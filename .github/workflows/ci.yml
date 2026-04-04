@@ -57,7 +57,7 @@ jobs:
         run: uv sync --extra dev
 
       - name: Ruff
-        run: uv run ruff check src tests scripts
+        run: uv run ruff check backend/src backend/tests
 
   frontend-typecheck:
     name: Frontend typecheck

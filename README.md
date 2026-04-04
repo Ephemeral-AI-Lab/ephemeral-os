@@ -1,6 +1,6 @@
-<h1 align="center"><img src="assets/logo.png" alt="OpenHarness" width="64" style="vertical-align: middle;">&nbsp; <code>oh</code> — OpenHarness: Open Agent Harness</h1>
+<h1 align="center"><img src="assets/logo.png" alt="EphemeralOS" width="64" style="vertical-align: middle;">&nbsp; <code>oh</code> — EphemeralOS: Open Agent Harness</h1>
 
-**OpenHarness** delivers core lightweight agent infrastructure: tool-use, skills, memory, and multi-agent coordination.
+**EphemeralOS** delivers core lightweight agent infrastructure: tool-use, skills, memory, and multi-agent coordination.
 
 **Join the community**: contribute **Harness** for open agent development.
 
@@ -18,17 +18,17 @@
   <img src="https://img.shields.io/badge/pytest-114_pass-brightgreen" alt="Pytest">
   <img src="https://img.shields.io/badge/E2E-6_suites-orange" alt="E2E">
   <img src="https://img.shields.io/badge/output-text_|_json_|_stream--json-blueviolet" alt="Output">
-  <a href="https://github.com/HKUDS/OpenHarness/actions/workflows/ci.yml"><img src="https://github.com/HKUDS/OpenHarness/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/HKUDS/EphemeralOS/actions/workflows/ci.yml"><img src="https://github.com/HKUDS/EphemeralOS/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/HKUDS/.github/blob/main/profile/README.md"><img src="https://img.shields.io/badge/Feishu-Group-E9DBFC?style=flat&logo=feishu&logoColor=white" alt="Feishu"></a>
   <a href="https://github.com/HKUDS/.github/blob/main/profile/README.md"><img src="https://img.shields.io/badge/WeChat-Group-C5EAB4?style=flat&logo=wechat&logoColor=white" alt="WeChat"></a>
 </p>
 
-One Command (**oh**) to Launch **OpenHarness** and Unlock All Agent Harnesses. 
+One Command (**oh**) to Launch **EphemeralOS** and Unlock All Agent Harnesses. 
 
 Supports CLI agent integration including OpenClaw, nanobot, Cursor, and more.
 
 <p align="center">
-  <img src="assets/cli-typing.gif" alt="OpenHarness Terminal Demo" width="800">
+  <img src="assets/cli-typing.gif" alt="EphemeralOS Terminal Demo" width="800">
 </p>
 
 <p align="center">
@@ -36,7 +36,7 @@ Supports CLI agent integration including OpenClaw, nanobot, Cursor, and more.
 </p>
 
 ---
-## ✨ OpenHarness's Key Harness Features
+## ✨ EphemeralOS's Key Harness Features
 
 <table align="center" width="100%">
 <tr>
@@ -133,7 +133,7 @@ An **Agent Harness** is the complete infrastructure that wraps around an LLM to 
   <img src="assets/harness-equation.png" alt="Harness = Tools + Knowledge + Observation + Action + Permissions" width="700">
 </p>
 
-OpenHarness is an open-source Python implementation designed for **researchers, builders, and the community**:
+EphemeralOS is an open-source Python implementation designed for **researchers, builders, and the community**:
 
 - **Understand** how production AI agents work under the hood
 - **Experiment** with cutting-edge tools, skills, and agent coordination patterns
@@ -144,7 +144,7 @@ OpenHarness is an open-source Python implementation designed for **researchers, 
 
 ## 📰 What's New
 
-- **2026-04-01** 🎨 **v0.1.0** — Initial **OpenHarness** open-source release featuring complete Harness architecture: 
+- **2026-04-01** 🎨 **v0.1.0** — Initial **EphemeralOS** open-source release featuring complete Harness architecture: 
 
 <p align="center">
   <strong>Start here:</strong>
@@ -175,8 +175,8 @@ ANTHROPIC_API_KEY=your_key uv run oh -p "Inspect this repository and list the to
 
 ```bash
 # Clone and install
-git clone https://github.com/HKUDS/OpenHarness.git
-cd OpenHarness
+git clone https://github.com/HKUDS/EphemeralOS.git
+cd EphemeralOS
 uv sync --extra dev
 
 # Example: use Kimi as the backend
@@ -190,7 +190,7 @@ uv run oh             # without activating venv
 ```
 
 <p align="center">
-  <img src="assets/landing.png" alt="OpenHarness Landing Screen" width="700">
+  <img src="assets/landing.png" alt="EphemeralOS Landing Screen" width="700">
 </p>
 
 ### Non-Interactive Mode (Pipes & Scripts)
@@ -208,7 +208,7 @@ oh -p "Fix the bug" --output-format stream-json
 
 ## 🔌 Provider Compatibility
 
-OpenHarness supports two API formats: **Anthropic** (default) and **OpenAI-compatible** (`--api-format openai`). The OpenAI format covers a wide range of providers.
+EphemeralOS supports two API formats: **Anthropic** (default) and **OpenAI-compatible** (`--api-format openai`). The OpenAI format covers a wide range of providers.
 
 ### Anthropic Format (default)
 
@@ -242,10 +242,10 @@ uv run oh --api-format openai \
   --model "qwen3.5-flash"
 
 # Or via environment variables
-export OPENHARNESS_API_FORMAT=openai
+export EPHEMERALOS_API_FORMAT=openai
 export OPENAI_API_KEY=sk-xxx
-export OPENHARNESS_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
-export OPENHARNESS_MODEL=qwen3.5-flash
+export EPHEMERALOS_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+export EPHEMERALOS_MODEL=qwen3.5-flash
 uv run oh
 ```
 
@@ -253,10 +253,10 @@ uv run oh
 
 ## 🏗️ Harness Architecture
 
-OpenHarness implements the core Agent Harness pattern with 10 subsystems:
+EphemeralOS implements the core Agent Harness pattern with 10 subsystems:
 
 ```
-openharness/
+ephemeralos/
   engine/          # 🧠 Agent Loop — query → stream → tool-call → loop
   tools/           # 🔧 43 Tools — file I/O, shell, search, web, MCP
   skills/          # 📚 Knowledge — on-demand skill loading (.md files)
@@ -349,7 +349,7 @@ Available Skills:
 - ... 40+ more
 ```
 
-**Compatible with [anthropics/skills](https://github.com/anthropics/skills)** — just copy `.md` files to `~/.openharness/skills/`.
+**Compatible with [anthropics/skills](https://github.com/anthropics/skills)** — just copy `.md` files to `~/.ephemeralos/skills/`.
 
 ### 🔌 Plugin System
 
@@ -373,10 +373,10 @@ oh plugin enable <name>
 
 ### 🤝 Ecosystem Workflows
 
-OpenHarness is useful as a lightweight harness layer around Claude-style tooling conventions:
+EphemeralOS is useful as a lightweight harness layer around Claude-style tooling conventions:
 
 - **OpenClaw-oriented workflows** can reuse Markdown-first knowledge and command-driven collaboration patterns.
-- **Claude-style plugins and skills** stay portable because OpenHarness keeps those formats familiar.
+- **Claude-style plugins and skills** stay portable because EphemeralOS keeps those formats familiar.
 - **ClawTeam-style multi-agent work** maps well onto the built-in team, task, and background execution primitives.
 
 For concrete usage ideas instead of generic claims, see [`docs/SHOWCASE.md`](docs/SHOWCASE.md).
@@ -450,13 +450,13 @@ python scripts/test_real_skills_plugins.py  # Real plugins E2E
 
 ---
 
-## 🔧 Extending OpenHarness
+## 🔧 Extending EphemeralOS
 
 ### Add a Custom Tool
 
 ```python
 from pydantic import BaseModel, Field
-from openharness.tools.base import BaseTool, ToolExecutionContext, ToolResult
+from ephemeralos.tools.base import BaseTool, ToolExecutionContext, ToolResult
 
 class MyToolInput(BaseModel):
     query: str = Field(description="Search query")
@@ -472,7 +472,7 @@ class MyTool(BaseTool):
 
 ### Add a Custom Skill
 
-Create `~/.openharness/skills/my-skill.md`:
+Create `~/.ephemeralos/skills/my-skill.md`:
 
 ```markdown
 ---
@@ -493,7 +493,7 @@ Use when the user asks about [your domain].
 
 ### Add a Plugin
 
-Create `.openharness/plugins/my-plugin/.claude-plugin/plugin.json`:
+Create `.ephemeralos/plugins/my-plugin/.claude-plugin/plugin.json`:
 
 ```json
 {
@@ -509,7 +509,7 @@ Add commands in `commands/*.md`, hooks in `hooks/hooks.json`, agents in `agents/
 
 ## 🌍 Showcase
 
-OpenHarness is most useful when treated as a small, inspectable harness you can adapt to a real workflow:
+EphemeralOS is most useful when treated as a small, inspectable harness you can adapt to a real workflow:
 
 - **Repo coding assistant** for reading code, patching files, and running checks locally.
 - **Headless scripting tool** for `json` and `stream-json` output in automation flows.
@@ -523,7 +523,7 @@ See [`docs/SHOWCASE.md`](docs/SHOWCASE.md) for short, reproducible examples.
 
 ## 🤝 Contributing
 
-OpenHarness is a **community-driven research project**. We welcome contributions in:
+EphemeralOS is a **community-driven research project**. We welcome contributions in:
 
 | Area | Examples |
 |------|---------|
@@ -537,8 +537,8 @@ OpenHarness is a **community-driven research project**. We welcome contributions
 
 ```bash
 # Development setup
-git clone https://github.com/HKUDS/OpenHarness.git
-cd OpenHarness
+git clone https://github.com/HKUDS/EphemeralOS.git
+cd EphemeralOS
 uv sync --extra dev
 uv run pytest -q  # Verify everything works
 ```
@@ -558,7 +558,7 @@ MIT — see [LICENSE](LICENSE).
 ---
 
 <p align="center">
-  <img src="assets/logo.png" alt="OpenHarness" width="48">
+  <img src="assets/logo.png" alt="EphemeralOS" width="48">
   <br>
   <strong>Oh my Harness!</strong>
   <br>
@@ -566,16 +566,16 @@ MIT — see [LICENSE](LICENSE).
 </p>
 
 <div align="center">
-  <a href="https://star-history.com/#HKUDS/OpenHarness&Date">
+  <a href="https://star-history.com/#HKUDS/EphemeralOS&Date">
     <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=HKUDS/OpenHarness&type=Date&theme=dark" />
-      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=HKUDS/OpenHarness&type=Date" />
-      <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=HKUDS/OpenHarness&type=Date" style="border-radius: 15px; box-shadow: 0 0 30px rgba(0, 217, 255, 0.3);" />
+      <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=HKUDS/EphemeralOS&type=Date&theme=dark" />
+      <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=HKUDS/EphemeralOS&type=Date" />
+      <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=HKUDS/EphemeralOS&type=Date" style="border-radius: 15px; box-shadow: 0 0 30px rgba(0, 217, 255, 0.3);" />
     </picture>
   </a>
 </div>
 
 <p align="center">
-  <em> Thanks for visiting ✨ OpenHarness!</em><br><br>
-  <img src="https://visitor-badge.laobi.icu/badge?page_id=HKUDS.OpenHarness&style=for-the-badge&color=00d4ff" alt="Views">
+  <em> Thanks for visiting ✨ EphemeralOS!</em><br><br>
+  <img src="https://visitor-badge.laobi.icu/badge?page_id=HKUDS.EphemeralOS&style=for-the-badge&color=00d4ff" alt="Views">
 </p>

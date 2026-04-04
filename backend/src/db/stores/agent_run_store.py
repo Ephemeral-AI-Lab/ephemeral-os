@@ -1,0 +1,148 @@
+"""Agent run persistence store."""
+
+from __future__ import annotations
+
+import logging
+from datetime import datetime, timezone
+
+from sqlalchemy.orm import Session, sessionmaker
+
+from ephemeralos.db.models.agent_run import AgentResponseChunkRecord, AgentRunRecord
+
+logger = logging.getLogger(__name__)
+
+
+class AgentRunStore:
+    """CRUD operations for agent run records and response chunks."""
+
+    def __init__(self) -> None:
+        self._session_factory: sessionmaker[Session] | None = None
+
+    def initialize(self, session_factory: sessionmaker[Session]) -> None:
+        self._session_factory = session_factory
+        logger.info("AgentRunStore initialised")
+
+    @property
+    def _sf(self) -> sessionmaker[Session]:
+        assert self._session_factory is not None, "AgentRunStore not initialised"
+        return self._session_factory
+
+    # -- run CRUD --------------------------------------------------------------
+
+    def create_run(
+        self,
+        *,
+        run_id: str,
+        session_id: str,
+        agent_name: str,
+        input_query: str | None = None,
+        metadata: dict | None = None,
+    ) -> AgentRunRecord:
+        with self._sf() as db:
+            record = AgentRunRecord(
+                id=run_id,
+                session_id=session_id,
+                agent_name=agent_name,
+                status="running",
+                input_query=input_query,
+                metadata_json=metadata,
+                started_at=datetime.now(timezone.utc),
+            )
+            db.add(record)
+            db.commit()
+            db.refresh(record)
+            return record
+
+    def finish_run(
+        self,
+        run_id: str,
+        *,
+        status: str = "completed",
+        response: dict | None = None,
+        error: str | None = None,
+        event_count: int = 0,
+    ) -> AgentRunRecord | None:
+        with self._sf() as db:
+            record = db.get(AgentRunRecord, run_id)
+            if record is None:
+                return None
+            record.status = status
+            record.response = response
+            record.error = error
+            record.event_count = event_count
+            record.finished_at = datetime.now(timezone.utc)
+            db.commit()
+            db.refresh(record)
+            return record
+
+    def get_run(self, run_id: str) -> AgentRunRecord | None:
+        with self._sf() as db:
+            return db.get(AgentRunRecord, run_id)
+
+    def list_runs(self, session_id: str, limit: int = 50) -> list[dict]:
+        with self._sf() as db:
+            q = (
+                db.query(AgentRunRecord)
+                .filter(AgentRunRecord.session_id == session_id)
+                .order_by(AgentRunRecord.created_at.desc())
+                .limit(limit)
+            )
+            return [
+                {
+                    "id": r.id,
+                    "agent_name": r.agent_name,
+                    "status": r.status,
+                    "input_query": r.input_query,
+                    "event_count": r.event_count,
+                    "error": r.error,
+                    "started_at": r.started_at.isoformat() if r.started_at else None,
+                    "finished_at": r.finished_at.isoformat() if r.finished_at else None,
+                }
+                for r in q.all()
+            ]
+
+    # -- chunk CRUD ------------------------------------------------------------
+
+    def append_chunk(
+        self,
+        *,
+        session_id: str,
+        run_id: str,
+        event_kind: str,
+        content: str | None = None,
+        tool_name: str | None = None,
+        tool_call_id: str | None = None,
+    ) -> AgentResponseChunkRecord:
+        with self._sf() as db:
+            chunk = AgentResponseChunkRecord(
+                session_id=session_id,
+                run_id=run_id,
+                event_kind=event_kind,
+                content=content,
+                tool_name=tool_name,
+                tool_call_id=tool_call_id,
+            )
+            db.add(chunk)
+            db.commit()
+            db.refresh(chunk)
+            return chunk
+
+    def list_chunks(self, run_id: str, limit: int = 500) -> list[dict]:
+        with self._sf() as db:
+            q = (
+                db.query(AgentResponseChunkRecord)
+                .filter(AgentResponseChunkRecord.run_id == run_id)
+                .order_by(AgentResponseChunkRecord.seq.asc())
+                .limit(limit)
+            )
+            return [
+                {
+                    "seq": c.seq,
+                    "event_kind": c.event_kind,
+                    "content": c.content,
+                    "tool_name": c.tool_name,
+                    "tool_call_id": c.tool_call_id,
+                    "created_at": c.created_at.isoformat() if c.created_at else None,
+                }
+                for c in q.all()
+            ]

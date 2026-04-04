@@ -1,10 +1,10 @@
-# OpenHarness Showcase
+# EphemeralOS Showcase
 
-This page collects concrete ways to use OpenHarness without overselling the project. Each example is intended to be small, reproducible, and easy to extend.
+This page collects concrete ways to use EphemeralOS without overselling the project. Each example is intended to be small, reproducible, and easy to extend.
 
 ## 1. Repository-aware coding assistant
 
-Use OpenHarness as a lightweight local coding agent for reading code, making edits, and running validation commands.
+Use EphemeralOS as a lightweight local coding agent for reading code, making edits, and running validation commands.
 
 ```bash
 uv run oh
@@ -27,12 +27,12 @@ uv run oh -p "List files that define the permission system" --output-format stre
 
 ## 3. Skill and plugin playground
 
-OpenHarness can load Markdown skills and Claude-style plugin layouts, which makes it useful for experimentation with custom workflows.
+EphemeralOS can load Markdown skills and Claude-style plugin layouts, which makes it useful for experimentation with custom workflows.
 
 Examples:
 
-- Put a custom skill in `~/.openharness/skills/`.
-- Install a plugin into `~/.openharness/plugins/`.
+- Put a custom skill in `~/.ephemeralos/skills/`.
+- Install a plugin into `~/.ephemeralos/plugins/`.
 - Use the same workflow conventions across multiple local projects.
 
 ## 4. Multi-agent and background task experiments
@@ -51,7 +51,7 @@ Create a background task that runs the slow integration script and report back w
 
 ## 5. Provider compatibility testbed
 
-OpenHarness is useful when you need to compare Anthropic-compatible backends behind one harness.
+EphemeralOS is useful when you need to compare Anthropic-compatible backends behind one harness.
 
 Typical scenarios:
 
@@ -77,4 +77,4 @@ Good showcase additions are:
 - Based on a real workflow you ran.
 - Short enough to reproduce locally.
 - Honest about prerequisites and limitations.
-- Focused on what OpenHarness makes easier, not on generic LLM claims.
+- Focused on what EphemeralOS makes easier, not on generic LLM claims.

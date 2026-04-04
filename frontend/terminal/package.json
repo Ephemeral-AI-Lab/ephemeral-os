@@ -1,5 +1,5 @@
 {
-  "name": "@openharness/terminal",
+  "name": "@ephemeralos/terminal",
   "private": true,
   "type": "module",
   "scripts": {

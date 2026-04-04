@@ -1,0 +1,60 @@
+{
+  "models": [
+    {
+      "key": "claude-sonnet",
+      "label": "Claude Sonnet 4",
+      "factory": {
+        "class_path": "anthropic",
+        "kwargs": {
+          "model": "claude-sonnet-4-20250514",
+          "api_key": "env:ANTHROPIC_API_KEY"
+        }
+      }
+    },
+    {
+      "key": "claude-opus",
+      "label": "Claude Opus 4",
+      "factory": {
+        "class_path": "anthropic",
+        "kwargs": {
+          "model": "claude-opus-4-20250514",
+          "api_key": "env:ANTHROPIC_API_KEY"
+        }
+      }
+    },
+    {
+      "key": "claude-haiku",
+      "label": "Claude Haiku 3.5",
+      "factory": {
+        "class_path": "anthropic",
+        "kwargs": {
+          "model": "claude-haiku-4-5-20251001",
+          "api_key": "env:ANTHROPIC_API_KEY"
+        }
+      }
+    },
+    {
+      "key": "gpt-4o",
+      "label": "GPT-4o",
+      "factory": {
+        "class_path": "openai",
+        "kwargs": {
+          "model": "gpt-4o",
+          "api_key": "env:OPENAI_API_KEY"
+        }
+      }
+    },
+    {
+      "key": "gpt-4o-mini",
+      "label": "GPT-4o Mini",
+      "factory": {
+        "class_path": "openai",
+        "kwargs": {
+          "model": "gpt-4o-mini",
+          "api_key": "env:OPENAI_API_KEY"
+        }
+      }
+    }
+  ],
+  "active": "claude-sonnet"
+}

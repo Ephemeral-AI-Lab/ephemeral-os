@@ -1,8 +1,8 @@
 blank_issues_enabled: true
 contact_links:
   - name: Contribution guide
-    url: https://github.com/HKUDS/OpenHarness/blob/main/CONTRIBUTING.md
+    url: https://github.com/HKUDS/EphemeralOS/blob/main/CONTRIBUTING.md
     about: Read local setup, validation, and PR expectations before contributing.
   - name: Showcase ideas
-    url: https://github.com/HKUDS/OpenHarness/blob/main/docs/SHOWCASE.md
+    url: https://github.com/HKUDS/EphemeralOS/blob/main/docs/SHOWCASE.md
     about: See example workflows and suggest new real-world use cases.

@@ -1,6 +1,6 @@
-# Contributing to OpenHarness
+# Contributing to EphemeralOS
 
-OpenHarness is an open-source agent harness focused on clarity, hackability, and compatibility with Claude-style workflows.
+EphemeralOS is an open-source agent harness focused on clarity, hackability, and compatibility with Claude-style workflows.
 
 ## Ways to contribute
 
@@ -13,8 +13,8 @@ OpenHarness is an open-source agent harness focused on clarity, hackability, and
 ## Development setup
 
 ```bash
-git clone https://github.com/HKUDS/OpenHarness.git
-cd OpenHarness
+git clone https://github.com/HKUDS/EphemeralOS.git
+cd EphemeralOS
 uv sync --extra dev
 ```
 
@@ -31,7 +31,7 @@ cd ../..
 Run the same core checks that CI runs before opening a PR:
 
 ```bash
-uv run ruff check src tests scripts
+uv run ruff check backend/src backend/tests
 uv run pytest -q
 ```
 
@@ -49,11 +49,11 @@ npx tsc --noEmit
 - Add or update tests when behavior changes.
 - Update docs when CLI flags, workflows, or compatibility claims change.
 - Add a short entry under `Unreleased` in [`CHANGELOG.md`](CHANGELOG.md) for user-visible changes.
-- If you are improving type coverage, feel free to run `uv run mypy src/openharness`, but it is not yet a required green check for the whole repo.
+- If you are improving type coverage, feel free to run `uv run mypy src/ephemeralos`, but it is not yet a required green check for the whole repo.
 
 ## Documentation and community contributions
 
-Issue [#7](https://github.com/HKUDS/OpenHarness/issues/7) surfaced several high-value docs needs. Useful contributions in that area include:
+Issue [#7](https://github.com/HKUDS/EphemeralOS/issues/7) surfaced several high-value docs needs. Useful contributions in that area include:
 
 - README accuracy improvements and compatibility notes.
 - Short, reproducible examples for common workflows.

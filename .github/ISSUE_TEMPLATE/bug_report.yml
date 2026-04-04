@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a reproducible problem in OpenHarness
+description: Report a reproducible problem in EphemeralOS
 title: "[Bug]: "
 labels:
   - bug
