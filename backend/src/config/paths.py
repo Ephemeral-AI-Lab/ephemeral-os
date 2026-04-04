@@ -94,10 +94,6 @@ def get_feedback_log_path() -> Path:
     return get_feedback_dir() / "feedback.log"
 
 
-def get_cron_registry_path() -> Path:
-    """Return the cron registry file path."""
-    return get_data_dir() / "cron_jobs.json"
-
 
 def get_project_config_dir(cwd: str | Path) -> Path:
     """Return the per-project .ephemeralos directory."""

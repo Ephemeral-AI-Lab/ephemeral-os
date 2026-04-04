@@ -153,7 +153,7 @@ def get_all_agent_definitions() -> list[AgentDefinition]:
                 if isinstance(agent_def, AgentDefinition):
                     agent_map[agent_def.name] = agent_def
     except Exception:
-        pass
+        logger.debug("Failed to load plugin agent definitions", exc_info=True)
     return list(agent_map.values())
 
 

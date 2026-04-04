@@ -72,6 +72,9 @@ export default function AgentRunsPage() {
 
   if (!sessionId) return <p className="p-6 text-sm text-zinc-500">No session selected.</p>
 
+  // Distinct agent names in this session
+  const uniqueAgents = new Set(runs.map((r) => r.agent_name))
+
   return (
     <div className="p-6">
       {/* Back nav + header */}
@@ -110,38 +113,45 @@ export default function AgentRunsPage() {
       </div>
 
       {/* Usage summary cards */}
-      {usage && (
-        <div className="mb-6 grid grid-cols-4 gap-4">
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-            <div className="text-xs text-zinc-500">Prompt Tokens</div>
-            <div className="mt-1 text-xl font-semibold text-zinc-100">
-              {formatTokens(usage.prompt_tokens)}
-            </div>
-          </div>
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-            <div className="text-xs text-zinc-500">Completion Tokens</div>
-            <div className="mt-1 text-xl font-semibold text-zinc-100">
-              {formatTokens(usage.completion_tokens)}
-            </div>
-          </div>
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-            <div className="text-xs text-zinc-500">Total Tokens</div>
-            <div className="mt-1 text-xl font-semibold text-zinc-100">
-              {formatTokens(usage.total_tokens)}
-            </div>
-          </div>
-          <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-            <div className="text-xs text-zinc-500">API Calls</div>
-            <div className="mt-1 text-xl font-semibold text-zinc-100">{usage.call_count}</div>
+      <div className="mb-6 grid grid-cols-5 gap-4">
+        <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
+          <div className="text-xs text-zinc-500">Ephemeral Agents</div>
+          <div className="mt-1 text-xl font-semibold text-zinc-100">{runs.length}</div>
+          <div className="mt-0.5 text-[10px] text-zinc-600">
+            {uniqueAgents.size} distinct
           </div>
         </div>
-      )}
+        <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
+          <div className="text-xs text-zinc-500">Prompt Tokens</div>
+          <div className="mt-1 text-xl font-semibold text-zinc-100">
+            {usage ? formatTokens(usage.prompt_tokens) : '—'}
+          </div>
+        </div>
+        <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
+          <div className="text-xs text-zinc-500">Completion Tokens</div>
+          <div className="mt-1 text-xl font-semibold text-zinc-100">
+            {usage ? formatTokens(usage.completion_tokens) : '—'}
+          </div>
+        </div>
+        <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
+          <div className="text-xs text-zinc-500">Total Tokens</div>
+          <div className="mt-1 text-xl font-semibold text-zinc-100">
+            {usage ? formatTokens(usage.total_tokens) : '—'}
+          </div>
+        </div>
+        <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
+          <div className="text-xs text-zinc-500">API Calls</div>
+          <div className="mt-1 text-xl font-semibold text-zinc-100">
+            {usage ? usage.call_count : '—'}
+          </div>
+        </div>
+      </div>
 
       {loading && <p className="text-sm text-zinc-500">Loading agent runs...</p>}
       {error && <p className="text-sm text-red-400">{error}</p>}
 
       {!loading && runs.length === 0 && (
-        <p className="text-sm text-zinc-500">No agent runs recorded for this session.</p>
+        <p className="text-sm text-zinc-500">No ephemeral agents have run in this session yet.</p>
       )}
 
       {!loading && runs.length > 0 && (
@@ -149,6 +159,7 @@ export default function AgentRunsPage() {
           <table className="w-full text-sm">
             <thead className="border-b border-zinc-800 bg-zinc-900/80 text-left text-xs text-zinc-500">
               <tr>
+                <th className="w-8 px-4 py-2 text-center">#</th>
                 <th className="px-4 py-2">Agent</th>
                 <th className="px-4 py-2">Status</th>
                 <th className="px-4 py-2">Input</th>
@@ -159,9 +170,16 @@ export default function AgentRunsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800/50">
-              {runs.map((r) => (
+              {runs.map((r, idx) => (
                 <tr key={r.id} className="text-zinc-300 transition hover:bg-zinc-800/50">
-                  <td className="px-4 py-2.5 font-medium text-zinc-100">{r.agent_name}</td>
+                  <td className="px-4 py-2.5 text-center text-xs text-zinc-600">
+                    {runs.length - idx}
+                  </td>
+                  <td className="px-4 py-2.5 font-medium text-zinc-100">
+                    <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-xs">
+                      {r.agent_name}
+                    </span>
+                  </td>
                   <td className="px-4 py-2.5">
                     <span
                       className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[r.status] ?? STATUS_COLORS.pending}`}

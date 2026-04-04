@@ -40,6 +40,7 @@ class QueryContext:
     max_turns: int = 200
     hook_executor: HookExecutor | None = None
     tool_metadata: dict[str, object] | None = None
+    session_context: object | None = None  # SessionContext, typed loosely to avoid circular import
 
 
 async def run_query(
@@ -54,12 +55,12 @@ async def run_query(
     content) and, if that is not enough, performs a full LLM-based
     summarization of older messages.
     """
-    from ephemeralos.services.compact import (
-        AutoCompactState,
+    from ephemeralos.utils.compact import (
+        SessionContext,
         auto_compact_if_needed,
     )
 
-    compact_state = AutoCompactState()
+    compact_state = context.session_context or SessionContext()
 
     for _ in range(context.max_turns):
         # --- auto-compact check before calling the model ---------------

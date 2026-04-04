@@ -44,7 +44,7 @@ def create_sandbox_router() -> APIRouter:
             api_url = settings.daytona_api_url.strip()
             target = settings.daytona_target.strip()
         except Exception:
-            pass
+            logger.debug("Failed to load Daytona settings", exc_info=True)
         if not api_key:
             api_key = os.environ.get("DAYTONA_API_KEY", "").strip()
         if not api_url:

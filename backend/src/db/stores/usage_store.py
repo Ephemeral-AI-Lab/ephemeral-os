@@ -24,7 +24,8 @@ class UsageStore:
 
     @property
     def _sf(self) -> sessionmaker[Session]:
-        assert self._session_factory is not None, "UsageStore not initialised"
+        if self._session_factory is None:
+            raise RuntimeError("UsageStore not initialised")
         return self._session_factory
 
     def record(

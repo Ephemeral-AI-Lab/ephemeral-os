@@ -28,6 +28,7 @@ class QueryEngine:
         max_tokens: int = 4096,
         hook_executor: HookExecutor | None = None,
         tool_metadata: dict[str, object] | None = None,
+        session_context: object | None = None,
     ) -> None:
         self._api_client = api_client
         self._tool_registry = tool_registry
@@ -37,6 +38,7 @@ class QueryEngine:
         self._max_tokens = max_tokens
         self._hook_executor = hook_executor
         self._tool_metadata = tool_metadata or {}
+        self._session_context = session_context
         self._messages: list[ConversationMessage] = []
         self._cost_tracker = CostTracker()
 
@@ -44,6 +46,11 @@ class QueryEngine:
     def messages(self) -> list[ConversationMessage]:
         """Return the current conversation history."""
         return list(self._messages)
+
+    @property
+    def session_context(self):
+        """Return the current compaction state (persisted across agents)."""
+        return self._session_context
 
     @property
     def total_usage(self):
@@ -79,6 +86,7 @@ class QueryEngine:
             max_tokens=self._max_tokens,
             hook_executor=self._hook_executor,
             tool_metadata=self._tool_metadata,
+            session_context=self._session_context,
         )
         async for event, usage in run_query(context, self._messages):
             if usage is not None:

@@ -95,7 +95,8 @@ class ModelStore:
 
     @property
     def _sf(self) -> sessionmaker[Session]:
-        assert self._session_factory is not None, "ModelStore not initialised"
+        if self._session_factory is None:
+            raise RuntimeError("ModelStore not initialised")
         return self._session_factory
 
     # -- writes ----------------------------------------------------------------

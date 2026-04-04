@@ -40,7 +40,6 @@ def create_agents_router(
     @router.get("/")
     async def list_agents(
         source: str | None = Query(default=None),
-        tags: str | None = Query(default=None),
     ) -> list[dict[str, Any]]:
         defs = list_definitions(source=source)
         return [

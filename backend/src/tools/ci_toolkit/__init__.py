@@ -26,7 +26,7 @@ class CIToolkit(BaseToolkit):
 
     def __init__(self) -> None:
         super().__init__(
-            name="ci",
+            name="code_intelligence",
             description="Read-only code intelligence: symbols, structure, changes",
             tools=[
                 CIStatusTool(),

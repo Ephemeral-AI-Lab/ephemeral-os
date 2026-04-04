@@ -24,7 +24,8 @@ class SessionStore:
 
     @property
     def _sf(self) -> sessionmaker[Session]:
-        assert self._session_factory is not None, "SessionStore not initialised"
+        if self._session_factory is None:
+            raise RuntimeError("SessionStore not initialised")
         return self._session_factory
 
     # -- writes ----------------------------------------------------------------
@@ -38,6 +39,7 @@ class SessionStore:
         system_prompt: str | None = None,
         messages: list[dict] | None = None,
         usage: dict | None = None,
+        session_context: dict | None = None,
         summary: str | None = None,
         message_count: int = 0,
     ) -> SessionRecord:
@@ -53,6 +55,7 @@ class SessionStore:
                     system_prompt=system_prompt,
                     message_history=messages,
                     usage=usage,
+                    session_context=session_context,
                     summary=summary,
                     message_count=message_count,
                     created_at=now,
@@ -64,6 +67,7 @@ class SessionStore:
                 record.system_prompt = system_prompt
                 record.message_history = messages
                 record.usage = usage
+                record.session_context = session_context
                 record.summary = summary
                 record.message_count = message_count
                 record.updated_at = now

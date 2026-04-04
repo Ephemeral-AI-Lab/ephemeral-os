@@ -24,7 +24,8 @@ class AgentRunStore:
 
     @property
     def _sf(self) -> sessionmaker[Session]:
-        assert self._session_factory is not None, "AgentRunStore not initialised"
+        if self._session_factory is None:
+            raise RuntimeError("AgentRunStore not initialised")
         return self._session_factory
 
     # -- run CRUD --------------------------------------------------------------

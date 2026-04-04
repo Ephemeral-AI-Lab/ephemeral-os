@@ -48,9 +48,9 @@ class DaytonaToolkit(BaseToolkit):
 
     def __init__(self, sandbox_id: str | None = None) -> None:
         super().__init__(
-            name="daytona",
+            name="sandbox_operations",
             description=(
-                "Remote sandbox operations via Daytona: shell, files, search, "
+                "Remote sandbox operations: shell, files, search, "
                 "OCC-coordinated editing, LSP queries, and CodeAct execution"
             ),
             tools=[

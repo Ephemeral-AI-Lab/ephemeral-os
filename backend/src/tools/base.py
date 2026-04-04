@@ -117,6 +117,18 @@ class ToolRegistry:
         """Return all registered toolkits."""
         return list(self._toolkits.values())
 
+    def restrict_to_toolkits(self, toolkit_names: list[str]) -> None:
+        """Remove all tools and toolkits not in *toolkit_names*."""
+        allowed = set(toolkit_names)
+        allowed_tools: set[str] = set()
+        kept_toolkits: dict[str, BaseToolkit] = {}
+        for name, tk in self._toolkits.items():
+            if name in allowed:
+                kept_toolkits[name] = tk
+                allowed_tools.update(tk.tool_names())
+        self._toolkits = kept_toolkits
+        self._tools = {k: v for k, v in self._tools.items() if k in allowed_tools}
+
     def to_api_schema(self) -> list[dict[str, Any]]:
         """Return all tool schemas in API format."""
         return [tool.to_api_schema() for tool in self._tools.values()]

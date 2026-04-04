@@ -12,7 +12,6 @@ import mimetypes
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING
-from uuid import uuid4
 
 if TYPE_CHECKING:
     from ephemeralos.agents.builder.service import AgentBuilderService
@@ -30,9 +29,8 @@ from ephemeralos.server.protocol import BackendEvent, BackendHostConfig, Toolkit
 from ephemeralos.server.runtime import (
     SessionConfig,
     build_session_config,
-    close_session,
-    spawn_agent,
 )
+from ephemeralos.tools import ToolRegistry
 from ephemeralos.models.api import create_models_router
 from ephemeralos.agents.api.router import create_agents_router
 from ephemeralos.server.routers.core import create_core_router
@@ -65,7 +63,7 @@ class SessionState:
         self._tool_registry: ToolRegistry | None = None
 
     async def initialize(self, host_config: BackendHostConfig) -> None:
-        self.config = await build_session_config(
+        self.config = build_session_config(
             model=host_config.model,
             base_url=host_config.base_url,
             system_prompt=host_config.system_prompt,
@@ -78,18 +76,16 @@ class SessionState:
         from ephemeralos.tools import create_default_tool_registry
         self._tool_registry = create_default_tool_registry()
 
-    async def close(self) -> None:
-        if self.config:
-            await close_session(self.config)
-
     @property
     def session_id(self) -> str:
-        assert self.config is not None
+        if self.config is None:
+            raise RuntimeError("SessionState not initialised")
         return self.config.session_id
 
     @property
     def cwd(self) -> str:
-        assert self.config is not None
+        if self.config is None:
+            raise RuntimeError("SessionState not initialised")
         return self.config.cwd
 
     @property
@@ -111,14 +107,41 @@ class SessionState:
 
     def _toolkit_snapshots(self) -> list[ToolkitSnapshot]:
         assert self._tool_registry is not None
-        return [
-            ToolkitSnapshot(
-                name=tk.name,
-                description=tk.description,
-                tools=tk.tool_names(),
+        # Registered toolkits (already instantiated in the default registry)
+        registered_names: set[str] = set()
+        snapshots: list[ToolkitSnapshot] = []
+        for tk in self._tool_registry.list_toolkits():
+            registered_names.add(tk.name)
+            snapshots.append(
+                ToolkitSnapshot(
+                    name=tk.name,
+                    description=tk.description,
+                    tools=tk.tool_names(),
+                )
             )
-            for tk in self._tool_registry.list_toolkits()
-        ]
+        # Factory-registered toolkits (e.g. daytona, ci) — instantiate with
+        # a bare context just to read their tool names for the snapshot.
+        from ephemeralos.tools.factory import ToolkitContext, list_factories, create_toolkit
+
+        seen_toolkit_names = set(registered_names)
+        for factory_name in list_factories():
+            if factory_name in registered_names:
+                continue
+            try:
+                tk = create_toolkit(factory_name, ToolkitContext())
+                if tk.name in seen_toolkit_names:
+                    continue  # skip aliases that produce duplicate toolkit names
+                seen_toolkit_names.add(tk.name)
+                snapshots.append(
+                    ToolkitSnapshot(
+                        name=tk.name,
+                        description=tk.description,
+                        tools=tk.tool_names(),
+                    )
+                )
+            except Exception:
+                pass  # factory may require runtime context; skip gracefully
+        return snapshots
 
 
 # ---------------------------------------------------------------------------
@@ -179,7 +202,6 @@ def create_app(config: BackendHostConfig) -> FastAPI:
             logger.info("Running without database — file-based persistence only")
 
         yield
-        await _session.close()
         _session = None
         _builder_service = None
 
@@ -228,7 +250,8 @@ def create_app(config: BackendHostConfig) -> FastAPI:
 
 
 def _get_session() -> SessionState:
-    assert _session is not None, "Session not initialized"
+    if _session is None:
+        raise RuntimeError("Session not initialized")
     return _session
 
 

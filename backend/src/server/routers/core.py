@@ -6,13 +6,11 @@ import asyncio
 import json
 from typing import TYPE_CHECKING
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
-from ephemeralos.models.clients.anthropic import AnthropicApiClient
-from ephemeralos.models.clients.openai_compat import OpenAICompatibleClient
-from ephemeralos.models.provider import auth_status, detect_provider
+from ephemeralos.models.provider import detect_provider, auth_status
 from ephemeralos.config import load_settings, save_settings
 from ephemeralos.engine.stream_events import (
     AssistantTextDelta,
@@ -61,11 +59,12 @@ def create_core_router(get_session: callable) -> APIRouter:
     @router.get("/state")
     async def get_state():
         session = get_session()
-        assert session.bundle is not None
-        settings = session.bundle.current_settings()
+        if session.config is None:
+            raise HTTPException(status_code=503, detail="Session not ready")
+        settings = session.current_settings()
         app_state = {
             "model": settings.model,
-            "cwd": session.bundle.cwd,
+            "cwd": session.cwd,
             "provider": settings.api_format,
             "auth_status": "authorized",
             "base_url": settings.base_url or "",
@@ -91,7 +90,8 @@ def create_core_router(get_session: callable) -> APIRouter:
     @router.post("/chat")
     async def chat(req: ChatRequest):
         session = get_session()
-        assert session.bundle is not None
+        if session.config is None:
+            raise HTTPException(status_code=503, detail="Session not ready")
 
         if session.busy:
             return JSONResponse(status_code=409, content={"error": "Session is busy"})
@@ -102,8 +102,9 @@ def create_core_router(get_session: callable) -> APIRouter:
 
         async def process() -> None:
             try:
-                bundle = session.bundle
-                assert bundle is not None
+                config = session.config
+                if config is None:
+                    raise RuntimeError("Session not ready")
 
                 await session.emit(
                     BackendEvent(
@@ -167,7 +168,7 @@ def create_core_router(get_session: callable) -> APIRouter:
                     await session.emit(BackendEvent(type="clear_transcript"))
 
                 await handle_line(
-                    bundle,
+                    config,
                     req.line,
                     print_system=_print_system,
                     render_event=_render_event,
@@ -210,7 +211,8 @@ def create_core_router(get_session: callable) -> APIRouter:
     @router.post("/config")
     async def update_config(req: ConfigRequest):
         session = get_session()
-        assert session.bundle is not None
+        if session.config is None:
+            raise HTTPException(status_code=503, detail="Session not ready")
 
         settings = load_settings()
         changed = False
@@ -225,20 +227,16 @@ def create_core_router(get_session: callable) -> APIRouter:
 
         save_settings(settings)
 
-        if settings.api_format == "openai":
-            new_client = OpenAICompatibleClient(
-                api_key=settings.resolve_api_key(),
-                base_url=settings.base_url,
-            )
-        else:
-            new_client = AnthropicApiClient(
-                api_key=settings.resolve_api_key(),
-                base_url=settings.base_url,
-            )
-
-        session.bundle.api_client = new_client
-        session.bundle.engine._api_client = new_client
-        session.bundle.engine.set_model(settings.model)
+        # Update durable config overrides so the next ephemeral agent picks them up
+        config = session.config
+        if req.model is not None:
+            config.model_override = req.model
+        if req.base_url is not None:
+            config.base_url_override = req.base_url
+        if req.api_key is not None:
+            config.api_key_override = req.api_key
+        if req.api_format is not None:
+            config.api_format_override = req.api_format
 
         provider = detect_provider(settings)
         return JSONResponse(content={
@@ -252,11 +250,15 @@ def create_core_router(get_session: callable) -> APIRouter:
     @router.get("/sessions")
     async def list_sessions():
         session = get_session()
-        assert session.bundle is not None
-        from ephemeralos.services.session_storage import list_session_snapshots
+        if session.config is None:
+            raise HTTPException(status_code=503, detail="Session not ready")
+        from ephemeralos.server.app_factory import session_store
         import time as _time
 
-        snapshots = list_session_snapshots(session.bundle.cwd, limit=10)
+        if session_store._session_factory is None:
+            return JSONResponse(content={"sessions": []})
+
+        snapshots = session_store.list_sessions(cwd=session.cwd, limit=10)
         options = []
         for s in snapshots:
             ts = _time.strftime("%m/%d %H:%M", _time.localtime(s["created_at"]))

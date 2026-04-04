@@ -1,3 +1,7 @@
 {"t":0,"agent":"system","event":"skill_invoked","skill_name":"everything-claude-code:plan"}
 {"t":0,"agent":"system","event":"skill_invoked","skill_name":"using-superpowers"}
 {"t":0,"agent":"system","event":"skill_invoked","skill_name":"using-superpowers"}
+{"t":0,"agent":"system","event":"skill_invoked","skill_name":"using-superpowers"}
+{"t":0,"agent":"ad9721c","agent_type":"Explore","event":"agent_start","parent_mode":"none"}
+{"t":0,"agent":"ad9721c","agent_type":"Explore","event":"agent_stop","success":true,"duration_ms":50425}
+{"t":0,"agent":"system","event":"skill_invoked","skill_name":"using-superpowers"}

@@ -1,4 +1,4 @@
-"""Tests for task and team tools."""
+"""Tests for task tools."""
 
 from __future__ import annotations
 
@@ -8,12 +8,10 @@ from pathlib import Path
 import pytest
 
 from ephemeralos.tasks import get_task_manager
-from ephemeralos.tools.agent_tool import AgentTool, AgentToolInput
 from ephemeralos.tools.base import ToolExecutionContext
 from ephemeralos.tools.task_create_tool import TaskCreateTool, TaskCreateToolInput
 from ephemeralos.tools.task_output_tool import TaskOutputTool, TaskOutputToolInput
 from ephemeralos.tools.task_update_tool import TaskUpdateTool, TaskUpdateToolInput
-from ephemeralos.tools.team_create_tool import TeamCreateTool, TeamCreateToolInput
 
 
 @pytest.mark.asyncio
@@ -42,16 +40,6 @@ async def test_task_create_and_output_tool(tmp_path: Path, monkeypatch):
         context,
     )
     assert "tool task" in output_result.output
-
-
-@pytest.mark.asyncio
-async def test_team_create_tool(tmp_path: Path):
-    result = await TeamCreateTool().execute(
-        TeamCreateToolInput(name="demo", description="test"),
-        ToolExecutionContext(cwd=tmp_path),
-    )
-    assert result.is_error is False
-    assert "Created team demo" == result.output
 
 
 @pytest.mark.asyncio
@@ -85,24 +73,3 @@ async def test_task_update_tool_updates_metadata(tmp_path: Path, monkeypatch):
     assert task.description == "renamed task"
     assert task.metadata["progress"] == "60"
     assert task.metadata["status_note"] == "waiting on verification"
-
-
-@pytest.mark.asyncio
-async def test_agent_tool_supports_remote_and_teammate_modes(tmp_path: Path, monkeypatch):
-    monkeypatch.setenv("EPHEMERALOS_DATA_DIR", str(tmp_path / "data"))
-    context = ToolExecutionContext(cwd=tmp_path)
-
-    for i, mode in enumerate(("remote_agent", "in_process_teammate")):
-        result = await AgentTool().execute(
-            AgentToolInput(
-                description=f"{mode} smoke",
-                prompt="ready",
-                mode=mode,
-                subagent_type=f"test-worker-{i}",
-                command="python -u -c \"import sys; print(sys.stdin.readline().strip())\"",
-            ),
-            context,
-        )
-        assert result.is_error is False
-        # Output format: "Spawned agent X (task_id=Y, backend=Z)"
-        assert "agent" in result.output.lower() or "task_id" in result.output.lower()
