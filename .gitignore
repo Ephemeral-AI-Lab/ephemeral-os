@@ -22,15 +22,60 @@ htmlcov/
 *.swo
 *~
 .python-version
+*.log
+*.tmp
+*.temp
+*.pid
+*.seed
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
 # React TUI frontend
 frontend/terminal/node_modules/
+frontend/node_modules/
+frontend/.next/
+frontend/dist/
+frontend/.nuxt/
+frontend/.turbo/
+frontend/.parcel-cache/
+frontend/.vite/
+frontend/.rollup.cache/
+frontend/coverage/
+frontend/out/
 
 # User data (never commit API keys or session data)
 .ephemeralos/
 react_tui_smoke.txt
+.pytest_cache/
+.pytest_cache
+.ruff_cache/
+coverage/
+*.lcov
+coverage.*
+.mypy_cache/
+.tox/
+.cache/
+htmlcov/
+
+# Backend/build artefacts and env tooling
+backend/.venv/
+backend/node_modules/
+backend/.pytest_cache/
+backend/.ruff_cache/
+backend/.mypy_cache/
+backend/.ipynb_checkpoints/
+backend/__pycache__/
+backend/.venv*/
 
 # OS
 .DS_Store
 Thumbs.db
 uv.lock
+
+# Keep these local workspace files visible
+!.claude/
+!.agents/
+!.agent*
+!.omc
