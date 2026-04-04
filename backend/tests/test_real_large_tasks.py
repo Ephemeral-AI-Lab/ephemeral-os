@@ -169,7 +169,7 @@ async def task_coordinator_code_review():
     from ephemeralos.coordinator.coordinator_mode import (
         get_coordinator_system_prompt, format_task_notification, TaskNotification,
     )
-    from ephemeralos.coordinator.agent_definitions import get_agent_definition
+    from ephemeralos.agents import get_agent_definition
     from ephemeralos.swarm.in_process import start_in_process_teammate, TeammateAbortController
     from ephemeralos.swarm.types import TeammateSpawnConfig
     from ephemeralos.swarm.team_lifecycle import TeamLifecycleManager, TeamMember
@@ -295,7 +295,7 @@ async def task_migration_plan_with_memory():
     """Agent analyzes AutoAgent, saves findings to memory, creates migration plan,
     saves session for later resume."""
 
-    from ephemeralos.coordinator.agent_definitions import get_agent_definition
+    from ephemeralos.agents import get_agent_definition
     from ephemeralos.skills.registry import SkillRegistry
     from ephemeralos.skills.types import SkillDefinition
     from ephemeralos.memory.manager import add_memory_entry, list_memory_files, remove_memory_entry

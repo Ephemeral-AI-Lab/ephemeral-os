@@ -20,12 +20,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from ephemeralos.services.code_intelligence.constants import (
+from ephemeralos.code_intelligence.constants import (
     LSP_CACHE_MAX_ENTRIES,
     LSP_CACHE_TTL,
     LSP_QUERY_TIMEOUT,
 )
-from ephemeralos.services.code_intelligence.types import (
+from ephemeralos.code_intelligence.types import (
     Diagnostic,
     DiagnosticSeverity,
     HoverResult,

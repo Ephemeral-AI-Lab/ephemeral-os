@@ -28,10 +28,10 @@ from ephemeralos.db.engine import initialize_db
 from ephemeralos.db.stores import AgentDefinitionStore, AgentRunStore, ModelStore, SessionStore, UsageStore
 from ephemeralos.server.protocol import BackendEvent, BackendHostConfig, ToolkitSnapshot
 from ephemeralos.server.runtime import (
-    RuntimeBundle,
-    build_runtime,
-    close_runtime,
-    start_runtime,
+    SessionConfig,
+    build_session_config,
+    close_session,
+    spawn_agent,
 )
 from ephemeralos.models.api import create_models_router
 from ephemeralos.agents.api.router import create_agents_router
@@ -51,27 +51,55 @@ _STATIC_DIR = Path(__file__).resolve().parent.parent.parent.parent / "frontend" 
 
 
 class SessionState:
-    """Manages the single active session and its event routing."""
+    """Manages the single active session and its event routing.
+
+    The session holds only durable config — no engine or API client lives
+    between requests.  Each request spawns an ephemeral agent via
+    ``handle_line``.
+    """
 
     def __init__(self) -> None:
-        self.bundle: RuntimeBundle | None = None
+        self.config: SessionConfig | None = None
         self.busy = False
         self._event_queue: asyncio.Queue[BackendEvent | None] | None = None
-    async def initialize(self, config: BackendHostConfig) -> None:
-        self.bundle = await build_runtime(
-            model=config.model,
-            base_url=config.base_url,
-            system_prompt=config.system_prompt,
-            api_key=config.api_key,
-            api_format=config.api_format,
-            api_client=config.api_client,
-            restore_messages=config.restore_messages,
+        self._tool_registry: ToolRegistry | None = None
+
+    async def initialize(self, host_config: BackendHostConfig) -> None:
+        self.config = await build_session_config(
+            model=host_config.model,
+            base_url=host_config.base_url,
+            system_prompt=host_config.system_prompt,
+            api_key=host_config.api_key,
+            api_format=host_config.api_format,
+            api_client=host_config.api_client,
+            restore_messages=host_config.restore_messages,
         )
-        await start_runtime(self.bundle)
+        # Keep a tool registry for config-time queries (agent builder, toolkit snapshots)
+        from ephemeralos.tools import create_default_tool_registry
+        self._tool_registry = create_default_tool_registry()
 
     async def close(self) -> None:
-        if self.bundle:
-            await close_runtime(self.bundle)
+        if self.config:
+            await close_session(self.config)
+
+    @property
+    def session_id(self) -> str:
+        assert self.config is not None
+        return self.config.session_id
+
+    @property
+    def cwd(self) -> str:
+        assert self.config is not None
+        return self.config.cwd
+
+    @property
+    def tool_registry(self) -> ToolRegistry:
+        assert self._tool_registry is not None
+        return self._tool_registry
+
+    def current_settings(self) -> "Settings":
+        assert self.config is not None
+        return self.config.resolve_settings()
 
     async def emit(self, event: BackendEvent) -> None:
         """Push an event to the current SSE stream."""
@@ -82,14 +110,14 @@ class SessionState:
         self._event_queue = queue
 
     def _toolkit_snapshots(self) -> list[ToolkitSnapshot]:
-        assert self.bundle is not None
+        assert self._tool_registry is not None
         return [
             ToolkitSnapshot(
                 name=tk.name,
                 description=tk.description,
                 tools=tk.tool_names(),
             )
-            for tk in self.bundle.tool_registry.list_toolkits()
+            for tk in self._tool_registry.list_toolkits()
         ]
 
 
@@ -141,7 +169,7 @@ def create_app(config: BackendHostConfig) -> FastAPI:
                 AgentDefinitionValidator,
             )
 
-            tool_reg = _session.bundle.tool_registry if _session.bundle else None
+            tool_reg = _session._tool_registry if _session else None
             validator = AgentDefinitionValidator(tool_reg)
             _builder_service = AgentBuilderService(agent_definition_store, validator)
             db_agents = _builder_service.load_all_from_db()
@@ -170,7 +198,7 @@ def create_app(config: BackendHostConfig) -> FastAPI:
     app.include_router(
         create_agents_router(
             get_builder_service=lambda: _builder_service,
-            get_tool_registry=lambda: _session.bundle.tool_registry if _session and _session.bundle else None,
+            get_tool_registry=lambda: _session._tool_registry if _session else None,
         )
     )
 

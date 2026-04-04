@@ -118,6 +118,54 @@ export type DbHealthStatus = {
   database: 'connected' | 'not_configured'
 }
 
+// -- Session & run persistence types -----------------------------------------
+
+export type SessionSummary = {
+  session_id: string
+  summary: string
+  message_count: number
+  model: string
+  created_at: number
+}
+
+export type SessionDetail = {
+  session_id: string
+  cwd: string
+  model: string
+  summary: string | null
+  message_count: number
+  usage: Record<string, unknown> | null
+  created_at: string | null
+  updated_at: string | null
+}
+
+export type AgentRunSummary = {
+  id: string
+  agent_name: string
+  status: string
+  input_query: string | null
+  event_count: number
+  error: string | null
+  started_at: string | null
+  finished_at: string | null
+}
+
+export type SessionUsage = {
+  session_id: string
+  prompt_tokens: number
+  completion_tokens: number
+  total_tokens: number
+  call_count: number
+}
+
+export type ModelUsage = {
+  model_id: string
+  prompt_tokens: number
+  completion_tokens: number
+  total_tokens: number
+  call_count: number
+}
+
 export type FrontendRequest =
   | { type: 'submit_line'; line: string }
   | { type: 'permission_response'; request_id: string; allowed: boolean }

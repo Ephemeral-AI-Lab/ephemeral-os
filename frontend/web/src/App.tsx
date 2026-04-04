@@ -7,6 +7,8 @@ import ConversationPage from './pages/ConversationPage'
 import SandboxesPage from './pages/SandboxesPage'
 import TaskDetailPage from './pages/TaskDetailPage'
 import SettingsPage from './pages/SettingsPage'
+import SessionsPage from './pages/SessionsPage'
+import AgentRunsPage from './pages/AgentRunsPage'
 
 export default function App() {
   return (
@@ -18,6 +20,8 @@ export default function App() {
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="agents" element={<AgentsPage />} />
           <Route path="sandboxes" element={<SandboxesPage />} />
+          <Route path="sessions" element={<SessionsPage />} />
+          <Route path="sessions/:sessionId/runs" element={<AgentRunsPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="tasks/:taskId" element={<TaskDetailPage />} />
         </Route>

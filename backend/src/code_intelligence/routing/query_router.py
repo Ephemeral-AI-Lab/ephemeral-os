@@ -10,12 +10,12 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from ephemeralos.services.code_intelligence.backend_protocol import (
+from ephemeralos.code_intelligence.routing.backend_protocol import (
     BackendQueryOutcome,
     CodeIntelligenceBackend,
     QueryStatus,
 )
-from ephemeralos.services.code_intelligence.types import (
+from ephemeralos.code_intelligence.types import (
     Diagnostic,
     HoverResult,
     ReferenceInfo,

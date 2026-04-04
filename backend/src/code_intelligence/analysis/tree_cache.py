@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
-from ephemeralos.services.code_intelligence.constants import (
+from ephemeralos.code_intelligence.constants import (
     SKIP_DIRECTORIES,
     TREE_CACHE_MAX_FILE_SIZE,
     TREE_CACHE_MAX_FILES,

@@ -16,13 +16,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from ephemeralos.services.code_intelligence.constants import (
+from ephemeralos.code_intelligence.constants import (
     SKIP_DIRECTORIES,
     SUPPORTED_EXTENSIONS,
     SYMBOL_INDEX_BATCH_SIZE,
     SYMBOL_INDEX_MAX_FILES,
 )
-from ephemeralos.services.code_intelligence.types import SymbolInfo, SymbolKind
+from ephemeralos.code_intelligence.types import SymbolInfo, SymbolKind
 
 logger = logging.getLogger(__name__)
 

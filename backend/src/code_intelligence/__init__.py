@@ -1,6 +1,6 @@
 """Code intelligence service — AST caching, symbol indexing, OCC, and LSP integration."""
 
-from ephemeralos.services.code_intelligence.types import (
+from ephemeralos.code_intelligence.types import (
     CITelemetry,
     Diagnostic,
     EditRequest,
@@ -9,8 +9,8 @@ from ephemeralos.services.code_intelligence.types import (
     ReferenceInfo,
     SymbolInfo,
 )
-from ephemeralos.services.code_intelligence.gateway import CodeIntelligenceGateway
-from ephemeralos.services.code_intelligence.service import CodeIntelligenceService
+from ephemeralos.code_intelligence.routing.gateway import CodeIntelligenceGateway
+from ephemeralos.code_intelligence.routing.service import CodeIntelligenceService
 
 __all__ = [
     "CITelemetry",

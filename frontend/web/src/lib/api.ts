@@ -5,7 +5,17 @@
  * - POST /api/chat with SSE streaming for chat responses
  */
 
-import type { BackendEvent, ConfigUpdate, DbHealthStatus, ModelRegistration } from './types'
+import type {
+  BackendEvent,
+  ConfigUpdate,
+  DbHealthStatus,
+  ModelRegistration,
+  SessionSummary,
+  SessionDetail,
+  AgentRunSummary,
+  SessionUsage,
+  ModelUsage,
+} from './types'
 
 type EventHandler = (event: BackendEvent) => void
 
@@ -250,4 +260,41 @@ export async function selectModel(key: string): Promise<{ ok: boolean; model: Mo
 export async function deleteModel(key: string): Promise<{ ok: boolean }> {
   const res = await fetch(`${DB_BASE}/models/${key}`, { method: 'DELETE' })
   return res.json()
+}
+
+// ---------------------------------------------------------------------------
+// Sessions & Agent Runs
+// ---------------------------------------------------------------------------
+
+export async function fetchDbSessions(limit = 50): Promise<SessionSummary[]> {
+  const res = await fetch(`${DB_BASE}/sessions?limit=${limit}`)
+  if (!res.ok) return []
+  const data = await res.json()
+  return data.sessions ?? []
+}
+
+export async function fetchDbSession(sessionId: string): Promise<SessionDetail | null> {
+  const res = await fetch(`${DB_BASE}/sessions/${sessionId}`)
+  if (!res.ok) return null
+  return res.json()
+}
+
+export async function fetchSessionRuns(sessionId: string, limit = 100): Promise<AgentRunSummary[]> {
+  const res = await fetch(`${DB_BASE}/sessions/${sessionId}/runs?limit=${limit}`)
+  if (!res.ok) return []
+  const data = await res.json()
+  return data.runs ?? []
+}
+
+export async function fetchSessionUsage(sessionId: string): Promise<SessionUsage | null> {
+  const res = await fetch(`${DB_BASE}/usage/${sessionId}`)
+  if (!res.ok) return null
+  return res.json()
+}
+
+export async function fetchGlobalUsage(): Promise<ModelUsage[]> {
+  const res = await fetch(`${DB_BASE}/usage`)
+  if (!res.ok) return []
+  const data = await res.json()
+  return data.by_model ?? []
 }

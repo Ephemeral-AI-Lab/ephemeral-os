@@ -75,7 +75,7 @@ class WorkspaceStructureTool(BaseTool):
             return ToolResult(output="Symbol index not available")
 
         # Get indexed file paths
-        from ephemeralos.services.code_intelligence.symbol_index import SymbolIndex
+        from ephemeralos.code_intelligence.analysis.symbol_index import SymbolIndex
         if isinstance(si, SymbolIndex):
             with si._lock:
                 paths = sorted(si._symbols.keys())
@@ -116,7 +116,7 @@ class SymbolQueryTool(BaseTool):
         if err:
             return err
 
-        from ephemeralos.services.code_intelligence.types import SymbolKind
+        from ephemeralos.code_intelligence.types import SymbolKind
         kind = None
         if arguments.kind:
             try:

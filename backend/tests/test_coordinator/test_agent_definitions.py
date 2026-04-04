@@ -5,12 +5,8 @@ from __future__ import annotations
 
 import pytest
 
-from ephemeralos.coordinator.agent_definitions import (
-    AgentDefinition,
-    _parse_agent_frontmatter,
-    get_builtin_agent_definitions,
-    load_agents_dir,
-)
+from ephemeralos.agents import AgentDefinition, get_builtin_agent_definitions, load_agents_dir
+from ephemeralos.agents.loader import _parse_agent_frontmatter
 
 
 # ---------------------------------------------------------------------------

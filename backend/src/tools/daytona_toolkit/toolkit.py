@@ -107,7 +107,7 @@ class DaytonaToolkit(BaseToolkit):
         # Inject CI gateway if available
         if self.sandbox_id and "ci_gateway" not in context.metadata:
             try:
-                from ephemeralos.services.code_intelligence.gateway import (
+                from ephemeralos.code_intelligence.routing.gateway import (
                     get_code_intelligence_gateway,
                 )
                 workspace_root = project_dir or "/workspace"

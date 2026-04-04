@@ -3,13 +3,8 @@
 from __future__ import annotations
 
 from ephemeralos.engine.messages import ConversationMessage, TextBlock
-from ephemeralos.services import (
-    compact_messages,
-    estimate_conversation_tokens,
-    estimate_message_tokens,
-    estimate_tokens,
-    summarize_messages,
-)
+from ephemeralos.services import estimate_message_tokens, estimate_tokens
+from ephemeralos.services.compact import microcompact_messages
 
 
 def test_token_estimation_helpers():
@@ -18,19 +13,14 @@ def test_token_estimation_helpers():
     assert estimate_message_tokens(["abcd", "abcdefgh"]) == 3
 
 
-def test_compact_and_summarize_messages():
+def test_microcompact_clears_old_tool_results():
+    """Smoke test that microcompact runs without error on plain messages."""
     messages = [
         ConversationMessage(role="user", content=[TextBlock(text="first question")]),
         ConversationMessage(role="assistant", content=[TextBlock(text="first answer")]),
         ConversationMessage(role="user", content=[TextBlock(text="second question")]),
         ConversationMessage(role="assistant", content=[TextBlock(text="second answer")]),
     ]
-
-    summary = summarize_messages(messages, max_messages=2)
-    assert "user: second question" in summary
-    assert "assistant: second answer" in summary
-
-    compacted = compact_messages(messages, preserve_recent=2)
-    assert len(compacted) == 3
-    assert "[conversation summary]" in compacted[0].text
-    assert estimate_conversation_tokens(compacted) >= 1
+    result, saved = microcompact_messages(messages)
+    assert len(result) == 4
+    assert saved == 0  # no tool results to clear

@@ -11,7 +11,7 @@ import os
 import threading
 from typing import Any, Callable, Awaitable
 
-from ephemeralos.services.sandbox.types import (
+from ephemeralos.sandbox.types import (
     CreateSandboxRequest,
     SandboxHealthResponse,
     SandboxInfo,

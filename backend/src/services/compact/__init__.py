@@ -76,11 +76,6 @@ def estimate_message_tokens(messages: list[ConversationMessage]) -> int:
     return int(total * TOKEN_ESTIMATION_PADDING)
 
 
-def estimate_conversation_tokens(messages: list[ConversationMessage]) -> int:
-    """Alias kept for backward compatibility."""
-    return estimate_message_tokens(messages)
-
-
 # ---------------------------------------------------------------------------
 # Microcompact — clear old tool results to reduce tokens cheaply
 # ---------------------------------------------------------------------------
@@ -430,63 +425,18 @@ async def auto_compact_if_needed(
         return messages, False
 
 
-# ---------------------------------------------------------------------------
-# Legacy compat
-# ---------------------------------------------------------------------------
-
-def summarize_messages(
-    messages: list[ConversationMessage],
-    *,
-    max_messages: int = 8,
-) -> str:
-    """Produce a compact textual summary of recent messages (legacy)."""
-    selected = messages[-max_messages:]
-    lines: list[str] = []
-    for message in selected:
-        text = message.text.strip()
-        if not text:
-            continue
-        lines.append(f"{message.role}: {text[:300]}")
-    return "\n".join(lines)
-
-
-def compact_messages(
-    messages: list[ConversationMessage],
-    *,
-    preserve_recent: int = 6,
-) -> list[ConversationMessage]:
-    """Replace older conversation history with a synthetic summary (legacy)."""
-    if len(messages) <= preserve_recent:
-        return list(messages)
-    older = messages[:-preserve_recent]
-    newer = messages[-preserve_recent:]
-    summary = summarize_messages(older)
-    if not summary:
-        return list(newer)
-    return [
-        ConversationMessage(
-            role="user",
-            content=[TextBlock(text=f"[conversation summary]\n{summary}")],
-        ),
-        *newer,
-    ]
-
-
 __all__ = [
-    "AUTO_COMPACT_BUFFER_TOKENS",
+    "AUTOCOMPACT_BUFFER_TOKENS",
     "AutoCompactState",
     "COMPACTABLE_TOOLS",
     "TIME_BASED_MC_CLEARED_MESSAGE",
     "auto_compact_if_needed",
     "build_compact_summary_message",
     "compact_conversation",
-    "compact_messages",
-    "estimate_conversation_tokens",
     "estimate_message_tokens",
     "format_compact_summary",
     "get_autocompact_threshold",
     "get_compact_prompt",
     "microcompact_messages",
     "should_autocompact",
-    "summarize_messages",
 ]

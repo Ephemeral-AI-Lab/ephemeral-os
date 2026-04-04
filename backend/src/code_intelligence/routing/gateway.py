@@ -12,11 +12,11 @@ import threading
 import time
 from typing import Any
 
-from ephemeralos.services.code_intelligence.service import (
+from ephemeralos.code_intelligence.routing.service import (
     CodeIntelligenceService,
     get_code_intelligence,
 )
-from ephemeralos.services.code_intelligence.types import (
+from ephemeralos.code_intelligence.types import (
     CITelemetry,
     Diagnostic,
     EditRequest,

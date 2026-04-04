@@ -1,12 +1,12 @@
 """Sandbox service — Daytona sandbox lifecycle management."""
 
-from ephemeralos.services.sandbox.types import (
+from ephemeralos.sandbox.types import (
     CreateSandboxRequest,
     SandboxHealthResponse,
     SandboxInfo,
     SandboxState,
 )
-from ephemeralos.services.sandbox.service import SandboxService
+from ephemeralos.sandbox.service import SandboxService
 
 __all__ = [
     "CreateSandboxRequest",

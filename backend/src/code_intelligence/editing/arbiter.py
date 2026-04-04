@@ -17,7 +17,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
-from ephemeralos.services.code_intelligence.constants import (
+from ephemeralos.code_intelligence.constants import (
     ARBITER_LOCK_TIMEOUT,
     ARBITER_MAX_CONCURRENT_EDITS,
 )

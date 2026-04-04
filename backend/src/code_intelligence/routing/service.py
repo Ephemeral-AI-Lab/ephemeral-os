@@ -11,19 +11,19 @@ import logging
 import threading
 from typing import Any
 
-from ephemeralos.services.code_intelligence.arbiter import Arbiter
-from ephemeralos.services.code_intelligence.backend_protocol import (
+from ephemeralos.code_intelligence.editing.arbiter import Arbiter
+from ephemeralos.code_intelligence.routing.backend_protocol import (
     LspBackendAdapter,
     SymbolIndexBackendAdapter,
 )
-from ephemeralos.services.code_intelligence.ledger import Ledger
-from ephemeralos.services.code_intelligence.lsp_client import LspClient
-from ephemeralos.services.code_intelligence.patcher import Patcher
-from ephemeralos.services.code_intelligence.query_router import IntelligenceQueryRouter
-from ephemeralos.services.code_intelligence.symbol_index import SymbolIndex
-from ephemeralos.services.code_intelligence.time_machine import TimeMachine
-from ephemeralos.services.code_intelligence.tree_cache import TreeCache
-from ephemeralos.services.code_intelligence.types import (
+from ephemeralos.code_intelligence.editing.ledger import Ledger
+from ephemeralos.code_intelligence.lsp.client import LspClient
+from ephemeralos.code_intelligence.editing.patcher import Patcher
+from ephemeralos.code_intelligence.routing.query_router import IntelligenceQueryRouter
+from ephemeralos.code_intelligence.analysis.symbol_index import SymbolIndex
+from ephemeralos.code_intelligence.editing.time_machine import TimeMachine
+from ephemeralos.code_intelligence.analysis.tree_cache import TreeCache
+from ephemeralos.code_intelligence.types import (
     CITelemetry,
     Diagnostic,
     EditRequest,
@@ -172,7 +172,7 @@ class CodeIntelligenceService:
             self.time_machine.save(file_path, current)
 
             # Apply edit
-            from ephemeralos.services.code_intelligence.patcher import SearchReplaceEdit
+            from ephemeralos.code_intelligence.editing.patcher import SearchReplaceEdit
             patch_result = self.patcher.apply_edits(
                 current,
                 [SearchReplaceEdit(old_text=request.old_text, new_text=request.new_text)],
