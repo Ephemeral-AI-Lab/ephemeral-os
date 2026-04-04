@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 
 from ephemeralos.config.paths import get_config_dir
-from ephemeralos.config.settings import load_settings
 from ephemeralos.skills.bundled import get_bundled_skills
 from ephemeralos.skills.registry import SkillRegistry
 from ephemeralos.skills.types import SkillDefinition
@@ -25,15 +24,6 @@ def load_skill_registry(cwd: str | Path | None = None) -> SkillRegistry:
         registry.register(skill)
     for skill in load_user_skills():
         registry.register(skill)
-    if cwd is not None:
-        from ephemeralos.plugins.loader import load_plugins
-
-        settings = load_settings()
-        for plugin in load_plugins(settings, cwd):
-            if not plugin.enabled:
-                continue
-            for skill in plugin.skills:
-                registry.register(skill)
     return registry
 
 

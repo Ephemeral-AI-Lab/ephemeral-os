@@ -16,7 +16,6 @@ class AppState:
     auth_status: str = "missing"
     base_url: str = ""
     output_style: str = "default"
-    keybindings: dict[str, str] = field(default_factory=dict)
     fast_mode: bool = False
     effort: str = "medium"
     passes: int = 1

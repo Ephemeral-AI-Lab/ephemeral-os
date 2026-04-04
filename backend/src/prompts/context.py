@@ -6,7 +6,6 @@ from pathlib import Path
 
 from ephemeralos.config.paths import get_project_issue_file, get_project_pr_comments_file
 from ephemeralos.config.settings import Settings
-from ephemeralos.memory import find_relevant_memories, load_memory_prompt
 from ephemeralos.prompts.claudemd import load_claude_md_prompt
 from ephemeralos.prompts.system_prompt import build_system_prompt
 from ephemeralos.skills.loader import load_skill_registry
@@ -68,34 +67,5 @@ def build_runtime_system_prompt(
             content = path.read_text(encoding="utf-8", errors="replace").strip()
             if content:
                 sections.append(f"# {title}\n\n```md\n{content[:12000]}\n```")
-
-    if settings.memory.enabled:
-        memory_section = load_memory_prompt(
-            cwd,
-            max_entrypoint_lines=settings.memory.max_entrypoint_lines,
-        )
-        if memory_section:
-            sections.append(memory_section)
-
-        if latest_user_prompt:
-            relevant = find_relevant_memories(
-                latest_user_prompt,
-                cwd,
-                max_results=settings.memory.max_files,
-            )
-            if relevant:
-                lines = ["# Relevant Memories"]
-                for header in relevant:
-                    content = header.path.read_text(encoding="utf-8", errors="replace").strip()
-                    lines.extend(
-                        [
-                            "",
-                            f"## {header.path.name}",
-                            "```md",
-                            content[:8000],
-                            "```",
-                        ]
-                    )
-                sections.append("\n".join(lines))
 
     return "\n\n".join(section for section in sections if section.strip())

@@ -34,14 +34,6 @@ class DatabaseSettings(BaseModel):
         return bool(self.url)
 
 
-class MemorySettings(BaseModel):
-    """Memory system configuration."""
-
-    enabled: bool = True
-    max_files: int = 5
-    max_entrypoint_lines: int = 200
-
-
 class Settings(BaseModel):
     """Main settings model for EphemeralOS."""
 
@@ -55,8 +47,6 @@ class Settings(BaseModel):
     # Behavior
     system_prompt: str | None = None
     hooks: dict[str, list[HookDefinition]] = Field(default_factory=dict)
-    memory: MemorySettings = Field(default_factory=MemorySettings)
-    enabled_plugins: dict[str, bool] = Field(default_factory=dict)
     mcp_servers: dict[str, McpServerConfig] = Field(default_factory=dict)
 
     # Database

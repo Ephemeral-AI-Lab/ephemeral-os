@@ -56,9 +56,6 @@ class SessionState:
         self.bundle: RuntimeBundle | None = None
         self.busy = False
         self._event_queue: asyncio.Queue[BackendEvent | None] | None = None
-        self._permission_futures: dict[str, asyncio.Future[bool]] = {}
-        self._question_futures: dict[str, asyncio.Future[str]] = {}
-
     async def initialize(self, config: BackendHostConfig) -> None:
         self.bundle = await build_runtime(
             model=config.model,
@@ -68,8 +65,6 @@ class SessionState:
             api_format=config.api_format,
             api_client=config.api_client,
             restore_messages=config.restore_messages,
-            permission_prompt=self._ask_permission,
-            ask_user_prompt=self._ask_question,
         )
         await start_runtime(self.bundle)
 
@@ -84,57 +79,6 @@ class SessionState:
 
     def set_event_queue(self, queue: asyncio.Queue[BackendEvent | None] | None) -> None:
         self._event_queue = queue
-
-    async def _ask_permission(self, tool_name: str, reason: str) -> bool:
-        request_id = uuid4().hex
-        future: asyncio.Future[bool] = asyncio.get_running_loop().create_future()
-        self._permission_futures[request_id] = future
-        await self.emit(
-            BackendEvent(
-                type="modal_request",
-                modal={
-                    "kind": "permission",
-                    "request_id": request_id,
-                    "tool_name": tool_name,
-                    "reason": reason,
-                },
-            )
-        )
-        try:
-            return await future
-        finally:
-            self._permission_futures.pop(request_id, None)
-
-    async def _ask_question(self, question: str) -> str:
-        request_id = uuid4().hex
-        future: asyncio.Future[str] = asyncio.get_running_loop().create_future()
-        self._question_futures[request_id] = future
-        await self.emit(
-            BackendEvent(
-                type="modal_request",
-                modal={
-                    "kind": "question",
-                    "request_id": request_id,
-                    "question": question,
-                },
-            )
-        )
-        try:
-            return await future
-        finally:
-            self._question_futures.pop(request_id, None)
-
-    def resolve_permission(self, request_id: str, allowed: bool) -> bool:
-        if request_id in self._permission_futures:
-            self._permission_futures[request_id].set_result(allowed)
-            return True
-        return False
-
-    def resolve_question(self, request_id: str, answer: str) -> bool:
-        if request_id in self._question_futures:
-            self._question_futures[request_id].set_result(answer)
-            return True
-        return False
 
     def status_snapshot(self) -> BackendEvent:
         assert self.bundle is not None

@@ -563,7 +563,7 @@ _BUILTIN_AGENTS: list[AgentDefinition] = [
             "moderate exploration, or \"very thorough\" for comprehensive analysis across "
             "multiple locations and naming conventions."
         ),
-        disallowed_tools=["agent", "exit_plan_mode", "file_edit", "file_write", "notebook_edit"],
+        disallowed_tools=["agent", "file_edit", "file_write", "notebook_edit"],
         system_prompt=_EXPLORE_SYSTEM_PROMPT,
         model="haiku",
         omit_claude_md=True,
@@ -578,7 +578,7 @@ _BUILTIN_AGENTS: list[AgentDefinition] = [
             "need to plan the implementation strategy for a task. Returns step-by-step plans, "
             "identifies critical files, and considers architectural trade-offs."
         ),
-        disallowed_tools=["agent", "exit_plan_mode", "file_edit", "file_write", "notebook_edit"],
+        disallowed_tools=["agent", "file_edit", "file_write", "notebook_edit"],
         system_prompt=_PLAN_SYSTEM_PROMPT,
         model="inherit",
         omit_claude_md=True,
@@ -607,7 +607,7 @@ _BUILTIN_AGENTS: list[AgentDefinition] = [
             "changed, and approach taken. The agent runs builds, tests, linters, and checks "
             "to produce a PASS/FAIL/PARTIAL verdict with evidence."
         ),
-        disallowed_tools=["agent", "exit_plan_mode", "file_edit", "file_write", "notebook_edit"],
+        disallowed_tools=["agent", "file_edit", "file_write", "notebook_edit"],
         system_prompt=_VERIFICATION_SYSTEM_PROMPT,
         critical_system_reminder=_VERIFICATION_CRITICAL_REMINDER,
         color="red",
@@ -960,23 +960,6 @@ def get_all_agent_definitions() -> list[AgentDefinition]:
     for agent in user_agents:
         agent_map[agent.name] = agent
 
-    # 3. Plugin agents — loaded lazily to avoid import cycles
-    try:
-        from ephemeralos.plugins.loader import load_plugins  # noqa: PLC0415
-        from ephemeralos.config.settings import load_settings  # noqa: PLC0415
-
-        settings = load_settings()
-        import os  # noqa: PLC0415
-
-        cwd = os.getcwd()
-        for plugin in load_plugins(settings, cwd):
-            if not plugin.enabled:
-                continue
-            for agent_def in getattr(plugin, "agents", []):
-                if isinstance(agent_def, AgentDefinition):
-                    agent_map[agent_def.name] = agent_def
-    except Exception:
-        pass
 
     return list(agent_map.values())
 

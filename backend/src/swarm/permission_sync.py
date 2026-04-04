@@ -1109,7 +1109,7 @@ async def handle_permission_request(
 
     Args:
         request: The incoming permission request from a worker.
-        checker: An already-configured :class:`~ephemeralos.permissions.checker.PermissionChecker`.
+        checker: The permission checker instance.
 
     Returns:
         A :class:`SwarmPermissionResponse` with the decision.

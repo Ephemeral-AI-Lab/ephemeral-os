@@ -10,7 +10,6 @@ from ephemeralos.api.client import AnthropicApiClient, SupportsStreamingMessages
 from ephemeralos.api.openai_client import OpenAICompatibleClient
 from ephemeralos.api.provider import auth_status, detect_provider
 from ephemeralos.bridge import get_bridge_manager
-from ephemeralos.commands import CommandContext, CommandResult, create_default_command_registry
 from ephemeralos.config import get_config_file_path, load_settings
 from ephemeralos.engine import QueryEngine
 from ephemeralos.engine.messages import ConversationMessage
@@ -19,7 +18,6 @@ from ephemeralos.hooks import HookEvent, HookExecutionContext, HookExecutor, loa
 from ephemeralos.hooks.hot_reload import HookReloader
 from ephemeralos.mcp.client import McpClientManager
 from ephemeralos.mcp.config import load_mcp_server_configs
-from ephemeralos.plugins import load_plugins
 from ephemeralos.prompts import build_runtime_system_prompt
 from ephemeralos.state import AppState, AppStateStore
 from ephemeralos.services.session_storage import save_session_snapshot
@@ -41,7 +39,6 @@ class RuntimeBundle:
     app_state: AppStateStore
     hook_executor: HookExecutor
     engine: QueryEngine
-    commands: object
     external_api_client: bool
     session_id: str = ""
 
@@ -49,24 +46,9 @@ class RuntimeBundle:
         """Return the latest persisted settings."""
         return load_settings()
 
-    def current_plugins(self):
-        """Return currently visible plugins for the working tree."""
-        return load_plugins(self.current_settings(), self.cwd)
-
     def hook_summary(self) -> str:
         """Return the current hook summary."""
-        return load_hook_registry(self.current_settings(), self.current_plugins()).summary()
-
-    def plugin_summary(self) -> str:
-        """Return the current plugin summary."""
-        plugins = self.current_plugins()
-        if not plugins:
-            return "No plugins discovered."
-        lines = ["Plugins:"]
-        for plugin in plugins:
-            state = "enabled" if plugin.enabled else "disabled"
-            lines.append(f"- {plugin.manifest.name} [{state}] {plugin.manifest.description}")
-        return "\n".join(lines)
+        return load_hook_registry(self.current_settings(), []).summary()
 
     def mcp_summary(self) -> str:
         """Return the current MCP summary."""
@@ -104,7 +86,6 @@ async def build_runtime(
         api_format=api_format,
     )
     cwd = str(Path.cwd())
-    plugins = load_plugins(settings, cwd)
     if api_client:
         resolved_api_client = api_client
     elif settings.api_format == "openai":
@@ -117,7 +98,7 @@ async def build_runtime(
             api_key=settings.resolve_api_key(),
             base_url=settings.base_url,
         )
-    mcp_manager = McpClientManager(load_mcp_server_configs(settings, plugins))
+    mcp_manager = McpClientManager(load_mcp_server_configs(settings))
     await mcp_manager.connect_all()
     tool_registry = create_default_tool_registry(mcp_manager)
     provider = detect_provider(settings)
@@ -140,7 +121,7 @@ async def build_runtime(
     )
     hook_reloader = HookReloader(get_config_file_path())
     hook_executor = HookExecutor(
-        hook_reloader.current_registry() if api_client is None else load_hook_registry(settings, plugins),
+        hook_reloader.current_registry() if api_client is None else load_hook_registry(settings, []),
         HookExecutionContext(
             cwd=Path(cwd).resolve(),
             api_client=resolved_api_client,
@@ -174,7 +155,6 @@ async def build_runtime(
         app_state=app_state,
         hook_executor=hook_executor,
         engine=engine,
-        commands=create_default_command_registry(),
         external_api_client=api_client is not None,
         session_id=uuid4().hex[:12],
     )
@@ -228,27 +208,8 @@ async def handle_line(
     """Handle one submitted line for either headless or TUI rendering."""
     if not bundle.external_api_client:
         bundle.hook_executor.update_registry(
-            load_hook_registry(bundle.current_settings(), bundle.current_plugins())
+            load_hook_registry(bundle.current_settings(), [])
         )
-
-    parsed = bundle.commands.lookup(line)
-    if parsed is not None:
-        command, args = parsed
-        result = await command.handler(
-            args,
-            CommandContext(
-                engine=bundle.engine,
-                hooks_summary=bundle.hook_summary(),
-                mcp_summary=bundle.mcp_summary(),
-                plugin_summary=bundle.plugin_summary(),
-                cwd=bundle.cwd,
-                tool_registry=bundle.tool_registry,
-                app_state=bundle.app_state,
-            ),
-        )
-        await _render_command_result(result, print_system, clear_output, render_event)
-        sync_app_state(bundle)
-        return not result.should_exit
 
     settings = bundle.current_settings()
     bundle.engine.set_system_prompt(
@@ -268,26 +229,3 @@ async def handle_line(
     return True
 
 
-async def _render_command_result(
-    result: CommandResult,
-    print_system: SystemPrinter,
-    clear_output: ClearHandler,
-    render_event: StreamRenderer | None = None,
-) -> None:
-    if result.clear_screen:
-        await clear_output()
-    if result.replay_messages and render_event is not None:
-        # Replay restored conversation messages as transcript events
-        from ephemeralos.engine.stream_events import AssistantTextDelta, AssistantTurnComplete
-        from ephemeralos.api.usage import UsageSnapshot
-
-        await clear_output()
-        await print_system("Session restored:")
-        for msg in result.replay_messages:
-            if msg.role == "user":
-                await print_system(f"> {msg.text}")
-            elif msg.role == "assistant" and msg.text.strip():
-                await render_event(AssistantTextDelta(text=msg.text))
-                await render_event(AssistantTurnComplete(message=msg, usage=UsageSnapshot()))
-    if result.message and not result.replay_messages:
-        await print_system(result.message)

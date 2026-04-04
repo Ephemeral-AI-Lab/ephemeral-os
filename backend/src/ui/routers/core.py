@@ -44,15 +44,6 @@ class ConfigRequest(BaseModel):
     api_format: str | None = None
 
 
-class PermissionResponse(BaseModel):
-    request_id: str
-    allowed: bool
-
-
-class QuestionResponse(BaseModel):
-    request_id: str
-    answer: str
-
 
 # ---------------------------------------------------------------------------
 # Router factory — receives get_session callable from web_server
@@ -242,18 +233,6 @@ def create_core_router(get_session: callable) -> APIRouter:
             "auth_status": state.auth_status,
             "base_url": state.base_url,
         })
-
-    @router.post("/permission")
-    async def respond_permission(req: PermissionResponse):
-        session = get_session()
-        resolved = session.resolve_permission(req.request_id, req.allowed)
-        return JSONResponse(content={"resolved": resolved})
-
-    @router.post("/question")
-    async def respond_question(req: QuestionResponse):
-        session = get_session()
-        resolved = session.resolve_question(req.request_id, req.answer)
-        return JSONResponse(content={"resolved": resolved})
 
     @router.get("/sessions")
     async def list_sessions():
