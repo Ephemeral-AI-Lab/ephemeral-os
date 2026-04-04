@@ -1,7 +1,7 @@
 """FastAPI-based web server for the EphemeralOS web frontend.
 
 Thin app factory that assembles routers and manages the session lifecycle.
-Route implementations live in ``ephemeralos.ui.routers.*``.
+Route implementations live in ``ephemeralos.server.routers.*``.
 """
 
 from __future__ import annotations
@@ -26,17 +26,17 @@ load_dotenv()
 from ephemeralos.config import load_settings
 from ephemeralos.db.engine import initialize_db
 from ephemeralos.db.stores import AgentDefinitionStore, AgentRunStore, ModelStore, SessionStore, UsageStore
-from ephemeralos.ui.protocol import BackendEvent, BackendHostConfig, ToolkitSnapshot
-from ephemeralos.ui.runtime import (
+from ephemeralos.server.protocol import BackendEvent, BackendHostConfig, ToolkitSnapshot
+from ephemeralos.server.runtime import (
     RuntimeBundle,
     build_runtime,
     close_runtime,
     start_runtime,
 )
-from ephemeralos.ui.routers.agents import create_agents_router
-from ephemeralos.ui.routers.core import create_core_router
-from ephemeralos.ui.routers.persistence import create_persistence_router
-from ephemeralos.ui.routers.sandboxes import create_sandbox_router
+from ephemeralos.server.routers.agents import create_agents_router
+from ephemeralos.server.routers.core import create_core_router
+from ephemeralos.server.routers.persistence import create_persistence_router
+from ephemeralos.server.routers.sandboxes import create_sandbox_router
 
 logger = logging.getLogger(__name__)
 

@@ -11,11 +11,11 @@ from ephemeralos.coordinator.agent_definitions import (
     MEMORY_SCOPES,
     PERMISSION_MODES,
 )
-from ephemeralos.ui.schemas.agent_schemas import AgentValidationResult
+from ephemeralos.server.schemas.agent_schemas import AgentValidationResult
 
 if TYPE_CHECKING:
     from ephemeralos.tools.base import ToolRegistry
-    from ephemeralos.ui.schemas.agent_schemas import AgentDefinitionCreate, AgentDefinitionUpdate
+    from ephemeralos.server.schemas.agent_schemas import AgentDefinitionCreate, AgentDefinitionUpdate
 
 logger = logging.getLogger(__name__)
 

@@ -12,7 +12,7 @@ from ephemeralos.coordinator.agent_definitions import (
     get_definition,
     list_definitions,
 )
-from ephemeralos.ui.schemas.agent_schemas import (
+from ephemeralos.server.schemas.agent_schemas import (
     AgentDefinitionCreate,
     AgentDefinitionResponse,
     AgentDefinitionUpdate,
@@ -49,6 +49,7 @@ def create_agents_router(
 
     # -- read endpoints (always available) -------------------------------------
 
+    @router.get("")
     @router.get("/")
     async def list_agents(
         source: str | None = Query(default=None, description="Filter by source: builtin, user"),

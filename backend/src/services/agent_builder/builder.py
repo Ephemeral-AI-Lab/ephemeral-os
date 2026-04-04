@@ -10,7 +10,7 @@ from ephemeralos.coordinator.agent_definitions import AgentDefinition
 from ephemeralos.db.models.agent_definition import AgentDefinitionRecord
 from ephemeralos.db.stores.agent_definition_store import AgentDefinitionStore
 from ephemeralos.services.agent_builder.validation import AgentDefinitionValidator
-from ephemeralos.ui.schemas.agent_schemas import (
+from ephemeralos.server.schemas.agent_schemas import (
     AgentDefinitionCreate,
     AgentDefinitionResponse,
     AgentDefinitionUpdate,

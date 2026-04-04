@@ -22,11 +22,11 @@ from ephemeralos.engine.stream_events import (
     ToolExecutionStarted,
 )
 from ephemeralos.tasks import get_task_manager
-from ephemeralos.ui.protocol import BackendEvent, TranscriptItem
-from ephemeralos.ui.runtime import handle_line
+from ephemeralos.server.protocol import BackendEvent, TranscriptItem
+from ephemeralos.server.runtime import handle_line
 
 if TYPE_CHECKING:
-    from ephemeralos.ui.web_server import SessionState
+    from ephemeralos.server.app_factory import SessionState
 
 # ---------------------------------------------------------------------------
 # Request models

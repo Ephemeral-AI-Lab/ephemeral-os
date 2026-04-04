@@ -2,6 +2,6 @@
 
 import asyncio
 
-from ephemeralos.ui.app import run_web
+from ephemeralos.server.entrypoint import run_web
 
 asyncio.run(run_web(open_browser=False))

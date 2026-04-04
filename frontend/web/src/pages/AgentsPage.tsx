@@ -83,16 +83,27 @@ const COLOR_CLASSES: Record<string, string> = {
 
 const API = '/api/agents'
 
+async function parseJsonResponse<T>(res: Response): Promise<T> {
+  const text = await res.text()
+  try {
+    return JSON.parse(text)
+  } catch {
+    throw new Error(res.ok ? 'Backend returned non-JSON response — is the API server running?' : `${res.status}: ${text.slice(0, 100)}`)
+  }
+}
+
 async function fetchAgents(): Promise<AgentSummary[]> {
   const res = await fetch(API)
-  if (!res.ok) throw new Error((await res.json()).detail ?? res.statusText)
-  return res.json()
+  const data = await parseJsonResponse<AgentSummary[] | { detail: string }>(res)
+  if (!res.ok) throw new Error((data as { detail: string }).detail ?? res.statusText)
+  return data as AgentSummary[]
 }
 
 async function fetchAgent(name: string): Promise<AgentDetail> {
   const res = await fetch(`${API}/${encodeURIComponent(name)}`)
-  if (!res.ok) throw new Error((await res.json()).detail ?? res.statusText)
-  return res.json()
+  const data = await parseJsonResponse<AgentDetail | { detail: string }>(res)
+  if (!res.ok) throw new Error((data as { detail: string }).detail ?? res.statusText)
+  return data as AgentDetail
 }
 
 async function createAgent(data: Record<string, unknown>): Promise<AgentDetail> {

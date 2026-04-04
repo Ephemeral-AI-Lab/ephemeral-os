@@ -7,7 +7,7 @@ from typing import Any
 
 from ephemeralos.tools.base import BaseToolkit
 
-from ephemeralos.toolkits.integrations.daytona_toolkit.tools import (
+from ephemeralos.toolkits.daytona_toolkit.tools import (
     DaytonaBashTool,
     DaytonaFileReadTool,
     DaytonaFileWriteTool,
@@ -60,7 +60,7 @@ class DaytonaToolkit(BaseToolkit):
                 "No sandbox_id configured. Pass sandbox_id to DaytonaToolkit() "
                 "or set it via toolkit.sandbox_id = '...'."
             )
-        from ephemeralos.toolkits.integrations.daytona_toolkit.client import get_sandbox
+        from ephemeralos.toolkits.daytona_toolkit.client import get_sandbox
 
         self._sandbox = get_sandbox(self.sandbox_id)
         logger.info("Daytona sandbox fetched: %s", self.sandbox_id)

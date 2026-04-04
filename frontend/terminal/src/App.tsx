@@ -6,7 +6,6 @@ import {ConversationView} from './components/ConversationView.js';
 import {ModalHost} from './components/ModalHost.js';
 import {PromptInput} from './components/PromptInput.js';
 import {SelectModal, type SelectOption} from './components/SelectModal.js';
-import {StatusBar} from './components/StatusBar.js';
 import {useBackendSession} from './hooks/useBackendSession.js';
 import type {FrontendConfig} from './types.js';
 
@@ -364,9 +363,6 @@ export function App({config}: {config: FrontendConfig}): React.JSX.Element {
 			{showPicker ? (
 				<CommandPicker hints={commandHints} selectedIndex={pickerIndex} />
 			) : null}
-
-			{/* Status bar */}
-			<StatusBar status={session.status} tasks={session.tasks} />
 
 			{/* Input */}
 			{session.modal || selectModal ? null : (
