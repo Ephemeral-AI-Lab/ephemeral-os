@@ -16,7 +16,8 @@ from ephemeralos.engine.stream_events import StreamEvent
 from ephemeralos.hooks import HookEvent, HookExecutionContext, HookExecutor, load_hook_registry
 from ephemeralos.prompts import build_runtime_system_prompt
 from ephemeralos.services.session_storage import save_session_snapshot
-from ephemeralos.tools import ToolRegistry, create_default_tool_registry
+from ephemeralos.tools import ToolRegistry
+from ephemeralos.tools import create_default_tool_registry
 
 SystemPrinter = Callable[[str], Awaitable[None]]
 StreamRenderer = Callable[[StreamEvent], Awaitable[None]]

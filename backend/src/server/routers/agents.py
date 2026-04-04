@@ -8,11 +8,8 @@ from typing import TYPE_CHECKING, Any, Callable
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import JSONResponse
 
-from ephemeralos.coordinator.agent_definitions import (
-    get_definition,
-    list_definitions,
-)
-from ephemeralos.server.schemas.agent_schemas import (
+from ephemeralos.agents import get_definition, list_definitions
+from ephemeralos.agents.api.schemas import (
     AgentDefinitionCreate,
     AgentDefinitionResponse,
     AgentDefinitionUpdate,
@@ -89,7 +86,7 @@ def create_agents_router(
     @router.get("/toolkits/available")
     async def list_available_toolkits() -> list[str]:
         """List all registered toolkit factory names."""
-        from ephemeralos.toolkits.factory import list_factories  # noqa: PLC0415
+        from ephemeralos.tools.factory import list_factories  # noqa: PLC0415
 
         return list_factories()
 

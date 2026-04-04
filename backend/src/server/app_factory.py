@@ -15,7 +15,7 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 if TYPE_CHECKING:
-    from ephemeralos.services.agent_builder.builder import AgentBuilderService
+    from ephemeralos.agents.builder.service import AgentBuilderService
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -116,7 +116,7 @@ def create_app(config: BackendHostConfig) -> FastAPI:
         await _session.initialize(config)
 
         # Register built-in agent definitions into the runtime registry
-        from ephemeralos.coordinator.agent_definitions import initialize_builtin_definitions
+        from ephemeralos.agents import initialize_builtin_definitions
 
         initialize_builtin_definitions()
 
@@ -134,7 +134,7 @@ def create_app(config: BackendHostConfig) -> FastAPI:
             model_store.seed_from_json(str(registry_path))
 
             # Bootstrap agent builder service and load DB agents
-            from ephemeralos.services.agent_builder import (
+            from ephemeralos.agents.builder import (
                 AgentBuilderService,
                 AgentDefinitionValidator,
             )

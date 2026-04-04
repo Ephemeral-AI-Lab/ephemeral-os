@@ -62,9 +62,32 @@ def create_core_router(get_session: callable) -> APIRouter:
     async def get_state():
         session = get_session()
         assert session.bundle is not None
+        settings = session.bundle.current_settings()
+        app_state = {
+            "model": settings.model,
+            "cwd": session.bundle.cwd,
+            "provider": settings.api_format,
+            "auth_status": "authorized",
+            "base_url": settings.base_url or "",
+            "permission_mode": "auto",
+            "theme": settings.theme,
+            "vim_enabled": False,
+            "voice_enabled": False,
+            "voice_available": False,
+            "voice_reason": "",
+            "fast_mode": settings.fast_mode,
+            "effort": settings.effort,
+            "passes": settings.passes,
+            "mcp_connected": 0,
+            "mcp_failed": 0,
+            "bridge_sessions": 0,
+            "output_style": "verbose" if settings.verbose else "normal",
+            "keybindings": {},
+        }
         ready = BackendEvent.ready(
             get_task_manager().list_tasks(),
             toolkits=session._toolkit_snapshots(),
+            state=app_state,
         )
         return JSONResponse(content=json.loads(ready.model_dump_json()))
 

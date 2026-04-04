@@ -5,10 +5,12 @@ dev: backend frontend
 
 # Start the FastAPI backend on port 8420
 backend:
+	-lsof -ti:8420 | xargs kill -9 2>/dev/null || true
 	.venv/bin/python -m ephemeralos &
 
 # Start the Vite dev server on port 5173 (proxies /api to backend)
 frontend:
+	-lsof -ti:5173 | xargs kill -9 2>/dev/null || true
 	cd frontend/web && npm run dev
 
 # Install all dependencies

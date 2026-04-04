@@ -102,11 +102,13 @@ class BackendEvent(BaseModel):
         cls,
         tasks: list[TaskRecord],
         toolkits: list[ToolkitSnapshot] | None = None,
+        state: dict[str, Any] | None = None,
     ) -> "BackendEvent":
         return cls(
             type="ready",
             tasks=[TaskSnapshot.from_record(task) for task in tasks],
             toolkits=toolkits or [],
+            state=state,
         )
 
     @classmethod

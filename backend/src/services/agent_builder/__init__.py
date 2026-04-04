@@ -1,6 +1,5 @@
-"""Agent builder service — DB-backed agent definition CRUD and runtime registration."""
+"""Backward compatibility shim — builder now lives in ephemeralos.agents.builder."""
 
-from ephemeralos.services.agent_builder.builder import AgentBuilderService
-from ephemeralos.services.agent_builder.validation import AgentDefinitionValidator
+from ephemeralos.agents.builder import AgentBuilderService, AgentDefinitionValidator  # noqa: F401
 
 __all__ = ["AgentBuilderService", "AgentDefinitionValidator"]

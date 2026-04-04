@@ -1,4 +1,4 @@
-"""Built-in tool registration."""
+"""Toolkit definitions — grouped by capability."""
 
 from ephemeralos.tools.base import (
     BaseTool,
@@ -7,22 +7,23 @@ from ephemeralos.tools.base import (
     ToolRegistry,
     ToolResult,
 )
+from ephemeralos.tools.filesystem import FilesystemToolkit
+from ephemeralos.tools.execution import ExecutionToolkit
+from ephemeralos.tools.web import WebToolkit
+from ephemeralos.tools.task_management import TaskManagementToolkit
+from ephemeralos.tools.scheduling import SchedulingToolkit
+from ephemeralos.tools.worktree import WorktreeToolkit
+from ephemeralos.tools.planning import PlanningToolkit
+from ephemeralos.tools.collaboration import CollaborationToolkit
+from ephemeralos.tools.code_analysis import CodeAnalysisToolkit
+from ephemeralos.tools.discovery import DiscoveryToolkit
+from ephemeralos.tools.system import SystemToolkit
+from ephemeralos.tools.daytona_toolkit import DaytonaToolkit
+
 
 
 def create_default_tool_registry() -> ToolRegistry:
     """Return the default built-in tool registry."""
-    from ephemeralos.toolkits import (
-        CollaborationToolkit,
-        ExecutionToolkit,
-        FilesystemToolkit,
-        PlanningToolkit,
-        SchedulingToolkit,
-        SystemToolkit,
-        TaskManagementToolkit,
-        WebToolkit,
-        WorktreeToolkit,
-    )
-
     registry = ToolRegistry()
     for toolkit in (
         FilesystemToolkit(),
@@ -33,18 +34,31 @@ def create_default_tool_registry() -> ToolRegistry:
         WorktreeToolkit(),
         PlanningToolkit(),
         CollaborationToolkit(),
+        CodeAnalysisToolkit(),
+        DiscoveryToolkit(),
         SystemToolkit(),
     ):
         registry.register_toolkit(toolkit)
-
     return registry
 
 
 __all__ = [
+    "create_default_tool_registry",
     "BaseTool",
     "BaseToolkit",
     "ToolExecutionContext",
     "ToolRegistry",
     "ToolResult",
-    "create_default_tool_registry",
+    "FilesystemToolkit",
+    "ExecutionToolkit",
+    "WebToolkit",
+    "TaskManagementToolkit",
+    "SchedulingToolkit",
+    "WorktreeToolkit",
+    "PlanningToolkit",
+    "CollaborationToolkit",
+    "CodeAnalysisToolkit",
+    "DiscoveryToolkit",
+    "SystemToolkit",
+    "DaytonaToolkit",
 ]
