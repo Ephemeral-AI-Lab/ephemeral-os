@@ -27,7 +27,6 @@ class ToolkitContext:
     agent_name: str = ""
     cwd: str = ""
     metadata: dict[str, Any] = field(default_factory=dict)
-    mcp_manager: Any = None
 
 
 def register_toolkit_factory(name: str, factory: ToolkitFactoryFn) -> None:
@@ -68,18 +67,12 @@ def has_factory(name: str) -> bool:
 def _register_builtins() -> None:
     """Register factories for toolkits that need runtime context."""
 
-    def _create_mcp(ctx: ToolkitContext) -> BaseToolkit:
-        from ephemeralos.toolkits.integrations.mcp_toolkit import McpToolkit
-
-        return McpToolkit(mcp_manager=ctx.mcp_manager)
-
     def _create_daytona(ctx: ToolkitContext) -> BaseToolkit:
         from ephemeralos.toolkits.integrations.daytona_toolkit import DaytonaToolkit
 
         sandbox_id = ctx.metadata.get("sandbox_id", "")
         return DaytonaToolkit(sandbox_id=sandbox_id or None)
 
-    register_toolkit_factory("mcp", _create_mcp)
     register_toolkit_factory("daytona", _create_daytona)
 
 

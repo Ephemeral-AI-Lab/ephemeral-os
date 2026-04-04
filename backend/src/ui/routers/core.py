@@ -23,7 +23,7 @@ from ephemeralos.engine.stream_events import (
 )
 from ephemeralos.tasks import get_task_manager
 from ephemeralos.ui.protocol import BackendEvent, TranscriptItem
-from ephemeralos.ui.runtime import handle_line, sync_app_state
+from ephemeralos.ui.runtime import handle_line
 
 if TYPE_CHECKING:
     from ephemeralos.ui.web_server import SessionState
@@ -63,9 +63,7 @@ def create_core_router(get_session: callable) -> APIRouter:
         session = get_session()
         assert session.bundle is not None
         ready = BackendEvent.ready(
-            session.bundle.app_state.get(),
             get_task_manager().list_tasks(),
-            [f"/{cmd.name}" for cmd in session.bundle.commands.list_commands()],
             toolkits=session._toolkit_snapshots(),
         )
         return JSONResponse(content=json.loads(ready.model_dump_json()))
@@ -144,7 +142,6 @@ def create_core_router(get_session: callable) -> APIRouter:
                             )
                         )
                         await session.emit(BackendEvent.tasks_snapshot(get_task_manager().list_tasks()))
-                        await session.emit(session.status_snapshot())
 
                 async def _clear_output() -> None:
                     await session.emit(BackendEvent(type="clear_transcript"))
@@ -156,7 +153,6 @@ def create_core_router(get_session: callable) -> APIRouter:
                     render_event=_render_event,
                     clear_output=_clear_output,
                 )
-                await session.emit(session.status_snapshot())
                 await session.emit(BackendEvent.tasks_snapshot(get_task_manager().list_tasks()))
                 await session.emit(BackendEvent(type="line_complete"))
             except Exception as exc:
@@ -223,15 +219,14 @@ def create_core_router(get_session: callable) -> APIRouter:
         session.bundle.api_client = new_client
         session.bundle.engine._api_client = new_client
         session.bundle.engine.set_model(settings.model)
-        sync_app_state(session.bundle)
 
-        state = session.bundle.app_state.get()
+        provider = detect_provider(settings)
         return JSONResponse(content={
             "changed": True,
-            "model": state.model,
-            "provider": state.provider,
-            "auth_status": state.auth_status,
-            "base_url": state.base_url,
+            "model": settings.model,
+            "provider": provider.name,
+            "auth_status": auth_status(settings),
+            "base_url": settings.base_url or "",
         })
 
     @router.get("/sessions")

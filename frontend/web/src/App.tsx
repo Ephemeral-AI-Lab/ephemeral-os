@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router'
 import { HarnessProvider } from './providers/HarnessProvider'
 import Layout from './components/layout/Layout'
+import AgentsPage from './pages/AgentsPage'
 import DashboardPage from './pages/DashboardPage'
 import ConversationPage from './pages/ConversationPage'
 import SandboxesPage from './pages/SandboxesPage'
@@ -15,6 +16,7 @@ export default function App() {
           <Route index element={<Navigate to="/conversation" replace />} />
           <Route path="conversation" element={<ConversationPage />} />
           <Route path="dashboard" element={<DashboardPage />} />
+          <Route path="agents" element={<AgentsPage />} />
           <Route path="sandboxes" element={<SandboxesPage />} />
           <Route path="settings" element={<SettingsPage />} />
           <Route path="tasks/:taskId" element={<TaskDetailPage />} />

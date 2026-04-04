@@ -11,7 +11,6 @@ from ephemeralos.coordinator.agent_definitions import (
     MEMORY_SCOPES,
     PERMISSION_MODES,
 )
-from ephemeralos.toolkits.factory import has_factory
 from ephemeralos.ui.schemas.agent_schemas import AgentValidationResult
 
 if TYPE_CHECKING:
@@ -44,6 +43,8 @@ class AgentDefinitionValidator:
         # Check toolkit names have registered factories
         toolkits = getattr(defn, "toolkits", None)
         if toolkits:
+            from ephemeralos.toolkits.factory import has_factory  # noqa: PLC0415
+
             for tk in toolkits:
                 if not has_factory(tk):
                     errors.append(f"Unknown toolkit factory: {tk}")

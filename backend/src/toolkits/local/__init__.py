@@ -9,7 +9,5 @@ __all__ = [
     "WorktreeToolkit",
     "PlanningToolkit",
     "CollaborationToolkit",
-    "CodeAnalysisToolkit",
-    "DiscoveryToolkit",
     "SystemToolkit",
 ]

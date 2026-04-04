@@ -17,7 +17,6 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from ephemeralos.hooks.schemas import HookDefinition
-from ephemeralos.mcp.types import McpServerConfig
 
 
 class DatabaseSettings(BaseModel):
@@ -47,7 +46,6 @@ class Settings(BaseModel):
     # Behavior
     system_prompt: str | None = None
     hooks: dict[str, list[HookDefinition]] = Field(default_factory=dict)
-    mcp_servers: dict[str, McpServerConfig] = Field(default_factory=dict)
 
     # Database
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)

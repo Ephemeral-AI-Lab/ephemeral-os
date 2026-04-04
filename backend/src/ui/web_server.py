@@ -23,7 +23,6 @@ from fastapi.responses import FileResponse, JSONResponse
 
 load_dotenv()
 
-from ephemeralos.bridge import get_bridge_manager
 from ephemeralos.config import load_settings
 from ephemeralos.db.engine import initialize_db
 from ephemeralos.db.stores import AgentDefinitionStore, AgentRunStore, ModelStore, SessionStore, UsageStore
@@ -79,15 +78,6 @@ class SessionState:
 
     def set_event_queue(self, queue: asyncio.Queue[BackendEvent | None] | None) -> None:
         self._event_queue = queue
-
-    def status_snapshot(self) -> BackendEvent:
-        assert self.bundle is not None
-        return BackendEvent.status_snapshot(
-            state=self.bundle.app_state.get(),
-            mcp_servers=self.bundle.mcp_manager.list_statuses(),
-            bridge_sessions=get_bridge_manager().list_sessions(),
-            toolkits=self._toolkit_snapshots(),
-        )
 
     def _toolkit_snapshots(self) -> list[ToolkitSnapshot]:
         assert self.bundle is not None

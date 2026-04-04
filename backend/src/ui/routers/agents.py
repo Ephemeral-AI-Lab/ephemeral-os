@@ -12,7 +12,6 @@ from ephemeralos.coordinator.agent_definitions import (
     get_definition,
     list_definitions,
 )
-from ephemeralos.toolkits.factory import list_factories
 from ephemeralos.ui.schemas.agent_schemas import (
     AgentDefinitionCreate,
     AgentDefinitionResponse,
@@ -89,6 +88,8 @@ def create_agents_router(
     @router.get("/toolkits/available")
     async def list_available_toolkits() -> list[str]:
         """List all registered toolkit factory names."""
+        from ephemeralos.toolkits.factory import list_factories  # noqa: PLC0415
+
         return list_factories()
 
     @router.get("/{name}")

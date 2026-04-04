@@ -9,17 +9,12 @@ from typing import Awaitable, Callable
 from ephemeralos.api.client import AnthropicApiClient, SupportsStreamingMessages
 from ephemeralos.api.openai_client import OpenAICompatibleClient
 from ephemeralos.api.provider import auth_status, detect_provider
-from ephemeralos.bridge import get_bridge_manager
-from ephemeralos.config import get_config_file_path, load_settings
+from ephemeralos.config import load_settings
 from ephemeralos.engine import QueryEngine
 from ephemeralos.engine.messages import ConversationMessage
 from ephemeralos.engine.stream_events import StreamEvent
 from ephemeralos.hooks import HookEvent, HookExecutionContext, HookExecutor, load_hook_registry
-from ephemeralos.hooks.hot_reload import HookReloader
-from ephemeralos.mcp.client import McpClientManager
-from ephemeralos.mcp.config import load_mcp_server_configs
 from ephemeralos.prompts import build_runtime_system_prompt
-from ephemeralos.state import AppState, AppStateStore
 from ephemeralos.services.session_storage import save_session_snapshot
 from ephemeralos.tools import ToolRegistry, create_default_tool_registry
 
@@ -34,9 +29,7 @@ class RuntimeBundle:
 
     api_client: SupportsStreamingMessages
     cwd: str
-    mcp_manager: McpClientManager
     tool_registry: ToolRegistry
-    app_state: AppStateStore
     hook_executor: HookExecutor
     engine: QueryEngine
     external_api_client: bool
@@ -45,25 +38,6 @@ class RuntimeBundle:
     def current_settings(self):
         """Return the latest persisted settings."""
         return load_settings()
-
-    def hook_summary(self) -> str:
-        """Return the current hook summary."""
-        return load_hook_registry(self.current_settings(), []).summary()
-
-    def mcp_summary(self) -> str:
-        """Return the current MCP summary."""
-        statuses = self.mcp_manager.list_statuses()
-        if not statuses:
-            return "No MCP servers configured."
-        lines = ["MCP servers:"]
-        for status in statuses:
-            suffix = f" - {status.detail}" if status.detail else ""
-            lines.append(f"- {status.name}: {status.state}{suffix}")
-            if status.tools:
-                lines.append(f"  tools: {', '.join(tool.name for tool in status.tools)}")
-            if status.resources:
-                lines.append(f"  resources: {', '.join(resource.uri for resource in status.resources)}")
-        return "\n".join(lines)
 
 
 async def build_runtime(
@@ -98,30 +72,9 @@ async def build_runtime(
             api_key=settings.resolve_api_key(),
             base_url=settings.base_url,
         )
-    mcp_manager = McpClientManager(load_mcp_server_configs(settings))
-    await mcp_manager.connect_all()
-    tool_registry = create_default_tool_registry(mcp_manager)
-    provider = detect_provider(settings)
-    bridge_manager = get_bridge_manager()
-    app_state = AppStateStore(
-        AppState(
-            model=settings.model,
-            theme=settings.theme,
-            cwd=cwd,
-            provider=provider.name,
-            auth_status=auth_status(settings),
-            base_url=settings.base_url or "",
-            fast_mode=settings.fast_mode,
-            effort=settings.effort,
-            passes=settings.passes,
-            mcp_connected=sum(1 for status in mcp_manager.list_statuses() if status.state == "connected"),
-            mcp_failed=sum(1 for status in mcp_manager.list_statuses() if status.state == "failed"),
-            bridge_sessions=len(bridge_manager.list_sessions()),
-        )
-    )
-    hook_reloader = HookReloader(get_config_file_path())
+    tool_registry = create_default_tool_registry()
     hook_executor = HookExecutor(
-        hook_reloader.current_registry() if api_client is None else load_hook_registry(settings, []),
+        load_hook_registry(settings, []),
         HookExecutionContext(
             cwd=Path(cwd).resolve(),
             api_client=resolved_api_client,
@@ -136,7 +89,6 @@ async def build_runtime(
         system_prompt=build_runtime_system_prompt(settings, cwd=cwd, latest_user_prompt=prompt),
         max_tokens=settings.max_tokens,
         hook_executor=hook_executor,
-        tool_metadata={"mcp_manager": mcp_manager, "bridge_manager": bridge_manager},
     )
     # Restore messages from a saved session if provided
     if restore_messages:
@@ -150,9 +102,7 @@ async def build_runtime(
     return RuntimeBundle(
         api_client=resolved_api_client,
         cwd=cwd,
-        mcp_manager=mcp_manager,
         tool_registry=tool_registry,
-        app_state=app_state,
         hook_executor=hook_executor,
         engine=engine,
         external_api_client=api_client is not None,
@@ -170,30 +120,9 @@ async def start_runtime(bundle: RuntimeBundle) -> None:
 
 async def close_runtime(bundle: RuntimeBundle) -> None:
     """Close runtime-owned resources."""
-    await bundle.mcp_manager.close()
     await bundle.hook_executor.execute(
         HookEvent.SESSION_END,
         {"cwd": bundle.cwd, "event": HookEvent.SESSION_END.value},
-    )
-
-
-def sync_app_state(bundle: RuntimeBundle) -> None:
-    """Refresh UI state from current settings."""
-    settings = bundle.current_settings()
-    provider = detect_provider(settings)
-    bundle.app_state.set(
-        model=settings.model,
-        theme=settings.theme,
-        cwd=bundle.cwd,
-        provider=provider.name,
-        auth_status=auth_status(settings),
-        base_url=settings.base_url or "",
-        fast_mode=settings.fast_mode,
-        effort=settings.effort,
-        passes=settings.passes,
-        mcp_connected=sum(1 for status in bundle.mcp_manager.list_statuses() if status.state == "connected"),
-        mcp_failed=sum(1 for status in bundle.mcp_manager.list_statuses() if status.state == "failed"),
-        bridge_sessions=len(get_bridge_manager().list_sessions()),
     )
 
 
@@ -205,7 +134,7 @@ async def handle_line(
     render_event: StreamRenderer,
     clear_output: ClearHandler,
 ) -> bool:
-    """Handle one submitted line for either headless or TUI rendering."""
+    """Handle one submitted line."""
     if not bundle.external_api_client:
         bundle.hook_executor.update_registry(
             load_hook_registry(bundle.current_settings(), [])
@@ -225,7 +154,4 @@ async def handle_line(
         usage=bundle.engine.total_usage,
         session_id=bundle.session_id,
     )
-    sync_app_state(bundle)
     return True
-
-

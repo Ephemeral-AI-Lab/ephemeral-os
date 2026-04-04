@@ -8,9 +8,6 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 from ephemeralos.api.client import SupportsStreamingMessages
-from ephemeralos.state.app_state import AppState
-from ephemeralos.bridge.manager import BridgeSessionRecord
-from ephemeralos.mcp.types import McpConnectionStatus
 from ephemeralos.tasks.types import TaskRecord
 
 
@@ -30,11 +27,8 @@ class BackendHostConfig:
 class FrontendRequest(BaseModel):
     """One request sent from the React frontend to the Python backend."""
 
-    type: Literal["submit_line", "permission_response", "question_response", "list_sessions", "update_config", "shutdown"]
+    type: Literal["submit_line", "list_sessions", "update_config", "shutdown"]
     line: str | None = None
-    request_id: str | None = None
-    allowed: bool | None = None
-    answer: str | None = None
     config: dict[str, Any] | None = None
 
 
@@ -90,21 +84,14 @@ class BackendEvent(BaseModel):
         "tool_started",
         "tool_completed",
         "clear_transcript",
-        "modal_request",
-        "select_request",
         "error",
         "shutdown",
     ]
-    select_options: list[dict[str, Any]] | None = None
     message: str | None = None
     item: TranscriptItem | None = None
     state: dict[str, Any] | None = None
     tasks: list[TaskSnapshot] | None = None
     toolkits: list[ToolkitSnapshot] | None = None
-    mcp_servers: list[dict[str, Any]] | None = None
-    bridge_sessions: list[dict[str, Any]] | None = None
-    commands: list[str] | None = None
-    modal: dict[str, Any] | None = None
     tool_name: str | None = None
     tool_input: dict[str, Any] | None = None
     output: str | None = None
@@ -113,24 +100,14 @@ class BackendEvent(BaseModel):
     @classmethod
     def ready(
         cls,
-        state: AppState,
         tasks: list[TaskRecord],
-        commands: list[str],
         toolkits: list[ToolkitSnapshot] | None = None,
     ) -> "BackendEvent":
         return cls(
             type="ready",
-            state=_state_payload(state),
             tasks=[TaskSnapshot.from_record(task) for task in tasks],
             toolkits=toolkits or [],
-            mcp_servers=[],
-            bridge_sessions=[],
-            commands=commands,
         )
-
-    @classmethod
-    def state_snapshot(cls, state: AppState) -> "BackendEvent":
-        return cls(type="state_snapshot", state=_state_payload(state))
 
     @classmethod
     def tasks_snapshot(cls, tasks: list[TaskRecord]) -> "BackendEvent":
@@ -138,62 +115,6 @@ class BackendEvent(BaseModel):
             type="tasks_snapshot",
             tasks=[TaskSnapshot.from_record(task) for task in tasks],
         )
-
-    @classmethod
-    def status_snapshot(
-        cls,
-        *,
-        state: AppState,
-        mcp_servers: list[McpConnectionStatus],
-        bridge_sessions: list[BridgeSessionRecord],
-        toolkits: list[ToolkitSnapshot] | None = None,
-    ) -> "BackendEvent":
-        return cls(
-            type="state_snapshot",
-            state=_state_payload(state),
-            toolkits=toolkits,
-            mcp_servers=[
-                {
-                    "name": server.name,
-                    "state": server.state,
-                    "detail": server.detail,
-                    "transport": server.transport,
-                    "auth_configured": server.auth_configured,
-                    "tool_count": len(server.tools),
-                    "resource_count": len(server.resources),
-                }
-                for server in mcp_servers
-            ],
-            bridge_sessions=[
-                {
-                    "session_id": session.session_id,
-                    "command": session.command,
-                    "cwd": session.cwd,
-                    "pid": session.pid,
-                    "status": session.status,
-                    "started_at": session.started_at,
-                    "output_path": session.output_path,
-                }
-                for session in bridge_sessions
-            ],
-        )
-
-
-def _state_payload(state: AppState) -> dict[str, Any]:
-    return {
-        "model": state.model,
-        "cwd": state.cwd,
-        "provider": state.provider,
-        "auth_status": state.auth_status,
-        "base_url": state.base_url,
-        "theme": state.theme,
-        "fast_mode": state.fast_mode,
-        "effort": state.effort,
-        "passes": state.passes,
-        "mcp_connected": state.mcp_connected,
-        "mcp_failed": state.mcp_failed,
-        "bridge_sessions": state.bridge_sessions,
-    }
 
 
 __all__ = [
