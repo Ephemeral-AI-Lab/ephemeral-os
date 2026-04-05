@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -19,6 +20,8 @@ from tools.base import ToolExecutionContext, ToolRegistry, ToolResult
 
 if TYPE_CHECKING:
     from models.types import ApiToolUseDeltaEvent
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -74,13 +77,22 @@ class StreamingToolExecutor:
             else False,
         )
         self._tools[event.id] = tracked
-        if event.input:
+        logger.debug(
+            "STREAM: Received tool_use event: tool_id=%s tool_name=%s concurrency_safe=%s input=%s",
+            event.id,
+            event.name,
+            tracked.is_concurrency_safe,
+            event.input,
+        )
+        if event.input is not None:
             self._start_tool(tracked)
+            logger.info("STREAM: Tool started: tool_id=%s tool_name=%s", event.id, event.name)
             return ToolExecutionStarted(tool_name=event.name, tool_input=event.input)
         return None
 
     def cancel(self, tool_id: str, reason: str) -> None:
         """Cancel a running tool."""
+        logger.info("STREAM: Cancel requested: tool_id=%s reason=%s", tool_id, reason)
         self._aborted.add(tool_id)
         if tool_id in self._tools:
             self._tools[tool_id].cancelled = True
@@ -88,6 +100,7 @@ class StreamingToolExecutor:
             task = self._tools[tool_id].task
             if task and not task.done():
                 task.cancel()
+                logger.info("STREAM: Cancel signal sent: tool_id=%s", tool_id)
 
     def get_progress(self) -> list[ToolExecutionProgress]:
         """Get new progress events since last call."""
@@ -136,14 +149,17 @@ class StreamingToolExecutor:
 
     async def _execute_tool(self, tool: TrackedTool) -> None:
         """Execute a single tool with progress tracking."""
+        logger.info("STREAM: Executing tool: tool_id=%s tool_name=%s", tool.id, tool.name)
         try:
             if tool.id in self._aborted:
+                logger.info("STREAM: Tool aborted before execution: tool_id=%s", tool.id)
                 tool.status = "completed"
                 tool.cancelled = True
                 return
 
             tool_def = self._tool_registry.get(tool.name)
             if not tool_def:
+                logger.warning("STREAM: Unknown tool: tool_id=%s tool_name=%s", tool.id, tool.name)
                 tool.result = ToolResult(
                     output=f"Unknown tool: {tool.name}",
                     is_error=True,
@@ -159,11 +175,25 @@ class StreamingToolExecutor:
             )
 
             try:
+                logger.debug(
+                    "STREAM: Calling tool.execute: tool_id=%s tool_name=%s", tool.id, tool.name
+                )
                 tool.result = await tool_def.execute(parsed_input, context_with_id)
+                logger.info(
+                    "STREAM: Tool completed: tool_id=%s tool_name=%s is_error=%s output_len=%d",
+                    tool.id,
+                    tool.name,
+                    tool.result.is_error,
+                    len(tool.result.output) if tool.result.output else 0,
+                )
             except asyncio.CancelledError:
+                logger.info("STREAM: Tool cancelled during execution: tool_id=%s", tool.id)
                 tool.cancelled = True
                 tool.cancel_reason = tool.cancel_reason or "Task cancelled"
             except Exception as exc:
+                logger.error(
+                    "STREAM: Tool execution error: tool_id=%s error=%s", tool.id, exc, exc_info=True
+                )
                 tool.result = ToolResult(
                     output=f"Tool execution failed: {exc}",
                     is_error=True,
@@ -172,10 +202,17 @@ class StreamingToolExecutor:
             tool.status = "completed"
 
         except asyncio.CancelledError:
+            logger.info("STREAM: Tool cancelled (outer): tool_id=%s", tool.id)
             tool.cancelled = True
             tool.cancel_reason = tool.cancel_reason or "Task cancelled"
             tool.status = "completed"
         except Exception as exc:
+            logger.error(
+                "STREAM: Tool execution error (outer): tool_id=%s error=%s",
+                tool.id,
+                exc,
+                exc_info=True,
+            )
             tool.result = ToolResult(
                 output=f"Tool execution failed: {exc}",
                 is_error=True,
@@ -189,6 +226,14 @@ class StreamingToolExecutor:
             for t in self._tools.values()
             if t.status == "queued"
         ]
+
+    def cancel_all(self) -> None:
+        """Cancel all running tasks to prevent orphaned execution."""
+        for tool in self._tools.values():
+            if tool.task and not tool.task.done():
+                tool.task.cancel()
+                tool.cancelled = True
+                tool.cancel_reason = "Superseded by fallback execution"
 
     def finalize(self) -> None:
         """Called when stream ends - wait for all tools to complete."""

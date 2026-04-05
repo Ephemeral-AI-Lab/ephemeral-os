@@ -40,8 +40,17 @@ class EphemeralAgent:
 
     async def run(self, prompt: str) -> AsyncIterator[StreamEvent]:
         """Execute one complete tool-call loop for the given prompt."""
-        async for event in self.engine.submit_message(prompt):
-            yield event
+        try:
+            async for event in self.engine.submit_message(prompt):
+                yield event
+        finally:
+            await self.close()
+
+    async def close(self) -> None:
+        """Release resources held by the agent's API client."""
+        client = self.engine._api_client
+        if hasattr(client, "aclose"):
+            await client.aclose()
 
 
 def spawn_agent(
@@ -167,6 +176,11 @@ def spawn_agent(
             agent_name,
         )
 
+    # --- Background tasks — enabled when sandbox tools are available
+    has_background_tools = any(
+        t.supports_background for t in tool_registry.list_tools()
+    )
+
     # --- Inject toolkit awareness into system prompt -----------------------
     awareness_sections: list[str] = []
 
@@ -185,6 +199,28 @@ def spawn_agent(
             tk_sections.append(section)
         awareness_sections.append("# Available Toolkits\n\n" + "\n\n".join(tk_sections))
 
+    # Background task awareness
+    if has_background_tools:
+        bg_tool_names = [t.name for t in tool_registry.list_tools() if t.supports_background]
+        awareness_sections.append(
+            "# Background Task Execution\n\n"
+            "You can run long-running tools in the background by adding "
+            '`"background": true` to the tool input JSON. Also include '
+            '`"task_note": "brief description"` to label the task for easier tracking. '
+            "This launches the tool asynchronously — you get an immediate acknowledgment "
+            "and can continue with other work while it runs.\n\n"
+            f"**Tools that support background execution:** {', '.join(f'`{n}`' for n in bg_tool_names)}\n\n"
+            "**Available management tools:**\n"
+            "- `check_background_progress` — check status of running background tasks\n"
+            "- `cancel_background_task` — cancel a running background task\n\n"
+            "**When to use background:**\n"
+            "- Long-running operations: test suites, builds, installations, deployments\n"
+            "- When you have other useful work to do in parallel\n\n"
+            "**When NOT to use background:**\n"
+            "- Quick commands (< 5 seconds)\n"
+            "- When you need the result immediately for your next step\n"
+        )
+
     if awareness_sections:
         system_prompt = system_prompt + "\n\n" + "\n\n".join(awareness_sections)
 
@@ -202,6 +238,7 @@ def spawn_agent(
         max_turns=max_turns,
         hook_executor=hook_executor,
         session_state=session_state,
+        enable_background_tasks=has_background_tools,
     )
     if messages:
         engine.load_messages(messages)

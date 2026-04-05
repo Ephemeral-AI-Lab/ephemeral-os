@@ -47,7 +47,7 @@ def _get_cwd(context: ToolExecutionContext) -> str:
 # ---------------------------------------------------------------------------
 
 
-@tool(name="daytona_bash", description="Run a shell command inside the remote Daytona sandbox.")
+@tool(name="daytona_bash", description="Run a shell command inside the remote Daytona sandbox.", supports_background=True)
 async def daytona_bash(
     command: str,
     timeout: int = _DEFAULT_TIMEOUT,

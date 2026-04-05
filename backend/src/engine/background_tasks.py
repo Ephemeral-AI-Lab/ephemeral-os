@@ -19,10 +19,13 @@ class TrackedBackgroundTask:
     tool_name: str
     tool_input: dict[str, Any]
     asyncio_task: asyncio.Task[ToolResult]
+    task_note: str = ""  # LLM-generated brief description of what the task does
     status: str = "running"  # running, completed, failed, cancelled, delivered
     result: ToolResult | None = None
     started_at: float = field(default_factory=time.monotonic)
     progress_lines: list[str] = field(default_factory=list)
+    _last_reminder_line_idx: int = 0  # tracks where the last reminder left off
+    _last_reminder_at: float = 0.0  # monotonic time of last reminder
 
 
 class BackgroundTaskManager:
@@ -41,6 +44,7 @@ class BackgroundTaskManager:
         tool_name: str,
         tool_input: dict[str, Any],
         coro: Coroutine[Any, Any, ToolResult],
+        task_note: str = "",
     ) -> BackgroundTaskStarted:
         """Launch *coro* as a background task and return a started event."""
         asyncio_task = asyncio.create_task(coro)
@@ -49,6 +53,7 @@ class BackgroundTaskManager:
             tool_name=tool_name,
             tool_input=tool_input,
             asyncio_task=asyncio_task,
+            task_note=task_note,
         )
         self._tasks[task_id] = tracked
 
@@ -139,8 +144,9 @@ class BackgroundTaskManager:
         lines = ["[BACKGROUND TASKS STATUS]"]
         for tracked in self._tasks.values():
             elapsed = now - tracked.started_at
+            label = tracked.task_note or tracked.tool_name
             line = (
-                f"- {tracked.tool_name} "
+                f"- {label} "
                 f"(task_id: {tracked.task_id}, {elapsed:.0f}s elapsed): "
                 f"{tracked.status}"
             )
@@ -165,6 +171,7 @@ class BackgroundTaskManager:
         for tracked in tasks:
             entry: dict[str, Any] = {
                 "task_id": tracked.task_id,
+                "task_note": tracked.task_note,
                 "tool_name": tracked.tool_name,
                 "status": tracked.status,
                 "elapsed_seconds": round(now - tracked.started_at, 1),
@@ -188,6 +195,24 @@ class BackgroundTaskManager:
         tracked.result = ToolResult(output=msg, is_error=True)
         tracked.progress_lines = [msg]
         return True
+
+    def get_reminder_diff(self, task_id: str, max_lines: int = 10) -> tuple[list[str], float]:
+        """Return new progress lines since the last reminder for *task_id*.
+
+        Advances the internal cursor so the next call returns only newer lines.
+        Returns ``(new_lines, seconds_since_last_reminder)``.
+        """
+        tracked = self._tasks.get(task_id)
+        if tracked is None:
+            return [], 0.0
+        now = time.monotonic()
+        since = now - tracked._last_reminder_at if tracked._last_reminder_at else now - tracked.started_at
+        new_lines = tracked.progress_lines[tracked._last_reminder_line_idx:]
+        tracked._last_reminder_line_idx = len(tracked.progress_lines)
+        tracked._last_reminder_at = now
+        if len(new_lines) > max_lines:
+            new_lines = new_lines[-max_lines:]
+        return new_lines, since
 
     def cancel_all(self) -> None:
         """Cancel all running tasks. Called on query loop exit."""

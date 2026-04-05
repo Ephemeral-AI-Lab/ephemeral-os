@@ -74,6 +74,7 @@ print(json.dumps({{"manifest": "/tmp/codeact-{run_id}.json", "status": _MANIFEST
         "Use read(), write(), and shell() helpers. Writes are committed "
         "atomically after execution completes successfully."
     ),
+    supports_background=True,
 )
 async def daytona_codeact(
     code: str,

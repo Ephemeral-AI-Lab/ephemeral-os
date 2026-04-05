@@ -175,6 +175,10 @@ class OpenAICompatibleClient:
             kwargs["base_url"] = base_url
         self._client = AsyncOpenAI(**kwargs)
 
+    async def aclose(self) -> None:
+        """Gracefully close the underlying HTTP transport."""
+        await self._client.close()
+
     async def stream_message(self, request: ApiMessageRequest) -> AsyncIterator[ApiStreamEvent]:
         """Yield text deltas and the final message, matching the Anthropic client interface."""
         last_error: Exception | None = None

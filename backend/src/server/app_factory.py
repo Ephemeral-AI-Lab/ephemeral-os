@@ -280,6 +280,12 @@ def create_app(config: BackendHostConfig) -> FastAPI:
         _builder_service = _initialize_database(_session)
 
         yield
+        # Close any externally-injected API client to avoid "Event loop is
+        # closed" errors from orphaned httpx transports during GC.
+        if _session and _session.config and _session.config.external_api_client:
+            client = _session.config.external_api_client
+            if hasattr(client, "aclose"):
+                await client.aclose()
         _session = None
         _builder_service = None
 

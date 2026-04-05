@@ -129,6 +129,7 @@ def tool(
     *,
     read_only: bool = False,
     stop_after_tool_call: bool = False,
+    supports_background: bool = False,
 ) -> Callable[[Callable[..., Any]], BaseTool]:
     """Decorator that converts a function into a ``BaseTool`` instance.
 
@@ -137,6 +138,7 @@ def tool(
         description: Tool description (defaults to first docstring line).
         read_only: Whether the tool is read-only.
         stop_after_tool_call: Whether the agent loop should stop after this tool.
+        supports_background: Whether this tool can be run as a background task.
 
     Returns:
         A ``BaseTool`` instance ready for registration in a toolkit or registry.
@@ -187,6 +189,7 @@ def tool(
         instance.description = tool_description
         instance.input_model = input_model
         instance._stop_after_tool_call = stop_after_tool_call
+        instance.supports_background = supports_background
         # Preserve the original function for testing/introspection
         instance._entrypoint = func
 

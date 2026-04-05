@@ -54,6 +54,14 @@ class AnthropicClient:
         self._client = anthropic.AsyncAnthropic(**kwargs)
 
     # ------------------------------------------------------------------
+    # Lifecycle
+    # ------------------------------------------------------------------
+
+    async def aclose(self) -> None:
+        """Gracefully close the underlying HTTP transport."""
+        await self._client.close()
+
+    # ------------------------------------------------------------------
     # Public interface (SupportsStreamingMessages)
     # ------------------------------------------------------------------
 
@@ -159,7 +167,7 @@ class AnthropicClient:
                         )
 
             # After the stream ends, build the final message from the SDK.
-            final_msg = stream.get_final_message()
+            final_msg = await stream.get_final_message()
 
         message = assistant_message_from_api(final_msg)
 

@@ -1,0 +1,327 @@
+# ruff: noqa
+"""Live E2E: test-anthropic-native-agent — MiniMax via Anthropic-native client.
+
+Tests the complete pipeline using the new AnthropicClient:
+- Model registration with api_format="anthropic"
+- Agent creation referencing the registered model
+- Tool invocation through Anthropic-native streaming
+- Mid-stream tool event ordering
+
+Run with: pytest tests/test_e2e/test_anthropic_native_agent.py -m live -v
+"""
+
+from __future__ import annotations
+
+import uuid
+
+import pytest
+
+from tests.test_e2e.conftest import (
+    HAS_DAYTONA,
+    create_test_sandbox,
+    delete_test_sandbox,
+    events_of_type,
+    get_assistant_text,
+    get_event_types,
+    make_live_client,
+    send_chat,
+)
+
+pytestmark = [pytest.mark.e2e, pytest.mark.live]
+
+# ---------------------------------------------------------------------------
+# MiniMax Anthropic-compatible credentials
+# ---------------------------------------------------------------------------
+
+MINIMAX_ANTHROPIC_KEY = "sk-cp-Ril2d0sHwI7gagi0S5s9XWFvfPpe6Y8Ms0N7FxpILv93jZCXJDmEiWGRjVALI4VKvSr2XhJfYs5_wLYfhB4QPKWKd4IJHkfZBLhRXQR5tAnjwKiItvcYg-o"
+MINIMAX_ANTHROPIC_MODEL = "minimax-2.7-highspeed"
+MINIMAX_ANTHROPIC_BASE_URL = "https://api.minimax.io/anthropic"
+MINIMAX_ANTHROPIC_FORMAT = "anthropic"
+
+MODEL_KEY = "minimax-anthropic-native"
+AGENT_NAME = "test-anthropic-native-agent"
+AGENT_TOOLKITS = ["sandbox_operations"]
+AGENT_PROMPT = (
+    "You are test-anthropic-native-agent, a developer with a remote Daytona sandbox. "
+    "You MUST use tools for every action — never just describe what you'd do. "
+    "Use daytona_write_file to create files, daytona_bash to run commands, "
+    "daytona_read_file to read files, daytona_list_files to list directories. "
+    "Always execute every step using tools. Be concise."
+)
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _register_model(client) -> dict:
+    """Register the MiniMax model with Anthropic format via API."""
+    resp = client.post(
+        "/api/db/models/register",
+        json={
+            "key": MODEL_KEY,
+            "label": "MiniMax 2.7 (Anthropic-native)",
+            "class_path": "models.clients.anthropic_native.AnthropicClient",
+            "kwargs": {
+                "api_key": MINIMAX_ANTHROPIC_KEY,
+                "base_url": MINIMAX_ANTHROPIC_BASE_URL,
+                "model": MINIMAX_ANTHROPIC_MODEL,
+                "api_format": MINIMAX_ANTHROPIC_FORMAT,
+            },
+            "activate": True,
+        },
+    )
+    assert resp.status_code == 200, f"Model registration failed: {resp.status_code} {resp.text}"
+    return resp.json()
+
+
+def _create_agent(client, name: str = AGENT_NAME) -> dict:
+    """Create an agent tied to the registered model."""
+    resp = client.post(
+        "/api/agents/",
+        json={
+            "name": name,
+            "description": f"E2E test: Anthropic-native agent ({name})",
+            "model": MODEL_KEY,
+            "toolkits": AGENT_TOOLKITS,
+            "system_prompt": AGENT_PROMPT,
+        },
+    )
+    if resp.status_code == 201:
+        return resp.json()
+    # May already exist
+    get_resp = client.get(f"/api/agents/{name}")
+    if get_resp.status_code == 200:
+        return get_resp.json()
+    assert False, f"Failed to create agent '{name}': {resp.status_code} {resp.text}"
+
+
+# ===========================================================================
+# Test: Model Registration & Agent Creation
+# ===========================================================================
+
+
+class TestAnthropicNativeModelSetup:
+    """Tests that the model is registered and agent created correctly."""
+
+    @pytest.fixture()
+    def client(self, db_session_factory, tmp_path, monkeypatch):
+        c = make_live_client(
+            db_session_factory,
+            tmp_path,
+            monkeypatch,
+            api_key=MINIMAX_ANTHROPIC_KEY,
+            model=MINIMAX_ANTHROPIC_MODEL,
+            base_url=MINIMAX_ANTHROPIC_BASE_URL,
+            api_format=MINIMAX_ANTHROPIC_FORMAT,
+        )
+        with c:
+            yield c
+
+    def test_model_registered_with_anthropic_format(self, client):
+        result = _register_model(client)
+        assert result["ok"] is True
+
+        # Verify model is listed
+        resp = client.get("/api/db/models")
+        assert resp.status_code == 200
+        data = resp.json()
+        models = data.get("models", [])
+        keys = [m["key"] for m in models]
+        assert MODEL_KEY in keys
+
+    def test_model_is_active(self, client):
+        _register_model(client)
+        resp = client.get("/api/db/models/active")
+        assert resp.status_code == 200
+        active = resp.json()
+        assert active["key"] == MODEL_KEY
+
+    def test_agent_created_with_model_key(self, client):
+        _register_model(client)
+        agent = _create_agent(client)
+        assert agent["model"] == MODEL_KEY
+
+
+# ===========================================================================
+# Test: Basic Agent Communication (Anthropic-native streaming)
+# ===========================================================================
+
+
+@pytest.mark.skipif(not HAS_DAYTONA, reason="Daytona required for sandbox tests")
+class TestAnthropicNativeAgentBasic:
+    @pytest.fixture(scope="class")
+    def sandbox(self):
+        sb = create_test_sandbox("anthropic-native")
+        yield sb
+        delete_test_sandbox(sb["id"])
+
+    @pytest.fixture()
+    def client(self, db_session_factory, tmp_path, monkeypatch):
+        c = make_live_client(
+            db_session_factory,
+            tmp_path,
+            monkeypatch,
+            api_key=MINIMAX_ANTHROPIC_KEY,
+            model=MINIMAX_ANTHROPIC_MODEL,
+            base_url=MINIMAX_ANTHROPIC_BASE_URL,
+            api_format=MINIMAX_ANTHROPIC_FORMAT,
+        )
+        with c:
+            yield c
+
+    def test_agent_responds_to_simple_prompt(self, client, sandbox):
+        _register_model(client)
+        _create_agent(client)
+        events = send_chat(
+            client,
+            "Say hello in exactly 3 words.",
+            agent_name=AGENT_NAME,
+            sandbox_id=sandbox["id"],
+            timeout=60,
+        )
+        types = get_event_types(events)
+        assert "assistant_complete" in types, f"Missing assistant_complete. Types: {types}"
+
+        text = get_assistant_text(events)
+        assert text, "Should produce a response"
+
+    def test_agent_uses_daytona_bash_tool(self, client, sandbox):
+        _register_model(client)
+        _create_agent(client)
+        events = send_chat(
+            client,
+            "Run this exact command in the sandbox: echo 'ANTHROPIC_BASH_OK'",
+            agent_name=AGENT_NAME,
+            sandbox_id=sandbox["id"],
+            timeout=120,
+        )
+        types = get_event_types(events)
+        assert "assistant_complete" in types, f"Missing assistant_complete. Types: {types}"
+
+        tool_started = events_of_type(events, "tool_started")
+        tool_names = [e.get("tool_name") for e in tool_started]
+        assert any("daytona" in t for t in tool_names), f"No daytona tool used: {tool_names}"
+
+    def test_agent_multi_tool_interaction(self, client, sandbox):
+        _register_model(client)
+        _create_agent(client)
+        events = send_chat(
+            client,
+            "Use daytona_bash to run: pwd",
+            agent_name=AGENT_NAME,
+            sandbox_id=sandbox["id"],
+            timeout=120,
+        )
+        types = get_event_types(events)
+        assert "assistant_complete" in types
+
+        tool_started = events_of_type(events, "tool_started")
+        tool_completed = events_of_type(events, "tool_completed")
+        assert len(tool_started) >= 1, f"Should use at least one tool. Types: {types}"
+        assert len(tool_completed) >= 1, f"Should have tool completion. Types: {types}"
+
+    def test_agent_multi_step_pipeline(self, client, sandbox):
+        _register_model(client)
+        _create_agent(client)
+        events = send_chat(
+            client,
+            (
+                "Do these steps in the sandbox:\n"
+                "1. Use daytona_write_file to create /workspace/anthro_pipeline.py with: print('ANTHRO_PIPELINE_OK')\n"
+                "2. Use daytona_bash to run: python3 /workspace/anthro_pipeline.py\n"
+                "3. Report the output"
+            ),
+            agent_name=AGENT_NAME,
+            sandbox_id=sandbox["id"],
+            timeout=180,
+        )
+        types = get_event_types(events)
+        assert "assistant_complete" in types
+
+        tool_started = events_of_type(events, "tool_started")
+        if tool_started:
+            daytona_tools = [
+                t
+                for t in tool_started
+                if isinstance(t, dict) and "daytona" in t.get("tool_name", "")
+            ]
+            assert len(daytona_tools) >= 1, (
+                f"Expected daytona tools. Got: {[t.get('tool_name') for t in tool_started]}"
+            )
+
+        tool_completed = events_of_type(events, "tool_completed")
+        all_output = " ".join(e.get("output", "") for e in tool_completed)
+        text = get_assistant_text(events)
+
+        has_pipeline = "ANTHRO_PIPELINE_OK" in all_output or "ANTHRO_PIPELINE_OK" in text
+        assert has_pipeline or len(tool_started) >= 2, (
+            f"Should execute pipeline or use multiple tools. "
+            f"Output: {all_output[:200]}, Text: {text[:200]}"
+        )
+
+
+# ===========================================================================
+# Test: Event Structure (verify Anthropic-native streaming events)
+# ===========================================================================
+
+
+@pytest.mark.skipif(not HAS_DAYTONA, reason="Daytona required for sandbox tests")
+class TestAnthropicNativeEventStructure:
+    @pytest.fixture(scope="class")
+    def sandbox(self):
+        sb = create_test_sandbox("anthropic-events")
+        yield sb
+        delete_test_sandbox(sb["id"])
+
+    @pytest.fixture()
+    def client(self, db_session_factory, tmp_path, monkeypatch):
+        c = make_live_client(
+            db_session_factory,
+            tmp_path,
+            monkeypatch,
+            api_key=MINIMAX_ANTHROPIC_KEY,
+            model=MINIMAX_ANTHROPIC_MODEL,
+            base_url=MINIMAX_ANTHROPIC_BASE_URL,
+            api_format=MINIMAX_ANTHROPIC_FORMAT,
+        )
+        with c:
+            yield c
+
+    def test_tool_started_has_correct_structure(self, client, sandbox):
+        agent_name = f"{AGENT_NAME}-events"
+        _register_model(client)
+        _create_agent(client, name=agent_name)
+        events = send_chat(
+            client,
+            "Use daytona_bash to run: echo 'ANTHRO_STRUCTURE_OK'",
+            agent_name=agent_name,
+            sandbox_id=sandbox["id"],
+            timeout=120,
+        )
+        tool_started = events_of_type(events, "tool_started")
+        assert len(tool_started) >= 1, f"No tool_started events. Types: {get_event_types(events)}"
+
+        for ev in tool_started:
+            tool_input = ev.get("tool_input")
+            assert tool_input is not None, f"tool_started missing tool_input: {ev}"
+            assert isinstance(tool_input, dict), f"tool_input should be dict: {type(tool_input)}"
+
+    def test_event_lifecycle_complete(self, client, sandbox):
+        agent_name = f"{AGENT_NAME}-lifecycle"
+        _register_model(client)
+        _create_agent(client, name=agent_name)
+        events = send_chat(
+            client,
+            "Use daytona_bash to run: echo 'LIFECYCLE_OK'",
+            agent_name=agent_name,
+            sandbox_id=sandbox["id"],
+            timeout=120,
+        )
+        types = get_event_types(events)
+
+        assert "transcript_item" in types, f"Missing transcript_item. Types: {types}"
+        assert "assistant_complete" in types, f"Missing assistant_complete. Types: {types}"
+        if "tool_started" in types and "error" not in types:
+            assert "tool_completed" in types, f"tool_started without tool_completed. Types: {types}"

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, AsyncIterator
@@ -36,6 +37,8 @@ from engine.stream_events import (
 from engine.streaming_executor import StreamingToolExecutor
 from hooks import HookEvent, HookExecutor
 from tools.base import ToolExecutionContext, ToolRegistry
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -85,6 +88,7 @@ async def _run_query_loop(
         # Register background tools
         from tools.builtins.check_background_progress import CheckBackgroundProgressTool
         from tools.builtins.cancel_background_task import CancelBackgroundTaskTool
+
         context.tool_registry.register(CheckBackgroundProgressTool())
         context.tool_registry.register(CancelBackgroundTaskTool())
 
@@ -103,19 +107,26 @@ async def _run_query_loop(
                 output = completed_task.result.output if completed_task.result else "No output"
                 if len(output) > 2000:
                     output = f"[truncated, showing last 2000 chars]\n...{output[-2000:]}"
-                status_label = "ERROR" if (completed_task.result and completed_task.result.is_error) else "COMPLETED"
+                status_label = (
+                    "ERROR"
+                    if (completed_task.result and completed_task.result.is_error)
+                    else "COMPLETED"
+                )
                 messages.append(
                     ConversationMessage.from_user_text(
                         f"[BACKGROUND TASK {status_label}] {completed_task.tool_name} "
                         f"(task_id: {completed_task.task_id})\n\n{output}"
                     )
                 )
-                yield BackgroundTaskCompleted(
-                    task_id=completed_task.task_id,
-                    tool_name=completed_task.tool_name,
-                    output=output,
-                    is_error=completed_task.result.is_error if completed_task.result else False,
-                ), None
+                yield (
+                    BackgroundTaskCompleted(
+                        task_id=completed_task.task_id,
+                        tool_name=completed_task.tool_name,
+                        output=output,
+                        is_error=completed_task.result.is_error if completed_task.result else False,
+                    ),
+                    None,
+                )
 
         executor = StreamingToolExecutor(
             tool_registry=context.tool_registry,
@@ -138,6 +149,7 @@ async def _run_query_loop(
                 context.tool_metadata.update(executor._context.metadata)
             except Exception:
                 import logging
+
                 logging.getLogger(__name__).debug(
                     "Sandbox context injection skipped (sandbox may not be configured)",
                     exc_info=True,
@@ -147,16 +159,54 @@ async def _run_query_loop(
         usage = UsageSnapshot()
         pending_cancel: dict[str, str] = {}
 
+        # Ephemeral background reminder — included in the API request
+        # but NOT persisted in conversation history.  Purely informational
+        # so the LLM knows background tasks exist; it can ignore this
+        # freely when focused on foreground work.
+        api_messages = messages
+        if background_manager is not None and background_manager.has_pending():
+            pending = [
+                t for t in background_manager._tasks.values()
+                if t.status == "running"
+            ]
+            if pending:
+                import time as _time
+
+                parts: list[str] = []
+                for t in pending:
+                    elapsed = _time.monotonic() - t.started_at
+                    label = t.task_note or t.tool_name
+                    header = f"Background: {label} ({elapsed:.0f}s) still running"
+                    new_lines, since = background_manager.get_reminder_diff(t.task_id)
+                    if new_lines:
+                        logs = "\n".join(new_lines)
+                        parts.append(
+                            f"<system-reminder>\n{header}\n"
+                            f"New output (last {len(new_lines)} lines):\n{logs}\n"
+                            f"</system-reminder>"
+                        )
+                    else:
+                        parts.append(
+                            f"<system-reminder>\n{header}\n"
+                            f"No new output in the last {since:.0f}s\n"
+                            f"</system-reminder>"
+                        )
+
+                api_messages = list(messages) + [
+                    ConversationMessage.from_user_text("\n".join(parts))
+                ]
+
         async for event in context.api_client.stream_message(
             ApiMessageRequest(
                 model=context.model,
-                messages=messages,
+                messages=api_messages,
                 system_prompt=context.system_prompt,
                 max_tokens=context.max_tokens,
                 tools=context.tool_registry.to_api_schema(),
             )
         ):
             if isinstance(event, ApiThinkingDeltaEvent):
+                logger.debug("STREAM: Received ApiThinkingDeltaEvent: text_len=%d", len(event.text))
                 yield ThinkingDelta(text=event.text), None
                 continue
 
@@ -164,23 +214,48 @@ async def _run_query_loop(
                 if match := cancel_pattern.search(event.text):
                     tool_id, reason = match.groups()
                     pending_cancel[tool_id] = reason or "Cancelled by LLM"
+                    logger.info(
+                        "STREAM: Cancel pattern found in text: tool_id=%s reason=%s",
+                        tool_id,
+                        reason,
+                    )
+                logger.debug("STREAM: Received ApiTextDeltaEvent: text_len=%d", len(event.text))
                 yield AssistantTextDelta(text=event.text), None
                 continue
 
             if isinstance(event, ApiToolUseDeltaEvent):
+                logger.info(
+                    "STREAM: Received ApiToolUseDeltaEvent: id=%s name=%s input_keys=%s",
+                    event.id,
+                    event.name,
+                    list(event.input.keys()) if event.input else None,
+                )
                 assistant_msg = final_message or ConversationMessage(role="assistant", content=[])
                 started = executor.add_tool(event, assistant_msg)
                 if started:
+                    logger.info("STREAM: Yielding ToolExecutionStarted: name=%s", started.tool_name)
                     yield started, None
                 for progress in executor.get_progress():
+                    logger.debug(
+                        "STREAM: Yielding ToolExecutionProgress: tool_id=%s", progress.tool_id
+                    )
                     yield progress, None
                 continue
 
             if isinstance(event, ApiCancelEvent):
+                logger.info(
+                    "STREAM: Received ApiCancelEvent: tool_id=%s reason=%s",
+                    event.tool_id,
+                    event.reason,
+                )
                 executor.cancel(event.tool_id, event.reason)
                 continue
 
             if isinstance(event, ApiMessageCompleteEvent):
+                logger.info(
+                    "STREAM: Received ApiMessageCompleteEvent: tool_uses_count=%d",
+                    len(event.message.tool_uses) if event.message.tool_uses else 0,
+                )
                 final_message = event.message
                 usage = event.usage
 
@@ -212,19 +287,26 @@ async def _run_query_loop(
                 output = completed_task.result.output if completed_task.result else "No output"
                 if len(output) > 2000:
                     output = f"[truncated, showing last 2000 chars]\n...{output[-2000:]}"
-                status_label = "ERROR" if (completed_task.result and completed_task.result.is_error) else "COMPLETED"
+                status_label = (
+                    "ERROR"
+                    if (completed_task.result and completed_task.result.is_error)
+                    else "COMPLETED"
+                )
                 messages.append(
                     ConversationMessage.from_user_text(
                         f"[BACKGROUND TASK {status_label}] {completed_task.tool_name} "
                         f"(task_id: {completed_task.task_id})\n\n{output}"
                     )
                 )
-                yield BackgroundTaskCompleted(
-                    task_id=completed_task.task_id,
-                    tool_name=completed_task.tool_name,
-                    output=output,
-                    is_error=completed_task.result.is_error if completed_task.result else False,
-                ), None
+                yield (
+                    BackgroundTaskCompleted(
+                        task_id=completed_task.task_id,
+                        tool_name=completed_task.tool_name,
+                        output=output,
+                        is_error=completed_task.result.is_error if completed_task.result else False,
+                    ),
+                    None,
+                )
             else:
                 # Timeout — give LLM a turn to decide
                 messages.append(
@@ -234,12 +316,21 @@ async def _run_query_loop(
 
         # Yield started events for any remaining tools
         for started in executor.get_started_events():
+            logger.info(
+                "STREAM: Yielding (remaining) ToolExecutionStarted: name=%s", started.tool_name
+            )
             yield started, None
 
         # Wait for all tools to complete and yield results
         tool_results: list[ToolResultBlock] = []
         for completed in executor.get_remaining():
             if isinstance(completed, ToolExecutionCompleted):
+                logger.info(
+                    "STREAM: Yielding ToolExecutionCompleted: name=%s is_error=%s output_len=%d",
+                    completed.tool_name,
+                    completed.is_error,
+                    len(completed.output) if completed.output else 0,
+                )
                 tool_results.append(
                     ToolResultBlock(
                         tool_use_id="",  # filled by caller
@@ -249,6 +340,11 @@ async def _run_query_loop(
                 )
                 yield completed, None
             elif isinstance(completed, ToolExecutionCancelled):
+                logger.info(
+                    "STREAM: Yielding ToolExecutionCancelled: name=%s reason=%s",
+                    completed.tool_name,
+                    completed.reason,
+                )
                 tool_results.append(
                     ToolResultBlock(
                         tool_use_id="",
@@ -260,50 +356,75 @@ async def _run_query_loop(
 
         # Match tool results to their tool_use blocks
         if not tool_results:
+            # Cancel any orphaned streaming executor tasks to avoid double
+            # execution — the fallback below will re-execute them properly.
+            executor.cancel_all()
+
             tool_calls = final_message.tool_uses
             foreground_calls = []
 
             for tc in tool_calls:
                 is_background = tc.input.pop("background", False) if background_manager else False
+                task_note = str(tc.input.pop("task_note", "")) if background_manager else ""
 
                 if is_background:
                     # Validate tool supports background
                     tool_def = context.tool_registry.get(tc.name)
                     if tool_def and not tool_def.supports_background:
-                        tool_results.append(ToolResultBlock(
-                            tool_use_id=tc.id,
-                            content=f"Tool '{tc.name}' does not support background execution.",
-                            is_error=True,
-                        ))
-                        yield ToolExecutionCompleted(
-                            tool_name=tc.name,
-                            output=f"Tool '{tc.name}' does not support background execution.",
-                            is_error=True,
-                        ), None
+                        tool_results.append(
+                            ToolResultBlock(
+                                tool_use_id=tc.id,
+                                content=f"Tool '{tc.name}' does not support background execution.",
+                                is_error=True,
+                            )
+                        )
+                        yield (
+                            ToolExecutionCompleted(
+                                tool_name=tc.name,
+                                output=f"Tool '{tc.name}' does not support background execution.",
+                                is_error=True,
+                            ),
+                            None,
+                        )
                         continue
 
                     # Launch background task — wrap _execute_tool_call to return ToolResult
-                    async def _bg_wrapper(ctx: QueryContext, name: str, uid: str, inp: dict[str, object]) -> "ToolResult":
+                    async def _bg_wrapper(
+                        ctx: QueryContext, name: str, uid: str, inp: dict[str, object]
+                    ) -> "ToolResult":
                         from tools.base import ToolResult
+
                         block = await _execute_tool_call(ctx, name, uid, inp)
                         return ToolResult(output=block.content, is_error=block.is_error)
 
                     coro = _bg_wrapper(context, tc.name, tc.id, tc.input)
-                    event = background_manager.launch(tc.id, tc.name, tc.input, coro)
+                    event = background_manager.launch(tc.id, tc.name, tc.input, coro, task_note=task_note)
                     yield event, None
-                    tool_results.append(ToolResultBlock(
-                        tool_use_id=tc.id,
-                        content=f"[BACKGROUND] Task launched. Task ID: {tc.id}. "
-                                f"Use check_background_progress to monitor or "
-                                f"cancel_background_task to stop it.",
-                        is_error=False,
-                    ))
+                    tool_results.append(
+                        ToolResultBlock(
+                            tool_use_id=tc.id,
+                            content=f"[BACKGROUND] Task launched. Task ID: {tc.id}. "
+                            f"Use check_background_progress to monitor or "
+                            f"cancel_background_task to stop it.",
+                            is_error=False,
+                        )
+                    )
                 else:
                     foreground_calls.append(tc)
 
             # Execute foreground tools (existing logic)
             if len(foreground_calls) == 1:
                 tc = foreground_calls[0]
+                logger.info(
+                    "STREAM: Executing single foreground tool: name=%s id=%s", tc.name, tc.id
+                )
+                yield (
+                    ToolExecutionStarted(
+                        tool_name=tc.name,
+                        tool_input=tc.input,
+                    ),
+                    None,
+                )
                 result = await _execute_tool_call(context, tc.name, tc.id, tc.input)
                 tool_results.append(result)
                 yield (
@@ -315,6 +436,11 @@ async def _run_query_loop(
                     None,
                 )
             elif foreground_calls:
+                logger.info(
+                    "STREAM: Executing PARALLEL foreground tools: count=%d names=%s",
+                    len(foreground_calls),
+                    [tc.name for tc in foreground_calls],
+                )
                 started_events = []
                 for tc in foreground_calls:
                     started_events.append(
@@ -323,13 +449,31 @@ async def _run_query_loop(
                             tool_input=tc.input,
                         )
                     )
+                    logger.info(
+                        "STREAM: Yielding parallel ToolExecutionStarted: name=%s id=%s",
+                        tc.name,
+                        tc.id,
+                    )
                     yield started_events[-1], None
 
-                results = await asyncio.gather(
-                    *[_execute_tool_call(context, tc.name, tc.id, tc.input) for tc in foreground_calls]
+                logger.debug(
+                    "STREAM: Launching asyncio.gather for %d parallel tools", len(foreground_calls)
                 )
+                results = await asyncio.gather(
+                    *[
+                        _execute_tool_call(context, tc.name, tc.id, tc.input)
+                        for tc in foreground_calls
+                    ]
+                )
+                logger.info("STREAM: All parallel tools completed, gathering results")
                 tool_results.extend(results)
                 for tc, result in zip(foreground_calls, results):
+                    logger.info(
+                        "STREAM: Yielding parallel ToolExecutionCompleted: name=%s is_error=%s output_len=%d",
+                        tc.name,
+                        result.is_error,
+                        len(result.content) if result.content else 0,
+                    )
                     yield (
                         ToolExecutionCompleted(
                             tool_name=tc.name,

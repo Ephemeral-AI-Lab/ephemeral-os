@@ -33,6 +33,7 @@ class QueryEngine:
         hook_executor: HookExecutor | None = None,
         tool_metadata: dict[str, object] | None = None,
         session_state: "SessionState | None" = None,
+        enable_background_tasks: bool = False,
     ) -> None:
         self._api_client = api_client
         self._tool_registry = tool_registry
@@ -44,6 +45,7 @@ class QueryEngine:
         self._hook_executor = hook_executor
         self._tool_metadata = tool_metadata or {}
         self._session_state = session_state
+        self._enable_background_tasks = enable_background_tasks
         self._messages: list[ConversationMessage] = []
         self._cost_tracker = CostTracker()
 
@@ -85,6 +87,7 @@ class QueryEngine:
             hook_executor=self._hook_executor,
             tool_metadata=self._tool_metadata,
             session_state=self._session_state,
+            enable_background_tasks=self._enable_background_tasks,
         )
         messages, event_stream = await run_query(context, self._messages)
         self._messages = messages

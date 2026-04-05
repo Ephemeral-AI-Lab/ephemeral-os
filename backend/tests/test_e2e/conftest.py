@@ -282,13 +282,25 @@ MINIMAX_MODEL = os.environ.get("MINIMAX_MODEL") or _LIVE_SETTINGS.get("model", "
 MINIMAX_BASE_URL = os.environ.get("MINIMAX_BASE_URL") or _LIVE_SETTINGS.get("base_url", "")
 MINIMAX_FORMAT = os.environ.get("MINIMAX_API_FORMAT") or _LIVE_SETTINGS.get("api_format", "openai")
 
+# Anthropic-format MiniMax credentials (Anthropic-native client)
+ANTHROPIC_MINIMAX_KEY = (
+    os.environ.get("ANTHROPIC_MINIMAX_API_KEY")
+    or _LIVE_SETTINGS.get("anthropic_api_key", "")
+    or "sk-cp-Ril2d0sHwI7gagi0S5s9XWFvfPpe6Y8Ms0N7FxpILv93jZCXJDmEiWGRjVALI4VKvSr2XhJfYs5_wLYfhB4QPKWKd4IJHkfZBLhRXQR5tAnjwKiItvcYg-o"
+)
+ANTHROPIC_MINIMAX_MODEL = os.environ.get("ANTHROPIC_MINIMAX_MODEL") or "MiniMax-M2.7-highspeed"
+ANTHROPIC_MINIMAX_BASE_URL = os.environ.get("ANTHROPIC_MINIMAX_BASE_URL") or "https://api.minimax.io/anthropic"
+ANTHROPIC_MINIMAX_FORMAT = "anthropic"
+
 DAYTONA_KEY = os.environ.get("DAYTONA_API_KEY") or _LIVE_SETTINGS.get("daytona_api_key", "")
 DAYTONA_URL = os.environ.get("DAYTONA_API_URL") or _LIVE_SETTINGS.get("daytona_api_url", "")
 DAYTONA_TARGET = os.environ.get("DAYTONA_TARGET") or _LIVE_SETTINGS.get("daytona_target", "")
 
 HAS_MINIMAX = bool(MINIMAX_KEY and MINIMAX_BASE_URL)
+HAS_ANTHROPIC_MINIMAX = bool(ANTHROPIC_MINIMAX_KEY and ANTHROPIC_MINIMAX_BASE_URL)
 HAS_DAYTONA = bool(DAYTONA_KEY and DAYTONA_URL)
 HAS_BOTH = HAS_MINIMAX and HAS_DAYTONA
+HAS_ANTHROPIC_AND_DAYTONA = HAS_ANTHROPIC_MINIMAX and HAS_DAYTONA
 
 
 def make_live_client(
@@ -409,11 +421,32 @@ def send_chat(
 
 
 def get_assistant_text(events: list[dict]) -> str:
-    """Extract the final assistant message text from events."""
-    completes = events_of_type(events, "assistant_complete")
-    if completes:
-        return completes[0].get("message", "")
-    return ""
+    """Extract ALL assistant message text from events across all turns.
+
+    In a multi-turn agent loop the final formatted answer may come in any
+    turn, so we concatenate text from every ``assistant_complete`` event.
+    We also strip ``<think>...</think>`` blocks that some models (e.g.
+    MiniMax) emit as regular text content rather than reasoning_content.
+    """
+    import re
+
+    parts: list[str] = []
+    for evt in events_of_type(events, "assistant_complete"):
+        msg = evt.get("message", "")
+        if msg:
+            parts.append(msg)
+
+    # Fall back to assistant_delta events when no assistant_complete exists
+    if not parts:
+        for evt in events_of_type(events, "assistant_delta"):
+            msg = evt.get("message", "")
+            if msg:
+                parts.append(msg)
+
+    text = "\n".join(parts)
+    # Strip <think>...</think> blocks (some models inline thinking as text)
+    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
+    return text
 
 
 def get_event_types(events: list[dict]) -> set[str]:
