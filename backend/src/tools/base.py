@@ -98,6 +98,7 @@ class BaseTool(ABC):
     name: str
     description: str
     input_model: type[BaseModel]
+    supports_background: bool = False
 
     @abstractmethod
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:

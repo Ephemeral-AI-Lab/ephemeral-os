@@ -100,5 +100,10 @@ def make_api_client(
     # Resolve from DB-registered model first, then settings
     api_key = (db_kwargs or {}).get("api_key") or settings.resolve_api_key()
     base_url = (db_kwargs or {}).get("base_url") or settings.base_url
+    api_format = (db_kwargs or {}).get("api_format") or settings.api_format
+
+    if api_format == "anthropic":
+        from models.clients.anthropic_native import AnthropicClient
+        return AnthropicClient(api_key=api_key, base_url=base_url)
 
     return OpenAICompatibleClient(api_key=api_key, base_url=base_url)

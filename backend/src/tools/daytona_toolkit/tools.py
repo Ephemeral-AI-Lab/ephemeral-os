@@ -121,7 +121,7 @@ async def daytona_read_file(
     """
     sandbox = _get_sandbox(context)
     try:
-        raw = sandbox.fs.download_file(file_path)
+        raw = await sandbox.fs.download_file(file_path)
         content = raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
         lines = content.splitlines()
         total = len(lines)
@@ -214,7 +214,7 @@ async def daytona_list_files(
     cwd = _get_cwd(context)
     directory = directory if directory != "." else cwd
     try:
-        entries = sandbox.fs.list_files(directory)
+        entries = await sandbox.fs.list_files(directory)
         names = []
         for entry in entries or []:
             name = getattr(entry, "name", None) or str(entry)
@@ -262,7 +262,7 @@ async def daytona_grep(
     cwd = _get_cwd(context)
     path = path if path != "." else cwd
     try:
-        matches = sandbox.fs.find_files(path, pattern)
+        matches = await sandbox.fs.find_files(path, pattern)
         if not matches:
             return ToolResult(
                 output=json.dumps(
@@ -332,7 +332,7 @@ async def daytona_glob(
     cwd = _get_cwd(context)
     path = path if path != "." else cwd
     try:
-        response = sandbox.fs.search_files(path, pattern)
+        response = await sandbox.fs.search_files(path, pattern)
         files = getattr(response, "files", None) or []
         return ToolResult(
             output=json.dumps(
@@ -348,7 +348,7 @@ async def daytona_glob(
         # Fallback: use shell glob via process.exec
         try:
             fallback_cmd = f"find {path} -name '{pattern}' 2>/dev/null | head -500"
-            resp = sandbox.process.exec(fallback_cmd, cwd=cwd, timeout=30)
+            resp = await sandbox.process.exec(fallback_cmd, cwd=cwd, timeout=30)
             file_list = [f for f in (resp.result or "").splitlines() if f.strip()]
             return ToolResult(
                 output=json.dumps(

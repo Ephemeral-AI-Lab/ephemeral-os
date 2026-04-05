@@ -21,9 +21,12 @@ from models.types import (
     UsageSnapshot,
 )
 from engine.messages import ConversationMessage, TextBlock, ToolResultBlock, ToolUseBlock
+from engine.background_tasks import BackgroundTaskManager
 from engine.stream_events import (
     AssistantTextDelta,
     AssistantTurnComplete,
+    BackgroundTaskCompleted,
+    BackgroundTaskStarted,
     StreamEvent,
     ThinkingDelta,
     ToolExecutionCancelled,
@@ -49,6 +52,7 @@ class QueryContext:
     hook_executor: HookExecutor | None = None
     tool_metadata: dict[str, object] | None = None
     session_state: "SessionState | None" = None
+    enable_background_tasks: bool = False
 
 
 async def _run_query_loop(
@@ -71,6 +75,19 @@ async def _run_query_loop(
     compact_state = context.session_state or SessionState()
     cancel_pattern = re.compile(r'\[CANCEL:(\S+)(?:\s+reason="([^"]*)")?\]')
 
+    background_manager: BackgroundTaskManager | None = None
+    if context.enable_background_tasks:
+        background_manager = BackgroundTaskManager()
+        if context.tool_metadata is None:
+            context.tool_metadata = {}
+        context.tool_metadata["background_task_manager"] = background_manager
+
+        # Register background tools
+        from tools.builtins.check_background_progress import CheckBackgroundProgressTool
+        from tools.builtins.cancel_background_task import CancelBackgroundTaskTool
+        context.tool_registry.register(CheckBackgroundProgressTool())
+        context.tool_registry.register(CancelBackgroundTaskTool())
+
     for _ in range(context.max_turns):
         messages, was_compacted = await auto_compact_if_needed(
             messages,
@@ -79,6 +96,26 @@ async def _run_query_loop(
             system_prompt=context.system_prompt,
             state=compact_state,
         )
+
+        # Inject completed background task results
+        if background_manager is not None:
+            for completed_task in background_manager.collect_completed():
+                output = completed_task.result.output if completed_task.result else "No output"
+                if len(output) > 2000:
+                    output = f"[truncated, showing last 2000 chars]\n...{output[-2000:]}"
+                status_label = "ERROR" if (completed_task.result and completed_task.result.is_error) else "COMPLETED"
+                messages.append(
+                    ConversationMessage.from_user_text(
+                        f"[BACKGROUND TASK {status_label}] {completed_task.tool_name} "
+                        f"(task_id: {completed_task.task_id})\n\n{output}"
+                    )
+                )
+                yield BackgroundTaskCompleted(
+                    task_id=completed_task.task_id,
+                    tool_name=completed_task.tool_name,
+                    output=output,
+                    is_error=completed_task.result.is_error if completed_task.result else False,
+                ), None
 
         executor = StreamingToolExecutor(
             tool_registry=context.tool_registry,
@@ -89,9 +126,22 @@ async def _run_query_loop(
         )
 
         # Inject Daytona sandbox into context if DaytonaToolkit is registered
+        # and a sandbox_id is configured. Gracefully skip if no sandbox is
+        # available (toolkit may be registered for schema purposes only).
         daytona_toolkit = context.tool_registry.get_toolkit("sandbox_operations")
-        if daytona_toolkit is not None:
-            await daytona_toolkit.prepare_context_async(executor._context)
+        if daytona_toolkit is not None and getattr(daytona_toolkit, "sandbox_id", None):
+            try:
+                await daytona_toolkit.prepare_context_async(executor._context)
+                # Propagate sandbox metadata so fallback _execute_tool_call can find it
+                if context.tool_metadata is None:
+                    context.tool_metadata = {}
+                context.tool_metadata.update(executor._context.metadata)
+            except Exception:
+                import logging
+                logging.getLogger(__name__).debug(
+                    "Sandbox context injection skipped (sandbox may not be configured)",
+                    exc_info=True,
+                )
 
         final_message: ConversationMessage | None = None
         usage = UsageSnapshot()
@@ -152,7 +202,35 @@ async def _run_query_loop(
         yield AssistantTurnComplete(message=final_message, usage=usage), usage
 
         if not final_message.tool_uses:
-            return
+            if background_manager is None or not background_manager.has_pending():
+                return
+
+            # Idle wait — no LLM turns, zero token cost
+            completed_task = await background_manager.wait_any(timeout=300)
+
+            if completed_task is not None:
+                output = completed_task.result.output if completed_task.result else "No output"
+                if len(output) > 2000:
+                    output = f"[truncated, showing last 2000 chars]\n...{output[-2000:]}"
+                status_label = "ERROR" if (completed_task.result and completed_task.result.is_error) else "COMPLETED"
+                messages.append(
+                    ConversationMessage.from_user_text(
+                        f"[BACKGROUND TASK {status_label}] {completed_task.tool_name} "
+                        f"(task_id: {completed_task.task_id})\n\n{output}"
+                    )
+                )
+                yield BackgroundTaskCompleted(
+                    task_id=completed_task.task_id,
+                    tool_name=completed_task.tool_name,
+                    output=output,
+                    is_error=completed_task.result.is_error if completed_task.result else False,
+                ), None
+            else:
+                # Timeout — give LLM a turn to decide
+                messages.append(
+                    ConversationMessage.from_user_text(background_manager.compact_status())
+                )
+            continue
 
         # Yield started events for any remaining tools
         for started in executor.get_started_events():
@@ -183,10 +261,51 @@ async def _run_query_loop(
         # Match tool results to their tool_use blocks
         if not tool_results:
             tool_calls = final_message.tool_uses
-            if len(tool_calls) == 1:
-                tc = tool_calls[0]
+            foreground_calls = []
+
+            for tc in tool_calls:
+                is_background = tc.input.pop("background", False) if background_manager else False
+
+                if is_background:
+                    # Validate tool supports background
+                    tool_def = context.tool_registry.get(tc.name)
+                    if tool_def and not tool_def.supports_background:
+                        tool_results.append(ToolResultBlock(
+                            tool_use_id=tc.id,
+                            content=f"Tool '{tc.name}' does not support background execution.",
+                            is_error=True,
+                        ))
+                        yield ToolExecutionCompleted(
+                            tool_name=tc.name,
+                            output=f"Tool '{tc.name}' does not support background execution.",
+                            is_error=True,
+                        ), None
+                        continue
+
+                    # Launch background task — wrap _execute_tool_call to return ToolResult
+                    async def _bg_wrapper(ctx: QueryContext, name: str, uid: str, inp: dict[str, object]) -> "ToolResult":
+                        from tools.base import ToolResult
+                        block = await _execute_tool_call(ctx, name, uid, inp)
+                        return ToolResult(output=block.content, is_error=block.is_error)
+
+                    coro = _bg_wrapper(context, tc.name, tc.id, tc.input)
+                    event = background_manager.launch(tc.id, tc.name, tc.input, coro)
+                    yield event, None
+                    tool_results.append(ToolResultBlock(
+                        tool_use_id=tc.id,
+                        content=f"[BACKGROUND] Task launched. Task ID: {tc.id}. "
+                                f"Use check_background_progress to monitor or "
+                                f"cancel_background_task to stop it.",
+                        is_error=False,
+                    ))
+                else:
+                    foreground_calls.append(tc)
+
+            # Execute foreground tools (existing logic)
+            if len(foreground_calls) == 1:
+                tc = foreground_calls[0]
                 result = await _execute_tool_call(context, tc.name, tc.id, tc.input)
-                tool_results = [result]
+                tool_results.append(result)
                 yield (
                     ToolExecutionCompleted(
                         tool_name=tc.name,
@@ -195,9 +314,9 @@ async def _run_query_loop(
                     ),
                     None,
                 )
-            else:
+            elif foreground_calls:
                 started_events = []
-                for tc in tool_calls:
+                for tc in foreground_calls:
                     started_events.append(
                         ToolExecutionStarted(
                             tool_name=tc.name,
@@ -207,10 +326,10 @@ async def _run_query_loop(
                     yield started_events[-1], None
 
                 results = await asyncio.gather(
-                    *[_execute_tool_call(context, tc.name, tc.id, tc.input) for tc in tool_calls]
+                    *[_execute_tool_call(context, tc.name, tc.id, tc.input) for tc in foreground_calls]
                 )
-                tool_results = list(results)
-                for tc, result in zip(tool_calls, results):
+                tool_results.extend(results)
+                for tc, result in zip(foreground_calls, results):
                     yield (
                         ToolExecutionCompleted(
                             tool_name=tc.name,
@@ -229,6 +348,10 @@ async def _run_query_loop(
                     break
 
         messages.append(ConversationMessage(role="user", content=tool_results))  # type: ignore[arg-type]
+
+    # Cleanup background tasks
+    if background_manager is not None:
+        background_manager.cancel_all()
 
     yield (
         ToolExecutionCompleted(

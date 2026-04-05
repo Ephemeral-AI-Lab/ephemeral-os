@@ -103,13 +103,13 @@ async def daytona_codeact(
     script_path = f"/tmp/codeact-wrapper-{run_id}.py"
 
     try:
-        sandbox.fs.upload_file(script_path, wrapper.encode("utf-8"))
+        await sandbox.fs.upload_file(script_path, wrapper.encode("utf-8"))
     except Exception as exc:
         return ToolResult(output=f"Failed to upload script: {exc}", is_error=True)
 
     # Execute
     try:
-        response = sandbox.process.exec(
+        response = await sandbox.process.exec(
             f"python3 {script_path}",
             timeout=300,
         )
@@ -139,7 +139,7 @@ async def daytona_codeact(
         return ToolResult(output=f"Script output:\n{stdout[:4000]}")
 
     try:
-        raw = sandbox.fs.download_file(manifest_path)
+        raw = await sandbox.fs.download_file(manifest_path)
         manifest = json.loads(raw.decode("utf-8") if isinstance(raw, bytes) else raw)
     except Exception:
         return ToolResult(output=f"Script completed but manifest unreadable:\n{stdout[:4000]}")
@@ -153,7 +153,7 @@ async def daytona_codeact(
         path = w.get("path", "")
         content = w.get("content", "")
         try:
-            sandbox.fs.upload_file(path, content.encode("utf-8"))
+            await sandbox.fs.upload_file(path, content.encode("utf-8"))
             prime_cache_after_write(context, path, content)
             record_edit_in_ledger(context, path, edit_type="codeact")
             committed += 1

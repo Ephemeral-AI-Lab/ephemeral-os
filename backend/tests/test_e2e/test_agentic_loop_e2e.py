@@ -12,205 +12,29 @@ Run with: pytest tests/test_e2e/test_agentic_loop_e2e.py -m live -v
 
 from __future__ import annotations
 
-import json
-import os
-import re
-import time
-from pathlib import Path
-from typing import Any
-
 import pytest
-from dotenv import load_dotenv
 
-from tests.test_e2e.conftest import parse_sse_events, events_of_type
-
-# Load .env from project root
-_PROJECT_ROOT = Path(__file__).resolve().parents[3]
-load_dotenv(_PROJECT_ROOT / ".env")
+from tests.test_e2e.conftest import (
+    HAS_BOTH,
+    create_test_agent,
+    create_test_sandbox,
+    delete_test_sandbox,
+    events_of_type,
+    get_assistant_text,
+    get_event_types,
+    get_tool_completed_events,
+    get_tool_started_events,
+    make_live_client,
+    send_chat,
+)
 
 pytestmark = [pytest.mark.e2e, pytest.mark.live]
-
-
-# ---------------------------------------------------------------------------
-# Credential loading (same pattern as test_live_minimax_comprehensive.py)
-# ---------------------------------------------------------------------------
-
-
-def _load_settings() -> dict:
-    settings_path = Path.home() / ".ephemeralos" / "settings.json"
-    if settings_path.exists():
-        return json.loads(settings_path.read_text())
-    return {}
-
-
-_SETTINGS = _load_settings()
-
-MINIMAX_KEY = os.environ.get("MINIMAX_API_KEY") or _SETTINGS.get("api_key", "")
-MINIMAX_MODEL = os.environ.get("MINIMAX_MODEL") or _SETTINGS.get("model", "MiniMax-M2.7-highspeed")
-MINIMAX_BASE_URL = os.environ.get("MINIMAX_BASE_URL") or _SETTINGS.get("base_url", "")
-MINIMAX_FORMAT = os.environ.get("MINIMAX_API_FORMAT") or _SETTINGS.get("api_format", "openai")
-
-DAYTONA_KEY = os.environ.get("DAYTONA_API_KEY") or _SETTINGS.get("daytona_api_key", "")
-DAYTONA_URL = os.environ.get("DAYTONA_API_URL") or _SETTINGS.get("daytona_api_url", "")
-DAYTONA_TARGET = os.environ.get("DAYTONA_TARGET") or _SETTINGS.get("daytona_target", "")
-
-HAS_MINIMAX = bool(MINIMAX_KEY and MINIMAX_BASE_URL)
-HAS_DAYTONA = bool(DAYTONA_KEY and DAYTONA_URL)
-HAS_BOTH = HAS_MINIMAX and HAS_DAYTONA
-
-
-# ---------------------------------------------------------------------------
-# Shared helpers (mirrors test_live_minimax_comprehensive.py)
-# ---------------------------------------------------------------------------
-
-
-def _make_live_client(
-    db_session_factory, tmp_path, monkeypatch, *, api_key, model, base_url, api_format
-):
-    """Create a TestClient configured with real API credentials."""
-    from fastapi.testclient import TestClient
-    from server.protocol import BackendHostConfig
-    from server.app_factory import create_app
-
-    # Clear ALL proxy env vars to prevent httpx routing through localhost proxy
-    for _var in ["HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy", "NO_PROXY", "no_proxy"]:
-        monkeypatch.delenv(_var, raising=False)
-    monkeypatch.delenv("EPHEMERALOS_DATABASE_URL", raising=False)
-    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
-    monkeypatch.setattr("db.engine.initialize_db", lambda *a, **kw: db_session_factory)
-    monkeypatch.setattr("engine.agent.make_hook_executor", lambda *a, **kw: None)
-
-    def _patched_load_settings(*a, **kw):
-        from config.settings import Settings, DatabaseSettings
-
-        return Settings(
-            api_key=api_key,
-            model=model,
-            api_format=api_format,
-            base_url=base_url or None,
-            daytona_api_key=DAYTONA_KEY,
-            daytona_api_url=DAYTONA_URL,
-            daytona_target=DAYTONA_TARGET,
-            database=DatabaseSettings(url=f"sqlite:///{tmp_path / 'test.db'}"),
-        )
-
-    monkeypatch.setattr("config.load_settings", _patched_load_settings)
-    monkeypatch.setattr("config.settings.load_settings", _patched_load_settings)
-    monkeypatch.setattr("server.app_factory.load_settings", _patched_load_settings)
-
-    config = BackendHostConfig(
-        api_key=api_key,
-        model=model,
-        api_format=api_format,
-        base_url=base_url or None,
-    )
-    app = create_app(config)
-    return TestClient(app)
-
-
-def _get_sandbox_service():
-    from sandbox.service import SandboxService
-
-    return SandboxService()
-
-
-def _create_test_sandbox(name: str = "e2e-agentic") -> dict:
-    svc = _get_sandbox_service()
-    sandbox = svc.create_sandbox(
-        name=f"{name}-{int(time.time())}",
-        language="python",
-        labels={"purpose": "e2e-agentic-loop"},
-    )
-    return sandbox
-
-
-def _delete_sandbox(sandbox_id: str) -> None:
-    try:
-        svc = _get_sandbox_service()
-        svc.delete_sandbox(sandbox_id)
-    except Exception:
-        pass
-
-
-def _send_chat(
-    client,
-    line: str,
-    *,
-    agent_name: str | None = None,
-    sandbox_id: str | None = None,
-    timeout: int = 180,
-) -> list[dict]:
-    """Send a chat message and return parsed SSE events."""
-    payload: dict[str, Any] = {"line": line}
-    if agent_name:
-        payload["agent_name"] = agent_name
-    if sandbox_id:
-        payload["sandbox_id"] = sandbox_id
-
-    resp = client.post("/api/chat", json=payload, timeout=timeout)
-    assert resp.status_code == 200, f"Chat failed: {resp.status_code} {resp.text[:500]}"
-    return parse_sse_events(resp.text)
-
-
-def _get_assistant_text(events: list[dict]) -> str:
-    """Extract the final assistant message text from events."""
-    completes = events_of_type(events, "assistant_complete")
-    if completes:
-        return completes[0].get("message", "")
-    return ""
-
-
-def _get_event_types(events: list[dict]) -> set[str]:
-    """Get unique event types."""
-    return {e["type"] for e in events}
-
-
-def _get_tool_started_events(events: list[dict]) -> list[dict]:
-    """Get all tool_started events."""
-    return events_of_type(events, "tool_started")
-
-
-def _get_tool_completed_events(events: list[dict]) -> list[dict]:
-    """Get all tool_completed events."""
-    return events_of_type(events, "tool_completed")
-
-
-def _create_agent(
-    client,
-    name: str,
-    *,
-    toolkits: list[str] | None = None,
-    skills: list[str] | None = None,
-    system_prompt: str | None = None,
-) -> dict:
-    """Create an agent and return its data, handling duplicates."""
-    payload: dict[str, Any] = {
-        "name": name,
-        "description": f"E2E agentic loop test agent: {name}",
-        "model": MINIMAX_MODEL,
-    }
-    if toolkits:
-        payload["toolkits"] = toolkits
-    if skills:
-        payload["skills"] = skills
-    if system_prompt:
-        payload["system_prompt"] = system_prompt
-
-    resp = client.post("/api/agents/", json=payload)
-    if resp.status_code == 201:
-        return resp.json()
-    # Agent may already exist from a previous test run — fetch it
-    get_resp = client.get(f"/api/agents/{name}")
-    if get_resp.status_code == 200:
-        return get_resp.json()
-    # If neither worked, raise
-    assert False, f"Failed to create or get agent '{name}': {resp.status_code} {resp.text}"
 
 
 def _extract_tool_calls_from_events(events: list[dict]) -> list[tuple[str, dict]]:
     """Extract (tool_name, tool_input) tuples from tool_started events."""
     tool_calls = []
-    for ev in _get_tool_started_events(events):
+    for ev in get_tool_started_events(events):
         tool_calls.append((ev.get("tool_name", ""), ev.get("tool_input", {})))
     return tool_calls
 
@@ -226,27 +50,19 @@ class TestToolCallAccuracy:
 
     @pytest.fixture(scope="class")
     def sandbox(self):
-        sb = _create_test_sandbox("tool-accuracy")
+        sb = create_test_sandbox("tool-accuracy")
         yield sb
-        _delete_sandbox(sb["id"])
+        delete_test_sandbox(sb["id"])
 
     @pytest.fixture()
     def client(self, db_session_factory, tmp_path, monkeypatch):
-        c = _make_live_client(
-            db_session_factory,
-            tmp_path,
-            monkeypatch,
-            api_key=MINIMAX_KEY,
-            model=MINIMAX_MODEL,
-            base_url=MINIMAX_BASE_URL,
-            api_format=MINIMAX_FORMAT,
-        )
+        c = make_live_client(db_session_factory, tmp_path, monkeypatch)
         with c:
             yield c
 
     def test_correct_tool_selected_for_file_write(self, client, sandbox):
         """Agent should use daytona_write_file, not daytona_bash, for file creation."""
-        _create_agent(
+        create_test_agent(
             client,
             "acc-write-agent",
             toolkits=["sandbox_operations"],
@@ -256,7 +72,7 @@ class TestToolCallAccuracy:
             ),
         )
 
-        events = _send_chat(
+        events = send_chat(
             client,
             "Create a file /workspace/e2e_accuracy.txt with content: TOOL_ACCURACY_TEST_PASS",
             agent_name="acc-write-agent",
@@ -264,7 +80,7 @@ class TestToolCallAccuracy:
             timeout=120,
         )
 
-        tool_started = _get_tool_started_events(events)
+        tool_started = get_tool_started_events(events)
         tool_names = [e["tool_name"] for e in tool_started]
 
         # Should use daytona_write_file for file creation
@@ -281,7 +97,7 @@ class TestToolCallAccuracy:
 
     def test_correct_tool_selected_for_command_execution(self, client, sandbox):
         """Agent should use daytona_bash, not daytona_write_file, for command execution."""
-        _create_agent(
+        create_test_agent(
             client,
             "acc-bash-agent",
             toolkits=["sandbox_operations"],
@@ -291,7 +107,7 @@ class TestToolCallAccuracy:
             ),
         )
 
-        events = _send_chat(
+        events = send_chat(
             client,
             "Run this command in the sandbox: echo 'CORRECT_TOOL_BASH'",
             agent_name="acc-bash-agent",
@@ -299,7 +115,7 @@ class TestToolCallAccuracy:
             timeout=120,
         )
 
-        tool_started = _get_tool_started_events(events)
+        tool_started = get_tool_started_events(events)
         tool_names = [e["tool_name"] for e in tool_started]
 
         # Should use daytona_bash for command execution
@@ -309,14 +125,14 @@ class TestToolCallAccuracy:
 
     def test_tool_input_parameters_correct(self, client, sandbox):
         """Verify tool is called with the exact parameters specified."""
-        _create_agent(
+        create_test_agent(
             client,
             "acc-params-agent",
             toolkits=["sandbox_operations"],
             system_prompt="Use daytona_write_file with EXACTLY the path and content provided.",
         )
 
-        events = _send_chat(
+        events = send_chat(
             client,
             "Write to /workspace/params_test.txt with content: PARAM_TEST_CONTENT",
             agent_name="acc-params-agent",
@@ -324,7 +140,7 @@ class TestToolCallAccuracy:
             timeout=120,
         )
 
-        tool_started = _get_tool_started_events(events)
+        tool_started = get_tool_started_events(events)
         write_calls = [e for e in tool_started if e["tool_name"] == "daytona_write_file"]
 
         assert write_calls, (
@@ -344,7 +160,7 @@ class TestToolCallAccuracy:
 
     def test_multiple_tools_different_purposes(self, client, sandbox):
         """Agent should use different tools for different purposes in same conversation."""
-        _create_agent(
+        create_test_agent(
             client,
             "acc-multi-agent",
             toolkits=["sandbox_operations"],
@@ -355,7 +171,7 @@ class TestToolCallAccuracy:
             ),
         )
 
-        events = _send_chat(
+        events = send_chat(
             client,
             "First, create /workspace/multi_test.txt with 'MULTI_TOOL_TEST'. Then run: cat /workspace/multi_test.txt",
             agent_name="acc-multi-agent",
@@ -363,7 +179,7 @@ class TestToolCallAccuracy:
             timeout=180,
         )
 
-        tool_started = _get_tool_started_events(events)
+        tool_started = get_tool_started_events(events)
         tool_names = [e["tool_name"] for e in tool_started]
 
         # Should have BOTH write and bash (read) tools
@@ -377,7 +193,7 @@ class TestToolCallAccuracy:
 
 
 # ===========================================================================
-# AREEA 2: Skill Loading & Instruction Following
+# AREA 2: Skill Loading & Instruction Following
 # ===========================================================================
 
 
@@ -387,27 +203,19 @@ class TestSkillLoadingAndInstructionFollowing:
 
     @pytest.fixture(scope="class")
     def sandbox(self):
-        sb = _create_test_sandbox("skill-follow")
+        sb = create_test_sandbox("skill-follow")
         yield sb
-        _delete_sandbox(sb["id"])
+        delete_test_sandbox(sb["id"])
 
     @pytest.fixture()
     def client(self, db_session_factory, tmp_path, monkeypatch):
-        c = _make_live_client(
-            db_session_factory,
-            tmp_path,
-            monkeypatch,
-            api_key=MINIMAX_KEY,
-            model=MINIMAX_MODEL,
-            base_url=MINIMAX_BASE_URL,
-            api_format=MINIMAX_FORMAT,
-        )
+        c = make_live_client(db_session_factory, tmp_path, monkeypatch)
         with c:
             yield c
 
     def test_skill_load_skill_tool_invoked(self, client, sandbox):
         """Agent should invoke load_skill tool when given a skill-dependent task."""
-        _create_agent(
+        create_test_agent(
             client,
             "skill-load-agent",
             toolkits=["sandbox_operations"],
@@ -418,7 +226,7 @@ class TestSkillLoadingAndInstructionFollowing:
             ),
         )
 
-        events = _send_chat(
+        events = send_chat(
             client,
             "I need to verify tool call accuracy. Load the e2e-test-skill and follow its instructions.",
             agent_name="skill-load-agent",
@@ -426,7 +234,7 @@ class TestSkillLoadingAndInstructionFollowing:
             timeout=120,
         )
 
-        tool_started = _get_tool_started_events(events)
+        tool_started = get_tool_started_events(events)
         tool_names = [e["tool_name"] for e in tool_started]
 
         # Should have invoked load_skill
@@ -436,7 +244,7 @@ class TestSkillLoadingAndInstructionFollowing:
 
     def test_skill_instructions_followed_exactly(self, client, sandbox):
         """Agent should follow skill instructions with exact string matching."""
-        _create_agent(
+        create_test_agent(
             client,
             "skill-follow-agent",
             toolkits=["sandbox_operations"],
@@ -448,7 +256,7 @@ class TestSkillLoadingAndInstructionFollowing:
             ),
         )
 
-        events = _send_chat(
+        events = send_chat(
             client,
             (
                 "Load the e2e-test-skill FIRST, then verify these steps:\n"
@@ -462,8 +270,7 @@ class TestSkillLoadingAndInstructionFollowing:
             timeout=180,
         )
 
-        text = _get_assistant_text(events)
-        tool_started = _get_tool_started_events(events)
+        tool_started = get_tool_started_events(events)
         tool_names = [e["tool_name"] for e in tool_started]
 
         assert "load_skill" in tool_names, (
@@ -472,7 +279,7 @@ class TestSkillLoadingAndInstructionFollowing:
 
     def test_skill_output_format_compliance(self, client, sandbox):
         """Verify agent uses the exact output format specified by the skill."""
-        _create_agent(
+        create_test_agent(
             client,
             "skill-format-agent",
             toolkits=["sandbox_operations"],
@@ -484,7 +291,7 @@ class TestSkillLoadingAndInstructionFollowing:
             ),
         )
 
-        events = _send_chat(
+        events = send_chat(
             client,
             (
                 "Run: echo 'FORMAT_TEST' and verify the output.\n"
@@ -495,7 +302,7 @@ class TestSkillLoadingAndInstructionFollowing:
             timeout=180,
         )
 
-        text = _get_assistant_text(events)
+        text = get_assistant_text(events)
 
         # Skill mandates specific output format
         required_fields = ["TOOL_CALLED:", "PARAMS_USED:", "VERIFIED:", "STATUS:"]
@@ -504,7 +311,7 @@ class TestSkillLoadingAndInstructionFollowing:
 
     def test_skill_not_loaded_when_not_needed(self, client, sandbox):
         """Verify load_skill is NOT invoked for tasks that don't require it."""
-        _create_agent(
+        create_test_agent(
             client,
             "skill-unneeded-agent",
             toolkits=["sandbox_operations"],
@@ -512,7 +319,7 @@ class TestSkillLoadingAndInstructionFollowing:
             system_prompt="You have e2e-test-skill available but only use it when appropriate.",
         )
 
-        events = _send_chat(
+        events = send_chat(
             client,
             "Simply run: echo 'NO_SKILL_NEEDED' and tell me the result.",
             agent_name="skill-unneeded-agent",
@@ -520,7 +327,7 @@ class TestSkillLoadingAndInstructionFollowing:
             timeout=120,
         )
 
-        tool_started = _get_tool_started_events(events)
+        tool_started = get_tool_started_events(events)
         tool_names = [e["tool_name"] for e in tool_started]
 
         # Should NOT invoke load_skill for simple echo command
@@ -540,27 +347,19 @@ class TestAgenticTaskCompletion:
 
     @pytest.fixture(scope="class")
     def sandbox(self):
-        sb = _create_test_sandbox("task-completion")
+        sb = create_test_sandbox("task-completion")
         yield sb
-        _delete_sandbox(sb["id"])
+        delete_test_sandbox(sb["id"])
 
     @pytest.fixture()
     def client(self, db_session_factory, tmp_path, monkeypatch):
-        c = _make_live_client(
-            db_session_factory,
-            tmp_path,
-            monkeypatch,
-            api_key=MINIMAX_KEY,
-            model=MINIMAX_MODEL,
-            base_url=MINIMAX_BASE_URL,
-            api_format=MINIMAX_FORMAT,
-        )
+        c = make_live_client(db_session_factory, tmp_path, monkeypatch)
         with c:
             yield c
 
     def test_five_step_task_completes_all_steps(self, client, sandbox):
         """A 5-step task should complete ALL 5 steps, not stop at step 2 or 3."""
-        _create_agent(
+        create_test_agent(
             client,
             "multi-step-agent",
             toolkits=["sandbox_operations"],
@@ -572,7 +371,7 @@ class TestAgenticTaskCompletion:
             ),
         )
 
-        events = _send_chat(
+        events = send_chat(
             client,
             (
                 "Complete these 5 steps in order:\n"
@@ -588,7 +387,7 @@ class TestAgenticTaskCompletion:
             timeout=300,
         )
 
-        tool_started = _get_tool_started_events(events)
+        tool_started = get_tool_started_events(events)
         tool_names = [e["tool_name"] for e in tool_started]
 
         # Count daytona_write_file calls - should be exactly 5 (one per step)
@@ -610,7 +409,7 @@ class TestAgenticTaskCompletion:
 
     def test_agent_continues_after_tool_error(self, client, sandbox):
         """Agent should continue task even if a tool call returns an error."""
-        _create_agent(
+        create_test_agent(
             client,
             "error-recovery-agent",
             toolkits=["sandbox_operations"],
@@ -621,7 +420,7 @@ class TestAgenticTaskCompletion:
             ),
         )
 
-        events = _send_chat(
+        events = send_chat(
             client,
             (
                 "Complete these steps:\n"
@@ -635,10 +434,8 @@ class TestAgenticTaskCompletion:
             timeout=180,
         )
 
-        text = _get_assistant_text(events)
-
         # Should have attempted all 3 steps
-        tool_started = _get_tool_started_events(events)
+        tool_started = get_tool_started_events(events)
         tool_names = [e["tool_name"] for e in tool_started]
 
         # Should have write for step 1
@@ -662,7 +459,7 @@ class TestAgenticTaskCompletion:
 
     def test_complex_task_with_10_plus_tool_calls(self, client, sandbox):
         """Complex task requiring 10+ tool calls should complete without hitting max_turns."""
-        _create_agent(
+        create_test_agent(
             client,
             "complex-task-agent",
             toolkits=["sandbox_operations"],
@@ -678,7 +475,7 @@ class TestAgenticTaskCompletion:
             + "\n".join(f"- file{i}.txt with content 'FILE{i}DONE'" for i in range(1, 11))
             + "\nThen list all 10 filenames."
         )
-        events = _send_chat(
+        events = send_chat(
             client,
             prompt,
             agent_name="complex-task-agent",
@@ -686,7 +483,7 @@ class TestAgenticTaskCompletion:
             timeout=600,
         )
 
-        tool_started = _get_tool_started_events(events)
+        tool_started = get_tool_started_events(events)
         tool_names = [e["tool_name"] for e in tool_started]
 
         # Should have made multiple tool calls
@@ -696,13 +493,13 @@ class TestAgenticTaskCompletion:
         )
 
         # Verify assistant completed (didn't hit max_turns limit)
-        assert "assistant_complete" in _get_event_types(events), (
+        assert "assistant_complete" in get_event_types(events), (
             "Task should complete with assistant_complete, not timeout"
         )
 
     def test_no_early_stop_verification(self, client, sandbox):
         """Verify agent doesn't stop early when task explicitly asks for specific completion criteria."""
-        _create_agent(
+        create_test_agent(
             client,
             "complete-agent",
             toolkits=["sandbox_operations"],
@@ -713,7 +510,7 @@ class TestAgenticTaskCompletion:
             ),
         )
 
-        events = _send_chat(
+        events = send_chat(
             client,
             (
                 "Complete these EXACT steps:\n"
@@ -728,7 +525,7 @@ class TestAgenticTaskCompletion:
             timeout=300,
         )
 
-        tool_started = _get_tool_started_events(events)
+        tool_started = get_tool_started_events(events)
         tool_names = [e["tool_name"] for e in tool_started]
 
         # Should have ls command at the end (step 4)
@@ -736,7 +533,6 @@ class TestAgenticTaskCompletion:
         assert bash_calls, f"Should execute ls command (step 4). Tools: {tool_names}"
 
         # Verify ls was called with correct path
-        # tool_input can be a dict or a string depending on the event structure
         ls_calls = []
         for e in bash_calls:
             tool_input = e.get("tool_input", {})
@@ -752,7 +548,7 @@ class TestAgenticTaskCompletion:
 
     def test_agent_completes_without_summarizing_early(self, client, sandbox):
         """Agent should not stop early by summarizing - must complete actual operations."""
-        _create_agent(
+        create_test_agent(
             client,
             "no-summarize-agent",
             toolkits=["sandbox_operations"],
@@ -763,7 +559,7 @@ class TestAgenticTaskCompletion:
             ),
         )
 
-        events = _send_chat(
+        events = send_chat(
             client,
             (
                 "Perform these actions (not just describe them):\n"
@@ -776,7 +572,7 @@ class TestAgenticTaskCompletion:
             timeout=300,
         )
 
-        tool_started = _get_tool_started_events(events)
+        tool_started = get_tool_started_events(events)
         tool_names = [e["tool_name"] for e in tool_started]
 
         # Should actually perform writes, not just describe
@@ -797,27 +593,19 @@ class TestIntegratedAgenticLoop:
 
     @pytest.fixture(scope="class")
     def sandbox(self):
-        sb = _create_test_sandbox("integrated")
+        sb = create_test_sandbox("integrated")
         yield sb
-        _delete_sandbox(sb["id"])
+        delete_test_sandbox(sb["id"])
 
     @pytest.fixture()
     def client(self, db_session_factory, tmp_path, monkeypatch):
-        c = _make_live_client(
-            db_session_factory,
-            tmp_path,
-            monkeypatch,
-            api_key=MINIMAX_KEY,
-            model=MINIMAX_MODEL,
-            base_url=MINIMAX_BASE_URL,
-            api_format=MINIMAX_FORMAT,
-        )
+        c = make_live_client(db_session_factory, tmp_path, monkeypatch)
         with c:
             yield c
 
     def test_full_integration_tool_accuracy_plus_skill_following(self, client, sandbox):
         """Combines: correct tool selection + skill instruction following + task completion."""
-        _create_agent(
+        create_test_agent(
             client,
             "integration-agent",
             toolkits=["sandbox_operations"],
@@ -831,7 +619,7 @@ class TestIntegratedAgenticLoop:
             ),
         )
 
-        events = _send_chat(
+        events = send_chat(
             client,
             (
                 "Using the e2e-test-skill format:\n"
@@ -845,7 +633,7 @@ class TestIntegratedAgenticLoop:
         )
 
         # Verify tool accuracy
-        tool_started = _get_tool_started_events(events)
+        tool_started = get_tool_started_events(events)
         tool_names = [e["tool_name"] for e in tool_started]
         assert "daytona_write_file" in tool_names, f"Should use correct tool. Tools: {tool_names}"
 
@@ -853,6 +641,6 @@ class TestIntegratedAgenticLoop:
         assert "load_skill" in tool_names, f"Should load skill. Tools: {tool_names}"
 
         # Verify task completion
-        text = _get_assistant_text(events)
+        text = get_assistant_text(events)
         assert "VERIFIED:" in text, f"Should follow skill format. Got: {text}"
         assert "INTEGRATION_PASS" in text, f"Should verify content. Got: {text}"

@@ -68,7 +68,7 @@ async def daytona_edit_file(
 
     # Read current content
     try:
-        raw = sandbox.fs.download_file(file_path)
+        raw = await sandbox.fs.download_file(file_path)
         current = raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
     except Exception as exc:
         return ToolResult(output=f"Cannot read file: {exc}", is_error=True)
@@ -86,6 +86,7 @@ async def daytona_edit_file(
     if dry_run:
         # Show preview
         import difflib
+
         diff = difflib.unified_diff(
             current.splitlines(keepends=True),
             new_content.splitlines(keepends=True),
@@ -96,10 +97,14 @@ async def daytona_edit_file(
         diff_text = "".join(diff)
         if len(diff_text) > _OUTPUT_MAX_CHARS:
             diff_text = diff_text[:_OUTPUT_MAX_CHARS] + "\n... (truncated)"
-        output = json.dumps({
-            "file_path": file_path, "status": "dry_run",
-            "occ": False, "diff": diff_text,
-        })
+        output = json.dumps(
+            {
+                "file_path": file_path,
+                "status": "dry_run",
+                "occ": False,
+                "diff": diff_text,
+            }
+        )
         return ToolResult(output=output, metadata={"dry_run": True})
 
     # Try OCC-coordinated edit via CI service
@@ -122,13 +127,14 @@ async def daytona_edit_file(
                 tm.save(file_path, current)
 
             # Write
-            sandbox.fs.upload_file(file_path, new_content.encode("utf-8"))
+            await sandbox.fs.upload_file(file_path, new_content.encode("utf-8"))
 
             # Record
             new_hash = _content_hash(new_content)
             arbiter.record_edit(file_path, "")
             record_edit_in_ledger(
-                context, file_path,
+                context,
+                file_path,
                 edit_type="edit",
                 old_hash=old_hash,
                 new_hash=new_hash,
@@ -136,9 +142,13 @@ async def daytona_edit_file(
             )
             prime_cache_after_write(context, file_path, new_content)
 
-            output = json.dumps({
-                "file_path": file_path, "status": "edited", "occ": True,
-            })
+            output = json.dumps(
+                {
+                    "file_path": file_path,
+                    "status": "edited",
+                    "occ": True,
+                }
+            )
             return ToolResult(
                 output=output,
                 metadata={"file_path": file_path, "occ": True},
@@ -148,10 +158,14 @@ async def daytona_edit_file(
     else:
         # Direct write (no CI)
         try:
-            sandbox.fs.upload_file(file_path, new_content.encode("utf-8"))
-            output = json.dumps({
-                "file_path": file_path, "status": "edited", "occ": False,
-            })
+            await sandbox.fs.upload_file(file_path, new_content.encode("utf-8"))
+            output = json.dumps(
+                {
+                    "file_path": file_path,
+                    "status": "edited",
+                    "occ": False,
+                }
+            )
             return ToolResult(
                 output=output,
                 metadata={"file_path": file_path, "occ": False},

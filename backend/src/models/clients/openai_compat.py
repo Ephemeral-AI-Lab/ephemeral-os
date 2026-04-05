@@ -139,13 +139,13 @@ def _convert_assistant_message(msg: ConversationMessage) -> dict[str, Any]:
     content = "".join(text_parts)
     openai_msg["content"] = content if content else None
 
-    # Replay reasoning_content for thinking models from ThinkingBlock content
+    # Replay reasoning_content for thinking models from ThinkingBlock content.
+    # Only set this field when actual thinking was produced — sending an empty
+    # reasoning_content to non-thinking providers can cause errors or
+    # unexpected behavior.
     reasoning = "".join(thinking_parts)
     if reasoning:
         openai_msg["reasoning_content"] = reasoning
-    elif tool_uses:
-        # Thinking models require this field even if empty
-        openai_msg["reasoning_content"] = ""
 
     if tool_uses:
         openai_msg["tool_calls"] = [
@@ -228,7 +228,6 @@ class OpenAICompatibleClient:
         collected_content = ""
         collected_reasoning = ""
         collected_tool_calls: dict[int, dict[str, Any]] = {}
-        yielded_tool_calls: set[int] = set()
         finish_reason: str | None = None
         usage_data: dict[str, int] = {}
 
@@ -279,18 +278,14 @@ class OpenAICompatibleClient:
                         if tc_delta.function.arguments:
                             entry["arguments"] += tc_delta.function.arguments
 
-                    # Yield mid-stream when we have name and some arguments
-                    if idx not in yielded_tool_calls and entry["name"]:
-                        yielded_tool_calls.add(idx)
-                        try:
-                            args = json.loads(entry["arguments"]) if entry["arguments"] else {}
-                        except (json.JSONDecodeError, TypeError):
-                            args = {}
-                        yield ApiToolUseDeltaEvent(
-                            id=entry["id"] or f"toolu_{idx}",
-                            name=entry["name"],
-                            input=args,
-                        )
+                    # NOTE: We intentionally do NOT yield ApiToolUseDeltaEvent
+                    # mid-stream here. OpenAI streams tool call arguments in
+                    # small JSON fragments; at this point the arguments string
+                    # is almost certainly incomplete / unparseable.  Yielding
+                    # now would cause the streaming executor to start the tool
+                    # with empty or wrong inputs.  Instead, tool events are
+                    # yielded after the stream completes (see below) when the
+                    # full arguments JSON is available.
 
             # Usage in chunk (if provider sends it)
             if chunk.usage:
@@ -321,6 +316,21 @@ class OpenAICompatibleClient:
                     name=tc["name"],
                     input=args,
                 )
+            )
+
+        # Yield tool events now that we have complete arguments
+        for _idx in sorted(collected_tool_calls.keys()):
+            tc = collected_tool_calls[_idx]
+            if not tc["name"]:
+                continue
+            try:
+                args = json.loads(tc["arguments"])
+            except (json.JSONDecodeError, TypeError):
+                args = {}
+            yield ApiToolUseDeltaEvent(
+                id=tc["id"] or f"toolu_{_idx}",
+                name=tc["name"],
+                input=args,
             )
 
         final_message = ConversationMessage(role="assistant", content=content)

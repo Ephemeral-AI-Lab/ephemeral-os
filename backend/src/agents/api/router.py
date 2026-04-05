@@ -33,7 +33,9 @@ def create_agents_router(
     def _require_builder() -> "AgentBuilderService":
         svc = get_builder_service()
         if svc is None:
-            raise HTTPException(status_code=503, detail="Agent builder not available (database not configured)")
+            raise HTTPException(
+                status_code=503, detail="Agent builder not available (database not configured)"
+            )
         return svc
 
     @router.get("")
@@ -43,16 +45,21 @@ def create_agents_router(
     ) -> list[dict[str, Any]]:
         defs = list_definitions(source=source)
         return [
-            {"name": d.name, "description": d.description, "source": d.source,
-             "model": d.model, "model_key": d.model,
-             "subagent_type": d.subagent_type,
-             "background": d.background}
+            {
+                "name": d.name,
+                "description": d.description,
+                "source": d.source,
+                "model": d.model,
+                "model_key": d.model,
+                "background": d.background,
+            }
             for d in defs
         ]
 
     @router.get("/toolkits/available")
     async def list_available_toolkits() -> list[str]:
         from tools.factory import list_factories  # noqa: PLC0415
+
         names: set[str] = set()
         tr = get_tool_registry()
         if tr:

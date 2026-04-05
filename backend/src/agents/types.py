@@ -29,7 +29,6 @@ class AgentDefinition(BaseModel):
     - ``model``         — LLM model override (alias: ``model_key``)
     - ``skills``        — list of skill slugs
     - ``toolkits``      — list of toolkit names
-    - ``subagent_type`` — routing key / agent type (alias: ``type``)
     """
 
     # --- required ---
@@ -66,7 +65,6 @@ class AgentDefinition(BaseModel):
 
     # --- Python-specific ---
     permissions: list[str] = Field(default_factory=list)
-    subagent_type: str = Field(default="general-purpose", alias="type")  # accepts both
     source: Literal["builtin", "user", "plugin"] = "builtin"
 
     model_config = {"populate_by_name": True}  # allow both field name and alias

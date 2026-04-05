@@ -71,6 +71,25 @@ class ToolExecutionCancelled:
     reason: str
 
 
+@dataclass(frozen=True)
+class BackgroundTaskStarted:
+    """A tool has been launched as a background task."""
+
+    task_id: str
+    tool_name: str
+    tool_input: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class BackgroundTaskCompleted:
+    """A background task has finished."""
+
+    task_id: str
+    tool_name: str
+    output: str
+    is_error: bool = False
+
+
 StreamEvent = (
     ThinkingDelta
     | AssistantTextDelta
@@ -79,4 +98,6 @@ StreamEvent = (
     | ToolExecutionCompleted
     | ToolExecutionProgress
     | ToolExecutionCancelled
+    | BackgroundTaskStarted
+    | BackgroundTaskCompleted
 )

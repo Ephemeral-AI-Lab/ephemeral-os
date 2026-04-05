@@ -30,32 +30,42 @@ class AgentBuilderService:
     @staticmethod
     def record_to_definition(record: AgentDefinitionRecord) -> AgentDefinition:
         return AgentDefinition(
-            name=record.name, description=record.description,
+            name=record.name,
+            description=record.description,
             system_prompt=record.system_prompt,
             model=record.model,
             effort=record.effort,
-            max_turns=record.max_turns, skills=record.skills or [],
+            max_turns=record.max_turns,
+            skills=record.skills or [],
             toolkits=record.toolkits or [],
-            hooks=record.hooks, background=record.background,
-            initial_prompt=record.initial_prompt, subagent_type=record.subagent_type,
+            hooks=record.hooks,
+            background=record.background,
+            initial_prompt=record.initial_prompt,
             source="user",
         )
 
     @staticmethod
     def _record_to_response(record: AgentDefinitionRecord) -> AgentDefinitionResponse:
         return AgentDefinitionResponse(
-            id=record.id, name=record.name, description=record.description,
-            system_prompt=record.system_prompt, model=record.model,
+            id=record.id,
+            name=record.name,
+            description=record.description,
+            system_prompt=record.system_prompt,
+            model=record.model,
             effort=record.effort,
             max_turns=record.max_turns,
             toolkits=record.toolkits,
             skills=record.skills or [],
-            hooks=record.hooks, background=record.background,
-            initial_prompt=record.initial_prompt, subagent_type=record.subagent_type,
-            version=record.version, is_active=record.is_active,
-            created_by=record.created_by, tags=record.tags,
+            hooks=record.hooks,
+            background=record.background,
+            initial_prompt=record.initial_prompt,
+            version=record.version,
+            is_active=record.is_active,
+            created_by=record.created_by,
+            tags=record.tags,
             metadata=record.metadata_json,
-            created_at=record.created_at, updated_at=record.updated_at,
+            created_at=record.created_at,
+            updated_at=record.updated_at,
         )
 
     def create_agent(self, data: AgentDefinitionCreate) -> AgentDefinitionResponse:
@@ -64,6 +74,7 @@ class AgentBuilderService:
             raise ValueError(f"Validation failed: {'; '.join(result.errors)}")
 
         from agents.registry import get_definition  # noqa: PLC0415
+
         existing = get_definition(data.name)
         if existing is not None and existing.source == "builtin":
             raise ValueError(f"Cannot overwrite built-in agent '{data.name}'")
@@ -85,7 +96,6 @@ class AgentBuilderService:
                 "hooks": data.hooks,
                 "background": data.background,
                 "initial_prompt": data.initial_prompt,
-                "subagent_type": data.subagent_type,
                 "tags": data.tags,
                 "metadata_json": data.metadata,
                 "created_by": data.created_by,
@@ -97,16 +107,23 @@ class AgentBuilderService:
 
         now = datetime.now(timezone.utc)
         record = AgentDefinitionRecord(
-            id=str(uuid4()), name=data.name, description=data.description,
-            system_prompt=data.system_prompt, model=data.model,
+            id=str(uuid4()),
+            name=data.name,
+            description=data.description,
+            system_prompt=data.system_prompt,
+            model=data.model,
             effort=data.effort,
             max_turns=data.max_turns,
             toolkits=data.toolkits,
             skills=data.skills or [],
-            hooks=data.hooks, background=data.background,
-            initial_prompt=data.initial_prompt, subagent_type=data.subagent_type,
-            tags=data.tags, metadata_json=data.metadata,
-            created_by=data.created_by, created_at=now, updated_at=now,
+            hooks=data.hooks,
+            background=data.background,
+            initial_prompt=data.initial_prompt,
+            tags=data.tags,
+            metadata_json=data.metadata,
+            created_by=data.created_by,
+            created_at=now,
+            updated_at=now,
         )
         record = self._store.create(record)
         self._register(self.record_to_definition(record))
@@ -129,6 +146,7 @@ class AgentBuilderService:
         ok = self._store.soft_delete(name)
         if ok:
             from agents.registry import unregister_definition  # noqa: PLC0415
+
             unregister_definition(name)
         return ok
 
@@ -137,7 +155,9 @@ class AgentBuilderService:
         self._register(self.record_to_definition(record))
         return self._record_to_response(record)
 
-    def validate_agent(self, data: AgentDefinitionCreate | AgentDefinitionUpdate) -> AgentValidationResult:
+    def validate_agent(
+        self, data: AgentDefinitionCreate | AgentDefinitionUpdate
+    ) -> AgentValidationResult:
         return self._validator.validate(data)
 
     def load_all_from_db(self) -> list[AgentDefinition]:
@@ -152,4 +172,5 @@ class AgentBuilderService:
     @staticmethod
     def _register(defn: AgentDefinition) -> None:
         from agents.registry import register_definition  # noqa: PLC0415
+
         register_definition(defn)

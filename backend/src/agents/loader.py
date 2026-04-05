@@ -43,7 +43,7 @@ def _parse_agent_frontmatter(content: str) -> tuple[dict[str, Any], str]:
             if ":" in fm_line:
                 key, _, value = fm_line.partition(":")
                 frontmatter[key.strip()] = value.strip().strip("'\"")
-    body = "\n".join(lines[end_index + 1:]).strip()
+    body = "\n".join(lines[end_index + 1 :]).strip()
     return frontmatter, body
 
 
@@ -76,7 +76,9 @@ def load_agents_dir(directory: Path) -> list[AgentDefinition]:
                 elif isinstance(effort_raw, str) and effort_raw in EFFORT_LEVELS:
                     effort = effort_raw
 
-            max_turns = parse_positive_int(frontmatter.get("maxTurns", frontmatter.get("max_turns")))
+            max_turns = parse_positive_int(
+                frontmatter.get("maxTurns", frontmatter.get("max_turns"))
+            )
             skills = parse_str_list(frontmatter.get("skills")) or []
             toolkits = parse_str_list(frontmatter.get("toolkits")) or []
 
@@ -96,7 +98,9 @@ def load_agents_dir(directory: Path) -> list[AgentDefinition]:
             ocm_raw = frontmatter.get("omitClaudeMd", frontmatter.get("omit_claude_md"))
             omit_claude_md = ocm_raw is True or ocm_raw == "true"
 
-            csr_raw = frontmatter.get("criticalSystemReminder", frontmatter.get("critical_system_reminder"))
+            csr_raw = frontmatter.get(
+                "criticalSystemReminder", frontmatter.get("critical_system_reminder")
+            )
             critical_system_reminder: str | None = None
             if isinstance(csr_raw, str) and csr_raw.strip():
                 critical_system_reminder = csr_raw
@@ -108,16 +112,22 @@ def load_agents_dir(directory: Path) -> list[AgentDefinition]:
 
             agents.append(
                 AgentDefinition(
-                    name=name, description=description, system_prompt=body or None,
+                    name=name,
+                    description=description,
+                    system_prompt=body or None,
                     model=model,
-                    effort=effort, max_turns=max_turns,
-                    skills=skills, toolkits=toolkits,
-                    hooks=hooks, background=background,
+                    effort=effort,
+                    max_turns=max_turns,
+                    skills=skills,
+                    toolkits=toolkits,
+                    hooks=hooks,
+                    background=background,
                     initial_prompt=initial_prompt,
-                    omit_claude_md=omit_claude_md, critical_system_reminder=critical_system_reminder,
+                    omit_claude_md=omit_claude_md,
+                    critical_system_reminder=critical_system_reminder,
                     permissions=permissions,
-                    filename=path.stem, base_dir=str(directory),
-                    subagent_type=str(frontmatter.get("subagent_type", name)),
+                    filename=path.stem,
+                    base_dir=str(directory),
                     source="user",
                 )
             )
@@ -132,18 +142,15 @@ def _get_user_agents_dir() -> Path:
 
 
 def get_all_agent_definitions() -> list[AgentDefinition]:
-    """Return all agent definitions: built-in + user + plugin."""
-    from agents.builtins import get_builtin_agent_definitions  # noqa: PLC0415
-
+    """Return all agent definitions: user + plugin."""
     agent_map: dict[str, AgentDefinition] = {}
-    for agent in get_builtin_agent_definitions():
-        agent_map[agent.name] = agent
     for agent in load_agents_dir(_get_user_agents_dir()):
         agent_map[agent.name] = agent
     try:
         from plugins.loader import load_plugins  # noqa: PLC0415
         from config.settings import load_settings  # noqa: PLC0415
         import os  # noqa: PLC0415
+
         settings = load_settings()
         cwd = os.getcwd()
         for plugin in load_plugins(settings, cwd):
@@ -160,6 +167,7 @@ def get_all_agent_definitions() -> list[AgentDefinition]:
 def get_agent_definition(name: str) -> AgentDefinition | None:
     """Return the agent definition for *name*, or None if not found."""
     from agents.registry import get_definition  # noqa: PLC0415
+
     defn = get_definition(name)
     if defn is not None:
         return defn

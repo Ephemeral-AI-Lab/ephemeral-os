@@ -136,6 +136,7 @@ class SessionState:
         )
         # Keep a tool registry for config-time queries (agent builder, toolkit snapshots)
         from tools import create_default_tool_registry
+
         self._tool_registry = create_default_tool_registry()
 
     @property
@@ -205,7 +206,11 @@ class SessionState:
                     )
                 )
             except Exception:
-                logger.debug("Toolkit factory %r skipped (requires runtime context)", factory_name, exc_info=True)
+                logger.debug(
+                    "Toolkit factory %r skipped (requires runtime context)",
+                    factory_name,
+                    exc_info=True,
+                )
         return snapshots
 
 
@@ -234,12 +239,21 @@ def _initialize_database(session: SessionState) -> "AgentBuilderService | None":
         logger.info("Running without database — file-based persistence only")
         return None
 
-    for store in (session_store, agent_run_store, usage_store, model_store,
-                  agent_definition_store, skill_definition_store, pipeline_store):
+    for store in (
+        session_store,
+        agent_run_store,
+        usage_store,
+        model_store,
+        agent_definition_store,
+        skill_definition_store,
+        pipeline_store,
+    ):
         store.initialize(sf)
 
     # Seed models from registry.json on first boot
-    registry_path = Path(__file__).resolve().parent.parent.parent.parent / "models" / "registry.json"
+    registry_path = (
+        Path(__file__).resolve().parent.parent.parent.parent / "models" / "registry.json"
+    )
     model_store.seed_from_json(str(registry_path))
 
     # Bootstrap agent builder service and load DB agents
@@ -263,9 +277,6 @@ def create_app(config: BackendHostConfig) -> FastAPI:
         _session = SessionState()
         await _session.initialize(config)
 
-        from agents import initialize_builtin_definitions
-        initialize_builtin_definitions()
-
         _builder_service = _initialize_database(_session)
 
         yield
@@ -276,11 +287,7 @@ def create_app(config: BackendHostConfig) -> FastAPI:
 
     # Register routers
     app.include_router(create_core_router(_get_session))
-    app.include_router(
-        create_persistence_router(
-            session_store, agent_run_store, usage_store
-        )
-    )
+    app.include_router(create_persistence_router(session_store, agent_run_store, usage_store))
     app.include_router(create_sandbox_router())
     app.include_router(ci_router)
     app.include_router(create_models_router(model_store))
@@ -302,7 +309,9 @@ def create_app(config: BackendHostConfig) -> FastAPI:
     # Skills API — DB-backed
     app.include_router(
         create_skills_router(
-            get_skill_store=lambda: skill_definition_store if skill_definition_store._session_factory else None,
+            get_skill_store=lambda: skill_definition_store
+            if skill_definition_store._session_factory
+            else None,
         )
     )
 

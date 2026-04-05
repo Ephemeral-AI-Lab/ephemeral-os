@@ -37,7 +37,7 @@ class Settings(BaseModel):
     model: str = "gpt-4o"
     max_tokens: int = 16384
     base_url: str | None = None
-    api_format: str = "openai"  # "openai" (OpenAI-compatible)
+    api_format: str = "openai"  # "openai" | "anthropic"
 
     # Behavior
     system_prompt: str | None = None
@@ -70,9 +70,13 @@ class Settings(BaseModel):
         if openai_key:
             return openai_key
 
+        anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        if anthropic_key:
+            return anthropic_key
+
         raise ValueError(
-            "No API key found. Set OPENAI_API_KEY environment variable, or configure "
-            "api_key in ~/.ephemeralos/settings.json"
+            "No API key found. Set OPENAI_API_KEY or ANTHROPIC_API_KEY environment variable, "
+            "or configure api_key in ~/.ephemeralos/settings.json"
         )
 
     def merge_cli_overrides(self, **overrides: Any) -> Settings:
@@ -97,6 +101,8 @@ def _apply_env_overrides(settings: Settings) -> Settings:
         updates["max_tokens"] = int(max_tokens)
 
     api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
     if api_key:
         updates["api_key"] = api_key
 

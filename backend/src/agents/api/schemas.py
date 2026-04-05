@@ -14,7 +14,9 @@ class AgentDefinitionCreate(BaseModel):
     name: str = Field(min_length=1, max_length=128)
     description: str = Field(min_length=1)
     system_prompt: str | None = None
-    model: str = Field(min_length=1, description="Model key — each agent must be tied to a registered model key")
+    model: str = Field(
+        min_length=1, description="Model key — each agent must be tied to a registered model key"
+    )
     effort: str | None = None
     max_turns: int | None = Field(default=None, gt=0)
     toolkits: list[str] | None = None
@@ -22,7 +24,6 @@ class AgentDefinitionCreate(BaseModel):
     hooks: dict[str, Any] | None = None
     background: bool = False
     initial_prompt: str | None = None
-    subagent_type: str = "general-purpose"
     tags: list[str] | None = None
     metadata: dict[str, Any] | None = None
     created_by: str | None = None
@@ -46,7 +47,6 @@ class AgentDefinitionUpdate(BaseModel):
     hooks: dict[str, Any] | None = None
     background: bool | None = None
     initial_prompt: str | None = None
-    subagent_type: str | None = None
     tags: list[str] | None = None
     metadata: dict[str, Any] | None = None
 
@@ -73,7 +73,6 @@ class AgentDefinitionResponse(BaseModel):
     hooks: dict[str, Any] | None = None
     background: bool = False
     initial_prompt: str | None = None
-    subagent_type: str = "general-purpose"
     version: int = 1
     is_active: bool = True
     created_by: str | None = None

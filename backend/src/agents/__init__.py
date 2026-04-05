@@ -16,7 +16,6 @@ from agents.registry import (
     register_definition,
     unregister_definition,
 )
-from agents.builtins import get_builtin_agent_definitions
 from agents.loader import (
     get_agent_definition,
     get_all_agent_definitions,
@@ -24,18 +23,13 @@ from agents.loader import (
 )
 
 __all__ = [
-    # Types & constants
     "AgentDefinition",
     "EFFORT_LEVELS",
-    # Registry
     "register_definition",
     "unregister_definition",
     "get_definition",
     "list_definitions",
     "initialize_builtin_definitions",
-    # Builtins
-    "get_builtin_agent_definitions",
-    # Loader
     "get_agent_definition",
     "get_all_agent_definitions",
     "load_agents_dir",

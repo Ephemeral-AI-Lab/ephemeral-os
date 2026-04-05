@@ -36,7 +36,6 @@ class AgentDefinitionRecord(Base):
     # Lifecycle
     background: Mapped[bool] = mapped_column(Boolean, default=False)
     initial_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
-    subagent_type: Mapped[str] = mapped_column(String(64), default="general-purpose")
 
     # Metadata & versioning
     version: Mapped[int] = mapped_column(Integer, default=1)
