@@ -20,7 +20,7 @@ class CIToolkit(BaseToolkit):
     """Read-only code intelligence toolkit.
 
     Provides symbol queries, workspace structure, edit hotspots,
-    and recent change awareness. Requires a CI gateway in the
+    and recent change awareness. Requires a CI service in the
     tool execution context.
     """
 

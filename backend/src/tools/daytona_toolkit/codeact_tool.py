@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 
 from tools.base import BaseTool, ToolExecutionContext, ToolResult
 from tools.daytona_toolkit.ci_integration import (
-    get_ci_gateway,
+    get_ci_service,
     prime_cache_after_write,
     record_edit_in_ledger,
 )

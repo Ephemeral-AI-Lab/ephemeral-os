@@ -1,7 +1,7 @@
 """LSP query tools for Daytona sandboxes.
 
 Provides hover, goto-definition, find-references, and diagnostics
-via the CodeIntelligenceGateway. All tools degrade gracefully if
+via the CodeIntelligenceService. All tools degrade gracefully if
 no CI service is configured.
 """
 
@@ -13,7 +13,7 @@ import logging
 from pydantic import BaseModel, Field
 
 from tools.base import BaseTool, ToolExecutionContext, ToolResult
-from tools.daytona_toolkit.ci_integration import get_ci_gateway
+from tools.daytona_toolkit.ci_integration import get_ci_service
 
 logger = logging.getLogger(__name__)
 
@@ -39,11 +39,11 @@ class DaytonaLspHoverTool(BaseTool):
     async def execute(
         self, arguments: DaytonaLspHoverInput, context: ToolExecutionContext,
     ) -> ToolResult:
-        gw = get_ci_gateway(context)
-        if gw is None:
+        svc = get_ci_service(context)
+        if svc is None:
             return ToolResult(output="Code intelligence not available", is_error=True)
 
-        result = gw.hover(arguments.file_path, arguments.line, arguments.character)
+        result = svc.hover(arguments.file_path, arguments.line, arguments.character)
         if result is None:
             return ToolResult(output=f"No hover information at {arguments.file_path}:{arguments.line}")
 
@@ -77,11 +77,11 @@ class DaytonaLspDefinitionTool(BaseTool):
     async def execute(
         self, arguments: DaytonaLspDefinitionInput, context: ToolExecutionContext,
     ) -> ToolResult:
-        gw = get_ci_gateway(context)
-        if gw is None:
+        svc = get_ci_service(context)
+        if svc is None:
             return ToolResult(output="Code intelligence not available", is_error=True)
 
-        results = gw.find_definitions(
+        results = svc.find_definitions(
             arguments.file_path,
             arguments.symbol,
             arguments.line,
@@ -126,11 +126,11 @@ class DaytonaLspReferencesTool(BaseTool):
     async def execute(
         self, arguments: DaytonaLspReferencesInput, context: ToolExecutionContext,
     ) -> ToolResult:
-        gw = get_ci_gateway(context)
-        if gw is None:
+        svc = get_ci_service(context)
+        if svc is None:
             return ToolResult(output="Code intelligence not available", is_error=True)
 
-        results = gw.find_references(
+        results = svc.find_references(
             arguments.file_path,
             arguments.symbol,
             arguments.line,
@@ -174,11 +174,11 @@ class DaytonaLspDiagnosticsTool(BaseTool):
     async def execute(
         self, arguments: DaytonaLspDiagnosticsInput, context: ToolExecutionContext,
     ) -> ToolResult:
-        gw = get_ci_gateway(context)
-        if gw is None:
+        svc = get_ci_service(context)
+        if svc is None:
             return ToolResult(output="Code intelligence not available", is_error=True)
 
-        results = gw.diagnostics(arguments.file_path)
+        results = svc.diagnostics(arguments.file_path)
         if not results:
             return ToolResult(output=f"No diagnostics for {arguments.file_path} (clean)")
 

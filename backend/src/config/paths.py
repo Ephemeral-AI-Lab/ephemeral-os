@@ -68,30 +68,12 @@ def get_logs_dir() -> Path:
     return logs_dir
 
 
-def get_sessions_dir() -> Path:
-    """Return the session storage directory."""
-    sessions_dir = get_data_dir() / "sessions"
-    sessions_dir.mkdir(parents=True, exist_ok=True)
-    return sessions_dir
-
-
-def get_tasks_dir() -> Path:
-    """Return the background task output directory."""
-    tasks_dir = get_data_dir() / "tasks"
-    tasks_dir.mkdir(parents=True, exist_ok=True)
-    return tasks_dir
-
-
 def get_feedback_dir() -> Path:
     """Return the feedback storage directory."""
     feedback_dir = get_data_dir() / "feedback"
     feedback_dir.mkdir(parents=True, exist_ok=True)
     return feedback_dir
 
-
-def get_feedback_log_path() -> Path:
-    """Return the feedback log file path."""
-    return get_feedback_dir() / "feedback.log"
 
 
 

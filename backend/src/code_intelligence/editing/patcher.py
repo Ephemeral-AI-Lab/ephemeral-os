@@ -9,7 +9,6 @@ Tracks line origins through edits for accurate conflict detection.
 
 from __future__ import annotations
 
-import difflib
 import logging
 from dataclasses import dataclass
 
@@ -124,22 +123,6 @@ class Patcher:
             errors=errors,
             warnings=warnings,
         )
-
-    def compute_diff(self, old: str, new: str, file_path: str = "") -> str:
-        """Compute a unified diff between old and new content."""
-        old_lines = old.splitlines(keepends=True)
-        new_lines = new.splitlines(keepends=True)
-        diff = difflib.unified_diff(
-            old_lines, new_lines,
-            fromfile=f"a/{file_path}" if file_path else "a/file",
-            tofile=f"b/{file_path}" if file_path else "b/file",
-            lineterm="",
-        )
-        return "".join(diff)
-
-    def check_file_size(self, content: str, max_bytes: int = 10 * 1024 * 1024) -> bool:
-        """Check if content is within the size limit."""
-        return len(content.encode("utf-8")) <= max_bytes
 
     # -- Internal strategies --------------------------------------------------
 

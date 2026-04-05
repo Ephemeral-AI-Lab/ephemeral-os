@@ -9,19 +9,19 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from tools.base import BaseTool, ToolExecutionContext, ToolResult
-from tools.daytona_toolkit.ci_integration import get_ci_gateway
+from tools.daytona_toolkit.ci_integration import get_ci_service
 
 logger = logging.getLogger(__name__)
 
 
-def _gw_or_error(context: ToolExecutionContext) -> tuple[Any | None, ToolResult | None]:
-    """Get CI gateway or return an error ToolResult."""
-    gw = get_ci_gateway(context)
-    if gw is None:
+def _svc_or_error(context: ToolExecutionContext) -> tuple[Any | None, ToolResult | None]:
+    """Get CI service or return an error ToolResult."""
+    svc = get_ci_service(context)
+    if svc is None:
         return None, ToolResult(
             output=json.dumps({"status": "unavailable", "reason": "Code intelligence not configured"}),
         )
-    return gw, None
+    return svc, None
 
 
 # -- CI Status ----------------------------------------------------------------
@@ -41,10 +41,10 @@ class CIStatusTool(BaseTool):
         return True
 
     async def execute(self, arguments: CIStatusInput, context: ToolExecutionContext) -> ToolResult:
-        gw, err = _gw_or_error(context)
+        svc, err = _svc_or_error(context)
         if err:
             return err
-        status = gw.status()
+        status = svc.status()
         return ToolResult(output=json.dumps(status, indent=2, default=str))
 
 
@@ -66,11 +66,11 @@ class WorkspaceStructureTool(BaseTool):
         return True
 
     async def execute(self, arguments: WorkspaceStructureInput, context: ToolExecutionContext) -> ToolResult:
-        gw, err = _gw_or_error(context)
+        svc, err = _svc_or_error(context)
         if err:
             return err
 
-        si = gw.symbol_index
+        si = svc.symbol_index
         if si is None:
             return ToolResult(output="Symbol index not available")
 
@@ -112,7 +112,7 @@ class SymbolQueryTool(BaseTool):
         return True
 
     async def execute(self, arguments: SymbolQueryInput, context: ToolExecutionContext) -> ToolResult:
-        gw, err = _gw_or_error(context)
+        svc, err = _svc_or_error(context)
         if err:
             return err
 
@@ -124,7 +124,7 @@ class SymbolQueryTool(BaseTool):
             except ValueError:
                 pass
 
-        results = gw.query_symbols(arguments.query)
+        results = svc.query_symbols(arguments.query)
         if kind:
             results = [s for s in results if s.kind == kind]
 
@@ -164,11 +164,11 @@ class SymbolReferencesTool(BaseTool):
         return True
 
     async def execute(self, arguments: SymbolReferencesInput, context: ToolExecutionContext) -> ToolResult:
-        gw, err = _gw_or_error(context)
+        svc, err = _svc_or_error(context)
         if err:
             return err
 
-        results = gw.find_references(
+        results = svc.find_references(
             arguments.file_path, arguments.symbol,
             arguments.line, arguments.character,
         )
@@ -207,11 +207,11 @@ class EditHotspotsTool(BaseTool):
         return True
 
     async def execute(self, arguments: EditHotspotsInput, context: ToolExecutionContext) -> ToolResult:
-        gw, err = _gw_or_error(context)
+        svc, err = _svc_or_error(context)
         if err:
             return err
 
-        arbiter = gw.arbiter
+        arbiter = svc.arbiter
         if arbiter is None:
             return ToolResult(output="Arbiter not available")
 
@@ -240,11 +240,11 @@ class RecentChangesTool(BaseTool):
         return True
 
     async def execute(self, arguments: RecentChangesInput, context: ToolExecutionContext) -> ToolResult:
-        gw, err = _gw_or_error(context)
+        svc, err = _svc_or_error(context)
         if err:
             return err
 
-        ledger = gw.ledger
+        ledger = svc.ledger
         if ledger is None:
             return ToolResult(output="Ledger not available")
 

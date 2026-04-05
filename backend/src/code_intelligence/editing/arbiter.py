@@ -106,45 +106,6 @@ class Arbiter:
             self._metrics.tokens_issued += 1
         return token
 
-    def validate_token(self, token_id: str, current_hash: str) -> tuple[bool, str]:
-        """Validate an edit token. Returns (valid, reason)."""
-        with self._lock:
-            token = self._active_tokens.get(token_id)
-
-        if token is None:
-            return False, "Token not found or already consumed"
-
-        if time.time() - token.issued_at > token.ttl:
-            with self._lock:
-                self._active_tokens.pop(token_id, None)
-                self._metrics.tokens_expired += 1
-            return False, "Token expired"
-
-        if token.content_hash != current_hash:
-            with self._lock:
-                self._metrics.conflicts_detected += 1
-            return False, (
-                f"Content changed since token was issued "
-                f"(expected {token.content_hash}, got {current_hash})"
-            )
-
-        return True, "ok"
-
-    def consume_token(self, token_id: str) -> EditToken | None:
-        """Consume (remove) a token after successful edit."""
-        with self._lock:
-            return self._active_tokens.pop(token_id, None)
-
-    def refresh_token(
-        self, token_id: str, new_hash: str,
-    ) -> EditToken | None:
-        """Refresh a token with updated content hash (for retry after conflict)."""
-        with self._lock:
-            old = self._active_tokens.pop(token_id, None)
-        if old is None:
-            return None
-        return self.issue_token(old.file_path, new_hash, old.agent_id)
-
     # -- Edit coordination ----------------------------------------------------
 
     def acquire_file_lock(

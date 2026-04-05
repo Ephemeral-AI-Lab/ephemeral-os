@@ -116,14 +116,6 @@ class SymbolIndex:
                 evt.set()
         return gen
 
-    def wait_for_file(self, file_path: str, timeout: float = 10.0) -> bool:
-        """Wait until a specific file has been refreshed."""
-        with self._lock:
-            if file_path not in self._file_events:
-                self._file_events[file_path] = threading.Event()
-            evt = self._file_events[file_path]
-        return evt.wait(timeout=timeout)
-
     def find(self, query: str, kind: SymbolKind | None = None) -> list[SymbolInfo]:
         """Find symbols matching a query string."""
         needle = query.lower().strip()
@@ -143,31 +135,6 @@ class SymbolIndex:
         with self._lock:
             fs = self._symbols.get(file_path)
             return list(fs.symbols) if fs else []
-
-    def all_symbols(self) -> list[SymbolInfo]:
-        """Return all indexed symbols."""
-        with self._lock:
-            return [
-                sym
-                for fs in self._symbols.values()
-                for sym in fs.symbols
-            ]
-
-    def file_generation(self, file_path: str) -> int:
-        """Return the generation counter for a file."""
-        with self._lock:
-            fs = self._symbols.get(file_path)
-            return fs.generation if fs else 0
-
-    def rebuild_prefix(self, prefix: str) -> int:
-        """Re-index all files under a path prefix. Returns count refreshed."""
-        count = 0
-        with self._lock:
-            paths = [k for k in self._symbols if k.startswith(prefix)]
-        for fp in paths:
-            self.refresh(fp)
-            count += 1
-        return count
 
     @property
     def is_built(self) -> bool:

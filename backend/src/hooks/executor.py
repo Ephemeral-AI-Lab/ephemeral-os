@@ -42,10 +42,6 @@ class HookExecutor:
         self._registry = registry
         self._context = context
 
-    def update_registry(self, registry: HookRegistry) -> None:
-        """Replace the active hook registry."""
-        self._registry = registry
-
     async def execute(self, event: HookEvent, payload: dict[str, Any]) -> AggregatedHookResult:
         """Execute all matching hooks for an event."""
         results: list[HookResult] = []

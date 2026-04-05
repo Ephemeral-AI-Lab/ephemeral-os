@@ -1,8 +1,9 @@
-# ruff: noqa: E402
+# ruff: noqa
 """E2E test fixtures — in-memory DB, mock LLM, TestClient."""
 
 from __future__ import annotations
 
+import json
 import sys
 import types
 from typing import Any, AsyncIterator
@@ -11,43 +12,47 @@ from unittest.mock import MagicMock
 import pytest
 
 # ---------------------------------------------------------------------------
-# Stub heavy dependencies not installed in test env
-# Only stub modules that are genuinely missing — httpx is installed.
+# Stub heavy dependencies ONLY if they are genuinely not installed.
+# If the real package is available, use it (needed for live API tests).
+# IMPORTANT: do NOT stub httpx — FastAPI TestClient needs it.
 # ---------------------------------------------------------------------------
 
-_STUB_MODULES = [
-    "anthropic", "anthropic.types",
-    "daytona_sdk", "daytona_sdk.daytona",
-]
+def _try_import_or_stub(mod_name: str, attrs: dict) -> None:
+    """Import the real module if available; otherwise install a stub."""
+    if mod_name in sys.modules:
+        return  # already loaded
+    try:
+        __import__(mod_name)
+    except ImportError:
+        _stub = types.ModuleType(mod_name)
+        for k, v in attrs.items():
+            _stub.__dict__.setdefault(k, v)
+        sys.modules[mod_name] = _stub
 
-_originals: dict[str, Any] = {}
-
-
-def _install_stubs() -> None:
-    for mod_name in _STUB_MODULES:
-        if mod_name not in sys.modules:
-            _originals[mod_name] = None
-            stub = types.ModuleType(mod_name)
-            stub.__dict__.setdefault("APIError", type("APIError", (Exception,), {}))
-            stub.__dict__.setdefault("APIStatusError", type("APIStatusError", (Exception,), {}))
-            stub.__dict__.setdefault("AsyncAnthropic", MagicMock)
-            stub.__dict__.setdefault("Daytona", MagicMock)
-            stub.__dict__.setdefault("DaytonaConfig", MagicMock)
-            stub.__dict__.setdefault("CreateSandboxParams", MagicMock)
-            sys.modules[mod_name] = stub
-
-
-_install_stubs()
+_try_import_or_stub("anthropic", {
+    "APIError": type("APIError", (Exception,), {}),
+    "APIStatusError": type("APIStatusError", (Exception,), {}),
+    "AsyncAnthropic": MagicMock,
+})
+_try_import_or_stub("anthropic.types", {})
+_try_import_or_stub("daytona_sdk", {
+    "Daytona": MagicMock,
+    "DaytonaConfig": MagicMock,
+    "CreateSandboxParams": MagicMock,
+})
+_try_import_or_stub("daytona_sdk.daytona", {
+    "Daytona": MagicMock,
+    "DaytonaConfig": MagicMock,
+    "CreateSandboxParams": MagicMock,
+})
 
 # Now safe to import project code
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-import json
-
-from ephemeralos.db.base import Base  # noqa: E402
-from ephemeralos.engine.messages import ConversationMessage, TextBlock, ThinkingBlock, ToolUseBlock  # noqa: E402
-from ephemeralos.models.types import (  # noqa: E402
+from db.base import Base
+from engine.messages import ConversationMessage, TextBlock, ThinkingBlock, ToolUseBlock
+from models.types import (
     ApiMessageCompleteEvent,
     ApiTextDeltaEvent,
     ApiThinkingDeltaEvent,
@@ -141,9 +146,8 @@ def db_session_factory(tmp_path):
     engine = create_engine(f"sqlite:///{db_path}", echo=False)
 
     # Import all models so Base.metadata knows about them
-    import ephemeralos.db.models  # noqa: F401
-    import ephemeralos.agents.db.model  # noqa: F401
-    import ephemeralos.skills.db  # noqa: F401
+    import db.models  # noqa: F401
+    import agents.db.model  # noqa: F401
 
     Base.metadata.create_all(engine)
     sf = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
@@ -180,43 +184,43 @@ def app_client(db_session_factory, mock_api_client, tmp_path, monkeypatch):
 
     # Monkey-patch initialize_db to return our test session factory
     monkeypatch.setattr(
-        "ephemeralos.db.engine.initialize_db",
+        "db.engine.initialize_db",
         lambda *a, **kw: db_session_factory,
     )
 
     # Monkey-patch make_api_client to return our mock
     monkeypatch.setattr(
-        "ephemeralos.engine.agent.make_api_client",
+        "engine.agent.make_api_client",
         lambda *a, **kw: mock_api_client,
     )
 
     # Monkey-patch make_hook_executor
     monkeypatch.setattr(
-        "ephemeralos.engine.agent.make_hook_executor",
+        "engine.agent.make_hook_executor",
         lambda *a, **kw: None,
     )
 
     # Monkey-patch build_runtime_system_prompt
     monkeypatch.setattr(
-        "ephemeralos.engine.agent.build_runtime_system_prompt",
+        "engine.agent.build_runtime_system_prompt",
         lambda *a, **kw: "You are a test assistant.",
     )
 
     # Monkey-patch settings to include api_key so resolve_api_key doesn't raise
     def _patched_load_settings(*a, **kw):
-        from ephemeralos.config.settings import Settings, DatabaseSettings  # noqa: PLC0415
+        from config.settings import Settings, DatabaseSettings  # noqa: PLC0415
         return Settings(
             api_key="test-api-key",
             model="claude-sonnet-4-20250514",
             database=DatabaseSettings(url=f"sqlite:///{tmp_path / 'test.db'}"),
         )
 
-    monkeypatch.setattr("ephemeralos.config.load_settings", _patched_load_settings)
-    monkeypatch.setattr("ephemeralos.config.settings.load_settings", _patched_load_settings)
-    monkeypatch.setattr("ephemeralos.server.app_factory.load_settings", _patched_load_settings)
+    monkeypatch.setattr("config.load_settings", _patched_load_settings)
+    monkeypatch.setattr("config.settings.load_settings", _patched_load_settings)
+    monkeypatch.setattr("server.app_factory.load_settings", _patched_load_settings)
 
-    from ephemeralos.server.protocol import BackendHostConfig  # noqa: PLC0415
-    from ephemeralos.server.app_factory import create_app  # noqa: PLC0415
+    from server.protocol import BackendHostConfig  # noqa: PLC0415
+    from server.app_factory import create_app  # noqa: PLC0415
 
     config = BackendHostConfig(
         api_key="test-api-key",
@@ -224,7 +228,7 @@ def app_client(db_session_factory, mock_api_client, tmp_path, monkeypatch):
         api_client=mock_api_client,
     )
     app = create_app(config)
-    client = TestClient(app)
 
-    # Yield both client and mock for assertions
-    yield client, mock_api_client
+    # Use context manager so lifespan runs (initializes _session, DB stores, etc.)
+    with TestClient(app) as client:
+        yield client, mock_api_client

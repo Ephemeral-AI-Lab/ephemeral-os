@@ -86,12 +86,6 @@ class TimeMachine:
 
         return snapshot.snapshot_id
 
-    def peek_snapshot(self, file_path: str) -> SnapshotEntry | None:
-        """Return the most recent snapshot without removing it."""
-        with self._lock:
-            stack = self._stacks.get(file_path, [])
-            return stack[-1] if stack else None
-
     def rollback(self, file_path: str) -> SnapshotEntry | None:
         """Pop and return the most recent snapshot for rollback."""
         with self._lock:
@@ -127,12 +121,3 @@ class TimeMachine:
                 self._stacks.clear()
                 self._total_bytes = 0
 
-    @property
-    def total_bytes(self) -> int:
-        with self._lock:
-            return self._total_bytes
-
-    @property
-    def file_count(self) -> int:
-        with self._lock:
-            return len(self._stacks)

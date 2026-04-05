@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 
 from tools.base import BaseTool, ToolExecutionContext, ToolResult
 from tools.daytona_toolkit.ci_integration import (
-    get_ci_gateway,
+    get_ci_service,
     prime_cache_after_write,
     record_edit_in_ledger,
 )
@@ -96,10 +96,10 @@ class DaytonaEditTool(BaseTool):
                 metadata={"dry_run": True},
             )
 
-        # Try OCC-coordinated edit via CI gateway
-        gw = get_ci_gateway(context)
-        if gw and hasattr(gw, "arbiter") and gw.arbiter:
-            arbiter = gw.arbiter
+        # Try OCC-coordinated edit via CI service
+        svc = get_ci_service(context)
+        if svc and hasattr(svc, "arbiter") and svc.arbiter:
+            arbiter = svc.arbiter
             old_hash = _content_hash(current)
 
             if not arbiter.acquire_file_lock(file_path, timeout=15.0):
@@ -111,7 +111,7 @@ class DaytonaEditTool(BaseTool):
 
             try:
                 # Save snapshot for undo
-                tm = gw.time_machine
+                tm = svc.time_machine
                 if tm:
                     tm.save(file_path, current)
 

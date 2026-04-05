@@ -181,37 +181,15 @@ class TreeCache:
         """Parse and cache content for a file (no disk read)."""
         return self.get_tree(file_path, content=content)
 
-    def prime_cache(self, file_paths: list[str]) -> int:
-        """Pre-parse a list of files. Returns count of successfully cached files."""
-        count = 0
-        for fp in file_paths:
-            if self.get_tree(fp) is not None:
-                count += 1
-        return count
-
     def invalidate(self, file_path: str) -> None:
         """Remove a file from the cache."""
         with self._dict_lock:
             self._cache.pop(file_path, None)
 
-    def invalidate_files(self, file_paths: list[str]) -> None:
-        """Remove multiple files from the cache."""
-        with self._dict_lock:
-            for fp in file_paths:
-                self._cache.pop(fp, None)
-
     def invalidate_all(self) -> None:
         """Clear the entire cache."""
         with self._dict_lock:
             self._cache.clear()
-
-    def invalidate_prefix(self, prefix: str) -> int:
-        """Invalidate all files under a path prefix. Returns count removed."""
-        with self._dict_lock:
-            to_remove = [k for k in self._cache if k.startswith(prefix)]
-            for k in to_remove:
-                del self._cache[k]
-            return len(to_remove)
 
     @property
     def size(self) -> int:

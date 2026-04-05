@@ -42,10 +42,6 @@ class AgentDefinitionStore:
                 q = q.filter(AgentDefinitionRecord.is_active.is_(True))
             return q.first()
 
-    def get_by_id(self, record_id: str) -> AgentDefinitionRecord | None:
-        with self._sf() as db:
-            return db.get(AgentDefinitionRecord, record_id)
-
     def list_active(self, *, tags: list[str] | None = None, limit: int = 50, offset: int = 0) -> list[AgentDefinitionRecord]:
         with self._sf() as db:
             q = db.query(AgentDefinitionRecord).filter(AgentDefinitionRecord.is_active.is_(True)).order_by(AgentDefinitionRecord.name)
@@ -75,15 +71,6 @@ class AgentDefinitionStore:
                 return False
             record.is_active = False
             record.updated_at = datetime.now(timezone.utc)
-            db.commit()
-            return True
-
-    def hard_delete(self, name: str) -> bool:
-        with self._sf() as db:
-            record = db.query(AgentDefinitionRecord).filter(AgentDefinitionRecord.name == name).first()
-            if record is None:
-                return False
-            db.delete(record)
             db.commit()
             return True
 

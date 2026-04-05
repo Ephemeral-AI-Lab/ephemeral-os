@@ -37,11 +37,6 @@ class _BoundedSnapshots(OrderedDict):
 _PARALLEL_RESULT_SNAPSHOTS: dict[str, str] = _BoundedSnapshots()
 
 
-def get_parallel_result_snapshot(session_id: str) -> str:
-    """Return the last serialized parallel-wave aggregate for a planning session."""
-    return _PARALLEL_RESULT_SNAPSHOTS.get(session_id, "")
-
-
 # ---------------------------------------------------------------------------
 # Input model
 # ---------------------------------------------------------------------------

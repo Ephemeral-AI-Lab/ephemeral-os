@@ -25,7 +25,6 @@ from engine.stream_events import (
     ToolExecutionStarted,
 )
 from prompts import build_runtime_system_prompt
-from tasks import get_task_manager
 from server.protocol import BackendEvent, TranscriptItem
 
 if TYPE_CHECKING:
@@ -257,7 +256,6 @@ def create_core_router(get_session: Callable[[], "SessionState"]) -> APIRouter:
             "output_style": "verbose" if settings.verbose else "normal",
         }
         ready = BackendEvent.ready(
-            get_task_manager().list_tasks(),
             toolkits=session._toolkit_snapshots(),
             state=app_state,
         )
@@ -311,7 +309,6 @@ def create_core_router(get_session: Callable[[], "SessionState"]) -> APIRouter:
                                 item=TranscriptItem(role="assistant", text=event.message.text.strip()),
                             )
                         )
-                        await session.emit(BackendEvent.tasks_snapshot(get_task_manager().list_tasks()))
                     elif isinstance(event, ToolExecutionStarted):
                         await session.emit(
                             BackendEvent(
@@ -341,7 +338,6 @@ def create_core_router(get_session: Callable[[], "SessionState"]) -> APIRouter:
                                 ),
                             )
                         )
-                        await session.emit(BackendEvent.tasks_snapshot(get_task_manager().list_tasks()))
 
                 async def _on_clear() -> None:
                     await session.emit(BackendEvent(type="clear_transcript"))
@@ -363,7 +359,6 @@ def create_core_router(get_session: Callable[[], "SessionState"]) -> APIRouter:
                     agent_def=agent_def,
                     sandbox_id=req.sandbox_id,
                 )
-                await session.emit(BackendEvent.tasks_snapshot(get_task_manager().list_tasks()))
                 await session.emit(BackendEvent(type="line_complete"))
             except Exception as exc:
                 await session.emit(

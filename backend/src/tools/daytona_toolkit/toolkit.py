@@ -35,7 +35,7 @@ class DaytonaToolkit(BaseToolkit):
     via the ``prepare_context`` helper.
 
     CI integration is optional — tools degrade gracefully if no
-    CodeIntelligenceGateway is configured in the context.
+    CodeIntelligenceService is configured in the context.
 
     Usage::
 
@@ -91,11 +91,11 @@ class DaytonaToolkit(BaseToolkit):
         return self._sandbox
 
     def prepare_context(self, context: Any) -> None:
-        """Inject sandbox and optional CI gateway into a ToolExecutionContext.
+        """Inject sandbox and optional CI service into a ToolExecutionContext.
 
         Call this before executing any Daytona tool so it can access
         the sandbox via ``context.metadata['daytona_sandbox']`` and
-        optionally the CI gateway via ``context.metadata['ci_gateway']``.
+        optionally the CI service via ``context.metadata['ci_service']``.
         """
         sandbox = self._get_sandbox()
         context.metadata["daytona_sandbox"] = sandbox
@@ -104,18 +104,17 @@ class DaytonaToolkit(BaseToolkit):
         if project_dir:
             context.metadata["daytona_cwd"] = project_dir
 
-        # Inject CI gateway if available
-        if self.sandbox_id and "ci_gateway" not in context.metadata:
+        # Inject CI service if available
+        if self.sandbox_id and "ci_service" not in context.metadata:
             try:
-                from code_intelligence.routing.gateway import (
-                    get_code_intelligence_gateway,
-                )
+                from code_intelligence.routing.service import get_code_intelligence
+
                 workspace_root = project_dir or "/workspace"
-                gw = get_code_intelligence_gateway(
+                svc = get_code_intelligence(
                     sandbox_id=self.sandbox_id,
                     workspace_root=workspace_root,
                     sandbox=sandbox,
                 )
-                context.metadata["ci_gateway"] = gw
+                context.metadata["ci_service"] = svc
             except Exception:
-                logger.debug("CI gateway not available for sandbox %s", self.sandbox_id)
+                logger.debug("CI service not available for sandbox %s", self.sandbox_id)

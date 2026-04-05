@@ -8,7 +8,7 @@ import logging
 from pydantic import BaseModel, Field
 
 from tools.base import BaseTool, ToolExecutionContext, ToolResult
-from tools.daytona_toolkit.ci_integration import get_ci_gateway
+from tools.daytona_toolkit.ci_integration import get_ci_service
 
 logger = logging.getLogger(__name__)
 
@@ -35,16 +35,14 @@ class CIReadFileTool(BaseTool):
     async def execute(
         self, arguments: CIReadFileInput, context: ToolExecutionContext,
     ) -> ToolResult:
-        gw = get_ci_gateway(context)
+        svc = get_ci_service(context)
 
         # Try reading from tree cache first
         content = None
-        if gw:
-            tc = gw.tree_cache
-            if tc:
-                entry = tc.get_tree(arguments.path)
-                if entry:
-                    content = entry.content
+        if svc:
+            entry = svc.tree_cache.get_tree(arguments.path)
+            if entry:
+                content = entry.content
 
         # Fall back to direct file read
         if content is None:

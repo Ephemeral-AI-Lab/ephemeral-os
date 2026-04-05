@@ -223,6 +223,39 @@ agent_definition_store = AgentDefinitionStore()
 skill_definition_store = SkillDefinitionStore()
 
 
+def _initialize_database(session: SessionState) -> "AgentBuilderService | None":
+    """Initialize DB stores and agent builder. Returns builder service or None."""
+    settings = load_settings()
+    sf = initialize_db(settings.database)
+    if sf is None:
+        logger.info("Running without database — file-based persistence only")
+        return None
+
+    for store in (session_store, agent_run_store, usage_store, model_store,
+                  agent_definition_store, skill_definition_store):
+        store.initialize(sf)
+
+    # Seed models from registry.json on first boot
+    registry_path = Path(__file__).resolve().parent.parent.parent.parent / "models" / "registry.json"
+    model_store.seed_from_json(str(registry_path))
+
+    # Backfill model_key for agents that don't have one
+    backfilled = agent_definition_store.backfill_model_key("minimax")
+    if backfilled:
+        logger.info("Backfilled model_key='minimax' on %d agents", backfilled)
+
+    # Bootstrap agent builder service and load DB agents
+    from agents.builder import AgentBuilderService, AgentDefinitionValidator
+
+    validator = AgentDefinitionValidator(session._tool_registry)
+    builder = AgentBuilderService(agent_definition_store, validator)
+
+    db_agents = builder.load_all_from_db()
+    logger.info("Loaded %d user agents from DB", len(db_agents))
+    logger.info("Database stores initialised")
+    return builder
+
+
 def create_app(config: BackendHostConfig) -> FastAPI:
     """Create the FastAPI application with session lifecycle."""
 
@@ -232,46 +265,10 @@ def create_app(config: BackendHostConfig) -> FastAPI:
         _session = SessionState()
         await _session.initialize(config)
 
-        # Register built-in agent definitions into the runtime registry
         from agents import initialize_builtin_definitions
-
         initialize_builtin_definitions()
 
-        # Initialise PostgreSQL persistence (opt-in via database config)
-        settings = load_settings()
-        sf = initialize_db(settings.database)
-        if sf is not None:
-            session_store.initialize(sf)
-            agent_run_store.initialize(sf)
-            usage_store.initialize(sf)
-            model_store.initialize(sf)
-            agent_definition_store.initialize(sf)
-            skill_definition_store.initialize(sf)
-            # Seed models from registry.json on first boot
-            registry_path = Path(__file__).resolve().parent.parent.parent.parent / "models" / "registry.json"
-            model_store.seed_from_json(str(registry_path))
-
-            # Backfill model_key for agents that don't have one
-            backfilled = agent_definition_store.backfill_model_key("minimax")
-            if backfilled:
-                logger.info("Backfilled model_key='minimax' on %d agents", backfilled)
-
-            # Bootstrap agent builder service and load DB agents
-            from agents.builder import (
-                AgentBuilderService,
-                AgentDefinitionValidator,
-            )
-
-            tool_reg = _session._tool_registry if _session else None
-            validator = AgentDefinitionValidator(tool_reg)
-            _builder_service = AgentBuilderService(agent_definition_store, validator)
-
-            db_agents = _builder_service.load_all_from_db()
-            logger.info("Loaded %d user agents from DB", len(db_agents))
-
-            logger.info("Database stores initialised")
-        else:
-            logger.info("Running without database — file-based persistence only")
+        _builder_service = _initialize_database(_session)
 
         yield
         _session = None

@@ -28,10 +28,6 @@ class DatabaseSettings(BaseModel):
     max_overflow: int = 10
     echo: bool = False
 
-    def is_configured(self) -> bool:
-        """Return True if a database URL has been set."""
-        return bool(self.url)
-
 
 class Settings(BaseModel):
     """Main settings model for EphemeralOS."""

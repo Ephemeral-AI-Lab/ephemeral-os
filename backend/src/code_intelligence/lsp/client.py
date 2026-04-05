@@ -166,13 +166,6 @@ class LspClient:
             self._ts_available = self._check_typescript_backend()
         return {"python": self._py_available or False, "typescript": self._ts_available or False}
 
-    def mark_backend_unavailable(self, language: str) -> None:
-        """Mark a backend as unavailable."""
-        if language == "python":
-            self._py_available = False
-        elif language in ("typescript", "javascript"):
-            self._ts_available = False
-
     @property
     def telemetry(self) -> LspTelemetry:
         with self._counter_lock:

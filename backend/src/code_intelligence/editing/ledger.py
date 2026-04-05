@@ -114,36 +114,6 @@ class Ledger:
                 result.append(e.file_path)
         return result
 
-    def to_dicts(self) -> list[dict]:
-        """Serialize all entries for persistence."""
-        with self._lock:
-            return [
-                {
-                    "file_path": e.file_path,
-                    "agent_id": e.agent_id,
-                    "timestamp": e.timestamp,
-                    "edit_type": e.edit_type,
-                    "old_hash": e.old_hash,
-                    "new_hash": e.new_hash,
-                    "description": e.description,
-                }
-                for e in self._entries
-            ]
-
-    def restore_entries(self, entries: list[dict]) -> None:
-        """Restore from persisted data."""
-        with self._lock:
-            self._entries.clear()
-            self._timestamps.clear()
-            self._by_file.clear()
-            self._ref_counts.clear()
-            for d in entries:
-                entry = LedgerEntry(**d)
-                self._entries.append(entry)
-                self._timestamps.append(entry.timestamp)
-                self._by_file[entry.file_path].append(entry)
-                self._ref_counts[entry.file_path] += 1
-
     @property
     def entry_count(self) -> int:
         with self._lock:

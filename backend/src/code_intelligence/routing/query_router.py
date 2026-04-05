@@ -120,6 +120,3 @@ class IntelligenceQueryRouter:
                 except Exception:
                     logger.debug("Cache invalidation failed for %s on %s", backend.name, file_path, exc_info=True)
 
-    @property
-    def backend_names(self) -> list[str]:
-        return [b.name for b in self._backends]

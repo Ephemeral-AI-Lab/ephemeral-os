@@ -158,75 +158,89 @@ def _paginate_all(list_fn: Any, limit: int) -> list[Any]:
     return items
 
 
-def _sandbox_state(sandbox: Any) -> str:
-    """Normalize sandbox state to lowercase string."""
-    raw_state = getattr(sandbox, "state", None)
-    if raw_state is None:
-        return "unknown"
-    normalized = getattr(raw_state, "value", raw_state)
-    state = str(normalized).strip()
-    if not state:
-        return "unknown"
-    if state.lower().startswith("sandboxstate."):
-        state = state.split(".", 1)[1]
-    return state.lower()
+class SandboxProxy:
+    """Typed view over a Daytona SDK sandbox object."""
 
+    __slots__ = ("_raw",)
 
-def _sandbox_image(sandbox: Any) -> str | None:
-    """Extract image name from sandbox labels/attributes."""
-    labels = getattr(sandbox, "labels", None) or {}
-    if isinstance(labels, dict):
-        snapshot_label = labels.get(_SNAPSHOT_LABEL)
-        if snapshot_label:
-            return str(snapshot_label)
-        image_label = labels.get(_IMAGE_LABEL)
-        if image_label:
-            return str(image_label)
-    direct_image = _normalize_optional_text(getattr(sandbox, "image", None))
-    if direct_image:
-        return direct_image
-    image_name = _normalize_optional_text(getattr(sandbox, "image_name", None))
-    if image_name:
-        return image_name
-    snapshot = _normalize_optional_text(getattr(sandbox, "snapshot", None))
-    return snapshot
+    def __init__(self, raw: Any) -> None:
+        self._raw = raw
 
+    @property
+    def id(self) -> str:
+        return getattr(self._raw, "id", "")
 
-def _serialize_sandbox(sandbox: Any, *, assigned_agents: list[str] | None = None) -> dict[str, Any]:
-    """Serialize a Daytona SDK sandbox to the shape the frontend expects."""
-    labels = getattr(sandbox, "labels", None) or {}
-    if not isinstance(labels, dict):
-        labels = {}
-    return {
-        "id": getattr(sandbox, "id", ""),
-        "name": getattr(sandbox, "name", ""),
-        "state": _sandbox_state(sandbox),
-        "image": _sandbox_image(sandbox),
-        "labels": {str(k): str(v) for k, v in labels.items()},
-        "created_at": getattr(sandbox, "created_at", None),
-        "managed_by_app": labels.get("managed_by") == _APP_MANAGED_BY,
-        "assigned_agents": list(assigned_agents or []),
-    }
+    @property
+    def name(self) -> str:
+        return getattr(self._raw, "name", "")
 
+    @property
+    def created_at(self) -> Any:
+        return getattr(self._raw, "created_at", None)
 
-def _refresh_sandbox_data(sandbox: Any) -> None:
-    refresh = getattr(sandbox, "refresh_data", None)
-    if callable(refresh):
-        refresh()
+    @property
+    def labels(self) -> dict[str, str]:
+        raw = getattr(self._raw, "labels", None) or {}
+        return {str(k): str(v) for k, v in raw.items()} if isinstance(raw, dict) else {}
 
+    @property
+    def state(self) -> str:
+        raw_state = getattr(self._raw, "state", None)
+        if raw_state is None:
+            return "unknown"
+        s = str(getattr(raw_state, "value", raw_state)).strip()
+        if not s:
+            return "unknown"
+        if s.lower().startswith("sandboxstate."):
+            s = s.split(".", 1)[1]
+        return s.lower()
 
-def _ensure_git(sandbox: Any) -> None:
-    """Install git in the sandbox if missing."""
-    try:
-        response = sandbox.process.exec(
-            "command -v git >/dev/null 2>&1 && echo ok || echo missing",
-            timeout=10,
-        )
-        if "ok" in (response.result or ""):
-            return
-        sandbox.process.exec(_GIT_BOOTSTRAP, timeout=120)
-    except Exception:
-        logger.warning("Git bootstrap failed for sandbox %s", getattr(sandbox, "id", "?"))
+    @property
+    def image(self) -> str | None:
+        labels = self.labels
+        for key in (_SNAPSHOT_LABEL, _IMAGE_LABEL):
+            if labels.get(key):
+                return labels[key]
+        for attr in ("image", "image_name", "snapshot"):
+            val = _normalize_optional_text(getattr(self._raw, attr, None))
+            if val:
+                return val
+        return None
+
+    @property
+    def managed_by_app(self) -> bool:
+        return self.labels.get("managed_by") == _APP_MANAGED_BY
+
+    def refresh(self) -> None:
+        fn = getattr(self._raw, "refresh_data", None)
+        if callable(fn):
+            fn()
+
+    def ensure_git(self) -> None:
+        """Install git in the sandbox if missing."""
+        try:
+            resp = self._raw.process.exec(
+                "command -v git >/dev/null 2>&1 && echo ok || echo missing",
+                timeout=10,
+            )
+            if "ok" in (resp.result or ""):
+                return
+            self._raw.process.exec(_GIT_BOOTSTRAP, timeout=120)
+        except Exception:
+            logger.warning("Git bootstrap failed for sandbox %s", self.id)
+
+    def serialize(self, *, assigned_agents: list[str] | None = None) -> dict[str, Any]:
+        """Serialize to the shape the frontend expects."""
+        return {
+            "id": self.id,
+            "name": self.name,
+            "state": self.state,
+            "image": self.image,
+            "labels": self.labels,
+            "created_at": self.created_at,
+            "managed_by_app": self.managed_by_app,
+            "assigned_agents": list(assigned_agents or []),
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -283,27 +297,27 @@ class SandboxService:
         """List all sandboxes (both managed and external)."""
         client = _get_daytona_client()
         sandboxes = [
-            _serialize_sandbox(sb)
+            SandboxProxy(sb).serialize()
             for sb in _paginate_all(client.list, _LIST_PAGE_LIMIT)
         ]
         sandboxes.sort(key=lambda item: item.get("created_at") or "", reverse=True)
         return sandboxes
 
+    def _get_proxy(self, sandbox_id: str) -> SandboxProxy:
+        """Fetch a sandbox by ID and return a typed proxy."""
+        client = _get_daytona_client()
+        raw = client.get(sandbox_id)
+        if raw is None:
+            raise ValueError(f"Sandbox '{sandbox_id}' not found")
+        return SandboxProxy(raw)
+
     def get_sandbox(self, sandbox_id: str) -> dict[str, Any]:
         """Get a single sandbox by ID."""
-        client = _get_daytona_client()
-        sb = client.get(sandbox_id)
-        if sb is None:
-            raise ValueError(f"Sandbox '{sandbox_id}' not found")
-        return _serialize_sandbox(sb)
+        return self._get_proxy(sandbox_id).serialize()
 
     def get_sandbox_object(self, sandbox_id: str) -> Any:
         """Return the raw Daytona SDK sandbox object."""
-        client = _get_daytona_client()
-        sb = client.get(sandbox_id)
-        if sb is None:
-            raise ValueError(f"Sandbox '{sandbox_id}' not found")
-        return sb
+        return self._get_proxy(sandbox_id)._raw
 
     # -- Lifecycle ------------------------------------------------------------
 
@@ -359,46 +373,37 @@ class SandboxService:
                 ephemeral=False,
             )
 
-        sb = client.create(params, timeout=_SANDBOX_TIMEOUT_SECONDS)
-        _refresh_sandbox_data(sb)
-        _ensure_git(sb)
+        raw = client.create(params, timeout=_SANDBOX_TIMEOUT_SECONDS)
+        sb = SandboxProxy(raw)
+        sb.refresh()
+        sb.ensure_git()
 
-        return _serialize_sandbox(sb, assigned_agents=[])
+        return sb.serialize(assigned_agents=[])
 
     def start_sandbox(self, sandbox_id: str) -> dict[str, Any]:
         """Start a stopped sandbox."""
-        client = _get_daytona_client()
-        sb = client.get(sandbox_id)
-        if sb is None:
-            raise ValueError(f"Sandbox '{sandbox_id}' not found")
+        sb = self._get_proxy(sandbox_id)
+        if sb.state == "started":
+            return sb.serialize()
 
-        if _sandbox_state(sb) == "started":
-            return _serialize_sandbox(sb)
+        sb._raw.start(timeout=_SANDBOX_TIMEOUT_SECONDS)
+        sb.refresh()
+        sb.ensure_git()
+        sb.refresh()
 
-        sb.start(timeout=_SANDBOX_TIMEOUT_SECONDS)
-        _refresh_sandbox_data(sb)
-        _ensure_git(sb)
-        _refresh_sandbox_data(sb)
-
-        return _serialize_sandbox(sb)
+        return sb.serialize()
 
     def stop_sandbox(self, sandbox_id: str) -> dict[str, Any]:
         """Stop a running sandbox."""
-        client = _get_daytona_client()
-        sb = client.get(sandbox_id)
-        if sb is None:
-            raise ValueError(f"Sandbox '{sandbox_id}' not found")
-        sb.stop(timeout=60)
-        _refresh_sandbox_data(sb)
-        return _serialize_sandbox(sb)
+        sb = self._get_proxy(sandbox_id)
+        sb._raw.stop(timeout=60)
+        sb.refresh()
+        return sb.serialize()
 
     def delete_sandbox(self, sandbox_id: str) -> None:
         """Delete a sandbox."""
-        client = _get_daytona_client()
-        sb = client.get(sandbox_id)
-        if sb is None:
-            raise ValueError(f"Sandbox '{sandbox_id}' not found")
-        sb.delete(timeout=_SANDBOX_TIMEOUT_SECONDS)
+        sb = self._get_proxy(sandbox_id)
+        sb._raw.delete(timeout=_SANDBOX_TIMEOUT_SECONDS)
         logger.info("Sandbox deleted: %s", sandbox_id)
 
     # -- Snapshots ------------------------------------------------------------

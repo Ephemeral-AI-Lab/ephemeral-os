@@ -3,9 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import json
-import re
-import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, AsyncIterator
@@ -30,9 +27,9 @@ from engine.stream_events import (
     ToolExecutionCompleted,
     ToolExecutionStarted,
 )
+from engine.text_tool_parser import parse_text_tool_calls
 from hooks import HookEvent, HookExecutor
-from tools.base import ToolExecutionContext
-from tools.base import ToolRegistry
+from tools.base import ToolExecutionContext, ToolRegistry
 
 
 @dataclass
@@ -49,54 +46,6 @@ class QueryContext:
     hook_executor: HookExecutor | None = None
     tool_metadata: dict[str, object] | None = None
     session_state: "SessionState | None" = None
-
-
-_TEXT_TOOL_CALL_RE = re.compile(
-    r"\[TOOL_CALL\]\s*(.*?)\s*\[/TOOL_CALL\]", re.DOTALL
-)
-
-
-def _parse_text_tool_calls(text: str) -> list[ToolUseBlock]:
-    """Parse [TOOL_CALL]...[/TOOL_CALL] markers from model text.
-
-    Supports formats like:
-      {tool => "name", args => {...}}
-      {"tool": "name", "args": {...}}
-    """
-    results: list[ToolUseBlock] = []
-    for match in _TEXT_TOOL_CALL_RE.finditer(text):
-        raw = match.group(1).strip()
-        tool_name: str | None = None
-        tool_args: dict = {}
-
-        # Try JSON format first: {"tool": "name", "args": {...}}
-        try:
-            parsed = json.loads(raw)
-            if isinstance(parsed, dict):
-                tool_name = parsed.get("tool") or parsed.get("name")
-                tool_args = parsed.get("args") or parsed.get("input") or {}
-        except (json.JSONDecodeError, TypeError):
-            pass
-
-        # Fallback: {tool => "name", args => {...}}
-        if tool_name is None:
-            name_match = re.search(r'tool\s*(?:=>|:)\s*"([^"]+)"', raw)
-            if name_match:
-                tool_name = name_match.group(1)
-            args_match = re.search(r'args\s*(?:=>|:)\s*(\{[\s\S]*\})', raw)
-            if args_match:
-                try:
-                    tool_args = json.loads(args_match.group(1))
-                except (json.JSONDecodeError, TypeError):
-                    tool_args = {}
-
-        if tool_name:
-            results.append(ToolUseBlock(
-                id=f"text-tc-{uuid.uuid4().hex[:8]}",
-                name=tool_name,
-                input=tool_args,
-            ))
-    return results
 
 
 async def run_query(
@@ -165,7 +114,7 @@ async def run_query(
         # execute the tools, and feed results back as a user text message so
         # the model sees them in its own format.
         if not final_message.tool_uses and final_message.text:
-            text_tool_calls = _parse_text_tool_calls(final_message.text)
+            text_tool_calls = parse_text_tool_calls(final_message.text)
             if text_tool_calls:
                 result_parts: list[str] = []
                 for tc in text_tool_calls:

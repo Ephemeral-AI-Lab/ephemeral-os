@@ -1,4 +1,4 @@
-"""Routing subpackage — query dispatch, service orchestration, and gateway."""
+"""Routing subpackage — query dispatch and service orchestration."""
 
 from code_intelligence.routing.backend_protocol import (
     CodeIntelligenceBackend,
@@ -14,14 +14,9 @@ from code_intelligence.routing.service import (
     get_code_intelligence,
     get_code_intelligence_if_exists,
 )
-from code_intelligence.routing.gateway import (
-    CodeIntelligenceGateway,
-    get_code_intelligence_gateway,
-)
 
 __all__ = [
     "CodeIntelligenceBackend",
-    "CodeIntelligenceGateway",
     "CodeIntelligenceService",
     "IntelligenceQueryRouter",
     "LspBackendAdapter",
@@ -30,6 +25,5 @@ __all__ = [
     "dispose_code_intelligence",
     "get_all_services_status",
     "get_code_intelligence",
-    "get_code_intelligence_gateway",
     "get_code_intelligence_if_exists",
 ]

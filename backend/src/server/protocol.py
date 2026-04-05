@@ -5,10 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from models.types import SupportsStreamingMessages
-from tasks.types import TaskRecord
 
 
 @dataclass(frozen=True)
@@ -42,26 +41,6 @@ class TranscriptItem(BaseModel):
     is_error: bool | None = None
 
 
-class TaskSnapshot(BaseModel):
-    """UI-safe task representation."""
-
-    id: str
-    type: str
-    status: str
-    description: str
-    metadata: dict[str, str] = Field(default_factory=dict)
-
-    @classmethod
-    def from_record(cls, record: TaskRecord) -> "TaskSnapshot":
-        return cls(
-            id=record.id,
-            type=record.type,
-            status=record.status,
-            description=record.description,
-            metadata=dict(record.metadata),
-        )
-
-
 class ToolkitSnapshot(BaseModel):
     """UI-safe toolkit representation."""
 
@@ -76,7 +55,6 @@ class BackendEvent(BaseModel):
     type: Literal[
         "ready",
         "state_snapshot",
-        "tasks_snapshot",
         "transcript_item",
         "thinking_delta",
         "assistant_delta",
@@ -91,7 +69,6 @@ class BackendEvent(BaseModel):
     message: str | None = None
     item: TranscriptItem | None = None
     state: dict[str, Any] | None = None
-    tasks: list[TaskSnapshot] | None = None
     toolkits: list[ToolkitSnapshot] | None = None
     tool_name: str | None = None
     tool_input: dict[str, Any] | None = None
@@ -101,22 +78,13 @@ class BackendEvent(BaseModel):
     @classmethod
     def ready(
         cls,
-        tasks: list[TaskRecord],
         toolkits: list[ToolkitSnapshot] | None = None,
         state: dict[str, Any] | None = None,
     ) -> "BackendEvent":
         return cls(
             type="ready",
-            tasks=[TaskSnapshot.from_record(task) for task in tasks],
             toolkits=toolkits or [],
             state=state,
-        )
-
-    @classmethod
-    def tasks_snapshot(cls, tasks: list[TaskRecord]) -> "BackendEvent":
-        return cls(
-            type="tasks_snapshot",
-            tasks=[TaskSnapshot.from_record(task) for task in tasks],
         )
 
 
@@ -124,7 +92,6 @@ __all__ = [
     "BackendEvent",
     "BackendHostConfig",
     "FrontendRequest",
-    "TaskSnapshot",
     "ToolkitSnapshot",
     "TranscriptItem",
 ]

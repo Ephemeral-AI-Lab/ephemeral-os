@@ -90,38 +90,12 @@ class BackgroundTaskManager:
         await self.write_to_task(record.id, prompt)
         return updated
 
-    def get_task(self, task_id: str) -> TaskRecord | None:
-        """Return one task record."""
-        return self._tasks.get(task_id)
-
     def list_tasks(self, *, status: TaskStatus | None = None) -> list[TaskRecord]:
         """Return all tasks, optionally filtered by status."""
         tasks = list(self._tasks.values())
         if status is not None:
             tasks = [task for task in tasks if task.status == status]
         return sorted(tasks, key=lambda item: item.created_at, reverse=True)
-
-    def update_task(
-        self,
-        task_id: str,
-        *,
-        description: str | None = None,
-        progress: int | None = None,
-        status_note: str | None = None,
-    ) -> TaskRecord:
-        """Update mutable task metadata used for coordination and UI display."""
-        task = self._require_task(task_id)
-        if description is not None and description.strip():
-            task.description = description.strip()
-        if progress is not None:
-            task.metadata["progress"] = str(progress)
-        if status_note is not None:
-            note = status_note.strip()
-            if note:
-                task.metadata["status_note"] = note
-            else:
-                task.metadata.pop("status_note", None)
-        return task
 
     async def stop_task(self, task_id: str) -> TaskRecord:
         """Terminate a running task."""
@@ -157,14 +131,6 @@ class BackgroundTaskManager:
                 process = await self._restart_agent_task(task)
                 process.stdin.write((data.rstrip("\n") + "\n").encode("utf-8"))
                 await process.stdin.drain()
-
-    def read_task_output(self, task_id: str, *, max_bytes: int = 12000) -> str:
-        """Return the tail of a task's output file."""
-        task = self._require_task(task_id)
-        content = task.output_file.read_text(encoding="utf-8", errors="replace")
-        if len(content) > max_bytes:
-            return content[-max_bytes:]
-        return content
 
     async def _watch_process(
         self,

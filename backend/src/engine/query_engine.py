@@ -65,14 +65,6 @@ class QueryEngine:
         self._messages.clear()
         self._cost_tracker = CostTracker()
 
-    def set_system_prompt(self, prompt: str) -> None:
-        """Update the active system prompt for future turns."""
-        self._system_prompt = prompt
-
-    def set_model(self, model: str) -> None:
-        """Update the active model for future turns."""
-        self._model = model
-
     def load_messages(self, messages: list[ConversationMessage]) -> None:
         """Replace the in-memory conversation history."""
         self._messages = list(messages)

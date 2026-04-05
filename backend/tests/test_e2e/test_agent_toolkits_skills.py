@@ -34,8 +34,11 @@ class TestInfrastructure:
         resp = client.get("/api/state")
         assert resp.status_code == 200
         data = resp.json()
-        assert "model" in data
-        assert "toolkits" in data
+        # /api/state returns a BackendEvent with type="ready"
+        assert data["type"] == "ready"
+        assert data["state"] is not None
+        assert "model" in data["state"]
+        assert data["toolkits"] is not None
 
 
 # ---------------------------------------------------------------------------
@@ -197,10 +200,9 @@ class TestChatToolkitIntegration:
 
         tool_names = self._chat_and_get_tools(client, mock_client, agent_name="sandbox-agent")
 
-        # Should have sandbox tools
-        sandbox_tools = {"read_file", "write_file", "bash", "glob", "grep", "list_files", "edit_file"}
-        found_sandbox = sandbox_tools.intersection(set(tool_names))
-        assert len(found_sandbox) > 0, f"Expected sandbox tools, got: {tool_names}"
+        # Sandbox tools are prefixed with 'daytona_'
+        daytona_tools = [t for t in tool_names if t.startswith("daytona_")]
+        assert len(daytona_tools) > 0, f"Expected daytona_* sandbox tools, got: {tool_names}"
 
     def test_agent_without_toolkits_gets_defaults(self, app_client):
         client, mock_client = app_client

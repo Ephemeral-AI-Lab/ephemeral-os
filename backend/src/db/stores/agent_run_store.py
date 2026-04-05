@@ -110,30 +110,6 @@ class AgentRunStore:
 
     # -- chunk CRUD ------------------------------------------------------------
 
-    def append_chunk(
-        self,
-        *,
-        session_id: str,
-        run_id: str,
-        event_kind: str,
-        content: str | None = None,
-        tool_name: str | None = None,
-        tool_call_id: str | None = None,
-    ) -> AgentResponseChunkRecord:
-        with self._sf() as db:
-            chunk = AgentResponseChunkRecord(
-                session_id=session_id,
-                run_id=run_id,
-                event_kind=event_kind,
-                content=content,
-                tool_name=tool_name,
-                tool_call_id=tool_call_id,
-            )
-            db.add(chunk)
-            db.commit()
-            db.refresh(chunk)
-            return chunk
-
     def list_chunks(self, run_id: str, limit: int = 500) -> list[dict]:
         with self._sf() as db:
             q = (

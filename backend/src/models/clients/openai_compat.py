@@ -145,30 +145,6 @@ def _convert_assistant_message(msg: ConversationMessage) -> dict[str, Any]:
     return openai_msg
 
 
-def _parse_assistant_response(response: Any) -> ConversationMessage:
-    """Parse an OpenAI ChatCompletion response into a ConversationMessage."""
-    choice = response.choices[0]
-    message = choice.message
-    content: list[ContentBlock] = []
-
-    if message.content:
-        content.append(TextBlock(text=message.content))
-
-    if message.tool_calls:
-        for tc in message.tool_calls:
-            try:
-                args = json.loads(tc.function.arguments)
-            except (json.JSONDecodeError, TypeError):
-                args = {}
-            content.append(ToolUseBlock(
-                id=tc.id,
-                name=tc.function.name,
-                input=args,
-            ))
-
-    return ConversationMessage(role="assistant", content=content)
-
-
 class OpenAICompatibleClient:
     """Client for OpenAI-compatible APIs (DashScope, GitHub Models, etc.).
 
