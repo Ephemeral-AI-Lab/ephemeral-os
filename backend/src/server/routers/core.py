@@ -21,6 +21,7 @@ from engine.stream_events import (
     AssistantTurnComplete,
     StreamEvent,
     ThinkingDelta,
+    ToolExecutionCancelled,
     ToolExecutionCompleted,
     ToolExecutionStarted,
 )
@@ -52,7 +53,6 @@ class ConfigRequest(BaseModel):
     base_url: str | None = None
     api_key: str | None = None
     api_format: str | None = None
-
 
 
 # ---------------------------------------------------------------------------
@@ -88,12 +88,16 @@ async def execute_ephemeral_agent_run(
 
     # 2. Spawn ephemeral agent (inherits session state)
     agent = spawn_agent(
-        config, messages,
-        agent_def=agent_def, latest_user_prompt=input_message,
+        config,
+        messages,
+        agent_def=agent_def,
+        latest_user_prompt=input_message,
         session_state=session_state,
         sandbox_id=sandbox_id,
     )
-    logger.info("Spawned agent %r (model=%s, session=%s)", agent.agent_name, agent.model, config.session_id)
+    logger.info(
+        "Spawned agent %r (model=%s, session=%s)", agent.agent_name, agent.model, config.session_id
+    )
 
     # 3. Ensure session record exists (agent_runs FK requires it)
     run_id: str | None = None
@@ -149,7 +153,9 @@ async def execute_ephemeral_agent_run(
         if run_id and db_available:
             try:
                 # Capture the response (new messages from this run)
-                run_response = [m.model_dump(mode="json") for m in agent.engine.messages[len(messages):]]
+                run_response = [
+                    m.model_dump(mode="json") for m in agent.engine.messages[len(messages) :]
+                ]
                 # Capture compacted history (what the engine holds after the run)
                 compacted = [m.model_dump(mode="json") for m in agent.engine.messages]
 
@@ -167,7 +173,11 @@ async def execute_ephemeral_agent_run(
                 logger.debug("Failed to finish agent run record", exc_info=True)
 
         # Record token usage
-        if db_available and usage_snapshot and (usage_snapshot.input_tokens or usage_snapshot.output_tokens):
+        if (
+            db_available
+            and usage_snapshot
+            and (usage_snapshot.input_tokens or usage_snapshot.output_tokens)
+        ):
             try:
                 usage_store.record(
                     session_id=config.session_id,
@@ -198,14 +208,22 @@ async def execute_ephemeral_agent_run(
                 cwd=config.cwd,
                 model=agent.model,
                 system_prompt=build_runtime_system_prompt(
-                    agent.settings, cwd=config.cwd, latest_user_prompt=input_message,
+                    agent.settings,
+                    cwd=config.cwd,
+                    latest_user_prompt=input_message,
                 ),
                 messages=[m.model_dump(mode="json") for m in agent.engine.messages],
                 full_messages=full_history,
                 usage=agent.engine.total_usage.model_dump(),
-                session_state=agent.engine.session_state.to_dict() if agent.engine.session_state else None,
+                session_state=agent.engine.session_state.to_dict()
+                if agent.engine.session_state
+                else None,
                 summary=next(
-                    (m.text.strip()[:80] for m in agent.engine.messages if m.role == "user" and m.text.strip()),
+                    (
+                        m.text.strip()[:80]
+                        for m in agent.engine.messages
+                        if m.role == "user" and m.text.strip()
+                    ),
                     "",
                 ),
                 message_count=len(agent.engine.messages),
@@ -213,7 +231,12 @@ async def execute_ephemeral_agent_run(
         except Exception:
             logger.debug("Failed to save session to DB", exc_info=True)
 
-    logger.info("Agent %r finished (events=%d, status=%s)", agent.agent_name, event_count, "failed" if run_error else "completed")
+    logger.info(
+        "Agent %r finished (events=%d, status=%s)",
+        agent.agent_name,
+        event_count,
+        "failed" if run_error else "completed",
+    )
 
     # 8. Agent goes out of scope — ephemeral lifecycle complete
     return True
@@ -306,7 +329,9 @@ def create_core_router(get_session: Callable[[], "SessionState"]) -> APIRouter:
                             BackendEvent(
                                 type="assistant_complete",
                                 message=event.message.text.strip(),
-                                item=TranscriptItem(role="assistant", text=event.message.text.strip()),
+                                item=TranscriptItem(
+                                    role="assistant", text=event.message.text.strip()
+                                ),
                             )
                         )
                     elif isinstance(event, ToolExecutionStarted):
@@ -338,6 +363,20 @@ def create_core_router(get_session: Callable[[], "SessionState"]) -> APIRouter:
                                 ),
                             )
                         )
+                    elif isinstance(event, ToolExecutionCancelled):
+                        await session.emit(
+                            BackendEvent(
+                                type="tool_cancelled",
+                                tool_name=event.tool_name,
+                                cancel_reason=event.reason,
+                                item=TranscriptItem(
+                                    role="tool_result",
+                                    text=f"[CANCELLED] {event.tool_name}: {event.reason}",
+                                    tool_name=event.tool_name,
+                                    is_error=True,
+                                ),
+                            )
+                        )
 
                 async def _on_clear() -> None:
                     await session.emit(BackendEvent(type="clear_transcript"))
@@ -346,9 +385,12 @@ def create_core_router(get_session: Callable[[], "SessionState"]) -> APIRouter:
                 agent_def = None
                 if req.agent_name:
                     from agents.registry import get_definition
+
                     agent_def = get_definition(req.agent_name)
                     if agent_def is None:
-                        await _on_system_notification(f"Agent '{req.agent_name}' not found — using default")
+                        await _on_system_notification(
+                            f"Agent '{req.agent_name}' not found — using default"
+                        )
 
                 await execute_ephemeral_agent_run(
                     config,
@@ -361,9 +403,7 @@ def create_core_router(get_session: Callable[[], "SessionState"]) -> APIRouter:
                 )
                 await session.emit(BackendEvent(type="line_complete"))
             except Exception as exc:
-                await session.emit(
-                    BackendEvent(type="error", message=f"Processing error: {exc}")
-                )
+                await session.emit(BackendEvent(type="error", message=f"Processing error: {exc}"))
             finally:
                 await queue.put(None)
                 session.busy = False
@@ -423,13 +463,15 @@ def create_core_router(get_session: Callable[[], "SessionState"]) -> APIRouter:
             config.api_format_override = req.api_format
 
         provider = detect_provider(settings)
-        return JSONResponse(content={
-            "changed": True,
-            "model": settings.model,
-            "provider": provider.name,
-            "auth_status": auth_status(settings),
-            "base_url": settings.base_url or "",
-        })
+        return JSONResponse(
+            content={
+                "changed": True,
+                "model": settings.model,
+                "provider": provider.name,
+                "auth_status": auth_status(settings),
+                "base_url": settings.base_url or "",
+            }
+        )
 
     @router.get("/sessions")
     async def list_sessions():
@@ -447,10 +489,12 @@ def create_core_router(get_session: Callable[[], "SessionState"]) -> APIRouter:
         for s in snapshots:
             ts = _time.strftime("%m/%d %H:%M", _time.localtime(s["created_at"]))
             summary = s.get("summary", "")[:50] or "(no summary)"
-            options.append({
-                "value": s["session_id"],
-                "label": f"{ts}  {s['message_count']}msg  {summary}",
-            })
+            options.append(
+                {
+                    "value": s["session_id"],
+                    "label": f"{ts}  {s['message_count']}msg  {summary}",
+                }
+            )
         return JSONResponse(content={"sessions": options})
 
     return router

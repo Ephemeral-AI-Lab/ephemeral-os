@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import BigInteger, Boolean, DateTime, String, Text
+from sqlalchemy import Boolean, DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from db.base import Base
@@ -15,7 +15,9 @@ class ModelRegistrationRecord(Base):
 
     __tablename__ = "model_registrations"
 
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    # NOTE: Using Integer (not BigInteger) for SQLite compatibility.
+    # SQLite only supports autoincrement on INTEGER PRIMARY KEY (not BIGINT).
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     key: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
     label: Mapped[str] = mapped_column(String(256), nullable=False)
     class_path: Mapped[str] = mapped_column(String(512), nullable=False)

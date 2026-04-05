@@ -62,6 +62,7 @@ class BackendEvent(BaseModel):
         "line_complete",
         "tool_started",
         "tool_completed",
+        "tool_cancelled",
         "clear_transcript",
         "error",
         "shutdown",
@@ -74,6 +75,7 @@ class BackendEvent(BaseModel):
     tool_input: dict[str, Any] | None = None
     output: str | None = None
     is_error: bool | None = None
+    cancel_reason: str | None = None
 
     @classmethod
     def ready(

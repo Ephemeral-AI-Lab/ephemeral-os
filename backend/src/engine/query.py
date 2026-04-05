@@ -88,6 +88,11 @@ async def _run_query_loop(
             ),
         )
 
+        # Inject Daytona sandbox into context if DaytonaToolkit is registered
+        daytona_toolkit = context.tool_registry.get_toolkit("sandbox_operations")
+        if daytona_toolkit is not None:
+            daytona_toolkit.prepare_context(executor._context)
+
         final_message: ConversationMessage | None = None
         usage = UsageSnapshot()
         pending_cancel: dict[str, str] = {}

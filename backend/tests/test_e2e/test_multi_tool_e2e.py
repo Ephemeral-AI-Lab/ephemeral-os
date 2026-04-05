@@ -225,6 +225,14 @@ class TestMultipleToolCalls:
         tool_started = _get_tool_started_events(events)
         tool_names = [e["tool_name"] for e in tool_started]
 
+        # DEBUG: print all event types
+        print(f"\nDEBUG: event_types={_get_event_types(events)}")
+        print(f"DEBUG: tool_started={tool_started}")
+        print(f"DEBUG: tool_names={tool_names}")
+        errors = events_of_type(events, "error")
+        if errors:
+            print(f"DEBUG: errors={errors}")
+
         daytona_calls = [n for n in tool_names if n.startswith("daytona_")]
         assert len(daytona_calls) >= 2, (
             f"Should make at least 2 tool calls. Got {len(daytona_calls)}: {daytona_calls}"
