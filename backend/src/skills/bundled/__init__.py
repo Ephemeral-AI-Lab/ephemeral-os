@@ -2,7 +2,6 @@
 
 Each skill is a subdirectory of ``content/`` containing a ``SKILL.md``
 file with optional YAML frontmatter (``name``, ``description``).
-Legacy flat ``.md`` files in ``content/`` are also supported.
 """
 
 from __future__ import annotations
@@ -36,20 +35,6 @@ def get_bundled_skills() -> list[SkillDefinition]:
                         path=str(skill_dir),
                     )
                 )
-
-    # Legacy flat .md files: content/*.md
-    for path in sorted(_CONTENT_DIR.glob("*.md")):
-        content = path.read_text(encoding="utf-8")
-        name, description = _parse_frontmatter(path.stem, content)
-        skills.append(
-            SkillDefinition(
-                name=name,
-                description=description,
-                content=content,
-                source="bundled",
-                path=str(path),
-            )
-        )
 
     return skills
 

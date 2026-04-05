@@ -1,21 +1,14 @@
 """Built-in agent definitions.
 
-Previously contained 7 hardcoded agents.  These have been replaced by
-DB-seeded specialists imported from the SuperCocoa agent directory.
-See :mod:`agents.seed` for the migration logic.
+All agents are now DB-seeded or user-defined. This module provides
+the interface for backwards compatibility but returns an empty list.
 """
 
 from __future__ import annotations
 
 from agents.types import AgentDefinition
 
-# ---------------------------------------------------------------------------
-# Built-in agent definitions — now empty (specialists live in the database)
-# ---------------------------------------------------------------------------
-
-_BUILTIN_AGENTS: list[AgentDefinition] = []
-
 
 def get_builtin_agent_definitions() -> list[AgentDefinition]:
-    """Return the built-in agent definitions (empty — see DB seed)."""
-    return list(_BUILTIN_AGENTS)
+    """Return built-in agent definitions (none — agents live in DB/user files)."""
+    return []

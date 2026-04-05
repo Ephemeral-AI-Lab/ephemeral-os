@@ -1,16 +1,15 @@
-"""Coordination worker toolkit — replanning escalation for worker agents.
-
-Provides a single tool:
-- ``request_replan``: signal that a task encountered issues requiring
-  replanning, persist context, and spawn a replanner task.
-"""
+"""Coordination worker toolkit — replanning escalation for worker agents."""
 
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import Callable
 
 from tools.base import BaseToolkit
-from tools.coordination_worker.replan_tool import RequestReplanTool
+from tools.coordination_worker.replan_tool import (
+    ArtifactStore,
+    ReplanHandler,
+    RequestReplanTool,
+)
 
 
 class CoordinationWorkerToolkit(BaseToolkit):
@@ -21,9 +20,8 @@ class CoordinationWorkerToolkit(BaseToolkit):
         *,
         task_id: str = "",
         run_id: str = "",
-        store: Any = None,
-        plan: Any = None,
-        agent_session_id: str | None = None,
+        store: ArtifactStore | None = None,
+        replan_handler: ReplanHandler | None = None,
         trigger_dispatch_fn: Callable[[], None] | None = None,
     ) -> None:
         super().__init__(
@@ -34,8 +32,7 @@ class CoordinationWorkerToolkit(BaseToolkit):
                     task_id=task_id,
                     run_id=run_id,
                     store=store,
-                    plan=plan,
-                    agent_session_id=agent_session_id,
+                    replan_handler=replan_handler,
                     trigger_dispatch_fn=trigger_dispatch_fn,
                 ),
             ],

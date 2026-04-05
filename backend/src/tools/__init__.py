@@ -7,17 +7,11 @@ from tools.base import (
     ToolRegistry,
     ToolResult,
 )
-from tools.discovery import DiscoveryToolkit
 
 
 def create_default_tool_registry() -> ToolRegistry:
-    """Return the default built-in tool registry."""
-    registry = ToolRegistry()
-    for toolkit in (
-        DiscoveryToolkit(),
-    ):
-        registry.register_toolkit(toolkit)
-    return registry
+    """Return an empty tool registry. Toolkits are added via the factory."""
+    return ToolRegistry()
 
 
 __all__ = [
@@ -27,5 +21,4 @@ __all__ = [
     "ToolExecutionContext",
     "ToolRegistry",
     "ToolResult",
-    "DiscoveryToolkit",
 ]

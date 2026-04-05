@@ -28,7 +28,7 @@ def _serialize_for_json(obj: Any) -> str:
 class QueryPhaseContextInput(BaseModel):
     """Arguments for querying a planning phase's output."""
 
-    phase: str = Field(description="Phase name to query (e.g. 'analyze', 'explore', 'synthesize')")
+    phase: str = Field(description="Phase name to query.")
     key: str | None = Field(
         default=None,
         description="Optional specific output key to retrieve. If omitted, returns the entire phase output.",
@@ -41,7 +41,7 @@ class QueryPhaseContextTool(BaseTool):
     name = "query_phase_context"
     description = (
         "Query structured output from a completed planning phase. "
-        "Use this to understand what earlier phases discovered before decomposing tasks."
+        "Use this to understand what earlier phases discovered."
     )
     input_model = QueryPhaseContextInput
 
@@ -92,7 +92,7 @@ class ListPhasesTool(BaseTool):
     name = "list_phases"
     description = (
         "List all completed planning phases and their output keys. "
-        "Use this first to discover which phases ran and what data they produced."
+        "Use this to discover which phases ran and what data they produced."
     )
     input_model = _EmptyInput
 
@@ -107,92 +107,9 @@ class ListPhasesTool(BaseTool):
 
         phases = []
         for name, output in self._phase_outputs.items():
-            summary_parts = []
-            for k in (
-                "summary",
-                "region_count",
-                "success_count",
-                "partial_success_count",
-                "failed_count",
-                "report_count",
-                "task_count",
-            ):
-                if k in output:
-                    summary_parts.append(f"{k}={output[k]}")
-            summary = "; ".join(summary_parts) if summary_parts else str(output)[:120]
-            phases.append({"phase": name, "keys": list(output.keys()), "summary": summary})
+            phases.append({
+                "phase": name,
+                "keys": list(output.keys()),
+            })
 
         return ToolResult(output=json.dumps({"phases": phases}))
-
-
-# ---------------------------------------------------------------------------
-# query_exploration_context
-# ---------------------------------------------------------------------------
-
-
-class QueryExplorationContextInput(BaseModel):
-    """Arguments for querying exploration context about a file."""
-
-    file_path: str = Field(description="File path to query (relative to repo root)")
-
-
-class QueryExplorationContextTool(BaseTool):
-    """Query what is known about a file from exploration and sibling workers."""
-
-    name = "query_exploration_context"
-    description = (
-        "Query what is known about a file path from exploration and sibling workers. "
-        "Returns exploration depth, discovered symbols, which tasks claimed or modified "
-        "the file, and whether siblings changed it. Use before editing shared files."
-    )
-    input_model = QueryExplorationContextInput
-
-    async def execute(
-        self, arguments: QueryExplorationContextInput, context: ToolExecutionContext
-    ) -> ToolResult:
-        normalized = arguments.file_path.strip().lstrip("/")
-        if not normalized:
-            return ToolResult(output=json.dumps({"error": "empty file path"}), is_error=True)
-
-        # Exploration ledger is injected via context metadata
-        exploration_ledger = context.metadata.get("exploration_ledger")
-        if exploration_ledger is None:
-            return ToolResult(
-                output=json.dumps({
-                    "path": normalized,
-                    "note": "No exploration ledger available in this context.",
-                })
-            )
-
-        with exploration_ledger._lock:
-            entry = exploration_ledger._files.get(normalized)
-
-        if entry is None:
-            covered = exploration_ledger.has_exploration_covering(normalized)
-            return ToolResult(
-                output=json.dumps({
-                    "path": normalized,
-                    "in_ledger": False,
-                    "exploration_covers_scope": covered,
-                    "note": (
-                        "Parent scope was explored."
-                        if covered
-                        else "No exploration covers this path."
-                    ),
-                })
-            )
-
-        depth_labels = {0: "stat", 1: "listed", 2: "read", 3: "symbol-parsed"}
-        result = {
-            "path": normalized,
-            "in_ledger": True,
-            "exists": entry.exists,
-            "exploration_depth": entry.exploration_depth,
-            "exploration_depth_label": depth_labels.get(entry.exploration_depth, "unknown"),
-            "explored_by": entry.explored_by,
-            "symbols": entry.symbols_exported[:15] if entry.symbols_exported else [],
-            "claimed_by": entry.claimed_by,
-            "modified_by": entry.modified_by,
-            "shared": len(entry.claimed_by) > 1,
-        }
-        return ToolResult(output=json.dumps(result))

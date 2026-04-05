@@ -82,7 +82,7 @@ def _register_builtins() -> None:
         from tools.coordination_planner import CoordinationPlannerToolkit
 
         return CoordinationPlannerToolkit(
-            team_agent_names=ctx.metadata.get("team_agent_names"),
+            agent_names=ctx.metadata.get("agent_names"),
             phase_outputs=ctx.metadata.get("phase_outputs"),
         )
 
@@ -93,8 +93,7 @@ def _register_builtins() -> None:
             task_id=ctx.metadata.get("task_id", ""),
             run_id=ctx.metadata.get("run_id", ""),
             store=ctx.metadata.get("store"),
-            plan=ctx.metadata.get("plan"),
-            agent_session_id=ctx.metadata.get("agent_session_id"),
+            replan_handler=ctx.metadata.get("replan_handler"),
             trigger_dispatch_fn=ctx.metadata.get("trigger_dispatch_fn"),
         )
 
@@ -102,13 +101,7 @@ def _register_builtins() -> None:
         from tools.subagent import SubagentToolkit
 
         return SubagentToolkit(
-            run_named_agent_fn=ctx.metadata.get("run_named_agent_fn"),
-            goal=ctx.metadata.get("goal", ""),
-            project_context=ctx.metadata.get("project_context", ""),
-            run_context=ctx.metadata.get("run_context"),
-            sandbox_id=ctx.metadata.get("sandbox_id"),
-            coordination_store=ctx.metadata.get("coordination_store"),
-            phase_outputs=ctx.metadata.get("phase_outputs"),
+            run_agent_fn=ctx.metadata.get("run_agent_fn"),
         )
 
     register_toolkit_factory("sandbox_operations", _create_daytona)
