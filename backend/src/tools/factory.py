@@ -104,11 +104,21 @@ def _register_builtins() -> None:
             run_agent_fn=ctx.metadata.get("run_agent_fn"),
         )
 
+    def _create_pipeline_context(ctx: ToolkitContext) -> BaseToolkit:
+        from tools.pipeline_context import PipelineContextToolkit
+
+        return PipelineContextToolkit(
+            context_map=ctx.metadata.get("pipeline_context_map"),
+            pipeline_meta=ctx.metadata.get("pipeline_meta"),
+            current_step=ctx.metadata.get("pipeline_current_step"),
+        )
+
     register_toolkit_factory("sandbox_operations", _create_daytona)
     register_toolkit_factory("code_intelligence", _create_ci)
     register_toolkit_factory("coordination_planner", _create_coordination_planner)
     register_toolkit_factory("coordination_worker", _create_coordination_worker)
     register_toolkit_factory("subagent", _create_subagent)
+    register_toolkit_factory("pipeline_context", _create_pipeline_context)
 
 
 _register_builtins()

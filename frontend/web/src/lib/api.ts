@@ -326,3 +326,93 @@ export async function fetchRunChunks(runId: string, limit = 500): Promise<AgentR
   const data = await res.json()
   return data.chunks ?? []
 }
+
+// ---------------------------------------------------------------------------
+// Pipeline API
+// ---------------------------------------------------------------------------
+
+const PIPELINE_BASE = `${API_BASE}/pipelines`
+
+export async function fetchPipelines(): Promise<import('./types').PipelineConfig[]> {
+  const res = await fetch(PIPELINE_BASE)
+  if (!res.ok) return []
+  return res.json()
+}
+
+export async function fetchPipeline(id: string): Promise<import('./types').PipelineConfig | null> {
+  const res = await fetch(`${PIPELINE_BASE}/${id}`)
+  if (!res.ok) return null
+  return res.json()
+}
+
+export async function createPipeline(config: import('./types').PipelineConfig): Promise<import('./types').PipelineConfig> {
+  const res = await fetch(PIPELINE_BASE, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(config),
+  })
+  return res.json()
+}
+
+export async function updatePipeline(config: import('./types').PipelineConfig): Promise<import('./types').PipelineConfig> {
+  const res = await fetch(`${PIPELINE_BASE}/${config.pipeline_id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(config),
+  })
+  return res.json()
+}
+
+export async function deletePipeline(id: string): Promise<void> {
+  await fetch(`${PIPELINE_BASE}/${id}`, { method: 'DELETE' })
+}
+
+export async function startPipelineRun(pipelineId: string, goal: string): Promise<{ status: string; pipeline_id: string }> {
+  const res = await fetch(`${PIPELINE_BASE}/${pipelineId}/run`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ goal }),
+  })
+  return res.json()
+}
+
+export async function fetchPipelineRuns(pipelineId: string): Promise<import('./types').PipelineRun[]> {
+  const res = await fetch(`${PIPELINE_BASE}/${pipelineId}/runs`)
+  if (!res.ok) return []
+  return res.json()
+}
+
+export async function fetchPipelineRun(runId: string): Promise<import('./types').PipelineRun | null> {
+  const res = await fetch(`${PIPELINE_BASE}/runs/${runId}`)
+  if (!res.ok) return null
+  return res.json()
+}
+
+export async function fetchPipelineCheckpoints(runId: string): Promise<import('./types').PipelineCheckpointSummary[]> {
+  const res = await fetch(`${PIPELINE_BASE}/runs/${runId}/checkpoints`)
+  if (!res.ok) return []
+  return res.json()
+}
+
+export async function resumePipelineRun(
+  runId: string,
+  checkpointId: string,
+  contextMapPatches?: Record<string, Record<string, unknown>>,
+): Promise<{ status: string }> {
+  const res = await fetch(`${PIPELINE_BASE}/runs/${runId}/resume`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ checkpoint_id: checkpointId, context_map_patches: contextMapPatches }),
+  })
+  return res.json()
+}
+
+export async function cancelPipelineRun(runId: string): Promise<void> {
+  await fetch(`${PIPELINE_BASE}/runs/${runId}/cancel`, { method: 'POST' })
+}
+
+export async function fetchPipelineTemplates(): Promise<import('./types').PipelineConfig[]> {
+  const res = await fetch(`${PIPELINE_BASE}/templates`)
+  if (!res.ok) return []
+  return res.json()
+}

@@ -37,6 +37,8 @@ from server.routers.persistence import create_persistence_router
 from server.routers.sandboxes import create_sandbox_router
 from server.routers.code_intelligence import router as ci_router
 from skills.api.router import create_skills_router
+from pipeline.api.router import create_pipeline_router
+from pipeline.db.store import DbPipelineStore
 
 logger = logging.getLogger(__name__)
 
@@ -221,6 +223,7 @@ usage_store = UsageStore()
 model_store = ModelStore()
 agent_definition_store = AgentDefinitionStore()
 skill_definition_store = SkillDefinitionStore()
+pipeline_store = DbPipelineStore()
 
 
 def _initialize_database(session: SessionState) -> "AgentBuilderService | None":
@@ -232,7 +235,7 @@ def _initialize_database(session: SessionState) -> "AgentBuilderService | None":
         return None
 
     for store in (session_store, agent_run_store, usage_store, model_store,
-                  agent_definition_store, skill_definition_store):
+                  agent_definition_store, skill_definition_store, pipeline_store):
         store.initialize(sf)
 
     # Seed models from registry.json on first boot
@@ -290,6 +293,14 @@ def create_app(config: BackendHostConfig) -> FastAPI:
         create_agents_router(
             get_builder_service=lambda: _builder_service,
             get_tool_registry=lambda: _session._tool_registry if _session else None,
+        )
+    )
+
+    # Pipeline API
+    app.include_router(
+        create_pipeline_router(
+            get_pipeline_store=lambda: pipeline_store if pipeline_store.is_available else None,
+            get_session=_get_session,
         )
     )
 

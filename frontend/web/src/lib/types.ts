@@ -195,6 +195,77 @@ export type ModelUsage = {
   call_count: number
 }
 
+// ---------------------------------------------------------------------------
+// Pipeline types
+// ---------------------------------------------------------------------------
+
+export type PipelineInputDep = {
+  step: string
+  keys?: string[] | null
+}
+
+export type PipelineStepConfig = {
+  name: string
+  agent: string
+  description?: string
+  enabled?: boolean
+  timeout?: number | null
+  tool_call_limit?: number | null
+  posthook_agent?: string | null
+  output_schema?: Record<string, unknown> | null
+  input_deps?: PipelineInputDep[]
+  checkpoint?: boolean
+  config?: Record<string, unknown>
+}
+
+export type PipelineConfig = {
+  pipeline_id: string
+  name: string
+  description?: string
+  version?: number
+  steps: PipelineStepConfig[]
+  default_timeout?: number
+  tags?: string[]
+  metadata?: Record<string, unknown>
+}
+
+export type PipelineStepRecord = {
+  name: string
+  agent: string
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'skipped'
+  started_at?: number | null
+  finished_at?: number | null
+  error?: string | null
+  metrics?: Record<string, unknown>
+  work_session_id?: string | null
+  posthook_session_id?: string | null
+  attempt?: number
+}
+
+export type PipelineCheckpointSummary = {
+  checkpoint_id: string
+  step_name: string
+  step_index: number
+  completed_steps: string[]
+  created_at: number
+}
+
+export type PipelineRun = {
+  run_id: string
+  pipeline_id: string
+  goal: string
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
+  current_step?: string | null
+  completed_steps: string[]
+  context_map: Record<string, Record<string, unknown>>
+  step_records: PipelineStepRecord[]
+  error?: string | null
+  started_at?: number | null
+  finished_at?: number | null
+  resumed_from_checkpoint?: string | null
+  attempt_number?: number
+}
+
 export type FrontendRequest =
   | { type: 'submit_line'; line: string }
   | { type: 'permission_response'; request_id: string; allowed: boolean }
