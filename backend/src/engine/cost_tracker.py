@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ephemeralos.models.types import UsageSnapshot
+from models.types import UsageSnapshot
 
 
 class CostTracker:

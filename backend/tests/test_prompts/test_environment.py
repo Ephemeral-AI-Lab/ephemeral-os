@@ -1,11 +1,11 @@
-"""Tests for ephemeralos.prompts.environment."""
+"""Tests for prompts.environment."""
 
 from __future__ import annotations
 
 import os
 from pathlib import Path
 
-from ephemeralos.prompts.environment import (
+from prompts.environment import (
     EnvironmentInfo,
     detect_git_info,
     detect_os,

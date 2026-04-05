@@ -5,9 +5,9 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from ephemeralos.tools.base import BaseToolkit
+from tools.base import BaseToolkit
 
-from ephemeralos.tools.daytona_toolkit.tools import (
+from tools.daytona_toolkit.tools import (
     DaytonaBashTool,
     DaytonaFileReadTool,
     DaytonaFileWriteTool,
@@ -15,14 +15,14 @@ from ephemeralos.tools.daytona_toolkit.tools import (
     DaytonaGrepTool,
     DaytonaListFilesTool,
 )
-from ephemeralos.tools.daytona_toolkit.edit_tool import DaytonaEditTool
-from ephemeralos.tools.daytona_toolkit.lsp_tools import (
+from tools.daytona_toolkit.edit_tool import DaytonaEditTool
+from tools.daytona_toolkit.lsp_tools import (
     DaytonaLspDefinitionTool,
     DaytonaLspDiagnosticsTool,
     DaytonaLspHoverTool,
     DaytonaLspReferencesTool,
 )
-from ephemeralos.tools.daytona_toolkit.codeact_tool import DaytonaCodeActTool
+from tools.daytona_toolkit.codeact_tool import DaytonaCodeActTool
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +84,7 @@ class DaytonaToolkit(BaseToolkit):
                 "No sandbox_id configured. Pass sandbox_id to DaytonaToolkit() "
                 "or set it via toolkit.sandbox_id = '...'."
             )
-        from ephemeralos.tools.daytona_toolkit.client import get_sandbox
+        from tools.daytona_toolkit.client import get_sandbox
 
         self._sandbox = get_sandbox(self.sandbox_id)
         logger.info("Daytona sandbox fetched: %s", self.sandbox_id)
@@ -107,7 +107,7 @@ class DaytonaToolkit(BaseToolkit):
         # Inject CI gateway if available
         if self.sandbox_id and "ci_gateway" not in context.metadata:
             try:
-                from ephemeralos.code_intelligence.routing.gateway import (
+                from code_intelligence.routing.gateway import (
                     get_code_intelligence_gateway,
                 )
                 workspace_root = project_dir or "/workspace"

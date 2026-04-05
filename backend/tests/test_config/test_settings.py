@@ -1,4 +1,4 @@
-"""Tests for ephemeralos.config.settings."""
+"""Tests for config.settings."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from ephemeralos.config.settings import Settings, load_settings, save_settings
+from config.settings import Settings, load_settings, save_settings
 
 
 class TestSettings:

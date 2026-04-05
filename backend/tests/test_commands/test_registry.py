@@ -7,17 +7,17 @@ from pathlib import Path
 
 import pytest
 
-import ephemeralos.commands.registry as registry_module
-from ephemeralos.commands.registry import CommandContext, create_default_command_registry
-from ephemeralos.config.paths import get_feedback_log_path, get_project_issue_file, get_project_pr_comments_file
-from ephemeralos.config.settings import load_settings, save_settings, Settings
-from ephemeralos.engine.messages import ConversationMessage, TextBlock
-from ephemeralos.engine.query_engine import QueryEngine
-from ephemeralos.mcp.types import McpHttpServerConfig, McpStdioServerConfig
-from ephemeralos.permissions import PermissionChecker
-from ephemeralos.state import AppState, AppStateStore
-from ephemeralos.tasks import get_task_manager
-from ephemeralos.tools import create_default_tool_registry
+import commands.registry as registry_module
+from commands.registry import CommandContext, create_default_command_registry
+from config.paths import get_feedback_log_path, get_project_issue_file, get_project_pr_comments_file
+from config.settings import load_settings, save_settings, Settings
+from engine.messages import ConversationMessage, TextBlock
+from engine.query_engine import QueryEngine
+from mcp.types import McpHttpServerConfig, McpStdioServerConfig
+from permissions import PermissionChecker
+from state import AppState, AppStateStore
+from tasks import get_task_manager
+from tools import create_default_tool_registry
 
 
 class FakeApiClient:

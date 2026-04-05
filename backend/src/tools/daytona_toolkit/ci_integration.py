@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from ephemeralos.tools.base import ToolExecutionContext
+from tools.base import ToolExecutionContext
 
 logger = logging.getLogger(__name__)
 

@@ -7,11 +7,11 @@ from pathlib import Path
 
 import pytest
 
-from ephemeralos.tasks import get_task_manager
-from ephemeralos.tools.base import ToolExecutionContext
-from ephemeralos.tools.task_create_tool import TaskCreateTool, TaskCreateToolInput
-from ephemeralos.tools.task_output_tool import TaskOutputTool, TaskOutputToolInput
-from ephemeralos.tools.task_update_tool import TaskUpdateTool, TaskUpdateToolInput
+from tasks import get_task_manager
+from tools.base import ToolExecutionContext
+from tools.task_create_tool import TaskCreateTool, TaskCreateToolInput
+from tools.task_output_tool import TaskOutputTool, TaskOutputToolInput
+from tools.task_update_tool import TaskUpdateTool, TaskUpdateToolInput
 
 
 @pytest.mark.asyncio

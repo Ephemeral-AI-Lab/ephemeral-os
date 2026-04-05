@@ -5,10 +5,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from ephemeralos.config.settings import Settings
-from ephemeralos.hooks.loader import load_hook_registry
-from ephemeralos.plugins import load_plugins
-from ephemeralos.skills import load_skill_registry
+from config.settings import Settings
+from hooks.loader import load_hook_registry
+from plugins import load_plugins
+from skills import load_skill_registry
 
 
 def _write_plugin(root: Path) -> None:

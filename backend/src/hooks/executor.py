@@ -12,18 +12,18 @@ from typing import Any
 
 import httpx
 
-from ephemeralos.models.types import ApiMessageCompleteEvent, ApiMessageRequest, SupportsStreamingMessages
-from ephemeralos.engine.messages import ConversationMessage
-from ephemeralos.hooks.events import HookEvent
-from ephemeralos.hooks.loader import HookRegistry
-from ephemeralos.hooks.schemas import (
+from models.types import ApiMessageCompleteEvent, ApiMessageRequest, SupportsStreamingMessages
+from engine.messages import ConversationMessage
+from hooks.events import HookEvent
+from hooks.loader import HookRegistry
+from hooks.schemas import (
     AgentHookDefinition,
     CommandHookDefinition,
     HookDefinition,
     HttpHookDefinition,
     PromptHookDefinition,
 )
-from ephemeralos.hooks.types import AggregatedHookResult, HookResult
+from hooks.types import AggregatedHookResult, HookResult
 
 
 @dataclass

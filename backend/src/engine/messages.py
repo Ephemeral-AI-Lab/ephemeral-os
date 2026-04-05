@@ -74,10 +74,18 @@ class ConversationMessage(BaseModel):
         return [block for block in self.content if isinstance(block, ToolUseBlock)]
 
     def to_api_param(self) -> dict[str, Any]:
-        """Convert the message into Anthropic SDK message params."""
+        """Convert the message into Anthropic SDK message params.
+
+        Thinking blocks are excluded — Anthropic manages thinking
+        internally and does not accept them back in the messages array.
+        """
         return {
             "role": self.role,
-            "content": [serialize_content_block(block) for block in self.content],
+            "content": [
+                serialize_content_block(block)
+                for block in self.content
+                if not isinstance(block, ThinkingBlock)
+            ],
         }
 
 

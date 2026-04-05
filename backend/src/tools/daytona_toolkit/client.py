@@ -22,7 +22,7 @@ def _require_settings() -> tuple[str, str, str]:
     """Return (api_key, api_url, target) from persisted settings or env vars."""
     # Try persisted settings first
     try:
-        from ephemeralos.config import load_settings
+        from config import load_settings
         settings = load_settings()
         api_key = settings.daytona_api_key.strip()
         api_url = settings.daytona_api_url.strip()

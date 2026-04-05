@@ -11,7 +11,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session, sessionmaker
 
-from ephemeralos.db.models.model_registration import ModelRegistrationRecord
+from db.models.model_registration import ModelRegistrationRecord
 
 logger = logging.getLogger(__name__)
 

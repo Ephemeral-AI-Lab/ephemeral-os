@@ -7,7 +7,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
-from ephemeralos.agents.types import EFFORT_LEVELS
+from agents.types import EFFORT_LEVELS
 
 
 class AgentDefinitionCreate(BaseModel):

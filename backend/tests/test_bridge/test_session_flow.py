@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from ephemeralos.bridge import build_sdk_url, decode_work_secret, encode_work_secret, spawn_session
-from ephemeralos.bridge.types import WorkSecret
+from bridge import build_sdk_url, decode_work_secret, encode_work_secret, spawn_session
+from bridge.types import WorkSecret
 
 
 @pytest.mark.asyncio

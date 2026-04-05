@@ -1,12 +1,12 @@
 """Routing subpackage — query dispatch, service orchestration, and gateway."""
 
-from ephemeralos.code_intelligence.routing.backend_protocol import (
+from code_intelligence.routing.backend_protocol import (
     CodeIntelligenceBackend,
     LspBackendAdapter,
     SymbolIndexBackendAdapter,
 )
-from ephemeralos.code_intelligence.routing.query_router import IntelligenceQueryRouter
-from ephemeralos.code_intelligence.routing.service import (
+from code_intelligence.routing.query_router import IntelligenceQueryRouter
+from code_intelligence.routing.service import (
     CodeIntelligenceService,
     dispose_all_code_intelligence,
     dispose_code_intelligence,
@@ -14,7 +14,7 @@ from ephemeralos.code_intelligence.routing.service import (
     get_code_intelligence,
     get_code_intelligence_if_exists,
 )
-from ephemeralos.code_intelligence.routing.gateway import (
+from code_intelligence.routing.gateway import (
     CodeIntelligenceGateway,
     get_code_intelligence_gateway,
 )

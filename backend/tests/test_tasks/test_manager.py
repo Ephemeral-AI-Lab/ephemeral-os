@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from ephemeralos.tasks.manager import BackgroundTaskManager
+from tasks.manager import BackgroundTaskManager
 
 
 @pytest.mark.asyncio

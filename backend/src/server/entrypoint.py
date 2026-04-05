@@ -20,7 +20,7 @@ async def run_web(
     """Start the web frontend server."""
     import os
 
-    from ephemeralos.server.app_factory import WebServer
+    from server.app_factory import WebServer
 
     if cwd:
         os.chdir(cwd)

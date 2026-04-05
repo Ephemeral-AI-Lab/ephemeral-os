@@ -12,8 +12,8 @@ import logging
 
 from pydantic import BaseModel, Field
 
-from ephemeralos.tools.base import BaseTool, ToolExecutionContext, ToolResult
-from ephemeralos.tools.daytona_toolkit.ci_integration import get_ci_gateway
+from tools.base import BaseTool, ToolExecutionContext, ToolResult
+from tools.daytona_toolkit.ci_integration import get_ci_gateway
 
 logger = logging.getLogger(__name__)
 

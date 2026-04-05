@@ -8,7 +8,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from ephemeralos.tools.base import BaseTool, ToolExecutionContext, ToolResult
+from tools.base import BaseTool, ToolExecutionContext, ToolResult
 
 logger = logging.getLogger(__name__)
 

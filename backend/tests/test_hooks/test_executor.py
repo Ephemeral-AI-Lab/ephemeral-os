@@ -6,12 +6,12 @@ from pathlib import Path
 
 import pytest
 
-from ephemeralos.api.client import ApiMessageCompleteEvent
-from ephemeralos.api.usage import UsageSnapshot
-from ephemeralos.engine.messages import ConversationMessage, TextBlock
-from ephemeralos.hooks import HookEvent, HookExecutionContext, HookExecutor
-from ephemeralos.hooks.loader import HookRegistry
-from ephemeralos.hooks.schemas import CommandHookDefinition, PromptHookDefinition
+from api.client import ApiMessageCompleteEvent
+from api.usage import UsageSnapshot
+from engine.messages import ConversationMessage, TextBlock
+from hooks import HookEvent, HookExecutionContext, HookExecutor
+from hooks.loader import HookRegistry
+from hooks.schemas import CommandHookDefinition, PromptHookDefinition
 
 
 class FakeApiClient:

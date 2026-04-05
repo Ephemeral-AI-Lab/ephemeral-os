@@ -10,8 +10,8 @@ from dataclasses import replace
 from pathlib import Path
 from uuid import uuid4
 
-from ephemeralos.config.paths import get_tasks_dir
-from ephemeralos.tasks.types import TaskRecord, TaskStatus, TaskType
+from config.paths import get_tasks_dir
+from tasks.types import TaskRecord, TaskStatus, TaskType
 
 
 class BackgroundTaskManager:

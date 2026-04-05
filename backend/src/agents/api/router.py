@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING, Any, Callable
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import JSONResponse
 
-from ephemeralos.agents.registry import get_definition, list_definitions
-from ephemeralos.agents.api.schemas import (
+from agents.registry import get_definition, list_definitions
+from agents.api.schemas import (
     AgentDefinitionCreate,
     AgentDefinitionResponse,
     AgentDefinitionUpdate,
@@ -18,8 +18,8 @@ from ephemeralos.agents.api.schemas import (
 )
 
 if TYPE_CHECKING:
-    from ephemeralos.agents.builder.service import AgentBuilderService
-    from ephemeralos.tools.base import ToolRegistry
+    from agents.builder.service import AgentBuilderService
+    from tools.base import ToolRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +52,7 @@ def create_agents_router(
 
     @router.get("/toolkits/available")
     async def list_available_toolkits() -> list[str]:
-        from ephemeralos.tools.factory import list_factories  # noqa: PLC0415
+        from tools.factory import list_factories  # noqa: PLC0415
         names: set[str] = set()
         tr = get_tool_registry()
         if tr:

@@ -8,8 +8,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from ephemeralos.tools.base import BaseTool, ToolExecutionContext, ToolResult
-from ephemeralos.tools.daytona_toolkit.ci_integration import get_ci_gateway
+from tools.base import BaseTool, ToolExecutionContext, ToolResult
+from tools.daytona_toolkit.ci_integration import get_ci_gateway
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +75,7 @@ class WorkspaceStructureTool(BaseTool):
             return ToolResult(output="Symbol index not available")
 
         # Get indexed file paths
-        from ephemeralos.code_intelligence.analysis.symbol_index import SymbolIndex
+        from code_intelligence.analysis.symbol_index import SymbolIndex
         if isinstance(si, SymbolIndex):
             with si._lock:
                 paths = sorted(si._symbols.keys())
@@ -116,7 +116,7 @@ class SymbolQueryTool(BaseTool):
         if err:
             return err
 
-        from ephemeralos.code_intelligence.types import SymbolKind
+        from code_intelligence.types import SymbolKind
         kind = None
         if arguments.kind:
             try:

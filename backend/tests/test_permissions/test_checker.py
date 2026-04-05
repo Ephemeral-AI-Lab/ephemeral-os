@@ -1,7 +1,7 @@
 """Tests for permission decisions."""
 
-from ephemeralos.config.settings import PermissionSettings
-from ephemeralos.permissions import PermissionChecker, PermissionMode
+from config.settings import PermissionSettings
+from permissions import PermissionChecker, PermissionMode
 
 
 def test_default_mode_allows_read_only():

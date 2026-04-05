@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from sqlalchemy import Boolean, DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from ephemeralos.db.base import Base
+from db.base import Base
 
 
 class SkillDefinitionRecord(Base):

@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ephemeralos.config.paths import get_config_dir
-from ephemeralos.skills.bundled import get_bundled_skills
-from ephemeralos.skills.registry import SkillRegistry
-from ephemeralos.skills.types import SkillDefinition
+from config.paths import get_config_dir
+from skills.bundled import get_bundled_skills
+from skills.registry import SkillRegistry
+from skills.types import SkillDefinition
 
 
 def get_user_skills_dir() -> Path:

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ephemeralos.tasks.manager import get_task_manager
-from ephemeralos.tasks.types import TaskRecord
+from tasks.manager import get_task_manager
+from tasks.types import TaskRecord
 
 
 async def spawn_local_agent_task(

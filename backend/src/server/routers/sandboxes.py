@@ -9,7 +9,7 @@ from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from ephemeralos.sandbox.service import SandboxService
+from sandbox.service import SandboxService
 
 logger = logging.getLogger(__name__)
 

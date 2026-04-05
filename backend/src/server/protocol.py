@@ -7,8 +7,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from ephemeralos.models.types import SupportsStreamingMessages
-from ephemeralos.tasks.types import TaskRecord
+from models.types import SupportsStreamingMessages
+from tasks.types import TaskRecord
 
 
 @dataclass(frozen=True)

@@ -77,7 +77,7 @@ def _normalize_dict(payload: dict[str, str] | None) -> dict[str, str]:
 def _require_settings() -> tuple[str, str, str]:
     """Return (api_key, api_url, target) from settings or env."""
     try:
-        from ephemeralos.config import load_settings
+        from config import load_settings
         settings = load_settings()
         api_key = (settings.daytona_api_key or "").strip()
         api_url = (settings.daytona_api_url or "").strip()

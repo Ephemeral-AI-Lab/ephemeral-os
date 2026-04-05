@@ -7,10 +7,10 @@ from typing import TYPE_CHECKING
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
-from ephemeralos.models.api.schemas import RegisterModelRequest, SelectModelRequest
+from models.api.schemas import RegisterModelRequest, SelectModelRequest
 
 if TYPE_CHECKING:
-    from ephemeralos.db.stores.model_store import ModelStore
+    from db.stores.model_store import ModelStore
 
 
 def create_models_router(model_store: "ModelStore") -> APIRouter:

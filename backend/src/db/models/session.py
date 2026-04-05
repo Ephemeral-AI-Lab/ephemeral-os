@@ -8,7 +8,7 @@ from sqlalchemy import DateTime, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from ephemeralos.db.base import Base
+from db.base import Base
 
 
 class SessionRecord(Base):

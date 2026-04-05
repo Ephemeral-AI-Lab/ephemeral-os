@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from ephemeralos.config.settings import Settings
-from ephemeralos.models.types import SupportsStreamingMessages
+from config.settings import Settings
+from models.types import SupportsStreamingMessages
 
 
 @dataclass(frozen=True)
@@ -95,8 +95,8 @@ def make_api_client(
     if external is not None:
         return external
 
-    from ephemeralos.models.clients.anthropic import AnthropicApiClient
-    from ephemeralos.models.clients.openai_compat import OpenAICompatibleClient
+    from models.clients.anthropic import AnthropicApiClient
+    from models.clients.openai_compat import OpenAICompatibleClient
 
     # Resolve from DB-registered model first, then settings
     api_key = (db_kwargs or {}).get("api_key") or settings.resolve_api_key()

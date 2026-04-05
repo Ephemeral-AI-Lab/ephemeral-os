@@ -8,20 +8,21 @@ from typing import Any, AsyncIterator
 
 from anthropic import APIError, APIStatusError, AsyncAnthropic
 
-from ephemeralos.models.errors import (
+from models.errors import (
     AuthenticationFailure,
     EphemeralOSApiError,
     RateLimitFailure,
     RequestFailure,
 )
-from ephemeralos.models.types import (
+from models.types import (
     ApiMessageCompleteEvent,
     ApiMessageRequest,
     ApiStreamEvent,
     ApiTextDeltaEvent,
+    ApiThinkingDeltaEvent,
     UsageSnapshot,
 )
-from ephemeralos.engine.messages import assistant_message_from_api
+from engine.messages import assistant_message_from_api
 
 log = logging.getLogger(__name__)
 
@@ -121,11 +122,15 @@ class AnthropicApiClient:
                     if getattr(event, "type", None) != "content_block_delta":
                         continue
                     delta = getattr(event, "delta", None)
-                    if getattr(delta, "type", None) != "text_delta":
-                        continue
-                    text = getattr(delta, "text", "")
-                    if text:
-                        yield ApiTextDeltaEvent(text=text)
+                    delta_type = getattr(delta, "type", None)
+                    if delta_type == "thinking_delta":
+                        thinking = getattr(delta, "thinking", "")
+                        if thinking:
+                            yield ApiThinkingDeltaEvent(text=thinking)
+                    elif delta_type == "text_delta":
+                        text = getattr(delta, "text", "")
+                        if text:
+                            yield ApiTextDeltaEvent(text=text)
 
                 final_message = await stream.get_final_message()
         except APIError as exc:

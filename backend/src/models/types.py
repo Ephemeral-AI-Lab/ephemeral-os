@@ -7,7 +7,7 @@ from typing import Any, AsyncIterator, Protocol
 
 from pydantic import BaseModel
 
-from ephemeralos.engine.messages import ConversationMessage
+from engine.messages import ConversationMessage
 
 
 # ---------------------------------------------------------------------------

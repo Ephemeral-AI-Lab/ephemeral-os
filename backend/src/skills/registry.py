@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ephemeralos.skills.types import SkillDefinition
+from skills.types import SkillDefinition
 
 
 class SkillRegistry:

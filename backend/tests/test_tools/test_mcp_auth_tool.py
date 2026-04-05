@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from ephemeralos.config.settings import Settings, load_settings, save_settings
-from ephemeralos.mcp.types import McpHttpServerConfig, McpStdioServerConfig
-from ephemeralos.tools.base import ToolExecutionContext
-from ephemeralos.tools.mcp_auth_tool import McpAuthTool, McpAuthToolInput
+from config.settings import Settings, load_settings, save_settings
+from mcp.types import McpHttpServerConfig, McpStdioServerConfig
+from tools.base import ToolExecutionContext
+from tools.mcp_auth_tool import McpAuthTool, McpAuthToolInput
 
 
 class FakeMcpManager:

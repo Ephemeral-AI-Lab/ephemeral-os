@@ -5,16 +5,16 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover
-    from ephemeralos.engine.agent import EphemeralAgent, spawn_agent
-    from ephemeralos.engine.messages import (
+    from engine.agent import EphemeralAgent, spawn_agent
+    from engine.messages import (
         ConversationMessage,
         TextBlock,
         ThinkingBlock,
         ToolResultBlock,
         ToolUseBlock,
     )
-    from ephemeralos.engine.query_engine import QueryEngine
-    from ephemeralos.engine.stream_events import (
+    from engine.query_engine import QueryEngine
+    from engine.stream_events import (
         AssistantTextDelta,
         AssistantTurnComplete,
         ToolExecutionCompleted,
@@ -39,12 +39,12 @@ __all__ = [
 
 def __getattr__(name: str):
     if name in {"EphemeralAgent", "spawn_agent"}:
-        from ephemeralos.engine.agent import EphemeralAgent, spawn_agent
+        from engine.agent import EphemeralAgent, spawn_agent
 
         return {"EphemeralAgent": EphemeralAgent, "spawn_agent": spawn_agent}[name]
 
     if name in {"ConversationMessage", "TextBlock", "ThinkingBlock", "ToolResultBlock", "ToolUseBlock"}:
-        from ephemeralos.engine.messages import (
+        from engine.messages import (
             ConversationMessage,
             TextBlock,
             ThinkingBlock,
@@ -61,7 +61,7 @@ def __getattr__(name: str):
         }[name]
 
     if name == "QueryEngine":
-        from ephemeralos.engine.query_engine import QueryEngine
+        from engine.query_engine import QueryEngine
 
         return QueryEngine
 
@@ -71,7 +71,7 @@ def __getattr__(name: str):
         "ToolExecutionCompleted",
         "ToolExecutionStarted",
     }:
-        from ephemeralos.engine.stream_events import (
+        from engine.stream_events import (
             AssistantTextDelta,
             AssistantTurnComplete,
             ToolExecutionCompleted,

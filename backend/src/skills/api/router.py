@@ -10,7 +10,7 @@ from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
-    from ephemeralos.skills.db.store import SkillDefinitionStore
+    from skills.db.store import SkillDefinitionStore
 
 # Packaged skills directory — read-only skill content shipped with the codebase
 _PACKAGED_SKILLS_DIR = Path(__file__).resolve().parent.parent / "bundled" / "content"
@@ -114,7 +114,7 @@ def create_skills_router(
     async def create_skill(body: SkillCreate) -> dict[str, Any]:
         store = _require_store()
         from uuid import uuid4
-        from ephemeralos.skills.db.model import SkillDefinitionRecord
+        from skills.db.model import SkillDefinitionRecord
 
         if store.get_by_name(body.name) is not None:
             raise HTTPException(status_code=400, detail=f"Skill '{body.name}' already exists")

@@ -8,13 +8,13 @@ from typing import Any
 
 import yaml
 
-from ephemeralos.agents.types import (
+from agents.types import (
     EFFORT_LEVELS,
     AgentDefinition,
     parse_positive_int,
     parse_str_list,
 )
-from ephemeralos.config.paths import get_config_dir
+from config.paths import get_config_dir
 
 logger = logging.getLogger(__name__)
 
@@ -133,7 +133,7 @@ def _get_user_agents_dir() -> Path:
 
 def get_all_agent_definitions() -> list[AgentDefinition]:
     """Return all agent definitions: built-in + user + plugin."""
-    from ephemeralos.agents.builtins import get_builtin_agent_definitions  # noqa: PLC0415
+    from agents.builtins import get_builtin_agent_definitions  # noqa: PLC0415
 
     agent_map: dict[str, AgentDefinition] = {}
     for agent in get_builtin_agent_definitions():
@@ -141,8 +141,8 @@ def get_all_agent_definitions() -> list[AgentDefinition]:
     for agent in load_agents_dir(_get_user_agents_dir()):
         agent_map[agent.name] = agent
     try:
-        from ephemeralos.plugins.loader import load_plugins  # noqa: PLC0415
-        from ephemeralos.config.settings import load_settings  # noqa: PLC0415
+        from plugins.loader import load_plugins  # noqa: PLC0415
+        from config.settings import load_settings  # noqa: PLC0415
         import os  # noqa: PLC0415
         settings = load_settings()
         cwd = os.getcwd()
@@ -159,7 +159,7 @@ def get_all_agent_definitions() -> list[AgentDefinition]:
 
 def get_agent_definition(name: str) -> AgentDefinition | None:
     """Return the agent definition for *name*, or None if not found."""
-    from ephemeralos.agents.registry import get_definition  # noqa: PLC0415
+    from agents.registry import get_definition  # noqa: PLC0415
     defn = get_definition(name)
     if defn is not None:
         return defn

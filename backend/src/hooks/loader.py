@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from ephemeralos.hooks.events import HookEvent
-from ephemeralos.hooks.schemas import HookDefinition
+from hooks.events import HookEvent
+from hooks.schemas import HookDefinition
 
 
 class HookRegistry:

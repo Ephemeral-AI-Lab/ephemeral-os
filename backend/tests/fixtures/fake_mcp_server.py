@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 
 try:
-    from ephemeralos.mcp._compat import load_external_mcp
+    from mcp._compat import load_external_mcp
 except ModuleNotFoundError:
     sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
     from mcp._compat import load_external_mcp

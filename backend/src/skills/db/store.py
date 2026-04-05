@@ -8,7 +8,7 @@ from uuid import uuid4
 
 from sqlalchemy.orm import Session, sessionmaker
 
-from ephemeralos.skills.db.model import SkillDefinitionRecord
+from skills.db.model import SkillDefinitionRecord
 
 logger = logging.getLogger(__name__)
 

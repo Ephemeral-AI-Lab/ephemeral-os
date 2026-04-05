@@ -1,5 +1,5 @@
-"""Re-export — canonical location is ephemeralos.db.stores.model_store."""
+"""Re-export — canonical location is db.stores.model_store."""
 
-from ephemeralos.db.stores.model_store import ModelStore  # noqa: F401
+from db.stores.model_store import ModelStore  # noqa: F401
 
 __all__ = ["ModelStore"]

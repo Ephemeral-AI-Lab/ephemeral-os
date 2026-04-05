@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from ephemeralos.tools import create_default_tool_registry
-from ephemeralos.tools.base import ToolExecutionContext
+from tools import create_default_tool_registry
+from tools.base import ToolExecutionContext
 
 
 @pytest.mark.asyncio

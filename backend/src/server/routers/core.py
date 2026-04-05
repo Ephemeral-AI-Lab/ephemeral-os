@@ -12,11 +12,11 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
-from ephemeralos.agents.types import AgentDefinition
-from ephemeralos.models.provider import detect_provider, auth_status
-from ephemeralos.config import load_settings, save_settings
-from ephemeralos.engine.agent import spawn_agent
-from ephemeralos.engine.stream_events import (
+from agents.types import AgentDefinition
+from models.provider import detect_provider, auth_status
+from config import load_settings, save_settings
+from engine.agent import spawn_agent
+from engine.stream_events import (
     AssistantTextDelta,
     AssistantTurnComplete,
     StreamEvent,
@@ -24,12 +24,12 @@ from ephemeralos.engine.stream_events import (
     ToolExecutionCompleted,
     ToolExecutionStarted,
 )
-from ephemeralos.prompts import build_runtime_system_prompt
-from ephemeralos.tasks import get_task_manager
-from ephemeralos.server.protocol import BackendEvent, TranscriptItem
+from prompts import build_runtime_system_prompt
+from tasks import get_task_manager
+from server.protocol import BackendEvent, TranscriptItem
 
 if TYPE_CHECKING:
-    from ephemeralos.server.app_factory import SessionConfig, SessionState
+    from server.app_factory import SessionConfig, SessionState
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +80,7 @@ async def execute_ephemeral_agent_run(
     5. Save updated history back to DB
     6. Agent goes out of scope — dies
     """
-    from ephemeralos.server.app_factory import agent_run_store, session_store, usage_store
+    from server.app_factory import agent_run_store, session_store, usage_store
 
     db_available = agent_run_store._session_factory is not None
 
@@ -349,7 +349,7 @@ def create_core_router(get_session: Callable[[], "SessionState"]) -> APIRouter:
                 # Resolve agent definition if requested
                 agent_def = None
                 if req.agent_name:
-                    from ephemeralos.agents.registry import get_definition
+                    from agents.registry import get_definition
                     agent_def = get_definition(req.agent_name)
                     if agent_def is None:
                         await _on_system_notification(f"Agent '{req.agent_name}' not found — using default")
@@ -441,7 +441,7 @@ def create_core_router(get_session: Callable[[], "SessionState"]) -> APIRouter:
         session = get_session()
         if session.config is None:
             raise HTTPException(status_code=503, detail="Session not ready")
-        from ephemeralos.server.app_factory import session_store
+        from server.app_factory import session_store
         import time as _time
 
         if session_store._session_factory is None:

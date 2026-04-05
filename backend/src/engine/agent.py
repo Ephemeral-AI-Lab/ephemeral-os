@@ -12,20 +12,20 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, AsyncIterator
 
 if TYPE_CHECKING:
-    from ephemeralos.server.app_factory import SessionConfig
-    from ephemeralos.utils.compact import SessionState
+    from server.app_factory import SessionConfig
+    from utils.compact import SessionState
 
-from ephemeralos.agents.types import AgentDefinition
-from ephemeralos.config import Settings
-from ephemeralos.engine.query_engine import QueryEngine
-from ephemeralos.engine.messages import ConversationMessage
-from ephemeralos.engine.stream_events import StreamEvent
-from ephemeralos.hooks import make_hook_executor
-from ephemeralos.models.provider import make_api_client
-from ephemeralos.models.types import SupportsStreamingMessages
-from ephemeralos.prompts import build_runtime_system_prompt
-from ephemeralos.tools import create_default_tool_registry
-from ephemeralos.tools.factory import create_toolkit, has_factory, ToolkitContext
+from agents.types import AgentDefinition
+from config import Settings
+from engine.query_engine import QueryEngine
+from engine.messages import ConversationMessage
+from engine.stream_events import StreamEvent
+from hooks import make_hook_executor
+from models.provider import make_api_client
+from models.types import SupportsStreamingMessages
+from prompts import build_runtime_system_prompt
+from tools import create_default_tool_registry
+from tools.factory import create_toolkit, has_factory, ToolkitContext
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +69,7 @@ def spawn_agent(
     db_kwargs: dict | None = None
     db_class_path: str | None = None
     try:
-        from ephemeralos.server.app_factory import model_store
+        from server.app_factory import model_store
         active = model_store.get_active_resolved() if model_store.is_available else None
         if active:
             db_kwargs = active.get("kwargs")
@@ -116,7 +116,7 @@ def spawn_agent(
     # Register Daytona sandbox tools when a sandbox is selected (if not already registered above)
     if sandbox_id and tool_registry.get_toolkit("sandbox_operations") is None:
         try:
-            from ephemeralos.tools.daytona_toolkit import DaytonaToolkit
+            from tools.daytona_toolkit import DaytonaToolkit
             daytona_toolkit = DaytonaToolkit(sandbox_id=sandbox_id)
             tool_registry.register_toolkit(daytona_toolkit)
             logger.info("Registered DaytonaToolkit for sandbox %s", sandbox_id)
@@ -142,7 +142,7 @@ def spawn_agent(
 
     # Skills awareness
     if agent_def and agent_def.skills:
-        from ephemeralos.skills.loader import load_skill_registry
+        from skills.loader import load_skill_registry
         registry = load_skill_registry(config.cwd)
         skill_lines = []
         for slug in agent_def.skills:

@@ -9,7 +9,7 @@ from typing import Any, AsyncIterator
 
 from openai import AsyncOpenAI
 
-from ephemeralos.models.types import (
+from models.types import (
     ApiMessageCompleteEvent,
     ApiMessageRequest,
     ApiStreamEvent,
@@ -17,13 +17,13 @@ from ephemeralos.models.types import (
     ApiThinkingDeltaEvent,
     UsageSnapshot,
 )
-from ephemeralos.models.errors import (
+from models.errors import (
     AuthenticationFailure,
     EphemeralOSApiError,
     RateLimitFailure,
     RequestFailure,
 )
-from ephemeralos.engine.messages import (
+from engine.messages import (
     ConversationMessage,
     ContentBlock,
     TextBlock,

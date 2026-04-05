@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from ephemeralos.engine.messages import ConversationMessage, TextBlock
-from ephemeralos.utils import estimate_message_tokens, estimate_tokens
-from ephemeralos.utils.compact import microcompact_messages
+from engine.messages import ConversationMessage, TextBlock
+from utils import estimate_message_tokens, estimate_tokens
+from utils.compact import microcompact_messages
 
 
 def test_token_estimation_helpers():

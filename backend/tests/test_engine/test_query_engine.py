@@ -7,22 +7,22 @@ from pathlib import Path
 
 import pytest
 
-from ephemeralos.api.client import ApiMessageCompleteEvent, ApiTextDeltaEvent
-from ephemeralos.api.usage import UsageSnapshot
-from ephemeralos.config.settings import PermissionSettings
-from ephemeralos.engine.messages import ConversationMessage, TextBlock, ToolUseBlock
-from ephemeralos.engine.query_engine import QueryEngine
-from ephemeralos.engine.stream_events import (
+from api.client import ApiMessageCompleteEvent, ApiTextDeltaEvent
+from api.usage import UsageSnapshot
+from config.settings import PermissionSettings
+from engine.messages import ConversationMessage, TextBlock, ToolUseBlock
+from engine.query_engine import QueryEngine
+from engine.stream_events import (
     AssistantTextDelta,
     AssistantTurnComplete,
     ToolExecutionCompleted,
     ToolExecutionStarted,
 )
-from ephemeralos.permissions import PermissionChecker
-from ephemeralos.tools import create_default_tool_registry
-from ephemeralos.hooks import HookExecutionContext, HookExecutor, HookEvent
-from ephemeralos.hooks.loader import HookRegistry
-from ephemeralos.hooks.schemas import PromptHookDefinition
+from permissions import PermissionChecker
+from tools import create_default_tool_registry
+from hooks import HookExecutionContext, HookExecutor, HookEvent
+from hooks.loader import HookRegistry
+from hooks.schemas import PromptHookDefinition
 
 
 @dataclass

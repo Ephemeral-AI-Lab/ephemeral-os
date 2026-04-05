@@ -16,7 +16,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from ephemeralos.hooks.schemas import HookDefinition
+from hooks.schemas import HookDefinition
 
 
 class DatabaseSettings(BaseModel):
@@ -134,7 +134,7 @@ def load_settings(config_path: Path | None = None) -> Settings:
         Settings instance with file values merged over defaults.
     """
     if config_path is None:
-        from ephemeralos.config.paths import get_config_file_path
+        from config.paths import get_config_file_path
 
         config_path = get_config_file_path()
 
@@ -153,7 +153,7 @@ def save_settings(settings: Settings, config_path: Path | None = None) -> None:
         config_path: Path to write. If None, uses the default location.
     """
     if config_path is None:
-        from ephemeralos.config.paths import get_config_file_path
+        from config.paths import get_config_file_path
 
         config_path = get_config_file_path()
 

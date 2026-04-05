@@ -1,7 +1,7 @@
 """FastAPI-based web server for the EphemeralOS web frontend.
 
 Thin app factory that assembles routers and manages the session lifecycle.
-Route implementations live in ``ephemeralos.server.routers.*``.
+Route implementations live in ``server.routers.*``.
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ephemeralos.agents.builder.service import AgentBuilderService
+    from agents.builder.service import AgentBuilderService
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
@@ -23,20 +23,20 @@ from fastapi.responses import FileResponse, JSONResponse
 
 load_dotenv()
 
-from ephemeralos.config import load_settings
-from ephemeralos.db.engine import initialize_db
-from ephemeralos.db.stores import AgentDefinitionStore, AgentRunStore, ModelStore, SessionStore, UsageStore
-from ephemeralos.skills.db.store import SkillDefinitionStore
-from ephemeralos.server.protocol import BackendEvent, BackendHostConfig, ToolkitSnapshot
-from ephemeralos.models.types import SupportsStreamingMessages
-from ephemeralos.tools import ToolRegistry
-from ephemeralos.models.api import create_models_router
-from ephemeralos.agents.api.router import create_agents_router
-from ephemeralos.server.routers.core import create_core_router
-from ephemeralos.server.routers.persistence import create_persistence_router
-from ephemeralos.server.routers.sandboxes import create_sandbox_router
-from ephemeralos.server.routers.code_intelligence import router as ci_router
-from ephemeralos.skills.api.router import create_skills_router
+from config import load_settings
+from db.engine import initialize_db
+from db.stores import AgentDefinitionStore, AgentRunStore, ModelStore, SessionStore, UsageStore
+from skills.db.store import SkillDefinitionStore
+from server.protocol import BackendEvent, BackendHostConfig, ToolkitSnapshot
+from models.types import SupportsStreamingMessages
+from tools import ToolRegistry
+from models.api import create_models_router
+from agents.api.router import create_agents_router
+from server.routers.core import create_core_router
+from server.routers.persistence import create_persistence_router
+from server.routers.sandboxes import create_sandbox_router
+from server.routers.code_intelligence import router as ci_router
+from skills.api.router import create_skills_router
 
 logger = logging.getLogger(__name__)
 
@@ -133,7 +133,7 @@ class SessionState:
             restore_messages=host_config.restore_messages,
         )
         # Keep a tool registry for config-time queries (agent builder, toolkit snapshots)
-        from ephemeralos.tools import create_default_tool_registry
+        from tools import create_default_tool_registry
         self._tool_registry = create_default_tool_registry()
 
     @property
@@ -184,7 +184,7 @@ class SessionState:
             )
         # Factory-registered toolkits (e.g. daytona, ci) — instantiate with
         # a bare context just to read their tool names for the snapshot.
-        from ephemeralos.tools.factory import ToolkitContext, list_factories, create_toolkit
+        from tools.factory import ToolkitContext, list_factories, create_toolkit
 
         seen_toolkit_names = set(registered_names)
         for factory_name in list_factories():
@@ -233,7 +233,7 @@ def create_app(config: BackendHostConfig) -> FastAPI:
         await _session.initialize(config)
 
         # Register built-in agent definitions into the runtime registry
-        from ephemeralos.agents import initialize_builtin_definitions
+        from agents import initialize_builtin_definitions
 
         initialize_builtin_definitions()
 
@@ -257,7 +257,7 @@ def create_app(config: BackendHostConfig) -> FastAPI:
                 logger.info("Backfilled model_key='minimax' on %d agents", backfilled)
 
             # Bootstrap agent builder service and load DB agents
-            from ephemeralos.agents.builder import (
+            from agents.builder import (
                 AgentBuilderService,
                 AgentDefinitionValidator,
             )
@@ -374,7 +374,7 @@ class WebServer:
             # Use absolute path so reload works regardless of CWD
             src_dir = str(Path(__file__).resolve().parents[1])
             config = uvicorn.Config(
-                "ephemeralos.server.app_factory:create_default_app",
+                "server.app_factory:create_default_app",
                 host=self.host,
                 port=self.port,
                 log_level="info",

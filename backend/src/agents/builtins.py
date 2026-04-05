@@ -2,12 +2,12 @@
 
 Previously contained 7 hardcoded agents.  These have been replaced by
 DB-seeded specialists imported from the SuperCocoa agent directory.
-See :mod:`ephemeralos.agents.seed` for the migration logic.
+See :mod:`agents.seed` for the migration logic.
 """
 
 from __future__ import annotations
 
-from ephemeralos.agents.types import AgentDefinition
+from agents.types import AgentDefinition
 
 # ---------------------------------------------------------------------------
 # Built-in agent definitions — now empty (specialists live in the database)

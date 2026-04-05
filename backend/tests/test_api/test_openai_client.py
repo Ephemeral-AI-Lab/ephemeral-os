@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import json
 
-from ephemeralos.api.openai_client import (
+from api.openai_client import (
     _convert_messages_to_openai,
     _convert_tools_to_openai,
 )
-from ephemeralos.engine.messages import (
+from engine.messages import (
     ConversationMessage,
     TextBlock,
     ToolResultBlock,

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from ephemeralos.tools.base import BaseTool, ToolExecutionContext, ToolResult
+from tools.base import BaseTool, ToolExecutionContext, ToolResult
 
 
 class SkillToolInput(BaseModel):

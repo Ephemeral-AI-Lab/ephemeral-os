@@ -1,4 +1,4 @@
-from ephemeralos.skills.db.model import SkillDefinitionRecord
-from ephemeralos.skills.db.store import SkillDefinitionStore
+from skills.db.model import SkillDefinitionRecord
+from skills.db.store import SkillDefinitionStore
 
 __all__ = ["SkillDefinitionRecord", "SkillDefinitionStore"]

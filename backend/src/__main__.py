@@ -1,9 +1,9 @@
-"""Allow running as ``python -m ephemeralos``."""
+"""Entry point for the backend server."""
 
 import asyncio
 import os
 
-from ephemeralos.server.entrypoint import run_web
+from server.entrypoint import run_web
 
 if __name__ == "__main__":
     dev = os.environ.get("EPHEMERALOS_DEV", "").lower() in ("1", "true")

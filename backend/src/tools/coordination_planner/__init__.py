@@ -6,13 +6,13 @@ Provides tools for coordinator agents to:
 - Check exploration context for shared file awareness
 """
 
-from ephemeralos.tools.base import BaseToolkit
-from ephemeralos.tools.coordination_planner.list_agents_tool import (
+from tools.base import BaseToolkit
+from tools.coordination_planner.list_agents_tool import (
     ListAvailableAgentsTool,
     ListCoordinatorAgentsTool,
     ListSpecialistAgentsTool,
 )
-from ephemeralos.tools.coordination_planner.phase_context_tool import (
+from tools.coordination_planner.phase_context_tool import (
     ListPhasesTool,
     QueryExplorationContextTool,
     QueryPhaseContextTool,

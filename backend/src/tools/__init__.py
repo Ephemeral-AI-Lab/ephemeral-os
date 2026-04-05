@@ -1,13 +1,13 @@
 """Toolkit definitions — grouped by capability."""
 
-from ephemeralos.tools.base import (
+from tools.base import (
     BaseTool,
     BaseToolkit,
     ToolExecutionContext,
     ToolRegistry,
     ToolResult,
 )
-from ephemeralos.tools.discovery import DiscoveryToolkit
+from tools.discovery import DiscoveryToolkit
 
 
 def create_default_tool_registry() -> ToolRegistry:

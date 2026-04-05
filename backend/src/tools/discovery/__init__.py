@@ -1,8 +1,8 @@
 """Discovery toolkit — skill invocation and tool search."""
 
-from ephemeralos.tools.base import BaseToolkit
-from ephemeralos.tools.discovery.skill_tool import SkillTool
-from ephemeralos.tools.discovery.tool_search_tool import ToolSearchTool
+from tools.base import BaseToolkit
+from tools.discovery.skill_tool import SkillTool
+from tools.discovery.tool_search_tool import ToolSearchTool
 
 
 class DiscoveryToolkit(BaseToolkit):

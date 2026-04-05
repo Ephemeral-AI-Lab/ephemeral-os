@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from ephemeralos.agents.types import AgentDefinition
+from agents.types import AgentDefinition
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ def list_definitions(source: str | None = None) -> list[AgentDefinition]:
 
 def initialize_builtin_definitions() -> None:
     """Register all built-in agents into the runtime registry."""
-    from ephemeralos.agents.builtins import get_builtin_agent_definitions  # noqa: PLC0415
+    from agents.builtins import get_builtin_agent_definitions  # noqa: PLC0415
 
     for defn in get_builtin_agent_definitions():
         register_definition(defn)

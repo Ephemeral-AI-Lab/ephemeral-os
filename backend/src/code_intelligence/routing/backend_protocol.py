@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Protocol, runtime_checkable
 
-from ephemeralos.code_intelligence.types import (
+from code_intelligence.types import (
     Diagnostic,
     HoverResult,
     ReferenceInfo,

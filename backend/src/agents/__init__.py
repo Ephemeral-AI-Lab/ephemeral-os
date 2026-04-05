@@ -2,22 +2,22 @@
 
 Import from here instead of deep paths:
 
-    from ephemeralos.agents import AgentDefinition, get_definition, AgentBuilderService
+    from agents import AgentDefinition, get_definition, AgentBuilderService
 """
 
-from ephemeralos.agents.types import (
+from agents.types import (
     EFFORT_LEVELS,
     AgentDefinition,
 )
-from ephemeralos.agents.registry import (
+from agents.registry import (
     get_definition,
     initialize_builtin_definitions,
     list_definitions,
     register_definition,
     unregister_definition,
 )
-from ephemeralos.agents.builtins import get_builtin_agent_definitions
-from ephemeralos.agents.loader import (
+from agents.builtins import get_builtin_agent_definitions
+from agents.loader import (
     get_agent_definition,
     get_all_agent_definitions,
     load_agents_dir,

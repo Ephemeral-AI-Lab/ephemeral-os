@@ -6,11 +6,11 @@ import logging
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from ephemeralos.agents.types import AgentDefinition
-from ephemeralos.agents.db.model import AgentDefinitionRecord
-from ephemeralos.agents.db.store import AgentDefinitionStore
-from ephemeralos.agents.builder.validation import AgentDefinitionValidator
-from ephemeralos.agents.api.schemas import (
+from agents.types import AgentDefinition
+from agents.db.model import AgentDefinitionRecord
+from agents.db.store import AgentDefinitionStore
+from agents.builder.validation import AgentDefinitionValidator
+from agents.api.schemas import (
     AgentDefinitionCreate,
     AgentDefinitionResponse,
     AgentDefinitionUpdate,
@@ -63,7 +63,7 @@ class AgentBuilderService:
         if not result.valid:
             raise ValueError(f"Validation failed: {'; '.join(result.errors)}")
 
-        from ephemeralos.agents.registry import get_definition  # noqa: PLC0415
+        from agents.registry import get_definition  # noqa: PLC0415
         existing = get_definition(data.name)
         if existing is not None and existing.source == "builtin":
             raise ValueError(f"Cannot overwrite built-in agent '{data.name}'")
@@ -128,7 +128,7 @@ class AgentBuilderService:
     def delete_agent(self, name: str) -> bool:
         ok = self._store.soft_delete(name)
         if ok:
-            from ephemeralos.agents.registry import unregister_definition  # noqa: PLC0415
+            from agents.registry import unregister_definition  # noqa: PLC0415
             unregister_definition(name)
         return ok
 
@@ -151,5 +151,5 @@ class AgentBuilderService:
 
     @staticmethod
     def _register(defn: AgentDefinition) -> None:
-        from ephemeralos.agents.registry import register_definition  # noqa: PLC0415
+        from agents.registry import register_definition  # noqa: PLC0415
         register_definition(defn)

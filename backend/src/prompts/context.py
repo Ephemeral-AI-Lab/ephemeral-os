@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ephemeralos.config.paths import get_project_issue_file, get_project_pr_comments_file
-from ephemeralos.config.settings import Settings
-from ephemeralos.prompts.claudemd import load_claude_md_prompt
-from ephemeralos.prompts.system_prompt import build_system_prompt
-from ephemeralos.skills.loader import load_skill_registry
+from config.paths import get_project_issue_file, get_project_pr_comments_file
+from config.settings import Settings
+from prompts.claudemd import load_claude_md_prompt
+from prompts.system_prompt import build_system_prompt
+from skills.loader import load_skill_registry
 
 
 def _build_skills_section(cwd: str | Path) -> str | None:

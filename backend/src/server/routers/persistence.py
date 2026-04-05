@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ephemeralos.db.stores import AgentRunStore, SessionStore, UsageStore
+from db.stores import AgentRunStore, SessionStore, UsageStore
 
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse

@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from ephemeralos.tools.base import BaseToolkit
-from ephemeralos.tools.subagent.parallel_dispatch_tool import RunParallelAgentsTool
+from tools.base import BaseToolkit
+from tools.subagent.parallel_dispatch_tool import RunParallelAgentsTool
 
 
 class SubagentToolkit(BaseToolkit):

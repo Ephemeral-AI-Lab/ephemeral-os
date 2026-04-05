@@ -1,10 +1,10 @@
-"""Tests for ephemeralos.config.paths."""
+"""Tests for config.paths."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from ephemeralos.config.paths import (
+from config.paths import (
     get_config_dir,
     get_config_file_path,
     get_data_dir,

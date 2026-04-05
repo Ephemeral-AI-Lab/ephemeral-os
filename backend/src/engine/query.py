@@ -11,9 +11,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, AsyncIterator
 
 if TYPE_CHECKING:
-    from ephemeralos.utils.compact import SessionState
+    from utils.compact import SessionState
 
-from ephemeralos.models.types import (
+from models.types import (
     ApiMessageCompleteEvent,
     ApiMessageRequest,
     ApiTextDeltaEvent,
@@ -21,8 +21,8 @@ from ephemeralos.models.types import (
     SupportsStreamingMessages,
     UsageSnapshot,
 )
-from ephemeralos.engine.messages import ConversationMessage, TextBlock, ToolResultBlock, ToolUseBlock
-from ephemeralos.engine.stream_events import (
+from engine.messages import ConversationMessage, TextBlock, ToolResultBlock, ToolUseBlock
+from engine.stream_events import (
     AssistantTextDelta,
     AssistantTurnComplete,
     StreamEvent,
@@ -30,9 +30,9 @@ from ephemeralos.engine.stream_events import (
     ToolExecutionCompleted,
     ToolExecutionStarted,
 )
-from ephemeralos.hooks import HookEvent, HookExecutor
-from ephemeralos.tools.base import ToolExecutionContext
-from ephemeralos.tools.base import ToolRegistry
+from hooks import HookEvent, HookExecutor
+from tools.base import ToolExecutionContext
+from tools.base import ToolRegistry
 
 
 @dataclass
@@ -111,7 +111,7 @@ async def run_query(
     content) and, if that is not enough, performs a full LLM-based
     summarization of older messages.
     """
-    from ephemeralos.utils.compact import (
+    from utils.compact import (
         SessionState,
         auto_compact_if_needed,
     )

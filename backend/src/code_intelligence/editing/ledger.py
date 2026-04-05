@@ -14,7 +14,7 @@ import time
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
 
-from ephemeralos.code_intelligence.constants import LEDGER_MAX_ENTRIES
+from code_intelligence.constants import LEDGER_MAX_ENTRIES
 
 logger = logging.getLogger(__name__)
 

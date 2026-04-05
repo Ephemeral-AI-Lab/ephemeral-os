@@ -7,7 +7,7 @@ import logging
 from sqlalchemy import func
 from sqlalchemy.orm import Session, sessionmaker
 
-from ephemeralos.db.models.token_usage import TokenUsageRecord
+from db.models.token_usage import TokenUsageRecord
 
 logger = logging.getLogger(__name__)
 

@@ -13,7 +13,7 @@ import difflib
 import logging
 from dataclasses import dataclass
 
-from ephemeralos.code_intelligence.constants import PATCHER_MAX_DIFF_SIZE
+from code_intelligence.constants import PATCHER_MAX_DIFF_SIZE
 
 logger = logging.getLogger(__name__)
 

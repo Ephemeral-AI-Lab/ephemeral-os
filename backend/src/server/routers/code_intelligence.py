@@ -43,13 +43,13 @@ class LspQueryRequest(BaseModel):
 
 def _get_service(sandbox_id: str) -> Any:
     """Get or create a CI service for a sandbox."""
-    from ephemeralos.code_intelligence.routing.service import get_code_intelligence
+    from code_intelligence.routing.service import get_code_intelligence
     return get_code_intelligence(sandbox_id)
 
 
 def _get_service_if_exists(sandbox_id: str) -> Any:
     """Get existing CI service or raise 404."""
-    from ephemeralos.code_intelligence.routing.service import get_code_intelligence_if_exists
+    from code_intelligence.routing.service import get_code_intelligence_if_exists
     service = get_code_intelligence_if_exists(sandbox_id)
     if service is None:
         raise HTTPException(404, f"No CI service for sandbox '{sandbox_id}'")
@@ -63,7 +63,7 @@ def _get_service_if_exists(sandbox_id: str) -> Any:
 @router.get("/health")
 async def health() -> dict:
     """Code intelligence health check."""
-    from ephemeralos.code_intelligence.routing.service import get_all_services_status
+    from code_intelligence.routing.service import get_all_services_status
     statuses = get_all_services_status()
     return {"healthy": True, "active_services": len(statuses)}
 
@@ -198,7 +198,7 @@ async def query_diagnostics(
 async def apply_edit(sandbox_id: str, request: EditRequest) -> dict:
     """Apply an OCC-coordinated edit."""
     service = _get_service_if_exists(sandbox_id)
-    from ephemeralos.code_intelligence.types import EditRequest as CIEditRequest
+    from code_intelligence.types import EditRequest as CIEditRequest
     result = service.apply_edit(CIEditRequest(
         file_path=request.file_path,
         old_text=request.old_text,
@@ -256,6 +256,6 @@ async def telemetry(sandbox_id: str) -> dict:
 @router.post("/{sandbox_id}/dispose")
 async def dispose_service(sandbox_id: str) -> dict:
     """Dispose CI service for a sandbox."""
-    from ephemeralos.code_intelligence.routing.service import dispose_code_intelligence
+    from code_intelligence.routing.service import dispose_code_intelligence
     dispose_code_intelligence(sandbox_id)
     return {"disposed": sandbox_id}

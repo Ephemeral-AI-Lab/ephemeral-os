@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ephemeralos.skills.types import SkillDefinition
+from skills.types import SkillDefinition
 
 _CONTENT_DIR = Path(__file__).parent / "content"
 

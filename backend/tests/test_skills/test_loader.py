@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ephemeralos.skills import get_user_skills_dir, load_skill_registry
+from skills import get_user_skills_dir, load_skill_registry
 
 
 def test_load_skill_registry_includes_bundled(tmp_path: Path, monkeypatch):

@@ -7,7 +7,7 @@ from typing import Any, Callable
 
 from pydantic import BaseModel, Field
 
-from ephemeralos.tools.base import BaseTool, ToolExecutionContext, ToolResult
+from tools.base import BaseTool, ToolExecutionContext, ToolResult
 
 logger = logging.getLogger(__name__)
 
@@ -147,7 +147,7 @@ class RequestReplanTool(BaseTool):
 
         # Import coordination models for task creation
         try:
-            from ephemeralos.swarm.models import TaskCIPlan, TeamTask
+            from swarm.models import TaskCIPlan, TeamTask
         except ImportError:
             logger.warning("Cannot import swarm models to spawn replanner task")
             return False

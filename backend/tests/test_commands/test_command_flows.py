@@ -7,13 +7,13 @@ from pathlib import Path
 
 import pytest
 
-from ephemeralos.commands.registry import CommandContext, create_default_command_registry
-from ephemeralos.config.settings import load_settings
-from ephemeralos.engine.messages import ConversationMessage, TextBlock
-from ephemeralos.engine.query_engine import QueryEngine
-from ephemeralos.permissions import PermissionChecker
-from ephemeralos.state import AppState, AppStateStore
-from ephemeralos.tools import create_default_tool_registry
+from commands.registry import CommandContext, create_default_command_registry
+from config.settings import load_settings
+from engine.messages import ConversationMessage, TextBlock
+from engine.query_engine import QueryEngine
+from permissions import PermissionChecker
+from state import AppState, AppStateStore
+from tools import create_default_tool_registry
 
 
 class FakeApiClient:

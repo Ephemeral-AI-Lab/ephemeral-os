@@ -5,13 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from ephemeralos.config.settings import Settings
-from ephemeralos.mcp.config import load_mcp_server_configs
-from ephemeralos.mcp.types import McpResourceInfo, McpStdioServerConfig, McpToolInfo
-from ephemeralos.plugins.types import LoadedPlugin
-from ephemeralos.plugins.schemas import PluginManifest
-from ephemeralos.tools import create_default_tool_registry
-from ephemeralos.tools.base import ToolExecutionContext
+from config.settings import Settings
+from mcp.config import load_mcp_server_configs
+from mcp.types import McpResourceInfo, McpStdioServerConfig, McpToolInfo
+from plugins.types import LoadedPlugin
+from plugins.schemas import PluginManifest
+from tools import create_default_tool_registry
+from tools.base import ToolExecutionContext
 
 
 @dataclass

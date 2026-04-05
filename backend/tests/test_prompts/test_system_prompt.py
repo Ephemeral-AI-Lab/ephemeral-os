@@ -1,9 +1,9 @@
-"""Tests for ephemeralos.prompts.system_prompt."""
+"""Tests for prompts.system_prompt."""
 
 from __future__ import annotations
 
-from ephemeralos.prompts.environment import EnvironmentInfo
-from ephemeralos.prompts.system_prompt import build_system_prompt
+from prompts.environment import EnvironmentInfo
+from prompts.system_prompt import build_system_prompt
 
 
 def _make_env(**overrides) -> EnvironmentInfo:

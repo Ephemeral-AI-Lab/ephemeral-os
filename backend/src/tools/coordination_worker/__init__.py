@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from ephemeralos.tools.base import BaseToolkit
-from ephemeralos.tools.coordination_worker.replan_tool import RequestReplanTool
+from tools.base import BaseToolkit
+from tools.coordination_worker.replan_tool import RequestReplanTool
 
 
 class CoordinationWorkerToolkit(BaseToolkit):

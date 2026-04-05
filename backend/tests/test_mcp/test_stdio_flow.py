@@ -7,10 +7,10 @@ from pathlib import Path
 
 import pytest
 
-from ephemeralos.mcp.client import McpClientManager
-from ephemeralos.mcp.types import McpStdioServerConfig
-from ephemeralos.tools import create_default_tool_registry
-from ephemeralos.tools.base import ToolExecutionContext
+from mcp.client import McpClientManager
+from mcp.types import McpStdioServerConfig
+from tools import create_default_tool_registry
+from tools.base import ToolExecutionContext
 
 
 @pytest.mark.asyncio

@@ -14,16 +14,16 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ephemeralos.models.types import SupportsStreamingMessages
+    from models.types import SupportsStreamingMessages
 
-from ephemeralos.engine.messages import (
+from engine.messages import (
     ConversationMessage,
     ContentBlock,
     TextBlock,
     ToolResultBlock,
     ToolUseBlock,
 )
-from ephemeralos.utils.token_estimation import estimate_tokens
+from utils.token_estimation import estimate_tokens
 
 log = logging.getLogger(__name__)
 
@@ -331,7 +331,7 @@ async def compact_conversation(
     Returns:
         The new compacted message list.
     """
-    from ephemeralos.models.types import ApiMessageRequest, ApiMessageCompleteEvent
+    from models.types import ApiMessageRequest, ApiMessageCompleteEvent
 
     if len(messages) <= preserve_recent:
         return list(messages)

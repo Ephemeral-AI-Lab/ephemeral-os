@@ -6,15 +6,15 @@ from pathlib import Path
 from typing import TYPE_CHECKING, AsyncIterator
 
 if TYPE_CHECKING:
-    from ephemeralos.utils.compact import SessionState
+    from utils.compact import SessionState
 
-from ephemeralos.models.types import SupportsStreamingMessages
-from ephemeralos.engine.cost_tracker import CostTracker
-from ephemeralos.engine.messages import ConversationMessage
-from ephemeralos.engine.query import QueryContext, run_query
-from ephemeralos.engine.stream_events import StreamEvent
-from ephemeralos.hooks import HookExecutor
-from ephemeralos.tools.base import ToolRegistry
+from models.types import SupportsStreamingMessages
+from engine.cost_tracker import CostTracker
+from engine.messages import ConversationMessage
+from engine.query import QueryContext, run_query
+from engine.stream_events import StreamEvent
+from hooks import HookExecutor
+from tools.base import ToolRegistry
 
 
 class QueryEngine:

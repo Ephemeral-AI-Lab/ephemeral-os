@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from sqlalchemy import BigInteger, Boolean, DateTime, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from ephemeralos.db.base import Base
+from db.base import Base
 
 
 class ModelRegistrationRecord(Base):

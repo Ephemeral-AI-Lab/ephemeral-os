@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from ephemeralos.tasks.manager import get_task_manager
-from ephemeralos.tasks.types import TaskRecord
+from tasks.manager import get_task_manager
+from tasks.types import TaskRecord
 
 
 async def stop_task(task_id: str) -> TaskRecord:

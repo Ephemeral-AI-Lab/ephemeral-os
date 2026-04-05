@@ -14,10 +14,10 @@ from typing import TYPE_CHECKING
 from sqlalchemy import Engine, create_engine, inspect, text
 from sqlalchemy.orm import Session, sessionmaker
 
-from ephemeralos.db.base import Base
+from db.base import Base
 
 if TYPE_CHECKING:
-    from ephemeralos.config.settings import DatabaseSettings
+    from config.settings import DatabaseSettings
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +90,7 @@ def initialize_db(
     )
 
     # Import models so Base.metadata knows about all tables
-    import ephemeralos.db.models  # noqa: F401
+    import db.models  # noqa: F401
 
     Base.metadata.create_all(_engine)
 

@@ -4,8 +4,8 @@ Lightweight toolkit for agents that need code grounding without write
 access. All tools degrade gracefully if no CI service is configured.
 """
 
-from ephemeralos.tools.base import BaseToolkit
-from ephemeralos.tools.ci_toolkit.query_tools import (
+from tools.base import BaseToolkit
+from tools.ci_toolkit.query_tools import (
     CIStatusTool,
     EditHotspotsTool,
     RecentChangesTool,
@@ -13,7 +13,7 @@ from ephemeralos.tools.ci_toolkit.query_tools import (
     SymbolReferencesTool,
     WorkspaceStructureTool,
 )
-from ephemeralos.tools.ci_toolkit.file_tools import CIReadFileTool
+from tools.ci_toolkit.file_tools import CIReadFileTool
 
 
 class CIToolkit(BaseToolkit):

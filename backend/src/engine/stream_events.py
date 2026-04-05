@@ -5,8 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from ephemeralos.models.types import UsageSnapshot
-from ephemeralos.engine.messages import ConversationMessage
+from models.types import UsageSnapshot
+from engine.messages import ConversationMessage
 
 
 @dataclass(frozen=True)

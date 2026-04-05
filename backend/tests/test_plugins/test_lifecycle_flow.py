@@ -8,13 +8,13 @@ from pathlib import Path
 
 import pytest
 
-from ephemeralos.config.settings import Settings, load_settings
-from ephemeralos.mcp.client import McpClientManager
-from ephemeralos.mcp.config import load_mcp_server_configs
-from ephemeralos.plugins import load_plugins
-from ephemeralos.plugins.installer import install_plugin_from_path, uninstall_plugin
-from ephemeralos.tools import create_default_tool_registry
-from ephemeralos.tools.base import ToolExecutionContext
+from config.settings import Settings, load_settings
+from mcp.client import McpClientManager
+from mcp.config import load_mcp_server_configs
+from plugins import load_plugins
+from plugins.installer import install_plugin_from_path, uninstall_plugin
+from tools import create_default_tool_registry
+from tools.base import ToolExecutionContext
 
 
 def _write_plugin(source_root: Path, server_script: Path) -> Path:

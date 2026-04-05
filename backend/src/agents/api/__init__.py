@@ -1,5 +1,5 @@
 """Agent API — schemas and router."""
 
-from ephemeralos.agents.api.router import create_agents_router
+from agents.api.router import create_agents_router
 
 __all__ = ["create_agents_router"]

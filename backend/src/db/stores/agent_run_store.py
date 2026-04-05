@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session, sessionmaker
 
-from ephemeralos.db.models.agent_run import AgentResponseChunkRecord, AgentRunRecord
+from db.models.agent_run import AgentResponseChunkRecord, AgentRunRecord
 
 logger = logging.getLogger(__name__)
 

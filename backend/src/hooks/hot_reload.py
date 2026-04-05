@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ephemeralos.config import load_settings
-from ephemeralos.hooks.loader import HookRegistry, load_hook_registry
+from config import load_settings
+from hooks.loader import HookRegistry, load_hook_registry
 
 
 class HookReloader:

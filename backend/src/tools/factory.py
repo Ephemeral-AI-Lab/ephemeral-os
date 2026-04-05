@@ -11,7 +11,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
-from ephemeralos.tools.base import BaseToolkit
+from tools.base import BaseToolkit
 
 logger = logging.getLogger(__name__)
 
@@ -68,18 +68,18 @@ def _register_builtins() -> None:
     """Register factories for toolkits that need runtime context."""
 
     def _create_daytona(ctx: ToolkitContext) -> BaseToolkit:
-        from ephemeralos.tools.daytona_toolkit import DaytonaToolkit
+        from tools.daytona_toolkit import DaytonaToolkit
 
         sandbox_id = ctx.metadata.get("sandbox_id", "")
         return DaytonaToolkit(sandbox_id=sandbox_id or None)
 
     def _create_ci(ctx: ToolkitContext) -> BaseToolkit:
-        from ephemeralos.tools.ci_toolkit import CIToolkit
+        from tools.ci_toolkit import CIToolkit
 
         return CIToolkit()
 
     def _create_coordination_planner(ctx: ToolkitContext) -> BaseToolkit:
-        from ephemeralos.tools.coordination_planner import CoordinationPlannerToolkit
+        from tools.coordination_planner import CoordinationPlannerToolkit
 
         return CoordinationPlannerToolkit(
             team_agent_names=ctx.metadata.get("team_agent_names"),
@@ -87,7 +87,7 @@ def _register_builtins() -> None:
         )
 
     def _create_coordination_worker(ctx: ToolkitContext) -> BaseToolkit:
-        from ephemeralos.tools.coordination_worker import CoordinationWorkerToolkit
+        from tools.coordination_worker import CoordinationWorkerToolkit
 
         return CoordinationWorkerToolkit(
             task_id=ctx.metadata.get("task_id", ""),
@@ -99,7 +99,7 @@ def _register_builtins() -> None:
         )
 
     def _create_subagent(ctx: ToolkitContext) -> BaseToolkit:
-        from ephemeralos.tools.subagent import SubagentToolkit
+        from tools.subagent import SubagentToolkit
 
         return SubagentToolkit(
             run_named_agent_fn=ctx.metadata.get("run_named_agent_fn"),

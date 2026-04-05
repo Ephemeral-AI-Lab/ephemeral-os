@@ -8,12 +8,12 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy.orm import Session, sessionmaker
 
-from ephemeralos.db.models.session import SessionRecord
-from ephemeralos.engine.messages import ConversationMessage
+from db.models.session import SessionRecord
+from engine.messages import ConversationMessage
 
 if TYPE_CHECKING:
-    from ephemeralos.server.app_factory import SessionConfig
-    from ephemeralos.utils.compact import SessionState
+    from server.app_factory import SessionConfig
+    from utils.compact import SessionState
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +122,7 @@ class SessionStore:
         If no full history exists yet, it is seeded from ``message_history``
         so existing sessions bootstrap gracefully.
         """
-        from ephemeralos.utils.compact import SessionState as _SessionState
+        from utils.compact import SessionState as _SessionState
 
         ctx = _SessionState()
         full_history: list[dict] = []
