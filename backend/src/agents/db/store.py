@@ -74,7 +74,7 @@ class AgentDefinitionStore:
             db.commit()
             return True
 
-    def backfill_model_key(self, default_model_key: str = "minimax") -> int:
+    def backfill_model_key(self, default_model_key: str) -> int:
         """Set model_key to *default_model_key* for all agents that have NULL or empty model."""
         with self._sf() as db:
             rows = (

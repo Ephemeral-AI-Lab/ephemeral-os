@@ -86,7 +86,7 @@ def make_api_client(
     db_kwargs: dict | None = None,
     db_class_path: str | None = None,
 ) -> SupportsStreamingMessages:
-    """Build an API client from settings, or return the external one.
+    """Build an OpenAI-compatible API client from settings, or return the external one.
 
     When *db_kwargs* / *db_class_path* are provided (from the active model
     registration in the DB) they supply ``api_key``, ``base_url``, and the
@@ -95,19 +95,10 @@ def make_api_client(
     if external is not None:
         return external
 
-    from models.clients.anthropic import AnthropicApiClient
     from models.clients.openai_compat import OpenAICompatibleClient
 
     # Resolve from DB-registered model first, then settings
     api_key = (db_kwargs or {}).get("api_key") or settings.resolve_api_key()
     base_url = (db_kwargs or {}).get("base_url") or settings.base_url
 
-    # Determine provider: DB class_path > settings.api_format
-    is_openai = (
-        (db_class_path or "").lower() in ("openai", "openai_compat")
-        or settings.api_format == "openai"
-    )
-
-    if is_openai:
-        return OpenAICompatibleClient(api_key=api_key, base_url=base_url)
-    return AnthropicApiClient(api_key=api_key, base_url=base_url)
+    return OpenAICompatibleClient(api_key=api_key, base_url=base_url)

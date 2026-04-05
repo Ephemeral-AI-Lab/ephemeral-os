@@ -74,20 +74,21 @@ class StepRunner:
                 "pipeline_current_step": self._step.name,
             },
         )
-        record.work_session_id = f"{self._step.name}-work"
+        record.work_session_id = self._session_config.session_id
+        record.metrics["response_text"] = work_response
 
         # 4. Posthook agent (if configured) — just another LLM run
         if self._step.posthook_agent:
             posthook_prompt = self._build_posthook_context(work_response)
-            validated_text = await self._run_agent(
+            posthook_response = await self._run_agent(
                 agent_name=self._step.posthook_agent,
                 prompt=posthook_prompt,
                 toolkit_metadata={},
             )
-            record.posthook_session_id = f"{self._step.name}-posthook"
-            validated_output = self._parse_output(validated_text)
+            record.posthook_session_id = self._session_config.session_id
+            validated_output = self._parse_output(posthook_response)
         else:
-            validated_output = self._parse_output(work_response)
+            validated_output = self._parse_output(work_result.text)
 
         record.status = StepStatus.COMPLETED
         record.finished_at = time.time()
@@ -179,20 +180,9 @@ class StepRunner:
                 update={"toolkits": [*(agent_def.toolkits or []), "pipeline_context"]}
             )
 
-        # Build a session config with pipeline toolkit metadata
-        from server.app_factory import SessionConfig
-        step_config = SessionConfig(
-            cwd=self._session_config.cwd,
-            session_id=f"{self._session_config.session_id}-{self._step.name}",
-            model_override=self._session_config.model_override,
-            base_url_override=self._session_config.base_url_override,
-            api_key_override=self._session_config.api_key_override,
-            api_format_override=self._session_config.api_format_override,
-            external_api_client=self._session_config.external_api_client,
-        )
-
+        # Reuse parent session — pipeline run has its own run_id for tracking
         agent = spawn_agent(
-            step_config,
+            self._session_config,
             messages=[],
             agent_def=agent_def,
         )

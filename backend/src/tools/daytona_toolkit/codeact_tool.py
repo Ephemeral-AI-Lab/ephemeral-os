@@ -12,14 +12,13 @@ import json
 import logging
 import uuid
 
-from pydantic import BaseModel, Field
-
-from tools.base import BaseTool, ToolExecutionContext, ToolResult
+from tools.base import ToolExecutionContext, ToolResult
 from tools.daytona_toolkit.ci_integration import (
     get_ci_service,
     prime_cache_after_write,
     record_edit_in_ledger,
 )
+from tools.decorator import tool
 
 logger = logging.getLogger(__name__)
 
@@ -68,130 +67,126 @@ print(json.dumps({{"manifest": "/tmp/codeact-{run_id}.json", "status": _MANIFEST
 '''
 
 
-class DaytonaCodeActInput(BaseModel):
-    """Arguments for CodeAct execution."""
-
-    code: str = Field(
-        description=(
-            "Python code to execute in the sandbox. Has access to:\n"
-            "- read(path) → str: Read a file\n"
-            "- write(path, content): Stage a file write\n"
-            "- shell(command, timeout=300) → dict: Run a shell command\n"
-            "All writes are staged and committed atomically after execution."
-        ),
-    )
-
-
-class DaytonaCodeActTool(BaseTool):
-    """Execute multi-step code with atomic file I/O in the Daytona sandbox."""
-
-    name = "daytona_codeact"
-    description = (
+@tool(
+    name="daytona_codeact",
+    description=(
         "Execute Python code in the sandbox with atomic file operations. "
         "Use read(), write(), and shell() helpers. Writes are committed "
         "atomically after execution completes successfully."
-    )
-    input_model = DaytonaCodeActInput
+    ),
+)
+async def daytona_codeact(
+    code: str,
+    *,
+    context: ToolExecutionContext,
+) -> ToolResult:
+    """Execute multi-step code with atomic file I/O in the Daytona sandbox.
 
-    async def execute(
-        self, arguments: DaytonaCodeActInput, context: ToolExecutionContext,
-    ) -> ToolResult:
-        sandbox = context.metadata.get("daytona_sandbox")
-        if sandbox is None:
-            return ToolResult(output="No Daytona sandbox in context.", is_error=True)
+    Args:
+        code: Python code to execute in the sandbox. Has access to read(path), write(path, content), and shell(command, timeout=300). All writes are staged and committed atomically after execution.
 
-        run_id = uuid.uuid4().hex[:8]
-        code_b64 = base64.b64encode(arguments.code.encode("utf-8")).decode("ascii")
+    Returns:
+        status (str): Execution status — ok or error
+        files_written (int): Number of files committed
+        shells_run (int): Number of shell commands executed
+        error (str): Error message if failed
+    """
+    sandbox = context.metadata.get("daytona_sandbox")
+    if sandbox is None:
+        return ToolResult(output="No Daytona sandbox in context.", is_error=True)
 
-        # Build and upload wrapper script
-        wrapper = _WRAPPER_TEMPLATE.format(run_id=run_id, code_b64=code_b64)
-        script_path = f"/tmp/codeact-wrapper-{run_id}.py"
+    run_id = uuid.uuid4().hex[:8]
+    code_b64 = base64.b64encode(code.encode("utf-8")).decode("ascii")
 
-        try:
-            sandbox.fs.upload_file(script_path, wrapper.encode("utf-8"))
-        except Exception as exc:
-            return ToolResult(output=f"Failed to upload script: {exc}", is_error=True)
+    # Build and upload wrapper script
+    wrapper = _WRAPPER_TEMPLATE.format(run_id=run_id, code_b64=code_b64)
+    script_path = f"/tmp/codeact-wrapper-{run_id}.py"
 
-        # Execute
-        try:
-            response = sandbox.process.exec(
-                f"python3 {script_path}",
-                timeout=300,
-            )
-            stdout = response.result or ""
-        except Exception as exc:
-            return ToolResult(output=f"Execution failed: {exc}", is_error=True)
+    try:
+        sandbox.fs.upload_file(script_path, wrapper.encode("utf-8"))
+    except Exception as exc:
+        return ToolResult(output=f"Failed to upload script: {exc}", is_error=True)
 
-        # Parse output
-        try:
-            result_line = stdout.strip().splitlines()[-1] if stdout.strip() else "{}"
-            result = json.loads(result_line)
-        except (json.JSONDecodeError, IndexError):
-            return ToolResult(
-                output=f"Script output:\n{stdout[:4000]}",
-                metadata={"status": "unknown"},
-            )
-
-        if result.get("status") == "error":
-            return ToolResult(
-                output=f"CodeAct execution error:\n{stdout[:4000]}",
-                is_error=True,
-            )
-
-        # Read manifest
-        manifest_path = result.get("manifest", "")
-        if not manifest_path:
-            return ToolResult(output=f"Script output:\n{stdout[:4000]}")
-
-        try:
-            raw = sandbox.fs.download_file(manifest_path)
-            manifest = json.loads(raw.decode("utf-8") if isinstance(raw, bytes) else raw)
-        except Exception:
-            return ToolResult(output=f"Script completed but manifest unreadable:\n{stdout[:4000]}")
-
-        # Commit staged writes
-        writes = manifest.get("writes", [])
-        committed = 0
-        errors = []
-
-        for w in writes:
-            path = w.get("path", "")
-            content = w.get("content", "")
-            try:
-                sandbox.fs.upload_file(path, content.encode("utf-8"))
-                prime_cache_after_write(context, path, content)
-                record_edit_in_ledger(context, path, edit_type="codeact")
-                committed += 1
-            except Exception as exc:
-                errors.append(f"{path}: {exc}")
-
-        # Build output
-        output_parts = []
-        if manifest.get("status") == "ok":
-            output_parts.append(f"CodeAct completed: {committed} file(s) written")
-        else:
-            output_parts.append(f"CodeAct finished with status: {manifest.get('status')}")
-
-        if errors:
-            output_parts.append(f"Write errors: {'; '.join(errors)}")
-
-        shells = manifest.get("shells", [])
-        if shells:
-            output_parts.append(f"Shell commands executed: {len(shells)}")
-            for sh in shells[:3]:
-                cmd = sh.get("command", "")[:80]
-                exit_code = sh.get("exit_code", "?")
-                output_parts.append(f"  $ {cmd} → exit {exit_code}")
-
-        if manifest.get("error"):
-            output_parts.append(f"Error: {manifest['error'][:500]}")
-
-        return ToolResult(
-            output="\n".join(output_parts),
-            is_error=bool(errors),
-            metadata={
-                "status": manifest.get("status", "unknown"),
-                "files_written": committed,
-                "shells_run": len(shells),
-            },
+    # Execute
+    try:
+        response = sandbox.process.exec(
+            f"python3 {script_path}",
+            timeout=300,
         )
+        stdout = response.result or ""
+    except Exception as exc:
+        return ToolResult(output=f"Execution failed: {exc}", is_error=True)
+
+    # Parse output
+    try:
+        result_line = stdout.strip().splitlines()[-1] if stdout.strip() else "{}"
+        result = json.loads(result_line)
+    except (json.JSONDecodeError, IndexError):
+        return ToolResult(
+            output=f"Script output:\n{stdout[:4000]}",
+            metadata={"status": "unknown"},
+        )
+
+    if result.get("status") == "error":
+        return ToolResult(
+            output=f"CodeAct execution error:\n{stdout[:4000]}",
+            is_error=True,
+        )
+
+    # Read manifest
+    manifest_path = result.get("manifest", "")
+    if not manifest_path:
+        return ToolResult(output=f"Script output:\n{stdout[:4000]}")
+
+    try:
+        raw = sandbox.fs.download_file(manifest_path)
+        manifest = json.loads(raw.decode("utf-8") if isinstance(raw, bytes) else raw)
+    except Exception:
+        return ToolResult(output=f"Script completed but manifest unreadable:\n{stdout[:4000]}")
+
+    # Commit staged writes
+    writes = manifest.get("writes", [])
+    committed = 0
+    errors = []
+
+    for w in writes:
+        path = w.get("path", "")
+        content = w.get("content", "")
+        try:
+            sandbox.fs.upload_file(path, content.encode("utf-8"))
+            prime_cache_after_write(context, path, content)
+            record_edit_in_ledger(context, path, edit_type="codeact")
+            committed += 1
+        except Exception as exc:
+            errors.append(f"{path}: {exc}")
+
+    # Build output
+    output_parts = []
+    if manifest.get("status") == "ok":
+        output_parts.append(f"CodeAct completed: {committed} file(s) written")
+    else:
+        output_parts.append(f"CodeAct finished with status: {manifest.get('status')}")
+
+    if errors:
+        output_parts.append(f"Write errors: {'; '.join(errors)}")
+
+    shells = manifest.get("shells", [])
+    if shells:
+        output_parts.append(f"Shell commands executed: {len(shells)}")
+        for sh in shells[:3]:
+            cmd = sh.get("command", "")[:80]
+            exit_code = sh.get("exit_code", "?")
+            output_parts.append(f"  $ {cmd} → exit {exit_code}")
+
+    if manifest.get("error"):
+        output_parts.append(f"Error: {manifest['error'][:500]}")
+
+    return ToolResult(
+        output="\n".join(output_parts),
+        is_error=bool(errors),
+        metadata={
+            "status": manifest.get("status", "unknown"),
+            "files_written": committed,
+            "shells_run": len(shells),
+        },
+    )

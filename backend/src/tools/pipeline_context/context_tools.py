@@ -5,9 +5,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from pydantic import BaseModel, Field
-
 from tools.base import BaseTool, ToolExecutionContext, ToolResult
+from tools.decorator import tool
 
 
 def _serialize(obj: Any) -> str:
@@ -22,57 +21,56 @@ def _serialize(obj: Any) -> str:
 # ---------------------------------------------------------------------------
 
 
-class _QueryInput(BaseModel):
-    step: str = Field(description="Step name to query.")
-    key: str | None = Field(
-        default=None,
-        description="Optional specific output key.  If omitted, returns the entire step output.",
+def make_query_pipeline_context_tool(*, context_map: dict[str, dict] | None = None) -> BaseTool:
+    """Create a query_pipeline_context tool that captures context_map via closure."""
+    _context_map = context_map or {}
+
+    @tool(
+        name="query_pipeline_context",
+        description=(
+            "Query structured output from a completed pipeline step. "
+            "Use this to read data produced by earlier steps."
+        ),
+        read_only=True,
     )
-
-
-class QueryPipelineContextTool(BaseTool):
-    """Query structured output from a completed pipeline step."""
-
-    name = "query_pipeline_context"
-    description = (
-        "Query structured output from a completed pipeline step. "
-        "Use this to read data produced by earlier steps."
-    )
-    input_model = _QueryInput
-
-    def __init__(self, *, context_map: dict[str, dict] | None = None) -> None:
-        self._context_map = context_map or {}
-
-    def is_read_only(self, arguments: BaseModel) -> bool:
-        return True
-
-    async def execute(
-        self, arguments: _QueryInput, context: ToolExecutionContext
+    async def query_pipeline_context(
+        step: str,
+        key: str | None = None,
+        *,
+        context: ToolExecutionContext,
     ) -> ToolResult:
-        step_output = self._context_map.get(arguments.step)
+        """Query structured output from a completed pipeline step.
+
+        Args:
+            step: Step name to query.
+            key: Optional specific output key. If omitted, returns the entire step output.
+        """
+        step_output = _context_map.get(step)
         if step_output is None:
-            available = list(self._context_map.keys())
+            available = list(_context_map.keys())
             return ToolResult(
                 output=json.dumps({
-                    "error": f"Step '{arguments.step}' has no recorded output.",
+                    "error": f"Step '{step}' has no recorded output.",
                     "available_steps": available,
                 }),
                 is_error=True,
             )
 
-        if arguments.key is not None:
-            value = step_output.get(arguments.key)
+        if key is not None:
+            value = step_output.get(key)
             if value is None:
                 return ToolResult(
                     output=json.dumps({
-                        "error": f"Key '{arguments.key}' not found in step '{arguments.step}' output.",
+                        "error": f"Key '{key}' not found in step '{step}' output.",
                         "available_keys": list(step_output.keys()),
                     }),
                     is_error=True,
                 )
-            return ToolResult(output=_serialize({arguments.key: value}))
+            return ToolResult(output=_serialize({key: value}))
 
         return ToolResult(output=_serialize(step_output))
+
+    return query_pipeline_context
 
 
 # ---------------------------------------------------------------------------
@@ -80,38 +78,31 @@ class QueryPipelineContextTool(BaseTool):
 # ---------------------------------------------------------------------------
 
 
-class _EmptyInput(BaseModel):
-    pass
+def make_list_pipeline_steps_tool(*, context_map: dict[str, dict] | None = None) -> BaseTool:
+    """Create a list_pipeline_steps tool that captures context_map via closure."""
+    _context_map = context_map or {}
 
-
-class ListPipelineStepsTool(BaseTool):
-    """List all completed pipeline steps and their output keys."""
-
-    name = "list_pipeline_steps"
-    description = (
-        "List all completed pipeline steps and their output keys. "
-        "Use this to discover what data is available from prior steps."
+    @tool(
+        name="list_pipeline_steps",
+        description=(
+            "List all completed pipeline steps and their output keys. "
+            "Use this to discover what data is available from prior steps."
+        ),
+        read_only=True,
     )
-    input_model = _EmptyInput
-
-    def __init__(self, *, context_map: dict[str, dict] | None = None) -> None:
-        self._context_map = context_map or {}
-
-    def is_read_only(self, arguments: BaseModel) -> bool:
-        return True
-
-    async def execute(
-        self, arguments: _EmptyInput, context: ToolExecutionContext
-    ) -> ToolResult:
-        if not self._context_map:
+    async def list_pipeline_steps(*, context: ToolExecutionContext) -> ToolResult:
+        """List all completed pipeline steps and their output keys."""
+        if not _context_map:
             return ToolResult(
                 output=json.dumps({"steps": [], "note": "No step outputs recorded yet."})
             )
         steps = [
             {"step": name, "keys": list(output.keys())}
-            for name, output in self._context_map.items()
+            for name, output in _context_map.items()
         ]
         return ToolResult(output=json.dumps({"steps": steps}))
+
+    return list_pipeline_steps
 
 
 # ---------------------------------------------------------------------------
@@ -119,31 +110,27 @@ class ListPipelineStepsTool(BaseTool):
 # ---------------------------------------------------------------------------
 
 
-class GetPipelineMetadataTool(BaseTool):
-    """Get pipeline-level metadata (goal, config, current step)."""
+def make_get_pipeline_metadata_tool(
+    *,
+    pipeline_meta: dict | None = None,
+    current_step: str | None = None,
+) -> BaseTool:
+    """Create a get_pipeline_metadata tool that captures pipeline_meta and current_step via closure."""
+    _pipeline_meta = pipeline_meta or {}
+    _current_step = current_step
 
-    name = "get_pipeline_metadata"
-    description = (
-        "Get pipeline-level metadata including the goal, current step, "
-        "and pipeline configuration."
+    @tool(
+        name="get_pipeline_metadata",
+        description=(
+            "Get pipeline-level metadata including the goal, current step, "
+            "and pipeline configuration."
+        ),
+        read_only=True,
     )
-    input_model = _EmptyInput
-
-    def __init__(
-        self,
-        *,
-        pipeline_meta: dict | None = None,
-        current_step: str | None = None,
-    ) -> None:
-        self._pipeline_meta = pipeline_meta or {}
-        self._current_step = current_step
-
-    def is_read_only(self, arguments: BaseModel) -> bool:
-        return True
-
-    async def execute(
-        self, arguments: _EmptyInput, context: ToolExecutionContext
-    ) -> ToolResult:
-        meta = dict(self._pipeline_meta)
-        meta["current_step"] = self._current_step
+    async def get_pipeline_metadata(*, context: ToolExecutionContext) -> ToolResult:
+        """Get pipeline-level metadata (goal, config, current step)."""
+        meta = dict(_pipeline_meta)
+        meta["current_step"] = _current_step
         return ToolResult(output=_serialize(meta))
+
+    return get_pipeline_metadata

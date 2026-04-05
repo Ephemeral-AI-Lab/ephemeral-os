@@ -242,11 +242,6 @@ def _initialize_database(session: SessionState) -> "AgentBuilderService | None":
     registry_path = Path(__file__).resolve().parent.parent.parent.parent / "models" / "registry.json"
     model_store.seed_from_json(str(registry_path))
 
-    # Backfill model_key for agents that don't have one
-    backfilled = agent_definition_store.backfill_model_key("minimax")
-    if backfilled:
-        logger.info("Backfilled model_key='minimax' on %d agents", backfilled)
-
     # Bootstrap agent builder service and load DB agents
     from agents.builder import AgentBuilderService, AgentDefinitionValidator
 

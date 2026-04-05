@@ -43,20 +43,34 @@ def _convert_tools_to_openai(tools: list[dict[str, Any]]) -> list[dict[str, Any]
     """Convert Anthropic tool schemas to OpenAI function-calling format.
 
     Anthropic format:
-        {"name": "...", "description": "...", "input_schema": {...}}
+        {"name": "...", "description": "...", "input_schema": {...}, "output_schema": {...}}
     OpenAI format:
         {"type": "function", "function": {"name": "...", "description": "...", "parameters": {...}}}
+
+    OpenAI does not support output schemas in tool definitions, so when an
+    output_schema is present we append a summary of the expected return
+    fields to the description so the model is aware of the structured output.
     """
     result = []
     for tool in tools:
-        result.append({
-            "type": "function",
-            "function": {
-                "name": tool["name"],
-                "description": tool.get("description", ""),
-                "parameters": tool.get("input_schema", {}),
-            },
-        })
+        description = tool.get("description", "")
+        output_schema = tool.get("output_schema")
+        if output_schema and "properties" in output_schema:
+            fields = ", ".join(
+                f"{k}: {v.get('type', 'any')}" for k, v in output_schema["properties"].items()
+            )
+            description += f"\n\nReturns JSON with fields: {fields}"
+
+        result.append(
+            {
+                "type": "function",
+                "function": {
+                    "name": tool["name"],
+                    "description": description,
+                    "parameters": tool.get("input_schema", {}),
+                },
+            }
+        )
     return result
 
 
@@ -89,11 +103,13 @@ def _convert_messages_to_openai(
             if tool_results:
                 # Each tool result becomes a separate message with role="tool"
                 for tr in tool_results:
-                    openai_messages.append({
-                        "role": "tool",
-                        "tool_call_id": tr.tool_use_id,
-                        "content": tr.content,
-                    })
+                    openai_messages.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": tr.tool_use_id,
+                            "content": tr.content,
+                        }
+                    )
             if text_blocks:
                 text = "".join(b.text for b in text_blocks)
                 if text.strip():
@@ -148,8 +164,7 @@ def _convert_assistant_message(msg: ConversationMessage) -> dict[str, Any]:
 class OpenAICompatibleClient:
     """Client for OpenAI-compatible APIs (DashScope, GitHub Models, etc.).
 
-    Implements the same SupportsStreamingMessages protocol as AnthropicApiClient
-    so it can be used as a drop-in replacement in the agent loop.
+    Implements the SupportsStreamingMessages protocol for the agent loop.
     """
 
     def __init__(self, api_key: str, *, base_url: str | None = None) -> None:
@@ -174,10 +189,13 @@ class OpenAICompatibleClient:
                 if attempt >= MAX_RETRIES or not self._is_retryable(exc):
                     raise self._translate_error(exc) from exc
 
-                delay = min(BASE_DELAY * (2 ** attempt), MAX_DELAY)
+                delay = min(BASE_DELAY * (2**attempt), MAX_DELAY)
                 log.warning(
                     "OpenAI API request failed (attempt %d/%d), retrying in %.1fs: %s",
-                    attempt + 1, MAX_RETRIES + 1, delay, exc,
+                    attempt + 1,
+                    MAX_RETRIES + 1,
+                    delay,
+                    exc,
                 )
                 await asyncio.sleep(delay)
 
@@ -281,11 +299,13 @@ class OpenAICompatibleClient:
                 args = json.loads(tc["arguments"])
             except (json.JSONDecodeError, TypeError):
                 args = {}
-            content.append(ToolUseBlock(
-                id=tc["id"],
-                name=tc["name"],
-                input=args,
-            ))
+            content.append(
+                ToolUseBlock(
+                    id=tc["id"],
+                    name=tc["name"],
+                    input=args,
+                )
+            )
 
         final_message = ConversationMessage(role="assistant", content=content)
 

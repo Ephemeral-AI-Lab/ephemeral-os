@@ -5,9 +5,8 @@ from __future__ import annotations
 import logging
 from typing import Any, Callable, Protocol, runtime_checkable
 
-from pydantic import BaseModel, Field
-
 from tools.base import BaseTool, ToolExecutionContext, ToolResult
+from tools.decorator import tool
 
 logger = logging.getLogger(__name__)
 
@@ -33,95 +32,90 @@ class ReplanHandler(Protocol):
     ) -> bool: ...
 
 
-class RequestReplanInput(BaseModel):
-    """Arguments for requesting a replan."""
+def make_request_replan_tool(
+    *,
+    task_id: str = "",
+    run_id: str = "",
+    store: ArtifactStore | None = None,
+    replan_handler: ReplanHandler | None = None,
+    trigger_dispatch_fn: Callable[[], None] | None = None,
+) -> BaseTool:
+    """Create a replan request tool with pre-bound coordination state."""
 
-    reason: str = Field(description="Brief summary of why replanning is needed")
-    context: str = Field(description="Detailed context — error output, test results, failure analysis")
-    suggestion: str = Field(default="", description="Optional hint for the replanner about what should happen next")
-
-
-class RequestReplanTool(BaseTool):
-    """Signal that a task encountered issues requiring replanning."""
-
-    name = "request_replan"
-    description = (
-        "Signal that this task encountered issues requiring replanning. "
-        "Persists a structured replan request and optionally triggers a replanner. "
-        "You do NOT need to stop after calling this; finish your current work naturally."
+    @tool(
+        name="request_replan",
+        description=(
+            "Signal that this task encountered issues requiring replanning. "
+            "Persists a structured replan request and optionally triggers a replanner. "
+            "You do NOT need to stop after calling this; finish your current work naturally."
+        ),
     )
-    input_model = RequestReplanInput
-
-    def __init__(
-        self,
+    async def request_replan(
+        reason: str,
+        context_detail: str,
+        suggestion: str = "",
         *,
-        task_id: str = "",
-        run_id: str = "",
-        store: ArtifactStore | None = None,
-        replan_handler: ReplanHandler | None = None,
-        trigger_dispatch_fn: Callable[[], None] | None = None,
-    ) -> None:
-        self._task_id = task_id
-        self._run_id = run_id
-        self._store = store
-        self._replan_handler = replan_handler
-        self._trigger_dispatch_fn = trigger_dispatch_fn
-
-    async def execute(
-        self, arguments: RequestReplanInput, context: ToolExecutionContext
+        context: ToolExecutionContext,
     ) -> ToolResult:
+        """Signal that a task encountered issues requiring replanning.
+
+        Args:
+            reason: Brief summary of why replanning is needed
+            context_detail: Detailed context — error output, test results, failure analysis
+            suggestion: Optional hint for the replanner about what should happen next
+        """
         replan_payload = {
             "type": "replan_request",
-            "reason": arguments.reason,
-            "context": arguments.context,
-            "suggestion": arguments.suggestion,
-            "task_id": self._task_id,
-            "run_id": self._run_id,
+            "reason": reason,
+            "context": context_detail,
+            "suggestion": suggestion,
+            "task_id": task_id,
+            "run_id": run_id,
         }
 
         # Persist as task artifact
-        if self._store is not None:
+        if store is not None:
             try:
-                self._store.save_artifact(
-                    self._run_id,
-                    self._task_id,
+                store.save_artifact(
+                    run_id,
+                    task_id,
                     artifact={"replan_request": replan_payload},
                 )
             except Exception:
                 logger.warning(
                     "Failed to persist replan_request artifact for task %s (run=%s)",
-                    self._task_id,
-                    self._run_id,
+                    task_id,
+                    run_id,
                     exc_info=True,
                 )
 
         # Delegate replanning to handler
         replanner_spawned = False
-        if self._replan_handler is not None:
+        if replan_handler is not None:
             try:
-                replanner_spawned = self._replan_handler.handle_replan(
-                    self._task_id,
-                    self._run_id,
-                    arguments.reason,
-                    arguments.context,
-                    arguments.suggestion,
+                replanner_spawned = replan_handler.handle_replan(
+                    task_id,
+                    run_id,
+                    reason,
+                    context_detail,
+                    suggestion,
                 )
             except Exception:
                 logger.warning(
                     "Replan handler failed for task %s (run=%s)",
-                    self._task_id,
-                    self._run_id,
+                    task_id,
+                    run_id,
                     exc_info=True,
                 )
 
         # Trigger dispatch so the replanner starts immediately
-        if replanner_spawned and self._trigger_dispatch_fn is not None:
+        if replanner_spawned and trigger_dispatch_fn is not None:
             try:
-                self._trigger_dispatch_fn()
+                trigger_dispatch_fn()
             except Exception:
                 logger.debug(
                     "Failed to trigger dispatch after replan (run=%s)",
-                    self._run_id,
+                    run_id,
                     exc_info=True,
                 )
 
@@ -130,3 +124,5 @@ class RequestReplanTool(BaseTool):
             + (" Replanner task spawned." if replanner_spawned else "")
             + " Continue your current work — no need to stop.",
         )
+
+    return request_replan

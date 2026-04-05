@@ -1,0 +1,590 @@
+"""Tests for tool registration, schema generation, and the tool call loop."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import pytest
+from pydantic import BaseModel, Field
+
+from engine.messages import ConversationMessage, TextBlock, ToolUseBlock
+from engine.query import QueryContext, run_query
+from engine.stream_events import (
+    AssistantTurnComplete,
+    ToolExecutionCompleted,
+    ToolExecutionStarted,
+)
+from models.types import (
+    ApiMessageCompleteEvent,
+    ApiMessageRequest,
+    ApiTextDeltaEvent,
+    UsageSnapshot,
+)
+from tools.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolRegistry, ToolResult
+
+
+# ---------------------------------------------------------------------------
+# Fixtures: fake tools
+# ---------------------------------------------------------------------------
+
+
+class EchoInput(BaseModel):
+    message: str = Field(description="Message to echo")
+
+
+class EchoTool(BaseTool):
+    """Echo the input message back.
+
+    Returns:
+        echoed (str): The echoed message
+    """
+
+    name = "echo"
+    description = "Echo a message."
+    input_model = EchoInput
+
+    async def execute(self, arguments: EchoInput, context: ToolExecutionContext) -> ToolResult:
+        return ToolResult(output=json.dumps({"echoed": arguments.message}))
+
+
+class AddInput(BaseModel):
+    a: int = Field(description="First number")
+    b: int = Field(description="Second number")
+
+
+class AddTool(BaseTool):
+    """Add two numbers.
+
+    Returns:
+        result (int): The sum
+    """
+
+    name = "add"
+    description = "Add two numbers."
+    input_model = AddInput
+
+    async def execute(self, arguments: AddInput, context: ToolExecutionContext) -> ToolResult:
+        return ToolResult(output=json.dumps({"result": arguments.a + arguments.b}))
+
+
+class NoDocTool(BaseTool):
+    """A tool with no Returns section."""
+
+    name = "no_doc"
+    description = "No output schema."
+    input_model = EchoInput
+
+    async def execute(self, arguments: EchoInput, context: ToolExecutionContext) -> ToolResult:
+        return ToolResult(output="plain text")
+
+
+class FailingTool(BaseTool):
+    """A tool that always fails."""
+
+    name = "failing"
+    description = "Always fails."
+    input_model = EchoInput
+
+    async def execute(self, arguments: EchoInput, context: ToolExecutionContext) -> ToolResult:
+        return ToolResult(output="something went wrong", is_error=True)
+
+
+def _make_toolkit(*tools: BaseTool) -> BaseToolkit:
+    return BaseToolkit(name="test_toolkit", description="Test", tools=list(tools))
+
+
+def _make_registry(*tools: BaseTool) -> ToolRegistry:
+    registry = ToolRegistry()
+    registry.register_toolkit(_make_toolkit(*tools))
+    return registry
+
+
+# ---------------------------------------------------------------------------
+# Fake API client
+# ---------------------------------------------------------------------------
+
+
+class FakeApiClient:
+    """Returns pre-configured responses sequentially."""
+
+    def __init__(self, responses: list[ConversationMessage]) -> None:
+        self._responses = list(responses)
+
+    async def stream_message(self, request: ApiMessageRequest):
+        msg = self._responses.pop(0)
+        for block in msg.content:
+            if isinstance(block, TextBlock) and block.text:
+                yield ApiTextDeltaEvent(text=block.text)
+        yield ApiMessageCompleteEvent(
+            message=msg,
+            usage=UsageSnapshot(input_tokens=1, output_tokens=1),
+            stop_reason=None,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Tests: tool registration
+# ---------------------------------------------------------------------------
+
+
+class TestToolRegistration:
+    def test_register_tool(self):
+        registry = _make_registry(EchoTool())
+        assert registry.get("echo") is not None
+        assert registry.get("nonexistent") is None
+
+    def test_register_toolkit(self):
+        registry = _make_registry(EchoTool(), AddTool())
+        assert len(registry.list_tools()) == 2
+        assert len(registry.list_toolkits()) == 1
+
+    def test_restrict_to_toolkits(self):
+        registry = ToolRegistry()
+        tk1 = BaseToolkit(name="tk1", description="A", tools=[EchoTool()])
+        tk2 = BaseToolkit(name="tk2", description="B", tools=[AddTool()])
+        registry.register_toolkit(tk1)
+        registry.register_toolkit(tk2)
+        assert len(registry.list_tools()) == 2
+
+        registry.restrict_to_toolkits(["tk1"])
+        assert len(registry.list_tools()) == 1
+        assert registry.get("echo") is not None
+        assert registry.get("add") is None
+
+
+# ---------------------------------------------------------------------------
+# Tests: output schema from docstrings
+# ---------------------------------------------------------------------------
+
+
+class TestOutputSchema:
+    def test_output_schema_from_docstring(self):
+        tool = EchoTool()
+        schema = tool.output_schema()
+        assert schema is not None
+        assert schema["type"] == "object"
+        assert "echoed" in schema["properties"]
+        assert schema["properties"]["echoed"]["type"] == "string"
+
+    def test_output_schema_with_int_type(self):
+        tool = AddTool()
+        schema = tool.output_schema()
+        assert schema is not None
+        assert "result" in schema["properties"]
+        assert schema["properties"]["result"]["type"] == "integer"
+
+    def test_no_output_schema_without_returns(self):
+        tool = NoDocTool()
+        assert tool.output_schema() is None
+
+    def test_api_schema_includes_output(self):
+        tool = EchoTool()
+        api = tool.to_api_schema()
+        assert "output_schema" in api
+        assert api["output_schema"]["properties"]["echoed"]["type"] == "string"
+
+    def test_api_schema_omits_output_when_none(self):
+        tool = NoDocTool()
+        api = tool.to_api_schema()
+        assert "output_schema" not in api
+
+    def test_api_schema_includes_input(self):
+        tool = EchoTool()
+        api = tool.to_api_schema()
+        assert "input_schema" in api
+        assert "message" in api["input_schema"]["properties"]
+
+
+# ---------------------------------------------------------------------------
+# Tests: OpenAI conversion
+# ---------------------------------------------------------------------------
+
+
+class TestOpenAIConversion:
+    def test_converts_output_schema_to_description(self):
+        from models.clients.openai_compat import _convert_tools_to_openai
+
+        tools = [EchoTool().to_api_schema()]
+        result = _convert_tools_to_openai(tools)
+        assert len(result) == 1
+        desc = result[0]["function"]["description"]
+        assert "Returns JSON with fields" in desc
+        assert "echoed: string" in desc
+
+    def test_no_output_schema_no_suffix(self):
+        from models.clients.openai_compat import _convert_tools_to_openai
+
+        tools = [NoDocTool().to_api_schema()]
+        result = _convert_tools_to_openai(tools)
+        desc = result[0]["function"]["description"]
+        assert "Returns JSON" not in desc
+
+
+# ---------------------------------------------------------------------------
+# Tests: tool call loop (query.py)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_single_tool_call(tmp_path: Path):
+    """Model calls a tool, gets result, then responds with text."""
+    registry = _make_registry(EchoTool())
+    client = FakeApiClient(
+        [
+            ConversationMessage(
+                role="assistant",
+                content=[
+                    ToolUseBlock(id="tc1", name="echo", input={"message": "hello"}),
+                ],
+            ),
+            ConversationMessage(
+                role="assistant",
+                content=[
+                    TextBlock(text="Done."),
+                ],
+            ),
+        ]
+    )
+    context = QueryContext(
+        api_client=client,
+        tool_registry=registry,
+        cwd=tmp_path,
+        model="test",
+        system_prompt="test",
+        max_tokens=100,
+    )
+    messages = [ConversationMessage.from_user_text("echo hello")]
+    events = []
+    _messages, event_stream = await run_query(context, messages)
+    async for event, _usage in event_stream:
+        events.append(event)
+
+    tool_starts = [e for e in events if isinstance(e, ToolExecutionStarted)]
+    tool_completes = [e for e in events if isinstance(e, ToolExecutionCompleted)]
+    turns = [e for e in events if isinstance(e, AssistantTurnComplete)]
+
+    assert len(tool_starts) == 1
+    assert tool_starts[0].tool_name == "echo"
+    assert len(tool_completes) == 1
+    assert not tool_completes[0].is_error
+    parsed = json.loads(tool_completes[0].output)
+    assert parsed["echoed"] == "hello"
+    assert len(turns) == 2  # tool turn + final text turn
+
+
+@pytest.mark.asyncio
+async def test_unknown_tool_returns_error(tmp_path: Path):
+    """Model calls a tool that doesn't exist — should get an error result."""
+    registry = _make_registry(EchoTool())
+    client = FakeApiClient(
+        [
+            ConversationMessage(
+                role="assistant",
+                content=[
+                    ToolUseBlock(id="tc1", name="nonexistent_tool", input={}),
+                ],
+            ),
+            ConversationMessage(
+                role="assistant",
+                content=[
+                    TextBlock(text="ok"),
+                ],
+            ),
+        ]
+    )
+    context = QueryContext(
+        api_client=client,
+        tool_registry=registry,
+        cwd=tmp_path,
+        model="test",
+        system_prompt="test",
+        max_tokens=100,
+    )
+    messages = [ConversationMessage.from_user_text("do something")]
+    events = []
+    _messages, event_stream = await run_query(context, messages)
+    async for event, _usage in event_stream:
+        events.append(event)
+
+    tool_completes = [e for e in events if isinstance(e, ToolExecutionCompleted)]
+    assert len(tool_completes) == 1
+    assert tool_completes[0].is_error
+    assert "Unknown tool" in tool_completes[0].output
+
+
+@pytest.mark.asyncio
+async def test_invalid_input_returns_error(tmp_path: Path):
+    """Model passes invalid input to a tool — should get a validation error."""
+    registry = _make_registry(AddTool())
+    client = FakeApiClient(
+        [
+            ConversationMessage(
+                role="assistant",
+                content=[
+                    ToolUseBlock(id="tc1", name="add", input={"a": "not_a_number", "b": 2}),
+                ],
+            ),
+            ConversationMessage(
+                role="assistant",
+                content=[
+                    TextBlock(text="ok"),
+                ],
+            ),
+        ]
+    )
+    context = QueryContext(
+        api_client=client,
+        tool_registry=registry,
+        cwd=tmp_path,
+        model="test",
+        system_prompt="test",
+        max_tokens=100,
+    )
+    messages = [ConversationMessage.from_user_text("add")]
+    events = []
+    _messages, event_stream = await run_query(context, messages)
+    async for event, _usage in event_stream:
+        events.append(event)
+
+    tool_completes = [e for e in events if isinstance(e, ToolExecutionCompleted)]
+    assert len(tool_completes) == 1
+    assert tool_completes[0].is_error
+    assert "Invalid input" in tool_completes[0].output
+
+
+@pytest.mark.asyncio
+async def test_tool_error_propagated(tmp_path: Path):
+    """Tool returns is_error=True — should be reflected in events."""
+    registry = _make_registry(FailingTool())
+    client = FakeApiClient(
+        [
+            ConversationMessage(
+                role="assistant",
+                content=[
+                    ToolUseBlock(id="tc1", name="failing", input={"message": "x"}),
+                ],
+            ),
+            ConversationMessage(
+                role="assistant",
+                content=[
+                    TextBlock(text="ok"),
+                ],
+            ),
+        ]
+    )
+    context = QueryContext(
+        api_client=client,
+        tool_registry=registry,
+        cwd=tmp_path,
+        model="test",
+        system_prompt="test",
+        max_tokens=100,
+    )
+    messages = [ConversationMessage.from_user_text("fail")]
+    events = []
+    _messages, event_stream = await run_query(context, messages)
+    async for event, _usage in event_stream:
+        events.append(event)
+
+    tool_completes = [e for e in events if isinstance(e, ToolExecutionCompleted)]
+    assert len(tool_completes) == 1
+    assert tool_completes[0].is_error
+    assert "something went wrong" in tool_completes[0].output
+
+
+@pytest.mark.asyncio
+async def test_parallel_tool_calls(tmp_path: Path):
+    """Model calls multiple tools in one turn — should execute in parallel."""
+    registry = _make_registry(EchoTool(), AddTool())
+    client = FakeApiClient(
+        [
+            ConversationMessage(
+                role="assistant",
+                content=[
+                    ToolUseBlock(id="tc1", name="echo", input={"message": "hi"}),
+                    ToolUseBlock(id="tc2", name="add", input={"a": 3, "b": 4}),
+                ],
+            ),
+            ConversationMessage(
+                role="assistant",
+                content=[
+                    TextBlock(text="Both done."),
+                ],
+            ),
+        ]
+    )
+    context = QueryContext(
+        api_client=client,
+        tool_registry=registry,
+        cwd=tmp_path,
+        model="test",
+        system_prompt="test",
+        max_tokens=100,
+    )
+    messages = [ConversationMessage.from_user_text("do both")]
+    events = []
+    _messages, event_stream = await run_query(context, messages)
+    async for event, _usage in event_stream:
+        events.append(event)
+
+    tool_completes = [e for e in events if isinstance(e, ToolExecutionCompleted)]
+    assert len(tool_completes) == 2
+    outputs = [json.loads(tc.output) for tc in tool_completes if not tc.is_error]
+    # Check both tools returned correct results (order may vary)
+    assert any(o.get("echoed") == "hi" for o in outputs)
+    assert any(o.get("result") == 7 for o in outputs)
+
+
+@pytest.mark.asyncio
+async def test_no_tool_calls_returns_immediately(tmp_path: Path):
+    """Model responds with text only — loop should end after one turn."""
+    registry = _make_registry(EchoTool())
+    client = FakeApiClient(
+        [
+            ConversationMessage(
+                role="assistant",
+                content=[
+                    TextBlock(text="Just text."),
+                ],
+            ),
+        ]
+    )
+    context = QueryContext(
+        api_client=client,
+        tool_registry=registry,
+        cwd=tmp_path,
+        model="test",
+        system_prompt="test",
+        max_tokens=100,
+    )
+    messages = [ConversationMessage.from_user_text("hello")]
+    events = []
+    _messages, event_stream = await run_query(context, messages)
+    async for event, _usage in event_stream:
+        events.append(event)
+
+    turns = [e for e in events if isinstance(e, AssistantTurnComplete)]
+    assert len(turns) == 1
+    assert turns[0].message.text == "Just text."
+    # No tool events
+    assert not any(isinstance(e, ToolExecutionStarted) for e in events)
+
+
+# ---------------------------------------------------------------------------
+# Tests: Daytona tools output schema
+# ---------------------------------------------------------------------------
+
+
+class TestOpenAIClientToolCallLoop:
+    """Test that OpenAI-format tool calls work through the full tool call loop."""
+
+    def test_openai_tool_call_format_works_in_loop(self, tmp_path: Path):
+        """OpenAI tool_calls format should execute tools correctly in the loop."""
+        from models.clients.openai_compat import (
+            _convert_tools_to_openai,
+            _convert_messages_to_openai,
+            _convert_assistant_message,
+        )
+        from engine.messages import ConversationMessage, TextBlock, ToolResultBlock, ToolUseBlock
+
+        registry = _make_registry(EchoTool(), AddTool())
+        tools = registry.to_api_schema()
+        openai_tools = _convert_tools_to_openai(tools)
+        assert len(openai_tools) == 2
+        assert openai_tools[0]["function"]["name"] == "echo"
+        assert openai_tools[1]["function"]["name"] == "add"
+
+        user_msg = ConversationMessage.from_user_text("echo hello")
+        assistant_with_tool = ConversationMessage(
+            role="assistant",
+            content=[
+                TextBlock(text="Calling echo..."),
+                ToolUseBlock(id="tc1", name="echo", input={"message": "hello"}),
+            ],
+        )
+        assistant_final = ConversationMessage(
+            role="assistant",
+            content=[TextBlock(text="Done!")],
+        )
+
+        openai_messages = _convert_messages_to_openai([user_msg, assistant_with_tool], None)
+        assert any(m.get("role") == "user" for m in openai_messages)
+        converted = _convert_assistant_message(assistant_with_tool)
+        assert converted["role"] == "assistant"
+        assert "tool_calls" in converted
+        assert converted["tool_calls"][0]["function"]["name"] == "echo"
+
+    def test_openai_tool_result_in_loop(self, tmp_path: Path):
+        """Tool results returned as OpenAI format should complete the loop correctly."""
+        from models.clients.openai_compat import (
+            _convert_tools_to_openai,
+            _convert_messages_to_openai,
+        )
+        from engine.messages import ConversationMessage, TextBlock, ToolResultBlock, ToolUseBlock
+
+        registry = _make_registry(EchoTool())
+        tools = registry.to_api_schema()
+        openai_tools = _convert_tools_to_openai(tools)
+
+        user_msg = ConversationMessage.from_user_text("echo hi")
+        assistant_with_tool = ConversationMessage(
+            role="assistant",
+            content=[
+                ToolUseBlock(id="tc1", name="echo", input={"message": "hi"}),
+            ],
+        )
+        tool_result = ConversationMessage(
+            role="user",
+            content=[ToolResultBlock(tool_use_id="tc1", content='{"echoed": "hi"}')],
+        )
+
+        messages = [user_msg, assistant_with_tool, tool_result]
+        openai_messages = _convert_messages_to_openai(messages, None)
+
+        tool_result_msgs = [m for m in openai_messages if m.get("role") == "tool"]
+        assert len(tool_result_msgs) == 1
+        assert tool_result_msgs[0]["tool_call_id"] == "tc1"
+        assert "hi" in tool_result_msgs[0]["content"]
+
+    def test_openai_parallel_tool_calls_in_loop(self, tmp_path: Path):
+        """Multiple OpenAI tool calls should be parsed and executed in parallel."""
+        from models.clients.openai_compat import _convert_assistant_message
+        from engine.messages import ConversationMessage, TextBlock, ToolUseBlock
+
+        assistant_msg = ConversationMessage(
+            role="assistant",
+            content=[
+                TextBlock(text="Doing math and echo..."),
+                ToolUseBlock(id="tc1", name="add", input={"a": 2, "b": 3}),
+                ToolUseBlock(id="tc2", name="echo", input={"message": "test"}),
+            ],
+        )
+
+        converted = _convert_assistant_message(assistant_msg)
+        assert len(converted["tool_calls"]) == 2
+        tc_names = {tc["function"]["name"] for tc in converted["tool_calls"]}
+        assert tc_names == {"add", "echo"}
+
+
+class TestDaytonaToolSchemas:
+    def test_all_daytona_tools_have_output_schemas(self):
+        from tools.daytona_toolkit.toolkit import DaytonaToolkit
+
+        tk = DaytonaToolkit(sandbox_id="test")
+        for tool in tk.list_tools():
+            schema = tool.to_api_schema()
+            assert "output_schema" in schema, (
+                f"{tool.name} missing output_schema — add Returns: to docstring"
+            )
+            assert "properties" in schema["output_schema"]
+
+    def test_daytona_bash_schema(self):
+        from tools.daytona_toolkit.tools import daytona_bash
+
+        schema = daytona_bash.output_schema()
+        assert schema is not None
+        assert "stdout" in schema["properties"]
+        assert "exit_code" in schema["properties"]
+        assert schema["properties"]["stdout"]["type"] == "string"
+        assert schema["properties"]["exit_code"]["type"] == "integer"

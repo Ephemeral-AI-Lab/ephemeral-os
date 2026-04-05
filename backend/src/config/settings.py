@@ -34,10 +34,10 @@ class Settings(BaseModel):
 
     # API configuration
     api_key: str = ""
-    model: str = "claude-sonnet-4-20250514"
+    model: str = "gpt-4o"
     max_tokens: int = 16384
     base_url: str | None = None
-    api_format: str = "anthropic"  # "anthropic" or "openai"
+    api_format: str = "openai"  # "openai" (OpenAI-compatible)
 
     # Behavior
     system_prompt: str | None = None
@@ -66,19 +66,13 @@ class Settings(BaseModel):
         if self.api_key:
             return self.api_key
 
-        env_key = os.environ.get("ANTHROPIC_API_KEY", "")
-        if env_key:
-            return env_key
-
-        # Also check OPENAI_API_KEY for openai-format providers
         openai_key = os.environ.get("OPENAI_API_KEY", "")
         if openai_key:
             return openai_key
 
         raise ValueError(
-            "No API key found. Set ANTHROPIC_API_KEY (or OPENAI_API_KEY for openai-format "
-            "providers) environment variable, or configure api_key in "
-            "~/.ephemeralos/settings.json"
+            "No API key found. Set OPENAI_API_KEY environment variable, or configure "
+            "api_key in ~/.ephemeralos/settings.json"
         )
 
     def merge_cli_overrides(self, **overrides: Any) -> Settings:
@@ -90,11 +84,11 @@ class Settings(BaseModel):
 def _apply_env_overrides(settings: Settings) -> Settings:
     """Apply supported environment variable overrides over loaded settings."""
     updates: dict[str, Any] = {}
-    model = os.environ.get("ANTHROPIC_MODEL") or os.environ.get("EPHEMERALOS_MODEL")
+    model = os.environ.get("EPHEMERALOS_MODEL")
     if model:
         updates["model"] = model
 
-    base_url = os.environ.get("ANTHROPIC_BASE_URL") or os.environ.get("EPHEMERALOS_BASE_URL")
+    base_url = os.environ.get("EPHEMERALOS_BASE_URL")
     if base_url:
         updates["base_url"] = base_url
 
@@ -102,7 +96,7 @@ def _apply_env_overrides(settings: Settings) -> Settings:
     if max_tokens:
         updates["max_tokens"] = int(max_tokens)
 
-    api_key = os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("OPENAI_API_KEY")
+    api_key = os.environ.get("OPENAI_API_KEY")
     if api_key:
         updates["api_key"] = api_key
 

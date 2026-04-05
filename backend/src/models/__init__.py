@@ -2,7 +2,7 @@
 
 Import from here instead of deep paths:
 
-    from models import AnthropicApiClient, ModelStore, detect_provider
+    from models import OpenAICompatibleClient, ModelStore, detect_provider
 """
 
 from models.types import (
@@ -25,7 +25,6 @@ from models.provider import (
     detect_provider,
 )
 from models.clients import (
-    AnthropicApiClient,
     OpenAICompatibleClient,
 )
 from models.db import (
@@ -52,7 +51,6 @@ __all__ = [
     "detect_provider",
     "auth_status",
     # Clients
-    "AnthropicApiClient",
     "OpenAICompatibleClient",
     # DB
     "ModelRegistrationRecord",

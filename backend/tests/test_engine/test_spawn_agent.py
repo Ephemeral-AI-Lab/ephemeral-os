@@ -91,7 +91,9 @@ class _DummyTool2(BaseTool):
 
 class _DummyToolkit(BaseToolkit):
     def __init__(self, name: str = "dummy_toolkit", tools=None) -> None:
-        super().__init__(name=name, description=f"Dummy toolkit: {name}", tools=tools or [_DummyTool()])
+        super().__init__(
+            name=name, description=f"Dummy toolkit: {name}", tools=tools or [_DummyTool()]
+        )
 
 
 def _make_agent_def(**overrides: Any) -> AgentDefinition:
@@ -225,17 +227,20 @@ class TestToolkitFactoryInstantiation:
         assert registry.get_toolkit("discovery") is None
         assert registry.get_toolkit("dummy_toolkit") is not None
 
-    def test_no_toolkits_keeps_defaults(self):
+    def test_no_toolkits_no_restriction(self):
+        """When agent_def.toolkits=[], restrict_toolkits([]) is NOT called, so registry stays as-is."""
         agent_def = _make_agent_def(toolkits=[])
         registry = self._apply_toolkit_instantiation(agent_def)
 
-        # No restriction applied — discovery stays
-        assert registry.get_toolkit("discovery") is not None
+        # Default registry starts empty; empty list doesn't trigger restriction
+        assert len(registry.list_toolkits()) == 0
 
-    def test_no_agent_def_keeps_defaults(self):
+    def test_no_agent_def_no_restriction(self):
+        """When agent_def is None, restriction is never applied."""
         registry = self._apply_toolkit_instantiation(None)
 
-        assert registry.get_toolkit("discovery") is not None
+        # Default registry starts empty; no restriction applied
+        assert len(registry.list_toolkits()) == 0
 
     def test_unknown_toolkit_does_not_crash(self):
         agent_def = _make_agent_def(toolkits=["nonexistent_toolkit"])
@@ -287,7 +292,10 @@ class TestToolkitFactoryInstantiation:
 
     @pytest.mark.usefixtures("_register_dummy_factory")
     def test_multiple_toolkits(self):
-        register_toolkit_factory("second_toolkit", lambda ctx: _DummyToolkit(name="second_toolkit", tools=[_DummyTool2()]))
+        register_toolkit_factory(
+            "second_toolkit",
+            lambda ctx: _DummyToolkit(name="second_toolkit", tools=[_DummyTool2()]),
+        )
 
         agent_def = _make_agent_def(toolkits=["dummy_toolkit", "second_toolkit"])
         registry = self._apply_toolkit_instantiation(agent_def)
@@ -364,18 +372,22 @@ class TestSystemPromptAwareness:
             from skills.types import SkillDefinition
 
             registry = SkillRegistry()
-            registry.register(SkillDefinition(
-                name="code-review",
-                description="Review code for quality",
-                content="...",
-                source="test",
-            ))
-            registry.register(SkillDefinition(
-                name="test-gen",
-                description="Generate tests",
-                content="...",
-                source="test",
-            ))
+            registry.register(
+                SkillDefinition(
+                    name="code-review",
+                    description="Review code for quality",
+                    content="...",
+                    source="test",
+                )
+            )
+            registry.register(
+                SkillDefinition(
+                    name="test-gen",
+                    description="Generate tests",
+                    content="...",
+                    source="test",
+                )
+            )
 
             skill_lines = []
             for slug in agent_def.skills:
@@ -399,8 +411,7 @@ class TestSystemPromptAwareness:
                 tk_lines.append(f"- **{tk.name}**: {tool_names}")
             awareness_sections.append(
                 "# Available Toolkits\n\n"
-                "You have the following toolkits and tools available:\n\n"
-                + "\n".join(tk_lines)
+                "You have the following toolkits and tools available:\n\n" + "\n".join(tk_lines)
             )
 
         if awareness_sections:

@@ -44,6 +44,18 @@ async def run_pipeline(
     return await _execute(config, run, session_config, store, on_step_complete)
 
 
+async def run_pipeline_with_run(
+    config: PipelineConfig,
+    run: PipelineRun,
+    *,
+    session_config: "SessionConfig",
+    store: "PipelineStore | None" = None,
+    on_step_complete: OnStepComplete | None = None,
+) -> PipelineRun:
+    """Execute a pipeline with a pre-created PipelineRun (for API use)."""
+    return await _execute(config, run, session_config, store, on_step_complete, skip_create=True)
+
+
 async def resume_pipeline(
     config: PipelineConfig,
     run_id: str,
@@ -90,13 +102,16 @@ async def _execute(
     session_config: "SessionConfig",
     store: "PipelineStore | None",
     on_step_complete: OnStepComplete | None,
+    skip_create: bool = False,
 ) -> PipelineRun:
     """Core execution loop shared by run and resume."""
     run.status = PipelineRunStatus.RUNNING
     run.started_at = run.started_at or time.time()
 
-    if store:
+    if store and not skip_create:
         await store.create_run(run)
+    elif store and skip_create:
+        await store.update_run(run)
 
     for step_config in config.steps:
         # Skip disabled steps

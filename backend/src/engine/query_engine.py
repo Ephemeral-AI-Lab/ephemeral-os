@@ -29,6 +29,7 @@ class QueryEngine:
         model: str,
         system_prompt: str,
         max_tokens: int = 4096,
+        max_turns: int = 200,
         hook_executor: HookExecutor | None = None,
         tool_metadata: dict[str, object] | None = None,
         session_state: "SessionState | None" = None,
@@ -39,6 +40,7 @@ class QueryEngine:
         self._model = model
         self._system_prompt = system_prompt
         self._max_tokens = max_tokens
+        self._max_turns = max_turns
         self._hook_executor = hook_executor
         self._tool_metadata = tool_metadata or {}
         self._session_state = session_state
@@ -79,11 +81,14 @@ class QueryEngine:
             model=self._model,
             system_prompt=self._system_prompt,
             max_tokens=self._max_tokens,
+            max_turns=self._max_turns,
             hook_executor=self._hook_executor,
             tool_metadata=self._tool_metadata,
             session_state=self._session_state,
         )
-        async for event, usage in run_query(context, self._messages):
+        messages, event_stream = await run_query(context, self._messages)
+        self._messages = messages
+        async for event, usage in event_stream:
             if usage is not None:
                 self._cost_tracker.add(usage)
             yield event

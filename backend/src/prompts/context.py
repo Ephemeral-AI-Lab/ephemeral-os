@@ -12,22 +12,28 @@ from skills.loader import load_skill_registry
 
 
 def _build_skills_section(cwd: str | Path) -> str | None:
-    """Build a system prompt section listing available skills."""
+    """Build a system prompt section with full skill content.
+
+    Injects the complete skill body (not just name/description) so the
+    model has access to detailed instructions, rules, and tool usage
+    discipline from each skill.
+    """
     registry = load_skill_registry(cwd)
     skills = registry.list_skills()
     if not skills:
         return None
-    lines = [
-        "# Available Skills",
+    sections = [
+        "# Skills & Instructions",
         "",
-        "The following skills are available via the `skill` tool. "
-        "When a user's request matches a skill, invoke it with `skill(name=\"<skill_name>\")` "
-        "to load detailed instructions before proceeding.",
+        "The following skills provide detailed instructions for your work. "
+        "Follow them when the task matches.",
         "",
     ]
     for skill in skills:
-        lines.append(f"- **{skill.name}**: {skill.description}")
-    return "\n".join(lines)
+        sections.append(f"## {skill.name}")
+        sections.append(skill.content)
+        sections.append("")
+    return "\n".join(sections)
 
 
 def build_runtime_system_prompt(

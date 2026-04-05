@@ -1,4 +1,4 @@
-"""RunParallelAgentsTool — launch multiple agents in parallel over work items."""
+"""RunParallelAgents — launch multiple agents in parallel over work items."""
 
 from __future__ import annotations
 
@@ -9,9 +9,8 @@ import re
 import uuid
 from typing import Any, Callable, Protocol, runtime_checkable
 
-from pydantic import BaseModel, Field
-
 from tools.base import BaseTool, ToolExecutionContext, ToolResult
+from tools.decorator import tool
 
 logger = logging.getLogger(__name__)
 
@@ -36,32 +35,6 @@ class AgentRunFn(Protocol):
         session_id: str | None = None,
         options: dict[str, Any] | None = None,
     ) -> Any: ...
-
-
-# ---------------------------------------------------------------------------
-# Input model
-# ---------------------------------------------------------------------------
-
-
-class RunParallelAgentsInput(BaseModel):
-    """Arguments for parallel agent dispatch."""
-
-    items: list[str] = Field(
-        description="Work items to process. Each item is dispatched to a separate worker agent.",
-    )
-    agent_name: str = Field(
-        description="Name of the worker agent to use for each item.",
-    )
-    prompt_template: str = Field(
-        description=(
-            "Prompt template with {{item}} and {{index}} placeholders. "
-            "Each worker receives this template with placeholders substituted."
-        ),
-    )
-    max_workers: int | None = Field(
-        default=None,
-        description="Maximum parallel workers. Defaults to number of items.",
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -97,95 +70,112 @@ def _coerce_result_content(result: Any) -> str:
     return repr(result)
 
 
+async def _launch_worker(
+    run_agent_fn: AgentRunFn,
+    semaphore: asyncio.Semaphore,
+    agent_name: str,
+    prompt: str,
+    item: str,
+    index: int,
+) -> dict[str, Any]:
+    async with semaphore:
+        session_id = str(uuid.uuid4())
+        try:
+            result = await run_agent_fn(
+                agent_name,
+                prompt,
+                session_id=session_id,
+            )
+            return {
+                "status": "success",
+                "index": index,
+                "item": item,
+                "session_id": session_id,
+                "content": _coerce_result_content(result),
+            }
+        except Exception as exc:
+            return {
+                "status": "error",
+                "index": index,
+                "item": item,
+                "session_id": session_id,
+                "error": str(exc),
+            }
+
+
 # ---------------------------------------------------------------------------
-# Tool
+# Tool factory
 # ---------------------------------------------------------------------------
 
 
-class RunParallelAgentsTool(BaseTool):
-    """Launch multiple agents in parallel to process a list of work items."""
+def make_run_parallel_agents_tool(run_agent_fn: AgentRunFn | None = None) -> BaseTool:
+    """Create a parallel agent dispatch tool with an optional pre-bound runner."""
 
-    name = "run_parallel_agents"
-    description = (
-        "Launch multiple agents in parallel to process a list of work items. "
-        "Each worker receives the prompt template with {{item}} and {{index}} substituted. "
-        "Returns a list of worker results."
+    @tool(
+        name="run_parallel_agents",
+        description=(
+            "Launch multiple agents in parallel to process a list of work items. "
+            "Each worker receives the prompt template with {{item}} and {{index}} substituted. "
+            "Returns a list of worker results."
+        ),
     )
-    input_model = RunParallelAgentsInput
-
-    def __init__(self, *, run_agent_fn: AgentRunFn | None = None) -> None:
-        self._run_agent_fn = run_agent_fn
-
-    async def _launch_worker(
-        self,
-        semaphore: asyncio.Semaphore,
+    async def run_parallel_agents(
+        items: list[str],
         agent_name: str,
-        prompt: str,
-        item: str,
-        index: int,
-    ) -> dict[str, Any]:
-        async with semaphore:
-            session_id = str(uuid.uuid4())
-            try:
-                result = await self._run_agent_fn(
-                    agent_name,
-                    prompt,
-                    session_id=session_id,
-                )
-                return {
-                    "status": "success",
-                    "index": index,
-                    "item": item,
-                    "session_id": session_id,
-                    "content": _coerce_result_content(result),
-                }
-            except Exception as exc:
-                return {
-                    "status": "error",
-                    "index": index,
-                    "item": item,
-                    "session_id": session_id,
-                    "error": str(exc),
-                }
-
-    async def execute(
-        self, arguments: RunParallelAgentsInput, context: ToolExecutionContext
+        prompt_template: str,
+        max_workers: int | None = None,
+        *,
+        context: ToolExecutionContext,
     ) -> ToolResult:
-        if self._run_agent_fn is None:
-            self._run_agent_fn = context.metadata.get("run_agent_fn")
+        """Launch multiple agents in parallel to process work items.
 
-        if self._run_agent_fn is None:
+        Args:
+            items: Work items to process. Each item is dispatched to a separate worker agent.
+            agent_name: Name of the worker agent to use for each item.
+            prompt_template: Prompt template with {{item}} and {{index}} placeholders.
+            max_workers: Maximum parallel workers. Defaults to number of items.
+
+        Returns:
+            results (list): Worker results with status, index, item, content or error
+            total (int): Total number of items
+            success_count (int): Number of successful workers
+            failed_count (int): Number of failed workers
+        """
+        effective_fn = run_agent_fn or context.metadata.get("run_agent_fn")
+
+        if effective_fn is None:
             return ToolResult(
                 output=json.dumps({"error": "No agent runner function configured"}),
                 is_error=True,
             )
 
-        if not arguments.items:
+        if not items:
             return ToolResult(
                 output=json.dumps({"error": "No work items provided"}),
                 is_error=True,
             )
 
-        max_workers = max(1, arguments.max_workers or len(arguments.items))
-        semaphore = asyncio.Semaphore(max_workers)
+        workers = max(1, max_workers or len(items))
+        semaphore = asyncio.Semaphore(workers)
 
         tasks = [
             asyncio.create_task(
-                self._launch_worker(
+                _launch_worker(
+                    run_agent_fn=effective_fn,
                     semaphore=semaphore,
-                    agent_name=arguments.agent_name,
-                    prompt=_render_prompt(arguments.prompt_template, item, idx),
+                    agent_name=agent_name,
+                    prompt=_render_prompt(prompt_template, item, idx),
                     item=item,
                     index=idx,
                 )
             )
-            for idx, item in enumerate(arguments.items)
+            for idx, item in enumerate(items)
         ]
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         processed = []
-        for idx, (item, result) in enumerate(zip(arguments.items, results)):
+        for idx, (item, result) in enumerate(zip(items, results)):
             if isinstance(result, Exception):
                 processed.append({
                     "status": "error",
@@ -207,8 +197,10 @@ class RunParallelAgentsTool(BaseTool):
         return ToolResult(
             output=json.dumps({
                 "results": processed,
-                "total": len(arguments.items),
+                "total": len(items),
                 "success_count": success_count,
-                "failed_count": len(arguments.items) - success_count,
+                "failed_count": len(items) - success_count,
             })
         )
+
+    return run_parallel_agents

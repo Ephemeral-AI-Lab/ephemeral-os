@@ -22,7 +22,6 @@ from engine.messages import ConversationMessage
 from engine.stream_events import StreamEvent
 from hooks import make_hook_executor
 from models.provider import make_api_client
-from models.types import SupportsStreamingMessages
 from prompts import build_runtime_system_prompt
 from tools import create_default_tool_registry
 from tools.factory import create_toolkit, has_factory, ToolkitContext
@@ -35,7 +34,6 @@ class EphemeralAgent:
     """A short-lived agent that handles one user request then dies."""
 
     agent_name: str
-    api_client: SupportsStreamingMessages
     engine: QueryEngine
     settings: Settings
     model: str
@@ -70,6 +68,7 @@ def spawn_agent(
     db_class_path: str | None = None
     try:
         from server.app_factory import model_store
+
         active = model_store.get_active_resolved() if model_store.is_available else None
         if active:
             db_kwargs = active.get("kwargs")
@@ -79,15 +78,18 @@ def spawn_agent(
 
     # --- Per-agent overrides ------------------------------------------------
     resolved_model = (
-        agent_def.model if agent_def and agent_def.model
+        agent_def.model
+        if agent_def and agent_def.model
         else (db_kwargs or {}).get("model") or settings.model
     )
     agent_name = agent_def.name if agent_def else resolved_model
 
     # --- API client
     api_client = make_api_client(
-        settings, config.external_api_client,
-        db_kwargs=db_kwargs, db_class_path=db_class_path,
+        settings,
+        config.external_api_client,
+        db_kwargs=db_kwargs,
+        db_class_path=db_class_path,
     )
 
     # --- Tool registry
@@ -109,21 +111,33 @@ def spawn_agent(
                     tool_registry.register_toolkit(tk)
                     logger.info("Registered toolkit %r for agent %r", tk_name, agent_name)
                 except Exception:
-                    logger.warning("Failed to create toolkit %r for agent %r", tk_name, agent_name, exc_info=True)
+                    logger.warning(
+                        "Failed to create toolkit %r for agent %r",
+                        tk_name,
+                        agent_name,
+                        exc_info=True,
+                    )
             else:
-                logger.warning("No factory for toolkit %r requested by agent %r", tk_name, agent_name)
+                logger.warning(
+                    "No factory for toolkit %r requested by agent %r", tk_name, agent_name
+                )
 
     # Register Daytona sandbox tools when a sandbox is selected (if not already registered above)
     if sandbox_id and tool_registry.get_toolkit("sandbox_operations") is None:
         try:
             from tools.daytona_toolkit import DaytonaToolkit
+
             daytona_toolkit = DaytonaToolkit(sandbox_id=sandbox_id)
             tool_registry.register_toolkit(daytona_toolkit)
             logger.info("Registered DaytonaToolkit for sandbox %s", sandbox_id)
         except Exception:
-            logger.warning("Failed to register DaytonaToolkit for sandbox %s", sandbox_id, exc_info=True)
+            logger.warning(
+                "Failed to register DaytonaToolkit for sandbox %s", sandbox_id, exc_info=True
+            )
 
     if agent_def and agent_def.toolkits:
+        # restrict_to_toolkits([]) would clear ALL tools, so we only call
+        # it when agent_def.toolkits is non-empty (truthy check above)
         tool_registry.restrict_to_toolkits(agent_def.toolkits)
 
     # --- Hook executor
@@ -134,41 +148,42 @@ def spawn_agent(
         system_prompt = agent_def.system_prompt
     else:
         system_prompt = build_runtime_system_prompt(
-            settings, cwd=config.cwd, latest_user_prompt=latest_user_prompt,
+            settings,
+            cwd=config.cwd,
+            latest_user_prompt=latest_user_prompt,
         )
 
-    # --- Inject skills & toolkit awareness into system prompt ----------------
-    awareness_sections: list[str] = []
-
-    # Skills awareness
+    # --- Implicit SkillsToolkit when agent has skills -----------------------
     if agent_def and agent_def.skills:
         from skills.loader import load_skill_registry
-        registry = load_skill_registry(config.cwd)
-        skill_lines = []
-        for slug in agent_def.skills:
-            skill = registry.get(slug)
-            if skill:
-                skill_lines.append(f"- **{skill.name}**: {skill.description}")
-        if skill_lines:
-            awareness_sections.append(
-                "# Available Skills\n\n"
-                "The following skills are available via the `skill` tool. "
-                "When a task matches a skill, invoke it to load detailed instructions.\n\n"
-                + "\n".join(skill_lines)
-            )
+        from tools.skills_toolkit import make_skills_toolkit
 
-    # Toolkit awareness — tell the agent what tools it has
+        skill_registry = load_skill_registry(config.cwd)
+        skills_toolkit = make_skills_toolkit(skill_registry, agent_def.skills)
+        tool_registry.register_toolkit(skills_toolkit)
+        logger.info(
+            "Registered SkillsToolkit with %d skills for agent %r",
+            len(agent_def.skills),
+            agent_name,
+        )
+
+    # --- Inject toolkit awareness into system prompt -----------------------
+    awareness_sections: list[str] = []
+
+    # Toolkit awareness — only behavioral guidance, not tool descriptions.
+    # Tool names, descriptions, and schemas are already sent via the API
+    # `tools` parameter. Repeating them here wastes tokens.
     registered_toolkits = tool_registry.list_toolkits()
     if registered_toolkits:
-        tk_lines = []
+        tk_sections = []
         for tk in registered_toolkits:
-            tool_names = ", ".join(tk.tool_names())
-            tk_lines.append(f"- **{tk.name}**: {tool_names}")
-        awareness_sections.append(
-            "# Available Toolkits\n\n"
-            "You have the following toolkits and tools available:\n\n"
-            + "\n".join(tk_lines)
-        )
+            section = f"## {tk.name}\n{tk.description}"
+            if tk.instructions:
+                section += f"\n\n{tk.instructions}"
+            tool_names = ", ".join(f"`{t.name}`" for t in tk.list_tools())
+            section += f"\n\nTools: {tool_names}"
+            tk_sections.append(section)
+        awareness_sections.append("# Available Toolkits\n\n" + "\n\n".join(tk_sections))
 
     if awareness_sections:
         system_prompt = system_prompt + "\n\n" + "\n\n".join(awareness_sections)
@@ -184,6 +199,7 @@ def spawn_agent(
         model=resolved_model,
         system_prompt=system_prompt,
         max_tokens=settings.max_tokens,
+        max_turns=max_turns,
         hook_executor=hook_executor,
         session_state=session_state,
     )
@@ -192,7 +208,6 @@ def spawn_agent(
 
     return EphemeralAgent(
         agent_name=agent_name,
-        api_client=api_client,
         engine=engine,
         settings=settings,
         model=resolved_model,

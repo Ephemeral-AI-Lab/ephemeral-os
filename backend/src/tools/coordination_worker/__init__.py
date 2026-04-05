@@ -8,7 +8,7 @@ from tools.base import BaseToolkit
 from tools.coordination_worker.replan_tool import (
     ArtifactStore,
     ReplanHandler,
-    RequestReplanTool,
+    make_request_replan_tool,
 )
 
 
@@ -28,7 +28,7 @@ class CoordinationWorkerToolkit(BaseToolkit):
             name="coordination_worker",
             description="Worker escalation: request replanning when tasks encounter issues",
             tools=[
-                RequestReplanTool(
+                make_request_replan_tool(
                     task_id=task_id,
                     run_id=run_id,
                     store=store,

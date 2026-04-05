@@ -8,21 +8,21 @@ from typing import Any
 from tools.base import BaseToolkit
 
 from tools.daytona_toolkit.tools import (
-    DaytonaBashTool,
-    DaytonaFileReadTool,
-    DaytonaFileWriteTool,
-    DaytonaGlobTool,
-    DaytonaGrepTool,
-    DaytonaListFilesTool,
+    daytona_bash,
+    daytona_glob,
+    daytona_grep,
+    daytona_list_files,
+    daytona_read_file,
+    daytona_write_file,
 )
-from tools.daytona_toolkit.edit_tool import DaytonaEditTool
+from tools.daytona_toolkit.edit_tool import daytona_edit_file
 from tools.daytona_toolkit.lsp_tools import (
-    DaytonaLspDefinitionTool,
-    DaytonaLspDiagnosticsTool,
-    DaytonaLspHoverTool,
-    DaytonaLspReferencesTool,
+    daytona_lsp_definition,
+    daytona_lsp_diagnostics,
+    daytona_lsp_hover,
+    daytona_lsp_references,
 )
-from tools.daytona_toolkit.codeact_tool import DaytonaCodeActTool
+from tools.daytona_toolkit.codeact_tool import daytona_codeact
 
 logger = logging.getLogger(__name__)
 
@@ -55,22 +55,35 @@ class DaytonaToolkit(BaseToolkit):
             ),
             tools=[
                 # Read tools first (preferred execution order)
-                DaytonaListFilesTool(),
-                DaytonaGrepTool(),
-                DaytonaGlobTool(),
-                DaytonaFileReadTool(),
+                daytona_list_files,
+                daytona_grep,
+                daytona_glob,
+                daytona_read_file,
                 # LSP queries
-                DaytonaLspHoverTool(),
-                DaytonaLspDefinitionTool(),
-                DaytonaLspReferencesTool(),
-                DaytonaLspDiagnosticsTool(),
+                daytona_lsp_hover,
+                daytona_lsp_definition,
+                daytona_lsp_references,
+                daytona_lsp_diagnostics,
                 # Write tools
-                DaytonaFileWriteTool(),
-                DaytonaEditTool(),
-                DaytonaCodeActTool(),
+                daytona_write_file,
+                daytona_edit_file,
+                daytona_codeact,
                 # Execution
-                DaytonaBashTool(),
+                daytona_bash,
             ],
+            instructions=(
+                "Use these tools to interact with the remote Daytona sandbox. "
+                "Prefer read-only tools first to understand context before making changes:\n"
+                "1. Explore: `daytona_list_files` and `daytona_glob` to find files\n"
+                "2. Search: `daytona_grep` to find code patterns\n"
+                "3. Read: `daytona_read_file` to understand file contents\n"
+                "4. Analyze: LSP tools (`daytona_lsp_hover`, `daytona_lsp_definition`, "
+                "`daytona_lsp_references`, `daytona_lsp_diagnostics`) for type info and errors\n"
+                "5. Edit: `daytona_edit` for targeted edits, `daytona_write_file` for new files\n"
+                "6. Execute: `daytona_bash` to run commands, tests, and verify changes\n"
+                "7. Advanced: `daytona_codeact` for multi-step code transformations\n\n"
+                "After making edits, always verify by reading the file or running relevant tests."
+            ),
         )
         self.sandbox_id = sandbox_id
         self._sandbox: Any | None = None

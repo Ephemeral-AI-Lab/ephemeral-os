@@ -78,7 +78,7 @@ function RegisterModelForm({ onRegistered }: { onRegistered: () => void }) {
   const [open, setOpen] = useState(false)
   const [key, setKey] = useState('')
   const [label, setLabel] = useState('')
-  const [classPath, setClassPath] = useState('anthropic')
+  const [classPath, setClassPath] = useState('openai-compatible')
   const [modelId, setModelId] = useState('')
   const [apiKey, setApiKey] = useState('')
   const [baseUrl, setBaseUrl] = useState('')
@@ -153,9 +153,8 @@ function RegisterModelForm({ onRegistered }: { onRegistered: () => void }) {
             value={classPath}
             onChange={(e) => setClassPath(e.target.value)}
             className="w-full rounded border border-zinc-700 bg-zinc-800 px-2.5 py-1.5 text-sm text-zinc-100 focus:border-zinc-500 focus:outline-none"
+            disabled
           >
-            <option value="anthropic">Anthropic</option>
-            <option value="openai">OpenAI</option>
             <option value="openai-compatible">OpenAI Compatible</option>
           </select>
         </div>
@@ -165,7 +164,7 @@ function RegisterModelForm({ onRegistered }: { onRegistered: () => void }) {
             type="text"
             value={modelId}
             onChange={(e) => setModelId(e.target.value)}
-            placeholder="claude-sonnet-4-20250514"
+            placeholder="e.g. deepseek-chat, gpt-4o, qwen3.5-flash"
             className="w-full rounded border border-zinc-700 bg-zinc-800 px-2.5 py-1.5 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none"
           />
         </div>

@@ -6,10 +6,9 @@ import json
 import logging
 from typing import Any
 
-from pydantic import BaseModel, Field
-
-from tools.base import BaseTool, ToolExecutionContext, ToolResult
+from tools.base import ToolExecutionContext, ToolResult
 from tools.daytona_toolkit.ci_integration import get_ci_service
+from tools.decorator import tool
 
 logger = logging.getLogger(__name__)
 
@@ -26,230 +25,218 @@ def _svc_or_error(context: ToolExecutionContext) -> tuple[Any | None, ToolResult
 
 # -- CI Status ----------------------------------------------------------------
 
-class CIStatusInput(BaseModel):
-    pass
-
-
-class CIStatusTool(BaseTool):
+@tool(name="ci_status", description="Check code intelligence readiness: cache, index, LSP, and edit activity.", read_only=True)
+async def ci_status(*, context: ToolExecutionContext) -> ToolResult:
     """Check code intelligence service readiness."""
-
-    name = "ci_status"
-    description = "Check code intelligence readiness: cache, index, LSP, and edit activity."
-    input_model = CIStatusInput
-
-    def is_read_only(self, arguments: BaseModel) -> bool:
-        return True
-
-    async def execute(self, arguments: CIStatusInput, context: ToolExecutionContext) -> ToolResult:
-        svc, err = _svc_or_error(context)
-        if err:
-            return err
-        status = svc.status()
-        return ToolResult(output=json.dumps(status, indent=2, default=str))
+    svc, err = _svc_or_error(context)
+    if err:
+        return err
+    status = svc.status()
+    return ToolResult(output=json.dumps(status, indent=2, default=str))
 
 
 # -- Workspace Structure ------------------------------------------------------
 
-class WorkspaceStructureInput(BaseModel):
-    path: str = Field(default="", description="Subdirectory to list (empty = workspace root)")
-    max_depth: int = Field(default=3, ge=1, le=10, description="Maximum directory depth")
+@tool(name="ci_workspace_structure", description="List files and directories in the workspace, sorted by path.", read_only=True)
+async def ci_workspace_structure(
+    path: str = "",
+    max_depth: int = 3,
+    *,
+    context: ToolExecutionContext,
+) -> ToolResult:
+    """List workspace file structure.
 
+    Args:
+        path: Subdirectory to list (empty = workspace root)
+        max_depth: Maximum directory depth
 
-class WorkspaceStructureTool(BaseTool):
-    """List workspace file structure."""
+    Returns:
+        output (str): File listing
+    """
+    svc, err = _svc_or_error(context)
+    if err:
+        return err
 
-    name = "ci_workspace_structure"
-    description = "List files and directories in the workspace, sorted by path."
-    input_model = WorkspaceStructureInput
+    si = svc.symbol_index
+    if si is None:
+        return ToolResult(output="Symbol index not available")
 
-    def is_read_only(self, arguments: BaseModel) -> bool:
-        return True
+    # Get indexed file paths
+    from code_intelligence.analysis.symbol_index import SymbolIndex
+    if isinstance(si, SymbolIndex):
+        with si._lock:
+            paths = sorted(si._symbols.keys())
+    else:
+        paths = []
 
-    async def execute(self, arguments: WorkspaceStructureInput, context: ToolExecutionContext) -> ToolResult:
-        svc, err = _svc_or_error(context)
-        if err:
-            return err
+    if path:
+        paths = [p for p in paths if p.startswith(path)]
 
-        si = svc.symbol_index
-        if si is None:
-            return ToolResult(output="Symbol index not available")
+    # Limit output
+    paths = paths[:500]
+    output = "\n".join(paths)
+    if len(paths) == 500:
+        output += "\n... (truncated at 500 files)"
 
-        # Get indexed file paths
-        from code_intelligence.analysis.symbol_index import SymbolIndex
-        if isinstance(si, SymbolIndex):
-            with si._lock:
-                paths = sorted(si._symbols.keys())
-        else:
-            paths = []
-
-        if arguments.path:
-            paths = [p for p in paths if p.startswith(arguments.path)]
-
-        # Limit output
-        paths = paths[:500]
-        output = "\n".join(paths)
-        if len(paths) == 500:
-            output += "\n... (truncated at 500 files)"
-
-        return ToolResult(output=output or "No files indexed")
+    return ToolResult(output=output or "No files indexed")
 
 
 # -- Symbol Query -------------------------------------------------------------
 
-class SymbolQueryInput(BaseModel):
-    query: str = Field(description="Symbol name or partial name to search for")
-    kind: str = Field(default="", description="Filter by kind: function, class, method, variable")
+@tool(name="ci_query_symbols", description="Find functions, classes, methods, and variables by name.", read_only=True)
+async def ci_query_symbols(
+    query: str,
+    kind: str = "",
+    *,
+    context: ToolExecutionContext,
+) -> ToolResult:
+    """Search for symbols by name.
 
+    Args:
+        query: Symbol name or partial name to search for
+        kind: Filter by kind: function, class, method, variable
 
-class SymbolQueryTool(BaseTool):
-    """Search for symbols by name."""
+    Returns:
+        symbols (list): Matching symbol entries
+    """
+    svc, err = _svc_or_error(context)
+    if err:
+        return err
 
-    name = "ci_query_symbols"
-    description = "Find functions, classes, methods, and variables by name."
-    input_model = SymbolQueryInput
+    from code_intelligence.types import SymbolKind
+    kind_filter = None
+    if kind:
+        try:
+            kind_filter = SymbolKind(kind.lower())
+        except ValueError:
+            pass
 
-    def is_read_only(self, arguments: BaseModel) -> bool:
-        return True
+    results = svc.query_symbols(query)
+    if kind_filter:
+        results = [s for s in results if s.kind == kind_filter]
 
-    async def execute(self, arguments: SymbolQueryInput, context: ToolExecutionContext) -> ToolResult:
-        svc, err = _svc_or_error(context)
-        if err:
-            return err
+    if not results:
+        return ToolResult(output=f"No symbols matching '{query}'")
 
-        from code_intelligence.types import SymbolKind
-        kind = None
-        if arguments.kind:
-            try:
-                kind = SymbolKind(arguments.kind.lower())
-            except ValueError:
-                pass
+    symbols = []
+    for s in results[:100]:
+        symbols.append({
+            "name": s.name,
+            "kind": s.kind.value if hasattr(s.kind, "value") else str(s.kind),
+            "file": s.file_path,
+            "line": s.line,
+            "signature": s.signature,
+        })
 
-        results = svc.query_symbols(arguments.query)
-        if kind:
-            results = [s for s in results if s.kind == kind]
-
-        if not results:
-            return ToolResult(output=f"No symbols matching '{arguments.query}'")
-
-        symbols = []
-        for s in results[:100]:
-            symbols.append({
-                "name": s.name,
-                "kind": s.kind.value if hasattr(s.kind, "value") else str(s.kind),
-                "file": s.file_path,
-                "line": s.line,
-                "signature": s.signature,
-            })
-
-        return ToolResult(output=json.dumps(symbols, indent=2))
+    return ToolResult(output=json.dumps(symbols, indent=2))
 
 
 # -- Symbol References --------------------------------------------------------
 
-class SymbolReferencesInput(BaseModel):
-    file_path: str = Field(description="File containing the symbol")
-    symbol: str = Field(description="Symbol name to find references for")
-    line: int = Field(default=0, description="Line number of the symbol")
-    character: int = Field(default=0, description="Character offset")
+@tool(name="ci_query_references", description="Find all usages of a symbol across the codebase.", read_only=True)
+async def ci_query_references(
+    file_path: str,
+    symbol: str,
+    line: int = 0,
+    character: int = 0,
+    *,
+    context: ToolExecutionContext,
+) -> ToolResult:
+    """Find all references to a symbol across files.
 
+    Args:
+        file_path: File containing the symbol
+        symbol: Symbol name to find references for
+        line: Line number of the symbol
+        character: Character offset
 
-class SymbolReferencesTool(BaseTool):
-    """Find all references to a symbol across files."""
+    Returns:
+        refs (list): Reference locations
+    """
+    svc, err = _svc_or_error(context)
+    if err:
+        return err
 
-    name = "ci_query_references"
-    description = "Find all usages of a symbol across the codebase."
-    input_model = SymbolReferencesInput
+    results = svc.find_references(
+        file_path, symbol,
+        line, character,
+    )
+    if not results:
+        return ToolResult(output=f"No references found for '{symbol}'")
 
-    def is_read_only(self, arguments: BaseModel) -> bool:
-        return True
+    refs = []
+    for r in results[:50]:
+        refs.append({
+            "file": r.file_path,
+            "line": r.line,
+            "text": r.text,
+        })
 
-    async def execute(self, arguments: SymbolReferencesInput, context: ToolExecutionContext) -> ToolResult:
-        svc, err = _svc_or_error(context)
-        if err:
-            return err
+    output = json.dumps(refs, indent=2)
+    if len(results) > 50:
+        output += f"\n\n... {len(results)} total (showing 50)"
 
-        results = svc.find_references(
-            arguments.file_path, arguments.symbol,
-            arguments.line, arguments.character,
-        )
-        if not results:
-            return ToolResult(output=f"No references found for '{arguments.symbol}'")
-
-        refs = []
-        for r in results[:50]:
-            refs.append({
-                "file": r.file_path,
-                "line": r.line,
-                "text": r.text,
-            })
-
-        output = json.dumps(refs, indent=2)
-        if len(results) > 50:
-            output += f"\n\n... {len(results)} total (showing 50)"
-
-        return ToolResult(output=output)
+    return ToolResult(output=output)
 
 
 # -- Edit Hotspots ------------------------------------------------------------
 
-class EditHotspotsInput(BaseModel):
-    limit: int = Field(default=10, ge=1, le=50, description="Max results")
+@tool(name="ci_edit_hotspots", description="Return files that have been edited most frequently (conflict-prone).", read_only=True)
+async def ci_edit_hotspots(
+    limit: int = 10,
+    *,
+    context: ToolExecutionContext,
+) -> ToolResult:
+    """Find frequently edited / conflict-prone files.
 
+    Args:
+        limit: Max results
 
-class EditHotspotsTool(BaseTool):
-    """Find frequently edited / conflict-prone files."""
+    Returns:
+        items (list): Hotspot entries with file and edit_count
+    """
+    svc, err = _svc_or_error(context)
+    if err:
+        return err
 
-    name = "ci_edit_hotspots"
-    description = "Return files that have been edited most frequently (conflict-prone)."
-    input_model = EditHotspotsInput
+    arbiter = svc.arbiter
+    if arbiter is None:
+        return ToolResult(output="Arbiter not available")
 
-    def is_read_only(self, arguments: BaseModel) -> bool:
-        return True
+    hotspots = arbiter.hotspots(limit=limit)
+    if not hotspots:
+        return ToolResult(output="No edit hotspots recorded")
 
-    async def execute(self, arguments: EditHotspotsInput, context: ToolExecutionContext) -> ToolResult:
-        svc, err = _svc_or_error(context)
-        if err:
-            return err
-
-        arbiter = svc.arbiter
-        if arbiter is None:
-            return ToolResult(output="Arbiter not available")
-
-        hotspots = arbiter.hotspots(limit=arguments.limit)
-        if not hotspots:
-            return ToolResult(output="No edit hotspots recorded")
-
-        items = [{"file": fp, "edit_count": count} for fp, count in hotspots]
-        return ToolResult(output=json.dumps(items, indent=2))
+    items = [{"file": fp, "edit_count": count} for fp, count in hotspots]
+    return ToolResult(output=json.dumps(items, indent=2))
 
 
 # -- Recent Changes -----------------------------------------------------------
 
-class RecentChangesInput(BaseModel):
-    seconds: float = Field(default=60.0, ge=1, le=3600, description="Look back window in seconds")
+@tool(name="ci_recent_changes", description="List files changed in the last N seconds for change awareness.", read_only=True)
+async def ci_recent_changes(
+    seconds: float = 60.0,
+    *,
+    context: ToolExecutionContext,
+) -> ToolResult:
+    """See files changed recently (by other agents or shell commands).
 
+    Args:
+        seconds: Look back window in seconds
 
-class RecentChangesTool(BaseTool):
-    """See files changed recently (by other agents or shell commands)."""
+    Returns:
+        files (list): Recently changed file paths
+    """
+    svc, err = _svc_or_error(context)
+    if err:
+        return err
 
-    name = "ci_recent_changes"
-    description = "List files changed in the last N seconds for change awareness."
-    input_model = RecentChangesInput
+    ledger = svc.ledger
+    if ledger is None:
+        return ToolResult(output="Ledger not available")
 
-    def is_read_only(self, arguments: BaseModel) -> bool:
-        return True
+    files = ledger.recent_files(seconds=seconds)
+    if not files:
+        return ToolResult(output=f"No files changed in the last {seconds}s")
 
-    async def execute(self, arguments: RecentChangesInput, context: ToolExecutionContext) -> ToolResult:
-        svc, err = _svc_or_error(context)
-        if err:
-            return err
-
-        ledger = svc.ledger
-        if ledger is None:
-            return ToolResult(output="Ledger not available")
-
-        files = ledger.recent_files(seconds=arguments.seconds)
-        if not files:
-            return ToolResult(output=f"No files changed in the last {arguments.seconds}s")
-
-        return ToolResult(output=json.dumps(files, indent=2))
+    return ToolResult(output=json.dumps(files, indent=2))

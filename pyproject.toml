@@ -13,7 +13,6 @@ authors = [
 ]
 
 dependencies = [
-    "anthropic>=0.40.0",
     "openai>=1.0.0",
     "rich>=13.0.0",
     "pydantic>=2.0.0",
@@ -44,8 +43,8 @@ dev = [
     "mypy>=1.10.0",
 ]
 
-[tool.hatch.build.targets.wheel.sources]
-"backend/src" = ""
+[tool.hatch.build.targets.wheel]
+packages = ["backend/src"]
 
 [tool.pytest.ini_options]
 testpaths = ["backend/tests"]

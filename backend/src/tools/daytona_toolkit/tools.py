@@ -1,4 +1,4 @@
-"""Daytona tool implementations — BaseTool subclasses for sandbox operations."""
+"""Daytona tool implementations — @tool-decorated functions for sandbox operations."""
 
 from __future__ import annotations
 
@@ -6,9 +6,8 @@ import json
 import logging
 from typing import Any
 
-from pydantic import BaseModel, Field
-
-from tools.base import BaseTool, ToolExecutionContext, ToolResult
+from tools.base import ToolExecutionContext, ToolResult
+from tools.decorator import tool
 
 logger = logging.getLogger(__name__)
 
@@ -48,41 +47,43 @@ def _get_cwd(context: ToolExecutionContext) -> str:
 # ---------------------------------------------------------------------------
 
 
-class DaytonaBashInput(BaseModel):
-    command: str = Field(description="Shell command to execute in the sandbox")
-    timeout: int = Field(
-        default=_DEFAULT_TIMEOUT,
-        ge=1,
-        le=600,
-        description="Timeout in seconds",
-    )
+@tool(name="daytona_bash", description="Run a shell command inside the remote Daytona sandbox.")
+async def daytona_bash(
+    command: str,
+    timeout: int = _DEFAULT_TIMEOUT,
+    *,
+    context: ToolExecutionContext,
+) -> ToolResult:
+    """Execute a shell command in a Daytona sandbox.
 
+    Args:
+        command: Shell command to execute in the sandbox
+        timeout: Timeout in seconds
 
-class DaytonaBashTool(BaseTool):
-    """Execute a shell command in a Daytona sandbox."""
-
-    name = "daytona_bash"
-    description = "Run a shell command inside the remote Daytona sandbox."
-    input_model = DaytonaBashInput
-
-    async def execute(self, arguments: DaytonaBashInput, context: ToolExecutionContext) -> ToolResult:
-        sandbox = _get_sandbox(context)
-        cwd = _get_cwd(context)
-        try:
-            response = sandbox.process.exec(
-                arguments.command,
-                cwd=cwd,
-                timeout=arguments.timeout,
-            )
-            output = _truncate(response.result or "")
-            is_error = getattr(response, "exit_code", 0) != 0
-            return ToolResult(
-                output=output,
-                is_error=is_error,
-                metadata={"exit_code": getattr(response, "exit_code", None)},
-            )
-        except Exception as exc:
-            return ToolResult(output=str(exc), is_error=True)
+    Returns:
+        stdout (str): Standard output from the command
+        exit_code (int): Exit code (0 = success)
+    """
+    sandbox = _get_sandbox(context)
+    cwd = _get_cwd(context)
+    try:
+        response = sandbox.process.exec(
+            command,
+            cwd=cwd,
+            timeout=timeout,
+        )
+        exit_code = getattr(response, "exit_code", 0)
+        output = json.dumps({
+            "stdout": _truncate(response.result or ""),
+            "exit_code": exit_code,
+        })
+        return ToolResult(
+            output=output,
+            is_error=exit_code != 0,
+            metadata={"exit_code": exit_code},
+        )
+    except Exception as exc:
+        return ToolResult(output=str(exc), is_error=True)
 
 
 # ---------------------------------------------------------------------------
@@ -90,43 +91,52 @@ class DaytonaBashTool(BaseTool):
 # ---------------------------------------------------------------------------
 
 
-class DaytonaFileReadInput(BaseModel):
-    file_path: str = Field(description="Path to the file in the sandbox")
-    start_line: int = Field(default=1, ge=1, description="First line to read (1-based)")
-    end_line: int | None = Field(default=None, description="Last line to read (1-based, inclusive)")
+@tool(name="daytona_read_file", description="Read file contents from the remote Daytona sandbox.", read_only=True)
+async def daytona_read_file(
+    file_path: str,
+    start_line: int = 1,
+    end_line: int | None = None,
+    *,
+    context: ToolExecutionContext,
+) -> ToolResult:
+    """Read a file from the Daytona sandbox.
 
+    Args:
+        file_path: Path to the file in the sandbox
+        start_line: First line to read (1-based)
+        end_line: Last line to read (1-based, inclusive)
 
-class DaytonaFileReadTool(BaseTool):
-    """Read a file from the Daytona sandbox."""
+    Returns:
+        file_path (str): Path to the file
+        total_lines (int): Total number of lines in the file
+        start_line (int): First line returned (1-based)
+        end_line (int): Last line returned (1-based)
+        content (str): File content with line numbers
+    """
+    sandbox = _get_sandbox(context)
+    try:
+        raw = sandbox.fs.download_file(file_path)
+        content = raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
+        lines = content.splitlines()
+        total = len(lines)
 
-    name = "daytona_read_file"
-    description = "Read file contents from the remote Daytona sandbox."
-    input_model = DaytonaFileReadInput
+        start = max(1, start_line)
+        end = min(total, end_line) if end_line else total
 
-    def is_read_only(self, arguments: BaseModel) -> bool:
-        return True
+        selected = []
+        for i in range(start, end + 1):
+            selected.append(f"{i:4d}: {lines[i - 1]}")
 
-    async def execute(self, arguments: DaytonaFileReadInput, context: ToolExecutionContext) -> ToolResult:
-        sandbox = _get_sandbox(context)
-        try:
-            raw = sandbox.fs.download_file(arguments.file_path)
-            content = raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
-            lines = content.splitlines()
-            total = len(lines)
-
-            start = max(1, arguments.start_line)
-            end = min(total, arguments.end_line) if arguments.end_line else total
-
-            selected = []
-            for i in range(start, end + 1):
-                selected.append(f"{i:4d}: {lines[i - 1]}")
-
-            header = f"File: {arguments.file_path} ({total} lines total)\n"
-            header += f"Showing lines {start}-{end}\n---\n"
-            output = header + "\n".join(selected)
-            return ToolResult(output=_truncate(output))
-        except Exception as exc:
-            return ToolResult(output=str(exc), is_error=True)
+        output = json.dumps({
+            "file_path": file_path,
+            "total_lines": total,
+            "start_line": start,
+            "end_line": end,
+            "content": _truncate("\n".join(selected)),
+        })
+        return ToolResult(output=output)
+    except Exception as exc:
+        return ToolResult(output=str(exc), is_error=True)
 
 
 # ---------------------------------------------------------------------------
@@ -134,26 +144,34 @@ class DaytonaFileReadTool(BaseTool):
 # ---------------------------------------------------------------------------
 
 
-class DaytonaFileWriteInput(BaseModel):
-    file_path: str = Field(description="Path to write in the sandbox")
-    content: str = Field(description="File content to write")
+@tool(name="daytona_write_file", description="Write or create a file in the remote Daytona sandbox.")
+async def daytona_write_file(
+    file_path: str,
+    content: str,
+    *,
+    context: ToolExecutionContext,
+) -> ToolResult:
+    """Write/create a file in the Daytona sandbox.
 
+    Args:
+        file_path: Path to write in the sandbox
+        content: File content to write
 
-class DaytonaFileWriteTool(BaseTool):
-    """Write/create a file in the Daytona sandbox."""
-
-    name = "daytona_write_file"
-    description = "Write or create a file in the remote Daytona sandbox."
-    input_model = DaytonaFileWriteInput
-
-    async def execute(self, arguments: DaytonaFileWriteInput, context: ToolExecutionContext) -> ToolResult:
-        sandbox = _get_sandbox(context)
-        try:
-            content_bytes = arguments.content.encode("utf-8")
-            sandbox.fs.upload_file(arguments.file_path, content_bytes)
-            return ToolResult(output=f"Written: {arguments.file_path} ({len(content_bytes)} bytes)")
-        except Exception as exc:
-            return ToolResult(output=str(exc), is_error=True)
+    Returns:
+        file_path (str): Path that was written
+        bytes_written (int): Number of bytes written
+    """
+    sandbox = _get_sandbox(context)
+    try:
+        content_bytes = content.encode("utf-8")
+        sandbox.fs.upload_file(file_path, content_bytes)
+        output = json.dumps({
+            "file_path": file_path,
+            "bytes_written": len(content_bytes),
+        })
+        return ToolResult(output=output)
+    except Exception as exc:
+        return ToolResult(output=str(exc), is_error=True)
 
 
 # ---------------------------------------------------------------------------
@@ -161,37 +179,37 @@ class DaytonaFileWriteTool(BaseTool):
 # ---------------------------------------------------------------------------
 
 
-class DaytonaListFilesInput(BaseModel):
-    directory: str = Field(default=".", description="Directory path to list")
+@tool(name="daytona_list_files", description="List files and directories in the remote Daytona sandbox.", read_only=True)
+async def daytona_list_files(
+    directory: str = ".",
+    *,
+    context: ToolExecutionContext,
+) -> ToolResult:
+    """List files in a directory in the Daytona sandbox.
 
+    Args:
+        directory: Directory path to list
 
-class DaytonaListFilesTool(BaseTool):
-    """List files in a directory in the Daytona sandbox."""
-
-    name = "daytona_list_files"
-    description = "List files and directories in the remote Daytona sandbox."
-    input_model = DaytonaListFilesInput
-
-    def is_read_only(self, arguments: BaseModel) -> bool:
-        return True
-
-    async def execute(self, arguments: DaytonaListFilesInput, context: ToolExecutionContext) -> ToolResult:
-        sandbox = _get_sandbox(context)
-        cwd = _get_cwd(context)
-        directory = arguments.directory if arguments.directory != "." else cwd
-        try:
-            entries = sandbox.fs.list_files(directory)
-            if not entries:
-                return ToolResult(output=f"Empty directory: {directory}")
-            # entries may be strings or objects with a name attribute
-            names = []
-            for entry in entries:
-                name = getattr(entry, "name", None) or str(entry)
-                names.append(name)
-            output = "\n".join(sorted(names))
-            return ToolResult(output=_truncate(output))
-        except Exception as exc:
-            return ToolResult(output=str(exc), is_error=True)
+    Returns:
+        directory (str): Directory that was listed
+        entries (list): File and directory names
+    """
+    sandbox = _get_sandbox(context)
+    cwd = _get_cwd(context)
+    directory = directory if directory != "." else cwd
+    try:
+        entries = sandbox.fs.list_files(directory)
+        names = []
+        for entry in entries or []:
+            name = getattr(entry, "name", None) or str(entry)
+            names.append(name)
+        output = json.dumps({
+            "directory": directory,
+            "entries": sorted(names),
+        })
+        return ToolResult(output=output)
+    except Exception as exc:
+        return ToolResult(output=str(exc), is_error=True)
 
 
 # ---------------------------------------------------------------------------
@@ -199,43 +217,50 @@ class DaytonaListFilesTool(BaseTool):
 # ---------------------------------------------------------------------------
 
 
-class DaytonaGrepInput(BaseModel):
-    pattern: str = Field(description="Text pattern to search for in file contents")
-    path: str = Field(default=".", description="File or directory to search")
+@tool(name="daytona_grep", description="Search file contents for a pattern in the remote Daytona sandbox.", read_only=True)
+async def daytona_grep(
+    pattern: str,
+    path: str = ".",
+    *,
+    context: ToolExecutionContext,
+) -> ToolResult:
+    """Search file contents in the Daytona sandbox.
 
+    Args:
+        pattern: Text pattern to search for in file contents
+        path: File or directory to search
 
-class DaytonaGrepTool(BaseTool):
-    """Search file contents in the Daytona sandbox."""
-
-    name = "daytona_grep"
-    description = "Search file contents for a pattern in the remote Daytona sandbox."
-    input_model = DaytonaGrepInput
-
-    def is_read_only(self, arguments: BaseModel) -> bool:
-        return True
-
-    async def execute(self, arguments: DaytonaGrepInput, context: ToolExecutionContext) -> ToolResult:
-        sandbox = _get_sandbox(context)
-        cwd = _get_cwd(context)
-        path = arguments.path if arguments.path != "." else cwd
-        try:
-            matches = sandbox.fs.find_files(path, arguments.pattern)
-            if not matches:
-                return ToolResult(output=f"No matches for '{arguments.pattern}' in {path}")
-            lines = []
-            for match in matches[:500]:
-                file_path = getattr(match, "file", None) or ""
-                line_no = getattr(match, "line", None)
-                content = getattr(match, "content", None) or ""
-                if line_no is not None:
-                    lines.append(f"{file_path}:{line_no}: {content.rstrip()}")
-                else:
-                    lines.append(f"{file_path}: {content.rstrip()}")
-            if len(matches) > 500:
-                lines.append(f"\n... truncated ({len(matches)} total, showing first 500)")
-            return ToolResult(output=_truncate("\n".join(lines)))
-        except Exception as exc:
-            return ToolResult(output=str(exc), is_error=True)
+    Returns:
+        pattern (str): Pattern that was searched
+        path (str): Search root path
+        matches (list): Matching results with file, line, content
+        total_matches (int): Total matches found
+    """
+    sandbox = _get_sandbox(context)
+    cwd = _get_cwd(context)
+    path = path if path != "." else cwd
+    try:
+        matches = sandbox.fs.find_files(path, pattern)
+        if not matches:
+            return ToolResult(output=json.dumps({
+                "pattern": pattern, "path": path,
+                "matches": [], "total_matches": 0,
+            }))
+        result_matches = []
+        for match in matches[:500]:
+            file_path = getattr(match, "file", None) or ""
+            line_no = getattr(match, "line", None)
+            content = getattr(match, "content", None) or ""
+            result_matches.append({
+                "file": file_path, "line": line_no,
+                "content": content.rstrip(),
+            })
+        return ToolResult(output=json.dumps({
+            "pattern": pattern, "path": path,
+            "matches": result_matches, "total_matches": len(matches),
+        }))
+    except Exception as exc:
+        return ToolResult(output=str(exc), is_error=True)
 
 
 # ---------------------------------------------------------------------------
@@ -243,39 +268,44 @@ class DaytonaGrepTool(BaseTool):
 # ---------------------------------------------------------------------------
 
 
-class DaytonaGlobInput(BaseModel):
-    pattern: str = Field(description="Glob pattern to match file names (e.g. '*.py', 'test_*')")
-    path: str = Field(default=".", description="Root directory to search from")
+@tool(name="daytona_glob", description="Find files matching a glob pattern in the remote Daytona sandbox.", read_only=True)
+async def daytona_glob(
+    pattern: str,
+    path: str = ".",
+    *,
+    context: ToolExecutionContext,
+) -> ToolResult:
+    """Find files by glob pattern in the Daytona sandbox.
 
+    Args:
+        pattern: Glob pattern to match file names (e.g. '*.py', 'test_*')
+        path: Root directory to search from
 
-class DaytonaGlobTool(BaseTool):
-    """Find files by glob pattern in the Daytona sandbox."""
-
-    name = "daytona_glob"
-    description = "Find files matching a glob pattern in the remote Daytona sandbox."
-    input_model = DaytonaGlobInput
-
-    def is_read_only(self, arguments: BaseModel) -> bool:
-        return True
-
-    async def execute(self, arguments: DaytonaGlobInput, context: ToolExecutionContext) -> ToolResult:
-        sandbox = _get_sandbox(context)
-        cwd = _get_cwd(context)
-        path = arguments.path if arguments.path != "." else cwd
+    Returns:
+        pattern (str): Glob pattern used
+        path (str): Search root path
+        files (list): Matching file paths
+        total_files (int): Total files found
+    """
+    sandbox = _get_sandbox(context)
+    cwd = _get_cwd(context)
+    path = path if path != "." else cwd
+    try:
+        response = sandbox.fs.search_files(path, pattern)
+        files = getattr(response, "files", None) or []
+        return ToolResult(output=json.dumps({
+            "pattern": pattern, "path": path,
+            "files": files[:500], "total_files": len(files),
+        }))
+    except Exception as exc:
+        # Fallback: use shell glob via process.exec
         try:
-            response = sandbox.fs.search_files(path, arguments.pattern)
-            files = getattr(response, "files", None) or []
-            if not files:
-                return ToolResult(output=f"No files matching '{arguments.pattern}' in {path}")
-            output = "\n".join(files[:500])
-            if len(files) > 500:
-                output += f"\n\n... truncated ({len(files)} total, showing first 500)"
-            return ToolResult(output=_truncate(output))
-        except Exception as exc:
-            # Fallback: use shell glob via process.exec
-            try:
-                fallback_cmd = f"find {path} -name '{arguments.pattern}' 2>/dev/null | head -500"
-                resp = sandbox.process.exec(fallback_cmd, cwd=cwd, timeout=30)
-                return ToolResult(output=resp.result or f"No files matching '{arguments.pattern}'")
-            except Exception as fallback_exc:
-                return ToolResult(output=str(fallback_exc), is_error=True)
+            fallback_cmd = f"find {path} -name '{pattern}' 2>/dev/null | head -500"
+            resp = sandbox.process.exec(fallback_cmd, cwd=cwd, timeout=30)
+            file_list = [f for f in (resp.result or "").splitlines() if f.strip()]
+            return ToolResult(output=json.dumps({
+                "pattern": pattern, "path": path,
+                "files": file_list, "total_files": len(file_list),
+            }))
+        except Exception as fallback_exc:
+            return ToolResult(output=str(fallback_exc), is_error=True)

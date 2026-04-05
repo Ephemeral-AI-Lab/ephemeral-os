@@ -2,9 +2,9 @@
 
 from tools.base import BaseToolkit
 from tools.pipeline_context.context_tools import (
-    GetPipelineMetadataTool,
-    ListPipelineStepsTool,
-    QueryPipelineContextTool,
+    make_get_pipeline_metadata_tool,
+    make_list_pipeline_steps_tool,
+    make_query_pipeline_context_tool,
 )
 
 
@@ -22,9 +22,9 @@ class PipelineContextToolkit(BaseToolkit):
             name="pipeline_context",
             description="Query pipeline context map and metadata",
             tools=[
-                QueryPipelineContextTool(context_map=context_map),
-                ListPipelineStepsTool(context_map=context_map),
-                GetPipelineMetadataTool(
+                make_query_pipeline_context_tool(context_map=context_map),
+                make_list_pipeline_steps_tool(context_map=context_map),
+                make_get_pipeline_metadata_tool(
                     pipeline_meta=pipeline_meta,
                     current_step=current_step,
                 ),

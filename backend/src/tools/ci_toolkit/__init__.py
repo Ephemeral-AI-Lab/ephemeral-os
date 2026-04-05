@@ -6,14 +6,14 @@ access. All tools degrade gracefully if no CI service is configured.
 
 from tools.base import BaseToolkit
 from tools.ci_toolkit.query_tools import (
-    CIStatusTool,
-    EditHotspotsTool,
-    RecentChangesTool,
-    SymbolQueryTool,
-    SymbolReferencesTool,
-    WorkspaceStructureTool,
+    ci_status,
+    ci_edit_hotspots,
+    ci_recent_changes,
+    ci_query_symbols,
+    ci_query_references,
+    ci_workspace_structure,
 )
-from tools.ci_toolkit.file_tools import CIReadFileTool
+from tools.ci_toolkit.file_tools import ci_read_file
 
 
 class CIToolkit(BaseToolkit):
@@ -29,13 +29,13 @@ class CIToolkit(BaseToolkit):
             name="code_intelligence",
             description="Read-only code intelligence: symbols, structure, changes",
             tools=[
-                CIStatusTool(),
-                WorkspaceStructureTool(),
-                SymbolQueryTool(),
-                SymbolReferencesTool(),
-                EditHotspotsTool(),
-                RecentChangesTool(),
-                CIReadFileTool(),
+                ci_status,
+                ci_workspace_structure,
+                ci_query_symbols,
+                ci_query_references,
+                ci_edit_hotspots,
+                ci_recent_changes,
+                ci_read_file,
             ],
         )
 

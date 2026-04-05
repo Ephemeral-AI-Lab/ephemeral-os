@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from tools.base import BaseToolkit
-from tools.subagent.parallel_dispatch_tool import AgentRunFn, RunParallelAgentsTool
+from tools.subagent.parallel_dispatch_tool import AgentRunFn, make_run_parallel_agents_tool
 
 
 class SubagentToolkit(BaseToolkit):
@@ -13,7 +13,7 @@ class SubagentToolkit(BaseToolkit):
         super().__init__(
             name="subagent",
             description="Parallel agent dispatch: fan out work items to worker agents",
-            tools=[RunParallelAgentsTool(run_agent_fn=run_agent_fn)],
+            tools=[make_run_parallel_agents_tool(run_agent_fn=run_agent_fn)],
         )
 
 

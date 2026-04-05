@@ -27,7 +27,6 @@ from engine.stream_events import (
     ToolExecutionCompleted,
     ToolExecutionStarted,
 )
-from engine.text_tool_parser import parse_text_tool_calls
 from hooks import HookEvent, HookExecutor
 from tools.base import ToolExecutionContext, ToolRegistry
 
@@ -48,18 +47,11 @@ class QueryContext:
     session_state: "SessionState | None" = None
 
 
-async def run_query(
+async def _run_query_loop(
     context: QueryContext,
     messages: list[ConversationMessage],
 ) -> AsyncIterator[tuple[StreamEvent, UsageSnapshot | None]]:
-    """Run the conversation loop until the model stops requesting tools.
-
-    Auto-compaction is checked at the start of each turn.  When the
-    estimated token count exceeds the model's auto-compact threshold,
-    the engine first tries a cheap microcompact (clearing old tool result
-    content) and, if that is not enough, performs a full LLM-based
-    summarization of older messages.
-    """
+    """Inner loop — yields events. Runs until model stops requesting tools."""
     from utils.compact import (
         SessionState,
         auto_compact_if_needed,
@@ -103,44 +95,13 @@ async def run_query(
                 usage = event.usage
 
         if final_message is None:
-            raise RuntimeError("Model stream finished without a final message")
+            raise RuntimeError(
+                f"Model stream finished without a final message for model {context.model}. "
+                "Check that the API endpoint, authentication, and model name are correct."
+            )
 
         messages.append(final_message)
         yield AssistantTurnComplete(message=final_message, usage=usage), usage
-
-        # --- Text-based tool calls ([TOOL_CALL]...[/TOOL_CALL]) ----------
-        # Models like MiniMax embed tool calls as text markers instead of
-        # using the structured function-calling API.  We parse those markers,
-        # execute the tools, and feed results back as a user text message so
-        # the model sees them in its own format.
-        if not final_message.tool_uses and final_message.text:
-            text_tool_calls = parse_text_tool_calls(final_message.text)
-            if text_tool_calls:
-                result_parts: list[str] = []
-                for tc in text_tool_calls:
-                    yield ToolExecutionStarted(
-                        tool_name=tc.name, tool_input=tc.input,
-                    ), None
-                    result = await _execute_tool_call(
-                        context, tc.name, tc.id, tc.input,
-                    )
-                    yield ToolExecutionCompleted(
-                        tool_name=tc.name,
-                        output=result.content,
-                        is_error=result.is_error,
-                    ), None
-                    result_parts.append(
-                        f"[TOOL_RESULT]\n"
-                        f"tool: {tc.name}\n"
-                        f"{'error: true' + chr(10) if result.is_error else ''}"
-                        f"{result.content}\n"
-                        f"[/TOOL_RESULT]"
-                    )
-                # Feed results back as a user message in text format
-                messages.append(
-                    ConversationMessage.from_user_text("\n\n".join(result_parts))
-                )
-                continue  # next turn — model will see the results
 
         if not final_message.tool_uses:
             return
@@ -152,11 +113,14 @@ async def run_query(
             tc = tool_calls[0]
             yield ToolExecutionStarted(tool_name=tc.name, tool_input=tc.input), None
             result = await _execute_tool_call(context, tc.name, tc.id, tc.input)
-            yield ToolExecutionCompleted(
-                tool_name=tc.name,
-                output=result.content,
-                is_error=result.is_error,
-            ), None
+            yield (
+                ToolExecutionCompleted(
+                    tool_name=tc.name,
+                    output=result.content,
+                    is_error=result.is_error,
+                ),
+                None,
+            )
             tool_results = [result]
         else:
             # Multiple tools: execute concurrently, emit events after
@@ -170,15 +134,47 @@ async def run_query(
             tool_results = list(results)
 
             for tc, result in zip(tool_calls, tool_results):
-                yield ToolExecutionCompleted(
-                    tool_name=tc.name,
-                    output=result.content,
-                    is_error=result.is_error,
-                ), None
+                yield (
+                    ToolExecutionCompleted(
+                        tool_name=tc.name,
+                        output=result.content,
+                        is_error=result.is_error,
+                    ),
+                    None,
+                )
 
         messages.append(ConversationMessage(role="user", content=tool_results))
 
-    raise RuntimeError(f"Exceeded maximum turn limit ({context.max_turns})")
+    # Max turns reached — yield an error event instead of raising
+    yield (
+        ToolExecutionCompleted(
+            tool_name="",
+            output=f"Agent stopped: maximum turn limit ({context.max_turns}) reached. "
+            "The conversation was too long to complete in the allowed iterations.",
+            is_error=True,
+        ),
+        None,
+    )
+
+
+async def run_query(
+    context: QueryContext,
+    messages: list[ConversationMessage],
+) -> tuple[list[ConversationMessage], AsyncIterator[tuple[StreamEvent, UsageSnapshot | None]]]:
+    """Run the conversation loop until the model stops requesting tools.
+
+    Auto-compaction is checked at the start of each turn.  When the
+    estimated token count exceeds the model's auto-compact threshold,
+    the engine first tries a cheap microcompact (clearing old tool result
+    content) and, if that is not enough, performs a full LLM-based
+    summarization of older messages.
+
+    Returns:
+        (messages, event_stream) — messages is the updated conversation history
+        (may be a new list after compaction), and event_stream yields
+        (event, usage) tuples.
+    """
+    return messages, _run_query_loop(context, messages)
 
 
 async def _execute_tool_call(
@@ -190,7 +186,11 @@ async def _execute_tool_call(
     if context.hook_executor is not None:
         pre_hooks = await context.hook_executor.execute(
             HookEvent.PRE_TOOL_USE,
-            {"tool_name": tool_name, "tool_input": tool_input, "event": HookEvent.PRE_TOOL_USE.value},
+            {
+                "tool_name": tool_name,
+                "tool_input": tool_input,
+                "event": HookEvent.PRE_TOOL_USE.value,
+            },
         )
         if pre_hooks.blocked:
             return ToolResultBlock(
@@ -216,16 +216,24 @@ async def _execute_tool_call(
             is_error=True,
         )
 
-    result = await tool.execute(
-        parsed_input,
-        ToolExecutionContext(
-            cwd=context.cwd,
-            metadata={
-                "tool_registry": context.tool_registry,
-                **(context.tool_metadata or {}),
-            },
-        ),
-    )
+    try:
+        result = await tool.execute(
+            parsed_input,
+            ToolExecutionContext(
+                cwd=context.cwd,
+                metadata={
+                    "tool_registry": context.tool_registry,
+                    **(context.tool_metadata or {}),
+                },
+            ),
+        )
+    except Exception as exc:
+        return ToolResultBlock(
+            tool_use_id=tool_use_id,
+            content=f"Tool execution failed: {exc}",
+            is_error=True,
+        )
+
     tool_result = ToolResultBlock(
         tool_use_id=tool_use_id,
         content=result.output,

@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, useCallback, KeyboardEvent } from 'react'
 import { useTranscript } from '@/lib/hooks'
 import { useModal } from '@/lib/hooks'
 import { useConnected } from '@/lib/hooks'
-import type { TranscriptItem } from '@/lib/types'
+import type { TranscriptItem, PipelineConfig, PipelineRun } from '@/lib/types'
+import { fetchPipelines, startPipelineRun, fetchPipelineRun } from '@/lib/api'
 
 interface AgentSummary {
   name: string
@@ -311,9 +312,10 @@ function PromptInput({
   busy,
   agents,
   sandboxes,
-  selectedAgent,
+  pipelines,
+  selectedRunWith,
   selectedSandbox,
-  onAgentChange,
+  onRunWithChange,
   onSandboxChange,
 }: {
   onSubmit: (line: string, options?: { agent_name?: string; sandbox_id?: string }) => void
@@ -321,13 +323,17 @@ function PromptInput({
   busy: boolean
   agents: AgentSummary[]
   sandboxes: SandboxInfo[]
-  selectedAgent: string
+  pipelines: PipelineConfig[]
+  selectedRunWith: string
   selectedSandbox: string
-  onAgentChange: (v: string) => void
+  onRunWithChange: (v: string) => void
   onSandboxChange: (v: string) => void
 }) {
   const [value, setValue] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Parse selectedRunWith: "agent:<name>" or "pipeline:<id>" or ""
+  const selectedAgent = selectedRunWith.startsWith('agent:') ? selectedRunWith.slice(6) : ''
 
   useEffect(() => {
     textareaRef.current?.focus()
@@ -363,28 +369,41 @@ function PromptInput({
     }
   }
 
-  const hasSelectors = agents.length > 0 || sandboxes.length > 0
+  const hasSelectors = agents.length > 0 || sandboxes.length > 0 || pipelines.length > 0
 
   return (
     <div className="border-t border-zinc-800 bg-zinc-950 px-4 py-3">
       <div className="max-w-4xl mx-auto">
-        {/* Agent & Sandbox selectors */}
+        {/* Run with & Sandbox selectors */}
         {hasSelectors && (
           <div className="flex items-center gap-3 mb-2">
-            {agents.length > 0 && (
+            {(agents.length > 0 || pipelines.length > 0) && (
               <div className="flex items-center gap-1.5">
-                <label className="text-xs text-zinc-500">Agent</label>
+                <label className="text-xs text-zinc-500">Run with</label>
                 <select
-                  value={selectedAgent}
-                  onChange={e => onAgentChange(e.target.value)}
-                  className="rounded-lg bg-zinc-800 border border-zinc-700 px-2 py-1 text-xs text-zinc-300 outline-none focus:ring-1 focus:ring-blue-500 max-w-[180px]"
+                  value={selectedRunWith}
+                  onChange={e => onRunWithChange(e.target.value)}
+                  className="rounded-lg bg-zinc-800 border border-zinc-700 px-2 py-1 text-xs text-zinc-300 outline-none focus:ring-1 focus:ring-blue-500 max-w-[220px]"
                 >
-                  <option value="">Default</option>
-                  {agents.map(a => (
-                    <option key={a.name} value={a.name}>
-                      {a.name}
-                    </option>
-                  ))}
+                  <option value="">Default Agent</option>
+                  {agents.length > 0 && (
+                    <optgroup label="Agents">
+                      {agents.map(a => (
+                        <option key={a.name} value={`agent:${a.name}`}>
+                          {a.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {pipelines.length > 0 && (
+                    <optgroup label="Pipelines">
+                      {pipelines.map(p => (
+                        <option key={p.pipeline_id} value={`pipeline:${p.pipeline_id}`}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
               </div>
             )}
@@ -405,9 +424,9 @@ function PromptInput({
                 </select>
               </div>
             )}
-            {(selectedAgent || selectedSandbox) && (
+            {(selectedRunWith || selectedSandbox) && (
               <button
-                onClick={() => { onAgentChange(''); onSandboxChange('') }}
+                onClick={() => { onRunWithChange(''); onSandboxChange('') }}
                 className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
               >
                 Clear
@@ -537,6 +556,151 @@ function QuestionModal({
   )
 }
 
+// ── Pipeline run — rendered like normal agent messages ─────────────────────────
+
+function PipelineRunInline({ run }: { run: PipelineRun }) {
+  const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set())
+
+  const toggleStep = (name: string) => {
+    setExpandedSteps(prev => {
+      const next = new Set(prev)
+      if (next.has(name)) next.delete(name)
+      else next.add(name)
+      return next
+    })
+  }
+
+  const dotColor: Record<string, string> = {
+    pending: 'bg-zinc-600',
+    running: 'bg-blue-500 animate-pulse',
+    completed: 'bg-emerald-500',
+    failed: 'bg-red-500',
+    skipped: 'bg-zinc-700',
+  }
+
+  return (
+    <>
+      {/* Pipeline header — system-style message */}
+      <div className="flex justify-start mb-4">
+        <div className="max-w-[85%] rounded-2xl rounded-tl-md bg-zinc-800/80 px-4 py-2.5 text-sm text-zinc-300 border border-zinc-700">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xs font-semibold text-blue-400">Pipeline</span>
+            <span className="text-xs text-zinc-500">{run.step_records.length} steps</span>
+          </div>
+          {/* Step progress dots */}
+          <div className="flex items-center gap-3">
+            {run.step_records.map((step) => (
+              <div key={step.name} className="flex items-center gap-1" title={`${step.name}: ${step.status}`}>
+                <div className={`h-2 w-2 rounded-full ${dotColor[step.status] ?? 'bg-zinc-600'}`} />
+                <span className="text-[11px] text-zinc-500">{step.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Each completed/running step rendered as an assistant message */}
+      {run.step_records
+        .filter(s => s.status !== 'pending' && s.status !== 'skipped')
+        .map((step) => {
+          const output = run.context_map[step.name]
+          const responseText = step.metrics?.response_text ? String(step.metrics.response_text) : null
+          const isRunning = step.status === 'running'
+          const isFailed = step.status === 'failed'
+          const isExpanded = expandedSteps.has(step.name)
+
+          return (
+            <div key={step.name} className="flex justify-start mb-4">
+              <div className="max-w-[85%] rounded-2xl rounded-tl-md bg-zinc-800 px-4 py-3 text-sm text-zinc-200">
+                {/* Step header */}
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className={`h-2 w-2 rounded-full ${dotColor[step.status]}`} />
+                  <span className="text-xs font-semibold text-zinc-400">{step.name}</span>
+                  <span className="text-[10px] text-zinc-600">({step.agent})</span>
+                  {step.started_at && step.finished_at && (
+                    <span className="text-[10px] text-zinc-600">
+                      {(step.finished_at - step.started_at).toFixed(1)}s
+                    </span>
+                  )}
+                </div>
+
+                {/* Running indicator */}
+                {isRunning && (
+                  <div className="flex items-center gap-2 text-zinc-400">
+                    <span className="inline-block w-3 h-3 border-2 border-zinc-600 border-t-blue-400 rounded-full animate-spin" />
+                    <span className="text-xs">Running...</span>
+                  </div>
+                )}
+
+                {/* Failed error */}
+                {isFailed && step.error && (
+                  <p className="text-xs text-red-400">{step.error}</p>
+                )}
+
+                {/* Agent response text */}
+                {responseText && (
+                  <div className="mt-1 text-sm text-zinc-200 whitespace-pre-wrap">
+                    {responseText.length > 500 && !isExpanded
+                      ? responseText.slice(0, 500) + '...'
+                      : responseText}
+                    {responseText.length > 500 && (
+                      <button
+                        onClick={() => toggleStep(step.name)}
+                        className="ml-1 text-xs text-blue-400 hover:text-blue-300"
+                      >
+                        {isExpanded ? 'Show less' : 'Show more'}
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {/* Session link + structured output toggle */}
+                <div className="mt-2 flex items-center gap-3">
+                  {step.work_session_id && (
+                    <a
+                      href={`/sessions/${step.work_session_id}/runs`}
+                      className="text-[10px] text-zinc-600 hover:text-zinc-400 font-mono"
+                    >
+                      {step.work_session_id}
+                    </a>
+                  )}
+                  {output && (
+                    <button
+                      onClick={() => toggleStep(step.name + '-json')}
+                      className="text-[10px] text-zinc-600 hover:text-zinc-400"
+                    >
+                      {expandedSteps.has(step.name + '-json') ? 'Hide JSON' : 'Show JSON'}
+                    </button>
+                  )}
+                </div>
+                {output && expandedSteps.has(step.name + '-json') && (
+                  <pre className="mt-2 max-h-48 overflow-auto rounded-lg bg-zinc-950 p-3 text-xs text-zinc-400">
+                    {JSON.stringify(output, null, 2)}
+                  </pre>
+                )}
+              </div>
+            </div>
+          )
+        })}
+
+      {/* Pipeline completion / error summary */}
+      {(run.status === 'completed' || run.status === 'failed') && (
+        <div className="flex justify-start mb-4">
+          <div className={`max-w-[85%] rounded-2xl rounded-tl-md px-4 py-2.5 text-sm border ${
+            run.status === 'completed'
+              ? 'bg-emerald-900/20 border-emerald-800 text-emerald-300'
+              : 'bg-red-900/20 border-red-800 text-red-300'
+          }`}>
+            {run.status === 'completed'
+              ? `Pipeline completed (${run.completed_steps.length} steps)`
+              : `Pipeline failed: ${run.error}`}
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
 // ── ConversationPage ───────────────────────────────────────────────────────────
 
 export default function ConversationPage() {
@@ -547,10 +711,13 @@ export default function ConversationPage() {
   const sentinelRef = useRef<HTMLDivElement>(null)
   const [agents, setAgents] = useState<AgentSummary[]>([])
   const [sandboxes, setSandboxes] = useState<SandboxInfo[]>([])
-  const [selectedAgent, setSelectedAgent] = useState('')
+  const [selectedRunWith, setSelectedRunWith] = useState('')
   const [selectedSandbox, setSelectedSandbox] = useState('')
+  const [pipelines, setPipelines] = useState<PipelineConfig[]>([])
+  const [activePipelineRun, setActivePipelineRun] = useState<PipelineRun | null>(null)
+  const [pipelineGoalText, setPipelineGoalText] = useState<string | null>(null)
 
-  // Fetch agents and sandboxes when connected
+  // Fetch agents, sandboxes, and pipelines when connected
   useEffect(() => {
     if (!connected) return
     fetch('/api/agents')
@@ -561,18 +728,41 @@ export default function ConversationPage() {
       .then(r => r.ok ? r.json() : [])
       .then(data => setSandboxes(Array.isArray(data) ? data : []))
       .catch(() => {})
+    fetchPipelines().then(setPipelines).catch(() => {})
   }, [connected])
+
+  // Poll active pipeline run
+  useEffect(() => {
+    if (!activePipelineRun) return
+    if (activePipelineRun.status !== 'running' && activePipelineRun.status !== 'pending') return
+    const id = setInterval(async () => {
+      const updated = await fetchPipelineRun(activePipelineRun.run_id)
+      if (updated) setActivePipelineRun(updated)
+    }, 2000)
+    return () => clearInterval(id)
+  }, [activePipelineRun?.run_id, activePipelineRun?.status])
 
   // Auto-scroll to bottom when items or streaming text change
   useEffect(() => {
     sentinelRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [items, streamingText, streamingThinking])
 
-  const handleSubmit = useCallback((line: string, options?: { agent_name?: string; sandbox_id?: string }) => {
+  const handleSubmit = useCallback(async (line: string, options?: { agent_name?: string; sandbox_id?: string }) => {
+    if (selectedRunWith.startsWith('pipeline:')) {
+      const pipelineId = selectedRunWith.slice(9)
+      // Show the user's message in the conversation
+      setPipelineGoalText(line)
+      // Start pipeline execution — returns run_id immediately
+      const { run_id } = await startPipelineRun(pipelineId, line)
+      // Fetch the pre-created run and start polling
+      const run = await fetchPipelineRun(run_id)
+      if (run) setActivePipelineRun(run)
+      return
+    }
     submitLine(line, options)
-  }, [submitLine])
+  }, [submitLine, selectedRunWith])
 
-  const isEmpty = items.length === 0 && !streamingText && !streamingThinking
+  const isEmpty = items.length === 0 && !streamingText && !streamingThinking && !pipelineGoalText && !activePipelineRun
 
   return (
     <div className="flex flex-col h-full bg-zinc-950">
@@ -590,6 +780,10 @@ export default function ConversationPage() {
               ))}
               <StreamingThinkingIndicator text={streamingThinking} />
               <StreamingIndicator text={streamingText} />
+              {pipelineGoalText && (
+                <MessageBubble item={{ role: 'user', text: pipelineGoalText }} />
+              )}
+              {activePipelineRun && <PipelineRunInline run={activePipelineRun} />}
             </>
           )}
           <div ref={sentinelRef} />
@@ -620,9 +814,10 @@ export default function ConversationPage() {
         busy={busy}
         agents={agents}
         sandboxes={sandboxes}
-        selectedAgent={selectedAgent}
+        pipelines={pipelines}
+        selectedRunWith={selectedRunWith}
         selectedSandbox={selectedSandbox}
-        onAgentChange={setSelectedAgent}
+        onRunWithChange={setSelectedRunWith}
         onSandboxChange={setSelectedSandbox}
       />
     </div>

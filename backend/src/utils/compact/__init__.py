@@ -31,16 +31,18 @@ log = logging.getLogger(__name__)
 # Constants (from Claude Code microCompact.ts / autoCompact.ts)
 # ---------------------------------------------------------------------------
 
-COMPACTABLE_TOOLS: frozenset[str] = frozenset({
-    "read_file",
-    "bash",
-    "grep",
-    "glob",
-    "web_search",
-    "web_fetch",
-    "edit_file",
-    "write_file",
-})
+COMPACTABLE_TOOLS: frozenset[str] = frozenset(
+    {
+        "read_file",
+        "bash",
+        "grep",
+        "glob",
+        "web_search",
+        "web_fetch",
+        "edit_file",
+        "write_file",
+    }
+)
 
 TIME_BASED_MC_CLEARED_MESSAGE = "[Old tool result content cleared]"
 
@@ -64,6 +66,7 @@ _DEFAULT_CONTEXT_WINDOW = 200_000
 # Token estimation
 # ---------------------------------------------------------------------------
 
+
 def estimate_message_tokens(messages: list[ConversationMessage]) -> int:
     """Estimate total tokens for a conversation, including the 4/3 padding."""
     total = 0
@@ -82,6 +85,7 @@ def estimate_message_tokens(messages: list[ConversationMessage]) -> int:
 # ---------------------------------------------------------------------------
 # Microcompact — clear old tool results to reduce tokens cheaply
 # ---------------------------------------------------------------------------
+
 
 def _collect_compactable_tool_ids(messages: list[ConversationMessage]) -> list[str]:
     """Walk messages and collect tool_use IDs whose results are compactable."""
@@ -141,7 +145,9 @@ def microcompact_messages(
         msg.content = new_content
 
     if tokens_saved > 0:
-        log.info("Microcompact cleared %d tool results, saved ~%d tokens", len(clear_set), tokens_saved)
+        log.info(
+            "Microcompact cleared %d tool results, saved ~%d tokens", len(clear_set), tokens_saved
+        )
 
     return messages, tokens_saved
 
@@ -237,6 +243,7 @@ def build_compact_summary_message(
 # Auto-compact tracking
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class SessionState:
     """Mutable state that persists across ephemeral agent runs.
@@ -271,6 +278,7 @@ class SessionState:
 # Context window helpers
 # ---------------------------------------------------------------------------
 
+
 def get_context_window(model: str) -> int:
     """Return the context window size for a model (conservative defaults)."""
     # All current Claude models share the same window; adjust per-family as needed.
@@ -302,6 +310,7 @@ def should_autocompact(
 # Full compact execution (calls the LLM)
 # ---------------------------------------------------------------------------
 
+
 async def compact_conversation(
     messages: list[ConversationMessage],
     *,
@@ -321,7 +330,7 @@ async def compact_conversation(
 
     Args:
         messages: The full conversation history.
-        api_client: An ``AnthropicApiClient`` or compatible for the summary call.
+        api_client: An API client implementing SupportsStreamingMessages for the summary call.
         model: Model ID to use for the summary.
         system_prompt: System prompt for the summary call.
         preserve_recent: Number of recent messages to keep verbatim.
@@ -379,8 +388,10 @@ async def compact_conversation(
     post_compact_tokens = estimate_message_tokens(result)
     log.info(
         "Compaction done: %d -> %d messages, ~%d -> ~%d tokens (saved ~%d)",
-        len(messages), len(result),
-        pre_compact_tokens, post_compact_tokens,
+        len(messages),
+        len(result),
+        pre_compact_tokens,
+        post_compact_tokens,
         pre_compact_tokens - post_compact_tokens,
     )
     return result
@@ -389,6 +400,7 @@ async def compact_conversation(
 # ---------------------------------------------------------------------------
 # Auto-compact integration (called from query loop)
 # ---------------------------------------------------------------------------
+
 
 async def auto_compact_if_needed(
     messages: list[ConversationMessage],

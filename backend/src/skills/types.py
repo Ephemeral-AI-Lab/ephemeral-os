@@ -14,3 +14,5 @@ class SkillDefinition:
     content: str
     source: str
     path: str | None = None
+    references: dict[str, str] = field(default_factory=dict)
+    """Mapping of reference name → file content, lazily loadable."""

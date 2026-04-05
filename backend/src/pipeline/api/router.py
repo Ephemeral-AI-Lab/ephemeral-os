@@ -81,70 +81,7 @@ def create_pipeline_router(
 
         return [t.model_dump(mode="json") for t in load_bundled_templates()]
 
-    @router.get("/{pipeline_id}")
-    async def get_pipeline(pipeline_id: str) -> dict[str, Any]:
-        store = _require_store()
-        config = store.get_pipeline(pipeline_id)
-        if config is None:
-            raise HTTPException(status_code=404, detail="Pipeline not found")
-        return config.model_dump(mode="json")
-
-    @router.put("/{pipeline_id}")
-    async def update_pipeline(
-        pipeline_id: str, config: PipelineConfig
-    ) -> dict[str, Any]:
-        store = _require_store()
-        if config.pipeline_id != pipeline_id:
-            raise HTTPException(
-                status_code=400, detail="pipeline_id in body must match URL"
-            )
-        store.save_pipeline(config)
-        return config.model_dump(mode="json")
-
-    @router.delete("/{pipeline_id}")
-    async def delete_pipeline(pipeline_id: str) -> dict[str, str]:
-        store = _require_store()
-        if not store.delete_pipeline(pipeline_id):
-            raise HTTPException(status_code=404, detail="Pipeline not found")
-        return {"status": "deleted"}
-
-    # -- Pipeline execution ---------------------------------------------------
-
-    @router.post("/{pipeline_id}/run")
-    async def start_pipeline_run(
-        pipeline_id: str, request: RunPipelineRequest
-    ) -> dict[str, Any]:
-        store = _require_store()
-        config = store.get_pipeline(pipeline_id)
-        if config is None:
-            raise HTTPException(status_code=404, detail="Pipeline not found")
-
-        session = get_session()
-        if session.config is None:
-            raise HTTPException(status_code=503, detail="Session not initialized")
-
-        from pipeline.runner import run_pipeline
-
-        async def _run() -> None:
-            try:
-                await run_pipeline(
-                    config,
-                    request.goal,
-                    session_config=session.config,
-                    store=store,
-                )
-            except Exception:
-                logger.exception("Pipeline run failed for %s", pipeline_id)
-
-        task = asyncio.create_task(_run())
-        # Generate a run_id preview (the actual run_id is created inside run_pipeline)
-        # We return pipeline_id so the client can poll via list_runs
-        _active_runs[pipeline_id] = task
-        task.add_done_callback(lambda _: _active_runs.pop(pipeline_id, None))
-
-        return {"status": "started", "pipeline_id": pipeline_id}
-
-    # -- Run queries ----------------------------------------------------------
+    # -- Run queries (MUST come before /{pipeline_id} to avoid path capture) --
 
     @router.get("/runs/{run_id}")
     async def get_run(run_id: str) -> dict[str, Any]:
@@ -153,14 +90,6 @@ def create_pipeline_router(
         if run is None:
             raise HTTPException(status_code=404, detail="Run not found")
         return asdict(run)
-
-    @router.get("/{pipeline_id}/runs")
-    async def list_runs(pipeline_id: str) -> list[dict[str, Any]]:
-        store = _require_store()
-        runs = await store.list_runs(pipeline_id=pipeline_id)
-        return [asdict(r) for r in runs]
-
-    # -- Checkpoints & resume -------------------------------------------------
 
     @router.get("/runs/{run_id}/checkpoints")
     async def list_checkpoints(run_id: str) -> list[dict[str, Any]]:
@@ -226,5 +155,91 @@ def create_pipeline_router(
             raise HTTPException(status_code=404, detail="No active run found")
         task.cancel()
         return {"status": "cancelled"}
+
+    # -- Pipeline by ID (after /runs/ routes to avoid path capture) -----------
+
+    @router.get("/{pipeline_id}")
+    async def get_pipeline(pipeline_id: str) -> dict[str, Any]:
+        store = _require_store()
+        config = store.get_pipeline(pipeline_id)
+        if config is None:
+            raise HTTPException(status_code=404, detail="Pipeline not found")
+        return config.model_dump(mode="json")
+
+    @router.put("/{pipeline_id}")
+    async def update_pipeline(
+        pipeline_id: str, config: PipelineConfig
+    ) -> dict[str, Any]:
+        store = _require_store()
+        if config.pipeline_id != pipeline_id:
+            raise HTTPException(
+                status_code=400, detail="pipeline_id in body must match URL"
+            )
+        store.save_pipeline(config)
+        return config.model_dump(mode="json")
+
+    @router.delete("/{pipeline_id}")
+    async def delete_pipeline(pipeline_id: str) -> dict[str, str]:
+        store = _require_store()
+        if not store.delete_pipeline(pipeline_id):
+            raise HTTPException(status_code=404, detail="Pipeline not found")
+        return {"status": "deleted"}
+
+    @router.get("/{pipeline_id}/runs")
+    async def list_runs(pipeline_id: str) -> list[dict[str, Any]]:
+        store = _require_store()
+        runs = await store.list_runs(pipeline_id=pipeline_id)
+        return [asdict(r) for r in runs]
+
+    # -- Pipeline execution ---------------------------------------------------
+
+    @router.post("/{pipeline_id}/run")
+    async def start_pipeline_run(
+        pipeline_id: str, request: RunPipelineRequest
+    ) -> dict[str, Any]:
+        store = _require_store()
+        config = store.get_pipeline(pipeline_id)
+        if config is None:
+            raise HTTPException(status_code=404, detail="Pipeline not found")
+
+        session = get_session()
+        if session.config is None:
+            raise HTTPException(status_code=503, detail="Session not initialized")
+
+        from uuid import uuid4
+        from pipeline.models import PipelineRun, PipelineRunStatus, StepRecord, StepStatus
+
+        # Create run record synchronously so the client can poll immediately
+        run_id = uuid4().hex[:12]
+        run = PipelineRun(
+            run_id=run_id,
+            pipeline_id=pipeline_id,
+            goal=request.goal,
+            status=PipelineRunStatus.PENDING,
+            step_records=[
+                StepRecord(name=s.name, agent=s.agent, status=StepStatus.PENDING)
+                for s in config.steps if s.enabled
+            ],
+        )
+        await store.create_run(run)
+
+        from pipeline.runner import run_pipeline_with_run
+
+        async def _run() -> None:
+            try:
+                await run_pipeline_with_run(
+                    config,
+                    run,
+                    session_config=session.config,
+                    store=store,
+                )
+            except Exception:
+                logger.exception("Pipeline run failed for %s", pipeline_id)
+
+        task = asyncio.create_task(_run())
+        _active_runs[run_id] = task
+        task.add_done_callback(lambda _: _active_runs.pop(run_id, None))
+
+        return {"status": "started", "pipeline_id": pipeline_id, "run_id": run_id}
 
     return router

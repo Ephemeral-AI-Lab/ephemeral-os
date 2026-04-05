@@ -7,6 +7,7 @@ from tools.base import (
     ToolRegistry,
     ToolResult,
 )
+from tools.decorator import tool
 
 
 def create_default_tool_registry() -> ToolRegistry:
@@ -21,4 +22,5 @@ __all__ = [
     "ToolExecutionContext",
     "ToolRegistry",
     "ToolResult",
+    "tool",
 ]

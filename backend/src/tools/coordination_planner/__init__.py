@@ -1,10 +1,10 @@
 """Coordination planner toolkit — agent discovery and phase context queries."""
 
 from tools.base import BaseToolkit
-from tools.coordination_planner.list_agents_tool import ListAgentsTool
+from tools.coordination_planner.list_agents_tool import make_list_agents_tool
 from tools.coordination_planner.phase_context_tool import (
-    ListPhasesTool,
-    QueryPhaseContextTool,
+    make_list_phases_tool,
+    make_query_phase_context_tool,
 )
 
 
@@ -21,9 +21,9 @@ class CoordinationPlannerToolkit(BaseToolkit):
             name="coordination_planner",
             description="Agent discovery and planning phase context queries",
             tools=[
-                ListAgentsTool(agent_names=agent_names),
-                QueryPhaseContextTool(phase_outputs=phase_outputs or {}),
-                ListPhasesTool(phase_outputs=phase_outputs or {}),
+                make_list_agents_tool(agent_names=agent_names),
+                make_query_phase_context_tool(phase_outputs=phase_outputs or {}),
+                make_list_phases_tool(phase_outputs=phase_outputs or {}),
             ],
         )
 

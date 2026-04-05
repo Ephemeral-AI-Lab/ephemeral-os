@@ -47,7 +47,6 @@ def test_build_runtime_system_prompt_combines_sections(tmp_path: Path, monkeypat
     assert "Environment" in prompt
     assert "Project Instructions" in prompt
     assert "repo rules" in prompt
-    assert "Memory" in prompt
 
 
 def test_build_runtime_system_prompt_includes_project_context_and_fast_mode(tmp_path: Path, monkeypatch):

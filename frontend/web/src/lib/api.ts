@@ -367,7 +367,7 @@ export async function deletePipeline(id: string): Promise<void> {
   await fetch(`${PIPELINE_BASE}/${id}`, { method: 'DELETE' })
 }
 
-export async function startPipelineRun(pipelineId: string, goal: string): Promise<{ status: string; pipeline_id: string }> {
+export async function startPipelineRun(pipelineId: string, goal: string): Promise<{ status: string; pipeline_id: string; run_id: string }> {
   const res = await fetch(`${PIPELINE_BASE}/${pipelineId}/run`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

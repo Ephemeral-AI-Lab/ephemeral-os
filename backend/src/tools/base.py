@@ -27,6 +27,65 @@ class ToolResult:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
+_TYPE_MAP = {
+    "str": "string", "string": "string",
+    "int": "integer", "integer": "integer",
+    "float": "number", "number": "number",
+    "bool": "boolean", "boolean": "boolean",
+    "list": "array", "array": "array",
+    "dict": "object", "object": "object",
+}
+
+
+def _parse_returns_schema(docstring: str | None) -> dict[str, Any] | None:
+    """Parse a ``Returns:`` section from a docstring into JSON Schema.
+
+    Supports two formats::
+
+        Returns:
+            field_name (type): Description of the field
+            field_name: Description (defaults to type "string")
+    """
+    import re
+
+    if not docstring:
+        return None
+
+    match = re.search(r"Returns:\s*\n((?:\s+.*\n?)*)", docstring)
+    if not match:
+        return None
+
+    block = match.group(1)
+    properties: dict[str, Any] = {}
+    required: list[str] = []
+
+    for line in block.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        # field_name (type): description
+        m = re.match(r"(\w+)\s*\((\w+)\)\s*:\s*(.*)", line)
+        if m:
+            name, typ, desc = m.group(1), m.group(2), m.group(3).strip()
+            properties[name] = {
+                "type": _TYPE_MAP.get(typ.lower(), "string"),
+                "description": desc,
+            }
+            required.append(name)
+            continue
+        # field_name: description
+        m = re.match(r"(\w+)\s*:\s*(.*)", line)
+        if m:
+            name, desc = m.group(1), m.group(2).strip()
+            properties[name] = {"type": "string", "description": desc}
+            required.append(name)
+
+    if not properties:
+        return None
+
+    return {"type": "object", "properties": properties, "required": required}
+
+
 class BaseTool(ABC):
     """Base class for all EphemeralOS tools."""
 
@@ -43,13 +102,26 @@ class BaseTool(ABC):
         del arguments
         return False
 
+    def output_schema(self) -> dict[str, Any] | None:
+        """Return the output JSON Schema, parsed from the class docstring.
+
+        If the subclass docstring has a ``Returns:`` section, it is
+        automatically converted to a JSON Schema.  Returns ``None``
+        if no output schema is documented.
+        """
+        return _parse_returns_schema(self.__class__.__doc__)
+
     def to_api_schema(self) -> dict[str, Any]:
         """Return the tool schema expected by the Anthropic Messages API."""
-        return {
+        schema: dict[str, Any] = {
             "name": self.name,
             "description": self.description,
             "input_schema": self.input_model.model_json_schema(),
         }
+        out = self.output_schema()
+        if out is not None:
+            schema["output_schema"] = out
+        return schema
 
 
 class BaseToolkit:
@@ -60,9 +132,11 @@ class BaseToolkit:
         name: str,
         description: str,
         tools: list[BaseTool] | None = None,
+        instructions: str | None = None,
     ) -> None:
         self.name = name
         self.description = description
+        self.instructions = instructions
         self._tools: dict[str, BaseTool] = {}
         for tool in tools or []:
             self.register(tool)

@@ -26,6 +26,12 @@ def get_bundled_skills() -> list[SkillDefinition]:
             if skill_md.exists():
                 content = skill_md.read_text(encoding="utf-8")
                 name, description = _parse_frontmatter(skill_dir.name, content)
+                # Discover reference files in references/ subdirectory
+                references: dict[str, str] = {}
+                refs_dir = skill_dir / "references"
+                if refs_dir.is_dir():
+                    for ref_file in sorted(refs_dir.glob("*.md")):
+                        references[ref_file.stem] = ref_file.read_text(encoding="utf-8")
                 skills.append(
                     SkillDefinition(
                         name=name,
@@ -33,6 +39,7 @@ def get_bundled_skills() -> list[SkillDefinition]:
                         content=content,
                         source="bundled",
                         path=str(skill_dir),
+                        references=references,
                     )
                 )
 
