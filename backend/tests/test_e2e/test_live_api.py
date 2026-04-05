@@ -576,7 +576,7 @@ class TestLiveMultipleToolCallsWithModelKey:
         create_resp = minimax_client.post("/api/agents/", json={
             "name": agent_name,
             "description": "Agent using model_key with multiple tools",
-            "model": "minimax",
+            "model": MINIMAX_MODEL,
             "toolkits": ["sandbox_operations"],
             "system_prompt": (
                 "You are a coding assistant with sandbox tools. "
@@ -591,7 +591,7 @@ class TestLiveMultipleToolCallsWithModelKey:
             get_resp = minimax_client.get(f"/api/agents/{agent_name}")
             assert get_resp.status_code == 200, create_resp.text
             agent_payload = get_resp.json()
-        assert agent_payload["model"] == "minimax"
+        assert agent_payload["model"] == MINIMAX_MODEL
 
         resp = minimax_client.post(
             "/api/chat",
@@ -630,7 +630,7 @@ class TestLiveMultipleToolCallsWithModelKey:
         create_resp = minimax_client.post("/api/agents/", json={
             "name": agent_name,
             "description": "Chain three tools using model_key",
-            "model": "minimax",
+            "model": MINIMAX_MODEL,
             "toolkits": ["sandbox_operations"],
             "system_prompt": (
                 "Complete every requested step using tools and do not stop early. "
@@ -643,7 +643,7 @@ class TestLiveMultipleToolCallsWithModelKey:
             get_resp = minimax_client.get(f"/api/agents/{agent_name}")
             assert get_resp.status_code == 200, create_resp.text
             agent_payload = get_resp.json()
-        assert agent_payload["model"] == "minimax"
+        assert agent_payload["model"] == MINIMAX_MODEL
 
         resp = minimax_client.post(
             "/api/chat",
