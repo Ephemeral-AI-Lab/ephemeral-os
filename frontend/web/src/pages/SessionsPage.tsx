@@ -104,7 +104,6 @@ export default function SessionsPage() {
             <thead className="border-b border-zinc-800 bg-zinc-900/80 text-left text-xs text-zinc-500">
               <tr>
                 <th className="px-4 py-2">Summary</th>
-                <th className="px-4 py-2">Model</th>
                 <th className="px-4 py-2 text-right">Messages</th>
                 <th className="px-4 py-2 text-right">Prompt Tokens</th>
                 <th className="px-4 py-2 text-right">Completion Tokens</th>
@@ -124,9 +123,6 @@ export default function SessionsPage() {
                   >
                     <td className="max-w-xs truncate px-4 py-2.5 font-medium text-zinc-100">
                       {s.summary || s.session_id.slice(0, 8)}
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-xs">{s.model}</span>
                     </td>
                     <td className="px-4 py-2.5 text-right">{s.message_count}</td>
                     <td className="px-4 py-2.5 text-right font-mono text-xs">

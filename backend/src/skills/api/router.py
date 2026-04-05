@@ -1,17 +1,53 @@
-"""Skills API router — DB-backed CRUD with keybinding support."""
+"""Skills API router — DB-backed CRUD with packaged skill file browsing."""
 
 from __future__ import annotations
 
-import logging
+from pathlib import Path
 from typing import Any, Callable, TYPE_CHECKING
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
     from ephemeralos.skills.db.store import SkillDefinitionStore
 
-logger = logging.getLogger(__name__)
+# Packaged skills directory — read-only skill content shipped with the codebase
+_PACKAGED_SKILLS_DIR = Path(__file__).resolve().parent.parent / "bundled" / "content"
+
+
+def _resolve_packaged_skill_dir(name: str) -> Path | None:
+    """Find the on-disk directory for a packaged skill by name."""
+    candidate = _PACKAGED_SKILLS_DIR / name
+    if candidate.is_dir():
+        return candidate
+    return None
+
+
+def _build_file_tree(root: Path, base: Path | None = None) -> list[dict[str, Any]]:
+    """Recursively build a file tree listing."""
+    if base is None:
+        base = root
+    entries: list[dict[str, Any]] = []
+    for item in sorted(root.iterdir()):
+        if item.name.startswith(".") or item.name == "__pycache__":
+            continue
+        rel = str(item.relative_to(base))
+        if item.is_dir():
+            entries.append({
+                "name": item.name,
+                "type": "directory",
+                "path": rel,
+                "children": _build_file_tree(item, base),
+            })
+        else:
+            entries.append({
+                "name": item.name,
+                "type": "file",
+                "path": rel,
+                "size": item.stat().st_size,
+            })
+    return entries
 
 
 # ---------------------------------------------------------------------------
@@ -23,13 +59,11 @@ class SkillCreate(BaseModel):
     name: str = Field(min_length=1, max_length=128)
     description: str = Field(min_length=1)
     content: str = Field(min_length=1)
-    keybinding: str | None = None
 
 
 class SkillUpdate(BaseModel):
     description: str | None = None
     content: str | None = None
-    keybinding: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -57,8 +91,6 @@ def create_skills_router(
             {
                 "name": r.name,
                 "description": r.description,
-                "source": r.source,
-                "keybinding": r.keybinding,
             }
             for r in records
         ]
@@ -73,8 +105,6 @@ def create_skills_router(
             "name": record.name,
             "description": record.description,
             "content": record.content,
-            "source": record.source,
-            "keybinding": record.keybinding,
             "version": record.version,
             "created_at": record.created_at.isoformat() if record.created_at else None,
             "updated_at": record.updated_at.isoformat() if record.updated_at else None,
@@ -94,8 +124,6 @@ def create_skills_router(
             name=body.name,
             description=body.description,
             content=body.content,
-            source="user",
-            keybinding=body.keybinding,
         )
         record = store.create(record)
         return {"name": record.name, "message": f"Skill '{record.name}' created"}
@@ -113,7 +141,6 @@ def create_skills_router(
         return {
             "name": record.name,
             "description": record.description,
-            "keybinding": record.keybinding,
             "version": record.version,
         }
 
@@ -124,5 +151,37 @@ def create_skills_router(
         if not ok:
             raise HTTPException(status_code=404, detail=f"Skill '{name}' not found")
         return {"deleted": name}
+
+    @router.get("/{name}/files")
+    async def list_packaged_skill_files(name: str) -> dict[str, Any]:
+        """Return the file tree for a packaged skill's on-disk directory."""
+        skill_dir = _resolve_packaged_skill_dir(name)
+        if skill_dir is None:
+            return {"name": name, "tree": []}
+        return {"name": name, "tree": _build_file_tree(skill_dir)}
+
+    @router.get("/{name}/files/{file_path:path}")
+    async def get_packaged_skill_file(name: str, file_path: str) -> PlainTextResponse:
+        """Serve a specific file from a packaged skill's directory."""
+        skill_dir = _resolve_packaged_skill_dir(name)
+        if skill_dir is None:
+            raise HTTPException(status_code=404, detail=f"Packaged skill directory for '{name}' not found")
+
+        target = (skill_dir / file_path).resolve()
+        # Prevent path traversal
+        try:
+            target.relative_to(skill_dir)
+        except ValueError:
+            raise HTTPException(status_code=403, detail="Path traversal not allowed")
+
+        if not target.is_file():
+            raise HTTPException(status_code=404, detail=f"File '{file_path}' not found")
+
+        try:
+            content = target.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            raise HTTPException(status_code=415, detail="Binary files not supported")
+
+        return PlainTextResponse(content)
 
     return router

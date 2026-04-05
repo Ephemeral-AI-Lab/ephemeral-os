@@ -60,6 +60,9 @@ class AgentRunStore:
         *,
         status: str = "completed",
         response: dict | None = None,
+        message_history: list | None = None,
+        compacted_history: list | None = None,
+        reasoning: str | None = None,
         error: str | None = None,
         event_count: int = 0,
     ) -> AgentRunRecord | None:
@@ -69,6 +72,9 @@ class AgentRunStore:
                 return None
             record.status = status
             record.response = response
+            record.message_history = message_history
+            record.compacted_history = compacted_history
+            record.reasoning = reasoning
             record.error = error
             record.event_count = event_count
             record.finished_at = datetime.now(timezone.utc)

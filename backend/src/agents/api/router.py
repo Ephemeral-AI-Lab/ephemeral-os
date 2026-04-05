@@ -44,7 +44,8 @@ def create_agents_router(
         defs = list_definitions(source=source)
         return [
             {"name": d.name, "description": d.description, "source": d.source,
-             "model": d.model, "subagent_type": d.subagent_type,
+             "model": d.model, "model_key": d.model,
+             "subagent_type": d.subagent_type,
              "background": d.background}
             for d in defs
         ]

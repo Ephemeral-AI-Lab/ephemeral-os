@@ -14,6 +14,7 @@ from ephemeralos.models.types import (
     ApiMessageRequest,
     ApiStreamEvent,
     ApiTextDeltaEvent,
+    ApiThinkingDeltaEvent,
     UsageSnapshot,
 )
 from ephemeralos.models.errors import (
@@ -26,6 +27,7 @@ from ephemeralos.engine.messages import (
     ConversationMessage,
     ContentBlock,
     TextBlock,
+    ThinkingBlock,
     ToolResultBlock,
     ToolUseBlock,
 )
@@ -108,10 +110,10 @@ def _convert_assistant_message(msg: ConversationMessage) -> dict[str, Any]:
 
     Providers with thinking models (e.g. Kimi k2.5) require a
     ``reasoning_content`` field on every assistant message that contains
-    tool calls.  We stash the raw reasoning text on ``msg._reasoning``
-    during parsing and replay it here.
+    tool calls.  ThinkingBlock content is replayed as ``reasoning_content``.
     """
     text_parts = [b.text for b in msg.content if isinstance(b, TextBlock)]
+    thinking_parts = [b.text for b in msg.content if isinstance(b, ThinkingBlock)]
     tool_uses = [b for b in msg.content if isinstance(b, ToolUseBlock)]
 
     openai_msg: dict[str, Any] = {"role": "assistant"}
@@ -119,8 +121,8 @@ def _convert_assistant_message(msg: ConversationMessage) -> dict[str, Any]:
     content = "".join(text_parts)
     openai_msg["content"] = content if content else None
 
-    # Replay reasoning_content for thinking models (stored by streaming parser)
-    reasoning = getattr(msg, "_reasoning", None)
+    # Replay reasoning_content for thinking models from ThinkingBlock content
+    reasoning = "".join(thinking_parts)
     if reasoning:
         openai_msg["reasoning_content"] = reasoning
     elif tool_uses:
@@ -250,10 +252,11 @@ class OpenAICompatibleClient:
             if chunk_finish:
                 finish_reason = chunk_finish
 
-            # Accumulate reasoning_content from thinking models (not shown to user)
+            # Stream reasoning_content from thinking models
             reasoning_piece = getattr(delta, "reasoning_content", None) or ""
             if reasoning_piece:
                 collected_reasoning += reasoning_piece
+                yield ApiThinkingDeltaEvent(text=reasoning_piece)
 
             # Stream text content to user
             if delta.content:
@@ -288,6 +291,8 @@ class OpenAICompatibleClient:
 
         # Build the final ConversationMessage
         content: list[ContentBlock] = []
+        if collected_reasoning:
+            content.append(ThinkingBlock(text=collected_reasoning))
         if collected_content:
             content.append(TextBlock(text=collected_content))
 
@@ -307,11 +312,6 @@ class OpenAICompatibleClient:
             ))
 
         final_message = ConversationMessage(role="assistant", content=content)
-
-        # Stash reasoning for thinking models so _convert_assistant_message
-        # can replay it when the message is sent back to the API
-        if collected_reasoning:
-            final_message._reasoning = collected_reasoning  # type: ignore[attr-defined]
 
         yield ApiMessageCompleteEvent(
             message=final_message,

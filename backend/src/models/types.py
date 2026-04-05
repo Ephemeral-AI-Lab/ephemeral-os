@@ -44,6 +44,13 @@ class ApiMessageRequest:
 
 
 @dataclass(frozen=True)
+class ApiThinkingDeltaEvent:
+    """Incremental thinking/reasoning content from the model."""
+
+    text: str
+
+
+@dataclass(frozen=True)
 class ApiTextDeltaEvent:
     """Incremental text produced by the model."""
 
@@ -59,7 +66,7 @@ class ApiMessageCompleteEvent:
     stop_reason: str | None = None
 
 
-ApiStreamEvent = ApiTextDeltaEvent | ApiMessageCompleteEvent
+ApiStreamEvent = ApiThinkingDeltaEvent | ApiTextDeltaEvent | ApiMessageCompleteEvent
 
 
 # ---------------------------------------------------------------------------

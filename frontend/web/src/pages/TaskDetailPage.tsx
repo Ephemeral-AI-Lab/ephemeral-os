@@ -132,11 +132,11 @@ export default function TaskDetailPage() {
       {/* Header */}
       <header className="border-b border-zinc-800 px-6 py-4 flex items-center justify-between">
         <Link
-          to="/dashboard"
+          to="/toolkits"
           className="flex items-center gap-2 text-sm text-zinc-400 hover:text-zinc-100 transition-colors"
         >
           <span aria-hidden>←</span>
-          Back to Dashboard
+          Back to Toolkits
         </Link>
         <span className="text-sm text-zinc-500 font-mono">Task: {taskId}</span>
       </header>

@@ -129,15 +129,15 @@
   },
   "hotPaths": [
     {
-      "path": "src/ephemeralos/cli.py",
-      "accessCount": 37,
-      "lastAccessed": 1775336810797,
+      "path": "pyproject.toml",
+      "accessCount": 39,
+      "lastAccessed": 1775374472710,
       "type": "file"
     },
     {
-      "path": "pyproject.toml",
+      "path": "src/ephemeralos/cli.py",
       "accessCount": 37,
-      "lastAccessed": 1775342723255,
+      "lastAccessed": 1775336810797,
       "type": "file"
     },
     {

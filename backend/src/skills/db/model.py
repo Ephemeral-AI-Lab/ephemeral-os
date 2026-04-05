@@ -20,7 +20,6 @@ class SkillDefinitionRecord(Base):
     description: Mapped[str] = mapped_column(Text)
     content: Mapped[str] = mapped_column(Text)
     source: Mapped[str] = mapped_column(String(32), default="user")
-    keybinding: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     # Metadata & versioning
     version: Mapped[int] = mapped_column(Integer, default=1)

@@ -151,6 +151,7 @@ export function useCommands(): string[] {
 export function useTranscript() {
   const [items, setItems] = useState<TranscriptItem[]>([])
   const [streamingText, setStreamingText] = useState('')
+  const [streamingThinking, setStreamingThinking] = useState('')
   const [busy, setBusy] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
 
@@ -159,7 +160,17 @@ export function useTranscript() {
       _onEvent('transcript_item', (e) => {
         if (e.item && e.item.role !== 'user') setItems((prev) => [...prev, e.item!])
       }),
+      _onEvent('thinking_delta', (e) => {
+        setStreamingThinking((prev) => prev + (e.message ?? ''))
+      }),
       _onEvent('tool_started', (e) => {
+        // Flush accumulated thinking before tool card
+        setStreamingThinking((prev) => {
+          if (prev) {
+            setItems((items) => [...items, { role: 'thinking' as const, text: prev }])
+          }
+          return ''
+        })
         if (e.item) {
           const item: TranscriptItem = {
             ...e.item,
@@ -180,9 +191,23 @@ export function useTranscript() {
         }
       }),
       _onEvent('assistant_delta', (e) => {
+        // Flush accumulated thinking when text response starts
+        setStreamingThinking((prev) => {
+          if (prev) {
+            setItems((items) => [...items, { role: 'thinking' as const, text: prev }])
+          }
+          return ''
+        })
         setStreamingText((prev) => prev + (e.message ?? ''))
       }),
       _onEvent('assistant_complete', (e) => {
+        // Flush any remaining thinking
+        setStreamingThinking((prev) => {
+          if (prev) {
+            setItems((items) => [...items, { role: 'thinking' as const, text: prev }])
+          }
+          return ''
+        })
         const text = e.message ?? ''
         setItems((prev) => [...prev, { role: 'assistant', text }])
         setStreamingText('')
@@ -229,7 +254,7 @@ export function useTranscript() {
     setStreamingText('')
   }, [])
 
-  return { items, streamingText, busy, submitLine, clear }
+  return { items, streamingText, streamingThinking, busy, submitLine, clear }
 }
 
 /** Modal state (permission / question dialogs) */

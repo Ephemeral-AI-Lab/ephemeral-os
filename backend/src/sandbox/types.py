@@ -32,6 +32,14 @@ class SandboxInfo(BaseModel):
     project_dir: str = ""
     labels: dict[str, str] = Field(default_factory=dict)
     metadata: dict[str, Any] = Field(default_factory=dict)
+    created_at: str = ""
+    cpu: int = 0
+    memory: int = 0
+    disk: int = 0
+
+    @property
+    def managed_by_app(self) -> bool:
+        return self.labels.get("managed_by") == "ephemeralos"
 
     @classmethod
     def from_sdk(cls, sandbox: Any) -> SandboxInfo:
@@ -52,6 +60,10 @@ class SandboxInfo(BaseModel):
                 if not key.startswith("_"):
                     labels[key] = str(getattr(raw_labels, key, ""))
 
+        created_at = getattr(sandbox, "created_at", "") or ""
+        if created_at and not isinstance(created_at, str):
+            created_at = str(created_at)
+
         return cls(
             id=getattr(sandbox, "id", ""),
             name=getattr(sandbox, "name", "") or getattr(sandbox, "id", ""),
@@ -60,29 +72,11 @@ class SandboxInfo(BaseModel):
             snapshot=labels.get("ephemeralos_snapshot", ""),
             project_dir=getattr(sandbox, "project_dir", "") or labels.get("project_dir", ""),
             labels=labels,
+            created_at=created_at,
+            cpu=getattr(sandbox, "cpu", 0) or 0,
+            memory=getattr(sandbox, "memory", 0) or 0,
+            disk=getattr(sandbox, "disk", 0) or 0,
         )
-
-
-class SandboxHealthResponse(BaseModel):
-    """Daytona availability and configuration status."""
-
-    available: bool = False
-    api_url: str = ""
-    target: str = ""
-    error: str = ""
-    sandbox_count: int = 0
-
-
-class CreateSandboxRequest(BaseModel):
-    """Payload for sandbox creation."""
-
-    name: str = ""
-    image: str = Field(default="", description="Docker image to use for the sandbox")
-    snapshot: str = Field(default="", description="Daytona snapshot ID to create from")
-    project_dir: str = Field(default="", description="Override workspace root directory")
-    labels: dict[str, str] = Field(default_factory=dict)
-    env_vars: dict[str, str] = Field(default_factory=dict)
-    auto_start: bool = True
 
 
 class SnapshotInfo(BaseModel):

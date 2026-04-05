@@ -8,11 +8,11 @@ interface SandboxInfo {
   id: string
   name: string
   state: string
+  image: string | null
   labels: Record<string, string>
   created_at: string | null
-  cpu: number
-  memory: number
-  disk: number
+  managed_by_app: boolean
+  assigned_agents: string[]
 }
 
 interface HealthInfo {
@@ -21,6 +21,21 @@ interface HealthInfo {
   api_url: string | null
   target: string | null
   detail: string | null
+  default_image: string | null
+}
+
+interface SnapshotInfo {
+  name: string
+  state: string
+  image_name: string | null
+}
+
+interface CreateSandboxRequest {
+  name: string
+  snapshot?: string
+  image?: string
+  env_vars?: Record<string, string>
+  labels?: Record<string, string>
 }
 
 // ---------------------------------------------------------------------------
@@ -40,14 +55,32 @@ async function fetchSandboxes(): Promise<SandboxInfo[]> {
   return res.json()
 }
 
-async function createSandbox(name: string): Promise<SandboxInfo> {
+async function fetchSnapshots(): Promise<SnapshotInfo[]> {
+  const res = await fetch(`${API}/available/snapshots`)
+  if (!res.ok) return []
+  return res.json()
+}
+
+async function createSandbox(req: CreateSandboxRequest): Promise<SandboxInfo> {
   const res = await fetch(API, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify(req),
   })
   if (!res.ok) throw new Error((await res.json()).error ?? res.statusText)
   return res.json()
+}
+
+function parseKeyValueBlock(raw: string): Record<string, string> {
+  const result: Record<string, string> = {}
+  for (const line of raw.split('\n')) {
+    const trimmed = line.trim()
+    if (!trimmed) continue
+    const idx = trimmed.indexOf('=')
+    if (idx <= 0) continue
+    result[trimmed.slice(0, idx).trim()] = trimmed.slice(idx + 1).trim()
+  }
+  return result
 }
 
 async function startSandbox(id: string): Promise<void> {
@@ -219,10 +252,14 @@ function SandboxCard({
       </div>
 
       {/* Metadata */}
-      <div className="mt-2 flex gap-3 text-xs text-zinc-500">
-        <span>{sandbox.cpu} CPU</span>
-        <span>{sandbox.memory} GiB RAM</span>
-        <span>{sandbox.disk} GiB disk</span>
+      <div className="mt-2 flex flex-wrap gap-3 text-xs text-zinc-500">
+        {sandbox.image && <span className="font-mono">{sandbox.image}</span>}
+        {sandbox.managed_by_app && (
+          <span className="text-cyan-500 border border-cyan-800 rounded px-1">Managed</span>
+        )}
+        {sandbox.assigned_agents.length > 0 && (
+          <span>Agents: {sandbox.assigned_agents.join(', ')}</span>
+        )}
         {sandbox.created_at && <span>{new Date(sandbox.created_at).toLocaleDateString()}</span>}
       </div>
 
@@ -324,16 +361,25 @@ function formatSize(bytes: number): string {
 export default function SandboxesPage() {
   const [health, setHealth] = useState<HealthInfo | null>(null)
   const [sandboxes, setSandboxes] = useState<SandboxInfo[]>([])
+  const [snapshots, setSnapshots] = useState<SnapshotInfo[]>([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
+  const [selectedSnapshot, setSelectedSnapshot] = useState('')
+  const [envVarsText, setEnvVarsText] = useState('')
+  const [labelsText, setLabelsText] = useState('')
+  const [showAdvanced, setShowAdvanced] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const refresh = useCallback(async () => {
     try {
-      const [h, sbs] = await Promise.all([fetchHealth(), fetchSandboxes()])
+      const [h, sbs, snaps] = await Promise.all([fetchHealth(), fetchSandboxes(), fetchSnapshots()])
       setHealth(h)
       setSandboxes(sbs)
+      setSnapshots(snaps.filter(s => {
+        const state = s.state.toLowerCase()
+        return state === 'active' || state.endsWith('.active')
+      }))
       setError(null)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -352,8 +398,17 @@ export default function SandboxesPage() {
     if (!newName.trim()) return
     setCreating(true)
     try {
-      await createSandbox(newName.trim())
+      const req: CreateSandboxRequest = { name: newName.trim() }
+      if (selectedSnapshot) req.snapshot = selectedSnapshot
+      const envVars = parseKeyValueBlock(envVarsText)
+      if (Object.keys(envVars).length > 0) req.env_vars = envVars
+      const labels = parseKeyValueBlock(labelsText)
+      if (Object.keys(labels).length > 0) req.labels = labels
+      await createSandbox(req)
       setNewName('')
+      setSelectedSnapshot('')
+      setEnvVarsText('')
+      setLabelsText('')
       await refresh()
     } catch (e) {
       alert(`Create failed: ${e instanceof Error ? e.message : e}`)
@@ -383,22 +438,82 @@ export default function SandboxesPage() {
       )}
 
       {/* Create */}
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-          placeholder="New sandbox name..."
-          className="flex-1 rounded border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-600 focus:outline-none"
-        />
+      <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4 space-y-3">
+        <h2 className="text-sm font-medium text-zinc-300">Create Sandbox</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wide mb-1">Name</label>
+            <input
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+              placeholder="research-python-node"
+              className="w-full rounded border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-cyan-600 focus:outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wide mb-1">Snapshot</label>
+            <select
+              value={selectedSnapshot}
+              onChange={(e) => setSelectedSnapshot(e.target.value)}
+              className="w-full rounded border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 focus:border-cyan-600 focus:outline-none"
+            >
+              <option value="">Default</option>
+              {snapshots.map((s) => (
+                <option key={s.name} value={s.name}>
+                  {s.name}{s.image_name ? ` — ${s.image_name}` : ''}
+                </option>
+              ))}
+            </select>
+            {snapshots.length === 0 && !loading && (
+              <p className="mt-1 text-xs text-zinc-600">No snapshots available</p>
+            )}
+          </div>
+        </div>
+
         <button
-          className="rounded px-4 py-2 text-sm font-medium bg-cyan-900 text-cyan-300 border border-cyan-700 hover:bg-cyan-800 disabled:opacity-50"
-          disabled={creating || !newName.trim()}
-          onClick={handleCreate}
+          type="button"
+          className="text-xs text-zinc-500 hover:text-zinc-300"
+          onClick={() => setShowAdvanced(!showAdvanced)}
         >
-          {creating ? 'Creating...' : 'Create Sandbox'}
+          {showAdvanced ? 'Hide' : 'Show'} advanced options
         </button>
+
+        {showAdvanced && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wide mb-1">Env Vars</label>
+              <textarea
+                value={envVarsText}
+                onChange={(e) => setEnvVarsText(e.target.value)}
+                rows={4}
+                placeholder={'NODE_ENV=development\nPYTHONUNBUFFERED=1'}
+                className="w-full rounded border border-zinc-700 bg-zinc-800 px-3 py-2 text-xs text-zinc-100 font-mono placeholder:text-zinc-600 focus:border-cyan-600 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wide mb-1">Labels</label>
+              <textarea
+                value={labelsText}
+                onChange={(e) => setLabelsText(e.target.value)}
+                rows={4}
+                placeholder={'team=research\npurpose=agent-sandbox'}
+                className="w-full rounded border border-zinc-700 bg-zinc-800 px-3 py-2 text-xs text-zinc-100 font-mono placeholder:text-zinc-600 focus:border-cyan-600 focus:outline-none"
+              />
+            </div>
+          </div>
+        )}
+
+        <div className="flex justify-end">
+          <button
+            className="rounded px-4 py-2 text-sm font-medium bg-cyan-900 text-cyan-300 border border-cyan-700 hover:bg-cyan-800 disabled:opacity-50"
+            disabled={creating || !newName.trim()}
+            onClick={handleCreate}
+          >
+            {creating ? 'Creating...' : 'Create Sandbox'}
+          </button>
+        </div>
       </div>
 
       {/* List */}

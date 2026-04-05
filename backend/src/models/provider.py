@@ -1,10 +1,11 @@
-"""Provider/auth capability helpers."""
+"""Provider/auth capability helpers and API client factory."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
 from ephemeralos.config.settings import Settings
+from ephemeralos.models.types import SupportsStreamingMessages
 
 
 @dataclass(frozen=True)
@@ -76,3 +77,37 @@ def auth_status(settings: Settings) -> str:
     if settings.api_key:
         return "configured"
     return "missing"
+
+
+def make_api_client(
+    settings: Settings,
+    external: SupportsStreamingMessages | None = None,
+    *,
+    db_kwargs: dict | None = None,
+    db_class_path: str | None = None,
+) -> SupportsStreamingMessages:
+    """Build an API client from settings, or return the external one.
+
+    When *db_kwargs* / *db_class_path* are provided (from the active model
+    registration in the DB) they supply ``api_key``, ``base_url``, and the
+    provider type — falling back to ``settings`` only when a value is absent.
+    """
+    if external is not None:
+        return external
+
+    from ephemeralos.models.clients.anthropic import AnthropicApiClient
+    from ephemeralos.models.clients.openai_compat import OpenAICompatibleClient
+
+    # Resolve from DB-registered model first, then settings
+    api_key = (db_kwargs or {}).get("api_key") or settings.resolve_api_key()
+    base_url = (db_kwargs or {}).get("base_url") or settings.base_url
+
+    # Determine provider: DB class_path > settings.api_format
+    is_openai = (
+        (db_class_path or "").lower() in ("openai", "openai_compat")
+        or settings.api_format == "openai"
+    )
+
+    if is_openai:
+        return OpenAICompatibleClient(api_key=api_key, base_url=base_url)
+    return AnthropicApiClient(api_key=api_key, base_url=base_url)

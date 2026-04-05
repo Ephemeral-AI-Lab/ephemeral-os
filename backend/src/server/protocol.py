@@ -35,7 +35,7 @@ class FrontendRequest(BaseModel):
 class TranscriptItem(BaseModel):
     """One transcript row rendered by the frontend."""
 
-    role: Literal["system", "user", "assistant", "tool", "tool_result", "log"]
+    role: Literal["system", "user", "assistant", "tool", "tool_result", "log", "thinking"]
     text: str
     tool_name: str | None = None
     tool_input: dict[str, Any] | None = None
@@ -78,6 +78,7 @@ class BackendEvent(BaseModel):
         "state_snapshot",
         "tasks_snapshot",
         "transcript_item",
+        "thinking_delta",
         "assistant_delta",
         "assistant_complete",
         "line_complete",

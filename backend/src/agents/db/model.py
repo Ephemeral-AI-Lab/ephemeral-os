@@ -22,7 +22,7 @@ class AgentDefinitionRecord(Base):
 
     # Prompt & behavior
     system_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
-    model: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    model: Mapped[str] = mapped_column(String(128), nullable=False)
     effort: Mapped[str | None] = mapped_column(String(16), nullable=True)
     max_turns: Mapped[int | None] = mapped_column(Integer, nullable=True)
 

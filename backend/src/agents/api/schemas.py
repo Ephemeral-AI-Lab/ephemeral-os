@@ -14,7 +14,7 @@ class AgentDefinitionCreate(BaseModel):
     name: str = Field(min_length=1, max_length=128)
     description: str = Field(min_length=1)
     system_prompt: str | None = None
-    model: str | None = None
+    model: str = Field(min_length=1, description="Model key — each agent must be tied to a registered model key")
     effort: str | None = None
     max_turns: int | None = Field(default=None, gt=0)
     toolkits: list[str] | None = None
@@ -38,7 +38,7 @@ class AgentDefinitionCreate(BaseModel):
 class AgentDefinitionUpdate(BaseModel):
     description: str | None = None
     system_prompt: str | None = None
-    model: str | None = None
+    model: str | None = Field(default=None, description="Model key override")
     effort: str | None = None
     max_turns: int | None = Field(default=None, gt=0)
     toolkits: list[str] | None = None
@@ -65,7 +65,7 @@ class AgentDefinitionResponse(BaseModel):
     name: str
     description: str
     system_prompt: str | None = None
-    model: str | None = None
+    model: str
     effort: str | None = None
     max_turns: int | None = None
     toolkits: list[str] | None = None

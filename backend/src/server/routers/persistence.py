@@ -2,15 +2,10 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
-from typing import TYPE_CHECKING
+from ephemeralos.db.stores import AgentRunStore, SessionStore, UsageStore
 
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
-
-if TYPE_CHECKING:
-    from ephemeralos.db.stores import AgentRunStore, SessionStore, UsageStore
-    from ephemeralos.server.app_factory import SessionState
 
 
 # ---------------------------------------------------------------------------
@@ -19,11 +14,9 @@ if TYPE_CHECKING:
 
 
 def create_persistence_router(
-    get_session: Callable[[], "SessionState"],
     session_store: SessionStore,
     agent_run_store: AgentRunStore,
     usage_store: UsageStore,
-    model_store: object = None,
 ) -> APIRouter:
     """Build the persistence API router."""
     router = APIRouter(prefix="/api/db")
@@ -60,9 +53,24 @@ def create_persistence_router(
             "summary": record.summary,
             "message_count": record.message_count,
             "usage": record.usage,
+            "session_state": record.session_state,
             "created_at": record.created_at.isoformat() if record.created_at else None,
             "updated_at": record.updated_at.isoformat() if record.updated_at else None,
         })
+
+    @router.get("/sessions/{session_id}/messages")
+    async def get_session_messages(session_id: str):
+        if not _db_available():
+            return JSONResponse(
+                status_code=503,
+                content={"error": "Database not configured"},
+            )
+        record = session_store.get(session_id)
+        if record is None:
+            return JSONResponse(status_code=404, content={"error": "Session not found"})
+        # Return full history if available, fall back to (possibly compacted) message_history
+        messages = record.full_message_history or record.message_history or []
+        return JSONResponse(content={"messages": messages})
 
     # -- agent runs ------------------------------------------------------------
 
@@ -92,6 +100,10 @@ def create_persistence_router(
             "agent_name": record.agent_name,
             "status": record.status,
             "input_query": record.input_query,
+            "response": record.response,
+            "message_history": record.message_history,
+            "compacted_history": record.compacted_history,
+            "reasoning": record.reasoning,
             "error": record.error,
             "event_count": record.event_count,
             "started_at": record.started_at.isoformat() if record.started_at else None,

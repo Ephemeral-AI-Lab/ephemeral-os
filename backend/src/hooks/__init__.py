@@ -18,6 +18,7 @@ __all__ = [
     "HookRegistry",
     "HookResult",
     "load_hook_registry",
+    "make_hook_executor",
 ]
 
 
@@ -47,4 +48,8 @@ def __getattr__(name: str):
             "AggregatedHookResult": AggregatedHookResult,
             "HookResult": HookResult,
         }[name]
+    if name == "make_hook_executor":
+        from ephemeralos.hooks._factory import make_hook_executor
+
+        return make_hook_executor
     raise AttributeError(name)

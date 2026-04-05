@@ -17,6 +17,110 @@ interface SandboxInfo {
   state: string
 }
 
+// ── Assistant text parser ─────────────────────────────────────────────────────
+
+type AssistantSegment =
+  | { kind: 'text'; content: string }
+  | { kind: 'tool_call'; tool: string; args: string }
+  | { kind: 'thinking'; content: string }
+
+function parseAssistantText(text: string): AssistantSegment[] {
+  const segments: AssistantSegment[] = []
+  // Match [TOOL_CALL]...[/TOOL_CALL] and <think>...</think> blocks
+  const pattern = /\[TOOL_CALL\]([\s\S]*?)\[\/TOOL_CALL\]|<think>([\s\S]*?)<\/think>/g
+  let lastIndex = 0
+  let match: RegExpExecArray | null
+
+  while ((match = pattern.exec(text)) !== null) {
+    // Push preceding text
+    if (match.index > lastIndex) {
+      const before = text.slice(lastIndex, match.index).trim()
+      if (before) segments.push({ kind: 'text', content: before })
+    }
+
+    if (match[1] !== undefined) {
+      // [TOOL_CALL] block — try to extract tool name and args
+      const raw = match[1].trim()
+      const toolMatch = raw.match(/\{?\s*tool\s*(?:=>|:)\s*"([^"]+)"/)
+      const toolName = toolMatch ? toolMatch[1] : 'tool'
+      const argsMatch = raw.match(/args\s*(?:=>|:)\s*(\{[\s\S]*\})/)
+      const argsText = argsMatch ? argsMatch[1].trim() : raw
+      segments.push({ kind: 'tool_call', tool: toolName, args: argsText })
+    } else if (match[2] !== undefined) {
+      // <think> block
+      const content = match[2].trim()
+      if (content) segments.push({ kind: 'thinking', content })
+    }
+
+    lastIndex = match.index + match[0].length
+  }
+
+  // Push trailing text
+  if (lastIndex < text.length) {
+    const after = text.slice(lastIndex).trim()
+    if (after) segments.push({ kind: 'text', content: after })
+  }
+
+  return segments
+}
+
+function hasSpecialBlocks(text: string): boolean {
+  return /\[TOOL_CALL\]|<think>/.test(text)
+}
+
+// ── Inline cards for parsed assistant segments ────────────────────────────────
+
+function InlineToolCallCard({ tool, args }: { tool: string; args: string }) {
+  const [expanded, setExpanded] = useState(false)
+  return (
+    <div className="my-2 rounded-lg border border-zinc-600 bg-zinc-900 text-sm">
+      <button
+        className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-zinc-700/50 transition-colors rounded-lg"
+        onClick={() => setExpanded(e => !e)}
+      >
+        <span className="font-mono text-xs bg-blue-900/60 text-blue-300 px-1.5 py-0.5 rounded">
+          {tool}
+        </span>
+        <span className="text-zinc-500 text-xs">tool call</span>
+        <span className="text-zinc-500 text-xs ml-auto shrink-0">
+          {expanded ? '▲' : '▼'}
+        </span>
+      </button>
+      {expanded && (
+        <pre className="px-3 pb-3 text-xs font-mono text-zinc-400 whitespace-pre-wrap break-all border-t border-zinc-700 pt-2">
+          {args || '(no args)'}
+        </pre>
+      )}
+    </div>
+  )
+}
+
+function InlineThinkingBlock({ content }: { content: string }) {
+  const [expanded, setExpanded] = useState(false)
+  const preview = content.length > 80 ? content.slice(0, 80) + '…' : content
+  return (
+    <div className="my-2 rounded-lg border border-amber-900/50 bg-amber-950/30 text-sm">
+      <button
+        className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-amber-900/20 transition-colors rounded-lg"
+        onClick={() => setExpanded(e => !e)}
+      >
+        <span className="text-amber-400 text-xs">✦ Thinking</span>
+        {!expanded && (
+          <span className="text-zinc-500 text-xs truncate flex-1">{preview}</span>
+        )}
+        <span className="text-zinc-500 text-xs ml-auto shrink-0">
+          {expanded ? '▲' : '▼'}
+        </span>
+      </button>
+      {expanded && (
+        <pre className="px-3 pb-3 text-xs font-mono text-zinc-400 whitespace-pre-wrap break-words border-t border-amber-900/40 pt-2">
+          {content}
+        </pre>
+      )}
+    </div>
+  )
+}
+
 // ── MessageBubble ──────────────────────────────────────────────────────────────
 
 function ToolCard({
@@ -105,6 +209,24 @@ function MessageBubble({ item }: { item: TranscriptItem }) {
   }
 
   if (item.role === 'assistant') {
+    if (hasSpecialBlocks(item.text)) {
+      const segments = parseAssistantText(item.text)
+      return (
+        <div className="flex justify-start mb-3">
+          <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-zinc-800 px-4 py-2.5 text-zinc-100 text-sm">
+            {segments.map((seg, i) =>
+              seg.kind === 'text' ? (
+                <div key={i} className="whitespace-pre-wrap break-words">{seg.content}</div>
+              ) : seg.kind === 'tool_call' ? (
+                <InlineToolCallCard key={i} tool={seg.tool} args={seg.args} />
+              ) : (
+                <InlineThinkingBlock key={i} content={seg.content} />
+              )
+            )}
+          </div>
+        </div>
+      )
+    }
     return (
       <div className="flex justify-start mb-3">
         <div className="max-w-[85%] rounded-2xl rounded-tl-sm bg-zinc-800 px-4 py-2.5 text-zinc-100 text-sm whitespace-pre-wrap break-words">
@@ -132,6 +254,14 @@ function MessageBubble({ item }: { item: TranscriptItem }) {
     )
   }
 
+  if (item.role === 'thinking') {
+    return (
+      <div className="mb-1">
+        <InlineThinkingBlock content={item.text} />
+      </div>
+    )
+  }
+
   if (item.role === 'log') {
     return (
       <div className="mb-1 px-1 text-zinc-500 text-xs font-mono">
@@ -144,6 +274,22 @@ function MessageBubble({ item }: { item: TranscriptItem }) {
 }
 
 // ── StreamingIndicator ─────────────────────────────────────────────────────────
+
+function StreamingThinkingIndicator({ text }: { text: string }) {
+  if (!text) return null
+  const preview = text.length > 120 ? '…' + text.slice(-120) : text
+  return (
+    <div className="mb-1">
+      <div className="rounded-lg border border-amber-900/50 bg-amber-950/30 px-3 py-2 text-sm">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-amber-400 text-xs">✦ Thinking</span>
+          <span className="inline-block w-2 h-3 bg-amber-400/60 ml-0.5 animate-pulse" />
+        </div>
+        <pre className="text-xs font-mono text-zinc-400 whitespace-pre-wrap break-words">{preview}</pre>
+      </div>
+    </div>
+  )
+}
 
 function StreamingIndicator({ text }: { text: string }) {
   if (!text) return null
@@ -394,7 +540,7 @@ function QuestionModal({
 // ── ConversationPage ───────────────────────────────────────────────────────────
 
 export default function ConversationPage() {
-  const { items, streamingText, busy, submitLine } = useTranscript()
+  const { items, streamingText, streamingThinking, busy, submitLine } = useTranscript()
   const { modal, respondPermission, respondQuestion } = useModal()
   const connected = useConnected()
 
@@ -412,21 +558,21 @@ export default function ConversationPage() {
       .then(data => setAgents(Array.isArray(data) ? data : []))
       .catch(() => {})
     fetch('/api/sandboxes')
-      .then(r => r.ok ? r.json() : { sandboxes: [] })
-      .then(data => setSandboxes(data.sandboxes ?? []))
+      .then(r => r.ok ? r.json() : [])
+      .then(data => setSandboxes(Array.isArray(data) ? data : []))
       .catch(() => {})
   }, [connected])
 
   // Auto-scroll to bottom when items or streaming text change
   useEffect(() => {
     sentinelRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [items, streamingText])
+  }, [items, streamingText, streamingThinking])
 
   const handleSubmit = useCallback((line: string, options?: { agent_name?: string; sandbox_id?: string }) => {
     submitLine(line, options)
   }, [submitLine])
 
-  const isEmpty = items.length === 0 && !streamingText
+  const isEmpty = items.length === 0 && !streamingText && !streamingThinking
 
   return (
     <div className="flex flex-col h-full bg-zinc-950">
@@ -442,6 +588,7 @@ export default function ConversationPage() {
               {items.map((item, i) => (
                 <MessageBubble key={i} item={item} />
               ))}
+              <StreamingThinkingIndicator text={streamingThinking} />
               <StreamingIndicator text={streamingText} />
             </>
           )}

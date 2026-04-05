@@ -8,7 +8,8 @@ interface AgentSummary {
   name: string
   description: string
   source: string
-  model: string | null
+  model: string
+  model_key: string
   subagent_type: string
   background: boolean
 }
@@ -18,7 +19,7 @@ interface AgentDetail {
   name: string
   description: string
   system_prompt: string | null
-  model: string | null
+  model: string
   effort: string | null
   max_turns: number | null
   tools: string[] | null
@@ -207,7 +208,9 @@ function AgentCard({
         </div>
       </div>
       <div className="mt-2 flex gap-2 text-xs text-zinc-600">
-        {agent.model && <span>model: {agent.model}</span>}
+        <span className="rounded bg-zinc-800 border border-zinc-700 px-1.5 py-0.5 text-zinc-400 font-mono">
+          {agent.model_key || agent.model}
+        </span>
         <span>type: {agent.subagent_type}</span>
       </div>
     </div>
@@ -239,7 +242,7 @@ const EMPTY_FORM: FormData = {
   name: '',
   description: '',
   system_prompt: '',
-  model: '',
+  model: 'minimax',
   effort: '',
   max_turns: '',
   tools: '',
@@ -257,7 +260,7 @@ function agentToForm(agent: AgentDetail): FormData {
     name: agent.name,
     description: agent.description,
     system_prompt: agent.system_prompt ?? '',
-    model: agent.model ?? '',
+    model: agent.model,
     effort: agent.effort ?? '',
     max_turns: agent.max_turns?.toString() ?? '',
     tools: agent.tools?.join(', ') ?? '',
@@ -459,7 +462,7 @@ function AgentBuilderForm({
       <section className="space-y-3">
         <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Model & Behavior</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <TextField label="Model" value={form.model} onChange={v => set('model', v)} placeholder="inherit" />
+          <TextField label="Model Key *" value={form.model} onChange={v => set('model', v)} placeholder="minimax" />
           <SelectField label="Effort" value={form.effort} onChange={v => set('effort', v)} options={EFFORT_LEVELS} />
           <TextField label="Max Turns" value={form.max_turns} onChange={v => set('max_turns', v)} placeholder="e.g. 20" />
         </div>
@@ -536,7 +539,7 @@ function AgentBuilderForm({
       <div className="flex gap-3 pt-2 border-t border-zinc-800">
         <button
           className="rounded px-4 py-2 text-sm font-medium bg-cyan-900 text-cyan-300 border border-cyan-700 hover:bg-cyan-800 disabled:opacity-50"
-          disabled={saving || !form.name.trim() || !form.description.trim()}
+          disabled={saving || !form.name.trim() || !form.description.trim() || !form.model.trim()}
           onClick={handleSubmit}
         >
           {saving ? 'Saving...' : editing ? 'Update Agent' : 'Create Agent'}
@@ -597,7 +600,7 @@ function AgentDetailView({
       <p className="text-sm text-zinc-400">{agent.description}</p>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {agent.model && <DetailField label="Model" value={agent.model} />}
+        <DetailField label="Model Key" value={agent.model} />
         {agent.effort && <DetailField label="Effort" value={agent.effort} />}
         {agent.max_turns && <DetailField label="Max Turns" value={String(agent.max_turns)} />}
         <DetailField label="Background" value={agent.background ? 'Yes' : 'No'} />

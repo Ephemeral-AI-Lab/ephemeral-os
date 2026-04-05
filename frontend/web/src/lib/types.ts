@@ -1,5 +1,5 @@
 export type TranscriptItem = {
-  role: 'system' | 'user' | 'assistant' | 'tool' | 'tool_result' | 'log'
+  role: 'system' | 'user' | 'assistant' | 'tool' | 'tool_result' | 'log' | 'thinking'
   text: string
   tool_name?: string
   tool_input?: Record<string, unknown>
@@ -64,7 +64,6 @@ export type AppState = {
   mcp_failed: number
   bridge_sessions: number
   output_style: string
-  keybindings: Record<string, string>
 }
 
 export type ModalRequest = {
@@ -135,8 +134,30 @@ export type SessionDetail = {
   summary: string | null
   message_count: number
   usage: Record<string, unknown> | null
+  session_state: Record<string, unknown> | null
   created_at: string | null
   updated_at: string | null
+}
+
+export type ConversationMessagePayload = {
+  role: 'user' | 'assistant'
+  content: Array<{
+    type: string
+    text?: string
+    name?: string
+    input?: Record<string, unknown>
+    content?: string
+    tool_use_id?: string
+  }>
+}
+
+export type AgentResponseChunk = {
+  seq: number
+  event_kind: string
+  content: string | null
+  tool_name: string | null
+  tool_call_id: string | null
+  created_at: string | null
 }
 
 export type AgentRunSummary = {
@@ -148,6 +169,14 @@ export type AgentRunSummary = {
   error: string | null
   started_at: string | null
   finished_at: string | null
+}
+
+export type AgentRunDetail = AgentRunSummary & {
+  session_id: string
+  response: Record<string, unknown>[] | null
+  message_history: Record<string, unknown>[] | null
+  compacted_history: Record<string, unknown>[] | null
+  reasoning: string | null
 }
 
 export type SessionUsage = {

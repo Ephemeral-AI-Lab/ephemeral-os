@@ -3,25 +3,30 @@
 from __future__ import annotations
 
 import asyncio
+import json
+import re
+import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, AsyncIterator
 
 if TYPE_CHECKING:
-    from ephemeralos.utils.compact import SessionContext
+    from ephemeralos.utils.compact import SessionState
 
 from ephemeralos.models.types import (
     ApiMessageCompleteEvent,
     ApiMessageRequest,
     ApiTextDeltaEvent,
+    ApiThinkingDeltaEvent,
     SupportsStreamingMessages,
     UsageSnapshot,
 )
-from ephemeralos.engine.messages import ConversationMessage, ToolResultBlock
+from ephemeralos.engine.messages import ConversationMessage, TextBlock, ToolResultBlock, ToolUseBlock
 from ephemeralos.engine.stream_events import (
     AssistantTextDelta,
     AssistantTurnComplete,
     StreamEvent,
+    ThinkingDelta,
     ToolExecutionCompleted,
     ToolExecutionStarted,
 )
@@ -43,7 +48,55 @@ class QueryContext:
     max_turns: int = 200
     hook_executor: HookExecutor | None = None
     tool_metadata: dict[str, object] | None = None
-    session_context: "SessionContext | None" = None
+    session_state: "SessionState | None" = None
+
+
+_TEXT_TOOL_CALL_RE = re.compile(
+    r"\[TOOL_CALL\]\s*(.*?)\s*\[/TOOL_CALL\]", re.DOTALL
+)
+
+
+def _parse_text_tool_calls(text: str) -> list[ToolUseBlock]:
+    """Parse [TOOL_CALL]...[/TOOL_CALL] markers from model text.
+
+    Supports formats like:
+      {tool => "name", args => {...}}
+      {"tool": "name", "args": {...}}
+    """
+    results: list[ToolUseBlock] = []
+    for match in _TEXT_TOOL_CALL_RE.finditer(text):
+        raw = match.group(1).strip()
+        tool_name: str | None = None
+        tool_args: dict = {}
+
+        # Try JSON format first: {"tool": "name", "args": {...}}
+        try:
+            parsed = json.loads(raw)
+            if isinstance(parsed, dict):
+                tool_name = parsed.get("tool") or parsed.get("name")
+                tool_args = parsed.get("args") or parsed.get("input") or {}
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+        # Fallback: {tool => "name", args => {...}}
+        if tool_name is None:
+            name_match = re.search(r'tool\s*(?:=>|:)\s*"([^"]+)"', raw)
+            if name_match:
+                tool_name = name_match.group(1)
+            args_match = re.search(r'args\s*(?:=>|:)\s*(\{[\s\S]*\})', raw)
+            if args_match:
+                try:
+                    tool_args = json.loads(args_match.group(1))
+                except (json.JSONDecodeError, TypeError):
+                    tool_args = {}
+
+        if tool_name:
+            results.append(ToolUseBlock(
+                id=f"text-tc-{uuid.uuid4().hex[:8]}",
+                name=tool_name,
+                input=tool_args,
+            ))
+    return results
 
 
 async def run_query(
@@ -59,11 +112,11 @@ async def run_query(
     summarization of older messages.
     """
     from ephemeralos.utils.compact import (
-        SessionContext,
+        SessionState,
         auto_compact_if_needed,
     )
 
-    compact_state = context.session_context or SessionContext()
+    compact_state = context.session_state or SessionState()
 
     for _ in range(context.max_turns):
         # --- auto-compact check before calling the model ---------------
@@ -88,6 +141,10 @@ async def run_query(
                 tools=context.tool_registry.to_api_schema(),
             )
         ):
+            if isinstance(event, ApiThinkingDeltaEvent):
+                yield ThinkingDelta(text=event.text), None
+                continue
+
             if isinstance(event, ApiTextDeltaEvent):
                 yield AssistantTextDelta(text=event.text), None
                 continue
@@ -101,6 +158,40 @@ async def run_query(
 
         messages.append(final_message)
         yield AssistantTurnComplete(message=final_message, usage=usage), usage
+
+        # --- Text-based tool calls ([TOOL_CALL]...[/TOOL_CALL]) ----------
+        # Models like MiniMax embed tool calls as text markers instead of
+        # using the structured function-calling API.  We parse those markers,
+        # execute the tools, and feed results back as a user text message so
+        # the model sees them in its own format.
+        if not final_message.tool_uses and final_message.text:
+            text_tool_calls = _parse_text_tool_calls(final_message.text)
+            if text_tool_calls:
+                result_parts: list[str] = []
+                for tc in text_tool_calls:
+                    yield ToolExecutionStarted(
+                        tool_name=tc.name, tool_input=tc.input,
+                    ), None
+                    result = await _execute_tool_call(
+                        context, tc.name, tc.id, tc.input,
+                    )
+                    yield ToolExecutionCompleted(
+                        tool_name=tc.name,
+                        output=result.content,
+                        is_error=result.is_error,
+                    ), None
+                    result_parts.append(
+                        f"[TOOL_RESULT]\n"
+                        f"tool: {tc.name}\n"
+                        f"{'error: true' + chr(10) if result.is_error else ''}"
+                        f"{result.content}\n"
+                        f"[/TOOL_RESULT]"
+                    )
+                # Feed results back as a user message in text format
+                messages.append(
+                    ConversationMessage.from_user_text("\n\n".join(result_parts))
+                )
+                continue  # next turn — model will see the results
 
         if not final_message.tool_uses:
             return

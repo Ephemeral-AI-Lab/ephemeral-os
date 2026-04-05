@@ -2,30 +2,40 @@
 
 from __future__ import annotations
 
+import logging
 import asyncio
 import json
 from collections.abc import Callable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Awaitable
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
+from ephemeralos.agents.types import AgentDefinition
 from ephemeralos.models.provider import detect_provider, auth_status
 from ephemeralos.config import load_settings, save_settings
+from ephemeralos.engine.agent import spawn_agent
 from ephemeralos.engine.stream_events import (
     AssistantTextDelta,
     AssistantTurnComplete,
     StreamEvent,
+    ThinkingDelta,
     ToolExecutionCompleted,
     ToolExecutionStarted,
 )
+from ephemeralos.prompts import build_runtime_system_prompt
 from ephemeralos.tasks import get_task_manager
 from ephemeralos.server.protocol import BackendEvent, TranscriptItem
-from ephemeralos.server.runtime import handle_line
 
 if TYPE_CHECKING:
-    from ephemeralos.server.app_factory import SessionState
+    from ephemeralos.server.app_factory import SessionConfig, SessionState
+
+logger = logging.getLogger(__name__)
+
+SystemNotificationEmitter = Callable[[str], Awaitable[None]]
+AgentStreamEmitter = Callable[[StreamEvent], Awaitable[None]]
+ClearEmitter = Callable[[], Awaitable[None]]
 
 # ---------------------------------------------------------------------------
 # Request models
@@ -44,6 +54,170 @@ class ConfigRequest(BaseModel):
     api_key: str | None = None
     api_format: str | None = None
 
+
+
+# ---------------------------------------------------------------------------
+# Ephemeral agent lifecycle — spawn, run, persist, die
+# ---------------------------------------------------------------------------
+
+
+async def execute_ephemeral_agent_run(
+    config: "SessionConfig",
+    input_message: str,
+    *,
+    on_system_notification: SystemNotificationEmitter,
+    on_agent_event: AgentStreamEmitter,
+    on_clear: ClearEmitter,
+    agent_def: AgentDefinition | None = None,
+    sandbox_id: str | None = None,
+) -> bool:
+    """Spawn an ephemeral agent, run it, let it die.
+
+    1. Load conversation history from persistence
+    2. Spawn a fresh agent (optionally configured by *agent_def*)
+    3. Execute the user's request (full tool-call loop)
+    4. Record the agent run + token usage to DB
+    5. Save updated history back to DB
+    6. Agent goes out of scope — dies
+    """
+    from ephemeralos.server.app_factory import agent_run_store, session_store, usage_store
+
+    db_available = agent_run_store._session_factory is not None
+
+    # 1. Load history + session context + full audit history from DB
+    messages, session_state, full_history = session_store.load_session_state(config)
+
+    # 2. Spawn ephemeral agent (inherits session state)
+    agent = spawn_agent(
+        config, messages,
+        agent_def=agent_def, latest_user_prompt=input_message,
+        session_state=session_state,
+        sandbox_id=sandbox_id,
+    )
+    logger.info("Spawned agent %r (model=%s, session=%s)", agent.agent_name, agent.model, config.session_id)
+
+    # 3. Ensure session record exists (agent_runs FK requires it)
+    run_id: str | None = None
+    if db_available:
+        try:
+            session_store.upsert(
+                session_id=config.session_id,
+                cwd=config.cwd,
+                model=agent.model,
+                message_count=0,
+            )
+        except Exception:
+            logger.debug("Failed to ensure session record", exc_info=True)
+
+    # 4. Create agent run record
+    if db_available:
+        from uuid import uuid4
+
+        run_id = uuid4().hex[:12]
+        try:
+            agent_run_store.create_run(
+                run_id=run_id,
+                session_id=config.session_id,
+                agent_name=agent.agent_name,
+                input_query=input_message[:2000],
+            )
+        except Exception:
+            logger.debug("Failed to create agent run record", exc_info=True)
+            run_id = None
+
+    # Snapshot the message history fed to this agent (before the run)
+    pre_run_message_history = [m.model_dump(mode="json") for m in messages] if messages else []
+
+    # 5. Run the agent
+    event_count = 0
+    run_error: str | None = None
+    usage_snapshot = None
+    reasoning_parts: list[str] = []
+
+    try:
+        async for event in agent.run(input_message):
+            event_count += 1
+            if isinstance(event, ThinkingDelta):
+                reasoning_parts.append(event.text)
+            if isinstance(event, AssistantTurnComplete):
+                usage_snapshot = event.usage
+            await on_agent_event(event)
+    except Exception as exc:
+        run_error = str(exc)
+        raise
+    finally:
+        # Finish agent run record
+        if run_id and db_available:
+            try:
+                # Capture the response (new messages from this run)
+                run_response = [m.model_dump(mode="json") for m in agent.engine.messages[len(messages):]]
+                # Capture compacted history (what the engine holds after the run)
+                compacted = [m.model_dump(mode="json") for m in agent.engine.messages]
+
+                agent_run_store.finish_run(
+                    run_id,
+                    status="failed" if run_error else "completed",
+                    response=run_response,
+                    message_history=pre_run_message_history,
+                    compacted_history=compacted,
+                    reasoning="".join(reasoning_parts) if reasoning_parts else None,
+                    error=run_error,
+                    event_count=event_count,
+                )
+            except Exception:
+                logger.debug("Failed to finish agent run record", exc_info=True)
+
+        # Record token usage
+        if db_available and usage_snapshot and (usage_snapshot.input_tokens or usage_snapshot.output_tokens):
+            try:
+                usage_store.record(
+                    session_id=config.session_id,
+                    agent_name=agent.agent_name,
+                    model_id=agent.model,
+                    prompt_tokens=usage_snapshot.input_tokens,
+                    completion_tokens=usage_snapshot.output_tokens,
+                )
+            except Exception:
+                logger.debug("Failed to record token usage", exc_info=True)
+
+    # 6. Extract new messages for the full (uncompacted) audit log
+    new_messages: list[dict] = []
+    engine_msgs = agent.engine.messages
+    for i in range(len(engine_msgs) - 1, -1, -1):
+        msg = engine_msgs[i]
+        if msg.role == "user" and msg.text.strip() == input_message.strip():
+            new_messages = [m.model_dump(mode="json") for m in engine_msgs[i:]]
+            break
+    if new_messages:
+        full_history.extend(new_messages)
+
+    # 7. Save updated history to DB
+    if db_available:
+        try:
+            session_store.upsert(
+                session_id=config.session_id,
+                cwd=config.cwd,
+                model=agent.model,
+                system_prompt=build_runtime_system_prompt(
+                    agent.settings, cwd=config.cwd, latest_user_prompt=input_message,
+                ),
+                messages=[m.model_dump(mode="json") for m in agent.engine.messages],
+                full_messages=full_history,
+                usage=agent.engine.total_usage.model_dump(),
+                session_state=agent.engine.session_state.to_dict() if agent.engine.session_state else None,
+                summary=next(
+                    (m.text.strip()[:80] for m in agent.engine.messages if m.role == "user" and m.text.strip()),
+                    "",
+                ),
+                message_count=len(agent.engine.messages),
+            )
+        except Exception:
+            logger.debug("Failed to save session to DB", exc_info=True)
+
+    logger.info("Agent %r finished (events=%d, status=%s)", agent.agent_name, event_count, "failed" if run_error else "completed")
+
+    # 8. Agent goes out of scope — ephemeral lifecycle complete
+    return True
 
 
 # ---------------------------------------------------------------------------
@@ -81,7 +255,6 @@ def create_core_router(get_session: Callable[[], "SessionState"]) -> APIRouter:
             "passes": settings.passes,
             "bridge_sessions": 0,
             "output_style": "verbose" if settings.verbose else "normal",
-            "keybindings": {},
         }
         ready = BackendEvent.ready(
             get_task_manager().list_tasks(),
@@ -117,7 +290,7 @@ def create_core_router(get_session: Callable[[], "SessionState"]) -> APIRouter:
                     )
                 )
 
-                async def _print_system(message: str) -> None:
+                async def _on_system_notification(message: str) -> None:
                     await session.emit(
                         BackendEvent(
                             type="transcript_item",
@@ -125,8 +298,10 @@ def create_core_router(get_session: Callable[[], "SessionState"]) -> APIRouter:
                         )
                     )
 
-                async def _render_event(event: StreamEvent) -> None:
-                    if isinstance(event, AssistantTextDelta):
+                async def _on_agent_event(event: StreamEvent) -> None:
+                    if isinstance(event, ThinkingDelta):
+                        await session.emit(BackendEvent(type="thinking_delta", message=event.text))
+                    elif isinstance(event, AssistantTextDelta):
                         await session.emit(BackendEvent(type="assistant_delta", message=event.text))
                     elif isinstance(event, AssistantTurnComplete):
                         await session.emit(
@@ -168,7 +343,7 @@ def create_core_router(get_session: Callable[[], "SessionState"]) -> APIRouter:
                         )
                         await session.emit(BackendEvent.tasks_snapshot(get_task_manager().list_tasks()))
 
-                async def _clear_output() -> None:
+                async def _on_clear() -> None:
                     await session.emit(BackendEvent(type="clear_transcript"))
 
                 # Resolve agent definition if requested
@@ -177,21 +352,16 @@ def create_core_router(get_session: Callable[[], "SessionState"]) -> APIRouter:
                     from ephemeralos.agents.registry import get_definition
                     agent_def = get_definition(req.agent_name)
                     if agent_def is None:
-                        await _print_system(f"Agent '{req.agent_name}' not found — using default")
+                        await _on_system_notification(f"Agent '{req.agent_name}' not found — using default")
 
-                # Attach sandbox context if requested
-                if req.sandbox_id:
-                    sandbox_line = f"[sandbox:{req.sandbox_id}] {req.line}"
-                else:
-                    sandbox_line = req.line
-
-                await handle_line(
+                await execute_ephemeral_agent_run(
                     config,
-                    sandbox_line,
-                    print_system=_print_system,
-                    render_event=_render_event,
-                    clear_output=_clear_output,
+                    req.line,
+                    on_system_notification=_on_system_notification,
+                    on_agent_event=_on_agent_event,
+                    on_clear=_on_clear,
                     agent_def=agent_def,
+                    sandbox_id=req.sandbox_id,
                 )
                 await session.emit(BackendEvent.tasks_snapshot(get_task_manager().list_tasks()))
                 await session.emit(BackendEvent(type="line_complete"))

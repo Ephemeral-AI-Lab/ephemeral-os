@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, AsyncIterator
 
 if TYPE_CHECKING:
-    from ephemeralos.utils.compact import SessionContext
+    from ephemeralos.utils.compact import SessionState
 
 from ephemeralos.models.types import SupportsStreamingMessages
 from ephemeralos.engine.cost_tracker import CostTracker
@@ -31,7 +31,7 @@ class QueryEngine:
         max_tokens: int = 4096,
         hook_executor: HookExecutor | None = None,
         tool_metadata: dict[str, object] | None = None,
-        session_context: "SessionContext | None" = None,
+        session_state: "SessionState | None" = None,
     ) -> None:
         self._api_client = api_client
         self._tool_registry = tool_registry
@@ -41,7 +41,7 @@ class QueryEngine:
         self._max_tokens = max_tokens
         self._hook_executor = hook_executor
         self._tool_metadata = tool_metadata or {}
-        self._session_context = session_context
+        self._session_state = session_state
         self._messages: list[ConversationMessage] = []
         self._cost_tracker = CostTracker()
 
@@ -51,9 +51,9 @@ class QueryEngine:
         return list(self._messages)
 
     @property
-    def session_context(self):
+    def session_state(self):
         """Return the current compaction state (persisted across agents)."""
-        return self._session_context
+        return self._session_state
 
     @property
     def total_usage(self):
@@ -89,7 +89,7 @@ class QueryEngine:
             max_tokens=self._max_tokens,
             hook_executor=self._hook_executor,
             tool_metadata=self._tool_metadata,
-            session_context=self._session_context,
+            session_state=self._session_state,
         )
         async for event, usage in run_query(context, self._messages):
             if usage is not None:

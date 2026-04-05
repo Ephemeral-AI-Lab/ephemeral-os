@@ -8,10 +8,19 @@
       "status": "completed",
       "completed_at": "2026-04-04T23:14:15.899Z",
       "duration_ms": 50425
+    },
+    {
+      "agent_id": "ad674e6ebc272a7ed",
+      "agent_type": "everything-claude-code:planner",
+      "started_at": "2026-04-05T07:19:09.377Z",
+      "parent_mode": "none",
+      "status": "completed",
+      "completed_at": "2026-04-05T07:22:03.188Z",
+      "duration_ms": 173811
     }
   ],
-  "total_spawned": 1,
-  "total_completed": 1,
+  "total_spawned": 2,
+  "total_completed": 2,
   "total_failed": 0,
-  "last_updated": "2026-04-04T23:14:16.002Z"
+  "last_updated": "2026-04-05T07:22:03.291Z"
 }

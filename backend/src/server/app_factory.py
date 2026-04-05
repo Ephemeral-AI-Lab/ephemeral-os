@@ -10,6 +10,7 @@ import asyncio
 import logging
 import mimetypes
 from contextlib import asynccontextmanager
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -27,10 +28,7 @@ from ephemeralos.db.engine import initialize_db
 from ephemeralos.db.stores import AgentDefinitionStore, AgentRunStore, ModelStore, SessionStore, UsageStore
 from ephemeralos.skills.db.store import SkillDefinitionStore
 from ephemeralos.server.protocol import BackendEvent, BackendHostConfig, ToolkitSnapshot
-from ephemeralos.server.runtime import (
-    SessionConfig,
-    build_session_config,
-)
+from ephemeralos.models.types import SupportsStreamingMessages
 from ephemeralos.tools import ToolRegistry
 from ephemeralos.models.api import create_models_router
 from ephemeralos.agents.api.router import create_agents_router
@@ -43,6 +41,65 @@ from ephemeralos.skills.api.router import create_skills_router
 logger = logging.getLogger(__name__)
 
 _STATIC_DIR = Path(__file__).resolve().parent.parent.parent.parent / "frontend" / "web" / "dist"
+
+
+# ---------------------------------------------------------------------------
+# SessionConfig — durable configuration that survives across requests
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class SessionConfig:
+    """Durable session configuration — persists across ephemeral agents."""
+
+    cwd: str
+    session_id: str
+    # CLI overrides (take precedence over settings.json)
+    model_override: str | None = None
+    base_url_override: str | None = None
+    system_prompt_override: str | None = None
+    api_key_override: str | None = None
+    api_format_override: str | None = None
+    # If an external API client was injected, store it for reuse
+    external_api_client: SupportsStreamingMessages | None = None
+    # Messages to restore on first spawn (from session restore)
+    _initial_messages: list[dict] | None = field(default=None, repr=False)
+
+    def resolve_settings(self) -> Settings:
+        """Load settings and apply any CLI overrides."""
+        return load_settings().merge_cli_overrides(
+            model=self.model_override,
+            base_url=self.base_url_override,
+            system_prompt=self.system_prompt_override,
+            api_key=self.api_key_override,
+            api_format=self.api_format_override,
+        )
+
+
+def build_session_config(
+    *,
+    model: str | None = None,
+    base_url: str | None = None,
+    system_prompt: str | None = None,
+    api_key: str | None = None,
+    api_format: str | None = None,
+    api_client: SupportsStreamingMessages | None = None,
+    restore_messages: list[dict] | None = None,
+) -> SessionConfig:
+    """Build durable session config. Called once at server startup."""
+    from uuid import uuid4
+
+    return SessionConfig(
+        cwd=str(Path.cwd()),
+        session_id=uuid4().hex[:12],
+        model_override=model,
+        base_url_override=base_url,
+        system_prompt_override=system_prompt,
+        api_key_override=api_key,
+        api_format_override=api_format,
+        external_api_client=api_client,
+        _initial_messages=restore_messages,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -194,6 +251,11 @@ def create_app(config: BackendHostConfig) -> FastAPI:
             registry_path = Path(__file__).resolve().parent.parent.parent.parent / "models" / "registry.json"
             model_store.seed_from_json(str(registry_path))
 
+            # Backfill model_key for agents that don't have one
+            backfilled = agent_definition_store.backfill_model_key("minimax")
+            if backfilled:
+                logger.info("Backfilled model_key='minimax' on %d agents", backfilled)
+
             # Bootstrap agent builder service and load DB agents
             from ephemeralos.agents.builder import (
                 AgentBuilderService,
@@ -204,30 +266,9 @@ def create_app(config: BackendHostConfig) -> FastAPI:
             validator = AgentDefinitionValidator(tool_reg)
             _builder_service = AgentBuilderService(agent_definition_store, validator)
 
-            # Seed SuperCocoa specialists into DB on first boot (idempotent)
-            from ephemeralos.agents.seed import seed_specialists_from_supercocoa
-
-            specialist_dir = (
-                Path(__file__).resolve().parent.parent.parent.parent.parent
-                / "synthetic-os"
-                / ".super-cocoa-agents"
-                / "specialist"
-            )
-            if specialist_dir.exists():
-                seed_created, seed_skipped = seed_specialists_from_supercocoa(
-                    agent_definition_store, specialist_dir
-                )
-                if seed_created:
-                    logger.info(
-                        "Seeded %d SuperCocoa specialists (%d already existed)",
-                        seed_created,
-                        seed_skipped,
-                    )
-            else:
-                logger.debug("SuperCocoa specialist dir not found: %s", specialist_dir)
-
             db_agents = _builder_service.load_all_from_db()
             logger.info("Loaded %d user agents from DB", len(db_agents))
+
             logger.info("Database stores initialised")
         else:
             logger.info("Running without database — file-based persistence only")
@@ -242,7 +283,7 @@ def create_app(config: BackendHostConfig) -> FastAPI:
     app.include_router(create_core_router(_get_session))
     app.include_router(
         create_persistence_router(
-            _get_session, session_store, agent_run_store, usage_store, model_store
+            session_store, agent_run_store, usage_store
         )
     )
     app.include_router(create_sandbox_router())
@@ -255,17 +296,12 @@ def create_app(config: BackendHostConfig) -> FastAPI:
         )
     )
 
-    # Skills API — lazy-load the registry on first request
-    from ephemeralos.skills.loader import load_skill_registry as _load_skills
-
-    _skill_registry_cache: list = []  # mutable container for closure
-
-    def _get_skill_registry():
-        if not _skill_registry_cache:
-            _skill_registry_cache.append(_load_skills())
-        return _skill_registry_cache[0]
-
-    app.include_router(create_skills_router(_get_skill_registry))
+    # Skills API — DB-backed
+    app.include_router(
+        create_skills_router(
+            get_skill_store=lambda: skill_definition_store if skill_definition_store._session_factory else None,
+        )
+    )
 
     # Static file serving (SPA fallback) — must be last
     @app.get("/{full_path:path}")
@@ -335,13 +371,15 @@ class WebServer:
 
         if reload:
             # uvicorn reload requires an import string, not an app instance
+            # Use absolute path so reload works regardless of CWD
+            src_dir = str(Path(__file__).resolve().parents[1])
             config = uvicorn.Config(
                 "ephemeralos.server.app_factory:create_default_app",
                 host=self.host,
                 port=self.port,
                 log_level="info",
                 reload=True,
-                reload_dirs=["backend/src"],
+                reload_dirs=[src_dir],
             )
         else:
             app = create_app(self._config)

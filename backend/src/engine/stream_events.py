@@ -10,6 +10,13 @@ from ephemeralos.engine.messages import ConversationMessage
 
 
 @dataclass(frozen=True)
+class ThinkingDelta:
+    """Incremental thinking/reasoning content from the model."""
+
+    text: str
+
+
+@dataclass(frozen=True)
 class AssistantTextDelta:
     """Incremental assistant text."""
 
@@ -42,7 +49,8 @@ class ToolExecutionCompleted:
 
 
 StreamEvent = (
-    AssistantTextDelta
+    ThinkingDelta
+    | AssistantTextDelta
     | AssistantTurnComplete
     | ToolExecutionStarted
     | ToolExecutionCompleted

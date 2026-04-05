@@ -40,7 +40,7 @@ class AgentDefinition(BaseModel):
     system_prompt: str | None = None
 
     # --- model & effort ---
-    model: str | None = Field(default=None, alias="model_key")  # accepts both 'model' and 'model_key'
+    model: str = Field(alias="model_key")  # required — each agent must specify a model key
     effort: str | int | None = None  # "low" | "medium" | "high" or positive int
 
     # --- agent loop control ---

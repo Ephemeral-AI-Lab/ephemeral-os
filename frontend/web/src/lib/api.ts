@@ -13,6 +13,9 @@ import type {
   SessionSummary,
   SessionDetail,
   AgentRunSummary,
+  AgentRunDetail,
+  AgentResponseChunk,
+  ConversationMessagePayload,
   SessionUsage,
   ModelUsage,
 } from './types'
@@ -302,4 +305,24 @@ export async function fetchGlobalUsage(): Promise<ModelUsage[]> {
   if (!res.ok) return []
   const data = await res.json()
   return data.by_model ?? []
+}
+
+export async function fetchSessionMessages(sessionId: string): Promise<ConversationMessagePayload[]> {
+  const res = await fetch(`${DB_BASE}/sessions/${sessionId}/messages`)
+  if (!res.ok) return []
+  const data = await res.json()
+  return data.messages ?? []
+}
+
+export async function fetchRunDetail(runId: string): Promise<AgentRunDetail | null> {
+  const res = await fetch(`${DB_BASE}/runs/${runId}`)
+  if (!res.ok) return null
+  return res.json()
+}
+
+export async function fetchRunChunks(runId: string, limit = 500): Promise<AgentResponseChunk[]> {
+  const res = await fetch(`${DB_BASE}/runs/${runId}/chunks?limit=${limit}`)
+  if (!res.ok) return []
+  const data = await res.json()
+  return data.chunks ?? []
 }

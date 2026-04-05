@@ -24,7 +24,8 @@ class SessionRecord(Base):
     message_count: Mapped[int] = mapped_column(Integer, default=0)
     message_history: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     usage: Mapped[dict | None] = mapped_column(JSON, nullable=True)
-    session_context: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    session_state: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    full_message_history: Mapped[list | None] = mapped_column(JSON, nullable=True)
     summary: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)

@@ -24,6 +24,13 @@ class ToolUseBlock(BaseModel):
     input: dict[str, Any] = Field(default_factory=dict)
 
 
+class ThinkingBlock(BaseModel):
+    """Model reasoning / chain-of-thought content."""
+
+    type: Literal["thinking"] = "thinking"
+    text: str
+
+
 class ToolResultBlock(BaseModel):
     """Tool result content sent back to the model."""
 
@@ -33,7 +40,7 @@ class ToolResultBlock(BaseModel):
     is_error: bool = False
 
 
-ContentBlock = Annotated[TextBlock | ToolUseBlock | ToolResultBlock, Field(discriminator="type")]
+ContentBlock = Annotated[TextBlock | ThinkingBlock | ToolUseBlock | ToolResultBlock, Field(discriminator="type")]
 
 
 class ConversationMessage(BaseModel):
@@ -49,9 +56,16 @@ class ConversationMessage(BaseModel):
 
     @property
     def text(self) -> str:
-        """Return concatenated text blocks."""
+        """Return concatenated text blocks (excludes thinking)."""
         return "".join(
             block.text for block in self.content if isinstance(block, TextBlock)
+        )
+
+    @property
+    def thinking(self) -> str:
+        """Return concatenated thinking blocks."""
+        return "".join(
+            block.text for block in self.content if isinstance(block, ThinkingBlock)
         )
 
     @property
@@ -71,6 +85,9 @@ def serialize_content_block(block: ContentBlock) -> dict[str, Any]:
     """Convert a local content block into the provider wire format."""
     if isinstance(block, TextBlock):
         return {"type": "text", "text": block.text}
+
+    if isinstance(block, ThinkingBlock):
+        return {"type": "thinking", "text": block.text}
 
     if isinstance(block, ToolUseBlock):
         return {
@@ -94,7 +111,9 @@ def assistant_message_from_api(raw_message: Any) -> ConversationMessage:
 
     for raw_block in getattr(raw_message, "content", []):
         block_type = getattr(raw_block, "type", None)
-        if block_type == "text":
+        if block_type == "thinking":
+            content.append(ThinkingBlock(text=getattr(raw_block, "thinking", "") or getattr(raw_block, "text", "")))
+        elif block_type == "text":
             content.append(TextBlock(text=getattr(raw_block, "text", "")))
         elif block_type == "tool_use":
             content.append(

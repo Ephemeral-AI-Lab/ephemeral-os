@@ -2,6 +2,8 @@
 
 Wraps the Daytona SDK to provide create/start/stop/delete/list operations
 with error handling, git bootstrapping, and optional CI warmup hooks.
+
+Modeled after the synthetic-os sandbox_service for API compatibility.
 """
 
 from __future__ import annotations
@@ -9,17 +11,21 @@ from __future__ import annotations
 import logging
 import os
 import threading
-from typing import Any, Callable, Awaitable
-
-from ephemeralos.sandbox.types import (
-    CreateSandboxRequest,
-    SandboxHealthResponse,
-    SandboxInfo,
-    SandboxState,
-    SnapshotInfo,
-)
+from typing import Any
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Labels & constants
+# ---------------------------------------------------------------------------
+
+_APP_MANAGED_BY = "ephemeralos"
+_APP_CREATED_VIA = "api"
+_SNAPSHOT_LABEL = "ephemeralos_snapshot"
+_IMAGE_LABEL = "ephemeralos_image"
+_LIST_PAGE_LIMIT = 100
+_SNAPSHOT_PAGE_LIMIT = 100
+_SANDBOX_TIMEOUT_SECONDS = 180.0
 
 # ---------------------------------------------------------------------------
 # Git bootstrap script — installs git if missing
@@ -47,23 +53,25 @@ echo "[sandbox] git installed"
 """
 
 # ---------------------------------------------------------------------------
-# Labels
-# ---------------------------------------------------------------------------
-
-_LABEL_MANAGED_BY = "managed_by"
-_LABEL_MANAGED_BY_VALUE = "ephemeralos"
-_LABEL_CREATED_VIA = "created_via"
-_LABEL_IMAGE = "ephemeralos_image"
-_LABEL_SNAPSHOT = "ephemeralos_snapshot"
-_LABEL_PROJECT_DIR = "project_dir"
-
-# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 _client_lock = threading.Lock()
 _cached_client: Any | None = None
 _cached_client_key: tuple[str, str, str] | None = None
+
+
+def _normalize_optional_text(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip()
+    return normalized or None
+
+
+def _normalize_dict(payload: dict[str, str] | None) -> dict[str, str]:
+    if not payload:
+        return {}
+    return {str(k).strip(): str(v).strip() for k, v in payload.items() if str(k).strip()}
 
 
 def _require_settings() -> tuple[str, str, str]:
@@ -87,6 +95,31 @@ def _require_settings() -> tuple[str, str, str]:
     return api_key, api_url, target
 
 
+def _daytona_classes():
+    """Import and return Daytona SDK classes."""
+    try:
+        from daytona_sdk import (
+            CreateSandboxFromImageParams,
+            CreateSandboxFromSnapshotParams,
+            Daytona,
+            DaytonaConfig,
+        )
+    except ImportError:
+        try:
+            from daytona import (
+                CreateSandboxFromImageParams,
+                CreateSandboxFromSnapshotParams,
+                Daytona,
+                DaytonaConfig,
+            )
+        except ImportError as exc:
+            raise RuntimeError(
+                "Daytona SDK not installed. Run: pip install daytona-sdk"
+            ) from exc
+
+    return Daytona, DaytonaConfig, CreateSandboxFromSnapshotParams, CreateSandboxFromImageParams
+
+
 def _get_daytona_client() -> Any:
     """Return a cached Daytona client, creating one if config changed."""
     global _cached_client, _cached_client_key
@@ -102,13 +135,7 @@ def _get_daytona_client() -> Any:
         if _cached_client is not None and _cached_client_key == current_key:
             return _cached_client
 
-        try:
-            from daytona_sdk import Daytona, DaytonaConfig
-        except ImportError as exc:
-            raise RuntimeError(
-                "Daytona SDK not installed. Run: pip install daytona-sdk"
-            ) from exc
-
+        Daytona, DaytonaConfig, *_ = _daytona_classes()
         cfg_kwargs: dict[str, str] = {"api_key": api_key, "api_url": api_url}
         if target:
             cfg_kwargs["target"] = target
@@ -119,75 +146,158 @@ def _get_daytona_client() -> Any:
         return _cached_client
 
 
-# ---------------------------------------------------------------------------
-# SandboxService
-# ---------------------------------------------------------------------------
+def _paginate_all(list_fn: Any, limit: int) -> list[Any]:
+    """Exhaust a paginated Daytona SDK list method and return all items."""
+    first_page = list_fn(limit=limit)
+    items = list(getattr(first_page, "items", []) or [])
+    current_page = int(getattr(first_page, "page", 1) or 1)
+    total_pages = int(getattr(first_page, "total_pages", 1) or 1)
+    for page in range(current_page + 1, total_pages + 1):
+        response = list_fn(page=page, limit=limit)
+        items.extend(list(getattr(response, "items", []) or []))
+    return items
 
-# Type for optional CI warmup callback
-OnSandboxReady = Callable[[str, Any], Awaitable[None]]  # (sandbox_id, sandbox_obj)
+
+def _sandbox_state(sandbox: Any) -> str:
+    """Normalize sandbox state to lowercase string."""
+    raw_state = getattr(sandbox, "state", None)
+    if raw_state is None:
+        return "unknown"
+    normalized = getattr(raw_state, "value", raw_state)
+    state = str(normalized).strip()
+    if not state:
+        return "unknown"
+    if state.lower().startswith("sandboxstate."):
+        state = state.split(".", 1)[1]
+    return state.lower()
+
+
+def _sandbox_image(sandbox: Any) -> str | None:
+    """Extract image name from sandbox labels/attributes."""
+    labels = getattr(sandbox, "labels", None) or {}
+    if isinstance(labels, dict):
+        snapshot_label = labels.get(_SNAPSHOT_LABEL)
+        if snapshot_label:
+            return str(snapshot_label)
+        image_label = labels.get(_IMAGE_LABEL)
+        if image_label:
+            return str(image_label)
+    direct_image = _normalize_optional_text(getattr(sandbox, "image", None))
+    if direct_image:
+        return direct_image
+    image_name = _normalize_optional_text(getattr(sandbox, "image_name", None))
+    if image_name:
+        return image_name
+    snapshot = _normalize_optional_text(getattr(sandbox, "snapshot", None))
+    return snapshot
+
+
+def _serialize_sandbox(sandbox: Any, *, assigned_agents: list[str] | None = None) -> dict[str, Any]:
+    """Serialize a Daytona SDK sandbox to the shape the frontend expects."""
+    labels = getattr(sandbox, "labels", None) or {}
+    if not isinstance(labels, dict):
+        labels = {}
+    return {
+        "id": getattr(sandbox, "id", ""),
+        "name": getattr(sandbox, "name", ""),
+        "state": _sandbox_state(sandbox),
+        "image": _sandbox_image(sandbox),
+        "labels": {str(k): str(v) for k, v in labels.items()},
+        "created_at": getattr(sandbox, "created_at", None),
+        "managed_by_app": labels.get("managed_by") == _APP_MANAGED_BY,
+        "assigned_agents": list(assigned_agents or []),
+    }
+
+
+def _refresh_sandbox_data(sandbox: Any) -> None:
+    refresh = getattr(sandbox, "refresh_data", None)
+    if callable(refresh):
+        refresh()
+
+
+def _ensure_git(sandbox: Any) -> None:
+    """Install git in the sandbox if missing."""
+    try:
+        response = sandbox.process.exec(
+            "command -v git >/dev/null 2>&1 && echo ok || echo missing",
+            timeout=10,
+        )
+        if "ok" in (response.result or ""):
+            return
+        sandbox.process.exec(_GIT_BOOTSTRAP, timeout=120)
+    except Exception:
+        logger.warning("Git bootstrap failed for sandbox %s", getattr(sandbox, "id", "?"))
+
+
+# ---------------------------------------------------------------------------
+# SandboxService — synchronous methods returning dicts (matching synthetic-os)
+# ---------------------------------------------------------------------------
 
 
 class SandboxService:
     """Manages Daytona sandbox lifecycle.
 
-    Thread-safe. The Daytona client is cached and reused across calls.
-    An optional ``on_sandbox_ready`` async callback can be registered
-    to warm up external services (e.g. code intelligence) when a sandbox
-    becomes available.
+    All public methods are synchronous and return plain dicts matching
+    the API response shapes. The router wraps them with asyncio.to_thread
+    when needed.
     """
-
-    def __init__(self, on_sandbox_ready: OnSandboxReady | None = None) -> None:
-        self._on_sandbox_ready = on_sandbox_ready
 
     # -- Health ---------------------------------------------------------------
 
-    async def get_health(self) -> SandboxHealthResponse:
+    def get_health(self) -> dict[str, Any]:
         """Check Daytona availability and configuration."""
         api_key, api_url, target = _require_settings()
         if not api_key or not api_url:
-            return SandboxHealthResponse(
-                available=False,
-                error="Daytona is not configured",
-            )
+            return {
+                "configured": False,
+                "available": False,
+                "api_url": api_url or None,
+                "target": target or None,
+                "detail": "Set DAYTONA_API_KEY and DAYTONA_API_URL to connect.",
+                "default_image": None,
+            }
         try:
             client = _get_daytona_client()
-            sandboxes = client.list() or []
-            return SandboxHealthResponse(
-                available=True,
-                api_url=api_url,
-                target=target,
-                sandbox_count=len(sandboxes),
-            )
+            client.list(limit=1)
+            return {
+                "configured": True,
+                "available": True,
+                "api_url": api_url,
+                "target": target or None,
+                "detail": None,
+                "default_image": None,
+            }
         except Exception as exc:
-            return SandboxHealthResponse(
-                available=False,
-                api_url=api_url,
-                target=target,
-                error=str(exc),
-            )
+            return {
+                "configured": True,
+                "available": False,
+                "api_url": api_url,
+                "target": target or None,
+                "detail": str(exc),
+                "default_image": None,
+            }
 
     # -- List -----------------------------------------------------------------
 
-    async def list_sandboxes(self) -> list[SandboxInfo]:
-        """List all sandboxes managed by EphemeralOS."""
+    def list_sandboxes(self) -> list[dict[str, Any]]:
+        """List all sandboxes (both managed and external)."""
         client = _get_daytona_client()
-        raw = client.list() or []
-        results: list[SandboxInfo] = []
-        for sb in raw:
-            info = SandboxInfo.from_sdk(sb)
-            if info.labels.get(_LABEL_MANAGED_BY) == _LABEL_MANAGED_BY_VALUE:
-                results.append(info)
-        return results
+        sandboxes = [
+            _serialize_sandbox(sb)
+            for sb in _paginate_all(client.list, _LIST_PAGE_LIMIT)
+        ]
+        sandboxes.sort(key=lambda item: item.get("created_at") or "", reverse=True)
+        return sandboxes
 
-    async def get_sandbox(self, sandbox_id: str) -> SandboxInfo:
+    def get_sandbox(self, sandbox_id: str) -> dict[str, Any]:
         """Get a single sandbox by ID."""
         client = _get_daytona_client()
         sb = client.get(sandbox_id)
         if sb is None:
             raise ValueError(f"Sandbox '{sandbox_id}' not found")
-        return SandboxInfo.from_sdk(sb)
+        return _serialize_sandbox(sb)
 
-    async def get_sandbox_object(self, sandbox_id: str) -> Any:
+    def get_sandbox_object(self, sandbox_id: str) -> Any:
         """Return the raw Daytona SDK sandbox object."""
         client = _get_daytona_client()
         sb = client.get(sandbox_id)
@@ -197,170 +307,177 @@ class SandboxService:
 
     # -- Lifecycle ------------------------------------------------------------
 
-    async def create_sandbox(self, request: CreateSandboxRequest) -> SandboxInfo:
+    def create_sandbox(
+        self,
+        *,
+        name: str,
+        snapshot: str | None = None,
+        image: str | None = None,
+        language: str = "python",
+        env_vars: dict[str, str] | None = None,
+        labels: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
         """Create a new sandbox."""
+        normalized_name = _normalize_optional_text(name)
+        normalized_snapshot = _normalize_optional_text(snapshot)
+        normalized_image = _normalize_optional_text(image)
+        if not normalized_name:
+            raise ValueError("Sandbox name is required")
+        if normalized_snapshot and normalized_image:
+            raise ValueError("Pass either snapshot or image, not both.")
+
+        clean_env = _normalize_dict(env_vars)
+        clean_labels = _normalize_dict(labels)
+        clean_labels["managed_by"] = _APP_MANAGED_BY
+        clean_labels["created_via"] = _APP_CREATED_VIA
+        if normalized_snapshot:
+            clean_labels[_SNAPSHOT_LABEL] = normalized_snapshot
+        if normalized_image:
+            clean_labels[_IMAGE_LABEL] = normalized_image
+
         client = _get_daytona_client()
+        _, _, CreateSandboxFromSnapshotParams, CreateSandboxFromImageParams = _daytona_classes()
 
-        labels = {
-            _LABEL_MANAGED_BY: _LABEL_MANAGED_BY_VALUE,
-            _LABEL_CREATED_VIA: "api",
-            **request.labels,
-        }
-        if request.image:
-            labels[_LABEL_IMAGE] = request.image
-        if request.snapshot:
-            labels[_LABEL_SNAPSHOT] = request.snapshot
-        if request.project_dir:
-            labels[_LABEL_PROJECT_DIR] = request.project_dir
+        if normalized_image:
+            params = CreateSandboxFromImageParams(
+                name=normalized_name,
+                image=normalized_image,
+                language=language,
+                auto_stop_interval=0,
+                env_vars=clean_env or None,
+                labels=clean_labels,
+                ephemeral=False,
+            )
+        else:
+            params = CreateSandboxFromSnapshotParams(
+                name=normalized_name,
+                snapshot=normalized_snapshot,
+                language=language,
+                auto_stop_interval=0,
+                env_vars=clean_env or None,
+                labels=clean_labels,
+                ephemeral=False,
+            )
 
-        create_kwargs: dict[str, Any] = {"labels": labels}
-        if request.image:
-            create_kwargs["image"] = request.image
-        if request.snapshot:
-            create_kwargs["snapshot"] = request.snapshot
-        if request.env_vars:
-            create_kwargs["env_vars"] = request.env_vars
+        sb = client.create(params, timeout=_SANDBOX_TIMEOUT_SECONDS)
+        _refresh_sandbox_data(sb)
+        _ensure_git(sb)
 
-        try:
-            sb = client.create(**create_kwargs)
-        except Exception as exc:
-            raise RuntimeError(f"Failed to create sandbox: {exc}") from exc
+        return _serialize_sandbox(sb, assigned_agents=[])
 
-        # Git bootstrap
-        await self._ensure_git(sb)
-
-        # Optional CI warmup
-        if self._on_sandbox_ready:
-            try:
-                await self._on_sandbox_ready(sb.id, sb)
-            except Exception:
-                logger.warning("CI warmup failed for sandbox %s", sb.id, exc_info=True)
-
-        return SandboxInfo.from_sdk(sb)
-
-    async def start_sandbox(self, sandbox_id: str) -> SandboxInfo:
+    def start_sandbox(self, sandbox_id: str) -> dict[str, Any]:
         """Start a stopped sandbox."""
         client = _get_daytona_client()
         sb = client.get(sandbox_id)
         if sb is None:
             raise ValueError(f"Sandbox '{sandbox_id}' not found")
 
-        state = getattr(sb, "state", "")
-        if isinstance(state, str) and state.lower() == "started":
-            return SandboxInfo.from_sdk(sb)
+        if _sandbox_state(sb) == "started":
+            return _serialize_sandbox(sb)
 
-        sb.start(timeout=180)
+        sb.start(timeout=_SANDBOX_TIMEOUT_SECONDS)
+        _refresh_sandbox_data(sb)
+        _ensure_git(sb)
+        _refresh_sandbox_data(sb)
 
-        if self._on_sandbox_ready:
-            try:
-                await self._on_sandbox_ready(sandbox_id, sb)
-            except Exception:
-                logger.warning("CI warmup failed for sandbox %s", sandbox_id, exc_info=True)
+        return _serialize_sandbox(sb)
 
-        return SandboxInfo.from_sdk(sb)
-
-    async def stop_sandbox(self, sandbox_id: str) -> SandboxInfo:
+    def stop_sandbox(self, sandbox_id: str) -> dict[str, Any]:
         """Stop a running sandbox."""
         client = _get_daytona_client()
         sb = client.get(sandbox_id)
         if sb is None:
             raise ValueError(f"Sandbox '{sandbox_id}' not found")
         sb.stop(timeout=60)
-        return SandboxInfo.from_sdk(sb)
+        _refresh_sandbox_data(sb)
+        return _serialize_sandbox(sb)
 
-    async def delete_sandbox(self, sandbox_id: str) -> None:
+    def delete_sandbox(self, sandbox_id: str) -> None:
         """Delete a sandbox."""
         client = _get_daytona_client()
         sb = client.get(sandbox_id)
         if sb is None:
             raise ValueError(f"Sandbox '{sandbox_id}' not found")
-        sb.delete(timeout=60)
+        sb.delete(timeout=_SANDBOX_TIMEOUT_SECONDS)
         logger.info("Sandbox deleted: %s", sandbox_id)
-
-    async def ensure_sandbox_exists(self, sandbox_id: str) -> SandboxInfo:
-        """Verify a sandbox exists and is accessible."""
-        return await self.get_sandbox(sandbox_id)
-
-    # -- File operations ------------------------------------------------------
-
-    async def list_files_recursive(
-        self,
-        sandbox_id: str,
-        path: str = "/workspace",
-        max_depth: int = 10,
-        max_items: int = 10_000,
-    ) -> list[str]:
-        """List files recursively in a sandbox."""
-        sb = await self.get_sandbox_object(sandbox_id)
-        try:
-            cmd = (
-                f"find {path} -maxdepth {max_depth} "
-                f"\\( -name .git -o -name node_modules -o -name __pycache__ "
-                f"-o -name .venv -o -name venv \\) -prune -o -print "
-                f"| head -n {max_items}"
-            )
-            response = sb.process.exec(cmd, cwd=path, timeout=30)
-            result = response.result or ""
-            return [line for line in result.strip().splitlines() if line]
-        except Exception as exc:
-            logger.warning("list_files_recursive failed: %s", exc)
-            return []
-
-    # -- Preview URLs ---------------------------------------------------------
-
-    async def get_preview_url(self, sandbox_id: str, port: int) -> str:
-        """Get a signed preview URL for a sandbox port."""
-        sb = await self.get_sandbox_object(sandbox_id)
-        try:
-            return sb.get_preview_url(port)
-        except Exception as exc:
-            raise RuntimeError(f"Failed to get preview URL: {exc}") from exc
 
     # -- Snapshots ------------------------------------------------------------
 
-    async def list_snapshots(self) -> list[SnapshotInfo]:
+    def list_snapshots(self) -> list[dict[str, Any]]:
         """List available Daytona snapshots."""
         client = _get_daytona_client()
-        try:
-            raw = client.list_snapshots() if hasattr(client, "list_snapshots") else []
-            return [
-                SnapshotInfo(
-                    id=getattr(s, "id", ""),
-                    name=getattr(s, "name", ""),
-                    created_at=str(getattr(s, "created_at", "")),
-                    size=str(getattr(s, "size", "")),
-                )
-                for s in (raw or [])
-            ]
-        except Exception:
-            logger.warning("Failed to list snapshots", exc_info=True)
+        # Try client.snapshot.list (newer SDK) then client.list_snapshots (older)
+        snapshot_api = getattr(client, "snapshot", None)
+        if snapshot_api and hasattr(snapshot_api, "list"):
+            items = _paginate_all(snapshot_api.list, _SNAPSHOT_PAGE_LIMIT)
+        elif hasattr(client, "list_snapshots"):
+            items = _paginate_all(client.list_snapshots, _SNAPSHOT_PAGE_LIMIT)
+        else:
+            logger.warning("Daytona client has no snapshot listing API")
             return []
+        return [
+            {
+                "name": getattr(s, "name", ""),
+                "state": str(getattr(s, "state", "unknown")),
+                "image_name": getattr(s, "image_name", None),
+            }
+            for s in items
+        ]
 
-    # -- Workspace root -------------------------------------------------------
+    # -- Preview URLs ---------------------------------------------------------
 
-    async def resolve_workspace_root(self, sandbox_id: str) -> str:
-        """Resolve the workspace root directory for a sandbox."""
-        info = await self.get_sandbox(sandbox_id)
-        if info.project_dir:
-            return info.project_dir
-        # Try to detect from sandbox
-        sb = await self.get_sandbox_object(sandbox_id)
-        project_dir = getattr(sb, "project_dir", None)
-        if project_dir:
-            return project_dir
-        return "/workspace"
-
-    # -- Internal helpers -----------------------------------------------------
-
-    async def _ensure_git(self, sandbox: Any) -> None:
-        """Install git in the sandbox if missing."""
+    def get_signed_preview_url(self, sandbox_id: str, port: int) -> dict[str, Any]:
+        """Get a signed preview URL for a sandbox port."""
+        sb = self.get_sandbox_object(sandbox_id)
         try:
-            response = sandbox.process.exec(
-                "command -v git >/dev/null 2>&1 && echo ok || echo missing",
-                timeout=10,
-            )
-            if "ok" in (response.result or ""):
-                return
-            sandbox.process.exec(_GIT_BOOTSTRAP, timeout=120)
-        except Exception:
-            logger.warning("Git bootstrap failed for sandbox %s", getattr(sandbox, "id", "?"))
+            result = sb.create_signed_preview_url(port)
+            return {
+                "url": result.url,
+                "token": result.token,
+                "port": result.port,
+            }
+        except AttributeError:
+            # Fallback for older SDK
+            url = sb.get_preview_url(port)
+            return {"url": url, "token": "", "port": port}
+
+    # -- File operations ------------------------------------------------------
+
+    def list_files_recursive(
+        self,
+        sandbox_id: str,
+        root: str = "/workspace",
+        max_depth: int = 10,
+        max_items: int = 10_000,
+    ) -> list[dict[str, Any]]:
+        """List files recursively in a sandbox."""
+        sb = self.get_sandbox_object(sandbox_id)
+        fs = getattr(sb, "fs", None)
+        list_files_fn = getattr(fs, "list_files", None)
+        if not callable(list_files_fn):
+            raise RuntimeError("Sandbox filesystem API is not available")
+
+        import posixpath
+
+        results: list[dict[str, Any]] = []
+        pending: list[tuple[str, int]] = [(root, 0)]
+
+        while pending:
+            if len(results) >= max_items:
+                break
+            current, depth = pending.pop()
+            entries = list_files_fn(current) or []
+            for entry in entries:
+                if len(results) >= max_items:
+                    break
+                name = getattr(entry, "name", None)
+                if not isinstance(name, str) or not name or name in {".", ".."}:
+                    continue
+                child = posixpath.join(current, name)
+                is_dir = bool(getattr(entry, "is_dir", False))
+                results.append({"path": child, "name": name, "is_dir": is_dir})
+                if is_dir and depth < max_depth:
+                    pending.append((child, depth + 1))
+
+        results.sort(key=lambda item: item["path"])
+        return results

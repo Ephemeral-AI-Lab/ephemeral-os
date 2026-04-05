@@ -87,6 +87,23 @@ class AgentDefinitionStore:
             db.commit()
             return True
 
+    def backfill_model_key(self, default_model_key: str = "minimax") -> int:
+        """Set model_key to *default_model_key* for all agents that have NULL or empty model."""
+        with self._sf() as db:
+            rows = (
+                db.query(AgentDefinitionRecord)
+                .filter(
+                    (AgentDefinitionRecord.model.is_(None))
+                    | (AgentDefinitionRecord.model == "")
+                )
+                .all()
+            )
+            for rec in rows:
+                rec.model = default_model_key
+                rec.updated_at = datetime.now(timezone.utc)
+            db.commit()
+            return len(rows)
+
     def clone(self, source_name: str, new_name: str) -> AgentDefinitionRecord:
         with self._sf() as db:
             source = db.query(AgentDefinitionRecord).filter(AgentDefinitionRecord.name == source_name, AgentDefinitionRecord.is_active.is_(True)).first()

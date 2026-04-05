@@ -238,7 +238,7 @@ def build_compact_summary_message(
 # ---------------------------------------------------------------------------
 
 @dataclass
-class SessionContext:
+class SessionState:
     """Mutable state that persists across ephemeral agent runs.
 
     Stored in the DB as part of the session record so compaction
@@ -257,7 +257,7 @@ class SessionContext:
         }
 
     @classmethod
-    def from_dict(cls, data: dict | None) -> "SessionContext":
+    def from_dict(cls, data: dict | None) -> "SessionState":
         if not data:
             return cls()
         return cls(
@@ -288,7 +288,7 @@ def get_autocompact_threshold(model: str) -> int:
 def should_autocompact(
     messages: list[ConversationMessage],
     model: str,
-    state: SessionContext,
+    state: SessionState,
 ) -> bool:
     """Return True when the conversation should be auto-compacted."""
     if state.consecutive_failures >= MAX_CONSECUTIVE_AUTOCOMPACT_FAILURES:
@@ -396,7 +396,7 @@ async def auto_compact_if_needed(
     api_client: "SupportsStreamingMessages",
     model: str,
     system_prompt: str = "",
-    state: SessionContext,
+    state: SessionState,
     preserve_recent: int = 6,
 ) -> tuple[list[ConversationMessage], bool]:
     """Check if auto-compact should fire, and if so, compact.
@@ -444,7 +444,7 @@ async def auto_compact_if_needed(
 
 __all__ = [
     "AUTOCOMPACT_BUFFER_TOKENS",
-    "SessionContext",
+    "SessionState",
     "COMPACTABLE_TOOLS",
     "TIME_BASED_MC_CLEARED_MESSAGE",
     "auto_compact_if_needed",

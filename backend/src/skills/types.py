@@ -14,4 +14,3 @@ class SkillDefinition:
     content: str
     source: str
     path: str | None = None
-    keybinding: str | None = None
