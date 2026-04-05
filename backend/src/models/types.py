@@ -66,7 +66,38 @@ class ApiMessageCompleteEvent:
     stop_reason: str | None = None
 
 
-ApiStreamEvent = ApiThinkingDeltaEvent | ApiTextDeltaEvent | ApiMessageCompleteEvent
+@dataclass(frozen=True)
+class ApiToolUseDeltaEvent:
+    """Tool use block arriving mid-stream.
+
+    Emitted when the API streams a tool_use content block before the
+    complete message is available. Allows early tool execution start.
+    """
+
+    id: str
+    name: str
+    input: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class ApiCancelEvent:
+    """LLM cancel signal for a running tool.
+
+    Emitted when the LLM decides to abort a long-running tool.
+    The loop intercepts this and calls executor.cancel().
+    """
+
+    tool_id: str
+    reason: str
+
+
+ApiStreamEvent = (
+    ApiThinkingDeltaEvent
+    | ApiTextDeltaEvent
+    | ApiMessageCompleteEvent
+    | ApiToolUseDeltaEvent
+    | ApiCancelEvent
+)
 
 
 # ---------------------------------------------------------------------------

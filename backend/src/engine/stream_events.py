@@ -48,10 +48,35 @@ class ToolExecutionCompleted:
     is_error: bool = False
 
 
+@dataclass(frozen=True)
+class ToolExecutionProgress:
+    """Progress update from a running tool.
+
+    Emitted during long-running tool execution (e.g., bash commands,
+    test runners) so the LLM can see partial output and decide
+    whether to continue or abort.
+    """
+
+    tool_id: str
+    tool_name: str
+    output: str
+
+
+@dataclass(frozen=True)
+class ToolExecutionCancelled:
+    """A tool was cancelled by LLM abort signal."""
+
+    tool_id: str
+    tool_name: str
+    reason: str
+
+
 StreamEvent = (
     ThinkingDelta
     | AssistantTextDelta
     | AssistantTurnComplete
     | ToolExecutionStarted
     | ToolExecutionCompleted
+    | ToolExecutionProgress
+    | ToolExecutionCancelled
 )

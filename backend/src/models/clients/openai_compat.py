@@ -10,11 +10,13 @@ from typing import Any, AsyncIterator
 from openai import AsyncOpenAI
 
 from models.types import (
+    ApiCancelEvent,
     ApiMessageCompleteEvent,
     ApiMessageRequest,
     ApiStreamEvent,
     ApiTextDeltaEvent,
     ApiThinkingDeltaEvent,
+    ApiToolUseDeltaEvent,
     UsageSnapshot,
 )
 from models.errors import (
@@ -226,6 +228,7 @@ class OpenAICompatibleClient:
         collected_content = ""
         collected_reasoning = ""
         collected_tool_calls: dict[int, dict[str, Any]] = {}
+        yielded_tool_calls: set[int] = set()
         finish_reason: str | None = None
         usage_data: dict[str, int] = {}
 
@@ -257,7 +260,7 @@ class OpenAICompatibleClient:
                 collected_content += delta.content
                 yield ApiTextDeltaEvent(text=delta.content)
 
-            # Accumulate tool calls
+            # Accumulate tool calls and yield mid-stream for early tool start
             if delta.tool_calls:
                 for tc_delta in delta.tool_calls:
                     idx = tc_delta.index
@@ -275,6 +278,19 @@ class OpenAICompatibleClient:
                             entry["name"] = tc_delta.function.name
                         if tc_delta.function.arguments:
                             entry["arguments"] += tc_delta.function.arguments
+
+                    # Yield mid-stream when we have name and some arguments
+                    if idx not in yielded_tool_calls and entry["name"]:
+                        yielded_tool_calls.add(idx)
+                        try:
+                            args = json.loads(entry["arguments"]) if entry["arguments"] else {}
+                        except (json.JSONDecodeError, TypeError):
+                            args = {}
+                        yield ApiToolUseDeltaEvent(
+                            id=entry["id"] or f"toolu_{idx}",
+                            name=entry["name"],
+                            input=args,
+                        )
 
             # Usage in chunk (if provider sends it)
             if chunk.usage:

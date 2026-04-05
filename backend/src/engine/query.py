@@ -11,10 +11,12 @@ if TYPE_CHECKING:
     from utils.compact import SessionState
 
 from models.types import (
+    ApiCancelEvent,
     ApiMessageCompleteEvent,
     ApiMessageRequest,
     ApiTextDeltaEvent,
     ApiThinkingDeltaEvent,
+    ApiToolUseDeltaEvent,
     SupportsStreamingMessages,
     UsageSnapshot,
 )
@@ -24,9 +26,11 @@ from engine.stream_events import (
     AssistantTurnComplete,
     StreamEvent,
     ThinkingDelta,
+    ToolExecutionCancelled,
     ToolExecutionCompleted,
     ToolExecutionStarted,
 )
+from engine.streaming_executor import StreamingToolExecutor
 from hooks import HookEvent, HookExecutor
 from tools.base import ToolExecutionContext, ToolRegistry
 
@@ -51,16 +55,23 @@ async def _run_query_loop(
     context: QueryContext,
     messages: list[ConversationMessage],
 ) -> AsyncIterator[tuple[StreamEvent, UsageSnapshot | None]]:
-    """Inner loop — yields events. Runs until model stops requesting tools."""
+    """Inner loop — yields events. Runs until model stops requesting tools.
+
+    Features:
+    - Mid-stream tool detection: tools start executing as tool_use blocks arrive
+    - Progress streaming: LLM sees tool output as it happens
+    - LLM abort: LLM can cancel running tools via [CANCEL:tool_id reason="..."]
+    """
+    import re
     from utils.compact import (
         SessionState,
         auto_compact_if_needed,
     )
 
     compact_state = context.session_state or SessionState()
+    cancel_pattern = re.compile(r'\[CANCEL:(\S+)(?:\s+reason="([^"]*)")?\]')
 
     for _ in range(context.max_turns):
-        # --- auto-compact check before calling the model ---------------
         messages, was_compacted = await auto_compact_if_needed(
             messages,
             api_client=context.api_client,
@@ -68,10 +79,18 @@ async def _run_query_loop(
             system_prompt=context.system_prompt,
             state=compact_state,
         )
-        # ---------------------------------------------------------------
+
+        executor = StreamingToolExecutor(
+            tool_registry=context.tool_registry,
+            context=ToolExecutionContext(
+                cwd=context.cwd,
+                metadata=context.tool_metadata or {},
+            ),
+        )
 
         final_message: ConversationMessage | None = None
         usage = UsageSnapshot()
+        pending_cancel: dict[str, str] = {}
 
         async for event in context.api_client.stream_message(
             ApiMessageRequest(
@@ -87,7 +106,21 @@ async def _run_query_loop(
                 continue
 
             if isinstance(event, ApiTextDeltaEvent):
+                if match := cancel_pattern.search(event.text):
+                    tool_id, reason = match.groups()
+                    pending_cancel[tool_id] = reason or "Cancelled by LLM"
                 yield AssistantTextDelta(text=event.text), None
+                continue
+
+            if isinstance(event, ApiToolUseDeltaEvent):
+                assistant_msg = final_message or ConversationMessage(role="assistant", content=[])
+                executor.add_tool(event, assistant_msg)
+                for progress in executor.get_progress():
+                    yield progress, None
+                continue
+
+            if isinstance(event, ApiCancelEvent):
+                executor.cancel(event.tool_id, event.reason)
                 continue
 
             if isinstance(event, ApiMessageCompleteEvent):
@@ -100,40 +133,53 @@ async def _run_query_loop(
                 "Check that the API endpoint, authentication, and model name are correct."
             )
 
+        # Process pending cancels from text
+        for tool_id, reason in pending_cancel.items():
+            executor.cancel(tool_id, reason)
+
+        # Yield any remaining progress
+        for progress in executor.get_progress():
+            yield progress, None
+
         messages.append(final_message)
         yield AssistantTurnComplete(message=final_message, usage=usage), usage
 
         if not final_message.tool_uses:
             return
 
-        tool_calls = final_message.tool_uses
+        # Yield started events for any remaining tools
+        for started in executor.get_started_events():
+            yield started, None
 
-        if len(tool_calls) == 1:
-            # Single tool: sequential (stream events immediately)
-            tc = tool_calls[0]
-            yield ToolExecutionStarted(tool_name=tc.name, tool_input=tc.input), None
-            result = await _execute_tool_call(context, tc.name, tc.id, tc.input)
-            yield (
-                ToolExecutionCompleted(
-                    tool_name=tc.name,
-                    output=result.content,
-                    is_error=result.is_error,
-                ),
-                None,
-            )
-            tool_results = [result]
-        else:
-            # Multiple tools: execute concurrently, emit events after
-            for tc in tool_calls:
-                yield ToolExecutionStarted(tool_name=tc.name, tool_input=tc.input), None
+        # Wait for all tools to complete and yield results
+        tool_results: list[ToolResultBlock] = []
+        for completed in executor.get_remaining():
+            if isinstance(completed, ToolExecutionCompleted):
+                tool_results.append(
+                    ToolResultBlock(
+                        tool_use_id="",  # filled by caller
+                        content=completed.output,
+                        is_error=completed.is_error,
+                    )
+                )
+                yield completed, None
+            elif isinstance(completed, ToolExecutionCancelled):
+                tool_results.append(
+                    ToolResultBlock(
+                        tool_use_id="",
+                        content=f"[CANCELLED] {completed.reason}",
+                        is_error=True,
+                    )
+                )
+                yield completed, None
 
-            async def _run(tc):
-                return await _execute_tool_call(context, tc.name, tc.id, tc.input)
-
-            results = await asyncio.gather(*[_run(tc) for tc in tool_calls])
-            tool_results = list(results)
-
-            for tc, result in zip(tool_calls, tool_results):
+        # Match tool results to their tool_use blocks
+        if not tool_results:
+            tool_calls = final_message.tool_uses
+            if len(tool_calls) == 1:
+                tc = tool_calls[0]
+                result = await _execute_tool_call(context, tc.name, tc.id, tc.input)
+                tool_results = [result]
                 yield (
                     ToolExecutionCompleted(
                         tool_name=tc.name,
@@ -142,10 +188,41 @@ async def _run_query_loop(
                     ),
                     None,
                 )
+            else:
+                started_events = []
+                for tc in tool_calls:
+                    started_events.append(
+                        ToolExecutionStarted(
+                            tool_name=tc.name,
+                            tool_input=tc.input,
+                        )
+                    )
+                    yield started_events[-1], None
 
-        messages.append(ConversationMessage(role="user", content=tool_results))
+                results = await asyncio.gather(
+                    *[_execute_tool_call(context, tc.name, tc.id, tc.input) for tc in tool_calls]
+                )
+                tool_results = list(results)
+                for tc, result in zip(tool_calls, results):
+                    yield (
+                        ToolExecutionCompleted(
+                            tool_name=tc.name,
+                            output=result.content,
+                            is_error=result.is_error,
+                        ),
+                        None,
+                    )
 
-    # Max turns reached — yield an error event instead of raising
+        # Fill in tool_use_id for results that need it
+        tool_use_map = {tu.id: tu for tu in final_message.tool_uses}
+        for tr in tool_results:
+            for tu_id, tu in tool_use_map.items():
+                if tr.tool_use_id == "" or tr.tool_use_id == tu_id:
+                    tr.tool_use_id = tu_id
+                    break
+
+        messages.append(ConversationMessage(role="user", content=tool_results))  # type: ignore[arg-type]
+
     yield (
         ToolExecutionCompleted(
             tool_name="",
