@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from fastapi import APIRouter
@@ -9,6 +10,7 @@ from fastapi.responses import JSONResponse
 
 if TYPE_CHECKING:
     from ephemeralos.db.stores import AgentRunStore, SessionStore, UsageStore
+    from ephemeralos.server.app_factory import SessionState
 
 
 # ---------------------------------------------------------------------------
@@ -17,7 +19,7 @@ if TYPE_CHECKING:
 
 
 def create_persistence_router(
-    get_session: callable,
+    get_session: Callable[[], "SessionState"],
     session_store: SessionStore,
     agent_run_store: AgentRunStore,
     usage_store: UsageStore,

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, HTTPException
@@ -48,7 +49,7 @@ class ConfigRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-def create_core_router(get_session: callable) -> APIRouter:
+def create_core_router(get_session: Callable[[], "SessionState"]) -> APIRouter:
     """Build the core API router."""
     router = APIRouter(prefix="/api")
 
@@ -93,12 +94,13 @@ def create_core_router(get_session: callable) -> APIRouter:
         if session.config is None:
             raise HTTPException(status_code=503, detail="Session not ready")
 
-        if session.busy:
-            return JSONResponse(status_code=409, content={"error": "Session is busy"})
+        async with session._busy_lock:
+            if session.busy:
+                return JSONResponse(status_code=409, content={"error": "Session is busy"})
+            session.busy = True
 
         queue: asyncio.Queue[BackendEvent | None] = asyncio.Queue()
         session.set_event_queue(queue)
-        session.busy = True
 
         async def process() -> None:
             try:

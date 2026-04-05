@@ -333,6 +333,7 @@ class SandboxService:
                 for s in (raw or [])
             ]
         except Exception:
+            logger.warning("Failed to list snapshots", exc_info=True)
             return []
 
     # -- Workspace root -------------------------------------------------------

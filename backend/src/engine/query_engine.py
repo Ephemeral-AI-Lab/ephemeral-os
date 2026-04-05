@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import AsyncIterator
+from typing import TYPE_CHECKING, AsyncIterator
+
+if TYPE_CHECKING:
+    from ephemeralos.utils.compact import SessionContext
 
 from ephemeralos.models.types import SupportsStreamingMessages
 from ephemeralos.engine.cost_tracker import CostTracker
@@ -28,7 +31,7 @@ class QueryEngine:
         max_tokens: int = 4096,
         hook_executor: HookExecutor | None = None,
         tool_metadata: dict[str, object] | None = None,
-        session_context: object | None = None,
+        session_context: "SessionContext | None" = None,
     ) -> None:
         self._api_client = api_client
         self._tool_registry = tool_registry

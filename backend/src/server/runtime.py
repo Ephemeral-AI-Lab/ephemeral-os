@@ -11,7 +11,10 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import AsyncIterator, Awaitable, Callable
+from typing import TYPE_CHECKING, AsyncIterator, Awaitable, Callable
+
+if TYPE_CHECKING:
+    from ephemeralos.utils.compact import SessionContext
 
 from ephemeralos.agents.types import AgentDefinition
 from ephemeralos.config import Settings, load_settings
@@ -130,7 +133,7 @@ def spawn_agent(
     *,
     agent_def: AgentDefinition | None = None,
     latest_user_prompt: str | None = None,
-    session_context: object | None = None,
+    session_context: "SessionContext | None" = None,
 ) -> EphemeralAgent:
     """Spawn a fresh ephemeral agent with the given session history.
 
@@ -250,7 +253,7 @@ def _load_session_state(config: SessionConfig) -> tuple[list[ConversationMessage
                     msgs = [ConversationMessage.model_validate(m) for m in record.message_history]
                     return msgs, ctx
                 except Exception:
-                    logger.debug("Failed to load messages from DB", exc_info=True)
+                    logger.warning("Failed to deserialize messages from DB — starting fresh", exc_info=True)
 
     # Fallback: initial restore messages (consumed once)
     if config._initial_messages:
@@ -259,7 +262,7 @@ def _load_session_state(config: SessionConfig) -> tuple[list[ConversationMessage
             config._initial_messages = None
             return msgs, ctx
         except Exception:
-            logger.debug("Failed to load initial restore messages", exc_info=True)
+            logger.warning("Failed to load initial restore messages — starting fresh", exc_info=True)
 
     return [], ctx
 

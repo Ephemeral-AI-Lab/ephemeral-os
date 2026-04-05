@@ -178,7 +178,7 @@ _BUILTIN_AGENTS: list[AgentDefinition] = [
     AgentDefinition(
         name="statusline-setup",
         description="Use this agent to configure the user's Claude Code status line setting.",
-        toolkits=["filesystem"],
+        toolkits=["sandbox_operations"],
         system_prompt=_STATUSLINE_SYSTEM_PROMPT,
         model="sonnet",
         subagent_type="statusline-setup",
@@ -192,7 +192,7 @@ _BUILTIN_AGENTS: list[AgentDefinition] = [
             '"How do I...") about: (1) Claude Code (the CLI tool); '
             "(2) Claude Agent SDK; (3) Claude API."
         ),
-        toolkits=["filesystem", "web"],
+        toolkits=["sandbox_operations"],
         system_prompt=_CLAUDE_CODE_GUIDE_SYSTEM_PROMPT,
         model="haiku",
         subagent_type="claude-code-guide",
@@ -206,7 +206,7 @@ _BUILTIN_AGENTS: list[AgentDefinition] = [
             'quickly find files by patterns, search code for keywords, or answer questions '
             "about the codebase."
         ),
-        toolkits=["filesystem", "execution", "web", "task_management", "code_analysis", "discovery", "system"],
+        toolkits=["sandbox_operations", "code_intelligence", "discovery"],
         system_prompt=_EXPLORE_SYSTEM_PROMPT,
         model="haiku",
         omit_claude_md=True,
@@ -220,7 +220,7 @@ _BUILTIN_AGENTS: list[AgentDefinition] = [
             "Software architect agent for designing implementation plans. Use this when you "
             "need to plan the implementation strategy for a task."
         ),
-        toolkits=["filesystem", "execution", "web", "task_management", "planning", "code_analysis", "discovery", "system"],
+        toolkits=["sandbox_operations", "code_intelligence", "coordination_planner", "discovery"],
         system_prompt=_PLAN_SYSTEM_PROMPT,
         model="inherit",
         omit_claude_md=True,
@@ -245,7 +245,7 @@ _BUILTIN_AGENTS: list[AgentDefinition] = [
             "Use this agent to verify that implementation work is correct before reporting "
             "completion. Produces a PASS/FAIL/PARTIAL verdict with evidence."
         ),
-        toolkits=["filesystem", "execution", "web", "task_management", "code_analysis", "discovery", "system"],
+        toolkits=["sandbox_operations", "code_intelligence", "discovery"],
         system_prompt=_VERIFICATION_SYSTEM_PROMPT,
         critical_system_reminder=_VERIFICATION_CRITICAL_REMINDER,
         background=True,

@@ -5,7 +5,10 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass
 from pathlib import Path
-from typing import AsyncIterator
+from typing import TYPE_CHECKING, AsyncIterator
+
+if TYPE_CHECKING:
+    from ephemeralos.utils.compact import SessionContext
 
 from ephemeralos.models.types import (
     ApiMessageCompleteEvent,
@@ -40,7 +43,7 @@ class QueryContext:
     max_turns: int = 200
     hook_executor: HookExecutor | None = None
     tool_metadata: dict[str, object] | None = None
-    session_context: object | None = None  # SessionContext, typed loosely to avoid circular import
+    session_context: "SessionContext | None" = None
 
 
 async def run_query(

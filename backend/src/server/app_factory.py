@@ -59,6 +59,7 @@ class SessionState:
     def __init__(self) -> None:
         self.config: SessionConfig | None = None
         self.busy = False
+        self._busy_lock = asyncio.Lock()
         self._event_queue: asyncio.Queue[BackendEvent | None] | None = None
         self._tool_registry: ToolRegistry | None = None
 
@@ -90,11 +91,13 @@ class SessionState:
 
     @property
     def tool_registry(self) -> ToolRegistry:
-        assert self._tool_registry is not None
+        if self._tool_registry is None:
+            raise RuntimeError("Tool registry not initialised")
         return self._tool_registry
 
     def current_settings(self) -> "Settings":
-        assert self.config is not None
+        if self.config is None:
+            raise RuntimeError("SessionState not initialised")
         return self.config.resolve_settings()
 
     async def emit(self, event: BackendEvent) -> None:
@@ -106,7 +109,8 @@ class SessionState:
         self._event_queue = queue
 
     def _toolkit_snapshots(self) -> list[ToolkitSnapshot]:
-        assert self._tool_registry is not None
+        if self._tool_registry is None:
+            raise RuntimeError("Tool registry not initialised")
         # Registered toolkits (already instantiated in the default registry)
         registered_names: set[str] = set()
         snapshots: list[ToolkitSnapshot] = []
@@ -140,7 +144,7 @@ class SessionState:
                     )
                 )
             except Exception:
-                pass  # factory may require runtime context; skip gracefully
+                logger.debug("Toolkit factory %r skipped (requires runtime context)", factory_name, exc_info=True)
         return snapshots
 
 
