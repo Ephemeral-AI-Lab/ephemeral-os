@@ -1,8 +1,8 @@
+# ruff: noqa: E402
 """E2E test fixtures — in-memory DB, mock LLM, TestClient."""
 
 from __future__ import annotations
 
-import os
 import sys
 import types
 from typing import Any, AsyncIterator
@@ -12,12 +12,11 @@ import pytest
 
 # ---------------------------------------------------------------------------
 # Stub heavy dependencies not installed in test env
+# Only stub modules that are genuinely missing — httpx is installed.
 # ---------------------------------------------------------------------------
 
 _STUB_MODULES = [
     "anthropic", "anthropic.types",
-    "openai", "openai.types", "openai.types.chat",
-    "httpx",
     "daytona_sdk", "daytona_sdk.daytona",
 ]
 
@@ -32,7 +31,6 @@ def _install_stubs() -> None:
             stub.__dict__.setdefault("APIError", type("APIError", (Exception,), {}))
             stub.__dict__.setdefault("APIStatusError", type("APIStatusError", (Exception,), {}))
             stub.__dict__.setdefault("AsyncAnthropic", MagicMock)
-            stub.__dict__.setdefault("AsyncOpenAI", MagicMock)
             stub.__dict__.setdefault("Daytona", MagicMock)
             stub.__dict__.setdefault("DaytonaConfig", MagicMock)
             stub.__dict__.setdefault("CreateSandboxParams", MagicMock)
@@ -43,10 +41,18 @@ _install_stubs()
 
 # Now safe to import project code
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import sessionmaker
 
-from db.base import Base
-from engine.messages import ConversationMessage, TextBlock, ToolUseBlock
+import json
+
+from ephemeralos.db.base import Base  # noqa: E402
+from ephemeralos.engine.messages import ConversationMessage, TextBlock, ThinkingBlock, ToolUseBlock  # noqa: E402
+from ephemeralos.models.types import (  # noqa: E402
+    ApiMessageCompleteEvent,
+    ApiTextDeltaEvent,
+    ApiThinkingDeltaEvent,
+    UsageSnapshot,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -55,10 +61,15 @@ from engine.messages import ConversationMessage, TextBlock, ToolUseBlock
 
 
 class MockApiClient:
-    """Deterministic mock that captures what tools/system_prompt the engine sends."""
+    """Deterministic mock that captures what tools/system_prompt the engine sends.
+
+    Supports text-only, thinking+text, and tool-call responses.
+    Streams ThinkingDelta and TextDelta events before the final message.
+    """
 
     def __init__(self) -> None:
         self.last_request: Any = None
+        self.all_requests: list[Any] = []
         self.responses: list[ConversationMessage] = []
         self._call_count = 0
 
@@ -66,21 +77,56 @@ class MockApiClient:
         self.responses = list(msgs)
 
     async def stream_message(self, request: Any) -> AsyncIterator:
-        """Capture the request and yield a deterministic response."""
-        from models.types import ApiMessageCompleteEvent, UsageSnapshot
-
+        """Capture the request and yield streaming events + final message."""
         self.last_request = request
-        idx = min(self._call_count, len(self.responses) - 1)
+        self.all_requests.append(request)
+        idx = min(self._call_count, len(self.responses) - 1) if self.responses else 0
         msg = self.responses[idx] if self.responses else ConversationMessage(
             role="assistant", content=[TextBlock(text="I have no tools.")]
         )
         self._call_count += 1
 
+        # Stream thinking deltas
+        for block in msg.content:
+            if isinstance(block, ThinkingBlock):
+                yield ApiThinkingDeltaEvent(text=block.text)
+
+        # Stream text deltas
+        for block in msg.content:
+            if isinstance(block, TextBlock):
+                yield ApiTextDeltaEvent(text=block.text)
+
         yield ApiMessageCompleteEvent(
             message=msg,
-            usage=UsageSnapshot(input_tokens=10, output_tokens=5),
+            usage=UsageSnapshot(input_tokens=100, output_tokens=50),
             stop_reason="end_turn",
         )
+
+
+# ---------------------------------------------------------------------------
+# SSE parsing helpers
+# ---------------------------------------------------------------------------
+
+
+def parse_sse_events(raw: str) -> list[dict[str, Any]]:
+    """Parse SSE text into a list of JSON-decoded BackendEvent dicts."""
+    events = []
+    for line in raw.split("\n"):
+        line = line.strip()
+        if line.startswith("data: "):
+            payload = line[6:]
+            if payload == "[DONE]":
+                continue
+            try:
+                events.append(json.loads(payload))
+            except json.JSONDecodeError:
+                pass
+    return events
+
+
+def events_of_type(events: list[dict], event_type: str) -> list[dict]:
+    """Filter parsed SSE events by their 'type' field."""
+    return [e for e in events if e.get("type") == event_type]
 
 
 # ---------------------------------------------------------------------------
@@ -90,14 +136,14 @@ class MockApiClient:
 
 @pytest.fixture()
 def db_session_factory(tmp_path):
-    """Create an in-memory SQLite DB with all tables."""
+    """Create a file-based SQLite DB with all tables."""
     db_path = tmp_path / "test.db"
     engine = create_engine(f"sqlite:///{db_path}", echo=False)
 
     # Import all models so Base.metadata knows about them
-    import db.models  # noqa: F401
-    import agents.db.model  # noqa: F401
-    import skills.db  # noqa: F401
+    import ephemeralos.db.models  # noqa: F401
+    import ephemeralos.agents.db.model  # noqa: F401
+    import ephemeralos.skills.db  # noqa: F401
 
     Base.metadata.create_all(engine)
     sf = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
@@ -125,7 +171,7 @@ def mock_api_client():
 @pytest.fixture()
 def app_client(db_session_factory, mock_api_client, tmp_path, monkeypatch):
     """Create a FastAPI TestClient with real DB and mock LLM."""
-    from fastapi.testclient import TestClient
+    from fastapi.testclient import TestClient  # noqa: PLC0415
 
     # Prevent env vars from leaking into test
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
@@ -134,89 +180,43 @@ def app_client(db_session_factory, mock_api_client, tmp_path, monkeypatch):
 
     # Monkey-patch initialize_db to return our test session factory
     monkeypatch.setattr(
-        "db.engine.initialize_db",
+        "ephemeralos.db.engine.initialize_db",
         lambda *a, **kw: db_session_factory,
-    )
-
-    # Monkey-patch model_store.seed_from_json to use a test registry
-    import json
-    test_registry = {
-        "models": [
-            {
-                "key": "minimax",
-                "label": "MiniMax M2.7 Highspeed",
-                "factory": {
-                    "class_path": "openai",
-                    "kwargs": {
-                        "model": "MiniMax-M2.7-highspeed",
-                        "api_key": "test-api-key",
-                        "base_url": "https://api.minimax.chat/v1",
-                    },
-                },
-            },
-            {
-                "key": "claude-sonnet",
-                "label": "Claude Sonnet 4",
-                "factory": {
-                    "class_path": "anthropic",
-                    "kwargs": {
-                        "model": "claude-sonnet-4-20250514",
-                        "api_key": "test-anthropic-key",
-                    },
-                },
-            },
-        ],
-        "active": "minimax",
-    }
-    test_registry_path = tmp_path / "registry.json"
-    test_registry_path.write_text(json.dumps(test_registry))
-
-    # Patch the registry path lookup
-    monkeypatch.setattr(
-        "server.app_factory.Path.__truediv__",
-        lambda self, other: test_registry_path if other == "registry.json" else self.__class__.__truediv__(self, other),
     )
 
     # Monkey-patch make_api_client to return our mock
     monkeypatch.setattr(
-        "engine.agent.make_api_client",
+        "ephemeralos.engine.agent.make_api_client",
         lambda *a, **kw: mock_api_client,
     )
 
     # Monkey-patch make_hook_executor
     monkeypatch.setattr(
-        "engine.agent.make_hook_executor",
+        "ephemeralos.engine.agent.make_hook_executor",
         lambda *a, **kw: None,
     )
 
     # Monkey-patch build_runtime_system_prompt
     monkeypatch.setattr(
-        "engine.agent.build_runtime_system_prompt",
+        "ephemeralos.engine.agent.build_runtime_system_prompt",
         lambda *a, **kw: "You are a test assistant.",
     )
 
     # Monkey-patch settings to include api_key so resolve_api_key doesn't raise
-    original_load = None
-    try:
-        from config.settings import load_settings as _orig_load
-        original_load = _orig_load
-    except Exception:
-        pass
-
     def _patched_load_settings(*a, **kw):
-        from config.settings import Settings, DatabaseSettings
+        from ephemeralos.config.settings import Settings, DatabaseSettings  # noqa: PLC0415
         return Settings(
             api_key="test-api-key",
             model="claude-sonnet-4-20250514",
             database=DatabaseSettings(url=f"sqlite:///{tmp_path / 'test.db'}"),
         )
 
-    monkeypatch.setattr("config.load_settings", _patched_load_settings)
-    monkeypatch.setattr("config.settings.load_settings", _patched_load_settings)
-    monkeypatch.setattr("server.app_factory.load_settings", _patched_load_settings)
+    monkeypatch.setattr("ephemeralos.config.load_settings", _patched_load_settings)
+    monkeypatch.setattr("ephemeralos.config.settings.load_settings", _patched_load_settings)
+    monkeypatch.setattr("ephemeralos.server.app_factory.load_settings", _patched_load_settings)
 
-    from server.protocol import BackendHostConfig
-    from server.app_factory import create_app
+    from ephemeralos.server.protocol import BackendHostConfig  # noqa: PLC0415
+    from ephemeralos.server.app_factory import create_app  # noqa: PLC0415
 
     config = BackendHostConfig(
         api_key="test-api-key",

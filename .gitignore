@@ -75,7 +75,6 @@ Thumbs.db
 uv.lock
 
 # Keep these local workspace files visible
-!.claude/
-!.agents/
-!.agent*
-!.omc
+.claude/
+.agents/
+.omc/

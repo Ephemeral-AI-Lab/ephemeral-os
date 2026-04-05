@@ -1,5 +1,0 @@
-# E2E Test Suite Progress
-
-## Iteration 1
-- Starting PRD-driven implementation
-- 9 user stories to complete

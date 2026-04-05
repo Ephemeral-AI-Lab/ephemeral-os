@@ -1,9 +1,0 @@
-{
-  "active": true,
-  "started_at": "2026-04-05T08:12:11.943Z",
-  "original_prompt": "❯ create e2e test suite with minimax model key and test sandbox toolkits and skills, test\nwith anthropic competible api key first, you can customize your agents\n\n/using-superpowers\n/ralph",
-  "session_id": "b924053f-6031-4d6c-b743-e0085bbbf522",
-  "project_path": "/Users/yifanxu/machine_learning/LoVC/EphemeralOS/backend",
-  "reinforcement_count": 0,
-  "last_checked_at": "2026-04-05T08:12:11.944Z"
-}
