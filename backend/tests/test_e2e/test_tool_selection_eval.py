@@ -16,7 +16,10 @@ Run with:
 from __future__ import annotations
 
 import json
+import os
+import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -25,23 +28,58 @@ pytestmark = [pytest.mark.e2e, pytest.mark.live]
 
 
 # ---------------------------------------------------------------------------
-# Check if we can create the eval agent
+# Credentials and sandbox
 # ---------------------------------------------------------------------------
 
-def _can_create_agent() -> bool:
-    try:
-        from config.settings import load_settings
-        s = load_settings()
-        return bool(s.api_key or s.resolve_api_key())
-    except Exception:
-        return False
 
-HAS_CREDENTIALS = _can_create_agent()
+def _load_settings() -> dict:
+    settings_path = Path.home() / ".ephemeralos" / "settings.json"
+    if settings_path.exists():
+        return json.loads(settings_path.read_text())
+    return {}
+
+
+_SETTINGS = _load_settings()
+
+MINIMAX_KEY = os.environ.get("MINIMAX_API_KEY") or _SETTINGS.get("api_key", "")
+DAYTONA_KEY = os.environ.get("DAYTONA_API_KEY") or _SETTINGS.get("daytona_api_key", "")
+DAYTONA_URL = os.environ.get("DAYTONA_API_URL") or _SETTINGS.get("daytona_api_url", "")
+
+HAS_CREDENTIALS = bool(MINIMAX_KEY)
+HAS_DAYTONA = bool(DAYTONA_KEY and DAYTONA_URL)
+
+
+def _create_sandbox(name: str = "tool-eval") -> str | None:
+    if not HAS_DAYTONA:
+        return None
+    try:
+        from sandbox.service import SandboxService
+
+        svc = SandboxService()
+        sandbox = svc.create_sandbox(
+            name=f"{name}-{int(time.time())}",
+            language="python",
+            labels={"purpose": "tool-eval"},
+        )
+        return sandbox["id"]
+    except Exception:
+        return None
+
+
+def _delete_sandbox(sandbox_id: str) -> None:
+    try:
+        from sandbox.service import SandboxService
+
+        svc = SandboxService()
+        svc.delete_sandbox(sandbox_id)
+    except Exception:
+        pass
 
 
 # ---------------------------------------------------------------------------
 # Eval case definitions
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class EvalCase:
@@ -84,7 +122,6 @@ EVAL_CASES = [
         expected_tools=["daytona_edit_file", "daytona_read_file"],  # read-first is acceptable
         required_params={},  # params depend on which tool is chosen
     ),
-
     # -- Search operations --
     EvalCase(
         name="grep_search",
@@ -98,7 +135,6 @@ EVAL_CASES = [
         expected_tools=["daytona_glob"],
         required_params={"daytona_glob": ["pattern"]},
     ),
-
     # -- Shell execution --
     EvalCase(
         name="run_command",
@@ -112,7 +148,6 @@ EVAL_CASES = [
         expected_tools=["daytona_bash"],
         required_params={"daytona_bash": ["command"]},
     ),
-
     # -- LSP operations --
     EvalCase(
         name="hover_info",
@@ -138,7 +173,6 @@ EVAL_CASES = [
         expected_tools=["daytona_lsp_diagnostics"],
         required_params={"daytona_lsp_diagnostics": ["file_path"]},
     ),
-
     # -- Behavioral --
     EvalCase(
         name="read_before_edit",
@@ -152,6 +186,7 @@ EVAL_CASES = [
 # ---------------------------------------------------------------------------
 # Scoring
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class EvalScore:
@@ -202,28 +237,28 @@ def _score(case: EvalCase, result) -> EvalScore:
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(scope="module")
 def eval_agent(tmp_path_factory):
     import os
     from engine.eval_agent import EvalAgent
-    from config.settings import Settings
-    import json
-    from pathlib import Path
 
-    # Load settings.json directly to avoid env var overrides
-    settings_path = Path.home() / ".ephemeralos" / "settings.json"
-    if settings_path.exists():
-        raw = json.loads(settings_path.read_text())
-        settings = Settings.model_validate(raw)
-    else:
-        settings = Settings()
+    # Ensure /workspace exists — build_runtime_system_prompt needs it
+    os.makedirs("/workspace", exist_ok=True)
 
-    return EvalAgent.from_settings(settings=settings)
+    sandbox_id = _create_sandbox("tool-eval")
+    if sandbox_id is None:
+        pytest.skip("Daytona sandbox not available")
+
+    agent = EvalAgent.from_registry_with_sandbox(sandbox_id)
+    yield agent
+    _delete_sandbox(sandbox_id)
 
 
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.mark.skipif(not HAS_CREDENTIALS, reason="No LLM credentials configured")
 @pytest.mark.asyncio
@@ -234,7 +269,9 @@ async def test_tool_selection(case: EvalCase, eval_agent):
 
     # Print for visibility
     status = "PASS" if score.passed else "FAIL"
-    print(f"\n  [{status}] {case.name}: expected={case.expected_tools}, got={score.tool_names_called}, {score.latency_ms:.0f}ms")
+    print(
+        f"\n  [{status}] {case.name}: expected={case.expected_tools}, got={score.tool_names_called}, {score.latency_ms:.0f}ms"
+    )
     if result.tool_calls:
         for tc in result.tool_calls:
             print(f"    -> {tc.name}({json.dumps(tc.input, default=str)[:200]})")
@@ -264,9 +301,9 @@ async def test_full_eval_report(eval_agent):
     print(f"\n{'=' * 70}")
     print(f"TOOL SELECTION EVAL — {eval_agent._model}")
     print(f"{'=' * 70}")
-    print(f"Overall:   {passed}/{total} ({passed/total*100:.0f}%)")
-    print(f"Tool sel:  {tool_ok}/{total} ({tool_ok/total*100:.0f}%)")
-    print(f"Params:    {params_ok}/{total} ({params_ok/total*100:.0f}%)")
+    print(f"Overall:   {passed}/{total} ({passed / total * 100:.0f}%)")
+    print(f"Tool sel:  {tool_ok}/{total} ({tool_ok / total * 100:.0f}%)")
+    print(f"Params:    {params_ok}/{total} ({params_ok / total * 100:.0f}%)")
     print(f"Avg latency: {avg_ms:.0f}ms")
     print(f"{'-' * 70}")
     for s in scores:
@@ -277,4 +314,4 @@ async def test_full_eval_report(eval_agent):
             print(f"         x {err}")
     print(f"{'=' * 70}")
 
-    assert passed / total >= 0.80, f"Pass rate {passed/total:.0%} < 80%"
+    assert passed / total >= 0.80, f"Pass rate {passed / total:.0%} < 80%"

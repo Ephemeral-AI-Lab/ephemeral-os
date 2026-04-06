@@ -1,36 +1,45 @@
+# ruff: noqa
 """Live end-to-end tests for the Anthropic native client.
 
-Requires a real ANTHROPIC_API_KEY environment variable.
-Run with: pytest tests/test_e2e/test_anthropic_live.py -m live -v
+Uses EvalAgent for credential loading from ~/.ephemeralos/settings.json.
+Run with: .venv/bin/python -m pytest backend/tests/test_e2e/test_anthropic_live.py -v
 """
 
 from __future__ import annotations
 
-import os
-
 import pytest
 
+from engine.eval_agent import EvalAgent
+from engine.messages import ConversationMessage
 from models.clients.anthropic_native import AnthropicClient
 from models.types import (
     ApiMessageRequest,
     ApiTextDeltaEvent,
     ApiToolUseDeltaEvent,
     ApiMessageCompleteEvent,
-    ApiThinkingDeltaEvent,
 )
-from engine.messages import ConversationMessage
-
-ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-MODEL = "claude-sonnet-4-20250514"
 
 pytestmark = [pytest.mark.e2e, pytest.mark.live]
 
+HAS_CREDENTIALS = EvalAgent.has_credentials()
+MODEL = "claude-sonnet-4-20250514"
+
+
+@pytest.fixture(scope="module")
+def agent():
+    """Create an EvalAgent for credential access."""
+    if not HAS_CREDENTIALS:
+        pytest.skip("No LLM credentials configured")
+    return EvalAgent.create()
+
 
 @pytest.fixture
-def client():
-    if not ANTHROPIC_API_KEY:
-        pytest.skip("ANTHROPIC_API_KEY not set")
-    return AnthropicClient(api_key=ANTHROPIC_API_KEY)
+def client(agent):
+    """Access the raw API client for streaming protocol tests."""
+    raw = agent.api_client
+    if not isinstance(raw, AnthropicClient):
+        pytest.skip("Raw client is not AnthropicClient (api_format may not be 'anthropic')")
+    return raw
 
 
 def _user_message(text: str) -> ConversationMessage:
@@ -43,6 +52,7 @@ def _user_message(text: str) -> ConversationMessage:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.skipif(not HAS_CREDENTIALS, reason="No credentials")
 @pytest.mark.asyncio
 async def test_simple_text_response(client):
     """Stream a simple reply and verify text delta + complete events."""
@@ -72,6 +82,7 @@ async def test_simple_text_response(client):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.skipif(not HAS_CREDENTIALS, reason="No credentials")
 @pytest.mark.asyncio
 async def test_tool_use_mid_stream_ordering(client):
     """Validate that ApiToolUseDeltaEvent arrives BEFORE ApiMessageCompleteEvent."""
@@ -102,7 +113,6 @@ async def test_tool_use_mid_stream_ordering(client):
     assert len(tool_events) >= 1, "Expected at least one ApiToolUseDeltaEvent"
     assert len(complete_events) == 1, "Expected exactly one ApiMessageCompleteEvent"
 
-    # Tool event must appear before complete event in the stream
     first_tool_idx = next(i for i, e in enumerate(events) if isinstance(e, ApiToolUseDeltaEvent))
     complete_idx = next(i for i, e in enumerate(events) if isinstance(e, ApiMessageCompleteEvent))
     assert first_tool_idx < complete_idx, (
@@ -119,6 +129,7 @@ async def test_tool_use_mid_stream_ordering(client):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.skipif(not HAS_CREDENTIALS, reason="No credentials")
 @pytest.mark.asyncio
 async def test_multiple_tools_arrive_in_order(client):
     """Two tool calls should arrive sequentially, both before ApiMessageCompleteEvent."""
@@ -162,7 +173,6 @@ async def test_multiple_tools_arrive_in_order(client):
     assert len(tool_events) == 2, f"Expected 2 ApiToolUseDeltaEvent, got {len(tool_events)}"
     assert len(complete_events) == 1, "Expected exactly one ApiMessageCompleteEvent"
 
-    # Both tool events must appear before the complete event
     tool_indices = [i for i, e in enumerate(events) if isinstance(e, ApiToolUseDeltaEvent)]
     complete_idx = next(i for i, e in enumerate(events) if isinstance(e, ApiMessageCompleteEvent))
 
@@ -171,7 +181,6 @@ async def test_multiple_tools_arrive_in_order(client):
             f"Tool event at index {idx} must precede complete event at index {complete_idx}"
         )
 
-    # First tool event index must be less than second — sequential mid-stream
     assert tool_indices[0] < tool_indices[1], (
         "First tool event must arrive before second tool event"
     )
@@ -182,6 +191,7 @@ async def test_multiple_tools_arrive_in_order(client):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.skipif(not HAS_CREDENTIALS, reason="No credentials")
 @pytest.mark.asyncio
 async def test_usage_reported(client):
     """ApiMessageCompleteEvent must contain positive token usage counters."""
@@ -208,20 +218,12 @@ async def test_usage_reported(client):
 # ---------------------------------------------------------------------------
 
 
-def test_provider_routing():
+@pytest.mark.skipif(not HAS_CREDENTIALS, reason="No credentials")
+def test_provider_routing(agent):
     """make_api_client returns AnthropicClient when api_format='anthropic'."""
-    if not ANTHROPIC_API_KEY:
-        pytest.skip("ANTHROPIC_API_KEY not set")
+    if agent.settings.api_format != "anthropic":
+        pytest.skip("api_format is not 'anthropic'")
 
-    from config.settings import Settings
-    from models.provider import make_api_client
-
-    settings = Settings(
-        api_key=ANTHROPIC_API_KEY,
-        api_format="anthropic",
-        model=MODEL,
-    )
-    resolved_client = make_api_client(settings)
-    assert isinstance(resolved_client, AnthropicClient), (
-        f"Expected AnthropicClient, got {type(resolved_client).__name__}"
+    assert isinstance(agent.api_client, AnthropicClient), (
+        f"Expected AnthropicClient, got {type(agent.api_client).__name__}"
     )
