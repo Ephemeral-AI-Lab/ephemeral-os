@@ -89,7 +89,7 @@ class TestParallelBgWithFgInterleaving:
             "- 'echo \"Step 2: Env verified\"'\n"
             "- 'echo \"Step 3: Deps checked\"'\n"
             "Then check progress using check_background_progress. "
-            "Wait for all tasks with wait_for_background_task using wait_for_all=true and timeout=15. "
+            "Wait for all tasks with wait_for_background_task using task_id="all" and timeout=15. "
             "Report all results."
         )
         _log_result(result, "three_bg_fg_interleave")
@@ -114,7 +114,7 @@ class TestParallelBgWithFgInterleaving:
             f"Expected wait_for_background_task. Got: {result.tool_names}"
         # wait call must use wait_for_all=True
         wait_calls = [tc for tc in result.tool_calls if tc.name == "wait_for_background_task"]
-        assert any(tc.input.get("wait_for_all") is True for tc in wait_calls), \
+        assert any(tc.input.get("task_id") == "all" for tc in wait_calls), \
             f"Expected wait_for_background_task with wait_for_all=True. Got: {[tc.input for tc in wait_calls]}"
         # text mentions results or completion
         text_lower = result.text.lower()
@@ -291,7 +291,7 @@ class TestParallelBgSameCommand:
             "4. 'sleep 5 && echo \"SHARD_4: 9/10 passed\"' (background: true)\n"
             "Do foreground: 'echo TEST_SHARDS_LAUNCHED'. "
             "Check progress using check_background_progress. "
-            "Wait for all shards with wait_for_background_task wait_for_all=true timeout=15. "
+            "Wait for all shards with wait_for_background_task task_id="all" timeout=15. "
             "Collect all results and create /home/daytona/test_summary.txt with the combined "
             "shard results using daytona_write_file. Report total pass/fail."
         )
@@ -308,7 +308,7 @@ class TestParallelBgSameCommand:
         wait_calls = [tc for tc in result.tool_calls if tc.name == "wait_for_background_task"]
         assert len(wait_calls) >= 1, \
             f"Expected wait_for_background_task. Got: {result.tool_names}"
-        assert any(tc.input.get("wait_for_all") is True for tc in wait_calls), \
+        assert any(tc.input.get("task_id") == "all" for tc in wait_calls), \
             f"Expected wait_for_background_task with wait_for_all=True. Got: {[tc.input for tc in wait_calls]}"
         # file write with test_summary in path
         write_calls = [tc for tc in result.tool_calls if tc.name == "daytona_write_file"]
@@ -354,7 +354,7 @@ class TestParallelBgOneFailsOthersSucceed:
             "3. 'sleep 3 && echo SUCCESS_C' (background: true)\n"
             "Do foreground: 'echo MONITORING'. "
             "Check progress using check_background_progress. "
-            "Wait for all with wait_for_background_task wait_for_all=true timeout=10. "
+            "Wait for all with wait_for_background_task task_id="all" timeout=10. "
             "Check progress again to see all statuses. "
             "Report: which succeeded, which failed, and note the exit code of the failed task."
         )
@@ -371,7 +371,7 @@ class TestParallelBgOneFailsOthersSucceed:
         wait_calls = [tc for tc in result.tool_calls if tc.name == "wait_for_background_task"]
         assert len(wait_calls) >= 1, \
             f"Expected wait_for_background_task. Got: {result.tool_names}"
-        assert any(tc.input.get("wait_for_all") is True for tc in wait_calls), \
+        assert any(tc.input.get("task_id") == "all" for tc in wait_calls), \
             f"Expected wait_for_background_task with wait_for_all=True. Got: {[tc.input for tc in wait_calls]}"
         # 1+ progress checks
         checks = result.tool_count("check_background_progress")

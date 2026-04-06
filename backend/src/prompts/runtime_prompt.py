@@ -173,8 +173,35 @@ def build_agent_capabilities_prompt(
     # Task note enforcement (when background tools are available)
     if has_background_tools:
         sections.append(build_task_note_prompt())
+        sections.append(build_background_lifecycle_prompt())
 
     return "\n\n".join(sections)
+
+
+def build_background_lifecycle_prompt() -> str:
+    """System prompt section explaining background task_id lifecycle."""
+    return (
+        "# Background Task Lifecycle\n\n"
+        "When you call a tool with `background=true`, the tool result is "
+        "`[BACKGROUND LAUNCHED] task_id=\"bg_N\" ...`. The string `bg_N` "
+        "(e.g. `bg_1`, `bg_2`) is the **task_id** — a short stable handle "
+        "that identifies this background task for its entire lifetime.\n\n"
+        "**You MUST:**\n"
+        "- Remember the exact `task_id` string from the launch message.\n"
+        "- Pass it explicitly to `wait_for_background_task(task_id=\"bg_N\")` "
+        "and `cancel_background_task(task_id=\"bg_N\")`. Never pass `null`/`None`. "
+        "To wait for every pending task at once, use `task_id=\"all\"`.\n"
+        "- Never invent task_ids — only use values you saw in a launch or progress message.\n\n"
+        "**Completion delivery:** when a background task finishes, you will "
+        "automatically receive a user message of the form "
+        "`[BACKGROUND bg_N COMPLETED] tool=... note=...` containing the output. "
+        "You do NOT need to poll — the system pushes completions to you. Use "
+        "`wait_for_background_task` only when you have no other foreground work "
+        "to do and want to block until that specific task finishes.\n\n"
+        "**Reminder header:** while a task is running you will periodically see "
+        "`Background task_id=\"bg_N\" still running (Ns) — <note>` headers. The "
+        "`task_id` in that header is the canonical handle to reuse.\n"
+    )
 
 
 def build_task_note_prompt() -> str:

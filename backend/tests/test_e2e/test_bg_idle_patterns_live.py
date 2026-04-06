@@ -156,14 +156,16 @@ class TestIdlePeriodicPolling:
             enable_background_tasks=True,
         )
         result = await agent.invoke(
-            "Launch 'sleep 10 && echo PERIODIC_DONE' in background. Do 'echo START'.\n"
-            "Now do a periodic monitoring cycle:\n"
-            "1. Check progress\n"
-            "2. Wait with timeout=3 — will timeout (task takes 10s)\n"
-            "3. Check progress again — note elapsed time increased\n"
-            "4. Wait with timeout=3 — might still timeout\n"
-            "5. Wait with timeout=10 — should complete this time\n"
-            "Report: how many wait attempts, when it finally completed."
+            "Launch 'sleep 30 && echo PERIODIC_DONE' in background. Do 'echo START'.\n"
+            "You MUST call wait_for_background_task EXACTLY 3 times and check_background_progress "
+            "EXACTLY 3 times. Do NOT skip any step even if a previous wait completed unexpectedly:\n"
+            "1. check_background_progress\n"
+            "2. wait_for_background_task timeout=3 — will timeout (task takes 30s)\n"
+            "3. check_background_progress — note elapsed time increased\n"
+            "4. wait_for_background_task timeout=3 — will timeout again\n"
+            "5. check_background_progress\n"
+            "6. wait_for_background_task timeout=30 — should complete this time\n"
+            "Report: each wait attempt and when it finally completed."
         )
         _log_result(result, "periodic_polling")
 
@@ -211,13 +213,18 @@ class TestIdleNoFgWorkPureWait:
             enable_background_tasks=True,
         )
         result = await agent.invoke(
-            "There is NO foreground work. Only background monitoring:\n"
-            "1. Launch 'sleep 4 && echo PURE_WAIT_DONE' in background (background: true)\n"
-            "2. Launch 'sleep 30 && echo SLOW_TASK' in background (background: true)\n"
+            "There is NO foreground work. Only background monitoring. You MUST complete ALL 7 steps "
+            "below in order and MUST NOT skip any step:\n"
+            "1. Launch 'sleep 8 && echo PURE_WAIT_DONE' in background (background: true). The tool "
+            "result will include a task_id — you MUST copy that exact task_id string and use it as FAST.\n"
+            "2. Launch 'sleep 45 && echo SLOW_TASK' in background (background: true). Copy its exact "
+            "task_id string and use it as SLOW.\n"
             "3. Call check_background_progress\n"
-            "4. Call wait_for_background_task with timeout=10 — first task should complete\n"
-            "5. Check progress — first done, second still running\n"
-            "6. Cancel the slow task with reason 'No longer needed'\n"
+            "4. Call wait_for_background_task with task_id=<the FAST task_id string from step 1> and "
+            "timeout=15. You MUST pass the exact FAST task_id — do NOT pass null/None.\n"
+            "5. Call check_background_progress — FAST done, SLOW still running\n"
+            "6. Call cancel_background_task with task_id=<the SLOW task_id string from step 2> and "
+            "reason='No longer needed'\n"
             "7. Report both task outcomes"
         )
         _log_result(result, "pure_idle_wait")
@@ -360,15 +367,15 @@ class TestIdleEscalatingTimeout:
             enable_background_tasks=True,
         )
         result = await agent.invoke(
-            "Launch 'sleep 18 && echo ESCALATED_DONE' in background. Do 'echo MONITOR'.\n"
+            "Launch 'sleep 30 && echo ESCALATED_DONE' in background. Do 'echo MONITOR'.\n"
             "You MUST call wait_for_background_task EXACTLY 3 times with escalating timeouts. "
-            "Do NOT skip any step:\n"
+            "Do NOT skip any step even if a previous wait completed unexpectedly:\n"
             "1. check_background_progress\n"
-            "2. wait_for_background_task timeout=3 — this WILL timeout (task takes 18s)\n"
+            "2. wait_for_background_task timeout=2 — this WILL timeout (task takes 30s)\n"
             "3. check_background_progress — note elapsed time\n"
-            "4. wait_for_background_task timeout=5 — this WILL timeout again\n"
+            "4. wait_for_background_task timeout=3 — this WILL timeout again\n"
             "5. check_background_progress — note elapsed time increasing\n"
-            "6. wait_for_background_task timeout=15 — should finally complete\n"
+            "6. wait_for_background_task timeout=30 — should finally complete\n"
             "Report: each timeout attempt and when it finally succeeded."
         )
         _log_result(result, "escalating_timeout")
@@ -417,18 +424,21 @@ class TestIdleMultipleBgStaggeredWait:
             enable_background_tasks=True,
         )
         result = await agent.invoke(
-            "Launch 3 background tasks with staggered durations:\n"
-            "1. 'sleep 3 && echo ALPHA_DONE' (background: true)\n"
-            "2. 'sleep 6 && echo BETA_DONE' (background: true)\n"
-            "3. 'sleep 45 && echo GAMMA_DONE' (background: true)\n"
-            "No foreground work — pure idle monitoring:\n"
-            "1. Check progress — all 3 running\n"
-            "2. Wait for any (timeout=8) — ALPHA should finish first\n"
-            "3. Check progress — ALPHA done, BETA/GAMMA running\n"
-            "4. Wait for any (timeout=8) — BETA should finish\n"
-            "5. Check progress — ALPHA/BETA done, GAMMA still running\n"
-            "6. Cancel GAMMA with reason 'Taking too long'\n"
-            "7. Report: completion order and final states"
+            "Launch 3 background tasks with staggered durations. For each launch, the tool result "
+            "includes a task_id — you MUST copy that exact task_id string to use in later steps:\n"
+            "1. 'sleep 5 && echo ALPHA_DONE' (background: true) — save its task_id as ALPHA\n"
+            "2. 'sleep 15 && echo BETA_DONE' (background: true) — save its task_id as BETA\n"
+            "3. 'sleep 60 && echo GAMMA_DONE' (background: true) — save its task_id as GAMMA\n"
+            "No foreground work — pure idle monitoring. You MUST complete ALL steps below in order "
+            "and MUST NOT skip any step, especially the final cancel:\n"
+            "4. check_background_progress — all 3 running\n"
+            "5. wait_for_background_task with task_id=<ALPHA string>, timeout=12 — ALPHA should finish\n"
+            "6. check_background_progress — ALPHA done, BETA/GAMMA running\n"
+            "7. wait_for_background_task with task_id=<BETA string>, timeout=20 — BETA should finish\n"
+            "8. check_background_progress — ALPHA/BETA done, GAMMA still running\n"
+            "9. cancel_background_task with task_id=<GAMMA string>, reason='Taking too long'. "
+            "This cancel step is MANDATORY — you MUST call cancel_background_task before reporting.\n"
+            "10. Report: completion order and final states"
         )
         _log_result(result, "staggered_multi_bg")
 

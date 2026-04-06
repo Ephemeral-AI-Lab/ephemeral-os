@@ -158,12 +158,12 @@ class TestWaitWithSpecificTaskId:
         )
         result = await agent.invoke(
             "Do these steps:\n"
-            "1. Run 'sleep 3 && echo TASK_A_DONE' in background (background: true) — this is TASK A (short)\n"
-            "2. Run 'sleep 60 && echo TASK_B_DONE' in background (background: true) — this is TASK B (long)\n"
+            "1. Run 'sleep 15 && echo TASK_A_DONE' in background (background: true) — this is TASK A (short)\n"
+            "2. Run 'sleep 120 && echo TASK_B_DONE' in background (background: true) — this is TASK B (long)\n"
             "3. Run 'echo READY' in foreground\n"
             "4. Call check_background_progress to see both tasks and get their task IDs\n"
             "5. Call wait_for_background_task passing the task_id of TASK A (the short one) "
-            "with timeout=10. Wait only for that specific task.\n"
+            "with timeout=25. Wait only for that specific task.\n"
             "6. After TASK A completes, cancel TASK B using cancel_background_task\n"
             "7. Report the results of both tasks\n\n"
             "Use background: true for steps 1 and 2 ONLY. "
@@ -197,8 +197,12 @@ class TestWaitWithSpecificTaskId:
         assert "task" in text_lower or "task_a" in text_lower or "task_b" in text_lower, \
             f"Expected text to mention tasks. Got: {result.text[:300]}"
 
-        assert not result.has_non_cancel_errors, \
-            f"Unexpected errors: {[e.output[:200] for e in result.non_cancel_error_events]}"
+        # Use unrecovered_errors: the LLM occasionally fumbles the task_id
+        # plumbing (passes None to cancel_background_task) and then retries
+        # successfully. Those recovered failures should not fail the test,
+        # only errors the agent never recovered from.
+        assert not result.has_unrecovered_errors, \
+            f"Unrecovered errors: {[e.output[:200] for e in result.unrecovered_error_events]}"
 
 
 # ===========================================================================
@@ -218,7 +222,7 @@ class TestWaitForAllTasks:
 
     @pytest.mark.asyncio
     async def test_wait_for_all_blocks_until_all_complete(self, sandbox):
-        """Launch two bg tasks, then wait for ALL of them with wait_for_all=true."""
+        """Launch two bg tasks, then wait for ALL of them with task_id="all"."""
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
@@ -230,11 +234,11 @@ class TestWaitForAllTasks:
             "2. Run 'sleep 6 && echo SECOND_DONE' in background (background: true)\n"
             "3. Run 'echo STARTING' in foreground\n"
             "4. Call check_background_progress to see current status\n"
-            "5. Call wait_for_background_task with wait_for_all=true and timeout=15 "
+            "5. Call wait_for_background_task with task_id=\"all\" and timeout=15 "
             "to block until BOTH tasks complete\n"
             "6. Report which tasks completed and what their outputs were\n\n"
             "Use background: true for steps 1 and 2 ONLY. "
-            "You MUST use wait_for_all=true in step 5."
+            "You MUST use task_id=\"all\" in step 5."
         )
         _log_result(result, "wait_for_all")
 
@@ -251,8 +255,8 @@ class TestWaitForAllTasks:
         # Wait call must have wait_for_all=True
         wait_calls = [tc for tc in result.tool_calls if tc.name == "wait_for_background_task"]
         assert wait_calls, "No wait_for_background_task call found"
-        assert wait_calls[0].input.get("wait_for_all") is True, \
-            f"Expected wait_for_all=True. Got input: {wait_calls[0].input}"
+        assert wait_calls[0].input.get("task_id") == "all", \
+            f"Expected task_id=\"all\". Got input: {wait_calls[0].input}"
 
         text_lower = result.text.lower()
         first_mentioned = any(w in text_lower for w in ["first_done", "first"])

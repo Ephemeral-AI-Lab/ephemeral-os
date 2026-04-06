@@ -88,7 +88,10 @@ async def _inject_background_reminder(
     for t in pending:
         elapsed = time_module.monotonic() - t.started_at
         label = t.task_note or t.tool_name
-        header = f"Background: {label} ({elapsed:.0f}s) still running"
+        header = (
+            f"Background task_id=\"{t.task_id}\" still running "
+            f"({elapsed:.0f}s) — {label}"
+        )
         new_lines, since = background_manager.get_reminder_diff(t.task_id)
         if new_lines:
             logs = "\n".join(new_lines)
@@ -167,8 +170,9 @@ async def _run_query_loop(
                 output, status_label = _format_background_result(completed_task)
                 messages.append(
                     ConversationMessage.from_user_text(
-                        f"[BACKGROUND TASK {status_label}] {completed_task.tool_name} "
-                        f"(task_id: {completed_task.task_id})\n\n{output}"
+                        f"[BACKGROUND {completed_task.task_id} {status_label}] "
+                        f"tool={completed_task.tool_name} "
+                        f"note={completed_task.task_note!r}\n\n{output}"
                     )
                 )
                 yield (
@@ -300,8 +304,9 @@ async def _run_query_loop(
                 output, status_label = _format_background_result(completed_task)
                 messages.append(
                     ConversationMessage.from_user_text(
-                        f"[BACKGROUND TASK {status_label}] {completed_task.tool_name} "
-                        f"(task_id: {completed_task.task_id})\n\n{output}"
+                        f"[BACKGROUND {completed_task.task_id} {status_label}] "
+                        f"tool={completed_task.tool_name} "
+                        f"note={completed_task.task_note!r}\n\n{output}"
                     )
                 )
                 yield (
@@ -403,17 +408,22 @@ async def _run_query_loop(
                     return ToolResult(output=block.content, is_error=block.is_error)
 
                 coro = _bg_wrapper(context, tc.name, tc.id, clean_input)
+                bg_alias = background_manager.next_alias()
                 bg_event = background_manager.launch(
-                    tc.id, tc.name, clean_input, coro, task_note=task_note,
+                    bg_alias, tc.name, clean_input, coro, task_note=task_note,
                     kill_callback=kill_callback,
                 )
                 yield bg_event, None
                 tool_results.append(
                     ToolResultBlock(
                         tool_use_id=tc.id,
-                        content=f"[BACKGROUND] Task launched. Task ID: {tc.id}. "
-                        f"Use check_background_progress to monitor or "
-                        f"cancel_background_task to stop it.",
+                        content=(
+                            f"[BACKGROUND LAUNCHED] task_id=\"{bg_alias}\" tool={tc.name}\n"
+                            f"REMEMBER this task_id — you must pass it to "
+                            f"wait_for_background_task(task_id=\"{bg_alias}\") or "
+                            f"cancel_background_task(task_id=\"{bg_alias}\"). "
+                            f"Completion will arrive as a [BACKGROUND {bg_alias} COMPLETED] message."
+                        ),
                         is_error=False,
                     )
                 )
@@ -467,17 +477,22 @@ async def _run_query_loop(
                         return ToolResult(output=block.content, is_error=block.is_error)
 
                     coro = _bg_wrapper(context, tc.name, tc.id, clean_input)
+                    bg_alias = background_manager.next_alias()
                     event = background_manager.launch(
-                        tc.id, tc.name, clean_input, coro, task_note=task_note,
+                        bg_alias, tc.name, clean_input, coro, task_note=task_note,
                         kill_callback=kill_callback,
                     )
                     yield event, None
                     tool_results.append(
                         ToolResultBlock(
                             tool_use_id=tc.id,
-                            content=f"[BACKGROUND] Task launched. Task ID: {tc.id}. "
-                            f"Use check_background_progress to monitor or "
-                            f"cancel_background_task to stop it.",
+                            content=(
+                                f"[BACKGROUND LAUNCHED] task_id=\"{bg_alias}\" tool={tc.name}\n"
+                                f"REMEMBER this task_id — pass it to "
+                                f"wait_for_background_task(task_id=\"{bg_alias}\") or "
+                                f"cancel_background_task(task_id=\"{bg_alias}\"). "
+                                f"Completion arrives as a [BACKGROUND {bg_alias} COMPLETED] message."
+                            ),
                             is_error=False,
                         )
                     )

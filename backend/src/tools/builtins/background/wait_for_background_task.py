@@ -5,33 +5,39 @@ from __future__ import annotations
 import json
 import time
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from tools.core.base import BaseTool, ToolExecutionContext, ToolResult
 
 
 class WaitForBackgroundTaskInput(BaseModel):
     """Input for wait_for_background_task tool."""
-    task_id: str | None = Field(
-        default=None,
+    task_id: str = Field(
+        ...,
         description=(
-            "Task ID to wait for. Copy the exact value from the `task_id` field in "
-            "`check_background_progress` output. You MUST provide either this `task_id` "
-            "or set `wait_for_all=True` — omitting both is an error. Never pass null/None."
+            "REQUIRED. Either the exact `task_id` string (e.g. \"bg_1\") shown "
+            "in the `[BACKGROUND LAUNCHED]` message / `check_background_progress` "
+            "output, OR the literal string \"all\" to wait for every pending "
+            "background task. Never pass null/None and never omit this field. "
+            "If you do not know the id, call `check_background_progress` first."
         ),
     )
     timeout: float = Field(
         default=30,
         description="Maximum seconds to block waiting. Capped at 300s server-side. Minimum 1s.",
     )
-    wait_for_all: bool = Field(
-        default=False,
-        description="If True, wait until ALL pending tasks complete, not just the first.",
-    )
     last_n_lines: int = Field(
         default=20,
         description="Number of output lines to include for completed tasks.",
     )
+
+    @model_validator(mode="after")
+    def _validate_task_id(self) -> "WaitForBackgroundTaskInput":
+        if not isinstance(self.task_id, str) or not self.task_id:
+            raise ValueError(
+                "task_id must be a non-empty string: either \"bg_N\" or \"all\"."
+            )
+        return self
 
 
 class WaitForBackgroundTaskTool(BaseTool):
@@ -51,73 +57,86 @@ class WaitForBackgroundTaskTool(BaseTool):
     input_model: type[BaseModel] = WaitForBackgroundTaskInput
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
-        manager = context.metadata.get("background_task_manager")
-        if manager is None:
-            return ToolResult(output="No background tasks are running.", is_error=False)
-
         assert isinstance(arguments, WaitForBackgroundTaskInput)
 
-        timeout = max(1.0, min(arguments.timeout, 300.0))
+        # Defensive: schema validation already rejects None / "" / non-str,
+        # but guard here too so a buggy caller bypassing validation gets a
+        # clear error instead of an attribute traceback.
+        if arguments.task_id is None or not isinstance(arguments.task_id, str) or not arguments.task_id:
+            return ToolResult(
+                output=(
+                    "ERROR: task_id is required and must be a non-empty string. "
+                    "Pass either an exact id like \"bg_1\" or \"all\" to wait "
+                    "for every pending background task."
+                ),
+                is_error=True,
+            )
 
-        # Disambiguation guard: require an explicit target. Without this, the
-        # LLM tends to pass task_id=None and rely on "wait for any" semantics,
-        # which produces confusing TIMED_OUT results when the task it cared
-        # about already finished and an unrelated long task is still running.
-        if arguments.task_id is None and not arguments.wait_for_all:
+        manager = context.metadata.get("background_task_manager")
+        if manager is None:
+            return ToolResult(
+                output=(
+                    "ERROR: background task manager is not available in this "
+                    "context — no background tasks can be waited on."
+                ),
+                is_error=True,
+            )
+
+        timeout = max(1.0, min(arguments.timeout, 300.0))
+        wait_for_all = arguments.task_id == "all"
+        target_id: str | None = None if wait_for_all else arguments.task_id
+
+        # ---- task_id="all" branch ----
+        if wait_for_all:
             snapshot = manager.get_status()
             running = [s for s in snapshot if s.get("status") == "running"]
-            if len(running) == 0:
-                # Nothing to wait for — return success.
-                return ToolResult(
-                    output="No background tasks are running.",
-                    is_error=False,
-                )
-            if len(running) == 1:
-                # Unambiguous — auto-select the only running task.
-                arguments.task_id = running[0]["task_id"]
-            else:
-                listing = "\n".join(
-                    f"  - task_id=\"{s['task_id']}\"  ({s.get('task_note') or s.get('tool_name')})"
-                    for s in running
-                )
+            running_count = len(running)
+
+            if running_count == 0:
+                finished = [
+                    s for s in snapshot
+                    if s.get("status") in ("completed", "failed", "cancelled", "delivered")
+                ]
+                if finished:
+                    _apply_last_n_lines(finished, arguments.last_n_lines)
+                    return ToolResult(
+                        output=(
+                            "[NO TASKS RUNNING] 0 background tasks are pending. "
+                            "All previously launched tasks have already finished; "
+                            "their results were (or will be) delivered as "
+                            "[BACKGROUND <task_id> COMPLETED] messages.\n"
+                            f"{json.dumps(finished, indent=2)}"
+                        ),
+                        is_error=False,
+                    )
                 return ToolResult(
                     output=(
-                        "ERROR: multiple background tasks are running and `task_id` "
-                        "was None. You MUST copy one of the exact task_id strings "
-                        "below into the `task_id` argument, or set `wait_for_all=True` "
-                        "to wait for every pending task.\n"
-                        f"Running tasks:\n{listing}\n"
-                        "Example: wait_for_background_task(task_id=\"<one of the above>\", timeout=5)"
+                        "[NO TASKS RUNNING] 0 background tasks are pending and "
+                        "none have ever been launched in this session."
                     ),
-                    is_error=True,
-                )
-
-        # Validate task_id if provided
-        if arguments.task_id is not None:
-            task_statuses = manager.get_status(arguments.task_id)
-            if not task_statuses:
-                return ToolResult(
-                    output=f"No background task found with ID: {arguments.task_id}",
-                    is_error=True,
-                )
-            # If already completed, return status immediately
-            if task_statuses[0].get("status") != "running":
-                status = manager.get_status(arguments.task_id)
-                _apply_last_n_lines(status, arguments.last_n_lines)
-                prefix = "[COMPLETED]"
-                return ToolResult(
-                    output=f"{prefix}\n{json.dumps(status, indent=2)}",
                     is_error=False,
                 )
 
-        # If no pending tasks, return early
-        if not manager.has_pending():
-            status = manager.get_status(arguments.task_id)
-            _apply_last_n_lines(status, arguments.last_n_lines)
-            return ToolResult(
-                output=f"All tasks already completed.\n{json.dumps(status, indent=2)}",
-                is_error=False,
-            )
+            if running_count == 1:
+                # Exactly one running — auto-target it so the wait loop reports
+                # against the single task instead of using "all" semantics.
+                target_id = running[0]["task_id"]
+                wait_for_all = False
+
+        # ---- specific task_id branch ----
+        if target_id is not None:
+            task_statuses = manager.get_status(target_id)
+            if not task_statuses:
+                return ToolResult(
+                    output=f"No background task found with ID: {target_id}",
+                    is_error=True,
+                )
+            if task_statuses[0].get("status") != "running":
+                _apply_last_n_lines(task_statuses, arguments.last_n_lines)
+                return ToolResult(
+                    output=f"[COMPLETED]\n{json.dumps(task_statuses, indent=2)}",
+                    is_error=False,
+                )
 
         # Wait loop
         start = time.monotonic()
@@ -129,31 +148,24 @@ class WaitForBackgroundTaskTool(BaseTool):
 
             await manager.wait_any(timeout=remaining)
 
-            if arguments.wait_for_all:
+            if wait_for_all:
                 if not manager.has_pending():
                     break
-                # remaining recalculated at top of loop
                 continue
-            elif arguments.task_id is not None:
-                task_statuses = manager.get_status(arguments.task_id)
-                if not task_statuses or task_statuses[0].get("status") != "running":
-                    break
-                continue
-            else:
+            task_statuses = manager.get_status(target_id)
+            if not task_statuses or task_statuses[0].get("status") != "running":
                 break
 
         elapsed = time.monotonic() - start
-        status = manager.get_status(arguments.task_id)
+        status = manager.get_status(target_id)
         _apply_last_n_lines(status, arguments.last_n_lines)
 
         # Determine if timed out
-        timed_out = False
-        if arguments.task_id is not None:
-            task_statuses = manager.get_status(arguments.task_id)
-            if task_statuses and task_statuses[0].get("status") == "running":
-                timed_out = True
-        elif manager.has_pending():
-            timed_out = True
+        if wait_for_all:
+            timed_out = manager.has_pending()
+        else:
+            task_statuses = manager.get_status(target_id)
+            timed_out = bool(task_statuses) and task_statuses[0].get("status") == "running"
 
         if timed_out:
             hint = (

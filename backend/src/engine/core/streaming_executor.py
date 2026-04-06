@@ -7,6 +7,8 @@ import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from pydantic import ValidationError
+
 from message.messages import ConversationMessage
 from message.stream_events import (
     ToolExecutionCancelled,
@@ -85,16 +87,27 @@ class StreamingToolExecutor:
             )
             return None
 
+        # Determine concurrency safety. If the LLM sent invalid input, defer
+        # the ValidationError to _execute_tool (which returns it as a tool
+        # error to the LLM) instead of crashing the query loop here.
+        is_concurrency_safe = False
+        if tool_def:
+            try:
+                is_concurrency_safe = tool_def.is_read_only(
+                    tool_def.input_model.model_validate(event.input)
+                )
+            except Exception as exc:
+                logger.warning(
+                    "STREAM: Invalid tool input for %s, deferring error: %s",
+                    event.name,
+                    exc,
+                )
         tracked = TrackedTool(
             id=event.id,
             name=event.name,
             input=event.input,
             assistant_message=assistant_message,
-            is_concurrency_safe=tool_def.is_read_only(
-                tool_def.input_model.model_validate(event.input)
-            )
-            if tool_def
-            else False,
+            is_concurrency_safe=is_concurrency_safe,
         )
         self._tools[event.id] = tracked
         logger.debug(
@@ -221,6 +234,23 @@ class StreamingToolExecutor:
             logger.info("STREAM: Tool cancelled during execution: tool_id=%s", tool.id)
             tool.cancelled = True
             tool.cancel_reason = tool.cancel_reason or "Task cancelled"
+        except ValidationError as exc:
+            logger.warning(
+                "STREAM: Tool input validation failed: tool_id=%s tool_name=%s error=%s",
+                tool.id,
+                tool.name,
+                exc,
+            )
+            errors = "; ".join(
+                f"{'.'.join(str(p) for p in e['loc'])}: {e['msg']}" for e in exc.errors()
+            )
+            tool.result = ToolResult(
+                output=(
+                    f"Invalid input for {tool.name}: {errors}. "
+                    "Please retry the tool call with valid arguments."
+                ),
+                is_error=True,
+            )
         except Exception as exc:
             logger.error(
                 "STREAM: Tool execution error: tool_id=%s error=%s", tool.id, exc, exc_info=True

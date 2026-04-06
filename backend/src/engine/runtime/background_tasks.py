@@ -44,6 +44,16 @@ class BackgroundTaskManager:
 
     def __init__(self) -> None:
         self._tasks: dict[str, TrackedBackgroundTask] = {}
+        self._alias_counter: int = 0
+
+    def next_alias(self) -> str:
+        """Return a short mnemonic task_id like 'bg_1', 'bg_2', ...
+
+        These are easier for the LLM to retain across turns than opaque
+        tool_use_ids and are what the agent sees as ``task_id`` everywhere.
+        """
+        self._alias_counter += 1
+        return f"bg_{self._alias_counter}"
 
     def launch(
         self,
