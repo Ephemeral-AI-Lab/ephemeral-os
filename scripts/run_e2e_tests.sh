@@ -28,6 +28,12 @@ LIVE_TESTS=(
     test_bg_idle_wait_live.py           # Idle/wait scenarios for bg tasks
     test_bg_mixed_chaos_live.py         # Mixed chaos: errors, relaunch, pipelines
     test_bg_physical_cancel_live.py     # Physical process kill on cancel
+    test_bg_wait_tool_live.py           # Wait tool: blocking, timeout, wait_for_all
+    test_bg_progress_output_live.py     # Progress checks, last_n_lines, output
+    test_bg_autonomous_decisions_live.py # Autonomous decisions based on bg results
+    test_bg_parallel_tasks_live.py      # Parallel bg/fg task orchestration
+    test_bg_idle_patterns_live.py       # Complex idle and wait patterns
+    test_bg_supernova_live.py           # Supernova: debug-fix-retest cycles
     test_live_api.py                    # Live API integration
     test_live_full_run.py               # Complete agent run with metrics
     test_live_sandbox_agents.py         # Sandbox tool calling

@@ -34,6 +34,14 @@ def make_background_toolkit(bg_tool_names: list[str]) -> BaseToolkit:
             "- When you have other useful work to do in parallel\n\n"
             "**When NOT to use background:**\n"
             "- Quick commands (< 5 seconds)\n"
-            "- When you need the result immediately for your next step"
+            "- When you need the result immediately for your next step\n\n"
+            "**Monitoring and waiting for background tasks:**\n"
+            "1. First call `check_background_progress` to get an instant status snapshot "
+            "and note each task's `task_id` from the output.\n"
+            "2. If you have more foreground work, do it and check progress again later.\n"
+            "3. When you have NO foreground work left, call `wait_for_background_task` to "
+            "block until tasks complete. To wait for a specific task, pass its `task_id` "
+            "(from check_background_progress). Do NOT poll in a loop.\n"
+            "4. Use `cancel_background_task` to stop tasks that are taking too long."
         ),
     )

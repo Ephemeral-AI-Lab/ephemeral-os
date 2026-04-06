@@ -14,7 +14,11 @@ class WaitForBackgroundTaskInput(BaseModel):
     """Input for wait_for_background_task tool."""
     task_id: str | None = Field(
         default=None,
-        description="Optional task ID to wait for. If omitted, waits for any task to complete.",
+        description=(
+            "Task ID to wait for. Copy the exact value from the `task_id` field in "
+            "`check_background_progress` output. You MUST provide either this `task_id` "
+            "or set `wait_for_all=True` — omitting both is an error. Never pass null/None."
+        ),
     )
     timeout: float = Field(
         default=30,
@@ -54,6 +58,26 @@ class WaitForBackgroundTaskTool(BaseTool):
         assert isinstance(arguments, WaitForBackgroundTaskInput)
 
         timeout = max(1.0, min(arguments.timeout, 300.0))
+
+        # Disambiguation guard: require an explicit target. Without this, the
+        # LLM tends to pass task_id=None and rely on "wait for any" semantics,
+        # which produces confusing TIMED_OUT results when the task it cared
+        # about already finished and an unrelated long task is still running.
+        if arguments.task_id is None and not arguments.wait_for_all:
+            snapshot = manager.get_status()
+            listing = ", ".join(
+                f"{s['task_id']} [{s.get('status')}] ({s.get('task_note') or s.get('tool_name')})"
+                for s in snapshot
+            ) or "(none)"
+            return ToolResult(
+                output=(
+                    "wait_for_background_task requires either `task_id` (a specific task "
+                    "to wait for, copied from check_background_progress output) or "
+                    "`wait_for_all=True` (wait for every pending task). "
+                    f"Current tasks: {listing}"
+                ),
+                is_error=True,
+            )
 
         # Validate task_id if provided
         if arguments.task_id is not None:

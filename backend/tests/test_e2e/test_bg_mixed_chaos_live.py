@@ -44,7 +44,7 @@ Always be concise. Execute tools, don't just describe them.
 
 
 def _log_result(result, label: str) -> None:
-    checks = result.tool_count("check_background_progress")
+    checks = result.tool_count("check_background_progress") + result.tool_count("wait_for_background_task")
     cancels = result.tool_count("cancel_background_task")
     bg_started = result.background_started()
     bg_completed = result.background_completed()
@@ -109,9 +109,9 @@ class TestCancelAndRelaunch:
             f"Expected 2 background launches (original + retry). Got {len(result.background_started())}"
         assert result.has_tool("cancel_background_task"), \
             f"Expected cancel. Got: {result.tool_names}"
-        checks = result.tool_count("check_background_progress")
+        checks = result.tool_count("check_background_progress") + result.tool_count("wait_for_background_task")
         assert checks >= 2, \
-            f"Expected 2+ progress checks. Got {checks}"
+            f"Expected 2+ progress/wait checks. Got {checks}"
         assert result.has_tool("daytona_write_file"), \
             f"Expected file creation for fix. Got: {result.tool_names}"
 
@@ -211,9 +211,9 @@ class TestFullPipelineSimulation:
 
         assert len(result.background_started()) >= 2, \
             f"Expected 2 background phases. Got {len(result.background_started())}"
-        checks = result.tool_count("check_background_progress")
+        checks = result.tool_count("check_background_progress") + result.tool_count("wait_for_background_task")
         assert checks >= 2, \
-            f"Expected 2+ progress checks. Got {checks}"
+            f"Expected 2+ progress/wait checks. Got {checks}"
         assert result.has_tool("cancel_background_task"), \
             f"Expected pipeline cancel. Got: {result.tool_names}"
         assert result.has_tool("daytona_write_file"), \
@@ -266,9 +266,9 @@ class TestRapidFireLifecycle:
         cancels = result.tool_count("cancel_background_task")
         assert cancels >= 2, \
             f"Expected 2+ cancels. Got {cancels}"
-        checks = result.tool_count("check_background_progress")
+        checks = result.tool_count("check_background_progress") + result.tool_count("wait_for_background_task")
         assert checks >= 3, \
-            f"Expected 3+ progress checks. Got {checks}"
+            f"Expected 3+ progress/wait checks. Got {checks}"
 
 
 # ===========================================================================
@@ -318,13 +318,13 @@ class TestNotificationDrivenWorkflow:
 
         assert len(result.background_started()) >= 2, \
             f"Expected 2 background phases. Got {len(result.background_started())}"
-        checks = result.tool_count("check_background_progress")
+        checks = result.tool_count("check_background_progress") + result.tool_count("wait_for_background_task")
         assert checks >= 2, \
-            f"Expected 2+ progress checks. Got {checks}"
+            f"Expected 2+ progress/wait checks. Got {checks}"
         write_count = result.tool_count("daytona_write_file")
         assert write_count >= 2, \
             f"Expected 2+ file writes. Got {write_count}"
         assert len(result.tools_started()) >= 8, \
             f"Expected 8+ tool calls for full pipeline. Got {len(result.tools_started())}"
-        assert not result.has_non_cancel_errors, \
-            f"Pipeline errors: {[e.output[:200] for e in result.non_cancel_error_events]}"
+        assert not result.has_unrecovered_errors, \
+            f"Pipeline errors: {[e.output[:200] for e in result.unrecovered_error_events]}"
