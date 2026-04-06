@@ -34,6 +34,7 @@ LIVE_TESTS=(
     test_bg_parallel_tasks_live.py      # Parallel bg/fg task orchestration
     test_bg_idle_patterns_live.py       # Complex idle and wait patterns
     test_bg_supernova_live.py           # Supernova: debug-fix-retest cycles
+    test_bg_long_suite_live.py          # Long suite with early cancel iterations
     test_live_api.py                    # Live API integration
     test_live_full_run.py               # Complete agent run with metrics
     test_live_sandbox_agents.py         # Sandbox tool calling

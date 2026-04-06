@@ -65,19 +65,32 @@ class WaitForBackgroundTaskTool(BaseTool):
         # about already finished and an unrelated long task is still running.
         if arguments.task_id is None and not arguments.wait_for_all:
             snapshot = manager.get_status()
-            listing = ", ".join(
-                f"{s['task_id']} [{s.get('status')}] ({s.get('task_note') or s.get('tool_name')})"
-                for s in snapshot
-            ) or "(none)"
-            return ToolResult(
-                output=(
-                    "wait_for_background_task requires either `task_id` (a specific task "
-                    "to wait for, copied from check_background_progress output) or "
-                    "`wait_for_all=True` (wait for every pending task). "
-                    f"Current tasks: {listing}"
-                ),
-                is_error=True,
-            )
+            running = [s for s in snapshot if s.get("status") == "running"]
+            if len(running) == 0:
+                # Nothing to wait for — return success.
+                return ToolResult(
+                    output="No background tasks are running.",
+                    is_error=False,
+                )
+            if len(running) == 1:
+                # Unambiguous — auto-select the only running task.
+                arguments.task_id = running[0]["task_id"]
+            else:
+                listing = "\n".join(
+                    f"  - task_id=\"{s['task_id']}\"  ({s.get('task_note') or s.get('tool_name')})"
+                    for s in running
+                )
+                return ToolResult(
+                    output=(
+                        "ERROR: multiple background tasks are running and `task_id` "
+                        "was None. You MUST copy one of the exact task_id strings "
+                        "below into the `task_id` argument, or set `wait_for_all=True` "
+                        "to wait for every pending task.\n"
+                        f"Running tasks:\n{listing}\n"
+                        "Example: wait_for_background_task(task_id=\"<one of the above>\", timeout=5)"
+                    ),
+                    is_error=True,
+                )
 
         # Validate task_id if provided
         if arguments.task_id is not None:
