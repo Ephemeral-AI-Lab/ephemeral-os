@@ -193,9 +193,13 @@ class EvalAgent:
     @staticmethod
     def has_daytona() -> bool:
         """Check if Daytona sandbox credentials are available."""
+        import os
+
         try:
             s = load_settings()
-            return bool(s.daytona_api_key and s.daytona_api_url)
+            api_key = s.daytona_api_key or os.environ.get("DAYTONA_API_KEY", "")
+            api_url = s.daytona_api_url or os.environ.get("DAYTONA_API_URL", "")
+            return bool(api_key and api_url)
         except Exception:
             return False
 
@@ -234,6 +238,11 @@ class EvalAgent:
     ) -> "EvalAgent":
         """Create a configured EvalAgent.
 
+        Uses the active model from the DB registry when available,
+        falling back to settings.json. This ensures the correct
+        client class and auth (e.g. auth_token for MiniMax Anthropic)
+        are used automatically.
+
         Args:
             system_prompt: Custom system prompt. If None, uses default.
             sandbox_id: Daytona sandbox ID for sandbox tools.
@@ -248,7 +257,34 @@ class EvalAgent:
         if settings is None:
             settings = load_settings()
 
-        api_client = make_api_client(settings)
+        # Load active model from DB registry (same pattern as engine.agent).
+        # Initializes the model_store with the real PostgreSQL DB if needed.
+        db_kwargs: dict | None = None
+        db_class_path: str | None = None
+        try:
+            from server.app_factory import model_store
+
+            if not model_store.is_available and settings.database.url:
+                from db.engine import initialize_db
+
+                sf = initialize_db(settings.database)
+                if sf is not None:
+                    model_store.initialize(sf)
+
+            active = model_store.get_active_resolved() if model_store.is_available else None
+            if active:
+                db_kwargs = active.get("kwargs")
+                db_class_path = active.get("class_path")
+                logger.info(
+                    "[EvalAgent] Using DB model: class_path=%s model=%s",
+                    db_class_path,
+                    (db_kwargs or {}).get("model", "?"),
+                )
+        except Exception as exc:
+            logger.debug("[EvalAgent] DB model registry unavailable: %s", exc)
+
+        resolved_model = (db_kwargs or {}).get("model") or settings.model
+        api_client = make_api_client(settings, db_kwargs=db_kwargs, db_class_path=db_class_path)
 
         tool_registry = ToolRegistry()
         daytona_toolkit = DaytonaToolkit(sandbox_id=sandbox_id)
@@ -259,8 +295,8 @@ class EvalAgent:
         engine = QueryEngine(
             api_client=api_client,
             tool_registry=tool_registry,
-            cwd="/workspace",
-            model=settings.model,
+            cwd=".",
+            model=resolved_model,
             system_prompt=prompt,
             max_tokens=max_tokens or settings.max_tokens,
             max_turns=max_turns,
@@ -271,7 +307,7 @@ class EvalAgent:
         return cls(
             engine=engine,
             settings=settings,
-            model=settings.model,
+            model=resolved_model,
             api_client=api_client,
         )
 
@@ -283,27 +319,51 @@ class EvalAgent:
     # -- Invocation --
 
     async def invoke(self, prompt: str) -> EvalResult:
-        """Send a prompt through the full agent loop and collect results."""
+        """Send a prompt through the full agent loop and collect results.
+
+        Each invocation starts with a clean conversation history so that
+        module-scoped fixtures can reuse the same agent across tests
+        without stale tool_use_ids leaking between runs.
+        """
+        self._engine.clear()
         start = time.monotonic()
         events: list[StreamEvent] = []
         tool_calls: list[ToolCallResult] = []
+        thinking_buf: list[str] = []
+        text_buf: list[str] = []
 
-        logger.info("[EvalAgent] Prompt: %s", prompt[:100])
+        print(f"\n  [EvalAgent] prompt: {_truncate(prompt, 80)}", flush=True)
 
         async for event in self._engine.submit_message(prompt):
             events.append(event)
 
+            if isinstance(event, ThinkingDelta):
+                thinking_buf.append(event.text)
+                continue
+            elif isinstance(event, AssistantTextDelta):
+                text_buf.append(event.text)
+                continue
+
+            # Flush accumulated thinking/text before printing other events
+            if thinking_buf:
+                print(f"    [thinking] {_truncate(''.join(thinking_buf), 500)}", flush=True)
+                thinking_buf.clear()
+            if text_buf:
+                print(f"    [text] {_truncate(''.join(text_buf), 500)}", flush=True)
+                text_buf.clear()
+
             if isinstance(event, ToolExecutionStarted):
-                logger.info(
-                    "[EvalAgent] Tool started: %s(%s)",
-                    event.tool_name,
-                    _truncate(str(event.tool_input), 100),
+                print(
+                    f"    -> tool_start: {event.tool_name}"
+                    f"({_truncate(str(event.tool_input), 120)})",
+                    flush=True,
                 )
             elif isinstance(event, ToolExecutionCompleted):
-                logger.info(
-                    "[EvalAgent] Tool completed: %s -> %s",
-                    event.tool_name,
-                    _truncate(event.output, 200),
+                status = "ERROR" if event.is_error else "ok"
+                print(
+                    f"    <- tool_done:  {event.tool_name} "
+                    f"[{status}] {_truncate(event.output, 120)}",
+                    flush=True,
                 )
             elif isinstance(event, AssistantTurnComplete):
                 for tb in event.message.tool_uses:
@@ -311,24 +371,30 @@ class EvalAgent:
                         ToolCallResult(name=tb.name, input=tb.input)
                     )
             elif isinstance(event, BackgroundTaskStarted):
-                logger.info(
-                    "[EvalAgent] Background started: %s task_id=%s",
-                    event.tool_name,
-                    event.task_id,
+                print(
+                    f"    >> bg_start:   {event.tool_name} "
+                    f"task_id={event.task_id}",
+                    flush=True,
                 )
             elif isinstance(event, BackgroundTaskCompleted):
-                logger.info(
-                    "[EvalAgent] Background completed: %s -> %s",
-                    event.tool_name,
-                    _truncate(event.output, 150),
+                print(
+                    f"    << bg_done:    {event.tool_name} "
+                    f"{_truncate(event.output, 120)}",
+                    flush=True,
                 )
+
+        # Flush any remaining thinking/text
+        if thinking_buf:
+            print(f"    [thinking] {_truncate(''.join(thinking_buf), 500)}", flush=True)
+        if text_buf:
+            print(f"    [text] {_truncate(''.join(text_buf), 500)}", flush=True)
 
         latency_ms = (time.monotonic() - start) * 1000
 
-        logger.info(
-            "[EvalAgent] Done. tool_calls=%d latency_ms=%.0f",
-            len(tool_calls),
-            latency_ms,
+        print(
+            f"  [EvalAgent] done: {len(tool_calls)} tool calls, "
+            f"{latency_ms:.0f}ms",
+            flush=True,
         )
 
         return EvalResult(
@@ -342,6 +408,12 @@ class EvalAgent:
         closer = getattr(self._api_client_ref, "aclose", None)
         if closer is not None:
             await closer()
+
+    async def __aenter__(self) -> "EvalAgent":
+        return self
+
+    async def __aexit__(self, *exc: object) -> None:
+        await self.close()
 
 
 def _truncate(s: str, max_len: int) -> str:
