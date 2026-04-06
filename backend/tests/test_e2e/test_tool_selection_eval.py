@@ -6,9 +6,7 @@ full Daytona toolkit, then verifies:
   1. The model selected the correct tool(s)
   2. The input parameters are well-formed
 
-Uses EvalAgent — no credential configuration in tests. Just uses
-whatever is in ~/.ephemeralos/settings.json or env vars.
-
+Uses EvalAgent for credential loading and agent configuration.
 Run with:
     .venv/bin/python -m pytest backend/tests/test_e2e/test_tool_selection_eval.py -v -s
 """
@@ -16,64 +14,21 @@ Run with:
 from __future__ import annotations
 
 import json
-import os
-import time
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any
 
 import pytest
 
+from engine.eval_agent import EvalAgent
+from tests.test_e2e.conftest import (
+    create_eval_agent,
+    create_test_sandbox,
+    delete_test_sandbox,
+    populate_sandbox_files,
+)
+
 pytestmark = [pytest.mark.e2e, pytest.mark.live]
 
-
-# ---------------------------------------------------------------------------
-# Credentials and sandbox
-# ---------------------------------------------------------------------------
-
-
-def _load_settings() -> dict:
-    settings_path = Path.home() / ".ephemeralos" / "settings.json"
-    if settings_path.exists():
-        return json.loads(settings_path.read_text())
-    return {}
-
-
-_SETTINGS = _load_settings()
-
-MINIMAX_KEY = os.environ.get("MINIMAX_API_KEY") or _SETTINGS.get("api_key", "")
-DAYTONA_KEY = os.environ.get("DAYTONA_API_KEY") or _SETTINGS.get("daytona_api_key", "")
-DAYTONA_URL = os.environ.get("DAYTONA_API_URL") or _SETTINGS.get("daytona_api_url", "")
-
-HAS_CREDENTIALS = bool(MINIMAX_KEY)
-HAS_DAYTONA = bool(DAYTONA_KEY and DAYTONA_URL)
-
-
-def _create_sandbox(name: str = "tool-eval") -> str | None:
-    if not HAS_DAYTONA:
-        return None
-    try:
-        from sandbox.service import SandboxService
-
-        svc = SandboxService()
-        sandbox = svc.create_sandbox(
-            name=f"{name}-{int(time.time())}",
-            language="python",
-            labels={"purpose": "tool-eval"},
-        )
-        return sandbox["id"]
-    except Exception:
-        return None
-
-
-def _delete_sandbox(sandbox_id: str) -> None:
-    try:
-        from sandbox.service import SandboxService
-
-        svc = SandboxService()
-        svc.delete_sandbox(sandbox_id)
-    except Exception:
-        pass
+HAS_CREDENTIALS = EvalAgent.has_credentials()
 
 
 # ---------------------------------------------------------------------------
@@ -94,38 +49,38 @@ EVAL_CASES = [
     # -- File operations --
     EvalCase(
         name="list_directory",
-        prompt="Show me what files are in the /workspace/src directory.",
+        prompt="Show me what files are in the src directory.",
         expected_tools=["daytona_list_files"],
         required_params={"daytona_list_files": ["directory"]},
     ),
     EvalCase(
         name="read_file",
-        prompt="Read the contents of /workspace/src/main.py",
+        prompt="Read the contents of src/main.py",
         expected_tools=["daytona_read_file"],
         required_params={"daytona_read_file": ["file_path"]},
     ),
     EvalCase(
         name="read_file_range",
-        prompt="Show me lines 10 through 25 of /workspace/src/utils.py",
+        prompt="Show me lines 10 through 25 of src/utils.py",
         expected_tools=["daytona_read_file"],
         required_params={"daytona_read_file": ["file_path"]},
     ),
     EvalCase(
         name="write_file",
-        prompt="Create a new file at /workspace/src/config.py with the content:\n\nDEBUG = True\nPORT = 8080",
+        prompt="Create a new file at src/config.py with the content:\n\nDEBUG = True\nPORT = 8080",
         expected_tools=["daytona_write_file"],
         required_params={"daytona_write_file": ["file_path", "content"]},
     ),
     EvalCase(
         name="edit_file",
-        prompt="In /workspace/src/main.py, replace 'DEBUG = False' with 'DEBUG = True'",
-        expected_tools=["daytona_edit_file", "daytona_read_file"],  # read-first is acceptable
-        required_params={},  # params depend on which tool is chosen
+        prompt="In src/main.py, replace 'DEBUG = False' with 'DEBUG = True'",
+        expected_tools=["daytona_edit_file", "daytona_read_file"],
+        required_params={},
     ),
     # -- Search operations --
     EvalCase(
         name="grep_search",
-        prompt="Search for all occurrences of 'TODO' in the /workspace/src directory.",
+        prompt="Search for all occurrences of 'TODO' in the src directory.",
         expected_tools=["daytona_grep"],
         required_params={"daytona_grep": ["pattern"]},
     ),
@@ -151,32 +106,32 @@ EVAL_CASES = [
     # -- LSP operations --
     EvalCase(
         name="hover_info",
-        prompt="What is the type of the symbol at line 15, column 10 in /workspace/src/main.py?",
+        prompt="What is the type of the symbol at line 15, column 10 in src/main.py?",
         expected_tools=["daytona_lsp_hover"],
         required_params={"daytona_lsp_hover": ["file_path", "line"]},
     ),
     EvalCase(
         name="goto_definition",
-        prompt="Find the definition of the function used at line 42 in /workspace/src/app.py",
-        expected_tools=["daytona_lsp_definition", "daytona_read_file"],  # read-first is acceptable
+        prompt="Find the definition of the function used at line 42 in src/app.py",
+        expected_tools=["daytona_lsp_definition", "daytona_read_file"],
         required_params={},
     ),
     EvalCase(
         name="find_references",
-        prompt="Find all usages of the symbol at line 5 in /workspace/src/models.py across the codebase.",
+        prompt="Find all usages of the symbol at line 5 in src/models.py across the codebase.",
         expected_tools=["daytona_lsp_references"],
         required_params={"daytona_lsp_references": ["file_path", "line"]},
     ),
     EvalCase(
         name="check_errors",
-        prompt="Check /workspace/src/main.py for syntax errors and type errors.",
+        prompt="Check src/main.py for syntax errors and type errors.",
         expected_tools=["daytona_lsp_diagnostics"],
         required_params={"daytona_lsp_diagnostics": ["file_path"]},
     ),
     # -- Behavioral --
     EvalCase(
         name="read_before_edit",
-        prompt="I need to understand how the login function works in /workspace/src/auth.py before I modify it. Read the file first.",
+        prompt="I need to understand how the login function works in src/auth.py before I modify it. Read the file first.",
         expected_tools=["daytona_read_file"],
         required_params={"daytona_read_file": ["file_path"]},
     ),
@@ -204,7 +159,7 @@ class EvalScore:
 
 def _score(case: EvalCase, result) -> EvalScore:
     errors: list[str] = []
-    called = [tc.name for tc in result.tool_calls]
+    called = result.tool_names
 
     tool_ok = any(t in called for t in case.expected_tools)
     if not tool_ok:
@@ -239,20 +194,21 @@ def _score(case: EvalCase, result) -> EvalScore:
 
 
 @pytest.fixture(scope="module")
-def eval_agent(tmp_path_factory):
-    import os
-    from engine.eval_agent import EvalAgent
+def eval_agent():
+    if not HAS_CREDENTIALS:
+        pytest.skip("No LLM credentials configured")
 
-    # Ensure /workspace exists — build_runtime_system_prompt needs it
-    os.makedirs("/workspace", exist_ok=True)
+    sandbox_id = None
+    if EvalAgent.has_daytona():
+        sb = create_test_sandbox("tool-eval")
+        sandbox_id = sb["id"]
+        populate_sandbox_files(sandbox_id)
 
-    sandbox_id = _create_sandbox("tool-eval")
-    if sandbox_id is None:
-        pytest.skip("Daytona sandbox not available")
-
-    agent = EvalAgent.from_registry_with_sandbox(sandbox_id)
+    agent = create_eval_agent(sandbox_id=sandbox_id, max_turns=100)
     yield agent
-    _delete_sandbox(sandbox_id)
+
+    if sandbox_id:
+        delete_test_sandbox(sandbox_id)
 
 
 # ---------------------------------------------------------------------------
@@ -267,10 +223,10 @@ async def test_tool_selection(case: EvalCase, eval_agent):
     result = await eval_agent.invoke(case.prompt)
     score = _score(case, result)
 
-    # Print for visibility
     status = "PASS" if score.passed else "FAIL"
     print(
-        f"\n  [{status}] {case.name}: expected={case.expected_tools}, got={score.tool_names_called}, {score.latency_ms:.0f}ms"
+        f"\n  [{status}] {case.name}: expected={case.expected_tools}, "
+        f"got={score.tool_names_called}, {score.latency_ms:.0f}ms"
     )
     if result.tool_calls:
         for tc in result.tool_calls:
@@ -299,7 +255,7 @@ async def test_full_eval_report(eval_agent):
     avg_ms = sum(s.latency_ms for s in scores) / total
 
     print(f"\n{'=' * 70}")
-    print(f"TOOL SELECTION EVAL — {eval_agent._model}")
+    print(f"TOOL SELECTION EVAL — {eval_agent.model}")
     print(f"{'=' * 70}")
     print(f"Overall:   {passed}/{total} ({passed / total * 100:.0f}%)")
     print(f"Tool sel:  {tool_ok}/{total} ({tool_ok / total * 100:.0f}%)")

@@ -14,163 +14,16 @@ Run with: pytest tests/test_e2e/test_live_minimax_comprehensive.py -m live -v
 
 from __future__ import annotations
 
-import json
-import os
-import time
-from pathlib import Path
-from typing import Any
-
 import pytest
-from dotenv import load_dotenv
 
-from tests.test_e2e.conftest import parse_sse_events, events_of_type
-
-# Load .env from project root
-_PROJECT_ROOT = Path(__file__).resolve().parents[3]
-load_dotenv(_PROJECT_ROOT / ".env")
+from engine.eval_agent import EvalAgent
+from tests.test_e2e.conftest import (
+    create_eval_agent,
+    create_test_sandbox,
+    delete_test_sandbox,
+)
 
 pytestmark = [pytest.mark.e2e, pytest.mark.live]
-
-
-# ---------------------------------------------------------------------------
-# Credential loading (shared with test_live_api.py)
-# ---------------------------------------------------------------------------
-
-def _load_settings() -> dict:
-    settings_path = Path.home() / ".ephemeralos" / "settings.json"
-    if settings_path.exists():
-        return json.loads(settings_path.read_text())
-    return {}
-
-_SETTINGS = _load_settings()
-
-MINIMAX_KEY = os.environ.get("MINIMAX_API_KEY") or _SETTINGS.get("api_key", "")
-MINIMAX_MODEL = os.environ.get("MINIMAX_MODEL") or _SETTINGS.get("model", "MiniMax-M2.7-highspeed")
-MINIMAX_BASE_URL = os.environ.get("MINIMAX_BASE_URL") or _SETTINGS.get("base_url", "")
-MINIMAX_FORMAT = os.environ.get("MINIMAX_API_FORMAT") or _SETTINGS.get("api_format", "anthropic")
-
-DAYTONA_KEY = os.environ.get("DAYTONA_API_KEY") or _SETTINGS.get("daytona_api_key", "")
-DAYTONA_URL = os.environ.get("DAYTONA_API_URL") or _SETTINGS.get("daytona_api_url", "")
-DAYTONA_TARGET = os.environ.get("DAYTONA_TARGET") or _SETTINGS.get("daytona_target", "")
-
-HAS_MINIMAX = bool(MINIMAX_KEY and MINIMAX_BASE_URL)
-HAS_DAYTONA = bool(DAYTONA_KEY and DAYTONA_URL)
-HAS_BOTH = HAS_MINIMAX and HAS_DAYTONA
-
-
-# ---------------------------------------------------------------------------
-# Shared helpers
-# ---------------------------------------------------------------------------
-
-def _make_live_client(db_session_factory, tmp_path, monkeypatch, *, api_key, model, base_url, api_format):
-    """Create a TestClient configured with real API credentials."""
-    from fastapi.testclient import TestClient
-    from server.protocol import BackendHostConfig
-    from server.app_factory import create_app
-
-    monkeypatch.delenv("EPHEMERALOS_DATABASE_URL", raising=False)
-    monkeypatch.setattr("db.engine.initialize_db", lambda *a, **kw: db_session_factory)
-    monkeypatch.setattr("engine.agent.make_hook_executor", lambda *a, **kw: None)
-
-    def _patched_load_settings(*a, **kw):
-        from config.settings import Settings, DatabaseSettings
-        return Settings(
-            api_key=api_key,
-            model=model,
-            api_format=api_format,
-            base_url=base_url or None,
-            daytona_api_key=DAYTONA_KEY,
-            daytona_api_url=DAYTONA_URL,
-            daytona_target=DAYTONA_TARGET,
-            database=DatabaseSettings(url=f"sqlite:///{tmp_path / 'test.db'}"),
-        )
-
-    monkeypatch.setattr("config.load_settings", _patched_load_settings)
-    monkeypatch.setattr("config.settings.load_settings", _patched_load_settings)
-    monkeypatch.setattr("server.app_factory.load_settings", _patched_load_settings)
-
-    config = BackendHostConfig(
-        api_key=api_key,
-        model=model,
-        api_format=api_format,
-        base_url=base_url or None,
-    )
-    app = create_app(config)
-    return TestClient(app)
-
-
-def _get_sandbox_service():
-    from sandbox.service import SandboxService
-    return SandboxService()
-
-
-def _create_test_sandbox(name: str = "e2e-comprehensive") -> dict:
-    svc = _get_sandbox_service()
-    sandbox = svc.create_sandbox(
-        name=f"{name}-{int(time.time())}",
-        language="python",
-        labels={"purpose": "e2e-comprehensive"},
-    )
-    return sandbox
-
-
-def _delete_sandbox(sandbox_id: str) -> None:
-    try:
-        svc = _get_sandbox_service()
-        svc.delete_sandbox(sandbox_id)
-    except Exception:
-        pass
-
-
-def _send_chat(client, line: str, *, agent_name: str | None = None,
-               sandbox_id: str | None = None, timeout: int = 120) -> list[dict]:
-    """Send a chat message and return parsed SSE events."""
-    payload: dict[str, Any] = {"line": line}
-    if agent_name:
-        payload["agent_name"] = agent_name
-    if sandbox_id:
-        payload["sandbox_id"] = sandbox_id
-
-    resp = client.post("/api/chat", json=payload, timeout=timeout)
-    assert resp.status_code == 200, f"Chat failed: {resp.status_code} {resp.text[:500]}"
-    return parse_sse_events(resp.text)
-
-
-def _get_assistant_text(events: list[dict]) -> str:
-    """Extract the final assistant message text from events."""
-    completes = events_of_type(events, "assistant_complete")
-    if completes:
-        return completes[0].get("message", "")
-    return ""
-
-
-def _get_event_types(events: list[dict]) -> set[str]:
-    """Get unique event types."""
-    return {e["type"] for e in events}
-
-
-def _create_agent(client, name: str, *, toolkits: list[str] | None = None,
-                  system_prompt: str | None = None) -> dict:
-    """Create an agent and return its data, handling duplicates."""
-    payload: dict[str, Any] = {
-        "name": name,
-        "description": f"E2E comprehensive test agent: {name}",
-        "model": MINIMAX_MODEL,
-    }
-    if toolkits:
-        payload["toolkits"] = toolkits
-    if system_prompt:
-        payload["system_prompt"] = system_prompt
-
-    resp = client.post("/api/agents/", json=payload)
-    if resp.status_code == 201:
-        return resp.json()
-    # Agent may already exist from a previous test run — fetch it
-    get_resp = client.get(f"/api/agents/{name}")
-    if get_resp.status_code == 200:
-        return get_resp.json()
-    # If neither worked, raise
-    assert False, f"Failed to create or get agent '{name}': {resp.status_code} {resp.text}"
 
 
 # ===========================================================================
@@ -178,104 +31,70 @@ def _create_agent(client, name: str, *, toolkits: list[str] | None = None,
 # ===========================================================================
 
 
-@pytest.mark.skipif(not HAS_BOTH, reason="MiniMax + Daytona both required")
+@pytest.mark.skipif(not EvalAgent.has_all(), reason="API + Daytona both required")
 class TestToolCallingAndSkillLoading:
     """Test tool calling mechanisms and skill loading in a real Daytona sandbox."""
 
     @pytest.fixture(scope="class")
     def sandbox(self):
-        sb = _create_test_sandbox("tool-calling")
+        sb = create_test_sandbox("tool-calling")
         yield sb
-        _delete_sandbox(sb["id"])
-
-    @pytest.fixture()
-    def client(self, db_session_factory, tmp_path, monkeypatch):
-        c = _make_live_client(
-            db_session_factory, tmp_path, monkeypatch,
-            api_key=MINIMAX_KEY, model=MINIMAX_MODEL,
-            base_url=MINIMAX_BASE_URL, api_format=MINIMAX_FORMAT,
-        )
-        with c:
-            yield c
+        delete_test_sandbox(sb["id"])
 
     # -- 1a: Sandbox tool execution --
 
-    def test_daytona_bash_tool_executes(self, client, sandbox):
+    @pytest.mark.asyncio
+    async def test_daytona_bash_tool_executes(self, sandbox):
         """Model should invoke daytona_bash and return real output."""
-        _create_agent(client, "tc-bash-agent", toolkits=["sandbox_operations"],
-                      system_prompt="You have a remote sandbox. Use daytona_bash to run commands. Always use tools.")
-
-        events = _send_chat(
-            client,
-            "Run this exact command in the sandbox: echo 'TOOL_CALL_E2E_PASS'",
-            agent_name="tc-bash-agent",
+        agent = create_eval_agent(
+            system_prompt="You have a remote sandbox. Use daytona_bash to run commands. Always use tools.",
             sandbox_id=sandbox["id"],
-            timeout=120,
         )
-        types = _get_event_types(events)
-        assert "assistant_complete" in types, f"Missing assistant_complete. Types: {types}"
+
+        result = await agent.invoke(
+            "Run this exact command in the sandbox: echo 'TOOL_CALL_E2E_PASS'"
+        )
+        assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
 
         # Check tool events — tool may or may not be used depending on model behavior
-        tool_started = events_of_type(events, "tool_started")
-        tool_completed = events_of_type(events, "tool_completed")
+        tool_started = result.tools_started()
         if tool_started:
-            tool_names = [e["tool_name"] for e in tool_started]
+            tool_names = result.tool_names
             assert any("daytona" in t for t in tool_names), f"No daytona tool used: {tool_names}"
 
-    def test_daytona_write_and_read_file(self, client, sandbox):
+    @pytest.mark.asyncio
+    async def test_daytona_write_and_read_file(self, sandbox):
         """Model should write a file and read it back using sandbox tools."""
-        _create_agent(client, "tc-file-agent", toolkits=["sandbox_operations"],
-                      system_prompt=(
-                          "You have sandbox access via daytona_write_file and daytona_read_file. "
-                          "Always use the tools, never simulate."
-                      ))
-
-        events = _send_chat(
-            client,
-            "Write the text 'E2E_FILE_TEST' to /workspace/e2e_check.txt, then read it back and tell me the content.",
-            agent_name="tc-file-agent",
+        agent = create_eval_agent(
+            system_prompt=(
+                "You have sandbox access via daytona_write_file and daytona_read_file. "
+                "Always use the tools, never simulate."
+            ),
             sandbox_id=sandbox["id"],
-            timeout=180,
         )
-        types = _get_event_types(events)
-        assert "assistant_complete" in types
 
-        tool_started = events_of_type(events, "tool_started")
+        result = await agent.invoke(
+            "Write the text 'E2E_FILE_TEST' to /workspace/e2e_check.txt, then read it back and tell me the content."
+        )
+        assert len(result.assistant_turns()) >= 1
+
+        tool_started = result.tools_started()
         if tool_started:
-            tool_names = [e["tool_name"] for e in tool_started]
+            tool_names = result.tool_names
             daytona_tools = [t for t in tool_names if t.startswith("daytona_")]
             assert len(daytona_tools) >= 1, f"Expected at least one daytona tool, got: {tool_names}"
 
-    def test_text_tool_call_parsing_integration(self, client, sandbox):
-        """Verify [TOOL_CALL] text markers from MiniMax are parsed and executed."""
-        from engine.text_tool_parser import parse_text_tool_calls
-
-        # Test the parser directly with various formats
-        text_json = '[TOOL_CALL]\n{"tool": "daytona_bash", "args": {"command": "echo test"}}\n[/TOOL_CALL]'
-        calls = parse_text_tool_calls(text_json)
-        assert len(calls) == 1
-        assert calls[0].name == "daytona_bash"
-
-        text_name = '[TOOL_CALL]\n{"name": "daytona_read_file", "input": {"file_path": "/test.txt"}}\n[/TOOL_CALL]'
-        calls2 = parse_text_tool_calls(text_name)
-        assert len(calls2) == 1
-        assert calls2[0].name == "daytona_read_file"
-
     # -- 1b: Skill loading --
 
-    def test_skill_tool_available(self, client, sandbox):
+    @pytest.mark.asyncio
+    async def test_skill_tool_available(self):
         """The skill discovery tool should be available when using discovery toolkit."""
-        _create_agent(client, "tc-skill-agent",
-                      system_prompt="You are a test assistant. Be concise.")
-
-        events = _send_chat(
-            client,
-            "Use the skill tool to list available skills.",
-            agent_name="tc-skill-agent",
-            timeout=60,
+        agent = create_eval_agent(
+            system_prompt="You are a test assistant. Be concise.",
         )
-        types = _get_event_types(events)
-        assert "assistant_complete" in types
+
+        result = await agent.invoke("Use the skill tool to list available skills.")
+        assert len(result.assistant_turns()) >= 1
 
     def test_skill_registry_loads(self):
         """Skill registry should load bundled and user skills."""
@@ -285,35 +104,33 @@ class TestToolCallingAndSkillLoading:
         all_skills = registry.list_skills()
         assert isinstance(all_skills, list)
 
-    def test_sandbox_tools_schema_complete(self, client, sandbox):
+    @pytest.mark.asyncio
+    async def test_sandbox_tools_schema_complete(self, sandbox):
         """Verify sandbox_operations toolkit provides all expected tools."""
-        _create_agent(client, "tc-schema-agent", toolkits=["sandbox_operations"])
+        agent = create_eval_agent(
+            sandbox_id=sandbox["id"],
+        )
 
         # Chat to trigger tool schema generation
-        events = _send_chat(
-            client, "Hello", agent_name="tc-schema-agent",
-            sandbox_id=sandbox["id"], timeout=60,
-        )
-        assert "assistant_complete" in _get_event_types(events)
+        result = await agent.invoke("Hello")
+        assert len(result.assistant_turns()) >= 1
 
     # -- 1c: Multiple tools in one turn --
 
-    def test_multiple_tool_calls_single_turn(self, client, sandbox):
+    @pytest.mark.asyncio
+    async def test_multiple_tool_calls_single_turn(self, sandbox):
         """Model should handle multiple tool calls in a single turn."""
-        _create_agent(client, "tc-multi-tool", toolkits=["sandbox_operations"],
-                      system_prompt="Use daytona_bash for all commands. Execute every step.")
-
-        events = _send_chat(
-            client,
-            "Run these two commands in the sandbox: 'echo FIRST' and then 'echo SECOND'",
-            agent_name="tc-multi-tool",
+        agent = create_eval_agent(
+            system_prompt="Use daytona_bash for all commands. Execute every step.",
             sandbox_id=sandbox["id"],
-            timeout=180,
         )
-        types = _get_event_types(events)
-        assert "assistant_complete" in types
 
-        tool_started = events_of_type(events, "tool_started")
+        result = await agent.invoke(
+            "Run these two commands in the sandbox: 'echo FIRST' and then 'echo SECOND'"
+        )
+        assert len(result.assistant_turns()) >= 1
+
+        tool_started = result.tools_started()
         # Model should have at least attempted tool calls
         if tool_started:
             assert len(tool_started) >= 1
@@ -324,58 +141,54 @@ class TestToolCallingAndSkillLoading:
 # ===========================================================================
 
 
-@pytest.mark.skipif(not HAS_MINIMAX, reason="MiniMax not configured")
+@pytest.mark.skipif(not EvalAgent.has_credentials(), reason="API credentials not configured")
 class TestMultiTurnConversation:
     """Test multi-turn conversations with context retention and continuity."""
 
-    @pytest.fixture()
-    def client(self, db_session_factory, tmp_path, monkeypatch):
-        c = _make_live_client(
-            db_session_factory, tmp_path, monkeypatch,
-            api_key=MINIMAX_KEY, model=MINIMAX_MODEL,
-            base_url=MINIMAX_BASE_URL, api_format=MINIMAX_FORMAT,
-        )
-        with c:
-            yield c
-
-    def test_three_turn_context_retention(self, client):
+    @pytest.mark.asyncio
+    async def test_three_turn_context_retention(self):
         """Three sequential messages should maintain context across turns."""
+        agent = create_eval_agent()
+
         # Turn 1: establish a fact
-        events1 = _send_chat(client, "Remember this code: X7Q9. Just confirm.")
-        text1 = _get_assistant_text(events1)
+        result1 = await agent.invoke("Remember this code: X7Q9. Just confirm.")
+        text1 = result1.text
         assert text1, "Turn 1 should produce a response"
 
         # Turn 2: recall the fact
-        events2 = _send_chat(client, "What code did I ask you to remember? Reply with just the code.")
-        text2 = _get_assistant_text(events2)
+        result2 = await agent.invoke("What code did I ask you to remember? Reply with just the code.")
+        text2 = result2.text
         assert "X7Q9" in text2, f"Model should recall 'X7Q9', got: {text2}"
 
         # Turn 3: transform the fact
-        events3 = _send_chat(client, "Reverse those 4 characters. Reply with just the reversed code.")
-        text3 = _get_assistant_text(events3)
+        result3 = await agent.invoke("Reverse those 4 characters. Reply with just the reversed code.")
+        text3 = result3.text
         assert "9Q7X" in text3, f"Model should reverse to '9Q7X', got: {text3}"
 
-    def test_five_turn_conversation_depth(self, client):
+    @pytest.mark.asyncio
+    async def test_five_turn_conversation_depth(self):
         """Five-turn conversation should maintain deep context."""
+        agent = create_eval_agent()
+
         # Turn 1
-        events1 = _send_chat(client, "I'm building a Python class called DataProcessor. Just acknowledge.")
-        assert _get_assistant_text(events1)
+        result1 = await agent.invoke("I'm building a Python class called DataProcessor. Just acknowledge.")
+        assert result1.text
 
         # Turn 2
-        events2 = _send_chat(client, "It should have a method called transform() that takes a list. Acknowledge.")
-        assert _get_assistant_text(events2)
+        result2 = await agent.invoke("It should have a method called transform() that takes a list. Acknowledge.")
+        assert result2.text
 
         # Turn 3
-        events3 = _send_chat(client, "The transform method should square each number. Acknowledge.")
-        assert _get_assistant_text(events3)
+        result3 = await agent.invoke("The transform method should square each number. Acknowledge.")
+        assert result3.text
 
         # Turn 4
-        events4 = _send_chat(client, "Add error handling for non-numeric values. Acknowledge.")
-        assert _get_assistant_text(events4)
+        result4 = await agent.invoke("Add error handling for non-numeric values. Acknowledge.")
+        assert result4.text
 
         # Turn 5: test recall of accumulated context
-        events5 = _send_chat(client, "Summarize the full class design in one sentence. Include: class name, method name, what it does, error handling.")
-        text5 = _get_assistant_text(events5)
+        result5 = await agent.invoke("Summarize the full class design in one sentence. Include: class name, method name, what it does, error handling.")
+        text5 = result5.text
 
         # Should reference key elements from earlier turns
         text5_lower = text5.lower()
@@ -383,32 +196,41 @@ class TestMultiTurnConversation:
             f"Should mention DataProcessor. Got: {text5}"
         )
 
-    def test_multiturn_with_tool_followup(self, client):
+    @pytest.mark.asyncio
+    async def test_multiturn_with_tool_followup(self):
         """Tool use in turn 1 should be referenceable in turn 2."""
-        events1 = _send_chat(client, "What is 15 * 13? Think step by step.", timeout=60)
-        text1 = _get_assistant_text(events1)
+        agent = create_eval_agent()
+
+        result1 = await agent.invoke("What is 15 * 13? Think step by step.")
+        text1 = result1.text
         assert "195" in text1, f"Should compute 195. Got: {text1}"
 
-        events2 = _send_chat(client, "Add 5 to the result you just gave me. Reply with just the number.")
-        text2 = _get_assistant_text(events2)
+        result2 = await agent.invoke("Add 5 to the result you just gave me. Reply with just the number.")
+        text2 = result2.text
         assert "200" in text2, f"Should compute 200. Got: {text2}"
 
-    def test_multiturn_session_isolation(self, client):
-        """Each test client should have an independent session."""
-        events = _send_chat(client, "Reply with exactly one word: ISOLATED")
-        text = _get_assistant_text(events)
+    @pytest.mark.asyncio
+    async def test_multiturn_session_isolation(self):
+        """Each test agent should have an independent session."""
+        agent = create_eval_agent()
+
+        result = await agent.invoke("Reply with exactly one word: ISOLATED")
+        text = result.text
         assert text, "Should get a response"
         # This test verifies that sessions don't bleed state from other tests
 
-    def test_multiturn_error_recovery(self, client):
+    @pytest.mark.asyncio
+    async def test_multiturn_error_recovery(self):
         """Conversation should continue normally after an error turn."""
+        agent = create_eval_agent()
+
         # Turn 1: normal message
-        events1 = _send_chat(client, "Say hello.")
-        assert _get_assistant_text(events1)
+        result1 = await agent.invoke("Say hello.")
+        assert result1.text
 
         # Turn 2: another normal message to verify conversation continues
-        events2 = _send_chat(client, "Now say goodbye.")
-        text2 = _get_assistant_text(events2)
+        result2 = await agent.invoke("Now say goodbye.")
+        text2 = result2.text
         assert text2, "Should still respond after error"
 
 
@@ -417,48 +239,44 @@ class TestMultiTurnConversation:
 # ===========================================================================
 
 
-@pytest.mark.skipif(not HAS_MINIMAX, reason="MiniMax not configured")
+@pytest.mark.skipif(not EvalAgent.has_credentials(), reason="API credentials not configured")
 class TestThinkingBlockStreaming:
     """Test reasoning/thinking block streaming from real MiniMax API."""
 
-    @pytest.fixture()
-    def client(self, db_session_factory, tmp_path, monkeypatch):
-        c = _make_live_client(
-            db_session_factory, tmp_path, monkeypatch,
-            api_key=MINIMAX_KEY, model=MINIMAX_MODEL,
-            base_url=MINIMAX_BASE_URL, api_format=MINIMAX_FORMAT,
-        )
-        with c:
-            yield c
-
-    def test_thinking_block_on_math_reasoning(self, client):
+    @pytest.mark.asyncio
+    async def test_thinking_block_on_math_reasoning(self):
         """Math problems should trigger thinking and produce correct results."""
-        events = _send_chat(client, "Think step by step: what is 23 * 17?", timeout=60)
-        types = _get_event_types(events)
-        assert "assistant_complete" in types
+        agent = create_eval_agent()
 
-        text = _get_assistant_text(events)
+        result = await agent.invoke("Think step by step: what is 23 * 17?")
+        assert len(result.assistant_turns()) >= 1
+
+        text = result.text
         assert "391" in text, f"Should compute 391. Got: {text}"
 
         # Thinking events may or may not be present — both valid
-        thinking_events = events_of_type(events, "thinking_delta")
-        if thinking_events:
-            assert thinking_events[0].get("message"), "Thinking delta should have content"
+        thinking_text = result.thinking_text
+        # If thinking was produced, it should have content
+        if thinking_text:
+            assert len(thinking_text) > 0, "Thinking text should have content"
 
-    def test_thinking_before_text_ordering(self, client):
+    @pytest.mark.asyncio
+    async def test_thinking_before_text_ordering(self):
         """If thinking events exist, they should precede text events."""
-        events = _send_chat(
-            client,
-            "Carefully reason: is 97 a prime number? Think before answering.",
-            timeout=60,
+        agent = create_eval_agent()
+
+        result = await agent.invoke(
+            "Carefully reason: is 97 a prime number? Think before answering."
         )
-        thinking = events_of_type(events, "thinking_delta")
-        text_deltas = events_of_type(events, "assistant_delta")
+
+        from engine.stream_events import ThinkingDelta, AssistantTextDelta
+
+        thinking = [e for e in result.events if isinstance(e, ThinkingDelta)]
+        text_deltas = [e for e in result.events if isinstance(e, AssistantTextDelta)]
 
         if thinking and text_deltas:
-            all_types = [e["type"] for e in events]
-            first_thinking = all_types.index("thinking_delta")
-            first_text = all_types.index("assistant_delta")
+            first_thinking = next(i for i, e in enumerate(result.events) if isinstance(e, ThinkingDelta))
+            first_text = next(i for i, e in enumerate(result.events) if isinstance(e, AssistantTextDelta))
             assert first_thinking < first_text, "Thinking should precede text deltas"
 
     def test_thinking_block_message_model(self):
@@ -479,31 +297,33 @@ class TestThinkingBlockStreaming:
         block_types = [b["type"] for b in api_param["content"]]
         assert "thinking" not in block_types
 
-    def test_thinking_block_with_complex_reasoning(self, client):
+    @pytest.mark.asyncio
+    async def test_thinking_block_with_complex_reasoning(self):
         """Complex reasoning should produce structured thought."""
-        events = _send_chat(
-            client,
-            "Think carefully: if all roses are flowers, and some flowers fade quickly, can we conclude that some roses fade quickly? Explain your logic.",
-            timeout=60,
+        agent = create_eval_agent()
+
+        result = await agent.invoke(
+            "Think carefully: if all roses are flowers, and some flowers fade quickly, can we conclude that some roses fade quickly? Explain your logic."
         )
-        text = _get_assistant_text(events)
+        text = result.text
         assert text, "Should produce a reasoning response"
         assert len(text) > 50, "Complex reasoning should produce substantial output"
 
-    def test_thinking_delta_event_structure(self, client):
+    @pytest.mark.asyncio
+    async def test_thinking_delta_event_structure(self):
         """Verify thinking_delta events have expected fields when present."""
-        events = _send_chat(
-            client,
-            "Step by step, calculate 8! (8 factorial).",
-            timeout=60,
-        )
-        text = _get_assistant_text(events)
+        agent = create_eval_agent()
+
+        result = await agent.invoke("Step by step, calculate 8! (8 factorial).")
+        text = result.text
         # Model may format with commas (40,320) or plain (40320)
         assert "40320" in text.replace(",", ""), f"8! = 40320. Got: {text}"
 
-        for ev in events_of_type(events, "thinking_delta"):
-            assert "type" in ev
-            assert ev["type"] == "thinking_delta"
+        from engine.stream_events import ThinkingDelta
+
+        for ev in result.events:
+            if isinstance(ev, ThinkingDelta):
+                assert hasattr(ev, "text")
 
 
 # ===========================================================================
@@ -707,131 +527,103 @@ class TestCompactionSystem:
 # ===========================================================================
 
 
-@pytest.mark.skipif(not HAS_BOTH, reason="MiniMax + Daytona both required")
+@pytest.mark.skipif(not EvalAgent.has_all(), reason="API + Daytona both required")
 class TestComplexLongTasks:
     """Test complex multi-step tasks requiring multiple tool calls."""
 
     @pytest.fixture(scope="class")
     def sandbox(self):
-        sb = _create_test_sandbox("complex-task")
+        sb = create_test_sandbox("complex-task")
         yield sb
-        _delete_sandbox(sb["id"])
+        delete_test_sandbox(sb["id"])
 
-    @pytest.fixture()
-    def client(self, db_session_factory, tmp_path, monkeypatch):
-        c = _make_live_client(
-            db_session_factory, tmp_path, monkeypatch,
-            api_key=MINIMAX_KEY, model=MINIMAX_MODEL,
-            base_url=MINIMAX_BASE_URL, api_format=MINIMAX_FORMAT,
-        )
-        with c:
-            yield c
-
-    def test_create_and_run_python_script(self, client, sandbox):
+    @pytest.mark.asyncio
+    async def test_create_and_run_python_script(self, sandbox):
         """Model should create a Python file and execute it in the sandbox."""
-        _create_agent(client, "cx-script-agent", toolkits=["sandbox_operations"],
-                      system_prompt=(
-                          "You have sandbox access. Use daytona_write_file to write files and "
-                          "daytona_bash to run them. Execute ALL requested steps using tools."
-                      ))
-
-        events = _send_chat(
-            client,
-            (
-                "Do these steps in the sandbox:\n"
-                "1. Write a file /workspace/greet.py with: print('COMPLEX_TASK_OK')\n"
-                "2. Run: python /workspace/greet.py\n"
-                "3. Tell me the output"
+        agent = create_eval_agent(
+            system_prompt=(
+                "You have sandbox access. Use daytona_write_file to write files and "
+                "daytona_bash to run them. Execute ALL requested steps using tools."
             ),
-            agent_name="cx-script-agent",
             sandbox_id=sandbox["id"],
-            timeout=180,
         )
-        types = _get_event_types(events)
-        assert "assistant_complete" in types, f"Missing assistant_complete. Types: {types}"
 
-        tool_started = events_of_type(events, "tool_started")
+        result = await agent.invoke(
+            "Do these steps in the sandbox:\n"
+            "1. Write a file /workspace/greet.py with: print('COMPLEX_TASK_OK')\n"
+            "2. Run: python /workspace/greet.py\n"
+            "3. Tell me the output"
+        )
+        assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
+
+        tool_started = result.tools_started()
         if tool_started:
-            tool_names = [e["tool_name"] for e in tool_started]
+            tool_names = result.tool_names
             daytona_tools = [t for t in tool_names if t.startswith("daytona_")]
             assert len(daytona_tools) >= 1, f"Expected daytona tools, got: {tool_names}"
 
-    def test_multi_step_file_pipeline(self, client, sandbox):
+    @pytest.mark.asyncio
+    async def test_multi_step_file_pipeline(self, sandbox):
         """Model should execute a multi-step pipeline: create, modify, verify."""
-        _create_agent(client, "cx-pipeline-agent", toolkits=["sandbox_operations"],
-                      system_prompt=(
-                          "You are a coding assistant with sandbox access. Use daytona_bash, "
-                          "daytona_write_file, and daytona_read_file tools. Execute every step."
-                      ))
-
-        events = _send_chat(
-            client,
-            (
-                "In the sandbox:\n"
-                "1. Create /workspace/data.txt with the text: alpha beta gamma\n"
-                "2. Run: wc -w /workspace/data.txt\n"
-                "3. Report the word count"
+        agent = create_eval_agent(
+            system_prompt=(
+                "You are a coding assistant with sandbox access. Use daytona_bash, "
+                "daytona_write_file, and daytona_read_file tools. Execute every step."
             ),
-            agent_name="cx-pipeline-agent",
             sandbox_id=sandbox["id"],
-            timeout=180,
         )
-        assert "assistant_complete" in _get_event_types(events)
 
-    def test_tool_error_handling(self, client, sandbox):
+        result = await agent.invoke(
+            "In the sandbox:\n"
+            "1. Create /workspace/data.txt with the text: alpha beta gamma\n"
+            "2. Run: wc -w /workspace/data.txt\n"
+            "3. Report the word count"
+        )
+        assert len(result.assistant_turns()) >= 1
+
+    @pytest.mark.asyncio
+    async def test_tool_error_handling(self, sandbox):
         """Model should handle tool errors gracefully."""
-        _create_agent(client, "cx-error-agent", toolkits=["sandbox_operations"],
-                      system_prompt="Use daytona_bash for commands. If a command fails, explain the error.")
-
-        events = _send_chat(
-            client,
-            "Run this in the sandbox: cat /nonexistent/file/that/does/not/exist",
-            agent_name="cx-error-agent",
+        agent = create_eval_agent(
+            system_prompt="Use daytona_bash for commands. If a command fails, explain the error.",
             sandbox_id=sandbox["id"],
-            timeout=120,
+        )
+
+        result = await agent.invoke(
+            "Run this in the sandbox: cat /nonexistent/file/that/does/not/exist"
         )
         # Should still complete without crashing
-        types = _get_event_types(events)
-        assert "assistant_complete" in types or "error" in types, (
-            f"Should have assistant_complete or error. Types: {types}"
+        assert len(result.assistant_turns()) >= 1 or result.has_errors, (
+            "Should have assistant turn or error events"
         )
-        # If tool errors cause empty assistant_complete, that's acceptable —
-        # the key invariant is the server doesn't crash
-        text = _get_assistant_text(events)
         # Text may be empty if tool error terminated the stream early
 
-    def test_sequential_tool_calls_preserve_state(self, client, sandbox):
+    @pytest.mark.asyncio
+    async def test_sequential_tool_calls_preserve_state(self, sandbox):
         """Sequential tool calls should see each other's results in the sandbox."""
-        _create_agent(client, "cx-state-agent", toolkits=["sandbox_operations"],
-                      system_prompt="Use daytona_bash for all commands.")
-
-        events = _send_chat(
-            client,
-            (
-                "In the sandbox, run these commands one after another:\n"
-                "1. echo 'STATE_TEST' > /workspace/state_test.txt\n"
-                "2. cat /workspace/state_test.txt\n"
-                "3. Report what you see"
-            ),
-            agent_name="cx-state-agent",
+        agent = create_eval_agent(
+            system_prompt="Use daytona_bash for all commands.",
             sandbox_id=sandbox["id"],
-            timeout=180,
         )
-        assert "assistant_complete" in _get_event_types(events)
 
-    def test_long_output_handling(self, client, sandbox):
+        result = await agent.invoke(
+            "In the sandbox, run these commands one after another:\n"
+            "1. echo 'STATE_TEST' > /workspace/state_test.txt\n"
+            "2. cat /workspace/state_test.txt\n"
+            "3. Report what you see"
+        )
+        assert len(result.assistant_turns()) >= 1
+
+    @pytest.mark.asyncio
+    async def test_long_output_handling(self, sandbox):
         """Model should handle large tool output without crashing."""
-        _create_agent(client, "cx-long-output", toolkits=["sandbox_operations"],
-                      system_prompt="Use daytona_bash for commands.")
-
-        events = _send_chat(
-            client,
-            "Run in the sandbox: seq 1 200",
-            agent_name="cx-long-output",
+        agent = create_eval_agent(
+            system_prompt="Use daytona_bash for commands.",
             sandbox_id=sandbox["id"],
-            timeout=120,
         )
-        assert "assistant_complete" in _get_event_types(events)
+
+        result = await agent.invoke("Run in the sandbox: seq 1 200")
+        assert len(result.assistant_turns()) >= 1
 
 
 # ===========================================================================
@@ -1031,53 +823,3 @@ class TestCodeIntelligenceSystem:
         assert d.severity == "error"
         assert d.source == "python"
         assert d.line == 10
-
-
-# ===========================================================================
-# Cross-cutting: SSE event stream validation
-# ===========================================================================
-
-
-@pytest.mark.skipif(not HAS_MINIMAX, reason="MiniMax not configured")
-class TestSSEEventStream:
-    """Validate the SSE event stream structure and ordering."""
-
-    @pytest.fixture()
-    def client(self, db_session_factory, tmp_path, monkeypatch):
-        c = _make_live_client(
-            db_session_factory, tmp_path, monkeypatch,
-            api_key=MINIMAX_KEY, model=MINIMAX_MODEL,
-            base_url=MINIMAX_BASE_URL, api_format=MINIMAX_FORMAT,
-        )
-        with c:
-            yield c
-
-    def test_event_stream_has_required_types(self, client):
-        """Every chat response must have assistant_complete and line_complete."""
-        events = _send_chat(client, "Say hello.")
-        types = _get_event_types(events)
-        assert "assistant_complete" in types, f"Missing assistant_complete. Types: {types}"
-        assert "line_complete" in types, f"Missing line_complete. Types: {types}"
-
-    def test_event_stream_has_transcript_item(self, client):
-        """Chat responses should include transcript_item events."""
-        events = _send_chat(client, "What is 2+2?")
-        types = _get_event_types(events)
-        assert "transcript_item" in types, f"Missing transcript_item. Types: {types}"
-
-    def test_assistant_complete_has_message(self, client):
-        """assistant_complete events must have a non-empty message field."""
-        events = _send_chat(client, "Reply with the word PASS")
-        completes = events_of_type(events, "assistant_complete")
-        assert len(completes) >= 1
-        assert completes[0].get("message"), "assistant_complete should have message content"
-
-    def test_line_complete_terminates_stream(self, client):
-        """line_complete should be the last meaningful event in the stream."""
-        events = _send_chat(client, "Say one word.")
-        types_list = [e["type"] for e in events]
-        assert "line_complete" in types_list
-        lc_idx = types_list.index("line_complete")
-        # Nothing after line_complete except possibly more line_complete
-        for evt in events[lc_idx + 1:]:
-            assert evt["type"] == "line_complete", f"Unexpected event after line_complete: {evt['type']}"

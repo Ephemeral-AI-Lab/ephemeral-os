@@ -14,48 +14,33 @@ Run with: pytest tests/test_e2e/test_live_nextjs_sandbox.py -m live -v
 
 from __future__ import annotations
 
-import json
-import os
-import time
-import uuid
-from pathlib import Path
 from typing import Any
 
 import pytest
-from dotenv import load_dotenv
 
-from tests.test_e2e.conftest import parse_sse_events, events_of_type
-
-_PROJECT_ROOT = Path(__file__).resolve().parents[3]
-load_dotenv(_PROJECT_ROOT / ".env")
+from engine.eval_agent import EvalAgent
+from tests.test_e2e.conftest import (
+    MINIMAX_KEY,
+    MINIMAX_MODEL,
+    MINIMAX_BASE_URL,
+    MINIMAX_FORMAT,
+    DAYTONA_KEY,
+    DAYTONA_URL,
+    DAYTONA_TARGET,
+    HAS_BOTH,
+    make_live_client,
+    parse_sse_events,
+    events_of_type,
+    create_test_sandbox,
+    delete_test_sandbox,
+    send_chat,
+    create_test_agent,
+    get_sandbox_service,
+)
 
 pytestmark = [pytest.mark.e2e, pytest.mark.live]
 
-# ---------------------------------------------------------------------------
-# Credential loading
-# ---------------------------------------------------------------------------
-
-def _load_settings() -> dict:
-    settings_path = Path.home() / ".ephemeralos" / "settings.json"
-    if settings_path.exists():
-        return json.loads(settings_path.read_text())
-    return {}
-
-_SETTINGS = _load_settings()
-
-MINIMAX_KEY = os.environ.get("MINIMAX_API_KEY") or _SETTINGS.get("api_key", "")
-MINIMAX_MODEL = os.environ.get("MINIMAX_MODEL") or _SETTINGS.get("model", "MiniMax-M2.7-highspeed")
-MINIMAX_BASE_URL = os.environ.get("MINIMAX_BASE_URL") or _SETTINGS.get("base_url", "")
-MINIMAX_FORMAT = os.environ.get("MINIMAX_API_FORMAT") or _SETTINGS.get("api_format", "anthropic")
-
-DAYTONA_KEY = os.environ.get("DAYTONA_API_KEY") or _SETTINGS.get("daytona_api_key", "")
-DAYTONA_URL = os.environ.get("DAYTONA_API_URL") or _SETTINGS.get("daytona_api_url", "")
-DAYTONA_TARGET = os.environ.get("DAYTONA_TARGET") or _SETTINGS.get("daytona_target", "")
-
-HAS_MINIMAX = bool(MINIMAX_KEY and MINIMAX_BASE_URL)
 HAS_DAYTONA = bool(DAYTONA_KEY and DAYTONA_URL)
-HAS_BOTH = HAS_MINIMAX and HAS_DAYTONA
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -78,66 +63,10 @@ NEXTJS_AGENT_PROMPT = (
 )
 
 
-def _make_live_client(db_session_factory, tmp_path, monkeypatch):
-    from fastapi.testclient import TestClient
-    from server.protocol import BackendHostConfig
-    from server.app_factory import create_app
-
-    monkeypatch.delenv("EPHEMERALOS_DATABASE_URL", raising=False)
-    monkeypatch.setattr("db.engine.initialize_db", lambda *a, **kw: db_session_factory)
-    monkeypatch.setattr("engine.agent.make_hook_executor", lambda *a, **kw: None)
-
-    def _patched_load_settings(*a, **kw):
-        from config.settings import Settings, DatabaseSettings
-        return Settings(
-            api_key=MINIMAX_KEY, model=MINIMAX_MODEL, api_format=MINIMAX_FORMAT,
-            base_url=MINIMAX_BASE_URL or None,
-            daytona_api_key=DAYTONA_KEY, daytona_api_url=DAYTONA_URL,
-            daytona_target=DAYTONA_TARGET,
-            database=DatabaseSettings(url=f"sqlite:///{tmp_path / 'test.db'}"),
-        )
-
-    monkeypatch.setattr("config.load_settings", _patched_load_settings)
-    monkeypatch.setattr("config.settings.load_settings", _patched_load_settings)
-    monkeypatch.setattr("server.app_factory.load_settings", _patched_load_settings)
-
-    config = BackendHostConfig(
-        api_key=MINIMAX_KEY, model=MINIMAX_MODEL,
-        api_format=MINIMAX_FORMAT, base_url=MINIMAX_BASE_URL or None,
-    )
-    return TestClient(create_app(config))
-
-
-def _get_sandbox_service():
-    from sandbox.service import SandboxService
-    return SandboxService()
-
-
-def _create_test_sandbox(name: str) -> dict:
-    svc = _get_sandbox_service()
-    return svc.create_sandbox(
-        name=f"{name}-{int(time.time())}", language="typescript",
-        labels={"purpose": "nextjs-e2e"},
-    )
-
-
-def _delete_sandbox(sandbox_id: str) -> None:
-    try:
-        _get_sandbox_service().delete_sandbox(sandbox_id)
-    except Exception:
-        pass
-
-
 def _send_chat(client, line: str, *, agent_name: str | None = None,
                sandbox_id: str | None = None, timeout: int = 300) -> list[dict]:
-    payload: dict[str, Any] = {"line": line}
-    if agent_name:
-        payload["agent_name"] = agent_name
-    if sandbox_id:
-        payload["sandbox_id"] = sandbox_id
-    resp = client.post("/api/chat", json=payload, timeout=timeout)
-    assert resp.status_code == 200, f"Chat failed: {resp.status_code} {resp.text[:500]}"
-    return parse_sse_events(resp.text)
+    """Thin wrapper around conftest send_chat with a longer default timeout."""
+    return send_chat(client, line, agent_name=agent_name, sandbox_id=sandbox_id, timeout=timeout)
 
 
 def _get_assistant_text(events: list[dict]) -> str:
@@ -156,6 +85,7 @@ def _get_tool_outputs(events: list[dict]) -> str:
 
 def _create_agent(client, name: str, *, toolkits: list[str] | None = None,
                   system_prompt: str | None = None) -> dict:
+    """Create an agent, handling 409 conflicts by deleting and re-creating."""
     payload: dict[str, Any] = {
         "name": name,
         "description": f"Next.js E2E agent: {name}",
@@ -186,11 +116,11 @@ def nextjs_sandbox():
     """Create a real Daytona sandbox for Next.js project tests."""
     if not HAS_DAYTONA:
         pytest.skip("Daytona not configured")
-    sb = _create_test_sandbox("nextjs-e2e")
+    sb = create_test_sandbox("nextjs-e2e")
     print(f"\n=== Created sandbox: {sb['id']} ===")
     yield sb
     print(f"\n=== Cleaning up sandbox: {sb['id']} ===")
-    _delete_sandbox(sb["id"])
+    delete_test_sandbox(sb["id"])
 
 
 # ===========================================================================
@@ -211,14 +141,14 @@ class TestSandboxCreationAndHealth:
 
     def test_sandbox_bash_exec(self, nextjs_sandbox):
         """Direct bash exec in sandbox should work."""
-        svc = _get_sandbox_service()
+        svc = get_sandbox_service()
         raw_sb = svc.get_sandbox_object(nextjs_sandbox["id"])
         resp = raw_sb.process.exec("echo 'SANDBOX_ALIVE'", timeout=30)
         assert "SANDBOX_ALIVE" in (resp.result or ""), f"Exec failed: {resp.result}"
 
     def test_sandbox_has_node(self, nextjs_sandbox):
         """Sandbox should have Node.js installed for Next.js development."""
-        svc = _get_sandbox_service()
+        svc = get_sandbox_service()
         raw_sb = svc.get_sandbox_object(nextjs_sandbox["id"])
         resp = raw_sb.process.exec("node --version", timeout=30)
         result = resp.result or ""
@@ -226,7 +156,7 @@ class TestSandboxCreationAndHealth:
 
     def test_sandbox_has_npm(self, nextjs_sandbox):
         """Sandbox should have npm available."""
-        svc = _get_sandbox_service()
+        svc = get_sandbox_service()
         raw_sb = svc.get_sandbox_object(nextjs_sandbox["id"])
         resp = raw_sb.process.exec("npm --version", timeout=30)
         result = resp.result or ""
@@ -249,7 +179,7 @@ class TestAgentScaffoldsNextjsProject:
 
     @pytest.fixture()
     def client(self, db_session_factory, tmp_path, monkeypatch):
-        c = _make_live_client(db_session_factory, tmp_path, monkeypatch)
+        c = make_live_client(db_session_factory, tmp_path, monkeypatch)
         with c:
             yield c
 
@@ -428,7 +358,7 @@ class TestProjectFileVerification:
 
     @pytest.fixture()
     def client(self, db_session_factory, tmp_path, monkeypatch):
-        c = _make_live_client(db_session_factory, tmp_path, monkeypatch)
+        c = make_live_client(db_session_factory, tmp_path, monkeypatch)
         with c:
             yield c
 
@@ -608,7 +538,7 @@ class TestAgentLspToolUse:
 
     @pytest.fixture()
     def client(self, db_session_factory, tmp_path, monkeypatch):
-        c = _make_live_client(db_session_factory, tmp_path, monkeypatch)
+        c = make_live_client(db_session_factory, tmp_path, monkeypatch)
         with c:
             yield c
 
@@ -667,7 +597,7 @@ class TestMultiTurnModificationWorkflow:
 
     @pytest.fixture()
     def client(self, db_session_factory, tmp_path, monkeypatch):
-        c = _make_live_client(db_session_factory, tmp_path, monkeypatch)
+        c = make_live_client(db_session_factory, tmp_path, monkeypatch)
         with c:
             yield c
 
@@ -779,7 +709,7 @@ class TestFullPipeline:
 
     @pytest.fixture()
     def client(self, db_session_factory, tmp_path, monkeypatch):
-        c = _make_live_client(db_session_factory, tmp_path, monkeypatch)
+        c = make_live_client(db_session_factory, tmp_path, monkeypatch)
         with c:
             yield c
 
