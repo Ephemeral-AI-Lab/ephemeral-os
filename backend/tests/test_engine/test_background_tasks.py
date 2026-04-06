@@ -105,7 +105,7 @@ async def test_has_pending() -> None:
     assert mgr.has_pending() is True
 
     # Cancel so we don't leak the slow task.
-    mgr.cancel_all()
+    await mgr.cancel_all()
     assert mgr.has_pending() is False
 
 
@@ -152,7 +152,7 @@ async def test_wait_any_timeout() -> None:
     result = await mgr.wait_any(timeout=0.1)
     assert result is None
 
-    mgr.cancel_all()
+    await mgr.cancel_all()
 
 
 # ---------------------------------------------------------------------------
@@ -180,7 +180,7 @@ async def test_cancel_running_task() -> None:
         coro=_make_tool_coro(delay=10),
     )
 
-    ok = mgr.cancel("t1", "test reason")
+    ok = await mgr.cancel("t1", "test reason")
     assert ok is True
 
     tracked = mgr._tasks["t1"]
@@ -197,7 +197,7 @@ async def test_cancel_running_task() -> None:
 
 async def test_cancel_nonexistent_task() -> None:
     mgr = BackgroundTaskManager()
-    assert mgr.cancel("nonexistent_id") is False
+    assert await mgr.cancel("nonexistent_id") is False
 
 
 # ---------------------------------------------------------------------------
@@ -215,7 +215,7 @@ async def test_cancel_all() -> None:
             coro=_make_tool_coro(delay=10),
         )
 
-    mgr.cancel_all()
+    await mgr.cancel_all()
 
     for i in range(3):
         assert mgr._tasks[f"t{i}"].status == "cancelled"
@@ -279,7 +279,7 @@ async def test_compact_status() -> None:
     assert "t2" in status
     assert "running" in status
 
-    mgr.cancel_all()
+    await mgr.cancel_all()
 
 
 # ---------------------------------------------------------------------------
@@ -313,7 +313,7 @@ async def test_get_status_all() -> None:
         assert "status" in s
         assert "elapsed_seconds" in s
 
-    mgr.cancel_all()
+    await mgr.cancel_all()
 
 
 # ---------------------------------------------------------------------------
@@ -340,7 +340,7 @@ async def test_get_status_by_id() -> None:
     assert len(statuses) == 1
     assert statuses[0]["task_id"] == "t1"
 
-    mgr.cancel_all()
+    await mgr.cancel_all()
 
 
 # ---------------------------------------------------------------------------
@@ -423,3 +423,116 @@ async def test_multiple_concurrent_tasks() -> None:
     remaining_ids = {t.task_id for t in remaining}
     assert "medium" in remaining_ids
     assert "slow" in remaining_ids
+
+
+# ---------------------------------------------------------------------------
+# 18. cancel invokes kill_callback
+# ---------------------------------------------------------------------------
+
+
+async def test_cancel_invokes_kill_callback() -> None:
+    """cancel() should call the kill_callback to physically stop the process."""
+    killed: list[str] = []
+
+    async def _fake_kill() -> None:
+        killed.append("killed")
+
+    mgr = BackgroundTaskManager()
+    mgr.launch(
+        task_id="t1",
+        tool_name="slow",
+        tool_input={},
+        coro=_make_tool_coro(delay=10),
+        kill_callback=_fake_kill,
+    )
+
+    ok = await mgr.cancel("t1", "test kill")
+    assert ok is True
+    assert killed == ["killed"], "kill_callback was not invoked"
+
+    tracked = mgr._tasks["t1"]
+    assert tracked.status == "cancelled"
+    assert tracked.result is not None
+    assert "test kill" in tracked.result.output
+
+
+# ---------------------------------------------------------------------------
+# 19. cancel_all invokes kill_callbacks
+# ---------------------------------------------------------------------------
+
+
+async def test_cancel_all_invokes_kill_callbacks() -> None:
+    """cancel_all() should call kill_callback for every running task."""
+    killed: list[str] = []
+
+    async def _fake_kill_1() -> None:
+        killed.append("t1")
+
+    async def _fake_kill_2() -> None:
+        killed.append("t2")
+
+    mgr = BackgroundTaskManager()
+    mgr.launch(
+        task_id="t1",
+        tool_name="tool1",
+        tool_input={},
+        coro=_make_tool_coro(delay=10),
+        kill_callback=_fake_kill_1,
+    )
+    mgr.launch(
+        task_id="t2",
+        tool_name="tool2",
+        tool_input={},
+        coro=_make_tool_coro(delay=10),
+        kill_callback=_fake_kill_2,
+    )
+
+    await mgr.cancel_all()
+    assert set(killed) == {"t1", "t2"}, f"Expected both callbacks invoked, got {killed}"
+    assert mgr.has_pending() is False
+
+
+# ---------------------------------------------------------------------------
+# 20. cancel without kill_callback still works (logical cancel)
+# ---------------------------------------------------------------------------
+
+
+async def test_cancel_without_kill_callback() -> None:
+    """cancel() with no kill_callback should still mark as cancelled."""
+    mgr = BackgroundTaskManager()
+    mgr.launch(
+        task_id="t1",
+        tool_name="slow",
+        tool_input={},
+        coro=_make_tool_coro(delay=10),
+        # No kill_callback
+    )
+
+    ok = await mgr.cancel("t1", "no kill cb")
+    assert ok is True
+    assert mgr._tasks["t1"].status == "cancelled"
+
+
+# ---------------------------------------------------------------------------
+# 21. kill_callback exception does not prevent cancel
+# ---------------------------------------------------------------------------
+
+
+async def test_kill_callback_exception_does_not_prevent_cancel() -> None:
+    """If kill_callback raises, the task should still be marked cancelled."""
+    async def _bad_kill() -> None:
+        raise RuntimeError("sandbox connection lost")
+
+    mgr = BackgroundTaskManager()
+    mgr.launch(
+        task_id="t1",
+        tool_name="slow",
+        tool_input={},
+        coro=_make_tool_coro(delay=10),
+        kill_callback=_bad_kill,
+    )
+
+    ok = await mgr.cancel("t1", "kill failed but cancel ok")
+    assert ok is True
+    assert mgr._tasks["t1"].status == "cancelled"
+    assert "kill failed but cancel ok" in mgr._tasks["t1"].result.output

@@ -16,6 +16,10 @@ class CheckBackgroundProgressInput(BaseModel):
         default=None,
         description="Optional task ID to filter. If omitted, returns all background tasks.",
     )
+    last_n_lines: int = Field(
+        default=20,
+        description="Number of output lines to include for completed tasks. Use to limit verbose output.",
+    )
 
 
 class CheckBackgroundProgressTool(BaseTool):
@@ -28,9 +32,9 @@ class CheckBackgroundProgressTool(BaseTool):
 
     name: str = "check_background_progress"
     description: str = (
-        "Check the status of background tasks. Returns task ID, tool name, "
-        "status, elapsed time, and recent output for each background task. "
-        "Use this to monitor long-running operations."
+        "Check the current status of background tasks (non-blocking). Returns an instant snapshot "
+        "of task status. Use this BEFORE wait_for_background_task to review what is running. "
+        "For blocking wait, use wait_for_background_task instead."
     )
     input_model: type[BaseModel] = CheckBackgroundProgressInput
 
@@ -49,6 +53,11 @@ class CheckBackgroundProgressTool(BaseTool):
                     is_error=True,
                 )
             return ToolResult(output="No background tasks.", is_error=False)
+
+        for entry in status:
+            if "output" in entry and entry["output"]:
+                lines = entry["output"].splitlines()
+                entry["output"] = "\n".join(lines[-arguments.last_n_lines:])
 
         return ToolResult(output=json.dumps(status, indent=2), is_error=False)
 

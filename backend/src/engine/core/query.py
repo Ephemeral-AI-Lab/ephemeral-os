@@ -24,7 +24,7 @@ from models.core.types import (
     UsageSnapshot,
 )
 from message.messages import ConversationMessage, TextBlock, ToolResultBlock, ToolUseBlock
-from engine.runtime.background_tasks import BackgroundTaskManager, TrackedBackgroundTask
+from engine.runtime.background_tasks import BackgroundTaskManager, KillCallback, TrackedBackgroundTask
 from message.stream_events import (
     AssistantTextDelta,
     AssistantTurnComplete,
@@ -43,7 +43,7 @@ from tools.core.base import ToolExecutionContext, ToolRegistry, ToolResult
 logger = logging.getLogger(__name__)
 
 MAX_OUTPUT_LENGTH: int = 2000
-BACKGROUND_IDLE_TIMEOUT: int = 300
+BACKGROUND_IDLE_TIMEOUT: int = 30  # Safety net — LLM should use wait_for_background_task explicitly
 CANCEL_PATTERN = re.compile(r'\[CANCEL:(\S+)(?:\s+reason="([^"]*)")?\]')
 
 
@@ -105,6 +105,37 @@ async def _inject_background_reminder(
             )
 
     return list(messages) + [ConversationMessage.from_user_text("\n".join(parts))]
+
+
+def _make_kill_callback(context: QueryContext, task_id: str) -> KillCallback | None:
+    """Create a callback that kills the sandbox process for a background task.
+
+    Sends a kill signal to the PID written by the wrapped command.  Returns
+    None when no sandbox is available (non-Daytona tools).
+    """
+    sandbox = (context.tool_metadata or {}).get("daytona_sandbox")
+    if sandbox is None:
+        return None
+
+    pid_file = f"/tmp/.eos_bg_{task_id}.pid"
+
+    async def _kill() -> None:
+        try:
+            await sandbox.process.exec(
+                f"PID=$(cat {pid_file} 2>/dev/null) && kill $PID 2>/dev/null; "
+                f"rm -f {pid_file}",
+                timeout=5,
+            )
+        except Exception as exc:
+            logger.debug("Failed to kill background process for task %s: %s", task_id, exc)
+
+    return _kill
+
+
+def _wrap_command_with_pid_tracking(command: str, task_id: str) -> str:
+    """Wrap a shell command to record its PID in a temp file."""
+    pid_file = f"/tmp/.eos_bg_{task_id}.pid"
+    return f"echo $$ > {pid_file}; {command}"
 
 
 async def _run_query_loop(
@@ -356,6 +387,15 @@ async def _run_query_loop(
                     )
                     continue
 
+                # Wrap daytona_bash commands with PID tracking for physical cancel
+                kill_callback = None
+                if tc.name == "daytona_bash" and "command" in clean_input:
+                    clean_input = dict(clean_input)
+                    clean_input["command"] = _wrap_command_with_pid_tracking(
+                        str(clean_input["command"]), tc.id
+                    )
+                    kill_callback = _make_kill_callback(context, tc.id)
+
                 async def _bg_wrapper(
                     ctx: QueryContext, name: str, uid: str, inp: dict[str, object]
                 ) -> ToolResult:
@@ -364,7 +404,8 @@ async def _run_query_loop(
 
                 coro = _bg_wrapper(context, tc.name, tc.id, clean_input)
                 bg_event = background_manager.launch(
-                    tc.id, tc.name, clean_input, coro, task_note=task_note
+                    tc.id, tc.name, clean_input, coro, task_note=task_note,
+                    kill_callback=kill_callback,
                 )
                 yield bg_event, None
                 tool_results.append(
@@ -410,6 +451,15 @@ async def _run_query_loop(
                         )
                         continue
 
+                    # Wrap daytona_bash commands with PID tracking for physical cancel
+                    kill_callback = None
+                    if tc.name == "daytona_bash" and "command" in clean_input:
+                        clean_input = dict(clean_input)
+                        clean_input["command"] = _wrap_command_with_pid_tracking(
+                            str(clean_input["command"]), tc.id
+                        )
+                        kill_callback = _make_kill_callback(context, tc.id)
+
                     async def _bg_wrapper(
                         ctx: QueryContext, name: str, uid: str, inp: dict[str, object]
                     ) -> ToolResult:
@@ -418,7 +468,8 @@ async def _run_query_loop(
 
                     coro = _bg_wrapper(context, tc.name, tc.id, clean_input)
                     event = background_manager.launch(
-                        tc.id, tc.name, clean_input, coro, task_note=task_note
+                        tc.id, tc.name, clean_input, coro, task_note=task_note,
+                        kill_callback=kill_callback,
                     )
                     yield event, None
                     tool_results.append(
@@ -512,7 +563,7 @@ async def _run_query_loop(
         messages.append(ConversationMessage(role="user", content=tool_results))  # type: ignore[arg-type]
 
     if background_manager is not None:
-        background_manager.cancel_all()
+        await background_manager.cancel_all()
 
     yield (
         ToolExecutionCompleted(

@@ -101,7 +101,7 @@ async def daytona_bash(
         kwargs: dict[str, object] = {"timeout": timeout}
         if cwd:
             kwargs["cwd"] = cwd
-        response = await sandbox.process.exec(f"bash -c {shlex.quote(command)}", **kwargs)
+        response = await sandbox.process.exec(f"env -u LC_ALL bash -c {shlex.quote(command)}", **kwargs)
         exit_code = getattr(response, "exit_code", 0)
         output = json.dumps(
             {
@@ -208,6 +208,10 @@ async def daytona_write_file(
     file_path = _resolve_path(file_path, context)
     try:
         content_bytes = content.encode("utf-8")
+        # Ensure parent directories exist
+        parent = "/".join(file_path.split("/")[:-1])
+        if parent:
+            await sandbox.process.exec(f"mkdir -p {shlex.quote(parent)}")
         # SDK signature: upload_file(src: str | bytes, dst: str)
         await sandbox.fs.upload_file(content_bytes, file_path)
         output = json.dumps(

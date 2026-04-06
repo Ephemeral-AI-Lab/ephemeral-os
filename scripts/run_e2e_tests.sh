@@ -23,6 +23,11 @@ LIVE_TESTS=(
     test_background_reminder_live.py    # Ephemeral background reminders
     test_background_context_live.py     # Context pressure with background tasks
     test_background_autonomy_live.py    # LLM autonomous background decisions
+    test_bg_high_concurrency_live.py    # High-concurrency bg+fg mixing
+    test_bg_task_lifecycle_live.py      # Task lifecycle: progress, cancel, notify
+    test_bg_idle_wait_live.py           # Idle/wait scenarios for bg tasks
+    test_bg_mixed_chaos_live.py         # Mixed chaos: errors, relaunch, pipelines
+    test_bg_physical_cancel_live.py     # Physical process kill on cancel
     test_live_api.py                    # Live API integration
     test_live_full_run.py               # Complete agent run with metrics
     test_live_sandbox_agents.py         # Sandbox tool calling

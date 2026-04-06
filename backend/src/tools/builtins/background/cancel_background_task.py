@@ -42,7 +42,7 @@ class CancelBackgroundTaskTool(BaseTool):
             )
 
         assert isinstance(arguments, CancelBackgroundTaskInput)
-        cancelled = manager.cancel(arguments.task_id, arguments.reason)
+        cancelled = await manager.cancel(arguments.task_id, arguments.reason)
 
         if cancelled:
             reason_msg = f" Reason: {arguments.reason}" if arguments.reason else ""

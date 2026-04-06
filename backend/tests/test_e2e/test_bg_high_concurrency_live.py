@@ -41,6 +41,41 @@ Always be concise. Execute tools, don't just describe them.
 """
 
 
+def _assert_fg_during_bg(result, min_fg: int = 1) -> None:
+    """Assert that foreground tool calls happened WHILE background tasks were running.
+
+    Verifies that at least *min_fg* foreground daytona_bash calls occurred between
+    the first BackgroundTaskStarted event and the first check_background_progress
+    or cancel_background_task call. This proves true fg+bg concurrency.
+    """
+    bg_start_indices = [
+        i for i, tc in enumerate(result.tool_calls)
+        if tc.name == "daytona_bash" and tc.input.get("background") is True
+    ]
+    lifecycle_indices = [
+        i for i, tc in enumerate(result.tool_calls)
+        if tc.name in ("check_background_progress", "cancel_background_task")
+    ]
+    assert bg_start_indices, "No background launches found"
+    assert lifecycle_indices, "No check/cancel calls found"
+
+    first_bg = bg_start_indices[0]
+    first_lifecycle = lifecycle_indices[0]
+
+    fg_during_bg = [
+        tc for i, tc in enumerate(result.tool_calls)
+        if first_bg < i < first_lifecycle
+        and tc.name in ("daytona_bash", "daytona_write_file")
+        and not tc.input.get("background")
+    ]
+    assert len(fg_during_bg) >= min_fg, (
+        f"Expected {min_fg}+ foreground calls BETWEEN bg launch (idx {first_bg}) "
+        f"and first check/cancel (idx {first_lifecycle}). "
+        f"Got {len(fg_during_bg)} fg calls in that window. "
+        f"Full sequence: {result.tool_names}"
+    )
+
+
 def _log_result(result, label: str) -> None:
     bg_started = result.background_started()
     bg_completed = result.background_completed()
@@ -98,12 +133,32 @@ class TestTripleBackgroundConcurrency:
         _log_result(result, "triple_bg")
 
         assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
-        assert len(result.background_started()) >= 3, \
-            f"Expected 3+ background tasks started. Got {len(result.background_started())}"
-        assert len(result.tools_started()) >= 5, \
-            f"Expected 5+ total tool calls (3 bg + 2 fg). Got: {result.tool_names}"
+        # Strict: exactly 3 background tasks must be launched
+        bg_started = result.background_started()
+        assert len(bg_started) >= 3, \
+            f"Expected 3+ background tasks started. Got {len(bg_started)}"
+        # Strict: all 3 bg tasks must use background: true on daytona_bash
+        bg_bash_calls = [tc for tc in result.tool_calls
+                         if tc.name == "daytona_bash" and tc.input.get("background") is True]
+        assert len(bg_bash_calls) >= 3, \
+            f"Expected 3+ daytona_bash calls with background: true. Got {len(bg_bash_calls)}: {result.tool_calls}"
+        # Strict: foreground calls must NOT have background flag
+        fg_bash_calls = [tc for tc in result.tool_calls
+                         if tc.name == "daytona_bash" and not tc.input.get("background")]
+        assert len(fg_bash_calls) >= 2, \
+            f"Expected 2+ foreground bash calls (no background flag). Got {len(fg_bash_calls)}"
+        # Background launches appear as BackgroundTaskStarted, not ToolExecutionStarted
+        # Foreground total: 2 fg bash + 1 check = 3+
+        assert len(result.tools_started()) >= 3, \
+            f"Expected 3+ foreground tool calls. Got: {result.tool_names}"
+        assert len(result.tools_started()) + len(result.background_started()) >= 6, \
+            f"Expected 6+ total actions (fg + bg). Got {len(result.tools_started())} fg + {len(result.background_started())} bg"
         assert result.has_tool("check_background_progress"), \
             f"Expected check_background_progress. Got: {result.tool_names}"
+        # Strict: fg calls must happen WHILE bg tasks are running (true concurrency)
+        _assert_fg_during_bg(result, min_fg=2)
+        assert not result.has_non_cancel_errors, \
+            f"Unexpected errors: {[e.output[:200] for e in result.non_cancel_error_events]}"
 
 
 # ===========================================================================
@@ -142,16 +197,31 @@ class TestInterleavedBgFg:
         )
         _log_result(result, "interleaved")
 
-        assert len(result.background_started()) >= 2, \
-            f"Expected 2+ background tasks. Got {len(result.background_started())}"
+        # Strict: exactly 2 background launches
+        bg_bash = [tc for tc in result.tool_calls
+                   if tc.name == "daytona_bash" and tc.input.get("background") is True]
+        assert len(bg_bash) >= 2, \
+            f"Expected 2+ daytona_bash with background: true. Got {len(bg_bash)}"
+        # Strict: 3+ foreground bash calls without background flag
         fg_bash = [tc for tc in result.tool_calls
                    if tc.name == "daytona_bash" and not tc.input.get("background")]
         assert len(fg_bash) >= 3, \
             f"Expected 3+ foreground bash calls. Got {len(fg_bash)}"
+        # Strict: interleaving order — first fg call should appear before second bg call
+        all_bash = [(i, tc) for i, tc in enumerate(result.tool_calls) if tc.name == "daytona_bash"]
+        bg_indices = [i for i, tc in all_bash if tc.input.get("background") is True]
+        fg_indices = [i for i, tc in all_bash if not tc.input.get("background")]
+        if len(bg_indices) >= 2 and len(fg_indices) >= 1:
+            assert fg_indices[0] < bg_indices[-1], \
+                f"Expected interleaved order (fg before last bg). bg={bg_indices}, fg={fg_indices}"
         assert result.has_tool("check_background_progress"), \
             f"Expected progress check. Got: {result.tool_names}"
         assert result.has_tool("cancel_background_task"), \
             f"Expected cancel. Got: {result.tool_names}"
+        # Strict: fg calls must happen WHILE bg tasks are running (true concurrency)
+        _assert_fg_during_bg(result, min_fg=1)
+        assert not result.has_non_cancel_errors, \
+            f"Unexpected errors: {[e.output[:200] for e in result.non_cancel_error_events]}"
 
 
 # ===========================================================================
@@ -181,26 +251,44 @@ class TestBgWithFileCreation:
             "Do the following:\n"
             "1. Run 'sleep 15 && echo COMPILE_DONE' in background (background: true)\n"
             "2. Run 'sleep 25 && echo PACKAGE_DONE' in background (background: true)\n"
-            "3. Create /workspace/config.json with '{\"version\": 1}' using daytona_write_file\n"
-            "4. Create /workspace/readme.txt with 'Project README' using daytona_write_file\n"
-            "5. Run 'ls /workspace/' in foreground to verify files\n"
+            "3. Create /home/daytona/config.json with '{\"version\": 1}' using daytona_write_file\n"
+            "4. Create /home/daytona/readme.txt with 'Project README' using daytona_write_file\n"
+            "5. Run 'ls /home/daytona/' in foreground to verify files\n"
             "6. Check background progress using check_background_progress\n"
             "7. Cancel all background tasks\n\n"
             "Use background: true for steps 1-2 ONLY."
         )
         _log_result(result, "bg_files")
 
+        # Strict: 2 background tasks with background: true
+        bg_bash = [tc for tc in result.tool_calls
+                   if tc.name == "daytona_bash" and tc.input.get("background") is True]
+        assert len(bg_bash) >= 2, \
+            f"Expected 2+ daytona_bash with background: true. Got {len(bg_bash)}"
         assert len(result.background_started()) >= 2, \
-            f"Expected 2+ background tasks. Got {len(result.background_started())}"
-        assert result.has_tool("daytona_write_file"), \
-            f"Expected file creation. Got: {result.tool_names}"
-        write_count = result.tool_count("daytona_write_file")
-        assert write_count >= 2, \
-            f"Expected 2+ file writes. Got {write_count}"
+            f"Expected 2+ BackgroundTaskStarted events. Got {len(result.background_started())}"
+        # Strict: exactly 2 file writes with correct paths
+        write_calls = [tc for tc in result.tool_calls if tc.name == "daytona_write_file"]
+        assert len(write_calls) >= 2, \
+            f"Expected 2+ daytona_write_file calls. Got {len(write_calls)}"
+        write_paths = [tc.input.get("file_path", "") for tc in write_calls]
+        assert any("config.json" in p for p in write_paths), \
+            f"Expected config.json write. Got paths: {write_paths}"
+        assert any("readme.txt" in p for p in write_paths), \
+            f"Expected readme.txt write. Got paths: {write_paths}"
+        # Strict: verification ls command ran in foreground
+        fg_bash = [tc for tc in result.tool_calls
+                   if tc.name == "daytona_bash" and not tc.input.get("background")]
+        assert any("ls" in str(tc.input) for tc in fg_bash), \
+            f"Expected 'ls' foreground command for verification. Got fg calls: {[tc.input for tc in fg_bash]}"
         assert result.has_tool("check_background_progress"), \
             f"Expected progress check. Got: {result.tool_names}"
         assert result.has_tool("cancel_background_task"), \
             f"Expected cancel. Got: {result.tool_names}"
+        # Strict: fg file ops must happen WHILE bg tasks are running (true concurrency)
+        _assert_fg_during_bg(result, min_fg=2)
+        assert not result.has_non_cancel_errors, \
+            f"Unexpected errors: {[e.output[:200] for e in result.non_cancel_error_events]}"
 
 
 # ===========================================================================
@@ -241,16 +329,33 @@ class TestHighVolumeForegroundBurst:
         )
         _log_result(result, "burst")
 
+        # Strict: 2 background launches with background: true
+        bg_bash = [tc for tc in result.tool_calls
+                   if tc.name == "daytona_bash" and tc.input.get("background") is True]
+        assert len(bg_bash) >= 2, \
+            f"Expected 2+ daytona_bash with background: true. Got {len(bg_bash)}"
         assert len(result.background_started()) >= 2, \
-            f"Expected 2+ background tasks. Got {len(result.background_started())}"
-        assert len(result.tools_started()) >= 8, \
-            f"Expected 8+ total tool calls. Got {len(result.tools_started())}: {result.tool_names}"
+            f"Expected 2+ BackgroundTaskStarted events. Got {len(result.background_started())}"
+        # Strict: at least 8 foreground bash calls (10 requested, allow some merging)
+        fg_bash = [tc for tc in result.tool_calls
+                   if tc.name == "daytona_bash" and not tc.input.get("background")]
+        assert len(fg_bash) >= 8, \
+            f"Expected 8+ foreground bash calls for 10 echo steps. Got {len(fg_bash)}"
+        # Strict: total tool count must reflect full workload
+        # Background launches appear as BackgroundTaskStarted, not ToolExecutionStarted
+        # Foreground total: 8+ fg bash + 1 check + 1 cancel = 10+
+        assert len(result.tools_started()) >= 10, \
+            f"Expected 10+ foreground tool calls. Got {len(result.tools_started())}: {result.tool_names}"
+        assert len(result.tools_started()) + len(result.background_started()) >= 12, \
+            f"Expected 12+ total actions (fg + bg). Got {len(result.tools_started())} fg + {len(result.background_started())} bg"
         assert result.has_tool("check_background_progress"), \
             f"Expected progress check. Got: {result.tool_names}"
         assert result.has_tool("cancel_background_task"), \
             f"Expected cancel. Got: {result.tool_names}"
-        assert not result.has_errors, \
-            f"Errors under high concurrency: {[e.output for e in result.error_events]}"
+        # Strict: fg burst must happen WHILE bg tasks are running (true concurrency)
+        _assert_fg_during_bg(result, min_fg=5)
+        assert not result.has_non_cancel_errors, \
+            f"Errors under high concurrency: {[e.output[:200] for e in result.non_cancel_error_events]}"
 
 
 # ===========================================================================
@@ -283,7 +388,7 @@ class TestFourBackgroundMaxConcurrency:
             "3. Run 'sleep 20 && echo INTEG_DONE' in background (background: true)\n"
             "4. Run 'sleep 30 && echo E2E_DONE' in background (background: true)\n"
             "5. Run 'echo DEPLOYING_CONFIG' in foreground\n"
-            "6. Create /workspace/deploy.log with 'deploy started' using daytona_write_file\n"
+            "6. Create /home/daytona/deploy.log with 'deploy started' using daytona_write_file\n"
             "7. Run 'echo MIGRATION_DONE' in foreground\n"
             "8. Check all background task progress using check_background_progress\n"
             "9. Cancel ALL remaining background tasks\n"
@@ -292,13 +397,35 @@ class TestFourBackgroundMaxConcurrency:
         )
         _log_result(result, "max_concurrency")
 
+        # Strict: exactly 4 background launches with background: true
+        bg_bash = [tc for tc in result.tool_calls
+                   if tc.name == "daytona_bash" and tc.input.get("background") is True]
+        assert len(bg_bash) >= 4, \
+            f"Expected 4+ daytona_bash with background: true. Got {len(bg_bash)}"
         assert len(result.background_started()) >= 4, \
-            f"Expected 4+ background tasks. Got {len(result.background_started())}"
+            f"Expected 4+ BackgroundTaskStarted events. Got {len(result.background_started())}"
+        # Strict: foreground work must include bash + write_file
+        fg_bash = [tc for tc in result.tool_calls
+                   if tc.name == "daytona_bash" and not tc.input.get("background")]
+        assert len(fg_bash) >= 2, \
+            f"Expected 2+ foreground bash calls. Got {len(fg_bash)}"
+        assert result.has_tool("daytona_write_file"), \
+            f"Expected daytona_write_file for deploy.log. Got: {result.tool_names}"
+        # Strict: deploy.log file path verification
+        write_calls = [tc for tc in result.tool_calls if tc.name == "daytona_write_file"]
+        assert any("deploy" in tc.input.get("file_path", "") for tc in write_calls), \
+            f"Expected deploy.log write. Got: {[tc.input for tc in write_calls]}"
         assert result.has_tool("check_background_progress"), \
             f"Expected progress check. Got: {result.tool_names}"
         assert result.has_tool("cancel_background_task"), \
             f"Expected cancel. Got: {result.tool_names}"
-        assert len(result.tools_started()) >= 7, \
-            f"Expected 7+ tool calls total. Got {len(result.tools_started())}"
-        assert not result.has_errors, \
-            f"Errors under max concurrency: {[e.output[:200] for e in result.error_events]}"
+        # Background launches appear as BackgroundTaskStarted, not ToolExecutionStarted.
+        # Foreground total: 2 fg bash + 1 write + 1 check + cancels >= 6
+        assert len(result.tools_started()) >= 6, \
+            f"Expected 6+ foreground tool calls. Got {len(result.tools_started())}"
+        assert len(result.tools_started()) + len(result.background_started()) >= 9, \
+            f"Expected 9+ total actions (fg + bg). Got {len(result.tools_started())} fg + {len(result.background_started())} bg"
+        # Strict: fg calls must happen WHILE bg tasks are running (true concurrency)
+        _assert_fg_during_bg(result, min_fg=2)
+        assert not result.has_non_cancel_errors, \
+            f"Errors under max concurrency: {[e.output[:200] for e in result.non_cancel_error_events]}"

@@ -3,12 +3,18 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
 from dataclasses import dataclass, field
-from typing import Any, Coroutine
+from typing import Any, Callable, Coroutine
 
 from tools.core.base import ToolResult
 from message.stream_events import BackgroundTaskStarted
+
+logger = logging.getLogger(__name__)
+
+# Async callback that physically kills the sandbox process.
+KillCallback = Callable[[], Coroutine[Any, Any, None]]
 
 
 @dataclass
@@ -24,6 +30,7 @@ class TrackedBackgroundTask:
     result: ToolResult | None = None
     started_at: float = field(default_factory=time.monotonic)
     progress_lines: list[str] = field(default_factory=list)
+    kill_callback: KillCallback | None = None  # physically kills the sandbox process
     _last_reminder_line_idx: int = 0  # tracks where the last reminder left off
     _last_reminder_at: float = 0.0  # monotonic time of last reminder
 
@@ -45,6 +52,7 @@ class BackgroundTaskManager:
         tool_input: dict[str, Any],
         coro: Coroutine[Any, Any, ToolResult],
         task_note: str = "",
+        kill_callback: KillCallback | None = None,
     ) -> BackgroundTaskStarted:
         """Launch *coro* as a background task and return a started event."""
         asyncio_task = asyncio.create_task(coro)
@@ -54,10 +62,16 @@ class BackgroundTaskManager:
             tool_input=tool_input,
             asyncio_task=asyncio_task,
             task_note=task_note,
+            kill_callback=kill_callback,
         )
         self._tasks[task_id] = tracked
 
         def _done_callback(task: asyncio.Task[ToolResult]) -> None:
+            # If cancel() already marked this task, don't overwrite its
+            # status/result — the SDK may complete normally with exit_code -1
+            # after we logically cancelled it.
+            if tracked.status == "cancelled":
+                return
             try:
                 if task.cancelled():
                     tracked.status = "cancelled"
@@ -180,16 +194,29 @@ class BackgroundTaskManager:
             result.append(entry)
         return result
 
-    def cancel(self, task_id: str, reason: str = "") -> bool:
-        """Cancel a task by id. Returns True if found and cancelled."""
+    async def cancel(self, task_id: str, reason: str = "") -> bool:
+        """Cancel a task by id. Returns True if found and cancelled.
+
+        Marks the task as cancelled first, then attempts to physically
+        kill the sandbox process via the kill_callback (if provided).
+        We do NOT call asyncio.Task.cancel() — that sends CancelledError
+        through the Daytona SDK's process.exec(), which can corrupt the
+        shared sandbox connection.  Instead the kill_callback sends a
+        kill signal to the sandbox process, letting the SDK call return
+        naturally.
+        """
         tracked = self._tasks.get(task_id)
         if tracked is None:
             return False
-        tracked.asyncio_task.cancel()
         tracked.status = "cancelled"
         msg = f"Cancelled: {reason}" if reason else "Cancelled"
         tracked.result = ToolResult(output=msg, is_error=True)
         tracked.progress_lines = [msg]
+        if tracked.kill_callback is not None:
+            try:
+                await tracked.kill_callback()
+            except Exception as exc:
+                logger.debug("Kill callback failed for task %s: %s", task_id, exc)
         return True
 
     def get_reminder_diff(self, task_id: str, max_lines: int = 10) -> tuple[list[str], float]:
@@ -214,11 +241,18 @@ class BackgroundTaskManager:
             new_lines = new_lines[-max_lines:]
         return new_lines, since
 
-    def cancel_all(self) -> None:
+    async def cancel_all(self) -> None:
         """Cancel all running tasks. Called on query loop exit."""
         for tracked in self._tasks.values():
             if tracked.status == "running":
-                tracked.asyncio_task.cancel()
                 tracked.status = "cancelled"
                 tracked.result = ToolResult(output="Cancelled", is_error=True)
                 tracked.progress_lines = ["Cancelled"]
+                if tracked.kill_callback is not None:
+                    try:
+                        await tracked.kill_callback()
+                    except Exception as exc:
+                        logger.debug("Kill callback failed for task %s: %s", tracked.task_id, exc)
+                # Fall back to asyncio cancel if no kill callback
+                # (or as a belt-and-suspenders cleanup).
+                tracked.asyncio_task.cancel()

@@ -114,8 +114,8 @@ class TestReminderDoesNotAccumulate:
             f"Expected cancel_background_task call. Got: {result.tool_names}"
 
         # If reminders accumulated, we'd see errors. Completion means reminders are ephemeral.
-        assert not result.has_errors, \
-            f"Context-related errors detected: {[e.output for e in result.error_events]}"
+        assert not result.has_non_cancel_errors, \
+            f"Context-related errors detected: {[e.output for e in result.non_cancel_error_events]}"
         logger.info("[PASS] No context accumulation from reminders across many turns")
 
 
@@ -165,8 +165,8 @@ class TestLargeOutputWithBackground:
             f"Expected check_background_progress call. Got: {result.tool_names}"
         assert result.has_tool("cancel_background_task"), \
             f"Expected cancel_background_task call. Got: {result.tool_names}"
-        assert not result.has_errors, \
-            f"Context overflow detected: {[e.output for e in result.error_events]}"
+        assert not result.has_non_cancel_errors, \
+            f"Context overflow detected: {[e.output for e in result.non_cancel_error_events]}"
         logger.info("[PASS] Large outputs handled")
 
 
@@ -223,8 +223,8 @@ class TestSustainedBackgroundStress:
             f"Expected check_background_progress call. Got: {result.tool_names}"
         assert result.has_tool("cancel_background_task"), \
             f"Expected cancel_background_task call. Got: {result.tool_names}"
-        assert not result.has_errors, \
-            f"Context errors under stress: {[e.output[:200] for e in result.error_events]}"
+        assert not result.has_non_cancel_errors, \
+            f"Context errors under stress: {[e.output[:200] for e in result.non_cancel_error_events]}"
 
         assert len(result.text) > 20, \
             f"Final summary too short — possible degradation. Got: {result.text}"

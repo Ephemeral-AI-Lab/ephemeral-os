@@ -1,6 +1,6 @@
 """Background task management toolkit.
 
-Provides tools to monitor and cancel long-running background tasks,
+Provides tools to monitor, wait for, and cancel long-running background tasks,
 plus a factory to assemble them into a toolkit with instructions.
 """
 
@@ -9,6 +9,7 @@ from __future__ import annotations
 from tools.core.base import BaseToolkit
 from tools.builtins.background.check_background_progress import CheckBackgroundProgressTool
 from tools.builtins.background.cancel_background_task import CancelBackgroundTaskTool
+from tools.builtins.background.wait_for_background_task import WaitForBackgroundTaskTool
 
 
 def make_background_toolkit(bg_tool_names: list[str]) -> BaseToolkit:
@@ -21,7 +22,7 @@ def make_background_toolkit(bg_tool_names: list[str]) -> BaseToolkit:
     return BaseToolkit(
         name="background",
         description="Background task management — launch, monitor, and cancel long-running tools.",
-        tools=[CheckBackgroundProgressTool(), CancelBackgroundTaskTool()],
+        tools=[CheckBackgroundProgressTool(), CancelBackgroundTaskTool(), WaitForBackgroundTaskTool()],
         instructions=(
             "You can run long-running tools in the background by adding "
             '`"background": true` to the tool input JSON. '

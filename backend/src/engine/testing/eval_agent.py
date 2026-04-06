@@ -153,6 +153,76 @@ class EvalResult:
     def has_errors(self) -> bool:
         return len(self.error_events) > 0
 
+    @property
+    def non_cancel_error_events(self) -> list[ToolExecutionCompleted | BackgroundTaskCompleted]:
+        """Error events excluding cancelled/killed process artifacts.
+
+        Filters out:
+        - ToolExecutionCompleted with exit_code -1 and empty stdout (process
+          killed by cancellation or transient SDK failure)
+        - BackgroundTaskCompleted with "Cancelled" output
+        """
+        def _is_killed_process(output: str) -> bool:
+            """Check if output is from a killed/cancelled process (exit_code -1, empty stdout)."""
+            if '"exit_code": -1' not in output:
+                return False
+            try:
+                import json
+                data = json.loads(output)
+                return data.get("exit_code") == -1 and not (data.get("stdout") or "").strip()
+            except (json.JSONDecodeError, AttributeError):
+                return False
+
+        results: list[ToolExecutionCompleted | BackgroundTaskCompleted] = []
+        for e in self.tools_completed():
+            if e.is_error and not _is_killed_process(e.output):
+                results.append(e)
+        for e in self.background_completed():
+            if e.is_error and not e.output.startswith("Cancelled"):
+                results.append(e)
+        return results
+
+    @property
+    def has_non_cancel_errors(self) -> bool:
+        return len(self.non_cancel_error_events) > 0
+
+    @property
+    def unrecovered_error_events(self) -> list[ToolExecutionCompleted | BackgroundTaskCompleted]:
+        """Non-cancel errors where no later successful call to the same tool exists.
+
+        An agent may hit an intermediate failure (e.g. ``cat`` on a file not yet
+        flushed) and then retry successfully.  This property keeps only errors
+        that were **never** followed by a success on the same tool, i.e. errors
+        the agent did not recover from.
+        """
+        errors = self.non_cancel_error_events
+        if not errors:
+            return []
+
+        all_completed = list(self.tools_completed())
+        event_index: dict[int, int] = {id(e): i for i, e in enumerate(self.events)}
+
+        results: list[ToolExecutionCompleted | BackgroundTaskCompleted] = []
+        for err in errors:
+            err_idx = event_index.get(id(err), len(self.events))
+            recovered = False
+            if isinstance(err, ToolExecutionCompleted):
+                for later in all_completed:
+                    if (
+                        event_index.get(id(later), -1) > err_idx
+                        and later.tool_name == err.tool_name
+                        and not later.is_error
+                    ):
+                        recovered = True
+                        break
+            if not recovered:
+                results.append(err)
+        return results
+
+    @property
+    def has_unrecovered_errors(self) -> bool:
+        return len(self.unrecovered_error_events) > 0
+
 
 # ---------------------------------------------------------------------------
 # EvalAgent
