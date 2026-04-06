@@ -20,7 +20,6 @@ Run with:
 from __future__ import annotations
 
 import json
-import os
 import time
 from collections import Counter
 from dataclasses import dataclass, field
@@ -30,37 +29,19 @@ from typing import Any
 import pytest
 from dotenv import load_dotenv
 
-from tests.test_e2e.conftest import parse_sse_events, events_of_type
+from engine.eval_agent import EvalAgent
+from tests.test_e2e.conftest import (
+    MINIMAX_KEY, MINIMAX_MODEL, MINIMAX_BASE_URL, MINIMAX_FORMAT,
+    DAYTONA_KEY, DAYTONA_URL, DAYTONA_TARGET,
+    HAS_BOTH,
+    make_live_client, parse_sse_events, events_of_type,
+    create_test_sandbox, delete_test_sandbox,
+)
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 load_dotenv(_PROJECT_ROOT / ".env")
 
 pytestmark = [pytest.mark.e2e, pytest.mark.live]
-
-# ---------------------------------------------------------------------------
-# Credential loading
-# ---------------------------------------------------------------------------
-
-def _load_settings() -> dict:
-    settings_path = Path.home() / ".ephemeralos" / "settings.json"
-    if settings_path.exists():
-        return json.loads(settings_path.read_text())
-    return {}
-
-_SETTINGS = _load_settings()
-
-MINIMAX_KEY = os.environ.get("MINIMAX_API_KEY") or _SETTINGS.get("api_key", "")
-MINIMAX_MODEL = os.environ.get("MINIMAX_MODEL") or _SETTINGS.get("model", "MiniMax-M2.7-highspeed")
-MINIMAX_BASE_URL = os.environ.get("MINIMAX_BASE_URL") or _SETTINGS.get("base_url", "")
-MINIMAX_FORMAT = os.environ.get("MINIMAX_API_FORMAT") or _SETTINGS.get("api_format", "anthropic")
-
-DAYTONA_KEY = os.environ.get("DAYTONA_API_KEY") or _SETTINGS.get("daytona_api_key", "")
-DAYTONA_URL = os.environ.get("DAYTONA_API_URL") or _SETTINGS.get("daytona_api_url", "")
-DAYTONA_TARGET = os.environ.get("DAYTONA_TARGET") or _SETTINGS.get("daytona_target", "")
-
-HAS_MINIMAX = bool(MINIMAX_KEY and MINIMAX_BASE_URL)
-HAS_DAYTONA = bool(DAYTONA_KEY and DAYTONA_URL)
-HAS_BOTH = HAS_MINIMAX and HAS_DAYTONA
 
 
 # ---------------------------------------------------------------------------
@@ -165,36 +146,6 @@ AGENT_PROMPT = (
     "daytona_read_file to read files. Always execute every step using tools. "
     "Be concise in your text responses."
 )
-
-
-def _make_live_client(db_session_factory, tmp_path, monkeypatch):
-    from fastapi.testclient import TestClient
-    from server.protocol import BackendHostConfig
-    from server.app_factory import create_app
-
-    monkeypatch.delenv("EPHEMERALOS_DATABASE_URL", raising=False)
-    monkeypatch.setattr("db.engine.initialize_db", lambda *a, **kw: db_session_factory)
-    monkeypatch.setattr("engine.agent.make_hook_executor", lambda *a, **kw: None)
-
-    def _patched_load_settings(*a, **kw):
-        from config.settings import Settings, DatabaseSettings
-        return Settings(
-            api_key=MINIMAX_KEY, model=MINIMAX_MODEL, api_format=MINIMAX_FORMAT,
-            base_url=MINIMAX_BASE_URL or None,
-            daytona_api_key=DAYTONA_KEY, daytona_api_url=DAYTONA_URL,
-            daytona_target=DAYTONA_TARGET,
-            database=DatabaseSettings(url=f"sqlite:///{tmp_path / 'test.db'}"),
-        )
-
-    monkeypatch.setattr("config.load_settings", _patched_load_settings)
-    monkeypatch.setattr("config.settings.load_settings", _patched_load_settings)
-    monkeypatch.setattr("server.app_factory.load_settings", _patched_load_settings)
-
-    config = BackendHostConfig(
-        api_key=MINIMAX_KEY, model=MINIMAX_MODEL,
-        api_format=MINIMAX_FORMAT, base_url=MINIMAX_BASE_URL or None,
-    )
-    return TestClient(create_app(config))
 
 
 def _get_sandbox_service():
@@ -382,7 +333,7 @@ class TestFullRun:
 
     @pytest.fixture()
     def client(self, db_session_factory, tmp_path, monkeypatch):
-        c = _make_live_client(db_session_factory, tmp_path, monkeypatch)
+        c = make_live_client(db_session_factory, tmp_path, monkeypatch)
         with c:
             yield c
 

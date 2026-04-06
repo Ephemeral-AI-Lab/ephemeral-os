@@ -7,124 +7,37 @@ Run with: pytest tests/test_e2e/test_live_api.py -m live -v
 
 from __future__ import annotations
 
-import json
-import os
-import time
-from typing import Any
-from pathlib import Path
-
 import pytest
-from dotenv import load_dotenv
 
-from tests.test_e2e.conftest import parse_sse_events, events_of_type
-
-# Load .env from project root (contains DAYTONA_API_KEY, etc.)
-_PROJECT_ROOT = Path(__file__).resolve().parents[3]
-load_dotenv(_PROJECT_ROOT / ".env")
+from engine.eval_agent import EvalAgent
+from tests.test_e2e.conftest import (
+    MINIMAX_KEY,
+    MINIMAX_MODEL,
+    MINIMAX_BASE_URL,
+    MINIMAX_FORMAT,
+    DAYTONA_KEY,
+    DAYTONA_URL,
+    DAYTONA_TARGET,
+    HAS_MINIMAX,
+    HAS_DAYTONA,
+    HAS_BOTH,
+    make_live_client,
+    parse_sse_events,
+    events_of_type,
+    create_test_sandbox,
+    delete_test_sandbox,
+    send_chat,
+    create_test_agent,
+    get_sandbox_service,
+)
 
 # Markers
 pytestmark = [pytest.mark.e2e, pytest.mark.live]
 
 
 # ---------------------------------------------------------------------------
-# Load credentials from settings file or env
+# Daytona sandbox helper — delegated to conftest
 # ---------------------------------------------------------------------------
-
-def _load_settings() -> dict:
-    """Load settings from ~/.ephemeralos/settings.json."""
-    settings_path = Path.home() / ".ephemeralos" / "settings.json"
-    if settings_path.exists():
-        return json.loads(settings_path.read_text())
-    return {}
-
-_SETTINGS = _load_settings()
-
-# MiniMax key: from env or settings file
-MINIMAX_KEY = os.environ.get("MINIMAX_API_KEY") or _SETTINGS.get("api_key", "")
-MINIMAX_MODEL = os.environ.get("MINIMAX_MODEL") or _SETTINGS.get("model", "MiniMax-M2.7-highspeed")
-MINIMAX_BASE_URL = os.environ.get("MINIMAX_BASE_URL") or _SETTINGS.get("base_url", "")
-MINIMAX_FORMAT = os.environ.get("MINIMAX_API_FORMAT") or _SETTINGS.get("api_format", "anthropic")
-
-# Daytona sandbox (from env — loaded from .env above — or settings)
-DAYTONA_KEY = os.environ.get("DAYTONA_API_KEY") or _SETTINGS.get("daytona_api_key", "")
-DAYTONA_URL = os.environ.get("DAYTONA_API_URL") or _SETTINGS.get("daytona_api_url", "")
-DAYTONA_TARGET = os.environ.get("DAYTONA_TARGET") or _SETTINGS.get("daytona_target", "")
-
-# Detect if MiniMax is configured (key + base_url both present)
-HAS_MINIMAX = bool(MINIMAX_KEY and MINIMAX_BASE_URL)
-HAS_DAYTONA = bool(DAYTONA_KEY and DAYTONA_URL)
-HAS_BOTH = HAS_MINIMAX and HAS_DAYTONA
-
-
-# ---------------------------------------------------------------------------
-# Shared live test fixture helper
-# ---------------------------------------------------------------------------
-
-def _make_live_client(db_session_factory, tmp_path, monkeypatch, *, api_key, model, base_url, api_format):
-    """Create a TestClient configured with real API credentials."""
-    from fastapi.testclient import TestClient
-    from server.protocol import BackendHostConfig
-    from server.app_factory import create_app
-
-    monkeypatch.delenv("EPHEMERALOS_DATABASE_URL", raising=False)
-    monkeypatch.setattr("db.engine.initialize_db", lambda *a, **kw: db_session_factory)
-    monkeypatch.setattr("engine.agent.make_hook_executor", lambda *a, **kw: None)
-
-    def _patched_load_settings(*a, **kw):
-        from config.settings import Settings, DatabaseSettings
-        return Settings(
-            api_key=api_key,
-            model=model,
-            api_format=api_format,
-            base_url=base_url or None,
-            daytona_api_key=DAYTONA_KEY,
-            daytona_api_url=DAYTONA_URL,
-            daytona_target=DAYTONA_TARGET,
-            database=DatabaseSettings(url=f"sqlite:///{tmp_path / 'test.db'}"),
-        )
-
-    monkeypatch.setattr("config.load_settings", _patched_load_settings)
-    monkeypatch.setattr("config.settings.load_settings", _patched_load_settings)
-    monkeypatch.setattr("server.app_factory.load_settings", _patched_load_settings)
-
-    config = BackendHostConfig(
-        api_key=api_key,
-        model=model,
-        api_format=api_format,
-        base_url=base_url or None,
-    )
-    app = create_app(config)
-    return TestClient(app)
-
-
-# ---------------------------------------------------------------------------
-# Daytona sandbox helper — create/delete real sandboxes for tests
-# ---------------------------------------------------------------------------
-
-def _get_sandbox_service():
-    """Return a SandboxService instance."""
-    from sandbox.service import SandboxService
-    return SandboxService()
-
-
-def _create_test_sandbox(name: str = "e2e-test") -> dict:
-    """Create a real Daytona sandbox for testing."""
-    svc = _get_sandbox_service()
-    sandbox = svc.create_sandbox(
-        name=f"{name}-{int(time.time())}",
-        language="python",
-        labels={"purpose": "e2e-test"},
-    )
-    return sandbox
-
-
-def _delete_sandbox(sandbox_id: str) -> None:
-    """Delete a sandbox, ignoring errors."""
-    try:
-        svc = _get_sandbox_service()
-        svc.delete_sandbox(sandbox_id)
-    except Exception:
-        pass
 
 
 def _looks_like_minimax_tool_validation_error(message: str | None) -> bool:
@@ -187,24 +100,6 @@ def _assert_parallel_tool_sequence(events: list[dict], *, min_starts: int = 2) -
     return False
 
 
-def _send_chat(
-    client,
-    line: str,
-    *,
-    agent_name: str | None = None,
-    sandbox_id: str | None = None,
-    timeout: int = 120,
-) -> list[dict]:
-    """Send a chat payload and return parsed SSE events."""
-    payload: dict[str, Any] = {"line": line}
-    if agent_name:
-        payload["agent_name"] = agent_name
-    if sandbox_id:
-        payload["sandbox_id"] = sandbox_id
-
-    resp = client.post("/api/chat", json=payload, timeout=timeout)
-    assert resp.status_code == 200, f"Chat failed: {resp.status_code} {resp.text[:300]}"
-    return parse_sse_events(resp.text)
 
 
 # ===========================================================================
@@ -219,9 +114,9 @@ class TestLiveSandboxLifecycle:
     @pytest.fixture(scope="class")
     def live_sandbox(self):
         """Create a real sandbox for the test class, clean up after."""
-        sandbox = _create_test_sandbox("lifecycle")
+        sandbox = create_test_sandbox("lifecycle")
         yield sandbox
-        _delete_sandbox(sandbox["id"])
+        delete_test_sandbox(sandbox["id"])
 
     def test_live_sandbox_create(self, live_sandbox):
         """Verify sandbox was created with expected fields."""
@@ -233,14 +128,14 @@ class TestLiveSandboxLifecycle:
 
     def test_live_sandbox_bash(self, live_sandbox):
         """Execute a shell command in the sandbox."""
-        svc = _get_sandbox_service()
+        svc = get_sandbox_service()
         raw_sb = svc.get_sandbox_object(live_sandbox["id"])
         response = raw_sb.process.exec("echo 'hello-e2e'", timeout=30)
         assert "hello-e2e" in (response.result or "")
 
     def test_live_sandbox_file_write_read(self, live_sandbox):
         """Write a file and read it back in the sandbox."""
-        svc = _get_sandbox_service()
+        svc = get_sandbox_service()
         raw_sb = svc.get_sandbox_object(live_sandbox["id"])
 
         # Write file and read it back in a single exec call — Daytona process
@@ -259,7 +154,7 @@ class TestLiveSandboxLifecycle:
 
     def test_live_sandbox_list_files(self, live_sandbox):
         """List files in the sandbox /workspace directory."""
-        svc = _get_sandbox_service()
+        svc = get_sandbox_service()
         raw_sb = svc.get_sandbox_object(live_sandbox["id"])
 
         # Ensure there's at least one file
@@ -271,7 +166,7 @@ class TestLiveSandboxLifecycle:
 
     def test_live_sandbox_cleanup(self, live_sandbox):
         """Verify the sandbox can be fetched before cleanup."""
-        svc = _get_sandbox_service()
+        svc = get_sandbox_service()
         info = svc.get_sandbox(live_sandbox["id"])
         assert info["id"] == live_sandbox["id"]
 
@@ -288,13 +183,13 @@ class TestLiveAgentSandboxChat:
     @pytest.fixture(scope="class")
     def sandbox_for_agent(self):
         """Create a sandbox for agent chat tests."""
-        sandbox = _create_test_sandbox("agent-chat")
+        sandbox = create_test_sandbox("agent-chat")
         yield sandbox
-        _delete_sandbox(sandbox["id"])
+        delete_test_sandbox(sandbox["id"])
 
     @pytest.fixture()
     def minimax_client(self, db_session_factory, tmp_path, monkeypatch):
-        client = _make_live_client(
+        client = make_live_client(
             db_session_factory, tmp_path, monkeypatch,
             api_key=MINIMAX_KEY,
             model=MINIMAX_MODEL,
@@ -399,7 +294,7 @@ class TestLiveMultiTurn:
 
     @pytest.fixture()
     def minimax_client(self, db_session_factory, tmp_path, monkeypatch):
-        client = _make_live_client(
+        client = make_live_client(
             db_session_factory, tmp_path, monkeypatch,
             api_key=MINIMAX_KEY,
             model=MINIMAX_MODEL,
@@ -488,7 +383,7 @@ class TestLiveThinkingBlock:
 
     @pytest.fixture()
     def minimax_client(self, db_session_factory, tmp_path, monkeypatch):
-        client = _make_live_client(
+        client = make_live_client(
             db_session_factory, tmp_path, monkeypatch,
             api_key=MINIMAX_KEY,
             model=MINIMAX_MODEL,
@@ -562,13 +457,13 @@ class TestLiveComplexTask:
     @pytest.fixture(scope="class")
     def sandbox_for_complex(self):
         """Create a sandbox for complex task tests."""
-        sandbox = _create_test_sandbox("complex-task")
+        sandbox = create_test_sandbox("complex-task")
         yield sandbox
-        _delete_sandbox(sandbox["id"])
+        delete_test_sandbox(sandbox["id"])
 
     @pytest.fixture()
     def minimax_client(self, db_session_factory, tmp_path, monkeypatch):
-        client = _make_live_client(
+        client = make_live_client(
             db_session_factory, tmp_path, monkeypatch,
             api_key=MINIMAX_KEY,
             model=MINIMAX_MODEL,
@@ -635,13 +530,13 @@ class TestLiveMultipleToolCallsWithModelKey:
     @pytest.fixture(scope="class")
     def sandbox_for_model_key(self):
         """Create a sandbox for model-key multi-tool tests."""
-        sandbox = _create_test_sandbox("model-key-multi-tool")
+        sandbox = create_test_sandbox("model-key-multi-tool")
         yield sandbox
-        _delete_sandbox(sandbox["id"])
+        delete_test_sandbox(sandbox["id"])
 
     @pytest.fixture()
     def minimax_client(self, db_session_factory, tmp_path, monkeypatch):
-        client = _make_live_client(
+        client = make_live_client(
             db_session_factory, tmp_path, monkeypatch,
             api_key=MINIMAX_KEY,
             model=MINIMAX_MODEL,
@@ -768,7 +663,7 @@ class TestLiveMultipleToolCallsWithModelKey:
                 f"Expected two writes. Tools: {tool_names}"
             )
             if "daytona_bash" not in tool_names and "daytona_read_file" not in tool_names:
-                recovery_events = _send_chat(
+                recovery_events = send_chat(
                     minimax_client,
                     (
                         "Now run: ls /workspace/modelkey_* | cat "
@@ -818,7 +713,7 @@ class TestLiveMultipleToolCallsWithModelKey:
             agent_payload = get_resp.json()
         assert agent_payload["model"] == MINIMAX_MODEL
 
-        events = _send_chat(
+        events = send_chat(
             minimax_client,
             (
                 "Use tools to do this in one response:\n"
@@ -860,7 +755,7 @@ class TestLiveMultipleToolCallsWithModelKey:
             agent_payload = get_resp.json()
         assert agent_payload["model"] == MINIMAX_MODEL
 
-        events = _send_chat(
+        events = send_chat(
             minimax_client,
             (
                 "Run these actions in one turn:\n"
@@ -883,63 +778,6 @@ class TestLiveMultipleToolCallsWithModelKey:
 
 
 # ===========================================================================
-# Text tool call parsing (unit test — no API/sandbox needed)
-# ===========================================================================
-
-
-class TestTextToolCallParsing:
-    """Verify [TOOL_CALL] text markers from MiniMax are parsed and executed."""
-
-    def test_json_format(self):
-        """Parse JSON-formatted tool call markers."""
-        from engine.text_tool_parser import parse_text_tool_calls
-
-        text = '[TOOL_CALL]\n{"tool": "daytona_bash", "args": {"command": "echo hi"}}\n[/TOOL_CALL]'
-        calls = parse_text_tool_calls(text)
-        assert len(calls) == 1
-        assert calls[0].name == "daytona_bash"
-        assert calls[0].input["command"] == "echo hi"
-
-    def test_arrow_format(self):
-        """Parse arrow-formatted tool call markers."""
-        from engine.text_tool_parser import parse_text_tool_calls
-
-        text = '[TOOL_CALL]\ntool => "daytona_read_file", args => {"file_path": "/test.txt"}\n[/TOOL_CALL]'
-        calls = parse_text_tool_calls(text)
-        assert len(calls) == 1
-        assert calls[0].name == "daytona_read_file"
-
-    def test_multiple_calls(self):
-        """Parse multiple tool call markers in one text."""
-        from engine.text_tool_parser import parse_text_tool_calls
-
-        text = (
-            '[TOOL_CALL]\n{"tool": "daytona_bash", "args": {"command": "ls"}}\n[/TOOL_CALL]\n'
-            'Some text in between\n'
-            '[TOOL_CALL]\n{"tool": "daytona_read_file", "args": {"file_path": "/a.txt"}}\n[/TOOL_CALL]'
-        )
-        calls = parse_text_tool_calls(text)
-        assert len(calls) == 2
-
-    def test_no_calls(self):
-        """Plain text should return empty list."""
-        from engine.text_tool_parser import parse_text_tool_calls
-
-        calls = parse_text_tool_calls("Just regular text with no tool calls")
-        assert len(calls) == 0
-
-    def test_name_key_format(self):
-        """Parse with 'name' key instead of 'tool'."""
-        from engine.text_tool_parser import parse_text_tool_calls
-
-        text = '[TOOL_CALL]\n{"name": "skill", "input": {"query": "test"}}\n[/TOOL_CALL]'
-        calls = parse_text_tool_calls(text)
-        assert len(calls) == 1
-        assert calls[0].name == "skill"
-        assert calls[0].input["query"] == "test"
-
-
-# ===========================================================================
 # Existing MiniMax live tests (kept for backward compat)
 # ===========================================================================
 
@@ -950,7 +788,7 @@ class TestMiniMaxLive:
 
     @pytest.fixture()
     def minimax_client(self, db_session_factory, tmp_path, monkeypatch):
-        client = _make_live_client(
+        client = make_live_client(
             db_session_factory, tmp_path, monkeypatch,
             api_key=MINIMAX_KEY,
             model=MINIMAX_MODEL,
