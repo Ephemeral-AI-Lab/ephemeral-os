@@ -189,7 +189,8 @@ async def daytona_write_file(
     sandbox = _get_sandbox(context)
     try:
         content_bytes = content.encode("utf-8")
-        await sandbox.fs.upload_file(file_path, content_bytes)
+        # SDK signature: upload_file(src: str | bytes, dst: str)
+        await sandbox.fs.upload_file(content_bytes, file_path)
         output = json.dumps(
             {
                 "file_path": file_path,
