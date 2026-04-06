@@ -26,13 +26,21 @@ pytestmark = [pytest.mark.e2e, pytest.mark.live]
 AGENT_PROMPT = """\
 You are test-context-agent, a developer with a remote Daytona sandbox.
 
-RULES:
-- Use tools for every action — never just describe what you'd do.
-- Use daytona_bash to run commands.
-- You have background task support: add "background": true to tool input.
-- Use check_background_progress to check background tasks.
-- Use cancel_background_task to cancel background tasks.
-- Be concise but thorough. Execute all steps requested.
+IMPORTANT RULES:
+- You MUST use tools for every action — never just describe what you'd do.
+- Use daytona_bash to run commands, daytona_write_file to create files.
+- You have background task support: add "background": true to tool input for long-running operations.
+- Use check_background_progress to monitor background tasks.
+- Use cancel_background_task to cancel running background tasks.
+
+BACKGROUND EXECUTION GUIDELINES:
+- For commands that take >5 seconds (test suites, builds, npm install), run in background.
+- For quick commands (<5 seconds like echo, pwd, cat), run in foreground.
+- When running in background, continue with other useful work.
+- Periodically check progress of background tasks.
+- Cancel background tasks that appear stuck or failing.
+
+Always be concise. Execute tools, don't just describe them.
 """
 
 
@@ -94,8 +102,16 @@ class TestReminderDoesNotAccumulate:
         _log_result(result, "reminder_accumulation")
 
         assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
+        assert result.has_tool_with_background("daytona_bash"), \
+            f"Expected daytona_bash called with background: true. Got tool calls: {result.tool_calls}"
+        assert len(result.background_started()) >= 1, \
+            f"Expected BackgroundTaskStarted event. Got tools: {result.tool_names}"
         assert len(result.tools_started()) >= 5, \
             f"Expected 5+ tool calls. Got {len(result.tools_started())}: {result.tool_names}"
+        assert result.has_tool("check_background_progress"), \
+            f"Expected check_background_progress call. Got: {result.tool_names}"
+        assert result.has_tool("cancel_background_task"), \
+            f"Expected cancel_background_task call. Got: {result.tool_names}"
 
         # If reminders accumulated, we'd see errors. Completion means reminders are ephemeral.
         assert not result.has_errors, \
@@ -139,8 +155,16 @@ class TestLargeOutputWithBackground:
         _log_result(result, "large_output")
 
         assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
+        assert result.has_tool_with_background("daytona_bash"), \
+            f"Expected daytona_bash called with background: true. Got tool calls: {result.tool_calls}"
+        assert len(result.background_started()) >= 1, \
+            f"Expected BackgroundTaskStarted event. Got tools: {result.tool_names}"
         assert len(result.tools_completed()) >= 2, \
             f"Expected 2+ tool completions. Got {len(result.tools_completed())}"
+        assert result.has_tool("check_background_progress"), \
+            f"Expected check_background_progress call. Got: {result.tool_names}"
+        assert result.has_tool("cancel_background_task"), \
+            f"Expected cancel_background_task call. Got: {result.tool_names}"
         assert not result.has_errors, \
             f"Context overflow detected: {[e.output for e in result.error_events]}"
         logger.info("[PASS] Large outputs handled")
@@ -189,8 +213,16 @@ class TestSustainedBackgroundStress:
         _log_result(result, "stress_test")
 
         assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
+        assert result.has_tool_with_background("daytona_bash"), \
+            f"Expected daytona_bash called with background: true. Got tool calls: {result.tool_calls}"
+        assert len(result.background_started()) >= 1, \
+            f"Expected BackgroundTaskStarted event. Got tools: {result.tool_names}"
         assert len(result.tools_started()) >= 6, \
             f"Expected 6+ tool calls. Got {len(result.tools_started())}: {result.tool_names}"
+        assert result.has_tool("check_background_progress"), \
+            f"Expected check_background_progress call. Got: {result.tool_names}"
+        assert result.has_tool("cancel_background_task"), \
+            f"Expected cancel_background_task call. Got: {result.tool_names}"
         assert not result.has_errors, \
             f"Context errors under stress: {[e.output[:200] for e in result.error_events]}"
 

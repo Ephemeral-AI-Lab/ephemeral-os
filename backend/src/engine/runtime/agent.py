@@ -65,6 +65,40 @@ class EphemeralAgent:
             await client.aclose()
 
 
+def finalize_tool_registry_and_prompt(
+    tool_registry: "ToolRegistry",
+    system_prompt: str,
+) -> tuple[str, bool]:
+    """Register background toolkit and inject capability awareness into the system prompt.
+
+    This is the shared setup logic used by both spawn_agent() and EvalAgent.
+
+    Args:
+        tool_registry: The tool registry (mutated in-place to add background toolkit).
+        system_prompt: The base system prompt.
+
+    Returns:
+        Tuple of (updated_system_prompt, has_background_tools).
+    """
+    from prompts.runtime_prompt import build_agent_capabilities_prompt
+    from tools.builtins.background import make_background_toolkit
+
+    bg_tool_names = [t.name for t in tool_registry.list_tools() if t.supports_background]
+    has_background_tools = bool(bg_tool_names)
+    if has_background_tools:
+        tool_registry.register_toolkit(make_background_toolkit(bg_tool_names))
+
+    awareness = build_agent_capabilities_prompt(
+        toolkits=tool_registry.list_toolkits(),
+        has_background_tools=has_background_tools,
+        bg_tool_names=bg_tool_names,
+    )
+    if awareness:
+        system_prompt = system_prompt + "\n\n" + awareness
+
+    return system_prompt, has_background_tools
+
+
 def spawn_agent(
     config: "SessionConfig",
     messages: list[ConversationMessage],
@@ -196,24 +230,10 @@ def spawn_agent(
             agent_name,
         )
 
-    # --- Background toolkit — register when background-capable tools exist
-    bg_tool_names = [t.name for t in tool_registry.list_tools() if t.supports_background]
-    has_background_tools = bool(bg_tool_names)
-    if has_background_tools:
-        from tools.builtins.background import make_background_toolkit
-
-        tool_registry.register_toolkit(make_background_toolkit(bg_tool_names))
-
-    # --- Inject toolkit and capability awareness into system prompt ---------
-    from prompts.runtime_prompt import build_agent_capabilities_prompt
-
-    awareness = build_agent_capabilities_prompt(
-        toolkits=tool_registry.list_toolkits(),
-        has_background_tools=has_background_tools,
-        bg_tool_names=bg_tool_names,
+    # --- Background toolkit + capability awareness --------------------------
+    system_prompt, has_background_tools = finalize_tool_registry_and_prompt(
+        tool_registry, system_prompt
     )
-    if awareness:
-        system_prompt = system_prompt + "\n\n" + awareness
 
     # --- Max turns
     max_turns = agent_def.max_turns if agent_def and agent_def.max_turns else 200

@@ -96,11 +96,12 @@ class TestLLMBackgroundDecision:
 
         assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
         assert len(result.tools_started()) >= 1, "Should use at least one tool"
-        logger.info("[PASS] Quick command executed successfully")
+        assert len(result.background_started()) == 0, \
+            "Quick command should NOT be backgrounded"
 
     @pytest.mark.asyncio
     async def test_long_command_offered_background(self, sandbox):
-        """LLM should consider backgrounding a long command."""
+        """LLM should background a long command."""
         agent = self._make_agent(sandbox)
         result = await agent.invoke(
             "Do TWO things:\n"
@@ -112,9 +113,10 @@ class TestLLMBackgroundDecision:
         _log_result(result, "long_background")
 
         assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
-        assert any("daytona" in n for n in result.tool_names), \
-            f"Expected daytona tool usage. Got: {result.tool_names}"
-        logger.info("[PASS] Long command scenario completed")
+        assert result.has_tool_with_background("daytona_bash"), \
+            f"Expected daytona_bash called with background: true. Got tool calls: {result.tool_calls}"
+        assert len(result.background_started()) >= 1, \
+            f"Expected BackgroundTaskStarted event. Got tools: {result.tool_names}"
 
 
 # ===========================================================================
@@ -152,9 +154,14 @@ class TestForegroundAndIdleWait:
         _log_result(result, "foreground_idle")
 
         assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
+        assert result.has_tool_with_background("daytona_bash"), \
+            f"Expected daytona_bash called with background: true. Got tool calls: {result.tool_calls}"
+        assert len(result.background_started()) >= 1, \
+            f"Expected BackgroundTaskStarted event. Got tools: {result.tool_names}"
         assert len(result.tools_started()) >= 2, \
-            f"Expected multiple tool calls. Got {len(result.tools_started())}: {result.tool_names}"
-        logger.info("[PASS] Background + foreground work completed")
+            f"Expected foreground work while background runs. Got: {result.tool_names}"
+        assert result.has_tool("check_background_progress"), \
+            f"Expected check_background_progress call. Got: {result.tool_names}"
 
 
 # ===========================================================================
@@ -192,16 +199,12 @@ class TestProactiveProgressCheck:
         _log_result(result, "progress_check")
 
         assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
-
-        has_progress_check = result.has_tool("check_background_progress")
-        logger.info(f"[Test3] check_background_progress called: {has_progress_check}")
-
-        if has_progress_check:
-            logger.info("[PASS] LLM proactively checked background progress")
-        else:
-            logger.warning("[WARN] LLM did not call check_background_progress — LLM non-determinism")
-
-        assert len(result.tools_started()) >= 2, f"Expected 2+ tools. Got: {result.tool_names}"
+        assert result.has_tool_with_background("daytona_bash"), \
+            f"Expected daytona_bash called with background: true. Got tool calls: {result.tool_calls}"
+        assert len(result.background_started()) >= 1, \
+            f"Expected BackgroundTaskStarted event. Got tools: {result.tool_names}"
+        assert result.has_tool("check_background_progress"), \
+            f"Expected check_background_progress call. Got: {result.tool_names}"
 
 
 # ===========================================================================
@@ -242,16 +245,14 @@ class TestCancelFailingTask:
         _log_result(result, "cancel_failing")
 
         assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
-
-        has_cancel = result.has_tool("cancel_background_task")
-        logger.info(f"[Test4] cancel_background_task called: {has_cancel}")
-
-        if has_cancel:
-            logger.info("[PASS] LLM cancelled the background task")
-        else:
-            logger.warning("[WARN] LLM did not call cancel_background_task — LLM non-determinism")
-
-        assert len(result.tools_started()) >= 2, f"Expected 2+ tool calls. Got: {result.tool_names}"
+        assert result.has_tool_with_background("daytona_bash"), \
+            f"Expected daytona_bash called with background: true. Got tool calls: {result.tool_calls}"
+        assert len(result.background_started()) >= 1, \
+            f"Expected BackgroundTaskStarted event. Got tools: {result.tool_names}"
+        assert result.has_tool("check_background_progress"), \
+            f"Expected check_background_progress call. Got: {result.tool_names}"
+        assert result.has_tool("cancel_background_task"), \
+            f"Expected cancel_background_task call. Got: {result.tool_names}"
 
 
 # ===========================================================================
@@ -291,19 +292,16 @@ class TestCancelHangingTask:
         _log_result(result, "cancel_hanging")
 
         assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
+        assert result.has_tool_with_background("daytona_bash"), \
+            f"Expected daytona_bash called with background: true. Got tool calls: {result.tool_calls}"
+        assert len(result.background_started()) >= 1, \
+            f"Expected BackgroundTaskStarted event. Got tools: {result.tool_names}"
 
         progress_count = result.tool_count("check_background_progress")
         cancel_count = result.tool_count("cancel_background_task")
         logger.info(f"[Test5] Progress checks: {progress_count}, Cancels: {cancel_count}")
 
-        if progress_count >= 2 and cancel_count >= 1:
-            logger.info("[PASS] LLM checked progress twice and cancelled hanging task")
-        elif cancel_count >= 1:
-            logger.info("[PASS] LLM cancelled hanging task (fewer progress checks than expected)")
-        else:
-            logger.warning(
-                f"[WARN] Expected 2+ progress checks and 1 cancel. "
-                f"Got progress={progress_count}, cancel={cancel_count} — LLM non-determinism"
-            )
-
-        assert len(result.tools_started()) >= 2, f"Expected 2+ tool calls. Got: {result.tool_names}"
+        assert progress_count >= 1, \
+            f"Expected at least 1 progress check. Got: {result.tool_names}"
+        assert cancel_count >= 1, \
+            f"Expected cancel_background_task call. Got: {result.tool_names}"

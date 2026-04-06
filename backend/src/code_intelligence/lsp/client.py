@@ -308,6 +308,8 @@ class LspClient:
             content = Path(file_path).read_text(encoding="utf-8")
             compile(content, file_path, "exec")
             return []
+        except FileNotFoundError:
+            return []
         except SyntaxError as e:
             return [
                 Diagnostic(

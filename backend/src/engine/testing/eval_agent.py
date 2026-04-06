@@ -112,6 +112,13 @@ class EvalResult:
         """Check if a specific tool was called."""
         return any(tc.name == name for tc in self.tool_calls)
 
+    def has_tool_with_background(self, name: str) -> bool:
+        """Check if a tool was called with background: true in its input."""
+        return any(
+            tc.name == name and tc.input.get("background") is True
+            for tc in self.tool_calls
+        )
+
     # -- Event type accessors --
 
     def tools_started(self) -> list[ToolExecutionStarted]:
@@ -291,6 +298,14 @@ class EvalAgent:
 
         prompt = system_prompt or DEFAULT_SYSTEM_PROMPT
 
+        # Use the same setup logic as spawn_agent: register background toolkit
+        # and inject capability awareness into the system prompt.
+        from engine.runtime.agent import finalize_tool_registry_and_prompt
+
+        prompt, has_background_tools = finalize_tool_registry_and_prompt(
+            tool_registry, prompt
+        )
+
         query_context = QueryContext(
             api_client=api_client,
             tool_registry=tool_registry,
@@ -300,7 +315,7 @@ class EvalAgent:
             max_tokens=max_tokens or settings.max_tokens,
             max_turns=max_turns,
             hook_executor=None,
-            enable_background_tasks=enable_background_tasks,
+            enable_background_tasks=has_background_tools,
         )
 
         return cls(

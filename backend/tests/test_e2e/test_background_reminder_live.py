@@ -26,14 +26,21 @@ pytestmark = [pytest.mark.e2e, pytest.mark.live]
 AGENT_PROMPT = """\
 You are test-reminder-agent, a developer with a remote Daytona sandbox.
 
-RULES:
-- Use tools for every action.
-- Use daytona_bash to run commands.
+IMPORTANT RULES:
+- You MUST use tools for every action — never just describe what you'd do.
+- Use daytona_bash to run commands, daytona_write_file to create files.
 - You have background task support: add "background": true to tool input for long-running operations.
-- Use check_background_progress to check background tasks.
-- Use cancel_background_task to cancel background tasks.
+- Use check_background_progress to monitor background tasks.
+- Use cancel_background_task to cancel running background tasks.
 
-Be concise. Always execute tools.
+BACKGROUND EXECUTION GUIDELINES:
+- For commands that take >5 seconds (test suites, builds, npm install), run in background.
+- For quick commands (<5 seconds like echo, pwd, cat), run in foreground.
+- When running in background, continue with other useful work.
+- Periodically check progress of background tasks.
+- Cancel background tasks that appear stuck or failing.
+
+Always be concise. Execute tools, don't just describe them.
 """
 
 
@@ -80,14 +87,12 @@ class TestEphemeralBackgroundReminder:
         assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
         assert len(result.tools_started()) >= 3, \
             f"Expected 3+ tool calls. Got: {result.tool_names}"
-
-        has_check = result.has_tool("check_background_progress")
-        logger.info(f"[Reminder] check_background_progress called: {has_check}")
-
-        if has_check:
-            logger.info("[PASS] LLM checked progress (reminder may have contributed)")
-        else:
-            logger.info("[INFO] LLM did not check progress — may have proceeded without")
+        assert result.has_tool_with_background("daytona_bash"), \
+            f"Expected daytona_bash called with background: true. Got tool calls: {result.tool_calls}"
+        assert len(result.background_started()) >= 1, \
+            f"Expected BackgroundTaskStarted event. Got tools: {result.tool_names}"
+        assert result.has_tool("check_background_progress"), \
+            f"Expected check_background_progress call. Got: {result.tool_names}"
 
         logger.info(f"[Reminder] Final text: {result.text[:200]}")
 
@@ -106,13 +111,10 @@ class TestEphemeralBackgroundReminder:
         _log_result(result, "no_reminder")
 
         assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
-
-        has_bg_check = result.has_tool("check_background_progress")
-        if has_bg_check:
-            logger.info("[INFO] LLM checked progress anyway (no tasks to show)")
-        else:
-            logger.info("[PASS] No background progress check — no reminder needed")
-
+        assert len(result.tools_started()) >= 1, \
+            f"Expected at least 1 tool call. Got: {result.tool_names}"
         assert len(result.background_started()) == 0, \
             f"No background tasks expected. Got {len(result.background_started())}"
+        assert not result.has_tool("check_background_progress"), \
+            f"No background tasks running — should not check progress. Got: {result.tool_names}"
         logger.info("[PASS] Foreground-only interaction, no reminder injected")

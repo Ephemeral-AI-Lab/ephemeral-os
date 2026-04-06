@@ -221,18 +221,30 @@ class ToolRegistry:
 
         When *inject_task_note* is True, every tool's input_schema gets a
         required ``task_note`` field so the LLM must provide it on every call.
+        Background-capable tools also get an optional ``background`` field
+        so the LLM can request asynchronous execution.
         """
         schemas = []
         for tool in self._tools.values():
             schema = tool.to_api_schema()
             if inject_task_note:
                 inp = schema.setdefault("input_schema", {})
-                inp.setdefault("properties", {})["task_note"] = {
+                props = inp.setdefault("properties", {})
+                props["task_note"] = {
                     "type": "string",
                     "description": "Brief note: what and why",
                 }
                 req = inp.setdefault("required", [])
                 if "task_note" not in req:
                     req.append("task_note")
+                # Inject optional background flag for background-capable tools
+                if tool.supports_background:
+                    props["background"] = {
+                        "type": "boolean",
+                        "description": (
+                            "Set to true to run this tool asynchronously in the background. "
+                            "Use for long-running operations (builds, test suites, installs)."
+                        ),
+                    }
             schemas.append(schema)
         return schemas

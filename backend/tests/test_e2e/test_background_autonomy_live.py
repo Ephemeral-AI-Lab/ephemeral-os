@@ -24,14 +24,22 @@ pytestmark = [pytest.mark.e2e, pytest.mark.live]
 AGENT_PROMPT = """\
 You are test-autonomy-agent, a developer with a remote Daytona sandbox.
 
-RULES:
-- Use tools for every action.
-- Use daytona_bash to run commands.
-- You have background task support: add "background": true to tool input for long operations.
-- Use check_background_progress to check background tasks.
-- Use cancel_background_task to cancel background tasks.
+IMPORTANT RULES:
+- You MUST use tools for every action — never just describe what you'd do.
+- Use daytona_bash to run commands, daytona_write_file to create files.
+- You have background task support: add "background": true to tool input for long-running operations.
+- Use check_background_progress to monitor background tasks.
+- Use cancel_background_task to cancel running background tasks.
+
+BACKGROUND EXECUTION GUIDELINES:
+- For commands that take >5 seconds (test suites, builds, npm install), run in background.
+- For quick commands (<5 seconds like echo, pwd, cat), run in foreground.
+- When running in background, continue with other useful work.
+- Periodically check progress of background tasks.
+- Cancel background tasks that appear stuck or failing.
 - Use your own judgment on when to check or cancel background tasks.
-- Be concise.
+
+Always be concise. Execute tools, don't just describe them.
 """
 
 
@@ -84,15 +92,15 @@ class TestAutonomousProgressCheck:
         _log_result(result, "autonomous_check")
 
         assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
-
-        has_check = result.has_tool("check_background_progress")
-        if has_check:
-            logger.info("[RESULT] LLM AUTONOMOUSLY checked background progress")
-        else:
-            logger.info("[RESULT] LLM did NOT check progress on its own")
-
-        assert len(result.tool_names) >= 2, f"Expected 2+ tools. Got: {result.tool_names}"
-        logger.info(f"[DONE] Autonomous check test: checked={has_check}")
+        assert result.has_tool_with_background("daytona_bash"), \
+            f"Expected daytona_bash called with background: true. Got tool calls: {result.tool_calls}"
+        assert len(result.background_started()) >= 1, \
+            f"Expected BackgroundTaskStarted event. Got tools: {result.tool_names}"
+        assert len(result.tool_names) >= 3, \
+            f"Expected 3+ tools (background + foreground work). Got: {result.tool_names}"
+        assert result.has_tool("check_background_progress"), \
+            f"Expected LLM to autonomously check progress. Got: {result.tool_names}"
+        logger.info("[PASS] LLM autonomously checked background progress")
 
 
 # ===========================================================================
@@ -127,22 +135,17 @@ class TestAutonomousCancel:
         _log_result(result, "autonomous_cancel")
 
         assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
-
-        has_check = result.has_tool("check_background_progress")
-        has_cancel = result.has_tool("cancel_background_task")
-
-        logger.info(
-            f"[RESULT] LLM autonomous decisions: checked={has_check}, cancelled={has_cancel}"
-        )
-
-        if has_cancel:
-            logger.info("[RESULT] LLM AUTONOMOUSLY cancelled the long task")
-        elif has_check:
-            logger.info("[RESULT] LLM checked progress but decided to wait")
-        else:
-            logger.info("[RESULT] LLM did not interact with background task")
-
-        assert len(result.tool_names) >= 1, f"Expected 1+ tools. Got: {result.tool_names}"
+        assert result.has_tool_with_background("daytona_bash"), \
+            f"Expected daytona_bash called with background: true. Got tool calls: {result.tool_calls}"
+        assert len(result.background_started()) >= 1, \
+            f"Expected BackgroundTaskStarted event. Got tools: {result.tool_names}"
+        assert len(result.tool_names) >= 2, \
+            f"Expected 2+ tools (background + foreground). Got: {result.tool_names}"
+        assert result.has_tool("check_background_progress"), \
+            f"Expected LLM to autonomously check progress on long task. Got: {result.tool_names}"
+        assert result.has_tool("cancel_background_task"), \
+            f"Expected LLM to autonomously cancel the 120s task. Got: {result.tool_names}"
+        logger.info("[PASS] LLM autonomously checked and cancelled the long task")
 
 
 # ===========================================================================
@@ -179,18 +182,14 @@ class TestAutonomousMultiTask:
         _log_result(result, "autonomous_multi")
 
         assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
+        assert result.has_tool_with_background("daytona_bash"), \
+            f"Expected daytona_bash called with background: true. Got tool calls: {result.tool_calls}"
+        assert len(result.background_started()) >= 2, \
+            f"Expected 2+ BackgroundTaskStarted events (two background tasks). Got: {result.background_started()}"
 
-        checks = result.tool_count("check_background_progress")
-        cancels = result.tool_count("cancel_background_task")
         bash_calls = result.tool_count("daytona_bash")
-
-        logger.info(
-            f"[RESULT] Multi-task autonomy:\n"
-            f"  bash calls: {bash_calls}\n"
-            f"  progress checks: {checks}\n"
-            f"  cancels: {cancels}\n"
-            f"  total tools: {len(result.tool_names)}"
-        )
-
-        assert bash_calls >= 1, f"Expected 1+ bash calls. Got: {result.tool_names}"
-        logger.info(f"[DONE] Multi-task autonomy: {len(result.tool_names)} total tools")
+        assert bash_calls >= 3, \
+            f"Expected 3+ bash calls (2 background + 1 foreground). Got: {result.tool_names}"
+        assert result.has_tool("check_background_progress"), \
+            f"Expected LLM to autonomously check progress. Got: {result.tool_names}"
+        logger.info(f"[PASS] Multi-task autonomy: {len(result.tool_names)} total tools")

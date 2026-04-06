@@ -15,7 +15,7 @@ from message.stream_events import (
     ToolExecutionProgress,
 )
 from engine.core.streaming_executor import StreamingToolExecutor, TrackedTool
-from models.types import ApiToolUseDeltaEvent
+from models.core.types import ApiToolUseDeltaEvent
 from tools.core.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolRegistry, ToolResult
 
 
@@ -335,3 +335,118 @@ async def test_get_progress_returns_empty_initially():
 
     progress = executor.get_progress()
     assert progress == []
+
+
+# ---------------------------------------------------------------------------
+# Tests: Background tool skipping
+# ---------------------------------------------------------------------------
+
+
+class BgBashInput(BaseModel):
+    command: str = Field(description="Command to run")
+
+
+class BgBashTool(BaseTool):
+    """A tool that supports background execution."""
+
+    name = "daytona_bash"
+    description = "Run a command in the sandbox."
+    input_model = BgBashInput
+    supports_background = True
+
+    async def execute(self, arguments: BgBashInput, context: ToolExecutionContext) -> ToolResult:
+        return ToolResult(output=f"ran: {arguments.command}")
+
+
+@pytest.mark.asyncio
+async def test_add_tool_skips_background_tool():
+    """add_tool skips tools with background=True when tool supports background."""
+    registry = _make_registry(BgBashTool())
+    context = _make_context()
+    executor = StreamingToolExecutor(registry, context)
+
+    event = ApiToolUseDeltaEvent(
+        id="tool_bg",
+        name="daytona_bash",
+        input={"command": "sleep 10", "background": True},
+    )
+
+    started = executor.add_tool(event, _make_assistant_msg())
+
+    assert started is None, "Background tool should not produce a started event"
+    assert "tool_bg" not in executor._tools, "Background tool should not be tracked"
+    assert "tool_bg" in executor.skipped_background_ids
+
+
+@pytest.mark.asyncio
+async def test_add_tool_runs_foreground_when_background_false():
+    """add_tool starts tools normally when background is False or absent."""
+    registry = _make_registry(BgBashTool())
+    context = _make_context()
+    executor = StreamingToolExecutor(registry, context)
+
+    event = ApiToolUseDeltaEvent(
+        id="tool_fg",
+        name="daytona_bash",
+        input={"command": "echo hello", "background": False},
+    )
+
+    started = executor.add_tool(event, _make_assistant_msg())
+
+    assert started is not None, "Foreground tool should produce a started event"
+    assert "tool_fg" in executor._tools
+    assert len(executor.skipped_background_ids) == 0
+
+
+@pytest.mark.asyncio
+async def test_add_tool_runs_non_bg_tool_with_background_flag():
+    """add_tool runs tools that don't support background even if background=True is sent."""
+    registry = _make_registry(FastTool())
+    context = _make_context()
+    executor = StreamingToolExecutor(registry, context)
+
+    event = ApiToolUseDeltaEvent(
+        id="tool_01",
+        name="fast",
+        input={"value": 5, "background": True},
+    )
+
+    started = executor.add_tool(event, _make_assistant_msg())
+
+    assert started is not None, "Non-bg-capable tool should still execute"
+    assert "tool_01" in executor._tools
+    assert len(executor.skipped_background_ids) == 0
+
+
+@pytest.mark.asyncio
+async def test_mixed_foreground_and_background_tools():
+    """Executor handles a mix of foreground and background tools in the same turn."""
+    registry = _make_registry(BgBashTool(), FastTool())
+    context = _make_context()
+    executor = StreamingToolExecutor(registry, context)
+
+    bg_event = ApiToolUseDeltaEvent(
+        id="tool_bg",
+        name="daytona_bash",
+        input={"command": "sleep 10", "background": True},
+    )
+    fg_event = ApiToolUseDeltaEvent(
+        id="tool_fg",
+        name="fast",
+        input={"value": 42},
+    )
+
+    bg_started = executor.add_tool(bg_event, _make_assistant_msg())
+    fg_started = executor.add_tool(fg_event, _make_assistant_msg())
+
+    assert bg_started is None, "Background tool should be skipped"
+    assert fg_started is not None, "Foreground tool should start"
+
+    assert len(executor._tools) == 1
+    assert "tool_fg" in executor._tools
+    assert "tool_bg" in executor.skipped_background_ids
+
+    await asyncio.sleep(0.1)
+    results = await executor.get_remaining()
+    assert len(results) == 1
+    assert results[0].tool_name == "fast"

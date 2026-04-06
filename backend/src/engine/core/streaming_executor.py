@@ -56,12 +56,34 @@ class StreamingToolExecutor:
         self._context = context
         self._tools: dict[str, TrackedTool] = {}
         self._aborted: set[str] = set()
+        self._skipped_background: set[str] = set()
+
+    @property
+    def skipped_background_ids(self) -> set[str]:
+        """IDs of tools that were skipped because they requested background execution."""
+        return self._skipped_background
 
     def add_tool(
         self, event: ApiToolUseDeltaEvent, assistant_message: ConversationMessage
     ) -> ToolExecutionStarted | None:
         """Add a tool to execute as it arrives mid-stream. Returns started event if tool was started."""
         tool_def = self._tool_registry.get(event.name)
+
+        # Skip tools requesting background execution — they'll be handled
+        # by the BackgroundTaskManager in the query loop instead.
+        if (
+            event.input
+            and event.input.get("background")
+            and tool_def
+            and tool_def.supports_background
+        ):
+            self._skipped_background.add(event.id)
+            logger.info(
+                "STREAM: Skipping background tool: tool_id=%s tool_name=%s",
+                event.id,
+                event.name,
+            )
+            return None
 
         tracked = TrackedTool(
             id=event.id,

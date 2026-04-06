@@ -250,7 +250,8 @@ async def test_five_step_task_completes_all_steps(sandbox_id):
             "Execute ALL steps in sequence. Do NOT skip any steps. "
             "Report completion of EACH step. "
             "Continue working — do not stop to summarize results unless the task is done. "
-            "You MUST make a tool call for EACH step - do not summarize or skip any step."
+            "You MUST use daytona_write_file for EACH file creation step - "
+            "do NOT use daytona_bash to create files."
         ),
         max_turns=200,
     )

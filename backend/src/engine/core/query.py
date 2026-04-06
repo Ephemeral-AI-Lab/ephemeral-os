@@ -326,6 +326,57 @@ async def _run_query_loop(
                 )
                 yield completed, None
 
+        # --- Launch background tools that the streaming executor skipped ---
+        skipped_bg = executor.skipped_background_ids
+        if skipped_bg and background_manager is not None:
+            for tc in final_message.tool_uses:
+                if tc.id not in skipped_bg:
+                    continue
+                task_note = str(tc.input.get("task_note", ""))
+                clean_input = {
+                    k: v for k, v in tc.input.items() if k not in ("background", "task_note")
+                }
+
+                tool_def = context.tool_registry.get(tc.name)
+                if tool_def and not tool_def.supports_background:
+                    tool_results.append(
+                        ToolResultBlock(
+                            tool_use_id=tc.id,
+                            content=f"Tool '{tc.name}' does not support background execution.",
+                            is_error=True,
+                        )
+                    )
+                    yield (
+                        ToolExecutionCompleted(
+                            tool_name=tc.name,
+                            output=f"Tool '{tc.name}' does not support background execution.",
+                            is_error=True,
+                        ),
+                        None,
+                    )
+                    continue
+
+                async def _bg_wrapper(
+                    ctx: QueryContext, name: str, uid: str, inp: dict[str, object]
+                ) -> ToolResult:
+                    block = await _execute_tool_call(ctx, name, uid, inp)
+                    return ToolResult(output=block.content, is_error=block.is_error)
+
+                coro = _bg_wrapper(context, tc.name, tc.id, clean_input)
+                bg_event = background_manager.launch(
+                    tc.id, tc.name, clean_input, coro, task_note=task_note
+                )
+                yield bg_event, None
+                tool_results.append(
+                    ToolResultBlock(
+                        tool_use_id=tc.id,
+                        content=f"[BACKGROUND] Task launched. Task ID: {tc.id}. "
+                        f"Use check_background_progress to monitor or "
+                        f"cancel_background_task to stop it.",
+                        is_error=False,
+                    )
+                )
+
         if not tool_results:
             executor.cancel_all()
 
@@ -333,8 +384,11 @@ async def _run_query_loop(
             foreground_calls = []
 
             for tc in tool_calls:
-                task_note = str(tc.input.pop("task_note", ""))
-                is_background = tc.input.pop("background", False) if background_manager else False
+                task_note = str(tc.input.get("task_note", ""))
+                is_background = tc.input.get("background", False) if background_manager else False
+                clean_input = {
+                    k: v for k, v in tc.input.items() if k not in ("background", "task_note")
+                }
 
                 if is_background:
                     tool_def = context.tool_registry.get(tc.name)
@@ -362,9 +416,9 @@ async def _run_query_loop(
                         block = await _execute_tool_call(ctx, name, uid, inp)
                         return ToolResult(output=block.content, is_error=block.is_error)
 
-                    coro = _bg_wrapper(context, tc.name, tc.id, tc.input)
+                    coro = _bg_wrapper(context, tc.name, tc.id, clean_input)
                     event = background_manager.launch(
-                        tc.id, tc.name, tc.input, coro, task_note=task_note
+                        tc.id, tc.name, clean_input, coro, task_note=task_note
                     )
                     yield event, None
                     tool_results.append(

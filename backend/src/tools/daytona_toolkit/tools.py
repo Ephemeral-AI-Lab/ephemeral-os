@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import shlex
 from typing import Any
 
 from tools.core.base import ToolExecutionContext, ToolResult
@@ -100,7 +101,7 @@ async def daytona_bash(
         kwargs: dict[str, object] = {"timeout": timeout}
         if cwd:
             kwargs["cwd"] = cwd
-        response = await sandbox.process.exec(command, **kwargs)
+        response = await sandbox.process.exec(f"bash -c {shlex.quote(command)}", **kwargs)
         exit_code = getattr(response, "exit_code", 0)
         output = json.dumps(
             {
