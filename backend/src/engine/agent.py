@@ -164,7 +164,7 @@ def spawn_agent(
 
     # --- Skills toolkit — always registered so agents can discover and load skills
     from skills.loader import load_skill_registry
-    from tools.skills_toolkit import make_skills_toolkit
+    from tools.builtins.skills import make_skills_toolkit
 
     skill_filter = agent_def.skills if agent_def and agent_def.skills else None
     skill_registry = load_skill_registry(config.cwd)
@@ -177,15 +177,17 @@ def spawn_agent(
             agent_name,
         )
 
-    # --- Background tasks — enabled when sandbox tools are available
-    has_background_tools = any(
-        t.supports_background for t in tool_registry.list_tools()
-    )
+    # --- Background toolkit — register when background-capable tools exist
+    bg_tool_names = [t.name for t in tool_registry.list_tools() if t.supports_background]
+    has_background_tools = bool(bg_tool_names)
+    if has_background_tools:
+        from tools.builtins.background import make_background_toolkit
+
+        tool_registry.register_toolkit(make_background_toolkit(bg_tool_names))
 
     # --- Inject toolkit and capability awareness into system prompt ---------
     from prompts.context import build_agent_capabilities_prompt
 
-    bg_tool_names = [t.name for t in tool_registry.list_tools() if t.supports_background]
     awareness = build_agent_capabilities_prompt(
         toolkits=tool_registry.list_toolkits(),
         has_background_tools=has_background_tools,

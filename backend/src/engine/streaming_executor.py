@@ -118,8 +118,21 @@ class StreamingToolExecutor:
                 tool.progress_lines.clear()
         return events
 
-    def get_remaining(self) -> list[ToolExecutionCompleted | ToolExecutionCancelled]:
-        """Get final results after stream completes."""
+    async def get_remaining(self) -> list[ToolExecutionCompleted | ToolExecutionCancelled]:
+        """Get final results after stream completes.
+
+        Waits for any in-flight tools to finish before returning.
+        This prevents the race where MiniMax sends tool_use + complete
+        together and the tool hasn't finished executing yet.
+        """
+        # Wait for in-flight tools to finish
+        in_flight = [
+            tool.task for tool in self._tools.values()
+            if tool.status == "executing" and tool.task is not None
+        ]
+        if in_flight:
+            await asyncio.gather(*in_flight, return_exceptions=True)
+
         results = []
         for tool in self._tools.values():
             if tool.status == "completed":

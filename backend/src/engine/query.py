@@ -85,13 +85,6 @@ async def _run_query_loop(
             context.tool_metadata = {}
         context.tool_metadata["background_task_manager"] = background_manager
 
-        # Register background tools
-        from tools.builtins.check_background_progress import CheckBackgroundProgressTool
-        from tools.builtins.cancel_background_task import CancelBackgroundTaskTool
-
-        context.tool_registry.register(CheckBackgroundProgressTool())
-        context.tool_registry.register(CancelBackgroundTaskTool())
-
     for _ in range(context.max_turns):
         messages, was_compacted = await auto_compact_if_needed(
             messages,
@@ -325,7 +318,7 @@ async def _run_query_loop(
 
         # Wait for all tools to complete and yield results
         tool_results: list[ToolResultBlock] = []
-        for completed in executor.get_remaining():
+        for completed in await executor.get_remaining():
             if isinstance(completed, ToolExecutionCompleted):
                 logger.info(
                     "STREAM: Yielding ToolExecutionCompleted: name=%s is_error=%s output_len=%d",
