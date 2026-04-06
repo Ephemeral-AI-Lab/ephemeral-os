@@ -102,7 +102,14 @@ def make_api_client(
     base_url = (db_kwargs or {}).get("base_url") or settings.base_url
     api_format = (db_kwargs or {}).get("api_format") or settings.api_format
 
-    if api_format == "anthropic":
+    # db_class_path from the model registry also indicates the provider type
+    is_anthropic = (
+        api_format == "anthropic"
+        or (db_class_path or "").endswith("AnthropicClient")
+        or db_class_path == "anthropic"
+    )
+
+    if is_anthropic:
         from models.clients.anthropic_native import AnthropicClient
         return AnthropicClient(api_key=api_key, base_url=base_url)
 

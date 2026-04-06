@@ -48,9 +48,17 @@ class AnthropicClient:
     """
 
     def __init__(self, api_key: str, *, base_url: str | None = None) -> None:
-        kwargs: dict[str, Any] = {"api_key": api_key}
+        kwargs: dict[str, Any] = {}
         if base_url:
             kwargs["base_url"] = base_url
+
+        # Non-Anthropic endpoints (e.g. MiniMax) expect Authorization: Bearer
+        # instead of Anthropic's x-api-key header.
+        if base_url and "anthropic.com" not in base_url:
+            kwargs["auth_token"] = api_key
+        else:
+            kwargs["api_key"] = api_key
+
         self._client = anthropic.AsyncAnthropic(**kwargs)
 
     # ------------------------------------------------------------------
