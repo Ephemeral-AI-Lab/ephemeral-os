@@ -328,7 +328,7 @@ async def _run_query_loop(
                 )
                 tool_results.append(
                     ToolResultBlock(
-                        tool_use_id="",  # filled by caller
+                        tool_use_id=completed.tool_id,
                         content=completed.output,
                         is_error=completed.is_error,
                     )
@@ -342,7 +342,7 @@ async def _run_query_loop(
                 )
                 tool_results.append(
                     ToolResultBlock(
-                        tool_use_id="",
+                        tool_use_id=completed.tool_id,
                         content=f"[CANCELLED] {completed.reason}",
                         is_error=True,
                     )
@@ -480,12 +480,11 @@ async def _run_query_loop(
                     )
 
         # Fill in tool_use_id for results that need it
-        tool_use_map = {tu.id: tu for tu in final_message.tool_uses}
+        assigned_ids: set[str] = {tr.tool_use_id for tr in tool_results if tr.tool_use_id}
+        unassigned_ids = [tu.id for tu in final_message.tool_uses if tu.id not in assigned_ids]
         for tr in tool_results:
-            for tu_id, tu in tool_use_map.items():
-                if tr.tool_use_id == "" or tr.tool_use_id == tu_id:
-                    tr.tool_use_id = tu_id
-                    break
+            if not tr.tool_use_id and unassigned_ids:
+                tr.tool_use_id = unassigned_ids.pop(0)
 
         messages.append(ConversationMessage(role="user", content=tool_results))  # type: ignore[arg-type]
 

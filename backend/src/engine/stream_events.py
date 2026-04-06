@@ -47,6 +47,7 @@ class ToolExecutionCompleted:
     tool_name: str
     output: str
     is_error: bool = False
+    tool_id: str = ""
 
 
 @dataclass(frozen=True)

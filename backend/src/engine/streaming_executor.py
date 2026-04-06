@@ -150,6 +150,7 @@ class StreamingToolExecutor:
                             tool_name=tool.name,
                             output=tool.result.output,
                             is_error=tool.result.is_error,
+                            tool_id=tool.id,
                         )
                     )
                 tool.status = "yielded"
