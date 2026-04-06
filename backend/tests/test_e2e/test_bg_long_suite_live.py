@@ -257,12 +257,26 @@ class TestLongSuiteEarlyCancel:
             "There is an integration test suite at /home/daytona/long_suite/ with:\n"
             "- run_suite.py — a long integration test suite\n"
             "- config.json — configuration the suite reads\n\n"
-            "The suite writes progress to /tmp/long_suite.log as it runs. "
-            "The full suite takes about 150 seconds when everything works.\n\n"
+            "The suite writes live progress to /tmp/long_suite.log as it runs, "
+            "so you can inspect it from outside while the suite is still running. "
+            "The full suite takes about 150 seconds when everything works, and it "
+            "keeps running to completion even after fatal errors.\n\n"
             "The suite is currently failing. Make it pass. You have a limited time "
-            "budget — don't waste it waiting for runs you can already tell will fail."
+            "budget — don't waste it waiting for runs you can already tell will fail "
+            "from the log output."
         )
         _log_result(result, "long_suite_cancel")
+
+        # Behavioral check: the agent must exercise the background workflow —
+        # without backgrounding, there's no way to read the live log while the
+        # suite runs, and the "detect fatal early, cancel, save time" pattern
+        # that this test exists to validate cannot happen.
+        assert len(result.background_started()) >= 1, (
+            "Expected agent to launch the suite as a background task at least once "
+            "so it could observe live progress via /tmp/long_suite.log. "
+            f"Got {len(result.background_started())} background launches. "
+            f"Tool sequence: {result.tool_names}"
+        )
 
         # Ground truth: run the suite ourselves and verify it passes end-to-end
         passed, output = _verify_suite_passes(
