@@ -37,9 +37,25 @@ def _get_sandbox(context: ToolExecutionContext) -> Any:
     return sandbox
 
 
-def _get_cwd(context: ToolExecutionContext) -> str:
-    """Get working directory, preferring sandbox project dir."""
-    return context.metadata.get("daytona_cwd", str(context.cwd))
+def _path_error(exc: Exception, path: str) -> str | None:
+    """Return a human-readable message if *exc* is a path-not-found error, else None."""
+    msg = str(exc)
+    if isinstance(exc, FileNotFoundError) or "No such file or directory" in msg:
+        return f"Path does not exist: {path}"
+    # Daytona SDK wraps errors and may lose the inner message
+    _sdk_prefixes = ("Failed to list files", "Failed to upload files", "Failed to download")
+    if any(msg.startswith(p) for p in _sdk_prefixes) and msg.rstrip().endswith(":"):
+        return f"Path does not exist: {path}"
+    return None
+
+
+def _get_cwd(context: ToolExecutionContext) -> str | None:
+    """Get working directory, preferring sandbox project dir.
+
+    Returns None if no sandbox-specific cwd is set, letting the sandbox
+    use its default directory (typically /home/daytona).
+    """
+    return context.metadata.get("daytona_cwd")
 
 
 # ---------------------------------------------------------------------------
@@ -47,7 +63,7 @@ def _get_cwd(context: ToolExecutionContext) -> str:
 # ---------------------------------------------------------------------------
 
 
-@tool(name="daytona_bash", description="Run a shell command inside the remote Daytona sandbox.", supports_background=True)
+@tool(name="daytona_bash", description="Run a shell command and return stdout and exit code.", supports_background=True)
 async def daytona_bash(
     command: str,
     timeout: int = _DEFAULT_TIMEOUT,
@@ -67,11 +83,10 @@ async def daytona_bash(
     sandbox = _get_sandbox(context)
     cwd = _get_cwd(context)
     try:
-        response = await sandbox.process.exec(
-            command,
-            cwd=cwd,
-            timeout=timeout,
-        )
+        kwargs: dict[str, object] = {"timeout": timeout}
+        if cwd:
+            kwargs["cwd"] = cwd
+        response = await sandbox.process.exec(command, **kwargs)
         exit_code = getattr(response, "exit_code", 0)
         output = json.dumps(
             {
@@ -95,7 +110,7 @@ async def daytona_bash(
 
 @tool(
     name="daytona_read_file",
-    description="Read file contents from the remote Daytona sandbox.",
+    description="Read file contents, optionally specifying a line range.",
     read_only=True,
 )
 async def daytona_read_file(
@@ -144,7 +159,7 @@ async def daytona_read_file(
         )
         return ToolResult(output=output)
     except Exception as exc:
-        return ToolResult(output=str(exc), is_error=True)
+        return ToolResult(output=_path_error(exc, file_path) or str(exc), is_error=True)
 
 
 # ---------------------------------------------------------------------------
@@ -153,7 +168,7 @@ async def daytona_read_file(
 
 
 @tool(
-    name="daytona_write_file", description="Write or create a file in the remote Daytona sandbox."
+    name="daytona_write_file", description="Create a new file or overwrite an existing file with the given content."
 )
 async def daytona_write_file(
     file_path: str,
@@ -183,7 +198,8 @@ async def daytona_write_file(
         )
         return ToolResult(output=output)
     except Exception as exc:
-        return ToolResult(output=str(exc), is_error=True)
+        parent = "/".join(file_path.split("/")[:-1])
+        return ToolResult(output=_path_error(exc, parent) or str(exc), is_error=True)
 
 
 # ---------------------------------------------------------------------------
@@ -193,7 +209,7 @@ async def daytona_write_file(
 
 @tool(
     name="daytona_list_files",
-    description="List files and directories in the remote Daytona sandbox.",
+    description="List files and directories in a given path.",
     read_only=True,
 )
 async def daytona_list_files(
@@ -227,7 +243,7 @@ async def daytona_list_files(
         )
         return ToolResult(output=output)
     except Exception as exc:
-        return ToolResult(output=str(exc), is_error=True)
+        return ToolResult(output=_path_error(exc, directory) or str(exc), is_error=True)
 
 
 # ---------------------------------------------------------------------------
@@ -237,7 +253,7 @@ async def daytona_list_files(
 
 @tool(
     name="daytona_grep",
-    description="Search file contents for a pattern in the remote Daytona sandbox.",
+    description="Search file contents for a text pattern and return matching lines.",
     read_only=True,
 )
 async def daytona_grep(
@@ -297,7 +313,7 @@ async def daytona_grep(
             )
         )
     except Exception as exc:
-        return ToolResult(output=str(exc), is_error=True)
+        return ToolResult(output=_path_error(exc, path) or str(exc), is_error=True)
 
 
 # ---------------------------------------------------------------------------
@@ -307,7 +323,7 @@ async def daytona_grep(
 
 @tool(
     name="daytona_glob",
-    description="Find files matching a glob pattern in the remote Daytona sandbox.",
+    description="Find files by name using a glob pattern (e.g. '*.py', 'test_*').",
     read_only=True,
 )
 async def daytona_glob(
@@ -361,4 +377,4 @@ async def daytona_glob(
                 )
             )
         except Exception as fallback_exc:
-            return ToolResult(output=str(fallback_exc), is_error=True)
+            return ToolResult(output=_path_error(fallback_exc, path) or str(fallback_exc), is_error=True)

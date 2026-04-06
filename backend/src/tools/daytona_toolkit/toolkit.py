@@ -34,9 +34,6 @@ class DaytonaToolkit(BaseToolkit):
     on first tool invocation and injected into ToolExecutionContext.metadata
     via the ``prepare_context`` helper.
 
-    CI integration is optional — tools degrade gracefully if no
-    CodeIntelligenceService is configured in the context.
-
     Usage::
 
         toolkit = DaytonaToolkit(sandbox_id="sb-abc123")
@@ -51,7 +48,7 @@ class DaytonaToolkit(BaseToolkit):
             name="sandbox_operations",
             description=(
                 "Remote sandbox operations: shell, files, search, "
-                "OCC-coordinated editing, LSP queries, and CodeAct execution"
+                "editing, LSP queries, and CodeAct execution"
             ),
             tools=[
                 # Read tools first (preferred execution order)
@@ -86,17 +83,17 @@ class DaytonaToolkit(BaseToolkit):
                 "- `daytona_lsp_references` — find all usages of a symbol across files.\n"
                 "- `daytona_lsp_diagnostics` — check a file for errors and warnings.\n\n"
                 "**Edit**\n"
-                "- `daytona_edit` — targeted string replacement in a file. Preferred for small changes.\n"
+                "- `daytona_edit_file` — targeted string replacement in a file. Preferred for small changes.\n"
                 "- `daytona_write_file` — create or overwrite a file. Use for new files.\n"
                 "- `daytona_codeact` — execute Python with atomic file I/O. "
                 "Use for multi-step transformations that need read/write/shell in one operation.\n\n"
                 "**Execute**\n"
-                "- `daytona_bash` — run a shell command. Use for tests, builds, installs, verification.\n\n"
-                "After editing, always verify by reading the file back or running relevant tests."
+                "- `daytona_bash` — run a shell command. Use for tests, builds, installs, verification."
             ),
         )
         self.sandbox_id = sandbox_id
         self._sandbox: Any | None = None
+        self._sandbox_loop_id: int | None = None
 
     def _get_sandbox(self) -> Any:
         """Lazily fetch the sandbox on first access."""
@@ -114,9 +111,19 @@ class DaytonaToolkit(BaseToolkit):
         return self._sandbox
 
     async def _get_sandbox_async(self) -> Any:
-        """Lazily fetch the async sandbox on first access."""
-        if self._sandbox is not None:
+        """Lazily fetch the async sandbox on first access.
+
+        Invalidates the cached sandbox when the event loop changes
+        (e.g. pytest-asyncio creates a new loop per test).
+        """
+        import asyncio
+
+        loop_id = id(asyncio.get_running_loop())
+        if self._sandbox is not None and self._sandbox_loop_id == loop_id:
             return self._sandbox
+        # Stale sandbox from a different (possibly closed) loop — discard it
+        self._sandbox = None
+        self._sandbox_loop_id = None
         if not self.sandbox_id:
             raise RuntimeError(
                 "No sandbox_id configured. Pass sandbox_id to DaytonaToolkit() "
@@ -125,27 +132,44 @@ class DaytonaToolkit(BaseToolkit):
         from tools.daytona_toolkit.async_client import get_async_sandbox
 
         self._sandbox = await get_async_sandbox(self.sandbox_id)
+        self._sandbox_loop_id = loop_id
         logger.info("Async Daytona sandbox fetched: %s", self.sandbox_id)
         return self._sandbox
 
-    def prepare_context(self, context: Any) -> None:
-        """Inject sandbox and optional CI service into a ToolExecutionContext.
-
-        Call this before executing any Daytona tool so it can access
-        the sandbox via ``context.metadata['daytona_sandbox']`` and
-        optionally the CI service via ``context.metadata['ci_service']``.
-        """
-        sandbox = self._get_sandbox()
-        context.metadata["daytona_sandbox"] = sandbox
+    @staticmethod
+    def _resolve_cwd_sync(sandbox: Any) -> str | None:
+        """Resolve cwd from a sync sandbox (project_dir or pwd)."""
         project_dir = getattr(sandbox, "project_dir", None)
         if project_dir:
-            context.metadata["daytona_cwd"] = project_dir
+            return project_dir
+        try:
+            resp = sandbox.process.exec("pwd")
+            if resp.exit_code == 0 and resp.result:
+                return resp.result.strip()
+        except Exception:
+            pass
+        return None
 
+    @staticmethod
+    async def _resolve_cwd_async(sandbox: Any) -> str | None:
+        """Resolve cwd from an async sandbox (project_dir or pwd)."""
+        project_dir = getattr(sandbox, "project_dir", None)
+        if project_dir:
+            return project_dir
+        try:
+            resp = await sandbox.process.exec("pwd")
+            if resp.exit_code == 0 and resp.result:
+                return resp.result.strip()
+        except Exception:
+            pass
+        return None
+
+    def _inject_ci(self, context: Any, sandbox: Any, workspace_root: str) -> None:
+        """Inject code intelligence service if available."""
         if self.sandbox_id and "ci_service" not in context.metadata:
             try:
                 from code_intelligence.routing.service import get_code_intelligence
 
-                workspace_root = project_dir or "/workspace"
                 svc = get_code_intelligence(
                     sandbox_id=self.sandbox_id,
                     workspace_root=workspace_root,
@@ -155,28 +179,29 @@ class DaytonaToolkit(BaseToolkit):
             except Exception:
                 logger.debug("CI service not available for sandbox %s", self.sandbox_id)
 
+    def prepare_context(self, context: Any) -> None:
+        """Inject sandbox, cwd, and optional CI service into a ToolExecutionContext.
+
+        Call this before executing any Daytona tool so it can access
+        the sandbox via ``context.metadata['daytona_sandbox']`` and
+        the resolved cwd via ``context.metadata['daytona_cwd']``.
+        """
+        sandbox = self._get_sandbox()
+        context.metadata["daytona_sandbox"] = sandbox
+        cwd = self._resolve_cwd_sync(sandbox)
+        if cwd:
+            context.metadata["daytona_cwd"] = cwd
+        self._inject_ci(context, sandbox, cwd or "/home/daytona")
+
     async def prepare_context_async(self, context: Any) -> None:
-        """Inject async sandbox and optional CI service into a ToolExecutionContext.
+        """Inject async sandbox, cwd, and optional CI service into a ToolExecutionContext.
 
         Use this for streaming tool execution where cancellation support is needed.
         The async sandbox supports asyncio.CancelledError propagation.
         """
         sandbox = await self._get_sandbox_async()
         context.metadata["daytona_sandbox"] = sandbox
-        project_dir = getattr(sandbox, "project_dir", None)
-        if project_dir:
-            context.metadata["daytona_cwd"] = project_dir
-
-        if self.sandbox_id and "ci_service" not in context.metadata:
-            try:
-                from code_intelligence.routing.service import get_code_intelligence
-
-                workspace_root = project_dir or "/workspace"
-                svc = get_code_intelligence(
-                    sandbox_id=self.sandbox_id,
-                    workspace_root=workspace_root,
-                    sandbox=sandbox,
-                )
-                context.metadata["ci_service"] = svc
-            except Exception:
-                logger.debug("CI service not available for sandbox %s", self.sandbox_id)
+        cwd = await self._resolve_cwd_async(sandbox)
+        if cwd:
+            context.metadata["daytona_cwd"] = cwd
+        self._inject_ci(context, sandbox, cwd or "/home/daytona")

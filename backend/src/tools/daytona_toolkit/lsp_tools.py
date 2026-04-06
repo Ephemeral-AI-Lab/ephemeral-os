@@ -1,9 +1,4 @@
-"""LSP query tools for Daytona sandboxes.
-
-Provides hover, goto-definition, find-references, and diagnostics
-via the CodeIntelligenceService. All tools degrade gracefully if
-no CI service is configured.
-"""
+"""LSP query tools for Daytona sandboxes."""
 
 from __future__ import annotations
 
@@ -40,7 +35,7 @@ async def daytona_lsp_hover(
     """
     svc = get_ci_service(context)
     if svc is None:
-        return ToolResult(output="Code intelligence not available", is_error=True)
+        return ToolResult(output="LSP not available", is_error=True)
 
     result = svc.hover(file_path, line, character)
     if result is None:
@@ -76,7 +71,7 @@ async def daytona_lsp_definition(
     """
     svc = get_ci_service(context)
     if svc is None:
-        return ToolResult(output="Code intelligence not available", is_error=True)
+        return ToolResult(output="LSP not available", is_error=True)
 
     results = svc.find_definitions(
         file_path,
@@ -126,7 +121,7 @@ async def daytona_lsp_references(
     """
     svc = get_ci_service(context)
     if svc is None:
-        return ToolResult(output="Code intelligence not available", is_error=True)
+        return ToolResult(output="LSP not available", is_error=True)
 
     results = svc.find_references(
         file_path,
@@ -172,7 +167,7 @@ async def daytona_lsp_diagnostics(
     """
     svc = get_ci_service(context)
     if svc is None:
-        return ToolResult(output="Code intelligence not available", is_error=True)
+        return ToolResult(output="LSP not available", is_error=True)
 
     results = svc.diagnostics(file_path)
     if not results:

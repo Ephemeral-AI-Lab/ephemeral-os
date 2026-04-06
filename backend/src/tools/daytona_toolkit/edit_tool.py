@@ -1,8 +1,4 @@
-"""OCC-coordinated file editing tool for Daytona sandboxes.
-
-Coordinates edits via the Arbiter for conflict detection. Falls back
-to direct write if no CI service is configured.
-"""
+"""File editing tool for Daytona sandboxes."""
 
 from __future__ import annotations
 
@@ -11,6 +7,7 @@ import json
 import logging
 
 from tools.base import ToolExecutionContext, ToolResult
+from tools.daytona_toolkit.tools import _path_error
 from tools.daytona_toolkit.ci_integration import (
     get_ci_service,
     prime_cache_after_write,
@@ -29,11 +26,7 @@ def _content_hash(content: str) -> str:
 
 @tool(
     name="daytona_edit_file",
-    description=(
-        "Edit a file in the remote Daytona sandbox using search-and-replace. "
-        "Coordinates with the code intelligence service for conflict detection. "
-        "Use dry_run=true to preview changes without applying."
-    ),
+    description="Edit a file using search-and-replace on the first match.",
 )
 async def daytona_edit_file(
     file_path: str,
@@ -44,7 +37,7 @@ async def daytona_edit_file(
     *,
     context: ToolExecutionContext,
 ) -> ToolResult:
-    """Edit a file in the Daytona sandbox with OCC conflict detection.
+    """Edit a file in the Daytona sandbox via search-and-replace.
 
     Args:
         file_path: Path to the file to edit
@@ -56,7 +49,6 @@ async def daytona_edit_file(
     Returns:
         file_path (str): Path to the edited file
         status (str): Edit result — edited, dry_run, or error
-        occ (bool): Whether OCC coordination was used
         diff (str): Unified diff preview (dry_run only)
     """
     sandbox = context.metadata.get("daytona_sandbox")
@@ -71,7 +63,7 @@ async def daytona_edit_file(
         raw = await sandbox.fs.download_file(file_path)
         current = raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
     except Exception as exc:
-        return ToolResult(output=f"Cannot read file: {exc}", is_error=True)
+        return ToolResult(output=_path_error(exc, file_path) or f"Cannot read file: {exc}", is_error=True)
 
     # Check that old_text exists
     if old_text not in current:
@@ -171,4 +163,4 @@ async def daytona_edit_file(
                 metadata={"file_path": file_path, "occ": False},
             )
         except Exception as exc:
-            return ToolResult(output=f"Write failed: {exc}", is_error=True)
+            return ToolResult(output=_path_error(exc, file_path) or f"Write failed: {exc}", is_error=True)

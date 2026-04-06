@@ -1,6 +1,6 @@
 """CodeAct tool — multi-step code thinking and execution in a sandbox.
 
-Executes a Python script in the sandbox with atomic OCC-guarded file I/O.
+Executes a Python script in the sandbox with atomic file I/O.
 The script has access to read(), write(), and shell() helpers. All writes
 are staged and committed atomically after the script finishes.
 """
@@ -69,11 +69,7 @@ print(json.dumps({{"manifest": "/tmp/codeact-{run_id}.json", "status": _MANIFEST
 
 @tool(
     name="daytona_codeact",
-    description=(
-        "Execute Python code in the sandbox with atomic file operations. "
-        "Use read(), write(), and shell() helpers. Writes are committed "
-        "atomically after execution completes successfully."
-    ),
+    description="Execute Python code with atomic file I/O via read(), write(), and shell() helpers.",
     supports_background=True,
 )
 async def daytona_codeact(
