@@ -5,24 +5,24 @@ Import from here instead of deep paths:
     from models import OpenAICompatibleClient, ModelStore, detect_provider
 """
 
-from models.types import (
+from models.core import (
+    ApiCancelEvent,
     ApiMessageCompleteEvent,
     ApiMessageRequest,
     ApiStreamEvent,
     ApiTextDeltaEvent,
+    ApiThinkingDeltaEvent,
+    ApiToolUseDeltaEvent,
     SupportsStreamingMessages,
     UsageSnapshot,
-)
-from models.errors import (
     AuthenticationFailure,
     EphemeralOSApiError,
     RateLimitFailure,
     RequestFailure,
-)
-from models.provider import (
     ProviderInfo,
     auth_status,
     detect_provider,
+    make_api_client,
 )
 from models.clients import (
     OpenAICompatibleClient,
@@ -35,8 +35,11 @@ from models.api import create_models_router
 
 __all__ = [
     # Types & protocol
+    "ApiCancelEvent",
     "ApiMessageRequest",
     "ApiTextDeltaEvent",
+    "ApiThinkingDeltaEvent",
+    "ApiToolUseDeltaEvent",
     "ApiMessageCompleteEvent",
     "ApiStreamEvent",
     "SupportsStreamingMessages",
@@ -50,6 +53,7 @@ __all__ = [
     "ProviderInfo",
     "detect_provider",
     "auth_status",
+    "make_api_client",
     # Clients
     "OpenAICompatibleClient",
     # DB

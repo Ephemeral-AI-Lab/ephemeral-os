@@ -14,10 +14,10 @@ from typing import TYPE_CHECKING, Any, AsyncIterator
 if TYPE_CHECKING:
     from server.app_factory import SessionConfig
     from utils.compact import SessionState
+    from engine.core.query import QueryContext, run_query
 
 from agents.types import AgentDefinition
 from config import Settings
-from engine.core.query import QueryContext, run_query
 from message.messages import ConversationMessage
 from message.stream_events import StreamEvent
 from hooks import make_hook_executor
