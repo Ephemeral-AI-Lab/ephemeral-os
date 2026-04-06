@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy.orm import Session, sessionmaker
 
 from db.models.session import SessionRecord
-from engine.messages import ConversationMessage
+from message import ConversationMessage
 
 if TYPE_CHECKING:
     from server.app_factory import SessionConfig
@@ -138,10 +138,14 @@ class SessionStore:
                     full_history = list(record.message_history)
                 if record.message_history:
                     try:
-                        msgs = [ConversationMessage.model_validate(m) for m in record.message_history]
+                        msgs = [
+                            ConversationMessage.model_validate(m) for m in record.message_history
+                        ]
                         return msgs, ctx, full_history
                     except Exception:
-                        logger.warning("Failed to deserialize messages from DB — starting fresh", exc_info=True)
+                        logger.warning(
+                            "Failed to deserialize messages from DB — starting fresh", exc_info=True
+                        )
 
         # Fallback: initial restore messages (consumed once)
         if config._initial_messages:
@@ -151,7 +155,9 @@ class SessionStore:
                 full_history = [m.model_dump(mode="json") for m in msgs]
                 return msgs, ctx, full_history
             except Exception:
-                logger.warning("Failed to load initial restore messages — starting fresh", exc_info=True)
+                logger.warning(
+                    "Failed to load initial restore messages — starting fresh", exc_info=True
+                )
 
         return [], ctx, full_history
 

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from engine.messages import ConversationMessage, TextBlock, ToolResultBlock, ToolUseBlock
+from message import ConversationMessage, TextBlock, ToolResultBlock, ToolUseBlock
 from utils.compact import (
     AUTOCOMPACT_BUFFER_TOKENS,
     COMPACTABLE_TOOLS,
@@ -42,24 +42,28 @@ class TestMicrocompact:
         for i in range(num_tool_calls):
             tool_id = f"toolu_{i:04d}"
             # Assistant requests tool
-            messages.append(ConversationMessage(
-                role="assistant",
-                content=[
-                    TextBlock(text=f"Let me check file {i}."),
-                    ToolUseBlock(id=tool_id, name="read_file", input={"path": f"/file{i}.txt"}),
-                ],
-            ))
+            messages.append(
+                ConversationMessage(
+                    role="assistant",
+                    content=[
+                        TextBlock(text=f"Let me check file {i}."),
+                        ToolUseBlock(id=tool_id, name="read_file", input={"path": f"/file{i}.txt"}),
+                    ],
+                )
+            )
             # User provides tool result
-            messages.append(ConversationMessage(
-                role="user",
-                content=[
-                    ToolResultBlock(
-                        tool_use_id=tool_id,
-                        content=f"File content {i}: " + "x" * 500,
-                        is_error=False,
-                    ),
-                ],
-            ))
+            messages.append(
+                ConversationMessage(
+                    role="user",
+                    content=[
+                        ToolResultBlock(
+                            tool_use_id=tool_id,
+                            content=f"File content {i}: " + "x" * 500,
+                            is_error=False,
+                        ),
+                    ],
+                )
+            )
         return messages
 
     def test_microcompact_clears_old_tool_results(self):
@@ -79,7 +83,9 @@ class TestMicrocompact:
                         preserved_count += 1
 
         assert cleared_count == 7, f"Should clear 7 old results, cleared {cleared_count}"
-        assert preserved_count == 3, f"Should preserve 3 recent results, preserved {preserved_count}"
+        assert preserved_count == 3, (
+            f"Should preserve 3 recent results, preserved {preserved_count}"
+        )
         assert tokens_saved > 0, "Should have saved tokens"
 
     def test_microcompact_keeps_recent(self):
@@ -241,10 +247,7 @@ class TestAutocompactThreshold:
     def test_should_autocompact_after_max_failures(self):
         """Should not compact after max consecutive failures."""
         # Create a large conversation that would trigger compaction
-        messages = [
-            ConversationMessage.from_user_text("x" * 100_000)
-            for _ in range(50)
-        ]
+        messages = [ConversationMessage.from_user_text("x" * 100_000) for _ in range(50)]
         state = SessionState(consecutive_failures=3)
         assert not should_autocompact(messages, "claude-sonnet-4-20250514", state)
 
@@ -328,7 +331,9 @@ class TestTokenEstimation:
             ConversationMessage(
                 role="assistant",
                 content=[
-                    ToolUseBlock(id="t1", name="read_file", input={"path": "/very/long/path/to/file.txt"}),
+                    ToolUseBlock(
+                        id="t1", name="read_file", input={"path": "/very/long/path/to/file.txt"}
+                    ),
                 ],
             ),
             ConversationMessage(

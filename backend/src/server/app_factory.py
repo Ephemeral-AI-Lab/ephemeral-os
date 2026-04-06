@@ -28,7 +28,7 @@ from db.engine import initialize_db
 from db.stores import AgentDefinitionStore, AgentRunStore, ModelStore, SessionStore, UsageStore
 from skills.db.store import SkillDefinitionStore
 from server.protocol import BackendEvent, BackendHostConfig, ToolkitSnapshot
-from models.types import SupportsStreamingMessages
+from models.core.types import SupportsStreamingMessages
 from tools import ToolRegistry
 from models.api import create_models_router
 from agents.api.router import create_agents_router
@@ -187,7 +187,7 @@ class SessionState:
             )
         # Factory-registered toolkits (e.g. daytona, ci) — instantiate with
         # a bare context just to read their tool names for the snapshot.
-        from tools.factory import ToolkitContext, list_factories, create_toolkit
+        from tools.core.factory import ToolkitContext, list_factories, create_toolkit
 
         seen_toolkit_names = set(registered_names)
         for factory_name in list_factories():

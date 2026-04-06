@@ -38,6 +38,7 @@ def detect_os() -> tuple[str, str]:
     if system == "Linux":
         try:
             import distro  # type: ignore[import-untyped]
+
             return "Linux", distro.version(pretty=True) or platform.release()
         except ImportError:
             return "Linux", platform.release()
@@ -64,14 +65,15 @@ def detect_shell() -> str:
     return "unknown"
 
 
-def detect_git_info(cwd: str) -> tuple[bool, str | None]:
+def detect_git_info(cwd: str | Path) -> tuple[bool, str | None]:
     """Check if cwd is inside a git repo and return (is_git_repo, branch_name)."""
+    cwd_str = str(cwd)
     try:
         result = subprocess.run(
             ["git", "rev-parse", "--is-inside-work-tree"],
             capture_output=True,
             text=True,
-            cwd=cwd,
+            cwd=cwd_str,
             timeout=5,
         )
         is_git = result.returncode == 0 and result.stdout.strip() == "true"
@@ -86,7 +88,7 @@ def detect_git_info(cwd: str) -> tuple[bool, str | None]:
             ["git", "rev-parse", "--abbrev-ref", "HEAD"],
             capture_output=True,
             text=True,
-            cwd=cwd,
+            cwd=cwd_str,
             timeout=5,
         )
         branch = result.stdout.strip() if result.returncode == 0 else None

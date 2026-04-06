@@ -98,7 +98,8 @@ class TestToolCallingAndSkillLoading:
 
     def test_skill_registry_loads(self):
         """Skill registry should load bundled and user skills."""
-        from skills.loader import load_skill_registry
+        from skills.core.loader import load_skill_registry
+
         registry = load_skill_registry()
         assert registry is not None
         all_skills = registry.list_skills()
@@ -156,12 +157,16 @@ class TestMultiTurnConversation:
         assert text1, "Turn 1 should produce a response"
 
         # Turn 2: recall the fact
-        result2 = await agent.invoke("What code did I ask you to remember? Reply with just the code.")
+        result2 = await agent.invoke(
+            "What code did I ask you to remember? Reply with just the code."
+        )
         text2 = result2.text
         assert "X7Q9" in text2, f"Model should recall 'X7Q9', got: {text2}"
 
         # Turn 3: transform the fact
-        result3 = await agent.invoke("Reverse those 4 characters. Reply with just the reversed code.")
+        result3 = await agent.invoke(
+            "Reverse those 4 characters. Reply with just the reversed code."
+        )
         text3 = result3.text
         assert "9Q7X" in text3, f"Model should reverse to '9Q7X', got: {text3}"
 
@@ -171,11 +176,15 @@ class TestMultiTurnConversation:
         agent = create_eval_agent()
 
         # Turn 1
-        result1 = await agent.invoke("I'm building a Python class called DataProcessor. Just acknowledge.")
+        result1 = await agent.invoke(
+            "I'm building a Python class called DataProcessor. Just acknowledge."
+        )
         assert result1.text
 
         # Turn 2
-        result2 = await agent.invoke("It should have a method called transform() that takes a list. Acknowledge.")
+        result2 = await agent.invoke(
+            "It should have a method called transform() that takes a list. Acknowledge."
+        )
         assert result2.text
 
         # Turn 3
@@ -187,14 +196,18 @@ class TestMultiTurnConversation:
         assert result4.text
 
         # Turn 5: test recall of accumulated context
-        result5 = await agent.invoke("Summarize the full class design in one sentence. Include: class name, method name, what it does, error handling.")
+        result5 = await agent.invoke(
+            "Summarize the full class design in one sentence. Include: class name, method name, what it does, error handling."
+        )
         text5 = result5.text
 
         # Should reference key elements from earlier turns
         text5_lower = text5.lower()
-        assert "dataprocessor" in text5_lower or "data_processor" in text5_lower or "data processor" in text5_lower, (
-            f"Should mention DataProcessor. Got: {text5}"
-        )
+        assert (
+            "dataprocessor" in text5_lower
+            or "data_processor" in text5_lower
+            or "data processor" in text5_lower
+        ), f"Should mention DataProcessor. Got: {text5}"
 
     @pytest.mark.asyncio
     async def test_multiturn_with_tool_followup(self):
@@ -205,7 +218,9 @@ class TestMultiTurnConversation:
         text1 = result1.text
         assert "195" in text1, f"Should compute 195. Got: {text1}"
 
-        result2 = await agent.invoke("Add 5 to the result you just gave me. Reply with just the number.")
+        result2 = await agent.invoke(
+            "Add 5 to the result you just gave me. Reply with just the number."
+        )
         text2 = result2.text
         assert "200" in text2, f"Should compute 200. Got: {text2}"
 
@@ -269,19 +284,23 @@ class TestThinkingBlockStreaming:
             "Carefully reason: is 97 a prime number? Think before answering."
         )
 
-        from engine.stream_events import ThinkingDelta, AssistantTextDelta
+        from message.stream_events import ThinkingDelta, AssistantTextDelta
 
         thinking = [e for e in result.events if isinstance(e, ThinkingDelta)]
         text_deltas = [e for e in result.events if isinstance(e, AssistantTextDelta)]
 
         if thinking and text_deltas:
-            first_thinking = next(i for i, e in enumerate(result.events) if isinstance(e, ThinkingDelta))
-            first_text = next(i for i, e in enumerate(result.events) if isinstance(e, AssistantTextDelta))
+            first_thinking = next(
+                i for i, e in enumerate(result.events) if isinstance(e, ThinkingDelta)
+            )
+            first_text = next(
+                i for i, e in enumerate(result.events) if isinstance(e, AssistantTextDelta)
+            )
             assert first_thinking < first_text, "Thinking should precede text deltas"
 
     def test_thinking_block_message_model(self):
         """ThinkingBlock should integrate correctly in ConversationMessage."""
-        from engine.messages import ConversationMessage, TextBlock, ThinkingBlock
+        from message import ConversationMessage, TextBlock, ThinkingBlock
 
         msg = ConversationMessage(
             role="assistant",
@@ -319,7 +338,7 @@ class TestThinkingBlockStreaming:
         # Model may format with commas (40,320) or plain (40320)
         assert "40320" in text.replace(",", ""), f"8! = 40320. Got: {text}"
 
-        from engine.stream_events import ThinkingDelta
+        from message.stream_events import ThinkingDelta
 
         for ev in result.events:
             if isinstance(ev, ThinkingDelta):
@@ -339,44 +358,52 @@ class TestCompactionSystem:
 
     def _build_long_conversation(self, num_tool_turns: int = 15) -> list:
         """Build a conversation with many tool calls to trigger compaction."""
-        from engine.messages import ConversationMessage, TextBlock, ToolUseBlock, ToolResultBlock
+        from message import ConversationMessage, TextBlock, ToolUseBlock, ToolResultBlock
 
         messages = []
         for i in range(num_tool_turns):
             tool_id = f"toolu_comp_{i:04d}"
-            messages.append(ConversationMessage(
-                role="assistant",
-                content=[
-                    TextBlock(text=f"Reading file {i}..."),
-                    ToolUseBlock(id=tool_id, name="read_file", input={"path": f"/file{i}.py"}),
-                ],
-            ))
-            messages.append(ConversationMessage(
-                role="user",
-                content=[
-                    ToolResultBlock(
-                        tool_use_id=tool_id,
-                        content=f"# File {i} content\n" + ("def func():\n    pass\n" * 50),
-                        is_error=False,
-                    ),
-                ],
-            ))
+            messages.append(
+                ConversationMessage(
+                    role="assistant",
+                    content=[
+                        TextBlock(text=f"Reading file {i}..."),
+                        ToolUseBlock(id=tool_id, name="read_file", input={"path": f"/file{i}.py"}),
+                    ],
+                )
+            )
+            messages.append(
+                ConversationMessage(
+                    role="user",
+                    content=[
+                        ToolResultBlock(
+                            tool_use_id=tool_id,
+                            content=f"# File {i} content\n" + ("def func():\n    pass\n" * 50),
+                            is_error=False,
+                        ),
+                    ],
+                )
+            )
         return messages
 
     def test_microcompact_clears_old_results(self):
         """Microcompact should clear old tool results, preserving recent ones."""
         from utils.compact import microcompact_messages, TIME_BASED_MC_CLEARED_MESSAGE
-        from engine.messages import ToolResultBlock
+        from message import ToolResultBlock
 
         messages = self._build_long_conversation(12)
         result, tokens_saved = microcompact_messages(messages, keep_recent=3)
 
         cleared = sum(
-            1 for msg in result for block in msg.content
+            1
+            for msg in result
+            for block in msg.content
             if isinstance(block, ToolResultBlock) and block.content == TIME_BASED_MC_CLEARED_MESSAGE
         )
         preserved = sum(
-            1 for msg in result for block in msg.content
+            1
+            for msg in result
+            for block in msg.content
             if isinstance(block, ToolResultBlock) and block.content != TIME_BASED_MC_CLEARED_MESSAGE
         )
         assert cleared == 9, f"Should clear 9 old results, cleared {cleared}"
@@ -394,22 +421,36 @@ class TestCompactionSystem:
 
     def test_microcompact_skips_non_compactable_tools(self):
         """Non-compactable tool results should never be cleared."""
-        from engine.messages import ConversationMessage, ToolUseBlock, ToolResultBlock
+        from message import ConversationMessage, ToolUseBlock, ToolResultBlock
         from utils.compact import microcompact_messages, TIME_BASED_MC_CLEARED_MESSAGE
 
         messages = [
-            ConversationMessage(role="assistant", content=[
-                ToolUseBlock(id="toolu_custom", name="custom_analysis", input={}),
-            ]),
-            ConversationMessage(role="user", content=[
-                ToolResultBlock(tool_use_id="toolu_custom", content="important analysis " * 100),
-            ]),
-            ConversationMessage(role="assistant", content=[
-                ToolUseBlock(id="toolu_read", name="read_file", input={"path": "/a.txt"}),
-            ]),
-            ConversationMessage(role="user", content=[
-                ToolResultBlock(tool_use_id="toolu_read", content="file data " * 100),
-            ]),
+            ConversationMessage(
+                role="assistant",
+                content=[
+                    ToolUseBlock(id="toolu_custom", name="custom_analysis", input={}),
+                ],
+            ),
+            ConversationMessage(
+                role="user",
+                content=[
+                    ToolResultBlock(
+                        tool_use_id="toolu_custom", content="important analysis " * 100
+                    ),
+                ],
+            ),
+            ConversationMessage(
+                role="assistant",
+                content=[
+                    ToolUseBlock(id="toolu_read", name="read_file", input={"path": "/a.txt"}),
+                ],
+            ),
+            ConversationMessage(
+                role="user",
+                content=[
+                    ToolResultBlock(tool_use_id="toolu_read", content="file data " * 100),
+                ],
+            ),
         ]
 
         result, _ = microcompact_messages(messages, keep_recent=1)
@@ -487,13 +528,10 @@ class TestCompactionSystem:
     def test_should_autocompact_respects_failure_limit(self):
         """Auto-compact should stop after max consecutive failures."""
         from utils.compact import should_autocompact, SessionState
-        from engine.messages import ConversationMessage
+        from message import ConversationMessage
 
         # Build a huge conversation
-        big_messages = [
-            ConversationMessage.from_user_text("x" * 100_000)
-            for _ in range(50)
-        ]
+        big_messages = [ConversationMessage.from_user_text("x" * 100_000) for _ in range(50)]
 
         state_ok = SessionState(consecutive_failures=0)
         assert should_autocompact(big_messages, "test-model", state_ok)
@@ -514,7 +552,7 @@ class TestCompactionSystem:
     def test_token_estimation_grows_with_content(self):
         """Token estimates should increase with message content."""
         from utils.compact import estimate_message_tokens
-        from engine.messages import ConversationMessage, TextBlock
+        from message import ConversationMessage, TextBlock
 
         short = [ConversationMessage.from_user_text("Hi")]
         long = [ConversationMessage.from_user_text("x" * 10_000)]
@@ -640,10 +678,12 @@ class TestCodeIntelligenceSystem:
     def setup_method(self):
         """Clean up the CI service registry."""
         from code_intelligence.routing.service import dispose_all_code_intelligence
+
         dispose_all_code_intelligence()
 
     def teardown_method(self):
         from code_intelligence.routing.service import dispose_all_code_intelligence
+
         dispose_all_code_intelligence()
 
     # -- Service lifecycle --

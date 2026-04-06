@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from skills.types import SkillDefinition
+from skills.core.types import SkillDefinition
 
 _CONTENT_DIR = Path(__file__).parent / "content"
 

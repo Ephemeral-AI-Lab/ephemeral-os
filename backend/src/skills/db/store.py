@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 from datetime import datetime, timezone
 from uuid import uuid4
 
@@ -39,7 +40,9 @@ class SkillDefinitionStore:
         with self._sf() as db:
             return (
                 db.query(SkillDefinitionRecord)
-                .filter(SkillDefinitionRecord.name == name, SkillDefinitionRecord.is_active.is_(True))
+                .filter(
+                    SkillDefinitionRecord.name == name, SkillDefinitionRecord.is_active.is_(True)
+                )
                 .first()
             )
 
@@ -54,11 +57,13 @@ class SkillDefinitionStore:
                 .all()
             )
 
-    def update(self, name: str, updates: dict) -> SkillDefinitionRecord:
+    def update(self, name: str, updates: dict[str, Any]) -> SkillDefinitionRecord:
         with self._sf() as db:
             record = (
                 db.query(SkillDefinitionRecord)
-                .filter(SkillDefinitionRecord.name == name, SkillDefinitionRecord.is_active.is_(True))
+                .filter(
+                    SkillDefinitionRecord.name == name, SkillDefinitionRecord.is_active.is_(True)
+                )
                 .first()
             )
             if record is None:
@@ -76,7 +81,9 @@ class SkillDefinitionStore:
         with self._sf() as db:
             record = (
                 db.query(SkillDefinitionRecord)
-                .filter(SkillDefinitionRecord.name == name, SkillDefinitionRecord.is_active.is_(True))
+                .filter(
+                    SkillDefinitionRecord.name == name, SkillDefinitionRecord.is_active.is_(True)
+                )
                 .first()
             )
             if record is None:

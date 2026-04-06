@@ -10,7 +10,7 @@ from agents.api.schemas import AgentValidationResult
 
 if TYPE_CHECKING:
     from agents.api.schemas import AgentDefinitionCreate, AgentDefinitionUpdate
-    from tools.base import ToolRegistry
+    from tools.core.base import ToolRegistry
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ class AgentDefinitionValidator:
             known: set[str] = set()
             if self._tool_registry:
                 known = {tk.name for tk in self._tool_registry.list_toolkits()}
-            from tools.factory import has_factory  # noqa: PLC0415
+            from tools.core.factory import has_factory  # noqa: PLC0415
             for tk in toolkits:
                 if tk not in known and not has_factory(tk):
                     errors.append(f"Unknown toolkit: {tk}")

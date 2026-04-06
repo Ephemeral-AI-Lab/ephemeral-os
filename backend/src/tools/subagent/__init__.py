@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from tools.base import BaseToolkit
+from tools.core.base import BaseToolkit
 from tools.subagent.parallel_dispatch_tool import AgentRunFn, make_run_parallel_agents_tool
 
 

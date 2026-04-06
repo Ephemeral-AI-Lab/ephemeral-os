@@ -23,10 +23,10 @@ from typing import Any, AsyncIterator
 
 import pytest
 
-from engine.background_tasks import BackgroundTaskManager
-from engine.messages import ConversationMessage, TextBlock, ToolResultBlock, ToolUseBlock
-from engine.query import QueryContext, _run_query_loop
-from engine.stream_events import (
+from engine.runtime.background_tasks import BackgroundTaskManager
+from message import ConversationMessage, TextBlock, ToolResultBlock, ToolUseBlock
+from engine.core.query import QueryContext, _run_query_loop
+from message.stream_events import (
     AssistantTextDelta,
     AssistantTurnComplete,
     BackgroundTaskCompleted,
@@ -42,7 +42,7 @@ from models.types import (
     ApiToolUseDeltaEvent,
     UsageSnapshot,
 )
-from tools.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolRegistry, ToolResult
+from tools.core.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolRegistry, ToolResult
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
@@ -56,6 +56,7 @@ logging.basicConfig(level=logging.DEBUG, format="%(asctime)s [%(name)s] %(leveln
 
 class SlowToolInput(BaseModel):
     """Input for the fake slow tool."""
+
     command: str = Field(description="Command to simulate")
     delay: float = Field(default=0.1, description="Seconds to sleep")
 
@@ -82,6 +83,7 @@ class SlowTool(BaseTool):
 
 class FastToolInput(BaseModel):
     """Input for the fake fast tool."""
+
     action: str = Field(description="Action to perform")
 
 
@@ -172,7 +174,9 @@ def _make_context(
     )
 
 
-async def _collect_events(context: QueryContext, messages: list[ConversationMessage]) -> list[StreamEvent]:
+async def _collect_events(
+    context: QueryContext, messages: list[ConversationMessage]
+) -> list[StreamEvent]:
     """Run the query loop and collect all events."""
     events: list[StreamEvent] = []
     async for event, _usage in _run_query_loop(context, messages):
@@ -226,15 +230,20 @@ class TestLLMDecidesToBackground:
         slow_tool = SlowTool(output="tests passed: 48/48")
         registry = _make_registry(slow_tool)
 
-        client = ScriptedMockClient([
-            # Turn 1: LLM decides to background the slow command
-            _msg_tool("fake_bash", {"command": "pytest", "delay": 0.5, "background": True},
-                      text="Running tests in background..."),
-            # Turn 2: LLM has no more work (idle → wait for background)
-            _msg_text("Waiting for tests to complete."),
-            # Turn 3: After background completes, LLM reacts
-            _msg_text("All 48 tests passed!"),
-        ])
+        client = ScriptedMockClient(
+            [
+                # Turn 1: LLM decides to background the slow command
+                _msg_tool(
+                    "fake_bash",
+                    {"command": "pytest", "delay": 0.5, "background": True},
+                    text="Running tests in background...",
+                ),
+                # Turn 2: LLM has no more work (idle → wait for background)
+                _msg_text("Waiting for tests to complete."),
+                # Turn 3: After background completes, LLM reacts
+                _msg_text("All 48 tests passed!"),
+            ]
+        )
 
         context = _make_context(client, registry)
         messages = [ConversationMessage.from_user_text("Run the tests")]
@@ -248,7 +257,9 @@ class TestLLMDecidesToBackground:
 
         # Should have BackgroundTaskCompleted
         bg_completed = _events_of_type(events, BackgroundTaskCompleted)
-        assert len(bg_completed) == 1, f"Expected 1 BackgroundTaskCompleted, got {len(bg_completed)}"
+        assert len(bg_completed) == 1, (
+            f"Expected 1 BackgroundTaskCompleted, got {len(bg_completed)}"
+        )
         assert "tests passed" in bg_completed[0].output
         logger.info(f"[PASS] Background task completed with output: {bg_completed[0].output[:100]}")
 
@@ -257,12 +268,14 @@ class TestLLMDecidesToBackground:
         slow_tool = SlowTool(output="quick result")
         registry = _make_registry(slow_tool)
 
-        client = ScriptedMockClient([
-            # Turn 1: LLM runs the tool in foreground (no background flag)
-            _msg_tool("fake_bash", {"command": "echo hello", "delay": 0.01}),
-            # Turn 2: LLM done
-            _msg_text("Done."),
-        ])
+        client = ScriptedMockClient(
+            [
+                # Turn 1: LLM runs the tool in foreground (no background flag)
+                _msg_tool("fake_bash", {"command": "echo hello", "delay": 0.01}),
+                # Turn 2: LLM done
+                _msg_text("Done."),
+            ]
+        )
 
         context = _make_context(client, registry)
         messages = [ConversationMessage.from_user_text("Run a quick command")]
@@ -283,12 +296,14 @@ class TestLLMDecidesToBackground:
         fast_tool = FastTool()
         registry = _make_registry(fast_tool)
 
-        client = ScriptedMockClient([
-            # Turn 1: LLM tries to background a fast tool
-            _msg_tool("fake_edit", {"action": "fix config", "background": True}),
-            # Turn 2: LLM sees error, adapts
-            _msg_text("I see the tool doesn't support background. Let me run it normally."),
-        ])
+        client = ScriptedMockClient(
+            [
+                # Turn 1: LLM tries to background a fast tool
+                _msg_tool("fake_edit", {"action": "fix config", "background": True}),
+                # Turn 2: LLM sees error, adapts
+                _msg_text("I see the tool doesn't support background. Let me run it normally."),
+            ]
+        )
 
         context = _make_context(client, registry)
         messages = [ConversationMessage.from_user_text("Fix the config")]
@@ -300,8 +315,9 @@ class TestLLMDecidesToBackground:
 
         # Should have error in tool completion
         tool_completed = _events_of_type(events, ToolExecutionCompleted)
-        assert any("does not support background" in tc.output for tc in tool_completed), \
+        assert any("does not support background" in tc.output for tc in tool_completed), (
             f"Expected rejection message. Got: {[tc.output for tc in tool_completed]}"
+        )
         logger.info("[PASS] Background correctly rejected for unsupported tool")
 
 
@@ -321,18 +337,20 @@ class TestForegroundWhileBackgroundRuns:
         fast_tool = FastTool()
         registry = _make_registry(slow_tool, fast_tool)
 
-        client = ScriptedMockClient([
-            # Turn 1: LLM backgrounds the build AND does a foreground edit
-            _msg_tools(
-                ("fake_bash", {"command": "npm run build", "delay": 0.5, "background": True}),
-                ("fake_edit", {"action": "fix typo in readme"}),
-                text="Building in background while I fix the readme...",
-            ),
-            # Turn 2: LLM finishes foreground, goes idle (no tool calls)
-            _msg_text("README fixed. Waiting for build..."),
-            # Turn 3: Engine injected background result → LLM reacts
-            _msg_text("Build succeeded! All done."),
-        ])
+        client = ScriptedMockClient(
+            [
+                # Turn 1: LLM backgrounds the build AND does a foreground edit
+                _msg_tools(
+                    ("fake_bash", {"command": "npm run build", "delay": 0.5, "background": True}),
+                    ("fake_edit", {"action": "fix typo in readme"}),
+                    text="Building in background while I fix the readme...",
+                ),
+                # Turn 2: LLM finishes foreground, goes idle (no tool calls)
+                _msg_text("README fixed. Waiting for build..."),
+                # Turn 3: Engine injected background result → LLM reacts
+                _msg_text("Build succeeded! All done."),
+            ]
+        )
 
         context = _make_context(client, registry)
         messages = [ConversationMessage.from_user_text("Build the project and fix the readme")]
@@ -356,9 +374,9 @@ class TestForegroundWhileBackgroundRuns:
         # Verify LLM got 3 turns
         turns = _events_of_type(events, AssistantTurnComplete)
         assert len(turns) == 3, f"Expected 3 LLM turns, got {len(turns)}"
-        logger.info("[PASS] Foreground work completed while background ran, idle wait delivered result")
-
-
+        logger.info(
+            "[PASS] Foreground work completed while background ran, idle wait delivered result"
+        )
 
 
 # ===========================================================================
@@ -375,24 +393,29 @@ class TestFullBackgroundLifecycle:
         fast_tool = FastTool()
         registry = _make_registry(slow_tool, fast_tool)
 
-        client = ScriptedMockClient([
-            # Turn 1: Background build + foreground edit
-            _msg_tools(
-                ("fake_bash", {"command": "npm run build && npm test", "delay": 0.3, "background": True}),
-                ("fake_edit", {"action": "update version to 2.0"}),
-                text="Building and testing in background. Updating version...",
-            ),
-            # Turn 2: Another foreground task
-            _msg_tool("fake_edit", {"action": "update changelog"},
-                      text="Also updating the changelog."),
-            # Turn 3: Check progress
-            _msg_tool("check_background_progress", {},
-                      text="Checking build status..."),
-            # Turn 4: Go idle — engine will wait and inject result
-            _msg_text("Build should be done soon, waiting..."),
-            # Turn 5: React to completion
-            _msg_text("Build succeeded, all 48 tests passed. Version 2.0 is ready!"),
-        ])
+        client = ScriptedMockClient(
+            [
+                # Turn 1: Background build + foreground edit
+                _msg_tools(
+                    (
+                        "fake_bash",
+                        {"command": "npm run build && npm test", "delay": 0.3, "background": True},
+                    ),
+                    ("fake_edit", {"action": "update version to 2.0"}),
+                    text="Building and testing in background. Updating version...",
+                ),
+                # Turn 2: Another foreground task
+                _msg_tool(
+                    "fake_edit", {"action": "update changelog"}, text="Also updating the changelog."
+                ),
+                # Turn 3: Check progress
+                _msg_tool("check_background_progress", {}, text="Checking build status..."),
+                # Turn 4: Go idle — engine will wait and inject result
+                _msg_text("Build should be done soon, waiting..."),
+                # Turn 5: React to completion
+                _msg_text("Build succeeded, all 48 tests passed. Version 2.0 is ready!"),
+            ]
+        )
 
         context = _make_context(client, registry)
         messages = [ConversationMessage.from_user_text("Release version 2.0")]
@@ -402,12 +425,18 @@ class TestFullBackgroundLifecycle:
         bg_started = _events_of_type(events, BackgroundTaskStarted)
         assert len(bg_started) == 1, "One background task should start"
 
-        fg_completed = [tc for tc in _events_of_type(events, ToolExecutionCompleted)
-                        if tc.tool_name == "fake_edit"]
+        fg_completed = [
+            tc
+            for tc in _events_of_type(events, ToolExecutionCompleted)
+            if tc.tool_name == "fake_edit"
+        ]
         assert len(fg_completed) >= 2, "Two foreground edits should complete"
 
-        progress = [tc for tc in _events_of_type(events, ToolExecutionCompleted)
-                    if tc.tool_name == "check_background_progress"]
+        progress = [
+            tc
+            for tc in _events_of_type(events, ToolExecutionCompleted)
+            if tc.tool_name == "check_background_progress"
+        ]
         assert len(progress) >= 1, "At least one progress check"
 
         bg_completed = _events_of_type(events, BackgroundTaskCompleted)

@@ -4,12 +4,12 @@ from agents.db.model import AgentDefinitionRecord
 from db.models.agent_run import AgentResponseChunkRecord, AgentRunRecord
 from db.models.model_registration import ModelRegistrationRecord
 from db.models.session import SessionRecord
-from db.models.token_usage import TokenUsageRecord
 from pipeline.db.model import (
     PipelineCheckpointRecord,
     PipelineDefinitionRecord,
     PipelineRunRecord,
 )
+from token_tracker.models import TokenUsageRecord
 
 __all__ = [
     "AgentDefinitionRecord",

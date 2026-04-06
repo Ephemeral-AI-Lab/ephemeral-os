@@ -19,7 +19,7 @@ from models.types import (
     UsageSnapshot,
 )
 from models.errors import AuthenticationFailure, RateLimitFailure
-from engine.messages import ConversationMessage, TextBlock
+from message import ConversationMessage, TextBlock
 
 
 # ---------------------------------------------------------------------------
@@ -239,7 +239,9 @@ class TestToolUseMidStream:
         assert tool_events[1].input == {"path": "bar.txt", "content": "hi"}
 
         # Both tool events arrive before the complete event
-        complete_idx = next(i for i, e in enumerate(result) if isinstance(e, ApiMessageCompleteEvent))
+        complete_idx = next(
+            i for i, e in enumerate(result) if isinstance(e, ApiMessageCompleteEvent)
+        )
         tool_indices = [i for i, e in enumerate(result) if isinstance(e, ApiToolUseDeltaEvent)]
         assert all(ti < complete_idx for ti in tool_indices)
 

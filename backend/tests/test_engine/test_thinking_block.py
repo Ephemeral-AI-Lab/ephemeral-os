@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from engine.messages import (
+from message import (
     ConversationMessage,
     TextBlock,
     ThinkingBlock,
@@ -23,7 +23,7 @@ from models.types import (
     ApiThinkingDeltaEvent,
     UsageSnapshot,
 )
-from engine.stream_events import (
+from message.stream_events import (
     AssistantTextDelta,
     AssistantTurnComplete,
     ThinkingDelta,
@@ -242,10 +242,12 @@ class TestAssistantMessageFromApiThinking:
     """Test that assistant_message_from_api parses thinking blocks."""
 
     def test_thinking_block_with_thinking_attr(self):
-        raw = _FakeMessage(content=[
-            _FakeBlock(type="thinking", thinking="deep thought"),
-            _FakeBlock(type="text", text="the answer is 42"),
-        ])
+        raw = _FakeMessage(
+            content=[
+                _FakeBlock(type="thinking", thinking="deep thought"),
+                _FakeBlock(type="text", text="the answer is 42"),
+            ]
+        )
         msg = assistant_message_from_api(raw)
         assert len(msg.content) == 2
         assert isinstance(msg.content[0], ThinkingBlock)
@@ -253,17 +255,21 @@ class TestAssistantMessageFromApiThinking:
         assert isinstance(msg.content[1], TextBlock)
 
     def test_thinking_block_with_text_attr_fallback(self):
-        raw = _FakeMessage(content=[
-            _FakeBlock(type="thinking", text="reasoning via text attr"),
-        ])
+        raw = _FakeMessage(
+            content=[
+                _FakeBlock(type="thinking", text="reasoning via text attr"),
+            ]
+        )
         msg = assistant_message_from_api(raw)
         assert isinstance(msg.content[0], ThinkingBlock)
         assert msg.content[0].text == "reasoning via text attr"
 
     def test_no_thinking(self):
-        raw = _FakeMessage(content=[
-            _FakeBlock(type="text", text="plain response"),
-        ])
+        raw = _FakeMessage(
+            content=[
+                _FakeBlock(type="text", text="plain response"),
+            ]
+        )
         msg = assistant_message_from_api(raw)
         assert len(msg.content) == 1
         assert isinstance(msg.content[0], TextBlock)

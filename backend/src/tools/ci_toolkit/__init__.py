@@ -4,7 +4,7 @@ Lightweight toolkit for agents that need code grounding without write
 access. All tools degrade gracefully if no CI service is configured.
 """
 
-from tools.base import BaseToolkit
+from tools.core.base import BaseToolkit
 from tools.ci_toolkit.query_tools import (
     ci_status,
     ci_edit_hotspots,

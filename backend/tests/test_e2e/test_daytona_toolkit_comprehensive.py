@@ -29,7 +29,7 @@ from dotenv import load_dotenv
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 load_dotenv(_PROJECT_ROOT / ".env")
 
-from tools.base import ToolExecutionContext
+from tools.core.base import ToolExecutionContext
 
 pytestmark = [pytest.mark.e2e]
 
@@ -601,7 +601,7 @@ class TestDaytonaToolkitIntegration:
 
     def test_toolkit_registry_integration(self):
         """Toolkit should integrate with ToolRegistry correctly."""
-        from tools.base import ToolRegistry
+        from tools.core.base import ToolRegistry
         from tools.daytona_toolkit import DaytonaToolkit
 
         registry = ToolRegistry()
@@ -615,7 +615,7 @@ class TestDaytonaToolkitIntegration:
 
     def test_toolkit_restrict_preserves_sandbox_tools(self):
         """restrict_to_toolkits should keep sandbox_operations."""
-        from tools.base import ToolRegistry
+        from tools.core.base import ToolRegistry
         from tools.daytona_toolkit import DaytonaToolkit
 
         registry = ToolRegistry()

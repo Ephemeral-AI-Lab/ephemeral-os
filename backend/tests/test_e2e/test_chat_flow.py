@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import pytest
 
-from engine.messages import ConversationMessage, TextBlock, ThinkingBlock, ToolUseBlock
+from message import ConversationMessage, TextBlock, ThinkingBlock, ToolUseBlock
 from tests.test_e2e.conftest import parse_sse_events, events_of_type
 
 
@@ -36,7 +36,8 @@ class TestSimpleChatFlow:
         events = parse_sse_events(resp.text)
 
         user_items = [
-            e for e in events_of_type(events, "transcript_item")
+            e
+            for e in events_of_type(events, "transcript_item")
             if e.get("item", {}).get("role") == "user"
         ]
         assert len(user_items) == 1

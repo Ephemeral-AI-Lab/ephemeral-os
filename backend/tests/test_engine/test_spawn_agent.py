@@ -58,8 +58,8 @@ def _stub_missing_modules():
 # ---------------------------------------------------------------------------
 
 from agents.types import AgentDefinition
-from tools.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolResult, ToolRegistry
-from tools.factory import ToolkitContext, register_toolkit_factory, _factories
+from tools.core.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolResult, ToolRegistry
+from tools.core.factory import ToolkitContext, register_toolkit_factory, _factories
 
 
 # ---------------------------------------------------------------------------
@@ -182,7 +182,7 @@ class TestToolkitFactoryInstantiation:
     ) -> ToolRegistry:
         """Replicate the toolkit instantiation logic from spawn_agent."""
         from tools import create_default_tool_registry
-        from tools.factory import create_toolkit, has_factory
+        from tools.core.factory import create_toolkit, has_factory
 
         tool_registry = create_default_tool_registry()
         agent_name = agent_def.name if agent_def else "default"
@@ -272,7 +272,7 @@ class TestToolkitFactoryInstantiation:
         register_toolkit_factory("counted_toolkit", _counting_factory)
 
         from tools import create_default_tool_registry
-        from tools.factory import create_toolkit as _ct, has_factory as _hf
+        from tools.core.factory import create_toolkit as _ct, has_factory as _hf
 
         registry = create_default_tool_registry()
         # Pre-register so the factory shouldn't be called
@@ -327,7 +327,7 @@ class TestFactoryContext:
         agent_def = _make_agent_def(name="my-agent", toolkits=["capturing_toolkit"])
 
         from tools import create_default_tool_registry
-        from tools.factory import create_toolkit, has_factory
+        from tools.core.factory import create_toolkit, has_factory
 
         registry = create_default_tool_registry()
         ctx = ToolkitContext(
@@ -368,8 +368,8 @@ class TestSystemPromptAwareness:
 
         # Skills awareness
         if agent_def and agent_def.skills:
-            from skills.registry import SkillRegistry
-            from skills.types import SkillDefinition
+            from skills.core.registry import SkillRegistry
+            from skills.core.types import SkillDefinition
 
             registry = SkillRegistry()
             registry.register(
@@ -514,7 +514,7 @@ class TestApiSchemaOutput:
     @pytest.mark.usefixtures("_register_dummy_factory")
     def test_factory_toolkit_tools_appear_in_schema(self):
         from tools import create_default_tool_registry
-        from tools.factory import create_toolkit
+        from tools.core.factory import create_toolkit
 
         registry = create_default_tool_registry()
         tk = create_toolkit("dummy_toolkit", ToolkitContext())
@@ -530,7 +530,7 @@ class TestApiSchemaOutput:
 
     @pytest.mark.usefixtures("_register_dummy_factory")
     def test_schema_has_correct_shape(self):
-        from tools.factory import create_toolkit
+        from tools.core.factory import create_toolkit
 
         tk = create_toolkit("dummy_toolkit", ToolkitContext())
         tool = tk.list_tools()[0]

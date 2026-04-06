@@ -7,7 +7,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from tools.base import BaseTool, ToolExecutionContext, ToolResult
+from tools.core.base import BaseTool, ToolExecutionContext, ToolResult
 
 
 class CheckBackgroundProgressInput(BaseModel):

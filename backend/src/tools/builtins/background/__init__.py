@@ -6,7 +6,7 @@ plus a factory to assemble them into a toolkit with instructions.
 
 from __future__ import annotations
 
-from tools.base import BaseToolkit
+from tools.core.base import BaseToolkit
 from tools.builtins.background.check_background_progress import CheckBackgroundProgressTool
 from tools.builtins.background.cancel_background_task import CancelBackgroundTaskTool
 

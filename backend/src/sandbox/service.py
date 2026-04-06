@@ -13,6 +13,9 @@ import os
 import threading
 from typing import Any
 
+from sandbox.credentials import load_credentials
+from sandbox.exc import DaytonaUnavailableError
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -53,12 +56,58 @@ echo "[sandbox] git installed"
 """
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Client lifecycle
 # ---------------------------------------------------------------------------
 
 _client_lock = threading.Lock()
 _cached_client: Any | None = None
 _cached_client_key: tuple[str, str, str] | None = None
+
+
+def acquire_client() -> Any:
+    """Return a cached Daytona client, creating one if config changed."""
+    global _cached_client, _cached_client_key
+
+    api_key, api_url, target = load_credentials()
+    if not api_key or not api_url:
+        raise DaytonaUnavailableError(
+            "Daytona is not configured. Set DAYTONA_API_KEY and DAYTONA_API_URL."
+        )
+    current_key = (api_key, api_url, target)
+
+    with _client_lock:
+        if _cached_client is not None and _cached_client_key == current_key:
+            return _cached_client
+
+        try:
+            from daytona_sdk import Daytona, DaytonaConfig
+        except ImportError as exc:
+            raise DaytonaUnavailableError(
+                "Daytona SDK not installed. Run: pip install daytona-sdk"
+            ) from exc
+
+        cfg_kwargs: dict[str, str] = {"api_key": api_key, "api_url": api_url}
+        if target:
+            cfg_kwargs["target"] = target
+        cfg = DaytonaConfig(**cfg_kwargs)
+        _cached_client = Daytona(cfg)
+        _cached_client_key = current_key
+        logger.info("Daytona client created (api_url=%s)", api_url)
+        return _cached_client
+
+
+def fetch_sandbox(sandbox_id: str) -> Any:
+    """Fetch a pre-created sandbox by ID."""
+    client = acquire_client()
+    sandbox = client.get(sandbox_id)
+    if sandbox is None:
+        raise ValueError(f"Sandbox '{sandbox_id}' not found")
+    return sandbox
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 
 def _normalize_optional_text(value: str | None) -> str | None:
@@ -72,27 +121,6 @@ def _normalize_dict(payload: dict[str, str] | None) -> dict[str, str]:
     if not payload:
         return {}
     return {str(k).strip(): str(v).strip() for k, v in payload.items() if str(k).strip()}
-
-
-def _require_settings() -> tuple[str, str, str]:
-    """Return (api_key, api_url, target) from settings or env."""
-    try:
-        from config import load_settings
-        settings = load_settings()
-        api_key = (settings.daytona_api_key or "").strip()
-        api_url = (settings.daytona_api_url or "").strip()
-        target = (settings.daytona_target or "").strip()
-    except Exception:
-        api_key = api_url = target = ""
-
-    if not api_key:
-        api_key = os.environ.get("DAYTONA_API_KEY", "").strip()
-    if not api_url:
-        api_url = os.environ.get("DAYTONA_API_URL", "").strip()
-    if not target:
-        target = os.environ.get("DAYTONA_TARGET", "").strip()
-
-    return api_key, api_url, target
 
 
 def _daytona_classes():
@@ -113,37 +141,11 @@ def _daytona_classes():
                 DaytonaConfig,
             )
         except ImportError as exc:
-            raise RuntimeError(
+            raise DaytonaUnavailableError(
                 "Daytona SDK not installed. Run: pip install daytona-sdk"
             ) from exc
 
     return Daytona, DaytonaConfig, CreateSandboxFromSnapshotParams, CreateSandboxFromImageParams
-
-
-def _get_daytona_client() -> Any:
-    """Return a cached Daytona client, creating one if config changed."""
-    global _cached_client, _cached_client_key
-
-    api_key, api_url, target = _require_settings()
-    if not api_key or not api_url:
-        raise RuntimeError(
-            "Daytona is not configured. Set DAYTONA_API_KEY and DAYTONA_API_URL."
-        )
-    current_key = (api_key, api_url, target)
-
-    with _client_lock:
-        if _cached_client is not None and _cached_client_key == current_key:
-            return _cached_client
-
-        Daytona, DaytonaConfig, *_ = _daytona_classes()
-        cfg_kwargs: dict[str, str] = {"api_key": api_key, "api_url": api_url}
-        if target:
-            cfg_kwargs["target"] = target
-        cfg = DaytonaConfig(**cfg_kwargs)
-        _cached_client = Daytona(cfg)
-        _cached_client_key = current_key
-        logger.info("Daytona client created (api_url=%s)", api_url)
-        return _cached_client
 
 
 def _paginate_all(list_fn: Any, limit: int) -> list[Any]:
@@ -156,6 +158,11 @@ def _paginate_all(list_fn: Any, limit: int) -> list[Any]:
         response = list_fn(page=page, limit=limit)
         items.extend(list(getattr(response, "items", []) or []))
     return items
+
+
+# ---------------------------------------------------------------------------
+# SandboxProxy
+# ---------------------------------------------------------------------------
 
 
 class SandboxProxy:
@@ -244,7 +251,7 @@ class SandboxProxy:
 
 
 # ---------------------------------------------------------------------------
-# SandboxService — synchronous methods returning dicts (matching synthetic-os)
+# SandboxService
 # ---------------------------------------------------------------------------
 
 
@@ -260,7 +267,7 @@ class SandboxService:
 
     def get_health(self) -> dict[str, Any]:
         """Check Daytona availability and configuration."""
-        api_key, api_url, target = _require_settings()
+        api_key, api_url, target = load_credentials()
         if not api_key or not api_url:
             return {
                 "configured": False,
@@ -271,7 +278,7 @@ class SandboxService:
                 "default_image": None,
             }
         try:
-            client = _get_daytona_client()
+            client = acquire_client()
             client.list(limit=1)
             return {
                 "configured": True,
@@ -295,20 +302,16 @@ class SandboxService:
 
     def list_sandboxes(self) -> list[dict[str, Any]]:
         """List all sandboxes (both managed and external)."""
-        client = _get_daytona_client()
+        client = acquire_client()
         sandboxes = [
-            SandboxProxy(sb).serialize()
-            for sb in _paginate_all(client.list, _LIST_PAGE_LIMIT)
+            SandboxProxy(sb).serialize() for sb in _paginate_all(client.list, _LIST_PAGE_LIMIT)
         ]
         sandboxes.sort(key=lambda item: item.get("created_at") or "", reverse=True)
         return sandboxes
 
     def _get_proxy(self, sandbox_id: str) -> SandboxProxy:
         """Fetch a sandbox by ID and return a typed proxy."""
-        client = _get_daytona_client()
-        raw = client.get(sandbox_id)
-        if raw is None:
-            raise ValueError(f"Sandbox '{sandbox_id}' not found")
+        raw = fetch_sandbox(sandbox_id)
         return SandboxProxy(raw)
 
     def get_sandbox(self, sandbox_id: str) -> dict[str, Any]:
@@ -349,7 +352,7 @@ class SandboxService:
         if normalized_image:
             clean_labels[_IMAGE_LABEL] = normalized_image
 
-        client = _get_daytona_client()
+        client = acquire_client()
         _, _, CreateSandboxFromSnapshotParams, CreateSandboxFromImageParams = _daytona_classes()
 
         if normalized_image:
@@ -410,8 +413,7 @@ class SandboxService:
 
     def list_snapshots(self) -> list[dict[str, Any]]:
         """List available Daytona snapshots."""
-        client = _get_daytona_client()
-        # Try client.snapshot.list (newer SDK) then client.list_snapshots (older)
+        client = acquire_client()
         snapshot_api = getattr(client, "snapshot", None)
         if snapshot_api and hasattr(snapshot_api, "list"):
             items = _paginate_all(snapshot_api.list, _SNAPSHOT_PAGE_LIMIT)
@@ -442,7 +444,6 @@ class SandboxService:
                 "port": result.port,
             }
         except AttributeError:
-            # Fallback for older SDK
             url = sb.get_preview_url(port)
             return {"url": url, "token": "", "port": port}
 

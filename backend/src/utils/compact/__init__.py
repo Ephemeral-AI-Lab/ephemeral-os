@@ -14,9 +14,9 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from models.types import SupportsStreamingMessages
+    from models.core.types import SupportsStreamingMessages
 
-from engine.messages import (
+from message import (
     ConversationMessage,
     ContentBlock,
     TextBlock,
@@ -340,7 +340,7 @@ async def compact_conversation(
     Returns:
         The new compacted message list.
     """
-    from models.types import ApiMessageRequest, ApiMessageCompleteEvent
+    from models.core.types import ApiMessageRequest, ApiMessageCompleteEvent
 
     if len(messages) <= preserve_recent:
         return list(messages)

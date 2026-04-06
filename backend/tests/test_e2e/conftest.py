@@ -64,7 +64,7 @@ from sqlalchemy.orm import sessionmaker
 
 from db.base import Base
 from engine.eval_agent import EvalAgent
-from engine.messages import ConversationMessage, TextBlock, ThinkingBlock, ToolUseBlock
+from message import ConversationMessage, TextBlock, ThinkingBlock, ToolUseBlock
 from models.types import (
     ApiMessageCompleteEvent,
     ApiTextDeltaEvent,
@@ -654,11 +654,10 @@ def populate_sandbox_files(sandbox_id: str) -> None:
             raw_sandbox.fs.upload_file(content.encode("utf-8"), file_path)
         except Exception:
             import shlex
+
             try:
                 escaped = shlex.quote(content)
-                raw_sandbox.process.exec(
-                    f"printf %s {escaped} > {file_path}", timeout=10
-                )
+                raw_sandbox.process.exec(f"printf %s {escaped} > {file_path}", timeout=10)
             except Exception as exc:
                 print(f"Warning: Failed to write {file_path}: {exc}")
 

@@ -7,9 +7,9 @@ import time
 
 import pytest
 
-from engine.background_tasks import BackgroundTaskManager, TrackedBackgroundTask
-from engine.stream_events import BackgroundTaskStarted
-from tools.base import ToolResult
+from engine.runtime.background_tasks import BackgroundTaskManager, TrackedBackgroundTask
+from message.stream_events import BackgroundTaskStarted
+from tools.core.base import ToolResult
 
 
 async def _make_tool_coro(

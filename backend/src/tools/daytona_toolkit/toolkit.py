@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from tools.base import BaseToolkit
+from tools.core.base import BaseToolkit
 
 from tools.daytona_toolkit.tools import (
     daytona_bash,
@@ -104,7 +104,7 @@ class DaytonaToolkit(BaseToolkit):
                 "No sandbox_id configured. Pass sandbox_id to DaytonaToolkit() "
                 "or set it via toolkit.sandbox_id = '...'."
             )
-        from tools.daytona_toolkit.client import get_sandbox
+        from sandbox import fetch_sandbox as get_sandbox
 
         self._sandbox = get_sandbox(self.sandbox_id)
         logger.info("Daytona sandbox fetched: %s", self.sandbox_id)
@@ -129,7 +129,7 @@ class DaytonaToolkit(BaseToolkit):
                 "No sandbox_id configured. Pass sandbox_id to DaytonaToolkit() "
                 "or set it via toolkit.sandbox_id = '...'."
             )
-        from tools.daytona_toolkit.async_client import get_async_sandbox
+        from sandbox.async_client import get_async_sandbox
 
         self._sandbox = await get_async_sandbox(self.sandbox_id)
         self._sandbox_loop_id = loop_id
@@ -138,46 +138,20 @@ class DaytonaToolkit(BaseToolkit):
 
     @staticmethod
     def _resolve_cwd_sync(sandbox: Any) -> str | None:
-        """Resolve cwd from a sync sandbox (project_dir or pwd)."""
-        project_dir = getattr(sandbox, "project_dir", None)
-        if project_dir:
-            return project_dir
-        try:
-            resp = sandbox.process.exec("pwd")
-            if resp.exit_code == 0 and resp.result:
-                return resp.result.strip()
-        except Exception:
-            pass
-        return None
+        from sandbox.workspace import discover_workspace
+
+        return discover_workspace(sandbox)
 
     @staticmethod
     async def _resolve_cwd_async(sandbox: Any) -> str | None:
-        """Resolve cwd from an async sandbox (project_dir or pwd)."""
-        project_dir = getattr(sandbox, "project_dir", None)
-        if project_dir:
-            return project_dir
-        try:
-            resp = await sandbox.process.exec("pwd")
-            if resp.exit_code == 0 and resp.result:
-                return resp.result.strip()
-        except Exception:
-            pass
-        return None
+        from sandbox.workspace import discover_workspace_async
+
+        return await discover_workspace_async(sandbox)
 
     def _inject_ci(self, context: Any, sandbox: Any, workspace_root: str) -> None:
-        """Inject code intelligence service if available."""
-        if self.sandbox_id and "ci_service" not in context.metadata:
-            try:
-                from code_intelligence.routing.service import get_code_intelligence
+        from sandbox.workspace import inject_code_intelligence
 
-                svc = get_code_intelligence(
-                    sandbox_id=self.sandbox_id,
-                    workspace_root=workspace_root,
-                    sandbox=sandbox,
-                )
-                context.metadata["ci_service"] = svc
-            except Exception:
-                logger.debug("CI service not available for sandbox %s", self.sandbox_id)
+        inject_code_intelligence(context, self.sandbox_id, sandbox, workspace_root)
 
     def prepare_context(self, context: Any) -> None:
         """Inject sandbox, cwd, and optional CI service into a ToolExecutionContext.

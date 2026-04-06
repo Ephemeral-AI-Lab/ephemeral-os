@@ -1,6 +1,6 @@
 """Coordination planner toolkit — agent discovery and phase context queries."""
 
-from tools.base import BaseToolkit
+from tools.core.base import BaseToolkit
 from tools.coordination_planner.list_agents_tool import make_list_agents_tool
 from tools.coordination_planner.phase_context_tool import (
     make_list_phases_tool,

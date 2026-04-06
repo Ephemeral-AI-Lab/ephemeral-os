@@ -11,7 +11,7 @@ import pytest
 
 from engine.eval_agent import EvalAgent
 from tests.test_e2e.conftest import create_eval_agent
-from engine.messages import ConversationMessage
+from message import ConversationMessage
 from models.clients.anthropic_native import AnthropicClient
 from models.types import (
     ApiMessageRequest,
@@ -128,7 +128,9 @@ async def test_tool_use_mid_stream_ordering(client, model):
     )
 
     tool_event = tool_events[0]
-    assert tool_event.name == "get_weather", f"Expected tool name 'get_weather', got '{tool_event.name}'"
+    assert tool_event.name == "get_weather", (
+        f"Expected tool name 'get_weather', got '{tool_event.name}'"
+    )
     assert "city" in tool_event.input, f"Expected 'city' in tool input, got {tool_event.input}"
 
 

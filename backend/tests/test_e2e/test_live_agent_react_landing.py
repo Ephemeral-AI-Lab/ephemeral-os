@@ -44,6 +44,7 @@ HAS_DAYTONA = bool(DAYTONA_KEY and DAYTONA_URL)
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _get_assistant_text(events: list[dict]) -> str:
     completes = events_of_type(events, "assistant_complete")
     return completes[0].get("message", "") if completes else ""
@@ -86,20 +87,32 @@ class TestDeepDaytonaToolUse:
 
     def test_tool_started_has_correct_tool_name(self, client, sandbox):
         """tool_started must contain tool_name matching a known daytona tool."""
-        create_test_agent(client, "deep-tool-name", toolkits=["sandbox_operations"], system_prompt=AGENT_PROMPT)
+        create_test_agent(
+            client, "deep-tool-name", toolkits=["sandbox_operations"], system_prompt=AGENT_PROMPT
+        )
         events = send_chat(
             client,
             "Use daytona_bash to run 'echo DEEP_TOOL_NAME_CHECK' in the sandbox.",
-            agent_name="deep-tool-name", sandbox_id=sandbox["id"], timeout=120,
+            agent_name="deep-tool-name",
+            sandbox_id=sandbox["id"],
+            timeout=120,
         )
         tool_started = events_of_type(events, "tool_started")
         assert len(tool_started) >= 1, f"No tool_started events. Types: {_get_event_types(events)}"
 
         known_daytona_tools = {
-            "daytona_bash", "daytona_read_file", "daytona_write_file",
-            "daytona_list_files", "daytona_grep", "daytona_glob",
-            "daytona_edit_file", "daytona_lsp_hover", "daytona_lsp_definition",
-            "daytona_lsp_references", "daytona_lsp_diagnostics", "daytona_codeact",
+            "daytona_bash",
+            "daytona_read_file",
+            "daytona_write_file",
+            "daytona_list_files",
+            "daytona_grep",
+            "daytona_glob",
+            "daytona_edit_file",
+            "daytona_lsp_hover",
+            "daytona_lsp_definition",
+            "daytona_lsp_references",
+            "daytona_lsp_diagnostics",
+            "daytona_codeact",
         }
         for ev in tool_started:
             name = ev.get("tool_name", "")
@@ -109,11 +122,15 @@ class TestDeepDaytonaToolUse:
 
     def test_tool_started_has_tool_input(self, client, sandbox):
         """tool_started must contain tool_input dict with expected keys."""
-        create_test_agent(client, "deep-tool-input", toolkits=["sandbox_operations"], system_prompt=AGENT_PROMPT)
+        create_test_agent(
+            client, "deep-tool-input", toolkits=["sandbox_operations"], system_prompt=AGENT_PROMPT
+        )
         events = send_chat(
             client,
             "Use daytona_bash to run 'echo INPUT_CHECK' in the sandbox.",
-            agent_name="deep-tool-input", sandbox_id=sandbox["id"], timeout=120,
+            agent_name="deep-tool-input",
+            sandbox_id=sandbox["id"],
+            timeout=120,
         )
         tool_started = events_of_type(events, "tool_started")
         assert len(tool_started) >= 1
@@ -121,30 +138,46 @@ class TestDeepDaytonaToolUse:
         for ev in tool_started:
             tool_input = ev.get("tool_input")
             assert tool_input is not None, f"tool_started missing tool_input: {ev}"
-            assert isinstance(tool_input, dict), f"tool_input should be dict, got: {type(tool_input)}"
+            assert isinstance(tool_input, dict), (
+                f"tool_input should be dict, got: {type(tool_input)}"
+            )
 
             name = ev.get("tool_name", "")
             if name == "daytona_bash":
-                assert "command" in tool_input, f"daytona_bash tool_input missing 'command': {tool_input}"
+                assert "command" in tool_input, (
+                    f"daytona_bash tool_input missing 'command': {tool_input}"
+                )
             elif name == "daytona_write_file":
-                assert "file_path" in tool_input, f"daytona_write_file missing 'file_path': {tool_input}"
-                assert "content" in tool_input, f"daytona_write_file missing 'content': {tool_input}"
+                assert "file_path" in tool_input, (
+                    f"daytona_write_file missing 'file_path': {tool_input}"
+                )
+                assert "content" in tool_input, (
+                    f"daytona_write_file missing 'content': {tool_input}"
+                )
             elif name == "daytona_read_file":
-                assert "file_path" in tool_input, f"daytona_read_file missing 'file_path': {tool_input}"
+                assert "file_path" in tool_input, (
+                    f"daytona_read_file missing 'file_path': {tool_input}"
+                )
 
     def test_tool_completed_has_output(self, client, sandbox):
         """tool_completed must contain non-empty output field when tools succeed."""
-        create_test_agent(client, "deep-tool-output", toolkits=["sandbox_operations"], system_prompt=AGENT_PROMPT)
+        create_test_agent(
+            client, "deep-tool-output", toolkits=["sandbox_operations"], system_prompt=AGENT_PROMPT
+        )
         events = send_chat(
             client,
             "Use daytona_bash to run 'echo COMPLETED_OUTPUT_CHECK' in the sandbox.",
-            agent_name="deep-tool-output", sandbox_id=sandbox["id"], timeout=120,
+            agent_name="deep-tool-output",
+            sandbox_id=sandbox["id"],
+            timeout=120,
         )
         types = _get_event_types(events)
         tool_completed = events_of_type(events, "tool_completed")
 
         if not tool_completed:
-            pytest.skip("No tool_completed events (sandbox may have errored) — cannot verify output")
+            pytest.skip(
+                "No tool_completed events (sandbox may have errored) — cannot verify output"
+            )
 
         for ev in tool_completed:
             output = ev.get("output", "")
@@ -152,24 +185,28 @@ class TestDeepDaytonaToolUse:
 
     def test_tool_completed_is_error_false_on_success(self, client, sandbox):
         """Successful tool calls should have is_error=false in tool_completed."""
-        create_test_agent(client, "deep-tool-success", toolkits=["sandbox_operations"], system_prompt=AGENT_PROMPT)
+        create_test_agent(
+            client, "deep-tool-success", toolkits=["sandbox_operations"], system_prompt=AGENT_PROMPT
+        )
         events = send_chat(
             client,
             "Use daytona_bash to run 'echo SUCCESS_CHECK' in the sandbox.",
-            agent_name="deep-tool-success", sandbox_id=sandbox["id"], timeout=120,
+            agent_name="deep-tool-success",
+            sandbox_id=sandbox["id"],
+            timeout=120,
         )
         tool_completed = events_of_type(events, "tool_completed")
         if not tool_completed:
             pytest.skip("No tool_completed events — cannot verify is_error field")
 
         success_tools = [e for e in tool_completed if not e.get("is_error", True)]
-        assert len(success_tools) >= 1, (
-            f"No successful tool completions. All: {tool_completed}"
-        )
+        assert len(success_tools) >= 1, f"No successful tool completions. All: {tool_completed}"
 
     def test_tool_roundtrip_write_then_read(self, client, sandbox):
         """Agent writes file via tool, then reads it back — output contains original content."""
-        create_test_agent(client, "deep-roundtrip", toolkits=["sandbox_operations"], system_prompt=AGENT_PROMPT)
+        create_test_agent(
+            client, "deep-roundtrip", toolkits=["sandbox_operations"], system_prompt=AGENT_PROMPT
+        )
         events = send_chat(
             client,
             (
@@ -178,7 +215,9 @@ class TestDeepDaytonaToolUse:
                 "2. Use daytona_bash to run 'cat /workspace/roundtrip.txt'\n"
                 "Do both steps."
             ),
-            agent_name="deep-roundtrip", sandbox_id=sandbox["id"], timeout=180,
+            agent_name="deep-roundtrip",
+            sandbox_id=sandbox["id"],
+            timeout=180,
         )
         tool_started = events_of_type(events, "tool_started")
         tool_completed = events_of_type(events, "tool_completed")
@@ -191,8 +230,7 @@ class TestDeepDaytonaToolUse:
         text = _get_assistant_text(events)
         has_marker = "ROUNDTRIP_MARKER_XYZ" in all_outputs or "ROUNDTRIP_MARKER_XYZ" in text
         has_write_tool = any(
-            e.get("tool_name") in ("daytona_write_file", "daytona_bash")
-            for e in tool_started
+            e.get("tool_name") in ("daytona_write_file", "daytona_bash") for e in tool_started
         )
         assert has_marker or has_write_tool, (
             f"Roundtrip: should find marker in output or at least attempt write tool. "
@@ -221,19 +259,31 @@ class TestSkillAndToolkitAvailability:
     def test_sandbox_operations_has_all_12_tools(self):
         """DaytonaToolkit must register exactly 12 tools."""
         from tools.daytona_toolkit import DaytonaToolkit
+
         toolkit = DaytonaToolkit(sandbox_id="schema-test")
         names = sorted(toolkit.tool_names())
-        expected = sorted([
-            "daytona_bash", "daytona_read_file", "daytona_write_file",
-            "daytona_list_files", "daytona_grep", "daytona_glob",
-            "daytona_edit_file", "daytona_lsp_hover", "daytona_lsp_definition",
-            "daytona_lsp_references", "daytona_lsp_diagnostics", "daytona_codeact",
-        ])
+        expected = sorted(
+            [
+                "daytona_bash",
+                "daytona_read_file",
+                "daytona_write_file",
+                "daytona_list_files",
+                "daytona_grep",
+                "daytona_glob",
+                "daytona_edit_file",
+                "daytona_lsp_hover",
+                "daytona_lsp_definition",
+                "daytona_lsp_references",
+                "daytona_lsp_diagnostics",
+                "daytona_codeact",
+            ]
+        )
         assert names == expected, f"Tool mismatch.\nGot:      {names}\nExpected: {expected}"
 
     def test_each_tool_has_valid_api_schema(self):
         """Every tool must produce a valid API schema with name, description, input_schema."""
         from tools.daytona_toolkit import DaytonaToolkit
+
         toolkit = DaytonaToolkit(sandbox_id="schema-test")
         for tool in toolkit.list_tools():
             schema = tool.to_api_schema()
@@ -245,12 +295,14 @@ class TestSkillAndToolkitAvailability:
 
     def test_skill_registry_loads_bundled_skills(self):
         """Skill registry must load without error. Bundled skills are verified separately."""
-        from skills.loader import load_skill_registry
+        from skills.core.loader import load_skill_registry
         from skills.bundled import get_bundled_skills
 
         # Verify bundled skills exist as a source
         bundled = get_bundled_skills()
-        assert isinstance(bundled, list), f"get_bundled_skills should return list, got {type(bundled)}"
+        assert isinstance(bundled, list), (
+            f"get_bundled_skills should return list, got {type(bundled)}"
+        )
 
         # Verify registry loads them
         registry = load_skill_registry()
@@ -307,7 +359,9 @@ class TestThinkingBlockDeep:
     def test_thinking_precedes_text_in_stream(self, client):
         """thinking_delta must appear before assistant_delta in the event stream."""
         events = send_chat(
-            client, "Reason carefully: is 97 a prime number?", timeout=60,
+            client,
+            "Reason carefully: is 97 a prime number?",
+            timeout=60,
         )
         thinking = events_of_type(events, "thinking_delta")
         text_deltas = events_of_type(events, "assistant_delta")
@@ -322,7 +376,8 @@ class TestThinkingBlockDeep:
 
     def test_thinking_block_excluded_from_api_param(self):
         """ThinkingBlock must be excluded from to_api_param() output."""
-        from engine.messages import ConversationMessage, TextBlock, ThinkingBlock
+        from message import ConversationMessage, TextBlock, ThinkingBlock
+
         msg = ConversationMessage(
             role="assistant",
             content=[
@@ -345,7 +400,8 @@ class TestThinkingBlockDeep:
 
     def test_thinking_and_text_properties(self):
         """ConversationMessage.thinking and .text should separate content correctly."""
-        from engine.messages import ConversationMessage, TextBlock, ThinkingBlock
+        from message import ConversationMessage, TextBlock, ThinkingBlock
+
         msg = ConversationMessage(
             role="assistant",
             content=[
@@ -367,19 +423,31 @@ class TestCodeIntelligenceDeep:
 
     def setup_method(self):
         from code_intelligence.routing.service import dispose_all_code_intelligence
+
         dispose_all_code_intelligence()
 
     def teardown_method(self):
         from code_intelligence.routing.service import dispose_all_code_intelligence
+
         dispose_all_code_intelligence()
 
     def test_ci_status_has_all_subsystems(self):
         """CI service status() must have lsp, tree_cache, symbol_index, arbiter, ledger."""
         from code_intelligence.routing.service import CodeIntelligenceService
+
         svc = CodeIntelligenceService(sandbox_id="ci-deep-001", workspace_root="/workspace")
         status = svc.status()
 
-        required_keys = {"sandbox_id", "initialized", "workspace_root", "lsp", "tree_cache", "symbol_index", "arbiter", "ledger"}
+        required_keys = {
+            "sandbox_id",
+            "initialized",
+            "workspace_root",
+            "lsp",
+            "tree_cache",
+            "symbol_index",
+            "arbiter",
+            "ledger",
+        }
         missing = required_keys - set(status.keys())
         assert not missing, f"CI status missing keys: {missing}. Got: {set(status.keys())}"
 
@@ -393,26 +461,36 @@ class TestCodeIntelligenceDeep:
         """CITelemetry must have all expected counters with correct types."""
         from code_intelligence.routing.service import CodeIntelligenceService
         from code_intelligence.types import CITelemetry
+
         svc = CodeIntelligenceService(sandbox_id="ci-tel-deep", workspace_root="/ws")
         tel = svc.get_telemetry()
         assert isinstance(tel, CITelemetry)
 
         # Verify all fields are integers or bools
         int_fields = [
-            "tree_cache_size", "tree_cache_hits", "tree_cache_misses",
-            "symbol_index_size", "symbol_index_generation", "indexed_files",
-            "lsp_query_count", "lsp_cache_hits",
-            "arbiter_active_edits", "ledger_entry_count",
+            "tree_cache_size",
+            "tree_cache_hits",
+            "tree_cache_misses",
+            "symbol_index_size",
+            "symbol_index_generation",
+            "indexed_files",
+            "lsp_query_count",
+            "lsp_cache_hits",
+            "arbiter_active_edits",
+            "ledger_entry_count",
         ]
         for field in int_fields:
             val = getattr(tel, field)
-            assert isinstance(val, int), f"CITelemetry.{field} should be int, got {type(val)}: {val}"
+            assert isinstance(val, int), (
+                f"CITelemetry.{field} should be int, got {type(val)}: {val}"
+            )
 
         assert isinstance(tel.lsp_connected, bool)
 
     def test_lsp_detects_python_and_typescript(self):
         """LspClient must detect Python for .py and TypeScript for .ts/.tsx."""
         from code_intelligence.lsp.client import LspClient
+
         lsp = LspClient()
         assert lsp._detect_language("app.py") == "python"
         assert lsp._detect_language("models.py") == "python"
@@ -424,6 +502,7 @@ class TestCodeIntelligenceDeep:
     def test_ci_registry_singleton_per_sandbox(self):
         """get_code_intelligence must return same instance for same sandbox_id."""
         from code_intelligence.routing.service import get_code_intelligence
+
         svc1 = get_code_intelligence("singleton-deep", "/ws")
         svc2 = get_code_intelligence("singleton-deep", "/ws")
         assert svc1 is svc2, "Should return same instance"
@@ -435,14 +514,13 @@ class TestCodeIntelligenceDeep:
         """CI health endpoint must be mounted and return JSON (not SPA fallback)."""
         client, _ = app_client
         resp = client.get("/api/code_intelligence/status")
-        assert resp.status_code == 200, (
-            f"CI endpoint should return 200. Got {resp.status_code}"
-        )
+        assert resp.status_code == 200, f"CI endpoint should return 200. Got {resp.status_code}"
         content_type = resp.headers.get("content-type", "")
         if "application/json" not in content_type:
             # SPA catch-all returned HTML instead of the API route — route may
             # not be mounted in test config. Verify the router exists in code.
             from server.routers.code_intelligence import router as ci_router
+
             assert ci_router is not None, "CI router module should exist"
             # Route exists in code but SPA fallback intercepted — acceptable in test env
             return
@@ -477,23 +555,34 @@ class TestMultiTurnToolChaining:
 
     def test_two_turn_write_then_verify(self, client, sandbox):
         """Turn 1: write file via tool. Turn 2: verify file via tool — check content reference."""
-        create_test_agent(client, "chain-write-verify", toolkits=["sandbox_operations"], system_prompt=AGENT_PROMPT)
+        create_test_agent(
+            client,
+            "chain-write-verify",
+            toolkits=["sandbox_operations"],
+            system_prompt=AGENT_PROMPT,
+        )
 
         # Turn 1: Create file
         events1 = send_chat(
             client,
             "Use daytona_write_file to create /workspace/chain_test.txt with content 'CHAIN_MARKER_ABC'. Only use the tool.",
-            agent_name="chain-write-verify", sandbox_id=sandbox["id"], timeout=120,
+            agent_name="chain-write-verify",
+            sandbox_id=sandbox["id"],
+            timeout=120,
         )
         assert "assistant_complete" in _get_event_types(events1)
         tool_started1 = events_of_type(events1, "tool_started")
-        assert len(tool_started1) >= 1, f"Turn 1 should use a tool. Types: {_get_event_types(events1)}"
+        assert len(tool_started1) >= 1, (
+            f"Turn 1 should use a tool. Types: {_get_event_types(events1)}"
+        )
 
         # Turn 2: Read/verify the file
         events2 = send_chat(
             client,
             "Now use daytona_bash to run 'cat /workspace/chain_test.txt' and tell me what's in it.",
-            agent_name="chain-write-verify", sandbox_id=sandbox["id"], timeout=120,
+            agent_name="chain-write-verify",
+            sandbox_id=sandbox["id"],
+            timeout=120,
         )
         assert "assistant_complete" in _get_event_types(events2)
 
@@ -513,13 +602,17 @@ class TestMultiTurnToolChaining:
 
     def test_three_turn_create_read_modify(self, client, sandbox):
         """3-turn chain: create → read → modify. Verify tool use AND content flow."""
-        create_test_agent(client, "chain-3turn", toolkits=["sandbox_operations"], system_prompt=AGENT_PROMPT)
+        create_test_agent(
+            client, "chain-3turn", toolkits=["sandbox_operations"], system_prompt=AGENT_PROMPT
+        )
 
         # Turn 1: Create with a unique marker
         events1 = send_chat(
             client,
             "Use daytona_bash to run: echo 'CHAIN3_ORIGINAL' > /workspace/evolving.txt",
-            agent_name="chain-3turn", sandbox_id=sandbox["id"], timeout=120,
+            agent_name="chain-3turn",
+            sandbox_id=sandbox["id"],
+            timeout=120,
         )
         t1_tools = events_of_type(events1, "tool_started")
         assert len(t1_tools) >= 1, f"Turn 1 should use tool. Types: {_get_event_types(events1)}"
@@ -528,7 +621,9 @@ class TestMultiTurnToolChaining:
         events2 = send_chat(
             client,
             "Use daytona_bash to run: cat /workspace/evolving.txt",
-            agent_name="chain-3turn", sandbox_id=sandbox["id"], timeout=120,
+            agent_name="chain-3turn",
+            sandbox_id=sandbox["id"],
+            timeout=120,
         )
         t2_tools = events_of_type(events2, "tool_started")
         assert len(t2_tools) >= 1, f"Turn 2 should use tool. Types: {_get_event_types(events2)}"
@@ -540,8 +635,7 @@ class TestMultiTurnToolChaining:
         if t2_completed:
             # Tool completed — verify content flow
             assert "CHAIN3_ORIGINAL" in t2_all, (
-                f"Turn 2 should show content from Turn 1 ('CHAIN3_ORIGINAL'). "
-                f"Got: {t2_all[:300]}"
+                f"Turn 2 should show content from Turn 1 ('CHAIN3_ORIGINAL'). Got: {t2_all[:300]}"
             )
         else:
             # Tool errored (sandbox isolation) — at least verify tool was attempted
@@ -551,7 +645,9 @@ class TestMultiTurnToolChaining:
         events3 = send_chat(
             client,
             "Use daytona_bash to run: echo 'CHAIN3_MODIFIED' >> /workspace/evolving.txt",
-            agent_name="chain-3turn", sandbox_id=sandbox["id"], timeout=120,
+            agent_name="chain-3turn",
+            sandbox_id=sandbox["id"],
+            timeout=120,
         )
         t3_tools = events_of_type(events3, "tool_started")
         assert len(t3_tools) >= 1, f"Turn 3 should use tool. Types: {_get_event_types(events3)}"
@@ -564,7 +660,9 @@ class TestMultiTurnToolChaining:
 
     def test_react_landing_full_pipeline(self, client, sandbox):
         """Full pipeline: create React page → verify structure → add component."""
-        create_test_agent(client, "chain-react-full", toolkits=["sandbox_operations"], system_prompt=AGENT_PROMPT)
+        create_test_agent(
+            client, "chain-react-full", toolkits=["sandbox_operations"], system_prompt=AGENT_PROMPT
+        )
 
         # Turn 1: Create React landing page
         events1 = send_chat(
@@ -575,11 +673,15 @@ class TestMultiTurnToolChaining:
                 "a root div, and a component rendering 'Welcome to EphemeralOS'. "
                 "Use daytona_write_file or daytona_bash."
             ),
-            agent_name="chain-react-full", sandbox_id=sandbox["id"], timeout=180,
+            agent_name="chain-react-full",
+            sandbox_id=sandbox["id"],
+            timeout=180,
         )
         assert "assistant_complete" in _get_event_types(events1)
         t1_tools = events_of_type(events1, "tool_started")
-        assert len(t1_tools) >= 1, f"Should use tool to create file. Types: {_get_event_types(events1)}"
+        assert len(t1_tools) >= 1, (
+            f"Should use tool to create file. Types: {_get_event_types(events1)}"
+        )
 
         # Verify tool names
         t1_names = [e.get("tool_name", "") for e in t1_tools]
@@ -591,7 +693,9 @@ class TestMultiTurnToolChaining:
         events2 = send_chat(
             client,
             "Use daytona_bash to run 'cat /workspace/index.html' and confirm it has React CDN links.",
-            agent_name="chain-react-full", sandbox_id=sandbox["id"], timeout=120,
+            agent_name="chain-react-full",
+            sandbox_id=sandbox["id"],
+            timeout=120,
         )
         assert "assistant_complete" in _get_event_types(events2)
 
@@ -602,7 +706,9 @@ class TestMultiTurnToolChaining:
         all_content = text2 + " ".join(e.get("output", "") for e in tool_completed2)
         all_lower = all_content.lower()
 
-        has_react_ref = any(kw in all_lower for kw in ["react", "unpkg", "html", "component", "index"])
+        has_react_ref = any(
+            kw in all_lower for kw in ["react", "unpkg", "html", "component", "index"]
+        )
         has_tool_use = len(tool_started2) >= 1  # model used a tool (even if output was empty)
         assert has_react_ref or has_tool_use, (
             f"Turn 2 should reference React content or use a tool. "

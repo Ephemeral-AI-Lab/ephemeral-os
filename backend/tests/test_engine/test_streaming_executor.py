@@ -8,15 +8,15 @@ import json
 import pytest
 from pydantic import BaseModel, Field
 
-from engine.messages import ConversationMessage, TextBlock
-from engine.stream_events import (
+from message import ConversationMessage, TextBlock
+from message.stream_events import (
     ToolExecutionCancelled,
     ToolExecutionCompleted,
     ToolExecutionProgress,
 )
-from engine.streaming_executor import StreamingToolExecutor, TrackedTool
+from engine.core.streaming_executor import StreamingToolExecutor, TrackedTool
 from models.types import ApiToolUseDeltaEvent
-from tools.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolRegistry, ToolResult
+from tools.core.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolRegistry, ToolResult
 
 
 # ---------------------------------------------------------------------------

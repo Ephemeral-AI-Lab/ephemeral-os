@@ -1,6 +1,6 @@
 """Pipeline context toolkit — query the incremental context map during pipeline execution."""
 
-from tools.base import BaseToolkit
+from tools.core.base import BaseToolkit
 from tools.pipeline_context.context_tools import (
     make_get_pipeline_metadata_tool,
     make_list_pipeline_steps_tool,

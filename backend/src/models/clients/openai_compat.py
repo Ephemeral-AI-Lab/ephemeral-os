@@ -9,7 +9,7 @@ from typing import Any, AsyncIterator
 
 from openai import AsyncOpenAI
 
-from models.types import (
+from models.core.types import (
     ApiCancelEvent,
     ApiMessageCompleteEvent,
     ApiMessageRequest,
@@ -19,13 +19,13 @@ from models.types import (
     ApiToolUseDeltaEvent,
     UsageSnapshot,
 )
-from models.errors import (
+from models.core.errors import (
     AuthenticationFailure,
     EphemeralOSApiError,
     RateLimitFailure,
     RequestFailure,
 )
-from engine.messages import (
+from message import (
     ConversationMessage,
     ContentBlock,
     TextBlock,

@@ -15,7 +15,7 @@ from typing import Any, AsyncIterator
 
 import anthropic
 
-from models.types import (
+from models.core.types import (
     ApiMessageCompleteEvent,
     ApiMessageRequest,
     ApiStreamEvent,
@@ -24,13 +24,13 @@ from models.types import (
     ApiToolUseDeltaEvent,
     UsageSnapshot,
 )
-from models.errors import (
+from models.core.errors import (
     AuthenticationFailure,
     EphemeralOSApiError,
     RateLimitFailure,
     RequestFailure,
 )
-from engine.messages import assistant_message_from_api
+from message import assistant_message_from_api
 
 log = logging.getLogger(__name__)
 
@@ -111,10 +111,11 @@ class AnthropicClient:
         messages = [msg.to_api_param() for msg in request.messages]
 
         # Strip output_schema — the Anthropic API does not accept it in tool defs.
-        tools = [
-            {k: v for k, v in t.items() if k != "output_schema"}
-            for t in request.tools
-        ] if request.tools else []
+        tools = (
+            [{k: v for k, v in t.items() if k != "output_schema"} for t in request.tools]
+            if request.tools
+            else []
+        )
 
         params: dict[str, Any] = {
             "model": request.model,
@@ -165,7 +166,11 @@ class AnthropicClient:
                     if block_state["type"] == "tool_use":
                         # KEY: yield tool event MID-STREAM with complete args
                         try:
-                            args = json.loads(block_state["input_json"]) if block_state["input_json"] else {}
+                            args = (
+                                json.loads(block_state["input_json"])
+                                if block_state["input_json"]
+                                else {}
+                            )
                         except (json.JSONDecodeError, TypeError):
                             args = {}
                         yield ApiToolUseDeltaEvent(

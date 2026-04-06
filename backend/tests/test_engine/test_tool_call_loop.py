@@ -8,9 +8,9 @@ from pathlib import Path
 import pytest
 from pydantic import BaseModel, Field
 
-from engine.messages import ConversationMessage, TextBlock, ToolUseBlock
-from engine.query import QueryContext, run_query
-from engine.stream_events import (
+from message import ConversationMessage, TextBlock, ToolUseBlock
+from engine.core.query import QueryContext, run_query
+from message.stream_events import (
     AssistantTurnComplete,
     ToolExecutionCompleted,
     ToolExecutionStarted,
@@ -21,7 +21,7 @@ from models.types import (
     ApiTextDeltaEvent,
     UsageSnapshot,
 )
-from tools.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolRegistry, ToolResult
+from tools.core.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolRegistry, ToolResult
 
 
 # ---------------------------------------------------------------------------
@@ -486,7 +486,7 @@ class TestOpenAIClientToolCallLoop:
             _convert_messages_to_openai,
             _convert_assistant_message,
         )
-        from engine.messages import ConversationMessage, TextBlock, ToolResultBlock, ToolUseBlock
+        from message import ConversationMessage, TextBlock, ToolResultBlock, ToolUseBlock
 
         registry = _make_registry(EchoTool(), AddTool())
         tools = registry.to_api_schema()
@@ -521,7 +521,7 @@ class TestOpenAIClientToolCallLoop:
             _convert_tools_to_openai,
             _convert_messages_to_openai,
         )
-        from engine.messages import ConversationMessage, TextBlock, ToolResultBlock, ToolUseBlock
+        from message import ConversationMessage, TextBlock, ToolResultBlock, ToolUseBlock
 
         registry = _make_registry(EchoTool())
         tools = registry.to_api_schema()
@@ -550,7 +550,7 @@ class TestOpenAIClientToolCallLoop:
     def test_openai_parallel_tool_calls_in_loop(self, tmp_path: Path):
         """Multiple OpenAI tool calls should be parsed and executed in parallel."""
         from models.clients.openai_compat import _convert_assistant_message
-        from engine.messages import ConversationMessage, TextBlock, ToolUseBlock
+        from message import ConversationMessage, TextBlock, ToolUseBlock
 
         assistant_msg = ConversationMessage(
             role="assistant",

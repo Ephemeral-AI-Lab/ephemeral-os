@@ -23,9 +23,9 @@ from __future__ import annotations
 
 import json
 
-from tools.base import BaseToolkit, ToolExecutionContext, ToolResult
-from tools.decorator import tool
-from skills.registry import SkillRegistry
+from tools.core.base import BaseToolkit, ToolExecutionContext, ToolResult
+from tools.core.decorator import tool
+from skills.core.registry import SkillRegistry
 
 
 def make_skills_toolkit(
@@ -45,7 +45,11 @@ def make_skills_toolkit(
 
     # Pre-resolve allowed skills for fast lookup
     available: dict[str, dict[str, object]] = {}
-    slugs = allowed_slugs if allowed_slugs is not None else [s.name for s in skill_registry.list_skills()]
+    slugs = (
+        allowed_slugs
+        if allowed_slugs is not None
+        else [s.name for s in skill_registry.list_skills()]
+    )
     for slug in slugs:
         skill = skill_registry.get(slug)
         if skill:
@@ -72,10 +76,12 @@ def make_skills_toolkit(
         """
         if skill_name not in available:
             return ToolResult(
-                output=json.dumps({
-                    "error": f"Skill '{skill_name}' not found.",
-                    "available": list(available.keys()),
-                }),
+                output=json.dumps(
+                    {
+                        "error": f"Skill '{skill_name}' not found.",
+                        "available": list(available.keys()),
+                    }
+                ),
                 is_error=True,
             )
 
@@ -118,10 +124,12 @@ def make_skills_toolkit(
         """
         if skill_name not in available:
             return ToolResult(
-                output=json.dumps({
-                    "error": f"Skill '{skill_name}' not found.",
-                    "available": list(available.keys()),
-                }),
+                output=json.dumps(
+                    {
+                        "error": f"Skill '{skill_name}' not found.",
+                        "available": list(available.keys()),
+                    }
+                ),
                 is_error=True,
             )
 
@@ -135,10 +143,12 @@ def make_skills_toolkit(
         content = skill.references.get(reference_name)
         if content is None:
             return ToolResult(
-                output=json.dumps({
-                    "error": f"Reference '{reference_name}' not found in skill '{skill_name}'.",
-                    "available_references": list(skill.references.keys()),
-                }),
+                output=json.dumps(
+                    {
+                        "error": f"Reference '{reference_name}' not found in skill '{skill_name}'.",
+                        "available_references": list(skill.references.keys()),
+                    }
+                ),
                 is_error=True,
             )
 
@@ -149,17 +159,18 @@ def make_skills_toolkit(
     for info in available.values():
         refs = info.get("references", [])
         ref_note = f" ({len(refs)} references)" if refs else ""
-        skill_entries.append(
-            f"- `load_skill(\"{info['name']}\")` — {info['description']}{ref_note}"
-        )
+        skill_entries.append(f'- `load_skill("{info["name"]}")` — {info["description"]}{ref_note}')
 
     instructions = (
-        "Lazy-loaded skill system. Use `load_skill(skill_name)` when a task "
-        "matches a skill's domain. Use `load_skill_reference(skill_name, ref)` "
-        "for supplementary docs.\n\n"
-        "**Available skills:**\n"
-        + "\n".join(skill_entries)
-    ) if skill_entries else None
+        (
+            "Lazy-loaded skill system. Use `load_skill(skill_name)` when a task "
+            "matches a skill's domain. Use `load_skill_reference(skill_name, ref)` "
+            "for supplementary docs.\n\n"
+            "**Available skills:**\n" + "\n".join(skill_entries)
+        )
+        if skill_entries
+        else None
+    )
 
     return BaseToolkit(
         name="skills",
