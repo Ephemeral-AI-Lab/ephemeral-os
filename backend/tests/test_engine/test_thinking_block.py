@@ -302,7 +302,7 @@ class TestOpenAIConvertAssistantMessageThinking:
         result = _convert_assistant_message(msg)
         assert result["reasoning_content"] == "Part 1. Part 2."
 
-    def test_no_thinking_with_tool_calls_gets_empty_reasoning(self):
+    def test_no_thinking_with_tool_calls_has_no_reasoning_key(self):
         msg = ConversationMessage(
             role="assistant",
             content=[
@@ -310,7 +310,7 @@ class TestOpenAIConvertAssistantMessageThinking:
             ],
         )
         result = _convert_assistant_message(msg)
-        assert result["reasoning_content"] == ""
+        assert "reasoning_content" not in result
         assert len(result["tool_calls"]) == 1
 
     def test_thinking_with_tool_calls(self):

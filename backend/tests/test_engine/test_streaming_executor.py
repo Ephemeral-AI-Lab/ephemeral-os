@@ -230,7 +230,7 @@ async def test_get_remaining_returns_completed_tools():
     # Wait for completion
     await asyncio.sleep(0.1)
 
-    results = executor.get_remaining()
+    results = await executor.get_remaining()
 
     assert len(results) == 1
     assert isinstance(results[0], ToolExecutionCompleted)
@@ -257,7 +257,7 @@ async def test_get_remaining_returns_cancelled_tools():
     # Wait for cancellation
     await asyncio.sleep(0.1)
 
-    results = executor.get_remaining()
+    results = await executor.get_remaining()
 
     assert len(results) == 1
     assert isinstance(results[0], ToolExecutionCancelled)
@@ -310,7 +310,7 @@ async def test_multiple_tools_run_concurrently():
 
     # All should complete eventually
     await asyncio.sleep(0.1)
-    results = executor.get_remaining()
+    results = await executor.get_remaining()
     assert len(results) == 3
 
 
