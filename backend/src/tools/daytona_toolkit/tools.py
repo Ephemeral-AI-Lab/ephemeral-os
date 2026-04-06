@@ -58,6 +58,20 @@ def _get_cwd(context: ToolExecutionContext) -> str | None:
     return context.metadata.get("daytona_cwd")
 
 
+def _resolve_path(path: str, context: ToolExecutionContext) -> str:
+    """Resolve a relative path against the sandbox cwd.
+
+    Absolute paths are returned as-is. Relative paths are joined
+    with the sandbox cwd (detected via pwd on first connect).
+    """
+    if path.startswith("/"):
+        return path
+    cwd = _get_cwd(context)
+    if cwd:
+        return f"{cwd}/{path}"
+    return path
+
+
 # ---------------------------------------------------------------------------
 # Shell execution
 # ---------------------------------------------------------------------------
@@ -90,6 +104,7 @@ async def daytona_bash(
         exit_code = getattr(response, "exit_code", 0)
         output = json.dumps(
             {
+                "cwd": cwd or "",
                 "stdout": _truncate(response.result or ""),
                 "exit_code": exit_code,
             }
@@ -135,6 +150,7 @@ async def daytona_read_file(
         content (str): File content with line numbers
     """
     sandbox = _get_sandbox(context)
+    file_path = _resolve_path(file_path, context)
     try:
         raw = await sandbox.fs.download_file(file_path)
         content = raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
@@ -150,6 +166,7 @@ async def daytona_read_file(
 
         output = json.dumps(
             {
+                "cwd": _get_cwd(context) or "",
                 "file_path": file_path,
                 "total_lines": total,
                 "start_line": start,
@@ -187,12 +204,14 @@ async def daytona_write_file(
         bytes_written (int): Number of bytes written
     """
     sandbox = _get_sandbox(context)
+    file_path = _resolve_path(file_path, context)
     try:
         content_bytes = content.encode("utf-8")
         # SDK signature: upload_file(src: str | bytes, dst: str)
         await sandbox.fs.upload_file(content_bytes, file_path)
         output = json.dumps(
             {
+                "cwd": _get_cwd(context) or "",
                 "file_path": file_path,
                 "bytes_written": len(content_bytes),
             }
@@ -228,8 +247,7 @@ async def daytona_list_files(
         entries (list): File and directory names
     """
     sandbox = _get_sandbox(context)
-    cwd = _get_cwd(context)
-    directory = directory if directory != "." else cwd
+    directory = _resolve_path(directory, context) if directory != "." else (_get_cwd(context) or ".")
     try:
         entries = await sandbox.fs.list_files(directory)
         names = []
@@ -238,6 +256,7 @@ async def daytona_list_files(
             names.append(name)
         output = json.dumps(
             {
+                "cwd": _get_cwd(context) or "",
                 "directory": directory,
                 "entries": sorted(names),
             }
@@ -276,14 +295,15 @@ async def daytona_grep(
         total_matches (int): Total matches found
     """
     sandbox = _get_sandbox(context)
-    cwd = _get_cwd(context)
-    path = path if path != "." else cwd
+    cwd = _get_cwd(context) or ""
+    path = _resolve_path(path, context) if path != "." else (cwd or ".")
     try:
         matches = await sandbox.fs.find_files(path, pattern)
         if not matches:
             return ToolResult(
                 output=json.dumps(
                     {
+                        "cwd": cwd,
                         "pattern": pattern,
                         "path": path,
                         "matches": [],
@@ -306,6 +326,7 @@ async def daytona_grep(
         return ToolResult(
             output=json.dumps(
                 {
+                    "cwd": cwd,
                     "pattern": pattern,
                     "path": path,
                     "matches": result_matches,
@@ -346,36 +367,25 @@ async def daytona_glob(
         total_files (int): Total files found
     """
     sandbox = _get_sandbox(context)
-    cwd = _get_cwd(context)
-    path = path if path != "." else cwd
+    cwd = _get_cwd(context) or ""
+    path = _resolve_path(path, context) if path != "." else (cwd or ".")
     try:
-        response = await sandbox.fs.search_files(path, pattern)
-        files = getattr(response, "files", None) or []
+        # Use shell find for reliable glob — SDK search_files has issues
+        # Strip leading **/ from glob patterns for find -name compatibility
+        find_pattern = pattern.replace("**/", "")
+        cmd = f"find {path} -name {find_pattern} -type f"
+        resp = await sandbox.process.exec(cmd, timeout=30)
+        file_list = [f for f in (resp.result or "").splitlines() if f.strip()][:500]
         return ToolResult(
             output=json.dumps(
                 {
+                    "cwd": cwd,
                     "pattern": pattern,
                     "path": path,
-                    "files": files[:500],
-                    "total_files": len(files),
+                    "files": file_list,
+                    "total_files": len(file_list),
                 }
             )
         )
     except Exception as exc:
-        # Fallback: use shell glob via process.exec
-        try:
-            fallback_cmd = f"find {path} -name '{pattern}' 2>/dev/null | head -500"
-            resp = await sandbox.process.exec(fallback_cmd, cwd=cwd, timeout=30)
-            file_list = [f for f in (resp.result or "").splitlines() if f.strip()]
-            return ToolResult(
-                output=json.dumps(
-                    {
-                        "pattern": pattern,
-                        "path": path,
-                        "files": file_list,
-                        "total_files": len(file_list),
-                    }
-                )
-            )
-        except Exception as fallback_exc:
-            return ToolResult(output=_path_error(fallback_exc, path) or str(fallback_exc), is_error=True)
+        return ToolResult(output=_path_error(exc, path) or str(exc), is_error=True)

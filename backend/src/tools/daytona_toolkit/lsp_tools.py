@@ -7,6 +7,7 @@ import logging
 
 from tools.base import ToolExecutionContext, ToolResult
 from tools.daytona_toolkit.ci_integration import get_ci_service
+from tools.daytona_toolkit.tools import _get_cwd
 from tools.decorator import tool
 
 logger = logging.getLogger(__name__)
@@ -42,6 +43,7 @@ async def daytona_lsp_hover(
         return ToolResult(output=f"No hover information at {file_path}:{line}")
 
     return ToolResult(output=json.dumps({
+        "cwd": _get_cwd(context) or "",
         "content": result.content,
         "language": result.language,
     }))
@@ -93,7 +95,7 @@ async def daytona_lsp_definition(
             "signature": sym.signature,
         })
 
-    return ToolResult(output=json.dumps({"definitions": defs}))
+    return ToolResult(output=json.dumps({"cwd": _get_cwd(context) or "", "definitions": defs}))
 
 
 # -- Find References ----------------------------------------------------------
@@ -142,6 +144,7 @@ async def daytona_lsp_references(
         })
 
     return ToolResult(output=json.dumps({
+        "cwd": _get_cwd(context) or "",
         "references": refs,
         "total_references": len(results),
     }))
@@ -172,7 +175,7 @@ async def daytona_lsp_diagnostics(
     results = svc.diagnostics(file_path)
     if not results:
         return ToolResult(output=json.dumps({
-            "file_path": file_path, "diagnostics": [], "clean": True,
+            "cwd": _get_cwd(context) or "", "file_path": file_path, "diagnostics": [], "clean": True,
         }))
 
     diags = []
@@ -186,5 +189,5 @@ async def daytona_lsp_diagnostics(
         })
 
     return ToolResult(output=json.dumps({
-        "file_path": file_path, "diagnostics": diags, "clean": False,
+        "cwd": _get_cwd(context) or "", "file_path": file_path, "diagnostics": diags, "clean": False,
     }))
