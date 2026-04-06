@@ -17,7 +17,7 @@ import logging
 import pytest
 
 from engine.eval_agent import EvalAgent
-from tests.test_e2e.conftest import create_test_sandbox, delete_test_sandbox
+from tests.test_e2e.conftest import create_eval_agent, create_test_sandbox, delete_test_sandbox
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +72,7 @@ class TestReminderDoesNotAccumulate:
     @pytest.mark.asyncio
     async def test_many_foreground_turns_with_background(self, sandbox):
         """Background a slow task, then do 5+ foreground operations."""
-        agent = EvalAgent.create(
+        agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
             enable_background_tasks=True,
@@ -121,7 +121,7 @@ class TestLargeOutputWithBackground:
     @pytest.mark.asyncio
     async def test_large_foreground_output_with_background(self, sandbox):
         """Generate large tool outputs while background runs."""
-        agent = EvalAgent.create(
+        agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
             enable_background_tasks=True,
@@ -164,7 +164,7 @@ class TestSustainedBackgroundStress:
     @pytest.mark.asyncio
     async def test_sustained_background_many_foreground_turns(self, sandbox):
         """Background task runs for 45s while LLM does 8+ foreground operations."""
-        agent = EvalAgent.create(
+        agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
             enable_background_tasks=True,

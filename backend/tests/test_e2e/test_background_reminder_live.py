@@ -17,7 +17,7 @@ import logging
 import pytest
 
 from engine.eval_agent import EvalAgent
-from tests.test_e2e.conftest import create_test_sandbox, delete_test_sandbox
+from tests.test_e2e.conftest import create_eval_agent, create_test_sandbox, delete_test_sandbox
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +61,7 @@ class TestEphemeralBackgroundReminder:
     async def test_reminder_nudges_llm_to_check_progress(self, sandbox):
         """Background a slow task, do foreground work, verify the LLM
         becomes aware of the background task on subsequent turns."""
-        agent = EvalAgent.create(
+        agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
             enable_background_tasks=True,
@@ -94,7 +94,7 @@ class TestEphemeralBackgroundReminder:
     @pytest.mark.asyncio
     async def test_reminder_only_when_tasks_pending(self, sandbox):
         """Verify that no reminder is injected when there are no background tasks."""
-        agent = EvalAgent.create(
+        agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
             enable_background_tasks=True,

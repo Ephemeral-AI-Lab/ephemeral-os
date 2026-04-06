@@ -225,14 +225,14 @@ class TestRequestCapture:
         assert len(mock.last_request.system_prompt) > 0
 
     def test_tools_passed_to_api(self, app_client):
-        """Default agent has no toolkits, so tools list is empty."""
+        """Default agent has no toolkits, but skills tools are always registered."""
         client, mock = app_client
         client.post("/api/chat", json={"line": "test"})
 
         assert mock.last_request is not None
         assert mock.last_request.tools is not None
-        # Default agent has no toolkits registered — tools come from toolkits
-        assert len(mock.last_request.tools) == 0
+        # Default agent gets skills tools (load_skill, load_skill_reference)
+        assert len(mock.last_request.tools) == 2
 
     def test_user_message_in_request(self, app_client):
         client, mock = app_client

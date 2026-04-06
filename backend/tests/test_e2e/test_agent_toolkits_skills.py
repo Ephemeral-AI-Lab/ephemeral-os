@@ -252,8 +252,11 @@ class TestChatToolkitIntegration:
 
         tool_names = self._chat_and_get_tools(client, mock_client, agent_name="default-agent")
 
-        # Agent with no toolkits gets no tools (no default discovery toolkit)
-        assert len(tool_names) == 0, f"Agent with no toolkits should have no tools, got: {tool_names}"
+        # Agent with no toolkits still gets skills tools (load_skill, load_skill_reference)
+        skill_tools = [t for t in tool_names if "skill" in t.lower()]
+        assert len(tool_names) == len(skill_tools), (
+            f"Agent with no toolkits should only have skills tools, got: {tool_names}"
+        )
 
     def test_agent_with_toolkits_restricts_tools(self, app_client):
         client, mock_client = app_client
@@ -315,7 +318,7 @@ class TestChatSkillAwareness:
             client, mock_client, agent_name="aware-agent"
         )
 
-        assert "# Available Toolkits" in system_prompt
+        assert "# Toolkit Instructions" in system_prompt
         assert "sandbox_operations" in system_prompt
 
     def test_agent_with_custom_system_prompt_gets_awareness(self, app_client):
@@ -336,15 +339,16 @@ class TestChatSkillAwareness:
         )
 
         assert system_prompt.startswith("You are a specialized coding assistant.")
-        assert "# Available Toolkits" in system_prompt
+        assert "# Toolkit Instructions" in system_prompt
 
-    def test_default_agent_has_no_toolkit_awareness_without_toolkits(self, app_client):
+    def test_default_agent_has_skills_toolkit_awareness(self, app_client):
         client, mock_client = app_client
-        # No agent_name — uses default (no toolkits registered)
+        # No agent_name — uses default (no explicit toolkits, but skills toolkit is always registered)
         system_prompt = self._chat_and_get_system_prompt(client, mock_client)
 
-        # Default agent has no toolkits, so no toolkit awareness section
-        assert "# Available Toolkits" not in system_prompt
+        # Skills toolkit is always registered, so toolkit instructions section appears
+        assert "# Toolkit Instructions" in system_prompt
+        assert "skills" in system_prompt.lower()
 
     def test_agent_without_skills_no_skills_section(self, app_client):
         client, mock_client = app_client

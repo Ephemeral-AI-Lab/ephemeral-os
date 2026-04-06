@@ -15,7 +15,7 @@ import logging
 import pytest
 
 from engine.eval_agent import EvalAgent
-from tests.test_e2e.conftest import create_test_sandbox, delete_test_sandbox
+from tests.test_e2e.conftest import create_eval_agent, create_test_sandbox, delete_test_sandbox
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ class TestAutonomousProgressCheck:
     async def test_llm_autonomously_checks_progress(self, sandbox):
         """Give the LLM a background task and foreground work.
         Do NOT tell it to check progress. See if it does on its own."""
-        agent = EvalAgent.create(
+        agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
             enable_background_tasks=True,
@@ -113,7 +113,7 @@ class TestAutonomousCancel:
     @pytest.mark.asyncio
     async def test_llm_autonomously_handles_long_task(self, sandbox):
         """Background a very long task. Give foreground work. See what happens."""
-        agent = EvalAgent.create(
+        agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
             enable_background_tasks=True,
@@ -163,7 +163,7 @@ class TestAutonomousMultiTask:
     @pytest.mark.asyncio
     async def test_llm_manages_multiple_background_tasks(self, sandbox):
         """Two background tasks with different durations. See how LLM manages."""
-        agent = EvalAgent.create(
+        agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
             enable_background_tasks=True,

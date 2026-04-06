@@ -19,7 +19,7 @@ import logging
 import pytest
 
 from engine.eval_agent import EvalAgent
-from tests.test_e2e.conftest import create_test_sandbox, delete_test_sandbox
+from tests.test_e2e.conftest import create_eval_agent, create_test_sandbox, delete_test_sandbox
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +78,7 @@ class TestLLMBackgroundDecision:
         delete_test_sandbox(sb["id"])
 
     def _make_agent(self, sandbox):
-        return EvalAgent.create(
+        return create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
             enable_background_tasks=True,
@@ -135,7 +135,7 @@ class TestForegroundAndIdleWait:
     @pytest.mark.asyncio
     async def test_background_with_foreground_work(self, sandbox):
         """LLM backgrounds a slow command, does foreground work, gets result."""
-        agent = EvalAgent.create(
+        agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
             enable_background_tasks=True,
@@ -175,7 +175,7 @@ class TestProactiveProgressCheck:
     @pytest.mark.asyncio
     async def test_llm_checks_progress(self, sandbox):
         """LLM backgrounds a task and proactively calls check_background_progress."""
-        agent = EvalAgent.create(
+        agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
             enable_background_tasks=True,
@@ -222,7 +222,7 @@ class TestCancelFailingTask:
     @pytest.mark.asyncio
     async def test_llm_cancels_after_checking(self, sandbox):
         """LLM backgrounds a task, checks progress, then cancels it."""
-        agent = EvalAgent.create(
+        agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
             enable_background_tasks=True,
@@ -272,7 +272,7 @@ class TestCancelHangingTask:
     @pytest.mark.asyncio
     async def test_llm_cancels_hanging_install(self, sandbox):
         """LLM backgrounds a hanging command, checks twice, then cancels."""
-        agent = EvalAgent.create(
+        agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
             enable_background_tasks=True,
