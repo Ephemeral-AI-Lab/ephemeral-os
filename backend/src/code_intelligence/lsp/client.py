@@ -322,13 +322,33 @@ class LspClient:
 
     # -- Script execution -----------------------------------------------------
 
+    @staticmethod
+    def _resolve(result: Any) -> Any:
+        """If *result* is a coroutine (async sandbox), run it synchronously."""
+        import asyncio
+        import inspect
+
+        if inspect.isawaitable(result):
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+            if loop and loop.is_running():
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                    return pool.submit(asyncio.run, result).result()
+            return asyncio.run(result)
+        return result
+
     def _run_python_script(self, script: str) -> str:
         """Run a Python script locally or in the sandbox."""
         try:
             if self._sandbox:
-                response = self._sandbox.process.exec(
-                    f"python3 -c {repr(script)}",
-                    timeout=int(LSP_QUERY_TIMEOUT),
+                response = self._resolve(
+                    self._sandbox.process.exec(
+                        f"python3 -c {repr(script)}",
+                        timeout=int(LSP_QUERY_TIMEOUT),
+                    )
                 )
                 result = response.result or ""
             else:
@@ -352,7 +372,9 @@ class LspClient:
     def _check_python_backend(self) -> bool:
         try:
             if self._sandbox:
-                resp = self._sandbox.process.exec("python3 -c 'import jedi'", timeout=10)
+                resp = self._resolve(
+                    self._sandbox.process.exec("python3 -c 'import jedi'", timeout=10)
+                )
                 return getattr(resp, "exit_code", 1) == 0
             proc = subprocess.run(
                 ["python3", "-c", "import jedi"],
@@ -365,7 +387,9 @@ class LspClient:
     def _check_typescript_backend(self) -> bool:
         try:
             if self._sandbox:
-                resp = self._sandbox.process.exec("npx tsc --version", timeout=10)
+                resp = self._resolve(
+                    self._sandbox.process.exec("npx tsc --version", timeout=10)
+                )
                 return getattr(resp, "exit_code", 1) == 0
             proc = subprocess.run(
                 ["npx", "tsc", "--version"],
