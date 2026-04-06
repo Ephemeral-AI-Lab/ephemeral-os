@@ -57,7 +57,7 @@ _run_batch() {
         echo "  Running: $test_file"
         echo "================================================================"
 
-        if $PYTEST "$E2E_DIR/$test_file" -v --tb=short --log-cli-level=WARNING; then
+        if $PYTEST "$E2E_DIR/$test_file" -v -s --tb=short --log-cli-level=INFO; then
             ((passed++))
         else
             exit_code=$?

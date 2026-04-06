@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from agents import get_agent_definition
-from engine.agent import spawn_agent
+from engine import spawn_agent
 from message import ConversationMessage
 from pipeline.models import StepRecord, StepStatus
 from pipeline.schema import PipelineStepConfig, PipelineConfig

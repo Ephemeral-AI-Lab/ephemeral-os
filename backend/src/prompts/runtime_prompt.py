@@ -3,11 +3,46 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from config.paths import get_project_issue_file, get_project_pr_comments_file
 from config.settings import Settings
 from prompts.system_prompt import build_system_prompt
 from tools.core.base import BaseToolkit
+
+
+def render_template(template: str, variables: dict[str, Any]) -> str:
+    """Render a template with variable substitution.
+
+    Supports {{variable}} syntax. Variables are auto-converted to strings.
+
+    Args:
+        template: Template string with {{variable}} placeholders.
+        variables: Dict of variable names to values.
+
+    Returns:
+        Rendered string with all placeholders substituted.
+    """
+    for key, value in variables.items():
+        placeholder = "{{" + key + "}}"
+        template = template.replace(placeholder, str(value) if value is not None else "")
+    return template
+
+
+def render_section(template: str, variables: dict[str, Any], condition: bool = True) -> str:
+    """Render a section template if condition is truthy.
+
+    Args:
+        template: Section template with {{variable}} placeholders.
+        variables: Dict of variable names to values.
+        condition: If False, returns empty string.
+
+    Returns:
+        Rendered section or empty string if condition is falsy.
+    """
+    if not condition:
+        return ""
+    return render_template(template, variables)
 
 
 # =============================================================================
@@ -43,8 +78,8 @@ def discover_claude_md_files(cwd: str | Path) -> list[Path]:
     return results
 
 
-def load_claude_md_prompt(cwd: str | Path) -> str | None:
-    """Load the CLAUDE.md prompt content for the project.
+def load_claude_md_content(cwd: str | Path) -> str | None:
+    """Load CLAUDE.md content, using the first file found walking up from cwd.
 
     Args:
         cwd: The working directory to search in.
@@ -72,23 +107,34 @@ def build_runtime_system_prompt(
     latest_user_prompt: str | None = None,
 ) -> str:
     """Build the runtime system prompt with project instructions and memory."""
-    sections = [build_system_prompt(agent_system_prompt=settings.system_prompt, cwd=str(cwd))]
+    variables = {
+        "base_prompt": build_system_prompt(
+            agent_system_prompt=settings.system_prompt, cwd=str(cwd)
+        ),
+        "fast_mode": settings.fast_mode,
+        "effort": settings.effort,
+        "passes": settings.passes,
+        "claude_md": load_claude_md_content(cwd),
+        "cwd": str(cwd),
+    }
 
-    if settings.fast_mode:
-        sections.append(
-            "# Session Mode\nFast mode is enabled. Prefer concise replies, minimal tool use, and quicker progress over exhaustive exploration."
-        )
-
-    sections.append(
+    sections = [
+        variables["base_prompt"],
+        render_section(
+            "# Session Mode\n"
+            "Fast mode is enabled. Prefer concise replies, minimal tool use, "
+            "and quicker progress over exhaustive exploration.",
+            variables,
+            condition=variables["fast_mode"],
+        ),
         "# Reasoning Settings\n"
-        f"- Effort: {settings.effort}\n"
-        f"- Passes: {settings.passes}\n"
-        "Adjust depth and iteration count to match these settings while still completing the task."
-    )
+        f"- Effort: {variables['effort']}\n"
+        f"- Passes: {variables['passes']}\n"
+        "Adjust depth and iteration count to match these settings while still completing the task.",
+    ]
 
-    claude_md = load_claude_md_prompt(cwd)
-    if claude_md:
-        sections.append(claude_md)
+    if variables["claude_md"]:
+        sections.append(variables["claude_md"])
 
     for title, path in (
         ("Issue Context", get_project_issue_file(cwd)),

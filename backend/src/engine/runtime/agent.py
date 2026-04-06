@@ -22,6 +22,7 @@ from message.messages import ConversationMessage
 from message.stream_events import StreamEvent
 from hooks import make_hook_executor
 from models.core.provider import make_api_client
+from models.core.types import UsageSnapshot
 from prompts import build_runtime_system_prompt
 from tools import create_default_tool_registry
 from tools.core.factory import create_toolkit, has_factory, ToolkitContext
@@ -38,14 +39,21 @@ class EphemeralAgent:
     settings: Settings
     model: str
     _messages: list[ConversationMessage]
+    total_usage: UsageSnapshot | None = None
 
     async def run(self, prompt: str) -> AsyncIterator[StreamEvent]:
         """Execute one complete tool-call loop for the given prompt."""
+        from engine.core.query import run_query
+
+        self.total_usage = UsageSnapshot()
         try:
             self._messages.append(ConversationMessage.from_user_text(prompt))
-            messages, event_iter = run_query(self.query_context, self._messages)
+            messages, event_iter = await run_query(self.query_context, self._messages)
             self._messages = messages
-            async for event, _usage in event_iter:
+            async for event, usage in event_iter:
+                if usage:
+                    self.total_usage.input_tokens += usage.input_tokens
+                    self.total_usage.output_tokens += usage.output_tokens
                 yield event
         finally:
             await self.close()
@@ -197,7 +205,7 @@ def spawn_agent(
         tool_registry.register_toolkit(make_background_toolkit(bg_tool_names))
 
     # --- Inject toolkit and capability awareness into system prompt ---------
-    from prompts.context import build_agent_capabilities_prompt
+    from prompts.runtime_prompt import build_agent_capabilities_prompt
 
     awareness = build_agent_capabilities_prompt(
         toolkits=tool_registry.list_toolkits(),
@@ -209,6 +217,8 @@ def spawn_agent(
 
     # --- Max turns
     max_turns = agent_def.max_turns if agent_def and agent_def.max_turns else 200
+
+    from engine.core.query import QueryContext
 
     query_context = QueryContext(
         api_client=api_client,

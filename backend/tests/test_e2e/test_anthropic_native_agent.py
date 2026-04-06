@@ -16,15 +16,13 @@ import uuid
 
 import pytest
 
+from engine.testing.eval_agent import EvalAgent
 from tests.test_e2e.conftest import (
     HAS_DAYTONA,
+    create_eval_agent,
     create_test_sandbox,
     delete_test_sandbox,
-    events_of_type,
-    get_assistant_text,
-    get_event_types,
     make_live_client,
-    send_chat,
 )
 
 pytestmark = [pytest.mark.e2e, pytest.mark.live]
@@ -51,7 +49,7 @@ AGENT_PROMPT = (
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Helpers (kept for TestAnthropicNativeModelSetup HTTP API tests)
 # ---------------------------------------------------------------------------
 
 
@@ -98,7 +96,7 @@ def _create_agent(client, name: str = AGENT_NAME) -> dict:
 
 
 # ===========================================================================
-# Test: Model Registration & Agent Creation
+# Test: Model Registration & Agent Creation (HTTP API — unchanged)
 # ===========================================================================
 
 
@@ -145,183 +143,103 @@ class TestAnthropicNativeModelSetup:
 
 
 # ===========================================================================
-# Test: Basic Agent Communication (Anthropic-native streaming)
+# Test: Basic Agent Communication (migrated to EvalAgent)
 # ===========================================================================
 
 
-@pytest.mark.skipif(not HAS_DAYTONA, reason="Daytona required for sandbox tests")
-class TestAnthropicNativeAgentBasic:
-    @pytest.fixture(scope="class")
-    def sandbox(self):
-        sb = create_test_sandbox("anthropic-native")
-        yield sb
-        delete_test_sandbox(sb["id"])
+@pytest.fixture(scope="module")
+def sandbox_id():
+    if not EvalAgent.has_all():
+        pytest.skip("LLM + Daytona credentials required")
+    sb = create_test_sandbox("anthropic-native")
+    yield sb["id"]
+    delete_test_sandbox(sb["id"])
 
-    @pytest.fixture()
-    def client(self, db_session_factory, tmp_path, monkeypatch):
-        c = make_live_client(
-            db_session_factory,
-            tmp_path,
-            monkeypatch,
-            api_key=MINIMAX_ANTHROPIC_KEY,
-            model=MINIMAX_ANTHROPIC_MODEL,
-            base_url=MINIMAX_ANTHROPIC_BASE_URL,
-            api_format=MINIMAX_ANTHROPIC_FORMAT,
+
+@pytest.mark.asyncio
+async def test_agent_responds_to_simple_prompt(sandbox_id):
+    agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, max_turns=5)
+    result = await agent.invoke("Say hello in exactly 3 words.")
+    assert len(result.assistant_turns()) > 0, "Missing assistant response"
+    assert result.text, "Should produce a response"
+
+
+@pytest.mark.asyncio
+async def test_agent_uses_daytona_bash_tool(sandbox_id):
+    agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, max_turns=10)
+    result = await agent.invoke("Run this exact command in the sandbox: echo 'ANTHROPIC_BASH_OK'")
+    assert len(result.assistant_turns()) > 0, "Missing assistant response"
+
+    tool_started = result.tools_started()
+    tool_names = [ev.tool_name for ev in tool_started]
+    assert any("daytona" in t for t in tool_names), f"No daytona tool used: {tool_names}"
+
+
+@pytest.mark.asyncio
+async def test_agent_multi_tool_interaction(sandbox_id):
+    agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, max_turns=10)
+    result = await agent.invoke("Use daytona_bash to run: pwd")
+    assert len(result.assistant_turns()) > 0, "Missing assistant response"
+
+    tool_started = result.tools_started()
+    tool_completed = result.tools_completed()
+    assert len(tool_started) >= 1, f"Should use at least one tool. Tools: {[ev.tool_name for ev in tool_started]}"
+    assert len(tool_completed) >= 1, f"Should have tool completion. Tools: {[ev.tool_name for ev in tool_completed]}"
+
+
+@pytest.mark.asyncio
+async def test_agent_multi_step_pipeline(sandbox_id):
+    agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, max_turns=15)
+    result = await agent.invoke(
+        "Do these steps in the sandbox:\n"
+        "1. Use daytona_write_file to create /workspace/anthro_pipeline.py with: print('ANTHRO_PIPELINE_OK')\n"
+        "2. Use daytona_bash to run: python3 /workspace/anthro_pipeline.py\n"
+        "3. Report the output"
+    )
+    assert len(result.assistant_turns()) > 0, "Missing assistant response"
+
+    tool_started = result.tools_started()
+    if tool_started:
+        daytona_tools = [ev for ev in tool_started if "daytona" in ev.tool_name]
+        assert len(daytona_tools) >= 1, (
+            f"Expected daytona tools. Got: {[ev.tool_name for ev in tool_started]}"
         )
-        with c:
-            yield c
 
-    def test_agent_responds_to_simple_prompt(self, client, sandbox):
-        _register_model(client)
-        _create_agent(client)
-        events = send_chat(
-            client,
-            "Say hello in exactly 3 words.",
-            agent_name=AGENT_NAME,
-            sandbox_id=sandbox["id"],
-            timeout=60,
-        )
-        types = get_event_types(events)
-        assert "assistant_complete" in types, f"Missing assistant_complete. Types: {types}"
+    tool_completed = result.tools_completed()
+    all_output = " ".join(ev.output for ev in tool_completed)
+    text = result.text
 
-        text = get_assistant_text(events)
-        assert text, "Should produce a response"
-
-    def test_agent_uses_daytona_bash_tool(self, client, sandbox):
-        _register_model(client)
-        _create_agent(client)
-        events = send_chat(
-            client,
-            "Run this exact command in the sandbox: echo 'ANTHROPIC_BASH_OK'",
-            agent_name=AGENT_NAME,
-            sandbox_id=sandbox["id"],
-            timeout=120,
-        )
-        types = get_event_types(events)
-        assert "assistant_complete" in types, f"Missing assistant_complete. Types: {types}"
-
-        tool_started = events_of_type(events, "tool_started")
-        tool_names = [e.get("tool_name") for e in tool_started]
-        assert any("daytona" in t for t in tool_names), f"No daytona tool used: {tool_names}"
-
-    def test_agent_multi_tool_interaction(self, client, sandbox):
-        _register_model(client)
-        _create_agent(client)
-        events = send_chat(
-            client,
-            "Use daytona_bash to run: pwd",
-            agent_name=AGENT_NAME,
-            sandbox_id=sandbox["id"],
-            timeout=120,
-        )
-        types = get_event_types(events)
-        assert "assistant_complete" in types
-
-        tool_started = events_of_type(events, "tool_started")
-        tool_completed = events_of_type(events, "tool_completed")
-        assert len(tool_started) >= 1, f"Should use at least one tool. Types: {types}"
-        assert len(tool_completed) >= 1, f"Should have tool completion. Types: {types}"
-
-    def test_agent_multi_step_pipeline(self, client, sandbox):
-        _register_model(client)
-        _create_agent(client)
-        events = send_chat(
-            client,
-            (
-                "Do these steps in the sandbox:\n"
-                "1. Use daytona_write_file to create /workspace/anthro_pipeline.py with: print('ANTHRO_PIPELINE_OK')\n"
-                "2. Use daytona_bash to run: python3 /workspace/anthro_pipeline.py\n"
-                "3. Report the output"
-            ),
-            agent_name=AGENT_NAME,
-            sandbox_id=sandbox["id"],
-            timeout=180,
-        )
-        types = get_event_types(events)
-        assert "assistant_complete" in types
-
-        tool_started = events_of_type(events, "tool_started")
-        if tool_started:
-            daytona_tools = [
-                t
-                for t in tool_started
-                if isinstance(t, dict) and "daytona" in t.get("tool_name", "")
-            ]
-            assert len(daytona_tools) >= 1, (
-                f"Expected daytona tools. Got: {[t.get('tool_name') for t in tool_started]}"
-            )
-
-        tool_completed = events_of_type(events, "tool_completed")
-        all_output = " ".join(e.get("output", "") for e in tool_completed)
-        text = get_assistant_text(events)
-
-        has_pipeline = "ANTHRO_PIPELINE_OK" in all_output or "ANTHRO_PIPELINE_OK" in text
-        assert has_pipeline or len(tool_started) >= 2, (
-            f"Should execute pipeline or use multiple tools. "
-            f"Output: {all_output[:200]}, Text: {text[:200]}"
-        )
+    has_pipeline = "ANTHRO_PIPELINE_OK" in all_output or "ANTHRO_PIPELINE_OK" in text
+    assert has_pipeline or len(tool_started) >= 2, (
+        f"Should execute pipeline or use multiple tools. "
+        f"Output: {all_output[:200]}, Text: {text[:200]}"
+    )
 
 
 # ===========================================================================
-# Test: Event Structure (verify Anthropic-native streaming events)
+# Test: Event Structure (migrated to EvalAgent)
 # ===========================================================================
 
 
-@pytest.mark.skipif(not HAS_DAYTONA, reason="Daytona required for sandbox tests")
-class TestAnthropicNativeEventStructure:
-    @pytest.fixture(scope="class")
-    def sandbox(self):
-        sb = create_test_sandbox("anthropic-events")
-        yield sb
-        delete_test_sandbox(sb["id"])
+@pytest.mark.asyncio
+async def test_tool_started_has_correct_structure(sandbox_id):
+    agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, max_turns=10)
+    result = await agent.invoke("Use daytona_bash to run: echo 'ANTHRO_STRUCTURE_OK'")
+    tool_started = result.tools_started()
+    assert len(tool_started) >= 1, f"No tool_started events."
 
-    @pytest.fixture()
-    def client(self, db_session_factory, tmp_path, monkeypatch):
-        c = make_live_client(
-            db_session_factory,
-            tmp_path,
-            monkeypatch,
-            api_key=MINIMAX_ANTHROPIC_KEY,
-            model=MINIMAX_ANTHROPIC_MODEL,
-            base_url=MINIMAX_ANTHROPIC_BASE_URL,
-            api_format=MINIMAX_ANTHROPIC_FORMAT,
-        )
-        with c:
-            yield c
+    for ev in tool_started:
+        assert ev.tool_input is not None, f"tool_started missing tool_input: {ev}"
+        assert isinstance(ev.tool_input, dict), f"tool_input should be dict: {type(ev.tool_input)}"
 
-    def test_tool_started_has_correct_structure(self, client, sandbox):
-        agent_name = f"{AGENT_NAME}-events"
-        _register_model(client)
-        _create_agent(client, name=agent_name)
-        events = send_chat(
-            client,
-            "Use daytona_bash to run: echo 'ANTHRO_STRUCTURE_OK'",
-            agent_name=agent_name,
-            sandbox_id=sandbox["id"],
-            timeout=120,
-        )
-        tool_started = events_of_type(events, "tool_started")
-        assert len(tool_started) >= 1, f"No tool_started events. Types: {get_event_types(events)}"
 
-        for ev in tool_started:
-            tool_input = ev.get("tool_input")
-            assert tool_input is not None, f"tool_started missing tool_input: {ev}"
-            assert isinstance(tool_input, dict), f"tool_input should be dict: {type(tool_input)}"
+@pytest.mark.asyncio
+async def test_event_lifecycle_complete(sandbox_id):
+    agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, max_turns=10)
+    result = await agent.invoke("Use daytona_bash to run: echo 'LIFECYCLE_OK'")
 
-    def test_event_lifecycle_complete(self, client, sandbox):
-        agent_name = f"{AGENT_NAME}-lifecycle"
-        _register_model(client)
-        _create_agent(client, name=agent_name)
-        events = send_chat(
-            client,
-            "Use daytona_bash to run: echo 'LIFECYCLE_OK'",
-            agent_name=agent_name,
-            sandbox_id=sandbox["id"],
-            timeout=120,
-        )
-        types = get_event_types(events)
-
-        assert "transcript_item" in types, f"Missing transcript_item. Types: {types}"
-        assert "assistant_complete" in types, f"Missing assistant_complete. Types: {types}"
-        if "tool_started" in types and "error" not in types:
-            assert "tool_completed" in types, f"tool_started without tool_completed. Types: {types}"
+    assert len(result.assistant_turns()) > 0, "Missing assistant response"
+    tool_started = result.tools_started()
+    tool_completed = result.tools_completed()
+    if len(tool_started) > 0 and not result.has_errors:
+        assert len(tool_completed) > 0, "tool_started without tool_completed"

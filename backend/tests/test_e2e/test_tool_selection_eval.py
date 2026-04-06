@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 
 import pytest
 
-from engine.eval_agent import EvalAgent
+from engine.testing.eval_agent import EvalAgent
 from tests.test_e2e.conftest import (
     create_eval_agent,
     create_test_sandbox,

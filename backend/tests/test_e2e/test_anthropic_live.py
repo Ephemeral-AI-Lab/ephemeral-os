@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from engine.eval_agent import EvalAgent
+from engine.testing.eval_agent import EvalAgent
 from tests.test_e2e.conftest import create_eval_agent
 from message import ConversationMessage
 from models.clients.anthropic_native import AnthropicClient

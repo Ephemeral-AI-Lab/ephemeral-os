@@ -326,8 +326,8 @@ class EvalAgent:
 
         Args:
             prompt: The user prompt to send.
-            verbose: If True, emit logs via logger.info (captured by test frameworks).
-                     If False, suppress output.
+            verbose: If True, print streaming events in real-time (thinking,
+                     text, tool calls). If False, suppress output.
         """
         self._messages.clear()
         self._messages.append(ConversationMessage.from_user_text(prompt))
@@ -337,9 +337,13 @@ class EvalAgent:
         thinking_buf: list[str] = []
         text_buf: list[str] = []
 
-        logger.info("[EvalAgent] prompt: %s", _truncate(prompt, 80))
+        def _out(msg: str) -> None:
+            if verbose:
+                print(msg, flush=True)
 
-        messages, event_iter = run_query(self._query_context, self._messages)
+        _out(f"  [EvalAgent] prompt: {_truncate(prompt, 80)}")
+
+        messages, event_iter = await run_query(self._query_context, self._messages)
         self._messages = messages
         async for event, _usage in event_iter:
             events.append(event)
@@ -352,54 +356,45 @@ class EvalAgent:
                 continue
 
             if thinking_buf:
-                logger.info("    [thinking] %s", _truncate("".join(thinking_buf), 500))
+                _out(f"    [thinking] {_truncate(''.join(thinking_buf), 500)}")
                 thinking_buf.clear()
             if text_buf:
-                logger.info("    [text] %s", _truncate("".join(text_buf), 500))
+                _out(f"    [text] {_truncate(''.join(text_buf), 500)}")
                 text_buf.clear()
 
             if isinstance(event, ToolExecutionStarted):
-                logger.info(
-                    "    -> tool_start: %s(%s)",
-                    event.tool_name,
-                    _truncate(str(event.tool_input), 120),
+                _out(
+                    f"    -> tool_start: {event.tool_name}"
+                    f"({_truncate(str(event.tool_input), 120)})"
                 )
             elif isinstance(event, ToolExecutionCompleted):
                 status = "ERROR" if event.is_error else "ok"
-                logger.info(
-                    "    <- tool_done:  %s [%s] %s",
-                    event.tool_name,
-                    status,
-                    _truncate(event.output, 120),
+                _out(
+                    f"    <- tool_done:  {event.tool_name}"
+                    f" [{status}] {_truncate(event.output, 120)}"
                 )
             elif isinstance(event, AssistantTurnComplete):
                 for tb in event.message.tool_uses:
                     tool_calls.append(ToolCallResult(name=tb.name, input=tb.input))
             elif isinstance(event, BackgroundTaskStarted):
-                logger.info(
-                    "    >> bg_start:   %s task_id=%s",
-                    event.tool_name,
-                    event.task_id,
+                _out(
+                    f"    >> bg_start:   {event.tool_name}"
+                    f" task_id={event.task_id}"
                 )
             elif isinstance(event, BackgroundTaskCompleted):
-                logger.info(
-                    "    << bg_done:    %s %s",
-                    event.tool_name,
-                    _truncate(event.output, 120),
+                _out(
+                    f"    << bg_done:    {event.tool_name}"
+                    f" {_truncate(event.output, 120)}"
                 )
 
         if thinking_buf:
-            logger.info("    [thinking] %s", _truncate("".join(thinking_buf), 500))
+            _out(f"    [thinking] {_truncate(''.join(thinking_buf), 500)}")
         if text_buf:
-            logger.info("    [text] %s", _truncate("".join(text_buf), 500))
+            _out(f"    [text] {_truncate(''.join(text_buf), 500)}")
 
         latency_ms = (time.monotonic() - start) * 1000
 
-        logger.info(
-            "  [EvalAgent] done: %d tool calls, %.0fms",
-            len(tool_calls),
-            latency_ms,
-        )
+        _out(f"  [EvalAgent] done: {len(tool_calls)} tool calls, {latency_ms:.0f}ms")
 
         return EvalResult(
             events=events,

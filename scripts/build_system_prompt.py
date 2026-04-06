@@ -18,18 +18,18 @@ import sys
 # Allow imports from backend/src
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend", "src"))
 
-from agents.loader import get_agent_definition
-from agents.types import AgentDefinition
-from prompts.context import build_agent_capabilities_prompt, build_runtime_system_prompt
-from prompts.system_prompt import build_system_prompt
-from config.settings import load_settings
+from agents.loader import get_agent_definition  # type: ignore[attr-defined]
+from agents.types import AgentDefinition  # type: ignore[attr-defined]
+from prompts.runtime_prompt import build_agent_capabilities_prompt, build_runtime_system_prompt  # type: ignore[attr-defined]
+from prompts.system_prompt import build_system_prompt  # type: ignore[attr-defined]
+from config.settings import load_settings  # type: ignore[attr-defined]
 
 
 def _load_from_db(name: str, settings) -> AgentDefinition | None:
     """Try to load an agent definition from the database."""
     try:
-        from db.engine import initialize_db
-        from agents.db.store import AgentDefinitionStore
+        from db.engine import initialize_db  # type: ignore[attr-defined]
+        from agents.db.store import AgentDefinitionStore  # type: ignore[attr-defined]
 
         sf = initialize_db(settings.database)
         if sf is None:
@@ -92,8 +92,8 @@ def main() -> None:
 
     # --- Tool registry (mirrors spawn_agent lines 105-150) ---
     if not args.no_capabilities:
-        from tools import create_default_tool_registry
-        from tools.factory import create_toolkit, has_factory, ToolkitContext
+        from tools import create_default_tool_registry  # type: ignore[attr-defined]
+        from tools.factory import create_toolkit, has_factory, ToolkitContext  # type: ignore[attr-defined]
 
         tool_registry = create_default_tool_registry()
 
@@ -112,14 +112,16 @@ def main() -> None:
                         tk = create_toolkit(tk_name, toolkit_ctx)
                         tool_registry.register_toolkit(tk)
                     except Exception as exc:
-                        print(f"Warning: failed to create toolkit '{tk_name}': {exc}", file=sys.stderr)
+                        print(
+                            f"Warning: failed to create toolkit '{tk_name}': {exc}", file=sys.stderr
+                        )
 
             tool_registry.restrict_to_toolkits(agent_def.toolkits)
 
         # --- SkillsToolkit (mirrors spawn_agent lines 166-177) ---
         if agent_def.skills:
-            from skills.loader import load_skill_registry
-            from tools.builtins.skills import make_skills_toolkit
+            from skills.loader import load_skill_registry  # type: ignore[attr-defined]
+            from tools.builtins.skills import make_skills_toolkit  # type: ignore[attr-defined]
 
             skill_registry = load_skill_registry(args.cwd)
             skills_toolkit = make_skills_toolkit(skill_registry, agent_def.skills)
@@ -129,7 +131,7 @@ def main() -> None:
         bg_tool_names = [t.name for t in tool_registry.list_tools() if t.supports_background]
         has_background_tools = bool(bg_tool_names)
         if has_background_tools:
-            from tools.builtins.background import make_background_toolkit
+            from tools.builtins.background import make_background_toolkit  # type: ignore[attr-defined]
 
             tool_registry.register_toolkit(make_background_toolkit(bg_tool_names))
         awareness = build_agent_capabilities_prompt(

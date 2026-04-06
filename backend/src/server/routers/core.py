@@ -15,7 +15,7 @@ from pydantic import BaseModel
 from agents.types import AgentDefinition
 from models.core.provider import detect_provider, auth_status
 from config import load_settings, save_settings
-from engine.agent import spawn_agent
+from engine import spawn_agent
 from message.stream_events import (
     AssistantTextDelta,
     AssistantTurnComplete,
@@ -153,11 +153,9 @@ async def execute_ephemeral_agent_run(
         if run_id and db_available:
             try:
                 # Capture the response (new messages from this run)
-                run_response = [
-                    m.model_dump(mode="json") for m in agent.engine.messages[len(messages) :]
-                ]
+                run_response = [m.model_dump(mode="json") for m in agent._messages[len(messages) :]]
                 # Capture compacted history (what the engine holds after the run)
-                compacted = [m.model_dump(mode="json") for m in agent.engine.messages]
+                compacted = [m.model_dump(mode="json") for m in agent._messages]
 
                 agent_run_store.finish_run(
                     run_id,
@@ -191,7 +189,7 @@ async def execute_ephemeral_agent_run(
 
     # 6. Extract new messages for the full (uncompacted) audit log
     new_messages: list[dict] = []
-    engine_msgs = agent.engine.messages
+    engine_msgs = agent._messages
     for i in range(len(engine_msgs) - 1, -1, -1):
         msg = engine_msgs[i]
         if msg.role == "user" and msg.text.strip() == input_message.strip():
@@ -212,21 +210,21 @@ async def execute_ephemeral_agent_run(
                     cwd=config.cwd,
                     latest_user_prompt=input_message,
                 ),
-                messages=[m.model_dump(mode="json") for m in agent.engine.messages],
+                messages=[m.model_dump(mode="json") for m in agent._messages],
                 full_messages=full_history,
-                usage=agent.engine.total_usage.model_dump(),
-                session_state=agent.engine.session_state.to_dict()
-                if agent.engine.session_state
+                usage=agent.total_usage.model_dump(),
+                session_state=agent.query_context.session_state.to_dict()
+                if agent.query_context.session_state
                 else None,
                 summary=next(
                     (
                         m.text.strip()[:80]
-                        for m in agent.engine.messages
+                        for m in agent._messages
                         if m.role == "user" and m.text.strip()
                     ),
                     "",
                 ),
-                message_count=len(agent.engine.messages),
+                message_count=len(agent._messages),
             )
         except Exception:
             logger.debug("Failed to save session to DB", exc_info=True)
