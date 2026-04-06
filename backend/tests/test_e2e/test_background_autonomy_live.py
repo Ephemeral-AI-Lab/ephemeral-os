@@ -3,45 +3,23 @@
 
 Tests that the LLM independently decides when to check and cancel
 background tasks — NO explicit instructions to check or cancel.
-The ephemeral reminder is the only signal. The LLM must use its
-own judgment.
 
-Run with: pytest tests/test_e2e/test_background_autonomy_live.py -m live -v --log-cli-level=INFO
+Uses EvalAgent for credential loading and agent configuration.
+Run with: .venv/bin/python -m pytest backend/tests/test_e2e/test_background_autonomy_live.py -v -s --log-cli-level=INFO
 """
 
 from __future__ import annotations
 
 import logging
-import os
 
 import pytest
 
-from tests.test_e2e.conftest import (
-    HAS_BOTH,
-    MINIMAX_KEY,
-    MINIMAX_MODEL,
-    create_test_sandbox,
-    delete_test_sandbox,
-    events_of_type,
-    get_assistant_text,
-    get_event_types,
-    get_tool_started_events,
-    get_tool_completed_events,
-    make_live_client,
-    send_chat,
-)
+from engine.eval_agent import EvalAgent
+from tests.test_e2e.conftest import create_test_sandbox, delete_test_sandbox
 
 logger = logging.getLogger(__name__)
 
 pytestmark = [pytest.mark.e2e, pytest.mark.live]
-
-_API_KEY = os.environ.get("MINIMAX_API_KEY") or MINIMAX_KEY
-_MODEL = os.environ.get("MINIMAX_MODEL") or MINIMAX_MODEL
-_BASE_URL = "https://api.minimax.io/anthropic"
-
-MODEL_KEY = "minimax-autonomy-test"
-AGENT_NAME = "test-autonomy-agent"
-AGENT_TOOLKITS = ["sandbox_operations"]
 
 AGENT_PROMPT = """\
 You are test-autonomy-agent, a developer with a remote Daytona sandbox.
@@ -57,77 +35,18 @@ RULES:
 """
 
 
-def _register_model(client) -> dict:
-    resp = client.post(
-        "/api/db/models/register",
-        json={
-            "key": MODEL_KEY,
-            "label": "MiniMax Autonomy Test",
-            "class_path": "models.clients.anthropic_native.AnthropicClient",
-            "kwargs": {
-                "api_key": _API_KEY,
-                "base_url": _BASE_URL,
-                "model": _MODEL,
-                "api_format": "anthropic",
-            },
-            "activate": True,
-        },
-    )
-    assert resp.status_code == 200, f"Model registration failed: {resp.status_code} {resp.text}"
-    return resp.json()
-
-
-def _create_agent(client, name: str = AGENT_NAME) -> dict:
-    resp = client.post(
-        "/api/agents/",
-        json={
-            "name": name,
-            "description": f"E2E autonomy test ({name})",
-            "model": MODEL_KEY,
-            "toolkits": AGENT_TOOLKITS,
-            "system_prompt": AGENT_PROMPT,
-        },
-    )
-    if resp.status_code == 201:
-        return resp.json()
-    get_resp = client.get(f"/api/agents/{name}")
-    if get_resp.status_code == 200:
-        return get_resp.json()
-    assert False, f"Failed to create agent '{name}': {resp.status_code} {resp.text}"
-
-
-def _log_events(events: list[dict], label: str) -> None:
-    tool_started = get_tool_started_events(events)
-    tool_completed = get_tool_completed_events(events)
-    assistant_turns = events_of_type(events, "assistant_complete")
-    errors = events_of_type(events, "error")
-
-    tool_names = [e.get("tool_name") for e in tool_started]
+def _log_result(result, label: str) -> None:
+    checks = result.tool_count("check_background_progress")
+    cancels = result.tool_count("cancel_background_task")
 
     logger.info(
-        f"\n{'='*60}\n"
-        f"[{label}]\n"
-        f"  Tools: {len(tool_started)} started, {len(tool_completed)} completed\n"
-        f"  Turns: {len(assistant_turns)}\n"
-        f"  Errors: {len(errors)}\n"
-        f"  Sequence: {tool_names}\n"
+        f"\n{'='*60}\n[{label}]\n"
+        f"  Tools: {len(result.tools_started())} started, {len(result.tools_completed())} completed\n"
+        f"  Turns: {len(result.assistant_turns())}\n"
+        f"  Sequence: {result.tool_names}\n"
+        f"  LLM autonomous decisions: {checks} progress checks, {cancels} cancels\n"
         f"{'='*60}"
     )
-
-    # Log check/cancel decisions specifically
-    checks = [n for n in tool_names if n == "check_background_progress"]
-    cancels = [n for n in tool_names if n == "cancel_background_task"]
-    logger.info(
-        f"  LLM autonomous decisions: "
-        f"{len(checks)} progress checks, {len(cancels)} cancels"
-    )
-
-    for e in errors:
-        logger.error(f"  ERROR: {e.get('message', '')[:300]}")
-
-    text = get_assistant_text(events)
-    if text:
-        logger.info(f"  Final text: {text[:300]}")
 
 
 # ===========================================================================
@@ -135,7 +54,7 @@ def _log_events(events: list[dict], label: str) -> None:
 # ===========================================================================
 
 
-@pytest.mark.skipif(not HAS_BOTH, reason="MiniMax + Daytona both required")
+@pytest.mark.skipif(not EvalAgent.has_all(), reason="API + Daytona both required")
 class TestAutonomousProgressCheck:
     """No instruction to check — LLM decides on its own."""
 
@@ -145,50 +64,34 @@ class TestAutonomousProgressCheck:
         yield sb
         delete_test_sandbox(sb["id"])
 
-    @pytest.fixture()
-    def client(self, db_session_factory, tmp_path, monkeypatch):
-        c = make_live_client(
-            db_session_factory, tmp_path, monkeypatch,
-            api_key=_API_KEY, model=_MODEL,
-            base_url=_BASE_URL, api_format="anthropic",
-        )
-        with c:
-            yield c
-
-    def test_llm_autonomously_checks_progress(self, client, sandbox):
+    @pytest.mark.asyncio
+    async def test_llm_autonomously_checks_progress(self, sandbox):
         """Give the LLM a background task and foreground work.
-        Do NOT tell it to check progress. See if it does on its own.
-        """
-        _register_model(client)
-        agent_name = f"{AGENT_NAME}-autocheck"
-        _create_agent(client, agent_name)
-
-        events = send_chat(
-            client,
+        Do NOT tell it to check progress. See if it does on its own."""
+        agent = EvalAgent.create(
+            system_prompt=AGENT_PROMPT,
+            sandbox_id=sandbox["id"],
+            enable_background_tasks=True,
+        )
+        result = await agent.invoke(
             "I need you to do two things:\n"
             "- Run a long build: 'sleep 20 && echo BUILD_OK' in background\n"
             "- While it runs, create a file /workspace/readme.txt with "
             "'Hello World' using daytona_bash: echo 'Hello World' > /workspace/readme.txt\n"
             "- Then read it back: cat /workspace/readme.txt\n\n"
-            "Let me know when everything is done.",
-            agent_name=agent_name,
-            sandbox_id=sandbox["id"],
-            timeout=300,
+            "Let me know when everything is done."
         )
-        _log_events(events, "autonomous_check")
-        types = get_event_types(events)
-        assert "assistant_complete" in types, f"Missing assistant_complete. Types: {types}"
+        _log_result(result, "autonomous_check")
 
-        tool_names = [e.get("tool_name") for e in get_tool_started_events(events)]
-        has_check = "check_background_progress" in tool_names
+        assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
 
+        has_check = result.has_tool("check_background_progress")
         if has_check:
             logger.info("[RESULT] LLM AUTONOMOUSLY checked background progress")
         else:
-            logger.info("[RESULT] LLM did NOT check progress on its own — completed without checking")
+            logger.info("[RESULT] LLM did NOT check progress on its own")
 
-        # Either way the agent should complete. We log the decision, not assert it.
-        assert len(tool_names) >= 2, f"Expected 2+ tools. Got: {tool_names}"
+        assert len(result.tool_names) >= 2, f"Expected 2+ tools. Got: {result.tool_names}"
         logger.info(f"[DONE] Autonomous check test: checked={has_check}")
 
 
@@ -197,12 +100,9 @@ class TestAutonomousProgressCheck:
 # ===========================================================================
 
 
-@pytest.mark.skipif(not HAS_BOTH, reason="MiniMax + Daytona both required")
+@pytest.mark.skipif(not EvalAgent.has_all(), reason="API + Daytona both required")
 class TestAutonomousCancel:
-    """Background a task that will never finish (sleep 120).
-    The LLM must decide on its own to cancel or wait.
-    The idle wait timeout will fire after 300s if the LLM doesn't act.
-    """
+    """Background a task that will never finish. LLM must decide on its own."""
 
     @pytest.fixture(scope="class")
     def sandbox(self):
@@ -210,45 +110,29 @@ class TestAutonomousCancel:
         yield sb
         delete_test_sandbox(sb["id"])
 
-    @pytest.fixture()
-    def client(self, db_session_factory, tmp_path, monkeypatch):
-        c = make_live_client(
-            db_session_factory, tmp_path, monkeypatch,
-            api_key=_API_KEY, model=_MODEL,
-            base_url=_BASE_URL, api_format="anthropic",
+    @pytest.mark.asyncio
+    async def test_llm_autonomously_handles_long_task(self, sandbox):
+        """Background a very long task. Give foreground work. See what happens."""
+        agent = EvalAgent.create(
+            system_prompt=AGENT_PROMPT,
+            sandbox_id=sandbox["id"],
+            enable_background_tasks=True,
         )
-        with c:
-            yield c
-
-    def test_llm_autonomously_handles_long_task(self, client, sandbox):
-        """Background a very long task. Give foreground work. See what happens.
-        The LLM might: check progress, cancel, or just wait for idle timeout.
-        """
-        _register_model(client)
-        agent_name = f"{AGENT_NAME}-autocancel"
-        _create_agent(client, agent_name)
-
-        events = send_chat(
-            client,
+        result = await agent.invoke(
             "Run 'sleep 120 && echo NEVER_FINISHES' in background.\n"
             "Then run 'echo quick_task_done' in foreground.\n\n"
             "The background task simulates a very slow npm install. "
-            "Use your judgment on what to do about it.",
-            agent_name=agent_name,
-            sandbox_id=sandbox["id"],
-            timeout=360,
+            "Use your judgment on what to do about it."
         )
-        _log_events(events, "autonomous_cancel")
-        types = get_event_types(events)
-        assert "assistant_complete" in types, f"Missing assistant_complete. Types: {types}"
+        _log_result(result, "autonomous_cancel")
 
-        tool_names = [e.get("tool_name") for e in get_tool_started_events(events)]
-        has_check = "check_background_progress" in tool_names
-        has_cancel = "cancel_background_task" in tool_names
+        assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
+
+        has_check = result.has_tool("check_background_progress")
+        has_cancel = result.has_tool("cancel_background_task")
 
         logger.info(
-            f"[RESULT] LLM autonomous decisions: "
-            f"checked={has_check}, cancelled={has_cancel}"
+            f"[RESULT] LLM autonomous decisions: checked={has_check}, cancelled={has_cancel}"
         )
 
         if has_cancel:
@@ -256,10 +140,9 @@ class TestAutonomousCancel:
         elif has_check:
             logger.info("[RESULT] LLM checked progress but decided to wait")
         else:
-            logger.info("[RESULT] LLM did not interact with background task — relied on idle wait")
+            logger.info("[RESULT] LLM did not interact with background task")
 
-        assert len(tool_names) >= 1, f"Expected 1+ tools. Got: {tool_names}"
-        logger.info(f"[DONE] Autonomous cancel test: check={has_check}, cancel={has_cancel}")
+        assert len(result.tool_names) >= 1, f"Expected 1+ tools. Got: {result.tool_names}"
 
 
 # ===========================================================================
@@ -267,7 +150,7 @@ class TestAutonomousCancel:
 # ===========================================================================
 
 
-@pytest.mark.skipif(not HAS_BOTH, reason="MiniMax + Daytona both required")
+@pytest.mark.skipif(not EvalAgent.has_all(), reason="API + Daytona both required")
 class TestAutonomousMultiTask:
     """Two background tasks. LLM must manage them independently."""
 
@@ -277,51 +160,37 @@ class TestAutonomousMultiTask:
         yield sb
         delete_test_sandbox(sb["id"])
 
-    @pytest.fixture()
-    def client(self, db_session_factory, tmp_path, monkeypatch):
-        c = make_live_client(
-            db_session_factory, tmp_path, monkeypatch,
-            api_key=_API_KEY, model=_MODEL,
-            base_url=_BASE_URL, api_format="anthropic",
-        )
-        with c:
-            yield c
-
-    def test_llm_manages_multiple_background_tasks(self, client, sandbox):
+    @pytest.mark.asyncio
+    async def test_llm_manages_multiple_background_tasks(self, sandbox):
         """Two background tasks with different durations. See how LLM manages."""
-        _register_model(client)
-        agent_name = f"{AGENT_NAME}-automulti"
-        _create_agent(client, agent_name)
-
-        events = send_chat(
-            client,
+        agent = EvalAgent.create(
+            system_prompt=AGENT_PROMPT,
+            sandbox_id=sandbox["id"],
+            enable_background_tasks=True,
+        )
+        result = await agent.invoke(
             "I need two things running in the background:\n"
             "- A fast build: 'sleep 10 && echo FAST_BUILD_DONE' in background\n"
             "- A slow test suite: 'sleep 60 && echo SLOW_TESTS_DONE' in background\n\n"
             "While those run, create /workspace/status.txt with 'waiting for builds' "
             "using daytona_bash.\n\n"
-            "Manage the background tasks as you see fit.",
-            agent_name=agent_name,
-            sandbox_id=sandbox["id"],
-            timeout=360,
+            "Manage the background tasks as you see fit."
         )
-        _log_events(events, "autonomous_multi")
-        types = get_event_types(events)
-        assert "assistant_complete" in types, f"Missing assistant_complete. Types: {types}"
+        _log_result(result, "autonomous_multi")
 
-        tool_names = [e.get("tool_name") for e in get_tool_started_events(events)]
-        checks = tool_names.count("check_background_progress")
-        cancels = tool_names.count("cancel_background_task")
-        bash_calls = tool_names.count("daytona_bash")
+        assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
+
+        checks = result.tool_count("check_background_progress")
+        cancels = result.tool_count("cancel_background_task")
+        bash_calls = result.tool_count("daytona_bash")
 
         logger.info(
             f"[RESULT] Multi-task autonomy:\n"
             f"  bash calls: {bash_calls}\n"
             f"  progress checks: {checks}\n"
             f"  cancels: {cancels}\n"
-            f"  total tools: {len(tool_names)}"
+            f"  total tools: {len(result.tool_names)}"
         )
 
-        # The LLM should at minimum run the foreground task
-        assert bash_calls >= 1, f"Expected 1+ bash calls. Got: {tool_names}"
-        logger.info(f"[DONE] Multi-task autonomy: {len(tool_names)} total tools")
+        assert bash_calls >= 1, f"Expected 1+ bash calls. Got: {result.tool_names}"
+        logger.info(f"[DONE] Multi-task autonomy: {len(result.tool_names)} total tools")
