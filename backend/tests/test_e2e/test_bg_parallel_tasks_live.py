@@ -89,7 +89,7 @@ class TestParallelBgWithFgInterleaving:
             "- 'echo \"Step 2: Env verified\"'\n"
             "- 'echo \"Step 3: Deps checked\"'\n"
             "Then check progress using check_background_progress. "
-            "Wait for all tasks with wait_for_background_task using task_id="all" and timeout=15. "
+            "Wait for all tasks with wait_for_background_task using task_id=\"all\" and timeout=15. "
             "Report all results."
         )
         _log_result(result, "three_bg_fg_interleave")
@@ -291,7 +291,7 @@ class TestParallelBgSameCommand:
             "4. 'sleep 5 && echo \"SHARD_4: 9/10 passed\"' (background: true)\n"
             "Do foreground: 'echo TEST_SHARDS_LAUNCHED'. "
             "Check progress using check_background_progress. "
-            "Wait for all shards with wait_for_background_task task_id="all" timeout=15. "
+            "Wait for all shards with wait_for_background_task task_id=\"all\" timeout=15. "
             "Collect all results and create /home/daytona/test_summary.txt with the combined "
             "shard results using daytona_write_file. Report total pass/fail."
         )
@@ -354,7 +354,7 @@ class TestParallelBgOneFailsOthersSucceed:
             "3. 'sleep 3 && echo SUCCESS_C' (background: true)\n"
             "Do foreground: 'echo MONITORING'. "
             "Check progress using check_background_progress. "
-            "Wait for all with wait_for_background_task task_id="all" timeout=10. "
+            "Wait for all with wait_for_background_task task_id=\"all\" timeout=10. "
             "Check progress again to see all statuses. "
             "Report: which succeeded, which failed, and note the exit code of the failed task."
         )

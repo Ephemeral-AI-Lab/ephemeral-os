@@ -12,6 +12,22 @@ from db.models.agent_run import AgentResponseChunkRecord, AgentRunRecord
 logger = logging.getLogger(__name__)
 
 
+def _serialize_run_summary(r: AgentRunRecord) -> dict:
+    """Compact JSON view of an AgentRunRecord for list endpoints."""
+    return {
+        "id": r.id,
+        "parent_run_id": r.parent_run_id,
+        "parent_task_id": r.parent_task_id,
+        "agent_name": r.agent_name,
+        "status": r.status,
+        "input_query": r.input_query,
+        "event_count": r.event_count,
+        "error": r.error,
+        "started_at": r.started_at.isoformat() if r.started_at else None,
+        "finished_at": r.finished_at.isoformat() if r.finished_at else None,
+    }
+
+
 class AgentRunStore:
     """CRUD operations for agent run records and response chunks."""
 
@@ -38,11 +54,24 @@ class AgentRunStore:
         agent_name: str,
         input_query: str | None = None,
         metadata: dict | None = None,
+        parent_run_id: str | None = None,
+        parent_task_id: str | None = None,
     ) -> AgentRunRecord:
+        """Create a new agent run record.
+
+        ``parent_run_id`` and ``parent_task_id`` are set when this run was
+        spawned by another agent (e.g. via run_subagent). Top-level user runs
+        leave them ``None``. ``session_id`` is required for the FK; subagent
+        runs reuse the parent's ``session_id`` but are filtered out of the
+        default ``list_runs()`` query so they do not pollute the parent
+        session's transcript.
+        """
         with self._sf() as db:
             record = AgentRunRecord(
                 id=run_id,
                 session_id=session_id,
+                parent_run_id=parent_run_id,
+                parent_task_id=parent_task_id,
                 agent_name=agent_name,
                 status="running",
                 input_query=input_query,
@@ -86,27 +115,39 @@ class AgentRunStore:
         with self._sf() as db:
             return db.get(AgentRunRecord, run_id)
 
-    def list_runs(self, session_id: str, limit: int = 50) -> list[dict]:
+    def list_runs(
+        self,
+        session_id: str,
+        limit: int = 50,
+        *,
+        include_subagents: bool = False,
+    ) -> list[dict]:
+        """List runs for a session.
+
+        By default returns only top-level runs (``parent_run_id IS NULL``) so
+        the user-facing transcript stays clean. Pass ``include_subagents=True``
+        to include subagent runs as well, or use :meth:`list_subagent_runs` to
+        fetch the children of a single parent run.
+        """
+        with self._sf() as db:
+            q = db.query(AgentRunRecord).filter(
+                AgentRunRecord.session_id == session_id
+            )
+            if not include_subagents:
+                q = q.filter(AgentRunRecord.parent_run_id.is_(None))
+            q = q.order_by(AgentRunRecord.created_at.desc()).limit(limit)
+            return [_serialize_run_summary(r) for r in q.all()]
+
+    def list_subagent_runs(self, parent_run_id: str, limit: int = 100) -> list[dict]:
+        """List all subagent runs spawned by *parent_run_id*, oldest first."""
         with self._sf() as db:
             q = (
                 db.query(AgentRunRecord)
-                .filter(AgentRunRecord.session_id == session_id)
-                .order_by(AgentRunRecord.created_at.desc())
+                .filter(AgentRunRecord.parent_run_id == parent_run_id)
+                .order_by(AgentRunRecord.created_at.asc())
                 .limit(limit)
             )
-            return [
-                {
-                    "id": r.id,
-                    "agent_name": r.agent_name,
-                    "status": r.status,
-                    "input_query": r.input_query,
-                    "event_count": r.event_count,
-                    "error": r.error,
-                    "started_at": r.started_at.isoformat() if r.started_at else None,
-                    "finished_at": r.finished_at.isoformat() if r.finished_at else None,
-                }
-                for r in q.all()
-            ]
+            return [_serialize_run_summary(r) for r in q.all()]
 
     # -- chunk CRUD ------------------------------------------------------------
 

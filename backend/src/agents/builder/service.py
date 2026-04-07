@@ -73,7 +73,7 @@ class AgentBuilderService:
         if not result.valid:
             raise ValueError(f"Validation failed: {'; '.join(result.errors)}")
 
-        from agents.registry import get_definition  # noqa: PLC0415
+        from agents.registry import get_definition
 
         existing = get_definition(data.name)
         if existing is not None and existing.source == "builtin":
@@ -145,7 +145,7 @@ class AgentBuilderService:
     def delete_agent(self, name: str) -> bool:
         ok = self._store.soft_delete(name)
         if ok:
-            from agents.registry import unregister_definition  # noqa: PLC0415
+            from agents.registry import unregister_definition
 
             unregister_definition(name)
         return ok
@@ -171,6 +171,6 @@ class AgentBuilderService:
 
     @staticmethod
     def _register(defn: AgentDefinition) -> None:
-        from agents.registry import register_definition  # noqa: PLC0415
+        from agents.registry import register_definition
 
         register_definition(defn)

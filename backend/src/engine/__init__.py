@@ -39,9 +39,8 @@ __all__ = [
     "ConversationMessage",
     "EphemeralAgent",
     "QueryContext",
-    "run_query",
-    "StreamingToolExecutor",
     "StreamEvent",
+    "StreamingToolExecutor",
     "TextBlock",
     "ThinkingBlock",
     "ThinkingDelta",
@@ -53,6 +52,7 @@ __all__ = [
     "ToolUseBlock",
     "TrackedBackgroundTask",
     "TrackedTool",
+    "run_query",
     "spawn_agent",
 ]
 

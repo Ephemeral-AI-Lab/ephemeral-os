@@ -30,7 +30,7 @@ class AgentDefinitionValidator:
             known: set[str] = set()
             if self._tool_registry:
                 known = {tk.name for tk in self._tool_registry.list_toolkits()}
-            from tools.core.factory import has_factory  # noqa: PLC0415
+            from tools.core.factory import has_factory
             for tk in toolkits:
                 if tk not in known and not has_factory(tk):
                     errors.append(f"Unknown toolkit: {tk}")

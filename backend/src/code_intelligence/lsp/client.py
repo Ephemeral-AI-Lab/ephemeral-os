@@ -348,7 +348,7 @@ class LspClient:
             if self._sandbox:
                 response = self._resolve(
                     self._sandbox.process.exec(
-                        f"python3 -c {repr(script)}",
+                        f"python3 -c {script!r}",
                         timeout=int(LSP_QUERY_TIMEOUT),
                     )
                 )

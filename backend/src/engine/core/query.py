@@ -25,7 +25,7 @@ from providers.types import (
     SupportsStreamingMessages,
     UsageSnapshot,
 )
-from message.messages import ConversationMessage, ToolResultBlock
+from message.messages import ConversationMessage, SystemReminderBlock, ToolResultBlock
 from engine.runtime.background_tasks import BackgroundTaskManager, KillCallback, TrackedBackgroundTask
 from message.stream_events import (
     AssistantTextDelta,
@@ -66,6 +66,11 @@ class QueryContext:
     tool_metadata: dict[str, object] | None = None
     session_state: SessionState | None = None
     enable_background_tasks: bool = False
+    # Snapshot of the most recent api_messages list sent to the provider.
+    # Updated by the query loop on every turn. Persistence layers read this
+    # to populate the ``compacted_history`` column without having to re-run
+    # compaction. ``None`` until the first turn completes.
+    api_messages_snapshot: list[ConversationMessage] | None = None
 
 
 def _format_background_result(
@@ -82,13 +87,23 @@ def _format_background_result(
     return output, status_label
 
 
-async def _inject_background_reminder(
-    messages: list[ConversationMessage],
+def _build_background_reminder(
     background_manager: BackgroundTaskManager,
-) -> list[ConversationMessage]:
+) -> ConversationMessage | None:
+    """Build a single durable user message summarising live background tasks.
+
+    Returns ``None`` if no tasks are running. The returned message is a
+    regular ``ConversationMessage`` and is appended to *display_messages*
+    so the user (and subsequent compaction passes) can see it. It is NOT
+    a separate ephemeral concept — once appended, it lives in history.
+
+    Calling this advances the per-task reminder cursor via
+    :meth:`BackgroundTaskManager.get_reminder_diff`, so each call yields
+    only progress lines that have appeared since the previous reminder.
+    """
     pending = [t for t in background_manager._tasks.values() if t.status == "running"]
     if not pending:
-        return messages
+        return None
 
     parts: list[str] = []
     for t in pending:
@@ -102,18 +117,20 @@ async def _inject_background_reminder(
         if new_lines:
             logs = "\n".join(new_lines)
             parts.append(
-                f"<system-reminder>\n{header}\n"
-                f"New output (last {len(new_lines)} lines):\n{logs}\n"
-                f"</system-reminder>"
+                f"{header}\nNew output (last {len(new_lines)} lines):\n{logs}"
             )
         else:
-            parts.append(
-                f"<system-reminder>\n{header}\n"
-                f"No new output in the last {since:.0f}s\n"
-                f"</system-reminder>"
-            )
+            parts.append(f"{header}\nNo new output in the last {since:.0f}s")
 
-    return list(messages) + [ConversationMessage.from_user_text("\n".join(parts))]
+    return ConversationMessage(
+        role="user",
+        content=[
+            SystemReminderBlock(
+                text="\n\n".join(parts),
+                category="background_progress",
+            )
+        ],
+    )
 
 
 def _make_kill_callback(context: QueryContext, task_id: str) -> KillCallback | None:
@@ -186,9 +203,25 @@ def _wrap_command_with_pid_tracking(command: str, task_id: str) -> str:
 
 async def _run_query_loop(
     context: QueryContext,
-    messages: list[ConversationMessage],
+    display_messages: list[ConversationMessage],
 ) -> AsyncIterator[tuple[StreamEvent, UsageSnapshot | None]]:
-    from compaction import SessionState, auto_compact_if_needed
+    """Run the agentic tool loop.
+
+    Two distinct message lists are maintained:
+
+    - ``display_messages``: the append-only full history. Owned by the
+      caller (EphemeralAgent / EvalAgent), persisted, and shown to the
+      user. The query loop only **appends** to this list — it never
+      mutates existing entries and never removes anything. Background
+      reminders, completion notifications, assistant turns, and tool
+      results all land here.
+    - ``api_messages``: the compacted view sent to the LLM provider.
+      Rebuilt fresh at the start of every turn from ``display_messages``
+      via :func:`compact_for_api`. Never persisted, never returned. The
+      reminder is part of ``display_messages`` so it is automatically
+      reflected in the next ``api_messages`` snapshot.
+    """
+    from compaction import SessionState, compact_for_api
 
     compact_state = context.session_state or SessionState()
 
@@ -200,18 +233,10 @@ async def _run_query_loop(
         context.tool_metadata["background_task_manager"] = background_manager
 
     for _ in range(context.max_turns):
-        messages, _ = await auto_compact_if_needed(
-            messages,
-            api_client=context.api_client,
-            model=context.model,
-            system_prompt=context.system_prompt,
-            state=compact_state,
-        )
-
         if background_manager is not None:
             for completed_task in background_manager.collect_completed():
                 output, status_label = _format_background_result(completed_task)
-                messages.append(
+                display_messages.append(
                     ConversationMessage.from_user_text(
                         f"[BACKGROUND {completed_task.task_id} {status_label}] "
                         f"tool={completed_task.tool_name} "
@@ -227,6 +252,13 @@ async def _run_query_loop(
                     ),
                     None,
                 )
+
+            # Append a fresh background reminder to the durable history so
+            # the user sees it AND the next compaction pass picks it up.
+            if background_manager.has_pending():
+                reminder_msg = _build_background_reminder(background_manager)
+                if reminder_msg is not None:
+                    display_messages.append(reminder_msg)
 
         executor = StreamingToolExecutor(
             tool_registry=context.tool_registry,
@@ -253,9 +285,19 @@ async def _run_query_loop(
         usage = UsageSnapshot()
         pending_cancel: dict[str, str] = {}
 
-        api_messages = messages
-        if background_manager is not None and background_manager.has_pending():
-            api_messages = await _inject_background_reminder(messages, background_manager)
+        # Build the api_messages view fresh from display_messages every turn.
+        # compact_for_api never mutates display_messages — the only list that
+        # ever reaches the provider is api_messages.
+        api_messages = await compact_for_api(
+            display_messages,
+            api_client=context.api_client,
+            model=context.model,
+            system_prompt=context.system_prompt,
+            state=compact_state,
+        )
+        # Persistence + introspection hook: callers can read this AFTER the
+        # loop returns to capture the final compacted view sent to the LLM.
+        context.api_messages_snapshot = api_messages
 
         async for event in context.api_client.stream_message(
             ApiMessageRequest(
@@ -336,7 +378,7 @@ async def _run_query_loop(
         for progress in executor.get_progress():
             yield progress, None
 
-        messages.append(final_message)
+        display_messages.append(final_message)
         yield AssistantTurnComplete(message=final_message, usage=usage), usage
 
         if not final_message.tool_uses:
@@ -347,7 +389,7 @@ async def _run_query_loop(
 
             if completed_task is not None:
                 output, status_label = _format_background_result(completed_task)
-                messages.append(
+                display_messages.append(
                     ConversationMessage.from_user_text(
                         f"[BACKGROUND {completed_task.task_id} {status_label}] "
                         f"tool={completed_task.tool_name} "
@@ -364,7 +406,7 @@ async def _run_query_loop(
                     None,
                 )
             else:
-                messages.append(
+                display_messages.append(
                     ConversationMessage.from_user_text(background_manager.compact_status())
                 )
             continue
@@ -419,7 +461,7 @@ async def _run_query_loop(
                 }
 
                 tool_def = context.tool_registry.get(tc.name)
-                if tool_def and not tool_def.supports_background:
+                if tool_def and getattr(tool_def, "background", "forbidden") == "forbidden":
                     tool_results.append(
                         ToolResultBlock(
                             tool_use_id=tc.id,
@@ -493,7 +535,7 @@ async def _run_query_loop(
             for tc in tool_calls:
                 task_note = str(tc.input.get("task_note", ""))
                 tool_def_for_check = context.tool_registry.get(tc.name)
-                force_bg = bool(getattr(tool_def_for_check, "force_background", False))
+                force_bg = getattr(tool_def_for_check, "background", "forbidden") == "always"
                 is_background = (
                     (tc.input.get("background", False) or force_bg)
                     if background_manager else False
@@ -504,7 +546,7 @@ async def _run_query_loop(
 
                 if is_background:
                     tool_def = context.tool_registry.get(tc.name)
-                    if tool_def and not tool_def.supports_background:
+                    if tool_def and getattr(tool_def, "background", "forbidden") == "forbidden":
                         tool_results.append(
                             ToolResultBlock(
                                 tool_use_id=tc.id,
@@ -625,7 +667,7 @@ async def _run_query_loop(
                 )
                 logger.info("STREAM: All parallel tools completed, gathering results")
                 tool_results.extend(results)
-                for tc, result in zip(foreground_calls, results):
+                for tc, result in zip(foreground_calls, results, strict=True):
                     logger.info(
                         "STREAM: Yielding parallel ToolExecutionCompleted: name=%s is_error=%s output_len=%d",
                         tc.name,
@@ -647,7 +689,7 @@ async def _run_query_loop(
             if not tr.tool_use_id and unassigned_ids:
                 tr.tool_use_id = unassigned_ids.pop(0)
 
-        messages.append(ConversationMessage(role="user", content=tool_results))  # type: ignore[arg-type]
+        display_messages.append(ConversationMessage(role="user", content=tool_results))  # type: ignore[arg-type]
 
     if background_manager is not None:
         await background_manager.cancel_all()
@@ -665,9 +707,19 @@ async def _run_query_loop(
 
 async def run_query(
     context: QueryContext,
-    messages: list[ConversationMessage],
+    display_messages: list[ConversationMessage],
 ) -> tuple[list[ConversationMessage], AsyncIterator[tuple[StreamEvent, UsageSnapshot | None]]]:
-    return messages, _run_query_loop(context, messages)
+    """Run an agent loop against *display_messages*.
+
+    The same list is returned so callers retain a reference to the
+    append-only display history. The query loop appends to it in place;
+    callers must not assume immutability.
+
+    The compacted ``api_messages`` view is built fresh inside the loop and
+    sent to the LLM provider — it is never returned. See
+    :func:`compact_for_api`.
+    """
+    return display_messages, _run_query_loop(context, display_messages)
 
 
 async def _execute_tool_call(

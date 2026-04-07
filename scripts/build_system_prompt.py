@@ -128,7 +128,11 @@ def main() -> None:
             tool_registry.register_toolkit(skills_toolkit)
 
         # --- Background toolkit (mirrors spawn_agent) ---
-        bg_tool_names = [t.name for t in tool_registry.list_tools() if t.supports_background]
+        bg_tool_names = [
+            t.name
+            for t in tool_registry.list_tools()
+            if getattr(t, "background", "forbidden") != "forbidden"
+        ]
         has_background_tools = bool(bg_tool_names)
         if has_background_tools:
             from tools.builtins.background import make_background_toolkit  # type: ignore[attr-defined]

@@ -22,7 +22,6 @@ from tools.builtins.background._common import (
     MAX_TOTAL_OUTPUT_CHARS,
     MIN_PER_ENTRY_CHARS,
     apply_last_n_lines,
-    validate_task_id,
 )
 from tools.builtins.background.check_background_progress import (
     CheckBackgroundProgressInput,
@@ -103,23 +102,8 @@ class TestApplyLastNLines:
 
 
 # ---------------------------------------------------------------------------
-# validate_task_id helper
-# ---------------------------------------------------------------------------
-
-
-class TestValidateTaskId:
-    @pytest.mark.parametrize("bad", [None, "", 0, 123, [], {}])
-    def test_rejects_invalid(self, bad: object) -> None:
-        err = validate_task_id(bad)
-        assert err is not None and "task_id" in err
-
-    @pytest.mark.parametrize("ok", ["bg_1", "all", "x"])
-    def test_accepts_valid(self, ok: str) -> None:
-        assert validate_task_id(ok) is None
-
-
-# ---------------------------------------------------------------------------
-# Pydantic schemas
+# Pydantic schemas — task_id validation now lives on the Field itself
+# (TASK_ID_FIELD with min_length=1), exercised end-to-end below.
 # ---------------------------------------------------------------------------
 
 
@@ -415,10 +399,13 @@ class TestLiveProgressTail:
         alias = mgr.next_alias()
         mgr.launch(alias, "noop", {}, slow())
         try:
+            # The manager stamps a "[started: ...]" line at launch time, so
+            # tail-only lines appended via append_progress live after that.
             mgr.append_progress(alias, "first")
             # Multi-line chunk should be split.
             mgr.append_progress(alias, "second\nthird")
-            assert mgr._tasks[alias].progress_lines == ["first", "second", "third"]
+            tail = mgr._tasks[alias].progress_lines[-3:]
+            assert tail == ["first", "second", "third"]
         finally:
             await mgr.cancel(alias, "")
 
@@ -453,7 +440,7 @@ class TestLiveProgressTail:
             cb = mgr.make_progress_callback(alias)
             cb("alpha")
             cb("beta")
-            assert mgr._tasks[alias].progress_lines == ["alpha", "beta"]
+            assert mgr._tasks[alias].progress_lines[-2:] == ["alpha", "beta"]
         finally:
             await mgr.cancel(alias, "")
 
@@ -471,11 +458,16 @@ class TestLiveProgressTail:
             mgr.append_progress(alias, "live-2")
             snap = mgr.get_status(alias)
             assert snap and snap[0]["status"] == "running"
-            assert snap[0]["output"] == "live-1\nlive-2"
+            # The manager prepends a "[started: ...]" stamp at launch; the
+            # appended lines must appear at the tail.
+            assert snap[0]["output"].endswith("live-1\nlive-2")
         finally:
             await mgr.cancel(alias, "")
 
-    async def test_get_status_no_output_field_for_running_without_progress(self) -> None:
+    async def test_get_status_running_task_carries_start_stamp(self) -> None:
+        """Running tasks always carry an `[started: ...]` stamp in output even
+        before any progress lines are appended, so check_background_progress
+        always has something to surface."""
         mgr = BackgroundTaskManager()
 
         async def slow() -> ToolResult:
@@ -487,6 +479,7 @@ class TestLiveProgressTail:
         try:
             snap = mgr.get_status(alias)
             assert snap and snap[0]["status"] == "running"
-            assert "output" not in snap[0]
+            assert "output" in snap[0]
+            assert snap[0]["output"].startswith("[started:")
         finally:
             await mgr.cancel(alias, "")

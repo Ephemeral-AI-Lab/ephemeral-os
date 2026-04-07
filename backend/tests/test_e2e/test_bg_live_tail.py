@@ -48,7 +48,7 @@ class _StreamingTool(BaseTool):
     name: str = "fake_streaming"
     description: str = "Emit n_lines progress lines, sleeping interval between each."
     input_model: type[BaseModel] = _StreamingInput
-    supports_background: bool = True
+    background: str = "optional"
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, _StreamingInput)

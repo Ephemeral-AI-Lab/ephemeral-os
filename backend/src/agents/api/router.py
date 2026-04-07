@@ -59,7 +59,7 @@ def create_agents_router(
 
     @router.get("/toolkits/available")
     async def list_available_toolkits() -> list[str]:
-        from tools.core.factory import list_factories  # noqa: PLC0415
+        from tools.core.factory import list_factories
 
         names: set[str] = set()
         tr = get_tool_registry()

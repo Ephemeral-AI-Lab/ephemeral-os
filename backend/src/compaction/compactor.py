@@ -8,6 +8,7 @@ Faithfully translated from Claude Code's compaction system:
 
 from __future__ import annotations
 
+import copy
 import logging
 import re
 from dataclasses import dataclass
@@ -23,7 +24,7 @@ from message import (
     ToolResultBlock,
     ToolUseBlock,
 )
-from compaction.token_estimation import estimate_tokens
+from compaction.token_tracker import estimate_tokens
 
 log = logging.getLogger(__name__)
 
@@ -402,37 +403,67 @@ async def compact_conversation(
 # ---------------------------------------------------------------------------
 
 
-async def auto_compact_if_needed(
-    messages: list[ConversationMessage],
+async def compact_for_api(
+    display_messages: list[ConversationMessage],
     *,
     api_client: SupportsStreamingMessages,
     model: str,
     system_prompt: str = "",
     state: SessionState,
     preserve_recent: int = 6,
-) -> tuple[list[ConversationMessage], bool]:
-    """Check if auto-compact should fire, and if so, compact.
+) -> list[ConversationMessage]:
+    """Build the compacted message list to send to the LLM provider.
 
-    Call this at the start of each query loop turn.
+    Pure function: never mutates *display_messages*. Always returns a fresh
+    list. The returned list is the "api_messages" view — the only list that
+    should be passed to ``api_client.stream_message``.
+
+    Compaction strategy:
+
+    1. If token count is below the auto-compact threshold, return a shallow
+       copy of *display_messages* unchanged.
+    2. Otherwise, deep-copy *display_messages* and run microcompact on the
+       copy. If that brings token count below the threshold, return it.
+    3. Otherwise, run a full LLM-based compaction on the copy and return the
+       resulting summarized list.
+    4. On compaction failure, return the microcompacted copy and increment
+       ``state.consecutive_failures``. *display_messages* is never touched.
+
+    Args:
+        display_messages: The full, append-only conversation history. Never
+            mutated.
+        api_client: API client used for the optional summary call.
+        model: Model id (drives the token threshold).
+        system_prompt: System prompt for the summary call.
+        state: Mutable session state — only ``compacted``, ``turn_counter``,
+            and ``consecutive_failures`` are updated; messages are not.
+        preserve_recent: Number of recent messages to keep verbatim during
+            full compaction.
 
     Returns:
-        (messages, was_compacted) — if compacted, messages is the new list.
+        A new ``list[ConversationMessage]`` ready to send to the provider.
     """
-    if not should_autocompact(messages, model, state):
-        return messages, False
+    if not should_autocompact(display_messages, model, state):
+        return list(display_messages)
 
-    log.info("Auto-compact triggered (failures=%d)", state.consecutive_failures)
+    log.info(
+        "compact_for_api: auto-compact triggered (failures=%d)",
+        state.consecutive_failures,
+    )
 
-    # Try microcompact first — may be enough
-    messages, tokens_freed = microcompact_messages(messages)
-    if tokens_freed > 0 and not should_autocompact(messages, model, state):
-        log.info("Microcompact freed ~%d tokens, auto-compact no longer needed", tokens_freed)
-        return messages, True
+    # Work on a deep copy so display_messages stays untouched.
+    working = copy.deepcopy(display_messages)
+    working, tokens_freed = microcompact_messages(working)
+    if tokens_freed > 0 and not should_autocompact(working, model, state):
+        log.info(
+            "compact_for_api: microcompact freed ~%d tokens, full compact skipped",
+            tokens_freed,
+        )
+        return working
 
-    # Full compact needed
     try:
         result = await compact_conversation(
-            messages,
+            working,
             api_client=api_client,
             model=model,
             system_prompt=system_prompt,
@@ -442,26 +473,26 @@ async def auto_compact_if_needed(
         state.compacted = True
         state.turn_counter += 1
         state.consecutive_failures = 0
-        return result, True
+        return result
     except Exception as exc:
         state.consecutive_failures += 1
         log.error(
-            "Auto-compact failed (attempt %d/%d): %s",
+            "compact_for_api: full compact failed (attempt %d/%d): %s",
             state.consecutive_failures,
             MAX_CONSECUTIVE_AUTOCOMPACT_FAILURES,
             exc,
         )
-        return messages, False
+        return working
 
 
 __all__ = [
     "AUTOCOMPACT_BUFFER_TOKENS",
-    "SessionState",
     "COMPACTABLE_TOOLS",
     "TIME_BASED_MC_CLEARED_MESSAGE",
-    "auto_compact_if_needed",
+    "SessionState",
     "build_compact_summary_message",
     "compact_conversation",
+    "compact_for_api",
     "estimate_message_tokens",
     "format_compact_summary",
     "get_autocompact_threshold",

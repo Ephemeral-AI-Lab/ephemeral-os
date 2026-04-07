@@ -63,8 +63,8 @@ def load_external_agents() -> list[AgentDefinition]:
     for defn in load_agents_dir(get_config_dir() / "agents"):
         out[defn.name] = defn
     try:
-        from config.settings import load_settings  # noqa: PLC0415
-        from plugins.loader import load_plugins  # noqa: PLC0415
+        from config.settings import load_settings
+        from plugins.loader import load_plugins
 
         for plugin in load_plugins(load_settings(), os.getcwd()):
             if not plugin.enabled:

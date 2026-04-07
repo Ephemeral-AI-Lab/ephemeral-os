@@ -80,7 +80,7 @@ def _resolve_path(path: str, context: ToolExecutionContext) -> str:
 # ---------------------------------------------------------------------------
 
 
-@tool(name="daytona_bash", description="Run a shell command and return stdout and exit code.", supports_background=True)
+@tool(name="daytona_bash", description="Run a shell command and return stdout and exit code.", background="optional")
 async def daytona_bash(
     command: str,
     timeout: int = _DEFAULT_TIMEOUT,

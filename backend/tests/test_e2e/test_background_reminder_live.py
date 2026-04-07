@@ -94,7 +94,42 @@ class TestEphemeralBackgroundReminder:
         assert result.has_tool("check_background_progress"), \
             f"Expected check_background_progress call. Got: {result.tool_names}"
 
+        # Reminder must live in the durable display history (so the user
+        # sees it in their scrollback) — not just be a transient API-only
+        # injection. Find at least one SystemReminderBlock with the
+        # background-progress category.
+        all_reminders = [
+            r
+            for m in agent._display_messages
+            for r in m.system_reminders
+        ]
+        assert all_reminders, (
+            "Expected at least one SystemReminderBlock in display_messages, "
+            "but found none. The reminder must persist in the durable "
+            "history, not just in api_messages."
+        )
+        assert any(r.category == "background_progress" for r in all_reminders), (
+            "Expected a background_progress reminder; got categories="
+            f"{[r.category for r in all_reminders]}"
+        )
+        assert any("still running" in r.text for r in all_reminders), (
+            "Reminder text 'still running' missing — the reminder builder "
+            "may have produced an empty body."
+        )
+
+        # The compacted view (api_messages) must NOT be the same object as
+        # display_messages: it is a derived snapshot.
+        last_api = agent._query_context.api_messages_snapshot
+        assert last_api is not None, "api_messages_snapshot should be set after a run"
+        assert last_api is not agent._display_messages, (
+            "api_messages must be a fresh list, not a reference to display_messages"
+        )
+
         logger.info(f"[Reminder] Final text: {result.text[:200]}")
+        logger.info(
+            f"[Reminder] display_messages={len(agent._display_messages)} "
+            f"api_messages={len(last_api)}"
+        )
 
     @pytest.mark.asyncio
     async def test_reminder_only_when_tasks_pending(self, sandbox):

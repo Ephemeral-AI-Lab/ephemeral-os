@@ -70,7 +70,7 @@ print(json.dumps({{"manifest": "/tmp/codeact-{run_id}.json", "status": _MANIFEST
 @tool(
     name="daytona_codeact",
     description="Execute Python code with atomic file I/O via read(), write(), and shell() helpers.",
-    supports_background=True,
+    background="optional",
 )
 async def daytona_codeact(
     code: str,

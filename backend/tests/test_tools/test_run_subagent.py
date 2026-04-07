@@ -18,7 +18,7 @@ from message.messages import (
 )
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.subagent.run_subagent_tool import (
-    PEEK_MESSAGE_COUNT,
+    PEEK_MESSAGE_MAX,
     format_last_n_messages,
     run_subagent,
 )
@@ -68,7 +68,7 @@ def _make_messages() -> list[ConversationMessage]:
 
 
 def test_format_last_n_messages_renders_each_block_type():
-    out = format_last_n_messages(_make_messages(), n=PEEK_MESSAGE_COUNT)
+    out = format_last_n_messages(_make_messages(), n=PEEK_MESSAGE_MAX)
     assert "[text]" in out
     assert "[think]" in out
     assert "[tool] read_file" in out
@@ -104,6 +104,94 @@ def test_format_last_n_messages_only_returns_last_n():
 
 
 # ---------------------------------------------------------------------------
+# PEEK_MESSAGE_MAX clamp — caller-supplied `n` is bounded by the formatter
+# so the parent's peek response stays within budget regardless of misuse.
+# ---------------------------------------------------------------------------
+
+
+def test_peek_max_clamps_when_n_exceeds_cap():
+    """Asking for more than PEEK_MESSAGE_MAX returns at most PEEK_MESSAGE_MAX
+    distinct messages, even if the agent has many more."""
+    msgs = [
+        ConversationMessage(role="assistant", content=[TextBlock(text=f"msg-{i}")])
+        for i in range(50)
+    ]
+    out = format_last_n_messages(msgs, n=999)
+    # The newest message is always present; PEEK_MESSAGE_MAX older ones at most.
+    assert f"msg-{50 - 1}" in out
+    # Anything older than the (50 - PEEK_MESSAGE_MAX)-th message must be gone.
+    cutoff = 50 - PEEK_MESSAGE_MAX
+    for i in range(cutoff):
+        assert f"msg-{i} " not in out and f"msg-{i}\n" not in out and f"msg-{i}…" not in out
+    # And the boundary message (cutoff) IS present.
+    assert f"msg-{cutoff}" in out
+
+
+def test_peek_max_returns_exactly_cap_when_more_messages_exist():
+    """When there are strictly more than PEEK_MESSAGE_MAX messages and the
+    caller asks for n >= cap, exactly PEEK_MESSAGE_MAX messages are surfaced."""
+    msgs = [
+        ConversationMessage(role="assistant", content=[TextBlock(text=f"msg-{i}")])
+        for i in range(PEEK_MESSAGE_MAX + 5)
+    ]
+    out = format_last_n_messages(msgs, n=PEEK_MESSAGE_MAX + 5)
+    rendered = out.count("[text]")
+    assert rendered == PEEK_MESSAGE_MAX, (
+        f"expected exactly {PEEK_MESSAGE_MAX} rendered messages, got {rendered}: {out}"
+    )
+
+
+def test_peek_max_does_not_pad_when_messages_below_n():
+    """If there are fewer messages than the cap (or the requested n), the
+    formatter returns ALL messages — no padding, no fake entries."""
+    msgs = [
+        ConversationMessage(role="assistant", content=[TextBlock(text=f"only-{i}")])
+        for i in range(3)
+    ]
+    out = format_last_n_messages(msgs, n=PEEK_MESSAGE_MAX)
+    rendered = out.count("[text]")
+    assert rendered == 3
+    assert "only-0" in out
+    assert "only-1" in out
+    assert "only-2" in out
+
+
+def test_peek_max_below_cap_honors_caller_n():
+    """A caller asking for n < PEEK_MESSAGE_MAX still gets exactly n messages
+    (the cap is an upper bound, not a target)."""
+    msgs = [
+        ConversationMessage(role="assistant", content=[TextBlock(text=f"m-{i}")])
+        for i in range(20)
+    ]
+    out = format_last_n_messages(msgs, n=4)
+    rendered = out.count("[text]")
+    assert rendered == 4
+    assert "m-19" in out
+    assert "m-16" in out
+    assert "m-15" not in out
+
+
+def test_peek_max_constant_value_is_ten():
+    """Sanity check on the cap itself — protects against accidental drift."""
+    assert PEEK_MESSAGE_MAX == 10
+
+
+def test_subagent_provider_clamps_via_format_helper():
+    """End-to-end: when run_subagent's registered provider receives a runaway
+    last_n via the bg manager, the rendered output still respects the cap."""
+    msgs = [
+        ConversationMessage(role="assistant", content=[TextBlock(text=f"e2e-{i}")])
+        for i in range(30)
+    ]
+    out = format_last_n_messages(msgs, n=500)
+    rendered = out.count("[text]")
+    assert rendered == PEEK_MESSAGE_MAX
+    # Newest survives, oldest beyond cap is gone.
+    assert "e2e-29" in out
+    assert "e2e-0" not in out
+
+
+# ---------------------------------------------------------------------------
 # Builtin subagent definition is registered
 # ---------------------------------------------------------------------------
 
@@ -118,8 +206,9 @@ def test_builtin_subagent_is_registered():
 
 
 def test_run_subagent_tool_flags():
-    assert run_subagent.supports_background is True
-    assert getattr(run_subagent, "force_background", False) is True
+    # New unified background-policy enum: "always" means the engine ALWAYS
+    # dispatches this tool as a background task, regardless of LLM input.
+    assert run_subagent.background == "always"
 
 
 # ---------------------------------------------------------------------------
@@ -129,7 +218,7 @@ def test_run_subagent_tool_flags():
 
 class _StubAgent:
     def __init__(self, scripted_messages: list[ConversationMessage]) -> None:
-        self._messages: list[ConversationMessage] = []
+        self._display_messages: list[ConversationMessage] = []
         self._scripted = scripted_messages
         self.total_usage = None
         # Used by the test to inspect that progress provider sees live state.
@@ -137,7 +226,7 @@ class _StubAgent:
 
     async def run(self, prompt: str):
         for msg in self._scripted:
-            self._messages.append(msg)
+            self._display_messages.append(msg)
             await asyncio.sleep(0)  # yield to allow inter-message peeks
             yield ("event",)
 
@@ -207,7 +296,7 @@ async def test_run_subagent_registers_provider_and_returns_final_text(monkeypatc
     # Provider should have been registered.
     tracked = bg._tasks["bg_test"]
     assert tracked.progress_provider is not None
-    snapshot = tracked.progress_provider()
+    snapshot = tracked.progress_provider(5)
     assert isinstance(snapshot, str)
     assert "[text]" in snapshot or "[tool]" in snapshot
 
@@ -239,7 +328,7 @@ async def test_run_subagent_provider_error_is_caught():
         task_note="test",
     )
 
-    def _bad_provider() -> str:
+    def _bad_provider(last_n: int) -> str:
         raise RuntimeError("boom")
 
     bg.set_progress_provider("bg_err", _bad_provider)
@@ -247,3 +336,210 @@ async def test_run_subagent_provider_error_is_caught():
     assert len(statuses) == 1
     assert "[progress provider error" in statuses[0]["output"]
     assert "boom" in statuses[0]["output"]
+
+
+# ---------------------------------------------------------------------------
+# Persistence: subagent runs are recorded with parent_run_id / parent_task_id
+# ---------------------------------------------------------------------------
+
+
+class _StubAgentRunStore:
+    """Captures create_run / finish_run kwargs for test inspection."""
+
+    def __init__(self) -> None:
+        self._session_factory = object()  # truthy → "DB available"
+        self.created: list[dict] = []
+        self.finished: list[dict] = []
+
+    def create_run(self, **kwargs):
+        self.created.append(kwargs)
+        return None
+
+    def finish_run(self, run_id, **kwargs):
+        self.finished.append({"run_id": run_id, **kwargs})
+        return None
+
+
+@pytest.mark.asyncio
+async def test_run_subagent_persists_run_with_parent_ids(monkeypatch):
+    """run_subagent must call create_run with parent_run_id + parent_task_id
+    derived from context.metadata, and finish_run with status='completed'
+    and the inner agent's compacted_history."""
+    scripted = [
+        ConversationMessage(role="user", content=[TextBlock(text="task")]),
+        ConversationMessage(
+            role="assistant", content=[TextBlock(text="DONE: child output")]
+        ),
+    ]
+    stub_agent = _StubAgent(scripted)
+
+    monkeypatch.setattr(
+        "engine.runtime.agent.spawn_agent",
+        lambda *a, **kw: stub_agent,
+        raising=True,
+    )
+
+    # Inject a stub agent_run_store that records calls.
+    fake_store = _StubAgentRunStore()
+    import server.app_factory as app_factory
+
+    monkeypatch.setattr(app_factory, "agent_run_store", fake_store, raising=True)
+
+    bg = BackgroundTaskManager()
+
+    async def _noop_coro() -> ToolResult:
+        return ToolResult(output="placeholder")
+
+    bg.launch(
+        task_id="bg_persist",
+        tool_name="run_subagent",
+        tool_input={"prompt": "task"},
+        coro=_noop_coro(),
+        task_note="test",
+    )
+
+    class _StubCfg:
+        cwd = Path("/tmp")
+        session_id = "session_abc"
+
+    ctx = ToolExecutionContext(
+        cwd=Path("/tmp"),
+        metadata={
+            "session_config": _StubCfg(),
+            "background_task_manager": bg,
+            "background_task_id": "bg_persist",
+            "sandbox_id": "",
+            "agent_run_id": "parent_run_xyz",
+        },
+    )
+
+    result = await run_subagent.execute(
+        run_subagent.input_model(prompt="do the thing"), ctx
+    )
+
+    assert result.is_error is False
+    assert "DONE: child output" in result.output
+
+    # create_run was called with the parent ids and parent's session_id.
+    assert len(fake_store.created) == 1
+    create_kwargs = fake_store.created[0]
+    assert create_kwargs["session_id"] == "session_abc"
+    assert create_kwargs["parent_run_id"] == "parent_run_xyz"
+    assert create_kwargs["parent_task_id"] == "bg_persist"
+    assert create_kwargs["agent_name"] == "subagent"
+    assert create_kwargs["input_query"] == "do the thing"
+
+    # finish_run was called with completed status. The full display history
+    # is persisted to message_history; compacted_history holds the last
+    # api_messages snapshot (None when the stub agent doesn't expose a
+    # query_context).
+    assert len(fake_store.finished) == 1
+    finish_kwargs = fake_store.finished[0]
+    assert finish_kwargs["status"] == "completed"
+    assert finish_kwargs["error"] is None
+    assert finish_kwargs["message_history"]
+    assert finish_kwargs["response"] == {"final_text": "DONE: child output"}
+
+
+@pytest.mark.asyncio
+async def test_run_subagent_persists_spawn_failure(monkeypatch):
+    """If spawn_agent itself raises (before the worker ever starts), the run
+    record must still be created AND finalized as `failed` so the parent has
+    an audit row to inspect / retry."""
+
+    def _boom(*args, **kwargs):
+        raise RuntimeError("spawn boom")
+
+    monkeypatch.setattr("engine.runtime.agent.spawn_agent", _boom, raising=True)
+
+    fake_store = _StubAgentRunStore()
+    import server.app_factory as app_factory
+
+    monkeypatch.setattr(app_factory, "agent_run_store", fake_store, raising=True)
+
+    class _StubCfg:
+        cwd = Path("/tmp")
+        session_id = "session_abc"
+
+    ctx = ToolExecutionContext(
+        cwd=Path("/tmp"),
+        metadata={
+            "session_config": _StubCfg(),
+            "background_task_id": "bg_spawn_fail",
+            "agent_run_id": "parent_run_xyz",
+        },
+    )
+
+    result = await run_subagent.execute(run_subagent.input_model(prompt="x"), ctx)
+
+    assert result.is_error is True
+    assert "spawn failed" in result.output
+    # The run row was created BEFORE spawn was attempted.
+    assert len(fake_store.created) == 1
+    assert fake_store.created[0]["parent_run_id"] == "parent_run_xyz"
+    assert fake_store.created[0]["parent_task_id"] == "bg_spawn_fail"
+    # And finalized as failed at the spawn stage.
+    assert len(fake_store.finished) == 1
+    assert fake_store.finished[0]["status"] == "failed"
+    assert "spawn boom" in fake_store.finished[0]["error"]
+
+
+@pytest.mark.asyncio
+async def test_run_subagent_persists_failure(monkeypatch):
+    """If the inner agent crashes, finish_run should be called with
+    status='failed' and error=<exc message>, and the tool result is_error=True."""
+
+    class _CrashingAgent(_StubAgent):
+        async def run(self, prompt: str):
+            self._display_messages.append(
+                ConversationMessage(role="user", content=[TextBlock(text=prompt)])
+            )
+            yield ("step",)
+            raise RuntimeError("inner exploded")
+
+    monkeypatch.setattr(
+        "engine.runtime.agent.spawn_agent",
+        lambda *a, **kw: _CrashingAgent([]),
+        raising=True,
+    )
+
+    fake_store = _StubAgentRunStore()
+    import server.app_factory as app_factory
+
+    monkeypatch.setattr(app_factory, "agent_run_store", fake_store, raising=True)
+
+    bg = BackgroundTaskManager()
+
+    async def _noop_coro() -> ToolResult:
+        return ToolResult(output="placeholder")
+
+    bg.launch(
+        task_id="bg_fail",
+        tool_name="run_subagent",
+        tool_input={"prompt": "x"},
+        coro=_noop_coro(),
+        task_note="test",
+    )
+
+    class _StubCfg:
+        cwd = Path("/tmp")
+        session_id = "session_abc"
+
+    ctx = ToolExecutionContext(
+        cwd=Path("/tmp"),
+        metadata={
+            "session_config": _StubCfg(),
+            "background_task_manager": bg,
+            "background_task_id": "bg_fail",
+            "sandbox_id": "",
+            "agent_run_id": "parent_run_xyz",
+        },
+    )
+
+    result = await run_subagent.execute(run_subagent.input_model(prompt="x"), ctx)
+
+    assert result.is_error is True
+    assert "inner exploded" in result.output
+    assert len(fake_store.finished) == 1
+    assert fake_store.finished[0]["status"] == "failed"
+    assert "inner exploded" in fake_store.finished[0]["error"]

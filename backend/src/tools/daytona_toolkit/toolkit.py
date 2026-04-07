@@ -44,7 +44,7 @@ class DaytonaToolkit(BaseToolkit):
     """
 
     @classmethod
-    def from_context(cls, ctx: Any) -> "DaytonaToolkit":
+    def from_context(cls, ctx: Any) -> DaytonaToolkit:
         sandbox_id = ctx.metadata.get("sandbox_id", "") if ctx is not None else ""
         return cls(sandbox_id=sandbox_id or None)
 

@@ -20,6 +20,18 @@ class AgentRunRecord(Base):
     session_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("sessions.id", ondelete="CASCADE"), index=True
     )
+    # When this run was spawned by another agent (e.g. via run_subagent),
+    # parent_run_id points at the parent's agent_run id and parent_task_id
+    # carries the parent's bg-task alias (e.g. "bg_3"). Top-level user-driven
+    # runs leave both NULL. list_runs() filters parent_run_id IS NULL by
+    # default so subagent runs do not pollute the user-facing transcript.
+    parent_run_id: Mapped[str | None] = mapped_column(
+        String(36),
+        ForeignKey("agent_runs.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    parent_task_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     agent_name: Mapped[str] = mapped_column(String(128))
     status: Mapped[str] = mapped_column(String(32), default="pending")
     input_query: Mapped[str | None] = mapped_column(Text, nullable=True)

@@ -36,7 +36,7 @@ class TrackedBackgroundTask:
     # Used by tools (e.g. run_subagent) that have structured progress state
     # which is more meaningful than a flat line buffer. When set, get_status
     # calls this instead of joining progress_lines for running tasks.
-    progress_provider: Callable[[], str] | None = None
+    progress_provider: Callable[[int], str] | None = None
     _last_reminder_line_idx: int = 0  # tracks where the last reminder left off
     _last_reminder_at: float = 0.0  # monotonic time of last reminder
 
@@ -80,6 +80,10 @@ class BackgroundTaskManager:
             task_note=task_note,
             kill_callback=kill_callback,
         )
+        # Stamp a startup line so progress_lines is non-empty from t=0
+        # and `check_background_progress` always has something to tail
+        # before the underlying tool flushes its first line.
+        tracked.progress_lines.append(f"[started: {tool_name} {tool_input}]")
         self._tasks[task_id] = tracked
 
         def _done_callback(task: asyncio.Task[ToolResult]) -> None:
@@ -228,7 +232,7 @@ class BackgroundTaskManager:
             tracked.progress_lines.append(piece)
 
     def set_progress_provider(
-        self, task_id: str, provider: Callable[[], str]
+        self, task_id: str, provider: Callable[[int], str]
     ) -> None:
         """Register a pull-callback for live progress on *task_id*.
 
@@ -251,7 +255,9 @@ class BackgroundTaskManager:
         """
         return lambda line: self.append_progress(task_id, line)
 
-    def get_status(self, task_id: str | None = None) -> list[dict[str, Any]]:
+    def get_status(
+        self, task_id: str | None = None, last_n: int = 20
+    ) -> list[dict[str, Any]]:
         """Return JSON-serializable status for tasks.
 
         If *task_id* is given, only that task is returned. Otherwise all
@@ -285,11 +291,13 @@ class BackgroundTaskManager:
                 # stream output via append_progress / on_progress_line.
                 if tracked.progress_provider is not None:
                     try:
-                        entry["output"] = tracked.progress_provider()
+                        entry["output"] = tracked.progress_provider(last_n)
                     except Exception as exc:
                         entry["output"] = f"[progress provider error: {exc}]"
                 elif tracked.progress_lines:
                     entry["output"] = "\n".join(tracked.progress_lines)
+                else:
+                    entry["output"] = "[no output captured yet]"
             result.append(entry)
         return result
 

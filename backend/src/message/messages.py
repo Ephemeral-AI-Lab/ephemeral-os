@@ -40,7 +40,39 @@ class ToolResultBlock(BaseModel):
     is_error: bool = False
 
 
-ContentBlock = Annotated[TextBlock | ThinkingBlock | ToolUseBlock | ToolResultBlock, Field(discriminator="type")]
+class SystemReminderBlock(BaseModel):
+    """Engine-generated nudge for the model wrapped in <system-reminder> tags.
+
+    This is a first-class content block — distinct from a user-authored
+    TextBlock — so the engine, UI, and compaction layers can treat it
+    specially:
+
+    - The display layer can render it differently (greyed-out, icon,
+      collapsible) instead of mixing it with real user text.
+    - :func:`compact_for_api` can filter or dedupe stale reminders before
+      they reach the LLM summarizer.
+    - Audit / persistence can count reminders separately from real user
+      messages.
+
+    On the wire (Anthropic and other providers that only accept ``text``
+    blocks mid-conversation), this block is serialized as a ``text`` block
+    whose body is wrapped in ``<system-reminder>...</system-reminder>``
+    tags. See :func:`serialize_content_block`. The role of the parent
+    :class:`ConversationMessage` should be ``"user"`` because Anthropic's
+    API does not accept arbitrary roles in the messages array.
+    """
+
+    type: Literal["system_reminder"] = "system_reminder"
+    text: str
+    # Free-form category so the UI / filters can group reminders.
+    # Examples: "background_progress", "task_warning", "context_update".
+    category: str = ""
+
+
+ContentBlock = Annotated[
+    TextBlock | ThinkingBlock | ToolUseBlock | ToolResultBlock | SystemReminderBlock,
+    Field(discriminator="type"),
+]
 
 
 class ConversationMessage(BaseModel):
@@ -56,10 +88,20 @@ class ConversationMessage(BaseModel):
 
     @property
     def text(self) -> str:
-        """Return concatenated text blocks (excludes thinking)."""
+        """Return concatenated text blocks (excludes thinking and reminders)."""
         return "".join(
             block.text for block in self.content if isinstance(block, TextBlock)
         )
+
+    @property
+    def system_reminders(self) -> list[SystemReminderBlock]:
+        """Return all system-reminder blocks contained in this message."""
+        return [b for b in self.content if isinstance(b, SystemReminderBlock)]
+
+    @property
+    def system_reminder_text(self) -> str:
+        """Concatenated text of all system-reminder blocks (no tags)."""
+        return "\n".join(b.text for b in self.system_reminders)
 
     @property
     def thinking(self) -> str:
@@ -96,6 +138,16 @@ def serialize_content_block(block: ContentBlock) -> dict[str, Any]:
 
     if isinstance(block, ThinkingBlock):
         return {"type": "thinking", "text": block.text}
+
+    if isinstance(block, SystemReminderBlock):
+        # Anthropic and most providers do not accept arbitrary block types
+        # mid-conversation. Flatten to a text block whose body is wrapped
+        # in <system-reminder> tags so the model recognises it as engine-
+        # generated guidance rather than user input.
+        return {
+            "type": "text",
+            "text": f"<system-reminder>\n{block.text}\n</system-reminder>",
+        }
 
     if isinstance(block, ToolUseBlock):
         return {

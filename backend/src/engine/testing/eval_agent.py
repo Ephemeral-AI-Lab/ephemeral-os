@@ -43,7 +43,7 @@ from message.stream_events import (
     ToolExecutionStarted,
 )
 from providers.provider import make_api_client
-from providers.types import SupportsStreamingMessages
+from providers.types import SupportsStreamingMessages, UsageSnapshot
 from tools import ToolRegistry
 from tools.daytona_toolkit import DaytonaToolkit
 
@@ -248,7 +248,7 @@ class EvalAgent:
         self._settings = settings
         self._model = model
         self._api_client_ref = api_client
-        self._messages: list[ConversationMessage] = []
+        self._display_messages: list[ConversationMessage] = []
 
     # -- Static helpers for credential checks --
 
@@ -373,6 +373,8 @@ class EvalAgent:
             tool_registry, prompt
         )
 
+        from compaction import SessionState
+
         query_context = QueryContext(
             api_client=api_client,
             tool_registry=tool_registry,
@@ -383,6 +385,7 @@ class EvalAgent:
             max_turns=max_turns,
             hook_executor=None,
             enable_background_tasks=has_background_tools,
+            session_state=SessionState(),
         )
 
         return cls(
@@ -411,8 +414,8 @@ class EvalAgent:
             verbose: If True, print streaming events in real-time (thinking,
                      text, tool calls). If False, suppress output.
         """
-        self._messages.clear()
-        self._messages.append(ConversationMessage.from_user_text(prompt))
+        self._display_messages.clear()
+        self._display_messages.append(ConversationMessage.from_user_text(prompt))
         start = time.monotonic()
         events: list[StreamEvent] = []
         tool_calls: list[ToolCallResult] = []
@@ -425,10 +428,23 @@ class EvalAgent:
 
         _out(f"  [EvalAgent] prompt: {_truncate(prompt, 80)}")
 
-        messages, event_iter = await run_query(self._query_context, self._messages)
-        self._messages = messages
-        async for event, _usage in event_iter:
+        total_usage = UsageSnapshot()
+        compact_state_before = None
+        if self._query_context.session_state is not None:
+            compact_state_before = (
+                self._query_context.session_state.turn_counter,
+                self._query_context.session_state.compacted,
+            )
+
+        messages, event_iter = await run_query(self._query_context, self._display_messages)
+        self._display_messages = messages
+        last_usage: UsageSnapshot | None = None
+        async for event, usage in event_iter:
             events.append(event)
+            if usage:
+                total_usage.input_tokens += usage.input_tokens
+                total_usage.output_tokens += usage.output_tokens
+                last_usage = usage
 
             if isinstance(event, ThinkingDelta):
                 thinking_buf.append(event.text)
@@ -453,7 +469,7 @@ class EvalAgent:
                 status = "ERROR" if event.is_error else "ok"
                 _out(
                     f"    <- tool_done:  {event.tool_name}"
-                    f" [{status}] {_truncate(event.output, 120)}"
+                    f" [{status}] {event.output}"
                 )
             elif isinstance(event, AssistantTurnComplete):
                 for tb in event.message.tool_uses:
@@ -476,7 +492,24 @@ class EvalAgent:
 
         latency_ms = (time.monotonic() - start) * 1000
 
-        _out(f"  [EvalAgent] done: {len(tool_calls)} tool calls, {latency_ms:.0f}ms")
+        compaction_note = ""
+        st = self._query_context.session_state
+        if st is not None and compact_state_before is not None:
+            prev_turns, prev_compacted = compact_state_before
+            new_compactions = int(st.compacted) - int(prev_compacted)
+            compaction_note = (
+                f", turns={st.turn_counter - prev_turns}"
+                f", compactions={'+1' if new_compactions > 0 else '0'}"
+                f" (compacted={st.compacted})"
+            )
+        _out(
+            f"  [EvalAgent] done: {len(tool_calls)} tool calls, "
+            f"{latency_ms:.0f}ms, "
+            f"tokens in={total_usage.input_tokens} out={total_usage.output_tokens} "
+            f"total={total_usage.total_tokens}, "
+            f"final_context={last_usage.input_tokens if last_usage else 0}"
+            f"{compaction_note}"
+        )
 
         return EvalResult(
             events=events,

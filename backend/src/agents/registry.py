@@ -96,7 +96,7 @@ def _ensure_external_loaded() -> None:
         return
     _external_loaded = True  # set first to avoid recursion on failure
     try:
-        from agents.loader import load_external_agents  # noqa: PLC0415
+        from agents.loader import load_external_agents
 
         for defn in load_external_agents():
             # Don't overwrite a builtin with itself; user/plugin defs take

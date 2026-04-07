@@ -5,9 +5,11 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel
+
+BackgroundMode = Literal["forbidden", "optional", "always"]
 
 
 @dataclass
@@ -98,11 +100,11 @@ class BaseTool(ABC):
     name: str
     description: str
     input_model: type[BaseModel]
-    supports_background: bool = False
-    # If True, the engine ALWAYS dispatches this tool as a background task,
-    # regardless of whether the LLM passed `background=true`. Used by tools
-    # like run_subagent that should never block the parent's turn.
-    force_background: bool = False
+    # Background dispatch policy:
+    #   "forbidden" — tool cannot run in background (default)
+    #   "optional"  — LLM may opt in by passing background=true
+    #   "always"    — engine ALWAYS dispatches as background, regardless of input
+    background: BackgroundMode = "forbidden"
 
     @abstractmethod
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
@@ -153,7 +155,7 @@ class BaseToolkit:
             self.register(tool)
 
     @classmethod
-    def from_context(cls, ctx: Any) -> "BaseToolkit":
+    def from_context(cls, ctx: Any) -> BaseToolkit:
         """Construct an instance from a ToolkitContext.
 
         Default implementation calls ``cls()`` with no arguments. Override
@@ -242,14 +244,15 @@ class ToolRegistry:
 
 
 def decorate_schemas_for_background(
-    registry: "ToolRegistry", schemas: list[dict[str, Any]]
+    registry: ToolRegistry, schemas: list[dict[str, Any]]
 ) -> list[dict[str, Any]]:
     """Inject ``task_note`` (required) and ``background`` (optional) fields.
 
     Mutates each schema in-place and returns the list. ``task_note`` is
     added to every tool so the LLM must explain what and why on each call.
-    ``background`` is added only to tools whose ``supports_background``
-    flag is set.
+    ``background`` is added only to tools whose ``background`` policy is
+    ``"optional"`` (LLM may choose). Tools marked ``"always"`` are dispatched
+    in the background unconditionally and need no LLM-facing flag.
     """
     for schema in schemas:
         tool = registry.get(schema["name"])
@@ -262,7 +265,7 @@ def decorate_schemas_for_background(
         req = inp.setdefault("required", [])
         if "task_note" not in req:
             req.append("task_note")
-        if tool is not None and tool.supports_background:
+        if tool is not None and getattr(tool, "background", "forbidden") == "optional":
             props["background"] = {
                 "type": "boolean",
                 "description": (

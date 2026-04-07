@@ -40,7 +40,7 @@ class EphemeralAgent:
     query_context: QueryContext
     settings: Settings
     model: str
-    _messages: list[ConversationMessage]
+    _display_messages: list[ConversationMessage]
     total_usage: UsageSnapshot | None = None
 
     async def run(self, prompt: str) -> AsyncIterator[StreamEvent]:
@@ -49,9 +49,11 @@ class EphemeralAgent:
 
         self.total_usage = UsageSnapshot()
         try:
-            self._messages.append(ConversationMessage.from_user_text(prompt))
-            messages, event_iter = await run_query(self.query_context, self._messages)
-            self._messages = messages
+            self._display_messages.append(ConversationMessage.from_user_text(prompt))
+            display_messages, event_iter = await run_query(
+                self.query_context, self._display_messages
+            )
+            self._display_messages = display_messages
             async for event, usage in event_iter:
                 if usage:
                     self.total_usage.input_tokens += usage.input_tokens
@@ -92,7 +94,11 @@ def finalize_tool_registry_and_prompt(
     from prompts.runtime_prompt import build_agent_capabilities_prompt
     from tools.builtins.background import make_background_toolkit
 
-    bg_tool_names = [t.name for t in tool_registry.list_tools() if t.supports_background]
+    bg_tool_names = [
+        t.name
+        for t in tool_registry.list_tools()
+        if getattr(t, "background", "forbidden") != "forbidden"
+    ]
     has_background_tools = bool(bg_tool_names) and agent_type != "subagent"
     if has_background_tools:
         tool_registry.register_toolkit(make_background_toolkit(bg_tool_names))
@@ -281,5 +287,5 @@ def spawn_agent(
         query_context=query_context,
         settings=settings,
         model=resolved_model,
-        _messages=messages if messages else [],
+        _display_messages=messages if messages else [],
     )

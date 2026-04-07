@@ -352,7 +352,7 @@ class BgBashTool(BaseTool):
     name = "daytona_bash"
     description = "Run a command in the sandbox."
     input_model = BgBashInput
-    supports_background = True
+    background = "optional"  # LLM may opt in via input.background=true
 
     async def execute(self, arguments: BgBashInput, context: ToolExecutionContext) -> ToolResult:
         return ToolResult(output=f"ran: {arguments.command}")

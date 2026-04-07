@@ -2,6 +2,7 @@
 
 from compaction.compactor import (
     AUTOCOMPACT_BUFFER_TOKENS,
+    COMPACTABLE_TOOLS,
     MAX_OUTPUT_TOKENS_FOR_SUMMARY,
     MAX_CONSECUTIVE_AUTOCOMPACT_FAILURES,
     TIME_BASED_MC_CLEARED_MESSAGE,
@@ -16,15 +17,13 @@ from compaction.compactor import (
     should_autocompact,
 )
 
-try:
-    from compaction.compactor import auto_compact_if_needed  # noqa: F401
-except ImportError:
-    pass
+from compaction.compactor import compact_for_api  # noqa: F401
 
 __all__ = [
     "AUTOCOMPACT_BUFFER_TOKENS",
-    "MAX_OUTPUT_TOKENS_FOR_SUMMARY",
+    "COMPACTABLE_TOOLS",
     "MAX_CONSECUTIVE_AUTOCOMPACT_FAILURES",
+    "MAX_OUTPUT_TOKENS_FOR_SUMMARY",
     "TIME_BASED_MC_CLEARED_MESSAGE",
     "SessionState",
     "build_compact_summary_message",

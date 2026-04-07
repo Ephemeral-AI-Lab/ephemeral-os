@@ -36,6 +36,7 @@ LIVE_TESTS=(
     test_bg_supernova_live.py           # Supernova: debug-fix-retest cycles
     test_bg_long_suite_live.py          # Long suite with early cancel iterations
     test_bg_live_tail.py                # Live progress tail via on_progress_line
+    test_subagent_complex_live.py       # Complex subagent fan-out/refinement/recovery
     test_live_api.py                    # Live API integration
     test_live_full_run.py               # Complete agent run with metrics
     test_live_sandbox_agents.py         # Sandbox tool calling

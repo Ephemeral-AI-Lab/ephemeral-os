@@ -273,9 +273,8 @@ will submit the plan for you:
 
 - Do **not** call `plan_tasks()`, `submit_plan_tasks`, `coordination`, or any
   wrapper you invent.
-- Do **not** reopen exploration with `run_parallel_agents()`,
-  `query_phase_context()`, or repo-discovery tools unless the phase-owned contract
-  explicitly allows it.
+- Do **not** reopen exploration via repo-discovery tools unless the phase-owned
+  contract explicitly allows it.
 - Build the mixed graph directly from `phase_outputs.synthesize.codebase_map`
   and the current runtime context.
 - Return the material needed for top-level `goal` and `tasks`; the downstream

@@ -33,7 +33,7 @@ from tools.builtins.background.check_background_progress import (
 )
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.subagent.run_subagent_tool import (
-    PEEK_MESSAGE_COUNT,
+    PEEK_MESSAGE_MAX,
     format_last_n_messages,
     run_subagent,
 )
@@ -43,13 +43,13 @@ class _StubAgent:
     """Stand-in for EphemeralAgent that grows _messages step by step."""
 
     def __init__(self, steps: list[ConversationMessage], delay: float = 0.05) -> None:
-        self._messages: list[ConversationMessage] = []
+        self._display_messages: list[ConversationMessage] = []
         self._steps = steps
         self._delay = delay
 
     async def run(self, prompt: str):
         for msg in self._steps:
-            self._messages.append(msg)
+            self._display_messages.append(msg)
             await asyncio.sleep(self._delay)
             yield ("step",)
 

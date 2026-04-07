@@ -71,7 +71,7 @@ class SlowTool(BaseTool):
     name: str = "fake_bash"
     description: str = "Run a fake shell command with configurable delay."
     input_model: type[BaseModel] = SlowToolInput
-    supports_background: bool = True
+    background = "optional"
 
     def __init__(self, output: str = "command completed", is_error: bool = False) -> None:
         self._output = output
@@ -97,7 +97,7 @@ class FastTool(BaseTool):
     name: str = "fake_edit"
     description: str = "A fast tool that completes immediately."
     input_model: type[BaseModel] = FastToolInput
-    supports_background: bool = False
+    background = "forbidden"
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, FastToolInput)
@@ -226,7 +226,7 @@ def _msg_tools(*tool_calls: tuple[str, dict], text: str = "") -> ConversationMes
 
 class TestLLMDecidesToBackground:
     """LLM sends background=true for slow tool, foreground for fast tool.
-    Validates that supports_background=True is required and LLM has choice.
+    Validates that background="optional" is required and LLM has choice.
     """
 
     async def test_llm_chooses_background_for_slow_tool(self):
@@ -480,7 +480,7 @@ class StreamingTool(BaseTool):
     name: str = "fake_streaming"
     description: str = "Emit n_lines progress lines, sleeping interval between each."
     input_model: type[BaseModel] = StreamingToolInput
-    supports_background: bool = True
+    background = "optional"
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, StreamingToolInput)
@@ -564,10 +564,11 @@ class TestLiveProgressTail:
         assert "completed" in final_result.output or "delivered" in final_result.output
         assert f"line {n_lines}" in final_result.output
 
-    async def test_no_streaming_means_no_output_field_while_running(self) -> None:
-        """A background task that does NOT use on_progress_line should not
-        surface any partial output until it finishes — guards against the
-        live-tail change leaking final-only outputs early."""
+    async def test_running_task_shows_start_stamp_not_final_output(self) -> None:
+        """A non-streaming background task should surface only the
+        ``[started: ...]`` stamp while running — not the final output that
+        the inner coroutine will eventually return. Final output is only
+        revealed after completion."""
         from engine.runtime.background_tasks import BackgroundTaskManager
 
         mgr = BackgroundTaskManager()
@@ -582,8 +583,10 @@ class TestLiveProgressTail:
         await asyncio.sleep(0.05)
         snap = mgr.get_status(alias)
         assert snap and snap[0]["status"] == "running"
-        assert "output" not in snap[0], (
-            f"Non-streaming task should not leak output mid-run: {snap[0]}"
+        running_output = snap[0].get("output", "")
+        assert running_output.startswith("[started:"), running_output
+        assert "final only" not in running_output, (
+            f"Non-streaming task must not leak final output mid-run: {snap[0]}"
         )
 
         await mgr.wait_for(alias, timeout=2.0)

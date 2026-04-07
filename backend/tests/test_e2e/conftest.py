@@ -285,17 +285,17 @@ def _print_sse_events(events: list[dict]) -> None:
         elif etype == "assistant_delta":
             text = evt.get("message", evt.get("text", ""))
             if text:
-                print(f"    [text] {text[:500]}", flush=True)
+                print(f"    [text] {text}", flush=True)
         elif etype == "tool_started":
             name = evt.get("tool_name", "?")
             inp = evt.get("tool_input", {})
-            print(f"    -> tool_start: {name}({str(inp)[:120]})", flush=True)
+            print(f"    -> tool_start: {name}({inp})", flush=True)
         elif etype == "tool_completed":
             name = evt.get("tool_name", "?")
             is_err = evt.get("is_error", False)
             output = evt.get("output", "")
             status = "ERROR" if is_err else "ok"
-            print(f"    <- tool_done:  {name} [{status}] {str(output)[:120]}", flush=True)
+            print(f"    <- tool_done:  {name} [{status}] {output}", flush=True)
         elif etype == "assistant_complete":
             print("    [assistant_complete]", flush=True)
 

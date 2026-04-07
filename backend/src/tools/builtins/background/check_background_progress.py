@@ -17,7 +17,11 @@ class CheckBackgroundProgressInput(BaseModel):
     last_n_lines: int = Field(
         default=20,
         ge=1,
-        description="Number of output lines to include for completed tasks. Use to limit verbose output.",
+        description=(
+            "Number of recent output lines to include. For subagent-style "
+            "tasks (run_subagent), this is interpreted as recent messages "
+            "and is hard-capped at 10."
+        ),
     )
 
 
@@ -44,7 +48,7 @@ class CheckBackgroundProgressTool(BaseTool):
             )
 
         target_id = None if arguments.task_id == "all" else arguments.task_id
-        status = manager.get_status(task_id=target_id)
+        status = manager.get_status(task_id=target_id, last_n=arguments.last_n_lines)
 
         if not status:
             if target_id is not None:

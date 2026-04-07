@@ -125,8 +125,13 @@ async def execute_ephemeral_agent_run(
             logger.debug("Failed to create agent run record", exc_info=True)
             run_id = None
 
-    # Snapshot the message history fed to this agent (before the run)
-    pre_run_message_history = [m.model_dump(mode="json") for m in messages] if messages else []
+    # Plumb the parent run id into tool_metadata so subagent dispatches
+    # (and any other tool that wants attribution) can persist themselves
+    # under this run as their parent.
+    if run_id is not None:
+        if agent.query_context.tool_metadata is None:
+            agent.query_context.tool_metadata = {}
+        agent.query_context.tool_metadata["agent_run_id"] = run_id
 
     # 5. Run the agent
     event_count = 0
@@ -150,15 +155,30 @@ async def execute_ephemeral_agent_run(
         if run_id and db_available:
             try:
                 # Capture the response (new messages from this run)
-                run_response = [m.model_dump(mode="json") for m in agent._messages[len(messages) :]]
-                # Capture compacted history (what the engine holds after the run)
-                compacted = [m.model_dump(mode="json") for m in agent._messages]
+                run_response = [
+                    m.model_dump(mode="json")
+                    for m in agent._display_messages[len(messages):]
+                ]
+                # Full append-only display history (user-visible scrollback)
+                # — this is the source of truth and goes into message_history.
+                full_display = [
+                    m.model_dump(mode="json") for m in agent._display_messages
+                ]
+                # Compacted view: the api_messages snapshot from the last
+                # turn, i.e. what the LLM actually saw. May be None if the
+                # run failed before any turn completed.
+                last_api = agent.query_context.api_messages_snapshot
+                compacted = (
+                    [m.model_dump(mode="json") for m in last_api]
+                    if last_api is not None
+                    else None
+                )
 
                 agent_run_store.finish_run(
                     run_id,
                     status="failed" if run_error else "completed",
                     response=run_response,
-                    message_history=pre_run_message_history,
+                    message_history=full_display,
                     compacted_history=compacted,
                     reasoning="".join(reasoning_parts) if reasoning_parts else None,
                     error=run_error,
@@ -186,7 +206,7 @@ async def execute_ephemeral_agent_run(
 
     # 6. Extract new messages for the full (uncompacted) audit log
     new_messages: list[dict] = []
-    engine_msgs = agent._messages
+    engine_msgs = agent._display_messages
     for i in range(len(engine_msgs) - 1, -1, -1):
         msg = engine_msgs[i]
         if msg.role == "user" and msg.text.strip() == input_message.strip():
@@ -207,7 +227,7 @@ async def execute_ephemeral_agent_run(
                     cwd=config.cwd,
                     latest_user_prompt=input_message,
                 ),
-                messages=[m.model_dump(mode="json") for m in agent._messages],
+                messages=[m.model_dump(mode="json") for m in agent._display_messages],
                 full_messages=full_history,
                 usage=agent.total_usage.model_dump(),
                 session_state=agent.query_context.session_state.to_dict()
@@ -216,12 +236,12 @@ async def execute_ephemeral_agent_run(
                 summary=next(
                     (
                         m.text.strip()[:80]
-                        for m in agent._messages
+                        for m in agent._display_messages
                         if m.role == "user" and m.text.strip()
                     ),
                     "",
                 ),
-                message_count=len(agent._messages),
+                message_count=len(agent._display_messages),
             )
         except Exception:
             logger.debug("Failed to save session to DB", exc_info=True)
