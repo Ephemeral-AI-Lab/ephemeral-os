@@ -43,6 +43,11 @@ class DaytonaToolkit(BaseToolkit):
         toolkit.prepare_context(context)
     """
 
+    @classmethod
+    def from_context(cls, ctx: Any) -> "DaytonaToolkit":
+        sandbox_id = ctx.metadata.get("sandbox_id", "") if ctx is not None else ""
+        return cls(sandbox_id=sandbox_id or None)
+
     def __init__(self, sandbox_id: str | None = None) -> None:
         super().__init__(
             name="sandbox_operations",

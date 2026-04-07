@@ -1,5 +1,7 @@
 """Pipeline context toolkit — query the incremental context map during pipeline execution."""
 
+from typing import Any
+
 from tools.core.base import BaseToolkit
 from tools.pipeline_context.context_tools import (
     make_get_pipeline_metadata_tool,
@@ -10,6 +12,15 @@ from tools.pipeline_context.context_tools import (
 
 class PipelineContextToolkit(BaseToolkit):
     """Tools for querying pipeline context map and metadata."""
+
+    @classmethod
+    def from_context(cls, ctx: Any) -> "PipelineContextToolkit":
+        meta = ctx.metadata if ctx is not None else {}
+        return cls(
+            context_map=meta.get("pipeline_context_map"),
+            pipeline_meta=meta.get("pipeline_meta"),
+            current_step=meta.get("pipeline_current_step"),
+        )
 
     def __init__(
         self,

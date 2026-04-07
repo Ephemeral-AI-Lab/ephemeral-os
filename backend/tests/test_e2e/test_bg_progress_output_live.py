@@ -28,6 +28,10 @@ IMPORTANT RULES:
 - Use daytona_bash to run commands, daytona_write_file to create files.
 - You have background task support: add "background": true to tool input for long-running operations.
 - Use check_background_progress to get an instant status snapshot of background tasks.
+  For streaming-capable tools (like daytona_bash), check_background_progress now also
+  returns a LIVE TAIL of stdout lines emitted so far while the task is still running.
+  Use this live tail to make autonomous decisions: cancel early if you spot a fatal
+  error line, or keep waiting if the task is still making progress.
 - Use wait_for_background_task to block until background tasks complete (only when no foreground work remains).
 - Use cancel_background_task to cancel running background tasks.
 
@@ -78,19 +82,21 @@ class TestCheckProgressRunningStatus:
 
     @pytest.mark.asyncio
     async def test_check_shows_running_tasks_with_elapsed(self, sandbox):
-        """Launch a long task, do fg work, check progress to see running status, then cancel."""
+        """Launch a long task, do fg work, check progress to see running status with
+        a live tail of streamed output, then cancel."""
         agent = create_eval_agent(
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
             enable_background_tasks=True,
         )
         result = await agent.invoke(
-            "Launch 'sleep 30 && echo LONG_TASK' in background (background: true). "
-            "Do 'echo FG_DONE' in foreground. "
-            "Now call check_background_progress to see the status. "
-            "The task should show as 'running' with elapsed time. "
+            "Launch this in background (background: true): "
+            "'for i in $(seq 1 20); do echo \"tick_$i\"; sleep 2; done && echo LONG_TASK'. "
+            "Do 'sleep 6' in foreground so the bg task has time to stream a few ticks. "
+            "Now call check_background_progress. The task should show as 'running' "
+            "with elapsed time AND you should see a live tail containing tick_N lines. "
             "Then cancel it with cancel_background_task using reason 'Test complete'. "
-            "Report what status you saw."
+            "Report which tick_N lines you saw in the live tail."
         )
         _log_result(result, "running_status")
 
@@ -99,8 +105,26 @@ class TestCheckProgressRunningStatus:
         assert result.has_tool("cancel_background_task"), \
             f"Expected cancel_background_task. Got: {result.tool_names}"
         text_lower = result.text.lower()
-        assert any(word in text_lower for word in ["running", "elapsed", "progress"]), \
-            f"Expected text to mention running/elapsed/progress. Got: {result.text[:300]}"
+        assert any(word in text_lower for word in ["running", "elapsed", "progress", "tick_"]), \
+            f"Expected text to mention running/elapsed/progress/tick_. Got: {result.text[:300]}"
+
+        # Live-tail assertion: at least one mid-flight check_background_progress
+        # completion event must have surfaced partial tick_ lines while the bg
+        # task was still running, and must NOT contain LONG_TASK (the final marker).
+        check_completions = [
+            e for e in result.tools_completed() if e.tool_name == "check_background_progress"
+        ]
+        saw_live_tail = any(
+            '"status": "running"' in (e.output or "")
+            and any(f"tick_{i}" in (e.output or "") for i in range(1, 6))
+            and "LONG_TASK" not in (e.output or "")
+            for e in check_completions
+        )
+        assert saw_live_tail, (
+            "No mid-flight check_background_progress call surfaced live-tail tick_ lines. "
+            f"Outputs: {[(e.output or '')[:300] for e in check_completions]}"
+        )
+
         assert not result.has_non_cancel_errors, \
             f"Unexpected errors: {[e.output[:200] for e in result.non_cancel_error_events]}"
 
@@ -344,5 +368,85 @@ class TestWaitLastNLinesOutput:
         text_lower = result.text.lower()
         assert any(word in text_lower for word in ["build_log", "lines", "output"]), \
             f"Expected text to mention BUILD_LOG/lines/output. Got: {result.text[:300]}"
+        assert not result.has_non_cancel_errors, \
+            f"Unexpected errors: {[e.output[:200] for e in result.non_cancel_error_events]}"
+
+
+# ===========================================================================
+# Test 7: Live tail drives autonomous early-cancel decision
+# ===========================================================================
+
+
+@pytest.mark.skipif(not EvalAgent.has_all(), reason="API + Daytona both required")
+class TestLiveTailAutonomousDecision:
+    """The agent reads streamed lines from a still-running task and decides on
+    its own to cancel as soon as a FATAL line appears, instead of waiting for
+    the long-running task to finish naturally."""
+
+    @pytest.fixture(scope="class")
+    def sandbox(self):
+        sb = create_test_sandbox("livetail-decide")
+        yield sb
+        delete_test_sandbox(sb["id"])
+
+    @pytest.mark.asyncio
+    async def test_agent_cancels_on_fatal_line_in_live_tail(self, sandbox):
+        """A bg task prints normal lines for a while, then a FATAL line, then
+        would keep running for another ~30s. The agent must observe the FATAL
+        line via check_background_progress and cancel early — NOT wait for the
+        full ~45s runtime."""
+        agent = create_eval_agent(
+            system_prompt=AGENT_PROMPT,
+            sandbox_id=sandbox["id"],
+            enable_background_tasks=True,
+        )
+        result = await agent.invoke(
+            "Launch this exact bash command in BACKGROUND (background: true):\n\n"
+            "  for i in $(seq 1 5); do echo \"step_$i ok\"; sleep 2; done; "
+            "echo 'FATAL: disk full'; for i in $(seq 6 20); do echo \"step_$i ok\"; sleep 2; done\n\n"
+            "Your job: poll check_background_progress periodically (insert short "
+            "'sleep 3' foreground daytona_bash calls between polls). As soon as you "
+            "see a line containing the word FATAL in the live tail, IMMEDIATELY "
+            "cancel the task with cancel_background_task and stop. Do NOT call "
+            "wait_for_background_task — that would block for the full ~45s. "
+            "Report the offending line and how many polls it took."
+        )
+        _log_result(result, "live_tail_decision")
+
+        # The agent must have polled check_background_progress at least once
+        # and cancelled — never waited.
+        assert result.has_tool("check_background_progress"), \
+            f"Agent never polled progress. Tools used: {result.tool_names}"
+        assert result.has_tool("cancel_background_task"), \
+            f"Agent never cancelled. Tools used: {result.tool_names}"
+        assert not result.has_tool("wait_for_background_task"), (
+            f"Agent waited instead of cancelling on FATAL line. "
+            f"Tools used: {result.tool_names}"
+        )
+
+        # At least one mid-flight check must have surfaced the FATAL line
+        # while the task was still running.
+        check_completions = [
+            e for e in result.tools_completed() if e.tool_name == "check_background_progress"
+        ]
+        saw_fatal_in_tail = any(
+            '"status": "running"' in (e.output or "") and "FATAL" in (e.output or "")
+            for e in check_completions
+        )
+        assert saw_fatal_in_tail, (
+            "No mid-flight check_background_progress call surfaced the FATAL line. "
+            f"Outputs: {[(e.output or '')[:300] for e in check_completions]}"
+        )
+
+        # The whole run must have been short enough to prove early-cancel:
+        # the underlying command would take ~45s if it ran to completion.
+        assert result.latency_ms < 40_000, (
+            f"Agent took {result.latency_ms:.0f}ms — likely waited for the bg task "
+            f"to finish instead of cancelling on the live tail."
+        )
+
+        text_lower = result.text.lower()
+        assert "fatal" in text_lower, \
+            f"Expected agent to report the FATAL line. Got: {result.text[:300]}"
         assert not result.has_non_cancel_errors, \
             f"Unexpected errors: {[e.output[:200] for e in result.non_cancel_error_events]}"

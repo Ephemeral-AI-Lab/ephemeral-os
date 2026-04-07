@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any
 
 from pydantic import Field
-from pydantic.fields import FieldInfo
 
 TASK_ID_FIELD_DESCRIPTION = (
     "REQUIRED. Either the exact `task_id` string (e.g. \"bg_1\") shown "
@@ -14,20 +13,7 @@ TASK_ID_FIELD_DESCRIPTION = (
     "background task. Never pass null/None and never omit this field."
 )
 
-
-def task_id_field() -> FieldInfo:
-    return Field(..., description=TASK_ID_FIELD_DESCRIPTION)
-
-
-def validate_task_id(task_id: Any) -> str | None:
-    """Return an error message if task_id is invalid, else None."""
-    if task_id is None or not isinstance(task_id, str) or not task_id:
-        return (
-            "ERROR: task_id is required and must be a non-empty string. "
-            "Pass either an exact id like \"bg_1\" or \"all\" to target "
-            "every pending background task."
-        )
-    return None
+TASK_ID_FIELD = Field(..., min_length=1, description=TASK_ID_FIELD_DESCRIPTION)
 
 
 # Total char budget for `output` fields in a single tool response,

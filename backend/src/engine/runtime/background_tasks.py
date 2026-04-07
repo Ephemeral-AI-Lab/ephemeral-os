@@ -32,6 +32,11 @@ class TrackedBackgroundTask:
     started_at: float = field(default_factory=time.monotonic)
     progress_lines: list[str] = field(default_factory=list)
     kill_callback: KillCallback | None = None  # physically kills the sandbox process
+    # Optional pull-callback that returns a fresh progress snapshot on demand.
+    # Used by tools (e.g. run_subagent) that have structured progress state
+    # which is more meaningful than a flat line buffer. When set, get_status
+    # calls this instead of joining progress_lines for running tasks.
+    progress_provider: Callable[[], str] | None = None
     _last_reminder_line_idx: int = 0  # tracks where the last reminder left off
     _last_reminder_at: float = 0.0  # monotonic time of last reminder
 
@@ -222,6 +227,21 @@ class BackgroundTaskManager:
         for piece in str(line).splitlines() or [""]:
             tracked.progress_lines.append(piece)
 
+    def set_progress_provider(
+        self, task_id: str, provider: Callable[[], str]
+    ) -> None:
+        """Register a pull-callback for live progress on *task_id*.
+
+        The provider is invoked synchronously by ``get_status`` while the task
+        is still running. It should return a compact text snapshot of the
+        task's current state. Errors raised by the provider are caught and
+        surfaced as ``[progress provider error: ...]`` so a buggy provider
+        can never crash the bg manager.
+        """
+        tracked = self._tasks.get(task_id)
+        if tracked is not None:
+            tracked.progress_provider = provider
+
     def make_progress_callback(self, task_id: str) -> Callable[[str], None]:
         """Return a callable that appends progress lines for *task_id*.
 
@@ -258,10 +278,18 @@ class BackgroundTaskManager:
                 # AFTER line-tail trimming, so a long-tail run still yields
                 # the requested number of trailing lines.
                 entry["output"] = tracked.result.output
-            elif tracked.status == "running" and tracked.progress_lines:
-                # Live tail: surface buffered streaming output for tools that
-                # call append_progress / on_progress_line while still running.
-                entry["output"] = "\n".join(tracked.progress_lines)
+            elif tracked.status == "running":
+                # Prefer the structured progress provider (e.g. run_subagent
+                # returns a formatted view of its inner agent's last N
+                # messages). Fall back to the line buffer for tools that
+                # stream output via append_progress / on_progress_line.
+                if tracked.progress_provider is not None:
+                    try:
+                        entry["output"] = tracked.progress_provider()
+                    except Exception as exc:
+                        entry["output"] = f"[progress provider error: {exc}]"
+                elif tracked.progress_lines:
+                    entry["output"] = "\n".join(tracked.progress_lines)
             result.append(entry)
         return result
 

@@ -99,6 +99,10 @@ class BaseTool(ABC):
     description: str
     input_model: type[BaseModel]
     supports_background: bool = False
+    # If True, the engine ALWAYS dispatches this tool as a background task,
+    # regardless of whether the LLM passed `background=true`. Used by tools
+    # like run_subagent that should never block the parent's turn.
+    force_background: bool = False
 
     @abstractmethod
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
@@ -147,6 +151,16 @@ class BaseToolkit:
         self._tools: dict[str, BaseTool] = {}
         for tool in tools or []:
             self.register(tool)
+
+    @classmethod
+    def from_context(cls, ctx: Any) -> "BaseToolkit":
+        """Construct an instance from a ToolkitContext.
+
+        Default implementation calls ``cls()`` with no arguments. Override
+        in subclasses that need to pull values out of ``ctx.metadata``.
+        """
+        del ctx
+        return cls()
 
     def register(self, tool: BaseTool) -> None:
         """Add a tool to this toolkit."""
@@ -216,35 +230,44 @@ class ToolRegistry:
         self._toolkits = kept_toolkits
         self._tools = {k: v for k, v in self._tools.items() if k in allowed_tools}
 
-    def to_api_schema(self, *, inject_task_note: bool = False) -> list[dict[str, Any]]:
+    def to_api_schema(self) -> list[dict[str, Any]]:
         """Return all tool schemas in API format.
 
-        When *inject_task_note* is True, every tool's input_schema gets a
-        required ``task_note`` field so the LLM must provide it on every call.
-        Background-capable tools also get an optional ``background`` field
-        so the LLM can request asynchronous execution.
+        Cross-cutting decorations like the required ``task_note`` field
+        and the optional ``background`` flag are applied separately by
+        :func:`decorate_schemas_for_background` so the registry stays
+        a dumb collection.
         """
-        schemas = []
-        for tool in self._tools.values():
-            schema = tool.to_api_schema()
-            if inject_task_note:
-                inp = schema.setdefault("input_schema", {})
-                props = inp.setdefault("properties", {})
-                props["task_note"] = {
-                    "type": "string",
-                    "description": "Brief note: what and why",
-                }
-                req = inp.setdefault("required", [])
-                if "task_note" not in req:
-                    req.append("task_note")
-                # Inject optional background flag for background-capable tools
-                if tool.supports_background:
-                    props["background"] = {
-                        "type": "boolean",
-                        "description": (
-                            "Set to true to run this tool asynchronously in the background. "
-                            "Use for long-running operations (builds, test suites, installs)."
-                        ),
-                    }
-            schemas.append(schema)
-        return schemas
+        return [tool.to_api_schema() for tool in self._tools.values()]
+
+
+def decorate_schemas_for_background(
+    registry: "ToolRegistry", schemas: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Inject ``task_note`` (required) and ``background`` (optional) fields.
+
+    Mutates each schema in-place and returns the list. ``task_note`` is
+    added to every tool so the LLM must explain what and why on each call.
+    ``background`` is added only to tools whose ``supports_background``
+    flag is set.
+    """
+    for schema in schemas:
+        tool = registry.get(schema["name"])
+        inp = schema.setdefault("input_schema", {})
+        props = inp.setdefault("properties", {})
+        props["task_note"] = {
+            "type": "string",
+            "description": "Brief note: what and why",
+        }
+        req = inp.setdefault("required", [])
+        if "task_note" not in req:
+            req.append("task_note")
+        if tool is not None and tool.supports_background:
+            props["background"] = {
+                "type": "boolean",
+                "description": (
+                    "Set to true to run this tool asynchronously in the background. "
+                    "Use for long-running operations (builds, test suites, installs)."
+                ),
+            }
+    return schemas

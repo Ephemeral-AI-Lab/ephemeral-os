@@ -156,43 +156,33 @@ async def _exec_streaming(
 
     session_id = f"bash-{uuid.uuid4().hex[:12]}"
     process = sandbox.process
+    poll_interval = 0.5
+    deadline = asyncio.get_event_loop().time() + timeout
 
-    # Buffers for assembling final output and reconstructing line boundaries
-    # from arbitrary chunk sizes (the SDK does not split on newlines).
-    stdout_chunks: list[str] = []
-    stderr_chunks: list[str] = []
+    last_emitted = 0  # number of stdout chars already forwarded as progress
     line_buf = ""
 
-    def _on_chunk(chunk: str, *, is_stderr: bool = False) -> None:
+    def _flush_lines(new_text: str) -> None:
         nonlocal line_buf
-        if not chunk:
+        if not new_text:
             return
-        logger.debug("daytona_bash stream chunk (%s, %d chars)", "stderr" if is_stderr else "stdout", len(chunk))
-        if is_stderr:
-            stderr_chunks.append(chunk)
-        else:
-            stdout_chunks.append(chunk)
-        line_buf += chunk
+        line_buf += new_text
         while "\n" in line_buf:
             line, line_buf = line_buf.split("\n", 1)
             try:
                 on_progress_line(line)
-            except Exception as cb_exc:  # never let a callback kill the run
+            except Exception as cb_exc:
                 logger.debug("on_progress_line callback failed: %s", cb_exc)
-
-    async def _on_stdout(chunk: str) -> None:
-        _on_chunk(chunk, is_stderr=False)
-
-    async def _on_stderr(chunk: str) -> None:
-        _on_chunk(chunk, is_stderr=True)
 
     try:
         await process.create_session(session_id)
     except Exception as exc:
         return ToolResult(output=f"failed to create sandbox session: {exc}", is_error=True)
 
+    final_stdout = ""
+    final_stderr = ""
+    exit_code: int | None = None
     try:
-        # Wrap the command in a cd so the session inherits the desired cwd.
         full_cmd = f"cd {shlex.quote(cwd)} && {command}" if cwd else command
         req = SessionExecuteRequest(command=full_cmd, run_async=True)
         try:
@@ -207,21 +197,54 @@ async def _exec_streaming(
                 is_error=True,
             )
 
-        try:
-            await asyncio.wait_for(
-                process.get_session_command_logs_async(
-                    session_id, cmd_id, _on_stdout, _on_stderr
-                ),
-                timeout=timeout,
-            )
-        except TimeoutError:
-            return ToolResult(
-                output=f"command timed out after {timeout}s",
-                is_error=True,
-                metadata={"exit_code": None},
-            )
+        # Poll logs and command status until the command exits.
+        while True:
+            try:
+                logs = await process.get_session_command_logs(session_id, cmd_id)
+                stdout_text = getattr(logs, "stdout", "") or ""
+                stderr_text = getattr(logs, "stderr", "") or ""
+            except Exception as exc:
+                logger.debug("get_session_command_logs failed: %s", exc)
+                stdout_text = final_stdout
+                stderr_text = final_stderr
 
-        # Flush any trailing partial line that never saw a newline.
+            if len(stdout_text) > last_emitted:
+                new_text = stdout_text[last_emitted:]
+                last_emitted = len(stdout_text)
+                _flush_lines(new_text)
+
+            final_stdout = stdout_text
+            final_stderr = stderr_text
+
+            try:
+                cmd_info = await process.get_session_command(session_id, cmd_id)
+                exit_code = getattr(cmd_info, "exit_code", None)
+            except Exception:
+                exit_code = None
+
+            if exit_code is not None:
+                break
+            if asyncio.get_event_loop().time() >= deadline:
+                return ToolResult(
+                    output=f"command timed out after {timeout}s",
+                    is_error=True,
+                    metadata={"exit_code": None},
+                )
+            await asyncio.sleep(poll_interval)
+
+        # One final poll to capture any tail logs written between the last
+        # poll and the exit_code becoming visible.
+        try:
+            logs = await process.get_session_command_logs(session_id, cmd_id)
+            tail_stdout = getattr(logs, "stdout", "") or ""
+            tail_stderr = getattr(logs, "stderr", "") or ""
+            if len(tail_stdout) > last_emitted:
+                _flush_lines(tail_stdout[last_emitted:])
+            final_stdout = tail_stdout
+            final_stderr = tail_stderr
+        except Exception as exc:
+            logger.debug("final log poll failed: %s", exc)
+
         if line_buf:
             try:
                 on_progress_line(line_buf)
@@ -229,15 +252,7 @@ async def _exec_streaming(
                 logger.debug("on_progress_line callback failed (flush): %s", cb_exc)
             line_buf = ""
 
-        try:
-            cmd_info = await process.get_session_command(session_id, cmd_id)
-            exit_code = getattr(cmd_info, "exit_code", None)
-        except Exception:
-            exit_code = None
-
-        stdout_text = "".join(stdout_chunks)
-        stderr_text = "".join(stderr_chunks)
-        combined = stdout_text + (("\n" + stderr_text) if stderr_text else "")
+        combined = final_stdout + (("\n" + final_stderr) if final_stderr else "")
         output = json.dumps(
             {
                 "cwd": cwd or "",

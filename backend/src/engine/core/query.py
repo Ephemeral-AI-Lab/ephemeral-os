@@ -39,7 +39,12 @@ from message.stream_events import (
 )
 from engine.core.streaming_executor import StreamingToolExecutor
 from hooks import HookEvent, HookExecutor
-from tools.core.base import ToolExecutionContext, ToolRegistry, ToolResult
+from tools.core.base import (
+    ToolExecutionContext,
+    ToolRegistry,
+    ToolResult,
+    decorate_schemas_for_background,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -258,9 +263,11 @@ async def _run_query_loop(
                 messages=api_messages,
                 system_prompt=context.system_prompt,
                 max_tokens=context.max_tokens,
-                tools=context.tool_registry.to_api_schema(
-                    inject_task_note=context.enable_background_tasks,
-                ),
+                tools=decorate_schemas_for_background(
+                    context.tool_registry,
+                    context.tool_registry.to_api_schema(),
+                ) if context.enable_background_tasks
+                else context.tool_registry.to_api_schema(),
             )
         ):
             if isinstance(event, ApiThinkingDeltaEvent):
@@ -485,7 +492,12 @@ async def _run_query_loop(
 
             for tc in tool_calls:
                 task_note = str(tc.input.get("task_note", ""))
-                is_background = tc.input.get("background", False) if background_manager else False
+                tool_def_for_check = context.tool_registry.get(tc.name)
+                force_bg = bool(getattr(tool_def_for_check, "force_background", False))
+                is_background = (
+                    (tc.input.get("background", False) or force_bg)
+                    if background_manager else False
+                )
                 clean_input = {
                     k: v for k, v in tc.input.items() if k not in ("background", "task_note")
                 }

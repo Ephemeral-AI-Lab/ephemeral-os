@@ -188,9 +188,11 @@ class TestToolkitFactoryInstantiation:
         agent_name = agent_def.name if agent_def else "default"
 
         toolkit_ctx = ToolkitContext(
-            agent_name=agent_name,
-            cwd="/tmp/test",
-            metadata={"sandbox_id": sandbox_id or ""},
+            metadata={
+                "agent_name": agent_name,
+                "cwd": "/tmp/test",
+                "sandbox_id": sandbox_id or "",
+            },
         )
 
         if agent_def and agent_def.toolkits:
@@ -331,9 +333,11 @@ class TestFactoryContext:
 
         registry = create_default_tool_registry()
         ctx = ToolkitContext(
-            agent_name="my-agent",
-            cwd="/tmp/test",
-            metadata={"sandbox_id": "sb-123"},
+            metadata={
+                "agent_name": "my-agent",
+                "cwd": "/tmp/test",
+                "sandbox_id": "sb-123",
+            },
         )
 
         for tk_name in agent_def.toolkits:
@@ -342,8 +346,8 @@ class TestFactoryContext:
                 registry.register_toolkit(tk)
 
         assert len(captured_ctx) == 1
-        assert captured_ctx[0].agent_name == "my-agent"
-        assert captured_ctx[0].cwd == "/tmp/test"
+        assert captured_ctx[0].metadata["agent_name"] == "my-agent"
+        assert captured_ctx[0].metadata["cwd"] == "/tmp/test"
         assert captured_ctx[0].metadata["sandbox_id"] == "sb-123"
 
 

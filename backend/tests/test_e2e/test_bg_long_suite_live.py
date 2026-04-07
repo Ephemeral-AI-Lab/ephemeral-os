@@ -38,7 +38,18 @@ You MUST use tools for every action. Never describe what you'd do — execute it
 Use whichever tools are appropriate for the task.
 
 For long-running commands (tests, builds), run them in background with "background": true,
-then use wait_for_background_task to wait for results.
+then use wait_for_background_task to block for the final result.
+
+You also have check_background_progress, which is non-blocking and returns a
+LIVE TAIL of the stdout that the background command has emitted so far. Prefer
+this over polling external log files — it shows the real stream from the task
+as it runs. Use last_n_lines to limit how much you fetch.
+
+Make autonomous decisions from the live tail:
+  * If you see a clearly fatal marker (e.g. [FATAL], FAIL, traceback, "STAGE
+    FAILED", "CANNOT", "wrong"), CANCEL the task immediately with
+    cancel_background_task instead of waiting for the full timeout.
+  * If progress looks healthy, keep waiting.
 
 You are an autonomous agent. Analyze failures, reason about root causes, apply fixes,
 and verify your fixes work. Keep iterating until the problem is solved.
@@ -271,28 +282,32 @@ class TestLongSuiteEarlyCancel:
         )
         result = await agent.invoke(
             "There is an integration test suite at /home/daytona/long_suite/ with:\n"
-            "- run_suite.py — a long integration test suite\n"
+            "- run_suite.py — a long integration test suite (TREAT AS A BLACK BOX)\n"
             "- config.json — configuration the suite reads\n\n"
-            "The suite writes live progress to /tmp/long_suite.log as it runs, "
-            "so you can inspect it from outside while the suite is still running. "
+            "RULES:\n"
+            "- DO NOT read run_suite.py — treat it as an opaque black box you must\n"
+            "  learn about purely from its runtime output. You may read config.json.\n"
+            "- You must discover bugs by RUNNING the suite and OBSERVING its live\n"
+            "  stdout via check_background_progress, not by static inspection.\n\n"
             "The full suite takes about 150 seconds when everything works, and it "
             "keeps running to completion even after fatal errors.\n\n"
             "The suite is currently failing. Make it pass. You have a limited time "
             "budget — don't waste it waiting for runs you can already tell will fail "
-            "from the log output.\n\n"
+            "from the partial output.\n\n"
             "IMPORTANT: You MUST run the suite as a background task (set "
-            '"background": true on the bash tool call). Running it in the '
-            "foreground will block you from reading /tmp/long_suite.log while it "
-            "runs, which is the whole point — you need to tail the log, detect "
-            "[FATAL] markers early, cancel the background task to save time, fix "
-            "the config, and relaunch. Do this for every suite run.\n\n"
+            '"background": true on the bash tool call). The PREFERRED way to peek '
+            "at partial output is check_background_progress(task_id=..., "
+            "last_n_lines=30) — that returns the live tail of the suite's stdout "
+            "directly from the running task, no log file needed. Use it to detect "
+            "[FATAL] markers as soon as they appear, then cancel_background_task "
+            "to save time, fix the config, and relaunch. Do this for every suite "
+            "run.\n\n"
             "NEVER use `sleep` in a foreground bash command to wait for the "
             "suite. Do not run things like `sleep 60 && tail ...` — that blocks "
-            "your turn and defeats the whole background workflow. To wait, use "
-            "the wait_for_background_task tool with a short timeout, or poll by "
-            "reading /tmp/long_suite.log directly between short waits. The only "
-            "acceptable ways to pass time are: (1) wait_for_background_task, "
-            "(2) check_background_progress, (3) reading the log file."
+            "your turn and defeats the whole background workflow. The only "
+            "acceptable ways to pass time are: (1) wait_for_background_task with "
+            "a short timeout, (2) check_background_progress (live tail, "
+            "non-blocking)."
         )
         _log_result(result, "long_suite_cancel")
 
@@ -302,9 +317,34 @@ class TestLongSuiteEarlyCancel:
         # that this test exists to validate cannot happen.
         assert len(result.background_started()) >= 1, (
             "Expected agent to launch the suite as a background task at least once "
-            "so it could observe live progress via /tmp/long_suite.log. "
+            "so it could observe the live tail via check_background_progress. "
             f"Got {len(result.background_started())} background launches. "
             f"Tool sequence: {result.tool_names}"
+        )
+
+        # Live-tail behavioral check: the agent must have actually exercised
+        # the streaming feature — calling check_background_progress on a
+        # background task that was still running, and observing live stdout
+        # in the response. This proves the agent used the new streaming path
+        # rather than just polling external log files or waiting blind.
+        assert result.has_tool("check_background_progress"), (
+            f"Agent never called check_background_progress. "
+            f"Tool sequence: {result.tool_names}"
+        )
+        check_completions = [
+            e for e in result.tools_completed()
+            if e.tool_name == "check_background_progress"
+        ]
+        saw_live_tail = any(
+            '"status": "running"' in (e.output or "")
+            and '"output"' in (e.output or "")
+            for e in check_completions
+        )
+        assert saw_live_tail, (
+            "No mid-flight check_background_progress call surfaced a live stdout "
+            "tail (status=running with an output field). The agent did not exercise "
+            "the streaming feature on a still-running task. Outputs: "
+            f"{[(e.output or '')[:300] for e in check_completions]}"
         )
 
         # Ground truth: run the suite ourselves and verify it passes end-to-end

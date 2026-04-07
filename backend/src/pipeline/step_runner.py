@@ -8,7 +8,7 @@ import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from agents import get_agent_definition
+from agents import get_definition as get_agent_definition
 from engine import spawn_agent
 from pipeline.models import StepRecord, StepStatus
 from pipeline.schema import PipelineStepConfig, PipelineConfig

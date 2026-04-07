@@ -72,13 +72,12 @@ class StreamingToolExecutor:
         tool_def = self._tool_registry.get(event.name)
 
         # Skip tools requesting background execution — they'll be handled
-        # by the BackgroundTaskManager in the query loop instead.
-        if (
-            event.input
-            and event.input.get("background")
-            and tool_def
-            and tool_def.supports_background
-        ):
+        # by the BackgroundTaskManager in the query loop instead. Tools with
+        # force_background=True (e.g. run_subagent) are ALWAYS dispatched in
+        # the background, regardless of the LLM's input.
+        force_bg = bool(getattr(tool_def, "force_background", False))
+        wants_bg = bool(event.input and event.input.get("background"))
+        if tool_def and tool_def.supports_background and (force_bg or wants_bg):
             self._skipped_background.add(event.id)
             logger.info(
                 "STREAM: Skipping background tool: tool_id=%s tool_name=%s",

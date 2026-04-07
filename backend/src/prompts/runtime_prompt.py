@@ -10,6 +10,15 @@ from config.settings import Settings
 from prompts.system_prompt import build_system_prompt
 from tools.core.base import BaseToolkit
 
+__all__ = [
+    "build_agent_capabilities_prompt",
+    "build_background_lifecycle_prompt",
+    "build_runtime_system_prompt",
+    "build_task_note_prompt",
+    "render_section",
+    "render_template",
+]
+
 
 def render_template(template: str, variables: dict[str, Any]) -> str:
     """Render a template with variable substitution.
@@ -45,61 +54,6 @@ def render_section(template: str, variables: dict[str, Any], condition: bool = T
     return render_template(template, variables)
 
 
-# =============================================================================
-# CLAUDE.md Discovery and Loading
-# =============================================================================
-
-
-def discover_claude_md_files(cwd: str | Path) -> list[Path]:
-    """Discover all CLAUDE.md files in the project directory.
-
-    Args:
-        cwd: The working directory to search in.
-
-    Returns:
-        List of Path objects for discovered CLAUDE.md files.
-    """
-    if isinstance(cwd, str):
-        cwd = Path(cwd)
-
-    results: list[Path] = []
-    current = cwd.resolve()
-
-    while True:
-        claude_md = current / "CLAUDE.md"
-        if claude_md.exists():
-            results.append(claude_md)
-
-        parent = current.parent
-        if parent == current:
-            break
-        current = parent
-
-    return results
-
-
-def load_claude_md_content(cwd: str | Path) -> str | None:
-    """Load CLAUDE.md content, using the first file found walking up from cwd.
-
-    Args:
-        cwd: The working directory to search in.
-
-    Returns:
-        The CLAUDE.md content as a string, or None if not found.
-    """
-    files = discover_claude_md_files(cwd)
-    if not files:
-        return None
-
-    content = files[0].read_text(encoding="utf-8", errors="replace")
-    return content.strip() if content.strip() else None
-
-
-# =============================================================================
-# Runtime Prompt Builders
-# =============================================================================
-
-
 def build_runtime_system_prompt(
     settings: Settings,
     *,
@@ -114,7 +68,6 @@ def build_runtime_system_prompt(
         "fast_mode": settings.fast_mode,
         "effort": settings.effort,
         "passes": settings.passes,
-        "claude_md": load_claude_md_content(cwd),
         "cwd": str(cwd),
     }
 
@@ -132,9 +85,6 @@ def build_runtime_system_prompt(
         f"- Passes: {variables['passes']}\n"
         "Adjust depth and iteration count to match these settings while still completing the task.",
     ]
-
-    if variables["claude_md"]:
-        sections.append(variables["claude_md"])
 
     for title, path in (
         ("Issue Context", get_project_issue_file(cwd)),

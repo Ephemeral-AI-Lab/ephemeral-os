@@ -7,6 +7,7 @@ from tools.core.base import (
     ToolRegistry,
     ToolResult,
     _parse_returns_schema,
+    decorate_schemas_for_background,
 )
 from tools.core.decorator import tool
 
@@ -17,5 +18,6 @@ __all__ = [
     "ToolRegistry",
     "ToolResult",
     "_parse_returns_schema",
+    "decorate_schemas_for_background",
     "tool",
 ]

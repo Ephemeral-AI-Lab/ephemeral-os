@@ -4,28 +4,21 @@ from __future__ import annotations
 
 import json
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
 from tools.core.base import BaseTool, ToolExecutionContext, ToolResult
 
-from ._common import apply_last_n_lines, task_id_field, validate_task_id
+from ._common import TASK_ID_FIELD, apply_last_n_lines
 
 
 class CheckBackgroundProgressInput(BaseModel):
     """Input for check_background_progress tool."""
-    task_id: str = task_id_field()
+    task_id: str = TASK_ID_FIELD
     last_n_lines: int = Field(
         default=20,
         ge=1,
         description="Number of output lines to include for completed tasks. Use to limit verbose output.",
     )
-
-    @model_validator(mode="after")
-    def _validate_task_id(self) -> CheckBackgroundProgressInput:
-        err = validate_task_id(self.task_id)
-        if err:
-            raise ValueError(err)
-        return self
 
 
 class CheckBackgroundProgressTool(BaseTool):
@@ -40,10 +33,6 @@ class CheckBackgroundProgressTool(BaseTool):
     input_model: type[BaseModel] = CheckBackgroundProgressInput
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
-        assert isinstance(arguments, CheckBackgroundProgressInput)
-        # task_id is enforced non-empty by the model_validator on the input
-        # schema; pydantic will raise before reaching here if it's missing.
-
         manager = context.metadata.get("background_task_manager")
         if manager is None:
             return ToolResult(

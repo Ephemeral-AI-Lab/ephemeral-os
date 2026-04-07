@@ -70,6 +70,7 @@ class EphemeralAgent:
 def finalize_tool_registry_and_prompt(
     tool_registry: ToolRegistry,
     system_prompt: str,
+    agent_type: str = "agent",
 ) -> tuple[str, bool]:
     """Register background toolkit and inject capability awareness into the system prompt.
 
@@ -78,6 +79,12 @@ def finalize_tool_registry_and_prompt(
     Args:
         tool_registry: The tool registry (mutated in-place to add background toolkit).
         system_prompt: The base system prompt.
+        agent_type: ``"agent"`` (default) or ``"subagent"``. Subagents may USE
+            tools that support background execution, but they cannot LAUNCH
+            background tasks themselves — so the background management toolkit
+            (check_background_progress / wait_for_background_task / cancel)
+            is not registered for them, and ``has_background_tools`` is forced
+            to ``False`` regardless of registry contents.
 
     Returns:
         Tuple of (updated_system_prompt, has_background_tools).
@@ -86,7 +93,7 @@ def finalize_tool_registry_and_prompt(
     from tools.builtins.background import make_background_toolkit
 
     bg_tool_names = [t.name for t in tool_registry.list_tools() if t.supports_background]
-    has_background_tools = bool(bg_tool_names)
+    has_background_tools = bool(bg_tool_names) and agent_type != "subagent"
     if has_background_tools:
         tool_registry.register_toolkit(make_background_toolkit(bg_tool_names))
 
@@ -139,9 +146,15 @@ def spawn_agent(
             db_kwargs = active.get("kwargs")
 
     # --- Per-agent overrides ------------------------------------------------
+    # An explicit "inherit" sentinel means: fall back to the session's active
+    # model. This lets builtin agents (e.g. the subagent) avoid hardcoding a
+    # specific model id.
+    _agent_model = agent_def.model if agent_def else None
+    if _agent_model and _agent_model.strip().lower() == "inherit":
+        _agent_model = None
     resolved_model = (
-        agent_def.model
-        if agent_def and agent_def.model
+        _agent_model
+        if _agent_model
         else (db_kwargs or {}).get("model") or settings.model
     )
     agent_name = agent_def.name if agent_def else resolved_model
@@ -158,9 +171,11 @@ def spawn_agent(
 
     # --- Instantiate toolkits requested by the agent definition via factory ---
     toolkit_ctx = ToolkitContext(
-        agent_name=agent_name,
-        cwd=config.cwd,
-        metadata={"sandbox_id": sandbox_id or ""},
+        metadata={
+            "agent_name": agent_name,
+            "cwd": config.cwd,
+            "sandbox_id": sandbox_id or "",
+        },
     )
     if agent_def and agent_def.toolkits:
         for tk_name in agent_def.toolkits:
@@ -230,14 +245,22 @@ def spawn_agent(
         )
 
     # --- Background toolkit + capability awareness --------------------------
+    agent_type = agent_def.agent_type if agent_def else "agent"
     system_prompt, has_background_tools = finalize_tool_registry_and_prompt(
-        tool_registry, system_prompt
+        tool_registry, system_prompt, agent_type=agent_type
     )
 
     # --- Max turns
     max_turns = agent_def.max_turns if agent_def and agent_def.max_turns else 200
 
     from engine.core.query import QueryContext
+
+    # Plumb session_config through tool_metadata so tools (e.g. run_subagent)
+    # that need to spawn nested agents can reach it without a Protocol layer.
+    initial_tool_metadata: dict[str, object] = {
+        "session_config": config,
+        "sandbox_id": sandbox_id or "",
+    }
 
     query_context = QueryContext(
         api_client=api_client,
@@ -248,6 +271,7 @@ def spawn_agent(
         max_tokens=settings.max_tokens,
         max_turns=max_turns,
         hook_executor=hook_executor,
+        tool_metadata=initial_tool_metadata,
         session_state=session_state,
         enable_background_tasks=has_background_tools,
     )

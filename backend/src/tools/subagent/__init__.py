@@ -1,26 +1,32 @@
-"""Subagent toolkit — parallel agent dispatch over work items."""
+"""Subagent toolkit — spawn focused worker subagents."""
 
 from __future__ import annotations
 
 from tools.core.base import BaseToolkit
-from tools.subagent.parallel_dispatch_tool import AgentRunFn, make_run_parallel_agents_tool
+from tools.subagent.run_subagent_tool import run_subagent
 
 
 class SubagentToolkit(BaseToolkit):
-    """Parallel agent dispatch — fan out work items to worker agents."""
+    """Spawn focused worker subagents that run as background tasks."""
 
-    def __init__(self, *, run_agent_fn: AgentRunFn | None = None) -> None:
+    def __init__(self) -> None:
         super().__init__(
             name="subagent",
-            description="Parallel agent dispatch: fan out work items to worker agents",
-            tools=[make_run_parallel_agents_tool(run_agent_fn=run_agent_fn)],
+            description="Spawn focused worker subagents.",
+            tools=[run_subagent],
             instructions=(
-                "Dispatch independent work items to parallel worker agents. "
-                "Use when a task can be decomposed into subtasks that don't depend on each other.\n\n"
-                "- `run_parallel_agents` — send a list of work items to worker agents. "
-                "Each item runs in its own agent concurrently. "
-                "Use for batch operations like editing multiple files, running tests across modules, "
-                "or processing independent data items."
+                "Use `run_subagent` to delegate a focused task to a worker.\n"
+                "- Every call returns a task_id immediately — subagents ALWAYS run "
+                "in the background.\n"
+                "- For PARALLEL workers: emit several `run_subagent` calls in the "
+                "SAME assistant turn. Each returns its own task_id.\n"
+                "- Join with `wait_for_background_task(task_id=...)` to read the "
+                "worker's final text.\n"
+                "- Peek at a worker's live progress (last 5 messages) with "
+                "`check_background_progress(task_id=...)`.\n"
+                "- Cancel a stuck worker with `cancel_background_task(task_id=...)`.\n"
+                "- Workers cannot themselves spawn subagents and cannot launch "
+                "background tasks of their own."
             ),
         )
 

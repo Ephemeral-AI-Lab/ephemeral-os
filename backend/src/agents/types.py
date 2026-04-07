@@ -4,32 +4,14 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
-
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
+from pydantic import AliasChoices, BaseModel, Field, field_validator
 
 #: Valid effort level strings.
 EFFORT_LEVELS: tuple[str, ...] = ("low", "medium", "high")
 
 
-# ---------------------------------------------------------------------------
-# AgentDefinition model
-# ---------------------------------------------------------------------------
-
-
 class AgentDefinition(BaseModel):
-    """Full agent definition with all configuration fields.
-
-    First-class fields:
-    - ``name``          — unique agent identifier
-    - ``description``   — when-to-use description
-    - ``system_prompt`` — agent instructions
-    - ``model``         — LLM model override (alias: ``model_key``)
-    - ``skills``        — list of skill slugs
-    - ``toolkits``      — list of toolkit names
-    """
+    """Full agent definition with all configuration fields."""
 
     # --- required ---
     name: str
@@ -39,60 +21,74 @@ class AgentDefinition(BaseModel):
     system_prompt: str | None = None
 
     # --- model & effort ---
-    model: str = Field(alias="model_key")  # required — each agent must specify a model key
-    effort: str | int | None = None  # "low" | "medium" | "high" or positive int
+    model: str | None = Field(default=None, alias="model_key")
+    effort: str | int | None = None
 
     # --- agent loop control ---
-    max_turns: int | None = None  # maximum agentic turns before stopping
+    max_turns: int | None = Field(
+        default=None, validation_alias=AliasChoices("max_turns", "maxTurns")
+    )
 
     # --- skills & toolkits ---
     skills: list[str] = Field(default_factory=list)
-    toolkits: list[str] = Field(default_factory=list)  # allowed toolkit names
+    toolkits: list[str] = Field(default_factory=list)
 
     # --- hooks ---
-    hooks: dict[str, Any] | None = None  # session-scoped hooks registered when agent starts
+    hooks: dict[str, Any] | None = None
 
     # --- lifecycle ---
-    background: bool = False  # always run as background task when spawned
-    initial_prompt: str | None = None  # prepended to the first user turn
+    background: bool = False
+    initial_prompt: str | None = Field(
+        default=None, validation_alias=AliasChoices("initial_prompt", "initialPrompt")
+    )
 
     # --- metadata ---
-    filename: str | None = None  # original filename without .md extension
-    base_dir: str | None = None  # directory the agent definition was loaded from
-    critical_system_reminder: str | None = None  # short message re-injected at every user turn
-    pending_snapshot_update: dict[str, Any] | None = None
-    omit_claude_md: bool = False  # skip CLAUDE.md injection for this agent
+    critical_system_reminder: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("critical_system_reminder", "criticalSystemReminder"),
+    )
 
     # --- Python-specific ---
     permissions: list[str] = Field(default_factory=list)
     source: Literal["builtin", "user", "plugin"] = "builtin"
 
-    model_config = {"populate_by_name": True}  # allow both field name and alias
+    # --- agent type: regular agent or subagent (worker) ---
+    agent_type: Literal["agent", "subagent"] = "agent"
 
+    model_config = {"populate_by_name": True}
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
+    @field_validator("skills", "toolkits", "permissions", mode="before")
+    @classmethod
+    def _split_csv(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return [s.strip() for s in v.split(",") if s.strip()]
+        return v
 
+    @field_validator("max_turns", mode="before")
+    @classmethod
+    def _coerce_positive_int(cls, v: Any) -> Any:
+        if v is None or isinstance(v, int):
+            return v if (v is None or v > 0) else None
+        try:
+            n = int(v)
+            return n if n > 0 else None
+        except (TypeError, ValueError):
+            return None
 
-def parse_str_list(raw: Any) -> list[str] | None:
-    """Parse a comma-separated string or list into a list of strings."""
-    if raw is None:
+    @field_validator("effort", mode="before")
+    @classmethod
+    def _validate_effort(cls, v: Any) -> Any:
+        if v is None:
+            return None
+        if isinstance(v, int):
+            return v if v > 0 else None
+        if isinstance(v, str) and v in EFFORT_LEVELS:
+            return v
         return None
-    if isinstance(raw, list):
-        return [str(item).strip() for item in raw if str(item).strip()]
-    if isinstance(raw, str):
-        items = [t.strip() for t in raw.split(",") if t.strip()]
-        return items if items else None
-    return None
 
-
-def parse_positive_int(raw: Any) -> int | None:
-    """Parse a positive integer, returning None if invalid."""
-    if raw is None:
-        return None
-    try:
-        val = int(raw)
-        return val if val > 0 else None
-    except (TypeError, ValueError):
-        return None
+    @field_validator("background", mode="before")
+    @classmethod
+    def _coerce_bool(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return v.lower() == "true"
+        return bool(v) if v is not None else False

@@ -5,16 +5,16 @@ from __future__ import annotations
 import json
 import time
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
 from tools.core.base import BaseTool, ToolExecutionContext, ToolResult
 
-from ._common import apply_last_n_lines, task_id_field, validate_task_id
+from ._common import TASK_ID_FIELD, apply_last_n_lines
 
 
 class WaitForBackgroundTaskInput(BaseModel):
     """Input for wait_for_background_task tool."""
-    task_id: str = task_id_field()
+    task_id: str = TASK_ID_FIELD
     timeout: float = Field(
         default=30,
         ge=1,
@@ -29,13 +29,6 @@ class WaitForBackgroundTaskInput(BaseModel):
         ge=1,
         description="Number of output lines to include for completed tasks.",
     )
-
-    @model_validator(mode="after")
-    def _validate_task_id(self) -> WaitForBackgroundTaskInput:
-        err = validate_task_id(self.task_id)
-        if err:
-            raise ValueError(err)
-        return self
 
 
 class WaitForBackgroundTaskTool(BaseTool):
@@ -55,8 +48,6 @@ class WaitForBackgroundTaskTool(BaseTool):
     input_model: type[BaseModel] = WaitForBackgroundTaskInput
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
-        assert isinstance(arguments, WaitForBackgroundTaskInput)
-
         manager = context.metadata.get("background_task_manager")
         if manager is None:
             return ToolResult(
@@ -141,7 +132,6 @@ class WaitForBackgroundTaskTool(BaseTool):
             # Specific task: use wait_for() so completions of *other*
             # background tasks remain queued for the engine's normal
             # delivery path (otherwise they'd be silently consumed).
-            assert target_id is not None  # narrowed by `wait_for_all` branch above
             await manager.wait_for(target_id, timeout=remaining)
             task_statuses = manager.get_status(target_id)
             if not task_statuses or task_statuses[0].get("status") != "running":
@@ -151,12 +141,10 @@ class WaitForBackgroundTaskTool(BaseTool):
         status = manager.get_status(target_id)
         apply_last_n_lines(status, arguments.last_n_lines)
 
-        # Determine if timed out
         if wait_for_all:
             timed_out = manager.has_pending()
         else:
-            task_statuses = manager.get_status(target_id)
-            timed_out = bool(task_statuses) and task_statuses[0].get("status") == "running"
+            timed_out = bool(status) and status[0].get("status") == "running"
 
         if timed_out:
             hint = (
