@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from server.app_factory import SessionConfig
     from compaction import SessionState
     from engine.core.query import QueryContext
+    from tools.core.base import ToolRegistry
 
 from agents.types import AgentDefinition
 from config import Settings

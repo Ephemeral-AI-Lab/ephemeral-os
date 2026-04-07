@@ -99,11 +99,28 @@ async def daytona_bash(
     """
     sandbox = _get_sandbox(context)
     cwd = _get_cwd(context)
+    on_progress_line = context.metadata.get("on_progress_line")
+
+    wrapped = f"env -u LC_ALL bash -c {shlex.quote(command)}"
+
+    # Streaming path: when launched as a background task, query.py injects
+    # ``on_progress_line`` into the metadata. Use a Daytona session so we can
+    # tail stdout/stderr live and feed each line into the BackgroundTaskManager,
+    # making the partial output visible via check_background_progress mid-run.
+    if callable(on_progress_line):
+        return await _exec_streaming(
+            sandbox=sandbox,
+            command=wrapped,
+            cwd=cwd,
+            timeout=timeout,
+            on_progress_line=on_progress_line,
+        )
+
     try:
         kwargs: dict[str, object] = {"timeout": timeout}
         if cwd:
             kwargs["cwd"] = cwd
-        response = await sandbox.process.exec(f"env -u LC_ALL bash -c {shlex.quote(command)}", **kwargs)
+        response = await sandbox.process.exec(wrapped, **kwargs)
         exit_code = getattr(response, "exit_code", 0)
         output = json.dumps(
             {
@@ -119,6 +136,124 @@ async def daytona_bash(
         )
     except Exception as exc:
         return ToolResult(output=str(exc), is_error=True)
+
+
+async def _exec_streaming(
+    *,
+    sandbox: Any,
+    command: str,
+    cwd: str | None,
+    timeout: int,
+    on_progress_line: Any,
+) -> ToolResult:
+    """Run *command* via a Daytona session and stream stdout lines live.
+
+    Each newline-terminated chunk from stdout/stderr is forwarded to
+    ``on_progress_line`` so the BackgroundTaskManager can surface a live
+    tail through check_background_progress while the task is still running.
+    """
+    from daytona_sdk import SessionExecuteRequest
+
+    session_id = f"bash-{uuid.uuid4().hex[:12]}"
+    process = sandbox.process
+
+    # Buffers for assembling final output and reconstructing line boundaries
+    # from arbitrary chunk sizes (the SDK does not split on newlines).
+    stdout_chunks: list[str] = []
+    stderr_chunks: list[str] = []
+    line_buf = ""
+
+    def _on_chunk(chunk: str, *, is_stderr: bool = False) -> None:
+        nonlocal line_buf
+        if not chunk:
+            return
+        if is_stderr:
+            stderr_chunks.append(chunk)
+        else:
+            stdout_chunks.append(chunk)
+        line_buf += chunk
+        while "\n" in line_buf:
+            line, line_buf = line_buf.split("\n", 1)
+            try:
+                on_progress_line(line)
+            except Exception as cb_exc:  # never let a callback kill the run
+                logger.debug("on_progress_line callback failed: %s", cb_exc)
+
+    async def _on_stdout(chunk: str) -> None:
+        _on_chunk(chunk, is_stderr=False)
+
+    async def _on_stderr(chunk: str) -> None:
+        _on_chunk(chunk, is_stderr=True)
+
+    try:
+        await process.create_session(session_id)
+    except Exception as exc:
+        return ToolResult(output=f"failed to create sandbox session: {exc}", is_error=True)
+
+    try:
+        # Wrap the command in a cd so the session inherits the desired cwd.
+        full_cmd = f"cd {shlex.quote(cwd)} && {command}" if cwd else command
+        req = SessionExecuteRequest(command=full_cmd, run_async=True)
+        try:
+            resp = await process.execute_session_command(session_id, req)
+        except Exception as exc:
+            return ToolResult(output=f"failed to start command: {exc}", is_error=True)
+
+        cmd_id = getattr(resp, "cmd_id", None) or getattr(resp, "command_id", None)
+        if not cmd_id:
+            return ToolResult(
+                output=f"daytona session did not return a cmd_id: {resp!r}",
+                is_error=True,
+            )
+
+        try:
+            await asyncio.wait_for(
+                process.get_session_command_logs_async(
+                    session_id, cmd_id, _on_stdout, _on_stderr
+                ),
+                timeout=timeout,
+            )
+        except asyncio.TimeoutError:
+            return ToolResult(
+                output=f"command timed out after {timeout}s",
+                is_error=True,
+                metadata={"exit_code": None},
+            )
+
+        # Flush any trailing partial line that never saw a newline.
+        if line_buf:
+            try:
+                on_progress_line(line_buf)
+            except Exception as cb_exc:
+                logger.debug("on_progress_line callback failed (flush): %s", cb_exc)
+            line_buf = ""
+
+        try:
+            cmd_info = await process.get_session_command(session_id, cmd_id)
+            exit_code = getattr(cmd_info, "exit_code", None)
+        except Exception:
+            exit_code = None
+
+        stdout_text = "".join(stdout_chunks)
+        stderr_text = "".join(stderr_chunks)
+        combined = stdout_text + (("\n" + stderr_text) if stderr_text else "")
+        output = json.dumps(
+            {
+                "cwd": cwd or "",
+                "stdout": _truncate(combined),
+                "exit_code": exit_code if exit_code is not None else 0,
+            }
+        )
+        return ToolResult(
+            output=output,
+            is_error=bool(exit_code) if exit_code is not None else False,
+            metadata={"exit_code": exit_code},
+        )
+    finally:
+        try:
+            await process.delete_session(session_id)
+        except Exception as exc:
+            logger.debug("failed to delete daytona session %s: %s", session_id, exc)
 
 
 # ---------------------------------------------------------------------------

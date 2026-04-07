@@ -87,7 +87,7 @@ class StepRunner:
             record.posthook_session_id = self._session_config.session_id
             validated_output = self._parse_output(posthook_response)
         else:
-            validated_output = self._parse_output(work_result.text)
+            validated_output = self._parse_output(work_response)
 
         record.status = StepStatus.COMPLETED
         record.finished_at = time.time()

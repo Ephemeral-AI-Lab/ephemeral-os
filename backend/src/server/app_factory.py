@@ -23,7 +23,7 @@ from fastapi.responses import FileResponse, JSONResponse
 
 load_dotenv()
 
-from config import load_settings
+from config import Settings, load_settings
 from db.engine import initialize_db
 from db.stores import AgentDefinitionStore, AgentRunStore, ModelStore, SessionStore, UsageStore
 from skills.db.store import SkillDefinitionStore
