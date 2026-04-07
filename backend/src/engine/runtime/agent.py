@@ -176,9 +176,14 @@ def spawn_agent(
     agent_name = agent_def.name if agent_def else resolved_model
 
     # --- API client
+    # Subagents must NEVER inherit the parent's shared AsyncAnthropic client.
+    # Sharing one httpx connection pool across many concurrent subagents causes
+    # pool contention and httpx.ReadError mid-stream. Build a fresh client per
+    # subagent so each gets its own independent pool.
+    is_subagent = bool(agent_def and agent_def.agent_type == "subagent")
     api_client = make_api_client(
         settings,
-        config.external_api_client,
+        None if is_subagent else config.external_api_client,
         db_kwargs=db_kwargs,
     )
 

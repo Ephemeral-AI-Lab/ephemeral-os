@@ -134,12 +134,26 @@ try:
     _s = _ls()
     if _s.database.url:
         from db.engine import initialize_db as _idb
-        from server.app_factory import model_store as _ms
+        from server.app_factory import (
+            agent_run_store as _ars,
+            model_store as _ms,
+            session_store as _ss,
+        )
 
-        if not _ms.is_available:
+        # Initialise *all* DB-backed singletons up front so EvalAgent-driven
+        # tests (and the local factories that bypass EvalAgent.create()) get
+        # the same persistence setup the production server bootstrap provides.
+        # Without this, run_subagent silently drops agent_run rows because the
+        # store is unready at tool-call time.
+        if not _ms.is_available or not _ars.is_ready or not _ss.is_ready:
             _sf = _idb(_s.database)
             if _sf:
-                _ms.initialize(_sf)
+                if not _ms.is_available:
+                    _ms.initialize(_sf)
+                if not _ars.is_ready:
+                    _ars.initialize(_sf)
+                if not _ss.is_ready:
+                    _ss.initialize(_sf)
         if _ms.is_available:
             _active = _ms.get_active_resolved()
             if _active:

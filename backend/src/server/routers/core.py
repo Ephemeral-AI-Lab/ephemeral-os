@@ -78,7 +78,7 @@ async def execute_ephemeral_agent_run(
     """
     from server.app_factory import agent_run_store, session_store, usage_store
 
-    db_available = agent_run_store._session_factory is not None
+    db_available = agent_run_store.is_ready
 
     # 1. Load history + session context + full audit history from DB
     messages, session_state, full_history = session_store.load_session_state(config)

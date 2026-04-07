@@ -212,9 +212,21 @@ async def run_subagent(
             lambda last_n: format_last_n_messages(agent.display_messages, last_n),
         )
         tracked = bg_manager.get_task(task_id) if hasattr(bg_manager, "get_task") else None
-        if tracked is not None:
+        if tracked is None:
+            logger.warning(
+                "run_subagent: bg_manager.get_task(%s) returned None — "
+                "tracked.run_id will stay None",
+                task_id,
+            )
+        else:
             tracked.run_id = sub_run_id
             tracked.task_type = "subagent"
+            if sub_run_id is None:
+                logger.warning(
+                    "run_subagent: sub_run_id is None for task %s — "
+                    "BackgroundTaskCompleted.run_id will be null",
+                    task_id,
+                )
 
     run_error: str | None = None
     cancelled = False
@@ -288,10 +300,22 @@ def _create_subagent_run_record(
     just delay the diagnosis.
     """
     if not session_id:
+        logger.warning(
+            "run_subagent: skipping persistence — session_id missing "
+            "(parent_task_id=%s, agent=%s)",
+            parent_task_id,
+            agent_name,
+        )
         return None
     from server.app_factory import agent_run_store
 
     if not agent_run_store.is_ready:
+        logger.warning(
+            "run_subagent: skipping persistence — agent_run_store not ready "
+            "(parent_task_id=%s, session_id=%s)",
+            parent_task_id,
+            session_id,
+        )
         return None
     run_id = uuid4().hex[:12]
     if len(prompt) > 2000:

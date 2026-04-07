@@ -46,6 +46,7 @@ from providers.provider import make_api_client
 from providers.types import SupportsStreamingMessages, UsageSnapshot
 from tools import ToolRegistry
 from tools.daytona_toolkit import DaytonaToolkit
+from tools.subagent import SubagentToolkit
 
 logger = logging.getLogger(__name__)
 
@@ -243,12 +244,14 @@ class EvalAgent:
         settings: Settings,
         model: str,
         api_client: SupportsStreamingMessages,
+        session_config: Any = None,
     ) -> None:
         self._query_context = query_context
         self._settings = settings
         self._model = model
         self._api_client_ref = api_client
         self._display_messages: list[ConversationMessage] = []
+        self._session_config = session_config
 
     # -- Static helpers for credential checks --
 
@@ -362,6 +365,7 @@ class EvalAgent:
         tool_registry = ToolRegistry()
         daytona_toolkit = DaytonaToolkit(sandbox_id=sandbox_id)
         tool_registry.register_toolkit(daytona_toolkit)
+        tool_registry.register_toolkit(SubagentToolkit())
 
         prompt = system_prompt or DEFAULT_SYSTEM_PROMPT
 
@@ -375,6 +379,51 @@ class EvalAgent:
 
         from compaction import SessionState
 
+        # --- Build a real SessionConfig + ensure DB-side parity with the
+        # production spawn_agent path so subagents persist agent_run rows
+        # (and `run_id` is non-null in BackgroundTaskCompleted events).
+        from uuid import uuid4
+
+        from server.app_factory import SessionConfig
+
+        session_config = SessionConfig(
+            cwd=".",
+            session_id=uuid4().hex[:12],
+        )
+
+        # Ensure agent_run_store + session_store are initialised against the
+        # same DB used by the model_store above. Safe no-op if already ready.
+        try:
+            from server.app_factory import agent_run_store, session_store
+
+            if (
+                not agent_run_store.is_ready or not session_store.is_ready
+            ) and settings.database.url:
+                from db.engine import initialize_db
+
+                sf = initialize_db(settings.database)
+                if sf is not None:
+                    if not agent_run_store.is_ready:
+                        agent_run_store.initialize(sf)
+                    if not session_store.is_ready:
+                        session_store.initialize(sf)
+
+            # Insert the parent sessions row so the agent_runs FK can resolve.
+            if session_store.is_ready:
+                try:
+                    session_store.upsert(
+                        session_id=session_config.session_id,
+                        cwd=session_config.cwd,
+                        model=resolved_model,
+                        message_count=0,
+                    )
+                except Exception:
+                    logger.debug(
+                        "[EvalAgent] session_store.upsert failed", exc_info=True
+                    )
+        except Exception as exc:
+            logger.debug("[EvalAgent] DB persistence unavailable: %s", exc)
+
         query_context = QueryContext(
             api_client=api_client,
             tool_registry=tool_registry,
@@ -386,6 +435,10 @@ class EvalAgent:
             hook_executor=None,
             enable_background_tasks=has_background_tools,
             session_state=SessionState(),
+            tool_metadata={
+                "session_config": session_config,
+                "sandbox_id": sandbox_id or "",
+            },
         )
 
         return cls(
@@ -393,6 +446,7 @@ class EvalAgent:
             settings=settings,
             model=resolved_model,
             api_client=api_client,
+            session_config=session_config,
         )
 
     @classmethod
@@ -435,6 +489,38 @@ class EvalAgent:
                 self._query_context.session_state.turn_counter,
                 self._query_context.session_state.compacted,
             )
+
+        # Create a top-level agent_run row for this invocation so tools that
+        # spawn nested runs (e.g. run_subagent) can attribute themselves to a
+        # parent_run_id — mirrors server.routers.core.execute_ephemeral_agent_run.
+        run_id: str | None = None
+        try:
+            from server.app_factory import agent_run_store
+
+            if agent_run_store.is_ready and self._session_config is not None:
+                from uuid import uuid4
+
+                run_id = uuid4().hex[:12]
+                try:
+                    agent_run_store.create_run(
+                        run_id=run_id,
+                        session_id=self._session_config.session_id,
+                        agent_name="eval_agent",
+                        input_query=prompt[:2000],
+                    )
+                except Exception:
+                    logger.debug(
+                        "[EvalAgent] failed to create top-level agent_run",
+                        exc_info=True,
+                    )
+                    run_id = None
+        except Exception as exc:
+            logger.debug("[EvalAgent] agent_run_store unavailable: %s", exc)
+
+        if run_id is not None:
+            if self._query_context.tool_metadata is None:
+                self._query_context.tool_metadata = {}
+            self._query_context.tool_metadata["agent_run_id"] = run_id
 
         messages, event_iter = await run_query(self._query_context, self._display_messages)
         self._display_messages = messages
@@ -489,6 +575,23 @@ class EvalAgent:
             _out(f"    [thinking] {_truncate(''.join(thinking_buf), 500)}")
         if text_buf:
             _out(f"    [text] {_truncate(''.join(text_buf), 500)}")
+
+        # Finalise the top-level agent_run row so listings/inspectors see it
+        # in a terminal state (mirrors execute_ephemeral_agent_run).
+        if run_id is not None:
+            try:
+                from server.app_factory import agent_run_store
+
+                agent_run_store.finish_run(
+                    run_id,
+                    status="completed",
+                    event_count=len(events),
+                )
+            except Exception:
+                logger.debug(
+                    "[EvalAgent] failed to finish top-level agent_run",
+                    exc_info=True,
+                )
 
         latency_ms = (time.monotonic() - start) * 1000
 
