@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Any, AsyncIterator
 if TYPE_CHECKING:
     from server.app_factory import SessionConfig
     from compaction import SessionState
-    from engine.core.query import QueryContext, run_query
+    from engine.core.query import QueryContext
 
 from agents.types import AgentDefinition
 from config import Settings
@@ -119,9 +119,8 @@ def spawn_agent(
     """
     settings = config.resolve_settings()
 
-    # --- Active model from DB (carries api_key, base_url, class_path) ------
+    # --- Active model from DB (carries api_key, base_url) ------------------
     db_kwargs: dict | None = None
-    db_class_path: str | None = None
     _model_store = model_store
     if _model_store is None:
         try:
@@ -136,7 +135,6 @@ def spawn_agent(
         active = _model_store.get_active_resolved()
         if active:
             db_kwargs = active.get("kwargs")
-            db_class_path = active.get("class_path")
 
     # --- Per-agent overrides ------------------------------------------------
     resolved_model = (
@@ -151,7 +149,6 @@ def spawn_agent(
         settings,
         config.external_api_client,
         db_kwargs=db_kwargs,
-        db_class_path=db_class_path,
     )
 
     # --- Tool registry

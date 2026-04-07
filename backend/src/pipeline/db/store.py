@@ -18,7 +18,6 @@ from pipeline.models import (
     PipelineRun,
     PipelineRunStatus,
     StepRecord,
-    StepStatus,
 )
 from pipeline.schema import PipelineConfig
 

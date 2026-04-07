@@ -15,7 +15,6 @@ import uuid
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.daytona_toolkit.tools import _get_cwd
 from tools.daytona_toolkit.ci_integration import (
-    get_ci_service,
     prime_cache_after_write,
     record_edit_in_ledger,
 )

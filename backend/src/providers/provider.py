@@ -85,13 +85,12 @@ def make_api_client(
     external: SupportsStreamingMessages | None = None,
     *,
     db_kwargs: dict[str, Any] | None = None,
-    db_class_path: str | None = None,
 ) -> SupportsStreamingMessages:
     """Build an Anthropic API client from settings, or return the external one.
 
-    When *db_kwargs* / *db_class_path* are provided (from the active model
-    registration in the DB) they supply ``api_key`` and ``base_url`` — falling
-    back to ``settings`` only when a value is absent.
+    When *db_kwargs* is provided (from the active model registration in the DB)
+    it supplies ``api_key`` and ``base_url`` — falling back to ``settings`` only
+    when a value is absent.
     """
     if external is not None:
         return external

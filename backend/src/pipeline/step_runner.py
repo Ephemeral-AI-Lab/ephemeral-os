@@ -5,12 +5,11 @@ from __future__ import annotations
 import json
 import logging
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from agents import get_agent_definition
 from engine import spawn_agent
-from message import ConversationMessage
 from pipeline.models import StepRecord, StepStatus
 from pipeline.schema import PipelineStepConfig, PipelineConfig
 

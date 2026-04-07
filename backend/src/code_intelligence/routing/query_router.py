@@ -8,10 +8,8 @@ never on error. Authoritative empty answers stop the search.
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from code_intelligence.routing.backend_protocol import (
-    BackendQueryOutcome,
     CodeIntelligenceBackend,
     QueryStatus,
 )

@@ -20,7 +20,6 @@ from pathlib import Path
 from typing import Any, Callable
 
 from code_intelligence.constants import (
-    SKIP_DIRECTORIES,
     TREE_CACHE_MAX_FILE_SIZE,
     TREE_CACHE_MAX_FILES,
 )

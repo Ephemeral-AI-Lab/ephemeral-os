@@ -11,10 +11,8 @@ import ast
 import logging
 import threading
 import time
-from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
 
 from code_intelligence.constants import (
     SKIP_DIRECTORIES,

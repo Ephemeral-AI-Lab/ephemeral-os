@@ -12,7 +12,7 @@ import logging
 import threading
 import time
 from collections import defaultdict, deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from code_intelligence.constants import LEDGER_MAX_ENTRIES
 

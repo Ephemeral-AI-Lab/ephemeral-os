@@ -9,7 +9,6 @@ Modeled after the synthetic-os sandbox_service for API compatibility.
 from __future__ import annotations
 
 import logging
-import os
 import threading
 from typing import Any
 

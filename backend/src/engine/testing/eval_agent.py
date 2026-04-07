@@ -336,7 +336,6 @@ class EvalAgent:
         # Load active model from DB registry (same pattern as engine.agent).
         # Initializes the model_store with the real PostgreSQL DB if needed.
         db_kwargs: dict | None = None
-        db_class_path: str | None = None
         try:
             from server.app_factory import model_store
 
@@ -350,17 +349,15 @@ class EvalAgent:
             active = model_store.get_active_resolved() if model_store.is_available else None
             if active:
                 db_kwargs = active.get("kwargs")
-                db_class_path = active.get("class_path")
                 logger.info(
-                    "[EvalAgent] Using DB model: class_path=%s model=%s",
-                    db_class_path,
+                    "[EvalAgent] Using DB model: model=%s",
                     (db_kwargs or {}).get("model", "?"),
                 )
         except Exception as exc:
             logger.debug("[EvalAgent] DB model registry unavailable: %s", exc)
 
         resolved_model = (db_kwargs or {}).get("model") or settings.model
-        api_client = make_api_client(settings, db_kwargs=db_kwargs, db_class_path=db_class_path)
+        api_client = make_api_client(settings, db_kwargs=db_kwargs)
 
         tool_registry = ToolRegistry()
         daytona_toolkit = DaytonaToolkit(sandbox_id=sandbox_id)

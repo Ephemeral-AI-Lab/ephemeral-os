@@ -5,7 +5,6 @@ from __future__ import annotations
 import shlex
 import time
 from pathlib import Path
-from typing import Any
 
 
 EVAL_SANDBOX_FILES: dict[str, str] = {

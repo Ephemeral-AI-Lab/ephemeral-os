@@ -3,14 +3,12 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 from dataclasses import asdict
 from typing import Any, Callable, TYPE_CHECKING
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from pipeline.db.store import DbPipelineStore
 from pipeline.models import PipelineRunStatus
@@ -207,7 +205,7 @@ def create_pipeline_router(
             raise HTTPException(status_code=503, detail="Session not initialized")
 
         from uuid import uuid4
-        from pipeline.models import PipelineRun, PipelineRunStatus, StepRecord, StepStatus
+        from pipeline.models import PipelineRun, StepRecord, StepStatus
 
         # Create run record synchronously so the client can poll immediately
         run_id = uuid4().hex[:12]

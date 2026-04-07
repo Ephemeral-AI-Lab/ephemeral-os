@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Callable, Protocol, runtime_checkable
+from typing import Any, Protocol, runtime_checkable
 
 from tools.core.base import BaseTool, ToolExecutionContext, ToolResult
 from tools.core.decorator import tool

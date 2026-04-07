@@ -5,7 +5,6 @@ from __future__ import annotations
 import logging
 from typing import Any
 from datetime import datetime, timezone
-from uuid import uuid4
 
 from sqlalchemy.orm import Session, sessionmaker
 
