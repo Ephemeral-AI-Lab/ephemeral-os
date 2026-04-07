@@ -15,7 +15,7 @@ from message.stream_events import (
     ToolExecutionCompleted,
     ToolExecutionStarted,
 )
-from models.types import (
+from providers.types import (
     ApiMessageCompleteEvent,
     ApiMessageRequest,
     ApiTextDeltaEvent,
@@ -203,7 +203,7 @@ class TestOutputSchema:
 
 class TestOpenAIConversion:
     def test_converts_output_schema_to_description(self):
-        from models.clients.openai_compat import _convert_tools_to_openai
+        from providers.clients.openai_compat import _convert_tools_to_openai
 
         tools = [EchoTool().to_api_schema()]
         result = _convert_tools_to_openai(tools)
@@ -213,7 +213,7 @@ class TestOpenAIConversion:
         assert "echoed: string" in desc
 
     def test_no_output_schema_no_suffix(self):
-        from models.clients.openai_compat import _convert_tools_to_openai
+        from providers.clients.openai_compat import _convert_tools_to_openai
 
         tools = [NoDocTool().to_api_schema()]
         result = _convert_tools_to_openai(tools)
@@ -481,7 +481,7 @@ class TestOpenAIClientToolCallLoop:
 
     def test_openai_tool_call_format_works_in_loop(self, tmp_path: Path):
         """OpenAI tool_calls format should execute tools correctly in the loop."""
-        from models.clients.openai_compat import (
+        from providers.clients.openai_compat import (
             _convert_tools_to_openai,
             _convert_messages_to_openai,
             _convert_assistant_message,
@@ -517,7 +517,7 @@ class TestOpenAIClientToolCallLoop:
 
     def test_openai_tool_result_in_loop(self, tmp_path: Path):
         """Tool results returned as OpenAI format should complete the loop correctly."""
-        from models.clients.openai_compat import (
+        from providers.clients.openai_compat import (
             _convert_tools_to_openai,
             _convert_messages_to_openai,
         )
@@ -549,7 +549,7 @@ class TestOpenAIClientToolCallLoop:
 
     def test_openai_parallel_tool_calls_in_loop(self, tmp_path: Path):
         """Multiple OpenAI tool calls should be parsed and executed in parallel."""
-        from models.clients.openai_compat import _convert_assistant_message
+        from providers.clients.openai_compat import _convert_assistant_message
         from message import ConversationMessage, TextBlock, ToolUseBlock
 
         assistant_msg = ConversationMessage(

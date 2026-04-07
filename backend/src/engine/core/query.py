@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import logging
 import re
 import time as time_module
@@ -13,7 +14,7 @@ from typing import TYPE_CHECKING, AsyncIterator
 if TYPE_CHECKING:
     from utils.compact import SessionState
 
-from models.core.types import (
+from providers.types import (
     ApiCancelEvent,
     ApiMessageCompleteEvent,
     ApiMessageRequest,
@@ -23,13 +24,12 @@ from models.core.types import (
     SupportsStreamingMessages,
     UsageSnapshot,
 )
-from message.messages import ConversationMessage, TextBlock, ToolResultBlock, ToolUseBlock
+from message.messages import ConversationMessage, ToolResultBlock
 from engine.runtime.background_tasks import BackgroundTaskManager, KillCallback, TrackedBackgroundTask
 from message.stream_events import (
     AssistantTextDelta,
     AssistantTurnComplete,
     BackgroundTaskCompleted,
-    BackgroundTaskStarted,
     StreamEvent,
     ThinkingDelta,
     ToolExecutionCancelled,
@@ -124,21 +124,58 @@ def _make_kill_callback(context: QueryContext, task_id: str) -> KillCallback | N
 
     async def _kill() -> None:
         try:
-            await sandbox.process.exec(
-                f"PID=$(cat {pid_file} 2>/dev/null) && kill $PID 2>/dev/null; "
-                f"rm -f {pid_file}",
-                timeout=5,
+            # PID file holds the session leader's PID, which equals the
+            # process group ID (set via setsid). `kill -- -PGID` signals
+            # every process in the group, killing the whole tree.
+            # Guard empty PID explicitly so `kill -- -` isn't invoked with
+            # an empty arg (harmless but noisy) when the file is missing
+            # or the wrapper shell was killed before it wrote $$.
+            kill_script = (
+                f"PID=$(cat {pid_file} 2>/dev/null); "
+                f'if [ -n "$PID" ]; then '
+                f"  kill -TERM -- -$PID 2>/dev/null; "
+                f"  sleep 0.2; "
+                f"  kill -KILL -- -$PID 2>/dev/null; "
+                f"fi; "
+                f"rm -f {pid_file}"
             )
+            await sandbox.process.exec(kill_script, timeout=5)
         except Exception as exc:
-            logger.debug("Failed to kill background process for task %s: %s", task_id, exc)
+            # Kill failure can leave an orphaned process group — log loud
+            # enough to be visible at default log level.
+            logger.warning("Failed to kill background process for task %s: %s", task_id, exc)
 
     return _kill
 
 
 def _wrap_command_with_pid_tracking(command: str, task_id: str) -> str:
-    """Wrap a shell command to record its PID in a temp file."""
+    """Wrap a shell command to record its PID in a temp file.
+
+    The command runs inside its own session/process group via `setsid` so
+    that cancel can signal the entire tree (wrapper + command + any
+    children it spawns). Without this, children of constructs like
+    `cd dir && python run.py` get orphaned and keep mutating shared
+    state after cancel.
+
+    The user command is passed to the inner shell base64-encoded to
+    avoid any quoting/escaping footguns: a stray single quote in
+    `command` would otherwise terminate the `sh -c '...'` wrapper and
+    allow unintended shell evaluation.
+    """
     pid_file = f"/tmp/.eos_bg_{task_id}.pid"
-    return f"echo $$ > {pid_file}; {command}"
+    encoded = base64.b64encode(command.encode("utf-8")).decode("ascii")
+    # Inside the setsid'd sh: record our own PID (== PGID) then exec the
+    # decoded user command. `exec` replaces the shell so signals target
+    # the user process directly; the PGID remains stable because exec
+    # does not change it.
+    # NOTE: `base64 -d` is GNU/BusyBox; the Daytona sandbox runs Linux,
+    # so this is portable for our deployment. If the sandbox ever moves
+    # to BSD/macOS the flag becomes `-D`.
+    inner = (
+        f'echo $$ > {pid_file}; '
+        f'exec sh -c "$(echo {encoded} | base64 -d)"'
+    )
+    return f"setsid sh -c '{inner}' < /dev/null"
 
 
 async def _run_query_loop(
@@ -401,14 +438,25 @@ async def _run_query_loop(
                     )
                     kill_callback = _make_kill_callback(context, tc.id)
 
+                bg_alias = background_manager.next_alias()
+
                 async def _bg_wrapper(
-                    ctx: QueryContext, name: str, uid: str, inp: dict[str, object]
+                    ctx: QueryContext,
+                    name: str,
+                    uid: str,
+                    inp: dict[str, object],
+                    alias: str = bg_alias,
                 ) -> ToolResult:
-                    block = await _execute_tool_call(ctx, name, uid, inp)
+                    block = await _execute_tool_call(
+                        ctx, name, uid, inp,
+                        extra_metadata={
+                            "on_progress_line": background_manager.make_progress_callback(alias),
+                            "background_task_id": alias,
+                        },
+                    )
                     return ToolResult(output=block.content, is_error=block.is_error)
 
                 coro = _bg_wrapper(context, tc.name, tc.id, clean_input)
-                bg_alias = background_manager.next_alias()
                 bg_event = background_manager.launch(
                     bg_alias, tc.name, clean_input, coro, task_note=task_note,
                     kill_callback=kill_callback,
@@ -470,14 +518,25 @@ async def _run_query_loop(
                         )
                         kill_callback = _make_kill_callback(context, tc.id)
 
+                    bg_alias = background_manager.next_alias()
+
                     async def _bg_wrapper(
-                        ctx: QueryContext, name: str, uid: str, inp: dict[str, object]
+                        ctx: QueryContext,
+                        name: str,
+                        uid: str,
+                        inp: dict[str, object],
+                        alias: str = bg_alias,
                     ) -> ToolResult:
-                        block = await _execute_tool_call(ctx, name, uid, inp)
+                        block = await _execute_tool_call(
+                            ctx, name, uid, inp,
+                            extra_metadata={
+                                "on_progress_line": background_manager.make_progress_callback(alias),
+                                "background_task_id": alias,
+                            },
+                        )
                         return ToolResult(output=block.content, is_error=block.is_error)
 
                     coro = _bg_wrapper(context, tc.name, tc.id, clean_input)
-                    bg_alias = background_manager.next_alias()
                     event = background_manager.launch(
                         bg_alias, tc.name, clean_input, coro, task_note=task_note,
                         kill_callback=kill_callback,
@@ -603,6 +662,7 @@ async def _execute_tool_call(
     tool_name: str,
     tool_use_id: str,
     tool_input: dict[str, object],
+    extra_metadata: dict[str, object] | None = None,
 ) -> ToolResultBlock:
     if context.hook_executor is not None:
         pre_hooks = await context.hook_executor.execute(
@@ -645,6 +705,7 @@ async def _execute_tool_call(
                 metadata={
                     "tool_registry": context.tool_registry,
                     **(context.tool_metadata or {}),
+                    **(extra_metadata or {}),
                 },
             ),
         )

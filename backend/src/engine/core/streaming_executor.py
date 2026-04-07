@@ -19,7 +19,7 @@ from message.stream_events import (
 from tools.core.base import ToolExecutionContext, ToolRegistry, ToolResult
 
 if TYPE_CHECKING:
-    from models.core.types import ApiToolUseDeltaEvent
+    from providers.types import ApiToolUseDeltaEvent
 
 logger = logging.getLogger(__name__)
 

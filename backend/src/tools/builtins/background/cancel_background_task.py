@@ -53,6 +53,20 @@ class CancelBackgroundTaskTool(BaseTool):
 
         task_id = arguments.task_id
 
+        # `all` is a sentinel supported by check/wait — but cancel is a
+        # mutating action and we want the LLM to make an explicit choice
+        # per task. Reject it loudly instead of failing later inside
+        # manager.cancel("all", ...).
+        if task_id == "all":
+            return ToolResult(
+                output=(
+                    "ERROR: cancel_background_task does not support task_id=\"all\". "
+                    "Cancel each task explicitly by its task_id, or call "
+                    "check_background_progress to list them first."
+                ),
+                is_error=True,
+            )
+
         # Disambiguation guard (mirrors wait_for_background_task):
         # the LLM frequently drops task_id when it thinks the intent is obvious.
         # Rather than crashing on ValidationError, auto-select the sole running

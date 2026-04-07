@@ -42,8 +42,8 @@ from message.stream_events import (
     ToolExecutionCompleted,
     ToolExecutionStarted,
 )
-from models.core.provider import make_api_client
-from models.core.types import SupportsStreamingMessages
+from providers.provider import make_api_client
+from providers.types import SupportsStreamingMessages
 from tools import ToolRegistry
 from tools.daytona_toolkit import DaytonaToolkit
 

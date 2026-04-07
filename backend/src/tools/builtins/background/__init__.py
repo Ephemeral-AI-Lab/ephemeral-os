@@ -42,6 +42,10 @@ def make_background_toolkit(bg_tool_names: list[str]) -> BaseToolkit:
             "3. When you have NO foreground work left, call `wait_for_background_task` to "
             "block until tasks complete. To wait for a specific task, pass its `task_id` "
             "(from check_background_progress). Do NOT poll in a loop.\n"
-            "4. Use `cancel_background_task` to stop tasks that are taking too long."
+            "4. Use `cancel_background_task` to stop tasks that are taking too long.\n\n"
+            "**Shortcut:** `check_background_progress` and `wait_for_background_task` "
+            "accept the literal string `\"all\"` as `task_id` to target every pending "
+            "background task at once. `cancel_background_task` does NOT accept `\"all\"` — "
+            "cancel each task explicitly to avoid accidental mass-cancellation."
         ),
     )

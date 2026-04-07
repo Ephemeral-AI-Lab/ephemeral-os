@@ -15,7 +15,7 @@ from message.stream_events import (
     ToolExecutionProgress,
 )
 from engine.core.streaming_executor import StreamingToolExecutor, TrackedTool
-from models.core.types import ApiToolUseDeltaEvent
+from providers.types import ApiToolUseDeltaEvent
 from tools.core.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolRegistry, ToolResult
 
 

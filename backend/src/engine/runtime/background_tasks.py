@@ -80,7 +80,13 @@ class BackgroundTaskManager:
             # If cancel() already marked this task, don't overwrite its
             # status/result — the SDK may complete normally with exit_code -1
             # after we logically cancelled it.
-            if tracked.status == "cancelled":
+            if tracked.status in ("cancelled", "delivered"):
+                if task.exception() is not None:
+                    logger.debug(
+                        "Background task %s raised after cancel: %s",
+                        tracked.task_id,
+                        task.exception(),
+                    )
                 return
             try:
                 if task.cancelled():
@@ -93,7 +99,8 @@ class BackgroundTaskManager:
                 else:
                     tracked.status = "completed"
                     tracked.result = task.result()
-            except Exception:
+            except Exception as exc:
+                logger.debug("done_callback failed for %s: %s", tracked.task_id, exc)
                 tracked.status = "failed"
                 tracked.result = ToolResult(output="Unknown error in done callback", is_error=True)
 
@@ -125,6 +132,28 @@ class BackgroundTaskManager:
     def has_pending(self) -> bool:
         """Return True if any task is still running."""
         return any(t.status == "running" for t in self._tasks.values())
+
+    async def wait_for(self, task_id: str, timeout: float) -> TrackedBackgroundTask | None:
+        """Wait for a *specific* task to complete or *timeout* expires.
+
+        Unlike :meth:`wait_any`, this does NOT call :meth:`collect_completed`,
+        so completion events for *other* tasks are preserved for the engine's
+        normal delivery path.
+        """
+        tracked = self._tasks.get(task_id)
+        if tracked is None:
+            return None
+        if tracked.status != "running":
+            return tracked
+        try:
+            await asyncio.wait(
+                {tracked.asyncio_task},
+                timeout=timeout,
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+        except Exception:
+            return None
+        return tracked if tracked.status != "running" else None
 
     async def wait_any(self, timeout: float = 300) -> TrackedBackgroundTask | None:
         """Wait until any running task completes or *timeout* expires.
@@ -177,6 +206,30 @@ class BackgroundTaskManager:
                     lines.append(f"  {pl}")
         return "\n".join(lines)
 
+    def append_progress(self, task_id: str, line: str) -> None:
+        """Append a live progress line for *task_id*.
+
+        Used by streaming-capable tools to push incremental output into the
+        manager so that ``check_background_progress`` can return a live tail
+        while the task is still running. Splits *line* on newlines so the
+        caller can pass either a single line or a chunk of multiple lines.
+        No-op if the task is unknown or already finished.
+        """
+        tracked = self._tasks.get(task_id)
+        if tracked is None or tracked.status != "running":
+            return
+        for piece in str(line).splitlines() or [""]:
+            tracked.progress_lines.append(piece)
+
+    def make_progress_callback(self, task_id: str) -> Callable[[str], None]:
+        """Return a callable that appends progress lines for *task_id*.
+
+        Convenience for wiring into a tool's execution context — the tool
+        can call ``ctx.metadata['on_progress_line']('hello')`` without ever
+        knowing about the manager.
+        """
+        return lambda line: self.append_progress(task_id, line)
+
     def get_status(self, task_id: str | None = None) -> list[dict[str, Any]]:
         """Return JSON-serializable status for tasks.
 
@@ -185,9 +238,12 @@ class BackgroundTaskManager:
         """
         now = time.monotonic()
         result: list[dict[str, Any]] = []
-        tasks = (
-            [self._tasks[task_id]] if task_id and task_id in self._tasks else self._tasks.values()
-        )
+        if task_id is not None:
+            if task_id not in self._tasks:
+                return []
+            tasks: Any = [self._tasks[task_id]]
+        else:
+            tasks = self._tasks.values()
         for tracked in tasks:
             entry: dict[str, Any] = {
                 "task_id": tracked.task_id,
@@ -197,10 +253,14 @@ class BackgroundTaskManager:
                 "elapsed_seconds": round(now - tracked.started_at, 1),
             }
             if tracked.result is not None:
-                output = tracked.result.output
-                if len(output) > 2000:
-                    output = output[:2000] + "... (truncated)"
-                entry["output"] = output
+                # Char-cap is applied by the tool layer (apply_last_n_lines)
+                # AFTER line-tail trimming, so a long-tail run still yields
+                # the requested number of trailing lines.
+                entry["output"] = tracked.result.output
+            elif tracked.status == "running" and tracked.progress_lines:
+                # Live tail: surface buffered streaming output for tools that
+                # call append_progress / on_progress_line while still running.
+                entry["output"] = "\n".join(tracked.progress_lines)
             result.append(entry)
         return result
 
@@ -263,6 +323,8 @@ class BackgroundTaskManager:
                         await tracked.kill_callback()
                     except Exception as exc:
                         logger.debug("Kill callback failed for task %s: %s", tracked.task_id, exc)
-                # Fall back to asyncio cancel if no kill callback
-                # (or as a belt-and-suspenders cleanup).
-                tracked.asyncio_task.cancel()
+                else:
+                    # No kill callback (e.g. pure-Python tool with no
+                    # sandbox process). asyncio.Task.cancel is safe in
+                    # that case — there is no Daytona SDK call to corrupt.
+                    tracked.asyncio_task.cancel()

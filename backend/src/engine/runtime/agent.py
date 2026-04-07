@@ -21,8 +21,8 @@ from config import Settings
 from message.messages import ConversationMessage
 from message.stream_events import StreamEvent
 from hooks import make_hook_executor
-from models.core.provider import make_api_client
-from models.core.types import UsageSnapshot
+from providers.provider import make_api_client
+from providers.types import UsageSnapshot
 from prompts import build_runtime_system_prompt
 from tools import create_default_tool_registry
 from tools.core.factory import create_toolkit, has_factory, ToolkitContext

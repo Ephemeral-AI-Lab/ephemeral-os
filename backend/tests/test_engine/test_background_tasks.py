@@ -348,7 +348,15 @@ async def test_get_status_by_id() -> None:
 # ---------------------------------------------------------------------------
 
 
-async def test_get_status_truncates_output() -> None:
+async def test_get_status_returns_full_output_for_tool_layer_to_trim() -> None:
+    """Manager returns the raw output verbatim.
+
+    Trimming (line-tail then char-cap) is the responsibility of the tool
+    wrapper via ``apply_last_n_lines``, applied AFTER the manager hands
+    the snapshot back. This guarantees `last_n_lines` always yields the
+    requested trailing lines instead of being silently capped by an
+    earlier head-truncation.
+    """
     mgr = BackgroundTaskManager()
     long_output = "x" * 5000
     mgr.launch(
@@ -361,10 +369,19 @@ async def test_get_status_truncates_output() -> None:
 
     statuses = mgr.get_status()
     assert len(statuses) == 1
-    output = statuses[0]["output"]
-    # The implementation truncates to 2000 chars + "... (truncated)".
-    assert len(output) <= 2020
-    assert output.endswith("... (truncated)")
+    assert statuses[0]["output"] == long_output
+
+    # Tool-layer trim is what bounds context: verify the helper caps it.
+    from tools.builtins.background._common import (
+        MAX_TOTAL_OUTPUT_CHARS,
+        apply_last_n_lines,
+    )
+
+    apply_last_n_lines(statuses, last_n_lines=20)
+    # Single-entry case: per-entry budget == total budget.
+    assert len(statuses[0]["output"]) <= MAX_TOTAL_OUTPUT_CHARS + len(
+        "... (head truncated)\n"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -536,3 +553,347 @@ async def test_kill_callback_exception_does_not_prevent_cancel() -> None:
     assert ok is True
     assert mgr._tasks["t1"].status == "cancelled"
     assert "kill failed but cancel ok" in mgr._tasks["t1"].result.output
+
+
+# ---------------------------------------------------------------------------
+# 22. wait_for: targets specific task and preserves other completions
+# ---------------------------------------------------------------------------
+
+
+async def test_wait_for_does_not_consume_other_task_completions() -> None:
+    """wait_for(target) must NOT swallow completion events for other tasks.
+
+    Guards the bug where the previous implementation routed specific-task
+    waits through wait_any(), which calls collect_completed as a side
+    effect and silently consumed completions for unrelated background
+    tasks before the engine could deliver them.
+    """
+    mgr = BackgroundTaskManager()
+    mgr.launch(
+        task_id="fast",
+        tool_name="fast",
+        tool_input={},
+        coro=_make_tool_coro(output="fast-done", delay=0.01),
+    )
+    mgr.launch(
+        task_id="slow",
+        tool_name="slow",
+        tool_input={},
+        coro=_make_tool_coro(output="slow-done", delay=0.30),
+    )
+
+    result = await mgr.wait_for("slow", timeout=0.05)
+    assert result is None
+    assert mgr._tasks["slow"].status == "running"
+
+    completed = mgr.collect_completed()
+    assert "fast" in [t.task_id for t in completed], (
+        "wait_for() must not swallow other tasks' completions"
+    )
+
+    # Cleanup the still-running slow task.
+    await mgr.cancel("slow")
+
+
+# ---------------------------------------------------------------------------
+# 23. wait_for: returns immediately for already-finished task
+# ---------------------------------------------------------------------------
+
+
+async def test_wait_for_returns_immediately_for_finished_task() -> None:
+    mgr = BackgroundTaskManager()
+    mgr.launch(
+        task_id="t1",
+        tool_name="t",
+        tool_input={},
+        coro=_make_tool_coro(output="ok"),
+    )
+    await asyncio.sleep(0.01)
+
+    start = time.monotonic()
+    result = await mgr.wait_for("t1", timeout=10.0)
+    elapsed = time.monotonic() - start
+
+    assert result is not None
+    assert result.task_id == "t1"
+    assert elapsed < 0.1, "should return immediately, not wait"
+
+
+# ---------------------------------------------------------------------------
+# 24. wait_for: unknown id returns None without raising
+# ---------------------------------------------------------------------------
+
+
+async def test_wait_for_unknown_id_returns_none() -> None:
+    mgr = BackgroundTaskManager()
+    result = await mgr.wait_for("nonexistent", timeout=1.0)
+    assert result is None
+
+
+# ---------------------------------------------------------------------------
+# 25. get_status unknown id returns empty list (not all tasks)
+# ---------------------------------------------------------------------------
+
+
+async def test_get_status_unknown_id_returns_empty() -> None:
+    """Unknown task_id must return [] — never silently fall through to 'all'."""
+    mgr = BackgroundTaskManager()
+    mgr.launch(
+        task_id="real",
+        tool_name="t",
+        tool_input={},
+        coro=_make_tool_coro(),
+    )
+
+    assert mgr.get_status("ghost") == []
+    assert len(mgr.get_status("real")) == 1
+    assert len(mgr.get_status()) == 1
+
+
+# ---------------------------------------------------------------------------
+# 26. cancel_all does NOT call asyncio.cancel when kill_callback present
+# ---------------------------------------------------------------------------
+
+
+async def test_cancel_all_skips_asyncio_cancel_when_kill_callback_present() -> None:
+    """If kill_callback is provided, cancel_all must NOT call asyncio.Task.cancel().
+
+    Calling .cancel() through Daytona SDK process.exec corrupts the shared
+    sandbox connection — the kill_callback is the safe path.
+    """
+    kill_called: list[str] = []
+
+    async def _kill() -> None:
+        kill_called.append("yes")
+
+    mgr = BackgroundTaskManager()
+    mgr.launch(
+        task_id="t1",
+        tool_name="slow",
+        tool_input={},
+        coro=_make_tool_coro(delay=10),
+        kill_callback=_kill,
+    )
+    task = mgr._tasks["t1"].asyncio_task
+
+    await mgr.cancel_all()
+
+    assert kill_called == ["yes"]
+    assert not task.cancelled(), (
+        "cancel_all must not invoke asyncio.Task.cancel() when a "
+        "kill_callback is provided"
+    )
+
+    # Clean up so the test doesn't leak the still-running asyncio task.
+    task.cancel()
+    try:
+        await task
+    except BaseException:
+        pass
+
+
+async def test_cancel_all_falls_back_to_asyncio_cancel_without_kill_callback() -> None:
+    mgr = BackgroundTaskManager()
+    mgr.launch(
+        task_id="t1",
+        tool_name="slow",
+        tool_input={},
+        coro=_make_tool_coro(delay=10),
+    )
+    task = mgr._tasks["t1"].asyncio_task
+
+    await mgr.cancel_all()
+    await asyncio.sleep(0)
+
+    assert task.cancelled() or task.done()
+
+
+# ---------------------------------------------------------------------------
+# 27. done_callback does not overwrite cancelled status
+# ---------------------------------------------------------------------------
+
+
+async def test_done_callback_skips_cancelled_status() -> None:
+    """If cancel() ran first, the asyncio task completing later must not
+    overwrite the cancelled state with completed."""
+    mgr = BackgroundTaskManager()
+    mgr.launch(
+        task_id="t1",
+        tool_name="t",
+        tool_input={},
+        coro=_make_tool_coro(output="late-completion", delay=0.05),
+    )
+    await mgr.cancel("t1", "early")
+    await asyncio.sleep(0.10)
+
+    assert mgr._tasks["t1"].status == "cancelled"
+    assert "early" in mgr._tasks["t1"].result.output
+    assert "late-completion" not in mgr._tasks["t1"].result.output
+
+
+# ---------------------------------------------------------------------------
+# 28-30. apply_last_n_lines: line trim + char-cap + budget split
+# ---------------------------------------------------------------------------
+
+
+def test_apply_last_n_lines_keeps_tail() -> None:
+    from tools.builtins.background._common import apply_last_n_lines
+
+    entries = [{"output": "\n".join(f"line{i}" for i in range(50))}]
+    apply_last_n_lines(entries, last_n_lines=5)
+    assert entries[0]["output"].splitlines() == [
+        "line45", "line46", "line47", "line48", "line49",
+    ]
+
+
+def test_apply_last_n_lines_char_cap_with_marker() -> None:
+    from tools.builtins.background._common import (
+        MAX_TOTAL_OUTPUT_CHARS,
+        apply_last_n_lines,
+    )
+
+    entries = [{"output": "x" * (MAX_TOTAL_OUTPUT_CHARS * 2)}]
+    apply_last_n_lines(entries, last_n_lines=100)
+    out = entries[0]["output"]
+    assert out.startswith("... (head truncated)\n")
+    body = out[len("... (head truncated)\n"):]
+    assert len(body) <= MAX_TOTAL_OUTPUT_CHARS
+
+
+def test_apply_last_n_lines_drops_leading_partial_line() -> None:
+    from tools.builtins.background._common import (
+        MAX_TOTAL_OUTPUT_CHARS,
+        apply_last_n_lines,
+    )
+
+    big_line = "A" * 500
+    text = "\n".join([big_line] * 20)
+    entries = [{"output": text}]
+    apply_last_n_lines(entries, last_n_lines=20)
+    out = entries[0]["output"]
+    assert out.startswith("... (head truncated)\n")
+    body = out[len("... (head truncated)\n"):]
+    first_line = body.split("\n", 1)[0]
+    assert first_line == big_line, (
+        "first line of body must be a complete `big_line`, not a partial"
+    )
+    assert len(body) <= MAX_TOTAL_OUTPUT_CHARS
+
+
+def test_apply_last_n_lines_budget_split_across_entries() -> None:
+    from tools.builtins.background._common import (
+        MAX_TOTAL_OUTPUT_CHARS,
+        MIN_PER_ENTRY_CHARS,
+        apply_last_n_lines,
+    )
+
+    entries = [{"output": "y" * (MAX_TOTAL_OUTPUT_CHARS * 2)} for _ in range(4)]
+    apply_last_n_lines(entries, last_n_lines=1000)
+
+    expected_per_entry = max(MIN_PER_ENTRY_CHARS, MAX_TOTAL_OUTPUT_CHARS // 4)
+    for e in entries:
+        assert e["output"].startswith("... (head truncated)\n")
+        body = e["output"][len("... (head truncated)\n"):]
+        assert len(body) <= expected_per_entry
+
+
+def test_apply_last_n_lines_floor_per_entry() -> None:
+    """With many entries, the per-entry floor (MIN_PER_ENTRY_CHARS) must hold."""
+    from tools.builtins.background._common import (
+        MIN_PER_ENTRY_CHARS,
+        apply_last_n_lines,
+    )
+
+    entries = [{"output": "z" * 5000} for _ in range(100)]
+    apply_last_n_lines(entries, last_n_lines=1000)
+    for e in entries:
+        body = (
+            e["output"][len("... (head truncated)\n"):]
+            if e["output"].startswith("... (head truncated)\n")
+            else e["output"]
+        )
+        assert len(body) <= MIN_PER_ENTRY_CHARS
+
+
+# ---------------------------------------------------------------------------
+# 31. cancel_background_task tool rejects task_id="all"
+# ---------------------------------------------------------------------------
+
+
+async def test_cancel_tool_rejects_all_sentinel() -> None:
+    from tools.builtins.background.cancel_background_task import (
+        CancelBackgroundTaskInput,
+        CancelBackgroundTaskTool,
+    )
+    from tools.core.base import ToolExecutionContext
+
+    mgr = BackgroundTaskManager()
+    mgr.launch(
+        task_id="bg_1",
+        tool_name="t",
+        tool_input={},
+        coro=_make_tool_coro(delay=10),
+    )
+
+    tool = CancelBackgroundTaskTool()
+    args = CancelBackgroundTaskInput(task_id="all")
+    ctx = ToolExecutionContext(cwd="/tmp", metadata={"background_task_manager": mgr})
+
+    result = await tool.execute(args, ctx)
+    assert result.is_error is True
+    assert "does not support" in result.output
+    assert mgr._tasks["bg_1"].status == "running"
+
+    await mgr.cancel("bg_1")
+
+
+# ---------------------------------------------------------------------------
+# 32. wait_for_background_task tool: specific already-completed task
+# ---------------------------------------------------------------------------
+
+
+async def test_wait_tool_already_completed_returns_stale_notice() -> None:
+    from tools.builtins.background.wait_for_background_task import (
+        WaitForBackgroundTaskInput,
+        WaitForBackgroundTaskTool,
+    )
+    from tools.core.base import ToolExecutionContext
+
+    mgr = BackgroundTaskManager()
+    mgr.launch(
+        task_id="bg_1",
+        tool_name="t",
+        tool_input={},
+        coro=_make_tool_coro(output="finished"),
+    )
+    await asyncio.sleep(0.01)
+
+    tool = WaitForBackgroundTaskTool()
+    args = WaitForBackgroundTaskInput(task_id="bg_1", timeout=5)
+    ctx = ToolExecutionContext(cwd="/tmp", metadata={"background_task_manager": mgr})
+
+    result = await tool.execute(args, ctx)
+    assert result.is_error is False
+    assert "ALREADY_COMPLETED" in result.output
+
+
+# ---------------------------------------------------------------------------
+# 33. check_background_progress tool: unknown id is_error=True
+# ---------------------------------------------------------------------------
+
+
+async def test_check_progress_unknown_id_is_error() -> None:
+    from tools.builtins.background.check_background_progress import (
+        CheckBackgroundProgressInput,
+        CheckBackgroundProgressTool,
+    )
+    from tools.core.base import ToolExecutionContext
+
+    mgr = BackgroundTaskManager()
+    tool = CheckBackgroundProgressTool()
+    args = CheckBackgroundProgressInput(task_id="ghost")
+    ctx = ToolExecutionContext(cwd="/tmp", metadata={"background_task_manager": mgr})
+
+    result = await tool.execute(args, ctx)
+    assert result.is_error is True
+    assert "ghost" in result.output

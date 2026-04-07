@@ -17,7 +17,7 @@ from message import (
     serialize_content_block,
     assistant_message_from_api,
 )
-from models.types import (
+from providers.types import (
     ApiMessageCompleteEvent,
     ApiTextDeltaEvent,
     ApiThinkingDeltaEvent,
@@ -28,7 +28,7 @@ from message.stream_events import (
     AssistantTurnComplete,
     ThinkingDelta,
 )
-from models.clients.openai_compat import (
+from providers.clients.openai_compat import (
     _convert_assistant_message,
     _convert_messages_to_openai,
 )
