@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone, UTC
+from datetime import datetime, UTC
 from uuid import uuid4
 
 from sqlalchemy.orm import Session, sessionmaker

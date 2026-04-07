@@ -167,6 +167,7 @@ async def _exec_streaming(
         nonlocal line_buf
         if not chunk:
             return
+        logger.debug("daytona_bash stream chunk (%s, %d chars)", "stderr" if is_stderr else "stdout", len(chunk))
         if is_stderr:
             stderr_chunks.append(chunk)
         else:
@@ -213,7 +214,7 @@ async def _exec_streaming(
                 ),
                 timeout=timeout,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return ToolResult(
                 output=f"command timed out after {timeout}s",
                 is_error=True,

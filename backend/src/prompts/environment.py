@@ -10,7 +10,7 @@ import platform
 import shutil
 import subprocess
 from dataclasses import dataclass, field
-from datetime import datetime, timezone, UTC
+from datetime import datetime, UTC
 from pathlib import Path
 
 

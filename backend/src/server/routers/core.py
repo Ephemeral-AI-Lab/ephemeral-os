@@ -34,9 +34,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-SystemNotificationEmitter = Callable[[str], Awaitable[None]]
 AgentStreamEmitter = Callable[[StreamEvent], Awaitable[None]]
-ClearEmitter = Callable[[], Awaitable[None]]
 
 # ---------------------------------------------------------------------------
 # Request models
@@ -65,9 +63,7 @@ async def execute_ephemeral_agent_run(
     config: SessionConfig,
     input_message: str,
     *,
-    on_system_notification: SystemNotificationEmitter,
     on_agent_event: AgentStreamEmitter,
-    on_clear: ClearEmitter,
     agent_def: AgentDefinition | None = None,
     sandbox_id: str | None = None,
 ) -> bool:
@@ -377,9 +373,6 @@ def create_core_router(get_session: Callable[[], SessionState]) -> APIRouter:
                             )
                         )
 
-                async def _on_clear() -> None:
-                    await session.emit(BackendEvent(type="clear_transcript"))
-
                 # Resolve agent definition if requested
                 agent_def = None
                 if req.agent_name:
@@ -394,9 +387,7 @@ def create_core_router(get_session: Callable[[], SessionState]) -> APIRouter:
                 await execute_ephemeral_agent_run(
                     config,
                     req.line,
-                    on_system_notification=_on_system_notification,
                     on_agent_event=_on_agent_event,
-                    on_clear=_on_clear,
                     agent_def=agent_def,
                     sandbox_id=req.sandbox_id,
                 )
