@@ -88,7 +88,7 @@ class HookExecutor:
                 process.communicate(),
                 timeout=hook.timeout_seconds,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             process.kill()
             await process.wait()
             return HookResult(

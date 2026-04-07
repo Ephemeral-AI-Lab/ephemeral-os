@@ -9,7 +9,8 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, AsyncIterator
+from typing import TYPE_CHECKING, Any
+from collections.abc import AsyncIterator
 
 if TYPE_CHECKING:
     from server.app_factory import SessionConfig
@@ -66,7 +67,7 @@ class EphemeralAgent:
 
 
 def finalize_tool_registry_and_prompt(
-    tool_registry: "ToolRegistry",
+    tool_registry: ToolRegistry,
     system_prompt: str,
 ) -> tuple[str, bool]:
     """Register background toolkit and inject capability awareness into the system prompt.
@@ -100,12 +101,12 @@ def finalize_tool_registry_and_prompt(
 
 
 def spawn_agent(
-    config: "SessionConfig",
+    config: SessionConfig,
     messages: list[ConversationMessage],
     *,
     agent_def: AgentDefinition | None = None,
     latest_user_prompt: str | None = None,
-    session_state: "SessionState | None" = None,
+    session_state: SessionState | None = None,
     sandbox_id: str | None = None,
     model_store: Any = None,
 ) -> EphemeralAgent:

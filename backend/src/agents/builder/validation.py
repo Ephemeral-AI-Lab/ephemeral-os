@@ -18,10 +18,10 @@ logger = logging.getLogger(__name__)
 class AgentDefinitionValidator:
     """Validates that agent definition references are resolvable."""
 
-    def __init__(self, tool_registry: "ToolRegistry | None") -> None:
+    def __init__(self, tool_registry: ToolRegistry | None) -> None:
         self._tool_registry = tool_registry
 
-    def validate(self, defn: "AgentDefinitionCreate | AgentDefinitionUpdate") -> AgentValidationResult:
+    def validate(self, defn: AgentDefinitionCreate | AgentDefinitionUpdate) -> AgentValidationResult:
         errors: list[str] = []
         warnings: list[str] = []
 

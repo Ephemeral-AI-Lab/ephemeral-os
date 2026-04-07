@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, UTC
 
 from sqlalchemy import DateTime, Float, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSON
@@ -22,12 +22,12 @@ class PipelineDefinitionRecord(Base):
     version: Mapped[int] = mapped_column(Integer, default=1)
     config_json: Mapped[dict] = mapped_column(JSON, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
 
     def __repr__(self) -> str:
@@ -55,7 +55,7 @@ class PipelineRunRecord(Base):
     started_at: Mapped[float | None] = mapped_column(Float, nullable=True)
     finished_at: Mapped[float | None] = mapped_column(Float, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
 
     def __repr__(self) -> str:

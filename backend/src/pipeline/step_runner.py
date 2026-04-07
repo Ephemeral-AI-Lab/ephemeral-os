@@ -35,7 +35,7 @@ class StepRunner:
         step_config: PipelineStepConfig,
         pipeline_config: PipelineConfig,
         context_map: dict[str, dict[str, Any]],
-        session_config: "SessionConfig",
+        session_config: SessionConfig,
     ) -> None:
         self._step = step_config
         self._pipeline = pipeline_config

@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from db.stores.model_store import ModelStore
 
 
-def create_models_router(model_store: "ModelStore") -> APIRouter:
+def create_models_router(model_store: ModelStore) -> APIRouter:
     """Build the model management API router."""
     router = APIRouter(prefix="/api/db/models", tags=["models"])
 

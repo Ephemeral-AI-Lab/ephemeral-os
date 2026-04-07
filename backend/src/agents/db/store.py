@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, UTC
 from uuid import uuid4
 
 from sqlalchemy.orm import Session, sessionmaker
@@ -67,7 +67,7 @@ class AgentDefinitionStore:
                 if hasattr(record, key) and key not in ("id", "name", "created_at", "version"):
                     setattr(record, key, value)
             record.version += 1
-            record.updated_at = datetime.now(timezone.utc)
+            record.updated_at = datetime.now(UTC)
             db.commit()
             db.refresh(record)
             return record
@@ -84,7 +84,7 @@ class AgentDefinitionStore:
             if record is None:
                 return False
             record.is_active = False
-            record.updated_at = datetime.now(timezone.utc)
+            record.updated_at = datetime.now(UTC)
             db.commit()
             return True
 
@@ -100,7 +100,7 @@ class AgentDefinitionStore:
             )
             for rec in rows:
                 rec.model = default_model_key
-                rec.updated_at = datetime.now(timezone.utc)
+                rec.updated_at = datetime.now(UTC)
             db.commit()
             return len(rows)
 
@@ -141,11 +141,11 @@ class AgentDefinitionStore:
                 existing.tags = source.tags
                 existing.metadata_json = source.metadata_json
                 existing.version += 1
-                existing.updated_at = datetime.now(timezone.utc)
+                existing.updated_at = datetime.now(UTC)
                 db.commit()
                 db.refresh(existing)
                 return existing
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             clone_record = AgentDefinitionRecord(
                 id=str(uuid4()),
                 name=new_name,

@@ -5,7 +5,8 @@ from __future__ import annotations
 import logging
 import time
 from copy import deepcopy
-from typing import TYPE_CHECKING, Any, Callable, Awaitable
+from typing import TYPE_CHECKING, Any
+from collections.abc import Callable, Awaitable
 from uuid import uuid4
 
 from pipeline.models import (
@@ -31,8 +32,8 @@ async def run_pipeline(
     config: PipelineConfig,
     goal: str,
     *,
-    session_config: "SessionConfig",
-    store: "PipelineStore | None" = None,
+    session_config: SessionConfig,
+    store: PipelineStore | None = None,
     on_step_complete: OnStepComplete | None = None,
 ) -> PipelineRun:
     """Execute a pipeline sequentially, building up context_map."""
@@ -48,8 +49,8 @@ async def run_pipeline_with_run(
     config: PipelineConfig,
     run: PipelineRun,
     *,
-    session_config: "SessionConfig",
-    store: "PipelineStore | None" = None,
+    session_config: SessionConfig,
+    store: PipelineStore | None = None,
     on_step_complete: OnStepComplete | None = None,
 ) -> PipelineRun:
     """Execute a pipeline with a pre-created PipelineRun (for API use)."""
@@ -62,8 +63,8 @@ async def resume_pipeline(
     checkpoint_id: str,
     *,
     context_map_patches: dict[str, dict[str, Any]] | None = None,
-    session_config: "SessionConfig",
-    store: "PipelineStore",
+    session_config: SessionConfig,
+    store: PipelineStore,
     on_step_complete: OnStepComplete | None = None,
 ) -> PipelineRun:
     """Resume a pipeline from a specific checkpoint.
@@ -99,8 +100,8 @@ async def resume_pipeline(
 async def _execute(
     config: PipelineConfig,
     run: PipelineRun,
-    session_config: "SessionConfig",
-    store: "PipelineStore | None",
+    session_config: SessionConfig,
+    store: PipelineStore | None,
     on_step_complete: OnStepComplete | None,
     skip_create: bool = False,
 ) -> PipelineRun:

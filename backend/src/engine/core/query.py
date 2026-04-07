@@ -9,7 +9,8 @@ import re
 import time as time_module
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, AsyncIterator
+from typing import TYPE_CHECKING
+from collections.abc import AsyncIterator
 
 if TYPE_CHECKING:
     from compaction import SessionState
@@ -58,7 +59,7 @@ class QueryContext:
     max_turns: int = 200
     hook_executor: HookExecutor | None = None
     tool_metadata: dict[str, object] | None = None
-    session_state: "SessionState | None" = None
+    session_state: SessionState | None = None
     enable_background_tasks: bool = False
 
 

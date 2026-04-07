@@ -82,7 +82,7 @@ class BackendEvent(BaseModel):
         cls,
         toolkits: list[ToolkitSnapshot] | None = None,
         state: dict[str, Any] | None = None,
-    ) -> "BackendEvent":
+    ) -> BackendEvent:
         return cls(
             type="ready",
             toolkits=toolkits or [],

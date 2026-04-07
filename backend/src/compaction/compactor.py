@@ -264,7 +264,7 @@ class SessionState:
         }
 
     @classmethod
-    def from_dict(cls, data: dict | None) -> "SessionState":
+    def from_dict(cls, data: dict | None) -> SessionState:
         if not data:
             return cls()
         return cls(
@@ -314,7 +314,7 @@ def should_autocompact(
 async def compact_conversation(
     messages: list[ConversationMessage],
     *,
-    api_client: "SupportsStreamingMessages",
+    api_client: SupportsStreamingMessages,
     model: str,
     system_prompt: str = "",
     preserve_recent: int = 6,
@@ -405,7 +405,7 @@ async def compact_conversation(
 async def auto_compact_if_needed(
     messages: list[ConversationMessage],
     *,
-    api_client: "SupportsStreamingMessages",
+    api_client: SupportsStreamingMessages,
     model: str,
     system_prompt: str = "",
     state: SessionState,

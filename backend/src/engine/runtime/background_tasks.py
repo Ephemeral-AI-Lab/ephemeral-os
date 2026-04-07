@@ -6,7 +6,8 @@ import asyncio
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Any, Callable, Coroutine
+from typing import Any
+from collections.abc import Callable, Coroutine
 
 from tools.core.base import ToolResult
 from message.stream_events import BackgroundTaskStarted

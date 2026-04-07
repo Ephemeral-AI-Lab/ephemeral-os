@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, UTC
 
 from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSON
@@ -33,12 +33,12 @@ class AgentRunRecord(Base):
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
 
     # Relationships
-    session: Mapped["SessionRecord"] = relationship(back_populates="runs")  # noqa: F821
-    chunks: Mapped[list["AgentResponseChunkRecord"]] = relationship(
+    session: Mapped[SessionRecord] = relationship(back_populates="runs")  # noqa: F821
+    chunks: Mapped[list[AgentResponseChunkRecord]] = relationship(
         back_populates="run", cascade="all, delete-orphan"
     )
 
@@ -61,11 +61,11 @@ class AgentResponseChunkRecord(Base):
     tool_name: Mapped[str | None] = mapped_column(String(128), nullable=True)
     tool_call_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
 
     # Relationships
-    run: Mapped["AgentRunRecord"] = relationship(back_populates="chunks")
+    run: Mapped[AgentRunRecord] = relationship(back_populates="chunks")
 
     def __repr__(self) -> str:
         return f"<AgentResponseChunkRecord seq={self.seq} kind={self.event_kind!r}>"

@@ -31,7 +31,7 @@ class WaitForBackgroundTaskInput(BaseModel):
     )
 
     @model_validator(mode="after")
-    def _validate_task_id(self) -> "WaitForBackgroundTaskInput":
+    def _validate_task_id(self) -> WaitForBackgroundTaskInput:
         err = validate_task_id(self.task_id)
         if err:
             raise ValueError(err)

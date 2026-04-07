@@ -311,7 +311,7 @@ class EvalAgent:
         max_turns: int = 200,
         max_tokens: int | None = None,
         settings: Settings | None = None,
-    ) -> "EvalAgent":
+    ) -> EvalAgent:
         """Create a configured EvalAgent.
 
         Uses the active model from the DB registry when available,
@@ -393,7 +393,7 @@ class EvalAgent:
         )
 
     @classmethod
-    def from_settings(cls, settings: Settings) -> "EvalAgent":
+    def from_settings(cls, settings: Settings) -> EvalAgent:
         """Construct from an explicit Settings object (backward compat)."""
         return cls.create(settings=settings)
 
@@ -490,7 +490,7 @@ class EvalAgent:
         if closer is not None:
             await closer()
 
-    async def __aenter__(self) -> "EvalAgent":
+    async def __aenter__(self) -> EvalAgent:
         return self
 
     async def __aexit__(self, *exc: object) -> None:

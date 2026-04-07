@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, UTC
 from uuid import uuid4
 
 from agents.types import AgentDefinition
@@ -105,7 +105,7 @@ class AgentBuilderService:
             self._register(self.record_to_definition(record))
             return self._record_to_response(record)
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         record = AgentDefinitionRecord(
             id=str(uuid4()),
             name=data.name,

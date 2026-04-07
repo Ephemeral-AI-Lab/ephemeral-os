@@ -17,7 +17,8 @@ import time
 from collections import OrderedDict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
+from collections.abc import Callable
 
 from code_intelligence.constants import (
     TREE_CACHE_MAX_FILE_SIZE,

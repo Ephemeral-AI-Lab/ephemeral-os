@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, AsyncIterator, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
+from collections.abc import AsyncIterator
 
 from pydantic import BaseModel
 

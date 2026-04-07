@@ -10,7 +10,7 @@ import platform
 import shutil
 import subprocess
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timezone, UTC
 from pathlib import Path
 
 
@@ -114,7 +114,7 @@ def get_environment_info(cwd: str | None = None) -> EnvironmentInfo:
         shell=shell,
         cwd=cwd,
         home_dir=str(Path.home()),
-        date=datetime.now(tz=timezone.utc).strftime("%Y-%m-%d"),
+        date=datetime.now(tz=UTC).strftime("%Y-%m-%d"),
         python_version=platform.python_version(),
         is_git_repo=is_git,
         git_branch=branch,

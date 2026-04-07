@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, UTC
 from typing import TYPE_CHECKING
 
 from sqlalchemy.orm import Session, sessionmaker
@@ -53,7 +53,7 @@ class SessionStore:
         """Insert or update a session record."""
         with self._sf() as db:
             record = db.get(SessionRecord, session_id)
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
             if record is None:
                 record = SessionRecord(
                     id=session_id,
@@ -111,8 +111,8 @@ class SessionStore:
 
     def load_session_state(
         self,
-        config: "SessionConfig",
-    ) -> tuple[list[ConversationMessage], "SessionState", list[dict]]:
+        config: SessionConfig,
+    ) -> tuple[list[ConversationMessage], SessionState, list[dict]]:
         """Load conversation history, session context, and full message history.
 
         Returns (messages, session_state, full_message_history).

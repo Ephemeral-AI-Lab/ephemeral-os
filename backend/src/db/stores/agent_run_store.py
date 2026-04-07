@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, UTC
 
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -47,7 +47,7 @@ class AgentRunStore:
                 status="running",
                 input_query=input_query,
                 metadata_json=metadata,
-                started_at=datetime.now(timezone.utc),
+                started_at=datetime.now(UTC),
             )
             db.add(record)
             db.commit()
@@ -77,7 +77,7 @@ class AgentRunStore:
             record.reasoning = reasoning
             record.error = error
             record.event_count = event_count
-            record.finished_at = datetime.now(timezone.utc)
+            record.finished_at = datetime.now(UTC)
             db.commit()
             db.refresh(record)
             return record

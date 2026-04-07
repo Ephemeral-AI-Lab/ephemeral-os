@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, UTC
 
 from sqlalchemy import DateTime, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSON
@@ -28,16 +28,16 @@ class SessionRecord(Base):
     full_message_history: Mapped[list | None] = mapped_column(JSON, nullable=True)
     summary: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )
 
     # Relationships
-    runs: Mapped[list["AgentRunRecord"]] = relationship(  # noqa: F821
+    runs: Mapped[list[AgentRunRecord]] = relationship(  # noqa: F821
         back_populates="session", cascade="all, delete-orphan"
     )
 

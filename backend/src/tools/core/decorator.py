@@ -33,7 +33,8 @@ from __future__ import annotations
 
 import inspect
 import re
-from typing import Any, Callable, get_type_hints
+from typing import Any, get_type_hints
+from collections.abc import Callable
 
 from pydantic import BaseModel, Field, create_model
 

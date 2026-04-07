@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 from tools.core.base import BaseToolkit
 from tools.coordination_worker.replan_tool import (

@@ -5,7 +5,8 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import asdict
-from typing import Any, Callable, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
+from collections.abc import Callable
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -44,7 +45,7 @@ class ResumePipelineRequest(BaseModel):
 
 def create_pipeline_router(
     get_pipeline_store: Callable[[], DbPipelineStore | None],
-    get_session: Callable[[], "SessionState"],
+    get_session: Callable[[], SessionState],
 ) -> APIRouter:
     router = APIRouter(prefix="/api/pipelines", tags=["pipelines"])
 

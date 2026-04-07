@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
+from collections.abc import Callable
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import JSONResponse
@@ -25,12 +26,12 @@ logger = logging.getLogger(__name__)
 
 
 def create_agents_router(
-    get_builder_service: Callable[[], "AgentBuilderService | None"],
-    get_tool_registry: Callable[[], "ToolRegistry | None"],
+    get_builder_service: Callable[[], AgentBuilderService | None],
+    get_tool_registry: Callable[[], ToolRegistry | None],
 ) -> APIRouter:
     router = APIRouter(prefix="/api/agents", tags=["agents"])
 
-    def _require_builder() -> "AgentBuilderService":
+    def _require_builder() -> AgentBuilderService:
         svc = get_builder_service()
         if svc is None:
             raise HTTPException(

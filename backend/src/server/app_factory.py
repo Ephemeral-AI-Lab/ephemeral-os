@@ -157,7 +157,7 @@ class SessionState:
             raise RuntimeError("Tool registry not initialised")
         return self._tool_registry
 
-    def current_settings(self) -> "Settings":
+    def current_settings(self) -> Settings:
         if self.config is None:
             raise RuntimeError("SessionState not initialised")
         return self.config.resolve_settings()
@@ -219,7 +219,7 @@ class SessionState:
 # ---------------------------------------------------------------------------
 
 _session: SessionState | None = None
-_builder_service: "AgentBuilderService | None" = None
+_builder_service: AgentBuilderService | None = None
 
 # Database stores — module-level singletons, initialised during lifespan
 session_store = SessionStore()
@@ -231,7 +231,7 @@ skill_definition_store = SkillDefinitionStore()
 pipeline_store = DbPipelineStore()
 
 
-def _initialize_database(session: SessionState) -> "AgentBuilderService | None":
+def _initialize_database(session: SessionState) -> AgentBuilderService | None:
     """Initialize DB stores and agent builder. Returns builder service or None."""
     settings = load_settings()
     sf = initialize_db(settings.database)

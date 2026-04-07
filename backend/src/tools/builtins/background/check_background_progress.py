@@ -21,7 +21,7 @@ class CheckBackgroundProgressInput(BaseModel):
     )
 
     @model_validator(mode="after")
-    def _validate_task_id(self) -> "CheckBackgroundProgressInput":
+    def _validate_task_id(self) -> CheckBackgroundProgressInput:
         err = validate_task_id(self.task_id)
         if err:
             raise ValueError(err)

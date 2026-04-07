@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Callable, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
+from collections.abc import Callable
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import PlainTextResponse
@@ -72,11 +73,11 @@ class SkillUpdate(BaseModel):
 
 
 def create_skills_router(
-    get_skill_store: Callable[[], "SkillDefinitionStore | None"],
+    get_skill_store: Callable[[], SkillDefinitionStore | None],
 ) -> APIRouter:
     router = APIRouter(prefix="/api/skills", tags=["skills"])
 
-    def _require_store() -> "SkillDefinitionStore":
+    def _require_store() -> SkillDefinitionStore:
         store = get_skill_store()
         if store is None:
             raise HTTPException(status_code=503, detail="Skill store not available (database not configured)")

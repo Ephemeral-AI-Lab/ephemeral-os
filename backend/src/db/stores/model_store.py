@@ -6,7 +6,7 @@ import json
 import logging
 import os
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timezone, UTC
 from typing import Any
 
 from sqlalchemy.orm import Session, sessionmaker
@@ -112,7 +112,7 @@ class ModelStore:
     ) -> dict[str, Any]:
         """Create or update a model registration."""
         kwargs_str = json.dumps(kwargs or {})
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         with self._sf() as db:
             existing = db.query(ModelRegistrationRecord).filter_by(key=key).first()
@@ -153,7 +153,7 @@ class ModelStore:
                 return None
             self._deactivate_all(db)
             record.is_active = True
-            record.updated_at = datetime.now(timezone.utc)
+            record.updated_at = datetime.now(UTC)
             db.commit()
             db.refresh(record)
             return _to_dict(record)

@@ -50,7 +50,7 @@ class ConversationMessage(BaseModel):
     content: list[ContentBlock] = Field(default_factory=list)
 
     @classmethod
-    def from_user_text(cls, text: str) -> "ConversationMessage":
+    def from_user_text(cls, text: str) -> ConversationMessage:
         """Construct a user message from raw text."""
         return cls(role="user", content=[TextBlock(text=text)])
 

@@ -6,7 +6,8 @@ import logging
 import asyncio
 import json
 from collections.abc import Callable
-from typing import TYPE_CHECKING, Awaitable
+from typing import TYPE_CHECKING
+from collections.abc import Awaitable
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -61,7 +62,7 @@ class ConfigRequest(BaseModel):
 
 
 async def execute_ephemeral_agent_run(
-    config: "SessionConfig",
+    config: SessionConfig,
     input_message: str,
     *,
     on_system_notification: SystemNotificationEmitter,
@@ -245,7 +246,7 @@ async def execute_ephemeral_agent_run(
 # ---------------------------------------------------------------------------
 
 
-def create_core_router(get_session: Callable[[], "SessionState"]) -> APIRouter:
+def create_core_router(get_session: Callable[[], SessionState]) -> APIRouter:
     """Build the core API router."""
     router = APIRouter(prefix="/api")
 

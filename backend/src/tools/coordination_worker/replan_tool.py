@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
+from collections.abc import Callable
 
 from tools.core.base import BaseTool, ToolExecutionContext, ToolResult
 from tools.core.decorator import tool

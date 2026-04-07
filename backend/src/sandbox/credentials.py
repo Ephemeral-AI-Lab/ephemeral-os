@@ -34,7 +34,7 @@ def load_credentials() -> tuple[str, str, str]:
     return api_key, api_url, target
 
 
-def build_config() -> "DaytonaConfig":
+def build_config() -> DaytonaConfig:
     api_key, api_url, target = load_credentials()
 
     if not api_key or not api_url:

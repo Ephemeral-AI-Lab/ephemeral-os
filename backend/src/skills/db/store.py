@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from typing import Any
-from datetime import datetime, timezone
+from datetime import datetime, timezone, UTC
 
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -71,7 +71,7 @@ class SkillDefinitionStore:
                 if hasattr(record, key) and key not in ("id", "name", "created_at", "version"):
                     setattr(record, key, value)
             record.version += 1
-            record.updated_at = datetime.now(timezone.utc)
+            record.updated_at = datetime.now(UTC)
             db.commit()
             db.refresh(record)
             return record
@@ -88,6 +88,6 @@ class SkillDefinitionStore:
             if record is None:
                 return False
             record.is_active = False
-            record.updated_at = datetime.now(timezone.utc)
+            record.updated_at = datetime.now(UTC)
             db.commit()
             return True
