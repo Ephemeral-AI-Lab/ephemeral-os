@@ -2,7 +2,7 @@
 
 Import from here instead of deep paths:
 
-    from providers import OpenAICompatibleClient, detect_provider
+    from providers import AnthropicClient, detect_provider
 """
 
 from providers.types import (
@@ -28,7 +28,7 @@ from providers.provider import (
     detect_provider,
     make_api_client,
 )
-from providers.clients import OpenAICompatibleClient, AnthropicClient
+from providers.clients import AnthropicClient
 from providers.api import create_models_router
 
 __all__ = [
@@ -53,7 +53,6 @@ __all__ = [
     "auth_status",
     "make_api_client",
     # Clients
-    "OpenAICompatibleClient",
     "AnthropicClient",
     # API
     "create_models_router",
