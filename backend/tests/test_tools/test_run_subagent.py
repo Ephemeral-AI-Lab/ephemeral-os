@@ -224,6 +224,10 @@ class _StubAgent:
         # Used by the test to inspect that progress provider sees live state.
         self.peek_calls: list[str] = []
 
+    @property
+    def display_messages(self) -> list[ConversationMessage]:
+        return self._display_messages
+
     async def run(self, prompt: str):
         for msg in self._scripted:
             self._display_messages.append(msg)
@@ -350,6 +354,10 @@ class _StubAgentRunStore:
         self._session_factory = object()  # truthy → "DB available"
         self.created: list[dict] = []
         self.finished: list[dict] = []
+
+    @property
+    def is_ready(self) -> bool:
+        return self._session_factory is not None
 
     def create_run(self, **kwargs):
         self.created.append(kwargs)

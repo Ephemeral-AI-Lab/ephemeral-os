@@ -21,6 +21,7 @@ their message history, and retry failed runs.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from typing import Any
@@ -200,38 +201,70 @@ async def run_subagent(
     # Register the live-peek progress provider — closes over the inner agent's
     # _messages list, so each peek returns a fresh snapshot of the last N
     # messages at the moment of the peek (not a stale historical buffer).
+    # Also back-link sub_run_id and tag task_type so the in-memory bg task
+    # and the persisted audit row can be cross-resolved by either id.
     if bg_manager is not None and isinstance(task_id, str):
         # The bg manager calls the provider with the user-supplied `last_n`
         # from check_background_progress. format_last_n_messages clamps it
         # to PEEK_MESSAGE_MAX so the response stays bounded.
         bg_manager.set_progress_provider(
             task_id,
-            lambda last_n: format_last_n_messages(agent._display_messages, last_n),
+            lambda last_n: format_last_n_messages(agent.display_messages, last_n),
         )
+        tracked = bg_manager.get_task(task_id) if hasattr(bg_manager, "get_task") else None
+        if tracked is not None:
+            tracked.run_id = sub_run_id
+            tracked.task_type = "subagent"
 
     run_error: str | None = None
+    cancelled = False
     try:
         async for _event in agent.run(prompt):
             # Drain the event stream — agent.run drives _messages, which is
             # what the peek provider reads. We don't need per-event handling.
             pass
+    except asyncio.CancelledError:
+        cancelled = True
+        logger.info("run_subagent: subagent cancelled via bg manager")
     except Exception as exc:
         run_error = str(exc)
         logger.exception("run_subagent: subagent run crashed")
 
-    final_text = _extract_final_text(agent._display_messages)
+    # If cancel() was called on this bg task, prefer cancellation framing over
+    # a generic failure — even if the agent.run loop happened to exit normally
+    # before the cancel propagated.
+    cancel_reason: str | None = None
+    if bg_manager is not None and isinstance(task_id, str):
+        tracked = bg_manager.get_task(task_id) if hasattr(bg_manager, "get_task") else None
+        if tracked is not None and tracked.status == "cancelled":
+            cancelled = True
+            cancel_reason = tracked.cancel_reason
+
+    final_text = _extract_final_text(agent.display_messages)
     # Tolerate test stubs that don't expose a query_context.
     qc = getattr(agent, "query_context", None)
     api_snapshot = qc.api_messages_snapshot if qc is not None else None
+    if cancelled:
+        final_status = "cancelled"
+    elif run_error:
+        final_status = "failed"
+    else:
+        final_status = "completed"
     _finish_subagent_run_record(
         sub_run_id,
-        status="failed" if run_error else "completed",
-        display_messages=agent._display_messages,
+        status=final_status,
+        display_messages=agent.display_messages,
         api_messages_snapshot=api_snapshot,
         error=run_error,
         final_text=final_text,
+        cancellation_reason=cancel_reason,
     )
 
+    if cancelled:
+        msg = f"run_subagent: cancelled ({cancel_reason})" if cancel_reason else "run_subagent: cancelled"
+        # Re-raise so the bg manager's done callback observes a cancelled task
+        # and the parent's wait/peek paths see consistent cancelled framing.
+        raise asyncio.CancelledError(msg)
     if run_error:
         return ToolResult(output=f"run_subagent: subagent crashed: {run_error}", is_error=True)
     if not final_text:
@@ -249,16 +282,23 @@ def _create_subagent_run_record(
 ) -> str | None:
     """Create the subagent's agent_run row. Returns the new run_id, or None
     if persistence is unavailable (DB not initialised, or session_id missing).
+
+    Import errors are intentionally NOT swallowed — if ``server.app_factory``
+    cannot be imported, something is structurally broken and hiding it would
+    just delay the diagnosis.
     """
     if not session_id:
         return None
-    try:
-        from server.app_factory import agent_run_store
-    except Exception:
-        return None
-    if agent_run_store._session_factory is None:
+    from server.app_factory import agent_run_store
+
+    if not agent_run_store.is_ready:
         return None
     run_id = uuid4().hex[:12]
+    if len(prompt) > 2000:
+        logger.info(
+            "run_subagent: input_query truncated from %d to 2000 chars for persistence",
+            len(prompt),
+        )
     try:
         agent_run_store.create_run(
             run_id=run_id,
@@ -269,7 +309,9 @@ def _create_subagent_run_record(
             parent_task_id=parent_task_id,
         )
     except Exception:
-        logger.debug("run_subagent: failed to persist run record", exc_info=True)
+        logger.warning(
+            "run_subagent: failed to persist subagent run record", exc_info=True
+        )
         return None
     return run_id
 
@@ -282,6 +324,7 @@ def _finish_subagent_run_record(
     api_messages_snapshot: list[ConversationMessage] | None = None,
     error: str | None,
     final_text: str,
+    cancellation_reason: str | None = None,
 ) -> None:
     """Finalise the subagent's agent_run row.
 
@@ -291,9 +334,9 @@ def _finish_subagent_run_record(
     """
     if run_id is None:
         return
-    try:
-        from server.app_factory import agent_run_store
-    except Exception:
+    from server.app_factory import agent_run_store
+
+    if not agent_run_store.is_ready:
         return
     try:
         full_display = [m.model_dump(mode="json") for m in display_messages]
@@ -310,6 +353,9 @@ def _finish_subagent_run_record(
             compacted_history=compacted,
             error=error,
             event_count=len(display_messages),
+            cancellation_reason=cancellation_reason,
         )
     except Exception:
-        logger.debug("run_subagent: failed to finalise run record", exc_info=True)
+        logger.warning(
+            "run_subagent: failed to finalise subagent run record", exc_info=True
+        )

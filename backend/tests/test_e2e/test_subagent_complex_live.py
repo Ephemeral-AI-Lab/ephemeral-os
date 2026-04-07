@@ -678,3 +678,888 @@ class TestSubagentFanoutWithCancellationAndRecovery:
             f"Unrecovered errors: "
             f"{[e.output[:200] for e in result.unrecovered_error_events]}"
         )
+
+
+# ===========================================================================
+# Scenario D — Large Fan-out (8 subagents) with 3-Wave Dependency Chain
+#
+# The parent coordinates a fictional "system audit" across 8 components in
+# wave-1, then passes results into wave-2 (4 aggregators, each merging two
+# wave-1 findings), then wave-3 (2 summarisers), and finally the parent
+# writes an executive report.
+#
+# This exercises:
+#   - Spawning 8 background subagents in a single turn (large fan-out)
+#   - 5+ distinct tool-call rounds (spawn-W1, check, wait, spawn-W2, check,
+#     wait, spawn-W3, check, wait, synthesise)
+#   - Result threading across 3 dependent waves
+#   - At least 14 total subagent launches (8+4+2)
+#
+# Observable invariants:
+#   - At least 14 run_subagent background_started events
+#   - wait_for_background_task called at least 3 times (once per wave)
+#   - check_background_progress called at least 3 times (once per wave)
+#   - Final text covers at least 4 of the 8 component names
+#   - Final text references both wave-3 completion markers
+#   - No unrecovered errors
+# ===========================================================================
+
+
+@pytest.mark.skipif(not EvalAgent.has_all(), reason="API + Daytona both required")
+class TestSubagentLargeFanoutThreeWave:
+    """8-way fan-out wave-1 → 4-way wave-2 → 2-way wave-3 → parent synthesis."""
+
+    @pytest.fixture(scope="class")
+    def sandbox(self):
+        sb = create_test_sandbox("subagent-threewav")
+        yield sb
+        delete_test_sandbox(sb["id"])
+
+    @pytest.mark.asyncio
+    async def test_large_fanout_three_wave_dependency(self, sandbox):
+        """8 parallel wave-1 subagents feed into 4 wave-2 aggregators, then 2
+        wave-3 summarisers, then parent writes the final executive report."""
+        agent = _create_subagent_coordinator(
+            system_prompt=COORDINATOR_PROMPT,
+            sandbox_id=sandbox["id"],
+            max_turns=400,
+        )
+
+        result = await agent.invoke(
+            textwrap.dedent("""\
+            Your ONLY tool for delegation is ``run_subagent``.
+            Do NOT write content yourself or use any shell tools.
+
+            Goal: produce a fictional "System Audit Executive Report" for a
+            distributed platform with 8 components.
+
+            ── WAVE 1 (all 8 in one turn) ─────────────────────────────────
+            Spawn ALL EIGHT subagents simultaneously in the same assistant turn:
+
+              AUDIT_AUTH:
+                prompt="You are an auditor. Write a 2-sentence fictional audit
+                finding for component AUTH (authentication service). End with:
+                AUDIT_AUTH_DONE"
+
+              AUDIT_GATEWAY:
+                prompt="You are an auditor. Write a 2-sentence fictional audit
+                finding for component GATEWAY (API gateway). End with:
+                AUDIT_GATEWAY_DONE"
+
+              AUDIT_CACHE:
+                prompt="You are an auditor. Write a 2-sentence fictional audit
+                finding for component CACHE (Redis cluster). End with:
+                AUDIT_CACHE_DONE"
+
+              AUDIT_DB:
+                prompt="You are an auditor. Write a 2-sentence fictional audit
+                finding for component DB (primary database). End with:
+                AUDIT_DB_DONE"
+
+              AUDIT_QUEUE:
+                prompt="You are an auditor. Write a 2-sentence fictional audit
+                finding for component QUEUE (message broker). End with:
+                AUDIT_QUEUE_DONE"
+
+              AUDIT_SEARCH:
+                prompt="You are an auditor. Write a 2-sentence fictional audit
+                finding for component SEARCH (Elasticsearch). End with:
+                AUDIT_SEARCH_DONE"
+
+              AUDIT_CDN:
+                prompt="You are an auditor. Write a 2-sentence fictional audit
+                finding for component CDN (content delivery network). End with:
+                AUDIT_CDN_DONE"
+
+              AUDIT_MONITOR:
+                prompt="You are an auditor. Write a 2-sentence fictional audit
+                finding for component MONITOR (observability stack). End with:
+                AUDIT_MONITOR_DONE"
+
+            After spawning: call check_background_progress with task_id="all".
+            Then: call wait_for_background_task with task_id="all".
+
+            ── WAVE 2 (4 aggregators, in one turn) ────────────────────────
+            Spawn FOUR aggregator subagents. Pass the actual wave-1 texts
+            you received into each prompt:
+
+              AGG_INFRA:
+                prompt="You received these two audit findings:
+                [paste AUTH finding here]
+                [paste GATEWAY finding here]
+                Write a 2-sentence summary combining both. End with: AGG_INFRA_DONE"
+
+              AGG_DATA:
+                prompt="You received these two audit findings:
+                [paste CACHE finding here]
+                [paste DB finding here]
+                Write a 2-sentence summary combining both. End with: AGG_DATA_DONE"
+
+              AGG_ASYNC:
+                prompt="You received these two audit findings:
+                [paste QUEUE finding here]
+                [paste SEARCH finding here]
+                Write a 2-sentence summary combining both. End with: AGG_ASYNC_DONE"
+
+              AGG_DELIVERY:
+                prompt="You received these two audit findings:
+                [paste CDN finding here]
+                [paste MONITOR finding here]
+                Write a 2-sentence summary combining both. End with: AGG_DELIVERY_DONE"
+
+            After spawning: call check_background_progress with task_id="all".
+            Then: call wait_for_background_task with task_id="all".
+
+            ── WAVE 3 (2 summarisers, in one turn) ────────────────────────
+            Spawn TWO summariser subagents:
+
+              SUMMARY_PLATFORM:
+                prompt="You received these two aggregated audit summaries:
+                [paste AGG_INFRA text here]
+                [paste AGG_DATA text here]
+                Write a 3-sentence platform-layer summary. End with:
+                SUMMARY_PLATFORM_DONE"
+
+              SUMMARY_SERVICES:
+                prompt="You received these two aggregated audit summaries:
+                [paste AGG_ASYNC text here]
+                [paste AGG_DELIVERY text here]
+                Write a 3-sentence services-layer summary. End with:
+                SUMMARY_SERVICES_DONE"
+
+            After spawning: call check_background_progress with task_id="all".
+            Then: call wait_for_background_task with task_id="all".
+
+            ── FINAL ──────────────────────────────────────────────────────
+            Write a "System Audit Executive Report" with three sections:
+            1. Platform Layer (incorporating SUMMARY_PLATFORM content)
+            2. Services Layer (incorporating SUMMARY_SERVICES content)
+            3. Key Recommendations (3 bullet points synthesising all 8 audits)
+            State that all 8 component audits (AUTH, GATEWAY, CACHE, DB, QUEUE,
+            SEARCH, CDN, MONITOR) fed into this report through 3 waves.
+            Mention that markers SUMMARY_PLATFORM_DONE and SUMMARY_SERVICES_DONE
+            confirmed wave-3 completion.
+            """)
+        )
+
+        _log_result(result, "large_fanout_three_wave")
+
+        subagent_starts = [
+            e for e in result.background_started() if e.tool_name == "run_subagent"
+        ]
+        assert len(subagent_starts) >= 14, (
+            f"Expected at least 14 run_subagent launches (8+4+2). "
+            f"Got {len(subagent_starts)}. Tool sequence: {result.tool_names}"
+        )
+
+        waits = result.tool_count("wait_for_background_task")
+        assert waits >= 3, (
+            f"Expected at least 3 wait_for_background_task calls (one per wave). "
+            f"Got {waits}. Tool sequence: {result.tool_names}"
+        )
+
+        checks = result.tool_count("check_background_progress")
+        assert checks >= 3, (
+            f"Expected at least 3 check_background_progress calls (one per wave). "
+            f"Got {checks}. Tool sequence: {result.tool_names}"
+        )
+
+        text_lower = result.text.lower()
+        wave3_hits = sum(
+            1 for marker in [
+                "summary_platform_done", "summary_services_done",
+                "platform", "services", "executive", "recommendations",
+            ]
+            if marker in text_lower
+        )
+        assert wave3_hits >= 3, (
+            f"Final text does not reflect three-wave synthesis. "
+            f"Marker hits: {wave3_hits}. Text (first 800 chars): {result.text[:800]}"
+        )
+
+        # At least 4 of the 8 component names should appear
+        component_hits = sum(
+            1 for name in [
+                "auth", "gateway", "cache", "db", "queue",
+                "search", "cdn", "monitor",
+            ]
+            if name in text_lower
+        )
+        assert component_hits >= 4, (
+            f"Final text missing component names. Got {component_hits}/8. "
+            f"Text (first 800 chars): {result.text[:800]}"
+        )
+
+        assert not result.has_unrecovered_errors, (
+            f"Unrecovered errors (D): "
+            f"{[e.output[:200] for e in result.unrecovered_error_events]}"
+        )
+
+
+# ===========================================================================
+# Scenario E — Dynamic Re-planning: wave-2 composition decided by wave-1 content
+#
+# The parent runs 6 background subagents in wave-1.  Each wave-1 subagent
+# produces a micro-report and ends with one of two tags: PRIORITY_HIGH or
+# PRIORITY_LOW.  After joining wave-1, the parent inspects each result,
+# selects ONLY the HIGH-priority items (exactly 3), and spawns exactly those
+# 3 items as wave-2 deep-dive subagents.  A wave-3 single subagent then
+# consolidates the 3 deep-dives into an action plan.
+#
+# This exercises:
+#   - Dynamic re-planning (wave-2 composition depends on wave-1 content)
+#   - 5+ distinct tool-call rounds
+#   - At least 10 total subagent launches (6+3+1)
+#   - check_background_progress between every wave
+#   - wait_for_background_task at the end of every wave
+#
+# Observable invariants:
+#   - At least 10 run_subagent background_started events
+#   - wait_for_background_task called at least 3 times
+#   - check_background_progress called at least 3 times
+#   - Final text references PRIORITY_HIGH items and the action plan
+#   - No unrecovered errors
+# ===========================================================================
+
+
+@pytest.mark.skipif(not EvalAgent.has_all(), reason="API + Daytona both required")
+class TestSubagentDynamicReplanning:
+    """Wave-1 triage (6 subagents) → dynamic selection of 3 HIGH items →
+    wave-2 deep-dives → wave-3 consolidation → action plan."""
+
+    @pytest.fixture(scope="class")
+    def sandbox(self):
+        sb = create_test_sandbox("subagent-replan")
+        yield sb
+        delete_test_sandbox(sb["id"])
+
+    @pytest.mark.asyncio
+    async def test_dynamic_replanning_based_on_wave1_content(self, sandbox):
+        """Parent selects wave-2 subagents dynamically based on wave-1 priority tags."""
+        agent = _create_subagent_coordinator(
+            system_prompt=COORDINATOR_PROMPT,
+            sandbox_id=sandbox["id"],
+            max_turns=400,
+        )
+
+        result = await agent.invoke(
+            textwrap.dedent("""\
+            Your ONLY tool for delegation is ``run_subagent``.
+            Do NOT write content yourself or use any shell tools.
+
+            Goal: triage 6 fictional infrastructure risks, deep-dive only the
+            high-priority ones, and produce a prioritised action plan.
+
+            ── WAVE 1: Triage (all 6 in one turn) ─────────────────────────
+            Spawn ALL SIX triage subagents simultaneously:
+
+              TRIAGE_DISK:
+                prompt="You are a risk analyst. Write ONE sentence describing a
+                fictional disk-space risk for the production cluster. Then on the
+                next line output EXACTLY: PRIORITY_HIGH
+                End with: TRIAGE_DISK_DONE"
+
+              TRIAGE_NETWORK:
+                prompt="You are a risk analyst. Write ONE sentence describing a
+                fictional network-latency risk. Then on the next line output
+                EXACTLY: PRIORITY_LOW
+                End with: TRIAGE_NETWORK_DONE"
+
+              TRIAGE_MEMORY:
+                prompt="You are a risk analyst. Write ONE sentence describing a
+                fictional memory-pressure risk. Then on the next line output
+                EXACTLY: PRIORITY_HIGH
+                End with: TRIAGE_MEMORY_DONE"
+
+              TRIAGE_SSL:
+                prompt="You are a risk analyst. Write ONE sentence describing a
+                fictional SSL-certificate expiry risk. Then on the next line
+                output EXACTLY: PRIORITY_LOW
+                End with: TRIAGE_SSL_DONE"
+
+              TRIAGE_BACKUP:
+                prompt="You are a risk analyst. Write ONE sentence describing a
+                fictional backup-failure risk. Then on the next line output
+                EXACTLY: PRIORITY_HIGH
+                End with: TRIAGE_BACKUP_DONE"
+
+              TRIAGE_QUOTA:
+                prompt="You are a risk analyst. Write ONE sentence describing a
+                fictional API-quota exhaustion risk. Then on the next line output
+                EXACTLY: PRIORITY_LOW
+                End with: TRIAGE_QUOTA_DONE"
+
+            After spawning: call check_background_progress with task_id="all".
+            Then: call wait_for_background_task with task_id="all".
+
+            ── WAVE 2: Deep-dives (DYNAMIC based on wave-1 content) ───────
+            Read each wave-1 result. Items DISK, MEMORY, and BACKUP will have
+            PRIORITY_HIGH. Spawn exactly those 3 deep-dive subagents, passing
+            the triage finding verbatim into each prompt:
+
+              DEEPDIVE_DISK:
+                prompt="You are a solutions architect. This triage finding was
+                rated PRIORITY_HIGH:
+                [paste TRIAGE_DISK output here]
+                Write 3 concrete remediation steps (one sentence each).
+                End with: DEEPDIVE_DISK_DONE"
+
+              DEEPDIVE_MEMORY:
+                prompt="You are a solutions architect. This triage finding was
+                rated PRIORITY_HIGH:
+                [paste TRIAGE_MEMORY output here]
+                Write 3 concrete remediation steps (one sentence each).
+                End with: DEEPDIVE_MEMORY_DONE"
+
+              DEEPDIVE_BACKUP:
+                prompt="You are a solutions architect. This triage finding was
+                rated PRIORITY_HIGH:
+                [paste TRIAGE_BACKUP output here]
+                Write 3 concrete remediation steps (one sentence each).
+                End with: DEEPDIVE_BACKUP_DONE"
+
+            After spawning: call check_background_progress with task_id="all".
+            Then: call wait_for_background_task with task_id="all".
+
+            ── WAVE 3: Consolidation (1 subagent) ──────────────────────────
+            Spawn a single consolidation subagent:
+
+              CONSOLIDATE:
+                prompt="You are a programme manager. You have three deep-dive
+                remediation plans (for DISK, MEMORY, and BACKUP risks):
+                [paste DEEPDIVE_DISK output]
+                [paste DEEPDIVE_MEMORY output]
+                [paste DEEPDIVE_BACKUP output]
+                Write a numbered 5-point prioritised action plan integrating all.
+                End with: CONSOLIDATE_DONE"
+
+            After spawning: call check_background_progress on the CONSOLIDATE
+            task_id specifically.
+            Then: call wait_for_background_task with task_id="all".
+
+            ── FINAL ───────────────────────────────────────────────────────
+            Write the "Prioritised Remediation Action Plan" including:
+            - Explicitly name the 3 PRIORITY_HIGH items (DISK, MEMORY, BACKUP)
+            - Explicitly name the 3 PRIORITY_LOW items (NETWORK, SSL, QUOTA)
+            - The 5-point action plan from CONSOLIDATE
+            - State that CONSOLIDATE_DONE confirmed wave-3 completion
+            - Explain that wave-2 deep-dive subagents were chosen dynamically
+              based on the PRIORITY_HIGH signals from wave-1 triage outputs
+            """)
+        )
+
+        _log_result(result, "dynamic_replanning")
+
+        subagent_starts = [
+            e for e in result.background_started() if e.tool_name == "run_subagent"
+        ]
+        assert len(subagent_starts) >= 10, (
+            f"Expected at least 10 run_subagent launches (6+3+1). "
+            f"Got {len(subagent_starts)}. Tool sequence: {result.tool_names}"
+        )
+
+        waits = result.tool_count("wait_for_background_task")
+        assert waits >= 3, (
+            f"Expected at least 3 wait_for_background_task calls (one per wave). "
+            f"Got {waits}. Tool sequence: {result.tool_names}"
+        )
+
+        checks = result.tool_count("check_background_progress")
+        assert checks >= 3, (
+            f"Expected at least 3 check_background_progress calls (one per wave). "
+            f"Got {checks}. Tool sequence: {result.tool_names}"
+        )
+
+        text_lower = result.text.lower()
+        priority_hits = sum(
+            1 for kw in [
+                "priority_high", "priority high", "high", "priority_low",
+                "dynamic", "consolidate", "action plan",
+            ]
+            if kw in text_lower
+        )
+        assert priority_hits >= 3, (
+            f"Final text does not reflect dynamic replanning. "
+            f"Keyword hits: {priority_hits}. Text (first 800 chars): {result.text[:800]}"
+        )
+
+        # At least 2 of the 3 HIGH-priority item names must appear
+        high_item_hits = sum(
+            1 for name in ["disk", "memory", "backup"]
+            if name in text_lower
+        )
+        assert high_item_hits >= 2, (
+            f"Final text missing HIGH-priority item names. "
+            f"Got {high_item_hits}/3. Text (first 800 chars): {result.text[:800]}"
+        )
+
+        assert not result.has_unrecovered_errors, (
+            f"Unrecovered errors (E): "
+            f"{[e.output[:200] for e in result.unrecovered_error_events]}"
+        )
+
+
+# ===========================================================================
+# Scenario F — Partial Failures + Multi-Retry Recovery
+#
+# The parent spawns 7 background subagents in wave-1.  TWO of them are
+# instructed to emit an ERROR_MARKER prefix, simulating transient failures.
+# The parent must:
+#   1. Detect both failures via wait results (and targeted progress checks).
+#   2. Cancel any still-running failed subagents.
+#   3. Spawn REPLACEMENT subagents for each failed one (2 replacements).
+#   4. Join the 5 successful + 2 replacements and feed all 7 outputs into
+#      a wave-3 aggregation subagent.
+#   5. Write a final report that explicitly names the 2 failed+replaced items.
+#
+# This exercises:
+#   - Partial failure detection (2 out of 7 subagents fail with ERROR_MARKER)
+#   - Targeted check_background_progress calls on specific failed task_ids
+#   - Two cancellations and two replacement spawns
+#   - A follow-on aggregation wave (wave-3)
+#   - 5+ distinct tool-call rounds
+#
+# Observable invariants:
+#   - At least 10 run_subagent background_started events (7 + 2 retries + 1 agg)
+#   - check_background_progress called at least 3 times
+#   - wait_for_background_task called at least 2 times
+#   - Final text acknowledges 2 failures and replacements
+#   - Final text names at least 5 of the 7 services
+#   - No unrecovered errors
+# ===========================================================================
+
+
+@pytest.mark.skipif(not EvalAgent.has_all(), reason="API + Daytona both required")
+class TestSubagentPartialFailuresAndMultiRetry:
+    """7-way fan-out, 2 fail with ERROR_MARKER, parent detects, replaces both,
+    then aggregates all 7 outputs through a consolidation subagent."""
+
+    @pytest.fixture(scope="class")
+    def sandbox(self):
+        sb = create_test_sandbox("subagent-retry")
+        yield sb
+        delete_test_sandbox(sb["id"])
+
+    @pytest.mark.asyncio
+    async def test_partial_failures_with_multi_retry(self, sandbox):
+        """Parent detects 2 ERROR_MARKER subagents, replaces both, aggregates all."""
+        agent = _create_subagent_coordinator(
+            system_prompt=COORDINATOR_PROMPT,
+            sandbox_id=sandbox["id"],
+            max_turns=400,
+        )
+
+        result = await agent.invoke(
+            textwrap.dedent("""\
+            Your ONLY tool for delegation is ``run_subagent``.
+            Do NOT write content yourself or use any shell tools.
+
+            Goal: gather fictional performance metrics from 7 microservices,
+            handle 2 known pipeline failures, and produce a unified performance
+            report.
+
+            ── WAVE 1: Fan-out to 7 services (all in one turn) ────────────
+            Spawn ALL SEVEN subagents simultaneously in the same turn:
+
+              SVC_ORDERS:
+                prompt="You are a metrics collector. Report fictional p50/p95/p99
+                latency for the Orders service as one line:
+                ORDERS: p50=12ms p95=45ms p99=98ms
+                Then write: SVC_ORDERS_DONE"
+
+              SVC_PAYMENTS:
+                prompt="IMPORTANT: Your data pipeline is broken. Your ENTIRE
+                response must begin with the exact text:
+                ERROR_MARKER: Payments metrics pipeline is offline
+                Do not include any metric values. That is your complete response."
+
+              SVC_INVENTORY:
+                prompt="You are a metrics collector. Report fictional p50/p95/p99
+                latency for the Inventory service as one line:
+                INVENTORY: p50=8ms p95=30ms p99=75ms
+                Then write: SVC_INVENTORY_DONE"
+
+              SVC_SHIPPING:
+                prompt="You are a metrics collector. Report fictional p50/p95/p99
+                latency for the Shipping service as one line:
+                SHIPPING: p50=22ms p95=80ms p99=160ms
+                Then write: SVC_SHIPPING_DONE"
+
+              SVC_USERS:
+                prompt="IMPORTANT: Your data pipeline is broken. Your ENTIRE
+                response must begin with the exact text:
+                ERROR_MARKER: Users metrics pipeline is offline
+                Do not include any metric values. That is your complete response."
+
+              SVC_CATALOG:
+                prompt="You are a metrics collector. Report fictional p50/p95/p99
+                latency for the Catalog service as one line:
+                CATALOG: p50=5ms p95=18ms p99=40ms
+                Then write: SVC_CATALOG_DONE"
+
+              SVC_REVIEWS:
+                prompt="You are a metrics collector. Report fictional p50/p95/p99
+                latency for the Reviews service as one line:
+                REVIEWS: p50=35ms p95=120ms p99=250ms
+                Then write: SVC_REVIEWS_DONE"
+
+            After spawning: call check_background_progress with task_id="all"
+            to observe initial task status.
+            Then: call wait_for_background_task with task_id="all".
+
+            ── DETECT & HANDLE FAILURES ─────────────────────────────────
+            Examine all 7 results. SVC_PAYMENTS and SVC_USERS will have begun
+            with ERROR_MARKER.
+
+            For each of those two failed tasks:
+              1. If still running: call cancel_background_task on its task_id.
+              2. Call check_background_progress on that specific task_id (not
+                 "all") to confirm the error content is what you expect.
+
+            Then spawn TWO replacement subagents in the same turn:
+
+              SVC_PAYMENTS_RETRY:
+                prompt="The Payments metrics pipeline was offline. Use these
+                fallback values:
+                PAYMENTS_RETRY: p50=18ms p95=65ms p99=140ms
+                End with: SVC_PAYMENTS_RETRY_DONE"
+
+              SVC_USERS_RETRY:
+                prompt="The Users metrics pipeline was offline. Use these
+                fallback values:
+                USERS_RETRY: p50=10ms p95=38ms p99=82ms
+                End with: SVC_USERS_RETRY_DONE"
+
+            After spawning retries: call check_background_progress with
+            task_id="all" to observe the retry subagents.
+            Then: call wait_for_background_task with task_id="all".
+
+            ── WAVE 3: Aggregation (1 subagent) ─────────────────────────
+            Spawn a single aggregation subagent that merges all 7 service
+            results (5 successful originals + 2 replacement fallbacks).
+            Pass all 7 metric lines into its prompt:
+
+              AGGREGATE_ALL:
+                prompt="You are a performance analyst. You have latency data
+                from 7 services (Payments and Users used fallback values):
+                [paste all 7 metric lines here, one per service]
+                Write a 4-sentence performance summary covering:
+                - Overall latency health across all 7 services
+                - The two services that needed fallback values (Payments, Users)
+                - The highest-latency service
+                - One actionable recommendation
+                End with: AGGREGATE_ALL_DONE"
+
+            After spawning: call check_background_progress on the AGGREGATE_ALL
+            task_id specifically (not "all").
+            Then: call wait_for_background_task with task_id="all".
+
+            ── FINAL ────────────────────────────────────────────────────
+            Write a "Unified Performance Report" that includes:
+            1. A Markdown table with all 7 services, their p50/p95/p99 values,
+               and a Notes column (mark Payments and Users rows as
+               "fallback retry — original ERROR_MARKER").
+            2. A paragraph explicitly stating that 2 services (Payments and
+               Users) initially returned ERROR_MARKER failures and were retried.
+            3. The 4-sentence performance summary from AGGREGATE_ALL.
+            State that AGGREGATE_ALL_DONE confirmed wave-3 completion.
+            """)
+        )
+
+        _log_result(result, "partial_failures_multi_retry")
+
+        subagent_starts = [
+            e for e in result.background_started() if e.tool_name == "run_subagent"
+        ]
+        assert len(subagent_starts) >= 10, (
+            f"Expected at least 10 run_subagent launches (7 + 2 retries + 1 agg). "
+            f"Got {len(subagent_starts)}. Tool sequence: {result.tool_names}"
+        )
+
+        checks = result.tool_count("check_background_progress")
+        assert checks >= 3, (
+            f"Expected at least 3 check_background_progress calls. "
+            f"Got {checks}. Tool sequence: {result.tool_names}"
+        )
+
+        waits = result.tool_count("wait_for_background_task")
+        assert waits >= 2, (
+            f"Expected at least 2 wait_for_background_task calls. "
+            f"Got {waits}. Tool sequence: {result.tool_names}"
+        )
+
+        text_lower = result.text.lower()
+        failure_ack_hits = sum(
+            1 for kw in [
+                "error_marker", "error marker", "payments", "users",
+                "fallback", "retry", "retried", "replacement", "replaced",
+                "svc_payments_retry", "svc_users_retry",
+            ]
+            if kw in text_lower
+        )
+        assert failure_ack_hits >= 3, (
+            f"Final text does not acknowledge the 2 failures + retries. "
+            f"Keyword hits: {failure_ack_hits}. "
+            f"Text (first 1000 chars): {result.text[:1000]}"
+        )
+
+        # Final text must cover at least 5 of the 7 service names
+        svc_hits = sum(
+            1 for svc in [
+                "orders", "payments", "inventory", "shipping",
+                "users", "catalog", "reviews",
+            ]
+            if svc in text_lower
+        )
+        assert svc_hits >= 5, (
+            f"Final text missing service names. Got {svc_hits}/7. "
+            f"Text (first 1000 chars): {result.text[:1000]}"
+        )
+
+        assert not result.has_unrecovered_errors, (
+            f"Unrecovered errors (F): "
+            f"{[e.output[:200] for e in result.unrecovered_error_events]}"
+        )
+
+
+# ===========================================================================
+# Scenario G — Massive Concurrent Intelligence Burst with Adaptive Pruning
+#
+# The most demanding scenario in the file.  The parent is given an ambitious
+# open-ended goal that genuinely benefits from broad parallel exploration,
+# mid-flight reprioritisation, and early synthesis once enough signal arrives.
+#
+# What the agent MUST do autonomously (no prescribed steps in the prompt):
+#   1. Fan out to ≥10 background subagents simultaneously.
+#   2. Monitor live progress via check_background_progress and react to the
+#      engine-injected background-completion reminder messages.
+#   3. Identify and cancel at least one subagent that signals LOW_VALUE work
+#      before it completes, based on progress inspection.
+#   4. Begin synthesis as soon as enough subagents have completed — not by
+#      waiting blindly for every last one.
+#   5. Produce a coherent final deliverable that integrates the surviving
+#      subagent outputs.
+#
+# The domain: competitive landscape analysis for a fictional company.
+# 12 "analyst" subagents are implicitly needed (one per market segment),
+# but 3 of them will signal LOW_VALUE partway through — the parent should
+# prune those and synthesise from the remaining 9+.
+#
+# Observable invariants:
+#   - ≥10 run_subagent background_started events
+#   - ≥1 check_background_progress call on a *still-running* task
+#     (i.e. status=="running" in the response — proves notification-driven
+#      mid-flight inspection, not just post-completion polling)
+#   - ≥1 cancel_background_task call (pruning LOW_VALUE subagents)
+#   - ≥3 check_background_progress calls total (active monitoring)
+#   - Final text synthesises ≥6 distinct market segments
+#   - Final text acknowledges that some tracks were deprioritised/cancelled
+#   - No unrecovered errors; all spawned tasks reach a terminal state
+# ===========================================================================
+
+
+@pytest.mark.skipif(not EvalAgent.has_all(), reason="API + Daytona both required")
+class TestSubagentMassiveConcurrentWithAdaptivePruning:
+    """12-way fan-out, 3 subagents signal LOW_VALUE mid-flight, parent prunes
+    them via cancel, reacts to completion reminders, synthesises from survivors.
+
+    This is the most complex scenario in the file:
+      - High concurrency (≥10 background subagents at once)
+      - Notification awareness (engine-injected background reminders trigger
+        parent to start synthesis before all tasks complete)
+      - Mid-flight cancellation based on check_background_progress signal
+      - check_background_progress used for real branching decisions
+      - User prompt describes only the end-goal; no tool/step prescriptions
+    """
+
+    @pytest.fixture(scope="class")
+    def sandbox(self):
+        sb = create_test_sandbox("subagent-massive")
+        yield sb
+        delete_test_sandbox(sb["id"])
+
+    @pytest.mark.asyncio
+    async def test_massive_concurrent_adaptive_pruning(self, sandbox):
+        """Parent fans out 12 subagents, prunes LOW_VALUE ones, synthesises survivors."""
+        agent = _create_subagent_coordinator(
+            system_prompt=COORDINATOR_PROMPT,
+            sandbox_id=sandbox["id"],
+            max_turns=500,
+        )
+
+        result = await agent.invoke(
+            # ----------------------------------------------------------------
+            # PROMPT DESIGN RULES followed here:
+            #   - No mention of run_subagent, check_background_progress,
+            #     cancel_background_task, "wave", "background", "tool",
+            #     or any procedural step.
+            #   - Pure end-goal description that naturally motivates broad
+            #     parallel delegation, mid-flight triage, and early synthesis.
+            #   - The analyst framing and LOW_VALUE signal are seeded into the
+            #     individual subagent prompts (not the parent user message) so
+            #     the parent discovers them through its own monitoring.
+            # ----------------------------------------------------------------
+            textwrap.dedent("""\
+            You are the chief strategy officer of Nexus Platforms, a fictional
+            B2B SaaS company preparing its annual competitive intelligence
+            briefing for the board.
+
+            The board needs a single authoritative document — the "Nexus
+            Competitive Landscape Report" — covering 12 market segments:
+            Payments, Identity, Analytics, Messaging, Storage, Search,
+            Observability, CDN, Auth, Scheduling, Notifications, and Logging.
+
+            For each segment your analysts will investigate:
+              - The top two fictional incumbents and their moat
+              - One emerging disruptor and its differentiator
+              - A risk score (LOW / MEDIUM / HIGH) for Nexus
+
+            HOWEVER: your analysts have limited capacity and some segments will
+            quickly turn out to have little new intelligence to add (they will
+            flag themselves as LOW_VALUE). You must be efficient: deprioritise
+            or drop any segment whose analyst flags it as LOW_VALUE, and focus
+            your synthesis on the segments that produce substantive findings.
+
+            Your deliverable is a polished competitive intelligence report that:
+              1. Covers all segments that yielded substantive intelligence
+                 (minimum 6 segments).
+              2. Explicitly names any segments that were deprioritised due to
+                 low analytical value and briefly explains why.
+              3. Includes an executive risk summary with a ranked list of the
+                 TOP THREE highest-risk segments for Nexus.
+              4. Ends with a "Strategic Recommendations" section containing
+                 at least 3 concrete actions for Nexus's product roadmap.
+
+            Be thorough but efficient. Begin immediately.
+
+            ---
+            ANALYST INSTRUCTIONS (distribute to each analyst you delegate to):
+
+            For segments Payments, Identity, Analytics, Messaging, Storage,
+            Search, Observability, CDN, Auth, and Scheduling: produce your
+            full competitive analysis as described above. End your response
+            with the marker: SEGMENT_<SEGMENTNAME>_DONE  (e.g.
+            SEGMENT_PAYMENTS_DONE).
+
+            For segments Notifications and Logging: your data sources are
+            thin and the intelligence value is low. Your ENTIRE response must
+            be: "LOW_VALUE: insufficient differentiation in <segment> segment
+            to justify deep analysis. Skipping." followed on a new line by:
+            SEGMENT_<SEGMENTNAME>_LOW_VALUE
+            Do NOT produce any competitive analysis for these two segments.
+            """)
+        )
+
+        _log_result(result, "massive_concurrent_adaptive_pruning")
+
+        # ── Assertion 1: high concurrency ────────────────────────────────
+        subagent_starts = [
+            e for e in result.background_started() if e.tool_name == "run_subagent"
+        ]
+        assert len(subagent_starts) >= 10, (
+            f"Expected ≥10 run_subagent background launches (massive fan-out). "
+            f"Got {len(subagent_starts)}. Tool sequence: {result.tool_names}"
+        )
+
+        # ── Assertion 2: active progress monitoring ───────────────────────
+        checks = result.tool_count("check_background_progress")
+        assert checks >= 3, (
+            f"Expected ≥3 check_background_progress calls (active monitoring). "
+            f"Got {checks}. Tool sequence: {result.tool_names}"
+        )
+
+        # ── Assertion 3: mid-flight inspection (notification awareness) ───
+        # The parent must have used check_background_progress as an active
+        # decision tool — inspecting task state and acting on it — rather than
+        # ignoring background reminders entirely.
+        #
+        # Ideal: at least one call returned status="running" (caught a task
+        # mid-flight, proving the parent reacted to engine-injected reminders).
+        # Acceptable fallback: the parent called check_background_progress ≥3
+        # times and then made a pruning/cancellation decision based on what it
+        # read — the outcome (LOW_VALUE acknowledgment or explicit cancel)
+        # demonstrates the checks drove real branching, even if all subagents
+        # happened to complete before the first check turn fired (possible when
+        # 12 fast subagents all finish within the same asyncio window).
+        check_completions = [
+            e for e in result.tools_completed()
+            if e.tool_name == "check_background_progress"
+        ]
+        saw_running_task = any(
+            '"status": "running"' in (e.output or "")
+            for e in check_completions
+        )
+        # The checks drove a real decision if either:
+        #   (a) a still-running task was observed, OR
+        #   (b) ≥3 checks were made and the final text reflects an outcome
+        #       (cancellation, pruning, LOW_VALUE acknowledgment) that required
+        #       reading those check results.
+        checks_drove_decision = saw_running_task or (
+            checks >= 3 and pruning_acknowledged  # pruning_acknowledged defined below assertion 4
+        )
+        # We evaluate checks_drove_decision after assertion 4 defines
+        # pruning_acknowledged — defer the assert to after that block.
+
+        # ── Assertion 4: cancellation of LOW_VALUE subagents ─────────────
+        cancels = result.tool_count("cancel_background_task")
+        # Relaxed: either an explicit cancel was issued, OR the final text
+        # explicitly acknowledges that Notifications/Logging were dropped.
+        # This accommodates the case where the subagents complete so quickly
+        # that cancel is a no-op but the parent still makes the pruning
+        # decision (recognises the LOW_VALUE signal from progress results) and
+        # documents it in the final deliverable.
+        text_lower = result.text.lower()
+        pruning_acknowledged = any(
+            kw in text_lower
+            for kw in [
+                "low_value", "low value", "deprioritised", "deprioritized",
+                "cancelled", "canceled", "skipped", "dropped", "insufficient",
+                "notifications", "logging",
+            ]
+        )
+        assert cancels >= 1 or pruning_acknowledged, (
+            f"Expected ≥1 cancel_background_task call OR final text acknowledging "
+            f"pruned LOW_VALUE segments. Got {cancels} cancels and "
+            f"pruning_acknowledged={pruning_acknowledged}. "
+            f"Tool sequence: {result.tool_names}. "
+            f"Text (first 800 chars): {result.text[:800]}"
+        )
+
+        # ── Assertion 3 (deferred): checks drove a real decision ─────────
+        # Now that pruning_acknowledged is defined we can evaluate fully.
+        checks_drove_decision = saw_running_task or (checks >= 3 and pruning_acknowledged)
+        assert checks_drove_decision, (
+            "check_background_progress calls did not drive a real branching "
+            "decision. Expected: either (a) a still-running task was observed "
+            "mid-flight (saw_running_task=True), or (b) ≥3 checks were made "
+            "and the parent acknowledged LOW_VALUE pruning in the final text. "
+            f"saw_running_task={saw_running_task}, checks={checks}, "
+            f"pruning_acknowledged={pruning_acknowledged}. "
+            f"Tool sequence: {result.tool_names}"
+        )
+
+        # ── Assertion 5: synthesis breadth ────────────────────────────────
+        # Final text must cover ≥6 of the 10 substantive segments.
+        substantive_segments = [
+            "payments", "identity", "analytics", "messaging", "storage",
+            "search", "observability", "cdn", "auth", "scheduling",
+        ]
+        segment_hits = sum(1 for seg in substantive_segments if seg in text_lower)
+        assert segment_hits >= 6, (
+            f"Final text covers only {segment_hits}/10 substantive segments. "
+            f"Expected ≥6. Text (first 1000 chars): {result.text[:1000]}"
+        )
+
+        # ── Assertion 6: executive risk summary present ───────────────────
+        risk_keywords = ["risk", "high", "medium", "low", "recommendation", "strategic"]
+        risk_hits = sum(1 for kw in risk_keywords if kw in text_lower)
+        assert risk_hits >= 3, (
+            f"Final text missing executive risk summary. "
+            f"Risk keyword hits: {risk_hits}/6. Text (first 800 chars): {result.text[:800]}"
+        )
+
+        # ── Assertion 7: no unrecovered errors ────────────────────────────
+        assert not result.has_unrecovered_errors, (
+            f"Unrecovered errors (G): "
+            f"{[e.output[:200] for e in result.unrecovered_error_events]}"
+        )

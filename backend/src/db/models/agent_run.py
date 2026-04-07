@@ -44,6 +44,12 @@ class AgentRunRecord(Base):
     metadata_json: Mapped[dict | None] = mapped_column("metadata", JSON, nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Cancellation audit: populated when a run is terminated via
+    # cancel_background_task. ``cancellation_reason`` mirrors the LLM-supplied
+    # ``reason`` argument so the audit trail explains *why* the run was killed,
+    # not just that it stopped.
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cancellation_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )

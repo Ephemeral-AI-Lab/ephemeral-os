@@ -43,6 +43,16 @@ class EphemeralAgent:
     _display_messages: list[ConversationMessage]
     total_usage: UsageSnapshot | None = None
 
+    @property
+    def display_messages(self) -> list[ConversationMessage]:
+        """Live view of the agent's append-only display history.
+
+        The list is owned by the agent and grows as ``run`` drives turns —
+        callers may read it (e.g. for live progress peeks) but must treat it
+        as read-only.
+        """
+        return self._display_messages
+
     async def run(self, prompt: str) -> AsyncIterator[StreamEvent]:
         """Execute one complete tool-call loop for the given prompt."""
         from engine.core.query import run_query

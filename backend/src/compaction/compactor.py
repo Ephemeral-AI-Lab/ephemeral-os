@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import copy
 import logging
+import math
 import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -24,9 +25,15 @@ from message import (
     ToolResultBlock,
     ToolUseBlock,
 )
-from compaction.token_tracker import estimate_tokens
 
 log = logging.getLogger(__name__)
+
+
+def estimate_tokens(text: str) -> int:
+    """Estimate tokens from plain text using a rough character heuristic."""
+    if not text:
+        return 0
+    return max(1, (len(text) + 3) // 4)
 
 # ---------------------------------------------------------------------------
 # Constants (from Claude Code microCompact.ts / autoCompact.ts)
@@ -80,7 +87,7 @@ def estimate_message_tokens(messages: list[ConversationMessage]) -> int:
             elif isinstance(block, ToolUseBlock):
                 total += estimate_tokens(block.name)
                 total += estimate_tokens(str(block.input))
-    return int(total * TOKEN_ESTIMATION_PADDING)
+    return math.ceil(total * TOKEN_ESTIMATION_PADDING)
 
 
 # ---------------------------------------------------------------------------
@@ -110,8 +117,13 @@ def microcompact_messages(
     This is the cheap first pass — no LLM call required. Tool result content
     is replaced with :data:`TIME_BASED_MC_CLEARED_MESSAGE`.
 
+    Each message's ``content`` list is rebuilt (the cleared
+    ``ToolResultBlock`` is a fresh instance), but the messages themselves are
+    mutated in place — i.e. the same ``messages`` list is returned with the
+    same ``ConversationMessage`` objects.
+
     Returns:
-        (messages, tokens_saved) — messages are mutated in place for efficiency.
+        (messages, tokens_saved)
     """
     keep_recent = max(1, keep_recent)  # never clear ALL results
     all_ids = _collect_compactable_tool_ids(messages)
@@ -280,17 +292,14 @@ class SessionState:
 # ---------------------------------------------------------------------------
 
 
-def get_context_window(model: str) -> int:
-    """Return the context window size for a model (conservative defaults)."""
-    # All current Claude models share the same window; adjust per-family as needed.
-    return _DEFAULT_CONTEXT_WINDOW
+def get_autocompact_threshold(model: str) -> int:  # noqa: ARG001 — model reserved for future per-family windows
+    """Calculate the token count at which auto-compact fires.
 
-
-def get_autocompact_threshold(model: str) -> int:
-    """Calculate the token count at which auto-compact fires."""
-    context_window = get_context_window(model)
-    reserved = min(MAX_OUTPUT_TOKENS_FOR_SUMMARY, 20_000)
-    effective = context_window - reserved
+    The ``model`` argument is currently unused — all supported Claude models
+    share the same window — but is preserved so callers can opt into
+    per-family sizing later without an API break.
+    """
+    effective = _DEFAULT_CONTEXT_WINDOW - MAX_OUTPUT_TOKENS_FOR_SUMMARY
     return effective - AUTOCOMPACT_BUFFER_TOKENS
 
 
@@ -321,10 +330,13 @@ async def compact_conversation(
     preserve_recent: int = 6,
     custom_instructions: str | None = None,
     suppress_follow_up: bool = True,
+    skip_microcompact: bool = False,
 ) -> list[ConversationMessage]:
     """Compact messages by calling the LLM to produce a summary.
 
-    1. Microcompact first (cheap token reduction).
+    1. Microcompact first (cheap token reduction) unless ``skip_microcompact``
+       is set — ``compact_for_api`` already runs microcompact and passes
+       ``skip_microcompact=True`` to avoid the redundant pass.
     2. Split into older (to summarize) and recent (to preserve).
     3. Call the LLM with the compact prompt to get a structured summary.
     4. Replace older messages with the summary + preserved recent messages.
@@ -346,8 +358,10 @@ async def compact_conversation(
     if len(messages) <= preserve_recent:
         return list(messages)
 
-    # Step 1: microcompact to reduce tokens cheaply
-    messages, tokens_freed = microcompact_messages(messages, keep_recent=DEFAULT_KEEP_RECENT)
+    # Step 1: microcompact to reduce tokens cheaply (skipped when the caller
+    # already ran microcompact — see compact_for_api).
+    if not skip_microcompact:
+        microcompact_messages(messages, keep_recent=DEFAULT_KEEP_RECENT)
 
     pre_compact_tokens = estimate_message_tokens(messages)
     log.info("Compacting conversation: %d messages, ~%d tokens", len(messages), pre_compact_tokens)
@@ -469,6 +483,7 @@ async def compact_for_api(
             system_prompt=system_prompt,
             preserve_recent=preserve_recent,
             suppress_follow_up=True,
+            skip_microcompact=True,
         )
         state.compacted = True
         state.turn_counter += 1

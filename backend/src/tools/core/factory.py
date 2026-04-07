@@ -90,12 +90,10 @@ def _register_builtins() -> None:
     from tools.daytona_toolkit import DaytonaToolkit
     from tools.ci_toolkit import CIToolkit
     from tools.subagent import SubagentToolkit
-    from tools.pipeline_context import PipelineContextToolkit
 
     register_toolkit_class("sandbox_operations", DaytonaToolkit)
     register_toolkit_class("code_intelligence", CIToolkit)
     register_toolkit_class("subagent", SubagentToolkit)
-    register_toolkit_class("pipeline_context", PipelineContextToolkit)
 
 
 _register_builtins()

@@ -510,6 +510,7 @@ async def _run_query_loop(
                 bg_event = background_manager.launch(
                     bg_alias, tc.name, clean_input, coro, task_note=task_note,
                     kill_callback=kill_callback,
+                    task_type="subagent" if tc.name == "run_subagent" else "agent",
                 )
                 yield bg_event, None
                 tool_results.append(
@@ -595,6 +596,7 @@ async def _run_query_loop(
                     event = background_manager.launch(
                         bg_alias, tc.name, clean_input, coro, task_note=task_note,
                         kill_callback=kill_callback,
+                        task_type="subagent" if tc.name == "run_subagent" else "agent",
                     )
                     yield event, None
                     tool_results.append(

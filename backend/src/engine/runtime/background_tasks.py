@@ -27,7 +27,16 @@ class TrackedBackgroundTask:
     tool_input: dict[str, Any]
     asyncio_task: asyncio.Task[ToolResult]
     task_note: str = ""  # LLM-generated brief description of what the task does
+    # Discriminator so monitoring/UI/audit can branch without sniffing tool_name.
+    # "agent" for ordinary background tools, "subagent" for run_subagent.
+    task_type: str = "agent"
+    # Optional back-reference to a persisted AgentRunRecord (set by run_subagent
+    # so the audit row and the in-memory bg task can be cross-resolved).
+    run_id: str | None = None
     status: str = "running"  # running, completed, failed, cancelled, delivered
+    # Reason captured by cancel(); kept on the tracked task so callers (and
+    # the subagent finaliser) can persist it to the audit record.
+    cancel_reason: str | None = None
     result: ToolResult | None = None
     started_at: float = field(default_factory=time.monotonic)
     progress_lines: list[str] = field(default_factory=list)
@@ -69,6 +78,8 @@ class BackgroundTaskManager:
         coro: Coroutine[Any, Any, ToolResult],
         task_note: str = "",
         kill_callback: KillCallback | None = None,
+        task_type: str = "agent",
+        run_id: str | None = None,
     ) -> BackgroundTaskStarted:
         """Launch *coro* as a background task and return a started event."""
         asyncio_task = asyncio.create_task(coro)
@@ -78,6 +89,8 @@ class BackgroundTaskManager:
             tool_input=tool_input,
             asyncio_task=asyncio_task,
             task_note=task_note,
+            task_type=task_type,
+            run_id=run_id,
             kill_callback=kill_callback,
         )
         # Stamp a startup line so progress_lines is non-empty from t=0
@@ -276,9 +289,13 @@ class BackgroundTaskManager:
                 "task_id": tracked.task_id,
                 "task_note": tracked.task_note,
                 "tool_name": tracked.tool_name,
+                "task_type": tracked.task_type,
+                "run_id": tracked.run_id,
                 "status": tracked.status,
                 "elapsed_seconds": round(now - tracked.started_at, 1),
             }
+            if tracked.cancel_reason:
+                entry["cancel_reason"] = tracked.cancel_reason
             if tracked.result is not None:
                 # Char-cap is applied by the tool layer (apply_last_n_lines)
                 # AFTER line-tail trimming, so a long-tail run still yields
@@ -316,6 +333,7 @@ class BackgroundTaskManager:
         if tracked is None:
             return False
         tracked.status = "cancelled"
+        tracked.cancel_reason = reason or None
         msg = f"Cancelled: {reason}" if reason else "Cancelled"
         tracked.result = ToolResult(output=msg, is_error=True)
         tracked.progress_lines = [msg]
@@ -324,7 +342,16 @@ class BackgroundTaskManager:
                 await tracked.kill_callback()
             except Exception as exc:
                 logger.debug("Kill callback failed for task %s: %s", task_id, exc)
+        else:
+            # Pure-Python tools (e.g. run_subagent) have no sandbox process to
+            # kill — fall back to asyncio cancellation so the coroutine actually
+            # stops instead of running to completion after a logical cancel.
+            tracked.asyncio_task.cancel()
         return True
+
+    def get_task(self, task_id: str) -> TrackedBackgroundTask | None:
+        """Return the tracked task for *task_id* (or None)."""
+        return self._tasks.get(task_id)
 
     def get_reminder_diff(self, task_id: str, max_lines: int = 10) -> tuple[list[str], float]:
         """Return new progress lines since the last reminder for *task_id*.

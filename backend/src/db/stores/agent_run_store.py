@@ -25,6 +25,8 @@ def _serialize_run_summary(r: AgentRunRecord) -> dict:
         "error": r.error,
         "started_at": r.started_at.isoformat() if r.started_at else None,
         "finished_at": r.finished_at.isoformat() if r.finished_at else None,
+        "cancelled_at": r.cancelled_at.isoformat() if r.cancelled_at else None,
+        "cancellation_reason": r.cancellation_reason,
     }
 
 
@@ -37,6 +39,11 @@ class AgentRunStore:
     def initialize(self, session_factory: sessionmaker[Session]) -> None:
         self._session_factory = session_factory
         logger.info("AgentRunStore initialised")
+
+    @property
+    def is_ready(self) -> bool:
+        """True once ``initialize`` has been called with a session factory."""
+        return self._session_factory is not None
 
     @property
     def _sf(self) -> sessionmaker[Session]:
@@ -94,6 +101,7 @@ class AgentRunStore:
         reasoning: str | None = None,
         error: str | None = None,
         event_count: int = 0,
+        cancellation_reason: str | None = None,
     ) -> AgentRunRecord | None:
         with self._sf() as db:
             record = db.get(AgentRunRecord, run_id)
@@ -106,7 +114,11 @@ class AgentRunStore:
             record.reasoning = reasoning
             record.error = error
             record.event_count = event_count
-            record.finished_at = datetime.now(UTC)
+            now = datetime.now(UTC)
+            record.finished_at = now
+            if status == "cancelled":
+                record.cancelled_at = now
+                record.cancellation_reason = cancellation_reason
             db.commit()
             db.refresh(record)
             return record

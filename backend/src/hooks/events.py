@@ -12,5 +12,3 @@ class HookEvent(str, Enum):
     SESSION_END = "session_end"
     PRE_TOOL_USE = "pre_tool_use"
     POST_TOOL_USE = "post_tool_use"
-    PIPELINE_STEP_COMPLETE = "pipeline_step_complete"
-    PIPELINE_STEP_FAILED = "pipeline_step_failed"
