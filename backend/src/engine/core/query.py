@@ -77,7 +77,10 @@ def _format_background_result(
     completed_task: TrackedBackgroundTask,
 ) -> tuple[str, str]:
     output = completed_task.result.output if completed_task.result else "No output"
-    if len(output) > MAX_OUTPUT_LENGTH:
+    # Subagent outputs are the substantive product of delegation — never
+    # truncate them, otherwise the parent has nothing to synthesise from.
+    # Other background tools (shell, etc.) can be noisy, so keep the cap.
+    if completed_task.tool_name != "run_subagent" and len(output) > MAX_OUTPUT_LENGTH:
         output = (
             f"[truncated, showing last {MAX_OUTPUT_LENGTH} chars]\n...{output[-MAX_OUTPUT_LENGTH:]}"
         )
@@ -297,7 +300,13 @@ async def _run_query_loop(
         )
         # Persistence + introspection hook: callers can read this AFTER the
         # loop returns to capture the final compacted view sent to the LLM.
-        context.api_messages_snapshot = api_messages
+        # The system prompt is prepended as a synthetic user-text message so
+        # downstream token estimation reflects the full context size. The
+        # system prompt itself is never compacted.
+        context.api_messages_snapshot = [
+            ConversationMessage.from_user_text(context.system_prompt),
+            *api_messages,
+        ]
 
         async for event in context.api_client.stream_message(
             ApiMessageRequest(

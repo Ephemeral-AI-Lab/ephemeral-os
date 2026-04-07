@@ -6,19 +6,12 @@ from pydantic import BaseModel, Field
 
 from tools.core.base import BaseTool, ToolExecutionContext, ToolResult
 
+from ._common import TASK_ID_FIELD
+
 
 class CancelBackgroundTaskInput(BaseModel):
     """Input for cancel_background_task tool."""
-    task_id: str | None = Field(
-        default=None,
-        description=(
-            "Task ID to cancel. Copy the exact value from the `task_id` field in "
-            "`check_background_progress` output. If omitted and exactly one "
-            "background task is running, that task is cancelled. If multiple tasks "
-            "are running, the call fails with a listing of running task IDs. "
-            "Never pass null/None when multiple tasks are running — always specify."
-        ),
-    )
+    task_id: str = TASK_ID_FIELD
     reason: str = Field(
         default="",
         description="Optional reason for cancellation.",
@@ -37,7 +30,8 @@ class CancelBackgroundTaskTool(BaseTool):
     description: str = (
         "Cancel a running background task by its task ID. "
         "Use check_background_progress first to find the task ID. "
-        "If exactly one task is running, task_id may be omitted."
+        "task_id is REQUIRED — pass the exact id string (e.g. \"bg_1\"). "
+        "Pass \"auto\" to cancel the sole running task when exactly one is running."
     )
     input_model: type[BaseModel] = CancelBackgroundTaskInput
 
@@ -67,11 +61,11 @@ class CancelBackgroundTaskTool(BaseTool):
                 is_error=True,
             )
 
-        # Disambiguation guard (mirrors wait_for_background_task):
-        # the LLM frequently drops task_id when it thinks the intent is obvious.
-        # Rather than crashing on ValidationError, auto-select the sole running
-        # task or return an informative listing.
-        if not task_id:
+        # Disambiguation guard: `task_id="auto"` resolves to the sole
+        # running task, or returns a listing if there are 0 / >1.
+        # Schema makes task_id required so we should never see empty
+        # strings here, but we handle them defensively the same way.
+        if task_id == "auto" or not task_id:
             snapshot = manager.get_status()
             running = [s for s in snapshot if s.get("status") == "running"]
             if len(running) == 0:

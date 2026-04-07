@@ -483,12 +483,9 @@ class EvalAgent:
         _out(f"  [EvalAgent] prompt: {_truncate(prompt, 80)}")
 
         total_usage = UsageSnapshot()
-        compact_state_before = None
+        compacted_before: int | None = None
         if self._query_context.session_state is not None:
-            compact_state_before = (
-                self._query_context.session_state.turn_counter,
-                self._query_context.session_state.compacted,
-            )
+            compacted_before = int(self._query_context.session_state.compacted)
 
         # Create a top-level agent_run row for this invocation so tools that
         # spawn nested runs (e.g. run_subagent) can attribute themselves to a
@@ -597,11 +594,9 @@ class EvalAgent:
 
         compaction_note = ""
         st = self._query_context.session_state
-        if st is not None and compact_state_before is not None:
-            prev_turns, prev_compacted = compact_state_before
-            new_compactions = int(st.compacted) - int(prev_compacted)
+        if st is not None and compacted_before is not None:
+            new_compactions = int(st.compacted) - compacted_before
             compaction_note = (
-                f", turns={st.turn_counter - prev_turns}"
                 f", compactions={'+1' if new_compactions > 0 else '0'}"
                 f" (compacted={st.compacted})"
             )
@@ -610,7 +605,7 @@ class EvalAgent:
             f"{latency_ms:.0f}ms, "
             f"tokens in={total_usage.input_tokens} out={total_usage.output_tokens} "
             f"total={total_usage.total_tokens}, "
-            f"final_context={last_usage.input_tokens if last_usage else 0}"
+            f"final_context={_estimate_final_context(self._query_context.api_messages_snapshot)}"
             f"{compaction_note}"
         )
 
@@ -631,6 +626,23 @@ class EvalAgent:
 
     async def __aexit__(self, *exc: object) -> None:
         await self.close()
+
+
+def _estimate_final_context(messages: list[ConversationMessage] | None) -> int:
+    """Estimate the context size (tokens) of the final compacted message list.
+
+    Mirrors the token count that ``compact_for_api`` uses when deciding
+    whether to auto-compact, so it reflects what would be sent to the
+    provider on the next turn.
+    """
+    if not messages:
+        return 0
+    try:
+        from compaction import estimate_message_tokens
+
+        return estimate_message_tokens(messages)
+    except Exception:
+        return 0
 
 
 def _truncate(s: str, max_len: int, /) -> str:

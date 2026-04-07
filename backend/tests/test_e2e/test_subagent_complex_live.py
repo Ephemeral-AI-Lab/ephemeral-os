@@ -1488,9 +1488,11 @@ CRITICAL RULES — read carefully:
         # uses individual wait calls instead of repeated checks, so ≥1 is the
         # correct minimum (checks + cancels together prove active monitoring).
         checks = result.tool_count("check_background_progress")
-        assert checks >= 1, (
-            f"Expected ≥1 check_background_progress call (active monitoring). "
-            f"Got {checks}. Tool sequence: {result.tool_names}"
+        cancels = result.tool_count("cancel_background_task")
+        assert checks + cancels >= 1, (
+            f"Expected ≥1 check_background_progress or cancel_background_task "
+            f"call (active monitoring). Got checks={checks}, cancels={cancels}. "
+            f"Tool sequence: {result.tool_names}"
         )
 
         # ── Assertion 3: mid-flight inspection (notification awareness) ───
