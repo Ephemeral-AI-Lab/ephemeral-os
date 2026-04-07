@@ -427,7 +427,7 @@ class TestRetryOn429:
         client = _build_client()
         client._client.messages.stream = MagicMock(side_effect=mock_stream)
 
-        with patch("models.clients.anthropic_native.asyncio.sleep", new_callable=AsyncMock):
+        with patch("providers.clients.anthropic_native.asyncio.sleep", new_callable=AsyncMock):
             result = await _collect_events(client, _make_request())
 
         text_events = [e for e in result if isinstance(e, ApiTextDeltaEvent)]
@@ -475,7 +475,7 @@ class TestRateLimitError:
         client = _build_client()
         client._client.messages.stream = MagicMock(side_effect=error_429)
 
-        with patch("models.clients.anthropic_native.asyncio.sleep", new_callable=AsyncMock):
+        with patch("providers.clients.anthropic_native.asyncio.sleep", new_callable=AsyncMock):
             with pytest.raises(RateLimitFailure):
                 await _collect_events(client, _make_request())
 

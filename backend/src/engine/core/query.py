@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, AsyncIterator
 
 if TYPE_CHECKING:
-    from utils.compact import SessionState
+    from compaction import SessionState
 
 from providers.types import (
     ApiCancelEvent,
@@ -182,7 +182,7 @@ async def _run_query_loop(
     context: QueryContext,
     messages: list[ConversationMessage],
 ) -> AsyncIterator[tuple[StreamEvent, UsageSnapshot | None]]:
-    from utils.compact import SessionState, auto_compact_if_needed
+    from compaction import SessionState, auto_compact_if_needed
 
     compact_state = context.session_state or SessionState()
 

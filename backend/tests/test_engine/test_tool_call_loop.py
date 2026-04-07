@@ -197,31 +197,6 @@ class TestOutputSchema:
 
 
 # ---------------------------------------------------------------------------
-# Tests: OpenAI conversion
-# ---------------------------------------------------------------------------
-
-
-class TestOpenAIConversion:
-    def test_converts_output_schema_to_description(self):
-        from providers.clients.openai_compat import _convert_tools_to_openai
-
-        tools = [EchoTool().to_api_schema()]
-        result = _convert_tools_to_openai(tools)
-        assert len(result) == 1
-        desc = result[0]["function"]["description"]
-        assert "Returns JSON with fields" in desc
-        assert "echoed: string" in desc
-
-    def test_no_output_schema_no_suffix(self):
-        from providers.clients.openai_compat import _convert_tools_to_openai
-
-        tools = [NoDocTool().to_api_schema()]
-        result = _convert_tools_to_openai(tools)
-        desc = result[0]["function"]["description"]
-        assert "Returns JSON" not in desc
-
-
-# ---------------------------------------------------------------------------
 # Tests: tool call loop (query.py)
 # ---------------------------------------------------------------------------
 
@@ -474,97 +449,6 @@ async def test_no_tool_calls_returns_immediately(tmp_path: Path):
 # ---------------------------------------------------------------------------
 # Tests: Daytona tools output schema
 # ---------------------------------------------------------------------------
-
-
-class TestOpenAIClientToolCallLoop:
-    """Test that OpenAI-format tool calls work through the full tool call loop."""
-
-    def test_openai_tool_call_format_works_in_loop(self, tmp_path: Path):
-        """OpenAI tool_calls format should execute tools correctly in the loop."""
-        from providers.clients.openai_compat import (
-            _convert_tools_to_openai,
-            _convert_messages_to_openai,
-            _convert_assistant_message,
-        )
-        from message import ConversationMessage, TextBlock, ToolResultBlock, ToolUseBlock
-
-        registry = _make_registry(EchoTool(), AddTool())
-        tools = registry.to_api_schema()
-        openai_tools = _convert_tools_to_openai(tools)
-        assert len(openai_tools) == 2
-        assert openai_tools[0]["function"]["name"] == "echo"
-        assert openai_tools[1]["function"]["name"] == "add"
-
-        user_msg = ConversationMessage.from_user_text("echo hello")
-        assistant_with_tool = ConversationMessage(
-            role="assistant",
-            content=[
-                TextBlock(text="Calling echo..."),
-                ToolUseBlock(id="tc1", name="echo", input={"message": "hello"}),
-            ],
-        )
-        assistant_final = ConversationMessage(
-            role="assistant",
-            content=[TextBlock(text="Done!")],
-        )
-
-        openai_messages = _convert_messages_to_openai([user_msg, assistant_with_tool], None)
-        assert any(m.get("role") == "user" for m in openai_messages)
-        converted = _convert_assistant_message(assistant_with_tool)
-        assert converted["role"] == "assistant"
-        assert "tool_calls" in converted
-        assert converted["tool_calls"][0]["function"]["name"] == "echo"
-
-    def test_openai_tool_result_in_loop(self, tmp_path: Path):
-        """Tool results returned as OpenAI format should complete the loop correctly."""
-        from providers.clients.openai_compat import (
-            _convert_tools_to_openai,
-            _convert_messages_to_openai,
-        )
-        from message import ConversationMessage, TextBlock, ToolResultBlock, ToolUseBlock
-
-        registry = _make_registry(EchoTool())
-        tools = registry.to_api_schema()
-        openai_tools = _convert_tools_to_openai(tools)
-
-        user_msg = ConversationMessage.from_user_text("echo hi")
-        assistant_with_tool = ConversationMessage(
-            role="assistant",
-            content=[
-                ToolUseBlock(id="tc1", name="echo", input={"message": "hi"}),
-            ],
-        )
-        tool_result = ConversationMessage(
-            role="user",
-            content=[ToolResultBlock(tool_use_id="tc1", content='{"echoed": "hi"}')],
-        )
-
-        messages = [user_msg, assistant_with_tool, tool_result]
-        openai_messages = _convert_messages_to_openai(messages, None)
-
-        tool_result_msgs = [m for m in openai_messages if m.get("role") == "tool"]
-        assert len(tool_result_msgs) == 1
-        assert tool_result_msgs[0]["tool_call_id"] == "tc1"
-        assert "hi" in tool_result_msgs[0]["content"]
-
-    def test_openai_parallel_tool_calls_in_loop(self, tmp_path: Path):
-        """Multiple OpenAI tool calls should be parsed and executed in parallel."""
-        from providers.clients.openai_compat import _convert_assistant_message
-        from message import ConversationMessage, TextBlock, ToolUseBlock
-
-        assistant_msg = ConversationMessage(
-            role="assistant",
-            content=[
-                TextBlock(text="Doing math and echo..."),
-                ToolUseBlock(id="tc1", name="add", input={"a": 2, "b": 3}),
-                ToolUseBlock(id="tc2", name="echo", input={"message": "test"}),
-            ],
-        )
-
-        converted = _convert_assistant_message(assistant_msg)
-        assert len(converted["tool_calls"]) == 2
-        tc_names = {tc["function"]["name"] for tc in converted["tool_calls"]}
-        assert tc_names == {"add", "echo"}
 
 
 class TestDaytonaToolSchemas:

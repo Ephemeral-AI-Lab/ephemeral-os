@@ -422,7 +422,7 @@ def app_client(db_session_factory, mock_api_client, tmp_path, monkeypatch):
     monkeypatch.delenv("EPHEMERALOS_DATABASE_URL", raising=False)
 
     monkeypatch.setattr("db.engine.initialize_db", lambda *a, **kw: db_session_factory)
-    monkeypatch.setattr("models.core.provider.make_api_client", lambda *a, **kw: mock_api_client)
+    monkeypatch.setattr("providers.provider.make_api_client", lambda *a, **kw: mock_api_client)
     monkeypatch.setattr("hooks.make_hook_executor", lambda *a, **kw: None)
     monkeypatch.setattr(
         "prompts.build_runtime_system_prompt",

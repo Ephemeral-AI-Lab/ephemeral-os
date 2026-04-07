@@ -13,7 +13,7 @@ from message import ConversationMessage
 
 if TYPE_CHECKING:
     from server.app_factory import SessionConfig
-    from utils.compact import SessionState
+    from compaction import SessionState
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +122,7 @@ class SessionStore:
         If no full history exists yet, it is seeded from ``message_history``
         so existing sessions bootstrap gracefully.
         """
-        from utils.compact import SessionState as _SessionState
+        from compaction import SessionState as _SessionState
 
         ctx = _SessionState()
         full_history: list[dict] = []

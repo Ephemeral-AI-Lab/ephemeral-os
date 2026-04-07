@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any, AsyncIterator
 
 if TYPE_CHECKING:
     from server.app_factory import SessionConfig
-    from utils.compact import SessionState
+    from compaction import SessionState
     from engine.core.query import QueryContext, run_query
 
 from agents.types import AgentDefinition

@@ -6,7 +6,6 @@ import pytest
 
 from config.settings import Settings, _apply_env_overrides
 from providers.provider import make_api_client
-from providers.clients.openai_compat import OpenAICompatibleClient
 from providers.clients.anthropic_native import AnthropicClient
 
 
@@ -56,12 +55,6 @@ def test_resolve_api_key_raises_when_none(monkeypatch):
         settings.resolve_api_key()
 
 
-def test_api_format_default():
-    """Default api_format is 'openai'."""
-    settings = Settings()
-    assert settings.api_format == "openai"
-
-
 def test_apply_env_overrides_anthropic_key(monkeypatch):
     """_apply_env_overrides picks up ANTHROPIC_API_KEY when OPENAI_API_KEY is absent."""
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
@@ -75,38 +68,29 @@ def test_apply_env_overrides_anthropic_key(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_make_api_client_default_openai(monkeypatch):
-    """Default settings (api_format='openai') returns OpenAICompatibleClient."""
-    monkeypatch.setenv("OPENAI_API_KEY", "sk-openai")
-    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    settings = Settings(api_format="openai")
-    client = make_api_client(settings)
-    assert isinstance(client, OpenAICompatibleClient)
-
-
-def test_make_api_client_anthropic(monkeypatch):
-    """api_format='anthropic' returns AnthropicClient."""
+def test_make_api_client_returns_anthropic(monkeypatch):
+    """make_api_client always returns an AnthropicClient."""
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-anthropic")
-    settings = Settings(api_format="anthropic")
+    settings = Settings()
     client = make_api_client(settings)
     assert isinstance(client, AnthropicClient)
 
 
 def test_make_api_client_external_passthrough(monkeypatch):
     """An externally supplied client is returned unchanged regardless of settings."""
-    monkeypatch.setenv("OPENAI_API_KEY", "sk-openai")
-    settings = Settings(api_format="openai")
-    external = OpenAICompatibleClient(api_key="sk-external")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-anthropic")
+    settings = Settings()
+    external = AnthropicClient(api_key="sk-external")
     result = make_api_client(settings, external=external)
     assert result is external
 
 
 def test_make_api_client_db_kwargs_override(monkeypatch):
-    """db_kwargs api_format='anthropic' overrides settings api_format='openai'."""
+    """db_kwargs api_key/base_url override settings."""
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-    settings = Settings(api_format="openai")
-    db_kwargs = {"api_key": "sk-db-anthropic", "api_format": "anthropic"}
+    settings = Settings()
+    db_kwargs = {"api_key": "sk-db-anthropic", "base_url": "https://example.test"}
     client = make_api_client(settings, db_kwargs=db_kwargs)
     assert isinstance(client, AnthropicClient)

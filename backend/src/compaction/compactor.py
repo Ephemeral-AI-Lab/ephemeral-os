@@ -23,7 +23,7 @@ from message import (
     ToolResultBlock,
     ToolUseBlock,
 )
-from utils.token_estimation import estimate_tokens
+from compaction.token_estimation import estimate_tokens
 
 log = logging.getLogger(__name__)
 

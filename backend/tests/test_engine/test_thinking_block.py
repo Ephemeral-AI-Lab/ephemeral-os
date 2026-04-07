@@ -28,12 +28,6 @@ from message.stream_events import (
     AssistantTurnComplete,
     ThinkingDelta,
 )
-from providers.clients.openai_compat import (
-    _convert_assistant_message,
-    _convert_messages_to_openai,
-)
-
-
 # ---------------------------------------------------------------------------
 # ThinkingBlock model tests
 # ---------------------------------------------------------------------------
@@ -273,100 +267,6 @@ class TestAssistantMessageFromApiThinking:
         msg = assistant_message_from_api(raw)
         assert len(msg.content) == 1
         assert isinstance(msg.content[0], TextBlock)
-
-
-# ---------------------------------------------------------------------------
-# OpenAI-compat: _convert_assistant_message with ThinkingBlock
-# ---------------------------------------------------------------------------
-
-
-class TestOpenAIConvertAssistantMessageThinking:
-    """Test that ThinkingBlock content is converted to reasoning_content."""
-
-    def test_thinking_becomes_reasoning_content(self):
-        msg = ConversationMessage(
-            role="assistant",
-            content=[
-                ThinkingBlock(text="Let me think..."),
-                TextBlock(text="The answer."),
-            ],
-        )
-        result = _convert_assistant_message(msg)
-        assert result["role"] == "assistant"
-        assert result["content"] == "The answer."
-        assert result["reasoning_content"] == "Let me think..."
-
-    def test_multiple_thinking_blocks_concatenated(self):
-        msg = ConversationMessage(
-            role="assistant",
-            content=[
-                ThinkingBlock(text="Part 1. "),
-                ThinkingBlock(text="Part 2."),
-                TextBlock(text="Final answer."),
-            ],
-        )
-        result = _convert_assistant_message(msg)
-        assert result["reasoning_content"] == "Part 1. Part 2."
-
-    def test_no_thinking_with_tool_calls_has_no_reasoning_key(self):
-        msg = ConversationMessage(
-            role="assistant",
-            content=[
-                ToolUseBlock(id="t1", name="bash", input={"cmd": "ls"}),
-            ],
-        )
-        result = _convert_assistant_message(msg)
-        assert "reasoning_content" not in result
-        assert len(result["tool_calls"]) == 1
-
-    def test_thinking_with_tool_calls(self):
-        msg = ConversationMessage(
-            role="assistant",
-            content=[
-                ThinkingBlock(text="I need to check the file"),
-                ToolUseBlock(id="t1", name="read_file", input={"path": "/a"}),
-            ],
-        )
-        result = _convert_assistant_message(msg)
-        assert result["reasoning_content"] == "I need to check the file"
-        assert result["content"] is None
-        assert len(result["tool_calls"]) == 1
-
-    def test_no_thinking_no_tools(self):
-        msg = ConversationMessage(
-            role="assistant",
-            content=[TextBlock(text="Simple reply.")],
-        )
-        result = _convert_assistant_message(msg)
-        assert result["content"] == "Simple reply."
-        assert "reasoning_content" not in result
-
-
-# ---------------------------------------------------------------------------
-# OpenAI-compat: _convert_messages_to_openai preserves thinking in round-trip
-# ---------------------------------------------------------------------------
-
-
-class TestOpenAIMessagesRoundTripThinking:
-    """Test that thinking blocks in messages convert to OpenAI format correctly."""
-
-    def test_assistant_with_thinking_in_conversation(self):
-        messages = [
-            ConversationMessage.from_user_text("What is 2+2?"),
-            ConversationMessage(
-                role="assistant",
-                content=[
-                    ThinkingBlock(text="2+2=4"),
-                    TextBlock(text="The answer is 4."),
-                ],
-            ),
-        ]
-        result = _convert_messages_to_openai(messages, None)
-        assert len(result) == 2
-        assert result[0]["role"] == "user"
-        assert result[1]["role"] == "assistant"
-        assert result[1]["content"] == "The answer is 4."
-        assert result[1]["reasoning_content"] == "2+2=4"
 
 
 # ---------------------------------------------------------------------------

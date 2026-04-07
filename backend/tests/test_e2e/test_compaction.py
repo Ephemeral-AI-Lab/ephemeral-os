@@ -11,7 +11,7 @@ from __future__ import annotations
 import pytest
 
 from message import ConversationMessage, TextBlock, ToolResultBlock, ToolUseBlock
-from utils.compact import (
+from compaction import (
     AUTOCOMPACT_BUFFER_TOKENS,
     COMPACTABLE_TOOLS,
     TIME_BASED_MC_CLEARED_MESSAGE,

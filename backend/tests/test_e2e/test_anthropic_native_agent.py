@@ -60,7 +60,7 @@ def _register_model(client) -> dict:
         json={
             "key": MODEL_KEY,
             "label": "MiniMax 2.7 (Anthropic-native)",
-            "class_path": "models.clients.anthropic_native.AnthropicClient",
+            "class_path": "providers.clients.anthropic_native.AnthropicClient",
             "kwargs": {
                 "api_key": MINIMAX_ANTHROPIC_KEY,
                 "base_url": MINIMAX_ANTHROPIC_BASE_URL,

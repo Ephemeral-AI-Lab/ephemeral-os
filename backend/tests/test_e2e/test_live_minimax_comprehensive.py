@@ -388,7 +388,7 @@ class TestCompactionSystem:
 
     def test_microcompact_clears_old_results(self):
         """Microcompact should clear old tool results, preserving recent ones."""
-        from utils.compact import microcompact_messages, TIME_BASED_MC_CLEARED_MESSAGE
+        from compaction import microcompact_messages, TIME_BASED_MC_CLEARED_MESSAGE
         from message import ToolResultBlock
 
         messages = self._build_long_conversation(12)
@@ -412,7 +412,7 @@ class TestCompactionSystem:
 
     def test_microcompact_idempotent(self):
         """Running microcompact twice should not change the result."""
-        from utils.compact import microcompact_messages
+        from compaction import microcompact_messages
 
         messages = self._build_long_conversation(10)
         result1, saved1 = microcompact_messages(messages, keep_recent=3)
@@ -422,7 +422,7 @@ class TestCompactionSystem:
     def test_microcompact_skips_non_compactable_tools(self):
         """Non-compactable tool results should never be cleared."""
         from message import ConversationMessage, ToolUseBlock, ToolResultBlock
-        from utils.compact import microcompact_messages, TIME_BASED_MC_CLEARED_MESSAGE
+        from compaction import microcompact_messages, TIME_BASED_MC_CLEARED_MESSAGE
 
         messages = [
             ConversationMessage(
@@ -461,7 +461,7 @@ class TestCompactionSystem:
 
     def test_compact_prompt_has_all_sections(self):
         """Compact prompt should include all required analysis sections."""
-        from utils.compact import get_compact_prompt
+        from compaction import get_compact_prompt
 
         prompt = get_compact_prompt()
         required_sections = [
@@ -477,7 +477,7 @@ class TestCompactionSystem:
 
     def test_compact_prompt_no_tool_warnings(self):
         """Compact prompt should forbid tool usage."""
-        from utils.compact import get_compact_prompt
+        from compaction import get_compact_prompt
 
         prompt = get_compact_prompt()
         assert "Do NOT call any tools" in prompt
@@ -485,7 +485,7 @@ class TestCompactionSystem:
 
     def test_format_compact_summary_strips_analysis(self):
         """format_compact_summary should remove <analysis> and extract <summary>."""
-        from utils.compact import format_compact_summary
+        from compaction import format_compact_summary
 
         raw = (
             "<analysis>Internal reasoning here...</analysis>\n"
@@ -501,7 +501,7 @@ class TestCompactionSystem:
 
     def test_build_compact_summary_message_variants(self):
         """Test different build_compact_summary_message configurations."""
-        from utils.compact import build_compact_summary_message
+        from compaction import build_compact_summary_message
 
         # With follow-up suppression
         msg1 = build_compact_summary_message("<summary>Test</summary>", suppress_follow_up=True)
@@ -518,7 +518,7 @@ class TestCompactionSystem:
 
     def test_autocompact_threshold_calculation(self):
         """Auto-compact threshold should be within expected range."""
-        from utils.compact import get_autocompact_threshold, AUTOCOMPACT_BUFFER_TOKENS
+        from compaction import get_autocompact_threshold, AUTOCOMPACT_BUFFER_TOKENS
 
         threshold = get_autocompact_threshold("any-model")
         # 200k context - 20k reserved - 13k buffer = 167k
@@ -527,7 +527,7 @@ class TestCompactionSystem:
 
     def test_should_autocompact_respects_failure_limit(self):
         """Auto-compact should stop after max consecutive failures."""
-        from utils.compact import should_autocompact, SessionState
+        from compaction import should_autocompact, SessionState
         from message import ConversationMessage
 
         # Build a huge conversation
@@ -541,7 +541,7 @@ class TestCompactionSystem:
 
     def test_session_state_roundtrip(self):
         """SessionState should survive serialization roundtrip."""
-        from utils.compact import SessionState
+        from compaction import SessionState
 
         original = SessionState(compacted=True, turn_counter=5, consecutive_failures=1)
         restored = SessionState.from_dict(original.to_dict())
@@ -551,7 +551,7 @@ class TestCompactionSystem:
 
     def test_token_estimation_grows_with_content(self):
         """Token estimates should increase with message content."""
-        from utils.compact import estimate_message_tokens
+        from compaction import estimate_message_tokens
         from message import ConversationMessage, TextBlock
 
         short = [ConversationMessage.from_user_text("Hi")]
