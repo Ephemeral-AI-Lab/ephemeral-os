@@ -15,7 +15,7 @@ from typing import Any, AsyncIterator
 
 import anthropic
 
-from models.core.types import (
+from providers.types import (
     ApiMessageCompleteEvent,
     ApiMessageRequest,
     ApiStreamEvent,
@@ -24,7 +24,7 @@ from models.core.types import (
     ApiToolUseDeltaEvent,
     UsageSnapshot,
 )
-from models.core.errors import (
+from providers.errors import (
     AuthenticationFailure,
     EphemeralOSApiError,
     RateLimitFailure,

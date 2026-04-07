@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from config.settings import Settings
-from models.core.types import SupportsStreamingMessages
+from providers.types import SupportsStreamingMessages
 
 
 @dataclass(frozen=True)
@@ -96,7 +96,7 @@ def make_api_client(
     if external is not None:
         return external
 
-    from models.clients.openai_compat import OpenAICompatibleClient
+    from providers.clients.openai_compat import OpenAICompatibleClient
 
     # Resolve from DB-registered model first, then settings
     api_key = (db_kwargs or {}).get("api_key") or settings.resolve_api_key()
@@ -111,7 +111,7 @@ def make_api_client(
     )
 
     if is_anthropic:
-        from models.clients.anthropic_native import AnthropicClient
+        from providers.clients.anthropic_native import AnthropicClient
 
         return AnthropicClient(api_key=api_key, base_url=base_url)
 

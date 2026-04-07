@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
-from models.api.schemas import RegisterModelRequest, SelectModelRequest
+from providers.api.schemas import RegisterModelRequest, SelectModelRequest
 
 if TYPE_CHECKING:
     from db.stores.model_store import ModelStore

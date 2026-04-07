@@ -1,9 +1,11 @@
-"""Core model types, errors, and provider abstractions.
+"""Provider abstraction over LLM backends — clients, types, errors, and HTTP API.
 
-Re-exports from submodules for convenient imports.
+Import from here instead of deep paths:
+
+    from providers import OpenAICompatibleClient, detect_provider
 """
 
-from models.core.types import (
+from providers.types import (
     ApiCancelEvent,
     ApiMessageCompleteEvent,
     ApiMessageRequest,
@@ -14,28 +16,30 @@ from models.core.types import (
     SupportsStreamingMessages,
     UsageSnapshot,
 )
-from models.core.errors import (
+from providers.errors import (
     AuthenticationFailure,
     EphemeralOSApiError,
     RateLimitFailure,
     RequestFailure,
 )
-from models.core.provider import (
+from providers.provider import (
     ProviderInfo,
     auth_status,
     detect_provider,
     make_api_client,
 )
+from providers.clients import OpenAICompatibleClient, AnthropicClient
+from providers.api import create_models_router
 
 __all__ = [
-    # Types
+    # Types & protocol
     "ApiCancelEvent",
-    "ApiMessageCompleteEvent",
     "ApiMessageRequest",
-    "ApiStreamEvent",
     "ApiTextDeltaEvent",
     "ApiThinkingDeltaEvent",
     "ApiToolUseDeltaEvent",
+    "ApiMessageCompleteEvent",
+    "ApiStreamEvent",
     "SupportsStreamingMessages",
     "UsageSnapshot",
     # Errors
@@ -45,7 +49,12 @@ __all__ = [
     "RequestFailure",
     # Provider
     "ProviderInfo",
-    "auth_status",
     "detect_provider",
+    "auth_status",
     "make_api_client",
+    # Clients
+    "OpenAICompatibleClient",
+    "AnthropicClient",
+    # API
+    "create_models_router",
 ]
