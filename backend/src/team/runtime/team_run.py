@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+from dataclasses import dataclass
 from typing import Any, Callable
 
 from team.artifacts.store import InMemoryArtifactStore
+from team.atlas.identity import project_key_for
 from team.context.project import ProjectContext
 from team.models import (
     BudgetConfig,
@@ -23,6 +25,45 @@ from team.runtime.registry import register as _register_team_run
 from team.runtime.registry import unregister as _unregister_team_run
 
 
+@dataclass(frozen=True)
+class TeamRuntimeServices:
+    """Concrete collaborators used by a TeamRun."""
+
+    project_context: ProjectContext
+    artifact_store: InMemoryArtifactStore
+    dispatcher: Dispatcher
+
+
+def build_team_runtime_services(
+    *,
+    team_run_id: str,
+    budgets: BudgetConfig,
+    budget_state: BudgetState,
+    user_request: str,
+    goal: str | None = None,
+    repo_root: str | None = None,
+) -> TeamRuntimeServices:
+    """Build the default in-memory runtime collaborators for a TeamRun."""
+    project_context = ProjectContext(
+        goal=goal or user_request,
+        user_request=user_request,
+        repo_root=repo_root or "",
+        project_key=project_key_for(repo_root),
+    )
+    artifact_store = InMemoryArtifactStore(budgets, budget_state)
+    dispatcher = Dispatcher(
+        team_run_id=team_run_id,
+        budgets=budgets,
+        budget_state=budget_state,
+        artifact_store=artifact_store,
+    )
+    return TeamRuntimeServices(
+        project_context=project_context,
+        artifact_store=artifact_store,
+        dispatcher=dispatcher,
+    )
+
+
 class TeamRun:
     def __init__(
         self,
@@ -32,6 +73,8 @@ class TeamRun:
         budgets: BudgetConfig | None = None,
         goal: str | None = None,
         sandbox_id: str | None = None,
+        repo_root: str | None = None,
+        services: TeamRuntimeServices | None = None,
     ) -> None:
         self.id = str(uuid.uuid4())
         self.session_id = session_id
@@ -40,16 +83,17 @@ class TeamRun:
         self.budgets = budgets or BudgetConfig()
         self.budget_state = BudgetState()
         self.status = TeamRunStatus.PENDING
-        self.project_context = ProjectContext(
-            goal=goal or user_request, user_request=user_request
-        )
-        self.artifacts = InMemoryArtifactStore(self.budgets, self.budget_state)
-        self.dispatcher = Dispatcher(
+        runtime_services = services or build_team_runtime_services(
             team_run_id=self.id,
             budgets=self.budgets,
             budget_state=self.budget_state,
-            artifact_store=self.artifacts,
+            user_request=user_request,
+            goal=goal,
+            repo_root=repo_root,
         )
+        self.project_context = runtime_services.project_context
+        self.artifacts = runtime_services.artifact_store
+        self.dispatcher = runtime_services.dispatcher
         self.cancel_event = asyncio.Event()
         self.root_work_item_id: str | None = None
         self._executor_tasks: list[asyncio.Task[None]] = []

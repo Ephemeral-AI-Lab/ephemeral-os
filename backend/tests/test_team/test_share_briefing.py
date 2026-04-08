@@ -8,7 +8,7 @@ import pytest
 
 from team.artifacts.store import InMemoryArtifactStore
 from team.context.project import ProjectContext
-from team.models import Briefing, BudgetConfig, BudgetState
+from team.models import BudgetConfig, BudgetState
 from team.runtime.registry import register, unregister
 from tools.core.base import ToolExecutionContext
 from tools.core.runtime import ExecutionMetadata

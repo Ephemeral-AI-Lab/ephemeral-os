@@ -10,15 +10,64 @@ is called from the ``run_subagent`` spawn handler so subagents inherit
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from team.context.briefings import render_briefings
 from team.models import WorkItem, WorkItemStatus
 from team.runtime.registry import get as _get_team_run
+from tools.core.runtime import ExecutionMetadata
 
 if TYPE_CHECKING:
     from agents.types import AgentDefinition
     from team.runtime.team_run import TeamRun
+
+
+@dataclass
+class TeamAgentContext:
+    """Canonical team-runtime context for work and posthook runners."""
+
+    user_message: str = ""
+    tool_metadata: ExecutionMetadata = field(default_factory=ExecutionMetadata)
+    work_result: Any | None = None
+    posthook_metadata_key: str = ""
+    posthook_outputs: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if isinstance(self.tool_metadata, dict):
+            meta = ExecutionMetadata()
+            meta.update(self.tool_metadata)
+            self.tool_metadata = meta
+        if self.work_result is not None and self.tool_metadata.get("work_result") is None:
+            self.tool_metadata["work_result"] = self.work_result
+        elif self.work_result is None:
+            self.work_result = self.tool_metadata.get("work_result")
+        if self.posthook_metadata_key:
+            self.tool_metadata["posthook_metadata_key"] = self.posthook_metadata_key
+        else:
+            self.posthook_metadata_key = self.tool_metadata.get("posthook_metadata_key", "")
+
+    def set_posthook_metadata_key(self, key: str) -> None:
+        self.posthook_metadata_key = key
+        self.tool_metadata["posthook_metadata_key"] = key
+
+    def set_posthook_output(self, key: str, value: Any) -> None:
+        self.posthook_outputs[key] = value
+        self.tool_metadata[key] = value
+
+    def get_posthook_output(self, key: str) -> Any:
+        if key in self.posthook_outputs:
+            return self.posthook_outputs[key]
+        return self.tool_metadata.get(key)
+
+
+def build_work_item_metadata(team_run: "TeamRun", wi: "WorkItem") -> ExecutionMetadata:
+    """Build the canonical routing metadata for a team work item."""
+    return ExecutionMetadata(
+        team_run_id=team_run.id,
+        work_item_id=wi.id,
+        agent_run_id=wi.agent_run_id,
+    )
 
 
 def build_initial_user_message(
@@ -90,20 +139,15 @@ def build_query_context(
     defn: "AgentDefinition",  # noqa: ARG001 — kept for QueryContextBuilder signature parity
     team_run: "TeamRun",
     wi: "WorkItem",
-) -> dict[str, Any]:
+) -> TeamAgentContext:
     """Default production ``QueryContextBuilder``.
 
-    Returns a minimal context dict carrying the rendered user message
-    plus routing metadata that downstream hooks and tools rely on.
+    Returns the canonical typed context carrying the rendered user
+    message plus routing metadata that downstream hooks and tools rely on.
     Production executor factories may wrap this to add domain-specific
     fields — the briefings-preamble contract lives here.
     """
-    user_message = build_initial_user_message(team_run, wi, default_base_prompt(wi))
-    return {
-        "user_message": user_message,
-        "tool_metadata": {
-            "team_run_id": team_run.id,
-            "work_item_id": wi.id,
-            "agent_run_id": wi.agent_run_id,
-        },
-    }
+    return TeamAgentContext(
+        user_message=build_initial_user_message(team_run, wi, default_base_prompt(wi)),
+        tool_metadata=build_work_item_metadata(team_run, wi),
+    )

@@ -16,9 +16,7 @@ from team.models import (
     BudgetConfig,
     BudgetState,
     DependencyArtifact,
-    Plan,
     WorkItem,
-    WorkItemKind,
     WorkItemStatus,
 )
 from team.runtime.dispatcher import Dispatcher
@@ -194,7 +192,6 @@ def test_dispatcher_add_work_item_snapshots_when_deps_already_done():
 def test_dispatcher_complete_snapshots_successor():
     async def _run():
         d = _dispatcher()
-        parent = _new_wi("P", status=WorkItemStatus.READY, local_id="p1")
         await d.add_work_item(_new_wi("P", status=WorkItemStatus.PENDING, local_id="p1"))
         await d.add_work_item(_new_wi("C", deps=["P"]))
         await d.mark_running("P", "run1")

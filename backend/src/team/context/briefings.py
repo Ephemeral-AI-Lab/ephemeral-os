@@ -89,8 +89,12 @@ def render_briefings(
         return True
 
     # Tier 1 — shared_briefings (highest priority). Keyed by canonical_scope.
-    shared = project_context.shared_briefings if project_context is not None else {}
-    for key, b in shared.items():
+    # Snapshot into a list so concurrent writes (e.g. a sibling calling
+    # ``share_briefing``) cannot mutate the dict mid-iteration if this
+    # function ever acquires an ``await`` point in the future.
+    shared_src = project_context.shared_briefings if project_context is not None else {}
+    shared_items = list(shared_src.items())
+    for key, b in shared_items:
         body = _load_brief(b, artifact_store)
         scope = key or scope_of_artifact(body)
         if not _claim(scope, b.ref):

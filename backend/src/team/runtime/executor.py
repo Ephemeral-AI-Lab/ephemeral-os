@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any, Awaitable, Callable
 
 from hooks.agent_posthook import NoPosthookOutput, execute_with_posthook
 from team.models import AgentResult, Plan
+from team.runtime.context_builder import TeamAgentContext
 from tools.posthook import SubmittedSummary
 
 if TYPE_CHECKING:
@@ -19,8 +20,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 QueryRunner = Callable[["AgentDefinition", Any], Awaitable[Any]]
-QueryContextBuilder = Callable[["AgentDefinition", "TeamRun", "WorkItem"], Any]
-PosthookContextBuilder = Callable[["AgentDefinition", Any], Any]
+QueryContextBuilder = Callable[["AgentDefinition", "TeamRun", "WorkItem"], TeamAgentContext]
+PosthookContextBuilder = Callable[["AgentDefinition", Any], TeamAgentContext]
 
 
 class Executor:

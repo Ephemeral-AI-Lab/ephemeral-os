@@ -16,6 +16,7 @@ from team.models import (
     WorkItemStatus,
 )
 from team.runtime.context_builder import (
+    TeamAgentContext,
     build_initial_user_message,
     build_query_context,
     default_base_prompt,
@@ -80,10 +81,12 @@ def test_build_query_context_carries_team_metadata_and_briefings():
     )
     defn = SimpleNamespace(name="worker")
     ctx = build_query_context(defn, tr, wi)
-    assert "scout report" in ctx["user_message"]
-    assert ctx["user_message"].endswith("implement")
-    meta = ctx["tool_metadata"]
-    assert meta == {"team_run_id": "T1", "work_item_id": "W1", "agent_run_id": None}
+    assert isinstance(ctx, TeamAgentContext)
+    assert "scout report" in ctx.user_message
+    assert ctx.user_message.endswith("implement")
+    assert ctx.tool_metadata.team_run_id == "T1"
+    assert ctx.tool_metadata.work_item_id == "W1"
+    assert ctx.tool_metadata.agent_run_id is None
 
 
 def test_shared_briefings_flow_into_query_context():
@@ -96,5 +99,17 @@ def test_shared_briefings_flow_into_query_context():
     wi = _wi(payload={"task": "refactor auth"})
     defn = SimpleNamespace(name="worker")
     ctx = build_query_context(defn, tr, wi)
-    assert "shared scout" in ctx["user_message"]
-    assert "Shared context" in ctx["user_message"]
+    assert "shared scout" in ctx.user_message
+    assert "Shared context" in ctx.user_message
+
+
+def test_team_agent_context_tracks_posthook_state_outside_raw_metadata():
+    ctx = TeamAgentContext(work_result={"phase": "work"})
+
+    ctx.set_posthook_metadata_key("submitted_plan")
+    ctx.set_posthook_output("submitted_plan", {"items": []})
+
+    assert ctx.work_result == {"phase": "work"}
+    assert ctx.posthook_metadata_key == "submitted_plan"
+    assert ctx.get_posthook_output("submitted_plan") == {"items": []}
+    assert ctx.tool_metadata["posthook_metadata_key"] == "submitted_plan"

@@ -106,6 +106,7 @@ def create_standalone_tool(name: str) -> BaseTool | None:
 
 def _register_builtins() -> None:
     """Register built-in toolkit classes. Each toolkit owns its from_context."""
+    from tools.atlas import AtlasToolkit
     from tools.daytona_toolkit import DaytonaToolkit
     from tools.ci_toolkit import CIToolkit
     from tools.subagent import SubagentToolkit
@@ -115,6 +116,7 @@ def _register_builtins() -> None:
     register_toolkit_class("code_intelligence", CIToolkit)
     register_toolkit_class("subagent", SubagentToolkit)
     register_toolkit_class("team_context", TeamContextToolkit)
+    register_toolkit_class("atlas", AtlasToolkit)
 
 
 _register_builtins()

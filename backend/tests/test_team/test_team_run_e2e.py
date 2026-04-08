@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from typing import Any
 
 import pytest
@@ -10,19 +9,17 @@ import pytest
 from agents.registry import register_definition, unregister_definition
 from agents.types import AgentDefinition
 from hooks.agent_posthook import PosthookConfig
-from team.models import Plan, TeamRunStatus, WorkItemKind, WorkItemStatus
+from team.artifacts.store import InMemoryArtifactStore
+from team.context.project import ProjectContext
+from team.models import BudgetConfig, BudgetState, Plan, TeamRunStatus, WorkItemKind, WorkItemStatus
+from team.runtime.context_builder import TeamAgentContext
+from team.runtime.dispatcher import Dispatcher
 from team.runtime.team_run import TeamRun
 from team.runtime.executor import Executor
+from team.runtime.team_run import TeamRuntimeServices
 from tools.posthook import SubmittedSummary
 
 pytestmark = pytest.mark.e2e
-
-
-@dataclass
-class ScriptedCtx:
-    defn_name: str = ""
-    tool_metadata: dict[str, Any] = field(default_factory=dict)
-
 
 def _register_scripted(name: str, posthook: PosthookConfig | None = None) -> AgentDefinition:
     # Posthook serializer agents must not carry builtin skills (enforced
@@ -113,16 +110,22 @@ def make_runner(scripts: dict[str, Any]):
 
 def make_executor_factory(runner):
     def build_query_ctx(defn, team_run, wi):
-        ctx = ScriptedCtx(defn_name=defn.name)
-        ctx.tool_metadata["team_context"] = {
-            "team_run_id": team_run.id,
-            "work_item_id": wi.id,
-            "agent_run_id": wi.agent_run_id,
-        }
-        return ctx
+        return TeamAgentContext(
+            tool_metadata={
+                "team_run_id": team_run.id,
+                "work_item_id": wi.id,
+                "agent_run_id": wi.agent_run_id,
+                "agent_name": defn.name,
+            }
+        )
 
     def build_posthook_ctx(posthook_defn, work_result):
-        return ScriptedCtx(defn_name=posthook_defn.name)
+        return TeamAgentContext(
+            tool_metadata={
+                "agent_name": posthook_defn.name,
+                "work_result": work_result,
+            }
+        )
 
     def factory(team_run):
         from agents.registry import get_definition
@@ -268,6 +271,35 @@ def test_team_run_sandbox_id_stored():
     assert tr.sandbox_id == "sb-abc123"
 
 
+def test_team_run_accepts_injected_runtime_services():
+    budget_config = BudgetConfig()
+    budget_state = BudgetState()
+    project_context = ProjectContext(goal="g", user_request="u")
+    artifact_store = InMemoryArtifactStore(budget_config, budget_state)
+    dispatcher = Dispatcher(
+        team_run_id="custom-run",
+        budgets=budget_config,
+        budget_state=budget_state,
+        artifact_store=artifact_store,
+    )
+    services = TeamRuntimeServices(
+        project_context=project_context,
+        artifact_store=artifact_store,
+        dispatcher=dispatcher,
+    )
+
+    tr = TeamRun(
+        session_id="S1",
+        user_request="hello",
+        budgets=budget_config,
+        services=services,
+    )
+
+    assert tr.project_context is project_context
+    assert tr.artifacts is artifact_store
+    assert tr.dispatcher is dispatcher
+
+
 @pytest.mark.asyncio
 async def test_sandbox_id_propagates_to_query_context_builder():
     """The build_query_context callback must be able to read team_run.sandbox_id
@@ -278,12 +310,20 @@ async def test_sandbox_id_propagates_to_query_context_builder():
 
         def build_query_ctx(defn, team_run, wi):
             captured["sandbox_id"] = team_run.sandbox_id
-            ctx = ScriptedCtx(defn_name=defn.name)
-            ctx.tool_metadata["sandbox_id"] = team_run.sandbox_id or ""
-            return ctx
+            return TeamAgentContext(
+                tool_metadata={
+                    "agent_name": defn.name,
+                    "sandbox_id": team_run.sandbox_id or "",
+                }
+            )
 
         def build_posthook_ctx(posthook_defn, work_result):
-            return ScriptedCtx(defn_name=posthook_defn.name)
+            return TeamAgentContext(
+                tool_metadata={
+                    "agent_name": posthook_defn.name,
+                    "work_result": work_result,
+                }
+            )
 
         def factory(team_run):
             from agents.registry import get_definition

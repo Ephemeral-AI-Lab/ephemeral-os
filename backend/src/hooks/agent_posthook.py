@@ -72,7 +72,18 @@ def _stamp_metadata_key(ctx: Any, key: str) -> None:
     callers that pass anything else are buggy and we want that to surface
     loudly rather than be silently swallowed.
     """
+    setter = getattr(ctx, "set_posthook_metadata_key", None)
+    if callable(setter):
+        setter(key)
+        return
     ctx.tool_metadata["posthook_metadata_key"] = key
+
+
+def _read_submitted_output(ctx: Any, key: str) -> Any | None:
+    reader = getattr(ctx, "get_posthook_output", None)
+    if callable(reader):
+        return reader(key)
+    return ctx.tool_metadata.get(key)
 
 
 def _assert_serializer_has_no_skills(defn: "AgentDefinition") -> None:
@@ -144,8 +155,7 @@ async def execute_with_posthook(
     # submit tool directly), skip the posthook entirely. Logged because
     # this branch silently changes the agent lifecycle and is otherwise
     # invisible.
-    work_meta = work_ctx.tool_metadata
-    if work_meta.get(cfg.metadata_key) is not None:
+    if _read_submitted_output(work_ctx, cfg.metadata_key) is not None:
         logger.debug(
             "execute_with_posthook: work agent %r already submitted to %r; "
             "skipping posthook %r",
@@ -153,7 +163,7 @@ async def execute_with_posthook(
             cfg.metadata_key,
             cfg.agent_name,
         )
-        return work_result, work_meta[cfg.metadata_key]
+        return work_result, _read_submitted_output(work_ctx, cfg.metadata_key)
 
     assert posthook_defn is not None  # established above when cfg is not None
     posthook_ctx = posthook_ctx_builder(posthook_defn, work_result)  # type: ignore[misc]
@@ -161,7 +171,7 @@ async def execute_with_posthook(
 
     await runner(posthook_defn, posthook_ctx)
 
-    submitted = posthook_ctx.tool_metadata.get(cfg.metadata_key)
+    submitted = _read_submitted_output(posthook_ctx, cfg.metadata_key)
     if submitted is None:
         raise NoPosthookOutput(
             f"Posthook agent {cfg.agent_name!r} for {work_defn.name!r} ended "

@@ -22,7 +22,6 @@ replanner must run in its own turn after seeing the briefs.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from typing import Any
 
 import pytest
@@ -32,6 +31,7 @@ from agents.types import AgentDefinition
 from hooks.agent_posthook import PosthookConfig
 from team.context.briefings import render_briefings
 from team.models import Plan, TeamRunStatus, WorkItemKind, WorkItemStatus
+from team.runtime.context_builder import TeamAgentContext
 from team.runtime.executor import Executor
 from team.runtime.team_run import TeamRun
 from tools.posthook import SubmittedSummary
@@ -42,13 +42,6 @@ pytestmark = pytest.mark.e2e
 # ---------------------------------------------------------------------------
 # Harness
 # ---------------------------------------------------------------------------
-
-
-@dataclass
-class _ScriptedCtx:
-    defn_name: str = ""
-    tool_metadata: dict[str, Any] = field(default_factory=dict)
-
 
 def _register(name: str, posthook: PosthookConfig | None = None) -> None:
     if posthook is None:
@@ -119,7 +112,6 @@ def _make_runner(scripts: dict[str, Any]):
 
 def _make_executor_factory(runner, captured_preambles: dict[str, str]):
     def build_query_ctx(defn, team_run, wi):
-        ctx = _ScriptedCtx(defn_name=defn.name)
         preamble = render_briefings(
             wi,
             artifact_store=team_run.artifacts,
@@ -127,15 +119,22 @@ def _make_executor_factory(runner, captured_preambles: dict[str, str]):
             budgets=team_run.budgets,
         )
         captured_preambles[f"{defn.name}:{wi.id}"] = preamble
-        ctx.tool_metadata["team_context"] = {
-            "team_run_id": team_run.id,
-            "work_item_id": wi.id,
-            "preamble": preamble,
-        }
-        return ctx
+        return TeamAgentContext(
+            tool_metadata={
+                "team_run_id": team_run.id,
+                "work_item_id": wi.id,
+                "agent_name": defn.name,
+                "preamble": preamble,
+            }
+        )
 
     def build_posthook_ctx(posthook_defn, work_result):
-        return _ScriptedCtx(defn_name=posthook_defn.name)
+        return TeamAgentContext(
+            tool_metadata={
+                "agent_name": posthook_defn.name,
+                "work_result": work_result,
+            }
+        )
 
     def factory(team_run):
         from agents.registry import get_definition
@@ -321,6 +320,7 @@ async def test_pattern_b_chained_planner_sees_all_scout_briefs_in_deps():
         dep_names = sorted(
             da.display_name or da.source_wi_id for da in replan_wi.dep_artifacts
         )
+        assert dep_names == ["s_core", "s_runtime", "s_testing"]
         # Every dep_artifact must reference a non-None artifact_ref.
         assert all(da.artifact_ref for da in replan_wi.dep_artifacts)
 

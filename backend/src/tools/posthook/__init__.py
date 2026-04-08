@@ -7,18 +7,17 @@ work-phase output and stashes the validated payload in
 
 ``SubmitPosthookTool`` is the abstract base; concrete tools like
 ``SubmitPlanTool`` and ``SubmitSummaryTool`` implement domain-specific
-validation in ``_build_payload``.
+validation in ``_build_payload``. Atlas-specific symbols are imported
+lazily so non-atlas code paths do not require SQLAlchemy during import.
 """
 
-from tools.posthook.base import SubmitPosthookTool
-from tools.posthook.submit_plan import SubmitPlanInput, SubmitPlanTool
-from tools.posthook.submit_summary import (
-    SubmittedSummary,
-    SubmitSummaryInput,
-    SubmitSummaryTool,
-)
+from __future__ import annotations
+
+from importlib import import_module
 
 __all__ = [
+    "SubmitAtlasInput",
+    "SubmitAtlasTool",
     "SubmitPosthookTool",
     "SubmitPlanInput",
     "SubmitPlanTool",
@@ -26,3 +25,15 @@ __all__ = [
     "SubmitSummaryInput",
     "SubmitSummaryTool",
 ]
+
+
+def __getattr__(name: str):
+    if name == "SubmitPosthookTool":
+        return import_module("tools.posthook.base").SubmitPosthookTool
+    if name in {"SubmitPlanInput", "SubmitPlanTool"}:
+        return getattr(import_module("tools.posthook.submit_plan"), name)
+    if name in {"SubmittedSummary", "SubmitSummaryInput", "SubmitSummaryTool"}:
+        return getattr(import_module("tools.posthook.submit_summary"), name)
+    if name in {"SubmitAtlasInput", "SubmitAtlasTool"}:
+        return getattr(import_module("tools.posthook.submit_atlas"), name)
+    raise AttributeError(name)

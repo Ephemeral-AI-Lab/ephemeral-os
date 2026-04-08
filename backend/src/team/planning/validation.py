@@ -7,7 +7,7 @@ from typing import Callable, Iterator
 from agents.registry import get_definition as _get_definition
 
 from team.errors import InvalidPlan
-from team.models import Briefing, Plan, WorkItem, WorkItemKind, WorkItemSpec, WorkItemStatus
+from team.models import Plan, WorkItem, WorkItemKind, WorkItemSpec, WorkItemStatus
 
 _MAX_INLINE_BRIEFING_BYTES_PER_SPEC = 4096
 
