@@ -296,6 +296,53 @@ async def test_query_symbols_remote_python_fallback_when_rg_unavailable():
     assert sandbox.process.exec.await_count >= 2
 
 
+async def test_query_symbols_prefers_code_symbol_over_doc_text_match():
+    svc = MagicMock()
+    svc.is_initialized = False
+    svc.workspace_root = "/testbed"
+    svc.query_symbols.return_value = []
+
+    sandbox = MagicMock()
+
+    async def _exec(command: str, timeout: int = 30):
+        if command.startswith("python -c "):
+            return MagicMock(
+                exit_code=0,
+                result=json.dumps(
+                    [
+                        {
+                            "file": "/testbed/pydantic/json_schema.py",
+                            "line": 338,
+                            "kind": "function",
+                            "snippet": "    def generate_definitions(self, inputs):",
+                        }
+                    ]
+                ),
+            )
+        return MagicMock(
+            exit_code=0,
+            result="/testbed/HISTORY.md:633:generate_definitions handles aliases better now\n",
+        )
+
+    sandbox.process.exec = AsyncMock(side_effect=_exec)
+
+    ctx = _ctx_with_svc(svc)
+    ctx.metadata["daytona_sandbox"] = sandbox
+    ctx.metadata["daytona_cwd"] = "/testbed"
+
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        with patch("code_intelligence.types.SymbolKind"):
+            result = await ci_query_symbols.execute(
+                ci_query_symbols.input_model(query="generate_definitions"),
+                ctx,
+            )
+
+    assert not result.is_error
+    symbols = json.loads(result.output)
+    assert symbols[0]["file"] == "/testbed/pydantic/json_schema.py"
+    assert symbols[0]["kind"] == "function"
+
+
 async def test_query_symbols_local_workspace_fallback_finds_class(tmp_path):
     source = tmp_path / "pydantic" / "type_adapter.py"
     source.parent.mkdir()

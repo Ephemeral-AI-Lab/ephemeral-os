@@ -106,9 +106,24 @@ def _extract_match_name(snippet: str, *, query: str, kind: str) -> str:
 
 
 def _dedupe_matches(matches: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def _rank(match: dict[str, Any]) -> tuple[int, int, int, str, int]:
+        file_path = str(match.get("file") or "")
+        lowered = file_path.lower()
+        suffix = Path(file_path).suffix.lower()
+        kind = str(match.get("kind") or "")
+        is_text_match = 1 if kind == "text_match" else 0
+        is_doc_path = 1 if (
+            suffix in {".md", ".rst", ".txt"}
+            or "/docs/" in lowered
+            or lowered.endswith("/history.md")
+            or lowered.endswith("/readme.md")
+        ) else 0
+        depth = file_path.count("/")
+        return (is_text_match, is_doc_path, depth, file_path, int(match.get("line") or 0))
+
     seen: set[tuple[str, int, str, str]] = set()
     deduped: list[dict[str, Any]] = []
-    for match in matches:
+    for match in sorted(matches, key=_rank):
         key = (
             str(match.get("file") or ""),
             int(match.get("line") or 0),
@@ -200,6 +215,9 @@ def _local_query_symbols(
         if len(collected) >= _SYMBOL_FALLBACK_LIMIT:
             break
 
+    python_matches = _python_fallback_query_symbols(root=root, query=query, kind=kind)
+    if python_matches:
+        collected.extend(python_matches)
     deduped = _dedupe_matches(collected)
     return deduped or None
 
@@ -342,15 +360,16 @@ async def _remote_query_symbols(
         if len(collected) >= _SYMBOL_FALLBACK_LIMIT:
             break
 
-    deduped = _dedupe_matches(collected)
-    if deduped:
-        return deduped
-    return await _remote_query_symbols_via_python(
+    python_matches = await _remote_query_symbols_via_python(
         sandbox=sandbox,
         target=target,
         query=query,
         kind=kind,
     )
+    if python_matches:
+        collected.extend(python_matches)
+    deduped = _dedupe_matches(collected)
+    return deduped or None
 
 
 async def _remote_query_symbols_via_python(
