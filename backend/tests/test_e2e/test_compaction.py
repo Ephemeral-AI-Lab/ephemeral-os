@@ -490,18 +490,10 @@ class TestReduceForApi:
                         task_id="bg_1",
                         tool_name="run_subagent",
                         task_type="subagent",
-                        status="running",
-                        source="engine_progress",
-                        text="newest-1",
-                    ),
-                    BackgroundTaskStateBlock(
-                        task_id="bg_2",
-                        tool_name="run_subagent",
-                        task_type="subagent",
                         status="completed",
                         source="engine_terminal",
-                        text="done-2",
-                    ),
+                        text="done-1",
+                    )
                 ],
             ),
         ]
@@ -513,7 +505,9 @@ class TestReduceForApi:
             for block in msg.content
             if isinstance(block, ToolResultBlock)
         ]
-        assert len(snapshot_blocks) == 0
+        assert len(snapshot_blocks) == 1
+        assert '"task_id": "bg_2"' in snapshot_blocks[0].content
+        assert '"task_id": "bg_1"' not in snapshot_blocks[0].content
 
     def test_drops_stale_background_snapshot_pair(self):
         snapshot_statuses = [
