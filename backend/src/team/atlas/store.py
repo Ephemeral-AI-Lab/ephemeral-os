@@ -1,24 +1,36 @@
 """Transactional CRUD for the Project Atlas.
 
 ``AtlasStore`` is the only writer for the ``project_atlas`` and
-``project_atlas_chunks`` tables. Every mutation runs inside a single
-SQLAlchemy transaction so concurrent ``atlas_builder`` / ``atlas_refresher``
-runs cannot leave the atlas in a torn state: the last writer wins
-deterministically on the ``(project_key, subsystem)`` unique constraint.
+``project_atlas_chunks`` tables.
+
+Concurrency model
+-----------------
+Every chunk mutation is **version-guarded**: writes are accepted only
+when the incoming ``brief_version`` is strictly greater than the stored
+version. Under concurrent ``atlas_builder`` / ``atlas_refresher`` runs
+this means a slow, stale writer cannot overwrite a fresh one — the
+conditional ``UPDATE ... WHERE brief_version < :new_version`` turns
+stale writes into no-ops instead of corrupting state. Inserts race
+against the ``(project_key, subsystem)`` PK and recover via a nested
+savepoint so a concurrent insert is converted into a version-guarded
+update without blowing away the enclosing transaction.
 
 Chunks are returned as :class:`AtlasChunk` dataclasses so callers never
 touch the ORM record objects. The brief body inside ``AtlasChunk.brief``
-is identical in shape to a Phase 1 scout artifact, which lets
-consumers re-use the same ``render_briefings`` path.
+is identical in shape to a Phase 1 scout artifact.
 """
 
 from __future__ import annotations
 
+import itertools
 import logging
+import time
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
+from typing import Any, Iterable
 
+from sqlalchemy import select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
 from team.atlas.model import ProjectAtlasChunkRecord, ProjectAtlasRecord
@@ -26,14 +38,31 @@ from team.atlas.model import ProjectAtlasChunkRecord, ProjectAtlasRecord
 logger = logging.getLogger(__name__)
 
 
+# Version stamps combine nanosecond wall-clock with a monotonic
+# per-process counter so two callers within the same ns bucket (possible
+# on coarse-clock platforms under ultra-concurrency) still get strictly
+# unique, strictly increasing values. 20 bits of counter = 1M distinct
+# stamps per ns, more than enough to shield against collisions.
+_version_counter = itertools.count()
+
+
+def _fresh_version() -> int:
+    """Monotonic unique version stamp — collision-free under concurrency."""
+    return (time.time_ns() << 20) | (next(_version_counter) & 0xFFFFF)
+
+
 @dataclass
 class AtlasChunk:
     """One cached scout brief, keyed by ``(project_key, subsystem)``.
 
-    ``content_hashes`` maps file paths under the chunk's scope to their
-    16-char sha256 prefix at write time. Used as a cold-start fallback
-    for freshness checks when the in-memory ledger is empty (fresh
-    process, new session).
+    - ``content_hashes`` maps file paths under the chunk's scope to
+      their 16-char sha256 prefix at write time.
+    - ``snapshot_time`` is the wall-clock (seconds) captured *before*
+      the scout started reading files; it is the ledger cutoff used by
+      freshness checks and is persisted verbatim.
+    - ``brief_version`` is a monotonic stamp. Callers that do not set
+      one get a fresh ``time.time_ns()`` at construction, which makes
+      every new ``AtlasChunk`` instance sortable against older rows.
     """
 
     subsystem: str
@@ -41,25 +70,13 @@ class AtlasChunk:
     updated_at: datetime | None = None
     content_hashes: dict[str, str] = field(default_factory=dict)
     symbol_ids: list[str] = field(default_factory=list)
-
-
-@dataclass
-class AtlasHeader:
-    """Header metadata for a project's atlas. Returned by :meth:`AtlasStore.get_atlas`."""
-
-    project_key: str
-    repo_root: str
-    updated_at: datetime
-    subsystems: list[str] = field(default_factory=list)
+    repo_root: str = ""
+    snapshot_time: float = 0.0
+    brief_version: int = field(default_factory=_fresh_version)
 
 
 class AtlasStore:
-    """SQLAlchemy-backed CRUD for the project atlas.
-
-    Initialised once by the application factory with a session factory;
-    tests pass an in-memory SQLite factory via the same ``initialize``
-    contract used by :class:`team.persistence.store.TeamDefinitionStore`.
-    """
+    """SQLAlchemy-backed CRUD for the project atlas."""
 
     def __init__(self) -> None:
         self._session_factory: sessionmaker[Session] | None = None
@@ -84,134 +101,155 @@ class AtlasStore:
         project_key: str,
         repo_root: str,
         chunks: list[AtlasChunk],
-    ) -> None:
+    ) -> int:
         """Upsert a header + N chunks in one transaction.
 
-        Concurrent builder/refresher runs are safe because each call runs
-        inside its own session and the unique constraint on
-        ``(project_key, subsystem)`` makes the write idempotent: the last
-        writer wins deterministically instead of corrupting state.
+        Returns the number of chunks whose write was actually applied —
+        stale writes (``brief_version <= existing``) are silently skipped
+        and do **not** count toward the return value.
         """
         if not project_key:
             raise ValueError("project_key must be non-empty")
+
+        applied = 0
         with self._sf() as db:
-            header = (
-                db.query(ProjectAtlasRecord)
-                .filter(ProjectAtlasRecord.project_key == project_key)
-                .first()
-            )
+            header = db.get(ProjectAtlasRecord, project_key)
             if header is None:
-                header = ProjectAtlasRecord(
-                    project_key=project_key,
-                    repo_root=repo_root,
-                )
-                db.add(header)
+                db.add(ProjectAtlasRecord(project_key=project_key, repo_root=repo_root))
             else:
                 header.repo_root = repo_root
 
             for chunk in chunks:
                 if not chunk.subsystem:
                     raise ValueError("chunk.subsystem must be non-empty")
-                existing = (
-                    db.query(ProjectAtlasChunkRecord)
-                    .filter(
-                        ProjectAtlasChunkRecord.project_key == project_key,
-                        ProjectAtlasChunkRecord.subsystem == chunk.subsystem,
-                    )
-                    .first()
-                )
-                if existing is None:
-                    db.add(
-                        ProjectAtlasChunkRecord(
-                            project_key=project_key,
-                            subsystem=chunk.subsystem,
-                            brief_json=dict(chunk.brief),
-                            content_hashes_json=dict(chunk.content_hashes),
-                            symbol_ids_json=list(chunk.symbol_ids),
-                        )
-                    )
-                else:
-                    existing.brief_json = dict(chunk.brief)
-                    existing.content_hashes_json = dict(chunk.content_hashes)
-                    existing.symbol_ids_json = list(chunk.symbol_ids)
+                if self._apply_chunk(db, project_key, chunk):
+                    applied += 1
+
             db.commit()
             logger.debug(
-                "atlas upsert: project=%s chunks=%d",
+                "atlas upsert: project=%s applied=%d skipped=%d",
                 project_key,
-                len(chunks),
+                applied,
+                len(chunks) - applied,
             )
+        return applied
+
+    def _apply_chunk(
+        self,
+        db: Session,
+        project_key: str,
+        chunk: AtlasChunk,
+    ) -> bool:
+        """Version-guarded upsert for one chunk. Returns True if applied."""
+        values = {
+            "brief_json": dict(chunk.brief),
+            "content_hashes_json": dict(chunk.content_hashes),
+            "symbol_ids_json": list(chunk.symbol_ids),
+            "snapshot_time": float(chunk.snapshot_time or 0.0),
+            "brief_version": int(chunk.brief_version),
+        }
+        # Conditional update — only overwrites older versions. rowcount==0
+        # means either the row doesn't exist, or an equal/newer row is
+        # already persisted.
+        stmt = (
+            update(ProjectAtlasChunkRecord)
+            .where(ProjectAtlasChunkRecord.project_key == project_key)
+            .where(ProjectAtlasChunkRecord.subsystem == chunk.subsystem)
+            .where(ProjectAtlasChunkRecord.brief_version < chunk.brief_version)
+            .values(**values)
+        )
+        result = db.execute(stmt)
+        if result.rowcount and result.rowcount > 0:
+            return True
+
+        # rowcount==0 — distinguish "not there yet" from "stale write".
+        existing = db.get(
+            ProjectAtlasChunkRecord, (project_key, chunk.subsystem)
+        )
+        if existing is not None:
+            # Existing row has brief_version >= ours → stale write, skip.
+            logger.debug(
+                "atlas upsert: skipping stale write for %s (incoming=%d stored=%d)",
+                chunk.subsystem,
+                chunk.brief_version,
+                existing.brief_version,
+            )
+            return False
+
+        # Insert in a savepoint so a concurrent inserter doesn't abort
+        # the whole outer transaction.
+        try:
+            with db.begin_nested():
+                db.add(
+                    ProjectAtlasChunkRecord(
+                        project_key=project_key,
+                        subsystem=chunk.subsystem,
+                        **values,
+                    )
+                )
+            return True
+        except IntegrityError:
+            # Someone inserted between our UPDATE and our INSERT. Retry
+            # the conditional update — if their version is newer, we
+            # still skip; if ours is newer, we win. We must re-execute
+            # the statement to get a fresh Result — the original `stmt`
+            # is a SQL expression and has no rowcount.
+            retry = db.execute(stmt)
+            return bool(retry.rowcount and retry.rowcount > 0)
 
     # ---- reads -----------------------------------------------------------
 
-    def get_atlas(self, project_key: str) -> AtlasHeader | None:
-        """Return the header + subsystem list for *project_key*, or None."""
-        with self._sf() as db:
-            header = (
-                db.query(ProjectAtlasRecord)
-                .filter(ProjectAtlasRecord.project_key == project_key)
-                .first()
-            )
-            if header is None:
-                return None
-            subsystems = [
-                row.subsystem
-                for row in db.query(ProjectAtlasChunkRecord)
-                .filter(ProjectAtlasChunkRecord.project_key == project_key)
-                .order_by(ProjectAtlasChunkRecord.subsystem)
-                .all()
-            ]
-            return AtlasHeader(
-                project_key=header.project_key,
-                repo_root=header.repo_root,
-                updated_at=header.updated_at,
-                subsystems=subsystems,
-            )
-
     def get_chunk(self, project_key: str, subsystem: str) -> AtlasChunk | None:
         """Return a single chunk by ``(project_key, subsystem)``, or None."""
-        with self._sf() as db:
-            row = (
-                db.query(ProjectAtlasChunkRecord)
-                .filter(
-                    ProjectAtlasChunkRecord.project_key == project_key,
-                    ProjectAtlasChunkRecord.subsystem == subsystem,
-                )
-                .first()
-            )
-            if row is None:
-                return None
-            return AtlasChunk(
-                subsystem=row.subsystem,
-                brief=dict(row.brief_json or {}),
-                updated_at=row.updated_at,
-                content_hashes=dict(row.content_hashes_json or {}),
-                symbol_ids=list(row.symbol_ids_json or []),
-            )
+        results = self.get_chunks(project_key, [subsystem])
+        return results[0] if results else None
 
-    def list_chunks(self, project_key: str) -> list[AtlasChunk]:
-        """Return every chunk for a project, ordered by subsystem."""
+    def get_chunks(
+        self, project_key: str, subsystems: Iterable[str]
+    ) -> list[AtlasChunk]:
+        """Batch read: one query for N chunks + one for the header.
+
+        Preserves caller order; missing chunks are simply omitted. This
+        is the path planners should prefer when looking up multiple
+        subsystems — it amortises the header fetch and avoids N×2
+        round-trips of ``get_chunk``.
+        """
+        subs = [s for s in subsystems if s]
+        if not subs:
+            return []
         with self._sf() as db:
-            rows = (
-                db.query(ProjectAtlasChunkRecord)
-                .filter(ProjectAtlasChunkRecord.project_key == project_key)
-                .order_by(ProjectAtlasChunkRecord.subsystem)
-                .all()
-            )
-            return [
-                AtlasChunk(
-                    subsystem=r.subsystem,
-                    brief=dict(r.brief_json or {}),
-                    updated_at=r.updated_at,
-                    content_hashes=dict(r.content_hashes_json or {}),
+            header = db.get(ProjectAtlasRecord, project_key)
+            repo_root = header.repo_root if header else ""
+
+            rows = db.execute(
+                select(ProjectAtlasChunkRecord)
+                .where(ProjectAtlasChunkRecord.project_key == project_key)
+                .where(ProjectAtlasChunkRecord.subsystem.in_(subs))
+            ).scalars().all()
+
+            by_key = {row.subsystem: row for row in rows}
+            out: list[AtlasChunk] = []
+            for sub in subs:
+                row = by_key.get(sub)
+                if row is None:
+                    continue
+                out.append(
+                    AtlasChunk(
+                        subsystem=row.subsystem,
+                        brief=dict(row.brief_json or {}),
+                        updated_at=row.updated_at,
+                        content_hashes=dict(row.content_hashes_json or {}),
+                        symbol_ids=list(row.symbol_ids_json or []),
+                        repo_root=repo_root,
+                        snapshot_time=float(row.snapshot_time or 0.0),
+                        brief_version=int(row.brief_version or 0),
+                    )
                 )
-                for r in rows
-            ]
+            return out
 
 
 # Module-level singleton, initialised by the application factory at
-# bootstrap and consumed by the atlas tools / posthooks. Tests that need
-# a fresh store can instantiate :class:`AtlasStore` directly or inject an
-# override via tool execution metadata.
+# bootstrap and consumed by the atlas tools / posthooks.
 _default_store: AtlasStore = AtlasStore()
 
 

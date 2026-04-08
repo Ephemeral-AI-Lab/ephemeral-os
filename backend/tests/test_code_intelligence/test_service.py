@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import time
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
 
+from code_intelligence.analysis.symbol_index import SymbolIndex
 from code_intelligence.routing.service import (
     CodeIntelligenceService,
     dispose_all_code_intelligence,
@@ -89,3 +91,13 @@ async def test_initialize_endpoint_passes_requested_workspace_root(monkeypatch) 
     assert result == {"sandbox_id": "sandbox-init", "initialized": True}
     assert calls == [("sandbox-init", "/tmp/project")]
 
+
+def test_symbol_index_missing_root_unblocks_waiters() -> None:
+    idx = SymbolIndex("/tmp/definitely-missing-symbol-index-root")
+
+    ready = idx.ensure_built(wait=True, timeout=0.05)
+    time.sleep(0.01)
+
+    assert ready is False
+    assert idx._building is False
+    assert idx._build_event.is_set() is True

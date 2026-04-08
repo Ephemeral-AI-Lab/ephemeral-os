@@ -86,7 +86,9 @@ class SymbolIndex:
                 self._start_build()
 
         if wait:
-            return self._build_event.wait(timeout=timeout)
+            self._build_event.wait(timeout=timeout)
+            with self._lock:
+                return self._built
         return False
 
     def rebuild(self) -> None:
@@ -159,6 +161,7 @@ class SymbolIndex:
     def _start_build(self) -> None:
         """Start a background build thread (must hold _lock)."""
         self._building = True
+        self._build_event.clear()
         self._build_thread = threading.Thread(
             target=self._background_build,
             name="symbol-index-build",
@@ -172,6 +175,9 @@ class SymbolIndex:
             root = Path(self._workspace_root)
             if not root.is_dir():
                 logger.warning("Workspace root does not exist: %s", self._workspace_root)
+                with self._lock:
+                    self._building = False
+                    self._build_event.set()
                 return
 
             files = self._collect_files(root)

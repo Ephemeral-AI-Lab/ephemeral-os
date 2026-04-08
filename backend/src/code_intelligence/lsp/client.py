@@ -238,7 +238,7 @@ class LspClient:
             return [
                 SymbolInfo(
                     name=d["name"],
-                    kind=SymbolKind(d.get("type", "unknown")) if d.get("type") in SymbolKind.__members__.values() else SymbolKind.UNKNOWN,
+                    kind=_coerce_symbol_kind(d.get("type")),
                     file_path=d.get("path", ""),
                     line=d.get("line", 0),
                     character=d.get("col", 0),
@@ -448,3 +448,11 @@ class LspClient:
             ".ts": "typescript",
             ".tsx": "typescript",
         }.get(ext, "unknown")
+
+
+def _coerce_symbol_kind(raw_kind: Any) -> SymbolKind:
+    """Map backend-reported symbol types onto SymbolKind."""
+    try:
+        return SymbolKind(str(raw_kind))
+    except ValueError:
+        return SymbolKind.UNKNOWN

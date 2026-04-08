@@ -60,23 +60,6 @@ def _scout_brief(paths: list[str], *, coverage: float = 1.0) -> dict:
 # ---------------------------------------------------------------------------
 
 
-def test_upsert_creates_header_and_chunks(store: AtlasStore) -> None:
-    store.upsert_chunks(
-        project_key="P1",
-        repo_root="/repo",
-        chunks=[
-            AtlasChunk(subsystem="src/a", brief=_scout_brief(["src/a"])),
-            AtlasChunk(subsystem="src/b", brief=_scout_brief(["src/b"])),
-        ],
-    )
-
-    header = store.get_atlas("P1")
-    assert header is not None
-    assert header.project_key == "P1"
-    assert header.repo_root == "/repo"
-    assert header.subsystems == ["src/a", "src/b"]
-
-
 def test_get_chunk_returns_none_when_missing(store: AtlasStore) -> None:
     assert store.get_chunk("P1", "src/ghost") is None
 
@@ -140,24 +123,6 @@ def test_upsert_preserves_other_chunks_on_partial_write(store: AtlasStore) -> No
     b = store.get_chunk("P1", "src/b")
     assert a is not None and a.brief["summary"] == "brief for ['src/a']"
     assert b is not None and b.brief["summary"] == "refreshed"
-
-
-def test_list_chunks_is_sorted(store: AtlasStore) -> None:
-    store.upsert_chunks(
-        project_key="P1",
-        repo_root="/repo",
-        chunks=[
-            AtlasChunk(subsystem="zulu", brief=_scout_brief(["zulu"])),
-            AtlasChunk(subsystem="alpha", brief=_scout_brief(["alpha"])),
-            AtlasChunk(subsystem="mike", brief=_scout_brief(["mike"])),
-        ],
-    )
-    chunks = store.list_chunks("P1")
-    assert [c.subsystem for c in chunks] == ["alpha", "mike", "zulu"]
-
-
-def test_get_atlas_returns_none_for_unknown_project(store: AtlasStore) -> None:
-    assert store.get_atlas("ghost") is None
 
 
 def test_upsert_requires_project_key(store: AtlasStore) -> None:
@@ -405,6 +370,174 @@ def test_upsert_persists_content_hashes(store: AtlasStore) -> None:
     chunk = store.get_chunk("P1", "src/a")
     assert chunk is not None
     assert chunk.content_hashes == hashes
+
+
+# ---------------------------------------------------------------------------
+# P0 fixes — version-guarded upserts, snapshot_time cutoff, added-file detection
+# ---------------------------------------------------------------------------
+
+
+def test_upsert_is_version_guarded_stale_writer_is_noop(store: AtlasStore) -> None:
+    """A slow writer with a lower brief_version must NOT overwrite a fresh one."""
+    # Fresh writer commits first.
+    fresh = AtlasChunk(
+        subsystem="src/a",
+        brief={**_scout_brief(["src/a"]), "summary": "fresh"},
+        brief_version=1000,
+    )
+    applied = store.upsert_chunks(project_key="P1", repo_root="/repo", chunks=[fresh])
+    assert applied == 1
+
+    # Stale writer (lower version) arrives late — must be ignored.
+    stale = AtlasChunk(
+        subsystem="src/a",
+        brief={**_scout_brief(["src/a"]), "summary": "STALE"},
+        brief_version=500,
+    )
+    applied = store.upsert_chunks(project_key="P1", repo_root="/repo", chunks=[stale])
+    assert applied == 0
+
+    chunk = store.get_chunk("P1", "src/a")
+    assert chunk is not None
+    assert chunk.brief["summary"] == "fresh"
+    assert chunk.brief_version == 1000
+
+
+def test_upsert_newer_version_overwrites(store: AtlasStore) -> None:
+    store.upsert_chunks(
+        project_key="P1",
+        repo_root="/repo",
+        chunks=[
+            AtlasChunk(
+                subsystem="src/a",
+                brief=_scout_brief(["src/a"]),
+                brief_version=1,
+            )
+        ],
+    )
+    store.upsert_chunks(
+        project_key="P1",
+        repo_root="/repo",
+        chunks=[
+            AtlasChunk(
+                subsystem="src/a",
+                brief={**_scout_brief(["src/a"]), "summary": "v2"},
+                brief_version=2,
+            )
+        ],
+    )
+    chunk = store.get_chunk("P1", "src/a")
+    assert chunk is not None and chunk.brief["summary"] == "v2"
+    assert chunk.brief_version == 2
+
+
+def test_upsert_persists_snapshot_time(store: AtlasStore) -> None:
+    store.upsert_chunks(
+        project_key="P1",
+        repo_root="/repo",
+        chunks=[
+            AtlasChunk(
+                subsystem="src/a",
+                brief=_scout_brief(["src/a"]),
+                snapshot_time=1234567.5,
+            )
+        ],
+    )
+    chunk = store.get_chunk("P1", "src/a")
+    assert chunk is not None
+    assert chunk.snapshot_time == 1234567.5
+
+
+def test_snapshot_time_is_used_as_ledger_cutoff() -> None:
+    """Edits between snapshot_time and updated_at must mark the chunk stale."""
+    from datetime import datetime, timezone
+
+    ledger = Ledger()
+    snapshot = time.time()
+    # Scout "read" files at `snapshot`. Then an edit lands BEFORE the
+    # row is committed — this is the race the fix targets.
+    time.sleep(0.01)
+    ledger.record("src/a/m.py", agent_id="racer")
+    time.sleep(0.01)
+    committed = time.time()
+
+    chunk = AtlasChunk(
+        subsystem="src/a",
+        brief={"target_paths": ["src/a"]},
+        updated_at=datetime.fromtimestamp(committed, tz=timezone.utc),
+        snapshot_time=snapshot,
+    )
+    # Using snapshot_time as cutoff → ledger entry is visible → stale.
+    assert is_chunk_fresh(chunk, ledger=ledger) is False
+
+
+def test_cold_path_detects_newly_added_files(tmp_path: Path) -> None:
+    """Files added to scope AFTER the chunk was written must mark it stale."""
+    import hashlib
+
+    src = tmp_path / "src"
+    src.mkdir()
+    existing = src / "a.py"
+    existing.write_text("x = 1\n")
+
+    def h(text: str) -> str:
+        return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
+
+    chunk = AtlasChunk(
+        subsystem="src",
+        brief={"target_paths": [str(src)]},
+        content_hashes={str(existing): h("x = 1\n")},
+        repo_root=str(tmp_path),
+    )
+    # Pristine → fresh.
+    assert is_chunk_fresh(chunk, ledger=None) is True
+
+    # New file appears in scope → stale, even though the tracked file
+    # is still hash-identical.
+    (src / "b.py").write_text("y = 2\n")
+    assert is_chunk_fresh(chunk, ledger=None) is False
+
+
+def test_ttl_gate_marks_old_chunks_stale() -> None:
+    from datetime import datetime, timedelta, timezone
+
+    chunk = AtlasChunk(
+        subsystem="src/a",
+        brief={"target_paths": ["src/a"]},
+        updated_at=datetime.now(timezone.utc) - timedelta(hours=48),
+        content_hashes={},  # would otherwise hit conservative-False path
+    )
+    # TTL 24h → 48h-old chunk is stale regardless of other signals.
+    assert is_chunk_fresh(chunk, ledger=None, max_age_seconds=24 * 3600) is False
+
+
+def test_get_chunks_batch_preserves_order_and_omits_missing(store: AtlasStore) -> None:
+    store.upsert_chunks(
+        project_key="P1",
+        repo_root="/repo",
+        chunks=[
+            AtlasChunk(subsystem="src/a", brief=_scout_brief(["src/a"])),
+            AtlasChunk(subsystem="src/b", brief=_scout_brief(["src/b"])),
+        ],
+    )
+    results = store.get_chunks("P1", ["src/b", "src/ghost", "src/a"])
+    assert [c.subsystem for c in results] == ["src/b", "src/a"]
+    assert all(c.repo_root == "/repo" for c in results)
+
+
+def test_unhashable_file_returns_sentinel(tmp_path: Path) -> None:
+    from team.atlas.freshness import UNHASHABLE, _clear_hash_cache, hash_file
+
+    _clear_hash_cache()
+    binary = tmp_path / "blob.bin"
+    binary.write_bytes(b"\xff\xfe\x00\x01nonutf")
+    assert hash_file(binary) == UNHASHABLE
+
+
+def test_hash_file_returns_none_for_missing(tmp_path: Path) -> None:
+    from team.atlas.freshness import hash_file
+
+    assert hash_file(tmp_path / "nope.py") is None
 
 
 def test_upsert_defaults_content_hashes_to_empty_dict(store: AtlasStore) -> None:

@@ -41,10 +41,10 @@ class LspQueryRequest(BaseModel):
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _get_service(sandbox_id: str) -> Any:
+def _get_service(sandbox_id: str, workspace_root: str = "/workspace") -> Any:
     """Get or create a CI service for a sandbox."""
     from code_intelligence.routing.service import get_code_intelligence
-    return get_code_intelligence(sandbox_id)
+    return get_code_intelligence(sandbox_id, workspace_root=workspace_root)
 
 
 def _get_service_if_exists(sandbox_id: str) -> Any:
@@ -78,8 +78,7 @@ async def status(sandbox_id: str) -> dict:
 @router.post("/initialize/{sandbox_id}")
 async def initialize(sandbox_id: str, workspace_root: str = "/workspace") -> dict:
     """Initialize CI service for a sandbox."""
-    service = _get_service(sandbox_id)
-    service.workspace_root = workspace_root
+    service = _get_service(sandbox_id, workspace_root)
     ready = service.ensure_initialized(wait=True)
     return {"sandbox_id": sandbox_id, "initialized": ready}
 

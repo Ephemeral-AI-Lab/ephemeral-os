@@ -1,4 +1,4 @@
-"""Builtin team_planner / team_worker / submit_plan_agent definitions."""
+"""Builtin team-mode agent definitions (planner, developer, validator, scout, atlas, posthooks)."""
 
 from __future__ import annotations
 
@@ -13,7 +13,8 @@ from tools.posthook import SubmitAtlasTool, SubmitPlanTool, SubmitSummaryTool
 logger = logging.getLogger(__name__)
 
 TEAM_PLANNER = "team_planner"
-TEAM_WORKER = "team_worker"
+DEVELOPER = "developer"
+VALIDATOR = "validator"
 SUBMIT_PLAN_AGENT = "submit_plan_agent"
 SUBMIT_SUMMARY_AGENT = "submit_summary_agent"
 SUBMIT_ATLAS_AGENT = "submit_atlas_agent"
@@ -72,17 +73,28 @@ Atlas lookup is for structural questions only, and atlas briefs are only refresh
 - **Empty-area rule.** If a scout brief returns ``scope_coverage == 0.0`` AND ``suggested_subdivisions == []``, interpret it as "this area is genuinely empty". DO NOT retry or fan out. Proceed with greenfield logic or revise your ``target_paths``.
 - **Semantic vs structural.** "Where is X", "what files implement Y" → pinpoint query, atlas lookup, or scout. "How does the auth flow work", "why does this module exist" → always a fresh scout, never the atlas or cached briefs.
 - **No workers alongside scout deps.** Phase A validation will reject a plan where a non-planner item depends on a scout sibling in the same submission. Use a chained ``team_planner`` replan step for that case.
-- **Required item kinds.** A plan item that will itself call ``submit_plan`` (e.g., a chained ``team_planner`` replanner) MUST have ``kind: "expandable"``. Leaf work items (scouts, coders, validators) stay ``kind: "atomic"``.
+- **Required item kinds.** A plan item that will itself call ``submit_plan`` (e.g., a chained ``team_planner`` replanner) MUST have ``kind: "expandable"``. Leaf work items (scouts, ``developer``, ``validator``) stay ``kind: "atomic"``.
+- **Worker roles.** For coding work emit a ``developer`` WorkItem; for verification (tests, lint, diagnostics) emit a ``validator`` WorkItem with ``deps=[<developer_local_id>]``. Do not invent other worker agent names unless a user-registered agent exists in the registry.
 - **Promote high-coverage briefs.** After reading a scout brief with ``scope_coverage >= 0.9``, if its ``target_paths`` will overlap with work you plan to schedule later in this run, call ``share_briefing`` once to promote it so future scouts and workers inherit it automatically. Do not promote partial or malformed briefs; scouts cannot self-promote."""
 
-_WORKER_PROMPT = """You are team_worker. Execute the specific WorkItem described in the payload. Return a concise summary and any artifacts.
+_DEVELOPER_PROMPT = """You are developer. Execute the coding WorkItem described in the payload: read the target files, write or edit code in the sandbox, and verify your changes compile/parse before returning.
 
-Your ``code_intelligence`` toolkit is live and authoritative under high concurrency — unlike the atlas briefs or ``symbol_ids`` hints in your payload, which are plan-time snapshots that may already be stale. Before acting on a symbol mentioned in your briefing:
-- Verify it still exists via ``ci_query_symbols(query=...)``.
-- Resolve call sites via ``ci_query_references(file_path=..., symbol=...)``.
-- Check ``ci_recent_changes`` if you suspect a sibling worker has touched the same files.
+Tooling discipline:
+- Use ``code_intelligence`` (``ci_query_symbols``, ``ci_query_references``, ``ci_read_file``, ``ci_workspace_structure``, ``ci_recent_changes``, ``ci_edit_hotspots``) as the authoritative live view of the workspace. Atlas briefs and ``symbol_ids`` hints in your payload are plan-time snapshots — re-verify any symbol before touching it.
+- Use ``sandbox_operations`` (``daytona_read_file``, ``daytona_write_file``, ``daytona_edit_file``, ``daytona_bash``, ``daytona_lsp_*``) to actually mutate the sandbox. Edits auto-prime the CI cache.
+- Before editing, confirm the symbol exists via ``ci_query_symbols`` and check its callers via ``ci_query_references``. Check ``ci_recent_changes`` when a sibling developer may have touched the same files.
+- After editing, run a minimal local check (syntax/import smoke test, targeted test, or ``daytona_lsp_diagnostics``) so you don't hand broken code to the validator.
 
-Prefer live CI queries over re-reading atlas briefs whenever the question is symbol-level or reference-level."""
+Stay in scope. Do not expand the task, refactor unrelated code, or add speculative features. Return a concise summary describing what you changed, which files were touched, and what you verified."""
+
+_VALIDATOR_PROMPT = """You are validator. Verify that the developer's WorkItem is correct and ready to ship. You do NOT edit production code — your job is to exercise it and report truthfully.
+
+Tooling discipline:
+- Use ``code_intelligence`` to inspect symbols, references, and recent changes so you understand what was modified.
+- Use ``sandbox_operations`` in a read/execute capacity: ``daytona_read_file``, ``daytona_bash`` (run tests, linters, type-checkers), ``daytona_lsp_diagnostics``. Do not write production source files; writing scratch/test scaffolding under an explicit temporary path is allowed only when the payload asks for it.
+- Run the required test commands from the payload (or the instance's default test suite). Capture exit codes, failing tests, and any diagnostics verbatim.
+
+Return a concise PASS/FAIL verdict plus the evidence (commands run, failing test names, error snippets). If you find a defect, describe the minimal reproducer — do not attempt to fix it yourself; the planner will schedule a follow-up developer WorkItem."""
 
 _SUBMIT_PLAN_AGENT_PROMPT = """You are submit_plan_agent. Read the work-phase output above and call submit_plan exactly once with a Plan whose items match it.
 
@@ -160,6 +172,7 @@ def register_all() -> None:
             model="inherit",
             max_turns=10,
             toolkits=["code_intelligence", "team_context", "atlas"],
+            skills=["team-planner-playbook"],
             source="builtin",
             posthook=PosthookConfig(
                 agent_name=SUBMIT_PLAN_AGENT,
@@ -184,12 +197,39 @@ def register_all() -> None:
     )
     register_definition(
         AgentDefinition(
-            name=TEAM_WORKER,
-            description="Team-mode worker agent: executes one WorkItem with full toolkit.",
-            system_prompt=_WORKER_PROMPT,
+            name=DEVELOPER,
+            description=(
+                "Team-mode developer agent: reads, writes, and edits code in the "
+                "sandbox to satisfy an atomic coding WorkItem. Verifies changes "
+                "with CI / LSP diagnostics before returning."
+            ),
+            system_prompt=_DEVELOPER_PROMPT,
             model="inherit",
-            max_turns=15,
+            max_turns=20,
             toolkits=["sandbox_operations", "code_intelligence"],
+            skills=["team-developer-playbook"],
+            supported_kinds=["atomic"],
+            source="builtin",
+            posthook=PosthookConfig(
+                agent_name=SUBMIT_SUMMARY_AGENT,
+                metadata_key="submitted_summary",
+            ),
+        )
+    )
+    register_definition(
+        AgentDefinition(
+            name=VALIDATOR,
+            description=(
+                "Team-mode validator agent: runs tests, linters, and diagnostics "
+                "against the developer's output and reports a PASS/FAIL verdict "
+                "with evidence. Does not edit production source."
+            ),
+            system_prompt=_VALIDATOR_PROMPT,
+            model="inherit",
+            max_turns=12,
+            toolkits=["sandbox_operations", "code_intelligence"],
+            skills=["team-validator-playbook"],
+            supported_kinds=["atomic"],
             source="builtin",
             posthook=PosthookConfig(
                 agent_name=SUBMIT_SUMMARY_AGENT,
@@ -208,6 +248,7 @@ def register_all() -> None:
             model="inherit",
             max_turns=15,
             toolkits=["code_intelligence"],
+            skills=["team-scout-playbook"],
             agent_type="subagent",
             tool_call_limit=40,
             posthook=PosthookConfig(
@@ -243,6 +284,7 @@ def register_all() -> None:
             model="inherit",
             max_turns=20,
             toolkits=["code_intelligence", "subagent"],
+            skills=["team-atlas-builder-playbook"],
             source="builtin",
             posthook=PosthookConfig(
                 agent_name=SUBMIT_ATLAS_AGENT,
@@ -261,6 +303,7 @@ def register_all() -> None:
             model="inherit",
             max_turns=15,
             toolkits=["subagent"],
+            skills=["team-atlas-refresher-playbook"],
             source="builtin",
             posthook=PosthookConfig(
                 agent_name=SUBMIT_ATLAS_AGENT,
@@ -269,9 +312,10 @@ def register_all() -> None:
         )
     )
     logger.info(
-        "team builtins registered: %s, %s, %s, %s, %s, %s, %s, %s",
+        "team builtins registered: %s, %s, %s, %s, %s, %s, %s, %s, %s",
         TEAM_PLANNER,
-        TEAM_WORKER,
+        DEVELOPER,
+        VALIDATOR,
         SUBMIT_PLAN_AGENT,
         SUBMIT_SUMMARY_AGENT,
         SCOUT,

@@ -7,6 +7,7 @@ single sandbox. Thread-safe with per-sandbox creation locks.
 
 from __future__ import annotations
 
+import inspect
 import logging
 import threading
 from typing import Any
@@ -187,13 +188,7 @@ class CodeIntelligenceService:
 
             # Write back
             try:
-                if self._sandbox:
-                    self._sandbox.fs.upload_file(
-                        file_path,
-                        patch_result.content.encode("utf-8"),
-                    )
-                else:
-                    Path(file_path).write_text(patch_result.content, encoding="utf-8")
+                self._write_content(file_path, patch_result.content)
             except Exception as exc:
                 return EditResult(
                     success=False,
@@ -243,14 +238,7 @@ class CodeIntelligenceService:
             )
 
         try:
-            if self._sandbox:
-                self._sandbox.fs.upload_file(
-                    file_path,
-                    snapshot.content.encode("utf-8"),
-                )
-            else:
-                from pathlib import Path
-                Path(file_path).write_text(snapshot.content, encoding="utf-8")
+            self._write_content(file_path, snapshot.content)
         except Exception as exc:
             return EditResult(
                 success=False,
@@ -327,6 +315,36 @@ class CodeIntelligenceService:
         """Called when tree cache detects a file change."""
         self.query_router.register_file_change(file_path)
 
+    def _write_content(self, file_path: str, content: str) -> None:
+        """Write content locally or to the attached sandbox."""
+        from pathlib import Path
+
+        if self._sandbox:
+            result = self._sandbox.fs.upload_file(
+                content.encode("utf-8"),
+                file_path,
+            )
+            self._resolve(result)
+            return
+        Path(file_path).write_text(content, encoding="utf-8")
+
+    @staticmethod
+    def _resolve(result: Any) -> Any:
+        """If *result* is awaitable, run it synchronously."""
+        import asyncio
+        import concurrent.futures
+
+        if inspect.isawaitable(result):
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+            if loop and loop.is_running():
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                    return pool.submit(asyncio.run, result).result()
+            return asyncio.run(result)
+        return result
+
 
 # ---------------------------------------------------------------------------
 # Global service registry — per-sandbox singleton management
@@ -343,9 +361,11 @@ def get_code_intelligence(
     sandbox: Any = None,
 ) -> CodeIntelligenceService:
     """Get or create a CI service for a sandbox."""
+    existing: CodeIntelligenceService | None = None
     with _SERVICES_LOCK:
-        if sandbox_id in _SERVICES:
-            return _SERVICES[sandbox_id]
+        existing = _SERVICES.get(sandbox_id)
+        if existing is not None and existing.workspace_root == workspace_root:
+            return existing
         if sandbox_id not in _CREATION_LOCKS:
             _CREATION_LOCKS[sandbox_id] = threading.Lock()
         creation_lock = _CREATION_LOCKS[sandbox_id]
@@ -353,8 +373,14 @@ def get_code_intelligence(
     with creation_lock:
         # Double-check after acquiring creation lock
         with _SERVICES_LOCK:
-            if sandbox_id in _SERVICES:
-                return _SERVICES[sandbox_id]
+            existing = _SERVICES.get(sandbox_id)
+            if existing is not None and existing.workspace_root == workspace_root:
+                return existing
+            if existing is not None:
+                _SERVICES.pop(sandbox_id, None)
+
+        if existing is not None:
+            existing.dispose()
 
         service = CodeIntelligenceService(
             sandbox_id=sandbox_id,

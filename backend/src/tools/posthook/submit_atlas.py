@@ -21,6 +21,7 @@ this module and :mod:`team.atlas`.
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -111,6 +112,17 @@ class SubmitAtlasTool(SubmitPosthookTool):
             if subsystem in seen:
                 return None, f"submit_atlas: duplicate subsystem {subsystem!r} at index {idx}"
             seen.add(subsystem)
+            # Capture snapshot_time BEFORE reading files — this is the
+            # ledger cutoff used by freshness checks. A brief-supplied
+            # value (set by the scout at read-time) is strictly better
+            # because it was taken earlier; we only fall back to "now"
+            # when the scout didn't record one.
+            brief_snapshot = raw.brief.get("snapshot_time") if isinstance(raw.brief, dict) else None
+            snapshot_time = (
+                float(brief_snapshot)
+                if isinstance(brief_snapshot, (int, float)) and brief_snapshot > 0
+                else time.time()
+            )
             target_paths = _target_paths(raw.brief)
             content_hashes = hash_paths_under(target_paths, repo_root)
             symbol_ids = _collect_symbol_ids(context, content_hashes.keys())
@@ -120,6 +132,10 @@ class SubmitAtlasTool(SubmitPosthookTool):
                     brief=dict(raw.brief),
                     content_hashes=content_hashes,
                     symbol_ids=symbol_ids,
+                    snapshot_time=snapshot_time,
+                    # brief_version defaults to time.time_ns() — monotonic
+                    # and unique per call, so concurrent writers cannot
+                    # collide on the version-guarded upsert.
                 )
             )
 

@@ -46,12 +46,12 @@ def test_create_and_get_by_name(store: TeamDefinitionStore) -> None:
     td = store.create(
         name="default",
         planner_agent="team_planner",
-        worker_agents=["team_worker"],
+        worker_agents=["developer", "validator"],
         description="default team",
     )
     assert td.name == "default"
     assert td.planner_agent == "team_planner"
-    assert td.worker_agents == ["team_worker"]
+    assert td.worker_agents == ["developer", "validator"]
     assert td.description == "default team"
     assert td.id  # uuid assigned
 
