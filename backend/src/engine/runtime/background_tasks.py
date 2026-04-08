@@ -243,26 +243,6 @@ class BackgroundTaskManager:
         completed = self.collect_completed()
         return completed[0] if completed else None
 
-    def compact_status(self, max_lines_per_task: int = 5, /) -> str:
-        """Return a compact human-readable summary of all tasks."""
-        if not self._tasks:
-            return "[BACKGROUND TASKS STATUS]\nNo background tasks."
-
-        now = time.monotonic()
-        lines = ["[BACKGROUND TASKS STATUS]"]
-        for tracked in self._tasks.values():
-            elapsed = now - tracked.started_at
-            label = tracked.task_note or tracked.tool_name
-            line = (
-                f"- {label} (task_id: {tracked.task_id}, {elapsed:.0f}s elapsed): {tracked.status}"
-            )
-            lines.append(line)
-            if tracked.progress_lines:
-                tail = tracked.progress_lines[-max_lines_per_task:]
-                for pl in tail:
-                    lines.append(f"  {pl}")
-        return "\n".join(lines)
-
     def append_progress(self, task_id: str, line: str) -> None:
         """Append a live progress line for *task_id*.
 

@@ -160,14 +160,10 @@ def _pick_winners(
     winners: dict[str, _ReductionCandidate] = {}
     for candidate in candidates:
         current = winners.get(candidate.task_id)
-        if current is None:
-            winners[candidate.task_id] = candidate
-            continue
-        if candidate.is_terminal:
-            if not current.is_terminal or candidate.sort_key > current.sort_key:
-                winners[candidate.task_id] = candidate
-            continue
-        if not current.is_terminal and candidate.sort_key > current.sort_key:
+        if current is None or (candidate.is_terminal, candidate.sort_key) > (
+            current.is_terminal,
+            current.sort_key,
+        ):
             winners[candidate.task_id] = candidate
     return winners
 
@@ -175,6 +171,7 @@ def _pick_winners(
 def reduce_for_api(display_messages: list[ConversationMessage]) -> list[ConversationMessage]:
     """Return a reduced provider view that keeps only the latest task state."""
     tool_use_map: dict[str, tuple[int, int, str]] = {}
+    snapshot_tool_use_ids: set[str] = set()
     for msg_idx, msg in enumerate(display_messages):
         if msg.role != "assistant":
             continue
@@ -202,6 +199,7 @@ def reduce_for_api(display_messages: list[ConversationMessage]) -> list[Conversa
             snapshot = _background_snapshot_info(block, tool_use_map)
             if snapshot is None:
                 continue
+            snapshot_tool_use_ids.add(block.tool_use_id)
             for status_idx, status_entry in enumerate(snapshot["statuses"]):
                 task_id = status_entry.get("task_id")
                 status = status_entry.get("status")
@@ -229,41 +227,10 @@ def reduce_for_api(display_messages: list[ConversationMessage]) -> list[Conversa
             continue
         keep_snapshot_statuses.setdefault(winner.tool_use_id, set()).add(winner.status_idx)
 
-    snapshot_plans: dict[str, dict[str, Any] | None] = {}
-    for msg in display_messages:
-        for block in msg.content:
-            if not isinstance(block, ToolResultBlock):
-                continue
-            snapshot = _background_snapshot_info(block, tool_use_map)
-            if snapshot is None:
-                continue
-            keep_idxs = keep_snapshot_statuses.get(block.tool_use_id, set())
-            filtered_statuses = [
-                copy.deepcopy(status_entry)
-                for idx, status_entry in enumerate(snapshot["statuses"])
-                if idx in keep_idxs
-            ]
-            if filtered_statuses:
-                snapshot_plans[block.tool_use_id] = {
-                    "content": render_background_snapshot(
-                        snapshot["kind"],
-                        filtered_statuses,
-                        elapsed_seconds=snapshot["elapsed_seconds"],
-                    ),
-                    "metadata": build_background_snapshot_metadata(
-                        snapshot["kind"],
-                        snapshot["scope"],
-                        filtered_statuses,
-                        elapsed_seconds=snapshot["elapsed_seconds"],
-                    ),
-                }
-            else:
-                snapshot_plans[block.tool_use_id] = None
-
     drop_tool_use_ids = {
         tool_use_id
-        for tool_use_id, plan in snapshot_plans.items()
-        if plan is None
+        for tool_use_id in snapshot_tool_use_ids
+        if not keep_snapshot_statuses.get(tool_use_id)
     }
     reduced: list[ConversationMessage] = []
     for msg_idx, msg in enumerate(display_messages):
@@ -278,13 +245,31 @@ def reduce_for_api(display_messages: list[ConversationMessage]) -> list[Conversa
             if isinstance(block, ToolUseBlock) and block.id in drop_tool_use_ids:
                 continue
 
-            if isinstance(block, ToolResultBlock) and block.tool_use_id in snapshot_plans:
-                plan = snapshot_plans[block.tool_use_id]
-                if plan is None:
+            if isinstance(block, ToolResultBlock):
+                snapshot = _background_snapshot_info(block, tool_use_map)
+                if snapshot is None:
+                    new_content.append(block.model_copy(deep=True))
                     continue
+                keep_idxs = keep_snapshot_statuses.get(block.tool_use_id, set())
+                if not keep_idxs:
+                    continue
+                filtered_statuses = [
+                    copy.deepcopy(status_entry)
+                    for idx, status_entry in enumerate(snapshot["statuses"])
+                    if idx in keep_idxs
+                ]
                 rebuilt = block.model_copy(deep=True)
-                rebuilt.content = plan["content"]
-                rebuilt.metadata = plan["metadata"]
+                rebuilt.content = render_background_snapshot(
+                    snapshot["kind"],
+                    filtered_statuses,
+                    elapsed_seconds=snapshot["elapsed_seconds"],
+                )
+                rebuilt.metadata = build_background_snapshot_metadata(
+                    snapshot["kind"],
+                    snapshot["scope"],
+                    filtered_statuses,
+                    elapsed_seconds=snapshot["elapsed_seconds"],
+                )
                 new_content.append(rebuilt)
                 continue
 

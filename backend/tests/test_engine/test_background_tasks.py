@@ -5,9 +5,7 @@ from __future__ import annotations
 import asyncio
 import time
 
-import pytest
-
-from engine.runtime.background_tasks import BackgroundTaskManager, TrackedBackgroundTask
+from engine.runtime.background_tasks import BackgroundTaskManager
 from message.stream_events import BackgroundTaskStarted
 from tools.core.base import ToolResult
 
@@ -253,37 +251,7 @@ async def test_task_that_raises_exception() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 12. compact_status
-# ---------------------------------------------------------------------------
-
-
-async def test_compact_status() -> None:
-    mgr = BackgroundTaskManager()
-    mgr.launch(
-        task_id="t1",
-        tool_name="alpha",
-        tool_input={},
-        coro=_make_tool_coro(delay=10),
-    )
-    mgr.launch(
-        task_id="t2",
-        tool_name="beta",
-        tool_input={},
-        coro=_make_tool_coro(delay=10),
-    )
-
-    status = mgr.compact_status()
-    assert "alpha" in status
-    assert "beta" in status
-    assert "t1" in status
-    assert "t2" in status
-    assert "running" in status
-
-    await mgr.cancel_all()
-
-
-# ---------------------------------------------------------------------------
-# 13. get_status all
+# 12. get_status all
 # ---------------------------------------------------------------------------
 
 
@@ -317,7 +285,7 @@ async def test_get_status_all() -> None:
 
 
 # ---------------------------------------------------------------------------
-# 14. get_status by id
+# 13. get_status by id
 # ---------------------------------------------------------------------------
 
 

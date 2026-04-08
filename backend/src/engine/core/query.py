@@ -97,8 +97,16 @@ def _deliver_completed_background_task(
     display_messages: list[ConversationMessage],
 ) -> BackgroundTaskCompleted:
     """Append a completion message to *display_messages* and return the event."""
-    output, _ = _format_background_result(task)
-    terminal_status = _terminal_background_status(task)
+    output = task.result.output if task.result else "No output"
+    if task.tool_name != "run_subagent" and len(output) > MAX_OUTPUT_LENGTH:
+        output = (
+            f"[truncated, showing last {MAX_OUTPUT_LENGTH} chars]\n...{output[-MAX_OUTPUT_LENGTH:]}"
+        )
+    terminal_status = "completed"
+    if task.cancel_reason or (task.result and task.result.output.startswith("Cancelled")):
+        terminal_status = "cancelled"
+    elif task.result and task.result.is_error:
+        terminal_status = "failed"
     display_messages.append(
         ConversationMessage(
             role="user",
@@ -143,35 +151,6 @@ def _append_and_emit_reminder(
         text=reminder_msg.background_task_state_text,
         category="background_progress",
     )
-
-
-def _format_background_result(
-    completed_task: TrackedBackgroundTask,
-) -> tuple[str, str]:
-    output = completed_task.result.output if completed_task.result else "No output"
-    # Subagent outputs are the substantive product of delegation — never
-    # truncate them, otherwise the parent has nothing to synthesise from.
-    # Other background tools (shell, etc.) can be noisy, so keep the cap.
-    if completed_task.tool_name != "run_subagent" and len(output) > MAX_OUTPUT_LENGTH:
-        output = (
-            f"[truncated, showing last {MAX_OUTPUT_LENGTH} chars]\n...{output[-MAX_OUTPUT_LENGTH:]}"
-        )
-    status_label = (
-        "ERROR" if (completed_task.result and completed_task.result.is_error) else "COMPLETED"
-    )
-    return output, status_label
-
-
-def _terminal_background_status(
-    completed_task: TrackedBackgroundTask,
-) -> str:
-    if completed_task.cancel_reason or (
-        completed_task.result and completed_task.result.output.startswith("Cancelled")
-    ):
-        return "cancelled"
-    if completed_task.result and completed_task.result.is_error:
-        return "failed"
-    return "completed"
 
 
 def _build_background_reminder(
@@ -494,9 +473,11 @@ async def _run_query_loop(
                 event = _deliver_completed_background_task(completed_task, display_messages)
                 yield event, None
             else:
-                display_messages.append(
-                    ConversationMessage.from_user_text(background_manager.compact_status())
+                reminder_event = _append_and_emit_reminder(
+                    background_manager, display_messages
                 )
+                if reminder_event is not None:
+                    yield reminder_event, None
             continue
 
         for started in executor.get_started_events():
