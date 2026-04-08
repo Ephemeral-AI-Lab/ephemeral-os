@@ -24,13 +24,17 @@ from compaction import SessionState, compact_for_api
 from compaction.compactor import (
     AUTOCOMPACT_BUFFER_TOKENS,
     get_autocompact_threshold,
+    reduce_for_api,
 )
 from engine.core.query import _build_background_reminder
 from engine.runtime.background_tasks import BackgroundTaskManager
 from message.messages import (
+    BackgroundTaskStateBlock,
     ConversationMessage,
     SystemReminderBlock,
     TextBlock,
+    ToolResultBlock,
+    ToolUseBlock,
 )
 from providers.types import (
     ApiMessageCompleteEvent,
@@ -38,6 +42,10 @@ from providers.types import (
     UsageSnapshot,
 )
 from tools.core.base import ToolResult
+from tools.builtins.background._common import (
+    build_background_snapshot_metadata,
+    render_background_snapshot,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -197,22 +205,21 @@ class TestBuildBackgroundReminder:
 
         msg = _build_background_reminder(mgr)
         assert msg is not None
-        # Reminder is a SystemReminderBlock, NOT a TextBlock — .text is empty.
+        # Reminder is carried as a BackgroundTaskStateBlock, not user text.
         assert msg.text == ""
-        reminder_text = msg.system_reminder_text
+        reminder_text = msg.background_task_state_text
         assert "bg_1" in reminder_text
         assert "long sleep" in reminder_text
         assert "halfway there" in reminder_text
-        # Wire serialization wraps the body in <system-reminder> tags.
-        assert msg.system_reminders[0].category == "background_progress"
+        assert msg.background_task_states[0].status == "running"
         api_param = msg.to_api_param()
-        assert "<system-reminder>" in api_param["content"][0]["text"]
+        assert "<background-task" in api_param["content"][0]["text"]
 
         # Cursor advanced — second call has no new lines.
         msg2 = _build_background_reminder(mgr)
         assert msg2 is not None
-        assert "halfway there" not in msg2.system_reminder_text
-        assert "No new output" in msg2.system_reminder_text
+        assert "halfway there" not in msg2.background_task_state_text
+        assert "No new output" in msg2.background_task_state_text
 
         await mgr.cancel_all()
 
@@ -235,10 +242,10 @@ class TestBuildBackgroundReminder:
 
         assert len(display) == 2
         assert display[1].role == "user"
-        # The reminder lives as a SystemReminderBlock — not a TextBlock — so
+        # The reminder lives as a BackgroundTaskStateBlock — not a TextBlock — so
         # display layers can render / filter it distinctly from real user
         # text.
-        assert len(display[1].system_reminders) == 1
+        assert len(display[1].background_task_states) == 1
         assert display[1].text == ""
 
         await mgr.cancel_all()
@@ -457,10 +464,10 @@ class TestCompactForApiState:
         assert result is not display
 
     @pytest.mark.asyncio
-    async def test_preserves_system_reminder_blocks_in_recent_window(
+    async def test_preserves_background_state_blocks_in_recent_window(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A reminder appended to display_messages must survive the
+        """A recent background state must survive the
         compaction round-trip when it falls within preserve_recent."""
         from compaction import compactor as compactor_mod
 
@@ -474,8 +481,13 @@ class TestCompactForApiState:
         reminder_msg = ConversationMessage(
             role="user",
             content=[
-                SystemReminderBlock(
-                    text="bg_1 still running", category="background_progress"
+                BackgroundTaskStateBlock(
+                    task_id="bg_1",
+                    tool_name="run_subagent",
+                    task_type="subagent",
+                    status="running",
+                    source="engine_progress",
+                    text="bg_1 still running",
                 )
             ],
         )
@@ -489,10 +501,64 @@ class TestCompactForApiState:
         )
 
         # The reminder must appear in the compacted output.
-        all_reminders = [r for m in api for r in m.system_reminders]
+        all_reminders = [r for m in api for r in m.background_task_states]
         assert any(
             "bg_1 still running" in r.text for r in all_reminders
         ), f"Reminder lost in compaction. api content: {[m.model_dump() for m in api]}"
+
+    def test_reduce_for_api_drops_stale_snapshot_pairs_but_not_display_history(self) -> None:
+        display = [
+            ConversationMessage(
+                role="assistant",
+                content=[
+                    ToolUseBlock(id="toolu_1", name="check_background_progress", input={"task_id": "all"})
+                ],
+            ),
+            ConversationMessage(
+                role="user",
+                content=[
+                    ToolResultBlock(
+                        tool_use_id="toolu_1",
+                        content=render_background_snapshot(
+                            "progress",
+                            [{"task_id": "bg_1", "status": "running", "output": "old"}],
+                        ),
+                        metadata=build_background_snapshot_metadata(
+                            "progress",
+                            "all",
+                            [{"task_id": "bg_1", "status": "running", "output": "old"}],
+                        ),
+                    )
+                ],
+            ),
+            ConversationMessage(
+                role="user",
+                content=[
+                    BackgroundTaskStateBlock(
+                        task_id="bg_1",
+                        tool_name="run_subagent",
+                        task_type="subagent",
+                        status="completed",
+                        source="engine_terminal",
+                        text="done",
+                    )
+                ],
+            ),
+        ]
+        snapshot = copy.deepcopy(display)
+
+        api = reduce_for_api(display)
+
+        assert display == snapshot
+        assert any(
+            isinstance(block, ToolUseBlock) and block.id == "toolu_1"
+            for msg in display
+            for block in msg.content
+        )
+        assert all(
+            not any(isinstance(block, ToolUseBlock) and block.id == "toolu_1" for block in msg.content)
+            for msg in api
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -519,7 +585,7 @@ class TestBuildReminderEdgeCases:
 
         msg = _build_background_reminder(mgr)
         assert msg is not None
-        text = msg.system_reminder_text
+        text = msg.background_task_state_text
         assert "bg_1" in text and "first task" in text and "alpha" in text
         assert "bg_2" in text and "second task" in text and "beta" in text
 
@@ -544,7 +610,7 @@ class TestBuildReminderEdgeCases:
 
         msg = _build_background_reminder(mgr)
         assert msg is not None
-        text = msg.system_reminder_text
+        text = msg.background_task_state_text
         assert "bg_running" in text
         assert "bg_done" not in text, "completed task should be filtered out"
 
@@ -567,7 +633,7 @@ class TestBuildReminderEdgeCases:
         # Cursor advanced — second call has nothing new.
         second = _build_background_reminder(mgr)
         assert second is not None
-        assert "No new output" in second.system_reminder_text
+        assert "No new output" in second.background_task_state_text
 
         await mgr.cancel_all()
 
