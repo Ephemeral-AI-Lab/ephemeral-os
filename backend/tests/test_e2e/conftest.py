@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import sys
 import time
 import types
@@ -71,6 +72,10 @@ from providers import (
     ApiThinkingDeltaEvent,
     UsageSnapshot,
 )
+from prompts import build_runtime_system_prompt
+from token_tracker.runtime import persist_run_usage
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -113,6 +118,370 @@ def create_eval_agent(
     )
 
 
+def _ensure_eval_agent_db_ready(settings) -> None:
+    """Initialise all DB-backed stores the live eval harness depends on."""
+    try:
+        from db.engine import initialize_db
+        from server.app_factory import (
+            agent_run_store,
+            model_store,
+            session_store,
+            usage_store,
+        )
+
+        needs_init = (
+            not model_store.is_available
+            or any(
+                not store.is_ready
+                for store in (agent_run_store, session_store)
+            )
+            or not _usage_store_ready(usage_store)
+        )
+        if not needs_init or not settings.database.url:
+            return
+
+        sf = initialize_db(settings.database)
+        if sf is None:
+            return
+
+        if not model_store.is_available:
+            model_store.initialize(sf)
+        if not agent_run_store.is_ready:
+            agent_run_store.initialize(sf)
+        if not session_store.is_ready:
+            session_store.initialize(sf)
+        if not _usage_store_ready(usage_store):
+            usage_store.initialize(sf)
+    except Exception as exc:
+        logger.debug("[tests.test_e2e] EvalAgent DB bootstrap unavailable: %s", exc)
+
+
+def _extract_new_messages(display_messages, prompt: str) -> list[dict[str, Any]]:
+    for i in range(len(display_messages) - 1, -1, -1):
+        msg = display_messages[i]
+        if msg.role == "user" and msg.text.strip() == prompt.strip():
+            return [m.model_dump(mode="json") for m in display_messages[i:]]
+    return [m.model_dump(mode="json") for m in display_messages]
+
+
+def _usage_store_ready(store: Any) -> bool:
+    return getattr(store, "_session_factory", None) is not None
+
+
+def _persist_eval_agent_artifacts(agent: EvalAgent, prompt: str, result: Any | None = None) -> None:
+    """Mirror the server router's post-run persistence for live eval runs."""
+    try:
+        from server.app_factory import agent_run_store, session_store, usage_store
+    except Exception:
+        return
+
+    session_config = getattr(agent, "_session_config", None)
+    if session_config is None:
+        return
+
+    display_messages = list(getattr(agent, "_display_messages", []) or [])
+    api_messages = list(agent._query_context.api_messages_snapshot or [])
+    session_id = getattr(session_config, "session_id", None)
+    if not session_id:
+        return
+
+    full_history = list(getattr(agent, "_e2e_full_history", []) or [])
+    if not full_history and session_store.is_ready:
+        try:
+            record = session_store.get(session_id)
+            if record and record.full_message_history:
+                full_history = list(record.full_message_history)
+        except Exception:
+            logger.debug("[tests.test_e2e] Failed to bootstrap full history", exc_info=True)
+
+    new_messages = _extract_new_messages(display_messages, prompt)
+    if new_messages:
+        full_history.extend(new_messages)
+    setattr(agent, "_e2e_full_history", full_history)
+
+    tool_metadata = getattr(agent._query_context, "tool_metadata", None)
+    run_id = getattr(tool_metadata, "agent_run_id", None)
+
+    if run_id and agent_run_store.is_ready:
+        record = agent_run_store.get_run(run_id)
+        event_count = getattr(record, "event_count", 0) if record else 0
+        status = getattr(record, "status", "completed") if record else "completed"
+        error = getattr(record, "error", None) if record else None
+        cancellation_reason = getattr(record, "cancellation_reason", None) if record else None
+        agent_name = getattr(getattr(agent, "_agent", None), "agent_name", "eval_agent")
+        agent_run_store.finish_run(
+            run_id,
+            status=status,
+            response=new_messages or None,
+            message_history=[m.model_dump(mode="json") for m in display_messages] or None,
+            compacted_history=[m.model_dump(mode="json") for m in api_messages] or None,
+            reasoning=(
+                getattr(result, "thinking_text", "") or getattr(agent, "_e2e_reasoning", None)
+            ),
+            error=error,
+            event_count=event_count,
+            cancellation_reason=cancellation_reason,
+        )
+
+        usage = getattr(agent, "_e2e_total_usage", None) or getattr(
+            getattr(agent, "_agent", None), "total_usage", None
+        )
+        if _usage_store_ready(usage_store) and usage_store.get_run_usage(run_id) is None:
+            persist_run_usage(
+                usage_store=usage_store,
+                session_id=session_id,
+                run_id=run_id,
+                agent_name=agent_name,
+                model_id=agent.model,
+                usage=usage,
+            )
+
+    if session_store.is_ready:
+        try:
+            session_store.upsert(
+                session_id=session_id,
+                cwd=getattr(session_config, "cwd", "."),
+                model=agent.model,
+                system_prompt=build_runtime_system_prompt(
+                    agent.settings,
+                    cwd=getattr(session_config, "cwd", "."),
+                    latest_user_prompt=prompt,
+                ),
+                messages=[m.model_dump(mode="json") for m in display_messages] or None,
+                full_messages=full_history or None,
+                usage=(
+                    usage.model_dump()
+                    if usage is not None
+                    else None
+                ),
+                session_state=agent._query_context.session_state.to_dict()
+                if agent._query_context.session_state
+                else None,
+                summary=next(
+                    (
+                        m.text.strip()[:80]
+                        for m in display_messages
+                        if m.role == "user" and m.text.strip()
+                    ),
+                    "",
+                ),
+                message_count=len(display_messages),
+            )
+        except Exception:
+            logger.debug("[tests.test_e2e] Failed to persist session artifacts", exc_info=True)
+
+
+def get_eval_persistence(agent: EvalAgent) -> dict[str, Any]:
+    """Return the persisted run/session/usage state for the given eval agent."""
+    from server.app_factory import agent_run_store, session_store, usage_store
+
+    session_config = getattr(agent, "_session_config", None)
+    session_id = getattr(session_config, "session_id", None) if session_config else None
+    tool_metadata = getattr(agent._query_context, "tool_metadata", None)
+    run_id = getattr(tool_metadata, "agent_run_id", None)
+
+    run = agent_run_store.get_run(run_id) if run_id and agent_run_store.is_ready else None
+    subagent_runs = (
+        agent_run_store.list_subagent_runs(run_id)
+        if run_id and agent_run_store.is_ready
+        else []
+    )
+    run_usage = (
+        usage_store.get_run_usage(run_id)
+        if run_id and _usage_store_ready(usage_store)
+        else None
+    )
+    child_usage = (
+        usage_store.get_usage_for_runs([child["id"] for child in subagent_runs])
+        if subagent_runs and _usage_store_ready(usage_store)
+        else {}
+    )
+    for child in subagent_runs:
+        child["usage"] = child_usage.get(child["id"])
+
+    return {
+        "session_id": session_id,
+        "session": session_store.get(session_id) if session_id and session_store.is_ready else None,
+        "session_usage": usage_store.get_session_usage(session_id)
+        if session_id and _usage_store_ready(usage_store)
+        else None,
+        "run_id": run_id,
+        "run": run,
+        "run_usage": run_usage,
+        "subagent_runs": subagent_runs,
+    }
+
+
+if not getattr(EvalAgent, "_tests_e2e_persistence_patched", False):
+    EvalAgent._ensure_db_ready = staticmethod(_ensure_eval_agent_db_ready)
+
+    async def _invoke_with_persistence(self, prompt: str, verbose: bool = True):
+        from agents.run_tracker import AgentRunTracker
+        from engine.core.query import run_query
+        from engine.testing.eval_agent import (
+            EvalResult,
+            ToolCallResult,
+            _estimate_final_context,
+            _truncate,
+        )
+        from message.stream_events import (
+            AssistantTextDelta,
+            AssistantTurnComplete,
+            BackgroundTaskCompleted,
+            BackgroundTaskStarted,
+            SystemNotification,
+            ThinkingDelta,
+            ToolExecutionCompleted,
+            ToolExecutionStarted,
+        )
+        from tools.core.base import ExecutionMetadata
+
+        self._display_messages.clear()
+        self._display_messages.append(ConversationMessage.from_user_text(prompt))
+        start = time.monotonic()
+        events: list[Any] = []
+        tool_calls: list[ToolCallResult] = []
+        thinking_buf: list[str] = []
+        text_buf: list[str] = []
+
+        def _out(msg: str) -> None:
+            if verbose:
+                print(msg, flush=True)
+
+        _out(f"  [EvalAgent] prompt: {_truncate(prompt, 80)}")
+
+        total_usage = UsageSnapshot()
+        compacted_before: int | None = None
+        if self._query_context.session_state is not None:
+            compacted_before = int(self._query_context.session_state.compacted)
+
+        tracker = AgentRunTracker.create(
+            session_id=getattr(self._session_config, "session_id", None),
+            agent_name="eval_agent",
+            input_query=prompt,
+        )
+        run_id = tracker.run_id
+        if run_id is not None:
+            if self._query_context.tool_metadata is None:
+                self._query_context.tool_metadata = ExecutionMetadata()
+            self._query_context.tool_metadata.agent_run_id = run_id
+
+        run_error: str | None = None
+        reasoning_parts: list[str] = []
+        pending_exc: Exception | None = None
+
+        try:
+            messages, event_iter = await run_query(self._query_context, self._display_messages)
+            self._display_messages = messages
+            async for event, usage in event_iter:
+                events.append(event)
+                if usage:
+                    total_usage.input_tokens += usage.input_tokens
+                    total_usage.output_tokens += usage.output_tokens
+
+                if isinstance(event, ThinkingDelta):
+                    thinking_buf.append(event.text)
+                    reasoning_parts.append(event.text)
+                    continue
+                if isinstance(event, AssistantTextDelta):
+                    text_buf.append(event.text)
+                    continue
+
+                if thinking_buf:
+                    _out(f"    [thinking] {_truncate(''.join(thinking_buf), 500)}")
+                    thinking_buf.clear()
+                if text_buf:
+                    _out(f"    [text] {_truncate(''.join(text_buf), 500)}")
+                    text_buf.clear()
+
+                if isinstance(event, ToolExecutionStarted):
+                    _out(
+                        f"    -> tool_start: {event.tool_name}"
+                        f"({_truncate(str(event.tool_input), 120)})"
+                    )
+                elif isinstance(event, ToolExecutionCompleted):
+                    status = "ERROR" if event.is_error else "ok"
+                    _out(
+                        f"    <- tool_done:  {event.tool_name}"
+                        f" [{status}] {event.output}"
+                    )
+                elif isinstance(event, AssistantTurnComplete):
+                    for tb in event.message.tool_uses:
+                        tool_calls.append(ToolCallResult(name=tb.name, input=tb.input))
+                elif isinstance(event, BackgroundTaskStarted):
+                    _out(
+                        f"    >> bg_start:   {event.tool_name}"
+                        f" task_id={event.task_id}"
+                    )
+                elif isinstance(event, BackgroundTaskCompleted):
+                    _out(
+                        f"    << bg_done:    {event.tool_name}"
+                        f" {_truncate(event.output, 120)}"
+                    )
+                elif isinstance(event, SystemNotification):
+                    _out(f"    [system] {_truncate(event.text, 200)}")
+        except Exception as exc:
+            run_error = str(exc)
+            pending_exc = exc
+        finally:
+            if thinking_buf:
+                _out(f"    [thinking] {_truncate(''.join(thinking_buf), 500)}")
+            if text_buf:
+                _out(f"    [text] {_truncate(''.join(text_buf), 500)}")
+
+            self._e2e_total_usage = total_usage
+            self._e2e_reasoning = "".join(reasoning_parts) if reasoning_parts else None
+
+            tracker.finish(
+                status="failed" if run_error else "completed",
+                display_messages=list(self._display_messages),
+                api_messages_snapshot=self._query_context.api_messages_snapshot,
+                response=_extract_new_messages(self._display_messages, prompt) or None,
+                reasoning=self._e2e_reasoning,
+                error=run_error,
+                event_count=len(events),
+            )
+
+            try:
+                _persist_eval_agent_artifacts(self, prompt, result=None)
+            except Exception:
+                logger.debug(
+                    "[tests.test_e2e] Failed to persist eval artifacts after invoke",
+                    exc_info=True,
+                )
+
+        if pending_exc is not None:
+            raise pending_exc
+
+        latency_ms = (time.monotonic() - start) * 1000
+        compaction_note = ""
+        st = self._query_context.session_state
+        if st is not None and compacted_before is not None:
+            new_compactions = int(st.compacted) - compacted_before
+            compaction_note = (
+                f", compactions={'+1' if new_compactions > 0 else '0'}"
+                f" (compacted={st.compacted})"
+            )
+        _out(
+            f"  [EvalAgent] done: {len(tool_calls)} tool calls, "
+            f"{latency_ms:.0f}ms, "
+            f"tokens in={total_usage.input_tokens} out={total_usage.output_tokens} "
+            f"total={total_usage.total_tokens}, "
+            f"final_context={_estimate_final_context(self._query_context.api_messages_snapshot)}"
+            f"{compaction_note}"
+        )
+
+        result = EvalResult(
+            events=events,
+            tool_calls=tool_calls,
+            latency_ms=latency_ms,
+        )
+        return result
+
+    EvalAgent.invoke = _invoke_with_persistence
+    EvalAgent._tests_e2e_persistence_patched = True
+
+
 # ---------------------------------------------------------------------------
 # Backward-compat: credential constants used by tests not yet refactored.
 # These will be removed as tests migrate to EvalAgent.create().
@@ -138,14 +507,16 @@ try:
             agent_run_store as _ars,
             model_store as _ms,
             session_store as _ss,
+            usage_store as _us,
         )
 
         # Initialise *all* DB-backed singletons up front so EvalAgent-driven
         # tests (and the local factories that bypass EvalAgent.create()) get
         # the same persistence setup the production server bootstrap provides.
-        # Without this, run_subagent silently drops agent_run rows because the
-        # store is unready at tool-call time.
-        if not _ms.is_available or not _ars.is_ready or not _ss.is_ready:
+        # Without this, run_subagent usage and compacted session artifacts can
+        # be dropped because the corresponding stores are unready at tool-call
+        # or post-run persistence time.
+        if not _ms.is_available or not _ars.is_ready or not _ss.is_ready or not _usage_store_ready(_us):
             _sf = _idb(_s.database)
             if _sf:
                 if not _ms.is_available:
@@ -154,6 +525,8 @@ try:
                     _ars.initialize(_sf)
                 if not _ss.is_ready:
                     _ss.initialize(_sf)
+                if not _usage_store_ready(_us):
+                    _us.initialize(_sf)
         if _ms.is_available:
             _active = _ms.get_active_resolved()
             if _active:
@@ -419,6 +792,23 @@ def mock_api_client():
         )
     )
     return client
+
+
+@pytest.fixture()
+def override_compaction_threshold(monkeypatch):
+    """Temporarily override the auto-compaction threshold for targeted tests."""
+
+    def _apply(threshold: int) -> None:
+        monkeypatch.setattr(
+            "compaction.compactor.get_autocompact_threshold",
+            lambda _model: threshold,
+        )
+        monkeypatch.setattr(
+            "compaction.get_autocompact_threshold",
+            lambda _model: threshold,
+        )
+
+    return _apply
 
 
 # ---------------------------------------------------------------------------

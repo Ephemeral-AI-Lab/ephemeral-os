@@ -37,6 +37,7 @@ LIVE_TESTS=(
     test_bg_long_suite_live.py          # Long suite with early cancel iterations
     test_bg_live_tail.py                # Live progress tail via on_progress_line
     test_subagent_complex_live.py       # Complex subagent fan-out/refinement/recovery
+    test_eval_persistence_live.py       # EvalAgent persistence parity
     test_live_api.py                    # Live API integration
     test_live_full_run.py               # Complete agent run with metrics
     test_live_sandbox_agents.py         # Sandbox tool calling
@@ -54,6 +55,7 @@ MOCK_TESTS=(
     test_daytona_toolkit_comprehensive.py # Daytona toolkit unit tests
     test_multi_tool_e2e.py              # Multi-tool execution
     test_tool_cancel_e2e.py             # Tool cancellation
+    test_token_tracker_e2e.py           # Token tracking persistence/API
     test_minimax_agent.py               # MiniMax agent (server-based)
     test_anthropic_native_agent.py      # Anthropic native agent (server-based)
     test_agentic_loop_e2e.py            # Agentic loop (server-based)
