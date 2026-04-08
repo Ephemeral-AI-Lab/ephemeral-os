@@ -343,6 +343,113 @@ async def _remote_query_symbols(
             break
 
     deduped = _dedupe_matches(collected)
+    if deduped:
+        return deduped
+    return await _remote_query_symbols_via_python(
+        sandbox=sandbox,
+        target=target,
+        query=query,
+        kind=kind,
+    )
+
+
+async def _remote_query_symbols_via_python(
+    *,
+    sandbox: Any,
+    target: str,
+    query: str,
+    kind: str = "",
+) -> list[dict[str, Any]] | None:
+    """Portable remote fallback when ripgrep is unavailable in the sandbox."""
+    specs = _build_fallback_specs(query, kind=kind)
+    if not specs:
+        return None
+
+    payload = json.dumps(
+        {
+            "root": target,
+            "patterns": [{"pattern": spec.pattern, "kind": spec.kind} for spec in specs],
+            "skip_dirs": sorted(SKIP_DIRECTORIES),
+            "extensions": sorted(SUPPORTED_EXTENSIONS),
+            "limit": _SYMBOL_FALLBACK_LIMIT,
+        }
+    )
+    script = """
+import json
+import os
+import re
+import sys
+
+payload = json.loads(sys.argv[1])
+root = payload["root"]
+patterns = [(re.compile(item["pattern"]), item["kind"]) for item in payload["patterns"]]
+skip_dirs = set(payload["skip_dirs"])
+extensions = tuple(payload["extensions"])
+limit = int(payload["limit"])
+matches = []
+
+for dirpath, dirnames, filenames in os.walk(root):
+    dirnames[:] = [name for name in dirnames if name not in skip_dirs]
+    for filename in filenames:
+        if not filename.endswith(extensions):
+            continue
+        path = os.path.join(dirpath, filename)
+        try:
+            with open(path, encoding="utf-8") as handle:
+                for lineno, line in enumerate(handle, start=1):
+                    for pattern, match_kind in patterns:
+                        if pattern.search(line):
+                            matches.append(
+                                {
+                                    "file": path,
+                                    "line": lineno,
+                                    "kind": match_kind,
+                                    "snippet": line.strip()[:200],
+                                }
+                            )
+                            break
+                    if len(matches) >= limit:
+                        break
+        except Exception:
+            continue
+        if len(matches) >= limit:
+            break
+    if len(matches) >= limit:
+        break
+
+print(json.dumps(matches))
+"""
+    command = f"python -c {shlex.quote(script)} {shlex.quote(payload)}"
+    try:
+        response = await sandbox.process.exec(command, timeout=30)
+    except Exception:
+        logger.debug("Remote python symbol query failed for %s", query, exc_info=True)
+        return None
+
+    exit_code = getattr(response, "exit_code", 0)
+    output = (getattr(response, "result", "") or "").strip()
+    if exit_code != 0 or not output:
+        return None
+    try:
+        raw_matches = json.loads(output)
+    except Exception:
+        logger.debug("Remote python symbol query produced invalid JSON for %s", query)
+        return None
+
+    collected: list[dict[str, Any]] = []
+    for item in raw_matches:
+        snippet = str(item.get("snippet") or "")
+        matched_kind = str(item.get("kind") or "text_match")
+        collected.append(
+            {
+                "name": _extract_match_name(snippet, query=query, kind=matched_kind),
+                "kind": matched_kind,
+                "file": str(item.get("file") or ""),
+                "line": int(item.get("line") or 0),
+                "signature": snippet[:200],
+            }
+        )
+    deduped = _dedupe_matches(collected)
     return deduped or None
 
 
