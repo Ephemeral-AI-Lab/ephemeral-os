@@ -4,15 +4,23 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+from datetime import datetime
 from typing import Any, Callable
 
 from team.artifacts.store import InMemoryArtifactStore
 from team.atlas.identity import project_key_for
 from team.context.project import ProjectContext
+from team.persistence.events import (
+    make_team_run_created,
+    make_team_run_status,
+)
+from team.persistence.run_store import NullTeamRunStore, TeamRunStore, build_default_store
 from team.models import (
+    Briefing,
     BudgetConfig,
     BudgetState,
+    DependencyArtifact,
     TeamDefinition,
     TeamRunStatus,
     WorkItem,
@@ -32,6 +40,7 @@ class TeamRuntimeServices:
     project_context: ProjectContext
     artifact_store: InMemoryArtifactStore
     dispatcher: Dispatcher
+    event_store: TeamRunStore
 
 
 def build_team_runtime_services(
@@ -42,8 +51,14 @@ def build_team_runtime_services(
     user_request: str,
     goal: str | None = None,
     repo_root: str | None = None,
+    event_store: TeamRunStore | None = None,
 ) -> TeamRuntimeServices:
-    """Build the default in-memory runtime collaborators for a TeamRun."""
+    """Build the default in-memory runtime collaborators for a TeamRun.
+
+    ``event_store`` is an optional durable event sink; when omitted the
+    factory consults ``EPHEMERALOS_TEAM_RUN_DIR`` (jsonl) and falls back
+    to ``NullTeamRunStore``. Pass an explicit store in tests.
+    """
     project_context = ProjectContext(
         goal=goal or user_request,
         user_request=user_request,
@@ -51,16 +66,19 @@ def build_team_runtime_services(
         project_key=project_key_for(repo_root),
     )
     artifact_store = InMemoryArtifactStore(budgets, budget_state)
+    store = event_store if event_store is not None else build_default_store()
     dispatcher = Dispatcher(
         team_run_id=team_run_id,
         budgets=budgets,
         budget_state=budget_state,
         artifact_store=artifact_store,
+        event_store=store,
     )
     return TeamRuntimeServices(
         project_context=project_context,
         artifact_store=artifact_store,
         dispatcher=dispatcher,
+        event_store=store,
     )
 
 
@@ -94,6 +112,9 @@ class TeamRun:
         self.project_context = runtime_services.project_context
         self.artifacts = runtime_services.artifact_store
         self.dispatcher = runtime_services.dispatcher
+        self.event_store: TeamRunStore = getattr(
+            runtime_services, "event_store", NullTeamRunStore()
+        )
         self.cancel_event = asyncio.Event()
         self.root_work_item_id: str | None = None
         self._executor_tasks: list[asyncio.Task[None]] = []
@@ -122,8 +143,21 @@ class TeamRun:
         )
         root.root_id = root.id
         self.root_work_item_id = root.id
+        # Durable record of the run *before* any work items exist so a
+        # crash during dispatch still leaves a recoverable header.
+        self.event_store.append(
+            make_team_run_created(
+                self.id,
+                session_id=self.session_id,
+                user_request=self.user_request,
+                goal=None,
+                repo_root=self.project_context.repo_root,
+                budgets=asdict(self.budgets),
+            )
+        )
         await self.dispatcher.add_work_item(root)
         self.status = TeamRunStatus.RUNNING
+        self.event_store.append(make_team_run_status(self.id, self.status.value))
         _register_team_run(self)
 
         self._executor_factory = executor_factory
@@ -213,6 +247,7 @@ class TeamRun:
             self.status = TeamRunStatus.CANCELLED
         else:
             self.status = TeamRunStatus.SUCCEEDED
+        self.event_store.append(make_team_run_status(self.id, self.status.value))
 
     async def cancel(self) -> None:
         self.cancel_event.set()
@@ -240,3 +275,165 @@ class TeamRun:
         # Phase 3 — respawn workers so the restored DAG actually drains.
         if self._executor_factory is not None:
             self._spawn_executors()
+
+    # ---- crash recovery --------------------------------------------------
+
+    @classmethod
+    def resume_from(
+        cls,
+        store: TeamRunStore,
+        team_run_id: str,
+    ) -> "TeamRun":
+        """Rehydrate a TeamRun from its durable event log.
+
+        Replays every event emitted for ``team_run_id`` back into a
+        fresh set of runtime objects:
+
+        * ``Dispatcher.graph`` is reconstructed from ``work_item_added``
+          events plus the final ``work_item_status`` seen for each id.
+        * ``InMemoryArtifactStore`` is repopulated from
+          ``artifact_written`` events.
+        * ``BudgetState`` is set from the last ``budget_update`` event
+          (fallback: counted from graph + artifact sizes).
+        * The ready queue is rebuilt to hold every WorkItem that ended
+          up in ``READY`` status at the end of the log.
+
+        The returned TeamRun is **paused**: no executors are running.
+        Callers attach an executor factory via ``start_with_executor``
+        (not implemented here — resume intentionally stops short so the
+        caller can decide whether to finish the run, inspect it, or
+        cancel).
+
+        Raises ``ValueError`` if no events exist for ``team_run_id`` or
+        the log lacks a ``team_run_created`` header.
+        """
+        events = store.load_run(team_run_id)
+        if not events:
+            raise ValueError(f"no events for team_run_id={team_run_id!r}")
+
+        created = next((e for e in events if e.kind == "team_run_created"), None)
+        if created is None:
+            raise ValueError(
+                f"event log for {team_run_id!r} missing team_run_created header"
+            )
+
+        # --- header -----------------------------------------------------
+        meta = created.data
+        budgets_dict = dict(meta.get("budgets") or {})
+        # BudgetConfig has all-defaulted fields; filter unknown keys defensively
+        valid_keys = set(BudgetConfig.__dataclass_fields__.keys())
+        budgets = BudgetConfig(**{k: v for k, v in budgets_dict.items() if k in valid_keys})
+
+        services = build_team_runtime_services(
+            team_run_id=team_run_id,
+            budgets=budgets,
+            budget_state=BudgetState(),
+            user_request=meta.get("user_request") or "",
+            goal=meta.get("goal"),
+            repo_root=meta.get("repo_root") or None,
+            event_store=store,
+        )
+        run = cls(
+            session_id=meta.get("session_id") or "",
+            user_request=meta.get("user_request") or "",
+            budgets=budgets,
+            goal=meta.get("goal"),
+            repo_root=meta.get("repo_root") or None,
+            services=services,
+        )
+        # Override the freshly-minted uuid with the persisted one so the
+        # rehydrated run continues to write to the same event stream.
+        run.id = team_run_id
+        services.dispatcher.team_run_id = team_run_id
+
+        # --- fold events into runtime state -----------------------------
+        graph = services.dispatcher.graph
+        last_budget: tuple[int, int] | None = None
+        final_status: str | None = None
+        root_id: str | None = None
+
+        for ev in events:
+            if ev.kind == "work_item_added":
+                wi = _work_item_from_dict(ev.data["work_item"])
+                graph[wi.id] = wi
+                if wi.depth == 0 and root_id is None:
+                    root_id = wi.id
+            elif ev.kind == "work_item_status":
+                wi = graph.get(ev.data["wi_id"])
+                if wi is None:
+                    continue
+                wi.status = WorkItemStatus(ev.data["status"])
+                for key in ("started_at", "finished_at"):
+                    iso = ev.data.get(key)
+                    if iso:
+                        setattr(wi, key, datetime.fromisoformat(iso))
+                if "agent_run_id" in ev.data:
+                    wi.agent_run_id = ev.data["agent_run_id"]
+                if "failure_reason" in ev.data:
+                    wi.failure_reason = ev.data["failure_reason"]
+                if "artifact_ref" in ev.data:
+                    wi.artifact_ref = ev.data["artifact_ref"]
+            elif ev.kind == "artifact_written":
+                # Re-save through the store so size bookkeeping stays
+                # consistent with the live path.
+                try:
+                    services.artifact_store.save(ev.data["wi_id"], ev.data["payload"])
+                except Exception:
+                    pass  # budget exceeded on replay — keep going
+            elif ev.kind == "budget_update":
+                last_budget = (
+                    int(ev.data["work_items_used"]),
+                    int(ev.data["artifact_bytes_used"]),
+                )
+            elif ev.kind == "team_run_status":
+                final_status = ev.data.get("status")
+
+        if last_budget is not None:
+            run.budget_state.work_items_used = last_budget[0]
+            run.budget_state.artifact_bytes_used = last_budget[1]
+        else:
+            run.budget_state.work_items_used = len(graph)
+
+        # Rebuild ready queue from whatever ended up READY.
+        for wi in graph.values():
+            if wi.status == WorkItemStatus.READY:
+                services.dispatcher._ready_queue.put_nowait(wi.id)
+                services.dispatcher._ready_order.append(wi.id)
+
+        run.root_work_item_id = root_id
+        if final_status:
+            try:
+                run.status = TeamRunStatus(final_status)
+            except ValueError:
+                pass
+
+        return run
+
+
+def _work_item_from_dict(data: dict[str, Any]) -> WorkItem:
+    """Inverse of :func:`team.persistence.events.work_item_to_dict`."""
+    def _parse_dt(iso: str | None) -> datetime | None:
+        return datetime.fromisoformat(iso) if iso else None
+
+    return WorkItem(
+        id=data["id"],
+        team_run_id=data["team_run_id"],
+        agent_name=data["agent_name"],
+        status=WorkItemStatus(data["status"]),
+        kind=WorkItemKind(data.get("kind", "atomic")),
+        deps=list(data.get("deps") or []),
+        parent_id=data.get("parent_id"),
+        root_id=data.get("root_id") or "",
+        agent_run_id=data.get("agent_run_id"),
+        payload=dict(data.get("payload") or {}),
+        artifact_ref=data.get("artifact_ref"),
+        timeout_seconds=data.get("timeout_seconds"),
+        depth=int(data.get("depth") or 0),
+        local_id=data.get("local_id"),
+        briefings=[Briefing(**b) for b in (data.get("briefings") or [])],
+        dep_artifacts=[DependencyArtifact(**d) for d in (data.get("dep_artifacts") or [])],
+        created_at=_parse_dt(data.get("created_at")) or datetime.now(),
+        started_at=_parse_dt(data.get("started_at")),
+        finished_at=_parse_dt(data.get("finished_at")),
+        failure_reason=data.get("failure_reason"),
+    )

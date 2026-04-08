@@ -98,11 +98,21 @@ def load_sweevo_instance(
     raise ValueError(f"Instance '{instance_id}' not found. Available: {available}")
 
 
+_BULLET_RE = __import__("re").compile(r"^\s*(?:[-*+]\s+|\d+[.)]\s+)")
+
+
 def count_sweevo_changelog_items(instance: SWEEvoInstance) -> int:
-    """Count markdown bullet items in a SWE-EVO problem statement."""
-    return sum(
-        1 for line in instance.problem_statement.splitlines() if line.lstrip().startswith("-")
-    )
+    """Count changelog items in a SWE-EVO problem statement.
+
+    Recognises both markdown bullets (``-``, ``*``, ``+``) and numbered
+    items (``1.`` / ``1)``). The SWE-EVO dataset mixes both styles — the
+    dvc corpus in particular uses ``N)`` almost exclusively, so a
+    ``-``-only matcher under-counted ~46% of instances and misclassified
+    them all as ``size=small``.
+    """
+    if not instance.problem_statement:
+        return 0
+    return sum(1 for line in instance.problem_statement.splitlines() if _BULLET_RE.match(line))
 
 
 def classify_sweevo_instance_size(bullet_count: int) -> str:

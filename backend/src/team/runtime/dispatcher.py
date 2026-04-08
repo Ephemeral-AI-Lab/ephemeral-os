@@ -25,6 +25,16 @@ from team.models import (
     WorkItemStatus,
     _utcnow,
 )
+from team.persistence.events import (
+    TeamRunEvent,
+    make_artifact_written,
+    make_budget_update,
+    make_checkpoint_taken,
+    make_work_item_added,
+    make_work_item_status,
+    work_item_to_dict,
+)
+from team.persistence.run_store import NullTeamRunStore, TeamRunStore
 from team.planning.validation import validate_plan_phase_b
 from team.runtime.checkpoint import TeamRunCheckpoint
 
@@ -42,6 +52,7 @@ class Dispatcher:
         budget_state: BudgetState,
         artifact_store: "InMemoryArtifactStore",
         max_checkpoints: int = 10,
+        event_store: TeamRunStore | None = None,
     ) -> None:
         self.team_run_id = team_run_id
         self.budgets = budgets
@@ -53,6 +64,33 @@ class Dispatcher:
         self.lock = asyncio.Lock()
         self._checkpoints: deque[TeamRunCheckpoint] = deque(maxlen=max_checkpoints)
         self._checkpoint_seq = 0
+        self._events: TeamRunStore = event_store or NullTeamRunStore()
+
+    # ---- event emission --------------------------------------------------
+
+    def _emit(self, event: TeamRunEvent) -> None:
+        """Append an event to the durable store.
+
+        Called *only* while ``self.lock`` is held so per-run ordering
+        matches the in-memory state machine. The store is expected to be
+        cheap (NullTeamRunStore is free; JsonlTeamRunStore is one fsync).
+        """
+        try:
+            self._events.append(event)
+        except Exception:  # pragma: no cover — don't let persistence kill the run
+            import logging
+            logging.getLogger(__name__).exception(
+                "team event store append failed; continuing in-memory"
+            )
+
+    def _emit_budget(self) -> None:
+        self._emit(
+            make_budget_update(
+                self.team_run_id,
+                work_items_used=self.budget_state.work_items_used,
+                artifact_bytes_used=self.budget_state.artifact_bytes_used,
+            )
+        )
 
     def new_id(self) -> str:
         return str(uuid.uuid4())
@@ -71,6 +109,7 @@ class Dispatcher:
         wi.status = WorkItemStatus.READY
         self._ready_queue.put_nowait(wi.id)
         self._ready_order.append(wi.id)
+        self._emit(make_work_item_status(self.team_run_id, wi.id, "ready"))
 
     def _promote_to_ready(self, wi: WorkItem) -> None:
         """Single chokepoint for PENDING→READY: snapshots dep artifacts, then enqueues.
@@ -111,6 +150,8 @@ class Dispatcher:
                 raise ValueError(f"WorkItem {wi.id} already exists")
             self.graph[wi.id] = wi
             self.budget_state.work_items_used += 1
+            self._emit(make_work_item_added(self.team_run_id, work_item_to_dict(wi)))
+            self._emit_budget()
             if self._compute_readiness(wi):
                 self._promote_to_ready(wi)
 
@@ -137,6 +178,15 @@ class Dispatcher:
             wi.status = WorkItemStatus.RUNNING
             wi.agent_run_id = agent_run_id
             wi.started_at = _utcnow()
+            self._emit(
+                make_work_item_status(
+                    self.team_run_id,
+                    wi_id,
+                    "running",
+                    agent_run_id=agent_run_id,
+                    started_at=wi.started_at.isoformat(),
+                )
+            )
             return wi
 
     async def complete(self, wi_id: str, result: AgentResult) -> list[WorkItem]:
@@ -153,6 +203,7 @@ class Dispatcher:
                 wi.status = WorkItemStatus.FAILED
                 wi.finished_at = _utcnow()
                 wi.failure_reason = "InvalidPlan: expandable work item did not submit a plan"
+                self._emit_failed(wi)
                 self._cascade_cancel(wi_id)
                 return []
 
@@ -170,6 +221,7 @@ class Dispatcher:
                     wi.status = WorkItemStatus.FAILED
                     wi.finished_at = _utcnow()
                     wi.failure_reason = f"InvalidPlan: {e}"
+                    self._emit_failed(wi)
                     self._cascade_cancel(wi_id)
                     return []
                 if (
@@ -179,25 +231,49 @@ class Dispatcher:
                     wi.status = WorkItemStatus.FAILED
                     wi.finished_at = _utcnow()
                     wi.failure_reason = "BudgetExceeded: max_work_items"
+                    self._emit_failed(wi)
                     self._cascade_cancel(wi_id)
                     return []
 
             try:
                 self.artifact_store.save(wi_id, result.artifact)
                 wi.artifact_ref = wi_id
+                self._emit(
+                    make_artifact_written(
+                        self.team_run_id,
+                        wi_id=wi_id,
+                        ref=wi_id,
+                        size=self.artifact_store._sizes.get(wi_id, 0),
+                        payload=result.artifact,
+                    )
+                )
             except ArtifactTooLarge as e:
                 wi.status = WorkItemStatus.FAILED
                 wi.finished_at = _utcnow()
                 wi.failure_reason = f"ArtifactTooLarge: {e}"
+                self._emit_failed(wi)
                 self._cascade_cancel(wi_id)
                 return []
 
             for nwi in new_items:
                 self.graph[nwi.id] = nwi
                 self.budget_state.work_items_used += 1
+                self._emit(make_work_item_added(self.team_run_id, work_item_to_dict(nwi)))
+            if new_items:
+                self._emit_budget()
 
             wi.status = WorkItemStatus.DONE
             wi.finished_at = _utcnow()
+            self._emit(
+                make_work_item_status(
+                    self.team_run_id,
+                    wi_id,
+                    "done",
+                    finished_at=wi.finished_at.isoformat(),
+                    artifact_ref=wi.artifact_ref,
+                )
+            )
+            self._emit_budget()
 
             touched: list[WorkItem] = list(new_items)
             for other in self.graph.values():
@@ -209,6 +285,17 @@ class Dispatcher:
 
         return new_items
 
+    def _emit_failed(self, wi: WorkItem) -> None:
+        self._emit(
+            make_work_item_status(
+                self.team_run_id,
+                wi.id,
+                "failed",
+                finished_at=wi.finished_at.isoformat() if wi.finished_at else None,
+                failure_reason=wi.failure_reason,
+            )
+        )
+
     async def fail(self, wi_id: str, reason: str) -> None:
         async with self.lock:
             wi = self.graph.get(wi_id)
@@ -217,6 +304,7 @@ class Dispatcher:
             wi.status = WorkItemStatus.FAILED
             wi.finished_at = _utcnow()
             wi.failure_reason = reason
+            self._emit_failed(wi)
             self._cascade_cancel(wi_id)
 
     def _cascade_cancel(self, wi_id: str) -> None:
@@ -232,6 +320,15 @@ class Dispatcher:
                         other.status = WorkItemStatus.CANCELLED
                         other.finished_at = _utcnow()
                         other.failure_reason = f"cascaded from {wi_id}"
+                        self._emit(
+                            make_work_item_status(
+                                self.team_run_id,
+                                other.id,
+                                "cancelled",
+                                finished_at=other.finished_at.isoformat(),
+                                failure_reason=other.failure_reason,
+                            )
+                        )
                     stack.append(other.id)
 
     async def cancel_all_pending(self) -> None:
@@ -241,6 +338,15 @@ class Dispatcher:
                     wi.status = WorkItemStatus.CANCELLED
                     wi.finished_at = _utcnow()
                     wi.failure_reason = "team_run cancelled"
+                    self._emit(
+                        make_work_item_status(
+                            self.team_run_id,
+                            wi.id,
+                            "cancelled",
+                            finished_at=wi.finished_at.isoformat(),
+                            failure_reason=wi.failure_reason,
+                        )
+                    )
 
     async def cancel_running(self, reason: str) -> None:
         """Mark any RUNNING items as CANCELLED. Used after a cooperative drain."""
@@ -250,6 +356,15 @@ class Dispatcher:
                     wi.status = WorkItemStatus.CANCELLED
                     wi.finished_at = _utcnow()
                     wi.failure_reason = reason
+                    self._emit(
+                        make_work_item_status(
+                            self.team_run_id,
+                            wi.id,
+                            "cancelled",
+                            finished_at=wi.finished_at.isoformat(),
+                            failure_reason=reason,
+                        )
+                    )
 
     def all_terminal(self) -> bool:
         return all(wi.status in TERMINAL_WI_STATUSES for wi in self.graph.values())
@@ -276,6 +391,14 @@ class Dispatcher:
                 budget_state=copy.deepcopy(self.budget_state),
             )
             self._checkpoints.append(cp)
+            self._emit(
+                make_checkpoint_taken(
+                    self.team_run_id,
+                    checkpoint_id=cp.id,
+                    sequence=cp.sequence,
+                    label=label,
+                )
+            )
             return cp
 
     def list_checkpoints(self) -> list[TeamRunCheckpoint]:
