@@ -75,14 +75,14 @@ class SWEEvoResult:
 
 
 def _normalize_sweevo_image_ref(image_ref: str) -> str:
-    """Add an explicit ``:latest`` tag when an image ref omits tag/digest."""
-    normalized = (image_ref or "").strip()
-    if not normalized:
-        return normalized
-    image_tail = normalized.rsplit("/", 1)[-1]
-    if ":" in image_tail or "@" in image_tail:
-        return normalized
-    return f"{normalized}:latest"
+    """Return the dataset-provided image reference without inventing a tag.
+
+    Daytona snapshot creation rejects ``:latest`` for image-based snapshots.
+    The SWE-EVO dataset often provides repository-only image refs, so we keep
+    them unchanged and let the runtime resolve the registry default rather than
+    forcing a tag that breaks provisioning.
+    """
+    return (image_ref or "").strip()
 
 
 def _truncate_dns_label(name: str, *, limit: int = 63) -> str:

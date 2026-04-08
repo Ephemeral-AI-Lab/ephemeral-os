@@ -112,7 +112,6 @@ class TestAnthropicNativeModelSetup:
             api_key=MINIMAX_ANTHROPIC_KEY,
             model=MINIMAX_ANTHROPIC_MODEL,
             base_url=MINIMAX_ANTHROPIC_BASE_URL,
-            api_format=MINIMAX_ANTHROPIC_FORMAT,
         )
         with c:
             yield c

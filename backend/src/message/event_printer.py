@@ -87,11 +87,16 @@ class MultiAgentEventPrinter:
         tag_width: int = 14,
         truncate: int = 500,
         sink: "Any" = None,
+        timestamps: bool = False,
     ) -> None:
+        import time as _time
+
         self._color = color
         self._tag_width = tag_width
         self._truncate_n = truncate
         self._sink = sink  # callable taking a line; default = print
+        self._timestamps = timestamps
+        self._start = _time.monotonic()
         self._agents: dict[str, _AgentState] = {}
         self._depth: dict[str, int] = {}  # work_id -> depth
         self._work_to_agent: dict[str, str] = {}  # work_id -> agent_name
@@ -195,6 +200,16 @@ class MultiAgentEventPrinter:
             tag = f"[system{':' + event.category if event.category else ''}]"
             self._line(agent, work_id, f"{tag} {_truncate(event.text, 200)}")
 
+    def raw_line(self, agent: str, body: str) -> None:
+        """Print a free-form line with the same column/tag/color treatment.
+
+        Used by callers that don't produce ``StreamEvent``s (e.g. the sweevo
+        CLI tailing pytest output in a sandbox) so the visual style stays
+        consistent with agent-driven runs.
+        """
+        self._flush_buffers(agent)
+        self._line(agent, "", body)
+
     def flush(self) -> None:
         for agent in list(self._agents):
             self._flush_buffers(agent)
@@ -249,10 +264,17 @@ class MultiAgentEventPrinter:
             st.text_buf.clear()
 
     def _line(self, agent: str, work_id: str, body: str) -> None:
+        import time as _time
+
         depth = self._depth.get(work_id, 0) if work_id else 0
         indent = "  " * depth
         tag = self._agent_tag(agent)
-        line = f"{tag} {indent}{body}"
+        if self._timestamps:
+            elapsed = _time.monotonic() - self._start
+            stamp = f"{_DIM}[{elapsed:7.1f}s]{_RESET}" if self._color else f"[{elapsed:7.1f}s]"
+            line = f"{stamp} {tag} {indent}{body}"
+        else:
+            line = f"{tag} {indent}{body}"
         if self._sink is not None:
             self._sink(line)
         else:

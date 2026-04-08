@@ -8,10 +8,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 import threading
 from typing import Any
 
+from sandbox.credentials import load_credentials
 from sandbox.exc import AsyncDaytonaUnavailableError
 
 logger = logging.getLogger(__name__)
@@ -23,12 +23,11 @@ _cached_loop_id: int | None = None
 
 
 def _load_credentials() -> tuple[str, str, str]:
-    api_key = os.environ.get("DAYTONA_API_KEY", "").strip()
-    api_url = os.environ.get("DAYTONA_API_URL", "").strip()
-    target = os.environ.get("DAYTONA_TARGET", "").strip()
+    api_key, api_url, target = load_credentials()
     if not api_key or not api_url:
         raise AsyncDaytonaUnavailableError(
-            "Async Daytona is not configured. Set DAYTONA_API_KEY and DAYTONA_API_URL env vars."
+            "Async Daytona is not configured. Set daytona_api_key/daytona_api_url in settings.json, "
+            "or DAYTONA_API_KEY and DAYTONA_API_URL env vars."
         )
     return api_key, api_url, target
 

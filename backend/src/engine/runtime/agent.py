@@ -79,34 +79,6 @@ class EphemeralAgent:
             await client.aclose()
 
 
-def resolve_active_model(
-    settings: Settings,
-    model_store: Any = None,
-) -> dict[str, Any] | None:
-    """Return the active model's DB kwargs, or ``None`` if unavailable.
-
-    Shared by :func:`spawn_agent` and the eval harness so both paths
-    pick up the same active model (with its api_key, base_url, and
-    client class) instead of duplicating the lookup.
-    """
-    _store = model_store
-    if _store is None:
-        try:
-            from server.app_factory import model_store as default_store
-
-            _store = default_store
-        except Exception as exc:
-            logger.debug("DB model registry unavailable: %s", exc)
-            return None
-
-    if _store is None or not getattr(_store, "is_available", False):
-        return None
-    active = _store.get_active_resolved()
-    if not active:
-        return None
-    return active.get("kwargs")
-
-
 def finalize_tool_registry_and_prompt(
     tool_registry: ToolRegistry,
     system_prompt: str,
@@ -156,25 +128,29 @@ def _resolve_agent_identity(
     config: SessionConfig,
     agent_def: AgentDefinition | None,
     settings: Settings,
-    *,
-    model_store: Any = None,
 ) -> tuple[str, str, Any, dict | None]:
     """Resolve the agent's name, model id, API client, and DB model kwargs.
 
     Returns ``(agent_name, resolved_model, api_client, db_kwargs)``.
     """
-    db_kwargs = resolve_active_model(settings, model_store=model_store)
+    from config.model_config import NoActiveModelError, get_active_model_kwargs
+
+    try:
+        db_kwargs = get_active_model_kwargs()
+    except NoActiveModelError as exc:
+        raise RuntimeError(
+            "No active model registration found — configure a model in the "
+            "model_registrations DB table before spawning agents."
+        ) from exc
 
     # ``model`` on the agent_def can be an explicit id, an ``"inherit"``
     # sentinel meaning "use the session's active model", or absent.
     agent_model = agent_def.model if agent_def else None
     if agent_model and agent_model.strip().lower() == "inherit":
         agent_model = None
-    resolved_model = (
-        agent_model
-        if agent_model
-        else (db_kwargs or {}).get("model") or settings.model
-    )
+    resolved_model = agent_model or db_kwargs.get("model")
+    if not resolved_model:
+        raise RuntimeError("Active model registration has no 'model' id")
     agent_name = agent_def.name if agent_def else resolved_model
 
     # Agents flagged ``require_fresh_client`` (currently: subagents) get
@@ -182,7 +158,6 @@ def _resolve_agent_identity(
     # shared connection pool.
     needs_fresh_client = bool(agent_def and agent_def.require_fresh_client)
     api_client = make_api_client(
-        settings,
         None if needs_fresh_client else config.external_api_client,
         db_kwargs=db_kwargs,
     )
@@ -316,7 +291,6 @@ def spawn_agent(
     latest_user_prompt: str | None = None,
     session_state: SessionState | None = None,
     sandbox_id: str | None = None,
-    model_store: Any = None,
 ) -> EphemeralAgent:
     """Spawn a fresh ephemeral agent with the given session history.
 
@@ -333,9 +307,10 @@ def spawn_agent(
 
     settings = config.resolve_settings()
 
-    agent_name, resolved_model, api_client, _db_kwargs = _resolve_agent_identity(
-        config, agent_def, settings, model_store=model_store
+    agent_name, resolved_model, api_client, db_kwargs = _resolve_agent_identity(
+        config, agent_def, settings
     )
+    max_tokens = int((db_kwargs or {}).get("max_tokens") or 16384)
 
     tool_registry = _build_agent_tool_registry(
         config, agent_def, sandbox_id, agent_name
@@ -368,7 +343,7 @@ def spawn_agent(
         cwd=Path(config.cwd),
         model=resolved_model,
         system_prompt=system_prompt,
-        max_tokens=settings.max_tokens,
+        max_tokens=max_tokens,
         max_turns=max_turns,
         tool_call_limit=tool_call_limit,
         hook_executor=hook_executor,

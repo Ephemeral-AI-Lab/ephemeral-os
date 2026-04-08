@@ -26,7 +26,10 @@ from benchmarks.sweevo.models import (
     _DEFAULT_TARGET_BULLETS,
     _REPO_DIR,
 )
-from benchmarks.sweevo.sandbox import prepare_sweevo_test_run
+
+# MultiAgentEventPrinter and run_sweevo_with_agent are imported lazily inside
+# _cmd_run so that ``--help`` / ``--list`` still work in minimal envs without
+# the full providers dependency tree.
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -53,54 +56,42 @@ def _build_parser() -> argparse.ArgumentParser:
     return p
 
 
-_ANSI = {
-    "reset": "\033[0m",
-    "dim": "\033[2m",
-    "bold": "\033[1m",
-    "red": "\033[31m",
-    "green": "\033[32m",
-    "yellow": "\033[33m",
-    "cyan": "\033[36m",
-    "magenta": "\033[35m",
-}
+_RED = "\033[31m"
+_GREEN = "\033[32m"
+_CYAN = "\033[36m"
+_MAGENTA = "\033[35m"
+_RESET = "\033[0m"
 
 
-def _make_line_printer(*, color: bool) -> "callable":
-    import time as _t
+def _make_pytest_line_forwarder(printer: "Any", *, color: bool) -> "callable":
+    """Return an ``on_line`` callback that forwards pytest stdout through the
+    shared :class:`MultiAgentEventPrinter` via ``raw_line`` under the agent
+    tag ``pytest``. Tracks pass/fail counters for the summary banner.
+    """
+    counts = {"passed": 0, "failed": 0, "errors": 0}
 
-    start = _t.monotonic()
-    passed = 0
-    failed = 0
-    errors = 0
-
-    def c(code: str, text: str) -> str:
-        return f"{_ANSI[code]}{text}{_ANSI['reset']}" if color else text
+    def _tag(label: str, code: str) -> str:
+        return f"{code}{label}{_RESET}" if color else label
 
     def _p(line: str) -> None:
-        nonlocal passed, failed, errors
-        t = _t.monotonic() - start
-        stamp = c("dim", f"[{t:7.1f}s]")
-        tag = "     "
         stripped = line.strip()
+        label = "[test]"
         if stripped.startswith("PASSED") or " PASSED" in stripped:
-            passed += 1
-            tag = c("green", " PASS")
+            counts["passed"] += 1
+            label = _tag("[pass]", _GREEN)
         elif stripped.startswith("FAILED") or " FAILED" in stripped:
-            failed += 1
-            tag = c("red", " FAIL")
+            counts["failed"] += 1
+            label = _tag("[fail]", _RED)
         elif stripped.startswith("ERROR") or " ERROR" in stripped:
-            errors += 1
-            tag = c("red", " ERR ")
+            counts["errors"] += 1
+            label = _tag("[error]", _RED)
         elif stripped.startswith("===") or stripped.startswith("---"):
-            tag = c("cyan", " ----")
+            label = _tag("[info]", _CYAN)
         elif stripped.startswith("collected") or "test session starts" in stripped:
-            tag = c("magenta", " INFO")
-        print(f"{stamp} {tag} {line}", flush=True)
+            label = _tag("[info]", _MAGENTA)
+        printer.raw_line("pytest", f"{label} {line}")
 
-    def summary() -> dict:
-        return {"passed": passed, "failed": failed, "errors": errors}
-
-    _p.summary = summary  # type: ignore[attr-defined]
+    _p.counts = counts  # type: ignore[attr-defined]
     return _p
 
 
@@ -119,16 +110,26 @@ def _cmd_list(source: str) -> int:
 
 
 async def _cmd_run(args: argparse.Namespace) -> int:
-    use_color = (not args.no_color) and sys.stdout.isatty()
-    on_line = None if args.no_stream else _make_line_printer(color=use_color)
+    from message.event_printer import MultiAgentEventPrinter
+    from benchmarks.sweevo.runner import run_sweevo_with_agent
 
-    if not args.no_stream:
+    use_color = (not args.no_color) and sys.stdout.isatty()
+    quiet = args.no_stream
+    printer = MultiAgentEventPrinter(
+        color=use_color and not quiet,
+        timestamps=True,
+        sink=(lambda _line: None) if quiet else None,
+    )
+    on_line = _make_pytest_line_forwarder(printer, color=use_color and not quiet)
+
+    if not quiet:
         header = "=" * 72
         print(header, flush=True)
         print(f"  SWE-EVO run  instance={args.instance_id or f'<auto size={args.size}>'}", flush=True)
         print(header, flush=True)
 
-    result = await prepare_sweevo_test_run(
+    result = await run_sweevo_with_agent(
+        printer=printer,
         source=args.source,
         instance_id=args.instance_id,
         size=args.size,
@@ -146,14 +147,15 @@ async def _cmd_run(args: argparse.Namespace) -> int:
 
     test = result.get("test", {})
     exit_code = test.get("exit_code")
+    counts = on_line.counts  # type: ignore[attr-defined]
 
-    if on_line is not None:
-        summary = on_line.summary()  # type: ignore[attr-defined]
+    if not quiet:
         print("=" * 72, flush=True)
         print(
-            f"  exit_code={exit_code}  "
-            f"passed={summary['passed']}  failed={summary['failed']}  "
-            f"errors={summary['errors']}",
+            f"  agent_events={result.get('agent_events', 0)}  "
+            f"exit_code={exit_code}  "
+            f"passed={counts['passed']}  failed={counts['failed']}  "
+            f"errors={counts['errors']}",
             flush=True,
         )
         print("=" * 72, flush=True)

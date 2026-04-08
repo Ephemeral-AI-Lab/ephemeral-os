@@ -266,10 +266,13 @@ class EvalAgent:
 
     @staticmethod
     def has_credentials() -> bool:
-        """Check if API credentials are available."""
+        """Check if API credentials are available via the active DB model."""
         try:
-            s = load_settings()
-            return bool(s.api_key or s.resolve_api_key())
+            EvalAgent._ensure_db_ready(load_settings())
+            from config.model_config import try_get_active_model_kwargs
+
+            kwargs = try_get_active_model_kwargs() or {}
+            return bool(kwargs.get("api_key"))
         except Exception:
             return False
 
@@ -350,12 +353,19 @@ class EvalAgent:
 
         # Resolve the active model so the test uses the same provider +
         # credentials the server would.
-        from engine.runtime.agent import resolve_active_model, spawn_agent
+        from config.model_config import NoActiveModelError, try_get_active_model_kwargs
+        from engine.runtime.agent import spawn_agent
         from providers.provider import make_api_client
 
-        db_kwargs = resolve_active_model(settings) or {}
-        resolved_model = db_kwargs.get("model") or settings.model
-        api_client = make_api_client(settings, db_kwargs=db_kwargs or None)
+        db_kwargs = try_get_active_model_kwargs() or {}
+        if not db_kwargs:
+            raise NoActiveModelError(
+                "EvalAgent requires an active model_registrations row."
+            )
+        resolved_model = db_kwargs.get("model")
+        if not resolved_model:
+            raise RuntimeError("Active model registration has no 'model' id")
+        api_client = make_api_client(db_kwargs=db_kwargs)
         if db_kwargs:
             logger.info(
                 "[EvalAgent] Using DB model: model=%s", db_kwargs.get("model", "?")

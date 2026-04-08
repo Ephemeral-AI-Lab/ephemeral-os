@@ -15,7 +15,7 @@ from db.models.model_registration import ModelRegistrationRecord
 
 logger = logging.getLogger(__name__)
 
-_SECRET_MARKERS = ("api_key", "token", "secret", "password", "authorization")
+_SECRET_MARKERS = ("api_key", "auth_token", "access_token", "secret", "password", "authorization")
 
 
 def _resolve_env_placeholders(value: Any) -> Any:

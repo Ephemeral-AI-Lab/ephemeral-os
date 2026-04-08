@@ -334,15 +334,10 @@ if not getattr(EvalAgent, "_tests_e2e_persistence_patched", False):
             _truncate,
         )
         from message.stream_events import (
-            AssistantTextDelta,
             AssistantTurnComplete,
-            BackgroundTaskCompleted,
-            BackgroundTaskStarted,
-            SystemNotification,
             ThinkingDelta,
-            ToolExecutionCompleted,
-            ToolExecutionStarted,
         )
+        from message.event_printer import MultiAgentEventPrinter
         from tools.core.base import ExecutionMetadata
 
         self._display_messages.clear()
@@ -350,12 +345,19 @@ if not getattr(EvalAgent, "_tests_e2e_persistence_patched", False):
         start = time.monotonic()
         events: list[Any] = []
         tool_calls: list[ToolCallResult] = []
-        thinking_buf: list[str] = []
-        text_buf: list[str] = []
+        reasoning_parts: list[str] = []
 
         def _out(msg: str) -> None:
             if verbose:
                 print(msg, flush=True)
+
+        # Shared printer — same file used by the sweevo CLI so single-agent
+        # and multi-agent runs produce the same visual format. ``sink=_out``
+        # routes through the existing verbose gate.
+        printer = MultiAgentEventPrinter(
+            color=sys.stdout.isatty(),
+            sink=_out,
+        )
 
         _out(f"  [EvalAgent] prompt: {_truncate(prompt, 80)}")
 
@@ -376,7 +378,6 @@ if not getattr(EvalAgent, "_tests_e2e_persistence_patched", False):
             self._query_context.tool_metadata.agent_run_id = run_id
 
         run_error: str | None = None
-        reasoning_parts: list[str] = []
         pending_exc: Exception | None = None
 
         try:
@@ -388,55 +389,25 @@ if not getattr(EvalAgent, "_tests_e2e_persistence_patched", False):
                     total_usage.input_tokens += usage.input_tokens
                     total_usage.output_tokens += usage.output_tokens
 
+                # Reasoning trace persistence lives outside the printer so
+                # it's available even when verbose=False.
                 if isinstance(event, ThinkingDelta):
-                    thinking_buf.append(event.text)
                     reasoning_parts.append(event.text)
-                    continue
-                if isinstance(event, AssistantTextDelta):
-                    text_buf.append(event.text)
-                    continue
 
-                if thinking_buf:
-                    _out(f"    [thinking] {_truncate(''.join(thinking_buf), 500)}")
-                    thinking_buf.clear()
-                if text_buf:
-                    _out(f"    [text] {_truncate(''.join(text_buf), 500)}")
-                    text_buf.clear()
-
-                if isinstance(event, ToolExecutionStarted):
-                    _out(
-                        f"    -> tool_start: {event.tool_name}"
-                        f"({_truncate(str(event.tool_input), 120)})"
-                    )
-                elif isinstance(event, ToolExecutionCompleted):
-                    status = "ERROR" if event.is_error else "ok"
-                    _out(
-                        f"    <- tool_done:  {event.tool_name}"
-                        f" [{status}] {event.output}"
-                    )
-                elif isinstance(event, AssistantTurnComplete):
+                # tool_calls must be captured for EvalResult regardless of
+                # whether the printer silences the structural event.
+                if isinstance(event, AssistantTurnComplete):
                     for tb in event.message.tool_uses:
                         tool_calls.append(ToolCallResult(name=tb.name, input=tb.input))
-                elif isinstance(event, BackgroundTaskStarted):
-                    _out(
-                        f"    >> bg_start:   {event.tool_name}"
-                        f" task_id={event.task_id}"
-                    )
-                elif isinstance(event, BackgroundTaskCompleted):
-                    _out(
-                        f"    << bg_done:    {event.tool_name}"
-                        f" {_truncate(event.output, 120)}"
-                    )
-                elif isinstance(event, SystemNotification):
-                    _out(f"    [system] {_truncate(event.text, 200)}")
+
+                if verbose:
+                    printer.emit(event)
         except Exception as exc:
             run_error = str(exc)
             pending_exc = exc
         finally:
-            if thinking_buf:
-                _out(f"    [thinking] {_truncate(''.join(thinking_buf), 500)}")
-            if text_buf:
-                _out(f"    [text] {_truncate(''.join(text_buf), 500)}")
+            if verbose:
+                printer.flush()
 
             self._e2e_total_usage = total_usage
             self._e2e_reasoning = "".join(reasoning_parts) if reasoning_parts else None
@@ -555,25 +526,17 @@ try:
 except Exception:
     pass
 
-MINIMAX_KEY = (
-    _DB_MODEL_KWARGS.get("api_key")
-    or os.environ.get("MINIMAX_API_KEY")
-    or _LIVE_SETTINGS.get("api_key", "")
-)
+MINIMAX_KEY = _DB_MODEL_KWARGS.get("api_key") or os.environ.get("MINIMAX_API_KEY") or ""
 MINIMAX_MODEL = (
     _DB_MODEL_KWARGS.get("model")
     or os.environ.get("MINIMAX_MODEL")
-    or _LIVE_SETTINGS.get("model", "MiniMax-M2.7-highspeed")
+    or "MiniMax-M2.7-highspeed"
 )
 MINIMAX_BASE_URL = (
-    _DB_MODEL_KWARGS.get("base_url")
-    or os.environ.get("MINIMAX_BASE_URL")
-    or _LIVE_SETTINGS.get("base_url", "")
+    _DB_MODEL_KWARGS.get("base_url") or os.environ.get("MINIMAX_BASE_URL") or ""
 )
-# Default to anthropic format — all e2e tests use Anthropic-compatible endpoint
-MINIMAX_FORMAT = (
-    _DB_MODEL_KWARGS.get("api_format") or os.environ.get("MINIMAX_API_FORMAT") or "anthropic"
-)
+# All e2e tests use an Anthropic-compatible endpoint.
+MINIMAX_FORMAT = "anthropic"
 
 ANTHROPIC_MINIMAX_KEY = MINIMAX_KEY
 ANTHROPIC_MINIMAX_MODEL = MINIMAX_MODEL
@@ -598,7 +561,6 @@ def make_live_client(
     api_key: str = "",
     model: str = "",
     base_url: str = "",
-    api_format: str = "",
 ):
     """Create a TestClient configured with real API credentials (compat)."""
     from fastapi.testclient import TestClient
@@ -608,7 +570,6 @@ def make_live_client(
     api_key = api_key or MINIMAX_KEY
     model = model or MINIMAX_MODEL
     base_url = base_url or MINIMAX_BASE_URL
-    api_format = api_format or MINIMAX_FORMAT
 
     for _var in ["HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy", "NO_PROXY", "no_proxy"]:
         monkeypatch.delenv(_var, raising=False)
@@ -629,10 +590,6 @@ def make_live_client(
         from config.settings import Settings as _S, DatabaseSettings as _DS
 
         return _S(
-            api_key=api_key,
-            model=model,
-            api_format=api_format,
-            base_url=base_url or None,
             daytona_api_key=DAYTONA_KEY,
             daytona_api_url=DAYTONA_URL,
             daytona_target=DAYTONA_TARGET,
@@ -643,12 +600,29 @@ def make_live_client(
     monkeypatch.setattr("config.settings.load_settings", _patched_load_settings)
     monkeypatch.setattr("server.app_factory.load_settings", _patched_load_settings)
 
-    config = BackendHostConfig(
-        api_key=api_key,
-        model=model,
-        api_format=api_format,
-        base_url=base_url or None,
-    )
+    # Seed active model registration for this test DB so DB-sourced model
+    # resolution finds credentials.
+    def _seed_model(sf):
+        from db.stores.model_store import ModelStore as _MS
+
+        _s = _MS()
+        _s.initialize(sf)
+        _s.register(
+            key="test_minimax",
+            label="test_minimax",
+            class_path="anthropic",
+            kwargs={
+                "model": model,
+                "api_key": api_key,
+                "base_url": base_url or None,
+                "max_tokens": 16384,
+            },
+            activate=True,
+        )
+
+    _seed_model(db_session_factory)
+
+    config = BackendHostConfig()
     app = create_app(config)
     return TestClient(app)
 
@@ -858,8 +832,6 @@ def app_client(db_session_factory, mock_api_client, tmp_path, monkeypatch):
         from config.settings import Settings, DatabaseSettings
 
         return Settings(
-            api_key="test-api-key",
-            model="claude-sonnet-4-20250514",
             database=DatabaseSettings(url=f"sqlite:///{tmp_path / 'test.db'}"),
         )
 
@@ -867,14 +839,28 @@ def app_client(db_session_factory, mock_api_client, tmp_path, monkeypatch):
     monkeypatch.setattr("config.settings.load_settings", _patched_load_settings)
     monkeypatch.setattr("server.app_factory.load_settings", _patched_load_settings)
 
+    # Seed active model registration so DB-based model resolution works.
+    from db.stores.model_store import ModelStore as _MS
+
+    _ms = _MS()
+    _ms.initialize(db_session_factory)
+    _ms.register(
+        key="test_mock",
+        label="test_mock",
+        class_path="anthropic",
+        kwargs={
+            "model": "claude-sonnet-4-20250514",
+            "api_key": "test-api-key",
+            "base_url": None,
+            "max_tokens": 16384,
+        },
+        activate=True,
+    )
+
     from server.protocol import BackendHostConfig
     from server.app_factory import create_app
 
-    config = BackendHostConfig(
-        api_key="test-api-key",
-        model="claude-sonnet-4-20250514",
-        api_client=mock_api_client,
-    )
+    config = BackendHostConfig(api_client=mock_api_client)
     app = create_app(config)
 
     with TestClient(app) as client:

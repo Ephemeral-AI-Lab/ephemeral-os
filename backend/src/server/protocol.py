@@ -14,11 +14,7 @@ from providers.types import SupportsStreamingMessages
 class BackendHostConfig:
     """Configuration for one backend host session."""
 
-    model: str | None = None
-    base_url: str | None = None
     system_prompt: str | None = None
-    api_key: str | None = None
-    api_format: str | None = None
     api_client: SupportsStreamingMessages | None = None
     restore_messages: list[dict] | None = None
 

@@ -15,12 +15,17 @@ def make_hook_executor(
     cwd: str,
     api_client: SupportsStreamingMessages,
 ) -> HookExecutor:
-    """Build a hook executor from settings."""
+    """Build a hook executor from settings + the active model registration."""
+    from config.model_config import try_get_active_model_kwargs
+
+    kwargs = try_get_active_model_kwargs() or {}
+    default_model = str(kwargs.get("model") or "")
+
     return HookExecutor(
         load_hook_registry(settings, []),
         HookExecutionContext(
             cwd=Path(cwd).resolve(),
             api_client=api_client,
-            default_model=settings.model,
+            default_model=default_model,
         ),
     )

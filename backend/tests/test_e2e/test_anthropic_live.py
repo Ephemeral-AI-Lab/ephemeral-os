@@ -230,9 +230,14 @@ async def test_usage_reported(client, model):
 
 @pytest.mark.skipif(not HAS_CREDENTIALS, reason="No credentials")
 def test_provider_routing(agent):
-    """make_api_client returns AnthropicClient when api_format='anthropic'."""
-    if agent.settings.api_format != "anthropic":
-        pytest.skip("api_format is not 'anthropic'")
+    """make_api_client returns AnthropicClient for the DB active model."""
+    from db.stores.model_store import ModelStore as _MS  # noqa: F401
+    from server.app_factory import model_store
+
+    active = model_store.get_active(redact=False) if model_store.is_available else None
+    class_path = (active or {}).get("class_path", "")
+    if "anthropic" not in class_path.lower():
+        pytest.skip(f"active model class_path is not anthropic: {class_path!r}")
 
     assert isinstance(agent.api_client, AnthropicClient), (
         f"Expected AnthropicClient, got {type(agent.api_client).__name__}"

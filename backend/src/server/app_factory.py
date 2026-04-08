@@ -54,12 +54,7 @@ class SessionConfig:
 
     cwd: str
     session_id: str
-    # CLI overrides (take precedence over settings.json)
-    model_override: str | None = None
-    base_url_override: str | None = None
     system_prompt_override: str | None = None
-    api_key_override: str | None = None
-    api_format_override: str | None = None
     # If an external API client was injected, store it for reuse
     external_api_client: SupportsStreamingMessages | None = None
     # Messages to restore on first spawn (from session restore)
@@ -68,21 +63,13 @@ class SessionConfig:
     def resolve_settings(self) -> Settings:
         """Load settings and apply any CLI overrides."""
         return load_settings().merge_cli_overrides(
-            model=self.model_override,
-            base_url=self.base_url_override,
             system_prompt=self.system_prompt_override,
-            api_key=self.api_key_override,
-            api_format=self.api_format_override,
         )
 
 
 def build_session_config(
     *,
-    model: str | None = None,
-    base_url: str | None = None,
     system_prompt: str | None = None,
-    api_key: str | None = None,
-    api_format: str | None = None,
     api_client: SupportsStreamingMessages | None = None,
     restore_messages: list[dict] | None = None,
 ) -> SessionConfig:
@@ -92,11 +79,7 @@ def build_session_config(
     return SessionConfig(
         cwd=str(Path.cwd()),
         session_id=uuid4().hex[:12],
-        model_override=model,
-        base_url_override=base_url,
         system_prompt_override=system_prompt,
-        api_key_override=api_key,
-        api_format_override=api_format,
         external_api_client=api_client,
         _initial_messages=restore_messages,
     )
@@ -124,11 +107,7 @@ class SessionState:
 
     async def initialize(self, host_config: BackendHostConfig) -> None:
         self.config = build_session_config(
-            model=host_config.model,
-            base_url=host_config.base_url,
             system_prompt=host_config.system_prompt,
-            api_key=host_config.api_key,
-            api_format=host_config.api_format,
             api_client=host_config.api_client,
             restore_messages=host_config.restore_messages,
         )
@@ -353,21 +332,13 @@ class WebServer:
         host: str = "127.0.0.1",
         port: int = 8420,
         *,
-        model: str | None = None,
-        base_url: str | None = None,
         system_prompt: str | None = None,
-        api_key: str | None = None,
-        api_format: str | None = None,
         restore_messages: list[dict] | None = None,
     ) -> None:
         self.host = host
         self.port = port
         self._config = BackendHostConfig(
-            model=model,
-            base_url=base_url,
             system_prompt=system_prompt,
-            api_key=api_key,
-            api_format=api_format,
             restore_messages=restore_messages,
         )
 

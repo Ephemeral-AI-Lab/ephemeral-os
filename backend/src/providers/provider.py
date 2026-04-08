@@ -5,7 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from config.settings import Settings
 from providers.types import SupportsStreamingMessages
 
 
@@ -19,86 +18,68 @@ class ProviderInfo:
     voice_reason: str
 
 
-def detect_provider(settings: Settings) -> ProviderInfo:
-    """Infer the active provider and rough capability set."""
-    base_url = (settings.base_url or "").lower()
-    model = settings.model.lower()
-    if "moonshot" in base_url or model.startswith("kimi"):
-        return ProviderInfo(
-            name="moonshot-anthropic-compatible",
-            auth_kind="api_key",
-            voice_supported=False,
-            voice_reason="voice mode requires a Claude.ai-style authenticated voice backend",
-        )
-    if "dashscope" in base_url or model.startswith("qwen"):
-        return ProviderInfo(
-            name="dashscope-openai-compatible",
-            auth_kind="api_key",
-            voice_supported=False,
-            voice_reason="voice mode is not supported for DashScope providers",
-        )
-    if "models.inference.ai.azure.com" in base_url or "github" in base_url:
-        return ProviderInfo(
-            name="github-models-openai-compatible",
-            auth_kind="api_key",
-            voice_supported=False,
-            voice_reason="voice mode is not supported for GitHub Models",
-        )
-    if "bedrock" in base_url:
-        return ProviderInfo(
-            name="bedrock-compatible",
-            auth_kind="aws",
-            voice_supported=False,
-            voice_reason="voice mode is not wired for Bedrock in this build",
-        )
-    if "vertex" in base_url or "aiplatform" in base_url:
-        return ProviderInfo(
-            name="vertex-compatible",
-            auth_kind="gcp",
-            voice_supported=False,
-            voice_reason="voice mode is not wired for Vertex in this build",
-        )
-    if base_url:
-        return ProviderInfo(
-            name="anthropic-compatible",
-            auth_kind="api_key",
-            voice_supported=False,
-            voice_reason="voice mode currently requires a dedicated Claude.ai-style provider",
-        )
+def _active_kwargs() -> dict[str, Any]:
+    from config.model_config import try_get_active_model_kwargs
+
+    return try_get_active_model_kwargs() or {}
+
+
+def detect_provider() -> ProviderInfo:
+    """Return provider metadata derived from the active model registration's class_path."""
+    from config.model_config import try_get_active_model_kwargs  # noqa: F401
+
+    from server.app_factory import model_store
+
+    name = "anthropic"
+    try:
+        if getattr(model_store, "is_available", False):
+            active = model_store.get_active_resolved()
+            if active:
+                class_path = str(active.get("class_path") or "")
+                if class_path:
+                    name = class_path.rsplit(".", 1)[-1] or class_path
+    except Exception:
+        pass
     return ProviderInfo(
-        name="anthropic",
+        name=name,
         auth_kind="api_key",
         voice_supported=False,
-        voice_reason="voice mode shell exists, but live voice auth/streaming is not configured in this build",
+        voice_reason="voice mode is not configured in this build",
     )
 
 
-def auth_status(settings: Settings) -> str:
-    """Return a compact auth status string."""
-    if settings.api_key:
-        return "configured"
-    return "missing"
+def auth_status() -> str:
+    """Return a compact auth status string based on the active model registration."""
+    kwargs = _active_kwargs()
+    return "configured" if kwargs.get("api_key") else "missing"
 
 
 def make_api_client(
-    settings: Settings,
     external: SupportsStreamingMessages | None = None,
     *,
     db_kwargs: dict[str, Any] | None = None,
 ) -> SupportsStreamingMessages:
-    """Build an Anthropic API client from settings, or return the external one.
+    """Build an Anthropic API client from the active model registration.
 
-    When *db_kwargs* is provided (from the active model registration in the DB)
-    it supplies ``api_key`` and ``base_url`` — falling back to ``settings`` only
-    when a value is absent.
+    When *db_kwargs* is not supplied, resolves them from the DB store.
+    Raises :class:`config.model_config.NoActiveModelError` if the active
+    model is unavailable and no *external* client is provided.
     """
     if external is not None:
         return external
 
     from providers.clients.anthropic_native import AnthropicClient
 
-    # Resolve from DB-registered model first, then settings
-    api_key = (db_kwargs or {}).get("api_key") or settings.resolve_api_key()
-    base_url = (db_kwargs or {}).get("base_url") or settings.base_url
+    if db_kwargs is None:
+        from config.model_config import get_active_model_kwargs
+
+        db_kwargs = get_active_model_kwargs()
+
+    api_key = db_kwargs.get("api_key") or ""
+    base_url = db_kwargs.get("base_url")
+    if not api_key:
+        from config.model_config import NoActiveModelError
+
+        raise NoActiveModelError("Active model registration has no api_key")
 
     return AnthropicClient(api_key=api_key, base_url=base_url)

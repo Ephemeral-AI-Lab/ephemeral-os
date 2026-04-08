@@ -15,7 +15,6 @@ from pydantic import BaseModel
 
 from agents.types import AgentDefinition
 from providers.provider import detect_provider, auth_status
-from config import load_settings, save_settings
 from engine import spawn_agent
 from message.stream_events import (
     AssistantTextDelta,
@@ -53,7 +52,6 @@ class ConfigRequest(BaseModel):
     model: str | None = None
     base_url: str | None = None
     api_key: str | None = None
-    api_format: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -243,12 +241,16 @@ def create_core_router(get_session: Callable[[], SessionState]) -> APIRouter:
         if session.config is None:
             raise HTTPException(status_code=503, detail="Session not ready")
         settings = session.current_settings()
+        from config.model_config import try_get_active_model_kwargs
+
+        active_kwargs = try_get_active_model_kwargs() or {}
+        provider_info = detect_provider()
         app_state = {
-            "model": settings.model,
+            "model": active_kwargs.get("model", ""),
             "cwd": session.cwd,
-            "provider": settings.api_format,
+            "provider": provider_info.name,
             "auth_status": "authorized",
-            "base_url": settings.base_url or "",
+            "base_url": active_kwargs.get("base_url") or "",
             "theme": settings.theme,
             "vim_enabled": False,
             "voice_enabled": False,
@@ -417,38 +419,49 @@ def create_core_router(get_session: Callable[[], SessionState]) -> APIRouter:
         if session.config is None:
             raise HTTPException(status_code=503, detail="Session not ready")
 
-        settings = load_settings()
+        from server.app_factory import model_store
+
+        if not model_store.is_available:
+            raise HTTPException(status_code=503, detail="Model store not ready")
+
+        active = model_store.get_active(redact=False)
+        if active is None:
+            raise HTTPException(
+                status_code=400,
+                detail="No active model registration to update",
+            )
+
+        kwargs = dict(active.get("kwargs") or {})
         changed = False
-        for key in ("model", "base_url", "api_key", "api_format"):
-            value = getattr(req, key, None)
-            if value is not None:
-                setattr(settings, key, value)
-                changed = True
+        if req.model is not None:
+            kwargs["model"] = req.model
+            changed = True
+        if req.base_url is not None:
+            kwargs["base_url"] = req.base_url
+            changed = True
+        if req.api_key is not None:
+            kwargs["api_key"] = req.api_key
+            changed = True
 
         if not changed:
             return JSONResponse(content={"changed": False})
 
-        save_settings(settings)
+        model_store.register(
+            key=active["key"],
+            label=active.get("label") or active["key"],
+            class_path=active.get("class_path") or "",
+            kwargs=kwargs,
+            activate=True,
+        )
 
-        # Update durable config overrides so the next ephemeral agent picks them up
-        config = session.config
-        if req.model is not None:
-            config.model_override = req.model
-        if req.base_url is not None:
-            config.base_url_override = req.base_url
-        if req.api_key is not None:
-            config.api_key_override = req.api_key
-        if req.api_format is not None:
-            config.api_format_override = req.api_format
-
-        provider = detect_provider(settings)
+        provider = detect_provider()
         return JSONResponse(
             content={
                 "changed": True,
-                "model": settings.model,
+                "model": kwargs.get("model", ""),
                 "provider": provider.name,
-                "auth_status": auth_status(settings),
-                "base_url": settings.base_url or "",
+                "auth_status": auth_status(),
+                "base_url": kwargs.get("base_url") or "",
             }
         )
 
