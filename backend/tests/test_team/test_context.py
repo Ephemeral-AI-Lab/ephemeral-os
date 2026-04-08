@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -62,8 +62,8 @@ async def test_sibling_view_live_updates():
     view = SiblingView(disp, "A", store)
     siblings = view.list()
     assert len(siblings) == 1
-    assert siblings[0].work_item_id == "B"
-    assert siblings[0].status == "ready"
+    assert siblings[0]["work_item_id"] == "B"
+    assert siblings[0]["status"] == "ready"
 
     # complete B and observe via the live view
     from team.types import AgentResult
@@ -73,11 +73,11 @@ async def test_sibling_view_live_updates():
     await disp.mark_running("B", "AR1")
     await disp.complete("B", AgentResult(artifact={"summary": "done"}, summary="done"))
     live = view.list()
-    assert live[0].status == "done"
-    assert "done" in live[0].artifact_summary
+    assert live[0]["status"] == "done"
+    assert "done" in live[0]["artifact_summary"]
 
     # status filter
-    assert view.list(status="done")[0].work_item_id == "B"
+    assert view.list(status="done")[0]["work_item_id"] == "B"
     assert view.list(status="running") == []
 
 
@@ -86,14 +86,14 @@ async def test_sibling_view_live_updates():
 
 def test_changelog_since_filters_by_timestamp_and_self():
     cl = ChangeLog()
-    t0 = datetime.utcnow()
+    t0 = datetime.now(timezone.utc)
     cl.append(ChangeLogEntry(work_item_id="W1", agent_run_id="A1", filepath="/a.py"))
     cl.append(ChangeLogEntry(work_item_id="W2", agent_run_id="A2", filepath="/b.py"))
 
     after_t0 = cl.since(t0 - timedelta(seconds=1))
     assert len(after_t0) == 2
 
-    future = cl.since(datetime.utcnow() + timedelta(seconds=1))
+    future = cl.since(datetime.now(timezone.utc) + timedelta(seconds=1))
     assert future == []
 
     excluded = cl.since(None, exclude_work_item_id="W1")
@@ -180,7 +180,7 @@ async def test_build_team_context_tools(monkeypatch):
         team_run_id=tr.id,
         agent_name="x",
         status=WorkItemStatus.RUNNING,
-        started_at=datetime.utcnow() - timedelta(seconds=10),
+        started_at=datetime.now(timezone.utc) - timedelta(seconds=10),
     )
     tr.dispatcher.graph[wi.id] = wi
     tr.change_log.append(
