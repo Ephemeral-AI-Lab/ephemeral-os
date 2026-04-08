@@ -24,6 +24,11 @@ class UsageStore:
         logger.info("UsageStore initialised")
 
     @property
+    def is_ready(self) -> bool:
+        """True once ``initialize`` has been called with a session factory."""
+        return self._session_factory is not None
+
+    @property
     def _sf(self) -> sessionmaker[Session]:
         if self._session_factory is None:
             raise RuntimeError("UsageStore not initialised")

@@ -58,61 +58,69 @@ async def run_sweevo_with_agent(
     """
     from benchmarks.sweevo.team_runner import run_sweevo_team
 
-    instance = select_sweevo_instance(
-        source=source,
-        instance_id=instance_id,
-        size=size,
-        target_bullets=target_bullets,
-    )
-
-    sandbox_result = await create_sweevo_test_sandbox(
-        instance,
-        snapshot_name=snapshot_name,
-        sandbox_name=sandbox_name,
-        register_snapshot=register_snapshot,
-        cpu=cpu,
-        disk=disk,
-        repo_dir=repo_dir,
-    )
-    sandbox_id = sandbox_result["sandbox_id"]
-
     try:
-        team_status, team_work_items = await run_sweevo_team(
+        from sandbox.lifecycle import shutdown_cached_client
+
+        instance = select_sweevo_instance(
+            source=source,
+            instance_id=instance_id,
+            size=size,
+            target_bullets=target_bullets,
+        )
+
+        sandbox_result = await create_sweevo_test_sandbox(
+            instance,
+            snapshot_name=snapshot_name,
+            sandbox_name=sandbox_name,
+            register_snapshot=register_snapshot,
+            cpu=cpu,
+            disk=disk,
+            repo_dir=repo_dir,
+        )
+        sandbox_id = sandbox_result["sandbox_id"]
+
+        try:
+            team_status, team_work_items = await run_sweevo_team(
+                instance,
+                sandbox_id,
+                repo_dir=repo_dir,
+                printer=printer,
+            )
+        finally:
+            try:
+                printer.flush()
+            except Exception:
+                pass
+
+        agent_patch = await _extract_combined_patch(sandbox_id, repo_dir)
+
+        test_result = await run_sweevo_required_test(
             instance,
             sandbox_id,
             repo_dir=repo_dir,
-            printer=printer,
+            test_command=test_command,
+            timeout=test_timeout,
+            on_line=on_line,
         )
+
+        return {
+            "instance": summarize_sweevo_instance(instance),
+            "snapshot_name": sandbox_result["snapshot_name"],
+            "sandbox": sandbox_result["sandbox"],
+            "repo_dir": repo_dir,
+            "agent_patch": agent_patch,
+            "team_status": (
+                team_status.value if hasattr(team_status, "value") else team_status
+            ),
+            "team_work_items": team_work_items,
+            # Legacy fields kept so existing CLI banners (``agent_events``)
+            # still render without KeyErrors.
+            "agent_name": "team",
+            "agent_events": team_work_items,
+            "test": test_result,
+        }
     finally:
         try:
-            printer.flush()
+            shutdown_cached_client()
         except Exception:
-            pass
-
-    agent_patch = await _extract_combined_patch(sandbox_id, repo_dir)
-
-    test_result = await run_sweevo_required_test(
-        instance,
-        sandbox_id,
-        repo_dir=repo_dir,
-        test_command=test_command,
-        timeout=test_timeout,
-        on_line=on_line,
-    )
-
-    return {
-        "instance": summarize_sweevo_instance(instance),
-        "snapshot_name": sandbox_result["snapshot_name"],
-        "sandbox": sandbox_result["sandbox"],
-        "repo_dir": repo_dir,
-        "agent_patch": agent_patch,
-        "team_status": (
-            team_status.value if hasattr(team_status, "value") else team_status
-        ),
-        "team_work_items": team_work_items,
-        # Legacy fields kept so existing CLI banners (``agent_events``)
-        # still render without KeyErrors.
-        "agent_name": "team",
-        "agent_events": team_work_items,
-        "test": test_result,
-    }
+            logger.debug("Failed to close cached AsyncDaytona client", exc_info=True)

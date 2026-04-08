@@ -161,22 +161,31 @@ async def _cmd_run(args: argparse.Namespace) -> int:
     test = result.get("test", {})
     exit_code = test.get("exit_code")
     counts = on_line.counts  # type: ignore[attr-defined]
+    team_status = str(result.get("team_status") or "unknown")
+    health_issues: list[str] = []
+    if team_status != "succeeded":
+        health_issues.append(f"team_status={team_status}")
+    result["health_ok"] = not health_issues
+    result["health_issues"] = health_issues
 
     if not quiet:
         print("=" * 72, flush=True)
         print(
             f"  agent_events={result.get('agent_events', 0)}  "
+            f"team_status={team_status}  "
             f"exit_code={exit_code}  "
             f"passed={counts['passed']}  failed={counts['failed']}  "
             f"errors={counts['errors']}",
             flush=True,
         )
+        if health_issues:
+            print(f"  unhealthy={' ; '.join(health_issues)}", flush=True)
         print("=" * 72, flush=True)
     else:
         # sandbox objects may not be JSON-serializable; coerce via str fallback.
         print(json.dumps(result, indent=2, default=str))
 
-    return 0 if exit_code == 0 else 1
+    return 0 if exit_code == 0 and not health_issues else 1
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 class NoActiveModelError(RuntimeError):
@@ -10,7 +13,15 @@ class NoActiveModelError(RuntimeError):
 
 
 def _resolve_store() -> Any:
-    from server.app_factory import model_store
+    from server.app_factory import ensure_runtime_stores_ready, model_store
+
+    if store_unavailable := (model_store is None or not getattr(model_store, "is_available", False)):
+        try:
+            ensure_runtime_stores_ready()
+        except Exception:
+            logger.debug("Failed to bootstrap runtime stores for model resolution", exc_info=True)
+        if store_unavailable and getattr(model_store, "is_available", False):
+            return model_store
 
     return model_store
 

@@ -24,7 +24,7 @@ from fastapi.responses import FileResponse, JSONResponse
 load_dotenv()
 
 from config import Settings, load_settings
-from db.engine import initialize_db
+from db.engine import get_session_factory, initialize_db
 from db.stores import AgentDefinitionStore, AgentRunStore, ModelStore, SessionStore, UsageStore
 from skills.db.store import SkillDefinitionStore
 from server.protocol import BackendEvent, BackendHostConfig, ToolkitSnapshot
@@ -207,29 +207,47 @@ agent_definition_store = AgentDefinitionStore()
 skill_definition_store = SkillDefinitionStore()
 
 
-def _initialize_database(session: SessionState) -> AgentBuilderService | None:
-    """Initialize DB stores and agent builder. Returns builder service or None."""
-    settings = load_settings()
-    sf = initialize_db(settings.database)
+def _model_registry_path() -> Path:
+    return Path(__file__).resolve().parent.parent.parent.parent / "models" / "registry.json"
+
+
+def ensure_runtime_stores_ready(settings: Settings | None = None):
+    """Initialise the runtime stores needed by non-server entrypoints.
+
+    Benchmarks, CLI helpers, and other direct runtime paths do not pass
+    through the FastAPI lifespan hook, so they need a shared bootstrap
+    path for DB-backed model resolution and run persistence.
+    """
+    settings = settings or load_settings()
+    sf = get_session_factory() or initialize_db(settings.database)
     if sf is None:
         logger.info("Running without database — file-based persistence only")
         return None
 
-    for store in (
-        session_store,
-        agent_run_store,
-        usage_store,
-        model_store,
-        agent_definition_store,
-        skill_definition_store,
-    ):
-        store.initialize(sf)
+    if not session_store.is_ready:
+        session_store.initialize(sf)
+    if not agent_run_store.is_ready:
+        agent_run_store.initialize(sf)
+    if not usage_store.is_ready:
+        usage_store.initialize(sf)
+    if not model_store.is_available:
+        model_store.initialize(sf)
 
-    # Seed models from registry.json on first boot
-    registry_path = (
-        Path(__file__).resolve().parent.parent.parent.parent / "models" / "registry.json"
-    )
-    model_store.seed_from_json(str(registry_path))
+    model_store.seed_from_json(str(_model_registry_path()))
+    return sf
+
+
+def _initialize_database(session: SessionState) -> AgentBuilderService | None:
+    """Initialize DB stores and agent builder. Returns builder service or None."""
+    settings = load_settings()
+    sf = ensure_runtime_stores_ready(settings)
+    if sf is None:
+        return None
+
+    if getattr(agent_definition_store, "_session_factory", None) is None:
+        agent_definition_store.initialize(sf)
+    if getattr(skill_definition_store, "_session_factory", None) is None:
+        skill_definition_store.initialize(sf)
 
     # Bootstrap agent builder service and load DB agents
     from agents.builder import AgentBuilderService, AgentDefinitionValidator
