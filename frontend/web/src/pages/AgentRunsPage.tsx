@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { Fragment, useCallback, useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router'
 import { fetchDbSession, fetchSessionRuns, fetchSessionUsage, fetchRunChunks, fetchRunDetail, fetchSessionMessages } from '../lib/api'
 import type {
@@ -45,6 +45,14 @@ function usageTotals(usage: RunUsageSummary | null) {
   }
 }
 
+type MessageBlock = {
+  type: string
+  text?: string
+  name?: string
+  input?: Record<string, unknown>
+  content?: string
+}
+
 const STATUS_COLORS: Record<string, string> = {
   completed: 'bg-emerald-500/20 text-emerald-400',
   running: 'bg-blue-500/20 text-blue-400',
@@ -57,6 +65,73 @@ const EVENT_KIND_COLORS: Record<string, string> = {
   tool_start: 'text-blue-400',
   tool_result: 'text-emerald-400',
   error: 'text-red-400',
+}
+
+const ROLE_COLORS: Record<string, string> = {
+  user: 'border-blue-500/30 bg-blue-500/5',
+  assistant: 'border-emerald-500/30 bg-emerald-500/5',
+}
+
+const ROLE_LABELS: Record<string, string> = {
+  user: 'text-blue-400',
+  assistant: 'text-emerald-400',
+}
+
+function renderMessageBlock(block: MessageBlock, key: number) {
+  if (block.type === 'text' && block.text) {
+    return (
+      <pre key={key} className="whitespace-pre-wrap break-words text-xs leading-relaxed text-zinc-300 font-mono">
+        {block.text.length > 2000 ? block.text.slice(0, 2000) + '...' : block.text}
+      </pre>
+    )
+  }
+  if (block.type === 'tool_use') {
+    return (
+      <div key={key} className="mt-1 rounded bg-zinc-800/60 px-3 py-2 text-xs">
+        <span className="font-medium text-blue-400">{block.name}</span>
+        <pre className="mt-1 max-h-24 overflow-auto text-[10px] text-zinc-500 font-mono">
+          {JSON.stringify(block.input, null, 2)}
+        </pre>
+      </div>
+    )
+  }
+  if (block.type === 'tool_result') {
+    return (
+      <div key={key} className="mt-1 rounded bg-zinc-800/60 px-3 py-2 text-xs">
+        <span className="font-medium text-emerald-400">tool_result</span>
+        <pre className="mt-1 max-h-24 overflow-auto text-[10px] text-zinc-500 font-mono">
+          {typeof block.content === 'string'
+            ? (block.content.length > 500 ? block.content.slice(0, 500) + '...' : block.content)
+            : JSON.stringify(block.content, null, 2)}
+        </pre>
+      </div>
+    )
+  }
+  return null
+}
+
+function MessageCard({
+  role,
+  content,
+  text,
+}: {
+  role: string
+  content?: MessageBlock[]
+  text?: string | null
+}) {
+  return (
+    <div className={`rounded-lg border px-4 py-3 ${ROLE_COLORS[role] ?? 'border-zinc-700 bg-zinc-800/50'}`}>
+      <div className={`mb-1.5 text-[10px] font-semibold uppercase tracking-wider ${ROLE_LABELS[role] ?? 'text-zinc-500'}`}>
+        {role}
+      </div>
+      {content?.map(renderMessageBlock)}
+      {!content && text && (
+        <pre className="whitespace-pre-wrap break-words text-xs leading-relaxed text-zinc-300 font-mono">
+          {text.length > 2000 ? text.slice(0, 2000) + '...' : text}
+        </pre>
+      )}
+    </div>
+  )
 }
 
 // ---------------------------------------------------------------------------

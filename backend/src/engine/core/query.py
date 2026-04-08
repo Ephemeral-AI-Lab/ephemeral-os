@@ -97,7 +97,7 @@ def _deliver_completed_background_task(
     display_messages: list[ConversationMessage],
 ) -> BackgroundTaskCompleted:
     """Append a completion message to *display_messages* and return the event."""
-    output, status_label = _format_background_result(task)
+    output, _ = _format_background_result(task)
     terminal_status = _terminal_background_status(task)
     display_messages.append(
         ConversationMessage(
