@@ -88,14 +88,6 @@ class AgentDefinition(BaseModel):
     require_fresh_client: bool = False
     include_skills: bool = True
 
-    # --- standalone tools ---
-    # Names of standalone tools (registered via
-    # ``tools.core.factory.register_standalone_tool``) to append to this
-    # agent's tool registry. Lets an agent declare individual tools that
-    # don't belong to any toolkit — e.g. the ``submit_plan_agent`` builtin
-    # uses ``extra_tools=["submit_plan"]`` with empty ``toolkits``.
-    extra_tools: list[str] = Field(default_factory=list)
-
     # --- posthook ---
     # Optional structured-output posthook. When set, the engine runs this
     # agent's work phase, then runs another *registered* agent (looked up

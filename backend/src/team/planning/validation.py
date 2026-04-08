@@ -10,6 +10,7 @@ from team.errors import InvalidPlan
 from team.models import Plan, WorkItem, WorkItemKind, WorkItemSpec, WorkItemStatus
 
 _MAX_INLINE_BRIEFING_BYTES_PER_SPEC = 4096
+_EXPANDABLE_AGENT = "team_planner"
 
 Issue = dict[str, str]
 
@@ -51,6 +52,31 @@ def validate_plan_phase_a(plan: Plan, max_plan_size: int = 50) -> list[Issue]:
             issues.append(
                 {"field": f"items[{idx}].agent_name", "msg": f"unknown agent '{item.agent_name}'"}
             )
+        else:
+            agent_def = _get_definition(item.agent_name)
+            if agent_def is not None and getattr(agent_def, "agent_type", "agent") == "subagent":
+                issues.append(
+                    {
+                        "field": f"items[{idx}].agent_name",
+                        "msg": (
+                            f"submitted plans cannot target subagent '{item.agent_name}'; "
+                            "use run_subagent in-turn or emit a chained planner instead"
+                        ),
+                    }
+                )
+            if (
+                item.kind == WorkItemKind.EXPANDABLE
+                and item.agent_name != _EXPANDABLE_AGENT
+            ):
+                issues.append(
+                    {
+                        "field": f"items[{idx}].agent_name",
+                        "msg": (
+                            f"expandable items must target '{_EXPANDABLE_AGENT}', "
+                            f"got '{item.agent_name}'"
+                        ),
+                    }
+                )
 
         # Briefings: dup-name check + inline byte cap (XOR+name enforced in __post_init__).
         seen_brief_names: set[str] = set()
@@ -77,8 +103,9 @@ def validate_plan_phase_a(plan: Plan, max_plan_size: int = 50) -> list[Issue]:
                 }
             )
 
-    # "No workers alongside scout deps" — a non-scout item cannot depend on a sibling
-    # whose agent_type == "subagent" in the same plan.
+    # Submitted plans may not contain subagents. Keep this dependency guard
+    # anyway so direct Plan construction cannot smuggle an atomic worker behind
+    # a same-plan subagent dependency if Phase A is bypassed.
     subagent_locals: set[str] = set()
     for item in plan.items:
         if item.local_id is None:

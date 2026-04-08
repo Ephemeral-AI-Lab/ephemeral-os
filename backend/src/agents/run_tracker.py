@@ -71,6 +71,7 @@ class AgentRunTracker:
         session_id: str | None,
         agent_name: str,
         input_query: str,
+        run_id: str | None = None,
         parent_run_id: str | None = None,
         parent_task_id: str | None = None,
     ) -> AgentRunTracker:
@@ -100,10 +101,10 @@ class AgentRunTracker:
                 _MAX_INPUT_QUERY_CHARS,
             )
 
-        run_id = uuid4().hex[:12]
+        resolved_run_id = run_id or uuid4().hex[:12]
         try:
             store.create_run(
-                run_id=run_id,
+                run_id=resolved_run_id,
                 session_id=session_id,
                 agent_name=agent_name,
                 input_query=input_query[:_MAX_INPUT_QUERY_CHARS],
@@ -115,7 +116,7 @@ class AgentRunTracker:
                 "AgentRunTracker.create: failed to persist agent_run row", exc_info=True
             )
             return cls(run_id=None, agent_name=agent_name)
-        return cls(run_id=run_id, agent_name=agent_name)
+        return cls(run_id=resolved_run_id, agent_name=agent_name)
 
     def finish(
         self,

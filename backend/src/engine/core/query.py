@@ -676,6 +676,11 @@ async def _run_query_loop(
 
         display_messages.append(ConversationMessage(role="user", content=tool_results))  # type: ignore[arg-type]
 
+        if _has_submission(context.tool_metadata):
+            if background_manager is not None:
+                await background_manager.cancel_all()
+            return
+
         if (
             context.tool_call_limit is not None
             and context.tool_calls_used >= context.tool_call_limit
@@ -835,6 +840,10 @@ async def _execute_tool_call(
         tool_input,
         ToolExecutionContext(cwd=context.cwd, metadata=metadata),
     )
+    _merge_submission_metadata(
+        original=context.tool_metadata,
+        updated=metadata,
+    )
 
     tool_result = ToolResultBlock(
         tool_use_id=tool_use_id,
@@ -854,3 +863,26 @@ async def _execute_tool_call(
             },
         )
     return tool_result
+
+
+def _merge_submission_metadata(
+    *,
+    original: ExecutionMetadata | None,
+    updated: ExecutionMetadata,
+) -> None:
+    """Propagate accepted submit-tool payloads back to the live metadata bag."""
+    if original is None:
+        return
+    for key, value in updated.extras.items():
+        if key.startswith("submitted_") and value is not None:
+            original[key] = value
+
+
+def _has_submission(metadata: ExecutionMetadata | None) -> bool:
+    """True when a submit tool has accepted a terminal payload for this run."""
+    if metadata is None:
+        return False
+    return any(
+        key.startswith("submitted_") and value is not None
+        for key, value in metadata.extras.items()
+    )

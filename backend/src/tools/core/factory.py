@@ -81,25 +81,6 @@ def list_factories() -> list[str]:
 
 
 # ---------------------------------------------------------------------------
-# Standalone tool registry — for tools registered individually (e.g. submit_plan)
-# rather than as part of a toolkit. Referenced via AgentDefinition.extra_tools.
-# ---------------------------------------------------------------------------
-
-_standalone_tools: dict[str, Callable[[], BaseTool]] = {}
-
-
-def register_standalone_tool(name: str, factory: Callable[[], BaseTool]) -> None:
-    """Register a factory for a standalone tool by name."""
-    _standalone_tools[name] = factory
-
-
-def create_standalone_tool(name: str) -> BaseTool | None:
-    """Instantiate a registered standalone tool, or return None if unknown."""
-    factory = _standalone_tools.get(name)
-    return factory() if factory is not None else None
-
-
-# ---------------------------------------------------------------------------
 # Self-register built-in toolkits
 # ---------------------------------------------------------------------------
 
@@ -109,6 +90,11 @@ def _register_builtins() -> None:
     from tools.atlas import AtlasToolkit
     from tools.daytona_toolkit import DaytonaToolkit
     from tools.ci_toolkit import CIToolkit
+    from tools.posthook.toolkits import (
+        SubmitAtlasToolkit,
+        SubmitPlanToolkit,
+        SubmitSummaryToolkit,
+    )
     from tools.subagent import SubagentToolkit
     from tools.team_context import TeamContextToolkit
 
@@ -117,6 +103,9 @@ def _register_builtins() -> None:
     register_toolkit_class("subagent", SubagentToolkit)
     register_toolkit_class("team_context", TeamContextToolkit)
     register_toolkit_class("atlas", AtlasToolkit)
+    register_toolkit_class("submit_plan_posthook", SubmitPlanToolkit)
+    register_toolkit_class("submit_summary_posthook", SubmitSummaryToolkit)
+    register_toolkit_class("submit_atlas_posthook", SubmitAtlasToolkit)
 
 
 _register_builtins()

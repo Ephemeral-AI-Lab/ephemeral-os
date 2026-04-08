@@ -15,9 +15,11 @@ import json
 import logging
 from typing import Any
 
+from agents.run_tracker import AgentRunTracker
 from agents.registry import get_definition
 from engine.runtime.agent import spawn_agent
 from message.event_printer import MultiAgentEventPrinter
+from token_tracker.runtime import persist_run_usage
 from team.builtins import TEAM_PLANNER, register_all as _register_team_builtins
 from team.models import BudgetConfig, TeamRunStatus, WorkItemKind
 from team.runtime.context_builder import (
@@ -65,7 +67,16 @@ def _build_root_prompt(instance: SWEEvoInstance, repo_dir: str) -> str:
         f"Repository: {instance.repo}\n"
         f"Working directory inside the sandbox: {repo_dir}\n"
         f"Base commit (already checked out): {instance.base_commit}\n\n"
-        f"## Task (release changelog / problem statement)\n"
+        f"## Objective\n"
+        f"Make the grading command pass by fixing the repository so the fail-to-pass tests turn green "
+        f"without regressing the pass-to-pass coverage.\n\n"
+        f"## Fail-To-Pass Targets\n"
+        f"{json.dumps(instance.fail_to_pass, indent=2)}\n\n"
+        f"## Pass-To-Pass Guardrail\n"
+        f"{json.dumps(instance.pass_to_pass, indent=2)}\n\n"
+        f"## Context (problem statement / release notes)\n"
+        f"This section is background context only. It may mention release notes or changelog entries; "
+        f"do not treat it as the implementation checklist. The grading command and test targets above define success.\n"
         f"{instance.problem_statement}\n\n"
         f"## Grading command\n"
         f"After your team finishes, this exact command will be executed in the sandbox "
@@ -75,6 +86,7 @@ def _build_root_prompt(instance: SWEEvoInstance, repo_dir: str) -> str:
         f"- Developers edit the repo in the sandbox via sandbox_operations tools.\n"
         f"- Stay inside {repo_dir}.\n"
         f"- Do NOT modify test files unless the task explicitly asks for it.\n"
+        f"- Start from the failing tests or failing behavior, not from the changelog prose.\n"
         f"- Validators should run the grading command (or a tighter subset) and "
         f"report PASS/FAIL with evidence."
     )
@@ -117,6 +129,14 @@ def _make_runner(
 ):
     async def _run(defn, ctx: TeamAgentContext):
         prompt = ctx.user_message or _work_item_base_prompt(None)
+        tracker = AgentRunTracker.create(
+            session_id=getattr(session_config, "session_id", None),
+            run_id=getattr(ctx.tool_metadata, "agent_run_id", None),
+            agent_name=defn.name,
+            input_query=prompt,
+        )
+        if tracker.run_id is not None:
+            ctx.tool_metadata.agent_run_id = tracker.run_id
 
         agent = spawn_agent(
             session_config,
@@ -138,8 +158,11 @@ def _make_runner(
             ctx.tool_metadata["sandbox_id"] = sb
         agent.query_context.tool_metadata = ctx.tool_metadata
 
+        event_count = 0
+        run_error: str | None = None
         try:
             async for event in agent.run(prompt):
+                event_count += 1
                 if printer is None:
                     continue
                 try:
@@ -150,9 +173,42 @@ def _make_runner(
                     printer.emit(event)
                 except Exception:
                     logger.debug("printer.emit failed", exc_info=True)
-        except Exception:
+        except Exception as exc:
+            run_error = str(exc)
             logger.exception("sweevo team runner: agent %s crashed", defn.name)
             raise
+        finally:
+            qc = getattr(agent, "query_context", None)
+            tracker.finish(
+                status="failed" if run_error else "completed",
+                display_messages=list(agent.display_messages),
+                api_messages_snapshot=getattr(qc, "api_messages_snapshot", None),
+                error=run_error,
+                final_text=_extract_final_text(agent.display_messages),
+                event_count=event_count,
+            )
+            try:
+                from server.app_factory import usage_store
+            except Exception:
+                usage_store = None
+            if usage_store is not None:
+                persist_run_usage(
+                    usage_store=usage_store,
+                    session_id=getattr(session_config, "session_id", None),
+                    run_id=tracker.run_id,
+                    agent_name=defn.name,
+                    model_id=agent.model,
+                    usage=agent.total_usage,
+                )
+            if printer is not None and agent.total_usage is not None:
+                total = agent.total_usage.input_tokens + agent.total_usage.output_tokens
+                printer.raw_line(
+                    defn.name,
+                    (
+                        f"[usage] prompt={agent.total_usage.input_tokens} "
+                        f"completion={agent.total_usage.output_tokens} total={total}"
+                    ),
+                )
 
         return {
             "agent": defn.name,
@@ -218,7 +274,12 @@ async def run_sweevo_team(
     team failure — the caller grades the result via the sweevo test
     command.
     """
-    from server.app_factory import build_session_config
+    from config.model_config import get_active_model_kwargs
+    from server.app_factory import (
+        build_session_config,
+        ensure_runtime_stores_ready,
+        session_store,
+    )
 
     try:
         _register_team_builtins()
@@ -227,6 +288,16 @@ async def run_sweevo_team(
 
     session_config = build_session_config()
     session_config.cwd = repo_dir
+    ensure_runtime_stores_ready()
+    try:
+        session_store.upsert(
+            session_id=session_config.session_id,
+            cwd=repo_dir,
+            model=str(get_active_model_kwargs().get("model") or ""),
+            message_count=0,
+        )
+    except Exception:
+        logger.debug("Failed to ensure sweevo team session row", exc_info=True)
     root_prompt = _build_root_prompt(instance, repo_dir)
 
     tr = TeamRun(

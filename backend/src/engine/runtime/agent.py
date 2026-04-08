@@ -227,21 +227,6 @@ def _build_agent_tool_registry(
         # it when agent_def.toolkits is non-empty.
         tool_registry.restrict_to_toolkits(agent_def.toolkits)
 
-    # Standalone tools — registered after restrict_to_toolkits so they
-    # survive the toolkit filter. Used by agents that need individual
-    # tools outside any toolkit (e.g. submit_plan_agent → submit_plan).
-    if agent_def and agent_def.extra_tools:
-        from tools.core.factory import create_standalone_tool
-
-        for tool_name in agent_def.extra_tools:
-            tool = create_standalone_tool(tool_name)
-            if tool is not None:
-                tool_registry.register(tool)
-            else:
-                logger.warning(
-                    "extra_tools: no standalone tool registered for %r", tool_name
-                )
-
     # Skills toolkit — opt-out via ``include_skills=False``.
     include_skills = agent_def.include_skills if agent_def else True
     if include_skills:
@@ -275,11 +260,54 @@ def _build_agent_system_prompt(
     that the server-side path normally produces.
     """
     if agent_def and agent_def.system_prompt:
-        return agent_def.system_prompt
-    return build_runtime_system_prompt(
-        settings,
-        cwd=config.cwd,
-        latest_user_prompt=latest_user_prompt,
+        base = agent_def.system_prompt
+    else:
+        base = build_runtime_system_prompt(
+            settings,
+            cwd=config.cwd,
+            latest_user_prompt=latest_user_prompt,
+        )
+
+    skill_preamble = _build_declared_skill_preamble(config, agent_def)
+    if skill_preamble:
+        return f"{base}\n\n{skill_preamble}"
+    return base
+
+
+def _build_declared_skill_preamble(
+    config: SessionConfig,
+    agent_def: AgentDefinition | None,
+) -> str:
+    """Preload declared agent skills into the system prompt for turn-1 guidance."""
+    if agent_def is None or not agent_def.skills:
+        return ""
+    try:
+        from skills.core.loader import load_skill_registry
+
+        skill_registry = load_skill_registry(config.cwd)
+    except Exception:
+        logger.debug("Failed to load declared skills for agent %r", agent_def.name, exc_info=True)
+        return ""
+
+    loaded: list[str] = []
+    for skill_name in agent_def.skills:
+        skill = skill_registry.get(skill_name)
+        if skill is None or not skill.content.strip():
+            logger.debug(
+                "Declared skill %r unavailable for agent %r",
+                skill_name,
+                agent_def.name,
+            )
+            continue
+        loaded.append(f"## Skill: {skill.name}\n{skill.content.strip()}")
+
+    if not loaded:
+        return ""
+    return (
+        "# Preloaded Skills\n\n"
+        "These declared skills are already loaded for this run. Follow them from turn 1; "
+        "do not spend a turn calling `load_skill` unless you need an additional reference.\n\n"
+        + "\n\n".join(loaded)
     )
 
 

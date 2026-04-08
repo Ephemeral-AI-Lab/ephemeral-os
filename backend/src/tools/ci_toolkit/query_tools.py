@@ -42,7 +42,7 @@ async def _remote_workspace_structure(
     target = resolve_daytona_path(path, context)
     command = (
         f"find {shlex.quote(target)} -maxdepth {max(0, int(max_depth))} "
-        "-print | sort | head -n 500"
+        "-print"
     )
     try:
         response = await sandbox.process.exec(command, timeout=30)
@@ -58,7 +58,19 @@ async def _remote_workspace_structure(
             target,
         )
         return None
-    return (getattr(response, "result", "") or "").strip()
+    output = (getattr(response, "result", "") or "").strip()
+    if not output:
+        return None
+
+    lines = sorted(line for line in output.splitlines() if line.strip())
+    if not lines:
+        return None
+
+    truncated = len(lines) > 500
+    rendered = "\n".join(lines[:500])
+    if truncated:
+        rendered += "\n... (truncated at 500 files)"
+    return rendered
 
 
 # -- CI Status ----------------------------------------------------------------
