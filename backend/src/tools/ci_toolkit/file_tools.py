@@ -6,7 +6,11 @@ import json
 import logging
 
 from tools.core.base import ToolExecutionContext, ToolResult
-from tools.daytona_toolkit.ci_integration import get_ci_service
+from tools.daytona_toolkit.ci_integration import (
+    get_ci_service,
+    get_daytona_sandbox,
+    resolve_daytona_path,
+)
 from tools.core.decorator import tool
 
 logger = logging.getLogger(__name__)
@@ -48,6 +52,19 @@ async def ci_read_file(
             content = entry.content
 
     # Fall back to direct file read
+    if content is None:
+        sandbox = get_daytona_sandbox(context)
+        if sandbox is not None:
+            remote_path = resolve_daytona_path(path, context)
+            try:
+                raw = await sandbox.fs.download_file(remote_path)
+                content = raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
+                path = remote_path
+            except UnicodeDecodeError:
+                return ToolResult(output=f"Binary file: {remote_path}", is_error=True)
+            except Exception:
+                logger.debug("Remote ci_read_file failed for %s", remote_path, exc_info=True)
+
     if content is None:
         try:
             from pathlib import Path

@@ -171,8 +171,9 @@ def register_all() -> None:
             system_prompt=_PLANNER_PROMPT,
             model="inherit",
             max_turns=10,
-            toolkits=["code_intelligence", "team_context", "atlas"],
+            toolkits=["code_intelligence", "team_context", "atlas", "subagent"],
             skills=["team-planner-playbook"],
+            extra_tools=["submit_plan"],
             source="builtin",
             posthook=PosthookConfig(
                 agent_name=SUBMIT_PLAN_AGENT,
@@ -249,6 +250,7 @@ def register_all() -> None:
             max_turns=15,
             toolkits=["code_intelligence"],
             skills=["team-scout-playbook"],
+            extra_tools=["submit_summary"],
             agent_type="subagent",
             tool_call_limit=40,
             posthook=PosthookConfig(
@@ -285,6 +287,7 @@ def register_all() -> None:
             max_turns=20,
             toolkits=["code_intelligence", "subagent"],
             skills=["team-atlas-builder-playbook"],
+            extra_tools=["submit_atlas"],
             source="builtin",
             posthook=PosthookConfig(
                 agent_name=SUBMIT_ATLAS_AGENT,
@@ -304,6 +307,7 @@ def register_all() -> None:
             max_turns=15,
             toolkits=["subagent"],
             skills=["team-atlas-refresher-playbook"],
+            extra_tools=["submit_atlas"],
             source="builtin",
             posthook=PosthookConfig(
                 agent_name=SUBMIT_ATLAS_AGENT,

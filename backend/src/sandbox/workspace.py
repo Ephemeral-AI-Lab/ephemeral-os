@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -49,6 +50,15 @@ def inject_code_intelligence(
                 workspace_root=workspace_root,
                 sandbox=sandbox,
             )
+            try:
+                if Path(workspace_root).is_dir():
+                    svc.ensure_initialized(wait=False)
+                else:
+                    svc.lsp_client.ensure_ready()
+            except Exception:
+                logger.debug(
+                    "CI service warmup skipped for sandbox %s", sandbox_id, exc_info=True
+                )
             context.metadata["ci_service"] = svc
         except Exception:
             logger.debug("CI service not available for sandbox %s", sandbox_id)

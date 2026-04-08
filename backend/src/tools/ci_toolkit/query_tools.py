@@ -4,10 +4,15 @@ from __future__ import annotations
 
 import json
 import logging
+import shlex
 from typing import Any
 
 from tools.core.base import ToolExecutionContext, ToolResult
-from tools.daytona_toolkit.ci_integration import get_ci_service
+from tools.daytona_toolkit.ci_integration import (
+    get_ci_service,
+    get_daytona_sandbox,
+    resolve_daytona_path,
+)
 from tools.core.decorator import tool
 
 logger = logging.getLogger(__name__)
@@ -21,6 +26,39 @@ def _svc_or_error(context: ToolExecutionContext) -> tuple[Any | None, ToolResult
             output=json.dumps({"status": "unavailable", "reason": "Code intelligence not configured"}),
         )
     return svc, None
+
+
+async def _remote_workspace_structure(
+    context: ToolExecutionContext,
+    *,
+    path: str,
+    max_depth: int,
+) -> str | None:
+    """List a sandbox-backed workspace when the local symbol index is cold."""
+    sandbox = get_daytona_sandbox(context)
+    if sandbox is None:
+        return None
+
+    target = resolve_daytona_path(path, context)
+    command = (
+        f"find {shlex.quote(target)} -maxdepth {max(0, int(max_depth))} "
+        "-print | sort | head -n 500"
+    )
+    try:
+        response = await sandbox.process.exec(command, timeout=30)
+    except Exception:
+        logger.debug("Remote workspace listing failed for %s", target, exc_info=True)
+        return None
+
+    exit_code = getattr(response, "exit_code", 0)
+    if exit_code != 0:
+        logger.debug(
+            "Remote workspace listing returned exit_code=%s for %s",
+            exit_code,
+            target,
+        )
+        return None
+    return (getattr(response, "result", "") or "").strip()
 
 
 # -- CI Status ----------------------------------------------------------------
@@ -78,7 +116,18 @@ async def ci_workspace_structure(
     if len(paths) == 500:
         output += "\n... (truncated at 500 files)"
 
-    return ToolResult(output=output or "No files indexed")
+    if output:
+        return ToolResult(output=output)
+
+    remote_listing = await _remote_workspace_structure(
+        context,
+        path=path,
+        max_depth=max_depth,
+    )
+    if remote_listing:
+        return ToolResult(output=remote_listing)
+
+    return ToolResult(output="No files indexed")
 
 
 # -- Symbol Query -------------------------------------------------------------

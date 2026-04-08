@@ -82,7 +82,7 @@ def _build_root_prompt(instance: SWEEvoInstance, repo_dir: str) -> str:
 
 def _work_item_base_prompt(payload: Any) -> str:
     if isinstance(payload, dict):
-        for key in ("prompt", "task", "description", "instructions"):
+        for key in ("prompt", "task", "description", "instructions", "final_text"):
             val = payload.get(key)
             if isinstance(val, str) and val.strip():
                 return val
@@ -92,6 +92,17 @@ def _work_item_base_prompt(payload: Any) -> str:
     if isinstance(payload, str):
         return payload
     return f"Payload: {payload!r}"
+
+
+def _extract_final_text(messages: list[Any]) -> str:
+    """Return the last assistant text emitted by an agent run."""
+    for msg in reversed(messages):
+        if getattr(msg, "role", None) != "assistant":
+            continue
+        text = getattr(msg, "text", "")
+        if text:
+            return str(text).strip()
+    return ""
 
 
 # ---------------------------------------------------------------------------
@@ -143,7 +154,10 @@ def _make_runner(
             logger.exception("sweevo team runner: agent %s crashed", defn.name)
             raise
 
-        return {"agent": defn.name}
+        return {
+            "agent": defn.name,
+            "final_text": _extract_final_text(agent.display_messages),
+        }
 
     return _run
 
@@ -164,6 +178,7 @@ def _make_executor_factory(
 
     def build_posthook_ctx(posthook_defn, work_result):
         return TeamAgentContext(
+            user_message=_work_item_base_prompt(work_result),
             tool_metadata={
                 "agent_name": posthook_defn.name,
                 "sandbox_id": sandbox_id,

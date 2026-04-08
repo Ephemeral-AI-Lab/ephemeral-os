@@ -8,6 +8,7 @@ tools degrade gracefully if no CI service is configured.
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any
 
 from tools.core.base import ToolExecutionContext
@@ -18,6 +19,28 @@ logger = logging.getLogger(__name__)
 def get_ci_service(context: ToolExecutionContext) -> Any | None:
     """Get the CodeIntelligenceService from context, or None if unavailable."""
     return context.metadata.get("ci_service")
+
+
+def get_daytona_sandbox(context: ToolExecutionContext) -> Any | None:
+    """Get the injected Daytona sandbox object, if available."""
+    return context.metadata.get("daytona_sandbox")
+
+
+def get_daytona_cwd(context: ToolExecutionContext) -> str:
+    """Get the injected Daytona working directory, if available."""
+    return context.metadata.get("daytona_cwd") or ""
+
+
+def resolve_daytona_path(path: str, context: ToolExecutionContext) -> str:
+    """Resolve *path* against the injected Daytona cwd."""
+    if not path:
+        return get_daytona_cwd(context) or "."
+    if path.startswith("/"):
+        return path
+    cwd = get_daytona_cwd(context)
+    if not cwd:
+        return path
+    return os.path.normpath(f"{cwd}/{path}")
 
 
 def prime_cache_after_write(context: ToolExecutionContext, file_path: str, content: str) -> None:
@@ -57,5 +80,4 @@ def record_edit_in_ledger(
         )
     except Exception:
         logger.debug("CI record_edit_in_ledger failed for %s", file_path)
-
 

@@ -7,10 +7,10 @@ interleaving mid-sentence.
 
 Key ideas:
 
-- **Per-agent delta buffers.** ``ThinkingDelta`` / ``AssistantTextDelta``
-  events from different agents are buffered independently and flushed
-  when that same agent produces a structural event, so two workers
-  streaming at once don't clobber each other's prose.
+- **Per-agent turn buffers.** ``ThinkingDelta`` / ``AssistantTextDelta``
+  events from different agents are buffered independently and printed
+  once per completed assistant turn, so two workers streaming at once
+  don't clobber each other's prose and the console shows full blocks.
 - **Lineage via bg task_id.** A ``BackgroundTaskStarted`` whose
   ``tool_name == "run_subagent"`` is treated as a spawn; its
   ``task_id`` becomes the child's work_id so the child's own events
@@ -76,8 +76,8 @@ class MultiAgentEventPrinter:
     """Format and print ``StreamEvent``s to stdout (or any sink).
 
     Pass the result of a ``run_query`` stream into :meth:`emit` per event.
-    Buffers thinking/text deltas per-agent and flushes on the next
-    structural event from that same agent.
+    Buffers thinking/text deltas per-agent and prints them once when
+    that same agent completes an assistant turn.
     """
 
     def __init__(
@@ -118,9 +118,6 @@ class MultiAgentEventPrinter:
         if isinstance(event, AssistantTextDelta):
             state.text_buf.append(event.text)
             return
-
-        # Flush any buffered deltas for *this agent* before structural events.
-        self._flush_buffers(agent)
 
         if isinstance(event, ToolExecutionStarted):
             state.tool_calls += 1
@@ -194,8 +191,8 @@ class MultiAgentEventPrinter:
                     f"{_truncate(event.output, 120)}",
                 )
         elif isinstance(event, AssistantTurnComplete):
-            # Turn-complete is quiet — the deltas already told the story.
-            pass
+            # Print full thinking/text blocks once per completed turn.
+            self._flush_buffers(agent)
         elif isinstance(event, SystemNotification):
             tag = f"[system{':' + event.category if event.category else ''}]"
             self._line(agent, work_id, f"{tag} {_truncate(event.text, 200)}")
