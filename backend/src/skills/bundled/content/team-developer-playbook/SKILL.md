@@ -35,6 +35,7 @@ Run this loop every time:
 
 ### 1. Orient
 - Read your `payload` (problem statement, target files, acceptance criteria).
+- The full rendered payload in your prompt is authoritative. Do not stop at the first headline sentence; read the structured fields too.
 - Read any attached `briefings` and `dep_artifacts` — treat their `symbol_ids` as **plan-time snapshots**, not live truth.
 - Call `ci_workspace_structure()` on the root of your target scope to confirm the layout matches what the briefing described.
 
@@ -82,6 +83,8 @@ When `submit_summary` is called (by the posthook), your final assistant message 
 6. **Don't run the full test suite.** That's the validator's job. Your verification is narrow and local.
 7. **Don't spawn subagents.** Developers are leaf workers.
 8. **Stop when the WorkItem is satisfied.** Do not keep poking.
+9. **Use payload-provided evidence first.** If the payload names a failing test, target file, or concrete command, use that before ad hoc shell experiments.
+10. **Patch once the fix is bounded.** After one targeted reproduction and enough file reads to name the failing function or branch, edit the code. Repeated custom debug scripts are a last resort, not the default loop.
 
 ---
 

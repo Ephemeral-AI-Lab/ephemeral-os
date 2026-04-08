@@ -216,8 +216,13 @@ async def setup_sweevo_sandbox(
     """Prepare the sandbox by checking out the repo at the base commit."""
     await _exec(sandbox_id, f"test -d {repo_dir} && test -d {repo_dir}/.git")
     await _exec(sandbox_id, f"{_CONDA_ACTIVATE} && python --version")
-    await _exec(sandbox_id, f"cd {repo_dir} && git checkout {instance.base_commit} 2>/dev/null")
-    await _exec(sandbox_id, f"cd {repo_dir} && git checkout -b sweevo-work 2>/dev/null || true")
+    # Retry runs may reuse the same named sandbox. Always restore the repo to
+    # a clean benchmark checkpoint before reapplying the SWE-EVO test patch so
+    # failed edits from earlier attempts do not contaminate the next run.
+    await _exec(sandbox_id, f"cd {repo_dir} && git reset --hard HEAD 2>/dev/null")
+    await _exec(sandbox_id, f"cd {repo_dir} && git clean -fd 2>/dev/null")
+    await _exec(sandbox_id, f"cd {repo_dir} && git checkout -f {instance.base_commit} 2>/dev/null")
+    await _exec(sandbox_id, f"cd {repo_dir} && git checkout -B sweevo-work {instance.base_commit} 2>/dev/null")
     await _exec(
         sandbox_id,
         f"{_CONDA_ACTIVATE} && cd {repo_dir} && pip install -e . -q 2>/dev/null || true",
@@ -315,6 +320,7 @@ async def create_sweevo_test_sandbox(
                 resolved_name,
                 existing.get("id", ""),
             )
+            await setup_sweevo_sandbox(instance, existing["id"], repo_dir)
             await ensure_sweevo_test_patch(instance, existing["id"], repo_dir)
             return {
                 "sandbox_id": existing["id"],

@@ -165,6 +165,26 @@ async def test_rejects_when_both_prompt_and_input():
     assert "exactly one" in res.output
 
 
+@pytest.mark.asyncio
+async def test_scout_rejects_prompt_mode():
+    res = await run_subagent.execute(
+        run_subagent.input_model(agent_name="scout", prompt="run the failing test"),
+        _ctx(),
+    )
+    assert res.is_error
+    assert "scout requires structured" in res.output
+
+
+@pytest.mark.asyncio
+async def test_scout_rejects_missing_target_paths():
+    res = await run_subagent.execute(
+        run_subagent.input_model(agent_name="scout", input={"task": "explore"}),
+        _ctx(),
+    )
+    assert res.is_error
+    assert "requires non-empty" in res.output
+
+
 # ---------- typed envelope ----------------------------------------------------
 
 

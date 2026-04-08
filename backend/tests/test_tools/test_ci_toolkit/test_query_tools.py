@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -208,6 +208,38 @@ async def test_query_symbols_no_results():
             )
 
     assert "No symbols matching" in result.output
+
+
+async def test_query_symbols_remote_fallback_on_cold_remote_workspace():
+    svc = MagicMock()
+    svc.is_initialized = False
+    svc.workspace_root = "/testbed"
+    svc.query_symbols.return_value = []
+
+    sandbox = MagicMock()
+    sandbox.process.exec = AsyncMock(
+        return_value=MagicMock(
+            exit_code=0,
+            result="/testbed/pydantic/json_schema.py:123:def generate_definitions(self):\n",
+        )
+    )
+
+    ctx = _ctx_with_svc(svc)
+    ctx.metadata["daytona_sandbox"] = sandbox
+    ctx.metadata["daytona_cwd"] = "/testbed"
+
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        with patch("code_intelligence.types.SymbolKind"):
+            result = await ci_query_symbols.execute(
+                ci_query_symbols.input_model(query="generate_definitions"),
+                ctx,
+            )
+
+    assert not result.is_error
+    symbols = json.loads(result.output)
+    assert symbols[0]["kind"] == "text_match"
+    assert symbols[0]["file"] == "/testbed/pydantic/json_schema.py"
+    svc.ensure_initialized.assert_not_called()
 
 
 async def test_query_symbols_returns_results():

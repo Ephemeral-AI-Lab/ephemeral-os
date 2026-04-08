@@ -11,6 +11,7 @@ import logging
 import os
 from typing import Any
 
+from team.runtime.registry import get as get_team_run
 from tools.core.base import ToolExecutionContext
 
 logger = logging.getLogger(__name__)
@@ -47,6 +48,7 @@ def prime_cache_after_write(context: ToolExecutionContext, file_path: str, conte
     """Prime the tree cache and refresh the symbol index after a write."""
     svc = get_ci_service(context)
     if svc is None:
+        _note_atlas_edit(context, file_path, reason="write")
         return
     try:
         svc.tree_cache.put_content(file_path, content)
@@ -54,6 +56,8 @@ def prime_cache_after_write(context: ToolExecutionContext, file_path: str, conte
         svc.lsp_client.invalidate(file_path)
     except Exception:
         logger.debug("CI prime_cache_after_write failed for %s", file_path)
+    finally:
+        _note_atlas_edit(context, file_path, reason="write")
 
 
 def record_edit_in_ledger(
@@ -81,3 +85,21 @@ def record_edit_in_ledger(
     except Exception:
         logger.debug("CI record_edit_in_ledger failed for %s", file_path)
 
+
+def _note_atlas_edit(
+    context: ToolExecutionContext,
+    file_path: str,
+    *,
+    reason: str,
+) -> None:
+    """Tell the live TeamRun that a file changed so atlas can refresh lazily."""
+    team_run_id = context.metadata.get("team_run_id")
+    if not team_run_id:
+        return
+    team_run = get_team_run(team_run_id)
+    if team_run is None:
+        return
+    try:
+        team_run.note_atlas_edit(file_path, reason=reason)
+    except Exception:
+        logger.debug("atlas dirty-mark failed for %s", file_path, exc_info=True)

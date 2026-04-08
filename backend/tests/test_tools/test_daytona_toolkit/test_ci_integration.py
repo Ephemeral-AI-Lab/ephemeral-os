@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
 
+from team.runtime.registry import register, unregister
 from tools.core.base import ToolExecutionContext
 from tools.daytona_toolkit.ci_integration import (
     get_ci_service,
@@ -57,6 +59,22 @@ def test_prime_cache_swallows_exceptions():
     svc.tree_cache.put_content.side_effect = RuntimeError("boom")
     ctx = _ctx({"ci_service": svc})
     prime_cache_after_write(ctx, "/file.py", "hello")  # must not raise
+
+
+def test_prime_cache_marks_atlas_dirty_for_team_run():
+    seen: list[tuple[str, str]] = []
+    register(
+        SimpleNamespace(
+            id="T1",
+            note_atlas_edit=lambda path, reason="edit": seen.append((path, reason)),
+        )
+    )
+    try:
+        ctx = _ctx({"team_run_id": "T1"})
+        prime_cache_after_write(ctx, "/repo/file.py", "hello")
+        assert seen == [("/repo/file.py", "write")]
+    finally:
+        unregister("T1")
 
 
 # ---------------------------------------------------------------------------

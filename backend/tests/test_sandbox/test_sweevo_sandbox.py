@@ -70,7 +70,7 @@ def test_create_sweevo_test_sandbox_reuses_named_retry(monkeypatch):
     assert result["sandbox_id"] == "sb-existing"
     assert result["sandbox"] == existing
     assert result["reused_existing"] is True
-    setup_mock.assert_not_awaited()
+    setup_mock.assert_awaited_once_with(_instance(), "sb-existing", _REPO_DIR)
     patch_mock.assert_awaited_once_with(_instance(), "sb-existing", _REPO_DIR)
 
 

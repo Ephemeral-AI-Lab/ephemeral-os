@@ -37,6 +37,8 @@ from message.messages import ConversationMessage
 logger = logging.getLogger(__name__)
 
 _MAX_INPUT_QUERY_CHARS = 2000
+_AUTO_RUN_ID_HEX_LEN = 16
+_AUTO_RUN_ID_RETRIES = 5
 
 
 def _get_agent_run_store() -> Any | None:
@@ -101,22 +103,32 @@ class AgentRunTracker:
                 _MAX_INPUT_QUERY_CHARS,
             )
 
-        resolved_run_id = run_id or uuid4().hex[:12]
-        try:
-            store.create_run(
-                run_id=resolved_run_id,
-                session_id=session_id,
-                agent_name=agent_name,
-                input_query=input_query[:_MAX_INPUT_QUERY_CHARS],
-                parent_run_id=parent_run_id,
-                parent_task_id=parent_task_id,
-            )
-        except Exception:
-            logger.warning(
-                "AgentRunTracker.create: failed to persist agent_run row", exc_info=True
-            )
-            return cls(run_id=None, agent_name=agent_name)
-        return cls(run_id=resolved_run_id, agent_name=agent_name)
+        retries = 1 if run_id else _AUTO_RUN_ID_RETRIES
+        for attempt in range(retries):
+            resolved_run_id = run_id or uuid4().hex[:_AUTO_RUN_ID_HEX_LEN]
+            try:
+                store.create_run(
+                    run_id=resolved_run_id,
+                    session_id=session_id,
+                    agent_name=agent_name,
+                    input_query=input_query[:_MAX_INPUT_QUERY_CHARS],
+                    parent_run_id=parent_run_id,
+                    parent_task_id=parent_task_id,
+                )
+            except Exception as exc:
+                if run_id is None and _is_duplicate_key_error(exc) and attempt + 1 < retries:
+                    logger.info(
+                        "AgentRunTracker.create: duplicate run_id %s for %s, retrying",
+                        resolved_run_id,
+                        agent_name,
+                    )
+                    continue
+                logger.warning(
+                    "AgentRunTracker.create: failed to persist agent_run row", exc_info=True
+                )
+                return cls(run_id=None, agent_name=agent_name)
+            return cls(run_id=resolved_run_id, agent_name=agent_name)
+        return cls(run_id=None, agent_name=agent_name)
 
     def finish(
         self,
@@ -172,3 +184,9 @@ class AgentRunTracker:
             )
         finally:
             self._finished = True
+
+
+def _is_duplicate_key_error(exc: Exception) -> bool:
+    """Return True when *exc* is a duplicate-PK insertion failure."""
+    text = str(exc).lower()
+    return "duplicate key" in text or "unique constraint" in text

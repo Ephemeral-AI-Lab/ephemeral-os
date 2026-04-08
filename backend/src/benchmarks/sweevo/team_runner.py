@@ -21,11 +21,13 @@ from engine.runtime.agent import spawn_agent
 from message.event_printer import MultiAgentEventPrinter
 from token_tracker.runtime import persist_run_usage
 from team.builtins import TEAM_PLANNER, register_all as _register_team_builtins
+from team.atlas.scheduler import AtlasMaintenanceScheduler
 from team.models import BudgetConfig, TeamRunStatus, WorkItemKind
 from team.runtime.context_builder import (
     TeamAgentContext,
     build_initial_user_message,
     build_work_item_metadata,
+    render_work_item_payload,
 )
 from team.runtime.executor import Executor
 from team.runtime.team_run import TeamRun
@@ -95,16 +97,9 @@ def _build_root_prompt(instance: SWEEvoInstance, repo_dir: str) -> str:
 
 
 def _work_item_base_prompt(payload: Any) -> str:
-    if isinstance(payload, dict):
-        for key in ("prompt", "task", "description", "instructions", "final_text"):
-            val = payload.get(key)
-            if isinstance(val, str) and val.strip():
-                return val
-        return "Execute the following WorkItem payload:\n" + json.dumps(
-            payload, indent=2, default=str
-        )
-    if isinstance(payload, str):
-        return payload
+    rendered = render_work_item_payload(payload)
+    if rendered is not None:
+        return rendered
     return f"Payload: {payload!r}"
 
 
@@ -215,18 +210,15 @@ def _make_runner(
         return {
             "agent": defn.name,
             "final_text": _extract_final_text(agent.display_messages),
+            "team_run_id": ctx.tool_metadata.get("team_run_id"),
+            "work_item_id": ctx.tool_metadata.get("work_item_id"),
+            "agent_run_id": ctx.tool_metadata.get("agent_run_id"),
         }
 
     return _run
 
 
-def _make_executor_factory(
-    session_config: Any,
-    sandbox_id: str,
-    printer: MultiAgentEventPrinter | None,
-):
-    runner = _make_runner(session_config, sandbox_id, printer)
-
+def _make_context_builders(sandbox_id: str):
     def build_query_ctx(defn, team_run, wi):
         base_prompt = _work_item_base_prompt(wi.payload)
         user_message = build_initial_user_message(team_run, wi, base_prompt)
@@ -235,14 +227,35 @@ def _make_executor_factory(
         return TeamAgentContext(user_message=user_message, tool_metadata=meta)
 
     def build_posthook_ctx(posthook_defn, work_result):
+        meta = {
+            "agent_name": posthook_defn.name,
+            "sandbox_id": sandbox_id,
+        }
+        user_message = _work_item_base_prompt(work_result)
+        if isinstance(work_result, dict):
+            for key in ("team_run_id", "work_item_id"):
+                value = work_result.get(key)
+                if value:
+                    meta[key] = value
+            final_text = work_result.get("final_text")
+            if isinstance(final_text, str) and final_text.strip():
+                user_message = final_text
         return TeamAgentContext(
-            user_message=_work_item_base_prompt(work_result),
-            tool_metadata={
-                "agent_name": posthook_defn.name,
-                "sandbox_id": sandbox_id,
-            },
+            user_message=user_message,
+            tool_metadata=meta,
             work_result=work_result,
         )
+
+    return build_query_ctx, build_posthook_ctx
+
+
+def _make_executor_factory(
+    session_config: Any,
+    sandbox_id: str,
+    printer: MultiAgentEventPrinter | None,
+):
+    runner = _make_runner(session_config, sandbox_id, printer)
+    build_query_ctx, build_posthook_ctx = _make_context_builders(sandbox_id)
 
     def factory(team_run):
         return Executor(
@@ -251,6 +264,27 @@ def _make_executor_factory(
             build_query_context=build_query_ctx,
             build_posthook_context=build_posthook_ctx,
             agent_lookup=get_definition,
+        )
+
+    return factory
+
+
+def _make_atlas_scheduler_factory(
+    session_config: Any,
+    sandbox_id: str,
+    printer: MultiAgentEventPrinter | None,
+):
+    runner = _make_runner(session_config, sandbox_id, printer)
+    build_query_ctx, build_posthook_ctx = _make_context_builders(sandbox_id)
+
+    def factory(team_run):
+        return AtlasMaintenanceScheduler(
+            team_run=team_run,
+            runner=runner,
+            build_query_context=build_query_ctx,
+            build_posthook_context=build_posthook_ctx,
+            agent_lookup=get_definition,
+            max_concurrent_jobs=1,
         )
 
     return factory
@@ -322,6 +356,11 @@ async def run_sweevo_team(
             "pass_to_pass": instance.pass_to_pass,
         },
         executor_factory=_make_executor_factory(session_config, sandbox_id, printer),
+        atlas_scheduler_factory=_make_atlas_scheduler_factory(
+            session_config,
+            sandbox_id,
+            printer,
+        ),
         num_executors=num_executors,
         root_kind=WorkItemKind.EXPANDABLE,
     )
@@ -334,4 +373,26 @@ async def run_sweevo_team(
         getattr(status, "value", status),
         work_items,
     )
+    if status != TeamRunStatus.SUCCEEDED:
+        failures = [
+            wi for wi in tr.dispatcher.graph.values() if wi.status.value == "failed"
+        ]
+        for wi in failures:
+            logger.warning(
+                "sweevo failed work item: id=%s agent=%s local_id=%s kind=%s reason=%s",
+                wi.id,
+                wi.agent_name,
+                wi.local_id,
+                wi.kind.value,
+                wi.failure_reason,
+            )
+            if printer is not None:
+                printer.raw_line(
+                    "team",
+                    (
+                        "[failed_work_item] "
+                        f"agent={wi.agent_name} local_id={wi.local_id or '-'} "
+                        f"kind={wi.kind.value} reason={wi.failure_reason or 'unknown'}"
+                    ),
+                )
     return status, work_items

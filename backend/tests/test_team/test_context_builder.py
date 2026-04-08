@@ -20,6 +20,7 @@ from team.runtime.context_builder import (
     build_initial_user_message,
     build_query_context,
     default_base_prompt,
+    render_work_item_payload,
 )
 
 
@@ -44,7 +45,24 @@ def _wi(**over) -> WorkItem:
 
 
 def test_default_base_prompt_uses_task_key():
-    assert default_base_prompt(_wi(payload={"task": "do it"})) == "do it"
+    out = default_base_prompt(_wi(payload={"task": "do it"}))
+    assert "do it" in out
+    assert '"task": "do it"' in out
+
+
+def test_render_work_item_payload_keeps_structured_fields():
+    out = render_work_item_payload(
+        {
+            "description": "refresh atlas",
+            "stale_subsystems": ["pydantic/core_models"],
+            "file_path": "/testbed/pydantic/json_schema.py",
+        }
+    )
+    assert out is not None
+    assert "refresh atlas" in out
+    assert "stale_subsystems" in out
+    assert "pydantic/core_models" in out
+    assert "/testbed/pydantic/json_schema.py" in out
 
 
 def test_default_base_prompt_fallback():
@@ -83,7 +101,8 @@ def test_build_query_context_carries_team_metadata_and_briefings():
     ctx = build_query_context(defn, tr, wi)
     assert isinstance(ctx, TeamAgentContext)
     assert "scout report" in ctx.user_message
-    assert ctx.user_message.endswith("implement")
+    assert "implement" in ctx.user_message
+    assert '"task": "implement"' in ctx.user_message
     assert ctx.tool_metadata.team_run_id == "T1"
     assert ctx.tool_metadata.work_item_id == "W1"
     assert ctx.tool_metadata.agent_run_id is None

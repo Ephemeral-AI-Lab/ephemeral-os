@@ -1,8 +1,9 @@
 """Atlas toolkit — planner-side read access to the Project Atlas (Phase 2).
 
 Exposes a single tool, :func:`atlas_lookup`, for planners to consult the
-persistent scout brief cache. Writers (``atlas_builder`` / ``atlas_refresher``)
-use the ``submit_atlas`` posthook instead; they never call this toolkit.
+persistent scout brief cache. Atlas maintenance is backend/runtime work:
+lookup misses and stale chunks can trigger background builder/refresher
+jobs, but planners never emit atlas work items directly.
 """
 
 from tools.atlas.lookup import atlas_lookup
@@ -21,9 +22,11 @@ class AtlasToolkit(BaseToolkit):
                 "Look up cached scout briefs for one or more subsystems. "
                 "`atlas_lookup` returns a decision per subsystem:\n"
                 "- `use`: a staged artifact ref is included — attach it to a worker briefing.\n"
-                "- `refresh`: spawn an atlas_refresher WorkItem with this subsystem in "
-                "`stale_subsystems`, then chain the worker via `deps`.\n"
-                "- `scout`: no cached brief — spawn a plain `scout` WorkItem.\n"
+                "- `refresh`: the cached chunk is stale. Treat atlas as unavailable "
+                "for this planning turn and fall back to fresh exploration.\n"
+                "- `scout`: no cached brief exists. Fall back to fresh exploration.\n"
+                "Runtime may refresh or build atlas chunks in the background; "
+                "that is not a planner-visible task.\n"
                 "Semantic questions ('how does X work', 'why does Y exist') must "
                 "always go to a fresh scout, never the atlas."
             ),

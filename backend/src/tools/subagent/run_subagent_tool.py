@@ -270,12 +270,39 @@ async def run_subagent(
                 f"run_subagent: agent '{agent_name}' is not a subagent "
                 f"(agent_type={getattr(sub_def, 'agent_type', 'agent')!r}); "
                 "only subagent-typed agents may be dispatched here. "
-                "If you need coding or validation work, emit `developer` / "
-                "`validator` WorkItems in the Plan instead of calling "
-                "`run_subagent`."
+                "This is terminal evidence for planners: do not retry or wait "
+                "on this background task. If you need coding, validation, or "
+                "runtime test evidence, emit `developer` / `validator` "
+                "WorkItems in the Plan instead of calling `run_subagent`."
             ),
             is_error=True,
         )
+    if agent_name == "scout":
+        if prompt is not None:
+            return ToolResult(
+                output=(
+                    "run_subagent: scout requires structured "
+                    "`input={\"target_paths\": [...]}`; prompt-mode scout "
+                    "calls are rejected. If you need to run tests, shell "
+                    "commands, or other execution work, emit `developer` / "
+                    "`validator` WorkItems instead."
+                ),
+                is_error=True,
+            )
+        target_paths = input.get("target_paths") if isinstance(input, dict) else None
+        valid_paths = [
+            path for path in (target_paths or []) if isinstance(path, str) and path.strip()
+        ]
+        if not valid_paths:
+            return ToolResult(
+                output=(
+                    "run_subagent: scout requires non-empty "
+                    "`input={\"target_paths\": [...]}`. Scout is for path-bounded "
+                    "read-only exploration only; do not use it as a proxy for "
+                    "test execution, shell commands, or validation."
+                ),
+                is_error=True,
+            )
 
     # Build the subagent's initial user message: shared_briefings preamble
     # (run-scoped, inherited symmetrically with the DAG executor path) + the

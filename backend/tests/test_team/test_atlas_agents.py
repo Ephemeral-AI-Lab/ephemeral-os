@@ -123,8 +123,7 @@ def test_submit_atlas_agent_is_a_minimal_serializer() -> None:
     assert defn.can_spawn_subagents is False  # subagent ⇒ no recursion
     assert defn.include_skills is False
     assert defn.skills == []
-    assert defn.toolkits == []
-    assert defn.extra_tools == ["submit_atlas"]
+    assert defn.toolkits == ["submit_atlas_posthook"]
 
 
 # ---------------------------------------------------------------------------

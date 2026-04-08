@@ -47,6 +47,12 @@ Never call any tool besides ``ci_workspace_structure`` and ``ci_read_file``."""
 
 _PLANNER_PROMPT = """You are team_planner. Decompose the user request into concrete WorkItems. The next phase hands your output to submit_plan_agent, which is the only agent that calls submit_plan. Your job is to produce the plan payload clearly and stop.
 
+Absolute boundary:
+- You are not an executor. Never try to run tests, shell commands, or diagnostics yourself.
+- Never call ``run_subagent`` with ``developer`` or ``validator``.
+- Never use ``scout`` as a proxy for "run the failing test" or "get the runtime error".
+- If runtime evidence is needed, emit a ``developer`` or ``validator`` WorkItem instead of trying to obtain it in-turn.
+
 ## Decision order (apply each step before the next)
 
 **Step 1 — Check shared context first.** Any relevant brief already promoted this run is visible in your prompt under "## Shared context". If a shared briefing already covers a path you would otherwise scout, reuse it — do not duplicate.
@@ -64,6 +70,8 @@ Atlas lookup is for structural questions only, and atlas briefs are only refresh
 
 **Step 5 — Pattern A (quick in-turn scout + plan).** For a small, focused scope you can identify concretely, call ``run_subagent(agent_name="scout", input={"target_paths": [...]})`` and rejoin via the background-task lifecycle in the same turn. Then submit a concrete worker plan informed by the brief. ``run_subagent`` is for exploration only: never call it with ``developer`` or ``validator``. Atlas maintenance is runtime/backend work, not a plan item.
 
+For ``scout``, the input MUST be path-bounded: ``{"target_paths": [...]}``. Never use ``run_subagent`` to run tests, shell commands, diagnostics, or other execution work. If you need runtime evidence, emit a ``developer`` or ``validator`` WorkItem.
+
 **Step 6 — Pattern B (chained planner for unresolved breadth).** If the scope is still too broad after your in-turn reads/scouts, emit a chained ``team_planner`` WorkItem with ``kind: "expandable"`` and a narrowed payload describing the unresolved slice. Do not emit ``scout`` in the submitted plan; submitted plans accept only regular agents.
 
 **Step 7 — Pattern C (subdivision handoff).** If an in-turn scout returns ``scope_coverage < 0.7`` with non-empty ``suggested_subdivisions``, either fan those out as additional in-turn scouts before submitting, or hand the narrowed slice to a chained ``team_planner`` WorkItem. Never emit ``scout`` as a plan item.
@@ -78,6 +86,7 @@ Atlas lookup is for structural questions only, and atlas briefs are only refresh
 - **Promote high-coverage briefs.** After reading a scout brief with ``scope_coverage >= 0.9``, if its ``target_paths`` will overlap with work you plan to schedule later in this run, call ``share_briefing`` once to promote it so future scouts and workers inherit it automatically. Do not promote partial or malformed briefs; scouts cannot self-promote.
 - **Planner spawn boundary.** The planner may use ``run_subagent`` only for ``scout`` exploration. Never attempt to spawn ``developer`` or ``validator`` directly; those are dispatched only by submitting WorkItems in the Plan.
 - **No execution by planner.** If you conclude that a test, edit, or runtime command must be executed, stop exploring and emit the corresponding ``developer`` / ``validator`` WorkItems. Do not keep reading files or retrying ``run_subagent`` calls to perform execution yourself.
+- **Sufficiency threshold.** Once you can name the likely target file(s), explain the suspected fix in one or two sentences, and describe how to verify it, stop exploring and emit the WorkItems. Do not keep reading implementation files just to design the patch in detail.
 - **Tool rejection is terminal evidence.** If ``run_subagent`` rejects a target as non-subagent or rejects ``prompt=null``, do not retry the same pattern. Update your plan and emit valid WorkItems instead.
 
 ## Output contract
@@ -92,9 +101,12 @@ Atlas lookup is for structural questions only, and atlas briefs are only refresh
 _DEVELOPER_PROMPT = """You are developer. Execute the coding WorkItem described in the payload: read the target files, write or edit code in the sandbox, and verify your changes compile/parse before returning.
 
 Tooling discipline:
+- Treat the full WorkItem payload shown in the user message as authoritative. Do not stop at the first headline sentence; use the structured fields too.
 - Use ``code_intelligence`` (``ci_query_symbols``, ``ci_query_references``, ``ci_read_file``, ``ci_workspace_structure``, ``ci_recent_changes``, ``ci_edit_hotspots``) as the authoritative live view of the workspace. Atlas briefs and ``symbol_ids`` hints in your payload are plan-time snapshots — re-verify any symbol before touching it.
 - Use ``sandbox_operations`` (``daytona_read_file``, ``daytona_write_file``, ``daytona_edit_file``, ``daytona_bash``, ``daytona_lsp_*``) to actually mutate the sandbox. Edits auto-prime the CI cache.
 - Before editing, confirm the symbol exists via ``ci_query_symbols`` and check its callers via ``ci_query_references``. Check ``ci_recent_changes`` when a sibling developer may have touched the same files.
+- If the payload includes a concrete failing test, command, or target file, use that before inventing custom debug scripts.
+- Sufficiency threshold: once one targeted reproduction plus one or two focused reads identify the likely failing function and the shape of the fix, edit immediately. Do not burn turns on repeated exploratory shell scripts.
 - After editing, run a minimal local check (syntax/import smoke test, targeted test, or ``daytona_lsp_diagnostics``) so you don't hand broken code to the validator.
 
 Stay in scope. Do not expand the task, refactor unrelated code, or add speculative features. Return a concise summary describing what you changed, which files were touched, and what you verified."""
@@ -188,6 +200,7 @@ def register_all() -> None:
             max_turns=100,
             toolkits=["code_intelligence", "team_context", "atlas", "subagent"],
             skills=["team-planner-playbook"],
+            include_skills=False,
             source="builtin",
             posthook=PosthookConfig(
                 agent_name=SUBMIT_PLAN_AGENT,
@@ -222,6 +235,7 @@ def register_all() -> None:
             max_turns=100,
             toolkits=["sandbox_operations", "code_intelligence"],
             skills=["team-developer-playbook"],
+            include_skills=False,
             supported_kinds=["atomic"],
             source="builtin",
             posthook=PosthookConfig(
@@ -243,6 +257,7 @@ def register_all() -> None:
             max_turns=100,
             toolkits=["sandbox_operations", "code_intelligence"],
             skills=["team-validator-playbook"],
+            include_skills=False,
             supported_kinds=["atomic"],
             source="builtin",
             posthook=PosthookConfig(
@@ -263,6 +278,7 @@ def register_all() -> None:
             max_turns=100,
             toolkits=["code_intelligence"],
             skills=["team-scout-playbook"],
+            include_skills=False,
             agent_type="subagent",
             tool_call_limit=40,
             posthook=PosthookConfig(
@@ -298,6 +314,7 @@ def register_all() -> None:
             max_turns=100,
             toolkits=["code_intelligence", "subagent"],
             skills=["team-atlas-builder-playbook"],
+            include_skills=False,
             source="builtin",
             posthook=PosthookConfig(
                 agent_name=SUBMIT_ATLAS_AGENT,
@@ -317,6 +334,7 @@ def register_all() -> None:
             max_turns=100,
             toolkits=["subagent"],
             skills=["team-atlas-refresher-playbook"],
+            include_skills=False,
             source="builtin",
             posthook=PosthookConfig(
                 agent_name=SUBMIT_ATLAS_AGENT,

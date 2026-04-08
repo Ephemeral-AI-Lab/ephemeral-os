@@ -38,8 +38,7 @@ def _make_serializer(name: str = "submit_plan_agent") -> AgentDefinition:
         name=name,
         description="serializer",
         system_prompt="serialize",
-        toolkits=[],
-        extra_tools=["submit_plan"],
+        toolkits=["submit_plan_posthook"],
         include_skills=False,
         source="builtin",
     )
@@ -77,8 +76,7 @@ async def test_posthook_phase_runs_and_extracts_submission():
         return serializer if name == "submit_plan_agent" else None
 
     def build_posthook_ctx(posthook_defn, work_result):
-        assert posthook_defn.toolkits == []
-        assert posthook_defn.extra_tools == ["submit_plan"]
+        assert posthook_defn.toolkits == ["submit_plan_posthook"]
         return FakeCtx()
 
     result, submitted = await execute_with_posthook(
@@ -245,8 +243,7 @@ async def test_serializer_with_include_skills_true_is_rejected():
         name="bad_serializer",
         description="bad",
         system_prompt="p",
-        toolkits=[],
-        extra_tools=["submit_plan"],
+        toolkits=["submit_plan_posthook"],
         include_skills=True,  # violates contract
         skills=[],
         source="builtin",
@@ -273,8 +270,7 @@ async def test_serializer_with_nonempty_skills_is_rejected():
         name="bad_serializer",
         description="bad",
         system_prompt="p",
-        toolkits=[],
-        extra_tools=["submit_plan"],
+        toolkits=["submit_plan_posthook"],
         include_skills=False,
         skills=["some_skill"],  # violates contract
         source="builtin",

@@ -47,6 +47,17 @@ class TrackedTool:
 DeferPredicate = Callable[[BaseTool | None, dict[str, Any] | None], bool]
 
 
+def _merge_submission_metadata(
+    *,
+    original: ToolExecutionContext,
+    updated: ToolExecutionContext,
+) -> None:
+    """Propagate accepted submit-tool payloads back to the live metadata bag."""
+    for key, value in updated.metadata.extras.items():
+        if key.startswith("submitted_") and value is not None:
+            original.metadata[key] = value
+
+
 def defer_background_dispatch(
     tool_def: BaseTool | None, tool_input: dict[str, Any] | None
 ) -> bool:
@@ -259,6 +270,7 @@ class StreamingToolExecutor:
             )
 
             tool.result = await run_tool_safely(tool_def, tool.input, context_with_id)
+            _merge_submission_metadata(original=self._context, updated=context_with_id)
             logger.info(
                 "STREAM: Tool completed: tool_id=%s tool_name=%s is_error=%s output_len=%d",
                 tool.id,

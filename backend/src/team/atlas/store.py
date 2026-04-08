@@ -222,6 +222,30 @@ class AtlasStore:
         results = self.get_chunks(project_key, [subsystem])
         return results[0] if results else None
 
+    def has_chunks(self, project_key: str) -> bool:
+        """Return True when *project_key* has at least one persisted chunk."""
+        if not project_key:
+            return False
+        with self._sf() as db:
+            row = db.execute(
+                select(ProjectAtlasChunkRecord.subsystem)
+                .where(ProjectAtlasChunkRecord.project_key == project_key)
+                .limit(1)
+            ).first()
+        return row is not None
+
+    def list_subsystems(self, project_key: str) -> list[str]:
+        """Return every persisted subsystem key for *project_key*."""
+        if not project_key:
+            return []
+        with self._sf() as db:
+            rows = db.execute(
+                select(ProjectAtlasChunkRecord.subsystem)
+                .where(ProjectAtlasChunkRecord.project_key == project_key)
+                .order_by(ProjectAtlasChunkRecord.subsystem)
+            ).all()
+        return [str(row[0]) for row in rows if row and row[0]]
+
     def get_chunks(
         self, project_key: str, subsystems: Iterable[str]
     ) -> list[AtlasChunk]:

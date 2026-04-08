@@ -8,15 +8,18 @@ entry comes back as a decision object:
   disk). The brief body is staged into the current ``TeamRun.artifacts``
   store and the resulting artifact ref is returned.
 - ``action="refresh"`` — the chunk exists but its scope has drifted.
-  The planner should spawn an ``atlas_refresher`` work item.
-- ``action="scout"`` — no chunk exists at all. The planner should spawn
-  a fresh ``scout`` work item.
+  The planner should treat atlas as unavailable for this planning turn
+  and fall back to fresh exploration.
+- ``action="scout"`` — no chunk exists at all. The planner should fall
+  back to fresh exploration.
 
 Freshness uses :func:`team.atlas.freshness.is_chunk_fresh`, which is
 git-independent — it consults the in-memory edit ledger (if available)
 and falls back to stored per-file content hashes on cold start.
 Decision arithmetic lives here (not in a prompt) so the behaviour is
-deterministic and testable in isolation.
+deterministic and testable in isolation. Atlas maintenance itself is
+runtime/backend work that may be triggered opportunistically after this
+tool returns.
 """
 
 from __future__ import annotations
@@ -43,7 +46,9 @@ logger = logging.getLogger(__name__)
     description=(
         "Consult the persistent Project Atlas for one or more subsystems. "
         "Returns a per-subsystem decision (use | refresh | scout). Use-marked "
-        "entries include a staged artifact_ref you can attach as a briefing."
+        "entries include a staged artifact_ref you can attach as a briefing. "
+        "Refresh/scout results mean the planner should use fresh exploration "
+        "for this turn; atlas maintenance is handled by the runtime."
     ),
     read_only=True,
 )
@@ -116,6 +121,7 @@ async def atlas_lookup(
                 max_age_seconds=max_age_seconds,
             )
         )
+    team_run.note_atlas_lookup(entries, source="atlas_lookup")
     return _build_result(entries, atlas_disabled=False)
 
 

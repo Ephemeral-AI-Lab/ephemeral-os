@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import shlex
+from pathlib import Path
 from typing import Any
 
 from tools.core.base import ToolExecutionContext, ToolResult
@@ -71,6 +72,55 @@ async def _remote_workspace_structure(
     if truncated:
         rendered += "\n... (truncated at 500 files)"
     return rendered
+
+
+async def _remote_query_symbols(
+    context: ToolExecutionContext,
+    *,
+    query: str,
+) -> list[dict[str, Any]] | None:
+    """Best-effort remote fallback for symbol search on cold starts."""
+    sandbox = get_daytona_sandbox(context)
+    if sandbox is None:
+        return None
+
+    target = resolve_daytona_path("", context)
+    command = (
+        f"rg -n --no-heading --color never {shlex.quote(query)} {shlex.quote(target)}"
+    )
+    try:
+        response = await sandbox.process.exec(command, timeout=30)
+    except Exception:
+        logger.debug("Remote symbol query failed for %s", query, exc_info=True)
+        return None
+
+    exit_code = getattr(response, "exit_code", 0)
+    output = (getattr(response, "result", "") or "").strip()
+    if exit_code not in (0, 1) or not output:
+        return None
+
+    matches: list[dict[str, Any]] = []
+    for line in output.splitlines():
+        parts = line.split(":", 2)
+        if len(parts) != 3:
+            continue
+        file_path, line_no, snippet = parts
+        try:
+            parsed_line = int(line_no)
+        except ValueError:
+            parsed_line = 0
+        matches.append(
+            {
+                "name": query,
+                "kind": "text_match",
+                "file": file_path,
+                "line": parsed_line,
+                "signature": snippet.strip()[:200],
+            }
+        )
+        if len(matches) >= 100:
+            break
+    return matches or None
 
 
 # -- CI Status ----------------------------------------------------------------
@@ -172,7 +222,12 @@ async def ci_query_symbols(
         except ValueError:
             pass
 
-    if not getattr(svc, "is_initialized", True):
+    workspace_root = str(getattr(svc, "workspace_root", "") or "")
+    has_remote_sandbox = get_daytona_sandbox(context) is not None
+    should_skip_local_warmup = bool(
+        has_remote_sandbox and workspace_root and not Path(workspace_root).is_dir()
+    )
+    if not getattr(svc, "is_initialized", True) and not should_skip_local_warmup:
         try:
             svc.ensure_initialized(wait=True)
         except Exception:
@@ -183,6 +238,9 @@ async def ci_query_symbols(
         results = [s for s in results if s.kind == kind_filter]
 
     if not results:
+        remote_matches = await _remote_query_symbols(context, query=query)
+        if remote_matches:
+            return ToolResult(output=json.dumps(remote_matches, indent=2))
         return ToolResult(output=f"No symbols matching '{query}'")
 
     symbols = []

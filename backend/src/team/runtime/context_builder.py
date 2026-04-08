@@ -10,6 +10,7 @@ is called from the ``run_subagent`` spawn handler so subagents inherit
 
 from __future__ import annotations
 
+import json
 import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
@@ -135,10 +136,33 @@ def prepend_shared_briefings_for_subagent(team_run_id: str | None, body: str) ->
 def default_base_prompt(wi: "WorkItem") -> str:
     """Minimal default rendering of a WorkItem payload into a user message."""
     payload = wi.payload or {}
-    task = payload.get("task") or payload.get("prompt") or payload.get("description")
-    if isinstance(task, str) and task:
-        return task
+    rendered = render_work_item_payload(payload)
+    if rendered is not None:
+        return rendered
     return f"Execute work item {wi.id} (agent={wi.agent_name}).\nPayload: {payload!r}"
+
+
+def render_work_item_payload(payload: Any) -> str | None:
+    """Render a structured payload without dropping critical fields."""
+    if isinstance(payload, dict):
+        if not payload:
+            return None
+        rendered_payload = json.dumps(payload, indent=2, default=str)
+        primary: list[str] = []
+        for key in ("task", "prompt", "description", "instructions", "final_text"):
+            value = payload.get(key)
+            if isinstance(value, str) and value.strip():
+                primary.append(value.strip())
+        if primary:
+            return (
+                "\n\n".join(primary)
+                + "\n\nWorkItem payload (authoritative):\n"
+                + rendered_payload
+            )
+        return "WorkItem payload (authoritative):\n" + rendered_payload
+    if isinstance(payload, str):
+        return payload
+    return None
 
 
 def build_query_context(
