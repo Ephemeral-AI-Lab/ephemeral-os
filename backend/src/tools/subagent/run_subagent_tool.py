@@ -104,6 +104,75 @@ def format_last_n_messages(messages: list[ConversationMessage], n: int) -> str:
     return out
 
 
+_ENVELOPE_SUMMARY_CAP = 500
+
+
+def _build_subagent_envelope(agent: Any, sub_run_id: str | None, final_text: str) -> dict[str, Any]:
+    """Project the subagent's posthook submission into the typed envelope.
+
+    Per plan §7:
+        - ``Plan``               → kind="plan",    payload={items, rationale}
+        - ``SubmittedSummary``   → kind="summary", artifact_ref present if
+                                   the submitter set one; if its artifact
+                                   carries a ``target_paths`` field, kind is
+                                   promoted to ``"brief"``.
+        - no posthook submission → kind="raw",    payload={"final_text": ...}
+    """
+    qc = getattr(agent, "query_context", None)
+    submitted = None
+    if qc is not None and qc.tool_metadata is not None:
+        for key in ("submitted_summary", "submitted_plan"):
+            value = qc.tool_metadata.get(key)
+            if value is not None:
+                submitted = value
+                break
+
+    # Lazy imports — avoid pulling team into tools at import time.
+    from team.models import Plan
+    from tools.posthook import SubmittedSummary
+
+    if isinstance(submitted, Plan):
+        return {
+            "kind": "plan",
+            "summary": (
+                f"submitted {len(submitted.items)} work item(s)"
+                if submitted.items
+                else "empty plan"
+            )[:_ENVELOPE_SUMMARY_CAP],
+            "artifact_ref": None,
+            "payload": {
+                "items": [
+                    {
+                        "agent_name": it.agent_name,
+                        "local_id": it.local_id,
+                        "kind": it.kind.value,
+                        "deps": list(it.deps),
+                    }
+                    for it in submitted.items
+                ],
+                "rationale": submitted.rationale,
+            },
+        }
+
+    if isinstance(submitted, SubmittedSummary):
+        artifact = submitted.artifact
+        kind = "brief" if (isinstance(artifact, dict) and "target_paths" in artifact) else "summary"
+        return {
+            "kind": kind,
+            "summary": (submitted.summary or "")[:_ENVELOPE_SUMMARY_CAP],
+            "artifact_ref": sub_run_id,
+            "payload": artifact if isinstance(artifact, dict) else {},
+        }
+
+    # No posthook submission — fall back to raw final text.
+    return {
+        "kind": "raw",
+        "summary": (final_text or "")[:_ENVELOPE_SUMMARY_CAP],
+        "artifact_ref": None,
+        "payload": {"final_text": final_text},
+    }
+
+
 def _extract_final_text(messages: list[ConversationMessage]) -> str:
     """Pull the assistant text out of the subagent's last assistant message."""
     for msg in reversed(messages):
@@ -118,26 +187,39 @@ def _extract_final_text(messages: list[ConversationMessage]) -> str:
 @tool(
     name="run_subagent",
     description=(
-        "Spawn a focused worker subagent as a background task. Returns a task_id immediately. "
-        "Inspect progress with check_background_progress(task_id=...), join with "
+        "Spawn a named subagent (e.g. ``scout``) as a background task. "
+        "Returns a task_id immediately. Inspect progress with "
+        "check_background_progress(task_id=...), join with "
         "wait_for_background_task(task_id=...), or stop stale work with "
-        "cancel_background_task(task_id=...). Emit multiple calls in one turn for parallel fan-out."
+        "cancel_background_task(task_id=...). Pass exactly one of ``prompt`` "
+        "(free-form text) or ``input`` (structured payload). Emit multiple "
+        "calls in one turn for parallel fan-out."
     ),
     background="always",
     task_type="subagent",
 )
 async def run_subagent(
-    prompt: str,
+    agent_name: str,
+    prompt: str | None = None,
+    input: dict[str, Any] | None = None,
     *,
     context: ToolExecutionContext,
 ) -> ToolResult:
-    """Spawn a focused worker subagent.
+    """Spawn a named subagent and rejoin via the background-task lifecycle.
 
     Args:
-        prompt: The task description for the subagent.
+        agent_name: Required. Name of a registered ``AgentDefinition``
+            whose ``agent_type == "subagent"``. Use ``"scout"`` for
+            read-only path exploration, ``"subagent"`` for the generic
+            worker, or any user-registered subagent definition.
+        prompt: Free-form task description. Mutually exclusive with ``input``.
+        input: Structured payload (e.g. ``{"target_paths": [...]}`` for a
+            scout). Mutually exclusive with ``prompt``.
 
     Returns:
-        output (str): The subagent's final assistant text.
+        output (str): JSON-encoded envelope ``{summary, artifact_ref, kind,
+            payload}`` where ``kind`` is one of ``"brief" | "plan" |
+            "summary" | "raw"``.
     """
     from agents import get_definition
     from engine.runtime.agent import spawn_agent
@@ -148,6 +230,7 @@ async def run_subagent(
     task_id = context.metadata.background_task_id
     parent_run_id = context.metadata.agent_run_id
     parent_task_id = task_id if isinstance(task_id, str) else None
+    parent_team_run_id = context.metadata.get("team_run_id")
 
     if parent_cfg is None:
         return ToolResult(
@@ -155,12 +238,46 @@ async def run_subagent(
             is_error=True,
         )
 
-    sub_def = get_definition("subagent")
-    if sub_def is None:
+    # XOR validation: exactly one of prompt / input must be supplied.
+    if (prompt is None) == (input is None):
         return ToolResult(
-            output="run_subagent: builtin 'subagent' agent definition not found.",
+            output=(
+                "run_subagent: must supply exactly one of `prompt` (str) or "
+                "`input` (dict)."
+            ),
             is_error=True,
         )
+
+    sub_def = get_definition(agent_name)
+    if sub_def is None:
+        return ToolResult(
+            output=f"run_subagent: agent '{agent_name}' is not registered.",
+            is_error=True,
+        )
+    # Construction-time recursion prevention is enforced by AgentDefinition's
+    # post-init (subagent type ⇒ can_spawn_subagents=False). The runtime gate
+    # below is the second line of defence: only subagent-typed targets are
+    # dispatchable through this tool, period.
+    if getattr(sub_def, "agent_type", "agent") != "subagent":
+        return ToolResult(
+            output=(
+                f"run_subagent: agent '{agent_name}' is not a subagent "
+                f"(agent_type={getattr(sub_def, 'agent_type', 'agent')!r}); "
+                f"only subagent-typed agents may be dispatched here."
+            ),
+            is_error=True,
+        )
+
+    # Build the subagent's initial user message: shared_briefings preamble
+    # (run-scoped, inherited symmetrically with the DAG executor path) + the
+    # caller-supplied prompt or serialized input. Parent ``wi.briefings`` are
+    # NOT forwarded — only ``shared_briefings`` cross the subagent boundary.
+    body = prompt if prompt is not None else json.dumps(input, separators=(",", ":"), default=str)
+    # Local import — avoids dragging team.runtime into tools.subagent at module
+    # load time and keeps the dependency direction tools→team explicit.
+    from team.runtime.context_builder import prepend_shared_briefings_for_subagent
+
+    final_prompt = prepend_shared_briefings_for_subagent(parent_team_run_id, body)
 
     # Persist a subagent run record FIRST, before spawn_agent — so spawn
     # failures still leave an audit trail that the parent can list / inspect
@@ -170,7 +287,7 @@ async def run_subagent(
     tracker = AgentRunTracker.create(
         session_id=getattr(parent_cfg, "session_id", None),
         agent_name=sub_def.name,
-        input_query=prompt,
+        input_query=final_prompt,
         parent_run_id=parent_run_id if isinstance(parent_run_id, str) else None,
         parent_task_id=parent_task_id,
     )
@@ -186,7 +303,7 @@ async def run_subagent(
             parent_cfg,
             messages=[],
             agent_def=sub_def,
-            latest_user_prompt=prompt,
+            latest_user_prompt=final_prompt,
             sandbox_id=sandbox_id,
         )
     except Exception as exc:
@@ -235,7 +352,7 @@ async def run_subagent(
     run_error: str | None = None
     cancelled = False
     try:
-        async for _event in agent.run(prompt):
+        async for _event in agent.run(final_prompt):
             # Drain the event stream — agent.run drives _messages, which is
             # what the peek provider reads. We don't need per-event handling.
             pass
@@ -301,7 +418,10 @@ async def run_subagent(
         raise asyncio.CancelledError(msg)
     if run_error:
         return ToolResult(output=f"run_subagent: subagent crashed: {run_error}", is_error=True)
-    if not final_text:
-        return ToolResult(output="(subagent produced no final text)", is_error=False)
-    return ToolResult(output=final_text)
+
+    envelope = _build_subagent_envelope(agent, sub_run_id, final_text)
+    return ToolResult(
+        output=json.dumps(envelope, default=str),
+        metadata={"envelope": envelope},
+    )
 

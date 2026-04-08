@@ -353,6 +353,7 @@ def spawn_agent(
     )
 
     max_turns = agent_def.max_turns if agent_def and agent_def.max_turns else 200
+    tool_call_limit = agent_def.tool_call_limit if agent_def else None
 
     # Plumb session_config through tool_metadata so tools (e.g. run_subagent)
     # that need to spawn nested agents can reach it without a Protocol layer.
@@ -369,6 +370,7 @@ def spawn_agent(
         system_prompt=system_prompt,
         max_tokens=settings.max_tokens,
         max_turns=max_turns,
+        tool_call_limit=tool_call_limit,
         hook_executor=hook_executor,
         tool_metadata=initial_tool_metadata,
         session_state=session_state,

@@ -18,6 +18,7 @@ from team.models import (
     AgentResult,
     BudgetConfig,
     BudgetState,
+    DependencyArtifact,
     TERMINAL_WI_STATUSES,
     WorkItem,
     WorkItemKind,
@@ -71,6 +72,35 @@ class Dispatcher:
         self._ready_queue.put_nowait(wi.id)
         self._ready_order.append(wi.id)
 
+    def _promote_to_ready(self, wi: WorkItem) -> None:
+        """Single chokepoint for PENDING→READY: snapshots dep artifacts, then enqueues.
+
+        Must be called from every path that transitions a WorkItem from
+        PENDING to READY so that ``wi.dep_artifacts`` is captured exactly
+        once from the frozen state of each dep at promotion time.
+        """
+        assert wi.status == WorkItemStatus.PENDING, (
+            f"_promote_to_ready called on {wi.id} in status {wi.status.value}"
+        )
+        snapshot: list[DependencyArtifact] = []
+        for dep_id in wi.deps:
+            dep = self.graph.get(dep_id)
+            if dep is None or dep.status != WorkItemStatus.DONE:
+                raise RuntimeError(
+                    f"_promote_to_ready called early: dep {dep_id} not DONE"
+                )
+            if dep.artifact_ref is None:
+                continue
+            snapshot.append(
+                DependencyArtifact(
+                    source_wi_id=dep.id,
+                    artifact_ref=dep.artifact_ref,
+                    display_name=dep.local_id or dep.agent_name or dep.id,
+                )
+            )
+        wi.dep_artifacts = snapshot
+        self._enqueue(wi)
+
     async def add_work_item(self, wi: WorkItem) -> None:
         async with self.lock:
             if self.budget_state.work_items_used >= self.budgets.max_work_items:
@@ -82,7 +112,7 @@ class Dispatcher:
             self.graph[wi.id] = wi
             self.budget_state.work_items_used += 1
             if self._compute_readiness(wi):
-                self._enqueue(wi)
+                self._promote_to_ready(wi)
 
     async def pop_ready(self) -> str:
         while True:
@@ -175,7 +205,7 @@ class Dispatcher:
                     touched.append(other)
             for t in touched:
                 if self._compute_readiness(t):
-                    self._enqueue(t)
+                    self._promote_to_ready(t)
 
         return new_items
 

@@ -6,10 +6,18 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from team.models import Plan, WorkItemKind, WorkItemSpec
+from team.models import Plan, WorkItemKind
 from team.planning.validation import validate_plan_phase_a
 from tools.core.base import ToolExecutionContext
 from tools.posthook.base import SubmitPosthookTool
+
+
+class _SubmitBriefing(BaseModel):
+    name: str
+    source: str  # "artifact" | "inline"
+    ref: str | None = None
+    inline: str | None = None
+    description: str | None = None
 
 
 class _SubmitPlanItem(BaseModel):
@@ -20,6 +28,7 @@ class _SubmitPlanItem(BaseModel):
     notes: str | None = None
     timeout_seconds: float | None = None
     kind: WorkItemKind = WorkItemKind.ATOMIC
+    briefings: list[_SubmitBriefing] = Field(default_factory=list)
 
 
 class SubmitPlanInput(BaseModel):
@@ -43,23 +52,8 @@ class SubmitPlanTool(SubmitPosthookTool):
         self, arguments: BaseModel, context: ToolExecutionContext
     ) -> tuple[Any, str | None]:
         assert isinstance(arguments, SubmitPlanInput)
-        data = arguments.model_dump()
         try:
-            plan = Plan(
-                items=[
-                    WorkItemSpec(
-                        agent_name=str(it["agent_name"]),
-                        payload=dict(it.get("payload") or {}),
-                        local_id=it.get("local_id"),
-                        deps=list(it.get("deps") or []),
-                        notes=it.get("notes"),
-                        timeout_seconds=it.get("timeout_seconds"),
-                        kind=WorkItemKind(it.get("kind", "atomic")),
-                    )
-                    for it in (data.get("items") or [])
-                ],
-                rationale=data.get("rationale"),
-            )
+            plan = Plan.from_dict(arguments.model_dump())
         except Exception as exc:
             return None, f"Invalid Plan shape: {exc}"
 

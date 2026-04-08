@@ -26,6 +26,7 @@ class AgentDefinitionRecord(Base):
     model: Mapped[str] = mapped_column(String(128), nullable=False)
     effort: Mapped[str | None] = mapped_column(String(16), nullable=True)
     max_turns: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    tool_call_limit: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # Toolkits & skills (JSON arrays)
     toolkits: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)

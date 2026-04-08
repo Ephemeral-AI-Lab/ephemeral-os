@@ -302,7 +302,7 @@ async def test_run_subagent_registers_provider_and_returns_final_text(monkeypatc
     )
 
     result = await run_subagent.execute(
-        run_subagent.input_model(prompt="task"), ctx
+        run_subagent.input_model(agent_name="subagent", prompt="task"), ctx
     )
 
     assert result.is_error is False
@@ -321,7 +321,7 @@ async def test_run_subagent_registers_provider_and_returns_final_text(monkeypatc
 async def test_run_subagent_missing_session_config_returns_error():
     ctx = ToolExecutionContext(cwd=Path("/tmp"), metadata={})
     result = await run_subagent.execute(
-        run_subagent.input_model(prompt="task"), ctx
+        run_subagent.input_model(agent_name="subagent", prompt="task"), ctx
     )
     assert result.is_error is True
     assert "session_config" in result.output
@@ -448,7 +448,7 @@ async def test_run_subagent_persists_run_with_parent_ids(monkeypatch):
     )
 
     result = await run_subagent.execute(
-        run_subagent.input_model(prompt="do the thing"), ctx
+        run_subagent.input_model(agent_name="subagent", prompt="do the thing"), ctx
     )
 
     assert result.is_error is False
@@ -514,7 +514,7 @@ async def test_run_subagent_persists_spawn_failure(monkeypatch):
         },
     )
 
-    result = await run_subagent.execute(run_subagent.input_model(prompt="x"), ctx)
+    result = await run_subagent.execute(run_subagent.input_model(agent_name="subagent", prompt="x"), ctx)
 
     assert result.is_error is True
     assert "spawn failed" in result.output
@@ -589,7 +589,7 @@ async def test_run_subagent_persists_failure(monkeypatch):
         },
     )
 
-    result = await run_subagent.execute(run_subagent.input_model(prompt="x"), ctx)
+    result = await run_subagent.execute(run_subagent.input_model(agent_name="subagent", prompt="x"), ctx)
 
     assert result.is_error is True
     assert "inner exploded" in result.output
@@ -664,7 +664,7 @@ async def test_run_subagent_persists_usage_when_cancelled(monkeypatch):
     )
 
     with pytest.raises(asyncio.CancelledError):
-        await run_subagent.execute(run_subagent.input_model(prompt="x"), ctx)
+        await run_subagent.execute(run_subagent.input_model(agent_name="subagent", prompt="x"), ctx)
 
     assert len(fake_store.finished) == 1
     assert fake_store.finished[0]["status"] == "cancelled"

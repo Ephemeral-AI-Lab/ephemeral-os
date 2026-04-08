@@ -44,6 +44,38 @@ TERMINAL_WI_STATUSES: frozenset[WorkItemStatus] = frozenset(
 
 
 @dataclass
+class Briefing:
+    """Parent→child context handoff. Wraps a brief (artifact) or inline text."""
+
+    name: str
+    source: str  # "artifact" | "inline"
+    ref: str | None = None
+    inline: str | None = None
+    description: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.source not in ("artifact", "inline"):
+            raise ValueError(f"Briefing.source must be 'artifact' or 'inline', got {self.source!r}")
+        if not self.name:
+            raise ValueError("Briefing.name must be non-empty")
+        if self.source == "artifact":
+            if not self.ref or self.inline is not None:
+                raise ValueError("Briefing(source='artifact') requires ref and forbids inline")
+        else:
+            if not self.inline or self.ref is not None:
+                raise ValueError("Briefing(source='inline') requires inline and forbids ref")
+
+
+@dataclass
+class DependencyArtifact:
+    """Run-scoped frozen snapshot of a completed dep's artifact (for rendering)."""
+
+    source_wi_id: str
+    artifact_ref: str
+    display_name: str | None = None
+
+
+@dataclass
 class WorkItem:
     id: str
     team_run_id: str
@@ -58,6 +90,9 @@ class WorkItem:
     artifact_ref: str | None = None
     timeout_seconds: float | None = None
     depth: int = 0
+    local_id: str | None = None
+    briefings: list[Briefing] = field(default_factory=list)
+    dep_artifacts: list[DependencyArtifact] = field(default_factory=list)
     created_at: datetime = field(default_factory=_utcnow)
     started_at: datetime | None = None
     finished_at: datetime | None = None
@@ -73,6 +108,7 @@ class WorkItemSpec:
     notes: str | None = None
     timeout_seconds: float | None = None
     kind: WorkItemKind = WorkItemKind.ATOMIC
+    briefings: list[Briefing] = field(default_factory=list)
 
 
 @dataclass
@@ -91,6 +127,7 @@ class Plan:
                 notes=it.get("notes"),
                 timeout_seconds=it.get("timeout_seconds"),
                 kind=WorkItemKind(it.get("kind", "atomic")),
+                briefings=[Briefing(**b) for b in (it.get("briefings") or [])],
             )
             for it in (data.get("items") or [])
         ]
@@ -114,6 +151,8 @@ class BudgetConfig:
     max_artifact_bytes: int = 1_000_000
     max_total_artifact_bytes: int = 50_000_000
     default_work_item_timeout: float = 300.0
+    max_briefing_bytes: int = 32_000
+    max_shared_briefings: int = 16
 
 
 @dataclass

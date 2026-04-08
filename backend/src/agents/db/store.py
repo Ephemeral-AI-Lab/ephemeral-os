@@ -132,6 +132,7 @@ class AgentDefinitionStore:
                 existing.model = source.model
                 existing.effort = source.effort
                 existing.max_turns = source.max_turns
+                existing.tool_call_limit = source.tool_call_limit
                 existing.toolkits = source.toolkits
                 existing.skills = source.skills or []
                 existing.hooks = source.hooks
@@ -155,6 +156,7 @@ class AgentDefinitionStore:
                 model=source.model,
                 effort=source.effort,
                 max_turns=source.max_turns,
+                tool_call_limit=source.tool_call_limit,
                 toolkits=source.toolkits,
                 skills=source.skills or [],
                 hooks=source.hooks,

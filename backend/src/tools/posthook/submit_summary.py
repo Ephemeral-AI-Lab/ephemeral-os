@@ -7,6 +7,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from team.context.canonicalize import scope_of_artifact
 from tools.core.base import ToolExecutionContext
 from tools.posthook.base import SubmitPosthookTool
 
@@ -60,11 +61,28 @@ class SubmitSummaryTool(SubmitPosthookTool):
         summary = arguments.summary.strip()
         if not summary:
             return None, "summary must be non-empty"
+        artifact = _inject_canonical_scope(arguments.artifact)
         return (
-            SubmittedSummary(summary=summary, artifact=arguments.artifact),
+            SubmittedSummary(summary=summary, artifact=artifact),
             None,
         )
 
     def _accepted_message(self, payload: Any) -> str:
         assert isinstance(payload, SubmittedSummary)
         return f"Summary accepted ({len(payload.summary)} chars)."
+
+
+def _inject_canonical_scope(artifact: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Idempotently derive ``canonical_scope`` from ``target_paths``.
+
+    Generic and applies to any artifact dict carrying ``target_paths``,
+    not just scout output. A scout that already supplied
+    ``canonical_scope`` is a no-op; one that forgot still lands a
+    correctly-keyed brief for ``shared_briefings`` dedup (§13).
+    """
+    if not isinstance(artifact, dict) or "canonical_scope" in artifact:
+        return artifact
+    derived = scope_of_artifact(artifact)
+    if not derived:
+        return artifact
+    return {**artifact, "canonical_scope": derived}

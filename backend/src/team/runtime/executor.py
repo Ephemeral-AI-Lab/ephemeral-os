@@ -21,24 +21,29 @@ logger = logging.getLogger(__name__)
 QueryRunner = Callable[["AgentDefinition", Any], Awaitable[Any]]
 QueryContextBuilder = Callable[["AgentDefinition", "TeamRun", "WorkItem"], Any]
 PosthookContextBuilder = Callable[["AgentDefinition", Any], Any]
-ResultExtractor = Callable[[Any, "WorkItem"], AgentResult]
 
 
 class Executor:
+    """Runtime invariant: every team agent MUST submit through a posthook.
+
+    Either ``Plan`` (planner) or ``SubmittedSummary`` (worker / scout /
+    validator). Anything else fails the WorkItem with a grep-able reason.
+    Wire ``submit_summary_agent`` as the default posthook for any agent
+    that does not have a domain-specific submission.
+    """
+
     def __init__(
         self,
         team_run: "TeamRun",
         runner: QueryRunner,
         build_query_context: QueryContextBuilder,
         build_posthook_context: PosthookContextBuilder,
-        extract_result: ResultExtractor,
         agent_lookup: Callable[[str], "AgentDefinition | None"],
     ) -> None:
         self.team_run = team_run
         self.runner = runner
         self.build_query_context = build_query_context
         self.build_posthook_context = build_posthook_context
-        self.extract_result = extract_result
         self.agent_lookup = agent_lookup
 
     async def run_forever(self) -> None:
@@ -80,7 +85,9 @@ class Executor:
         )
 
         try:
-            work_result, submitted = await asyncio.wait_for(
+            # work_result is consumed for posthook side-effects only; the
+            # final dispatch result is built from ``submitted`` below.
+            _, submitted = await asyncio.wait_for(
                 execute_with_posthook(
                     work_defn=defn,
                     work_ctx=query_ctx,
@@ -97,12 +104,25 @@ class Executor:
             await dispatcher.fail(wi_id, f"NoPosthookOutput: {exc}")
             return
 
-        result = self.extract_result(work_result, wi)
-        if submitted is not None and result.submitted_plan is None and isinstance(submitted, Plan):
-            result.submitted_plan = submitted
-        if isinstance(submitted, SubmittedSummary):
-            result.summary = submitted.summary
-            if submitted.artifact is not None:
-                result.artifact = submitted.artifact
+        if submitted is None:
+            await dispatcher.fail(
+                wi_id,
+                "no_posthook_submission: team agents must submit via a posthook "
+                "(use submit_summary_agent if no domain-specific posthook applies)",
+            )
+            return
+        if isinstance(submitted, Plan):
+            result = AgentResult(artifact=None, summary="", submitted_plan=submitted)
+        elif isinstance(submitted, SubmittedSummary):
+            result = AgentResult(
+                artifact=submitted.artifact,
+                summary=submitted.summary,
+                submitted_plan=None,
+            )
+        else:
+            await dispatcher.fail(
+                wi_id, f"unexpected_submission_type: {type(submitted).__name__}"
+            )
+            return
 
         await dispatcher.complete(wi_id, result)

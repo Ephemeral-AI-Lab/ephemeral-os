@@ -7,7 +7,9 @@ from typing import Callable, Iterator
 from agents.registry import get_definition as _get_definition
 
 from team.errors import InvalidPlan
-from team.models import Plan, WorkItem, WorkItemKind, WorkItemSpec, WorkItemStatus
+from team.models import Briefing, Plan, WorkItem, WorkItemKind, WorkItemSpec, WorkItemStatus
+
+_MAX_INLINE_BRIEFING_BYTES_PER_SPEC = 4096
 
 Issue = dict[str, str]
 
@@ -49,6 +51,63 @@ def validate_plan_phase_a(plan: Plan, max_plan_size: int = 50) -> list[Issue]:
             issues.append(
                 {"field": f"items[{idx}].agent_name", "msg": f"unknown agent '{item.agent_name}'"}
             )
+
+        # Briefings: dup-name check + inline byte cap (XOR+name enforced in __post_init__).
+        seen_brief_names: set[str] = set()
+        inline_bytes = 0
+        for bi, b in enumerate(item.briefings):
+            if b.name in seen_brief_names:
+                issues.append(
+                    {
+                        "field": f"items[{idx}].briefings[{bi}].name",
+                        "msg": f"duplicate briefing name '{b.name}'",
+                    }
+                )
+            seen_brief_names.add(b.name)
+            if b.source == "inline" and b.inline is not None:
+                inline_bytes += len(b.inline.encode("utf-8"))
+        if inline_bytes > _MAX_INLINE_BRIEFING_BYTES_PER_SPEC:
+            issues.append(
+                {
+                    "field": f"items[{idx}].briefings",
+                    "msg": (
+                        f"total inline briefing bytes {inline_bytes} exceeds cap "
+                        f"{_MAX_INLINE_BRIEFING_BYTES_PER_SPEC}"
+                    ),
+                }
+            )
+
+    # "No workers alongside scout deps" — a non-scout item cannot depend on a sibling
+    # whose agent_type == "subagent" in the same plan.
+    subagent_locals: set[str] = set()
+    for item in plan.items:
+        if item.local_id is None:
+            continue
+        agent_def = _get_definition(item.agent_name)
+        if agent_def is not None and getattr(agent_def, "agent_type", "agent") == "subagent":
+            subagent_locals.add(item.local_id)
+    if subagent_locals:
+        for idx, item in enumerate(plan.items):
+            agent_def = _get_definition(item.agent_name)
+            is_self_subagent = (
+                agent_def is not None
+                and getattr(agent_def, "agent_type", "agent") == "subagent"
+            )
+            if is_self_subagent:
+                continue
+            for dep in item.deps:
+                if dep in subagent_locals:
+                    # planner-typed items (expandable) are allowed; workers (atomic non-planner) not.
+                    if item.kind == WorkItemKind.ATOMIC:
+                        issues.append(
+                            {
+                                "field": f"items[{idx}].deps",
+                                "msg": (
+                                    f"atomic worker '{item.agent_name}' depends on subagent "
+                                    f"sibling '{dep}' — use a chained expandable planner instead"
+                                ),
+                            }
+                        )
 
     # Dep refs + cycle check on internal subgraph.
     # Every item gets a node key (local_id or synthetic idx) so cycles
@@ -171,6 +230,8 @@ def validate_plan_phase_b(
                 timeout_seconds=spec.timeout_seconds,
                 depth=new_depth,
                 kind=spec.kind,
+                local_id=spec.local_id,
+                briefings=list(spec.briefings),
             )
         )
 

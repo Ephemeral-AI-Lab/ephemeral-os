@@ -43,6 +43,7 @@ from message.stream_events import (
     ToolExecutionCompleted,
     ToolExecutionStarted,
 )
+from engine.core.notifications import build_budget_warning
 from engine.core.streaming_executor import StreamingToolExecutor, defer_background_dispatch
 from hooks import HookEvent, HookExecutor
 from tools.core.base import (
@@ -70,6 +71,11 @@ class QueryContext:
     system_prompt: str
     max_tokens: int
     max_turns: int = 200
+    # Per-ephemeral-run cap on tool dispatches. ``None`` = unlimited. Each
+    # spawned agent starts with a fresh ``tool_calls_used`` counter.
+    tool_call_limit: int | None = None
+    tool_calls_used: int = 0
+    last_budget_warning_remaining: int | None = None
     hook_executor: HookExecutor | None = None
     tool_metadata: ExecutionMetadata | None = None
     session_state: SessionState | None = None
@@ -313,6 +319,12 @@ async def _run_query_loop(
         context.tool_metadata.background_task_manager = background_manager
 
     for _ in range(context.max_turns):
+        budget_warning = build_budget_warning(context)
+        if budget_warning is not None:
+            history_msg, warning_event = budget_warning
+            display_messages.append(history_msg)
+            yield warning_event, None
+
         if background_manager is not None:
             for completed_task in background_manager.collect_completed():
                 event = _deliver_completed_background_task(completed_task, display_messages)
@@ -637,6 +649,25 @@ async def _run_query_loop(
 
         display_messages.append(ConversationMessage(role="user", content=tool_results))  # type: ignore[arg-type]
 
+        if (
+            context.tool_call_limit is not None
+            and context.tool_calls_used >= context.tool_call_limit
+        ):
+            if background_manager is not None:
+                await background_manager.cancel_all()
+            yield (
+                ToolExecutionCompleted(
+                    tool_name="",
+                    output=(
+                        f"Agent stopped: tool_call_limit "
+                        f"({context.tool_call_limit}) exceeded."
+                    ),
+                    is_error=True,
+                ),
+                None,
+            )
+            return
+
     if background_manager is not None:
         await background_manager.cancel_all()
 
@@ -675,6 +706,24 @@ async def _execute_tool_call(
     tool_input: dict[str, object],
     extra_metadata: ExecutionMetadata | dict[str, Any] | None = None,
 ) -> ToolResultBlock:
+    # Per-ephemeral-run tool budget. Checked BEFORE the call so the agent
+    # gets a clear, structured rejection instead of silently exceeding the
+    # cap. Counter is bumped on every dispatch attempt — including the
+    # rejected one — so a runaway agent cannot loop on rejections.
+    if context.tool_call_limit is not None:
+        if context.tool_calls_used >= context.tool_call_limit:
+            return ToolResultBlock(
+                tool_use_id=tool_use_id,
+                content=(
+                    f"tool_call_limit exceeded: {context.tool_call_limit} tool "
+                    f"calls already used. The agent run will terminate after "
+                    f"this turn — call submit_summary / submit_plan now to "
+                    f"preserve partial work."
+                ),
+                is_error=True,
+            )
+        context.tool_calls_used += 1
+
     if context.hook_executor is not None:
         pre_hooks = await context.hook_executor.execute(
             HookEvent.PRE_TOOL_USE,

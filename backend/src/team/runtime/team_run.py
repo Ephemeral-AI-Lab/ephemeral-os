@@ -19,6 +19,8 @@ from team.models import (
 )
 from team.runtime.dispatcher import Dispatcher
 from team.runtime.executor import Executor
+from team.runtime.registry import register as _register_team_run
+from team.runtime.registry import unregister as _unregister_team_run
 
 
 class TeamRun:
@@ -78,6 +80,7 @@ class TeamRun:
         self.root_work_item_id = root.id
         await self.dispatcher.add_work_item(root)
         self.status = TeamRunStatus.RUNNING
+        _register_team_run(self)
 
         self._executor_factory = executor_factory
         self._num_executors = num_executors
@@ -122,11 +125,14 @@ class TeamRun:
             self._executor_tasks.append(asyncio.create_task(executor.run_forever()))
 
     async def wait(self) -> TeamRunStatus:
-        while not self.dispatcher.all_terminal():
-            await asyncio.sleep(0.05)
-        await self._join_executors()
-        self._compute_final_status()
-        return self.status
+        try:
+            while not self.dispatcher.all_terminal():
+                await asyncio.sleep(0.05)
+            await self._join_executors()
+            self._compute_final_status()
+            return self.status
+        finally:
+            _unregister_team_run(self.id)
 
     async def _join_executors(self) -> None:
         """Cooperative shutdown after the DAG has reached a terminal state.

@@ -10,9 +10,10 @@ import pytest
 from agents.registry import register_definition, unregister_definition
 from agents.types import AgentDefinition
 from hooks.agent_posthook import PosthookConfig
-from team.models import AgentResult, Plan, TeamRunStatus, WorkItemKind, WorkItemStatus
+from team.models import Plan, TeamRunStatus, WorkItemKind, WorkItemStatus
 from team.runtime.team_run import TeamRun
 from team.runtime.executor import Executor
+from tools.posthook import SubmittedSummary
 
 pytestmark = pytest.mark.e2e
 
@@ -27,6 +28,26 @@ def _register_scripted(name: str, posthook: PosthookConfig | None = None) -> Age
     # Posthook serializer agents must not carry builtin skills (enforced
     # by hooks.agent_posthook). The scripted helper is reused for both
     # work agents and serializers, so we always opt out of skills here.
+    #
+    # Runtime invariant (Step 2d): every team agent must have a posthook.
+    # If the test does not supply one, auto-wire a per-agent ``submit_summary``
+    # serializer (``f"{name}__autopost"``) and register it alongside.
+    if posthook is None:
+        autopost_name = f"{name}__autopost"
+        register_definition(
+            AgentDefinition(
+                name=autopost_name,
+                description=f"autopost serializer for {name}",
+                system_prompt="p",
+                toolkits=[],
+                skills=[],
+                include_skills=False,
+                source="builtin",
+            )
+        )
+        posthook = PosthookConfig(
+            agent_name=autopost_name, metadata_key="submitted_summary"
+        )
     defn = AgentDefinition(
         name=name,
         description=f"scripted {name}",
@@ -44,6 +65,11 @@ def _register_scripted(name: str, posthook: PosthookConfig | None = None) -> Age
 def _cleanup(*names: str) -> None:
     for n in names:
         unregister_definition(n)
+        # Also unregister the auto-wired serializer if it exists.
+        try:
+            unregister_definition(f"{n}__autopost")
+        except Exception:
+            pass
 
 
 def make_runner(scripts: dict[str, Any]):
@@ -55,6 +81,19 @@ def make_runner(scripts: dict[str, Any]):
     """
 
     async def runner(defn, ctx):
+        # Auto-posthook serializer for the default ``__autopost`` flow:
+        # look up the work agent's script and stash a SubmittedSummary so
+        # the Executor's posthook-required invariant is satisfied without
+        # the test having to write a serializer by hand.
+        if defn.name.endswith("__autopost"):
+            owner = defn.name[: -len("__autopost")]
+            owner_script = scripts.get(owner) or {}
+            ctx.tool_metadata["submitted_summary"] = SubmittedSummary(
+                summary=owner_script.get("summary", ""),
+                artifact=owner_script.get("artifact"),
+            )
+            return {"phase": defn.name}
+
         script = scripts.get(defn.name)
         if callable(script):
             script(ctx)
@@ -70,14 +109,6 @@ def make_runner(scripts: dict[str, Any]):
         return {"artifact": {}, "summary": ""}
 
     return runner
-
-
-def extract_result(work_result, wi) -> AgentResult:
-    if isinstance(work_result, dict) and "artifact" in work_result:
-        return AgentResult(
-            artifact=work_result["artifact"], summary=work_result.get("summary", "")
-        )
-    return AgentResult(artifact=work_result, summary=str(work_result)[:100])
 
 
 def make_executor_factory(runner):
@@ -101,7 +132,6 @@ def make_executor_factory(runner):
             runner=runner,
             build_query_context=build_query_ctx,
             build_posthook_context=build_posthook_ctx,
-            extract_result=extract_result,
             agent_lookup=get_definition,
         )
 
@@ -263,8 +293,7 @@ async def test_sandbox_id_propagates_to_query_context_builder():
                 runner=make_runner({"solo": {"artifact": {}, "summary": "ok"}}),
                 build_query_context=build_query_ctx,
                 build_posthook_context=build_posthook_ctx,
-                extract_result=extract_result,
-                agent_lookup=get_definition,
+                    agent_lookup=get_definition,
             )
 
         tr = TeamRun(session_id="S1", user_request="hello", sandbox_id="sb-xyz")

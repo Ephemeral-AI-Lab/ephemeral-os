@@ -93,3 +93,49 @@ async def test_single_submission_guard():
     assert "already called" in res2.output
     # Stashed payload unchanged.
     assert ctx.metadata["submitted_summary"].summary == "first."
+
+
+@pytest.mark.asyncio
+async def test_canonical_scope_auto_injected_from_target_paths():
+    tool = SubmitSummaryTool()
+    ctx = _ctx()
+    args = SubmitSummaryInput.model_validate(
+        {
+            "summary": "scout report",
+            "artifact": {"target_paths": ["src/foo/", "./src/bar"], "files": []},
+        }
+    )
+    res = await tool.execute(args, ctx)
+    assert not res.is_error
+    stashed = ctx.metadata["submitted_summary"]
+    assert stashed.artifact["canonical_scope"] == "src/bar|src/foo"
+
+
+@pytest.mark.asyncio
+async def test_canonical_scope_explicit_value_preserved():
+    tool = SubmitSummaryTool()
+    ctx = _ctx()
+    args = SubmitSummaryInput.model_validate(
+        {
+            "summary": "scout report",
+            "artifact": {
+                "target_paths": ["src/foo"],
+                "canonical_scope": "explicit/key",
+            },
+        }
+    )
+    res = await tool.execute(args, ctx)
+    assert not res.is_error
+    assert ctx.metadata["submitted_summary"].artifact["canonical_scope"] == "explicit/key"
+
+
+@pytest.mark.asyncio
+async def test_canonical_scope_skipped_without_target_paths():
+    tool = SubmitSummaryTool()
+    ctx = _ctx()
+    args = SubmitSummaryInput.model_validate(
+        {"summary": "report", "artifact": {"files": []}}
+    )
+    res = await tool.execute(args, ctx)
+    assert not res.is_error
+    assert "canonical_scope" not in ctx.metadata["submitted_summary"].artifact
