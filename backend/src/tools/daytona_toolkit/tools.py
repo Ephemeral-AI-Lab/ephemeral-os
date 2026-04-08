@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
 import shlex
 import uuid
 from typing import Any
@@ -21,6 +22,7 @@ logger = logging.getLogger(__name__)
 _DEFAULT_TIMEOUT = 120
 _BACKGROUND_DEFAULT_TIMEOUT = 1800
 _OUTPUT_MAX_CHARS = 8000
+_EXIT_MARKER = "__CODEX_EXIT_CODE__="
 
 
 def _truncate(text: str, max_chars: int = _OUTPUT_MAX_CHARS) -> str:
@@ -28,6 +30,33 @@ def _truncate(text: str, max_chars: int = _OUTPUT_MAX_CHARS) -> str:
         return text
     half = max_chars // 2
     return text[:half] + f"\n\n... truncated ({len(text)} chars total) ...\n\n" + text[-half:]
+
+
+def _wrap_bash_command(command: str) -> str:
+    """Wrap *command* so we can recover exit code even if the SDK omits it."""
+    script = (
+        f"{command}\n"
+        "__codex_exit_code=$?\n"
+        f'printf "\\n{_EXIT_MARKER}%s\\n" "$__codex_exit_code"\n'
+        'exit "$__codex_exit_code"'
+    )
+    return f"env -u LC_ALL bash -lc {shlex.quote(script)}"
+
+
+def _extract_exit_code(
+    output: str,
+    *,
+    fallback_exit_code: int | None,
+) -> tuple[str, int]:
+    """Strip the synthetic exit marker and return the resolved exit code."""
+    match = re.search(rf"\n?{re.escape(_EXIT_MARKER)}(-?\d+)\s*$", output, flags=re.S)
+    if match:
+        resolved = int(match.group(1))
+        cleaned = output[: match.start()]
+        if cleaned.endswith("\n"):
+            cleaned = cleaned[:-1]
+        return cleaned, resolved
+    return output, 0 if fallback_exit_code is None else int(fallback_exit_code)
 
 
 def _get_sandbox(context: ToolExecutionContext) -> Any:
@@ -102,7 +131,7 @@ async def daytona_bash(
     cwd = _get_cwd(context)
     on_progress_line = context.metadata.get("on_progress_line")
 
-    wrapped = f"env -u LC_ALL bash -c {shlex.quote(command)}"
+    wrapped = _wrap_bash_command(command)
 
     # Streaming path: when launched as a background task, query.py injects
     # ``on_progress_line`` into the metadata. Use a Daytona session so we can
@@ -123,11 +152,14 @@ async def daytona_bash(
         if cwd:
             kwargs["cwd"] = cwd
         response = await sandbox.process.exec(wrapped, **kwargs)
-        exit_code = getattr(response, "exit_code", 0)
+        stdout, exit_code = _extract_exit_code(
+            getattr(response, "result", "") or "",
+            fallback_exit_code=getattr(response, "exit_code", None),
+        )
         output = json.dumps(
             {
                 "cwd": cwd or "",
-                "stdout": _truncate(response.result or ""),
+                "stdout": _truncate(stdout),
                 "exit_code": exit_code,
             }
         )
@@ -171,6 +203,8 @@ async def _exec_streaming(
         line_buf += new_text
         while "\n" in line_buf:
             line, line_buf = line_buf.split("\n", 1)
+            if line.startswith(_EXIT_MARKER):
+                continue
             try:
                 on_progress_line(line)
             except Exception as cb_exc:
@@ -248,24 +282,29 @@ async def _exec_streaming(
             logger.debug("final log poll failed: %s", exc)
 
         if line_buf:
-            try:
-                on_progress_line(line_buf)
-            except Exception as cb_exc:
-                logger.debug("on_progress_line callback failed (flush): %s", cb_exc)
+            if not line_buf.startswith(_EXIT_MARKER):
+                try:
+                    on_progress_line(line_buf)
+                except Exception as cb_exc:
+                    logger.debug("on_progress_line callback failed (flush): %s", cb_exc)
             line_buf = ""
 
-        combined = final_stdout + (("\n" + final_stderr) if final_stderr else "")
+        cleaned_stdout, resolved_exit_code = _extract_exit_code(
+            final_stdout,
+            fallback_exit_code=exit_code,
+        )
+        combined = cleaned_stdout + (("\n" + final_stderr) if final_stderr else "")
         output = json.dumps(
             {
                 "cwd": cwd or "",
-                "stdout": _truncate(combined),
-                "exit_code": exit_code if exit_code is not None else 0,
+                "stdout": _truncate(cleaned_stdout),
+                "exit_code": resolved_exit_code,
             }
         )
         return ToolResult(
             output=output,
-            is_error=bool(exit_code) if exit_code is not None else False,
-            metadata={"exit_code": exit_code},
+            is_error=resolved_exit_code != 0,
+            metadata={"exit_code": resolved_exit_code},
         )
     finally:
         try:

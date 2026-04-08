@@ -237,9 +237,66 @@ async def test_query_symbols_remote_fallback_on_cold_remote_workspace():
 
     assert not result.is_error
     symbols = json.loads(result.output)
-    assert symbols[0]["kind"] == "text_match"
+    assert symbols[0]["kind"] == "function"
+    assert symbols[0]["name"] == "generate_definitions"
     assert symbols[0]["file"] == "/testbed/pydantic/json_schema.py"
     svc.ensure_initialized.assert_not_called()
+
+
+async def test_query_symbols_local_workspace_fallback_finds_class(tmp_path):
+    source = tmp_path / "pydantic" / "type_adapter.py"
+    source.parent.mkdir()
+    source.write_text(
+        "class TypeAdapter:\n"
+        "    pass\n",
+        encoding="utf-8",
+    )
+
+    svc = MagicMock()
+    svc.is_initialized = False
+    svc.workspace_root = str(tmp_path)
+    svc.query_symbols.return_value = []
+
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        with patch("code_intelligence.types.SymbolKind"):
+            result = await ci_query_symbols.execute(
+                ci_query_symbols.input_model(query="TypeAdapter"),
+                _ctx_with_svc(svc),
+            )
+
+    assert not result.is_error
+    symbols = json.loads(result.output)
+    assert symbols[0]["name"] == "TypeAdapter"
+    assert symbols[0]["kind"] == "class"
+    assert symbols[0]["file"].endswith("type_adapter.py")
+
+
+async def test_query_symbols_local_workspace_fallback_finds_partial_function(tmp_path):
+    source = tmp_path / "pydantic" / "json_schema.py"
+    source.parent.mkdir()
+    source.write_text(
+        "def _extract_discriminator(schema):\n"
+        "    return schema\n",
+        encoding="utf-8",
+    )
+
+    svc = MagicMock()
+    svc.is_initialized = False
+    svc.workspace_root = str(tmp_path)
+    svc.query_symbols.return_value = []
+
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        with patch("code_intelligence.types.SymbolKind"):
+            result = await ci_query_symbols.execute(
+                ci_query_symbols.input_model(query="discriminator", kind="function"),
+                _ctx_with_svc(svc),
+            )
+
+    assert not result.is_error
+    symbols = json.loads(result.output)
+    assert symbols[0]["name"] == "_extract_discriminator"
+    assert symbols[0]["kind"] == "function"
+    assert symbols[0]["file"].endswith("json_schema.py")
 
 
 async def test_query_symbols_returns_results():

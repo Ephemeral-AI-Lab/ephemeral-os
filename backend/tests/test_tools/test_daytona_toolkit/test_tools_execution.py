@@ -10,6 +10,7 @@ import pytest
 
 from tools.core.base import ToolExecutionContext
 from tools.daytona_toolkit.tools import (
+    _EXIT_MARKER,
     daytona_bash,
     daytona_read_file,
     daytona_write_file,
@@ -56,6 +57,21 @@ async def test_bash_nonzero_exit_is_error():
     result = await daytona_bash.execute(daytona_bash.input_model(command="bad"), ctx)
     assert result.is_error
     assert json.loads(result.output)["exit_code"] == 1
+
+
+async def test_bash_prefers_marker_exit_code_when_sdk_reports_success():
+    sb = _sb(
+        exec_result=MagicMock(
+            result=f"bash: line 1: pytest: command not found\n{_EXIT_MARKER}127\n",
+            exit_code=0,
+        )
+    )
+    ctx = _ctx({"daytona_sandbox": sb})
+    result = await daytona_bash.execute(daytona_bash.input_model(command="pytest"), ctx)
+    data = json.loads(result.output)
+    assert result.is_error
+    assert data["exit_code"] == 127
+    assert _EXIT_MARKER not in data["stdout"]
 
 
 async def test_bash_exception_returns_error():

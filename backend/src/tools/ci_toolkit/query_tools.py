@@ -4,10 +4,14 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import shlex
+import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from code_intelligence.constants import SKIP_DIRECTORIES, SUPPORTED_EXTENSIONS
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.daytona_toolkit.ci_integration import (
     get_ci_service,
@@ -17,6 +21,236 @@ from tools.daytona_toolkit.ci_integration import (
 from tools.core.decorator import tool
 
 logger = logging.getLogger(__name__)
+_SYMBOL_FALLBACK_LIMIT = 100
+_IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+_PY_DEF_RE = re.compile(r"^\s*(?:async\s+def|def)\s+([A-Za-z_][A-Za-z0-9_]*)\b")
+_PY_CLASS_RE = re.compile(r"^\s*class\s+([A-Za-z_][A-Za-z0-9_]*)\b")
+_ASSIGN_RE = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=")
+
+
+@dataclass(frozen=True)
+class _FallbackSearchSpec:
+    pattern: str
+    kind: str
+
+
+def _build_fallback_specs(query: str, *, kind: str = "") -> list[_FallbackSearchSpec]:
+    """Return ordered regex specs for definition-first fallback lookup."""
+    needle = query.strip()
+    if not needle:
+        return []
+
+    kind_name = (kind or "").lower().strip()
+    exact_identifier = bool(_IDENTIFIER_RE.fullmatch(needle))
+    escaped = re.escape(needle)
+    specs: list[_FallbackSearchSpec] = []
+
+    allow_functions = kind_name in {"", "function", "method"}
+    allow_classes = kind_name in {"", "class"}
+    allow_vars = kind_name in {"", "variable", "constant", "property"}
+
+    if exact_identifier and allow_functions:
+        specs.extend(
+            (
+                _FallbackSearchSpec(
+                    pattern=rf"^\s*(?:async\s+def|def)\s+{escaped}\b",
+                    kind="function",
+                ),
+                _FallbackSearchSpec(
+                    pattern=rf"^\s*(?:async\s+def|def)\s+[A-Za-z_][A-Za-z0-9_]*{escaped}[A-Za-z0-9_]*\b",
+                    kind="function",
+                ),
+            )
+        )
+    if exact_identifier and allow_classes:
+        specs.extend(
+            (
+                _FallbackSearchSpec(
+                    pattern=rf"^\s*class\s+{escaped}\b",
+                    kind="class",
+                ),
+                _FallbackSearchSpec(
+                    pattern=rf"^\s*class\s+[A-Za-z_][A-Za-z0-9_]*{escaped}[A-Za-z0-9_]*\b",
+                    kind="class",
+                ),
+            )
+        )
+    if exact_identifier and allow_vars:
+        specs.append(
+            _FallbackSearchSpec(
+                pattern=rf"^\s*{escaped}\s*=",
+                kind="variable",
+            )
+        )
+
+    boundary = rf"\b{escaped}\b" if exact_identifier else escaped
+    specs.append(_FallbackSearchSpec(pattern=boundary, kind="text_match"))
+    return specs
+
+
+def _extract_match_name(snippet: str, *, query: str, kind: str) -> str:
+    """Infer the real symbol name from a matched line when possible."""
+    if kind == "function":
+        match = _PY_DEF_RE.search(snippet)
+        if match:
+            return match.group(1)
+    elif kind == "class":
+        match = _PY_CLASS_RE.search(snippet)
+        if match:
+            return match.group(1)
+    elif kind == "variable":
+        match = _ASSIGN_RE.search(snippet)
+        if match:
+            return match.group(1)
+    return query
+
+
+def _dedupe_matches(matches: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    seen: set[tuple[str, int, str, str]] = set()
+    deduped: list[dict[str, Any]] = []
+    for match in matches:
+        key = (
+            str(match.get("file") or ""),
+            int(match.get("line") or 0),
+            str(match.get("kind") or ""),
+            str(match.get("name") or ""),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(match)
+        if len(deduped) >= _SYMBOL_FALLBACK_LIMIT:
+            break
+    return deduped
+
+
+def _parse_rg_matches(
+    output: str,
+    *,
+    query: str,
+    kind: str,
+) -> list[dict[str, Any]]:
+    matches: list[dict[str, Any]] = []
+    for line in output.splitlines():
+        parts = line.split(":", 2)
+        if len(parts) != 3:
+            continue
+        file_path, line_no, snippet = parts
+        try:
+            parsed_line = int(line_no)
+        except ValueError:
+            parsed_line = 0
+        inferred_name = _extract_match_name(snippet, query=query, kind=kind)
+        matches.append(
+            {
+                "name": inferred_name,
+                "kind": kind,
+                "file": file_path,
+                "line": parsed_line,
+                "signature": snippet.strip()[:200],
+            }
+        )
+        if len(matches) >= _SYMBOL_FALLBACK_LIMIT:
+            break
+    return matches
+
+
+def _local_query_symbols(
+    *,
+    workspace_root: str,
+    query: str,
+    kind: str = "",
+) -> list[dict[str, Any]] | None:
+    """Search the local workspace when the symbol index is cold or incomplete."""
+    root = Path(workspace_root)
+    if not root.is_dir():
+        return None
+
+    collected: list[dict[str, Any]] = []
+    for spec in _build_fallback_specs(query, kind=kind):
+        try:
+            response = subprocess.run(
+                [
+                    "rg",
+                    "-n",
+                    "--no-heading",
+                    "--color",
+                    "never",
+                    "-e",
+                    spec.pattern,
+                    str(root),
+                ],
+                capture_output=True,
+                text=True,
+                timeout=30,
+                check=False,
+            )
+        except FileNotFoundError:
+            return _python_fallback_query_symbols(root=root, query=query, kind=kind)
+        except Exception:
+            logger.debug("Local symbol query failed for %s", query, exc_info=True)
+            continue
+        if response.returncode not in (0, 1):
+            continue
+        if not response.stdout:
+            continue
+        collected.extend(
+            _parse_rg_matches(response.stdout, query=query, kind=spec.kind)
+        )
+        if len(collected) >= _SYMBOL_FALLBACK_LIMIT:
+            break
+
+    deduped = _dedupe_matches(collected)
+    return deduped or None
+
+
+def _python_fallback_query_symbols(
+    *,
+    root: Path,
+    query: str,
+    kind: str = "",
+) -> list[dict[str, Any]] | None:
+    """Last-resort fallback when ripgrep is unavailable."""
+    collected: list[dict[str, Any]] = []
+    compiled_specs = [
+        (re.compile(spec.pattern), spec.kind)
+        for spec in _build_fallback_specs(query, kind=kind)
+    ]
+    if not compiled_specs:
+        return None
+
+    for file_path in root.rglob("*"):
+        if len(collected) >= _SYMBOL_FALLBACK_LIMIT:
+            break
+        if not file_path.is_file():
+            continue
+        if any(part in SKIP_DIRECTORIES for part in file_path.parts):
+            continue
+        if file_path.suffix.lower() not in SUPPORTED_EXTENSIONS:
+            continue
+        try:
+            lines = file_path.read_text(encoding="utf-8").splitlines()
+        except Exception:
+            continue
+        for lineno, line in enumerate(lines, start=1):
+            for pattern, matched_kind in compiled_specs:
+                if not pattern.search(line):
+                    continue
+                collected.append(
+                    {
+                        "name": _extract_match_name(line, query=query, kind=matched_kind),
+                        "kind": matched_kind,
+                        "file": str(file_path),
+                        "line": lineno,
+                        "signature": line.strip()[:200],
+                    }
+                )
+                break
+            if len(collected) >= _SYMBOL_FALLBACK_LIMIT:
+                break
+
+    deduped = _dedupe_matches(collected)
+    return deduped or None
 
 
 def _svc_or_error(context: ToolExecutionContext) -> tuple[Any | None, ToolResult | None]:
@@ -78,6 +312,7 @@ async def _remote_query_symbols(
     context: ToolExecutionContext,
     *,
     query: str,
+    kind: str = "",
 ) -> list[dict[str, Any]] | None:
     """Best-effort remote fallback for symbol search on cold starts."""
     sandbox = get_daytona_sandbox(context)
@@ -85,42 +320,30 @@ async def _remote_query_symbols(
         return None
 
     target = resolve_daytona_path("", context)
-    command = (
-        f"rg -n --no-heading --color never {shlex.quote(query)} {shlex.quote(target)}"
-    )
-    try:
-        response = await sandbox.process.exec(command, timeout=30)
-    except Exception:
-        logger.debug("Remote symbol query failed for %s", query, exc_info=True)
-        return None
-
-    exit_code = getattr(response, "exit_code", 0)
-    output = (getattr(response, "result", "") or "").strip()
-    if exit_code not in (0, 1) or not output:
-        return None
-
-    matches: list[dict[str, Any]] = []
-    for line in output.splitlines():
-        parts = line.split(":", 2)
-        if len(parts) != 3:
-            continue
-        file_path, line_no, snippet = parts
-        try:
-            parsed_line = int(line_no)
-        except ValueError:
-            parsed_line = 0
-        matches.append(
-            {
-                "name": query,
-                "kind": "text_match",
-                "file": file_path,
-                "line": parsed_line,
-                "signature": snippet.strip()[:200],
-            }
+    collected: list[dict[str, Any]] = []
+    for spec in _build_fallback_specs(query, kind=kind):
+        command = (
+            "rg -n --no-heading --color never "
+            f"-e {shlex.quote(spec.pattern)} {shlex.quote(target)}"
         )
-        if len(matches) >= 100:
+        try:
+            response = await sandbox.process.exec(command, timeout=30)
+        except Exception:
+            logger.debug("Remote symbol query failed for %s", query, exc_info=True)
+            return None
+
+        exit_code = getattr(response, "exit_code", 0)
+        output = (getattr(response, "result", "") or "").strip()
+        if exit_code not in (0, 1) or not output:
+            continue
+        collected.extend(
+            _parse_rg_matches(output, query=query, kind=spec.kind)
+        )
+        if len(collected) >= _SYMBOL_FALLBACK_LIMIT:
             break
-    return matches or None
+
+    deduped = _dedupe_matches(collected)
+    return deduped or None
 
 
 # -- CI Status ----------------------------------------------------------------
@@ -238,9 +461,20 @@ async def ci_query_symbols(
         results = [s for s in results if s.kind == kind_filter]
 
     if not results:
-        remote_matches = await _remote_query_symbols(context, query=query)
+        fallback_matches: list[dict[str, Any]] = []
+        local_matches = _local_query_symbols(
+            workspace_root=workspace_root,
+            query=query,
+            kind=kind,
+        )
+        if local_matches:
+            fallback_matches.extend(local_matches)
+        remote_matches = await _remote_query_symbols(context, query=query, kind=kind)
         if remote_matches:
-            return ToolResult(output=json.dumps(remote_matches, indent=2))
+            fallback_matches.extend(remote_matches)
+        fallback_matches = _dedupe_matches(fallback_matches)
+        if fallback_matches:
+            return ToolResult(output=json.dumps(fallback_matches, indent=2))
         return ToolResult(output=f"No symbols matching '{query}'")
 
     symbols = []
