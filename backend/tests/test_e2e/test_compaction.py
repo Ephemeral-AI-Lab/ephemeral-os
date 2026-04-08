@@ -10,7 +10,14 @@ from __future__ import annotations
 
 import pytest
 
-from message import ConversationMessage, TextBlock, ToolResultBlock, ToolUseBlock
+from message import (
+    BackgroundTaskStateBlock,
+    ConversationMessage,
+    SystemReminderBlock,
+    TextBlock,
+    ToolResultBlock,
+    ToolUseBlock,
+)
 from compaction import (
     AUTOCOMPACT_BUFFER_TOKENS,
     COMPACTABLE_TOOLS,
@@ -22,8 +29,10 @@ from compaction import (
     get_autocompact_threshold,
     get_compact_prompt,
     microcompact_messages,
+    reduce_for_api,
     should_autocompact,
 )
+from tools.builtins.background._common import build_background_snapshot_metadata, render_background_snapshot
 
 pytestmark = [pytest.mark.e2e]
 
@@ -346,3 +355,202 @@ class TestTokenEstimation:
         short_tokens = estimate_message_tokens(short_messages)
         tool_tokens = estimate_message_tokens(tool_messages)
         assert tool_tokens > short_tokens
+
+    def test_estimate_message_tokens_counts_system_reminders(self):
+        baseline = estimate_message_tokens([ConversationMessage.from_user_text("hello")])
+        with_reminder = estimate_message_tokens(
+            [
+                ConversationMessage(
+                    role="user",
+                    content=[SystemReminderBlock(text="background task still running")],
+                )
+            ]
+        )
+        assert with_reminder > 0
+        assert with_reminder > baseline
+
+    def test_estimate_message_tokens_counts_background_task_state_blocks(self):
+        tokens = estimate_message_tokens(
+            [
+                ConversationMessage(
+                    role="user",
+                    content=[
+                        BackgroundTaskStateBlock(
+                            task_id="bg_1",
+                            tool_name="run_subagent",
+                            task_type="subagent",
+                            status="running",
+                            source="engine_progress",
+                            text="Running for 12s\nNew output:\nhello",
+                            task_note="research wave",
+                        )
+                    ],
+                )
+            ]
+        )
+        assert tokens > 0
+
+
+class TestReduceForApi:
+    def test_repeated_running_updates_collapse_to_latest_event(self):
+        messages = [
+            ConversationMessage(
+                role="user",
+                content=[
+                    BackgroundTaskStateBlock(
+                        task_id="bg_1",
+                        tool_name="run_subagent",
+                        task_type="subagent",
+                        status="running",
+                        source="engine_progress",
+                        text="old progress",
+                    )
+                ],
+            ),
+            ConversationMessage(
+                role="user",
+                content=[
+                    BackgroundTaskStateBlock(
+                        task_id="bg_1",
+                        tool_name="run_subagent",
+                        task_type="subagent",
+                        status="running",
+                        source="engine_progress",
+                        text="new progress",
+                    )
+                ],
+            ),
+        ]
+
+        reduced = reduce_for_api(messages)
+        states = [s for msg in reduced for s in msg.background_task_states]
+        assert len(states) == 1
+        assert states[0].text == "new progress"
+
+    def test_terminal_event_suppresses_older_running_event(self):
+        messages = [
+            ConversationMessage(
+                role="user",
+                content=[
+                    BackgroundTaskStateBlock(
+                        task_id="bg_1",
+                        tool_name="run_subagent",
+                        task_type="subagent",
+                        status="running",
+                        source="engine_progress",
+                        text="still running",
+                    )
+                ],
+            ),
+            ConversationMessage(
+                role="user",
+                content=[
+                    BackgroundTaskStateBlock(
+                        task_id="bg_1",
+                        tool_name="run_subagent",
+                        task_type="subagent",
+                        status="failed",
+                        source="engine_terminal",
+                        text="BLOCKED",
+                    )
+                ],
+            ),
+        ]
+
+        reduced = reduce_for_api(messages)
+        states = [s for msg in reduced for s in msg.background_task_states]
+        assert len(states) == 1
+        assert states[0].status == "failed"
+        assert states[0].text == "BLOCKED"
+
+    def test_mixed_all_snapshot_rewrites_to_surviving_rows(self):
+        snapshot_statuses = [
+            {"task_id": "bg_1", "status": "running", "output": "older-1"},
+            {"task_id": "bg_2", "status": "running", "output": "older-2"},
+        ]
+        messages = [
+            ConversationMessage(
+                role="assistant",
+                content=[ToolUseBlock(id="toolu_1", name="check_background_progress", input={"task_id": "all"})],
+            ),
+            ConversationMessage(
+                role="user",
+                content=[
+                    ToolResultBlock(
+                        tool_use_id="toolu_1",
+                        content=render_background_snapshot("progress", snapshot_statuses),
+                        metadata=build_background_snapshot_metadata("progress", "all", snapshot_statuses),
+                    )
+                ],
+            ),
+            ConversationMessage(
+                role="user",
+                content=[
+                    BackgroundTaskStateBlock(
+                        task_id="bg_1",
+                        tool_name="run_subagent",
+                        task_type="subagent",
+                        status="running",
+                        source="engine_progress",
+                        text="newest-1",
+                    ),
+                    BackgroundTaskStateBlock(
+                        task_id="bg_2",
+                        tool_name="run_subagent",
+                        task_type="subagent",
+                        status="completed",
+                        source="engine_terminal",
+                        text="done-2",
+                    ),
+                ],
+            ),
+        ]
+
+        reduced = reduce_for_api(messages)
+        snapshot_blocks = [
+            block
+            for msg in reduced
+            for block in msg.content
+            if isinstance(block, ToolResultBlock)
+        ]
+        assert len(snapshot_blocks) == 0
+
+    def test_drops_stale_background_snapshot_pair(self):
+        snapshot_statuses = [
+            {"task_id": "bg_1", "status": "running", "output": "old"},
+        ]
+        messages = [
+            ConversationMessage(
+                role="assistant",
+                content=[ToolUseBlock(id="toolu_1", name="check_background_progress", input={"task_id": "all"})],
+            ),
+            ConversationMessage(
+                role="user",
+                content=[
+                    ToolResultBlock(
+                        tool_use_id="toolu_1",
+                        content=render_background_snapshot("progress", snapshot_statuses),
+                        metadata=build_background_snapshot_metadata("progress", "all", snapshot_statuses),
+                    )
+                ],
+            ),
+            ConversationMessage(
+                role="user",
+                content=[
+                    BackgroundTaskStateBlock(
+                        task_id="bg_1",
+                        tool_name="run_subagent",
+                        task_type="subagent",
+                        status="completed",
+                        source="engine_terminal",
+                        text="done",
+                    )
+                ],
+            ),
+        ]
+
+        reduced = reduce_for_api(messages)
+        assert all(
+            not any(isinstance(block, ToolUseBlock) and block.id == "toolu_1" for block in msg.content)
+            for msg in reduced
+        )
