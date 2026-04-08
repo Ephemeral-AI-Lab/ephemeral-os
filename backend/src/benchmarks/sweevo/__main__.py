@@ -47,8 +47,61 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--disk", type=int, default=10)
     p.add_argument("--test-command", default=None, help="Override instance.test_cmds")
     p.add_argument("--test-timeout", type=int, default=_DEFAULT_SWEEVO_TEST_TIMEOUT)
+    p.add_argument("--no-stream", action="store_true", help="Disable live line streaming")
+    p.add_argument("--no-color", action="store_true")
     p.add_argument("-v", "--verbose", action="store_true")
     return p
+
+
+_ANSI = {
+    "reset": "\033[0m",
+    "dim": "\033[2m",
+    "bold": "\033[1m",
+    "red": "\033[31m",
+    "green": "\033[32m",
+    "yellow": "\033[33m",
+    "cyan": "\033[36m",
+    "magenta": "\033[35m",
+}
+
+
+def _make_line_printer(*, color: bool) -> "callable":
+    import time as _t
+
+    start = _t.monotonic()
+    passed = 0
+    failed = 0
+    errors = 0
+
+    def c(code: str, text: str) -> str:
+        return f"{_ANSI[code]}{text}{_ANSI['reset']}" if color else text
+
+    def _p(line: str) -> None:
+        nonlocal passed, failed, errors
+        t = _t.monotonic() - start
+        stamp = c("dim", f"[{t:7.1f}s]")
+        tag = "     "
+        stripped = line.strip()
+        if stripped.startswith("PASSED") or " PASSED" in stripped:
+            passed += 1
+            tag = c("green", " PASS")
+        elif stripped.startswith("FAILED") or " FAILED" in stripped:
+            failed += 1
+            tag = c("red", " FAIL")
+        elif stripped.startswith("ERROR") or " ERROR" in stripped:
+            errors += 1
+            tag = c("red", " ERR ")
+        elif stripped.startswith("===") or stripped.startswith("---"):
+            tag = c("cyan", " ----")
+        elif stripped.startswith("collected") or "test session starts" in stripped:
+            tag = c("magenta", " INFO")
+        print(f"{stamp} {tag} {line}", flush=True)
+
+    def summary() -> dict:
+        return {"passed": passed, "failed": failed, "errors": errors}
+
+    _p.summary = summary  # type: ignore[attr-defined]
+    return _p
 
 
 def _cmd_list(source: str) -> int:
@@ -66,6 +119,15 @@ def _cmd_list(source: str) -> int:
 
 
 async def _cmd_run(args: argparse.Namespace) -> int:
+    use_color = (not args.no_color) and sys.stdout.isatty()
+    on_line = None if args.no_stream else _make_line_printer(color=use_color)
+
+    if not args.no_stream:
+        header = "=" * 72
+        print(header, flush=True)
+        print(f"  SWE-EVO run  instance={args.instance_id or f'<auto size={args.size}>'}", flush=True)
+        print(header, flush=True)
+
     result = await prepare_sweevo_test_run(
         source=args.source,
         instance_id=args.instance_id,
@@ -79,10 +141,26 @@ async def _cmd_run(args: argparse.Namespace) -> int:
         repo_dir=args.repo_dir,
         test_command=args.test_command,
         test_timeout=args.test_timeout,
+        on_line=on_line,
     )
-    # sandbox objects may not be JSON-serializable; coerce via str fallback.
-    print(json.dumps(result, indent=2, default=str))
-    exit_code = result.get("test", {}).get("exit_code")
+
+    test = result.get("test", {})
+    exit_code = test.get("exit_code")
+
+    if on_line is not None:
+        summary = on_line.summary()  # type: ignore[attr-defined]
+        print("=" * 72, flush=True)
+        print(
+            f"  exit_code={exit_code}  "
+            f"passed={summary['passed']}  failed={summary['failed']}  "
+            f"errors={summary['errors']}",
+            flush=True,
+        )
+        print("=" * 72, flush=True)
+    else:
+        # sandbox objects may not be JSON-serializable; coerce via str fallback.
+        print(json.dumps(result, indent=2, default=str))
+
     return 0 if exit_code == 0 else 1
 
 

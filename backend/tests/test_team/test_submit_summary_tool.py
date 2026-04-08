@@ -139,3 +139,38 @@ async def test_canonical_scope_skipped_without_target_paths():
     res = await tool.execute(args, ctx)
     assert not res.is_error
     assert "canonical_scope" not in ctx.metadata["submitted_summary"].artifact
+
+
+@pytest.mark.asyncio
+async def test_snapshot_time_injected_from_work_item_start():
+    tool = SubmitSummaryTool()
+    ctx = _ctx()
+    ctx.metadata["work_item_started_at"] = 1234.5
+    args = SubmitSummaryInput.model_validate(
+        {
+            "summary": "scout report",
+            "artifact": {"target_paths": ["src/foo"], "files": []},
+        }
+    )
+    res = await tool.execute(args, ctx)
+    assert not res.is_error
+    assert ctx.metadata["submitted_summary"].artifact["snapshot_time"] == 1234.5
+
+
+@pytest.mark.asyncio
+async def test_snapshot_time_explicit_value_preserved():
+    tool = SubmitSummaryTool()
+    ctx = _ctx()
+    ctx.metadata["work_item_started_at"] = 1234.5
+    args = SubmitSummaryInput.model_validate(
+        {
+            "summary": "scout report",
+            "artifact": {
+                "target_paths": ["src/foo"],
+                "snapshot_time": 99.0,
+            },
+        }
+    )
+    res = await tool.execute(args, ctx)
+    assert not res.is_error
+    assert ctx.metadata["submitted_summary"].artifact["snapshot_time"] == 99.0

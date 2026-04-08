@@ -44,6 +44,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_ATLAS_MAX_AGE_SECONDS = 6 * 3600
+MIN_COMPLETE_SCOPE_COVERAGE = 0.9
+
 
 # ---------------------------------------------------------------------------
 # Stat-cached content hashing
@@ -208,7 +211,7 @@ def _ledger_cutoff(chunk: AtlasChunk) -> float | None:
     if chunk.snapshot_time and chunk.snapshot_time > 0:
         return float(chunk.snapshot_time)
     if chunk.updated_at is not None:
-        return chunk.updated_at.timestamp()
+        return _as_utc(chunk.updated_at).timestamp()
     return None
 
 
@@ -223,6 +226,21 @@ def is_chunk_fresh(
     ledger: "Ledger | None" = None,
     max_age_seconds: float | None = None,
 ) -> bool:
+    """Return True iff *chunk* can be proven fresh."""
+    fresh, _ = freshness_status(
+        chunk,
+        ledger=ledger,
+        max_age_seconds=max_age_seconds,
+    )
+    return fresh
+
+
+def freshness_status(
+    chunk: AtlasChunk,
+    *,
+    ledger: "Ledger | None" = None,
+    max_age_seconds: float | None = None,
+) -> tuple[bool, str | None]:
     """Return True iff *chunk* can be proven fresh.
 
     Resolution order:
@@ -240,21 +258,29 @@ def is_chunk_fresh(
     """
     if max_age_seconds is not None and chunk.updated_at is not None:
         now = datetime.now(timezone.utc)
-        age = (now - chunk.updated_at).total_seconds()
+        age = (now - _as_utc(chunk.updated_at)).total_seconds()
         if age > max_age_seconds:
-            return False
+            return False, (
+                "atlas brief exceeded the max reuse age and must be refreshed"
+            )
 
     cutoff = _ledger_cutoff(chunk)
     if ledger is not None and cutoff is not None:
         touched = changes_since_chunk(chunk, ledger)
-        return not is_subsystem_stale(chunk, touched)
+        if not is_subsystem_stale(chunk, touched):
+            return True, None
+        return False, (
+            "ledger recorded edits under this scope since the chunk snapshot"
+        )
 
     if chunk.content_hashes:
         # (a) every tracked file must still hash identically
         for path, stored in chunk.content_hashes.items():
             current = hash_file(path)
             if current is None or current != stored:
-                return False
+                return False, (
+                    "content hashes diverged from the working tree under this scope"
+                )
         # (b) no new files may have appeared in scope
         target_paths = _target_paths(chunk)
         if target_paths and chunk.repo_root:
@@ -263,10 +289,38 @@ def is_chunk_fresh(
             }
             tracked = set(chunk.content_hashes.keys())
             if current_files - tracked:
-                return False
-        return True
+                return False, (
+                    "new files appeared under this scope since the chunk was written"
+                )
+        return True, None
 
-    return False
+    return False, (
+        "cannot prove freshness: no ledger visibility and no stored content hashes"
+    )
+
+
+def chunk_reuse_status(
+    chunk: AtlasChunk,
+    *,
+    ledger: "Ledger | None" = None,
+    max_age_seconds: float | None = DEFAULT_ATLAS_MAX_AGE_SECONDS,
+    min_scope_coverage: float = MIN_COMPLETE_SCOPE_COVERAGE,
+) -> tuple[bool, str | None]:
+    """Return whether the planner should reuse a cached atlas chunk.
+
+    Planner reuse is stricter than freshness alone: an atlas entry can
+    be fresh on disk and still be too incomplete to trust as structural
+    context. In that case callers should refresh it, not propagate a
+    partial brief.
+    """
+    fresh, reason = freshness_status(
+        chunk,
+        ledger=ledger,
+        max_age_seconds=max_age_seconds,
+    )
+    if not fresh:
+        return False, reason
+    return _brief_reuse_status(chunk, min_scope_coverage=min_scope_coverage)
 
 
 # ---------------------------------------------------------------------------
@@ -340,6 +394,56 @@ def _normalise_ledger_path(
         if root and path.startswith(root + "/"):
             return path[len(root) + 1 :]
     return path
+
+
+def _brief_reuse_status(
+    chunk: AtlasChunk,
+    *,
+    min_scope_coverage: float,
+) -> tuple[bool, str | None]:
+    brief = chunk.brief if isinstance(chunk.brief, dict) else {}
+    if _is_explicit_empty_area_brief(brief):
+        return True, None
+
+    coverage = brief.get("scope_coverage")
+    if not isinstance(coverage, (int, float)):
+        return False, "atlas brief is missing scope_coverage and cannot be trusted"
+    if float(coverage) < min_scope_coverage:
+        return False, (
+            f"atlas brief coverage {float(coverage):.2f} is below the reuse threshold"
+        )
+
+    if _normalised_subdivisions(brief.get("suggested_subdivisions")):
+        return False, (
+            "atlas brief requested further subdivision and should be refreshed"
+        )
+
+    gaps = brief.get("gaps")
+    if isinstance(gaps, str) and gaps.strip():
+        return False, "atlas brief contains unresolved gaps and should be refreshed"
+    return True, None
+
+
+def _is_explicit_empty_area_brief(brief: dict[str, object]) -> bool:
+    coverage = brief.get("scope_coverage")
+    if not isinstance(coverage, (int, float)) or float(coverage) != 0.0:
+        return False
+    files = brief.get("files")
+    if not isinstance(files, list) or files:
+        return False
+    return not _normalised_subdivisions(brief.get("suggested_subdivisions"))
+
+
+def _normalised_subdivisions(raw: object) -> list[str]:
+    if not isinstance(raw, list):
+        return []
+    return [p.strip() for p in raw if isinstance(p, str) and p.strip()]
+
+
+def _as_utc(dt: datetime) -> datetime:
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
 
 
 def canonical_subsystem_key(paths: list[str]) -> str:

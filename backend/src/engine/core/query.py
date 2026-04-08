@@ -71,6 +71,12 @@ class QueryContext:
     system_prompt: str
     max_tokens: int
     max_turns: int = 200
+    # Identity of the agent running this loop. Empty string for legacy
+    # single-agent callers. Used by the stamping wrapper in :func:`run_query`
+    # to tag every outgoing ``StreamEvent`` with ``agent_name`` / ``work_id``
+    # so multi-agent printers can attribute events without sniffing context.
+    agent_name: str = ""
+    run_id: str = ""
     # Per-ephemeral-run cap on tool dispatches. ``None`` = unlimited. Each
     # spawned agent starts with a fresh ``tool_calls_used`` counter.
     tool_call_limit: int | None = None
@@ -682,6 +688,46 @@ async def _run_query_loop(
     )
 
 
+_STAMPABLE_FIELDS = ("agent_name", "work_id")
+
+
+def _stamp_event(
+    event: StreamEvent,
+    agent_name: str,
+    work_id: str,
+) -> StreamEvent:
+    """Return *event* with empty ``agent_name`` / ``work_id`` filled in.
+
+    Uses ``dataclasses.replace`` on frozen event dataclasses. No-op when the
+    event already carries both fields or when the context has nothing to
+    stamp (single-agent callers that never set ``QueryContext.agent_name``).
+    """
+    from dataclasses import fields, is_dataclass, replace
+
+    if not is_dataclass(event):
+        return event
+    if not (agent_name or work_id):
+        return event
+    names = {f.name for f in fields(event)}
+    updates: dict[str, str] = {}
+    if "agent_name" in names and not getattr(event, "agent_name", ""):
+        updates["agent_name"] = agent_name
+    if "work_id" in names and not getattr(event, "work_id", ""):
+        updates["work_id"] = work_id
+    if not updates:
+        return event
+    return replace(event, **updates)
+
+
+async def _stamped_stream(
+    inner: AsyncIterator[tuple[StreamEvent, UsageSnapshot | None]],
+    agent_name: str,
+    work_id: str,
+) -> AsyncIterator[tuple[StreamEvent, UsageSnapshot | None]]:
+    async for event, usage in inner:
+        yield _stamp_event(event, agent_name, work_id), usage
+
+
 async def run_query(
     context: QueryContext,
     display_messages: list[ConversationMessage],
@@ -692,11 +738,19 @@ async def run_query(
     append-only display history. The query loop appends to it in place;
     callers must not assume immutability.
 
+    Every outgoing ``StreamEvent`` is stamped with ``context.agent_name`` /
+    ``context.run_id`` (as ``work_id``) when those fields are empty, so
+    multi-agent printers can attribute events without touching QueryContext.
+
     The compacted ``api_messages`` view is built fresh inside the loop and
     sent to the LLM provider — it is never returned. See
     :func:`compact_for_api`.
     """
-    return display_messages, _run_query_loop(context, display_messages)
+    return display_messages, _stamped_stream(
+        _run_query_loop(context, display_messages),
+        context.agent_name,
+        context.run_id,
+    )
 
 
 async def _execute_tool_call(

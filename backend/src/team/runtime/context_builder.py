@@ -10,6 +10,7 @@ is called from the ``run_subagent`` spawn handler so subagents inherit
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -63,11 +64,16 @@ class TeamAgentContext:
 
 def build_work_item_metadata(team_run: "TeamRun", wi: "WorkItem") -> ExecutionMetadata:
     """Build the canonical routing metadata for a team work item."""
-    return ExecutionMetadata(
+    meta = ExecutionMetadata(
         team_run_id=team_run.id,
         work_item_id=wi.id,
         agent_run_id=wi.agent_run_id,
     )
+    # Captured before the agent starts its work phase. Scout artifacts
+    # re-use this as their snapshot cutoff so atlas freshness can see
+    # edits that land during the scout's read window.
+    meta["work_item_started_at"] = time.time()
+    return meta
 
 
 def build_initial_user_message(

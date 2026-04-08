@@ -55,13 +55,14 @@ class SubmitSummaryTool(SubmitPosthookTool):
     default_metadata_key: str = "submitted_summary"
 
     def _build_payload(
-        self, arguments: BaseModel, context: ToolExecutionContext  # noqa: ARG002
+        self, arguments: BaseModel, context: ToolExecutionContext
     ) -> tuple[Any, str | None]:
         assert isinstance(arguments, SubmitSummaryInput)
         summary = arguments.summary.strip()
         if not summary:
             return None, "summary must be non-empty"
-        artifact = _inject_canonical_scope(arguments.artifact)
+        artifact = _inject_snapshot_time(arguments.artifact, context)
+        artifact = _inject_canonical_scope(artifact)
         return (
             SubmittedSummary(summary=summary, artifact=artifact),
             None,
@@ -86,3 +87,26 @@ def _inject_canonical_scope(artifact: dict[str, Any] | None) -> dict[str, Any] |
     if not derived:
         return artifact
     return {**artifact, "canonical_scope": derived}
+
+
+def _inject_snapshot_time(
+    artifact: dict[str, Any] | None,
+    context: ToolExecutionContext,
+) -> dict[str, Any] | None:
+    """Stamp scout-like artifacts with a pre-work snapshot cutoff.
+
+    ``build_work_item_metadata`` records ``work_item_started_at`` before
+    the agent begins its work phase. Reusing that timestamp here is
+    conservative and lets atlas freshness see edits that landed while a
+    scout was reading files, instead of only those that happened after
+    the scout finished composing its artifact.
+    """
+    if not isinstance(artifact, dict) or "snapshot_time" in artifact:
+        return artifact
+    target_paths = artifact.get("target_paths")
+    if not isinstance(target_paths, list):
+        return artifact
+    started_at = context.metadata.get("work_item_started_at")
+    if not isinstance(started_at, (int, float)) or started_at <= 0:
+        return artifact
+    return {**artifact, "snapshot_time": float(started_at)}

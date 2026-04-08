@@ -26,10 +26,9 @@ import uuid
 from typing import Any
 
 from team.atlas.freshness import (
+    DEFAULT_ATLAS_MAX_AGE_SECONDS,
     canonical_subsystem_key,
-    changes_since_chunk,
-    hash_file,
-    is_subsystem_stale,
+    chunk_reuse_status,
 )
 from team.atlas.store import AtlasChunk, AtlasStore, get_default_store
 from team.runtime.registry import get as _get_team_run
@@ -97,16 +96,26 @@ async def atlas_lookup(
 
     ledger = _resolve_ledger(context)
 
+    max_age_seconds = _resolve_max_age_seconds(context)
+    keys = [_normalise_key(raw) for raw in subsystems]
+    wanted = [key for key in keys if key]
+    chunks = store.get_chunks(project_key, list(dict.fromkeys(wanted)))
+    chunk_map = {chunk.subsystem: chunk for chunk in chunks}
+
     entries: list[dict[str, Any]] = []
-    for raw in subsystems:
-        key = _normalise_key(raw)
-        if not key:
-            continue
-        chunk = store.get_chunk(project_key, key)
+    for key in wanted:
+        chunk = chunk_map.get(key)
         if chunk is None:
             entries.append(_as_scout(key))
             continue
-        entries.append(_decide(chunk=chunk, team_run=team_run, ledger=ledger))
+        entries.append(
+            _decide(
+                chunk=chunk,
+                team_run=team_run,
+                ledger=ledger,
+                max_age_seconds=max_age_seconds,
+            )
+        )
     return _build_result(entries, atlas_disabled=False)
 
 
@@ -116,11 +125,19 @@ async def atlas_lookup(
 
 
 def _decide(
-    *, chunk: AtlasChunk, team_run: Any, ledger: Any = None
+    *,
+    chunk: AtlasChunk,
+    team_run: Any,
+    ledger: Any = None,
+    max_age_seconds: float | None = None,
 ) -> dict[str, Any]:
     """Resolve a single chunk into use/refresh using ledger → hash → conservative."""
     staged_ref = _stage_into_run(team_run, chunk)
-    fresh, reason = _freshness(chunk, ledger)
+    fresh, reason = _freshness(
+        chunk,
+        ledger,
+        max_age_seconds=max_age_seconds,
+    )
     if fresh:
         return {
             "subsystem": chunk.subsystem,
@@ -140,32 +157,17 @@ def _decide(
     }
 
 
-def _freshness(chunk: AtlasChunk, ledger: Any) -> tuple[bool, str | None]:
-    """Return ``(fresh, reason_if_stale)`` for *chunk*.
-
-    Resolution order matches :func:`team.atlas.freshness.is_chunk_fresh`
-    but also yields a human-readable reason so the planner can surface
-    which signal triggered the refresh.
-    """
-    if ledger is not None and chunk.updated_at is not None:
-        touched = changes_since_chunk(chunk, ledger)
-        if not is_subsystem_stale(chunk, touched):
-            return True, None
-        return False, (
-            "ledger recorded edits under this scope since the chunk was written"
-        )
-
-    if chunk.content_hashes:
-        for path, stored in chunk.content_hashes.items():
-            current = hash_file(path)
-            if current is None or current != stored:
-                return False, (
-                    "content hashes diverged from the working tree under this scope"
-                )
-        return True, None
-
-    return False, (
-        "cannot prove freshness: no ledger visibility and no stored content hashes"
+def _freshness(
+    chunk: AtlasChunk,
+    ledger: Any,
+    *,
+    max_age_seconds: float | None,
+) -> tuple[bool, str | None]:
+    """Return the shared atlas reuse decision for *chunk*."""
+    return chunk_reuse_status(
+        chunk,
+        ledger=ledger,
+        max_age_seconds=max_age_seconds,
     )
 
 
@@ -238,3 +240,15 @@ def _resolve_store(context: ToolExecutionContext) -> AtlasStore | None:
     if isinstance(override, AtlasStore):
         return override
     return get_default_store()
+
+
+def _resolve_max_age_seconds(context: ToolExecutionContext) -> float | None:
+    """Allow tests and callers to override atlas max age per invocation."""
+    raw = context.metadata.extras.get("atlas_max_age_seconds") if hasattr(
+        context.metadata, "extras"
+    ) else None
+    if raw is None:
+        return DEFAULT_ATLAS_MAX_AGE_SECONDS
+    if isinstance(raw, (int, float)) and raw > 0:
+        return float(raw)
+    return None

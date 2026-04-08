@@ -7,6 +7,10 @@ untouched — deleting ``backend/src/team/`` leaves the single-agent flow
 fully functional.
 """
 
+from __future__ import annotations
+
+from importlib import import_module
+
 from team.errors import (
     ArtifactTooLarge,
     BudgetExceeded,
@@ -26,7 +30,6 @@ from team.models import (
     WorkItemSpec,
     WorkItemStatus,
 )
-from team.runtime.team_run import TeamRun
 
 __all__ = [
     "AgentResult",
@@ -46,3 +49,9 @@ __all__ = [
     "WorkItemSpec",
     "WorkItemStatus",
 ]
+
+
+def __getattr__(name: str):
+    if name == "TeamRun":
+        return import_module("team.runtime.team_run").TeamRun
+    raise AttributeError(name)

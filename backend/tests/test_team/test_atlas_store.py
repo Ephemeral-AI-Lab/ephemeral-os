@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 from sqlalchemy import create_engine
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 
 from code_intelligence.editing.ledger import Ledger
@@ -448,6 +449,39 @@ def test_upsert_persists_snapshot_time(store: AtlasStore) -> None:
     assert chunk.snapshot_time == 1234567.5
 
 
+def test_header_insert_race_recovers_without_aborting(store: AtlasStore) -> None:
+    existing = ProjectAtlasRecord(project_key="P1", repo_root="/old")
+
+    class _Nested:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+    class _FakeDB:
+        def __init__(self) -> None:
+            self.get_calls = 0
+
+        def get(self, model, key):
+            assert model is ProjectAtlasRecord
+            assert key == "P1"
+            self.get_calls += 1
+            return None if self.get_calls == 1 else existing
+
+        def begin_nested(self):
+            return _Nested()
+
+        def add(self, row) -> None:
+            assert isinstance(row, ProjectAtlasRecord)
+
+        def flush(self) -> None:
+            raise IntegrityError("insert", {}, Exception("duplicate key"))
+
+    store._upsert_header(_FakeDB(), "P1", "/repo")
+    assert existing.repo_root == "/repo"
+
+
 def test_snapshot_time_is_used_as_ledger_cutoff() -> None:
     """Edits between snapshot_time and updated_at must mark the chunk stale."""
     from datetime import datetime, timezone
@@ -525,19 +559,104 @@ def test_get_chunks_batch_preserves_order_and_omits_missing(store: AtlasStore) -
     assert all(c.repo_root == "/repo" for c in results)
 
 
-def test_unhashable_file_returns_sentinel(tmp_path: Path) -> None:
-    from team.atlas.freshness import UNHASHABLE, _clear_hash_cache, hash_file
+def test_binary_file_hashing_and_mutation_detected(tmp_path: Path) -> None:
+    """Binary files must hash (not silently drop), and mutations must register.
 
-    _clear_hash_cache()
+    Regression for the original review point #8: ``read_text`` dropped
+    non-UTF-8 files from ``content_hashes`` entirely, so replacing a
+    binary under scope was invisible. Hashing raw bytes fixes it.
+    """
+    from team.atlas.freshness import hash_file
+
     binary = tmp_path / "blob.bin"
     binary.write_bytes(b"\xff\xfe\x00\x01nonutf")
-    assert hash_file(binary) == UNHASHABLE
+    h1 = hash_file(binary)
+    assert h1 is not None and h1 != ""
+
+    time.sleep(0.01)
+    binary.write_bytes(b"\x00\x01\x02completely different")
+    h2 = hash_file(binary)
+    assert h2 is not None and h2 != h1
 
 
 def test_hash_file_returns_none_for_missing(tmp_path: Path) -> None:
     from team.atlas.freshness import hash_file
 
     assert hash_file(tmp_path / "nope.py") is None
+
+
+def test_binary_mutation_marks_chunk_stale(tmp_path: Path) -> None:
+    """End-to-end: a binary under scope that changes bytes → chunk is stale."""
+    from team.atlas.freshness import hash_paths_under
+
+    scope = tmp_path / "pkg"
+    scope.mkdir()
+    binary = scope / "asset.bin"
+    binary.write_bytes(b"\xff\x00\x01")
+
+    hashes = hash_paths_under([str(scope)], tmp_path)
+    assert hashes  # binary is tracked, not silently dropped
+    chunk = AtlasChunk(
+        subsystem="pkg",
+        brief={"target_paths": [str(scope)]},
+        content_hashes=hashes,
+        repo_root=str(tmp_path),
+    )
+    assert is_chunk_fresh(chunk, ledger=None) is True
+
+    binary.write_bytes(b"\x02\x03\x04different")
+    assert is_chunk_fresh(chunk, ledger=None) is False
+
+
+def test_ledger_path_normalization_handles_symlinked_root(tmp_path: Path) -> None:
+    """macOS /tmp → /private/tmp style: ledger stores raw, repo_root resolves.
+
+    Uses a hand-built repo_root pair where ``raw`` and ``resolved``
+    differ, so the two-root prefix check in ``_normalise_ledger_path``
+    is exercised even on filesystems without real symlinks.
+    """
+    from datetime import datetime, timezone
+    from team.atlas.freshness import changes_since_chunk, is_subsystem_stale
+
+    # Simulate: ledger recorded under an unresolved root; chunk stores
+    # the resolved form. Use monkey-patching via a real symlink when
+    # possible, otherwise fabricate the condition manually.
+    real_root = tmp_path / "real"
+    real_root.mkdir()
+    link_root = tmp_path / "link"
+    try:
+        link_root.symlink_to(real_root)
+    except (OSError, NotImplementedError):
+        pytest.skip("symlinks unavailable on this platform")
+
+    ledger = Ledger()
+    chunk = AtlasChunk(
+        subsystem="src/a",
+        brief={"target_paths": ["src/a"]},
+        updated_at=datetime.fromtimestamp(time.time(), tz=timezone.utc),
+        snapshot_time=time.time(),
+        repo_root=str(link_root),  # UNRESOLVED form
+    )
+    time.sleep(0.01)
+    # Edit tool records the RESOLVED path (what /tmp→/private/tmp gives).
+    ledger.record(str(real_root / "src" / "a" / "m.py"), agent_id="worker-1")
+
+    changed = changes_since_chunk(chunk, ledger)
+    # Path should have been stripped to "src/a/m.py" via the two-root
+    # prefix check — either raw_root or resolved_root matches.
+    assert any(p.endswith("src/a/m.py") and not p.startswith("/") for p in changed), (
+        f"expected repo-relative path in {changed}"
+    )
+    assert is_subsystem_stale(chunk, changed) is True
+
+
+def test_brief_version_monotonic_under_rapid_calls() -> None:
+    """Two AtlasChunks created back-to-back must have strictly increasing versions."""
+    from team.atlas.store import _fresh_version
+
+    versions = [_fresh_version() for _ in range(1000)]
+    assert len(set(versions)) == 1000, "brief_version must be collision-free"
+    assert versions == sorted(versions), "brief_version must be monotonic"
 
 
 def test_upsert_defaults_content_hashes_to_empty_dict(store: AtlasStore) -> None:

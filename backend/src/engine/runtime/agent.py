@@ -375,6 +375,7 @@ def spawn_agent(
         tool_metadata=initial_tool_metadata,
         session_state=session_state,
         enable_background_tasks=has_background_tools,
+        agent_name=agent_name,
     )
 
     return EphemeralAgent(

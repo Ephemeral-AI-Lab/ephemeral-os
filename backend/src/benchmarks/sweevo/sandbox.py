@@ -284,26 +284,107 @@ async def run_sweevo_required_test(
     repo_dir: str = _REPO_DIR,
     test_command: str | None = None,
     timeout: int = _DEFAULT_SWEEVO_TEST_TIMEOUT,
+    on_line: "callable | None" = None,
+    poll_interval: float = 1.5,
 ) -> dict[str, Any]:
-    """Run the instance's required test command inside the prepared sandbox."""
+    """Run the instance's required test command inside the prepared sandbox.
+
+    If ``on_line`` is provided, stream stdout/stderr line-by-line as the test
+    runs (via background shell + ``tail -c +N`` polling on a log file). Without
+    it, behaves like the original one-shot exec.
+    """
+    import asyncio
     import re
+    import time as _time
 
     resolved_command = (test_command or instance.test_cmds).strip()
     if not resolved_command:
         raise ValueError(f"Instance {instance.instance_id} has no test command.")
 
-    output = await _exec(
-        sandbox_id,
-        (f'{_CONDA_ACTIVATE} && cd {repo_dir} && {resolved_command} 2>&1; echo "EXIT_CODE=$?"'),
-        timeout=timeout,
-        check=False,
+    if on_line is None:
+        output = await _exec(
+            sandbox_id,
+            (f'{_CONDA_ACTIVATE} && cd {repo_dir} && {resolved_command} 2>&1; echo "EXIT_CODE=$?"'),
+            timeout=timeout,
+            check=False,
+        )
+        match = re.search(r"EXIT_CODE=(\d+)", output)
+        exit_code = int(match.group(1)) if match else None
+        return {
+            "command": resolved_command,
+            "exit_code": exit_code,
+            "output": _strip_exit_code_marker(output),
+        }
+
+    # ---- Streaming mode ---------------------------------------------------
+    log_path = f"/tmp/sweevo_run_{int(_time.time() * 1000)}.log"
+    pid_path = f"{log_path}.pid"
+    done_path = f"{log_path}.done"
+
+    spawn_cmd = (
+        f"rm -f {log_path} {pid_path} {done_path} && "
+        f"( {_CONDA_ACTIVATE} && cd {repo_dir} && {resolved_command} > {log_path} 2>&1; "
+        f"echo $? > {done_path} ) & "
+        f"echo $! > {pid_path}"
     )
-    match = re.search(r"EXIT_CODE=(\d+)", output)
-    exit_code = int(match.group(1)) if match else None
+    await _exec(sandbox_id, spawn_cmd, check=False)
+
+    offset = 1  # tail -c +N is 1-indexed
+    buf = ""
+    collected: list[str] = []
+    deadline = _time.monotonic() + timeout
+    exit_code: int | None = None
+
+    while True:
+        poll_cmd = (
+            f'tail -c +{offset} {log_path} 2>/dev/null; '
+            f'printf "\\n__SWEEVO_MARK__"; '
+            f'if [ -f {done_path} ]; then cat {done_path}; fi'
+        )
+        chunk = await _exec(sandbox_id, poll_cmd, check=False)
+        marker_idx = chunk.rfind("__SWEEVO_MARK__")
+        if marker_idx >= 0:
+            data = chunk[:marker_idx]
+            tail = chunk[marker_idx + len("__SWEEVO_MARK__"):].strip()
+        else:
+            data = chunk
+            tail = ""
+
+        if data:
+            # strip the trailing newline we injected before the marker
+            if data.endswith("\n"):
+                data = data[:-1]
+            offset += len(data.encode("utf-8", errors="replace"))
+            buf += data
+            while "\n" in buf:
+                line, buf = buf.split("\n", 1)
+                collected.append(line)
+                try:
+                    on_line(line)
+                except Exception:
+                    logger.debug("on_line callback raised", exc_info=True)
+
+        if tail and tail.isdigit():
+            exit_code = int(tail)
+            if buf:
+                collected.append(buf)
+                try:
+                    on_line(buf)
+                except Exception:
+                    pass
+                buf = ""
+            break
+
+        if _time.monotonic() > deadline:
+            logger.warning("Streaming test run exceeded timeout %ss", timeout)
+            break
+
+        await asyncio.sleep(poll_interval)
+
     return {
         "command": resolved_command,
         "exit_code": exit_code,
-        "output": _strip_exit_code_marker(output),
+        "output": "\n".join(collected),
     }
 
 
@@ -321,6 +402,7 @@ async def prepare_sweevo_test_run(
     repo_dir: str = _REPO_DIR,
     test_command: str | None = None,
     test_timeout: int = _DEFAULT_SWEEVO_TEST_TIMEOUT,
+    on_line: "callable | None" = None,
 ) -> dict[str, Any]:
     """Resolve an instance, prepare its sandbox, and run the required test."""
     instance = select_sweevo_instance(
@@ -344,6 +426,7 @@ async def prepare_sweevo_test_run(
         repo_dir=repo_dir,
         test_command=test_command,
         timeout=test_timeout,
+        on_line=on_line,
     )
     return {
         "instance": summarize_sweevo_instance(instance),

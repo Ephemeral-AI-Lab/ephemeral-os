@@ -7,11 +7,24 @@ from providers.types import UsageSnapshot
 from message.messages import ConversationMessage
 
 
+# Identity fields carried by every StreamEvent:
+#   agent_name — short label of the emitting agent ("coordinator",
+#                "developer-1", "eval_agent", ...). Empty string for
+#                legacy/single-agent callers.
+#   work_id    — stable identifier for the unit of work that produced the
+#                event. For a coordinator's own turn this is its run_id;
+#                for a dispatched subagent it is the subagent's run_id
+#                (distinct from the parent). Lets printers group and
+#                indent events by work unit even when agents interleave.
+
+
 @dataclass(frozen=True)
 class ThinkingDelta:
     """Incremental thinking/reasoning content from the model."""
 
     text: str
+    agent_name: str = ""
+    work_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -19,6 +32,8 @@ class AssistantTextDelta:
     """Incremental assistant text."""
 
     text: str
+    agent_name: str = ""
+    work_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -27,6 +42,8 @@ class AssistantTurnComplete:
 
     message: ConversationMessage
     usage: UsageSnapshot
+    agent_name: str = ""
+    work_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -36,6 +53,8 @@ class ToolExecutionStarted:
     tool_name: str
     tool_input: dict[str, Any]
     task_note: str = ""
+    agent_name: str = ""
+    work_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -46,6 +65,8 @@ class ToolExecutionCompleted:
     output: str
     is_error: bool = False
     tool_id: str = ""
+    agent_name: str = ""
+    work_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -60,6 +81,8 @@ class ToolExecutionProgress:
     tool_id: str
     tool_name: str
     output: str
+    agent_name: str = ""
+    work_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -69,6 +92,8 @@ class ToolExecutionCancelled:
     tool_id: str
     tool_name: str
     reason: str
+    agent_name: str = ""
+    work_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -78,6 +103,8 @@ class BackgroundTaskStarted:
     task_id: str
     tool_name: str
     tool_input: dict[str, Any]
+    agent_name: str = ""
+    work_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -88,6 +115,8 @@ class BackgroundTaskCompleted:
     tool_name: str
     output: str
     is_error: bool = False
+    agent_name: str = ""
+    work_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -96,6 +125,8 @@ class SystemNotification:
 
     text: str
     category: str = ""
+    agent_name: str = ""
+    work_id: str = ""
 
 
 StreamEvent = (

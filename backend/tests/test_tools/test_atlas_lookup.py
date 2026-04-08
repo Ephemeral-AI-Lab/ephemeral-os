@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -67,12 +67,15 @@ def _ctx(
     *,
     store: AtlasStore | None = None,
     ledger: Ledger | None = None,
+    atlas_max_age_seconds: float | None = None,
 ) -> ToolExecutionContext:
     meta = ExecutionMetadata(team_run_id=tid or "")
     if store is not None:
         meta.extras["atlas_store"] = store
     if ledger is not None:
         meta.ci_service = SimpleNamespace(ledger=ledger)
+    if atlas_max_age_seconds is not None:
+        meta.extras["atlas_max_age_seconds"] = atlas_max_age_seconds
     return ToolExecutionContext(cwd=Path("."), metadata=meta)
 
 
@@ -103,6 +106,7 @@ def _seed_chunk(
     subsystem: str,
     paths: list[str],
     *,
+    brief: dict[str, Any] | None = None,
     content_hashes: dict[str, str] | None = None,
     updated_at: datetime | None = None,
 ) -> None:
@@ -112,11 +116,17 @@ def _seed_chunk(
         chunks=[
             AtlasChunk(
                 subsystem=subsystem,
-                brief=_brief(paths),
+                brief=brief or _brief(paths),
                 content_hashes=content_hashes or {},
             )
         ],
     )
+    if updated_at is not None:
+        with store._sf() as db:
+            row = db.get(ProjectAtlasChunkRecord, ("P1", subsystem))
+            assert row is not None
+            row.updated_at = updated_at
+            db.commit()
 
 
 # ---------------------------------------------------------------------------
@@ -283,6 +293,95 @@ async def test_cold_start_no_hashes_is_conservative(atlas_store: AtlasStore) -> 
         assert not result.is_error
         assert lookups[0]["action"] == "refresh"
         assert "cannot prove freshness" in (lookups[0]["staleness_reason"] or "")
+    finally:
+        unregister("T1")
+
+
+@pytest.mark.asyncio
+async def test_cold_start_added_file_refreshes(
+    atlas_store: AtlasStore, tmp_path: Path
+) -> None:
+    src = tmp_path / "src"
+    src.mkdir()
+    tracked = src / "m.py"
+    tracked.write_text("x = 1\n")
+    _seed_chunk(
+        atlas_store,
+        subsystem=str(src),
+        paths=[str(src)],
+        content_hashes={str(tracked.resolve()): _sha("x = 1\n")},
+    )
+    (src / "new.py").write_text("y = 2\n")
+
+    tr = _fake_team_run("T1")
+    register(tr)
+    try:
+        result, lookups = await _call(
+            subsystems=[str(src)],
+            context=_ctx("T1", store=atlas_store),
+        )
+        assert not result.is_error
+        assert lookups[0]["action"] == "refresh"
+        assert "new files appeared" in (lookups[0]["staleness_reason"] or "")
+    finally:
+        unregister("T1")
+
+
+@pytest.mark.asyncio
+async def test_incomplete_brief_refreshes_even_when_fresh(atlas_store: AtlasStore) -> None:
+    partial = {
+        **_brief(["src/a"]),
+        "scope_coverage": 0.6,
+        "gaps": "budget exhausted",
+        "suggested_subdivisions": ["src/a/core"],
+    }
+    _seed_chunk(atlas_store, "src/a", ["src/a"], brief=partial)
+    ledger = Ledger()
+
+    tr = _fake_team_run("T1")
+    register(tr)
+    try:
+        result, lookups = await _call(
+            subsystems=["src/a"],
+            context=_ctx("T1", store=atlas_store, ledger=ledger),
+        )
+        assert not result.is_error
+        assert lookups[0]["action"] == "refresh"
+        assert "reuse threshold" in (lookups[0]["staleness_reason"] or "")
+    finally:
+        unregister("T1")
+
+
+@pytest.mark.asyncio
+async def test_lookup_ttl_refreshes_old_chunk(
+    atlas_store: AtlasStore, tmp_path: Path
+) -> None:
+    src = tmp_path / "src"
+    src.mkdir()
+    tracked = src / "m.py"
+    tracked.write_text("x = 1\n")
+    _seed_chunk(
+        atlas_store,
+        subsystem=str(src),
+        paths=[str(src)],
+        content_hashes={str(tracked.resolve()): _sha("x = 1\n")},
+        updated_at=datetime.now(timezone.utc) - timedelta(hours=48),
+    )
+
+    tr = _fake_team_run("T1")
+    register(tr)
+    try:
+        result, lookups = await _call(
+            subsystems=[str(src)],
+            context=_ctx(
+                "T1",
+                store=atlas_store,
+                atlas_max_age_seconds=24 * 3600,
+            ),
+        )
+        assert not result.is_error
+        assert lookups[0]["action"] == "refresh"
+        assert "max reuse age" in (lookups[0]["staleness_reason"] or "")
     finally:
         unregister("T1")
 

@@ -22,8 +22,8 @@ is identical in shape to a Phase 1 scout artifact.
 
 from __future__ import annotations
 
-import itertools
 import logging
+import threading
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -38,17 +38,22 @@ from team.atlas.model import ProjectAtlasChunkRecord, ProjectAtlasRecord
 logger = logging.getLogger(__name__)
 
 
-# Version stamps combine nanosecond wall-clock with a monotonic
-# per-process counter so two callers within the same ns bucket (possible
-# on coarse-clock platforms under ultra-concurrency) still get strictly
-# unique, strictly increasing values. 20 bits of counter = 1M distinct
-# stamps per ns, more than enough to shield against collisions.
-_version_counter = itertools.count()
+# Version stamps are strictly increasing 63-bit integers so they fit in
+# SQLite INTEGER / Postgres BIGINT. We seed from ``time.time_ns()`` so
+# versions are roughly wall-clock-ordered across process restarts, but
+# under concurrency we advance a lock-protected counter — two callers
+# in the same ns bucket still get strictly distinct values.
+_version_lock = threading.Lock()
+_last_version = time.time_ns()
 
 
 def _fresh_version() -> int:
     """Monotonic unique version stamp — collision-free under concurrency."""
-    return (time.time_ns() << 20) | (next(_version_counter) & 0xFFFFF)
+    global _last_version
+    with _version_lock:
+        now = time.time_ns()
+        _last_version = max(_last_version + 1, now)
+        return _last_version
 
 
 @dataclass
@@ -113,11 +118,7 @@ class AtlasStore:
 
         applied = 0
         with self._sf() as db:
-            header = db.get(ProjectAtlasRecord, project_key)
-            if header is None:
-                db.add(ProjectAtlasRecord(project_key=project_key, repo_root=repo_root))
-            else:
-                header.repo_root = repo_root
+            self._upsert_header(db, project_key, repo_root)
 
             for chunk in chunks:
                 if not chunk.subsystem:
@@ -187,6 +188,7 @@ class AtlasStore:
                         **values,
                     )
                 )
+                db.flush()
             return True
         except IntegrityError:
             # Someone inserted between our UPDATE and our INSERT. Retry
@@ -196,6 +198,22 @@ class AtlasStore:
             # is a SQL expression and has no rowcount.
             retry = db.execute(stmt)
             return bool(retry.rowcount and retry.rowcount > 0)
+
+    def _upsert_header(self, db: Session, project_key: str, repo_root: str) -> None:
+        """Insert or update the project header without losing insert races."""
+        header = db.get(ProjectAtlasRecord, project_key)
+        if header is not None:
+            header.repo_root = repo_root
+            return
+        try:
+            with db.begin_nested():
+                db.add(ProjectAtlasRecord(project_key=project_key, repo_root=repo_root))
+                db.flush()
+        except IntegrityError:
+            existing = db.get(ProjectAtlasRecord, project_key)
+            if existing is None:
+                raise
+            existing.repo_root = repo_root
 
     # ---- reads -----------------------------------------------------------
 
