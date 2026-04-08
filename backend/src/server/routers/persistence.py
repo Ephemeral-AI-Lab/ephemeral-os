@@ -21,6 +21,9 @@ def create_persistence_router(
     """Build the persistence API router."""
     router = APIRouter(prefix="/api/db")
 
+    def _usage_for_runs(run_ids: list[str]) -> dict[str, dict]:
+        return usage_store.get_usage_for_runs(run_ids) if run_ids else {}
+
     def _db_available() -> bool:
         return session_store._session_factory is not None
 
@@ -94,6 +97,8 @@ def create_persistence_router(
         record = agent_run_store.get_run(run_id)
         if record is None:
             return JSONResponse(status_code=404, content={"error": "Run not found"})
+        child_runs = agent_run_store.list_subagent_runs(run_id)
+        usage_by_run = _usage_for_runs([run_id, *[child["id"] for child in child_runs]])
         return JSONResponse(content={
             "id": record.id,
             "session_id": record.session_id,
@@ -108,6 +113,14 @@ def create_persistence_router(
             "event_count": record.event_count,
             "started_at": record.started_at.isoformat() if record.started_at else None,
             "finished_at": record.finished_at.isoformat() if record.finished_at else None,
+            "usage": usage_by_run.get(run_id),
+            "subagent_runs": [
+                {
+                    **child,
+                    "usage": usage_by_run.get(child["id"]),
+                }
+                for child in child_runs
+            ],
         })
 
     @router.get("/runs/{run_id}/chunks")

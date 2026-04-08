@@ -53,7 +53,21 @@ class AgentDefinition(BaseModel):
     source: Literal["builtin", "user", "plugin"] = "builtin"
 
     # --- agent type: regular agent or subagent (worker) ---
+    # Descriptive label kept for logging / UI. Engine behaviour is driven
+    # by the explicit capability flags below, not by this string.
     agent_type: Literal["agent", "subagent"] = "agent"
+
+    # Capability flags (authoritative for engine behaviour).
+    # ``can_spawn_subagents`` gates registration of the background toolkit
+    # (subagents cannot launch their own background work or spawn further
+    # subagents). ``require_fresh_client`` forces a dedicated API client
+    # per agent instance — used for subagents so concurrent workers do
+    # not share one httpx connection pool. ``include_skills`` opts into
+    # automatic skill toolkit registration; test harnesses set it to
+    # False to get a minimal tool surface.
+    can_spawn_subagents: bool = True
+    require_fresh_client: bool = False
+    include_skills: bool = True
 
     model_config = {"populate_by_name": True}
 
@@ -92,3 +106,11 @@ class AgentDefinition(BaseModel):
         if isinstance(v, str):
             return v.lower() == "true"
         return bool(v) if v is not None else False
+
+    def model_post_init(self, __context: Any) -> None:
+        # Keep legacy ``agent_type`` strings in sync with capability flags
+        # so existing callers that read ``agent_def.agent_type`` continue
+        # to work without caring that the flags are now authoritative.
+        if self.agent_type == "subagent":
+            self.can_spawn_subagents = False
+            self.require_fresh_client = True

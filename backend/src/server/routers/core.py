@@ -29,6 +29,7 @@ from message.stream_events import (
 )
 from prompts import build_runtime_system_prompt
 from server.protocol import BackendEvent, TranscriptItem
+from token_tracker.runtime import persist_run_usage
 
 if TYPE_CHECKING:
     from server.app_factory import SessionConfig, SessionState
@@ -77,6 +78,7 @@ async def execute_ephemeral_agent_run(
     5. Save updated history back to DB
     6. Agent goes out of scope — dies
     """
+    from agents.run_tracker import AgentRunTracker
     from server.app_factory import agent_run_store, session_store, usage_store
 
     db_available = agent_run_store.is_ready
@@ -98,7 +100,6 @@ async def execute_ephemeral_agent_run(
     )
 
     # 3. Ensure session record exists (agent_runs FK requires it)
-    run_id: str | None = None
     if db_available:
         try:
             session_store.upsert(
@@ -110,34 +111,27 @@ async def execute_ephemeral_agent_run(
         except Exception:
             logger.debug("Failed to ensure session record", exc_info=True)
 
-    # 4. Create agent run record
-    if db_available:
-        from uuid import uuid4
-
-        run_id = uuid4().hex[:12]
-        try:
-            agent_run_store.create_run(
-                run_id=run_id,
-                session_id=config.session_id,
-                agent_name=agent.agent_name,
-                input_query=input_message[:2000],
-            )
-        except Exception:
-            logger.debug("Failed to create agent run record", exc_info=True)
-            run_id = None
+    # 4. Create agent run record via the shared tracker.
+    tracker = AgentRunTracker.create(
+        session_id=config.session_id,
+        agent_name=agent.agent_name,
+        input_query=input_message,
+    )
+    run_id = tracker.run_id
 
     # Plumb the parent run id into tool_metadata so subagent dispatches
     # (and any other tool that wants attribution) can persist themselves
     # under this run as their parent.
     if run_id is not None:
+        from tools.core.base import ExecutionMetadata
+
         if agent.query_context.tool_metadata is None:
-            agent.query_context.tool_metadata = {}
-        agent.query_context.tool_metadata["agent_run_id"] = run_id
+            agent.query_context.tool_metadata = ExecutionMetadata()
+        agent.query_context.tool_metadata.agent_run_id = run_id
 
     # 5. Run the agent
     event_count = 0
     run_error: str | None = None
-    usage_snapshot = None
     reasoning_parts: list[str] = []
 
     try:
@@ -145,65 +139,37 @@ async def execute_ephemeral_agent_run(
             event_count += 1
             if isinstance(event, ThinkingDelta):
                 reasoning_parts.append(event.text)
-            if isinstance(event, AssistantTurnComplete):
-                usage_snapshot = event.usage
             await on_agent_event(event)
     except Exception as exc:
         run_error = str(exc)
         raise
     finally:
-        # Finish agent run record
-        if run_id and db_available:
-            try:
-                # Capture the response (new messages from this run)
-                run_response = [
-                    m.model_dump(mode="json")
-                    for m in agent._display_messages[len(messages):]
-                ]
-                # Full append-only display history (user-visible scrollback)
-                # — this is the source of truth and goes into message_history.
-                full_display = [
-                    m.model_dump(mode="json") for m in agent._display_messages
-                ]
-                # Compacted view: the api_messages snapshot from the last
-                # turn, i.e. what the LLM actually saw. May be None if the
-                # run failed before any turn completed.
-                last_api = agent.query_context.api_messages_snapshot
-                compacted = (
-                    [m.model_dump(mode="json") for m in last_api]
-                    if last_api is not None
-                    else None
-                )
+        # Finish the agent run row. The tracker short-circuits when
+        # persistence is unavailable, so we don't need the db_available
+        # guard here.
+        run_response = [
+            m.model_dump(mode="json")
+            for m in agent._display_messages[len(messages):]
+        ]
+        tracker.finish(
+            status="failed" if run_error else "completed",
+            response=run_response,
+            display_messages=list(agent._display_messages),
+            api_messages_snapshot=agent.query_context.api_messages_snapshot,
+            reasoning="".join(reasoning_parts) if reasoning_parts else None,
+            error=run_error,
+            event_count=event_count,
+        )
 
-                agent_run_store.finish_run(
-                    run_id,
-                    status="failed" if run_error else "completed",
-                    response=run_response,
-                    message_history=full_display,
-                    compacted_history=compacted,
-                    reasoning="".join(reasoning_parts) if reasoning_parts else None,
-                    error=run_error,
-                    event_count=event_count,
-                )
-            except Exception:
-                logger.debug("Failed to finish agent run record", exc_info=True)
-
-        # Record token usage
-        if (
-            db_available
-            and usage_snapshot
-            and (usage_snapshot.input_tokens or usage_snapshot.output_tokens)
-        ):
-            try:
-                usage_store.record(
-                    session_id=config.session_id,
-                    agent_name=agent.agent_name,
-                    model_id=agent.model,
-                    prompt_tokens=usage_snapshot.input_tokens,
-                    completion_tokens=usage_snapshot.output_tokens,
-                )
-            except Exception:
-                logger.debug("Failed to record token usage", exc_info=True)
+        if db_available:
+            persist_run_usage(
+                usage_store=usage_store,
+                session_id=config.session_id,
+                run_id=run_id,
+                agent_name=agent.agent_name,
+                model_id=agent.model,
+                usage=agent.total_usage,
+            )
 
     # 6. Extract new messages for the full (uncompacted) audit log
     new_messages: list[dict] = []

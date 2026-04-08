@@ -23,6 +23,13 @@ logger = logging.getLogger(__name__)
 
 _engine: Engine | None = None
 _session_factory: sessionmaker[Session] | None = None
+_INDEX_DDL: tuple[tuple[str, str, str], ...] = (
+    (
+        "token_usage",
+        "ix_token_usage_run_id",
+        'CREATE INDEX IF NOT EXISTS "ix_token_usage_run_id" ON "token_usage" ("run_id")',
+    ),
+)
 
 
 def get_engine() -> Engine | None:
@@ -50,6 +57,20 @@ def _add_missing_columns(engine: Engine) -> None:
                     conn.execute(
                         text(f'ALTER TABLE "{table.name}" ADD COLUMN "{col.name}" {col_type}')
                     )
+
+
+def _ensure_indexes(engine: Engine) -> None:
+    """Create indexes that may be missing on upgraded databases."""
+    insp = inspect(engine)
+    for table_name, index_name, ddl in _INDEX_DDL:
+        if not insp.has_table(table_name):
+            continue
+        existing = {idx["name"] for idx in insp.get_indexes(table_name)}
+        if index_name in existing:
+            continue
+        logger.info("Adding missing index %s on %s", index_name, table_name)
+        with engine.begin() as conn:
+            conn.execute(text(ddl))
 
 
 def initialize_db(
@@ -97,6 +118,7 @@ def initialize_db(
     # Patch existing tables with columns added after initial creation.
     # create_all only creates missing *tables*, not missing *columns*.
     _add_missing_columns(_engine)
+    _ensure_indexes(_engine)
 
     logger.info("Database tables created / verified")
 

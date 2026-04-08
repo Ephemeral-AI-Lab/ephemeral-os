@@ -35,6 +35,7 @@ class TokenTracker:
         self,
         *,
         session_id: str,
+        run_id: str | None = None,
         agent_name: str,
         model_id: str,
         prompt_tokens: int = 0,
@@ -54,6 +55,7 @@ class TokenTracker:
         """
         return self._store.record(
             session_id=session_id,
+            run_id=run_id,
             agent_name=agent_name,
             model_id=model_id,
             prompt_tokens=prompt_tokens,
@@ -67,6 +69,14 @@ class TokenTracker:
     def get_usage_by_model(self, session_id: str | None = None) -> list[dict]:
         """Get usage breakdown by model, optionally filtered by session."""
         return self._store.get_usage_by_model(session_id)
+
+    def get_run_usage(self, run_id: str) -> dict | None:
+        """Get aggregated usage for a single run."""
+        return self._store.get_run_usage(run_id)
+
+    def get_usage_for_runs(self, run_ids: list[str]) -> dict[str, dict]:
+        """Get aggregated usage for multiple runs keyed by ``run_id``."""
+        return self._store.get_usage_for_runs(run_ids)
 
 
 __all__ = [

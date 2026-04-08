@@ -131,6 +131,7 @@ def tool(
     read_only: bool = False,
     stop_after_tool_call: bool = False,
     background: Literal["forbidden", "optional", "always"] = "forbidden",
+    task_type: str = "agent",
 ) -> Callable[[Callable[..., Any]], BaseTool]:
     """Decorator that converts a function into a ``BaseTool`` instance.
 
@@ -143,6 +144,9 @@ def tool(
             ``"forbidden"`` — never run in background (default).
             ``"optional"`` — LLM may opt in via input ``background=true``.
             ``"always"``   — engine ALWAYS dispatches as background.
+        task_type: Discriminator propagated to the background task manager so
+            monitoring/UI/audit can tell ordinary background tools ("agent")
+            apart from tools that spawn a nested agent ("subagent").
 
     Returns:
         A ``BaseTool`` instance ready for registration in a toolkit or registry.
@@ -200,6 +204,7 @@ def tool(
         instance.input_model = input_model
         instance._stop_after_tool_call = stop_after_tool_call
         instance.background = background
+        instance.task_type = task_type
         # Preserve the original function for testing/introspection
         instance._entrypoint = func
 

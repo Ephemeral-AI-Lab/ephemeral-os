@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterable
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session, sessionmaker
@@ -32,6 +33,7 @@ class UsageStore:
         self,
         *,
         session_id: str,
+        run_id: str | None = None,
         agent_name: str,
         model_id: str,
         prompt_tokens: int = 0,
@@ -40,6 +42,7 @@ class UsageStore:
         with self._sf() as db:
             rec = TokenUsageRecord(
                 session_id=session_id,
+                run_id=run_id,
                 agent_name=agent_name,
                 model_id=model_id,
                 prompt_tokens=prompt_tokens,
@@ -94,3 +97,39 @@ class UsageStore:
                 }
                 for row in q.all()
             ]
+
+    def get_run_usage(self, run_id: str) -> dict | None:
+        """Return aggregated usage for a single run."""
+        return self.get_usage_for_runs([run_id]).get(run_id)
+
+    def get_usage_for_runs(self, run_ids: Iterable[str]) -> dict[str, dict]:
+        """Return a mapping of ``run_id -> usage summary`` for the given runs."""
+        normalized = [run_id for run_id in dict.fromkeys(run_ids) if run_id]
+        if not normalized:
+            return {}
+
+        with self._sf() as db:
+            rows = (
+                db.query(TokenUsageRecord)
+                .filter(TokenUsageRecord.run_id.in_(normalized))
+                .order_by(TokenUsageRecord.id.asc())
+                .all()
+            )
+
+        usage_by_run: dict[str, dict] = {}
+        for row in rows:
+            if row.run_id is None:
+                continue
+            if row.run_id not in usage_by_run:
+                usage_by_run[row.run_id] = {
+                    "run_id": row.run_id,
+                    "model_id": row.model_id,
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "total_tokens": 0,
+                }
+            usage = usage_by_run[row.run_id]
+            usage["prompt_tokens"] += row.prompt_tokens
+            usage["completion_tokens"] += row.completion_tokens
+            usage["total_tokens"] += row.total_tokens
+        return usage_by_run

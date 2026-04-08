@@ -5,8 +5,8 @@ Covers three layers, all offline (no sandbox, no LLM):
     1. `_common.apply_last_n_lines` — line trim, char cap, total budget.
     2. `CheckBackgroundProgress` / `WaitForBackgroundTask` schemas and
        `execute` branches that don't require a running loop to assert.
-    3. `query._wrap_command_with_pid_tracking` — pure string helper that
-       can be inspected without a sandbox.
+    3. `tools.daytona_toolkit.background._wrap_command_with_pid_tracking` —
+       pure string helper that can be inspected without a sandbox.
 """
 
 from __future__ import annotations
@@ -37,7 +37,7 @@ from tools.builtins.background.cancel_background_task import (
 )
 from tools.core.base import ToolExecutionContext, ToolResult
 from engine.runtime.background_tasks import BackgroundTaskManager
-from engine.core.query import _wrap_command_with_pid_tracking
+from tools.daytona_toolkit.background import _wrap_command_with_pid_tracking
 
 
 # ---------------------------------------------------------------------------

@@ -28,8 +28,9 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
+from agents.types import AgentDefinition
 from config.settings import Settings, load_settings
-from engine.core.query import QueryContext, run_query
+from engine.core.query import run_query
 from message.messages import ConversationMessage
 from message.stream_events import (
     AssistantTextDelta,
@@ -43,11 +44,8 @@ from message.stream_events import (
     ToolExecutionCompleted,
     ToolExecutionStarted,
 )
-from providers.provider import make_api_client
 from providers.types import SupportsStreamingMessages, UsageSnapshot
-from tools import ToolRegistry
-from tools.daytona_toolkit import DaytonaToolkit
-from tools.subagent import SubagentToolkit
+from tools.core.base import ExecutionMetadata
 
 logger = logging.getLogger(__name__)
 
@@ -237,20 +235,22 @@ class EvalResult:
 class EvalAgent:
     """Configurable test agent for e2e evaluation.
 
-    Wraps QueryContext + run_query with credentials from settings.json. Test classes
-    configure their specific agent (system prompt, toolkits, background
-    tasks) via the create() classmethod.
+    Wraps an :class:`EphemeralAgent` (built via :func:`spawn_agent`) with
+    credentials from settings.json. Test classes configure their specific
+    agent (system prompt, toolkits, background tasks) via the
+    :meth:`create` classmethod.
     """
 
     def __init__(
         self,
-        query_context: QueryContext,
+        ephemeral_agent: Any,
         settings: Settings,
         model: str,
         api_client: SupportsStreamingMessages,
         session_config: Any = None,
     ) -> None:
-        self._query_context = query_context
+        self._agent = ephemeral_agent
+        self._query_context = ephemeral_agent.query_context
         self._settings = settings
         self._model = model
         self._api_client_ref = api_client
@@ -321,15 +321,18 @@ class EvalAgent:
     ) -> EvalAgent:
         """Create a configured EvalAgent.
 
-        Uses the active model from the DB registry when available,
-        falling back to settings.json. This ensures the correct
-        client class and auth (e.g. auth_token for MiniMax Anthropic)
-        are used automatically.
+        EvalAgent is a thin test harness wrapper around :func:`spawn_agent`.
+        All production spawn semantics (model resolution, API client,
+        Daytona toolkit registration, capability gating) run through the
+        same code path as the server router, so tests exercise the real
+        stack rather than a parallel implementation.
 
         Args:
             system_prompt: Custom system prompt. If None, uses default.
             sandbox_id: Daytona sandbox ID for sandbox tools.
             enable_background_tasks: Enable background task execution.
+                (Effectively derived from available tools; retained as a
+                no-op arg for API compatibility with older tests.)
             max_turns: Maximum agentic loop turns.
             max_tokens: Override max_tokens from settings.
             settings: Override auto-loaded settings.
@@ -337,121 +340,118 @@ class EvalAgent:
         Returns:
             Configured EvalAgent ready to invoke.
         """
+        del enable_background_tasks  # derived from registered tools
+
         if settings is None:
             settings = load_settings()
 
-        # Load active model from DB registry (same pattern as engine.agent).
-        # Initializes the model_store with the real PostgreSQL DB if needed.
-        db_kwargs: dict | None = None
-        try:
-            from server.app_factory import model_store
+        # Ensure the DB stores the test harness needs are initialised.
+        cls._ensure_db_ready(settings)
 
-            if not model_store.is_available and settings.database.url:
-                from db.engine import initialize_db
+        # Resolve the active model so the test uses the same provider +
+        # credentials the server would.
+        from engine.runtime.agent import resolve_active_model, spawn_agent
+        from providers.provider import make_api_client
 
-                sf = initialize_db(settings.database)
-                if sf is not None:
-                    model_store.initialize(sf)
+        db_kwargs = resolve_active_model(settings) or {}
+        resolved_model = db_kwargs.get("model") or settings.model
+        api_client = make_api_client(settings, db_kwargs=db_kwargs or None)
+        if db_kwargs:
+            logger.info(
+                "[EvalAgent] Using DB model: model=%s", db_kwargs.get("model", "?")
+            )
 
-            active = model_store.get_active_resolved() if model_store.is_available else None
-            if active:
-                db_kwargs = active.get("kwargs")
-                logger.info(
-                    "[EvalAgent] Using DB model: model=%s",
-                    (db_kwargs or {}).get("model", "?"),
-                )
-        except Exception as exc:
-            logger.debug("[EvalAgent] DB model registry unavailable: %s", exc)
-
-        resolved_model = (db_kwargs or {}).get("model") or settings.model
-        api_client = make_api_client(settings, db_kwargs=db_kwargs)
-
-        tool_registry = ToolRegistry()
-        daytona_toolkit = DaytonaToolkit(sandbox_id=sandbox_id)
-        tool_registry.register_toolkit(daytona_toolkit)
-        tool_registry.register_toolkit(SubagentToolkit())
-
-        prompt = system_prompt or DEFAULT_SYSTEM_PROMPT
-
-        # Use the same setup logic as spawn_agent: register background toolkit
-        # and inject capability awareness into the system prompt.
-        from engine.runtime.agent import finalize_tool_registry_and_prompt
-
-        prompt, has_background_tools = finalize_tool_registry_and_prompt(
-            tool_registry, prompt
-        )
-
-        from compaction import SessionState
-
-        # --- Build a real SessionConfig + ensure DB-side parity with the
-        # production spawn_agent path so subagents persist agent_run rows
-        # (and `run_id` is non-null in BackgroundTaskCompleted events).
+        # Build a real SessionConfig so subagents persist agent_run rows
+        # with a valid parent session_id.
         from uuid import uuid4
 
         from server.app_factory import SessionConfig
 
-        session_config = SessionConfig(
-            cwd=".",
-            session_id=uuid4().hex[:12],
-        )
+        session_config = SessionConfig(cwd=".", session_id=uuid4().hex[:12])
+        cls._ensure_parent_session_row(session_config, resolved_model)
 
-        # Ensure agent_run_store + session_store are initialised against the
-        # same DB used by the model_store above. Safe no-op if already ready.
-        try:
-            from server.app_factory import agent_run_store, session_store
-
-            if (
-                not agent_run_store.is_ready or not session_store.is_ready
-            ) and settings.database.url:
-                from db.engine import initialize_db
-
-                sf = initialize_db(settings.database)
-                if sf is not None:
-                    if not agent_run_store.is_ready:
-                        agent_run_store.initialize(sf)
-                    if not session_store.is_ready:
-                        session_store.initialize(sf)
-
-            # Insert the parent sessions row so the agent_runs FK can resolve.
-            if session_store.is_ready:
-                try:
-                    session_store.upsert(
-                        session_id=session_config.session_id,
-                        cwd=session_config.cwd,
-                        model=resolved_model,
-                        message_count=0,
-                    )
-                except Exception:
-                    logger.debug(
-                        "[EvalAgent] session_store.upsert failed", exc_info=True
-                    )
-        except Exception as exc:
-            logger.debug("[EvalAgent] DB persistence unavailable: %s", exc)
-
-        query_context = QueryContext(
-            api_client=api_client,
-            tool_registry=tool_registry,
-            cwd=".",
-            model=resolved_model,
-            system_prompt=prompt,
-            max_tokens=max_tokens or settings.max_tokens,
+        # Tune the AgentDefinition so spawn_agent produces the same tool
+        # surface EvalAgent historically exposed: Daytona + subagent, no
+        # auto-loaded skills, the raw test system prompt.
+        agent_def = AgentDefinition(
+            name="eval_agent",
+            description="Test harness eval agent",
+            system_prompt=system_prompt or DEFAULT_SYSTEM_PROMPT,
+            toolkits=["sandbox_operations", "subagent"],
             max_turns=max_turns,
-            hook_executor=None,
-            enable_background_tasks=has_background_tools,
-            session_state=SessionState(),
-            tool_metadata={
-                "session_config": session_config,
-                "sandbox_id": sandbox_id or "",
-            },
+            include_skills=False,
+            source="builtin",
         )
+
+        ephemeral = spawn_agent(
+            session_config,
+            messages=[],
+            agent_def=agent_def,
+            sandbox_id=sandbox_id,
+        )
+        if max_tokens is not None:
+            ephemeral.query_context.max_tokens = max_tokens
+
+        # The fresh EphemeralAgent built its own API client; swap it for
+        # the one we just created so eval-side observers (latency,
+        # request inspection) see the same object the tests constructed.
+        ephemeral.query_context.api_client = api_client
 
         return cls(
-            query_context=query_context,
+            ephemeral_agent=ephemeral,
             settings=settings,
             model=resolved_model,
             api_client=api_client,
             session_config=session_config,
         )
+
+    @staticmethod
+    def _ensure_db_ready(settings: Settings) -> None:
+        """Initialise agent_run_store + session_store + model_store if configured.
+
+        Safe no-op when the DB URL is missing or stores are already ready.
+        Swallows errors — the eval harness tolerates an unavailable DB and
+        simply skips persistence.
+        """
+        try:
+            from server.app_factory import agent_run_store, model_store, session_store
+
+            needs_init = any(
+                not store.is_ready
+                for store in (agent_run_store, session_store)
+            ) or not model_store.is_available
+
+            if needs_init and settings.database.url:
+                from db.engine import initialize_db
+
+                sf = initialize_db(settings.database)
+                if sf is not None:
+                    if not model_store.is_available:
+                        model_store.initialize(sf)
+                    if not agent_run_store.is_ready:
+                        agent_run_store.initialize(sf)
+                    if not session_store.is_ready:
+                        session_store.initialize(sf)
+        except Exception as exc:
+            logger.debug("[EvalAgent] DB persistence unavailable: %s", exc)
+
+    @staticmethod
+    def _ensure_parent_session_row(session_config: Any, model: str) -> None:
+        """Insert the parent sessions row so the agent_runs FK can resolve."""
+        try:
+            from server.app_factory import session_store
+
+            if session_store.is_ready:
+                session_store.upsert(
+                    session_id=session_config.session_id,
+                    cwd=session_config.cwd,
+                    model=model,
+                    message_count=0,
+                )
+        except Exception:
+            logger.debug(
+                "[EvalAgent] session_store.upsert failed", exc_info=True
+            )
 
     @classmethod
     def from_settings(cls, settings: Settings) -> EvalAgent:
@@ -494,44 +494,27 @@ class EvalAgent:
         # Create a top-level agent_run row for this invocation so tools that
         # spawn nested runs (e.g. run_subagent) can attribute themselves to a
         # parent_run_id — mirrors server.routers.core.execute_ephemeral_agent_run.
-        run_id: str | None = None
-        try:
-            from server.app_factory import agent_run_store
+        from agents.run_tracker import AgentRunTracker
 
-            if agent_run_store.is_ready and self._session_config is not None:
-                from uuid import uuid4
-
-                run_id = uuid4().hex[:12]
-                try:
-                    agent_run_store.create_run(
-                        run_id=run_id,
-                        session_id=self._session_config.session_id,
-                        agent_name="eval_agent",
-                        input_query=prompt[:2000],
-                    )
-                except Exception:
-                    logger.debug(
-                        "[EvalAgent] failed to create top-level agent_run",
-                        exc_info=True,
-                    )
-                    run_id = None
-        except Exception as exc:
-            logger.debug("[EvalAgent] agent_run_store unavailable: %s", exc)
+        tracker = AgentRunTracker.create(
+            session_id=getattr(self._session_config, "session_id", None),
+            agent_name="eval_agent",
+            input_query=prompt,
+        )
+        run_id = tracker.run_id
 
         if run_id is not None:
             if self._query_context.tool_metadata is None:
-                self._query_context.tool_metadata = {}
-            self._query_context.tool_metadata["agent_run_id"] = run_id
+                self._query_context.tool_metadata = ExecutionMetadata()
+            self._query_context.tool_metadata.agent_run_id = run_id
 
         messages, event_iter = await run_query(self._query_context, self._display_messages)
         self._display_messages = messages
-        last_usage: UsageSnapshot | None = None
         async for event, usage in event_iter:
             events.append(event)
             if usage:
                 total_usage.input_tokens += usage.input_tokens
                 total_usage.output_tokens += usage.output_tokens
-                last_usage = usage
 
             if isinstance(event, ThinkingDelta):
                 thinking_buf.append(event.text)
@@ -581,20 +564,7 @@ class EvalAgent:
 
         # Finalise the top-level agent_run row so listings/inspectors see it
         # in a terminal state (mirrors execute_ephemeral_agent_run).
-        if run_id is not None:
-            try:
-                from server.app_factory import agent_run_store
-
-                agent_run_store.finish_run(
-                    run_id,
-                    status="completed",
-                    event_count=len(events),
-                )
-            except Exception:
-                logger.debug(
-                    "[EvalAgent] failed to finish top-level agent_run",
-                    exc_info=True,
-                )
+        tracker.finish(status="completed", event_count=len(events))
 
         latency_ms = (time.monotonic() - start) * 1000
 

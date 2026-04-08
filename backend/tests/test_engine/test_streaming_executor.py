@@ -14,7 +14,11 @@ from message.stream_events import (
     ToolExecutionCompleted,
     ToolExecutionProgress,
 )
-from engine.core.streaming_executor import StreamingToolExecutor, TrackedTool
+from engine.core.streaming_executor import (
+    StreamingToolExecutor,
+    TrackedTool,
+    defer_background_dispatch,
+)
 from providers.types import ApiToolUseDeltaEvent
 from tools.core.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolRegistry, ToolResult
 
@@ -363,7 +367,9 @@ async def test_add_tool_skips_background_tool():
     """add_tool skips tools with background=True when tool supports background."""
     registry = _make_registry(BgBashTool())
     context = _make_context()
-    executor = StreamingToolExecutor(registry, context)
+    executor = StreamingToolExecutor(
+        registry, context, should_defer=defer_background_dispatch
+    )
 
     event = ApiToolUseDeltaEvent(
         id="tool_bg",
@@ -375,7 +381,7 @@ async def test_add_tool_skips_background_tool():
 
     assert started is None, "Background tool should not produce a started event"
     assert "tool_bg" not in executor._tools, "Background tool should not be tracked"
-    assert "tool_bg" in executor.skipped_background_ids
+    assert "tool_bg" in executor.deferred_dispatch_ids
 
 
 @pytest.mark.asyncio
@@ -395,7 +401,7 @@ async def test_add_tool_runs_foreground_when_background_false():
 
     assert started is not None, "Foreground tool should produce a started event"
     assert "tool_fg" in executor._tools
-    assert len(executor.skipped_background_ids) == 0
+    assert len(executor.deferred_dispatch_ids) == 0
 
 
 @pytest.mark.asyncio
@@ -415,7 +421,7 @@ async def test_add_tool_runs_non_bg_tool_with_background_flag():
 
     assert started is not None, "Non-bg-capable tool should still execute"
     assert "tool_01" in executor._tools
-    assert len(executor.skipped_background_ids) == 0
+    assert len(executor.deferred_dispatch_ids) == 0
 
 
 @pytest.mark.asyncio
@@ -423,7 +429,9 @@ async def test_mixed_foreground_and_background_tools():
     """Executor handles a mix of foreground and background tools in the same turn."""
     registry = _make_registry(BgBashTool(), FastTool())
     context = _make_context()
-    executor = StreamingToolExecutor(registry, context)
+    executor = StreamingToolExecutor(
+        registry, context, should_defer=defer_background_dispatch
+    )
 
     bg_event = ApiToolUseDeltaEvent(
         id="tool_bg",
@@ -444,7 +452,7 @@ async def test_mixed_foreground_and_background_tools():
 
     assert len(executor._tools) == 1
     assert "tool_fg" in executor._tools
-    assert "tool_bg" in executor.skipped_background_ids
+    assert "tool_bg" in executor.deferred_dispatch_ids
 
     await asyncio.sleep(0.1)
     results = await executor.get_remaining()

@@ -7,7 +7,22 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
+
+from tools.core.runtime import ExecutionMetadata
+
+__all__ = [
+    "BackgroundMode",
+    "BaseTool",
+    "BaseToolkit",
+    "ExecutionMetadata",
+    "ToolExecutionContext",
+    "ToolRegistry",
+    "ToolResult",
+    "decorate_schemas_for_background",
+    "run_tool_safely",
+]
+
 
 BackgroundMode = Literal["forbidden", "optional", "always"]
 
@@ -17,7 +32,19 @@ class ToolExecutionContext:
     """Shared execution context for tool invocations."""
 
     cwd: Path
-    metadata: dict[str, Any] = field(default_factory=dict)
+    metadata: ExecutionMetadata = field(default_factory=ExecutionMetadata)
+
+    def __post_init__(self) -> None:
+        # Accept a plain dict for backward compatibility with older call
+        # sites (in particular test fixtures). Coerce it into a typed
+        # ``ExecutionMetadata`` so downstream code can rely on attribute
+        # access without branching on the input shape.
+        if isinstance(self.metadata, dict):
+            raw: dict[str, Any] = self.metadata
+            meta = ExecutionMetadata()
+            for key, value in raw.items():
+                meta[key] = value
+            self.metadata = meta
 
 
 @dataclass(frozen=True)
@@ -105,6 +132,10 @@ class BaseTool(ABC):
     #   "optional"  — LLM may opt in by passing background=true
     #   "always"    — engine ALWAYS dispatches as background, regardless of input
     background: BackgroundMode = "forbidden"
+    # Discriminator for monitoring/UI/audit so the engine never sniffs tool names.
+    # "agent" is the default for ordinary background tools; tools that spawn a
+    # nested agent (e.g. run_subagent) override it to "subagent".
+    task_type: str = "agent"
 
     @abstractmethod
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
@@ -241,6 +272,47 @@ class ToolRegistry:
         a dumb collection.
         """
         return [tool.to_api_schema() for tool in self._tools.values()]
+
+
+async def run_tool_safely(
+    tool: "BaseTool",
+    raw_input: dict[str, Any],
+    context: "ToolExecutionContext",
+) -> ToolResult:
+    """Validate input, execute *tool*, and normalise errors to a ``ToolResult``.
+
+    Used by both the streaming executor and the background-dispatch path
+    so validation and error framing stay consistent across the engine's
+    tool invocation sites. ``asyncio.CancelledError`` is intentionally
+    not caught — callers decide how to handle cancellation.
+    """
+    try:
+        parsed_input = tool.input_model.model_validate(raw_input)
+    except ValidationError as exc:
+        errors = "; ".join(
+            f"{'.'.join(str(p) for p in e['loc'])}: {e['msg']}"
+            for e in exc.errors()
+        )
+        return ToolResult(
+            output=(
+                f"Invalid input for {tool.name}: {errors}. "
+                "Please retry the tool call with valid arguments."
+            ),
+            is_error=True,
+        )
+    except Exception as exc:
+        return ToolResult(
+            output=f"Invalid input for {tool.name}: {exc}",
+            is_error=True,
+        )
+
+    try:
+        return await tool.execute(parsed_input, context)
+    except Exception as exc:
+        return ToolResult(
+            output=f"Tool execution failed: {exc}",
+            is_error=True,
+        )
 
 
 def decorate_schemas_for_background(

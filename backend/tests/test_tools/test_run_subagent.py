@@ -16,6 +16,7 @@ from message.messages import (
     ToolResultBlock,
     ToolUseBlock,
 )
+from providers.types import UsageSnapshot
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.subagent.run_subagent_tool import (
     PEEK_MESSAGE_MAX,
@@ -217,10 +218,18 @@ def test_run_subagent_tool_flags():
 
 
 class _StubAgent:
-    def __init__(self, scripted_messages: list[ConversationMessage]) -> None:
+    def __init__(
+        self,
+        scripted_messages: list[ConversationMessage],
+        *,
+        usage: UsageSnapshot | None = None,
+        model: str = "mock-subagent-model",
+    ) -> None:
         self._display_messages: list[ConversationMessage] = []
         self._scripted = scripted_messages
-        self.total_usage = None
+        self.total_usage = usage
+        self.model = model
+        self.agent_name = "subagent"
         # Used by the test to inspect that progress provider sees live state.
         self.peek_calls: list[str] = []
 
@@ -254,7 +263,10 @@ async def test_run_subagent_registers_provider_and_returns_final_text(monkeypatc
         ),
     ]
 
-    stub_agent = _StubAgent(scripted)
+    stub_agent = _StubAgent(
+        scripted,
+        usage=UsageSnapshot(input_tokens=21, output_tokens=9),
+    )
 
     def _fake_spawn_agent(*args, **kwargs):
         return stub_agent
@@ -368,6 +380,15 @@ class _StubAgentRunStore:
         return None
 
 
+class _StubUsageStore:
+    def __init__(self) -> None:
+        self.records: list[dict] = []
+
+    def record(self, **kwargs):
+        self.records.append(kwargs)
+        return kwargs
+
+
 @pytest.mark.asyncio
 async def test_run_subagent_persists_run_with_parent_ids(monkeypatch):
     """run_subagent must call create_run with parent_run_id + parent_task_id
@@ -379,7 +400,10 @@ async def test_run_subagent_persists_run_with_parent_ids(monkeypatch):
             role="assistant", content=[TextBlock(text="DONE: child output")]
         ),
     ]
-    stub_agent = _StubAgent(scripted)
+    stub_agent = _StubAgent(
+        scripted,
+        usage=UsageSnapshot(input_tokens=21, output_tokens=9),
+    )
 
     monkeypatch.setattr(
         "engine.runtime.agent.spawn_agent",
@@ -389,9 +413,11 @@ async def test_run_subagent_persists_run_with_parent_ids(monkeypatch):
 
     # Inject a stub agent_run_store that records calls.
     fake_store = _StubAgentRunStore()
+    fake_usage_store = _StubUsageStore()
     import server.app_factory as app_factory
 
     monkeypatch.setattr(app_factory, "agent_run_store", fake_store, raising=True)
+    monkeypatch.setattr(app_factory, "usage_store", fake_usage_store, raising=True)
 
     bg = BackgroundTaskManager()
 
@@ -447,6 +473,14 @@ async def test_run_subagent_persists_run_with_parent_ids(monkeypatch):
     assert finish_kwargs["error"] is None
     assert finish_kwargs["message_history"]
     assert finish_kwargs["response"] == {"final_text": "DONE: child output"}
+    assert len(fake_usage_store.records) == 1
+    usage_kwargs = fake_usage_store.records[0]
+    assert usage_kwargs["session_id"] == "session_abc"
+    assert usage_kwargs["run_id"] == finish_kwargs["run_id"]
+    assert usage_kwargs["agent_name"] == "subagent"
+    assert usage_kwargs["model_id"] == getattr(stub_agent, "model", "")
+    assert usage_kwargs["prompt_tokens"] == 21
+    assert usage_kwargs["completion_tokens"] == 9
 
 
 @pytest.mark.asyncio
@@ -461,9 +495,11 @@ async def test_run_subagent_persists_spawn_failure(monkeypatch):
     monkeypatch.setattr("engine.runtime.agent.spawn_agent", _boom, raising=True)
 
     fake_store = _StubAgentRunStore()
+    fake_usage_store = _StubUsageStore()
     import server.app_factory as app_factory
 
     monkeypatch.setattr(app_factory, "agent_run_store", fake_store, raising=True)
+    monkeypatch.setattr(app_factory, "usage_store", fake_usage_store, raising=True)
 
     class _StubCfg:
         cwd = Path("/tmp")
@@ -490,6 +526,7 @@ async def test_run_subagent_persists_spawn_failure(monkeypatch):
     assert len(fake_store.finished) == 1
     assert fake_store.finished[0]["status"] == "failed"
     assert "spawn boom" in fake_store.finished[0]["error"]
+    assert fake_usage_store.records == []
 
 
 @pytest.mark.asyncio
@@ -498,6 +535,12 @@ async def test_run_subagent_persists_failure(monkeypatch):
     status='failed' and error=<exc message>, and the tool result is_error=True."""
 
     class _CrashingAgent(_StubAgent):
+        def __init__(self) -> None:
+            super().__init__(
+                [],
+                usage=UsageSnapshot(input_tokens=13, output_tokens=7),
+            )
+
         async def run(self, prompt: str):
             self._display_messages.append(
                 ConversationMessage(role="user", content=[TextBlock(text=prompt)])
@@ -507,14 +550,16 @@ async def test_run_subagent_persists_failure(monkeypatch):
 
     monkeypatch.setattr(
         "engine.runtime.agent.spawn_agent",
-        lambda *a, **kw: _CrashingAgent([]),
+        lambda *a, **kw: _CrashingAgent(),
         raising=True,
     )
 
     fake_store = _StubAgentRunStore()
+    fake_usage_store = _StubUsageStore()
     import server.app_factory as app_factory
 
     monkeypatch.setattr(app_factory, "agent_run_store", fake_store, raising=True)
+    monkeypatch.setattr(app_factory, "usage_store", fake_usage_store, raising=True)
 
     bg = BackgroundTaskManager()
 
@@ -551,3 +596,79 @@ async def test_run_subagent_persists_failure(monkeypatch):
     assert len(fake_store.finished) == 1
     assert fake_store.finished[0]["status"] == "failed"
     assert "inner exploded" in fake_store.finished[0]["error"]
+    assert len(fake_usage_store.records) == 1
+    assert fake_usage_store.records[0]["run_id"] == fake_store.finished[0]["run_id"]
+    assert fake_usage_store.records[0]["prompt_tokens"] == 13
+    assert fake_usage_store.records[0]["completion_tokens"] == 7
+
+
+@pytest.mark.asyncio
+async def test_run_subagent_persists_usage_when_cancelled(monkeypatch):
+    class _CancelledAgent(_StubAgent):
+        def __init__(self) -> None:
+            super().__init__(
+                [ConversationMessage(role="user", content=[TextBlock(text="x")])],
+                usage=UsageSnapshot(input_tokens=8, output_tokens=2),
+            )
+
+        async def run(self, prompt: str):
+            self._display_messages.append(
+                ConversationMessage(role="user", content=[TextBlock(text=prompt)])
+            )
+            yield ("event",)
+            raise asyncio.CancelledError("cancelled")
+
+    monkeypatch.setattr(
+        "engine.runtime.agent.spawn_agent",
+        lambda *a, **kw: _CancelledAgent(),
+        raising=True,
+    )
+
+    fake_store = _StubAgentRunStore()
+    fake_usage_store = _StubUsageStore()
+    import server.app_factory as app_factory
+
+    monkeypatch.setattr(app_factory, "agent_run_store", fake_store, raising=True)
+    monkeypatch.setattr(app_factory, "usage_store", fake_usage_store, raising=True)
+
+    bg = BackgroundTaskManager()
+
+    async def _noop_coro() -> ToolResult:
+        return ToolResult(output="placeholder")
+
+    bg.launch(
+        task_id="bg_cancel",
+        tool_name="run_subagent",
+        tool_input={"prompt": "x"},
+        coro=_noop_coro(),
+        task_note="test",
+    )
+    tracked = bg.get_task("bg_cancel")
+    assert tracked is not None
+    tracked.status = "cancelled"
+    tracked.cancel_reason = "user requested stop"
+
+    class _StubCfg:
+        cwd = Path("/tmp")
+        session_id = "session_abc"
+
+    ctx = ToolExecutionContext(
+        cwd=Path("/tmp"),
+        metadata={
+            "session_config": _StubCfg(),
+            "background_task_manager": bg,
+            "background_task_id": "bg_cancel",
+            "sandbox_id": "",
+            "agent_run_id": "parent_run_xyz",
+        },
+    )
+
+    with pytest.raises(asyncio.CancelledError):
+        await run_subagent.execute(run_subagent.input_model(prompt="x"), ctx)
+
+    assert len(fake_store.finished) == 1
+    assert fake_store.finished[0]["status"] == "cancelled"
+    assert fake_store.finished[0]["cancellation_reason"] == "user requested stop"
+    assert len(fake_usage_store.records) == 1
+    assert fake_usage_store.records[0]["prompt_tokens"] == 8
+    assert fake_usage_store.records[0]["completion_tokens"] == 2

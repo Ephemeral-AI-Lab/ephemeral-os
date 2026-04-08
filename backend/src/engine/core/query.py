@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import asyncio
-import base64
 import logging
 import re
 import time as time_module
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from collections.abc import AsyncIterator
 
 if TYPE_CHECKING:
@@ -26,11 +25,13 @@ from providers.types import (
     UsageSnapshot,
 )
 from message.messages import ConversationMessage, SystemReminderBlock, ToolResultBlock
-from engine.runtime.background_tasks import BackgroundTaskManager, KillCallback, TrackedBackgroundTask
+from engine.runtime.background_tasks import BackgroundTaskManager, TrackedBackgroundTask
+from tools.daytona_toolkit.background import prepare_background_launch
 from message.stream_events import (
     AssistantTextDelta,
     AssistantTurnComplete,
     BackgroundTaskCompleted,
+    BackgroundTaskStarted,
     StreamEvent,
     SystemNotification,
     ThinkingDelta,
@@ -38,13 +39,15 @@ from message.stream_events import (
     ToolExecutionCompleted,
     ToolExecutionStarted,
 )
-from engine.core.streaming_executor import StreamingToolExecutor
+from engine.core.streaming_executor import StreamingToolExecutor, defer_background_dispatch
 from hooks import HookEvent, HookExecutor
 from tools.core.base import (
+    ExecutionMetadata,
     ToolExecutionContext,
     ToolRegistry,
     ToolResult,
     decorate_schemas_for_background,
+    run_tool_safely,
 )
 
 logger = logging.getLogger(__name__)
@@ -64,7 +67,7 @@ class QueryContext:
     max_tokens: int
     max_turns: int = 200
     hook_executor: HookExecutor | None = None
-    tool_metadata: dict[str, object] | None = None
+    tool_metadata: ExecutionMetadata | None = None
     session_state: SessionState | None = None
     enable_background_tasks: bool = False
     # Snapshot of the most recent api_messages list sent to the provider.
@@ -72,6 +75,62 @@ class QueryContext:
     # to populate the ``compacted_history`` column without having to re-run
     # compaction. ``None`` until the first turn completes.
     api_messages_snapshot: list[ConversationMessage] | None = None
+
+
+def _ensure_execution_metadata(
+    metadata: ExecutionMetadata | dict[str, object] | None,
+) -> ExecutionMetadata:
+    if isinstance(metadata, ExecutionMetadata):
+        return metadata
+    coerced = ExecutionMetadata()
+    if metadata:
+        coerced.update(metadata)
+    return coerced
+
+
+def _deliver_completed_background_task(
+    task: TrackedBackgroundTask,
+    display_messages: list[ConversationMessage],
+) -> BackgroundTaskCompleted:
+    """Append a completion message to *display_messages* and return the event."""
+    output, status_label = _format_background_result(task)
+    display_messages.append(
+        ConversationMessage.from_user_text(
+            f"[BACKGROUND {task.task_id} {status_label}] "
+            f"tool={task.tool_name} "
+            f"note={task.task_note!r}\n\n{output}"
+        )
+    )
+    return BackgroundTaskCompleted(
+        task_id=task.task_id,
+        tool_name=task.tool_name,
+        output=output,
+        is_error=task.result.is_error if task.result else False,
+    )
+
+
+def _append_and_emit_reminder(
+    background_manager: BackgroundTaskManager,
+    display_messages: list[ConversationMessage],
+) -> SystemNotification | None:
+    """Append a background reminder message and return the matching event.
+
+    Returns ``None`` when no reminder is produced (no running tasks).
+    The append + yield pairing is packaged here so the caller cannot
+    drift the two sides apart.
+    """
+    reminder_msg = _build_background_reminder(background_manager)
+    if reminder_msg is None:
+        return None
+    display_messages.append(reminder_msg)
+    return SystemNotification(
+        text=reminder_msg.system_reminder_text,
+        category=(
+            reminder_msg.system_reminders[0].category
+            if reminder_msg.system_reminders
+            else ""
+        ),
+    )
 
 
 def _format_background_result(
@@ -105,7 +164,7 @@ def _build_background_reminder(
     :meth:`BackgroundTaskManager.get_reminder_diff`, so each call yields
     only progress lines that have appeared since the previous reminder.
     """
-    pending = [t for t in background_manager._tasks.values() if t.status == "running"]
+    pending = list(background_manager.iter_running())
     if not pending:
         return None
 
@@ -137,72 +196,85 @@ def _build_background_reminder(
     )
 
 
-def _make_kill_callback(context: QueryContext, task_id: str) -> KillCallback | None:
-    """Create a callback that kills the sandbox process for a background task.
+def _launch_background_tool(
+    context: QueryContext,
+    background_manager: BackgroundTaskManager,
+    tool_use: object,  # ToolUseBlock; typed as object to avoid import cycles
+    task_note: str,
+) -> tuple[ToolResultBlock, BackgroundTaskStarted | None, ToolExecutionCompleted | None]:
+    """Dispatch a single tool_use as a background task.
 
-    Sends a kill signal to the PID written by the wrapped command.  Returns
-    None when no sandbox is available (non-Daytona tools).
+    Returns ``(tool_result_block, bg_event, reject_event)``:
+
+    - ``tool_result_block`` — the block to add to the turn's tool_results.
+    - ``bg_event`` — the ``BackgroundTaskStarted`` to yield, or ``None`` if
+      the launch was rejected.
+    - ``reject_event`` — a ``ToolExecutionCompleted`` to yield when the tool
+      does not support background execution, otherwise ``None``.
+
+    The caller is responsible for yielding whichever of the two events is
+    non-``None`` so that tests and the router see a single ordered stream.
     """
-    sandbox = (context.tool_metadata or {}).get("daytona_sandbox")
-    if sandbox is None:
-        return None
+    tc = tool_use  # local alias; attribute access below mirrors ToolUseBlock
+    clean_input = {
+        k: v for k, v in tc.input.items() if k not in ("background", "task_note")
+    }
 
-    pid_file = f"/tmp/.eos_bg_{task_id}.pid"
+    tool_def = context.tool_registry.get(tc.name)
+    if tool_def is None or getattr(tool_def, "background", "forbidden") == "forbidden":
+        msg = f"Tool '{tc.name}' does not support background execution."
+        return (
+            ToolResultBlock(tool_use_id=tc.id, content=msg, is_error=True),
+            None,
+            ToolExecutionCompleted(tool_name=tc.name, output=msg, is_error=True),
+        )
 
-    async def _kill() -> None:
-        try:
-            # PID file holds the session leader's PID, which equals the
-            # process group ID (set via setsid). `kill -- -PGID` signals
-            # every process in the group, killing the whole tree.
-            # Guard empty PID explicitly so `kill -- -` isn't invoked with
-            # an empty arg (harmless but noisy) when the file is missing
-            # or the wrapper shell was killed before it wrote $$.
-            kill_script = (
-                f"PID=$(cat {pid_file} 2>/dev/null); "
-                f'if [ -n "$PID" ]; then '
-                f"  kill -TERM -- -$PID 2>/dev/null; "
-                f"  sleep 0.2; "
-                f"  kill -KILL -- -$PID 2>/dev/null; "
-                f"fi; "
-                f"rm -f {pid_file}"
-            )
-            await sandbox.process.exec(kill_script, timeout=5)
-        except Exception as exc:
-            # Kill failure can leave an orphaned process group — log loud
-            # enough to be visible at default log level.
-            logger.warning("Failed to kill background process for task %s: %s", task_id, exc)
-
-    return _kill
-
-
-def _wrap_command_with_pid_tracking(command: str, task_id: str) -> str:
-    """Wrap a shell command to record its PID in a temp file.
-
-    The command runs inside its own session/process group via `setsid` so
-    that cancel can signal the entire tree (wrapper + command + any
-    children it spawns). Without this, children of constructs like
-    `cd dir && python run.py` get orphaned and keep mutating shared
-    state after cancel.
-
-    The user command is passed to the inner shell base64-encoded to
-    avoid any quoting/escaping footguns: a stray single quote in
-    `command` would otherwise terminate the `sh -c '...'` wrapper and
-    allow unintended shell evaluation.
-    """
-    pid_file = f"/tmp/.eos_bg_{task_id}.pid"
-    encoded = base64.b64encode(command.encode("utf-8")).decode("ascii")
-    # Inside the setsid'd sh: record our own PID (== PGID) then exec the
-    # decoded user command. `exec` replaces the shell so signals target
-    # the user process directly; the PGID remains stable because exec
-    # does not change it.
-    # NOTE: `base64 -d` is GNU/BusyBox; the Daytona sandbox runs Linux,
-    # so this is portable for our deployment. If the sandbox ever moves
-    # to BSD/macOS the flag becomes `-D`.
-    inner = (
-        f'echo $$ > {pid_file}; '
-        f'exec sh -c "$(echo {encoded} | base64 -d)"'
+    sandbox = context.tool_metadata.daytona_sandbox if context.tool_metadata else None
+    clean_input, kill_callback = prepare_background_launch(
+        tc.name, clean_input, tc.id, sandbox
     )
-    return f"setsid sh -c '{inner}' < /dev/null"
+
+    bg_alias = background_manager.next_alias()
+
+    async def _bg_wrapper(
+        ctx: QueryContext,
+        name: str,
+        uid: str,
+        inp: dict[str, object],
+        alias: str = bg_alias,
+    ) -> ToolResult:
+        bg_overrides = ExecutionMetadata(
+            on_progress_line=background_manager.make_progress_callback(alias),
+            background_task_id=alias,
+        )
+        block = await _execute_tool_call(
+            ctx, name, uid, inp, extra_metadata=bg_overrides,
+        )
+        return ToolResult(output=block.content, is_error=block.is_error)
+
+    coro = _bg_wrapper(context, tc.name, tc.id, clean_input)
+    bg_event = background_manager.launch(
+        bg_alias,
+        tc.name,
+        clean_input,
+        coro,
+        task_note=task_note,
+        kill_callback=kill_callback,
+        task_type=getattr(tool_def, "task_type", "agent"),
+    )
+    tool_result = ToolResultBlock(
+        tool_use_id=tc.id,
+        content=(
+            f"[BACKGROUND LAUNCHED] task_id=\"{bg_alias}\" tool={tc.name}\n"
+            f"Use this task_id with "
+            f"check_background_progress(task_id=\"{bg_alias}\"), "
+            f"wait_for_background_task(task_id=\"{bg_alias}\"), or "
+            f"cancel_background_task(task_id=\"{bg_alias}\"). "
+            f"A [BACKGROUND {bg_alias} COMPLETED] message will arrive automatically."
+        ),
+        is_error=False,
+    )
+    return tool_result, bg_event, None
 
 
 async def _run_query_loop(
@@ -228,58 +300,36 @@ async def _run_query_loop(
     from compaction import SessionState, compact_for_api
 
     compact_state = context.session_state or SessionState()
+    context.tool_metadata = _ensure_execution_metadata(context.tool_metadata)
 
     background_manager: BackgroundTaskManager | None = None
     if context.enable_background_tasks:
         background_manager = BackgroundTaskManager()
-        if context.tool_metadata is None:
-            context.tool_metadata = {}
-        context.tool_metadata["background_task_manager"] = background_manager
+        context.tool_metadata.background_task_manager = background_manager
 
     for _ in range(context.max_turns):
         if background_manager is not None:
             for completed_task in background_manager.collect_completed():
-                output, status_label = _format_background_result(completed_task)
-                display_messages.append(
-                    ConversationMessage.from_user_text(
-                        f"[BACKGROUND {completed_task.task_id} {status_label}] "
-                        f"tool={completed_task.tool_name} "
-                        f"note={completed_task.task_note!r}\n\n{output}"
-                    )
-                )
-                yield (
-                    BackgroundTaskCompleted(
-                        task_id=completed_task.task_id,
-                        tool_name=completed_task.tool_name,
-                        output=output,
-                        is_error=completed_task.result.is_error if completed_task.result else False,
-                    ),
-                    None,
-                )
+                event = _deliver_completed_background_task(completed_task, display_messages)
+                yield event, None
 
             # Append a fresh background reminder to the durable history so
             # the user sees it AND the next compaction pass picks it up.
             if background_manager.has_pending():
-                reminder_msg = _build_background_reminder(background_manager)
-                if reminder_msg is not None:
-                    display_messages.append(reminder_msg)
-                    yield (
-                        SystemNotification(
-                            text=reminder_msg.system_reminder_text,
-                            category=(
-                                reminder_msg.system_reminders[0].category
-                                if reminder_msg.system_reminders
-                                else ""
-                            ),
-                        ),
-                        None,
-                    )
+                reminder_event = _append_and_emit_reminder(
+                    background_manager, display_messages
+                )
+                if reminder_event is not None:
+                    yield reminder_event, None
 
         executor = StreamingToolExecutor(
             tool_registry=context.tool_registry,
             context=ToolExecutionContext(
                 cwd=context.cwd,
-                metadata=context.tool_metadata or {},
+                metadata=context.tool_metadata,
+            ),
+            should_defer=(
+                defer_background_dispatch if background_manager is not None else None
             ),
         )
 
@@ -288,7 +338,7 @@ async def _run_query_loop(
             try:
                 await daytona_toolkit.prepare_context_async(executor._context)
                 if context.tool_metadata is None:
-                    context.tool_metadata = {}
+                    context.tool_metadata = ExecutionMetadata()
                 context.tool_metadata.update(executor._context.metadata)
             except Exception as exc:
                 logger.debug(
@@ -403,29 +453,18 @@ async def _run_query_loop(
         yield AssistantTurnComplete(message=final_message, usage=usage), usage
 
         if not final_message.tool_uses:
+            # The model produced no tool calls this turn. If we have no
+            # background work either, we're done. Otherwise, idle-wait
+            # briefly so a pending job can land and drive the next turn
+            # instead of returning to the caller half-finished.
             if background_manager is None or not background_manager.has_pending():
                 return
 
             completed_task = await background_manager.wait_any(timeout=BACKGROUND_IDLE_TIMEOUT)
 
             if completed_task is not None:
-                output, status_label = _format_background_result(completed_task)
-                display_messages.append(
-                    ConversationMessage.from_user_text(
-                        f"[BACKGROUND {completed_task.task_id} {status_label}] "
-                        f"tool={completed_task.tool_name} "
-                        f"note={completed_task.task_note!r}\n\n{output}"
-                    )
-                )
-                yield (
-                    BackgroundTaskCompleted(
-                        task_id=completed_task.task_id,
-                        tool_name=completed_task.tool_name,
-                        output=output,
-                        is_error=completed_task.result.is_error if completed_task.result else False,
-                    ),
-                    None,
-                )
+                event = _deliver_completed_background_task(completed_task, display_messages)
+                yield event, None
             else:
                 display_messages.append(
                     ConversationMessage.from_user_text(background_manager.compact_status())
@@ -470,84 +509,21 @@ async def _run_query_loop(
                 )
                 yield completed, None
 
-        # --- Launch background tools that the streaming executor skipped ---
-        skipped_bg = executor.skipped_background_ids
-        if skipped_bg and background_manager is not None:
+        # --- Launch background tools the streaming executor deferred ---
+        deferred_bg = executor.deferred_dispatch_ids
+        if deferred_bg and background_manager is not None:
             for tc in final_message.tool_uses:
-                if tc.id not in skipped_bg:
+                if tc.id not in deferred_bg:
                     continue
                 task_note = str(tc.input.get("task_note", ""))
-                clean_input = {
-                    k: v for k, v in tc.input.items() if k not in ("background", "task_note")
-                }
-
-                tool_def = context.tool_registry.get(tc.name)
-                if tool_def and getattr(tool_def, "background", "forbidden") == "forbidden":
-                    tool_results.append(
-                        ToolResultBlock(
-                            tool_use_id=tc.id,
-                            content=f"Tool '{tc.name}' does not support background execution.",
-                            is_error=True,
-                        )
-                    )
-                    yield (
-                        ToolExecutionCompleted(
-                            tool_name=tc.name,
-                            output=f"Tool '{tc.name}' does not support background execution.",
-                            is_error=True,
-                        ),
-                        None,
-                    )
-                    continue
-
-                # Wrap daytona_bash commands with PID tracking for physical cancel
-                kill_callback = None
-                if tc.name == "daytona_bash" and "command" in clean_input:
-                    clean_input = dict(clean_input)
-                    clean_input["command"] = _wrap_command_with_pid_tracking(
-                        str(clean_input["command"]), tc.id
-                    )
-                    kill_callback = _make_kill_callback(context, tc.id)
-
-                bg_alias = background_manager.next_alias()
-
-                async def _bg_wrapper(
-                    ctx: QueryContext,
-                    name: str,
-                    uid: str,
-                    inp: dict[str, object],
-                    alias: str = bg_alias,
-                ) -> ToolResult:
-                    block = await _execute_tool_call(
-                        ctx, name, uid, inp,
-                        extra_metadata={
-                            "on_progress_line": background_manager.make_progress_callback(alias),
-                            "background_task_id": alias,
-                        },
-                    )
-                    return ToolResult(output=block.content, is_error=block.is_error)
-
-                coro = _bg_wrapper(context, tc.name, tc.id, clean_input)
-                bg_event = background_manager.launch(
-                    bg_alias, tc.name, clean_input, coro, task_note=task_note,
-                    kill_callback=kill_callback,
-                    task_type="subagent" if tc.name == "run_subagent" else "agent",
+                tool_result, bg_event, reject_event = _launch_background_tool(
+                    context, background_manager, tc, task_note
                 )
-                yield bg_event, None
-                tool_results.append(
-                    ToolResultBlock(
-                        tool_use_id=tc.id,
-                        content=(
-                            f"[BACKGROUND LAUNCHED] task_id=\"{bg_alias}\" tool={tc.name}\n"
-                            f"Use this task_id with "
-                            f"check_background_progress(task_id=\"{bg_alias}\"), "
-                            f"wait_for_background_task(task_id=\"{bg_alias}\"), or "
-                            f"cancel_background_task(task_id=\"{bg_alias}\"). "
-                            f"A [BACKGROUND {bg_alias} COMPLETED] message will arrive automatically."
-                        ),
-                        is_error=False,
-                    )
-                )
+                tool_results.append(tool_result)
+                if bg_event is not None:
+                    yield bg_event, None
+                if reject_event is not None:
+                    yield reject_event, None
 
         if not tool_results:
             executor.cancel_all()
@@ -563,78 +539,16 @@ async def _run_query_loop(
                     (tc.input.get("background", False) or force_bg)
                     if background_manager else False
                 )
-                clean_input = {
-                    k: v for k, v in tc.input.items() if k not in ("background", "task_note")
-                }
 
                 if is_background:
-                    tool_def = context.tool_registry.get(tc.name)
-                    if tool_def and getattr(tool_def, "background", "forbidden") == "forbidden":
-                        tool_results.append(
-                            ToolResultBlock(
-                                tool_use_id=tc.id,
-                                content=f"Tool '{tc.name}' does not support background execution.",
-                                is_error=True,
-                            )
-                        )
-                        yield (
-                            ToolExecutionCompleted(
-                                tool_name=tc.name,
-                                output=f"Tool '{tc.name}' does not support background execution.",
-                                is_error=True,
-                            ),
-                            None,
-                        )
-                        continue
-
-                    # Wrap daytona_bash commands with PID tracking for physical cancel
-                    kill_callback = None
-                    if tc.name == "daytona_bash" and "command" in clean_input:
-                        clean_input = dict(clean_input)
-                        clean_input["command"] = _wrap_command_with_pid_tracking(
-                            str(clean_input["command"]), tc.id
-                        )
-                        kill_callback = _make_kill_callback(context, tc.id)
-
-                    bg_alias = background_manager.next_alias()
-
-                    async def _bg_wrapper(
-                        ctx: QueryContext,
-                        name: str,
-                        uid: str,
-                        inp: dict[str, object],
-                        alias: str = bg_alias,
-                    ) -> ToolResult:
-                        block = await _execute_tool_call(
-                            ctx, name, uid, inp,
-                            extra_metadata={
-                                "on_progress_line": background_manager.make_progress_callback(alias),
-                                "background_task_id": alias,
-                            },
-                        )
-                        return ToolResult(output=block.content, is_error=block.is_error)
-
-                    coro = _bg_wrapper(context, tc.name, tc.id, clean_input)
-                    event = background_manager.launch(
-                        bg_alias, tc.name, clean_input, coro, task_note=task_note,
-                        kill_callback=kill_callback,
-                        task_type="subagent" if tc.name == "run_subagent" else "agent",
+                    tool_result, bg_event, reject_event = _launch_background_tool(
+                        context, background_manager, tc, task_note
                     )
-                    yield event, None
-                    tool_results.append(
-                        ToolResultBlock(
-                            tool_use_id=tc.id,
-                            content=(
-                                f"[BACKGROUND LAUNCHED] task_id=\"{bg_alias}\" tool={tc.name}\n"
-                                f"Use this task_id with "
-                                f"check_background_progress(task_id=\"{bg_alias}\"), "
-                                f"wait_for_background_task(task_id=\"{bg_alias}\"), or "
-                                f"cancel_background_task(task_id=\"{bg_alias}\"). "
-                                f"A [BACKGROUND {bg_alias} COMPLETED] message will arrive automatically."
-                            ),
-                            is_error=False,
-                        )
-                    )
+                    tool_results.append(tool_result)
+                    if bg_event is not None:
+                        yield bg_event, None
+                    if reject_event is not None:
+                        yield reject_event, None
                 else:
                     foreground_calls.append(tc)
 
@@ -752,7 +666,7 @@ async def _execute_tool_call(
     tool_name: str,
     tool_use_id: str,
     tool_input: dict[str, object],
-    extra_metadata: dict[str, object] | None = None,
+    extra_metadata: ExecutionMetadata | dict[str, Any] | None = None,
 ) -> ToolResultBlock:
     if context.hook_executor is not None:
         pre_hooks = await context.hook_executor.execute(
@@ -778,33 +692,18 @@ async def _execute_tool_call(
             is_error=True,
         )
 
-    try:
-        parsed_input = tool.input_model.model_validate(tool_input)
-    except Exception as exc:
-        return ToolResultBlock(
-            tool_use_id=tool_use_id,
-            content=f"Invalid input for {tool_name}: {exc}",
-            is_error=True,
-        )
+    metadata = (
+        context.tool_metadata.copy() if context.tool_metadata is not None else ExecutionMetadata()
+    )
+    metadata.tool_registry = context.tool_registry
+    if extra_metadata:
+        metadata.update(extra_metadata)
 
-    try:
-        result = await tool.execute(
-            parsed_input,
-            ToolExecutionContext(
-                cwd=context.cwd,
-                metadata={
-                    "tool_registry": context.tool_registry,
-                    **(context.tool_metadata or {}),
-                    **(extra_metadata or {}),
-                },
-            ),
-        )
-    except Exception as exc:
-        return ToolResultBlock(
-            tool_use_id=tool_use_id,
-            content=f"Tool execution failed: {exc}",
-            is_error=True,
-        )
+    result = await run_tool_safely(
+        tool,
+        tool_input,
+        ToolExecutionContext(cwd=context.cwd, metadata=metadata),
+    )
 
     tool_result = ToolResultBlock(
         tool_use_id=tool_use_id,

@@ -86,7 +86,7 @@ export default function SessionsPage() {
           <div className="mt-1 text-2xl font-semibold text-zinc-100">{formatTokens(totalTokens)}</div>
         </div>
         <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-          <div className="text-xs text-zinc-500">Total API Calls</div>
+          <div className="text-xs text-zinc-500">Total Tracked Runs</div>
           <div className="mt-1 text-2xl font-semibold text-zinc-100">{totalCalls}</div>
         </div>
       </div>
@@ -108,7 +108,7 @@ export default function SessionsPage() {
                 <th className="px-4 py-2 text-right">Prompt Tokens</th>
                 <th className="px-4 py-2 text-right">Completion Tokens</th>
                 <th className="px-4 py-2 text-right">Total Tokens</th>
-                <th className="px-4 py-2 text-right">API Calls</th>
+                <th className="px-4 py-2 text-right">Tracked Runs</th>
                 <th className="px-4 py-2">Created</th>
               </tr>
             </thead>

@@ -11,7 +11,10 @@ from tools.core.base import ToolExecutionContext
 from tools.daytona_toolkit.toolkit import DaytonaToolkit
 
 
-pytestmark = pytest.mark.asyncio
+# pytest-asyncio runs in auto mode (configured in pyproject.toml) — async
+# test functions are handled automatically, so no module-level marker is
+# needed. Leaving `pytestmark = pytest.mark.asyncio` in place here would
+# emit a warning for every *sync* test in the file.
 
 
 def _ctx(metadata=None) -> ToolExecutionContext:

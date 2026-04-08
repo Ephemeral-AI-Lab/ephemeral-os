@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router'
 import { fetchDbSession, fetchSessionRuns, fetchSessionUsage, fetchRunChunks, fetchRunDetail, fetchSessionMessages } from '../lib/api'
-import type { AgentRunSummary, AgentRunDetail, AgentResponseChunk, ConversationMessagePayload, SessionDetail, SessionUsage } from '../lib/types'
+import type {
+  AgentRunSummary,
+  AgentRunDetail,
+  AgentResponseChunk,
+  ConversationMessagePayload,
+  RunUsageSummary,
+  SessionDetail,
+  SessionUsage,
+  SubagentRunSummary,
+} from '../lib/types'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -26,6 +35,14 @@ function durationStr(start: string | null, end: string | null): string {
   if (ms < 1000) return `${ms}ms`
   if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`
   return `${(ms / 60_000).toFixed(1)}m`
+}
+
+function usageTotals(usage: RunUsageSummary | null) {
+  return {
+    prompt_tokens: usage?.prompt_tokens ?? 0,
+    completion_tokens: usage?.completion_tokens ?? 0,
+    total_tokens: usage?.total_tokens ?? 0,
+  }
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -301,6 +318,121 @@ function CollapsibleText({
 }
 
 // ---------------------------------------------------------------------------
+// Run usage summary + subagent table
+// ---------------------------------------------------------------------------
+
+function RunUsageSummaryStrip({
+  parentUsage,
+  subagentRuns,
+}: {
+  parentUsage: RunUsageSummary | null
+  subagentRuns: SubagentRunSummary[]
+}) {
+  const parent = usageTotals(parentUsage)
+  const hasParentUsage = parentUsage !== null
+  const subagents = subagentRuns.reduce(
+    (sum, run) => {
+      const usage = usageTotals(run.usage)
+      return {
+        prompt_tokens: sum.prompt_tokens + usage.prompt_tokens,
+        completion_tokens: sum.completion_tokens + usage.completion_tokens,
+        total_tokens: sum.total_tokens + usage.total_tokens,
+      }
+    },
+    { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+  )
+  const hasSubagentUsage = subagentRuns.some((run) => run.usage !== null)
+  const combined = {
+    prompt_tokens: parent.prompt_tokens + subagents.prompt_tokens,
+    completion_tokens: parent.completion_tokens + subagents.completion_tokens,
+    total_tokens: parent.total_tokens + subagents.total_tokens,
+  }
+  const hasCombinedUsage = hasParentUsage || hasSubagentUsage
+
+  return (
+    <div className="grid gap-3 md:grid-cols-3">
+      <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
+        <div className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">Parent Run</div>
+        <div className="mt-2 font-mono text-sm text-zinc-100">{hasParentUsage ? formatTokens(parent.total_tokens) : '\u2014'}</div>
+        <div className="mt-1 text-[11px] text-zinc-500">
+          {hasParentUsage ? `${formatTokens(parent.prompt_tokens)} in / ${formatTokens(parent.completion_tokens)} out` : '\u2014'}
+        </div>
+      </div>
+      <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
+        <div className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">Subagents</div>
+        <div className="mt-2 font-mono text-sm text-zinc-100">{hasSubagentUsage ? formatTokens(subagents.total_tokens) : '\u2014'}</div>
+        <div className="mt-1 text-[11px] text-zinc-500">
+          {hasSubagentUsage ? `${formatTokens(subagents.prompt_tokens)} in / ${formatTokens(subagents.completion_tokens)} out` : '\u2014'}
+        </div>
+      </div>
+      <div className="rounded-lg border border-zinc-800 bg-zinc-950/50 p-4">
+        <div className="text-[10px] font-medium uppercase tracking-wider text-zinc-500">Run Tree Total</div>
+        <div className="mt-2 font-mono text-sm text-zinc-100">{hasCombinedUsage ? formatTokens(combined.total_tokens) : '\u2014'}</div>
+        <div className="mt-1 text-[11px] text-zinc-500">
+          {hasCombinedUsage ? `${formatTokens(combined.prompt_tokens)} in / ${formatTokens(combined.completion_tokens)} out` : '\u2014'}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function SubagentRunsTable({ runs }: { runs: SubagentRunSummary[] }) {
+  if (runs.length === 0) return null
+
+  return (
+    <div className="rounded-lg border border-zinc-800 bg-zinc-950/50">
+      <div className="border-b border-zinc-800 px-4 py-2 text-[10px] font-medium uppercase tracking-wider text-zinc-500">
+        Subagent Runs ({runs.length})
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead className="bg-zinc-950 text-[10px] text-zinc-600">
+            <tr>
+              <th className="px-3 py-2 text-left">Task</th>
+              <th className="px-3 py-2 text-left">Agent</th>
+              <th className="px-3 py-2 text-left">Model</th>
+              <th className="px-3 py-2 text-left">Status</th>
+              <th className="px-3 py-2 text-left">Input</th>
+              <th className="px-3 py-2 text-right">Prompt</th>
+              <th className="px-3 py-2 text-right">Completion</th>
+              <th className="px-3 py-2 text-right">Total</th>
+              <th className="px-3 py-2 text-right">Events</th>
+              <th className="px-3 py-2 text-left">Started</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-800/30">
+            {runs.map((run) => (
+              <tr key={run.id} className="hover:bg-zinc-800/20">
+                <td className="px-3 py-2 font-mono text-zinc-500">{run.parent_task_id || '\u2014'}</td>
+                <td className="px-3 py-2 text-zinc-100">{run.agent_name}</td>
+                <td className="px-3 py-2 font-mono text-zinc-500">{run.usage?.model_id || '\u2014'}</td>
+                <td className="px-3 py-2">
+                  <span className={`inline-block rounded px-2 py-0.5 text-[11px] font-medium ${STATUS_COLORS[run.status] ?? STATUS_COLORS.pending}`}>
+                    {run.status}
+                  </span>
+                </td>
+                <td className="max-w-xs truncate px-3 py-2 text-zinc-400">{run.input_query || '\u2014'}</td>
+                <td className="px-3 py-2 text-right font-mono text-zinc-400">
+                  {run.usage ? formatTokens(run.usage.prompt_tokens) : '\u2014'}
+                </td>
+                <td className="px-3 py-2 text-right font-mono text-zinc-400">
+                  {run.usage ? formatTokens(run.usage.completion_tokens) : '\u2014'}
+                </td>
+                <td className="px-3 py-2 text-right font-mono text-zinc-100">
+                  {run.usage ? formatTokens(run.usage.total_tokens) : '\u2014'}
+                </td>
+                <td className="px-3 py-2 text-right font-mono text-zinc-500">{run.event_count}</td>
+                <td className="whitespace-nowrap px-3 py-2 text-zinc-500">{formatTime(run.started_at)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Expandable Run Detail (message_history, compacted_history, reasoning, response, event log)
 // ---------------------------------------------------------------------------
 
@@ -336,7 +468,11 @@ function RunDetailPanel({ runId }: { runId: string }) {
   const compactedHistory = detail?.compacted_history ?? null
   const response = detail?.response ?? null
   const reasoning = detail?.reasoning ?? null
+  const usage = detail?.usage ?? null
+  const subagentRuns = detail?.subagent_runs ?? []
   const hasContent = Boolean(
+    usage ||
+    subagentRuns.length > 0 ||
     (messageHistory && messageHistory.length > 0) ||
     (compactedHistory && compactedHistory.length > 0) ||
     (response && response.length > 0) ||
@@ -358,6 +494,8 @@ function RunDetailPanel({ runId }: { runId: string }) {
     <tr>
       <td colSpan={8} className="px-0 py-0">
         <div className="mx-4 my-3 space-y-3">
+          <RunUsageSummaryStrip parentUsage={usage} subagentRuns={subagentRuns} />
+          <SubagentRunsTable runs={subagentRuns} />
           {messageHistory && messageHistory.length > 0 && (
             <CollapsibleMessageList
               title="Message History"
@@ -540,7 +678,7 @@ export default function AgentRunsPage() {
           </div>
         </div>
         <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-4">
-          <div className="text-xs text-zinc-500">API Calls</div>
+          <div className="text-xs text-zinc-500">Tracked Runs</div>
           <div className="mt-1 text-xl font-semibold text-zinc-100">
             {usage ? usage.call_count : '\u2014'}
           </div>

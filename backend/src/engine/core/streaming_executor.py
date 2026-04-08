@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
-
-from pydantic import ValidationError
 
 from message.messages import ConversationMessage
 from message.stream_events import (
@@ -16,7 +15,13 @@ from message.stream_events import (
     ToolExecutionProgress,
     ToolExecutionStarted,
 )
-from tools.core.base import ToolExecutionContext, ToolRegistry, ToolResult
+from tools.core.base import (
+    BaseTool,
+    ToolExecutionContext,
+    ToolRegistry,
+    ToolResult,
+    run_tool_safely,
+)
 
 if TYPE_CHECKING:
     from providers.types import ApiToolUseDeltaEvent
@@ -39,6 +44,30 @@ class TrackedTool:
     cancel_reason: str = ""
 
 
+DeferPredicate = Callable[[BaseTool | None, dict[str, Any] | None], bool]
+
+
+def defer_background_dispatch(
+    tool_def: BaseTool | None, tool_input: dict[str, Any] | None
+) -> bool:
+    """Default defer predicate: skip tools that should run in the background.
+
+    A tool is deferred when it has ``background="always"`` or when it
+    has ``background="optional"`` and the LLM explicitly requested
+    background execution via the input flag. Callers wire this into
+    :class:`StreamingToolExecutor` via ``should_defer`` so the executor
+    itself never inspects the ``background`` attribute directly.
+    """
+    if tool_def is None:
+        return False
+    bg_mode = getattr(tool_def, "background", "forbidden")
+    if bg_mode == "always":
+        return True
+    if bg_mode == "optional" and tool_input and tool_input.get("background"):
+        return True
+    return False
+
+
 class StreamingToolExecutor:
     """Executes tools as they arrive mid-stream with progress support.
 
@@ -47,40 +76,50 @@ class StreamingToolExecutor:
     - Concurrency-safe tools run in parallel
     - Progress events stream back for long-running operations
     - LLM can abort tools via cancel() signal
+    - Tools the caller flags via ``should_defer`` (e.g. background
+      dispatches) are **deferred**: tracked by id but not executed, so
+      the query loop can dispatch them through a different path.
+
+    The executor itself has no knowledge of "background" semantics —
+    the caller provides ``should_defer`` if it wants deferral. This keeps
+    the streaming executor agnostic of engine-level dispatch policy.
     """
 
     def __init__(
         self,
         tool_registry: ToolRegistry,
         context: ToolExecutionContext,
+        should_defer: DeferPredicate | None = None,
     ):
         self._tool_registry = tool_registry
         self._context = context
+        self._should_defer = should_defer
         self._tools: dict[str, TrackedTool] = {}
         self._aborted: set[str] = set()
-        self._skipped_background: set[str] = set()
+        self._deferred: set[str] = set()
 
     @property
-    def skipped_background_ids(self) -> set[str]:
-        """IDs of tools that were skipped because they requested background execution."""
-        return self._skipped_background
+    def deferred_dispatch_ids(self) -> set[str]:
+        """IDs of tool_uses the caller asked us to defer (not execute)."""
+        return self._deferred
 
     def add_tool(
         self, event: ApiToolUseDeltaEvent, assistant_message: ConversationMessage
     ) -> ToolExecutionStarted | None:
-        """Add a tool to execute as it arrives mid-stream. Returns started event if tool was started."""
+        """Add a tool to execute as it arrives mid-stream.
+
+        Returns the ``ToolExecutionStarted`` event if the tool was
+        started synchronously; ``None`` if the caller asked us to defer
+        it or input is still streaming.
+        """
         tool_def = self._tool_registry.get(event.name)
 
-        # Skip tools requesting background execution — they'll be handled
-        # by the BackgroundTaskManager in the query loop instead. Tools with
-        # background="always" (e.g. run_subagent) are ALWAYS dispatched in
-        # the background, regardless of the LLM's input.
-        bg_mode = getattr(tool_def, "background", "forbidden")
-        wants_bg = bool(event.input and event.input.get("background"))
-        if tool_def and (bg_mode == "always" or (bg_mode == "optional" and wants_bg)):
-            self._skipped_background.add(event.id)
+        # Deferred tools are tracked by id but never executed here —
+        # the query loop dispatches them through its background path.
+        if self._should_defer is not None and self._should_defer(tool_def, event.input):
+            self._deferred.add(event.id)
             logger.info(
-                "STREAM: Skipping background tool: tool_id=%s tool_name=%s",
+                "STREAM: Deferring tool dispatch: tool_id=%s tool_name=%s",
                 event.id,
                 event.name,
             )
@@ -214,14 +253,12 @@ class StreamingToolExecutor:
                 tool.status = "completed"
                 return
 
-            parsed_input = tool_def.input_model.model_validate(tool.input)
-
             context_with_id = ToolExecutionContext(
                 cwd=self._context.cwd,
-                metadata={**self._context.metadata, "tool_id": tool.id},
+                metadata=self._context.metadata.with_overrides(tool_id=tool.id),
             )
 
-            tool.result = await tool_def.execute(parsed_input, context_with_id)
+            tool.result = await run_tool_safely(tool_def, tool.input, context_with_id)
             logger.info(
                 "STREAM: Tool completed: tool_id=%s tool_name=%s is_error=%s output_len=%d",
                 tool.id,
@@ -233,31 +270,6 @@ class StreamingToolExecutor:
             logger.info("STREAM: Tool cancelled during execution: tool_id=%s", tool.id)
             tool.cancelled = True
             tool.cancel_reason = tool.cancel_reason or "Task cancelled"
-        except ValidationError as exc:
-            logger.warning(
-                "STREAM: Tool input validation failed: tool_id=%s tool_name=%s error=%s",
-                tool.id,
-                tool.name,
-                exc,
-            )
-            errors = "; ".join(
-                f"{'.'.join(str(p) for p in e['loc'])}: {e['msg']}" for e in exc.errors()
-            )
-            tool.result = ToolResult(
-                output=(
-                    f"Invalid input for {tool.name}: {errors}. "
-                    "Please retry the tool call with valid arguments."
-                ),
-                is_error=True,
-            )
-        except Exception as exc:
-            logger.error(
-                "STREAM: Tool execution error: tool_id=%s error=%s", tool.id, exc, exc_info=True
-            )
-            tool.result = ToolResult(
-                output=f"Tool execution failed: {exc}",
-                is_error=True,
-            )
         finally:
             tool.status = "completed"
 

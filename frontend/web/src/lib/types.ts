@@ -171,12 +171,28 @@ export type AgentRunSummary = {
   finished_at: string | null
 }
 
+export type RunUsageSummary = {
+  run_id: string
+  model_id: string
+  prompt_tokens: number
+  completion_tokens: number
+  total_tokens: number
+}
+
+export type SubagentRunSummary = AgentRunSummary & {
+  parent_run_id: string | null
+  parent_task_id: string | null
+  usage: RunUsageSummary | null
+}
+
 export type AgentRunDetail = AgentRunSummary & {
   session_id: string
   response: Record<string, unknown>[] | null
   message_history: Record<string, unknown>[] | null
   compacted_history: Record<string, unknown>[] | null
   reasoning: string | null
+  usage: RunUsageSummary | null
+  subagent_runs: SubagentRunSummary[]
 }
 
 export type SessionUsage = {

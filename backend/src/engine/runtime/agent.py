@@ -79,10 +79,39 @@ class EphemeralAgent:
             await client.aclose()
 
 
+def resolve_active_model(
+    settings: Settings,
+    model_store: Any = None,
+) -> dict[str, Any] | None:
+    """Return the active model's DB kwargs, or ``None`` if unavailable.
+
+    Shared by :func:`spawn_agent` and the eval harness so both paths
+    pick up the same active model (with its api_key, base_url, and
+    client class) instead of duplicating the lookup.
+    """
+    _store = model_store
+    if _store is None:
+        try:
+            from server.app_factory import model_store as default_store
+
+            _store = default_store
+        except Exception as exc:
+            logger.debug("DB model registry unavailable: %s", exc)
+            return None
+
+    if _store is None or not getattr(_store, "is_available", False):
+        return None
+    active = _store.get_active_resolved()
+    if not active:
+        return None
+    return active.get("kwargs")
+
+
 def finalize_tool_registry_and_prompt(
     tool_registry: ToolRegistry,
     system_prompt: str,
-    agent_type: str = "agent",
+    *,
+    can_spawn_subagents: bool = True,
 ) -> tuple[str, bool]:
     """Register background toolkit and inject capability awareness into the system prompt.
 
@@ -91,12 +120,11 @@ def finalize_tool_registry_and_prompt(
     Args:
         tool_registry: The tool registry (mutated in-place to add background toolkit).
         system_prompt: The base system prompt.
-        agent_type: ``"agent"`` (default) or ``"subagent"``. Subagents may USE
-            tools that support background execution, but they cannot LAUNCH
-            background tasks themselves — so the background management toolkit
+        can_spawn_subagents: Whether this agent is allowed to launch background
+            tasks and spawn subagents. Agents that cannot (e.g. subagents
+            themselves) have the background management toolkit
             (check_background_progress / wait_for_background_task / cancel)
-            is not registered for them, and ``has_background_tools`` is forced
-            to ``False`` regardless of registry contents.
+            withheld regardless of registry contents.
 
     Returns:
         Tuple of (updated_system_prompt, has_background_tools).
@@ -109,7 +137,7 @@ def finalize_tool_registry_and_prompt(
         for t in tool_registry.list_tools()
         if getattr(t, "background", "forbidden") != "forbidden"
     ]
-    has_background_tools = bool(bg_tool_names) and agent_type != "subagent"
+    has_background_tools = bool(bg_tool_names) and can_spawn_subagents
     if has_background_tools:
         tool_registry.register_toolkit(make_background_toolkit(bg_tool_names))
 
@@ -124,73 +152,57 @@ def finalize_tool_registry_and_prompt(
     return system_prompt, has_background_tools
 
 
-def spawn_agent(
+def _resolve_agent_identity(
     config: SessionConfig,
-    messages: list[ConversationMessage],
+    agent_def: AgentDefinition | None,
+    settings: Settings,
     *,
-    agent_def: AgentDefinition | None = None,
-    latest_user_prompt: str | None = None,
-    session_state: SessionState | None = None,
-    sandbox_id: str | None = None,
     model_store: Any = None,
-) -> EphemeralAgent:
-    """Spawn a fresh ephemeral agent with the given session history.
+) -> tuple[str, str, Any, dict | None]:
+    """Resolve the agent's name, model id, API client, and DB model kwargs.
 
-    If *agent_def* is provided, its fields override the session defaults:
-    - ``model`` overrides the session model
-    - ``system_prompt`` replaces the default system prompt
-    - ``toolkits`` restricts available toolkits
-    - ``max_turns`` caps the tool-call loop iterations
+    Returns ``(agent_name, resolved_model, api_client, db_kwargs)``.
     """
-    settings = config.resolve_settings()
+    db_kwargs = resolve_active_model(settings, model_store=model_store)
 
-    # --- Active model from DB (carries api_key, base_url) ------------------
-    db_kwargs: dict | None = None
-    _model_store = model_store
-    if _model_store is None:
-        try:
-            from server.app_factory import model_store
-
-            _model_store = model_store
-        except Exception as exc:
-            logger.debug("DB model registry unavailable: %s", exc)
-            _model_store = None
-
-    if _model_store is not None and _model_store.is_available:
-        active = _model_store.get_active_resolved()
-        if active:
-            db_kwargs = active.get("kwargs")
-
-    # --- Per-agent overrides ------------------------------------------------
-    # An explicit "inherit" sentinel means: fall back to the session's active
-    # model. This lets builtin agents (e.g. the subagent) avoid hardcoding a
-    # specific model id.
-    _agent_model = agent_def.model if agent_def else None
-    if _agent_model and _agent_model.strip().lower() == "inherit":
-        _agent_model = None
+    # ``model`` on the agent_def can be an explicit id, an ``"inherit"``
+    # sentinel meaning "use the session's active model", or absent.
+    agent_model = agent_def.model if agent_def else None
+    if agent_model and agent_model.strip().lower() == "inherit":
+        agent_model = None
     resolved_model = (
-        _agent_model
-        if _agent_model
+        agent_model
+        if agent_model
         else (db_kwargs or {}).get("model") or settings.model
     )
     agent_name = agent_def.name if agent_def else resolved_model
 
-    # --- API client
-    # Subagents must NEVER inherit the parent's shared AsyncAnthropic client.
-    # Sharing one httpx connection pool across many concurrent subagents causes
-    # pool contention and httpx.ReadError mid-stream. Build a fresh client per
-    # subagent so each gets its own independent pool.
-    is_subagent = bool(agent_def and agent_def.agent_type == "subagent")
+    # Agents flagged ``require_fresh_client`` (currently: subagents) get
+    # their own httpx pool so concurrent workers don't contend over a
+    # shared connection pool.
+    needs_fresh_client = bool(agent_def and agent_def.require_fresh_client)
     api_client = make_api_client(
         settings,
-        None if is_subagent else config.external_api_client,
+        None if needs_fresh_client else config.external_api_client,
         db_kwargs=db_kwargs,
     )
+    return agent_name, resolved_model, api_client, db_kwargs
 
-    # --- Tool registry
+
+def _build_agent_tool_registry(
+    config: SessionConfig,
+    agent_def: AgentDefinition | None,
+    sandbox_id: str | None,
+    agent_name: str,
+) -> ToolRegistry:
+    """Build the tool registry for a spawning agent.
+
+    Registers toolkits requested by *agent_def*, the Daytona toolkit when
+    a sandbox is selected, restricts to the requested set, and finally
+    registers the skills toolkit unless the agent opts out.
+    """
     tool_registry = create_default_tool_registry()
 
-    # --- Instantiate toolkits requested by the agent definition via factory ---
     toolkit_ctx = ToolkitContext(
         metadata={
             "agent_name": agent_name,
@@ -219,7 +231,8 @@ def spawn_agent(
                     "No factory for toolkit %r requested by agent %r", tk_name, agent_name
                 )
 
-    # Register Daytona sandbox tools when a sandbox is selected (if not already registered above)
+    # Register Daytona sandbox tools when a sandbox is selected (if not
+    # already registered above).
     if sandbox_id and tool_registry.get_toolkit("sandbox_operations") is None:
         try:
             from tools.daytona_toolkit import DaytonaToolkit
@@ -229,59 +242,107 @@ def spawn_agent(
             logger.info("Registered DaytonaToolkit for sandbox %s", sandbox_id)
         except Exception:
             logger.warning(
-                "Failed to register DaytonaToolkit for sandbox %s", sandbox_id, exc_info=True
+                "Failed to register DaytonaToolkit for sandbox %s",
+                sandbox_id,
+                exc_info=True,
             )
 
     if agent_def and agent_def.toolkits:
         # restrict_to_toolkits([]) would clear ALL tools, so we only call
-        # it when agent_def.toolkits is non-empty (truthy check above)
+        # it when agent_def.toolkits is non-empty.
         tool_registry.restrict_to_toolkits(agent_def.toolkits)
 
-    # --- Hook executor
-    hook_executor = make_hook_executor(settings, config.cwd, api_client)
+    # Skills toolkit — opt-out via ``include_skills=False``.
+    include_skills = agent_def.include_skills if agent_def else True
+    if include_skills:
+        from skills.core.loader import load_skill_registry
+        from tools.builtins.skills import make_skills_toolkit
 
-    # --- System prompt
+        skill_filter = agent_def.skills if agent_def and agent_def.skills else None
+        skill_registry = load_skill_registry(config.cwd)
+        skills_toolkit = make_skills_toolkit(skill_registry, skill_filter)
+        if skills_toolkit.list_tools():
+            tool_registry.register_toolkit(skills_toolkit)
+            logger.info(
+                "Registered SkillsToolkit (%d tools) for agent %r",
+                len(skills_toolkit.list_tools()),
+                agent_name,
+            )
+
+    return tool_registry
+
+
+def _build_agent_system_prompt(
+    config: SessionConfig,
+    agent_def: AgentDefinition | None,
+    settings: Settings,
+    latest_user_prompt: str | None,
+) -> str:
+    """Return the base system prompt for *agent_def*.
+
+    If the definition provides its own prompt, use it verbatim; otherwise
+    build the runtime prompt (memory, issue context, PR comments, etc.)
+    that the server-side path normally produces.
+    """
     if agent_def and agent_def.system_prompt:
-        system_prompt = agent_def.system_prompt
-    else:
-        system_prompt = build_runtime_system_prompt(
-            settings,
-            cwd=config.cwd,
-            latest_user_prompt=latest_user_prompt,
-        )
-
-    # --- Skills toolkit — always registered so agents can discover and load skills
-    from skills.core.loader import load_skill_registry
-    from tools.builtins.skills import make_skills_toolkit
-
-    skill_filter = agent_def.skills if agent_def and agent_def.skills else None
-    skill_registry = load_skill_registry(config.cwd)
-    skills_toolkit = make_skills_toolkit(skill_registry, skill_filter)
-    if skills_toolkit.list_tools():
-        tool_registry.register_toolkit(skills_toolkit)
-        logger.info(
-            "Registered SkillsToolkit (%d tools) for agent %r",
-            len(skills_toolkit.list_tools()),
-            agent_name,
-        )
-
-    # --- Background toolkit + capability awareness --------------------------
-    agent_type = agent_def.agent_type if agent_def else "agent"
-    system_prompt, has_background_tools = finalize_tool_registry_and_prompt(
-        tool_registry, system_prompt, agent_type=agent_type
+        return agent_def.system_prompt
+    return build_runtime_system_prompt(
+        settings,
+        cwd=config.cwd,
+        latest_user_prompt=latest_user_prompt,
     )
 
-    # --- Max turns
-    max_turns = agent_def.max_turns if agent_def and agent_def.max_turns else 200
 
+def spawn_agent(
+    config: SessionConfig,
+    messages: list[ConversationMessage],
+    *,
+    agent_def: AgentDefinition | None = None,
+    latest_user_prompt: str | None = None,
+    session_state: SessionState | None = None,
+    sandbox_id: str | None = None,
+    model_store: Any = None,
+) -> EphemeralAgent:
+    """Spawn a fresh ephemeral agent with the given session history.
+
+    If *agent_def* is provided, its fields override the session defaults:
+    - ``model`` overrides the session model
+    - ``system_prompt`` replaces the default system prompt
+    - ``toolkits`` restricts available toolkits
+    - ``max_turns`` caps the tool-call loop iterations
+    """
     from engine.core.query import QueryContext
+    from tools.core.base import ExecutionMetadata
+
+    settings = config.resolve_settings()
+
+    agent_name, resolved_model, api_client, _db_kwargs = _resolve_agent_identity(
+        config, agent_def, settings, model_store=model_store
+    )
+
+    tool_registry = _build_agent_tool_registry(
+        config, agent_def, sandbox_id, agent_name
+    )
+
+    hook_executor = make_hook_executor(settings, config.cwd, api_client)
+
+    base_system_prompt = _build_agent_system_prompt(
+        config, agent_def, settings, latest_user_prompt
+    )
+
+    can_spawn = agent_def.can_spawn_subagents if agent_def else True
+    system_prompt, has_background_tools = finalize_tool_registry_and_prompt(
+        tool_registry, base_system_prompt, can_spawn_subagents=can_spawn
+    )
+
+    max_turns = agent_def.max_turns if agent_def and agent_def.max_turns else 200
 
     # Plumb session_config through tool_metadata so tools (e.g. run_subagent)
     # that need to spawn nested agents can reach it without a Protocol layer.
-    initial_tool_metadata: dict[str, object] = {
-        "session_config": config,
-        "sandbox_id": sandbox_id or "",
-    }
+    initial_tool_metadata = ExecutionMetadata(
+        session_config=config,
+        sandbox_id=sandbox_id or "",
+    )
 
     query_context = QueryContext(
         api_client=api_client,

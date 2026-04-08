@@ -25,8 +25,8 @@ import asyncio
 import json
 import logging
 from typing import Any
-from uuid import uuid4
 
+from agents.run_tracker import AgentRunTracker
 from message.messages import (
     ConversationMessage,
     TextBlock,
@@ -34,6 +34,7 @@ from message.messages import (
     ToolResultBlock,
     ToolUseBlock,
 )
+from token_tracker.runtime import persist_run_usage
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.decorator import tool
 
@@ -123,6 +124,7 @@ def _extract_final_text(messages: list[ConversationMessage]) -> str:
         "cancel_background_task(task_id=...). Emit multiple calls in one turn for parallel fan-out."
     ),
     background="always",
+    task_type="subagent",
 )
 async def run_subagent(
     prompt: str,
@@ -140,12 +142,11 @@ async def run_subagent(
     from agents import get_definition
     from engine.runtime.agent import spawn_agent
 
-    parent_cfg = context.metadata.get("session_config")
-    raw_sandbox_id = context.metadata.get("sandbox_id")
-    sandbox_id = raw_sandbox_id if isinstance(raw_sandbox_id, str) and raw_sandbox_id else None
-    bg_manager = context.metadata.get("background_task_manager")
-    task_id = context.metadata.get("background_task_id")
-    parent_run_id = context.metadata.get("agent_run_id")
+    parent_cfg = context.metadata.session_config
+    sandbox_id = context.metadata.sandbox_id or None
+    bg_manager = context.metadata.background_task_manager
+    task_id = context.metadata.background_task_id
+    parent_run_id = context.metadata.agent_run_id
     parent_task_id = task_id if isinstance(task_id, str) else None
 
     if parent_cfg is None:
@@ -166,13 +167,19 @@ async def run_subagent(
     # / retry. Reuses the parent's session_id (FK requirement) but sets
     # parent_run_id so the default `list_runs(session_id)` query filters
     # this row out of the user-facing transcript.
-    sub_run_id = _create_subagent_run_record(
-        parent_run_id=parent_run_id if isinstance(parent_run_id, str) else None,
-        parent_task_id=parent_task_id,
+    tracker = AgentRunTracker.create(
         session_id=getattr(parent_cfg, "session_id", None),
         agent_name=sub_def.name,
-        prompt=prompt,
+        input_query=prompt,
+        parent_run_id=parent_run_id if isinstance(parent_run_id, str) else None,
+        parent_task_id=parent_task_id,
     )
+    sub_run_id = tracker.run_id
+
+    try:
+        from server.app_factory import usage_store
+    except Exception:
+        usage_store = None
 
     try:
         agent = spawn_agent(
@@ -186,8 +193,7 @@ async def run_subagent(
         logger.exception("run_subagent: spawn_agent failed")
         # Mark the run as failed at the spawn stage. No messages to capture
         # because the agent never started.
-        _finish_subagent_run_record(
-            sub_run_id,
+        tracker.finish(
             status="failed",
             display_messages=[],
             api_messages_snapshot=None,
@@ -260,8 +266,7 @@ async def run_subagent(
         final_status = "failed"
     else:
         final_status = "completed"
-    _finish_subagent_run_record(
-        sub_run_id,
+    tracker.finish(
         status=final_status,
         display_messages=agent.display_messages,
         api_messages_snapshot=api_snapshot,
@@ -269,6 +274,25 @@ async def run_subagent(
         final_text=final_text,
         cancellation_reason=cancel_reason,
     )
+    # Test stubs may not expose ``agent_name``/``model``/``total_usage`` —
+    # skip usage persistence in that case instead of crashing the tool.
+    agent_name_for_usage = getattr(agent, "agent_name", None)
+    agent_model_for_usage = getattr(agent, "model", None)
+    agent_usage_for_usage = getattr(agent, "total_usage", None)
+    if (
+        usage_store is not None
+        and agent_name_for_usage is not None
+        and agent_model_for_usage is not None
+        and agent_usage_for_usage is not None
+    ):
+        persist_run_usage(
+            usage_store=usage_store,
+            session_id=getattr(parent_cfg, "session_id", None),
+            run_id=sub_run_id,
+            agent_name=agent_name_for_usage,
+            model_id=agent_model_for_usage,
+            usage=agent_usage_for_usage,
+        )
 
     if cancelled:
         msg = f"run_subagent: cancelled ({cancel_reason})" if cancel_reason else "run_subagent: cancelled"
@@ -281,103 +305,3 @@ async def run_subagent(
         return ToolResult(output="(subagent produced no final text)", is_error=False)
     return ToolResult(output=final_text)
 
-
-def _create_subagent_run_record(
-    *,
-    parent_run_id: str | None,
-    parent_task_id: str | None,
-    session_id: str | None,
-    agent_name: str,
-    prompt: str,
-) -> str | None:
-    """Create the subagent's agent_run row. Returns the new run_id, or None
-    if persistence is unavailable (DB not initialised, or session_id missing).
-
-    Import errors are intentionally NOT swallowed — if ``server.app_factory``
-    cannot be imported, something is structurally broken and hiding it would
-    just delay the diagnosis.
-    """
-    if not session_id:
-        logger.warning(
-            "run_subagent: skipping persistence — session_id missing "
-            "(parent_task_id=%s, agent=%s)",
-            parent_task_id,
-            agent_name,
-        )
-        return None
-    from server.app_factory import agent_run_store
-
-    if not agent_run_store.is_ready:
-        logger.warning(
-            "run_subagent: skipping persistence — agent_run_store not ready "
-            "(parent_task_id=%s, session_id=%s)",
-            parent_task_id,
-            session_id,
-        )
-        return None
-    run_id = uuid4().hex[:12]
-    if len(prompt) > 2000:
-        logger.info(
-            "run_subagent: input_query truncated from %d to 2000 chars for persistence",
-            len(prompt),
-        )
-    try:
-        agent_run_store.create_run(
-            run_id=run_id,
-            session_id=session_id,
-            agent_name=agent_name,
-            input_query=prompt[:2000],
-            parent_run_id=parent_run_id,
-            parent_task_id=parent_task_id,
-        )
-    except Exception:
-        logger.warning(
-            "run_subagent: failed to persist subagent run record", exc_info=True
-        )
-        return None
-    return run_id
-
-
-def _finish_subagent_run_record(
-    run_id: str | None,
-    *,
-    status: str,
-    display_messages: list[ConversationMessage],
-    api_messages_snapshot: list[ConversationMessage] | None = None,
-    error: str | None,
-    final_text: str,
-    cancellation_reason: str | None = None,
-) -> None:
-    """Finalise the subagent's agent_run row.
-
-    Stores the full append-only display history in ``message_history`` and
-    the final compacted view sent to the LLM in ``compacted_history``. The
-    latter may be ``None`` if the subagent crashed before any turn ran.
-    """
-    if run_id is None:
-        return
-    from server.app_factory import agent_run_store
-
-    if not agent_run_store.is_ready:
-        return
-    try:
-        full_display = [m.model_dump(mode="json") for m in display_messages]
-        compacted = (
-            [m.model_dump(mode="json") for m in api_messages_snapshot]
-            if api_messages_snapshot is not None
-            else None
-        )
-        agent_run_store.finish_run(
-            run_id,
-            status=status,
-            response={"final_text": final_text} if final_text else None,
-            message_history=full_display,
-            compacted_history=compacted,
-            error=error,
-            event_count=len(display_messages),
-            cancellation_reason=cancellation_reason,
-        )
-    except Exception:
-        logger.warning(
-            "run_subagent: failed to finalise subagent run record", exc_info=True
-        )

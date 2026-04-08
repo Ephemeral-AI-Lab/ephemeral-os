@@ -12,7 +12,9 @@ from tools.core.base import ToolExecutionContext
 from tools.daytona_toolkit.edit_tool import daytona_edit_file, _content_hash
 
 
-pytestmark = pytest.mark.asyncio
+# pytest-asyncio runs in auto mode — async tests are handled
+# automatically. A module-level `pytestmark = pytest.mark.asyncio` would
+# emit a warning for every sync test in this file.
 
 
 def _ctx(metadata=None) -> ToolExecutionContext:
