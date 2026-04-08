@@ -69,7 +69,21 @@ class AgentDefinition(BaseModel):
     require_fresh_client: bool = False
     include_skills: bool = True
 
-    model_config = {"populate_by_name": True}
+    # --- team-mode posthook enforcement ---
+    # Optional structured-output posthook config. Populated by agents that
+    # need a constrained second ``run_query`` phase (e.g. planner agents
+    # that must call ``submit_plan``). The value is a
+    # ``hooks.agent_posthook.PosthookConfig`` — typed as ``Any`` here to
+    # avoid an import cycle (``hooks.agent_posthook`` imports this file).
+    posthook: Any | None = None
+
+    # Extra standalone tool names appended to the agent's toolkit. Used by
+    # the ephemeral posthook AgentDefinition (``toolkits=[]`` +
+    # ``posthook_extra_tools=[submit_tool]``) so the posthook phase has
+    # literally one action available. Regular agents leave this empty.
+    posthook_extra_tools: list[str] = Field(default_factory=list)
+
+    model_config = {"populate_by_name": True, "arbitrary_types_allowed": True}
 
     @field_validator("skills", "toolkits", "permissions", mode="before")
     @classmethod
