@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
-import pytest
-
-from benchmarks.sweevo.models import SWEEvoInstance
+from benchmarks.sweevo.models import _REPO_DIR, SWEEvoInstance, _normalize_sweevo_image_ref
 
 
 def _instance() -> SWEEvoInstance:
@@ -39,8 +38,7 @@ def test_default_sweevo_sandbox_name_is_unique():
     assert len(second) <= 63
 
 
-@pytest.mark.asyncio
-async def test_create_sweevo_test_sandbox_reuses_named_retry(monkeypatch):
+def test_create_sweevo_test_sandbox_reuses_named_retry(monkeypatch):
     from benchmarks.sweevo import sandbox as sweevo_sandbox
 
     existing = {
@@ -57,13 +55,56 @@ async def test_create_sweevo_test_sandbox_reuses_named_retry(monkeypatch):
     monkeypatch.setattr(sweevo_sandbox, "_service", lambda: service)
     monkeypatch.setattr(sweevo_sandbox, "setup_sweevo_sandbox", setup_mock)
 
-    result = await sweevo_sandbox.create_sweevo_test_sandbox(
-        _instance(),
-        sandbox_name="retry-sandbox",
-        register_snapshot=False,
+    result = asyncio.run(
+        sweevo_sandbox.create_sweevo_test_sandbox(
+            _instance(),
+            sandbox_name="retry-sandbox",
+            register_snapshot=False,
+        )
     )
 
     assert result["sandbox_id"] == "sb-existing"
     assert result["sandbox"] == existing
     assert result["reused_existing"] is True
     setup_mock.assert_not_awaited()
+
+
+def test_create_sweevo_test_sandbox_truncates_explicit_name_on_create(monkeypatch):
+    from benchmarks.sweevo import sandbox as sweevo_sandbox
+    from benchmarks.sweevo.models import _truncate_dns_label
+
+    long_name = (
+        "retry-sandbox-name-that-is-way-too-long-for-daytona-and-needs-truncation-now"
+    )
+    expected_name = _truncate_dns_label(long_name)
+    created: dict[str, object] = {}
+
+    def create_sandbox(**kwargs):
+        created.update(kwargs)
+        return {"id": "sb-created"}
+
+    service = SimpleNamespace(
+        list_sandboxes=lambda: [],
+        create_sandbox=create_sandbox,
+        get_sandbox=lambda sandbox_id: {"id": sandbox_id, "name": expected_name},
+    )
+    setup_mock = AsyncMock()
+
+    monkeypatch.setattr(sweevo_sandbox, "_service", lambda: service)
+    monkeypatch.setattr(sweevo_sandbox, "setup_sweevo_sandbox", setup_mock)
+
+    instance = _instance()
+    result = asyncio.run(
+        sweevo_sandbox.create_sweevo_test_sandbox(
+            instance,
+            sandbox_name=long_name,
+            register_snapshot=False,
+        )
+    )
+
+    assert created["name"] == expected_name
+    assert created["image"] == _normalize_sweevo_image_ref(instance.docker_image)
+    assert result["sandbox_id"] == "sb-created"
+    assert result["sandbox"]["name"] == expected_name
+    assert result["reused_existing"] is False
+    setup_mock.assert_awaited_once_with(instance, "sb-created", _REPO_DIR)

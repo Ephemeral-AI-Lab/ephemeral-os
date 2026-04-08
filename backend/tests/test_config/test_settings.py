@@ -125,3 +125,24 @@ class TestLoadSaveSettings:
         assert s.daytona_api_key == "dotenv-key"
         assert s.daytona_api_url == "https://dotenv-url"
         assert s.daytona_target == "dotenv-target"
+
+    def test_daytona_env_overrides_take_precedence_over_dotenv(self, tmp_path: Path, monkeypatch):
+        path = tmp_path / "settings.json"
+        path.write_text(json.dumps({}))
+        dotenv_path = tmp_path / ".env"
+        dotenv_path.write_text(
+            "DAYTONA_API_KEY=dotenv-key\n"
+            "DAYTONA_API_URL=https://dotenv-url\n"
+            "DAYTONA_TARGET=dotenv-target\n",
+            encoding="utf-8",
+        )
+        monkeypatch.setattr("config.settings._DOTENV_PATH", dotenv_path)
+        monkeypatch.setenv("DAYTONA_API_KEY", "env-key")
+        monkeypatch.setenv("DAYTONA_API_URL", "https://env-url")
+        monkeypatch.setenv("DAYTONA_TARGET", "env-target")
+
+        s = load_settings(path)
+
+        assert s.daytona_api_key == "env-key"
+        assert s.daytona_api_url == "https://env-url"
+        assert s.daytona_target == "env-target"
