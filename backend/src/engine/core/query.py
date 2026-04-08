@@ -24,7 +24,11 @@ from providers.types import (
     SupportsStreamingMessages,
     UsageSnapshot,
 )
-from message.messages import ConversationMessage, SystemReminderBlock, ToolResultBlock
+from message.messages import (
+    BackgroundTaskStateBlock,
+    ConversationMessage,
+    ToolResultBlock,
+)
 from engine.runtime.background_tasks import BackgroundTaskManager, TrackedBackgroundTask
 from tools.daytona_toolkit.background import prepare_background_launch
 from message.stream_events import (
@@ -94,11 +98,23 @@ def _deliver_completed_background_task(
 ) -> BackgroundTaskCompleted:
     """Append a completion message to *display_messages* and return the event."""
     output, status_label = _format_background_result(task)
+    terminal_status = _terminal_background_status(task)
     display_messages.append(
-        ConversationMessage.from_user_text(
-            f"[BACKGROUND {task.task_id} {status_label}] "
-            f"tool={task.tool_name} "
-            f"note={task.task_note!r}\n\n{output}"
+        ConversationMessage(
+            role="user",
+            content=[
+                BackgroundTaskStateBlock(
+                    task_id=task.task_id,
+                    tool_name=task.tool_name,
+                    task_type=task.task_type,
+                    status=terminal_status,
+                    source="engine_terminal",
+                    text=output,
+                    task_note=task.task_note,
+                    run_id=task.run_id,
+                    cancel_reason=task.cancel_reason,
+                )
+            ],
         )
     )
     return BackgroundTaskCompleted(
@@ -124,12 +140,8 @@ def _append_and_emit_reminder(
         return None
     display_messages.append(reminder_msg)
     return SystemNotification(
-        text=reminder_msg.system_reminder_text,
-        category=(
-            reminder_msg.system_reminders[0].category
-            if reminder_msg.system_reminders
-            else ""
-        ),
+        text=reminder_msg.background_task_state_text,
+        category="background_progress",
     )
 
 
@@ -150,6 +162,18 @@ def _format_background_result(
     return output, status_label
 
 
+def _terminal_background_status(
+    completed_task: TrackedBackgroundTask,
+) -> str:
+    if completed_task.cancel_reason or (
+        completed_task.result and completed_task.result.output.startswith("Cancelled")
+    ):
+        return "cancelled"
+    if completed_task.result and completed_task.result.is_error:
+        return "failed"
+    return "completed"
+
+
 def _build_background_reminder(
     background_manager: BackgroundTaskManager,
 ) -> ConversationMessage | None:
@@ -168,31 +192,35 @@ def _build_background_reminder(
     if not pending:
         return None
 
-    parts: list[str] = []
+    content: list[BackgroundTaskStateBlock] = []
     for t in pending:
         elapsed = time_module.monotonic() - t.started_at
         label = t.task_note or t.tool_name
-        header = (
-            f"Background task_id=\"{t.task_id}\" still running "
-            f"({elapsed:.0f}s) — {label}"
-        )
         new_lines, since = background_manager.get_reminder_diff(t.task_id)
         if new_lines:
-            logs = "\n".join(new_lines)
-            parts.append(
-                f"{header}\nNew output (last {len(new_lines)} lines):\n{logs}"
-            )
+            text = f"Running for {elapsed:.0f}s\nNew output (last {len(new_lines)} lines):\n"
+            text += "\n".join(new_lines)
         else:
-            parts.append(f"{header}\nNo new output in the last {since:.0f}s")
+            text = (
+                f"Running for {elapsed:.0f}s\n"
+                f"No new output in the last {since:.0f}s"
+            )
+        content.append(
+            BackgroundTaskStateBlock(
+                task_id=t.task_id,
+                tool_name=t.tool_name,
+                task_type=t.task_type,
+                status="running",
+                source="engine_progress",
+                text=text,
+                task_note=label,
+                run_id=t.run_id,
+            )
+        )
 
     return ConversationMessage(
         role="user",
-        content=[
-            SystemReminderBlock(
-                text="\n\n".join(parts),
-                category="background_progress",
-            )
-        ],
+        content=content,
     )
 
 
@@ -709,6 +737,7 @@ async def _execute_tool_call(
         tool_use_id=tool_use_id,
         content=result.output,
         is_error=result.is_error,
+        metadata=result.metadata,
     )
     if context.hook_executor is not None:
         await context.hook_executor.execute(
