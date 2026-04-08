@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import copy
-import logging
 import uuid
 from collections import deque
 from typing import TYPE_CHECKING, Any, Callable
@@ -30,8 +29,6 @@ from team.runtime.checkpoint import TeamRunCheckpoint
 
 if TYPE_CHECKING:
     from team.artifacts.store import InMemoryArtifactStore
-
-logger = logging.getLogger(__name__)
 
 
 class Dispatcher:
@@ -224,16 +221,6 @@ class Dispatcher:
                     wi.finished_at = _utcnow()
                     wi.failure_reason = reason
 
-    async def cancel_descendants(self, wi_id: str) -> None:
-        async with self.lock:
-            self._cascade_cancel(wi_id)
-
-    def ready_items(self) -> list[WorkItem]:
-        return [wi for wi in self.graph.values() if wi.status == WorkItemStatus.READY]
-
-    def successors(self, wi_id: str) -> list[WorkItem]:
-        return [wi for wi in self.graph.values() if wi_id in wi.deps]
-
     def all_terminal(self) -> bool:
         return all(wi.status in TERMINAL_WI_STATUSES for wi in self.graph.values())
 
@@ -293,11 +280,3 @@ class Dispatcher:
                     self._ready_queue.put_nowait(wi_id)
                     self._ready_order.append(wi_id)
             return cp
-
-    async def delete_checkpoint(self, checkpoint_id: str) -> bool:
-        async with self.lock:
-            cp = self._get_checkpoint(checkpoint_id)
-            if cp is None:
-                return False
-            self._checkpoints.remove(cp)
-            return True

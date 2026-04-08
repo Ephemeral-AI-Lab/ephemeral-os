@@ -14,6 +14,8 @@ from team.models import AgentResult, Plan, TeamRunStatus, WorkItemKind, WorkItem
 from team.runtime.team_run import TeamRun
 from team.runtime.executor import Executor
 
+pytestmark = pytest.mark.e2e
+
 
 @dataclass
 class ScriptedCtx:
@@ -78,7 +80,7 @@ def extract_result(work_result, wi) -> AgentResult:
     return AgentResult(artifact=work_result, summary=str(work_result)[:100])
 
 
-def make_worker_factory(runner):
+def make_executor_factory(runner):
     def build_query_ctx(defn, team_run, wi):
         ctx = ScriptedCtx(defn_name=defn.name)
         ctx.tool_metadata["team_context"] = {
@@ -120,8 +122,8 @@ async def test_single_work_item_team_run():
         await tr.start(
             "solo",
             payload={"task": "do-it"},
-            worker_factory=make_worker_factory(make_runner(scripts)),
-            num_workers=1,
+            executor_factory=make_executor_factory(make_runner(scripts)),
+            num_executors=1,
         )
         status = await tr.wait()
         assert status == TeamRunStatus.SUCCEEDED
@@ -165,8 +167,8 @@ async def test_planner_emits_plan_via_posthook_and_children_run():
         await tr.start(
             "planner",
             payload={},
-            worker_factory=make_worker_factory(make_runner(scripts)),
-            num_workers=2,
+            executor_factory=make_executor_factory(make_runner(scripts)),
+            num_executors=2,
             root_kind=WorkItemKind.EXPANDABLE,
         )
         status = await tr.wait()
@@ -194,7 +196,7 @@ async def test_planner_no_posthook_submission_fails_work_item():
         await tr.start(
             "stubborn_planner",
             payload={},
-            worker_factory=make_worker_factory(make_runner(scripts)),
+            executor_factory=make_executor_factory(make_runner(scripts)),
         )
         await tr.wait()
         root = tr.dispatcher.graph[tr.root_work_item_id]
@@ -213,7 +215,7 @@ async def test_checkpoint_rollback_cooperative_drain():
         await tr.start(
             "solo",
             payload={},
-            worker_factory=make_worker_factory(make_runner(scripts)),
+            executor_factory=make_executor_factory(make_runner(scripts)),
         )
         cp_id = await tr.checkpoint(label="pre-run")
         await tr.wait()
@@ -266,7 +268,7 @@ async def test_sandbox_id_propagates_to_query_context_builder():
             )
 
         tr = TeamRun(session_id="S1", user_request="hello", sandbox_id="sb-xyz")
-        await tr.start("solo", payload={}, worker_factory=factory)
+        await tr.start("solo", payload={}, executor_factory=factory)
         status = await tr.wait()
         assert status == TeamRunStatus.SUCCEEDED
         assert captured["sandbox_id"] == "sb-xyz"

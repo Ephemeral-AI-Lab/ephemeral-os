@@ -38,6 +38,8 @@ from tools.subagent.run_subagent_tool import (
     run_subagent,
 )
 
+pytestmark = pytest.mark.e2e
+
 
 class _StubAgent:
     """Stand-in for EphemeralAgent that grows _messages step by step."""

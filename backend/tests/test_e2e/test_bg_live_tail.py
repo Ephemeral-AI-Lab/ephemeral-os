@@ -36,6 +36,8 @@ from tools.core.base import BaseTool, ToolExecutionContext, ToolResult
 
 logger = logging.getLogger(__name__)
 
+pytestmark = pytest.mark.e2e
+
 
 class _StreamingInput(BaseModel):
     n_lines: int = Field(default=5)

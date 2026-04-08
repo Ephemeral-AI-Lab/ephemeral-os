@@ -53,9 +53,6 @@ class InMemoryArtifactStore:
     def load(self, work_item_id: str) -> Any:
         return self._data.get(work_item_id)
 
-    def load_many(self, work_item_ids: list[str]) -> dict[str, Any]:
-        return {wi: self._data[wi] for wi in work_item_ids if wi in self._data}
-
     def delete(self, work_item_id: str) -> bool:
         if work_item_id not in self._data:
             return False

@@ -52,6 +52,8 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
 
+pytestmark = pytest.mark.e2e
+
 
 # ---------------------------------------------------------------------------
 # Fake slow tool — simulates daytona_bash with configurable delay and output

@@ -107,27 +107,3 @@ class TeamDefinitionStore:
             db.delete(record)
             db.commit()
             return True
-
-    def get_or_create(
-        self,
-        *,
-        name: str,
-        planner_agent: str,
-        worker_agents: list[str] | None = None,
-        description: str = "",
-    ) -> TeamDefinition:
-        """Idempotent seed helper: return existing row or create one.
-
-        Does NOT update an existing row if its fields drift from the
-        defaults — seeding is one-shot. Callers that want to overwrite an
-        existing row should delete + create explicitly.
-        """
-        existing = self.get_by_name(name)
-        if existing is not None:
-            return existing
-        return self.create(
-            name=name,
-            planner_agent=planner_agent,
-            worker_agents=worker_agents,
-            description=description,
-        )

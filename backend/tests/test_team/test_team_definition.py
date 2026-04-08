@@ -87,22 +87,6 @@ def test_delete_removes_row(store: TeamDefinitionStore) -> None:
     assert store.delete("x") is False
 
 
-def test_get_or_create_is_idempotent(store: TeamDefinitionStore) -> None:
-    first = store.get_or_create(
-        name="default",
-        planner_agent="team_planner",
-        worker_agents=["team_worker"],
-    )
-    second = store.get_or_create(
-        name="default",
-        planner_agent="DIFFERENT",  # should NOT overwrite an existing row
-        worker_agents=["DIFFERENT"],
-    )
-    assert first.id == second.id
-    assert second.planner_agent == "team_planner"
-    assert second.worker_agents == ["team_worker"]
-
-
 def test_worker_agents_defaults_to_empty_list(store: TeamDefinitionStore) -> None:
     td = store.create(name="bare", planner_agent="p")
     assert td.worker_agents == []
@@ -131,7 +115,7 @@ class _NoopWorker:
         return None
 
 
-def _noop_worker_factory(team_run: TeamRun) -> _NoopWorker:
+def _noop_executor_factory(team_run: TeamRun) -> _NoopWorker:
     return _NoopWorker(team_run)
 
 
@@ -181,7 +165,7 @@ async def test_start_with_team_definition_spawns_root_with_planner(
         await run.start_with_team_definition(
             team_def,
             payload={"k": "v"},
-            worker_factory=_noop_worker_factory,
+            executor_factory=_noop_executor_factory,
         )
         assert run.status == TeamRunStatus.RUNNING
         assert run.root_work_item_id is not None
@@ -208,7 +192,7 @@ async def test_start_with_team_definition_rejects_unknown_planner(
         await run.start_with_team_definition(
             team_def,
             payload={},
-            worker_factory=_noop_worker_factory,
+            executor_factory=_noop_executor_factory,
         )
     # No root WorkItem should have been inserted; TeamRun stays PENDING.
     assert run.root_work_item_id is None
@@ -232,7 +216,7 @@ async def test_start_with_team_definition_error_message_names_team_and_agent(
         await run.start_with_team_definition(
             team_def,
             payload={},
-            worker_factory=_noop_worker_factory,
+            executor_factory=_noop_executor_factory,
         )
     msg = str(exc_info.value)
     assert "frontend_team" in msg

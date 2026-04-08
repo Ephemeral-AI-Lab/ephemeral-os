@@ -50,9 +50,9 @@ class TeamRun:
         )
         self.cancel_event = asyncio.Event()
         self.root_work_item_id: str | None = None
-        self._worker_tasks: list[asyncio.Task[None]] = []
-        self._worker_factory: Callable[["TeamRun"], Executor] | None = None
-        self._num_workers: int = 1
+        self._executor_tasks: list[asyncio.Task[None]] = []
+        self._executor_factory: Callable[["TeamRun"], Executor] | None = None
+        self._num_executors: int = 1
 
     # ---- lifecycle -------------------------------------------------------
 
@@ -61,8 +61,8 @@ class TeamRun:
         agent_name: str,
         payload: dict[str, Any],
         *,
-        worker_factory: Callable[["TeamRun"], Executor],
-        num_workers: int = 1,
+        executor_factory: Callable[["TeamRun"], Executor],
+        num_executors: int = 1,
         root_kind: WorkItemKind = WorkItemKind.ATOMIC,
     ) -> None:
         root = WorkItem(
@@ -79,17 +79,17 @@ class TeamRun:
         await self.dispatcher.add_work_item(root)
         self.status = TeamRunStatus.RUNNING
 
-        self._worker_factory = worker_factory
-        self._num_workers = num_workers
-        self._spawn_workers()
+        self._executor_factory = executor_factory
+        self._num_executors = num_executors
+        self._spawn_executors()
 
     async def start_with_team_definition(
         self,
         team_def: TeamDefinition,
         payload: dict[str, Any],
         *,
-        worker_factory: Callable[["TeamRun"], Executor],
-        num_workers: int = 1,
+        executor_factory: Callable[["TeamRun"], Executor],
+        num_executors: int = 1,
     ) -> None:
         """Start a team run using a ``TeamDefinition`` to pick the planner.
 
@@ -110,48 +110,48 @@ class TeamRun:
         await self.start(
             agent_name=team_def.planner_agent,
             payload=payload,
-            worker_factory=worker_factory,
-            num_workers=num_workers,
+            executor_factory=executor_factory,
+            num_executors=num_executors,
             root_kind=WorkItemKind.EXPANDABLE,
         )
 
-    def _spawn_workers(self) -> None:
-        assert self._worker_factory is not None, "worker_factory not set"
-        for _ in range(self._num_workers):
-            worker = self._worker_factory(self)
-            self._worker_tasks.append(asyncio.create_task(worker.run_forever()))
+    def _spawn_executors(self) -> None:
+        assert self._executor_factory is not None, "executor_factory not set"
+        for _ in range(self._num_executors):
+            executor = self._executor_factory(self)
+            self._executor_tasks.append(asyncio.create_task(executor.run_forever()))
 
     async def wait(self) -> TeamRunStatus:
         while not self.dispatcher.all_terminal():
             await asyncio.sleep(0.05)
-        await self._join_workers()
+        await self._join_executors()
         self._compute_final_status()
         return self.status
 
-    async def _join_workers(self) -> None:
+    async def _join_executors(self) -> None:
         """Cooperative shutdown after the DAG has reached a terminal state.
 
-        Unlike ``_drain_workers``, this does NOT cancel running items —
+        Unlike ``_drain_executors``, this does NOT cancel running items —
         the graph is already terminal so no item should be RUNNING.
         """
         self.cancel_event.set()
-        for t in self._worker_tasks:
+        for t in self._executor_tasks:
             try:
                 await asyncio.wait_for(t, timeout=2.0)
             except (asyncio.TimeoutError, asyncio.CancelledError):
                 t.cancel()
-        self._worker_tasks = []
+        self._executor_tasks = []
         self.cancel_event.clear()
 
-    async def _drain_workers(self) -> None:
+    async def _drain_executors(self) -> None:
         """Forceful drain used by rollback/cancel — kills any RUNNING item."""
         self.cancel_event.set()
-        for t in self._worker_tasks:
+        for t in self._executor_tasks:
             try:
                 await asyncio.wait_for(t, timeout=2.0)
             except (asyncio.TimeoutError, asyncio.CancelledError):
                 t.cancel()
-        self._worker_tasks = []
+        self._executor_tasks = []
         await self.dispatcher.cancel_running("drained by rollback/cancel")
         self.cancel_event.clear()
 
@@ -180,7 +180,7 @@ class TeamRun:
     async def rollback_to(self, checkpoint_id: str) -> None:
         # Phase 1 — cooperative drain.
         self.cancel_event.set()
-        await self._drain_workers()
+        await self._drain_executors()
         # Phase 2 — atomic restore.
         await self.dispatcher.rollback_to(
             checkpoint_id,
@@ -188,5 +188,5 @@ class TeamRun:
         )
         self.cancel_event.clear()
         # Phase 3 — respawn workers so the restored DAG actually drains.
-        if self._worker_factory is not None:
-            self._spawn_workers()
+        if self._executor_factory is not None:
+            self._spawn_executors()
