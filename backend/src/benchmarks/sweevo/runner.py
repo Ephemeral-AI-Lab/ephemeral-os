@@ -1,9 +1,11 @@
-"""SWE-EVO agent runner.
+"""SWE-EVO team runner.
 
-Runs an ephemeral agent against a SWE-EVO instance inside its Daytona
-sandbox, streaming every ``StreamEvent`` (thinking, assistant text, tool
-start/end, background dispatch, subagent spawn/return) through the shared
-:class:`message.event_printer.MultiAgentEventPrinter`.
+Drives a full builtin team (planner → developer → validator) against a
+SWE-EVO instance inside its Daytona sandbox. Each WorkItem spawned by
+the team dispatcher runs through :func:`engine.runtime.agent.spawn_agent`
+with its full production tool surface, and every ``StreamEvent`` is
+forwarded to the shared :class:`MultiAgentEventPrinter` so the CLI shows
+all agents in the same multi-column log.
 """
 
 from __future__ import annotations
@@ -12,6 +14,7 @@ import logging
 from typing import Any
 
 from benchmarks.sweevo.dataset import select_sweevo_instance, summarize_sweevo_instance
+from benchmarks.sweevo.evaluation import _extract_combined_patch
 from benchmarks.sweevo.models import (
     _DEFAULT_DATASET_SOURCE,
     _DEFAULT_SWEEVO_TEST_TIMEOUT,
@@ -24,26 +27,6 @@ from benchmarks.sweevo.sandbox import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-_DEFAULT_SWEEVO_PROMPT_TEMPLATE = """\
-You are solving a SWE-EVO benchmark instance.
-
-Repository: {repo}
-Checked out in the sandbox at: {repo_dir}
-
-Problem statement / changelog:
----
-{problem_statement}
----
-
-Your job: modify the code under {repo_dir} so the tests described in the
-problem statement pass. Use the available bash/edit tools to explore the
-repo, make changes, and iterate. The sandbox is already set up with the
-correct Python environment (``conda activate testbed`` is required before
-running Python commands). When you believe the fix is complete, stop and
-return a short summary of the changes you made.
-"""
 
 
 async def run_sweevo_with_agent(
@@ -63,14 +46,17 @@ async def run_sweevo_with_agent(
     test_timeout: int = _DEFAULT_SWEEVO_TEST_TIMEOUT,
     on_line: "Any" = None,
 ) -> dict[str, Any]:
-    """Drive an agent against a SWE-EVO instance and stream its events.
+    """Drive a team against a SWE-EVO instance and grade it.
 
-    Returns a dict with ``instance``, ``sandbox``, ``agent_events`` (count),
-    ``agent_name``, and ``test`` (required-test result).
+    Provisions the sandbox, runs the builtin team (planner/developer/
+    validator DAG) against it through :func:`run_sweevo_team`, then
+    executes the instance's required test command as the grader.
+
+    Returns a dict with ``instance``, ``sandbox``, ``team_status``,
+    ``team_work_items`` (count), ``agent_patch`` (combined git diff),
+    and ``test`` (required-test result).
     """
-    # Lazy imports — pull the provider stack only when actually running.
-    from engine.runtime.agent import spawn_agent
-    from server.app_factory import build_session_config
+    from benchmarks.sweevo.team_runner import run_sweevo_team
 
     instance = select_sweevo_instance(
         source=source,
@@ -90,25 +76,20 @@ async def run_sweevo_with_agent(
     )
     sandbox_id = sandbox_result["sandbox_id"]
 
-    agent = spawn_agent(
-        build_session_config(),
-        messages=[],
-        sandbox_id=sandbox_id,
-    )
-
-    prompt = _DEFAULT_SWEEVO_PROMPT_TEMPLATE.format(
-        repo=instance.repo,
-        repo_dir=repo_dir,
-        problem_statement=instance.problem_statement,
-    )
-
-    event_count = 0
     try:
-        async for event in agent.run(prompt):
-            event_count += 1
-            printer.emit(event)
+        team_status, team_work_items = await run_sweevo_team(
+            instance,
+            sandbox_id,
+            repo_dir=repo_dir,
+            printer=printer,
+        )
     finally:
-        printer.flush()
+        try:
+            printer.flush()
+        except Exception:
+            pass
+
+    agent_patch = await _extract_combined_patch(sandbox_id, repo_dir)
 
     test_result = await run_sweevo_required_test(
         instance,
@@ -124,7 +105,14 @@ async def run_sweevo_with_agent(
         "snapshot_name": sandbox_result["snapshot_name"],
         "sandbox": sandbox_result["sandbox"],
         "repo_dir": repo_dir,
-        "agent_name": agent.agent_name,
-        "agent_events": event_count,
+        "agent_patch": agent_patch,
+        "team_status": (
+            team_status.value if hasattr(team_status, "value") else team_status
+        ),
+        "team_work_items": team_work_items,
+        # Legacy fields kept so existing CLI banners (``agent_events``)
+        # still render without KeyErrors.
+        "agent_name": "team",
+        "agent_events": team_work_items,
         "test": test_result,
     }
