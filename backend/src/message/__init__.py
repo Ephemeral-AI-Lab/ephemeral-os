@@ -1,6 +1,7 @@
 """Message models and stream event types."""
 
 from message.messages import (
+    BackgroundTaskStateBlock,
     ConversationMessage,
     TextBlock,
     ThinkingBlock,
@@ -28,6 +29,7 @@ __all__ = [
     "AssistantTextDelta",
     "AssistantTurnComplete",
     "BackgroundTaskCompleted",
+    "BackgroundTaskStateBlock",
     "BackgroundTaskStarted",
     "ContentBlock",
     "ConversationMessage",

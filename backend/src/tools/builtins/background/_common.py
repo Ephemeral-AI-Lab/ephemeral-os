@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import copy
+import json
 from typing import Any
 
 from pydantic import Field
@@ -69,3 +71,63 @@ def apply_last_n_lines(status: list[dict[str, Any]], last_n_lines: int) -> None:
         if nl != -1:
             tail = tail[nl + 1:]
         entry["output"] = "... (head truncated)\n" + tail
+
+
+def render_background_snapshot(
+    kind: str,
+    statuses: list[dict[str, Any]],
+    *,
+    elapsed_seconds: float | None = None,
+) -> str:
+    """Render a background status snapshot exactly as the tools return it."""
+    if kind == "progress":
+        return json.dumps(statuses, indent=2)
+
+    if kind == "wait_completed":
+        return f"[COMPLETED]\n{json.dumps(statuses, indent=2)}"
+
+    if kind == "wait_timed_out":
+        elapsed = elapsed_seconds or 0.0
+        hint = (
+            "Call wait_for_background_task again to continue waiting, "
+            "or cancel_background_task to stop."
+        )
+        return (
+            f"[TIMED_OUT after {elapsed:.1f}s]\n"
+            f"{json.dumps(statuses, indent=2)}\n"
+            f"{hint}"
+        )
+
+    if kind == "wait_no_tasks":
+        if statuses:
+            return (
+                "[NO TASKS RUNNING] 0 background tasks are pending. "
+                "All previously launched tasks have already finished; "
+                "their results were (or will be) delivered as "
+                "[BACKGROUND <task_id> COMPLETED] messages.\n"
+                f"{json.dumps(statuses, indent=2)}"
+            )
+        return (
+            "[NO TASKS RUNNING] 0 background tasks are pending and "
+            "none have ever been launched in this session."
+        )
+
+    raise ValueError(f"Unknown background snapshot kind: {kind}")
+
+
+def build_background_snapshot_metadata(
+    kind: str,
+    scope: str,
+    statuses: list[dict[str, Any]],
+    *,
+    elapsed_seconds: float | None = None,
+) -> dict[str, Any]:
+    """Build internal metadata used by API-view reduction."""
+    snapshot: dict[str, Any] = {
+        "kind": kind,
+        "scope": scope,
+        "statuses": copy.deepcopy(statuses),
+    }
+    if elapsed_seconds is not None:
+        snapshot["elapsed_seconds"] = round(elapsed_seconds, 1)
+    return {"background_snapshot": snapshot}

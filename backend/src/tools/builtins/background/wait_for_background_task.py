@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
-import json
 import time
 
 from pydantic import BaseModel, Field
 
 from tools.core.base import BaseTool, ToolExecutionContext, ToolResult
 
-from ._common import TASK_ID_FIELD, apply_last_n_lines
+from ._common import (
+    TASK_ID_FIELD,
+    apply_last_n_lines,
+    build_background_snapshot_metadata,
+    render_background_snapshot,
+)
 
 
 class WaitForBackgroundTaskInput(BaseModel):
@@ -73,28 +77,36 @@ class WaitForBackgroundTaskTool(BaseTool):
                 if fresh:
                     apply_last_n_lines(fresh, arguments.last_n_lines)
                     return ToolResult(
-                        output=f"[COMPLETED]\n{json.dumps(fresh, indent=2)}",
+                        output=render_background_snapshot("wait_completed", fresh),
                         is_error=False,
+                        metadata=build_background_snapshot_metadata(
+                            "wait_completed",
+                            arguments.task_id,
+                            fresh,
+                        ),
                     )
                 delivered = [s for s in snapshot if s.get("status") == "delivered"]
                 if delivered:
                     apply_last_n_lines(delivered, arguments.last_n_lines)
                     return ToolResult(
-                        output=(
-                            "[NO TASKS RUNNING] 0 background tasks are pending. "
-                            "All previously launched tasks have already finished; "
-                            "their results were (or will be) delivered as "
-                            "[BACKGROUND <task_id> COMPLETED] messages.\n"
-                            f"{json.dumps(delivered, indent=2)}"
+                        output=render_background_snapshot(
+                            "wait_no_tasks", delivered
                         ),
                         is_error=False,
+                        metadata=build_background_snapshot_metadata(
+                            "wait_no_tasks",
+                            arguments.task_id,
+                            delivered,
+                        ),
                     )
                 return ToolResult(
-                    output=(
-                        "[NO TASKS RUNNING] 0 background tasks are pending and "
-                        "none have ever been launched in this session."
-                    ),
+                    output=render_background_snapshot("wait_no_tasks", []),
                     is_error=False,
+                    metadata=build_background_snapshot_metadata(
+                        "wait_no_tasks",
+                        arguments.task_id,
+                        [],
+                    ),
                 )
 
         # ---- specific task_id branch ----
@@ -114,8 +126,13 @@ class WaitForBackgroundTaskTool(BaseTool):
                     "your mental model from the status payload below."
                 )
                 return ToolResult(
-                    output=f"{notice}\n{json.dumps(task_statuses, indent=2)}",
+                    output=f"{notice}\n{render_background_snapshot('progress', task_statuses)}",
                     is_error=False,
+                    metadata=build_background_snapshot_metadata(
+                        "wait_completed",
+                        arguments.task_id,
+                        task_statuses,
+                    ),
                 )
 
         # Wait loop
@@ -153,15 +170,27 @@ class WaitForBackgroundTaskTool(BaseTool):
             timed_out = bool(status) and status[0].get("status") == "running"
 
         if timed_out:
-            hint = (
-                "Call wait_for_background_task again to continue waiting, "
-                "or cancel_background_task to stop."
+            output = render_background_snapshot(
+                "wait_timed_out",
+                status,
+                elapsed_seconds=elapsed,
             )
-            output = f"[TIMED_OUT after {elapsed:.1f}s]\n{json.dumps(status, indent=2)}\n{hint}"
+            metadata = build_background_snapshot_metadata(
+                "wait_timed_out",
+                arguments.task_id,
+                status,
+                elapsed_seconds=elapsed,
+            )
         else:
-            output = f"[COMPLETED]\n{json.dumps(status, indent=2)}"
+            output = render_background_snapshot("wait_completed", status)
+            metadata = build_background_snapshot_metadata(
+                "wait_completed",
+                arguments.task_id,
+                status,
+                elapsed_seconds=elapsed,
+            )
 
-        return ToolResult(output=output, is_error=False)
+        return ToolResult(output=output, is_error=False, metadata=metadata)
 
     def is_read_only(self, arguments: BaseModel) -> bool:
         return True

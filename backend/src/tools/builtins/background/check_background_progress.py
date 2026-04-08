@@ -2,13 +2,16 @@
 
 from __future__ import annotations
 
-import json
-
 from pydantic import BaseModel, Field
 
 from tools.core.base import BaseTool, ToolExecutionContext, ToolResult
 
-from ._common import TASK_ID_FIELD, apply_last_n_lines
+from ._common import (
+    TASK_ID_FIELD,
+    apply_last_n_lines,
+    build_background_snapshot_metadata,
+    render_background_snapshot,
+)
 
 
 class CheckBackgroundProgressInput(BaseModel):
@@ -63,7 +66,15 @@ class CheckBackgroundProgressTool(BaseTool):
             return ToolResult(output="No background tasks.", is_error=False)
 
         apply_last_n_lines(status, arguments.last_n_lines)
-        return ToolResult(output=json.dumps(status, indent=2), is_error=False)
+        return ToolResult(
+            output=render_background_snapshot("progress", status),
+            is_error=False,
+            metadata=build_background_snapshot_metadata(
+                "progress",
+                arguments.task_id,
+                status,
+            ),
+        )
 
     def is_read_only(self, arguments: BaseModel) -> bool:
         return True
