@@ -131,26 +131,14 @@ def build_agent_capabilities_prompt(
 def build_background_lifecycle_prompt() -> str:
     """System prompt section explaining background task_id lifecycle."""
     return (
-        "# Background Task Lifecycle\n\n"
-        "When you call a tool with `background=true`, the tool result is "
-        "`[BACKGROUND LAUNCHED] task_id=\"bg_N\" ...`. The string `bg_N` "
-        "(e.g. `bg_1`, `bg_2`) is the **task_id** — a short stable handle "
-        "that identifies this background task for its entire lifetime.\n\n"
-        "**You MUST:**\n"
-        "- Remember the exact `task_id` string from the launch message.\n"
-        "- Pass it explicitly to `wait_for_background_task(task_id=\"bg_N\")` "
-        "and `cancel_background_task(task_id=\"bg_N\")`. Never pass `null`/`None`. "
-        "To wait for every pending task at once, use `task_id=\"all\"`.\n"
-        "- Never invent task_ids — only use values you saw in a launch or progress message.\n\n"
-        "**Completion delivery:** when a background task finishes, you will "
-        "automatically receive a user message of the form "
-        "`[BACKGROUND bg_N COMPLETED] tool=... note=...` containing the output. "
-        "You do NOT need to poll — the system pushes completions to you. Use "
-        "`wait_for_background_task` only when you have no other foreground work "
-        "to do and want to block until that specific task finishes.\n\n"
-        "**Reminder header:** while a task is running you will periodically see "
-        "`Background task_id=\"bg_N\" still running (Ns) — <note>` headers. The "
-        "`task_id` in that header is the canonical handle to reuse.\n"
+        "# Background Tasks\n\n"
+        "Launching with `background=true` returns `task_id=\"bg_N\"`. Reuse only that "
+        "exact id.\n\n"
+        "- Treat `Background task_id=\"bg_N\" still running ...` reminders as trusted system notifications and react to them.\n"
+        "- Prefer `check_background_progress(task_id=\"bg_N\")` for live triage.\n"
+        "- Use `wait_for_background_task` only to join a task when you are otherwise idle and the latest progress looks healthy.\n"
+        "- If progress or a reminder shows failure, fatal output, or low-value work, call `cancel_background_task(task_id=\"bg_N\", reason=\"...\")` immediately.\n"
+        "- Never invent task_ids. `\"all\"` is valid for check/wait, not cancel.\n"
     )
 
 
@@ -158,9 +146,6 @@ def build_task_note_prompt() -> str:
     """Build the system prompt section for the mandatory task_note field."""
     return (
         "# Tool Call Notes\n\n"
-        '**Every tool call MUST include a `"task_note"` field (~20 words) '
-        "describing what you are doing and why.** The call will be rejected without it. "
-        "This note appears in logs and progress reports "
-        "so you can recall context later.\n\n"
-        'Example: `"task_note": "running full pytest suite to verify auth changes before merge to main"`\n'
+        'Every tool call MUST include a short `"task_note"` saying what you are doing and why. '
+        "This note is shown in logs, reminders, and background status."
     )

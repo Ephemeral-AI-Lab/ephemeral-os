@@ -93,10 +93,10 @@ class BackgroundTaskManager:
             run_id=run_id,
             kill_callback=kill_callback,
         )
-        # Stamp a startup line so progress_lines is non-empty from t=0
-        # and `check_background_progress` always has something to tail
-        # before the underlying tool flushes its first line.
-        tracked.progress_lines.append(f"[started: {tool_name} {tool_input}]")
+        start_line = f"[started: {tool_name}]"
+        if task_note:
+            start_line += f" {task_note}"
+        tracked.progress_lines.append(start_line)
         self._tasks[task_id] = tracked
 
         def _done_callback(task: asyncio.Task[ToolResult]) -> None:

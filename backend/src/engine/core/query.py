@@ -32,6 +32,7 @@ from message.stream_events import (
     AssistantTurnComplete,
     BackgroundTaskCompleted,
     StreamEvent,
+    SystemNotification,
     ThinkingDelta,
     ToolExecutionCancelled,
     ToolExecutionCompleted,
@@ -262,6 +263,17 @@ async def _run_query_loop(
                 reminder_msg = _build_background_reminder(background_manager)
                 if reminder_msg is not None:
                     display_messages.append(reminder_msg)
+                    yield (
+                        SystemNotification(
+                            text=reminder_msg.system_reminder_text,
+                            category=(
+                                reminder_msg.system_reminders[0].category
+                                if reminder_msg.system_reminders
+                                else ""
+                            ),
+                        ),
+                        None,
+                    )
 
         executor = StreamingToolExecutor(
             tool_registry=context.tool_registry,
@@ -527,10 +539,11 @@ async def _run_query_loop(
                         tool_use_id=tc.id,
                         content=(
                             f"[BACKGROUND LAUNCHED] task_id=\"{bg_alias}\" tool={tc.name}\n"
-                            f"REMEMBER this task_id — you must pass it to "
-                            f"wait_for_background_task(task_id=\"{bg_alias}\") or "
+                            f"Use this task_id with "
+                            f"check_background_progress(task_id=\"{bg_alias}\"), "
+                            f"wait_for_background_task(task_id=\"{bg_alias}\"), or "
                             f"cancel_background_task(task_id=\"{bg_alias}\"). "
-                            f"Completion will arrive as a [BACKGROUND {bg_alias} COMPLETED] message."
+                            f"A [BACKGROUND {bg_alias} COMPLETED] message will arrive automatically."
                         ),
                         is_error=False,
                     )
@@ -613,10 +626,11 @@ async def _run_query_loop(
                             tool_use_id=tc.id,
                             content=(
                                 f"[BACKGROUND LAUNCHED] task_id=\"{bg_alias}\" tool={tc.name}\n"
-                                f"REMEMBER this task_id — pass it to "
-                                f"wait_for_background_task(task_id=\"{bg_alias}\") or "
+                                f"Use this task_id with "
+                                f"check_background_progress(task_id=\"{bg_alias}\"), "
+                                f"wait_for_background_task(task_id=\"{bg_alias}\"), or "
                                 f"cancel_background_task(task_id=\"{bg_alias}\"). "
-                                f"Completion arrives as a [BACKGROUND {bg_alias} COMPLETED] message."
+                                f"A [BACKGROUND {bg_alias} COMPLETED] message will arrive automatically."
                             ),
                             is_error=False,
                         )

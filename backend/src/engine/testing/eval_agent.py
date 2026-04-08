@@ -37,6 +37,7 @@ from message.stream_events import (
     BackgroundTaskCompleted,
     BackgroundTaskStarted,
     StreamEvent,
+    SystemNotification,
     ThinkingDelta,
     ToolExecutionCancelled,
     ToolExecutionCompleted,
@@ -136,6 +137,9 @@ class EvalResult:
 
     def background_completed(self) -> list[BackgroundTaskCompleted]:
         return [e for e in self.events if isinstance(e, BackgroundTaskCompleted)]
+
+    def system_notifications(self) -> list[SystemNotification]:
+        return [e for e in self.events if isinstance(e, SystemNotification)]
 
     def assistant_turns(self) -> list[AssistantTurnComplete]:
         return [e for e in self.events if isinstance(e, AssistantTurnComplete)]
@@ -567,6 +571,8 @@ class EvalAgent:
                     f"    << bg_done:    {event.tool_name}"
                     f" {_truncate(event.output, 120)}"
                 )
+            elif isinstance(event, SystemNotification):
+                _out(f"    [system] {_truncate(event.text, 200)}")
 
         if thinking_buf:
             _out(f"    [thinking] {_truncate(''.join(thinking_buf), 500)}")

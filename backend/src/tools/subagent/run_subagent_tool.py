@@ -117,12 +117,10 @@ def _extract_final_text(messages: list[ConversationMessage]) -> str:
 @tool(
     name="run_subagent",
     description=(
-        "Spawn a focused worker subagent to complete a delegated task. "
-        "ALWAYS runs as a background task — returns a task_id immediately. "
-        "Join with wait_for_background_task(task_id=...). Peek at live progress "
-        "(last 5 messages) with check_background_progress(task_id=...). Cancel "
-        "with cancel_background_task(task_id=...). To run several subagents "
-        "in parallel, emit multiple run_subagent calls in the same turn."
+        "Spawn a focused worker subagent as a background task. Returns a task_id immediately. "
+        "Inspect progress with check_background_progress(task_id=...), join with "
+        "wait_for_background_task(task_id=...), or stop stale work with "
+        "cancel_background_task(task_id=...). Emit multiple calls in one turn for parallel fan-out."
     ),
     background="always",
 )

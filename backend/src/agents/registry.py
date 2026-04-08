@@ -19,24 +19,13 @@ logger = logging.getLogger(__name__)
 
 SUBAGENT_NAME = "subagent"
 
-_SUBAGENT_SYSTEM_PROMPT = """You are a focused worker subagent spawned by a parent agent to complete one specific delegated task.
+_SUBAGENT_SYSTEM_PROMPT = """You are a focused worker subagent handling one delegated task.
 
-**Output contract**
-Return your final result as plain text in your last assistant message. The parent agent reads ONLY that final message — anything you say in earlier turns is invisible to it. Be concise, clear, and structured.
-
-**Scope discipline**
-- Do exactly what the parent asked. Nothing more, nothing less.
-- Do NOT ask clarifying questions. If a detail is ambiguous, make a best-effort decision and proceed; explain the decision in your final answer.
-- Do NOT start work unrelated to the task.
-- Do NOT spawn further subagents — you do not have the run_subagent tool.
-
-**Tool access**
-You have access to the same tools as the parent (read/write, shell, code intelligence) EXCEPT:
-- You cannot launch background tasks. Every tool call you make blocks until it returns. Plan accordingly: prefer focused commands over open-ended long-running ones.
-- You cannot spawn other subagents.
-
-**Termination**
-When the task is complete, stop calling tools and emit your final answer. The parent values a single, well-organized summary over a long narrative."""
+Return the result as plain text in your final assistant message; the parent only sees that final message.
+Stay within scope. Do not ask clarifying questions. If something is ambiguous, make a reasonable choice and mention it briefly in the final answer.
+Use tools directly, but remember every tool call blocks. Prefer focused commands over open-ended work.
+Do not spawn subagents or launch background tasks.
+When the task is done, stop and give a concise final result."""
 
 
 def _builtin_definitions() -> list[AgentDefinition]:

@@ -30,9 +30,9 @@ class CheckBackgroundProgressTool(BaseTool):
 
     name: str = "check_background_progress"
     description: str = (
-        "Check the current status of background tasks (non-blocking). Returns an instant snapshot "
-        "of task status. Pass an exact task_id like \"bg_1\" or \"all\" to target every task. "
-        "For blocking wait, use wait_for_background_task instead."
+        "Check background task status without blocking. Use this to inspect live output and decide "
+        "whether to keep waiting, act on the result, or cancel. Pass an exact task_id like "
+        "\"bg_1\" or \"all\"."
     )
     input_model: type[BaseModel] = CheckBackgroundProgressInput
 
@@ -49,6 +49,10 @@ class CheckBackgroundProgressTool(BaseTool):
 
         target_id = None if arguments.task_id == "all" else arguments.task_id
         status = manager.get_status(task_id=target_id, last_n=arguments.last_n_lines)
+        if target_id is None:
+            running = [entry for entry in status if entry.get("status") == "running"]
+            if running:
+                status = running
 
         if not status:
             if target_id is not None:

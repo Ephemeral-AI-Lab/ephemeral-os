@@ -136,6 +136,10 @@ class TestSchemas:
         with pytest.raises(ValidationError):
             WaitForBackgroundTaskInput(task_id="bg_1", last_n_lines=0)
 
+    def test_cancel_requires_task_id(self) -> None:
+        with pytest.raises(ValidationError):
+            CancelBackgroundTaskInput()  # type: ignore[call-arg]
+
 
 # ---------------------------------------------------------------------------
 # Tool.execute branches
@@ -171,6 +175,28 @@ class TestCheckBackgroundProgressExecute:
         assert result.is_error
         assert "bg_nonexistent" in result.output
 
+    async def test_all_prefers_running_tasks(self) -> None:
+        tool = CheckBackgroundProgressTool()
+        mgr = BackgroundTaskManager()
+
+        async def fast() -> ToolResult:
+            return ToolResult(output="done")
+
+        async def slow() -> ToolResult:
+            await asyncio.sleep(5)
+            return ToolResult(output="later")
+
+        mgr.launch("bg_done", "t", {}, fast())
+        mgr.launch("bg_run", "t", {}, slow())
+        await asyncio.sleep(0.01)
+
+        try:
+            result = await tool.execute(CheckBackgroundProgressInput(task_id="all"), _ctx(mgr))
+            assert '"task_id": "bg_run"' in result.output
+            assert '"task_id": "bg_done"' not in result.output
+        finally:
+            await mgr.cancel("bg_run")
+
 
 class TestWaitForBackgroundTaskExecute:
     async def test_no_manager_returns_error(self) -> None:
@@ -194,6 +220,26 @@ class TestWaitForBackgroundTaskExecute:
         result = await tool.execute(args, _ctx(mgr))
         assert result.is_error
         assert "bg_nope" in result.output
+
+    async def test_all_prefers_fresh_completions_over_delivered_history(self) -> None:
+        tool = WaitForBackgroundTaskTool()
+        mgr = BackgroundTaskManager()
+
+        async def fast(output: str) -> ToolResult:
+            return ToolResult(output=output)
+
+        mgr.launch("bg_old", "t", {}, fast("old"))
+        await asyncio.sleep(0.01)
+        mgr.collect_completed()
+
+        mgr.launch("bg_new", "t", {}, fast("new"))
+        await asyncio.sleep(0.01)
+
+        result = await tool.execute(WaitForBackgroundTaskInput(task_id="all", timeout=1), _ctx(mgr))
+        assert result.is_error is False
+        assert "[COMPLETED]" in result.output
+        assert '"task_id": "bg_new"' in result.output
+        assert '"task_id": "bg_old"' not in result.output
 
 
 # ---------------------------------------------------------------------------
@@ -241,7 +287,7 @@ class TestWrapCommand:
 class TestCancelBackgroundTaskExecute:
     async def test_no_manager_returns_error(self) -> None:
         tool = CancelBackgroundTaskTool()
-        result = await tool.execute(CancelBackgroundTaskInput(), _ctx(None))
+        result = await tool.execute(CancelBackgroundTaskInput(task_id="bg_1"), _ctx(None))
         assert result.is_error
 
     async def test_rejects_all_sentinel(self) -> None:
@@ -251,13 +297,6 @@ class TestCancelBackgroundTaskExecute:
         assert result.is_error
         assert "does not support" in result.output
 
-    async def test_no_running_tasks_is_benign(self) -> None:
-        tool = CancelBackgroundTaskTool()
-        mgr = BackgroundTaskManager()
-        result = await tool.execute(CancelBackgroundTaskInput(), _ctx(mgr))
-        assert not result.is_error
-        assert "nothing to cancel" in result.output
-
     async def test_unknown_task_id_returns_error(self) -> None:
         tool = CancelBackgroundTaskTool()
         mgr = BackgroundTaskManager()
@@ -266,43 +305,6 @@ class TestCancelBackgroundTaskExecute:
         )
         assert result.is_error
         assert "bg_missing" in result.output
-
-    async def test_auto_disambiguates_single_running_task(self) -> None:
-        tool = CancelBackgroundTaskTool()
-        mgr = BackgroundTaskManager()
-
-        async def slow() -> ToolResult:
-            await asyncio.sleep(5)
-            return ToolResult(output="done")
-
-        alias = mgr.next_alias()
-        mgr.launch(alias, "noop", {}, slow())
-        try:
-            result = await tool.execute(CancelBackgroundTaskInput(), _ctx(mgr))
-            assert not result.is_error
-            assert alias in result.output
-        finally:
-            await mgr.cancel(alias, "")
-
-    async def test_multiple_running_tasks_requires_explicit_id(self) -> None:
-        tool = CancelBackgroundTaskTool()
-        mgr = BackgroundTaskManager()
-
-        async def slow() -> ToolResult:
-            await asyncio.sleep(5)
-            return ToolResult(output="done")
-
-        a = mgr.next_alias()
-        b = mgr.next_alias()
-        mgr.launch(a, "noop", {}, slow())
-        mgr.launch(b, "noop", {}, slow())
-        try:
-            result = await tool.execute(CancelBackgroundTaskInput(), _ctx(mgr))
-            assert result.is_error
-            assert a in result.output and b in result.output
-        finally:
-            await mgr.cancel(a, "")
-            await mgr.cancel(b, "")
 
 
 # ---------------------------------------------------------------------------

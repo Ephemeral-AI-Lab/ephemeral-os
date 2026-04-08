@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 _DEFAULT_TIMEOUT = 120
+_BACKGROUND_DEFAULT_TIMEOUT = 1800
 _OUTPUT_MAX_CHARS = 8000
 
 
@@ -108,11 +109,12 @@ async def daytona_bash(
     # tail stdout/stderr live and feed each line into the BackgroundTaskManager,
     # making the partial output visible via check_background_progress mid-run.
     if callable(on_progress_line):
+        bg_timeout = timeout if timeout != _DEFAULT_TIMEOUT else _BACKGROUND_DEFAULT_TIMEOUT
         return await _exec_streaming(
             sandbox=sandbox,
             command=wrapped,
             cwd=cwd,
-            timeout=timeout,
+            timeout=bg_timeout,
             on_progress_line=on_progress_line,
         )
 

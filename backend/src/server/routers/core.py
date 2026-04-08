@@ -21,6 +21,7 @@ from message.stream_events import (
     AssistantTextDelta,
     AssistantTurnComplete,
     StreamEvent,
+    SystemNotification,
     ThinkingDelta,
     ToolExecutionCancelled,
     ToolExecutionCompleted,
@@ -335,7 +336,9 @@ def create_core_router(get_session: Callable[[], SessionState]) -> APIRouter:
                     )
 
                 async def _on_agent_event(event: StreamEvent) -> None:
-                    if isinstance(event, ThinkingDelta):
+                    if isinstance(event, SystemNotification):
+                        await _on_system_notification(event.text)
+                    elif isinstance(event, ThinkingDelta):
                         await session.emit(BackendEvent(type="thinking_delta", message=event.text))
                     elif isinstance(event, AssistantTextDelta):
                         await session.emit(BackendEvent(type="assistant_delta", message=event.text))

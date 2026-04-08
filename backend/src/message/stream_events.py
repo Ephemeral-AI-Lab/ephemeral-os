@@ -90,6 +90,14 @@ class BackgroundTaskCompleted:
     is_error: bool = False
 
 
+@dataclass(frozen=True)
+class SystemNotification:
+    """Engine-generated notification visible to the user and the agent."""
+
+    text: str
+    category: str = ""
+
+
 StreamEvent = (
     ThinkingDelta
     | AssistantTextDelta
@@ -100,4 +108,5 @@ StreamEvent = (
     | ToolExecutionCancelled
     | BackgroundTaskStarted
     | BackgroundTaskCompleted
+    | SystemNotification
 )

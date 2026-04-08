@@ -41,9 +41,8 @@ class WaitForBackgroundTaskTool(BaseTool):
     name: str = "wait_for_background_task"
     description: str = (
         "Block server-side until background task(s) complete or the timeout expires. "
-        "Use this ONLY when you have no foreground work to do and need to wait for "
-        "background tasks. Always call check_background_progress first to review task "
-        "status before using this tool."
+        "Use this only when you have no foreground work left or after recent progress "
+        "shows the task is healthy enough to join."
     )
     input_model: type[BaseModel] = WaitForBackgroundTaskInput
 
@@ -67,19 +66,26 @@ class WaitForBackgroundTaskTool(BaseTool):
         if wait_for_all:
             snapshot = manager.get_status()
             if not any(s.get("status") == "running" for s in snapshot):
-                finished = [
+                fresh = [
                     s for s in snapshot
-                    if s.get("status") in ("completed", "failed", "cancelled", "delivered")
+                    if s.get("status") in ("completed", "failed", "cancelled")
                 ]
-                if finished:
-                    apply_last_n_lines(finished, arguments.last_n_lines)
+                if fresh:
+                    apply_last_n_lines(fresh, arguments.last_n_lines)
+                    return ToolResult(
+                        output=f"[COMPLETED]\n{json.dumps(fresh, indent=2)}",
+                        is_error=False,
+                    )
+                delivered = [s for s in snapshot if s.get("status") == "delivered"]
+                if delivered:
+                    apply_last_n_lines(delivered, arguments.last_n_lines)
                     return ToolResult(
                         output=(
                             "[NO TASKS RUNNING] 0 background tasks are pending. "
                             "All previously launched tasks have already finished; "
                             "their results were (or will be) delivered as "
                             "[BACKGROUND <task_id> COMPLETED] messages.\n"
-                            f"{json.dumps(finished, indent=2)}"
+                            f"{json.dumps(delivered, indent=2)}"
                         ),
                         is_error=False,
                     )

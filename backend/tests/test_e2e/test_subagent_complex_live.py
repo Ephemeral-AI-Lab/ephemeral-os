@@ -78,27 +78,18 @@ def _create_subagent_coordinator(
 # ---------------------------------------------------------------------------
 
 COORDINATOR_PROMPT = """\
-You are a senior coordinator agent. You decompose complex tasks by delegating
-to focused worker subagents via the ``run_subagent`` tool.
+You are a coordinator agent. Delegate focused work only through ``run_subagent``.
 
-CRITICAL RULES — read carefully:
-- You have EXACTLY ONE tool for delegation: ``run_subagent``.  Use it for ALL
-  delegation.  Do NOT use daytona_bash, daytona_codeact, or any other tool to
-  do the delegated work yourself.
-- ``run_subagent`` ALWAYS launches as a background task and returns a task_id
-  immediately.  The subagent runs independently — you do NOT block.
-- To launch several subagents IN PARALLEL, emit multiple ``run_subagent``
-  calls in the SAME assistant turn.
-- After spawning subagents use ``check_background_progress(task_id=<id>,
-  last_n_lines=5)`` (non-blocking) to peek at a running subagent's latest
-  messages.
-- Use ``wait_for_background_task(task_id="all")`` when you are ready to join
-  all running subagents.
-- Use ``cancel_background_task`` if a subagent signals it is blocked or
-  producing unwanted output.
-- After all relevant subagents finish, synthesise their outputs in your final
-  assistant message.  Reference the specific content each subagent produced.
-- Never describe what you would do — use tools to execute it.
+Rules:
+- Do not do delegated work yourself and do not use shell or code tools.
+- ``run_subagent`` always returns a background task_id immediately.
+- Launch parallel workers by emitting multiple ``run_subagent`` calls in one turn.
+- Use ``check_background_progress`` to inspect live workers, ``wait_for_background_task``
+  when you are ready to join results, and ``cancel_background_task`` when a
+  worker is blocked, low-value, or no longer worth waiting for.
+- Keep intermediate narration minimal; if the next tool action is clear, call it.
+- Final answers must synthesise actual worker outputs and mention any
+  cancellations or replacements when relevant.
 """
 
 
@@ -230,8 +221,8 @@ class TestSubagentParallelResearchSynthesis:
         subagent_starts = [
             e for e in result.background_started() if e.tool_name == "run_subagent"
         ]
-        assert len(subagent_starts) >= 3, (
-            f"Expected at least 3 run_subagent background launches (parallel research wave). "
+        assert len(subagent_starts) >= 4, (
+            f"Expected at least 4 run_subagent background launches (3 research + 1 outline). "
             f"Got {len(subagent_starts)}. Tool sequence: {result.tool_names}"
         )
 
@@ -559,7 +550,7 @@ class TestSubagentFanoutWithCancellationAndRecovery:
             ]
             if any(r in text_lower for r in pair)
         )
-        assert distinct_regions >= 3, (
+        assert distinct_regions >= 4, (
             f"Final text missing regions. Found {distinct_regions}/4 distinct regions. "
             f"Text (first 800 chars): {result.text[:800]}"
         )
@@ -756,14 +747,14 @@ class TestSubagentLargeFanoutThreeWave:
         )
 
         waits = result.tool_count("wait_for_background_task")
-        assert waits >= 1, (
-            f"Expected at least 1 wait_for_background_task call. "
+        assert waits >= 2, (
+            f"Expected at least 2 wait_for_background_task calls. "
             f"Got {waits}. Tool sequence: {result.tool_names}"
         )
 
         checks = result.tool_count("check_background_progress")
-        assert checks >= 1, (
-            f"Expected at least 1 check_background_progress call. "
+        assert checks >= 2, (
+            f"Expected at least 2 check_background_progress calls. "
             f"Got {checks}. Tool sequence: {result.tool_names}"
         )
 
@@ -969,8 +960,8 @@ class TestSubagentDynamicReplanning:
         )
 
         checks = result.tool_count("check_background_progress")
-        assert checks >= 1, (
-            f"Expected at least 1 check_background_progress call. "
+        assert checks >= 2, (
+            f"Expected at least 2 check_background_progress calls. "
             f"Got {checks}. Tool sequence: {result.tool_names}"
         )
 
@@ -992,7 +983,7 @@ class TestSubagentDynamicReplanning:
             1 for name in ["disk", "memory", "backup"]
             if name in text_lower
         )
-        assert high_item_hits >= 2, (
+        assert high_item_hits >= 3, (
             f"Final text missing HIGH-priority item names. "
             f"Got {high_item_hits}/3. Text (first 800 chars): {result.text[:800]}"
         )
@@ -1285,34 +1276,19 @@ class TestSubagentMassiveConcurrentWithAdaptivePruning:
     # Tighter prompt for this test: requires checking slow tasks after the fast
     # batch is done, then cancelling any that are still running.
     PRUNING_COORDINATOR_PROMPT = """\
-You are a senior coordinator agent. You decompose complex tasks by delegating
-to focused worker subagents via the ``run_subagent`` tool.
+You are a coordinator agent. Delegate only through ``run_subagent``.
 
-CRITICAL RULES — read carefully:
-- You have EXACTLY ONE tool for delegation: ``run_subagent``.  Use it for ALL
-  delegation.  Do NOT use daytona_bash, daytona_codeact, or any other tool to
-  do the delegated work yourself.
-- ``run_subagent`` ALWAYS launches as a background task and returns a task_id
-  immediately.  The subagent runs independently — you do NOT block.
-- To launch several subagents IN PARALLEL, emit multiple ``run_subagent``
-  calls in the SAME assistant turn.
-- MANDATORY TRIAGE PROTOCOL when you know some tasks may be slow:
-    1. After spawning ALL tasks, call ``check_background_progress(
-       task_id="all", last_n_lines=5)`` to see live status.
-    2. Wait for the FAST tasks by calling ``wait_for_background_task`` once
-       per fast task_id (not "all") so slow tasks keep running in parallel.
-    3. Once the fast tasks are done, call ``check_background_progress(
-       task_id="all", last_n_lines=3)`` to identify any still-running tasks.
-    4. For EVERY task still showing status="running": immediately call
-       ``cancel_background_task(task_id="<EXACT_ID>", reason="<why>")``
-       using the EXACT task_id string shown in the status listing.
-       NEVER omit task_id — always copy it verbatim from the listing.
-       Issue one cancel call per still-running task.
-    5. Synthesise from the completed (non-cancelled) tasks.
-- Do NOT call ``wait_for_background_task(task_id="all")`` if you know some
-  tasks are intentionally slow — always check and cancel stragglers first.
-- After all relevant subagents finish or are cancelled, synthesise outputs.
-- Never describe what you would do — use tools to execute it.
+Rules:
+- Do not do delegated work yourself.
+- Launch parallel workers in a single turn when the task naturally decomposes.
+- Use ``check_background_progress`` to inspect live status.
+- When fast workers finish, inspect the remaining workers. If any are still
+  running and are low-value or too slow for the deadline, cancel them explicitly
+  with ``cancel_background_task(task_id=..., reason=...)`` using the exact
+  task_id you observed.
+- Prefer targeted waits over ``wait_for_background_task(task_id="all")`` when
+  you already know stragglers should be pruned.
+- Keep narration brief and synthesise from completed, non-cancelled workers.
 """
 
     @pytest.mark.asyncio

@@ -328,6 +328,9 @@ class TestLongSuiteEarlyCancel:
             "the streaming feature on a still-running task. Outputs: "
             f"{[(e.output or '')[:300] for e in check_completions]}"
         )
+        assert not result.has_unrecovered_errors, (
+            f"Unexpected unrecovered errors: {[e.output[:300] for e in result.unrecovered_error_events]}"
+        )
 
         # Ground truth: run the suite ourselves and verify it passes end-to-end
         passed, output = _verify_suite_passes(
@@ -335,9 +338,7 @@ class TestLongSuiteEarlyCancel:
             "cd /home/daytona/long_suite && python3 run_suite.py",
             "INTEGRATION SUITE: ALL PHASES PASSED",
         )
-        if not passed:
-            logger.warning(
-                "Ground-truth suite re-run did not see success marker "
-                "(agent-side behavior checks still passed). "
-                f"Last 2000 chars:\n{output[-2000:]}"
-            )
+        assert passed, (
+            "Ground-truth suite re-run did not pass. "
+            f"Last 2000 chars:\n{output[-2000:]}"
+        )
