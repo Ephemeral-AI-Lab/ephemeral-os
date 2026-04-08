@@ -218,18 +218,22 @@ def _make_runner(
     return _run
 
 
-def _make_context_builders(sandbox_id: str):
+def _make_context_builders(sandbox_id: str, repo_dir: str = _REPO_DIR):
     def build_query_ctx(defn, team_run, wi):
         base_prompt = _work_item_base_prompt(wi.payload)
         user_message = build_initial_user_message(team_run, wi, base_prompt)
         meta = build_work_item_metadata(team_run, wi)
         meta["sandbox_id"] = team_run.sandbox_id or sandbox_id
+        meta["daytona_cwd"] = repo_dir
+        meta["ci_workspace_root"] = repo_dir
         return TeamAgentContext(user_message=user_message, tool_metadata=meta)
 
     def build_posthook_ctx(posthook_defn, work_result):
         meta = {
             "agent_name": posthook_defn.name,
             "sandbox_id": sandbox_id,
+            "daytona_cwd": repo_dir,
+            "ci_workspace_root": repo_dir,
         }
         user_message = _work_item_base_prompt(work_result)
         if isinstance(work_result, dict):
@@ -253,9 +257,11 @@ def _make_executor_factory(
     session_config: Any,
     sandbox_id: str,
     printer: MultiAgentEventPrinter | None,
+    *,
+    repo_dir: str = _REPO_DIR,
 ):
     runner = _make_runner(session_config, sandbox_id, printer)
-    build_query_ctx, build_posthook_ctx = _make_context_builders(sandbox_id)
+    build_query_ctx, build_posthook_ctx = _make_context_builders(sandbox_id, repo_dir)
 
     def factory(team_run):
         return Executor(
@@ -273,9 +279,11 @@ def _make_atlas_scheduler_factory(
     session_config: Any,
     sandbox_id: str,
     printer: MultiAgentEventPrinter | None,
+    *,
+    repo_dir: str = _REPO_DIR,
 ):
     runner = _make_runner(session_config, sandbox_id, printer)
-    build_query_ctx, build_posthook_ctx = _make_context_builders(sandbox_id)
+    build_query_ctx, build_posthook_ctx = _make_context_builders(sandbox_id, repo_dir)
 
     def factory(team_run):
         return AtlasMaintenanceScheduler(
@@ -355,11 +363,17 @@ async def run_sweevo_team(
             "fail_to_pass": instance.fail_to_pass,
             "pass_to_pass": instance.pass_to_pass,
         },
-        executor_factory=_make_executor_factory(session_config, sandbox_id, printer),
+        executor_factory=_make_executor_factory(
+            session_config,
+            sandbox_id,
+            printer,
+            repo_dir=repo_dir,
+        ),
         atlas_scheduler_factory=_make_atlas_scheduler_factory(
             session_config,
             sandbox_id,
             printer,
+            repo_dir=repo_dir,
         ),
         num_executors=num_executors,
         root_kind=WorkItemKind.EXPANDABLE,

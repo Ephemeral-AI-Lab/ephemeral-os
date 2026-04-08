@@ -167,10 +167,11 @@ class DaytonaToolkit(BaseToolkit):
         """
         sandbox = self._get_sandbox()
         context.metadata["daytona_sandbox"] = sandbox
-        cwd = self._resolve_cwd_sync(sandbox)
+        cwd = context.metadata.get("daytona_cwd") or self._resolve_cwd_sync(sandbox)
         if cwd:
             context.metadata["daytona_cwd"] = cwd
-        self._inject_ci(context, sandbox, cwd or "/home/daytona")
+        ci_root = context.metadata.get("ci_workspace_root") or cwd or "/home/daytona"
+        self._inject_ci(context, sandbox, ci_root)
 
     async def prepare_context_async(self, context: Any) -> None:
         """Inject async sandbox, cwd, and optional CI service into a ToolExecutionContext.
@@ -180,7 +181,8 @@ class DaytonaToolkit(BaseToolkit):
         """
         sandbox = await self._get_sandbox_async()
         context.metadata["daytona_sandbox"] = sandbox
-        cwd = await self._resolve_cwd_async(sandbox)
+        cwd = context.metadata.get("daytona_cwd") or await self._resolve_cwd_async(sandbox)
         if cwd:
             context.metadata["daytona_cwd"] = cwd
-        self._inject_ci(context, sandbox, cwd or "/home/daytona")
+        ci_root = context.metadata.get("ci_workspace_root") or cwd or "/home/daytona"
+        self._inject_ci(context, sandbox, ci_root)
