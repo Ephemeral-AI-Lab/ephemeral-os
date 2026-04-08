@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useState } from 'react'
+import { Fragment, useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useParams, useNavigate } from 'react-router'
 import { fetchDbSession, fetchSessionRuns, fetchSessionUsage, fetchRunChunks, fetchRunDetail, fetchSessionMessages } from '../lib/api'
 import type {
@@ -77,6 +77,14 @@ const ROLE_LABELS: Record<string, string> = {
   assistant: 'text-emerald-400',
 }
 
+const PANEL_ACCENTS: Record<string, string> = {
+  amber: 'border-amber-500/30 text-amber-400',
+  emerald: 'border-emerald-500/30 text-emerald-400',
+  sky: 'border-sky-500/30 text-sky-400',
+  violet: 'border-violet-500/30 text-violet-400',
+  zinc: 'border-zinc-700 text-zinc-400',
+}
+
 function renderMessageBlock(block: MessageBlock, key: number) {
   if (block.type === 'text' && block.text) {
     return (
@@ -141,6 +149,7 @@ function MessageCard({
 function ConversationHistoryPanel({ sessionId }: { sessionId: string }) {
   const [expanded, setExpanded] = useState(false)
   const [messages, setMessages] = useState<ConversationMessagePayload[]>([])
+  const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [loaded, setLoaded] = useState(false)
 
@@ -148,25 +157,26 @@ function ConversationHistoryPanel({ sessionId }: { sessionId: string }) {
     if (!expanded || loaded) return
     let cancelled = false
     setLoading(true)
-    fetchSessionMessages(sessionId).then((data) => {
-      if (!cancelled) {
-        setMessages(data)
-        setLoading(false)
-        setLoaded(true)
-      }
-    })
+    setError(null)
+    fetchSessionMessages(sessionId)
+      .then((data) => {
+        if (!cancelled) {
+          setMessages(data)
+          setLoaded(true)
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : String(err))
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      })
     return () => { cancelled = true }
   }, [expanded, loaded, sessionId])
-
-  const ROLE_COLORS: Record<string, string> = {
-    user: 'border-blue-500/30 bg-blue-500/5',
-    assistant: 'border-emerald-500/30 bg-emerald-500/5',
-  }
-
-  const ROLE_LABELS: Record<string, string> = {
-    user: 'text-blue-400',
-    assistant: 'text-emerald-400',
-  }
 
   return (
     <div className="mb-6 rounded-lg border border-zinc-800 bg-zinc-900">
@@ -183,52 +193,18 @@ function ConversationHistoryPanel({ sessionId }: { sessionId: string }) {
       {expanded && (
         <div className="border-t border-zinc-800 px-4 py-3">
           {loading && <p className="text-xs text-zinc-500">Loading messages...</p>}
-          {loaded && messages.length === 0 && (
+          {error && <p className="text-xs text-red-400">{error}</p>}
+          {loaded && !error && messages.length === 0 && (
             <p className="text-xs text-zinc-500">No messages recorded.</p>
           )}
-          {loaded && messages.length > 0 && (
+          {loaded && !error && messages.length > 0 && (
             <div className="max-h-[32rem] space-y-3 overflow-y-auto">
               {messages.map((msg, i) => (
-                <div
+                <MessageCard
                   key={i}
-                  className={`rounded-lg border px-4 py-3 ${ROLE_COLORS[msg.role] ?? 'border-zinc-700 bg-zinc-800/50'}`}
-                >
-                  <div className={`mb-1.5 text-[10px] font-semibold uppercase tracking-wider ${ROLE_LABELS[msg.role] ?? 'text-zinc-500'}`}>
-                    {msg.role}
-                  </div>
-                  {msg.content?.map((block, j) => {
-                    if (block.type === 'text' && block.text) {
-                      return (
-                        <pre key={j} className="whitespace-pre-wrap break-words text-xs leading-relaxed text-zinc-300 font-mono">
-                          {block.text.length > 2000 ? block.text.slice(0, 2000) + '...' : block.text}
-                        </pre>
-                      )
-                    }
-                    if (block.type === 'tool_use') {
-                      return (
-                        <div key={j} className="mt-1 rounded bg-zinc-800/60 px-3 py-2 text-xs">
-                          <span className="font-medium text-blue-400">{block.name}</span>
-                          <pre className="mt-1 max-h-24 overflow-auto text-[10px] text-zinc-500 font-mono">
-                            {JSON.stringify(block.input, null, 2)}
-                          </pre>
-                        </div>
-                      )
-                    }
-                    if (block.type === 'tool_result') {
-                      return (
-                        <div key={j} className="mt-1 rounded bg-zinc-800/60 px-3 py-2 text-xs">
-                          <span className="font-medium text-emerald-400">tool_result</span>
-                          <pre className="mt-1 max-h-24 overflow-auto text-[10px] text-zinc-500 font-mono">
-                            {typeof block.content === 'string'
-                              ? (block.content.length > 500 ? block.content.slice(0, 500) + '...' : block.content)
-                              : JSON.stringify(block.content, null, 2)}
-                          </pre>
-                        </div>
-                      )
-                    }
-                    return null
-                  })}
-                </div>
+                  role={msg.role}
+                  content={msg.content as MessageBlock[] | undefined}
+                />
               ))}
             </div>
           )}
@@ -242,6 +218,43 @@ function ConversationHistoryPanel({ sessionId }: { sessionId: string }) {
 // Collapsible message list (shared by message_history / compacted_history / response)
 // ---------------------------------------------------------------------------
 
+function CollapsiblePanel({
+  title,
+  badge,
+  accentColor = 'zinc',
+  defaultOpen = false,
+  children,
+}: {
+  title: string
+  badge?: string
+  accentColor?: string
+  defaultOpen?: boolean
+  children: ReactNode
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  const accent = PANEL_ACCENTS[accentColor] ?? PANEL_ACCENTS.zinc
+
+  return (
+    <div className={`rounded-lg border ${accent.split(' ')[0]} bg-zinc-950/50`}>
+      <button
+        onClick={() => setOpen(!open)}
+        className={`flex w-full items-center justify-between px-4 py-2.5 text-left text-xs hover:bg-zinc-800/30 ${accent.split(' ').slice(1).join(' ')}`}
+      >
+        <span className="font-medium">
+          {title}
+          {badge && <span className="ml-2 text-zinc-600">({badge})</span>}
+        </span>
+        <span className="text-zinc-600">{open ? '\u25B2' : '\u25BC'}</span>
+      </button>
+      {open && (
+        <div className="border-t border-zinc-800 px-4 py-3">
+          {children}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function CollapsibleMessageList({
   title,
   messages,
@@ -253,97 +266,30 @@ function CollapsibleMessageList({
   accentColor?: string
   defaultOpen?: boolean
 }) {
-  const [open, setOpen] = useState(defaultOpen)
-
-  const ACCENT: Record<string, string> = {
-    amber: 'border-amber-500/30 text-amber-400',
-    sky: 'border-sky-500/30 text-sky-400',
-    emerald: 'border-emerald-500/30 text-emerald-400',
-    zinc: 'border-zinc-700 text-zinc-400',
-  }
-  const accent = ACCENT[accentColor] ?? ACCENT.zinc
-
   return (
-    <div className={`rounded-lg border ${accent.split(' ')[0]} bg-zinc-950/50`}>
-      <button
-        onClick={() => setOpen(!open)}
-        className={`flex w-full items-center justify-between px-4 py-2.5 text-left text-xs hover:bg-zinc-800/30 ${accent.split(' ').slice(1).join(' ')}`}
-      >
-        <span className="font-medium">
-          {title}
-          <span className="ml-2 text-zinc-600">({messages.length} message{messages.length !== 1 ? 's' : ''})</span>
-        </span>
-        <span className="text-zinc-600">{open ? '\u25B2' : '\u25BC'}</span>
-      </button>
-      {open && (
-        <div className="border-t border-zinc-800 px-4 py-3">
-          <div className="max-h-[32rem] space-y-3 overflow-y-auto">
-            {messages.map((msg, i) => {
-              const role = (msg.role as string) ?? 'unknown'
-              const content = msg.content as Array<{ type: string; text?: string; name?: string; input?: Record<string, unknown>; content?: string }> | undefined
-              const text = (msg.text as string) ?? null
+    <CollapsiblePanel
+      title={title}
+      badge={`${messages.length} message${messages.length !== 1 ? 's' : ''}`}
+      accentColor={accentColor}
+      defaultOpen={defaultOpen}
+    >
+      <div className="max-h-[32rem] space-y-3 overflow-y-auto">
+        {messages.map((msg, i) => {
+          const role = (msg.role as string) ?? 'unknown'
+          const content = msg.content as MessageBlock[] | undefined
+          const text = (msg.text as string) ?? null
 
-              const ROLE_COLORS: Record<string, string> = {
-                user: 'border-blue-500/30 bg-blue-500/5',
-                assistant: 'border-emerald-500/30 bg-emerald-500/5',
-              }
-              const ROLE_LABELS: Record<string, string> = {
-                user: 'text-blue-400',
-                assistant: 'text-emerald-400',
-              }
-
-              return (
-                <div
-                  key={i}
-                  className={`rounded-lg border px-4 py-3 ${ROLE_COLORS[role] ?? 'border-zinc-700 bg-zinc-800/50'}`}
-                >
-                  <div className={`mb-1.5 text-[10px] font-semibold uppercase tracking-wider ${ROLE_LABELS[role] ?? 'text-zinc-500'}`}>
-                    {role}
-                  </div>
-                  {content?.map((block, j) => {
-                    if (block.type === 'text' && block.text) {
-                      return (
-                        <pre key={j} className="whitespace-pre-wrap break-words text-xs leading-relaxed text-zinc-300 font-mono">
-                          {block.text.length > 2000 ? block.text.slice(0, 2000) + '...' : block.text}
-                        </pre>
-                      )
-                    }
-                    if (block.type === 'tool_use') {
-                      return (
-                        <div key={j} className="mt-1 rounded bg-zinc-800/60 px-3 py-2 text-xs">
-                          <span className="font-medium text-blue-400">{block.name}</span>
-                          <pre className="mt-1 max-h-24 overflow-auto text-[10px] text-zinc-500 font-mono">
-                            {JSON.stringify(block.input, null, 2)}
-                          </pre>
-                        </div>
-                      )
-                    }
-                    if (block.type === 'tool_result') {
-                      return (
-                        <div key={j} className="mt-1 rounded bg-zinc-800/60 px-3 py-2 text-xs">
-                          <span className="font-medium text-emerald-400">tool_result</span>
-                          <pre className="mt-1 max-h-24 overflow-auto text-[10px] text-zinc-500 font-mono">
-                            {typeof block.content === 'string'
-                              ? (block.content.length > 500 ? block.content.slice(0, 500) + '...' : block.content)
-                              : JSON.stringify(block.content, null, 2)}
-                          </pre>
-                        </div>
-                      )
-                    }
-                    return null
-                  })}
-                  {!content && text && (
-                    <pre className="whitespace-pre-wrap break-words text-xs leading-relaxed text-zinc-300 font-mono">
-                      {text.length > 2000 ? text.slice(0, 2000) + '...' : text}
-                    </pre>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )}
-    </div>
+          return (
+            <MessageCard
+              key={i}
+              role={role}
+              content={content}
+              text={text}
+            />
+          )
+        })}
+      </div>
+    </CollapsiblePanel>
   )
 }
 
@@ -362,33 +308,18 @@ function CollapsibleText({
   accentColor?: string
   defaultOpen?: boolean
 }) {
-  const [open, setOpen] = useState(defaultOpen)
-
-  const ACCENT: Record<string, string> = {
-    violet: 'border-violet-500/30 text-violet-400',
-    zinc: 'border-zinc-700 text-zinc-400',
-  }
-  const accent = ACCENT[accentColor] ?? ACCENT.zinc
-
   return (
-    <div className={`rounded-lg border ${accent.split(' ')[0]} bg-zinc-950/50`}>
-      <button
-        onClick={() => setOpen(!open)}
-        className={`flex w-full items-center justify-between px-4 py-2.5 text-left text-xs hover:bg-zinc-800/30 ${accent.split(' ').slice(1).join(' ')}`}
-      >
-        <span className="font-medium">{title}</span>
-        <span className="text-zinc-600">{open ? '\u25B2' : '\u25BC'}</span>
-      </button>
-      {open && (
-        <div className="border-t border-zinc-800 px-4 py-3">
-          <div className="max-h-[32rem] overflow-y-auto">
-            <pre className="whitespace-pre-wrap break-words text-xs leading-relaxed text-zinc-300 font-mono">
-              {text}
-            </pre>
-          </div>
-        </div>
-      )}
-    </div>
+    <CollapsiblePanel
+      title={title}
+      accentColor={accentColor}
+      defaultOpen={defaultOpen}
+    >
+      <div className="max-h-[32rem] overflow-y-auto">
+        <pre className="whitespace-pre-wrap break-words text-xs leading-relaxed text-zinc-300 font-mono">
+          {text}
+        </pre>
+      </div>
+    </CollapsiblePanel>
   )
 }
 
@@ -514,18 +445,30 @@ function SubagentRunsTable({ runs }: { runs: SubagentRunSummary[] }) {
 function RunDetailPanel({ runId }: { runId: string }) {
   const [detail, setDetail] = useState<AgentRunDetail | null>(null)
   const [chunks, setChunks] = useState<AgentResponseChunk[]>([])
+  const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    Promise.all([fetchRunDetail(runId), fetchRunChunks(runId)]).then(([d, c]) => {
-      if (!cancelled) {
-        setDetail(d)
-        setChunks(c)
-        setLoading(false)
-      }
-    })
+    setError(null)
+    Promise.all([fetchRunDetail(runId), fetchRunChunks(runId)])
+      .then(([d, c]) => {
+        if (!cancelled) {
+          setDetail(d)
+          setChunks(c)
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : String(err))
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      })
     return () => { cancelled = true }
   }, [runId])
 
@@ -534,6 +477,16 @@ function RunDetailPanel({ runId }: { runId: string }) {
       <tr>
         <td colSpan={8} className="px-6 py-4 text-xs text-zinc-500">
           Loading run details...
+        </td>
+      </tr>
+    )
+  }
+
+  if (error) {
+    return (
+      <tr>
+        <td colSpan={8} className="px-6 py-4 text-xs text-red-400">
+          {error}
         </td>
       </tr>
     )
@@ -791,9 +744,8 @@ export default function AgentRunsPage() {
               {runs.map((r, idx) => {
                 const isExpanded = expandedRunId === r.id
                 return (
-                  <>
+                  <Fragment key={r.id}>
                     <tr
-                      key={r.id}
                       className={`text-zinc-300 transition cursor-pointer ${isExpanded ? 'bg-zinc-800/60' : 'hover:bg-zinc-800/50'}`}
                       onClick={() => setExpandedRunId(isExpanded ? null : r.id)}
                     >
@@ -831,8 +783,8 @@ export default function AgentRunsPage() {
                         {r.error || ''}
                       </td>
                     </tr>
-                    {isExpanded && <RunDetailPanel key={`${r.id}-detail`} runId={r.id} />}
-                  </>
+                    {isExpanded && <RunDetailPanel runId={r.id} />}
+                  </Fragment>
                 )
               })}
             </tbody>
