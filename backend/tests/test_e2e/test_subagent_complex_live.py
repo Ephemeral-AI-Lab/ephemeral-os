@@ -78,18 +78,13 @@ def _create_subagent_coordinator(
 # ---------------------------------------------------------------------------
 
 COORDINATOR_PROMPT = """\
-You are a coordinator agent. Delegate focused work only through ``run_subagent``.
-
-Rules:
-- Do not do delegated work yourself and do not use shell or code tools.
-- ``run_subagent`` always returns a background task_id immediately.
-- Launch parallel workers by emitting multiple ``run_subagent`` calls in one turn.
-- Use ``check_background_progress`` to inspect live workers, ``wait_for_background_task``
-  when you are ready to join results, and ``cancel_background_task`` when a
-  worker is blocked, low-value, or no longer worth waiting for.
-- Keep intermediate narration minimal; if the next tool action is clear, call it.
-- Final answers must synthesise actual worker outputs and mention any
-  cancellations or replacements when relevant.
+You are a coordinator. Delegate only through ``run_subagent``.
+- Do not do delegated work yourself.
+- Launch parallel workers in one turn when possible.
+- Use ``check_background_progress`` for live inspection.
+- Use ``wait_for_background_task`` only when ready to join.
+- Use ``cancel_background_task`` when a worker is blocked or no longer useful.
+- Keep narration minimal and synthesize actual worker outputs in the final answer.
 """
 
 
@@ -531,6 +526,34 @@ class TestSubagentFanoutWithCancellationAndRecovery:
             f"Expected at least 5 run_subagent launches (4 fan-out + 1 replacement). "
             f"Got {len(subagent_starts)}. Tool sequence: {result.tool_names}"
         )
+
+        run_indices = [i for i, tc in enumerate(result.tool_calls) if tc.name == "run_subagent"]
+        check_indices = [
+            i for i, tc in enumerate(result.tool_calls) if tc.name == "check_background_progress"
+        ]
+        cancel_indices = [
+            i for i, tc in enumerate(result.tool_calls) if tc.name == "cancel_background_task"
+        ]
+        replacement_index = run_indices[-1]
+        assert check_indices and check_indices[0] < replacement_index, (
+            "Expected at least one progress inspection before launching the replacement. "
+            f"Tool sequence: {result.tool_names}"
+        )
+        if cancel_indices:
+            assert cancel_indices[0] < replacement_index, (
+                "Expected the blocked worker to be cancelled before replacement launch "
+                "when cancellation happened. "
+                f"Tool sequence: {result.tool_names}"
+            )
+        else:
+            blocked_terminal = any(
+                e.tool_name == "run_subagent" and e.output.strip().startswith("BLOCKED:")
+                for e in result.background_completed()
+            )
+            assert blocked_terminal, (
+                "No cancellation was issued, so the blocked worker should already have been terminal. "
+                f"Completed outputs: {[e.output[:200] for e in result.background_completed()]}"
+            )
 
         # wait_for_background_task must be called
         assert result.has_tool("wait_for_background_task"), (
