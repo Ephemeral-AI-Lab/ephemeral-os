@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from typing import Any
+from uuid import uuid4
 
 from sandbox.async_client import get_async_sandbox
 
@@ -40,6 +41,19 @@ def _service() -> Any:
     from sandbox.service import SandboxService
 
     return SandboxService()
+
+
+def _default_sweevo_sandbox_name(instance: SWEEvoInstance) -> str:
+    """Return a unique sandbox name for a fresh SWE-EVO run."""
+    return _truncate_dns_label(f"sweevo-test-{instance.instance_id}-{uuid4().hex[:8]}")
+
+
+def _find_existing_sandbox_by_name(service: Any, name: str) -> dict[str, Any] | None:
+    """Return an existing sandbox record matching ``name`` if present."""
+    for sandbox in service.list_sandboxes():
+        if sandbox.get("name") == name:
+            return sandbox
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -238,7 +252,23 @@ async def create_sweevo_test_sandbox(
     """Create and prepare a Daytona sandbox for direct SWE-EVO test execution."""
     service = _service()
 
-    resolved_name = sandbox_name or f"sweevo-test-{instance.instance_id}"
+    resolved_name = _truncate_dns_label(sandbox_name) if sandbox_name else _default_sweevo_sandbox_name(instance)
+    if sandbox_name:
+        existing = _find_existing_sandbox_by_name(service, resolved_name)
+        if existing:
+            logger.info(
+                "Reusing existing SWE-EVO sandbox %s (%s) for retry",
+                resolved_name,
+                existing.get("id", ""),
+            )
+            return {
+                "sandbox_id": existing["id"],
+                "sandbox": existing,
+                "snapshot_name": "",
+                "repo_dir": repo_dir,
+                "reused_existing": True,
+            }
+
     create_kwargs: dict[str, Any] = {}
     resolved_snapshot = ""
     if register_snapshot:
@@ -257,7 +287,7 @@ async def create_sweevo_test_sandbox(
         create_kwargs["image"] = _normalize_sweevo_image_ref(instance.docker_image)
 
     result = service.create_sandbox(
-        name=_truncate_dns_label(resolved_name),
+        name=resolved_name,
         language="python",
         labels={
             "purpose": "sweevo-test",
@@ -274,6 +304,7 @@ async def create_sweevo_test_sandbox(
         "sandbox": sandbox_info,
         "snapshot_name": resolved_snapshot,
         "repo_dir": repo_dir,
+        "reused_existing": False,
     }
 
 

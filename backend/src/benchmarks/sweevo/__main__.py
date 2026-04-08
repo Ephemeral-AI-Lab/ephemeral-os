@@ -45,7 +45,20 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--repo-dir", default=_REPO_DIR)
     p.add_argument("--snapshot-name", default="")
     p.add_argument("--sandbox-name", default="")
-    p.add_argument("--no-register-snapshot", action="store_true")
+    snapshot_group = p.add_mutually_exclusive_group()
+    snapshot_group.add_argument(
+        "--register-snapshot",
+        dest="register_snapshot",
+        action="store_true",
+        help="Register a Daytona snapshot from the SWE-EVO image before sandbox creation.",
+    )
+    snapshot_group.add_argument(
+        "--no-register-snapshot",
+        dest="register_snapshot",
+        action="store_false",
+        help="Create the sandbox directly from the SWE-EVO image instead of registering a snapshot.",
+    )
+    p.set_defaults(register_snapshot=True)
     p.add_argument("--cpu", type=int, default=2)
     p.add_argument("--disk", type=int, default=10)
     p.add_argument("--test-command", default=None, help="Override instance.test_cmds")
@@ -136,7 +149,7 @@ async def _cmd_run(args: argparse.Namespace) -> int:
         target_bullets=args.target_bullets,
         snapshot_name=args.snapshot_name,
         sandbox_name=args.sandbox_name,
-        register_snapshot=not args.no_register_snapshot,
+        register_snapshot=args.register_snapshot,
         cpu=args.cpu,
         disk=args.disk,
         repo_dir=args.repo_dir,

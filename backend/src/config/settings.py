@@ -12,9 +12,13 @@ import os
 from pathlib import Path
 from typing import Any
 
+from dotenv import dotenv_values
 from pydantic import BaseModel, Field
 
 from hooks.schemas import HookDefinition
+
+_PROJECT_ROOT = Path(__file__).resolve().parents[3]
+_DOTENV_PATH = _PROJECT_ROOT / ".env"
 
 
 class DatabaseSettings(BaseModel):
@@ -58,11 +62,31 @@ class Settings(BaseModel):
 def _apply_env_overrides(settings: Settings) -> Settings:
     """Apply supported environment variable overrides over loaded settings."""
     updates: dict[str, Any] = {}
+    dotenv_values_map = {
+        str(key): str(value).strip()
+        for key, value in dotenv_values(_DOTENV_PATH).items()
+        if key and value is not None and str(value).strip()
+    }
 
-    database_url = os.environ.get("EPHEMERALOS_DATABASE_URL")
+    def _get_override(name: str) -> str:
+        return os.environ.get(name, "").strip() or dotenv_values_map.get(name, "")
+
+    database_url = _get_override("EPHEMERALOS_DATABASE_URL")
     if database_url:
         db = settings.database.model_copy(update={"url": database_url})
         updates["database"] = db
+
+    daytona_api_key = _get_override("DAYTONA_API_KEY")
+    if daytona_api_key:
+        updates["daytona_api_key"] = daytona_api_key
+
+    daytona_api_url = _get_override("DAYTONA_API_URL")
+    if daytona_api_url:
+        updates["daytona_api_url"] = daytona_api_url
+
+    daytona_target = _get_override("DAYTONA_TARGET")
+    if daytona_target:
+        updates["daytona_target"] = daytona_target
 
     if not updates:
         return settings

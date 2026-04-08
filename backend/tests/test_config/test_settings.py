@@ -34,6 +34,10 @@ class TestSettings:
 class TestLoadSaveSettings:
     def test_load_missing_file_returns_defaults(self, tmp_path: Path, monkeypatch):
         monkeypatch.delenv("EPHEMERALOS_DATABASE_URL", raising=False)
+        monkeypatch.delenv("DAYTONA_API_KEY", raising=False)
+        monkeypatch.delenv("DAYTONA_API_URL", raising=False)
+        monkeypatch.delenv("DAYTONA_TARGET", raising=False)
+        monkeypatch.setattr("config.settings._DOTENV_PATH", tmp_path / ".env")
         path = tmp_path / "nonexistent.json"
         s = load_settings(path)
         assert s == Settings()
@@ -87,3 +91,37 @@ class TestLoadSaveSettings:
         monkeypatch.setenv("EPHEMERALOS_DATABASE_URL", "postgresql://env/override")
         s = load_settings(path)
         assert s.database.url == "postgresql://env/override"
+
+    def test_daytona_env_overrides(self, tmp_path: Path, monkeypatch):
+        path = tmp_path / "settings.json"
+        path.write_text(json.dumps({}))
+        monkeypatch.setenv("DAYTONA_API_KEY", "env-key")
+        monkeypatch.setenv("DAYTONA_API_URL", "https://env-url")
+        monkeypatch.setenv("DAYTONA_TARGET", "env-target")
+
+        s = load_settings(path)
+
+        assert s.daytona_api_key == "env-key"
+        assert s.daytona_api_url == "https://env-url"
+        assert s.daytona_target == "env-target"
+
+    def test_daytona_dotenv_fallback(self, tmp_path: Path, monkeypatch):
+        path = tmp_path / "settings.json"
+        path.write_text(json.dumps({}))
+        dotenv_path = tmp_path / ".env"
+        dotenv_path.write_text(
+            "DAYTONA_API_KEY=dotenv-key\n"
+            "DAYTONA_API_URL=https://dotenv-url\n"
+            "DAYTONA_TARGET=dotenv-target\n",
+            encoding="utf-8",
+        )
+        monkeypatch.delenv("DAYTONA_API_KEY", raising=False)
+        monkeypatch.delenv("DAYTONA_API_URL", raising=False)
+        monkeypatch.delenv("DAYTONA_TARGET", raising=False)
+        monkeypatch.setattr("config.settings._DOTENV_PATH", dotenv_path)
+
+        s = load_settings(path)
+
+        assert s.daytona_api_key == "dotenv-key"
+        assert s.daytona_api_url == "https://dotenv-url"
+        assert s.daytona_target == "dotenv-target"
