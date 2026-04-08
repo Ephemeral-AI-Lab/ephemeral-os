@@ -11,7 +11,7 @@ from agents.registry import register_definition, unregister_definition
 from agents.types import AgentDefinition
 from hooks.agent_posthook import PosthookConfig
 from team.run import TeamRun
-from team.types import AgentResult, Plan, TeamRunStatus, WorkItemStatus
+from team.types import AgentResult, Plan, TeamRunStatus, WorkItemKind, WorkItemStatus
 from team.worker import Worker
 
 
@@ -167,6 +167,7 @@ async def test_planner_emits_plan_via_posthook_and_children_run():
             payload={},
             worker_factory=make_worker_factory(make_runner(scripts)),
             num_workers=2,
+            root_kind=WorkItemKind.EXPANDABLE,
         )
         status = await tr.wait()
         assert status == TeamRunStatus.SUCCEEDED

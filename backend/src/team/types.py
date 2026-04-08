@@ -12,6 +12,11 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+class WorkItemKind(str, Enum):
+    ATOMIC = "atomic"
+    EXPANDABLE = "expandable"
+
+
 class WorkItemStatus(str, Enum):
     PENDING = "pending"
     READY = "ready"
@@ -40,6 +45,7 @@ class WorkItem:
     team_run_id: str
     agent_name: str
     status: WorkItemStatus
+    kind: WorkItemKind = WorkItemKind.ATOMIC
     deps: list[str] = field(default_factory=list)
     parent_id: str | None = None
     root_id: str = ""
@@ -62,6 +68,7 @@ class WorkItemSpec:
     deps: list[str] = field(default_factory=list)
     notes: str | None = None
     timeout_seconds: float | None = None
+    kind: WorkItemKind = WorkItemKind.ATOMIC
 
 
 @dataclass
@@ -79,6 +86,7 @@ class Plan:
                 deps=list(it.get("deps") or []),
                 notes=it.get("notes"),
                 timeout_seconds=it.get("timeout_seconds"),
+                kind=WorkItemKind(it.get("kind", "atomic")),
             )
             for it in (data.get("items") or [])
         ]

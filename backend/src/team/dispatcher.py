@@ -19,6 +19,7 @@ from team.types import (
     CheckpointNotFound,
     InvalidPlan,
     WorkItem,
+    WorkItemKind,
     WorkItemStatus,
     TERMINAL_WI_STATUSES,
     _utcnow,
@@ -118,6 +119,13 @@ class Dispatcher:
                 raise RuntimeError(
                     f"complete: {wi_id} is {wi.status.value}, not RUNNING"
                 )
+
+            if wi.kind == WorkItemKind.EXPANDABLE and result.submitted_plan is None:
+                wi.status = WorkItemStatus.FAILED
+                wi.finished_at = _utcnow()
+                wi.failure_reason = "InvalidPlan: expandable work item did not submit a plan"
+                self._cascade_cancel(wi_id)
+                return []
 
             if result.submitted_plan is not None:
                 try:

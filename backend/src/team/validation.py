@@ -4,19 +4,14 @@ from __future__ import annotations
 
 from typing import Callable, Iterator
 
-try:
-    from agents.registry import get_definition as _get_definition
-except Exception:  # pragma: no cover
-    _get_definition = None  # type: ignore[assignment]
+from agents.registry import get_definition as _get_definition
 
-from team.types import InvalidPlan, Plan, WorkItem, WorkItemSpec, WorkItemStatus
+from team.types import InvalidPlan, Plan, WorkItem, WorkItemKind, WorkItemSpec, WorkItemStatus
 
 Issue = dict[str, str]
 
 
 def _agent_exists(agent_name: str) -> bool:
-    if _get_definition is None:
-        return True
     return _get_definition(agent_name) is not None
 
 
@@ -114,6 +109,10 @@ def validate_plan_phase_b(
     max_depth: int,
 ) -> list[WorkItem]:
     """Dispatcher-time re-check. Resolves local_ids, checks externals, depth, cycles."""
+    if parent_wi.kind != WorkItemKind.EXPANDABLE:
+        raise InvalidPlan(
+            f"work item {parent_wi.id} is {parent_wi.kind.value}; only expandable items may submit a plan"
+        )
     new_depth = parent_wi.depth + 1
     if new_depth > max_depth:
         raise InvalidPlan(f"plan would exceed max_depth={max_depth} (parent depth={parent_wi.depth})")
@@ -135,6 +134,14 @@ def validate_plan_phase_b(
     issues: list[str] = []
     new_items: list[WorkItem] = []
     for idx, spec in enumerate(plan.items):
+        agent_def = _get_definition(spec.agent_name)
+        if agent_def is not None:
+            supported = getattr(agent_def, "supported_kinds", None) or ["atomic", "expandable"]
+            if spec.kind.value not in supported:
+                issues.append(
+                    f"items[{idx}] agent '{spec.agent_name}' does not support kind '{spec.kind.value}' (supports: {supported})"
+                )
+                continue
         new_id: str = local_to_new[spec.local_id] if spec.local_id else new_id_factory()
         resolved_deps: list[str] = []
         for dep in spec.deps:
@@ -162,6 +169,7 @@ def validate_plan_phase_b(
                 payload=dict(spec.payload),
                 timeout_seconds=spec.timeout_seconds,
                 depth=new_depth,
+                kind=spec.kind,
             )
         )
 

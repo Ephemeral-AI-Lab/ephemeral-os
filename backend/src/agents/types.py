@@ -61,6 +61,14 @@ class AgentDefinition(BaseModel):
     # by the explicit capability flags below, not by this string.
     agent_type: Literal["agent", "subagent"] = "agent"
 
+    # --- team-mode work item kinds this agent is allowed to serve ---
+    # Values: "atomic", "expandable". Defaults to both so existing
+    # builtin agents remain compatible. Phase B validation rejects any
+    # WorkItemSpec whose ``kind`` is not in the target agent's list.
+    supported_kinds: list[str] = Field(
+        default_factory=lambda: ["atomic", "expandable"]
+    )
+
     # Capability flags (authoritative for engine behaviour).
     # ``can_spawn_subagents`` gates registration of the background toolkit
     # (subagents cannot launch their own background work or spawn further

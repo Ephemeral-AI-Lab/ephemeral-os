@@ -6,7 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from team.types import Plan, WorkItemSpec
+from team.types import Plan, WorkItemKind, WorkItemSpec
 from team.validation import validate_plan_phase_a
 from tools.core.base import ToolExecutionContext
 from tools.posthook.base import SubmitPosthookTool
@@ -19,6 +19,7 @@ class _SubmitPlanItem(BaseModel):
     deps: list[str] = Field(default_factory=list)
     notes: str | None = None
     timeout_seconds: float | None = None
+    kind: WorkItemKind = WorkItemKind.ATOMIC
 
 
 class SubmitPlanInput(BaseModel):
@@ -53,6 +54,7 @@ class SubmitPlanTool(SubmitPosthookTool):
                         deps=list(it.get("deps") or []),
                         notes=it.get("notes"),
                         timeout_seconds=it.get("timeout_seconds"),
+                        kind=WorkItemKind(it.get("kind", "atomic")),
                     )
                     for it in (data.get("items") or [])
                 ],

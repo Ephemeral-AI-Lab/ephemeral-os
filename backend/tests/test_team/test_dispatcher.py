@@ -13,6 +13,7 @@ from team.types import (
     BudgetState,
     Plan,
     WorkItem,
+    WorkItemKind,
     WorkItemSpec,
     WorkItemStatus,
 )
@@ -30,12 +31,18 @@ def _make_dispatcher(budgets: BudgetConfig | None = None) -> Dispatcher:
     )
 
 
-def _wi(id_: str, deps: list[str] | None = None, depth: int = 0) -> WorkItem:
+def _wi(
+    id_: str,
+    deps: list[str] | None = None,
+    depth: int = 0,
+    kind: WorkItemKind = WorkItemKind.ATOMIC,
+) -> WorkItem:
     return WorkItem(
         id=id_,
         team_run_id="T1",
         agent_name="a",
         status=WorkItemStatus.PENDING,
+        kind=kind,
         deps=deps or [],
         root_id=id_,
         depth=depth,
@@ -109,7 +116,7 @@ async def test_max_work_items_budget_enforced():
 @pytest.mark.asyncio
 async def test_complete_inserts_plan_atomically():
     disp = _make_dispatcher()
-    await disp.add_work_item(_wi("PLANNER"))
+    await disp.add_work_item(_wi("PLANNER", kind=WorkItemKind.EXPANDABLE))
     await disp.pop_ready()
     await disp.mark_running("PLANNER", "AR1")
     plan = Plan(
@@ -132,7 +139,7 @@ async def test_complete_inserts_plan_atomically():
 @pytest.mark.asyncio
 async def test_invalid_plan_fails_parent_without_partial_insert():
     disp = _make_dispatcher()
-    await disp.add_work_item(_wi("PLANNER"))
+    await disp.add_work_item(_wi("PLANNER", kind=WorkItemKind.EXPANDABLE))
     await disp.pop_ready()
     await disp.mark_running("PLANNER", "AR1")
     # cross-run dep — triggers InvalidPlan inside complete()
@@ -143,6 +150,31 @@ async def test_invalid_plan_fails_parent_without_partial_insert():
     )
     assert disp.graph["PLANNER"].status == WorkItemStatus.FAILED
     assert set(disp.graph) == before  # nothing added
+
+
+@pytest.mark.asyncio
+async def test_atomic_submitting_plan_is_rejected():
+    disp = _make_dispatcher()
+    await disp.add_work_item(_wi("A"))  # atomic
+    await disp.pop_ready()
+    await disp.mark_running("A", "AR1")
+    plan = Plan(items=[WorkItemSpec(agent_name="a", local_id="x")])
+    await disp.complete(
+        "A", AgentResult(artifact={}, summary="s", submitted_plan=plan)
+    )
+    assert disp.graph["A"].status == WorkItemStatus.FAILED
+    assert "only expandable" in (disp.graph["A"].failure_reason or "")
+
+
+@pytest.mark.asyncio
+async def test_expandable_without_plan_is_rejected():
+    disp = _make_dispatcher()
+    await disp.add_work_item(_wi("P", kind=WorkItemKind.EXPANDABLE))
+    await disp.pop_ready()
+    await disp.mark_running("P", "AR1")
+    await disp.complete("P", AgentResult(artifact={}, summary="s"))
+    assert disp.graph["P"].status == WorkItemStatus.FAILED
+    assert "did not submit a plan" in (disp.graph["P"].failure_reason or "")
 
 
 @pytest.mark.asyncio

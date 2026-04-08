@@ -12,6 +12,7 @@ from team.types import (
     InvalidPlan,
     Plan,
     WorkItem,
+    WorkItemKind,
     WorkItemSpec,
     WorkItemStatus,
 )
@@ -111,6 +112,7 @@ def _parent_wi(team_run_id="T1"):
         team_run_id=team_run_id,
         agent_name="planner",
         status=WorkItemStatus.RUNNING,
+        kind=WorkItemKind.EXPANDABLE,
         root_id="PARENT",
         depth=0,
     )
@@ -174,6 +176,28 @@ def test_phase_b_depth_exceeded(monkeypatch):
     parent.depth = 5
     plan = Plan(items=[WorkItemSpec(agent_name="a")])
     with pytest.raises(InvalidPlan, match="max_depth"):
+        validate_plan_phase_b(
+            {parent.id: parent}, plan, "T1", parent, new_id_factory=lambda: "N", max_depth=5
+        )
+
+
+def test_phase_b_rejects_agent_without_supported_kind(monkeypatch):
+    from agents.types import AgentDefinition
+    from team import validation as _v
+
+    atomic_only = AgentDefinition(
+        name="atomic_only", description="d", supported_kinds=["atomic"]
+    )
+    monkeypatch.setattr(_v, "_get_definition", lambda n: atomic_only if n == "atomic_only" else None)
+    parent = _parent_wi()
+    plan = Plan(
+        items=[
+            WorkItemSpec(
+                agent_name="atomic_only", local_id="w1", kind=WorkItemKind.EXPANDABLE
+            )
+        ]
+    )
+    with pytest.raises(InvalidPlan, match="does not support kind"):
         validate_plan_phase_b(
             {parent.id: parent}, plan, "T1", parent, new_id_factory=lambda: "N", max_depth=5
         )

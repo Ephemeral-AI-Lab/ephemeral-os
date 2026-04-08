@@ -15,6 +15,7 @@ from team.types import (
     TeamDefinition,
     TeamRunStatus,
     WorkItem,
+    WorkItemKind,
     WorkItemStatus,
 )
 from team.worker import Worker
@@ -62,6 +63,7 @@ class TeamRun:
         *,
         worker_factory: Callable[["TeamRun"], Worker],
         num_workers: int = 1,
+        root_kind: WorkItemKind = WorkItemKind.ATOMIC,
     ) -> None:
         root = WorkItem(
             id=str(uuid.uuid4()),
@@ -70,6 +72,7 @@ class TeamRun:
             status=WorkItemStatus.PENDING,
             payload=dict(payload),
             depth=0,
+            kind=root_kind,
         )
         root.root_id = root.id
         self.root_work_item_id = root.id
@@ -109,6 +112,7 @@ class TeamRun:
             payload=payload,
             worker_factory=worker_factory,
             num_workers=num_workers,
+            root_kind=WorkItemKind.EXPANDABLE,
         )
 
     def _spawn_workers(self) -> None:
