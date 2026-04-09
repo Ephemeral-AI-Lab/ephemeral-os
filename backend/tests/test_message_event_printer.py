@@ -1,7 +1,7 @@
 from message.event_printer import MultiAgentEventPrinter
 from message.stream_events import AssistantTurnComplete, ThinkingDelta, ToolExecutionStarted
 from providers.types import UsageSnapshot
-from message.messages import ConversationMessage
+from message.messages import ConversationMessage, TextBlock
 
 
 def test_printer_includes_work_id_in_prefix() -> None:
@@ -29,7 +29,7 @@ def test_printer_keeps_work_id_for_flushed_thinking() -> None:
     printer.emit(ThinkingDelta(text="working", agent_name="team_planner", work_id="b88848c71234425a"))
     printer.emit(
         AssistantTurnComplete(
-            message=ConversationMessage.from_assistant_text("done"),
+            message=ConversationMessage(role="assistant", content=[TextBlock(text="done")]),
             usage=UsageSnapshot(),
             agent_name="team_planner",
             work_id="b88848c71234425a",

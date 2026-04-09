@@ -66,6 +66,28 @@ def _compact_args(inp: Any) -> str:
     return _truncate(s)
 
 
+def _normalize_target_paths(value: Any) -> list[str]:
+    if isinstance(value, str):
+        stripped = value.strip()
+        return [stripped] if stripped else []
+    if not isinstance(value, list):
+        return []
+    out: list[str] = []
+    for item in value:
+        if isinstance(item, str):
+            stripped = item.strip()
+            if stripped:
+                out.append(stripped)
+    return out
+
+
+def _already_covered_scout_targets(context: ToolExecutionContext, target_paths: list[str]) -> list[str]:
+    metadata = context.metadata
+    read_paths = set(_normalize_target_paths(metadata.get("_read_paths_this_turn", [])))
+    prior_scouts = set(_normalize_target_paths(metadata.get("_scout_target_paths_this_turn", [])))
+    return [path for path in target_paths if path in read_paths or path in prior_scouts]
+
+
 def _render_block(block: Any) -> str:
     """One-line render of a single content block."""
     if isinstance(block, TextBlock):
@@ -290,9 +312,7 @@ async def run_subagent(
                 is_error=True,
             )
         target_paths = input.get("target_paths") if isinstance(input, dict) else None
-        valid_paths = [
-            path for path in (target_paths or []) if isinstance(path, str) and path.strip()
-        ]
+        valid_paths = _normalize_target_paths(target_paths)
         if not valid_paths:
             return ToolResult(
                 output=(
@@ -300,6 +320,16 @@ async def run_subagent(
                     "`input={\"target_paths\": [...]}`. Scout is for path-bounded "
                     "read-only exploration only; do not use it as a proxy for "
                     "test execution, shell commands, or validation."
+                ),
+                is_error=True,
+            )
+        covered_paths = _already_covered_scout_targets(context, valid_paths)
+        if covered_paths and len(covered_paths) == len(valid_paths):
+            return ToolResult(
+                output=(
+                    "run_subagent: scout target_paths are already covered in this turn "
+                    f"({', '.join(covered_paths)}). Reuse the file reads or prior scout "
+                    "you already have and submit the plan instead of re-exploring the same area."
                 ),
                 is_error=True,
             )

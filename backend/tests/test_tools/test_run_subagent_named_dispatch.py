@@ -185,6 +185,24 @@ async def test_scout_rejects_missing_target_paths():
     assert "requires non-empty" in res.output
 
 
+@pytest.mark.asyncio
+async def test_scout_rejects_duplicate_exact_path_coverage(monkeypatch):
+    ctx = _ctx()
+    ctx.metadata["_read_paths_this_turn"] = ["/testbed/pydantic/json_schema.py"]
+
+    res = await run_subagent.execute(
+        run_subagent.input_model(
+            agent_name="scout",
+            input={"target_paths": ["/testbed/pydantic/json_schema.py"]},
+        ),
+        ctx,
+    )
+
+    assert res.is_error
+    assert "already covered in this turn" in res.output
+    assert "submit the plan" in res.output
+
+
 # ---------- typed envelope ----------------------------------------------------
 
 

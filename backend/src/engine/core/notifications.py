@@ -10,6 +10,7 @@ control flow only and gives notifications a single, easy-to-test home.
 from __future__ import annotations
 
 from typing import TYPE_CHECKING
+import math
 
 from message.messages import ConversationMessage
 from message.stream_events import SystemNotification
@@ -39,16 +40,19 @@ def build_budget_warning(
     remaining = limit - context.tool_calls_used
     if remaining <= 0:
         return None  # exhausted — handled by loop termination
-    threshold = max(1, limit // 10)
-    if remaining > 1 and remaining > threshold:
+    threshold = max(3, math.ceil(limit * 0.25))
+    should_warn = remaining in {threshold, 1}
+    if not should_warn:
         return None
     if context.last_budget_warning_remaining == remaining:
         return None
     context.last_budget_warning_remaining = remaining
     text = (
-        f"[budget warning] Only {remaining} of {limit} tool calls remaining. "
-        f"Submit your final result now (submit_summary / submit_plan) or the "
-        f"agent run will terminate when the budget is exhausted."
+        f"[budget warning] Only {remaining} of {limit} tool calls remain "
+        f"({context.tool_calls_used} already used). "
+        f"Stop exploring, reuse the evidence you already gathered, and submit "
+        f"your final result now (submit_summary / submit_plan) before the "
+        f"agent run is terminated."
     )
     return (
         ConversationMessage.from_user_text(text),

@@ -52,6 +52,31 @@ def _recommended_frontier_cap(size: str) -> int:
     return 3 if size == "large" else 2
 
 
+def _derive_planner_controls(instance: SWEEvoInstance) -> dict[str, int]:
+    size = str(summarize_sweevo_instance(instance).get("size") or "medium")
+    return {
+        "small": {
+            "first_plan_exploration_budget": 8,
+            "tool_call_limit": 14,
+            "max_turns": 50,
+        },
+        "medium": {
+            "first_plan_exploration_budget": 10,
+            "tool_call_limit": 16,
+            "max_turns": 60,
+        },
+        "large": {
+            "first_plan_exploration_budget": 12,
+            "tool_call_limit": 18,
+            "max_turns": 70,
+        },
+    }.get(size, {
+        "first_plan_exploration_budget": 10,
+        "tool_call_limit": 16,
+        "max_turns": 60,
+    })
+
+
 def _derive_sweevo_budgets(instance: SWEEvoInstance) -> BudgetConfig:
     """Return size-aware team budgets for SWE-EVO instead of disabling them."""
     summary = summarize_sweevo_instance(instance)
@@ -112,6 +137,7 @@ def _build_root_prompt(instance: SWEEvoInstance, repo_dir: str) -> str:
     summary = summarize_sweevo_instance(instance)
     size = str(summary.get("size") or "medium")
     frontier_cap = _recommended_frontier_cap(size)
+    planner_controls = _derive_planner_controls(instance)
     return (
         f"You are leading a coding team on a SWE-EVO benchmark instance.\n"
         f"Repository: {instance.repo}\n"
@@ -138,6 +164,8 @@ def _build_root_prompt(instance: SWEEvoInstance, repo_dir: str) -> str:
         f"{len(instance.fail_to_pass)} fail-to-pass target(s)).\n"
         f"- Keep the first ready frontier to at most {frontier_cap} benchmark-critical "
         f"implementation lane(s) for this run.\n"
+        f"- Spend at most {planner_controls['first_plan_exploration_budget']} exploratory "
+        f"tool calls before submitting the first plan.\n"
         f"- Put speculative or lower-signal follow-ups behind a downstream expandable "
         f"planner item or final verification.\n"
         f"- Recursive planner items must narrow ownership and should not form one-child "
@@ -171,6 +199,22 @@ def _extract_final_text(messages: list[Any]) -> str:
     return ""
 
 
+def _build_sweevo_planner_runtime_prompt(instance: SWEEvoInstance) -> str:
+    controls = _derive_planner_controls(instance)
+    return (
+        "## SWE-EVO Runtime Guardrails\n"
+        f"- Spend at most {controls['first_plan_exploration_budget']} exploratory tool calls "
+        "before the first plan. A scout launch counts toward this budget.\n"
+        "- Do not spawn scout to confirm line numbers, restate a failure you already read, "
+        "or revisit an exact file path you already opened this turn.\n"
+        "- If a semantic CI query is cold or disconnected after you already have one failing "
+        "test block and one candidate implementation method, treat that as non-blocking and "
+        "dispatch a developer/validator lane with the evidence you have.\n"
+        "- Once you say or infer that you have enough context, your very next assistant "
+        "message must be the plan JSON. Do not call more tools after that point.\n"
+    )
+
+
 # ---------------------------------------------------------------------------
 # Runner + executor factory
 # ---------------------------------------------------------------------------
@@ -181,13 +225,19 @@ def _make_runner(
     sandbox_id: str,
     printer: MultiAgentEventPrinter | None,
     team_metrics: dict[str, Any] | None = None,
+    agent_overrides: dict[str, dict[str, Any]] | None = None,
 ):
     async def _run(defn, ctx: TeamAgentContext):
+        effective_defn = defn
+        if agent_overrides:
+            overrides = agent_overrides.get(defn.name)
+            if overrides:
+                effective_defn = defn.model_copy(update=overrides)
         prompt = ctx.user_message or _work_item_base_prompt(None)
         tracker = AgentRunTracker.create(
             session_id=getattr(session_config, "session_id", None),
             run_id=getattr(ctx.tool_metadata, "agent_run_id", None),
-            agent_name=defn.name,
+            agent_name=effective_defn.name,
             input_query=prompt,
         )
         if tracker.run_id is not None:
@@ -196,7 +246,7 @@ def _make_runner(
         agent = spawn_agent(
             session_config,
             messages=[],
-            agent_def=defn,
+            agent_def=effective_defn,
             latest_user_prompt=prompt,
             sandbox_id=sandbox_id,
         )
@@ -224,6 +274,7 @@ def _make_runner(
                     continue
                 try:
                     object.__setattr__(event, "agent_name", defn.name)
+                    object.__setattr__(event, "agent_name", effective_defn.name)
                 except Exception:
                     pass
                 try:
@@ -254,14 +305,14 @@ def _make_runner(
                     usage_store=usage_store,
                     session_id=getattr(session_config, "session_id", None),
                     run_id=tracker.run_id,
-                    agent_name=defn.name,
+                    agent_name=effective_defn.name,
                     model_id=agent.model,
                     usage=agent.total_usage,
                 )
             if printer is not None and agent.total_usage is not None:
                 total = agent.total_usage.input_tokens + agent.total_usage.output_tokens
                 printer.raw_line(
-                    defn.name,
+                    effective_defn.name,
                     (
                         f"[usage] prompt={agent.total_usage.input_tokens} "
                         f"completion={agent.total_usage.output_tokens} total={total}"
@@ -280,23 +331,23 @@ def _make_runner(
 
                 team_run_id = ctx.tool_metadata.get("team_run_id")
                 team_run = get_team_run(team_run_id) if team_run_id else None
-                if team_run is not None and defn.name in {TEAM_PLANNER, "developer", "validator"}:
+                if team_run is not None and effective_defn.name in {TEAM_PLANNER, "developer", "validator"}:
                     checkpoint_label = (
-                        f"{defn.name}:{ctx.tool_metadata.get('work_item_id') or tracker.run_id or 'run'}"
+                        f"{effective_defn.name}:{ctx.tool_metadata.get('work_item_id') or tracker.run_id or 'run'}"
                     )
                     checkpoint_id = await team_run.checkpoint(label=checkpoint_label)
                     if team_metrics is not None:
                         team_metrics.setdefault("checkpoint_ids", []).append(checkpoint_id)
                     if printer is not None:
                         printer.raw_line(
-                            defn.name,
+                            effective_defn.name,
                             f"[checkpoint] id={checkpoint_id} label={checkpoint_label}",
                         )
             except Exception:
-                logger.debug("Failed to checkpoint after %s", defn.name, exc_info=True)
+                logger.debug("Failed to checkpoint after %s", effective_defn.name, exc_info=True)
 
         return {
-            "agent": defn.name,
+            "agent": effective_defn.name,
             "final_text": final_text,
             "team_run_id": ctx.tool_metadata.get("team_run_id"),
             "work_item_id": ctx.tool_metadata.get("work_item_id"),
@@ -349,8 +400,15 @@ def _make_executor_factory(
     *,
     repo_dir: str = _REPO_DIR,
     team_metrics: dict[str, Any] | None = None,
+    agent_overrides: dict[str, dict[str, Any]] | None = None,
 ):
-    runner = _make_runner(session_config, sandbox_id, printer, team_metrics=team_metrics)
+    runner = _make_runner(
+        session_config,
+        sandbox_id,
+        printer,
+        team_metrics=team_metrics,
+        agent_overrides=agent_overrides,
+    )
     build_query_ctx, build_posthook_ctx = _make_context_builders(sandbox_id, repo_dir)
 
     def factory(team_run):
@@ -374,7 +432,12 @@ def _make_atlas_scheduler_factory(
     team_metrics: dict[str, Any] | None = None,
     max_concurrent_jobs: int = 1,
 ):
-    runner = _make_runner(session_config, sandbox_id, printer, team_metrics=team_metrics)
+    runner = _make_runner(
+        session_config,
+        sandbox_id,
+        printer,
+        team_metrics=team_metrics,
+    )
     build_query_ctx, build_posthook_ctx = _make_context_builders(sandbox_id, repo_dir)
 
     def factory(team_run):
@@ -436,7 +499,18 @@ async def run_sweevo_team(
         logger.debug("Failed to ensure sweevo team session row", exc_info=True)
     root_prompt = _build_root_prompt(instance, repo_dir)
     budgets = _derive_sweevo_budgets(instance)
+    planner_controls = _derive_planner_controls(instance)
     atlas_parallelism = _derive_atlas_parallelism(instance, num_executors=num_executors)
+    planner_def = get_definition(TEAM_PLANNER)
+    planner_overrides: dict[str, dict[str, Any]] = {}
+    if planner_def is not None and planner_def.system_prompt:
+        planner_overrides[TEAM_PLANNER] = {
+            "system_prompt": (
+                f"{planner_def.system_prompt}\n\n{_build_sweevo_planner_runtime_prompt(instance)}"
+            ),
+            "tool_call_limit": planner_controls["tool_call_limit"],
+            "max_turns": planner_controls["max_turns"],
+        }
     team_metrics: dict[str, Any] = {
         "agent_runs": 0,
         "agent_counts": Counter(),
@@ -478,6 +552,7 @@ async def run_sweevo_team(
             printer,
             repo_dir=repo_dir,
             team_metrics=team_metrics,
+            agent_overrides=planner_overrides,
         ),
         atlas_scheduler_factory=_make_atlas_scheduler_factory(
             session_config,
@@ -573,5 +648,6 @@ async def run_sweevo_team(
             "max_shared_briefings": budgets.max_shared_briefings,
             "max_briefing_bytes": budgets.max_briefing_bytes,
         },
+        "planner_controls": planner_controls,
         "atlas_parallelism": atlas_parallelism,
     }

@@ -78,13 +78,14 @@ def test_budget_warning_silent_when_far_from_limit():
     assert build_budget_warning(_ctx(100, 50)) is None
 
 
-def test_budget_warning_fires_at_ten_percent():
-    # 100-call limit, 90 used → 10 remaining = threshold. Warns.
-    pair = build_budget_warning(_ctx(100, 90))
+def test_budget_warning_fires_at_quarter_budget_boundary():
+    # 100-call limit, 75 used → 25 remaining = threshold. Warns once.
+    pair = build_budget_warning(_ctx(100, 75))
     assert pair is not None
     history_msg, event = pair
     assert event.category == "budget_warning"
-    assert "10 of 100" in event.text
+    assert "25 of 100" in event.text
+    assert "75 already used" in event.text
 
 
 def test_budget_warning_fires_at_one_call_remaining():
@@ -96,7 +97,7 @@ def test_budget_warning_fires_at_one_call_remaining():
 
 
 def test_budget_warning_emits_once_per_remaining_count():
-    ctx = _ctx(10, 9)
+    ctx = _ctx(10, 7)
     assert build_budget_warning(ctx) is not None
     assert build_budget_warning(ctx) is None
 
