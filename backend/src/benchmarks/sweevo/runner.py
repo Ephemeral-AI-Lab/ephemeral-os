@@ -55,6 +55,8 @@ async def run_sweevo_with_agent(
     test_command: str | None = None,
     test_timeout: int = _DEFAULT_SWEEVO_TEST_TIMEOUT,
     resume_team_run_id: str | None = None,
+    resume_checkpoint_id: str | None = None,
+    resume_latest_checkpoint: bool = False,
     on_line: "Any" = None,
 ) -> dict[str, Any]:
     """Drive a team against a SWE-EVO instance and grade it.
@@ -95,7 +97,10 @@ async def run_sweevo_with_agent(
             if printer is not None:
                 _emit_progress(
                     printer,
-                    f"[resume] team_run_id={resume_team_run_id}",
+                    (
+                        f"[resume] team_run_id={resume_team_run_id} "
+                        f"checkpoint={resume_checkpoint_id or ('<latest>' if resume_latest_checkpoint else '<latest-state>')}"
+                    ),
                 )
             try:
                 team_result = await sweevo_team_runner.resume_sweevo_team(
@@ -103,6 +108,8 @@ async def run_sweevo_with_agent(
                     resume_team_run_id,
                     repo_dir=repo_dir,
                     printer=printer,
+                    checkpoint_id=resume_checkpoint_id,
+                    use_latest_checkpoint=resume_latest_checkpoint,
                 )
             finally:
                 try:

@@ -135,11 +135,12 @@ class MultiAgentEventPrinter:
             )
         elif isinstance(event, ToolExecutionCompleted):
             status = self._c("red", "ERROR") if event.is_error else self._c("green", "ok")
+            limit = 500 if event.is_error else 120
             self._line(
                 agent,
                 work_id,
                 f"<- tool_done:  {event.tool_name} [{status}] "
-                f"{_truncate(event.output, 120)}",
+                f"{_truncate(event.output, limit)}",
             )
         elif isinstance(event, ToolExecutionProgress):
             self._line(
@@ -151,7 +152,7 @@ class MultiAgentEventPrinter:
             self._line(
                 agent,
                 work_id,
-                f"x  cancelled:  {event.tool_name} {_truncate(event.reason, 120)}",
+                f"x  cancelled:  {event.tool_name} {_truncate(event.reason, 240)}",
             )
         elif isinstance(event, BackgroundTaskStarted):
             # run_subagent is a regular background tool — the only thing that
@@ -180,6 +181,7 @@ class MultiAgentEventPrinter:
                 )
         elif isinstance(event, BackgroundTaskCompleted):
             status = self._c("red", "ERROR") if event.is_error else self._c("green", "ok")
+            limit = 500 if event.is_error else 120
             if event.tool_name == "run_subagent":
                 child = self._work_to_agent.get(event.task_id, "subagent")
                 self._line(
@@ -187,21 +189,22 @@ class MultiAgentEventPrinter:
                     work_id,
                     f"<~ return:     {self._c('bold', child)} "
                     f"task_id={event.task_id} [{status}] "
-                    f"{_truncate(event.output, 120)}",
+                    f"{_truncate(event.output, limit)}",
                 )
             else:
                 self._line(
                     agent,
                     work_id,
                     f"<< bg_done:    {event.tool_name} [{status}] "
-                    f"{_truncate(event.output, 120)}",
+                    f"{_truncate(event.output, limit)}",
                 )
         elif isinstance(event, AssistantTurnComplete):
             # Print full thinking/text blocks once per completed turn.
             self._flush_buffers(agent, work_id)
         elif isinstance(event, SystemNotification):
             tag = f"[system{':' + event.category if event.category else ''}]"
-            self._line(agent, work_id, f"{tag} {_truncate(event.text, 200)}")
+            limit = 400 if event.category in {"budget_warning", "background_progress"} else 200
+            self._line(agent, work_id, f"{tag} {_truncate(event.text, limit)}")
 
     def raw_line(self, agent: str, body: str) -> None:
         """Print a free-form line with the same column/tag/color treatment.

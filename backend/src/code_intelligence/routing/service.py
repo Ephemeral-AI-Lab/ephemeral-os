@@ -37,6 +37,16 @@ from code_intelligence.types import (
 logger = logging.getLogger(__name__)
 
 
+def _rebind_service_sandbox(service: "CodeIntelligenceService", sandbox: Any) -> None:
+    """Refresh the sandbox handle carried by a cached CI service."""
+    if sandbox is None:
+        return
+    service._sandbox = sandbox
+    lsp = getattr(service, "lsp_client", None)
+    if lsp is not None:
+        lsp._sandbox = sandbox
+
+
 class CodeIntelligenceService:
     """Per-sandbox code intelligence runtime.
 
@@ -365,6 +375,7 @@ def get_code_intelligence(
     with _SERVICES_LOCK:
         existing = _SERVICES.get(sandbox_id)
         if existing is not None and existing.workspace_root == workspace_root:
+            _rebind_service_sandbox(existing, sandbox)
             return existing
         if sandbox_id not in _CREATION_LOCKS:
             _CREATION_LOCKS[sandbox_id] = threading.Lock()
@@ -375,6 +386,7 @@ def get_code_intelligence(
         with _SERVICES_LOCK:
             existing = _SERVICES.get(sandbox_id)
             if existing is not None and existing.workspace_root == workspace_root:
+                _rebind_service_sandbox(existing, sandbox)
                 return existing
             if existing is not None:
                 _SERVICES.pop(sandbox_id, None)

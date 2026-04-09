@@ -74,6 +74,8 @@ def build_work_item_metadata(team_run: "TeamRun", wi: "WorkItem") -> ExecutionMe
     # re-use this as their snapshot cutoff so atlas freshness can see
     # edits that land during the scout's read window.
     meta["work_item_started_at"] = time.time()
+    meta["retry_count"] = wi.retry_count
+    meta["max_retries"] = wi.max_retries
     return meta
 
 

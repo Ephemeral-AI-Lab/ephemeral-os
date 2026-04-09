@@ -362,6 +362,8 @@ class TeamRun:
         cls,
         store: TeamRunStore,
         team_run_id: str,
+        *,
+        checkpoint_id: str | None = None,
     ) -> "TeamRun":
         """Rehydrate a TeamRun from its durable event log.
 
@@ -387,6 +389,22 @@ class TeamRun:
         events = store.load_run(team_run_id)
         if not events:
             raise ValueError(f"no events for team_run_id={team_run_id!r}")
+
+        if checkpoint_id is not None:
+            checkpoint_event = next(
+                (
+                    ev
+                    for ev in events
+                    if ev.kind == "checkpoint_taken"
+                    and str(ev.data.get("checkpoint_id") or "") == checkpoint_id
+                ),
+                None,
+            )
+            if checkpoint_event is None:
+                raise ValueError(
+                    f"checkpoint_id={checkpoint_id!r} not found for team_run_id={team_run_id!r}"
+                )
+            events = [ev for ev in events if ev.seq <= checkpoint_event.seq]
 
         created = next((e for e in events if e.kind == "team_run_created"), None)
         if created is None:

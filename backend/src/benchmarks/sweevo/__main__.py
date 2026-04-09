@@ -51,6 +51,17 @@ def _build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Resume a persisted TeamRun in the existing sandbox instead of starting a fresh team run.",
     )
+    resume_group = p.add_mutually_exclusive_group()
+    resume_group.add_argument(
+        "--resume-checkpoint-id",
+        default=None,
+        help="When resuming a team run, restore state at this checkpoint id before continuing.",
+    )
+    resume_group.add_argument(
+        "--resume-latest-checkpoint",
+        action="store_true",
+        help="When resuming a team run, restore state at the latest durable checkpoint before continuing.",
+    )
     snapshot_group = p.add_mutually_exclusive_group()
     snapshot_group.add_argument(
         "--register-snapshot",
@@ -182,6 +193,8 @@ async def _cmd_run(args: argparse.Namespace) -> int:
         test_command=args.test_command,
         test_timeout=args.test_timeout,
         resume_team_run_id=args.resume_team_run_id,
+        resume_checkpoint_id=args.resume_checkpoint_id,
+        resume_latest_checkpoint=args.resume_latest_checkpoint,
         on_line=on_line,
     )
 
@@ -235,6 +248,24 @@ async def _cmd_run(args: argparse.Namespace) -> int:
                 f"session_id={team.get('session_id') or '-'}",
                 flush=True,
             )
+            if team.get("latest_checkpoint_id"):
+                print(
+                    f"  checkpoint: latest={team.get('latest_checkpoint_id')}",
+                    flush=True,
+                )
+            if team.get("resumed_from") or team.get("resumed_from_checkpoint"):
+                print(
+                    f"  resume: from_team_run={team.get('resumed_from') or '-'}  "
+                    f"checkpoint={team.get('resumed_from_checkpoint') or '-'}",
+                    flush=True,
+                )
+            checkpoint_ids = team.get("checkpoint_ids") or []
+            if checkpoint_ids:
+                print(
+                    "  checkpoint_tail: "
+                    + " ".join(str(checkpoint_id) for checkpoint_id in checkpoint_ids[-3:]),
+                    flush=True,
+                )
             print(
                 f"  stream: agents={stream_summary['totals']['agents']}  "
                 f"tool_calls={stream_summary['totals']['tool_calls']}  "
@@ -246,7 +277,7 @@ async def _cmd_run(args: argparse.Namespace) -> int:
                     f"  tokens: prompt={usage.get('prompt_tokens', 0)}  "
                     f"completion={usage.get('completion_tokens', 0)}  "
                     f"total={usage.get('total_tokens', 0)}  "
-                    f"calls={usage.get('call_count', 0)}",
+                    f"run_rows={usage.get('run_count', usage.get('call_count', 0))}",
                     flush=True,
                 )
             if budgets:
@@ -266,7 +297,7 @@ async def _cmd_run(args: argparse.Namespace) -> int:
                 rendered_models = " ".join(
                     (
                         f"{entry.get('model_id', '?')}"
-                        f"(total={entry.get('total_tokens', 0)},calls={entry.get('call_count', 0)})"
+                        f"(total={entry.get('total_tokens', 0)},run_rows={entry.get('run_count', entry.get('call_count', 0))})"
                     )
                     for entry in usage_by_model
                 )

@@ -77,6 +77,7 @@ class UsageStore:
                 "prompt_tokens": row[0],
                 "completion_tokens": row[1],
                 "total_tokens": row[2],
+                "run_count": row[3],
                 "call_count": row[3],
             }
 
@@ -98,6 +99,7 @@ class UsageStore:
                     "prompt_tokens": row[1],
                     "completion_tokens": row[2],
                     "total_tokens": row[3],
+                    "run_count": row[4],
                     "call_count": row[4],
                 }
                 for row in q.all()

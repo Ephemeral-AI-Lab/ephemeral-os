@@ -93,6 +93,9 @@ class WorkItem:
     local_id: str | None = None
     briefings: list[Briefing] = field(default_factory=list)
     dep_artifacts: list[DependencyArtifact] = field(default_factory=list)
+    retry_count: int = 0
+    max_retries: int = 2
+    replan_source_id: str | None = None
     created_at: datetime = field(default_factory=_utcnow)
     started_at: datetime | None = None
     finished_at: datetime | None = None
@@ -135,6 +138,24 @@ class Plan:
 
 
 @dataclass
+class RetryRequest:
+    """Posthook decision: retry the current work item."""
+
+    reason: str
+    retry_count: int = 0
+    max_retries: int = 2
+
+
+@dataclass
+class ReplanRequest:
+    """Posthook decision: replan at the current node level."""
+
+    reason: str
+    context: str
+    suggestion: str = ""
+
+
+@dataclass
 class AgentResult:
     """Return shape the Worker reconstructs from a finished run_query call."""
 
@@ -153,12 +174,15 @@ class BudgetConfig:
     default_work_item_timeout: float | None = None
     max_briefing_bytes: int = 32_000
     max_shared_briefings: int = 16
+    max_retries_per_item: int = 2
+    max_replans_per_run: int = 5
 
 
 @dataclass
 class BudgetState:
     work_items_used: int = 0
     artifact_bytes_used: int = 0
+    replans_used: int = 0
 
 
 @dataclass

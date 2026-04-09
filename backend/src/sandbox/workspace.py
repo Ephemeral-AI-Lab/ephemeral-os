@@ -2,11 +2,49 @@
 
 from __future__ import annotations
 
+import inspect
 import logging
 from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+
+def _sandbox_exec_is_async(sandbox: Any) -> bool:
+    """Best-effort detection for async Daytona sandbox wrappers.
+
+    Async sandbox warmup must stay lazy. Eager CI/LSP warmup against an async
+    sandbox can corrupt the shared aiohttp client across loop boundaries,
+    which then breaks later ``daytona_*`` tool calls with
+    ``RuntimeError('Event loop is closed')``.
+    """
+    process = getattr(sandbox, "process", None)
+    exec_fn = getattr(process, "exec", None)
+    return bool(exec_fn) and inspect.iscoroutinefunction(exec_fn)
+
+
+def _ci_sandbox_handle(sandbox_id: str | None, sandbox: Any) -> Any:
+    """Return a sandbox handle safe for CI warmup.
+
+    Worker tools use an async sandbox so shell/file operations can be awaited
+    and cancelled. CI warmup should not reuse that same async handle because
+    some CI/LSP warmup paths are synchronous and may survive across loop
+    boundaries. When we detect an async Daytona sandbox, resolve a separate
+    sync handle for CI instead.
+    """
+    if not sandbox_id or sandbox is None or not _sandbox_exec_is_async(sandbox):
+        return sandbox
+    try:
+        from sandbox.service import SandboxService
+
+        return SandboxService().get_sandbox_object(sandbox_id)
+    except Exception:
+        logger.debug(
+            "Could not resolve sync sandbox handle for CI warmup on %s; falling back to async handle",
+            sandbox_id,
+            exc_info=True,
+        )
+        return sandbox
 
 
 def discover_workspace(sandbox: Any) -> str | None:
@@ -45,10 +83,11 @@ def inject_code_intelligence(
         try:
             from code_intelligence.routing.service import get_code_intelligence
 
+            ci_sandbox = _ci_sandbox_handle(sandbox_id, sandbox)
             svc = get_code_intelligence(
                 sandbox_id=sandbox_id,
                 workspace_root=workspace_root,
-                sandbox=sandbox,
+                sandbox=ci_sandbox,
             )
             try:
                 if Path(workspace_root).is_dir():

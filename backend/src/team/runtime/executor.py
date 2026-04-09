@@ -9,7 +9,7 @@ from collections.abc import Awaitable
 from typing import TYPE_CHECKING, Any, Callable
 
 from hooks.agent_posthook import NoPosthookOutput, execute_with_posthook
-from team.models import AgentResult, Plan
+from team.models import AgentResult, Plan, ReplanRequest, RetryRequest
 from team.runtime.context_builder import TeamAgentContext
 from tools.posthook import SubmittedSummary
 
@@ -103,6 +103,12 @@ class Executor:
                 "no_posthook_submission: team agents must submit via a posthook "
                 "(use submit_summary_agent if no domain-specific posthook applies)",
             )
+            return
+        if isinstance(submitted, RetryRequest):
+            await dispatcher.retry_work_item(wi_id, submitted)
+            return
+        if isinstance(submitted, ReplanRequest):
+            await dispatcher.request_replan(wi_id, submitted)
             return
         if isinstance(submitted, Plan):
             result = AgentResult(artifact=None, summary="", submitted_plan=submitted)

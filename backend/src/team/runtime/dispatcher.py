@@ -458,3 +458,150 @@ class Dispatcher:
 
                 if self._compute_readiness(wi):
                     self._promote_to_ready(wi)
+
+    # ---- replan: lateral DAG mutation ------------------------------------
+
+    async def apply_replan(
+        self,
+        replan_wi_id: str,
+        add_specs: list[dict],
+        cancel_ids: list[str],
+        target_depth: int,
+        target_parent_id: str | None,
+        target_root_id: str,
+    ) -> dict[str, int]:
+        """Atomically cancel stale items and insert corrective items at the target level.
+
+        Unlike ``complete()`` + ``validate_plan_phase_b`` (which always creates
+        children at ``depth + 1``), this method inserts items at a specified
+        depth and parent — enabling true sibling-level replacement.
+
+        ``cancel_ids`` must share the same ``parent_id`` as the target to
+        enforce scoping to the current plan level.
+        """
+        from team.models import Briefing
+
+        async with self.lock:
+            # --- Validate cancellations (scoped to same parent) ---
+            for cid in cancel_ids:
+                wi = self.graph.get(cid)
+                if wi is None:
+                    raise InvalidPlan(f"cancel target {cid} not found")
+                if wi.parent_id != target_parent_id:
+                    raise InvalidPlan(
+                        f"cancel target {cid} has parent {wi.parent_id!r}, "
+                        f"but replan is scoped to parent {target_parent_id!r}"
+                    )
+                if wi.status not in (WorkItemStatus.PENDING, WorkItemStatus.READY):
+                    raise InvalidPlan(
+                        f"cancel target {cid} is {wi.status.value}; "
+                        f"can only cancel PENDING or READY items"
+                    )
+
+            # --- Resolve local_ids ---
+            local_to_new: dict[str, str] = {}
+            for spec in add_specs:
+                lid = spec.get("local_id")
+                if lid:
+                    if lid in local_to_new:
+                        raise InvalidPlan(f"duplicate local_id '{lid}'")
+                    local_to_new[lid] = self.new_id()
+
+            # --- Build new WorkItems ---
+            new_items: list[WorkItem] = []
+            for spec in add_specs:
+                lid = spec.get("local_id")
+                new_id = local_to_new.get(lid, self.new_id()) if lid else self.new_id()
+                resolved_deps: list[str] = []
+                for dep in spec.get("deps") or []:
+                    if dep in local_to_new:
+                        resolved_deps.append(local_to_new[dep])
+                    elif dep in self.graph:
+                        resolved_deps.append(dep)
+                    else:
+                        raise InvalidPlan(f"dep '{dep}' not found")
+
+                briefings = [Briefing(**b) for b in (spec.get("briefings") or [])]
+                new_items.append(
+                    WorkItem(
+                        id=new_id,
+                        team_run_id=self.team_run_id,
+                        agent_name=spec["agent_name"],
+                        status=WorkItemStatus.PENDING,
+                        kind=WorkItemKind(spec.get("kind", "atomic")),
+                        deps=resolved_deps,
+                        parent_id=target_parent_id,
+                        root_id=target_root_id,
+                        depth=target_depth,
+                        local_id=lid,
+                        payload=dict(spec.get("payload") or {}),
+                        timeout_seconds=spec.get("timeout_seconds"),
+                        briefings=briefings,
+                    )
+                )
+
+            # --- Budget check ---
+            if self.budget_state.work_items_used + len(new_items) > self.budgets.max_work_items:
+                raise BudgetExceeded("max_work_items would be exceeded by replan")
+
+            # --- Cycle detection on merged graph ---
+            cancelled_set = set(cancel_ids)
+            combined_adj: dict[str, list[str]] = {}
+            for wi_id_key, wi in self.graph.items():
+                if wi_id_key not in cancelled_set:
+                    combined_adj[wi_id_key] = list(wi.deps)
+            for nwi in new_items:
+                combined_adj[nwi.id] = list(nwi.deps)
+
+            # Topological sort check (DFS-based cycle detection)
+            visited: set[str] = set()
+            on_stack: set[str] = set()
+
+            def _has_cycle_from(node: str) -> bool:
+                if node in on_stack:
+                    return True
+                if node in visited:
+                    return False
+                visited.add(node)
+                on_stack.add(node)
+                for nb in combined_adj.get(node, []):
+                    if _has_cycle_from(nb):
+                        return True
+                on_stack.discard(node)
+                return False
+
+            for start in combined_adj:
+                if _has_cycle_from(start):
+                    raise InvalidPlan("replan would create a cycle in the combined graph")
+
+            # --- Apply atomically ---
+            # 1. Cancel stale items + cascade dependents
+            for cid in cancel_ids:
+                wi = self.graph[cid]
+                wi.status = WorkItemStatus.CANCELLED
+                wi.finished_at = _utcnow()
+                wi.failure_reason = f"cancelled_by_replan_{replan_wi_id}"
+                self._emit(
+                    make_work_item_status(
+                        self.team_run_id, cid, "cancelled",
+                        finished_at=wi.finished_at.isoformat(),
+                        failure_reason=wi.failure_reason,
+                    )
+                )
+                self._cascade_cancel(cid)
+
+            # 2. Insert new items
+            for nwi in new_items:
+                self.graph[nwi.id] = nwi
+                self.budget_state.work_items_used += 1
+                self._emit(make_work_item_added(self.team_run_id, work_item_to_dict(nwi)))
+
+            if new_items:
+                self._emit_budget()
+
+            # 3. Promote newly ready items
+            for nwi in new_items:
+                if self._compute_readiness(nwi):
+                    self._promote_to_ready(nwi)
+
+            return {"added": len(new_items), "cancelled": len(cancel_ids)}

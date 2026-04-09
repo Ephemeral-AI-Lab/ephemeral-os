@@ -142,11 +142,9 @@ def _derive_atlas_parallelism(instance: SWEEvoInstance, *, num_executors: int) -
 
 
 def _derive_planner_runtime_limits(instance: SWEEvoInstance) -> dict[str, int]:
-    """Return benchmark-specific planner limits that warn before thrashing."""
-    size = str(summarize_sweevo_instance(instance).get("size") or "medium")
-    base_limit = {"small": 10, "medium": 12, "large": 14}.get(size, 12)
-    extra_targets = max(0, len(instance.fail_to_pass) - 1)
-    tool_call_limit = min(20, base_limit + min(6, extra_targets * 2))
+    """Return benchmark-specific planner limits."""
+    del instance
+    tool_call_limit = 100
     max_turns = max(48, tool_call_limit * 4)
     return {
         "tool_call_limit": tool_call_limit,
@@ -158,6 +156,13 @@ def _build_root_prompt(instance: SWEEvoInstance, repo_dir: str) -> str:
     summary = summarize_sweevo_instance(instance)
     size = str(summary.get("size") or "medium")
     frontier_cap = _recommended_frontier_cap(instance)
+    file_counts: Counter[str] = Counter()
+    for test_id in instance.fail_to_pass:
+        file_counts[test_id.split("::", 1)[0]] += 1
+    rendered_clusters = "\n".join(
+        f"- {path}: {count} fail-to-pass target(s)"
+        for path, count in sorted(file_counts.items())
+    )
     return (
         f"You are leading a coding team on a SWE-EVO benchmark instance.\n"
         f"Repository: {instance.repo}\n"
@@ -168,39 +173,26 @@ def _build_root_prompt(instance: SWEEvoInstance, repo_dir: str) -> str:
         f"without regressing the pass-to-pass coverage.\n\n"
         f"The SWE-EVO test patch has already been applied inside the sandbox, so any newly added "
         f"or modified fail-to-pass tests are present in the working tree.\n\n"
+        f"## Fail-To-Pass Summary\n"
+        f"{rendered_clusters}\n\n"
         f"## Fail-To-Pass Targets\n"
         f"{json.dumps(instance.fail_to_pass, indent=2)}\n\n"
         f"## Pass-To-Pass Guardrail\n"
         f"{json.dumps(instance.pass_to_pass, indent=2)}\n\n"
-        f"## Background Context\n"
-        f"The raw problem statement / release notes are intentionally omitted from the root planner "
-        f"prompt because they are low-signal for decomposition on SWE-EVO. Use the live test targets, "
-        f"current source ownership, and grading command above as the source of truth.\n\n"
         f"## Grading command\n"
         f"After your team finishes, this exact command will be executed in the sandbox "
         f"to grade the work:\n```\n{instance.test_cmds}\n```\n\n"
-        f"## Instance Notes\n"
+        f"## Runtime Notes\n"
         f"- Instance size: {size} ({summary.get('bullet_count', 0)} changelog bullets, "
         f"{len(instance.fail_to_pass)} fail-to-pass target(s)).\n"
         f"- Recommended first-ready frontier cap: {frontier_cap} benchmark-critical "
         f"implementation lane(s).\n"
         f"- Stable SWE-EVO workflow policy lives in the declared skills for this run; "
-        f"use the test targets and grading command above as the source of truth.\n\n"
-        f"## Instructions\n"
-        f"- Decompose the work into concrete developer and validator WorkItems.\n"
-        f"- Developers edit the repo in the sandbox via sandbox_operations tools.\n"
-        f"- Stay inside {repo_dir}.\n"
-        f"- Do NOT modify test files unless the task explicitly asks for it.\n"
-        f"- Start from the failing tests or failing behavior, not from the changelog prose.\n"
-        f"- The root planner must not inspect dependency/version metadata or ``pyproject.toml`` as a "
-        f"first-step diagnosis. If a manifest hypothesis remains after source ownership is clear, hand "
-        f"it to a developer lane instead of keeping the root planner in version archaeology.\n"
-        f"- Treat the named fail-to-pass tests as reproduction targets, not as a queue of large "
-        f"test-file scouts. Prefer source ownership once the failing surface is known.\n"
-        f"- Validators should run the grading command (or a tighter subset) and "
-        f"report PASS/FAIL with evidence."
+        f"use the test targets and grading command above as the source of truth.\n"
         f"\n- Fix the repository checkout itself. Do not rely on ad hoc sandbox-only "
-        f"package upgrades or ambient environment mutations as the benchmark fix."
+        f"package upgrades or ambient environment mutations as the benchmark fix.\n"
+        f"- Stay inside {repo_dir} and treat the named tests as reproduction signals, not as a "
+        f"reason to restate the changelog or inspect unrelated manifests from the root planner."
     )
 
 
@@ -220,6 +212,128 @@ def _extract_final_text(messages: list[Any]) -> str:
         if text:
             return str(text).strip()
     return ""
+
+
+def _extract_last_json_object(text: str) -> dict[str, Any] | None:
+    stripped = text.strip()
+    if not stripped:
+        return None
+
+    decoder = json.JSONDecoder()
+    candidates = [stripped]
+    first_brace = stripped.find("{")
+    last_brace = stripped.rfind("}")
+    if 0 <= first_brace < last_brace:
+        inner = stripped[first_brace : last_brace + 1]
+        if inner != stripped:
+            candidates.append(inner)
+
+    for candidate in candidates:
+        try:
+            payload, end = decoder.raw_decode(candidate)
+        except ValueError:
+            continue
+        if isinstance(payload, dict) and candidate[end:].strip() == "":
+            return payload
+    return None
+
+
+def _matches_posthook_payload(payload: dict[str, Any], metadata_key: str) -> bool:
+    if metadata_key == "submitted_plan":
+        return isinstance(payload.get("items"), list)
+    if metadata_key == "submitted_summary":
+        return isinstance(payload.get("summary"), str)
+    if metadata_key == "submitted_atlas":
+        return isinstance(payload.get("chunks"), list)
+    return False
+
+
+def _extract_posthook_input_text(
+    messages: list[ConversationMessage] | list[dict[str, Any]],
+    metadata_key: str | None,
+) -> str | None:
+    """Return the latest assistant JSON payload accepted by the posthook."""
+    if not metadata_key:
+        return None
+
+    def _message_role(msg: ConversationMessage | dict[str, Any]) -> str | None:
+        if isinstance(msg, dict):
+            role = msg.get("role")
+            return role if isinstance(role, str) else None
+        return getattr(msg, "role", None)
+
+    def _message_blocks(msg: ConversationMessage | dict[str, Any]) -> list[Any]:
+        if isinstance(msg, dict):
+            content = msg.get("content")
+            return content if isinstance(content, list) else []
+        return list(getattr(msg, "content", []))
+
+    def _block_text(block: Any) -> str | None:
+        if isinstance(block, dict):
+            text = block.get("text")
+            return text if isinstance(text, str) else None
+        text = getattr(block, "text", None)
+        return text if isinstance(text, str) else None
+
+    for msg in reversed(messages):
+        if _message_role(msg) != "assistant":
+            continue
+        for block in reversed(_message_blocks(msg)):
+            text = _block_text(block)
+            if text is None:
+                continue
+            payload = _extract_last_json_object(text)
+            if payload is None or not _matches_posthook_payload(payload, metadata_key):
+                continue
+            return json.dumps(payload, ensure_ascii=False)
+    return None
+
+
+def _estimate_final_context(messages: list[ConversationMessage] | None) -> int:
+    """Best-effort token estimate for the final compacted provider context."""
+    if not messages:
+        return 0
+    try:
+        from compaction import estimate_message_tokens
+
+        return estimate_message_tokens(messages)
+    except Exception:
+        logger.debug("Failed to estimate final compacted context", exc_info=True)
+        return 0
+
+
+def _persist_benchmark_session(
+    *,
+    session_config: Any,
+    agent: Any,
+    summary_text: str,
+) -> None:
+    """Persist the latest benchmark agent history into the shared session row."""
+    try:
+        from server.app_factory import session_store
+    except Exception:
+        session_store = None
+    if session_store is None or not getattr(session_store, "is_ready", False):
+        return
+
+    qc = getattr(agent, "query_context", None)
+    try:
+        session_store.upsert(
+            session_id=getattr(session_config, "session_id", ""),
+            cwd=session_config.cwd,
+            model=agent.model,
+            system_prompt=getattr(qc, "system_prompt", None),
+            messages=[m.model_dump(mode="json") for m in agent.display_messages],
+            full_messages=[m.model_dump(mode="json") for m in agent.display_messages],
+            usage=agent.total_usage.model_dump() if agent.total_usage else {},
+            session_state=qc.session_state.to_dict()
+            if qc is not None and getattr(qc, "session_state", None) is not None
+            else None,
+            summary=summary_text[:80],
+            message_count=len(agent.display_messages),
+        )
+    except Exception:
+        logger.debug("Failed to persist benchmark session snapshot", exc_info=True)
 
 
 def _tool_names_from_messages(messages: list[ConversationMessage]) -> list[str]:
@@ -281,6 +395,9 @@ def _make_runner(
             latest_user_prompt=prompt,
             sandbox_id=sandbox_id,
         )
+        compacted_before = None
+        if getattr(agent.query_context, "session_state", None) is not None:
+            compacted_before = int(agent.query_context.session_state.compacted)
 
         # Redirect the spawned agent's tool_metadata to the team ctx so
         # submit_plan / submit_summary tools write into the slot that
@@ -308,6 +425,7 @@ def _make_runner(
         event_count = 0
         run_error: str | None = None
         final_text = ""
+        posthook_input_text = None
         try:
             async for event in agent.run(prompt):
                 event_count += 1
@@ -338,13 +456,40 @@ def _make_runner(
         finally:
             qc = getattr(agent, "query_context", None)
             final_text = _extract_final_text(agent.display_messages)
+            posthook_key = getattr(getattr(effective_defn, "posthook", None), "metadata_key", None)
+            posthook_input_text = _extract_posthook_input_text(
+                list(agent.display_messages),
+                posthook_key,
+            )
+            session_state = getattr(qc, "session_state", None)
+            compacted_total = int(getattr(session_state, "compacted", 0) or 0)
+            new_compactions = 0
+            if session_state is not None and compacted_before is not None:
+                new_compactions = compacted_total - compacted_before
+            final_context_tokens = _estimate_final_context(
+                getattr(qc, "api_messages_snapshot", None),
+            )
+            response_payload = {
+                "final_text": final_text,
+                "posthook_input_text": posthook_input_text,
+                "tool_calls_used": int(getattr(qc, "tool_calls_used", 0) or 0),
+                "tool_call_limit": getattr(qc, "tool_call_limit", None),
+                "final_context_tokens": final_context_tokens,
+                "compacted": compacted_total,
+            }
             tracker.finish(
                 status="failed" if run_error else "completed",
                 display_messages=list(agent.display_messages),
                 api_messages_snapshot=getattr(qc, "api_messages_snapshot", None),
+                response=response_payload,
                 error=run_error,
                 final_text=final_text,
                 event_count=event_count,
+            )
+            _persist_benchmark_session(
+                session_config=session_config,
+                agent=agent,
+                summary_text=final_text or prompt,
             )
             try:
                 from server.app_factory import usage_store
@@ -359,14 +504,28 @@ def _make_runner(
                     model_id=agent.model,
                     usage=agent.total_usage,
                 )
-            if printer is not None and agent.total_usage is not None:
-                total = agent.total_usage.input_tokens + agent.total_usage.output_tokens
+            if printer is not None:
+                prompt_tokens = int(getattr(agent.total_usage, "input_tokens", 0) or 0)
+                completion_tokens = int(getattr(agent.total_usage, "output_tokens", 0) or 0)
+                total = prompt_tokens + completion_tokens
+                tool_calls_used = int(getattr(qc, "tool_calls_used", 0) or 0)
+                tool_call_limit = getattr(qc, "tool_call_limit", None)
+                usage_line = (
+                    f"[usage] prompt={prompt_tokens} "
+                    f"completion={completion_tokens} total={total} "
+                    f"tool_calls={tool_calls_used}"
+                )
+                if tool_call_limit is not None:
+                    usage_line += f"/{tool_call_limit}"
+                usage_line += f" final_context={final_context_tokens}"
+                if compacted_before is not None:
+                    usage_line += (
+                        f" compactions={'+1' if new_compactions > 0 else '0'}"
+                        f"(total={compacted_total})"
+                    )
                 printer.raw_line(
                     effective_defn.name,
-                    (
-                        f"[usage] prompt={agent.total_usage.input_tokens} "
-                        f"completion={agent.total_usage.output_tokens} total={total}"
-                    ),
+                    usage_line,
                 )
 
         if run_error is None:
@@ -409,6 +568,7 @@ def _make_runner(
             "work_item_id": ctx.tool_metadata.get("work_item_id"),
             "agent_run_id": ctx.tool_metadata.get("agent_run_id"),
             "checkpoint_id": checkpoint_id,
+            "posthook_input_text": posthook_input_text,
         }
 
     return _run
@@ -455,7 +615,13 @@ def _make_context_builders(
     repo_dir: str = _REPO_DIR,
 ):
     def build_query_ctx(defn, team_run, wi):
-        base_prompt = _work_item_base_prompt(wi.payload)
+        if wi.depth == 0 and wi.agent_name == TEAM_PLANNER:
+            # The root planner already receives the benchmark prompt via
+            # ``team_run.user_request``. Re-rendering the full payload here
+            # duplicates the prompt and the full FAIL_TO_PASS list.
+            base_prompt = team_run.user_request
+        else:
+            base_prompt = _work_item_base_prompt(wi.payload)
         user_message = build_initial_user_message(team_run, wi, base_prompt)
         meta = build_work_item_metadata(team_run, wi)
         meta["sandbox_id"] = team_run.sandbox_id or sandbox_id
@@ -476,9 +642,13 @@ def _make_context_builders(
                 value = work_result.get(key)
                 if value:
                     meta[key] = value
-            final_text = work_result.get("final_text")
-            if isinstance(final_text, str) and final_text.strip():
-                user_message = final_text
+            posthook_input_text = work_result.get("posthook_input_text")
+            if isinstance(posthook_input_text, str) and posthook_input_text.strip():
+                user_message = posthook_input_text
+            else:
+                final_text = work_result.get("final_text")
+                if isinstance(final_text, str) and final_text.strip():
+                    user_message = final_text
         return TeamAgentContext(
             user_message=user_message,
             tool_metadata=meta,
@@ -656,6 +826,7 @@ def _finalize_team_result(
     printer: MultiAgentEventPrinter | None,
     checkpoint_ids: list[str] | None = None,
     resumed_from: str | None = None,
+    resumed_from_checkpoint: str | None = None,
 ) -> dict[str, Any]:
     status = tr.status
     work_items = len(tr.dispatcher.graph)
@@ -709,7 +880,7 @@ def _finalize_team_result(
                 f"prompt={usage_summary['prompt_tokens']} "
                 f"completion={usage_summary['completion_tokens']} "
                 f"total={usage_summary['total_tokens']} "
-                f"calls={usage_summary['call_count']}"
+                f"run_rows={usage_summary.get('run_count', usage_summary.get('call_count', 0))}"
             ),
         )
         printer.raw_line(
@@ -732,6 +903,7 @@ def _finalize_team_result(
         "usage": usage_summary,
         "usage_by_model": usage_by_model,
         "checkpoint_ids": resolved_checkpoint_ids,
+        "latest_checkpoint_id": resolved_checkpoint_ids[-1] if resolved_checkpoint_ids else None,
         "max_depth_reached": max_depth_reached,
         "agent_runs": int(team_metrics["agent_runs"]),
         "agent_counts": dict(team_metrics["agent_counts"]),
@@ -744,6 +916,7 @@ def _finalize_team_result(
         },
         "atlas_parallelism": atlas_parallelism,
         "resumed_from": resumed_from,
+        "resumed_from_checkpoint": resumed_from_checkpoint,
     }
 
 
@@ -845,6 +1018,8 @@ async def resume_sweevo_team(
     repo_dir: str = _REPO_DIR,
     printer: MultiAgentEventPrinter | None = None,
     num_executors: int = _DEFAULT_NUM_EXECUTORS,
+    checkpoint_id: str | None = None,
+    use_latest_checkpoint: bool = False,
 ) -> dict[str, Any]:
     """Resume a persisted SWE-EVO TeamRun in a fresh process."""
     try:
@@ -856,7 +1031,15 @@ async def resume_sweevo_team(
 
     session_factory = ensure_runtime_stores_ready()
     event_store = _build_benchmark_event_store(session_factory=session_factory)
-    tr = TeamRun.resume_from(event_store, team_run_id)
+    checkpoint_ids = _checkpoint_ids_from_store(event_store, team_run_id)
+    resolved_checkpoint_id = checkpoint_id
+    if resolved_checkpoint_id is None and use_latest_checkpoint and checkpoint_ids:
+        resolved_checkpoint_id = checkpoint_ids[-1]
+    tr = TeamRun.resume_from(
+        event_store,
+        team_run_id,
+        checkpoint_id=resolved_checkpoint_id,
+    )
     if not tr.sandbox_id:
         raise ValueError(
             f"team run {team_run_id!r} cannot be resumed: missing sandbox_id in persisted header"
@@ -877,7 +1060,8 @@ async def resume_sweevo_team(
             (
                 "[resume] "
                 f"team_run_id={team_run_id} sandbox_id={tr.sandbox_id} "
-                f"durable_checkpoints={len(_checkpoint_ids_from_store(event_store, team_run_id))}"
+                f"durable_checkpoints={len(checkpoint_ids)} "
+                f"checkpoint={resolved_checkpoint_id or '<latest-state>'}"
             ),
         )
 
@@ -914,6 +1098,7 @@ async def resume_sweevo_team(
         budgets=budgets,
         atlas_parallelism=atlas_parallelism,
         printer=printer,
-        checkpoint_ids=_checkpoint_ids_from_store(event_store, team_run_id),
+        checkpoint_ids=checkpoint_ids,
         resumed_from=team_run_id,
+        resumed_from_checkpoint=resolved_checkpoint_id,
     )

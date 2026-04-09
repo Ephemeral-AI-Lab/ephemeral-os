@@ -93,8 +93,11 @@ def _register_builtins() -> None:
     from tools.posthook.toolkits import (
         SubmitAtlasToolkit,
         SubmitPlanToolkit,
+        SubmitReplanPosthookToolkit,
+        SubmitRetryPosthookToolkit,
         SubmitSummaryToolkit,
     )
+    from tools.replan.toolkit import ReplanToolkit
     from tools.subagent import SubagentToolkit
     from tools.team_context import TeamContextToolkit
 
@@ -106,6 +109,9 @@ def _register_builtins() -> None:
     register_toolkit_class("submit_plan_posthook", SubmitPlanToolkit)
     register_toolkit_class("submit_summary_posthook", SubmitSummaryToolkit)
     register_toolkit_class("submit_atlas_posthook", SubmitAtlasToolkit)
+    register_toolkit_class("posthook_submit_retry", SubmitRetryPosthookToolkit)
+    register_toolkit_class("posthook_submit_replan", SubmitReplanPosthookToolkit)
+    register_toolkit_class("replan_operations", ReplanToolkit)
 
 
 _register_builtins()
