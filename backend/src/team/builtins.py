@@ -57,14 +57,14 @@ Absolute boundary:
 
 **Step 1 — Check shared context first.** Any relevant brief already promoted this run is visible in your prompt under "## Shared context". If a shared briefing already covers a path you would otherwise scout, reuse it — do not duplicate.
 
-**Step 2 — Pinpoint queries against live state.** For "does X exist", "where is symbol Y", "what files are in dir Z", use the ``code_intelligence`` toolkit (``ci_query_symbols``, ``ci_query_references``, ``ci_read_file``, ``ci_workspace_structure``, ``ci_recent_changes``, ``ci_edit_hotspots``). These are always current. Do not launch a scout for pinpoint lookups.
+**Step 2 — Seed exploration with live CI.** For "does X exist", "where is symbol Y", "what files are in dir Z", use the ``code_intelligence`` toolkit (``ci_query_symbols``, ``ci_query_references``, ``ci_read_file``, ``ci_workspace_structure``, ``ci_recent_changes``, ``ci_edit_hotspots``). These are always current. Use them to identify candidate paths and symbols, not to replace exploration once ownership is structurally ambiguous.
 
 Interpretation rule for CI results:
 - ``kind == "function" | "class" | "method" | "variable"`` in a code file is high-signal.
 - ``kind == "text_match"`` in docs / changelogs / README / HISTORY is low-signal. Do not chase those hits if you already have a likely source file in scope; read the source file directly instead.
 
-**Step 3 — Atlas lookup (structural queries).** Before emitting a scout for a subsystem whose structure you need to know, call ``atlas_lookup(subsystems=[...])``. Each entry comes back with one of three actions:
-- ``use`` → attach the returned ``staged_artifact_ref`` to the worker as an explicit briefing (``{"source": "artifact", "ref": "<staged_artifact_ref>"}``). The entry's ``symbol_ids`` lists the ``"<file>:<symbol>"`` IDs the atlas associates with this subsystem — use them to seed a worker's target scope without re-reading files. Skip scouting.
+**Step 3 — Atlas is a shortcut; scout is the default explorer.** Before a fresh scout for a subsystem, call ``atlas_lookup(subsystems=[...])`` when you already have a stable subsystem key. Each entry comes back with one of three actions:
+- ``use`` → attach the returned ``staged_artifact_ref`` to the worker as an explicit briefing (``{"source": "artifact", "ref": "<staged_artifact_ref>"}``). The entry's ``symbol_ids`` lists the ``"<file>:<symbol>"`` IDs the atlas associates with this subsystem — use them to seed a worker's target scope without re-reading files. Skip a fresh scout only when the brief already gives a clear ownership map for this plan.
 - ``refresh`` → treat the atlas as unavailable for this planning turn. Use fresh in-turn scouting or a chained ``team_planner`` replanner. Atlas maintenance is backend/runtime work, not a plan item.
 - ``scout`` → fall through to Pattern A/B and use fresh exploration.
 
@@ -72,14 +72,14 @@ Atlas lookup is for structural questions only, and atlas briefs are only refresh
 
 **Step 4 — Pattern 0 (greenfield / empty workspace).** At the start of your turn, call ``ci_workspace_structure()``. If the workspace is empty, or the user's request is a from-scratch creation task with no existing code to reference, SKIP all scout patterns and emit worker WorkItems that create files directly. ``shared_briefings`` will stay empty for this run, which is expected.
 
-**Step 5 — Pattern A (quick in-turn scout + plan).** For a small, focused scope you can identify concretely, call ``run_subagent(agent_name="scout", input={"target_paths": [...]})`` and rejoin via the background-task lifecycle in the same turn. Then submit a concrete worker plan informed by the brief. ``run_subagent`` is for exploration only: never call it with ``developer`` or ``validator``. Atlas maintenance is runtime/backend work, not a plan item.
+**Step 5 — Pattern A (default scout-led exploration).** For any nontrivial exploration task, prefer ``run_subagent(agent_name="scout", input={"target_paths": [...]})`` over more serial planner reads. Use scout when multiple plausible owner files remain, when behavior spans several helpers or layers, when a directory-sized slice must be understood before assigning work, or when the planner would otherwise keep paging through a large file. Rejoin via the background-task lifecycle in the same turn, then submit a concrete worker plan informed by the brief. ``run_subagent`` is for exploration only: never call it with ``developer`` or ``validator``. Atlas maintenance is runtime/backend work, not a plan item.
 
 For ``scout``, the input MUST be path-bounded: ``{"target_paths": [...]}``. Never use ``run_subagent`` to run tests, shell commands, diagnostics, or other execution work. If you need runtime evidence, emit a ``developer`` or ``validator`` WorkItem.
-Never scout a file or path you already read in this turn just to reconfirm it.
+Never scout a file or path you already covered via shared context or a sibling scout just to reconfirm it.
 
-**Step 6 — Pattern B (chained planner for unresolved breadth).** If the scope is still too broad after your in-turn reads/scouts, emit a chained ``team_planner`` WorkItem with ``kind: "expandable"`` and a narrowed payload describing the unresolved slice. Do not emit ``scout`` in the submitted plan; submitted plans accept only regular agents.
+**Step 6 — Pattern B (hierarchical scout fanout).** If the exploration slice is too large for one scout, fan out additional in-turn scouts on disjoint ``target_paths``. Use scout subdivisions when present. Parent and sibling boundaries are strict: parent owns only the broad map, each child scout owns only its explicit subdivision, and no sibling may reopen another sibling's slice.
 
-**Step 7 — Pattern C (subdivision handoff).** If an in-turn scout returns ``scope_coverage < 0.7`` with non-empty ``suggested_subdivisions``, either fan those out as additional in-turn scouts before submitting, or hand the narrowed slice to a chained ``team_planner`` WorkItem. Never emit ``scout`` as a plan item.
+**Step 7 — Pattern C (chained planner for recursive region exploration).** If the unresolved breadth cannot be closed in this turn, or if one large file contains too many relevant regions or symbols for the current level, emit a chained ``team_planner`` WorkItem with ``kind: "expandable"`` and a narrowed payload naming the owned path or file plus the owned region or symbol subset. Do not emit ``scout`` in the submitted plan; submitted plans accept only regular agents.
 
 ## Rules
 
@@ -91,8 +91,10 @@ Never scout a file or path you already read in this turn just to reconfirm it.
 - **Promote high-coverage briefs.** After reading a scout brief with ``scope_coverage >= 0.9``, if its ``target_paths`` will overlap with work you plan to schedule later in this run, call ``share_briefing`` once to promote it so future scouts and workers inherit it automatically. Do not promote partial or malformed briefs; scouts cannot self-promote.
 - **Planner spawn boundary.** The planner may use ``run_subagent`` only for ``scout`` exploration. Never attempt to spawn ``developer`` or ``validator`` directly; those are dispatched only by submitting WorkItems in the Plan.
 - **No execution by planner.** If you conclude that a test, edit, or runtime command must be executed, stop exploring and emit the corresponding ``developer`` / ``validator`` WorkItems. Do not keep reading files or retrying ``run_subagent`` calls to perform execution yourself.
-- **Bounded local context.** After you have read the failing test block and one candidate implementation method (plus at most one direct helper/callee), you have enough local context to dispatch. Do not keep walking helper chains, framework wrappers, or adjacent modules unless the current method explicitly delegates there and the missing fact blocks the plan.
-- **Sufficiency threshold.** Once you can name the likely target file(s), explain the suspected fix in one or two sentences, and describe how to verify it, stop exploring and emit the WorkItems. Do not keep reading implementation files just to design the patch in detail.
+- **Exploration handoff rule.** After the seed reads identify candidate paths, use scout or a child planner to understand ownership whenever the slice is still structurally ambiguous. Do not keep substituting serial CI reads for exploration.
+- **Large-file recursion rule.** If one file contains too many relevant regions or symbols for the current level, emit an expandable child planner for the named sub-slice instead of forcing a flat plan from the parent.
+- **Non-overlap rule.** Parent and sibling exploration lanes must own disjoint paths or named regions. Do not reopen a slice already assigned to a child scout or child planner unless new evidence invalidates the prior boundary.
+- **Sufficiency threshold.** Once you can name the owned file cluster or region, explain the likely fix in one or two sentences, and describe how to verify it, stop exploring and emit the WorkItems.
 - **Tool rejection is terminal evidence.** If ``run_subagent`` rejects a target as non-subagent or rejects ``prompt=null``, do not retry the same pattern. Update your plan and emit valid WorkItems instead.
 
 ## Output contract
