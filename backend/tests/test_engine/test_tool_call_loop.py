@@ -19,6 +19,7 @@ from providers.types import (
     ApiMessageCompleteEvent,
     ApiMessageRequest,
     ApiTextDeltaEvent,
+    ApiToolUseDeltaEvent,
     UsageSnapshot,
 )
 from tools.core.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolRegistry, ToolResult
@@ -121,6 +122,19 @@ class FakeApiClient:
             usage=UsageSnapshot(input_tokens=1, output_tokens=1),
             stop_reason=None,
         )
+
+
+class FakeStreamingApiClient:
+    """Returns pre-configured streaming event batches sequentially."""
+
+    def __init__(self, event_batches: list[list[object]]) -> None:
+        self._event_batches = list(event_batches)
+
+    async def stream_message(self, request: ApiMessageRequest):
+        del request
+        batch = self._event_batches.pop(0)
+        for event in batch:
+            yield event
 
 
 # ---------------------------------------------------------------------------
@@ -409,6 +423,63 @@ async def test_parallel_tool_calls(tmp_path: Path):
     # Check both tools returned correct results (order may vary)
     assert any(o.get("echoed") == "hi" for o in outputs)
     assert any(o.get("result") == 7 for o in outputs)
+
+
+@pytest.mark.asyncio
+async def test_streaming_tool_calls_respect_planner_soft_limit(tmp_path: Path):
+    registry = _make_registry(EchoTool())
+    client = FakeStreamingApiClient(
+        [
+            [
+                ApiToolUseDeltaEvent(id="tc1", name="echo", input={"message": "first"}),
+                ApiToolUseDeltaEvent(id="tc2", name="echo", input={"message": "second"}),
+                ApiMessageCompleteEvent(
+                    message=ConversationMessage(
+                        role="assistant",
+                        content=[
+                            ToolUseBlock(id="tc1", name="echo", input={"message": "first"}),
+                            ToolUseBlock(id="tc2", name="echo", input={"message": "second"}),
+                        ],
+                    ),
+                    usage=UsageSnapshot(input_tokens=1, output_tokens=1),
+                    stop_reason=None,
+                ),
+            ],
+            [
+                ApiMessageCompleteEvent(
+                    message=ConversationMessage(
+                        role="assistant",
+                        content=[TextBlock(text="Done.")],
+                    ),
+                    usage=UsageSnapshot(input_tokens=1, output_tokens=1),
+                    stop_reason=None,
+                ),
+            ],
+        ]
+    )
+    context = QueryContext(
+        api_client=client,
+        tool_registry=registry,
+        cwd=tmp_path,
+        model="test",
+        system_prompt="test",
+        max_tokens=100,
+        tool_call_limit=20,
+        planner_soft_tool_limit=1,
+    )
+    messages = [ConversationMessage.from_user_text("echo twice")]
+    events = []
+    _messages, event_stream = await run_query(context, messages)
+    async for event, _usage in event_stream:
+        events.append(event)
+
+    tool_starts = [e for e in events if isinstance(e, ToolExecutionStarted)]
+    tool_completes = [e for e in events if isinstance(e, ToolExecutionCompleted)]
+
+    assert len(tool_starts) == 1
+    assert tool_starts[0].tool_name == "echo"
+    assert any(not event.is_error and '"echoed": "first"' in event.output for event in tool_completes)
+    assert any(event.is_error and "planner discovery budget exceeded" in event.output for event in tool_completes)
 
 
 @pytest.mark.asyncio

@@ -4,9 +4,11 @@ import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
-from benchmarks.sweevo.team_runner import _make_context_builders
+from benchmarks.sweevo import team_runner as sweevo_team_runner
+from benchmarks.sweevo.team_runner import _make_context_builders, _make_runner
 from benchmarks.sweevo.team_runner import _build_sweevo_planner_runtime_prompt, _derive_planner_controls
 from team.models import WorkItem, WorkItemKind, WorkItemStatus
+from tools.core.runtime import ExecutionMetadata
 
 
 def test_posthook_ctx_prefers_final_text_over_wrapped_work_result():
@@ -56,6 +58,36 @@ def test_query_ctx_seeds_repo_root_for_daytona_and_ci():
     assert ctx.tool_metadata["ci_workspace_root"] == "/testbed"
 
 
+def test_query_ctx_seeds_planner_soft_limit_for_team_planner():
+    build_query_ctx, _ = _make_context_builders(
+        "sbx-1",
+        repo_dir="/testbed",
+        planner_controls={"first_plan_exploration_budget": 8},
+    )
+    ctx = build_query_ctx(
+        SimpleNamespace(name="team_planner"),
+        SimpleNamespace(
+            id="TR1",
+            sandbox_id="sbx-1",
+            dispatcher=SimpleNamespace(
+                artifact_store=SimpleNamespace(load=lambda _ref: None)
+            ),
+            budgets=None,
+            project_context=None,
+        ),
+        WorkItem(
+            id="W1",
+            team_run_id="T1",
+            agent_name="team_planner",
+            status=WorkItemStatus.PENDING,
+            kind=WorkItemKind.EXPANDABLE,
+            payload={"prompt": "Plan it"},
+        ),
+    )
+
+    assert ctx.tool_metadata["planner_soft_tool_limit"] == 8
+
+
 def test_planner_controls_scale_with_large_instance():
     instance = SimpleNamespace(
         repo="pydantic/pydantic",
@@ -71,14 +103,13 @@ def test_planner_controls_scale_with_large_instance():
     )
     controls = _derive_planner_controls(instance)
 
-    assert controls["first_plan_exploration_budget"] == 12
-    assert controls["tool_call_limit"] == 50
+    assert controls["first_plan_exploration_budget"] == 8
+    assert controls["tool_call_limit"] == 28
+    assert controls["max_turns"] == 50
     assert "Once you say or infer that you have enough context" in _build_sweevo_planner_runtime_prompt(instance)
 
 
 def test_resume_sweevo_team_uses_executor_factory_signature_without_planner_controls(monkeypatch):
-    from benchmarks.sweevo import team_runner as sweevo_team_runner
-
     instance = SimpleNamespace(
         repo="pydantic/pydantic",
         instance_id="pydantic__pydantic_v2.6.0b1_v2.6.0",
@@ -154,3 +185,71 @@ def test_resume_sweevo_team_uses_executor_factory_signature_without_planner_cont
     assert result == {"status": "ok"}
     assert seen_factory_calls and seen_factory_calls[0][1] == "sbx-1"
     fake_tr.resume.assert_awaited_once()
+
+
+def test_make_runner_copies_planner_soft_limit_into_query_context(monkeypatch):
+    captured_agents: list[SimpleNamespace] = []
+
+    class _Tracker:
+        def __init__(self) -> None:
+            self.run_id = "run-1"
+
+        def finish(self, **_: object) -> None:
+            return None
+
+    async def _fake_run(_prompt: str):
+        if False:
+            yield None
+
+    def fake_spawn_agent(*_args, **_kwargs):
+        agent = SimpleNamespace(
+            query_context=SimpleNamespace(
+                tool_metadata=ExecutionMetadata(session_config="cfg", sandbox_id="sbx-1"),
+                run_id="",
+                tool_call_limit=_kwargs["agent_def"].tool_call_limit,
+                planner_soft_tool_limit=None,
+                max_turns=_kwargs["agent_def"].max_turns,
+                api_messages_snapshot=None,
+            ),
+            display_messages=[],
+            total_usage=None,
+            model="test-model",
+            run=_fake_run,
+        )
+        captured_agents.append(agent)
+        return agent
+
+    monkeypatch.setattr(
+        sweevo_team_runner,
+        "AgentRunTracker",
+        SimpleNamespace(create=lambda **_: _Tracker()),
+    )
+    monkeypatch.setattr(sweevo_team_runner, "spawn_agent", fake_spawn_agent)
+
+    runner = _make_runner(
+        session_config=SimpleNamespace(session_id="sess-1"),
+        sandbox_id="sbx-1",
+        printer=None,
+        agent_overrides={"team_planner": {"tool_call_limit": 28, "max_turns": 50}},
+    )
+    ctx = sweevo_team_runner.TeamAgentContext(
+        user_message="Plan it",
+        tool_metadata=ExecutionMetadata(team_run_id="TR1", work_item_id="W1"),
+    )
+    ctx.tool_metadata["planner_soft_tool_limit"] = 8
+
+    asyncio.run(
+        runner(
+            SimpleNamespace(
+                name="team_planner",
+                model_copy=lambda update: SimpleNamespace(name="team_planner", **update),
+            ),
+            ctx,
+        )
+    )
+
+    assert captured_agents
+    assert captured_agents[0].query_context.tool_metadata.agent_name == "team_planner"
+    assert captured_agents[0].query_context.tool_call_limit == 28
+    assert captured_agents[0].query_context.planner_soft_tool_limit == 8
+    assert captured_agents[0].query_context.max_turns == 50

@@ -43,7 +43,7 @@ from message.stream_events import (
     ToolExecutionCompleted,
     ToolExecutionStarted,
 )
-from engine.core.notifications import build_budget_warning
+from engine.core.notifications import build_budget_warning, get_planner_soft_limit
 from engine.core.streaming_executor import StreamingToolExecutor, defer_background_dispatch
 from hooks import HookEvent, HookExecutor
 from tools.core.base import (
@@ -81,6 +81,7 @@ class QueryContext:
     # Per-ephemeral-run cap on tool dispatches. ``None`` = unlimited. Each
     # spawned agent starts with a fresh ``tool_calls_used`` counter.
     tool_call_limit: int | None = None
+    planner_soft_tool_limit: int | None = None
     tool_calls_used: int = 0
     last_budget_warning_remaining: int | None = None
     hook_executor: HookExecutor | None = None
@@ -162,6 +163,44 @@ def _record_tool_trace(
         "_scout_target_paths_this_turn",
         _normalize_trace_paths(scout_input.get("target_paths")),
     )
+
+
+def _planner_soft_limit_for_context(context: QueryContext) -> int:
+    return context.planner_soft_tool_limit or get_planner_soft_limit(context.tool_metadata)
+
+
+def _consume_tool_budget_or_reject(
+    context: QueryContext,
+    tool_use_id: str,
+) -> ToolResultBlock | None:
+    soft_limit = _planner_soft_limit_for_context(context)
+    if soft_limit > 0 and context.tool_calls_used >= soft_limit:
+        context.tool_calls_used += 1
+        return ToolResultBlock(
+            tool_use_id=tool_use_id,
+            content=(
+                f"planner discovery budget exceeded: {soft_limit} tool calls already used. "
+                "Stop requesting more tools, reuse the evidence you already gathered, and emit the "
+                "plan JSON now so submit_plan can preserve the handoff."
+            ),
+            is_error=True,
+        )
+
+    if context.tool_call_limit is None:
+        return None
+    if context.tool_calls_used >= context.tool_call_limit:
+        return ToolResultBlock(
+            tool_use_id=tool_use_id,
+            content=(
+                f"tool_call_limit exceeded: {context.tool_call_limit} tool "
+                f"calls already used. The agent run will terminate after "
+                f"this turn — call submit_summary / submit_plan now to "
+                f"preserve partial work."
+            ),
+            is_error=True,
+        )
+    context.tool_calls_used += 1
+    return None
 
 
 def _deliver_completed_background_task(
@@ -386,6 +425,7 @@ async def _run_query_loop(
         context.tool_metadata.background_task_manager = background_manager
 
     for _ in range(context.max_turns):
+        streamed_rejections: list[ToolResultBlock] = []
         budget_warning = build_budget_warning(context)
         if budget_warning is not None:
             history_msg, warning_event = budget_warning
@@ -513,6 +553,19 @@ async def _run_query_loop(
                     event.name,
                     list(event.input.keys()) if event.input else None,
                 )
+                budget_rejection = _consume_tool_budget_or_reject(context, event.id)
+                if budget_rejection is not None:
+                    streamed_rejections.append(budget_rejection)
+                    yield (
+                        ToolExecutionCompleted(
+                            tool_name=event.name,
+                            output=budget_rejection.content,
+                            is_error=True,
+                            tool_id=event.id,
+                        ),
+                        None,
+                    )
+                    continue
                 assistant_msg = final_message or ConversationMessage(role="assistant", content=[])
                 started = executor.add_tool(event, assistant_msg)
                 if started:
@@ -584,7 +637,7 @@ async def _run_query_loop(
             )
             yield started, None
 
-        tool_results: list[ToolResultBlock] = []
+        tool_results: list[ToolResultBlock] = list(streamed_rejections)
         for completed in await executor.get_remaining():
             if isinstance(completed, ToolExecutionCompleted):
                 logger.info(
@@ -847,23 +900,9 @@ async def _execute_tool_call(
     tool_input: dict[str, object],
     extra_metadata: ExecutionMetadata | dict[str, Any] | None = None,
 ) -> ToolResultBlock:
-    # Per-ephemeral-run tool budget. Checked BEFORE the call so the agent
-    # gets a clear, structured rejection instead of silently exceeding the
-    # cap. Counter is bumped on every dispatch attempt — including the
-    # rejected one — so a runaway agent cannot loop on rejections.
-    if context.tool_call_limit is not None:
-        if context.tool_calls_used >= context.tool_call_limit:
-            return ToolResultBlock(
-                tool_use_id=tool_use_id,
-                content=(
-                    f"tool_call_limit exceeded: {context.tool_call_limit} tool "
-                    f"calls already used. The agent run will terminate after "
-                    f"this turn — call submit_summary / submit_plan now to "
-                    f"preserve partial work."
-                ),
-                is_error=True,
-            )
-        context.tool_calls_used += 1
+    budget_rejection = _consume_tool_budget_or_reject(context, tool_use_id)
+    if budget_rejection is not None:
+        return budget_rejection
 
     if context.hook_executor is not None:
         pre_hooks = await context.hook_executor.execute(
