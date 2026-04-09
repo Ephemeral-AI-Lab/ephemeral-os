@@ -22,9 +22,10 @@ from agents.registry import get_definition
 from config.paths import get_project_config_dir
 from engine.runtime.agent import spawn_agent
 from message.event_printer import MultiAgentEventPrinter
+from message.messages import ConversationMessage, ToolUseBlock
 from message.stream_events import ToolExecutionCompleted
 from token_tracker.runtime import persist_run_usage
-from team.builtins import DEVELOPER, TEAM_PLANNER, register_all as _register_team_builtins
+from team.builtins import DEVELOPER, TEAM_PLANNER, VALIDATOR, register_all as _register_team_builtins
 from team.atlas.scheduler import AtlasMaintenanceScheduler
 from team.models import BudgetConfig, TeamRunStatus, WorkItemKind
 from team.persistence.run_store import build_default_store
@@ -201,6 +202,30 @@ def _extract_final_text(messages: list[Any]) -> str:
         if text:
             return str(text).strip()
     return ""
+
+
+def _tool_names_from_messages(messages: list[ConversationMessage]) -> list[str]:
+    names: list[str] = []
+    for msg in messages:
+        for block in getattr(msg, "content", []):
+            if isinstance(block, ToolUseBlock):
+                names.append(block.name)
+    return names
+
+
+def _enforce_validation_evidence(
+    agent_name: str,
+    display_messages: list[ConversationMessage],
+) -> None:
+    if agent_name != VALIDATOR:
+        return
+    tool_names = _tool_names_from_messages(display_messages)
+    if "daytona_bash" in tool_names:
+        return
+    raise RuntimeError(
+        "validator_missing_tool_evidence: validator must execute at least one "
+        "daytona_bash command before returning a verdict"
+    )
 
 
 def _build_sweevo_planner_runtime_prompt(instance: SWEEvoInstance) -> str:
@@ -400,6 +425,12 @@ def _make_runner(
                         f"completion={agent.total_usage.output_tokens} total={total}"
                     ),
                 )
+
+        if run_error is None:
+            _enforce_validation_evidence(
+                effective_defn.name,
+                list(agent.display_messages),
+            )
 
         if team_metrics is not None:
             team_metrics["agent_runs"] = int(team_metrics.get("agent_runs", 0)) + 1

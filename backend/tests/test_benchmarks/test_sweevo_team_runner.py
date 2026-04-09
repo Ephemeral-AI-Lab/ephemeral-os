@@ -4,14 +4,18 @@ import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
+import pytest
+
 from benchmarks.sweevo import team_runner as sweevo_team_runner
 from benchmarks.sweevo.team_runner import (
     _build_sweevo_developer_runtime_prompt,
+    _enforce_validation_evidence,
     _build_sweevo_planner_runtime_prompt,
     _emit_dispatcher_dag,
     _make_context_builders,
     _make_runner,
 )
+from message import ConversationMessage, TextBlock, ToolUseBlock
 from team.models import WorkItem, WorkItemKind, WorkItemStatus
 from tools.core.runtime import ExecutionMetadata
 
@@ -93,6 +97,30 @@ def test_developer_runtime_prompt_limits_post_failure_probes():
     assert "at most one ad hoc python/bash probe" in prompt
     assert "trust the pytest failure as the source of truth" in prompt
     assert "Once a budget warning appears" in prompt
+
+
+def test_enforce_validation_evidence_requires_daytona_bash():
+    with pytest.raises(RuntimeError, match="validator_missing_tool_evidence"):
+        _enforce_validation_evidence(
+            "validator",
+            [ConversationMessage(role="assistant", content=[TextBlock(text="VERDICT: PASS")])],
+        )
+
+    _enforce_validation_evidence(
+        "validator",
+        [
+            ConversationMessage(
+                role="assistant",
+                content=[
+                    ToolUseBlock(
+                        id="tc1",
+                        name="daytona_bash",
+                        input={"command": "pytest -q"},
+                    )
+                ],
+            )
+        ],
+    )
 
 
 def test_resume_sweevo_team_uses_default_executor_factory_signature(monkeypatch):
