@@ -4,7 +4,7 @@ A posthook is just *another registered agent*. The work-phase agent
 declares ``posthook=PosthookConfig(agent_name="submit_plan_agent", ...)``
 and the engine looks that name up in the agent registry, then runs it as
 a normal ephemeral agent. The serializer agent's own AgentDefinition
-controls its tool surface, model, max_turns, and prompt — there is no
+controls its tool surface, model, tool_call_limit, and prompt — there is no
 parent-clone hack and no special-case fields on AgentDefinition.
 
 Contract for posthook submit serializers:

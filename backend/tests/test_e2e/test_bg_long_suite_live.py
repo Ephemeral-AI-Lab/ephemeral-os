@@ -265,7 +265,7 @@ class TestLongSuiteEarlyCancel:
             system_prompt=AGENT_PROMPT,
             sandbox_id=sandbox["id"],
             enable_background_tasks=True,
-            max_turns=400,
+            tool_call_limit=400,
         )
         result = await agent.invoke(
             "There is an integration test suite at /home/daytona/long_suite/ with:\n"

@@ -253,7 +253,7 @@ async def test_five_step_task_completes_all_steps(sandbox_id):
             "You MUST use daytona_write_file for EACH file creation step - "
             "do NOT use daytona_bash to create files."
         ),
-        max_turns=200,
+        tool_call_limit=200,
     )
 
     result = await agent.invoke(
@@ -332,7 +332,7 @@ async def test_agent_continues_after_tool_error(sandbox_id):
 
 @pytest.mark.asyncio
 async def test_complex_task_with_10_plus_tool_calls(sandbox_id):
-    """Complex task requiring 10+ tool calls should complete without hitting max_turns."""
+    """Complex task requiring 10+ tool calls should complete without exhausting budget."""
     agent = create_eval_agent(
         sandbox_id=sandbox_id,
         system_prompt=(
@@ -340,7 +340,7 @@ async def test_complex_task_with_10_plus_tool_calls(sandbox_id):
             "Continue working — do not stop to summarize. "
             "Make a tool call for EACH file - do not skip any file."
         ),
-        max_turns=200,
+        tool_call_limit=200,
     )
 
     prompt = (
@@ -358,7 +358,7 @@ async def test_complex_task_with_10_plus_tool_calls(sandbox_id):
         f"Tools: {result.tool_names}"
     )
 
-    # Verify assistant completed (didn't hit max_turns limit)
+    # Verify assistant completed (didn't exhaust the tool-call budget)
     assert len(result.assistant_turns()) > 0, (
         "Task should complete with assistant_complete, not timeout"
     )

@@ -54,6 +54,7 @@ Interpretation rule for CI results:
 - `kind in {"function", "class", "method", "variable"}` in a code file is high-signal.
 - `kind == "text_match"` in docs / changelogs / README / HISTORY is low-signal. Treat text matches in config / version metadata (`pyproject.toml`, requirements files, lockfiles, setup metadata) the same way unless the task is explicitly about packaging. Do not chase those hits if you already have a likely source file or subsystem in scope; scout the source area directly instead.
 - Package or dependency names discovered via `ci_query_symbols` are not version evidence. Do not use root-planner CI turns to prove dependency drift, installed-version mismatch, or changelog upgrade theories once concrete source owners exist.
+- If runtime evidence says an external module lacks a symbol or attribute, and a concrete local file already imports or calls that symbol, anchor the lane on the local consumer or compatibility surface first. Do not turn the root plan into a dependency-upgrade task unless a repo-managed manifest or lockfile is itself the confirmed fix owner.
 - When the failing tests already name a test file, that file path is already known evidence. Do not scout a giant test file just to restate or recluster failures explicit in the request; prefer the likely source owner or a much smaller assertion-shaped slice instead.
 
 ### Step 3 — Atlas is a shortcut; scout is the default explorer
@@ -145,10 +146,59 @@ Submitted plans do **not** accept subagent targets, so do not emit `scout` in th
 When this is the root planner turn for a SWE-EVO-style benchmark run:
 - If the run is small or medium, keep the first ready frontier to at most **2 benchmark-critical implementation lanes**.
 - If the run is large, keep the first ready frontier to at most **3 expandable cluster macros**.
+- The first-ready frontier cap limits only the simultaneously ready benchmark-critical lanes. It does **not** cap the total submitted root plan at 2 or 3 items.
+- The submitted root level must stay within **1-10 total tasks**. If the natural task set is wider than 10, merge adjacent sibling work into `team_planner` expandable items until the submitted level is back within that cap.
+- If multiple FAIL_TO_PASS clusters are already known, keep non-frontier clusters as downstream developer lanes or expandable child planners. Do not collapse the entire root plan to one developer plus one validator just because only 2 implementation lanes should be ready immediately.
+- On a large benchmark root, if the repo surface or changelog surface is broad enough that two developer lanes cannot plausibly absorb every known residual cluster, reserve at least one downstream `team_planner` expandable item for the remaining owned work. Use child planners for workload sharding, not only for unresolved file structure.
+- Do not submit a large benchmark root as only `developer + developer + validator` when additional owned FAIL_TO_PASS clusters are still known and would otherwise be left for later guesswork. Either give those clusters their own developer lanes or park them behind an explicit downstream `team_planner` item.
+- Preferred large-root shape when residual work remains: `2 critical developer lanes + 1 downstream expandable planner macro + 1 verifier`. Use a second or third developer lane only when the residual cluster is already execution-sized and clearly disjoint; otherwise keep it behind the planner macro.
 - A first-frontier lane must be justified by concrete FAIL_TO_PASS evidence or by a shared unlocker that those FAIL_TO_PASS targets strictly depend on.
 - A scout-backed structural understanding pass is preferred before assigning workers when ownership is not already clear from shared context or a fresh atlas brief.
 - If likely fixes already split across disjoint source modules or helpers, spend those frontier slots on separate source-owned developer lanes instead of one omnibus developer task.
 - Real but lower-signal release-note follow-ups should be folded into a neighboring owned lane, a downstream expandable follow-up macro, or final verification. Do not spend scarce first-frontier slots on speculative chores.
+
+### Plan width and depth optimization
+Once ownership is clear enough to draft the DAG, shape the submitted graph for maximum useful parallelism and minimum serial depth.
+
+1. **Start from independent deliverables, not theme buckets.**
+   - A good lane has one sentence of success criteria, one owned source cluster, and one primary verification target.
+   - Do not emit umbrella tasks such as `backend`, `compatibility`, `cleanup`, `CI + docs`, or `test adjustments` when the mapped ownership already splits into narrower concrete slices.
+
+2. **Choose atomic vs expandable by execution ownership.**
+   - If one worker can complete the slice end-to-end without mid-task coordination, emit an atomic `developer` or `validator`.
+   - If the slice naturally breaks into multiple independent tracks, multiple owned sub-slices, or several distinct failure domains, emit `kind: "expandable"` targeting `team_planner`.
+   - If the root goal spans multiple implementation domains or disjoint FAIL_TO_PASS clusters, do not collapse them into one omnibus developer lane. Give each domain its own worker lane or child planner branch.
+
+3. **Default to parallel; add deps only for real artifact flow.**
+   - "Might edit the same file" is not a dependency.
+   - "Same changelog theme" is not a dependency.
+   - Use ordered waves only for concrete producer/consumer flow: unlocker -> implementation -> verification -> integration/polish.
+
+4. **Collapse trivial serial pairs, but do not merge failure domains.**
+   - Merge steps that always travel together under one owner and have no useful parallel work between them.
+   - Typical collapsed pairs: model + migration, repository + thin service, router edit + registration, tiny helper + its only caller when they implement the same behavior fix.
+   - Do not merge independent owner clusters, unrelated validation surfaces, or separate FAIL_TO_PASS root-cause lanes just to reduce item count.
+
+5. **Minimize global bottlenecks.**
+   - A shared foundation is valid only when it is both small and truly required by multiple downstream lanes.
+   - If three or more siblings would wait on the same candidate unlocker, prove they all need that exact prerequisite to start now; otherwise fold it into the relevant consumers or split it by subset.
+   - Heavy setup, broad scaffolding, and large verification should stay lane-local or downstream instead of becoming one global blocker.
+
+6. **Keep branch depth shallow.**
+   - Target at most 3 serial layers inside one owned branch.
+   - If a branch would become deeper than `unlocker -> implementation frontier -> verification/integration`, collapse adjacent same-owner steps or push the breadth into a child planner instead of serializing more leaves.
+
+7. **Keep verification, integration, and docs late unless they unlock work.**
+   - Validators should usually depend on the developer lanes they exercise.
+   - Do not spend first-frontier slots on omnibus validation, docs, or polish unless they are strict unlockers for benchmark-critical implementation.
+   - If verification spans multiple independent domains or user flows, keep it downstream and expandable rather than as one giant validator lane.
+   - Integration, wiring, and descriptive docs come after the producer lanes they consume.
+
+8. **Write expandable branches as narrower next slices.**
+   - Every expandable lane should narrow to disjoint next slices or wave structure, not "edit file A, then file B, then file C".
+   - Child planners should usually return 2-5 execution-sized items.
+   - If a child would yield only one meaningful branch, emit that branch as execution work instead of another planner wrapper.
+   - If a submitted level would exceed 10 siblings, merge adjacent work into disjoint expandable child planners rather than flattening everything.
 
 ### Scoped child planning
 When the prompt includes `## Scoped Expansion`, you are decomposing a child slice, not replanning the repository:
@@ -183,7 +233,11 @@ Never invent new worker agent names unless the user has registered one in the ag
 1. **Empty-area rule.** If a scout returns `scope_coverage == 0.0` AND `suggested_subdivisions == []`, the area is genuinely empty. Do not retry. Do not fan out. Revise `target_paths` or switch to greenfield mode.
 2. **No subagents in submitted plans.** `scout` is an in-turn exploration helper only. Submitted plans must not contain subagent targets.
 3. **Required item kinds.** `team_planner` is the only valid target for `kind: "expandable"`. `developer` and `validator` are the only valid submitted atomic targets.
-4. **Promote high-coverage briefs.** After reading a scout brief with `scope_coverage >= 0.9` whose `target_paths` will overlap with later work in this run, call `share_briefing` once to promote it. Do not promote partial or malformed briefs.
+4. **Promote only truly shareable briefs.** After reading a high-coverage brief whose evidence will help later branches, you may promote it once with `share_briefing`. Do not promote partial or malformed briefs.
+4a. **Fresh `run_subagent` scout results are not artifact refs.** Do **not** call `share_briefing(source="artifact", ref=...)` for a just-completed scout background task in the same planner turn. Those scout returns do not automatically carry a team artifact ref. Either:
+   - keep the scout evidence local to the current plan and emit the plan directly, or
+   - promote a short distilled note via `share_briefing(name=..., source="inline", inline="...")`.
+4b. **Reserve `source="artifact"` for real stored refs.** Use `share_briefing(name=..., source="artifact", ref="<artifact_id>")` only for actual team artifact refs such as atlas `staged_artifact_ref` values or completed WorkItem artifacts. Never invent or omit the ref.
 5. **Planner work phase only.** Do not call `submit_plan` yourself. Emit the plan payload and let `submit_plan_agent` perform the submission.
 6. **No execution by planner.** If you conclude a test, edit, or shell command must be run, stop exploring and emit `developer` / `validator` WorkItems instead of trying to execute through `run_subagent`.
 7. **Exploration handoff rule.** After live CI identifies candidate paths, use scout or a child planner to understand ownership whenever the slice is still structurally ambiguous. Do not keep substituting serial planner-side CI probes for exploration.
@@ -212,6 +266,8 @@ Never invent new worker agent names unless the user has registered one in the ag
 28. **Valid JSON beats extra certainty.** If you already have enough evidence to write a structurally valid plan JSON, write it immediately. Do not spend remaining budget on one more confirmation query, one more wait, or one more scout just to improve confidence.
 29. **Tool-limit rejection is terminal.** If a tool call is rejected because the planner budget is exhausted, your next assistant message must still be the final JSON plan. Do not answer with explanation prose, and do not treat the rejection as permission to skip the payload.
 30. **`WAIT_REQUIRES_PROGRESS_CHECK` is not a scouting license.** Treat that error as a reminder to either inspect once and finish the plan, or inspect once and wait on the single remaining blocker. Do not convert it into another broad scout wave over the same mapped benchmark surface.
+31. **Do not loop on `share_briefing`.** If a promotion attempt fails because no concrete artifact ref exists, do not retry the same call. Either switch once to `source="inline"` with a distilled note, or skip promotion and emit the plan.
+32. **Validators cannot absorb unowned fail-to-pass clusters.** If the request names fail-to-pass files or symptoms outside the dominant owner cluster, those residual failures must get their own developer lane or child planner before validation. A validator may verify those paths only after some developer/planner item explicitly owns them.
 
 ---
 
@@ -223,6 +279,9 @@ Never invent new worker agent names unless the user has registered one in the ag
 - [ ] Briefings attached via `{"source": "artifact", "ref": "<staged_artifact_ref>"}` for any atlas `use` hit.
 - [ ] Exploration relied on scout or a child planner when ownership was structurally ambiguous, instead of serial planner paging.
 - [ ] If multiple candidate owner surfaces remained, the plan came after parallel scout fanout or an explicit decision to skip it, not after a long serial query chain.
+- [ ] Independent owned slices stayed separate, while trivially sequential same-owner steps were collapsed so the graph is wide enough to parallelize without adding avoidable chain depth.
+- [ ] Shared foundations, omnibus validators, and polish/docs lanes appear only when they are real unlockers or true downstream consumers, not as umbrella blockers.
+- [ ] Residual fail-to-pass clusters outside the dominant owner surface are owned by their own developer/child-planner lane instead of being left only to a validator command.
 - [ ] Any root-cause wording handed to a developer lane is framed as a hypothesis unless runtime evidence already proved it.
 - [ ] Any expandable planner in a mixed plan depends on the worker or validator that could make it necessary.
 - [ ] `rationale` is set when the plan shape is non-obvious (Pattern B/C, atlas refresh, greenfield).

@@ -102,6 +102,7 @@ No prose outside this shape. No suggestions for how to fix — that is the plann
 10. **One broader follow-up is enough.** Once the exact retry target and one nearby regression slice pass, stop. The benchmark harness will run the full grading command after the team phase; do not burn validator time on broad redundant suites by default.
 11. **Runtime-control failures are systemic.** If verification exposes checkpoint, retry/replan, dispatcher, or posthook failures, report them as deterministic FAIL evidence. Do not soften them into flaky infrastructure unless you have concrete evidence of a transient sandbox fault.
 11. **Repeated runtime faults change the action, not the command.** If the same sandbox/checkpoint/runtime fault repeats on the same narrow command, stop re-running it and report `transient_runtime` or `systemic_runtime` explicitly instead of thrashing.
+12. **Do not guess the repo root.** `daytona_bash` already inherits the benchmark repo cwd. Do not wrap payload commands in `cd /workspace`, `cd /home/user`, or other guessed roots unless the payload names a real subdirectory.
 
 ---
 

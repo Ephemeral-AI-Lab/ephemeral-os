@@ -159,7 +159,7 @@ async def test_tool_completed_is_error_false_on_success(sandbox_id):
 async def test_tool_roundtrip_write_then_read(sandbox_id):
     """Agent writes file via tool, then reads it back — output contains original content."""
     agent = create_eval_agent(
-        sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, max_turns=10
+        sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, tool_call_limit=10
     )
     result = await agent.invoke(
         "Do these two steps in the sandbox using tools:\n"
@@ -461,7 +461,7 @@ class TestCodeIntelligenceDeep:
 async def test_two_turn_write_then_verify(sandbox_id):
     """Turn 1: write file via tool. Turn 2: verify file via tool — check content reference."""
     agent = create_eval_agent(
-        sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, max_turns=10
+        sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, tool_call_limit=10
     )
 
     # Turn 1: Create file
@@ -499,7 +499,7 @@ async def test_two_turn_write_then_verify(sandbox_id):
 async def test_three_turn_create_read_modify(sandbox_id):
     """3-turn chain: create -> read -> modify. Verify tool use AND content flow."""
     agent = create_eval_agent(
-        sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, max_turns=10
+        sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, tool_call_limit=10
     )
 
     # Turn 1: Create with a unique marker
@@ -544,7 +544,7 @@ async def test_three_turn_create_read_modify(sandbox_id):
 async def test_react_landing_full_pipeline(sandbox_id):
     """Full pipeline: create React page -> verify structure -> add component."""
     agent = create_eval_agent(
-        sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, max_turns=10
+        sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, tool_call_limit=10
     )
 
     # Turn 1: Create React landing page

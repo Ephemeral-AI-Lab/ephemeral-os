@@ -327,7 +327,7 @@ def spawn_agent(
     - ``model`` overrides the session model
     - ``system_prompt`` replaces the default system prompt
     - ``toolkits`` restricts available toolkits
-    - ``max_turns`` caps the tool-call loop iterations
+    - ``tool_call_limit`` caps tool dispatches for the ephemeral run
     """
     from pathlib import Path
 
@@ -356,7 +356,6 @@ def spawn_agent(
         tool_registry, base_system_prompt, can_spawn_subagents=can_spawn
     )
 
-    max_turns = agent_def.max_turns if agent_def and agent_def.max_turns else 200
     tool_call_limit = agent_def.tool_call_limit if agent_def else None
 
     # Plumb session_config through tool_metadata so tools (e.g. run_subagent)
@@ -373,7 +372,6 @@ def spawn_agent(
         model=resolved_model,
         system_prompt=system_prompt,
         max_tokens=max_tokens,
-        max_turns=max_turns,
         tool_call_limit=tool_call_limit,
         hook_executor=hook_executor,
         tool_metadata=initial_tool_metadata,

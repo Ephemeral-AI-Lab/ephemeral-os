@@ -24,7 +24,7 @@ SCOUT = "scout"
 ATLAS_BUILDER = "atlas_builder"
 ATLAS_REFRESHER = "atlas_refresher"
 
-_DEFAULT_TEAM_TOOL_CALL_LIMIT = 100
+_DEFAULT_TEAM_TOOL_CALL_LIMIT = 200
 
 _SCOUT_PROMPT = """You are scout. Read-only exploration of the concrete list of paths supplied as ``target_paths``. Produce a compact brief that downstream planners and workers can rely on without re-exploring.
 
@@ -165,7 +165,6 @@ def register_all() -> None:
             description="Serializes a planner's free-form output into a validated Plan via submit_plan.",
             system_prompt=_SUBMIT_PLAN_AGENT_PROMPT,
             model="inherit",
-            max_turns=5,
             toolkits=["submit_plan_posthook"],
             skills=[],
             include_skills=False,
@@ -179,7 +178,6 @@ def register_all() -> None:
             description="Team-mode planner agent: decomposes requests and drafts plan payloads for posthook submission.",
             system_prompt=_PLANNER_PROMPT,
             model="inherit",
-            max_turns=100,
             tool_call_limit=_DEFAULT_TEAM_TOOL_CALL_LIMIT,
             toolkits=["code_intelligence", "team_context", "atlas", "subagent"],
             skills=["team-planner-playbook"],
@@ -197,7 +195,6 @@ def register_all() -> None:
             description="Serializes a worker's free-form output into a validated SubmittedSummary via submit_summary.",
             system_prompt=_SUBMIT_SUMMARY_AGENT_PROMPT,
             model="inherit",
-            max_turns=5,
             toolkits=["submit_summary_posthook"],
             skills=[],
             include_skills=False,
@@ -215,7 +212,6 @@ def register_all() -> None:
             ),
             system_prompt=_DEVELOPER_PROMPT,
             model="inherit",
-            max_turns=100,
             tool_call_limit=_DEFAULT_TEAM_TOOL_CALL_LIMIT,
             toolkits=["sandbox_operations", "code_intelligence"],
             skills=["team-developer-playbook"],
@@ -238,7 +234,6 @@ def register_all() -> None:
             ),
             system_prompt=_VALIDATOR_PROMPT,
             model="inherit",
-            max_turns=100,
             tool_call_limit=_DEFAULT_TEAM_TOOL_CALL_LIMIT,
             toolkits=["sandbox_operations", "code_intelligence"],
             skills=["team-validator-playbook"],
@@ -260,7 +255,6 @@ def register_all() -> None:
             ),
             system_prompt=_SCOUT_PROMPT,
             model="inherit",
-            max_turns=100,
             toolkits=["code_intelligence"],
             skills=["team-scout-playbook"],
             include_skills=False,
@@ -279,7 +273,6 @@ def register_all() -> None:
             description="Serializes an atlas builder/refresher's output into durable atlas chunks via submit_atlas.",
             system_prompt=_SUBMIT_ATLAS_AGENT_PROMPT,
             model="inherit",
-            max_turns=5,
             toolkits=["submit_atlas_posthook"],
             skills=[],
             include_skills=False,
@@ -296,7 +289,6 @@ def register_all() -> None:
             ),
             system_prompt=_ATLAS_BUILDER_PROMPT,
             model="inherit",
-            max_turns=100,
             tool_call_limit=_DEFAULT_TEAM_TOOL_CALL_LIMIT,
             toolkits=["code_intelligence", "subagent"],
             skills=["team-atlas-builder-playbook"],
@@ -317,7 +309,6 @@ def register_all() -> None:
             ),
             system_prompt=_ATLAS_REFRESHER_PROMPT,
             model="inherit",
-            max_turns=100,
             tool_call_limit=_DEFAULT_TEAM_TOOL_CALL_LIMIT,
             toolkits=["subagent"],
             skills=["team-atlas-refresher-playbook"],
@@ -336,7 +327,6 @@ def register_all() -> None:
             description="Decision posthook: submit or retry.",
             system_prompt=_DECISION_AGENT_PROMPT,
             model="inherit",
-            max_turns=5,
             toolkits=["posthook_submit_retry"],
             skills=[],
             include_skills=False,
@@ -350,7 +340,6 @@ def register_all() -> None:
             description="Decision posthook: submit or replan.",
             system_prompt=_DECISION_AGENT_PROMPT,
             model="inherit",
-            max_turns=5,
             toolkits=["posthook_submit_replan"],
             skills=[],
             include_skills=False,
@@ -365,7 +354,6 @@ def register_all() -> None:
             description="Serializes a replanner's output into a validated ReplanPlan via submit_replan.",
             system_prompt=_SUBMIT_REPLAN_AGENT_PROMPT,
             model="inherit",
-            max_turns=5,
             toolkits=["submit_replan_posthook"],
             skills=[],
             include_skills=False,
@@ -379,7 +367,6 @@ def register_all() -> None:
             description="Replanner: reads failure context and produces corrective plan for posthook serialization.",
             system_prompt=_REPLANNER_PROMPT,
             model="inherit",
-            max_turns=50,
             tool_call_limit=25,
             toolkits=["code_intelligence", "team_context", "subagent"],
             skills=["team-replanner-playbook"],

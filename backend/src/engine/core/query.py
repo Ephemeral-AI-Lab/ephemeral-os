@@ -71,7 +71,6 @@ class QueryContext:
     model: str
     system_prompt: str
     max_tokens: int
-    max_turns: int = 200
     # Identity of the agent running this loop. Empty string for legacy
     # single-agent callers. Used by the stamping wrapper in :func:`run_query`
     # to tag every outgoing ``StreamEvent`` with ``agent_name`` / ``work_id``
@@ -410,7 +409,7 @@ async def _run_query_loop(
         background_manager = BackgroundTaskManager()
         context.tool_metadata.background_task_manager = background_manager
 
-    for _ in range(context.max_turns):
+    while True:
         streamed_rejections: list[ToolResultBlock] = []
         budget_warning = build_budget_warning(context)
         if budget_warning is not None:
@@ -799,20 +798,6 @@ async def _run_query_loop(
                 None,
             )
             return
-
-    if background_manager is not None:
-        await background_manager.cancel_all()
-
-    yield (
-        ToolExecutionCompleted(
-            tool_name="",
-            output=f"Agent stopped: maximum turn limit ({context.max_turns}) reached. "
-            "The conversation was too long to complete in the allowed iterations.",
-            is_error=True,
-        ),
-        None,
-    )
-
 
 _STAMPABLE_FIELDS = ("agent_name", "work_id")
 

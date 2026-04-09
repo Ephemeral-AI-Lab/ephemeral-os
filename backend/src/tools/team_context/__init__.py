@@ -23,7 +23,13 @@ class TeamContextToolkit(BaseToolkit):
                 "- `share_briefing` — attach a brief (artifact ref or inline "
                 "text) to the run's shared context. Only promote briefs you "
                 "trust; promoted briefs are visible to every subsequent "
-                "executor in this run."
+                "executor in this run.\n"
+                "- Use `source=\"artifact\"` only when you already have a real "
+                "team artifact ref (for example an atlas staged ref or a "
+                "completed WorkItem artifact).\n"
+                "- Fresh `run_subagent` scout results should usually be shared "
+                "as `source=\"inline\"` distilled notes, or kept local to the "
+                "current planner turn."
             ),
         )
 

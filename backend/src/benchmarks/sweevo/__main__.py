@@ -67,7 +67,10 @@ class _AnsiStrippingTee:
 
     def flush(self) -> None:
         self._primary.flush()
-        self._mirror.flush()
+        try:
+            self._mirror.flush()
+        except ValueError:
+            pass
 
     def isatty(self) -> bool:
         return bool(getattr(self._primary, "isatty", lambda: False)())

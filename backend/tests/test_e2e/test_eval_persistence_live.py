@@ -72,7 +72,7 @@ class _UsageCapturingClient:
 async def test_live_eval_persists_run_linked_subagent_usage():
     agent = create_eval_agent(
         system_prompt=SUBAGENT_SYSTEM_PROMPT,
-        max_turns=60,
+        tool_call_limit=60,
     )
 
     result = await agent.invoke(
@@ -125,7 +125,7 @@ async def test_live_eval_persists_compaction_artifacts(override_compaction_thres
 
     agent = create_eval_agent(
         system_prompt="You are a concise assistant.",
-        max_turns=20,
+        tool_call_limit=20,
     )
 
     from compaction import SessionState, compact_for_api

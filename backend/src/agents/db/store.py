@@ -131,7 +131,6 @@ class AgentDefinitionStore:
                 existing.system_prompt = source.system_prompt
                 existing.model = source.model
                 existing.effort = source.effort
-                existing.max_turns = source.max_turns
                 existing.tool_call_limit = source.tool_call_limit
                 existing.toolkits = source.toolkits
                 existing.skills = source.skills or []
@@ -155,7 +154,6 @@ class AgentDefinitionStore:
                 system_prompt=source.system_prompt,
                 model=source.model,
                 effort=source.effort,
-                max_turns=source.max_turns,
                 tool_call_limit=source.tool_call_limit,
                 toolkits=source.toolkits,
                 skills=source.skills or [],

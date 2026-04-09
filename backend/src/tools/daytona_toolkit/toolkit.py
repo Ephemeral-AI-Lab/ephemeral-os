@@ -93,7 +93,8 @@ class DaytonaToolkit(BaseToolkit):
                 "- `daytona_codeact` — execute Python with atomic file I/O. "
                 "Use for multi-step transformations that need read/write/shell in one operation.\n\n"
                 "**Execute**\n"
-                "- `daytona_bash` — run a shell command. Use for tests, builds, installs, verification."
+                "- `daytona_bash` — run a shell command. Use for tests, builds, installs, verification.\n"
+                "- When an injected sandbox cwd/repo root is configured, shell and file tools already run relative to that root. Prefer relative repo paths and do not prepend guessed roots like `/workspace`, `/home/user`, or `/home/user/repos/...` unless you truly need a real subdirectory."
             ),
         )
         self.sandbox_id = sandbox_id

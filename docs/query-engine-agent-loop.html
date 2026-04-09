@@ -105,7 +105,7 @@ flowchart TB
     <div class="diagram-container">
         <pre class="mermaid">
 flowchart TB
-    subgraph Loop["while turn < max_turns: (200)"]
+    subgraph Loop["while active"]
         Start["Auto-Compact Check<br/>(if needed)"]
         --> APICall["api_client.stream_message()"]
         
@@ -267,7 +267,7 @@ flowchart LR
         </div>
         <div class="legend-item loop">
             <h3>🟢 run_query() Loop</h3>
-            <p>Core while loop: stream from API → yield events → check tool_uses → execute tools (parallel if multiple) → append results → repeat until stop_reason != "tool_use" or max_turns.</p>
+            <p>Core loop: stream from API → yield events → check tool_uses → execute tools (parallel if multiple) → append results → repeat until the model stops requesting tools, a submission tool completes, or the tool-call budget is exhausted.</p>
         </div>
         <div class="legend-item tool">
             <h3>🟨 Tool Execution</h3>

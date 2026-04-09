@@ -204,7 +204,7 @@ def eval_agent():
         sandbox_id = sb["id"]
         populate_sandbox_files(sandbox_id)
 
-    agent = create_eval_agent(sandbox_id=sandbox_id, max_turns=100)
+    agent = create_eval_agent(sandbox_id=sandbox_id, tool_call_limit=100)
     yield agent
 
     if sandbox_id:

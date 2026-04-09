@@ -11,11 +11,6 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_client_lock = threading.Lock()
-_cached_client: Any | None = None
-_cached_client_key: tuple[str, str, str] | None = None
-_cached_loop_id: int | None = None
-
 
 def close_client(client: Any) -> None:
     if client is None:
@@ -49,12 +44,13 @@ def close_client(client: Any) -> None:
 
 
 def shutdown_cached_client() -> None:
-    global _cached_client, _cached_client_key, _cached_loop_id
-    with _client_lock:
-        client = _cached_client
-        _cached_client = None
-        _cached_client_key = None
-        _cached_loop_id = None
+    from sandbox import async_client as async_client_mod
+
+    with async_client_mod._client_lock:
+        client = async_client_mod._cached_client
+        async_client_mod._cached_client = None
+        async_client_mod._cached_client_key = None
+        async_client_mod._cached_loop_id = None
     close_client(client)
 
 

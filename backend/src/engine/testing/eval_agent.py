@@ -318,7 +318,7 @@ class EvalAgent:
         system_prompt: str | None = None,
         sandbox_id: str | None = None,
         enable_background_tasks: bool = False,
-        max_turns: int = 200,
+        tool_call_limit: int | None = None,
         max_tokens: int | None = None,
         settings: Settings | None = None,
     ) -> EvalAgent:
@@ -336,7 +336,7 @@ class EvalAgent:
             enable_background_tasks: Enable background task execution.
                 (Effectively derived from available tools; retained as a
                 no-op arg for API compatibility with older tests.)
-            max_turns: Maximum agentic loop turns.
+            tool_call_limit: Optional cap on tool dispatches for the ephemeral run.
             max_tokens: Override max_tokens from settings.
             settings: Override auto-loaded settings.
 
@@ -388,7 +388,7 @@ class EvalAgent:
             description="Test harness eval agent",
             system_prompt=system_prompt or DEFAULT_SYSTEM_PROMPT,
             toolkits=["sandbox_operations", "subagent"],
-            max_turns=max_turns,
+            tool_call_limit=tool_call_limit,
             include_skills=False,
             source="builtin",
         )

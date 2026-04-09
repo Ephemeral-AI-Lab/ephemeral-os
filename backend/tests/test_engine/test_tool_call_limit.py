@@ -33,7 +33,6 @@ def _ctx(limit: int | None, used: int = 0) -> QueryContext:
         model="m",
         system_prompt="p",
         max_tokens=1,
-        max_turns=10,
         tool_call_limit=limit,
         tool_calls_used=used,
         tool_metadata=ExecutionMetadata(),
@@ -140,4 +139,3 @@ async def test_execute_tool_call_unlimited_budget_does_not_count():
     await _execute_tool_call(ctx, "ghost", "id1", {})
     # ``None`` limit short-circuits the budget gate; counter stays put.
     assert ctx.tool_calls_used == 0
-

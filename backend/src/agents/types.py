@@ -29,9 +29,6 @@ class AgentDefinition(BaseModel):
     effort: str | int | None = None
 
     # --- agent loop control ---
-    max_turns: int | None = Field(
-        default=None, validation_alias=AliasChoices("max_turns", "maxTurns")
-    )
     # Per-ephemeral-run cap on tool dispatches. ``None`` = unlimited.
     # Each ``EphemeralAgent`` spawn starts with a fresh counter, so
     # nested ``run_subagent`` calls have independent budgets and the
@@ -105,7 +102,7 @@ class AgentDefinition(BaseModel):
             return [s.strip() for s in v.split(",") if s.strip()]
         return v
 
-    @field_validator("max_turns", "tool_call_limit", mode="before")
+    @field_validator("tool_call_limit", mode="before")
     @classmethod
     def _coerce_positive_int(cls, v: Any) -> Any:
         if v is None or isinstance(v, int):

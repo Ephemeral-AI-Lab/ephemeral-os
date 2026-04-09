@@ -14,12 +14,14 @@ When benchmark prose, release notes, or changelog bullets disagree with the live
 ## Shared benchmark constraints
 
 - **Source of truth is the current sandbox checkout.** The SWE-EVO test patch is already applied in the sandbox for this run. Treat the working tree, the named FAIL_TO_PASS targets, the PASS_TO_PASS guardrails, and the grading command as the benchmark contract.
+- **Use the injected repo root as-is.** The benchmark runtime already injects the sandbox repo root as the working directory for worker shell commands. Do not prepend guessed `cd /workspace`, `cd /home/user`, or similar path hops unless the payload explicitly names a real child directory.
 - **Changelog prose is background context only.** Do not treat release notes or version-transition prose as the implementation checklist.
 - **Fix the repository, not the ambient environment.** Do not rely on ad hoc `pip install`, `conda install`, `uv add`, or other sandbox-only environment mutation as the benchmark fix. If dependency metadata is part of the solution, land it in the repo-managed manifest or lockfile.
 - **Plan -> Execute -> Validate.** Planner decomposes, developer edits, validator verifies. Do not collapse those phases into one role.
 - **Background work stays backgrounded.** After launching a scout or other background task, keep working other ready surfaces, use `check_background_progress` for spot checks, and wait only when that result is the remaining blocker.
 - **Progress checks are per fresh scout.** If you launch a new scout and later want to wait on it, inspect that specific task with `check_background_progress` first. Do not spawn a batch of fresh scouts and then immediately wait on them.
 - **Live tooling beats cached context.** Atlas briefs, shared briefings, and planner hints are useful snapshots. On any conflict, trust live code intelligence and live sandbox reads.
+- **Runtime tool names are literal.** In team-mode sandboxes, use the actual `daytona_*` tool names exposed by the developer/validator toolkits. Do not fall back to generic `edit_file` / `read_file` tool names from other environments.
 
 ## Retry loop
 
@@ -34,14 +36,21 @@ When benchmark prose, release notes, or changelog bullets disagree with the live
 - On large benchmark roots, spend the first exploration pass on 2-3 disjoint source-owner scouts rather than one long serial hypothesis lane.
 - If the first scout wave comes back partial or still leaves several disjoint owner hypotheses alive, launch another disjoint scout wave or a narrowed child planner. Do not freeze the root plan just because the first wave already ran.
 - Once two scout waves or roughly 25 planner tool calls have already gone into the same root benchmark surface, the default next step is the plan. A third wave needs a genuinely new disjoint owner cluster, not a deeper read of the same mapped clusters.
+- The submitted root benchmark plan should stay within **1-10 total tasks**. Use dependency edges to keep the ready frontier small; do not confuse a small ready frontier with a two-item total plan.
+- If the natural root task set exceeds 10 concrete slices, regroup adjacent sibling work into expandable child-planner items until the submitted level is back within 10.
+- On large benchmark roots, child planners are also workload-sharding tools. If two developer lanes cannot plausibly cover every known residual cluster, keep the remaining owned surface behind one or more downstream expandable planner items instead of leaving it implicit.
+- For broad SWE-EVO roots, the default graph shape should usually be `2 critical developer lanes + 1 downstream expandable planner item + 1 verifier` whenever residual owned work still remains after the first two lanes are chosen.
 - Use the FAIL_TO_PASS list as reproduction signals, not as a reason to scout giant test files just to restate known failures.
 - When the failure surface is broad, cluster by likely production owner and guardrail surface first. A hundred failing test IDs in one module still count as one source-owner lane, not a hundred planner tasks.
+- A dominant cluster does not erase the residual cluster. If named FAIL_TO_PASS targets remain outside the dominant owner surface, the root plan must still give those residual targets their own developer lane or expandable child planner. Do not hide unresolved non-dominant failures inside validator-only coverage.
 - Once one likely owner file or subsystem is known, stop changelog/version archaeology. Hand off the symptom, likely owner, exact reproduction target, and verification target.
 - If the next planner thought is "I need to understand the actual test failures" inside a cluster that is already source-owner complete, stop and hand that cluster to a developer or validator. Exact runtime mismatch confirmation belongs downstream.
 - Do not treat a dependency pin or `pyproject.toml` entry as the root cause from the root planner just because the changelog mentions a version bump. A manifest bump is only a planner-owned lane when the task is explicitly packaging-related or a developer later confirms the repo manifest is the real fix from live evidence.
+- If runtime evidence says an external dependency is missing a symbol or attribute, but a concrete repo file already imports or calls that symbol, keep the root lane anchored on the local consumer or compatibility surface. Do not rewrite the root plan into "upgrade the dependency" unless live manifest or lockfile evidence proves the repo-managed dependency metadata is the actual owner.
 - Root planners must not spend CI turns on dependency-name or import archaeology (`pydantic_core`, package pins, installed versions, lockfiles) once concrete source owners are known. If version drift is still plausible, pass it to the developer lane as a hypothesis tied to an exact reproduction target.
 - Once source-owner scouts exist, do not open new manifest or giant-test scouts. Remaining uncertainty belongs to a developer or validator lane unless source ownership is still ambiguous.
 - Split disjoint owner clusters into separate source-owned execution lanes. Do not collapse unrelated modules into one omnibus developer task just because they appear in the same release-note block.
+- Validators verify; they do not own first-fix work. Every named FAIL_TO_PASS cluster in the request must map to a developer or child-planner owner before a validator is allowed to cover it.
 - If one file is large but still the likely owner, a bounded single-file scout is valid. If that still leaves several independent regions, emit a narrowed child planner instead of forcing a flat root plan.
 - Parent and sibling exploration lanes must stay disjoint. Do not reopen a slice already owned by a scout or child planner unless new evidence invalidates the boundary.
 - While scouts are running, keep the planner moving on other uncovered branches, shared-context reuse, and plan-shape reasoning. Wait only when a scout result becomes the remaining blocker.

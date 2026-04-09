@@ -108,17 +108,21 @@ The hint is injected verbatim as context into the sub-coordinator's decompositio
 
 ---
 
-## Specialist Mapping
+## Worker Assignment Intent
 
-These role labels are conceptual guidance only. In `plan_tasks()`, `agent_name` must always be one of the exact names returned by `list_available_agents()`. If your team uses custom names like `wwx` or `yifa`, map the role intent onto those names instead of emitting the generic labels below.
+`agent_name` in `plan_tasks()` must always be one of the exact names returned by `list_specialist_agents()` or `list_available_agents()`. Do not emit stack-role labels such as `backend-developer`, `frontend-developer`, `test-engineer`, `devops-engineer`, or `fullstack-developer`.
 
-| Specialist | Use for |
+Reason about assignment by lane intent, then map that intent onto the active roster:
+
+| Lane intent | Use for |
 |---|---|
-| `backend-developer` | Python, FastAPI, SQLAlchemy, Alembic, REST/GraphQL endpoints, background tasks |
-| `frontend-developer` | React 18+, TypeScript, Tailwind CSS, React Query, React Router, Vite |
-| `test-engineer` | pytest, vitest, playwright, test fixtures, coverage reporting |
-| `devops-engineer` | Shell, Docker, docker-compose, npm/pip/cargo install, .env, CI/CD pipelines |
-| `fullstack-developer` | Tasks spanning both FE and BE: shared type contracts, auth wiring, API client generation |
+| `implementation-worker` | benchmark-critical production code that owns the FAIL_TO_PASS behavior or the nearest grounded root cause |
+| `bridge-worker` | repo code that propagates or integrates a proven implementation change across modules, interfaces, or compatibility layers |
+| `infrastructure-worker` | repo-managed config, fixture, build, or environment files only when they are required to unblock benchmark-critical work |
+| `verification-worker` | targeted FAIL_TO_PASS checks first, PASS_TO_PASS guardrails second, broader regression only when needed |
+| `phase_settings.expandable_task_agent_name` | any lane still too broad or uncertain for one worker; use this exact runtime-provided coordinator name only for `expandable: true` tasks |
+
+These placeholder lane names appear in the reference sketches below and are never valid submitted `agent_name` values. If the active roster exposes only one non-expandable worker, reuse that same exact agent name for all atomic leaves instead of fabricating specialist aliases.
 
 ---
 
@@ -170,7 +174,7 @@ If a graph mixes implementation work and verification work, every verification t
 (3) cart + checkout flow tests (add/remove items, mock payment);
 (4) order history tests"
 ```
-Each subset becomes an atomic subtask that one agent can complete within a single worker tool budget. Treat the Agno hard ceiling as 100 tool calls and plan for each subset to finish well under that. The same pattern applies to frontend tests (split by page/feature) and E2E tests (split by user flow).
+Each subset becomes an atomic subtask that one agent can complete within a single worker tool budget. Treat the Agno hard ceiling as 200 tool calls and plan for each subset to finish well under that. The same pattern applies to frontend tests (split by page/feature) and E2E tests (split by user flow).
 
 **5. Integration and wiring come last.**
 Router wiring, page composition, cross-domain integration, release assembly, and final smoke/E2E checks should depend on the leaf tasks they aggregate.
@@ -287,10 +291,6 @@ will submit the plan for you:
 
 ## Domain Reference Guides
 
-For situation-specific patterns and examples, read the relevant reference:
+For the remaining decomposition guidance, read:
 
-- **Fullstack web application** → `references/fullstack-webapp.md`
-- **API-only backend** → `references/api-backend.md`
-- **Data pipeline / ML workflow** → `references/data-and-ml.md`
-- **Infrastructure and DevOps** → `references/infra-and-devops.md`
 - **Expandable vs atomic decision rubric** → `references/decomposition-rubric.md`

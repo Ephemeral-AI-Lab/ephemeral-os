@@ -165,7 +165,6 @@ def _make_context(
     client: ScriptedMockClient,
     registry: ToolRegistry,
     enable_background: bool = True,
-    max_turns: int = 20,
 ) -> QueryContext:
     """Create a QueryContext for testing."""
     return QueryContext(
@@ -175,7 +174,6 @@ def _make_context(
         model="test-model",
         system_prompt="You are a test assistant.",
         max_tokens=4096,
-        max_turns=max_turns,
         enable_background_tasks=enable_background,
     )
 

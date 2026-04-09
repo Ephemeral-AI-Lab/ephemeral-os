@@ -64,12 +64,12 @@ def _create_subagent_coordinator(
     *,
     system_prompt: str,
     sandbox_id: str,
-    max_turns: int = 400,
+    tool_call_limit: int = 400,
 ) -> EvalAgent:
     return EvalAgent.create(
         system_prompt=system_prompt,
         sandbox_id=sandbox_id,
-        max_turns=max_turns,
+        tool_call_limit=tool_call_limit,
     )
 
 
@@ -160,7 +160,7 @@ class TestSubagentParallelResearchSynthesis:
         agent = _create_subagent_coordinator(
             system_prompt=COORDINATOR_PROMPT,
             sandbox_id=sandbox["id"],
-            max_turns=400,
+            tool_call_limit=400,
         )
 
         result = await agent.invoke(
@@ -298,7 +298,7 @@ class TestSubagentTwoWaveRefinement:
         agent = _create_subagent_coordinator(
             system_prompt=COORDINATOR_PROMPT,
             sandbox_id=sandbox["id"],
-            max_turns=400,
+            tool_call_limit=400,
         )
 
         result = await agent.invoke(
@@ -442,7 +442,7 @@ class TestSubagentFanoutWithCancellationAndRecovery:
         agent = _create_subagent_coordinator(
             system_prompt=COORDINATOR_PROMPT,
             sandbox_id=sandbox["id"],
-            max_turns=400,
+            tool_call_limit=400,
         )
 
         result = await agent.invoke(
@@ -641,7 +641,7 @@ class TestSubagentLargeFanoutThreeWave:
         agent = _create_subagent_coordinator(
             system_prompt=COORDINATOR_PROMPT,
             sandbox_id=sandbox["id"],
-            max_turns=400,
+            tool_call_limit=400,
         )
 
         result = await agent.invoke(
@@ -881,7 +881,7 @@ class TestSubagentDynamicReplanning:
         agent = _create_subagent_coordinator(
             system_prompt=COORDINATOR_PROMPT,
             sandbox_id=sandbox["id"],
-            max_turns=400,
+            tool_call_limit=400,
         )
 
         result = await agent.invoke(
@@ -1089,7 +1089,7 @@ class TestSubagentPartialFailuresAndMultiRetry:
         agent = _create_subagent_coordinator(
             system_prompt=COORDINATOR_PROMPT,
             sandbox_id=sandbox["id"],
-            max_turns=400,
+            tool_call_limit=400,
         )
 
         result = await agent.invoke(
@@ -1346,7 +1346,7 @@ Rules:
         agent = _create_subagent_coordinator(
             system_prompt=self.PRUNING_COORDINATOR_PROMPT,
             sandbox_id=sandbox["id"],
-            max_turns=500,
+            tool_call_limit=500,
         )
 
         result = await agent.invoke(

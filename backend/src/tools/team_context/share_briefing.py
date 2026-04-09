@@ -33,7 +33,8 @@ logger = logging.getLogger(__name__)
     description=(
         "Promote a brief into the run-scoped shared context so future "
         "WorkItems and subagents inherit it. Use after reading a brief "
-        "with high coverage that you trust will be relevant to siblings."
+        "with high coverage that you trust will be relevant to siblings. "
+        "Artifact promotion accepts only real team artifact refs."
     ),
 )
 async def share_briefing(
@@ -76,7 +77,31 @@ async def share_briefing(
             name=name, source=source, ref=ref, inline=inline, description=description
         )
     except ValueError as exc:
-        return ToolResult(output=f"invalid briefing: {exc}", is_error=True)
+        detail = f"invalid briefing: {exc}"
+        if source == "artifact" and not ref:
+            detail += (
+                ". `source=\"artifact\"` needs a concrete team artifact ref. "
+                "Fresh `run_subagent` scout results do not automatically give "
+                "you a shareable team artifact ref; either use "
+                "`source=\"inline\"` with a distilled note/brief body, or skip "
+                "promotion and keep the scout evidence local to this turn."
+            )
+        return ToolResult(output=detail, is_error=True)
+
+    if briefing.source == "artifact":
+        assert briefing.ref is not None
+        if team_run.artifacts.load(briefing.ref) is None:
+            return ToolResult(
+                output=(
+                    f"invalid briefing: unknown artifact ref {briefing.ref!r}. "
+                    "`share_briefing(source=\"artifact\")` accepts only real "
+                    "team artifact refs such as atlas `staged_artifact_ref` "
+                    "values or completed WorkItem artifacts. Fresh scout "
+                    "sub-run ids are not shareable artifact refs; use "
+                    "`source=\"inline\"` or skip promotion."
+                ),
+                is_error=True,
+            )
 
     project_ctx = team_run.project_context
     cap = team_run.budgets.max_shared_briefings

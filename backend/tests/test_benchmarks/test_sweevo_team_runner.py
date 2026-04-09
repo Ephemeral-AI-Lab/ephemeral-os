@@ -9,6 +9,7 @@ import pytest
 from benchmarks.sweevo import team_runner as sweevo_team_runner
 from benchmarks.sweevo.team_runner import (
     _derive_atlas_parallelism,
+    _derive_sweevo_budgets,
     _enforce_validation_evidence,
     _build_agent_overrides,
     _build_root_prompt,
@@ -42,6 +43,33 @@ def test_posthook_ctx_prefers_final_text_over_wrapped_work_result():
     assert ctx.tool_metadata.work_item_id == "W1"
 
 
+def test_posthook_ctx_propagates_live_team_plan_budget(monkeypatch):
+    _, build_posthook_ctx = _make_context_builders("sbx-1")
+
+    from team.runtime import registry as runtime_registry
+
+    monkeypatch.setattr(
+        runtime_registry,
+        "get",
+        lambda team_run_id: (
+            SimpleNamespace(budgets=SimpleNamespace(max_plan_size=10))
+            if team_run_id == "T1"
+            else None
+        ),
+    )
+
+    ctx = build_posthook_ctx(
+        SimpleNamespace(name="submit_plan_agent"),
+        {
+            "final_text": '{"items":[{"agent_name":"developer","local_id":"dev1"}]}',
+            "team_run_id": "T1",
+            "work_item_id": "W1",
+        },
+    )
+
+    assert ctx.tool_metadata["max_plan_size"] == 10
+
+
 def test_query_ctx_seeds_repo_root_for_daytona_and_ci():
     build_query_ctx, _ = _make_context_builders("sbx-1", repo_dir="/testbed")
     ctx = build_query_ctx(
@@ -68,6 +96,8 @@ def test_query_ctx_seeds_repo_root_for_daytona_and_ci():
     assert ctx.tool_metadata.sandbox_id == "sbx-1"
     assert ctx.tool_metadata.daytona_cwd == "/testbed"
     assert ctx.tool_metadata["ci_workspace_root"] == "/testbed"
+    assert "Repo root inside the sandbox: /testbed" in ctx.user_message
+    assert "Do not prepend guessed roots" in ctx.user_message
 
 
 def test_root_prompt_points_to_skill_owned_workflow_policy():
@@ -91,6 +121,10 @@ def test_root_prompt_points_to_skill_owned_workflow_policy():
     assert "release notes are intentionally omitted from the root planner prompt" in prompt
     assert "Stable SWE-EVO workflow policy lives in the declared skills" in prompt
     assert "Recommended first-ready frontier cap" in prompt
+    assert "submitted root plan must stay within 1-10 total tasks" in prompt
+    assert "does not mean the whole submitted graph should stop at that many items" in prompt
+    assert "do not hand the whole remaining surface to only the initial developers" in prompt
+    assert "must still receive its own developer lane or expandable child planner" in prompt
     assert "must not inspect dependency/version metadata" in prompt
     assert "benchmark run log file under `.ephemeralos/benchmark-logs/`" in prompt
 
@@ -121,7 +155,7 @@ def test_agent_overrides_attach_sweevo_skills_without_prompt_duplication():
     assert "verification-replan" in overrides[VALIDATOR]["skills"]
 
 
-def test_planner_runtime_limits_scale_to_warn_before_thrashing():
+def test_planner_runtime_limits_preserve_shared_agent_budget():
     large_single_target = SimpleNamespace(
         instance_id="large-one",
         instance_id_swe="large-one",
@@ -135,8 +169,7 @@ def test_planner_runtime_limits_scale_to_warn_before_thrashing():
         problem_statement="- bullet\n" * 80,
     )
     assert _derive_planner_runtime_limits(large_single_target) == {
-        "tool_call_limit": 14,
-        "max_turns": 56,
+        "tool_call_limit": 200,
     }
 
     medium_multi_target = SimpleNamespace(
@@ -152,9 +185,27 @@ def test_planner_runtime_limits_scale_to_warn_before_thrashing():
         problem_statement="- bullet\n" * 10,
     )
     assert _derive_planner_runtime_limits(medium_multi_target) == {
-        "tool_call_limit": 16,
-        "max_turns": 64,
+        "tool_call_limit": 200,
     }
+
+
+def test_sweevo_budgets_cap_submitted_plan_size_at_ten():
+    instance = SimpleNamespace(
+        repo="pydantic/pydantic",
+        instance_id="wide-plan",
+        instance_id_swe="wide-plan",
+        start_version="2.6.0b1",
+        end_version="2.6.0",
+        docker_image="example/image:latest",
+        test_cmds="pytest -q",
+        problem_statement="- bullet\n" * 80,
+        fail_to_pass=[f"tests/test_{i}.py::test_case" for i in range(20)],
+        pass_to_pass=["tests/test_guard.py::test_existing"],
+    )
+
+    budgets = _derive_sweevo_budgets(instance)
+
+    assert budgets.max_plan_size == 10
 
 
 def test_sweevo_disables_atlas_maintenance_parallelism():
@@ -212,6 +263,7 @@ def test_resume_sweevo_team_uses_default_executor_factory_signature(monkeypatch)
         pass_to_pass=["tests/test_foo.py::test_existing"],
     )
     fake_tr = SimpleNamespace(
+        id="team-run-1",
         sandbox_id="sbx-1",
         session_id="sess-1",
         budgets=SimpleNamespace(),
@@ -232,10 +284,14 @@ def test_resume_sweevo_team_uses_default_executor_factory_signature(monkeypatch)
     monkeypatch.setattr(sweevo_team_runner, "_build_team_metrics", lambda: {})
     monkeypatch.setattr(sweevo_team_runner, "_emit_team_runtime_banner", lambda *args, **kwargs: None)
     monkeypatch.setattr(sweevo_team_runner, "_checkpoint_ids_from_store", lambda *args, **kwargs: [])
+    def fake_resume_from(_store, _team_run_id, *, checkpoint_id=None):
+        assert checkpoint_id is None
+        return fake_tr
+
     monkeypatch.setattr(
         sweevo_team_runner.TeamRun,
         "resume_from",
-        staticmethod(lambda _store, _team_run_id: fake_tr),
+        staticmethod(fake_resume_from),
     )
 
     seen_factory_calls: list[dict[str, object]] = []
@@ -307,7 +363,6 @@ def test_make_runner_uses_agent_definition_limits(monkeypatch):
                 tool_metadata=ExecutionMetadata(session_config="cfg", sandbox_id="sbx-1"),
                 run_id="",
                 tool_call_limit=_kwargs["agent_def"].tool_call_limit,
-                max_turns=_kwargs["agent_def"].max_turns,
                 api_messages_snapshot=None,
             ),
             display_messages=[],
@@ -329,7 +384,7 @@ def test_make_runner_uses_agent_definition_limits(monkeypatch):
         session_config=SimpleNamespace(session_id="sess-1"),
         sandbox_id="sbx-1",
         printer=None,
-        agent_overrides={"team_planner": {"tool_call_limit": 50, "max_turns": 100}},
+        agent_overrides={"team_planner": {"tool_call_limit": 50}},
     )
     ctx = sweevo_team_runner.TeamAgentContext(
         user_message="Plan it",
@@ -349,7 +404,6 @@ def test_make_runner_uses_agent_definition_limits(monkeypatch):
     assert captured_agents
     assert captured_agents[0].query_context.tool_metadata.agent_name == "team_planner"
     assert captured_agents[0].query_context.tool_call_limit == 50
-    assert captured_agents[0].query_context.max_turns == 100
 
 
 def test_emit_dispatcher_dag_logs_graph_lines():

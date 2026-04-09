@@ -33,8 +33,8 @@ class TestCloseClient:
 
 
 class TestShutdownCachedClient:
-    def test_clears_cached_state(self):
-        import asyncio
+    def test_clears_async_client_cached_state(self):
+        import sandbox.async_client as async_client_mod
         import sandbox.lifecycle as mod
 
         async def fake_close():
@@ -42,12 +42,12 @@ class TestShutdownCachedClient:
 
         mock_client = MagicMock()
         mock_client.close = MagicMock(return_value=fake_close())
-        mod._cached_client = mock_client
-        mod._cached_client_key = ("key", "url", "target")
-        mod._cached_loop_id = 42
+        async_client_mod._cached_client = mock_client
+        async_client_mod._cached_client_key = ("key", "url", "target")
+        async_client_mod._cached_loop_id = 42
 
         mod.shutdown_cached_client()
 
-        assert mod._cached_client is None
-        assert mod._cached_client_key is None
-        assert mod._cached_loop_id is None
+        assert async_client_mod._cached_client is None
+        assert async_client_mod._cached_client_key is None
+        assert async_client_mod._cached_loop_id is None

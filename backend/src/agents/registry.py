@@ -39,7 +39,6 @@ def _builtin_definitions() -> list[AgentDefinition]:
             ),
             system_prompt=_SUBAGENT_SYSTEM_PROMPT,
             model="inherit",
-            max_turns=15,
             toolkits=["sandbox_operations", "code_intelligence"],
             agent_type="subagent",
             source="builtin",

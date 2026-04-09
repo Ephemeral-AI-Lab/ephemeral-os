@@ -21,7 +21,7 @@ interface AgentDetail {
   system_prompt: string | null
   model: string
   effort: string | null
-  max_turns: number | null
+  tool_call_limit: number | null
   tools: string[] | null
   disallowed_tools: string[] | null
   toolkits: string[] | null
@@ -227,7 +227,7 @@ interface FormData {
   system_prompt: string
   model: string
   effort: string
-  max_turns: string
+  tool_call_limit: string
   tools: string
   disallowed_tools: string
   toolkits: string
@@ -244,7 +244,7 @@ const EMPTY_FORM: FormData = {
   system_prompt: '',
   model: 'minimax',
   effort: '',
-  max_turns: '',
+  tool_call_limit: '',
   tools: '',
   disallowed_tools: '',
   toolkits: '',
@@ -262,7 +262,7 @@ function agentToForm(agent: AgentDetail): FormData {
     system_prompt: agent.system_prompt ?? '',
     model: agent.model,
     effort: agent.effort ?? '',
-    max_turns: agent.max_turns?.toString() ?? '',
+    tool_call_limit: agent.tool_call_limit?.toString() ?? '',
     tools: agent.tools?.join(', ') ?? '',
     disallowed_tools: agent.disallowed_tools?.join(', ') ?? '',
     toolkits: agent.toolkits?.join(', ') ?? '',
@@ -285,7 +285,7 @@ function formToPayload(form: FormData): Record<string, unknown> {
     system_prompt: form.system_prompt || null,
     model: form.model || null,
     effort: form.effort || null,
-    max_turns: form.max_turns ? parseInt(form.max_turns, 10) : null,
+    tool_call_limit: form.tool_call_limit ? parseInt(form.tool_call_limit, 10) : null,
     tools: splitList(form.tools),
     disallowed_tools: splitList(form.disallowed_tools),
     toolkits: splitList(form.toolkits),
@@ -464,7 +464,7 @@ function AgentBuilderForm({
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <TextField label="Model Key *" value={form.model} onChange={v => set('model', v)} placeholder="minimax" />
           <SelectField label="Effort" value={form.effort} onChange={v => set('effort', v)} options={EFFORT_LEVELS} />
-          <TextField label="Max Turns" value={form.max_turns} onChange={v => set('max_turns', v)} placeholder="e.g. 20" />
+          <TextField label="Tool Call Limit" value={form.tool_call_limit} onChange={v => set('tool_call_limit', v)} placeholder="e.g. 50" />
         </div>
       </section>
 
@@ -602,7 +602,7 @@ function AgentDetailView({
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <DetailField label="Model Key" value={agent.model} />
         {agent.effort && <DetailField label="Effort" value={agent.effort} />}
-        {agent.max_turns && <DetailField label="Max Turns" value={String(agent.max_turns)} />}
+        {agent.tool_call_limit && <DetailField label="Tool Call Limit" value={String(agent.tool_call_limit)} />}
         <DetailField label="Background" value={agent.background ? 'Yes' : 'No'} />
         <DetailField label="Type" value={agent.subagent_type} />
       </div>

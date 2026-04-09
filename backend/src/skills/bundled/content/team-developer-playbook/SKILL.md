@@ -56,6 +56,7 @@ Always `ci_read_file` (or `daytona_read_file`) the full target file (or the symb
 - Use `daytona_write_file` only for net-new files or full rewrites you deliberately intend.
 - One logical change per edit call. Do not batch unrelated edits.
 - **Stay in scope.** Do not refactor adjacent code, rename unrelated symbols, or "clean up" the file. The WorkItem payload is the contract.
+- Tool names are exact. Use `daytona_edit_file` / `daytona_write_file` / `daytona_read_file`, not generic `edit_file` / `write_file` / `read_file`.
 
 ### 5. Self-verify
 After every edit to a source file you MUST run at least one of:
@@ -110,6 +111,7 @@ When `submit_summary` is called (by the posthook), your final assistant message 
 19. **Live e2e failures stay concrete.** When an in-flight benchmark or coordination task fails on a real command, real node id, or runtime component, stay anchored to that exact failing surface until you either patch it or prove the task is mis-scoped. Do not drift back into broad benchmark archaeology.
 20. **Checkpoint/replan bugs are production bugs.** If the owned task touches checkpoint restore, retry routing, request_replan, submit_replan, dispatcher correction, or related runtime state, debug that control path directly and keep the verification target tied to it.
 19. **Repeated live-runtime faults are not a coding loop.** After one confirming retry, repeated harness/checkpoint/sandbox failures are evidence for retry or replan, not permission to keep hammering the same command.
+20. **Do not fight the injected cwd.** `daytona_bash` already runs from the benchmark repo root when `daytona_cwd` is set. Do not prepend `cd /workspace`, `cd /home/user`, or other guessed directories unless the payload explicitly requires a subdirectory.
 
 ---
 

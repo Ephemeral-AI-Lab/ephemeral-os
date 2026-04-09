@@ -157,7 +157,7 @@ def sandbox_id():
 
 @pytest.mark.asyncio
 async def test_agent_responds_to_simple_prompt(sandbox_id):
-    agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, max_turns=5)
+    agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, tool_call_limit=5)
     result = await agent.invoke("Say hello in exactly 3 words.")
     assert len(result.assistant_turns()) > 0, "Missing assistant response"
     assert result.text, "Should produce a response"
@@ -165,7 +165,7 @@ async def test_agent_responds_to_simple_prompt(sandbox_id):
 
 @pytest.mark.asyncio
 async def test_agent_uses_daytona_bash_tool(sandbox_id):
-    agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, max_turns=10)
+    agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, tool_call_limit=10)
     result = await agent.invoke("Run this exact command in the sandbox: echo 'ANTHROPIC_BASH_OK'")
     assert len(result.assistant_turns()) > 0, "Missing assistant response"
 
@@ -176,7 +176,7 @@ async def test_agent_uses_daytona_bash_tool(sandbox_id):
 
 @pytest.mark.asyncio
 async def test_agent_multi_tool_interaction(sandbox_id):
-    agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, max_turns=10)
+    agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, tool_call_limit=10)
     result = await agent.invoke("Use daytona_bash to run: pwd")
     assert len(result.assistant_turns()) > 0, "Missing assistant response"
 
@@ -188,7 +188,7 @@ async def test_agent_multi_tool_interaction(sandbox_id):
 
 @pytest.mark.asyncio
 async def test_agent_multi_step_pipeline(sandbox_id):
-    agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, max_turns=15)
+    agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, tool_call_limit=15)
     result = await agent.invoke(
         "Do these steps in the sandbox:\n"
         "1. Use daytona_write_file to create /workspace/anthro_pipeline.py with: print('ANTHRO_PIPELINE_OK')\n"
@@ -222,7 +222,7 @@ async def test_agent_multi_step_pipeline(sandbox_id):
 
 @pytest.mark.asyncio
 async def test_tool_started_has_correct_structure(sandbox_id):
-    agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, max_turns=10)
+    agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, tool_call_limit=10)
     result = await agent.invoke("Use daytona_bash to run: echo 'ANTHRO_STRUCTURE_OK'")
     tool_started = result.tools_started()
     assert len(tool_started) >= 1, f"No tool_started events."
@@ -234,7 +234,7 @@ async def test_tool_started_has_correct_structure(sandbox_id):
 
 @pytest.mark.asyncio
 async def test_event_lifecycle_complete(sandbox_id):
-    agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, max_turns=10)
+    agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, tool_call_limit=10)
     result = await agent.invoke("Use daytona_bash to run: echo 'LIFECYCLE_OK'")
 
     assert len(result.assistant_turns()) > 0, "Missing assistant response"

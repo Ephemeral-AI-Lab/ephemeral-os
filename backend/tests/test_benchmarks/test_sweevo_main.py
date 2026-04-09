@@ -125,3 +125,12 @@ def test_main_run_log_keeps_full_conversation_messages(monkeypatch, tmp_path):
     contents = log_files[0].read_text(encoding="utf-8")
     assert f"[text] {long_text}" in contents
     assert f"[system:runtime_note] {long_system}" in contents
+
+
+def test_ansi_stripping_tee_flush_tolerates_closed_mirror(tmp_path):
+    mirror = (tmp_path / "run.log").open("w", encoding="utf-8")
+    tee = sweevo_main._AnsiStrippingTee(sys.stdout, mirror)
+
+    mirror.close()
+
+    tee.flush()

@@ -155,6 +155,42 @@ async def test_share_briefing_validates_briefing_xor():
         )
         assert result.is_error
         assert "invalid briefing" in result.output
+        assert "source=\"inline\"" in result.output
+    finally:
+        unregister("T1")
+
+
+@pytest.mark.asyncio
+async def test_share_briefing_missing_artifact_ref_explains_inline_fallback():
+    tr = _fake_team_run()
+    register(tr)
+    try:
+        result = await _call(
+            name="bad_artifact",
+            source="artifact",
+            context=_ctx("T1"),
+        )
+        assert result.is_error
+        assert "source=\"inline\"" in result.output
+        assert "run_subagent" in result.output
+    finally:
+        unregister("T1")
+
+
+@pytest.mark.asyncio
+async def test_share_briefing_rejects_unknown_artifact_ref():
+    tr = _fake_team_run()
+    register(tr)
+    try:
+        result = await _call(
+            name="missing",
+            source="artifact",
+            ref="ghost",
+            context=_ctx("T1"),
+        )
+        assert result.is_error
+        assert "unknown artifact ref" in result.output
+        assert "source=\"inline\"" in result.output
     finally:
         unregister("T1")
 

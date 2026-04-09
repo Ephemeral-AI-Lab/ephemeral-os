@@ -87,17 +87,17 @@ These descriptions should almost always be expandable:
 
 These descriptions should almost always be atomic:
 
-| Description | Agent |
+| Description | Lane intent |
 |---|---|
-| "Implement the ProductCard component" | frontend-developer |
-| "Write the GET /products endpoint with filtering" | backend-developer |
-| "Add the Product ORM model and migration" | backend-developer |
-| "Write pytest fixtures for DB session" | test-engineer |
-| "Write the Dockerfile for the backend service" | devops-engineer |
-| "Implement the useCart hook" | frontend-developer |
-| "Add the catalog router to main.py" | backend-developer |
-| "Write integration tests for the orders API" | test-engineer |
-| "Create .env.example with all required variables" | devops-engineer |
+| "Implement the ProductCard component" | `implementation-worker` |
+| "Write the GET /products endpoint with filtering" | `implementation-worker` |
+| "Add the Product ORM model and migration" | `implementation-worker` |
+| "Write pytest fixtures for DB session" | `verification-worker` |
+| "Write the Dockerfile for the backend service" | `infrastructure-worker` |
+| "Implement the useCart hook" | `implementation-worker` |
+| "Add the catalog router to main.py" | `bridge-worker` |
+| "Write integration tests for the orders API" | `verification-worker` |
+| "Create .env.example with all required variables" | `infrastructure-worker` |
 
 ---
 

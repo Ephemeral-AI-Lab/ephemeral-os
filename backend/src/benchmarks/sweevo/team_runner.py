@@ -119,8 +119,14 @@ def _derive_sweevo_budgets(instance: SWEEvoInstance) -> BudgetConfig:
         "max_briefing_bytes": 48_000,
     })
 
-    plan_size = min(24, int(base["max_plan_size"]) + max(0, min(4, f2p_targets - 1)))
-    work_items = max(int(base["max_work_items"]), plan_size * int(base["max_depth"]))
+    # Keep every submitted planner level within 1-10 items. When the natural
+    # task set is wider than that, the planner should compress adjacent work
+    # into expandable child-planner lanes rather than flattening more siblings.
+    plan_size = 10
+    work_items = max(
+        int(base["max_work_items"]),
+        max(4, min(plan_size, f2p_targets)) * int(base["max_depth"]),
+    )
     return BudgetConfig(
         max_work_items=work_items,
         max_depth=int(base["max_depth"]),
@@ -142,13 +148,17 @@ def _derive_atlas_parallelism(instance: SWEEvoInstance, *, num_executors: int) -
 
 
 def _derive_planner_runtime_limits(instance: SWEEvoInstance) -> dict[str, int]:
-    """Return benchmark-specific planner limits."""
+    """Return benchmark-specific planner limits.
+
+    SWE-EVO planner behavior should stay inside the shared 200-call runtime
+    budget enforced for the built-in coordination agents. Benchmark tuning
+    belongs in skills and plan quality, not by shrinking the planner's tool
+    ceiling per instance.
+    """
     del instance
-    tool_call_limit = 100
-    max_turns = max(48, tool_call_limit * 4)
+    tool_call_limit = 200
     return {
         "tool_call_limit": tool_call_limit,
-        "max_turns": max_turns,
     }
 
 
@@ -187,6 +197,19 @@ def _build_root_prompt(instance: SWEEvoInstance, repo_dir: str) -> str:
         f"{len(instance.fail_to_pass)} fail-to-pass target(s)).\n"
         f"- Recommended first-ready frontier cap: {frontier_cap} benchmark-critical "
         f"implementation lane(s).\n"
+        f"- The submitted root plan must stay within 1-10 total tasks. If the natural "
+        f"task set is wider than 10, group adjacent sibling work into expandable child "
+        f"planner items until the submitted level is back under that cap.\n"
+        f"- The first-ready frontier cap limits only simultaneously ready implementation "
+        f"lanes. It does not mean the whole submitted graph should stop at that many items.\n"
+        f"- On large instances with many fail-to-pass clusters, do not hand the whole "
+        f"remaining surface to only the initial developers. If residual owned clusters "
+        f"remain after the first developer lanes are chosen, keep at least one downstream "
+        f"expandable planner item for that residual work unless every cluster already has "
+        f"its own explicit developer owner.\n"
+        f"- Every named fail-to-pass cluster outside the dominant owner surface "
+        f"must still receive its own developer lane or expandable child planner. "
+        f"Do not hide residual unfixed clusters inside validator coverage.\n"
         f"- Stable SWE-EVO workflow policy lives in the declared skills for this run; "
         f"use the test targets and grading command above as the source of truth.\n"
         f"- release notes are intentionally omitted from the root planner prompt; "
@@ -425,8 +448,7 @@ def _make_runner(
                 effective_defn.name,
                 (
                     "[runtime_limits] "
-                    f"tool_call_limit={agent.query_context.tool_call_limit} "
-                    f"max_turns={agent.query_context.max_turns}"
+                    f"tool_call_limit={agent.query_context.tool_call_limit}"
                 ),
             )
 
@@ -622,6 +644,15 @@ def _make_context_builders(
     sandbox_id: str,
     repo_dir: str = _REPO_DIR,
 ):
+    sandbox_note = (
+        "## Sandbox Working Directory\n"
+        f"- Repo root inside the sandbox: {repo_dir}\n"
+        "- `daytona_bash`, `daytona_read_file`, `daytona_edit_file`, and related "
+        "tools already execute relative to that repo root when you use relative paths.\n"
+        "- Do not prepend guessed roots such as `/workspace`, `/home/user`, or "
+        "`/home/user/repos/...` unless the payload names a real child directory.\n\n"
+    )
+
     def build_query_ctx(defn, team_run, wi):
         if wi.depth == 0 and wi.agent_name == TEAM_PLANNER:
             # The root planner already receives the benchmark prompt via
@@ -629,7 +660,7 @@ def _make_context_builders(
             # duplicates the prompt and the full FAIL_TO_PASS list.
             base_prompt = team_run.user_request
         else:
-            base_prompt = _work_item_base_prompt(wi.payload)
+            base_prompt = sandbox_note + _work_item_base_prompt(wi.payload)
         user_message = build_initial_user_message(team_run, wi, base_prompt)
         meta = build_work_item_metadata(team_run, wi)
         meta["sandbox_id"] = team_run.sandbox_id or sandbox_id
@@ -650,6 +681,18 @@ def _make_context_builders(
                 value = work_result.get(key)
                 if value:
                     meta[key] = value
+            team_run_id = str(meta.get("team_run_id") or "").strip()
+            if team_run_id:
+                try:
+                    from team.runtime.registry import get as get_team_run
+
+                    team_run = get_team_run(team_run_id)
+                except Exception:
+                    team_run = None
+                budgets = getattr(team_run, "budgets", None)
+                max_plan_size = getattr(budgets, "max_plan_size", None)
+                if max_plan_size is not None:
+                    meta["max_plan_size"] = int(max_plan_size)
             posthook_input_text = work_result.get("posthook_input_text")
             if isinstance(posthook_input_text, str) and posthook_input_text.strip():
                 user_message = posthook_input_text
@@ -1071,11 +1114,14 @@ async def resume_sweevo_team(
     resolved_checkpoint_id = checkpoint_id
     if resolved_checkpoint_id is None and use_latest_checkpoint and checkpoint_ids:
         resolved_checkpoint_id = checkpoint_ids[-1]
-    tr = TeamRun.resume_from(
-        event_store,
-        team_run_id,
-        checkpoint_id=resolved_checkpoint_id,
-    )
+    if resolved_checkpoint_id is None:
+        tr = TeamRun.resume_from(event_store, team_run_id)
+    else:
+        tr = TeamRun.resume_from(
+            event_store,
+            team_run_id,
+            checkpoint_id=resolved_checkpoint_id,
+        )
     if not tr.sandbox_id:
         raise ValueError(
             f"team run {team_run_id!r} cannot be resumed: missing sandbox_id in persisted header"
