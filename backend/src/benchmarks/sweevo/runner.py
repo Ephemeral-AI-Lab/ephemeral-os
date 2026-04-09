@@ -14,12 +14,13 @@ import logging
 from typing import Any
 
 from benchmarks.sweevo.dataset import select_sweevo_instance, summarize_sweevo_instance
-from benchmarks.sweevo.evaluation import _extract_combined_patch
+from benchmarks.sweevo.evaluation import _extract_combined_patch, evaluate_sweevo_result
 from benchmarks.sweevo.models import (
     _DEFAULT_DATASET_SOURCE,
     _DEFAULT_SWEEVO_TEST_TIMEOUT,
     _DEFAULT_TARGET_BULLETS,
     _REPO_DIR,
+    SWEEvoResult,
 )
 from benchmarks.sweevo.sandbox import (
     create_sweevo_test_sandbox,
@@ -50,11 +51,12 @@ async def run_sweevo_with_agent(
 
     Provisions the sandbox, runs the builtin team (planner/developer/
     validator DAG) against it through :func:`run_sweevo_team`, then
-    executes the instance's required test command as the grader.
+    executes the instance's required test command and explicit F2P/P2P
+    grader.
 
     Returns a dict with ``instance``, ``sandbox``, ``team_status``,
     ``team_work_items`` (count), ``agent_patch`` (combined git diff),
-    and ``test`` (required-test result).
+    ``test`` (required-test result), and ``grading`` (F2P/P2P metrics).
     """
     from benchmarks.sweevo.team_runner import run_sweevo_team
 
@@ -102,6 +104,18 @@ async def run_sweevo_with_agent(
             timeout=test_timeout,
             on_line=on_line,
         )
+        grading_result = await evaluate_sweevo_result(
+            instance,
+            SWEEvoResult(
+                plan_id="team",
+                instance_id=instance.instance_id,
+                status="completed",
+                agent_patch=agent_patch,
+                task_count=team_work_items,
+            ),
+            sandbox_id,
+            repo_dir=repo_dir,
+        )
 
         return {
             "instance": summarize_sweevo_instance(instance),
@@ -118,6 +132,15 @@ async def run_sweevo_with_agent(
             "agent_name": "team",
             "agent_events": team_work_items,
             "test": test_result,
+            "grading": {
+                "resolved": grading_result.resolved,
+                "fix_rate": grading_result.fix_rate,
+                "fail_to_pass_passed": grading_result.fail_to_pass_passed,
+                "fail_to_pass_total": grading_result.fail_to_pass_total,
+                "pass_to_pass_broken": grading_result.pass_to_pass_broken,
+                "pass_to_pass_total": grading_result.pass_to_pass_total,
+                "status": grading_result.status,
+            },
         }
     finally:
         try:

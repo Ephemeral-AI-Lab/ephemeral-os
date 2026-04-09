@@ -18,6 +18,7 @@ import asyncio
 import json
 import logging
 import sys
+from typing import Any
 
 from benchmarks.sweevo.dataset import load_sweevo_dataset, summarize_sweevo_instance
 from benchmarks.sweevo.models import (
@@ -122,6 +123,26 @@ def _cmd_list(source: str) -> int:
     return 0
 
 
+def _collect_health_issues(result: dict[str, Any]) -> list[str]:
+    team_status = str(result.get("team_status") or "unknown")
+    health_issues: list[str] = []
+    if team_status != "succeeded":
+        health_issues.append(f"team_status={team_status}")
+
+    grading = result.get("grading") or {}
+    if grading:
+        f2p_passed = int(grading.get("fail_to_pass_passed") or 0)
+        f2p_total = int(grading.get("fail_to_pass_total") or 0)
+        p2p_broken = int(grading.get("pass_to_pass_broken") or 0)
+        p2p_total = int(grading.get("pass_to_pass_total") or 0)
+        if f2p_total > 0 and f2p_passed < f2p_total:
+            health_issues.append(f"f2p={f2p_passed}/{f2p_total}")
+        if p2p_total > 0 and p2p_broken > 0:
+            health_issues.append(f"p2p_broken={p2p_broken}/{p2p_total}")
+
+    return health_issues
+
+
 async def _cmd_run(args: argparse.Namespace) -> int:
     from message.event_printer import MultiAgentEventPrinter
     from benchmarks.sweevo.runner import run_sweevo_with_agent
@@ -159,12 +180,11 @@ async def _cmd_run(args: argparse.Namespace) -> int:
     )
 
     test = result.get("test", {})
+    grading = result.get("grading", {})
     exit_code = test.get("exit_code")
     counts = on_line.counts  # type: ignore[attr-defined]
     team_status = str(result.get("team_status") or "unknown")
-    health_issues: list[str] = []
-    if team_status != "succeeded":
-        health_issues.append(f"team_status={team_status}")
+    health_issues = _collect_health_issues(result)
     result["health_ok"] = not health_issues
     result["health_issues"] = health_issues
 
@@ -178,6 +198,16 @@ async def _cmd_run(args: argparse.Namespace) -> int:
             f"errors={counts['errors']}",
             flush=True,
         )
+        if grading:
+            print(
+                f"  grading: resolved={grading.get('resolved')}  "
+                f"f2p={grading.get('fail_to_pass_passed', 0)}/"
+                f"{grading.get('fail_to_pass_total', 0)}  "
+                f"p2p_broken={grading.get('pass_to_pass_broken', 0)}/"
+                f"{grading.get('pass_to_pass_total', 0)}  "
+                f"fix_rate={float(grading.get('fix_rate', 0.0)):.2f}",
+                flush=True,
+            )
         if health_issues:
             print(f"  unhealthy={' ; '.join(health_issues)}", flush=True)
         print("=" * 72, flush=True)
