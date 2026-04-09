@@ -89,6 +89,7 @@ class Dispatcher:
                 self.team_run_id,
                 work_items_used=self.budget_state.work_items_used,
                 artifact_bytes_used=self.budget_state.artifact_bytes_used,
+                replans_used=self.budget_state.replans_used,
             )
         )
 
@@ -306,6 +307,122 @@ class Dispatcher:
             wi.failure_reason = reason
             self._emit_failed(wi)
             self._cascade_cancel(wi_id)
+
+    # ---- retry / replan --------------------------------------------------
+
+    async def retry_work_item(self, wi_id: str, request: "RetryRequest") -> None:
+        """Reset a RUNNING work item back to READY for re-execution."""
+        from team.models import RetryRequest as _RR  # noqa: F811
+
+        async with self.lock:
+            wi = self.graph[wi_id]
+            if wi.status != WorkItemStatus.RUNNING:
+                raise RuntimeError(f"retry: {wi_id} is {wi.status.value}, not RUNNING")
+            if wi.retry_count >= wi.max_retries:
+                wi.status = WorkItemStatus.FAILED
+                wi.finished_at = _utcnow()
+                wi.failure_reason = f"retry_exhausted: {request.reason}"
+                self._emit_failed(wi)
+                self._cascade_cancel(wi_id)
+                return
+            wi.retry_count += 1
+            wi.agent_run_id = None
+            wi.started_at = None
+            wi.status = WorkItemStatus.PENDING
+            retries = wi.payload.setdefault("_retry_history", [])
+            retries.append({"attempt": wi.retry_count, "reason": request.reason})
+            self._emit(make_work_item_status(self.team_run_id, wi_id, "pending"))
+            self._promote_to_ready(wi)
+
+    async def request_replan(self, wi_id: str, request: "ReplanRequest") -> WorkItem:
+        """Fail the work item and spawn an ATOMIC replanner at the same depth level."""
+        async with self.lock:
+            wi = self.graph[wi_id]
+            if wi.status != WorkItemStatus.RUNNING:
+                raise RuntimeError(f"replan: {wi_id} is {wi.status.value}, not RUNNING")
+
+            if self.budget_state.replans_used >= self.budgets.max_replans_per_run:
+                wi.status = WorkItemStatus.FAILED
+                wi.finished_at = _utcnow()
+                wi.failure_reason = f"replan_budget_exhausted: {request.reason}"
+                self._emit_failed(wi)
+                self._cascade_cancel(wi_id)
+                raise BudgetExceeded("max_replans_per_run reached")
+
+            # 1. Fail the current work item
+            wi.status = WorkItemStatus.FAILED
+            wi.finished_at = _utcnow()
+            wi.failure_reason = f"replan_requested: {request.reason}"
+            self._emit_failed(wi)
+
+            # 2. Cancel PENDING and READY siblings (not RUNNING)
+            for other in list(self.graph.values()):
+                if (
+                    other.parent_id == wi.parent_id
+                    and other.id != wi_id
+                    and other.status in (WorkItemStatus.PENDING, WorkItemStatus.READY)
+                ):
+                    other.status = WorkItemStatus.CANCELLED
+                    other.finished_at = _utcnow()
+                    other.failure_reason = f"cancelled_by_replan_from_{wi_id}"
+                    self._emit(
+                        make_work_item_status(
+                            self.team_run_id, other.id, "cancelled",
+                            finished_at=other.finished_at.isoformat(),
+                            failure_reason=other.failure_reason,
+                        )
+                    )
+                    self._cascade_cancel(other.id)
+
+            # 3. Cancel downstream dependents of failed item
+            self._cascade_cancel(wi_id)
+
+            # 4. Collect DONE siblings as deps for replanner
+            done_sibling_ids = [
+                other.id
+                for other in self.graph.values()
+                if other.parent_id == wi.parent_id
+                and other.id != wi_id
+                and other.status == WorkItemStatus.DONE
+            ]
+
+            # 5. Create ATOMIC replanner
+            from team.builtins import TEAM_REPLANNER
+
+            replanner_id = self.new_id()
+            replanner = WorkItem(
+                id=replanner_id,
+                team_run_id=self.team_run_id,
+                agent_name=TEAM_REPLANNER,
+                status=WorkItemStatus.PENDING,
+                kind=WorkItemKind.ATOMIC,
+                deps=done_sibling_ids,
+                parent_id=wi.parent_id,
+                root_id=wi.root_id,
+                depth=wi.depth,
+                local_id=f"replan-from-{wi.local_id or wi_id}",
+                payload={
+                    "replan": True,
+                    "failed_work_item_id": wi_id,
+                    "failed_agent": wi.agent_name,
+                    "failure_reason": request.reason,
+                    "failure_context": request.context,
+                    "suggestion": request.suggestion,
+                    "original_payload": wi.payload,
+                },
+                briefings=list(wi.briefings),
+                replan_source_id=wi_id,
+            )
+            self.graph[replanner_id] = replanner
+            self.budget_state.work_items_used += 1
+            self.budget_state.replans_used += 1
+            self._emit(make_work_item_added(self.team_run_id, work_item_to_dict(replanner)))
+            self._emit_budget()
+
+            if self._compute_readiness(replanner):
+                self._promote_to_ready(replanner)
+
+            return replanner
 
     def _cascade_cancel(self, wi_id: str) -> None:
         """Cancel everything transitively dependent on wi_id."""

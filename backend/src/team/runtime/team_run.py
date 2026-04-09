@@ -441,7 +441,7 @@ class TeamRun:
 
         # --- fold events into runtime state -----------------------------
         graph = services.dispatcher.graph
-        last_budget: tuple[int, int] | None = None
+        last_budget: tuple[int, int, int] | None = None
         final_status: str | None = None
         root_id: str | None = None
 
@@ -477,6 +477,7 @@ class TeamRun:
                 last_budget = (
                     int(ev.data["work_items_used"]),
                     int(ev.data["artifact_bytes_used"]),
+                    int(ev.data.get("replans_used") or 0),
                 )
             elif ev.kind == "team_run_status":
                 final_status = ev.data.get("status")
@@ -484,6 +485,7 @@ class TeamRun:
         if last_budget is not None:
             run.budget_state.work_items_used = last_budget[0]
             run.budget_state.artifact_bytes_used = last_budget[1]
+            run.budget_state.replans_used = last_budget[2]
         else:
             run.budget_state.work_items_used = len(graph)
 
@@ -529,4 +531,7 @@ def _work_item_from_dict(data: dict[str, Any]) -> WorkItem:
         started_at=_parse_dt(data.get("started_at")),
         finished_at=_parse_dt(data.get("finished_at")),
         failure_reason=data.get("failure_reason"),
+        retry_count=int(data.get("retry_count") or 0),
+        max_retries=int(data.get("max_retries") or 2),
+        replan_source_id=data.get("replan_source_id"),
     )

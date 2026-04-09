@@ -109,7 +109,7 @@ def test_jsonl_replay_folds_events_into_view(tmp_path: Path) -> None:
     assert view["work_items"]["a"]["status"] == "done"
     assert view["work_items"]["a"]["agent_run_id"] == "ar1"
     assert view["artifacts"]["a"]["size"] == 11
-    assert view["budget"] == {"work_items_used": 1, "artifact_bytes_used": 11}
+    assert view["budget"] == {"work_items_used": 1, "artifact_bytes_used": 11, "replans_used": 0}
 
 
 # ---------- Sequence recovery across reopen -------------------------------

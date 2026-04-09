@@ -135,6 +135,7 @@ def make_budget_update(
     *,
     work_items_used: int,
     artifact_bytes_used: int,
+    replans_used: int = 0,
 ) -> TeamRunEvent:
     return TeamRunEvent(
         team_run_id=team_run_id,
@@ -142,6 +143,7 @@ def make_budget_update(
         data={
             "work_items_used": work_items_used,
             "artifact_bytes_used": artifact_bytes_used,
+            "replans_used": replans_used,
         },
     )
 
@@ -211,4 +213,7 @@ def work_item_to_dict(wi: Any) -> dict[str, Any]:
         "started_at": wi.started_at.isoformat() if wi.started_at else None,
         "finished_at": wi.finished_at.isoformat() if wi.finished_at else None,
         "failure_reason": wi.failure_reason,
+        "retry_count": wi.retry_count,
+        "max_retries": wi.max_retries,
+        "replan_source_id": wi.replan_source_id,
     }

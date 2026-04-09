@@ -138,10 +138,29 @@ def prepend_shared_briefings_for_subagent(team_run_id: str | None, body: str) ->
 def default_base_prompt(wi: "WorkItem") -> str:
     """Minimal default rendering of a WorkItem payload into a user message."""
     payload = wi.payload or {}
+    if payload.get("replan"):
+        return _render_replan_prompt(wi, payload)
     rendered = render_work_item_payload(payload)
     if rendered is not None:
         return rendered
     return f"Execute work item {wi.id} (agent={wi.agent_name}).\nPayload: {payload!r}"
+
+
+def _render_replan_prompt(wi: "WorkItem", payload: dict) -> str:
+    """Render a replan work item with full failure context."""
+    original = json.dumps(payload.get("original_payload", {}), indent=2, default=str)
+    return (
+        f"## Replan Request\n\n"
+        f"A sibling work item failed and requires corrective action at this depth level.\n\n"
+        f"**Failed work item**: {payload.get('failed_work_item_id', 'unknown')}\n"
+        f"**Failed agent**: {payload.get('failed_agent', 'unknown')}\n"
+        f"**Failure reason**: {payload.get('failure_reason', 'unknown')}\n\n"
+        f"### Failure Context\n{payload.get('failure_context', 'No context provided.')}\n\n"
+        f"### Suggestion\n{payload.get('suggestion', 'None')}\n\n"
+        f"### Original Payload\n{original}\n\n"
+        f"Analyze the failure and call update_plan with corrective work items. "
+        f"Completed sibling artifacts are available via dependency briefings above."
+    )
 
 
 def render_work_item_payload(payload: Any) -> str | None:

@@ -299,6 +299,7 @@ def replay(events: Iterable[TeamRunEvent]) -> dict:
             view["budget"] = {
                 "work_items_used": ev.data["work_items_used"],
                 "artifact_bytes_used": ev.data["artifact_bytes_used"],
+                "replans_used": ev.data.get("replans_used", 0),
             }
         elif ev.kind == "checkpoint_taken":
             view["checkpoints"].append(ev.data)

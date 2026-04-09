@@ -24,6 +24,8 @@ __all__ = [
     "SubmittedSummary",
     "SubmitSummaryInput",
     "SubmitSummaryTool",
+    "RequestRetryTool",
+    "RequestReplanTool",
 ]
 
 
@@ -36,4 +38,8 @@ def __getattr__(name: str):
         return getattr(import_module("tools.posthook.submit_summary"), name)
     if name in {"SubmitAtlasInput", "SubmitAtlasTool"}:
         return getattr(import_module("tools.posthook.submit_atlas"), name)
+    if name == "RequestRetryTool":
+        return import_module("tools.posthook.request_retry").RequestRetryTool
+    if name == "RequestReplanTool":
+        return import_module("tools.posthook.request_replan").RequestReplanTool
     raise AttributeError(name)
