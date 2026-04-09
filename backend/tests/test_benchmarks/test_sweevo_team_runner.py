@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -41,6 +42,88 @@ def test_posthook_ctx_prefers_final_text_over_wrapped_work_result():
     )
     assert ctx.tool_metadata.team_run_id == "T1"
     assert ctx.tool_metadata.work_item_id == "W1"
+
+
+def test_posthook_ctx_prefers_extracted_posthook_input_over_final_text():
+    _, build_posthook_ctx = _make_context_builders("sbx-1")
+
+    extracted = '{"chunks":[{"subsystem":"pydantic","brief":{"target_paths":["pydantic"]}}]}'
+    ctx = build_posthook_ctx(
+        SimpleNamespace(name="submit_atlas_agent"),
+        {
+            "posthook_input_text": extracted,
+            "final_text": "Acknowledged. Since the atlas payload has already been submitted, no further action is required.",
+            "team_run_id": "T1",
+            "work_item_id": "W1",
+        },
+    )
+
+    assert ctx.user_message == extracted
+    assert ctx.tool_metadata.team_run_id == "T1"
+    assert ctx.tool_metadata.work_item_id == "W1"
+
+
+def test_extract_posthook_input_text_recovers_plan_json_with_trailing_prose():
+    extracted = sweevo_team_runner._extract_posthook_input_text(
+        [
+            ConversationMessage(
+                role="assistant",
+                content=[
+                    TextBlock(
+                        text=(
+                            "I have sufficient evidence.\n\n"
+                            '{"items":[{"agent_name":"developer","local_id":"dev1","kind":"atomic"}]}\n\n'
+                            "Summary after the payload that should be ignored."
+                        )
+                    )
+                ],
+            )
+        ],
+        "submitted_plan",
+    )
+
+    assert extracted is not None
+    assert json.loads(extracted) == {
+        "items": [{"agent_name": "developer", "local_id": "dev1", "kind": "atomic"}]
+    }
+
+
+def test_extract_posthook_input_text_recovers_atlas_json_from_earlier_message():
+    extracted = sweevo_team_runner._extract_posthook_input_text(
+        [
+            ConversationMessage(
+                role="assistant",
+                content=[
+                    TextBlock(
+                        text=(
+                            "Budget critical.\n\n"
+                            '{"chunks":[{"subsystem":"tests/test_types.py","brief":{"target_paths":["tests/test_types.py"]}}],"rationale":"refresh"}'
+                        )
+                    )
+                ],
+            ),
+            ConversationMessage(
+                role="assistant",
+                content=[
+                    TextBlock(
+                        text="Atlas refresh payload already submitted. No further action needed."
+                    )
+                ],
+            ),
+        ],
+        "submitted_atlas",
+    )
+
+    assert extracted is not None
+    assert json.loads(extracted) == {
+        "chunks": [
+            {
+                "subsystem": "tests/test_types.py",
+                "brief": {"target_paths": ["tests/test_types.py"]},
+            }
+        ],
+        "rationale": "refresh",
+    }
 
 
 def test_posthook_ctx_propagates_live_team_plan_budget(monkeypatch):
@@ -148,6 +231,8 @@ def test_agent_overrides_attach_sweevo_skills_without_prompt_duplication():
 
     assert "system_prompt" not in overrides[TEAM_PLANNER]
     assert "sweevo-project-context" in overrides[TEAM_PLANNER]["skills"]
+    assert "team_context" not in overrides[TEAM_PLANNER]["toolkits"]
+    assert overrides[TEAM_PLANNER]["tool_call_limit"] == 100
     assert "system_prompt" not in overrides[DEVELOPER]
     assert "sweevo-project-context" in overrides[DEVELOPER]["skills"]
     assert "system_prompt" not in overrides[VALIDATOR]
@@ -169,7 +254,7 @@ def test_planner_runtime_limits_preserve_shared_agent_budget():
         problem_statement="- bullet\n" * 80,
     )
     assert _derive_planner_runtime_limits(large_single_target) == {
-        "tool_call_limit": 200,
+        "tool_call_limit": 100,
     }
 
     medium_multi_target = SimpleNamespace(
@@ -185,7 +270,7 @@ def test_planner_runtime_limits_preserve_shared_agent_budget():
         problem_statement="- bullet\n" * 10,
     )
     assert _derive_planner_runtime_limits(medium_multi_target) == {
-        "tool_call_limit": 200,
+        "tool_call_limit": 100,
     }
 
 
@@ -208,7 +293,7 @@ def test_sweevo_budgets_cap_submitted_plan_size_at_ten():
     assert budgets.max_plan_size == 10
 
 
-def test_sweevo_disables_atlas_maintenance_parallelism():
+def test_sweevo_enables_low_parallelism_atlas_maintenance():
     instance = SimpleNamespace(
         fail_to_pass=["a", "b"],
         problem_statement="- bullet\n" * 10,
@@ -222,7 +307,7 @@ def test_sweevo_disables_atlas_maintenance_parallelism():
         pass_to_pass=[],
     )
 
-    assert _derive_atlas_parallelism(instance, num_executors=8) == 0
+    assert _derive_atlas_parallelism(instance, num_executors=8) == 1
 
 
 def test_enforce_validation_evidence_requires_daytona_bash():

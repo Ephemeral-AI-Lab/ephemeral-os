@@ -217,6 +217,54 @@ def test_phase_b_rejects_agent_without_supported_kind(monkeypatch):
         )
 
 
+def test_phase_b_rejects_validator_depending_on_expandable_sibling(monkeypatch):
+    from agents.types import AgentDefinition
+    from team.planning import validation as _v
+
+    developer_def = AgentDefinition(name="developer", description="d")
+    planner_def = AgentDefinition(name="team_planner", description="d")
+    validator_def = AgentDefinition(name="validator", description="d")
+    monkeypatch.setattr(
+        _v,
+        "_get_definition",
+        lambda n: {
+            "developer": developer_def,
+            "team_planner": planner_def,
+            "validator": validator_def,
+        }.get(n),
+    )
+
+    counter = {"n": 0}
+
+    def fresh_id():
+        counter["n"] += 1
+        return f"NEW{counter['n']}"
+
+    parent = _parent_wi()
+    plan = Plan(
+        items=[
+            WorkItemSpec(agent_name="developer", local_id="dev1", kind=WorkItemKind.ATOMIC),
+            WorkItemSpec(
+                agent_name="team_planner",
+                local_id="child",
+                kind=WorkItemKind.EXPANDABLE,
+                deps=["dev1"],
+            ),
+            WorkItemSpec(
+                agent_name="validator",
+                local_id="val1",
+                kind=WorkItemKind.ATOMIC,
+                deps=["child"],
+            ),
+        ]
+    )
+
+    with pytest.raises(InvalidPlan, match="validator items may not depend on expandable planner"):
+        validate_plan_phase_b(
+            {parent.id: parent}, plan, "T1", parent, new_id_factory=fresh_id, max_depth=5
+        )
+
+
 def test_phase_b_combined_cycle(monkeypatch):
     _patch_registry(monkeypatch, {"a"})
     existing_parent = _parent_wi()
@@ -451,6 +499,45 @@ def test_phase_a_rejects_ready_expandable_backup_in_mixed_plan(monkeypatch):
     issues = validate_plan_phase_a(plan)
 
     assert any("speculative backup replanners" in i["msg"] for i in issues)
+
+
+def test_phase_a_rejects_validator_depending_on_expandable_sibling(monkeypatch):
+    from agents.types import AgentDefinition
+    from team.planning import validation as _v
+
+    developer_def = AgentDefinition(name="developer", description="d")
+    planner_def = AgentDefinition(name="team_planner", description="d")
+    validator_def = AgentDefinition(name="validator", description="d")
+    monkeypatch.setattr(
+        _v,
+        "_get_definition",
+        lambda n: {
+            "developer": developer_def,
+            "team_planner": planner_def,
+            "validator": validator_def,
+        }.get(n),
+    )
+    plan = Plan(
+        items=[
+            WorkItemSpec(agent_name="developer", local_id="dev1", kind=WorkItemKind.ATOMIC),
+            WorkItemSpec(
+                agent_name="team_planner",
+                local_id="child",
+                kind=WorkItemKind.EXPANDABLE,
+                deps=["dev1"],
+            ),
+            WorkItemSpec(
+                agent_name="validator",
+                local_id="val1",
+                kind=WorkItemKind.ATOMIC,
+                deps=["child"],
+            ),
+        ]
+    )
+
+    issues = validate_plan_phase_a(plan)
+
+    assert any("validator items may not depend on expandable sibling" in i["msg"] for i in issues)
 
 
 def test_submit_plan_item_parses_briefings_and_kind():

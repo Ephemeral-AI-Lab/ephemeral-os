@@ -12,6 +12,7 @@ from team.models import Plan, WorkItem, WorkItemKind, WorkItemSpec, WorkItemStat
 _MAX_INLINE_BRIEFING_BYTES_PER_SPEC = 4096
 _EXPANDABLE_AGENT = "team_planner"
 _ALLOWED_ATOMIC_AGENTS = frozenset({"developer", "validator"})
+_VALIDATOR_AGENT = "validator"
 
 Issue = dict[str, str]
 
@@ -138,6 +139,26 @@ def validate_plan_phase_a(
                 }
             )
 
+    local_specs: dict[str, WorkItemSpec] = {
+        item.local_id: item for item in plan.items if item.local_id is not None
+    }
+    for idx, item in enumerate(plan.items):
+        if item.kind != WorkItemKind.ATOMIC or item.agent_name != _VALIDATOR_AGENT:
+            continue
+        for dep in item.deps:
+            dep_item = local_specs.get(dep)
+            if dep_item is not None and dep_item.kind == WorkItemKind.EXPANDABLE:
+                issues.append(
+                    {
+                        "field": f"items[{idx}].deps",
+                        "msg": (
+                            f"validator items may not depend on expandable sibling '{dep}' — "
+                            "depend on concrete developer lanes or place validation inside "
+                            "that child planner branch"
+                        ),
+                    }
+                )
+
     # Submitted plans may not contain subagents. Keep this dependency guard
     # anyway so direct Plan construction cannot smuggle an atomic worker behind
     # a same-plan subagent dependency if Phase A is bypassed.
@@ -259,6 +280,9 @@ def validate_plan_phase_b(
     local_to_new: dict[str, str] = {
         item.local_id: new_id_factory() for item in plan.items if item.local_id is not None
     }
+    local_specs: dict[str, WorkItemSpec] = {
+        item.local_id: item for item in plan.items if item.local_id is not None
+    }
 
     issues: list[str] = []
     new_items: list[WorkItem] = []
@@ -273,9 +297,13 @@ def validate_plan_phase_b(
                 continue
         new_id: str = local_to_new[spec.local_id] if spec.local_id else new_id_factory()
         resolved_deps: list[str] = []
+        resolved_dep_kinds: list[tuple[str, WorkItemKind]] = []
         for dep in spec.deps:
             if dep in local_to_new:
                 resolved_deps.append(local_to_new[dep])
+                dep_spec = local_specs.get(dep)
+                if dep_spec is not None:
+                    resolved_dep_kinds.append((dep, dep_spec.kind))
             else:
                 target = existing_graph.get(dep)
                 if target is None:
@@ -285,6 +313,16 @@ def validate_plan_phase_b(
                     issues.append(f"items[{idx}] dep '{dep}' is cross-run (rejected)")
                     continue
                 resolved_deps.append(dep)
+                resolved_dep_kinds.append((dep, target.kind))
+
+        if spec.kind == WorkItemKind.ATOMIC and spec.agent_name == _VALIDATOR_AGENT:
+            for dep_name, dep_kind in resolved_dep_kinds:
+                if dep_kind == WorkItemKind.EXPANDABLE:
+                    issues.append(
+                        "items[{}] validator items may not depend on expandable planner '{}' — "
+                        "depend on concrete developer lanes or place validation inside that "
+                        "planner branch".format(idx, dep_name)
+                    )
 
         new_items.append(
             WorkItem(

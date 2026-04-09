@@ -28,6 +28,7 @@ When benchmark prose, release notes, or changelog bullets disagree with the live
 - **First attempt should be fresh.** Start benchmark investigation from a fresh sandbox so you can trust the first failure signal.
 - **After local runtime or skill fixes, prefer sandbox reuse.** Re-run with a stable `sandbox_name` so the harness can reuse the latest healthy prepared sandbox instead of rebuilding the image each time.
 - **Reuse the latest healthy evidence.** Checkpoints, scout artifacts, token totals, and validator evidence are part of the retry surface. Do not restart cold if the existing sandbox is healthy and the repo can be reset in place.
+- **On resume, reuse before reopening.** If a resumed or replanned turn already has a stable owner cluster or subsystem key, consult atlas/shared briefings first and scout only the still-missing slice.
 
 ---
 
@@ -51,6 +52,7 @@ When benchmark prose, release notes, or changelog bullets disagree with the live
 - Once source-owner scouts exist, do not open new manifest or giant-test scouts. Remaining uncertainty belongs to a developer or validator lane unless source ownership is still ambiguous.
 - Split disjoint owner clusters into separate source-owned execution lanes. Do not collapse unrelated modules into one omnibus developer task just because they appear in the same release-note block.
 - Validators verify; they do not own first-fix work. Every named FAIL_TO_PASS cluster in the request must map to a developer or child-planner owner before a validator is allowed to cover it.
+- A root or sibling validator must not depend on an expandable child planner as a placeholder barrier. If residual work is parked behind child planning, the verification for that slice belongs inside that child branch or behind the concrete leaf developers it emits.
 - If one file is large but still the likely owner, a bounded single-file scout is valid. If that still leaves several independent regions, emit a narrowed child planner instead of forcing a flat root plan.
 - Parent and sibling exploration lanes must stay disjoint. Do not reopen a slice already owned by a scout or child planner unless new evidence invalidates the boundary.
 - While scouts are running, keep the planner moving on other uncovered branches, shared-context reuse, and plan-shape reasoning. Wait only when a scout result becomes the remaining blocker.
@@ -58,6 +60,7 @@ When benchmark prose, release notes, or changelog bullets disagree with the live
 - If the planner receives a budget warning, the next assistant message must be the final plan JSON. Do not spend the remaining budget checking background progress or reopening hypotheses.
 - Treat duplicate-scout rejections and background wait protocol errors as stop-and-plan signals. Reuse the gathered evidence instead of retrying the same exploration pattern.
 - A repeated `WAIT_REQUIRES_PROGRESS_CHECK` or repeated whole-batch wait on the same benchmark wave is evidence that the planner should finish the plan, not evidence that another planner-side deep-dive is needed.
+- After emitting the final plan JSON, stop immediately. Do not append prose summaries after the payload.
 
 ---
 

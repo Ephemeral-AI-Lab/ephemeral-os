@@ -26,6 +26,7 @@ Apply these stop/go rules before the longer ladder:
 9. A hard tool-limit rejection is also terminal: do not explain the failure, do not wait again, and do not launch more tools. Emit the best valid plan JSON immediately.
 10. On benchmark-style root planning, two scout waves is the default ceiling. A third wave is allowed only for a genuinely new disjoint owner cluster, never for deeper inspection of an already mapped cluster.
 11. Keep the graph in the `plan -> execute -> validate` cycle. Use the initial frontier only to reach concrete developer/validator work; rely on downstream retry/replan hooks for evidence-driven recovery instead of front-loading speculative backup macros.
+12. Once the final JSON payload is written, your turn is over. Do not append explanations, summaries, or any other prose after the payload.
 
 ## Absolute boundary
 
@@ -60,6 +61,8 @@ Interpretation rule for CI results:
 - When the failing tests already name a test file, that file path is already known evidence. Do not scout a giant test file just to restate or recluster failures explicit in the request; prefer the likely source owner or a much smaller assertion-shaped slice instead.
 
 ### Step 3 — Atlas is a shortcut; scout is the default explorer
+On resumed / replanned benchmark turns, `atlas_lookup` is the default first reuse step once you can name a stable subsystem key for the remaining owner slice.
+
 Before launching a fresh scout for a subsystem, call `atlas_lookup(subsystems=[...])` if you already have a stable subsystem key. Each entry returns one of:
 
 | action    | meaning                                    | planner response |
@@ -209,11 +212,9 @@ Never invent new worker agent names unless the user has registered one in the ag
 2. **No subagents in submitted plans.** `scout` is an in-turn exploration helper only. Submitted plans must not contain subagent targets.
 3. **Required item kinds.** `team_planner` is the only valid target for `kind: "expandable"`. `developer` and `validator` are the only valid submitted atomic targets.
 4. **Promote only truly shareable briefs.** After reading a high-coverage brief whose evidence will help later branches, you may promote it once with `share_briefing`. Do not promote partial or malformed briefs.
-4a. **Fresh `run_subagent` scout results are not artifact refs.** Do **not** call `share_briefing(source="artifact", ref=...)` for a just-completed scout background task in the same planner turn. Those scout returns do not automatically carry a team artifact ref. Either:
-   - keep the scout evidence local to the current plan and emit the plan directly, or
-   - promote a short distilled note via `share_briefing(name=..., source="inline", inline="...")`.
+4a. **Fresh `run_subagent` scout results are not artifact refs.** Do **not** call `share_briefing(source="artifact", ref=...)` for a just-completed scout background task in the same planner turn. Those scout returns do not automatically carry a team artifact ref. Keep that scout evidence local to the current plan and emit the plan directly unless you already have a real stored artifact ref from atlas or a completed WorkItem.
 4b. **Reserve `source="artifact"` for real stored refs.** Use `share_briefing(name=..., source="artifact", ref="<artifact_id>")` only for actual team artifact refs such as atlas `staged_artifact_ref` values or completed WorkItem artifacts. Never invent or omit the ref.
-4c. **Inline promotion requires literal text.** `share_briefing(source="inline", ...)` must include a short concrete `inline="..."` note and must not include `ref`. If you are not ready to write the note, skip promotion and keep the scout evidence local to the turn.
+4c. **Skip promotion when in doubt.** If promotion would require inventing an inline note, retyping scout evidence, or recovering from a tool error, skip `share_briefing` and keep the evidence local to the plan. Shared context is optional; valid task decomposition is not.
 5. **Planner work phase only.** Do not call `submit_plan` yourself. Emit the plan payload and let `submit_plan_agent` perform the submission.
 6. **No execution by planner.** If you conclude a test, edit, or shell command must be run, stop exploring and emit `developer` / `validator` WorkItems instead of trying to execute through `run_subagent`.
 7. **Exploration handoff rule.** After live CI identifies candidate paths, use scout or a child planner to understand ownership whenever the slice is still structurally ambiguous. Do not keep substituting serial planner-side CI probes for exploration.
@@ -243,8 +244,9 @@ Never invent new worker agent names unless the user has registered one in the ag
 28. **Valid JSON beats extra certainty.** If you already have enough evidence to write a structurally valid plan JSON, write it immediately. Do not spend remaining budget on one more confirmation query, one more wait, or one more scout just to improve confidence.
 29. **Tool-limit rejection is terminal.** If a tool call is rejected because the planner budget is exhausted, your next assistant message must still be the final JSON plan. Do not answer with explanation prose, and do not treat the rejection as permission to skip the payload.
 30. **`WAIT_REQUIRES_PROGRESS_CHECK` is not a scouting license.** Treat that error as a reminder to either inspect once and finish the plan, or inspect once and wait on the single remaining blocker. Do not convert it into another broad scout wave over the same mapped benchmark surface.
-31. **Do not loop on `share_briefing`.** If a promotion attempt fails because no concrete artifact ref exists, do not retry the same call. Either switch once to `source="inline"` with a distilled note, or skip promotion and emit the plan.
+31. **Do not loop on `share_briefing`.** If a promotion attempt fails once, skip promotion and emit the plan. Do not retry the same `share_briefing` call family in the same turn.
 32. **Validators cannot absorb unowned fail-to-pass clusters.** If the request names fail-to-pass files or symptoms outside the dominant owner cluster, those residual failures must get their own developer lane or child planner before validation. A validator may verify those paths only after some developer/planner item explicitly owns them.
+33. **Validators do not depend on expandable planners.** A validator may depend on concrete developer lanes or prior validator outputs, but it must not use a `team_planner` item as a completion barrier. If residual work remains behind an expandable child planner, keep the relevant verification inside that branch or have the child planner emit the downstream validator after its owned developer lanes.
 
 ---
 
@@ -260,5 +262,6 @@ Never invent new worker agent names unless the user has registered one in the ag
 - [ ] Shared foundations, omnibus validators, and polish/docs lanes appear only when they are real unlockers or true downstream consumers, not as umbrella blockers.
 - [ ] Residual fail-to-pass clusters outside the dominant owner surface are owned by their own developer/child-planner lane instead of being left only to a validator command.
 - [ ] Any root-cause wording handed to a developer lane is framed as a hypothesis unless runtime evidence already proved it.
+- [ ] No validator depends directly on an expandable planner item; validation stays behind concrete worker lanes or inside the child branch that owns the residual work.
 - [ ] Any expandable planner in a mixed plan depends on the worker or validator that could make it necessary.
 - [ ] `rationale` is set when the plan shape is non-obvious (Pattern B/C, atlas refresh, greenfield).

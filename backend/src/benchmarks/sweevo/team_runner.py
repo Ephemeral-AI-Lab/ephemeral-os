@@ -140,23 +140,25 @@ def _derive_sweevo_budgets(instance: SWEEvoInstance) -> BudgetConfig:
 
 
 def _derive_atlas_parallelism(instance: SWEEvoInstance, *, num_executors: int) -> int:
-    del instance, num_executors
-    # SWE-EVO runs are dominated by benchmark-critical planner/developer/validator
-    # work. Atlas maintenance currently adds substantial background churn and token
-    # burn without helping the grading path reliably enough to justify it.
-    return 0
+    del instance
+    # Keep atlas maintenance on at low concurrency so resumed / retried benchmark
+    # runs can reuse scout structure without starving foreground planner and worker
+    # lanes.
+    if num_executors <= 1:
+        return 0
+    return 1
 
 
 def _derive_planner_runtime_limits(instance: SWEEvoInstance) -> dict[str, int]:
     """Return benchmark-specific planner limits.
 
-    SWE-EVO planner behavior should stay inside the shared 200-call runtime
+    SWE-EVO planner behavior should stay inside the shared 100-call runtime
     budget enforced for the built-in coordination agents. Benchmark tuning
     belongs in skills and plan quality, not by shrinking the planner's tool
     ceiling per instance.
     """
     del instance
-    tool_call_limit = 200
+    tool_call_limit = 100
     return {
         "tool_call_limit": tool_call_limit,
     }
@@ -246,27 +248,28 @@ def _extract_final_text(messages: list[Any]) -> str:
 
 
 def _extract_last_json_object(text: str) -> dict[str, Any] | None:
-    stripped = text.strip()
-    if not stripped:
+    if not text.strip():
         return None
 
     decoder = json.JSONDecoder()
-    candidates = [stripped]
-    first_brace = stripped.find("{")
-    last_brace = stripped.rfind("}")
-    if 0 <= first_brace < last_brace:
-        inner = stripped[first_brace : last_brace + 1]
-        if inner != stripped:
-            candidates.append(inner)
+    best_payload: dict[str, Any] | None = None
+    best_start: int | None = None
+    best_end = -1
 
-    for candidate in candidates:
+    for start, char in enumerate(text):
+        if char != "{":
+            continue
         try:
-            payload, end = decoder.raw_decode(candidate)
+            payload, end = decoder.raw_decode(text, idx=start)
         except ValueError:
             continue
-        if isinstance(payload, dict) and candidate[end:].strip() == "":
-            return payload
-    return None
+        if not isinstance(payload, dict):
+            continue
+        if end > best_end or (end == best_end and (best_start is None or start < best_start)):
+            best_payload = payload
+            best_start = start
+            best_end = end
+    return best_payload
 
 
 def _matches_posthook_payload(payload: dict[str, Any], metadata_key: str) -> bool:
@@ -491,6 +494,13 @@ def _make_runner(
                 list(agent.display_messages),
                 posthook_key,
             )
+            posthook_input_source = (
+                "extracted_json"
+                if isinstance(posthook_input_text, str) and posthook_input_text.strip()
+                else "final_text"
+                if isinstance(final_text, str) and final_text.strip()
+                else "none"
+            )
             session_state = getattr(qc, "session_state", None)
             compacted_total = int(getattr(session_state, "compacted", 0) or 0)
             new_compactions = 0
@@ -502,6 +512,7 @@ def _make_runner(
             response_payload = {
                 "final_text": final_text,
                 "posthook_input_text": posthook_input_text,
+                "posthook_input_source": posthook_input_source,
                 "tool_calls_used": int(getattr(qc, "tool_calls_used", 0) or 0),
                 "tool_call_limit": getattr(qc, "tool_call_limit", None),
                 "final_context_tokens": final_context_tokens,
@@ -557,6 +568,16 @@ def _make_runner(
                     effective_defn.name,
                     usage_line,
                 )
+                if posthook_key:
+                    posthook_bytes = len(posthook_input_text or final_text or "")
+                    printer.raw_line(
+                        effective_defn.name,
+                        (
+                            "[posthook_input] "
+                            f"key={posthook_key} source={posthook_input_source} "
+                            f"bytes={posthook_bytes}"
+                        ),
+                    )
 
         if run_error is None:
             _enforce_validation_evidence(
@@ -793,8 +814,14 @@ def _build_agent_overrides(instance: SWEEvoInstance) -> dict[str, dict[str, Any]
     agent_overrides: dict[str, dict[str, Any]] = {}
     if planner_def is not None:
         planner_limits = _derive_planner_runtime_limits(instance)
+        planner_toolkits = [
+            toolkit_name
+            for toolkit_name in (planner_def.toolkits or [])
+            if toolkit_name != "team_context"
+        ]
         agent_overrides[TEAM_PLANNER] = {
             "skills": _with_extra_skills(planner_def.skills, "sweevo-project-context"),
+            "toolkits": planner_toolkits,
             **planner_limits,
         }
     developer_def = get_definition(DEVELOPER)

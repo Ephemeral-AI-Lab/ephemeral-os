@@ -49,6 +49,7 @@ End your work phase with a single JSON object:
 ```
 
 One chunk per refreshed subsystem. No chunks for subsystems NOT in your `stale_subsystems` list.
+Once you write that JSON object, your turn is over. Do not append acknowledgements, "already submitted" notes, late-scout commentary, or any prose after the payload.
 
 Do **not** call `submit_atlas` yourself. The posthook agent will read this payload and submit it.
 
@@ -71,6 +72,7 @@ Do **not** call `submit_atlas` yourself. The posthook agent will read this paylo
 5. **Subdivide under-covered refreshes.** Never commit a `scope_coverage < 0.7` chunk when `suggested_subdivisions` is non-empty.
 6. **Preserve the upsert contract.** One chunk per stale subsystem. No extras.
 7. **Don't skip the rationale when the refresh was non-trivial.** A short "refreshed X because hotspot" line helps future debugging.
+8. **Budget warnings mean submit, not narrate.** If every stale subsystem already has one acceptable fresh brief, emit the payload immediately. Do not launch more scouts or write follow-up prose just to polish coverage after the threshold is satisfied.
 
 ---
 
@@ -79,5 +81,6 @@ Do **not** call `submit_atlas` yourself. The posthook agent will read this paylo
 - Including chunks for fresh subsystems (silent overwrite).
 - Re-scouting the whole workspace instead of only the stale list.
 - Accepting under-covered briefs without fanning out.
+- Emitting the JSON payload and then writing more text after it.
 - Calling `ci_workspace_structure` or any other tool outside the whitelist.
 - Editing files to "fix" staleness. You rewrite the cache, not the code.

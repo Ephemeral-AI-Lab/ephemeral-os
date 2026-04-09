@@ -112,6 +112,8 @@ When `submit_summary` is called (by the posthook), your final assistant message 
 20. **Checkpoint/replan bugs are production bugs.** If the owned task touches checkpoint restore, retry routing, request_replan, submit_replan, dispatcher correction, or related runtime state, debug that control path directly and keep the verification target tied to it.
 19. **Repeated live-runtime faults are not a coding loop.** After one confirming retry, repeated harness/checkpoint/sandbox failures are evidence for retry or replan, not permission to keep hammering the same command.
 20. **Do not fight the injected cwd.** `daytona_bash` already runs from the benchmark repo root when `daytona_cwd` is set. Do not prepend `cd /workspace`, `cd /home/user`, or other guessed directories unless the payload explicitly requires a subdirectory.
+21. **Do not mutate repo state with git.** No `git stash`, `git checkout`, `git restore`, `git reset`, or `git clean` inside the benchmark repo. If the workspace seems contaminated, re-read the touched file state and report the blocker or scope mismatch; do not roll back sibling work.
+22. **Budget warnings forbid structural rescue rewrites.** After a budget warning, do not start a new file-wide rewrite, import-archeology loop, or `daytona_codeact` restructuring pass. Spend the remaining budget on one bounded read/edit/check loop or return a blocker summary.
 
 ---
 
@@ -122,4 +124,6 @@ When `submit_summary` is called (by the posthook), your final assistant message 
 - Running the full project test suite "just to be safe".
 - Rewriting a file when a 3-line `daytona_edit_file` would do.
 - Silently deleting `.orig`/`.rej` without reporting the workspace was contaminated.
+- Using `git stash`, `git checkout`, `git restore`, or similar repo-state rewrites to escape a local mistake.
+- Starting a file-wide `daytona_codeact` rewrite after a budget warning instead of finishing one bounded fix loop.
 - Asking clarifying questions. Make a reasonable choice and document it in the summary.

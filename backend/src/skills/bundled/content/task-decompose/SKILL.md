@@ -174,7 +174,7 @@ If a graph mixes implementation work and verification work, every verification t
 (3) cart + checkout flow tests (add/remove items, mock payment);
 (4) order history tests"
 ```
-Each subset becomes an atomic subtask that one agent can complete within a single worker tool budget. Treat the Agno hard ceiling as 200 tool calls and plan for each subset to finish well under that. The same pattern applies to frontend tests (split by page/feature) and E2E tests (split by user flow).
+Each subset becomes an atomic subtask that one agent can complete within a single worker tool budget. Treat the Agno hard ceiling as 100 tool calls and plan for each subset to finish well under that. The same pattern applies to frontend tests (split by page/feature) and E2E tests (split by user flow).
 
 **5. Integration and wiring come last.**
 Router wiring, page composition, cross-domain integration, release assembly, and final smoke/E2E checks should depend on the leaf tasks they aggregate.

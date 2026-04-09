@@ -399,6 +399,6 @@ def test_scout_builtin_registered():
     scout = get_definition("scout")
     assert scout is not None
     assert scout.agent_type == "subagent"
-    assert scout.tool_call_limit == 200
+    assert scout.tool_call_limit == 100
     assert "code_intelligence" in scout.toolkits
     assert scout.posthook is not None

@@ -24,7 +24,7 @@ SCOUT = "scout"
 ATLAS_BUILDER = "atlas_builder"
 ATLAS_REFRESHER = "atlas_refresher"
 
-_DEFAULT_TEAM_TOOL_CALL_LIMIT = 200
+_DEFAULT_TEAM_TOOL_CALL_LIMIT = 100
 
 _SCOUT_PROMPT = """You are scout. Read-only exploration of the concrete list of paths supplied as ``target_paths``. Produce a compact brief that downstream planners and workers can rely on without re-exploring.
 

@@ -171,6 +171,7 @@ Keep these late unless they are strict unlockers:
 
 Guidance:
 - Validators should usually depend on the `developer` lanes they exercise.
+- Validators must not depend directly on an expandable child planner. If a branch still needs child planning, keep the validation inside that branch or behind the concrete developer lanes the child planner emits.
 - If verification spans multiple independent flows or domains, keep it downstream and expandable rather than as one giant validator lane.
 - Integration should depend only on the lanes it truly consumes.
 - Descriptive docs should follow the behavior they describe; bootstrap docs may run earlier only when they unblock work.
