@@ -186,9 +186,32 @@ async def test_scout_rejects_missing_target_paths():
 
 
 @pytest.mark.asyncio
-async def test_scout_rejects_duplicate_exact_path_coverage(monkeypatch):
+async def test_scout_allows_seed_read_then_structural_exploration(monkeypatch):
+    submitted = SubmittedSummary(
+        summary="scout report",
+        artifact={"target_paths": ["/testbed/pydantic/json_schema.py"], "files": []},
+    )
+    stub, _ = _make_stub_agent(submitted=submitted)
+    _patch_spawn(monkeypatch, stub)
+
     ctx = _ctx()
     ctx.metadata["_read_paths_this_turn"] = ["/testbed/pydantic/json_schema.py"]
+
+    res = await run_subagent.execute(
+        run_subagent.input_model(
+            agent_name="scout",
+            input={"target_paths": ["/testbed/pydantic/json_schema.py"]},
+        ),
+        ctx,
+    )
+
+    assert not res.is_error
+
+
+@pytest.mark.asyncio
+async def test_scout_rejects_duplicate_exact_prior_scout_coverage(monkeypatch):
+    ctx = _ctx()
+    ctx.metadata["_scout_target_paths_this_turn"] = ["/testbed/pydantic/json_schema.py"]
 
     res = await run_subagent.execute(
         run_subagent.input_model(
@@ -341,6 +364,6 @@ def test_scout_builtin_registered():
     scout = get_definition("scout")
     assert scout is not None
     assert scout.agent_type == "subagent"
-    assert scout.tool_call_limit == 40
+    assert scout.tool_call_limit == 50
     assert "code_intelligence" in scout.toolkits
     assert scout.posthook is not None
