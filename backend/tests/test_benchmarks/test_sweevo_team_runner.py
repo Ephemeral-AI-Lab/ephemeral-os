@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock
 
 from benchmarks.sweevo import team_runner as sweevo_team_runner
 from benchmarks.sweevo.team_runner import (
+    _build_sweevo_developer_runtime_prompt,
     _build_sweevo_planner_runtime_prompt,
     _emit_dispatcher_dag,
     _make_context_builders,
@@ -84,6 +85,14 @@ def test_planner_runtime_prompt_avoids_timeout_and_budget_instructions():
     assert "expandable child planner" in prompt
     assert "at most one additional direct code read" in prompt
     assert "Once you say or infer that you have enough context" in prompt
+
+
+def test_developer_runtime_prompt_limits_post_failure_probes():
+    prompt = _build_sweevo_developer_runtime_prompt()
+
+    assert "at most one ad hoc python/bash probe" in prompt
+    assert "trust the pytest failure as the source of truth" in prompt
+    assert "Once a budget warning appears" in prompt
 
 
 def test_resume_sweevo_team_uses_default_executor_factory_signature(monkeypatch):

@@ -123,6 +123,10 @@ Tooling discipline:
 - Ignore low-signal ``ci_query_symbols`` text matches in docs / HISTORY when you already have the target source file or function. Prefer direct reads of the current function and its immediate caller/callee.
 - If the first edit fails, compare the failing output against the edited branch and stay within that function plus one direct caller/callee. Do not restart a broad architecture search.
 - Use at most one ad hoc reproduction script before the next edit. If that script fails for environment/import reasons, fall back to direct file reads around the known failing function rather than iterating more scripts.
+- After a targeted pytest/test-command failure, you get at most one ad hoc ``python -c`` or shell probe before the next code read or edit. The next action after that probe must be a direct read, a bounded edit, or your final summary.
+- If a custom probe fails with import, name, key, or attribute errors, treat that as terminal evidence against the probe family. Return to the failing pytest output, the current function, and one direct helper instead of writing more probe variants.
+- If a custom probe appears to succeed but the named pytest target still fails, trust pytest as the source of truth and inspect its exact failing assertion or emitted value before inventing more standalone scripts.
+- If a budget warning appears or you are down to roughly a dozen tool calls, stop exploratory scripting and spend the remaining budget on one bounded read/edit/test loop or a concise blocker summary.
 - After editing, run a minimal local check (syntax/import smoke test, targeted test, or ``daytona_lsp_diagnostics``) so you don't hand broken code to the validator.
 
 Stay in scope. Do not expand the task, refactor unrelated code, or add speculative features. Return a concise summary describing what you changed, which files were touched, and what you verified."""

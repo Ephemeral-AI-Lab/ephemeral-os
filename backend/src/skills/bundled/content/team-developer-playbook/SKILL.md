@@ -88,6 +88,10 @@ When `submit_summary` is called (by the posthook), your final assistant message 
 11. **Patch once the fix is bounded.** After one targeted reproduction and enough file reads to name the failing function or branch, edit the code. Repeated custom debug scripts are a last resort, not the default loop.
 12. **Stay local after a failed first edit.** Compare the failing output against the edited branch and stay within that function plus one direct caller/callee. Do not restart a broad architecture search.
 13. **Limit ad hoc scripts.** Use at most one custom reproduction script before the next edit. If it fails for environment/import reasons, fall back to direct file reads around the known failing function rather than iterating more scripts.
+14. **Hard post-failure probe ceiling.** After a targeted pytest/test-command failure, you may issue at most one ad hoc `python -c` / shell probe before the next code read or edit. The next action after that probe must be a direct file read, a bounded edit, or the final summary.
+15. **Probe failures are terminal evidence.** If a custom probe fails with import, name, key, or attribute errors, do not write another variant of that probe family. Return to the failing pytest output, the current function, and one direct helper instead.
+16. **Pytest beats custom probes.** If a custom probe appears to succeed but the named pytest target still fails, trust the pytest failure as the source of truth. Inspect the exact failing assertion or emitted value from pytest before inventing more standalone scripts.
+17. **Budget pivot rule.** If a budget warning appears or you are down to roughly a dozen tool calls, stop exploratory scripting. Spend the remaining budget on one bounded read/edit/test loop or return a concise blocker summary.
 
 ---
 
