@@ -17,7 +17,7 @@ Produce a structural ownership map first, then assign developer and validator wo
    If there are multiple plausible owners, a directory-sized slice, or a large file with many relevant regions, switch to exploration.
    Once live CI identifies one candidate implementation file or subsystem, the next step should be scout, child-planning, or dispatch.
    Prefer scout immediately whenever it can answer the ownership question.
-   If the owner is already a single large file and the remaining question is which region inside that file matters, do not scout the whole file. Move directly to child planning for the named sub-slice.
+   If the owner is already a single large file, a single-file scout is allowed when you still need that file's live structure or key symbols before dispatch. Move to child planning only when that scout still leaves several named regions unresolved.
 
 3. Launch a bounded scout.
    Call `run_subagent(agent_name="scout", input={"target_paths": [...]})` with concrete paths only.
@@ -56,12 +56,13 @@ Produce a structural ownership map first, then assign developer and validator wo
 - Prefer one bounded scout over more planner-side symbol/reference probing when the real goal is to understand ownership, interaction, or decomposition.
 - Prefer one scout over many serial planner CI queries when structure is still unclear.
 - Once a large candidate file is known, treat repeated parent probing as a smell. The next step should usually be scout or child planning.
-- Once one large file is already the clear owner candidate, prefer child planning over whole-file scout. Scout is for path-level structure; region-level ambiguity inside one monolith belongs to a child planner.
+- Once one large file is already the clear owner candidate, allow one scout on that single file when you still need a live structural map. Prefer child planning only after that scout, or when the next step is decomposing named regions rather than reading the file.
 - If there are multiple disjoint candidate areas, prefer parallel scouts over parent-side file windows across those areas.
 - Do not queue a ready expandable child planner in parallel just for "if the developer finds more issues"; that contingency belongs in downstream deps or later replanning.
 - Prefer atlas reuse only when the cached brief already answers the decomposition question.
 - Prefer child planners over extra parent reads when a large file needs region-level ownership.
 - Prefer disjoint fanout over overlapping scouts.
+- Once a scout brief names the likely owner file cluster, do not resume low-signal planner-side CI queries driven only by changelog prose, dependency bumps, or version hypotheses.
 
 ## Anti-patterns
 

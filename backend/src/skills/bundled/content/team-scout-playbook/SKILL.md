@@ -26,6 +26,7 @@ For each path in `target_paths`, call `ci_workspace_structure(path=...)` to unde
 
 ### 2. Read selectively
 `ci_read_file` the handful of files that define the public surface of the scope: entry points, top-level modules, config files, and anything a downstream developer would need to reason about the area. **Do not read everything.** Budget yourself to the minimum needed for a useful brief.
+Single-file targets are valid. When `target_paths` points at one file, map only the key regions and symbols a downstream worker needs instead of paging through the whole file by default.
 
 ### 3. Stay in scope
 Do not wander outside `target_paths`. If a file you're reading imports from elsewhere, note the reference in `open_questions` — don't follow it.

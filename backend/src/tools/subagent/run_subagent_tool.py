@@ -131,8 +131,24 @@ def format_last_n_messages(messages: list[ConversationMessage], n: int) -> str:
 _ENVELOPE_SUMMARY_CAP = 500
 
 
-def _build_subagent_envelope(agent: Any, sub_run_id: str | None, final_text: str) -> dict[str, Any]:
-    """Project the subagent's posthook submission into the typed envelope.
+def _extract_submitted_output(agent: Any) -> Any | None:
+    """Return the agent's accepted submitted output, if any."""
+    qc = getattr(agent, "query_context", None)
+    if qc is None or qc.tool_metadata is None:
+        return None
+    for key in ("submitted_summary", "submitted_plan"):
+        value = qc.tool_metadata.get(key)
+        if value is not None:
+            return value
+    return None
+
+
+def _build_subagent_envelope(
+    submitted: Any | None,
+    sub_run_id: str | None,
+    final_text: str,
+) -> dict[str, Any]:
+    """Project the subagent submission into the typed envelope.
 
     Per plan §7:
         - ``Plan``               → kind="plan",    payload={items, rationale}
@@ -142,15 +158,6 @@ def _build_subagent_envelope(agent: Any, sub_run_id: str | None, final_text: str
                                    promoted to ``"brief"``.
         - no posthook submission → kind="raw",    payload={"final_text": ...}
     """
-    qc = getattr(agent, "query_context", None)
-    submitted = None
-    if qc is not None and qc.tool_metadata is not None:
-        for key in ("submitted_summary", "submitted_plan"):
-            value = qc.tool_metadata.get(key)
-            if value is not None:
-                submitted = value
-                break
-
     # Lazy imports — avoid pulling team into tools at import time.
     from team.models import Plan
     from tools.posthook import SubmittedSummary
@@ -206,6 +213,56 @@ def _extract_final_text(messages: list[ConversationMessage]) -> str:
         if text:
             return text.strip()
     return ""
+
+
+async def _run_posthook_if_needed(
+    *,
+    sub_def: Any,
+    submitted: Any | None,
+    final_text: str,
+    parent_cfg: Any,
+    sandbox_id: str | None,
+    base_metadata: ToolExecutionContext,
+) -> Any | None:
+    """Run the subagent's serializer posthook when the work phase did not submit."""
+    if submitted is not None or getattr(sub_def, "posthook", None) is None:
+        return submitted
+
+    from agents import get_definition
+    from engine.runtime.agent import spawn_agent
+
+    cfg = sub_def.posthook
+    posthook_def = get_definition(cfg.agent_name)
+    if posthook_def is None:
+        raise RuntimeError(
+            f"run_subagent: posthook agent {cfg.agent_name!r} for {sub_def.name!r} is not registered"
+        )
+
+    posthook_agent = spawn_agent(
+        parent_cfg,
+        messages=[],
+        agent_def=posthook_def,
+        latest_user_prompt=final_text,
+        sandbox_id=sandbox_id,
+    )
+    posthook_agent.query_context.tool_metadata = base_metadata.metadata.copy()
+    posthook_agent.query_context.tool_metadata.agent_name = posthook_def.name
+    posthook_agent.query_context.tool_metadata["posthook_metadata_key"] = cfg.metadata_key
+
+    try:
+        async for _event in posthook_agent.run(final_text):
+            pass
+    except Exception as exc:
+        raise RuntimeError(
+            f"run_subagent: posthook {posthook_def.name!r} failed: {exc}"
+        ) from exc
+
+    submitted = posthook_agent.query_context.tool_metadata.get(cfg.metadata_key)
+    if submitted is None:
+        raise RuntimeError(
+            f"run_subagent: posthook {posthook_def.name!r} ended without writing {cfg.metadata_key!r}"
+        )
+    return submitted
 
 
 @tool(
@@ -503,7 +560,19 @@ async def run_subagent(
     if run_error:
         return ToolResult(output=f"run_subagent: subagent crashed: {run_error}", is_error=True)
 
-    envelope = _build_subagent_envelope(agent, sub_run_id, final_text)
+    try:
+        submitted = await _run_posthook_if_needed(
+            sub_def=sub_def,
+            submitted=_extract_submitted_output(agent),
+            final_text=final_text,
+            parent_cfg=parent_cfg,
+            sandbox_id=sandbox_id,
+            base_metadata=context,
+        )
+    except Exception as exc:
+        return ToolResult(output=str(exc), is_error=True)
+
+    envelope = _build_subagent_envelope(submitted, sub_run_id, final_text)
     return ToolResult(
         output=json.dumps(envelope, default=str),
         metadata={"envelope": envelope},

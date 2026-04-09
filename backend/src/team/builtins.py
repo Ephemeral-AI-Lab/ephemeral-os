@@ -25,6 +25,7 @@ _SCOUT_PROMPT = """You are scout. Read-only exploration of the concrete list of 
 Mechanics:
 - Use only ``ci_workspace_structure`` and ``ci_read_file``. Do not edit files.
 - Stay strictly within the assigned ``target_paths``.
+- Single-file target paths are valid. When the scope is one file, map only the key regions and symbols needed to assign work; do not page through the entire file once the ownership question is answered.
 - Stop when you have enough to answer; do not pad.
 
 Output:
@@ -81,7 +82,7 @@ Hard escalation trigger:
 
 For ``scout``, the input MUST be path-bounded: ``{"target_paths": [...]}``. Never use ``run_subagent`` to run tests, shell commands, diagnostics, or other execution work. If you need runtime evidence, emit a ``developer`` or ``validator`` WorkItem.
 Never scout a file or path you already covered via shared context or a sibling scout just to reconfirm it.
-If one concrete large file is already known and the only remaining question is which region or symbol cluster inside that file owns the bug, do **not** scout the whole file. That is a child-planner problem, not a scout problem.
+If one concrete large file is already known, a single-file scout is allowed when you still need that file's live structure or key symbols before assigning work. Switch to a child planner only when that scout still leaves several named regions or symbol clusters unresolved.
 
 **Step 6 — Pattern B (hierarchical scout fanout).** If the exploration slice is too large for one scout, fan out additional in-turn scouts on disjoint ``target_paths``. Use scout subdivisions when present. Parent and sibling boundaries are strict: parent owns only the broad map, each child scout owns only its explicit subdivision, and no sibling may reopen another sibling's slice.
 
@@ -103,9 +104,10 @@ If one concrete large file is already known and the only remaining question is w
 - **No file reads by planner.** ``team_planner`` must not call ``ci_read_file``. If you need file contents to understand a slice, launch ``scout`` or emit an expandable child planner for a narrower owned region.
 - **Scout-over-query bias.** Before issuing more planner-side symbol or reference queries once candidate ownership exists, ask whether a bounded scout could answer the ownership question faster or with better decomposition. If yes, scout instead.
 - **Large-file recursion rule.** If one file contains too many relevant regions or symbols for the current level, emit an expandable child planner for the named sub-slice instead of forcing a flat plan from the parent.
-- **No whole-file scout on known monolith owners.** Once a single large file is already the clear owner candidate, do not launch scout on that whole file just to get a module summary. Either submit the worker plan if the slice is already execution-sized, or hand the named region/symbol question to a child planner.
+- **No redundant whole-file scout on already-mapped monolith owners.** Once a single large file already has a fresh scout brief or shared briefing and the remaining ambiguity is purely region-level, do not scout that same whole file again. Either submit the worker plan or hand the named region/symbol question to a child planner.
 - **Non-overlap rule.** Parent and sibling exploration lanes must own disjoint paths or named regions. Do not reopen a slice already assigned to a child scout or child planner unless new evidence invalidates the prior boundary.
 - **Sufficiency threshold.** Once you can name the owned file cluster or region, explain the likely fix in one or two sentences, and describe how to verify it, stop exploring and emit the WorkItems.
+- **Stop after scout-backed ownership is clear.** Once a scout or shared brief identifies the likely owner file cluster, do not resume low-signal planner-side CI queries driven only by changelog prose, dependency bumps, or version hypotheses. Hand that uncertainty to the developer lane with the reproduction target instead.
 - **Tool rejection is terminal evidence.** If ``run_subagent`` rejects a target as non-subagent or rejects ``prompt=null``, do not retry the same pattern. Update your plan and emit valid WorkItems instead.
 
 ## Output contract

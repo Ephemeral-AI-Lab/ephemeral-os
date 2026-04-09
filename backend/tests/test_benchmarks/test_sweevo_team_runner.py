@@ -98,7 +98,8 @@ def test_planner_runtime_prompt_avoids_timeout_and_budget_instructions():
     assert "one likely owner file and one concrete reproduction target" in prompt
     assert "Once you say or infer that you have enough context" in prompt
     assert "do not write developer payload sections titled `Root Cause`" in prompt
-    assert "do not launch scout on the whole file" in prompt
+    assert "a single-file scout is allowed" in prompt
+    assert "do not resume planner-side CI queries driven only by changelog prose" in prompt
 
 
 def test_developer_runtime_prompt_limits_post_failure_probes():

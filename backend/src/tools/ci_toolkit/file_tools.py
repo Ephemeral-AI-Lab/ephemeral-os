@@ -49,8 +49,10 @@ async def ci_read_file(
             output=(
                 f"ci_read_file: caller '{caller_agent}' may not read files directly. "
                 "Use `run_subagent(agent_name=\"scout\", input={\"target_paths\": [...]})` "
-                "for bounded file exploration, or emit a child planner if the unresolved "
-                "question is region-level inside one known large file."
+                "for bounded file exploration, including a single concrete file when you "
+                "need file contents to assign ownership. Emit a child planner only when "
+                "one known file remains too broad even after that scout and the unresolved "
+                "question is region-level decomposition."
             ),
             is_error=True,
         )
