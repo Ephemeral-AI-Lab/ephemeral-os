@@ -208,7 +208,7 @@ def register_all() -> None:
             system_prompt=_PLANNER_PROMPT,
             model="inherit",
             max_turns=100,
-            tool_call_limit=24,
+            tool_call_limit=50,
             toolkits=["code_intelligence", "team_context", "atlas", "subagent"],
             skills=["team-planner-playbook"],
             include_skills=False,
@@ -291,7 +291,7 @@ def register_all() -> None:
             skills=["team-scout-playbook"],
             include_skills=False,
             agent_type="subagent",
-            tool_call_limit=40,
+            tool_call_limit=50,
             posthook=PosthookConfig(
                 agent_name=SUBMIT_SUMMARY_AGENT,
                 metadata_key="submitted_summary",

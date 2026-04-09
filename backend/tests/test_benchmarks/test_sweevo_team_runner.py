@@ -70,5 +70,5 @@ def test_planner_controls_scale_with_large_instance():
     controls = _derive_planner_controls(instance)
 
     assert controls["first_plan_exploration_budget"] == 12
-    assert controls["tool_call_limit"] == 18
+    assert controls["tool_call_limit"] == 50
     assert "Once you say or infer that you have enough context" in _build_sweevo_planner_runtime_prompt(instance)

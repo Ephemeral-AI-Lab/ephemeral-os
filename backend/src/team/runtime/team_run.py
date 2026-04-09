@@ -95,9 +95,11 @@ class TeamRun:
         goal: str | None = None,
         sandbox_id: str | None = None,
         repo_root: str | None = None,
+        team_run_id: str | None = None,
+        event_store: TeamRunStore | None = None,
         services: TeamRuntimeServices | None = None,
     ) -> None:
-        self.id = str(uuid.uuid4())
+        self.id = team_run_id or str(uuid.uuid4())
         self.session_id = session_id
         self.user_request = user_request
         self.sandbox_id = sandbox_id
@@ -111,7 +113,10 @@ class TeamRun:
             user_request=user_request,
             goal=goal,
             repo_root=repo_root,
+            event_store=event_store,
         )
+        self.budgets = runtime_services.dispatcher.budgets
+        self.budget_state = runtime_services.dispatcher.budget_state
         self.project_context = runtime_services.project_context
         self.artifacts = runtime_services.artifact_store
         self.dispatcher = runtime_services.dispatcher
@@ -159,6 +164,7 @@ class TeamRun:
                 user_request=self.user_request,
                 goal=None,
                 repo_root=self.project_context.repo_root,
+                sandbox_id=self.sandbox_id,
                 budgets=asdict(self.budgets),
             )
         )
@@ -324,6 +330,31 @@ class TeamRun:
         if self._executor_factory is not None:
             self._spawn_executors()
 
+    async def resume(
+        self,
+        *,
+        executor_factory: Callable[["TeamRun"], Executor],
+        atlas_scheduler_factory: Callable[
+            ["TeamRun"], "AtlasMaintenanceScheduler"
+        ] | None = None,
+        num_executors: int = 1,
+    ) -> None:
+        """Resume a rehydrated TeamRun in the current process."""
+        if self.dispatcher.all_terminal():
+            return
+
+        await self.dispatcher.prepare_for_resume()
+        self.cancel_event.clear()
+        self._executor_factory = executor_factory
+        self._num_executors = num_executors
+        self.status = TeamRunStatus.RUNNING
+        self.event_store.append(make_team_run_status(self.id, self.status.value))
+        _register_team_run(self)
+        if atlas_scheduler_factory is not None:
+            self.atlas_scheduler = atlas_scheduler_factory(self)
+            await self.atlas_scheduler.start()
+        self._spawn_executors()
+
     # ---- crash recovery --------------------------------------------------
 
     @classmethod
@@ -347,10 +378,8 @@ class TeamRun:
           up in ``READY`` status at the end of the log.
 
         The returned TeamRun is **paused**: no executors are running.
-        Callers attach an executor factory via ``start_with_executor``
-        (not implemented here — resume intentionally stops short so the
-        caller can decide whether to finish the run, inspect it, or
-        cancel).
+        Callers resume it explicitly via ``TeamRun.resume(...)`` so they
+        can decide whether to finish the run, inspect it, or cancel.
 
         Raises ``ValueError`` if no events exist for ``team_run_id`` or
         the log lacks a ``team_run_created`` header.
@@ -386,13 +415,11 @@ class TeamRun:
             user_request=meta.get("user_request") or "",
             budgets=budgets,
             goal=meta.get("goal"),
+            sandbox_id=meta.get("sandbox_id") or None,
             repo_root=meta.get("repo_root") or None,
+            team_run_id=team_run_id,
             services=services,
         )
-        # Override the freshly-minted uuid with the persisted one so the
-        # rehydrated run continues to write to the same event stream.
-        run.id = team_run_id
-        services.dispatcher.team_run_id = team_run_id
 
         # --- fold events into runtime state -----------------------------
         graph = services.dispatcher.graph

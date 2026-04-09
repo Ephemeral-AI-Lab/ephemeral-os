@@ -46,6 +46,11 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--repo-dir", default=_REPO_DIR)
     p.add_argument("--snapshot-name", default="")
     p.add_argument("--sandbox-name", default="")
+    p.add_argument(
+        "--resume-team-run-id",
+        default=None,
+        help="Resume a persisted TeamRun in the existing sandbox instead of starting a fresh team run.",
+    )
     snapshot_group = p.add_mutually_exclusive_group()
     snapshot_group.add_argument(
         "--register-snapshot",
@@ -176,6 +181,7 @@ async def _cmd_run(args: argparse.Namespace) -> int:
         repo_dir=args.repo_dir,
         test_command=args.test_command,
         test_timeout=args.test_timeout,
+        resume_team_run_id=args.resume_team_run_id,
         on_line=on_line,
     )
 

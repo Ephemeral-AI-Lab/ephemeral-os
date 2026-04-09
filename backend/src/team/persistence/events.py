@@ -71,6 +71,7 @@ def make_team_run_created(
     user_request: str,
     goal: str | None,
     repo_root: str | None,
+    sandbox_id: str | None = None,
     budgets: dict[str, Any],
 ) -> TeamRunEvent:
     return TeamRunEvent(
@@ -81,6 +82,7 @@ def make_team_run_created(
             "user_request": user_request,
             "goal": goal,
             "repo_root": repo_root,
+            "sandbox_id": sandbox_id,
             "budgets": budgets,
         },
     )

@@ -16,11 +16,15 @@ from pathlib import Path
 
 import pytest
 
+from agents.registry import get_definition, register_definition, unregister_definition
+from agents.types import AgentDefinition
+from hooks.agent_posthook import PosthookConfig
 from team.artifacts.store import InMemoryArtifactStore
 from team.models import (
     AgentResult,
     BudgetConfig,
     BudgetState,
+    TeamRunStatus,
     WorkItem,
     WorkItemKind,
     WorkItemStatus,
@@ -32,6 +36,7 @@ from team.persistence.events import (
     make_team_run_status,
     make_work_item_added,
     make_work_item_status,
+    work_item_to_dict,
 )
 from team.persistence.run_store import (
     JsonlTeamRunStore,
@@ -39,8 +44,11 @@ from team.persistence.run_store import (
     build_default_store,
     replay,
 )
+from team.runtime.context_builder import TeamAgentContext
 from team.runtime.dispatcher import Dispatcher
+from team.runtime.executor import Executor
 from team.runtime.team_run import TeamRun, build_team_runtime_services
+from tools.posthook import SubmittedSummary
 
 
 # ---------- JsonlTeamRunStore round-trip ----------------------------------
@@ -302,6 +310,78 @@ def _wi_for_run(run_id: str, id_: str, deps: list[str] | None = None) -> WorkIte
     )
 
 
+def _register_scripted(name: str) -> None:
+    autopost_name = f"{name}__autopost"
+    register_definition(
+        AgentDefinition(
+            name=autopost_name,
+            description=f"autopost serializer for {name}",
+            system_prompt="p",
+            toolkits=[],
+            skills=[],
+            include_skills=False,
+            source="builtin",
+        )
+    )
+    register_definition(
+        AgentDefinition(
+            name=name,
+            description=f"scripted {name}",
+            system_prompt="p",
+            toolkits=[],
+            skills=[],
+            include_skills=False,
+            posthook=PosthookConfig(
+                agent_name=autopost_name,
+                metadata_key="submitted_summary",
+            ),
+            source="builtin",
+        )
+    )
+
+
+def _cleanup_scripted(name: str) -> None:
+    unregister_definition(name)
+    unregister_definition(f"{name}__autopost")
+
+
+def _resume_executor_factory(team_run: TeamRun) -> Executor:
+    async def _runner(defn, ctx):
+        if defn.name.endswith("__autopost"):
+            ctx.tool_metadata["submitted_summary"] = SubmittedSummary(
+                summary="done",
+                artifact={"done": True},
+            )
+            return {"phase": defn.name}
+        return {"phase": defn.name}
+
+    def _build_query_ctx(defn, active_run, wi):
+        return TeamAgentContext(
+            tool_metadata={
+                "team_run_id": active_run.id,
+                "work_item_id": wi.id,
+                "agent_run_id": wi.agent_run_id,
+                "agent_name": defn.name,
+            }
+        )
+
+    def _build_posthook_ctx(posthook_defn, work_result):
+        return TeamAgentContext(
+            tool_metadata={
+                "agent_name": posthook_defn.name,
+                "work_result": work_result,
+            }
+        )
+
+    return Executor(
+        team_run=team_run,
+        runner=_runner,
+        build_query_context=_build_query_ctx,
+        build_posthook_context=_build_posthook_ctx,
+        agent_lookup=get_definition,
+    )
+
+
 def test_resume_from_raises_on_missing_run(tmp_path: Path) -> None:
     store = JsonlTeamRunStore(tmp_path)
     with pytest.raises(ValueError, match="no events"):
@@ -313,3 +393,52 @@ def test_resume_from_raises_on_missing_header(tmp_path: Path) -> None:
     store.append(make_team_run_status("r", "running"))  # no created event
     with pytest.raises(ValueError, match="missing team_run_created"):
         TeamRun.resume_from(store, "r")
+
+
+@pytest.mark.asyncio
+async def test_team_run_resume_replays_running_work_item(tmp_path: Path) -> None:
+    store = JsonlTeamRunStore(tmp_path)
+    run_id = "tr-resume-running"
+    wi = WorkItem(
+        id="A",
+        team_run_id=run_id,
+        agent_name="resume_worker",
+        status=WorkItemStatus.PENDING,
+        kind=WorkItemKind.ATOMIC,
+        root_id="A",
+    )
+    store.append(
+        make_team_run_created(
+            run_id,
+            session_id="sess-1",
+            user_request="resume this run",
+            goal=None,
+            repo_root="/repo",
+            sandbox_id="sbx-123",
+            budgets={},
+        )
+    )
+    store.append(make_work_item_added(run_id, work_item_to_dict(wi)))
+    store.append(make_work_item_status(run_id, "A", "ready"))
+    store.append(make_work_item_status(run_id, "A", "running", agent_run_id="AR-old"))
+    store.append(make_team_run_status(run_id, "running"))
+
+    revived = TeamRun.resume_from(store, run_id)
+    assert revived.sandbox_id == "sbx-123"
+    assert revived.dispatcher.graph["A"].status == WorkItemStatus.RUNNING
+
+    _register_scripted("resume_worker")
+    try:
+        await revived.resume(
+            executor_factory=_resume_executor_factory,
+            num_executors=1,
+        )
+        status = await revived.wait()
+    finally:
+        _cleanup_scripted("resume_worker")
+
+    assert status == TeamRunStatus.SUCCEEDED
+    assert revived.dispatcher.graph["A"].status == WorkItemStatus.DONE
+    assert revived.dispatcher.graph["A"].agent_run_id is not None
+    assert revived.dispatcher.graph["A"].agent_run_id != "AR-old"
+    assert revived.artifacts.load("A") == {"done": True}

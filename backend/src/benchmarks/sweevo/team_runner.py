@@ -14,16 +14,19 @@ from __future__ import annotations
 from collections import Counter
 import json
 import logging
+from pathlib import Path
 from typing import Any
 
 from agents.run_tracker import AgentRunTracker
 from agents.registry import get_definition
+from config.paths import get_project_config_dir
 from engine.runtime.agent import spawn_agent
 from message.event_printer import MultiAgentEventPrinter
 from token_tracker.runtime import persist_run_usage
 from team.builtins import TEAM_PLANNER, register_all as _register_team_builtins
 from team.atlas.scheduler import AtlasMaintenanceScheduler
 from team.models import BudgetConfig, TeamRunStatus, WorkItemKind
+from team.persistence.run_store import build_default_store
 from team.runtime.context_builder import (
     TeamAgentContext,
     build_initial_user_message,
@@ -41,6 +44,30 @@ logger = logging.getLogger(__name__)
 # Default pool size for the team's Executor workers. Not a cap — callers
 # can still override.
 _DEFAULT_NUM_EXECUTORS = 8
+_PROJECT_ROOT = Path(__file__).resolve().parents[4]
+
+
+def _benchmark_team_run_dir() -> Path:
+    """Return the benchmark-owned TeamRun event log directory."""
+    return get_project_config_dir(_PROJECT_ROOT) / "team-runs"
+
+
+def _build_benchmark_event_store(*, session_factory: object | None) -> Any:
+    """Prefer DB-backed durability, else fall back to a stable project-local JSONL log."""
+    if session_factory is not None:
+        return build_default_store(session_factory=session_factory)
+    return build_default_store(base_dir=_benchmark_team_run_dir())
+
+
+def _checkpoint_ids_from_store(store: Any, team_run_id: str) -> list[str]:
+    checkpoint_ids: list[str] = []
+    for event in store.load_run(team_run_id):
+        if event.kind != "checkpoint_taken":
+            continue
+        checkpoint_id = str(event.data.get("checkpoint_id") or "").strip()
+        if checkpoint_id and checkpoint_id not in checkpoint_ids:
+            checkpoint_ids.append(checkpoint_id)
+    return checkpoint_ids
 
 
 # ---------------------------------------------------------------------------
@@ -57,22 +84,22 @@ def _derive_planner_controls(instance: SWEEvoInstance) -> dict[str, int]:
     return {
         "small": {
             "first_plan_exploration_budget": 8,
-            "tool_call_limit": 14,
+            "tool_call_limit": 50,
             "max_turns": 50,
         },
         "medium": {
             "first_plan_exploration_budget": 10,
-            "tool_call_limit": 16,
+            "tool_call_limit": 50,
             "max_turns": 60,
         },
         "large": {
             "first_plan_exploration_budget": 12,
-            "tool_call_limit": 18,
+            "tool_call_limit": 50,
             "max_turns": 70,
         },
     }.get(size, {
         "first_plan_exploration_budget": 10,
-        "tool_call_limit": 16,
+        "tool_call_limit": 50,
         "max_turns": 60,
     })
 
@@ -164,8 +191,11 @@ def _build_root_prompt(instance: SWEEvoInstance, repo_dir: str) -> str:
         f"{len(instance.fail_to_pass)} fail-to-pass target(s)).\n"
         f"- Keep the first ready frontier to at most {frontier_cap} benchmark-critical "
         f"implementation lane(s) for this run.\n"
-        f"- Spend at most {planner_controls['first_plan_exploration_budget']} exploratory "
-        f"tool calls before submitting the first plan.\n"
+        f"- Aim to submit the first plan within roughly "
+        f"{planner_controls['first_plan_exploration_budget']} exploratory tool calls when the "
+        f"failing test and owning implementation slice are already clear.\n"
+        f"- You have up to {planner_controls['tool_call_limit']} tool calls overall for the "
+        f"planner turn; use the extra budget only when a missing fact truly blocks task ownership.\n"
         f"- Put speculative or lower-signal follow-ups behind a downstream expandable "
         f"planner item or final verification.\n"
         f"- Recursive planner items must narrow ownership and should not form one-child "
@@ -203,8 +233,10 @@ def _build_sweevo_planner_runtime_prompt(instance: SWEEvoInstance) -> str:
     controls = _derive_planner_controls(instance)
     return (
         "## SWE-EVO Runtime Guardrails\n"
-        f"- Spend at most {controls['first_plan_exploration_budget']} exploratory tool calls "
-        "before the first plan. A scout launch counts toward this budget.\n"
+        f"- Aim to land the first plan within roughly {controls['first_plan_exploration_budget']} "
+        f"exploratory tool calls when the failing test and owning implementation file are "
+        f"already clear. You still have up to {controls['tool_call_limit']} total tool calls "
+        "for the planner turn when deeper discovery is genuinely required.\n"
         "- Do not spawn scout to confirm line numbers, restate a failure you already read, "
         "or revisit an exact file path you already opened this turn.\n"
         "- If a semantic CI query is cold or disconnected after you already have one failing "
@@ -358,7 +390,10 @@ def _make_runner(
     return _run
 
 
-def _make_context_builders(sandbox_id: str, repo_dir: str = _REPO_DIR):
+def _make_context_builders(
+    sandbox_id: str,
+    repo_dir: str = _REPO_DIR,
+):
     def build_query_ctx(defn, team_run, wi):
         base_prompt = _work_item_base_prompt(wi.payload)
         user_message = build_initial_user_message(team_run, wi, base_prompt)
@@ -453,6 +488,189 @@ def _make_atlas_scheduler_factory(
     return factory
 
 
+def _build_planner_overrides(instance: SWEEvoInstance) -> tuple[dict[str, int], dict[str, dict[str, Any]]]:
+    planner_controls = _derive_planner_controls(instance)
+    planner_def = get_definition(TEAM_PLANNER)
+    planner_overrides: dict[str, dict[str, Any]] = {}
+    if planner_def is not None and planner_def.system_prompt:
+        planner_overrides[TEAM_PLANNER] = {
+            "system_prompt": (
+                f"{planner_def.system_prompt}\n\n{_build_sweevo_planner_runtime_prompt(instance)}"
+            ),
+            "tool_call_limit": planner_controls["tool_call_limit"],
+            "max_turns": planner_controls["max_turns"],
+        }
+    return planner_controls, planner_overrides
+
+
+def _emit_team_runtime_banner(
+    printer: MultiAgentEventPrinter | None,
+    *,
+    budgets: BudgetConfig,
+    planner_controls: dict[str, int],
+) -> None:
+    if printer is None:
+        return
+    printer.raw_line(
+        "team",
+        (
+            "[planning_budget] "
+            f"max_plan_size={budgets.max_plan_size} max_depth={budgets.max_depth} "
+            f"max_work_items={budgets.max_work_items} "
+            f"max_shared_briefings={budgets.max_shared_briefings}"
+        ),
+    )
+    printer.raw_line(
+        "team",
+        (
+            "[planner_controls] "
+            f"first_plan_exploration_budget={planner_controls['first_plan_exploration_budget']} "
+            f"tool_call_limit={planner_controls['tool_call_limit']} "
+            f"max_turns={planner_controls['max_turns']}"
+        ),
+    )
+
+
+def _build_team_metrics() -> dict[str, Any]:
+    return {
+        "agent_runs": 0,
+        "agent_counts": Counter(),
+        "checkpoint_ids": [],
+    }
+
+
+def _prepare_benchmark_session(
+    *,
+    repo_dir: str,
+    session_id: str | None = None,
+) -> tuple[Any, object | None]:
+    from config.model_config import get_active_model_kwargs
+    from server.app_factory import (
+        build_session_config,
+        ensure_runtime_stores_ready,
+        session_store,
+    )
+
+    session_config = build_session_config()
+    session_config.cwd = repo_dir
+    if session_id:
+        session_config.session_id = session_id
+    session_factory = ensure_runtime_stores_ready()
+    try:
+        session_store.upsert(
+            session_id=session_config.session_id,
+            cwd=repo_dir,
+            model=str(get_active_model_kwargs().get("model") or ""),
+            message_count=0,
+        )
+    except Exception:
+        logger.debug("Failed to ensure sweevo team session row", exc_info=True)
+    return session_config, session_factory
+
+
+def _finalize_team_result(
+    *,
+    tr: TeamRun,
+    session_config: Any,
+    team_metrics: dict[str, Any],
+    budgets: BudgetConfig,
+    planner_controls: dict[str, int],
+    atlas_parallelism: int,
+    printer: MultiAgentEventPrinter | None,
+    checkpoint_ids: list[str] | None = None,
+    resumed_from: str | None = None,
+) -> dict[str, Any]:
+    status = tr.status
+    work_items = len(tr.dispatcher.graph)
+    logger.info(
+        "sweevo team run %s finished: status=%s work_items=%d",
+        tr.id,
+        getattr(status, "value", status),
+        work_items,
+    )
+    if status != TeamRunStatus.SUCCEEDED:
+        failures = [
+            wi for wi in tr.dispatcher.graph.values() if wi.status.value == "failed"
+        ]
+        for wi in failures:
+            logger.warning(
+                "sweevo failed work item: id=%s agent=%s local_id=%s kind=%s reason=%s",
+                wi.id,
+                wi.agent_name,
+                wi.local_id,
+                wi.kind.value,
+                wi.failure_reason,
+            )
+            if printer is not None:
+                printer.raw_line(
+                    "team",
+                    (
+                        "[failed_work_item] "
+                        f"agent={wi.agent_name} local_id={wi.local_id or '-'} "
+                        f"kind={wi.kind.value} reason={wi.failure_reason or 'unknown'}"
+                    ),
+                )
+
+    resolved_checkpoint_ids = checkpoint_ids or [cp.id for cp in tr.dispatcher.list_checkpoints()]
+    max_depth_reached = max((wi.depth for wi in tr.dispatcher.graph.values()), default=0)
+    usage_summary = None
+    usage_by_model: list[dict[str, Any]] = []
+    try:
+        from server.app_factory import usage_store
+
+        if usage_store is not None and getattr(usage_store, "is_ready", False):
+            usage_summary = usage_store.get_session_usage(session_config.session_id)
+            usage_by_model = usage_store.get_usage_by_model(session_config.session_id)
+    except Exception:
+        logger.debug("Failed to load sweevo token usage summary", exc_info=True)
+
+    if printer is not None and usage_summary is not None:
+        printer.raw_line(
+            "team",
+            (
+                "[team_usage] "
+                f"prompt={usage_summary['prompt_tokens']} "
+                f"completion={usage_summary['completion_tokens']} "
+                f"total={usage_summary['total_tokens']} "
+                f"calls={usage_summary['call_count']}"
+            ),
+        )
+        printer.raw_line(
+            "team",
+            (
+                "[team_stats] "
+                f"work_items={work_items} max_depth={max_depth_reached} "
+                f"agent_runs={team_metrics['agent_runs']} "
+                f"checkpoints={len(resolved_checkpoint_ids)} "
+                f"atlas_parallelism={atlas_parallelism}"
+            ),
+        )
+
+    return {
+        "status": status,
+        "work_items": work_items,
+        "team_run_id": tr.id,
+        "sandbox_id": tr.sandbox_id,
+        "session_id": session_config.session_id,
+        "usage": usage_summary,
+        "usage_by_model": usage_by_model,
+        "checkpoint_ids": resolved_checkpoint_ids,
+        "max_depth_reached": max_depth_reached,
+        "agent_runs": int(team_metrics["agent_runs"]),
+        "agent_counts": dict(team_metrics["agent_counts"]),
+        "budgets": {
+            "max_work_items": budgets.max_work_items,
+            "max_depth": budgets.max_depth,
+            "max_plan_size": budgets.max_plan_size,
+            "max_shared_briefings": budgets.max_shared_briefings,
+            "max_briefing_bytes": budgets.max_briefing_bytes,
+        },
+        "planner_controls": planner_controls,
+        "atlas_parallelism": atlas_parallelism,
+        "resumed_from": resumed_from,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Public entry point
 # ---------------------------------------------------------------------------
@@ -473,59 +691,23 @@ async def run_sweevo_team(
     Does not raise on team failure — the caller grades the result via
     the sweevo test command.
     """
-    from config.model_config import get_active_model_kwargs
-    from server.app_factory import (
-        build_session_config,
-        ensure_runtime_stores_ready,
-        session_store,
-    )
-
     try:
         _register_team_builtins()
     except Exception:
         logger.debug("team builtins already registered", exc_info=True)
 
-    session_config = build_session_config()
-    session_config.cwd = repo_dir
-    ensure_runtime_stores_ready()
-    try:
-        session_store.upsert(
-            session_id=session_config.session_id,
-            cwd=repo_dir,
-            model=str(get_active_model_kwargs().get("model") or ""),
-            message_count=0,
-        )
-    except Exception:
-        logger.debug("Failed to ensure sweevo team session row", exc_info=True)
+    session_config, session_factory = _prepare_benchmark_session(repo_dir=repo_dir)
+    event_store = _build_benchmark_event_store(session_factory=session_factory)
     root_prompt = _build_root_prompt(instance, repo_dir)
     budgets = _derive_sweevo_budgets(instance)
-    planner_controls = _derive_planner_controls(instance)
+    planner_controls, planner_overrides = _build_planner_overrides(instance)
     atlas_parallelism = _derive_atlas_parallelism(instance, num_executors=num_executors)
-    planner_def = get_definition(TEAM_PLANNER)
-    planner_overrides: dict[str, dict[str, Any]] = {}
-    if planner_def is not None and planner_def.system_prompt:
-        planner_overrides[TEAM_PLANNER] = {
-            "system_prompt": (
-                f"{planner_def.system_prompt}\n\n{_build_sweevo_planner_runtime_prompt(instance)}"
-            ),
-            "tool_call_limit": planner_controls["tool_call_limit"],
-            "max_turns": planner_controls["max_turns"],
-        }
-    team_metrics: dict[str, Any] = {
-        "agent_runs": 0,
-        "agent_counts": Counter(),
-        "checkpoint_ids": [],
-    }
-    if printer is not None:
-        printer.raw_line(
-            "team",
-            (
-                "[planning_budget] "
-                f"max_plan_size={budgets.max_plan_size} max_depth={budgets.max_depth} "
-                f"max_work_items={budgets.max_work_items} "
-                f"max_shared_briefings={budgets.max_shared_briefings}"
-            ),
-        )
+    team_metrics = _build_team_metrics()
+    _emit_team_runtime_banner(
+        printer,
+        budgets=budgets,
+        planner_controls=planner_controls,
+    )
 
     tr = TeamRun(
         session_id=getattr(session_config, "session_id", "sweevo"),
@@ -533,6 +715,7 @@ async def run_sweevo_team(
         budgets=budgets,
         sandbox_id=sandbox_id,
         repo_root=repo_dir,
+        event_store=event_store,
     )
 
     await tr.start(
@@ -566,88 +749,94 @@ async def run_sweevo_team(
         root_kind=WorkItemKind.EXPANDABLE,
     )
 
-    status = await tr.wait()
-    work_items = len(tr.dispatcher.graph)
-    logger.info(
-        "sweevo team run %s finished: status=%s work_items=%d",
-        tr.id,
-        getattr(status, "value", status),
-        work_items,
+    await tr.wait()
+    return _finalize_team_result(
+        tr=tr,
+        session_config=session_config,
+        team_metrics=team_metrics,
+        budgets=budgets,
+        planner_controls=planner_controls,
+        atlas_parallelism=atlas_parallelism,
+        printer=printer,
     )
-    if status != TeamRunStatus.SUCCEEDED:
-        failures = [
-            wi for wi in tr.dispatcher.graph.values() if wi.status.value == "failed"
-        ]
-        for wi in failures:
-            logger.warning(
-                "sweevo failed work item: id=%s agent=%s local_id=%s kind=%s reason=%s",
-                wi.id,
-                wi.agent_name,
-                wi.local_id,
-                wi.kind.value,
-                wi.failure_reason,
-            )
-            if printer is not None:
-                printer.raw_line(
-                    "team",
-                    (
-                        "[failed_work_item] "
-                        f"agent={wi.agent_name} local_id={wi.local_id or '-'} "
-                        f"kind={wi.kind.value} reason={wi.failure_reason or 'unknown'}"
-                    ),
-                )
-    checkpoint_ids = [cp.id for cp in tr.dispatcher.list_checkpoints()]
-    max_depth_reached = max((wi.depth for wi in tr.dispatcher.graph.values()), default=0)
-    usage_summary = None
-    usage_by_model: list[dict[str, Any]] = []
+
+
+async def resume_sweevo_team(
+    instance: SWEEvoInstance,
+    team_run_id: str,
+    *,
+    repo_dir: str = _REPO_DIR,
+    printer: MultiAgentEventPrinter | None = None,
+    num_executors: int = _DEFAULT_NUM_EXECUTORS,
+) -> dict[str, Any]:
+    """Resume a persisted SWE-EVO TeamRun in a fresh process."""
     try:
-        from server.app_factory import usage_store
-
-        if usage_store is not None and getattr(usage_store, "is_ready", False):
-            usage_summary = usage_store.get_session_usage(session_config.session_id)
-            usage_by_model = usage_store.get_usage_by_model(session_config.session_id)
+        _register_team_builtins()
     except Exception:
-        logger.debug("Failed to load sweevo token usage summary", exc_info=True)
+        logger.debug("team builtins already registered", exc_info=True)
 
-    if printer is not None and usage_summary is not None:
+    from server.app_factory import ensure_runtime_stores_ready
+
+    session_factory = ensure_runtime_stores_ready()
+    event_store = _build_benchmark_event_store(session_factory=session_factory)
+    tr = TeamRun.resume_from(event_store, team_run_id)
+    if not tr.sandbox_id:
+        raise ValueError(
+            f"team run {team_run_id!r} cannot be resumed: missing sandbox_id in persisted header"
+        )
+
+    session_config, _ = _prepare_benchmark_session(
+        repo_dir=repo_dir,
+        session_id=tr.session_id or None,
+    )
+    budgets = tr.budgets
+    planner_controls, planner_overrides = _build_planner_overrides(instance)
+    atlas_parallelism = _derive_atlas_parallelism(instance, num_executors=num_executors)
+    team_metrics = _build_team_metrics()
+    _emit_team_runtime_banner(
+        printer,
+        budgets=budgets,
+        planner_controls=planner_controls,
+    )
+    if printer is not None:
         printer.raw_line(
             "team",
             (
-                "[team_usage] "
-                f"prompt={usage_summary['prompt_tokens']} "
-                f"completion={usage_summary['completion_tokens']} "
-                f"total={usage_summary['total_tokens']} "
-                f"calls={usage_summary['call_count']}"
-            ),
-        )
-        printer.raw_line(
-            "team",
-            (
-                "[team_stats] "
-                f"work_items={work_items} max_depth={max_depth_reached} "
-                f"agent_runs={team_metrics['agent_runs']} "
-                f"checkpoints={len(checkpoint_ids)} "
-                f"atlas_parallelism={atlas_parallelism}"
+                "[resume] "
+                f"team_run_id={team_run_id} sandbox_id={tr.sandbox_id} "
+                f"durable_checkpoints={len(_checkpoint_ids_from_store(event_store, team_run_id))}"
             ),
         )
 
-    return {
-        "status": status,
-        "work_items": work_items,
-        "session_id": session_config.session_id,
-        "usage": usage_summary,
-        "usage_by_model": usage_by_model,
-        "checkpoint_ids": checkpoint_ids,
-        "max_depth_reached": max_depth_reached,
-        "agent_runs": int(team_metrics["agent_runs"]),
-        "agent_counts": dict(team_metrics["agent_counts"]),
-        "budgets": {
-            "max_work_items": budgets.max_work_items,
-            "max_depth": budgets.max_depth,
-            "max_plan_size": budgets.max_plan_size,
-            "max_shared_briefings": budgets.max_shared_briefings,
-            "max_briefing_bytes": budgets.max_briefing_bytes,
-        },
-        "planner_controls": planner_controls,
-        "atlas_parallelism": atlas_parallelism,
-    }
+    await tr.resume(
+        executor_factory=_make_executor_factory(
+            session_config,
+            tr.sandbox_id,
+            printer,
+            repo_dir=repo_dir,
+            team_metrics=team_metrics,
+            agent_overrides=planner_overrides,
+            planner_controls=planner_controls,
+        ),
+        atlas_scheduler_factory=_make_atlas_scheduler_factory(
+            session_config,
+            tr.sandbox_id,
+            printer,
+            repo_dir=repo_dir,
+            team_metrics=team_metrics,
+            max_concurrent_jobs=atlas_parallelism,
+        ),
+        num_executors=num_executors,
+    )
+    await tr.wait()
+    return _finalize_team_result(
+        tr=tr,
+        session_config=session_config,
+        team_metrics=team_metrics,
+        budgets=budgets,
+        planner_controls=planner_controls,
+        atlas_parallelism=atlas_parallelism,
+        printer=printer,
+        checkpoint_ids=_checkpoint_ids_from_store(event_store, team_run_id),
+        resumed_from=team_run_id,
+    )

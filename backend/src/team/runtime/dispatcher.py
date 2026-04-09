@@ -433,3 +433,28 @@ class Dispatcher:
                     self._ready_queue.put_nowait(wi_id)
                     self._ready_order.append(wi_id)
             return cp
+
+    async def prepare_for_resume(self) -> None:
+        """Normalize live state after process loss and rebuild the ready queue."""
+        async with self.lock:
+            while not self._ready_queue.empty():
+                self._ready_queue.get_nowait()
+            self._ready_order = []
+
+            for wi in self.graph.values():
+                if wi.status == WorkItemStatus.RUNNING:
+                    wi.status = WorkItemStatus.READY
+                    wi.agent_run_id = None
+                    wi.started_at = None
+                    self._ready_queue.put_nowait(wi.id)
+                    self._ready_order.append(wi.id)
+                    self._emit(make_work_item_status(self.team_run_id, wi.id, "ready"))
+                    continue
+
+                if wi.status == WorkItemStatus.READY:
+                    self._ready_queue.put_nowait(wi.id)
+                    self._ready_order.append(wi.id)
+                    continue
+
+                if self._compute_readiness(wi):
+                    self._promote_to_ready(wi)

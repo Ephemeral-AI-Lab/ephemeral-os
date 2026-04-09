@@ -54,12 +54,14 @@ async def run_sweevo_with_agent(
     repo_dir: str = _REPO_DIR,
     test_command: str | None = None,
     test_timeout: int = _DEFAULT_SWEEVO_TEST_TIMEOUT,
+    resume_team_run_id: str | None = None,
     on_line: "Any" = None,
 ) -> dict[str, Any]:
     """Drive a team against a SWE-EVO instance and grade it.
 
-    Provisions the sandbox, runs the builtin team (planner/developer/
-    validator DAG) against it through :func:`run_sweevo_team`, then
+    Provisions the sandbox, or resumes a persisted team run in-place,
+    then runs the builtin team (planner/developer/validator DAG)
+    through :func:`run_sweevo_team`, then
     executes the instance's required test command and explicit F2P/P2P
     grader.
 
@@ -67,7 +69,7 @@ async def run_sweevo_with_agent(
     ``team_work_items`` (count), ``agent_patch`` (combined git diff),
     ``test`` (required-test result), and ``grading`` (F2P/P2P metrics).
     """
-    from benchmarks.sweevo.team_runner import run_sweevo_team
+    from benchmarks.sweevo import team_runner as sweevo_team_runner
 
     try:
         from sandbox.lifecycle import shutdown_cached_client
@@ -88,46 +90,73 @@ async def run_sweevo_with_agent(
                     f"size={summary['size']} bullets={summary['bullet_count']}"
                 ),
             )
-            _emit_progress(
-                printer,
-                (
-                    "[setup] "
-                    f"creating sandbox register_snapshot={register_snapshot} "
-                    f"sandbox_name={sandbox_name or '<fresh>'}"
-                ),
-            )
 
-        sandbox_result = await create_sweevo_test_sandbox(
-            instance,
-            snapshot_name=snapshot_name,
-            sandbox_name=sandbox_name,
-            register_snapshot=register_snapshot,
-            cpu=cpu,
-            disk=disk,
-            repo_dir=repo_dir,
-        )
-        sandbox_id = sandbox_result["sandbox_id"]
-        if printer is not None:
-            _emit_progress(
-                printer,
-                (
-                    "[setup] "
-                    f"sandbox_id={sandbox_id} reused_existing={sandbox_result.get('reused_existing', False)}"
-                ),
-            )
-
-        try:
-            team_result = await run_sweevo_team(
-                instance,
-                sandbox_id,
-                repo_dir=repo_dir,
-                printer=printer,
-            )
-        finally:
+        if resume_team_run_id:
+            if printer is not None:
+                _emit_progress(
+                    printer,
+                    f"[resume] team_run_id={resume_team_run_id}",
+                )
             try:
-                printer.flush()
-            except Exception:
-                pass
+                team_result = await sweevo_team_runner.resume_sweevo_team(
+                    instance,
+                    resume_team_run_id,
+                    repo_dir=repo_dir,
+                    printer=printer,
+                )
+            finally:
+                try:
+                    printer.flush()
+                except Exception:
+                    pass
+            sandbox_id = str(team_result.get("sandbox_id") or "")
+            sandbox_result = {
+                "sandbox_id": sandbox_id,
+                "sandbox": {"id": sandbox_id},
+                "snapshot_name": "",
+            }
+        else:
+            if printer is not None:
+                _emit_progress(
+                    printer,
+                    (
+                        "[setup] "
+                        f"creating sandbox register_snapshot={register_snapshot} "
+                        f"sandbox_name={sandbox_name or '<fresh>'}"
+                    ),
+                )
+
+            sandbox_result = await create_sweevo_test_sandbox(
+                instance,
+                snapshot_name=snapshot_name,
+                sandbox_name=sandbox_name,
+                register_snapshot=register_snapshot,
+                cpu=cpu,
+                disk=disk,
+                repo_dir=repo_dir,
+            )
+            sandbox_id = sandbox_result["sandbox_id"]
+            if printer is not None:
+                _emit_progress(
+                    printer,
+                    (
+                        "[setup] "
+                        f"sandbox_id={sandbox_id} reused_existing={sandbox_result.get('reused_existing', False)}"
+                    ),
+                )
+
+            try:
+                team_result = await sweevo_team_runner.run_sweevo_team(
+                    instance,
+                    sandbox_id,
+                    repo_dir=repo_dir,
+                    printer=printer,
+                )
+            finally:
+                try:
+                    printer.flush()
+                except Exception:
+                    pass
 
         if isinstance(team_result, tuple):
             team_status, team_work_items = team_result
@@ -170,6 +199,7 @@ async def run_sweevo_with_agent(
             "sandbox": sandbox_result["sandbox"],
             "repo_dir": repo_dir,
             "agent_patch": agent_patch,
+            "team_run_id": team_details.get("team_run_id"),
             "team_status": (
                 team_status.value if hasattr(team_status, "value") else team_status
             ),
