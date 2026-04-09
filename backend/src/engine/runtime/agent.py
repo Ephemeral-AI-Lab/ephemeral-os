@@ -290,6 +290,8 @@ def _build_declared_skill_preamble(
         return ""
 
     loaded: list[str] = []
+    reference_hints: list[str] = []
+    include_skills = bool(agent_def.include_skills)
     for skill_name in agent_def.skills:
         skill = skill_registry.get(skill_name)
         if skill is None or not skill.content.strip():
@@ -300,15 +302,31 @@ def _build_declared_skill_preamble(
             )
             continue
         loaded.append(f"## Skill: {skill.name}\n{skill.content.strip()}")
+        if include_skills and skill.references:
+            ref_list = ", ".join(f"`{ref}`" for ref in sorted(skill.references))
+            reference_hints.append(
+                "- "
+                f"`{skill.name}` references available via "
+                f"`load_skill_reference(\"{skill.name}\", \"<reference>\")`: {ref_list}"
+            )
 
     if not loaded:
         return ""
+    reference_block = ""
+    if reference_hints:
+        reference_block = (
+            "\n\n## Declared Skill References\n\n"
+            "When a preloaded skill tells you to read a reference, use "
+            "`load_skill_reference(...)` for that specific document before proceeding.\n"
+            + "\n".join(reference_hints)
+        )
     return (
         "# Preloaded Skills\n\n"
         "Read and follow these declared skills first. They are the authoritative task workflow for "
         "this run. Do not spend a turn calling `load_skill` unless you need an additional "
         "reference beyond what is already preloaded.\n\n"
         + "\n\n".join(loaded)
+        + reference_block
     )
 
 

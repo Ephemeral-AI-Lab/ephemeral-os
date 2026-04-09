@@ -34,7 +34,8 @@ logger = logging.getLogger(__name__)
         "Promote a brief into the run-scoped shared context so future "
         "WorkItems and subagents inherit it. Use after reading a brief "
         "with high coverage that you trust will be relevant to siblings. "
-        "Artifact promotion accepts only real team artifact refs."
+        "`source=\"inline\"` requires non-empty `inline` text and forbids "
+        "`ref`. `source=\"artifact\"` requires a real team artifact ref."
     ),
 )
 async def share_briefing(

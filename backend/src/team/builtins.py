@@ -181,7 +181,7 @@ def register_all() -> None:
             tool_call_limit=_DEFAULT_TEAM_TOOL_CALL_LIMIT,
             toolkits=["code_intelligence", "team_context", "atlas", "subagent"],
             skills=["team-planner-playbook"],
-            include_skills=False,
+            include_skills=True,
             source="builtin",
             posthook=PosthookConfig(
                 agent_name=SUBMIT_PLAN_AGENT,
