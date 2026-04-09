@@ -39,27 +39,41 @@ class SubmitAtlasToolkit(BaseToolkit):
 
 
 class SubmitRetryPosthookToolkit(BaseToolkit):
-    """Decision posthook: submit_summary + request_retry."""
+    """Decision posthook: submit_summary + request_retry + request_replan."""
 
     def __init__(self) -> None:
+        from tools.posthook.request_replan import RequestReplanTool
         from tools.posthook.request_retry import RequestRetryTool
 
         super().__init__(
             name="posthook_submit_retry",
-            description="Decision posthook for agents that may submit or retry.",
-            tools=[SubmitSummaryTool(), RequestRetryTool()],
+            description="Decision posthook for agents that may submit, retry, or request replanning.",
+            tools=[SubmitSummaryTool(), RequestRetryTool(), RequestReplanTool()],
         )
 
 
 class SubmitReplanPosthookToolkit(BaseToolkit):
-    """Decision posthook: submit_summary + request_replan."""
+    """Decision posthook: submit_summary + request_retry + request_replan."""
 
     def __init__(self) -> None:
         from tools.posthook.request_replan import RequestReplanTool
+        from tools.posthook.request_retry import RequestRetryTool
 
         super().__init__(
             name="posthook_submit_replan",
-            description="Decision posthook for agents that may submit or request replan.",
-            tools=[SubmitSummaryTool(), RequestReplanTool()],
+            description="Decision posthook for agents that may submit, retry, or request replanning.",
+            tools=[SubmitSummaryTool(), RequestRetryTool(), RequestReplanTool()],
         )
 
+
+class SubmitReplanPlanToolkit(BaseToolkit):
+    """Single-tool toolkit for replanner serializer agents."""
+
+    def __init__(self) -> None:
+        from tools.posthook.submit_replan import SubmitReplanTool
+
+        super().__init__(
+            name="submit_replan_posthook",
+            description="Single-tool toolkit for replanner agents that submit corrective plans.",
+            tools=[SubmitReplanTool()],
+        )

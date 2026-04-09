@@ -18,7 +18,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-from tools.core.base import BaseTool, BaseToolkit
+from tools.core.base import BaseToolkit
 
 logger = logging.getLogger(__name__)
 
@@ -93,11 +93,11 @@ def _register_builtins() -> None:
     from tools.posthook.toolkits import (
         SubmitAtlasToolkit,
         SubmitPlanToolkit,
+        SubmitReplanPlanToolkit,
         SubmitReplanPosthookToolkit,
         SubmitRetryPosthookToolkit,
         SubmitSummaryToolkit,
     )
-    from tools.replan.toolkit import ReplanToolkit
     from tools.subagent import SubagentToolkit
     from tools.team_context import TeamContextToolkit
 
@@ -111,7 +111,7 @@ def _register_builtins() -> None:
     register_toolkit_class("submit_atlas_posthook", SubmitAtlasToolkit)
     register_toolkit_class("posthook_submit_retry", SubmitRetryPosthookToolkit)
     register_toolkit_class("posthook_submit_replan", SubmitReplanPosthookToolkit)
-    register_toolkit_class("replan_operations", ReplanToolkit)
+    register_toolkit_class("submit_replan_posthook", SubmitReplanPlanToolkit)
 
 
 _register_builtins()

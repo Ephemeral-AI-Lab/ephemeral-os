@@ -70,6 +70,32 @@ def test_default_base_prompt_fallback():
     assert "W1" in out and "worker" in out
 
 
+def test_default_base_prompt_uses_payload_for_normal_work_without_replan_source():
+    out = default_base_prompt(_wi(payload={"legacy_flag": True, "task": "do it"}))
+    assert "do it" in out
+    assert "Failed work item" not in out
+
+
+def test_default_base_prompt_uses_replan_source_id_for_replanner():
+    out = default_base_prompt(
+        _wi(
+            agent_name="team_replanner",
+            replan_source_id="VAL1",
+            payload={
+                "failed_work_item_id": "VAL1",
+                "failed_agent": "validator",
+                "failure_reason": "tests failed",
+                "failure_context": "traceback",
+                "suggestion": "add a fix task",
+                "original_payload": {"verify": ["pytest -q"]},
+            },
+        )
+    )
+    assert "Replan Request" in out
+    assert "VAL1" in out
+    assert "traceback" in out
+
+
 def test_build_initial_user_message_no_briefings():
     store = InMemoryArtifactStore(BudgetConfig(), BudgetState())
     tr = _fake_team_run(store)

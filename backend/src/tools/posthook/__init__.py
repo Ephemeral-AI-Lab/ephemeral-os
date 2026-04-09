@@ -21,6 +21,8 @@ __all__ = [
     "SubmitPosthookTool",
     "SubmitPlanInput",
     "SubmitPlanTool",
+    "SubmitReplanInput",
+    "SubmitReplanTool",
     "SubmittedSummary",
     "SubmitSummaryInput",
     "SubmitSummaryTool",
@@ -34,6 +36,8 @@ def __getattr__(name: str):
         return import_module("tools.posthook.base").SubmitPosthookTool
     if name in {"SubmitPlanInput", "SubmitPlanTool"}:
         return getattr(import_module("tools.posthook.submit_plan"), name)
+    if name in {"SubmitReplanInput", "SubmitReplanTool"}:
+        return getattr(import_module("tools.posthook.submit_replan"), name)
     if name in {"SubmittedSummary", "SubmitSummaryInput", "SubmitSummaryTool"}:
         return getattr(import_module("tools.posthook.submit_summary"), name)
     if name in {"SubmitAtlasInput", "SubmitAtlasTool"}:

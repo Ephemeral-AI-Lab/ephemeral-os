@@ -137,17 +137,18 @@ def prepend_shared_briefings_for_subagent(team_run_id: str | None, body: str) ->
 
 def default_base_prompt(wi: "WorkItem") -> str:
     """Minimal default rendering of a WorkItem payload into a user message."""
+    if wi.replan_source_id is not None:
+        return _render_replan_prompt(wi)
     payload = wi.payload or {}
-    if payload.get("replan"):
-        return _render_replan_prompt(wi, payload)
     rendered = render_work_item_payload(payload)
     if rendered is not None:
         return rendered
     return f"Execute work item {wi.id} (agent={wi.agent_name}).\nPayload: {payload!r}"
 
 
-def _render_replan_prompt(wi: "WorkItem", payload: dict) -> str:
+def _render_replan_prompt(wi: "WorkItem") -> str:
     """Render a replan work item with full failure context."""
+    payload = wi.payload or {}
     original = json.dumps(payload.get("original_payload", {}), indent=2, default=str)
     return (
         f"## Replan Request\n\n"
@@ -158,7 +159,8 @@ def _render_replan_prompt(wi: "WorkItem", payload: dict) -> str:
         f"### Failure Context\n{payload.get('failure_context', 'No context provided.')}\n\n"
         f"### Suggestion\n{payload.get('suggestion', 'None')}\n\n"
         f"### Original Payload\n{original}\n\n"
-        f"Analyze the failure and call update_plan with corrective work items. "
+        f"Analyze the failure and return a JSON corrective replan payload with "
+        f"``add_items`` and optional ``cancel_ids`` for the posthook agent to submit. "
         f"Completed sibling artifacts are available via dependency briefings above."
     )
 

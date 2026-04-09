@@ -58,7 +58,7 @@ If the runtime does not expose `request_replan()`, put the same structured conte
 ## Rules
 
 - **Do NOT modify source files.** Your job is verification and reporting only.
-- **Do NOT create tasks.** If `request_replan()` is available, the replanner handles task creation via `update_plan`. Otherwise your job stops at a structured FAIL summary.
+- **Do NOT create tasks.** If `request_replan()` is available, the replanner drafts corrective items and its downstream posthook submits them via `submit_replan`. Otherwise your job stops at a structured FAIL summary.
 - **Be specific in your report.** Vague reports like "tests failed" waste the replanner's time. Include test IDs, error messages, file paths, and root cause analysis.
 - **Cluster by root cause.** Don't list every test failure independently — group them so the replanner creates one targeted fix per cluster.
 - **Map failures to sibling tasks.** Tell the replanner which completed task's work needs rework and what files are involved.
@@ -120,10 +120,10 @@ PASS_TO_PASS results: 15/15 passing (no regressions)
 
 ## What happens after
 
-When `request_replan()` is available, the replanner agent reads your `replan_request` artifact and calls `update_plan` with:
-- `add_tasks`: targeted fix tasks based on your triage
-- `cancel_task_ids`: any pending tasks that are no longer relevant
+When `request_replan()` is available, the replanner agent reads your `replan_request` artifact, returns a corrective JSON payload, and the downstream `submit_replan_agent` submits it with:
+- `add_items`: targeted fix work items based on your triage
+- `cancel_ids`: any pending sibling work items that are no longer relevant
 
 When `request_replan()` is not available, the same triage block should appear in the verifier's final FAIL summary and a later coordinator or human turn must perform the replan explicitly.
 
-The `update_plan` posthook automatically resets the verifier to PENDING with dependencies on the new fix tasks. Once the fix tasks complete, you (the verifier) run again automatically to re-verify. This cycle continues until all tests pass.
+After `submit_replan` is accepted, the dispatcher reapplies the corrective plan and automatically resets the verifier to PENDING with dependencies on the new fix tasks. Once the fix tasks complete, you (the verifier) run again automatically to re-verify. This cycle continues until all tests pass.

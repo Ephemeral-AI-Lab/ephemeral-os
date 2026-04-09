@@ -18,6 +18,7 @@ SUBMIT_SUMMARY_AGENT = "submit_summary_agent"
 SUBMIT_ATLAS_AGENT = "submit_atlas_agent"
 DECISION_SUBMIT_RETRY = "decision_submit_retry"
 DECISION_SUBMIT_REPLAN = "decision_submit_replan"
+SUBMIT_REPLAN_AGENT = "submit_replan_agent"
 TEAM_REPLANNER = "team_replanner"
 SCOUT = "scout"
 ATLAS_BUILDER = "atlas_builder"
@@ -124,30 +125,37 @@ Output contract:
 
 _DECISION_AGENT_PROMPT = """You are a decision agent. Evaluate the work-phase output and decide which action to take by calling exactly ONE of your available tools.
 
-Guidelines for each tool (use only the tools you have been given):
-- **submit_summary** — the work succeeded. Provide a concise summary.
-- **request_retry** — the failure is transient (flaky test, timeout, model confusion) and the same task would likely succeed on re-execution.
-- **request_replan** — the failure is systemic (wrong approach, missing context, task definition is flawed) and requires the planner to revise the plan.
+Read the preloaded skills first; they define the decision workflow for summary, retry, and replan. This system prompt only fixes the role boundary.
 
 Rules:
 - Call exactly ONE tool. Never call more than one.
 - Only use the tools available to you.
-- Prefer submit_summary when work succeeded, even partially.
-- If you have request_retry, prefer it for transient failures before escalating.
-- Include structured failure analysis in request_replan context."""
+- Stop immediately after that tool call is accepted."""
 
 _REPLANNER_PROMPT = """You are team_replanner. A sibling work item failed and you must draft corrective work items to recover the execution chain.
+
+Read the preloaded skills first; they define how to analyze the failure, when to scout, and how to shape the corrective plan. This system prompt only fixes the role boundary and output contract.
 
 Role boundary:
 - Read the failure context, completed sibling artifacts (via briefings), and the original payload.
 - Use run_subagent only for read-only scout exploration if needed.
-- Call update_plan exactly once with corrective work items.
-- New items will be inserted as siblings of the failed item at the same DAG level.
+- You are not an executor. Never run tests, shell commands, or diagnostics yourself.
 
 Output contract:
 - Analyze the failure and determine targeted fixes.
-- Call update_plan with add_items (new corrective work items) and optionally cancel_ids (stale pending items).
-- After update_plan succeeds, stop. Your posthook will submit a summary."""
+- End with a single JSON object shaped like ``{"add_items": [...], "cancel_ids": [...]}``.
+- Each item in add_items must have at least ``agent_name`` and ``payload``.
+- New items will be inserted as siblings of the failed item at the same DAG level.
+- Do NOT call ``submit_replan`` yourself. Do NOT write prose before or after the JSON payload."""
+
+_SUBMIT_REPLAN_AGENT_PROMPT = """You are submit_replan_agent. Read the work-phase output above and call submit_replan exactly once with the corrective plan.
+
+- The work-phase output should be a JSON object with ``add_items`` and optional ``cancel_ids``. Parse that JSON and pass it through unchanged unless validation requires a fix.
+- ``add_items`` must be passed to ``submit_replan`` as a real list object, never as a JSON string.
+- Call submit_replan exactly once with valid arguments.
+- If submit_replan returns a validation error, read the issues, fix the payload, and call submit_replan again in the same turn.
+- Stop immediately after the first accepted submission.
+- Do not write prose. You have no other tools."""
 
 
 def register_all() -> None:
@@ -168,7 +176,7 @@ def register_all() -> None:
     register_definition(
         AgentDefinition(
             name=TEAM_PLANNER,
-            description="Team-mode planner agent: decomposes requests and submits Plans.",
+            description="Team-mode planner agent: decomposes requests and drafts plan payloads for posthook submission.",
             system_prompt=_PLANNER_PROMPT,
             model="inherit",
             max_turns=100,
@@ -330,8 +338,8 @@ def register_all() -> None:
             model="inherit",
             max_turns=5,
             toolkits=["posthook_submit_retry"],
-            skills=[],
-            include_skills=False,
+            skills=["team-posthook-decision-playbook"],
+            include_skills=True,
             agent_type="subagent",
             source="builtin",
         )
@@ -344,29 +352,43 @@ def register_all() -> None:
             model="inherit",
             max_turns=5,
             toolkits=["posthook_submit_replan"],
+            skills=["team-posthook-decision-playbook"],
+            include_skills=True,
+            agent_type="subagent",
+            source="builtin",
+        )
+    )
+    # --- Replan serializer + replanner agent ---
+    register_definition(
+        AgentDefinition(
+            name=SUBMIT_REPLAN_AGENT,
+            description="Serializes a replanner's output into a validated ReplanPlan via submit_replan.",
+            system_prompt=_SUBMIT_REPLAN_AGENT_PROMPT,
+            model="inherit",
+            max_turns=5,
+            toolkits=["submit_replan_posthook"],
             skills=[],
             include_skills=False,
             agent_type="subagent",
             source="builtin",
         )
     )
-    # --- Replanner agent ---
     register_definition(
         AgentDefinition(
             name=TEAM_REPLANNER,
-            description="Replanner: reads failure context, calls update_plan for lateral DAG correction.",
+            description="Replanner: reads failure context and produces corrective plan for posthook serialization.",
             system_prompt=_REPLANNER_PROMPT,
             model="inherit",
             max_turns=50,
             tool_call_limit=25,
-            toolkits=["code_intelligence", "team_context", "replan_operations", "subagent"],
-            skills=[],
-            include_skills=False,
+            toolkits=["code_intelligence", "team_context", "subagent"],
+            skills=["team-replanner-playbook"],
+            include_skills=True,
             supported_kinds=["atomic"],
             source="builtin",
             posthook=PosthookConfig(
-                agent_name=SUBMIT_SUMMARY_AGENT,
-                metadata_key="submitted_summary",
+                agent_name=SUBMIT_REPLAN_AGENT,
+                metadata_key="submitted_replan",
             ),
         )
     )
@@ -376,6 +398,7 @@ def register_all() -> None:
             TEAM_PLANNER, DEVELOPER, VALIDATOR,
             SUBMIT_PLAN_AGENT, SUBMIT_SUMMARY_AGENT, SCOUT,
             SUBMIT_ATLAS_AGENT, ATLAS_BUILDER, ATLAS_REFRESHER,
-            DECISION_SUBMIT_RETRY, DECISION_SUBMIT_REPLAN, TEAM_REPLANNER,
+            DECISION_SUBMIT_RETRY, DECISION_SUBMIT_REPLAN,
+            SUBMIT_REPLAN_AGENT, TEAM_REPLANNER,
         ]),
     )

@@ -379,10 +379,13 @@ class BackgroundTaskManager:
             except Exception as exc:
                 logger.debug("Kill callback failed for task %s: %s", task_id, exc)
         else:
-            # Pure-Python tools (e.g. run_subagent) have no sandbox process to
-            # kill — fall back to asyncio cancellation so the coroutine actually
-            # stops instead of running to completion after a logical cancel.
-            tracked.asyncio_task.cancel()
+            # Subagent tasks may still be inside async Daytona/CI calls. Hard
+            # asyncio cancellation can corrupt the shared async sandbox client,
+            # so logical cancel must be enough for them.
+            if tracked.task_type != "subagent":
+                # Pure-Python tools with no external runtime can be cancelled
+                # cooperatively without risking the shared sandbox connection.
+                tracked.asyncio_task.cancel()
         return True
 
     def get_task(self, task_id: str) -> TrackedBackgroundTask | None:
@@ -424,7 +427,8 @@ class BackgroundTaskManager:
                     except Exception as exc:
                         logger.debug("Kill callback failed for task %s: %s", tracked.task_id, exc)
                 else:
-                    # No kill callback (e.g. pure-Python tool with no
-                    # sandbox process). asyncio.Task.cancel is safe in
-                    # that case — there is no Daytona SDK call to corrupt.
-                    tracked.asyncio_task.cancel()
+                    # Subagent tasks may still be awaiting async Daytona/CI
+                    # calls inside their inner agent run. Mark them cancelled
+                    # logically but let them drain instead of hard-cancelling.
+                    if tracked.task_type != "subagent":
+                        tracked.asyncio_task.cancel()

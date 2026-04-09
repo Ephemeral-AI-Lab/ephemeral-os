@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import suppress
 import time
 
 from engine.runtime.background_tasks import BackgroundTaskManager
@@ -218,6 +219,41 @@ async def test_cancel_all() -> None:
     for i in range(3):
         assert mgr._tasks[f"t{i}"].status == "cancelled"
     assert mgr.has_pending() is False
+
+
+async def test_cancel_all_marks_subagent_cancelled_without_asyncio_cancel() -> None:
+    mgr = BackgroundTaskManager()
+    cancelled = asyncio.Event()
+
+    async def _subagent_coro() -> ToolResult:
+        try:
+            await asyncio.sleep(10)
+        except asyncio.CancelledError:
+            cancelled.set()
+            raise
+        return ToolResult(output="done")
+
+    mgr.launch(
+        task_id="bg_1",
+        tool_name="run_subagent",
+        tool_input={"agent_name": "scout"},
+        coro=_subagent_coro(),
+        task_type="subagent",
+    )
+
+    await mgr.cancel_all()
+    await asyncio.sleep(0)
+
+    tracked = mgr._tasks["bg_1"]
+    assert tracked.status == "cancelled"
+    assert tracked.result is not None
+    assert tracked.result.output == "Cancelled"
+    assert cancelled.is_set() is False
+    assert tracked.asyncio_task.cancelled() is False
+
+    tracked.asyncio_task.cancel()
+    with suppress(asyncio.CancelledError):
+        await tracked.asyncio_task
 
 
 # ---------------------------------------------------------------------------

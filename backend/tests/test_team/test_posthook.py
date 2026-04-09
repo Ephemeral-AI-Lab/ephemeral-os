@@ -461,3 +461,47 @@ def test_submit_plan_agent_registry_strictly_contains_only_submit_tool():
     )
     tool_names = {t.name for t in registry.list_tools()}
     assert tool_names == {"submit_plan"}, f"expected only submit_plan, got {tool_names}"
+
+
+def test_team_planner_definition_uses_submit_plan_posthook_not_submit_toolkit():
+    from team.builtins import SUBMIT_PLAN_AGENT, TEAM_PLANNER, register_all
+    from agents.registry import get_definition
+
+    register_all()  # idempotent
+
+    planner = get_definition(TEAM_PLANNER)
+    assert planner is not None
+    assert planner.posthook is not None
+    assert planner.posthook.agent_name == SUBMIT_PLAN_AGENT
+    assert "submit_plan_posthook" not in planner.toolkits
+    assert "submit_replan_posthook" not in planner.toolkits
+    assert "posthook_submit_replan" not in planner.toolkits
+
+
+def test_team_replanner_definition_uses_submit_replan_posthook_not_replan_tools():
+    from team.builtins import SUBMIT_REPLAN_AGENT, TEAM_REPLANNER, register_all
+    from agents.registry import get_definition
+
+    register_all()  # idempotent
+
+    replanner = get_definition(TEAM_REPLANNER)
+    assert replanner is not None
+    assert replanner.posthook is not None
+    assert replanner.posthook.agent_name == SUBMIT_REPLAN_AGENT
+    assert "submit_plan_posthook" not in replanner.toolkits
+    assert "submit_replan_posthook" not in replanner.toolkits
+    assert "posthook_submit_replan" not in replanner.toolkits
+    assert "replan_operations" not in replanner.toolkits
+
+
+def test_submit_replan_agent_definition_uses_only_replan_submit_toolkit():
+    from team.builtins import SUBMIT_REPLAN_AGENT, register_all
+    from agents.registry import get_definition
+
+    register_all()  # idempotent
+
+    serializer = get_definition(SUBMIT_REPLAN_AGENT)
+    assert serializer is not None
+    assert serializer.toolkits == ["submit_replan_posthook"]
+    assert serializer.include_skills is False
+    assert serializer.skills == []

@@ -11,6 +11,7 @@ from team.models import (
     BudgetConfig,
     BudgetState,
     Plan,
+    ReplanRequest,
     WorkItem,
     WorkItemKind,
     WorkItemSpec,
@@ -196,6 +197,72 @@ async def test_checkpoint_rollback_round_trip():
     assert captured["pc"] == {"g": "x"}
     # Ready queue was rebuilt
     assert await disp.pop_ready() == "A"
+
+
+@pytest.mark.asyncio
+async def test_checkpoint_rollback_restores_replan_budget():
+    disp = _make_dispatcher()
+    cp = await disp.checkpoint(label="t0", project_context={"g": "x"})
+
+    disp.budget_state.replans_used = 3
+
+    await disp.rollback_to(cp.id, project_context_setter=lambda pc: None)
+
+    assert disp.budget_state.replans_used == 0
+
+
+@pytest.mark.asyncio
+async def test_apply_replan_reattaches_failed_validator_to_new_fix_tasks():
+    disp = _make_dispatcher()
+
+    dev = _wi("DEV")
+    dev.agent_name = "developer"
+    validator = _wi("VAL", deps=["DEV"])
+    validator.agent_name = "validator"
+    validator.root_id = "ROOT"
+
+    await disp.add_work_item(dev)
+    await disp.add_work_item(validator)
+
+    assert await disp.pop_ready() == "DEV"
+    await disp.mark_running("DEV", "AR-dev")
+    await disp.complete("DEV", AgentResult(artifact={"out": 1}, summary="done"))
+
+    assert await disp.pop_ready() == "VAL"
+    await disp.mark_running("VAL", "AR-val")
+    replanner = await disp.request_replan(
+        "VAL",
+        ReplanRequest(reason="tests failed", context="traceback"),
+    )
+
+    assert "replan" not in replanner.payload
+    assert disp.graph["VAL"].status == WorkItemStatus.FAILED
+
+    assert await disp.pop_ready() == replanner.id
+    await disp.mark_running(replanner.id, "AR-replan")
+
+    result = await disp.apply_replan(
+        replan_wi_id=replanner.id,
+        add_specs=[{"agent_name": "developer", "local_id": "fix"}],
+        cancel_ids=[],
+        target_depth=validator.depth,
+        target_parent_id=validator.parent_id,
+        target_root_id=validator.root_id,
+    )
+
+    assert result == {"added": 1, "cancelled": 0}
+    fix = next(wi for wi in disp.graph.values() if wi.local_id == "fix")
+    reattached = disp.graph["VAL"]
+    assert reattached.status == WorkItemStatus.PENDING
+    assert reattached.failure_reason is None
+    assert reattached.finished_at is None
+    assert reattached.deps == ["DEV", fix.id]
+
+    assert await disp.pop_ready() == fix.id
+    await disp.mark_running(fix.id, "AR-fix")
+    await disp.complete(fix.id, AgentResult(artifact={"fixed": True}, summary="ok"))
+
+    assert disp.graph["VAL"].status == WorkItemStatus.READY
 
 
 @pytest.mark.asyncio

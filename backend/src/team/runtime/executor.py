@@ -9,7 +9,7 @@ from collections.abc import Awaitable
 from typing import TYPE_CHECKING, Any, Callable
 
 from hooks.agent_posthook import NoPosthookOutput, execute_with_posthook
-from team.models import AgentResult, Plan, ReplanRequest, RetryRequest
+from team.models import AgentResult, Plan, ReplanPlan, ReplanRequest, RetryRequest
 from team.runtime.context_builder import TeamAgentContext
 from tools.posthook import SubmittedSummary
 
@@ -112,6 +112,8 @@ class Executor:
             return
         if isinstance(submitted, Plan):
             result = AgentResult(artifact=None, summary="", submitted_plan=submitted)
+        elif isinstance(submitted, ReplanPlan):
+            result = AgentResult(artifact=None, summary="", submitted_replan=submitted)
         elif isinstance(submitted, SubmittedSummary):
             result = AgentResult(
                 artifact=submitted.artifact,

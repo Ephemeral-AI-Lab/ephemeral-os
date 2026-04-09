@@ -156,12 +156,55 @@ class ReplanRequest:
 
 
 @dataclass
+class ReplanItemSpec:
+    """Specification for a corrective work item added by the replanner."""
+
+    agent_name: str
+    payload: dict[str, Any] = field(default_factory=dict)
+    local_id: str | None = None
+    deps: list[str] = field(default_factory=list)
+    notes: str | None = None
+    timeout_seconds: float | None = None
+    kind: WorkItemKind = WorkItemKind.ATOMIC
+    briefings: list[Briefing] = field(default_factory=list)
+
+
+@dataclass
+class ReplanPlan:
+    """Validated replan output: items to add and items to cancel."""
+
+    add_items: list[ReplanItemSpec] = field(default_factory=list)
+    cancel_ids: list[str] = field(default_factory=list)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "ReplanPlan":
+        add_items = [
+            ReplanItemSpec(
+                agent_name=str(it["agent_name"]),
+                payload=dict(it.get("payload") or {}),
+                local_id=it.get("local_id"),
+                deps=list(it.get("deps") or []),
+                notes=it.get("notes"),
+                timeout_seconds=it.get("timeout_seconds"),
+                kind=WorkItemKind(it.get("kind", "atomic")),
+                briefings=[Briefing(**b) for b in (it.get("briefings") or [])],
+            )
+            for it in (data.get("add_items") or [])
+        ]
+        return cls(
+            add_items=add_items,
+            cancel_ids=list(data.get("cancel_ids") or []),
+        )
+
+
+@dataclass
 class AgentResult:
     """Return shape the Worker reconstructs from a finished run_query call."""
 
     artifact: Any
     summary: str
     submitted_plan: Plan | None = None
+    submitted_replan: ReplanPlan | None = None
 
 
 @dataclass
