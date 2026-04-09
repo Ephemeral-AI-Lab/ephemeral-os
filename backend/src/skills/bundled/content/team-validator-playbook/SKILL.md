@@ -87,6 +87,8 @@ No prose outside this shape. No suggestions for how to fix — that is the plann
 6. **Narrow scope.** Do not run unrelated suites "for coverage". Your verification set is bounded by the payload + the developer's touched files.
 7. **Do not spawn subagents.** Validators are leaf workers.
 8. **Don't retry flakes silently.** If a test is suspected flaky, run it exactly twice, report both outcomes, and let the planner decide.
+9. **Start with the exact retry target.** When the payload names a single benchmark retry target, run that exact node first. Only after it passes may you spend one broader follow-up command on the nearest same-surface regression slice.
+10. **One broader follow-up is enough.** Once the exact retry target and one nearby regression slice pass, stop. The benchmark harness will run the full grading command after the team phase; do not burn validator time on broad redundant suites by default.
 
 ---
 

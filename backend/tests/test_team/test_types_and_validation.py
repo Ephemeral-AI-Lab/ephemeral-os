@@ -93,11 +93,11 @@ def test_phase_a_internal_cycle(monkeypatch):
 
 
 def test_phase_a_valid_plan(monkeypatch):
-    _patch_registry(monkeypatch, {"a", "b"})
+    _patch_registry(monkeypatch, {"developer", "validator"})
     plan = Plan(
         items=[
-            WorkItemSpec(agent_name="a", local_id="w1"),
-            WorkItemSpec(agent_name="b", local_id="w2", deps=["w1"]),
+            WorkItemSpec(agent_name="developer", local_id="w1"),
+            WorkItemSpec(agent_name="validator", local_id="w2", deps=["w1"]),
         ]
     )
     assert validate_plan_phase_a(plan) == []
@@ -410,6 +410,33 @@ def test_phase_a_allows_expandable_planner_depending_on_subagent(monkeypatch):
     )
     issues = validate_plan_phase_a(plan)
     assert not any("subagent sibling" in i["msg"] for i in issues)
+
+
+def test_phase_a_rejects_ready_expandable_backup_in_mixed_plan(monkeypatch):
+    from agents.types import AgentDefinition
+    from team.planning import validation as _v
+
+    developer_def = AgentDefinition(name="developer", description="d")
+    planner_def = AgentDefinition(name="team_planner", description="d")
+    monkeypatch.setattr(
+        _v,
+        "_get_definition",
+        lambda n: {"developer": developer_def, "team_planner": planner_def}.get(n),
+    )
+    plan = Plan(
+        items=[
+            WorkItemSpec(agent_name="developer", local_id="dev1", kind=WorkItemKind.ATOMIC),
+            WorkItemSpec(
+                agent_name="team_planner",
+                local_id="p1",
+                kind=WorkItemKind.EXPANDABLE,
+            ),
+        ]
+    )
+
+    issues = validate_plan_phase_a(plan)
+
+    assert any("speculative backup replanners" in i["msg"] for i in issues)
 
 
 def test_submit_plan_item_parses_briefings_and_kind():

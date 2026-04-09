@@ -49,6 +49,7 @@ PEEK_MESSAGE_MAX = 10
 _PEEK_BLOCK_CHAR_CAP = 200
 # Total character cap for the peek view.
 _PEEK_TOTAL_CHAR_CAP = 2048
+_SCOUT_ONLY_CALLERS = frozenset({"team_planner", "atlas_builder", "atlas_refresher"})
 
 
 def _truncate(s: str) -> str:
@@ -273,6 +274,22 @@ async def run_subagent(
                 "`input` (dict). For team planners, prefer "
                 "`agent_name=\"scout\"` with `input={\"target_paths\": [...]}`; "
                 "do not retry with `prompt=null`."
+            ),
+            is_error=True,
+        )
+
+    caller_agent = str(context.metadata.get("agent_name") or "").strip()
+    if caller_agent in _SCOUT_ONLY_CALLERS and agent_name != "scout":
+        return ToolResult(
+            output=(
+                f"run_subagent: caller '{caller_agent}' may dispatch only 'scout', "
+                f"got '{agent_name}'. Use "
+                "`run_subagent(agent_name=\"scout\", input={\"target_paths\": [...]})` "
+                "for bounded exploration only. If you need runtime execution, "
+                "coding, or validation, emit `developer` / `validator` WorkItems "
+                "in the Plan instead of trying to spawn them here. This is "
+                "terminal evidence for planners: the next action must be a "
+                "bounded scout or a submitted Plan."
             ),
             is_error=True,
         )

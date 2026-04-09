@@ -11,6 +11,8 @@ from benchmarks.sweevo.team_runner import (
     _build_sweevo_developer_runtime_prompt,
     _enforce_validation_evidence,
     _build_sweevo_planner_runtime_prompt,
+    _build_sweevo_validator_runtime_prompt,
+    _derive_planner_runtime_limits,
     _emit_dispatcher_dag,
     _make_context_builders,
     _make_runner,
@@ -86,11 +88,17 @@ def test_planner_runtime_prompt_avoids_timeout_and_budget_instructions():
     assert "timeout_seconds" not in prompt
     assert "hard stop" not in prompt
     assert "switch to scout-led exploration" in prompt
+    assert "run the failing test before planning" in prompt
     assert "Treat planner-side ci_read_file as seed-only" in prompt
     assert "expandable child planner" in prompt
     assert "at most one additional direct code read" in prompt
     assert "exception, not a budget to spend by default" in prompt
+    assert "terminal evidence" in prompt
+    assert "Do not queue a ready expandable child planner" in prompt
+    assert "one likely owner file and one concrete reproduction target" in prompt
     assert "Once you say or infer that you have enough context" in prompt
+    assert "do not write developer payload sections titled `Root Cause`" in prompt
+    assert "do not launch scout on the whole file" in prompt
 
 
 def test_developer_runtime_prompt_limits_post_failure_probes():
@@ -98,7 +106,57 @@ def test_developer_runtime_prompt_limits_post_failure_probes():
 
     assert "at most one ad hoc python/bash probe" in prompt
     assert "trust the pytest failure as the source of truth" in prompt
+    assert "already green on the first reproduction" in prompt
     assert "Once a budget warning appears" in prompt
+    assert "do not apply it blindly" in prompt
+
+
+def test_validator_runtime_prompt_prefers_exact_retry_target_first():
+    instance = SimpleNamespace(
+        fail_to_pass=["tests/test_foo.py::test_bar"],
+    )
+
+    prompt = _build_sweevo_validator_runtime_prompt(instance)
+
+    assert "Start with the exact named retry target" in prompt
+    assert "at most one broader follow-up verification command" in prompt
+    assert "benchmark harness will run the full grading command after the team phase" in prompt
+
+
+def test_planner_runtime_limits_scale_to_warn_before_thrashing():
+    large_single_target = SimpleNamespace(
+        instance_id="large-one",
+        instance_id_swe="large-one",
+        repo="example/repo",
+        start_version="1.0.0",
+        end_version="1.0.1",
+        docker_image="example/image:latest",
+        test_cmds="pytest -q",
+        fail_to_pass=["tests/test_foo.py::test_bar"],
+        pass_to_pass=[],
+        problem_statement="- bullet\n" * 80,
+    )
+    assert _derive_planner_runtime_limits(large_single_target) == {
+        "tool_call_limit": 16,
+        "max_turns": 64,
+    }
+
+    medium_multi_target = SimpleNamespace(
+        instance_id="medium-three",
+        instance_id_swe="medium-three",
+        repo="example/repo",
+        start_version="1.0.0",
+        end_version="1.0.1",
+        docker_image="example/image:latest",
+        test_cmds="pytest -q",
+        fail_to_pass=["a", "b", "c"],
+        pass_to_pass=[],
+        problem_statement="- bullet\n" * 10,
+    )
+    assert _derive_planner_runtime_limits(medium_multi_target) == {
+        "tool_call_limit": 22,
+        "max_turns": 88,
+    }
 
 
 def test_enforce_validation_evidence_requires_daytona_bash():

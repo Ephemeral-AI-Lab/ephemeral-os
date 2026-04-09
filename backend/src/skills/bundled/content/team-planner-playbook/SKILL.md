@@ -55,7 +55,7 @@ Semantic "how does X work" / "why does Y exist" questions **bypass the atlas ent
 At the start of your turn, call `ci_workspace_structure()`. If the workspace is empty, or the request is from-scratch creation with no existing code to reference, **skip all scouting** and emit `developer` WorkItems that create files directly. Empty `shared_briefings` is expected here.
 
 ### Step 5 — Pattern A: scout-led exploration is the default planning pattern
-For any nontrivial exploration task, prefer `run_subagent(agent_name="scout", input={"target_paths": [...]})` over another planner `ci_read_file`. The planner should feel biased toward launching a bounded scout as soon as candidate ownership stops being obvious from the seed reads.
+For any nontrivial exploration task, prefer `run_subagent(agent_name="scout", input={"target_paths": [...]})` over another planner `ci_read_file`. The planner should feel biased toward launching a bounded scout as soon as candidate ownership stops being obvious from the seed reads across multiple files or directories.
 
 Hard escalation trigger:
 - After you have read the failing test block and identified one candidate implementation file or subsystem, the root planner gets **at most one additional direct `ci_read_file`** to confirm the next branch.
@@ -65,13 +65,12 @@ Hard escalation trigger:
   - emit an expandable child `team_planner`
   - submit the worker plan if ownership is already clear
 - Do not keep paging the same large file or neighboring helpers from the root planner beyond that point.
+- If one large file is already the clear owner candidate and the ambiguity is now region-level inside that file, do **not** scout the whole file. Switch to a chained `team_planner` for the named region/symbol subset, or submit the worker plan if the slice is already execution-sized.
 
 Use scout when one or more of these is true:
 - more than one plausible owner file or directory remains after the seed reads
 - the behavior spans multiple helpers, adapters, or layers
 - a directory-sized slice must be understood before task ownership is clear
-- the planner would otherwise keep paging through a large file to figure out decomposition
-- one file is clearly relevant but contains several candidate regions, branches, or helper clusters and the parent does not yet know which region should own the work
 - the next planner action would otherwise be "open one more implementation file window" mainly to understand ownership or boundaries
 
 `run_subagent` is exploration-only. Never call it with `developer` or `validator`. Atlas maintenance is runtime/backend work, not a plan item and not a planner-spawned subagent.
@@ -95,6 +94,7 @@ Parent and sibling boundaries are strict:
 
 ### Step 7 — Pattern C: recursive child planner for large-file or mixed-slice exploration
 If the unresolved breadth lives inside one large file or one mixed slice that cannot be cleanly decomposed in-turn, emit a chained `team_planner` WorkItem with `kind: "expandable"` and a narrowed payload.
+Do not emit a speculative backup replanner whose payload only says "if the developer finds more issues". If the follow-up depends on what an atomic worker discovers, keep that contingency in notes or let validator failure trigger a later replan.
 
 Use a child planner when:
 - one file contains too many relevant regions, branches, or symbols for the current level
@@ -158,10 +158,13 @@ Never invent new worker agent names unless the user has registered one in the ag
 10. **Large-file recursion rule.** If one file contains too many relevant regions or symbols for the current level, emit an expandable child planner for the named sub-slice instead of forcing a flat plan from the parent.
 11. **Non-overlap rule.** Parent and sibling exploration lanes must own disjoint paths or named regions. Do not reopen a slice already assigned to a child scout or child planner unless new evidence invalidates the prior boundary.
 12. **Sufficiency threshold.** Once you can name the owned file cluster or region, explain the likely fix briefly, and describe how to verify it, stop exploring and emit the WorkItems.
-13. **Never scout or re-read a test you already have.** If you already read the failing test block, do not spawn `scout` or read more of that test just to reconfirm the failure. Runtime confirmation belongs to a `developer` or `validator` WorkItem, not to the planner turn.
-14. **Treat tool rejection as evidence.** If `run_subagent` rejects a target as non-subagent, rejects `prompt=null`, or rejects a `scout` call that lacks `target_paths`, do not retry the same pattern. Update your plan and emit valid WorkItems.
-15. **No prose outside the plan payload.** End your turn with a single JSON object that matches the `Plan` shape (`items`, optional `rationale`), with no wrapper prose before or after it.
-16. **Stop after the JSON payload.** Once the plan JSON is written, your turn is over. Do not inspect background tasks, run more tools, or spawn workers afterward.
+13. **No whole-file scout on known monolith owners.** Once one large file is already the clear owner candidate, do not call `scout` on that same whole file just to get a module summary. Either spend the one allowed confirmation read and submit the worker plan, or hand the named region/symbol question to a child planner.
+14. **Hypothesis handoff only.** Unless runtime evidence or directly-read code already proves the defect, the developer payload must frame the bug as symptom + likely owner + reproduction target + verification target. Do not hand off a settled `Root Cause`, `Specific Edit`, or exact patch diff as if the planner already executed the reproduction.
+15. **No speculative backup replanners.** In a mixed plan, every expandable child planner must depend on the worker or validator that could reveal the need for it. Do not queue a ready replanner in parallel for "maybe more issues."
+16. **Never scout or re-read a test you already have.** If you already read the failing test block, do not spawn `scout` or read more of that test just to reconfirm the failure. Runtime confirmation belongs to a `developer` or `validator` WorkItem, not to the planner turn.
+17. **Treat tool rejection as evidence.** If `run_subagent` rejects a target as non-subagent, rejects `prompt=null`, or rejects a `scout` call that lacks `target_paths`, do not retry the same pattern. Update your plan and emit valid WorkItems.
+18. **No prose outside the plan payload.** End your turn with a single JSON object that matches the `Plan` shape (`items`, optional `rationale`), with no wrapper prose before or after it.
+19. **Stop after the JSON payload.** Once the plan JSON is written, your turn is over. Do not inspect background tasks, run more tools, or spawn workers afterward.
 
 ---
 
@@ -172,4 +175,6 @@ Never invent new worker agent names unless the user has registered one in the ag
 - [ ] Every `kind: "expandable"` item targets `team_planner`; all other submitted items are `kind: "atomic"`.
 - [ ] Briefings attached via `{"source": "artifact", "ref": "<staged_artifact_ref>"}` for any atlas `use` hit.
 - [ ] Exploration relied on scout or a child planner when ownership was structurally ambiguous, instead of serial planner paging.
+- [ ] Any root-cause wording handed to a developer lane is framed as a hypothesis unless runtime evidence already proved it.
+- [ ] Any expandable planner in a mixed plan depends on the worker or validator that could make it necessary.
 - [ ] `rationale` is set when the plan shape is non-obvious (Pattern B/C, atlas refresh, greenfield).

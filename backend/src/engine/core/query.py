@@ -184,7 +184,6 @@ def _consume_tool_budget_or_reject(
     context.tool_calls_used += 1
     return None
 
-
 def _deliver_completed_background_task(
     task: TrackedBackgroundTask,
     display_messages: list[ConversationMessage],

@@ -38,6 +38,7 @@ def validate_plan_phase_a(plan: Plan, max_plan_size: int = 50) -> list[Issue]:
         return issues
 
     local_ids: set[str] = set()
+    has_atomic_items = any(item.kind == WorkItemKind.ATOMIC for item in plan.items)
     for idx, item in enumerate(plan.items):
         # local_id uniqueness
         if item.local_id is not None:
@@ -88,6 +89,21 @@ def validate_plan_phase_a(plan: Plan, max_plan_size: int = 50) -> list[Issue]:
                         "msg": (
                             "atomic submitted items must target one of "
                             f"{sorted(_ALLOWED_ATOMIC_AGENTS)}, got '{item.agent_name}'"
+                        ),
+                    }
+                )
+            if (
+                has_atomic_items
+                and item.kind == WorkItemKind.EXPANDABLE
+                and len(item.deps) == 0
+            ):
+                issues.append(
+                    {
+                        "field": f"items[{idx}].deps",
+                        "msg": (
+                            "expandable items in mixed plans must depend on at least one "
+                            "sibling item; do not queue speculative backup replanners in "
+                            "parallel with atomic workers"
                         ),
                     }
                 )

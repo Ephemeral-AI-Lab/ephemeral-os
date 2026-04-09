@@ -17,6 +17,7 @@ Produce a structural ownership map first, then assign developer and validator wo
    If there are multiple plausible owners, a directory-sized slice, or a large file with many relevant regions, switch to exploration.
    After the failing test and one candidate implementation file are known, allow yourself at most one additional direct planner file read before you must scout, child-plan, or dispatch.
    That extra read is a narrow exception. Prefer scout immediately whenever it can answer the ownership question.
+   If the owner is already a single large file and the remaining question is which region inside that file matters, do not scout the whole file. Move directly to child planning for the named sub-slice.
 
 3. Launch a bounded scout.
    Call `run_subagent(agent_name="scout", input={"target_paths": [...]})` with concrete paths only.
@@ -55,7 +56,9 @@ Produce a structural ownership map first, then assign developer and validator wo
 - Prefer one bounded scout over any planner `ci_read_file` whose real purpose is to understand ownership, interaction, or decomposition.
 - Prefer one scout over many serial planner `ci_read_file` calls when structure is still unclear.
 - Once a large candidate file is known, treat repeated parent reads as a smell. One extra confirmation read is acceptable; the next step must be scout or child planning.
+- Once one large file is already the clear owner candidate, prefer child planning over whole-file scout. Scout is for path-level structure; region-level ambiguity inside one monolith belongs to a child planner.
 - If there are multiple disjoint candidate areas, prefer parallel scouts over parent-side file windows across those areas.
+- Do not queue a ready expandable child planner in parallel just for "if the developer finds more issues"; that contingency belongs in downstream deps or later replanning.
 - Prefer atlas reuse only when the cached brief already answers the decomposition question.
 - Prefer child planners over extra parent reads when a large file needs region-level ownership.
 - Prefer disjoint fanout over overlapping scouts.
@@ -65,6 +68,7 @@ Produce a structural ownership map first, then assign developer and validator wo
 - Reading five windows of the same large file from the parent planner just to decide who should own it
 - Reading the failing test, then three or more implementation windows from the root planner before any scout or child-planner handoff
 - Using planner `ci_read_file` as the main exploration workflow after candidate paths are already known
+- Emitting a speculative expandable child planner whose only purpose is "maybe there are more issues later"
 - Using `developer` as a discovery worker
 - Re-scouting a path already covered by shared context or a sibling scout
 - Emitting a one-child recursive planner chain that simply restates the same broad slice

@@ -231,6 +231,11 @@ async def _cmd_run(args: argparse.Namespace) -> int:
                 flush=True,
             )
             print(
+                f"  run_ids: team_run_id={result.get('team_run_id') or '-'}  "
+                f"session_id={team.get('session_id') or '-'}",
+                flush=True,
+            )
+            print(
                 f"  stream: agents={stream_summary['totals']['agents']}  "
                 f"tool_calls={stream_summary['totals']['tool_calls']}  "
                 f"subagents={stream_summary['totals']['subagents_spawned']}",
