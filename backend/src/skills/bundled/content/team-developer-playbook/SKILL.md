@@ -64,8 +64,21 @@ After every edit to a source file you MUST run at least one of:
 
 **If diagnostics report errors, fix them before returning.** Do not hand broken code to the validator.
 
-### 6. Report
+### 6. Runtime fault handling
+If a live tool or harness fault blocks normal execution (for example `Event loop is closed`, sandbox session failure, checkpoint restore mismatch, or an obviously corrupted retry/checkpoint state):
+- Do at most one confirming retry of the same narrow action when the fault could be transient.
+- If the same infra/runtime fault repeats, stop retrying that tool family. Re-read any changed file state if needed, then return a blocker report instead of thrashing.
+- Classify the blocker explicitly so the decision posthook can choose the next action:
+  - `transient_runtime` → likely `request_retry`
+  - `systemic_runtime` or `scope_mismatch` → likely `request_replan`
+  - `code_fix_complete` → `submit_summary`
+- If you already changed code before the fault, still report the touched files and the last successful verification step.
+
+### 7. Report
 When `submit_summary` is called (by the posthook), your final assistant message must contain:
+- `OUTCOME: changed | blocked`
+- `FAILURE_TYPE: code_fix_complete | transient_runtime | systemic_runtime | scope_mismatch` when relevant
+- `RECOMMENDED_ACTION: submit_summary | request_retry | request_replan`
 - A 1–3 sentence narrative of what you changed and why.
 - The list of files touched.
 - The verification step you ran and its outcome.
@@ -93,6 +106,7 @@ When `submit_summary` is called (by the posthook), your final assistant message 
 16. **Probe failures are terminal evidence.** If a custom probe fails with import, name, key, or attribute errors, do not write another variant of that probe family. Return to the failing pytest output, the current function, and one direct helper instead.
 17. **Pytest beats custom probes.** If a custom probe appears to succeed but the named pytest target still fails, trust the pytest failure as the source of truth. Inspect the exact failing assertion or emitted value from pytest before inventing more standalone scripts.
 18. **Budget pivot rule.** If a budget warning appears or you are down to roughly a dozen tool calls, stop exploratory scripting. Spend the remaining budget on one bounded read/edit/test loop or return a concise blocker summary.
+19. **Repeated live-runtime faults are not a coding loop.** After one confirming retry, repeated harness/checkpoint/sandbox failures are evidence for retry or replan, not permission to keep hammering the same command.
 
 ---
 
