@@ -18,9 +18,12 @@ Apply these stop/go rules before the longer ladder:
 3. While scouts are running, keep planning in the foreground: classify uncovered branches, reuse atlas/shared briefs, inspect progress on completed lanes, and launch another disjoint scout or a narrowed child planner only if the current evidence is still incomplete.
 4. Every fresh scout you may later join must be inspected first with `check_background_progress(task_id=...)`.
 5. Stop on sufficiency, not scout-count. Once scout-backed ownership is clear for the likely production slice(s) plus the validation or guardrail slice(s) needed for dispatch, stop exploring and emit the plan JSON.
-6. After source-owner scouts exist, do not scout `pyproject.toml`, lockfiles, requirements, or giant test files unless the task is explicitly packaging-focused or source ownership is still unresolved.
-7. A budget warning, duplicate-scout rejection, or `WAIT_REQUIRES_PROGRESS_CHECK` means reuse the evidence you already have and finish the plan instead of opening new exploration lanes.
-8. A hard tool-limit rejection is also terminal: do not explain the failure, do not wait again, and do not launch more tools. Emit the best valid plan JSON immediately.
+6. If your next thought is "understand the actual failing behavior better" inside an already mapped owner cluster, stop exploring. Runtime confirmation belongs to `developer` or `validator`, not to another planner-side scout.
+7. After source-owner scouts exist, do not scout `pyproject.toml`, lockfiles, requirements, or giant test files unless the task is explicitly packaging-focused or source ownership is still unresolved.
+8. A budget warning, duplicate-scout rejection, or `WAIT_REQUIRES_PROGRESS_CHECK` means reuse the evidence you already have and finish the plan instead of opening new exploration lanes.
+9. A hard tool-limit rejection is also terminal: do not explain the failure, do not wait again, and do not launch more tools. Emit the best valid plan JSON immediately.
+10. On benchmark-style root planning, two scout waves is the default ceiling. A third wave is allowed only for a genuinely new disjoint owner cluster, never for deeper inspection of an already mapped cluster.
+11. Keep the graph in the `plan -> execute -> validate` cycle. Use the initial frontier only to reach concrete developer/validator work; rely on downstream retry/replan hooks for evidence-driven recovery instead of front-loading speculative backup macros.
 
 ## Absolute boundary
 
@@ -28,6 +31,7 @@ Apply these stop/go rules before the longer ladder:
 - Never call `run_subagent` with `developer` or `validator`.
 - Never use `scout` as a proxy for "run the failing test" or "get the runtime error".
 - If runtime evidence is needed, emit a `developer` or `validator` WorkItem instead of trying to obtain it in-turn.
+- Runtime budgets (`max_plan_size`, `max_depth`, tool-call limit) are ceilings, not targets. Use the smallest frontier that can start execution.
 
 ---
 
@@ -99,6 +103,7 @@ For `scout`, the contract is strict: call `run_subagent(agent_name="scout", inpu
 Late-root rule:
 - Once the root planner has enough scout-backed evidence to name the concrete implementation slice(s) and direct validation surface(s), stop scouting and emit the plan. This may happen after the first wave or after a later wave; the stop condition is evidence sufficiency, not a fixed number of scouts.
 - Do not launch late-budget root scouts just to confirm a changelog theory, restate a named failing test, or inspect dependency/version metadata after concrete source owners are already known.
+- Do not launch another scout just to understand the exact runtime mismatch inside a cluster that is already ownership-complete. Hand that cluster to a developer or validator lane with the exact failing test or command instead.
 - If dependency or manifest drift still seems plausible at that point, hand it to a developer lane as a hypothesis with the exact reproduction target. Do not keep the root planner in confirmation mode.
 
 ### Step 6 — Pattern B: hierarchical scout fanout
@@ -190,6 +195,8 @@ Never invent new worker agent names unless the user has registered one in the ag
 13. **No repeated whole-set waits after timeout.** If `wait_for_background_task(task_id="all")` times out, use any completed scout returns, cancel stale low-value scouts if warranted, or wait only on the remaining blocker. Do not immediately issue another whole-set wait across the same scout batch.
 14. **Budget warning is terminal.** If a budget warning appears, or you are down to only a few tool calls, your next assistant message must be the final JSON plan. Do not launch more scouts, reopen changelog hypotheses, inspect progress on still-running scouts, or issue more planner-side CI queries.
 15. **Sufficiency threshold.** Once you can name the owned file cluster or region, explain the likely fix briefly, and describe how to verify it, stop exploring and emit the WorkItems.
+15a. **Benchmark wave ceiling.** On a benchmark root turn, once you have spent roughly 25 tool calls or completed two scout waves, your next move must be the final plan unless a genuinely new disjoint owner cluster is still unmapped.
+15b. **No repeat-wave deep dives.** If a cluster is already scout-backed and your only remaining question is "what exact failure pattern does this cluster have?", do not open another scout wave for that cluster. Pass the exact failing test/command to a worker instead.
 16. **No redundant whole-file scout on already-mapped monolith owners.** Once one large file already has a fresh scout brief or shared briefing and the remaining ambiguity is purely region-level, do not call `scout` on that same whole file again. Either submit the worker plan if the slice is already execution-sized, or hand the named region/symbol question to a child planner.
 17. **Hypothesis handoff only.** Unless runtime evidence or explicit context already proves the defect, the developer payload must frame the bug as symptom + likely owner + reproduction target + verification target. Do not hand off a settled `Root Cause`, `Specific Edit`, or exact patch diff as if the planner already executed the reproduction.
 18. **No speculative backup replanners.** In a mixed plan, every expandable child planner must depend on the worker or validator that could reveal the need for it. Do not queue a ready replanner in parallel for "maybe more issues."
@@ -204,6 +211,7 @@ Never invent new worker agent names unless the user has registered one in the ag
 27. **Fresh-scout wait sequencing is per task, not per batch.** Every freshly spawned scout that you intend to join must be inspected with `check_background_progress` first, unless that scout was already checked earlier in the turn. Do not spawn two fresh scouts and then immediately wait on both.
 28. **Valid JSON beats extra certainty.** If you already have enough evidence to write a structurally valid plan JSON, write it immediately. Do not spend remaining budget on one more confirmation query, one more wait, or one more scout just to improve confidence.
 29. **Tool-limit rejection is terminal.** If a tool call is rejected because the planner budget is exhausted, your next assistant message must still be the final JSON plan. Do not answer with explanation prose, and do not treat the rejection as permission to skip the payload.
+30. **`WAIT_REQUIRES_PROGRESS_CHECK` is not a scouting license.** Treat that error as a reminder to either inspect once and finish the plan, or inspect once and wait on the single remaining blocker. Do not convert it into another broad scout wave over the same mapped benchmark surface.
 
 ---
 
