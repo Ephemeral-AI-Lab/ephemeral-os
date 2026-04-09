@@ -321,6 +321,20 @@ class SandboxService:
         """Return the raw Daytona SDK sandbox object."""
         return self._get_proxy(sandbox_id)._raw
 
+    def get_build_logs_url(self, sandbox_id: str) -> str | None:
+        """Return the Daytona build-logs URL for a sandbox when available."""
+        raw = self.get_sandbox_object(sandbox_id)
+        sandbox_api = getattr(raw, "_sandbox_api", None)
+        if sandbox_api is None or not hasattr(sandbox_api, "get_build_logs_url"):
+            return None
+        try:
+            result = sandbox_api.get_build_logs_url(sandbox_id)
+        except Exception:
+            logger.debug("Failed to fetch build logs URL for sandbox %s", sandbox_id, exc_info=True)
+            return None
+        url = getattr(result, "url", None)
+        return str(url).strip() or None
+
     # -- Lifecycle ------------------------------------------------------------
 
     def create_sandbox(

@@ -116,3 +116,74 @@ def test_create_sweevo_test_sandbox_truncates_explicit_name_on_create(monkeypatc
     assert result["reused_existing"] is False
     setup_mock.assert_awaited_once_with(instance, "sb-created", _REPO_DIR)
     patch_mock.assert_awaited_once_with(instance, "sb-created", _REPO_DIR)
+
+
+def test_create_sweevo_test_sandbox_falls_back_after_pending_build_timeout(monkeypatch):
+    from benchmarks.sweevo import sandbox as sweevo_sandbox
+
+    instance = _instance()
+    fresh_name = "fresh-sandbox"
+    pending = {"id": "sb-pending", "name": fresh_name, "state": "pending_build", "labels": {}}
+    started = {
+        "id": "sb-started",
+        "name": f"sweevo-test-{instance.instance_id}-prev",
+        "state": "started",
+        "labels": {"project_dir": _REPO_DIR},
+    }
+    deleted: list[str] = []
+    service = SimpleNamespace(
+        list_sandboxes=lambda: [pending, started],
+        create_sandbox=lambda **_: (_ for _ in ()).throw(RuntimeError("timed out waiting for build")),
+        delete_sandbox=lambda sandbox_id: deleted.append(sandbox_id),
+    )
+    setup_mock = AsyncMock()
+    patch_mock = AsyncMock()
+
+    monkeypatch.setattr(sweevo_sandbox, "_service", lambda: service)
+    monkeypatch.setattr(sweevo_sandbox, "_default_sweevo_sandbox_name", lambda _instance: fresh_name)
+    monkeypatch.setattr(sweevo_sandbox, "setup_sweevo_sandbox", setup_mock)
+    monkeypatch.setattr(sweevo_sandbox, "ensure_sweevo_test_patch", patch_mock)
+
+    result = asyncio.run(
+        sweevo_sandbox.create_sweevo_test_sandbox(
+            instance,
+            register_snapshot=False,
+        )
+    )
+
+    assert deleted == ["sb-pending"]
+    assert result["sandbox_id"] == "sb-started"
+    assert result["sandbox"] == started
+    assert result["reused_existing"] is True
+    assert result["fallback_reason"] == "fresh_create_timeout_reused_started_sandbox"
+    assert "timed out waiting for build" in result["fresh_create_error"]
+    setup_mock.assert_awaited_once_with(instance, "sb-started", _REPO_DIR)
+    patch_mock.assert_awaited_once_with(instance, "sb-started", _REPO_DIR)
+
+
+def test_setup_sweevo_sandbox_preserves_existing_labels(monkeypatch):
+    from benchmarks.sweevo import sandbox as sweevo_sandbox
+
+    labels_set: list[dict[str, str]] = []
+
+    class FakeSandbox:
+        labels = {"purpose": "sweevo-test", "sweevo_instance": "abc"}
+
+        def set_labels(self, labels: dict[str, str]) -> None:
+            labels_set.append(labels)
+
+    exec_mock = AsyncMock(return_value="")
+    service = SimpleNamespace(get_sandbox_object=lambda sandbox_id: FakeSandbox())
+
+    monkeypatch.setattr(sweevo_sandbox, "_exec", exec_mock)
+    monkeypatch.setattr(sweevo_sandbox, "_service", lambda: service)
+
+    asyncio.run(sweevo_sandbox.setup_sweevo_sandbox(_instance(), "sbx-1"))
+
+    assert labels_set == [
+        {
+            "purpose": "sweevo-test",
+            "sweevo_instance": "abc",
+            "project_dir": _REPO_DIR,
+        }
+    ]

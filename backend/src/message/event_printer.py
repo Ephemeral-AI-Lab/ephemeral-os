@@ -64,13 +64,16 @@ def _truncate(text: str, limit: int) -> str:
 
 
 @dataclass
-class _AgentState:
+class _AgentTotals:
     color: str = ""
-    thinking_buf: list[str] = field(default_factory=list)
-    text_buf: list[str] = field(default_factory=list)
-    last_work_id: str = ""
     tool_calls: int = 0
     subagents_spawned: int = 0
+
+
+@dataclass
+class _LaneState:
+    thinking_buf: list[str] = field(default_factory=list)
+    text_buf: list[str] = field(default_factory=list)
 
 
 class MultiAgentEventPrinter:
@@ -98,7 +101,8 @@ class MultiAgentEventPrinter:
         self._sink = sink  # callable taking a line; default = print
         self._timestamps = timestamps
         self._start = _time.monotonic()
-        self._agents: dict[str, _AgentState] = {}
+        self._agent_totals: dict[str, _AgentTotals] = {}
+        self._lanes: dict[tuple[str, str], _LaneState] = {}
         self._depth: dict[str, int] = {}  # work_id -> depth
         self._work_to_agent: dict[str, str] = {}  # work_id -> agent_name
         self._palette_idx = 0
@@ -110,20 +114,19 @@ class MultiAgentEventPrinter:
     def emit(self, event: StreamEvent) -> None:
         agent = getattr(event, "agent_name", "") or "?"
         work_id = getattr(event, "work_id", "")
-        state = self._state_for(agent)
-        if work_id:
-            state.last_work_id = work_id
+        totals = self._agent_totals_for(agent)
+        lane = self._lane_for(agent, work_id)
 
         # Stream deltas into per-agent buffers; do not print yet.
         if isinstance(event, ThinkingDelta):
-            state.thinking_buf.append(event.text)
+            lane.thinking_buf.append(event.text)
             return
         if isinstance(event, AssistantTextDelta):
-            state.text_buf.append(event.text)
+            lane.text_buf.append(event.text)
             return
 
         if isinstance(event, ToolExecutionStarted):
-            state.tool_calls += 1
+            totals.tool_calls += 1
             self._line(
                 agent,
                 work_id,
@@ -155,7 +158,7 @@ class MultiAgentEventPrinter:
             # makes it a "spawn" is its name. Treat it specially so the printed
             # log reads as team coordination rather than generic bg plumbing.
             if event.tool_name == "run_subagent":
-                state.subagents_spawned += 1
+                totals.subagents_spawned += 1
                 child = str(event.tool_input.get("agent_name") or "subagent")
                 task_text = str(event.tool_input.get("prompt") or event.tool_input.get("task_note") or "")
                 # Record lineage so the child's own events indent one level
@@ -195,7 +198,7 @@ class MultiAgentEventPrinter:
                 )
         elif isinstance(event, AssistantTurnComplete):
             # Print full thinking/text blocks once per completed turn.
-            self._flush_buffers(agent)
+            self._flush_buffers(agent, work_id)
         elif isinstance(event, SystemNotification):
             tag = f"[system{':' + event.category if event.category else ''}]"
             self._line(agent, work_id, f"{tag} {_truncate(event.text, 200)}")
@@ -211,8 +214,8 @@ class MultiAgentEventPrinter:
         self._line(agent, "", body)
 
     def flush(self) -> None:
-        for agent in list(self._agents):
-            self._flush_buffers(agent)
+        for agent, work_id in list(self._lanes):
+            self._flush_buffers(agent, work_id)
 
     def summary(self) -> dict[str, Any]:
         per_agent = {
@@ -220,13 +223,13 @@ class MultiAgentEventPrinter:
                 "tool_calls": st.tool_calls,
                 "subagents_spawned": st.subagents_spawned,
             }
-            for name, st in self._agents.items()
+            for name, st in self._agent_totals.items()
         }
         totals = {
-            "agents": len(self._agents),
-            "tool_calls": sum(st.tool_calls for st in self._agents.values()),
+            "agents": len(self._agent_totals),
+            "tool_calls": sum(st.tool_calls for st in self._agent_totals.values()),
             "subagents_spawned": sum(
-                st.subagents_spawned for st in self._agents.values()
+                st.subagents_spawned for st in self._agent_totals.values()
             ),
         }
         return {"per_agent": per_agent, "totals": totals}
@@ -235,34 +238,50 @@ class MultiAgentEventPrinter:
     # Internals
     # ------------------------------------------------------------------
 
-    def _state_for(self, agent: str) -> _AgentState:
-        st = self._agents.get(agent)
+    def _agent_totals_for(self, agent: str) -> _AgentTotals:
+        st = self._agent_totals.get(agent)
         if st is None:
             color = _PALETTE[self._palette_idx % len(_PALETTE)] if self._color else ""
             self._palette_idx += 1
-            st = _AgentState(color=color)
-            self._agents[agent] = st
+            st = _AgentTotals(color=color)
+            self._agent_totals[agent] = st
         return st
 
-    def _flush_buffers(self, agent: str) -> None:
-        st = self._agents.get(agent)
-        if st is None:
+    def _lane_for(self, agent: str, work_id: str) -> _LaneState:
+        key = (agent, work_id or "")
+        lane = self._lanes.get(key)
+        if lane is None:
+            self._agent_totals_for(agent)
+            lane = _LaneState()
+            self._lanes[key] = lane
+        return lane
+
+    def _flush_lane(self, agent: str, work_id: str) -> None:
+        lane = self._lanes.get((agent, work_id or ""))
+        if lane is None:
             return
-        work_id = st.last_work_id
-        if st.thinking_buf:
+        if lane.thinking_buf:
             self._line(
                 agent,
                 work_id,
-                f"[thinking] {_truncate(''.join(st.thinking_buf), self._truncate_n)}",
+                f"[thinking] {_truncate(''.join(lane.thinking_buf), self._truncate_n)}",
             )
-            st.thinking_buf.clear()
-        if st.text_buf:
+            lane.thinking_buf.clear()
+        if lane.text_buf:
             self._line(
                 agent,
                 work_id,
-                f"[text] {_truncate(''.join(st.text_buf), self._truncate_n)}",
+                f"[text] {_truncate(''.join(lane.text_buf), self._truncate_n)}",
             )
-            st.text_buf.clear()
+            lane.text_buf.clear()
+
+    def _flush_buffers(self, agent: str, work_id: str = "") -> None:
+        if work_id:
+            self._flush_lane(agent, work_id)
+            return
+        for lane_agent, lane_work_id in list(self._lanes):
+            if lane_agent == agent:
+                self._flush_lane(lane_agent, lane_work_id)
 
     def _line(self, agent: str, work_id: str, body: str) -> None:
         import time as _time
@@ -282,7 +301,7 @@ class MultiAgentEventPrinter:
             print(line, flush=True)
 
     def _agent_tag(self, agent: str, work_id: str = "") -> str:
-        st = self._state_for(agent)
+        st = self._agent_totals_for(agent)
         name = agent[: self._tag_width].ljust(self._tag_width)
         raw = f"[{name}]"
         if work_id:

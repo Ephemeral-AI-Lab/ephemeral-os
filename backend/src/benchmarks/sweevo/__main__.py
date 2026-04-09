@@ -192,8 +192,10 @@ async def _cmd_run(args: argparse.Namespace) -> int:
     counts = on_line.counts  # type: ignore[attr-defined]
     team_status = str(result.get("team_status") or "unknown")
     health_issues = _collect_health_issues(result)
+    stream_summary = printer.summary()
     result["health_ok"] = not health_issues
     result["health_issues"] = health_issues
+    result["stream_summary"] = stream_summary
 
     if not quiet:
         print("=" * 72, flush=True)
@@ -217,6 +219,8 @@ async def _cmd_run(args: argparse.Namespace) -> int:
             )
         if team:
             usage = team.get("usage") or {}
+            usage_by_model = team.get("usage_by_model") or []
+            agent_counts = team.get("agent_counts") or {}
             budgets = team.get("budgets") or {}
             print(
                 f"  team: work_items={team.get('work_items', result.get('team_work_items', 0))}  "
@@ -224,6 +228,12 @@ async def _cmd_run(args: argparse.Namespace) -> int:
                 f"agent_runs={team.get('agent_runs', 0)}  "
                 f"checkpoints={len(team.get('checkpoint_ids') or [])}  "
                 f"atlas_parallelism={team.get('atlas_parallelism', 0)}",
+                flush=True,
+            )
+            print(
+                f"  stream: agents={stream_summary['totals']['agents']}  "
+                f"tool_calls={stream_summary['totals']['tool_calls']}  "
+                f"subagents={stream_summary['totals']['subagents_spawned']}",
                 flush=True,
             )
             if usage:
@@ -242,6 +252,20 @@ async def _cmd_run(args: argparse.Namespace) -> int:
                     f"shared_briefings={budgets.get('max_shared_briefings', 0)}",
                     flush=True,
                 )
+            if agent_counts:
+                rendered_counts = " ".join(
+                    f"{agent}={count}" for agent, count in sorted(agent_counts.items())
+                )
+                print(f"  agent_counts: {rendered_counts}", flush=True)
+            if usage_by_model:
+                rendered_models = " ".join(
+                    (
+                        f"{entry.get('model_id', '?')}"
+                        f"(total={entry.get('total_tokens', 0)},calls={entry.get('call_count', 0)})"
+                    )
+                    for entry in usage_by_model
+                )
+                print(f"  models: {rendered_models}", flush=True)
         if health_issues:
             print(f"  unhealthy={' ; '.join(health_issues)}", flush=True)
         print("=" * 72, flush=True)

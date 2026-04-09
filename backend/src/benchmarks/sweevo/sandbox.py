@@ -57,6 +57,86 @@ def _find_existing_sandbox_by_name(service: Any, name: str) -> dict[str, Any] | 
     return None
 
 
+def _find_latest_started_sweevo_sandbox(
+    service: Any,
+    instance: SWEEvoInstance,
+    *,
+    exclude_name: str = "",
+) -> dict[str, Any] | None:
+    """Return the newest started sandbox for this SWE-EVO instance, if any."""
+    expected_prefix = f"sweevo-test-{instance.instance_id}-"
+    for sandbox in service.list_sandboxes():
+        name = str(sandbox.get("name") or "")
+        if exclude_name and name == exclude_name:
+            continue
+        if str(sandbox.get("state") or "") != "started":
+            continue
+        labels = sandbox.get("labels") or {}
+        same_instance = str(labels.get("sweevo_instance") or "") == instance.instance_id
+        same_name_family = name.startswith(expected_prefix)
+        if same_instance or same_name_family:
+            return sandbox
+    return None
+
+
+def _is_timeout_error(exc: Exception) -> bool:
+    name = exc.__class__.__name__.lower()
+    text = str(exc).lower()
+    return "timeout" in name or "timeout" in text or "timed out" in text
+
+
+def _log_sandbox_creation_failure(
+    service: Any,
+    *,
+    sandbox_name: str,
+    instance: SWEEvoInstance,
+    exc: Exception,
+) -> None:
+    pending = _find_existing_sandbox_by_name(service, sandbox_name)
+    if pending is None:
+        logger.warning(
+            "Fresh SWE-EVO sandbox %s for %s failed before the sandbox became discoverable: %s",
+            sandbox_name,
+            instance.instance_id,
+            exc,
+        )
+        return
+    build_logs_url = None
+    try:
+        build_logs_url = service.get_build_logs_url(str(pending["id"]))
+    except Exception:
+        logger.debug(
+            "Failed to fetch build logs URL for sandbox %s",
+            pending.get("id", ""),
+            exc_info=True,
+        )
+    logger.warning(
+        "Fresh SWE-EVO sandbox %s (%s) failed in state=%s build_logs_url=%s error=%s",
+        sandbox_name,
+        pending.get("id", ""),
+        pending.get("state", "unknown"),
+        build_logs_url or "-",
+        exc,
+    )
+
+
+def _cleanup_failed_sandbox(service: Any, sandbox_name: str) -> None:
+    pending = _find_existing_sandbox_by_name(service, sandbox_name)
+    if pending is None:
+        return
+    state = str(pending.get("state") or "")
+    if state not in {"pending_build", "build_failed", "error"}:
+        return
+    try:
+        service.delete_sandbox(str(pending["id"]))
+    except Exception:
+        logger.debug(
+            "Failed to delete unhealthy SWE-EVO sandbox %s",
+            pending.get("id", ""),
+            exc_info=True,
+        )
+
+
 # ---------------------------------------------------------------------------
 # Sandbox command execution
 # ---------------------------------------------------------------------------
@@ -231,7 +311,10 @@ async def setup_sweevo_sandbox(
 
     try:
         sandbox = _service().get_sandbox_object(sandbox_id)
-        sandbox.set_labels({"project_dir": repo_dir})
+        existing_labels = getattr(sandbox, "labels", None) or {}
+        merged_labels = {str(k): str(v) for k, v in dict(existing_labels).items()}
+        merged_labels["project_dir"] = repo_dir
+        sandbox.set_labels(merged_labels)
         logger.info("Set project_dir label to %s", repo_dir)
     except Exception as exc:
         logger.warning("Could not set project_dir label: %s", exc)
@@ -315,6 +398,25 @@ async def create_sweevo_test_sandbox(
     if sandbox_name:
         existing = _find_existing_sandbox_by_name(service, resolved_name)
         if existing:
+            state = str(existing.get("state") or "")
+            if state == "stopped":
+                try:
+                    existing = service.start_sandbox(str(existing["id"]))
+                except Exception:
+                    logger.warning(
+                        "Failed to start stopped SWE-EVO sandbox %s (%s)",
+                        resolved_name,
+                        existing.get("id", ""),
+                    )
+                    existing = None
+            elif state not in {"started", ""}:
+                logger.warning(
+                    "Ignoring named SWE-EVO sandbox %s in non-reusable state %s",
+                    resolved_name,
+                    state,
+                )
+                existing = None
+        if existing:
             logger.info(
                 "Reusing existing SWE-EVO sandbox %s (%s) for retry",
                 resolved_name,
@@ -347,16 +449,50 @@ async def create_sweevo_test_sandbox(
     else:
         create_kwargs["image"] = _normalize_sweevo_image_ref(instance.docker_image)
 
-    result = service.create_sandbox(
-        name=resolved_name,
-        language="python",
-        labels={
-            "purpose": "sweevo-test",
-            "sweevo_instance": instance.instance_id,
-            "sweevo_repo": instance.repo,
-        },
-        **create_kwargs,
-    )
+    try:
+        result = service.create_sandbox(
+            name=resolved_name,
+            language="python",
+            labels={
+                "purpose": "sweevo-test",
+                "sweevo_instance": instance.instance_id,
+                "sweevo_repo": instance.repo,
+            },
+            **create_kwargs,
+        )
+    except Exception as exc:
+        _log_sandbox_creation_failure(
+            service,
+            sandbox_name=resolved_name,
+            instance=instance,
+            exc=exc,
+        )
+        if _is_timeout_error(exc):
+            fallback = _find_latest_started_sweevo_sandbox(
+                service,
+                instance,
+                exclude_name=resolved_name,
+            )
+            if fallback is not None:
+                logger.warning(
+                    "Falling back to started SWE-EVO sandbox %s (%s) after fresh build failure",
+                    fallback.get("name", ""),
+                    fallback.get("id", ""),
+                )
+                await setup_sweevo_sandbox(instance, str(fallback["id"]), repo_dir)
+                await ensure_sweevo_test_patch(instance, str(fallback["id"]), repo_dir)
+                _cleanup_failed_sandbox(service, resolved_name)
+                return {
+                    "sandbox_id": fallback["id"],
+                    "sandbox": fallback,
+                    "snapshot_name": "",
+                    "repo_dir": repo_dir,
+                    "reused_existing": True,
+                    "fallback_reason": "fresh_create_timeout_reused_started_sandbox",
+                    "fresh_create_error": str(exc),
+                }
+        _cleanup_failed_sandbox(service, resolved_name)
+        raise
     sandbox_id = result["id"]
     await setup_sweevo_sandbox(instance, sandbox_id, repo_dir)
     await ensure_sweevo_test_patch(instance, sandbox_id, repo_dir)

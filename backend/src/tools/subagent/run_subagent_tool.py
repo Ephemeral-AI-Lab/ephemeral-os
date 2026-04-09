@@ -83,6 +83,8 @@ def _normalize_target_paths(value: Any) -> list[str]:
 
 def _already_covered_scout_targets(context: ToolExecutionContext, target_paths: list[str]) -> list[str]:
     metadata = context.metadata
+    if str(metadata.get("agent_name") or "") in {"atlas_builder", "atlas_refresher"}:
+        return []
     read_paths = set(_normalize_target_paths(metadata.get("_read_paths_this_turn", [])))
     prior_scouts = set(_normalize_target_paths(metadata.get("_scout_target_paths_this_turn", [])))
     return [path for path in target_paths if path in read_paths or path in prior_scouts]

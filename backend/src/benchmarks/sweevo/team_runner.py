@@ -23,7 +23,7 @@ from config.paths import get_project_config_dir
 from engine.runtime.agent import spawn_agent
 from message.event_printer import MultiAgentEventPrinter
 from token_tracker.runtime import persist_run_usage
-from team.builtins import TEAM_PLANNER, register_all as _register_team_builtins
+from team.builtins import DEVELOPER, TEAM_PLANNER, register_all as _register_team_builtins
 from team.atlas.scheduler import AtlasMaintenanceScheduler
 from team.models import BudgetConfig, TeamRunStatus, WorkItemKind
 from team.persistence.run_store import build_default_store
@@ -241,9 +241,32 @@ def _build_sweevo_planner_runtime_prompt(instance: SWEEvoInstance) -> str:
         "or revisit an exact file path you already opened this turn.\n"
         "- If a semantic CI query is cold or disconnected after you already have one failing "
         "test block and one candidate implementation method, treat that as non-blocking and "
-        "dispatch a developer/validator lane with the evidence you have.\n"
+        "dispatch a developer/validator lane with the evidence you have. Do not call "
+        "ci_workspace_structure, atlas_lookup, or additional symbol/reference queries after that point.\n"
+        "- For assertion mismatches or missing generated fields, do not lock the plan to an exact "
+        "code edit unless the broken condition is directly evidenced by the code you already read. "
+        "Once the owning function is known, let the developer lane confirm the real cause from live output.\n"
+        f"- This instance has {len(instance.fail_to_pass)} fail-to-pass target(s). "
+        "When that count is 1, default to a single developer lane plus one validator lane unless a "
+        "concrete second implementation file is already proven necessary.\n"
+        f"- Reaching {controls['first_plan_exploration_budget']} exploration tool calls is the soft stop "
+        "for discovery on this turn. Emit the best plan you have instead of refining the patch design.\n"
         "- Once you say or infer that you have enough context, your very next assistant "
         "message must be the plan JSON. Do not call more tools after that point.\n"
+    )
+
+
+def _build_sweevo_developer_runtime_prompt() -> str:
+    return (
+        "## SWE-EVO Developer Guardrails\n"
+        "- When the failing signal is an assertion diff or a missing generated field, inspect the "
+        "actual produced value before the first edit unless the root cause is explicit in the code "
+        "you already opened.\n"
+        "- If the first edit does not fix the failing test, stop guessing. Capture one targeted "
+        "intermediate value or inspect the immediate mapping source before the next edit.\n"
+        "- Avoid multiple scratch repro scripts that fight the sandbox environment. If a quick "
+        "script fails for import or environment reasons, fall back to the failing test, the target "
+        "function, and one direct helper rather than stacking more scripts.\n"
     )
 
 
@@ -499,6 +522,13 @@ def _build_planner_overrides(instance: SWEEvoInstance) -> tuple[dict[str, int], 
             ),
             "tool_call_limit": planner_controls["tool_call_limit"],
             "max_turns": planner_controls["max_turns"],
+        }
+    developer_def = get_definition(DEVELOPER)
+    if developer_def is not None and developer_def.system_prompt:
+        planner_overrides[DEVELOPER] = {
+            "system_prompt": (
+                f"{developer_def.system_prompt}\n\n{_build_sweevo_developer_runtime_prompt()}"
+            ),
         }
     return planner_controls, planner_overrides
 
@@ -816,7 +846,6 @@ async def resume_sweevo_team(
             repo_dir=repo_dir,
             team_metrics=team_metrics,
             agent_overrides=planner_overrides,
-            planner_controls=planner_controls,
         ),
         atlas_scheduler_factory=_make_atlas_scheduler_factory(
             session_config,

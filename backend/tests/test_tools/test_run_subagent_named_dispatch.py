@@ -203,6 +203,30 @@ async def test_scout_rejects_duplicate_exact_path_coverage(monkeypatch):
     assert "submit the plan" in res.output
 
 
+@pytest.mark.asyncio
+async def test_scout_allows_duplicate_paths_for_atlas_refresh(monkeypatch):
+    submitted = SubmittedSummary(
+        summary="atlas scout report",
+        artifact={"target_paths": ["/testbed/pydantic"], "files": []},
+    )
+    stub, _ = _make_stub_agent(submitted=submitted)
+    _patch_spawn(monkeypatch, stub)
+
+    ctx = _ctx()
+    ctx.metadata["agent_name"] = "atlas_refresher"
+    ctx.metadata["_read_paths_this_turn"] = ["/testbed/pydantic"]
+
+    res = await run_subagent.execute(
+        run_subagent.input_model(
+            agent_name="scout",
+            input={"target_paths": ["/testbed/pydantic"]},
+        ),
+        ctx,
+    )
+
+    assert not res.is_error
+
+
 # ---------- typed envelope ----------------------------------------------------
 
 
