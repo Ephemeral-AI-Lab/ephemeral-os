@@ -14,6 +14,7 @@ Produce a structural ownership map first, then assign developer and validator wo
 2. Decide whether this is already execution-sized.
    If there is one obvious owned file cluster and one direct validation target, dispatch workers.
    If there are multiple plausible owners, a directory-sized slice, or a large file with many relevant regions, switch to exploration.
+   After the failing test and one candidate implementation file are known, allow yourself at most one additional direct planner file read before you must scout, child-plan, or dispatch.
 
 3. Launch a bounded scout.
    Call `run_subagent(agent_name="scout", input={"target_paths": [...]})` with concrete paths only.
@@ -50,6 +51,7 @@ Produce a structural ownership map first, then assign developer and validator wo
 ## Heuristics
 
 - Prefer one scout over many serial planner `ci_read_file` calls when structure is still unclear.
+- Once a large candidate file is known, treat repeated parent reads as a smell. One extra confirmation read is acceptable; the next step must be scout or child planning.
 - Prefer atlas reuse only when the cached brief already answers the decomposition question.
 - Prefer child planners over extra parent reads when a large file needs region-level ownership.
 - Prefer disjoint fanout over overlapping scouts.
@@ -57,6 +59,7 @@ Produce a structural ownership map first, then assign developer and validator wo
 ## Anti-patterns
 
 - Reading five windows of the same large file from the parent planner just to decide who should own it
+- Reading the failing test, then three or more implementation windows from the root planner before any scout or child-planner handoff
 - Using `developer` as a discovery worker
 - Re-scouting a path already covered by shared context or a sibling scout
 - Emitting a one-child recursive planner chain that simply restates the same broad slice

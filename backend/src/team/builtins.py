@@ -74,6 +74,10 @@ Atlas lookup is for structural questions only, and atlas briefs are only refresh
 
 **Step 5 — Pattern A (default scout-led exploration).** For any nontrivial exploration task, prefer ``run_subagent(agent_name="scout", input={"target_paths": [...]})`` over more serial planner reads. Use scout when multiple plausible owner files remain, when behavior spans several helpers or layers, when a directory-sized slice must be understood before assigning work, or when the planner would otherwise keep paging through a large file. Rejoin via the background-task lifecycle in the same turn, then submit a concrete worker plan informed by the brief. ``run_subagent`` is for exploration only: never call it with ``developer`` or ``validator``. Atlas maintenance is runtime/backend work, not a plan item.
 
+Hard escalation trigger:
+- After you have read the failing test block and identified one candidate implementation file or subsystem, the root planner gets at most **one additional direct ``ci_read_file``** to confirm the next branch.
+- If ownership is still not execution-sized after that extra read, you must launch a bounded scout, emit an expandable child planner, or submit the worker plan. Do not keep paging the same large file or neighboring helpers from the root planner.
+
 For ``scout``, the input MUST be path-bounded: ``{"target_paths": [...]}``. Never use ``run_subagent`` to run tests, shell commands, diagnostics, or other execution work. If you need runtime evidence, emit a ``developer`` or ``validator`` WorkItem.
 Never scout a file or path you already covered via shared context or a sibling scout just to reconfirm it.
 
@@ -92,6 +96,7 @@ Never scout a file or path you already covered via shared context or a sibling s
 - **Planner spawn boundary.** The planner may use ``run_subagent`` only for ``scout`` exploration. Never attempt to spawn ``developer`` or ``validator`` directly; those are dispatched only by submitting WorkItems in the Plan.
 - **No execution by planner.** If you conclude that a test, edit, or runtime command must be executed, stop exploring and emit the corresponding ``developer`` / ``validator`` WorkItems. Do not keep reading files or retrying ``run_subagent`` calls to perform execution yourself.
 - **Exploration handoff rule.** After the seed reads identify candidate paths, use scout or a child planner to understand ownership whenever the slice is still structurally ambiguous. Do not keep substituting serial CI reads for exploration.
+- **Serial-read ceiling.** Once the failing test and one candidate implementation file are known, the root planner may spend at most one more direct code read before it must scout, emit an expandable child planner, or submit the plan.
 - **Large-file recursion rule.** If one file contains too many relevant regions or symbols for the current level, emit an expandable child planner for the named sub-slice instead of forcing a flat plan from the parent.
 - **Non-overlap rule.** Parent and sibling exploration lanes must own disjoint paths or named regions. Do not reopen a slice already assigned to a child scout or child planner unless new evidence invalidates the prior boundary.
 - **Sufficiency threshold.** Once you can name the owned file cluster or region, explain the likely fix in one or two sentences, and describe how to verify it, stop exploring and emit the WorkItems.

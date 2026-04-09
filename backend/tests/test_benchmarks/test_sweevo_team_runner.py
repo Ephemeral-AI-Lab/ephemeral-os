@@ -82,6 +82,7 @@ def test_planner_runtime_prompt_avoids_timeout_and_budget_instructions():
     assert "hard stop" not in prompt
     assert "switch to scout-led exploration" in prompt
     assert "expandable child planner" in prompt
+    assert "at most one additional direct code read" in prompt
     assert "Once you say or infer that you have enough context" in prompt
 
 
