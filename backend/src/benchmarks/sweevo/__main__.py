@@ -181,6 +181,7 @@ async def _cmd_run(args: argparse.Namespace) -> int:
 
     test = result.get("test", {})
     grading = result.get("grading", {})
+    team = result.get("team", {})
     exit_code = test.get("exit_code")
     counts = on_line.counts  # type: ignore[attr-defined]
     team_status = str(result.get("team_status") or "unknown")
@@ -208,6 +209,33 @@ async def _cmd_run(args: argparse.Namespace) -> int:
                 f"fix_rate={float(grading.get('fix_rate', 0.0)):.2f}",
                 flush=True,
             )
+        if team:
+            usage = team.get("usage") or {}
+            budgets = team.get("budgets") or {}
+            print(
+                f"  team: work_items={team.get('work_items', result.get('team_work_items', 0))}  "
+                f"max_depth={team.get('max_depth_reached', 0)}  "
+                f"agent_runs={team.get('agent_runs', 0)}  "
+                f"checkpoints={len(team.get('checkpoint_ids') or [])}  "
+                f"atlas_parallelism={team.get('atlas_parallelism', 0)}",
+                flush=True,
+            )
+            if usage:
+                print(
+                    f"  tokens: prompt={usage.get('prompt_tokens', 0)}  "
+                    f"completion={usage.get('completion_tokens', 0)}  "
+                    f"total={usage.get('total_tokens', 0)}  "
+                    f"calls={usage.get('call_count', 0)}",
+                    flush=True,
+                )
+            if budgets:
+                print(
+                    f"  budgets: plan_size={budgets.get('max_plan_size', 0)}  "
+                    f"depth={budgets.get('max_depth', 0)}  "
+                    f"work_items={budgets.get('max_work_items', 0)}  "
+                    f"shared_briefings={budgets.get('max_shared_briefings', 0)}",
+                    flush=True,
+                )
         if health_issues:
             print(f"  unhealthy={' ; '.join(health_issues)}", flush=True)
         print("=" * 72, flush=True)

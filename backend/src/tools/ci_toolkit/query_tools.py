@@ -22,6 +22,7 @@ from tools.core.decorator import tool
 
 logger = logging.getLogger(__name__)
 _SYMBOL_FALLBACK_LIMIT = 100
+_REFERENCE_FALLBACK_LIMIT = 100
 _IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _PY_DEF_RE = re.compile(r"^\s*(?:async\s+def|def)\s+([A-Za-z_][A-Za-z0-9_]*)\b")
 _PY_CLASS_RE = re.compile(r"^\s*class\s+([A-Za-z_][A-Za-z0-9_]*)\b")
@@ -170,6 +171,52 @@ def _parse_rg_matches(
     return matches
 
 
+def _build_reference_pattern(symbol: str) -> str:
+    needle = symbol.strip()
+    if not needle:
+        return ""
+    escaped = re.escape(needle)
+    if _IDENTIFIER_RE.fullmatch(needle):
+        return rf"\b{escaped}\b"
+    return escaped
+
+
+def _parse_reference_matches(
+    output: str,
+    *,
+    symbol: str,
+    skip_file: str = "",
+    skip_line: int = 0,
+) -> list[dict[str, Any]]:
+    refs: list[dict[str, Any]] = []
+    seen: set[tuple[str, int, str]] = set()
+    for line in output.splitlines():
+        parts = line.split(":", 2)
+        if len(parts) != 3:
+            continue
+        file_path, line_no, snippet = parts
+        try:
+            parsed_line = int(line_no)
+        except ValueError:
+            parsed_line = 0
+        if skip_file and file_path == skip_file and skip_line and parsed_line == skip_line:
+            continue
+        key = (file_path, parsed_line, snippet.strip())
+        if key in seen:
+            continue
+        seen.add(key)
+        refs.append(
+            {
+                "file": file_path,
+                "line": parsed_line,
+                "text": snippet.strip()[:200],
+            }
+        )
+        if len(refs) >= _REFERENCE_FALLBACK_LIMIT:
+            break
+    return refs
+
+
 def _local_query_symbols(
     *,
     workspace_root: str,
@@ -220,6 +267,54 @@ def _local_query_symbols(
         collected.extend(python_matches)
     deduped = _dedupe_matches(collected)
     return deduped or None
+
+
+def _local_query_references(
+    *,
+    workspace_root: str,
+    symbol: str,
+    skip_file: str = "",
+    skip_line: int = 0,
+) -> list[dict[str, Any]] | None:
+    root = Path(workspace_root)
+    if not root.is_dir():
+        return None
+
+    pattern = _build_reference_pattern(symbol)
+    if not pattern:
+        return None
+    try:
+        response = subprocess.run(
+            [
+                "rg",
+                "-n",
+                "--no-heading",
+                "--color",
+                "never",
+                "-e",
+                pattern,
+                str(root),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+    except FileNotFoundError:
+        return None
+    except Exception:
+        logger.debug("Local reference query failed for %s", symbol, exc_info=True)
+        return None
+
+    if response.returncode not in (0, 1) or not response.stdout:
+        return None
+    refs = _parse_reference_matches(
+        response.stdout,
+        symbol=symbol,
+        skip_file=skip_file,
+        skip_line=skip_line,
+    )
+    return refs or None
 
 
 def _python_fallback_query_symbols(
@@ -370,6 +465,44 @@ async def _remote_query_symbols(
         collected.extend(python_matches)
     deduped = _dedupe_matches(collected)
     return deduped or None
+
+
+async def _remote_query_references(
+    context: ToolExecutionContext,
+    *,
+    symbol: str,
+    skip_file: str = "",
+    skip_line: int = 0,
+) -> list[dict[str, Any]] | None:
+    sandbox = get_daytona_sandbox(context)
+    if sandbox is None:
+        return None
+
+    pattern = _build_reference_pattern(symbol)
+    if not pattern:
+        return None
+    target = resolve_daytona_path("", context)
+    command = (
+        "rg -n --no-heading --color never "
+        f"-e {shlex.quote(pattern)} {shlex.quote(target)}"
+    )
+    try:
+        response = await sandbox.process.exec(command, timeout=30)
+    except Exception:
+        logger.debug("Remote reference query failed for %s", symbol, exc_info=True)
+        return None
+
+    exit_code = getattr(response, "exit_code", 0)
+    output = (getattr(response, "result", "") or "").strip()
+    if exit_code not in (0, 1) or not output:
+        return None
+    refs = _parse_reference_matches(
+        output,
+        symbol=symbol,
+        skip_file=skip_file,
+        skip_line=skip_line,
+    )
+    return refs or None
 
 
 async def _remote_query_symbols_via_python(
@@ -642,11 +775,60 @@ async def ci_query_references(
     if err:
         return err
 
+    workspace_root = str(getattr(svc, "workspace_root", "") or "")
+    has_remote_sandbox = get_daytona_sandbox(context) is not None
+    should_skip_local_warmup = bool(
+        has_remote_sandbox and workspace_root and not Path(workspace_root).is_dir()
+    )
+    if not getattr(svc, "is_initialized", True) and not should_skip_local_warmup:
+        try:
+            svc.ensure_initialized(wait=True)
+        except Exception:
+            logger.debug("ci_query_references warmup failed", exc_info=True)
+
     results = svc.find_references(
         file_path, symbol,
         line, character,
     )
     if not results:
+        fallback_refs: list[dict[str, Any]] = []
+        local_refs = _local_query_references(
+            workspace_root=workspace_root,
+            symbol=symbol,
+            skip_file=file_path,
+            skip_line=line,
+        )
+        if local_refs:
+            fallback_refs.extend(local_refs)
+        remote_refs = await _remote_query_references(
+            context,
+            symbol=symbol,
+            skip_file=file_path,
+            skip_line=line,
+        )
+        if remote_refs:
+            fallback_refs.extend(remote_refs)
+        if fallback_refs:
+            return ToolResult(output=json.dumps(fallback_refs[:50], indent=2))
+
+        lsp = getattr(svc, "lsp_client", None)
+        lsp_connected = bool(getattr(lsp, "connected", True)) if lsp is not None else True
+        if not getattr(svc, "is_initialized", True) or not lsp_connected:
+            return ToolResult(
+                output=json.dumps(
+                    {
+                        "status": "cold",
+                        "symbol": symbol,
+                        "initialized": bool(getattr(svc, "is_initialized", False)),
+                        "lsp_connected": lsp_connected,
+                        "message": (
+                            "Reference search returned no results while code intelligence "
+                            "was still warming up or LSP was unavailable."
+                        ),
+                    },
+                    indent=2,
+                )
+            )
         return ToolResult(output=f"No references found for '{symbol}'")
 
     refs = []

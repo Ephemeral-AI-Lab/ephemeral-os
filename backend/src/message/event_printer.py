@@ -68,6 +68,7 @@ class _AgentState:
     color: str = ""
     thinking_buf: list[str] = field(default_factory=list)
     text_buf: list[str] = field(default_factory=list)
+    last_work_id: str = ""
     tool_calls: int = 0
     subagents_spawned: int = 0
 
@@ -110,6 +111,8 @@ class MultiAgentEventPrinter:
         agent = getattr(event, "agent_name", "") or "?"
         work_id = getattr(event, "work_id", "")
         state = self._state_for(agent)
+        if work_id:
+            state.last_work_id = work_id
 
         # Stream deltas into per-agent buffers; do not print yet.
         if isinstance(event, ThinkingDelta):
@@ -245,17 +248,18 @@ class MultiAgentEventPrinter:
         st = self._agents.get(agent)
         if st is None:
             return
+        work_id = st.last_work_id
         if st.thinking_buf:
             self._line(
                 agent,
-                "",
+                work_id,
                 f"[thinking] {_truncate(''.join(st.thinking_buf), self._truncate_n)}",
             )
             st.thinking_buf.clear()
         if st.text_buf:
             self._line(
                 agent,
-                "",
+                work_id,
                 f"[text] {_truncate(''.join(st.text_buf), self._truncate_n)}",
             )
             st.text_buf.clear()
@@ -265,7 +269,7 @@ class MultiAgentEventPrinter:
 
         depth = self._depth.get(work_id, 0) if work_id else 0
         indent = "  " * depth
-        tag = self._agent_tag(agent)
+        tag = self._agent_tag(agent, work_id)
         if self._timestamps:
             elapsed = _time.monotonic() - self._start
             stamp = f"{_DIM}[{elapsed:7.1f}s]{_RESET}" if self._color else f"[{elapsed:7.1f}s]"
@@ -277,13 +281,20 @@ class MultiAgentEventPrinter:
         else:
             print(line, flush=True)
 
-    def _agent_tag(self, agent: str) -> str:
+    def _agent_tag(self, agent: str, work_id: str = "") -> str:
         st = self._state_for(agent)
         name = agent[: self._tag_width].ljust(self._tag_width)
         raw = f"[{name}]"
+        if work_id:
+            raw += f" [{self._format_work_id(work_id)}]"
         if self._color and st.color:
             return f"{st.color}{raw}{_RESET}"
         return raw
+
+    def _format_work_id(self, work_id: str) -> str:
+        if len(work_id) <= 16:
+            return work_id
+        return f"{work_id[:8]}…{work_id[-4:]}"
 
     def _c(self, key: str, text: str) -> str:
         if not self._color:

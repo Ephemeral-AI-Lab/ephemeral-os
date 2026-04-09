@@ -30,6 +30,15 @@ from benchmarks.sweevo.sandbox import (
 logger = logging.getLogger(__name__)
 
 
+def _emit_progress(printer: Any, line: str) -> None:
+    if printer is None or not hasattr(printer, "raw_line"):
+        return
+    try:
+        printer.raw_line("team", line)
+    except Exception:
+        logger.debug("Failed to emit benchmark progress line", exc_info=True)
+
+
 async def run_sweevo_with_agent(
     *,
     printer: "Any",
@@ -69,6 +78,24 @@ async def run_sweevo_with_agent(
             size=size,
             target_bullets=target_bullets,
         )
+        if printer is not None:
+            summary = summarize_sweevo_instance(instance)
+            _emit_progress(
+                printer,
+                (
+                    "[setup] "
+                    f"instance={instance.instance_id} repo={instance.repo} "
+                    f"size={summary['size']} bullets={summary['bullet_count']}"
+                ),
+            )
+            _emit_progress(
+                printer,
+                (
+                    "[setup] "
+                    f"creating sandbox register_snapshot={register_snapshot} "
+                    f"sandbox_name={sandbox_name or '<fresh>'}"
+                ),
+            )
 
         sandbox_result = await create_sweevo_test_sandbox(
             instance,
@@ -80,9 +107,17 @@ async def run_sweevo_with_agent(
             repo_dir=repo_dir,
         )
         sandbox_id = sandbox_result["sandbox_id"]
+        if printer is not None:
+            _emit_progress(
+                printer,
+                (
+                    "[setup] "
+                    f"sandbox_id={sandbox_id} reused_existing={sandbox_result.get('reused_existing', False)}"
+                ),
+            )
 
         try:
-            team_status, team_work_items = await run_sweevo_team(
+            team_result = await run_sweevo_team(
                 instance,
                 sandbox_id,
                 repo_dir=repo_dir,
@@ -94,8 +129,18 @@ async def run_sweevo_with_agent(
             except Exception:
                 pass
 
+        if isinstance(team_result, tuple):
+            team_status, team_work_items = team_result
+            team_details: dict[str, Any] = {}
+        else:
+            team_status = team_result.get("status")
+            team_work_items = int(team_result.get("work_items") or 0)
+            team_details = dict(team_result)
+
         agent_patch = await _extract_combined_patch(sandbox_id, repo_dir)
 
+        if printer is not None:
+            _emit_progress(printer, "[test] running required benchmark command")
         test_result = await run_sweevo_required_test(
             instance,
             sandbox_id,
@@ -104,6 +149,8 @@ async def run_sweevo_with_agent(
             timeout=test_timeout,
             on_line=on_line,
         )
+        if printer is not None:
+            _emit_progress(printer, "[grading] evaluating fail-to-pass and pass-to-pass results")
         grading_result = await evaluate_sweevo_result(
             instance,
             SWEEvoResult(
@@ -127,6 +174,7 @@ async def run_sweevo_with_agent(
                 team_status.value if hasattr(team_status, "value") else team_status
             ),
             "team_work_items": team_work_items,
+            "team": team_details,
             # Legacy fields kept so existing CLI banners (``agent_events``)
             # still render without KeyErrors.
             "agent_name": "team",

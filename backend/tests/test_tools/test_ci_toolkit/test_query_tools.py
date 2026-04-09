@@ -576,6 +576,24 @@ async def test_query_references_no_results():
     assert "No references found" in result.output
 
 
+async def test_query_references_reports_cold_state_when_ci_not_ready():
+    svc = MagicMock()
+    svc.is_initialized = False
+    svc.workspace_root = "/missing"
+    svc.find_references.return_value = []
+    svc.lsp_client.connected = False
+
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        result = await ci_query_references.execute(
+            ci_query_references.input_model(file_path="/f.py", symbol="missing"),
+            _ctx_with_svc(svc),
+        )
+
+    data = json.loads(result.output)
+    assert data["status"] == "cold"
+    assert data["lsp_connected"] is False
+
+
 async def test_query_references_returns_results():
     ref = MagicMock()
     ref.file_path = "src/user.py"

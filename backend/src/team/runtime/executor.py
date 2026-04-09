@@ -88,16 +88,17 @@ class Executor:
         try:
             # work_result is consumed for posthook side-effects only; the
             # final dispatch result is built from ``submitted`` below.
-            _, submitted = await asyncio.wait_for(
-                execute_with_posthook(
-                    work_defn=defn,
-                    work_ctx=query_ctx,
-                    runner=self.runner,
-                    agent_lookup=self.agent_lookup,
-                    posthook_ctx_builder=self.build_posthook_context,
-                ),
-                timeout=timeout,
+            execution = execute_with_posthook(
+                work_defn=defn,
+                work_ctx=query_ctx,
+                runner=self.runner,
+                agent_lookup=self.agent_lookup,
+                posthook_ctx_builder=self.build_posthook_context,
             )
+            if timeout is None:
+                _, submitted = await execution
+            else:
+                _, submitted = await asyncio.wait_for(execution, timeout=timeout)
         except asyncio.TimeoutError:
             await dispatcher.fail(wi_id, f"timeout after {timeout}s")
             return

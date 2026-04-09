@@ -12,6 +12,7 @@ from typing import Any
 
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.decorator import tool
+from tools.daytona_toolkit.ci_integration import sync_shell_mutations, sync_write_to_ci
 
 logger = logging.getLogger(__name__)
 
@@ -139,13 +140,26 @@ async def daytona_bash(
     # making the partial output visible via check_background_progress mid-run.
     if callable(on_progress_line):
         bg_timeout = timeout if timeout != _DEFAULT_TIMEOUT else _BACKGROUND_DEFAULT_TIMEOUT
-        return await _exec_streaming(
+        result = await _exec_streaming(
             sandbox=sandbox,
             command=wrapped,
             cwd=cwd,
             timeout=bg_timeout,
             on_progress_line=on_progress_line,
         )
+        sync_info = await sync_shell_mutations(context, command=command)
+        if sync_info.get("enabled"):
+            try:
+                data = json.loads(result.output)
+                data["ci_sync"] = sync_info
+                return ToolResult(
+                    output=json.dumps(data),
+                    is_error=result.is_error,
+                    metadata=dict(result.metadata),
+                )
+            except Exception:
+                logger.debug("Failed to attach shell CI sync metadata", exc_info=True)
+        return result
 
     try:
         kwargs: dict[str, object] = {"timeout": timeout}
@@ -156,13 +170,15 @@ async def daytona_bash(
             getattr(response, "result", "") or "",
             fallback_exit_code=getattr(response, "exit_code", None),
         )
-        output = json.dumps(
-            {
-                "cwd": cwd or "",
-                "stdout": _truncate(stdout),
-                "exit_code": exit_code,
-            }
-        )
+        payload = {
+            "cwd": cwd or "",
+            "stdout": _truncate(stdout),
+            "exit_code": exit_code,
+        }
+        sync_info = await sync_shell_mutations(context, command=command)
+        if sync_info.get("enabled"):
+            payload["ci_sync"] = sync_info
+        output = json.dumps(payload)
         return ToolResult(
             output=output,
             is_error=exit_code != 0,
@@ -408,11 +424,19 @@ async def daytona_write_file(
             await sandbox.process.exec(f"mkdir -p {shlex.quote(parent)}")
         # SDK signature: upload_file(src: str | bytes, dst: str)
         await sandbox.fs.upload_file(content_bytes, file_path)
+        sync_write_to_ci(
+            context,
+            file_path,
+            content,
+            edit_type="write",
+            description="daytona_write_file",
+        )
         output = json.dumps(
             {
                 "cwd": _get_cwd(context) or "",
                 "file_path": file_path,
                 "bytes_written": len(content_bytes),
+                "ci_sync": True,
             }
         )
         return ToolResult(output=output)

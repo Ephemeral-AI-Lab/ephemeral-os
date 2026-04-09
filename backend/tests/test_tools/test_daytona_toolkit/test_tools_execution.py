@@ -198,6 +198,29 @@ async def test_write_file_success():
     assert data["file_path"] == "/ws/new.txt"
 
 
+async def test_write_file_syncs_ci_state():
+    sb = _sb()
+    sb.process.exec = AsyncMock(return_value=MagicMock(result="", exit_code=0))
+    svc = MagicMock()
+    ctx = _ctx({
+        "daytona_sandbox": sb,
+        "daytona_cwd": "/ws",
+        "ci_service": svc,
+    })
+
+    result = await daytona_write_file.execute(
+        daytona_write_file.input_model(file_path="/ws/new.txt", content="hello"), ctx
+    )
+
+    assert not result.is_error
+    svc.arbiter.record_edit.assert_called_once_with("/ws/new.txt", "")
+    svc.ledger.record.assert_called_once()
+    svc.tree_cache.put_content.assert_called_once_with("/ws/new.txt", "hello")
+    svc.symbol_index.refresh.assert_called_once_with("/ws/new.txt", "hello")
+    svc.lsp_client.invalidate.assert_called_once_with("/ws/new.txt")
+    assert json.loads(result.output)["ci_sync"] is True
+
+
 async def test_write_file_resolves_relative_path():
     sb = _sb()
     sb.process.exec = AsyncMock(return_value=MagicMock(result="", exit_code=0))

@@ -208,6 +208,7 @@ def register_all() -> None:
             system_prompt=_PLANNER_PROMPT,
             model="inherit",
             max_turns=100,
+            tool_call_limit=24,
             toolkits=["code_intelligence", "team_context", "atlas", "subagent"],
             skills=["team-planner-playbook"],
             include_skills=False,
