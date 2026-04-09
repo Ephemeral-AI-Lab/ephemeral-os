@@ -5,8 +5,13 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 from benchmarks.sweevo import team_runner as sweevo_team_runner
-from benchmarks.sweevo.team_runner import _make_context_builders, _make_runner
-from benchmarks.sweevo.team_runner import _build_sweevo_planner_runtime_prompt, _derive_planner_controls
+from benchmarks.sweevo.team_runner import (
+    _build_sweevo_planner_runtime_prompt,
+    _derive_planner_controls,
+    _emit_dispatcher_dag,
+    _make_context_builders,
+    _make_runner,
+)
 from team.models import WorkItem, WorkItemKind, WorkItemStatus
 from tools.core.runtime import ExecutionMetadata
 
@@ -28,6 +33,23 @@ def test_posthook_ctx_prefers_final_text_over_wrapped_work_result():
     )
     assert ctx.tool_metadata.team_run_id == "T1"
     assert ctx.tool_metadata.work_item_id == "W1"
+
+
+def test_submit_plan_posthook_ctx_seeds_timeout_floors():
+    _, build_posthook_ctx = _make_context_builders(
+        "sbx-1",
+        timeout_floors={"developer": 240.0, "validator": 300.0},
+    )
+
+    ctx = build_posthook_ctx(
+        SimpleNamespace(name="submit_plan_agent"),
+        {"final_text": '{"items":[]}', "team_run_id": "T1", "work_item_id": "W1"},
+    )
+
+    assert ctx.tool_metadata["min_timeout_seconds_by_agent"] == {
+        "developer": 240.0,
+        "validator": 300.0,
+    }
 
 
 def test_query_ctx_seeds_repo_root_for_daytona_and_ci():
@@ -109,7 +131,7 @@ def test_planner_controls_scale_with_large_instance():
     assert "Once you say or infer that you have enough context" in _build_sweevo_planner_runtime_prompt(instance)
 
 
-def test_resume_sweevo_team_uses_executor_factory_signature_without_planner_controls(monkeypatch):
+def test_resume_sweevo_team_threads_planner_controls_and_timeout_floors(monkeypatch):
     instance = SimpleNamespace(
         repo="pydantic/pydantic",
         instance_id="pydantic__pydantic_v2.6.0b1_v2.6.0",
@@ -149,7 +171,7 @@ def test_resume_sweevo_team_uses_executor_factory_signature_without_planner_cont
         staticmethod(lambda _store, _team_run_id: fake_tr),
     )
 
-    seen_factory_calls: list[tuple[object, str, object]] = []
+    seen_factory_calls: list[dict[str, object]] = []
 
     def fake_make_executor_factory(
         session_config,
@@ -159,16 +181,28 @@ def test_resume_sweevo_team_uses_executor_factory_signature_without_planner_cont
         repo_dir="/testbed",
         team_metrics=None,
         agent_overrides=None,
+        planner_controls=None,
+        timeout_floors=None,
     ):
-        seen_factory_calls.append((session_config, sandbox_id, printer))
+        seen_factory_calls.append(
+            {
+                "session_config": session_config,
+                "sandbox_id": sandbox_id,
+                "printer": printer,
+                "planner_controls": planner_controls,
+                "timeout_floors": timeout_floors,
+            }
+        )
         return "executor-factory"
 
     monkeypatch.setattr(sweevo_team_runner, "_make_executor_factory", fake_make_executor_factory)
-    monkeypatch.setattr(
-        sweevo_team_runner,
-        "_make_atlas_scheduler_factory",
-        lambda *args, **kwargs: "atlas-factory",
-    )
+    seen_atlas_calls: list[dict[str, object]] = []
+
+    def fake_make_atlas_scheduler_factory(*args, **kwargs):
+        seen_atlas_calls.append(kwargs)
+        return "atlas-factory"
+
+    monkeypatch.setattr(sweevo_team_runner, "_make_atlas_scheduler_factory", fake_make_atlas_scheduler_factory)
     monkeypatch.setattr(
         sweevo_team_runner,
         "_finalize_team_result",
@@ -183,7 +217,10 @@ def test_resume_sweevo_team_uses_executor_factory_signature_without_planner_cont
     )
 
     assert result == {"status": "ok"}
-    assert seen_factory_calls and seen_factory_calls[0][1] == "sbx-1"
+    assert seen_factory_calls and seen_factory_calls[0]["sandbox_id"] == "sbx-1"
+    assert seen_factory_calls[0]["planner_controls"] == {}
+    assert seen_factory_calls[0]["timeout_floors"] == {"developer": 240.0, "validator": 300.0}
+    assert seen_atlas_calls and seen_atlas_calls[0]["planner_controls"] == {}
     fake_tr.resume.assert_awaited_once()
 
 
@@ -253,3 +290,34 @@ def test_make_runner_copies_planner_soft_limit_into_query_context(monkeypatch):
     assert captured_agents[0].query_context.tool_call_limit == 28
     assert captured_agents[0].query_context.planner_soft_tool_limit == 8
     assert captured_agents[0].query_context.max_turns == 50
+
+
+def test_emit_dispatcher_dag_logs_graph_lines():
+    lines: list[tuple[str, str]] = []
+    printer = SimpleNamespace(raw_line=lambda agent, body: lines.append((agent, body)))
+    root = WorkItem(
+        id="root-1",
+        team_run_id="TR1",
+        agent_name="team_planner",
+        status=WorkItemStatus.DONE,
+        kind=WorkItemKind.EXPANDABLE,
+        local_id="plan1",
+        depth=0,
+    )
+    child = WorkItem(
+        id="child-1",
+        team_run_id="TR1",
+        agent_name="developer",
+        status=WorkItemStatus.READY,
+        kind=WorkItemKind.ATOMIC,
+        deps=["root-1"],
+        local_id="dev1",
+        depth=1,
+    )
+    team_run = SimpleNamespace(dispatcher=SimpleNamespace(graph={root.id: root, child.id: child}))
+
+    _emit_dispatcher_dag(printer, team_run, trigger_agent="team_planner")
+
+    assert lines[0] == ("team", "[dag] after=team_planner nodes=2")
+    assert any("plan1 agent=team_planner" in body for _, body in lines[1:])
+    assert any("dev1 agent=developer" in body and "deps=['plan1']" in body for _, body in lines[1:])

@@ -304,6 +304,9 @@ def _build_sweevo_developer_runtime_prompt() -> str:
         "- Use at most one ad hoc python/bash probe before the first edit. If that probe fails or "
         "the failing test already reveals the key symptom, the next step must be an immediate code "
         "read of the deciding branch or an edit.\n"
+        "- Once two probes contradict the current hypothesis, stop probing and pivot to the nearest "
+        "emitting function or guard in the live code. Do not keep rerunning the same failing test "
+        "or variant scripts to defend a disproven theory.\n"
         "- If the first edit does not fix the failing test, stop guessing. Capture one targeted "
         "intermediate value or inspect the immediate mapping source before the next edit.\n"
         "- Avoid multiple scratch repro scripts that fight the sandbox environment. If a quick "
@@ -311,6 +314,9 @@ def _build_sweevo_developer_runtime_prompt() -> str:
         "function, and one direct helper rather than stacking more scripts.\n"
         "- After the first reproduction, do not run broad module suites or unrelated regressions until "
         "the exact fail-to-pass target turns green. Hand broad regression coverage to the validator lane.\n"
+        "- Do not inspect git history, changelogs, or commit logs unless the WorkItem explicitly "
+        "asks for regression archaeology. Use the current checkout, current failing output, and "
+        "current implementation.\n"
         "- Do not edit tests, snapshots, or benchmark harness files unless the WorkItem explicitly "
         "asks for it. Fix production code first.\n"
     )
@@ -863,6 +869,7 @@ async def run_sweevo_team(
     root_prompt = _build_root_prompt(instance, repo_dir)
     budgets = _derive_sweevo_budgets(instance)
     planner_controls, planner_overrides = _build_planner_overrides(instance)
+    timeout_floors = _derive_timeout_floors(instance)
     atlas_parallelism = _derive_atlas_parallelism(instance, num_executors=num_executors)
     team_metrics = _build_team_metrics()
     _emit_team_runtime_banner(
@@ -899,6 +906,7 @@ async def run_sweevo_team(
             team_metrics=team_metrics,
             agent_overrides=planner_overrides,
             planner_controls=planner_controls,
+            timeout_floors=timeout_floors,
         ),
         atlas_scheduler_factory=_make_atlas_scheduler_factory(
             session_config,
@@ -955,6 +963,7 @@ async def resume_sweevo_team(
     )
     budgets = tr.budgets
     planner_controls, planner_overrides = _build_planner_overrides(instance)
+    timeout_floors = _derive_timeout_floors(instance)
     atlas_parallelism = _derive_atlas_parallelism(instance, num_executors=num_executors)
     team_metrics = _build_team_metrics()
     _emit_team_runtime_banner(
@@ -980,6 +989,8 @@ async def resume_sweevo_team(
             repo_dir=repo_dir,
             team_metrics=team_metrics,
             agent_overrides=planner_overrides,
+            planner_controls=planner_controls,
+            timeout_floors=timeout_floors,
         ),
         atlas_scheduler_factory=_make_atlas_scheduler_factory(
             session_config,
@@ -988,6 +999,7 @@ async def resume_sweevo_team(
             repo_dir=repo_dir,
             team_metrics=team_metrics,
             max_concurrent_jobs=atlas_parallelism,
+            planner_controls=planner_controls,
         ),
         num_executors=num_executors,
     )

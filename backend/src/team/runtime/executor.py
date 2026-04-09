@@ -5,7 +5,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
-from typing import TYPE_CHECKING, Any, Awaitable, Callable
+from collections.abc import Awaitable
+from typing import TYPE_CHECKING, Any, Callable
 
 from hooks.agent_posthook import NoPosthookOutput, execute_with_posthook
 from team.models import AgentResult, Plan
@@ -40,12 +41,14 @@ class Executor:
         build_query_context: QueryContextBuilder,
         build_posthook_context: PosthookContextBuilder,
         agent_lookup: Callable[[str], "AgentDefinition | None"],
+        after_dispatch: Callable[["WorkItem", AgentResult, list["WorkItem"]], Any] | None = None,
     ) -> None:
         self.team_run = team_run
         self.runner = runner
         self.build_query_context = build_query_context
         self.build_posthook_context = build_posthook_context
         self.agent_lookup = agent_lookup
+        self.after_dispatch = after_dispatch
 
     async def run_forever(self) -> None:
         """Pop READY items until cancel_event is set.
@@ -127,4 +130,8 @@ class Executor:
             )
             return
 
-        await dispatcher.complete(wi_id, result)
+        new_items = await dispatcher.complete(wi_id, result)
+        if self.after_dispatch is not None:
+            callback_result = self.after_dispatch(wi, result, new_items)
+            if isinstance(callback_result, Awaitable):
+                await callback_result
