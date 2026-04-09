@@ -333,7 +333,6 @@ def _launch_background_tool(
     )
 
     bg_alias = background_manager.next_alias()
-    _record_tool_trace(context.tool_metadata, tc.name, clean_input)
 
     async def _bg_wrapper(
         ctx: QueryContext,

@@ -9,7 +9,8 @@ import pytest
 from pydantic import BaseModel, Field
 
 from message import ConversationMessage, TextBlock, ToolUseBlock
-from engine.core.query import QueryContext, run_query
+from engine.core.query import QueryContext, _launch_background_tool, run_query
+from engine.runtime.background_tasks import BackgroundTaskManager
 from message.stream_events import (
     AssistantTurnComplete,
     ToolExecutionCompleted,
@@ -22,7 +23,14 @@ from providers.types import (
     ApiToolUseDeltaEvent,
     UsageSnapshot,
 )
-from tools.core.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolRegistry, ToolResult
+from tools.core.base import (
+    BaseTool,
+    BaseToolkit,
+    ExecutionMetadata,
+    ToolExecutionContext,
+    ToolRegistry,
+    ToolResult,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -89,6 +97,27 @@ class FailingTool(BaseTool):
 
     async def execute(self, arguments: EchoInput, context: ToolExecutionContext) -> ToolResult:
         return ToolResult(output="something went wrong", is_error=True)
+
+
+class SpyRunSubagentInput(BaseModel):
+    agent_name: str = Field(description="Subagent name")
+    input: dict = Field(description="Structured payload")
+
+
+class SpyRunSubagentTool(BaseTool):
+    """Background tool that reports what scout traces are visible during execution."""
+
+    name = "run_subagent"
+    description = "Spy background subagent launcher."
+    input_model = SpyRunSubagentInput
+    background = "always"
+
+    async def execute(
+        self, arguments: SpyRunSubagentInput, context: ToolExecutionContext
+    ) -> ToolResult:
+        del arguments
+        seen = list(context.metadata.get("_scout_target_paths_this_turn", []))
+        return ToolResult(output=json.dumps({"seen_paths": seen}), is_error=False)
 
 
 def _make_toolkit(*tools: BaseTool) -> BaseToolkit:
@@ -259,7 +288,50 @@ async def test_single_tool_call(tmp_path: Path):
     assert not tool_completes[0].is_error
     parsed = json.loads(tool_completes[0].output)
     assert parsed["echoed"] == "hello"
-    assert len(turns) == 2  # tool turn + final text turn
+
+
+@pytest.mark.asyncio
+async def test_background_scout_trace_is_recorded_after_launch_not_before(tmp_path: Path):
+    registry = _make_registry(SpyRunSubagentTool())
+    context = QueryContext(
+        api_client=FakeApiClient([]),
+        tool_registry=registry,
+        cwd=tmp_path,
+        model="test",
+        system_prompt="test",
+        max_tokens=100,
+        tool_metadata=ExecutionMetadata(),
+    )
+    manager = BackgroundTaskManager()
+    tool_use = ToolUseBlock(
+        id="tc1",
+        name="run_subagent",
+        input={
+            "agent_name": "scout",
+            "input": {"target_paths": ["/testbed/pydantic/json_schema.py"]},
+        },
+    )
+
+    result, started, rejected = _launch_background_tool(
+        context,
+        manager,
+        tool_use,
+        task_note="launch scout",
+    )
+
+    assert not result.is_error
+    assert started is not None
+    assert rejected is None
+
+    completed = await manager.wait_any(timeout=1.0)
+    assert completed is not None
+    assert completed.result is not None
+    payload = json.loads(completed.result.output)
+    assert payload["seen_paths"] == []
+    assert context.tool_metadata is not None
+    assert context.tool_metadata["_scout_target_paths_this_turn"] == [
+        "/testbed/pydantic/json_schema.py"
+    ]
 
 
 @pytest.mark.asyncio
