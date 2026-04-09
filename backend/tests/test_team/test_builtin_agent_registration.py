@@ -10,6 +10,7 @@ from team.builtins import (
     VALIDATOR,
     register_all,
 )
+from tools.core.factory import ToolkitContext, create_toolkit
 
 
 def setup_module() -> None:
@@ -29,3 +30,17 @@ def test_builtin_team_agents_use_default_tool_call_limits() -> None:
         defn = get_definition(name)
         assert defn is not None
         assert defn.tool_call_limit == 50
+
+
+def test_team_planner_code_intelligence_toolkit_omits_ci_read_file() -> None:
+    planner_ci = create_toolkit(
+        "code_intelligence",
+        ToolkitContext(metadata={"agent_name": TEAM_PLANNER}),
+    )
+    developer_ci = create_toolkit(
+        "code_intelligence",
+        ToolkitContext(metadata={"agent_name": DEVELOPER}),
+    )
+
+    assert "ci_read_file" not in planner_ci.tool_names()
+    assert "ci_read_file" in developer_ci.tool_names()

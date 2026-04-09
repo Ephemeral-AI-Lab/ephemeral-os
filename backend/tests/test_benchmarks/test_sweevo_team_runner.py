@@ -89,10 +89,10 @@ def test_planner_runtime_prompt_avoids_timeout_and_budget_instructions():
     assert "hard stop" not in prompt
     assert "switch to scout-led exploration" in prompt
     assert "run the failing test before planning" in prompt
-    assert "Treat planner-side ci_read_file as seed-only" in prompt
+    assert "planner does not have ci_read_file" in prompt
     assert "expandable child planner" in prompt
-    assert "at most one additional direct code read" in prompt
-    assert "exception, not a budget to spend by default" in prompt
+    assert "the next exploration step must be a bounded scout" in prompt
+    assert "planner-side symbol or reference probing" in prompt
     assert "terminal evidence" in prompt
     assert "Do not queue a ready expandable child planner" in prompt
     assert "one likely owner file and one concrete reproduction target" in prompt

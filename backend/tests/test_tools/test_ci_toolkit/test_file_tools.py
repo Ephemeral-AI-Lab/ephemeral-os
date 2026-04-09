@@ -60,6 +60,22 @@ async def test_read_file_not_found_returns_error(tmp_path):
     assert "not found" in result.output.lower() or "File not found" in result.output
 
 
+async def test_read_file_rejects_team_planner_even_when_file_exists(tmp_path):
+    """Planners must scout for file contents instead of calling ci_read_file."""
+    f = tmp_path / "hello.py"
+    f.write_text("line one\n")
+
+    ctx = _ctx({"agent_name": "team_planner"})
+    result = await ci_read_file.execute(
+        ci_read_file.input_model(path=str(f)),
+        ctx,
+    )
+
+    assert result.is_error
+    assert "may not read files directly" in result.output
+    assert "run_subagent(agent_name=\"scout\"" in result.output
+
+
 async def test_read_file_binary_returns_error(tmp_path):
     """Binary file returns is_error=True with 'Binary file' message."""
     f = tmp_path / "bin.dat"

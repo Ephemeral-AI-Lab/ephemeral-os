@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 _MAX_LINES = 500
 _MAX_CHARS = 32_000
+_FILE_READ_DISALLOWED_CALLERS = frozenset({"team_planner"})
 
 
 @tool(name="ci_read_file", description="Read file contents from the workspace sandbox with line numbers.", read_only=True)
@@ -42,6 +43,18 @@ async def ci_read_file(
         truncated (bool): Whether file was truncated
         content (str): File contents with line numbers
     """
+    caller_agent = str(context.metadata.get("agent_name") or "").strip()
+    if caller_agent in _FILE_READ_DISALLOWED_CALLERS:
+        return ToolResult(
+            output=(
+                f"ci_read_file: caller '{caller_agent}' may not read files directly. "
+                "Use `run_subagent(agent_name=\"scout\", input={\"target_paths\": [...]})` "
+                "for bounded file exploration, or emit a child planner if the unresolved "
+                "question is region-level inside one known large file."
+            ),
+            is_error=True,
+        )
+
     svc = get_ci_service(context)
 
     # Try reading from tree cache first

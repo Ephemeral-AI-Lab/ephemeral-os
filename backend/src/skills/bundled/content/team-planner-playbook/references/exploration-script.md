@@ -9,14 +9,14 @@ Produce a structural ownership map first, then assign developer and validator wo
 ## Script
 
 1. Seed the search space with live CI.
-   Read the failing test, locate one or two candidate symbols, and identify the candidate paths or directories.
-   Treat planner file reads as seed-only. If the next read would mainly answer an ownership or decomposition question, scout that slice instead.
+   Use the request, shared context, workspace structure, symbol lookup, and references to identify the candidate paths or directories.
+   The planner does not read files directly. If the next question requires file contents to answer an ownership or decomposition question, scout that slice instead.
 
 2. Decide whether this is already execution-sized.
    If there is one obvious owned file cluster and one direct validation target, dispatch workers.
    If there are multiple plausible owners, a directory-sized slice, or a large file with many relevant regions, switch to exploration.
-   After the failing test and one candidate implementation file are known, allow yourself at most one additional direct planner file read before you must scout, child-plan, or dispatch.
-   That extra read is a narrow exception. Prefer scout immediately whenever it can answer the ownership question.
+   Once live CI identifies one candidate implementation file or subsystem, the next step should be scout, child-planning, or dispatch.
+   Prefer scout immediately whenever it can answer the ownership question.
    If the owner is already a single large file and the remaining question is which region inside that file matters, do not scout the whole file. Move directly to child planning for the named sub-slice.
 
 3. Launch a bounded scout.
@@ -53,9 +53,9 @@ Produce a structural ownership map first, then assign developer and validator wo
 
 ## Heuristics
 
-- Prefer one bounded scout over any planner `ci_read_file` whose real purpose is to understand ownership, interaction, or decomposition.
-- Prefer one scout over many serial planner `ci_read_file` calls when structure is still unclear.
-- Once a large candidate file is known, treat repeated parent reads as a smell. One extra confirmation read is acceptable; the next step must be scout or child planning.
+- Prefer one bounded scout over more planner-side symbol/reference probing when the real goal is to understand ownership, interaction, or decomposition.
+- Prefer one scout over many serial planner CI queries when structure is still unclear.
+- Once a large candidate file is known, treat repeated parent probing as a smell. The next step should usually be scout or child planning.
 - Once one large file is already the clear owner candidate, prefer child planning over whole-file scout. Scout is for path-level structure; region-level ambiguity inside one monolith belongs to a child planner.
 - If there are multiple disjoint candidate areas, prefer parallel scouts over parent-side file windows across those areas.
 - Do not queue a ready expandable child planner in parallel just for "if the developer finds more issues"; that contingency belongs in downstream deps or later replanning.
@@ -65,9 +65,9 @@ Produce a structural ownership map first, then assign developer and validator wo
 
 ## Anti-patterns
 
-- Reading five windows of the same large file from the parent planner just to decide who should own it
-- Reading the failing test, then three or more implementation windows from the root planner before any scout or child-planner handoff
-- Using planner `ci_read_file` as the main exploration workflow after candidate paths are already known
+- Firing repeated symbol/reference queries over the same large file from the parent planner just to decide who should own it
+- Continuing root-planner probing after the candidate area is already known instead of handing off to scout or a child planner
+- Treating the planner like a file reader instead of using scout for file contents
 - Emitting a speculative expandable child planner whose only purpose is "maybe there are more issues later"
 - Using `developer` as a discovery worker
 - Re-scouting a path already covered by shared context or a sibling scout
@@ -75,15 +75,14 @@ Produce a structural ownership map first, then assign developer and validator wo
 
 ## Example: multi-file exploration
 
-1. Read the failing test.
-2. Use CI to locate two candidate modules.
+1. Use the request and CI to locate two candidate modules.
 3. Scout the containing subsystem paths.
 4. If the scout finds three disjoint ownership branches, fan out three child scouts or three child planner items.
 5. Assign developers only after each branch has a clear owned slice.
 
 ## Example: one large file
 
-1. Read the failing test and locate the target file.
-2. If the file has several relevant regions, do not keep paging it from the root planner.
+1. Use the request, shared context, or CI to locate the target file.
+2. If the file has several relevant regions, do not keep probing it from the root planner.
 3. Emit an expandable child planner for one named region such as `"schema generation discriminator handling"` and exclude adjacent regions.
 4. Let the child planner run scouts or CI only within that owned region.
