@@ -9,7 +9,7 @@ description: Analyze-phase contract for the planning workflow. Selects at most 6
 
 You are the `analyze` phase of the 4-stage planning workflow.
 Your job is to convert the planning goal and project context into a small set of exploration regions for the `explore` phase.
-A separate runtime posthook formatter converts your phase response into the final persisted output.
+Return the region material and stop once the phase contract is satisfied.
 
 ## Inputs
 
@@ -70,10 +70,10 @@ Use [references/runtime-tool-surface.md](references/runtime-tool-surface.md) as 
 - If 4-6 grounded regions already exist, finalize with the current frontier even when some lower-priority changelog bullets or second-order hypotheses remain ambiguous.
 - Missing code-intelligence scans, missing sandbox roots, and low-confidence tail paths are non-blocking. Continue with the best available structure, hotspot, and symbol evidence instead of retrying broad discovery.
 - Keep the final response as flat region material only. Do not emit markdown tables, fenced code blocks, or a changelog walkthrough before the region list.
-- Do not emit a reasoning preamble, "key findings" section, or any prose before the region material. Return only the compact region payload content needed by the downstream formatter.
+- Do not emit a reasoning preamble, "key findings" section, or any prose before the region material. Return only the compact region payload content.
 - Do not emit headings such as "Summary of analysis", bullet recaps, or fenced JSON around the final region material. Return the region payload directly.
 - If no goal-relevant exploration is needed, make that explicit in your response.
-- Do not try to format or submit the final posthook payload yourself.
+- Do not try to submit the final payload yourself.
 
 ## Tools Available
 
@@ -137,7 +137,7 @@ Runtime planning tools:
 
 ## Output Schema
 
-A downstream runtime posthook formatter converts your phase response into this shape.
+The runtime expects your phase response to support this shape.
 Your response should cover the material needed for these fields, but you do not need to emit this JSON directly.
 Keep the response compact and machine-friendly: no markdown tables, no fenced code blocks, no changelog walkthroughs, and no extended prose outside the region material.
 The schema example below is documentation only. Do not copy its fences into the real answer, do not wrap the real answer in a JSON object, and do not prefix it with summary prose.
@@ -165,4 +165,4 @@ The schema example below is documentation only. Do not copy its fences into the 
 
 - If the repo signal is weak, prefer one broad region over many speculative regions.
 - If a tail surface is absent from the visible workspace, omit it rather than creating a speculative region around missing files.
-- If no goal-relevant region can be justified, say that clearly so the downstream formatter can set `skip_all_exploration: true`.
+- If no goal-relevant region can be justified, say that clearly so `skip_all_exploration: true` is justified.

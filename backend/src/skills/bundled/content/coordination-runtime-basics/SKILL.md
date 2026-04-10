@@ -44,6 +44,6 @@ Verifier and replanner tasks are planned by the planner — they are normal spec
 
 ## Output Contract
 
-- If the runtime surface exposes `plan_tasks()` as the active submission tool and no phase-owned contract delegates submission to a downstream formatter/posthook, call `plan_tasks()` exactly once.
-- If a phase-owned contract says a downstream formatter/posthook will submit the plan, return only the material needed by that contract and do not call `plan_tasks()` yourself.
+- If the runtime surface exposes `plan_tasks()` as the active submission tool and the current phase contract expects direct submission, call `plan_tasks()` exactly once.
+- If the current phase contract expects returned planning material instead, return only that material and do not call `plan_tasks()` yourself.
 - Do not ask clarifying questions. Make the narrowest reasonable assumption and reflect it in the tasks.

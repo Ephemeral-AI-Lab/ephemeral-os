@@ -14,6 +14,13 @@ _PLAYBOOKS = [
     _BACKEND_ROOT / "src/skills/bundled/content/team-planner-playbook/SKILL.md",
 ]
 _SWEEVO_CONTEXT = _BACKEND_ROOT / "src/skills/bundled/content/sweevo-project-context/SKILL.md"
+_COORDINATION_SKILLS = [
+    _BACKEND_ROOT / "src/skills/bundled/content/coordination-analyze/SKILL.md",
+    _BACKEND_ROOT / "src/skills/bundled/content/coordination-synthesize/SKILL.md",
+    _BACKEND_ROOT / "src/skills/bundled/content/coordination-plan-tasks/SKILL.md",
+    _BACKEND_ROOT / "src/skills/bundled/content/coordination-runtime-basics/SKILL.md",
+    _BACKEND_ROOT / "src/skills/bundled/content/task-decompose/SKILL.md",
+]
 
 
 def _read(path: Path) -> str:
@@ -97,8 +104,27 @@ def test_validator_playbook_mentions_codeact_is_unavailable_in_team_lanes() -> N
     validator = _read(_BACKEND_ROOT / "src/skills/bundled/content/team-validator-playbook/SKILL.md")
     assert "coordinated team validation lanes intentionally omit `daytona_codeact`" in validator
     assert "Ownership mismatch is not a validator discovery task." in validator
-    assert "report `FAILURE_TYPE: plan_gap` and `RECOMMENDED_ACTION: request_replan`." in validator
+    assert "return `plan_gap` with exact evidence." in validator
     assert "Validators are not backup planners." in validator
+    assert "RECOMMENDED_ACTION" not in validator
+
+
+def test_worker_playbooks_do_not_mention_submitters_or_action_routing() -> None:
+    developer = _read(_BACKEND_ROOT / "src/skills/bundled/content/team-developer-playbook/SKILL.md")
+    validator = _read(_BACKEND_ROOT / "src/skills/bundled/content/team-validator-playbook/SKILL.md")
+    sweevo = _read(_SWEEVO_CONTEXT)
+
+    for content in (developer, validator, sweevo):
+        assert "submit_summary" not in content
+        assert "submit_replan" not in content
+        assert "RECOMMENDED_ACTION" not in content
+
+
+def test_coordination_skills_do_not_tell_main_agents_about_posthook_formatters() -> None:
+    for path in _COORDINATION_SKILLS:
+        content = _read(path)
+        assert "posthook formatter" not in content
+        assert "formatter/posthook" not in content
 
 
 def test_posthook_decision_playbook_forbids_clarifying_questions_on_worker_output() -> None:

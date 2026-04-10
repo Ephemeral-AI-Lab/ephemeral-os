@@ -272,8 +272,8 @@ exactly once with the mixed graph.
 
 ### Mode B — planning-workflow `plan_tasks` phase
 
-If you are inside the 4-phase planning workflow and a downstream formatter/posthook
-will submit the plan for you:
+If you are inside the 4-phase planning workflow and the phase contract expects
+you to return the plan material instead of submitting it directly:
 
 - Do **not** call `plan_tasks()`, `submit_plan_tasks`, `coordination`, or any
   wrapper you invent.
@@ -281,8 +281,7 @@ will submit the plan for you:
   contract explicitly allows it.
 - Build the mixed graph directly from `phase_outputs.synthesize.codebase_map`
   and the current runtime context.
-- Return the material needed for top-level `goal` and `tasks`; the downstream
-  formatter/posthook submits the actual payload.
+- Return the material needed for top-level `goal` and `tasks`, then stop.
 - In this workflow mode, `expandable: true` tasks may use the coordinator-owned
   agent name provided by the runtime contract (for example
   `phase_settings.expandable_task_agent_name`).

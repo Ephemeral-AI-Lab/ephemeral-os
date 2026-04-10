@@ -166,6 +166,57 @@ def test_phase_a_rejects_unknown_dep_when_external_scope_is_known(monkeypatch):
     assert any("unknown dep reference 'missing_dep'" in i["msg"] for i in issues)
 
 
+def test_phase_a_rejects_benchmark_test_ref_aliases(monkeypatch):
+    _patch_registry(monkeypatch, {"developer"})
+    plan = Plan(
+        items=[
+            WorkItemSpec(
+                agent_name="developer",
+                payload={
+                    "owned_failures": ["tests/test_hdf.py"],
+                    "reproduction": ["pytest tests/test_hdf.py -q"],
+                },
+            )
+        ]
+    )
+
+    issues = validate_plan_phase_a(
+        plan,
+        benchmark_test_files={"dask/dataframe/io/tests/test_hdf.py"},
+    )
+
+    assert any(
+        "expected 'dask/dataframe/io/tests/test_hdf.py'" in issue["msg"]
+        for issue in issues
+    )
+    assert any("payload.owned_failures[0]" in issue["field"] for issue in issues)
+    assert any("payload.reproduction[0]" in issue["field"] for issue in issues)
+
+
+def test_phase_a_accepts_exact_benchmark_test_refs(monkeypatch):
+    _patch_registry(monkeypatch, {"developer"})
+    exact_node = "dask/dataframe/io/tests/test_hdf.py::test_read_hdf"
+    plan = Plan(
+        items=[
+            WorkItemSpec(
+                agent_name="developer",
+                payload={
+                    "owned_failures": [exact_node],
+                    "verification": ["pytest dask/dataframe/io/tests/test_hdf.py -q"],
+                },
+            )
+        ]
+    )
+
+    issues = validate_plan_phase_a(
+        plan,
+        benchmark_test_ids={exact_node},
+        benchmark_test_files={"dask/dataframe/io/tests/test_hdf.py"},
+    )
+
+    assert issues == []
+
+
 # ---------- Phase B ----------------------------------------------------------
 
 

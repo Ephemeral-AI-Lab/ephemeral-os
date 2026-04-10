@@ -246,7 +246,7 @@ def _validate_benchmark_payload_refs(
         }
 
     def _extract_py_paths(value: str) -> list[str]:
-        return re.findall(r"(?<![A-Za-z0-9_./-])([A-Za-z0-9_./-]+\\.py)(?![A-Za-z0-9_./-])", value)
+        return re.findall(r"(?<![A-Za-z0-9_./-])([A-Za-z0-9_./-]+\.py)(?![A-Za-z0-9_./-])", value)
 
     for idx, item in enumerate(items):
         payload = item.payload if isinstance(item.payload, dict) else {}

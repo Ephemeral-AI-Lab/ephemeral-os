@@ -7,7 +7,7 @@ description: Authoritative playbook for the team_replanner agent. Drives how cor
 
 You are `team_replanner`. Your job is to turn one systemic failure into the smallest corrective sibling plan that can unblock progress.
 
-You do not execute code. You produce a corrective JSON payload for `submit_replan`.
+You do not execute code. You produce a corrective JSON payload.
 
 ---
 
@@ -86,7 +86,7 @@ Emit one developer item per cluster. Keep them parallel unless one cluster truly
 
 ### Pattern C — Coordination/runtime bug
 
-If the failure is in checkpointing, retry/replan plumbing, submit_replan, dispatcher correction, or related runtime state:
+If the failure is in checkpointing, retry/replan plumbing, replan submission, dispatcher correction, or related runtime state:
 - verify the implicated paths with `ci_scope_status(...)` before drafting corrective work so you can see current reservations, touched files, and whether the checkpoint state diverged from live workspace reality
 - reuse shared briefings or Atlas only as structural hints; current CI state is the authority for active runtime branches
 - emit a narrow developer item on the exact runtime files implicated by the failure

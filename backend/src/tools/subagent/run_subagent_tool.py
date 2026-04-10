@@ -498,7 +498,7 @@ async def run_subagent(
         )
 
     caller_agent = str(context.metadata.get("agent_name") or "").strip()
-    if caller_agent in _SCOUT_ONLY_CALLERS and agent_name != "scout":
+    if caller_agent in SCOUT_ONLY_CALLERS and agent_name != "scout":
         return ToolResult(
             output=(
                 f"run_subagent: caller '{caller_agent}' may dispatch only 'scout', "

@@ -57,9 +57,9 @@ If any of these contradict your briefing, **trust live CI** and adjust. Never ac
 Tool-choice rule:
 - use `briefings` / `dep_artifacts` for intended ownership and task context
 - use `code_intelligence` for live symbol, file, and recent-change truth
-- do not try to recover same-run context from Atlas; if briefing plus CI is still insufficient, escalate via fresh scout or replan
+- do not try to recover same-run context from Atlas; if briefing plus CI is still insufficient, stop and report the missing context instead of guessing
 
-If the payload or validator evidence names a live failing command, failing pytest node, or coordination-runtime component (checkpoint, retry/replan, dispatcher, posthook), reproduce that exact surface before broader probing. Treat those runtime failures as real owned bugs, not as harness noise.
+If the payload or validator evidence names a live failing command, failing pytest node, or coordination-runtime component (checkpoint, retry/recovery, dispatcher, serialization/runtime plumbing), reproduce that exact surface before broader probing. Treat those runtime failures as real owned bugs, not as harness noise.
 For text lookup or symbol discovery, prefer `daytona_grep`, `ci_query_symbols`, `ci_query_references`, and direct file reads before reaching for shell `grep` / `find` probes in `daytona_bash`.
 
 ### 3. Read before editing
@@ -71,7 +71,7 @@ Always `ci_read_file` (or `daytona_read_file`) the full target file (or the symb
 - In ultra-concurrency team runs, mutating `daytona_bash` calls must pass `declared_output_paths=[...]` or they will be rejected. Prefer `daytona_write_file` / `daytona_edit_file` unless a shell mutation is truly required.
 - One logical change per edit call. Do not batch unrelated edits.
 - **Stay in scope.** Do not refactor adjacent code, rename unrelated symbols, or "clean up" the file. The WorkItem payload is the contract.
-- **Tests are read-only unless explicitly owned.** You may read failing tests for context, but if the payload does not explicitly assign that test file or a `tests/` path, you may not edit it. When the only apparent fix would change an unowned test, stop and return `scope_mismatch` / `request_replan`.
+- **Tests are read-only unless explicitly owned.** You may read failing tests for context, but if the payload does not explicitly assign that test file or a `tests/` path, you may not edit it. When the only apparent fix would change an unowned test, stop and return `scope_mismatch`.
 - **Unowned test collection/import failures stay on the production surface.** If the first failing pytest surface is inside an unowned test file, inspect the adjacent production/export surface first. Do not "fix" the collection error by editing the unowned test file.
 - Tool names are exact. Use `daytona_edit_file` / `daytona_write_file` / `daytona_read_file`, not generic `edit_file` / `write_file` / `read_file`.
 - If you need to refresh write coherence mid-task, `ci_scope_status(scope_paths=[<exact target file>])` is the default retry path. A blank-scope refresh is not a write preflight.
@@ -88,17 +88,17 @@ After every edit to a source file you MUST run at least one of:
 If a live tool or harness fault blocks normal execution (for example `Event loop is closed`, sandbox session failure, checkpoint restore mismatch, or an obviously corrupted retry/checkpoint state):
 - Do at most one confirming retry of the same narrow action when the fault could be transient.
 - If the same infra/runtime fault repeats, stop retrying that tool family. Re-read any changed file state if needed, then return a blocker report instead of thrashing.
-- Classify the blocker explicitly so the decision posthook can choose the next action:
-  - `transient_runtime` → likely `request_retry`
-  - `systemic_runtime` or `scope_mismatch` → likely `request_replan`
-  - `code_fix_complete` → `submit_summary`
+- Classify the blocker explicitly so the final report is unambiguous:
+  - `transient_runtime`
+  - `systemic_runtime`
+  - `scope_mismatch`
+  - `code_fix_complete`
 - If you already changed code before the fault, still report the touched files and the last successful verification step.
 
 ### 7. Report
-When `submit_summary` is called (by the posthook), your final assistant message must contain:
+Your final assistant message must contain:
 - `OUTCOME: changed | blocked`
 - `FAILURE_TYPE: code_fix_complete | transient_runtime | systemic_runtime | scope_mismatch` when relevant
-- `RECOMMENDED_ACTION: submit_summary | request_retry | request_replan`
 - A 1–3 sentence narrative of what you changed and why.
 - The list of files touched.
 - The verification step you ran and its outcome.
@@ -128,8 +128,8 @@ When `submit_summary` is called (by the posthook), your final assistant message 
 17. **Pytest beats custom probes.** If a custom probe appears to succeed but the named pytest target still fails, trust the pytest failure as the source of truth. Inspect the exact failing assertion or emitted value from pytest before inventing more standalone scripts.
 18. **Budget pivot rule.** If a budget warning appears or you are down to roughly a dozen tool calls, stop exploratory scripting. Spend the remaining budget on one bounded read/edit/test loop or return a concise blocker summary.
 19. **Live e2e failures stay concrete.** When an in-flight benchmark or coordination task fails on a real command, real node id, or runtime component, stay anchored to that exact failing surface until you either patch it or prove the task is mis-scoped. Do not drift back into broad benchmark archaeology.
-20. **Checkpoint/replan bugs are production bugs.** If the owned task touches checkpoint restore, retry routing, request_replan, submit_replan, dispatcher correction, or related runtime state, debug that control path directly and keep the verification target tied to it.
-21. **Repeated live-runtime faults are not a coding loop.** After one confirming retry, repeated harness/checkpoint/sandbox failures are evidence for retry or replan, not permission to keep hammering the same command.
+20. **Checkpoint and recovery-path bugs are production bugs.** If the owned task touches checkpoint restore, retry routing, corrective-plan submission, dispatcher correction, or related runtime state, debug that control path directly and keep the verification target tied to it.
+21. **Repeated live-runtime faults are not a coding loop.** After one confirming retry, repeated harness/checkpoint/sandbox failures are runtime-blocker evidence, not permission to keep hammering the same command.
 22. **Do not fight the injected cwd.** `daytona_bash` already runs from the benchmark repo root when `daytona_cwd` is set. Do not prepend `cd /workspace`, `cd /home/user`, or other guessed directories unless the payload explicitly requires a subdirectory.
 23. **Do not mutate repo state with git.** No `git stash`, `git checkout`, `git restore`, `git reset`, or `git clean` inside the benchmark repo. If the workspace seems contaminated, re-read the touched file state and report the blocker or scope mismatch; do not roll back sibling work.
 24. **Budget warnings forbid structural rescue rewrites.** After a budget warning, do not start a new file-wide rewrite, import-archeology loop, or `daytona_codeact` restructuring pass. Spend the remaining budget on one bounded read/edit/check loop or return a blocker summary.
@@ -157,8 +157,8 @@ When `submit_summary` is called (by the posthook), your final assistant message 
 - Treat any `[system:budget_warning]` as a hard transition out of exploration mode.
 - After a budget warning, do not read more files, grep more files, inspect git state, or start new debugging branches.
 - After a budget warning, the only acceptable next actions are:
-  - run one already-planned targeted validation command, then immediately `submit_summary`
-  - `submit_summary` immediately
+  - run one already-planned targeted validation command, then immediately return the final summary
+  - return the final summary immediately
 - Do not make new edits after a budget warning unless the edit is the already-planned minimal change you are validating in the very next command.
 - If multiple failures remain at budget warning time, summarize the exact remaining failures, likely owner files, and the narrowest next-step hypotheses instead of improvising more exploration.
 
@@ -166,15 +166,15 @@ When `submit_summary` is called (by the posthook), your final assistant message 
 
 - Never use `git checkout`, `git restore`, `git stash`, `git reset`, or `git clean` to recover from a bad edit.
 - This applies even when you are only reverting your own mistake.
-- If you damage a file and cannot repair it with one bounded edit in the current lane, stop and report the damage in `submit_summary`.
+- If you damage a file and cannot repair it with one bounded edit in the current lane, stop and report the damage in the final summary.
 - Do not inspect `git diff` or `git status` as a recovery workflow after a bad edit; rely on the file context you already have and summarize if recovery is not immediate.
 
 ## Benchmark developer scope control
 
-- Treat your assignment as a leaf slice. If the task spans more than two production files or clearly contains more than one bug family, fix only the bounded slice you can justify and return the remaining evidence for replan instead of widening the task.
+- Treat your assignment as a leaf slice. If the task spans more than two production files or clearly contains more than one bug family, fix only the bounded slice you can justify and return the remaining evidence as `scope_mismatch` instead of widening the task.
 - When you hit `[system:budget_warning]`, stop opening new files or launching new diagnostics. Finish the bounded edit already in flight or return a residual blocker summary.
 - Do not turn a residual benchmark lane into a cross-subsystem omnibus repair. `construction`, `json_schema`, `root_model`, `types`, and `networks` are separate slices unless the plan explicitly proved a shared owner surface.
-- If a task description bundles unrelated failures, prioritize the shared owner file first. If no shared owner file exists, stop and request replan rather than spreading across unrelated modules.
+- If a task description bundles unrelated failures, prioritize the shared owner file first. If no shared owner file exists, stop and report `scope_mismatch` rather than spreading across unrelated modules.
 
 ## Mixed residual lane escalation
 
@@ -182,7 +182,6 @@ When `submit_summary` is called (by the posthook), your final assistant message 
 - If your first bounded fix succeeds but the next deterministic failure moves to a different owner file, a different behavior family, or a nearby guardrail surface the plan did not explicitly own, stop and report:
   - `OUTCOME: blocked`
   - `FAILURE_TYPE: scope_mismatch`
-  - `RECOMMENDED_ACTION: request_replan`
 - If you now understand that the task actually contained multiple bug families, do not keep widening the lane to chase them all. Summarize the finished cluster, name the remaining clusters, and escalate.
 - Do not label a lane `code_fix_complete` while also listing named deterministic "Remaining Issues" that still require additional code changes in the same benchmark recovery path.
 

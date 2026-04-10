@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -140,3 +141,100 @@ async def test_submit_plan_rejects_unknown_dep_against_live_team_run(monkeypatch
 
     assert res.is_error
     assert "unknown dep reference 'dev1'" in res.output
+
+
+@pytest.mark.asyncio
+async def test_submit_plan_rejects_benchmark_ref_aliases_against_root_prompt(monkeypatch):
+    tool = SubmitPlanTool()
+    ctx = _ctx()
+    ctx.metadata["team_run_id"] = "TR1"
+
+    root = SimpleNamespace(
+        payload={
+            "fail_to_pass": [
+                "dask/dataframe/io/tests/test_hdf.py::test_read_hdf",
+            ],
+            "pass_to_pass": [
+                "dask/dataframe/io/tests/test_hdf.py::test_to_hdf",
+            ],
+        }
+    )
+    fake_team_run = SimpleNamespace(
+        root_work_item_id="ROOT",
+        dispatcher=SimpleNamespace(graph={"ROOT": root}),
+    )
+
+    from team.runtime import registry as runtime_registry
+
+    monkeypatch.setattr(runtime_registry, "get", lambda team_run_id: fake_team_run if team_run_id == "TR1" else None)
+
+    args = SubmitPlanInput.model_validate(
+        {
+            "items": [
+                {
+                    "agent_name": "developer",
+                    "local_id": "dev_hdf",
+                    "payload": {
+                        "owned_failures": ["tests/test_hdf.py"],
+                        "reproduction": ["pytest tests/test_hdf.py -q"],
+                    },
+                }
+            ]
+        }
+    )
+
+    res = await tool.execute(args, ctx)
+
+    assert res.is_error
+    assert "benchmark reference must use the exact prompt path/id" in res.output
+    assert "expected 'dask/dataframe/io/tests/test_hdf.py'" in res.output
+
+
+@pytest.mark.asyncio
+async def test_submit_plan_accepts_exact_benchmark_refs_against_root_prompt(monkeypatch):
+    tool = SubmitPlanTool()
+    ctx = _ctx()
+    ctx.metadata["team_run_id"] = "TR2"
+
+    root = SimpleNamespace(
+        payload={
+            "fail_to_pass": [
+                "dask/dataframe/io/tests/test_hdf.py::test_read_hdf",
+            ],
+            "pass_to_pass": [
+                "dask/dataframe/io/tests/test_hdf.py::test_to_hdf",
+            ],
+        }
+    )
+    fake_team_run = SimpleNamespace(
+        root_work_item_id="ROOT",
+        dispatcher=SimpleNamespace(graph={"ROOT": root}),
+    )
+
+    from team.runtime import registry as runtime_registry
+
+    monkeypatch.setattr(runtime_registry, "get", lambda team_run_id: fake_team_run if team_run_id == "TR2" else None)
+
+    args = SubmitPlanInput.model_validate(
+        {
+            "items": [
+                {
+                    "agent_name": "developer",
+                    "local_id": "dev_hdf",
+                    "payload": {
+                        "owned_failures": [
+                            "dask/dataframe/io/tests/test_hdf.py::test_read_hdf"
+                        ],
+                        "verification": [
+                            "pytest dask/dataframe/io/tests/test_hdf.py -q"
+                        ],
+                    },
+                }
+            ]
+        }
+    )
+
+    res = await tool.execute(args, ctx)
+
+    assert not res.is_error
+    assert isinstance(ctx.metadata["submitted_plan"], Plan)

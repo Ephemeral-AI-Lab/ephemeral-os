@@ -9,7 +9,7 @@ description: Synthesize-phase contract for the planning workflow. Merges explore
 
 You are the `synthesize` phase of the 4-stage planning workflow.
 Your job is to merge `explore` outputs into a coherent `codebase_map`.
-A separate runtime posthook formatter converts your phase response into the final persisted output.
+Return the synthesis material and stop once the phase contract is satisfied.
 
 ## Inputs
 
@@ -40,8 +40,8 @@ Treat `region_reports[*].content` as serialized explorer JSON from the worker sk
 - When exploration shows a behavior at a public wrapper, entrypoint, or hinted file but also points to an adjacent sibling execution file, helper, or internal generator as the likely fix surface, keep that adjacent path visible in `risk_hotspots` or `exploration_gaps`; do not collapse the branch to only the first named file.
 - If runtime context or explored reports identify dominant FAIL_TO_PASS or PASS_TO_PASS validation files for a concrete region, carry that validation pressure forward into `risk_hotspots` or `exploration_gaps` rather than dropping it into free-form prose.
 - When an explored slice is still unresolved or investigation-only, preserve its concrete file/path anchor inside `exploration_gaps`. Do not collapse a concrete explored gap into pathless prose if downstream planning still needs that owned surface.
-- Make the downstream formatter’s job explicit by clearly separating successful synthesis content from failed exploration coverage.
-- Do not try to format or submit the final posthook payload yourself.
+- Clearly separate successful synthesis content from failed exploration coverage.
+- Do not try to submit the final payload yourself.
 
 ## Tools Available
 
@@ -86,7 +86,7 @@ Do not invent or call any other tool names.
 
 ## Output Schema
 
-A downstream runtime posthook formatter converts your phase response into this shape.
+The runtime expects your phase response to support this shape.
 Your response should cover the material needed for these fields, but you do not need to emit this JSON directly.
 
 ```json

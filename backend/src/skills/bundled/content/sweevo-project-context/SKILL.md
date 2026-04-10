@@ -14,7 +14,7 @@ When benchmark prose, release notes, or changelog bullets disagree with the live
 ## Shared benchmark constraints
 
 - **Source of truth is the current sandbox checkout.** The SWE-EVO test patch is already applied in the sandbox for this run. Treat the working tree, the named FAIL_TO_PASS targets, the PASS_TO_PASS guardrails, and the grading command as the benchmark contract.
-- **Missing named tests are a runtime mismatch signal.** If a developer or validator cannot collect a named FAIL_TO_PASS node, or discovers the expected test file/function is absent from the live checkout, treat that as a sandbox or benchmark-surface mismatch first. Re-check the applied test surface and request replan or retry instead of guessing replacement owner files from similarly named modules.
+- **Missing named tests are a runtime mismatch signal.** If a developer or validator cannot collect a named FAIL_TO_PASS node, or discovers the expected test file/function is absent from the live checkout, treat that as a sandbox or benchmark-surface mismatch first. Re-check the applied test surface and report the mismatch instead of guessing replacement owner files from similarly named modules.
 - **Use the injected repo root as-is.** The benchmark runtime already injects the sandbox repo root as the working directory for worker shell commands. Do not prepend guessed `cd /workspace`, `cd /home/user`, or similar path hops unless the payload explicitly names a real child directory.
 - **Changelog prose is background context only.** Do not treat release notes or version-transition prose as the implementation checklist.
 - **Fix the repository, not the ambient environment.** Do not rely on ad hoc `pip install`, `conda install`, `uv add`, or other sandbox-only environment mutation as the benchmark fix. If dependency metadata is part of the solution, land it in the repo-managed manifest or lockfile.
@@ -107,8 +107,8 @@ When benchmark prose, release notes, or changelog bullets disagree with the live
 - Start with the exact retry target(s) named by the payload or benchmark context.
 - After the exact retry target passes, spend at most one broader same-surface regression command unless the payload explicitly requires more.
 - If the exact retry target fails, report that failure immediately with exact test ids, exit code, and a short verbatim error snippet.
-- If verification shows the lane owns the wrong files, misses a sibling corrective cluster, or resumed from a stale retry boundary, report `plan_gap` with `RECOMMENDED_ACTION: request_replan`. Do not broaden into fresh exploration from validator mode.
-- If the validator cannot collect a named FAIL_TO_PASS node because the test or file is missing, report `FAILURE_TYPE: benchmark_surface_mismatch` and `RECOMMENDED_ACTION: request_replan` with the exact missing node ids.
+- If verification shows the lane owns the wrong files, misses a sibling corrective cluster, or resumed from a stale retry boundary, report `plan_gap` with exact evidence. Do not broaden into fresh exploration from validator mode.
+- If the validator cannot collect a named FAIL_TO_PASS node because the test or file is missing, report `FAILURE_TYPE: benchmark_surface_mismatch` with the exact missing node ids.
 - The benchmark harness will run the full grading command after the team phase. Do not spend validator budget duplicating broad redundant suites by default.
 
 ---

@@ -1,4 +1,4 @@
-"""Builtin team-mode agent definitions (planner, developer, validator, scout, atlas, posthooks)."""
+"""Builtin team-mode agent definitions and internal runtime helpers."""
 
 from __future__ import annotations
 
@@ -154,7 +154,7 @@ def register_all() -> None:
     register_definition(
         AgentDefinition(
             name=TEAM_PLANNER,
-            description="Team-mode planner agent: decomposes requests and drafts plan payloads for posthook submission.",
+            description="Team-mode planner agent: decomposes requests and drafts executable plan payloads.",
             system_prompt=_PLANNER_PROMPT,
             model="inherit",
             tool_call_limit=_DEFAULT_TEAM_TOOL_CALL_LIMIT,
@@ -231,7 +231,7 @@ def register_all() -> None:
             name=SCOUT,
             description=(
                 "Read-only exploration of a concrete list of paths. Produces a "
-                "compact brief via submit_summary; never edits files."
+                "compact brief; never edits files."
             ),
             system_prompt=_SCOUT_PROMPT,
             model="inherit",
@@ -294,7 +294,7 @@ def register_all() -> None:
     register_definition(
         AgentDefinition(
             name=TEAM_REPLANNER,
-            description="Replanner: reads failure context and produces corrective plan for posthook serialization.",
+            description="Replanner: reads failure context and produces corrective sibling work items.",
             system_prompt=_REPLANNER_PROMPT,
             model="inherit",
             tool_call_limit=_DEFAULT_TEAM_TOOL_CALL_LIMIT,

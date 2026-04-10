@@ -9,7 +9,7 @@ description: Plan-tasks-phase contract for the planning workflow. Builds and sub
 
 You are the `plan_tasks` phase of the 4-stage planning workflow.
 Your job is to turn the synthesized codebase map into a task graph.
-A separate runtime posthook formatter converts your phase response into the final submitted task graph.
+Return the task-graph material and stop once the phase contract is satisfied.
 
 ## Inputs
 
@@ -188,7 +188,7 @@ Use [references/task_graph_schema.md](references/task_graph_schema.md) as the ca
 - Separate implementation tasks from test-only cleanup tasks when they can be executed independently.
 - Do not fabricate extra top-level keys.
 - Keep the phase response compact and machine-friendly: no markdown tables, fenced code blocks, or changelog walkthroughs before the task graph material.
-- Do not try to format or submit the final posthook payload yourself.
+- Do not try to submit the final payload yourself.
 - Once the graph satisfies the quality gates, stop and return the task-graph material directly instead of continuing a changelog-by-changelog narrative.
 
 ## Tools Available
@@ -327,7 +327,7 @@ Do not invent or call any other tool names.
    - when a task directly owns one of those focus files, make sure that exact file path appears in the task's `touches_paths`
    - if any dominant focus file has no clear owner, revise the graph before returning it
    - if one task still owns three or more dominant focus files, justify why they are one coherent validation cluster; otherwise split the task first
-26. Make the final task graph explicit enough that a downstream formatter can construct the exact payload with top-level `goal` and `tasks`.
+26. Make the final task graph explicit enough that the runtime can construct the exact payload with top-level `goal` and `tasks`.
 
 ## Quality Gate
 
@@ -337,7 +337,7 @@ If any gate fails, revise the plan first.
 - Task graph completeness gate:
   - the planning goal is explicit and non-empty
   - the task list is explicit and is the only task container
-  - every task contains the required task fields needed by the downstream formatter
+  - every task contains the required task fields needed by the runtime contract
   - every task contains non-empty `touches_paths` with at least one concrete in-repo owned path
   - the submitted level contains 2-8 root tasks; if not, regroup before finishing
   - the 2-8 limit counts all tasks at this submitted level, not just expandable tasks
@@ -457,7 +457,7 @@ If any gate fails, revise the plan first.
 
 ## Output Schema
 
-A downstream runtime posthook formatter converts your phase response into this shape.
+The runtime expects your phase response to support this shape.
 Your response should cover the material needed for these fields, but you do not need to emit this JSON directly.
 
 ```json

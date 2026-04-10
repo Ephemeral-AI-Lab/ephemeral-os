@@ -1,11 +1,11 @@
 ---
 name: verification-replan
-description: Skill for verifier agents to analyze test failures and report structured summaries via request_replan. A downstream replanner agent reads these summaries and creates fix tasks.
+description: Skill for verifier agents to analyze test failures and report structured summaries for downstream recovery.
 ---
 
 # Verification Replan
 
-When assigned as a verifier for a coordination node, use this skill to analyze test results and — if failures are detected — report structured summaries for the replanner agent to act on.
+When assigned as a verifier for a coordination node, use this skill to analyze test results and — if failures are detected — report structured summaries for downstream recovery.
 
 Current runtime note:
 - This repository does not currently expose a universal `request_replan` tool in every verifier run.
@@ -13,7 +13,7 @@ Current runtime note:
 - If the tool is present in your runtime surface, use it.
 - If it is absent, emit the same structured triage in your final FAIL summary so a downstream coordinator or human can replan manually.
 
-You do NOT create fix tasks. Your job is to test, triage, and report. The replanner reads your report and decides what to do.
+You do NOT create fix tasks. Your job is to test, triage, and report.
 
 ---
 
@@ -62,7 +62,7 @@ If the runtime does not expose the needed tool, put the same structured content 
 ## Rules
 
 - **Do NOT modify source files.** Your job is verification and reporting only.
-- **Do NOT create tasks.** If `request_replan()` is available, the replanner drafts corrective items and its downstream posthook submits them via `submit_replan`. Otherwise your job stops at a structured FAIL summary.
+- **Do NOT create tasks.** If `request_replan()` is available, use it. Otherwise your job stops at a structured FAIL summary.
 - **Prefer retry for repeated transient runtime faults.** Use replanning only when the evidence says the task graph or implementation work itself is wrong.
 - **Be specific in your report.** Vague reports like "tests failed" waste the replanner's time. Include test IDs, error messages, file paths, and root cause analysis.
 - **Cluster by root cause.** Don't list every test failure independently — group them so the replanner creates one targeted fix per cluster.
@@ -125,10 +125,4 @@ PASS_TO_PASS results: 15/15 passing (no regressions)
 
 ## What happens after
 
-When `request_replan()` is available, the replanner agent reads your `replan_request` artifact, returns a corrective JSON payload, and a downstream posthook serializer submits it with:
-- `add_items`: targeted fix work items based on your triage
-- `cancel_ids`: any pending sibling work items that are no longer relevant
-
-When `request_replan()` is not available, the same triage block should appear in the verifier's final FAIL summary and a later coordinator or human turn must perform the replan explicitly.
-
-After `submit_replan` is accepted, the dispatcher reapplies the corrective plan and automatically resets the verifier to PENDING with dependencies on the new fix tasks. Once the fix tasks complete, you (the verifier) run again automatically to re-verify. This cycle continues until all tests pass.
+When `request_replan()` is available, your structured triage becomes the input for downstream recovery. When `request_replan()` is not available, the same triage block should appear in the verifier's final FAIL summary and a later coordinator or human turn must perform the replan explicitly.
