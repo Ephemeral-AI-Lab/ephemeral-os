@@ -9,8 +9,8 @@ Produce a structural ownership map first, then assign developer and validator wo
 ## Script
 
 1. Seed the search space with live CI.
-   On fresh benchmark-root turns, if the likely production owner path is already exact, the first live CI action must be `ci_scope_status(scope_paths=[...])`. If file existence is still a hypothesis, spend exactly one narrow `ci_workspace_structure(path="<nearest likely production directory/package>", max_depth<=4)` pass first, then call `ci_scope_status(...)` on an exact existing production path from that listing. Do not open with root-wide `ci_workspace_structure()`, symbol queries, or other live CI calls before that anchor.
-   Do not narrate a concrete scout wave or call `run_subagent(...)` before that benchmark-root anchor succeeds.
+   On fresh benchmark-root turns, if the likely production owner path is already exact, start with `ci_scoped_status(scope_paths=[...])`. If file existence is still a hypothesis, spend one narrow `ci_workspace_structure(path="<nearest likely production directory/package>", max_depth<=4)` pass first, then call `ci_scoped_status(...)` on the exact existing production path that listing or inherited live evidence confirms. Do not open with root-wide `ci_workspace_structure()`, symbol queries, or other live CI calls before that anchor.
+   Do not narrate a concrete scout wave or call `run_subagent(...)` before that benchmark-root scope grounding exists.
    If file existence is still uncertain, anchor the nearest likely directory/package first rather than guessing a leaf file such as `parquet.py`.
    After the benchmark-root anchor, or immediately on non-benchmark turns, use the request, shared context, workspace structure, symbol lookup, and references to identify the candidate paths or directories.
    If only a package-level owner surface is confirmed, keep the parent planner on that exact existing package/directory and let scouts resolve file-level ownership. Do not guess file names from test names or failure labels before a scout confirms them.
@@ -24,7 +24,7 @@ Produce a structural ownership map first, then assign developer and validator wo
    If there are multiple plausible owners, a directory-sized slice, or a large file with many relevant regions, switch to exploration.
    Once live CI identifies one candidate implementation file or subsystem, the next step should be scout, child-planning, or dispatch.
    Prefer scout immediately whenever it can answer the ownership question.
-   On benchmark roots, after the initial `ci_scope_status(...)` anchor, spend at most one parent-side workspace pass per unresolved top-level owner cluster before opening scouts. If more structure is still needed after that pass, scout instead of continuing parent-side directory walks.
+   On benchmark roots, after the initial `ci_scoped_status(...)` grounding, spend at most one parent-side workspace pass per unresolved top-level owner cluster before opening scouts. If more structure is still needed after that pass, scout instead of continuing parent-side directory walks.
    If the owner is already a single large file, a single-file scout is allowed when you still need that file's live structure or key symbols before dispatch. Move to child planning only when that scout still leaves several named regions unresolved.
    If several disjoint owner hypotheses remain, prefer a small wave of parallel scouts instead of proving them one at a time from the parent planner.
 
@@ -33,7 +33,7 @@ Produce a structural ownership map first, then assign developer and validator wo
    The scout call must satisfy the runtime schema exactly: provide `input` only, never `prompt=null`, never both `prompt` and `input`, and never an empty or missing `target_paths` list.
    Give the scout the smallest slice that can still answer the ownership question.
    When ownership has already split, prefer several disjoint scouts in parallel over serial parent-side probing.
-   On large benchmark roots with several named clusters and `ci_scope_status(...).admission` still `parallel` or `cautious`, the first scout wave should usually cover multiple separate production-owner scouts. Do not bundle unrelated owner surfaces into one scout lane just to force an artificially narrow first wave.
+   On large benchmark roots with several named clusters and `ci_scoped_status(...).admission` still `parallel` or `cautious`, the first scout wave should usually cover multiple separate production-owner scouts. Do not bundle unrelated owner surfaces into one scout lane just to force an artificially narrow first wave or a fixed lane count.
    Do not open a scout just because fanout is available. Launch only when the lane covers a still-unresolved owner boundary that existing scout briefs, atlas results, or shared context do not already answer.
    After launch, you MUST take at least one non-wait action before any `wait_for_background_task`: launch another disjoint scout, call `check_background_progress`, classify the remaining branch, promote a completed brief, or emit the final plan JSON. Do not call `wait_for_background_task` first unless that scout result is already the only blocker left.
    Treat parallel scouting as waves, not as a rigid one-shot batch. Start with the smallest useful wave, keep reasoning while those scouts run, and launch another disjoint scout or child planner only when the current evidence still leaves a real ownership gap.

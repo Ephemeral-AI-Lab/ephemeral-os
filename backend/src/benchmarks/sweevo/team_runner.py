@@ -146,10 +146,10 @@ def _derive_sweevo_budgets(instance: SWEEvoInstance) -> BudgetConfig:
         "max_briefing_bytes": 48_000,
     })
 
-    # Keep every submitted planner level within 1-10 items. When the natural
-    # task set is wider than that, the planner should compress adjacent work
-    # into expandable child-planner lanes rather than flattening more siblings.
-    plan_size = 10
+    # Keep each planner level inside the benchmark-size ceiling. When the
+    # natural task set is wider than that, compress adjacent work into
+    # expandable child-planner lanes rather than flattening more siblings.
+    plan_size = min(int(base["max_plan_size"]), 10)
     work_items = max(
         int(base["max_work_items"]),
         max(4, min(plan_size, f2p_targets)) * int(base["max_depth"]),
@@ -158,6 +158,8 @@ def _derive_sweevo_budgets(instance: SWEEvoInstance) -> BudgetConfig:
         max_work_items=work_items,
         max_depth=int(base["max_depth"]),
         max_plan_size=plan_size,
+        max_validators_per_plan=None,
+        require_validator_for_plan_size=None,
         max_artifact_bytes=1_000_000,
         max_total_artifact_bytes=50_000_000,
         default_work_item_timeout=None,
@@ -185,6 +187,7 @@ def _build_root_prompt(instance: SWEEvoInstance, repo_dir: str) -> str:
     summary = summarize_sweevo_instance(instance)
     size = str(summary.get("size") or "medium")
     frontier_cap = _recommended_frontier_cap(instance)
+    max_plan_size = _derive_sweevo_budgets(instance).max_plan_size
     file_counts: Counter[str] = Counter()
     for test_id in instance.fail_to_pass:
         file_counts[test_id.split("::", 1)[0]] += 1
@@ -216,9 +219,10 @@ def _build_root_prompt(instance: SWEEvoInstance, repo_dir: str) -> str:
         f"{len(instance.fail_to_pass)} fail-to-pass target(s)).\n"
         f"- Recommended first-ready frontier cap: {frontier_cap} benchmark-critical "
         f"implementation lane(s).\n"
-        f"- The submitted root plan must stay within 1-10 total tasks. If the natural "
-        f"task set is wider than 10, group adjacent sibling work into expandable child "
-        f"planner items until the submitted level is back under that cap.\n"
+        f"- The submitted root plan must stay within 1-10 total tasks. Treat {max_plan_size} "
+        f"as the runtime cap for this instance, and if the natural task set is wider, group "
+        f"adjacent sibling work into expandable child planner items instead of flattening "
+        f"every cluster at the root.\n"
         f"- The first-ready frontier cap limits only simultaneously ready implementation "
         f"lanes. It does not mean the whole submitted graph should stop at that many items.\n"
         f"- On large instances with many fail-to-pass clusters, do not hand the whole "

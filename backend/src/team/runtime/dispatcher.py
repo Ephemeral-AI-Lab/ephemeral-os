@@ -252,6 +252,9 @@ class Dispatcher:
                         parent_wi=wi,
                         new_id_factory=self.new_id,
                         max_depth=self.budgets.max_depth,
+                        max_plan_size=self.budgets.max_plan_size,
+                        max_validators_per_plan=self.budgets.max_validators_per_plan,
+                        require_validator_for_plan_size=self.budgets.require_validator_for_plan_size,
                     )
                 except InvalidPlan as e:
                     self._mark_failed(wi, f"InvalidPlan: {e}")

@@ -54,16 +54,16 @@ def test_planner_playbook_gates_share_briefing_on_tool_availability() -> None:
     assert "On fresh benchmark root turns, do **not** open with `atlas_lookup`." in planner
     assert "Call `atlas_lookup` only after that fresh current-turn context is exhausted" in planner
     assert "use current-turn scout / dep artifacts before Atlas in a changing repo" in planner
-    assert "on fresh benchmark roots, use `ci_scope_status(...)` and fresh scouts before any atlas lookup" in planner
+    assert "on fresh benchmark roots, use `ci_scope_status(...)` or one narrow `ci_workspace_structure(...)` plus `ci_scope_status(...)`, then fresh scouts before any atlas lookup" in planner
     assert "Planner sibling-awareness should come from `ci_scope_status(...)` packets first." in planner
     assert "load `exploration-script` before the first non-reference tool call" in planner
-    assert "if the likely production owner path is already exact, the first live CI action must be `ci_scope_status(scope_paths=[...])`" in planner
+    assert "Fresh benchmark root: if the likely production owner path is already exact, the first live CI action must be `ci_scope_status(scope_paths=[...])`" in planner
     assert "If file existence is still a hypothesis, spend exactly one narrow `ci_workspace_structure(path=\"<nearest likely production directory/package>\", max_depth<=4)` pass first, then call `ci_scope_status(...)` on an exact existing production path from that listing." in planner
-    assert "Do not open with root-wide `ci_workspace_structure()`, `ci_query_symbols(...)`, or other live CI queries before that anchor." in planner
-    assert "do not draft or narrate a concrete scout wave until one `ci_scope_status(...)` anchor has already succeeded" in planner
+    assert "Do not open with root-wide `ci_workspace_structure()`, `ci_query_symbols(...)`, or other broad live CI queries before that anchor." in planner
+    assert "do not draft or narrate a concrete scout wave until one `ci_scope_status(...)` anchor or equivalent inherited live scope packet exists" in planner
     assert "Do not call `run_subagent(...)`, list scout targets, or narrate a concrete scout wave before that anchor succeeds." in planner
     assert "before every `run_subagent(agent_name=\"scout\", ...)` call, compare the proposed `target_paths` against the named benchmark test files" in planner
-    assert "Do not guess a leaf file before that pass." in planner
+    assert "do not guess a leaf file before that pass." in planner
     assert "`WAIT_REQUIRES_PROGRESS_CHECK`, duplicate-scout rejection, or a budget warning are stop-and-plan signals" in planner
     assert 'If you plan to join `task_id="all"`, inspect each fresh scout in that batch first' in planner
     assert 'Never call `run_subagent` with `agent_name="team_planner"`' in planner
@@ -77,14 +77,14 @@ def test_planner_playbook_gates_share_briefing_on_tool_availability() -> None:
     assert "A validator-only extracted payload means the JSON boundaries are broken." in planner
     assert "Every entry in `briefings` must be a complete object with a stable `name`, a valid `source`, and the matching payload field for that source." in planner
     assert 'For `run_subagent(agent_name="scout", ...)`, supply exactly one channel' in planner
-    assert "keep at most two root validators" in planner
-    assert "The global validator cap still applies inside child plans." in planner
-    assert "Do not emit one validator per developer when that would exceed the cap." in planner
+    assert "Keep root validators attached to concrete root lanes" in planner
+    assert "let a residual `team_planner` branch carry its own downstream validation" in planner
+    assert "keep child-plan validators branch-local and risk-weighted" in planner
     assert "the first live CI action must be `ci_scope_status(scope_paths=[...])`" in planner
-    assert "Do not open with root-wide `ci_workspace_structure()`, `ci_query_symbols(...)`, or other live CI queries before that anchor." in planner
-    assert "the first scout wave should usually cover 3-4 disjoint production-owner slices, not only the top two clusters by failure count" in planner
-    assert "Cluster size orders the wave; it does not cap it at two." in planner
-    assert "Do not bundle unrelated owner surfaces into one scout just to imitate an old two-lane cap" in planner
+    assert "Do not open with root-wide `ci_workspace_structure()`, `ci_query_symbols(...)`, or other broad live CI queries before that anchor." in planner
+    assert "the first scout wave should usually cover multiple disjoint production-owner slices instead of only the top two clusters by failure count" in planner
+    assert "Cluster size can order the wave, but it should not force an artificially narrow first pass." in planner
+    assert "Do not bundle unrelated owner surfaces into one scout just to force an artificially narrow wave" in planner
     assert "Do not pack unrelated owner surfaces into one scout lane just to honor an outdated first-wave cap." in planner
     assert "Do not spend one of those first-wave scout slots on a guessed missing file such as `parquet.py`" in planner
     assert "Do not guess file names from test names such as `parquet.py`, `utils_dataframe.py`, or similar prompt-shaped aliases." in planner
@@ -124,14 +124,14 @@ def test_sweevo_context_treats_missing_share_briefing_as_non_blocking() -> None:
     assert "Once that missing public name is anchored to a local export file, do not spend developer budget on dependency version checks" in sweevo
     assert "Fresh benchmark roots should stay live-first." in sweevo
     assert "prefer `ci_scope_status(scope_paths=[...])` plus fresh scouts over `atlas_lookup`" in sweevo
-    assert "the first live planning tool call should be `ci_scope_status(scope_paths=[...])` on the likely owner files/directories" in sweevo
+    assert "the opening live planning step should be either `ci_scope_status(scope_paths=[...])` on the likely owner files/directories" in sweevo
     assert "Same-run scout context beats Atlas in a moving repo." in sweevo
-    assert "the first wave should usually cover 3-4 disjoint production-owner scouts" in sweevo
+    assert "the first wave should usually cover multiple disjoint production-owner scouts" in sweevo
     assert "otherwise use the smallest useful disjoint wave" in sweevo
     assert "Do not bundle unrelated owner surfaces into one scout lane just to mimic an old two-lane default" in sweevo
     assert "Retry/replan handoff must preserve the evidence packet." in sweevo
     assert "Ownership mismatch is a planning problem." in sweevo
-    assert "Exact existing paths only." in sweevo
+    assert "Ground payload paths in live existing paths." in sweevo
     assert "The one exception is a missing module file spelled verbatim by the failing import path" in sweevo
     assert "Exact validator evidence is enough to branch." in sweevo
     assert "Planner briefings must be execution-ready." in sweevo
@@ -144,8 +144,8 @@ def test_sweevo_context_treats_missing_share_briefing_as_non_blocking() -> None:
     assert "instead of emitting one validator per developer or recreating an umbrella validation layer" in sweevo
     assert "The default large-root benchmark shape for this repo is: two critical developer lanes, one residual child planner lane, and one validator lane." in sweevo
     assert "If a guessed production owner file turns out to be missing, re-anchor on the nearest exact existing production directory/package path or park that cluster behind a child planner." in sweevo
-    assert "`owned_files` is not a hypothesis bucket." in sweevo
-    assert "keep missing guessed owners out of `owned_files`" in sweevo
+    assert "Treat `owned_files` as a grounded edit surface, not a hypothesis bucket." in sweevo
+    assert "Keep missing guessed owners out of `owned_files`" in sweevo
     assert "Root planner symbol hits that only land in benchmark test files are not ownership evidence." in sweevo
     assert "if a validator or inherited note cites a missing alias path such as `pyarrow.py` while live CI resolves the surface to `arrow.py`" in sweevo
     assert "When the failure packet itself names a missing module import path such as `from dask._compatibility import PY_VERSION`" in sweevo

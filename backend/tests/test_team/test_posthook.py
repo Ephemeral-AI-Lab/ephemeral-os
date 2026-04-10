@@ -602,13 +602,13 @@ def test_team_planner_prompt_makes_child_scope_rules_explicit():
     assert "the opening live planning step must be either ``ci_scope_status(scope_paths=[...])`` on the likely owner files/directories, or one narrow ``ci_workspace_structure(path=\"<nearest likely production directory/package>\")`` pass when the exact production path is still only a hypothesis" in (
         planner.system_prompt
     )
-    assert "on large roots with four or more named clusters and permissive `ci_scope_status(...)` admission, prefer 3-4 disjoint production-owner surfaces" in (
+    assert "keep the first scout wave dynamic: wide enough for the live owner surface, narrow enough that each lane answers one real ownership question" in (
         planner.system_prompt
     )
-    assert "follow the smallest useful disjoint wave described by the preloaded skill" in (
+    assert "prefer multiple separate production-owner scouts instead of collapsing those clusters into one omnibus lane" in (
         planner.system_prompt
     )
-    assert "Do not bundle unrelated owner surfaces into one scout lane just to mimic an old two-lane default" in (
+    assert "Do not spend those first-wave lanes on already-named benchmark test files when a plausible production owner already exists." in (
         planner.system_prompt
     )
     assert "If a guessed benchmark owner file is missing, re-anchor on the nearest exact existing production directory/package path" in (

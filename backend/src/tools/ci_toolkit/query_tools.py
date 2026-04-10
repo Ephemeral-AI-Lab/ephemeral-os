@@ -927,11 +927,32 @@ async def _ci_scope_status_impl(
         requested = normalize_scope_paths(context.metadata.get("default_scope_paths") or [])
     if not requested:
         requested = scope_paths_for_write(context)
+    benchmark_payload = _benchmark_root_payload(context)
+    if benchmark_payload is not None and requested:
+        missing = _benchmark_root_missing_scope_paths(
+            context=context,
+            requested=requested,
+            svc=svc,
+        )
+        if not missing:
+            missing = await _benchmark_root_missing_scope_paths_remote(
+                context=context,
+                requested=requested,
+            )
+        if missing:
+            return ToolResult(
+                output=(
+                    f"{tool_name}: benchmark-root planners must anchor on exact existing files/directories "
+                    "from the live checkout. Missing from live structure: "
+                    + ", ".join(missing)
+                ),
+                is_error=True,
+            )
     packet = build_live_scope_packet(
         context,
         scope_paths=requested,
     )
-    if _benchmark_root_payload(context) is not None:
+    if benchmark_payload is not None:
         context.metadata["_benchmark_root_scope_anchor_done"] = True
     refresh_scope_baseline(context, packet=packet)
     return ToolResult(
@@ -1081,6 +1102,12 @@ async def ci_query_symbols(
     scout_whitelist_err = _reject_scout_non_whitelist(tool_name="ci_query_symbols", context=context)
     if scout_whitelist_err is not None:
         return scout_whitelist_err
+    benchmark_anchor_err = _require_benchmark_root_scope_anchor(
+        tool_name="ci_query_symbols",
+        context=context,
+    )
+    if benchmark_anchor_err is not None:
+        return benchmark_anchor_err
     svc, err = _svc_or_error(context)
     if err:
         return err

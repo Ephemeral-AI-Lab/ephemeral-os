@@ -46,7 +46,6 @@ from tools.daytona_toolkit.coordination import (
     scope_paths_from_payload,
     scopes_overlap,
 )
-from tools.daytona_toolkit.ci_integration import get_ci_service
 from tools.subagent.policy import SCOUT_ONLY_CALLERS
 
 logger = logging.getLogger(__name__)
