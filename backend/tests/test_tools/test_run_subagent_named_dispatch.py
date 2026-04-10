@@ -16,6 +16,7 @@ import pytest
 from agents.registry import register_definition, unregister_definition
 from agents import get_definition as _get_agent_def
 from team.builtins import register_all as _register_team_builtins
+from team.context.scout_briefings import store_stable_scout_artifact
 
 # Builtins (including the ``scout`` agent) are registered lazily by
 # ``__main__``. Tests bypass that entrypoint, so opt-in here — but be
@@ -416,6 +417,162 @@ async def test_team_scout_does_not_overwrite_newer_stable_artifact(monkeypatch):
         assert artifacts.load("scout:src/auth")["summary"] == "newer brief"
     finally:
         _unregister_team_run("T-scout-guard")
+
+
+def test_stable_scout_replacement_uses_run_id_tie_break_for_equal_snapshots():
+    budgets = BudgetConfig()
+    state = BudgetState()
+    artifacts = InMemoryArtifactStore(budgets, state)
+    team_run = SimpleNamespace(
+        id="T-scout-order",
+        budgets=budgets,
+        artifacts=artifacts,
+        project_context=ProjectContext(goal="g", user_request="u"),
+    )
+
+    ref = store_stable_scout_artifact(
+        team_run,
+        {
+            "target_paths": ["src/auth"],
+            "canonical_scope": "src/auth",
+            "summary": "run-b",
+            "files": [],
+            "scope_coverage": 1.0,
+            "gaps": "",
+            "suggested_subdivisions": [],
+            "snapshot_time": 100.0,
+        },
+        run_id="run-b",
+    )
+
+    assert ref == "scout:src/auth"
+    store_stable_scout_artifact(
+        team_run,
+        {
+            "target_paths": ["src/auth"],
+            "canonical_scope": "src/auth",
+            "summary": "run-a",
+            "files": [],
+            "scope_coverage": 1.0,
+            "gaps": "",
+            "suggested_subdivisions": [],
+            "snapshot_time": 100.0,
+        },
+        run_id="run-a",
+    )
+    assert artifacts.load("scout:src/auth")["summary"] == "run-b"
+
+    store_stable_scout_artifact(
+        team_run,
+        {
+            "target_paths": ["src/auth"],
+            "canonical_scope": "src/auth",
+            "summary": "run-z",
+            "files": [],
+            "scope_coverage": 1.0,
+            "gaps": "",
+            "suggested_subdivisions": [],
+            "snapshot_time": 100.0,
+        },
+        run_id="run-z",
+    )
+    assert artifacts.load("scout:src/auth")["summary"] == "run-z"
+
+
+def test_stable_scout_replacement_keeps_current_when_tie_provenance_is_missing():
+    budgets = BudgetConfig()
+    state = BudgetState()
+    artifacts = InMemoryArtifactStore(budgets, state)
+    artifacts.save(
+        "scout:src/auth",
+        {
+            "target_paths": ["src/auth"],
+            "canonical_scope": "src/auth",
+            "summary": "existing",
+            "files": [],
+            "scope_coverage": 1.0,
+            "gaps": "",
+            "suggested_subdivisions": [],
+        },
+    )
+    team_run = SimpleNamespace(
+        id="T-scout-missing-order",
+        budgets=budgets,
+        artifacts=artifacts,
+        project_context=ProjectContext(goal="g", user_request="u"),
+    )
+
+    ref = store_stable_scout_artifact(
+        team_run,
+        {
+            "target_paths": ["src/auth"],
+            "canonical_scope": "src/auth",
+            "summary": "incoming",
+            "files": [],
+            "scope_coverage": 1.0,
+            "gaps": "",
+            "suggested_subdivisions": [],
+        },
+        run_id="run-z",
+    )
+
+    assert ref == "scout:src/auth"
+    assert artifacts.load("scout:src/auth")["summary"] == "existing"
+
+
+def test_stable_scout_replacement_uses_run_id_tie_break_when_snapshots_are_missing():
+    budgets = BudgetConfig()
+    state = BudgetState()
+    artifacts = InMemoryArtifactStore(budgets, state)
+    team_run = SimpleNamespace(
+        id="T-scout-missing-snapshot-order",
+        budgets=budgets,
+        artifacts=artifacts,
+        project_context=ProjectContext(goal="g", user_request="u"),
+    )
+
+    store_stable_scout_artifact(
+        team_run,
+        {
+            "target_paths": ["src/auth"],
+            "canonical_scope": "src/auth",
+            "summary": "run-b",
+            "files": [],
+            "scope_coverage": 1.0,
+            "gaps": "",
+            "suggested_subdivisions": [],
+        },
+        run_id="run-b",
+    )
+    store_stable_scout_artifact(
+        team_run,
+        {
+            "target_paths": ["src/auth"],
+            "canonical_scope": "src/auth",
+            "summary": "run-a",
+            "files": [],
+            "scope_coverage": 1.0,
+            "gaps": "",
+            "suggested_subdivisions": [],
+        },
+        run_id="run-a",
+    )
+    assert artifacts.load("scout:src/auth")["summary"] == "run-b"
+
+    store_stable_scout_artifact(
+        team_run,
+        {
+            "target_paths": ["src/auth"],
+            "canonical_scope": "src/auth",
+            "summary": "run-z",
+            "files": [],
+            "scope_coverage": 1.0,
+            "gaps": "",
+            "suggested_subdivisions": [],
+        },
+        run_id="run-z",
+    )
+    assert artifacts.load("scout:src/auth")["summary"] == "run-z"
 
 
 @pytest.mark.asyncio

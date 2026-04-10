@@ -8,6 +8,7 @@ import pytest
 
 from team.artifacts.store import InMemoryArtifactStore
 from team.context.project import ProjectContext
+from team.context.scout_briefings import auto_promote_scout_briefing
 from team.models import BudgetConfig, BudgetState
 from team.runtime.registry import register, unregister
 from tools.core.base import ToolExecutionContext
@@ -141,6 +142,79 @@ async def test_share_briefing_enforces_cap():
         )
         assert result.is_error
         assert "cap reached" in result.output
+    finally:
+        unregister("T1")
+
+
+@pytest.mark.asyncio
+async def test_share_briefing_evicts_auto_promoted_scout_when_full():
+    tr = _fake_team_run(max_shared=1)
+    tr.artifacts.save(
+        "scout:src/auth",
+        {
+            "summary": "scout",
+            "target_paths": ["src/auth"],
+            "canonical_scope": "src/auth",
+            "files": [],
+            "scope_coverage": 1.0,
+            "gaps": "",
+            "suggested_subdivisions": [],
+            "snapshot_time": 100.0,
+        },
+    )
+    assert auto_promote_scout_briefing(tr, "scout:src/auth")
+    register(tr)
+    try:
+        result = await _call(
+            name="manual", source="inline", inline="pin this", context=_ctx("T1")
+        )
+        assert not result.is_error
+        assert "evicted_auto_promoted_scope='src/auth'" in result.output
+        assert "manual" in tr.project_context.shared_briefings
+        assert "src/auth" not in tr.project_context.shared_briefings
+    finally:
+        unregister("T1")
+
+
+@pytest.mark.asyncio
+async def test_explicit_scout_promotion_stays_pinned_against_later_auto_promotion():
+    tr = _fake_team_run(max_shared=1)
+    tr.artifacts.save(
+        "scout:src/auth",
+        {
+            "summary": "auth scout",
+            "target_paths": ["src/auth"],
+            "canonical_scope": "src/auth",
+            "files": [],
+            "scope_coverage": 1.0,
+            "gaps": "",
+            "suggested_subdivisions": [],
+            "snapshot_time": 100.0,
+        },
+    )
+    tr.artifacts.save(
+        "scout:src/payments",
+        {
+            "summary": "payments scout",
+            "target_paths": ["src/payments"],
+            "canonical_scope": "src/payments",
+            "files": [],
+            "scope_coverage": 1.0,
+            "gaps": "",
+            "suggested_subdivisions": [],
+            "snapshot_time": 110.0,
+        },
+    )
+    assert auto_promote_scout_briefing(tr, "scout:src/auth")
+    register(tr)
+    try:
+        result = await _call(
+            name="auth_map", source="artifact", ref="scout:src/auth", context=_ctx("T1")
+        )
+        assert not result.is_error
+        assert "src/auth" not in tr.project_context.auto_promoted_scout_scopes
+        assert not auto_promote_scout_briefing(tr, "scout:src/payments")
+        assert sorted(tr.project_context.shared_briefings.keys()) == ["src/auth"]
     finally:
         unregister("T1")
 

@@ -59,7 +59,9 @@ Reduce duplicate exploration during high-parallelism team runs by making foregro
 ### Bounded same-run promotion
 - If a reusable scout brief lands for a scope already present in shared context, it replaces the previous briefing in place.
 - If capacity is full and the new scope is different, the runtime evicts only an existing auto-promoted scout briefing.
+- Explicit `share_briefing(...)` promotions get the same headroom rule: they may evict an existing auto-promoted scout briefing before rejection.
 - Manual inline briefings and non-scout artifact briefings are not evicted by auto-promotion.
+- Once a scope is explicitly promoted, it is no longer treated as replaceable auto-promoted context.
 - Eviction order for the first cut:
   1. lowest `scope_coverage`
   2. oldest `snapshot_time`
@@ -67,6 +69,7 @@ Reduce duplicate exploration during high-parallelism team runs by making foregro
 
 ### Out-of-order completion guard
 - The stable `scout:<scope>` artifact key is overwritten only when the incoming scout is at least as new by `snapshot_time`.
+- Equal or missing `snapshot_time` ties fall back to stable `run_id` ordering when both sides have provenance; otherwise the runtime keeps the current artifact.
 - An older scout completion may still return the stable ref, but it must not replace newer stored content.
 
 ## High-Parallelism Operating Model

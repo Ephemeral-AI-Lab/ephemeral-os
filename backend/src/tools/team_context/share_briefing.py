@@ -10,7 +10,8 @@ Per plan §13:
   2. Derived from ``artifact["target_paths"]`` via ``canonicalize_scope``, else
   3. The briefing ``name`` (last-resort fallback for inline briefings or
      non-scout artifacts).
-- Enforces ``BudgetConfig.max_shared_briefings``; rejects when full.
+- Enforces ``BudgetConfig.max_shared_briefings``; explicit promotions may
+  displace a replaceable auto-promoted scout entry before rejecting.
 - Latest-wins replacement on key collision (logged via the result text).
 """
 
@@ -22,6 +23,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 from team.context.canonicalize import scope_of_artifact
+from team.context.scout_briefings import evict_auto_promoted_scout_briefing
 from team.models import Briefing
 from team.runtime.registry import get as _get_team_run
 from tools.core.base import BaseTool, ToolExecutionContext, ToolResult
@@ -183,14 +185,17 @@ class ShareBriefingTool(BaseTool):
         cap = team_run.budgets.max_shared_briefings
         scope_key = _resolve_scope_key(briefing, team_run.artifacts)
         replaced = scope_key in project_ctx.shared_briefings
+        evicted_scope: str | None = None
         if not replaced and len(project_ctx.shared_briefings) >= cap:
-            return ToolResult(
-                output=(
-                    f"share_briefing rejected: shared_briefings cap reached "
-                    f"({cap}). Existing keys: {sorted(project_ctx.shared_briefings.keys())}"
-                ),
-                is_error=True,
-            )
+            evicted_scope = evict_auto_promoted_scout_briefing(team_run)
+            if evicted_scope is None:
+                return ToolResult(
+                    output=(
+                        f"share_briefing rejected: shared_briefings cap reached "
+                        f"({cap}). Existing keys: {sorted(project_ctx.shared_briefings.keys())}"
+                    ),
+                    is_error=True,
+                )
 
         if replaced:
             logger.info(
@@ -198,12 +203,20 @@ class ShareBriefingTool(BaseTool):
                 scope_key,
             )
         project_ctx.shared_briefings[scope_key] = briefing
+        project_ctx.auto_promoted_scout_scopes.discard(scope_key)
+        detail = (
+            f"shared briefing promoted under scope={scope_key!r} "
+            f"(replaced={replaced}, total={len(project_ctx.shared_briefings)})"
+        )
+        if evicted_scope is not None:
+            detail += f"; evicted_auto_promoted_scope={evicted_scope!r}"
         return ToolResult(
-            output=(
-                f"shared briefing promoted under scope={scope_key!r} "
-                f"(replaced={replaced}, total={len(project_ctx.shared_briefings)})"
-            ),
-            metadata={"scope_key": scope_key, "replaced": replaced},
+            output=detail,
+            metadata={
+                "scope_key": scope_key,
+                "replaced": replaced,
+                "evicted_scope": evicted_scope,
+            },
         )
 
 

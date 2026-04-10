@@ -692,7 +692,11 @@ async def run_subagent(
             if team_run is not None and isinstance(submitted, SubmittedSummary):
                 artifact = submitted.artifact
                 if isinstance(artifact, dict):
-                    stored_artifact_ref = store_stable_scout_artifact(team_run, artifact)
+                    stored_artifact_ref = store_stable_scout_artifact(
+                        team_run,
+                        artifact,
+                        run_id=sub_run_id,
+                    )
                     if stored_artifact_ref is not None:
                         auto_promote_scout_briefing(team_run, stored_artifact_ref)
         except Exception:

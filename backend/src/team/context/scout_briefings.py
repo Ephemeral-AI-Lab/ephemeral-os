@@ -19,7 +19,12 @@ def stable_scout_artifact_ref(scope: str) -> str:
     return f"{_SCOUT_ARTIFACT_PREFIX}{scope}"
 
 
-def store_stable_scout_artifact(team_run: Any, artifact: dict[str, Any]) -> str | None:
+def store_stable_scout_artifact(
+    team_run: Any,
+    artifact: dict[str, Any],
+    *,
+    run_id: str | None = None,
+) -> str | None:
     """Persist the latest scout artifact under a stable per-scope key."""
     if not isinstance(artifact, dict):
         return None
@@ -28,9 +33,14 @@ def store_stable_scout_artifact(team_run: Any, artifact: dict[str, Any]) -> str 
         return None
     ref = stable_scout_artifact_ref(scope)
     existing = team_run.artifacts.load(ref)
-    if isinstance(existing, dict) and not _should_replace(existing, artifact):
+    current_version = team_run.project_context.stable_scout_versions.get(scope)
+    if current_version is None:
+        current_version = _version_from_artifact(existing)
+    incoming_version = _version_from_artifact(artifact, run_id=run_id)
+    if isinstance(existing, dict) and not _should_replace(current_version, incoming_version):
         return ref
     team_run.artifacts.save(ref, dict(artifact))
+    team_run.project_context.stable_scout_versions[scope] = incoming_version
     return ref
 
 
@@ -54,28 +64,47 @@ def auto_promote_scout_briefing(team_run: Any, artifact_ref: str) -> bool:
         )
         return False
 
-    briefings = team_run.project_context.shared_briefings
-    if scope not in briefings and len(briefings) >= team_run.budgets.max_shared_briefings:
-        victim = _select_auto_promoted_victim(team_run)
+    project_ctx = team_run.project_context
+    briefings = project_ctx.shared_briefings
+    replaceable_scopes = team_run.project_context.auto_promoted_scout_scopes
+    existing_is_replaceable = scope in replaceable_scopes
+    is_new_scope = scope not in briefings
+    if is_new_scope and len(briefings) >= team_run.budgets.max_shared_briefings:
+        victim = evict_auto_promoted_scout_briefing(team_run)
         if victim is None:
             logger.debug(
                 "scout auto-promotion skipped for %s: shared briefing cap reached",
                 scope,
             )
             return False
-        briefings.pop(victim, None)
 
     briefings[scope] = Briefing(
         name=stable_scout_artifact_ref(scope),
         source="artifact",
         ref=artifact_ref,
     )
+    if is_new_scope or existing_is_replaceable:
+        replaceable_scopes.add(scope)
+    else:
+        replaceable_scopes.discard(scope)
     return True
+
+
+def evict_auto_promoted_scout_briefing(team_run: Any) -> str | None:
+    victim = _select_auto_promoted_victim(team_run)
+    if victim is None:
+        return None
+    team_run.project_context.shared_briefings.pop(victim, None)
+    team_run.project_context.auto_promoted_scout_scopes.discard(victim)
+    return victim
 
 
 def _select_auto_promoted_victim(team_run: Any) -> str | None:
     candidates: list[tuple[float, float, str]] = []
-    for scope, briefing in team_run.project_context.shared_briefings.items():
+    for scope in team_run.project_context.auto_promoted_scout_scopes:
+        briefing = team_run.project_context.shared_briefings.get(scope)
+        if briefing is None:
+            continue
         if briefing.source != "artifact" or not briefing.ref:
             continue
         if not briefing.ref.startswith(_SCOUT_ARTIFACT_PREFIX):
@@ -94,14 +123,48 @@ def _select_auto_promoted_victim(team_run: Any) -> str | None:
     return victim
 
 
-def _should_replace(current: dict[str, Any], incoming: dict[str, Any]) -> bool:
-    current_snapshot = _snapshot_time(current)
-    incoming_snapshot = _snapshot_time(incoming)
-    if incoming_snapshot and current_snapshot:
-        return incoming_snapshot >= current_snapshot
-    if current_snapshot and not incoming_snapshot:
-        return False
-    return True
+def _should_replace(
+    current_version: dict[str, Any] | None,
+    incoming_version: dict[str, Any] | None,
+) -> bool:
+    current_snapshot = _version_snapshot(current_version)
+    incoming_snapshot = _version_snapshot(incoming_version)
+    if incoming_snapshot != current_snapshot:
+        return incoming_snapshot > current_snapshot
+
+    current_run_id = _version_run_id(current_version)
+    incoming_run_id = _version_run_id(incoming_version)
+    if current_run_id and incoming_run_id:
+        return incoming_run_id > current_run_id
+    return False
+
+
+def _version_from_artifact(
+    artifact: Any,
+    *,
+    run_id: str | None = None,
+) -> dict[str, Any]:
+    version: dict[str, Any] = {}
+    snapshot = _snapshot_time(artifact)
+    if snapshot > 0:
+        version["snapshot_time"] = snapshot
+    if isinstance(run_id, str) and run_id:
+        version["run_id"] = run_id
+    return version
+
+
+def _version_snapshot(version: dict[str, Any] | None) -> float:
+    if not isinstance(version, dict):
+        return 0.0
+    raw = version.get("snapshot_time")
+    return float(raw) if isinstance(raw, (int, float)) and raw > 0 else 0.0
+
+
+def _version_run_id(version: dict[str, Any] | None) -> str:
+    if not isinstance(version, dict):
+        return ""
+    raw = version.get("run_id")
+    return raw if isinstance(raw, str) else ""
 
 
 def _snapshot_time(artifact: Any) -> float:

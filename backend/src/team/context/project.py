@@ -18,6 +18,13 @@ class ProjectContext:
     # explicitly via the ``share_briefing`` tool, read automatically by
     # ``render_briefings`` for every executor and spawned subagent.
     shared_briefings: dict[str, Briefing] = field(default_factory=dict)
+    # Runtime-owned scout scopes that may be displaced under briefing
+    # pressure. Explicit promotions remove a scope from this set.
+    auto_promoted_scout_scopes: set[str] = field(default_factory=set)
+    # Stable scout replacement metadata keyed by canonical scope. Kept in
+    # run memory so equal/missing snapshot ties do not degrade to
+    # last-writer-wins.
+    stable_scout_versions: dict[str, dict[str, Any]] = field(default_factory=dict)
     # Phase 2 — project identity for the persistent atlas. Both fields
     # default to empty strings; atlas tools treat an empty ``project_key``
     # as "atlas disabled" and degrade gracefully.
@@ -49,5 +56,10 @@ class ProjectContext:
                     "description": b.description,
                 }
                 for scope, b in self.shared_briefings.items()
+            },
+            "auto_promoted_scout_scopes": sorted(self.auto_promoted_scout_scopes),
+            "stable_scout_versions": {
+                scope: dict(version)
+                for scope, version in self.stable_scout_versions.items()
             },
         }
