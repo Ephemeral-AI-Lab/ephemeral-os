@@ -928,26 +928,6 @@ async def _ci_scope_status_impl(
     if not requested:
         requested = scope_paths_for_write(context)
     benchmark_payload = _benchmark_root_payload(context)
-    if benchmark_payload is not None and requested:
-        missing = _benchmark_root_missing_scope_paths(
-            context=context,
-            requested=requested,
-            svc=svc,
-        )
-        if not missing:
-            missing = await _benchmark_root_missing_scope_paths_remote(
-                context=context,
-                requested=requested,
-            )
-        if missing:
-            return ToolResult(
-                output=(
-                    f"{tool_name}: benchmark-root planners must anchor on exact existing files/directories "
-                    "from the live checkout. Missing from live structure: "
-                    + ", ".join(missing)
-                ),
-                is_error=True,
-            )
     packet = build_live_scope_packet(
         context,
         scope_paths=requested,

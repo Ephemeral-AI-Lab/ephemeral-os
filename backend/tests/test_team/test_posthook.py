@@ -593,13 +593,13 @@ def test_team_planner_prompt_makes_child_scope_rules_explicit():
     assert "Keep validation branch-local. Do not add an umbrella validator over a child plan" in (
         planner.system_prompt
     )
-    assert "On benchmark plans, keep validator items paired with the concrete developer lanes they actually verify, and keep them within the active runtime validator cap for that plan." in (
+    assert "On benchmark plans, keep validator items paired with the concrete developer lanes they actually verify." in (
         planner.system_prompt
     )
     assert "If you cannot quote the node id verbatim from the prompt, use the exact benchmark test file path instead of inventing or renaming a node." in (
         planner.system_prompt
     )
-    assert "the opening live planning step must be either ``ci_scope_status(scope_paths=[...])`` on the likely owner files/directories, or one narrow ``ci_workspace_structure(path=\"<nearest likely production directory/package>\")`` pass when the exact production path is still only a hypothesis" in (
+    assert "open with one narrow ``ci_workspace_structure(path=\"<nearest likely production directory/package>\")`` pass, then call ``ci_scoped_status(scope_paths=[...])`` on an exact existing production path" in (
         planner.system_prompt
     )
     assert "keep the first scout wave dynamic: wide enough for the live owner surface, narrow enough that each lane answers one real ownership question" in (
@@ -648,7 +648,7 @@ def test_team_replanner_definition_uses_submit_replan_posthook_not_replan_tools(
     assert "atlas" in replanner.toolkits
     assert "load the corrective-fast-path reference before deeper analysis" in replanner.system_prompt
     assert "If ``load_skill_reference`` is available" in replanner.system_prompt
-    assert "the first one must be ``ci_scope_status(...)`` on the exact owner surface or owning directory" in replanner.system_prompt
+    assert "start with ``ci_scoped_status(...)`` on the exact owner surface or owning directory" in replanner.system_prompt
     assert "submit_plan_posthook" not in replanner.toolkits
     assert "submit_replan_posthook" not in replanner.toolkits
     assert "posthook_submit_replan" not in replanner.toolkits

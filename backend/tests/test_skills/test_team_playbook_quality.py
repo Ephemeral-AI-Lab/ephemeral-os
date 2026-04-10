@@ -54,14 +54,13 @@ def test_planner_playbook_gates_share_briefing_on_tool_availability() -> None:
     assert "On fresh benchmark root turns, do **not** open with `atlas_lookup`." in planner
     assert "Call `atlas_lookup` only after that fresh current-turn context is exhausted" in planner
     assert "use current-turn scout / dep artifacts before Atlas in a changing repo" in planner
-    assert "on fresh benchmark roots, use `ci_scope_status(...)` or one narrow `ci_workspace_structure(...)` plus `ci_scope_status(...)`, then fresh scouts before any atlas lookup" in planner
-    assert "Planner sibling-awareness should come from `ci_scope_status(...)` packets first." in planner
+    assert "on fresh benchmark roots, use one narrow `ci_workspace_structure(...)`, then `ci_scoped_status(...)`, then fresh scouts before any atlas lookup" in planner
+    assert "Planner sibling-awareness should come from `ci_scoped_status(...)` packets first." in planner
     assert "load `exploration-script` before the first non-reference tool call" in planner
-    assert "Fresh benchmark root: if the likely production owner path is already exact, the first live CI action must be `ci_scope_status(scope_paths=[...])`" in planner
-    assert "If file existence is still a hypothesis, spend exactly one narrow `ci_workspace_structure(path=\"<nearest likely production directory/package>\", max_depth<=4)` pass first, then call `ci_scope_status(...)` on an exact existing production path from that listing." in planner
-    assert "Do not open with root-wide `ci_workspace_structure()`, `ci_query_symbols(...)`, or other broad live CI queries before that anchor." in planner
-    assert "do not draft or narrate a concrete scout wave until one `ci_scope_status(...)` anchor or equivalent inherited live scope packet exists" in planner
-    assert "Do not call `run_subagent(...)`, list scout targets, or narrate a concrete scout wave before that anchor succeeds." in planner
+    assert "Fresh benchmark root: spend exactly one narrow `ci_workspace_structure(path=\"<nearest likely production directory/package>\", max_depth<=4)` pass first, then call `ci_scoped_status(...)` on an exact existing production path from that listing or inherited evidence." in planner
+    assert "Do not open with root-wide `ci_workspace_structure()`, `ci_query_symbols(...)`, or other broad live CI queries before that sequence completes." in planner
+    assert "do not draft or narrate a concrete scout wave until one `ci_workspace_structure(...)` pass and one `ci_scoped_status(...)` anchor" in planner
+    assert "listing scout targets or calling `run_subagent(...)` before that scope grounding is not." in planner
     assert "before every `run_subagent(agent_name=\"scout\", ...)` call, compare the proposed `target_paths` against the named benchmark test files" in planner
     assert "do not guess a leaf file before that pass." in planner
     assert "`WAIT_REQUIRES_PROGRESS_CHECK`, duplicate-scout rejection, or a budget warning are stop-and-plan signals" in planner
@@ -80,8 +79,8 @@ def test_planner_playbook_gates_share_briefing_on_tool_availability() -> None:
     assert "Keep root validators attached to concrete root lanes" in planner
     assert "let a residual `team_planner` branch carry its own downstream validation" in planner
     assert "keep child-plan validators branch-local and risk-weighted" in planner
-    assert "the first live CI action must be `ci_scope_status(scope_paths=[...])`" in planner
-    assert "Do not open with root-wide `ci_workspace_structure()`, `ci_query_symbols(...)`, or other broad live CI queries before that anchor." in planner
+    assert "open with one narrow `ci_workspace_structure(path=..., max_depth<=4)` pass and then `ci_scoped_status(scope_paths=[...])`" in planner
+    assert "Do not open with root-wide `ci_workspace_structure()`, `ci_query_symbols(...)`, or other broad live CI queries before that sequence completes." in planner
     assert "the first scout wave should usually cover multiple disjoint production-owner slices instead of only the top two clusters by failure count" in planner
     assert "Cluster size can order the wave, but it should not force an artificially narrow first pass." in planner
     assert "Do not bundle unrelated owner surfaces into one scout just to force an artificially narrow wave" in planner
@@ -104,7 +103,7 @@ def test_planner_playbook_gates_share_briefing_on_tool_availability() -> None:
     assert "Zero-coverage or wrong-path scout evidence supports only ownership/path-shape conclusions." in planner
     assert "preserve them byte-for-byte downstream" in planner
     assert 'Keep `test_cli.py` as `test_cli.py`, not `test_dask_cli.py`' in planner
-    assert "spend at most one `ci_scope_status(...)` freshness check before emitting direct developer/validator lanes" in planner
+    assert "spend at most one `ci_scoped_status(...)` freshness check before emitting direct developer/validator lanes" in planner
     non_root = _read(
         _BACKEND_ROOT
         / "src/skills/bundled/content/team-planner-playbook/references/non-root-context-reuse.md"
@@ -123,12 +122,12 @@ def test_sweevo_context_treats_missing_share_briefing_as_non_blocking() -> None:
     assert "After a bounded export fix, rerun the named pytest entry point before widening the same lane to additional public names." in sweevo
     assert "Once that missing public name is anchored to a local export file, do not spend developer budget on dependency version checks" in sweevo
     assert "Fresh benchmark roots should stay live-first." in sweevo
-    assert "prefer `ci_scope_status(scope_paths=[...])` plus fresh scouts over `atlas_lookup`" in sweevo
-    assert "the opening live planning step should be either `ci_scope_status(scope_paths=[...])` on the likely owner files/directories" in sweevo
+    assert "prefer one narrow `ci_workspace_structure(...)` pass followed by `ci_scoped_status(scope_paths=[...])` plus fresh scouts over `atlas_lookup`" in sweevo
+    assert "start with one narrow `ci_workspace_structure(path=\"<nearest likely production directory/package>\")` pass, then call `ci_scoped_status(scope_paths=[...])`" in sweevo
     assert "Same-run scout context beats Atlas in a moving repo." in sweevo
     assert "the first wave should usually cover multiple disjoint production-owner scouts" in sweevo
     assert "otherwise use the smallest useful disjoint wave" in sweevo
-    assert "Do not bundle unrelated owner surfaces into one scout lane just to mimic an old two-lane default" in sweevo
+    assert "Do not bundle unrelated owner surfaces into one scout lane just to mimic an old fixed-lane default" in sweevo
     assert "Retry/replan handoff must preserve the evidence packet." in sweevo
     assert "Ownership mismatch is a planning problem." in sweevo
     assert "Ground payload paths in live existing paths." in sweevo
@@ -139,10 +138,10 @@ def test_sweevo_context_treats_missing_share_briefing_as_non_blocking() -> None:
     assert "Do not push that rediscovery work down to the next developer or validator lane." in sweevo
     assert "Preserve exact pytest node ids verbatim in planner payloads." in sweevo
     assert "Do not shorten `test_info_versions` to `test_info`" in sweevo
-    assert "At any submitted benchmark plan level, keep validators paired with the concrete developer lanes they actually verify and stay within the active runtime validator cap for that plan" in sweevo
-    assert "Child benchmark plans inherit that same cap." in sweevo
+    assert "At any submitted benchmark plan level, keep validators paired with the concrete developer lanes they actually verify." in sweevo
+    assert "Child benchmark plans should keep validators branch-local and risk-weighted" in sweevo
     assert "instead of emitting one validator per developer or recreating an umbrella validation layer" in sweevo
-    assert "The default large-root benchmark shape for this repo is: two critical developer lanes, one residual child planner lane, and one validator lane." in sweevo
+    assert "The default large-root benchmark shape for this repo is a small set of concrete developer lanes" in sweevo
     assert "If a guessed production owner file turns out to be missing, re-anchor on the nearest exact existing production directory/package path or park that cluster behind a child planner." in sweevo
     assert "Treat `owned_files` as a grounded edit surface, not a hypothesis bucket." in sweevo
     assert "Keep missing guessed owners out of `owned_files`" in sweevo
@@ -172,10 +171,10 @@ def test_replanner_playbook_requires_exact_existing_paths() -> None:
     )
     assert 'read `references/corrective-fast-path.md` before any deeper analysis' in replanner
     assert 'load_skill_reference("team-replanner-playbook", "corrective-fast-path")' in replanner
-    assert "the first one must be `ci_scope_status(...)` on the exact owner surface or owning directory" in replanner
+    assert "start with `ci_scoped_status(...)` on the exact owner surface or owning directory" in replanner
     assert "every corrective `scope_paths`, owned file, and candidate owner path must already exist in the live checkout packet or be re-confirmed by CI before you reuse it" in replanner
     assert "except for one exact missing module file spelled verbatim by the failing import path when its parent package/directory already exists live" in replanner
-    assert "if a cited path cannot be read or `ci_scope_status(...)` / `ci_read_file(...)` says it does not exist, treat that as an owner-map mismatch" in replanner
+    assert "if a cited path cannot be read or `ci_scoped_status(...)` / `ci_read_file(...)` says it does not exist, treat that as an owner-map mismatch" in replanner
     assert "do not preserve guessed module aliases across replans; if the live repo uses `arrow.py`, do not draft corrective work against invented siblings such as `pyarrow.py`" in replanner
     assert "corrective payload paths must be exact existing checkout-relative paths, never guessed aliases or nonexistent siblings" in replanner
     assert "If Python is trying to import `pkg._compat` and the live parent package `pkg/` exists, you may assign the exact import-path file `pkg/_compat.py`" in replanner
@@ -193,15 +192,15 @@ def test_replanner_playbook_requires_exact_existing_paths() -> None:
     assert "Do not draft a test-edit corrective lane from a developer's contradicted patch alone." in replanner
     assert "Exact failing ids plus exact owner files are enough." in replanner
     assert "Do not prescribe an export-only fix for a missing module import unless the module path would actually resolve." in replanner
-    assert "if you need any live confirmation at all, the first confirmation step is `ci_scope_status(...)`" in replanner
+    assert "if you need any live confirmation at all, the first confirmation step is `ci_scoped_status(...)`" in replanner
     assert "do not query benchmark test decorators, parametrization markers, or test headers such as `PYARROW_MARK`, `parametrize`, or top-of-file skips" in replanner
     assert "Repeated same-surface reads are a stop signal." in replanner
-    assert "Benchmark replans anchor live context with `ci_scope_status` first." in replanner
+    assert "Benchmark replans anchor live context with `ci_scoped_status` first." in replanner
     assert "incoming validator packet already names exact failing pytest ids and exact existing owner file(s)" in corrective_fast_path
-    assert "The default first live-tool call is `ci_scope_status(scope_paths=[...])`" in corrective_fast_path
+    assert "The default first live-tool call is `ci_scoped_status(scope_paths=[...])`" in corrective_fast_path
     assert "If the failure packet itself names a missing module import path and the live parent package/directory exists" in corrective_fast_path
     assert "Example: `from dask._compatibility import PY_VERSION` may justify a corrective target on `dask/_compatibility.py`." in corrective_fast_path
-    assert "If a benchmark corrective turn opens with `ci_read_file(...)` or symbol queries on the owner files before first calling `ci_scope_status(...)`" in corrective_fast_path
+    assert "If a benchmark corrective turn opens with `ci_read_file(...)` or symbol queries on the owner files before first calling `ci_scoped_status(...)`" in corrective_fast_path
     assert "marker or parametrization queries such as `PYARROW_MARK`, `skipif`, or `parametrize`" in corrective_fast_path
     assert "If you have already reopened the same owner cluster once and can still name the owner plus retry target, emit JSON now." in corrective_fast_path
     assert 'when the actual failure is `from dask._compatibility import PY_VERSION` and the missing module path itself remains unresolved' in corrective_fast_path
@@ -237,7 +236,7 @@ def test_developer_playbook_anchors_import_failures_to_named_pytest_surface() ->
     assert "If a narrow debug probe shows a helper already returns the value or shape the test expects, stop editing that helper." in developer
     assert "keep those entry points behaviorally distinct unless the live failing test proves they should converge" in developer
     assert "If the runtime says `Unknown tool: edit_file`, `write_file`, or `read_file`" in developer
-    assert "the default first live coordination step is `ci_scope_status(scope_paths=[<exact owned file(s) or nearest owning directory>])`" in developer
+    assert "the default first live coordination step is `ci_scoped_status(scope_paths=[<exact owned file(s) or nearest owning directory>])`" in developer
     assert "Treat `daytona_bash` as an execution tool, not a discovery or editing tool." in developer
     assert "Do not fall back to `daytona_bash` for file reads, file writes, search, globbing, or ad hoc patch application" in developer
     assert "Do not use `daytona_bash` for `ls`, `pwd`, `cd`, `find`, or other workspace-discovery probes." in developer
@@ -255,7 +254,7 @@ def test_validator_playbook_mentions_codeact_is_unavailable_in_team_lanes() -> N
     assert "A pytest FAIL with exact node ids is already enough." in validator
     assert "Do not turn a failing node list into theories like \"test expectation mismatch\"" in validator
     assert "A failed broad regression command ends execution." in validator
-    assert "the default first live coordination step is `ci_scope_status(scope_paths=[<exact verification file(s) or owning directory>])`" in validator
+    assert "the default first live coordination step is `ci_scoped_status(scope_paths=[<exact verification file(s) or owning directory>])`" in validator
     assert "RECOMMENDED_ACTION" not in validator
 
 

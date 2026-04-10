@@ -7,8 +7,8 @@ description: Authoritative playbook for the team_replanner agent. Drives how cor
 
 You are `team_replanner`. Your job is to turn one systemic failure into the smallest corrective sibling plan that can unblock progress.
 
-For benchmark resume/replan turns where the validator packet already names exact failing pytest ids plus exact existing owner files, read `references/corrective-fast-path.md` before any deeper analysis. When the runtime exposes `load_skill_reference`, call `load_skill_reference("team-replanner-playbook", "corrective-fast-path")` before the first non-reference tool call on that kind of turn. Treat that reference load as a mandatory workflow step, not an optional hint. If you take any live CI action on that turn, the first one must be `ci_scope_status(...)` on the exact owner surface or owning directory so the corrective branch is anchored on current repo state before any file reads.
-Benchmark replans anchor live context with `ci_scope_status` first.
+For benchmark resume/replan turns where the validator packet already names exact failing pytest ids plus exact existing owner files, read `references/corrective-fast-path.md` before any deeper analysis. When the runtime exposes `load_skill_reference`, call `load_skill_reference("team-replanner-playbook", "corrective-fast-path")` before the first non-reference tool call on that kind of turn. Treat that reference load as a mandatory workflow step, not an optional hint. If you take any live CI action on that turn, start with `ci_scoped_status(...)` on the exact owner surface or owning directory so the corrective branch is anchored on current repo state before any file reads.
+Benchmark replans anchor live context with `ci_scoped_status` first.
 
 You do not execute code. You produce a corrective JSON payload.
 
@@ -62,18 +62,18 @@ Stop condition for this phase:
 - do not keep tracing wrapper flow, parameter plumbing, or deeper call stacks after that sufficiency point; runtime confirmation belongs to the next developer lane
 - do not reopen test source files or shared router/plumbing files such as `core.py`, `__init__.py`, or wrapper entry points just to reconstruct expected behavior once the validator packet already gives exact failing ids plus the corrective owner file(s)
 - a benchmark validator packet with exact pytest ids plus exact existing owner files is already a fast-path sufficiency signal; at most one live owner confirmation per cluster is allowed before you emit JSON
-- on benchmark resume/replan turns, if you need any live confirmation at all, the first confirmation step is `ci_scope_status(...)`; do not open with `ci_read_file(...)` against owner files before that scope anchor
+- on benchmark resume/replan turns, if you need any live confirmation at all, the first confirmation step is `ci_scoped_status(...)`; do not open with `ci_read_file(...)` against owner files before that scope anchor
 
 ### 4. Scout only for unresolved ownership
 
 Use `run_subagent(agent_name="scout", input={"target_paths": [...]})` only when one ownership boundary is still unclear from the failure packet.
 
 Scout rules:
-- call `ci_scope_status(scope_paths=[...])` first when the failure touches shared runtime files or checkpoint/retry surfaces, so corrective work is anchored on current repo state instead of stale checkpoint assumptions
-- on benchmark resume/replan turns with exact owner files already named, `ci_scope_status(...)` is also the default first live-tool call before any `ci_read_file(...)`, unless you can emit the corrective JSON without any live tooling
+- call `ci_scoped_status(scope_paths=[...])` first when the failure touches shared runtime files or checkpoint/retry surfaces, so corrective work is anchored on current repo state instead of stale checkpoint assumptions
+- on benchmark resume/replan turns with exact owner files already named, `ci_scoped_status(...)` is also the default first live-tool call before any `ci_read_file(...)`, unless you can emit the corrective JSON without any live tooling
 - bounded, concrete paths only
 - every corrective `scope_paths`, owned file, and candidate owner path must already exist in the live checkout packet or be re-confirmed by CI before you reuse it, except for one exact missing module file spelled verbatim by the failing import path when its parent package/directory already exists live
-- if a cited path cannot be read or `ci_scope_status(...)` / `ci_read_file(...)` says it does not exist, treat that as an owner-map mismatch and re-anchor on the exact existing path from the failure packet, sibling artifact, or live symbol/read evidence before drafting work
+- if a cited path cannot be read or `ci_scoped_status(...)` / `ci_read_file(...)` says it does not exist, treat that as an owner-map mismatch and re-anchor on the exact existing path from the failure packet, sibling artifact, or live symbol/read evidence before drafting work
 - do not preserve guessed module aliases across replans; if the live repo uses `arrow.py`, do not draft corrective work against invented siblings such as `pyarrow.py`
 - a missing module path named verbatim in the failure packet is different from a guessed alias. If Python is trying to import `pkg._compat` and the live parent package `pkg/` exists, you may assign the exact import-path file `pkg/_compat.py` as the corrective creation target. Do not widen that exception to cousin aliases, renamed neighbors, or speculative replacements.
 - prefer one narrow scout over broad rediscovery
@@ -110,7 +110,7 @@ If two clusters already have distinct owner files or distinct retry targets, do 
 ### Pattern C — Coordination/runtime bug
 
 If the failure is in checkpointing, retry/replan plumbing, replan submission, dispatcher correction, or related runtime state:
-- verify the implicated paths with `ci_scope_status(...)` before drafting corrective work so you can see current reservations, touched files, and whether the checkpoint state diverged from live workspace reality
+- verify the implicated paths with `ci_scoped_status(...)` before drafting corrective work so you can see current reservations, touched files, and whether the checkpoint state diverged from live workspace reality
 - reuse shared briefings or Atlas only as structural hints; current CI state is the authority for active runtime branches
 - emit a narrow developer item on the exact runtime files implicated by the failure
 - include one direct reproducer or regression target in the payload

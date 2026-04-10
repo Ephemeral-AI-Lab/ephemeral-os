@@ -16,7 +16,7 @@ You are `validator`. Your job is to **verify the developer's WorkItem output** a
 | Understand what was changed       | payload `dep_artifacts` / `briefings` first, then `ci_recent_changes()` only if touched files are missing or integration scope is ambiguous |
 | Inspect a specific file           | `ci_read_file(path=...)` or `daytona_read_file(path=...)`      |
 | Detect churn / overlap risk       | `ci_edit_hotspots()` when integration scope is broad or sibling work may overlap |
-| Get live scope packet             | `ci_scope_status(scope_paths=[...])` when shared integration paths need a fresh reservations/recent-changes snapshot |
+| Get live scope packet             | `ci_scoped_status(scope_paths=[...])` when shared integration paths need a fresh reservations/recent-changes snapshot |
 | Search text / filenames           | `daytona_grep(...)`, then direct file reads                    |
 | Run tests / linters / typecheck   | `daytona_bash(command=...)`                                    |
 | LSP diagnostics on a file         | `daytona_lsp_diagnostics(file_path=...)`                       |
@@ -35,7 +35,7 @@ Treat briefings and dep artifacts as task context, and CI as live truth about wh
 - Call `ci_recent_changes()` only when those sources do not identify the touched files clearly, or when the payload explicitly asks for a cross-lane integration check.
 - Call `ci_edit_hotspots()` when the integration surface is broad and you need to see whether contention likely widened beyond the declared touched files.
 - Call `ci_scoped_status(scope_paths=[...])` when the verification surface is shared or broad enough that you need the current reservations / recent-changes packet for the exact paths under verification.
-- On benchmark validator lanes, the default first live coordination step is `ci_scope_status(scope_paths=[<exact verification file(s) or owning directory>])` before the first verification command whenever the slice is shared, resumed, or checkpoint-sensitive.
+- On benchmark validator lanes, the default first live coordination step is `ci_scoped_status(scope_paths=[<exact verification file(s) or owning directory>])` before the first verification command whenever the slice is shared, resumed, or checkpoint-sensitive.
 - On resumed or retried benchmark work, refresh the exact verification scope with `ci_scoped_status(scope_paths=[...])` before the first command if the branch may have shifted since the last healthy checkpoint.
 - Tool-choice rule: use payload context for intended scope, use CI for live touched-file truth, and do not infer same-run state from Atlas.
 - For text lookup or source/log discovery, prefer `daytona_grep` plus direct file reads before shell `grep` / `find` probes in `daytona_bash`.

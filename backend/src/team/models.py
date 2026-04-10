@@ -11,6 +11,9 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
+_OWNED_FAILURES_PREVIEW_LIMIT = 64
+
+
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -41,9 +44,14 @@ def _normalize_payload(payload: Any) -> dict[str, Any]:
             normalized[key] = deduped
     deduped_failures = _dedupe_str_list(normalized.get("owned_failures"))
     if deduped_failures is not None:
-        raw_total = len([item for item in normalized.get("owned_failures") or [] if isinstance(item, str) and item.strip()])
+        raw_total = len(
+            [item for item in normalized.get("owned_failures") or [] if isinstance(item, str) and item.strip()]
+        )
         if raw_total > len(deduped_failures):
             normalized["owned_failures_total"] = raw_total
+        if len(deduped_failures) > _OWNED_FAILURES_PREVIEW_LIMIT:
+            normalized["owned_failures_unique_total"] = len(deduped_failures)
+            deduped_failures = deduped_failures[:_OWNED_FAILURES_PREVIEW_LIMIT]
         normalized["owned_failures"] = deduped_failures
     return normalized
 

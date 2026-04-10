@@ -16,9 +16,9 @@ Turn a validator-backed failure packet into a corrective JSON payload without re
    then ownership discovery is over for this cluster.
 
 2. Allow at most one live confirmation per cluster.
-   The default first live-tool call is `ci_scope_status(scope_paths=[...])` on the exact owner surface or owning directory.
+   The default first live-tool call is `ci_scoped_status(scope_paths=[...])` on the exact owner surface or owning directory.
    Use exactly one of:
-   - `ci_scope_status(scope_paths=[...])` when the failure touches shared runtime, retry, checkpoint, or any benchmark owner surface that may have drifted
+   - `ci_scoped_status(scope_paths=[...])` when the failure touches shared runtime, retry, checkpoint, or any benchmark owner surface that may have drifted
    - one `ci_read_file(...)` on an exact owner file only when you still need one last owner confirmation and the scope anchor is already established or the turn can justify skipping live anchoring entirely
 
    Do not spend both unless the first is about runtime branch state and the second is on a different unresolved owner surface.
@@ -54,7 +54,7 @@ Turn a validator-backed failure packet into a corrective JSON payload without re
    If you have already reopened the same owner cluster once and can still name the owner plus retry target, emit JSON now. More same-surface reads are evidence that you missed the stop condition.
 
 6. Treat a missing scope anchor as a protocol failure.
-   If a benchmark corrective turn opens with `ci_read_file(...)` or symbol queries on the owner files before first calling `ci_scope_status(...)`, that turn is drifting. Re-anchor on the owner surface immediately or emit JSON without further live exploration.
+   If a benchmark corrective turn opens with `ci_read_file(...)` or symbol queries on the owner files before first calling `ci_scoped_status(...)`, that turn is drifting. Re-anchor on the owner surface immediately or emit JSON without further live exploration.
 
 ## Good handoff
 

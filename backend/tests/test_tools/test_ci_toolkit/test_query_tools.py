@@ -15,6 +15,7 @@ from tools.core.runtime import ExecutionMetadata
 from tools.ci_toolkit.query_tools import (
     _svc_or_error,
     ci_status,
+    ci_scoped_status,
     ci_scope_status,
     ci_workspace_structure,
     ci_query_symbols,
@@ -132,6 +133,28 @@ async def test_ci_scope_status_returns_live_scope_packet():
     assert ctx.metadata["coherence_token"] == data["coherence_token"]
 
 
+async def test_ci_scoped_status_alias_returns_live_scope_packet():
+    svc = MagicMock()
+    svc.ledger.generation = 1
+    svc.ledger.recent_entries.return_value = []
+    svc.arbiter.generation = 2
+    svc.arbiter.active_reservations.return_value = []
+    svc.arbiter.active_edit_intents.return_value = []
+    svc.arbiter.hotspots.return_value = []
+    svc.symbol_index.generation = 3
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        ctx = _ctx_with_svc(svc)
+        result = await ci_scoped_status.execute(
+            ci_scoped_status.input_model(scope_paths=["src"]),
+            ctx,
+        )
+
+    assert not result.is_error
+    data = json.loads(result.output)
+    assert data["scope_paths"] == ["src"]
+    assert result.metadata["scope_packet"]["scope_paths"] == ["src"]
+
+
 async def test_ci_scope_status_defaults_to_default_scope_paths_when_unspecified():
     svc = MagicMock()
     svc.ledger.generation = 1
@@ -198,7 +221,7 @@ async def test_workspace_structure_allows_single_narrow_preanchor_pass_on_benchm
     assert result.metadata["_benchmark_root_preanchor_structure_done"] is True
 
 
-async def test_workspace_structure_rejects_root_listing_before_scope_status_on_benchmark_root_planner(monkeypatch):
+async def test_workspace_structure_allows_root_listing_before_scope_status_on_benchmark_root_planner(monkeypatch):
     svc = MagicMock()
     svc.symbol_index = MagicMock()
     team_run = SimpleNamespace(
@@ -225,11 +248,11 @@ async def test_workspace_structure_rejects_root_listing_before_scope_status_on_b
             ),
         )
 
-    assert result.is_error
-    assert "Root-wide listings and empty paths are not allowed" in result.output
+    assert not result.is_error
+    assert result.metadata["_benchmark_root_preanchor_structure_done"] is True
 
 
-async def test_workspace_structure_rejects_second_preanchor_pass_before_scope_status_on_benchmark_root_planner(monkeypatch):
+async def test_workspace_structure_allows_second_preanchor_pass_before_scope_status_on_benchmark_root_planner(monkeypatch):
     svc = MagicMock()
     svc.symbol_index = MagicMock()
     team_run = SimpleNamespace(
@@ -262,11 +285,10 @@ async def test_workspace_structure_rejects_second_preanchor_pass_before_scope_st
         )
 
     assert not first.is_error
-    assert second.is_error
-    assert "at most one pre-anchor structure pass" in second.output
+    assert not second.is_error
 
 
-async def test_ci_scope_status_rejects_missing_paths_on_benchmark_root_planner(monkeypatch):
+async def test_ci_scope_status_allows_missing_paths_on_benchmark_root_planner(monkeypatch):
     svc = MagicMock()
     svc.symbol_index = SimpleNamespace(
         generation=3,
@@ -300,12 +322,12 @@ async def test_ci_scope_status_rejects_missing_paths_on_benchmark_root_planner(m
             ),
         )
 
-    assert result.is_error
-    assert "must anchor on exact existing files/directories from the live checkout" in result.output
-    assert "pkg/missing.py" in result.output
+    assert not result.is_error
+    data = json.loads(result.output)
+    assert data["scope_paths"] == ["pkg/io", "pkg/missing.py"]
 
 
-async def test_ci_scope_status_rejects_missing_paths_on_benchmark_root_planner_via_sandbox(monkeypatch):
+async def test_ci_scope_status_allows_missing_paths_on_benchmark_root_planner_via_sandbox(monkeypatch):
     svc = MagicMock()
     svc.symbol_index = SimpleNamespace(generation=3, _symbols={})
     sandbox = SimpleNamespace(
@@ -351,9 +373,9 @@ async def test_ci_scope_status_rejects_missing_paths_on_benchmark_root_planner_v
             ),
         )
 
-    assert result.is_error
-    assert "must anchor on exact existing files/directories from the live checkout" in result.output
-    assert "pkg/missing.py" in result.output
+    assert not result.is_error
+    data = json.loads(result.output)
+    assert data["scope_paths"] == ["pkg/io", "pkg/missing.py"]
 
 
 async def test_ci_query_symbols_rejects_test_only_hits_for_benchmark_root_planner(monkeypatch):

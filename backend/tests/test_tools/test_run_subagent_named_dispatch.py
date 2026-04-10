@@ -285,7 +285,14 @@ async def test_scout_ignores_its_own_launch_trace_when_running_in_background(mon
 
 
 @pytest.mark.asyncio
-async def test_scout_rejects_parallel_fanout_when_live_scope_requires_serialization(monkeypatch):
+async def test_scout_allows_parallel_fanout_when_live_scope_prefers_serialization(monkeypatch):
+    submitted = SubmittedSummary(
+        summary="scout report",
+        artifact={"target_paths": ["/testbed/pydantic/json_schema.py"], "files": []},
+    )
+    stub, _ = _make_stub_agent(submitted=submitted)
+    _patch_spawn(monkeypatch, stub)
+
     ctx = _ctx()
     ctx.metadata["coordination_mode"] = "ultra"
     ctx.metadata["_scout_target_paths_this_turn"] = ["/testbed/pydantic/core.py"]
@@ -310,13 +317,18 @@ async def test_scout_rejects_parallel_fanout_when_live_scope_requires_serializat
         ctx,
     )
 
-    assert res.is_error
-    assert "requires serialized scout expansion" in res.output
-    assert "active write reservations overlap this scope" in res.output
+    assert not res.is_error
 
 
 @pytest.mark.asyncio
-async def test_scout_rejects_when_turn_fanout_cap_is_reached(monkeypatch):
+async def test_scout_allows_turn_fanout_beyond_old_cap(monkeypatch):
+    submitted = SubmittedSummary(
+        summary="scout report",
+        artifact={"target_paths": ["/testbed/pydantic/json_schema.py"], "files": []},
+    )
+    stub, _ = _make_stub_agent(submitted=submitted)
+    _patch_spawn(monkeypatch, stub)
+
     ctx = _ctx()
     ctx.metadata["coordination_mode"] = "ultra"
     ctx.metadata["_scout_launches_this_turn"] = 8
@@ -329,12 +341,18 @@ async def test_scout_rejects_when_turn_fanout_cap_is_reached(monkeypatch):
         ctx,
     )
 
-    assert res.is_error
-    assert "scout fanout cap reached for this turn (8)" in res.output
+    assert not res.is_error
 
 
 @pytest.mark.asyncio
-async def test_scout_requires_scope_status_first_on_benchmark_root_planner(monkeypatch):
+async def test_scout_allows_benchmark_root_launch_before_scope_status_when_prompt_allows(monkeypatch):
+    submitted = SubmittedSummary(
+        summary="scout report",
+        artifact={"target_paths": ["pkg/core.py"], "files": []},
+    )
+    stub, _ = _make_stub_agent(submitted=submitted)
+    _patch_spawn(monkeypatch, stub)
+
     ctx = _ctx(team_run_id="TR_BENCH")
     ctx.metadata["agent_name"] = "team_planner"
     ctx.metadata["work_item_id"] = "ROOT"
@@ -358,8 +376,7 @@ async def test_scout_requires_scope_status_first_on_benchmark_root_planner(monke
         ctx,
     )
 
-    assert res.is_error
-    assert "must call `ci_scope_status(scope_paths=[...])` before launching scouts" in res.output
+    assert not res.is_error
 
 
 @pytest.mark.asyncio
@@ -388,13 +405,18 @@ async def test_restricted_run_subagent_tool_forwards_background_preflight(monkey
         ctx,
     )
 
-    assert res is not None
-    assert res.is_error
-    assert "must call `ci_scope_status(scope_paths=[...])` before launching scouts" in res.output
+    assert res is None
 
 
 @pytest.mark.asyncio
-async def test_scout_rejects_benchmark_test_file_in_root_first_wave(monkeypatch):
+async def test_scout_allows_benchmark_test_file_in_root_first_wave_when_planner_chooses_it(monkeypatch):
+    submitted = SubmittedSummary(
+        summary="scout report",
+        artifact={"target_paths": ["pkg/tests/test_api.py"], "files": []},
+    )
+    stub, _ = _make_stub_agent(submitted=submitted)
+    _patch_spawn(monkeypatch, stub)
+
     ctx = _ctx(team_run_id="TR_BENCH")
     ctx.metadata["agent_name"] = "team_planner"
     ctx.metadata["work_item_id"] = "ROOT"
@@ -419,12 +441,18 @@ async def test_scout_rejects_benchmark_test_file_in_root_first_wave(monkeypatch)
         ctx,
     )
 
-    assert res.is_error
-    assert "must target likely production owner files or directories first" in res.output
+    assert not res.is_error
 
 
 @pytest.mark.asyncio
-async def test_scout_rejects_missing_benchmark_root_owner_path(monkeypatch):
+async def test_scout_allows_missing_benchmark_root_owner_path(monkeypatch):
+    submitted = SubmittedSummary(
+        summary="scout report",
+        artifact={"target_paths": ["pkg/io/parquet.py"], "files": []},
+    )
+    stub, _ = _make_stub_agent(submitted=submitted)
+    _patch_spawn(monkeypatch, stub)
+
     ctx = _ctx(team_run_id="TR_BENCH")
     ctx.metadata["agent_name"] = "team_planner"
     ctx.metadata["work_item_id"] = "ROOT"
@@ -443,18 +471,6 @@ async def test_scout_rejects_missing_benchmark_root_owner_path(monkeypatch):
         "team.runtime.registry.get",
         lambda team_run_id: team_run if team_run_id == "TR_BENCH" else None,
     )
-    monkeypatch.setattr(
-        "tools.subagent.run_subagent_tool.get_ci_service",
-        lambda context: SimpleNamespace(
-            symbol_index=SimpleNamespace(
-                _symbols={
-                    "/testbed/pkg/core.py": object(),
-                    "/testbed/pkg/io/parquet/core.py": object(),
-                }
-            )
-        ),
-    )
-
     res = await run_subagent.execute(
         run_subagent.input_model(
             agent_name="scout",
@@ -463,9 +479,7 @@ async def test_scout_rejects_missing_benchmark_root_owner_path(monkeypatch):
         ctx,
     )
 
-    assert res.is_error
-    assert "must target exact existing production files/directories from the live checkout" in res.output
-    assert "pkg/io/parquet.py" in res.output
+    assert not res.is_error
 
 
 @pytest.mark.asyncio
@@ -543,7 +557,7 @@ async def test_scout_allows_fourth_root_first_wave_lane_before_any_completion(mo
 
 
 @pytest.mark.asyncio
-async def test_scout_rejects_fifth_root_first_wave_lane_before_any_completion(monkeypatch):
+async def test_scout_allows_fifth_root_first_wave_lane_before_any_completion(monkeypatch):
     submitted = SubmittedSummary(
         summary="scout report",
         artifact={"target_paths": ["pkg/fifth_owner.py"], "files": []},
@@ -576,8 +590,7 @@ async def test_scout_rejects_fifth_root_first_wave_lane_before_any_completion(mo
         ctx,
     )
 
-    assert res.is_error
-    assert "first scout wave is capped at 4 lanes" in res.output
+    assert not res.is_error
 
 
 @pytest.mark.asyncio

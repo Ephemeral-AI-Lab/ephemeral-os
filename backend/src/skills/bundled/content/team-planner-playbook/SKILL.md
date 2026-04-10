@@ -17,8 +17,8 @@ These reference reads are mandatory workflow steps, not suggestions. When a turn
 Apply this short checklist before the detailed ladder:
 
 1. Fresh benchmark root: if `load_skill_reference` is available, load `exploration-script` before the first non-reference tool call.
-2. Fresh benchmark root: if the likely production owner path is already exact, the first live CI action must be `ci_scope_status(scope_paths=[...])`. If file existence is still a hypothesis, spend exactly one narrow `ci_workspace_structure(path="<nearest likely production directory/package>", max_depth<=4)` pass first, then call `ci_scope_status(...)` on an exact existing production path from that listing. Do not open with root-wide `ci_workspace_structure()`, `ci_query_symbols(...)`, or other live CI queries before that anchor. Do not open with root-wide `ci_workspace_structure()`, `ci_query_symbols(...)`, or other broad live CI queries before that anchor.
-2a. Fresh benchmark root: do not draft or narrate a concrete scout wave until one `ci_scope_status(...)` anchor or equivalent inherited live scope packet exists. "Launch scouts after this" is fine; listing scout targets or calling `run_subagent(...)` before that scope grounding is not.
+2. Fresh benchmark root: spend exactly one narrow `ci_workspace_structure(path="<nearest likely production directory/package>", max_depth<=4)` pass first, then call `ci_scoped_status(...)` on an exact existing production path from that listing or inherited evidence. Do not open with root-wide `ci_workspace_structure()`, `ci_query_symbols(...)`, or other broad live CI queries before that sequence completes.
+2a. Fresh benchmark root: do not draft or narrate a concrete scout wave until one `ci_workspace_structure(...)` pass and one `ci_scoped_status(...)` anchor, or an equivalent inherited live scope packet, already exist. "Launch scouts after this" is fine; listing scout targets or calling `run_subagent(...)` before that scope grounding is not.
 3. Fresh benchmark root: after the live owner map is sufficient, load `task-planning-decomposition` immediately before the final JSON payload.
 4. Child or `## Scoped Expansion` turn: load `non-root-context-reuse` before fresh exploration.
 5. Fresh scouts: inspect each one with `check_background_progress(task_id=...)` before the first `wait_for_background_task(...)` on that task.
@@ -33,8 +33,8 @@ Apply this short checklist before the detailed ladder:
 Apply these stop/go rules before the longer ladder:
 
 0. On fresh benchmark-root turns, if `load_skill_reference` is available, call `load_skill_reference("team-planner-playbook", "exploration-script")` before the first non-reference tool call. Once scout-backed ownership is sufficient to draft the DAG, call `load_skill_reference("team-planner-playbook", "task-planning-decomposition")` before the final plan JSON. On non-root turns or any prompt with `## Scoped Expansion`, call `load_skill_reference("team-planner-playbook", "non-root-context-reuse")` before fresh exploration.
-1. On fresh benchmark-root turns, open with either `ci_scope_status(scope_paths=[...])` on the likely owner directories/packages or confirmed owner files, or one narrow `ci_workspace_structure(path=..., max_depth<=4)` pass when only a production directory/package hypothesis exists. After that narrow structure pass, the next live CI call must be `ci_scope_status(...)` on an exact existing production path before any scout launch or broader query. Do not call `run_subagent(...)`, list scout targets, or narrate a concrete scout wave before that anchor succeeds. On non-benchmark turns, or after that benchmark anchor succeeds, seed the map once with `ci_workspace_structure()` and only a few high-signal CI queries.
-2. As soon as ownership splits across multiple plausible areas, or immediately after the fresh benchmark-root anchor, use `ci_scope_status(scope_paths=[...])` to sanity-check contention. Launch an initial wave of **disjoint** scouts when the returned admission supports it, and narrow or serialize only the slices whose live packet says they are hot.
+1. On fresh benchmark-root turns, open with one narrow `ci_workspace_structure(path=..., max_depth<=4)` pass and then `ci_scoped_status(scope_paths=[...])` on an exact existing production path from that listing or inherited evidence. Do not call `run_subagent(...)`, list scout targets, or narrate a concrete scout wave before that sequence succeeds. On non-benchmark turns, or after that benchmark sequence succeeds, seed the map once with `ci_workspace_structure()` and only a few high-signal CI queries.
+2. As soon as ownership splits across multiple plausible areas, or immediately after the fresh benchmark-root anchor, use `ci_scoped_status(scope_paths=[...])` to sanity-check contention. Launch an initial wave of **disjoint** scouts when the returned admission supports it, and narrow or serialize only the slices whose live packet says they are hot.
    Scout-launch guidance: start with the smallest useful wave, keep each `target_paths` slice narrow and non-overlapping, and open a new scout only when it answers a still-unresolved ownership question that existing briefs cannot cover.
    On benchmark roots, every `run_subagent(... target_paths=[...])` entry must be an exact production file/directory from the anchored live CI surface or a confirmed existing candidate directory/package. A prompt-named benchmark test file, or any unconfirmed `/tests/` target, is a stop-and-re-anchor signal, not a valid scout lane.
 3. While scouts are running, keep planning in the foreground: classify uncovered branches, reuse atlas/shared briefs, inspect progress on completed lanes, and launch another disjoint scout or a narrowed child planner only if the current evidence is still incomplete.
@@ -68,12 +68,12 @@ Apply these stop/go rules before the longer ladder:
 When a benchmark request already names one dominant FAIL_TO_PASS cluster plus several smaller named failures, use this fast path before any broader planning instincts:
 
 1. If `load_skill_reference` is available, load `exploration-script` before the first non-reference planning tool call and `task-planning-decomposition` before you finalize the root DAG. Treat those reference loads as part of the opening sequence, not as optional cleanup.
-2. If the likely production owner path is already exact, start the live CI pass with `ci_scope_status(scope_paths=[...])` on that existing production path. Otherwise, spend one narrow `ci_workspace_structure(path="<nearest likely production directory/package>", max_depth<=4)` pass first, then call `ci_scope_status(...)` on the exact existing production path that listing or inherited evidence confirms. Use the grounded CI surface to seed the dominant production-owner target plus the disjoint residual production-owner surfaces that still need live ownership mapping.
-2a. If file existence is still a hypothesis, do not guess a leaf file before that pass. Do not guess a leaf file before that pass. Use an exact leaf file in `ci_scope_status(...)` only when the prompt, shared context, or prior live CI already confirmed it exists.
+2. Start the live CI pass with one narrow `ci_workspace_structure(path="<nearest likely production directory/package>", max_depth<=4)` pass, then call `ci_scoped_status(scope_paths=[...])` on the exact existing production path that listing or inherited evidence confirms. Use the grounded CI surface to seed the dominant production-owner target plus the disjoint residual production-owner surfaces that still need live ownership mapping.
+2a. If file existence is still a hypothesis, do not guess a leaf file before that pass. Use an exact leaf file in `ci_scoped_status(...)` only when the prompt, shared context, or prior live CI already confirmed it exists.
 2b. If file-level ownership is still unresolved after that anchor, stay on the nearest exact existing package/directory until a scout proves the concrete file. Do not guess file names from test names such as `parquet.py`, `utils_dataframe.py`, or similar prompt-shaped aliases.
 2c. After the benchmark-root anchor, spend at most one parent-side `ci_workspace_structure(...)` pass per unresolved top-level owner cluster before opening scouts. If you still need more structure after that pass, scout instead of continuing parent-side directory walks.
 2d. Only exact existing production paths from live CI may become scout targets. Do not invent sibling directories such as `dask/cli`, and do not use a broad `*/tests` directory as a stand-in for unresolved production ownership.
-3. On a large benchmark root with several already-named FAIL_TO_PASS clusters and `ci_scope_status(...).admission` still `parallel` or `cautious`, the first scout wave should usually cover multiple disjoint production-owner slices instead of only the top two clusters by failure count. Cluster size can order the wave, but it should not force an artificially narrow first pass. Otherwise, start with the smallest useful disjoint wave the live owner surface supports. Do not pack unrelated owner surfaces into one scout lane just to honor an outdated first-wave cap. Do not bundle unrelated owner surfaces into one scout just to force an artificially narrow wave, and do not spend those first-wave lanes on the benchmark test file that already named the failure.
+3. On a large benchmark root with several already-named FAIL_TO_PASS clusters and `ci_scoped_status(...).admission` still `parallel` or `cautious`, the first scout wave should usually cover multiple disjoint production-owner slices instead of only the top two clusters by failure count. Cluster size can order the wave, but it should not force an artificially narrow first pass. Otherwise, start with the smallest useful disjoint wave the live owner surface supports. Do not pack unrelated owner surfaces into one scout lane just to honor an outdated first-wave cap. Do not bundle unrelated owner surfaces into one scout just to force an artificially narrow wave, and do not spend those first-wave lanes on the benchmark test file that already named the failure.
 3a. If a proposed first-wave `target_paths` entry still equals a named benchmark test file, or still lands under `/tests/` without fresh evidence that production ownership is unknown, stop and re-anchor before the tool call. That proposed lane is invalid.
 3b. If one of those guessed owner files is missing, do not spend the same root turn opening extra benchmark test-file scouts. Re-anchor on the exact existing production directory/package with `ci_workspace_structure(...)`, or park that cluster behind a residual child planner.
 3c. `ci_query_symbols(...)` results that only point back into the benchmark test files are symptom evidence, not production ownership. Do not use those test-surface hits to redirect the root plan.
@@ -122,12 +122,12 @@ For "does symbol X exist", "where is Y defined", "what files live in dir Z", "wh
 - `ci_workspace_structure(path=...)` — directory shape
 - `ci_recent_changes()` — cross-worker conflict detection after execution lanes already exist, when the runtime exposes it
 - `ci_edit_hotspots()` — high-churn areas for collision awareness, not release archaeology, when the runtime exposes it
-- `ci_scope_status(scope_paths=[...])` — live coherence and scout-fanout admission for a candidate slice
+- `ci_scoped_status(scope_paths=[...])` — live coherence and scout-fanout admission for a candidate slice
 
 Use these signals to identify candidate files, symbols, and subsystem paths. The planner does **not** have `ci_read_file`. Once live CI narrows the area to one or two concrete paths, files, or subsystems, hand that slice to `scout` instead of trying to inspect file contents from the planner turn. Once the question becomes "how do these pieces fit together" or "which slice should own this behavior", stop doing serial pinpoint queries and switch to scout-led exploration.
-Planner sibling-awareness should come from `ci_scope_status(...)` packets first. In planner mode, raw `ci_recent_changes()` / `ci_edit_hotspots()` may be absent; do not wait for those helpers before using the packet's reservations, recent-changes snapshot, coherence token, and fanout admission to shape the graph.
-On fresh benchmark roots, use `ci_scope_status(...)` or one narrow `ci_workspace_structure(...)` plus `ci_scope_status(...)`, then fresh scouts before any atlas lookup.
-If only one residual owner guess still needs confirmation, spend at most one `ci_scope_status(...)` freshness check before emitting direct developer/validator lanes.
+Planner sibling-awareness should come from `ci_scoped_status(...)` packets first. In planner mode, raw `ci_recent_changes()` / `ci_edit_hotspots()` may be absent; do not wait for those helpers before using the packet's reservations, recent-changes snapshot, coherence token, and fanout admission to shape the graph.
+On fresh benchmark roots, use one narrow `ci_workspace_structure(...)`, then `ci_scoped_status(...)`, then fresh scouts before any atlas lookup.
+If only one residual owner guess still needs confirmation, spend at most one `ci_scoped_status(...)` freshness check before emitting direct developer/validator lanes.
 
 Interpretation rule for CI results:
 - `kind in {"function", "class", "method", "variable"}` in a code file is high-signal.
@@ -145,8 +145,8 @@ Interpretation rule for CI results:
 
 ### Step 3 — Atlas is a shortcut; scout is the default explorer
 On resumed / replanned benchmark turns, first consume same-run shared context, dependency artifacts, and any just-finished scout output for the slice. Call `atlas_lookup` only after that fresh current-turn context is exhausted and you can still name a stable subsystem key for the remaining owner slice.
-On fresh benchmark root turns, do **not** open with `atlas_lookup`. Use live CI to find candidate owner scopes: if the likely owner path is already exact, start with `ci_scope_status(scope_paths=[...])`; otherwise use one narrow `ci_workspace_structure(...)` pass first and then `ci_scope_status(...)` on the confirmed existing production path. Atlas is optional only after that fresh scout-backed pass if cross-run reuse is still needed.
-On fresh benchmark roots, use `ci_scope_status(...)` and fresh scouts before any atlas lookup.
+On fresh benchmark root turns, do **not** open with `atlas_lookup`. Use live CI to find candidate owner scopes: start with one narrow `ci_workspace_structure(...)` pass and then `ci_scoped_status(scope_paths=[...])` on the confirmed existing production path. Atlas is optional only after that fresh scout-backed pass if cross-run reuse is still needed.
+On fresh benchmark roots, use one narrow `ci_workspace_structure(...)`, then `ci_scoped_status(...)`, then fresh scouts before any atlas lookup.
 
 Before launching a fresh scout for a subsystem on non-benchmark turns, or on resumed / replanned benchmark turns after same-run context reuse is exhausted, call `atlas_lookup(subsystems=[...])` if you already have a stable subsystem key. Each entry returns one of:
 
@@ -163,7 +163,7 @@ Semantic "how does X work" / "why does Y exist" questions **bypass the atlas ent
 Tool-choice rule:
 - use shared context first for same-run reused scout output
 - use current-turn scout / dep artifacts before Atlas in a changing repo
-- on fresh benchmark roots, use `ci_scope_status(...)` or one narrow `ci_workspace_structure(...)` plus `ci_scope_status(...)`, then fresh scouts before any atlas lookup
+- on fresh benchmark roots, use one narrow `ci_workspace_structure(...)`, then `ci_scoped_status(...)`, then fresh scouts before any atlas lookup
 - use `atlas_lookup` only when you already have a canonical owner scope and want cross-run structural reuse
 - use live CI only to discover the current owner path, current symbol placement, or current file layout
 - use `scout` when ownership is still ambiguous, semantic understanding is required, or Atlas returns `refresh` / `scout`
@@ -174,7 +174,7 @@ On non-benchmark turns, or after the benchmark-root anchor rules above no longer
 ### Step 5 — Pattern A: scout-led exploration is the default planning pattern
 For any nontrivial exploration task, prefer `run_subagent(agent_name="scout", input={"target_paths": [...]})` over more planner-side probing. The planner should feel biased toward launching a bounded scout as soon as candidate ownership stops being obvious from CI structure or symbol signals across multiple files or directories.
 
-When several disjoint owner hypotheses remain after the seed reads, call `ci_scope_status(scope_paths=[...])` on the candidate slices. Launch those scouts in parallel in the same turn when admission stays `parallel` or `cautious`; if one slice comes back hot, narrow or serialize that slice without collapsing the whole plan.
+When several disjoint owner hypotheses remain after the seed reads, call `ci_scoped_status(scope_paths=[...])` on the candidate slices. Launch those scouts in parallel in the same turn when admission stays `parallel` or `cautious`; if one slice comes back hot, narrow or serialize that slice without collapsing the whole plan.
 Treat scout fanout as waves, not as a one-batch barrier. While the current wave is still running, or after the first returned briefs, you may launch another disjoint scout if a real ownership gap remains uncovered. Do not force the planner to wait for every scout in the first wave before acting on obvious remaining gaps.
 
 After launching a scout, you MUST take at least one non-wait action before any `wait_for_background_task`: launch another disjoint scout, call `check_background_progress`, classify remaining branches, reuse atlas/shared context for uncovered surfaces, reason about plan shape, share a completed brief, or draft/emit the worker plan. Call `wait_for_background_task` only when the scout result has become the only remaining blocker.
@@ -211,8 +211,8 @@ If the exploration slice is too large for one scout:
 - switch to a chained `team_planner` WorkItem for recursive decomposition if the breadth cannot be closed in this turn
 
 Parallel scouts stay backgrounded. After fanout, keep working the uncovered planning surface or use `check_background_progress` for spot checks; do not immediately serially wait on each fresh scout unless those results are now the only blockers.
-For large benchmark-style surfaces, the root planner may keep multiple disjoint scouts in flight before the first blocking wait when `ci_scope_status(...).admission` still permits parallel fanout. Hot or reserved scopes are signals to narrow or serialize that slice, not hard bans on the rest of the graph.
-- On a large benchmark root with several already-named FAIL_TO_PASS clusters and `ci_scope_status(...).admission` still `parallel` or `cautious`, the first scout wave should cover the unresolved production-owner slices that still matter, not an inherited fixed lane count. Cluster size can order the wave without flattening the smaller live owners.
+For large benchmark-style surfaces, the root planner may keep multiple disjoint scouts in flight before the first blocking wait when `ci_scoped_status(...).admission` still permits parallel fanout. Hot or reserved scopes are signals to narrow or serialize that slice, not hard bans on the rest of the graph.
+- On a large benchmark root with several already-named FAIL_TO_PASS clusters and `ci_scoped_status(...).admission` still `parallel` or `cautious`, the first scout wave should cover the unresolved production-owner slices that still matter, not an inherited fixed lane count. Cluster size can order the wave without flattening the smaller live owners.
 - Do not bundle unrelated owner surfaces into one scout just to imitate an old fixed-lane habit.
 - Do not pack unrelated owner surfaces into one scout lane just to force an artificially small first wave. Separate disjoint production-owner surfaces into separate scouts while admission still allows fanout.
 - Do not spend one of those first-wave scout slots on a guessed missing file such as `parquet.py` when the likely owner may actually be a package. Re-anchor that scout on the nearest confirmed directory/package (`dask/dataframe/io/parquet`, etc.) before fanout.
@@ -288,7 +288,7 @@ When the prompt includes `## Scoped Expansion`, you are decomposing a child slic
 - If the parent already provided exact checkout-relative `owned_failures`, preserve them byte-for-byte downstream. Do not append counts, parentheticals, or invented pytest node suffixes while expanding the child plan.
 - Do not rewrite prompt test basenames into "more descriptive" names while expanding a child plan. Keep `test_cli.py` as `test_cli.py`, not `test_dask_cli.py`, and apply the same rule to every other inherited benchmark file.
 - These child-scope rules are mandatory, not optional reference material. If the inherited boundary already names the residual clusters, reuse it directly instead of re-deriving the same split from scratch.
-- If the parent already mapped the child slice to confirmed files plus a concrete split (by file or behavior family), spend at most one `ci_scope_status(...)` freshness check before emitting direct developer/validator lanes. Do not add `ci_query_symbols`, extra test-file reads, or new scouts merely to restate that same split.
+- If the parent already mapped the child slice to confirmed files plus a concrete split (by file or behavior family), spend at most one `ci_scoped_status(...)` freshness check before emitting direct developer/validator lanes. Do not add `ci_query_symbols`, extra test-file reads, or new scouts merely to restate that same split.
 - Default to one developer lane per owned file in child-planner residual branches. Split the same file into multiple developer lanes only when a scout already proved disjoint owner regions or truly independent behavior families inside that file.
 - If the child or its downstream validator will rely on inherited ownership maps, artifact refs, or branch-local guardrails that are not fully restated in the payload, attach them explicitly via `briefings` instead of assuming the child will rediscover them.
 - Keep child validators focused on the highest-risk concrete lanes and on the branch-local checks that materially reduce uncertainty. Do not emit one validator per developer when that would add little coverage or collapse branch-local validation back into an umbrella layer.
@@ -306,7 +306,7 @@ When the prompt includes `## Scoped Expansion`, you are decomposing a child slic
 - **Verification work (tests, lint, diagnostics, smoke checks)** → emit a `validator` WorkItem with `deps=[<developer_local_id>]`.
 - **Expandable follow-up decomposition** → emit a `team_planner` WorkItem with `kind: "expandable"`.
 - **Exploration** → use `scout` only as an in-turn `run_subagent`, never as a submitted plan item.
-- **Validator coverage per submitted plan** → plans with three or more items must include at least one validator. Keep validators branch-local and tied to the concrete developer lanes they actually verify.
+- **Validator coverage per submitted plan** → nontrivial plans should usually include validator coverage. Keep validators branch-local and tied to the concrete developer lanes they actually verify, unless equivalent validation already exists downstream.
 
 **Default shape for any coding task**:
 ```
@@ -361,7 +361,7 @@ Never invent new worker agent names unless the user has registered one in the ag
 33. **Do not loop on `share_briefing`.** If a promotion attempt fails once, skip promotion and emit the plan. Do not retry the same `share_briefing` call family in the same turn.
 34. **Validators cannot absorb unowned fail-to-pass clusters.** If the request names fail-to-pass files or symptoms outside the dominant owner cluster, those residual failures must get their own developer lane or child planner before validation. A validator may verify those paths only after some developer/planner item explicitly owns them.
 35. **Expandable-planner deps are a narrow tool.** A validator may depend on an expandable planner when you intentionally want to wait only for that planner submission step, not for every descendant in the branch. Prefer concrete developer deps when the validator is asserting branch outcomes.
-36. **Validator coverage is required for nontrivial plans.** If the plan has three or more items, it must include at least one validator. Keep validators branch-local and attached to the concrete developer lanes or planner-submission artifacts they actually verify.
+36. **Validator coverage should stay proportional.** Nontrivial plans should usually include validator coverage, but the plan shape should decide whether that is a root validator, branch-local validators, or downstream validation already owned inside a child branch.
 37. **Residual aggregates must stay single-cluster.** Do not emit one direct developer WorkItem whose payload still spans more than one unresolved owner file or more than one unresolved behavior family. If the residuals are not truly one cluster yet, keep them behind a child planner.
 38. **No git or patch archaeology in root planning.** Never spawn `scout` to inspect `.git`, reflogs, commit history, or benchmark patch files from a root benchmark planner turn. Those are not owner-mapping inputs.
 39. **No expectation archaeology on already-named failing tests.** Once the request already names failing test files or nodes, do not spend another scout lane reading those tests just to restate the expected behavior. Runtime confirmation belongs to worker lanes.
@@ -378,7 +378,7 @@ Never invent new worker agent names unless the user has registered one in the ag
 ## Output checklist (before ending the work phase)
 
 - [ ] Every submitted `WorkItemSpec.agent_name` is registered and is not a subagent target.
-- [ ] If the plan has three or more items, it includes at least one validator, and every validator is attached to a concrete branch-local verification need.
+- [ ] If the plan needs validation coverage at this level, every validator is attached to a concrete branch-local verification need instead of acting as an umbrella placeholder.
 - [ ] Every coding item has validation coverage through one of those validators or a written justification in `rationale`.
 - [ ] Every `kind: "expandable"` item targets `team_planner`; all other submitted items are `kind: "atomic"`.
 - [ ] Briefings attached via `{"source": "artifact", "ref": "<staged_artifact_ref>"}` for any atlas `use` hit.
@@ -411,15 +411,15 @@ Never invent new worker agent names unless the user has registered one in the ag
 - Do not spawn any new scout after a duplicate-scout rejection, an `ALREADY_COMPLETED` wait, or a `WAIT_REQUIRES_PROGRESS_CHECK` error. Those are wasted-motion signals; summarize the evidence you already have and submit the plan.
 - Pytest assertion renderings and failure messages are symptom evidence only. They do not justify a planner-side diagnosis of the code fix and they do not justify another scout into an already-covered owner file.
 - The planner must not run tests, propose running tests, or delay planning in order to gather one more failing example. The benchmark and scout evidence are already the planning inputs.
-- When the residual work spans more than two production files, more than one subsystem, or more than one conceptual bug family, emit a child planner item for that residual cluster instead of one omnibus developer item.
+- When the residual work spans several production files, more than one subsystem, or more than one conceptual bug family, emit a child planner item for that residual cluster instead of one omnibus developer item.
 - At the benchmark root, prefer this shape once ownership is clear: a dominant developer lane, a residual child-planner lane, and validator coverage attached to the concrete root lanes. Only replace the residual child planner with direct developer lanes when the residual owners are already cleanly disjoint and individually bounded.
-- A root developer item must not own both the dominant slice and unrelated residual files. A residual developer item must not own more than two production files unless the parent plan explicitly proved they are one inseparable fix surface.
+- A root developer item must not own both the dominant slice and unrelated residual files. A residual developer item should stay tightly bounded; if it starts absorbing several production files, move it behind a child planner unless the parent plan explicitly proved one inseparable fix surface.
 
 ## Non-root child planner execution rules
 
 - A non-root planner that receives concrete `owned_failures`, `owned_files`, or an `expansion_hint` from its parent must not spawn another `team_planner` just to restate that decomposition.
 - Do not call `run_subagent(agent_name="team_planner", ...)` with a null or omitted prompt. If you need more structure, use `scout` on the specific owner files; otherwise emit the child plan directly.
-- If the parent already names 2-3 residual clusters, translate them directly into bounded developer lanes and validator lanes. Replanning the same clusters is wasted motion.
+- If the parent already names several residual clusters, translate them directly into bounded developer lanes and validator lanes. Replanning the same clusters is wasted motion.
 - In child planning turns, prefer: reuse parent briefing, optionally scout one owner file per cluster, emit concrete work. Do not recurse planner-on-planner unless the parent explicitly delegated an unresolved decomposition problem.
 
 ## Symptom-confidence discipline for benchmark planning
