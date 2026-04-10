@@ -26,6 +26,64 @@ from tools.daytona_toolkit.codeact_tool import daytona_codeact
 
 logger = logging.getLogger(__name__)
 
+_TEAM_SAFE_AGENT_NAMES = frozenset({"developer", "validator"})
+
+
+def _build_tools(*, include_codeact: bool) -> list[Any]:
+    tools: list[Any] = [
+        # Read tools first (preferred execution order)
+        daytona_list_files,
+        daytona_grep,
+        daytona_glob,
+        daytona_read_file,
+        # LSP queries
+        daytona_lsp_hover,
+        daytona_lsp_definition,
+        daytona_lsp_references,
+        daytona_lsp_diagnostics,
+        # Write tools
+        daytona_write_file,
+        daytona_edit_file,
+    ]
+    if include_codeact:
+        tools.append(daytona_codeact)
+    # Execution
+    tools.append(daytona_bash)
+    return tools
+
+
+def _build_instructions(*, include_codeact: bool) -> str:
+    codeact_line = (
+        "- `daytona_codeact` — execute Python with atomic file I/O. "
+        "Use for multi-step transformations that need read/write/shell in one operation.\n"
+        if include_codeact
+        else "- Coordinated team developer/validator lanes intentionally omit "
+        "`daytona_codeact`; keep multi-step changes reviewable with direct "
+        "`daytona_read_file` / `daytona_edit_file` / `daytona_write_file` calls.\n"
+    )
+    return (
+        "Interact with a remote Daytona sandbox for file operations, "
+        "code analysis, editing, and command execution. "
+        "Read before you write — explore and understand context first.\n\n"
+        "**Explore & Search**\n"
+        "- `daytona_list_files` — list directory contents. Use to orient yourself.\n"
+        "- `daytona_glob` — find files by pattern (e.g. `**/*.py`). Use to locate files.\n"
+        "- `daytona_grep` — search file contents by regex. Use to find code patterns.\n"
+        "- `daytona_read_file` — read a file. Use before editing to understand context.\n\n"
+        "**Analyze**\n"
+        "- `daytona_lsp_hover` — type info and docs for a symbol at a position.\n"
+        "- `daytona_lsp_definition` — jump to where a symbol is defined.\n"
+        "- `daytona_lsp_references` — find all usages of a symbol across files.\n"
+        "- `daytona_lsp_diagnostics` — check a file for errors and warnings.\n\n"
+        "**Edit**\n"
+        "- `daytona_edit_file` — atomic file edits using `search_replace` or `line_range`, including small batched edits.\n"
+        "- `daytona_write_file` — create or overwrite a file. Use for new files.\n"
+        f"{codeact_line}\n"
+        "**Execute**\n"
+        "- `daytona_bash` — run a shell command. Use for tests, builds, installs, verification. In coordinated team runs, mutating commands must pass `declared_output_paths` so the runtime can reserve those paths before execution; undeclared mutations are rejected.\n"
+        "- When an injected sandbox cwd/repo root is configured, shell and file tools already run relative to that root. Prefer relative repo paths and do not prepend guessed roots like `/workspace`, `/home/user`, or `/home/user/repos/...` unless you truly need a real subdirectory."
+    )
+
 
 class DaytonaToolkit(BaseToolkit):
     """Daytona sandbox toolkit — file I/O, editing, LSP, shell, and CodeAct.
@@ -46,56 +104,22 @@ class DaytonaToolkit(BaseToolkit):
     @classmethod
     def from_context(cls, ctx: Any) -> DaytonaToolkit:
         sandbox_id = ctx.metadata.get("sandbox_id", "") if ctx is not None else ""
-        return cls(sandbox_id=sandbox_id or None)
+        agent_name = str(ctx.metadata.get("agent_name", "") or "") if ctx is not None else ""
+        include_codeact = agent_name not in _TEAM_SAFE_AGENT_NAMES
+        return cls(sandbox_id=sandbox_id or None, include_codeact=include_codeact)
 
-    def __init__(self, sandbox_id: str | None = None) -> None:
+    def __init__(self, sandbox_id: str | None = None, *, include_codeact: bool = True) -> None:
+        description = (
+            "Remote sandbox operations: shell, files, search, "
+            "editing, and LSP queries"
+        )
+        if include_codeact:
+            description += ", and CodeAct execution"
         super().__init__(
             name="sandbox_operations",
-            description=(
-                "Remote sandbox operations: shell, files, search, "
-                "editing, LSP queries, and CodeAct execution"
-            ),
-            tools=[
-                # Read tools first (preferred execution order)
-                daytona_list_files,
-                daytona_grep,
-                daytona_glob,
-                daytona_read_file,
-                # LSP queries
-                daytona_lsp_hover,
-                daytona_lsp_definition,
-                daytona_lsp_references,
-                daytona_lsp_diagnostics,
-                # Write tools
-                daytona_write_file,
-                daytona_edit_file,
-                daytona_codeact,
-                # Execution
-                daytona_bash,
-            ],
-            instructions=(
-                "Interact with a remote Daytona sandbox for file operations, "
-                "code analysis, editing, and command execution. "
-                "Read before you write — explore and understand context first.\n\n"
-                "**Explore & Search**\n"
-                "- `daytona_list_files` — list directory contents. Use to orient yourself.\n"
-                "- `daytona_glob` — find files by pattern (e.g. `**/*.py`). Use to locate files.\n"
-                "- `daytona_grep` — search file contents by regex. Use to find code patterns.\n"
-                "- `daytona_read_file` — read a file. Use before editing to understand context.\n\n"
-                "**Analyze**\n"
-                "- `daytona_lsp_hover` — type info and docs for a symbol at a position.\n"
-                "- `daytona_lsp_definition` — jump to where a symbol is defined.\n"
-                "- `daytona_lsp_references` — find all usages of a symbol across files.\n"
-                "- `daytona_lsp_diagnostics` — check a file for errors and warnings.\n\n"
-                "**Edit**\n"
-                "- `daytona_edit_file` — targeted string replacement in a file. Preferred for small changes.\n"
-                "- `daytona_write_file` — create or overwrite a file. Use for new files.\n"
-                "- `daytona_codeact` — execute Python with atomic file I/O. "
-                "Use for multi-step transformations that need read/write/shell in one operation.\n\n"
-                "**Execute**\n"
-                "- `daytona_bash` — run a shell command. Use for tests, builds, installs, verification. In coordinated team runs, mutating commands must pass `declared_output_paths` so the runtime can reserve those paths before execution; undeclared mutations are rejected.\n"
-                "- When an injected sandbox cwd/repo root is configured, shell and file tools already run relative to that root. Prefer relative repo paths and do not prepend guessed roots like `/workspace`, `/home/user`, or `/home/user/repos/...` unless you truly need a real subdirectory."
-            ),
+            description=description,
+            tools=_build_tools(include_codeact=include_codeact),
+            instructions=_build_instructions(include_codeact=include_codeact),
         )
         self.sandbox_id = sandbox_id
         self._sandbox: Any | None = None

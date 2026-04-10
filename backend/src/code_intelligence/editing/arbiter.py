@@ -26,6 +26,7 @@ from code_intelligence.constants import (
 logger = logging.getLogger(__name__)
 
 _EDIT_TOKEN_TTL = 300.0  # 5 minutes
+_EDIT_INTENT_TTL = 300.0  # 5 minutes
 
 
 def _content_hash(content: str) -> str:
@@ -42,6 +43,22 @@ class EditToken:
     issued_at: float
     agent_id: str = ""
     ttl: float = _EDIT_TOKEN_TTL
+
+
+@dataclass
+class EditIntent:
+    """Published edit intent for coordination and observability."""
+
+    intent_id: str
+    file_path: str
+    issued_at: float
+    heartbeat_at: float
+    agent_id: str = ""
+    coordination_plan_id: str = ""
+    task_id: str = ""
+    symbols: tuple[str, ...] = ()
+    scope: str = "file"
+    ttl: float = _EDIT_INTENT_TTL
 
 
 @dataclass
@@ -84,6 +101,7 @@ class Arbiter:
         self._lock = threading.Lock()
         self._file_locks: dict[str, threading.Lock] = {}
         self._active_tokens: dict[str, EditToken] = {}  # token_id -> token
+        self._active_intents: dict[str, EditIntent] = {}  # intent_id -> intent
         self._metrics = ArbiterMetrics()
         self._generation = 0
         # Hotspot tracking: file_path -> edit count
@@ -132,6 +150,54 @@ class Arbiter:
         """Drop an active edit token."""
         with self._lock:
             self._active_tokens.pop(token_id, None)
+
+    def publish_edit_intent(
+        self,
+        file_path: str,
+        agent_id: str = "",
+        *,
+        coordination_plan_id: str | None = None,
+        task_id: str | None = None,
+        symbols: list[str] | tuple[str, ...] | None = None,
+        scope: str = "file",
+    ) -> str:
+        """Publish an edit intent for coordination-aware consumers."""
+        now = time.time()
+        intent = EditIntent(
+            intent_id=uuid.uuid4().hex[:12],
+            file_path=file_path,
+            issued_at=now,
+            heartbeat_at=now,
+            agent_id=agent_id,
+            coordination_plan_id=str(coordination_plan_id or ""),
+            task_id=str(task_id or ""),
+            symbols=tuple(
+                str(symbol).strip()
+                for symbol in (symbols or [])
+                if isinstance(symbol, str) and str(symbol).strip()
+            ),
+            scope=str(scope or "file"),
+        )
+        with self._lock:
+            self._prune_expired_tokens_locked()
+            self._prune_expired_intents_locked(now=now)
+            self._active_intents[intent.intent_id] = intent
+        return intent.intent_id
+
+    def heartbeat_edit_intent(self, intent_id: str) -> bool:
+        """Refresh an existing edit intent heartbeat."""
+        with self._lock:
+            self._prune_expired_intents_locked()
+            intent = self._active_intents.get(intent_id)
+            if intent is None:
+                return False
+            intent.heartbeat_at = time.time()
+            return True
+
+    def release_edit_intent(self, intent_id: str) -> None:
+        """Drop an active edit intent."""
+        with self._lock:
+            self._active_intents.pop(intent_id, None)
 
     # -- Edit coordination ----------------------------------------------------
 
@@ -224,6 +290,36 @@ class Arbiter:
             out.sort(key=lambda item: (str(item["file_path"]), str(item["token_id"])))
             return out
 
+    def active_edit_intents(
+        self,
+        scope_paths: list[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Return active edit intents, optionally filtered to *scope_paths*."""
+        scope_paths = [p.strip() for p in (scope_paths or []) if isinstance(p, str) and p.strip()]
+        now = time.time()
+        with self._lock:
+            self._prune_expired_intents_locked(now=now)
+            out: list[dict[str, Any]] = []
+            for intent in self._active_intents.values():
+                if scope_paths and not any(_paths_overlap(intent.file_path, scope) for scope in scope_paths):
+                    continue
+                out.append(
+                    {
+                        "intent_id": intent.intent_id,
+                        "file_path": intent.file_path,
+                        "agent_id": intent.agent_id,
+                        "coordination_plan_id": intent.coordination_plan_id,
+                        "task_id": intent.task_id,
+                        "scope": intent.scope,
+                        "symbols": list(intent.symbols),
+                        "issued_at": intent.issued_at,
+                        "heartbeat_at": intent.heartbeat_at,
+                        "expires_at": intent.heartbeat_at + intent.ttl,
+                    }
+                )
+            out.sort(key=lambda item: (str(item["file_path"]), str(item["intent_id"])))
+            return out
+
     def status(self) -> dict[str, Any]:
         """Return arbiter status summary."""
         m = self.metrics
@@ -233,6 +329,7 @@ class Arbiter:
             "tokens_issued": m.tokens_issued,
             "tokens_expired": m.tokens_expired,
             "active_tokens": self.active_edit_count,
+            "active_intents": len(self._active_intents),
             "active_locks": m.active_locks,
         }
 
@@ -266,6 +363,16 @@ class Arbiter:
         for token_id in expired:
             self._active_tokens.pop(token_id, None)
             self._metrics.tokens_expired += 1
+
+    def _prune_expired_intents_locked(self, *, now: float | None = None) -> None:
+        now = time.time() if now is None else now
+        expired = [
+            intent_id
+            for intent_id, intent in self._active_intents.items()
+            if intent.heartbeat_at + intent.ttl <= now
+        ]
+        for intent_id in expired:
+            self._active_intents.pop(intent_id, None)
 
 
 def _paths_overlap(path_a: str, path_b: str) -> bool:

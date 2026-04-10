@@ -92,6 +92,18 @@ async def test_ci_scope_status_returns_live_scope_packet():
             "expires_at": 2.0,
         }
     ]
+    svc.arbiter.active_edit_intents.return_value = [
+        {
+            "intent_id": "intent-1",
+            "file_path": "src/app.py",
+            "agent_id": "worker-1",
+            "scope": "symbol",
+            "symbols": ["app.main"],
+            "issued_at": 1.0,
+            "heartbeat_at": 1.5,
+            "expires_at": 2.0,
+        }
+    ]
     svc.arbiter.hotspots.return_value = [("src/app.py", 4)]
     svc.symbol_index.generation = 11
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
@@ -107,6 +119,7 @@ async def test_ci_scope_status_returns_live_scope_packet():
     assert data["arbiter_generation"] == 7
     assert data["symbol_index_generation"] == 11
     assert data["active_reservations"][0]["file_path"] == "src/app.py"
+    assert data["active_edit_intents"][0]["scope"] == "symbol"
     assert data["coherence_token"]
     assert data["admission"]["mode"] == "serialize"
     assert data["admission"]["recommended_parallel_scouts"] == 1

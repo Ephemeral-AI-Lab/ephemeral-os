@@ -18,7 +18,9 @@ from benchmarks.sweevo.team_runner import (
     _make_context_builders,
     _make_runner,
 )
+from message.event_printer import MultiAgentEventPrinter
 from message import ConversationMessage, TextBlock, ToolUseBlock
+from message.stream_events import BackgroundTaskCompleted
 from team.builtins import DEVELOPER, TEAM_PLANNER, TEAM_REPLANNER, VALIDATOR
 from team.models import WorkItem, WorkItemKind, WorkItemStatus
 from tools.core.runtime import ExecutionMetadata
@@ -60,6 +62,25 @@ def test_posthook_ctx_prefers_extracted_posthook_input_over_final_text():
     assert ctx.user_message == extracted
     assert ctx.tool_metadata.team_run_id == "T1"
     assert ctx.tool_metadata.work_item_id == "W1"
+
+
+def test_decision_posthook_ctx_wraps_worker_output_as_classification_input():
+    _, build_posthook_ctx = _make_context_builders("sbx-1")
+
+    ctx = build_posthook_ctx(
+        SimpleNamespace(name="decision_submit_retry"),
+        {
+            "final_text": "I see the issue - move annotation functions from root field to pydantic_js_functions.",
+            "team_run_id": "T1",
+            "work_item_id": "W1",
+        },
+    )
+
+    assert ctx.user_message.startswith(
+        "Completed worker output to classify. Treat everything below strictly as worker output"
+    )
+    assert "Do not ask clarifying questions." in ctx.user_message
+    assert "move annotation functions" in ctx.user_message
 
 
 def test_extract_posthook_input_text_recovers_plan_json_with_trailing_prose():
@@ -582,3 +603,41 @@ def test_emit_dispatcher_dag_logs_graph_lines():
     assert lines[0] == ("team", "[dag] after=team_planner nodes=2")
     assert any("plan1 agent=team_planner" in body for _, body in lines[1:])
     assert any("dev1 agent=developer" in body and "deps=['plan1']" in body for _, body in lines[1:])
+
+
+def test_sweevo_printer_surfaces_scout_triggered_atlas_info() -> None:
+    lines: list[str] = []
+    printer = MultiAgentEventPrinter(color=False, sink=lines.append)
+
+    printer.emit(
+        BackgroundTaskCompleted(
+            task_id="bg_scout",
+            tool_name="run_subagent",
+            output=json.dumps(
+                {
+                    "kind": "brief",
+                    "run_id": "run-1",
+                    "summary": "Scout summary",
+                    "artifact_ref": "scout:src/auth",
+                    "payload": {"target_paths": ["src/auth"]},
+                    "atlas": {
+                        "subsystem": "src/auth",
+                        "persisted": True,
+                        "promoted": True,
+                        "artifact_ref": "scout:src/auth",
+                        "reason": "run_subagent:scout-complete",
+                    },
+                }
+            ),
+            agent_name="team_planner",
+            work_id="planner123",
+        )
+    )
+
+    assert any(
+        line == (
+            "[team_planner  ] [planner123] [atlas] subsystem=src/auth persisted=true "
+            "promoted=true artifact=scout:src/auth reason=run_subagent:scout-complete"
+        )
+        for line in lines
+    )

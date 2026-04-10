@@ -17,6 +17,10 @@ from typing import Any
 
 from code_intelligence.atlas.service import AtlasService
 from code_intelligence.editing.arbiter import Arbiter
+from code_intelligence.editing.merge import (
+    detect_edit_window,
+    merge_non_overlapping_edit,
+)
 from code_intelligence.routing.backend_protocol import (
     LspBackendAdapter,
     SymbolIndexBackendAdapter,
@@ -106,6 +110,7 @@ def _scope_coherence_token(packet: dict[str, Any]) -> str:
         "symbol_index_generation": packet.get("symbol_index_generation") or 0,
         "recent_changes": packet.get("recent_changes") or [],
         "active_reservations": packet.get("active_reservations") or [],
+        "active_edit_intents": packet.get("active_edit_intents") or [],
     }
     encoded = json.dumps(stable, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()[:24]
@@ -123,16 +128,17 @@ def _scope_freshness(current: dict[str, Any], baseline_packet: dict[str, Any] | 
     if _same_scope(current, baseline_packet):
         if str(current.get("coherence_token") or "") == str(baseline_packet.get("coherence_token") or ""):
             return "fresh"
-        if current.get("active_reservations") or current.get("recent_changes"):
+        if current.get("active_reservations") or current.get("recent_changes") or current.get("active_edit_intents"):
             return "touched"
         return "stale"
-    if current.get("active_reservations") or current.get("recent_changes"):
+    if current.get("active_reservations") or current.get("recent_changes") or current.get("active_edit_intents"):
         return "touched"
     return "fresh"
 
 
 def _scope_admission(packet: dict[str, Any]) -> dict[str, Any]:
     reservations = list(packet.get("active_reservations") or [])
+    intents = list(packet.get("active_edit_intents") or [])
     recent_changes = list(packet.get("recent_changes") or [])
     hotspots = list(packet.get("hotspots") or [])
     hotspot_max = max((int(item.get("edit_count") or 0) for item in hotspots), default=0)
@@ -154,6 +160,11 @@ def _scope_admission(packet: dict[str, Any]) -> dict[str, Any]:
         contention = "medium"
         recommended_parallel_scouts = 2
         reasons.append("scope changed recently; keep scout fanout narrow and disjoint")
+    elif intents:
+        mode = "cautious"
+        contention = "medium"
+        recommended_parallel_scouts = 2
+        reasons.append("active edit intents exist in this scope; prefer disjoint work")
     else:
         mode = "parallel"
         contention = "low"
@@ -317,6 +328,25 @@ class CodeIntelligenceService:
                     file_path=request.file_path,
                     message="; ".join(patch_result.errors),
                 )
+            refreshed = self.refresh_prepared_write(prepared)
+            if refreshed.token_id != prepared.token_id or refreshed.current_hash != prepared.current_hash:
+                prepared = refreshed
+                patch_result = self.patcher.apply_edits(
+                    prepared.current_content,
+                    [SearchReplaceEdit(old_text=request.old_text, new_text=request.new_text)],
+                )
+                if not patch_result.success:
+                    self.time_machine.discard_snapshot(request.file_path)
+                    return EditResult(
+                        success=False,
+                        file_path=request.file_path,
+                        message=(
+                            "Write precheck failed: search text no longer matches the latest file "
+                            "content. Re-read the file and retry."
+                        ),
+                        conflict=True,
+                        conflict_reason="version_mismatch",
+                    )
             return self.commit_prepared_write(
                 prepared,
                 patch_result.content,
@@ -356,19 +386,10 @@ class CodeIntelligenceService:
         expected_hash: str = "",
         allow_missing: bool = False,
     ) -> PreparedWrite | EditResult:
-        """Reserve *file_path* for writing and capture a stable read snapshot."""
-        if not self.arbiter.acquire_file_lock(file_path):
-            return EditResult(
-                success=False,
-                file_path=file_path,
-                message="Could not acquire file lock (timeout)",
-                conflict=True,
-            )
-
+        """Capture a stable read snapshot and issue a write reservation token."""
         try:
             current, existed = self._read_content(file_path, allow_missing=allow_missing)
         except Exception as exc:
-            self.arbiter.release_file_lock(file_path)
             return EditResult(
                 success=False,
                 file_path=file_path,
@@ -377,7 +398,6 @@ class CodeIntelligenceService:
 
         current_hash = _content_hash(current)
         if expected_hash and current_hash != expected_hash:
-            self.arbiter.release_file_lock(file_path)
             return EditResult(
                 success=False,
                 file_path=file_path,
@@ -408,70 +428,170 @@ class CodeIntelligenceService:
         message: str = "Wrote file",
     ) -> EditResult:
         """Commit a prepared write after validating the reservation is still current."""
-        ok, reason = self.arbiter.validate_token(
-            prepared.token_id,
-            file_path=prepared.file_path,
-            content_hash=prepared.current_hash,
-        )
-        if not ok:
+        if not self.arbiter.acquire_file_lock(prepared.file_path):
             return EditResult(
                 success=False,
                 file_path=prepared.file_path,
-                message=f"Write precheck failed: {reason}",
+                message="Could not acquire file lock (timeout)",
                 conflict=True,
+                conflict_reason="lock_timeout",
             )
 
         try:
-            current_now, _ = self._read_content(prepared.file_path, allow_missing=True)
-        except Exception as exc:
-            return EditResult(
-                success=False,
+            ok, reason = self.arbiter.validate_token(
+                prepared.token_id,
                 file_path=prepared.file_path,
-                message=f"Cannot re-read file before commit: {exc}",
+                content_hash=prepared.current_hash,
             )
-        if _content_hash(current_now) != prepared.current_hash:
-            return EditResult(
-                success=False,
-                file_path=prepared.file_path,
-                message=(
-                    "Write precheck failed: file content changed before commit. "
-                    "Re-read the file and retry."
-                ),
-                conflict=True,
-            )
+            if not ok:
+                return EditResult(
+                    success=False,
+                    file_path=prepared.file_path,
+                    message=f"Write precheck failed: {reason}",
+                    conflict=True,
+                    conflict_reason="stale_reservation",
+                )
 
-        self.time_machine.save(prepared.file_path, current_now)
+            try:
+                current_now, _ = self._read_content(prepared.file_path, allow_missing=True)
+            except Exception as exc:
+                return EditResult(
+                    success=False,
+                    file_path=prepared.file_path,
+                    message=f"Cannot re-read file before commit: {exc}",
+                )
+
+            old_hash = prepared.current_hash
+            current_hash = _content_hash(current_now)
+            if current_hash != prepared.current_hash:
+                line_start = prepared.line_start
+                line_end = prepared.line_end
+                operation_type = prepared.operation_type or "replace"
+                if line_start is None:
+                    line_start, line_end, operation_type = detect_edit_window(
+                        prepared.current_content,
+                        new_content,
+                    )
+                merged_content: str | None = None
+                if prepared.existed and line_start is not None:
+                    merged_content = merge_non_overlapping_edit(
+                        original_content=prepared.current_content,
+                        new_content=new_content,
+                        current_content=current_now,
+                        line_start=line_start,
+                        line_end=line_end,
+                        operation_type=operation_type,
+                    )
+                if merged_content is None:
+                    if line_start is not None and prepared.existed:
+                        return EditResult(
+                            success=False,
+                            file_path=prepared.file_path,
+                            message=(
+                                "Write precheck failed: file content changed in an overlapping "
+                                "or unsupported range. Re-read the file and retry."
+                            ),
+                            conflict=True,
+                            conflict_reason="overlapping_range",
+                        )
+                    return EditResult(
+                        success=False,
+                        file_path=prepared.file_path,
+                        message=(
+                            "Write precheck failed: file content changed before commit. "
+                            "Re-read the file and retry."
+                        ),
+                        conflict=True,
+                        conflict_reason="version_mismatch",
+                    )
+                new_content = merged_content
+                old_hash = current_hash
+
+            self.time_machine.save(prepared.file_path, current_now)
+            try:
+                self._write_content(prepared.file_path, new_content)
+            except Exception as exc:
+                return EditResult(
+                    success=False,
+                    file_path=prepared.file_path,
+                    message=f"Write failed: {exc}",
+                )
+
+            new_hash = _content_hash(new_content)
+            self.ledger.record(
+                file_path=prepared.file_path,
+                agent_id=prepared.agent_id,
+                edit_type=edit_type,
+                old_hash=old_hash,
+                new_hash=new_hash,
+                description=description,
+            )
+            gen = self.arbiter.record_edit(prepared.file_path, prepared.agent_id)
+            self.tree_cache.put_content(prepared.file_path, new_content)
+            self.symbol_index.refresh(prepared.file_path, new_content)
+            self.lsp_client.invalidate(prepared.file_path)
+            self.arbiter.release_token(prepared.token_id)
+            return EditResult(
+                success=True,
+                file_path=prepared.file_path,
+                message=message,
+                snapshot_id=str(gen),
+            )
+        finally:
+            self.arbiter.release_file_lock(prepared.file_path)
+
+    def refresh_prepared_write(self, prepared: PreparedWrite) -> PreparedWrite:
+        """Refresh a prepared write snapshot, issuing a new token when the file changed."""
         try:
-            self._write_content(prepared.file_path, new_content)
-        except Exception as exc:
-            return EditResult(
-                success=False,
-                file_path=prepared.file_path,
-                message=f"Write failed: {exc}",
-            )
+            current, existed = self._read_content(prepared.file_path, allow_missing=True)
+        except Exception:
+            return prepared
 
-        old_hash = prepared.current_hash
-        new_hash = _content_hash(new_content)
-        self.ledger.record(
+        current_hash = _content_hash(current)
+        if current_hash == prepared.current_hash and existed == prepared.existed:
+            return prepared
+
+        self.abort_prepared_write(prepared)
+        token = self.arbiter.issue_token(prepared.file_path, current_hash, prepared.agent_id)
+        return PreparedWrite(
             file_path=prepared.file_path,
+            token_id=token.token_id,
+            current_content=current,
+            current_hash=current_hash,
             agent_id=prepared.agent_id,
-            edit_type=edit_type,
-            old_hash=old_hash,
-            new_hash=new_hash,
-            description=description,
+            existed=existed,
+            line_start=prepared.line_start,
+            line_end=prepared.line_end,
+            operation_type=prepared.operation_type,
         )
-        gen = self.arbiter.record_edit(prepared.file_path, prepared.agent_id)
-        self.tree_cache.put_content(prepared.file_path, new_content)
-        self.symbol_index.refresh(prepared.file_path, new_content)
-        self.lsp_client.invalidate(prepared.file_path)
-        self.arbiter.release_token(prepared.token_id)
-        self.arbiter.release_file_lock(prepared.file_path)
-        return EditResult(
-            success=True,
-            file_path=prepared.file_path,
-            message=message,
-            snapshot_id=str(gen),
+
+    def publish_edit_intent(
+        self,
+        *,
+        filepath: str,
+        agent_id: str = "",
+        coordination_plan_id: str | None = None,
+        task_id: str | None = None,
+        symbols: list[str] | tuple[str, ...] | None = None,
+        scope: str = "file",
+    ) -> str:
+        """Publish an edit intent through the arbiter."""
+        return self.arbiter.publish_edit_intent(
+            filepath,
+            agent_id,
+            coordination_plan_id=coordination_plan_id,
+            task_id=task_id,
+            symbols=symbols,
+            scope=scope,
         )
+
+    def heartbeat_edit_intent(self, intent_id: str) -> bool:
+        """Refresh an edit intent heartbeat."""
+        return self.arbiter.heartbeat_edit_intent(intent_id)
+
+    def release_edit_intent(self, intent_id: str) -> None:
+        """Release an edit intent."""
+        self.arbiter.release_edit_intent(intent_id)
 
     def abort_prepared_write(self, prepared: PreparedWrite) -> None:
         """Release any reservation still held for *prepared*."""
@@ -481,7 +601,6 @@ class CodeIntelligenceService:
         )
         if ok:
             self.arbiter.release_token(prepared.token_id)
-            self.arbiter.release_file_lock(prepared.file_path)
 
     def undo_last_edit(self, file_path: str) -> EditResult:
         """Undo the last edit to a file via TimeMachine."""
@@ -539,6 +658,7 @@ class CodeIntelligenceService:
         recent_changes.sort(key=lambda item: (item["file_path"], item["timestamp"]))
 
         active_reservations = self.arbiter.active_reservations(normalized)
+        active_edit_intents = self.arbiter.active_edit_intents(normalized)
         hotspots = [
             {"file_path": str(file_path), "edit_count": int(count)}
             for file_path, count in self.arbiter.hotspots(limit=25)
@@ -553,6 +673,7 @@ class CodeIntelligenceService:
             "symbol_index_generation": self.symbol_index.generation,
             "recent_changes": recent_changes[:25],
             "active_reservations": [dict(item) for item in active_reservations][:25],
+            "active_edit_intents": [dict(item) for item in active_edit_intents][:25],
             "hotspots": hotspots,
             "generated_at": time.time(),
         }
@@ -630,11 +751,21 @@ class CodeIntelligenceService:
         from pathlib import Path
 
         if self._sandbox:
-            result = self._sandbox.fs.upload_file(
-                content.encode("utf-8"),
-                file_path,
-            )
-            self._resolve(result)
+            payload = content.encode("utf-8")
+            try:
+                result = self._sandbox.fs.upload_file(
+                    payload,
+                    file_path,
+                )
+                self._resolve(result)
+            except (AttributeError, TypeError) as exc:
+                if "decode" not in str(exc) and "bytes-like object" not in str(exc):
+                    raise
+                result = self._sandbox.fs.upload_file(
+                    file_path,
+                    payload,
+                )
+                self._resolve(result)
             return
         Path(file_path).write_text(content, encoding="utf-8")
 

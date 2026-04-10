@@ -127,6 +127,7 @@ def build_scope_packet(
         "symbol_index_generation": symbol_generation,
         "recent_changes": recent_changes,
         "active_reservations": active_reservations,
+        "active_edit_intents": _active_edit_intents(svc, normalized),
         "hotspots": hotspots,
         "generated_at": time.time(),
     }
@@ -271,12 +272,24 @@ def _hotspots(svc: Any | None, scope_paths: list[str]) -> list[dict[str, Any]]:
     return out[:10]
 
 
+def _active_edit_intents(svc: Any | None, scope_paths: list[str]) -> list[dict[str, Any]]:
+    arbiter = getattr(svc, "arbiter", None)
+    if arbiter is None or not hasattr(arbiter, "active_edit_intents"):
+        return []
+    try:
+        intents = arbiter.active_edit_intents(scope_paths)
+    except Exception:
+        return []
+    return [dict(item) for item in intents][:25]
+
+
 def _coherence_token(packet: dict[str, Any]) -> str:
     stable = {
         "scope_paths": packet.get("scope_paths") or [],
         "briefing_versions": packet.get("briefing_versions") or [],
         "recent_changes": packet.get("recent_changes") or [],
         "active_reservations": packet.get("active_reservations") or [],
+        "active_edit_intents": packet.get("active_edit_intents") or [],
     }
     raw = json.dumps(stable, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:24]
@@ -288,14 +301,15 @@ def _freshness_grade(current: dict[str, Any], baseline_packet: dict[str, Any] | 
     ):
         if str(current.get("coherence_token") or "") == str(baseline_packet.get("coherence_token") or ""):
             return "fresh"
-        if current.get("active_reservations") or current.get("recent_changes"):
+        if current.get("active_reservations") or current.get("recent_changes") or current.get("active_edit_intents"):
             return "touched"
         return "stale"
-    if current.get("active_reservations") or current.get("recent_changes"):
+    if current.get("active_reservations") or current.get("recent_changes") or current.get("active_edit_intents"):
         return "touched"
     return "fresh"
 def _admission(packet: dict[str, Any]) -> dict[str, Any]:
     reservations = list(packet.get("active_reservations") or [])
+    intents = list(packet.get("active_edit_intents") or [])
     recent_changes = list(packet.get("recent_changes") or [])
     hotspots = list(packet.get("hotspots") or [])
     hotspot_max = max((int(item.get("edit_count") or 0) for item in hotspots), default=0)
@@ -331,6 +345,17 @@ def _admission(packet: dict[str, Any]) -> dict[str, Any]:
             "recent_change_count": len(recent_changes),
             "hotspot_max_edit_count": hotspot_max,
             "reasons": ["scope changed recently; keep scout fanout narrow and disjoint"],
+        }
+    if intents:
+        return {
+            "mode": "cautious",
+            "contention": "medium",
+            "recommended_parallel_scouts": 2,
+            "allow_parallel_fanout": True,
+            "active_reservation_count": 0,
+            "recent_change_count": len(recent_changes),
+            "hotspot_max_edit_count": hotspot_max,
+            "reasons": ["active edit intents exist in this scope; prefer disjoint work"],
         }
     return {
         "mode": "parallel",

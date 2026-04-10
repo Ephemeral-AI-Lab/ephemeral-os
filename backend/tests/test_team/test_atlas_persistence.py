@@ -73,12 +73,13 @@ def test_team_run_note_direct_scout_brief_delegates_to_service_layer() -> None:
     )
     ci_service = SimpleNamespace(atlas=fake_atlas)
 
-    run.note_direct_scout_brief(
+    persisted = run.note_direct_scout_brief(
         brief,
         ci_service=ci_service,
         reason="run_subagent:scout-complete",
     )
 
+    assert persisted is True
     assert seen == [
         {
             "team_run": run,
@@ -91,8 +92,9 @@ def test_team_run_note_direct_scout_brief_delegates_to_service_layer() -> None:
 def test_team_run_note_direct_scout_brief_skips_without_service_layer() -> None:
     run = TeamRun(session_id="S1", user_request="hello", repo_root="/repo")
 
-    run.note_direct_scout_brief(
+    persisted = run.note_direct_scout_brief(
         _brief(["src/auth"]),
         ci_service=None,
         reason="run_subagent:scout-complete",
     )
+    assert persisted is False

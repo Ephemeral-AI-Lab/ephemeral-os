@@ -62,6 +62,12 @@ class TrackedBackgroundTask:
     # Reason captured by cancel(); kept on the tracked task so callers (and
     # the subagent finaliser) can persist it to the audit record.
     cancel_reason: str | None = None
+    # Cancellation / stop mode requested by the manager. Ordinary tools use
+    # "cancel"; subagents may use "early_stop" so the task can salvage a
+    # partial result and still run its serializer posthook.
+    stop_mode: str | None = None
+    # Final completion flavor for successful-but-interrupted tasks.
+    completion_mode: str | None = None
     result: ToolResult | None = None
     started_at: float = field(default_factory=time.monotonic)
     progress_lines: list[str] = field(default_factory=list)
@@ -152,6 +158,8 @@ class BackgroundTaskManager:
                     tracked.result = ToolResult(output=str(exc), is_error=True)
                 else:
                     tracked.status = TaskStatus.COMPLETED
+                    if tracked.stop_mode == "early_stop":
+                        tracked.completion_mode = "early_stopped"
                     tracked.result = task.result()
             except Exception as exc:
                 logger.debug("done_callback failed for %s: %s", tracked.task_id, exc)
@@ -316,6 +324,10 @@ class BackgroundTaskManager:
             }
             if tracked.cancel_reason:
                 entry["cancel_reason"] = tracked.cancel_reason
+            if tracked.stop_mode:
+                entry["stop_mode"] = tracked.stop_mode
+            if tracked.completion_mode:
+                entry["completion_mode"] = tracked.completion_mode
             if tracked.result is not None:
                 # Char-cap is applied by the tool layer (apply_last_n_lines)
                 # AFTER line-tail trimming, so a long-tail run still yields
@@ -326,15 +338,19 @@ class BackgroundTaskManager:
                 # returns a formatted view of its inner agent's last N
                 # messages). Fall back to the line buffer for tools that
                 # stream output via append_progress / on_progress_line.
+                prefix = ""
+                if tracked.stop_mode == "early_stop":
+                    reason = f" ({tracked.cancel_reason})" if tracked.cancel_reason else ""
+                    prefix = f"[early stop requested{reason}]\n"
                 if tracked.progress_provider is not None:
                     try:
-                        entry["output"] = tracked.progress_provider(last_n)
+                        entry["output"] = prefix + tracked.progress_provider(last_n)
                     except Exception as exc:
                         entry["output"] = f"[progress provider error: {exc}]"
                 elif tracked.progress_lines:
-                    entry["output"] = "\n".join(tracked.progress_lines)
+                    entry["output"] = prefix + "\n".join(tracked.progress_lines)
                 else:
-                    entry["output"] = "[no output captured yet]"
+                    entry["output"] = prefix + "[no output captured yet]"
             result.append(entry)
         return result
 
@@ -368,8 +384,23 @@ class BackgroundTaskManager:
         tracked = self._tasks.get(task_id)
         if tracked is None:
             return False
-        tracked.status = TaskStatus.CANCELLED
         tracked.cancel_reason = reason or None
+        if tracked.task_type == "subagent":
+            tracked.stop_mode = "early_stop"
+            tracked.progress_lines = [
+                f"Early stop requested{': ' + reason if reason else ''}"
+            ]
+            # Give a freshly launched subagent one event-loop turn to reach its
+            # first cooperative await so cancellation can be salvaged into a
+            # partial result instead of short-circuiting before user code runs.
+            await asyncio.sleep(0)
+            tracked.asyncio_task.cancel()
+            # Let trivial cancellation handlers and the task done-callback run
+            # before we return status to the caller.
+            await asyncio.sleep(0)
+            return True
+        tracked.stop_mode = "cancel"
+        tracked.status = TaskStatus.CANCELLED
         msg = f"Cancelled: {reason}" if reason else "Cancelled"
         tracked.result = ToolResult(output=msg, is_error=True)
         tracked.progress_lines = [msg]
@@ -418,6 +449,7 @@ class BackgroundTaskManager:
         """Cancel all running tasks. Called on query loop exit."""
         for tracked in self._tasks.values():
             if tracked.status == TaskStatus.RUNNING:
+                tracked.stop_mode = "cancel"
                 tracked.status = TaskStatus.CANCELLED
                 tracked.result = ToolResult(output="Cancelled", is_error=True)
                 tracked.progress_lines = ["Cancelled"]

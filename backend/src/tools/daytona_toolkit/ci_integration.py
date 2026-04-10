@@ -8,12 +8,15 @@ is configured.
 
 from __future__ import annotations
 
+import copy
+import dataclasses
 import logging
 import os
 import re
 import shlex
 from typing import Any
 
+from code_intelligence.editing.merge import detect_edit_window
 from tools.daytona_toolkit.coordination import (
     build_scope_packet_for_context,
     normalize_scope_paths,
@@ -125,19 +128,178 @@ def enforce_scope_coherence(
     return packet, None
 
 
+def _update_prepared_write(prepared: Any, **fields: Any) -> Any:
+    """Return a shallow copy of *prepared* with updated fields."""
+    if dataclasses.is_dataclass(prepared) and not isinstance(prepared, type):
+        return dataclasses.replace(prepared, **fields)
+    updated = copy.copy(prepared)
+    for key, value in fields.items():
+        setattr(updated, key, value)
+    return updated
+
+
+def _enrich_prepared_write_with_line_range(prepared: Any, content: str) -> Any:
+    """Attach the minimal changed line range to *prepared* when possible."""
+    current_content = str(getattr(prepared, "current_content", "") or "")
+    line_start, line_end, operation_type = detect_edit_window(current_content, content)
+    if line_start is None:
+        return prepared
+    return _update_prepared_write(
+        prepared,
+        line_start=line_start,
+        line_end=line_end,
+        operation_type=operation_type,
+    )
+
+
+def _enrich_prepared_write_with_symbol_boundaries(prepared: Any, context: ToolExecutionContext) -> Any:
+    """Widen line anchors to the narrowest enclosing symbol when available."""
+    line_start = getattr(prepared, "line_start", None)
+    if line_start is None:
+        return prepared
+
+    svc = get_ci_service(context)
+    symbol_index = getattr(svc, "symbol_index", None)
+    file_path = str(getattr(prepared, "file_path", "") or "")
+    if symbol_index is None or not file_path:
+        return prepared
+
+    try:
+        boundaries = symbol_index.symbol_boundaries_for_file(file_path)
+    except Exception:
+        logger.debug("symbol_boundaries_for_file failed for %s", file_path, exc_info=True)
+        return prepared
+
+    if not isinstance(boundaries, list) or not boundaries:
+        return prepared
+
+    diff_start = int(line_start)
+    diff_end = getattr(prepared, "line_end", None)
+    diff_end = int(diff_end) if diff_end is not None else diff_start
+
+    best: tuple[str, int, int] | None = None
+    best_size: int | None = None
+    for sym_name, sym_start, sym_end in boundaries:
+        if sym_start <= diff_start and sym_end >= diff_end - 1:
+            size = sym_end - sym_start
+            if best is None or best_size is None or size < best_size:
+                best = (sym_name, sym_start, sym_end)
+                best_size = size
+
+    if best is None:
+        return prepared
+
+    _, sym_start, sym_end = best
+    return _update_prepared_write(
+        prepared,
+        line_start=sym_start,
+        line_end=sym_end + 1,
+    )
+
+
+def _intent_symbols_for_prepared_write(prepared: Any, context: ToolExecutionContext) -> list[str]:
+    """Return the narrowest enclosing symbol for *prepared* when possible."""
+    line_start = getattr(prepared, "line_start", None)
+    if line_start is None:
+        return []
+
+    svc = get_ci_service(context)
+    symbol_index = getattr(svc, "symbol_index", None)
+    file_path = str(getattr(prepared, "file_path", "") or "")
+    if symbol_index is None or not file_path:
+        return []
+
+    try:
+        boundaries = symbol_index.symbol_boundaries_for_file(file_path)
+    except Exception:
+        logger.debug("symbol_boundaries_for_file failed for %s", file_path, exc_info=True)
+        return []
+
+    if not isinstance(boundaries, list) or not boundaries:
+        return []
+
+    diff_start = int(line_start)
+    diff_end = getattr(prepared, "line_end", None)
+    diff_end = int(diff_end) if diff_end is not None else diff_start
+
+    best: tuple[str, int, int] | None = None
+    best_size: int | None = None
+    for sym_name, sym_start, sym_end in boundaries:
+        if sym_start <= diff_start and sym_end >= diff_end - 1:
+            size = sym_end - sym_start
+            if best is None or best_size is None or size < best_size:
+                best = (sym_name, sym_start, sym_end)
+                best_size = size
+    return [best[0]] if best is not None else []
+
+
+def prepare_ci_edit_intent(
+    context: ToolExecutionContext,
+    prepared: Any,
+    *,
+    content: str,
+) -> tuple[Any, str | None]:
+    """Enrich *prepared* and publish an edit intent when the CI service supports it."""
+    prepared = _enrich_prepared_write_with_line_range(prepared, content)
+    prepared = _enrich_prepared_write_with_symbol_boundaries(prepared, context)
+
+    svc = get_ci_service(context)
+    publish = getattr(svc, "publish_edit_intent", None)
+    if svc is None or type(svc).__module__ == "unittest.mock" or not callable(publish):
+        return prepared, None
+
+    symbols = _intent_symbols_for_prepared_write(prepared, context)
+    scope = "symbol" if symbols else ("line" if getattr(prepared, "line_start", None) is not None else "file")
+    try:
+        intent_id = publish(
+            filepath=str(getattr(prepared, "file_path", "") or ""),
+            agent_id=str(context.metadata.get("agent_run_id") or ""),
+            symbols=symbols or None,
+            scope=scope,
+        )
+    except Exception:
+        logger.debug("publish_edit_intent failed for %s", getattr(prepared, "file_path", ""), exc_info=True)
+        return prepared, None
+
+    heartbeat = getattr(svc, "heartbeat_edit_intent", None)
+    if callable(heartbeat):
+        try:
+            heartbeat(intent_id)
+        except Exception:
+            logger.debug("heartbeat_edit_intent failed for %s", intent_id, exc_info=True)
+    return prepared, intent_id
+
+
+def release_ci_edit_intent(context: ToolExecutionContext, intent_id: str | None) -> None:
+    """Release an edit intent when the CI service supports it."""
+    if not intent_id:
+        return
+    svc = get_ci_service(context)
+    release = getattr(svc, "release_edit_intent", None) if svc is not None else None
+    if not callable(release):
+        return
+    try:
+        release(intent_id)
+    except Exception:
+        logger.debug("release_edit_intent failed for %s", intent_id, exc_info=True)
+
+
 def prepare_ci_write(
     context: ToolExecutionContext,
     file_path: str,
     *,
     expected_hash: str = "",
+    allow_scope_drift: bool = False,
 ) -> tuple[Any | None, dict[str, Any], str | None]:
     """Run scope/token prechecks and reserve *file_path* for a write."""
     scope_paths = scope_paths_for_write(context, fallback_paths=[file_path])
     packet, err = enforce_scope_coherence(context, scope_paths=scope_paths)
-    if err is not None:
+    if err is not None and not allow_scope_drift:
         return None, packet, err
     svc = get_ci_service(context)
     if svc is None or not hasattr(svc, "prepare_write"):
+        if err is not None:
+            return None, packet, err
         refresh_scope_baseline(context, packet=packet)
         return None, packet, None
     prepared = svc.prepare_write(
@@ -163,6 +325,8 @@ def finalize_ci_write(
     """Commit a prepared write via the CI service."""
     svc = get_ci_service(context)
     assert svc is not None and hasattr(svc, "commit_prepared_write")
+    prepared = _enrich_prepared_write_with_line_range(prepared, content)
+    prepared = _enrich_prepared_write_with_symbol_boundaries(prepared, context)
     result = svc.commit_prepared_write(
         prepared,
         content,

@@ -1,6 +1,6 @@
 """Events yielded by the query engine."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from providers.types import UsageSnapshot
@@ -65,6 +65,7 @@ class ToolExecutionCompleted:
     output: str
     is_error: bool = False
     tool_id: str = ""
+    metadata: dict[str, Any] = field(default_factory=dict)
     agent_name: str = ""
     work_id: str = ""
 

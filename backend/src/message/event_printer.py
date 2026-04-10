@@ -24,6 +24,7 @@ Key ideas:
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -63,6 +64,57 @@ def _truncate(text: str, limit: int | None) -> str:
     if limit is None:
         return text
     return text if len(text) <= limit else text[: limit - 1] + "…"
+
+
+def _tool_completion_detail_lines(event: ToolExecutionCompleted) -> list[str]:
+    if event.tool_name != "atlas_lookup":
+        return []
+    meta = event.metadata if isinstance(event.metadata, dict) else {}
+    lookups = meta.get("lookups")
+    if not isinstance(lookups, list):
+        return []
+
+    lines: list[str] = []
+    for raw in lookups:
+        if not isinstance(raw, dict):
+            continue
+        subsystem = str(raw.get("subsystem") or "").strip() or "?"
+        action = str(raw.get("action") or "").strip() or "?"
+        parts = [f"[atlas] subsystem={subsystem}", f"action={action}"]
+        staged_ref = str(raw.get("staged_artifact_ref") or "").strip()
+        if staged_ref:
+            parts.append(f"artifact={staged_ref}")
+        reason = str(raw.get("staleness_reason") or "").strip()
+        if reason:
+            parts.append(f"reason={reason}")
+        lines.append(" ".join(parts))
+    return lines
+
+
+def _subagent_completion_detail_lines(output: str) -> list[str]:
+    try:
+        payload = json.loads(output)
+    except Exception:
+        return []
+    if not isinstance(payload, dict):
+        return []
+    atlas = payload.get("atlas")
+    if not isinstance(atlas, dict):
+        return []
+
+    subsystem = str(atlas.get("subsystem") or "").strip() or "?"
+    parts = [f"[atlas] subsystem={subsystem}"]
+    if "persisted" in atlas:
+        parts.append(f"persisted={str(bool(atlas.get('persisted'))).lower()}")
+    if "promoted" in atlas:
+        parts.append(f"promoted={str(bool(atlas.get('promoted'))).lower()}")
+    artifact_ref = str(atlas.get("artifact_ref") or "").strip()
+    if artifact_ref:
+        parts.append(f"artifact={artifact_ref}")
+    reason = str(atlas.get("reason") or "").strip()
+    if reason:
+        parts.append(f"reason={reason}")
+    return [" ".join(parts)]
 
 
 @dataclass
@@ -144,6 +196,8 @@ class MultiAgentEventPrinter:
                 f"<- tool_done:  {event.tool_name} [{status}] "
                 f"{_truncate(event.output, limit)}",
             )
+            for extra in _tool_completion_detail_lines(event):
+                self._line(agent, work_id, extra)
         elif isinstance(event, ToolExecutionProgress):
             self._line(
                 agent,
@@ -193,6 +247,8 @@ class MultiAgentEventPrinter:
                     f"task_id={event.task_id} [{status}] "
                     f"{_truncate(event.output, limit)}",
                 )
+                for extra in _subagent_completion_detail_lines(event.output):
+                    self._line(agent, work_id, extra)
             else:
                 self._line(
                     agent,

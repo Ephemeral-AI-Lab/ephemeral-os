@@ -83,6 +83,7 @@ class BackgroundTaskStateBlock(BaseModel):
     task_note: str = ""
     run_id: str | None = None
     cancel_reason: str | None = None
+    completion_mode: str | None = None
 
 
 ContentBlock = Annotated[
@@ -102,6 +103,8 @@ def _background_task_state_body(block: BackgroundTaskStateBlock) -> str:
         lines.append(f"Note: {block.task_note}")
     if block.run_id:
         lines.append(f"Run ID: {block.run_id}")
+    if block.completion_mode:
+        lines.append(f"Completion Mode: {block.completion_mode}")
     if block.cancel_reason:
         lines.append(f"Cancel Reason: {block.cancel_reason}")
     if block.text:
@@ -207,11 +210,16 @@ def serialize_content_block(block: ContentBlock) -> dict[str, Any]:
 
     if isinstance(block, BackgroundTaskStateBlock):
         body = _background_task_state_body(block)
+        completion_attr = (
+            f' completion_mode="{block.completion_mode}"'
+            if block.completion_mode
+            else ""
+        )
         return {
             "type": "text",
             "text": (
                 f'<background-task task_id="{block.task_id}" '
-                f'status="{block.status}" source="{block.source}">\n'
+                f'status="{block.status}" source="{block.source}"{completion_attr}>\n'
                 f"{body}\n"
                 "</background-task>"
             ),

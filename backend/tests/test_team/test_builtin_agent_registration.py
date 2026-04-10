@@ -72,3 +72,19 @@ def test_toolkit_instructions_surface_scope_and_search_tools() -> None:
 
     assert sandbox_ops.instructions is not None
     assert "daytona_grep" in sandbox_ops.instructions
+
+
+def test_team_worker_sandbox_toolkit_omits_codeact() -> None:
+    developer_sandbox = create_toolkit(
+        "sandbox_operations",
+        ToolkitContext(metadata={"agent_name": DEVELOPER, "sandbox_id": "sb-dev"}),
+    )
+    validator_sandbox = create_toolkit(
+        "sandbox_operations",
+        ToolkitContext(metadata={"agent_name": VALIDATOR, "sandbox_id": "sb-val"}),
+    )
+
+    assert "daytona_codeact" not in developer_sandbox.tool_names()
+    assert "daytona_codeact" not in validator_sandbox.tool_names()
+    assert "daytona_edit_file" in developer_sandbox.tool_names()
+    assert "daytona_bash" in validator_sandbox.tool_names()

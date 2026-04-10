@@ -166,6 +166,40 @@ def test_prepare_ci_write_refreshes_scope_baseline_after_reservation(monkeypatch
     assert ctx.metadata["coherence_token"] == "reserved-token"
 
 
+def test_prepare_ci_write_allows_scope_drift_when_opted_in(monkeypatch):
+    svc = MagicMock()
+    prepared = SimpleNamespace(file_path="/repo/file.py", token_id="tok-1")
+    svc.prepare_write.return_value = prepared
+    packets = [
+        {"scope_paths": ["src"], "coherence_token": "drifted-token"},
+        {"scope_paths": ["src"], "coherence_token": "reserved-token"},
+    ]
+    monkeypatch.setattr(
+        "tools.daytona_toolkit.ci_integration.build_scope_packet_for_context",
+        lambda *args, **kwargs: dict(packets.pop(0)),
+    )
+    ctx = _ctx(
+        {
+            "ci_service": svc,
+            "agent_run_id": "worker-1",
+            "scope_packet": {"scope_paths": ["src"], "coherence_token": "base-token"},
+            "coherence_token": "base-token",
+        }
+    )
+
+    result, packet, err = prepare_ci_write(
+        ctx,
+        "/repo/file.py",
+        allow_scope_drift=True,
+    )
+
+    assert err is None
+    assert result is prepared
+    assert packet["coherence_token"] == "reserved-token"
+    assert ctx.metadata["scope_packet"]["coherence_token"] == "reserved-token"
+    assert ctx.metadata["coherence_token"] == "reserved-token"
+
+
 def test_abort_ci_write_refreshes_scope_baseline_after_release(monkeypatch):
     svc = MagicMock()
     packets = [{"scope_paths": ["src"], "coherence_token": "released-token"}]
@@ -217,6 +251,52 @@ def test_finalize_ci_write_refreshes_scope_baseline_after_commit(monkeypatch):
     assert result.success is True
     assert ctx.metadata["scope_packet"]["coherence_token"] == "after-commit"
     assert ctx.metadata["coherence_token"] == "after-commit"
+
+
+def test_finalize_ci_write_enriches_prepared_write_with_symbol_boundaries(monkeypatch):
+    captured: dict[str, object] = {}
+
+    def commit(prepared, content, *, edit_type, description):
+        captured["prepared"] = prepared
+        captured["content"] = content
+        captured["edit_type"] = edit_type
+        captured["description"] = description
+        return SimpleNamespace(success=True)
+
+    svc = MagicMock()
+    svc.commit_prepared_write.side_effect = commit
+    svc.symbol_index.symbol_boundaries_for_file.return_value = [("foo", 3, 4)]
+    packets = [{"scope_paths": ["src"], "coherence_token": "after-commit"}]
+    monkeypatch.setattr(
+        "tools.daytona_toolkit.ci_integration.build_scope_packet_for_context",
+        lambda *args, **kwargs: dict(packets.pop(0)),
+    )
+    ctx = _ctx(
+        {
+            "ci_service": svc,
+            "scope_packet": {"scope_paths": ["src"], "coherence_token": "reserved-token"},
+            "coherence_token": "reserved-token",
+        }
+    )
+    prepared = SimpleNamespace(
+        file_path="/repo/file.py",
+        current_content="header\n\ndef foo():\n    return 1\n",
+        current_hash="hash-1",
+    )
+
+    result = finalize_ci_write(
+        ctx,
+        prepared,
+        content="header\n\ndef foo():\n    return 2\n",
+        edit_type="edit",
+        description="change foo",
+    )
+
+    enriched = captured["prepared"]
+    assert result.success is True
+    assert getattr(enriched, "line_start", None) == 3
+    assert getattr(enriched, "line_end", None) == 5
+    assert getattr(enriched, "operation_type", None) == "replace"
 
 
 def test_build_scope_packet_coherence_ignores_unrelated_global_generation_changes():

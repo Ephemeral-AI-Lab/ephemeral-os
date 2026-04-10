@@ -544,6 +544,41 @@ def test_submit_plan_agent_prompt_preserves_parallel_expandable_children():
     )
 
 
+def test_submit_plan_agent_prompt_rebuilds_shape_on_plan_size_failure():
+    from team.builtins import register_all
+    from agents.registry import get_definition
+
+    register_all()  # idempotent
+
+    serializer = get_definition("submit_plan_agent")
+    assert serializer is not None
+    assert "If validation fails on `max_plan_size`, do not make a cosmetic one-item trim." in (
+        serializer.system_prompt
+    )
+    assert "merging adjacent residual siblings behind a narrower expandable `team_planner` item" in (
+        serializer.system_prompt
+    )
+
+
+def test_team_planner_prompt_makes_child_scope_rules_explicit():
+    from team.builtins import TEAM_PLANNER, register_all
+    from agents.registry import get_definition
+
+    register_all()  # idempotent
+
+    planner = get_definition(TEAM_PLANNER)
+    assert planner is not None
+    assert "On non-root turns, read `references/non-root-context-reuse.md` before opening fresh exploration." in (
+        planner.system_prompt
+    )
+    assert "On non-root turns, treat inherited `## Scoped Expansion`, `## From deps`, and `## From parent` context as mandatory inputs." in (
+        planner.system_prompt
+    )
+    assert "Keep validation branch-local. Do not add an umbrella validator over a child plan" in (
+        planner.system_prompt
+    )
+
+
 def test_team_planner_definition_uses_submit_plan_posthook_not_submit_toolkit():
     from team.builtins import SUBMIT_PLAN_AGENT, TEAM_PLANNER, register_all
     from agents.registry import get_definition

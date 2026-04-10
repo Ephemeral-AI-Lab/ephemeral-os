@@ -78,6 +78,33 @@ class ProgressTool(BaseTool):
         return ToolResult(output=json.dumps({"lines": results}))
 
 
+class AtlasInput(BaseModel):
+    subsystem: str = Field(description="Subsystem to inspect")
+
+
+class AtlasTool(BaseTool):
+    """A fake atlas tool that returns lookup metadata."""
+
+    name = "atlas_lookup"
+    description = "Returns atlas lookup metadata."
+    input_model = AtlasInput
+
+    async def execute(self, arguments: AtlasInput, context: ToolExecutionContext) -> ToolResult:
+        return ToolResult(
+            output="atlas_lookup: use=1 refresh=0 scout=0",
+            metadata={
+                "lookups": [
+                    {
+                        "subsystem": arguments.subsystem,
+                        "action": "use",
+                        "staged_artifact_ref": "atlas:pydantic/networks.py:deadbeef",
+                        "staleness_reason": None,
+                    }
+                ]
+            },
+        )
+
+
 def _make_toolkit(*tools: BaseTool) -> BaseToolkit:
     return BaseToolkit(name="test_toolkit", description="Test", tools=list(tools))
 
@@ -239,6 +266,28 @@ async def test_get_remaining_returns_completed_tools():
     assert len(results) == 1
     assert isinstance(results[0], ToolExecutionCompleted)
     assert results[0].tool_name == "fast"
+
+
+@pytest.mark.asyncio
+async def test_get_remaining_preserves_tool_metadata() -> None:
+    registry = _make_registry(AtlasTool())
+    context = _make_context()
+    executor = StreamingToolExecutor(registry, context)
+
+    event = ApiToolUseDeltaEvent(
+        id="tool_01",
+        name="atlas_lookup",
+        input={"subsystem": "pydantic/networks.py"},
+    )
+
+    executor.add_tool(event, _make_assistant_msg())
+    await asyncio.sleep(0.1)
+
+    results = await executor.get_remaining()
+
+    assert len(results) == 1
+    assert isinstance(results[0], ToolExecutionCompleted)
+    assert results[0].metadata["lookups"][0]["subsystem"] == "pydantic/networks.py"
 
 
 @pytest.mark.asyncio

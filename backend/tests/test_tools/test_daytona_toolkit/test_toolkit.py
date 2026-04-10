@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from tools.core.base import ToolExecutionContext
+from tools.core.factory import ToolkitContext
 from tools.daytona_toolkit.toolkit import DaytonaToolkit
 
 
@@ -65,6 +66,20 @@ def test_toolkit_registers_expected_tools():
     assert expected.issubset(names)
 
 
+def test_toolkit_from_context_omits_codeact_for_team_workers():
+    developer_tk = DaytonaToolkit.from_context(
+        ToolkitContext(metadata={"sandbox_id": "sb-dev", "agent_name": "developer"})
+    )
+    validator_tk = DaytonaToolkit.from_context(
+        ToolkitContext(metadata={"sandbox_id": "sb-val", "agent_name": "validator"})
+    )
+
+    assert "daytona_codeact" not in developer_tk.tool_names()
+    assert "daytona_codeact" not in validator_tk.tool_names()
+    assert "daytona_edit_file" in developer_tk.tool_names()
+    assert "daytona_bash" in validator_tk.tool_names()
+
+
 def test_toolkit_get_tool():
     tk = DaytonaToolkit()
     tool = tk.get("daytona_bash")
@@ -81,6 +96,14 @@ def test_toolkit_list_tools_length():
     tk = DaytonaToolkit()
     tools = tk.list_tools()
     assert len(tools) == 12
+
+
+def test_team_worker_toolkit_list_tools_length():
+    tk = DaytonaToolkit.from_context(
+        ToolkitContext(metadata={"sandbox_id": "sb-dev", "agent_name": "developer"})
+    )
+    tools = tk.list_tools()
+    assert len(tools) == 11
 
 
 # ---------------------------------------------------------------------------

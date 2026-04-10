@@ -67,7 +67,12 @@ def _build_result(entries: list[dict[str, object]], *, atlas_disabled: bool) -> 
             f"atlas_lookup: use={actions['use']} refresh={actions['refresh']} "
             f"scout={actions['scout']}"
         )
-    return ToolResult(output=summary, metadata={"lookups": entries})
+    return ToolResult(
+        output=summary,
+        metadata={
+            "lookups": entries,
+        },
+    )
 
 
 def _store_override(context: ToolExecutionContext) -> AtlasStore | None:

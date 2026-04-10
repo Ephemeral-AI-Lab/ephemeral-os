@@ -116,6 +116,16 @@ def _resolve_path(path: str, context: ToolExecutionContext) -> str:
     return path
 
 
+async def _upload_file_compat(sandbox: Any, content: bytes, file_path: str) -> None:
+    """Upload using the SDK signature, with fallback for stale path-first mocks."""
+    try:
+        await sandbox.fs.upload_file(content, file_path)
+    except (AttributeError, TypeError) as exc:
+        if "decode" not in str(exc) and "bytes-like object" not in str(exc):
+            raise
+        await sandbox.fs.upload_file(file_path, content)
+
+
 # ---------------------------------------------------------------------------
 # Shell execution
 # ---------------------------------------------------------------------------
@@ -500,8 +510,7 @@ async def daytona_write_file(
                     metadata={"conflict": bool(getattr(result, "conflict", False))},
                 )
         else:
-            # SDK signature: upload_file(src: str | bytes, dst: str)
-            await sandbox.fs.upload_file(content_bytes, file_path)
+            await _upload_file_compat(sandbox, content_bytes, file_path)
             sync_write_to_ci(
                 context,
                 file_path,

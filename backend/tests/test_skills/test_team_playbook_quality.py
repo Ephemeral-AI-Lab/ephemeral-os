@@ -40,6 +40,13 @@ def test_planner_playbook_gates_share_briefing_on_tool_availability() -> None:
     assert "calling a tool that is not visibly available" in planner
     assert "representative deduped subset" in planner
     assert "Every entry in `items` must be its own `{...}` object" in planner
+    assert 'A missing `class` hit from `ci_query_symbols(kind="class")` is not enough to conclude a public API is absent.' in planner
+    assert 'Do not claim "class X is missing from the codebase" from planner-side symbol misses alone.' in planner
+    assert "On fresh benchmark root turns, do **not** open with `atlas_lookup`." in planner
+    assert "on fresh benchmark roots, use `ci_scope_status(...)` and fresh scouts before any atlas lookup" in planner
+    assert 'If you plan to join `task_id="all"`, inspect each fresh scout in that batch first' in planner
+    assert 'Never call `run_subagent` with `agent_name="team_planner"`' in planner
+    assert "duplicate-scout rejection over an already mapped path is terminal planning evidence" in planner
 
 
 def test_sweevo_context_treats_missing_share_briefing_as_non_blocking() -> None:
@@ -48,9 +55,37 @@ def test_sweevo_context_treats_missing_share_briefing_as_non_blocking() -> None:
     assert "treat that as a no-promotion profile, not as a blocker" in sweevo
     assert "representative deduped subset of failing ids" in sweevo
     assert "repeat `local_id`, `agent_name`, `kind`, or `payload` keys inside one JSON object" in sweevo
+    assert 'A planner-side `ci_query_symbols(kind="class")` miss does not prove a public type is absent from the repo.' in sweevo
+    assert "After a bounded export fix, rerun the named pytest entry point before widening the same lane to additional public names." in sweevo
+    assert "Once that missing public name is anchored to a local export file, do not spend developer budget on dependency version checks" in sweevo
+    assert "Fresh benchmark roots should stay live-first." in sweevo
+    assert "prefer `ci_scope_status(scope_paths=[...])` plus fresh scouts over `atlas_lookup`" in sweevo
 
 
 def test_developer_playbook_anchors_import_failures_to_named_pytest_surface() -> None:
     developer = _read(_BACKEND_ROOT / "src/skills/bundled/content/team-developer-playbook/SKILL.md")
     assert "If that first entry point is an import or collection failure" in developer
     assert "Do not promote a probe-only theory into broader code edits" in developer
+    assert 'A `ci_query_symbols(kind="class")` miss is not proof that a public type is absent.' in developer
+    assert "When the first pytest failure is a missing public name" in developer
+    assert "After fixing one missing export or public name, rerun the named pytest entry point before adding any other symbols." in developer
+    assert "inspect the package export bridge next" in developer
+    assert "exact failing import path succeeds in a fresh Python process" in developer
+    assert "In coordinated team developer lanes, `daytona_codeact` is intentionally unavailable." in developer
+    assert "Do not escalate a surgical same-file export or alias fix into `daytona_codeact`." in developer
+    assert "After a targeted retest fails, re-read the edited block before writing custom debug scripts." in developer
+    assert "Budget warnings require the identified patch point, not more diagnosis." in developer
+    assert "Rejected mutating shell probes are a stop sign." in developer
+    assert "patch the last merge/update function that overwrites the public field" in developer
+
+
+def test_validator_playbook_mentions_codeact_is_unavailable_in_team_lanes() -> None:
+    validator = _read(_BACKEND_ROOT / "src/skills/bundled/content/team-validator-playbook/SKILL.md")
+    assert "coordinated team validation lanes intentionally omit `daytona_codeact`" in validator
+
+
+def test_posthook_decision_playbook_forbids_clarifying_questions_on_worker_output() -> None:
+    posthook = _read(_BACKEND_ROOT / "src/skills/bundled/content/team-posthook-decision-playbook/SKILL.md")
+    assert "Every incoming message is worker output from the previous phase" in posthook
+    assert "Do not ask clarifying questions." in posthook
+    assert "Malformed worker output still requires a decision." in posthook

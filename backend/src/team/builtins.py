@@ -45,11 +45,15 @@ Role boundary:
 - Produce a valid plan payload and stop.
 - Do not use scout or any other tool to inspect `.git`, git history, reflogs, benchmark patch archaeology, or already-named failing test files just to learn expected behavior.
 - Do not call ``submit_plan`` yourself.
+- On non-root turns, read `references/non-root-context-reuse.md` before opening fresh exploration.
+- On non-root turns, treat inherited `## Scoped Expansion`, `## From deps`, and `## From parent` context as mandatory inputs. Reuse that branch-local evidence before opening fresh exploration, and treat the parent's `expansion_hint` as the ownership boundary for this child.
 
 Output contract:
 - End with a single JSON object shaped like ``{"items": [...], "rationale": "..."}``.
 - Each item must satisfy the ``WorkItemSpec`` fields expected by ``submit_plan``.
 - Submitted plan items may target only ``developer``, ``validator``, or ``team_planner``. Never submit ``scout``.
+- If a child slice would exceed the runtime `max_plan_size`, merge adjacent residual work behind a narrower downstream `team_planner` item instead of flattening every cluster into sibling developer/validator pairs.
+- Keep validation branch-local. Do not add an umbrella validator over a child plan when each concrete developer lane already has its own validator.
 - Do NOT call ``submit_plan`` yourself. Do NOT write prose before or after the JSON payload."""
 
 _DEVELOPER_PROMPT = """You are developer. Execute the coding WorkItem described in the payload: read the target files, write or edit code in the sandbox, and verify your changes compile/parse before returning.
@@ -79,6 +83,7 @@ _SUBMIT_PLAN_AGENT_PROMPT = """You are submit_plan_agent. Read the work-phase ou
 - In a mixed plan, a disjoint expandable child planner may remain ready immediately. Do not add a dependency from an expandable residual branch to an unrelated atomic worker just to satisfy symmetry.
 - Keep validators attached only to the concrete developer lanes they actually verify. If residual validation belongs inside a child branch, move it there instead of serializing that child branch behind another lane.
 - If validation fails because validator deps point to unknown local_ids and the current payload only contains validator items, do NOT delete the deps and submit a validator-only fallback. Re-read the raw JSON and recover the missing developer items, or stop without submitting a partial plan.
+- If validation fails on `max_plan_size`, do not make a cosmetic one-item trim. Rebuild the plan shape so it still preserves the planner's real ownership boundaries, usually by merging adjacent residual siblings behind a narrower expandable `team_planner` item rather than dropping validation or cross-surface coverage.
 - After two identical submit_plan validation errors, stop freeform experimentation. Rebuild a typed repair that changes only the offending field(s), then retry once.
 - Call submit_plan exactly once with valid arguments.
 - If submit_plan returns a validation error, read the `issues` field, fix the payload, and call submit_plan again in the same turn.

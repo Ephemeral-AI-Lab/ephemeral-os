@@ -196,8 +196,9 @@ def _deliver_completed_background_task(
         )
     terminal_status = (
         "cancelled"
-        if task.cancel_reason or (task.result and task.result.output.startswith("Cancelled"))
-        else "failed" if task.result and task.result.is_error
+        if str(task.status) == "cancelled"
+        else "failed"
+        if str(task.status) == "failed"
         else "completed"
     )
     display_messages.append(
@@ -214,6 +215,7 @@ def _deliver_completed_background_task(
                     task_note=task.task_note,
                     run_id=task.run_id,
                     cancel_reason=task.cancel_reason,
+                    completion_mode=getattr(task, "completion_mode", None),
                 )
             ],
         )
@@ -717,6 +719,7 @@ async def _run_query_loop(
                         tool_name=tc.name,
                         output=result.content,
                         is_error=result.is_error,
+                        metadata=dict(result.metadata or {}),
                     ),
                     None,
                 )
@@ -764,6 +767,7 @@ async def _run_query_loop(
                             tool_name=tc.name,
                             output=result.content,
                             is_error=result.is_error,
+                            metadata=dict(result.metadata or {}),
                         ),
                         None,
                     )

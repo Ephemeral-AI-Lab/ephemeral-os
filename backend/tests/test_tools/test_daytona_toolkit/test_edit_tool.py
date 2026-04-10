@@ -228,6 +228,62 @@ async def test_edit_replaces_only_first_occurrence():
     assert written_bytes == b"y x x"
 
 
+async def test_edit_line_range_direct_write_success():
+    sb = _make_sandbox(download_content="a\nb\nc\n")
+    ctx = _ctx({"daytona_sandbox": sb})
+    result = await daytona_edit_file.execute(
+        daytona_edit_file.input_model(
+            file_path="/file.py",
+            edits=[
+                {
+                    "strategy": "line_range",
+                    "start_line": 2,
+                    "end_line": 2,
+                    "new_content": "beta",
+                }
+            ],
+        ),
+        ctx,
+    )
+    assert not result.is_error
+    written_bytes = sb.fs.upload_file.call_args[0][0]
+    assert written_bytes == b"a\nbeta\nc\n"
+
+
+async def test_edit_batch_direct_write_success():
+    sb = _make_sandbox(download_content="alpha\nbeta\ngamma\n")
+    ctx = _ctx({"daytona_sandbox": sb})
+    result = await daytona_edit_file.execute(
+        daytona_edit_file.input_model(
+            file_path="/file.py",
+            edits=[
+                {"strategy": "search_replace", "search": "alpha", "replace": "ALPHA"},
+                {"strategy": "line_range", "start_line": 3, "end_line": 3, "new_content": "GAMMA"},
+            ],
+        ),
+        ctx,
+    )
+    assert not result.is_error
+    written_bytes = sb.fs.upload_file.call_args[0][0]
+    assert written_bytes == b"ALPHA\nbeta\nGAMMA\n"
+
+
+async def test_edit_rejects_mixed_legacy_and_batch_inputs():
+    sb = _make_sandbox(download_content="alpha\n")
+    ctx = _ctx({"daytona_sandbox": sb})
+    result = await daytona_edit_file.execute(
+        daytona_edit_file.input_model(
+            file_path="/file.py",
+            old_text="alpha",
+            new_text="beta",
+            edits=[{"strategy": "search_replace", "search": "alpha", "replace": "beta"}],
+        ),
+        ctx,
+    )
+    assert result.is_error
+    assert "Provide either `old_text`/`new_text` or `edits`" in result.output
+
+
 # ---------------------------------------------------------------------------
 # OCC path (with CI arbiter)
 # ---------------------------------------------------------------------------
@@ -260,6 +316,92 @@ async def test_edit_occ_path_success():
     svc.prepare_write.assert_called_once()
     svc.commit_prepared_write.assert_called_once()
     svc.abort_prepared_write.assert_called_once()
+
+
+async def test_edit_occ_refreshes_and_repatches_latest_content():
+    sb = _make_sandbox(download_content="old content\n")
+    initial = SimpleNamespace(
+        file_path="/file.py",
+        current_content="alpha\nold\nomega\n",
+        current_hash=_content_hash("alpha\nold\nomega\n"),
+        token_id="tok-1",
+        existed=True,
+    )
+    refreshed = SimpleNamespace(
+        file_path="/file.py",
+        current_content="prefix\nalpha\nold\nomega\n",
+        current_hash=_content_hash("prefix\nalpha\nold\nomega\n"),
+        token_id="tok-2",
+        existed=True,
+    )
+    commit = MagicMock(return_value=SimpleNamespace(success=True, message="ok"))
+    svc = SimpleNamespace(
+        prepare_write=MagicMock(return_value=initial),
+        refresh_prepared_write=MagicMock(side_effect=[refreshed, refreshed]),
+        commit_prepared_write=commit,
+        abort_prepared_write=MagicMock(),
+    )
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "ci_service": svc,
+            "scope_packet": {"scope_paths": ["src"], "coherence_token": "stale-token"},
+            "coherence_token": "stale-token",
+        }
+    )
+
+    result = await daytona_edit_file.execute(
+        daytona_edit_file.input_model(
+            file_path="/file.py",
+            old_text="old",
+            new_text="new",
+        ),
+        ctx,
+    )
+
+    assert not result.is_error
+    commit.assert_called_once()
+    assert commit.call_args.args[1] == "prefix\nalpha\nnew\nomega\n"
+
+
+async def test_edit_occ_publishes_and_releases_symbol_intent():
+    sb = _make_sandbox(download_content="def foo():\n    return 1\n")
+    initial = SimpleNamespace(
+        file_path="/file.py",
+        current_content="def foo():\n    return 1\n",
+        current_hash=_content_hash("def foo():\n    return 1\n"),
+        token_id="tok-1",
+        existed=True,
+    )
+    publish = MagicMock(return_value="intent-1")
+    release = MagicMock()
+    svc = SimpleNamespace(
+        prepare_write=MagicMock(return_value=initial),
+        commit_prepared_write=MagicMock(return_value=SimpleNamespace(success=True, message="ok")),
+        abort_prepared_write=MagicMock(),
+        publish_edit_intent=publish,
+        heartbeat_edit_intent=MagicMock(),
+        release_edit_intent=release,
+        symbol_index=SimpleNamespace(
+            symbol_boundaries_for_file=MagicMock(return_value=[("foo", 1, 2)])
+        ),
+    )
+    ctx = _ctx({"daytona_sandbox": sb, "ci_service": svc})
+
+    result = await daytona_edit_file.execute(
+        daytona_edit_file.input_model(
+            file_path="/file.py",
+            old_text="return 1",
+            new_text="return 2",
+        ),
+        ctx,
+    )
+
+    assert not result.is_error
+    publish.assert_called_once()
+    assert publish.call_args.kwargs["symbols"] == ["foo"]
+    assert publish.call_args.kwargs["scope"] == "symbol"
+    release.assert_called_once_with("intent-1")
 
 
 async def test_edit_occ_lock_conflict():

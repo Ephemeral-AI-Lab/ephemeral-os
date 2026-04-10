@@ -371,6 +371,25 @@ class TestCancelBackgroundTaskExecute:
         assert result.is_error
         assert "bg_missing" in result.output
 
+    async def test_subagent_cancel_reports_early_stop(self) -> None:
+        tool = CancelBackgroundTaskTool()
+        mgr = BackgroundTaskManager()
+
+        async def _subagent() -> ToolResult:
+            await asyncio.sleep(10)
+            return ToolResult(output="done")
+
+        mgr.launch(
+            task_id="bg_sub",
+            tool_name="run_subagent",
+            tool_input={"agent_name": "scout"},
+            coro=_subagent(),
+            task_type="subagent",
+        )
+        result = await tool.execute(CancelBackgroundTaskInput(task_id="bg_sub"), _ctx(mgr))
+        assert result.is_error is False
+        assert "early-stop requested" in result.output
+
 
 # ---------------------------------------------------------------------------
 # BackgroundTaskManager — internal API not covered by test_background_tasks.py

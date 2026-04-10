@@ -226,6 +226,7 @@ def _build_subagent_envelope(
     final_text: str,
     *,
     artifact_ref: str | None = None,
+    atlas: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Project the subagent submission into the typed envelope.
 
@@ -245,7 +246,7 @@ def _build_subagent_envelope(
     from tools.posthook import SubmittedSummary
 
     if isinstance(submitted, Plan):
-        return {
+        envelope = {
             "kind": "plan",
             "run_id": sub_run_id,
             "summary": (
@@ -267,35 +268,47 @@ def _build_subagent_envelope(
                 "rationale": submitted.rationale,
             },
         }
+        if atlas:
+            envelope["atlas"] = dict(atlas)
+        return envelope
 
     if isinstance(submitted, SubmittedSummary):
         artifact = submitted.artifact
         kind = "brief" if (isinstance(artifact, dict) and "target_paths" in artifact) else "summary"
-        return {
+        envelope = {
             "kind": kind,
             "run_id": sub_run_id,
             "summary": (submitted.summary or "")[:_ENVELOPE_SUMMARY_CAP],
             "artifact_ref": artifact_ref,
             "payload": artifact if isinstance(artifact, dict) else {},
         }
+        if atlas:
+            envelope["atlas"] = dict(atlas)
+        return envelope
 
     if submitted is not None:
-        return {
+        envelope = {
             "kind": "summary",
             "run_id": sub_run_id,
             "summary": _derive_submission_summary(submitted, final_text),
             "artifact_ref": artifact_ref,
             "payload": _coerce_payload_object(submitted),
         }
+        if atlas:
+            envelope["atlas"] = dict(atlas)
+        return envelope
 
     # No posthook submission — fall back to raw final text.
-    return {
+    envelope = {
         "kind": "raw",
         "run_id": sub_run_id,
         "summary": (final_text or "")[:_ENVELOPE_SUMMARY_CAP],
         "artifact_ref": None,
         "payload": {"final_text": final_text},
     }
+    if atlas:
+        envelope["atlas"] = dict(atlas)
+    return envelope
 
 
 def _fallback_run_id() -> str:
@@ -312,6 +325,36 @@ def _extract_final_text(messages: list[ConversationMessage]) -> str:
         if text:
             return text.strip()
     return ""
+
+
+def _build_posthook_input(final_text: str, messages: list[ConversationMessage]) -> str:
+    """Return the best available serializer input for a partial subagent run."""
+    if final_text.strip():
+        return final_text.strip()
+
+    assistant_text: list[str] = []
+    for msg in messages:
+        if msg.role != "assistant":
+            continue
+        text = msg.text.strip()
+        if text:
+            assistant_text.append(text)
+
+    return "\n\n".join(assistant_text).strip()
+
+
+def _clear_current_task_cancellation() -> None:
+    """Clear pending cancellation so salvage logic can await the posthook."""
+    task = asyncio.current_task()
+    if task is None:
+        return
+    uncancel = getattr(task, "uncancel", None)
+    cancelling = getattr(task, "cancelling", None)
+    if not callable(uncancel):
+        return
+    remaining = int(cancelling() or 0) if callable(cancelling) else 1
+    for _ in range(max(1, remaining)):
+        uncancel()
 
 
 async def _run_posthook_if_needed(
@@ -662,14 +705,23 @@ async def run_subagent(
 
     run_error: str | None = None
     cancelled = False
+    early_stopped = False
     try:
         async for _event in agent.run(final_prompt):
             # Drain the event stream — agent.run drives _messages, which is
             # what the peek provider reads. We don't need per-event handling.
             pass
     except asyncio.CancelledError:
-        cancelled = True
-        logger.info("run_subagent: subagent cancelled via bg manager")
+        tracked = bg_manager.get_task(task_id) if (
+            bg_manager is not None and isinstance(task_id, str) and hasattr(bg_manager, "get_task")
+        ) else None
+        if tracked is not None and getattr(tracked, "stop_mode", None) == "early_stop":
+            early_stopped = True
+            _clear_current_task_cancellation()
+            logger.info("run_subagent: subagent interrupted for early-stop salvage")
+        else:
+            cancelled = True
+            logger.info("run_subagent: subagent cancelled via bg manager")
     except Exception as exc:
         run_error = str(exc)
         logger.exception("run_subagent: subagent run crashed")
@@ -680,11 +732,15 @@ async def run_subagent(
     cancel_reason: str | None = None
     if bg_manager is not None and isinstance(task_id, str):
         tracked = bg_manager.get_task(task_id) if hasattr(bg_manager, "get_task") else None
-        if tracked is not None and tracked.status == "cancelled":
+        if tracked is not None and getattr(tracked, "stop_mode", None) == "early_stop":
+            early_stopped = True
+            cancel_reason = tracked.cancel_reason
+        elif tracked is not None and tracked.status == "cancelled":
             cancelled = True
             cancel_reason = tracked.cancel_reason
 
     final_text = _extract_final_text(agent.display_messages)
+    posthook_input = _build_posthook_input(final_text, agent.display_messages)
     # Tolerate test stubs that don't expose a query_context.
     api_snapshot = qc.api_messages_snapshot if qc is not None else None
     # Test stubs may not expose ``agent_name``/``model``/``total_usage`` —
@@ -731,16 +787,18 @@ async def run_subagent(
         )
         return ToolResult(output=f"run_subagent: subagent crashed: {run_error}", is_error=True)
 
+    submitted = _extract_submitted_output(agent)
     try:
-        submitted = await _run_posthook_if_needed(
-            posthook_cfg=posthook_cfg,
-            posthook_def=posthook_def,
-            submitted=_extract_submitted_output(agent),
-            final_text=final_text,
-            parent_cfg=parent_cfg,
-            sandbox_id=sandbox_id,
-            base_metadata=subagent_ctx,
-        )
+        if submitted is None and (not early_stopped or posthook_input):
+            submitted = await _run_posthook_if_needed(
+                posthook_cfg=posthook_cfg,
+                posthook_def=posthook_def,
+                submitted=submitted,
+                final_text=posthook_input,
+                parent_cfg=parent_cfg,
+                sandbox_id=sandbox_id,
+                base_metadata=subagent_ctx,
+            )
     except Exception as exc:
         tracker.finish(
             status="failed",
@@ -753,6 +811,7 @@ async def run_subagent(
         return ToolResult(output=str(exc), is_error=True)
 
     stored_artifact_ref: str | None = None
+    atlas_info: dict[str, Any] | None = None
     if (
         agent_name == "scout"
         and parent_team_run_id
@@ -762,6 +821,7 @@ async def run_subagent(
                 auto_promote_scout_briefing,
                 store_stable_scout_artifact,
             )
+            from team.context.canonicalize import scope_of_artifact
             from team.runtime.registry import get as _get_team_run
             from tools.posthook import SubmittedSummary
 
@@ -769,18 +829,26 @@ async def run_subagent(
             if team_run is not None and isinstance(submitted, SubmittedSummary):
                 artifact = submitted.artifact
                 if isinstance(artifact, dict):
+                    scope = scope_of_artifact(artifact) or ""
                     stored_artifact_ref = store_stable_scout_artifact(
                         team_run,
                         artifact,
                         run_id=persisted_run_id,
                     )
                     if stored_artifact_ref is not None:
-                        auto_promote_scout_briefing(team_run, stored_artifact_ref)
-                        team_run.note_direct_scout_brief(
+                        promoted = auto_promote_scout_briefing(team_run, stored_artifact_ref)
+                        persisted = team_run.note_direct_scout_brief(
                             artifact,
                             ci_service=context.metadata.get("ci_service"),
                             reason="run_subagent:scout-complete",
                         )
+                        atlas_info = {
+                            "subsystem": scope,
+                            "persisted": bool(persisted),
+                            "promoted": bool(promoted),
+                            "artifact_ref": stored_artifact_ref,
+                            "reason": "run_subagent:scout-complete",
+                        }
         except Exception:
             logger.debug("run_subagent: scout artifact promotion failed", exc_info=True)
 
@@ -789,7 +857,12 @@ async def run_subagent(
         sub_run_id,
         final_text,
         artifact_ref=stored_artifact_ref,
+        atlas=atlas_info,
     )
+    if early_stopped:
+        envelope["completion_mode"] = "early_stopped"
+        if cancel_reason:
+            envelope["cancel_reason"] = cancel_reason
     tracker.finish(
         status="completed",
         display_messages=agent.display_messages,

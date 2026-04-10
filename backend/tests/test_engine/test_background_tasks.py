@@ -256,6 +256,39 @@ async def test_cancel_all_marks_subagent_cancelled_without_asyncio_cancel() -> N
         await tracked.asyncio_task
 
 
+async def test_cancel_subagent_requests_early_stop_and_preserves_result() -> None:
+    mgr = BackgroundTaskManager()
+    cancelled = asyncio.Event()
+
+    async def _subagent_coro() -> ToolResult:
+        try:
+            await asyncio.sleep(10)
+        except asyncio.CancelledError:
+            cancelled.set()
+            return ToolResult(output="partial brief")
+        return ToolResult(output="done")
+
+    mgr.launch(
+        task_id="bg_early",
+        tool_name="run_subagent",
+        tool_input={"agent_name": "scout"},
+        coro=_subagent_coro(),
+        task_type="subagent",
+    )
+
+    ok = await mgr.cancel("bg_early", "enough evidence")
+    assert ok is True
+    await asyncio.sleep(0)
+
+    tracked = mgr._tasks["bg_early"]
+    assert cancelled.is_set() is True
+    assert tracked.status == "completed"
+    assert tracked.stop_mode == "early_stop"
+    assert tracked.completion_mode == "early_stopped"
+    assert tracked.result is not None
+    assert tracked.result.output == "partial brief"
+
+
 # ---------------------------------------------------------------------------
 # 11. task that raises exception
 # ---------------------------------------------------------------------------

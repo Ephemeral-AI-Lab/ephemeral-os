@@ -269,16 +269,16 @@ class TeamRun:
         *,
         ci_service: Any | None = None,
         reason: str = "direct-scout",
-    ) -> None:
+    ) -> bool:
         try:
             atlas = getattr(ci_service, "atlas", None)
             if atlas is None:
-                return
-            atlas.persist_scout_brief(
+                return False
+            return bool(atlas.persist_scout_brief(
                 team_run=self,
                 brief=brief,
                 reason=reason,
-            )
+            ))
         except Exception:
             import logging
 
@@ -286,6 +286,7 @@ class TeamRun:
                 "atlas direct scout persistence failed",
                 exc_info=True,
             )
+            return False
 
     # ---- checkpoint API --------------------------------------------------
 

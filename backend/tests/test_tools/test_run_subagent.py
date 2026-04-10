@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -733,6 +735,250 @@ async def test_run_subagent_persists_usage_when_cancelled(monkeypatch):
     assert len(fake_usage_store.records) == 1
     assert fake_usage_store.records[0]["prompt_tokens"] == 8
     assert fake_usage_store.records[0]["completion_tokens"] == 2
+
+
+@pytest.mark.asyncio
+async def test_run_subagent_early_stop_salvages_posthook(monkeypatch):
+    from tools.posthook import SubmittedSummary
+    from tools.core.runtime import ExecutionMetadata
+
+    register_definition(
+        AgentDefinition(
+            name="worker_with_posthook",
+            description="d",
+            agent_type="subagent",
+            posthook=PosthookConfig(
+                agent_name="submit_summary_agent",
+                metadata_key="submitted_summary",
+            ),
+        )
+    )
+
+    class _EarlyStoppedAgent(_StubAgent):
+        def __init__(self) -> None:
+            super().__init__(
+                [],
+                usage=UsageSnapshot(input_tokens=3, output_tokens=2),
+            )
+
+        async def run(self, prompt: str):
+            self._display_messages.append(
+                ConversationMessage(
+                    role="assistant",
+                    content=[TextBlock(text="Partial scout brief")],
+                )
+            )
+            yield ("event",)
+            raise asyncio.CancelledError("early stop")
+
+    class _SerializerAgent:
+        def __init__(self) -> None:
+            self.display_messages: list[ConversationMessage] = []
+            self.query_context = type(
+                "_QC",
+                (),
+                {
+                    "tool_metadata": ExecutionMetadata(),
+                    "api_messages_snapshot": None,
+                },
+            )()
+
+        async def run(self, prompt: str):
+            key = self.query_context.tool_metadata.get(
+                "posthook_metadata_key", "submitted_summary"
+            )
+            self.query_context.tool_metadata[key] = SubmittedSummary(
+                summary=f"Salvaged: {prompt}",
+                artifact={"note": "partial"},
+            )
+            yield ("serialized",)
+
+    def _fake_spawn(*args, **kwargs):
+        if kwargs["agent_def"].name == "submit_summary_agent":
+            return _SerializerAgent()
+        return _EarlyStoppedAgent()
+
+    monkeypatch.setattr(
+        "engine.runtime.agent.spawn_agent",
+        _fake_spawn,
+        raising=True,
+    )
+
+    fake_store = _StubAgentRunStore()
+    fake_usage_store = _StubUsageStore()
+    import server.app_factory as app_factory
+
+    monkeypatch.setattr(app_factory, "agent_run_store", fake_store, raising=True)
+    monkeypatch.setattr(app_factory, "usage_store", fake_usage_store, raising=True)
+
+    bg = BackgroundTaskManager()
+
+    async def _noop_coro() -> ToolResult:
+        return ToolResult(output="placeholder")
+
+    bg.launch(
+        task_id="bg_early_stop",
+        tool_name="run_subagent",
+        tool_input={"prompt": "x"},
+        coro=_noop_coro(),
+        task_note="test",
+        task_type="subagent",
+    )
+    tracked = bg.get_task("bg_early_stop")
+    assert tracked is not None
+    tracked.stop_mode = "early_stop"
+    tracked.cancel_reason = "enough evidence"
+
+    class _StubCfg:
+        cwd = Path("/tmp")
+        session_id = "session_abc"
+
+    ctx = ToolExecutionContext(
+        cwd=Path("/tmp"),
+        metadata={
+            "session_config": _StubCfg(),
+            "background_task_manager": bg,
+            "background_task_id": "bg_early_stop",
+            "sandbox_id": "",
+            "agent_run_id": "parent_run_xyz",
+        },
+    )
+
+    try:
+        result = await run_subagent.execute(
+            run_subagent.input_model(agent_name="worker_with_posthook", prompt="x"),
+            ctx,
+        )
+
+        assert result.is_error is False
+        assert '"completion_mode": "early_stopped"' in result.output
+        assert '"cancel_reason": "enough evidence"' in result.output
+        assert "Salvaged: Partial scout brief" in result.output
+        assert len(fake_store.finished) == 1
+        assert fake_store.finished[0]["status"] == "completed"
+        assert len(fake_usage_store.records) == 1
+    finally:
+        unregister_definition("worker_with_posthook")
+
+
+@pytest.mark.asyncio
+async def test_run_subagent_scout_completion_includes_atlas_info(monkeypatch):
+    from tools.posthook import SubmittedSummary
+    from tools.core.runtime import ExecutionMetadata
+    from team.runtime.team_run import TeamRun
+
+    class _ScoutAgent(_StubAgent):
+        def __init__(self) -> None:
+            super().__init__(
+                [ConversationMessage(role="assistant", content=[TextBlock(text="Scout complete")])],
+                usage=UsageSnapshot(input_tokens=5, output_tokens=3),
+                model="mock-scout-model",
+            )
+
+    class _SerializerAgent:
+        def __init__(self) -> None:
+            self.display_messages: list[ConversationMessage] = []
+            self.query_context = type(
+                "_QC",
+                (),
+                {
+                    "tool_metadata": ExecutionMetadata(),
+                    "api_messages_snapshot": None,
+                },
+            )()
+
+        async def run(self, prompt: str):
+            key = self.query_context.tool_metadata.get(
+                "posthook_metadata_key", "submitted_summary"
+            )
+            self.query_context.tool_metadata[key] = SubmittedSummary(
+                summary="Scout summary",
+                artifact={
+                    "target_paths": ["src/auth"],
+                    "canonical_scope": "src/auth",
+                    "summary": "brief",
+                    "files": [],
+                    "entry_points": [],
+                    "open_questions": [],
+                    "scope_coverage": 1.0,
+                    "gaps": "",
+                    "suggested_subdivisions": [],
+                },
+            )
+            yield ("serialized",)
+
+    def _fake_spawn(*args, **kwargs):
+        if kwargs["agent_def"].name == "submit_summary_agent":
+            return _SerializerAgent()
+        return _ScoutAgent()
+
+    monkeypatch.setattr(
+        "engine.runtime.agent.spawn_agent",
+        _fake_spawn,
+        raising=True,
+    )
+    monkeypatch.setattr(
+        "team.context.scout_briefings.store_stable_scout_artifact",
+        lambda *args, **kwargs: "scout:src/auth",
+    )
+    monkeypatch.setattr(
+        "team.context.scout_briefings.auto_promote_scout_briefing",
+        lambda *args, **kwargs: True,
+    )
+
+    run = TeamRun(session_id="S1", user_request="hello", repo_root="/repo")
+    monkeypatch.setattr(
+        "team.runtime.registry.get",
+        lambda team_run_id: run if team_run_id == "TR1" else None,
+    )
+
+    bg = BackgroundTaskManager()
+
+    async def _noop_coro() -> ToolResult:
+        return ToolResult(output="placeholder")
+
+    bg.launch(
+        task_id="bg_scout",
+        tool_name="run_subagent",
+        tool_input={"input": {"target_paths": ["src/auth"]}},
+        coro=_noop_coro(),
+        task_note="scout auth",
+        task_type="subagent",
+    )
+
+    class _StubCfg:
+        cwd = Path("/tmp")
+        session_id = "session_abc"
+
+    ctx = ToolExecutionContext(
+        cwd=Path("/tmp"),
+        metadata={
+            "session_config": _StubCfg(),
+            "background_task_manager": bg,
+            "background_task_id": "bg_scout",
+            "sandbox_id": "",
+            "team_run_id": "TR1",
+            "ci_service": SimpleNamespace(
+                atlas=SimpleNamespace(persist_scout_brief=lambda **kwargs: True)
+            ),
+        },
+    )
+
+    result = await run_subagent.execute(
+        run_subagent.input_model(agent_name="scout", input={"target_paths": ["src/auth"]}),
+        ctx,
+    )
+
+    assert result.is_error is False
+    envelope = json.loads(result.output)
+    assert envelope["artifact_ref"] == "scout:src/auth"
+    assert envelope["atlas"] == {
+        "subsystem": "src/auth",
+        "persisted": True,
+        "promoted": True,
+        "artifact_ref": "scout:src/auth",
+        "reason": "run_subagent:scout-complete",
+    }
 
 
 @pytest.mark.asyncio

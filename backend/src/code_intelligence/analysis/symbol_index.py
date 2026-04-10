@@ -136,6 +136,18 @@ class SymbolIndex:
             fs = self._symbols.get(file_path)
             return list(fs.symbols) if fs else []
 
+    def symbol_boundaries_for_file(self, file_path: str) -> list[tuple[str, int, int]]:
+        """Return ``(symbol_name, start_line, end_line)`` for indexed symbols in *file_path*."""
+        with self._lock:
+            fs = self._symbols.get(file_path)
+            if fs is None:
+                return []
+            return [
+                (symbol.name, symbol.line, symbol.end_line or symbol.line)
+                for symbol in fs.symbols
+                if symbol.line > 0
+            ]
+
     @property
     def is_built(self) -> bool:
         with self._lock:
@@ -297,6 +309,7 @@ class SymbolIndex:
                     kind=kind,
                     file_path=file_path,
                     line=child.lineno,
+                    end_line=getattr(child, "end_lineno", child.lineno),
                     character=child.col_offset,
                     signature=signature,
                     docstring=ast.get_docstring(child) or "",
@@ -312,6 +325,7 @@ class SymbolIndex:
                     kind=SymbolKind.CLASS,
                     file_path=file_path,
                     line=child.lineno,
+                    end_line=getattr(child, "end_lineno", child.lineno),
                     character=child.col_offset,
                     signature=f"class {name}",
                     docstring=ast.get_docstring(child) or "",
@@ -328,6 +342,7 @@ class SymbolIndex:
                             kind=SymbolKind.VARIABLE,
                             file_path=file_path,
                             line=target.lineno,
+                            end_line=getattr(target, "end_lineno", target.lineno),
                             character=target.col_offset,
                             signature=f"{target.id} = ...",
                             container=container,
@@ -361,6 +376,7 @@ class SymbolIndex:
                         kind=kind,
                         file_path=file_path,
                         line=lineno,
+                        end_line=lineno,
                         character=0,
                         signature=line.strip()[:100],
                     ))

@@ -29,6 +29,7 @@ When benchmark prose, release notes, or changelog bullets disagree with the live
 - **After local runtime or skill fixes, prefer sandbox reuse.** Re-run with a stable `sandbox_name` so the harness can reuse the latest healthy prepared sandbox instead of rebuilding the image each time.
 - **Reuse the latest healthy evidence.** Checkpoints, scout artifacts, token totals, and validator evidence are part of the retry surface. Do not restart cold if the existing sandbox is healthy and the repo can be reset in place.
 - **On resume, reuse before reopening.** If a resumed or replanned turn already has a stable owner cluster or subsystem key, consult atlas/shared briefings first and scout only the still-missing slice.
+- **Fresh benchmark roots should stay live-first.** On the first root planning pass, prefer `ci_scope_status(scope_paths=[...])` plus fresh scouts over `atlas_lookup`. Use Atlas only on resume/replan or when the current turn already established a live owner map and still needs cross-run structural reuse.
 
 ---
 
@@ -63,6 +64,7 @@ When benchmark prose, release notes, or changelog bullets disagree with the live
 - Benchmark planner turns should not spend tool budget on explicit `share_briefing` promotion unless that tool is visibly available. Same-run scout auto-promotion plus attached artifact refs already cover the normal reuse path here.
 - Once the returned scout evidence is sufficient to name the likely implementation surfaces and direct validation surfaces, the root planner should stop scouting and emit the plan. This may happen after one wave or several; additional confirmation belongs to developer or validator lanes, not to the root planner.
 - Treat pytest assertion renderings as runtime symptoms only. A line such as `where None = MultiHostUrl(...).path` is not proof that the bug lives in a particular accessor or external dependency API; it is only evidence the downstream worker should reproduce against the owned source slice.
+- A planner-side `ci_query_symbols(kind="class")` miss does not prove a public type is absent from the repo. Imported dependency classes, `Annotated[...]` aliases, and lazy/export-only names can live behind the local module surface without appearing as classes. Keep the lane on the local export/compatibility file until a worker confirms the exact missing public import.
 - If the planner receives a budget warning, the next assistant message must be the final plan JSON. Do not spend the remaining budget checking background progress or reopening hypotheses.
 - Treat duplicate-scout rejections and background wait protocol errors as stop-and-plan signals. Reuse the gathered evidence instead of retrying the same exploration pattern, and do not pivot into `ci_recent_changes`, `ci_edit_hotspots`, or dependency/version archaeology once those signals fire.
 - A repeated `WAIT_REQUIRES_PROGRESS_CHECK` or repeated whole-batch wait on the same benchmark wave is evidence that the planner should finish the plan, not evidence that another planner-side deep-dive is needed.
@@ -74,6 +76,9 @@ When benchmark prose, release notes, or changelog bullets disagree with the live
 
 - Start from the exact named failing test or a faithful reproduction lifted directly from it.
 - Planner diagnoses are hypotheses until the current failing output confirms them.
+- When the first failing pytest surface is a missing public name or collection/import error, inspect the exact import site and the owning module's export surface before inventing new public types or neighboring symbols.
+- After a bounded export fix, rerun the named pytest entry point before widening the same lane to additional public names. Do not infer the next missing symbol from memory, truncated output, or nearby imports.
+- Once that missing public name is anchored to a local export file, do not spend developer budget on dependency version checks or dependency capability archaeology. Fix the local surface first.
 - After one targeted reproduction plus one or two focused code reads identify the deciding function or branch, edit immediately. Do not spend the attempt on repeated ad hoc probes.
 - If the exact retry target is already green in the sandbox, stop debugging and report that result; let the validator spend the one broader regression check.
 - Fix production code first. Do not edit tests, snapshots, or benchmark harness files unless the WorkItem explicitly assigns them.

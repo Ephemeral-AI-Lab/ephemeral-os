@@ -38,6 +38,7 @@ class SymbolInfo:
     kind: SymbolKind
     file_path: str
     line: int
+    end_line: int | None = None
     character: int = 0
     signature: str = ""
     docstring: str = ""
@@ -114,6 +115,9 @@ class PreparedWrite:
     current_hash: str
     agent_id: str = ""
     existed: bool = True
+    line_start: int | None = None
+    line_end: int | None = None
+    operation_type: str = ""
 
 
 @dataclass(frozen=True)
@@ -124,6 +128,7 @@ class EditResult:
     file_path: str
     message: str = ""
     conflict: bool = False
+    conflict_reason: str = ""
     snapshot_id: str = ""
 
 
