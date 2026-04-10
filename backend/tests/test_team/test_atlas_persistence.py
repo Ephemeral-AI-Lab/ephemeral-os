@@ -9,9 +9,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from db.base import Base
-from team.atlas import AtlasStore
-from team.atlas.model import ProjectAtlasChunkRecord, ProjectAtlasRecord  # noqa: F401
-from team.atlas.persistence import persist_brief_to_atlas
+from code_intelligence.atlas import AtlasStore
+from code_intelligence.atlas.model import ProjectAtlasChunkRecord, ProjectAtlasRecord  # noqa: F401
+from code_intelligence.atlas.persistence import persist_brief_to_atlas
 from team.context.project import ProjectContext
 from team.runtime.team_run import TeamRun
 
@@ -64,20 +64,18 @@ def test_persist_brief_to_atlas_writes_chunk() -> None:
     assert chunk.brief["summary"] == "brief for ['src/auth']"
 
 
-def test_team_run_note_direct_scout_brief_delegates_to_persistence(monkeypatch) -> None:
+def test_team_run_note_direct_scout_brief_delegates_to_service_layer() -> None:
     seen: list[dict[str, object]] = []
-
-    def _fake_persist(**kwargs):
-        seen.append(kwargs)
-        return True
-
-    monkeypatch.setattr("team.runtime.team_run.persist_brief_to_atlas", _fake_persist)
     run = TeamRun(session_id="S1", user_request="hello", repo_root="/repo")
     brief = _brief(["src/auth"])
+    fake_atlas = SimpleNamespace(
+        persist_scout_brief=lambda **kwargs: seen.append(kwargs) or True
+    )
+    ci_service = SimpleNamespace(atlas=fake_atlas)
 
     run.note_direct_scout_brief(
         brief,
-        ci_service="ci-service",
+        ci_service=ci_service,
         reason="run_subagent:scout-complete",
     )
 
@@ -85,7 +83,16 @@ def test_team_run_note_direct_scout_brief_delegates_to_persistence(monkeypatch) 
         {
             "team_run": run,
             "brief": brief,
-            "ci_service": "ci-service",
             "reason": "run_subagent:scout-complete",
         }
     ]
+
+
+def test_team_run_note_direct_scout_brief_skips_without_service_layer() -> None:
+    run = TeamRun(session_id="S1", user_request="hello", repo_root="/repo")
+
+    run.note_direct_scout_brief(
+        _brief(["src/auth"]),
+        ci_service=None,
+        reason="run_subagent:scout-complete",
+    )

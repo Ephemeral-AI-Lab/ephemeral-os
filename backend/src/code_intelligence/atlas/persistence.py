@@ -6,8 +6,8 @@ import logging
 import time
 from typing import Any
 
-from team.atlas.freshness import hash_paths_under
-from team.atlas.store import AtlasChunk, AtlasStore, get_default_store
+from code_intelligence.atlas.freshness import hash_paths_under
+from code_intelligence.atlas.store import AtlasChunk, AtlasStore, get_default_store
 from team.context.canonicalize import scope_of_artifact
 
 logger = logging.getLogger(__name__)

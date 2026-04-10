@@ -9,8 +9,7 @@ from datetime import datetime
 from typing import Any, Callable
 
 from team.artifacts.store import InMemoryArtifactStore
-from team.atlas.identity import project_key_for
-from team.atlas.persistence import persist_brief_to_atlas
+from code_intelligence.atlas.identity import project_key_for
 from team.context.project import ProjectContext
 from team.context.scout_briefings import invalidate_stale_scout_context
 from team.persistence.events import (
@@ -272,10 +271,12 @@ class TeamRun:
         reason: str = "direct-scout",
     ) -> None:
         try:
-            persist_brief_to_atlas(
+            atlas = getattr(ci_service, "atlas", None)
+            if atlas is None:
+                return
+            atlas.persist_scout_brief(
                 team_run=self,
                 brief=brief,
-                ci_service=ci_service,
                 reason=reason,
             )
         except Exception:

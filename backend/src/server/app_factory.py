@@ -235,7 +235,7 @@ def ensure_runtime_stores_ready(settings: Settings | None = None):
 
     model_store.seed_from_json(str(_model_registry_path()))
     try:
-        from team.atlas.store import get_default_store
+        from code_intelligence.atlas.store import get_default_store
 
         atlas_store = get_default_store()
         if not atlas_store.is_initialised():

@@ -55,3 +55,20 @@ def test_team_planner_code_intelligence_toolkit_omits_ci_read_file() -> None:
 
     assert "ci_read_file" not in planner_ci.tool_names()
     assert "ci_read_file" in developer_ci.tool_names()
+
+
+def test_toolkit_instructions_surface_scope_and_search_tools() -> None:
+    developer_ci = create_toolkit(
+        "code_intelligence",
+        ToolkitContext(metadata={"agent_name": DEVELOPER}),
+    )
+    sandbox_ops = create_toolkit(
+        "sandbox_operations",
+        ToolkitContext(metadata={"sandbox_id": "sb-test"}),
+    )
+
+    assert developer_ci.instructions is not None
+    assert "ci_scope_status" in developer_ci.instructions
+
+    assert sandbox_ops.instructions is not None
+    assert "daytona_grep" in sandbox_ops.instructions

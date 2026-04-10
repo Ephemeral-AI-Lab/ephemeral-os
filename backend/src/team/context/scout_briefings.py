@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from team.atlas.freshness import MIN_COMPLETE_SCOPE_COVERAGE, brief_reuse_status
+from code_intelligence.atlas.freshness import MIN_COMPLETE_SCOPE_COVERAGE, brief_reuse_status
 from team.context.canonicalize import scope_of_artifact
 from team.models import Briefing
 

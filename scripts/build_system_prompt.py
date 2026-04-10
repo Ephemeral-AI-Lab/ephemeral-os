@@ -14,15 +14,20 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+from types import SimpleNamespace
 
 # Allow imports from backend/src
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend", "src"))
 
-from agents.loader import get_agent_definition  # type: ignore[attr-defined]
+from agents import get_definition  # type: ignore[attr-defined]
 from agents.types import AgentDefinition  # type: ignore[attr-defined]
-from prompts.runtime_prompt import build_agent_capabilities_prompt, build_runtime_system_prompt  # type: ignore[attr-defined]
-from prompts.system_prompt import build_system_prompt  # type: ignore[attr-defined]
 from config.settings import load_settings  # type: ignore[attr-defined]
+from engine.runtime.agent import (  # type: ignore[attr-defined]
+    _build_agent_system_prompt,
+    _build_agent_tool_registry,
+    finalize_tool_registry_and_prompt,
+)
+from team.builtins import register_all as register_team_builtins  # type: ignore[attr-defined]
 
 
 def _load_from_db(name: str, settings) -> AgentDefinition | None:
@@ -47,7 +52,7 @@ def _load_from_db(name: str, settings) -> AgentDefinition | None:
             system_prompt=record.system_prompt,
             model=record.model,
             effort=record.effort,
-            max_turns=record.max_turns,
+            tool_call_limit=record.tool_call_limit,
             toolkits=record.toolkits or [],
             skills=record.skills or [],
             hooks=record.hooks,
@@ -72,10 +77,11 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    register_team_builtins()
     settings = load_settings()
 
     # Try file-based lookup first, then fall back to DB
-    agent_def = get_agent_definition(args.agent_name)
+    agent_def = get_definition(args.agent_name)
     if agent_def is None:
         agent_def = _load_from_db(args.agent_name, settings)
     if agent_def is None:
@@ -83,68 +89,27 @@ def main() -> None:
         sys.exit(1)
 
     # --- Build system prompt the same way spawn_agent does ---
-
-    if agent_def.system_prompt:
-        system_prompt = agent_def.system_prompt
-    else:
-        settings.system_prompt = None
-        system_prompt = build_runtime_system_prompt(settings, cwd=args.cwd)
+    config = SimpleNamespace(cwd=args.cwd)
+    system_prompt = _build_agent_system_prompt(
+        config,
+        agent_def,
+        settings,
+        latest_user_prompt=None,
+    )
 
     # --- Tool registry (mirrors spawn_agent lines 105-150) ---
     if not args.no_capabilities:
-        from tools import create_default_tool_registry  # type: ignore[attr-defined]
-        from tools.factory import create_toolkit, has_factory, ToolkitContext  # type: ignore[attr-defined]
-
-        tool_registry = create_default_tool_registry()
-
-        toolkit_ctx = ToolkitContext(
-            agent_name=args.agent_name,
-            cwd=args.cwd,
-            metadata={"sandbox_id": args.sandbox_id or ""},
+        tool_registry = _build_agent_tool_registry(
+            config,
+            agent_def,
+            args.sandbox_id or None,
+            args.agent_name,
         )
-
-        if agent_def.toolkits:
-            for tk_name in agent_def.toolkits:
-                if tool_registry.get_toolkit(tk_name) is not None:
-                    continue
-                if has_factory(tk_name):
-                    try:
-                        tk = create_toolkit(tk_name, toolkit_ctx)
-                        tool_registry.register_toolkit(tk)
-                    except Exception as exc:
-                        print(
-                            f"Warning: failed to create toolkit '{tk_name}': {exc}", file=sys.stderr
-                        )
-
-            tool_registry.restrict_to_toolkits(agent_def.toolkits)
-
-        # --- SkillsToolkit (mirrors spawn_agent lines 166-177) ---
-        if agent_def.skills:
-            from skills.loader import load_skill_registry  # type: ignore[attr-defined]
-            from tools.builtins.skills import make_skills_toolkit  # type: ignore[attr-defined]
-
-            skill_registry = load_skill_registry(args.cwd)
-            skills_toolkit = make_skills_toolkit(skill_registry, agent_def.skills)
-            tool_registry.register_toolkit(skills_toolkit)
-
-        # --- Background toolkit (mirrors spawn_agent) ---
-        bg_tool_names = [
-            t.name
-            for t in tool_registry.list_tools()
-            if getattr(t, "background", "forbidden") != "forbidden"
-        ]
-        has_background_tools = bool(bg_tool_names)
-        if has_background_tools:
-            from tools.builtins.background import make_background_toolkit  # type: ignore[attr-defined]
-
-            tool_registry.register_toolkit(make_background_toolkit(bg_tool_names))
-        awareness = build_agent_capabilities_prompt(
-            toolkits=tool_registry.list_toolkits(),
-            has_background_tools=bool(bg_tool_names),
-            bg_tool_names=bg_tool_names,
+        system_prompt, _ = finalize_tool_registry_and_prompt(
+            tool_registry,
+            system_prompt,
+            can_spawn_subagents=agent_def.can_spawn_subagents,
         )
-        if awareness:
-            system_prompt = system_prompt + "\n\n" + awareness
 
     print(system_prompt)
 

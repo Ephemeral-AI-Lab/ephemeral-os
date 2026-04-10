@@ -33,7 +33,7 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
-from team.atlas.model import ProjectAtlasChunkRecord, ProjectAtlasRecord
+from code_intelligence.atlas.model import ProjectAtlasChunkRecord, ProjectAtlasRecord
 
 logger = logging.getLogger(__name__)
 

@@ -19,10 +19,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from code_intelligence.editing.ledger import Ledger
+from code_intelligence.atlas import AtlasChunk, AtlasStore
+from code_intelligence.atlas.model import ProjectAtlasChunkRecord, ProjectAtlasRecord  # noqa: F401
 from db.base import Base
 from team.artifacts.store import InMemoryArtifactStore
-from team.atlas import AtlasChunk, AtlasStore
-from team.atlas.model import ProjectAtlasChunkRecord, ProjectAtlasRecord  # noqa: F401
 from team.context.project import ProjectContext
 from team.models import BudgetConfig, BudgetState
 from team.runtime.registry import register, unregister
@@ -67,12 +67,15 @@ def _ctx(
     *,
     store: AtlasStore | None = None,
     ledger: Ledger | None = None,
+    ci_service: Any | None = None,
     atlas_max_age_seconds: float | None = None,
 ) -> ToolExecutionContext:
     meta = ExecutionMetadata(team_run_id=tid or "")
     if store is not None:
         meta.extras["atlas_store"] = store
-    if ledger is not None:
+    if ci_service is not None:
+        meta.ci_service = ci_service
+    elif ledger is not None:
         meta.ci_service = SimpleNamespace(ledger=ledger)
     if atlas_max_age_seconds is not None:
         meta.extras["atlas_max_age_seconds"] = atlas_max_age_seconds
@@ -208,6 +211,46 @@ async def test_ledger_edit_out_of_scope_stays_fresh(atlas_store: AtlasStore) -> 
         )
         assert not result.is_error
         assert lookups[0]["action"] == "use"
+    finally:
+        unregister("T1")
+
+
+@pytest.mark.asyncio
+async def test_tool_prefers_ci_service_atlas_delegate() -> None:
+    tr = _fake_team_run("T1")
+    register(tr)
+    seen: list[dict[str, Any]] = []
+    fake_atlas = SimpleNamespace(
+        lookup_subsystems=lambda **kwargs: seen.append(kwargs)
+        or SimpleNamespace(
+            entries=[
+                {
+                    "subsystem": "src/a",
+                    "action": "scout",
+                    "stale": False,
+                    "staleness_reason": None,
+                    "staged_artifact_ref": None,
+                    "symbol_ids": [],
+                }
+            ],
+            atlas_disabled=False,
+        )
+    )
+    ci_service = SimpleNamespace(atlas=fake_atlas, workspace_root="/repo")
+    try:
+        result, lookups = await _call(
+            subsystems=["src/a"],
+            context=_ctx("T1", ci_service=ci_service),
+        )
+        assert not result.is_error
+        assert lookups[0]["action"] == "scout"
+        assert seen == [
+            {
+                "team_run": tr,
+                "subsystems": ["src/a"],
+                "max_age_seconds": 21600.0,
+            }
+        ]
     finally:
         unregister("T1")
 

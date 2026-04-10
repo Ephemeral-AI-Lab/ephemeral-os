@@ -4,7 +4,7 @@ Single entry point — ``project_key_for(repo_root)`` — so every caller
 uses the same rule. Keys are the SHA-256 prefix of the resolved absolute
 path: short enough to index cheaply, stable across CWD changes, and
 insensitive to symlinks. The raw path is kept in a separate column on
-:class:`team.atlas.model.ProjectAtlasRecord` for human inspection.
+:class:`code_intelligence.atlas.model.ProjectAtlasRecord` for human inspection.
 """
 
 from __future__ import annotations

@@ -1,4 +1,4 @@
-"""Tests for :mod:`team.atlas` — store, freshness, and project identity."""
+"""Tests for :mod:`code_intelligence.atlas` — store, freshness, and project identity."""
 
 from __future__ import annotations
 
@@ -11,8 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 
 from code_intelligence.editing.ledger import Ledger
-from db.base import Base
-from team.atlas import (
+from code_intelligence.atlas import (
     AtlasChunk,
     AtlasStore,
     changes_since_chunk,
@@ -20,7 +19,8 @@ from team.atlas import (
     is_subsystem_stale,
     project_key_for,
 )
-from team.atlas.model import ProjectAtlasChunkRecord, ProjectAtlasRecord  # noqa: F401
+from code_intelligence.atlas.model import ProjectAtlasChunkRecord, ProjectAtlasRecord  # noqa: F401
+from db.base import Base
 
 
 # ---------------------------------------------------------------------------
@@ -566,7 +566,7 @@ def test_binary_file_hashing_and_mutation_detected(tmp_path: Path) -> None:
     non-UTF-8 files from ``content_hashes`` entirely, so replacing a
     binary under scope was invisible. Hashing raw bytes fixes it.
     """
-    from team.atlas.freshness import hash_file
+    from code_intelligence.atlas.freshness import hash_file
 
     binary = tmp_path / "blob.bin"
     binary.write_bytes(b"\xff\xfe\x00\x01nonutf")
@@ -580,14 +580,14 @@ def test_binary_file_hashing_and_mutation_detected(tmp_path: Path) -> None:
 
 
 def test_hash_file_returns_none_for_missing(tmp_path: Path) -> None:
-    from team.atlas.freshness import hash_file
+    from code_intelligence.atlas.freshness import hash_file
 
     assert hash_file(tmp_path / "nope.py") is None
 
 
 def test_binary_mutation_marks_chunk_stale(tmp_path: Path) -> None:
     """End-to-end: a binary under scope that changes bytes → chunk is stale."""
-    from team.atlas.freshness import hash_paths_under
+    from code_intelligence.atlas.freshness import hash_paths_under
 
     scope = tmp_path / "pkg"
     scope.mkdir()
@@ -616,7 +616,7 @@ def test_ledger_path_normalization_handles_symlinked_root(tmp_path: Path) -> Non
     is exercised even on filesystems without real symlinks.
     """
     from datetime import datetime, timezone
-    from team.atlas.freshness import changes_since_chunk, is_subsystem_stale
+    from code_intelligence.atlas.freshness import changes_since_chunk, is_subsystem_stale
 
     # Simulate: ledger recorded under an unresolved root; chunk stores
     # the resolved form. Use monkey-patching via a real symlink when
@@ -652,7 +652,7 @@ def test_ledger_path_normalization_handles_symlinked_root(tmp_path: Path) -> Non
 
 def test_brief_version_monotonic_under_rapid_calls() -> None:
     """Two AtlasChunks created back-to-back must have strictly increasing versions."""
-    from team.atlas.store import _fresh_version
+    from code_intelligence.atlas.store import _fresh_version
 
     versions = [_fresh_version() for _ in range(1000)]
     assert len(set(versions)) == 1000, "brief_version must be collision-free"

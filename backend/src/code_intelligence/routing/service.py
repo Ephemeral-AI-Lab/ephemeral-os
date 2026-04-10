@@ -15,6 +15,7 @@ import threading
 import time
 from typing import Any
 
+from code_intelligence.atlas.service import AtlasService
 from code_intelligence.editing.arbiter import Arbiter
 from code_intelligence.routing.backend_protocol import (
     LspBackendAdapter,
@@ -224,6 +225,11 @@ class CodeIntelligenceService:
         self.lsp_client = LspClient(
             workspace_root=workspace_root,
             sandbox=sandbox,
+        )
+        self.atlas = AtlasService(
+            workspace_root=workspace_root,
+            ledger=self.ledger,
+            symbol_index=self.symbol_index,
         )
 
         # Query router with backend adapters
@@ -578,6 +584,7 @@ class CodeIntelligenceService:
                 "entries": self.ledger.entry_count,
                 "generation": self.ledger.generation,
             },
+            "atlas": self.atlas.status(),
             "lsp": {
                 "connected": self.lsp_client.connected,
                 "queries": lsp_tel.queries,

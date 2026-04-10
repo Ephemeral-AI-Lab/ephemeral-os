@@ -36,7 +36,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from team.atlas.store import AtlasChunk
+from code_intelligence.atlas.store import AtlasChunk
 from team.context.canonicalize import canonicalize_scope
 
 if TYPE_CHECKING:

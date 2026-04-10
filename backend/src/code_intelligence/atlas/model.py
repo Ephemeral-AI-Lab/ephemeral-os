@@ -12,7 +12,7 @@ Two tables, one per concern:
 Both tables are registered on the shared :class:`db.base.Base` so
 ``Base.metadata.create_all`` picks them up the same way the rest of the
 application models do. No domain logic lives here — that belongs in
-:mod:`team.atlas.store`.
+:mod:`code_intelligence.atlas.store`.
 """
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ class ProjectAtlasRecord(Base):
     """Header row for a project's atlas.
 
     ``project_key`` is a stable identity derived from the repo root (see
-    :mod:`team.atlas.identity`). Freshness is computed per-chunk via the
+    :mod:`code_intelligence.atlas.identity`). Freshness is computed per-chunk via the
     edit ledger and stored content hashes — this row is purely a pointer.
     """
 
