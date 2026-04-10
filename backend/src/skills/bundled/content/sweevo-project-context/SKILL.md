@@ -43,6 +43,7 @@ When benchmark prose, release notes, or changelog bullets disagree with the live
 - Preserve exact pytest node ids verbatim in planner payloads. Do not shorten `test_info_versions` to `test_info`, drop parametrization, or invent normalized aliases when you split FAIL_TO_PASS targets across child planners or workers.
 - Never synthesize pytest node ids. If you need only a representative subset, copy exact node ids verbatim from the prompt. If you cannot quote an exact node id confidently, use the exact checkout-relative test file path from the prompt instead of inventing parametrization suffixes or hash-like ids.
 - Planner briefings must be execution-ready. Each developer or validator lane should receive the exact retry target, owned files or region, nearest same-surface guardrail, and any artifact refs or residual-cluster notes needed to act without fresh ownership discovery.
+- Every planner `briefings` entry needs a stable `name`, a valid `source`, and the matching payload field for that source. Use `ref` for `source="artifact"` and `inline` for `source="inline"`. A content-only briefing object is malformed and will be rejected at plan submission time.
 - Reproduction and verification commands must use exact checkout-relative test paths from the prompt or scout evidence. Do not shorten `dask/dataframe/io/tests/test_json.py` to `tests/test_json.py`, and do not strip package prefixes from benchmark focus files.
 - On large benchmark roots, spend the first exploration pass on a small set of disjoint source-owner scouts rather than one long serial hypothesis lane.
 - Treat scout lanes as scarce. Open a new scout only for a genuinely distinct unresolved owner slice, and remember that fresh scout fanout is capped at `8` launches per planner turn.
@@ -95,6 +96,7 @@ When benchmark prose, release notes, or changelog bullets disagree with the live
 - If the exact retry target is already green in the sandbox, stop debugging and report that result; let the validator spend the one broader regression check.
 - If the named pytest node does not exist in the live checkout, stop and report the mismatch with the exact missing node id. Do not invent substitute tests, new compatibility shims, or neighboring files until the benchmark surface is confirmed.
 - If the first failing surface is an unowned benchmark test import/collection error, keep the lane on the adjacent production/export owner. Do not "repair" the benchmark by editing the unowned test file just because the payload or node name is stale.
+- A test path mentioned only in `owned_failures`, `verify`, or a failing command is not test ownership. Worker lanes may edit `tests/` files only when the payload explicitly assigns that test path as an owned file or direct task target.
 - Fix production code first. Do not edit tests, snapshots, or benchmark harness files unless the WorkItem explicitly assigns them.
 - When touching core metadata propagation or schema-wrapper logic, run a same-surface regression slice that checks ordering, wrapper passthrough, and error-shape stability, not just the exact failing test.
 - When touching RootModel JSON schema description propagation, validate both the field-description-only case and the docstring-vs-field precedence case.
@@ -123,6 +125,7 @@ When benchmark prose, release notes, or changelog bullets disagree with the live
 - Once the root planner can name a dominant owner slice and a residual cluster boundary, planning is complete for that layer. Submit the hierarchical plan immediately.
 - After that sufficiency point, do not launch any new subagents except progress checks for already-running scouts. In particular, do not background a child `team_planner` to "help" finalize the root DAG.
 - Duplicate-scout rejection, background wait protocol errors, and already-completed waits are evidence that exploration has crossed the sufficiency boundary. Do not open another scout after those signals.
+- Scout launches must satisfy the literal runtime schema: pass exactly one of `prompt` or `input`, and for `agent_name="scout"` that means `input={"target_paths": [...]}` only. Never send `prompt=null` or an empty scout input.
 - If `share_briefing` is absent from the visible tool list, treat that as a no-promotion profile, not as a blocker. Reuse the scout artifact locally or via auto-promoted shared context and keep planning.
 - If the dominant cluster is already mapped to one owner file or one tightly-coupled owner pair, keep that as one developer lane. Everything else becomes either a residual child planner or separately bounded residual developer lanes.
 - The default root benchmark shape for this repo is: one dominant developer lane, one residual child planner lane, one validator lane. Flatten the residual lane into direct developers only when each residual owner is already bounded without more planning.
@@ -132,6 +135,7 @@ When benchmark prose, release notes, or changelog bullets disagree with the live
 - Root benchmark scouts should target likely production owner files or directories first. Do not spend the first scout wave on already-named benchmark test files unless production ownership is still unresolved after the owner-surface pass.
 - Planner outputs that collapse unrelated residual bugs from `construction`, `json_schema`, `root_model`, and `types` into one developer lane are low-quality plans and should be avoided.
 - Planner outputs that repeat `local_id`, `agent_name`, `kind`, or `payload` keys inside one JSON object are malformed and unusable. Close the current item object and start a new sibling item instead of continuing the same object.
+- If a planned multi-lane root payload extracts as only one validator-looking item, treat that as broken JSON boundaries, not as permission to submit a validator-only fallback. Repair the sibling item separators first.
 - Planner outputs that invent pytest node ids, shorten benchmark test paths, or name production files that the checkout does not contain are malformed benchmark payloads even if the JSON parses. Copy exact ids and paths from the prompt or confirmed live structure only.
 - Planner-side narration must stay at the ownership and validation-target level. Do not speculate about concrete code fixes from failure strings such as `MultiHostUrl.path` or other pytest assertion details.
 

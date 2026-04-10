@@ -59,6 +59,11 @@ def test_planner_playbook_gates_share_briefing_on_tool_availability() -> None:
     assert "Every execution lane should also receive the minimal handoff packet it needs to start immediately" in planner
     assert "Retry/replan handoff packets must preserve clustered failures, affected files, and what changed since the last healthy checkpoint or validator pass." in planner
     assert "do not expect validator or developer lanes to rediscover the owner map with fresh repo-wide probing" in planner
+    assert "Build the `items` array one sibling object at a time." in planner
+    assert "Count sibling items before you stop." in planner
+    assert "A validator-only extracted payload means the JSON boundaries are broken." in planner
+    assert "Every entry in `briefings` must be a complete object with a stable `name`, a valid `source`, and the matching payload field for that source." in planner
+    assert 'For `run_subagent(agent_name="scout", ...)`, supply exactly one channel' in planner
 
 
 def test_sweevo_context_treats_missing_share_briefing_as_non_blocking() -> None:
@@ -67,6 +72,7 @@ def test_sweevo_context_treats_missing_share_briefing_as_non_blocking() -> None:
     assert "treat that as a no-promotion profile, not as a blocker" in sweevo
     assert "representative deduped subset of failing ids" in sweevo
     assert "repeat `local_id`, `agent_name`, `kind`, or `payload` keys inside one JSON object" in sweevo
+    assert "broken JSON boundaries" in sweevo
     assert 'A planner-side `ci_query_symbols(kind="class")` miss does not prove a public type is absent from the repo.' in sweevo
     assert "After a bounded export fix, rerun the named pytest entry point before widening the same lane to additional public names." in sweevo
     assert "Once that missing public name is anchored to a local export file, do not spend developer budget on dependency version checks" in sweevo
@@ -75,10 +81,13 @@ def test_sweevo_context_treats_missing_share_briefing_as_non_blocking() -> None:
     assert "Retry/replan handoff must preserve the evidence packet." in sweevo
     assert "Ownership mismatch is a planning problem." in sweevo
     assert "Planner briefings must be execution-ready." in sweevo
+    assert "Every planner `briefings` entry needs a stable `name`, a valid `source`, and the matching payload field for that source." in sweevo
     assert "Do not push that rediscovery work down to the next developer or validator lane." in sweevo
     assert "Preserve exact pytest node ids verbatim in planner payloads." in sweevo
     assert "Do not shorten `test_info_versions` to `test_info`" in sweevo
     assert 'Do not "repair" the benchmark by editing the unowned test file' in sweevo
+    assert "mentioned only in `owned_failures`, `verify`, or a failing command is not test ownership" in sweevo
+    assert "Scout launches must satisfy the literal runtime schema" in sweevo
 
 
 def test_developer_playbook_anchors_import_failures_to_named_pytest_surface() -> None:
@@ -98,6 +107,9 @@ def test_developer_playbook_anchors_import_failures_to_named_pytest_surface() ->
     assert "patch the last merge/update function that overwrites the public field" in developer
     assert "If the first failing pytest surface is inside an unowned test file" in developer
     assert "Named-node mismatches are not permission to rewrite tests." in developer
+    assert "`owned_failures` is not a write allowlist." in developer
+    assert "A failing test path in `owned_failures`, `verify`, or reproduction output is evidence, not write permission." in developer
+    assert "If the runtime says `Unknown tool: edit_file`, `write_file`, or `read_file`" in developer
 
 
 def test_validator_playbook_mentions_codeact_is_unavailable_in_team_lanes() -> None:

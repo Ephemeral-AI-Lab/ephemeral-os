@@ -23,6 +23,7 @@ Produce a structural ownership map first, then assign developer and validator wo
 
 3. Launch a bounded scout.
    Call `run_subagent(agent_name="scout", input={"target_paths": [...]})` with concrete paths only.
+   The scout call must satisfy the runtime schema exactly: provide `input` only, never `prompt=null`, never both `prompt` and `input`, and never an empty or missing `target_paths` list.
    Give the scout the smallest slice that can still answer the ownership question.
    When ownership has already split, prefer several disjoint scouts in parallel over serial parent-side probing.
    Do not open a scout just because fanout is available. Launch only when the lane covers a still-unresolved owner boundary that existing scout briefs, atlas results, or shared context do not already answer.

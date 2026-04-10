@@ -242,6 +242,14 @@ def ensure_runtime_stores_ready(settings: Settings | None = None):
             atlas_store.initialize(sf)
     except Exception:
         logger.debug("AtlasStore initialisation skipped", exc_info=True)
+    try:
+        from team.memory.store import get_default_store as get_team_memory_store
+
+        memory_store = get_team_memory_store()
+        if not memory_store.is_initialised():
+            memory_store.initialize(sf)
+    except Exception:
+        logger.debug("TeamMemoryStore initialisation skipped", exc_info=True)
     return sf
 
 

@@ -295,6 +295,11 @@ def prepare_ci_write(
     scope_paths = scope_paths_for_write(context, fallback_paths=[file_path])
     packet, err = enforce_scope_coherence(context, scope_paths=scope_paths)
     if err is not None and not allow_scope_drift:
+        _note_team_memory_conflict(
+            context,
+            file_path=file_path,
+            reason=err,
+        )
         return None, packet, err
     svc = get_ci_service(context)
     if svc is None or not hasattr(svc, "prepare_write"):
@@ -309,7 +314,13 @@ def prepare_ci_write(
         allow_missing=True,
     )
     if getattr(prepared, "success", None) is False:
-        return None, packet, str(getattr(prepared, "message", "") or "write precheck failed")
+        message = str(getattr(prepared, "message", "") or "write precheck failed")
+        _note_team_memory_conflict(
+            context,
+            file_path=file_path,
+            reason=message,
+        )
+        return None, packet, message
     refreshed = refresh_scope_baseline(context, scope_paths=scope_paths)
     return prepared, refreshed or packet, None
 
@@ -341,6 +352,12 @@ def finalize_ci_write(
                 context,
                 fallback_paths=[getattr(prepared, "file_path", "")],
             ),
+        )
+    elif bool(getattr(result, "conflict", False)):
+        _note_team_memory_conflict(
+            context,
+            file_path=str(getattr(prepared, "file_path", "") or ""),
+            reason=str(getattr(result, "conflict_reason", "") or getattr(result, "message", "") or "write conflict"),
         )
     return result
 
@@ -688,6 +705,30 @@ def _note_atlas_edit(
         team_run.note_atlas_edit(file_path, reason=reason)
     except Exception:
         logger.debug("atlas dirty-mark failed for %s", file_path, exc_info=True)
+
+
+def _note_team_memory_conflict(
+    context: ToolExecutionContext,
+    *,
+    file_path: str,
+    reason: str,
+) -> None:
+    """Persist a typed conflict event when a TeamRun is active."""
+    team_run_id = context.metadata.get("team_run_id")
+    if not team_run_id:
+        return
+    team_run = _get_team_run(str(team_run_id))
+    if team_run is None or not hasattr(team_run, "note_conflict_event"):
+        return
+    try:
+        team_run.note_conflict_event(
+            file_path=file_path,
+            reason=reason,
+            work_item_id=str(context.metadata.get("work_item_id") or ""),
+            agent_name=str(context.metadata.get("agent_name") or ""),
+        )
+    except Exception:
+        logger.debug("team memory conflict persistence failed for %s", file_path, exc_info=True)
 
 
 def _get_team_run(team_run_id: str) -> Any | None:

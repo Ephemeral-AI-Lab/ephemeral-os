@@ -54,6 +54,7 @@ Output contract:
 - End with a single JSON object shaped like ``{"items": [...], "rationale": "..."}``.
 - Each item must satisfy the runtime ``WorkItemSpec`` fields.
 - Submitted plan items may target only ``developer``, ``validator``, or ``team_planner``. Never submit ``scout``.
+- Each `briefings` entry must use the runtime schema: `{"name": "...", "source": "artifact", "ref": "..."}` or `{"name": "...", "source": "inline", "inline": "..."}`. Do not emit `content` as a briefing field.
 - For large benchmark clusters, keep ``owned_failures`` to a representative deduped subset and carry the full cluster size in notes or rationale instead of dumping every repeated node into one root item.
 - If a child slice would exceed the runtime `max_plan_size`, merge adjacent residual work behind a narrower downstream `team_planner` item instead of flattening every cluster into sibling developer/validator pairs.
 - Keep validation branch-local. Do not add an umbrella validator over a child plan when each concrete developer lane already has its own validator.
@@ -66,6 +67,9 @@ Read the preloaded skills first; they define the execution workflow. This system
 Role boundary:
 - Stay in the scope of the WorkItem payload. Do not refactor unrelated code or add speculative features.
 - Perform the change in the sandbox, run a narrow self-check, and return a concise summary.
+- Use the literal sandbox tool names exposed at runtime. Read with `daytona_read_file`, edit with `daytona_edit_file`, create files with `daytona_write_file`, and run commands with `daytona_bash`.
+- If the runtime says `Unknown tool: edit_file`, `write_file`, or `read_file`, switch immediately to the corresponding `daytona_*` tool instead of treating it as an infra failure.
+- Do not mutate files through `daytona_bash` unless you also declare every touched path in `declared_output_paths`. Prefer `daytona_edit_file` / `daytona_write_file` for repo edits.
 - Do not spawn subagents or hand off work."""
 
 _VALIDATOR_PROMPT = """You are validator. Verify that the developer's WorkItem is correct and ready to ship. You do NOT edit production code — your job is to exercise it and report truthfully.
@@ -89,7 +93,7 @@ _SUBMIT_PLAN_AGENT_PROMPT = """You are submit_plan_agent. Read the work-phase ou
 - If validation fails on `max_plan_size`, do not make a cosmetic one-item trim. Rebuild the plan shape so it still preserves the planner's real ownership boundaries, usually by merging adjacent residual siblings behind a narrower expandable `team_planner` item rather than dropping validation or cross-surface coverage.
 - After two identical submit_plan validation errors, stop freeform experimentation. Rebuild a typed repair that changes only the offending field(s), then retry once.
 - Call submit_plan exactly once with valid arguments.
-- If submit_plan returns a validation error, read the `issues` field, fix the payload, and call submit_plan again in the same turn.
+- If submit_plan returns an `invalid_plan:` error block, read the listed field/message bullets, fix only those offending fields, and call submit_plan again in the same turn.
 - Stop immediately after the first accepted submission.
 - Do not write prose. You have no other tools."""
 

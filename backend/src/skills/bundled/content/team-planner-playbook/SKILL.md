@@ -38,6 +38,9 @@ Apply these stop/go rules before the longer ladder:
 16. Once all launched scouts for the current wave have completed, you are at the decision point: emit the plan or launch one genuinely new disjoint scout for an uncovered owner. Do not keep monologuing about task-shape options without taking one of those two actions.
 17. Fresh scout fanout is hard-capped at `8` launches per planner turn. If you are near that cap, spend the remaining budget on progress checks, brief reuse, and the final plan instead of opening marginal scout lanes.
 18. Every test id, test path, production path, and verification command you place in the payload must come verbatim from the current prompt, a scout brief, or live CI/workspace evidence. If you cannot quote an exact pytest node id, fall back to the exact test file path from the prompt. Never synthesize parametrization suffixes, random-looking ids, shortened `tests/...` aliases, or guessed owner files.
+18a. Build the `items` array one sibling object at a time. Close each item immediately after its `payload`, `deps`, `briefings`, and `notes`. Never start the next lane by writing a second `local_id`, `agent_name`, `kind`, or `payload` key inside the current `{...}` object.
+18b. Every entry in `briefings` must be a complete object with a stable `name`, a valid `source`, and the matching payload field for that source. Use `{"name": "...", "source": "artifact", "ref": "..."}` for artifact briefings and `{"name": "...", "source": "inline", "inline": "..."}` for inline briefings. Do not emit content-only briefing objects.
+18c. Scout launches are schema-checked. For `run_subagent(agent_name="scout", ...)`, supply exactly one channel and make it `input={"target_paths": [...]}` with concrete paths. Never send `prompt=null`, never omit `target_paths`, and never pass both `prompt` and `input`.
 
 ## Benchmark root fast path
 
@@ -319,6 +322,7 @@ Never invent new worker agent names unless the user has registered one in the ag
 43. **Protocol errors are stop-and-plan signals.** After `WAIT_REQUIRES_PROGRESS_CHECK` on a benchmark root, do the single required progress check if an uncovered scout is still meaningful; otherwise finish the plan immediately. Do not respond by opening new scouts, waiting on `all`, or narrating more diagnosis.
 44. **No release archaeology after sufficiency.** Once you can name the dominant owner cluster and at least one residual owner or child-planner slice, do not call `ci_recent_changes`, `ci_edit_hotspots`, or version/dependency-oriented CI queries from the root planner turn. Those tools are for collision awareness after execution lanes exist, not for recovering confidence after source ownership is already clear.
 45. **Do not rescue malformed child plans by dropping validator deps.** If a child branch needs developer lanes, they must appear in the same JSON `items` array before the validators that depend on them. Validators with unknown deps are evidence of a malformed plan, not permission to submit a validator-only fallback.
+46. **Count sibling items before you stop.** If you intended `N` root lanes, the final JSON must contain `N` sibling `{...}` objects inside `items`, separated at array depth by `}, {` semantics. If the extracted payload would contain only one validator-looking item, the plan is malformed; repair the JSON boundaries before ending the turn.
 
 ---
 
@@ -339,6 +343,8 @@ Never invent new worker agent names unless the user has registered one in the ag
 - [ ] Any expandable planner deps reflect real ordering needs, not a mandatory sibling-dependency rule.
 - [ ] Any checkpoint / resumed-from / tool-usage evidence from workers is preserved in `briefings`, `cluster_notes`, or `rationale` instead of being collapsed into generic runtime prose.
 - [ ] Every benchmark test id and test path in the payload was copied verbatim from the runtime prompt or confirmed live evidence; no fabricated parametrization hashes, shortened `tests/...` aliases, or guessed checkout paths slipped in.
+- [ ] The number of sibling objects in `items` matches the number of lanes you intended to submit; no repeated `local_id` / `agent_name` / `kind` / `payload` keys appear inside one item object.
+- [ ] If the plan mentions multiple developer lanes, the final `items` array still contains those developer objects before any validator that depends on them. A validator-only extracted payload means the JSON boundaries are broken.
 - [ ] `rationale` is set when the plan shape is non-obvious (Pattern B/C, atlas refresh, greenfield).
 ## Residual-failure replans
 
@@ -394,3 +400,4 @@ Never invent new worker agent names unless the user has registered one in the ag
 - Do not create a root validator whose scope is primarily the residual child-planner branch (`val_core`, `val_remaining`, `val_small_residuals`, etc.). That validator does not cover the descendant code work and creates a false sense of completion.
 - For large benchmark clusters, `owned_failures` should be a representative deduped subset, not a full dump of hundreds of parametrized nodes. Keep the list short enough to stay readable, and carry the total cluster size in `cluster_notes`, `notes`, or `rationale`.
 - JSON item boundaries are literal. Every entry in `items` must be its own `{...}` object. If you see yourself writing `local_id`, `agent_name`, `kind`, or `payload` a second time before closing the current item object, stop and split that content into a new sibling object.
+- A practical self-check: scan the final payload from left to right and count the top-level item openings in `items`. If you planned `dev_hdf`, `dev_groupby`, `plan_residual`, and `val`, you must be able to point to four sibling objects in the array before you end the turn.

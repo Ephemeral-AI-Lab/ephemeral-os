@@ -8,6 +8,7 @@ from dataclasses import asdict
 from typing import Any, Callable
 
 from team.context.scout_briefings import invalidate_stale_scout_context
+from team.memory.runtime import persist_memory_record
 from team.persistence.events import (
     make_team_run_created,
     make_team_run_status,
@@ -234,6 +235,99 @@ class TeamRun:
             )
             return False
 
+    def note_validator_outcome(
+        self,
+        *,
+        work_item: WorkItem,
+        summary: str,
+        artifact: dict[str, Any] | None,
+    ) -> bool:
+        scope_paths = _memory_scope_paths(work_item, artifact)
+        return persist_memory_record(
+            project_key=self.project_context.project_key,
+            repo_root=self.project_context.repo_root,
+            kind="validation_outcome",
+            scope={"paths": scope_paths},
+            content={
+                "summary": summary,
+                "artifact": _coerce_memory_payload(artifact),
+                "work_item_id": work_item.id,
+                "agent_name": work_item.agent_name,
+            },
+            source={
+                "team_run_id": self.id,
+                "work_item_id": work_item.id,
+                "agent": work_item.agent_name,
+                "artifact_ref": work_item.artifact_ref or "",
+            },
+        )
+
+    def note_conflict_event(
+        self,
+        *,
+        file_path: str,
+        reason: str,
+        work_item_id: str = "",
+        agent_name: str = "",
+    ) -> bool:
+        return persist_memory_record(
+            project_key=self.project_context.project_key,
+            repo_root=self.project_context.repo_root,
+            kind="conflict_event",
+            scope={"paths": [file_path] if file_path else []},
+            content={
+                "file_path": file_path,
+                "reason": reason,
+            },
+            source={
+                "team_run_id": self.id,
+                "work_item_id": work_item_id,
+                "agent": agent_name,
+            },
+            stale_hint="coordination conflict observed during live execution",
+        )
+
+    def note_explicit_memory_artifacts(
+        self,
+        *,
+        work_item: WorkItem,
+        artifact: dict[str, Any] | None,
+    ) -> int:
+        if not isinstance(artifact, dict):
+            return 0
+        raw_records = artifact.get("memory_records")
+        if not isinstance(raw_records, list):
+            return 0
+        persisted = 0
+        for raw in raw_records:
+            if not isinstance(raw, dict):
+                continue
+            kind = str(raw.get("kind") or "").strip()
+            if not kind:
+                continue
+            source = _coerce_memory_dict(raw.get("source"))
+            source.pop("team_run_id", None)
+            source.pop("work_item_id", None)
+            source.pop("agent", None)
+            ok = persist_memory_record(
+                project_key=self.project_context.project_key,
+                repo_root=self.project_context.repo_root,
+                kind=kind,
+                scope=_coerce_memory_dict(raw.get("scope")),
+                content=_coerce_memory_dict(raw.get("content")),
+                source={
+                    **source,
+                    "team_run_id": self.id,
+                    "work_item_id": work_item.id,
+                    "agent": work_item.agent_name,
+                },
+                status=str(raw.get("status") or "active"),
+                stale_hint=str(raw.get("stale_hint") or ""),
+                superseded_by=str(raw.get("superseded_by") or ""),
+            )
+            persisted += int(bool(ok))
+        return persisted
+
     # ---- checkpoint API --------------------------------------------------
 
     async def checkpoint(self, label: str | None = None) -> str:
@@ -378,3 +472,32 @@ class TeamRun:
                 pass
 
         return run
+
+
+def _coerce_memory_dict(value: Any) -> dict[str, Any]:
+    return dict(value) if isinstance(value, dict) else {}
+
+
+def _coerce_memory_payload(value: Any) -> Any:
+    if isinstance(value, dict):
+        return dict(value)
+    if isinstance(value, list):
+        return list(value)
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    return repr(value)
+
+
+def _memory_scope_paths(work_item: WorkItem, artifact: dict[str, Any] | None) -> list[str]:
+    if isinstance(artifact, dict):
+        target_paths = artifact.get("target_paths")
+        if isinstance(target_paths, list):
+            return [str(item) for item in target_paths if isinstance(item, str) and item]
+    payload = work_item.payload if isinstance(work_item.payload, dict) else {}
+    for key in ("verify", "owned_files"):
+        raw = payload.get(key)
+        if isinstance(raw, list):
+            paths = [str(item) for item in raw if isinstance(item, str) and item]
+            if paths:
+                return paths
+    return []

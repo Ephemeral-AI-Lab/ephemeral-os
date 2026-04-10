@@ -74,9 +74,12 @@ class AtlasChunk:
     brief: dict[str, Any]
     updated_at: datetime | None = None
     content_hashes: dict[str, str] = field(default_factory=dict)
+    scope_paths: list[str] = field(default_factory=list)
     symbol_ids: list[str] = field(default_factory=list)
     repo_root: str = ""
     snapshot_time: float = 0.0
+    observed_at: float = field(default_factory=time.time)
+    source_run_id: str = ""
     brief_version: int = field(default_factory=_fresh_version)
 
 
@@ -145,8 +148,11 @@ class AtlasStore:
         values = {
             "brief_json": dict(chunk.brief),
             "content_hashes_json": dict(chunk.content_hashes),
+            "scope_json": list(chunk.scope_paths),
             "symbol_ids_json": list(chunk.symbol_ids),
             "snapshot_time": float(chunk.snapshot_time or 0.0),
+            "observed_at": float(chunk.observed_at or 0.0),
+            "source_run_id": str(chunk.source_run_id or ""),
             "brief_version": int(chunk.brief_version),
         }
         # Conditional update — only overwrites older versions. rowcount==0
@@ -281,9 +287,12 @@ class AtlasStore:
                         brief=dict(row.brief_json or {}),
                         updated_at=row.updated_at,
                         content_hashes=dict(row.content_hashes_json or {}),
+                        scope_paths=list(row.scope_json or []),
                         symbol_ids=list(row.symbol_ids_json or []),
                         repo_root=repo_root,
                         snapshot_time=float(row.snapshot_time or 0.0),
+                        observed_at=float(row.observed_at or 0.0),
+                        source_run_id=str(row.source_run_id or ""),
                         brief_version=int(row.brief_version or 0),
                     )
                 )

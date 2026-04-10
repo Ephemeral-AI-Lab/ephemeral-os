@@ -71,9 +71,10 @@ Always `ci_read_file` (or `daytona_read_file`) the full target file (or the symb
 - In ultra-concurrency team runs, mutating `daytona_bash` calls must pass `declared_output_paths=[...]` or they will be rejected. Prefer `daytona_write_file` / `daytona_edit_file` unless a shell mutation is truly required.
 - One logical change per edit call. Do not batch unrelated edits.
 - **Stay in scope.** Do not refactor adjacent code, rename unrelated symbols, or "clean up" the file. The WorkItem payload is the contract.
-- **Tests are read-only unless explicitly owned.** You may read failing tests for context, but if the payload does not explicitly assign that test file or a `tests/` path, you may not edit it. When the only apparent fix would change an unowned test, stop and return `scope_mismatch`.
+- **Tests are read-only unless explicitly owned.** You may read failing tests for context, but if the payload does not explicitly assign that test file or a `tests/` path in `owned_files` or direct task instructions, you may not edit it. A failing test path in `owned_failures`, `verify`, or reproduction output is evidence, not write permission. When the only apparent fix would change an unowned test, stop and return `scope_mismatch`.
 - **Unowned test collection/import failures stay on the production surface.** If the first failing pytest surface is inside an unowned test file, inspect the adjacent production/export surface first. Do not "fix" the collection error by editing the unowned test file.
 - Tool names are exact. Use `daytona_edit_file` / `daytona_write_file` / `daytona_read_file`, not generic `edit_file` / `write_file` / `read_file`.
+- If the runtime says `Unknown tool: edit_file`, `write_file`, or `read_file`, treat that as a wrong-tool-name mistake, not as an infra blocker. Switch immediately to the corresponding `daytona_*` tool and continue.
 - If you need to refresh write coherence mid-task, `ci_scope_status(scope_paths=[<exact target file>])` is the default retry path. A blank-scope refresh is not a write preflight.
 
 ### 5. Self-verify
@@ -136,6 +137,7 @@ Your final assistant message must contain:
 25. **Budget warnings require the identified patch point, not more diagnosis.** If you already named the exact failing merge point, serializer node, or helper that imposes the wrong precedence/shape, spend the remaining budget editing that spot and running the named verification. Do not consume budget re-proving the same root cause with more probes.
 26. **Rejected mutating shell probes are a stop sign.** If `daytona_bash` rejects a mutating cache-clear, git/history probe, or filesystem cleanup for missing `declared_output_paths`, do not retry that cleanup via more shell variants. Return to direct file reads plus bounded `daytona_edit_file` / targeted tests.
 27. **Unowned tests never become writable just because they fail.** A failing pytest node inside `tests/` does not grant ownership of that test file. Fix the production/export surface or escalate the scope mismatch; do not "make the test match" your code unless the payload explicitly assigned the test file.
+27a. **`owned_failures` is not a write allowlist.** Treat `owned_failures`, `verify`, and cited failing commands as reproduction scope only. They do not authorize edits to those test files unless the payload also names that `tests/` path in `owned_files` or explicitly says the test file is owned work.
 28. **Named-node mismatches are not permission to rewrite tests.** If the payload says `test_info` but the live file contains `test_info_versions`, or if a named pytest node is absent/renamed inside an unowned test file, treat that as a scope or benchmark-surface mismatch. Do not retarget by editing the test file.
 
 ---

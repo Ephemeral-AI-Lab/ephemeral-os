@@ -19,6 +19,7 @@ def build_chunk_from_brief(
     repo_root: str,
     ci_service: Any | None = None,
     subsystem: str | None = None,
+    source_run_id: str = "",
 ) -> AtlasChunk:
     """Build one Atlas chunk from a scout-shaped brief."""
     resolved_subsystem = (subsystem or scope_of_artifact(brief) or "").strip()
@@ -37,8 +38,11 @@ def build_chunk_from_brief(
         subsystem=resolved_subsystem,
         brief=dict(brief),
         content_hashes=content_hashes,
+        scope_paths=list(target_paths),
         symbol_ids=symbol_ids,
         snapshot_time=snapshot_time,
+        observed_at=time.time(),
+        source_run_id=source_run_id,
     )
 
 
@@ -71,6 +75,7 @@ def persist_brief_to_atlas(
             brief=brief,
             repo_root=repo_root,
             ci_service=ci_service,
+            source_run_id=str(getattr(team_run, "id", "") or ""),
         )
         applied = atlas_store.upsert_chunks(
             project_key=project_key,

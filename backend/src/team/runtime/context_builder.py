@@ -79,6 +79,7 @@ def build_work_item_metadata(team_run: TeamRun, wi: WorkItem) -> ExecutionMetada
         team_run_id=team_run.id,
         work_item_id=wi.id,
         agent_run_id=wi.agent_run_id,
+        agent_name=wi.agent_name,
         sandbox_id=getattr(team_run, "sandbox_id", "") or "",
     )
     # Captured before the agent starts its work phase. Scout artifacts

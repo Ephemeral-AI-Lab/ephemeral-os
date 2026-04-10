@@ -151,6 +151,17 @@ class Executor:
             return
 
         new_items = await dispatcher.complete(wi_id, dispatch_payload)
+        if isinstance(dispatch_payload, AgentResult):
+            self.team_run.note_explicit_memory_artifacts(
+                work_item=wi,
+                artifact=dispatch_payload.artifact,
+            )
+            if wi.agent_name == "validator":
+                self.team_run.note_validator_outcome(
+                    work_item=wi,
+                    summary=dispatch_payload.summary,
+                    artifact=dispatch_payload.artifact,
+                )
         if self.after_dispatch is not None:
             callback_result = self.after_dispatch(wi, dispatch_payload, new_items)
             if isinstance(callback_result, Awaitable):

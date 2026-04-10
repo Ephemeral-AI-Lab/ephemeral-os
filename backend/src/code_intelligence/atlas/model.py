@@ -82,10 +82,13 @@ class ProjectAtlasChunkRecord(Base):
     content_hashes_json: Mapped[dict[str, str]] = mapped_column(
         _JSON_COL, default=dict, nullable=False
     )
+    scope_json: Mapped[list[str]] = mapped_column(_JSON_COL, default=list, nullable=False)
     symbol_ids_json: Mapped[list[str]] = mapped_column(
         _JSON_COL, default=list, nullable=False
     )
     snapshot_time: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    observed_at: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    source_run_id: Mapped[str] = mapped_column(String(128), default="", nullable=False)
     brief_version: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow

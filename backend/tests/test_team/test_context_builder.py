@@ -140,6 +140,7 @@ def test_build_query_context_carries_team_metadata_and_briefings():
     assert ctx.tool_metadata.team_run_id == "T1"
     assert ctx.tool_metadata.work_item_id == "W1"
     assert ctx.tool_metadata.agent_run_id is None
+    assert ctx.tool_metadata.agent_name == "worker"
     assert isinstance(ctx.tool_metadata.get("work_item_started_at"), float)
     assert ctx.tool_metadata["coordination_mode"] == "ultra"
     assert ctx.tool_metadata["require_declared_shell_outputs"] is True

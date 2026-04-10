@@ -69,13 +69,42 @@ def test_get_chunk_roundtrip(store: AtlasStore) -> None:
     store.upsert_chunks(
         project_key="P1",
         repo_root="/repo",
-        chunks=[AtlasChunk(subsystem="src/a", brief=_scout_brief(["src/a"]))],
+        chunks=[
+            AtlasChunk(
+                subsystem="src/a",
+                brief=_scout_brief(["src/a"]),
+                scope_paths=["src/a"],
+                source_run_id="T1",
+            )
+        ],
     )
     chunk = store.get_chunk("P1", "src/a")
     assert chunk is not None
     assert chunk.subsystem == "src/a"
     assert chunk.brief["target_paths"] == ["src/a"]
     assert chunk.repo_root == "/repo"
+    assert chunk.scope_paths == ["src/a"]
+    assert chunk.source_run_id == "T1"
+    assert chunk.observed_at > 0
+def test_upsert_persists_minimal_metadata(store: AtlasStore) -> None:
+    store.upsert_chunks(
+        project_key="P1",
+        repo_root="/repo",
+        chunks=[
+            AtlasChunk(
+                subsystem="src/a",
+                brief=_scout_brief(["src/a"]),
+                scope_paths=["src/a"],
+                observed_at=123.0,
+                source_run_id="RUN-1",
+            )
+        ],
+    )
+
+    chunk = store.get_chunk("P1", "src/a")
+    assert chunk is not None
+    assert chunk.observed_at == 123.0
+    assert chunk.source_run_id == "RUN-1"
 
 
 def test_upsert_updates_existing_chunks_and_header(store: AtlasStore) -> None:

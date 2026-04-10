@@ -62,6 +62,9 @@ def test_persist_brief_to_atlas_writes_chunk() -> None:
     chunk = store.get_chunk("P1", "src/auth")
     assert chunk is not None
     assert chunk.brief["summary"] == "brief for ['src/auth']"
+    assert chunk.scope_paths == ["src/auth"]
+    assert chunk.source_run_id == "T1"
+    assert chunk.observed_at > 0
 
 
 def test_team_run_note_direct_scout_brief_delegates_to_service_layer() -> None:
