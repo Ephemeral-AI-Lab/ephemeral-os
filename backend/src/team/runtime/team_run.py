@@ -7,13 +7,16 @@ import uuid
 from dataclasses import asdict
 from typing import Any, Callable
 
-from team.context.scout_briefings import invalidate_stale_scout_context
+from team.context.scout_briefings import (
+    invalidate_stale_scout_context,
+    note_work_item_context_access,
+)
 from team.memory.runtime import persist_memory_record
 from team.persistence.events import (
     make_team_run_created,
     make_team_run_status,
 )
-from team.persistence.run_store import NullTeamRunStore, TeamRunStore, build_default_store
+from team.persistence.run_store import NullTeamRunStore, TeamRunStore
 from team.models import (
     BudgetConfig,
     BudgetState,
@@ -234,6 +237,20 @@ class TeamRun:
                 exc_info=True,
             )
             return False
+
+    def note_context_access(
+        self,
+        *,
+        work_item: WorkItem,
+        metadata: Any,
+        artifact: dict[str, Any] | None,
+    ) -> list[str]:
+        return note_work_item_context_access(
+            self,
+            work_item,
+            metadata,
+            artifact=artifact,
+        )
 
     def note_validator_outcome(
         self,

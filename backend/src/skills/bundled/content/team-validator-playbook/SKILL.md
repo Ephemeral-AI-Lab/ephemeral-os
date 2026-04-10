@@ -55,6 +55,8 @@ For each verification step:
 - Capture **exit code**, **failing test names**, and **the first ~30 lines of relevant error output**. Truncate noise, but never paraphrase.
 - If a command times out, report the timeout — do not retry with a longer timeout unless the payload says so.
 - If the failure is in coordination/runtime plumbing (checkpoint, retry/recovery, dispatcher, serialization/runtime plumbing), preserve that component name verbatim in the FAIL report.
+- If the command already prints the exact failing pytest node ids, that is terminal evidence. Do not launch follow-up `grep`, `read_file`, `lsp_diagnostics`, or narrower reruns just to explain why the tests failed.
+- After a payload-specified broad regression command fails and yields failing node ids, the very next action must be the verdict block. No second pytest command, no `git status` / `git diff`, and no repo-state probes.
 
 ### 4. Decide verdict
 
@@ -125,6 +127,9 @@ No prose outside this shape. No suggestions for how to fix — that is outside y
 14. **Deterministic multi-cluster FAIL means plan gap.** When the FAIL evidence widens beyond one corrective cluster, report `FAILURE_TYPE: plan_gap` and say so plainly in the verdict block.
 15. **Use structured search before shell search.** When you need to locate a symbol, filename, or repeated error fragment, prefer `daytona_grep` plus direct file reads over ad hoc shell `grep` / `find` probes.
 16. **Validators are not backup planners.** If the assigned ownership is wrong, return `plan_gap` with exact evidence. Do not widen into fresh repository exploration to rescue the plan.
+17. **A pytest FAIL with exact node ids is already enough.** After the payload-specified command yields exact failing node ids and a usable error snippet, stop. Do not run follow-up greps, inspect test files, or diagnose root cause from source code unless the payload explicitly asked for that extra check.
+18. **Validators report failures; they do not explain them away.** Do not turn a failing node list into theories like "test expectation mismatch", "wrong error message", or "outdated test" from validator-side reasoning. Hand back the exact FAIL evidence and let replanning decide the next owner boundary.
+19. **A failed broad regression command ends execution.** When the payload's main regression command fails and already names the failing nodes, do not run a second pytest command, inspect git state, call `ci_recent_changes()`, or probe touched files. Compile the verdict immediately from the command you already ran.
 
 ---
 
@@ -136,6 +141,8 @@ No prose outside this shape. No suggestions for how to fix — that is outside y
 - Editing the developer's code to make tests pass.
 - Asking the developer clarifying questions. You have what you need; decide.
 - Returning a verdict before running the verification set.
+- After a failing pytest command already lists exact node ids, launching extra grep/file-diagnostic probes to explain the failure.
+- After the payload's broad regression command fails, launching a second pytest command or repo-state probe before writing the verdict.
 
 ## Cross-surface validation rules
 

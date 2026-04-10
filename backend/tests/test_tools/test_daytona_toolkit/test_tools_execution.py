@@ -153,6 +153,20 @@ async def test_bash_truncates_long_output():
     assert "truncated" in json.loads(result.output)["stdout"]
 
 
+async def test_bash_nonzero_long_output_preserves_tail():
+    stdout = "suite header\n" + ("x" * 15_000) + "\nFAILURES\nnodeid::test_case\nassert 1 == 2\n"
+    sb = _sb(exec_result=MagicMock(result=stdout, exit_code=1))
+    ctx = _ctx({"daytona_sandbox": sb})
+    result = await daytona_bash.execute(daytona_bash.input_model(command="pytest"), ctx)
+
+    assert result.is_error
+    rendered = json.loads(result.output)["stdout"]
+    assert "truncated" in rendered
+    assert "suite header" not in rendered
+    assert "FAILURES" in rendered
+    assert "nodeid::test_case" in rendered
+
+
 async def test_bash_passes_cwd_to_exec():
     sb = _sb(exec_result=MagicMock(result="", exit_code=0))
     ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/proj"})

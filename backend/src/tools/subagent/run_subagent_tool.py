@@ -634,7 +634,8 @@ async def run_subagent(
             "- If a target path does not exist, report zero coverage for that missing path instead of correcting it to a nearby file.",
             "- Do not inspect already-named benchmark test files or guessed owner files unless they are inside `target_paths`.",
         ]
-        final_prompt = f"{'\n'.join(strict_scope_lines)}\n\n{final_prompt}"
+        strict_scope_block = "\n".join(strict_scope_lines)
+        final_prompt = f"{strict_scope_block}\n\n{final_prompt}"
 
     # Persist a subagent run record FIRST, before spawn_agent — so spawn
     # failures still leave an audit trail that the parent can list / inspect
@@ -862,12 +863,19 @@ async def run_subagent(
                         run_id=persisted_run_id,
                     )
                     if stored_artifact_ref is not None:
-                        promoted = auto_promote_scout_briefing(team_run, stored_artifact_ref)
-                        persisted = team_run.note_direct_scout_brief(
-                            artifact,
-                            ci_service=context.metadata.get("ci_service"),
-                            reason="run_subagent:scout-complete",
+                        ci_service = context.metadata.get("ci_service")
+                        promoted = auto_promote_scout_briefing(
+                            team_run,
+                            stored_artifact_ref,
+                            ci_service=ci_service,
                         )
+                        persisted = False
+                        if promoted:
+                            persisted = team_run.note_direct_scout_brief(
+                                artifact,
+                                ci_service=ci_service,
+                                reason="run_subagent:scout-complete",
+                            )
                         atlas_info = {
                             "subsystem": scope,
                             "persisted": bool(persisted),

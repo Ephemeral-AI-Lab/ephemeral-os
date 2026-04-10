@@ -48,6 +48,19 @@ def _ctx(team_run_id: str | None) -> ToolExecutionContext:
     return ToolExecutionContext(cwd=Path("."), metadata=meta)
 
 
+def _seed_context_pressure(tr: SimpleNamespace, scope: str) -> None:
+    tr.project_context.scope_context_stats[scope] = {
+        "lane_ids": {"developer-lane", "validator-lane"},
+        "roles": {"developer", "validator"},
+        "source_refs": {"payload:owned_files", "dep:auth-map"},
+        "read_paths": {f"{scope}/service.py"},
+        "verify_refs": {"tests/test_auth.py"},
+        "failure_refs": set(),
+        "developer_lane_ids": {"developer-lane"},
+        "validator_after_developer": True,
+    }
+
+
 @pytest.mark.asyncio
 async def test_share_briefing_promotes_inline():
     tr = _fake_team_run()
@@ -152,6 +165,7 @@ async def test_share_briefing_enforces_cap():
 @pytest.mark.asyncio
 async def test_share_briefing_evicts_auto_promoted_scout_when_full():
     tr = _fake_team_run(max_shared=1)
+    _seed_context_pressure(tr, "src/auth")
     tr.artifacts.save(
         "scout:src/auth",
         {
@@ -179,9 +193,30 @@ async def test_share_briefing_evicts_auto_promoted_scout_when_full():
         unregister("T1")
 
 
+def test_auto_promote_scout_briefing_requires_same_run_context_pressure():
+    tr = _fake_team_run()
+    tr.artifacts.save(
+        "scout:src/auth",
+        {
+            "summary": "auth scout",
+            "target_paths": ["src/auth"],
+            "canonical_scope": "src/auth",
+            "files": [],
+            "scope_coverage": 1.0,
+            "gaps": "",
+            "suggested_subdivisions": [],
+            "snapshot_time": 100.0,
+        },
+    )
+
+    assert not auto_promote_scout_briefing(tr, "scout:src/auth")
+    assert tr.project_context.shared_briefings == {}
+
+
 @pytest.mark.asyncio
 async def test_explicit_scout_promotion_stays_pinned_against_later_auto_promotion():
     tr = _fake_team_run(max_shared=1)
+    _seed_context_pressure(tr, "src/auth")
     tr.artifacts.save(
         "scout:src/auth",
         {
@@ -225,6 +260,7 @@ async def test_explicit_scout_promotion_stays_pinned_against_later_auto_promotio
 def test_invalidate_stale_scout_context_removes_overlapping_scout_briefings_and_versions():
     tr = _fake_team_run()
     tr.project_context.repo_root = "/repo"
+    _seed_context_pressure(tr, "src/auth")
     tr.artifacts.save(
         "scout:src/auth",
         {

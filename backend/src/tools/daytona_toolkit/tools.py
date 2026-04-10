@@ -49,6 +49,24 @@ def _truncate(text: str, max_chars: int = _OUTPUT_MAX_CHARS) -> str:
     return text[:half] + f"\n\n... truncated ({len(text)} chars total) ...\n\n" + text[-half:]
 
 
+def _truncate_tail(text: str, max_chars: int = _OUTPUT_MAX_CHARS) -> str:
+    if len(text) <= max_chars:
+        return text
+    return f"... truncated ({len(text)} chars total, showing last {max_chars}) ...\n\n{text[-max_chars:]}"
+
+
+def _format_shell_stdout(text: str, *, exit_code: int, max_chars: int = _OUTPUT_MAX_CHARS) -> str:
+    """Format shell stdout for model consumption.
+
+    Successful commands keep head+tail context, but failing commands keep the
+    tail because test runners typically print the actionable failure details at
+    the end of stdout.
+    """
+    if exit_code != 0:
+        return _truncate_tail(text, max_chars=max_chars)
+    return _truncate(text, max_chars=max_chars)
+
+
 def _wrap_bash_command(command: str) -> str:
     """Wrap *command* so we can recover exit code even if the SDK omits it."""
     script = (
@@ -303,7 +321,7 @@ async def daytona_bash(
         )
         payload = {
             "cwd": cwd or "",
-            "stdout": _truncate(stdout),
+            "stdout": _format_shell_stdout(stdout, exit_code=exit_code),
             "exit_code": exit_code,
         }
         try:
@@ -332,7 +350,7 @@ async def daytona_bash(
             )
             payload = {
                 "cwd": cwd or "",
-                "stdout": _truncate(stdout),
+                "stdout": _format_shell_stdout(stdout, exit_code=exit_code),
                 "exit_code": exit_code,
             }
             sync_info = await sync_shell_mutations(
@@ -477,7 +495,10 @@ async def _exec_streaming(
         output = json.dumps(
             {
                 "cwd": cwd or "",
-                "stdout": _truncate(cleaned_stdout),
+                "stdout": _format_shell_stdout(
+                    cleaned_stdout,
+                    exit_code=resolved_exit_code,
+                ),
                 "exit_code": resolved_exit_code,
             }
         )

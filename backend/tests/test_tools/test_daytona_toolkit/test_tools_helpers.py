@@ -10,6 +10,8 @@ import pytest
 from tools.core.base import ToolExecutionContext
 from tools.daytona_toolkit.tools import (
     _truncate,
+    _truncate_tail,
+    _format_shell_stdout,
     _get_sandbox,
     _path_error,
     _get_cwd,
@@ -47,6 +49,30 @@ def test_truncate_custom_max():
     text = "ab" * 100
     result = _truncate(text, max_chars=10)
     assert "truncated" in result
+
+
+def test_truncate_tail_keeps_end_only():
+    text = "prefix-" + ("x" * 50) + "-suffix"
+    result = _truncate_tail(text, max_chars=20)
+    assert "truncated" in result
+    assert "prefix-" not in result
+    assert result.endswith(text[-20:])
+
+
+def test_format_shell_stdout_prefers_tail_for_errors():
+    text = "header-" + ("m" * 50) + "-failure-tail"
+    result = _format_shell_stdout(text, exit_code=1, max_chars=25)
+    assert "truncated" in result
+    assert "header-" not in result
+    assert result.endswith(text[-25:])
+
+
+def test_format_shell_stdout_keeps_head_and_tail_for_success():
+    text = "header-" + ("m" * 50) + "-success-tail"
+    result = _format_shell_stdout(text, exit_code=0, max_chars=24)
+    assert "truncated" in result
+    assert result.startswith(text[:12])
+    assert result.endswith(text[-12:])
 
 
 # ---------------------------------------------------------------------------

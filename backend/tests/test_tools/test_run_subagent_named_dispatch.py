@@ -107,6 +107,19 @@ def _patch_spawn(monkeypatch, stub) -> None:
     )
 
 
+def _seed_context_pressure(team_run: SimpleNamespace, scope: str) -> None:
+    team_run.project_context.scope_context_stats[scope] = {
+        "lane_ids": {"developer-lane", "validator-lane"},
+        "roles": {"developer", "validator"},
+        "source_refs": {"payload:owned_files", "dep:auth-map"},
+        "read_paths": {f"{scope}/service.py"},
+        "verify_refs": {"tests/test_auth.py"},
+        "failure_refs": set(),
+        "developer_lane_ids": {"developer-lane"},
+        "validator_after_developer": True,
+    }
+
+
 # ---------- agent_name + recursion prevention --------------------------------
 
 
@@ -344,7 +357,7 @@ async def test_scout_injects_scope_packet_into_prompt_and_metadata(monkeypatch):
     )
 
     assert not res.is_error
-    assert captured["prompt"].startswith("SCOPE token-1\n\n")
+    assert "SCOPE token-1\n\n" in captured["prompt"]
     assert stub.query_context.tool_metadata["coherence_token"] == "token-1"
     assert stub.query_context.tool_metadata["scope_packet"]["scope_paths"] == ["src/auth"]
 
@@ -406,6 +419,7 @@ async def test_team_scout_returns_stable_artifact_ref_and_auto_promotes(monkeypa
         artifacts=artifacts,
         project_context=ProjectContext(goal="g", user_request="u"),
     )
+    _seed_context_pressure(team_run, "src/auth")
     _register_team_run(team_run)
 
     submitted = SubmittedSummary(
@@ -435,6 +449,7 @@ async def test_team_scout_returns_stable_artifact_ref_and_auto_promotes(monkeypa
         assert artifacts.load("scout:src/auth")["canonical_scope"] == "src/auth"
         shared = team_run.project_context.shared_briefings["src/auth"]
         assert shared.ref == "scout:src/auth"
+        assert "context_hotspot_score" in (shared.description or "")
     finally:
         _unregister_team_run("T-scout")
 

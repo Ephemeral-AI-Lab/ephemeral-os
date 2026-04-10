@@ -53,6 +53,11 @@ Special case:
 - the dispatcher will reattach the failed validator after the new fix items complete
 - add only the corrective developer item(s) unless an extra intermediate validation step is truly needed
 
+Stop condition for this phase:
+- once you can name the exact failing cluster, the exact existing owner file(s), and the exact retry or verification target for the next worker, stop exploring and draft the corrective JSON immediately
+- do not keep tracing wrapper flow, parameter plumbing, or deeper call stacks after that sufficiency point; runtime confirmation belongs to the next developer lane
+- do not reopen test source files or shared router/plumbing files such as `core.py`, `__init__.py`, or wrapper entry points just to reconstruct expected behavior once the validator packet already gives exact failing ids plus the corrective owner file(s)
+
 ### 4. Scout only for unresolved ownership
 
 Use `run_subagent(agent_name="scout", input={"target_paths": [...]})` only when one ownership boundary is still unclear from the failure packet.
@@ -60,9 +65,14 @@ Use `run_subagent(agent_name="scout", input={"target_paths": [...]})` only when 
 Scout rules:
 - call `ci_scope_status(scope_paths=[...])` first when the failure touches shared runtime files or checkpoint/retry surfaces, so corrective work is anchored on current repo state instead of stale checkpoint assumptions
 - bounded, concrete paths only
+- every corrective `scope_paths`, owned file, and candidate owner path must already exist in the live checkout packet or be re-confirmed by CI before you reuse it
+- if a cited path cannot be read or `ci_scope_status(...)` / `ci_read_file(...)` says it does not exist, treat that as an owner-map mismatch and re-anchor on the exact existing path from the failure packet, sibling artifact, or live symbol/read evidence before drafting work
+- do not preserve guessed module aliases across replans; if the live repo uses `arrow.py`, do not draft corrective work against invented siblings such as `pyarrow.py`
 - prefer one narrow scout over broad rediscovery
 - do not scout to re-run tests or gather runtime evidence
 - if the failing surface is already clear, draft the corrective items immediately
+- one confirmatory read/query per unresolved cluster is usually enough; if you already have a validator packet plus one live owner confirmation, the next action is the corrective JSON, not more tracing
+- if the validator already names exact pytest ids plus exact existing owner files, do not read the test body or shared parameter-plumbing files to reverse-engineer semantics; hand the symptom and guardrail target to the developer lane instead
 
 ### 5. Cancel stale pending siblings only when necessary
 
@@ -79,10 +89,13 @@ Do not cancel unrelated ready work just because it looks lower priority.
 ### Pattern A — Deterministic code failure in one owned surface
 
 Emit one developer corrective item anchored to the exact file cluster plus the failing command/test target in its payload.
+Describe the observed symptom, likely owner, and guardrail targets; do not encode a precise patch prescription unless a validator packet or sibling artifact already proved that exact edit.
+Do not emit `specific_fixes`, condition rewrites, exact line edits, or message-text prescriptions from replanner-side reasoning alone.
 
 ### Pattern B — Validator found multiple independent clusters
 
 Emit one developer item per cluster. Keep them parallel unless one cluster truly blocks another.
+If two clusters already have distinct owner files or distinct retry targets, do not merge them back into one omnibus developer item just because they were found by the same validator.
 
 ### Pattern C — Coordination/runtime bug
 
@@ -124,6 +137,7 @@ Rules:
 - `add_items` may be empty only if `cancel_ids` is non-empty
 - every item must be execution-sized and concrete
 - new items are sibling work items, not a new root graph
+- corrective payload paths must be exact existing checkout-relative paths, never guessed aliases or nonexistent siblings
 - do not write prose before or after the JSON
 
 ---
@@ -139,6 +153,11 @@ Rules:
 7. **Treat checkpoint/replan bugs as first-class fix surfaces.** They are not "infrastructure noise"; draft a direct corrective lane for them.
 8. **Prefer reuse before rediscovery.** Fresh shared briefings and reusable atlas briefs beat a new scout; only scout when ownership is still unresolved.
 9. **Live CI wins on runtime branches.** When checkpoint or retry state may have drifted, use `ci_scope_status(...)` to anchor on live workspace truth before drafting the fix.
+10. **Missing paths are mismatch signals, not evidence.** If a cited owner file does not exist in the live checkout, stop treating it as the owner and re-anchor on an exact existing path from live CI or inherited evidence before you emit JSON.
+11. **Replanners do not debug like developers.** After the failure packet plus one live ownership confirmation identifies the corrective lane, stop tracing deeper runtime plumbing and emit the sibling fix items.
+12. **Handoff evidence, not speculative patches.** If the exact code change is still a hypothesis, pass it as a hypothesis or symptom note. Do not frame an unproven edit as the required fix in the payload.
+13. **A worker claim that "the test is stale" is still just a hypothesis.** Do not draft a test-edit corrective lane from a developer's contradicted patch alone. Unless an independent validator packet, owned test target, or second artifact already proves the expected behavior changed, keep the corrective payload anchored on the last confirmed production or coordination owner surface.
+14. **Exact failing ids plus exact owner files are enough.** Once a validator packet already names the failing pytest ids and live CI confirms the exact owner file(s), stop. Do not read test source to infer semantics, do not crawl shared router files like `core.py` to reconstruct parameter flow, and do not turn replanner reasoning into a line-by-line patch recipe.
 
 ---
 
@@ -149,3 +168,5 @@ Rules:
 - Spawning broad scouts after the failure packet already identifies the owner
 - Adding a duplicate validator after a failed validator when the dispatcher will already reattach it
 - Canceling unrelated sibling work to simplify the graph
+- Reading test bodies and shared router files after the validator packet already named exact failing ids plus exact owner files
+- Writing payload fields like `specific_fixes` or exact condition rewrites from replanner-side speculation

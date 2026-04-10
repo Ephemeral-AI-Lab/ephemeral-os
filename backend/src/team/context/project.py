@@ -25,6 +25,13 @@ class ProjectContext:
     # run memory so equal/missing snapshot ties do not degrade to
     # last-writer-wins.
     stable_scout_versions: dict[str, dict[str, Any]] = field(default_factory=dict)
+    # Run-scoped fan-in telemetry keyed by canonical scope. Values are small
+    # mutable dicts containing sets/counters used to decide whether a stable
+    # scout artifact is worth promoting into shared same-run context.
+    scope_context_stats: dict[str, dict[str, Any]] = field(default_factory=dict)
+    # Successful same-run auto-promotions keyed by canonical scope. Used to
+    # avoid persisting every reusable scout into Atlas.
+    scope_promotion_counts: dict[str, int] = field(default_factory=dict)
     # Phase 2 — project identity for the persistent atlas. Both fields
     # default to empty strings; atlas tools treat an empty ``project_key``
     # as "atlas disabled" and degrade gracefully.
@@ -61,5 +68,16 @@ class ProjectContext:
             "stable_scout_versions": {
                 scope: dict(version)
                 for scope, version in self.stable_scout_versions.items()
+            },
+            "scope_context_stats": {
+                scope: {
+                    key: sorted(value) if isinstance(value, set) else value
+                    for key, value in stats.items()
+                }
+                for scope, stats in self.scope_context_stats.items()
+            },
+            "scope_promotion_counts": {
+                scope: int(count)
+                for scope, count in self.scope_promotion_counts.items()
             },
         }

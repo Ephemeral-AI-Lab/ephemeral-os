@@ -7,6 +7,7 @@ from team.builtins import (
     DEVELOPER,
     SCOUT,
     TEAM_PLANNER,
+    TEAM_REPLANNER,
     VALIDATOR,
     register_all,
 )
@@ -18,7 +19,7 @@ def setup_module() -> None:
 
 
 def test_builtin_team_agents_preload_skills_without_lazy_skill_toolkit() -> None:
-    for name in (TEAM_PLANNER, DEVELOPER, VALIDATOR, SCOUT):
+    for name in (TEAM_PLANNER, TEAM_REPLANNER, DEVELOPER, VALIDATOR, SCOUT):
         defn = get_definition(name)
         assert defn is not None
         assert defn.include_skills is True
@@ -26,7 +27,7 @@ def test_builtin_team_agents_preload_skills_without_lazy_skill_toolkit() -> None
 
 
 def test_builtin_team_agents_use_default_tool_call_limits() -> None:
-    for name in (TEAM_PLANNER, DEVELOPER, VALIDATOR, SCOUT):
+    for name in (TEAM_PLANNER, TEAM_REPLANNER, DEVELOPER, VALIDATOR, SCOUT):
         defn = get_definition(name)
         assert defn is not None
         assert defn.tool_call_limit == 100

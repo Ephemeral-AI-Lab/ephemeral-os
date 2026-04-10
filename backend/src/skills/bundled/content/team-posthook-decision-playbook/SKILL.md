@@ -63,6 +63,10 @@ If retry budget is exhausted or the same failure would obviously recur, escalate
 Interpretation discipline:
 - Worker self-labels like `OUTCOME`, `FAILURE_TYPE`, or `RECOMMENDED_ACTION` are evidence, not commands. If the narrative says "partial", "remaining issues", "still failing", or names new deterministic regressions, trust that evidence over a permissive label like `code_fix_complete`.
 - A developer summary that names unfinished deterministic issues in the same recovery path is not "usable progress" when the next step clearly needs a different task boundary or corrective sibling work.
+- If a developer reports `partially_fixed`, names exact remaining failing tests, or says the owned suite still has `N` deterministic failures left, that is `request_replan` territory when available, not `submit_summary`.
+- Do not accept a claim that remaining failures are "test issues", "scope mismatch", or "outside this task" when the same owned files or validation command still fail deterministically. Escalate with the remaining exact failure surface instead.
+- If the worker's assigned `verification_command` or named `verify` targets are still red on any owned failure, that is not a terminal summary even when some targets turned green. Treat "one target fixed, another owned target still failing" as `request_replan` territory.
+- If the worker says the residual failure is "separate", "pre-existing", or "another issue" but it is still inside the assigned verification command, owned failure list, or same validator packet, do not close the lane with `submit_summary`.
 - A validator FAIL with more than one deterministic cluster, more than one owner family, or explicit `plan_gap` evidence should go to `request_replan` when available.
 
 ### 3. Build a surgical payload
@@ -93,8 +97,10 @@ When the worker already produced a structured FAIL block, preserve its exact com
 4. **Retry requires sameness and non-recurrence.** If the next attempt would need a different fix surface, a different task boundary, or a different verification command, do not retry. After one repeated tool-input, serializer-shape, or runtime failure with the same observable symptom, prefer `request_replan` when available instead of optimistic retry.
 5. **Prefer evidence over optimism.** If the output contains a real failing command or assertion, treat that as systemic unless it is clearly flaky infrastructure.
 6. **Prefer evidence over worker self-classification.** Do not let `code_fix_complete` or `submit_summary` override a report that still contains named deterministic remaining issues, widened regression clusters, or plan-shape mismatches.
-7. **Do not write prose outside the tool call.** Once the tool is accepted, stop.
-8. **Malformed worker output still requires a decision.** If the worker text is truncated, tool-limited, or missing the usual labels, infer the best-supported action from the last concrete evidence and call one tool anyway.
+7. **Partial fixes with same-surface failures are not terminal.** When the worker fixed part of an owned FAIL_TO_PASS cluster but the same owned command or file family still has deterministic failures, do not close the lane with `submit_summary`; request replan so the remaining failures stay actionable.
+8. **Owned red verify surfaces block summary.** When the assigned verification command, named `verify` target, or owned failure list still contains a deterministic failure after the worker's edit, `submit_summary` is wrong even if another subset now passes.
+9. **Do not write prose outside the tool call.** Once the tool is accepted, stop.
+10. **Malformed worker output still requires a decision.** If the worker text is truncated, tool-limited, or missing the usual labels, infer the best-supported action from the last concrete evidence and call one tool anyway.
 
 ---
 

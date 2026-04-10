@@ -11,6 +11,7 @@ from code_intelligence.routing.scope_packets import (
     scope_paths_overlap,
 )
 from team.context.canonicalize import scope_of_artifact
+from team.context.scout_briefings import context_pressure_for_scope
 from tools.core.base import ToolExecutionContext
 
 _DEFAULT_RECENT_SECONDS = 300.0
@@ -73,12 +74,18 @@ def build_scope_packet(
     """Build a machine-checkable live scope packet."""
     normalized = normalize_scope_paths(scope_paths)
     briefing_versions = _matching_briefing_versions(team_run, normalized)
+    context_pressure = context_pressure_for_scope(
+        team_run,
+        normalized,
+        ci_service=svc,
+    ) if team_run is not None else {}
     scope_status = getattr(svc, "scope_status", None)
     if callable(scope_status):
         try:
             packet = scope_status(
                 normalized,
                 briefing_versions=briefing_versions,
+                context_pressure=context_pressure,
                 baseline_packet=baseline_packet,
                 recent_seconds=recent_seconds,
             )
@@ -96,6 +103,7 @@ def build_scope_packet(
         active_reservations=_active_reservations(svc, normalized),
         active_edit_intents=_active_edit_intents(svc, normalized),
         hotspots=_hotspots(svc, normalized),
+        context_pressure=context_pressure,
         generated_at=time.time(),
         baseline_packet=baseline_packet,
     )
@@ -148,6 +156,12 @@ def render_scope_packet(packet: dict[str, Any] | None) -> str:
     admission = packet.get("admission") if isinstance(packet.get("admission"), dict) else {}
     admission_mode = str(admission.get("mode") or "unknown")
     reasons = "; ".join(str(item) for item in (admission.get("reasons") or []) if str(item).strip()) or "none"
+    context_pressure = packet.get("context_pressure") if isinstance(packet.get("context_pressure"), dict) else {}
+    context_score = float(context_pressure.get("score") or 0.0)
+    context_level = str(context_pressure.get("level") or "low")
+    context_reasons = "; ".join(
+        str(item) for item in (context_pressure.get("reasons") or []) if str(item).strip()
+    ) or "none"
     return (
         "## Live scope packet\n"
         f"- freshness: {packet.get('freshness')}\n"
@@ -155,6 +169,8 @@ def render_scope_packet(packet: dict[str, Any] | None) -> str:
         f"- scope_paths: {scope_paths}\n"
         f"- recent_changes: {changes}\n"
         f"- active_reservations: {reservations}\n"
+        f"- context_pressure: {context_level} ({context_score:.2f})\n"
+        f"- context_pressure_reasons: {context_reasons}\n"
         f"- scout_fanout_mode: {admission_mode}\n"
         f"- scout_fanout_reasons: {reasons}"
     )

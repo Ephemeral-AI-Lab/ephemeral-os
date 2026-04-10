@@ -61,6 +61,11 @@ Tool-choice rule:
 
 If the payload or validator evidence names a live failing command, failing pytest node, or coordination-runtime component (checkpoint, retry/recovery, dispatcher, serialization/runtime plumbing), reproduce that exact surface before broader probing. Treat those runtime failures as real owned bugs, not as harness noise.
 For text lookup or symbol discovery, prefer `daytona_grep`, `ci_query_symbols`, `ci_query_references`, and direct file reads before reaching for shell `grep` / `find` probes in `daytona_bash`.
+Treat `daytona_bash` as an execution tool, not a discovery or editing tool. When a structured Daytona tool exists for the job, use it instead:
+- search/glob with `daytona_grep` or `ci_workspace_structure`
+- read with `ci_read_file` or `daytona_read_file`
+- edit/write with `daytona_edit_file` or `daytona_write_file`
+- reserve `daytona_bash` for targeted test commands, syntax checks, or one-off runtime probes that the structured Daytona tools cannot express
 
 ### 3. Read before editing
 Always `ci_read_file` (or `daytona_read_file`) the full target file (or the symbol's line range) before issuing an edit. Never blind-overwrite.
@@ -75,6 +80,7 @@ Always `ci_read_file` (or `daytona_read_file`) the full target file (or the symb
 - **Unowned test collection/import failures stay on the production surface.** If the first failing pytest surface is inside an unowned test file, inspect the adjacent production/export surface first. Do not "fix" the collection error by editing the unowned test file.
 - Tool names are exact. Use `daytona_edit_file` / `daytona_write_file` / `daytona_read_file`, not generic `edit_file` / `write_file` / `read_file`.
 - If the runtime says `Unknown tool: edit_file`, `write_file`, or `read_file`, treat that as a wrong-tool-name mistake, not as an infra blocker. Switch immediately to the corresponding `daytona_*` tool and continue.
+- Do not fall back to `daytona_bash` for file reads, file writes, search, globbing, or ad hoc patch application when a structured Daytona tool exists for that action.
 - If you need to refresh write coherence mid-task, `ci_scope_status(scope_paths=[<exact target file>])` is the default retry path. A blank-scope refresh is not a write preflight.
 
 ### 5. Self-verify
@@ -139,6 +145,8 @@ Your final assistant message must contain:
 27. **Unowned tests never become writable just because they fail.** A failing pytest node inside `tests/` does not grant ownership of that test file. Fix the production/export surface or escalate the scope mismatch; do not "make the test match" your code unless the payload explicitly assigned the test file.
 27a. **`owned_failures` is not a write allowlist.** Treat `owned_failures`, `verify`, and cited failing commands as reproduction scope only. They do not authorize edits to those test files unless the payload also names that `tests/` path in `owned_files` or explicitly says the test file is owned work.
 28. **Named-node mismatches are not permission to rewrite tests.** If the payload says `test_info` but the live file contains `test_info_versions`, or if a named pytest node is absent/renamed inside an unowned test file, treat that as a scope or benchmark-surface mismatch. Do not retarget by editing the test file.
+29. **A contradicted fix is not proof the benchmark test is stale.** If your first targeted reproduction shows that a planner-suggested edit makes the named benchmark test fail differently, treat that as evidence the diagnosis or patch hypothesis is incomplete. Do not claim the test encodes "old behavior", "stale expectations", or needs a test-only follow-up unless an independent owned artifact already proves the expected behavior changed.
+30. **Do not synthesize hybrid public strings to satisfy competing tests.** If nearby tests expect different public error messages depending on which API parameter or caller path was used, do not concatenate both names into one hacky message just to satisfy regexes. Trace at most one direct caller to preserve the real public parameter identity; if that caller is unowned, report the exact caller as `scope_mismatch`.
 
 ---
 
@@ -154,6 +162,7 @@ Your final assistant message must contain:
 - Starting a file-wide `daytona_codeact` rewrite after a budget warning instead of finishing one bounded fix loop.
 - Retrying cache-clears, pycache deletion, or git/history shell probes after coordination mode already rejected the mutating `daytona_bash` pattern.
 - Asking clarifying questions. Make a reasonable choice and document it in the summary.
+- Crafting a combined public error string that mentions two competing parameter names just to satisfy two regex assertions.
 ## Hard stop after budget warning
 
 - Treat any `[system:budget_warning]` as a hard transition out of exploration mode.

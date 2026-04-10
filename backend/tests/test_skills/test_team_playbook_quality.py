@@ -12,6 +12,7 @@ _PLAYBOOKS = [
     _BACKEND_ROOT / "src/skills/bundled/content/team-validator-playbook/SKILL.md",
     _BACKEND_ROOT / "src/skills/bundled/content/team-posthook-decision-playbook/SKILL.md",
     _BACKEND_ROOT / "src/skills/bundled/content/team-planner-playbook/SKILL.md",
+    _BACKEND_ROOT / "src/skills/bundled/content/team-replanner-playbook/SKILL.md",
 ]
 _SWEEVO_CONTEXT = _BACKEND_ROOT / "src/skills/bundled/content/sweevo-project-context/SKILL.md"
 _COORDINATION_SKILLS = [
@@ -80,14 +81,39 @@ def test_sweevo_context_treats_missing_share_briefing_as_non_blocking() -> None:
     assert "prefer `ci_scope_status(scope_paths=[...])` plus fresh scouts over `atlas_lookup`" in sweevo
     assert "Retry/replan handoff must preserve the evidence packet." in sweevo
     assert "Ownership mismatch is a planning problem." in sweevo
+    assert "Exact existing paths only." in sweevo
+    assert "Exact validator evidence is enough to branch." in sweevo
     assert "Planner briefings must be execution-ready." in sweevo
     assert "Every planner `briefings` entry needs a stable `name`, a valid `source`, and the matching payload field for that source." in sweevo
     assert "Do not push that rediscovery work down to the next developer or validator lane." in sweevo
     assert "Preserve exact pytest node ids verbatim in planner payloads." in sweevo
     assert "Do not shorten `test_info_versions` to `test_info`" in sweevo
+    assert "if a validator or inherited note cites a missing alias path such as `pyarrow.py` while live CI resolves the surface to `arrow.py`" in sweevo
     assert 'Do not "repair" the benchmark by editing the unowned test file' in sweevo
     assert "mentioned only in `owned_failures`, `verify`, or a failing command is not test ownership" in sweevo
+    assert 'A developer claim that a named benchmark test now encodes "old behavior" after a contradicted patch is not enough to open a test-edit lane.' in sweevo
+    assert "do not re-read the test body or shared parameter-plumbing files to author a patch recipe" in sweevo
     assert "Scout launches must satisfy the literal runtime schema" in sweevo
+
+
+def test_replanner_playbook_requires_exact_existing_paths() -> None:
+    replanner = _read(_BACKEND_ROOT / "src/skills/bundled/content/team-replanner-playbook/SKILL.md")
+    assert "every corrective `scope_paths`, owned file, and candidate owner path must already exist in the live checkout packet or be re-confirmed by CI before you reuse it" in replanner
+    assert "if a cited path cannot be read or `ci_scope_status(...)` / `ci_read_file(...)` says it does not exist, treat that as an owner-map mismatch" in replanner
+    assert "do not preserve guessed module aliases across replans; if the live repo uses `arrow.py`, do not draft corrective work against invented siblings such as `pyarrow.py`" in replanner
+    assert "corrective payload paths must be exact existing checkout-relative paths, never guessed aliases or nonexistent siblings" in replanner
+    assert "Missing paths are mismatch signals, not evidence." in replanner
+    assert "once you can name the exact failing cluster, the exact existing owner file(s), and the exact retry or verification target for the next worker, stop exploring and draft the corrective JSON immediately" in replanner
+    assert "one confirmatory read/query per unresolved cluster is usually enough" in replanner
+    assert "do not reopen test source files or shared router/plumbing files such as `core.py`" in replanner
+    assert "do not read the test body or shared parameter-plumbing files to reverse-engineer semantics" in replanner
+    assert "If two clusters already have distinct owner files or distinct retry targets, do not merge them back into one omnibus developer item" in replanner
+    assert "Replanners do not debug like developers." in replanner
+    assert "Describe the observed symptom, likely owner, and guardrail targets; do not encode a precise patch prescription unless a validator packet or sibling artifact already proved that exact edit." in replanner
+    assert "Do not emit `specific_fixes`, condition rewrites, exact line edits, or message-text prescriptions from replanner-side reasoning alone." in replanner
+    assert "Handoff evidence, not speculative patches." in replanner
+    assert "Do not draft a test-edit corrective lane from a developer's contradicted patch alone." in replanner
+    assert "Exact failing ids plus exact owner files are enough." in replanner
 
 
 def test_developer_playbook_anchors_import_failures_to_named_pytest_surface() -> None:
@@ -109,7 +135,11 @@ def test_developer_playbook_anchors_import_failures_to_named_pytest_surface() ->
     assert "Named-node mismatches are not permission to rewrite tests." in developer
     assert "`owned_failures` is not a write allowlist." in developer
     assert "A failing test path in `owned_failures`, `verify`, or reproduction output is evidence, not write permission." in developer
+    assert 'Do not claim the test encodes "old behavior", "stale expectations", or needs a test-only follow-up' in developer
+    assert "Do not synthesize hybrid public strings to satisfy competing tests." in developer
     assert "If the runtime says `Unknown tool: edit_file`, `write_file`, or `read_file`" in developer
+    assert "Treat `daytona_bash` as an execution tool, not a discovery or editing tool." in developer
+    assert "Do not fall back to `daytona_bash` for file reads, file writes, search, globbing, or ad hoc patch application" in developer
 
 
 def test_validator_playbook_mentions_codeact_is_unavailable_in_team_lanes() -> None:
@@ -118,6 +148,11 @@ def test_validator_playbook_mentions_codeact_is_unavailable_in_team_lanes() -> N
     assert "Ownership mismatch is not a validator discovery task." in validator
     assert "return `plan_gap` with exact evidence." in validator
     assert "Validators are not backup planners." in validator
+    assert "If the command already prints the exact failing pytest node ids, that is terminal evidence." in validator
+    assert "After a payload-specified broad regression command fails and yields failing node ids, the very next action must be the verdict block." in validator
+    assert "A pytest FAIL with exact node ids is already enough." in validator
+    assert "Do not turn a failing node list into theories like \"test expectation mismatch\"" in validator
+    assert "A failed broad regression command ends execution." in validator
     assert "RECOMMENDED_ACTION" not in validator
 
 
@@ -144,3 +179,9 @@ def test_posthook_decision_playbook_forbids_clarifying_questions_on_worker_outpu
     assert "Every incoming message is worker output from the previous phase" in posthook
     assert "Do not ask clarifying questions." in posthook
     assert "Malformed worker output still requires a decision." in posthook
+    assert "If a developer reports `partially_fixed`, names exact remaining failing tests" in posthook
+    assert 'Do not accept a claim that remaining failures are "test issues", "scope mismatch", or "outside this task"' in posthook
+    assert "Partial fixes with same-surface failures are not terminal." in posthook
+    assert "If the worker's assigned `verification_command` or named `verify` targets are still red" in posthook
+    assert 'If the worker says the residual failure is "separate", "pre-existing", or "another issue"' in posthook
+    assert "Owned red verify surfaces block summary." in posthook

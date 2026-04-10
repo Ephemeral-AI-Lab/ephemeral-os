@@ -311,6 +311,27 @@ async def test_run_subagent_rejects_team_planner_non_scout_targets_early():
 
 
 @pytest.mark.asyncio
+async def test_run_subagent_rejects_team_replanner_non_scout_targets_early():
+    class _StubConfig:
+        cwd = Path("/tmp")
+        session_id = "session_abc"
+
+    ctx = ToolExecutionContext(
+        cwd=Path("/tmp"),
+        metadata={"session_config": _StubConfig(), "agent_name": "team_replanner"},
+    )
+
+    result = await run_subagent.execute(
+        run_subagent.input_model(agent_name="developer", prompt="run pytest"),
+        ctx,
+    )
+
+    assert result.is_error is True
+    assert "caller 'team_replanner' may dispatch only 'scout'" in result.output
+    assert "bounded scout or a submitted Plan" in result.output
+
+
+@pytest.mark.asyncio
 async def test_run_subagent_registers_provider_and_returns_final_text(monkeypatch):
     scripted = [
         ConversationMessage(role="user", content=[TextBlock(text="task")]),

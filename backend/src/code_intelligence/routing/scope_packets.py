@@ -65,6 +65,7 @@ def build_scope_packet(
     active_reservations: list[dict[str, Any]] | None = None,
     active_edit_intents: list[dict[str, Any]] | None = None,
     hotspots: list[dict[str, Any]] | None = None,
+    context_pressure: dict[str, Any] | None = None,
     generated_at: float | None = None,
     baseline_packet: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -78,6 +79,7 @@ def build_scope_packet(
         "active_reservations": list(active_reservations or []),
         "active_edit_intents": list(active_edit_intents or []),
         "hotspots": list(hotspots or []),
+        "context_pressure": dict(context_pressure or {}),
         "generated_at": generated_at,
     }
     packet["coherence_token"] = scope_coherence_token(packet)
@@ -95,6 +97,7 @@ def scope_coherence_token(packet: dict[str, Any]) -> str:
         "recent_changes": packet.get("recent_changes") or [],
         "active_reservations": packet.get("active_reservations") or [],
         "active_edit_intents": packet.get("active_edit_intents") or [],
+        "context_pressure": packet.get("context_pressure") or {},
     }
     encoded = json.dumps(stable, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(encoded.encode("utf-8")).hexdigest()[:24]

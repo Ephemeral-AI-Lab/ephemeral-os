@@ -141,6 +141,12 @@ class Executor:
                 "(use submit_summary_agent if no domain-specific posthook applies)",
             )
             return
+        artifact = dispatch_payload.artifact if isinstance(dispatch_payload, AgentResult) else None
+        self.team_run.note_context_access(
+            work_item=wi,
+            metadata=query_ctx.tool_metadata,
+            artifact=artifact if isinstance(artifact, dict) else None,
+        )
         if isinstance(dispatch_payload, RetryRequest):
             await dispatcher.retry_work_item(wi_id, dispatch_payload)
             await self._checkpoint_after_transition(wi, outcome="retry")

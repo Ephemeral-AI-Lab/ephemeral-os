@@ -68,6 +68,17 @@ def test_subagent_toolkit_schema_limits_planner_to_scout():
     assert enum == ["scout"]
 
 
+def test_subagent_toolkit_schema_limits_replanner_to_scout():
+    toolkit = SubagentToolkit.from_context(
+        SimpleNamespace(metadata={"agent_name": "team_replanner"})
+    )
+
+    schema = toolkit.list_tools()[0].to_api_schema()["input_schema"]
+    enum = schema["properties"]["agent_name"]["enum"]
+
+    assert enum == ["scout"]
+
+
 def test_subagent_toolkit_schema_excludes_non_subagent_team_roles():
     toolkit = SubagentToolkit.from_context(
         SimpleNamespace(metadata={"agent_name": "coordinator"})
