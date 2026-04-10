@@ -84,6 +84,11 @@ class AgentDefinition(BaseModel):
     can_spawn_subagents: bool = True
     require_fresh_client: bool = False
     include_skills: bool = True
+    # Whether this subagent should appear as a valid ``run_subagent``
+    # target in tool schemas and pass the runtime dispatch gate. Internal
+    # serializer/decision subagents set this false so planners do not see
+    # engine-owned helper agents as delegable workers.
+    dispatchable_via_run_subagent: bool = True
 
     # --- posthook ---
     # Optional structured-output posthook. When set, the engine runs this
@@ -138,3 +143,5 @@ class AgentDefinition(BaseModel):
         if self.agent_type == "subagent":
             self.can_spawn_subagents = False
             self.require_fresh_client = True
+        else:
+            self.dispatchable_via_run_subagent = False

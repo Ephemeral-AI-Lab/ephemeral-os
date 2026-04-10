@@ -1,9 +1,6 @@
-"""Provider abstraction over LLM backends — clients, types, errors, and HTTP API.
+"""Provider exports with lazy optional-dependency imports."""
 
-Import from here instead of deep paths:
-
-    from providers import AnthropicClient, detect_provider
-"""
+from __future__ import annotations
 
 from providers.types import (
     ApiCancelEvent,
@@ -28,8 +25,6 @@ from providers.provider import (
     detect_provider,
     make_api_client,
 )
-from providers.clients import AnthropicClient
-from providers.api import create_models_router
 
 __all__ = [
     # Types & protocol
@@ -57,3 +52,15 @@ __all__ = [
     # API
     "create_models_router",
 ]
+
+
+def __getattr__(name: str):
+    if name == "AnthropicClient":
+        from providers.clients import AnthropicClient
+
+        return AnthropicClient
+    if name == "create_models_router":
+        from providers.api import create_models_router
+
+        return create_models_router
+    raise AttributeError(name)

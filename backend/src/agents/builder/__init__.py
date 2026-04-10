@@ -1,6 +1,17 @@
-"""Agent builder service — DB-backed agent definition CRUD and runtime registration."""
+"""Agent builder exports with lazy imports for optional heavy dependencies."""
 
-from agents.builder.service import AgentBuilderService
-from agents.builder.validation import AgentDefinitionValidator
+from __future__ import annotations
 
 __all__ = ["AgentBuilderService", "AgentDefinitionValidator"]
+
+
+def __getattr__(name: str):
+    if name == "AgentBuilderService":
+        from agents.builder.service import AgentBuilderService
+
+        return AgentBuilderService
+    if name == "AgentDefinitionValidator":
+        from agents.builder.validation import AgentDefinitionValidator
+
+        return AgentDefinitionValidator
+    raise AttributeError(name)

@@ -18,6 +18,15 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 SUBAGENT_NAME = "subagent"
+RESERVED_BUILTIN_AGENT_NAMES = frozenset(
+    {
+        "team_planner",
+        "developer",
+        "validator",
+        "scout",
+        "team_replanner",
+    }
+)
 
 _SUBAGENT_SYSTEM_PROMPT = """You are a focused worker subagent handling one delegated task.
 
@@ -79,6 +88,17 @@ def list_definitions(source: str | None = None) -> list[AgentDefinition]:
     return defs
 
 
+def list_dispatchable_subagent_names() -> list[str]:
+    """Return registered subagent names that may be targeted by run_subagent."""
+    _ensure_external_loaded()
+    return sorted(
+        defn.name
+        for defn in _DEFINITIONS.values()
+        if getattr(defn, "agent_type", "agent") == "subagent"
+        and bool(getattr(defn, "dispatchable_via_run_subagent", False))
+    )
+
+
 def _ensure_external_loaded() -> None:
     global _external_loaded
     if _external_loaded:
@@ -88,8 +108,14 @@ def _ensure_external_loaded() -> None:
         from agents.loader import load_external_agents
 
         for defn in load_external_agents():
-            # Don't overwrite a builtin with itself; user/plugin defs take
-            # precedence over builtins of the same name.
+            if defn.name in RESERVED_BUILTIN_AGENT_NAMES:
+                logger.warning(
+                    "Ignoring external agent definition %r because the name is reserved for a builtin agent",
+                    defn.name,
+                )
+                continue
+            # External definitions may replace earlier external definitions,
+            # but never a builtin reserved name.
             existing = _DEFINITIONS.get(defn.name)
             if existing is not None and existing.source != "builtin":
                 continue

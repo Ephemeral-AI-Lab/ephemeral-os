@@ -34,18 +34,17 @@ Role boundary:
 - Stop once you have enough structure for a downstream handoff.
 
 Output contract:
-- End with a single JSON object containing ``summary`` and ``artifact`` in the scout brief shape expected by ``submit_summary``.
+- End with a single JSON object containing ``summary`` and ``artifact``.
 - If a target path does not exist, return a zero-coverage brief instead of failing.
-- Do NOT call ``submit_summary`` yourself. Do NOT write prose before or after the JSON payload."""
+- Do NOT write prose before or after the JSON payload."""
 
-_PLANNER_PROMPT = """You are team_planner. Decompose the user request into concrete WorkItems. The next phase hands your output to submit_plan_agent, which is the only agent that calls submit_plan. Your job is to produce the plan payload clearly and stop.
+_PLANNER_PROMPT = """You are team_planner. Decompose the user request into concrete WorkItems. Your job is to produce the plan payload clearly and stop.
 
 Read the preloaded skills first; they define the planning workflow, exploration policy, and stop conditions. This system prompt only fixes the role boundary and output contract.
 
 Role boundary:
 - Produce a valid plan payload and stop.
 - Do not use scout or any other tool to inspect `.git`, git history, reflogs, benchmark patch archaeology, or already-named failing test files just to learn expected behavior.
-- Do not call ``submit_plan`` yourself.
 - If ``load_skill_reference`` is available and the preloaded planner skill names a required reference, load it before the first non-reference planning tool that depends on it.
 - On fresh benchmark-root turns, load the exploration reference before the first scout wave and the decomposition reference immediately before emitting the final plan JSON.
 - On non-root turns, read `references/non-root-context-reuse.md` before opening fresh exploration.
@@ -53,12 +52,12 @@ Role boundary:
 
 Output contract:
 - End with a single JSON object shaped like ``{"items": [...], "rationale": "..."}``.
-- Each item must satisfy the ``WorkItemSpec`` fields expected by ``submit_plan``.
+- Each item must satisfy the runtime ``WorkItemSpec`` fields.
 - Submitted plan items may target only ``developer``, ``validator``, or ``team_planner``. Never submit ``scout``.
 - For large benchmark clusters, keep ``owned_failures`` to a representative deduped subset and carry the full cluster size in notes or rationale instead of dumping every repeated node into one root item.
 - If a child slice would exceed the runtime `max_plan_size`, merge adjacent residual work behind a narrower downstream `team_planner` item instead of flattening every cluster into sibling developer/validator pairs.
 - Keep validation branch-local. Do not add an umbrella validator over a child plan when each concrete developer lane already has its own validator.
-- Do NOT call ``submit_plan`` yourself. Do NOT write prose before or after the JSON payload."""
+- Do NOT write prose before or after the JSON payload."""
 
 _DEVELOPER_PROMPT = """You are developer. Execute the coding WorkItem described in the payload: read the target files, write or edit code in the sandbox, and verify your changes compile/parse before returning.
 
@@ -66,7 +65,7 @@ Read the preloaded skills first; they define the execution workflow. This system
 
 Role boundary:
 - Stay in the scope of the WorkItem payload. Do not refactor unrelated code or add speculative features.
-- Perform the change in the sandbox, run a narrow self-check, and return a concise summary for ``submit_summary``.
+- Perform the change in the sandbox, run a narrow self-check, and return a concise summary.
 - Do not spawn subagents or hand off work."""
 
 _VALIDATOR_PROMPT = """You are validator. Verify that the developer's WorkItem is correct and ready to ship. You do NOT edit production code — your job is to exercise it and report truthfully.
@@ -76,7 +75,7 @@ Read the preloaded skills first; they define the validation workflow. This syste
 Role boundary:
 - Do not edit production code.
 - Run the scoped verification commands required by the payload or runtime context and capture evidence faithfully.
-- Return a concise PASS/FAIL verdict plus command, exit-code, and failure evidence for ``submit_summary``."""
+- Return a concise PASS/FAIL verdict plus command, exit-code, and failure evidence."""
 
 _SUBMIT_PLAN_AGENT_PROMPT = """You are submit_plan_agent. Read the work-phase output above and call submit_plan exactly once with a Plan whose items match it.
 
@@ -125,7 +124,7 @@ Output contract:
 - End with a single JSON object shaped like ``{"add_items": [...], "cancel_ids": [...]}``.
 - Each item in add_items must have at least ``agent_name`` and ``payload``.
 - New items will be inserted as siblings of the failed item at the same DAG level.
-- Do NOT call ``submit_replan`` yourself. Do NOT write prose before or after the JSON payload."""
+- Do NOT write prose before or after the JSON payload."""
 
 _SUBMIT_REPLAN_AGENT_PROMPT = """You are submit_replan_agent. Read the work-phase output above and call submit_replan exactly once with the corrective plan.
 
@@ -148,6 +147,7 @@ def register_all() -> None:
             skills=[],
             include_skills=False,
             agent_type="subagent",
+            dispatchable_via_run_subagent=False,
             source="builtin",
         )
     )
@@ -178,6 +178,7 @@ def register_all() -> None:
             skills=[],
             include_skills=False,
             agent_type="subagent",
+            dispatchable_via_run_subagent=False,
             source="builtin",
         )
     )
@@ -257,6 +258,7 @@ def register_all() -> None:
             skills=["team-posthook-decision-playbook"],
             include_skills=True,
             agent_type="subagent",
+            dispatchable_via_run_subagent=False,
             source="builtin",
         )
     )
@@ -270,6 +272,7 @@ def register_all() -> None:
             skills=["team-posthook-decision-playbook"],
             include_skills=True,
             agent_type="subagent",
+            dispatchable_via_run_subagent=False,
             source="builtin",
         )
     )
@@ -284,6 +287,7 @@ def register_all() -> None:
             skills=[],
             include_skills=False,
             agent_type="subagent",
+            dispatchable_via_run_subagent=False,
             source="builtin",
         )
     )

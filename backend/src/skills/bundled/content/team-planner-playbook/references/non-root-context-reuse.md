@@ -32,6 +32,7 @@ Treat these as real planning inputs, not as decorative background text.
 2. Lock the slice boundary first.
    Combine the parent's `expansion_hint`, explicit child payload, and inherited briefings into one owned boundary.
    Do not reopen siblings outside that boundary.
+   Preserve uncertainty honestly: if the parent named a likely owner file that has not been confirmed to exist, keep it as a hypothesis until workspace structure or scout evidence proves it. Do not silently rewrite that hypothesis into a different owned file.
 
 3. Reuse the strongest existing evidence.
    If an inherited atlas brief or prior scout artifact already covers this slice with enough detail to assign workers, dispatch workers.
@@ -84,6 +85,7 @@ Fresh exploration is not justified when:
 - the child prompt already names the owner file or region and the remaining question is runtime behavior
 - a prior scout already mapped the same file and only one named region is still in scope
 - the child would just restate the parent map in its own words
+- the only "new" move would be replacing an unconfirmed parent path with a guessed nearby file instead of using live structure to confirm it
 
 ---
 
@@ -95,6 +97,7 @@ Fresh exploration is not justified when:
 - If only one meaningful sub-slice remains, emit execution work instead of another planner wrapper.
 - If you scout, ask only for the missing structure that inherited context did not already answer.
 - If the next move would be "re-read the same file because this is a child planner now", stop and reuse the existing brief instead.
+- If the inherited payload names exact benchmark test files, preserve those exact checkout-relative paths in downstream developer and validator payloads. Do not shorten them to `tests/...` aliases or invent exact pytest nodes you do not have.
 
 ---
 

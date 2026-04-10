@@ -67,7 +67,7 @@ End your work phase with a single JSON object:
 }
 ```
 
-Do **not** call `submit_summary` yourself. The posthook agent will read this payload and submit it.
+Do **not** write prose before or after this JSON payload.
 
 ---
 

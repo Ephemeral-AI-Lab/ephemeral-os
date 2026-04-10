@@ -80,6 +80,7 @@ Produce a structural ownership map first, then assign developer and validator wo
 - If a budget warning appears, or you are down to only a few tool calls, stop exploring and emit the final JSON plan immediately.
 - If a tool call is rejected because the planner budget is exhausted, treat that rejection itself as the finalization trigger and emit the JSON plan immediately.
 - Do not queue a ready expandable child planner in parallel just for "if the developer finds more issues"; that contingency belongs in downstream deps or later replanning.
+- Do not spawn a child `team_planner` subagent after scout sufficiency just to precompute the residual branch. Child planners are submitted plan items, not planner-time background work.
 - Prefer atlas reuse only when the cached brief already answers the decomposition question.
 - Prefer child planners over extra parent reads when a large file needs region-level ownership.
 - Prefer disjoint fanout over overlapping scouts.

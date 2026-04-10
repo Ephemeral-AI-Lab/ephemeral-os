@@ -125,7 +125,7 @@ PASS_TO_PASS results: 15/15 passing (no regressions)
 
 ## What happens after
 
-When `request_replan()` is available, the replanner agent reads your `replan_request` artifact, returns a corrective JSON payload, and the downstream `submit_replan_agent` submits it with:
+When `request_replan()` is available, the replanner agent reads your `replan_request` artifact, returns a corrective JSON payload, and a downstream posthook serializer submits it with:
 - `add_items`: targeted fix work items based on your triage
 - `cancel_ids`: any pending sibling work items that are no longer relevant
 

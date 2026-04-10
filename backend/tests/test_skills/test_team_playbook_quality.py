@@ -36,6 +36,7 @@ def test_hard_rule_numbers_do_not_repeat() -> None:
 
 def test_planner_playbook_gates_share_briefing_on_tool_availability() -> None:
     planner = _read(_BACKEND_ROOT / "src/skills/bundled/content/team-planner-playbook/SKILL.md")
+    assert "submit_plan_agent" not in planner
     assert "only when `share_briefing` is actually available in your tool list" in planner
     assert "calling a tool that is not visibly available" in planner
     assert "representative deduped subset" in planner

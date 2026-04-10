@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from agents.registry import RESERVED_BUILTIN_AGENT_NAMES
 from agents.types import EFFORT_LEVELS
 from agents.api.schemas import AgentValidationResult
 
@@ -24,6 +25,10 @@ class AgentDefinitionValidator:
     def validate(self, defn: AgentDefinitionCreate | AgentDefinitionUpdate) -> AgentValidationResult:
         errors: list[str] = []
         warnings: list[str] = []
+
+        name = getattr(defn, "name", None)
+        if isinstance(name, str) and name in RESERVED_BUILTIN_AGENT_NAMES:
+            errors.append(f"Agent name is reserved for a builtin runtime agent: {name}")
 
         toolkits = getattr(defn, "toolkits", None)
         if toolkits:

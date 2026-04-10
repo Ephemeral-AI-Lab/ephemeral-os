@@ -63,10 +63,13 @@ class SubmitPlanTool(SubmitPosthookTool):
             return None, f"Invalid Plan shape: {exc}"
 
         max_plan_size = int(context.metadata.get("max_plan_size", 50) or 50)
+        benchmark_test_ids, benchmark_test_files = self._known_benchmark_targets(context)
         issues = validate_plan_phase_a(
             plan,
             max_plan_size=max_plan_size,
             known_external_deps=self._known_external_dep_ids(context),
+            benchmark_test_ids=benchmark_test_ids,
+            benchmark_test_files=benchmark_test_files,
         )
         if issues:
             lines = [f"- {i['field']}: {i['msg']}" for i in issues]
@@ -97,3 +100,46 @@ class SubmitPlanTool(SubmitPosthookTool):
         if not isinstance(graph, dict):
             return None
         return {str(wi_id) for wi_id in graph}
+
+    def _known_benchmark_targets(
+        self, context: ToolExecutionContext
+    ) -> tuple[set[str] | None, set[str] | None]:
+        team_run_id = str(context.metadata.get("team_run_id") or "").strip()
+        if not team_run_id:
+            return None, None
+        try:
+            from team.runtime.registry import get as get_team_run
+
+            team_run = get_team_run(team_run_id)
+        except Exception:
+            return None, None
+        if team_run is None:
+            return None, None
+        graph = getattr(getattr(team_run, "dispatcher", None), "graph", None)
+        root_id = getattr(team_run, "root_work_item_id", None)
+        if not isinstance(graph, dict) or not isinstance(root_id, str):
+            return None, None
+        root = graph.get(root_id)
+        payload = getattr(root, "payload", None) if root is not None else None
+        if not isinstance(payload, dict):
+            return None, None
+        fail_to_pass = payload.get("fail_to_pass")
+        pass_to_pass = payload.get("pass_to_pass")
+        test_ids = {
+            str(item).strip()
+            for item in (fail_to_pass or [])
+            if isinstance(item, str) and str(item).strip()
+        }
+        test_ids.update(
+            str(item).strip()
+            for item in (pass_to_pass or [])
+            if isinstance(item, str) and str(item).strip()
+        )
+        if not test_ids:
+            return None, None
+        test_files = {
+            item.split("::", 1)[0]
+            for item in test_ids
+            if "::" in item and item.split("::", 1)[0]
+        }
+        return test_ids, test_files

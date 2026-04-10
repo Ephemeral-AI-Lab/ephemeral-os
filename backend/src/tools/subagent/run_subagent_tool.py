@@ -46,6 +46,7 @@ from tools.daytona_toolkit.coordination import (
     scope_paths_from_payload,
     scopes_overlap,
 )
+from tools.subagent.policy import SCOUT_ONLY_CALLERS
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +59,6 @@ PEEK_MESSAGE_MAX = 10
 _PEEK_BLOCK_CHAR_CAP = 200
 # Total character cap for the peek view.
 _PEEK_TOTAL_CHAR_CAP = 2048
-_SCOUT_ONLY_CALLERS = frozenset({"team_planner"})
 _MAX_SCOUT_LAUNCHES_PER_TURN = 8
 
 
@@ -533,6 +533,16 @@ async def run_subagent(
                 "on this background task. If you need coding, validation, or "
                 "runtime test evidence, emit `developer` / `validator` "
                 "WorkItems in the Plan instead of calling `run_subagent`."
+            ),
+            is_error=True,
+        )
+    if not bool(getattr(sub_def, "dispatchable_via_run_subagent", False)):
+        return ToolResult(
+            output=(
+                f"run_subagent: agent '{agent_name}' is an internal subagent and "
+                "may not be dispatched via `run_subagent`. Use a dispatchable "
+                "worker subagent such as `scout`, or emit `developer` / "
+                "`validator` WorkItems in the Plan."
             ),
             is_error=True,
         )
