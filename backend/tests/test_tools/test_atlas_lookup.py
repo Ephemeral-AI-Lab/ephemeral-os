@@ -208,8 +208,7 @@ async def test_ledger_edit_in_scope_routes_to_refresh(atlas_store: AtlasStore) -
         assert not result.is_error
         assert lookups[0]["action"] == "refresh"
         assert "ledger" in (lookups[0]["staleness_reason"] or "")
-        # Still staged so the planner can skim while the refresher runs.
-        assert lookups[0]["staged_artifact_ref"] is not None
+        assert lookups[0]["staged_artifact_ref"] is None
     finally:
         unregister("T1")
 

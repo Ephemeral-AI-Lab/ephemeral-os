@@ -28,6 +28,16 @@ class _StubStore:
         return list(self._subsystems)
 
 
+class _PersistStore(_StubStore):
+    def __init__(self) -> None:
+        super().__init__([], has_chunks=True)
+        self.writes = []
+
+    def upsert_chunks(self, *, project_key: str, repo_root: str, chunks: list[object]) -> int:
+        self.writes.append((project_key, repo_root, chunks))
+        return len(chunks)
+
+
 def _fake_team_run() -> SimpleNamespace:
     return SimpleNamespace(
         id="T1",
@@ -141,3 +151,65 @@ def test_note_lookup_defers_refresh_when_bootstrap_is_already_queued() -> None:
 
     assert scheduler._dirty_subsystems == {"tests"}
     assert scheduler._queue.qsize() == 1
+
+
+def test_note_lookup_refresh_only_ignores_scout_jobs() -> None:
+    scheduler = AtlasMaintenanceScheduler(
+        team_run=_fake_team_run(),
+        runner=_unused_runner,
+        build_query_context=_unused_context_builder,
+        build_posthook_context=_unused_context_builder,
+        agent_lookup=lambda name: None,
+        store=_StubStore(["tests"], has_chunks=True),
+        policy="refresh_only",
+    )
+
+    scheduler.note_lookup([{"action": "scout", "subsystem": "tests"}], source="lookup")
+
+    assert scheduler._queue.qsize() == 0
+
+
+def test_deferred_persist_policy_skips_lookup_and_dirty_queueing() -> None:
+    scheduler = AtlasMaintenanceScheduler(
+        team_run=_fake_team_run(),
+        runner=_unused_runner,
+        build_query_context=_unused_context_builder,
+        build_posthook_context=_unused_context_builder,
+        agent_lookup=lambda name: None,
+        store=_StubStore(["tests"], has_chunks=True),
+        policy="deferred_persist",
+    )
+
+    scheduler.note_lookup([{"action": "refresh", "subsystem": "tests"}], source="lookup")
+    scheduler.mark_dirty_path("/repo/tests/test_main.py")
+
+    assert scheduler._queue.qsize() == 0
+    assert scheduler._dirty_subsystems == set()
+
+
+def test_deferred_persist_policy_accepts_direct_scout_brief_persistence() -> None:
+    store = _PersistStore()
+    scheduler = AtlasMaintenanceScheduler(
+        team_run=_fake_team_run(),
+        runner=_unused_runner,
+        build_query_context=_unused_context_builder,
+        build_posthook_context=_unused_context_builder,
+        agent_lookup=lambda name: None,
+        store=store,
+        policy="deferred_persist",
+    )
+
+    persisted = scheduler.persist_direct_scout_brief(
+        {
+            "target_paths": ["tests"],
+            "canonical_scope": "tests",
+            "summary": "scout",
+            "files": [],
+            "scope_coverage": 1.0,
+            "gaps": "",
+            "suggested_subdivisions": [],
+        }
+    )
+
+    assert persisted is True
+    assert len(store.writes) == 1

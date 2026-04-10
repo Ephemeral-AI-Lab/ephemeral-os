@@ -9,9 +9,10 @@ import logging
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.daytona_toolkit.tools import _get_cwd, _path_error, _resolve_path
 from tools.daytona_toolkit.ci_integration import (
+    abort_ci_write,
+    finalize_ci_write,
     get_ci_service,
-    prime_cache_after_write,
-    record_edit_in_ledger,
+    prepare_ci_write,
 )
 from tools.core.decorator import tool
 
@@ -60,15 +61,42 @@ async def daytona_edit_file(
 
     file_path = _resolve_path(file_path, context)
 
-    # Read current content
-    try:
-        raw = await sandbox.fs.download_file(file_path)
-        current = raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
-    except Exception as exc:
-        return ToolResult(output=_path_error(exc, file_path) or f"Cannot read file: {exc}", is_error=True)
+    prepared = None
+    current = ""
+    current_hash = ""
+    svc = get_ci_service(context)
+    if svc is not None and hasattr(svc, "prepare_write"):
+        prepared, scope_packet, err = prepare_ci_write(context, file_path)
+        if err is not None:
+            return ToolResult(
+                output=err,
+                is_error=True,
+                metadata={"scope_packet": scope_packet, "conflict": True},
+            )
+        if prepared is None:
+            return ToolResult(
+                output=f"CI service unavailable for coordinated edit of {file_path}",
+                is_error=True,
+            )
+        if not bool(getattr(prepared, "existed", True)):
+            abort_ci_write(context, prepared)
+            return ToolResult(
+                output=f"Path does not exist: {file_path}",
+                is_error=True,
+            )
+        current = str(getattr(prepared, "current_content", "") or "")
+        current_hash = str(getattr(prepared, "current_hash", "") or "")
+    else:
+        try:
+            raw = await sandbox.fs.download_file(file_path)
+            current = raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
+            current_hash = _content_hash(current)
+        except Exception as exc:
+            return ToolResult(output=_path_error(exc, file_path) or f"Cannot read file: {exc}", is_error=True)
 
     # Check that old_text exists
     if old_text not in current:
+        abort_ci_write(context, prepared)
         return ToolResult(
             output=f"Search text not found in {file_path}",
             is_error=True,
@@ -100,57 +128,40 @@ async def daytona_edit_file(
                 "diff": diff_text,
             }
         )
+        abort_ci_write(context, prepared)
         return ToolResult(output=output, metadata={"dry_run": True})
 
     # Try OCC-coordinated edit via CI service
-    svc = get_ci_service(context)
-    if svc and hasattr(svc, "arbiter") and svc.arbiter:
-        arbiter = svc.arbiter
-        old_hash = _content_hash(current)
-
-        if not arbiter.acquire_file_lock(file_path, timeout=15.0):
-            return ToolResult(
-                output=f"Could not acquire edit lock for {file_path} (conflict)",
-                is_error=True,
-                metadata={"conflict": True},
-            )
-
+    if prepared is not None:
         try:
-            # Save snapshot for undo
-            tm = svc.time_machine
-            if tm:
-                tm.save(file_path, current)
-
-            # Write
-            await sandbox.fs.upload_file(new_content.encode("utf-8"), file_path)
-
-            # Record
-            new_hash = _content_hash(new_content)
-            arbiter.record_edit(file_path, "")
-            record_edit_in_ledger(
+            result = finalize_ci_write(
                 context,
-                file_path,
+                prepared,
+                content=new_content,
                 edit_type="edit",
-                old_hash=old_hash,
-                new_hash=new_hash,
                 description=description,
             )
-            prime_cache_after_write(context, file_path, new_content)
-
+        finally:
+            abort_ci_write(context, prepared)
+        if getattr(result, "success", False):
             output = json.dumps(
                 {
                     "cwd": _get_cwd(context) or "",
                     "file_path": file_path,
                     "status": "edited",
                     "occ": True,
+                    "expected_hash": current_hash,
                 }
             )
             return ToolResult(
                 output=output,
                 metadata={"file_path": file_path, "occ": True},
             )
-        finally:
-            arbiter.release_file_lock(file_path)
+        return ToolResult(
+            output=str(getattr(result, "message", "") or "Edit failed"),
+            is_error=True,
+            metadata={"conflict": bool(getattr(result, "conflict", False))},
+        )
     else:
         # Direct write (no CI)
         try:

@@ -21,12 +21,11 @@ this module and :mod:`team.atlas`.
 from __future__ import annotations
 
 import logging
-import time
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
-from team.atlas.freshness import hash_paths_under
+from team.atlas.persistence import build_chunk_from_brief
 from team.atlas.store import AtlasChunk, AtlasStore, get_default_store
 from team.context.canonicalize import scope_of_artifact
 from team.runtime.registry import get as _get_team_run
@@ -117,30 +116,12 @@ class SubmitAtlasTool(SubmitPosthookTool):
             if subsystem in seen:
                 return None, f"submit_atlas: duplicate subsystem {subsystem!r} at index {idx}"
             seen.add(subsystem)
-            # Capture snapshot_time BEFORE reading files — this is the
-            # ledger cutoff used by freshness checks. A brief-supplied
-            # value (set by the scout at read-time) is strictly better
-            # because it was taken earlier; we only fall back to "now"
-            # when the scout didn't record one.
-            brief_snapshot = raw.brief.get("snapshot_time") if isinstance(raw.brief, dict) else None
-            snapshot_time = (
-                float(brief_snapshot)
-                if isinstance(brief_snapshot, (int, float)) and brief_snapshot > 0
-                else time.time()
-            )
-            target_paths = _target_paths(raw.brief)
-            content_hashes = hash_paths_under(target_paths, repo_root)
-            symbol_ids = _collect_symbol_ids(context, content_hashes.keys())
             chunks.append(
-                AtlasChunk(
-                    subsystem=subsystem,
+                build_chunk_from_brief(
                     brief=dict(raw.brief),
-                    content_hashes=content_hashes,
-                    symbol_ids=symbol_ids,
-                    snapshot_time=snapshot_time,
-                    # brief_version defaults to time.time_ns() — monotonic
-                    # and unique per call, so concurrent writers cannot
-                    # collide on the version-guarded upsert.
+                    repo_root=repo_root,
+                    ci_service=getattr(context.metadata, "ci_service", None),
+                    subsystem=subsystem,
                 )
             )
 
@@ -181,14 +162,6 @@ class SubmitAtlasTool(SubmitPosthookTool):
         assert isinstance(payload, SubmittedSummary)
         return payload.summary
 
-
-def _target_paths(brief: dict[str, Any]) -> list[str]:
-    raw = brief.get("target_paths") if isinstance(brief, dict) else None
-    if not isinstance(raw, list):
-        return []
-    return [p for p in raw if isinstance(p, str) and p.strip()]
-
-
 def _resolve_subsystem(
     raw: _SubmitAtlasChunk, idx: int
 ) -> tuple[str, str | None]:
@@ -202,37 +175,6 @@ def _resolve_subsystem(
         f"submit_atlas: chunk[{idx}] missing subsystem and brief has no "
         "canonical_scope / target_paths to derive one from"
     )
-
-
-def _collect_symbol_ids(
-    context: ToolExecutionContext, file_paths: Any
-) -> list[str]:
-    """Collect ``"<file>:<symbol>"`` IDs for every file under a chunk's scope.
-
-    Uses the per-run code-intelligence ``SymbolIndex`` attached to
-    ``ExecutionMetadata.ci_service``. Missing service / unindexed files
-    → empty list; symbol IDs are a best-effort annotation so planners
-    can map subsystem → symbols without a live scan, and missing data
-    never blocks an atlas write.
-    """
-    svc = getattr(context.metadata, "ci_service", None)
-    if svc is None:
-        return []
-    symbol_index = getattr(svc, "symbol_index", None)
-    if symbol_index is None:
-        return []
-    out: list[str] = []
-    for path in file_paths:
-        try:
-            symbols = symbol_index.file_symbols(path)
-        except Exception:
-            continue
-        for sym in symbols:
-            name = getattr(sym, "name", None)
-            if name:
-                out.append(f"{path}:{name}")
-    return out
-
 
 def _resolve_store(context: ToolExecutionContext) -> AtlasStore | None:
     """Allow tests to inject an override via ``extras['atlas_store']``."""

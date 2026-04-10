@@ -12,6 +12,7 @@ from tools.core.base import ToolExecutionContext
 from tools.ci_toolkit.query_tools import (
     _svc_or_error,
     ci_status,
+    ci_scope_status,
     ci_workspace_structure,
     ci_query_symbols,
     ci_query_references,
@@ -75,6 +76,37 @@ async def test_ci_status_returns_service_status():
     assert data["ready"] is True
     assert data["files"] == 42
     svc.status.assert_called_once()
+
+
+async def test_ci_scope_status_returns_live_scope_packet():
+    svc = MagicMock()
+    svc.ledger.generation = 3
+    svc.ledger.recent_entries.return_value = []
+    svc.arbiter.generation = 7
+    svc.arbiter.active_reservations.return_value = [
+        {
+            "token_id": "tok-1",
+            "file_path": "src/app.py",
+            "agent_id": "worker-1",
+            "issued_at": 1.0,
+            "expires_at": 2.0,
+        }
+    ]
+    svc.arbiter.hotspots.return_value = [("src/app.py", 4)]
+    svc.symbol_index.generation = 11
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        result = await ci_scope_status.execute(
+            ci_scope_status.input_model(scope_paths=["src"]),
+            _ctx_with_svc(svc),
+        )
+    assert not result.is_error
+    data = json.loads(result.output)
+    assert data["scope_paths"] == ["src"]
+    assert data["ledger_generation"] == 3
+    assert data["arbiter_generation"] == 7
+    assert data["symbol_index_generation"] == 11
+    assert data["active_reservations"][0]["file_path"] == "src/app.py"
+    assert data["coherence_token"]
 
 
 # ---------------------------------------------------------------------------

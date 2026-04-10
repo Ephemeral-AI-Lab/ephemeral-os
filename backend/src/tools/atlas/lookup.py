@@ -138,13 +138,13 @@ def _decide(
     max_age_seconds: float | None = None,
 ) -> dict[str, Any]:
     """Resolve a single chunk into use/refresh using ledger → hash → conservative."""
-    staged_ref = _stage_into_run(team_run, chunk)
     fresh, reason = _freshness(
         chunk,
         ledger,
         max_age_seconds=max_age_seconds,
     )
     if fresh:
+        staged_ref = _stage_into_run(team_run, chunk)
         return {
             "subsystem": chunk.subsystem,
             "action": "use",
@@ -158,7 +158,7 @@ def _decide(
         "action": "refresh",
         "stale": True,
         "staleness_reason": reason,
-        "staged_artifact_ref": staged_ref,
+        "staged_artifact_ref": None,
         "symbol_ids": list(chunk.symbol_ids),
     }
 

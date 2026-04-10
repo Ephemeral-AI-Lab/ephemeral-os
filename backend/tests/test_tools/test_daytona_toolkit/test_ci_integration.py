@@ -6,11 +6,10 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-import pytest
-
 from team.runtime.registry import register, unregister
 from tools.core.base import ToolExecutionContext
 from tools.daytona_toolkit.ci_integration import (
+    finalize_ci_write,
     get_ci_service,
     prime_cache_after_write,
     record_edit_in_ledger,
@@ -73,6 +72,63 @@ def test_prime_cache_marks_atlas_dirty_for_team_run():
         ctx = _ctx({"team_run_id": "T1"})
         prime_cache_after_write(ctx, "/repo/file.py", "hello")
         assert seen == [("/repo/file.py", "write")]
+    finally:
+        unregister("T1")
+
+
+# ---------------------------------------------------------------------------
+# finalize_ci_write
+# ---------------------------------------------------------------------------
+
+
+def test_finalize_ci_write_marks_atlas_dirty_for_team_run():
+    seen: list[tuple[str, str]] = []
+    svc = MagicMock()
+    svc.commit_prepared_write.return_value = SimpleNamespace(success=True)
+    register(
+        SimpleNamespace(
+            id="T1",
+            note_atlas_edit=lambda path, reason="edit": seen.append((path, reason)),
+        )
+    )
+    try:
+        ctx = _ctx({"ci_service": svc, "team_run_id": "T1"})
+        prepared = SimpleNamespace(file_path="/repo/file.py")
+        result = finalize_ci_write(
+            ctx,
+            prepared,
+            content="hello",
+            edit_type="write",
+            description="desc",
+        )
+        assert result.success is True
+        assert seen == [("/repo/file.py", "write")]
+    finally:
+        unregister("T1")
+
+
+def test_finalize_ci_write_skips_atlas_dirty_mark_on_failed_commit():
+    seen: list[tuple[str, str]] = []
+    svc = MagicMock()
+    svc.commit_prepared_write.return_value = SimpleNamespace(success=False)
+    register(
+        SimpleNamespace(
+            id="T1",
+            note_atlas_edit=lambda path, reason="edit": seen.append((path, reason)),
+        )
+    )
+    try:
+        ctx = _ctx({"ci_service": svc, "team_run_id": "T1"})
+        prepared = SimpleNamespace(file_path="/repo/file.py")
+        result = finalize_ci_write(
+            ctx,
+            prepared,
+            content="hello",
+            edit_type="edit",
+            description="desc",
+        )
+        assert result.success is False
+        assert seen == []
     finally:
         unregister("T1")
 

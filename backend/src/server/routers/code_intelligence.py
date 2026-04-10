@@ -25,18 +25,6 @@ class EditRequest(BaseModel):
     description: str = ""
 
 
-class SymbolQueryRequest(BaseModel):
-    query: str
-    kind: str = ""
-
-
-class LspQueryRequest(BaseModel):
-    file_path: str
-    line: int
-    character: int = 0
-    symbol: str = ""
-
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

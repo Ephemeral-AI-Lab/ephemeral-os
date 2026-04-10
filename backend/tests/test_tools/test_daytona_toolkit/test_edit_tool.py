@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
-
-import pytest
 
 from tools.core.base import ToolExecutionContext
 from tools.daytona_toolkit.edit_tool import daytona_edit_file, _content_hash
@@ -235,14 +234,16 @@ async def test_edit_replaces_only_first_occurrence():
 
 async def test_edit_occ_path_success():
     sb = _make_sandbox(download_content="old content\n")
-    arbiter = MagicMock()
-    arbiter.acquire_file_lock.return_value = True
-    arbiter.release_file_lock = MagicMock()
-    arbiter.record_edit = MagicMock()
-    tm = MagicMock()
     svc = MagicMock()
-    svc.arbiter = arbiter
-    svc.time_machine = tm
+    svc.prepare_write.return_value = SimpleNamespace(
+        file_path="/file.py",
+        current_content="old content\n",
+        current_hash=_content_hash("old content\n"),
+        token_id="tok-1",
+        existed=True,
+    )
+    svc.commit_prepared_write.return_value = SimpleNamespace(success=True, message="ok")
+    svc.abort_prepared_write = MagicMock()
     ctx = _ctx({"daytona_sandbox": sb, "ci_service": svc})
 
     result = await daytona_edit_file.execute(
@@ -256,17 +257,19 @@ async def test_edit_occ_path_success():
     assert not result.is_error
     data = json.loads(result.output)
     assert data["occ"] is True
-    arbiter.acquire_file_lock.assert_called_once()
-    arbiter.release_file_lock.assert_called_once()
-    tm.save.assert_called_once()
+    svc.prepare_write.assert_called_once()
+    svc.commit_prepared_write.assert_called_once()
+    svc.abort_prepared_write.assert_called_once()
 
 
 async def test_edit_occ_lock_conflict():
     sb = _make_sandbox(download_content="content")
-    arbiter = MagicMock()
-    arbiter.acquire_file_lock.return_value = False
     svc = MagicMock()
-    svc.arbiter = arbiter
+    svc.prepare_write.return_value = SimpleNamespace(
+        success=False,
+        message="Could not acquire edit lock for /file.py (conflict)",
+        conflict=True,
+    )
     ctx = _ctx({"daytona_sandbox": sb, "ci_service": svc})
 
     result = await daytona_edit_file.execute(
@@ -283,8 +286,7 @@ async def test_edit_occ_lock_conflict():
 async def test_edit_occ_no_arbiter_falls_back_to_direct():
     """CI service present but no arbiter → direct write path."""
     sb = _make_sandbox(download_content="content here")
-    svc = MagicMock()
-    svc.arbiter = None
+    svc = SimpleNamespace(arbiter=None)
     ctx = _ctx({"daytona_sandbox": sb, "ci_service": svc})
 
     result = await daytona_edit_file.execute(

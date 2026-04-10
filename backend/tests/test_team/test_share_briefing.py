@@ -8,8 +8,11 @@ import pytest
 
 from team.artifacts.store import InMemoryArtifactStore
 from team.context.project import ProjectContext
-from team.context.scout_briefings import auto_promote_scout_briefing
-from team.models import BudgetConfig, BudgetState
+from team.context.scout_briefings import (
+    auto_promote_scout_briefing,
+    invalidate_stale_scout_context,
+)
+from team.models import Briefing, BudgetConfig, BudgetState
 from team.runtime.registry import register, unregister
 from tools.core.base import ToolExecutionContext
 from tools.core.runtime import ExecutionMetadata
@@ -217,6 +220,75 @@ async def test_explicit_scout_promotion_stays_pinned_against_later_auto_promotio
         assert sorted(tr.project_context.shared_briefings.keys()) == ["src/auth"]
     finally:
         unregister("T1")
+
+
+def test_invalidate_stale_scout_context_removes_overlapping_scout_briefings_and_versions():
+    tr = _fake_team_run()
+    tr.project_context.repo_root = "/repo"
+    tr.artifacts.save(
+        "scout:src/auth",
+        {
+            "summary": "auth scout",
+            "target_paths": ["src/auth"],
+            "canonical_scope": "src/auth",
+            "files": [],
+            "scope_coverage": 1.0,
+            "gaps": "",
+            "suggested_subdivisions": [],
+            "snapshot_time": 100.0,
+        },
+    )
+    assert auto_promote_scout_briefing(tr, "scout:src/auth")
+    tr.project_context.stable_scout_versions["src/auth"] = {
+        "snapshot_time": 100.0,
+        "run_id": "run-a",
+    }
+    tr.project_context.shared_briefings["manual"] = Briefing(
+        name="manual",
+        source="inline",
+        inline="keep this note",
+    )
+
+    invalidated = invalidate_stale_scout_context(tr, "/repo/src/auth/service.py")
+
+    assert invalidated == ["src/auth"]
+    assert "src/auth" not in tr.project_context.shared_briefings
+    assert "src/auth" not in tr.project_context.stable_scout_versions
+    assert "src/auth" not in tr.project_context.auto_promoted_scout_scopes
+    assert "manual" in tr.project_context.shared_briefings
+
+
+def test_invalidate_stale_scout_context_matches_compound_scope_members():
+    tr = _fake_team_run()
+    tr.project_context.repo_root = "/repo"
+    tr.artifacts.save(
+        "scout:src/bar|src/foo",
+        {
+            "summary": "compound scout",
+            "target_paths": ["src/foo", "src/bar"],
+            "canonical_scope": "src/bar|src/foo",
+            "files": [],
+            "scope_coverage": 1.0,
+            "gaps": "",
+            "suggested_subdivisions": [],
+            "snapshot_time": 100.0,
+        },
+    )
+    tr.project_context.shared_briefings["src/bar|src/foo"] = Briefing(
+        name="compound",
+        source="artifact",
+        ref="scout:src/bar|src/foo",
+    )
+    tr.project_context.stable_scout_versions["src/bar|src/foo"] = {
+        "snapshot_time": 100.0,
+        "run_id": "run-b",
+    }
+
+    invalidated = invalidate_stale_scout_context(tr, "src/foo/service.py")
+
+    assert invalidated == ["src/bar|src/foo"]
+    assert "src/bar|src/foo" not in tr.project_context.shared_briefings
+    assert "src/bar|src/foo" not in tr.project_context.stable_scout_versions
 
 
 @pytest.mark.asyncio

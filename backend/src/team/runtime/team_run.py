@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, Callable
 from team.artifacts.store import InMemoryArtifactStore
 from team.atlas.identity import project_key_for
 from team.context.project import ProjectContext
+from team.context.scout_briefings import invalidate_stale_scout_context
 from team.persistence.events import (
     make_team_run_created,
     make_team_run_status,
@@ -295,6 +296,7 @@ class TeamRun:
             )
 
     def note_atlas_edit(self, file_path: str, *, reason: str = "edit") -> None:
+        invalidate_stale_scout_context(self, file_path)
         if self.atlas_scheduler is None:
             return
         try:
@@ -304,6 +306,29 @@ class TeamRun:
 
             logging.getLogger(__name__).debug(
                 "atlas scheduler mark_dirty_path failed",
+                exc_info=True,
+            )
+
+    def note_direct_scout_brief(
+        self,
+        brief: dict[str, Any],
+        *,
+        ci_service: Any | None = None,
+        reason: str = "direct-scout",
+    ) -> None:
+        if self.atlas_scheduler is None:
+            return
+        try:
+            self.atlas_scheduler.persist_direct_scout_brief(
+                brief,
+                ci_service=ci_service,
+                reason=reason,
+            )
+        except Exception:
+            import logging
+
+            logging.getLogger(__name__).debug(
+                "atlas direct scout persistence failed",
                 exc_info=True,
             )
 

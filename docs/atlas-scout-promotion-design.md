@@ -160,7 +160,7 @@ Acceptance criteria:
 - Atlas persistence reuses scout-complete output and does not fork write semantics
 
 Status:
-- deferred
+- implemented
 
 ### Phase 5: Live Scope Awareness
 Objective:
@@ -179,19 +179,20 @@ Acceptance criteria:
 - write-time coordination is based on authoritative rechecks, not only startup prompt text
 
 Status:
-- deferred
+- implemented
 
 ## Worker Awareness Model
 
 ### Implemented now
 - shared scout ownership memory is automatic and bounded
 - scout reuse is artifact-backed instead of text-only
-- worker/toolkit guidance tells agents to trust CI for live truth over stale structural memory
-
-### Required later
 - machine-checkable freshness grades
 - reservation-backed active editor visibility
 - coherent scope packet injection for developer and validator startup
+- startup and pre-write metadata carry coherence tokens across shared briefings, ledger, arbiter, and symbol index
+- production and benchmark workers both receive live scope packets when CI is available
+- overlapping edits invalidate scout-backed shared context and force fresh CI truth on subsequent turns
+- write-time coordination uses authoritative pre-write and commit-time rechecks, not only startup prompt text
 
 ## Cleanup And Legacy Removal
 - Removed the legacy assumption that fresh scout results are never real artifact refs.
@@ -205,4 +206,4 @@ Status:
 - older scout completions cannot clobber a newer stable scope view
 - planner, toolkit, and sharing instructions agree on the new ref contract
 - fresh SWE-EVO continues to avoid Atlas-owned duplicate exploration on the critical path
-- the design cleanly separates what is implemented now from the still-required live scope awareness stack
+- the design and runtime agree on the implemented live scope awareness stack

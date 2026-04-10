@@ -19,6 +19,45 @@ def stable_scout_artifact_ref(scope: str) -> str:
     return f"{_SCOUT_ARTIFACT_PREFIX}{scope}"
 
 
+def invalidate_stale_scout_context(team_run: Any, file_path: str) -> list[str]:
+    """Evict scout-backed shared context that overlaps *file_path*.
+
+    This keeps same-run prompt injection conservative after writes: shared
+    scout briefings and stable scout version metadata are removed when an
+    edited path falls under their scope. Inline shared briefings and
+    non-scout artifact briefings are left untouched.
+    """
+    project_ctx = getattr(team_run, "project_context", None)
+    if project_ctx is None:
+        return []
+    repo_root = str(getattr(project_ctx, "repo_root", "") or "")
+    shared_briefings = getattr(project_ctx, "shared_briefings", None)
+    stable_versions = getattr(project_ctx, "stable_scout_versions", None)
+    if not isinstance(shared_briefings, dict) or not isinstance(stable_versions, dict):
+        return []
+
+    stale_scopes: set[str] = set()
+    for scope, briefing in list(shared_briefings.items()):
+        if not _is_scout_briefing(briefing):
+            continue
+        if _scope_overlaps_file(scope, file_path, repo_root=repo_root):
+            stale_scopes.add(scope)
+    for scope in list(stable_versions.keys()):
+        if _scope_overlaps_file(scope, file_path, repo_root=repo_root):
+            stale_scopes.add(scope)
+
+    if not stale_scopes:
+        return []
+
+    for scope in sorted(stale_scopes):
+        briefing = shared_briefings.get(scope)
+        if _is_scout_briefing(briefing):
+            shared_briefings.pop(scope, None)
+        project_ctx.auto_promoted_scout_scopes.discard(scope)
+        stable_versions.pop(scope, None)
+    return sorted(stale_scopes)
+
+
 def store_stable_scout_artifact(
     team_run: Any,
     artifact: dict[str, Any],
@@ -179,3 +218,62 @@ def _scope_coverage(artifact: Any) -> float:
         return -1.0
     raw = artifact.get("scope_coverage")
     return float(raw) if isinstance(raw, (int, float)) else -1.0
+
+
+def _is_scout_briefing(briefing: Any) -> bool:
+    return (
+        isinstance(getattr(briefing, "source", None), str)
+        and briefing.source == "artifact"
+        and isinstance(getattr(briefing, "ref", None), str)
+        and briefing.ref.startswith(_SCOUT_ARTIFACT_PREFIX)
+    )
+
+
+def _scope_overlaps_file(scope: str, file_path: str, *, repo_root: str) -> bool:
+    scope_parts = [part for part in str(scope or "").split("|") if part.strip()]
+    if not scope_parts:
+        return False
+    file_variants = _path_variants(file_path, repo_root=repo_root)
+    for part in scope_parts:
+        scope_variants = _path_variants(part, repo_root=repo_root)
+        for candidate in file_variants:
+            for target in scope_variants:
+                if _paths_overlap(candidate, target):
+                    return True
+    return False
+
+
+def _path_variants(path: str, *, repo_root: str) -> set[str]:
+    cleaned = _normalise_path(path)
+    if not cleaned:
+        return set()
+    out = {cleaned}
+    root = _normalise_path(repo_root)
+    if not root:
+        return out
+    if cleaned.startswith(root + "/"):
+        out.add(cleaned[len(root) + 1 :])
+    elif not cleaned.startswith("/"):
+        out.add(f"{root}/{cleaned}")
+    return out
+
+
+def _normalise_path(path: str) -> str:
+    return str(path or "").strip().replace("\\", "/").removeprefix("./").rstrip("/")
+
+
+def _paths_overlap(path_a: str, path_b: str) -> bool:
+    left = _normalise_path(path_a)
+    right = _normalise_path(path_b)
+    if not left or not right:
+        return False
+    if left == right:
+        return True
+    if left.startswith(right + "/") or right.startswith(left + "/"):
+        return True
+    return (
+        left.endswith("/" + right)
+        or right.endswith("/" + left)
+        or ("/" + right + "/") in (left + "/")
+        or ("/" + left + "/") in (right + "/")
+    )

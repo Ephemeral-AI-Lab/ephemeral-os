@@ -14,10 +14,14 @@ import re
 import shlex
 from typing import Any
 
-from team.runtime.registry import get as get_team_run
+from tools.daytona_toolkit.coordination import (
+    build_scope_packet_for_context,
+    normalize_scope_paths,
+)
 from tools.core.base import ToolExecutionContext
 
 logger = logging.getLogger(__name__)
+_DEFAULT_SCOPE_RECENT_SECONDS = 300.0
 
 _SHELL_MUTATION_PATTERN = re.compile(
     r"(^|[;&|]\s*)("
@@ -43,6 +47,115 @@ def get_daytona_sandbox(context: ToolExecutionContext) -> Any | None:
 def get_daytona_cwd(context: ToolExecutionContext) -> str:
     """Get the injected Daytona working directory, if available."""
     return context.metadata.get("daytona_cwd") or ""
+
+
+def scope_paths_for_write(
+    context: ToolExecutionContext,
+    *,
+    fallback_paths: list[str] | None = None,
+) -> list[str]:
+    """Return the scope paths a write should be validated against."""
+    baseline = context.metadata.get("scope_packet")
+    if isinstance(baseline, dict):
+        paths = baseline.get("scope_paths")
+        if isinstance(paths, list) and paths:
+            return normalize_scope_paths([str(item) for item in paths if isinstance(item, str)])
+    return normalize_scope_paths(fallback_paths or [])
+
+
+def build_live_scope_packet(
+    context: ToolExecutionContext,
+    *,
+    scope_paths: list[str] | None = None,
+    recent_seconds: float = _DEFAULT_SCOPE_RECENT_SECONDS,
+) -> dict[str, Any]:
+    """Build the current live scope packet for *scope_paths*."""
+    baseline = context.metadata.get("scope_packet")
+    return build_scope_packet_for_context(
+        context,
+        scope_paths=scope_paths,
+        baseline_packet=baseline if isinstance(baseline, dict) else None,
+        recent_seconds=recent_seconds,
+    )
+
+
+def enforce_scope_coherence(
+    context: ToolExecutionContext,
+    *,
+    scope_paths: list[str] | None,
+) -> tuple[dict[str, Any], str | None]:
+    """Return the live scope packet plus an error when the baseline token drifted."""
+    packet = build_live_scope_packet(context, scope_paths=scope_paths)
+    expected = str(context.metadata.get("coherence_token") or "")
+    current = str(packet.get("coherence_token") or "")
+    if expected and current and expected != current:
+        return packet, (
+            "Scope coherence changed since the work item started. "
+            "Refresh live CI state with ci_scope_status before writing."
+        )
+    return packet, None
+
+
+def prepare_ci_write(
+    context: ToolExecutionContext,
+    file_path: str,
+    *,
+    expected_hash: str = "",
+) -> tuple[Any | None, dict[str, Any], str | None]:
+    """Run scope/token prechecks and reserve *file_path* for a write."""
+    packet, err = enforce_scope_coherence(
+        context,
+        scope_paths=scope_paths_for_write(context, fallback_paths=[file_path]),
+    )
+    if err is not None:
+        return None, packet, err
+    svc = get_ci_service(context)
+    if svc is None or not hasattr(svc, "prepare_write"):
+        return None, packet, None
+    prepared = svc.prepare_write(
+        file_path,
+        agent_id=str(context.metadata.get("agent_run_id") or ""),
+        expected_hash=expected_hash,
+        allow_missing=True,
+    )
+    if getattr(prepared, "success", None) is False:
+        return None, packet, str(getattr(prepared, "message", "") or "write precheck failed")
+    return prepared, packet, None
+
+
+def finalize_ci_write(
+    context: ToolExecutionContext,
+    prepared: Any,
+    *,
+    content: str,
+    edit_type: str,
+    description: str,
+) -> Any:
+    """Commit a prepared write via the CI service."""
+    svc = get_ci_service(context)
+    assert svc is not None and hasattr(svc, "commit_prepared_write")
+    result = svc.commit_prepared_write(
+        prepared,
+        content,
+        edit_type=edit_type,
+        description=description,
+    )
+    if getattr(result, "success", False):
+        _note_atlas_edit(context, getattr(prepared, "file_path", ""), reason=edit_type)
+    return result
+
+
+def abort_ci_write(context: ToolExecutionContext, prepared: Any | None) -> None:
+    """Release any prepared CI write reservation."""
+    if prepared is None:
+        return
+    svc = get_ci_service(context)
+    if svc is None or not hasattr(svc, "abort_prepared_write"):
+        return
+    try:
+        svc.abort_prepared_write(prepared)
+    except Exception:
+        logger.debug("abort_prepared_write failed for %s", getattr(prepared, "file_path", ""), exc_info=True)
 
 
 def resolve_daytona_path(path: str, context: ToolExecutionContext) -> str:
@@ -150,6 +263,7 @@ async def sync_shell_mutations(
     context: ToolExecutionContext,
     *,
     command: str,
+    declared_output_paths: list[str] | None = None,
     limit: int = 64,
 ) -> dict[str, Any]:
     """Refresh CI state for files currently dirty after a mutating shell command.
@@ -159,7 +273,8 @@ async def sync_shell_mutations(
     keep CI caches, ledger, hotspots, and atlas invalidation in sync when an
     agent edits files via ``daytona_bash`` instead of structured edit tools.
     """
-    if not command_may_mutate_workspace(command):
+    declared_output_paths = normalize_scope_paths(declared_output_paths or [])
+    if not command_may_mutate_workspace(command) and not declared_output_paths:
         return {"enabled": False, "files": 0, "truncated": False}
 
     sandbox = get_daytona_sandbox(context)
@@ -180,19 +295,25 @@ async def sync_shell_mutations(
     if getattr(root_resp, "exit_code", 1) != 0 or not git_root:
         return {"enabled": False, "files": 0, "truncated": False}
 
-    try:
-        status_resp = await sandbox.process.exec(
-            f"git -C {shlex.quote(git_root)} status --porcelain --untracked-files=all",
-            timeout=30,
-        )
-    except Exception:
-        logger.debug("Shell sync skipped: git status failed for %s", git_root, exc_info=True)
-        return {"enabled": True, "files": 0, "truncated": False}
+    if declared_output_paths:
+        dirty_paths = [
+            path if path.startswith("/") else os.path.normpath(f"{git_root}/{path}")
+            for path in declared_output_paths
+        ]
+    else:
+        try:
+            status_resp = await sandbox.process.exec(
+                f"git -C {shlex.quote(git_root)} status --porcelain --untracked-files=all",
+                timeout=30,
+            )
+        except Exception:
+            logger.debug("Shell sync skipped: git status failed for %s", git_root, exc_info=True)
+            return {"enabled": True, "files": 0, "truncated": False}
 
-    if getattr(status_resp, "exit_code", 1) != 0:
-        return {"enabled": True, "files": 0, "truncated": False}
+        if getattr(status_resp, "exit_code", 1) != 0:
+            return {"enabled": True, "files": 0, "truncated": False}
 
-    dirty_paths = _parse_git_status_paths((getattr(status_resp, "result", "") or ""), git_root)
+        dirty_paths = _parse_git_status_paths((getattr(status_resp, "result", "") or ""), git_root)
     truncated = len(dirty_paths) > limit
     changed_count = 0
     for file_path in dirty_paths[:limit]:
@@ -218,7 +339,42 @@ async def sync_shell_mutations(
         )
         changed_count += 1
 
-    return {"enabled": True, "files": changed_count, "truncated": truncated}
+    return {
+        "enabled": True,
+        "files": changed_count,
+        "truncated": truncated,
+        "declared_output_paths": declared_output_paths,
+    }
+
+
+def prepare_declared_shell_outputs(
+    context: ToolExecutionContext,
+    *,
+    declared_output_paths: list[str] | None,
+) -> tuple[list[Any], dict[str, Any], str | None]:
+    """Reserve declared shell outputs before running a mutating command."""
+    paths = normalize_scope_paths(declared_output_paths or [])
+    packet, err = enforce_scope_coherence(context, scope_paths=paths)
+    if err is not None:
+        return [], packet, err
+    if not paths:
+        return [], packet, None
+    prepared_items: list[Any] = []
+    for path in paths:
+        prepared, _, prep_err = prepare_ci_write(context, path)
+        if prep_err is not None:
+            for item in prepared_items:
+                abort_ci_write(context, item)
+            return [], packet, prep_err
+        if prepared is not None:
+            prepared_items.append(prepared)
+    return prepared_items, packet, None
+
+
+def release_declared_shell_outputs(context: ToolExecutionContext, prepared_items: list[Any]) -> None:
+    """Release any declared shell reservations."""
+    for item in prepared_items:
+        abort_ci_write(context, item)
 
 
 def record_edit_in_ledger(
@@ -257,13 +413,24 @@ def _note_atlas_edit(
     team_run_id = context.metadata.get("team_run_id")
     if not team_run_id:
         return
-    team_run = get_team_run(team_run_id)
+    team_run = _get_team_run(str(team_run_id))
     if team_run is None:
         return
     try:
         team_run.note_atlas_edit(file_path, reason=reason)
     except Exception:
         logger.debug("atlas dirty-mark failed for %s", file_path, exc_info=True)
+
+
+def _get_team_run(team_run_id: str) -> Any | None:
+    try:
+        from team.runtime.registry import get as get_team_run
+    except Exception:
+        return None
+    try:
+        return get_team_run(team_run_id)
+    except Exception:
+        return None
 
 
 def _parse_git_status_paths(output: str, git_root: str) -> list[str]:

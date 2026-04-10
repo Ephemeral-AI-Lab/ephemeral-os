@@ -25,6 +25,7 @@ from message.event_printer import MultiAgentEventPrinter
 from message.messages import ConversationMessage, ToolUseBlock
 from message.stream_events import ToolExecutionCompleted
 from token_tracker.runtime import persist_run_usage
+from code_intelligence.routing.service import get_code_intelligence
 from team.builtins import DEVELOPER, TEAM_PLANNER, VALIDATOR, register_all as _register_team_builtins
 from team.atlas.scheduler import AtlasMaintenanceScheduler
 from team.models import BudgetConfig, TeamRunStatus, WorkItemKind
@@ -37,6 +38,11 @@ from team.runtime.context_builder import (
 )
 from team.runtime.executor import Executor
 from team.runtime.team_run import TeamRun
+from tools.daytona_toolkit.coordination import (
+    build_scope_packet,
+    render_scope_packet,
+    scope_paths_for_work_item,
+)
 
 from benchmarks.sweevo.dataset import summarize_sweevo_instance
 from benchmarks.sweevo.models import SWEEvoInstance, _REPO_DIR
@@ -139,12 +145,21 @@ def _derive_sweevo_budgets(instance: SWEEvoInstance) -> BudgetConfig:
     )
 
 
-def _derive_atlas_parallelism(instance: SWEEvoInstance, *, num_executors: int) -> int:
-    del instance, num_executors
-    # Atlas maintenance currently duplicates foreground scout work on fresh
-    # benchmark runs. Keep the scheduler disabled until deferred persistence
-    # lands, so planners and developers own the full critical path.
-    return 0
+def _derive_atlas_scheduler_policy(*, resumed: bool) -> str:
+    """Return the atlas scheduler policy for this benchmark run."""
+    return "refresh_only" if resumed else "deferred_persist"
+
+
+def _derive_atlas_parallelism(
+    instance: SWEEvoInstance,
+    *,
+    num_executors: int,
+    policy: str,
+) -> int:
+    del instance
+    if policy == "deferred_persist":
+        return 0
+    return max(1, min(2, num_executors))
 
 
 def _derive_planner_runtime_limits(instance: SWEEvoInstance) -> dict[str, int]:
@@ -685,6 +700,22 @@ def _make_context_builders(
         meta["sandbox_id"] = team_run.sandbox_id or sandbox_id
         meta["daytona_cwd"] = repo_dir
         meta["ci_workspace_root"] = repo_dir
+        try:
+            ci_service = get_code_intelligence(
+                sandbox_id=team_run.sandbox_id or sandbox_id,
+                workspace_root=repo_dir,
+            )
+        except Exception:
+            ci_service = None
+        if ci_service is not None:
+            scope_packet = build_scope_packet(
+                scope_paths=scope_paths_for_work_item(team_run, wi),
+                svc=ci_service,
+                team_run=team_run,
+            )
+            meta["scope_packet"] = scope_packet
+            meta["coherence_token"] = scope_packet.get("coherence_token")
+            user_message = render_scope_packet(scope_packet) + "\n\n" + user_message
         return TeamAgentContext(user_message=user_message, tool_metadata=meta)
 
     def build_posthook_ctx(posthook_defn, work_result):
@@ -775,6 +806,7 @@ def _make_atlas_scheduler_factory(
     repo_dir: str = _REPO_DIR,
     team_metrics: dict[str, Any] | None = None,
     max_concurrent_jobs: int = 1,
+    policy: str = "full",
 ):
     runner = _make_runner(
         session_config,
@@ -795,6 +827,7 @@ def _make_atlas_scheduler_factory(
             build_posthook_context=build_posthook_ctx,
             agent_lookup=get_definition,
             max_concurrent_jobs=max_concurrent_jobs,
+            policy=policy,
         )
 
     return factory
@@ -1048,7 +1081,12 @@ async def run_sweevo_team(
     root_prompt = _build_root_prompt(instance, repo_dir)
     budgets = _derive_sweevo_budgets(instance)
     agent_overrides = _build_agent_overrides(instance)
-    atlas_parallelism = _derive_atlas_parallelism(instance, num_executors=num_executors)
+    atlas_policy = _derive_atlas_scheduler_policy(resumed=False)
+    atlas_parallelism = _derive_atlas_parallelism(
+        instance,
+        num_executors=num_executors,
+        policy=atlas_policy,
+    )
     team_metrics = _build_team_metrics()
     _emit_team_runtime_banner(printer, budgets=budgets)
 
@@ -1074,9 +1112,10 @@ async def run_sweevo_team(
             printer,
             repo_dir=repo_dir,
             team_metrics=team_metrics,
-            max_concurrent_jobs=atlas_parallelism,
+            max_concurrent_jobs=max(1, atlas_parallelism or 1),
+            policy=atlas_policy,
         )
-        if atlas_parallelism > 0
+        if atlas_policy != "off"
         else None
     )
 
@@ -1158,7 +1197,12 @@ async def resume_sweevo_team(
     )
     budgets = tr.budgets
     agent_overrides = _build_agent_overrides(instance)
-    atlas_parallelism = _derive_atlas_parallelism(instance, num_executors=num_executors)
+    atlas_policy = _derive_atlas_scheduler_policy(resumed=True)
+    atlas_parallelism = _derive_atlas_parallelism(
+        instance,
+        num_executors=num_executors,
+        policy=atlas_policy,
+    )
     team_metrics = _build_team_metrics()
     _emit_team_runtime_banner(printer, budgets=budgets)
     if printer is not None:
@@ -1185,9 +1229,10 @@ async def resume_sweevo_team(
             printer,
             repo_dir=repo_dir,
             team_metrics=team_metrics,
-            max_concurrent_jobs=atlas_parallelism,
+            max_concurrent_jobs=max(1, atlas_parallelism or 1),
+            policy=atlas_policy,
         )
-        if atlas_parallelism > 0
+        if atlas_policy != "off"
         else None
     )
 

@@ -10,6 +10,7 @@ import pytest
 from benchmarks.sweevo import team_runner as sweevo_team_runner
 from benchmarks.sweevo.team_runner import (
     _derive_atlas_parallelism,
+    _derive_atlas_scheduler_policy,
     _derive_sweevo_budgets,
     _enforce_validation_evidence,
     _build_agent_overrides,
@@ -183,6 +184,53 @@ def test_query_ctx_seeds_repo_root_for_daytona_and_ci():
     assert "Do not prepend guessed roots" in ctx.user_message
 
 
+def test_query_ctx_injects_scope_packet_when_ci_is_available(monkeypatch):
+    build_query_ctx, _ = _make_context_builders("sbx-1", repo_dir="/testbed")
+    fake_ci = object()
+
+    monkeypatch.setattr(sweevo_team_runner, "get_code_intelligence", lambda **_: fake_ci)
+    monkeypatch.setattr(
+        sweevo_team_runner,
+        "build_scope_packet",
+        lambda **_: {
+            "coherence_token": "token-1",
+            "freshness": "fresh",
+            "scope_paths": ["src/module.py"],
+        },
+    )
+    monkeypatch.setattr(
+        sweevo_team_runner,
+        "render_scope_packet",
+        lambda packet: f"SCOPE {packet['coherence_token']}",
+    )
+
+    ctx = build_query_ctx(
+        SimpleNamespace(name="developer"),
+        SimpleNamespace(
+            id="TR1",
+            sandbox_id="sbx-1",
+            user_request="Root prompt",
+            dispatcher=SimpleNamespace(
+                artifact_store=SimpleNamespace(load=lambda _ref: None)
+            ),
+            budgets=None,
+            project_context=None,
+        ),
+        WorkItem(
+            id="W1",
+            team_run_id="T1",
+            agent_name="developer",
+            status=WorkItemStatus.PENDING,
+            kind=WorkItemKind.ATOMIC,
+            payload={"prompt": "Fix it", "files_to_edit": ["src/module.py"]},
+        ),
+    )
+
+    assert ctx.tool_metadata["scope_packet"]["coherence_token"] == "token-1"
+    assert ctx.tool_metadata["coherence_token"] == "token-1"
+    assert ctx.user_message.startswith("SCOPE token-1\n\n")
+
+
 def test_root_prompt_points_to_skill_owned_workflow_policy():
     instance = SimpleNamespace(
         repo="pydantic/pydantic",
@@ -293,7 +341,7 @@ def test_sweevo_budgets_cap_submitted_plan_size_at_ten():
     assert budgets.max_plan_size == 10
 
 
-def test_sweevo_disables_atlas_maintenance_for_now():
+def test_sweevo_derives_atlas_policy_from_run_mode():
     instance = SimpleNamespace(
         fail_to_pass=["a", "b"],
         problem_statement="- bullet\n" * 10,
@@ -307,7 +355,24 @@ def test_sweevo_disables_atlas_maintenance_for_now():
         pass_to_pass=[],
     )
 
-    assert _derive_atlas_parallelism(instance, num_executors=8) == 0
+    assert _derive_atlas_scheduler_policy(resumed=False) == "deferred_persist"
+    assert _derive_atlas_scheduler_policy(resumed=True) == "refresh_only"
+    assert (
+        _derive_atlas_parallelism(
+            instance,
+            num_executors=8,
+            policy="deferred_persist",
+        )
+        == 0
+    )
+    assert (
+        _derive_atlas_parallelism(
+            instance,
+            num_executors=8,
+            policy="refresh_only",
+        )
+        == 2
+    )
 
 
 def test_enforce_validation_evidence_requires_daytona_bash():
@@ -425,6 +490,7 @@ def test_resume_sweevo_team_uses_default_executor_factory_signature(monkeypatch)
     assert seen_factory_calls and seen_factory_calls[0]["sandbox_id"] == "sbx-1"
     assert seen_factory_calls[0]["agent_overrides"] == {}
     assert seen_atlas_calls
+    assert seen_atlas_calls[0]["policy"] == "refresh_only"
     fake_tr.resume.assert_awaited_once()
 
 

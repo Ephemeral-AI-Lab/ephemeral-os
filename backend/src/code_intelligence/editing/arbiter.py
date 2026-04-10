@@ -95,6 +95,8 @@ class Arbiter:
         self, file_path: str, content_hash: str, agent_id: str = "",
     ) -> EditToken:
         """Issue an edit token for a file."""
+        with self._lock:
+            self._prune_expired_tokens_locked()
         token = EditToken(
             token_id=uuid.uuid4().hex[:12],
             file_path=file_path,
@@ -106,6 +108,30 @@ class Arbiter:
             self._active_tokens[token.token_id] = token
             self._metrics.tokens_issued += 1
         return token
+
+    def validate_token(
+        self,
+        token_id: str,
+        *,
+        file_path: str,
+        content_hash: str = "",
+    ) -> tuple[bool, str]:
+        """Validate that *token_id* still reserves *file_path* at *content_hash*."""
+        with self._lock:
+            self._prune_expired_tokens_locked()
+            token = self._active_tokens.get(token_id)
+            if token is None:
+                return False, "missing or expired write reservation"
+            if token.file_path != file_path:
+                return False, "write reservation does not belong to this file"
+            if content_hash and token.content_hash != content_hash:
+                return False, "write reservation content hash no longer matches"
+            return True, ""
+
+    def release_token(self, token_id: str) -> None:
+        """Drop an active edit token."""
+        with self._lock:
+            self._active_tokens.pop(token_id, None)
 
     # -- Edit coordination ----------------------------------------------------
 
@@ -127,6 +153,7 @@ class Arbiter:
     def record_edit(self, file_path: str, agent_id: str = "") -> int:
         """Record a successful edit. Returns the new generation."""
         with self._lock:
+            self._prune_expired_tokens_locked()
             self._generation += 1
             gen = self._generation
             self._metrics.total_edits += 1
@@ -164,7 +191,38 @@ class Arbiter:
     @property
     def active_edit_count(self) -> int:
         with self._lock:
+            self._prune_expired_tokens_locked()
             return len(self._active_tokens)
+
+    @property
+    def generation(self) -> int:
+        with self._lock:
+            return self._generation
+
+    def active_reservations(
+        self,
+        scope_paths: list[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Return active edit reservations, optionally filtered to *scope_paths*."""
+        scope_paths = [p.strip() for p in (scope_paths or []) if isinstance(p, str) and p.strip()]
+        now = time.time()
+        with self._lock:
+            self._prune_expired_tokens_locked(now=now)
+            out: list[dict[str, Any]] = []
+            for token in self._active_tokens.values():
+                if scope_paths and not any(_paths_overlap(token.file_path, scope) for scope in scope_paths):
+                    continue
+                out.append(
+                    {
+                        "token_id": token.token_id,
+                        "file_path": token.file_path,
+                        "agent_id": token.agent_id,
+                        "issued_at": token.issued_at,
+                        "expires_at": token.issued_at + token.ttl,
+                    }
+                )
+            out.sort(key=lambda item: (str(item["file_path"]), str(item["token_id"])))
+            return out
 
     def status(self) -> dict[str, Any]:
         """Return arbiter status summary."""
@@ -181,6 +239,7 @@ class Arbiter:
     def cleanup_locks(self) -> int:
         """Remove file locks that are not held. Returns count cleaned."""
         with self._lock:
+            self._prune_expired_tokens_locked()
             to_remove = [
                 fp for fp, lock in self._file_locks.items()
                 if not lock.locked()
@@ -196,3 +255,31 @@ class Arbiter:
             if file_path not in self._file_locks:
                 self._file_locks[file_path] = threading.Lock()
             return self._file_locks[file_path]
+
+    def _prune_expired_tokens_locked(self, *, now: float | None = None) -> None:
+        now = time.time() if now is None else now
+        expired = [
+            token_id
+            for token_id, token in self._active_tokens.items()
+            if token.issued_at + token.ttl <= now
+        ]
+        for token_id in expired:
+            self._active_tokens.pop(token_id, None)
+            self._metrics.tokens_expired += 1
+
+
+def _paths_overlap(path_a: str, path_b: str) -> bool:
+    left = (path_a or "").strip().rstrip("/")
+    right = (path_b or "").strip().rstrip("/")
+    if not left or not right:
+        return False
+    if left == right:
+        return True
+    if left.startswith(right + "/") or right.startswith(left + "/"):
+        return True
+    return (
+        left.endswith("/" + right)
+        or right.endswith("/" + left)
+        or ("/" + right + "/") in (left + "/")
+        or ("/" + left + "/") in (right + "/")
+    )

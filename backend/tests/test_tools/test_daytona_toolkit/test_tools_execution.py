@@ -202,6 +202,8 @@ async def test_write_file_syncs_ci_state():
     sb = _sb()
     sb.process.exec = AsyncMock(return_value=MagicMock(result="", exit_code=0))
     svc = MagicMock()
+    svc.prepare_write.return_value = MagicMock()
+    svc.commit_prepared_write.return_value = MagicMock(success=True, message="ok")
     ctx = _ctx({
         "daytona_sandbox": sb,
         "daytona_cwd": "/ws",
@@ -213,11 +215,9 @@ async def test_write_file_syncs_ci_state():
     )
 
     assert not result.is_error
-    svc.arbiter.record_edit.assert_called_once_with("/ws/new.txt", "")
-    svc.ledger.record.assert_called_once()
-    svc.tree_cache.put_content.assert_called_once_with("/ws/new.txt", "hello")
-    svc.symbol_index.refresh.assert_called_once_with("/ws/new.txt", "hello")
-    svc.lsp_client.invalidate.assert_called_once_with("/ws/new.txt")
+    svc.prepare_write.assert_called_once()
+    svc.commit_prepared_write.assert_called_once()
+    svc.abort_prepared_write.assert_called_once()
     assert json.loads(result.output)["ci_sync"] is True
 
 
@@ -242,6 +242,35 @@ async def test_write_file_exception_returns_error():
     )
     assert result.is_error
     assert "disk full" in result.output
+
+
+async def test_write_file_rejects_stale_scope_coherence():
+    sb = _sb()
+    sb.process.exec = AsyncMock(return_value=MagicMock(result="", exit_code=0))
+    svc = MagicMock()
+    svc.ledger.generation = 1
+    svc.ledger.recent_entries.return_value = []
+    svc.arbiter.generation = 1
+    svc.arbiter.active_reservations.return_value = []
+    svc.arbiter.hotspots.return_value = []
+    svc.symbol_index.generation = 1
+    ctx = _ctx({
+        "daytona_sandbox": sb,
+        "daytona_cwd": "/ws",
+        "ci_service": svc,
+        "scope_packet": {
+            "scope_paths": ["src"],
+            "coherence_token": "stale-token",
+        },
+        "coherence_token": "stale-token",
+    })
+
+    result = await daytona_write_file.execute(
+        daytona_write_file.input_model(file_path="/ws/new.txt", content="hello"), ctx
+    )
+
+    assert result.is_error
+    assert "Scope coherence changed" in result.output
 
 
 # ---------------------------------------------------------------------------

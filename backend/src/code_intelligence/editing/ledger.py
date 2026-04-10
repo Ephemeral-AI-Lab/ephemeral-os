@@ -50,6 +50,7 @@ class Ledger:
         self._timestamps: deque[float] = deque(maxlen=max_entries)
         self._by_file: dict[str, list[LedgerEntry]] = defaultdict(list)
         self._ref_counts: dict[str, int] = defaultdict(int)
+        self._generation = 0
 
     def record(
         self,
@@ -88,6 +89,7 @@ class Ledger:
             self._timestamps.append(entry.timestamp)
             self._by_file[file_path].append(entry)
             self._ref_counts[file_path] += 1
+            self._generation += 1
 
         return entry
 
@@ -114,10 +116,20 @@ class Ledger:
                 result.append(e.file_path)
         return result
 
+    def recent_entries(self, seconds: float = 60.0) -> list[LedgerEntry]:
+        """Return all entries in the last N seconds."""
+        cutoff = time.time() - seconds
+        return self.changes_since(cutoff)
+
     @property
     def entry_count(self) -> int:
         with self._lock:
             return len(self._entries)
+
+    @property
+    def generation(self) -> int:
+        with self._lock:
+            return self._generation
 
     def clear(self) -> None:
         """Clear all entries."""

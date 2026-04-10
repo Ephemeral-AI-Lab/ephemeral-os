@@ -14,10 +14,13 @@ from typing import Any
 from code_intelligence.constants import SKIP_DIRECTORIES, SUPPORTED_EXTENSIONS
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.daytona_toolkit.ci_integration import (
+    build_live_scope_packet,
     get_ci_service,
     get_daytona_sandbox,
+    scope_paths_for_write,
     resolve_daytona_path,
 )
+from tools.daytona_toolkit.coordination import normalize_scope_paths
 from tools.core.decorator import tool
 
 logger = logging.getLogger(__name__)
@@ -615,6 +618,34 @@ async def ci_status(*, context: ToolExecutionContext) -> ToolResult:
         return err
     status = svc.status()
     return ToolResult(output=json.dumps(status, indent=2, default=str))
+
+
+@tool(
+    name="ci_scope_status",
+    description=(
+        "Return a live scope packet with coherence token, recent changes, "
+        "reservations, and freshness grade for one or more paths."
+    ),
+    read_only=True,
+)
+async def ci_scope_status(
+    scope_paths: list[str] | None = None,
+    *,
+    context: ToolExecutionContext,
+) -> ToolResult:
+    """Return the current live scope packet for a scope."""
+    svc, err = _svc_or_error(context)
+    if err:
+        return err
+    del svc
+    requested = normalize_scope_paths(scope_paths or [])
+    if not requested:
+        requested = scope_paths_for_write(context)
+    packet = build_live_scope_packet(
+        context,
+        scope_paths=requested,
+    )
+    return ToolResult(output=json.dumps(packet, indent=2, default=str))
 
 
 # -- Workspace Structure ------------------------------------------------------

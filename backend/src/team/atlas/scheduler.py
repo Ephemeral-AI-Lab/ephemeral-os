@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any, Awaitable, Callable
 
 from hooks.agent_posthook import execute_with_posthook
 from team.atlas.freshness import canonical_subsystem_key
+from team.atlas.persistence import build_chunk_from_brief
 from team.atlas.store import AtlasStore, get_default_store
 from team.builtins import ATLAS_BUILDER, ATLAS_REFRESHER
 from team.models import WorkItem, WorkItemKind, WorkItemStatus
@@ -39,6 +40,14 @@ _LOOKUP_REFRESH_PRIORITY = 10
 _LOOKUP_SCOUT_PRIORITY = 20
 _EDIT_DIRTY_PRIORITY = 40
 _TEAM_RUN_BOOTSTRAP_PRIORITY = 60
+_ATLAS_POLICY_DEFERRED_PERSIST = "deferred_persist"
+_ATLAS_POLICY_REFRESH_ONLY = "refresh_only"
+_ATLAS_POLICY_FULL = "full"
+_VALID_POLICIES = {
+    _ATLAS_POLICY_DEFERRED_PERSIST,
+    _ATLAS_POLICY_REFRESH_ONLY,
+    _ATLAS_POLICY_FULL,
+}
 
 
 @dataclass(frozen=True)
@@ -78,6 +87,7 @@ class AtlasMaintenanceScheduler:
         agent_lookup: AgentLookup,
         store: AtlasStore | None = None,
         max_concurrent_jobs: int = 1,
+        policy: str = _ATLAS_POLICY_FULL,
         lease_ttl_seconds: float = 600.0,
         dirty_flush_seconds: float = 2.0,
     ) -> None:
@@ -88,6 +98,7 @@ class AtlasMaintenanceScheduler:
         self.agent_lookup = agent_lookup
         self.store = store if store is not None else get_default_store()
         self.max_concurrent_jobs = max(1, int(max_concurrent_jobs))
+        self.policy = policy if policy in _VALID_POLICIES else _ATLAS_POLICY_FULL
         self.lease_ttl_seconds = max(30.0, float(lease_ttl_seconds))
         self.dirty_flush_seconds = max(0.5, float(dirty_flush_seconds))
 
@@ -105,7 +116,7 @@ class AtlasMaintenanceScheduler:
         self._idle_task: asyncio.Task[None] | None = None
 
     async def start(self) -> None:
-        if self._worker_task is not None:
+        if self._worker_task is not None or self.policy == _ATLAS_POLICY_DEFERRED_PERSIST:
             return
         self._stop.clear()
         self._worker_task = asyncio.create_task(
@@ -139,16 +150,19 @@ class AtlasMaintenanceScheduler:
 
     def note_lookup(self, entries: list[dict[str, Any]], *, source: str = "atlas_lookup") -> None:
         """Queue background maintenance implied by a lookup result."""
-        if not self._atlas_enabled() or not entries:
+        if not self._atlas_enabled() or not entries or self.policy == _ATLAS_POLICY_DEFERRED_PERSIST:
             return
         self._prune_expired_leases()
         if not self._project_has_chunks():
-            self._enqueue_builder(reason=f"{source}:cold-start", priority=_LOOKUP_REFRESH_PRIORITY)
+            if self.policy == _ATLAS_POLICY_FULL:
+                self._enqueue_builder(reason=f"{source}:cold-start", priority=_LOOKUP_REFRESH_PRIORITY)
             return
         for entry in entries:
             action = str(entry.get("action") or "").strip()
             subsystem = str(entry.get("subsystem") or "").strip()
             if not subsystem or action not in {"refresh", "scout"}:
+                continue
+            if self.policy == _ATLAS_POLICY_REFRESH_ONLY and action != "refresh":
                 continue
             self._enqueue_refresh(
                 subsystem,
@@ -162,7 +176,7 @@ class AtlasMaintenanceScheduler:
 
     def mark_dirty_path(self, file_path: str, *, reason: str = "edit") -> None:
         """Record a changed file so the idle loop can refresh affected chunks."""
-        if not self._atlas_enabled():
+        if not self._atlas_enabled() or self.policy == _ATLAS_POLICY_DEFERRED_PERSIST:
             return
         subsystem_keys = self._match_subsystems(file_path)
         if not subsystem_keys:
@@ -180,7 +194,7 @@ class AtlasMaintenanceScheduler:
         )
 
     def _schedule_team_run_bootstrap(self) -> None:
-        if not self._atlas_enabled():
+        if not self._atlas_enabled() or self.policy != _ATLAS_POLICY_FULL:
             return
         if self._project_has_chunks():
             return
@@ -356,6 +370,45 @@ class AtlasMaintenanceScheduler:
             list(job.subsystems),
         )
         return submitted
+
+    def persist_direct_scout_brief(
+        self,
+        brief: dict[str, Any],
+        *,
+        ci_service: Any | None = None,
+        reason: str = "direct-scout",
+    ) -> bool:
+        """Persist a scout brief directly without spawning atlas-owned scout work."""
+        if not self._atlas_enabled() or not isinstance(brief, dict):
+            return False
+        project_key = getattr(self.team_run.project_context, "project_key", "") or ""
+        repo_root = getattr(self.team_run.project_context, "repo_root", "") or ""
+        if not project_key or not repo_root or self.store is None:
+            return False
+        try:
+            chunk = build_chunk_from_brief(
+                brief=brief,
+                repo_root=repo_root,
+                ci_service=ci_service,
+            )
+            applied = self.store.upsert_chunks(
+                project_key=project_key,
+                repo_root=repo_root,
+                chunks=[chunk],
+            )
+            if applied:
+                self._dirty_subsystems.discard(chunk.subsystem)
+            logger.info(
+                "atlas scheduler persisted direct scout brief: run=%s subsystem=%s reason=%s applied=%s",
+                self.team_run.id,
+                chunk.subsystem,
+                reason,
+                bool(applied),
+            )
+            return bool(applied)
+        except Exception:
+            logger.debug("direct scout atlas persistence failed", exc_info=True)
+            return False
 
     def _clear_dirty(self, submitted: Any, *, fallback: list[str]) -> None:
         artifact = getattr(submitted, "artifact", None)

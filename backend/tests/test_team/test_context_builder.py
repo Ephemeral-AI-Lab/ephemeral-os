@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from types import SimpleNamespace
 
+import team.runtime.context_builder as context_builder_module
 from team.artifacts.store import InMemoryArtifactStore
 from team.context.project import ProjectContext
 from team.models import (
@@ -29,11 +30,18 @@ class _FakeDispatcher:
     artifact_store: InMemoryArtifactStore
 
 
-def _fake_team_run(artifact_store: InMemoryArtifactStore) -> SimpleNamespace:
+def _fake_team_run(
+    artifact_store: InMemoryArtifactStore,
+    *,
+    sandbox_id: str = "",
+    repo_root: str = "",
+) -> SimpleNamespace:
+    project_context = ProjectContext(goal="g", user_request="u", repo_root=repo_root)
     return SimpleNamespace(
         id="T1",
+        sandbox_id=sandbox_id,
         dispatcher=_FakeDispatcher(artifact_store=artifact_store),
-        project_context=ProjectContext(goal="g", user_request="u"),
+        project_context=project_context,
         budgets=BudgetConfig(),
     )
 
@@ -147,6 +155,38 @@ def test_shared_briefings_flow_into_query_context():
     ctx = build_query_context(defn, tr, wi)
     assert "shared scout" in ctx.user_message
     assert "Shared context" in ctx.user_message
+
+
+def test_build_query_context_injects_scope_packet_when_ci_is_available(monkeypatch):
+    store = InMemoryArtifactStore(BudgetConfig(), BudgetState())
+    tr = _fake_team_run(store, sandbox_id="sbx-1", repo_root="/testbed")
+    wi = _wi(payload={"prompt": "Fix it", "target_paths": ["src/module.py"]})
+    defn = SimpleNamespace(name="developer")
+
+    monkeypatch.setattr(context_builder_module, "get_code_intelligence", lambda **_: object())
+    monkeypatch.setattr(
+        context_builder_module,
+        "build_scope_packet",
+        lambda **_: {
+            "coherence_token": "token-1",
+            "freshness": "fresh",
+            "scope_paths": ["src/module.py"],
+        },
+    )
+    monkeypatch.setattr(
+        context_builder_module,
+        "render_scope_packet",
+        lambda packet: f"SCOPE {packet['coherence_token']}",
+    )
+
+    ctx = build_query_context(defn, tr, wi)
+
+    assert ctx.tool_metadata.sandbox_id == "sbx-1"
+    assert ctx.tool_metadata.daytona_cwd == "/testbed"
+    assert ctx.tool_metadata["ci_workspace_root"] == "/testbed"
+    assert ctx.tool_metadata["scope_packet"]["coherence_token"] == "token-1"
+    assert ctx.tool_metadata["coherence_token"] == "token-1"
+    assert ctx.user_message.startswith("SCOPE token-1\n\n")
 
 
 def test_team_agent_context_tracks_posthook_state_outside_raw_metadata():

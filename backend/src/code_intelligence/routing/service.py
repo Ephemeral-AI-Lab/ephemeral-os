@@ -8,6 +8,7 @@ single sandbox. Thread-safe with per-sandbox creation locks.
 from __future__ import annotations
 
 import inspect
+import hashlib
 import logging
 import threading
 from typing import Any
@@ -30,11 +31,17 @@ from code_intelligence.types import (
     EditRequest,
     EditResult,
     HoverResult,
+    PreparedWrite,
     ReferenceInfo,
     SymbolInfo,
+    WriteRequest,
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _content_hash(content: str) -> str:
+    return hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
 
 
 def _rebind_service_sandbox(service: "CodeIntelligenceService", sandbox: Any) -> None:
@@ -156,8 +163,67 @@ class CodeIntelligenceService:
         6. Refresh symbol index
         7. Release lock
         """
-        file_path = request.file_path
+        prepared = self.prepare_write(
+            request.file_path,
+            agent_id=request.agent_id,
+            expected_hash=request.expected_hash,
+        )
+        if isinstance(prepared, EditResult):
+            return prepared
+        try:
+            from code_intelligence.editing.patcher import SearchReplaceEdit
 
+            patch_result = self.patcher.apply_edits(
+                prepared.current_content,
+                [SearchReplaceEdit(old_text=request.old_text, new_text=request.new_text)],
+            )
+            if not patch_result.success:
+                self.time_machine.discard_snapshot(request.file_path)
+                return EditResult(
+                    success=False,
+                    file_path=request.file_path,
+                    message="; ".join(patch_result.errors),
+                )
+            return self.commit_prepared_write(
+                prepared,
+                patch_result.content,
+                edit_type="edit",
+                description=request.description,
+                message=f"Applied {patch_result.edits_applied} edit(s)",
+            )
+        finally:
+            self.abort_prepared_write(prepared)
+
+    def apply_write(self, request: WriteRequest) -> EditResult:
+        """Apply an OCC-coordinated full-file write."""
+        prepared = self.prepare_write(
+            request.file_path,
+            agent_id=request.agent_id,
+            expected_hash=request.expected_hash,
+            allow_missing=True,
+        )
+        if isinstance(prepared, EditResult):
+            return prepared
+        try:
+            return self.commit_prepared_write(
+                prepared,
+                request.content,
+                edit_type=request.edit_type,
+                description=request.description,
+                message="Wrote file",
+            )
+        finally:
+            self.abort_prepared_write(prepared)
+
+    def prepare_write(
+        self,
+        file_path: str,
+        *,
+        agent_id: str = "",
+        expected_hash: str = "",
+        allow_missing: bool = False,
+    ) -> PreparedWrite | EditResult:
+        """Reserve *file_path* for writing and capture a stable read snapshot."""
         if not self.arbiter.acquire_file_lock(file_path):
             return EditResult(
                 success=False,
@@ -167,75 +233,122 @@ class CodeIntelligenceService:
             )
 
         try:
-            # Read current content
-            try:
-                from pathlib import Path
-                current = Path(file_path).read_text(encoding="utf-8")
-            except Exception as exc:
-                return EditResult(
-                    success=False,
-                    file_path=file_path,
-                    message=f"Cannot read file: {exc}",
-                )
-
-            # Save snapshot for undo
-            self.time_machine.save(file_path, current)
-
-            # Apply edit
-            from code_intelligence.editing.patcher import SearchReplaceEdit
-            patch_result = self.patcher.apply_edits(
-                current,
-                [SearchReplaceEdit(old_text=request.old_text, new_text=request.new_text)],
-            )
-
-            if not patch_result.success:
-                self.time_machine.discard_snapshot(file_path)
-                return EditResult(
-                    success=False,
-                    file_path=file_path,
-                    message="; ".join(patch_result.errors),
-                )
-
-            # Write back
-            try:
-                self._write_content(file_path, patch_result.content)
-            except Exception as exc:
-                return EditResult(
-                    success=False,
-                    file_path=file_path,
-                    message=f"Write failed: {exc}",
-                )
-
-            # Record
-            import hashlib
-            old_hash = hashlib.sha256(current.encode()).hexdigest()[:16]
-            new_hash = hashlib.sha256(patch_result.content.encode()).hexdigest()[:16]
-
-            self.ledger.record(
-                file_path=file_path,
-                agent_id=request.agent_id,
-                edit_type="edit",
-                old_hash=old_hash,
-                new_hash=new_hash,
-                description=request.description,
-            )
-
-            gen = self.arbiter.record_edit(file_path, request.agent_id)
-
-            # Refresh caches
-            self.tree_cache.put_content(file_path, patch_result.content)
-            self.symbol_index.refresh(file_path, patch_result.content)
-            self.lsp_client.invalidate(file_path)
-
-            return EditResult(
-                success=True,
-                file_path=file_path,
-                message=f"Applied {patch_result.edits_applied} edit(s)",
-                snapshot_id=str(gen),
-            )
-
-        finally:
+            current, existed = self._read_content(file_path, allow_missing=allow_missing)
+        except Exception as exc:
             self.arbiter.release_file_lock(file_path)
+            return EditResult(
+                success=False,
+                file_path=file_path,
+                message=f"Cannot read file: {exc}",
+            )
+
+        current_hash = _content_hash(current)
+        if expected_hash and current_hash != expected_hash:
+            self.arbiter.release_file_lock(file_path)
+            return EditResult(
+                success=False,
+                file_path=file_path,
+                message=(
+                    "Write precheck failed: file content changed since it was read. "
+                    "Re-read the file and retry."
+                ),
+                conflict=True,
+            )
+
+        token = self.arbiter.issue_token(file_path, current_hash, agent_id)
+        return PreparedWrite(
+            file_path=file_path,
+            token_id=token.token_id,
+            current_content=current,
+            current_hash=current_hash,
+            agent_id=agent_id,
+            existed=existed,
+        )
+
+    def commit_prepared_write(
+        self,
+        prepared: PreparedWrite,
+        new_content: str,
+        *,
+        edit_type: str,
+        description: str = "",
+        message: str = "Wrote file",
+    ) -> EditResult:
+        """Commit a prepared write after validating the reservation is still current."""
+        ok, reason = self.arbiter.validate_token(
+            prepared.token_id,
+            file_path=prepared.file_path,
+            content_hash=prepared.current_hash,
+        )
+        if not ok:
+            return EditResult(
+                success=False,
+                file_path=prepared.file_path,
+                message=f"Write precheck failed: {reason}",
+                conflict=True,
+            )
+
+        try:
+            current_now, _ = self._read_content(prepared.file_path, allow_missing=True)
+        except Exception as exc:
+            return EditResult(
+                success=False,
+                file_path=prepared.file_path,
+                message=f"Cannot re-read file before commit: {exc}",
+            )
+        if _content_hash(current_now) != prepared.current_hash:
+            return EditResult(
+                success=False,
+                file_path=prepared.file_path,
+                message=(
+                    "Write precheck failed: file content changed before commit. "
+                    "Re-read the file and retry."
+                ),
+                conflict=True,
+            )
+
+        self.time_machine.save(prepared.file_path, current_now)
+        try:
+            self._write_content(prepared.file_path, new_content)
+        except Exception as exc:
+            return EditResult(
+                success=False,
+                file_path=prepared.file_path,
+                message=f"Write failed: {exc}",
+            )
+
+        old_hash = prepared.current_hash
+        new_hash = _content_hash(new_content)
+        self.ledger.record(
+            file_path=prepared.file_path,
+            agent_id=prepared.agent_id,
+            edit_type=edit_type,
+            old_hash=old_hash,
+            new_hash=new_hash,
+            description=description,
+        )
+        gen = self.arbiter.record_edit(prepared.file_path, prepared.agent_id)
+        self.tree_cache.put_content(prepared.file_path, new_content)
+        self.symbol_index.refresh(prepared.file_path, new_content)
+        self.lsp_client.invalidate(prepared.file_path)
+        self.arbiter.release_token(prepared.token_id)
+        self.arbiter.release_file_lock(prepared.file_path)
+        return EditResult(
+            success=True,
+            file_path=prepared.file_path,
+            message=message,
+            snapshot_id=str(gen),
+        )
+
+    def abort_prepared_write(self, prepared: PreparedWrite) -> None:
+        """Release any reservation still held for *prepared*."""
+        ok, _ = self.arbiter.validate_token(
+            prepared.token_id,
+            file_path=prepared.file_path,
+        )
+        if ok:
+            self.arbiter.release_token(prepared.token_id)
+            self.arbiter.release_file_lock(prepared.file_path)
 
     def undo_last_edit(self, file_path: str) -> EditResult:
         """Undo the last edit to a file via TimeMachine."""
@@ -284,7 +397,10 @@ class CodeIntelligenceService:
                 "generation": self.symbol_index.generation,
             },
             "arbiter": self.arbiter.status(),
-            "ledger": {"entries": self.ledger.entry_count},
+            "ledger": {
+                "entries": self.ledger.entry_count,
+                "generation": self.ledger.generation,
+            },
             "lsp": {
                 "connected": self.lsp_client.connected,
                 "queries": lsp_tel.queries,
@@ -337,6 +453,40 @@ class CodeIntelligenceService:
             self._resolve(result)
             return
         Path(file_path).write_text(content, encoding="utf-8")
+
+    def _read_content(
+        self,
+        file_path: str,
+        *,
+        allow_missing: bool = False,
+    ) -> tuple[str, bool]:
+        """Read content locally or from the attached sandbox."""
+        from pathlib import Path
+
+        if self._sandbox:
+            try:
+                raw = self._resolve(self._sandbox.fs.download_file(file_path))
+            except Exception as exc:
+                if allow_missing and self._is_missing_error(exc):
+                    return "", False
+                raise
+            if isinstance(raw, bytes):
+                return raw.decode("utf-8"), True
+            return str(raw), True
+
+        path = Path(file_path)
+        if not path.exists():
+            if allow_missing:
+                return "", False
+            raise FileNotFoundError(file_path)
+        return path.read_text(encoding="utf-8"), True
+
+    @staticmethod
+    def _is_missing_error(exc: Exception) -> bool:
+        text = str(exc).lower()
+        if isinstance(exc, FileNotFoundError):
+            return True
+        return "not found" in text or "no such file" in text or "does not exist" in text
 
     @staticmethod
     def _resolve(result: Any) -> Any:

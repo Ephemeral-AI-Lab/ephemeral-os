@@ -27,6 +27,7 @@ import logging
 import time
 from dataclasses import asdict, is_dataclass
 from typing import Any
+from uuid import uuid4
 
 from agents.run_tracker import AgentRunTracker
 from message.messages import (
@@ -258,6 +259,11 @@ def _build_subagent_envelope(
         "artifact_ref": None,
         "payload": {"final_text": final_text},
     }
+
+
+def _fallback_run_id() -> str:
+    """Return a local run id when audit persistence is unavailable."""
+    return f"ephemeral-{uuid4().hex[:16]}"
 
 
 def _extract_final_text(messages: list[ConversationMessage]) -> str:
@@ -508,7 +514,8 @@ async def run_subagent(
         parent_run_id=parent_run_id if isinstance(parent_run_id, str) else None,
         parent_task_id=parent_task_id,
     )
-    sub_run_id = tracker.run_id
+    persisted_run_id = tracker.run_id
+    sub_run_id = persisted_run_id or _fallback_run_id()
 
     try:
         from server.app_factory import usage_store
@@ -575,11 +582,12 @@ async def run_subagent(
         else:
             tracked.run_id = sub_run_id
             tracked.task_type = "subagent"
-            if sub_run_id is None:
+            if persisted_run_id is None:
                 logger.warning(
-                    "run_subagent: sub_run_id is None for task %s — "
-                    "BackgroundTaskCompleted.run_id will be null",
+                    "run_subagent: agent_run persistence unavailable for task %s; "
+                    "using ephemeral run_id %s",
                     task_id,
+                    sub_run_id,
                 )
 
     run_error: str | None = None
@@ -623,7 +631,7 @@ async def run_subagent(
         persist_run_usage(
             usage_store=usage_store,
             session_id=getattr(parent_cfg, "session_id", None),
-            run_id=sub_run_id,
+            run_id=persisted_run_id,
             agent_name=agent_name_for_usage,
             model_id=agent_model_for_usage,
             usage=agent_usage_for_usage,
@@ -678,7 +686,6 @@ async def run_subagent(
     if (
         agent_name == "scout"
         and parent_team_run_id
-        and sub_run_id
     ):
         try:
             from team.context.scout_briefings import (
@@ -699,6 +706,11 @@ async def run_subagent(
                     )
                     if stored_artifact_ref is not None:
                         auto_promote_scout_briefing(team_run, stored_artifact_ref)
+                        team_run.note_direct_scout_brief(
+                            artifact,
+                            ci_service=context.metadata.get("ci_service"),
+                            reason="run_subagent:scout-complete",
+                        )
         except Exception:
             logger.debug("run_subagent: scout artifact promotion failed", exc_info=True)
 

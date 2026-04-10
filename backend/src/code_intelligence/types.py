@@ -87,6 +87,33 @@ class EditRequest:
     new_text: str
     agent_id: str = ""
     description: str = ""
+    expected_hash: str = ""
+    token_id: str = ""
+
+
+@dataclass(frozen=True)
+class WriteRequest:
+    """A request to write or overwrite a file via OCC."""
+
+    file_path: str
+    content: str
+    agent_id: str = ""
+    description: str = ""
+    edit_type: str = "write"
+    expected_hash: str = ""
+    token_id: str = ""
+
+
+@dataclass(frozen=True)
+class PreparedWrite:
+    """A prepared write reservation with the current file snapshot."""
+
+    file_path: str
+    token_id: str
+    current_content: str
+    current_hash: str
+    agent_id: str = ""
+    existed: bool = True
 
 
 @dataclass(frozen=True)
@@ -116,26 +143,3 @@ class CITelemetry:
     arbiter_active_edits: int = 0
     ledger_entry_count: int = 0
     extra: dict[str, Any] = field(default_factory=dict)
-
-
-@dataclass(frozen=True)
-class FileSnapshot:
-    """A point-in-time snapshot of a file for undo."""
-
-    file_path: str
-    content: str
-    snapshot_id: str
-    timestamp: float = 0.0
-
-
-@dataclass(frozen=True)
-class LedgerEntry:
-    """An entry in the edit audit journal."""
-
-    file_path: str
-    agent_id: str
-    edit_type: str  # "edit", "create", "delete", "shell_mutation"
-    timestamp: float = 0.0
-    description: str = ""
-    old_hash: str = ""
-    new_hash: str = ""
