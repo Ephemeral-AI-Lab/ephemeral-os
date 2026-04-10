@@ -28,7 +28,9 @@ When benchmark prose, release notes, or changelog bullets disagree with the live
 - **First attempt should be fresh.** Start benchmark investigation from a fresh sandbox so you can trust the first failure signal.
 - **After local runtime or skill fixes, prefer sandbox reuse.** Re-run with a stable `sandbox_name` so the harness can reuse the latest healthy prepared sandbox instead of rebuilding the image each time.
 - **Reuse the latest healthy evidence.** Checkpoints, scout artifacts, token totals, and validator evidence are part of the retry surface. Do not restart cold if the existing sandbox is healthy and the repo can be reset in place.
+- **Retry/replan handoff must preserve the evidence packet.** Carry forward clustered failing ids, affected files, prior touched files, the latest healthy checkpoint or sandbox anchor, and what changed since that point so the next planner turn can reuse evidence instead of rediscovering it.
 - **On resume, reuse before reopening.** If a resumed or replanned turn already has a stable owner cluster or subsystem key, consult atlas/shared briefings first and scout only the still-missing slice.
+- **Ownership mismatch is a planning problem.** If validator evidence says the active lane owns the wrong files or missed a sibling cluster, replan around that packet. Do not push that rediscovery work down to the next developer or validator lane.
 - **Fresh benchmark roots should stay live-first.** On the first root planning pass, prefer `ci_scope_status(scope_paths=[...])` plus fresh scouts over `atlas_lookup`. Use Atlas only on resume/replan or when the current turn already established a live owner map and still needs cross-run structural reuse.
 
 ---
@@ -37,6 +39,7 @@ When benchmark prose, release notes, or changelog bullets disagree with the live
 
 - When the request already names one dominant FAIL_TO_PASS cluster plus several smaller named failures, the default first wave is one dominant production-owner scout plus one residual source-owner or residual-aggregate scout. Do not spend a first-wave lane on the already-named giant test file unless no plausible production owner exists yet.
 - When a dominant FAIL_TO_PASS cluster contains dozens or hundreds of parametrized nodes, summarize it as one owner slice with a representative deduped subset of failing ids. Do not paste the full repeated test-id list into one developer payload.
+- Planner briefings must be execution-ready. Each developer or validator lane should receive the exact retry target, owned files or region, nearest same-surface guardrail, and any artifact refs or residual-cluster notes needed to act without fresh ownership discovery.
 - On large benchmark roots, spend the first exploration pass on 2-3 disjoint source-owner scouts rather than one long serial hypothesis lane.
 - If the first scout wave comes back partial or still leaves several disjoint owner hypotheses alive, launch another disjoint scout wave or a narrowed child planner. Do not freeze the root plan just because the first wave already ran.
 - Once two scout waves or roughly 25 planner tool calls have already gone into the same root benchmark surface, the default next step is the plan. A third wave needs a genuinely new disjoint owner cluster, not a deeper read of the same mapped clusters.
@@ -93,6 +96,7 @@ When benchmark prose, release notes, or changelog bullets disagree with the live
 - Start with the exact retry target(s) named by the payload or benchmark context.
 - After the exact retry target passes, spend at most one broader same-surface regression command unless the payload explicitly requires more.
 - If the exact retry target fails, report that failure immediately with exact test ids, exit code, and a short verbatim error snippet.
+- If verification shows the lane owns the wrong files, misses a sibling corrective cluster, or resumed from a stale retry boundary, report `plan_gap` with `RECOMMENDED_ACTION: request_replan`. Do not broaden into fresh exploration from validator mode.
 - The benchmark harness will run the full grading command after the team phase. Do not spend validator budget duplicating broad redundant suites by default.
 
 ---

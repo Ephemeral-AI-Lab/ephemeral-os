@@ -47,6 +47,10 @@ def test_planner_playbook_gates_share_briefing_on_tool_availability() -> None:
     assert 'If you plan to join `task_id="all"`, inspect each fresh scout in that batch first' in planner
     assert 'Never call `run_subagent` with `agent_name="team_planner"`' in planner
     assert "duplicate-scout rejection over an already mapped path is terminal planning evidence" in planner
+    assert "If a downstream developer or validator would still need fresh ownership discovery to start" in planner
+    assert "Every execution lane should also receive the minimal handoff packet it needs to start immediately" in planner
+    assert "Retry/replan handoff packets must preserve clustered failures, affected files, and what changed since the last healthy checkpoint or validator pass." in planner
+    assert "do not expect validator or developer lanes to rediscover the owner map with fresh repo-wide probing" in planner
 
 
 def test_sweevo_context_treats_missing_share_briefing_as_non_blocking() -> None:
@@ -60,6 +64,10 @@ def test_sweevo_context_treats_missing_share_briefing_as_non_blocking() -> None:
     assert "Once that missing public name is anchored to a local export file, do not spend developer budget on dependency version checks" in sweevo
     assert "Fresh benchmark roots should stay live-first." in sweevo
     assert "prefer `ci_scope_status(scope_paths=[...])` plus fresh scouts over `atlas_lookup`" in sweevo
+    assert "Retry/replan handoff must preserve the evidence packet." in sweevo
+    assert "Ownership mismatch is a planning problem." in sweevo
+    assert "Planner briefings must be execution-ready." in sweevo
+    assert "Do not push that rediscovery work down to the next developer or validator lane." in sweevo
 
 
 def test_developer_playbook_anchors_import_failures_to_named_pytest_surface() -> None:
@@ -82,6 +90,9 @@ def test_developer_playbook_anchors_import_failures_to_named_pytest_surface() ->
 def test_validator_playbook_mentions_codeact_is_unavailable_in_team_lanes() -> None:
     validator = _read(_BACKEND_ROOT / "src/skills/bundled/content/team-validator-playbook/SKILL.md")
     assert "coordinated team validation lanes intentionally omit `daytona_codeact`" in validator
+    assert "Ownership mismatch is not a validator discovery task." in validator
+    assert "report `FAILURE_TYPE: plan_gap` and `RECOMMENDED_ACTION: request_replan`." in validator
+    assert "Validators are not backup planners." in validator
 
 
 def test_posthook_decision_playbook_forbids_clarifying_questions_on_worker_output() -> None:

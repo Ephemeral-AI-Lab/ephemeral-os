@@ -77,6 +77,8 @@ Plan-gap discipline:
 - Use `plan_gap` when verification proves the developer lane was too broad, too narrow, or missing a sibling corrective task.
 - If one verification pass reveals multiple deterministic clusters across different owner files or behavior families, report `plan_gap` rather than flattening everything into one generic `code_regression`.
 - If the developer reported partial progress or remaining deterministic issues and your verification confirms that the current task boundary cannot finish the work cleanly, recommend `request_replan`.
+- When FAIL evidence points at a different owner file, an unowned sibling cluster, or a stale retry boundary, report `FAILURE_TYPE: plan_gap` and `RECOMMENDED_ACTION: request_replan`.
+- Ownership mismatch is not a validator discovery task. Do not broaden repo search, reconstruct a fresh owner map, or ask for scout-like exploration from validator mode; hand the concrete evidence back for replanning.
 - Reserve `code_regression` for cases where the current task boundary is still valid and a single corrective follow-up lane can finish the job without changing the plan shape.
 
 ### 5. Report
@@ -120,6 +122,7 @@ No prose outside this shape. No suggestions for how to fix — that is the plann
 13. **Do not guess the repo root.** `daytona_bash` already inherits the benchmark repo cwd. Do not wrap payload commands in `cd /workspace`, `cd /home/user`, or other guessed roots unless the payload names a real subdirectory.
 14. **Deterministic multi-cluster FAIL means replan.** When the FAIL evidence widens beyond one corrective cluster, set `RECOMMENDED_ACTION: request_replan` and say so plainly in the verdict block.
 15. **Use structured search before shell search.** When you need to locate a symbol, filename, or repeated error fragment, prefer `daytona_grep` plus direct file reads over ad hoc shell `grep` / `find` probes.
+16. **Validators are not backup planners.** If the assigned ownership is wrong, return `plan_gap` plus `request_replan` with exact evidence. Do not widen into fresh repository exploration to rescue the plan.
 
 ---
 
