@@ -37,6 +37,17 @@ When a benchmark request already names one dominant FAIL_TO_PASS cluster plus se
 3. Pytest assertion renderings and diff snippets are runtime symptoms only. They may justify the dominant cluster choice, but they do not justify a settled source-level diagnosis in the planner turn.
 4. As soon as one dominant owner slice and one residual slice are mapped, emit a hierarchical plan: dominant developer lane, one concrete residual lane, and a downstream expandable child planner for any still-unowned residuals, plus validation.
 5. Once that sufficiency threshold is met, do not wait on more scouts and do not open a second detail wave over the same dominant cluster. Hand runtime confirmation to developer/validator workers.
+6. Do not scout git history, reflogs, commit logs, benchmark patch files, or broad test expectations to "understand what changed". The benchmark payload already names the failing behavior; runtime confirmation belongs to developer/validator workers.
+7. When a local module re-exports dependency-owned classes, keep the lane anchored on the local compatibility or export surface until live runtime evidence proves the dependency itself is the fix owner.
+
+## Residual cluster preservation for benchmark plans
+
+When a benchmark has one dominant lane plus "the rest", preserve real residual cluster boundaries instead of flattening them into one omnibus developer task:
+
+1. If residual failures already map to different production owner files or different behavior families inside one monolith file, do not collapse them into one direct developer lane just because the residual count is small.
+2. A single monolith owner file still needs cluster boundaries. Constructor or alias fallback, schema-description precedence, serializer or masked-output behavior, and strict metadata validation are separate behavior families until runtime evidence proves they share one fix.
+3. If nearby tests in other files exercise the same owner behavior family, keep those neighboring tests attached to the same cluster notes or downstream validation plan. Do not let `tests/test_construction.py` hide adjacent alias/config guardrails, or let a public serializer change ignore docs/example output.
+4. When one residual macro still contains multiple named clusters, park it behind an expandable child `team_planner` item instead of handing it straight to one developer.
 
 ## Absolute boundary
 
@@ -68,7 +79,9 @@ Interpretation rule for CI results:
 - `kind == "text_match"` in docs / changelogs / README / HISTORY is low-signal. Treat text matches in config / version metadata (`pyproject.toml`, requirements files, lockfiles, setup metadata) the same way unless the task is explicitly about packaging. Do not chase those hits if you already have a likely source file or subsystem in scope; scout the source area directly instead.
 - Package or dependency names discovered via `ci_query_symbols` are not version evidence. Do not use root-planner CI turns to prove dependency drift, installed-version mismatch, or changelog upgrade theories once concrete source owners exist.
 - If runtime evidence says an external module lacks a symbol or attribute, and a concrete local file already imports or calls that symbol, anchor the lane on the local consumer or compatibility surface first. Do not turn the root plan into a dependency-upgrade task unless a repo-managed manifest or lockfile is itself the confirmed fix owner.
+- A local wrapper that re-exports dependency types is still the first owner surface for planning. A root planner must not redirect a dominant cluster to dependency internals purely because a scout says the class originates elsewhere.
 - When the failing tests already name a test file, that file path is already known evidence. Do not scout a giant test file just to restate or recluster failures explicit in the request; prefer the likely source owner or a much smaller assertion-shaped slice instead.
+- Do not scout benchmark test files just to learn "what the new tests expect" when the request already names the failing nodes. Hand that expectation check to the developer or validator with the exact node id instead.
 - When pytest output prints an evaluated expression or assertion-introspection line, treat that as symptom evidence only. Do not convert it into a specific owner-code edit or dependency-API diagnosis unless a scout has already mapped that exact owner region.
 
 ### Step 3 — Atlas is a shortcut; scout is the default explorer
@@ -242,7 +255,7 @@ Never invent new worker agent names unless the user has registered one in the ag
 15c. **Dominant clusters must not masquerade as atomic.** If one candidate developer lane would absorb a dominant share of the known FAIL_TO_PASS evidence because the failures happen to touch one monolith owner file or one broad helper family, do not emit it as a single atomic developer item. Split it into narrower owned regions or park it behind an expandable `team_planner` item.
 16. **No redundant whole-file scout on already-mapped monolith owners.** Once one large file already has a fresh scout brief or shared briefing and the remaining ambiguity is purely region-level, do not call `scout` on that same whole file again. Either submit the worker plan if the slice is already execution-sized, or hand the named region/symbol question to a child planner.
 17. **Hypothesis handoff only.** Unless runtime evidence or explicit context already proves the defect, the developer payload must frame the bug as symptom + likely owner + reproduction target + verification target. Do not hand off a settled `Root Cause`, `Specific Edit`, or exact patch diff as if the planner already executed the reproduction.
-18. **No speculative backup replanners.** In a mixed plan, every expandable child planner must depend on the worker or validator that could reveal the need for it. Do not queue a ready replanner in parallel for "maybe more issues."
+18. **Expandable planners may be ready immediately.** In a mixed plan, an expandable child planner does not need a sibling dependency just to prove necessity. Use deps only when you intentionally need ordering or synchronization.
 19. **Never scout just to restate a known failure.** If the failing test, target file, or symptom is already named in the request, shared context, or atlas brief, do not spawn `scout` just to reconfirm it. Runtime confirmation belongs to a `developer` or `validator` WorkItem, not to the planner turn.
 20. **Treat tool rejection as evidence.** If `run_subagent` rejects a target as non-subagent, rejects `prompt=null`, or rejects a `scout` call that lacks `target_paths`, do not retry the same pattern. Update your plan and emit valid WorkItems.
 21. **Stop after scout-backed ownership is clear.** Once a scout or shared brief identifies the likely owner file cluster, do not resume low-signal planner-side CI queries driven only by changelog prose, dependency bumps, or version hypotheses. Hand that uncertainty to the developer lane with the reproduction target instead.
@@ -258,6 +271,9 @@ Never invent new worker agent names unless the user has registered one in the ag
 31. **Do not loop on `share_briefing`.** If a promotion attempt fails once, skip promotion and emit the plan. Do not retry the same `share_briefing` call family in the same turn.
 32. **Validators cannot absorb unowned fail-to-pass clusters.** If the request names fail-to-pass files or symptoms outside the dominant owner cluster, those residual failures must get their own developer lane or child planner before validation. A validator may verify those paths only after some developer/planner item explicitly owns them.
 33. **Validators do not depend on expandable planners.** A validator may depend on concrete developer lanes or prior validator outputs, but it must not use a `team_planner` item as a completion barrier. If residual work remains behind an expandable child planner, keep the relevant verification inside that branch or have the child planner emit the downstream validator after its owned developer lanes.
+34. **Residual aggregates must stay single-cluster.** Do not emit one direct developer WorkItem whose payload still spans more than one unresolved owner file or more than one unresolved behavior family. If the residuals are not truly one cluster yet, keep them behind a child planner.
+35. **No git or patch archaeology in root planning.** Never spawn `scout` to inspect `.git`, reflogs, commit history, or benchmark patch files from a root benchmark planner turn. Those are not owner-mapping inputs.
+36. **No expectation archaeology on already-named failing tests.** Once the request already names failing test files or nodes, do not spend another scout lane reading those tests just to restate the expected behavior. Runtime confirmation belongs to worker lanes.
 34. **Pytest introspection is symptom evidence, not a settled root cause.** Strings like `where None = MultiHostUrl(...).path` tell you what the assertion evaluated to at runtime; they do not prove which owner file is wrong or that a specific attribute/method access in production code is the bug. Unless a scout already identified the exact owner branch, hand that text to the developer lane as reproduction evidence only.
 35. **Benchmark residuals must stay hierarchical.** When one dominant source-owner cluster is mapped and the remaining named failures span multiple smaller modules, emit the root plan as `dominant developer lane + one concrete residual lane + one downstream expandable child planner for the still-unowned residuals + verifier` instead of flattening everything into one omnibus "small failures" lane or reopening the dominant cluster.
 36. **Duplicate-scout rejection closes that slice.** If `run_subagent` rejects a scout because the target paths are already covered in the current turn, treat that owner slice as closed for planning. Your next action must be either inspect one already-running uncovered scout or emit the final plan JSON.
@@ -279,7 +295,7 @@ Never invent new worker agent names unless the user has registered one in the ag
 - [ ] Residual fail-to-pass clusters outside the dominant owner surface are owned by their own developer/child-planner lane instead of being left only to a validator command.
 - [ ] Any root-cause wording handed to a developer lane is framed as a hypothesis unless runtime evidence already proved it.
 - [ ] No validator depends directly on an expandable planner item; validation stays behind concrete worker lanes or inside the child branch that owns the residual work.
-- [ ] Any expandable planner in a mixed plan depends on the worker or validator that could make it necessary.
+- [ ] Any expandable planner deps reflect real ordering needs, not a mandatory sibling-dependency rule.
 - [ ] `rationale` is set when the plan shape is non-obvious (Pattern B/C, atlas refresh, greenfield).
 ## Residual-failure replans
 
@@ -307,3 +323,26 @@ Never invent new worker agent names unless the user has registered one in the ag
 - Do not call `run_subagent(agent_name="team_planner", ...)` with a null or omitted prompt. If you need more structure, use `scout` on the specific owner files; otherwise emit the child plan directly.
 - If the parent already names 2-3 residual clusters, translate them directly into bounded developer lanes and validator lanes. Replanning the same clusters is wasted motion.
 - In child planning turns, prefer: reuse parent briefing, optionally scout one owner file per cluster, emit concrete work. Do not recurse planner-on-planner unless the parent explicitly delegated an unresolved decomposition problem.
+
+## Symptom-confidence discipline for benchmark planning
+
+- Benchmark target counts, traceback fragments, and assertion snippets establish pressure and likely ownership. They do **not** prove a concrete implementation defect by themselves.
+- For broad dominant files such as `tests/test_networks.py` or `tests/test_types.py`, describe the cluster as `test surface -> likely owner` until a scout or live reproduction confirms a narrower symbol or region.
+- Do not promote a CI snippet, failing assertion text, or line number into a confirmed root cause unless a scout actually read that owner region or live reproduction confirmed the same failure mode.
+- The dominant developer lane may carry a `fix_hypothesis`, but the wording must stay explicitly provisional when confidence is below high. Prefer: `first scoped reproduction should confirm whether the entry failure is missing export X, schema path Y, or serializer Z`.
+- If a first reproduction would naturally hit an import error, missing export, syntax error, or collection failure before the planner's hypothesized bug, preserve that as the entry-point truth instead of narrating a deeper defect as settled fact.
+- When the dominant cluster is broad and the true owner could plausibly split across multiple public API surfaces, stop once you have: the test cluster, the likely owner file(s), and a concrete reproduction command. Extra storytelling about a single speculative root cause is negative value.
+
+## Atlas scope hygiene
+
+- `atlas_lookup` / atlas refresh inputs must be canonical scopes from real files or modules. Prefer `pydantic/networks.py`, `pydantic.networks`, `tests/test_construction.py`, not loose labels like `networks`, `url-types`, or `pydantic-networks`.
+- If you cannot name a concrete scope with confidence, skip atlas for that slice and scout the real owner path directly. Do not seed atlas refreshes from invented aliases or search labels.
+- A zero-coverage atlas refresh only means "this subsystem is empty now" when the requested subsystem key was already canonical. Alias misses are planner mistakes, not evidence that a subsystem vanished.
+
+## Root validator placement when residual work stays behind a child planner
+
+- If a root plan leaves named failures behind an expandable child planner, the root-level validator must not claim full-suite or full-benchmark verification for those failures.
+- In that shape, either:
+  - omit the root omnibus validator and require the child planner to emit the downstream validator after its concrete developer lanes are known, or
+  - keep a root validator that verifies only the concrete root lanes it actually depends on.
+- Never emit a root validator whose command covers residual clusters that remain owned only by an expandable sibling. That creates a race the submit-plan repair path cannot safely solve.

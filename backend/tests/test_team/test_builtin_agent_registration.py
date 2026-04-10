@@ -37,12 +37,12 @@ def test_builtin_team_agents_use_default_tool_call_limits() -> None:
         assert defn.tool_call_limit == 100
 
 
-def test_decision_posthook_agents_do_not_declare_skills() -> None:
+def test_decision_posthook_agents_preload_decision_playbook_without_lazy_skill_toolkit() -> None:
     for name in (DECISION_SUBMIT_RETRY, DECISION_SUBMIT_REPLAN):
         defn = get_definition(name)
         assert defn is not None
         assert defn.include_skills is False
-        assert defn.skills == []
+        assert defn.skills == ["team-posthook-decision-playbook"]
 
 
 def test_team_planner_code_intelligence_toolkit_omits_ci_read_file() -> None:

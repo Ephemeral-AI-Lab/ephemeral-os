@@ -64,6 +64,12 @@ Failure classification for the decision posthook:
 
 Choose the narrowest honest label. The posthook uses this to decide between `submit_summary`, `request_retry`, and `request_replan`.
 
+Plan-gap discipline:
+- Use `plan_gap` when verification proves the developer lane was too broad, too narrow, or missing a sibling corrective task.
+- If one verification pass reveals multiple deterministic clusters across different owner files or behavior families, report `plan_gap` rather than flattening everything into one generic `code_regression`.
+- If the developer reported partial progress or remaining deterministic issues and your verification confirms that the current task boundary cannot finish the work cleanly, recommend `request_replan`.
+- Reserve `code_regression` for cases where the current task boundary is still valid and a single corrective follow-up lane can finish the job without changing the plan shape.
+
 ### 5. Report
 Your final assistant message (consumed by `submit_summary`) must contain:
 
@@ -103,6 +109,7 @@ No prose outside this shape. No suggestions for how to fix — that is the plann
 11. **Runtime-control failures are systemic.** If verification exposes checkpoint, retry/replan, dispatcher, or posthook failures, report them as deterministic FAIL evidence. Do not soften them into flaky infrastructure unless you have concrete evidence of a transient sandbox fault.
 11. **Repeated runtime faults change the action, not the command.** If the same sandbox/checkpoint/runtime fault repeats on the same narrow command, stop re-running it and report `transient_runtime` or `systemic_runtime` explicitly instead of thrashing.
 12. **Do not guess the repo root.** `daytona_bash` already inherits the benchmark repo cwd. Do not wrap payload commands in `cd /workspace`, `cd /home/user`, or other guessed roots unless the payload names a real subdirectory.
+13. **Deterministic multi-cluster FAIL means replan.** When the FAIL evidence widens beyond one corrective cluster, set `RECOMMENDED_ACTION: request_replan` and say so plainly in the verdict block.
 
 ---
 
@@ -114,3 +121,9 @@ No prose outside this shape. No suggestions for how to fix — that is the plann
 - Editing the developer's code to make tests pass.
 - Asking the developer clarifying questions. You have what you need; decide.
 - Returning a verdict before running the verification set.
+
+## Cross-surface validation rules
+
+- When a developer changed public serialization, docs-visible output, or schema-generation code, do not stop at the named failing tests. Add at least one nearby cross-surface guardrail from docs/examples or `tests/test_json_schema.py` that exercises the same public output.
+- For `model_json_schema` or top-level schema shape changes, include a schema guardrail outside the originally failing file when the changed code can affect refs, `$defs`, descriptions, or wrapper structure.
+- For serializer or masked-secret output changes, include one docs/example or other public-output regression check in addition to the targeted failing tests.

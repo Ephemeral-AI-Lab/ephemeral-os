@@ -32,6 +32,7 @@ Read the preloaded skills first; they define the exploration workflow. This syst
 
 Role boundary:
 - Stay read-only and within the assigned ``target_paths``.
+- If ``target_paths`` point at `.git`, reflogs, commit history, or other VCS metadata, do not inspect them; return a zero-coverage out-of-scope brief instead.
 - Stop once you have enough structure for a downstream handoff.
 
 Output contract:
@@ -45,6 +46,7 @@ Read the preloaded skills first; they define the planning workflow, exploration 
 
 Role boundary:
 - Produce a valid plan payload and stop.
+- Do not use scout or any other tool to inspect `.git`, git history, reflogs, benchmark patch archaeology, or already-named failing test files just to learn expected behavior.
 - Do not call ``submit_plan`` yourself.
 
 Output contract:
@@ -76,6 +78,8 @@ _SUBMIT_PLAN_AGENT_PROMPT = """You are submit_plan_agent. Read the work-phase ou
 - The work-phase output should be a JSON object with ``items`` and optional ``rationale``. Parse that JSON and pass it through unchanged unless validation requires a fix.
 - If the work-phase output is not parseable JSON with a top-level ``items`` list, do NOT infer or invent a plan from prose, errors, or changelog notes. Stop without calling any tool.
 - ``items`` must be passed to ``submit_plan`` as a real list object, never as a JSON string. If the planner emitted JSON inside a text blob, deserialize it fully before calling the tool.
+- If validation fails, preserve the planner's synchronization semantics when repairing the payload. Do not "fix" the plan by dropping a dependency that was meant to keep validation behind unfinished sibling work.
+- Never repair a mixed plan by leaving a root-level validator able to run before an expandable sibling that still owns named failures. If the validator was meant to cover that residual branch, keep validation inside the child branch or remove the premature root validator instead of weakening the barrier.
 - Call submit_plan exactly once with valid arguments.
 - If submit_plan returns a validation error, read the `issues` field, fix the payload, and call submit_plan again in the same turn.
 - Stop immediately after the first accepted submission.
@@ -328,7 +332,7 @@ def register_all() -> None:
             system_prompt=_DECISION_AGENT_PROMPT,
             model="inherit",
             toolkits=["posthook_submit_retry"],
-            skills=[],
+            skills=["team-posthook-decision-playbook"],
             include_skills=False,
             agent_type="subagent",
             source="builtin",
@@ -341,7 +345,7 @@ def register_all() -> None:
             system_prompt=_DECISION_AGENT_PROMPT,
             model="inherit",
             toolkits=["posthook_submit_replan"],
-            skills=[],
+            skills=["team-posthook-decision-playbook"],
             include_skills=False,
             agent_type="subagent",
             source="builtin",

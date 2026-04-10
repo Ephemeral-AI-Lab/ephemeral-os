@@ -28,12 +28,33 @@ def _decode_json_array_string(value: Any) -> Any:
     if not isinstance(value, str):
         return value
     text = value.strip()
-    if not text.startswith("["):
+    if not text:
         return value
-    try:
-        return json.loads(text)
-    except json.JSONDecodeError:
-        return value
+
+    if text.startswith("["):
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            pass
+
+    decoder = json.JSONDecoder()
+    best_payload: list[Any] | None = None
+    best_start: int | None = None
+    best_end = -1
+    for start, char in enumerate(text):
+        if char != "[":
+            continue
+        try:
+            payload, end = decoder.raw_decode(text, idx=start)
+        except ValueError:
+            continue
+        if not isinstance(payload, list):
+            continue
+        if end > best_end or (end == best_end and (best_start is None or start < best_start)):
+            best_payload = payload
+            best_start = start
+            best_end = end
+    return best_payload if best_payload is not None else value
 
 
 class SubmitPosthookTool(BaseTool):

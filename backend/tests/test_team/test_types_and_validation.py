@@ -474,7 +474,7 @@ def test_phase_a_allows_expandable_planner_depending_on_subagent(monkeypatch):
     assert not any("subagent sibling" in i["msg"] for i in issues)
 
 
-def test_phase_a_rejects_ready_expandable_backup_in_mixed_plan(monkeypatch):
+def test_phase_a_allows_ready_expandable_item_in_mixed_plan(monkeypatch):
     from agents.types import AgentDefinition
     from team.planning import validation as _v
 
@@ -498,7 +498,7 @@ def test_phase_a_rejects_ready_expandable_backup_in_mixed_plan(monkeypatch):
 
     issues = validate_plan_phase_a(plan)
 
-    assert any("speculative backup replanners" in i["msg"] for i in issues)
+    assert not issues
 
 
 def test_phase_a_rejects_validator_depending_on_expandable_sibling(monkeypatch):
@@ -555,6 +555,34 @@ def test_submit_plan_item_parses_briefings_and_kind():
     assert item.kind == WorkItemKind.EXPANDABLE
     assert item.briefings[0].name == "ctx"
     assert item.briefings[0].source == "inline"
+
+
+def test_submit_plan_input_extracts_items_from_embedded_json_array_string():
+    from tools.posthook.submit_plan import SubmitPlanInput
+
+    parsed = SubmitPlanInput.model_validate(
+        {
+            "items": 'planner said: [{"agent_name": "developer", "local_id": "w1"}] thanks',
+            "rationale": "keep it moving",
+        }
+    )
+
+    assert len(parsed.items) == 1
+    assert parsed.items[0].agent_name == "developer"
+    assert parsed.items[0].local_id == "w1"
+
+
+def test_submit_replan_input_extracts_cancel_ids_from_embedded_json_array_string():
+    from tools.posthook.submit_replan import SubmitReplanInput
+
+    parsed = SubmitReplanInput.model_validate(
+        {
+            "add_items": [],
+            "cancel_ids": 'cancel these -> ["W1", "W2"] <- now',
+        }
+    )
+
+    assert parsed.cancel_ids == ["W1", "W2"]
 
 
 def test_artifact_store_snapshot_restore():

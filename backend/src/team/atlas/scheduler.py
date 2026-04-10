@@ -418,18 +418,46 @@ class AtlasMaintenanceScheduler:
         normalised = self._normalise_path(file_path)
         if not normalised:
             return set()
-        matches: set[str] = set()
+        matches: dict[str, tuple[int, int]] = {}
+        best_specificity: tuple[int, int] | None = None
         for subsystem in self.store.list_subsystems(project_key):
             scopes = [part.strip() for part in subsystem.split("|") if part.strip()]
+            subsystem_best: tuple[int, int] | None = None
             for scope in scopes:
-                if (
-                    normalised == scope
-                    or normalised.startswith(scope.rstrip("/") + "/")
-                    or scope.startswith(normalised.rstrip("/") + "/")
-                ):
-                    matches.add(subsystem)
-                    break
-        return matches
+                if not self._scope_matches(normalised, scope):
+                    continue
+                specificity = self._scope_specificity(scope)
+                if subsystem_best is None or specificity > subsystem_best:
+                    subsystem_best = specificity
+            if subsystem_best is None:
+                continue
+            matches[subsystem] = subsystem_best
+            if best_specificity is None or subsystem_best > best_specificity:
+                best_specificity = subsystem_best
+        if best_specificity is None:
+            return set()
+        return {
+            subsystem
+            for subsystem, specificity in matches.items()
+            if specificity == best_specificity
+        }
+
+    @staticmethod
+    def _scope_matches(path: str, scope: str) -> bool:
+        scope = scope.strip()
+        if not scope:
+            return False
+        return (
+            path == scope
+            or path.startswith(scope.rstrip("/") + "/")
+            or scope.startswith(path.rstrip("/") + "/")
+        )
+
+    @staticmethod
+    def _scope_specificity(scope: str) -> tuple[int, int]:
+        scope = scope.strip().rstrip("/")
+        parts = [part for part in scope.split("/") if part]
+        return (len(parts), len(scope))
 
     def _normalise_path(self, file_path: str) -> str:
         raw = (file_path or "").strip()
@@ -446,4 +474,3 @@ class AtlasMaintenanceScheduler:
     def _job_key(self, subsystem: str) -> str:
         project_key = getattr(self.team_run.project_context, "project_key", "") or ""
         return f"{project_key}:{subsystem}"
-

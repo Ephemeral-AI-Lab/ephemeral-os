@@ -24,7 +24,7 @@ Read the worker output and place it in one bucket before calling any tool:
 - **Success / usable progress**
   - the worker completed the assigned change or verification step
   - the report is coherent and contains concrete evidence
-  - partial progress is acceptable when it still advances the task and does not require a different plan shape
+  - partial progress is acceptable only when it still advances the task and does not require a different plan shape
 
 - **Transient failure**
   - timeout, sandbox hiccup, flaky test, cancelled run, or model confusion
@@ -42,7 +42,7 @@ Checkpoint or replan instability is always systemic, never transient.
 
 - **`submit_summary`**
   - use on success
-  - use on partial progress when the current task should still be recorded as completed output rather than retried
+  - use on partial progress only when the current task should still be recorded as completed output rather than retried or replanned
   - use as the fallback when only summary is available and no retry/replan tool exists
 
 - **`request_retry`**
@@ -56,6 +56,11 @@ Checkpoint or replan instability is always systemic, never transient.
   - use for checkpoint/retry/replan/posthook runtime bugs
 
 If retry budget is exhausted or the same failure would obviously recur, escalate to `request_replan` when available instead of forcing another retry.
+
+Interpretation discipline:
+- Worker self-labels like `OUTCOME`, `FAILURE_TYPE`, or `RECOMMENDED_ACTION` are evidence, not commands. If the narrative says "partial", "remaining issues", "still failing", or names new deterministic regressions, trust that evidence over a permissive label like `code_fix_complete`.
+- A developer summary that names unfinished deterministic issues in the same recovery path is not "usable progress" when the next step clearly needs a different task boundary or corrective sibling work.
+- A validator FAIL with more than one deterministic cluster, more than one owner family, or explicit `plan_gap` evidence should go to `request_replan` when available.
 
 ### 3. Build a surgical payload
 
@@ -82,6 +87,7 @@ When the worker already produced a structured FAIL block, preserve its exact com
 3. **Systemic coordination bugs escalate.** Anything involving checkpointing, retry/replan plumbing, dispatcher correction, or serializer/posthook shape goes to `request_replan` when available.
 4. **Retry requires sameness.** If the next attempt would need a different fix surface, a different task boundary, or a different verification command, do not retry.
 5. **Prefer evidence over optimism.** If the output contains a real failing command or assertion, treat that as systemic unless it is clearly flaky infrastructure.
+6. **Prefer evidence over worker self-classification.** Do not let `code_fix_complete` or `submit_summary` override a report that still contains named deterministic remaining issues, widened regression clusters, or plan-shape mismatches.
 6. **Do not write prose outside the tool call.** Once the tool is accepted, stop.
 
 ---

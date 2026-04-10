@@ -715,9 +715,21 @@ async def ci_query_symbols(
         except Exception:
             logger.debug("ci_query_symbols warmup failed", exc_info=True)
 
+    agent_name = str((context.metadata or {}).get("agent_name") or "").strip()
+    drop_text_matches = agent_name == "team_planner"
+
     results = svc.query_symbols(query)
     if kind_filter:
         results = [s for s in results if s.kind == kind_filter]
+    if drop_text_matches:
+        results = [
+            s
+            for s in results
+            if (
+                (getattr(getattr(s, "kind", None), "value", None) or str(getattr(s, "kind", "")))
+                != "text_match"
+            )
+        ]
 
     if not results:
         fallback_matches: list[dict[str, Any]] = []
@@ -732,6 +744,12 @@ async def ci_query_symbols(
         if remote_matches:
             fallback_matches.extend(remote_matches)
         fallback_matches = _dedupe_matches(fallback_matches)
+        if drop_text_matches:
+            fallback_matches = [
+                match
+                for match in fallback_matches
+                if str(match.get("kind") or "") != "text_match"
+            ]
         if fallback_matches:
             return ToolResult(output=json.dumps(fallback_matches, indent=2))
         return ToolResult(output=f"No symbols matching '{query}'")

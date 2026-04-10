@@ -44,7 +44,6 @@ def validate_plan_phase_a(
         return issues
 
     local_ids: set[str] = set()
-    has_atomic_items = any(item.kind == WorkItemKind.ATOMIC for item in plan.items)
     for idx, item in enumerate(plan.items):
         # local_id uniqueness
         if item.local_id is not None:
@@ -98,22 +97,6 @@ def validate_plan_phase_a(
                         ),
                     }
                 )
-            if (
-                has_atomic_items
-                and item.kind == WorkItemKind.EXPANDABLE
-                and len(item.deps) == 0
-            ):
-                issues.append(
-                    {
-                        "field": f"items[{idx}].deps",
-                        "msg": (
-                            "expandable items in mixed plans must depend on at least one "
-                            "sibling item; do not queue speculative backup replanners in "
-                            "parallel with atomic workers"
-                        ),
-                    }
-                )
-
         # Briefings: dup-name check + inline byte cap (XOR+name enforced in __post_init__).
         seen_brief_names: set[str] = set()
         inline_bytes = 0

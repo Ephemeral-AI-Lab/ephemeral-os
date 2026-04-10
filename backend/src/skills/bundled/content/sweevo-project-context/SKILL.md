@@ -103,3 +103,8 @@ When benchmark prose, release notes, or changelog bullets disagree with the live
 - The default root benchmark shape for this repo is: one dominant developer lane, one residual child planner lane, one validator lane. Flatten the residual lane into direct developers only when each residual owner is already bounded without more planning.
 - Planner outputs that collapse unrelated residual bugs from `construction`, `json_schema`, `root_model`, and `types` into one developer lane are low-quality plans and should be avoided.
 - Planner-side narration must stay at the ownership and validation-target level. Do not speculate about concrete code fixes from failure strings such as `MultiHostUrl.path` or other pytest assertion details.
+
+## Pydantic cross-surface guardrails
+
+- Changes to `pydantic/root_model.py` or any `model_json_schema` override can affect `tests/test_json_schema.py` even when the original failure came from `tests/test_root_model.py`. Include `tests/test_json_schema.py::test_root_model` or an equivalent nearby schema guardrail before declaring success.
+- Changes to `pydantic/types.py` that alter `Secret` JSON output can affect docs/example expectations in `tests/test_docs.py`, not just `tests/test_types.py`. Include the nearby doc example guardrail for the touched symbol region before declaring success.

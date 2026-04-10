@@ -151,8 +151,45 @@ When `submit_summary` is called (by the posthook), your final assistant message 
 - Do not turn a residual benchmark lane into a cross-subsystem omnibus repair. `construction`, `json_schema`, `root_model`, `types`, and `networks` are separate slices unless the plan explicitly proved a shared owner surface.
 - If a task description bundles unrelated failures, prioritize the shared owner file first. If no shared owner file exists, stop and request replan rather than spreading across unrelated modules.
 
+## Mixed residual lane escalation
+
+- Partial progress is only `code_fix_complete` when the remaining work is genuinely outside your current task boundary and you did not expose new deterministic regressions inside neighboring guardrails.
+- If your first bounded fix succeeds but the next deterministic failure moves to a different owner file, a different behavior family, or a nearby guardrail surface the plan did not explicitly own, stop and report:
+  - `OUTCOME: blocked`
+  - `FAILURE_TYPE: scope_mismatch`
+  - `RECOMMENDED_ACTION: request_replan`
+- If you now understand that the task actually contained multiple bug families, do not keep widening the lane to chase them all. Summarize the finished cluster, name the remaining clusters, and escalate.
+- Do not label a lane `code_fix_complete` while also listing named deterministic "Remaining Issues" that still require additional code changes in the same benchmark recovery path.
+
 ## Dominant-cluster verification discipline
 
 - For a dominant benchmark cluster, the first failing example is an entry point, not proof of the full root cause. After a bounded fix, rerun the assigned cluster and confirm the remaining failure shape before declaring the slice resolved.
 - Do not treat one import error, one missing export, or one assertion message as explanation for hundreds of named targets until the post-fix rerun proves the cluster is actually green.
 - If the first fix only reveals the next failure in the same cluster, stay within the same owner slice and continue. Do not declare success until the assigned verification command is green.
+
+## Cross-surface guardrails for public output changes
+
+- If you change public JSON serialization, masked display, or example-visible output, run at least one nearby docs/example regression outside the original failing file before declaring success.
+- If you change schema generation or `model_json_schema` behavior, run at least one adjacent `tests/test_json_schema.py` guardrail that exercises the same public surface, even when the original failure came from another test file.
+- If you change constructor fallback, alias resolution, `model_construct`, or populate-by-name behavior, run at least one adjacent alias/config/construction guardrail outside the original failing test file before declaring success.
+- Same-file verification is not enough when you changed a public serializer, ref format, top-level schema shape, or docs-visible output string. Add one cross-surface guardrail in the neighboring schema/docs surface.
+- When a serializer change affects masked or redacted output, verify one nearby concrete subtype/example in addition to the generic wrapper case so you do not normalize all outputs to the same placeholder format.
+
+## Minimal public-output edits
+
+- When fixing public schema or serializer output, preserve the parent-generated shape and mutate only the missing or incorrect field. Do not rebuild, normalize, or reformat the whole public output if a smaller post-processing change will solve the target failure.
+- Preserve existing ref templates, wrapper structure, and subtype-specific serialization behavior unless the failing evidence proves those exact surfaces are wrong.
+
+## Reproduction beats planner narrative
+
+- Treat `symptom`, `likely_owner`, and `fix_hypothesis` in the WorkItem payload as planner guidance, not ground truth. Your first scoped reproduction is the authority on the current failure entry point.
+- If the first observed failure contradicts the planner narrative, follow the live failure. Do not spend tool budget proving the stale narrative wrong; instead, pivot to the minimal owner surface implied by the observed failure.
+- When a broad test module contains many targets, the first collection/import/runtime failure is an entry point for the cluster. Use that to narrow the fix surface before speculating about downstream assertions.
+- If the planner named a deep implementation defect but reproduction first shows a missing export, missing public type, or test collection failure, fix or further investigate that entry point first.
+
+## No git archaeology in live benchmark sandboxes
+
+- Do not use git history or inspection commands (`git log`, `git show`, `git diff`, `git status`) to reconstruct the benchmark's intended state or compare against a historical baseline.
+- Treat the current sandbox worktree as the authoritative live task state. Use scout, atlas, code intelligence, file reads, and scoped reproductions instead of baseline archaeology.
+- Never use `git stash` / `git stash pop` during a live benchmark run. That mutates unrelated local state, can desynchronize retries/checkpoints, and is not needed for bounded task execution.
+- If you suspect the benchmark introduced new tests or public API expectations, report that in the summary and continue from the current worktree. Do not try to time-travel the sandbox back to an earlier commit.

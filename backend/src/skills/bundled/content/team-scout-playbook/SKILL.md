@@ -31,6 +31,12 @@ Single-file targets are valid. When `target_paths` points at one file, map only 
 ### 3. Stay in scope
 Do not wander outside `target_paths`. If a file you're reading imports from elsewhere, note the reference in `open_questions` — don't follow it.
 
+### 3a. Refuse archaeology scopes
+If a target path is version-control metadata (`.git`, reflogs, commit logs), benchmark patch archaeology, or another non-owner artifact that cannot help a downstream worker engage the code directly:
+- do not read it
+- return a valid brief with `scope_coverage: 0.0`
+- explain in `gaps` that the target is out of scope for scout because scout maps code ownership, not repository history
+
 ### 4. Stop early
 The moment you can answer "what lives here and how does a downstream worker engage with it", stop. Padding the brief wastes budget.
 
@@ -85,6 +91,7 @@ If any of `target_paths` does not exist in the workspace:
 5. **Stay in scope.** Do not follow imports out of `target_paths`. Note them as `open_questions`.
 6. **Key symbols, not full dumps.** `files[*].key_symbols` lists the names a downstream worker would care about, not every symbol in the file.
 7. **No clarifying questions.** Make a reasonable choice and note ambiguities in `open_questions`.
+8. **No VCS archaeology.** `.git`, reflogs, commit history, and patch metadata are out of scope. Return zero coverage instead of exploring them.
 
 ---
 
