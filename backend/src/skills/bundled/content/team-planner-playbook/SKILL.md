@@ -63,6 +63,7 @@ When a benchmark has one dominant lane plus "the rest", preserve real residual c
 
 ### Step 1 — Reuse shared context
 Any brief already promoted this run is in your prompt under `## Shared context`. If a shared briefing covers a path you were about to scout, **reuse it**. Never re-scout a path covered by a shared briefing.
+Fresh scout completions may also be auto-promoted there under stable `scout:<canonical_scope>` artifact refs. Treat those like any other real artifact-backed briefing.
 
 ### Step 2 — Use live CI to seed scout targets, not replace them
 For "does symbol X exist", "where is Y defined", "what files live in dir Z", "who calls W", use `code_intelligence` directly:
@@ -243,8 +244,8 @@ Never invent new worker agent names unless the user has registered one in the ag
 2. **No subagents in submitted plans.** `scout` is an in-turn exploration helper only. Submitted plans must not contain subagent targets.
 3. **Required item kinds.** `team_planner` is the only valid target for `kind: "expandable"`. `developer` and `validator` are the only valid submitted atomic targets.
 4. **Promote only truly shareable briefs.** After reading a high-coverage brief whose evidence will help later branches, you may promote it once with `share_briefing`. Do not promote partial or malformed briefs.
-4a. **Fresh `run_subagent` scout results are not artifact refs.** Do **not** call `share_briefing(source="artifact", ref=...)` for a just-completed scout background task in the same planner turn. Those scout returns do not automatically carry a team artifact ref. Keep that scout evidence local to the current plan and emit the plan directly unless you already have a real stored artifact ref from atlas or a completed WorkItem.
-4b. **Reserve `source="artifact"` for real stored refs.** Use `share_briefing(name=..., source="artifact", ref="<artifact_id>")` only for actual team artifact refs such as atlas `staged_artifact_ref` values or completed WorkItem artifacts. Never invent or omit the ref.
+4a. **Fresh scout `artifact_ref` values are real team refs.** If a just-completed `run_subagent(agent_name="scout", ...)` returns `artifact_ref`, you may reuse or promote that ref directly. Use `run_id` only for audit or progress; it is not a briefing ref.
+4b. **Reserve `source="artifact"` for real stored refs.** Use `share_briefing(name=..., source="artifact", ref="<artifact_id>")` only for actual team artifact refs such as atlas `staged_artifact_ref` values, completed WorkItem artifacts, or scout `artifact_ref` values returned by `run_subagent`. Never invent or omit the ref.
 4c. **Skip promotion when in doubt.** If promotion would require inventing an inline note, retyping scout evidence, or recovering from a tool error, skip `share_briefing` and keep the evidence local to the plan. Shared context is optional; valid task decomposition is not.
 5. **Planner work phase only.** Do not call `submit_plan` yourself. Emit the plan payload and let `submit_plan_agent` perform the submission.
 6. **No execution by planner.** If you conclude a test, edit, or shell command must be run, stop exploring and emit `developer` / `validator` WorkItems instead of trying to execute through `run_subagent`.

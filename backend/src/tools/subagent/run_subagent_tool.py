@@ -24,6 +24,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import time
 from dataclasses import asdict, is_dataclass
 from typing import Any
 
@@ -185,15 +186,17 @@ def _build_subagent_envelope(
     submitted: Any | None,
     sub_run_id: str | None,
     final_text: str,
+    *,
+    artifact_ref: str | None = None,
 ) -> dict[str, Any]:
     """Project the subagent submission into the typed envelope.
 
     Per plan §7:
         - ``Plan``               → kind="plan",    payload={items, rationale}
         - ``SubmittedSummary``   → kind="summary", artifact_ref present if
-                                   the submitter set one; if its artifact
-                                   carries a ``target_paths`` field, kind is
-                                   promoted to ``"brief"``.
+                                   the runtime stored a real team artifact; if
+                                   its artifact carries a ``target_paths`` field,
+                                   kind is promoted to ``"brief"``.
         - other structured data  → kind="summary", payload=best-effort JSON
                                    object, summary derived from the submission
                                    or final_text.
@@ -206,6 +209,7 @@ def _build_subagent_envelope(
     if isinstance(submitted, Plan):
         return {
             "kind": "plan",
+            "run_id": sub_run_id,
             "summary": (
                 f"submitted {len(submitted.items)} work item(s)"
                 if submitted.items
@@ -231,22 +235,25 @@ def _build_subagent_envelope(
         kind = "brief" if (isinstance(artifact, dict) and "target_paths" in artifact) else "summary"
         return {
             "kind": kind,
+            "run_id": sub_run_id,
             "summary": (submitted.summary or "")[:_ENVELOPE_SUMMARY_CAP],
-            "artifact_ref": sub_run_id,
+            "artifact_ref": artifact_ref,
             "payload": artifact if isinstance(artifact, dict) else {},
         }
 
     if submitted is not None:
         return {
             "kind": "summary",
+            "run_id": sub_run_id,
             "summary": _derive_submission_summary(submitted, final_text),
-            "artifact_ref": sub_run_id,
+            "artifact_ref": artifact_ref,
             "payload": _coerce_payload_object(submitted),
         }
 
     # No posthook submission — fall back to raw final text.
     return {
         "kind": "raw",
+        "run_id": sub_run_id,
         "summary": (final_text or "")[:_ENVELOPE_SUMMARY_CAP],
         "artifact_ref": None,
         "payload": {"final_text": final_text},
@@ -356,9 +363,11 @@ async def run_subagent(
             scout). Mutually exclusive with ``prompt``.
 
     Returns:
-        output (str): JSON-encoded envelope ``{summary, artifact_ref, kind,
-            payload}`` where ``kind`` is one of ``"brief" | "plan" |
-            "summary" | "raw"``.
+        output (str): JSON-encoded envelope ``{summary, run_id,
+            artifact_ref, kind, payload}`` where ``run_id`` is the
+            subagent audit run id and ``artifact_ref`` is a real team
+            artifact ref when the runtime stored one. ``kind`` is one of
+            ``"brief" | "plan" | "summary" | "raw"``.
     """
     from agents import get_definition
     from engine.runtime.agent import spawn_agent
@@ -527,8 +536,17 @@ async def run_subagent(
         )
         return ToolResult(output=f"run_subagent: spawn failed: {exc}", is_error=True)
 
+    subagent_ctx = ToolExecutionContext(cwd=context.cwd, metadata=context.metadata.copy())
+    subagent_ctx.metadata["work_item_started_at"] = time.time()
+    if parent_team_run_id:
+        subagent_ctx.metadata.team_run_id = parent_team_run_id
+
     qc = getattr(agent, "query_context", None)
     if qc is not None:
+        merged = qc.tool_metadata.copy() if qc.tool_metadata is not None else subagent_ctx.metadata.copy()
+        merged.update(subagent_ctx.metadata)
+        merged.agent_name = sub_def.name
+        qc.tool_metadata = merged
         stamp_posthook_metadata_key(
             qc,
             posthook_cfg.metadata_key if posthook_cfg is not None else _DIRECT_SUBMISSION_METADATA_KEY,
@@ -643,7 +661,7 @@ async def run_subagent(
             final_text=final_text,
             parent_cfg=parent_cfg,
             sandbox_id=sandbox_id,
-            base_metadata=context,
+            base_metadata=subagent_ctx,
         )
     except Exception as exc:
         tracker.finish(
@@ -656,7 +674,36 @@ async def run_subagent(
         )
         return ToolResult(output=str(exc), is_error=True)
 
-    envelope = _build_subagent_envelope(submitted, sub_run_id, final_text)
+    stored_artifact_ref: str | None = None
+    if (
+        agent_name == "scout"
+        and parent_team_run_id
+        and sub_run_id
+    ):
+        try:
+            from team.context.scout_briefings import (
+                auto_promote_scout_briefing,
+                store_stable_scout_artifact,
+            )
+            from team.runtime.registry import get as _get_team_run
+            from tools.posthook import SubmittedSummary
+
+            team_run = _get_team_run(parent_team_run_id)
+            if team_run is not None and isinstance(submitted, SubmittedSummary):
+                artifact = submitted.artifact
+                if isinstance(artifact, dict):
+                    stored_artifact_ref = store_stable_scout_artifact(team_run, artifact)
+                    if stored_artifact_ref is not None:
+                        auto_promote_scout_briefing(team_run, stored_artifact_ref)
+        except Exception:
+            logger.debug("run_subagent: scout artifact promotion failed", exc_info=True)
+
+    envelope = _build_subagent_envelope(
+        submitted,
+        sub_run_id,
+        final_text,
+        artifact_ref=stored_artifact_ref,
+    )
     tracker.finish(
         status="completed",
         display_messages=agent.display_messages,

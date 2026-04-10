@@ -82,7 +82,7 @@ class CIToolkit(BaseToolkit):
         instructions += (
             "\nTool-choice rule:\n"
             "- use Atlas for cross-run reusable structural briefs on canonical scopes\n"
-            "- use shared briefings for same-run scout reuse already attached to the run\n"
+            "- use shared briefings for same-run scout reuse already attached to the run; fresh scout completions may appear there under stable `scout:<canonical_scope>` refs\n"
             "- use code_intelligence for live symbol truth, recent edits, and collision awareness"
         )
         super().__init__(

@@ -149,10 +149,10 @@ class ShareBriefingTool(BaseTool):
             if arguments.source == "artifact" and not arguments.ref:
                 detail += (
                     ". `source=\"artifact\"` needs a concrete team artifact ref. "
-                    "Fresh `run_subagent` scout results do not automatically give "
-                    "you a shareable team artifact ref; either use "
-                    "`source=\"inline\"` with a distilled note/brief body, or skip "
-                    "promotion and keep the scout evidence local to this turn."
+                    "Use a real stored ref such as an atlas "
+                    "`staged_artifact_ref`, a completed WorkItem artifact, or a "
+                    "scout `artifact_ref` returned by `run_subagent`; otherwise use "
+                    "`source=\"inline\"` with a distilled note or skip promotion."
                 )
             if arguments.source == "inline" and not arguments.inline:
                 detail += (
@@ -170,9 +170,11 @@ class ShareBriefingTool(BaseTool):
                         f"invalid briefing: unknown artifact ref {briefing.ref!r}. "
                         "`share_briefing(source=\"artifact\")` accepts only real "
                         "team artifact refs such as atlas `staged_artifact_ref` "
-                        "values or completed WorkItem artifacts. Fresh scout "
-                        "sub-run ids are not shareable artifact refs; use "
-                        "`source=\"inline\"` or skip promotion."
+                        "values, completed WorkItem artifacts, or scout "
+                        "`artifact_ref` values returned by `run_subagent`. "
+                        "Subagent `run_id` values are audit ids, not shareable "
+                        "artifact refs; use `source=\"inline\"` or a real "
+                        "artifact ref."
                     ),
                     is_error=True,
                 )
@@ -215,4 +217,3 @@ def _resolve_scope_key(briefing: Briefing, artifact_store: Any) -> str:
 
 
 share_briefing = ShareBriefingTool()
-

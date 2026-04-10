@@ -320,7 +320,10 @@ def chunk_reuse_status(
     )
     if not fresh:
         return False, reason
-    return _brief_reuse_status(chunk, min_scope_coverage=min_scope_coverage)
+    return brief_reuse_status(
+        chunk.brief,
+        min_scope_coverage=min_scope_coverage,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -396,12 +399,12 @@ def _normalise_ledger_path(
     return path
 
 
-def _brief_reuse_status(
-    chunk: AtlasChunk,
+def brief_reuse_status(
+    brief: dict[str, object] | None,
     *,
     min_scope_coverage: float,
 ) -> tuple[bool, str | None]:
-    brief = chunk.brief if isinstance(chunk.brief, dict) else {}
+    brief = brief if isinstance(brief, dict) else {}
     if _is_explicit_empty_area_brief(brief):
         return True, None
 

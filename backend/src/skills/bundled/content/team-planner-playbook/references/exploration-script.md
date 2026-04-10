@@ -30,12 +30,11 @@ Produce a structural ownership map first, then assign developer and validator wo
 
 4. Read the scout brief and classify the result.
    `scope_coverage >= 0.9` with a clear ownership map:
-   Plan workers immediately. If later work will overlap it, either keep the
-   scout evidence local to the current plan or distill it into
-   `share_briefing(source="inline", inline="...")`. Reserve
-   `share_briefing(source="artifact", ref="...")` for real stored team
-   artifact refs such as atlas `staged_artifact_ref` values or completed
-   WorkItem artifacts.
+   Plan workers immediately. If the scout return includes `artifact_ref`, you
+   may reuse or promote it directly because it is a real stored team artifact.
+   `run_id` is only the scout audit id. If no artifact ref is available, distill
+   the evidence into `share_briefing(source="inline", inline="...")` or keep it
+   local to the current plan.
 
    `0.0 < scope_coverage < 0.7` with `suggested_subdivisions`:
    Fan out child scouts on those disjoint subdivisions, or hand the slice to a child planner if you cannot close it in this turn.

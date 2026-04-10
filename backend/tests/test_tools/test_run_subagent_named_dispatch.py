@@ -267,6 +267,8 @@ async def test_envelope_kind_brief_when_artifact_has_target_paths(monkeypatch):
     assert not res.is_error
     env = json.loads(res.output)
     assert env["kind"] == "brief"
+    assert env["run_id"]
+    assert env["artifact_ref"] is None
     assert env["summary"] == "scout report"
     assert env["payload"]["target_paths"] == ["src/auth"]
 
@@ -283,6 +285,7 @@ async def test_envelope_kind_summary_when_no_target_paths(monkeypatch):
     assert not res.is_error
     env = json.loads(res.output)
     assert env["kind"] == "summary"
+    assert env["run_id"]
     assert env["payload"] == {"files": ["a.py"]}
 
 
@@ -298,6 +301,7 @@ async def test_envelope_kind_plan(monkeypatch):
     assert not res.is_error
     env = json.loads(res.output)
     assert env["kind"] == "plan"
+    assert env["run_id"]
     assert env["payload"]["rationale"] == "r"
     assert env["payload"]["items"][0]["agent_name"] == "scout"
 
@@ -311,7 +315,107 @@ async def test_envelope_kind_raw_when_no_posthook_submission(monkeypatch):
     assert not res.is_error
     env = json.loads(res.output)
     assert env["kind"] == "raw"
+    assert env["run_id"]
     assert env["payload"]["final_text"] == "hello world"
+
+
+@pytest.mark.asyncio
+async def test_team_scout_returns_stable_artifact_ref_and_auto_promotes(monkeypatch):
+    budgets = BudgetConfig()
+    state = BudgetState()
+    artifacts = InMemoryArtifactStore(budgets, state)
+    team_run = SimpleNamespace(
+        id="T-scout",
+        budgets=budgets,
+        artifacts=artifacts,
+        project_context=ProjectContext(goal="g", user_request="u"),
+    )
+    _register_team_run(team_run)
+
+    submitted = SubmittedSummary(
+        summary="scout report",
+        artifact={
+            "target_paths": ["src/auth"],
+            "canonical_scope": "src/auth",
+            "files": [],
+            "scope_coverage": 1.0,
+            "gaps": "",
+            "suggested_subdivisions": [],
+            "snapshot_time": 100.0,
+        },
+    )
+    stub, _ = _make_stub_agent(submitted=submitted)
+    _patch_spawn(monkeypatch, stub)
+
+    try:
+        res = await run_subagent.execute(
+            run_subagent.input_model(agent_name="scout", input={"target_paths": ["src/auth"]}),
+            _ctx(team_run_id="T-scout"),
+        )
+        assert not res.is_error
+        env = json.loads(res.output)
+        assert env["run_id"]
+        assert env["artifact_ref"] == "scout:src/auth"
+        assert artifacts.load("scout:src/auth")["canonical_scope"] == "src/auth"
+        shared = team_run.project_context.shared_briefings["src/auth"]
+        assert shared.ref == "scout:src/auth"
+    finally:
+        _unregister_team_run("T-scout")
+
+
+@pytest.mark.asyncio
+async def test_team_scout_does_not_overwrite_newer_stable_artifact(monkeypatch):
+    budgets = BudgetConfig()
+    state = BudgetState()
+    artifacts = InMemoryArtifactStore(budgets, state)
+    artifacts.save(
+        "scout:src/auth",
+        {
+            "target_paths": ["src/auth"],
+            "canonical_scope": "src/auth",
+            "summary": "newer brief",
+            "files": [],
+            "scope_coverage": 1.0,
+            "gaps": "",
+            "suggested_subdivisions": [],
+            "snapshot_time": 200.0,
+        },
+    )
+    team_run = SimpleNamespace(
+        id="T-scout-guard",
+        budgets=budgets,
+        artifacts=artifacts,
+        project_context=ProjectContext(goal="g", user_request="u"),
+    )
+    _register_team_run(team_run)
+
+    submitted = SubmittedSummary(
+        summary="older scout report",
+        artifact={
+            "target_paths": ["src/auth"],
+            "canonical_scope": "src/auth",
+            "summary": "older brief",
+            "files": [],
+            "scope_coverage": 1.0,
+            "gaps": "",
+            "suggested_subdivisions": [],
+            "snapshot_time": 100.0,
+        },
+    )
+    stub, _ = _make_stub_agent(submitted=submitted)
+    _patch_spawn(monkeypatch, stub)
+
+    try:
+        res = await run_subagent.execute(
+            run_subagent.input_model(agent_name="scout", input={"target_paths": ["src/auth"]}),
+            _ctx(team_run_id="T-scout-guard"),
+        )
+        assert not res.is_error
+        env = json.loads(res.output)
+        assert env["artifact_ref"] == "scout:src/auth"
+        assert artifacts.load("scout:src/auth")["summary"] == "newer brief"
+    finally:
+        _unregister_team_run("T-scout-guard")
 
 
 @pytest.mark.asyncio
