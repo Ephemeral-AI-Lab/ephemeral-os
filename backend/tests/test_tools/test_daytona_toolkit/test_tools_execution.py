@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -81,6 +81,57 @@ async def test_bash_exception_returns_error():
     result = await daytona_bash.execute(daytona_bash.input_model(command="fail"), ctx)
     assert result.is_error
     assert "boom" in result.output
+
+
+async def test_bash_lazily_attaches_sandbox_from_sandbox_id():
+    sb = _sb(exec_result=MagicMock(result="hello", exit_code=0))
+    ctx = _ctx({"sandbox_id": "sb-attached", "daytona_cwd": "/workspace"})
+
+    async def fake_get_async_sandbox(sandbox_id):
+        assert sandbox_id == "sb-attached"
+        return sb
+
+    workspace_module = MagicMock()
+    workspace_module.discover_workspace_async = AsyncMock(return_value="/workspace")
+    workspace_module.inject_code_intelligence = MagicMock()
+    async_client_module = MagicMock()
+    async_client_module.get_async_sandbox = fake_get_async_sandbox
+
+    with patch.dict(
+        "sys.modules",
+        {
+            "sandbox.async_client": async_client_module,
+            "sandbox.workspace": workspace_module,
+        },
+    ):
+        result = await daytona_bash.execute(
+            daytona_bash.input_model(command="echo hello"),
+            ctx,
+        )
+
+    assert not result.is_error
+    assert ctx.metadata["daytona_sandbox"] is sb
+    assert json.loads(result.output)["stdout"] == "hello"
+
+
+async def test_bash_recovers_after_container_loss_once():
+    stale = _sb()
+    stale.process.exec = AsyncMock(side_effect=RuntimeError("No such container: sb-stale"))
+    fresh = _sb(exec_result=MagicMock(result="recovered", exit_code=0))
+    ctx = _ctx({"daytona_sandbox": stale, "sandbox_id": "sb-stale"})
+
+    with patch(
+        "tools.daytona_toolkit.tools._recover_sandbox",
+        new=AsyncMock(return_value=fresh),
+    ) as recover_mock:
+        result = await daytona_bash.execute(
+            daytona_bash.input_model(command="echo recovered"),
+            ctx,
+        )
+
+    assert not result.is_error
+    assert json.loads(result.output)["stdout"] == "recovered"
+    recover_mock.assert_awaited_once()
 
 
 async def test_bash_no_sandbox_raises():

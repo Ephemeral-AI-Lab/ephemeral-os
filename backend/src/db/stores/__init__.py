@@ -1,9 +1,25 @@
-"""Database store layer — one store per domain."""
+"""Database store layer."""
 
-from agents.db.store import AgentDefinitionStore
-from db.stores.agent_run_store import AgentRunStore
-from db.stores.model_store import ModelStore
-from db.stores.session_store import SessionStore
-from token_tracker.store import UsageStore
+from __future__ import annotations
+
+from importlib import import_module
+from typing import Any
 
 __all__ = ["AgentDefinitionStore", "AgentRunStore", "ModelStore", "SessionStore", "UsageStore"]
+
+_EXPORTS = {
+    "AgentDefinitionStore": ("agents.db.store", "AgentDefinitionStore"),
+    "AgentRunStore": ("db.stores.agent_run_store", "AgentRunStore"),
+    "ModelStore": ("db.stores.model_store", "ModelStore"),
+    "SessionStore": ("db.stores.session_store", "SessionStore"),
+    "UsageStore": ("token_tracker.store", "UsageStore"),
+}
+
+
+def __getattr__(name: str) -> Any:
+    if name not in _EXPORTS:
+        raise AttributeError(name)
+    module_name, attr_name = _EXPORTS[name]
+    value = getattr(import_module(module_name), attr_name)
+    globals()[name] = value
+    return value

@@ -68,6 +68,24 @@ class AgentBuilderService:
             updated_at=record.updated_at,
         )
 
+    @staticmethod
+    def _record_payload_from_request(data: AgentDefinitionCreate) -> dict[str, object]:
+        return {
+            "description": data.description,
+            "system_prompt": data.system_prompt,
+            "model": data.model,
+            "effort": data.effort,
+            "tool_call_limit": data.tool_call_limit,
+            "toolkits": data.toolkits,
+            "skills": data.skills or [],
+            "hooks": data.hooks,
+            "background": data.background,
+            "initial_prompt": data.initial_prompt,
+            "tags": data.tags,
+            "metadata_json": data.metadata,
+            "created_by": data.created_by,
+        }
+
     def create_agent(self, data: AgentDefinitionCreate) -> AgentDefinitionResponse:
         result = self._validator.validate(data)
         if not result.valid:
@@ -85,22 +103,8 @@ class AgentBuilderService:
             if inactive.is_active:
                 raise ValueError(f"Agent '{data.name}' already exists")
             # Reactivate with new data
-            updates = {
-                "description": data.description,
-                "system_prompt": data.system_prompt,
-                "model": data.model,
-                "effort": data.effort,
-                "tool_call_limit": data.tool_call_limit,
-                "toolkits": data.toolkits,
-                "skills": data.skills or [],
-                "hooks": data.hooks,
-                "background": data.background,
-                "initial_prompt": data.initial_prompt,
-                "tags": data.tags,
-                "metadata_json": data.metadata,
-                "created_by": data.created_by,
-                "is_active": True,
-            }
+            updates = self._record_payload_from_request(data)
+            updates["is_active"] = True
             record = self._store.update(data.name, updates)
             self._register(self.record_to_definition(record))
             return self._record_to_response(record)
@@ -109,19 +113,7 @@ class AgentBuilderService:
         record = AgentDefinitionRecord(
             id=str(uuid4()),
             name=data.name,
-            description=data.description,
-            system_prompt=data.system_prompt,
-            model=data.model,
-            effort=data.effort,
-            tool_call_limit=data.tool_call_limit,
-            toolkits=data.toolkits,
-            skills=data.skills or [],
-            hooks=data.hooks,
-            background=data.background,
-            initial_prompt=data.initial_prompt,
-            tags=data.tags,
-            metadata_json=data.metadata,
-            created_by=data.created_by,
+            **self._record_payload_from_request(data),
             created_at=now,
             updated_at=now,
         )

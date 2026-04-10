@@ -51,6 +51,7 @@ Before editing ANY symbol mentioned in your briefing:
 4. `ci_edit_hotspots()` when the target scope is broad or likely shared — is this area already high-churn?
 5. `ci_scope_status(scope_paths=[...])` before a shared or high-risk write — did the coherence token, reservations, or freshness grade change?
    If a write/edit tool rejects with "Scope coherence changed", refresh with the exact file(s) you are about to edit. Do not call `ci_scope_status()` with an empty scope and then retry a file edit.
+   On resumed or retried lanes, refresh the exact target scope before the first edit, not just before the first write, so you do not re-enter a stale checkpoint boundary.
 
 If any of these contradict your briefing, **trust live CI** and adjust. Never act on stale `symbol_ids`.
 Tool-choice rule:
@@ -101,6 +102,7 @@ When `submit_summary` is called (by the posthook), your final assistant message 
 - A 1–3 sentence narrative of what you changed and why.
 - The list of files touched.
 - The verification step you ran and its outcome.
+- The exact verification command, exit code, and any checkpoint / retry / resume identifiers or usage lines that surfaced during the run.
 - Any open questions or follow-ups (kept short; validator will catch regressions).
 
 ---

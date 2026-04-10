@@ -13,7 +13,7 @@ import logging
 import uuid
 
 from tools.core.base import ToolExecutionContext, ToolResult
-from tools.daytona_toolkit.tools import _get_cwd
+from tools.daytona_toolkit.tools import _get_cwd, _recover_sandbox, _require_sandbox
 from tools.daytona_toolkit.ci_integration import (
     prime_cache_after_write,
     record_edit_in_ledger,
@@ -88,9 +88,10 @@ async def daytona_codeact(
         shells_run (int): Number of shell commands executed
         error (str): Error message if failed
     """
-    sandbox = context.metadata.get("daytona_sandbox")
-    if sandbox is None:
-        return ToolResult(output="No Daytona sandbox in context.", is_error=True)
+    try:
+        sandbox = await _require_sandbox(context)
+    except Exception as exc:
+        return ToolResult(output=str(exc), is_error=True)
 
     run_id = uuid.uuid4().hex[:8]
     code_b64 = base64.b64encode(code.encode("utf-8")).decode("ascii")
@@ -102,7 +103,11 @@ async def daytona_codeact(
     try:
         await sandbox.fs.upload_file(wrapper.encode("utf-8"), script_path)
     except Exception as exc:
-        return ToolResult(output=f"Failed to upload script: {exc}", is_error=True)
+        try:
+            sandbox = await _recover_sandbox(context, exc)
+            await sandbox.fs.upload_file(wrapper.encode("utf-8"), script_path)
+        except Exception as recovery_exc:
+            return ToolResult(output=f"Failed to upload script: {recovery_exc}", is_error=True)
 
     # Execute
     try:
@@ -112,7 +117,15 @@ async def daytona_codeact(
         )
         stdout = response.result or ""
     except Exception as exc:
-        return ToolResult(output=f"Execution failed: {exc}", is_error=True)
+        try:
+            sandbox = await _recover_sandbox(context, exc)
+            response = await sandbox.process.exec(
+                f"python3 {script_path}",
+                timeout=300,
+            )
+            stdout = response.result or ""
+        except Exception as recovery_exc:
+            return ToolResult(output=f"Execution failed: {recovery_exc}", is_error=True)
 
     # Parse output
     try:

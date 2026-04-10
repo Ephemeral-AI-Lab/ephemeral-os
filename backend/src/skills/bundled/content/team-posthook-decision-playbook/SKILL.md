@@ -70,6 +70,7 @@ Interpretation discipline:
 For `submit_summary`:
 - keep it concise and factual
 - preserve the worker's concrete verification evidence or changed-file summary
+- keep exact command, exit code, and any token / tool-call / checkpoint metadata when the worker surfaced it; do not paraphrase those fields away
 
 For `request_retry`:
 - provide one sentence that explains why the failure is transient and why the same work item should succeed on re-execution
@@ -78,6 +79,7 @@ For `request_replan`:
 - `reason`: one-line statement of the failure class
 - `context`: cluster the failure evidence by root cause, include the exact failing command/test/tool, and name the likely owner surface
 - `suggestion`: say what corrective branch should happen next, not a full patch
+- If the worker output includes checkpoint ids, resumed-from ids, or usage lines, carry them forward verbatim in the replan context when they help explain the failure boundary.
 
 When the worker already produced a structured FAIL block, preserve its exact command, exit code, and failing test ids in the replan context.
 

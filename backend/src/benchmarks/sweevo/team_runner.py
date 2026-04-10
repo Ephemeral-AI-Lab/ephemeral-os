@@ -249,34 +249,10 @@ def _extract_final_text(messages: list[Any]) -> str:
     return ""
 
 
-def _extract_last_json_object(text: str) -> dict[str, Any] | None:
-    if not text.strip():
-        return None
-
-    decoder = json.JSONDecoder()
-    best_payload: dict[str, Any] | None = None
-    best_start: int | None = None
-    best_end = -1
-
-    for start, char in enumerate(text):
-        if char != "{":
-            continue
-        try:
-            payload, end = decoder.raw_decode(text, idx=start)
-        except ValueError:
-            continue
-        if not isinstance(payload, dict):
-            continue
-        if end > best_end or (end == best_end and (best_start is None or start < best_start)):
-            best_payload = payload
-            best_start = start
-            best_end = end
-    return best_payload
-
-
-def _extract_matching_json_object(
+def _extract_json_object(
     text: str,
-    matcher: Callable[[dict[str, Any]], bool],
+    *,
+    matcher: Callable[[dict[str, Any]], bool] | None = None,
 ) -> dict[str, Any] | None:
     if not text.strip():
         return None
@@ -293,13 +269,21 @@ def _extract_matching_json_object(
             payload, end = decoder.raw_decode(text, idx=start)
         except ValueError:
             continue
-        if not isinstance(payload, dict) or not matcher(payload):
+        if not isinstance(payload, dict) or (matcher is not None and not matcher(payload)):
             continue
         if end > best_end or (end == best_end and (best_start is None or start < best_start)):
             best_payload = payload
             best_start = start
             best_end = end
     return best_payload
+
+
+def _extract_matching_json_object(
+    text: str,
+    matcher: Callable[[dict[str, Any]], bool],
+) -> dict[str, Any] | None:
+    """Backward-compatible wrapper for matcher-filtered JSON extraction."""
+    return _extract_json_object(text, matcher=matcher)
 
 
 def _find_matching_delimiter(text: str, start: int, open_char: str, close_char: str) -> int:
@@ -421,9 +405,9 @@ def _extract_posthook_input_text(
             text = _block_text(block)
             if text is None:
                 continue
-            payload = _extract_matching_json_object(
+            payload = _extract_json_object(
                 text,
-                lambda candidate: _matches_posthook_payload(candidate, metadata_key),
+                matcher=lambda candidate: _matches_posthook_payload(candidate, metadata_key),
             )
             if payload is None and metadata_key == "submitted_plan":
                 payload = _repair_submitted_plan_payload(text)
@@ -771,6 +755,21 @@ def _emit_dispatcher_dag(
         )
 
 
+def _build_runtime_metadata(
+    *,
+    sandbox_id: str,
+    repo_dir: str,
+    base: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    meta = dict(base or {})
+    meta["sandbox_id"] = sandbox_id
+    meta["daytona_cwd"] = repo_dir
+    meta["ci_workspace_root"] = repo_dir
+    meta["coordination_mode"] = "ultra"
+    meta["require_declared_shell_outputs"] = True
+    return meta
+
+
 def _make_context_builders(
     sandbox_id: str,
     repo_dir: str = _REPO_DIR,
@@ -793,12 +792,11 @@ def _make_context_builders(
         else:
             base_prompt = sandbox_note + _work_item_base_prompt(wi.payload)
         user_message = build_initial_user_message(team_run, wi, base_prompt)
-        meta = build_work_item_metadata(team_run, wi)
-        meta["sandbox_id"] = team_run.sandbox_id or sandbox_id
-        meta["daytona_cwd"] = repo_dir
-        meta["ci_workspace_root"] = repo_dir
-        meta["coordination_mode"] = "ultra"
-        meta["require_declared_shell_outputs"] = True
+        meta = _build_runtime_metadata(
+            sandbox_id=team_run.sandbox_id or sandbox_id,
+            repo_dir=repo_dir,
+            base=build_work_item_metadata(team_run, wi),
+        )
         try:
             ci_service = get_code_intelligence(
                 sandbox_id=team_run.sandbox_id or sandbox_id,
@@ -828,14 +826,11 @@ def _make_context_builders(
                 f"{text}"
             )
 
-        meta = {
-            "agent_name": posthook_defn.name,
-            "sandbox_id": sandbox_id,
-            "daytona_cwd": repo_dir,
-            "ci_workspace_root": repo_dir,
-            "coordination_mode": "ultra",
-            "require_declared_shell_outputs": True,
-        }
+        meta = _build_runtime_metadata(
+            sandbox_id=sandbox_id,
+            repo_dir=repo_dir,
+            base={"agent_name": posthook_defn.name},
+        )
         user_message = _work_item_base_prompt(work_result)
         if isinstance(work_result, dict):
             for key in ("team_run_id", "work_item_id"):

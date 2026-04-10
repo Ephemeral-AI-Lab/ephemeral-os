@@ -20,7 +20,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from team.context.canonicalize import scope_of_artifact
 from team.context.scout_briefings import evict_auto_promoted_scout_briefing
@@ -33,6 +33,24 @@ logger = logging.getLogger(__name__)
 
 class ShareBriefingInput(BaseModel):
     """Input for the ``share_briefing`` tool."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "oneOf": [
+                {
+                    "title": "ArtifactBriefing",
+                    "properties": {"source": {"enum": ["artifact"]}},
+                    "required": ["ref"],
+                },
+                {
+                    "title": "InlineBriefing",
+                    "properties": {"source": {"enum": ["inline"]}},
+                    "required": ["inline"],
+                },
+            ]
+        },
+    )
 
     name: str = Field(
         min_length=1,
@@ -74,51 +92,6 @@ class ShareBriefingTool(BaseTool):
         "If source is \"artifact\", you must provide a real team artifact ref."
     )
     input_model: type[BaseModel] = ShareBriefingInput
-
-    def to_api_schema(self) -> dict[str, Any]:
-        schema = super().to_api_schema()
-        schema["input_schema"] = {
-            "type": "object",
-            "additionalProperties": False,
-            "properties": {
-                "name": {
-                    "type": "string",
-                    "minLength": 1,
-                    "description": ShareBriefingInput.model_fields["name"].description,
-                },
-                "source": {
-                    "type": "string",
-                    "enum": ["artifact", "inline"],
-                    "description": ShareBriefingInput.model_fields["source"].description,
-                },
-                "ref": {
-                    "type": "string",
-                    "description": ShareBriefingInput.model_fields["ref"].description,
-                },
-                "inline": {
-                    "type": "string",
-                    "description": ShareBriefingInput.model_fields["inline"].description,
-                },
-                "description": {
-                    "type": "string",
-                    "description": ShareBriefingInput.model_fields["description"].description,
-                },
-            },
-            "required": ["name", "source"],
-            "oneOf": [
-                {
-                    "title": "ArtifactBriefing",
-                    "properties": {"source": {"enum": ["artifact"]}},
-                    "required": ["ref"],
-                },
-                {
-                    "title": "InlineBriefing",
-                    "properties": {"source": {"enum": ["inline"]}},
-                    "required": ["inline"],
-                },
-            ],
-        }
-        return schema
 
     async def execute(
         self, arguments: BaseModel, context: ToolExecutionContext

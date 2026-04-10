@@ -2,92 +2,25 @@
 
 from __future__ import annotations
 
-import logging
 from typing import Any
-from datetime import datetime, UTC
 
-from sqlalchemy.orm import Session, sessionmaker
-
+from db.stores.definition_store import DefinitionStoreBase
 from skills.db.model import SkillDefinitionRecord
 
-logger = logging.getLogger(__name__)
-
-
-class SkillDefinitionStore:
+class SkillDefinitionStore(DefinitionStoreBase[SkillDefinitionRecord]):
     """CRUD operations for skill definition records."""
 
-    def __init__(self) -> None:
-        self._session_factory: sessionmaker[Session] | None = None
-
-    def initialize(self, session_factory: sessionmaker[Session]) -> None:
-        self._session_factory = session_factory
-        logger.info("SkillDefinitionStore initialised")
-
-    @property
-    def _sf(self) -> sessionmaker[Session]:
-        assert self._session_factory is not None, "SkillDefinitionStore not initialised"
-        return self._session_factory
-
-    def create(self, record: SkillDefinitionRecord) -> SkillDefinitionRecord:
-        with self._sf() as db:
-            db.add(record)
-            db.commit()
-            db.refresh(record)
-            return record
+    record_type = SkillDefinitionRecord
+    store_name = "SkillDefinitionStore"
 
     def get_by_name(self, name: str) -> SkillDefinitionRecord | None:
-        with self._sf() as db:
-            return (
-                db.query(SkillDefinitionRecord)
-                .filter(
-                    SkillDefinitionRecord.name == name, SkillDefinitionRecord.is_active.is_(True)
-                )
-                .first()
-            )
+        return self._get_by_name(name)
 
     def list_active(self, *, limit: int = 200, offset: int = 0) -> list[SkillDefinitionRecord]:
-        with self._sf() as db:
-            return list(
-                db.query(SkillDefinitionRecord)
-                .filter(SkillDefinitionRecord.is_active.is_(True))
-                .order_by(SkillDefinitionRecord.name)
-                .offset(offset)
-                .limit(limit)
-                .all()
-            )
+        return self._list_active(limit=limit, offset=offset, order_by=SkillDefinitionRecord.name)
 
     def update(self, name: str, updates: dict[str, Any]) -> SkillDefinitionRecord:
-        with self._sf() as db:
-            record = (
-                db.query(SkillDefinitionRecord)
-                .filter(
-                    SkillDefinitionRecord.name == name, SkillDefinitionRecord.is_active.is_(True)
-                )
-                .first()
-            )
-            if record is None:
-                raise KeyError(f"Skill '{name}' not found")
-            for key, value in updates.items():
-                if hasattr(record, key) and key not in ("id", "name", "created_at", "version"):
-                    setattr(record, key, value)
-            record.version += 1
-            record.updated_at = datetime.now(UTC)
-            db.commit()
-            db.refresh(record)
-            return record
+        return self._update_by_name(name, updates, missing_message=f"Skill '{name}' not found")
 
     def soft_delete(self, name: str) -> bool:
-        with self._sf() as db:
-            record = (
-                db.query(SkillDefinitionRecord)
-                .filter(
-                    SkillDefinitionRecord.name == name, SkillDefinitionRecord.is_active.is_(True)
-                )
-                .first()
-            )
-            if record is None:
-                return False
-            record.is_active = False
-            record.updated_at = datetime.now(UTC)
-            db.commit()
-            return True
+        return self._soft_delete_by_name(name)

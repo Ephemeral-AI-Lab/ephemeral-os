@@ -416,6 +416,42 @@ class SandboxService:
         sb.refresh()
         return sb.serialize()
 
+    def ensure_sandbox_running(self, sandbox_id: str) -> dict[str, Any]:
+        """Best-effort recovery when a sandbox handle exists but execution fails.
+
+        Some long-running benchmark runs observe a sandbox that still resolves by
+        id yet whose backing container is gone or detached. In that state fresh
+        workers degrade into misleading "no context" errors because sandbox
+        preparation fails before tools run. Probe the sandbox directly and, when
+        execution is unhealthy, try a targeted restart once.
+        """
+        sb = self._get_proxy(sandbox_id)
+        try:
+            resp = sb._raw.process.exec("pwd", timeout=10)
+            exit_code = getattr(resp, "exit_code", 0)
+            if exit_code in (None, 0):
+                return sb.serialize()
+        except Exception:
+            logger.warning(
+                "Sandbox %s probe failed; attempting restart recovery",
+                sandbox_id,
+                exc_info=True,
+            )
+
+        try:
+            sb._raw.start(timeout=_SANDBOX_TIMEOUT_SECONDS)
+        except Exception:
+            logger.debug(
+                "Sandbox %s start during recovery raised; continuing with refresh",
+                sandbox_id,
+                exc_info=True,
+            )
+
+        sb.refresh()
+        sb.ensure_git()
+        sb.refresh()
+        return sb.serialize()
+
     def delete_sandbox(self, sandbox_id: str) -> None:
         """Delete a sandbox."""
         sb = self._get_proxy(sandbox_id)

@@ -98,6 +98,26 @@ class Dispatcher:
     def new_id(self) -> str:
         return str(uuid.uuid4())
 
+    def _mark_failed(self, wi: WorkItem, reason: str) -> None:
+        wi.status = WorkItemStatus.FAILED
+        wi.finished_at = _utcnow()
+        wi.failure_reason = reason
+        self._emit_failed(wi)
+
+    def _mark_cancelled(self, wi: WorkItem, reason: str) -> None:
+        wi.status = WorkItemStatus.CANCELLED
+        wi.finished_at = _utcnow()
+        wi.failure_reason = reason
+        self._emit(
+            make_work_item_status(
+                self.team_run_id,
+                wi.id,
+                "cancelled",
+                finished_at=wi.finished_at.isoformat(),
+                failure_reason=wi.failure_reason,
+            )
+        )
+
     def _compute_readiness(self, wi: WorkItem) -> bool:
         """A WorkItem becomes READY iff PENDING and all deps are DONE."""
         if wi.status != WorkItemStatus.PENDING:
@@ -203,10 +223,10 @@ class Dispatcher:
                 )
 
             if wi.kind == WorkItemKind.EXPANDABLE and result.submitted_plan is None:
-                wi.status = WorkItemStatus.FAILED
-                wi.finished_at = _utcnow()
-                wi.failure_reason = "InvalidPlan: expandable work item did not submit a plan"
-                self._emit_failed(wi)
+                self._mark_failed(
+                    wi,
+                    "InvalidPlan: expandable work item did not submit a plan",
+                )
                 self._cascade_cancel(wi_id)
                 return []
 
@@ -221,20 +241,14 @@ class Dispatcher:
                         max_depth=self.budgets.max_depth,
                     )
                 except InvalidPlan as e:
-                    wi.status = WorkItemStatus.FAILED
-                    wi.finished_at = _utcnow()
-                    wi.failure_reason = f"InvalidPlan: {e}"
-                    self._emit_failed(wi)
+                    self._mark_failed(wi, f"InvalidPlan: {e}")
                     self._cascade_cancel(wi_id)
                     return []
                 if (
                     self.budget_state.work_items_used + len(new_items)
                     > self.budgets.max_work_items
                 ):
-                    wi.status = WorkItemStatus.FAILED
-                    wi.finished_at = _utcnow()
-                    wi.failure_reason = "BudgetExceeded: max_work_items"
-                    self._emit_failed(wi)
+                    self._mark_failed(wi, "BudgetExceeded: max_work_items")
                     self._cascade_cancel(wi_id)
                     return []
 
@@ -251,10 +265,7 @@ class Dispatcher:
                     )
                 )
             except ArtifactTooLarge as e:
-                wi.status = WorkItemStatus.FAILED
-                wi.finished_at = _utcnow()
-                wi.failure_reason = f"ArtifactTooLarge: {e}"
-                self._emit_failed(wi)
+                self._mark_failed(wi, f"ArtifactTooLarge: {e}")
                 self._cascade_cancel(wi_id)
                 return []
 
@@ -334,10 +345,7 @@ class Dispatcher:
             wi = self.graph.get(wi_id)
             if wi is None or wi.status in TERMINAL_WI_STATUSES:
                 return
-            wi.status = WorkItemStatus.FAILED
-            wi.finished_at = _utcnow()
-            wi.failure_reason = reason
-            self._emit_failed(wi)
+            self._mark_failed(wi, reason)
             self._cascade_cancel(wi_id)
 
     # ---- retry / replan --------------------------------------------------
@@ -350,10 +358,7 @@ class Dispatcher:
             if wi.status != WorkItemStatus.RUNNING:
                 raise RuntimeError(f"retry: {wi_id} is {wi.status.value}, not RUNNING")
             if wi.retry_count >= wi.max_retries:
-                wi.status = WorkItemStatus.FAILED
-                wi.finished_at = _utcnow()
-                wi.failure_reason = f"retry_exhausted: {request.reason}"
-                self._emit_failed(wi)
+                self._mark_failed(wi, f"retry_exhausted: {request.reason}")
                 self._cascade_cancel(wi_id)
                 return
             wi.retry_count += 1
@@ -373,18 +378,12 @@ class Dispatcher:
                 raise RuntimeError(f"replan: {wi_id} is {wi.status.value}, not RUNNING")
 
             if self.budget_state.replans_used >= self.budgets.max_replans_per_run:
-                wi.status = WorkItemStatus.FAILED
-                wi.finished_at = _utcnow()
-                wi.failure_reason = f"replan_budget_exhausted: {request.reason}"
-                self._emit_failed(wi)
+                self._mark_failed(wi, f"replan_budget_exhausted: {request.reason}")
                 self._cascade_cancel(wi_id)
                 raise BudgetExceeded("max_replans_per_run reached")
 
             # 1. Fail the current work item
-            wi.status = WorkItemStatus.FAILED
-            wi.finished_at = _utcnow()
-            wi.failure_reason = f"replan_requested: {request.reason}"
-            self._emit_failed(wi)
+            self._mark_failed(wi, f"replan_requested: {request.reason}")
 
             # 2. Cancel PENDING and READY siblings (not RUNNING)
             for other in list(self.graph.values()):
@@ -393,16 +392,7 @@ class Dispatcher:
                     and other.id != wi_id
                     and other.status in (WorkItemStatus.PENDING, WorkItemStatus.READY)
                 ):
-                    other.status = WorkItemStatus.CANCELLED
-                    other.finished_at = _utcnow()
-                    other.failure_reason = f"cancelled_by_replan_from_{wi_id}"
-                    self._emit(
-                        make_work_item_status(
-                            self.team_run_id, other.id, "cancelled",
-                            finished_at=other.finished_at.isoformat(),
-                            failure_reason=other.failure_reason,
-                        )
-                    )
+                    self._mark_cancelled(other, f"cancelled_by_replan_from_{wi_id}")
                     self._cascade_cancel(other.id)
 
             # 3. Cancel downstream dependents of failed item
@@ -488,54 +478,21 @@ class Dispatcher:
                 if cur in other.deps and other.id not in seen:
                     seen.add(other.id)
                     if other.status not in TERMINAL_WI_STATUSES:
-                        other.status = WorkItemStatus.CANCELLED
-                        other.finished_at = _utcnow()
-                        other.failure_reason = f"cascaded from {wi_id}"
-                        self._emit(
-                            make_work_item_status(
-                                self.team_run_id,
-                                other.id,
-                                "cancelled",
-                                finished_at=other.finished_at.isoformat(),
-                                failure_reason=other.failure_reason,
-                            )
-                        )
+                        self._mark_cancelled(other, f"cascaded from {wi_id}")
                     stack.append(other.id)
 
     async def cancel_all_pending(self) -> None:
         async with self.lock:
             for wi in self.graph.values():
                 if wi.status in (WorkItemStatus.PENDING, WorkItemStatus.READY):
-                    wi.status = WorkItemStatus.CANCELLED
-                    wi.finished_at = _utcnow()
-                    wi.failure_reason = "team_run cancelled"
-                    self._emit(
-                        make_work_item_status(
-                            self.team_run_id,
-                            wi.id,
-                            "cancelled",
-                            finished_at=wi.finished_at.isoformat(),
-                            failure_reason=wi.failure_reason,
-                        )
-                    )
+                    self._mark_cancelled(wi, "team_run cancelled")
 
     async def cancel_running(self, reason: str) -> None:
         """Mark any RUNNING items as CANCELLED. Used after a cooperative drain."""
         async with self.lock:
             for wi in self.graph.values():
                 if wi.status == WorkItemStatus.RUNNING:
-                    wi.status = WorkItemStatus.CANCELLED
-                    wi.finished_at = _utcnow()
-                    wi.failure_reason = reason
-                    self._emit(
-                        make_work_item_status(
-                            self.team_run_id,
-                            wi.id,
-                            "cancelled",
-                            finished_at=wi.finished_at.isoformat(),
-                            failure_reason=reason,
-                        )
-                    )
+                    self._mark_cancelled(wi, reason)
 
     def all_terminal(self) -> bool:
         return all(wi.status in TERMINAL_WI_STATUSES for wi in self.graph.values())
@@ -769,16 +726,7 @@ class Dispatcher:
             # 1. Cancel stale items + cascade dependents
             for cid in cancel_ids:
                 wi = self.graph[cid]
-                wi.status = WorkItemStatus.CANCELLED
-                wi.finished_at = _utcnow()
-                wi.failure_reason = f"cancelled_by_replan_{replan_wi_id}"
-                self._emit(
-                    make_work_item_status(
-                        self.team_run_id, cid, "cancelled",
-                        finished_at=wi.finished_at.isoformat(),
-                        failure_reason=wi.failure_reason,
-                    )
-                )
+                self._mark_cancelled(wi, f"cancelled_by_replan_{replan_wi_id}")
                 self._cascade_cancel(cid)
 
             # 2. Insert new items

@@ -2,50 +2,23 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
 import time
 from typing import Any
 
+from code_intelligence.routing.scope_packets import (
+    build_scope_packet as build_shared_scope_packet,
+    normalize_scope_paths,
+    scope_paths_overlap,
+)
 from team.context.canonicalize import scope_of_artifact
 from tools.core.base import ToolExecutionContext
 
 _DEFAULT_RECENT_SECONDS = 300.0
 
 
-def normalize_scope_paths(paths: list[str] | tuple[str, ...] | None) -> list[str]:
-    """Return stable, deduplicated scope paths."""
-    out: list[str] = []
-    seen: set[str] = set()
-    for raw in paths or ():
-        if not isinstance(raw, str):
-            continue
-        for part in raw.split("|"):
-            cleaned = part.strip().replace("\\", "/").removeprefix("./").rstrip("/")
-            if not cleaned or cleaned in seen:
-                continue
-            seen.add(cleaned)
-            out.append(cleaned)
-    out.sort()
-    return out
-
-
 def scopes_overlap(path_a: str, path_b: str) -> bool:
     """Return True when two file or directory scopes overlap."""
-    left = (path_a or "").strip().rstrip("/")
-    right = (path_b or "").strip().rstrip("/")
-    if not left or not right:
-        return False
-    if left == right:
-        return True
-    if left.startswith(right + "/") or right.startswith(left + "/"):
-        return True
-    return (
-        left.endswith("/" + right)
-        or right.endswith("/" + left)
-        or ("/" + right + "/") in (left + "/")
-        or ("/" + left + "/") in (right + "/")
-    )
+    return scope_paths_overlap(path_a, path_b)
 
 
 def scope_paths_from_payload(payload: Any) -> list[str]:
@@ -113,30 +86,19 @@ def build_scope_packet(
             packet = None
         if isinstance(packet, dict):
             return packet
-    recent_changes = _recent_changes(svc, normalized, seconds=recent_seconds)
-    active_reservations = _active_reservations(svc, normalized)
-    hotspots = _hotspots(svc, normalized)
-    ledger_generation = _safe_attr(getattr(svc, "ledger", None), "generation")
-    arbiter_generation = _safe_attr(getattr(svc, "arbiter", None), "generation")
-    symbol_generation = _safe_attr(getattr(svc, "symbol_index", None), "generation")
-    packet = {
-        "scope_paths": normalized,
-        "briefing_versions": briefing_versions,
-        "ledger_generation": ledger_generation,
-        "arbiter_generation": arbiter_generation,
-        "symbol_index_generation": symbol_generation,
-        "recent_changes": recent_changes,
-        "active_reservations": active_reservations,
-        "active_edit_intents": _active_edit_intents(svc, normalized),
-        "hotspots": hotspots,
-        "generated_at": time.time(),
-    }
-    packet["coherence_token"] = _coherence_token(packet)
-    packet["freshness"] = _freshness_grade(packet, baseline_packet)
-    if isinstance(baseline_packet, dict):
-        packet["baseline_coherence_token"] = str(baseline_packet.get("coherence_token") or "")
-    packet["admission"] = _admission(packet)
-    return packet
+    return build_shared_scope_packet(
+        scope_paths=normalized,
+        briefing_versions=briefing_versions,
+        ledger_generation=_safe_generation(getattr(svc, "ledger", None)),
+        arbiter_generation=_safe_generation(getattr(svc, "arbiter", None)),
+        symbol_index_generation=_safe_generation(getattr(svc, "symbol_index", None)),
+        recent_changes=_recent_changes(svc, normalized, seconds=recent_seconds),
+        active_reservations=_active_reservations(svc, normalized),
+        active_edit_intents=_active_edit_intents(svc, normalized),
+        hotspots=_hotspots(svc, normalized),
+        generated_at=time.time(),
+        baseline_packet=baseline_packet,
+    )
 
 
 def build_scope_packet_for_context(
@@ -283,87 +245,6 @@ def _active_edit_intents(svc: Any | None, scope_paths: list[str]) -> list[dict[s
     return [dict(item) for item in intents][:25]
 
 
-def _coherence_token(packet: dict[str, Any]) -> str:
-    stable = {
-        "scope_paths": packet.get("scope_paths") or [],
-        "briefing_versions": packet.get("briefing_versions") or [],
-        "recent_changes": packet.get("recent_changes") or [],
-        "active_reservations": packet.get("active_reservations") or [],
-        "active_edit_intents": packet.get("active_edit_intents") or [],
-    }
-    raw = json.dumps(stable, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:24]
-
-
-def _freshness_grade(current: dict[str, Any], baseline_packet: dict[str, Any] | None) -> str:
-    if isinstance(baseline_packet, dict) and normalize_scope_paths(current.get("scope_paths") or []) == normalize_scope_paths(
-        baseline_packet.get("scope_paths") or []
-    ):
-        if str(current.get("coherence_token") or "") == str(baseline_packet.get("coherence_token") or ""):
-            return "fresh"
-        if current.get("active_reservations") or current.get("recent_changes") or current.get("active_edit_intents"):
-            return "touched"
-        return "stale"
-    if current.get("active_reservations") or current.get("recent_changes") or current.get("active_edit_intents"):
-        return "touched"
-    return "fresh"
-def _admission(packet: dict[str, Any]) -> dict[str, Any]:
-    reservations = list(packet.get("active_reservations") or [])
-    intents = list(packet.get("active_edit_intents") or [])
-    recent_changes = list(packet.get("recent_changes") or [])
-    hotspots = list(packet.get("hotspots") or [])
-    hotspot_max = max((int(item.get("edit_count") or 0) for item in hotspots), default=0)
-    if reservations:
-        return {
-            "mode": "serialize",
-            "contention": "high",
-            "allow_parallel_fanout": False,
-            "active_reservation_count": len(reservations),
-            "recent_change_count": len(recent_changes),
-            "hotspot_max_edit_count": hotspot_max,
-            "reasons": ["active write reservations overlap this scope"],
-        }
-    if hotspot_max >= 4 or len(recent_changes) >= 6:
-        return {
-            "mode": "serialize",
-            "contention": "high",
-            "allow_parallel_fanout": False,
-            "active_reservation_count": 0,
-            "recent_change_count": len(recent_changes),
-            "hotspot_max_edit_count": hotspot_max,
-            "reasons": ["scope is in a high-churn hotspot window"],
-        }
-    if hotspot_max >= 2 or len(recent_changes) >= 2:
-        return {
-            "mode": "cautious",
-            "contention": "medium",
-            "allow_parallel_fanout": True,
-            "active_reservation_count": 0,
-            "recent_change_count": len(recent_changes),
-            "hotspot_max_edit_count": hotspot_max,
-            "reasons": ["scope changed recently; keep scout fanout narrow and disjoint"],
-        }
-    if intents:
-        return {
-            "mode": "cautious",
-            "contention": "medium",
-            "allow_parallel_fanout": True,
-            "active_reservation_count": 0,
-            "recent_change_count": len(recent_changes),
-            "hotspot_max_edit_count": hotspot_max,
-            "reasons": ["active edit intents exist in this scope; prefer disjoint work"],
-        }
-    return {
-        "mode": "parallel",
-        "contention": "low",
-        "allow_parallel_fanout": True,
-        "active_reservation_count": 0,
-        "recent_change_count": len(recent_changes),
-        "hotspot_max_edit_count": hotspot_max,
-        "reasons": ["scope is stable enough for disjoint scout fanout"],
-    }
-
-
-def _safe_attr(obj: Any, name: str) -> int:
-    raw = getattr(obj, name, 0)
+def _safe_generation(obj: Any) -> int:
+    raw = getattr(obj, "generation", 0)
     return int(raw) if isinstance(raw, (int, float)) else 0

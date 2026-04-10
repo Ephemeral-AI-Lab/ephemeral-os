@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 
 class TestGetAsyncSandbox:
@@ -43,3 +43,25 @@ class TestGetAsyncSandbox:
 
         with pytest.raises(ValueError, match="not found"):
             await mod.get_async_sandbox("sb-nonexistent")
+
+    @pytest.mark.anyio
+    async def test_fetch_sandbox_recovers_once_when_initial_lookup_missing(self, monkeypatch):
+        monkeypatch.setenv("DAYTONA_API_KEY", "async-key")
+        monkeypatch.setenv("DAYTONA_API_URL", "https://async-url")
+
+        recovered = MagicMock()
+        mock_client = MagicMock()
+        mock_client.get = AsyncMock(side_effect=[None, recovered])
+
+        import sandbox.async_client as mod
+
+        mod._cached_client = mock_client
+        mod._cached_client_key = ("async-key", "https://async-url", "")
+        mod._cached_loop_id = id(pytest.importorskip("asyncio").get_running_loop())
+
+        with patch("sandbox.service.SandboxService.ensure_sandbox_running") as ensure_mock:
+            result = await mod.get_async_sandbox("sb-recoverable")
+
+        assert result is recovered
+        ensure_mock.assert_called_once_with("sb-recoverable")
+        assert mock_client.get.await_count == 2

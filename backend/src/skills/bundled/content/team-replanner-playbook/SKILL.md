@@ -19,6 +19,7 @@ Use:
 - the failed work item's payload
 - the structured failure context
 - completed sibling artifacts and shared briefings
+- any checkpoint / resumed_from / recent-change metadata already attached to the run
 
 Extract:
 - the exact failing command, test id, or runtime component
@@ -90,6 +91,7 @@ If the failure is in checkpointing, retry/replan plumbing, submit_replan, dispat
 - reuse shared briefings or Atlas only as structural hints; current CI state is the authority for active runtime branches
 - emit a narrow developer item on the exact runtime files implicated by the failure
 - include one direct reproducer or regression target in the payload
+- preserve checkpoint / resume ids and tool-usage metadata in the failure context when they explain why the branch needs to be resumed or replanned
 - keep the plan surgical; do not reopen benchmark-domain ownership unless the runtime failure proved the domain plan was wrong
 
 ### Pattern D — Missing coverage / mis-scoped branch

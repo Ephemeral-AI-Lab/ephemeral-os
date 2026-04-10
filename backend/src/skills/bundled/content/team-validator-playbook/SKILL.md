@@ -35,6 +35,7 @@ Treat briefings and dep artifacts as task context, and CI as live truth about wh
 - Call `ci_recent_changes()` only when those sources do not identify the touched files clearly, or when the payload explicitly asks for a cross-lane integration check.
 - Call `ci_edit_hotspots()` when the integration surface is broad and you need to see whether contention likely widened beyond the declared touched files.
 - Call `ci_scope_status(scope_paths=[...])` when the verification surface is shared or broad enough that you need the current reservations / recent-changes packet for the exact paths under verification.
+- On resumed or retried benchmark work, refresh the exact verification scope with `ci_scope_status(scope_paths=[...])` before the first command if the branch may have shifted since the last healthy checkpoint.
 - Tool-choice rule: use payload context for intended scope, use CI for live touched-file truth, and do not infer same-run state from Atlas.
 - For text lookup or source/log discovery, prefer `daytona_grep` plus direct file reads before shell `grep` / `find` probes in `daytona_bash`.
 
@@ -100,6 +101,8 @@ Failures (only on FAIL):
 
 Notes: <optional, short>
 ```
+
+Preserve exact command, exit code, checkpoint/resume ids, and usage details when they are present in the payload or run metadata.
 
 No prose outside this shape. No suggestions for how to fix — that is the planner's job.
 

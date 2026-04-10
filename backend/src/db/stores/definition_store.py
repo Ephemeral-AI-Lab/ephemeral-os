@@ -1,0 +1,102 @@
+"""Shared helpers for small definition-style SQLAlchemy stores."""
+
+from __future__ import annotations
+
+import logging
+from datetime import UTC, datetime
+from typing import Any, Generic, TypeVar
+
+from sqlalchemy.orm import Session, sessionmaker
+
+RecordT = TypeVar("RecordT")
+
+
+class DefinitionStoreBase(Generic[RecordT]):
+    """Provide common CRUD primitives for name-keyed definition records."""
+
+    record_type: type[RecordT]
+    store_name: str
+    immutable_fields: tuple[str, ...] = ("id", "name", "created_at", "version")
+
+    def __init__(self) -> None:
+        self._session_factory: sessionmaker[Session] | None = None
+        self._logger = logging.getLogger(self.__class__.__module__)
+
+    def initialize(self, session_factory: sessionmaker[Session]) -> None:
+        self._session_factory = session_factory
+        self._logger.info("%s initialised", self.store_name)
+
+    @property
+    def _sf(self) -> sessionmaker[Session]:
+        assert self._session_factory is not None, f"{self.store_name} not initialised"
+        return self._session_factory
+
+    def create(self, record: RecordT) -> RecordT:
+        with self._sf() as db:
+            db.add(record)
+            db.commit()
+            db.refresh(record)
+            return record
+
+    def _query_by_name(self, db: Session, name: str):
+        return db.query(self.record_type).filter(self.record_type.name == name)
+
+    def _get_by_name(self, name: str, *, active_only: bool = True) -> RecordT | None:
+        with self._sf() as db:
+            query = self._query_by_name(db, name)
+            if active_only:
+                query = query.filter(self.record_type.is_active.is_(True))
+            return query.first()
+
+    def _list_active(self, *, limit: int, offset: int, order_by) -> list[RecordT]:
+        with self._sf() as db:
+            return list(
+                db.query(self.record_type)
+                .filter(self.record_type.is_active.is_(True))
+                .order_by(order_by)
+                .offset(offset)
+                .limit(limit)
+                .all()
+            )
+
+    def _apply_updates(self, record: RecordT, updates: dict[str, Any]) -> None:
+        for key, value in updates.items():
+            if hasattr(record, key) and key not in self.immutable_fields:
+                setattr(record, key, value)
+
+    def _update_by_name(
+        self,
+        name: str,
+        updates: dict[str, Any],
+        *,
+        active_only: bool = True,
+        missing_message: str,
+    ) -> RecordT:
+        with self._sf() as db:
+            record = self._get_by_name_with_session(db, name, active_only=active_only)
+            if record is None:
+                raise KeyError(missing_message)
+            self._apply_updates(record, updates)
+            record.version += 1
+            record.updated_at = datetime.now(UTC)
+            db.commit()
+            db.refresh(record)
+            return record
+
+    def _get_by_name_with_session(
+        self, db: Session, name: str, *, active_only: bool = True
+    ) -> RecordT | None:
+        query = self._query_by_name(db, name)
+        if active_only:
+            query = query.filter(self.record_type.is_active.is_(True))
+        return query.first()
+
+    def _soft_delete_by_name(self, name: str) -> bool:
+        with self._sf() as db:
+            record = self._get_by_name_with_session(db, name, active_only=True)
+            if record is None:
+                return False
+            record.is_active = False
+            record.updated_at = datetime.now(UTC)
+            db.commit()
+            return True

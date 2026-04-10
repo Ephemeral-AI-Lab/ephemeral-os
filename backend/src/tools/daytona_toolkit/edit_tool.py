@@ -9,7 +9,14 @@ from typing import Any
 
 from code_intelligence.editing.patcher import LineRangeEdit, Patcher, SearchReplaceEdit
 from tools.core.base import ToolExecutionContext, ToolResult
-from tools.daytona_toolkit.tools import _get_cwd, _path_error, _resolve_path, _upload_file_compat
+from tools.daytona_toolkit.tools import (
+    _get_cwd,
+    _path_error,
+    _recover_sandbox,
+    _require_sandbox,
+    _resolve_path,
+    _upload_file_compat,
+)
 from tools.daytona_toolkit.ci_integration import (
     abort_ci_write,
     finalize_ci_write,
@@ -60,12 +67,10 @@ async def daytona_edit_file(
         status (str): Edit result — edited, dry_run, or error
         diff (str): Unified diff preview (dry_run only)
     """
-    sandbox = context.metadata.get("daytona_sandbox")
-    if sandbox is None:
-        return ToolResult(
-            output="No Daytona sandbox in context.",
-            is_error=True,
-        )
+    try:
+        sandbox = await _require_sandbox(context)
+    except Exception as exc:
+        return ToolResult(output=str(exc), is_error=True)
 
     file_path = _resolve_path(file_path, context)
 
@@ -115,7 +120,16 @@ async def daytona_edit_file(
             current = raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
             current_hash = _content_hash(current)
         except Exception as exc:
-            return ToolResult(output=_path_error(exc, file_path) or f"Cannot read file: {exc}", is_error=True)
+            try:
+                sandbox = await _recover_sandbox(context, exc)
+                raw = await sandbox.fs.download_file(file_path)
+                current = raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
+                current_hash = _content_hash(current)
+            except Exception as recovery_exc:
+                return ToolResult(
+                    output=_path_error(recovery_exc, file_path) or f"Cannot read file: {recovery_exc}",
+                    is_error=True,
+                )
 
     if prepared is not None and refresh_supported:
         refreshed = refresh_prepared(prepared)
@@ -238,7 +252,27 @@ async def daytona_edit_file(
                 metadata={"file_path": file_path, "occ": False},
             )
         except Exception as exc:
-            return ToolResult(output=_path_error(exc, file_path) or f"Write failed: {exc}", is_error=True)
+            try:
+                sandbox = await _recover_sandbox(context, exc)
+                await _upload_file_compat(sandbox, new_content.encode("utf-8"), file_path)
+                output = json.dumps(
+                    {
+                        "cwd": _get_cwd(context) or "",
+                        "file_path": file_path,
+                        "status": "edited",
+                        "occ": False,
+                        "warnings": list(patch_result.warnings),
+                    }
+                )
+                return ToolResult(
+                    output=output,
+                    metadata={"file_path": file_path, "occ": False},
+                )
+            except Exception as recovery_exc:
+                return ToolResult(
+                    output=_path_error(recovery_exc, file_path) or f"Write failed: {recovery_exc}",
+                    is_error=True,
+                )
 
 
 def _normalize_edits(
