@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+import re
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
@@ -10,6 +12,11 @@ from team.models import Plan, WorkItemKind
 from team.planning.validation import validate_plan_phase_a
 from tools.core.base import ToolExecutionContext
 from tools.posthook.base import SubmitPosthookTool, _decode_json_array_string
+
+_BENCHMARK_COMMAND_KEYS = ("reproduction", "verification", "verify", "retries")
+_CD_COMMAND_RE = re.compile(
+    r"^\s*cd\s+(?P<quote>['\"]?)(?P<path>[^&|;'\"]+?)(?P=quote)\s*&&\s*(?P<rest>.+?)\s*$"
+)
 
 
 def _optional_int(value: Any) -> int | None:
@@ -66,8 +73,15 @@ class SubmitPlanTool(SubmitPosthookTool):
         self, arguments: BaseModel, context: ToolExecutionContext
     ) -> tuple[Any, str | None]:
         assert isinstance(arguments, SubmitPlanInput)
+        benchmark_test_ids, benchmark_test_files = self._known_benchmark_targets(context)
+        raw_plan = self._normalize_benchmark_command_payloads(
+            arguments.model_dump(),
+            context=context,
+            benchmark_test_ids=benchmark_test_ids,
+            benchmark_test_files=benchmark_test_files,
+        )
         try:
-            plan = Plan.from_dict(arguments.model_dump())
+            plan = Plan.from_dict(raw_plan)
         except Exception as exc:
             return None, f"Invalid Plan shape: {exc}"
 
@@ -76,7 +90,6 @@ class SubmitPlanTool(SubmitPosthookTool):
         require_validator_for_plan_size = _optional_int(
             context.metadata.get("require_validator_for_plan_size")
         )
-        benchmark_test_ids, benchmark_test_files = self._known_benchmark_targets(context)
         issues = validate_plan_phase_a(
             plan,
             max_plan_size=max_plan_size,
@@ -186,3 +199,71 @@ class SubmitPlanTool(SubmitPosthookTool):
             if "::" in item and item.split("::", 1)[0]
         }
         return test_ids, test_files
+
+    def _normalize_benchmark_command_payloads(
+        self,
+        plan_data: dict[str, Any],
+        *,
+        context: ToolExecutionContext,
+        benchmark_test_ids: set[str] | None,
+        benchmark_test_files: set[str] | None,
+    ) -> dict[str, Any]:
+        if not benchmark_test_ids and not benchmark_test_files:
+            return plan_data
+        repo_dir = str(
+            context.metadata.get("daytona_cwd")
+            or context.metadata.get("ci_workspace_root")
+            or ""
+        ).strip()
+        if not repo_dir:
+            return plan_data
+
+        items = plan_data.get("items")
+        if not isinstance(items, list):
+            return plan_data
+
+        normalized_items: list[dict[str, Any]] = []
+        for item in items:
+            if not isinstance(item, dict):
+                normalized_items.append(item)
+                continue
+            payload = item.get("payload")
+            if not isinstance(payload, dict):
+                normalized_items.append(item)
+                continue
+            normalized_payload = dict(payload)
+            for key in _BENCHMARK_COMMAND_KEYS:
+                raw_value = normalized_payload.get(key)
+                if isinstance(raw_value, str):
+                    normalized_payload[key] = self._normalize_benchmark_command(
+                        raw_value, repo_dir=repo_dir
+                    )
+                elif isinstance(raw_value, list):
+                    normalized_payload[key] = [
+                        self._normalize_benchmark_command(value, repo_dir=repo_dir)
+                        if isinstance(value, str)
+                        else value
+                        for value in raw_value
+                    ]
+            normalized_items.append({**item, "payload": normalized_payload})
+
+        return {**plan_data, "items": normalized_items}
+
+    def _normalize_benchmark_command(self, value: str, *, repo_dir: str) -> str:
+        match = _CD_COMMAND_RE.match(value)
+        if match is None:
+            return value
+
+        raw_target = match.group("path").strip()
+        if not os.path.isabs(raw_target):
+            return value
+
+        repo_root = os.path.normpath(repo_dir)
+        target_root = os.path.normpath(raw_target)
+        try:
+            stays_inside_repo = os.path.commonpath([repo_root, target_root]) == repo_root
+        except ValueError:
+            stays_inside_repo = False
+        if target_root == repo_root or stays_inside_repo:
+            return value
+        return match.group("rest").strip()

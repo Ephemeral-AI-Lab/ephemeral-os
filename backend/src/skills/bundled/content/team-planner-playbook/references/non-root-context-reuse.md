@@ -99,6 +99,8 @@ Fresh exploration is not justified when:
 - If you scout, ask only for the missing structure that inherited context did not already answer.
 - If the next move would be "re-read the same file because this is a child planner now", stop and reuse the existing brief instead.
 - If the inherited payload names exact benchmark test files, preserve those exact checkout-relative paths in downstream developer and validator payloads. Do not shorten them to `tests/...` aliases or invent exact pytest nodes you do not have.
+- If the parent only gives a benchmark file path plus a prose cluster label, keep `owned_failures`, `reproduction`, `verification`, and validator `verify` at the exact file path until a live artifact proves the exact `::pytest_node` suffix. Child planners should not "helpfully" turn labels like `test_read_json` into guessed retry nodes.
+- Keep benchmark command strings repo-root-relative unless a real child directory is explicitly required. `python -m pytest dask/...` is the default shape; do not prepend guessed absolute hops like `cd /home &&` or `cd /workspace &&` in child-plan payloads.
 
 ---
 

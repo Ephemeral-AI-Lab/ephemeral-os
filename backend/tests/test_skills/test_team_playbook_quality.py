@@ -91,8 +91,10 @@ def test_planner_playbook_gates_share_briefing_on_tool_availability() -> None:
     assert "Only exact existing production paths from live CI may become scout targets." in planner
     assert "if you cannot quote an exact FAIL_TO_PASS node id verbatim from the prompt, use the exact benchmark test file path instead" in planner
     assert "Keep `owned_failures` entries literal checkout-relative prompt ids only" in planner
+    assert "only use a `::pytest_node` suffix in `owned_failures`, `reproduction`, `verification`, or validator `verify` commands when that exact node id was explicitly confirmed" in planner
     assert "Keep command-bearing payload keys canonical and minimal." in planner
     assert "Do not invent ad hoc command fields like `retries` to smuggle in guessed pytest paths." in planner
+    assert "Cluster summaries are not exact retry targets." in planner
     assert "a missing guessed owner file means re-anchor on the nearest exact existing production directory/package or hand the slice to a residual child planner" in planner
     assert "If a proposed first-wave `target_paths` entry still equals a named benchmark test file" in planner
     assert "`ci_query_symbols(...)` results that only point back into the benchmark test files are symptom evidence, not production ownership" in planner
@@ -102,6 +104,8 @@ def test_planner_playbook_gates_share_briefing_on_tool_availability() -> None:
     assert "Do not infer an optional-dependency or environment root cause from cluster size alone." in planner
     assert "Child `owned_files` must contain only confirmed existing checkout-relative paths." in planner
     assert "keep the exact failing test file in `owned_failures`, move the unresolved production guess into `expansion_hint` or `notes`" in planner
+    assert "An expandable child planner is not a readiness barrier for descendant code verification." in planner
+    assert "A broad pytest command over residual test files is proof that the validator is misplaced and must move into the child branch." in planner
     assert "Zero-coverage or wrong-path scout evidence supports only ownership/path-shape conclusions." in planner
     assert "preserve them byte-for-byte downstream" in planner
     assert 'Keep `test_cli.py` as `test_cli.py`, not `test_dask_cli.py`' in planner
@@ -111,6 +115,7 @@ def test_planner_playbook_gates_share_briefing_on_tool_availability() -> None:
         / "src/skills/bundled/content/team-planner-playbook/references/non-root-context-reuse.md"
     )
     assert "If only one residual owner guess still needs confirmation, spend at most one live confirmation step on that unresolved owner and then emit direct lanes for the already-mapped siblings." in non_root
+    assert "keep `owned_failures`, `reproduction`, `verification`, and validator `verify` at the exact file path until a live artifact proves the exact `::pytest_node` suffix" in non_root
 
 
 def test_sweevo_context_treats_missing_share_briefing_as_non_blocking() -> None:
@@ -140,7 +145,9 @@ def test_sweevo_context_treats_missing_share_briefing_as_non_blocking() -> None:
     assert "Do not push that rediscovery work down to the next developer or validator lane." in sweevo
     assert "Preserve exact pytest node ids verbatim in planner payloads." in sweevo
     assert "Do not shorten `test_info_versions` to `test_info`" in sweevo
+    assert "File-level fallback applies to retry commands too." in sweevo
     assert "At any submitted benchmark plan level, keep validators paired with the concrete developer lanes they actually verify." in sweevo
+    assert "An expandable child planner is not a readiness barrier for descendant code verification." in sweevo
     assert "Child benchmark plans should keep validators branch-local and risk-weighted" in sweevo
     assert "instead of emitting one validator per developer or recreating an umbrella validation layer" in sweevo
     assert "The default large-root benchmark shape for this repo is a small set of concrete developer lanes" in sweevo
