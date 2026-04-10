@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 
+from code_intelligence.routing.scope_packets import normalize_scope_paths, scope_paths_overlap
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.daytona_toolkit.ci_integration import (
     get_ci_service,
@@ -18,6 +19,36 @@ logger = logging.getLogger(__name__)
 _MAX_LINES = 500
 _MAX_CHARS = 32_000
 _FILE_READ_DISALLOWED_CALLERS = frozenset({"team_planner"})
+
+
+def _scout_scope_violation(
+    *,
+    path: str,
+    context: ToolExecutionContext,
+) -> ToolResult | None:
+    caller_agent = str(context.metadata.get("agent_name") or "").strip()
+    if caller_agent != "scout":
+        return None
+    scope_packet = context.metadata.get("scope_packet")
+    if not isinstance(scope_packet, dict):
+        return None
+    allowed = normalize_scope_paths(scope_packet.get("scope_paths") or [])
+    if not allowed:
+        return None
+    normalized = normalize_scope_paths([path])
+    candidate = normalized[0] if normalized else str(path).strip().replace("\\", "/")
+    if any(scope_paths_overlap(candidate, scope) for scope in allowed):
+        return None
+    joined = ", ".join(allowed)
+    return ToolResult(
+        output=(
+            "ci_read_file: scout must stay within the assigned `target_paths` "
+            f"({joined}); got {path!r}. If a target path is missing, report zero "
+            "coverage for that missing path instead of widening to nearby files or "
+            "directories."
+        ),
+        is_error=True,
+    )
 
 
 @tool(name="ci_read_file", description="Read file contents from the workspace sandbox with line numbers.", read_only=True)
@@ -56,6 +87,9 @@ async def ci_read_file(
             ),
             is_error=True,
         )
+    scout_scope_err = _scout_scope_violation(path=path, context=context)
+    if scout_scope_err is not None:
+        return scout_scope_err
 
     svc = get_ci_service(context)
 

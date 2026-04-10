@@ -160,6 +160,57 @@ def test_extract_posthook_input_text_repairs_malformed_plan_items_missing_outer_
     }
 
 
+def test_extract_posthook_input_text_repairs_items_when_later_objects_lose_opening_braces():
+    extracted = sweevo_team_runner._extract_posthook_input_text(
+        [
+            ConversationMessage(
+                role="assistant",
+                content=[
+                    TextBlock(
+                        text=(
+                            '{"items": ['
+                            '{"agent_name": "developer", "local_id": "dev_hdf", "kind": "atomic", '
+                            '"payload": {"owned_files": ["dask/dataframe/io/hdf.py"]}}, '
+                            '"agent_name": "team_planner", "local_id": "plan_residual", "kind": "expandable", '
+                            '"payload": {"owned_files": ["dask/dataframe/io/parquet/core.py"]}, '
+                            '"agent_name": "validator", "local_id": "val_hdf", "kind": "atomic", '
+                            '"deps": ["dev_hdf"], "payload": {"verify": ["dask/dataframe/io/tests/test_hdf.py"]}}], '
+                            '"rationale": "Keep the dominant HDF lane isolated."}'
+                        )
+                    )
+                ],
+            )
+        ],
+        "submitted_plan",
+    )
+
+    assert extracted is not None
+    assert json.loads(extracted) == {
+        "items": [
+            {
+                "agent_name": "developer",
+                "local_id": "dev_hdf",
+                "kind": "atomic",
+                "payload": {"owned_files": ["dask/dataframe/io/hdf.py"]},
+            },
+            {
+                "agent_name": "team_planner",
+                "local_id": "plan_residual",
+                "kind": "expandable",
+                "payload": {"owned_files": ["dask/dataframe/io/parquet/core.py"]},
+            },
+            {
+                "agent_name": "validator",
+                "local_id": "val_hdf",
+                "kind": "atomic",
+                "deps": ["dev_hdf"],
+                "payload": {"verify": ["dask/dataframe/io/tests/test_hdf.py"]},
+            },
+        ],
+        "rationale": "Keep the dominant HDF lane isolated.",
+    }
+
+
 def test_extract_matching_json_object_prefers_matching_top_level_plan():
     text = (
         '{"items": [{"local_id": "dev1", "agent_name": "developer", "kind": "atomic", '

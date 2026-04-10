@@ -6,10 +6,10 @@ import asyncio
 import logging
 import re
 import time as time_module
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
-from collections.abc import AsyncIterator
 
 if TYPE_CHECKING:
     from compaction import SessionState
@@ -29,8 +29,9 @@ from message.messages import (
     ConversationMessage,
     ToolResultBlock,
 )
+from engine.runtime.background_dispatch import launch_background_tool as _launch_background_tool_impl
 from engine.runtime.background_tasks import BackgroundTaskManager, TrackedBackgroundTask
-from tools.daytona_toolkit.background import prepare_background_launch
+from engine.runtime.tool_trace import record_tool_trace as _record_tool_trace
 from message.stream_events import (
     AssistantTextDelta,
     AssistantTurnComplete,
@@ -50,18 +51,16 @@ from tools.core.base import (
     ExecutionMetadata,
     ToolExecutionContext,
     ToolRegistry,
-    ToolResult,
     decorate_schemas_for_background,
     run_tool_safely,
 )
+from tools.core.runtime import merge_runtime_metadata as _merge_submission_metadata
 
 logger = logging.getLogger(__name__)
 
 MAX_OUTPUT_LENGTH: int = 2000
 BACKGROUND_IDLE_TIMEOUT: int = 30  # Safety net — LLM should use wait_for_background_task explicitly
 CANCEL_PATTERN = re.compile(r'\[CANCEL:(\S+)(?:\s+reason="([^"]*)")?\]')
-_TOOL_TRACE_LIMIT = 64
-_MERGED_RUNTIME_METADATA_KEYS = ("scope_packet", "coherence_token")
 
 
 @dataclass
@@ -105,67 +104,6 @@ def _ensure_execution_metadata(
     return coerced
 
 
-def _normalize_trace_paths(value: object) -> list[str]:
-    if isinstance(value, str):
-        stripped = value.strip()
-        return [stripped] if stripped else []
-    if isinstance(value, list):
-        out: list[str] = []
-        for item in value:
-            if isinstance(item, str):
-                stripped = item.strip()
-                if stripped:
-                    out.append(stripped)
-        return out
-    return []
-
-
-def _append_trace_values(
-    metadata: ExecutionMetadata | None,
-    key: str,
-    values: list[str],
-) -> None:
-    if metadata is None or not values:
-        return
-    existing = _normalize_trace_paths(metadata.get(key, []))
-    seen = set(existing)
-    for value in values:
-        if value not in seen:
-            existing.append(value)
-            seen.add(value)
-    if len(existing) > _TOOL_TRACE_LIMIT:
-        existing = existing[-_TOOL_TRACE_LIMIT:]
-    metadata[key] = existing
-
-
-def _record_tool_trace(
-    metadata: ExecutionMetadata | None,
-    tool_name: str,
-    tool_input: dict[str, object],
-) -> None:
-    if metadata is None:
-        return
-    if tool_name in {"ci_read_file", "daytona_read_file"}:
-        _append_trace_values(
-            metadata,
-            "_read_paths_this_turn",
-            _normalize_trace_paths(tool_input.get("path")),
-        )
-        return
-    if tool_name != "run_subagent" or tool_input.get("agent_name") != "scout":
-        return
-    scout_input = tool_input.get("input")
-    if not isinstance(scout_input, dict):
-        return
-    current_launches = metadata.get("_scout_launches_this_turn", 0)
-    metadata["_scout_launches_this_turn"] = int(current_launches) + 1 if isinstance(current_launches, (int, float)) else 1
-    _append_trace_values(
-        metadata,
-        "_scout_target_paths_this_turn",
-        _normalize_trace_paths(scout_input.get("target_paths")),
-    )
-
-
 def _consume_tool_budget_or_reject(
     context: QueryContext,
     tool_use_id: str,
@@ -185,6 +123,7 @@ def _consume_tool_budget_or_reject(
         )
     context.tool_calls_used += 1
     return None
+
 
 def _deliver_completed_background_task(
     task: TrackedBackgroundTask,
@@ -320,68 +259,29 @@ def _launch_background_tool(
     The caller is responsible for yielding whichever of the two events is
     non-``None`` so that tests and the router see a single ordered stream.
     """
-    tc = tool_use  # local alias; attribute access below mirrors ToolUseBlock
-    clean_input = {
-        k: v for k, v in tc.input.items() if k not in ("background", "task_note")
-    }
-
-    tool_def = context.tool_registry.get(tc.name)
-    if tool_def is None or getattr(tool_def, "background", "forbidden") == "forbidden":
-        msg = f"Tool '{tc.name}' does not support background execution."
-        return (
-            ToolResultBlock(tool_use_id=tc.id, content=msg, is_error=True),
-            None,
-            ToolExecutionCompleted(tool_name=tc.name, output=msg, is_error=True),
+    async def _execute_in_context(
+        tool_name: str,
+        tool_use_id: str,
+        tool_input: dict[str, object],
+        extra_metadata: ExecutionMetadata | dict[str, Any] | None = None,
+    ) -> ToolResultBlock:
+        return await _execute_tool_call(
+            context,
+            tool_name,
+            tool_use_id,
+            tool_input,
+            extra_metadata=extra_metadata,
         )
 
-    sandbox = context.tool_metadata.daytona_sandbox if context.tool_metadata else None
-    clean_input, kill_callback = prepare_background_launch(
-        tc.name, clean_input, tc.id, sandbox
-    )
-
-    bg_alias = background_manager.next_alias()
-
-    async def _bg_wrapper(
-        ctx: QueryContext,
-        name: str,
-        uid: str,
-        inp: dict[str, object],
-        alias: str = bg_alias,
-    ) -> ToolResult:
-        bg_overrides = ExecutionMetadata(
-            on_progress_line=background_manager.make_progress_callback(alias),
-            background_task_id=alias,
-        )
-        block = await _execute_tool_call(
-            ctx, name, uid, inp, extra_metadata=bg_overrides,
-        )
-        return ToolResult(output=block.content, is_error=block.is_error)
-
-    coro = _bg_wrapper(context, tc.name, tc.id, clean_input)
-    bg_event = background_manager.launch(
-        bg_alias,
-        tc.name,
-        clean_input,
-        coro,
+    return _launch_background_tool_impl(
+        tool_registry=context.tool_registry,
+        tool_metadata=context.tool_metadata,
+        cwd=context.cwd,
+        background_manager=background_manager,
+        tool_use=tool_use,
         task_note=task_note,
-        kill_callback=kill_callback,
-        task_type=getattr(tool_def, "task_type", "agent"),
+        execute_tool_call=_execute_in_context,
     )
-    tool_result = ToolResultBlock(
-        tool_use_id=tc.id,
-        content=(
-            f"[BACKGROUND LAUNCHED] task_id=\"{bg_alias}\" tool={tc.name}\n"
-            f"Use this task_id with "
-            f"check_background_progress(task_id=\"{bg_alias}\"), "
-            f"wait_for_background_task(task_id=\"{bg_alias}\"), or "
-            f"cancel_background_task(task_id=\"{bg_alias}\"). "
-            f"Keep using the current turn on other ready work first; do not "
-            f"wait immediately unless this task is the only blocker left. "
-            f"A [BACKGROUND {bg_alias} COMPLETED] message will arrive automatically."
-        ),
-        is_error=False,
-    )
-    return tool_result, bg_event, None
 
 
 async def _run_query_loop(
@@ -910,6 +810,7 @@ async def _execute_tool_call(
         context.tool_metadata.copy() if context.tool_metadata is not None else ExecutionMetadata()
     )
     metadata.tool_registry = context.tool_registry
+    metadata.tool_id = tool_use_id
     if extra_metadata:
         metadata.update(extra_metadata)
 
@@ -918,13 +819,14 @@ async def _execute_tool_call(
         tool_input,
         ToolExecutionContext(cwd=context.cwd, metadata=metadata),
     )
-    _merge_submission_metadata(
-        original=context.tool_metadata,
-        updated=metadata,
-        result_metadata=result.metadata,
-    )
+    _merge_submission_metadata(original=context.tool_metadata, updated=metadata, result_metadata=result.metadata)
     if not result.is_error:
-        _record_tool_trace(context.tool_metadata, tool_name, tool_input)
+        _record_tool_trace(
+            context.tool_metadata,
+            tool_name,
+            tool_input,
+            tool_use_id=tool_use_id,
+        )
 
     tool_result = ToolResultBlock(
         tool_use_id=tool_use_id,
@@ -944,28 +846,6 @@ async def _execute_tool_call(
             },
         )
     return tool_result
-
-
-def _merge_submission_metadata(
-    *,
-    original: ExecutionMetadata | None,
-    updated: ExecutionMetadata,
-    result_metadata: dict[str, Any] | None = None,
-) -> None:
-    """Propagate selected tool metadata back to the live metadata bag."""
-    if original is None:
-        return
-    for key, value in updated.extras.items():
-        if key.startswith("submitted_") and value is not None:
-            original[key] = value
-    for key in _MERGED_RUNTIME_METADATA_KEYS:
-        value = updated.extras.get(key)
-        if value is None and isinstance(result_metadata, dict):
-            value = result_metadata.get(key)
-        if value is not None:
-            original[key] = value
-
-
 def _has_submission(metadata: ExecutionMetadata | None) -> bool:
     """True when a submit tool has accepted a terminal payload for this run."""
     if metadata is None:

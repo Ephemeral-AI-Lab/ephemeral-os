@@ -76,6 +76,30 @@ async def test_read_file_rejects_team_planner_even_when_file_exists(tmp_path):
     assert "run_subagent(agent_name=\"scout\"" in result.output
 
 
+async def test_read_file_rejects_scout_reads_outside_assigned_target_paths(tmp_path):
+    """Scout file reads must stay within the injected target_paths scope."""
+    inside = tmp_path / "pkg" / "owned.py"
+    outside = tmp_path / "pkg" / "replacement.py"
+    inside.parent.mkdir(parents=True, exist_ok=True)
+    inside.write_text("owned = True\n")
+    outside.write_text("replacement = True\n")
+
+    ctx = _ctx(
+        {
+            "agent_name": "scout",
+            "scope_packet": {"scope_paths": [str(inside)]},
+        }
+    )
+    result = await ci_read_file.execute(
+        ci_read_file.input_model(path=str(outside)),
+        ctx,
+    )
+
+    assert result.is_error
+    assert "scout must stay within the assigned `target_paths`" in result.output
+    assert "report zero coverage" in result.output
+
+
 async def test_read_file_binary_returns_error(tmp_path):
     """Binary file returns is_error=True with 'Binary file' message."""
     f = tmp_path / "bin.dat"

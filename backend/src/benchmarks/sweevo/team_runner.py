@@ -13,7 +13,6 @@ from __future__ import annotations
 
 from collections import Counter
 import json
-import re
 import logging
 from pathlib import Path
 from typing import Any, Callable
@@ -312,7 +311,117 @@ def _find_matching_delimiter(text: str, start: int, open_char: str, close_char: 
     return -1
 
 
-_BROKEN_PLAN_ITEM_SPLIT = re.compile(r",\s*(?=\{\"(?:local_id|agent_name)\")")
+_PLAN_ITEM_PRIMARY_KEYS = frozenset({"local_id", "agent_name"})
+
+
+def _skip_json_whitespace(text: str, start: int) -> int:
+    idx = start
+    while idx < len(text) and text[idx].isspace():
+        idx += 1
+    return idx
+
+
+def _parse_json_object_field(
+    text: str,
+    start: int,
+    decoder: json.JSONDecoder,
+) -> tuple[str, Any, int] | None:
+    idx = _skip_json_whitespace(text, start)
+    try:
+        key, key_end = decoder.raw_decode(text, idx)
+    except ValueError:
+        return None
+    if not isinstance(key, str):
+        return None
+    colon = _skip_json_whitespace(text, key_end)
+    if colon >= len(text) or text[colon] != ":":
+        return None
+    value_start = _skip_json_whitespace(text, colon + 1)
+    try:
+        value, value_end = decoder.raw_decode(text, value_start)
+    except ValueError:
+        return None
+    return key, value, value_end
+
+
+def _peek_plan_item_start_key(
+    text: str,
+    start: int,
+    decoder: json.JSONDecoder,
+) -> tuple[str | None, bool]:
+    idx = _skip_json_whitespace(text, start)
+    saw_open_brace = False
+    if idx < len(text) and text[idx] == "{":
+        saw_open_brace = True
+        idx = _skip_json_whitespace(text, idx + 1)
+    parsed = _parse_json_object_field(text, idx, decoder)
+    if parsed is None:
+        return None, saw_open_brace
+    key, _, _ = parsed
+    if key not in _PLAN_ITEM_PRIMARY_KEYS:
+        return None, saw_open_brace
+    return key, saw_open_brace
+
+
+def _parse_repaired_plan_item(
+    text: str,
+    start: int,
+    decoder: json.JSONDecoder,
+) -> tuple[dict[str, Any], int] | None:
+    idx = _skip_json_whitespace(text, start)
+    if idx >= len(text):
+        return None
+
+    try:
+        payload, end = decoder.raw_decode(text, idx)
+    except ValueError:
+        payload = None
+    if isinstance(payload, dict):
+        return payload, end
+
+    saw_open_brace = False
+    if text[idx] == "{":
+        saw_open_brace = True
+        idx = _skip_json_whitespace(text, idx + 1)
+
+    item: dict[str, Any] = {}
+    saw_non_primary_key = False
+    while idx < len(text):
+        while idx < len(text) and text[idx] == "}":
+            idx += 1
+            idx = _skip_json_whitespace(text, idx)
+        parsed = _parse_json_object_field(text, idx, decoder)
+        if parsed is None:
+            break
+        key, value, value_end = parsed
+        item[key] = value
+        if key not in _PLAN_ITEM_PRIMARY_KEYS:
+            saw_non_primary_key = True
+
+        idx = _skip_json_whitespace(text, value_end)
+        while idx < len(text) and text[idx] == "}":
+            idx += 1
+            idx = _skip_json_whitespace(text, idx)
+            if saw_open_brace:
+                return item, idx
+
+        if idx >= len(text) or text[idx] != ",":
+            break
+
+        next_key, next_has_open_brace = _peek_plan_item_start_key(text, idx + 1, decoder)
+        should_split = (
+            next_key in _PLAN_ITEM_PRIMARY_KEYS
+            and bool(item)
+            and (next_has_open_brace or saw_non_primary_key or item.keys() >= _PLAN_ITEM_PRIMARY_KEYS)
+        )
+        idx += 1
+        if should_split:
+            break
+        idx = _skip_json_whitespace(text, idx)
+
+    if not item:
+        return None
+    return item, idx
 
 
 def _repair_submitted_plan_payload(text: str) -> dict[str, Any] | None:
@@ -328,25 +437,23 @@ def _repair_submitted_plan_payload(text: str) -> dict[str, Any] | None:
 
     decoder = json.JSONDecoder()
     raw_items = text[array_start + 1 : array_end]
-    item_chunks = [chunk.strip() for chunk in _BROKEN_PLAN_ITEM_SPLIT.split(raw_items) if chunk.strip()]
-    if not item_chunks:
-        return None
 
     items: list[dict[str, Any]] = []
-    for chunk in item_chunks:
-        candidates = list(dict.fromkeys([chunk, chunk + "}"]))
-        parsed_item: dict[str, Any] | None = None
-        for candidate in candidates:
-            try:
-                payload, end = decoder.raw_decode(candidate)
-            except ValueError:
-                continue
-            if isinstance(payload, dict) and end == len(candidate):
-                parsed_item = payload
-                break
+    idx = 0
+    while True:
+        idx = _skip_json_whitespace(raw_items, idx)
+        while idx < len(raw_items) and raw_items[idx] in ",}":
+            idx += 1
+            idx = _skip_json_whitespace(raw_items, idx)
+        if idx >= len(raw_items):
+            break
+        parsed_item = _parse_repaired_plan_item(raw_items, idx, decoder)
         if parsed_item is None:
             return None
-        items.append(parsed_item)
+        item, idx = parsed_item
+        items.append(item)
+    if not items:
+        return None
 
     repaired: dict[str, Any] = {"items": items}
     rationale_key = text.find('"rationale"', array_end)

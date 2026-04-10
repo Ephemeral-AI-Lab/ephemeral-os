@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from engine.core.query import _merge_submission_metadata
 from tools.core.base import ToolExecutionContext
+from tools.core.runtime import ExecutionMetadata
 from tools.ci_toolkit.query_tools import (
     _svc_or_error,
     ci_status,
@@ -151,6 +154,101 @@ async def test_ci_scope_status_defaults_to_owned_scope_paths_when_unspecified():
     assert data["scope_paths"] == ["pydantic/networks.py"]
 
 
+async def test_ci_scope_status_rejects_scout_caller():
+    svc = MagicMock()
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        result = await ci_scope_status.execute(
+            ci_scope_status.input_model(scope_paths=["src"]),
+            _ctx({"agent_name": "scout", "ci_service": svc}),
+        )
+
+    assert result.is_error
+    assert "scout is read-only and may use only" in result.output
+    assert "ci_scope_status" in result.output
+
+
+async def test_workspace_structure_requires_scope_status_first_on_benchmark_root_planner(monkeypatch):
+    svc = MagicMock()
+    svc.symbol_index = MagicMock()
+    team_run = SimpleNamespace(
+        root_work_item_id="ROOT",
+        dispatcher=SimpleNamespace(
+            graph={
+                "ROOT": SimpleNamespace(
+                    payload={"fail_to_pass": ["pkg/tests/test_api.py::test_one"]}
+                )
+            }
+        ),
+    )
+    monkeypatch.setattr("team.runtime.registry.get", lambda team_run_id: team_run if team_run_id == "TR1" else None)
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        result = await ci_workspace_structure.execute(
+            ci_workspace_structure.input_model(path="pkg"),
+            _ctx(
+                {
+                    "agent_name": "team_planner",
+                    "team_run_id": "TR1",
+                    "work_item_id": "ROOT",
+                    "ci_service": svc,
+                }
+            ),
+        )
+
+    assert result.is_error
+    assert "must call `ci_scope_status(scope_paths=[...])` before other live CI queries" in result.output
+
+
+async def test_ci_query_symbols_rejects_test_only_hits_for_benchmark_root_planner(monkeypatch):
+    svc = MagicMock()
+    svc.is_initialized = True
+    svc.query_symbols.return_value = [
+        SimpleNamespace(
+            name="backends",
+            kind=SimpleNamespace(value="variable"),
+            file_path="pkg/tests/test_api.py",
+            line=10,
+            signature="backends = ...",
+        )
+    ]
+    team_run = SimpleNamespace(
+        root_work_item_id="ROOT",
+        dispatcher=SimpleNamespace(
+            graph={
+                "ROOT": SimpleNamespace(
+                    payload={"fail_to_pass": ["pkg/tests/test_api.py::test_one"]}
+                )
+            }
+        ),
+    )
+    monkeypatch.setattr("team.runtime.registry.get", lambda team_run_id: team_run if team_run_id == "TR2" else None)
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        result = await ci_query_symbols.execute(
+            ci_query_symbols.input_model(query="backends"),
+            _ctx(
+                {
+                    "agent_name": "team_planner",
+                    "team_run_id": "TR2",
+                    "work_item_id": "ROOT",
+                    "ci_service": svc,
+                    "_benchmark_root_scope_anchor_done": True,
+                }
+            ),
+        )
+
+    assert result.is_error
+    assert "matches landed only inside already-named benchmark test files" in result.output
+
+
+async def test_merge_submission_metadata_propagates_benchmark_root_scope_anchor_flag():
+    original = ExecutionMetadata()
+    updated = ExecutionMetadata()
+    updated["_benchmark_root_scope_anchor_done"] = True
+
+    _merge_submission_metadata(original=original, updated=updated, result_metadata=None)
+
+    assert original["_benchmark_root_scope_anchor_done"] is True
+
+
 # ---------------------------------------------------------------------------
 # ci_workspace_structure
 # ---------------------------------------------------------------------------
@@ -235,6 +333,47 @@ async def test_workspace_structure_filters_by_path():
     assert "tests/c.py" not in result.output
 
 
+async def test_workspace_structure_rejects_scout_listing_outside_assigned_scope():
+    svc = MagicMock()
+    svc.symbol_index = MagicMock()
+
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        result = await ci_workspace_structure.execute(
+            ci_workspace_structure.input_model(path="src/replacement"),
+            _ctx(
+                {
+                    "agent_name": "scout",
+                    "ci_service": svc,
+                    "scope_packet": {"scope_paths": ["src/owned.py"]},
+                }
+            ),
+        )
+
+    assert result.is_error
+    assert "scout must stay within the assigned `target_paths`" in result.output
+    assert "report zero coverage" in result.output
+
+
+async def test_workspace_structure_rejects_scout_root_listing_when_scope_is_concrete():
+    svc = MagicMock()
+    svc.symbol_index = MagicMock()
+
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        result = await ci_workspace_structure.execute(
+            ci_workspace_structure.input_model(),
+            _ctx(
+                {
+                    "agent_name": "scout",
+                    "ci_service": svc,
+                    "scope_packet": {"scope_paths": ["src/owned.py"]},
+                }
+            ),
+        )
+
+    assert result.is_error
+    assert "may not list the workspace root" in result.output
+
+
 async def test_workspace_structure_non_symbol_index_returns_empty():
     """When symbol_index is not a SymbolIndex instance, returns 'No files indexed'."""
     import threading
@@ -267,6 +406,19 @@ async def test_query_symbols_no_service():
         )
     data = json.loads(result.output)
     assert data["status"] == "unavailable"
+
+
+async def test_query_symbols_rejects_scout_caller():
+    svc = MagicMock()
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        result = await ci_query_symbols.execute(
+            ci_query_symbols.input_model(query="foo"),
+            _ctx({"agent_name": "scout", "ci_service": svc}),
+        )
+
+    assert result.is_error
+    assert "scout is read-only and may use only" in result.output
+    assert "ci_query_symbols" in result.output
 
 
 async def test_query_symbols_no_results():

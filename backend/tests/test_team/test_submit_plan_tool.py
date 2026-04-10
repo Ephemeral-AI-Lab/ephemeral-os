@@ -238,3 +238,53 @@ async def test_submit_plan_accepts_exact_benchmark_refs_against_root_prompt(monk
 
     assert not res.is_error
     assert isinstance(ctx.metadata["submitted_plan"], Plan)
+
+
+@pytest.mark.asyncio
+async def test_submit_plan_suggests_exact_file_path_for_invented_node_on_real_benchmark_file(
+    monkeypatch,
+):
+    tool = SubmitPlanTool()
+    ctx = _ctx()
+    ctx.metadata["team_run_id"] = "TR3"
+
+    root = SimpleNamespace(
+        payload={
+            "fail_to_pass": [
+                "dask/dataframe/io/tests/test_hdf.py::test_read_hdf",
+            ],
+            "pass_to_pass": [
+                "dask/dataframe/io/tests/test_hdf.py::test_to_hdf",
+            ],
+        }
+    )
+    fake_team_run = SimpleNamespace(
+        root_work_item_id="ROOT",
+        dispatcher=SimpleNamespace(graph={"ROOT": root}),
+    )
+
+    from team.runtime import registry as runtime_registry
+
+    monkeypatch.setattr(runtime_registry, "get", lambda team_run_id: fake_team_run if team_run_id == "TR3" else None)
+
+    args = SubmitPlanInput.model_validate(
+        {
+            "items": [
+                {
+                    "agent_name": "developer",
+                    "local_id": "dev_hdf",
+                    "payload": {
+                        "owned_failures": [
+                            "dask/dataframe/io/tests/test_hdf.py::test_made_up_node"
+                        ],
+                    },
+                }
+            ]
+        }
+    )
+
+    res = await tool.execute(args, ctx)
+
+    assert res.is_error
+    assert "benchmark reference must use the exact prompt path/id" in res.output
+    assert "expected 'dask/dataframe/io/tests/test_hdf.py'" in res.output

@@ -146,6 +146,15 @@ class BaseTool(ABC):
         del arguments
         return False
 
+    def background_preflight(
+        self,
+        arguments: BaseModel,
+        context: ToolExecutionContext,
+    ) -> ToolResult | None:
+        """Optionally reject a background launch before the task is spawned."""
+        del arguments, context
+        return None
+
     def output_schema(self) -> dict[str, Any] | None:
         """Return the output JSON Schema, parsed from the class docstring.
 

@@ -195,6 +195,16 @@ def tool(
             def is_read_only(self, arguments: BaseModel) -> bool:
                 return read_only
 
+            def background_preflight(
+                self,
+                arguments: BaseModel,
+                context: ToolExecutionContext,
+            ) -> ToolResult | None:
+                hook = getattr(self, "_background_preflight", None)
+                if callable(hook):
+                    return hook(arguments, context)
+                return None
+
             def output_schema(self) -> dict[str, Any] | None:
                 return output
 

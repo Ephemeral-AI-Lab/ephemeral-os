@@ -53,6 +53,8 @@ def test_planner_playbook_gates_share_briefing_on_tool_availability() -> None:
     assert 'Do not claim "class X is missing from the codebase" from planner-side symbol misses alone.' in planner
     assert "On fresh benchmark root turns, do **not** open with `atlas_lookup`." in planner
     assert "on fresh benchmark roots, use `ci_scope_status(...)` and fresh scouts before any atlas lookup" in planner
+    assert "load `exploration-script` before the first non-reference tool call" in planner
+    assert "`WAIT_REQUIRES_PROGRESS_CHECK`, duplicate-scout rejection, or a budget warning are stop-and-plan signals" in planner
     assert 'If you plan to join `task_id="all"`, inspect each fresh scout in that batch first' in planner
     assert 'Never call `run_subagent` with `agent_name="team_planner"`' in planner
     assert "duplicate-scout rejection over an already mapped path is terminal planning evidence" in planner
@@ -65,6 +67,14 @@ def test_planner_playbook_gates_share_briefing_on_tool_availability() -> None:
     assert "A validator-only extracted payload means the JSON boundaries are broken." in planner
     assert "Every entry in `briefings` must be a complete object with a stable `name`, a valid `source`, and the matching payload field for that source." in planner
     assert 'For `run_subagent(agent_name="scout", ...)`, supply exactly one channel' in planner
+    assert "keep at most two root validators" in planner
+    assert "The global validator cap still applies inside child plans." in planner
+    assert "Do not emit one validator per developer when that would exceed the cap." in planner
+    assert "if you cannot quote an exact FAIL_TO_PASS node id verbatim from the prompt, use the exact benchmark test file path instead" in planner
+    assert "a missing guessed owner file means re-anchor on the nearest exact existing production directory/package or hand the slice to a residual child planner" in planner
+    assert "`ci_query_symbols(...)` results that only point back into the benchmark test files are symptom evidence, not production ownership" in planner
+    assert "Child `owned_files` must contain only confirmed existing checkout-relative paths." in planner
+    assert "keep the exact failing test file in `owned_failures`, move the unresolved production guess into `expansion_hint` or `notes`" in planner
 
 
 def test_sweevo_context_treats_missing_share_briefing_as_non_blocking() -> None:
@@ -88,12 +98,26 @@ def test_sweevo_context_treats_missing_share_briefing_as_non_blocking() -> None:
     assert "Do not push that rediscovery work down to the next developer or validator lane." in sweevo
     assert "Preserve exact pytest node ids verbatim in planner payloads." in sweevo
     assert "Do not shorten `test_info_versions` to `test_info`" in sweevo
+    assert "At the submitted benchmark root, keep at most two validators total." in sweevo
+    assert "Child benchmark plans inherit that same cap." in sweevo
+    assert "instead of emitting a third validator" in sweevo
+    assert "If a guessed production owner file turns out to be missing, re-anchor on the nearest exact existing production directory/package path or park that cluster behind a child planner." in sweevo
+    assert "`owned_files` is not a hypothesis bucket." in sweevo
+    assert "keep missing guessed owners out of `owned_files`" in sweevo
+    assert "Root planner symbol hits that only land in benchmark test files are not ownership evidence." in sweevo
     assert "if a validator or inherited note cites a missing alias path such as `pyarrow.py` while live CI resolves the surface to `arrow.py`" in sweevo
     assert 'Do not "repair" the benchmark by editing the unowned test file' in sweevo
     assert "mentioned only in `owned_failures`, `verify`, or a failing command is not test ownership" in sweevo
+    assert "the developer should report `scope_mismatch` with the exact missing import/export and likely owner path" in sweevo
     assert 'A developer claim that a named benchmark test now encodes "old behavior" after a contradicted patch is not enough to open a test-edit lane.' in sweevo
     assert "do not re-read the test body or shared parameter-plumbing files to author a patch recipe" in sweevo
     assert "Scout launches must satisfy the literal runtime schema" in sweevo
+
+
+def test_scout_playbook_keeps_missing_file_targets_missing() -> None:
+    scout = _read(_BACKEND_ROOT / "src/skills/bundled/content/team-scout-playbook/SKILL.md")
+    assert "If a file target is missing, keep that exact path missing." in scout
+    assert "do not inspect nearby replacements such as `parquet/core.py` for a missing `parquet.py`" in scout
 
 
 def test_replanner_playbook_requires_exact_existing_paths() -> None:
@@ -148,8 +172,10 @@ def test_developer_playbook_anchors_import_failures_to_named_pytest_surface() ->
     assert "Rejected mutating shell probes are a stop sign." in developer
     assert "patch the last merge/update function that overwrites the public field" in developer
     assert "If the first failing pytest surface is inside an unowned test file" in developer
+    assert "When the first failing import/collection surface points to a missing export/module in a different production file than your `owned_files`, report `scope_mismatch`" in developer
     assert "Named-node mismatches are not permission to rewrite tests." in developer
     assert "`owned_failures` is not a write allowlist." in developer
+    assert "If the first reproducible failure names an unowned test file and the missing import/export lives outside your assigned production files, stop with `scope_mismatch`" in developer
     assert "A failing test path in `owned_failures`, `verify`, or reproduction output is evidence, not write permission." in developer
     assert 'Do not claim the test encodes "old behavior", "stale expectations", or needs a test-only follow-up' in developer
     assert "Do not synthesize hybrid public strings to satisfy competing tests." in developer

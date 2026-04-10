@@ -17,6 +17,12 @@ from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass, field, replace
 from typing import Any, ClassVar
 
+MERGED_RUNTIME_METADATA_KEYS: tuple[str, ...] = (
+    "scope_packet",
+    "coherence_token",
+    "_benchmark_root_scope_anchor_done",
+)
+
 
 @dataclass
 class ExecutionMetadata:
@@ -165,3 +171,23 @@ class ExecutionMetadata:
         for key, value in overrides.items():
             new[key] = value
         return new
+
+
+def merge_runtime_metadata(
+    *,
+    original: ExecutionMetadata | None,
+    updated: ExecutionMetadata,
+    result_metadata: dict[str, Any] | None = None,
+) -> None:
+    """Propagate selected tool metadata back to the live metadata bag."""
+    if original is None:
+        return
+    for key, value in updated.extras.items():
+        if key.startswith("submitted_") and value is not None:
+            original[key] = value
+    for key in MERGED_RUNTIME_METADATA_KEYS:
+        value = updated.extras.get(key)
+        if value is None and isinstance(result_metadata, dict):
+            value = result_metadata.get(key)
+        if value is not None:
+            original[key] = value

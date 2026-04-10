@@ -25,7 +25,7 @@ import asyncio
 import json
 import logging
 import time
-from dataclasses import asdict, is_dataclass
+from dataclasses import asdict, dataclass, is_dataclass
 from typing import Any
 from uuid import uuid4
 
@@ -62,6 +62,13 @@ _PEEK_TOTAL_CHAR_CAP = 2048
 _MAX_SCOUT_LAUNCHES_PER_TURN = 8
 
 
+@dataclass
+class _ValidatedRunSubagentRequest:
+    sub_def: Any
+    subagent_scope_packet: dict[str, Any] | None
+    subagent_scope_paths: list[str]
+
+
 def _truncate(s: str) -> str:
     s = s.replace("\n", " ").strip()
     if len(s) > _PEEK_BLOCK_CHAR_CAP:
@@ -94,7 +101,23 @@ def _normalize_target_paths(value: Any) -> list[str]:
 
 def _already_covered_scout_targets(context: ToolExecutionContext, target_paths: list[str]) -> list[str]:
     metadata = context.metadata
-    prior_scouts = _normalize_target_paths(metadata.get("_scout_target_paths_this_turn", []))
+    current_tool_id = str(getattr(metadata, "tool_id", None) or metadata.get("tool_id") or "").strip()
+    trace_targets = metadata.get("_scout_trace_targets_by_tool_use_id", {})
+    self_targets: list[str] = []
+    if isinstance(trace_targets, dict) and current_tool_id:
+        self_targets = _normalize_target_paths(trace_targets.get(current_tool_id))
+    prior_scouts: list[str] = []
+    if isinstance(trace_targets, dict):
+        for tool_id, raw_paths in trace_targets.items():
+            if current_tool_id and str(tool_id).strip() == current_tool_id:
+                continue
+            prior_scouts.extend(_normalize_target_paths(raw_paths))
+    if not prior_scouts:
+        prior_scouts = [
+            path
+            for path in _normalize_target_paths(metadata.get("_scout_target_paths_this_turn", []))
+            if path not in self_targets
+        ]
     overlaps: set[str] = set()
     for target in target_paths:
         for prior in prior_scouts:
@@ -134,6 +157,239 @@ def _scout_fanout_admission_error(
         + ("scope" if not reasons else f"scope ({reasons})")
         + ". Reuse the current evidence, inspect progress on existing scouts, or emit "
         "the plan instead of opening another overlapping or hot scout lane."
+    )
+
+
+def _benchmark_root_payload(context: ToolExecutionContext) -> dict[str, Any] | None:
+    agent_name = str(context.metadata.get("agent_name") or "").strip()
+    if agent_name != "team_planner":
+        return None
+    team_run_id = str(context.metadata.get("team_run_id") or "").strip()
+    work_item_id = str(context.metadata.get("work_item_id") or "").strip()
+    if not team_run_id or not work_item_id:
+        return None
+    try:
+        from team.runtime.registry import get as get_team_run
+    except Exception:
+        return None
+    try:
+        team_run = get_team_run(team_run_id)
+    except Exception:
+        return None
+    if team_run is None or work_item_id != str(getattr(team_run, "root_work_item_id", "") or ""):
+        return None
+    graph = getattr(getattr(team_run, "dispatcher", None), "graph", None)
+    if not isinstance(graph, dict):
+        return None
+    root_item = graph.get(work_item_id)
+    payload = getattr(root_item, "payload", None)
+    if not isinstance(payload, dict):
+        return None
+    has_benchmark_targets = bool(payload.get("fail_to_pass") or payload.get("pass_to_pass"))
+    return payload if has_benchmark_targets else None
+
+
+def _benchmark_test_files(payload: dict[str, Any]) -> set[str]:
+    refs: set[str] = set()
+    for key in ("fail_to_pass", "pass_to_pass"):
+        raw = payload.get(key) or []
+        if not isinstance(raw, list):
+            continue
+        for item in raw:
+            if not isinstance(item, str):
+                continue
+            value = item.strip()
+            if value:
+                refs.add(value.split("::", 1)[0].strip())
+    return refs
+
+
+def _benchmark_root_scout_policy_error(
+    context: ToolExecutionContext,
+    target_paths: list[str],
+) -> str | None:
+    payload = _benchmark_root_payload(context)
+    if payload is None:
+        return None
+    if not context.metadata.get("_benchmark_root_scope_anchor_done"):
+        return (
+            "run_subagent: fresh benchmark-root planners must call "
+            "`ci_scope_status(scope_paths=[...])` before launching scouts. "
+            "Anchor the live owner surface first, then open scout lanes."
+        )
+    benchmark_files = _benchmark_test_files(payload)
+    normalized_targets = {path.split("::", 1)[0].strip() for path in target_paths}
+    if benchmark_files and any(path in benchmark_files for path in normalized_targets):
+        return (
+            "run_subagent: fresh benchmark-root scout waves must target likely production owner "
+            "files or directories first, not already-named benchmark test files. Re-anchor on the "
+            "corresponding production surface or an exact existing candidate directory."
+        )
+    prior_launches_raw = context.metadata.get("_scout_launches_this_turn", 0)
+    prior_launches = int(prior_launches_raw) if isinstance(prior_launches_raw, (int, float)) else 0
+    current_tool_id = str(getattr(context.metadata, "tool_id", None) or context.metadata.get("tool_id") or "").strip()
+    if current_tool_id:
+        launch_order_raw = context.metadata.get("_scout_launch_order_by_tool_use_id", {})
+        if isinstance(launch_order_raw, dict):
+            current_launch_order = launch_order_raw.get(current_tool_id)
+            if isinstance(current_launch_order, (int, float)) and int(current_launch_order) <= 2:
+                return None
+    bg_manager = context.metadata.get("background_task_manager")
+    completed_scout_seen = False
+    if bg_manager is not None and hasattr(bg_manager, "iter_all"):
+        try:
+            completed_scout_seen = any(
+                getattr(task, "tool_name", "") == "run_subagent"
+                and str(getattr(task, "status", "")).lower() != "running"
+                for task in bg_manager.iter_all()
+            )
+        except Exception:
+            completed_scout_seen = False
+    if prior_launches >= 2 and not completed_scout_seen:
+        return (
+            "run_subagent: fresh benchmark-root first scout wave is capped at 2 lanes "
+            "(dominant production owner plus one residual surface). Inspect progress on the "
+            "current wave or wait for a completed scout before opening another lane."
+        )
+    return None
+
+
+def _validate_run_subagent_request(
+    *,
+    agent_name: str,
+    prompt: str | None,
+    input: dict[str, Any] | None,
+    context: ToolExecutionContext,
+) -> ToolResult | _ValidatedRunSubagentRequest:
+    from agents import get_definition
+
+    parent_cfg = context.metadata.session_config
+    if parent_cfg is None:
+        return ToolResult(
+            output="run_subagent: missing session_config in execution context",
+            is_error=True,
+        )
+
+    # XOR validation: exactly one of prompt / input must be supplied.
+    if (prompt is None) == (input is None):
+        return ToolResult(
+            output=(
+                "run_subagent: must supply exactly one of `prompt` (str) or "
+                "`input` (dict). For team planners, prefer "
+                "`agent_name=\"scout\"` with `input={\"target_paths\": [...]}`; "
+                "do not retry with `prompt=null`."
+            ),
+            is_error=True,
+        )
+
+    caller_agent = str(context.metadata.get("agent_name") or "").strip()
+    if caller_agent in SCOUT_ONLY_CALLERS and agent_name != "scout":
+        return ToolResult(
+            output=(
+                f"run_subagent: caller '{caller_agent}' may dispatch only 'scout', "
+                f"got '{agent_name}'. Use "
+                "`run_subagent(agent_name=\"scout\", input={\"target_paths\": [...]})` "
+                "for bounded exploration only. If you need runtime execution, "
+                "coding, or validation, emit `developer` / `validator` WorkItems "
+                "in the Plan instead of trying to spawn them here. This is "
+                "terminal evidence for planners: the next action must be a "
+                "bounded scout or a submitted Plan."
+            ),
+            is_error=True,
+        )
+
+    sub_def = get_definition(agent_name)
+    if sub_def is None:
+        return ToolResult(
+            output=f"run_subagent: agent '{agent_name}' is not registered.",
+            is_error=True,
+        )
+    if getattr(sub_def, "agent_type", "agent") != "subagent":
+        return ToolResult(
+            output=(
+                f"run_subagent: agent '{agent_name}' is not a subagent "
+                f"(agent_type={getattr(sub_def, 'agent_type', 'agent')!r}); "
+                "only subagent-typed agents may be dispatched here. "
+                "This is terminal evidence for planners: do not retry or wait "
+                "on this background task. If you need coding, validation, or "
+                "runtime test evidence, emit `developer` / `validator` "
+                "WorkItems in the Plan instead of calling `run_subagent`."
+            ),
+            is_error=True,
+        )
+    if not bool(getattr(sub_def, "dispatchable_via_run_subagent", False)):
+        return ToolResult(
+            output=(
+                f"run_subagent: agent '{agent_name}' is an internal subagent and "
+                "may not be dispatched via `run_subagent`. Use a dispatchable "
+                "worker subagent such as `scout`, or emit `developer` / "
+                "`validator` WorkItems in the Plan."
+            ),
+            is_error=True,
+        )
+
+    subagent_scope_packet: dict[str, Any] | None = None
+    subagent_scope_paths: list[str] = []
+    if agent_name == "scout":
+        if prompt is not None:
+            return ToolResult(
+                output=(
+                    "run_subagent: scout requires structured "
+                    "`input={\"target_paths\": [...]}`; prompt-mode scout "
+                    "calls are rejected. If you need to run tests, shell "
+                    "commands, or other execution work, emit `developer` / "
+                    "`validator` WorkItems instead."
+                ),
+                is_error=True,
+            )
+        target_paths = input.get("target_paths") if isinstance(input, dict) else None
+        valid_paths = _normalize_target_paths(target_paths)
+        if not valid_paths:
+            return ToolResult(
+                output=(
+                    "run_subagent: scout requires non-empty "
+                    "`input={\"target_paths\": [...]}`. Scout is for path-bounded "
+                    "read-only exploration only; do not use it as a proxy for "
+                    "test execution, shell commands, or validation."
+                ),
+                is_error=True,
+            )
+        covered_paths = _already_covered_scout_targets(context, valid_paths)
+        if covered_paths:
+            return ToolResult(
+                output=(
+                    "run_subagent: scout target_paths overlap a scope already covered in this turn "
+                    f"({', '.join(covered_paths)}). Reuse the file reads or prior scout "
+                    "you already have and submit the plan instead of re-exploring the same area."
+                ),
+                is_error=True,
+            )
+        benchmark_policy_err = _benchmark_root_scout_policy_error(context, valid_paths)
+        if benchmark_policy_err is not None:
+            return ToolResult(output=benchmark_policy_err, is_error=True)
+        subagent_scope_paths = valid_paths
+        subagent_scope_packet, fanout_err = _scout_fanout_admission_error(context, valid_paths)
+        if fanout_err is not None:
+            return ToolResult(
+                output=fanout_err,
+                is_error=True,
+                metadata={"scope_packet": subagent_scope_packet or {}, "conflict": True},
+            )
+    elif isinstance(input, dict):
+        subagent_scope_paths = scope_paths_from_payload(input)
+    else:
+        baseline_packet = context.metadata.get("scope_packet")
+        if isinstance(baseline_packet, dict):
+            subagent_scope_paths = [
+                str(item)
+                for item in (baseline_packet.get("scope_paths") or [])
+                if isinstance(item, str)
+            ]
+
+    return _ValidatedRunSubagentRequest(
+        sub_def=sub_def,
+        subagent_scope_packet=subagent_scope_packet,
+        subagent_scope_paths=subagent_scope_paths,
     )
 
 
@@ -479,123 +735,17 @@ async def run_subagent(
     parent_task_id = task_id if isinstance(task_id, str) else None
     parent_team_run_id = context.metadata.get("team_run_id")
 
-    if parent_cfg is None:
-        return ToolResult(
-            output="run_subagent: missing session_config in execution context",
-            is_error=True,
-        )
-
-    # XOR validation: exactly one of prompt / input must be supplied.
-    if (prompt is None) == (input is None):
-        return ToolResult(
-            output=(
-                "run_subagent: must supply exactly one of `prompt` (str) or "
-                "`input` (dict). For team planners, prefer "
-                "`agent_name=\"scout\"` with `input={\"target_paths\": [...]}`; "
-                "do not retry with `prompt=null`."
-            ),
-            is_error=True,
-        )
-
-    caller_agent = str(context.metadata.get("agent_name") or "").strip()
-    if caller_agent in SCOUT_ONLY_CALLERS and agent_name != "scout":
-        return ToolResult(
-            output=(
-                f"run_subagent: caller '{caller_agent}' may dispatch only 'scout', "
-                f"got '{agent_name}'. Use "
-                "`run_subagent(agent_name=\"scout\", input={\"target_paths\": [...]})` "
-                "for bounded exploration only. If you need runtime execution, "
-                "coding, or validation, emit `developer` / `validator` WorkItems "
-                "in the Plan instead of trying to spawn them here. This is "
-                "terminal evidence for planners: the next action must be a "
-                "bounded scout or a submitted Plan."
-            ),
-            is_error=True,
-        )
-
-    sub_def = get_definition(agent_name)
-    if sub_def is None:
-        return ToolResult(
-            output=f"run_subagent: agent '{agent_name}' is not registered.",
-            is_error=True,
-        )
-    # Construction-time recursion prevention is enforced by AgentDefinition's
-    # post-init (subagent type ⇒ can_spawn_subagents=False). The runtime gate
-    # below is the second line of defence: only subagent-typed targets are
-    # dispatchable through this tool, period.
-    if getattr(sub_def, "agent_type", "agent") != "subagent":
-        return ToolResult(
-            output=(
-                f"run_subagent: agent '{agent_name}' is not a subagent "
-                f"(agent_type={getattr(sub_def, 'agent_type', 'agent')!r}); "
-                "only subagent-typed agents may be dispatched here. "
-                "This is terminal evidence for planners: do not retry or wait "
-                "on this background task. If you need coding, validation, or "
-                "runtime test evidence, emit `developer` / `validator` "
-                "WorkItems in the Plan instead of calling `run_subagent`."
-            ),
-            is_error=True,
-        )
-    if not bool(getattr(sub_def, "dispatchable_via_run_subagent", False)):
-        return ToolResult(
-            output=(
-                f"run_subagent: agent '{agent_name}' is an internal subagent and "
-                "may not be dispatched via `run_subagent`. Use a dispatchable "
-                "worker subagent such as `scout`, or emit `developer` / "
-                "`validator` WorkItems in the Plan."
-            ),
-            is_error=True,
-        )
-    subagent_scope_packet: dict[str, Any] | None = None
-    subagent_scope_paths: list[str] = []
-    if agent_name == "scout":
-        if prompt is not None:
-            return ToolResult(
-                output=(
-                    "run_subagent: scout requires structured "
-                    "`input={\"target_paths\": [...]}`; prompt-mode scout "
-                    "calls are rejected. If you need to run tests, shell "
-                    "commands, or other execution work, emit `developer` / "
-                    "`validator` WorkItems instead."
-                ),
-                is_error=True,
-            )
-        target_paths = input.get("target_paths") if isinstance(input, dict) else None
-        valid_paths = _normalize_target_paths(target_paths)
-        if not valid_paths:
-            return ToolResult(
-                output=(
-                    "run_subagent: scout requires non-empty "
-                    "`input={\"target_paths\": [...]}`. Scout is for path-bounded "
-                    "read-only exploration only; do not use it as a proxy for "
-                    "test execution, shell commands, or validation."
-                ),
-                is_error=True,
-            )
-        covered_paths = _already_covered_scout_targets(context, valid_paths)
-        if covered_paths:
-            return ToolResult(
-                output=(
-                    "run_subagent: scout target_paths overlap a scope already covered in this turn "
-                    f"({', '.join(covered_paths)}). Reuse the file reads or prior scout "
-                    "you already have and submit the plan instead of re-exploring the same area."
-                ),
-                is_error=True,
-            )
-        subagent_scope_paths = valid_paths
-        subagent_scope_packet, fanout_err = _scout_fanout_admission_error(context, valid_paths)
-        if fanout_err is not None:
-            return ToolResult(
-                output=fanout_err,
-                is_error=True,
-                metadata={"scope_packet": subagent_scope_packet or {}, "conflict": True},
-            )
-    elif isinstance(input, dict):
-        subagent_scope_paths = scope_paths_from_payload(input)
-    else:
-        baseline_packet = context.metadata.get("scope_packet")
-        if isinstance(baseline_packet, dict):
-            subagent_scope_paths = [str(item) for item in (baseline_packet.get("scope_paths") or []) if isinstance(item, str)]
+    validation = _validate_run_subagent_request(
+        agent_name=agent_name,
+        prompt=prompt,
+        input=input,
+        context=context,
+    )
+    if isinstance(validation, ToolResult):
+        return validation
+    sub_def = validation.sub_def
+    subagent_scope_packet = validation.subagent_scope_packet
+    subagent_scope_paths = validation.subagent_scope_paths
 
     try:
         posthook_cfg, posthook_def = resolve_posthook_definition(
@@ -909,3 +1059,18 @@ async def run_subagent(
         output=json.dumps(envelope, default=str),
         metadata={"envelope": envelope},
     )
+
+
+def _run_subagent_background_preflight(arguments: Any, context: ToolExecutionContext) -> ToolResult | None:
+    validation = _validate_run_subagent_request(
+        agent_name=str(getattr(arguments, "agent_name", "")),
+        prompt=getattr(arguments, "prompt", None),
+        input=getattr(arguments, "input", None),
+        context=context,
+    )
+    if isinstance(validation, ToolResult):
+        return validation
+    return None
+
+
+run_subagent._background_preflight = _run_subagent_background_preflight

@@ -260,6 +260,26 @@ def _validate_benchmark_payload_refs(
                     continue
                 if value in benchmark_test_ids or value in benchmark_test_files:
                     continue
+                file_candidate = value.split("::", 1)[0].strip() if "::" in value else value
+                if file_candidate in benchmark_test_files:
+                    issues.append(
+                        _alias_issue(
+                            f"items[{idx}].payload.owned_failures[{fi}]",
+                            value,
+                            file_candidate,
+                        )
+                    )
+                    continue
+                basename_matches = basename_to_paths.get(os.path.basename(file_candidate), set())
+                if len(basename_matches) == 1:
+                    issues.append(
+                        _alias_issue(
+                            f"items[{idx}].payload.owned_failures[{fi}]",
+                            value,
+                            next(iter(basename_matches)),
+                        )
+                    )
+                    continue
                 basename_matches = basename_to_paths.get(os.path.basename(value), set())
                 if len(basename_matches) == 1:
                     issues.append(
@@ -269,16 +289,16 @@ def _validate_benchmark_payload_refs(
                             next(iter(basename_matches)),
                         )
                     )
-                else:
-                    issues.append(
-                        {
-                            "field": f"items[{idx}].payload.owned_failures[{fi}]",
-                            "msg": (
-                                "benchmark reference must match an exact FAIL_TO_PASS/PASS_TO_PASS node "
-                                f"or exact benchmark test file path from the prompt, got {value!r}"
-                            ),
-                        }
-                    )
+                    continue
+                issues.append(
+                    {
+                        "field": f"items[{idx}].payload.owned_failures[{fi}]",
+                        "msg": (
+                            "benchmark reference must match an exact FAIL_TO_PASS/PASS_TO_PASS node "
+                            f"or exact benchmark test file path from the prompt, got {value!r}"
+                        ),
+                    }
+                )
 
         for key in ("reproduction", "verification"):
             raw_value = payload.get(key)

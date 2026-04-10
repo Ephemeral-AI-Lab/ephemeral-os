@@ -12,6 +12,7 @@ def test_background_lifecycle_prompt_discourages_immediate_wait():
 
     assert "Do not make `wait_for_background_task` your immediate next move" in prompt
     assert "remaining foreground analysis or tool work first" in prompt
+    assert "call `check_background_progress(task_id=\"bg_N\")` at least once before the first `wait_for_background_task" in prompt
 
 
 def test_subagent_toolkit_treats_spawned_workers_as_background():
@@ -19,6 +20,7 @@ def test_subagent_toolkit_treats_spawned_workers_as_background():
 
     assert "workers always run in the background" in toolkit.instructions
     assert "Do not immediately block on the new task" in toolkit.instructions
+    assert "inspect that exact `task_id` with `check_background_progress` before the first `wait_for_background_task`" in toolkit.instructions
 
 
 def test_background_toolkit_says_wait_only_after_foreground_work():

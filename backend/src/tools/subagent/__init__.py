@@ -69,6 +69,9 @@ class RestrictedRunSubagentTool(BaseTool):
     async def execute(self, arguments, context: ToolExecutionContext) -> ToolResult:  # type: ignore[override]
         return await self._delegate.execute(arguments, context)
 
+    def background_preflight(self, arguments, context: ToolExecutionContext) -> ToolResult | None:  # type: ignore[override]
+        return self._delegate.background_preflight(arguments, context)
+
     def is_read_only(self, arguments) -> bool:  # type: ignore[override]
         return self._delegate.is_read_only(arguments)
 
@@ -103,6 +106,7 @@ class SubagentToolkit(BaseToolkit):
                 f"- Valid `agent_name` values for this caller: {allowed_text}.\n"
                 "- Only dispatchable subagent targets are valid. Planner-class callers may launch only `scout`; they must not launch `developer`, `validator`, or `team_planner` here.\n"
                 "- Prefer `check_background_progress(task_id=...)` to inspect a running worker before you wait on it.\n"
+                "- For a fresh subagent, inspect that exact `task_id` with `check_background_progress` before the first `wait_for_background_task`.\n"
                 "- Use `wait_for_background_task(task_id=...)` to join a worker when you are ready for its final answer.\n"
                 "- Cancel stale or low-value workers with `cancel_background_task(task_id=...).`\n"
                 "- Workers cannot spawn subagents or launch their own background tasks."

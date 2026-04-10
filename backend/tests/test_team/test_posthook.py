@@ -560,6 +560,23 @@ def test_submit_plan_agent_prompt_rebuilds_shape_on_plan_size_failure():
     )
 
 
+def test_submit_plan_agent_prompt_repairs_benchmark_refs_and_root_validator_overflow():
+    from team.builtins import register_all
+    from agents.registry import get_definition
+
+    register_all()  # idempotent
+
+    serializer = get_definition("submit_plan_agent")
+    assert serializer is not None
+    assert "If validation says the plan has too many validator items" in serializer.system_prompt
+    assert "downgrade that entry to the exact benchmark test file path instead of guessing a nearby node name" in (
+        serializer.system_prompt
+    )
+    assert "strip the ``::...`` suffix and keep only the exact benchmark test file path" in (
+        serializer.system_prompt
+    )
+
+
 def test_team_planner_prompt_makes_child_scope_rules_explicit():
     from team.builtins import TEAM_PLANNER, register_all
     from agents.registry import get_definition
@@ -575,6 +592,18 @@ def test_team_planner_prompt_makes_child_scope_rules_explicit():
         planner.system_prompt
     )
     assert "Keep validation branch-local. Do not add an umbrella validator over a child plan" in (
+        planner.system_prompt
+    )
+    assert "On benchmark-root plans, keep at most two validators at the submitted root" in (
+        planner.system_prompt
+    )
+    assert "If you cannot quote the node id verbatim from the prompt, use the exact benchmark test file path instead of inventing or renaming a node." in (
+        planner.system_prompt
+    )
+    assert "keep the first scout wave to the dominant production-owner surface plus at most one residual production-owner or residual-aggregate surface" in (
+        planner.system_prompt
+    )
+    assert "If a guessed benchmark owner file is missing, re-anchor on the nearest exact existing production directory/package path" in (
         planner.system_prompt
     )
 

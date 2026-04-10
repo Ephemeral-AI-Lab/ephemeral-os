@@ -19,10 +19,12 @@ import asyncio
 import logging
 from dataclasses import dataclass
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any, AsyncIterator
 
 import pytest
 
+from agents import get_definition as _get_agent_def
 from engine.runtime.background_tasks import BackgroundTaskManager
 from message import ConversationMessage, TextBlock, ToolResultBlock, ToolUseBlock
 from engine.core.query import QueryContext, _run_query_loop
@@ -47,12 +49,22 @@ from tools.builtins.background.check_background_progress import (
     CheckBackgroundProgressTool,
 )
 from tools.core.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolRegistry, ToolResult
+from tools.core.runtime import ExecutionMetadata
+from tools.subagent.run_subagent_tool import run_subagent
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s [%(name)s] %(levelname)s: %(message)s")
 
 pytestmark = pytest.mark.e2e
+
+if _get_agent_def("scout") is None:
+    from team.builtins import register_all as _register_team_builtins
+
+    try:
+        _register_team_builtins()
+    except Exception:
+        pass
 
 
 # ---------------------------------------------------------------------------
@@ -323,6 +335,60 @@ class TestLLMDecidesToBackground:
             f"Expected rejection message. Got: {[tc.output for tc in tool_completed]}"
         )
         logger.info("[PASS] Background correctly rejected for unsupported tool")
+
+    async def test_run_subagent_preflight_rejects_without_background_launch(self, monkeypatch):
+        class _StubConfig:
+            cwd = Path("/tmp")
+            session_id = "S1"
+
+        registry = _make_registry(run_subagent)
+        client = ScriptedMockClient(
+            [
+                _msg_tool(
+                    "run_subagent",
+                    {"agent_name": "scout", "input": {"target_paths": ["pkg/core.py"]}},
+                    text="Opening the scout lane.",
+                ),
+                _msg_text("Need to anchor scope first."),
+            ]
+        )
+
+        context = _make_context(client, registry)
+        context.tool_metadata = ExecutionMetadata(
+            session_config=_StubConfig(),
+            agent_name="team_planner",
+            team_run_id="TR_BENCH",
+            work_item_id="ROOT",
+        )
+        team_run = SimpleNamespace(
+            root_work_item_id="ROOT",
+            dispatcher=SimpleNamespace(
+                graph={
+                    "ROOT": SimpleNamespace(
+                        payload={"fail_to_pass": ["pkg/tests/test_api.py::test_one"]}
+                    )
+                }
+            ),
+        )
+        monkeypatch.setattr(
+            "team.runtime.registry.get",
+            lambda team_run_id: team_run if team_run_id == "TR_BENCH" else None,
+        )
+
+        events = await _collect_events(
+            context,
+            [ConversationMessage.from_user_text("Plan the benchmark run")],
+        )
+
+        bg_started = _events_of_type(events, BackgroundTaskStarted)
+        assert len(bg_started) == 0, f"Expected no BackgroundTaskStarted, got {len(bg_started)}"
+
+        tool_completed = _events_of_type(events, ToolExecutionCompleted)
+        assert any(
+            tc.tool_name == "run_subagent"
+            and "must call `ci_scope_status(scope_paths=[...])` before launching scouts" in tc.output
+            for tc in tool_completed
+        ), f"Expected synchronous preflight rejection. Got: {[tc.output for tc in tool_completed]}"
 
 
 # ===========================================================================

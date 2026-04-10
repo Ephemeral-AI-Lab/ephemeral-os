@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from code_intelligence.constants import SKIP_DIRECTORIES, SUPPORTED_EXTENSIONS
+from code_intelligence.routing.scope_packets import scope_paths_overlap
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.daytona_toolkit.ci_integration import (
     build_live_scope_packet,
@@ -31,6 +32,7 @@ _IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _PY_DEF_RE = re.compile(r"^\s*(?:async\s+def|def)\s+([A-Za-z_][A-Za-z0-9_]*)\b")
 _PY_CLASS_RE = re.compile(r"^\s*class\s+([A-Za-z_][A-Za-z0-9_]*)\b")
 _ASSIGN_RE = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=")
+_SCOUT_ALLOWED_QUERY_TOOLS = frozenset({"ci_workspace_structure"})
 
 
 @dataclass(frozen=True)
@@ -91,6 +93,160 @@ def _build_fallback_specs(query: str, *, kind: str = "") -> list[_FallbackSearch
     boundary = rf"\b{escaped}\b" if exact_identifier else escaped
     specs.append(_FallbackSearchSpec(pattern=boundary, kind="text_match"))
     return specs
+
+
+def _scout_scope_violation(
+    *,
+    path: str,
+    context: ToolExecutionContext,
+) -> ToolResult | None:
+    caller_agent = str(context.metadata.get("agent_name") or "").strip()
+    if caller_agent != "scout":
+        return None
+    scope_packet = context.metadata.get("scope_packet")
+    if not isinstance(scope_packet, dict):
+        return None
+    allowed = normalize_scope_paths(scope_packet.get("scope_paths") or [])
+    if not allowed:
+        return None
+    requested = normalize_scope_paths([path])
+    if not requested:
+        return ToolResult(
+            output=(
+                "ci_workspace_structure: scout may not list the workspace root when "
+                "assigned concrete `target_paths`. Enumerate the exact target path or "
+                "its immediate parent only."
+            ),
+            is_error=True,
+        )
+    candidate = requested[0]
+    if any(scope_paths_overlap(candidate, scope) for scope in allowed):
+        return None
+    joined = ", ".join(allowed)
+    return ToolResult(
+        output=(
+            "ci_workspace_structure: scout must stay within the assigned "
+            f"`target_paths` ({joined}); got {path!r}. If a target path is "
+            "missing, keep the scope at that missing path and report zero coverage "
+            "instead of enumerating nearby replacements."
+        ),
+        is_error=True,
+    )
+
+
+def _reject_scout_non_whitelist(
+    *,
+    tool_name: str,
+    context: ToolExecutionContext,
+) -> ToolResult | None:
+    caller_agent = str(context.metadata.get("agent_name") or "").strip()
+    if caller_agent != "scout" or tool_name in _SCOUT_ALLOWED_QUERY_TOOLS:
+        return None
+    allowed = ", ".join(sorted(_SCOUT_ALLOWED_QUERY_TOOLS | {"ci_read_file"}))
+    return ToolResult(
+        output=(
+            f"{tool_name}: scout is read-only and may use only {allowed}. "
+            "Stay inside the assigned `target_paths` with structural listing plus "
+            "bounded file reads; downstream planners or developers can run broader "
+            "queries if needed."
+        ),
+        is_error=True,
+    )
+
+
+def _benchmark_root_payload(context: ToolExecutionContext) -> dict[str, Any] | None:
+    agent_name = str(context.metadata.get("agent_name") or "").strip()
+    if agent_name != "team_planner":
+        return None
+    team_run_id = str(context.metadata.get("team_run_id") or "").strip()
+    work_item_id = str(context.metadata.get("work_item_id") or "").strip()
+    if not team_run_id or not work_item_id:
+        return None
+    try:
+        from team.runtime.registry import get as get_team_run
+    except Exception:
+        return None
+    try:
+        team_run = get_team_run(team_run_id)
+    except Exception:
+        return None
+    if team_run is None or work_item_id != str(getattr(team_run, "root_work_item_id", "") or ""):
+        return None
+    graph = getattr(getattr(team_run, "dispatcher", None), "graph", None)
+    if not isinstance(graph, dict):
+        return None
+    root_item = graph.get(work_item_id)
+    payload = getattr(root_item, "payload", None)
+    if not isinstance(payload, dict):
+        return None
+    has_benchmark_targets = bool(payload.get("fail_to_pass") or payload.get("pass_to_pass"))
+    return payload if has_benchmark_targets else None
+
+
+def _require_benchmark_root_scope_anchor(
+    *,
+    tool_name: str,
+    context: ToolExecutionContext,
+) -> ToolResult | None:
+    if _benchmark_root_payload(context) is None:
+        return None
+    if context.metadata.get("_benchmark_root_scope_anchor_done"):
+        return None
+    return ToolResult(
+        output=(
+            f"{tool_name}: fresh benchmark-root planners must call "
+            "`ci_scope_status(scope_paths=[...])` before other live CI queries. "
+            "Anchor on the likely production owner directories/files first, then continue "
+            "with workspace structure, symbol queries, or scouts."
+        ),
+        is_error=True,
+    )
+
+
+def _benchmark_test_files(payload: dict[str, Any]) -> set[str]:
+    refs: set[str] = set()
+    for key in ("fail_to_pass", "pass_to_pass"):
+        raw = payload.get(key) or []
+        if not isinstance(raw, list):
+            continue
+        for item in raw:
+            if not isinstance(item, str):
+                continue
+            value = item.strip()
+            if not value:
+                continue
+            refs.add(value.split("::", 1)[0].strip())
+    return refs
+
+
+def _reject_test_only_symbol_hits(
+    *,
+    context: ToolExecutionContext,
+    matches: list[dict[str, Any]],
+) -> ToolResult | None:
+    payload = _benchmark_root_payload(context)
+    if payload is None or not matches:
+        return None
+    benchmark_files = _benchmark_test_files(payload)
+    if not benchmark_files:
+        return None
+    normalized = []
+    for match in matches:
+        file_path = str(match.get("file") or "").strip()
+        if not file_path:
+            return None
+        candidate = file_path.replace("/testbed/", "", 1).lstrip("/")
+        normalized.append(candidate)
+    if normalized and all(path in benchmark_files for path in normalized):
+        return ToolResult(
+            output=(
+                "ci_query_symbols: matches landed only inside already-named benchmark test files. "
+                "Those hits are symptom evidence, not production ownership. Re-anchor on the nearest "
+                "exact existing production path or leave the slice behind a residual child planner."
+            ),
+            is_error=True,
+        )
+    return None
 
 
 def _extract_match_name(snippet: str, *, query: str, kind: str) -> str:
@@ -614,6 +770,12 @@ print(json.dumps(matches))
 @tool(name="ci_status", description="Check code intelligence readiness: cache, index, LSP, and edit activity.", read_only=True)
 async def ci_status(*, context: ToolExecutionContext) -> ToolResult:
     """Check code intelligence service readiness."""
+    scout_whitelist_err = _reject_scout_non_whitelist(tool_name="ci_status", context=context)
+    if scout_whitelist_err is not None:
+        return scout_whitelist_err
+    root_anchor_err = _require_benchmark_root_scope_anchor(tool_name="ci_status", context=context)
+    if root_anchor_err is not None:
+        return root_anchor_err
     svc, err = _svc_or_error(context)
     if err:
         return err
@@ -635,6 +797,9 @@ async def ci_scope_status(
     context: ToolExecutionContext,
 ) -> ToolResult:
     """Return the current live scope packet for a scope."""
+    scout_whitelist_err = _reject_scout_non_whitelist(tool_name="ci_scope_status", context=context)
+    if scout_whitelist_err is not None:
+        return scout_whitelist_err
     svc, err = _svc_or_error(context)
     if err:
         return err
@@ -648,6 +813,8 @@ async def ci_scope_status(
         context,
         scope_paths=requested,
     )
+    if _benchmark_root_payload(context) is not None:
+        context.metadata["_benchmark_root_scope_anchor_done"] = True
     refresh_scope_baseline(context, packet=packet)
     return ToolResult(
         output=json.dumps(packet, indent=2, default=str),
@@ -676,9 +843,18 @@ async def ci_workspace_structure(
     Returns:
         output (str): File listing
     """
+    root_anchor_err = _require_benchmark_root_scope_anchor(
+        tool_name="ci_workspace_structure",
+        context=context,
+    )
+    if root_anchor_err is not None:
+        return root_anchor_err
     svc, err = _svc_or_error(context)
     if err:
         return err
+    scout_scope_err = _scout_scope_violation(path=path, context=context)
+    if scout_scope_err is not None:
+        return scout_scope_err
 
     si = svc.symbol_index
     if si is None:
@@ -733,6 +909,15 @@ async def ci_query_symbols(
     Returns:
         symbols (list): Matching symbol entries
     """
+    scout_whitelist_err = _reject_scout_non_whitelist(tool_name="ci_query_symbols", context=context)
+    if scout_whitelist_err is not None:
+        return scout_whitelist_err
+    root_anchor_err = _require_benchmark_root_scope_anchor(
+        tool_name="ci_query_symbols",
+        context=context,
+    )
+    if root_anchor_err is not None:
+        return root_anchor_err
     svc, err = _svc_or_error(context)
     if err:
         return err
@@ -792,6 +977,9 @@ async def ci_query_symbols(
                 if str(match.get("kind") or "") != "text_match"
             ]
         if fallback_matches:
+            test_only_err = _reject_test_only_symbol_hits(context=context, matches=fallback_matches)
+            if test_only_err is not None:
+                return test_only_err
             return ToolResult(output=json.dumps(fallback_matches, indent=2))
         return ToolResult(output=f"No symbols matching '{query}'")
 
@@ -805,6 +993,9 @@ async def ci_query_symbols(
             "signature": s.signature,
         })
 
+    test_only_err = _reject_test_only_symbol_hits(context=context, matches=symbols)
+    if test_only_err is not None:
+        return test_only_err
     return ToolResult(output=json.dumps(symbols, indent=2))
 
 
@@ -830,6 +1021,15 @@ async def ci_query_references(
     Returns:
         refs (list): Reference locations
     """
+    scout_whitelist_err = _reject_scout_non_whitelist(tool_name="ci_query_references", context=context)
+    if scout_whitelist_err is not None:
+        return scout_whitelist_err
+    root_anchor_err = _require_benchmark_root_scope_anchor(
+        tool_name="ci_query_references",
+        context=context,
+    )
+    if root_anchor_err is not None:
+        return root_anchor_err
     svc, err = _svc_or_error(context)
     if err:
         return err
@@ -921,6 +1121,9 @@ async def ci_edit_hotspots(
     Returns:
         items (list): Hotspot entries with file and edit_count
     """
+    scout_whitelist_err = _reject_scout_non_whitelist(tool_name="ci_edit_hotspots", context=context)
+    if scout_whitelist_err is not None:
+        return scout_whitelist_err
     svc, err = _svc_or_error(context)
     if err:
         return err
@@ -953,6 +1156,9 @@ async def ci_recent_changes(
     Returns:
         files (list): Recently changed file paths
     """
+    scout_whitelist_err = _reject_scout_non_whitelist(tool_name="ci_recent_changes", context=context)
+    if scout_whitelist_err is not None:
+        return scout_whitelist_err
     svc, err = _svc_or_error(context)
     if err:
         return err

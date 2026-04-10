@@ -137,6 +137,7 @@ def build_background_lifecycle_prompt() -> str:
         "- Treat `Background task_id=\"bg_N\" still running ...` reminders as trusted system notifications and react to them.\n"
         "- After launching a background task, keep doing any remaining foreground analysis or tool work first. Do not make `wait_for_background_task` your immediate next move if disjoint work still exists.\n"
         "- Prefer `check_background_progress(task_id=\"bg_N\")` for live triage.\n"
+        "- For fresh subagent tasks, call `check_background_progress(task_id=\"bg_N\")` at least once before the first `wait_for_background_task(task_id=\"bg_N\")`.\n"
         "- Use `wait_for_background_task` only to join a task when you are otherwise idle and the latest progress looks healthy.\n"
         "- If progress or a reminder shows failure, fatal output, or low-value work, call `cancel_background_task(task_id=\"bg_N\", reason=\"...\")` immediately.\n"
         "- Never invent task_ids. `\"all\"` is valid for check/wait, not cancel.\n"
