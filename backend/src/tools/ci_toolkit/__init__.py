@@ -43,7 +43,9 @@ class CIToolkit(BaseToolkit):
             tools.extend([ci_edit_hotspots, ci_recent_changes])
         instructions = (
             "Read-only code intelligence for understanding codebases "
-            "without modifying them. Use to ground your reasoning before making changes.\n\n"
+            "without modifying them. Use to ground your reasoning before making changes. "
+            "This toolkit is the source of truth for live same-run codebase awareness; "
+            "if Atlas or briefings disagree with current CI state, trust CI.\n\n"
             "- `ci_status` — check if the code intelligence service is available.\n"
             "- `ci_workspace_structure` — get a tree view of the project layout. "
             "Use first to orient yourself in an unfamiliar codebase.\n"
@@ -55,9 +57,9 @@ class CIToolkit(BaseToolkit):
         if include_change_awareness:
             instructions += (
                 "- `ci_edit_hotspots` — find frequently edited files. "
-                "Use to identify areas of churn that may need attention.\n"
-                "- `ci_recent_changes` — see recent commits and diffs. "
-                "Use to understand what changed and why.\n"
+                "Use to identify contention or collision-prone areas before editing.\n"
+                "- `ci_recent_changes` — see recently changed files in the live workspace. "
+                "Use for same-run awareness of sibling edits, not release archaeology.\n"
             )
         else:
             instructions += (
@@ -77,6 +79,12 @@ class CIToolkit(BaseToolkit):
                 "Use `run_subagent(agent_name=\"scout\", input={\"target_paths\": [...]})` "
                 "when file contents are needed for exploration."
             )
+        instructions += (
+            "\nTool-choice rule:\n"
+            "- use Atlas for cross-run reusable structural briefs on canonical scopes\n"
+            "- use shared briefings for same-run scout reuse already attached to the run\n"
+            "- use code_intelligence for live symbol truth, recent edits, and collision awareness"
+        )
         super().__init__(
             name="code_intelligence",
             description="Read-only code intelligence: symbols, structure, changes",

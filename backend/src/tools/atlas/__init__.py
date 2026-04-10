@@ -19,6 +19,10 @@ class AtlasToolkit(BaseToolkit):
             description="Persistent cross-run scout brief cache (Project Atlas).",
             tools=[atlas_lookup],
             instructions=(
+                "Use Atlas only for cross-run structural reuse of canonical subsystem scopes. "
+                "Do not use Atlas for same-run edit awareness, conflict detection, live symbol placement, "
+                "or semantic understanding; those belong to shared briefings, fresh scout results, "
+                "and the `code_intelligence` toolkit.\n"
                 "Look up cached scout briefs for one or more subsystems. "
                 "`atlas_lookup` returns a decision per subsystem:\n"
                 "- `use`: a staged artifact ref is included — attach it to a worker briefing.\n"
@@ -27,6 +31,8 @@ class AtlasToolkit(BaseToolkit):
                 "- `scout`: no cached brief exists. Fall back to fresh exploration.\n"
                 "Runtime may refresh or build atlas chunks in the background; "
                 "that is not a planner-visible task.\n"
+                "Use Atlas when you can already name a real owner scope and want a cheap answer to "
+                "'do we already have a reusable structural brief for this slice?'\n"
                 "Semantic questions ('how does X work', 'why does Y exist') must "
                 "always go to a fresh scout, never the atlas."
             ),

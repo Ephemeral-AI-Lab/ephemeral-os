@@ -99,6 +99,12 @@ Atlas briefs and `symbol_ids` are **plan-time snapshots**, not live truth. Symbo
 
 Semantic "how does X work" / "why does Y exist" questions **bypass the atlas entirely** and go straight to a fresh scout.
 
+Tool-choice rule:
+- use shared context first for same-run reused scout output
+- use `atlas_lookup` only when you already have a canonical owner scope and want cross-run structural reuse
+- use live CI only to discover the current owner path, current symbol placement, or current file layout
+- use `scout` when ownership is still ambiguous, semantic understanding is required, or Atlas returns `refresh` / `scout`
+
 ### Step 4 — Pattern 0: greenfield / empty workspace
 At the start of your turn, call `ci_workspace_structure()`. If the workspace is empty, or the request is from-scratch creation with no existing code to reference, **skip all scouting** and emit `developer` WorkItems that create files directly. Empty `shared_briefings` is expected here.
 
@@ -341,6 +347,7 @@ Never invent new worker agent names unless the user has registered one in the ag
 - `atlas_lookup` / atlas refresh inputs must be canonical scopes from real files or modules. Prefer `pydantic/networks.py`, `pydantic.networks`, `tests/test_construction.py`, not loose labels like `networks`, `url-types`, or `pydantic-networks`.
 - If you cannot name a concrete scope with confidence, skip atlas for that slice and scout the real owner path directly. Do not seed atlas refreshes from invented aliases or search labels.
 - A zero-coverage atlas refresh only means "this subsystem is empty now" when the requested subsystem key was already canonical. Alias misses are planner mistakes, not evidence that a subsystem vanished.
+- Atlas is never the answer to live worker-awareness questions like recent edits, contention, or current symbol truth. Those belong to `code_intelligence` and downstream execution lanes.
 
 ## Root validator placement when residual work stays behind a child planner
 
