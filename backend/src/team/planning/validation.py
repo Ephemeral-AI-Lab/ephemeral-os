@@ -80,6 +80,7 @@ def validate_plan_phase_a(
     plan: Plan,
     max_plan_size: int = 50,
     *,
+    allow_empty: bool = False,
     known_external_deps: set[str] | None = None,
     benchmark_test_ids: set[str] | None = None,
     benchmark_test_files: set[str] | None = None,
@@ -90,6 +91,8 @@ def validate_plan_phase_a(
     issues: list[Issue] = []
 
     if len(plan.items) == 0:
+        if allow_empty:
+            return issues
         issues.append({"field": "items", "msg": "plan has no items"})
         return issues
 

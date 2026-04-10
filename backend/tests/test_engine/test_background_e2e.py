@@ -336,7 +336,7 @@ class TestLLMDecidesToBackground:
         )
         logger.info("[PASS] Background correctly rejected for unsupported tool")
 
-    async def test_run_subagent_preflight_rejects_without_background_launch(self, monkeypatch):
+    async def test_run_subagent_preflight_does_not_hard_reject_without_background_launch(self, monkeypatch):
         class _StubConfig:
             cwd = Path("/tmp")
             session_id = "S1"
@@ -381,14 +381,15 @@ class TestLLMDecidesToBackground:
         )
 
         bg_started = _events_of_type(events, BackgroundTaskStarted)
-        assert len(bg_started) == 0, f"Expected no BackgroundTaskStarted, got {len(bg_started)}"
+        assert len(bg_started) == 1, f"Expected 1 BackgroundTaskStarted, got {len(bg_started)}"
+        assert bg_started[0].tool_name == "run_subagent"
 
         tool_completed = _events_of_type(events, ToolExecutionCompleted)
-        assert any(
+        assert not any(
             tc.tool_name == "run_subagent"
-            and "must call `ci_scope_status(scope_paths=[...])` before launching scouts" in tc.output
+            and "ci_scoped_status(scope_paths=[...])" in tc.output
             for tc in tool_completed
-        ), f"Expected synchronous preflight rejection. Got: {[tc.output for tc in tool_completed]}"
+        ), f"Expected no synchronous hard rejection. Got: {[tc.output for tc in tool_completed]}"
 
 
 # ===========================================================================

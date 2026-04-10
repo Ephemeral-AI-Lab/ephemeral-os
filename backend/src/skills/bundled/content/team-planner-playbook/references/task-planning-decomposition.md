@@ -22,6 +22,7 @@ Default mapping:
 - Production-code ownership -> `developer`
 - Verification-only ownership -> `validator`
 - Multi-slice or still-overbroad ownership -> expandable `team_planner`
+- Prompt-named benchmark test files are reproduction surfaces, not automatic implementation owners. A developer lane whose `owned_files` contain only those tests should be rare and reserved for true test/support-infrastructure ownership; otherwise keep the test path in `owned_failures` and anchor the lane on production/export code or a residual child planner.
 
 ---
 

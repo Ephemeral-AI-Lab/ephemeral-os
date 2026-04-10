@@ -103,6 +103,11 @@ def test_phase_a_empty_plan(monkeypatch):
     assert any("no items" in i["msg"] for i in issues)
 
 
+def test_phase_a_empty_plan_allowed_when_opted_in(monkeypatch):
+    _patch_registry(monkeypatch, {"a"})
+    assert validate_plan_phase_a(Plan(items=[]), allow_empty=True) == []
+
+
 def test_phase_a_size_limit(monkeypatch):
     _patch_registry(monkeypatch, {"a"})
     plan = Plan(items=[WorkItemSpec(agent_name="a", local_id=f"w{i}") for i in range(51)])

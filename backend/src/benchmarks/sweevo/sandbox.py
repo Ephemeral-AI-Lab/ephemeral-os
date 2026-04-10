@@ -439,6 +439,74 @@ async def ensure_sweevo_test_patch(
         )
 
 
+async def capture_sweevo_repo_patch(
+    sandbox_id: str,
+    repo_dir: str = _REPO_DIR,
+) -> str:
+    """Capture a binary-safe patch for the current SWE-EVO worktree without mutating the real index."""
+    script = (
+        "set -e\n"
+        f"cd {shlex.quote(repo_dir)}\n"
+        "tmp_index=$(mktemp)\n"
+        "cleanup() { rm -f \"$tmp_index\"; }\n"
+        "trap cleanup EXIT\n"
+        "if [ -f .git/index ]; then cp .git/index \"$tmp_index\"; else : > \"$tmp_index\"; fi\n"
+        "GIT_INDEX_FILE=\"$tmp_index\" git add -A >/dev/null 2>&1 || true\n"
+        "GIT_INDEX_FILE=\"$tmp_index\" git diff --cached --binary HEAD 2>/dev/null || true\n"
+    )
+    patch = await _exec(sandbox_id, script, check=False)
+    return patch.strip()
+
+
+async def apply_sweevo_repo_patch(
+    sandbox_id: str,
+    repo_patch: str,
+    repo_dir: str = _REPO_DIR,
+) -> None:
+    """Apply a captured SWE-EVO repo patch onto a clean checkout."""
+    if not repo_patch.strip():
+        return
+
+    patch_path = "/tmp/sweevo_repo_state.patch"
+    patch_bytes = repo_patch.encode("utf-8")
+    try:
+        sandbox = await _get_sandbox(sandbox_id)
+        await _upload_file_compat(sandbox, patch_bytes, patch_path)
+    except Exception:
+        await _write_file_via_chunked_base64_exec(
+            sandbox_id,
+            patch_path,
+            patch_bytes,
+        )
+
+    check_out = await _exec(
+        sandbox_id,
+        f"cd {repo_dir} && git apply --check --binary {patch_path} 2>&1",
+        check=False,
+    )
+    if "error:" in check_out.lower():
+        raise RuntimeError(f"checkpoint repo patch is not applyable: {check_out[:300]}")
+
+    apply_out = await _exec(
+        sandbox_id,
+        f"cd {repo_dir} && git apply --binary {patch_path} 2>&1",
+        check=False,
+    )
+    if "error:" in apply_out.lower():
+        raise RuntimeError(f"failed to apply checkpoint repo patch: {apply_out[:300]}")
+
+    try:
+        from code_intelligence.routing.service import dispose_code_intelligence
+
+        dispose_code_intelligence(sandbox_id)
+    except Exception:
+        logger.debug(
+            "CI disposal skipped after repo patch restore for sandbox %s",
+            sandbox_id,
+            exc_info=True,
+        )
+
+
 async def create_sweevo_test_sandbox(
     instance: SWEEvoInstance,
     *,

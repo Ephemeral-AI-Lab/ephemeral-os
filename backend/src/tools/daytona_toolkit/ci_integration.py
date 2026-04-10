@@ -295,22 +295,10 @@ def prepare_ci_write(
     """Run scope/token prechecks and reserve *file_path* for a write."""
     scope_paths = scope_paths_for_write(context, fallback_paths=[file_path])
     if scope_paths and not any(scopes_overlap(file_path, scope) for scope in scope_paths):
-        packet = context.metadata.get("scope_packet")
-        if isinstance(packet, dict):
-            packet = dict(packet)
-            packet["scope_paths"] = scope_paths
-        else:
-            packet = {"scope_paths": scope_paths}
-        message = (
-            "Write target is outside the current scoped paths. Refresh live CI state with "
-            f"`ci_scoped_status(scope_paths=[{file_path!r}])` before writing this file."
-        )
-        _note_team_memory_conflict(
-            context,
-            file_path=file_path,
-            reason=message,
-        )
-        return None, packet, message
+        # Treat the inherited lane scope as a soft starting surface. When a worker
+        # discovers that the minimal coherent fix lives in an adjacent file, widen
+        # the live scope packet instead of hard-failing the write precheck.
+        scope_paths = normalize_scope_paths([*scope_paths, file_path])
     packet, err = enforce_scope_coherence(context, scope_paths=scope_paths)
     if err is not None and not allow_scope_drift:
         _note_team_memory_conflict(
@@ -647,13 +635,17 @@ def prepare_declared_shell_outputs(
     """Reserve declared shell outputs before running a mutating command."""
     paths = normalize_scope_paths(declared_output_paths or [])
     packet, err = enforce_scope_coherence(context, scope_paths=paths)
-    if err is not None:
+    if err is not None and not paths:
         return [], packet, err
     if not paths:
         return [], packet, None
     prepared_items: list[Any] = []
     for path in paths:
-        prepared, _, prep_err = prepare_ci_write(context, path)
+        prepared, _, prep_err = prepare_ci_write(
+            context,
+            path,
+            allow_scope_drift=True,
+        )
         if prep_err is not None:
             for item in prepared_items:
                 abort_ci_write(context, item)

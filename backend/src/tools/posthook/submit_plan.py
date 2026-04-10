@@ -80,6 +80,7 @@ class SubmitPlanTool(SubmitPosthookTool):
         issues = validate_plan_phase_a(
             plan,
             max_plan_size=max_plan_size,
+            allow_empty=self._allow_empty_plan(context),
             known_external_deps=self._known_external_dep_ids(context),
             benchmark_test_ids=benchmark_test_ids,
             benchmark_test_files=benchmark_test_files,
@@ -98,6 +99,33 @@ class SubmitPlanTool(SubmitPosthookTool):
     def _accepted_message(self, payload: Any) -> str:
         assert isinstance(payload, Plan)
         return f"Plan accepted: {len(payload.items)} item(s) queued for dispatch."
+
+    def _allow_empty_plan(self, context: ToolExecutionContext) -> bool:
+        team_run_id = str(context.metadata.get("team_run_id") or "").strip()
+        work_item_id = str(context.metadata.get("work_item_id") or "").strip()
+        if not team_run_id or not work_item_id:
+            return False
+        try:
+            from team.runtime.registry import get as get_team_run
+
+            team_run = get_team_run(team_run_id)
+        except Exception:
+            return False
+        if team_run is None:
+            return False
+        root_id = str(getattr(team_run, "root_work_item_id", "") or "")
+        if not root_id or work_item_id == root_id:
+            return False
+        graph = getattr(getattr(team_run, "dispatcher", None), "graph", None)
+        if not isinstance(graph, dict):
+            return False
+        work_item = graph.get(work_item_id)
+        if work_item is None:
+            return False
+        return (
+            str(getattr(work_item, "agent_name", "") or "") == "team_planner"
+            and getattr(work_item, "kind", None) == WorkItemKind.EXPANDABLE
+        )
 
     def _known_external_dep_ids(self, context: ToolExecutionContext) -> set[str] | None:
         team_run_id = str(context.metadata.get("team_run_id") or "").strip()

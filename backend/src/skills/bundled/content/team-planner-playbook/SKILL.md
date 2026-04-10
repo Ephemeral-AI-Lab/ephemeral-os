@@ -77,6 +77,7 @@ When a benchmark request already names one dominant FAIL_TO_PASS cluster plus se
 3a. If a proposed first-wave `target_paths` entry still equals a named benchmark test file, or still lands under `/tests/` without fresh evidence that production ownership is unknown, stop and re-anchor before the tool call. That proposed lane is invalid.
 3b. If one of those guessed owner files is missing, do not spend the same root turn opening extra benchmark test-file scouts. Re-anchor on the exact existing production directory/package with `ci_workspace_structure(...)`, or park that cluster behind a residual child planner.
 3c. `ci_query_symbols(...)` results that only point back into the benchmark test files are symptom evidence, not production ownership. Do not use those test-surface hits to redirect the root plan.
+3d. Prompt-named benchmark test files are symptom surfaces, not settled implementation ownership. Do not emit a direct developer lane whose `owned_files` are only those test files unless live evidence says the slice truly belongs to test/support infrastructure. Otherwise keep the test path in `owned_failures`, anchor the lane on the exact production/export surface you do know, or leave the unresolved slice behind a child planner.
 4. Pytest assertion renderings and diff snippets are runtime symptoms only. They may justify the dominant cluster choice, but they do not justify a settled source-level diagnosis in the planner turn.
 5. As soon as one dominant owner slice and one residual slice are mapped, emit a hierarchical plan: dominant developer lane, one concrete residual lane, and a downstream expandable child planner for any still-unowned residuals, plus validation.
 5a. That root validation must stay attached to the concrete developer lanes only, and leave residual child-planner validation inside the child branch.
@@ -414,6 +415,7 @@ Never invent new worker agent names unless the user has registered one in the ag
 - When the residual work spans several production files, more than one subsystem, or more than one conceptual bug family, emit a child planner item for that residual cluster instead of one omnibus developer item.
 - At the benchmark root, prefer this shape once ownership is clear: a dominant developer lane, a residual child-planner lane, and validator coverage attached to the concrete root lanes. Only replace the residual child planner with direct developer lanes when the residual owners are already cleanly disjoint and individually bounded.
 - A root developer item must not own both the dominant slice and unrelated residual files. A residual developer item should stay tightly bounded; if it starts absorbing several production files, move it behind a child planner unless the parent plan explicitly proved one inseparable fix surface.
+- A root benchmark developer item whose `owned_files` contain only prompt-named test files is usually malformed ownership, not a shortcut. Unless live evidence proves a true test/support-infrastructure owner, keep those test paths in `owned_failures` and anchor the lane on production/export code or a residual child planner instead.
 
 ## Non-root child planner execution rules
 

@@ -12,6 +12,7 @@ from tools.daytona_toolkit.ci_integration import (
     abort_ci_write,
     finalize_ci_write,
     get_ci_service,
+    prepare_declared_shell_outputs,
     prepare_ci_write,
     prime_cache_after_write,
     record_edit_in_ledger,
@@ -200,23 +201,82 @@ def test_prepare_ci_write_allows_scope_drift_when_opted_in(monkeypatch):
     assert ctx.metadata["coherence_token"] == "reserved-token"
 
 
-def test_prepare_ci_write_rejects_write_outside_scoped_paths():
+def test_prepare_ci_write_auto_expands_scope_for_adjacent_write(monkeypatch):
     svc = MagicMock()
+    prepared = SimpleNamespace(file_path="/repo/tests/test_owned.py", token_id="tok-1")
+    svc.prepare_write.return_value = prepared
+    packets = [
+        {
+            "scope_paths": ["/repo/src/owned.py", "/repo/tests/test_owned.py"],
+            "coherence_token": "base-token",
+        },
+        {
+            "scope_paths": ["/repo/src/owned.py", "/repo/tests/test_owned.py"],
+            "coherence_token": "reserved-token",
+        },
+    ]
+    monkeypatch.setattr(
+        "tools.daytona_toolkit.ci_integration.build_scope_packet_for_context",
+        lambda *args, **kwargs: dict(packets.pop(0)),
+    )
     ctx = _ctx(
         {
             "ci_service": svc,
             "scope_packet": {"scope_paths": ["/repo/src/owned.py"], "coherence_token": "base-token"},
             "coherence_token": "base-token",
+            "agent_run_id": "worker-1",
         }
     )
 
     result, packet, err = prepare_ci_write(ctx, "/repo/tests/test_owned.py")
 
-    assert result is None
-    assert err is not None
-    assert "outside the current scoped paths" in err
-    assert packet["scope_paths"] == ["/repo/src/owned.py"]
-    svc.prepare_write.assert_not_called()
+    assert err is None
+    assert result is prepared
+    assert packet["scope_paths"] == ["/repo/src/owned.py", "/repo/tests/test_owned.py"]
+    assert ctx.metadata["scope_packet"]["scope_paths"] == [
+        "/repo/src/owned.py",
+        "/repo/tests/test_owned.py",
+    ]
+    svc.prepare_write.assert_called_once_with(
+        "/repo/tests/test_owned.py",
+        agent_id="worker-1",
+        expected_hash="",
+        allow_missing=True,
+    )
+
+
+def test_prepare_declared_shell_outputs_allows_scope_drift(monkeypatch):
+    svc = MagicMock()
+    prepared = SimpleNamespace(file_path="/repo/new.py", token_id="tok-1")
+    svc.prepare_write.return_value = prepared
+    packets = [
+        {"scope_paths": ["/repo/new.py"], "coherence_token": "drifted-token"},
+        {"scope_paths": ["/repo/new.py"], "coherence_token": "reserved-token"},
+        {"scope_paths": ["/repo/new.py"], "coherence_token": "reserved-token"},
+    ]
+    monkeypatch.setattr(
+        "tools.daytona_toolkit.ci_integration.build_scope_packet_for_context",
+        lambda *args, **kwargs: dict(packets.pop(0)),
+    )
+    ctx = _ctx(
+        {
+            "ci_service": svc,
+            "agent_run_id": "worker-1",
+            "scope_packet": {"scope_paths": ["/repo/new.py"], "coherence_token": "base-token"},
+            "coherence_token": "base-token",
+        }
+    )
+
+    prepared_items, packet, err = prepare_declared_shell_outputs(
+        ctx,
+        declared_output_paths=["/repo/new.py"],
+    )
+
+    assert err is None
+    assert prepared_items == [prepared]
+    assert packet["coherence_token"] == "reserved-token"
+    assert ctx.metadata["scope_packet"]["coherence_token"] == "reserved-token"
+    assert ctx.metadata["coherence_token"] == "reserved-token"
 
 def test_abort_ci_write_refreshes_scope_baseline_after_release(monkeypatch):
     svc = MagicMock()

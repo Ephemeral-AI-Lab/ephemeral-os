@@ -23,6 +23,7 @@ EventKind = Literal[
     "artifact_written",
     "budget_update",
     "checkpoint_taken",
+    "checkpoint_repo_state",
     "file_changed",
 ]
 
@@ -164,6 +165,23 @@ def make_checkpoint_taken(
             "checkpoint_id": checkpoint_id,
             "sequence": sequence,
             "label": label,
+        },
+    )
+
+
+def make_checkpoint_repo_state(
+    team_run_id: str,
+    *,
+    checkpoint_id: str,
+    repo_patch: str,
+) -> TeamRunEvent:
+    return TeamRunEvent(
+        team_run_id=team_run_id,
+        kind="checkpoint_repo_state",
+        data={
+            "checkpoint_id": checkpoint_id,
+            "repo_patch": repo_patch,
+            "repo_patch_bytes": len(repo_patch.encode("utf-8")),
         },
     )
 

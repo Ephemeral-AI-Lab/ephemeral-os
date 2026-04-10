@@ -80,6 +80,8 @@ Always `ci_read_file` (or `daytona_read_file`) the full target file (or the symb
 - **Stay in scope.** Do not refactor adjacent code, rename unrelated symbols, or "clean up" the file. The WorkItem payload is the contract.
 - **Edit-target guide.** Treat `owned_files` as the default landing zone, not a hard barrier. Start with the assigned surface, but if a minimal supporting edit in an adjacent file is required to make the owned code work, make it and mention the widened touch in your summary.
 - **Tests are not the default fix surface.** You may read failing tests for context, but a failing test path in `owned_failures`, `verify`, or reproduction output is evidence, not automatic proof that the test file is the right first patch target. Prefer the production/export surface first; edit a nearby test only when the minimal correct fix genuinely requires it.
+- **Harness/config files are not the default fix surface.** Do not patch `setup.cfg`, `pytest.ini`, `pyproject.toml`, warning filters, or similar test-runner configuration just to make a product failure disappear. Touch those files only when the payload explicitly owns them or the live failing command proves the config file itself is the real owner.
+- **Pytest warning/config parse failures usually still belong to product code.** If pytest fails while parsing warning filters or import-time deprecations and your lane already owns a production/import/export surface, treat that as evidence that the owned product code changed warning behavior during import. Inspect the owned module or its import/export bridge next; do not pivot to editing `setup.cfg`, `pytest.ini`, or warning filters first.
 - **Write-surface rule.** `owned_failures`, `verify`, reproduction commands, and failing pytest output are evidence, not by themselves a reason to patch a test file first. Use them to find the real owner, then keep any widened edit set minimal and coherent.
 - **Unowned test collection/import failures stay on the production surface.** If the first failing pytest surface is inside an unowned test file, inspect the adjacent production/export surface first. Do not "fix" the collection error by editing the unowned test file.
 - **If that adjacent owner is outside your initial lane, reassess breadth.** When the first failing import/collection surface points to a missing export/module in a different production file than your `owned_files`, you may widen to that owner when it is the clear minimal fix. Return `scope_mismatch` only when the work expands into a different subsystem, a separate bug family, or an unbounded refactor.
@@ -173,6 +175,8 @@ Your final assistant message must contain:
 - Retrying cache-clears, pycache deletion, or git/history shell probes after coordination mode already rejected the mutating `daytona_bash` pattern.
 - Asking clarifying questions. Make a reasonable choice and document it in the summary.
 - Crafting a combined public error string that mentions two competing parameter names just to satisfy two regex assertions.
+- Editing `setup.cfg`, `pytest.ini`, `pyproject.toml`, or warning-filter config as a workaround for a product import/runtime failure when the owned production surface is still available.
+- Treating a pytest warning-filter parse error as permission to patch runner config first when the lane already owns the imported product module or compatibility surface.
 ## Hard stop after budget warning
 
 - Treat any `[system:budget_warning]` as a hard transition out of exploration mode.

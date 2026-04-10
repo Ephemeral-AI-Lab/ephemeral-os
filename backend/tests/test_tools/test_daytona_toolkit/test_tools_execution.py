@@ -407,10 +407,12 @@ async def test_write_file_exception_returns_error():
     assert "disk full" in result.output
 
 
-async def test_write_file_rejects_stale_scope_coherence():
+async def test_write_file_refreshes_stale_scope_coherence():
     sb = _sb()
     sb.process.exec = AsyncMock(return_value=MagicMock(result="", exit_code=0))
     svc = MagicMock()
+    svc.prepare_write.return_value = MagicMock()
+    svc.commit_prepared_write.return_value = MagicMock(success=True, message="ok")
     svc.ledger.generation = 1
     svc.ledger.recent_entries.return_value = []
     svc.arbiter.generation = 1
@@ -432,8 +434,10 @@ async def test_write_file_rejects_stale_scope_coherence():
         daytona_write_file.input_model(file_path="/ws/new.txt", content="hello"), ctx
     )
 
-    assert result.is_error
-    assert "Scope coherence changed" in result.output
+    assert not result.is_error
+    assert json.loads(result.output)["file_path"] == "/ws/new.txt"
+    svc.prepare_write.assert_called_once()
+    svc.commit_prepared_write.assert_called_once()
 
 
 # ---------------------------------------------------------------------------

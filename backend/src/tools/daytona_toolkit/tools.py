@@ -635,7 +635,11 @@ async def daytona_write_file(
     try:
         content_bytes = content.encode("utf-8")
         await _ensure_parent(sandbox)
-        prepared, scope_packet, err = prepare_ci_write(context, file_path)
+        prepared, scope_packet, err = prepare_ci_write(
+            context,
+            file_path,
+            allow_scope_drift=True,
+        )
         if err is not None:
             return ToolResult(
                 output=err,

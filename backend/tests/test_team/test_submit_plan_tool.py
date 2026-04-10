@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from team.models import Plan
+from team.models import Plan, WorkItemKind
 from tools.core.base import ExecutionMetadata, ToolExecutionContext
 from tools.posthook import SubmitPlanInput, SubmitPlanTool
 
@@ -110,6 +110,38 @@ async def test_max_plan_size_respects_metadata_override():
     res = await tool.execute(args, ctx)
     assert res.is_error
     assert "max_plan_size" in res.output
+
+
+@pytest.mark.asyncio
+async def test_submit_plan_accepts_empty_plan_for_non_root_child_planner(monkeypatch):
+    tool = SubmitPlanTool()
+    ctx = _ctx()
+    ctx.metadata["team_run_id"] = "TR_CHILD"
+    ctx.metadata["work_item_id"] = "CHILD"
+
+    root = SimpleNamespace(agent_name="team_planner", kind=WorkItemKind.EXPANDABLE)
+    child = SimpleNamespace(agent_name="team_planner", kind=WorkItemKind.EXPANDABLE)
+    fake_team_run = SimpleNamespace(
+        root_work_item_id="ROOT",
+        dispatcher=SimpleNamespace(graph={"ROOT": root, "CHILD": child}),
+    )
+
+    from team.runtime import registry as runtime_registry
+
+    monkeypatch.setattr(
+        runtime_registry,
+        "get",
+        lambda team_run_id: fake_team_run if team_run_id == "TR_CHILD" else None,
+    )
+
+    args = SubmitPlanInput.model_validate({"items": []})
+
+    res = await tool.execute(args, ctx)
+
+    assert not res.is_error
+    stashed = ctx.metadata["submitted_plan"]
+    assert isinstance(stashed, Plan)
+    assert stashed.items == []
 
 
 @pytest.mark.asyncio

@@ -96,6 +96,8 @@ def test_planner_playbook_gates_share_briefing_on_tool_availability() -> None:
     assert "a missing guessed owner file means re-anchor on the nearest exact existing production directory/package or hand the slice to a residual child planner" in planner
     assert "If a proposed first-wave `target_paths` entry still equals a named benchmark test file" in planner
     assert "`ci_query_symbols(...)` results that only point back into the benchmark test files are symptom evidence, not production ownership" in planner
+    assert "Prompt-named benchmark test files are symptom surfaces, not settled implementation ownership." in planner
+    assert "Do not emit a direct developer lane whose `owned_files` are only those test files unless live evidence says the slice truly belongs to test/support infrastructure." in planner
     assert "Do not invent sibling directories like `dask/cli`, and do not redirect the lane into `dask/tests` as a substitute for missing production ownership." in planner
     assert "Do not infer an optional-dependency or environment root cause from cluster size alone." in planner
     assert "Child `owned_files` must contain only confirmed existing checkout-relative paths." in planner
@@ -143,6 +145,8 @@ def test_sweevo_context_treats_missing_share_briefing_as_non_blocking() -> None:
     assert "instead of emitting one validator per developer or recreating an umbrella validation layer" in sweevo
     assert "The default large-root benchmark shape for this repo is a small set of concrete developer lanes" in sweevo
     assert "If a guessed production owner file turns out to be missing, re-anchor on the nearest exact existing production directory/package path or park that cluster behind a child planner." in sweevo
+    assert "Prompt-named benchmark test files are symptom evidence, not default implementation ownership." in sweevo
+    assert "Do not emit root developer lanes whose `owned_files` contain only those tests unless live evidence says the slice truly belongs to test/support infrastructure." in sweevo
     assert "Treat `owned_files` as a grounded edit surface, not a hypothesis bucket." in sweevo
     assert "Keep missing guessed owners out of `owned_files`" in sweevo
     assert "Root planner symbol hits that only land in benchmark test files are not ownership evidence." in sweevo
@@ -227,6 +231,10 @@ def test_developer_playbook_anchors_import_failures_to_named_pytest_surface() ->
     assert "`owned_failures` is not a write allowlist." in developer
     assert "If the first reproducible failure names an unowned test file and the missing import/export lives outside your assigned production files, patch the true owner when it is clearly the same bug and the change stays bounded." in developer
     assert "a failing test path in `owned_failures`, `verify`, or reproduction output is evidence, not automatic proof that the test file is the right first patch target." in developer
+    assert "Harness/config files are not the default fix surface." in developer
+    assert "Do not patch `setup.cfg`, `pytest.ini`, `pyproject.toml`, warning filters, or similar test-runner configuration just to make a product failure disappear." in developer
+    assert "Pytest warning/config parse failures usually still belong to product code." in developer
+    assert "If pytest fails while parsing warning filters or import-time deprecations and your lane already owns a production/import/export surface" in developer
     assert "Treat `owned_files` as the default landing zone, not a hard barrier." in developer
     assert "`owned_files` guides the default edit surface." in developer
     assert 'if you catch yourself reasoning "the failing test is listed in `owned_failures`, so I should patch that test import first," stop.' in developer
@@ -234,6 +242,10 @@ def test_developer_playbook_anchors_import_failures_to_named_pytest_surface() ->
     assert "Do not synthesize hybrid public strings to satisfy competing tests." in developer
     assert "read the exact observed-vs-expected mismatch from that failure output before the next edit" in developer
     assert "If a narrow debug probe shows a helper already returns the value or shape the test expects, stop editing that helper." in developer
+    sweevo = _read(_SWEEVO_CONTEXT)
+    assert "If a product bug manifests as pytest import-time warning/config parsing fallout, keep the developer lane on the product import/export surface first." in sweevo
+    assert "Do not retarget the lane to `setup.cfg`, `pytest.ini`, `pyproject.toml`, or warning filters unless live evidence proves the config file itself owns the regression." in sweevo
+    assert "when the failing lane already owns a compatibility/import/export module and pytest now dies while parsing warning filters, assume the product module changed import-time warning behavior until a direct read proves otherwise." in sweevo
     assert "keep those entry points behaviorally distinct unless the live failing test proves they should converge" in developer
     assert "If the runtime says `Unknown tool: edit_file`, `write_file`, or `read_file`" in developer
     assert "the default first live coordination step is `ci_scoped_status(scope_paths=[<exact owned file(s) or nearest owning directory>])`" in developer

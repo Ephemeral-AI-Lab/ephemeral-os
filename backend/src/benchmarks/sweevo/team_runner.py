@@ -34,6 +34,7 @@ from team.builtins import (
     register_all as _register_team_builtins,
 )
 from team.models import BudgetConfig, TeamRunStatus, WorkItemKind
+from team.persistence.events import make_checkpoint_repo_state
 from team.persistence.run_store import build_default_store
 from team.runtime.context_builder import (
     TeamAgentContext,
@@ -51,6 +52,7 @@ from tools.daytona_toolkit.coordination import (
 
 from benchmarks.sweevo.dataset import summarize_sweevo_instance
 from benchmarks.sweevo.models import SWEEvoInstance, _REPO_DIR
+from benchmarks.sweevo.sandbox import apply_sweevo_repo_patch, capture_sweevo_repo_patch, setup_sweevo_sandbox
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +99,20 @@ def _checkpoint_records_from_store(store: Any, team_run_id: str) -> list[dict[st
 
 def _checkpoint_ids_from_store(store: Any, team_run_id: str) -> list[str]:
     return [record["id"] for record in _checkpoint_records_from_store(store, team_run_id)]
+
+
+def _checkpoint_repo_patch_from_store(store: Any, team_run_id: str, checkpoint_id: str) -> str:
+    load_run = getattr(store, "load_run", None)
+    if not callable(load_run):
+        return ""
+    repo_patch = ""
+    for event in load_run(team_run_id):
+        if event.kind != "checkpoint_repo_state":
+            continue
+        if str(event.data.get("checkpoint_id") or "").strip() != checkpoint_id:
+            continue
+        repo_patch = str(event.data.get("repo_patch") or "")
+    return repo_patch
 
 
 # ---------------------------------------------------------------------------
@@ -149,7 +165,7 @@ def _derive_sweevo_budgets(instance: SWEEvoInstance) -> BudgetConfig:
     # Keep each planner level inside the benchmark-size ceiling. When the
     # natural task set is wider than that, compress adjacent work into
     # expandable child-planner lanes rather than flattening more siblings.
-    plan_size = min(int(base["max_plan_size"]), 10)
+    plan_size = int(base["max_plan_size"])
     work_items = max(
         int(base["max_work_items"]),
         max(4, min(plan_size, f2p_targets)) * int(base["max_depth"]),
@@ -219,8 +235,8 @@ def _build_root_prompt(instance: SWEEvoInstance, repo_dir: str) -> str:
         f"{len(instance.fail_to_pass)} fail-to-pass target(s)).\n"
         f"- Recommended first-ready frontier cap: {frontier_cap} benchmark-critical "
         f"implementation lane(s).\n"
-        f"- The submitted root plan must stay within 1-10 total tasks. Treat {max_plan_size} "
-        f"as the runtime cap for this instance, and if the natural task set is wider, group "
+        f"- The submitted root plan must stay within the runtime cap of {max_plan_size} total tasks. "
+        f"If the natural task set is wider, group "
         f"adjacent sibling work into expandable child planner items instead of flattening "
         f"every cluster at the root.\n"
         f"- The first-ready frontier cap limits only simultaneously ready implementation "
@@ -829,6 +845,24 @@ def _make_runner(
                         f"{effective_defn.name}:{ctx.tool_metadata.get('work_item_id') or tracker.run_id or 'run'}"
                     )
                     checkpoint_id = await team_run.checkpoint(label=checkpoint_label)
+                    try:
+                        repo_patch = await capture_sweevo_repo_patch(
+                            team_run.sandbox_id or sandbox_id,
+                            repo_dir=repo_dir,
+                        )
+                        team_run.event_store.append(
+                            make_checkpoint_repo_state(
+                                team_run.id,
+                                checkpoint_id=checkpoint_id,
+                                repo_patch=repo_patch,
+                            )
+                        )
+                    except Exception:
+                        logger.debug(
+                            "Failed to capture repo patch for checkpoint %s",
+                            checkpoint_id,
+                            exc_info=True,
+                        )
                     if team_metrics is not None:
                         team_metrics.setdefault("checkpoint_ids", []).append(checkpoint_id)
                         team_metrics.setdefault("checkpoints", []).append(
@@ -1421,6 +1455,31 @@ async def resume_sweevo_team(
         raise ValueError(
             f"team run {team_run_id!r} cannot be resumed: missing sandbox_id in persisted header"
         )
+    if resolved_checkpoint_id:
+        repo_patch = _checkpoint_repo_patch_from_store(
+            event_store,
+            team_run_id,
+            resolved_checkpoint_id,
+        )
+        if repo_patch:
+            await setup_sweevo_sandbox(instance, tr.sandbox_id, repo_dir)
+            await apply_sweevo_repo_patch(tr.sandbox_id, repo_patch, repo_dir)
+            if printer is not None:
+                printer.raw_line(
+                    "team",
+                    (
+                        "[resume_restore] "
+                        f"checkpoint={resolved_checkpoint_id} repo_patch_bytes={len(repo_patch.encode('utf-8'))}"
+                    ),
+                )
+        elif printer is not None:
+            printer.raw_line(
+                "team",
+                (
+                    "[resume_restore] "
+                    f"checkpoint={resolved_checkpoint_id} repo_patch=<missing>"
+                ),
+            )
 
     session_config, _ = _prepare_benchmark_session(
         repo_dir=repo_dir,

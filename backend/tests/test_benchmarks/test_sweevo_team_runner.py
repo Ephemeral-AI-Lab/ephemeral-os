@@ -14,11 +14,13 @@ from benchmarks.sweevo.team_runner import (
     _enforce_validation_evidence,
     _build_agent_overrides,
     _build_root_prompt,
+    _checkpoint_repo_patch_from_store,
     _derive_planner_runtime_limits,
     _emit_dispatcher_dag,
     _make_context_builders,
     _make_runner,
 )
+from team.persistence.events import TeamRunEvent
 from message.event_printer import MultiAgentEventPrinter
 from message import ConversationMessage, TextBlock, ToolUseBlock
 from message.stream_events import BackgroundTaskCompleted
@@ -398,7 +400,7 @@ def test_root_prompt_points_to_skill_owned_workflow_policy():
     assert "release notes are intentionally omitted from the root planner prompt" in prompt
     assert "Stable SWE-EVO workflow policy lives in the declared skills" in prompt
     assert "Recommended first-ready frontier cap" in prompt
-    assert "submitted root plan must stay within 1-10 total tasks" in prompt
+    assert "submitted root plan must stay within the runtime cap of 16 total tasks" in prompt
     assert "does not mean the whole submitted graph should stop at that many items" in prompt
     assert "do not hand the whole remaining surface to only the initial developers" in prompt
     assert "must still receive its own developer lane or expandable child planner" in prompt
@@ -470,7 +472,7 @@ def test_planner_runtime_limits_preserve_shared_agent_budget():
     }
 
 
-def test_sweevo_budgets_cap_submitted_plan_size_at_ten():
+def test_sweevo_budgets_follow_instance_size_ceiling():
     instance = SimpleNamespace(
         repo="pydantic/pydantic",
         instance_id="wide-plan",
@@ -486,7 +488,33 @@ def test_sweevo_budgets_cap_submitted_plan_size_at_ten():
 
     budgets = _derive_sweevo_budgets(instance)
 
-    assert budgets.max_plan_size == 10
+    assert budgets.max_plan_size == 16
+
+
+def test_checkpoint_repo_patch_from_store_returns_latest_matching_patch():
+    store = SimpleNamespace(
+        load_run=lambda _team_run_id: [
+            TeamRunEvent(
+                team_run_id="T1",
+                kind="checkpoint_repo_state",
+                data={"checkpoint_id": "cp-1", "repo_patch": "patch-a"},
+            ),
+            TeamRunEvent(
+                team_run_id="T1",
+                kind="checkpoint_repo_state",
+                data={"checkpoint_id": "cp-2", "repo_patch": "patch-b"},
+            ),
+            TeamRunEvent(
+                team_run_id="T1",
+                kind="checkpoint_repo_state",
+                data={"checkpoint_id": "cp-1", "repo_patch": "patch-a2"},
+            ),
+        ]
+    )
+
+    assert _checkpoint_repo_patch_from_store(store, "T1", "cp-1") == "patch-a2"
+    assert _checkpoint_repo_patch_from_store(store, "T1", "cp-2") == "patch-b"
+    assert _checkpoint_repo_patch_from_store(store, "T1", "missing") == ""
 
 def test_enforce_validation_evidence_requires_daytona_bash():
     with pytest.raises(RuntimeError, match="validator_missing_tool_evidence"):
@@ -546,6 +574,7 @@ def test_resume_sweevo_team_uses_default_executor_factory_signature(monkeypatch)
     monkeypatch.setattr(sweevo_team_runner, "_build_team_metrics", lambda: {})
     monkeypatch.setattr(sweevo_team_runner, "_emit_team_runtime_banner", lambda *args, **kwargs: None)
     monkeypatch.setattr(sweevo_team_runner, "_checkpoint_records_from_store", lambda *args, **kwargs: [])
+    monkeypatch.setattr(sweevo_team_runner, "_checkpoint_repo_patch_from_store", lambda *args, **kwargs: "")
     def fake_resume_from(_store, _team_run_id, *, checkpoint_id=None):
         assert checkpoint_id is None
         return fake_tr
@@ -600,6 +629,81 @@ def test_resume_sweevo_team_uses_default_executor_factory_signature(monkeypatch)
         resumed_from="team-run-1",
         resumed_from_checkpoint=None,
     )
+
+
+def test_resume_sweevo_team_restores_checkpoint_repo_patch(monkeypatch):
+    instance = SimpleNamespace(
+        repo="pydantic/pydantic",
+        instance_id="pydantic__pydantic_v2.6.0b1_v2.6.0",
+        instance_id_swe="pydantic__pydantic_v2.6.0b1_v2.6.0",
+        start_version="2.6.0b1",
+        end_version="2.6.0",
+        docker_image="example/image:latest",
+        test_cmds="pytest -q",
+        problem_statement="- bullet\n" * 80,
+        fail_to_pass=["tests/test_foo.py::test_bar"],
+        pass_to_pass=["tests/test_foo.py::test_existing"],
+    )
+    fake_tr = SimpleNamespace(
+        id="team-run-1",
+        sandbox_id="sbx-1",
+        session_id="sess-1",
+        budgets=SimpleNamespace(),
+        dispatcher=SimpleNamespace(graph={}, list_checkpoints=lambda: []),
+        resume=AsyncMock(),
+        wait=AsyncMock(),
+    )
+
+    monkeypatch.setattr(sweevo_team_runner, "_register_team_builtins", lambda: None)
+    monkeypatch.setattr(sweevo_team_runner, "_build_benchmark_event_store", lambda **_: object())
+    monkeypatch.setattr(
+        sweevo_team_runner,
+        "_prepare_benchmark_session",
+        lambda **_: (SimpleNamespace(session_id="sess-1"), object()),
+    )
+    monkeypatch.setattr(sweevo_team_runner, "_build_agent_overrides", lambda _instance: {})
+    monkeypatch.setattr(sweevo_team_runner, "_build_team_metrics", lambda: {})
+    monkeypatch.setattr(sweevo_team_runner, "_emit_team_runtime_banner", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        sweevo_team_runner,
+        "_checkpoint_records_from_store",
+        lambda *args, **kwargs: [{"id": "cp-1", "label": "durable:complete:developer:dev1", "sequence": 1}],
+    )
+    monkeypatch.setattr(
+        sweevo_team_runner,
+        "_checkpoint_repo_patch_from_store",
+        lambda *args, **kwargs: "diff --git a/x b/x",
+    )
+    monkeypatch.setattr(
+        sweevo_team_runner.TeamRun,
+        "resume_from",
+        staticmethod(lambda *_args, **_kwargs: fake_tr),
+    )
+    monkeypatch.setattr(sweevo_team_runner, "setup_sweevo_sandbox", AsyncMock())
+    monkeypatch.setattr(sweevo_team_runner, "apply_sweevo_repo_patch", AsyncMock())
+    monkeypatch.setattr(sweevo_team_runner, "_make_executor_factory", lambda *args, **kwargs: "executor-factory")
+    monkeypatch.setattr(
+        sweevo_team_runner,
+        "_finalize_team_result",
+        lambda **_: {"status": "ok"},
+    )
+
+    result = asyncio.run(
+        sweevo_team_runner.resume_sweevo_team(
+            instance,
+            "team-run-1",
+            checkpoint_id="cp-1",
+        )
+    )
+
+    assert result == {"status": "ok"}
+    sweevo_team_runner.setup_sweevo_sandbox.assert_awaited_once_with(instance, "sbx-1", "/testbed")
+    sweevo_team_runner.apply_sweevo_repo_patch.assert_awaited_once_with(
+        "sbx-1",
+        "diff --git a/x b/x",
+        "/testbed",
+    )
+    fake_tr.resume.assert_awaited_once()
 
 
 def test_make_runner_uses_agent_definition_limits(monkeypatch):
