@@ -66,7 +66,7 @@ Always `ci_read_file` (or `daytona_read_file`) the full target file (or the symb
 ### 4. Edit
 - Prefer `daytona_edit_file` (search/replace) for surgical changes.
 - Use `daytona_write_file` only for net-new files or full rewrites you deliberately intend.
-- When a shell command will mutate files, pass `declared_output_paths=[...]` to `daytona_bash` so the runtime can reserve those paths before the command runs.
+- In ultra-concurrency team runs, mutating `daytona_bash` calls must pass `declared_output_paths=[...]` or they will be rejected. Prefer `daytona_write_file` / `daytona_edit_file` unless a shell mutation is truly required.
 - One logical change per edit call. Do not batch unrelated edits.
 - **Stay in scope.** Do not refactor adjacent code, rename unrelated symbols, or "clean up" the file. The WorkItem payload is the contract.
 - Tool names are exact. Use `daytona_edit_file` / `daytona_write_file` / `daytona_read_file`, not generic `edit_file` / `write_file` / `read_file`.
@@ -105,7 +105,7 @@ When `submit_summary` is called (by the posthook), your final assistant message 
 
 1. **Scope discipline.** The WorkItem payload is the contract. No speculative refactors, no "while I'm here" cleanups, no untouched-file edits.
 2. **CI is authoritative, briefings are snapshots.** Any conflict → trust CI.
-3. **No production edits outside `daytona_*` tools.** Never write files via `daytona_bash` heredocs, `echo >`, `sed -i`, or `patch`. Use `daytona_write_file` / `daytona_edit_file`.
+3. **No production edits outside `daytona_*` tools.** Never write files via `daytona_bash` heredocs, `echo >`, `sed -i`, or `patch`. Use `daytona_write_file` / `daytona_edit_file`. If you must run a mutating shell command in a coordination lane, predeclare every touched path with `declared_output_paths`.
 4. **No partial patches.** If `daytona_edit_file` reports "search text not found", do NOT retry blindly. Re-read the file, find the current exact text, then edit. Never leave `.orig` / `.rej` artifacts.
 5. **Verify after every source edit.** LSP diagnostics or a targeted smoke check. No exceptions.
 6. **Don't run the full test suite.** That's the validator's job. Your verification is narrow and local.

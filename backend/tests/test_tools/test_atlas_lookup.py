@@ -59,7 +59,6 @@ def _fake_team_run(tid: str, *, project_key: str = "P1") -> SimpleNamespace:
             project_key=project_key,
             repo_root="/repo",
         ),
-        note_atlas_lookup=lambda entries, source="atlas_lookup": None,
     )
 
 
@@ -148,25 +147,6 @@ async def test_missing_subsystem_routes_to_scout(atlas_store: AtlasStore) -> Non
         assert len(lookups) == 1
         assert lookups[0]["action"] == "scout"
         assert lookups[0]["staged_artifact_ref"] is None
-    finally:
-        unregister("T1")
-
-
-@pytest.mark.asyncio
-async def test_lookup_notifies_runtime_scheduler(atlas_store: AtlasStore) -> None:
-    seen: list[tuple[str, list[str]]] = []
-    tr = _fake_team_run("T1")
-    tr.note_atlas_lookup = lambda entries, source="atlas_lookup": seen.append(  # type: ignore[attr-defined]
-        (source, [str(entry.get("action")) for entry in entries])
-    )
-    register(tr)
-    try:
-        result, _ = await _call(
-            subsystems=["src/missing"],
-            context=_ctx("T1", store=atlas_store),
-        )
-        assert not result.is_error
-        assert seen == [("atlas_lookup", ["scout"])]
     finally:
         unregister("T1")
 

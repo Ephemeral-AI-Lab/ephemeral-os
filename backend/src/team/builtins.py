@@ -15,14 +15,11 @@ DEVELOPER = "developer"
 VALIDATOR = "validator"
 SUBMIT_PLAN_AGENT = "submit_plan_agent"
 SUBMIT_SUMMARY_AGENT = "submit_summary_agent"
-SUBMIT_ATLAS_AGENT = "submit_atlas_agent"
 DECISION_SUBMIT_RETRY = "decision_submit_retry"
 DECISION_SUBMIT_REPLAN = "decision_submit_replan"
 SUBMIT_REPLAN_AGENT = "submit_replan_agent"
 TEAM_REPLANNER = "team_replanner"
 SCOUT = "scout"
-ATLAS_BUILDER = "atlas_builder"
-ATLAS_REFRESHER = "atlas_refresher"
 
 _DEFAULT_TEAM_TOOL_CALL_LIMIT = 100
 
@@ -94,42 +91,6 @@ _SUBMIT_SUMMARY_AGENT_PROMPT = """You are submit_summary_agent. Read the work-ph
 - If submit_summary returns a validation error, fix the payload and call submit_summary again in the same turn.
 - Stop immediately after the first accepted submission.
 - Do not write prose. You have no other tools."""
-
-_SUBMIT_ATLAS_AGENT_PROMPT = """You are submit_atlas_agent. Read the work-phase output above and call submit_atlas exactly once with the atlas chunks the builder/refresher produced.
-
-- The work-phase output should be a JSON object with ``chunks`` and optional ``rationale``. Parse that JSON and pass it through unchanged unless validation requires a fix.
-- ``chunks`` must be passed to ``submit_atlas`` as a real list object, never as a JSON string. If the work-phase output contains JSON inside a text blob, fully deserialize it before calling the tool.
-- Every chunk carries a scout-shaped brief. If a chunk lacks an explicit ``subsystem`` field, submit_atlas derives one from the brief's ``canonical_scope`` (or ``target_paths``); you do not need to compute it yourself.
-- If submit_atlas returns a validation error, repair the payload structurally with a real typed list/object and the minimal required fields. Do not speculate about unrelated nested schema details that were not named by the error.
-- After two identical submit_atlas validation errors, stop freeform retries. Rebuild ``chunks`` as a typed Python list of chunk objects and retry once with only the required fields preserved.
-- Call submit_atlas exactly once with valid arguments.
-- If submit_atlas returns an error, fix the payload and call submit_atlas again in the same turn.
-- Stop immediately after the first accepted submission.
-- Do not write prose. You have no other tools."""
-
-_ATLAS_BUILDER_PROMPT = """You are atlas_builder. Bootstrap the project atlas from scratch by running a hierarchical scout pass, then prepare every resulting brief as an atlas chunk for the posthook agent.
-
-Read the preloaded skills first; they define the atlas build workflow. This system prompt only fixes the role boundary and output contract.
-
-Role boundary:
-- Never edit files; you are a cache writer, not a worker.
-
-Output contract:
-- End with a single JSON object containing ``chunks`` and optional ``rationale`` in the shape expected by ``submit_atlas``.
-- Do NOT call ``submit_atlas`` yourself. Do NOT write prose before or after the JSON payload."""
-
-_ATLAS_REFRESHER_PROMPT = """You are atlas_refresher. The caller supplies ``stale_subsystems: list[str]`` in your payload — rewrite only those chunks and leave every other subsystem untouched.
-
-Read the preloaded skills first; they define the atlas refresh workflow. This system prompt only fixes the role boundary and output contract.
-
-Role boundary:
-- Refresh only the subsystems named in ``stale_subsystems``.
-- Do NOT refresh fresh chunks; do NOT edit files.
-
-Output contract:
-- End with a single JSON object containing one fresh brief per stale subsystem plus optional ``rationale``.
-- Do NOT call ``submit_atlas`` yourself. Do NOT write prose before or after the JSON payload."""
-
 
 _DECISION_AGENT_PROMPT = """You are a decision agent. Evaluate the work-phase output and decide which action to take by calling exactly ONE of your available tools.
 
@@ -275,59 +236,6 @@ def register_all() -> None:
             source="builtin",
         )
     )
-    register_definition(
-        AgentDefinition(
-            name=SUBMIT_ATLAS_AGENT,
-            description="Serializes an atlas builder/refresher's output into durable atlas chunks via submit_atlas.",
-            system_prompt=_SUBMIT_ATLAS_AGENT_PROMPT,
-            model="inherit",
-            toolkits=["submit_atlas_posthook"],
-            skills=[],
-            include_skills=False,
-            agent_type="subagent",
-            source="builtin",
-        )
-    )
-    register_definition(
-        AgentDefinition(
-            name=ATLAS_BUILDER,
-            description=(
-                "Bootstraps the persistent Project Atlas by running a "
-                "hierarchical scout pass and committing each brief as a chunk."
-            ),
-            system_prompt=_ATLAS_BUILDER_PROMPT,
-            model="inherit",
-            tool_call_limit=_DEFAULT_TEAM_TOOL_CALL_LIMIT,
-            toolkits=["code_intelligence", "subagent"],
-            skills=["team-atlas-builder-playbook"],
-            include_skills=False,
-            source="builtin",
-            posthook=PosthookConfig(
-                agent_name=SUBMIT_ATLAS_AGENT,
-                metadata_key="submitted_atlas",
-            ),
-        )
-    )
-    register_definition(
-        AgentDefinition(
-            name=ATLAS_REFRESHER,
-            description=(
-                "Rewrites only the stale subsystems of the Project Atlas by "
-                "re-scouting each target path and upserting the new briefs."
-            ),
-            system_prompt=_ATLAS_REFRESHER_PROMPT,
-            model="inherit",
-            tool_call_limit=_DEFAULT_TEAM_TOOL_CALL_LIMIT,
-            toolkits=["subagent"],
-            skills=["team-atlas-refresher-playbook"],
-            include_skills=False,
-            source="builtin",
-            posthook=PosthookConfig(
-                agent_name=SUBMIT_ATLAS_AGENT,
-                metadata_key="submitted_atlas",
-            ),
-        )
-    )
     # --- Decision posthook agents ---
     register_definition(
         AgentDefinition(
@@ -392,7 +300,6 @@ def register_all() -> None:
         ", ".join([
             TEAM_PLANNER, DEVELOPER, VALIDATOR,
             SUBMIT_PLAN_AGENT, SUBMIT_SUMMARY_AGENT, SCOUT,
-            SUBMIT_ATLAS_AGENT, ATLAS_BUILDER, ATLAS_REFRESHER,
             DECISION_SUBMIT_RETRY, DECISION_SUBMIT_REPLAN,
             SUBMIT_REPLAN_AGENT, TEAM_REPLANNER,
         ]),

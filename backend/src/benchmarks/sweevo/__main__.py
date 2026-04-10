@@ -331,8 +331,7 @@ async def _cmd_run(args: argparse.Namespace) -> int:
                 f"  team: work_items={team.get('work_items', result.get('team_work_items', 0))}  "
                 f"max_depth={team.get('max_depth_reached', 0)}  "
                 f"agent_runs={team.get('agent_runs', 0)}  "
-                f"checkpoints={len(team.get('checkpoint_ids') or [])}  "
-                f"atlas_parallelism={team.get('atlas_parallelism', 0)}",
+                f"checkpoints={len(team.get('checkpoint_ids') or [])}",
                 flush=True,
             )
             print(

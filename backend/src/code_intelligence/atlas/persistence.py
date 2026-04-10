@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import logging
 import time
 from typing import Any
 
 from team.atlas.freshness import hash_paths_under
-from team.atlas.store import AtlasChunk
+from team.atlas.store import AtlasChunk, AtlasStore, get_default_store
 from team.context.canonicalize import scope_of_artifact
+
+logger = logging.getLogger(__name__)
 
 
 def build_chunk_from_brief(
@@ -37,6 +40,54 @@ def build_chunk_from_brief(
         symbol_ids=symbol_ids,
         snapshot_time=snapshot_time,
     )
+
+
+def persist_brief_to_atlas(
+    *,
+    team_run: Any,
+    brief: dict[str, Any],
+    ci_service: Any | None = None,
+    store: AtlasStore | None = None,
+    reason: str = "direct-scout",
+) -> bool:
+    """Persist one scout brief directly into Atlas.
+
+    This is the remaining Atlas write path after removing Atlas-owned
+    maintenance agents. It is intentionally small and side-effect free:
+    no background jobs, no runtime scheduling, just one guarded upsert.
+    """
+    if not isinstance(brief, dict):
+        return False
+    project_ctx = getattr(team_run, "project_context", None)
+    project_key = getattr(project_ctx, "project_key", "") or ""
+    repo_root = getattr(project_ctx, "repo_root", "") or ""
+    atlas_store = store if store is not None else get_default_store()
+    if not project_key or not repo_root or atlas_store is None:
+        return False
+    if not atlas_store.is_initialised():
+        return False
+    try:
+        chunk = build_chunk_from_brief(
+            brief=brief,
+            repo_root=repo_root,
+            ci_service=ci_service,
+        )
+        applied = atlas_store.upsert_chunks(
+            project_key=project_key,
+            repo_root=repo_root,
+            chunks=[chunk],
+        )
+        logger.info(
+            "atlas persisted scout brief: run=%s subsystem=%s reason=%s applied=%s",
+            getattr(team_run, "id", ""),
+            chunk.subsystem,
+            reason,
+            bool(applied),
+        )
+        return bool(applied)
+    except Exception:
+        logger.debug("direct scout atlas persistence failed", exc_info=True)
+        return False
 
 def _target_paths(brief: dict[str, Any]) -> list[str]:
     raw = brief.get("target_paths") if isinstance(brief, dict) else None

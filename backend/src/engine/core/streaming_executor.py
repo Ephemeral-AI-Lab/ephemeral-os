@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from providers.types import ApiToolUseDeltaEvent
 
 logger = logging.getLogger(__name__)
+_MERGED_RUNTIME_METADATA_KEYS = ("scope_packet", "coherence_token")
 
 
 @dataclass
@@ -51,10 +52,17 @@ def _merge_submission_metadata(
     *,
     original: ToolExecutionContext,
     updated: ToolExecutionContext,
+    result_metadata: dict[str, Any] | None = None,
 ) -> None:
-    """Propagate accepted submit-tool payloads back to the live metadata bag."""
+    """Propagate selected tool metadata back to the live metadata bag."""
     for key, value in updated.metadata.extras.items():
         if key.startswith("submitted_") and value is not None:
+            original.metadata[key] = value
+    for key in _MERGED_RUNTIME_METADATA_KEYS:
+        value = updated.metadata.extras.get(key)
+        if value is None and isinstance(result_metadata, dict):
+            value = result_metadata.get(key)
+        if value is not None:
             original.metadata[key] = value
 
 
@@ -270,7 +278,11 @@ class StreamingToolExecutor:
             )
 
             tool.result = await run_tool_safely(tool_def, tool.input, context_with_id)
-            _merge_submission_metadata(original=self._context, updated=context_with_id)
+            _merge_submission_metadata(
+                original=self._context,
+                updated=context_with_id,
+                result_metadata=tool.result.metadata if tool.result is not None else None,
+            )
             logger.info(
                 "STREAM: Tool completed: tool_id=%s tool_name=%s is_error=%s output_len=%d",
                 tool.id,

@@ -141,6 +141,8 @@ def test_build_query_context_carries_team_metadata_and_briefings():
     assert ctx.tool_metadata.work_item_id == "W1"
     assert ctx.tool_metadata.agent_run_id is None
     assert isinstance(ctx.tool_metadata.get("work_item_started_at"), float)
+    assert ctx.tool_metadata["coordination_mode"] == "ultra"
+    assert ctx.tool_metadata["require_declared_shell_outputs"] is True
 
 
 def test_shared_briefings_flow_into_query_context():
@@ -186,6 +188,8 @@ def test_build_query_context_injects_scope_packet_when_ci_is_available(monkeypat
     assert ctx.tool_metadata["ci_workspace_root"] == "/testbed"
     assert ctx.tool_metadata["scope_packet"]["coherence_token"] == "token-1"
     assert ctx.tool_metadata["coherence_token"] == "token-1"
+    assert ctx.tool_metadata["coordination_mode"] == "ultra"
+    assert ctx.tool_metadata["require_declared_shell_outputs"] is True
     assert ctx.user_message.startswith("SCOPE token-1\n\n")
 
 

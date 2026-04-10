@@ -72,7 +72,7 @@ class TeamAgentContext:
         return self.tool_metadata.get(key)
 
 
-def build_work_item_metadata(team_run: "TeamRun", wi: "WorkItem") -> ExecutionMetadata:
+def build_work_item_metadata(team_run: TeamRun, wi: WorkItem) -> ExecutionMetadata:
     """Build the canonical routing metadata for a team work item."""
     meta = ExecutionMetadata(
         team_run_id=team_run.id,
@@ -86,6 +86,8 @@ def build_work_item_metadata(team_run: "TeamRun", wi: "WorkItem") -> ExecutionMe
     meta["work_item_started_at"] = time.time()
     meta["retry_count"] = wi.retry_count
     meta["max_retries"] = wi.max_retries
+    meta["coordination_mode"] = "ultra"
+    meta["require_declared_shell_outputs"] = True
     repo_root = str(getattr(getattr(team_run, "project_context", None), "repo_root", "") or "")
     if repo_root:
         meta["daytona_cwd"] = repo_root
@@ -94,8 +96,8 @@ def build_work_item_metadata(team_run: "TeamRun", wi: "WorkItem") -> ExecutionMe
 
 
 def _maybe_attach_live_scope_packet(
-    team_run: "TeamRun",
-    wi: "WorkItem",
+    team_run: TeamRun,
+    wi: WorkItem,
     *,
     meta: ExecutionMetadata,
     user_message: str,
@@ -136,8 +138,8 @@ def _maybe_attach_live_scope_packet(
 
 
 def build_initial_user_message(
-    team_run: "TeamRun",
-    wi: "WorkItem",
+    team_run: TeamRun,
+    wi: WorkItem,
     base_prompt: str,
 ) -> str:
     """Prepend rendered briefings (if any) to ``base_prompt``.
@@ -191,7 +193,7 @@ def prepend_shared_briefings_for_subagent(team_run_id: str | None, body: str) ->
     return f"{preamble}\n\n{body}"
 
 
-def default_base_prompt(wi: "WorkItem") -> str:
+def default_base_prompt(wi: WorkItem) -> str:
     """Minimal default rendering of a WorkItem payload into a user message."""
     if wi.replan_source_id is not None:
         return _render_replan_prompt(wi)
@@ -202,7 +204,7 @@ def default_base_prompt(wi: "WorkItem") -> str:
     return f"Execute work item {wi.id} (agent={wi.agent_name}).\nPayload: {payload!r}"
 
 
-def _render_replan_prompt(wi: "WorkItem") -> str:
+def _render_replan_prompt(wi: WorkItem) -> str:
     """Render a replan work item with full failure context."""
     payload = wi.payload or {}
     original = json.dumps(payload.get("original_payload", {}), indent=2, default=str)
@@ -245,9 +247,9 @@ def render_work_item_payload(payload: Any) -> str | None:
 
 
 def build_query_context(
-    defn: "AgentDefinition",  # noqa: ARG001 — kept for QueryContextBuilder signature parity
-    team_run: "TeamRun",
-    wi: "WorkItem",
+    defn: AgentDefinition,  # noqa: ARG001 — kept for QueryContextBuilder signature parity
+    team_run: TeamRun,
+    wi: WorkItem,
 ) -> TeamAgentContext:
     """Default production ``QueryContextBuilder``.
 

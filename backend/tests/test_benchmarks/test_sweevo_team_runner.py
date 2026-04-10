@@ -9,8 +9,6 @@ import pytest
 
 from benchmarks.sweevo import team_runner as sweevo_team_runner
 from benchmarks.sweevo.team_runner import (
-    _derive_atlas_parallelism,
-    _derive_atlas_scheduler_policy,
     _derive_sweevo_budgets,
     _enforce_validation_evidence,
     _build_agent_overrides,
@@ -30,16 +28,16 @@ def test_posthook_ctx_prefers_final_text_over_wrapped_work_result():
     _, build_posthook_ctx = _make_context_builders("sbx-1")
 
     ctx = build_posthook_ctx(
-        SimpleNamespace(name="submit_atlas_agent"),
+        SimpleNamespace(name="submit_plan_agent"),
         {
-            "final_text": '{"chunks":[{"subsystem":"pydantic","brief":{"target_paths":["pydantic"]}}]}',
+            "final_text": '{"items":[{"agent_name":"developer","local_id":"dev1","kind":"atomic"}]}',
             "team_run_id": "T1",
             "work_item_id": "W1",
         },
     )
 
     assert ctx.user_message == (
-        '{"chunks":[{"subsystem":"pydantic","brief":{"target_paths":["pydantic"]}}]}'
+        '{"items":[{"agent_name":"developer","local_id":"dev1","kind":"atomic"}]}'
     )
     assert ctx.tool_metadata.team_run_id == "T1"
     assert ctx.tool_metadata.work_item_id == "W1"
@@ -48,12 +46,12 @@ def test_posthook_ctx_prefers_final_text_over_wrapped_work_result():
 def test_posthook_ctx_prefers_extracted_posthook_input_over_final_text():
     _, build_posthook_ctx = _make_context_builders("sbx-1")
 
-    extracted = '{"chunks":[{"subsystem":"pydantic","brief":{"target_paths":["pydantic"]}}]}'
+    extracted = '{"items":[{"agent_name":"developer","local_id":"dev1","kind":"atomic"}]}'
     ctx = build_posthook_ctx(
-        SimpleNamespace(name="submit_atlas_agent"),
+        SimpleNamespace(name="submit_plan_agent"),
         {
             "posthook_input_text": extracted,
-            "final_text": "Acknowledged. Since the atlas payload has already been submitted, no further action is required.",
+            "final_text": "Plan payload already submitted. No further action is required.",
             "team_run_id": "T1",
             "work_item_id": "W1",
         },
@@ -87,45 +85,6 @@ def test_extract_posthook_input_text_recovers_plan_json_with_trailing_prose():
     assert json.loads(extracted) == {
         "items": [{"agent_name": "developer", "local_id": "dev1", "kind": "atomic"}]
     }
-
-
-def test_extract_posthook_input_text_recovers_atlas_json_from_earlier_message():
-    extracted = sweevo_team_runner._extract_posthook_input_text(
-        [
-            ConversationMessage(
-                role="assistant",
-                content=[
-                    TextBlock(
-                        text=(
-                            "Budget critical.\n\n"
-                            '{"chunks":[{"subsystem":"tests/test_types.py","brief":{"target_paths":["tests/test_types.py"]}}],"rationale":"refresh"}'
-                        )
-                    )
-                ],
-            ),
-            ConversationMessage(
-                role="assistant",
-                content=[
-                    TextBlock(
-                        text="Atlas refresh payload already submitted. No further action needed."
-                    )
-                ],
-            ),
-        ],
-        "submitted_atlas",
-    )
-
-    assert extracted is not None
-    assert json.loads(extracted) == {
-        "chunks": [
-            {
-                "subsystem": "tests/test_types.py",
-                "brief": {"target_paths": ["tests/test_types.py"]},
-            }
-        ],
-        "rationale": "refresh",
-    }
-
 
 def test_posthook_ctx_propagates_live_team_plan_budget(monkeypatch):
     _, build_posthook_ctx = _make_context_builders("sbx-1")
@@ -180,6 +139,8 @@ def test_query_ctx_seeds_repo_root_for_daytona_and_ci():
     assert ctx.tool_metadata.sandbox_id == "sbx-1"
     assert ctx.tool_metadata.daytona_cwd == "/testbed"
     assert ctx.tool_metadata["ci_workspace_root"] == "/testbed"
+    assert ctx.tool_metadata["coordination_mode"] == "ultra"
+    assert ctx.tool_metadata["require_declared_shell_outputs"] is True
     assert "Repo root inside the sandbox: /testbed" in ctx.user_message
     assert "Do not prepend guessed roots" in ctx.user_message
 
@@ -228,6 +189,8 @@ def test_query_ctx_injects_scope_packet_when_ci_is_available(monkeypatch):
 
     assert ctx.tool_metadata["scope_packet"]["coherence_token"] == "token-1"
     assert ctx.tool_metadata["coherence_token"] == "token-1"
+    assert ctx.tool_metadata["coordination_mode"] == "ultra"
+    assert ctx.tool_metadata["require_declared_shell_outputs"] is True
     assert ctx.user_message.startswith("SCOPE token-1\n\n")
 
 
@@ -340,41 +303,6 @@ def test_sweevo_budgets_cap_submitted_plan_size_at_ten():
 
     assert budgets.max_plan_size == 10
 
-
-def test_sweevo_derives_atlas_policy_from_run_mode():
-    instance = SimpleNamespace(
-        fail_to_pass=["a", "b"],
-        problem_statement="- bullet\n" * 10,
-        repo="example/repo",
-        instance_id="atlas-off",
-        instance_id_swe="atlas-off",
-        start_version="1.0.0",
-        end_version="1.0.1",
-        docker_image="example/image:latest",
-        test_cmds="pytest -q",
-        pass_to_pass=[],
-    )
-
-    assert _derive_atlas_scheduler_policy(resumed=False) == "deferred_persist"
-    assert _derive_atlas_scheduler_policy(resumed=True) == "refresh_only"
-    assert (
-        _derive_atlas_parallelism(
-            instance,
-            num_executors=8,
-            policy="deferred_persist",
-        )
-        == 0
-    )
-    assert (
-        _derive_atlas_parallelism(
-            instance,
-            num_executors=8,
-            policy="refresh_only",
-        )
-        == 2
-    )
-
-
 def test_enforce_validation_evidence_requires_daytona_bash():
     with pytest.raises(RuntimeError, match="validator_missing_tool_evidence"):
         _enforce_validation_evidence(
@@ -430,7 +358,6 @@ def test_resume_sweevo_team_uses_default_executor_factory_signature(monkeypatch)
         lambda **_: (SimpleNamespace(session_id="sess-1"), object()),
     )
     monkeypatch.setattr(sweevo_team_runner, "_build_agent_overrides", lambda _instance: {})
-    monkeypatch.setattr(sweevo_team_runner, "_derive_atlas_parallelism", lambda *args, **kwargs: 1)
     monkeypatch.setattr(sweevo_team_runner, "_build_team_metrics", lambda: {})
     monkeypatch.setattr(sweevo_team_runner, "_emit_team_runtime_banner", lambda *args, **kwargs: None)
     monkeypatch.setattr(sweevo_team_runner, "_checkpoint_ids_from_store", lambda *args, **kwargs: [])
@@ -466,13 +393,6 @@ def test_resume_sweevo_team_uses_default_executor_factory_signature(monkeypatch)
         return "executor-factory"
 
     monkeypatch.setattr(sweevo_team_runner, "_make_executor_factory", fake_make_executor_factory)
-    seen_atlas_calls: list[dict[str, object]] = []
-
-    def fake_make_atlas_scheduler_factory(*args, **kwargs):
-        seen_atlas_calls.append(kwargs)
-        return "atlas-factory"
-
-    monkeypatch.setattr(sweevo_team_runner, "_make_atlas_scheduler_factory", fake_make_atlas_scheduler_factory)
     monkeypatch.setattr(
         sweevo_team_runner,
         "_finalize_team_result",
@@ -489,8 +409,6 @@ def test_resume_sweevo_team_uses_default_executor_factory_signature(monkeypatch)
     assert result == {"status": "ok"}
     assert seen_factory_calls and seen_factory_calls[0]["sandbox_id"] == "sbx-1"
     assert seen_factory_calls[0]["agent_overrides"] == {}
-    assert seen_atlas_calls
-    assert seen_atlas_calls[0]["policy"] == "refresh_only"
     fake_tr.resume.assert_awaited_once()
 
 

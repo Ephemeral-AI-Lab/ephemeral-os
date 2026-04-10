@@ -110,6 +110,47 @@ async def test_bash_passes_cwd_to_exec():
     assert call_kwargs.get("cwd") == "/proj"
 
 
+async def test_bash_rejects_mutating_command_without_declared_outputs_in_ultra_mode():
+    sb = _sb(exec_result=MagicMock(result="ok", exit_code=0))
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "coordination_mode": "ultra",
+            "require_declared_shell_outputs": True,
+        }
+    )
+
+    result = await daytona_bash.execute(daytona_bash.input_model(command="touch tmp.txt"), ctx)
+
+    assert result.is_error
+    assert "must declare `declared_output_paths`" in result.output
+    sb.process.exec.assert_not_called()
+
+
+async def test_bash_allows_mutating_command_with_declared_outputs_in_ultra_mode():
+    sb = _sb(exec_result=MagicMock(result="ok", exit_code=0))
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "daytona_cwd": "/workspace",
+            "coordination_mode": "ultra",
+            "require_declared_shell_outputs": True,
+        }
+    )
+
+    result = await daytona_bash.execute(
+        daytona_bash.input_model(
+            command="touch tmp.txt",
+            declared_output_paths=["tmp.txt"],
+        ),
+        ctx,
+    )
+
+    assert not result.is_error
+    assert json.loads(result.output)["exit_code"] == 0
+    assert sb.process.exec.called
+
+
 # ---------------------------------------------------------------------------
 # daytona_read_file
 # ---------------------------------------------------------------------------

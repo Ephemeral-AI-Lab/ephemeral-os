@@ -9,8 +9,10 @@ from unittest.mock import MagicMock
 from team.runtime.registry import register, unregister
 from tools.core.base import ToolExecutionContext
 from tools.daytona_toolkit.ci_integration import (
+    abort_ci_write,
     finalize_ci_write,
     get_ci_service,
+    prepare_ci_write,
     prime_cache_after_write,
     record_edit_in_ledger,
 )
@@ -131,6 +133,89 @@ def test_finalize_ci_write_skips_atlas_dirty_mark_on_failed_commit():
         assert seen == []
     finally:
         unregister("T1")
+
+
+def test_prepare_ci_write_refreshes_scope_baseline_after_reservation(monkeypatch):
+    svc = MagicMock()
+    prepared = SimpleNamespace(file_path="/repo/file.py", token_id="tok-1")
+    svc.prepare_write.return_value = prepared
+    packets = [
+        {"scope_paths": ["src"], "coherence_token": "base-token"},
+        {"scope_paths": ["src"], "coherence_token": "reserved-token"},
+    ]
+    monkeypatch.setattr(
+        "tools.daytona_toolkit.ci_integration.build_scope_packet_for_context",
+        lambda *args, **kwargs: dict(packets.pop(0)),
+    )
+    ctx = _ctx(
+        {
+            "ci_service": svc,
+            "agent_run_id": "worker-1",
+            "scope_packet": {"scope_paths": ["src"], "coherence_token": "base-token"},
+            "coherence_token": "base-token",
+        }
+    )
+
+    result, packet, err = prepare_ci_write(ctx, "/repo/file.py")
+
+    assert err is None
+    assert result is prepared
+    assert packet["coherence_token"] == "reserved-token"
+    assert ctx.metadata["scope_packet"]["coherence_token"] == "reserved-token"
+    assert ctx.metadata["coherence_token"] == "reserved-token"
+
+
+def test_abort_ci_write_refreshes_scope_baseline_after_release(monkeypatch):
+    svc = MagicMock()
+    packets = [{"scope_paths": ["src"], "coherence_token": "released-token"}]
+    monkeypatch.setattr(
+        "tools.daytona_toolkit.ci_integration.build_scope_packet_for_context",
+        lambda *args, **kwargs: dict(packets.pop(0)),
+    )
+    ctx = _ctx(
+        {
+            "ci_service": svc,
+            "scope_packet": {"scope_paths": ["src"], "coherence_token": "reserved-token"},
+            "coherence_token": "reserved-token",
+        }
+    )
+    prepared = SimpleNamespace(file_path="/repo/file.py", token_id="tok-1")
+
+    abort_ci_write(ctx, prepared)
+
+    svc.abort_prepared_write.assert_called_once_with(prepared)
+    assert ctx.metadata["scope_packet"]["coherence_token"] == "released-token"
+    assert ctx.metadata["coherence_token"] == "released-token"
+
+
+def test_finalize_ci_write_refreshes_scope_baseline_after_commit(monkeypatch):
+    svc = MagicMock()
+    svc.commit_prepared_write.return_value = SimpleNamespace(success=True)
+    packets = [{"scope_paths": ["src"], "coherence_token": "after-commit"}]
+    monkeypatch.setattr(
+        "tools.daytona_toolkit.ci_integration.build_scope_packet_for_context",
+        lambda *args, **kwargs: dict(packets.pop(0)),
+    )
+    ctx = _ctx(
+        {
+            "ci_service": svc,
+            "scope_packet": {"scope_paths": ["src"], "coherence_token": "reserved-token"},
+            "coherence_token": "reserved-token",
+        }
+    )
+    prepared = SimpleNamespace(file_path="/repo/file.py")
+
+    result = finalize_ci_write(
+        ctx,
+        prepared,
+        content="hello",
+        edit_type="write",
+        description="desc",
+    )
+
+    assert result.success is True
+    assert ctx.metadata["scope_packet"]["coherence_token"] == "after-commit"
+    assert ctx.metadata["coherence_token"] == "after-commit"
 
 
 # ---------------------------------------------------------------------------

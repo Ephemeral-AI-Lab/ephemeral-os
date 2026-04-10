@@ -6,10 +6,11 @@ import asyncio
 import uuid
 from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Callable
+from typing import Any, Callable
 
 from team.artifacts.store import InMemoryArtifactStore
 from team.atlas.identity import project_key_for
+from team.atlas.persistence import persist_brief_to_atlas
 from team.context.project import ProjectContext
 from team.context.scout_briefings import invalidate_stale_scout_context
 from team.persistence.events import (
@@ -32,9 +33,6 @@ from team.runtime.dispatcher import Dispatcher
 from team.runtime.executor import Executor
 from team.runtime.registry import register as _register_team_run
 from team.runtime.registry import unregister as _unregister_team_run
-
-if TYPE_CHECKING:
-    from team.atlas.scheduler import AtlasMaintenanceScheduler
 
 
 @dataclass(frozen=True)
@@ -129,7 +127,6 @@ class TeamRun:
         self._executor_tasks: list[asyncio.Task[None]] = []
         self._executor_factory: Callable[["TeamRun"], Executor] | None = None
         self._num_executors: int = 1
-        self.atlas_scheduler: AtlasMaintenanceScheduler | None = None
 
     # ---- lifecycle -------------------------------------------------------
 
@@ -139,9 +136,6 @@ class TeamRun:
         payload: dict[str, Any],
         *,
         executor_factory: Callable[["TeamRun"], Executor],
-        atlas_scheduler_factory: Callable[
-            ["TeamRun"], "AtlasMaintenanceScheduler"
-        ] | None = None,
         num_executors: int = 1,
         root_kind: WorkItemKind = WorkItemKind.ATOMIC,
     ) -> None:
@@ -173,10 +167,6 @@ class TeamRun:
         self.status = TeamRunStatus.RUNNING
         self.event_store.append(make_team_run_status(self.id, self.status.value))
         _register_team_run(self)
-        if atlas_scheduler_factory is not None:
-            self.atlas_scheduler = atlas_scheduler_factory(self)
-            await self.atlas_scheduler.start()
-
         self._executor_factory = executor_factory
         self._num_executors = num_executors
         self._spawn_executors()
@@ -187,9 +177,6 @@ class TeamRun:
         payload: dict[str, Any],
         *,
         executor_factory: Callable[["TeamRun"], Executor],
-        atlas_scheduler_factory: Callable[
-            ["TeamRun"], "AtlasMaintenanceScheduler"
-        ] | None = None,
         num_executors: int = 1,
     ) -> None:
         """Start a team run using a ``TeamDefinition`` to pick the planner.
@@ -212,7 +199,6 @@ class TeamRun:
             agent_name=team_def.planner_agent,
             payload=payload,
             executor_factory=executor_factory,
-            atlas_scheduler_factory=atlas_scheduler_factory,
             num_executors=num_executors,
             root_kind=WorkItemKind.EXPANDABLE,
         )
@@ -231,9 +217,6 @@ class TeamRun:
             self._compute_final_status()
             return self.status
         finally:
-            if self.atlas_scheduler is not None:
-                await self.atlas_scheduler.stop()
-                self.atlas_scheduler = None
             _unregister_team_run(self.id)
 
     async def _join_executors(self) -> None:
@@ -277,37 +260,9 @@ class TeamRun:
         self.cancel_event.set()
         await self.dispatcher.cancel_all_pending()
 
-    def note_atlas_lookup(
-        self,
-        entries: list[dict[str, Any]],
-        *,
-        source: str = "atlas_lookup",
-    ) -> None:
-        if self.atlas_scheduler is None:
-            return
-        try:
-            self.atlas_scheduler.note_lookup(entries, source=source)
-        except Exception:
-            import logging
-
-            logging.getLogger(__name__).debug(
-                "atlas scheduler note_lookup failed",
-                exc_info=True,
-            )
-
     def note_atlas_edit(self, file_path: str, *, reason: str = "edit") -> None:
+        del reason
         invalidate_stale_scout_context(self, file_path)
-        if self.atlas_scheduler is None:
-            return
-        try:
-            self.atlas_scheduler.mark_dirty_path(file_path, reason=reason)
-        except Exception:
-            import logging
-
-            logging.getLogger(__name__).debug(
-                "atlas scheduler mark_dirty_path failed",
-                exc_info=True,
-            )
 
     def note_direct_scout_brief(
         self,
@@ -316,11 +271,10 @@ class TeamRun:
         ci_service: Any | None = None,
         reason: str = "direct-scout",
     ) -> None:
-        if self.atlas_scheduler is None:
-            return
         try:
-            self.atlas_scheduler.persist_direct_scout_brief(
-                brief,
+            persist_brief_to_atlas(
+                team_run=self,
+                brief=brief,
                 ci_service=ci_service,
                 reason=reason,
             )
@@ -359,9 +313,6 @@ class TeamRun:
         self,
         *,
         executor_factory: Callable[["TeamRun"], Executor],
-        atlas_scheduler_factory: Callable[
-            ["TeamRun"], "AtlasMaintenanceScheduler"
-        ] | None = None,
         num_executors: int = 1,
     ) -> None:
         """Resume a rehydrated TeamRun in the current process."""
@@ -375,9 +326,6 @@ class TeamRun:
         self.status = TeamRunStatus.RUNNING
         self.event_store.append(make_team_run_status(self.id, self.status.value))
         _register_team_run(self)
-        if atlas_scheduler_factory is not None:
-            self.atlas_scheduler = atlas_scheduler_factory(self)
-            await self.atlas_scheduler.start()
         self._spawn_executors()
 
     # ---- crash recovery --------------------------------------------------

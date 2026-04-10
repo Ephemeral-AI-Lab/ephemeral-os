@@ -95,9 +95,10 @@ async def test_ci_scope_status_returns_live_scope_packet():
     svc.arbiter.hotspots.return_value = [("src/app.py", 4)]
     svc.symbol_index.generation = 11
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        ctx = _ctx_with_svc(svc)
         result = await ci_scope_status.execute(
             ci_scope_status.input_model(scope_paths=["src"]),
-            _ctx_with_svc(svc),
+            ctx,
         )
     assert not result.is_error
     data = json.loads(result.output)
@@ -107,6 +108,12 @@ async def test_ci_scope_status_returns_live_scope_packet():
     assert data["symbol_index_generation"] == 11
     assert data["active_reservations"][0]["file_path"] == "src/app.py"
     assert data["coherence_token"]
+    assert data["admission"]["mode"] == "serialize"
+    assert data["admission"]["recommended_parallel_scouts"] == 1
+    assert result.metadata["scope_packet"]["coherence_token"] == data["coherence_token"]
+    assert result.metadata["coherence_token"] == data["coherence_token"]
+    assert ctx.metadata["scope_packet"]["coherence_token"] == data["coherence_token"]
+    assert ctx.metadata["coherence_token"] == data["coherence_token"]
 
 
 # ---------------------------------------------------------------------------

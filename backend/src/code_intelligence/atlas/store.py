@@ -7,8 +7,8 @@ Concurrency model
 -----------------
 Every chunk mutation is **version-guarded**: writes are accepted only
 when the incoming ``brief_version`` is strictly greater than the stored
-version. Under concurrent ``atlas_builder`` / ``atlas_refresher`` runs
-this means a slow, stale writer cannot overwrite a fresh one — the
+version. Under concurrent Atlas writes this means a slow, stale writer
+cannot overwrite a fresh one — the
 conditional ``UPDATE ... WHERE brief_version < :new_version`` turns
 stale writes into no-ops instead of corrupting state. Inserts race
 against the ``(project_key, subsystem)`` PK and recover via a nested

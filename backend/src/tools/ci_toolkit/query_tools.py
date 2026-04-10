@@ -17,6 +17,7 @@ from tools.daytona_toolkit.ci_integration import (
     build_live_scope_packet,
     get_ci_service,
     get_daytona_sandbox,
+    refresh_scope_baseline,
     scope_paths_for_write,
     resolve_daytona_path,
 )
@@ -624,7 +625,7 @@ async def ci_status(*, context: ToolExecutionContext) -> ToolResult:
     name="ci_scope_status",
     description=(
         "Return a live scope packet with coherence token, recent changes, "
-        "reservations, and freshness grade for one or more paths."
+        "reservations, freshness grade, and scout fanout admission for one or more paths."
     ),
     read_only=True,
 )
@@ -645,7 +646,14 @@ async def ci_scope_status(
         context,
         scope_paths=requested,
     )
-    return ToolResult(output=json.dumps(packet, indent=2, default=str))
+    refresh_scope_baseline(context, packet=packet)
+    return ToolResult(
+        output=json.dumps(packet, indent=2, default=str),
+        metadata={
+            "scope_packet": packet,
+            "coherence_token": str(packet.get("coherence_token") or ""),
+        },
+    )
 
 
 # -- Workspace Structure ------------------------------------------------------

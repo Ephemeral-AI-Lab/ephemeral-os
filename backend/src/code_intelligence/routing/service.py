@@ -7,10 +7,12 @@ single sandbox. Thread-safe with per-sandbox creation locks.
 
 from __future__ import annotations
 
+import json
 import inspect
 import hashlib
 import logging
 import threading
+import time
 from typing import Any
 
 from code_intelligence.editing.arbiter import Arbiter
@@ -38,13 +40,138 @@ from code_intelligence.types import (
 )
 
 logger = logging.getLogger(__name__)
+_DEFAULT_SCOPE_RECENT_SECONDS = 300.0
 
 
 def _content_hash(content: str) -> str:
     return hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
 
 
-def _rebind_service_sandbox(service: "CodeIntelligenceService", sandbox: Any) -> None:
+def _normalize_scope_paths(paths: list[str] | tuple[str, ...] | None) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for raw in paths or ():
+        if not isinstance(raw, str):
+            continue
+        for part in raw.split("|"):
+            cleaned = part.strip().replace("\\", "/").removeprefix("./").rstrip("/")
+            if not cleaned or cleaned in seen:
+                continue
+            seen.add(cleaned)
+            out.append(cleaned)
+    out.sort()
+    return out
+
+
+def _paths_overlap(path_a: str, path_b: str) -> bool:
+    left = (path_a or "").strip().rstrip("/")
+    right = (path_b or "").strip().rstrip("/")
+    if not left or not right:
+        return False
+    if left == right:
+        return True
+    if left.startswith(right + "/") or right.startswith(left + "/"):
+        return True
+    return (
+        left.endswith("/" + right)
+        or right.endswith("/" + left)
+        or ("/" + right + "/") in (left + "/")
+        or ("/" + left + "/") in (right + "/")
+    )
+
+
+def _stable_briefing_versions(value: list[dict[str, Any]] | None) -> list[dict[str, Any]]:
+    out: list[dict[str, Any]] = []
+    for item in value or []:
+        if not isinstance(item, dict):
+            continue
+        out.append(
+            {
+                "scope": str(item.get("scope") or ""),
+                "snapshot_time": float(item.get("snapshot_time") or 0.0),
+                "run_id": str(item.get("run_id") or ""),
+            }
+        )
+    out.sort(key=lambda entry: entry["scope"])
+    return out
+
+
+def _scope_coherence_token(packet: dict[str, Any]) -> str:
+    stable = {
+        "scope_paths": packet.get("scope_paths") or [],
+        "briefing_versions": packet.get("briefing_versions") or [],
+        "ledger_generation": packet.get("ledger_generation") or 0,
+        "arbiter_generation": packet.get("arbiter_generation") or 0,
+        "symbol_index_generation": packet.get("symbol_index_generation") or 0,
+        "recent_changes": packet.get("recent_changes") or [],
+        "active_reservations": packet.get("active_reservations") or [],
+    }
+    encoded = json.dumps(stable, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()[:24]
+
+
+def _same_scope(current: dict[str, Any], baseline_packet: dict[str, Any] | None) -> bool:
+    if not isinstance(baseline_packet, dict):
+        return False
+    return _normalize_scope_paths(current.get("scope_paths") or []) == _normalize_scope_paths(
+        baseline_packet.get("scope_paths") or []
+    )
+
+
+def _scope_freshness(current: dict[str, Any], baseline_packet: dict[str, Any] | None) -> str:
+    if _same_scope(current, baseline_packet):
+        if str(current.get("coherence_token") or "") == str(baseline_packet.get("coherence_token") or ""):
+            return "fresh"
+        if current.get("active_reservations") or current.get("recent_changes"):
+            return "touched"
+        return "stale"
+    if current.get("active_reservations") or current.get("recent_changes"):
+        return "touched"
+    return "fresh"
+
+
+def _scope_admission(packet: dict[str, Any]) -> dict[str, Any]:
+    reservations = list(packet.get("active_reservations") or [])
+    recent_changes = list(packet.get("recent_changes") or [])
+    hotspots = list(packet.get("hotspots") or [])
+    hotspot_max = max((int(item.get("edit_count") or 0) for item in hotspots), default=0)
+    change_count = len(recent_changes)
+    reasons: list[str] = []
+
+    if reservations:
+        mode = "serialize"
+        contention = "high"
+        recommended_parallel_scouts = 1
+        reasons.append("active write reservations overlap this scope")
+    elif hotspot_max >= 4 or change_count >= 6:
+        mode = "serialize"
+        contention = "high"
+        recommended_parallel_scouts = 1
+        reasons.append("scope is in a high-churn hotspot window")
+    elif hotspot_max >= 2 or change_count >= 2:
+        mode = "cautious"
+        contention = "medium"
+        recommended_parallel_scouts = 2
+        reasons.append("scope changed recently; keep scout fanout narrow and disjoint")
+    else:
+        mode = "parallel"
+        contention = "low"
+        recommended_parallel_scouts = 3
+        reasons.append("scope is stable enough for disjoint scout fanout")
+
+    return {
+        "mode": mode,
+        "contention": contention,
+        "recommended_parallel_scouts": recommended_parallel_scouts,
+        "allow_parallel_fanout": recommended_parallel_scouts > 1,
+        "active_reservation_count": len(reservations),
+        "recent_change_count": change_count,
+        "hotspot_max_edit_count": hotspot_max,
+        "reasons": reasons,
+    }
+
+
+def _rebind_service_sandbox(service: CodeIntelligenceService, sandbox: Any) -> None:
     """Refresh the sandbox handle carried by a cached CI service."""
     if sandbox is None:
         return
@@ -379,6 +506,56 @@ class CodeIntelligenceService:
             file_path=file_path,
             message="Reverted to previous snapshot",
         )
+
+    def scope_status(
+        self,
+        scope_paths: list[str] | tuple[str, ...] | None,
+        *,
+        briefing_versions: list[dict[str, Any]] | None = None,
+        baseline_packet: dict[str, Any] | None = None,
+        recent_seconds: float = _DEFAULT_SCOPE_RECENT_SECONDS,
+    ) -> dict[str, Any]:
+        """Return the authoritative live coordination snapshot for *scope_paths*."""
+        normalized = _normalize_scope_paths(scope_paths)
+        recent_changes: list[dict[str, Any]] = []
+        for entry in self.ledger.recent_entries(recent_seconds):
+            file_path = str(getattr(entry, "file_path", "") or "")
+            if normalized and not any(_paths_overlap(file_path, scope) for scope in normalized):
+                continue
+            recent_changes.append(
+                {
+                    "file_path": file_path,
+                    "agent_id": str(getattr(entry, "agent_id", "") or ""),
+                    "timestamp": float(getattr(entry, "timestamp", 0.0) or 0.0),
+                    "edit_type": str(getattr(entry, "edit_type", "") or ""),
+                }
+            )
+        recent_changes.sort(key=lambda item: (item["file_path"], item["timestamp"]))
+
+        active_reservations = self.arbiter.active_reservations(normalized)
+        hotspots = [
+            {"file_path": str(file_path), "edit_count": int(count)}
+            for file_path, count in self.arbiter.hotspots(limit=25)
+            if not normalized or any(_paths_overlap(str(file_path), scope) for scope in normalized)
+        ][:10]
+
+        packet = {
+            "scope_paths": normalized,
+            "briefing_versions": _stable_briefing_versions(briefing_versions),
+            "ledger_generation": self.ledger.generation,
+            "arbiter_generation": self.arbiter.generation,
+            "symbol_index_generation": self.symbol_index.generation,
+            "recent_changes": recent_changes[:25],
+            "active_reservations": [dict(item) for item in active_reservations][:25],
+            "hotspots": hotspots,
+            "generated_at": time.time(),
+        }
+        packet["coherence_token"] = _scope_coherence_token(packet)
+        packet["freshness"] = _scope_freshness(packet, baseline_packet)
+        if isinstance(baseline_packet, dict):
+            packet["baseline_coherence_token"] = str(baseline_packet.get("coherence_token") or "")
+        packet["admission"] = _scope_admission(packet)
+        return packet
 
     # -- Telemetry ------------------------------------------------------------
 

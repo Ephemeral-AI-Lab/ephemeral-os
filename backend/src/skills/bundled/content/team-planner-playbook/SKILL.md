@@ -16,7 +16,7 @@ For child-planner turns and `## Scoped Expansion`, read `references/non-root-con
 Apply these stop/go rules before the longer ladder:
 
 1. Seed the map once with `ci_workspace_structure()` and only a few high-signal CI queries.
-2. As soon as ownership splits across multiple plausible areas, launch an initial wave of 2-3 **disjoint** scouts in parallel instead of continuing serial parent-side probing.
+2. As soon as ownership splits across multiple plausible areas, use `ci_scope_status(scope_paths=[...])` to sanity-check contention. Launch an initial wave of 2-3 **disjoint** scouts in parallel only when the returned admission still allows fanout; otherwise serialize that branch.
 3. While scouts are running, keep planning in the foreground: classify uncovered branches, reuse atlas/shared briefs, inspect progress on completed lanes, and launch another disjoint scout or a narrowed child planner only if the current evidence is still incomplete.
 4. Every fresh scout you may later join must be inspected first with `check_background_progress(task_id=...)`.
 5. Stop on sufficiency, not scout-count. Once scout-backed ownership is clear for the likely production slice(s) plus the validation or guardrail slice(s) needed for dispatch, stop exploring and emit the plan JSON.
@@ -72,6 +72,7 @@ For "does symbol X exist", "where is Y defined", "what files live in dir Z", "wh
 - `ci_workspace_structure(path=...)` — directory shape
 - `ci_recent_changes()` — cross-worker conflict detection after execution lanes already exist
 - `ci_edit_hotspots()` — high-churn areas for collision awareness, not release archaeology
+- `ci_scope_status(scope_paths=[...])` — live coherence and scout-fanout admission for a candidate slice
 
 Use these signals to identify candidate files, symbols, and subsystem paths. The planner does **not** have `ci_read_file`. Once live CI narrows the area to one or two concrete paths, files, or subsystems, hand that slice to `scout` instead of trying to inspect file contents from the planner turn. Once the question becomes "how do these pieces fit together" or "which slice should own this behavior", stop doing serial pinpoint queries and switch to scout-led exploration.
 
@@ -93,7 +94,7 @@ Before launching a fresh scout for a subsystem, call `atlas_lookup(subsystems=[.
 | action    | meaning                                    | planner response |
 |-----------|--------------------------------------------|------------------|
 | `use`     | Fresh brief exists                         | Attach `staged_artifact_ref` as an explicit briefing on the downstream worker: `{"source": "artifact", "ref": "<ref>"}`. Use `symbol_ids` to seed worker target scope. Skip a fresh scout only when the brief already gives a clear ownership map for this plan. |
-| `refresh` | Brief is stale                             | Treat atlas as unavailable for this planning turn. Use fresh in-turn scouting or a chained `team_planner` replanner. Atlas maintenance is backend/runtime work, not a plan item. |
+| `refresh` | Brief is stale                             | Treat atlas as unavailable for this planning turn. Use fresh in-turn scouting or a chained `team_planner` replanner. |
 | `scout`   | No usable brief                            | Launch fresh exploration with `scout`. |
 
 Atlas briefs and `symbol_ids` are **plan-time snapshots**, not live truth. Symbol-level and reference-level questions ("does this still exist", "who calls it") always belong to the worker via live CI — never block a plan on them.
@@ -112,7 +113,7 @@ At the start of your turn, call `ci_workspace_structure()`. If the workspace is 
 ### Step 5 — Pattern A: scout-led exploration is the default planning pattern
 For any nontrivial exploration task, prefer `run_subagent(agent_name="scout", input={"target_paths": [...]})` over more planner-side probing. The planner should feel biased toward launching a bounded scout as soon as candidate ownership stops being obvious from CI structure or symbol signals across multiple files or directories.
 
-When two or three disjoint owner hypotheses remain after the seed reads, launch those scouts in parallel in the same turn before you start checking progress or waiting.
+When two or three disjoint owner hypotheses remain after the seed reads, call `ci_scope_status(scope_paths=[...])` on the candidate slices. Launch those scouts in parallel in the same turn only when admission stays `parallel` or `cautious`; if admission says `serialize`, keep that slice single-threaded.
 Treat scout fanout as waves, not as a one-batch barrier. While the current wave is still running, or after the first returned briefs, you may launch another disjoint scout if a real ownership gap remains uncovered. Do not force the planner to wait for every scout in the first wave before acting on obvious remaining gaps.
 
 After launching a scout, you MUST take at least one non-wait action before any `wait_for_background_task`: launch another disjoint scout, call `check_background_progress`, classify remaining branches, reuse atlas/shared context for uncovered surfaces, reason about plan shape, share a completed brief, or draft/emit the worker plan. Call `wait_for_background_task` only when the scout result has become the only remaining blocker.
@@ -133,7 +134,7 @@ Use scout when one or more of these is true:
 - one concrete file is the likely owner but the planner still needs file contents to map the relevant symbols or branches before handing off work
 - the next planner action would otherwise be "open one more implementation file window" mainly to understand ownership or boundaries
 
-`run_subagent` is exploration-only. Never call it with `developer` or `validator`. Atlas maintenance is runtime/backend work, not a plan item and not a planner-spawned subagent.
+`run_subagent` is exploration-only. Never call it with `developer` or `validator`. Atlas is lookup plus runtime persistence, not a planner-spawned subagent workflow.
 
 For `scout`, the contract is strict: call `run_subagent(agent_name="scout", input={"target_paths": [...]})` with concrete paths only. Do not use `prompt` mode for `scout`. Do not use `scout` as a proxy for tests, shell commands, diagnostics, or any other execution work.
 
@@ -149,7 +150,7 @@ If the exploration slice is too large for one scout:
 - switch to a chained `team_planner` WorkItem for recursive decomposition if the breadth cannot be closed in this turn
 
 Parallel scouts stay backgrounded. After fanout, keep working the uncovered planning surface or use `check_background_progress` for spot checks; do not immediately serially wait on each fresh scout unless those results are now the only blockers.
-For large benchmark-style surfaces, the root planner should usually have 2-3 disjoint scouts in flight before the first blocking wait.
+For large benchmark-style surfaces, the root planner should usually have 2-3 disjoint scouts in flight before the first blocking wait, but only when `ci_scope_status(...).admission` still permits parallel fanout. Hot or reserved scopes must serialize.
 A later scout wave is justified only when completed briefs still leave a real disjoint ownership gap, expose disjoint `suggested_subdivisions`, or leave one still-relevant branch at partial coverage. Do not freeze after wave one when evidence is incomplete, and do not launch another wave once ownership is already clear.
 
 Use hierarchical fanout when one or more of these is true:
@@ -225,7 +226,6 @@ When the prompt includes `## Scoped Expansion`, you are decomposing a child slic
 - **Coding work (read, write, edit)** → emit a `developer` WorkItem.
 - **Verification work (tests, lint, diagnostics, smoke checks)** → emit a `validator` WorkItem with `deps=[<developer_local_id>]`.
 - **Expandable follow-up decomposition** → emit a `team_planner` WorkItem with `kind: "expandable"`.
-- **Atlas maintenance** → backend/runtime work, not a submitted plan target.
 - **Exploration** → use `scout` only as an in-turn `run_subagent`, never as a submitted plan item.
 
 **Default shape for any coding task**:

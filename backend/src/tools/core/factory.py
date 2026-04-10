@@ -91,7 +91,6 @@ def _register_builtins() -> None:
     from tools.daytona_toolkit import DaytonaToolkit
     from tools.ci_toolkit import CIToolkit
     from tools.posthook.toolkits import (
-        SubmitAtlasToolkit,
         SubmitPlanToolkit,
         SubmitReplanPlanToolkit,
         SubmitReplanPosthookToolkit,
@@ -108,7 +107,6 @@ def _register_builtins() -> None:
     register_toolkit_class("atlas", AtlasToolkit)
     register_toolkit_class("submit_plan_posthook", SubmitPlanToolkit)
     register_toolkit_class("submit_summary_posthook", SubmitSummaryToolkit)
-    register_toolkit_class("submit_atlas_posthook", SubmitAtlasToolkit)
     register_toolkit_class("posthook_submit_retry", SubmitRetryPosthookToolkit)
     register_toolkit_class("posthook_submit_replan", SubmitReplanPosthookToolkit)
     register_toolkit_class("submit_replan_posthook", SubmitReplanPlanToolkit)

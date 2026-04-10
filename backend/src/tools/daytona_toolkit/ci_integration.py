@@ -49,6 +49,11 @@ def get_daytona_cwd(context: ToolExecutionContext) -> str:
     return context.metadata.get("daytona_cwd") or ""
 
 
+def require_declared_shell_outputs(context: ToolExecutionContext) -> bool:
+    """Return True when mutating shell commands must predeclare output paths."""
+    return bool(context.metadata.get("require_declared_shell_outputs"))
+
+
 def scope_paths_for_write(
     context: ToolExecutionContext,
     *,
@@ -79,6 +84,26 @@ def build_live_scope_packet(
     )
 
 
+def refresh_scope_baseline(
+    context: ToolExecutionContext,
+    *,
+    scope_paths: list[str] | None = None,
+    packet: dict[str, Any] | None = None,
+    recent_seconds: float = _DEFAULT_SCOPE_RECENT_SECONDS,
+) -> dict[str, Any]:
+    """Persist the latest live scope packet into the tool metadata."""
+    resolved = packet if isinstance(packet, dict) else build_live_scope_packet(
+        context,
+        scope_paths=scope_paths,
+        recent_seconds=recent_seconds,
+    )
+    if not isinstance(resolved, dict):
+        return {}
+    context.metadata["scope_packet"] = resolved
+    context.metadata["coherence_token"] = str(resolved.get("coherence_token") or "")
+    return resolved
+
+
 def enforce_scope_coherence(
     context: ToolExecutionContext,
     *,
@@ -103,14 +128,13 @@ def prepare_ci_write(
     expected_hash: str = "",
 ) -> tuple[Any | None, dict[str, Any], str | None]:
     """Run scope/token prechecks and reserve *file_path* for a write."""
-    packet, err = enforce_scope_coherence(
-        context,
-        scope_paths=scope_paths_for_write(context, fallback_paths=[file_path]),
-    )
+    scope_paths = scope_paths_for_write(context, fallback_paths=[file_path])
+    packet, err = enforce_scope_coherence(context, scope_paths=scope_paths)
     if err is not None:
         return None, packet, err
     svc = get_ci_service(context)
     if svc is None or not hasattr(svc, "prepare_write"):
+        refresh_scope_baseline(context, packet=packet)
         return None, packet, None
     prepared = svc.prepare_write(
         file_path,
@@ -120,7 +144,8 @@ def prepare_ci_write(
     )
     if getattr(prepared, "success", None) is False:
         return None, packet, str(getattr(prepared, "message", "") or "write precheck failed")
-    return prepared, packet, None
+    refreshed = refresh_scope_baseline(context, scope_paths=scope_paths)
+    return prepared, refreshed or packet, None
 
 
 def finalize_ci_write(
@@ -142,6 +167,13 @@ def finalize_ci_write(
     )
     if getattr(result, "success", False):
         _note_atlas_edit(context, getattr(prepared, "file_path", ""), reason=edit_type)
+        refresh_scope_baseline(
+            context,
+            scope_paths=scope_paths_for_write(
+                context,
+                fallback_paths=[getattr(prepared, "file_path", "")],
+            ),
+        )
     return result
 
 
@@ -156,6 +188,14 @@ def abort_ci_write(context: ToolExecutionContext, prepared: Any | None) -> None:
         svc.abort_prepared_write(prepared)
     except Exception:
         logger.debug("abort_prepared_write failed for %s", getattr(prepared, "file_path", ""), exc_info=True)
+    finally:
+        refresh_scope_baseline(
+            context,
+            scope_paths=scope_paths_for_write(
+                context,
+                fallback_paths=[getattr(prepared, "file_path", "")],
+            ),
+        )
 
 
 def resolve_daytona_path(path: str, context: ToolExecutionContext) -> str:
@@ -170,11 +210,35 @@ def resolve_daytona_path(path: str, context: ToolExecutionContext) -> str:
     return os.path.normpath(f"{cwd}/{path}")
 
 
+def shell_mutation_declaration_error(
+    context: ToolExecutionContext,
+    *,
+    command: str,
+    declared_output_paths: list[str] | None,
+) -> str | None:
+    """Return an error when a mutating shell command lacks declared outputs."""
+    if not require_declared_shell_outputs(context):
+        return None
+    if not command_may_mutate_workspace(command):
+        return None
+    if normalize_scope_paths(declared_output_paths or []):
+        return None
+    return (
+        "Mutating daytona_bash calls must declare `declared_output_paths` in ultra "
+        "coordination mode. Prefer daytona_write_file/daytona_edit_file, or list every "
+        "path the command may create, modify, move, or delete before running it."
+    )
+
+
 def prime_cache_after_write(context: ToolExecutionContext, file_path: str, content: str) -> None:
     """Prime the tree cache and refresh the symbol index after a write."""
     svc = get_ci_service(context)
     if svc is None:
         _note_atlas_edit(context, file_path, reason="write")
+        refresh_scope_baseline(
+            context,
+            scope_paths=scope_paths_for_write(context, fallback_paths=[file_path]),
+        )
         return
     try:
         svc.tree_cache.put_content(file_path, content)
@@ -184,6 +248,10 @@ def prime_cache_after_write(context: ToolExecutionContext, file_path: str, conte
         logger.debug("CI prime_cache_after_write failed for %s", file_path)
     finally:
         _note_atlas_edit(context, file_path, reason="write")
+        refresh_scope_baseline(
+            context,
+            scope_paths=scope_paths_for_write(context, fallback_paths=[file_path]),
+        )
 
 
 def sync_write_to_ci(
@@ -249,6 +317,10 @@ def sync_deleted_file(
         description=description,
     )
     _note_atlas_edit(context, file_path, reason=edit_type)
+    refresh_scope_baseline(
+        context,
+        scope_paths=scope_paths_for_write(context, fallback_paths=[file_path]),
+    )
 
 
 def command_may_mutate_workspace(command: str) -> bool:
@@ -274,6 +346,19 @@ async def sync_shell_mutations(
     agent edits files via ``daytona_bash`` instead of structured edit tools.
     """
     declared_output_paths = normalize_scope_paths(declared_output_paths or [])
+    missing_decl = shell_mutation_declaration_error(
+        context,
+        command=command,
+        declared_output_paths=declared_output_paths,
+    )
+    if missing_decl is not None:
+        return {
+            "enabled": False,
+            "files": 0,
+            "truncated": False,
+            "missing_declarations": True,
+            "error": missing_decl,
+        }
     if not command_may_mutate_workspace(command) and not declared_output_paths:
         return {"enabled": False, "files": 0, "truncated": False}
 
@@ -368,13 +453,24 @@ def prepare_declared_shell_outputs(
             return [], packet, prep_err
         if prepared is not None:
             prepared_items.append(prepared)
-    return prepared_items, packet, None
+    latest = context.metadata.get("scope_packet")
+    return prepared_items, latest if isinstance(latest, dict) else packet, None
 
 
 def release_declared_shell_outputs(context: ToolExecutionContext, prepared_items: list[Any]) -> None:
     """Release any declared shell reservations."""
     for item in prepared_items:
         abort_ci_write(context, item)
+    if prepared_items:
+        refresh_scope_baseline(
+            context,
+            scope_paths=normalize_scope_paths(
+                [
+                    str(getattr(item, "file_path", "") or "")
+                    for item in prepared_items
+                ]
+            ),
+        )
 
 
 def record_edit_in_ledger(

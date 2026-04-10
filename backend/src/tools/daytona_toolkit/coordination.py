@@ -30,6 +30,24 @@ def normalize_scope_paths(paths: list[str] | tuple[str, ...] | None) -> list[str
     return out
 
 
+def scopes_overlap(path_a: str, path_b: str) -> bool:
+    """Return True when two file or directory scopes overlap."""
+    left = (path_a or "").strip().rstrip("/")
+    right = (path_b or "").strip().rstrip("/")
+    if not left or not right:
+        return False
+    if left == right:
+        return True
+    if left.startswith(right + "/") or right.startswith(left + "/"):
+        return True
+    return (
+        left.endswith("/" + right)
+        or right.endswith("/" + left)
+        or ("/" + right + "/") in (left + "/")
+        or ("/" + left + "/") in (right + "/")
+    )
+
+
 def scope_paths_from_payload(payload: Any) -> list[str]:
     """Extract the most likely scope paths from a work-item payload."""
     if not isinstance(payload, dict):
@@ -82,6 +100,19 @@ def build_scope_packet(
     """Build a machine-checkable live scope packet."""
     normalized = normalize_scope_paths(scope_paths)
     briefing_versions = _matching_briefing_versions(team_run, normalized)
+    scope_status = getattr(svc, "scope_status", None)
+    if callable(scope_status):
+        try:
+            packet = scope_status(
+                normalized,
+                briefing_versions=briefing_versions,
+                baseline_packet=baseline_packet,
+                recent_seconds=recent_seconds,
+            )
+        except Exception:
+            packet = None
+        if isinstance(packet, dict):
+            return packet
     recent_changes = _recent_changes(svc, normalized, seconds=recent_seconds)
     active_reservations = _active_reservations(svc, normalized)
     hotspots = _hotspots(svc, normalized)
@@ -103,6 +134,7 @@ def build_scope_packet(
     packet["freshness"] = _freshness_grade(packet, baseline_packet)
     if isinstance(baseline_packet, dict):
         packet["baseline_coherence_token"] = str(baseline_packet.get("coherence_token") or "")
+    packet["admission"] = _admission(packet)
     return packet
 
 
@@ -150,13 +182,18 @@ def render_scope_packet(packet: dict[str, Any] | None) -> str:
     scope_paths = ", ".join(packet.get("scope_paths") or []) or "(unscoped)"
     changes = ", ".join(item["file_path"] for item in (packet.get("recent_changes") or [])[:4]) or "none"
     reservations = ", ".join(item["file_path"] for item in (packet.get("active_reservations") or [])[:4]) or "none"
+    admission = packet.get("admission") if isinstance(packet.get("admission"), dict) else {}
+    admission_mode = str(admission.get("mode") or "unknown")
+    scout_budget = int(admission.get("recommended_parallel_scouts") or 0)
     return (
         "## Live scope packet\n"
         f"- freshness: {packet.get('freshness')}\n"
         f"- coherence_token: {packet.get('coherence_token')}\n"
         f"- scope_paths: {scope_paths}\n"
         f"- recent_changes: {changes}\n"
-        f"- active_reservations: {reservations}"
+        f"- active_reservations: {reservations}\n"
+        f"- scout_fanout_mode: {admission_mode}\n"
+        f"- recommended_parallel_scouts: {scout_budget}"
     )
 
 
@@ -167,7 +204,7 @@ def _matching_briefing_versions(team_run: Any | None, scope_paths: list[str]) ->
     versions = getattr(project_context, "stable_scout_versions", {}) or {}
     out: list[dict[str, Any]] = []
     for scope, version in versions.items():
-        if scope_paths and not any(_paths_overlap(scope_part, target) for scope_part in normalize_scope_paths([scope]) for target in scope_paths):
+        if scope_paths and not any(scopes_overlap(scope_part, target) for scope_part in normalize_scope_paths([scope]) for target in scope_paths):
             continue
         if not isinstance(version, dict):
             continue
@@ -193,7 +230,7 @@ def _recent_changes(svc: Any | None, scope_paths: list[str], *, seconds: float) 
     out: list[dict[str, Any]] = []
     for entry in entries:
         file_path = str(getattr(entry, "file_path", "") or "")
-        if scope_paths and not any(_paths_overlap(file_path, scope) for scope in scope_paths):
+        if scope_paths and not any(scopes_overlap(file_path, scope) for scope in scope_paths):
             continue
         out.append(
             {
@@ -229,7 +266,7 @@ def _hotspots(svc: Any | None, scope_paths: list[str]) -> list[dict[str, Any]]:
     out = [
         {"file_path": str(file_path), "edit_count": int(count)}
         for file_path, count in hotspots
-        if not scope_paths or any(_paths_overlap(str(file_path), scope) for scope in scope_paths)
+        if not scope_paths or any(scopes_overlap(str(file_path), scope) for scope in scope_paths)
     ]
     return out[:10]
 
@@ -249,7 +286,9 @@ def _coherence_token(packet: dict[str, Any]) -> str:
 
 
 def _freshness_grade(current: dict[str, Any], baseline_packet: dict[str, Any] | None) -> str:
-    if isinstance(baseline_packet, dict):
+    if isinstance(baseline_packet, dict) and normalize_scope_paths(current.get("scope_paths") or []) == normalize_scope_paths(
+        baseline_packet.get("scope_paths") or []
+    ):
         if str(current.get("coherence_token") or "") == str(baseline_packet.get("coherence_token") or ""):
             return "fresh"
         if current.get("active_reservations") or current.get("recent_changes"):
@@ -258,23 +297,54 @@ def _freshness_grade(current: dict[str, Any], baseline_packet: dict[str, Any] | 
     if current.get("active_reservations") or current.get("recent_changes"):
         return "touched"
     return "fresh"
-
-
-def _paths_overlap(path_a: str, path_b: str) -> bool:
-    left = (path_a or "").strip().rstrip("/")
-    right = (path_b or "").strip().rstrip("/")
-    if not left or not right:
-        return False
-    if left == right:
-        return True
-    if left.startswith(right + "/") or right.startswith(left + "/"):
-        return True
-    return (
-        left.endswith("/" + right)
-        or right.endswith("/" + left)
-        or ("/" + right + "/") in (left + "/")
-        or ("/" + left + "/") in (right + "/")
-    )
+def _admission(packet: dict[str, Any]) -> dict[str, Any]:
+    reservations = list(packet.get("active_reservations") or [])
+    recent_changes = list(packet.get("recent_changes") or [])
+    hotspots = list(packet.get("hotspots") or [])
+    hotspot_max = max((int(item.get("edit_count") or 0) for item in hotspots), default=0)
+    if reservations:
+        return {
+            "mode": "serialize",
+            "contention": "high",
+            "recommended_parallel_scouts": 1,
+            "allow_parallel_fanout": False,
+            "active_reservation_count": len(reservations),
+            "recent_change_count": len(recent_changes),
+            "hotspot_max_edit_count": hotspot_max,
+            "reasons": ["active write reservations overlap this scope"],
+        }
+    if hotspot_max >= 4 or len(recent_changes) >= 6:
+        return {
+            "mode": "serialize",
+            "contention": "high",
+            "recommended_parallel_scouts": 1,
+            "allow_parallel_fanout": False,
+            "active_reservation_count": 0,
+            "recent_change_count": len(recent_changes),
+            "hotspot_max_edit_count": hotspot_max,
+            "reasons": ["scope is in a high-churn hotspot window"],
+        }
+    if hotspot_max >= 2 or len(recent_changes) >= 2:
+        return {
+            "mode": "cautious",
+            "contention": "medium",
+            "recommended_parallel_scouts": 2,
+            "allow_parallel_fanout": True,
+            "active_reservation_count": 0,
+            "recent_change_count": len(recent_changes),
+            "hotspot_max_edit_count": hotspot_max,
+            "reasons": ["scope changed recently; keep scout fanout narrow and disjoint"],
+        }
+    return {
+        "mode": "parallel",
+        "contention": "low",
+        "recommended_parallel_scouts": 3,
+        "allow_parallel_fanout": True,
+        "active_reservation_count": 0,
+        "recent_change_count": len(recent_changes),
+        "hotspot_max_edit_count": hotspot_max,
+        "reasons": ["scope is stable enough for disjoint scout fanout"],
+    }
 
 
 def _safe_attr(obj: Any, name: str) -> int:

@@ -1,7 +1,7 @@
 # Atlas Scout Promotion Design
 
 ## Goal
-Reduce duplicate exploration during high-parallelism team runs by making foreground scout output immediately reusable inside the same run, while keeping Atlas positioned as cross-run memory instead of a competing exploration scheduler.
+Reduce duplicate exploration during high-parallelism team runs by making direct scout output immediately reusable inside the same run, while keeping Atlas positioned as cross-run memory instead of a competing exploration scheduler.
 
 ## Current Runtime Position
 - Fresh SWE-EVO runs already keep Atlas maintenance disabled.
@@ -28,7 +28,7 @@ Reduce duplicate exploration during high-parallelism team runs by making foregro
 
 ### 5. Worker awareness still has two maturity levels
 - Implemented now: same-run structural reuse via stable scout refs and shared briefings.
-- Still deferred: coherent live scope packets that merge briefings, ledger churn, hotspots, active reservations, and symbol state for write-time checks.
+- Implemented now: coherent live scope packets that merge briefing versions, ledger churn, hotspots, active reservations, and symbol state for prompt-time and write-time checks.
 
 ## Design Principles
 - Same-run reuse comes from stable scout artifacts plus `shared_briefings`.
@@ -83,13 +83,10 @@ Reduce duplicate exploration during high-parallelism team runs by making foregro
   - shared briefings for same-run scout reuse
   - CI for live truth
 
-### What remains deferred
-- `ci_scope_status`
-- coherence tokens across briefing + ledger + arbiter + symbol index
-- reservation-backed active edit ownership
-- mandatory pre-write and commit/apply rechecks
-- background Atlas persistence of foreground scout output
-- scheduler policy re-enable for non-fresh runs
+### What remains intentionally separate
+- heuristic shell-mutation reconciliation still exists as a compatibility fallback outside strict team lanes, but ultra-concurrency worker lanes now reject undeclared mutating shell commands
+- the coordination snapshot is now surfaced through CI as the authoritative scope-status/admission view, but cross-run memory still remains Atlas rather than a separate global state store
+- background Atlas persistence of direct scout output and scheduler policy tuning still evolve independently of same-run write coordination
 
 ## Implementation Phases
 
@@ -146,7 +143,7 @@ Status:
 
 ### Phase 4: Deferred Atlas Runtime Policy
 Objective:
-Re-enable Atlas only after it can consume foreground scout output without launching duplicate scout work.
+Re-enable Atlas only after it can consume direct scout output without launching duplicate scout work.
 
 Changes:
 - add an explicit scheduler policy surface
@@ -156,7 +153,7 @@ Changes:
 
 Acceptance criteria:
 - fresh runs do not launch Atlas-owned scout work
-- resumed or retried runs may enable Atlas maintenance without duplicating foreground exploration
+- resumed or retried runs may enable Atlas maintenance without duplicating direct exploration
 - Atlas persistence reuses scout-complete output and does not fork write semantics
 
 Status:

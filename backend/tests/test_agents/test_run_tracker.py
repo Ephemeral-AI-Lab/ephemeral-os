@@ -32,7 +32,7 @@ def test_create_retries_on_duplicate_auto_run_id(monkeypatch):
 
     tracker = AgentRunTracker.create(
         session_id="s1",
-        agent_name="submit_atlas_agent",
+        agent_name="submit_plan_agent",
         input_query="payload",
     )
 

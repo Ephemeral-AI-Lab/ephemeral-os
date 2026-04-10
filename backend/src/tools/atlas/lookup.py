@@ -17,9 +17,7 @@ Freshness uses :func:`team.atlas.freshness.is_chunk_fresh`, which is
 git-independent — it consults the in-memory edit ledger (if available)
 and falls back to stored per-file content hashes on cold start.
 Decision arithmetic lives here (not in a prompt) so the behaviour is
-deterministic and testable in isolation. Atlas maintenance itself is
-runtime/backend work that may be triggered opportunistically after this
-tool returns.
+deterministic and testable in isolation.
 """
 
 from __future__ import annotations
@@ -48,7 +46,7 @@ logger = logging.getLogger(__name__)
         "Returns a per-subsystem decision (use | refresh | scout). Use-marked "
         "entries include a staged artifact_ref you can attach as a briefing. "
         "Refresh/scout results mean the planner should use fresh exploration "
-        "for this turn; atlas maintenance is handled by the runtime."
+        "for this turn."
     ),
     read_only=True,
 )
@@ -121,7 +119,6 @@ async def atlas_lookup(
                 max_age_seconds=max_age_seconds,
             )
         )
-    team_run.note_atlas_lookup(entries, source="atlas_lookup")
     return _build_result(entries, atlas_disabled=False)
 
 

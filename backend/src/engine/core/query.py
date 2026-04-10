@@ -61,6 +61,7 @@ MAX_OUTPUT_LENGTH: int = 2000
 BACKGROUND_IDLE_TIMEOUT: int = 30  # Safety net — LLM should use wait_for_background_task explicitly
 CANCEL_PATTERN = re.compile(r'\[CANCEL:(\S+)(?:\s+reason="([^"]*)")?\]')
 _TOOL_TRACE_LIMIT = 64
+_MERGED_RUNTIME_METADATA_KEYS = ("scope_packet", "coherence_token")
 
 
 @dataclass
@@ -914,6 +915,7 @@ async def _execute_tool_call(
     _merge_submission_metadata(
         original=context.tool_metadata,
         updated=metadata,
+        result_metadata=result.metadata,
     )
     if not result.is_error:
         _record_tool_trace(context.tool_metadata, tool_name, tool_input)
@@ -942,12 +944,19 @@ def _merge_submission_metadata(
     *,
     original: ExecutionMetadata | None,
     updated: ExecutionMetadata,
+    result_metadata: dict[str, Any] | None = None,
 ) -> None:
-    """Propagate accepted submit-tool payloads back to the live metadata bag."""
+    """Propagate selected tool metadata back to the live metadata bag."""
     if original is None:
         return
     for key, value in updated.extras.items():
         if key.startswith("submitted_") and value is not None:
+            original[key] = value
+    for key in _MERGED_RUNTIME_METADATA_KEYS:
+        value = updated.extras.get(key)
+        if value is None and isinstance(result_metadata, dict):
+            value = result_metadata.get(key)
+        if value is not None:
             original[key] = value
 
 

@@ -27,7 +27,6 @@ from message.stream_events import ToolExecutionCompleted
 from token_tracker.runtime import persist_run_usage
 from code_intelligence.routing.service import get_code_intelligence
 from team.builtins import DEVELOPER, TEAM_PLANNER, VALIDATOR, register_all as _register_team_builtins
-from team.atlas.scheduler import AtlasMaintenanceScheduler
 from team.models import BudgetConfig, TeamRunStatus, WorkItemKind
 from team.persistence.run_store import build_default_store
 from team.runtime.context_builder import (
@@ -143,23 +142,6 @@ def _derive_sweevo_budgets(instance: SWEEvoInstance) -> BudgetConfig:
         max_briefing_bytes=int(base["max_briefing_bytes"]),
         max_shared_briefings=int(base["max_shared_briefings"]),
     )
-
-
-def _derive_atlas_scheduler_policy(*, resumed: bool) -> str:
-    """Return the atlas scheduler policy for this benchmark run."""
-    return "refresh_only" if resumed else "deferred_persist"
-
-
-def _derive_atlas_parallelism(
-    instance: SWEEvoInstance,
-    *,
-    num_executors: int,
-    policy: str,
-) -> int:
-    del instance
-    if policy == "deferred_persist":
-        return 0
-    return max(1, min(2, num_executors))
 
 
 def _derive_planner_runtime_limits(instance: SWEEvoInstance) -> dict[str, int]:
@@ -290,8 +272,6 @@ def _matches_posthook_payload(payload: dict[str, Any], metadata_key: str) -> boo
         return isinstance(payload.get("items"), list)
     if metadata_key == "submitted_summary":
         return isinstance(payload.get("summary"), str)
-    if metadata_key == "submitted_atlas":
-        return isinstance(payload.get("chunks"), list)
     return False
 
 
@@ -700,6 +680,8 @@ def _make_context_builders(
         meta["sandbox_id"] = team_run.sandbox_id or sandbox_id
         meta["daytona_cwd"] = repo_dir
         meta["ci_workspace_root"] = repo_dir
+        meta["coordination_mode"] = "ultra"
+        meta["require_declared_shell_outputs"] = True
         try:
             ci_service = get_code_intelligence(
                 sandbox_id=team_run.sandbox_id or sandbox_id,
@@ -724,6 +706,8 @@ def _make_context_builders(
             "sandbox_id": sandbox_id,
             "daytona_cwd": repo_dir,
             "ci_workspace_root": repo_dir,
+            "coordination_mode": "ultra",
+            "require_declared_shell_outputs": True,
         }
         user_message = _work_item_base_prompt(work_result)
         if isinstance(work_result, dict):
@@ -793,41 +777,6 @@ def _make_executor_factory(
             build_posthook_context=build_posthook_ctx,
             agent_lookup=get_definition,
             after_dispatch=after_dispatch,
-        )
-
-    return factory
-
-
-def _make_atlas_scheduler_factory(
-    session_config: Any,
-    sandbox_id: str,
-    printer: MultiAgentEventPrinter | None,
-    *,
-    repo_dir: str = _REPO_DIR,
-    team_metrics: dict[str, Any] | None = None,
-    max_concurrent_jobs: int = 1,
-    policy: str = "full",
-):
-    runner = _make_runner(
-        session_config,
-        sandbox_id,
-        printer,
-        team_metrics=team_metrics,
-    )
-    build_query_ctx, build_posthook_ctx = _make_context_builders(
-        sandbox_id,
-        repo_dir,
-    )
-
-    def factory(team_run):
-        return AtlasMaintenanceScheduler(
-            team_run=team_run,
-            runner=runner,
-            build_query_context=build_query_ctx,
-            build_posthook_context=build_posthook_ctx,
-            agent_lookup=get_definition,
-            max_concurrent_jobs=max_concurrent_jobs,
-            policy=policy,
         )
 
     return factory
@@ -953,7 +902,6 @@ def _finalize_team_result(
     session_config: Any,
     team_metrics: dict[str, Any],
     budgets: BudgetConfig,
-    atlas_parallelism: int,
     printer: MultiAgentEventPrinter | None,
     checkpoint_ids: list[str] | None = None,
     resumed_from: str | None = None,
@@ -1020,8 +968,7 @@ def _finalize_team_result(
                 "[team_stats] "
                 f"work_items={work_items} max_depth={max_depth_reached} "
                 f"agent_runs={team_metrics['agent_runs']} "
-                f"checkpoints={len(resolved_checkpoint_ids)} "
-                f"atlas_parallelism={atlas_parallelism}"
+                f"checkpoints={len(resolved_checkpoint_ids)}"
             ),
         )
 
@@ -1045,7 +992,6 @@ def _finalize_team_result(
             "max_shared_briefings": budgets.max_shared_briefings,
             "max_briefing_bytes": budgets.max_briefing_bytes,
         },
-        "atlas_parallelism": atlas_parallelism,
         "resumed_from": resumed_from,
         "resumed_from_checkpoint": resumed_from_checkpoint,
     }
@@ -1081,12 +1027,6 @@ async def run_sweevo_team(
     root_prompt = _build_root_prompt(instance, repo_dir)
     budgets = _derive_sweevo_budgets(instance)
     agent_overrides = _build_agent_overrides(instance)
-    atlas_policy = _derive_atlas_scheduler_policy(resumed=False)
-    atlas_parallelism = _derive_atlas_parallelism(
-        instance,
-        num_executors=num_executors,
-        policy=atlas_policy,
-    )
     team_metrics = _build_team_metrics()
     _emit_team_runtime_banner(printer, budgets=budgets)
 
@@ -1103,20 +1043,6 @@ async def run_sweevo_team(
         team_run_id=tr.id,
         session_id=getattr(session_config, "session_id", "sweevo"),
         sandbox_id=sandbox_id,
-    )
-
-    atlas_factory = (
-        _make_atlas_scheduler_factory(
-            session_config,
-            sandbox_id,
-            printer,
-            repo_dir=repo_dir,
-            team_metrics=team_metrics,
-            max_concurrent_jobs=max(1, atlas_parallelism or 1),
-            policy=atlas_policy,
-        )
-        if atlas_policy != "off"
-        else None
     )
 
     await tr.start(
@@ -1138,7 +1064,6 @@ async def run_sweevo_team(
             team_metrics=team_metrics,
             agent_overrides=agent_overrides,
         ),
-        atlas_scheduler_factory=atlas_factory,
         num_executors=num_executors,
         root_kind=WorkItemKind.EXPANDABLE,
     )
@@ -1149,7 +1074,6 @@ async def run_sweevo_team(
         session_config=session_config,
         team_metrics=team_metrics,
         budgets=budgets,
-        atlas_parallelism=atlas_parallelism,
         printer=printer,
     )
 
@@ -1197,12 +1121,6 @@ async def resume_sweevo_team(
     )
     budgets = tr.budgets
     agent_overrides = _build_agent_overrides(instance)
-    atlas_policy = _derive_atlas_scheduler_policy(resumed=True)
-    atlas_parallelism = _derive_atlas_parallelism(
-        instance,
-        num_executors=num_executors,
-        policy=atlas_policy,
-    )
     team_metrics = _build_team_metrics()
     _emit_team_runtime_banner(printer, budgets=budgets)
     if printer is not None:
@@ -1222,20 +1140,6 @@ async def resume_sweevo_team(
         sandbox_id=tr.sandbox_id,
     )
 
-    atlas_factory = (
-        _make_atlas_scheduler_factory(
-            session_config,
-            tr.sandbox_id,
-            printer,
-            repo_dir=repo_dir,
-            team_metrics=team_metrics,
-            max_concurrent_jobs=max(1, atlas_parallelism or 1),
-            policy=atlas_policy,
-        )
-        if atlas_policy != "off"
-        else None
-    )
-
     await tr.resume(
         executor_factory=_make_executor_factory(
             session_config,
@@ -1245,7 +1149,6 @@ async def resume_sweevo_team(
             team_metrics=team_metrics,
             agent_overrides=agent_overrides,
         ),
-        atlas_scheduler_factory=atlas_factory,
         num_executors=num_executors,
     )
     await tr.wait()
@@ -1254,7 +1157,6 @@ async def resume_sweevo_team(
         session_config=session_config,
         team_metrics=team_metrics,
         budgets=budgets,
-        atlas_parallelism=atlas_parallelism,
         printer=printer,
         checkpoint_ids=checkpoint_ids,
         resumed_from=team_run_id,

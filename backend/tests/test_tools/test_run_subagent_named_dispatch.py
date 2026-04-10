@@ -226,27 +226,53 @@ async def test_scout_rejects_duplicate_exact_prior_scout_coverage(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_scout_allows_duplicate_paths_for_atlas_refresh(monkeypatch):
-    submitted = SubmittedSummary(
-        summary="atlas scout report",
-        artifact={"target_paths": ["/testbed/pydantic"], "files": []},
-    )
-    stub, _ = _make_stub_agent(submitted=submitted)
-    _patch_spawn(monkeypatch, stub)
-
+async def test_scout_rejects_overlapping_prior_scout_coverage(monkeypatch):
     ctx = _ctx()
-    ctx.metadata["agent_name"] = "atlas_refresher"
-    ctx.metadata["_read_paths_this_turn"] = ["/testbed/pydantic"]
+    ctx.metadata["_scout_target_paths_this_turn"] = ["/testbed/pydantic"]
 
     res = await run_subagent.execute(
         run_subagent.input_model(
             agent_name="scout",
-            input={"target_paths": ["/testbed/pydantic"]},
+            input={"target_paths": ["/testbed/pydantic/json_schema.py"]},
         ),
         ctx,
     )
 
-    assert not res.is_error
+    assert res.is_error
+    assert "overlap a scope already covered in this turn" in res.output
+    assert "/testbed/pydantic" in res.output
+
+
+@pytest.mark.asyncio
+async def test_scout_rejects_parallel_fanout_when_live_scope_requires_serialization(monkeypatch):
+    ctx = _ctx()
+    ctx.metadata["coordination_mode"] = "ultra"
+    ctx.metadata["_scout_target_paths_this_turn"] = ["/testbed/pydantic/core.py"]
+    monkeypatch.setattr(
+        "tools.subagent.run_subagent_tool.build_scope_packet_for_context",
+        lambda *a, **k: {
+            "scope_paths": ["/testbed/pydantic/json_schema.py"],
+            "coherence_token": "token-1",
+            "admission": {
+                "mode": "serialize",
+                "recommended_parallel_scouts": 1,
+                "allow_parallel_fanout": False,
+                "reasons": ["active write reservations overlap this scope"],
+            },
+        },
+    )
+
+    res = await run_subagent.execute(
+        run_subagent.input_model(
+            agent_name="scout",
+            input={"target_paths": ["/testbed/pydantic/json_schema.py"]},
+        ),
+        ctx,
+    )
+
+    assert res.is_error
+    assert "requires serialized scout expansion" in res.output
+    assert "recommended_parallel_scouts=1" in res.output
 
 
 # ---------- typed envelope ----------------------------------------------------
@@ -272,6 +298,38 @@ async def test_envelope_kind_brief_when_artifact_has_target_paths(monkeypatch):
     assert env["artifact_ref"] is None
     assert env["summary"] == "scout report"
     assert env["payload"]["target_paths"] == ["src/auth"]
+
+
+@pytest.mark.asyncio
+async def test_scout_injects_scope_packet_into_prompt_and_metadata(monkeypatch):
+    submitted = SubmittedSummary(
+        summary="scout report",
+        artifact={"target_paths": ["src/auth"], "files": []},
+    )
+    stub, captured = _make_stub_agent(submitted=submitted)
+    _patch_spawn(monkeypatch, stub)
+    monkeypatch.setattr(
+        "tools.subagent.run_subagent_tool.build_scope_packet_for_context",
+        lambda *a, **k: {
+            "scope_paths": ["src/auth"],
+            "coherence_token": "token-1",
+            "admission": {"mode": "parallel", "recommended_parallel_scouts": 3},
+        },
+    )
+    monkeypatch.setattr(
+        "tools.subagent.run_subagent_tool.render_scope_packet",
+        lambda packet: f"SCOPE {packet['coherence_token']}",
+    )
+
+    res = await run_subagent.execute(
+        run_subagent.input_model(agent_name="scout", input={"target_paths": ["src/auth"]}),
+        _ctx(),
+    )
+
+    assert not res.is_error
+    assert captured["prompt"].startswith("SCOPE token-1\n\n")
+    assert stub.query_context.tool_metadata["coherence_token"] == "token-1"
+    assert stub.query_context.tool_metadata["scope_packet"]["scope_paths"] == ["src/auth"]
 
 
 @pytest.mark.asyncio
@@ -608,6 +666,56 @@ async def test_configured_posthook_runs_when_work_phase_only_returns_raw_text(mo
     assert env["summary"] == "scout report"
     assert env["payload"]["target_paths"] == ["src/auth"]
     assert captured["prompt"].startswith("{")
+
+
+@pytest.mark.asyncio
+async def test_scout_stable_version_ignores_ephemeral_fallback_run_id(monkeypatch):
+    budgets = BudgetConfig()
+    state = BudgetState()
+    artifacts = InMemoryArtifactStore(budgets, state)
+    team_run = SimpleNamespace(
+        id="T-scout-ephemeral",
+        budgets=budgets,
+        artifacts=artifacts,
+        project_context=ProjectContext(goal="g", user_request="u"),
+        note_direct_scout_brief=lambda *args, **kwargs: None,
+    )
+    _register_team_run(team_run)
+    submitted = SubmittedSummary(
+        summary="scout report",
+        artifact={
+            "target_paths": ["src/auth"],
+            "canonical_scope": "src/auth",
+            "summary": "fresh scout",
+            "files": [],
+            "scope_coverage": 1.0,
+            "gaps": "",
+            "suggested_subdivisions": [],
+            "snapshot_time": 100.0,
+        },
+    )
+    stub, _ = _make_stub_agent(submitted=submitted)
+    _patch_spawn(monkeypatch, stub)
+
+    class _UnavailableRunStore:
+        is_ready = False
+
+    monkeypatch.setattr("server.app_factory.agent_run_store", _UnavailableRunStore(), raising=True)
+
+    try:
+        res = await run_subagent.execute(
+            run_subagent.input_model(agent_name="scout", input={"target_paths": ["src/auth"]}),
+            _ctx(team_run_id="T-scout-ephemeral"),
+        )
+        assert not res.is_error
+        env = json.loads(res.output)
+        assert env["run_id"].startswith("ephemeral-")
+        assert env["artifact_ref"] == "scout:src/auth"
+        assert team_run.project_context.stable_scout_versions["src/auth"] == {
+            "snapshot_time": 100.0,
+        }
+    finally:
+        _unregister_team_run("T-scout-ephemeral")
 
 
 @pytest.mark.asyncio

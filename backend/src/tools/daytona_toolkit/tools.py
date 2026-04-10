@@ -18,6 +18,7 @@ from tools.daytona_toolkit.ci_integration import (
     prepare_ci_write,
     prepare_declared_shell_outputs,
     release_declared_shell_outputs,
+    shell_mutation_declaration_error,
     sync_shell_mutations,
     sync_write_to_ci,
 )
@@ -140,6 +141,17 @@ async def daytona_bash(
     sandbox = _get_sandbox(context)
     cwd = _get_cwd(context)
     on_progress_line = context.metadata.get("on_progress_line")
+    declaration_error = shell_mutation_declaration_error(
+        context,
+        command=command,
+        declared_output_paths=declared_output_paths,
+    )
+    if declaration_error is not None:
+        return ToolResult(
+            output=declaration_error,
+            is_error=True,
+            metadata={"missing_declarations": True, "conflict": True},
+        )
     declared_shell_prepared, scope_packet, precheck_error = prepare_declared_shell_outputs(
         context,
         declared_output_paths=declared_output_paths,

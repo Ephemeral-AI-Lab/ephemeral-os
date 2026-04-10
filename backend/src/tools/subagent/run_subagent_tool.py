@@ -40,6 +40,12 @@ from message.messages import (
 from token_tracker.runtime import persist_run_usage
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.decorator import tool
+from tools.daytona_toolkit.coordination import (
+    build_scope_packet_for_context,
+    render_scope_packet,
+    scope_paths_from_payload,
+    scopes_overlap,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +58,7 @@ PEEK_MESSAGE_MAX = 10
 _PEEK_BLOCK_CHAR_CAP = 200
 # Total character cap for the peek view.
 _PEEK_TOTAL_CHAR_CAP = 2048
-_SCOUT_ONLY_CALLERS = frozenset({"team_planner", "atlas_builder", "atlas_refresher"})
+_SCOUT_ONLY_CALLERS = frozenset({"team_planner"})
 
 
 def _truncate(s: str) -> str:
@@ -87,10 +93,41 @@ def _normalize_target_paths(value: Any) -> list[str]:
 
 def _already_covered_scout_targets(context: ToolExecutionContext, target_paths: list[str]) -> list[str]:
     metadata = context.metadata
-    if str(metadata.get("agent_name") or "") in {"atlas_builder", "atlas_refresher"}:
-        return []
-    prior_scouts = set(_normalize_target_paths(metadata.get("_scout_target_paths_this_turn", [])))
-    return [path for path in target_paths if path in prior_scouts]
+    prior_scouts = _normalize_target_paths(metadata.get("_scout_target_paths_this_turn", []))
+    overlaps: set[str] = set()
+    for target in target_paths:
+        for prior in prior_scouts:
+            if scopes_overlap(target, prior):
+                overlaps.add(prior)
+    return sorted(overlaps)
+
+
+def _scout_fanout_admission_error(
+    context: ToolExecutionContext,
+    target_paths: list[str],
+) -> tuple[dict[str, Any] | None, str | None]:
+    if str(context.metadata.get("coordination_mode") or "") != "ultra":
+        return None, None
+    prior_scouts = _normalize_target_paths(context.metadata.get("_scout_target_paths_this_turn", []))
+    if not prior_scouts:
+        return None, None
+    packet = build_scope_packet_for_context(
+        context,
+        scope_paths=target_paths,
+        baseline_packet=None,
+    )
+    admission = packet.get("admission") if isinstance(packet, dict) else {}
+    if not isinstance(admission, dict) or admission.get("allow_parallel_fanout", True):
+        return packet if isinstance(packet, dict) else None, None
+    reasons = "; ".join(str(item) for item in (admission.get("reasons") or []) if str(item).strip())
+    recommended = int(admission.get("recommended_parallel_scouts") or 1)
+    return packet if isinstance(packet, dict) else None, (
+        "run_subagent: live scope status requires serialized scout expansion for this "
+        f"scope (recommended_parallel_scouts={recommended}"
+        + (f"; {reasons}" if reasons else "")
+        + "). Reuse the current evidence, inspect progress on existing scouts, or emit "
+        "the plan instead of opening another overlapping or hot scout lane."
+    )
 
 
 def _render_block(block: Any) -> str:
@@ -343,7 +380,8 @@ async def _run_posthook_if_needed(
         "(free-form text) or ``input`` (structured payload). In team mode, "
         "planners should use this only for exploration subagents such as "
         "``scout``; never pass ``developer`` or ``validator`` here. Emit "
-        "multiple calls in one turn for parallel fan-out."
+        "multiple disjoint calls in one turn only when live scope status "
+        "still admits parallel fan-out."
     ),
     background="always",
     task_type="subagent",
@@ -448,6 +486,8 @@ async def run_subagent(
             ),
             is_error=True,
         )
+    subagent_scope_packet: dict[str, Any] | None = None
+    subagent_scope_paths: list[str] = []
     if agent_name == "scout":
         if prompt is not None:
             return ToolResult(
@@ -473,15 +513,29 @@ async def run_subagent(
                 is_error=True,
             )
         covered_paths = _already_covered_scout_targets(context, valid_paths)
-        if covered_paths and len(covered_paths) == len(valid_paths):
+        if covered_paths:
             return ToolResult(
                 output=(
-                    "run_subagent: scout target_paths are already covered in this turn "
+                    "run_subagent: scout target_paths overlap a scope already covered in this turn "
                     f"({', '.join(covered_paths)}). Reuse the file reads or prior scout "
                     "you already have and submit the plan instead of re-exploring the same area."
                 ),
                 is_error=True,
             )
+        subagent_scope_paths = valid_paths
+        subagent_scope_packet, fanout_err = _scout_fanout_admission_error(context, valid_paths)
+        if fanout_err is not None:
+            return ToolResult(
+                output=fanout_err,
+                is_error=True,
+                metadata={"scope_packet": subagent_scope_packet or {}, "conflict": True},
+            )
+    elif isinstance(input, dict):
+        subagent_scope_paths = scope_paths_from_payload(input)
+    else:
+        baseline_packet = context.metadata.get("scope_packet")
+        if isinstance(baseline_packet, dict):
+            subagent_scope_paths = [str(item) for item in (baseline_packet.get("scope_paths") or []) if isinstance(item, str)]
 
     try:
         posthook_cfg, posthook_def = resolve_posthook_definition(
@@ -501,6 +555,17 @@ async def run_subagent(
     from team.runtime.context_builder import prepend_shared_briefings_for_subagent
 
     final_prompt = prepend_shared_briefings_for_subagent(parent_team_run_id, body)
+    if subagent_scope_packet is None and subagent_scope_paths:
+        maybe_packet = build_scope_packet_for_context(
+            context,
+            scope_paths=subagent_scope_paths,
+            baseline_packet=None,
+        )
+        if isinstance(maybe_packet, dict):
+            subagent_scope_packet = maybe_packet
+    rendered_scope_packet = render_scope_packet(subagent_scope_packet)
+    if rendered_scope_packet:
+        final_prompt = f"{rendered_scope_packet}\n\n{final_prompt}"
 
     # Persist a subagent run record FIRST, before spawn_agent — so spawn
     # failures still leave an audit trail that the parent can list / inspect
@@ -547,6 +612,11 @@ async def run_subagent(
     subagent_ctx.metadata["work_item_started_at"] = time.time()
     if parent_team_run_id:
         subagent_ctx.metadata.team_run_id = parent_team_run_id
+    if isinstance(subagent_scope_packet, dict):
+        subagent_ctx.metadata["scope_packet"] = subagent_scope_packet
+        coherence_token = str(subagent_scope_packet.get("coherence_token") or "")
+        if coherence_token:
+            subagent_ctx.metadata["coherence_token"] = coherence_token
 
     qc = getattr(agent, "query_context", None)
     if qc is not None:
@@ -702,7 +772,7 @@ async def run_subagent(
                     stored_artifact_ref = store_stable_scout_artifact(
                         team_run,
                         artifact,
-                        run_id=sub_run_id,
+                        run_id=persisted_run_id,
                     )
                     if stored_artifact_ref is not None:
                         auto_promote_scout_briefing(team_run, stored_artifact_ref)
