@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 from datetime import UTC, datetime
 from typing import Any, Generic, TypeVar
 
@@ -15,20 +14,17 @@ class DefinitionStoreBase(Generic[RecordT]):
     """Provide common CRUD primitives for name-keyed definition records."""
 
     record_type: type[RecordT]
-    store_name: str
     immutable_fields: tuple[str, ...] = ("id", "name", "created_at", "version")
 
     def __init__(self) -> None:
         self._session_factory: sessionmaker[Session] | None = None
-        self._logger = logging.getLogger(self.__class__.__module__)
 
     def initialize(self, session_factory: sessionmaker[Session]) -> None:
         self._session_factory = session_factory
-        self._logger.info("%s initialised", self.store_name)
 
     @property
     def _sf(self) -> sessionmaker[Session]:
-        assert self._session_factory is not None, f"{self.store_name} not initialised"
+        assert self._session_factory is not None, f"{self.__class__.__name__} not initialised"
         return self._session_factory
 
     def create(self, record: RecordT) -> RecordT:
@@ -38,15 +34,9 @@ class DefinitionStoreBase(Generic[RecordT]):
             db.refresh(record)
             return record
 
-    def _query_by_name(self, db: Session, name: str):
-        return db.query(self.record_type).filter(self.record_type.name == name)
-
     def _get_by_name(self, name: str, *, active_only: bool = True) -> RecordT | None:
         with self._sf() as db:
-            query = self._query_by_name(db, name)
-            if active_only:
-                query = query.filter(self.record_type.is_active.is_(True))
-            return query.first()
+            return self._get_by_name_with_session(db, name, active_only=active_only)
 
     def _list_active(self, *, limit: int, offset: int, order_by) -> list[RecordT]:
         with self._sf() as db:
@@ -86,7 +76,7 @@ class DefinitionStoreBase(Generic[RecordT]):
     def _get_by_name_with_session(
         self, db: Session, name: str, *, active_only: bool = True
     ) -> RecordT | None:
-        query = self._query_by_name(db, name)
+        query = db.query(self.record_type).filter(self.record_type.name == name)
         if active_only:
             query = query.filter(self.record_type.is_active.is_(True))
         return query.first()

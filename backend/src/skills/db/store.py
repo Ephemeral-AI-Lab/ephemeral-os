@@ -7,11 +7,11 @@ from typing import Any
 from db.stores.definition_store import DefinitionStoreBase
 from skills.db.model import SkillDefinitionRecord
 
+
 class SkillDefinitionStore(DefinitionStoreBase[SkillDefinitionRecord]):
     """CRUD operations for skill definition records."""
 
     record_type = SkillDefinitionRecord
-    store_name = "SkillDefinitionStore"
 
     def get_by_name(self, name: str) -> SkillDefinitionRecord | None:
         return self._get_by_name(name)

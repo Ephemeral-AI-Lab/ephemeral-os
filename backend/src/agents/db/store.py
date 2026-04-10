@@ -14,7 +14,6 @@ class AgentDefinitionStore(DefinitionStoreBase[AgentDefinitionRecord]):
     """CRUD operations for agent definition records."""
 
     record_type = AgentDefinitionRecord
-    store_name = "AgentDefinitionStore"
 
     def get_by_name(self, name: str, *, active_only: bool = True) -> AgentDefinitionRecord | None:
         return self._get_by_name(name, active_only=active_only)

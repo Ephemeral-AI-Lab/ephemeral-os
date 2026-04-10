@@ -224,17 +224,14 @@ class TeamRun:
         Unlike ``_drain_executors``, this does NOT cancel running items —
         the graph is already terminal so no item should be RUNNING.
         """
-        self.cancel_event.set()
-        for t in self._executor_tasks:
-            try:
-                await asyncio.wait_for(t, timeout=2.0)
-            except (asyncio.TimeoutError, asyncio.CancelledError):
-                t.cancel()
-        self._executor_tasks = []
-        self.cancel_event.clear()
+        await self._stop_executors()
 
     async def _drain_executors(self) -> None:
         """Forceful drain used by rollback/cancel — kills any RUNNING item."""
+        await self._stop_executors()
+        await self.dispatcher.cancel_running("drained by rollback/cancel")
+
+    async def _stop_executors(self) -> None:
         self.cancel_event.set()
         for t in self._executor_tasks:
             try:
@@ -242,7 +239,6 @@ class TeamRun:
             except (asyncio.TimeoutError, asyncio.CancelledError):
                 t.cancel()
         self._executor_tasks = []
-        await self.dispatcher.cancel_running("drained by rollback/cancel")
         self.cancel_event.clear()
 
     def _compute_final_status(self) -> None:
@@ -387,31 +383,10 @@ class TeamRun:
                 f"event log for {team_run_id!r} missing team_run_created header"
             )
 
-        # --- header -----------------------------------------------------
-        meta = created.data
-        budgets_dict = dict(meta.get("budgets") or {})
-        # BudgetConfig has all-defaulted fields; filter unknown keys defensively
-        valid_keys = set(BudgetConfig.__dataclass_fields__.keys())
-        budgets = BudgetConfig(**{k: v for k, v in budgets_dict.items() if k in valid_keys})
-
-        services = build_team_runtime_services(
+        services, run = cls._build_resumed_run(
+            store=store,
             team_run_id=team_run_id,
-            budgets=budgets,
-            budget_state=BudgetState(),
-            user_request=meta.get("user_request") or "",
-            goal=meta.get("goal"),
-            repo_root=meta.get("repo_root") or None,
-            event_store=store,
-        )
-        run = cls(
-            session_id=meta.get("session_id") or "",
-            user_request=meta.get("user_request") or "",
-            budgets=budgets,
-            goal=meta.get("goal"),
-            sandbox_id=meta.get("sandbox_id") or None,
-            repo_root=meta.get("repo_root") or None,
-            team_run_id=team_run_id,
-            services=services,
+            created_event=created,
         )
 
         # --- fold events into runtime state -----------------------------
@@ -464,11 +439,10 @@ class TeamRun:
         else:
             run.budget_state.work_items_used = len(graph)
 
-        # Rebuild ready queue from whatever ended up READY.
-        for wi in graph.values():
-            if wi.status == WorkItemStatus.READY:
-                services.dispatcher._ready_queue.put_nowait(wi.id)
-                services.dispatcher._ready_order.append(wi.id)
+        services.dispatcher._ready_order = cls._restore_ready_queue(
+            dispatcher=services.dispatcher,
+            graph=graph,
+        )
 
         run.root_work_item_id = root_id
         if final_status:
@@ -478,6 +452,56 @@ class TeamRun:
                 pass
 
         return run
+
+    @classmethod
+    def _build_resumed_run(
+        cls,
+        *,
+        store: TeamRunStore,
+        team_run_id: str,
+        created_event: Any,
+    ) -> tuple[TeamRuntimeServices, "TeamRun"]:
+        meta = created_event.data
+        budgets = cls._budget_config_from_event(meta)
+        services = build_team_runtime_services(
+            team_run_id=team_run_id,
+            budgets=budgets,
+            budget_state=BudgetState(),
+            user_request=meta.get("user_request") or "",
+            goal=meta.get("goal"),
+            repo_root=meta.get("repo_root") or None,
+            event_store=store,
+        )
+        run = cls(
+            session_id=meta.get("session_id") or "",
+            user_request=meta.get("user_request") or "",
+            budgets=budgets,
+            goal=meta.get("goal"),
+            sandbox_id=meta.get("sandbox_id") or None,
+            repo_root=meta.get("repo_root") or None,
+            team_run_id=team_run_id,
+            services=services,
+        )
+        return services, run
+
+    @staticmethod
+    def _budget_config_from_event(meta: dict[str, Any]) -> BudgetConfig:
+        budgets_dict = dict(meta.get("budgets") or {})
+        valid_keys = set(BudgetConfig.__dataclass_fields__.keys())
+        return BudgetConfig(**{k: v for k, v in budgets_dict.items() if k in valid_keys})
+
+    @staticmethod
+    def _restore_ready_queue(
+        *,
+        dispatcher: Dispatcher,
+        graph: dict[str, WorkItem],
+    ) -> list[str]:
+        ready_order: list[str] = []
+        for wi in graph.values():
+            if wi.status == WorkItemStatus.READY:
+                dispatcher._ready_queue.put_nowait(wi.id)
+                ready_order.append(wi.id)
+        return ready_order
 
 
 def _work_item_from_dict(data: dict[str, Any]) -> WorkItem:

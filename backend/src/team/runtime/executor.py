@@ -84,6 +84,24 @@ class Executor:
                 logger.exception("Worker error on %s: %s", wi_id, exc)
                 await dispatcher.fail(wi_id, f"worker_exception: {exc}")
 
+    @staticmethod
+    def _result_from_submission(submitted: Any) -> AgentResult | RetryRequest | ReplanRequest | None:
+        if submitted is None:
+            return None
+        if isinstance(submitted, (RetryRequest, ReplanRequest)):
+            return submitted
+        if isinstance(submitted, Plan):
+            return AgentResult(artifact=None, summary="", submitted_plan=submitted)
+        if isinstance(submitted, ReplanPlan):
+            return AgentResult(artifact=None, summary="", submitted_replan=submitted)
+        if isinstance(submitted, SubmittedSummary):
+            return AgentResult(
+                artifact=submitted.artifact,
+                summary=submitted.summary,
+                submitted_plan=None,
+            )
+        raise TypeError(type(submitted).__name__)
+
     async def _run_one(self, wi_id: str) -> None:
         dispatcher = self.team_run.dispatcher
         agent_run_id = str(uuid.uuid4())
@@ -110,40 +128,31 @@ class Executor:
             await dispatcher.fail(wi_id, f"NoPosthookOutput: {exc}")
             return
 
-        if submitted is None:
+        try:
+            dispatch_payload = self._result_from_submission(submitted)
+        except TypeError as exc:
+            await dispatcher.fail(wi_id, f"unexpected_submission_type: {exc}")
+            return
+
+        if dispatch_payload is None:
             await dispatcher.fail(
                 wi_id,
                 "no_posthook_submission: team agents must submit via a posthook "
                 "(use submit_summary_agent if no domain-specific posthook applies)",
             )
             return
-        if isinstance(submitted, RetryRequest):
-            await dispatcher.retry_work_item(wi_id, submitted)
+        if isinstance(dispatch_payload, RetryRequest):
+            await dispatcher.retry_work_item(wi_id, dispatch_payload)
             await self._checkpoint_after_transition(wi, outcome="retry")
             return
-        if isinstance(submitted, ReplanRequest):
-            await dispatcher.request_replan(wi_id, submitted)
+        if isinstance(dispatch_payload, ReplanRequest):
+            await dispatcher.request_replan(wi_id, dispatch_payload)
             await self._checkpoint_after_transition(wi, outcome="replan_request")
             return
-        if isinstance(submitted, Plan):
-            result = AgentResult(artifact=None, summary="", submitted_plan=submitted)
-        elif isinstance(submitted, ReplanPlan):
-            result = AgentResult(artifact=None, summary="", submitted_replan=submitted)
-        elif isinstance(submitted, SubmittedSummary):
-            result = AgentResult(
-                artifact=submitted.artifact,
-                summary=submitted.summary,
-                submitted_plan=None,
-            )
-        else:
-            await dispatcher.fail(
-                wi_id, f"unexpected_submission_type: {type(submitted).__name__}"
-            )
-            return
 
-        new_items = await dispatcher.complete(wi_id, result)
+        new_items = await dispatcher.complete(wi_id, dispatch_payload)
         if self.after_dispatch is not None:
-            callback_result = self.after_dispatch(wi, result, new_items)
+            callback_result = self.after_dispatch(wi, dispatch_payload, new_items)
             if isinstance(callback_result, Awaitable):
                 await callback_result
         await self._checkpoint_after_transition(wi, outcome="complete")

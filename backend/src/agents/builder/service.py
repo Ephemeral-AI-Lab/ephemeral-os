@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 from datetime import datetime, UTC
 from uuid import uuid4
 
@@ -16,9 +15,6 @@ from agents.api.schemas import (
     AgentDefinitionUpdate,
     AgentValidationResult,
 )
-
-logger = logging.getLogger(__name__)
-
 
 class AgentBuilderService:
     """Converts DB records to/from runtime AgentDefinition with validation."""
