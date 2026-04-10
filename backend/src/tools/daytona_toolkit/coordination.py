@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import time
 from typing import Any
 
@@ -15,6 +16,7 @@ from team.context.scout_briefings import context_pressure_for_scope
 from tools.core.base import ToolExecutionContext
 
 _DEFAULT_RECENT_SECONDS = 300.0
+_PY_PATH_RE = re.compile(r"(?<![A-Za-z0-9_./-])([A-Za-z0-9_./-]+\.py)(?![A-Za-z0-9_./-])")
 
 
 def scopes_overlap(path_a: str, path_b: str) -> bool:
@@ -27,10 +29,17 @@ def scope_paths_from_payload(payload: Any) -> list[str]:
     if not isinstance(payload, dict):
         return []
     collected: list[str] = []
-    for key in ("touches_paths", "target_paths", "stale_subsystems", "paths", "files"):
+    for key in ("touches_paths", "target_paths", "stale_subsystems", "paths", "files", "owned_files"):
         raw = payload.get(key)
         if isinstance(raw, list):
             collected.extend(str(item) for item in raw if isinstance(item, str))
+    raw_verify = payload.get("verify")
+    if isinstance(raw_verify, list):
+        for item in raw_verify:
+            if isinstance(item, str):
+                collected.extend(path.split("::", 1)[0].strip() for path in _PY_PATH_RE.findall(item))
+    elif isinstance(raw_verify, str):
+        collected.extend(path.split("::", 1)[0].strip() for path in _PY_PATH_RE.findall(raw_verify))
     for key in ("file_path", "path", "subsystem", "canonical_scope"):
         raw = payload.get(key)
         if isinstance(raw, str) and raw.strip():

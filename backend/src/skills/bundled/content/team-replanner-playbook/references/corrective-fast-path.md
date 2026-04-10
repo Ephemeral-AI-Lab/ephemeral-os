@@ -40,6 +40,11 @@ Turn a validator-backed failure packet into a corrective JSON payload without re
    - nearby guardrail or verification targets
    - hypotheses only as hypotheses
 
+   Exact missing-module exception:
+   - If the failure packet itself names a missing module import path and the live parent package/directory exists, you may include that exact checkout-relative module file as a creation target even though it does not exist yet.
+   - Example: `from dask._compatibility import PY_VERSION` may justify a corrective target on `dask/_compatibility.py`.
+   - This exception does not cover guessed neighbors or stale aliases such as `pyarrow.py` when live CI already resolves the real surface to `arrow.py`.
+
    Do not include:
    - `specific_fixes`
    - exact condition rewrites
@@ -59,3 +64,4 @@ Turn a validator-backed failure packet into a corrective JSON payload without re
 
 - "Read the test marker, test parametrization, and shared plumbing again to work out exactly which branch should change."
 - "Tell the developer to change this exact condition and rewrite this exact error string" when no validator packet or sibling artifact proved that edit.
+- "Add `PY_VERSION` to `dask/compatibility.py`" when the actual failure is `from dask._compatibility import PY_VERSION` and the missing module path itself remains unresolved.

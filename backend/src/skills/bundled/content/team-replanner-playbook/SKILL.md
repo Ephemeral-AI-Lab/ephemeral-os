@@ -56,7 +56,7 @@ Special case:
 - add only the corrective developer item(s) unless an extra intermediate validation step is truly needed
 
 Stop condition for this phase:
-- once you can name the exact failing cluster, the exact existing owner file(s), and the exact retry or verification target for the next worker, stop exploring and draft the corrective JSON immediately
+- once you can name the exact failing cluster, the exact existing owner file(s) or exact missing import-path module target, and the exact retry or verification target for the next worker, stop exploring and draft the corrective JSON immediately
 - do not keep tracing wrapper flow, parameter plumbing, or deeper call stacks after that sufficiency point; runtime confirmation belongs to the next developer lane
 - do not reopen test source files or shared router/plumbing files such as `core.py`, `__init__.py`, or wrapper entry points just to reconstruct expected behavior once the validator packet already gives exact failing ids plus the corrective owner file(s)
 - a benchmark validator packet with exact pytest ids plus exact existing owner files is already a fast-path sufficiency signal; at most one live owner confirmation per cluster is allowed before you emit JSON
@@ -70,9 +70,10 @@ Scout rules:
 - call `ci_scope_status(scope_paths=[...])` first when the failure touches shared runtime files or checkpoint/retry surfaces, so corrective work is anchored on current repo state instead of stale checkpoint assumptions
 - on benchmark resume/replan turns with exact owner files already named, `ci_scope_status(...)` is also the default first live-tool call before any `ci_read_file(...)`, unless you can emit the corrective JSON without any live tooling
 - bounded, concrete paths only
-- every corrective `scope_paths`, owned file, and candidate owner path must already exist in the live checkout packet or be re-confirmed by CI before you reuse it
+- every corrective `scope_paths`, owned file, and candidate owner path must already exist in the live checkout packet or be re-confirmed by CI before you reuse it, except for one exact missing module file spelled verbatim by the failing import path when its parent package/directory already exists live
 - if a cited path cannot be read or `ci_scope_status(...)` / `ci_read_file(...)` says it does not exist, treat that as an owner-map mismatch and re-anchor on the exact existing path from the failure packet, sibling artifact, or live symbol/read evidence before drafting work
 - do not preserve guessed module aliases across replans; if the live repo uses `arrow.py`, do not draft corrective work against invented siblings such as `pyarrow.py`
+- a missing module path named verbatim in the failure packet is different from a guessed alias. If Python is trying to import `pkg._compat` and the live parent package `pkg/` exists, you may assign the exact import-path file `pkg/_compat.py` as the corrective creation target. Do not widen that exception to cousin aliases, renamed neighbors, or speculative replacements.
 - prefer one narrow scout over broad rediscovery
 - do not scout to re-run tests or gather runtime evidence
 - if the failing surface is already clear, draft the corrective items immediately
@@ -143,7 +144,7 @@ Rules:
 - `add_items` may be empty only if `cancel_ids` is non-empty
 - every item must be execution-sized and concrete
 - new items are sibling work items, not a new root graph
-- corrective payload paths must be exact existing checkout-relative paths, never guessed aliases or nonexistent siblings
+- corrective payload paths must be exact existing checkout-relative paths, never guessed aliases or nonexistent siblings, except for one missing module file spelled verbatim by the failing import path when its parent package/directory already exists live
 - do not write prose before or after the JSON
 
 ---
@@ -159,7 +160,7 @@ Rules:
 7. **Treat checkpoint/replan bugs as first-class fix surfaces.** They are not "infrastructure noise"; draft a direct corrective lane for them.
 8. **Prefer reuse before rediscovery.** Fresh shared briefings and reusable atlas briefs beat a new scout; only scout when ownership is still unresolved.
 9. **Live CI wins on runtime branches.** When checkpoint or retry state may have drifted, use `ci_scope_status(...)` to anchor on live workspace truth before drafting the fix.
-10. **Missing paths are mismatch signals, not evidence.** If a cited owner file does not exist in the live checkout, stop treating it as the owner and re-anchor on an exact existing path from live CI or inherited evidence before you emit JSON.
+10. **Missing paths are mismatch signals, not evidence.** If a cited owner file does not exist in the live checkout, stop treating it as the owner and re-anchor on an exact existing path from live CI or inherited evidence before you emit JSON. The only exception is an exact missing module file named by the failing import path itself when the live parent package/directory already exists.
 11. **Replanners do not debug like developers.** After the failure packet plus one live ownership confirmation identifies the corrective lane, stop tracing deeper runtime plumbing and emit the sibling fix items.
 12. **Handoff evidence, not speculative patches.** If the exact code change is still a hypothesis, pass it as a hypothesis or symptom note. Do not frame an unproven edit as the required fix in the payload.
 13. **A worker claim that "the test is stale" is still just a hypothesis.** Do not draft a test-edit corrective lane from a developer's contradicted patch alone. Unless an independent validator packet, owned test target, or second artifact already proves the expected behavior changed, keep the corrective payload anchored on the last confirmed production or coordination owner surface.
@@ -167,6 +168,7 @@ Rules:
 15. **Benchmark validator packets use the corrective fast path.** When that packet already names exact pytest ids plus exact existing owner file(s), allow at most one live confirmation per cluster, then emit JSON. Do not inspect benchmark test decorators, parametrization markers, or file headers to keep reinterpreting the same failure.
 16. **Repeated same-surface reads are a stop signal.** If you have already reopened the same failing cluster once and can still name the owner plus retry target, the next action is the corrective JSON, not another read/query over the same files or tests.
 17. **Benchmark replans anchor live context with `ci_scope_status` first.** If you take any live-tool action on a benchmark resume/replan turn, open with `ci_scope_status(scope_paths=[...])` on the exact owner surface or owning directory before any `ci_read_file(...)` or symbol query. Skipping that anchor is a protocol error unless you emit JSON with zero live tools.
+18. **Do not prescribe an export-only fix for a missing module import unless the module path would actually resolve.** If the failure is `from dask._compatibility import PY_VERSION`, a re-export inside `dask/compatibility.py` alone does not satisfy the import path. Carry the exact module target `dask/_compatibility.py` or explicitly hand off both surfaces as hypotheses.
 
 ---
 

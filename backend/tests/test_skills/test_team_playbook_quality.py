@@ -54,12 +54,13 @@ def test_planner_playbook_gates_share_briefing_on_tool_availability() -> None:
     assert "On fresh benchmark root turns, do **not** open with `atlas_lookup`." in planner
     assert "on fresh benchmark roots, use `ci_scope_status(...)` and fresh scouts before any atlas lookup" in planner
     assert "load `exploration-script` before the first non-reference tool call" in planner
-    assert "the first live CI action must be `ci_scope_status(scope_paths=[...])` on the likely owner files/directories" in planner
-    assert "Do not open with `ci_workspace_structure(...)`, `ci_query_symbols(...)`, or other live CI queries before that anchor." in planner
+    assert "if the likely production owner path is already exact, the first live CI action must be `ci_scope_status(scope_paths=[...])`" in planner
+    assert "If file existence is still a hypothesis, spend exactly one narrow `ci_workspace_structure(path=\"<nearest likely production directory/package>\", max_depth<=4)` pass first, then call `ci_scope_status(...)` on an exact existing production path from that listing." in planner
+    assert "Do not open with root-wide `ci_workspace_structure()`, `ci_query_symbols(...)`, or other live CI queries before that anchor." in planner
     assert "do not draft or narrate a concrete scout wave until one `ci_scope_status(...)` anchor has already succeeded" in planner
     assert "Do not call `run_subagent(...)`, list scout targets, or narrate a concrete scout wave before that anchor succeeds." in planner
     assert "before every `run_subagent(agent_name=\"scout\", ...)` call, compare the proposed `target_paths` against the named benchmark test files" in planner
-    assert "If file existence is still a hypothesis, prefer the nearest likely owner directory/package in that first `ci_scope_status(...)` call instead of a guessed leaf file." in planner
+    assert "Do not guess a leaf file before that pass." in planner
     assert "`WAIT_REQUIRES_PROGRESS_CHECK`, duplicate-scout rejection, or a budget warning are stop-and-plan signals" in planner
     assert 'If you plan to join `task_id="all"`, inspect each fresh scout in that batch first' in planner
     assert 'Never call `run_subagent` with `agent_name="team_planner"`' in planner
@@ -77,7 +78,7 @@ def test_planner_playbook_gates_share_briefing_on_tool_availability() -> None:
     assert "The global validator cap still applies inside child plans." in planner
     assert "Do not emit one validator per developer when that would exceed the cap." in planner
     assert "the first live CI action must be `ci_scope_status(scope_paths=[...])`" in planner
-    assert "Do not open with `ci_workspace_structure(...)`, `ci_query_symbols(...)`, or other live CI queries before that anchor." in planner
+    assert "Do not open with root-wide `ci_workspace_structure()`, `ci_query_symbols(...)`, or other live CI queries before that anchor." in planner
     assert "the first scout wave should usually cover 3-4 disjoint production-owner slices, not only the top two clusters by failure count" in planner
     assert "Cluster size orders the wave; it does not cap it at two." in planner
     assert "Do not bundle unrelated owner surfaces into one scout just to imitate an old two-lane cap" in planner
@@ -97,9 +98,15 @@ def test_planner_playbook_gates_share_briefing_on_tool_availability() -> None:
     assert "Do not infer an optional-dependency or environment root cause from cluster size alone." in planner
     assert "Child `owned_files` must contain only confirmed existing checkout-relative paths." in planner
     assert "keep the exact failing test file in `owned_failures`, move the unresolved production guess into `expansion_hint` or `notes`" in planner
+    assert "Zero-coverage or wrong-path scout evidence supports only ownership/path-shape conclusions." in planner
     assert "preserve them byte-for-byte downstream" in planner
     assert 'Keep `test_cli.py` as `test_cli.py`, not `test_dask_cli.py`' in planner
     assert "spend at most one `ci_scope_status(...)` freshness check before emitting direct developer/validator lanes" in planner
+    non_root = _read(
+        _BACKEND_ROOT
+        / "src/skills/bundled/content/team-planner-playbook/references/non-root-context-reuse.md"
+    )
+    assert "If only one residual owner guess still needs confirmation, spend at most one live confirmation step on that unresolved owner and then emit direct lanes for the already-mapped siblings." in non_root
 
 
 def test_sweevo_context_treats_missing_share_briefing_as_non_blocking() -> None:
@@ -121,6 +128,7 @@ def test_sweevo_context_treats_missing_share_briefing_as_non_blocking() -> None:
     assert "Retry/replan handoff must preserve the evidence packet." in sweevo
     assert "Ownership mismatch is a planning problem." in sweevo
     assert "Exact existing paths only." in sweevo
+    assert "The one exception is a missing module file spelled verbatim by the failing import path" in sweevo
     assert "Exact validator evidence is enough to branch." in sweevo
     assert "Planner briefings must be execution-ready." in sweevo
     assert "Every planner `briefings` entry needs a stable `name`, a valid `source`, and the matching payload field for that source." in sweevo
@@ -136,8 +144,10 @@ def test_sweevo_context_treats_missing_share_briefing_as_non_blocking() -> None:
     assert "keep missing guessed owners out of `owned_files`" in sweevo
     assert "Root planner symbol hits that only land in benchmark test files are not ownership evidence." in sweevo
     assert "if a validator or inherited note cites a missing alias path such as `pyarrow.py` while live CI resolves the surface to `arrow.py`" in sweevo
+    assert "When the failure packet itself names a missing module import path such as `from dask._compatibility import PY_VERSION`" in sweevo
     assert 'Do not "repair" the benchmark by editing the unowned test file' in sweevo
     assert "mentioned only in `owned_failures`, `verify`, or a failing command is not test ownership" in sweevo
+    assert "`owned_files` wins every write-permission decision." in sweevo
     assert "the developer should report `scope_mismatch` with the exact missing import/export and likely owner path" in sweevo
     assert 'A developer claim that a named benchmark test now encodes "old behavior" after a contradicted patch is not enough to open a test-edit lane.' in sweevo
     assert "do not re-read the test body or shared parameter-plumbing files to author a patch recipe" in sweevo
@@ -160,11 +170,14 @@ def test_replanner_playbook_requires_exact_existing_paths() -> None:
     assert 'load_skill_reference("team-replanner-playbook", "corrective-fast-path")' in replanner
     assert "the first one must be `ci_scope_status(...)` on the exact owner surface or owning directory" in replanner
     assert "every corrective `scope_paths`, owned file, and candidate owner path must already exist in the live checkout packet or be re-confirmed by CI before you reuse it" in replanner
+    assert "except for one exact missing module file spelled verbatim by the failing import path when its parent package/directory already exists live" in replanner
     assert "if a cited path cannot be read or `ci_scope_status(...)` / `ci_read_file(...)` says it does not exist, treat that as an owner-map mismatch" in replanner
     assert "do not preserve guessed module aliases across replans; if the live repo uses `arrow.py`, do not draft corrective work against invented siblings such as `pyarrow.py`" in replanner
     assert "corrective payload paths must be exact existing checkout-relative paths, never guessed aliases or nonexistent siblings" in replanner
+    assert "If Python is trying to import `pkg._compat` and the live parent package `pkg/` exists, you may assign the exact import-path file `pkg/_compat.py`" in replanner
     assert "Missing paths are mismatch signals, not evidence." in replanner
-    assert "once you can name the exact failing cluster, the exact existing owner file(s), and the exact retry or verification target for the next worker, stop exploring and draft the corrective JSON immediately" in replanner
+    assert "The only exception is an exact missing module file named by the failing import path itself" in replanner
+    assert "once you can name the exact failing cluster, the exact existing owner file(s) or exact missing import-path module target, and the exact retry or verification target for the next worker, stop exploring and draft the corrective JSON immediately" in replanner
     assert "one confirmatory read/query per unresolved cluster is usually enough" in replanner
     assert "do not reopen test source files or shared router/plumbing files such as `core.py`" in replanner
     assert "do not read the test body or shared parameter-plumbing files to reverse-engineer semantics" in replanner
@@ -175,15 +188,19 @@ def test_replanner_playbook_requires_exact_existing_paths() -> None:
     assert "Handoff evidence, not speculative patches." in replanner
     assert "Do not draft a test-edit corrective lane from a developer's contradicted patch alone." in replanner
     assert "Exact failing ids plus exact owner files are enough." in replanner
+    assert "Do not prescribe an export-only fix for a missing module import unless the module path would actually resolve." in replanner
     assert "if you need any live confirmation at all, the first confirmation step is `ci_scope_status(...)`" in replanner
     assert "do not query benchmark test decorators, parametrization markers, or test headers such as `PYARROW_MARK`, `parametrize`, or top-of-file skips" in replanner
     assert "Repeated same-surface reads are a stop signal." in replanner
     assert "Benchmark replans anchor live context with `ci_scope_status` first." in replanner
     assert "incoming validator packet already names exact failing pytest ids and exact existing owner file(s)" in corrective_fast_path
     assert "The default first live-tool call is `ci_scope_status(scope_paths=[...])`" in corrective_fast_path
+    assert "If the failure packet itself names a missing module import path and the live parent package/directory exists" in corrective_fast_path
+    assert "Example: `from dask._compatibility import PY_VERSION` may justify a corrective target on `dask/_compatibility.py`." in corrective_fast_path
     assert "If a benchmark corrective turn opens with `ci_read_file(...)` or symbol queries on the owner files before first calling `ci_scope_status(...)`" in corrective_fast_path
     assert "marker or parametrization queries such as `PYARROW_MARK`, `skipif`, or `parametrize`" in corrective_fast_path
     assert "If you have already reopened the same owner cluster once and can still name the owner plus retry target, emit JSON now." in corrective_fast_path
+    assert 'when the actual failure is `from dask._compatibility import PY_VERSION` and the missing module path itself remains unresolved' in corrective_fast_path
 
 
 def test_developer_playbook_anchors_import_failures_to_named_pytest_surface() -> None:
@@ -207,6 +224,9 @@ def test_developer_playbook_anchors_import_failures_to_named_pytest_surface() ->
     assert "`owned_failures` is not a write allowlist." in developer
     assert "If the first reproducible failure names an unowned test file and the missing import/export lives outside your assigned production files, stop with `scope_mismatch`" in developer
     assert "A failing test path in `owned_failures`, `verify`, or reproduction output is evidence, not write permission." in developer
+    assert "Before any `daytona_edit_file` or `daytona_write_file`, check whether the destination path is explicitly inside `owned_files`" in developer
+    assert "`owned_files` wins every write-permission decision." in developer
+    assert 'if you catch yourself reasoning "the failing test is listed in `owned_failures`, so I can patch that test import," stop.' in developer
     assert 'Do not claim the test encodes "old behavior", "stale expectations", or needs a test-only follow-up' in developer
     assert "Do not synthesize hybrid public strings to satisfy competing tests." in developer
     assert "read the exact observed-vs-expected mismatch from that failure output before the next edit" in developer

@@ -152,7 +152,7 @@ def test_prepare_ci_write_refreshes_scope_baseline_after_reservation(monkeypatch
         {
             "ci_service": svc,
             "agent_run_id": "worker-1",
-            "scope_packet": {"scope_paths": ["src"], "coherence_token": "base-token"},
+            "scope_packet": {"scope_paths": ["/repo"], "coherence_token": "base-token"},
             "coherence_token": "base-token",
         }
     )
@@ -182,7 +182,7 @@ def test_prepare_ci_write_allows_scope_drift_when_opted_in(monkeypatch):
         {
             "ci_service": svc,
             "agent_run_id": "worker-1",
-            "scope_packet": {"scope_paths": ["src"], "coherence_token": "base-token"},
+            "scope_packet": {"scope_paths": ["/repo"], "coherence_token": "base-token"},
             "coherence_token": "base-token",
         }
     )
@@ -198,6 +198,25 @@ def test_prepare_ci_write_allows_scope_drift_when_opted_in(monkeypatch):
     assert packet["coherence_token"] == "reserved-token"
     assert ctx.metadata["scope_packet"]["coherence_token"] == "reserved-token"
     assert ctx.metadata["coherence_token"] == "reserved-token"
+
+
+def test_prepare_ci_write_rejects_write_outside_scoped_paths():
+    svc = MagicMock()
+    ctx = _ctx(
+        {
+            "ci_service": svc,
+            "scope_packet": {"scope_paths": ["/repo/src/owned.py"], "coherence_token": "base-token"},
+            "coherence_token": "base-token",
+        }
+    )
+
+    result, packet, err = prepare_ci_write(ctx, "/repo/tests/test_owned.py")
+
+    assert result is None
+    assert err is not None
+    assert "outside the current scoped paths" in err
+    assert packet["scope_paths"] == ["/repo/src/owned.py"]
+    svc.prepare_write.assert_not_called()
 
 
 def test_abort_ci_write_refreshes_scope_baseline_after_release(monkeypatch):

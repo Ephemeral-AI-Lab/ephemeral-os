@@ -600,7 +600,7 @@ def test_team_planner_prompt_makes_child_scope_rules_explicit():
     assert "If you cannot quote the node id verbatim from the prompt, use the exact benchmark test file path instead of inventing or renaming a node." in (
         planner.system_prompt
     )
-    assert "the first live planning tool call must be ``ci_scope_status(scope_paths=[...])`` on the likely owner files/directories" in (
+    assert "the opening live planning step must be either ``ci_scope_status(scope_paths=[...])`` on the likely owner files/directories, or one narrow ``ci_workspace_structure(path=\"<nearest likely production directory/package>\")`` pass when the exact production path is still only a hypothesis" in (
         planner.system_prompt
     )
     assert "on large roots with four or more named clusters and permissive `ci_scope_status(...)` admission, prefer 3-4 disjoint production-owner surfaces" in (

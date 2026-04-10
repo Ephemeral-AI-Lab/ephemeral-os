@@ -20,6 +20,7 @@ from code_intelligence.editing.merge import detect_edit_window
 from tools.daytona_toolkit.coordination import (
     build_scope_packet_for_context,
     normalize_scope_paths,
+    scopes_overlap,
 )
 from tools.core.base import ToolExecutionContext
 
@@ -293,6 +294,20 @@ def prepare_ci_write(
 ) -> tuple[Any | None, dict[str, Any], str | None]:
     """Run scope/token prechecks and reserve *file_path* for a write."""
     scope_paths = scope_paths_for_write(context, fallback_paths=[file_path])
+    if scope_paths and not any(scopes_overlap(file_path, scope) for scope in scope_paths):
+        packet = context.metadata.get("scope_packet")
+        if not isinstance(packet, dict):
+            packet = {"scope_paths": scope_paths}
+        message = (
+            "Write target is outside the current scoped paths. Refresh live CI state with "
+            f"`ci_scope_status(scope_paths=[{file_path!r}])` before writing this file."
+        )
+        _note_team_memory_conflict(
+            context,
+            file_path=file_path,
+            reason=message,
+        )
+        return None, packet, message
     packet, err = enforce_scope_coherence(context, scope_paths=scope_paths)
     if err is not None and not allow_scope_drift:
         _note_team_memory_conflict(

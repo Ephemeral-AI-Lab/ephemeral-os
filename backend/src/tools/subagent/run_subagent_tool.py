@@ -46,6 +46,7 @@ from tools.daytona_toolkit.coordination import (
     scope_paths_from_payload,
     scopes_overlap,
 )
+from tools.daytona_toolkit.ci_integration import get_ci_service
 from tools.subagent.policy import SCOUT_ONLY_CALLERS
 
 logger = logging.getLogger(__name__)
@@ -224,6 +225,52 @@ def _benchmark_root_scout_policy_error(
             "run_subagent: fresh benchmark-root scout waves must target likely production owner "
             "files or directories first, not already-named benchmark test files. Re-anchor on the "
             "corresponding production surface or an exact existing candidate directory."
+        )
+    svc = get_ci_service(context)
+    symbol_index = getattr(svc, "symbol_index", None) if svc is not None else None
+    raw_symbols = getattr(symbol_index, "_symbols", None)
+    if isinstance(raw_symbols, dict) and raw_symbols:
+        indexed_paths = {
+            str(path).strip().replace("/testbed/", "", 1).lstrip("/")
+            for path in raw_symbols.keys()
+            if str(path).strip()
+        }
+        missing: list[str] = []
+        for candidate in target_paths:
+            normalized = str(candidate).strip().replace("/testbed/", "", 1).lstrip("/")
+            if not normalized:
+                continue
+            prefix = normalized.rstrip("/") + "/"
+            if normalized in indexed_paths or any(path.startswith(prefix) for path in indexed_paths):
+                continue
+            missing.append(candidate)
+        if missing:
+            joined = ", ".join(missing)
+            return (
+                "run_subagent: fresh benchmark-root scout waves must target exact existing "
+                "production files/directories from the live checkout. The requested target paths "
+                f"are missing: {joined}. Re-anchor on the nearest existing production "
+                "directory/package before launching scouts."
+            )
+    prior_launches_raw = context.metadata.get("_scout_launches_this_turn", 0)
+    prior_launches = int(prior_launches_raw) if isinstance(prior_launches_raw, (int, float)) else 0
+    bg_manager = context.metadata.get("background_task_manager")
+    completed_scout_seen = False
+    if bg_manager is not None and hasattr(bg_manager, "iter_all"):
+        try:
+            completed_scout_seen = any(
+                getattr(task, "tool_name", "") == "run_subagent"
+                and str(getattr(task, "status", "")).lower() != "running"
+                for task in bg_manager.iter_all()
+            )
+        except Exception:
+            completed_scout_seen = False
+    if prior_launches > 4 and not completed_scout_seen:
+        return (
+            "run_subagent: fresh benchmark-root first scout wave is capped at 4 lanes "
+            "(dominant production owner plus up to three disjoint residual surfaces). "
+            "Inspect progress on the current wave or wait for a completed scout before "
+            "opening another lane."
         )
     return None
 

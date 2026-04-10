@@ -17,6 +17,7 @@ from tools.core.base import ToolExecutionContext, ToolResult
 from tools.daytona_toolkit.ci_integration import (
     build_live_scope_packet,
     get_ci_service,
+    get_daytona_cwd,
     get_daytona_sandbox,
     refresh_scope_baseline,
     scope_paths_for_write,
@@ -33,6 +34,7 @@ _PY_DEF_RE = re.compile(r"^\s*(?:async\s+def|def)\s+([A-Za-z_][A-Za-z0-9_]*)\b")
 _PY_CLASS_RE = re.compile(r"^\s*class\s+([A-Za-z_][A-Za-z0-9_]*)\b")
 _ASSIGN_RE = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=")
 _SCOUT_ALLOWED_QUERY_TOOLS = frozenset({"ci_workspace_structure"})
+_BENCHMARK_ROOT_PREANCHOR_STRUCTURE_KEY = "_benchmark_root_preanchor_structure_done"
 
 
 @dataclass(frozen=True)
@@ -196,11 +198,73 @@ def _require_benchmark_root_scope_anchor(
         output=(
             f"{tool_name}: fresh benchmark-root planners must call "
             "`ci_scope_status(scope_paths=[...])` before other live CI queries. "
-            "Anchor on the likely production owner directories/files first, then continue "
-            "with workspace structure, symbol queries, or scouts."
+            "If the exact production path is still only a hypothesis, spend one narrow "
+            "`ci_workspace_structure(path=...)` pass on the nearest likely production "
+            "directory/package first, then anchor with `ci_scope_status(...)` before "
+            "continuing with symbol queries or scouts."
         ),
         is_error=True,
     )
+
+
+def _validate_benchmark_root_preanchor_structure(
+    *,
+    path: str,
+    max_depth: int,
+    context: ToolExecutionContext,
+) -> ToolResult | None:
+    payload = _benchmark_root_payload(context)
+    if payload is None or context.metadata.get("_benchmark_root_scope_anchor_done"):
+        return None
+    if context.metadata.get(_BENCHMARK_ROOT_PREANCHOR_STRUCTURE_KEY):
+        return ToolResult(
+            output=(
+                "ci_workspace_structure: fresh benchmark-root planners get at most one "
+                "pre-anchor structure pass before `ci_scope_status(scope_paths=[...])`. "
+                "Anchor on an exact existing production path from that listing before any "
+                "further live CI queries."
+            ),
+            is_error=True,
+        )
+
+    requested = normalize_scope_paths([path])
+    candidate = requested[0] if requested else ""
+    if not candidate:
+        return ToolResult(
+            output=(
+                "ci_workspace_structure: fresh benchmark-root planners may spend one "
+                "pre-anchor structure pass only on an explicit likely production "
+                "directory/package when the exact owner path is still a hypothesis. "
+                "Root-wide listings and empty paths are not allowed before "
+                "`ci_scope_status(...)`."
+            ),
+            is_error=True,
+        )
+    if max_depth > 4:
+        return ToolResult(
+            output=(
+                "ci_workspace_structure: fresh benchmark-root planners must keep the "
+                "pre-anchor structure pass narrow. Use `max_depth<=4`, then anchor the "
+                "exact existing production path with `ci_scope_status(...)`."
+            ),
+            is_error=True,
+        )
+    benchmark_files = _benchmark_test_files(payload)
+    if (
+        candidate in benchmark_files
+        or candidate.endswith("/tests")
+        or "/tests/" in f"/{candidate}/"
+    ):
+        return ToolResult(
+            output=(
+                "ci_workspace_structure: the pre-anchor structure pass must stay on a "
+                "likely production directory/package, not on benchmark test files or "
+                "`/tests/` paths. Re-anchor on the nearest production ancestor, then call "
+                "`ci_scope_status(scope_paths=[...])`."
+            ),
+            is_error=True,
+        )
+    return None
 
 
 def _benchmark_test_files(payload: dict[str, Any]) -> set[str]:
@@ -233,7 +297,7 @@ def _benchmark_root_missing_scope_paths(
     if not isinstance(raw_symbols, dict) or not raw_symbols:
         return []
     indexed_paths = {
-        str(path).strip().lstrip("/")
+        str(path).strip().replace("/testbed/", "", 1).lstrip("/")
         for path in raw_symbols.keys()
         if str(path).strip()
     }
@@ -249,6 +313,78 @@ def _benchmark_root_missing_scope_paths(
         if normalized in indexed_paths or any(path.startswith(prefix) for path in indexed_paths):
             continue
         missing.append(candidate)
+    return missing
+
+
+async def _benchmark_root_missing_scope_paths_remote(
+    *,
+    context: ToolExecutionContext,
+    requested: list[str],
+) -> list[str]:
+    payload = _benchmark_root_payload(context)
+    if payload is None or not requested:
+        return []
+    sandbox = get_daytona_sandbox(context)
+    if sandbox is None:
+        return []
+    cwd = get_daytona_cwd(context)
+    if not cwd:
+        cwd = str(context.metadata.get("ci_workspace_root") or "").strip()
+    if not cwd:
+        team_run_id = str(context.metadata.get("team_run_id") or "").strip()
+        if team_run_id:
+            try:
+                from team.runtime.registry import get as get_team_run
+
+                team_run = get_team_run(team_run_id)
+            except Exception:
+                team_run = None
+            cwd = str(getattr(getattr(team_run, "project_context", None), "repo_root", "") or "").strip()
+    if not cwd:
+        cwd = str(getattr(sandbox, "project_dir", "") or "").strip()
+    if not cwd:
+        try:
+            from sandbox.workspace import discover_workspace_async
+
+            cwd = str(await discover_workspace_async(sandbox) or "").strip()
+        except Exception:
+            logger.debug("Remote workspace discovery failed for benchmark-root scope check", exc_info=True)
+    if cwd:
+        context.metadata["daytona_cwd"] = cwd
+    if not cwd:
+        try:
+            response = await sandbox.process.exec("pwd", timeout=10)
+        except Exception:
+            logger.debug("Remote cwd resolution failed for benchmark-root scope check", exc_info=True)
+            return []
+        cwd = (
+            getattr(response, "result", "")
+            or getattr(response, "stdout", "")
+            or ""
+        ).strip()
+        if cwd:
+            context.metadata["daytona_cwd"] = cwd
+
+    missing: list[str] = []
+    for candidate in requested:
+        target = resolve_daytona_path(candidate, context)
+        command = (
+            "python -c "
+            + shlex.quote("import os,sys; print('1' if os.path.exists(sys.argv[1]) else '0')")
+            + f" {shlex.quote(target)}"
+        )
+        try:
+            response = await sandbox.process.exec(command, timeout=10)
+        except Exception:
+            logger.debug("Remote scope existence check failed for %s", candidate, exc_info=True)
+            return []
+        output = (
+            getattr(response, "result", "")
+            or getattr(response, "stdout", "")
+            or ""
+        ).strip()
+        if output != "1":
+            missing.append(candidate)
     return missing
 
 
@@ -846,6 +982,11 @@ async def ci_scope_status(
         requested=requested,
         svc=svc,
     )
+    if not missing:
+        missing = await _benchmark_root_missing_scope_paths_remote(
+            context=context,
+            requested=requested,
+        )
     if missing:
         joined = ", ".join(missing)
         return ToolResult(
@@ -891,12 +1032,16 @@ async def ci_workspace_structure(
     Returns:
         output (str): File listing
     """
-    root_anchor_err = _require_benchmark_root_scope_anchor(
-        tool_name="ci_workspace_structure",
+    preanchor_structure = False
+    preanchor_err = _validate_benchmark_root_preanchor_structure(
+        path=path,
+        max_depth=max_depth,
         context=context,
     )
-    if root_anchor_err is not None:
-        return root_anchor_err
+    if preanchor_err is not None:
+        return preanchor_err
+    if _benchmark_root_payload(context) is not None and not context.metadata.get("_benchmark_root_scope_anchor_done"):
+        preanchor_structure = True
     svc, err = _svc_or_error(context)
     if err:
         return err
@@ -925,8 +1070,13 @@ async def ci_workspace_structure(
     if len(paths) == 500:
         output += "\n... (truncated at 500 files)"
 
+    metadata = None
+    if preanchor_structure:
+        context.metadata[_BENCHMARK_ROOT_PREANCHOR_STRUCTURE_KEY] = True
+        metadata = {_BENCHMARK_ROOT_PREANCHOR_STRUCTURE_KEY: True}
+
     if output:
-        return ToolResult(output=output)
+        return ToolResult(output=output, metadata=metadata)
 
     remote_listing = await _remote_workspace_structure(
         context,
@@ -934,9 +1084,9 @@ async def ci_workspace_structure(
         max_depth=max_depth,
     )
     if remote_listing:
-        return ToolResult(output=remote_listing)
+        return ToolResult(output=remote_listing, metadata=metadata)
 
-    return ToolResult(output="No files indexed")
+    return ToolResult(output="No files indexed", metadata=metadata)
 
 
 # -- Symbol Query -------------------------------------------------------------

@@ -21,6 +21,7 @@ MERGED_RUNTIME_METADATA_KEYS: tuple[str, ...] = (
     "scope_packet",
     "coherence_token",
     "_benchmark_root_scope_anchor_done",
+    "_benchmark_root_preanchor_structure_done",
 )
 
 

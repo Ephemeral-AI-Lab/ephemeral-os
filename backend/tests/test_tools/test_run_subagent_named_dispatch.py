@@ -424,6 +424,51 @@ async def test_scout_rejects_benchmark_test_file_in_root_first_wave(monkeypatch)
 
 
 @pytest.mark.asyncio
+async def test_scout_rejects_missing_benchmark_root_owner_path(monkeypatch):
+    ctx = _ctx(team_run_id="TR_BENCH")
+    ctx.metadata["agent_name"] = "team_planner"
+    ctx.metadata["work_item_id"] = "ROOT"
+    ctx.metadata["_benchmark_root_scope_anchor_done"] = True
+    team_run = SimpleNamespace(
+        root_work_item_id="ROOT",
+        dispatcher=SimpleNamespace(
+            graph={
+                "ROOT": SimpleNamespace(
+                    payload={"fail_to_pass": ["pkg/tests/test_api.py::test_one"]}
+                )
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        "team.runtime.registry.get",
+        lambda team_run_id: team_run if team_run_id == "TR_BENCH" else None,
+    )
+    monkeypatch.setattr(
+        "tools.subagent.run_subagent_tool.get_ci_service",
+        lambda context: SimpleNamespace(
+            symbol_index=SimpleNamespace(
+                _symbols={
+                    "/testbed/pkg/core.py": object(),
+                    "/testbed/pkg/io/parquet/core.py": object(),
+                }
+            )
+        ),
+    )
+
+    res = await run_subagent.execute(
+        run_subagent.input_model(
+            agent_name="scout",
+            input={"target_paths": ["pkg/io/parquet.py"]},
+        ),
+        ctx,
+    )
+
+    assert res.is_error
+    assert "must target exact existing production files/directories from the live checkout" in res.output
+    assert "pkg/io/parquet.py" in res.output
+
+
+@pytest.mark.asyncio
 async def test_scout_allows_third_root_first_wave_lane_before_any_completion(monkeypatch):
     submitted = SubmittedSummary(
         summary="scout report",
@@ -461,10 +506,10 @@ async def test_scout_allows_third_root_first_wave_lane_before_any_completion(mon
 
 
 @pytest.mark.asyncio
-async def test_scout_allows_admitted_first_wave_lane_when_launch_order_is_recorded(monkeypatch):
+async def test_scout_allows_fourth_root_first_wave_lane_before_any_completion(monkeypatch):
     submitted = SubmittedSummary(
         summary="scout report",
-        artifact={"target_paths": ["pkg/first_owner.py"], "files": []},
+        artifact={"target_paths": ["pkg/fourth_owner.py"], "files": []},
     )
     stub, _ = _make_stub_agent(submitted=submitted)
     _patch_spawn(monkeypatch, stub)
@@ -473,15 +518,94 @@ async def test_scout_allows_admitted_first_wave_lane_when_launch_order_is_record
     ctx.metadata["agent_name"] = "team_planner"
     ctx.metadata["work_item_id"] = "ROOT"
     ctx.metadata["_benchmark_root_scope_anchor_done"] = True
-    ctx.metadata["_scout_launches_this_turn"] = 2
-    ctx.metadata.tool_id = "toolu_first"
+    ctx.metadata["_scout_launches_this_turn"] = 3
+    team_run = SimpleNamespace(
+        root_work_item_id="ROOT",
+        dispatcher=SimpleNamespace(
+            graph={
+                "ROOT": SimpleNamespace(
+                    payload={"fail_to_pass": ["pkg/tests/test_api.py::test_one"]}
+                )
+            }
+        ),
+    )
+    monkeypatch.setattr("team.runtime.registry.get", lambda team_run_id: team_run if team_run_id == "TR_BENCH" else None)
+
+    res = await run_subagent.execute(
+        run_subagent.input_model(
+            agent_name="scout",
+            input={"target_paths": ["pkg/fourth_owner.py"]},
+        ),
+        ctx,
+    )
+
+    assert not res.is_error
+
+
+@pytest.mark.asyncio
+async def test_scout_rejects_fifth_root_first_wave_lane_before_any_completion(monkeypatch):
+    submitted = SubmittedSummary(
+        summary="scout report",
+        artifact={"target_paths": ["pkg/fifth_owner.py"], "files": []},
+    )
+    stub, _ = _make_stub_agent(submitted=submitted)
+    _patch_spawn(monkeypatch, stub)
+
+    ctx = _ctx(team_run_id="TR_BENCH")
+    ctx.metadata["agent_name"] = "team_planner"
+    ctx.metadata["work_item_id"] = "ROOT"
+    ctx.metadata["_benchmark_root_scope_anchor_done"] = True
+    ctx.metadata["_scout_launches_this_turn"] = 5
+    team_run = SimpleNamespace(
+        root_work_item_id="ROOT",
+        dispatcher=SimpleNamespace(
+            graph={
+                "ROOT": SimpleNamespace(
+                    payload={"fail_to_pass": ["pkg/tests/test_api.py::test_one"]}
+                )
+            }
+        ),
+    )
+    monkeypatch.setattr("team.runtime.registry.get", lambda team_run_id: team_run if team_run_id == "TR_BENCH" else None)
+
+    res = await run_subagent.execute(
+        run_subagent.input_model(
+            agent_name="scout",
+            input={"target_paths": ["pkg/fifth_owner.py"]},
+        ),
+        ctx,
+    )
+
+    assert res.is_error
+    assert "first scout wave is capped at 4 lanes" in res.output
+
+
+@pytest.mark.asyncio
+async def test_scout_allows_admitted_first_wave_lane_when_launch_order_is_recorded(monkeypatch):
+    submitted = SubmittedSummary(
+        summary="scout report",
+        artifact={"target_paths": ["pkg/fourth_owner.py"], "files": []},
+    )
+    stub, _ = _make_stub_agent(submitted=submitted)
+    _patch_spawn(monkeypatch, stub)
+
+    ctx = _ctx(team_run_id="TR_BENCH")
+    ctx.metadata["agent_name"] = "team_planner"
+    ctx.metadata["work_item_id"] = "ROOT"
+    ctx.metadata["_benchmark_root_scope_anchor_done"] = True
+    ctx.metadata["_scout_launches_this_turn"] = 4
+    ctx.metadata.tool_id = "toolu_fourth"
     ctx.metadata["_scout_trace_targets_by_tool_use_id"] = {
         "toolu_first": ["pkg/first_owner.py"],
         "toolu_second": ["pkg/second_owner.py"],
+        "toolu_third": ["pkg/third_owner.py"],
+        "toolu_fourth": ["pkg/fourth_owner.py"],
     }
     ctx.metadata["_scout_launch_order_by_tool_use_id"] = {
         "toolu_first": 1,
         "toolu_second": 2,
+        "toolu_third": 3,
+        "toolu_fourth": 4,
     }
     team_run = SimpleNamespace(
         root_work_item_id="ROOT",
@@ -501,7 +625,7 @@ async def test_scout_allows_admitted_first_wave_lane_when_launch_order_is_record
     res = await run_subagent.execute(
         run_subagent.input_model(
             agent_name="scout",
-            input={"target_paths": ["pkg/first_owner.py"]},
+            input={"target_paths": ["pkg/fourth_owner.py"]},
         ),
         ctx,
     )

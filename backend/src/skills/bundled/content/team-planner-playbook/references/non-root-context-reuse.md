@@ -114,6 +114,7 @@ Fresh exploration is not justified when:
 
 - When the parent briefing already names the residual clusters, target files, and likely worker split, treat that as the decomposition boundary for this layer.
 - If the parent already mapped one owned production file or one tight owner pair per residual cluster, emit direct developer/validator items from that mapping. Do not launch one scout per already-mapped cluster just to restate key symbols or file summaries.
+- If only one residual owner guess still needs confirmation, spend at most one live confirmation step on that unresolved owner and then emit direct lanes for the already-mapped siblings. Do not fan out a fresh scout wave across all inherited clusters once the parent already handed you exact existing owner files for most of them.
 - Do not spawn nested `team_planner` agents to restate the parent split. Either emit direct developer/validator items or use a single scout per unresolved owner file and then emit the plan.
 - Never call a nested planner with `prompt=null` or with no concrete decomposition question. That is a protocol error, not exploration.
 - If a parent expansion hint already says "one child for X, one child for Y, one child for Z", your job is to convert X/Y/Z into concrete worker items, not to open a new planning tree for X/Y/Z.

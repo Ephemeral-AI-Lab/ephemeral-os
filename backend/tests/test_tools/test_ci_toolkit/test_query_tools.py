@@ -167,7 +167,7 @@ async def test_ci_scope_status_rejects_scout_caller():
     assert "ci_scope_status" in result.output
 
 
-async def test_workspace_structure_requires_scope_status_first_on_benchmark_root_planner(monkeypatch):
+async def test_workspace_structure_allows_single_narrow_preanchor_pass_on_benchmark_root_planner(monkeypatch):
     svc = MagicMock()
     svc.symbol_index = MagicMock()
     team_run = SimpleNamespace(
@@ -183,7 +183,38 @@ async def test_workspace_structure_requires_scope_status_first_on_benchmark_root
     monkeypatch.setattr("team.runtime.registry.get", lambda team_run_id: team_run if team_run_id == "TR1" else None)
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
         result = await ci_workspace_structure.execute(
-            ci_workspace_structure.input_model(path="pkg"),
+            ci_workspace_structure.input_model(path="pkg", max_depth=4),
+            _ctx(
+                {
+                    "agent_name": "team_planner",
+                    "team_run_id": "TR1",
+                    "work_item_id": "ROOT",
+                    "ci_service": svc,
+                }
+            ),
+        )
+
+    assert not result.is_error
+    assert result.metadata["_benchmark_root_preanchor_structure_done"] is True
+
+
+async def test_workspace_structure_rejects_root_listing_before_scope_status_on_benchmark_root_planner(monkeypatch):
+    svc = MagicMock()
+    svc.symbol_index = MagicMock()
+    team_run = SimpleNamespace(
+        root_work_item_id="ROOT",
+        dispatcher=SimpleNamespace(
+            graph={
+                "ROOT": SimpleNamespace(
+                    payload={"fail_to_pass": ["pkg/tests/test_api.py::test_one"]}
+                )
+            }
+        ),
+    )
+    monkeypatch.setattr("team.runtime.registry.get", lambda team_run_id: team_run if team_run_id == "TR1" else None)
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        result = await ci_workspace_structure.execute(
+            ci_workspace_structure.input_model(path=""),
             _ctx(
                 {
                     "agent_name": "team_planner",
@@ -195,7 +226,44 @@ async def test_workspace_structure_requires_scope_status_first_on_benchmark_root
         )
 
     assert result.is_error
-    assert "must call `ci_scope_status(scope_paths=[...])` before other live CI queries" in result.output
+    assert "Root-wide listings and empty paths are not allowed" in result.output
+
+
+async def test_workspace_structure_rejects_second_preanchor_pass_before_scope_status_on_benchmark_root_planner(monkeypatch):
+    svc = MagicMock()
+    svc.symbol_index = MagicMock()
+    team_run = SimpleNamespace(
+        root_work_item_id="ROOT",
+        dispatcher=SimpleNamespace(
+            graph={
+                "ROOT": SimpleNamespace(
+                    payload={"fail_to_pass": ["pkg/tests/test_api.py::test_one"]}
+                )
+            }
+        ),
+    )
+    monkeypatch.setattr("team.runtime.registry.get", lambda team_run_id: team_run if team_run_id == "TR1" else None)
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        ctx = _ctx(
+            {
+                "agent_name": "team_planner",
+                "team_run_id": "TR1",
+                "work_item_id": "ROOT",
+                "ci_service": svc,
+            }
+        )
+        first = await ci_workspace_structure.execute(
+            ci_workspace_structure.input_model(path="pkg", max_depth=4),
+            ctx,
+        )
+        second = await ci_workspace_structure.execute(
+            ci_workspace_structure.input_model(path="pkg/io", max_depth=4),
+            ctx,
+        )
+
+    assert not first.is_error
+    assert second.is_error
+    assert "at most one pre-anchor structure pass" in second.output
 
 
 async def test_ci_scope_status_rejects_missing_paths_on_benchmark_root_planner(monkeypatch):
@@ -203,9 +271,9 @@ async def test_ci_scope_status_rejects_missing_paths_on_benchmark_root_planner(m
     svc.symbol_index = SimpleNamespace(
         generation=3,
         _symbols={
-            "pkg/core.py": [],
-            "pkg/io/real.py": [],
-            "pkg/tests/test_api.py": [],
+            "/testbed/pkg/core.py": [],
+            "/testbed/pkg/io/real.py": [],
+            "/testbed/pkg/tests/test_api.py": [],
         },
     )
     team_run = SimpleNamespace(
@@ -228,6 +296,57 @@ async def test_ci_scope_status_rejects_missing_paths_on_benchmark_root_planner(m
                     "team_run_id": "TR_MISSING",
                     "work_item_id": "ROOT",
                     "ci_service": svc,
+                }
+            ),
+        )
+
+    assert result.is_error
+    assert "must anchor on exact existing files/directories from the live checkout" in result.output
+    assert "pkg/missing.py" in result.output
+
+
+async def test_ci_scope_status_rejects_missing_paths_on_benchmark_root_planner_via_sandbox(monkeypatch):
+    svc = MagicMock()
+    svc.symbol_index = SimpleNamespace(generation=3, _symbols={})
+    sandbox = SimpleNamespace(
+        process=SimpleNamespace(
+            exec=AsyncMock()
+        )
+    )
+    async def _exec(command: str, timeout: int = 10):
+        if "pkg/missing.py" in command:
+            return SimpleNamespace(exit_code=0, result="0")
+        return SimpleNamespace(exit_code=0, result="1")
+
+    sandbox.process.exec.side_effect = _exec
+    team_run = SimpleNamespace(
+        root_work_item_id="ROOT",
+        dispatcher=SimpleNamespace(
+            graph={
+                "ROOT": SimpleNamespace(
+                    payload={"fail_to_pass": ["pkg/tests/test_api.py::test_one"]}
+                )
+            }
+        ),
+    )
+    monkeypatch.setattr("team.runtime.registry.get", lambda team_run_id: team_run if team_run_id == "TR_REMOTE" else None)
+    with (
+        patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc),
+        patch("tools.ci_toolkit.query_tools.get_daytona_sandbox", return_value=sandbox),
+        patch(
+            "tools.ci_toolkit.query_tools.resolve_daytona_path",
+            side_effect=lambda path, context: f"/testbed/{path}",
+        ),
+    ):
+        result = await ci_scope_status.execute(
+            ci_scope_status.input_model(scope_paths=["pkg/missing.py", "pkg/io"]),
+            _ctx(
+                {
+                    "agent_name": "team_planner",
+                    "team_run_id": "TR_REMOTE",
+                    "work_item_id": "ROOT",
+                    "ci_service": svc,
+                    "daytona_sandbox": sandbox,
                 }
             ),
         )

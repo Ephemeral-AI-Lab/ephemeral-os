@@ -9,7 +9,7 @@ Produce a structural ownership map first, then assign developer and validator wo
 ## Script
 
 1. Seed the search space with live CI.
-   On fresh benchmark-root turns, the first live CI action must be `ci_scope_status(scope_paths=[...])` on the likely owner files/directories. Do not open with `ci_workspace_structure(...)`, symbol queries, or other live CI calls before that anchor.
+   On fresh benchmark-root turns, if the likely production owner path is already exact, the first live CI action must be `ci_scope_status(scope_paths=[...])`. If file existence is still a hypothesis, spend exactly one narrow `ci_workspace_structure(path="<nearest likely production directory/package>", max_depth<=4)` pass first, then call `ci_scope_status(...)` on an exact existing production path from that listing. Do not open with root-wide `ci_workspace_structure()`, symbol queries, or other live CI calls before that anchor.
    Do not narrate a concrete scout wave or call `run_subagent(...)` before that benchmark-root anchor succeeds.
    If file existence is still uncertain, anchor the nearest likely directory/package first rather than guessing a leaf file such as `parquet.py`.
    After the benchmark-root anchor, or immediately on non-benchmark turns, use the request, shared context, workspace structure, symbol lookup, and references to identify the candidate paths or directories.
