@@ -102,6 +102,8 @@ def create_persistence_router(
         return JSONResponse(content={
             "id": record.id,
             "session_id": record.session_id,
+            "parent_run_id": record.parent_run_id,
+            "parent_task_id": record.parent_task_id,
             "agent_name": record.agent_name,
             "status": record.status,
             "input_query": record.input_query,

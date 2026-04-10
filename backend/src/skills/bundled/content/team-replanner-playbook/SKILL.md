@@ -54,6 +54,7 @@ Special case:
 - if the failed item was a `validator`, do **not** add a duplicate validator by default
 - the dispatcher will reattach the failed validator after the new fix items complete
 - add only the corrective developer item(s) unless an extra intermediate validation step is truly needed
+- if the failed validator's verify surface is now known to be too broad, stale, or misaligned with the corrective slice, add one replacement `validator` item with the narrowed retry/guardrail target and set `"replace_failed_validator": true` in the JSON so the replacement validator takes over instead of preserving the old broad verifier unchanged
 
 Stop condition for this phase:
 - once you can name the exact failing cluster, the exact existing owner file(s) or exact missing import-path module target, and the exact retry or verification target for the next worker, stop exploring and draft the corrective JSON immediately
@@ -98,6 +99,7 @@ Do not cancel unrelated ready work just because it looks lower priority.
 Emit one developer corrective item anchored to the exact file cluster plus the failing command/test target in its payload.
 Describe the observed symptom, likely owner, and guardrail targets; do not encode a precise patch prescription unless a validator packet or sibling artifact already proved that exact edit.
 Do not emit `specific_fixes`, condition rewrites, exact line edits, or message-text prescriptions from replanner-side reasoning alone.
+If the failed verifier bundled adjacent deterministic failures from one broad guardrail, keep the developer item focused on the exact corrective cluster and, when needed, add a replacement validator item that verifies the narrowed retry target plus the nearest same-surface guardrail instead of rerunning the stale broad verifier. When you do this, set `"replace_failed_validator": true` at the top level of the corrective JSON.
 
 ### Pattern B — Validator found multiple independent clusters
 
@@ -142,6 +144,7 @@ End with one JSON object of the form:
 
 Rules:
 - `add_items` may be empty only if `cancel_ids` is non-empty
+- include `"replace_failed_validator": true` only when you are intentionally replacing a failed validator with a narrower corrective validator
 - every item must be execution-sized and concrete
 - new items are sibling work items, not a new root graph
 - corrective payload paths must be exact existing checkout-relative paths, never guessed aliases or nonexistent siblings, except for one missing module file spelled verbatim by the failing import path when its parent package/directory already exists live
@@ -154,7 +157,7 @@ Rules:
 1. **No execution.** Never run tests, shell commands, or diagnostics yourself.
 2. **No branch reset.** Replan only the failed slice unless the failure packet proves the parent graph is wrong.
 3. **One root-cause cluster, one corrective lane.** Do not merge unrelated fixes into one omnibus developer task.
-4. **Do not duplicate validators unnecessarily.** A failed validator is normally reattached by the dispatcher after the new fix items complete.
+4. **Do not duplicate validators unnecessarily.** A failed validator is normally reattached by the dispatcher after the new fix items complete. The exception is when you are intentionally replacing a stale or overly broad validator with a narrower one for the corrective slice; set `"replace_failed_validator": true` when you mean to do that.
 5. **Use deps only for true unlock order.** Keep independent corrective items parallel.
 6. **Stay concrete.** Payloads must name exact files, commands, or owner surfaces from the failure evidence.
 7. **Treat checkpoint/replan bugs as first-class fix surfaces.** They are not "infrastructure noise"; draft a direct corrective lane for them.

@@ -32,6 +32,10 @@ class ProjectContext:
     # Successful same-run auto-promotions keyed by canonical scope. Used to
     # avoid persisting every reusable scout into Atlas.
     scope_promotion_counts: dict[str, int] = field(default_factory=dict)
+    # Timestamped invalidation markers for scout-backed context keyed by
+    # canonical scope. Used to suppress stale scout artifacts that were read
+    # before an overlapping write landed in the same run.
+    invalidated_scout_scopes: dict[str, float] = field(default_factory=dict)
     # Phase 2 — project identity for the persistent atlas. Both fields
     # default to empty strings; atlas tools treat an empty ``project_key``
     # as "atlas disabled" and degrade gracefully.
@@ -79,5 +83,9 @@ class ProjectContext:
             "scope_promotion_counts": {
                 scope: int(count)
                 for scope, count in self.scope_promotion_counts.items()
+            },
+            "invalidated_scout_scopes": {
+                scope: float(ts)
+                for scope, ts in self.invalidated_scout_scopes.items()
             },
         }

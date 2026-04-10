@@ -1,29 +1,33 @@
-"""Token tracker module for recording and querying token usage.
-
-Architecture:
-    - TokenUsageRecord: SQLAlchemy model for persisted usage data
-    - UsageStore: Database operations for recording/querying usage
-    - TokenTracker: High-level facade combining model + store operations
-"""
+"""Token tracker module for recording and querying token usage."""
 
 from __future__ import annotations
 
-from token_tracker.models import TokenUsageRecord
-from token_tracker.store import UsageStore
+from importlib import import_module
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from token_tracker.models import TokenUsageRecord
+    from token_tracker.store import UsageStore
+
+__all__ = ["TokenUsageRecord", "UsageStore", "TokenTracker"]
+
+
+def __getattr__(name: str) -> Any:
+    if name == "TokenUsageRecord":
+        return import_module("token_tracker.models").TokenUsageRecord
+    if name == "UsageStore":
+        return import_module("token_tracker.store").UsageStore
+    raise AttributeError(name)
 
 
 class TokenTracker:
-    """High-level token usage tracker.
-
-    Combines UsageStore (database operations) with TokenUsageRecord model
-    into a single interface for recording and querying token consumption.
-    """
+    """High-level token usage tracker."""
 
     def __init__(self) -> None:
-        self._store = UsageStore()
+        self._store = import_module("token_tracker.store").UsageStore()
 
     @property
-    def store(self) -> UsageStore:
+    def store(self) -> "UsageStore":
         """Direct access to underlying UsageStore for compatibility."""
         return self._store
 
@@ -40,19 +44,8 @@ class TokenTracker:
         model_id: str,
         prompt_tokens: int = 0,
         completion_tokens: int = 0,
-    ) -> TokenUsageRecord:
-        """Record token usage for an agent call.
-
-        Args:
-            session_id: Unique session identifier
-            agent_name: Name of the agent that made the call
-            model_id: Model identifier (e.g., "claude-3-5-sonnet")
-            prompt_tokens: Number of input tokens consumed
-            completion_tokens: Number of output tokens generated
-
-        Returns:
-            The created TokenUsageRecord
-        """
+    ) -> "TokenUsageRecord":
+        """Record token usage for an agent call."""
         return self._store.record(
             session_id=session_id,
             run_id=run_id,
@@ -77,10 +70,3 @@ class TokenTracker:
     def get_usage_for_runs(self, run_ids: list[str]) -> dict[str, dict]:
         """Get aggregated usage for multiple runs keyed by ``run_id``."""
         return self._store.get_usage_for_runs(run_ids)
-
-
-__all__ = [
-    "TokenTracker",
-    "TokenUsageRecord",
-    "UsageStore",
-]

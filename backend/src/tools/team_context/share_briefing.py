@@ -23,7 +23,10 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from team.context.canonicalize import scope_of_artifact
-from team.context.scout_briefings import evict_auto_promoted_scout_briefing
+from team.context.scout_briefings import (
+    evict_auto_promoted_scout_briefing,
+    scout_artifact_invalidated,
+)
 from team.models import Briefing
 from team.runtime.registry import get as _get_team_run
 from tools.core.base import BaseTool, ToolExecutionContext, ToolResult
@@ -139,7 +142,8 @@ class ShareBriefingTool(BaseTool):
 
         if briefing.source == "artifact":
             assert briefing.ref is not None
-            if team_run.artifacts.load(briefing.ref) is None:
+            artifact = team_run.artifacts.load(briefing.ref)
+            if artifact is None:
                 return ToolResult(
                     output=(
                         f"invalid briefing: unknown artifact ref {briefing.ref!r}. "
@@ -150,6 +154,15 @@ class ShareBriefingTool(BaseTool):
                         "Subagent `run_id` values are audit ids, not shareable "
                         "artifact refs; use `source=\"inline\"` or a real "
                         "artifact ref."
+                    ),
+                    is_error=True,
+                )
+            if scout_artifact_invalidated(team_run.project_context, artifact):
+                return ToolResult(
+                    output=(
+                        f"invalid briefing: scout artifact {briefing.ref!r} predates a same-run "
+                        "overlapping edit and is no longer safe to promote. Re-run scout for the "
+                        "current scope or distill a fresh inline note instead."
                     ),
                     is_error=True,
                 )

@@ -88,11 +88,13 @@ def make_team_run_created(
     )
 
 
-def make_team_run_status(team_run_id: str, status: str) -> TeamRunEvent:
+def make_team_run_status(team_run_id: str, status: str, **fields: Any) -> TeamRunEvent:
+    payload: dict[str, Any] = {"status": status}
+    payload.update(fields)
     return TeamRunEvent(
         team_run_id=team_run_id,
         kind="team_run_status",
-        data={"status": status},
+        data=payload,
     )
 
 
@@ -111,7 +113,7 @@ def make_work_item_status(
     **fields: Any,
 ) -> TeamRunEvent:
     payload: dict[str, Any] = {"wi_id": wi_id, "status": status}
-    payload.update({k: v for k, v in fields.items() if v is not None})
+    payload.update(fields)
     return TeamRunEvent(team_run_id=team_run_id, kind="work_item_status", data=payload)
 
 

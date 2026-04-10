@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import uuid
 from dataclasses import asdict
 from typing import Any, Callable
@@ -35,6 +36,14 @@ from team.runtime.rehydration import (
 from team.runtime.registry import register as _register_team_run
 from team.runtime.registry import unregister as _unregister_team_run
 from team.runtime.services import TeamRuntimeServices, build_team_runtime_services
+
+
+def _default_num_executors() -> int:
+    raw = os.getenv("TEAM_DEFAULT_NUM_EXECUTORS", "2").strip()
+    try:
+        return max(1, int(raw))
+    except ValueError:
+        return 2
 
 
 class TeamRun:
@@ -79,7 +88,7 @@ class TeamRun:
         self.root_work_item_id: str | None = None
         self._executor_tasks: list[asyncio.Task[None]] = []
         self._executor_factory: Callable[["TeamRun"], Executor] | None = None
-        self._num_executors: int = 1
+        self._num_executors: int = _default_num_executors()
 
     # ---- lifecycle -------------------------------------------------------
 
@@ -89,7 +98,7 @@ class TeamRun:
         payload: dict[str, Any],
         *,
         executor_factory: Callable[["TeamRun"], Executor],
-        num_executors: int = 1,
+        num_executors: int | None = None,
         root_kind: WorkItemKind = WorkItemKind.ATOMIC,
     ) -> None:
         root = WorkItem(
@@ -121,7 +130,8 @@ class TeamRun:
         self.event_store.append(make_team_run_status(self.id, self.status.value))
         _register_team_run(self)
         self._executor_factory = executor_factory
-        self._num_executors = num_executors
+        if num_executors is not None:
+            self._num_executors = max(1, int(num_executors))
         self._spawn_executors()
 
     async def start_with_team_definition(
@@ -130,7 +140,7 @@ class TeamRun:
         payload: dict[str, Any],
         *,
         executor_factory: Callable[["TeamRun"], Executor],
-        num_executors: int = 1,
+        num_executors: int | None = None,
     ) -> None:
         """Start a team run using a ``TeamDefinition`` to pick the planner.
 
@@ -372,7 +382,9 @@ class TeamRun:
         self,
         *,
         executor_factory: Callable[["TeamRun"], Executor],
-        num_executors: int = 1,
+        num_executors: int | None = None,
+        resumed_from: str | None = None,
+        resumed_from_checkpoint: str | None = None,
     ) -> None:
         """Resume a rehydrated TeamRun in the current process."""
         if self.dispatcher.all_terminal():
@@ -381,9 +393,17 @@ class TeamRun:
         await self.dispatcher.prepare_for_resume()
         self.cancel_event.clear()
         self._executor_factory = executor_factory
-        self._num_executors = num_executors
+        if num_executors is not None:
+            self._num_executors = max(1, int(num_executors))
         self.status = TeamRunStatus.RUNNING
-        self.event_store.append(make_team_run_status(self.id, self.status.value))
+        self.event_store.append(
+            make_team_run_status(
+                self.id,
+                self.status.value,
+                resumed_from=resumed_from,
+                resumed_from_checkpoint=resumed_from_checkpoint,
+            )
+        )
         _register_team_run(self)
         self._spawn_executors()
 

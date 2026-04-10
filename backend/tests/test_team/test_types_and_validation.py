@@ -152,6 +152,21 @@ def test_phase_a_valid_plan(monkeypatch):
     assert validate_plan_phase_a(plan) == []
 
 
+def test_phase_a_validator_policy_is_budget_driven(monkeypatch):
+    _patch_registry(monkeypatch, {"a"})
+    plan = Plan(
+        items=[
+            WorkItemSpec(agent_name="a", local_id="w1"),
+            WorkItemSpec(agent_name="a", local_id="w2"),
+            WorkItemSpec(agent_name="a", local_id="w3"),
+        ]
+    )
+
+    assert validate_plan_phase_a(plan) == []
+    issues = validate_plan_phase_a(plan, require_validator_for_plan_size=3)
+    assert any("3 or more items must include at least one validator" in i["msg"] for i in issues)
+
+
 def test_phase_a_rejects_unknown_dep_when_external_scope_is_known(monkeypatch):
     _patch_registry(monkeypatch, {"developer", "validator"})
     plan = Plan(
@@ -299,6 +314,80 @@ def test_phase_b_depth_exceeded(monkeypatch):
         )
 
 
+def test_phase_b_enforces_max_plan_size(monkeypatch):
+    _patch_registry(monkeypatch, {"a"})
+    parent = _parent_wi()
+    plan = Plan(
+        items=[
+            WorkItemSpec(agent_name="a", local_id="w1"),
+            WorkItemSpec(agent_name="a", local_id="w2"),
+        ]
+    )
+    with pytest.raises(InvalidPlan, match="max_plan_size"):
+        validate_plan_phase_b(
+            {parent.id: parent},
+            plan,
+            "T1",
+            parent,
+            new_id_factory=lambda: "N",
+            max_depth=5,
+            max_plan_size=1,
+        )
+
+
+def test_phase_b_validator_policy_is_budget_driven(monkeypatch):
+    _patch_registry(monkeypatch, {"a", "validator"})
+    parent = _parent_wi()
+    no_validator_plan = Plan(
+        items=[
+            WorkItemSpec(agent_name="a", local_id="w1"),
+            WorkItemSpec(agent_name="a", local_id="w2"),
+            WorkItemSpec(agent_name="a", local_id="w3"),
+        ]
+    )
+    counter = {"n": 0}
+
+    def fresh_id():
+        counter["n"] += 1
+        return f"N{counter['n']}"
+
+    new_items = validate_plan_phase_b(
+        {parent.id: parent},
+        no_validator_plan,
+        "T1",
+        parent,
+        new_id_factory=fresh_id,
+        max_depth=5,
+    )
+    assert len(new_items) == 3
+    with pytest.raises(InvalidPlan, match="3 or more items must include at least one validator"):
+        validate_plan_phase_b(
+            {parent.id: parent},
+            no_validator_plan,
+            "T1",
+            parent,
+            new_id_factory=fresh_id,
+            max_depth=5,
+            require_validator_for_plan_size=3,
+        )
+    too_many_validators_plan = Plan(
+        items=[
+            WorkItemSpec(agent_name="validator", local_id="v1"),
+            WorkItemSpec(agent_name="validator", local_id="v2"),
+        ]
+    )
+    with pytest.raises(InvalidPlan, match="submitted plans may have at most 1"):
+        validate_plan_phase_b(
+            {parent.id: parent},
+            too_many_validators_plan,
+            "T1",
+            parent,
+            new_id_factory=fresh_id,
+            max_depth=5,
+            max_validators_per_plan=1,
+        )
+
+
 def test_phase_b_rejects_agent_without_supported_kind(monkeypatch):
     from agents.types import AgentDefinition
     from team.planning import validation as _v
@@ -319,6 +408,48 @@ def test_phase_b_rejects_agent_without_supported_kind(monkeypatch):
         validate_plan_phase_b(
             {parent.id: parent}, plan, "T1", parent, new_id_factory=lambda: "N", max_depth=5
         )
+
+
+def test_phase_a_rejects_agent_without_supported_kind(monkeypatch):
+    from agents.types import AgentDefinition
+    from team.planning import validation as _v
+
+    atomic_only = AgentDefinition(
+        name="atomic_only", description="d", supported_kinds=["atomic"]
+    )
+    monkeypatch.setattr(
+        _v,
+        "_get_definition",
+        lambda n: atomic_only if n == "atomic_only" else None,
+    )
+    monkeypatch.setattr(_v, "_agent_exists", lambda n: n == "atomic_only")
+    plan = Plan(
+        items=[
+            WorkItemSpec(
+                agent_name="atomic_only", local_id="w1", kind=WorkItemKind.EXPANDABLE
+            )
+        ]
+    )
+
+    issues = validate_plan_phase_a(plan)
+
+    assert any("does not support kind 'expandable'" in issue["msg"] for issue in issues)
+
+
+def test_phase_a_accepts_custom_atomic_agent_with_supported_kind(monkeypatch):
+    from agents.types import AgentDefinition
+    from team.planning import validation as _v
+
+    worker = AgentDefinition(name="worker", description="d", supported_kinds=["atomic"])
+    monkeypatch.setattr(
+        _v,
+        "_get_definition",
+        lambda n: worker if n == "worker" else None,
+    )
+    monkeypatch.setattr(_v, "_agent_exists", lambda n: n == "worker")
+    plan = Plan(items=[WorkItemSpec(agent_name="worker", local_id="w1")])
+
+    assert validate_plan_phase_a(plan) == []
 
 
 def test_phase_b_allows_validator_depending_on_expandable_sibling(monkeypatch):

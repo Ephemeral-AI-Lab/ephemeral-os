@@ -266,6 +266,66 @@ async def test_apply_replan_reattaches_failed_validator_to_new_fix_tasks():
 
 
 @pytest.mark.asyncio
+async def test_apply_replan_leaves_failed_validator_terminal_when_replan_adds_replacement_validator():
+    disp = _make_dispatcher()
+
+    dev = _wi("DEV")
+    dev.agent_name = "developer"
+    validator = _wi("VAL", deps=["DEV"])
+    validator.agent_name = "validator"
+    validator.root_id = "ROOT"
+
+    await disp.add_work_item(dev)
+    await disp.add_work_item(validator)
+
+    assert await disp.pop_ready() == "DEV"
+    await disp.mark_running("DEV", "AR-dev")
+    await disp.complete("DEV", AgentResult(artifact={"out": 1}, summary="done"))
+
+    assert await disp.pop_ready() == "VAL"
+    await disp.mark_running("VAL", "AR-val")
+    replanner = await disp.request_replan(
+        "VAL",
+        ReplanRequest(reason="adjacent deterministic failures", context="traceback"),
+    )
+
+    assert await disp.pop_ready() == replanner.id
+    await disp.mark_running(replanner.id, "AR-replan")
+
+    result = await disp.apply_replan(
+        replan_wi_id=replanner.id,
+        add_specs=[
+            {"agent_name": "developer", "local_id": "fix"},
+            {
+                "agent_name": "validator",
+                "local_id": "val-replacement",
+                "deps": ["fix"],
+            },
+        ],
+        cancel_ids=[],
+        target_depth=validator.depth,
+        target_parent_id=validator.parent_id,
+        target_root_id=validator.root_id,
+        replace_failed_validator=True,
+    )
+
+    assert result == {"added": 2, "cancelled": 0}
+    assert disp.graph["VAL"].status == WorkItemStatus.FAILED
+
+    fix = next(wi for wi in disp.graph.values() if wi.local_id == "fix")
+    replacement = next(wi for wi in disp.graph.values() if wi.local_id == "val-replacement")
+    assert replacement.deps == [fix.id]
+    assert replacement.status == WorkItemStatus.PENDING
+
+    assert await disp.pop_ready() == fix.id
+    await disp.mark_running(fix.id, "AR-fix")
+    await disp.complete(fix.id, AgentResult(artifact={"fixed": True}, summary="ok"))
+
+    assert disp.graph["VAL"].status == WorkItemStatus.FAILED
+    assert disp.graph[replacement.id].status == WorkItemStatus.READY
+
+
+@pytest.mark.asyncio
 async def test_checkpoint_ring_buffer_drops_oldest():
     disp = _make_dispatcher()
     disp._checkpoints.clear()  # start empty

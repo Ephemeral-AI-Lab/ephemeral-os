@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, Any
+
 from code_intelligence.atlas.freshness import DEFAULT_ATLAS_MAX_AGE_SECONDS
-from code_intelligence.atlas.service import AtlasService
-from code_intelligence.atlas.store import AtlasStore
 from team.runtime.registry import get as _get_team_run
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.decorator import tool
+
+if TYPE_CHECKING:
+    from code_intelligence.atlas.store import AtlasStore
 
 
 @tool(
@@ -75,11 +78,15 @@ def _build_result(entries: list[dict[str, object]], *, atlas_disabled: bool) -> 
     )
 
 
-def _store_override(context: ToolExecutionContext) -> AtlasStore | None:
+def _store_override(context: ToolExecutionContext) -> "AtlasStore | None":
     """Allow tests to inject an override via ``metadata.extras['atlas_store']``."""
     override = context.metadata.extras.get("atlas_store") if hasattr(
         context.metadata, "extras"
     ) else None
+    try:
+        from code_intelligence.atlas.store import AtlasStore
+    except Exception:
+        return None
     if isinstance(override, AtlasStore):
         return override
     return None
@@ -100,12 +107,14 @@ def _resolve_max_age_seconds(context: ToolExecutionContext) -> float | None:
 def _resolve_atlas_service(
     context: ToolExecutionContext,
     *,
-    store: AtlasStore | None,
-) -> object:
+    store: "AtlasStore | None",
+) -> Any:
     svc = getattr(context.metadata, "ci_service", None)
     atlas = getattr(svc, "atlas", None)
     if atlas is not None and store is None:
         return atlas
+    from code_intelligence.atlas.service import AtlasService
+
     workspace_root = (
         str(getattr(svc, "workspace_root", "") or "")
         or str(getattr(context, "cwd", "") or "")

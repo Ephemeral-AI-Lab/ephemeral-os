@@ -422,7 +422,7 @@ async def test_write_file_rejects_stale_scope_coherence():
         "daytona_cwd": "/ws",
         "ci_service": svc,
         "scope_packet": {
-            "scope_paths": ["src"],
+            "scope_paths": ["/ws/new.txt"],
             "coherence_token": "stale-token",
         },
         "coherence_token": "stale-token",

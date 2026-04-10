@@ -68,6 +68,7 @@ Interpretation discipline:
 - If the worker's assigned `verification_command` or named `verify` targets are still red on any owned failure, that is not a terminal summary even when some targets turned green. Treat "one target fixed, another owned target still failing" as `request_replan` territory.
 - If the worker says the residual failure is "separate", "pre-existing", or "another issue" but it is still inside the assigned verification command, owned failure list, or same validator packet, do not close the lane with `submit_summary`.
 - A validator FAIL with more than one deterministic cluster, more than one owner family, or explicit `plan_gap` evidence should go to `request_replan` when available.
+- If the retry target turned green but a broader validator command surfaced adjacent deterministic failures on the same owner surface, still choose `request_replan` and preserve both the exact retry target and the broader failing command so replanning can replace or narrow the stale verifier instead of rerunning it unchanged.
 
 ### 3. Build a surgical payload
 
@@ -83,6 +84,7 @@ For `request_replan`:
 - `reason`: one-line statement of the failure class
 - `context`: cluster the failure evidence by root cause, include the exact failing command/test/tool, and name the likely owner surface
 - `suggestion`: say what corrective branch should happen next, not a full patch
+- when the failed validator mixed a green retry target with a broader red guardrail, say that the next branch should narrow or replace the verification surface for the corrective slice rather than rerun the same broad validator unchanged
 - If the worker output includes checkpoint ids, resumed-from ids, or usage lines, carry them forward verbatim in the replan context when they help explain the failure boundary.
 
 When the worker already produced a structured FAIL block, preserve its exact command, exit code, and failing test ids in the replan context.

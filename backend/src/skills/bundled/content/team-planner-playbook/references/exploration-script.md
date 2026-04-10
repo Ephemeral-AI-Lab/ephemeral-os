@@ -33,11 +33,11 @@ Produce a structural ownership map first, then assign developer and validator wo
    The scout call must satisfy the runtime schema exactly: provide `input` only, never `prompt=null`, never both `prompt` and `input`, and never an empty or missing `target_paths` list.
    Give the scout the smallest slice that can still answer the ownership question.
    When ownership has already split, prefer several disjoint scouts in parallel over serial parent-side probing.
-   On large benchmark roots with four or more named clusters and `ci_scope_status(...).admission` still `parallel` or `cautious`, the first scout wave should usually cover 3-4 separate production-owner scouts. Do not bundle unrelated owner surfaces into one scout lane just to imitate an outdated two-lane cap.
+   On large benchmark roots with several named clusters and `ci_scope_status(...).admission` still `parallel` or `cautious`, the first scout wave should usually cover multiple separate production-owner scouts. Do not bundle unrelated owner surfaces into one scout lane just to force an artificially narrow first wave.
    Do not open a scout just because fanout is available. Launch only when the lane covers a still-unresolved owner boundary that existing scout briefs, atlas results, or shared context do not already answer.
    After launch, you MUST take at least one non-wait action before any `wait_for_background_task`: launch another disjoint scout, call `check_background_progress`, classify the remaining branch, promote a completed brief, or emit the final plan JSON. Do not call `wait_for_background_task` first unless that scout result is already the only blocker left.
    Treat parallel scouting as waves, not as a rigid one-shot batch. Start with the smallest useful wave, keep reasoning while those scouts run, and launch another disjoint scout or child planner only when the current evidence still leaves a real ownership gap.
-   Fresh scout fanout is hard-capped at `8` launches per planner turn, so conserve lanes for genuinely distinct ownership questions.
+   Keep fresh scout fanout modest and justified by genuinely distinct ownership questions.
 
 4. Read the scout brief and classify the result.
    `scope_coverage >= 0.9` with a clear ownership map:
@@ -72,7 +72,7 @@ Produce a structural ownership map first, then assign developer and validator wo
    - the direct validation command or test target
    Sufficiency, not wave count, is the stop condition. Stop after the first wave if ownership is clear; launch another wave only if the existing evidence is still incomplete.
    If the only remaining question is the exact runtime mismatch inside an already mapped owner cluster, stop exploring and hand that cluster to a developer or validator with the exact failing test or command.
-   On benchmark-style root turns, treat two scout waves or roughly 25 tool calls as the default ceiling. A third wave needs a genuinely new disjoint owner cluster, not a deeper dive into the same mapped cluster.
+   On benchmark-style root turns, once a substantial amount of planner budget has already gone into the same mapped surface, default to finishing the plan unless a genuinely new disjoint owner cluster is still unmapped.
 
 ## Heuristics
 

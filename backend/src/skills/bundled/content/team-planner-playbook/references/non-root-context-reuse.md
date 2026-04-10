@@ -33,7 +33,7 @@ Treat these as real planning inputs, not as decorative background text.
    Combine the parent's `expansion_hint`, explicit child payload, and inherited briefings into one owned boundary.
    Do not reopen siblings outside that boundary.
    Preserve uncertainty honestly: if the parent named a likely owner file that has not been confirmed to exist, keep it as a hypothesis until workspace structure or scout evidence proves it. Do not silently rewrite that hypothesis into a different owned file.
-   `owned_files` is for confirmed existing paths only. If the parent guess is missing, do not copy that missing file into downstream `owned_files`; keep the exact failing test path in `owned_failures` and carry the unresolved production guess in `expansion_hint` or `notes` until a confirmed owner path exists.
+   `owned_files` should stay grounded in confirmed existing paths. If the parent guess is missing, do not copy that missing file into downstream `owned_files`; keep the exact failing test path in `owned_failures` and carry the unresolved production guess in `expansion_hint` or `notes` until a confirmed owner path exists.
 
 3. Reuse the strongest existing evidence.
    If an inherited atlas brief or prior scout artifact already covers this slice with enough detail to assign workers, dispatch workers.

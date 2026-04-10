@@ -345,7 +345,7 @@ async def test_edit_occ_refreshes_and_repatches_latest_content():
         {
             "daytona_sandbox": sb,
             "ci_service": svc,
-            "scope_packet": {"scope_paths": ["src"], "coherence_token": "stale-token"},
+            "scope_packet": {"scope_paths": ["/file.py"], "coherence_token": "stale-token"},
             "coherence_token": "stale-token",
         }
     )

@@ -84,17 +84,17 @@ Collapse only when the same owner would inevitably perform the steps together an
 
 ### Root submitted level
 
-- Keep the submitted root within `1-10` total tasks.
-- For benchmark roots, the first ready frontier may be narrow while the total graph is larger. Do not confuse frontier cap with total plan size.
-- If the natural root plan exceeds 10 siblings, merge adjacent work into disjoint expandable `team_planner` branches.
+- Keep the submitted root materially smaller than the runtime `max_plan_size`.
+- For benchmark roots, the first ready frontier may be narrow while the total graph is larger. Do not confuse frontier width with total plan size.
+- If the natural root plan grows unwieldy at the submitted level, merge adjacent work into disjoint expandable `team_planner` branches that preserve real ownership boundaries.
 
 Healthy root shapes usually look like:
-- `2-4` implementation lanes plus one downstream verifier
-- or `2` critical implementation lanes plus one downstream expandable planner branch plus one verifier when residual work is real but not yet execution-sized
+- a small set of implementation lanes plus downstream verification
+- or a few critical implementation lanes plus one downstream expandable planner branch plus one verifier when residual work is real but not yet execution-sized
 
 ### Child planner level
 
-- Child planners should usually return `2-5` execution-sized items.
+- Child planners should usually return a small execution-sized set.
 - If only one meaningful child slice remains, emit execution work instead of another planner wrapper.
 - If a child still owns multiple independent tracks, split them into disjoint narrower branches rather than returning one broad omnibus child again.
 
@@ -118,7 +118,7 @@ Bad reasons for a dependency:
 
 ### Keep branch depth shallow
 
-Target at most `3` serial layers inside one branch:
+Target a shallow serial chain inside one branch, ideally close to:
 
 `unlocker -> implementation frontier -> verification/integration`
 
@@ -172,7 +172,7 @@ Keep these late unless they are strict unlockers:
 Guidance:
 - Validators should usually depend on the `developer` lanes they exercise.
 - A validator that only verifies one concrete developer lane should stay attached to that lane even when a disjoint expandable child planner sibling is also present.
-- Validators must not depend directly on an expandable child planner. If a branch still needs child planning, keep the validation inside that branch or behind the concrete developer lanes the child planner emits.
+- A validator should not depend directly on an expandable child planner when the goal is to verify descendant code work. In the rare case where a validator intentionally checks the planner submission artifact itself, that dependency is allowed but should stay exceptional.
 - Do not add a dependency from a disjoint expandable child planner to an unrelated developer just to keep a root validator "behind" that child branch. Keep the child ready immediately and place residual validation inside the child branch.
 - If verification spans multiple independent flows or domains, keep it downstream and expandable rather than as one giant validator lane.
 - Integration should depend only on the lanes it truly consumes.

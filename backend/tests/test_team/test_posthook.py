@@ -560,7 +560,7 @@ def test_submit_plan_agent_prompt_rebuilds_shape_on_plan_size_failure():
     )
 
 
-def test_submit_plan_agent_prompt_repairs_benchmark_refs_and_root_validator_overflow():
+def test_submit_plan_agent_prompt_repairs_benchmark_refs_without_locking_old_validator_wording():
     from team.builtins import register_all
     from agents.registry import get_definition
 
@@ -568,7 +568,6 @@ def test_submit_plan_agent_prompt_repairs_benchmark_refs_and_root_validator_over
 
     serializer = get_definition("submit_plan_agent")
     assert serializer is not None
-    assert "If validation says the plan has too many validator items" in serializer.system_prompt
     assert "downgrade that entry to the exact benchmark test file path instead of guessing a nearby node name" in (
         serializer.system_prompt
     )
@@ -594,7 +593,7 @@ def test_team_planner_prompt_makes_child_scope_rules_explicit():
     assert "Keep validation branch-local. Do not add an umbrella validator over a child plan" in (
         planner.system_prompt
     )
-    assert "On benchmark-root plans, keep at most two validators at the submitted root" in (
+    assert "On benchmark plans, keep validator items paired with the concrete developer lanes they actually verify, and keep them within the active runtime validator cap for that plan." in (
         planner.system_prompt
     )
     assert "If you cannot quote the node id verbatim from the prompt, use the exact benchmark test file path instead of inventing or renaming a node." in (

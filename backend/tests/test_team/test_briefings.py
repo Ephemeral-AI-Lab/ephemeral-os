@@ -124,6 +124,54 @@ def test_render_deduplicates_by_canonical_scope_across_tiers():
     assert "Shared context" in out
 
 
+def test_render_skips_invalidated_scout_dep_artifact():
+    store = _store_with(
+        dep_art={
+            "summary": "old scout",
+            "target_paths": ["src/auth"],
+            "canonical_scope": "src/auth",
+            "scope_coverage": 1.0,
+            "gaps": "",
+            "suggested_subdivisions": [],
+            "snapshot_time": 100.0,
+        }
+    )
+    wi = _wi(
+        dep_artifacts=[
+            DependencyArtifact(source_wi_id="D1", artifact_ref="dep_art", display_name="dep_scout")
+        ]
+    )
+    from team.context.project import ProjectContext
+
+    pc = ProjectContext(goal="g", user_request="u")
+    pc.invalidated_scout_scopes["src/auth"] = 150.0
+
+    assert render_briefings(wi, store, project_context=pc) == ""
+
+
+def test_render_keeps_fresh_scout_artifact_after_scope_invalidation():
+    store = _store_with(
+        fresh_art={
+            "summary": "fresh scout",
+            "target_paths": ["src/auth"],
+            "canonical_scope": "src/auth",
+            "scope_coverage": 1.0,
+            "gaps": "",
+            "suggested_subdivisions": [],
+            "snapshot_time": 200.0,
+        }
+    )
+    wi = _wi(briefings=[Briefing(name="fresh", source="artifact", ref="fresh_art")])
+    from team.context.project import ProjectContext
+
+    pc = ProjectContext(goal="g", user_request="u")
+    pc.invalidated_scout_scopes["src/auth"] = 150.0
+
+    out = render_briefings(wi, store, project_context=pc)
+    assert "fresh scout" in out
+    assert "fresh" in out
+
+
 def test_render_dedupe_names_collisions():
     store = _store_with(a={"target_paths": ["x"]}, b={"target_paths": ["y"]})
     wi = _wi(

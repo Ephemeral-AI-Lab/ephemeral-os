@@ -16,6 +16,16 @@ def should_reattach_failed_verifier(failed_wi: WorkItem) -> bool:
     return failed_wi.agent_name == VALIDATOR and failed_wi.status == WorkItemStatus.FAILED
 
 
+def _replan_adds_replacement_validator(add_specs: list[dict]) -> bool:
+    from team.builtins import VALIDATOR
+
+    return any(
+        str(spec.get("agent_name") or "").strip() == VALIDATOR
+        for spec in add_specs
+        if isinstance(spec, dict)
+    )
+
+
 def build_replan_verifier_deps(
     dispatcher: "Dispatcher",
     failed_wi: WorkItem,
@@ -45,6 +55,7 @@ async def apply_replan(
     target_depth: int,
     target_parent_id: str | None,
     target_root_id: str,
+    replace_failed_validator: bool = False,
 ) -> dict[str, int]:
     from team.models import Briefing
     async with dispatcher.lock:
@@ -115,7 +126,10 @@ async def apply_replan(
             raise BudgetExceeded("max_work_items would be exceeded by replan")
         cancelled_set = set(cancel_ids)
         verifier_reset_deps: list[str] | None = None
-        if should_reattach_failed_verifier(failed_wi):
+        replacing_failed_verifier = (
+            replace_failed_validator or _replan_adds_replacement_validator(add_specs)
+        )
+        if should_reattach_failed_verifier(failed_wi) and not replacing_failed_verifier:
             verifier_reset_deps = build_replan_verifier_deps(
                 dispatcher,
                 failed_wi,

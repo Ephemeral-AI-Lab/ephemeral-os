@@ -213,6 +213,28 @@ def test_auto_promote_scout_briefing_requires_same_run_context_pressure():
     assert tr.project_context.shared_briefings == {}
 
 
+def test_auto_promote_scout_briefing_rejects_invalidated_scout_artifact():
+    tr = _fake_team_run()
+    tr.project_context.invalidated_scout_scopes["src/auth"] = 150.0
+    _seed_context_pressure(tr, "src/auth")
+    tr.artifacts.save(
+        "scout:src/auth",
+        {
+            "summary": "auth scout",
+            "target_paths": ["src/auth"],
+            "canonical_scope": "src/auth",
+            "files": [],
+            "scope_coverage": 1.0,
+            "gaps": "",
+            "suggested_subdivisions": [],
+            "snapshot_time": 100.0,
+        },
+    )
+
+    assert not auto_promote_scout_briefing(tr, "scout:src/auth")
+    assert tr.project_context.shared_briefings == {}
+
+
 @pytest.mark.asyncio
 async def test_explicit_scout_promotion_stays_pinned_against_later_auto_promotion():
     tr = _fake_team_run(max_shared=1)
@@ -355,6 +377,37 @@ async def test_share_briefing_missing_inline_explains_literal_text_requirement()
         assert result.is_error
         assert "literal non-empty" in result.output
         assert "skip promotion" in result.output
+    finally:
+        unregister("T1")
+
+
+@pytest.mark.asyncio
+async def test_share_briefing_rejects_invalidated_scout_artifact_ref():
+    tr = _fake_team_run()
+    tr.project_context.invalidated_scout_scopes["src/auth"] = 150.0
+    tr.artifacts.save(
+        "scout:src/auth",
+        {
+            "summary": "auth scout",
+            "target_paths": ["src/auth"],
+            "canonical_scope": "src/auth",
+            "files": [],
+            "scope_coverage": 1.0,
+            "gaps": "",
+            "suggested_subdivisions": [],
+            "snapshot_time": 100.0,
+        },
+    )
+    register(tr)
+    try:
+        result = await _call(
+            name="auth_map",
+            source="artifact",
+            ref="scout:src/auth",
+            context=_ctx("T1"),
+        )
+        assert result.is_error
+        assert "predates a same-run overlapping edit" in result.output
     finally:
         unregister("T1")
 

@@ -335,6 +335,7 @@ class Dispatcher:
                         for s in result.submitted_replan.add_items
                     ],
                     cancel_ids=result.submitted_replan.cancel_ids,
+                    replace_failed_validator=result.submitted_replan.replace_failed_validator,
                     target_depth=failed_wi.depth,
                     target_parent_id=failed_wi.parent_id,
                     target_root_id=failed_wi.root_id,
@@ -425,6 +426,7 @@ class Dispatcher:
         target_depth: int,
         target_parent_id: str | None,
         target_root_id: str,
+        replace_failed_validator: bool = False,
     ) -> dict[str, int]:
         """Atomically cancel stale items and insert corrective items at the target level."""
         return await apply_dispatcher_replan(
@@ -432,6 +434,7 @@ class Dispatcher:
             replan_wi_id=replan_wi_id,
             add_specs=add_specs,
             cancel_ids=cancel_ids,
+            replace_failed_validator=replace_failed_validator,
             target_depth=target_depth,
             target_parent_id=target_parent_id,
             target_root_id=target_root_id,

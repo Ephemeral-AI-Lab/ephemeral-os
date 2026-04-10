@@ -26,6 +26,7 @@ def _instance() -> SWEEvoInstance:
 
 
 def test_run_sweevo_with_agent_returns_structured_grading(monkeypatch):
+    import benchmarks.sweevo as sweevo_pkg
     from benchmarks.sweevo import runner as sweevo_runner
 
     instance = _instance()
@@ -38,6 +39,7 @@ def test_run_sweevo_with_agent_returns_structured_grading(monkeypatch):
 
     fake_team_runner.run_sweevo_team = _fake_run_team
     monkeypatch.setitem(sys.modules, "benchmarks.sweevo.team_runner", fake_team_runner)
+    monkeypatch.setattr(sweevo_pkg, "team_runner", fake_team_runner, raising=False)
 
     fake_sandbox_pkg = ModuleType("sandbox")
     fake_lifecycle = ModuleType("sandbox.lifecycle")
@@ -117,6 +119,7 @@ def test_collect_health_issues_includes_unresolved_grading():
 
 
 def test_run_sweevo_with_agent_resumes_existing_team_run(monkeypatch):
+    import benchmarks.sweevo as sweevo_pkg
     from benchmarks.sweevo import runner as sweevo_runner
 
     instance = _instance()
@@ -139,6 +142,7 @@ def test_run_sweevo_with_agent_resumes_existing_team_run(monkeypatch):
     fake_team_runner.resume_sweevo_team = _fake_resume_team
     fake_team_runner.run_sweevo_team = _unexpected_run_team
     monkeypatch.setitem(sys.modules, "benchmarks.sweevo.team_runner", fake_team_runner)
+    monkeypatch.setattr(sweevo_pkg, "team_runner", fake_team_runner, raising=False)
 
     fake_sandbox_pkg = ModuleType("sandbox")
     fake_lifecycle = ModuleType("sandbox.lifecycle")

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections import Counter
 import json
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
@@ -105,6 +106,32 @@ def test_extract_posthook_input_text_recovers_plan_json_with_trailing_prose():
     assert extracted is not None
     assert json.loads(extracted) == {
         "items": [{"agent_name": "developer", "local_id": "dev1", "kind": "atomic"}]
+    }
+
+
+def test_extract_posthook_input_text_recovers_replan_json_with_trailing_prose():
+    extracted = sweevo_team_runner._extract_posthook_input_text(
+        [
+            ConversationMessage(
+                role="assistant",
+                content=[
+                    TextBlock(
+                        text=(
+                            "Ownership is settled.\n\n"
+                            '{"add_items":[{"agent_name":"developer","local_id":"fix1","kind":"atomic"}],"cancel_ids":[]}\n\n'
+                            "The background scout is still running but the corrective payload is already submitted."
+                        )
+                    )
+                ],
+            )
+        ],
+        "submitted_replan",
+    )
+
+    assert extracted is not None
+    assert json.loads(extracted) == {
+        "add_items": [{"agent_name": "developer", "local_id": "fix1", "kind": "atomic"}],
+        "cancel_ids": [],
     }
 
 
@@ -243,7 +270,13 @@ def test_posthook_ctx_propagates_live_team_plan_budget(monkeypatch):
         runtime_registry,
         "get",
         lambda team_run_id: (
-            SimpleNamespace(budgets=SimpleNamespace(max_plan_size=10))
+            SimpleNamespace(
+                budgets=SimpleNamespace(
+                    max_plan_size=10,
+                    max_validators_per_plan=2,
+                    require_validator_for_plan_size=3,
+                )
+            )
             if team_run_id == "T1"
             else None
         ),
@@ -259,6 +292,8 @@ def test_posthook_ctx_propagates_live_team_plan_budget(monkeypatch):
     )
 
     assert ctx.tool_metadata["max_plan_size"] == 10
+    assert ctx.tool_metadata["max_validators_per_plan"] == 2
+    assert ctx.tool_metadata["require_validator_for_plan_size"] == 3
 
 
 def test_query_ctx_seeds_repo_root_for_daytona_and_ci():
@@ -510,7 +545,7 @@ def test_resume_sweevo_team_uses_default_executor_factory_signature(monkeypatch)
     monkeypatch.setattr(sweevo_team_runner, "_build_agent_overrides", lambda _instance: {})
     monkeypatch.setattr(sweevo_team_runner, "_build_team_metrics", lambda: {})
     monkeypatch.setattr(sweevo_team_runner, "_emit_team_runtime_banner", lambda *args, **kwargs: None)
-    monkeypatch.setattr(sweevo_team_runner, "_checkpoint_ids_from_store", lambda *args, **kwargs: [])
+    monkeypatch.setattr(sweevo_team_runner, "_checkpoint_records_from_store", lambda *args, **kwargs: [])
     def fake_resume_from(_store, _team_run_id, *, checkpoint_id=None):
         assert checkpoint_id is None
         return fake_tr
@@ -559,7 +594,12 @@ def test_resume_sweevo_team_uses_default_executor_factory_signature(monkeypatch)
     assert result == {"status": "ok"}
     assert seen_factory_calls and seen_factory_calls[0]["sandbox_id"] == "sbx-1"
     assert seen_factory_calls[0]["agent_overrides"] == {}
-    fake_tr.resume.assert_awaited_once()
+    fake_tr.resume.assert_awaited_once_with(
+        executor_factory="executor-factory",
+        num_executors=sweevo_team_runner._DEFAULT_NUM_EXECUTORS,
+        resumed_from="team-run-1",
+        resumed_from_checkpoint=None,
+    )
 
 
 def test_make_runner_uses_agent_definition_limits(monkeypatch):
@@ -623,6 +663,159 @@ def test_make_runner_uses_agent_definition_limits(monkeypatch):
     assert captured_agents
     assert captured_agents[0].query_context.tool_metadata.agent_name == "team_planner"
     assert captured_agents[0].query_context.tool_call_limit == 50
+
+
+def test_make_runner_persists_full_compaction_delta(monkeypatch):
+    tracker_finishes: list[dict[str, object]] = []
+    printed: list[tuple[str, str]] = []
+
+    class _Tracker:
+        run_id = "run-1"
+
+        def finish(self, **kwargs: object) -> None:
+            tracker_finishes.append(kwargs)
+
+    async def _fake_run(_prompt: str):
+        state.compacted = 3
+        query_context.tool_calls_used = 4
+        if False:
+            yield None
+
+    state = SimpleNamespace(compacted=1)
+    query_context = SimpleNamespace(
+        tool_metadata=ExecutionMetadata(session_config="cfg", sandbox_id="sbx-1"),
+        run_id="",
+        tool_call_limit=10,
+        tool_calls_used=0,
+        session_state=state,
+        api_messages_snapshot=["snapshot"],
+    )
+    agent = SimpleNamespace(
+        query_context=query_context,
+        display_messages=[],
+        total_usage=SimpleNamespace(input_tokens=12, output_tokens=8),
+        model="test-model",
+        run=_fake_run,
+    )
+
+    monkeypatch.setattr(
+        sweevo_team_runner,
+        "AgentRunTracker",
+        SimpleNamespace(create=lambda **_: _Tracker()),
+    )
+    monkeypatch.setattr(sweevo_team_runner, "spawn_agent", lambda *_args, **_kwargs: agent)
+    monkeypatch.setattr(sweevo_team_runner, "_estimate_final_context", lambda _messages: 321)
+    monkeypatch.setattr(sweevo_team_runner, "_persist_benchmark_session", lambda **_: None)
+
+    runner = _make_runner(
+        session_config=SimpleNamespace(session_id="sess-1"),
+        sandbox_id="sbx-1",
+        printer=SimpleNamespace(
+            raw_line=lambda who, body: printed.append((who, body)),
+            emit=lambda _event: None,
+        ),
+    )
+    ctx = sweevo_team_runner.TeamAgentContext(
+        user_message="Ship it",
+        tool_metadata=ExecutionMetadata(team_run_id="TR1", work_item_id="W1"),
+    )
+
+    asyncio.run(
+        runner(
+            SimpleNamespace(name="developer", model_copy=lambda update: SimpleNamespace(name="developer", **update)),
+            ctx,
+        )
+    )
+
+    assert tracker_finishes
+    response = tracker_finishes[0]["response"]
+    assert isinstance(response, dict)
+    assert response["tool_calls_used"] == 4
+    assert response["tool_call_limit"] == 10
+    assert response["final_context_tokens"] == 321
+    assert response["compactions_added"] == 2
+    assert response["compacted"] == 3
+    assert any(
+        body == "[usage] prompt=12 completion=8 total=20 tool_calls=4/10 final_context=321 compactions=+2(total=3)"
+        for _, body in printed
+    )
+
+
+def test_finalize_team_result_surfaces_retry_replan_and_checkpoint_metadata(monkeypatch):
+    printed: list[tuple[str, str]] = []
+    fake_usage_store = SimpleNamespace(
+        is_ready=True,
+        get_session_usage=lambda _session_id: {
+            "prompt_tokens": 11,
+            "completion_tokens": 7,
+            "total_tokens": 18,
+            "run_count": 2,
+        },
+        get_usage_by_model=lambda _session_id: [{"model_id": "test-model", "total_tokens": 18}],
+    )
+    monkeypatch.setattr("server.app_factory.usage_store", fake_usage_store, raising=False)
+
+    result = sweevo_team_runner._finalize_team_result(
+        tr=SimpleNamespace(
+            id="TR1",
+            status=sweevo_team_runner.TeamRunStatus.SUCCEEDED,
+            sandbox_id="sbx-1",
+            budget_state=SimpleNamespace(replans_used=2),
+            dispatcher=SimpleNamespace(
+                graph={
+                    "A": WorkItem(
+                        id="A",
+                        team_run_id="TR1",
+                        agent_name="developer",
+                        status=WorkItemStatus.DONE,
+                        kind=WorkItemKind.ATOMIC,
+                        retry_count=1,
+                    ),
+                    "B": WorkItem(
+                        id="B",
+                        team_run_id="TR1",
+                        agent_name="validator",
+                        status=WorkItemStatus.DONE,
+                        kind=WorkItemKind.ATOMIC,
+                        retry_count=2,
+                        depth=1,
+                    ),
+                },
+                list_checkpoints=lambda: [],
+            ),
+        ),
+        session_config=SimpleNamespace(session_id="sess-1"),
+        team_metrics={
+            "agent_runs": 4,
+            "agent_counts": Counter({"developer": 2, "validator": 2}),
+            "checkpoint_ids": [],
+            "checkpoints": [],
+        },
+        budgets=SimpleNamespace(
+            max_work_items=10,
+            max_depth=5,
+            max_plan_size=6,
+            max_shared_briefings=100,
+            max_briefing_bytes=4096,
+        ),
+        printer=SimpleNamespace(raw_line=lambda who, body: printed.append((who, body))),
+        checkpoint_records=[
+            {"id": "cp-1", "label": "planner:W1", "sequence": 1},
+            {"id": "cp-2", "label": "durable:complete:developer:A", "sequence": 2},
+        ],
+        resumed_from="TR0",
+        resumed_from_checkpoint="cp-1",
+    )
+
+    assert result["retry_count_total"] == 3
+    assert result["replans_used"] == 2
+    assert result["checkpoints"][-1]["label"] == "durable:complete:developer:A"
+    assert result["latest_checkpoint_id"] == "cp-2"
+    assert result["latest_checkpoint_label"] == "durable:complete:developer:A"
+    assert any(
+        body == "[team_stats] work_items=2 max_depth=1 agent_runs=4 checkpoints=2 retries=3 replans=2"
+        for _, body in printed
+    )
 
 
 def test_emit_dispatcher_dag_logs_graph_lines():

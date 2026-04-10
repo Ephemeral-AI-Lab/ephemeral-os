@@ -124,7 +124,7 @@ def enforce_scope_coherence(
     if expected and current and expected != current:
         return packet, (
             "Scope coherence changed since the work item started. "
-            "Refresh live CI state with ci_scope_status before writing."
+            "Refresh live CI state with ci_scoped_status before writing."
         )
     return packet, None
 
@@ -296,11 +296,14 @@ def prepare_ci_write(
     scope_paths = scope_paths_for_write(context, fallback_paths=[file_path])
     if scope_paths and not any(scopes_overlap(file_path, scope) for scope in scope_paths):
         packet = context.metadata.get("scope_packet")
-        if not isinstance(packet, dict):
+        if isinstance(packet, dict):
+            packet = dict(packet)
+            packet["scope_paths"] = scope_paths
+        else:
             packet = {"scope_paths": scope_paths}
         message = (
             "Write target is outside the current scoped paths. Refresh live CI state with "
-            f"`ci_scope_status(scope_paths=[{file_path!r}])` before writing this file."
+            f"`ci_scoped_status(scope_paths=[{file_path!r}])` before writing this file."
         )
         _note_team_memory_conflict(
             context,

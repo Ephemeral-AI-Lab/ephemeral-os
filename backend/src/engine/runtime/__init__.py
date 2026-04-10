@@ -1,6 +1,27 @@
-"""Agent runtime and background task management."""
+"""Agent runtime exports.
 
-from engine.runtime.agent import EphemeralAgent, spawn_agent
-from engine.runtime.background_tasks import BackgroundTaskManager, TrackedBackgroundTask
+Avoid eager imports so tests can pull in background-task helpers without
+instantiating the full agent / toolkit factory stack at import time.
+"""
 
-__all__ = ["BackgroundTaskManager", "EphemeralAgent", "TrackedBackgroundTask", "spawn_agent"]
+from __future__ import annotations
+
+from importlib import import_module
+from typing import Any
+
+__all__ = [
+    "BackgroundTaskManager",
+    "EphemeralAgent",
+    "TrackedBackgroundTask",
+    "spawn_agent",
+]
+
+
+def __getattr__(name: str) -> Any:
+    if name in {"BackgroundTaskManager", "TrackedBackgroundTask"}:
+        module = import_module("engine.runtime.background_tasks")
+        return getattr(module, name)
+    if name in {"EphemeralAgent", "spawn_agent"}:
+        module = import_module("engine.runtime.agent")
+        return getattr(module, name)
+    raise AttributeError(name)

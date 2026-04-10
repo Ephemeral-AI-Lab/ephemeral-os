@@ -218,7 +218,6 @@ def test_prepare_ci_write_rejects_write_outside_scoped_paths():
     assert packet["scope_paths"] == ["/repo/src/owned.py"]
     svc.prepare_write.assert_not_called()
 
-
 def test_abort_ci_write_refreshes_scope_baseline_after_release(monkeypatch):
     svc = MagicMock()
     packets = [{"scope_paths": ["src"], "coherence_token": "released-token"}]

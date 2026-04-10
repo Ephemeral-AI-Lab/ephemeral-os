@@ -7,6 +7,7 @@ access. All tools degrade gracefully if no CI service is configured.
 from tools.core.base import BaseToolkit
 from tools.ci_toolkit.query_tools import (
     ci_status,
+    ci_scoped_status,
     ci_scope_status,
     ci_edit_hotspots,
     ci_recent_changes,
@@ -25,7 +26,7 @@ class CIToolkit(BaseToolkit):
     tool execution context.
     """
 
-    _NO_FILE_READ_AGENTS = frozenset({"team_planner"})
+    _NO_FILE_READ_AGENTS = frozenset({"team_planner", "team_replanner"})
     _NO_CHANGE_AWARENESS_AGENTS = frozenset({"team_planner"})
 
     def __init__(
@@ -36,6 +37,7 @@ class CIToolkit(BaseToolkit):
     ) -> None:
         tools = [
             ci_status,
+            ci_scoped_status,
             ci_scope_status,
             ci_workspace_structure,
             ci_query_symbols,
@@ -49,7 +51,8 @@ class CIToolkit(BaseToolkit):
             "This toolkit is the source of truth for live same-run codebase awareness; "
             "if Atlas or briefings disagree with current CI state, trust CI.\n\n"
             "- `ci_status` — check if the code intelligence service is available.\n"
-            "- `ci_scope_status` — get a live scope packet with coherence token, active reservations, and recent changes for the paths you are about to edit.\n"
+            "- `ci_scoped_status` — get a live scope packet with coherence token, active reservations, and recent changes for the paths you are about to edit.\n"
+            "- `ci_scope_status` — compatibility alias for the same live scope packet.\n"
             "- `ci_workspace_structure` — get a tree view of the project layout. "
             "Use first to orient yourself in an unfamiliar codebase.\n"
             "- `ci_query_symbols` — find functions, classes, or variables by name. "
@@ -68,7 +71,10 @@ class CIToolkit(BaseToolkit):
             instructions += (
                 "- `ci_edit_hotspots` and `ci_recent_changes` are intentionally unavailable "
                 "for planner-style agents. Use them only from execution or collision-aware lanes, "
-                "not while mapping initial ownership.\n"
+                "not while mapping initial ownership. In planner mode, use "
+                "`ci_scoped_status(scope_paths=[...])` as the live sibling-awareness packet: "
+                "it already carries reservations, recent changes, coherence, and scout fanout "
+                "admission for the scoped slice.\n"
             )
         if include_file_reads:
             tools.append(ci_read_file)

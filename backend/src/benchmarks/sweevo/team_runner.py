@@ -72,15 +72,31 @@ def _build_benchmark_event_store(*, session_factory: object | None) -> Any:
     return build_default_store(base_dir=_benchmark_team_run_dir())
 
 
-def _checkpoint_ids_from_store(store: Any, team_run_id: str) -> list[str]:
-    checkpoint_ids: list[str] = []
-    for event in store.load_run(team_run_id):
+def _checkpoint_records_from_store(store: Any, team_run_id: str) -> list[dict[str, Any]]:
+    checkpoints: list[dict[str, Any]] = []
+    seen_ids: set[str] = set()
+    load_run = getattr(store, "load_run", None)
+    if not callable(load_run):
+        return checkpoints
+    for event in load_run(team_run_id):
         if event.kind != "checkpoint_taken":
             continue
         checkpoint_id = str(event.data.get("checkpoint_id") or "").strip()
-        if checkpoint_id and checkpoint_id not in checkpoint_ids:
-            checkpoint_ids.append(checkpoint_id)
-    return checkpoint_ids
+        if not checkpoint_id or checkpoint_id in seen_ids:
+            continue
+        seen_ids.add(checkpoint_id)
+        checkpoints.append(
+            {
+                "id": checkpoint_id,
+                "label": event.data.get("label"),
+                "sequence": int(event.data.get("sequence") or 0),
+            }
+        )
+    return checkpoints
+
+
+def _checkpoint_ids_from_store(store: Any, team_run_id: str) -> list[str]:
+    return [record["id"] for record in _checkpoint_records_from_store(store, team_run_id)]
 
 
 # ---------------------------------------------------------------------------
@@ -473,6 +489,10 @@ def _repair_submitted_plan_payload(text: str) -> dict[str, Any] | None:
 def _matches_posthook_payload(payload: dict[str, Any], metadata_key: str) -> bool:
     if metadata_key == "submitted_plan":
         return isinstance(payload.get("items"), list)
+    if metadata_key == "submitted_replan":
+        add_items = payload.get("add_items")
+        cancel_ids = payload.get("cancel_ids")
+        return isinstance(add_items, list) or isinstance(cancel_ids, list)
     if metadata_key == "submitted_summary":
         return isinstance(payload.get("summary"), str)
     return False
@@ -717,6 +737,7 @@ def _make_runner(
                 "tool_calls_used": int(getattr(qc, "tool_calls_used", 0) or 0),
                 "tool_call_limit": getattr(qc, "tool_call_limit", None),
                 "final_context_tokens": final_context_tokens,
+                "compactions_added": new_compactions,
                 "compacted": compacted_total,
             }
             tracker.finish(
@@ -761,8 +782,9 @@ def _make_runner(
                     usage_line += f"/{tool_call_limit}"
                 usage_line += f" final_context={final_context_tokens}"
                 if compacted_before is not None:
+                    compactions_delta = f"+{new_compactions}" if new_compactions > 0 else str(new_compactions)
                     usage_line += (
-                        f" compactions={'+1' if new_compactions > 0 else '0'}"
+                        f" compactions={compactions_delta}"
                         f"(total={compacted_total})"
                     )
                 printer.raw_line(
@@ -805,6 +827,12 @@ def _make_runner(
                     checkpoint_id = await team_run.checkpoint(label=checkpoint_label)
                     if team_metrics is not None:
                         team_metrics.setdefault("checkpoint_ids", []).append(checkpoint_id)
+                        team_metrics.setdefault("checkpoints", []).append(
+                            {
+                                "id": checkpoint_id,
+                                "label": checkpoint_label,
+                            }
+                        )
                     if printer is not None:
                         printer.raw_line(
                             effective_defn.name,
@@ -956,6 +984,16 @@ def _make_context_builders(
                 max_plan_size = getattr(budgets, "max_plan_size", None)
                 if max_plan_size is not None:
                     meta["max_plan_size"] = int(max_plan_size)
+                max_validators_per_plan = getattr(budgets, "max_validators_per_plan", None)
+                if max_validators_per_plan is not None:
+                    meta["max_validators_per_plan"] = int(max_validators_per_plan)
+                require_validator_for_plan_size = getattr(
+                    budgets, "require_validator_for_plan_size", None
+                )
+                if require_validator_for_plan_size is not None:
+                    meta["require_validator_for_plan_size"] = int(
+                        require_validator_for_plan_size
+                    )
             posthook_input_text = work_result.get("posthook_input_text")
             if isinstance(posthook_input_text, str) and posthook_input_text.strip():
                 user_message = posthook_input_text
@@ -1102,6 +1140,7 @@ def _build_team_metrics() -> dict[str, Any]:
         "agent_runs": 0,
         "agent_counts": Counter(),
         "checkpoint_ids": [],
+        "checkpoints": [],
     }
 
 
@@ -1141,7 +1180,7 @@ def _finalize_team_result(
     team_metrics: dict[str, Any],
     budgets: BudgetConfig,
     printer: MultiAgentEventPrinter | None,
-    checkpoint_ids: list[str] | None = None,
+    checkpoint_records: list[dict[str, Any]] | None = None,
     resumed_from: str | None = None,
     resumed_from_checkpoint: str | None = None,
 ) -> dict[str, Any]:
@@ -1176,8 +1215,22 @@ def _finalize_team_result(
                     ),
                 )
 
-    resolved_checkpoint_ids = checkpoint_ids or [cp.id for cp in tr.dispatcher.list_checkpoints()]
+    resolved_checkpoint_records = checkpoint_records or [
+        {
+            "id": cp.id,
+            "label": cp.label,
+            "sequence": cp.sequence,
+        }
+        for cp in tr.dispatcher.list_checkpoints()
+    ]
+    resolved_checkpoint_ids = [
+        str(record.get("id") or "").strip()
+        for record in resolved_checkpoint_records
+        if str(record.get("id") or "").strip()
+    ]
     max_depth_reached = max((wi.depth for wi in tr.dispatcher.graph.values()), default=0)
+    retry_count_total = sum(int(getattr(wi, "retry_count", 0) or 0) for wi in tr.dispatcher.graph.values())
+    replans_used = int(getattr(tr.budget_state, "replans_used", 0) or 0)
     usage_summary = None
     usage_by_model: list[dict[str, Any]] = []
     try:
@@ -1206,7 +1259,8 @@ def _finalize_team_result(
                 "[team_stats] "
                 f"work_items={work_items} max_depth={max_depth_reached} "
                 f"agent_runs={team_metrics['agent_runs']} "
-                f"checkpoints={len(resolved_checkpoint_ids)}"
+                f"checkpoints={len(resolved_checkpoint_ids)} "
+                f"retries={retry_count_total} replans={replans_used}"
             ),
         )
 
@@ -1218,11 +1272,19 @@ def _finalize_team_result(
         "session_id": session_config.session_id,
         "usage": usage_summary,
         "usage_by_model": usage_by_model,
+        "checkpoints": resolved_checkpoint_records,
         "checkpoint_ids": resolved_checkpoint_ids,
         "latest_checkpoint_id": resolved_checkpoint_ids[-1] if resolved_checkpoint_ids else None,
+        "latest_checkpoint_label": (
+            resolved_checkpoint_records[-1].get("label")
+            if resolved_checkpoint_records
+            else None
+        ),
         "max_depth_reached": max_depth_reached,
         "agent_runs": int(team_metrics["agent_runs"]),
         "agent_counts": dict(team_metrics["agent_counts"]),
+        "retry_count_total": retry_count_total,
+        "replans_used": replans_used,
         "budgets": {
             "max_work_items": budgets.max_work_items,
             "max_depth": budgets.max_depth,
@@ -1307,12 +1369,14 @@ async def run_sweevo_team(
     )
 
     await tr.wait()
+    checkpoint_records = _checkpoint_records_from_store(event_store, tr.id)
     return _finalize_team_result(
         tr=tr,
         session_config=session_config,
         team_metrics=team_metrics,
         budgets=budgets,
         printer=printer,
+        checkpoint_records=checkpoint_records,
     )
 
 
@@ -1336,7 +1400,8 @@ async def resume_sweevo_team(
 
     session_factory = ensure_runtime_stores_ready()
     event_store = _build_benchmark_event_store(session_factory=session_factory)
-    checkpoint_ids = _checkpoint_ids_from_store(event_store, team_run_id)
+    initial_checkpoint_records = _checkpoint_records_from_store(event_store, team_run_id)
+    checkpoint_ids = [record["id"] for record in initial_checkpoint_records]
     resolved_checkpoint_id = checkpoint_id
     if resolved_checkpoint_id is None and use_latest_checkpoint and checkpoint_ids:
         resolved_checkpoint_id = checkpoint_ids[-1]
@@ -1362,6 +1427,14 @@ async def resume_sweevo_team(
     team_metrics = _build_team_metrics()
     _emit_team_runtime_banner(printer, budgets=budgets)
     if printer is not None:
+        checkpoint_label = next(
+            (
+                str(record.get("label") or "")
+                for record in initial_checkpoint_records
+                if record.get("id") == resolved_checkpoint_id
+            ),
+            "",
+        )
         printer.raw_line(
             "team",
             (
@@ -1369,6 +1442,7 @@ async def resume_sweevo_team(
                 f"team_run_id={team_run_id} sandbox_id={tr.sandbox_id} "
                 f"durable_checkpoints={len(checkpoint_ids)} "
                 f"checkpoint={resolved_checkpoint_id or '<latest-state>'}"
+                f"{f' label={checkpoint_label}' if checkpoint_label else ''}"
             ),
         )
     _emit_team_identity_banner(
@@ -1388,15 +1462,18 @@ async def resume_sweevo_team(
             agent_overrides=agent_overrides,
         ),
         num_executors=num_executors,
+        resumed_from=team_run_id,
+        resumed_from_checkpoint=resolved_checkpoint_id,
     )
     await tr.wait()
+    checkpoint_records = _checkpoint_records_from_store(event_store, tr.id)
     return _finalize_team_result(
         tr=tr,
         session_config=session_config,
         team_metrics=team_metrics,
         budgets=budgets,
         printer=printer,
-        checkpoint_ids=checkpoint_ids,
+        checkpoint_records=checkpoint_records,
         resumed_from=team_run_id,
         resumed_from_checkpoint=resolved_checkpoint_id,
     )

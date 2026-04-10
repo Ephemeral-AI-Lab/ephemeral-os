@@ -146,7 +146,6 @@ def test_build_query_context_carries_team_metadata_and_briefings():
     assert ctx.tool_metadata["require_declared_shell_outputs"] is True
     assert ctx.tool_metadata["default_scope_paths"] == ["src/file.py"]
 
-
 def test_shared_briefings_flow_into_query_context():
     store = InMemoryArtifactStore(BudgetConfig(), BudgetState())
     store.save("S1", {"target_paths": ["src/auth"], "summary": "shared scout"})

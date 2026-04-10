@@ -60,7 +60,6 @@ PEEK_MESSAGE_MAX = 10
 _PEEK_BLOCK_CHAR_CAP = 200
 # Total character cap for the peek view.
 _PEEK_TOTAL_CHAR_CAP = 2048
-_MAX_SCOUT_LAUNCHES_PER_TURN = 8
 
 
 @dataclass
@@ -133,14 +132,6 @@ def _scout_fanout_admission_error(
 ) -> tuple[dict[str, Any] | None, str | None]:
     if str(context.metadata.get("coordination_mode") or "") != "ultra":
         return None, None
-    prior_launches_raw = context.metadata.get("_scout_launches_this_turn", 0)
-    prior_launches = int(prior_launches_raw) if isinstance(prior_launches_raw, (int, float)) else 0
-    if prior_launches >= _MAX_SCOUT_LAUNCHES_PER_TURN:
-        return None, (
-            "run_subagent: scout fanout cap reached for this turn "
-            f"({_MAX_SCOUT_LAUNCHES_PER_TURN}). Reuse the current evidence, inspect progress on "
-            "existing scouts, or emit the plan instead of opening another scout lane."
-        )
     prior_scouts = _normalize_target_paths(context.metadata.get("_scout_target_paths_this_turn", []))
     if not prior_scouts:
         return None, None
@@ -149,16 +140,7 @@ def _scout_fanout_admission_error(
         scope_paths=target_paths,
         baseline_packet=None,
     )
-    admission = packet.get("admission") if isinstance(packet, dict) else {}
-    if not isinstance(admission, dict) or admission.get("allow_parallel_fanout", True):
-        return packet if isinstance(packet, dict) else None, None
-    reasons = "; ".join(str(item) for item in (admission.get("reasons") or []) if str(item).strip())
-    return packet if isinstance(packet, dict) else None, (
-        "run_subagent: live scope status requires serialized scout expansion for this "
-        + ("scope" if not reasons else f"scope ({reasons})")
-        + ". Reuse the current evidence, inspect progress on existing scouts, or emit "
-        "the plan instead of opening another overlapping or hot scout lane."
-    )
+    return packet if isinstance(packet, dict) else None, None
 
 
 def _benchmark_root_payload(context: ToolExecutionContext) -> dict[str, Any] | None:
@@ -209,69 +191,7 @@ def _benchmark_root_scout_policy_error(
     context: ToolExecutionContext,
     target_paths: list[str],
 ) -> str | None:
-    payload = _benchmark_root_payload(context)
-    if payload is None:
-        return None
-    if not context.metadata.get("_benchmark_root_scope_anchor_done"):
-        return (
-            "run_subagent: fresh benchmark-root planners must call "
-            "`ci_scope_status(scope_paths=[...])` before launching scouts. "
-            "Anchor the live owner surface first, then open scout lanes."
-        )
-    benchmark_files = _benchmark_test_files(payload)
-    normalized_targets = {path.split("::", 1)[0].strip() for path in target_paths}
-    if benchmark_files and any(path in benchmark_files for path in normalized_targets):
-        return (
-            "run_subagent: fresh benchmark-root scout waves must target likely production owner "
-            "files or directories first, not already-named benchmark test files. Re-anchor on the "
-            "corresponding production surface or an exact existing candidate directory."
-        )
-    svc = get_ci_service(context)
-    symbol_index = getattr(svc, "symbol_index", None) if svc is not None else None
-    raw_symbols = getattr(symbol_index, "_symbols", None)
-    if isinstance(raw_symbols, dict) and raw_symbols:
-        indexed_paths = {
-            str(path).strip().replace("/testbed/", "", 1).lstrip("/")
-            for path in raw_symbols.keys()
-            if str(path).strip()
-        }
-        missing: list[str] = []
-        for candidate in target_paths:
-            normalized = str(candidate).strip().replace("/testbed/", "", 1).lstrip("/")
-            if not normalized:
-                continue
-            prefix = normalized.rstrip("/") + "/"
-            if normalized in indexed_paths or any(path.startswith(prefix) for path in indexed_paths):
-                continue
-            missing.append(candidate)
-        if missing:
-            joined = ", ".join(missing)
-            return (
-                "run_subagent: fresh benchmark-root scout waves must target exact existing "
-                "production files/directories from the live checkout. The requested target paths "
-                f"are missing: {joined}. Re-anchor on the nearest existing production "
-                "directory/package before launching scouts."
-            )
-    prior_launches_raw = context.metadata.get("_scout_launches_this_turn", 0)
-    prior_launches = int(prior_launches_raw) if isinstance(prior_launches_raw, (int, float)) else 0
-    bg_manager = context.metadata.get("background_task_manager")
-    completed_scout_seen = False
-    if bg_manager is not None and hasattr(bg_manager, "iter_all"):
-        try:
-            completed_scout_seen = any(
-                getattr(task, "tool_name", "") == "run_subagent"
-                and str(getattr(task, "status", "")).lower() != "running"
-                for task in bg_manager.iter_all()
-            )
-        except Exception:
-            completed_scout_seen = False
-    if prior_launches > 4 and not completed_scout_seen:
-        return (
-            "run_subagent: fresh benchmark-root first scout wave is capped at 4 lanes "
-            "(dominant production owner plus up to three disjoint residual surfaces). "
-            "Inspect progress on the current wave or wait for a completed scout before "
-            "opening another lane."
-        )
+    del context, target_paths
     return None
 
 
@@ -1017,6 +937,7 @@ async def run_subagent(
         try:
             from team.context.scout_briefings import (
                 auto_promote_scout_briefing,
+                scout_artifact_reuse_status,
                 store_stable_scout_artifact,
             )
             from team.context.canonicalize import scope_of_artifact
@@ -1028,31 +949,46 @@ async def run_subagent(
                 artifact = submitted.artifact
                 if isinstance(artifact, dict):
                     scope = scope_of_artifact(artifact) or ""
-                    stored_artifact_ref = store_stable_scout_artifact(
+                    reusable, reuse_reason = scout_artifact_reuse_status(
                         team_run,
                         artifact,
-                        run_id=persisted_run_id,
+                        ci_service=context.metadata.get("ci_service"),
                     )
-                    if stored_artifact_ref is not None:
-                        ci_service = context.metadata.get("ci_service")
-                        promoted = auto_promote_scout_briefing(
+                    if reusable:
+                        stored_artifact_ref = store_stable_scout_artifact(
                             team_run,
-                            stored_artifact_ref,
-                            ci_service=ci_service,
+                            artifact,
+                            run_id=persisted_run_id,
                         )
-                        persisted = False
-                        if promoted:
-                            persisted = team_run.note_direct_scout_brief(
-                                artifact,
+                        if stored_artifact_ref is not None:
+                            ci_service = context.metadata.get("ci_service")
+                            promoted = auto_promote_scout_briefing(
+                                team_run,
+                                stored_artifact_ref,
                                 ci_service=ci_service,
-                                reason="run_subagent:scout-complete",
                             )
+                            persisted = False
+                            if promoted:
+                                persisted = team_run.note_direct_scout_brief(
+                                    artifact,
+                                    ci_service=ci_service,
+                                    reason="run_subagent:scout-complete",
+                                )
+                            atlas_info = {
+                                "subsystem": scope,
+                                "persisted": bool(persisted),
+                                "promoted": bool(promoted),
+                                "artifact_ref": stored_artifact_ref,
+                                "reason": "run_subagent:scout-complete",
+                            }
+                    else:
                         atlas_info = {
                             "subsystem": scope,
-                            "persisted": bool(persisted),
-                            "promoted": bool(promoted),
-                            "artifact_ref": stored_artifact_ref,
-                            "reason": "run_subagent:scout-complete",
+                            "persisted": False,
+                            "promoted": False,
+                            "artifact_ref": None,
+                            "reason": reuse_reason or "scout brief is not safe to reuse",
+                            "stale": True,
                         }
         except Exception:
             logger.debug("run_subagent: scout artifact promotion failed", exc_info=True)

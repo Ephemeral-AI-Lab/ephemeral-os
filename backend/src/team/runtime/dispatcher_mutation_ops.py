@@ -48,10 +48,26 @@ async def retry_work_item(
         wi.retry_count += 1
         wi.agent_run_id = None
         wi.started_at = None
+        wi.finished_at = None
+        wi.failure_reason = None
+        wi.artifact_ref = None
         wi.status = WorkItemStatus.PENDING
         retries = wi.payload.setdefault("_retry_history", [])
         retries.append({"attempt": wi.retry_count, "reason": request.reason})
-        dispatcher._emit(make_work_item_status(dispatcher.team_run_id, wi_id, "pending"))
+        dispatcher._emit(
+            make_work_item_status(
+                dispatcher.team_run_id,
+                wi_id,
+                "pending",
+                agent_run_id=None,
+                started_at=None,
+                finished_at=None,
+                failure_reason=None,
+                artifact_ref=None,
+                retry_count=wi.retry_count,
+                max_retries=wi.max_retries,
+            )
+        )
         dispatcher._promote_to_ready(wi)
 
 async def cancel_all_pending(dispatcher: "Dispatcher") -> None:

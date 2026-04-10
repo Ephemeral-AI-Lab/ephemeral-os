@@ -121,15 +121,19 @@ def apply_replayed_event(
         if wi is not None:
             wi.status = WorkItemStatus(event.data["status"])
             for key in ("started_at", "finished_at"):
-                iso = event.data.get(key)
-                if iso:
-                    setattr(wi, key, datetime.fromisoformat(iso))
+                if key in event.data:
+                    iso = event.data.get(key)
+                    setattr(wi, key, datetime.fromisoformat(iso) if iso else None)
             if "agent_run_id" in event.data:
                 wi.agent_run_id = event.data["agent_run_id"]
             if "failure_reason" in event.data:
                 wi.failure_reason = event.data["failure_reason"]
             if "artifact_ref" in event.data:
                 wi.artifact_ref = event.data["artifact_ref"]
+            if "retry_count" in event.data:
+                wi.retry_count = int(event.data.get("retry_count") or 0)
+            if "max_retries" in event.data:
+                wi.max_retries = int(event.data.get("max_retries") or wi.max_retries)
     elif event.kind == "artifact_written":
         try:
             services.artifact_store.save(event.data["wi_id"], event.data["payload"])

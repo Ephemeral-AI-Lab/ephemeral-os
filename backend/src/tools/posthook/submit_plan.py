@@ -12,6 +12,15 @@ from tools.core.base import ToolExecutionContext
 from tools.posthook.base import SubmitPosthookTool, _decode_json_array_string
 
 
+def _optional_int(value: Any) -> int | None:
+    if value in (None, ""):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 class _SubmitBriefing(BaseModel):
     name: str
     source: str  # "artifact" | "inline"
@@ -63,6 +72,10 @@ class SubmitPlanTool(SubmitPosthookTool):
             return None, f"Invalid Plan shape: {exc}"
 
         max_plan_size = int(context.metadata.get("max_plan_size", 50) or 50)
+        max_validators_per_plan = _optional_int(context.metadata.get("max_validators_per_plan"))
+        require_validator_for_plan_size = _optional_int(
+            context.metadata.get("require_validator_for_plan_size")
+        )
         benchmark_test_ids, benchmark_test_files = self._known_benchmark_targets(context)
         issues = validate_plan_phase_a(
             plan,
@@ -70,6 +83,8 @@ class SubmitPlanTool(SubmitPosthookTool):
             known_external_deps=self._known_external_dep_ids(context),
             benchmark_test_ids=benchmark_test_ids,
             benchmark_test_files=benchmark_test_files,
+            max_validators_per_plan=max_validators_per_plan,
+            require_validator_for_plan_size=require_validator_for_plan_size,
         )
         if issues:
             lines = [f"- {i['field']}: {i['msg']}" for i in issues]

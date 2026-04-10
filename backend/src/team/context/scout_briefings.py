@@ -4,11 +4,15 @@ from __future__ import annotations
 
 import logging
 import time
+from types import SimpleNamespace
 from typing import Any
 
-from code_intelligence.atlas.freshness import MIN_COMPLETE_SCOPE_COVERAGE, brief_reuse_status
+from code_intelligence.atlas.freshness import (
+    MIN_COMPLETE_SCOPE_COVERAGE,
+    brief_reuse_status,
+    freshness_status,
+)
 from team.context.canonicalize import canonicalize_scope, scope_of_artifact
-from team.memory.runtime import persist_memory_record
 from team.models import Briefing
 
 logger = logging.getLogger(__name__)
@@ -139,6 +143,10 @@ def record_context_promotion_signal(
     pressure: dict[str, Any],
 ) -> bool:
     """Persist non-Atlas context-reuse signals into team memory when available."""
+    try:
+        from team.memory.runtime import persist_memory_record
+    except Exception:
+        return False
     project_ctx = getattr(team_run, "project_context", None)
     if project_ctx is None:
         return False
@@ -166,6 +174,74 @@ def record_context_promotion_signal(
     )
 
 
+def scout_artifact_invalidated(
+    project_ctx: Any,
+    artifact: dict[str, Any] | None,
+) -> bool:
+    """Return True when a scout artifact predates a same-run overlapping write."""
+    if not isinstance(artifact, dict):
+        return False
+    scope = scope_of_artifact(artifact)
+    if not scope:
+        return False
+    invalidated = getattr(project_ctx, "invalidated_scout_scopes", None)
+    if not isinstance(invalidated, dict):
+        return False
+    invalidated_at = invalidated.get(scope)
+    snapshot = _snapshot_time(artifact)
+    return (
+        isinstance(invalidated_at, (int, float))
+        and invalidated_at > 0
+        and (snapshot <= 0 or snapshot <= float(invalidated_at))
+    )
+
+
+def scout_artifact_reuse_status(
+    team_run: Any,
+    artifact: dict[str, Any] | None,
+    *,
+    ci_service: Any | None = None,
+) -> tuple[bool, str | None]:
+    """Return whether a scout artifact is safe to reuse in the current run."""
+    artifact = artifact if isinstance(artifact, dict) else None
+    reusable, reason = brief_reuse_status(
+        artifact,
+        min_scope_coverage=MIN_COMPLETE_SCOPE_COVERAGE,
+    )
+    if not reusable:
+        return False, reason
+
+    project_ctx = getattr(team_run, "project_context", None)
+    if project_ctx is None:
+        return True, None
+    if scout_artifact_invalidated(project_ctx, artifact):
+        return False, "same-run edits invalidated this scout brief after its snapshot"
+
+    ledger = getattr(ci_service, "ledger", None)
+    if ledger is None or artifact is None:
+        return True, None
+
+    target_paths = _artifact_scope_paths(artifact)
+    scope = scope_of_artifact(artifact) or _canonical_scope(target_paths)
+    if not scope:
+        return True, None
+
+    chunk = SimpleNamespace(
+        subsystem=scope,
+        brief=dict(artifact),
+        scope_paths=list(target_paths),
+        repo_root=str(getattr(project_ctx, "repo_root", "") or ""),
+        snapshot_time=_snapshot_time(artifact),
+        updated_at=None,
+        content_hashes={},
+    )
+    return freshness_status(
+        chunk,
+        ledger=ledger,
+        max_age_seconds=None,
+    )
+
+
 def invalidate_stale_scout_context(team_run: Any, file_path: str) -> list[str]:
     """Evict scout-backed shared context that overlaps *file_path*.
 
@@ -180,7 +256,12 @@ def invalidate_stale_scout_context(team_run: Any, file_path: str) -> list[str]:
     repo_root = str(getattr(project_ctx, "repo_root", "") or "")
     shared_briefings = getattr(project_ctx, "shared_briefings", None)
     stable_versions = getattr(project_ctx, "stable_scout_versions", None)
-    if not isinstance(shared_briefings, dict) or not isinstance(stable_versions, dict):
+    invalidated = getattr(project_ctx, "invalidated_scout_scopes", None)
+    if (
+        not isinstance(shared_briefings, dict)
+        or not isinstance(stable_versions, dict)
+        or not isinstance(invalidated, dict)
+    ):
         return []
 
     stale_scopes: set[str] = set()
@@ -196,12 +277,14 @@ def invalidate_stale_scout_context(team_run: Any, file_path: str) -> list[str]:
     if not stale_scopes:
         return []
 
+    invalidated_at = time.time()
     for scope in sorted(stale_scopes):
         briefing = shared_briefings.get(scope)
         if _is_scout_briefing(briefing):
             shared_briefings.pop(scope, None)
         project_ctx.auto_promoted_scout_scopes.discard(scope)
         stable_versions.pop(scope, None)
+        invalidated[scope] = invalidated_at
     return sorted(stale_scopes)
 
 
@@ -243,9 +326,10 @@ def auto_promote_scout_briefing(
     scope = scope_of_artifact(artifact)
     if not scope:
         return False
-    reusable, reason = brief_reuse_status(
+    reusable, reason = scout_artifact_reuse_status(
+        team_run,
         artifact,
-        min_scope_coverage=MIN_COMPLETE_SCOPE_COVERAGE,
+        ci_service=ci_service,
     )
     if not reusable:
         logger.debug(

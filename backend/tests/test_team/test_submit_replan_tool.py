@@ -17,3 +17,14 @@ def test_submit_replan_input_accepts_json_string_lists() -> None:
     assert len(args.add_items) == 1
     assert args.add_items[0].agent_name == "developer"
     assert args.cancel_ids == ["w2"]
+
+
+def test_submit_replan_input_accepts_replace_failed_validator_flag() -> None:
+    args = SubmitReplanInput.model_validate(
+        {
+            "add_items": [{"agent_name": "validator", "local_id": "val1"}],
+            "replace_failed_validator": True,
+        }
+    )
+
+    assert args.replace_failed_validator is True

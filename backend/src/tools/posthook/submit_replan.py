@@ -39,6 +39,13 @@ class SubmitReplanInput(BaseModel):
         default_factory=list,
         description="IDs of PENDING/READY work items to cancel (must share same parent).",
     )
+    replace_failed_validator: bool = Field(
+        default=False,
+        description=(
+            "When true, leave the failed validator terminal and rely on a replacement "
+            "validator from add_items instead of auto-reattaching the old one."
+        ),
+    )
 
     @field_validator("add_items", "cancel_ids", mode="before")
     @classmethod

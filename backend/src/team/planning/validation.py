@@ -12,10 +12,7 @@ from team.errors import InvalidPlan
 from team.models import Plan, WorkItem, WorkItemKind, WorkItemSpec, WorkItemStatus
 
 _MAX_INLINE_BRIEFING_BYTES_PER_SPEC = 4096
-_EXPANDABLE_AGENT = "team_planner"
-_ALLOWED_ATOMIC_AGENTS = frozenset({"developer", "validator"})
 _VALIDATOR_AGENT = "validator"
-_MAX_VALIDATORS_PER_PLAN = 2
 
 Issue = dict[str, str]
 
@@ -28,6 +25,57 @@ def _validator_count(items: list[WorkItemSpec]) -> int:
     return sum(1 for item in items if item.agent_name == _VALIDATOR_AGENT)
 
 
+def _kind_supported(agent_name: str, kind: WorkItemKind) -> Issue | None:
+    agent_def = _get_definition(agent_name)
+    if agent_def is None:
+        return None
+    supported = getattr(agent_def, "supported_kinds", None) or ["atomic", "expandable"]
+    if kind.value in supported:
+        return None
+    return {
+        "field": "agent_name",
+        "msg": (
+            f"agent '{agent_name}' does not support kind '{kind.value}' "
+            f"(supports: {supported})"
+        ),
+    }
+
+
+def _validator_policy_issues(
+    items: list[WorkItemSpec],
+    *,
+    max_validators_per_plan: int | None = None,
+    require_validator_for_plan_size: int | None = None,
+) -> list[Issue]:
+    issues: list[Issue] = []
+    validator_count = _validator_count(items)
+    if max_validators_per_plan is not None and validator_count > max_validators_per_plan:
+        issues.append(
+            {
+                "field": "items",
+                "msg": (
+                    f"plan has {validator_count} validator items; submitted plans may have at most "
+                    f"{max_validators_per_plan}"
+                ),
+            }
+        )
+    if (
+        require_validator_for_plan_size is not None
+        and len(items) >= require_validator_for_plan_size
+        and validator_count == 0
+    ):
+        issues.append(
+            {
+                "field": "items",
+                "msg": (
+                    f"plans with {require_validator_for_plan_size} or more items must "
+                    "include at least one validator"
+                ),
+            }
+        )
+    return issues
+
+
 def validate_plan_phase_a(
     plan: Plan,
     max_plan_size: int = 50,
@@ -35,6 +83,8 @@ def validate_plan_phase_a(
     known_external_deps: set[str] | None = None,
     benchmark_test_ids: set[str] | None = None,
     benchmark_test_files: set[str] | None = None,
+    max_validators_per_plan: int | None = None,
+    require_validator_for_plan_size: int | None = None,
 ) -> list[Issue]:
     """Pure-function structural validation."""
     issues: list[Issue] = []
@@ -52,24 +102,13 @@ def validate_plan_phase_a(
         )
         return issues
 
-    validator_count = _validator_count(plan.items)
-    if validator_count > _MAX_VALIDATORS_PER_PLAN:
-        issues.append(
-            {
-                "field": "items",
-                "msg": (
-                    f"plan has {validator_count} validator items; submitted plans may have at most "
-                    f"{_MAX_VALIDATORS_PER_PLAN}"
-                ),
-            }
+    issues.extend(
+        _validator_policy_issues(
+            plan.items,
+            max_validators_per_plan=max_validators_per_plan,
+            require_validator_for_plan_size=require_validator_for_plan_size,
         )
-    if len(plan.items) >= 3 and validator_count == 0:
-        issues.append(
-            {
-                "field": "items",
-                "msg": "plans with 3 or more items must include at least one validator",
-            }
-        )
+    )
 
     local_ids: set[str] = set()
     for idx, item in enumerate(plan.items):
@@ -99,30 +138,12 @@ def validate_plan_phase_a(
                         ),
                     }
                 )
-            if (
-                item.kind == WorkItemKind.EXPANDABLE
-                and item.agent_name != _EXPANDABLE_AGENT
-            ):
+            kind_issue = _kind_supported(item.agent_name, item.kind)
+            if kind_issue is not None:
                 issues.append(
                     {
                         "field": f"items[{idx}].agent_name",
-                        "msg": (
-                            f"expandable items must target '{_EXPANDABLE_AGENT}', "
-                            f"got '{item.agent_name}'"
-                        ),
-                    }
-                )
-            if (
-                item.kind == WorkItemKind.ATOMIC
-                and item.agent_name not in _ALLOWED_ATOMIC_AGENTS
-            ):
-                issues.append(
-                    {
-                        "field": f"items[{idx}].agent_name",
-                        "msg": (
-                            "atomic submitted items must target one of "
-                            f"{sorted(_ALLOWED_ATOMIC_AGENTS)}, got '{item.agent_name}'"
-                        ),
+                        "msg": kind_issue["msg"],
                     }
                 )
         # Briefings: dup-name check + inline byte cap (XOR+name enforced in __post_init__).
@@ -360,6 +381,9 @@ def validate_plan_phase_b(
     *,
     new_id_factory: Callable[[], str],
     max_depth: int,
+    max_plan_size: int | None = None,
+    max_validators_per_plan: int | None = None,
+    require_validator_for_plan_size: int | None = None,
 ) -> list[WorkItem]:
     """Dispatcher-time re-check. Resolves local_ids, checks externals, depth, cycles."""
     if parent_wi.kind != WorkItemKind.EXPANDABLE:
@@ -369,16 +393,17 @@ def validate_plan_phase_b(
     new_depth = parent_wi.depth + 1
     if new_depth > max_depth:
         raise InvalidPlan(f"plan would exceed max_depth={max_depth} (parent depth={parent_wi.depth})")
-
-    validator_count = _validator_count(plan.items)
-    if validator_count > _MAX_VALIDATORS_PER_PLAN:
+    if max_plan_size is not None and len(plan.items) > max_plan_size:
         raise InvalidPlan(
-            "plan has {} validator items; submitted plans may have at most {}".format(
-                validator_count, _MAX_VALIDATORS_PER_PLAN
-            )
+            f"plan has {len(plan.items)} items, exceeds max_plan_size={max_plan_size}"
         )
-    if len(plan.items) >= 3 and validator_count == 0:
-        raise InvalidPlan("plans with 3 or more items must include at least one validator")
+    validator_issues = _validator_policy_issues(
+        plan.items,
+        max_validators_per_plan=max_validators_per_plan,
+        require_validator_for_plan_size=require_validator_for_plan_size,
+    )
+    if validator_issues:
+        raise InvalidPlan("; ".join(issue["msg"] for issue in validator_issues))
 
     # Re-check local_id uniqueness — Phase A may have been bypassed if a Plan
     # was constructed directly rather than via the submit_plan tool.

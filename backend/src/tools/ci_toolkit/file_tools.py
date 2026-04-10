@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 _MAX_LINES = 500
 _MAX_CHARS = 32_000
-_FILE_READ_DISALLOWED_CALLERS = frozenset({"team_planner"})
+_FILE_READ_DISALLOWED_CALLERS = frozenset({"team_planner", "team_replanner"})
 
 
 def _scout_scope_violation(

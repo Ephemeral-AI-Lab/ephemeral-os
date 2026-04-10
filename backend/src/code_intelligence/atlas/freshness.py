@@ -6,12 +6,12 @@ import hashlib
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-from code_intelligence.atlas.store import AtlasChunk
 from team.context.canonicalize import canonicalize_scope
 
 if TYPE_CHECKING:
+    from code_intelligence.atlas.store import AtlasChunk
     from code_intelligence.editing.ledger import Ledger
 
 logger = logging.getLogger(__name__)
@@ -98,7 +98,7 @@ def _iter_scope_files(
     return files
 
 
-def is_subsystem_stale(chunk: AtlasChunk, changed_files: set[str]) -> bool:
+def is_subsystem_stale(chunk: "AtlasChunk | Any", changed_files: set[str]) -> bool:
     """Return True if any file under the chunk's scope is in *changed_files*."""
     if not changed_files:
         return False
@@ -113,7 +113,7 @@ def is_subsystem_stale(chunk: AtlasChunk, changed_files: set[str]) -> bool:
     return False
 
 
-def changes_since_chunk(chunk: AtlasChunk, ledger: "Ledger") -> set[str]:
+def changes_since_chunk(chunk: "AtlasChunk | Any", ledger: "Ledger") -> set[str]:
     """Return file paths touched after the chunk's cutoff."""
     cutoff = _ledger_cutoff(chunk)
     if cutoff is None:
@@ -127,7 +127,7 @@ def changes_since_chunk(chunk: AtlasChunk, ledger: "Ledger") -> set[str]:
     return out
 
 
-def _ledger_cutoff(chunk: AtlasChunk) -> float | None:
+def _ledger_cutoff(chunk: "AtlasChunk | Any") -> float | None:
     if chunk.snapshot_time and chunk.snapshot_time > 0:
         return float(chunk.snapshot_time)
     if chunk.updated_at is not None:
@@ -136,7 +136,7 @@ def _ledger_cutoff(chunk: AtlasChunk) -> float | None:
 
 
 def is_chunk_fresh(
-    chunk: AtlasChunk,
+    chunk: "AtlasChunk | Any",
     *,
     ledger: "Ledger | None" = None,
     max_age_seconds: float | None = None,
@@ -151,7 +151,7 @@ def is_chunk_fresh(
 
 
 def freshness_status(
-    chunk: AtlasChunk,
+    chunk: "AtlasChunk | Any",
     *,
     ledger: "Ledger | None" = None,
     max_age_seconds: float | None = None,
@@ -199,7 +199,7 @@ def freshness_status(
 
 
 def chunk_reuse_status(
-    chunk: AtlasChunk,
+    chunk: "AtlasChunk | Any",
     *,
     ledger: "Ledger | None" = None,
     max_age_seconds: float | None = DEFAULT_ATLAS_MAX_AGE_SECONDS,
@@ -225,7 +225,7 @@ def chunk_reuse_status(
     )
 
 
-def _target_paths(chunk: AtlasChunk) -> list[str]:
+def _target_paths(chunk: "AtlasChunk | Any") -> list[str]:
     raw = chunk.brief.get("target_paths") if isinstance(chunk.brief, dict) else None
     if not isinstance(raw, list):
         return []

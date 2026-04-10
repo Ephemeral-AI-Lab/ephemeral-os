@@ -11,9 +11,6 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
-_OWNED_FAILURES_CAP = 64
-
-
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -47,11 +44,7 @@ def _normalize_payload(payload: Any) -> dict[str, Any]:
         raw_total = len([item for item in normalized.get("owned_failures") or [] if isinstance(item, str) and item.strip()])
         if raw_total > len(deduped_failures):
             normalized["owned_failures_total"] = raw_total
-        if len(deduped_failures) > _OWNED_FAILURES_CAP:
-            normalized["owned_failures_unique_total"] = len(deduped_failures)
-            normalized["owned_failures"] = deduped_failures[:_OWNED_FAILURES_CAP]
-        else:
-            normalized["owned_failures"] = deduped_failures
+        normalized["owned_failures"] = deduped_failures
     return normalized
 
 
@@ -251,6 +244,8 @@ class BudgetConfig:
     max_work_items: int = 200
     max_depth: int = 5
     max_plan_size: int = 50
+    max_validators_per_plan: int | None = 2
+    require_validator_for_plan_size: int | None = 3
     max_artifact_bytes: int = 1_000_000
     max_total_artifact_bytes: int = 50_000_000
     default_work_item_timeout: float | None = None

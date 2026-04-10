@@ -113,6 +113,41 @@ async def test_max_plan_size_respects_metadata_override():
 
 
 @pytest.mark.asyncio
+async def test_validator_policy_respects_metadata_overrides():
+    tool = SubmitPlanTool()
+    ctx = _ctx()
+    ctx.metadata["max_validators_per_plan"] = 1
+    ctx.metadata["require_validator_for_plan_size"] = 3
+
+    no_validator = SubmitPlanInput.model_validate(
+        {
+            "items": [
+                {"agent_name": "a", "local_id": "w1"},
+                {"agent_name": "a", "local_id": "w2"},
+                {"agent_name": "a", "local_id": "w3"},
+            ]
+        }
+    )
+    res = await tool.execute(no_validator, ctx)
+    assert res.is_error
+    assert "3 or more items must include at least one validator" in res.output
+
+    too_many_validators = SubmitPlanInput.model_validate(
+        {
+            "items": [
+                {"agent_name": "validator", "local_id": "v1"},
+                {"agent_name": "validator", "local_id": "v2"},
+            ]
+        }
+    )
+    fresh_ctx = _ctx()
+    fresh_ctx.metadata["max_validators_per_plan"] = 1
+    res = await tool.execute(too_many_validators, fresh_ctx)
+    assert res.is_error
+    assert "submitted plans may have at most 1" in res.output
+
+
+@pytest.mark.asyncio
 async def test_submit_plan_rejects_unknown_dep_against_live_team_run(monkeypatch):
     tool = SubmitPlanTool()
     ctx = _ctx()

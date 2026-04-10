@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from uuid import uuid4
+
 from message.messages import ConversationMessage, TextBlock, ToolUseBlock
 from tests.test_e2e.conftest import parse_sse_events
 
@@ -115,82 +117,98 @@ class TestRunDetailUsageAPI:
         client, _ = app_client
         from server.app_factory import agent_run_store, session_store, usage_store
 
+        suffix = uuid4().hex[:8]
+        session_id = f"seed-{suffix}"
+        parent_run_id = f"parent-{suffix}"
+        child_run_id = f"child-{suffix}"
+
         session_store.upsert(
-            session_id="seed-session",
+            session_id=session_id,
             cwd="/tmp",
             model="claude-seeded",
             message_count=0,
         )
         agent_run_store.create_run(
-            run_id="parent-run",
-            session_id="seed-session",
+            run_id=parent_run_id,
+            session_id=session_id,
             agent_name="parent-agent",
             input_query="parent task",
         )
-        agent_run_store.finish_run("parent-run", status="completed", response=[])
+        agent_run_store.finish_run(parent_run_id, status="completed", response=[])
         agent_run_store.create_run(
-            run_id="child-run",
-            session_id="seed-session",
+            run_id=child_run_id,
+            session_id=session_id,
             agent_name="subagent",
             input_query="child task",
-            parent_run_id="parent-run",
+            parent_run_id=parent_run_id,
             parent_task_id="bg_1",
         )
-        agent_run_store.finish_run("child-run", status="completed", response={"final_text": "ok"})
+        agent_run_store.finish_run(child_run_id, status="completed", response={"final_text": "ok"})
         usage_store.record(
-            session_id="seed-session",
-            run_id="parent-run",
+            session_id=session_id,
+            run_id=parent_run_id,
             agent_name="parent-agent",
             model_id="claude-parent",
             prompt_tokens=40,
             completion_tokens=10,
         )
         usage_store.record(
-            session_id="seed-session",
-            run_id="child-run",
+            session_id=session_id,
+            run_id=child_run_id,
             agent_name="subagent",
             model_id="claude-child",
             prompt_tokens=15,
             completion_tokens=5,
         )
 
-        resp = client.get("/api/db/runs/parent-run")
+        resp = client.get(f"/api/db/runs/{parent_run_id}")
         assert resp.status_code == 200
         data = resp.json()
+        assert data["parent_run_id"] is None
+        assert data["parent_task_id"] is None
         assert data["usage"]["model_id"] == "claude-parent"
         assert data["usage"]["total_tokens"] == 50
         assert len(data["subagent_runs"]) == 1
         child = data["subagent_runs"][0]
-        assert child["id"] == "child-run"
+        assert child["id"] == child_run_id
         assert child["parent_task_id"] == "bg_1"
         assert child["usage"]["model_id"] == "claude-child"
         assert child["usage"]["total_tokens"] == 20
+
+        child_resp = client.get(f"/api/db/runs/{child_run_id}")
+        assert child_resp.status_code == 200
+        child_data = child_resp.json()
+        assert child_data["parent_run_id"] == parent_run_id
+        assert child_data["parent_task_id"] == "bg_1"
+        assert child_data["usage"]["model_id"] == "claude-child"
 
     def test_session_usage_includes_subagents_for_newly_tracked_runs(self, app_client):
         client, _ = app_client
         from server.app_factory import usage_store
 
+        suffix = uuid4().hex[:8]
+        session_id = f"agg-{suffix}"
         usage_store.record(
-            session_id="agg-session",
-            run_id="parent-run",
+            session_id=session_id,
+            run_id=f"parent-{suffix}",
             agent_name="parent-agent",
             model_id="claude-parent",
             prompt_tokens=30,
             completion_tokens=10,
         )
         usage_store.record(
-            session_id="agg-session",
-            run_id="child-run",
+            session_id=session_id,
+            run_id=f"child-{suffix}",
             agent_name="subagent",
             model_id="claude-child",
             prompt_tokens=5,
             completion_tokens=5,
         )
 
-        resp = client.get("/api/db/usage/agg-session")
+        resp = client.get(f"/api/db/usage/{session_id}")
         assert resp.status_code == 200
         data = resp.json()
-        assert data["session_id"] == "agg-session"
+        assert data["session_id"] == session_id
         assert data["prompt_tokens"] == 35
         assert data["completion_tokens"] == 15
         assert data["total_tokens"] == 50
@@ -200,21 +218,24 @@ class TestRunDetailUsageAPI:
         client, _ = app_client
         from server.app_factory import agent_run_store, session_store
 
+        suffix = uuid4().hex[:8]
+        session_id = f"legacy-{suffix}"
+        run_id = f"legacy-run-{suffix}"
         session_store.upsert(
-            session_id="legacy-session",
+            session_id=session_id,
             cwd="/tmp",
             model="claude-seeded",
             message_count=0,
         )
         agent_run_store.create_run(
-            run_id="legacy-run",
-            session_id="legacy-session",
+            run_id=run_id,
+            session_id=session_id,
             agent_name="legacy-agent",
             input_query="legacy task",
         )
-        agent_run_store.finish_run("legacy-run", status="completed", response=[])
+        agent_run_store.finish_run(run_id, status="completed", response=[])
 
-        resp = client.get("/api/db/runs/legacy-run")
+        resp = client.get(f"/api/db/runs/{run_id}")
         assert resp.status_code == 200
         data = resp.json()
         assert data["usage"] is None

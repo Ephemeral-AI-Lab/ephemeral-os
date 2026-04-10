@@ -442,3 +442,104 @@ async def test_team_run_resume_replays_running_work_item(tmp_path: Path) -> None
     assert revived.dispatcher.graph["A"].agent_run_id is not None
     assert revived.dispatcher.graph["A"].agent_run_id != "AR-old"
     assert revived.artifacts.load("A") == {"done": True}
+
+
+def test_resume_from_rehydrates_retry_metadata_and_clears_running_fields(tmp_path: Path) -> None:
+    store = JsonlTeamRunStore(tmp_path)
+    run_id = "tr-retry-ready"
+    wi = WorkItem(
+        id="A",
+        team_run_id=run_id,
+        agent_name="resume_worker",
+        status=WorkItemStatus.PENDING,
+        kind=WorkItemKind.ATOMIC,
+        root_id="A",
+    )
+    store.append(
+        make_team_run_created(
+            run_id,
+            session_id="sess-1",
+            user_request="resume retry",
+            goal=None,
+            repo_root="/repo",
+            sandbox_id="sbx-123",
+            budgets={},
+        )
+    )
+    store.append(make_work_item_added(run_id, work_item_to_dict(wi)))
+    store.append(make_work_item_status(run_id, "A", "ready"))
+    store.append(make_work_item_status(run_id, "A", "running", agent_run_id="AR-old"))
+    store.append(
+        make_work_item_status(
+            run_id,
+            "A",
+            "pending",
+            agent_run_id=None,
+            started_at=None,
+            finished_at=None,
+            failure_reason=None,
+            artifact_ref=None,
+            retry_count=1,
+        )
+    )
+    store.append(make_work_item_status(run_id, "A", "ready"))
+    store.append(make_team_run_status(run_id, "running"))
+
+    revived = TeamRun.resume_from(store, run_id)
+
+    assert revived.dispatcher.graph["A"].status == WorkItemStatus.READY
+    assert revived.dispatcher.graph["A"].retry_count == 1
+    assert revived.dispatcher.graph["A"].agent_run_id is None
+    assert revived.dispatcher.graph["A"].started_at is None
+    assert revived.dispatcher.graph["A"].finished_at is None
+    assert revived.dispatcher.graph["A"].failure_reason is None
+    assert revived.dispatcher.graph["A"].artifact_ref is None
+
+
+@pytest.mark.asyncio
+async def test_team_run_resume_emits_resume_metadata(tmp_path: Path, monkeypatch) -> None:
+    from team.runtime.registry import unregister
+
+    store = JsonlTeamRunStore(tmp_path)
+    run_id = "tr-resume-meta"
+    wi = WorkItem(
+        id="A",
+        team_run_id=run_id,
+        agent_name="resume_worker",
+        status=WorkItemStatus.PENDING,
+        kind=WorkItemKind.ATOMIC,
+        root_id="A",
+    )
+    store.append(
+        make_team_run_created(
+            run_id,
+            session_id="sess-1",
+            user_request="resume meta",
+            goal=None,
+            repo_root="/repo",
+            sandbox_id="sbx-123",
+            budgets={},
+        )
+    )
+    store.append(make_work_item_added(run_id, work_item_to_dict(wi)))
+    store.append(make_work_item_status(run_id, "A", "ready"))
+    store.append(make_team_run_status(run_id, "running"))
+
+    revived = TeamRun.resume_from(store, run_id)
+    monkeypatch.setattr(revived, "_spawn_executors", lambda: None)
+
+    try:
+        await revived.resume(
+            executor_factory=lambda _team_run: None,
+            num_executors=1,
+            resumed_from=run_id,
+            resumed_from_checkpoint="cp-1",
+        )
+    finally:
+        unregister(run_id)
+
+    resumed_event = store.load_run(run_id)[-1]
+    assert resumed_event.kind == "team_run_status"
+    assert resumed_event.data["status"] == "running"
+    assert resumed_event.data["resumed_from"] == run_id
+    assert resumed_event.data["resumed_from_checkpoint"] == "cp-1"

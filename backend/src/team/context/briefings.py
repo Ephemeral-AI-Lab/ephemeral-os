@@ -20,6 +20,7 @@ from __future__ import annotations
 from typing import Any, TYPE_CHECKING
 
 from team.context.canonicalize import scope_of_artifact
+from team.context.scout_briefings import scout_artifact_invalidated
 from team.models import Briefing, BudgetConfig, WorkItem
 
 if TYPE_CHECKING:
@@ -96,6 +97,8 @@ def render_briefings(
     shared_items = list(shared_src.items())
     for key, b in shared_items:
         body = _load_brief(b, artifact_store)
+        if scout_artifact_invalidated(project_context, body):
+            continue
         scope = key or scope_of_artifact(body)
         if not _claim(scope, b.ref):
             continue
@@ -110,6 +113,8 @@ def render_briefings(
     # Tier 2 — dep_artifacts
     for dep in wi.dep_artifacts:
         body = artifact_store.load(dep.artifact_ref)
+        if scout_artifact_invalidated(project_context, body):
+            continue
         scope = scope_of_artifact(body)
         if not _claim(scope, dep.artifact_ref):
             continue
@@ -123,6 +128,8 @@ def render_briefings(
     # Tier 3 — explicit briefings
     for b in wi.briefings:
         body = _load_brief(b, artifact_store)
+        if scout_artifact_invalidated(project_context, body):
+            continue
         scope = scope_of_artifact(body)
         ref = b.ref if b.source == "artifact" else None
         if not _claim(scope, ref):

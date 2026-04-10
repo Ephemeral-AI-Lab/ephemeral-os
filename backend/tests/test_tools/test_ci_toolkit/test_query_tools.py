@@ -132,7 +132,7 @@ async def test_ci_scope_status_returns_live_scope_packet():
     assert ctx.metadata["coherence_token"] == data["coherence_token"]
 
 
-async def test_ci_scope_status_defaults_to_owned_scope_paths_when_unspecified():
+async def test_ci_scope_status_defaults_to_default_scope_paths_when_unspecified():
     svc = MagicMock()
     svc.ledger.generation = 1
     svc.ledger.recent_entries.return_value = []
@@ -530,6 +530,45 @@ async def test_workspace_structure_rejects_scout_root_listing_when_scope_is_conc
 
     assert result.is_error
     assert "may not list the workspace root" in result.output
+
+
+async def test_workspace_structure_allows_immediate_parent_for_single_file_target():
+    svc = MagicMock()
+    svc.symbol_index = MagicMock()
+
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        result = await ci_workspace_structure.execute(
+            ci_workspace_structure.input_model(path="src/pkg"),
+            _ctx(
+                {
+                    "agent_name": "scout",
+                    "ci_service": svc,
+                    "scope_packet": {"scope_paths": ["src/pkg/owned.py"]},
+                }
+            ),
+        )
+
+    assert not result.is_error
+
+
+async def test_workspace_structure_rejects_grandparent_for_single_file_target():
+    svc = MagicMock()
+    svc.symbol_index = MagicMock()
+
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        result = await ci_workspace_structure.execute(
+            ci_workspace_structure.input_model(path="src"),
+            _ctx(
+                {
+                    "agent_name": "scout",
+                    "ci_service": svc,
+                    "scope_packet": {"scope_paths": ["src/pkg/owned.py"]},
+                }
+            ),
+        )
+
+    assert result.is_error
+    assert "Enumerate only the exact target path or, for a single-file target, its immediate parent" in result.output
 
 
 async def test_workspace_structure_non_symbol_index_returns_empty():

@@ -14,7 +14,7 @@ from team.context.project import ProjectContext
 from team.models import BudgetConfig, BudgetState, Plan, TeamRunStatus, WorkItemKind, WorkItemStatus
 from team.runtime.context_builder import TeamAgentContext
 from team.runtime.dispatcher import Dispatcher
-from team.runtime.team_run import TeamRun
+from team.runtime.team_run import TeamRun, _default_num_executors
 from team.runtime.executor import Executor
 from team.runtime.team_run import TeamRuntimeServices
 from tools.posthook import SubmittedSummary
@@ -282,6 +282,14 @@ def test_team_run_sandbox_id_defaults_to_none():
 def test_team_run_sandbox_id_stored():
     tr = TeamRun(session_id="S1", user_request="hello", sandbox_id="sb-abc123")
     assert tr.sandbox_id == "sb-abc123"
+
+
+def test_team_run_uses_parallel_default_executor_pool(monkeypatch):
+    monkeypatch.setenv("TEAM_DEFAULT_NUM_EXECUTORS", "3")
+
+    assert _default_num_executors() == 3
+    tr = TeamRun(session_id="S1", user_request="hello")
+    assert tr._num_executors == 3
 
 
 def test_team_run_accepts_injected_runtime_services():

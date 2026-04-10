@@ -52,7 +52,10 @@ def test_planner_playbook_gates_share_briefing_on_tool_availability() -> None:
     assert 'A missing `class` hit from `ci_query_symbols(kind="class")` is not enough to conclude a public API is absent.' in planner
     assert 'Do not claim "class X is missing from the codebase" from planner-side symbol misses alone.' in planner
     assert "On fresh benchmark root turns, do **not** open with `atlas_lookup`." in planner
+    assert "Call `atlas_lookup` only after that fresh current-turn context is exhausted" in planner
+    assert "use current-turn scout / dep artifacts before Atlas in a changing repo" in planner
     assert "on fresh benchmark roots, use `ci_scope_status(...)` and fresh scouts before any atlas lookup" in planner
+    assert "Planner sibling-awareness should come from `ci_scope_status(...)` packets first." in planner
     assert "load `exploration-script` before the first non-reference tool call" in planner
     assert "if the likely production owner path is already exact, the first live CI action must be `ci_scope_status(scope_paths=[...])`" in planner
     assert "If file existence is still a hypothesis, spend exactly one narrow `ci_workspace_structure(path=\"<nearest likely production directory/package>\", max_depth<=4)` pass first, then call `ci_scope_status(...)` on an exact existing production path from that listing." in planner
@@ -122,6 +125,7 @@ def test_sweevo_context_treats_missing_share_briefing_as_non_blocking() -> None:
     assert "Fresh benchmark roots should stay live-first." in sweevo
     assert "prefer `ci_scope_status(scope_paths=[...])` plus fresh scouts over `atlas_lookup`" in sweevo
     assert "the first live planning tool call should be `ci_scope_status(scope_paths=[...])` on the likely owner files/directories" in sweevo
+    assert "Same-run scout context beats Atlas in a moving repo." in sweevo
     assert "the first wave should usually cover 3-4 disjoint production-owner scouts" in sweevo
     assert "otherwise use the smallest useful disjoint wave" in sweevo
     assert "Do not bundle unrelated owner surfaces into one scout lane just to mimic an old two-lane default" in sweevo
@@ -135,9 +139,9 @@ def test_sweevo_context_treats_missing_share_briefing_as_non_blocking() -> None:
     assert "Do not push that rediscovery work down to the next developer or validator lane." in sweevo
     assert "Preserve exact pytest node ids verbatim in planner payloads." in sweevo
     assert "Do not shorten `test_info_versions` to `test_info`" in sweevo
-    assert "At the submitted benchmark root, keep at most two validators total." in sweevo
+    assert "At any submitted benchmark plan level, keep validators paired with the concrete developer lanes they actually verify and stay within the active runtime validator cap for that plan" in sweevo
     assert "Child benchmark plans inherit that same cap." in sweevo
-    assert "instead of emitting a third validator" in sweevo
+    assert "instead of emitting one validator per developer or recreating an umbrella validation layer" in sweevo
     assert "The default large-root benchmark shape for this repo is: two critical developer lanes, one residual child planner lane, and one validator lane." in sweevo
     assert "If a guessed production owner file turns out to be missing, re-anchor on the nearest exact existing production directory/package path or park that cluster behind a child planner." in sweevo
     assert "`owned_files` is not a hypothesis bucket." in sweevo
@@ -147,8 +151,8 @@ def test_sweevo_context_treats_missing_share_briefing_as_non_blocking() -> None:
     assert "When the failure packet itself names a missing module import path such as `from dask._compatibility import PY_VERSION`" in sweevo
     assert 'Do not "repair" the benchmark by editing the unowned test file' in sweevo
     assert "mentioned only in `owned_failures`, `verify`, or a failing command is not test ownership" in sweevo
-    assert "`owned_files` wins every write-permission decision." in sweevo
-    assert "the developer should report `scope_mismatch` with the exact missing import/export and likely owner path" in sweevo
+    assert "`owned_files` defines the default edit surface, not an absolute write-permission wall." in sweevo
+    assert "the developer may widen to that likely owner when it remains the same cohesive bug" in sweevo
     assert 'A developer claim that a named benchmark test now encodes "old behavior" after a contradicted patch is not enough to open a test-edit lane.' in sweevo
     assert "do not re-read the test body or shared parameter-plumbing files to author a patch recipe" in sweevo
     assert "Scout launches must satisfy the literal runtime schema" in sweevo
@@ -219,14 +223,14 @@ def test_developer_playbook_anchors_import_failures_to_named_pytest_surface() ->
     assert "Rejected mutating shell probes are a stop sign." in developer
     assert "patch the last merge/update function that overwrites the public field" in developer
     assert "If the first failing pytest surface is inside an unowned test file" in developer
-    assert "When the first failing import/collection surface points to a missing export/module in a different production file than your `owned_files`, report `scope_mismatch`" in developer
+    assert "When the first failing import/collection surface points to a missing export/module in a different production file than your `owned_files`, you may widen to that owner when it is the clear minimal fix." in developer
     assert "Named-node mismatches are not permission to rewrite tests." in developer
     assert "`owned_failures` is not a write allowlist." in developer
-    assert "If the first reproducible failure names an unowned test file and the missing import/export lives outside your assigned production files, stop with `scope_mismatch`" in developer
-    assert "A failing test path in `owned_failures`, `verify`, or reproduction output is evidence, not write permission." in developer
-    assert "Before any `daytona_edit_file` or `daytona_write_file`, check whether the destination path is explicitly inside `owned_files`" in developer
-    assert "`owned_files` wins every write-permission decision." in developer
-    assert 'if you catch yourself reasoning "the failing test is listed in `owned_failures`, so I can patch that test import," stop.' in developer
+    assert "If the first reproducible failure names an unowned test file and the missing import/export lives outside your assigned production files, patch the true owner when it is clearly the same bug and the change stays bounded." in developer
+    assert "a failing test path in `owned_failures`, `verify`, or reproduction output is evidence, not automatic proof that the test file is the right first patch target." in developer
+    assert "Treat `owned_files` as the default landing zone, not a hard barrier." in developer
+    assert "`owned_files` guides the default edit surface." in developer
+    assert 'if you catch yourself reasoning "the failing test is listed in `owned_failures`, so I should patch that test import first," stop.' in developer
     assert 'Do not claim the test encodes "old behavior", "stale expectations", or needs a test-only follow-up' in developer
     assert "Do not synthesize hybrid public strings to satisfy competing tests." in developer
     assert "read the exact observed-vs-expected mismatch from that failure output before the next edit" in developer
@@ -237,7 +241,7 @@ def test_developer_playbook_anchors_import_failures_to_named_pytest_surface() ->
     assert "Treat `daytona_bash` as an execution tool, not a discovery or editing tool." in developer
     assert "Do not fall back to `daytona_bash` for file reads, file writes, search, globbing, or ad hoc patch application" in developer
     assert "Do not use `daytona_bash` for `ls`, `pwd`, `cd`, `find`, or other workspace-discovery probes." in developer
-    assert "if `dask/dataframe/io/tests/test_hdf.py` fails on `from dask._compatibility import PY_VERSION` while your lane owns only `dask/dataframe/io/hdf.py` / `dask/dataframe/io/json.py`, stop with `scope_mismatch`" in developer
+    assert "if `dask/dataframe/io/tests/test_hdf.py` fails on `from dask._compatibility import PY_VERSION` while your lane owns only `dask/dataframe/io/hdf.py` / `dask/dataframe/io/json.py`, treat `dask/_compatibility.py` as an allowed supporting edit when it is the clear minimal owner" in developer
 
 
 def test_validator_playbook_mentions_codeact_is_unavailable_in_team_lanes() -> None:
