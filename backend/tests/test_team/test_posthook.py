@@ -609,6 +609,9 @@ def test_team_replanner_definition_uses_submit_replan_posthook_not_replan_tools(
     assert replanner.posthook.agent_name == SUBMIT_REPLAN_AGENT
     assert replanner.tool_call_limit == 100
     assert "atlas" in replanner.toolkits
+    assert "load the corrective-fast-path reference before deeper analysis" in replanner.system_prompt
+    assert "If ``load_skill_reference`` is available" in replanner.system_prompt
+    assert "the first one must be ``ci_scope_status(...)`` on the exact owner surface or owning directory" in replanner.system_prompt
     assert "submit_plan_posthook" not in replanner.toolkits
     assert "submit_replan_posthook" not in replanner.toolkits
     assert "posthook_submit_replan" not in replanner.toolkits

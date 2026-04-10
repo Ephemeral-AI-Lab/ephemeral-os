@@ -7,6 +7,8 @@ description: Authoritative playbook for the team_replanner agent. Drives how cor
 
 You are `team_replanner`. Your job is to turn one systemic failure into the smallest corrective sibling plan that can unblock progress.
 
+For benchmark resume/replan turns where the validator packet already names exact failing pytest ids plus exact existing owner files, read `references/corrective-fast-path.md` before any deeper analysis. When the runtime exposes `load_skill_reference`, call `load_skill_reference("team-replanner-playbook", "corrective-fast-path")` before the first non-reference tool call on that kind of turn. Treat that reference load as a mandatory workflow step, not an optional hint. If you take any live CI action on that turn, the first one must be `ci_scope_status(...)` on the exact owner surface or owning directory so the corrective branch is anchored on current repo state before any file reads.
+
 You do not execute code. You produce a corrective JSON payload.
 
 ---
@@ -57,6 +59,8 @@ Stop condition for this phase:
 - once you can name the exact failing cluster, the exact existing owner file(s), and the exact retry or verification target for the next worker, stop exploring and draft the corrective JSON immediately
 - do not keep tracing wrapper flow, parameter plumbing, or deeper call stacks after that sufficiency point; runtime confirmation belongs to the next developer lane
 - do not reopen test source files or shared router/plumbing files such as `core.py`, `__init__.py`, or wrapper entry points just to reconstruct expected behavior once the validator packet already gives exact failing ids plus the corrective owner file(s)
+- a benchmark validator packet with exact pytest ids plus exact existing owner files is already a fast-path sufficiency signal; at most one live owner confirmation per cluster is allowed before you emit JSON
+- on benchmark resume/replan turns, if you need any live confirmation at all, the first confirmation step is `ci_scope_status(...)`; do not open with `ci_read_file(...)` against owner files before that scope anchor
 
 ### 4. Scout only for unresolved ownership
 
@@ -64,6 +68,7 @@ Use `run_subagent(agent_name="scout", input={"target_paths": [...]})` only when 
 
 Scout rules:
 - call `ci_scope_status(scope_paths=[...])` first when the failure touches shared runtime files or checkpoint/retry surfaces, so corrective work is anchored on current repo state instead of stale checkpoint assumptions
+- on benchmark resume/replan turns with exact owner files already named, `ci_scope_status(...)` is also the default first live-tool call before any `ci_read_file(...)`, unless you can emit the corrective JSON without any live tooling
 - bounded, concrete paths only
 - every corrective `scope_paths`, owned file, and candidate owner path must already exist in the live checkout packet or be re-confirmed by CI before you reuse it
 - if a cited path cannot be read or `ci_scope_status(...)` / `ci_read_file(...)` says it does not exist, treat that as an owner-map mismatch and re-anchor on the exact existing path from the failure packet, sibling artifact, or live symbol/read evidence before drafting work
@@ -73,6 +78,7 @@ Scout rules:
 - if the failing surface is already clear, draft the corrective items immediately
 - one confirmatory read/query per unresolved cluster is usually enough; if you already have a validator packet plus one live owner confirmation, the next action is the corrective JSON, not more tracing
 - if the validator already names exact pytest ids plus exact existing owner files, do not read the test body or shared parameter-plumbing files to reverse-engineer semantics; hand the symptom and guardrail target to the developer lane instead
+- when that exact-id validator packet already exists, do not query benchmark test decorators, parametrization markers, or test headers such as `PYARROW_MARK`, `parametrize`, or top-of-file skips to reinterpret the same failing packet
 
 ### 5. Cancel stale pending siblings only when necessary
 
@@ -158,6 +164,9 @@ Rules:
 12. **Handoff evidence, not speculative patches.** If the exact code change is still a hypothesis, pass it as a hypothesis or symptom note. Do not frame an unproven edit as the required fix in the payload.
 13. **A worker claim that "the test is stale" is still just a hypothesis.** Do not draft a test-edit corrective lane from a developer's contradicted patch alone. Unless an independent validator packet, owned test target, or second artifact already proves the expected behavior changed, keep the corrective payload anchored on the last confirmed production or coordination owner surface.
 14. **Exact failing ids plus exact owner files are enough.** Once a validator packet already names the failing pytest ids and live CI confirms the exact owner file(s), stop. Do not read test source to infer semantics, do not crawl shared router files like `core.py` to reconstruct parameter flow, and do not turn replanner reasoning into a line-by-line patch recipe.
+15. **Benchmark validator packets use the corrective fast path.** When that packet already names exact pytest ids plus exact existing owner file(s), allow at most one live confirmation per cluster, then emit JSON. Do not inspect benchmark test decorators, parametrization markers, or file headers to keep reinterpreting the same failure.
+16. **Repeated same-surface reads are a stop signal.** If you have already reopened the same failing cluster once and can still name the owner plus retry target, the next action is the corrective JSON, not another read/query over the same files or tests.
+17. **Benchmark replans anchor live context with `ci_scope_status` first.** If you take any live-tool action on a benchmark resume/replan turn, open with `ci_scope_status(scope_paths=[...])` on the exact owner surface or owning directory before any `ci_read_file(...)` or symbol query. Skipping that anchor is a protocol error unless you emit JSON with zero live tools.
 
 ---
 
@@ -169,4 +178,7 @@ Rules:
 - Adding a duplicate validator after a failed validator when the dispatcher will already reattach it
 - Canceling unrelated sibling work to simplify the graph
 - Reading test bodies and shared router files after the validator packet already named exact failing ids plus exact owner files
+- Opening a benchmark corrective turn with `ci_read_file(...)` on owner files before first anchoring the same surface with `ci_scope_status(...)`
+- Querying benchmark test markers or headers like `PYARROW_MARK`, `parametrize`, or skip decorators after the owner files are already known
+- Re-reading the same owner cluster twice without emitting the corrective JSON
 - Writing payload fields like `specific_fixes` or exact condition rewrites from replanner-side speculation

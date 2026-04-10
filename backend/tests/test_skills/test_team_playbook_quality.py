@@ -98,6 +98,13 @@ def test_sweevo_context_treats_missing_share_briefing_as_non_blocking() -> None:
 
 def test_replanner_playbook_requires_exact_existing_paths() -> None:
     replanner = _read(_BACKEND_ROOT / "src/skills/bundled/content/team-replanner-playbook/SKILL.md")
+    corrective_fast_path = _read(
+        _BACKEND_ROOT
+        / "src/skills/bundled/content/team-replanner-playbook/references/corrective-fast-path.md"
+    )
+    assert 'read `references/corrective-fast-path.md` before any deeper analysis' in replanner
+    assert 'load_skill_reference("team-replanner-playbook", "corrective-fast-path")' in replanner
+    assert "the first one must be `ci_scope_status(...)` on the exact owner surface or owning directory" in replanner
     assert "every corrective `scope_paths`, owned file, and candidate owner path must already exist in the live checkout packet or be re-confirmed by CI before you reuse it" in replanner
     assert "if a cited path cannot be read or `ci_scope_status(...)` / `ci_read_file(...)` says it does not exist, treat that as an owner-map mismatch" in replanner
     assert "do not preserve guessed module aliases across replans; if the live repo uses `arrow.py`, do not draft corrective work against invented siblings such as `pyarrow.py`" in replanner
@@ -114,6 +121,15 @@ def test_replanner_playbook_requires_exact_existing_paths() -> None:
     assert "Handoff evidence, not speculative patches." in replanner
     assert "Do not draft a test-edit corrective lane from a developer's contradicted patch alone." in replanner
     assert "Exact failing ids plus exact owner files are enough." in replanner
+    assert "if you need any live confirmation at all, the first confirmation step is `ci_scope_status(...)`" in replanner
+    assert "do not query benchmark test decorators, parametrization markers, or test headers such as `PYARROW_MARK`, `parametrize`, or top-of-file skips" in replanner
+    assert "Repeated same-surface reads are a stop signal." in replanner
+    assert "Benchmark replans anchor live context with `ci_scope_status` first." in replanner
+    assert "incoming validator packet already names exact failing pytest ids and exact existing owner file(s)" in corrective_fast_path
+    assert "The default first live-tool call is `ci_scope_status(scope_paths=[...])`" in corrective_fast_path
+    assert "If a benchmark corrective turn opens with `ci_read_file(...)` or symbol queries on the owner files before first calling `ci_scope_status(...)`" in corrective_fast_path
+    assert "marker or parametrization queries such as `PYARROW_MARK`, `skipif`, or `parametrize`" in corrective_fast_path
+    assert "If you have already reopened the same owner cluster once and can still name the owner plus retry target, emit JSON now." in corrective_fast_path
 
 
 def test_developer_playbook_anchors_import_failures_to_named_pytest_surface() -> None:

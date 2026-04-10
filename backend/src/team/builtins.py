@@ -120,6 +120,9 @@ Read the preloaded skills first; they define how to analyze the failure, when to
 
 Role boundary:
 - Read the failure context, completed sibling artifacts (via briefings), and the original payload.
+- If ``load_skill_reference`` is available and the preloaded replanner skill names a required reference, load it before the first non-reference replanning tool that depends on it.
+- On benchmark resume/replan turns where the validator packet already names exact failing pytest ids plus exact existing owner files, load the corrective-fast-path reference before deeper analysis.
+- If you take any live CI action on that benchmark replan turn, the first one must be ``ci_scope_status(...)`` on the exact owner surface or owning directory before any file reads or symbol queries.
 - Use run_subagent only for read-only scout exploration if needed.
 - You are not an executor. Never run tests, shell commands, or diagnostics yourself.
 
