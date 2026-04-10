@@ -219,6 +219,39 @@ def _benchmark_test_files(payload: dict[str, Any]) -> set[str]:
     return refs
 
 
+def _benchmark_root_missing_scope_paths(
+    *,
+    context: ToolExecutionContext,
+    requested: list[str],
+    svc: Any,
+) -> list[str]:
+    payload = _benchmark_root_payload(context)
+    if payload is None or not requested:
+        return []
+    symbol_index = getattr(svc, "symbol_index", None)
+    raw_symbols = getattr(symbol_index, "_symbols", None)
+    if not isinstance(raw_symbols, dict) or not raw_symbols:
+        return []
+    indexed_paths = {
+        str(path).strip().lstrip("/")
+        for path in raw_symbols.keys()
+        if str(path).strip()
+    }
+    if not indexed_paths:
+        return []
+
+    missing: list[str] = []
+    for candidate in requested:
+        normalized = str(candidate).strip().lstrip("/")
+        if not normalized:
+            continue
+        prefix = normalized.rstrip("/") + "/"
+        if normalized in indexed_paths or any(path.startswith(prefix) for path in indexed_paths):
+            continue
+        missing.append(candidate)
+    return missing
+
+
 def _reject_test_only_symbol_hits(
     *,
     context: ToolExecutionContext,
@@ -803,12 +836,27 @@ async def ci_scope_status(
     svc, err = _svc_or_error(context)
     if err:
         return err
-    del svc
     requested = normalize_scope_paths(scope_paths or [])
     if not requested:
         requested = normalize_scope_paths(context.metadata.get("default_scope_paths") or [])
     if not requested:
         requested = scope_paths_for_write(context)
+    missing = _benchmark_root_missing_scope_paths(
+        context=context,
+        requested=requested,
+        svc=svc,
+    )
+    if missing:
+        joined = ", ".join(missing)
+        return ToolResult(
+            output=(
+                "ci_scope_status: benchmark-root planners must anchor on exact existing "
+                "files/directories from the live checkout. The requested scope paths are "
+                f"missing: {joined}. Re-anchor on the nearest existing production "
+                "directory/package before continuing."
+            ),
+            is_error=True,
+        )
     packet = build_live_scope_packet(
         context,
         scope_paths=requested,

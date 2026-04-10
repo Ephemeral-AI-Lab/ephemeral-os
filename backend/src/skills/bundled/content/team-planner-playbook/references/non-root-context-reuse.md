@@ -118,3 +118,4 @@ Fresh exploration is not justified when:
 - Never call a nested planner with `prompt=null` or with no concrete decomposition question. That is a protocol error, not exploration.
 - If a parent expansion hint already says "one child for X, one child for Y, one child for Z", your job is to convert X/Y/Z into concrete worker items, not to open a new planning tree for X/Y/Z.
 - If inherited `owned_failures` already contain exact pytest node ids, preserve them verbatim downstream. Do not rename, shorten, de-parameterize, or substitute nearby test names while expanding the child plan.
+- Do not "improve" inherited benchmark filenames into guessed variants such as `test_dask_cli.py`. Preserve the exact basename from the parent or prompt until live structure proves a different exact path exists.

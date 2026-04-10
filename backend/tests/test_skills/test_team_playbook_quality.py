@@ -54,6 +54,12 @@ def test_planner_playbook_gates_share_briefing_on_tool_availability() -> None:
     assert "On fresh benchmark root turns, do **not** open with `atlas_lookup`." in planner
     assert "on fresh benchmark roots, use `ci_scope_status(...)` and fresh scouts before any atlas lookup" in planner
     assert "load `exploration-script` before the first non-reference tool call" in planner
+    assert "the first live CI action must be `ci_scope_status(scope_paths=[...])` on the likely owner files/directories" in planner
+    assert "Do not open with `ci_workspace_structure(...)`, `ci_query_symbols(...)`, or other live CI queries before that anchor." in planner
+    assert "do not draft or narrate a concrete scout wave until one `ci_scope_status(...)` anchor has already succeeded" in planner
+    assert "Do not call `run_subagent(...)`, list scout targets, or narrate a concrete scout wave before that anchor succeeds." in planner
+    assert "before every `run_subagent(agent_name=\"scout\", ...)` call, compare the proposed `target_paths` against the named benchmark test files" in planner
+    assert "If file existence is still a hypothesis, prefer the nearest likely owner directory/package in that first `ci_scope_status(...)` call instead of a guessed leaf file." in planner
     assert "`WAIT_REQUIRES_PROGRESS_CHECK`, duplicate-scout rejection, or a budget warning are stop-and-plan signals" in planner
     assert 'If you plan to join `task_id="all"`, inspect each fresh scout in that batch first' in planner
     assert 'Never call `run_subagent` with `agent_name="team_planner"`' in planner
@@ -70,11 +76,30 @@ def test_planner_playbook_gates_share_briefing_on_tool_availability() -> None:
     assert "keep at most two root validators" in planner
     assert "The global validator cap still applies inside child plans." in planner
     assert "Do not emit one validator per developer when that would exceed the cap." in planner
+    assert "the first live CI action must be `ci_scope_status(scope_paths=[...])`" in planner
+    assert "Do not open with `ci_workspace_structure(...)`, `ci_query_symbols(...)`, or other live CI queries before that anchor." in planner
+    assert "the first scout wave should usually cover 3-4 disjoint production-owner slices, not only the top two clusters by failure count" in planner
+    assert "Cluster size orders the wave; it does not cap it at two." in planner
+    assert "Do not bundle unrelated owner surfaces into one scout just to imitate an old two-lane cap" in planner
+    assert "Do not pack unrelated owner surfaces into one scout lane just to honor an outdated first-wave cap." in planner
+    assert "Do not spend one of those first-wave scout slots on a guessed missing file such as `parquet.py`" in planner
+    assert "Do not guess file names from test names such as `parquet.py`, `utils_dataframe.py`, or similar prompt-shaped aliases." in planner
+    assert "spend at most one parent-side `ci_workspace_structure(...)` pass per unresolved top-level owner cluster before opening scouts" in planner
+    assert "Only exact existing production paths from live CI may become scout targets." in planner
     assert "if you cannot quote an exact FAIL_TO_PASS node id verbatim from the prompt, use the exact benchmark test file path instead" in planner
+    assert "Keep `owned_failures` entries literal checkout-relative prompt ids only" in planner
+    assert "Keep command-bearing payload keys canonical and minimal." in planner
+    assert "Do not invent ad hoc command fields like `retries` to smuggle in guessed pytest paths." in planner
     assert "a missing guessed owner file means re-anchor on the nearest exact existing production directory/package or hand the slice to a residual child planner" in planner
+    assert "If a proposed first-wave `target_paths` entry still equals a named benchmark test file" in planner
     assert "`ci_query_symbols(...)` results that only point back into the benchmark test files are symptom evidence, not production ownership" in planner
+    assert "Do not invent sibling directories like `dask/cli`, and do not redirect the lane into `dask/tests` as a substitute for missing production ownership." in planner
+    assert "Do not infer an optional-dependency or environment root cause from cluster size alone." in planner
     assert "Child `owned_files` must contain only confirmed existing checkout-relative paths." in planner
     assert "keep the exact failing test file in `owned_failures`, move the unresolved production guess into `expansion_hint` or `notes`" in planner
+    assert "preserve them byte-for-byte downstream" in planner
+    assert 'Keep `test_cli.py` as `test_cli.py`, not `test_dask_cli.py`' in planner
+    assert "spend at most one `ci_scope_status(...)` freshness check before emitting direct developer/validator lanes" in planner
 
 
 def test_sweevo_context_treats_missing_share_briefing_as_non_blocking() -> None:
@@ -89,6 +114,10 @@ def test_sweevo_context_treats_missing_share_briefing_as_non_blocking() -> None:
     assert "Once that missing public name is anchored to a local export file, do not spend developer budget on dependency version checks" in sweevo
     assert "Fresh benchmark roots should stay live-first." in sweevo
     assert "prefer `ci_scope_status(scope_paths=[...])` plus fresh scouts over `atlas_lookup`" in sweevo
+    assert "the first live planning tool call should be `ci_scope_status(scope_paths=[...])` on the likely owner files/directories" in sweevo
+    assert "the first wave should usually cover 3-4 disjoint production-owner scouts" in sweevo
+    assert "otherwise use the smallest useful disjoint wave" in sweevo
+    assert "Do not bundle unrelated owner surfaces into one scout lane just to mimic an old two-lane default" in sweevo
     assert "Retry/replan handoff must preserve the evidence packet." in sweevo
     assert "Ownership mismatch is a planning problem." in sweevo
     assert "Exact existing paths only." in sweevo
@@ -101,6 +130,7 @@ def test_sweevo_context_treats_missing_share_briefing_as_non_blocking() -> None:
     assert "At the submitted benchmark root, keep at most two validators total." in sweevo
     assert "Child benchmark plans inherit that same cap." in sweevo
     assert "instead of emitting a third validator" in sweevo
+    assert "The default large-root benchmark shape for this repo is: two critical developer lanes, one residual child planner lane, and one validator lane." in sweevo
     assert "If a guessed production owner file turns out to be missing, re-anchor on the nearest exact existing production directory/package path or park that cluster behind a child planner." in sweevo
     assert "`owned_files` is not a hypothesis bucket." in sweevo
     assert "keep missing guessed owners out of `owned_files`" in sweevo
@@ -179,9 +209,15 @@ def test_developer_playbook_anchors_import_failures_to_named_pytest_surface() ->
     assert "A failing test path in `owned_failures`, `verify`, or reproduction output is evidence, not write permission." in developer
     assert 'Do not claim the test encodes "old behavior", "stale expectations", or needs a test-only follow-up' in developer
     assert "Do not synthesize hybrid public strings to satisfy competing tests." in developer
+    assert "read the exact observed-vs-expected mismatch from that failure output before the next edit" in developer
+    assert "If a narrow debug probe shows a helper already returns the value or shape the test expects, stop editing that helper." in developer
+    assert "keep those entry points behaviorally distinct unless the live failing test proves they should converge" in developer
     assert "If the runtime says `Unknown tool: edit_file`, `write_file`, or `read_file`" in developer
+    assert "the default first live coordination step is `ci_scope_status(scope_paths=[<exact owned file(s) or nearest owning directory>])`" in developer
     assert "Treat `daytona_bash` as an execution tool, not a discovery or editing tool." in developer
     assert "Do not fall back to `daytona_bash` for file reads, file writes, search, globbing, or ad hoc patch application" in developer
+    assert "Do not use `daytona_bash` for `ls`, `pwd`, `cd`, `find`, or other workspace-discovery probes." in developer
+    assert "if `dask/dataframe/io/tests/test_hdf.py` fails on `from dask._compatibility import PY_VERSION` while your lane owns only `dask/dataframe/io/hdf.py` / `dask/dataframe/io/json.py`, stop with `scope_mismatch`" in developer
 
 
 def test_validator_playbook_mentions_codeact_is_unavailable_in_team_lanes() -> None:
@@ -195,6 +231,7 @@ def test_validator_playbook_mentions_codeact_is_unavailable_in_team_lanes() -> N
     assert "A pytest FAIL with exact node ids is already enough." in validator
     assert "Do not turn a failing node list into theories like \"test expectation mismatch\"" in validator
     assert "A failed broad regression command ends execution." in validator
+    assert "the default first live coordination step is `ci_scope_status(scope_paths=[<exact verification file(s) or owning directory>])`" in validator
     assert "RECOMMENDED_ACTION" not in validator
 
 

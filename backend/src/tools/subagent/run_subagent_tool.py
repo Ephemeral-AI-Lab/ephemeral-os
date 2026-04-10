@@ -225,32 +225,6 @@ def _benchmark_root_scout_policy_error(
             "files or directories first, not already-named benchmark test files. Re-anchor on the "
             "corresponding production surface or an exact existing candidate directory."
         )
-    prior_launches_raw = context.metadata.get("_scout_launches_this_turn", 0)
-    prior_launches = int(prior_launches_raw) if isinstance(prior_launches_raw, (int, float)) else 0
-    current_tool_id = str(getattr(context.metadata, "tool_id", None) or context.metadata.get("tool_id") or "").strip()
-    if current_tool_id:
-        launch_order_raw = context.metadata.get("_scout_launch_order_by_tool_use_id", {})
-        if isinstance(launch_order_raw, dict):
-            current_launch_order = launch_order_raw.get(current_tool_id)
-            if isinstance(current_launch_order, (int, float)) and int(current_launch_order) <= 2:
-                return None
-    bg_manager = context.metadata.get("background_task_manager")
-    completed_scout_seen = False
-    if bg_manager is not None and hasattr(bg_manager, "iter_all"):
-        try:
-            completed_scout_seen = any(
-                getattr(task, "tool_name", "") == "run_subagent"
-                and str(getattr(task, "status", "")).lower() != "running"
-                for task in bg_manager.iter_all()
-            )
-        except Exception:
-            completed_scout_seen = False
-    if prior_launches >= 2 and not completed_scout_seen:
-        return (
-            "run_subagent: fresh benchmark-root first scout wave is capped at 2 lanes "
-            "(dominant production owner plus one residual surface). Inspect progress on the "
-            "current wave or wait for a completed scout before opening another lane."
-        )
     return None
 
 

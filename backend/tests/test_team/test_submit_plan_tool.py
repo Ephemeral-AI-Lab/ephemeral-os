@@ -177,6 +177,8 @@ async def test_submit_plan_rejects_benchmark_ref_aliases_against_root_prompt(mon
                     "payload": {
                         "owned_failures": ["tests/test_hdf.py"],
                         "reproduction": ["pytest tests/test_hdf.py -q"],
+                        "verify": ["pytest tests/test_hdf.py -q"],
+                        "retries": ["pytest tests/test_hdf.py::test_read_hdf -q"],
                     },
                 }
             ]
@@ -188,6 +190,8 @@ async def test_submit_plan_rejects_benchmark_ref_aliases_against_root_prompt(mon
     assert res.is_error
     assert "benchmark reference must use the exact prompt path/id" in res.output
     assert "expected 'dask/dataframe/io/tests/test_hdf.py'" in res.output
+    assert "payload.verify[0]" in res.output
+    assert "payload.retries[0]" in res.output
 
 
 @pytest.mark.asyncio

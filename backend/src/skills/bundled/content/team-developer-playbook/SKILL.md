@@ -45,6 +45,7 @@ Run this loop every time:
 
 ### 2. Verify before touching
 Before editing ANY symbol mentioned in your briefing:
+- On benchmark developer lanes, the default first live coordination step is `ci_scope_status(scope_paths=[<exact owned file(s) or nearest owning directory>])` before the first reproduction command or source read. Fresh reservations / recent-changes context beats stale briefings.
 1. `ci_query_symbols(query="<symbol>")` — does it still exist? At what path?
 2. `ci_query_references(file_path=..., symbol=...)` — who calls it? What will your change break?
 3. `ci_recent_changes()` — has a sibling developer touched these files in the last few minutes?
@@ -66,6 +67,7 @@ Treat `daytona_bash` as an execution tool, not a discovery or editing tool. When
 - read with `ci_read_file` or `daytona_read_file`
 - edit/write with `daytona_edit_file` or `daytona_write_file`
 - reserve `daytona_bash` for targeted test commands, syntax checks, or one-off runtime probes that the structured Daytona tools cannot express
+- Do not use `daytona_bash` for `ls`, `pwd`, `cd`, `find`, or other workspace-discovery probes. Use `ci_workspace_structure`, `daytona_grep`, or `daytona_glob`.
 
 ### 3. Read before editing
 Always `ci_read_file` (or `daytona_read_file`) the full target file (or the symbol's line range) before issuing an edit. Never blind-overwrite.
@@ -79,6 +81,7 @@ Always `ci_read_file` (or `daytona_read_file`) the full target file (or the symb
 - **Tests are read-only unless explicitly owned.** You may read failing tests for context, but if the payload does not explicitly assign that test file or a `tests/` path in `owned_files` or direct task instructions, you may not edit it. A failing test path in `owned_failures`, `verify`, or reproduction output is evidence, not write permission. When the only apparent fix would change an unowned test, stop and return `scope_mismatch`.
 - **Unowned test collection/import failures stay on the production surface.** If the first failing pytest surface is inside an unowned test file, inspect the adjacent production/export surface first. Do not "fix" the collection error by editing the unowned test file.
 - **If that adjacent owner is outside your lane, stop.** When the first failing import/collection surface points to a missing export/module in a different production file than your `owned_files`, report `scope_mismatch` with the exact missing import plus the likely owner path. Do not reinterpret `owned_failures` as permission to edit the test file, and do not widen the lane on your own.
+- **Concrete benchmark example:** if `dask/dataframe/io/tests/test_hdf.py` fails on `from dask._compatibility import PY_VERSION` while your lane owns only `dask/dataframe/io/hdf.py` / `dask/dataframe/io/json.py`, stop with `scope_mismatch`. Do not investigate or patch `dask/compatibility.py` from that lane.
 - Tool names are exact. Use `daytona_edit_file` / `daytona_write_file` / `daytona_read_file`, not generic `edit_file` / `write_file` / `read_file`.
 - If the runtime says `Unknown tool: edit_file`, `write_file`, or `read_file`, treat that as a wrong-tool-name mistake, not as an infra blocker. Switch immediately to the corresponding `daytona_*` tool and continue.
 - Do not fall back to `daytona_bash` for file reads, file writes, search, globbing, or ad hoc patch application when a structured Daytona tool exists for that action.
@@ -203,6 +206,17 @@ Your final assistant message must contain:
 - For a dominant benchmark cluster, the first failing example is an entry point, not proof of the full root cause. After a bounded fix, rerun the assigned cluster and confirm the remaining failure shape before declaring the slice resolved.
 - Do not treat one import error, one missing export, or one assertion message as explanation for hundreds of named targets until the post-fix rerun proves the cluster is actually green.
 - If the first fix only reveals the next failure in the same cluster, stay within the same owner slice and continue. Do not declare success until the assigned verification command is green.
+
+## Retest-driven debugging discipline
+
+- After a targeted retest still fails, read the exact observed-vs-expected mismatch from that failure output before the next edit. Do not keep changing helper semantics based only on a prior theory once the latest retest has produced newer concrete evidence.
+- If a narrow debug probe shows a helper already returns the value or shape the test expects, stop editing that helper. Re-read the immediate caller, argument preparation, or merge/update site that consumes that helper output and continue from there.
+- When one retest inside the same owned file reveals a neighboring failing function with the same datatype, index, or merge-shape pathology, treat that as the same owner slice unless the new failure points to a different file or public surface.
+
+## Legacy-vs-new API guardrail
+
+- When a public surface supports both a deprecated path and a newer replacement, keep those entry points behaviorally distinct unless the live failing test proves they should converge.
+- If separate tests assert different warnings, error messages, or validation behavior for a legacy flag versus a new parameter, preserve those differences in code. Do not normalize them into one shared message just because the underlying owner file is the same.
 
 ## Cross-surface guardrails for public output changes
 

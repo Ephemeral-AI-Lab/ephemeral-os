@@ -600,7 +600,16 @@ def test_team_planner_prompt_makes_child_scope_rules_explicit():
     assert "If you cannot quote the node id verbatim from the prompt, use the exact benchmark test file path instead of inventing or renaming a node." in (
         planner.system_prompt
     )
-    assert "keep the first scout wave to the dominant production-owner surface plus at most one residual production-owner or residual-aggregate surface" in (
+    assert "the first live planning tool call must be ``ci_scope_status(scope_paths=[...])`` on the likely owner files/directories" in (
+        planner.system_prompt
+    )
+    assert "on large roots with four or more named clusters and permissive `ci_scope_status(...)` admission, prefer 3-4 disjoint production-owner surfaces" in (
+        planner.system_prompt
+    )
+    assert "follow the smallest useful disjoint wave described by the preloaded skill" in (
+        planner.system_prompt
+    )
+    assert "Do not bundle unrelated owner surfaces into one scout lane just to mimic an old two-lane default" in (
         planner.system_prompt
     )
     assert "If a guessed benchmark owner file is missing, re-anchor on the nearest exact existing production directory/package path" in (

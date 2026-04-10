@@ -424,7 +424,14 @@ async def test_scout_rejects_benchmark_test_file_in_root_first_wave(monkeypatch)
 
 
 @pytest.mark.asyncio
-async def test_scout_rejects_third_root_first_wave_lane_before_any_completion(monkeypatch):
+async def test_scout_allows_third_root_first_wave_lane_before_any_completion(monkeypatch):
+    submitted = SubmittedSummary(
+        summary="scout report",
+        artifact={"target_paths": ["pkg/third_owner.py"], "files": []},
+    )
+    stub, _ = _make_stub_agent(submitted=submitted)
+    _patch_spawn(monkeypatch, stub)
+
     ctx = _ctx(team_run_id="TR_BENCH")
     ctx.metadata["agent_name"] = "team_planner"
     ctx.metadata["work_item_id"] = "ROOT"
@@ -450,8 +457,7 @@ async def test_scout_rejects_third_root_first_wave_lane_before_any_completion(mo
         ctx,
     )
 
-    assert res.is_error
-    assert "first scout wave is capped at 2 lanes" in res.output
+    assert not res.is_error
 
 
 @pytest.mark.asyncio

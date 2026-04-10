@@ -175,6 +175,8 @@ def test_phase_a_rejects_benchmark_test_ref_aliases(monkeypatch):
                 payload={
                     "owned_failures": ["tests/test_hdf.py"],
                     "reproduction": ["pytest tests/test_hdf.py -q"],
+                    "verify": ["pytest tests/test_hdf.py -q"],
+                    "retries": ["pytest tests/test_hdf.py::test_read_hdf -q"],
                 },
             )
         ]
@@ -191,6 +193,8 @@ def test_phase_a_rejects_benchmark_test_ref_aliases(monkeypatch):
     )
     assert any("payload.owned_failures[0]" in issue["field"] for issue in issues)
     assert any("payload.reproduction[0]" in issue["field"] for issue in issues)
+    assert any("payload.verify[0]" in issue["field"] for issue in issues)
+    assert any("payload.retries[0]" in issue["field"] for issue in issues)
 
 
 def test_phase_a_accepts_exact_benchmark_test_refs(monkeypatch):

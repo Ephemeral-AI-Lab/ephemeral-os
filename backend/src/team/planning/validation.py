@@ -300,7 +300,7 @@ def _validate_benchmark_payload_refs(
                     }
                 )
 
-        for key in ("reproduction", "verification"):
+        for key in ("reproduction", "verification", "verify", "retries"):
             raw_value = payload.get(key)
             if isinstance(raw_value, str):
                 values = [raw_value]
