@@ -28,6 +28,8 @@ Use this skill only for stable benchmark policy. Must treat the prompt, payload,
 - After the root anchor, planners must execute at least one scout wave on unresolved production-owner slices before loading final-plan references or emitting the root DAG.
 - Planners must load `team-planner-playbook/task-planning-decomposition` immediately before finalizing the root DAG when `load_skill_reference` is available.
 - Child or scoped benchmark planning must load `team-planner-playbook/non-root-context-reuse` before fresh exploration when `load_skill_reference` is available.
+- Must treat early test-file census, optional-dependency guessing, and repeated source-symbol queries before the first scout wave as planning drift. Reset to one production anchor and scout the unresolved owner slices.
+- When one dominant production subtree and several scattered sibling families coexist, anchor inside the dominant subtree first, then branch to sibling production modules. Never census every benchmark test file before the scout wave.
 - Must anchor `owned_files`, `owned_failures`, and verification commands on exact live paths. Never keep guessed aliases such as `compat.py` when live structure shows `compatibility.py`.
 - Must stop planning once ownership is clear enough to emit the next plan layer. Never keep scouting after sufficiency.
 

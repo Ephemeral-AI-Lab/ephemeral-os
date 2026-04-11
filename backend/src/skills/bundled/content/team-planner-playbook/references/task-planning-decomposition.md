@@ -25,44 +25,17 @@ Use this reference only after ownership is already clear enough to draft the DAG
 - Never drop validation or cross-surface coverage just to trim one item.
 - Never call a bundled leftovers lane atomic unless one shared live owner explains every file in it.
 
-## Validator heuristic
-
-- Prefer one terminal validator when several concrete lanes converge on the same public surface.
-- Add one midflight validator only when it protects a genuinely risky branch cut before later lanes build on it.
-- Every validator must depend on at least one upstream non-validator sibling.
-- A terminal validator must depend on every terminal non-validator sibling in that layer so it gates the whole ready frontier, not just one branch.
-- Recommend not to have more than three validators in a single layer.
-- Prefer to a midflight validator when the concrete lane is a long path or logically more risky.
-
 ## Few-shot examples
 
 - Example: root evidence clearly isolates `pkg/io/hdf.py`, while `pkg/io/parquet/` and `pkg/groupby.py` still each need their own decomposition.
-  Emit `developer(hdf)` now, then two child planners for parquet and groupby.
-  Do not collapse parquet and groupby into one residual bucket just because both live under `dataframe/`.
+  Emit `developer(hdf)` now, then two child planners for parquet and groupby. Do not collapse parquet and groupby into one residual bucket just because both live under `dataframe/`.
 - Example: root scouts map `pkg/io/hdf.py`, `pkg/io/parquet/`, `pkg/groupby.py`, `pkg/io/json.py`, `pkg/utils.py`, `pkg/cli.py`, `pkg/config.py`, and `pkg/compat.py`.
-  Emit `developer(hdf)` now.
-  Keep `parquet` and `groupby` expandable.
-  Put the remaining small slices behind direct leaves or one residual child planner.
-  Do not submit eight root developers plus one validator after a fully mapped scout wave.
+  Emit `developer(hdf)` now, keep `parquet` and `groupby` expandable, and put the remaining small slices behind direct leaves or one residual child planner. Do not submit eight root developers plus one validator after a fully mapped scout wave.
 - Example: one huge `pkg/groupby.py` file contains separate `cov`, `unique`, and `value_counts` regions with different verification families.
-  Use a child planner for the file-level region split even though the owner file is singular.
-  If the parent already handed down a scout for `pkg/groupby.py`, reuse that brief plus symbol lookup to emit the three lanes directly.
-  Do not launch fresh `cov`, `unique`, or `value_counts` scouts on the same file unless one family still lacks real owner evidence.
-  Do not force one atomic developer just because the file path is singular.
-- Example: `pkg/config.py` and `pkg/compat.py` failures both import the same helper after scouts confirm that helper is the real owner.
-  Merge them behind one developer or child planner that targets the shared helper.
-  Do not merge them before that live shared-owner evidence exists.
-- Example: `pkg/tests/test_cli.py` and `pkg/tests/test_compatibility.py` both fail after one release, and scouts map `pkg/cli.py` plus `pkg/compatibility.py` as separate exact owners.
-  Emit two direct developers, or park one behind a residual child planner if the layer is crowded.
-  Do not emit one atomic `cli_compat_fix` lane or one scout artifact that pretends `pkg/cli.py|pkg/compatibility.py` is a single subsystem.
+  Use a child planner for the file-level region split even though the owner file is singular. Do not force one atomic developer just because the file path is singular.
 - Example: one dominant cluster has 32 targets, two secondary clusters have 11 and 8 targets, and the remaining slices are `cli`, `config`, `compat`, `json`, and `utils` with only 1-4 targets each.
-  Emit the dominant lane directly, keep the two secondary clusters separate, and park the residual small slices behind one or more child planners only if live evidence still leaves them unresolved.
-  Do not create one atomic "misc fixes" lane just because those residual slices are individually small.
+  Emit the dominant lane directly, keep the two secondary clusters separate, and park the residual small slices behind one or more child planners only if live evidence still leaves them unresolved. Do not create one atomic "misc fixes" lane just because those residual slices are individually small.
 - Example: HDF and parquet are already split, and five remaining single-file production modules each have their own scout brief (`json.py`, `cli.py`, `config.py`, `compatibility.py`, `utils.py`).
-  Either keep those five developers separate or put them behind one residual child planner that can schedule them well.
-  Do not collapse those unrelated files into one atomic developer just to save root-plan slots.
-- Example: four unrelated direct developers converge only at the grading command.
-  Prefer one terminal validator or grading lane at the end.
-  Do not decorate the graph with paired validator siblings purely for symmetry.
+  Either keep those five developers separate or put them behind one residual child planner that can schedule them well. Do not collapse those unrelated files into one atomic developer just to save root-plan slots.
 - Example: a risky serializer change lands early and three later lanes depend on its shape.
   Place one midflight validator after that serializer lane, then resume the dependent lanes, then keep one final terminal validator.
