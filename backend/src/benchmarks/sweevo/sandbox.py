@@ -87,6 +87,36 @@ def _find_existing_sandbox_by_name(service: Any, name: str) -> dict[str, Any] | 
     return None
 
 
+def _prune_auto_sweevo_sandboxes_for_fresh_run(
+    service: Any,
+    instance: SWEEvoInstance,
+) -> list[str]:
+    """Delete older auto-generated sandboxes for the same instance before a fresh run."""
+    expected_prefix = f"sweevo-test-{instance.instance_id}-"
+    deleted: list[str] = []
+    for sandbox in _safe_list_sandboxes(service):
+        name = str(sandbox.get("name") or "")
+        if not name.startswith(expected_prefix):
+            continue
+        state = str(sandbox.get("state") or "")
+        if state not in {"started", "stopped", "pending_build", "build_failed", "error"}:
+            continue
+        sandbox_id = str(sandbox.get("id") or "")
+        if not sandbox_id:
+            continue
+        try:
+            service.delete_sandbox(sandbox_id)
+            deleted.append(sandbox_id)
+        except Exception:
+            logger.warning(
+                "Failed to delete stale SWE-EVO sandbox %s (%s) during fresh-run prune",
+                name,
+                sandbox_id,
+                exc_info=True,
+            )
+    return deleted
+
+
 def _log_sandbox_creation_failure(
     service: Any,
     *,
@@ -575,6 +605,14 @@ async def create_sweevo_test_sandbox(
                 "repo_dir": repo_dir,
                 "reused_existing": True,
             }
+    else:
+        deleted = _prune_auto_sweevo_sandboxes_for_fresh_run(service, instance)
+        if deleted:
+            logger.info(
+                "Pruned %s stale SWE-EVO sandboxes before fresh run for %s",
+                len(deleted),
+                instance.instance_id,
+            )
 
     create_kwargs: dict[str, Any] = {}
     resolved_snapshot = ""
@@ -590,10 +628,14 @@ async def create_sweevo_test_sandbox(
             )
             create_kwargs["snapshot"] = resolved_snapshot
         else:
-            raise RuntimeError(
-                "SWE-EVO fresh sandbox creation with register_snapshot=True "
-                f"requires an explicit non-latest image version; got {instance.docker_image!r}"
+            fallback_reason = "snapshot_requires_explicit_image_version"
+            logger.info(
+                "Skipping SWE-EVO snapshot registration for %s because image %s "
+                "has no explicit non-latest version",
+                instance.instance_id,
+                instance.docker_image,
             )
+            create_kwargs["image"] = _normalize_sweevo_image_ref(instance.docker_image)
     elif snapshot_name:
         resolved_snapshot = snapshot_name
         create_kwargs["snapshot"] = resolved_snapshot
