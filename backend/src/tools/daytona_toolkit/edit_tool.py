@@ -16,6 +16,7 @@ from tools.daytona_toolkit.tools import (
     _require_sandbox,
     _resolve_path,
     _team_repo_write_error,
+    _team_repo_write_warning,
     _upload_file_compat,
 )
 from tools.daytona_toolkit.ci_integration import (
@@ -77,6 +78,10 @@ async def daytona_edit_file(
     contract_error = _team_repo_write_error(context, file_path, tool_name="daytona_edit_file")
     if contract_error is not None:
         return ToolResult(output=contract_error, is_error=True)
+    warnings: list[str] = []
+    contract_warning = _team_repo_write_warning(context, file_path, tool_name="daytona_edit_file")
+    if contract_warning is not None:
+        warnings.append(contract_warning)
 
     prepared = None
     intent_id = None
@@ -198,7 +203,7 @@ async def daytona_edit_file(
                 "status": "dry_run",
                 "occ": False,
                 "diff": diff_text,
-                "warnings": list(patch_result.warnings),
+                "warnings": warnings + list(patch_result.warnings),
             }
         )
         abort_ci_write(context, prepared)
@@ -226,7 +231,7 @@ async def daytona_edit_file(
                     "status": "edited",
                     "occ": True,
                     "expected_hash": current_hash,
-                    "warnings": list(patch_result.warnings),
+                    "warnings": warnings + list(patch_result.warnings),
                 }
             )
             return ToolResult(
@@ -248,7 +253,7 @@ async def daytona_edit_file(
                     "file_path": file_path,
                     "status": "edited",
                     "occ": False,
-                    "warnings": list(patch_result.warnings),
+                    "warnings": warnings + list(patch_result.warnings),
                 }
             )
             return ToolResult(

@@ -20,6 +20,7 @@ from tools.daytona_toolkit.tools import (
     _get_cwd,
     _recover_sandbox,
     _require_sandbox,
+    _verification_surface_enforcement_mode,
     _wrap_bash_command,
 )
 from tools.daytona_toolkit.ci_integration import (
@@ -179,6 +180,19 @@ def _extract_verify_paths(value: Any, repo_root: str) -> list[str]:
     return out
 
 
+def _verification_surface_warning_paths(
+    write_paths: list[str],
+    *,
+    allowed_write_paths: set[str],
+    verify_paths: set[str],
+) -> list[str]:
+    return sorted(
+        path
+        for path in set(write_paths)
+        if path in verify_paths and path not in allowed_write_paths
+    )
+
+
 def _resolve_call_name(node: ast.AST, aliases: dict[str, str]) -> str | None:
     parts: list[str] = []
     current = node
@@ -238,6 +252,7 @@ def _team_codeact_contract(context: ToolExecutionContext) -> dict[str, Any] | No
         "owned_files": owned_files,
         "touches_paths": touches_paths,
         "verify_paths": verify_paths,
+        "verification_surface_write_enforcement": _verification_surface_enforcement_mode(context),
     }
 
 
@@ -316,14 +331,22 @@ def _team_codeact_manifest_error(
     allowed_write_paths = set(contract.get("owned_files") or ())
     allowed_write_paths.update(contract.get("touches_paths") or ())
     verify_paths = set(contract.get("verify_paths") or ())
-    verify_writes = sorted(path for path in set(write_paths) if path in verify_paths and path not in allowed_write_paths)
+    verify_writes = _verification_surface_warning_paths(
+        write_paths,
+        allowed_write_paths=allowed_write_paths,
+        verify_paths=verify_paths,
+    )
     if verify_writes:
         rendered = ", ".join(verify_writes[:3])
-        return (
+        message = (
             "daytona_codeact: developer lanes must keep verification surfaces read-only unless the "
             "WorkItem explicitly owns or widens to them. "
             f"Observed write(s) on verification paths: {rendered}."
         )
+        if contract.get("verification_surface_write_enforcement") == "warn":
+            logger.warning(message)
+            return None
+        return message
     return None
 
 
@@ -429,6 +452,31 @@ async def daytona_codeact(
     writes = manifest.get("writes", [])
     committed = 0
     errors = []
+    warnings = []
+    if team_contract is not None and team_contract.get("verification_surface_write_enforcement") == "warn":
+        write_paths = [
+            rel
+            for rel in (
+                _normalize_repo_relative_path(
+                    item.get("path"),
+                    str(team_contract.get("repo_root") or ""),
+                )
+                for item in writes
+                if isinstance(item, dict)
+            )
+            if rel
+        ]
+        verify_writes = _verification_surface_warning_paths(
+            write_paths,
+            allowed_write_paths=set(team_contract.get("owned_files") or ())
+            | set(team_contract.get("touches_paths") or ()),
+            verify_paths=set(team_contract.get("verify_paths") or ()),
+        )
+        if verify_writes:
+            warnings.append(
+                "daytona_codeact: verification-surface writes allowed in advisory mode. "
+                f"Observed write(s) on verification paths: {', '.join(verify_writes[:3])}."
+            )
 
     for w in writes:
         path = w.get("path", "")
@@ -468,6 +516,7 @@ async def daytona_codeact(
             "shell_outputs": shell_outputs,
             "script_stdout": script_stdout,
             "write_errors": errors or [],
+            "warnings": warnings,
             "error": manifest.get("error", "")[:500] if manifest.get("error") else "",
         }
     )

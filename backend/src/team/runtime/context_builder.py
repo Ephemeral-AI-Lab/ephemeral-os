@@ -91,6 +91,7 @@ def build_work_item_metadata(team_run: TeamRun, wi: WorkItem) -> ExecutionMetada
     meta["max_retries"] = wi.max_retries
     meta["coordination_mode"] = "ultra"
     meta["require_declared_shell_outputs"] = True
+    meta["verification_surface_write_enforcement"] = "warn"
     repo_root = str(getattr(getattr(team_run, "project_context", None), "repo_root", "") or "")
     if repo_root:
         meta["daytona_cwd"] = repo_root

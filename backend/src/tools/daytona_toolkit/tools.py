@@ -264,6 +264,17 @@ def _extract_verify_paths(value: Any, repo_root: str) -> list[str]:
     return out
 
 
+def _verification_surface_enforcement_mode(context: ToolExecutionContext) -> str:
+    raw = str(
+        context.metadata.get("verification_surface_write_enforcement")
+        or context.metadata.get("verification_surface_policy")
+        or ""
+    ).strip().lower()
+    if raw in {"warn", "warning", "soft", "advisory"}:
+        return "warn"
+    return "error"
+
+
 def _team_repo_write_error(
     context: ToolExecutionContext,
     file_path: str,
@@ -289,9 +300,42 @@ def _team_repo_write_error(
     verify_paths = set(_extract_verify_paths(context.metadata.get("verify"), repo_root))
     verify_paths.update(_extract_verify_paths(context.metadata.get("owned_failures"), repo_root))
     if rel_path in verify_paths and rel_path not in allowed_write_paths:
-        return (
+        message = (
             f"{tool_name}: developer lanes must keep verification surfaces read-only unless the "
             "WorkItem explicitly owns or widens to them. "
+            f"Observed write on verification path: {rel_path}."
+        )
+        if _verification_surface_enforcement_mode(context) == "warn":
+            logger.warning(message)
+            return None
+        return message
+    return None
+
+
+def _team_repo_write_warning(
+    context: ToolExecutionContext,
+    file_path: str,
+    *,
+    tool_name: str,
+) -> str | None:
+    agent_name = str(context.metadata.get("agent_name") or "").strip()
+    if agent_name not in _TEAM_CONTRACT_AGENT_NAMES or agent_name == "validator":
+        return None
+    if str(context.metadata.get("coordination_mode") or "").strip() != "ultra":
+        return None
+    if _verification_surface_enforcement_mode(context) != "warn":
+        return None
+    repo_root = str(_get_cwd(context) or "")
+    rel_path = _normalize_repo_relative_path(file_path, repo_root)
+    if not rel_path:
+        return None
+    allowed_write_paths = set(_normalize_string_list(context.metadata.get("owned_files"), repo_root))
+    allowed_write_paths.update(_normalize_string_list(context.metadata.get("touches_paths"), repo_root))
+    verify_paths = set(_extract_verify_paths(context.metadata.get("verify"), repo_root))
+    verify_paths.update(_extract_verify_paths(context.metadata.get("owned_failures"), repo_root))
+    if rel_path in verify_paths and rel_path not in allowed_write_paths:
+        return (
+            f"{tool_name}: verification-surface write allowed in advisory mode. "
             f"Observed write on verification path: {rel_path}."
         )
     return None
@@ -732,6 +776,7 @@ async def daytona_write_file(
     contract_error = _team_repo_write_error(context, file_path, tool_name="daytona_write_file")
     if contract_error is not None:
         return ToolResult(output=contract_error, is_error=True)
+    contract_warning = _team_repo_write_warning(context, file_path, tool_name="daytona_write_file")
     prepared = None
     async def _ensure_parent(active_sandbox: Any) -> None:
         parent = "/".join(file_path.split("/")[:-1])
@@ -780,6 +825,7 @@ async def daytona_write_file(
                 "file_path": file_path,
                 "bytes_written": len(content_bytes),
                 "ci_sync": True,
+                "warnings": [contract_warning] if contract_warning else [],
             }
         )
         return ToolResult(output=output)
@@ -803,6 +849,7 @@ async def daytona_write_file(
                     "file_path": file_path,
                     "bytes_written": len(content_bytes),
                     "ci_sync": True,
+                    "warnings": [contract_warning] if contract_warning else [],
                 }
             )
             return ToolResult(output=output)

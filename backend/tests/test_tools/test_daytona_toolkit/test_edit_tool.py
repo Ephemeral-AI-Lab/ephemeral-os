@@ -206,6 +206,7 @@ async def test_edit_rejects_verify_surface_write_outside_owned_scope():
             "daytona_cwd": "/testbed",
             "agent_name": "developer",
             "coordination_mode": "ultra",
+            "verification_surface_write_enforcement": "error",
             "owned_files": ["dask/config.py"],
             "owned_failures": ["dask/tests/test_config.py"],
             "verify": ["pytest dask/tests/test_config.py -q"],
@@ -224,6 +225,37 @@ async def test_edit_rejects_verify_surface_write_outside_owned_scope():
     assert result.is_error
     assert "verification surfaces read-only" in result.output
     sb.fs.upload_file.assert_not_called()
+
+
+async def test_edit_allows_verify_surface_write_in_advisory_mode():
+    sb = _make_sandbox(download_content="original")
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "daytona_cwd": "/testbed",
+            "agent_name": "developer",
+            "coordination_mode": "ultra",
+            "verification_surface_write_enforcement": "warn",
+            "owned_files": ["dask/config.py"],
+            "owned_failures": ["dask/tests/test_config.py"],
+            "verify": ["pytest dask/tests/test_config.py -q"],
+        }
+    )
+
+    result = await daytona_edit_file.execute(
+        daytona_edit_file.input_model(
+            file_path="/testbed/dask/tests/test_config.py",
+            old_text="original",
+            new_text="patched",
+        ),
+        ctx,
+    )
+
+    assert not result.is_error
+    data = json.loads(result.output)
+    assert data["status"] == "edited"
+    assert any("advisory mode" in warning for warning in data["warnings"])
+    sb.fs.upload_file.assert_called_once()
 
 
 async def test_edit_rejects_repo_write_from_validator():

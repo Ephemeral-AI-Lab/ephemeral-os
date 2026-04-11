@@ -956,6 +956,7 @@ def _build_runtime_metadata(
     meta["ci_workspace_root"] = repo_dir
     meta["coordination_mode"] = "ultra"
     meta["require_declared_shell_outputs"] = True
+    meta["verification_surface_write_enforcement"] = "warn"
     return meta
 
 

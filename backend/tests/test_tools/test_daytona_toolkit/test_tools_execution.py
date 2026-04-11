@@ -403,6 +403,7 @@ async def test_write_file_rejects_verify_surface_write_outside_owned_scope():
             "daytona_cwd": "/testbed",
             "agent_name": "developer",
             "coordination_mode": "ultra",
+            "verification_surface_write_enforcement": "error",
             "owned_files": ["dask/config.py"],
             "owned_failures": ["dask/tests/test_config.py"],
             "verify": ["pytest dask/tests/test_config.py -q"],
@@ -421,6 +422,36 @@ async def test_write_file_rejects_verify_surface_write_outside_owned_scope():
     assert "verification surfaces read-only" in result.output
     sb.fs.upload_file.assert_not_called()
     sb.process.exec.assert_not_called()
+
+
+async def test_write_file_allows_verify_surface_write_in_advisory_mode():
+    sb = _sb()
+    sb.process.exec = AsyncMock(return_value=MagicMock(result="", exit_code=0))
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "daytona_cwd": "/testbed",
+            "agent_name": "developer",
+            "coordination_mode": "ultra",
+            "verification_surface_write_enforcement": "warn",
+            "owned_files": ["dask/config.py"],
+            "owned_failures": ["dask/tests/test_config.py"],
+            "verify": ["pytest dask/tests/test_config.py -q"],
+        }
+    )
+
+    result = await daytona_write_file.execute(
+        daytona_write_file.input_model(
+            file_path="/testbed/dask/tests/test_config.py",
+            content="patched",
+        ),
+        ctx,
+    )
+
+    assert not result.is_error
+    data = json.loads(result.output)
+    assert any("advisory mode" in warning for warning in data["warnings"])
+    sb.fs.upload_file.assert_called_once()
 
 
 async def test_write_file_rejects_repo_write_from_validator():

@@ -20,6 +20,7 @@ Use this reference immediately before emitting final plan JSON.
 - When one root lane owns many failures from the same benchmark file, prefer that exact benchmark file path over dumping dozens of node ids into the root DAG.
 - When one leaf lane is already narrow to one or a few exact prompt nodes, keep those exact node ids.
 - Must preserve the exact benchmark file basename and directory segments already quoted by the prompt, scout notes, or earlier planner notes.
+- If an inherited parent lane only names an exact benchmark file path, keep that file path until prompt, scout, or validator evidence supplies an exact existing node id.
 - Never normalize one benchmark path into a nearby sibling such as `test_utils_dataframe.py` -> `test_utils.py`.
 - If validation rejects a guessed benchmark node, first fall back to the exact benchmark file path already named in the prompt or notes; do not drop that failure just to make the plan validate.
 - Must keep `verify` aligned with the chosen benchmark surface.
@@ -55,9 +56,12 @@ Use this reference immediately before emitting final plan JSON.
 - Example: one HDF lane covers 32 fail-to-pass targets, all from `pkg/tests/test_hdf.py`.
   Emit `owned_failures:["pkg/tests/test_hdf.py"]` in the root plan and keep `verify:"pytest pkg/tests/test_hdf.py ..."`.
   Do not inline 32 node ids into the root DAG just because the prompt listed them.
-- Example: one JSON lane owns only `pkg/tests/test_json.py::test_read_json_chunksize`.
+- Example: one JSON lane owns only `pkg/tests/test_io_json.py::test_records_roundtrip`.
   Emit that exact node id because the lane is already narrow to one concrete benchmark target.
   Do not widen it to the whole file unless the planner truly cannot quote the node verbatim.
+- Example: a parent lane handed down `pkg/tests/test_io_json.py` with no exact node, and the child draft is tempted to invent `::test_chunksize`.
+  Keep `owned_failures:["pkg/tests/test_io_json.py"]` until live evidence names an exact existing node.
+  Do not guess a narrower pytest id just to make the child lane look more precise.
 - Example: the prompt named `pkg/tests/test_utils_dataframe.py::test_valid_divisions[a-b]`, but your draft accidentally wrote `pkg/tests/test_utils.py::test_valid_divisions`.
   Repair the entry by restoring the exact prompt surface: either keep the exact node id or downgrade to `pkg/tests/test_utils_dataframe.py`.
   Do not submit `pkg/tests/test_utils.py`, and do not delete the utils failure from `owned_failures`.

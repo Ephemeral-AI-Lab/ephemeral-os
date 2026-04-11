@@ -384,6 +384,7 @@ def test_query_ctx_seeds_repo_root_for_daytona_and_ci():
     assert ctx.tool_metadata["ci_workspace_root"] == "/testbed"
     assert ctx.tool_metadata["coordination_mode"] == "ultra"
     assert ctx.tool_metadata["require_declared_shell_outputs"] is True
+    assert ctx.tool_metadata["verification_surface_write_enforcement"] == "warn"
     assert "Repo root inside the sandbox: /testbed" in ctx.user_message
     assert "Do not prepend guessed roots" in ctx.user_message
 
@@ -434,6 +435,7 @@ def test_query_ctx_injects_scope_packet_when_ci_is_available(monkeypatch):
     assert ctx.tool_metadata["coherence_token"] == "token-1"
     assert ctx.tool_metadata["coordination_mode"] == "ultra"
     assert ctx.tool_metadata["require_declared_shell_outputs"] is True
+    assert ctx.tool_metadata["verification_surface_write_enforcement"] == "warn"
     assert ctx.user_message.startswith("SCOPE token-1\n\n")
 
 

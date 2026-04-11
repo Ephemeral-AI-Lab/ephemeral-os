@@ -14,10 +14,12 @@ Use this reference before the first `daytona_codeact` verification or reproducti
 - Never treat ambient package installation as the default next step just because the first verify command failed.
 - After one existing-environment probe, must either use the working command form or switch to source-and-test reading on the owned repo surface.
 - Never turn an install rejection into a `pip` -> `pip3` -> `conda` -> `uv` retry ladder.
+- Must treat the object returned by `shell("...")` as a mapping with keys like `stdout`, `stderr`, and `exit_code`.
 - Must not use `git status`, `git log`, `git diff`, `git show`, `git blame`, `git stash`, `git checkout`, `git restore`, or temporary revert probes to prove whether a sibling failure was "already there".
 - If the live source file looks different from what you expected, treat the live file plus payload evidence as authoritative and diagnose that code path directly.
 - If `shell("...")` output is sparse or truncated, must capture it through shell redirection plus a structured read instead of abandoning the shell helper.
 - Must not broaden from a named failing id or bounded payload command to a much larger suite unless the payload itself assigns that broader command.
+- If pytest says a named node is missing, report that exact node mismatch or hand the file surface back to replanning; do not run collect-only or hunt similar names unless the payload already owns the full file.
 
 ## Few-shot examples
 
@@ -28,6 +30,9 @@ Use this reference before the first `daytona_codeact` verification or reproducti
   Wrong: `import subprocess` plus `subprocess.run(["pytest", "pkg/tests/test_hdf.py", "-x"])`.
   Right: `result = shell("pytest pkg/tests/test_hdf.py -x", timeout=120)`.
   Keep the first runtime probe in the shell helper form unless you truly need to parse a prior shell result.
+- Example: `result = shell("pytest pkg/tests/test_cli.py -x", timeout=120)` already ran and you need the exit code.
+  Read `result["exit_code"]` or `result["stdout"]`.
+  Do not use `result.stdout`, `result.stderr`, or `result.returncode` because `shell("...")` does not return a subprocess object.
 - Example: `pytest` is missing from `PATH`.
   Probe once with `shell("which pytest || python -m pytest --version || which uv", timeout=30)`, then retry with the working command form if one exists.
   If no runner exists, stop probing the ambient environment and move to `daytona_read_file`, `daytona_grep`, and owned-source diagnosis instead of installing pytest.
@@ -48,6 +53,9 @@ Use this reference before the first `daytona_codeact` verification or reproducti
 - Example: `shell("pytest ...")` returns a green exit code but the adapter shows little stdout.
   Capture the output in the shell command itself, such as `shell("pytest ... > /tmp/verify.out 2>&1; code=$?; echo EXIT_CODE:$code")`, then inspect `/tmp/verify.out` with a structured read if needed.
   Do not switch back to `subprocess.run(...)` or a Python wrapper just to print nicer output.
+- Example: payload verify is `pytest pkg/tests/test_io_json.py::test_records_roundtrip -x`, and pytest says the node is not found.
+  Surface that exact missing node or hand the exact file path back to replanning if the parent lane owned the file.
+  Do not run `--collect-only`, grep for similar names, or silently swap in a nearby test id.
 - Example: payload verify is `pytest dask/dataframe/tests/test_groupby.py::test_groupby_unique[disk-uint8] -x`.
   Keep reproductions and post-edit verifies on that named test or the exact payload command.
   Do not jump to the entire `dask/dataframe/tests/test_groupby.py` module or a broad `-k` sweep unless the payload already told you to own that larger surface.

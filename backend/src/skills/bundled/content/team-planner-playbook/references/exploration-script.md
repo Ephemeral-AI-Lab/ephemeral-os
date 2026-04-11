@@ -4,12 +4,12 @@ Use this reference only on fresh benchmark roots or any turn that still lacks cl
 
 ## Workflow
 
-1. Must start with one narrow `ci_workspace_structure(path=...)` pass on the nearest likely production directory or package implied by the prompt failures.
-2. Must follow with `ci_scoped_status(scope_paths=[...])` on exactly one existing production path from that listing.
+1. Must start with one narrow `ci_workspace_structure(path=...)` pass on the deepest shared production directory or package already implied by the prompt failures.
+2. Must follow with `ci_scoped_status(scope_paths=[...])` on exactly one existing production path from that listing. If the listing already reveals a concrete file candidate, prefer that exact file over a directory packet.
 3. Must use code intelligence to seed likely owners from live symbols, package structure, and the scoped packet before naming scout slices.
 4. Must translate benchmark failure evidence into production-owner slices before scout launch. Failing test paths stay evidence only.
 5. Any exact production file or package named in reasoning, scout input, or plan output must already exist in the current live workspace listing or scoped packet.
-6. If another failure family sits outside the current anchor, must branch through the nearest production directory or package for that family before naming a new exact production path.
+6. If another failure family sits outside the current anchor, must branch through the nearest production directory or package for that family after the first anchor, not by widening the first anchor to cover everything at once.
 7. If a similar-looking filename is absent from the live listing, keep that owner slice unresolved and scout the nearest existing production boundary instead of inventing a sibling file.
 8. If more than one owner slice is still unresolved after the anchor, the next planning action must be a scout wave, not more local file-level exploration or final DAG synthesis.
 9. Must launch scouts only after that live anchor exists.
@@ -45,6 +45,17 @@ If benchmark failures mention `pkg/io/tests/test_hdf.py`, `pkg/io/tests/test_par
 Then scout the production-owner slices such as `pkg/io/hdf.py`, `pkg/io/parquet/`, `pkg/groupby.py`, and `pkg/config.py`.
 Do not anchor on `pkg`, `pkg/tests`, or the failing test files once those production candidates are already visible.
 
+If most failures already cluster under `pkg/dataframe/io/`, but a few others later point to `pkg/dataframe/groupby.py`, `pkg/config.py`, or `pkg/cli.py`, the first anchor must still stay inside the deeper shared subtree:
+
+- Right: `ci_workspace_structure(path="pkg/dataframe/io")`
+- Right: `ci_scoped_status(scope_paths=["pkg/dataframe/io/hdf.py"])`
+- Later: branch with another production-side listing to reach `pkg/dataframe/groupby.py`, `pkg/config.py`, or `pkg/cli.py`
+
+- Wrong: `ci_workspace_structure(path="pkg")`
+- Wrong: `ci_scoped_status(scope_paths=["pkg/dataframe/io", "pkg/dataframe/groupby.py", "pkg/config.py", "pkg/cli.py"])`
+
+The first anchor is a cold-start probe, not a census of every family in the benchmark.
+
 If the first anchor is already inside `pkg/io`, but another failing family is only named by `pkg/tests/test_groupby.py`, the next discovery step must branch through a production-side listing such as `ci_workspace_structure(path="pkg")` or `ci_workspace_structure(path="pkg/dataframe")`.
 If that listing shows `pkg/groupby.py` or `pkg/groupby/`, anchor there.
 Never call `ci_scoped_status(scope_paths=["pkg/tests/test_groupby.py"])` as a substitute for missing production mapping.
@@ -73,7 +84,7 @@ Only after those scout briefs return may the planner load decomposition guidance
 
 - Never open with root-wide CI queries.
 - Never use the workspace root, repo package root, or a broad top-level package as the first anchor when the prompt already points at a deeper production area.
-- Never call the first `ci_scoped_status(...)` with multiple top-level scope paths.
+- Never call the first `ci_scoped_status(...)` with more than one scope path.
 - Never spend first-wave scouts on benchmark test files when a plausible production owner exists.
 - Never use a benchmark test file as a temporary `ci_scoped_status(...)` anchor while "figuring out" an out-of-anchor failure family.
 - Never guess missing production files from test names.

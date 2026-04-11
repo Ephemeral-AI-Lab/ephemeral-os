@@ -144,6 +144,7 @@ def test_build_query_context_carries_team_metadata_and_briefings():
     assert isinstance(ctx.tool_metadata.get("work_item_started_at"), float)
     assert ctx.tool_metadata["coordination_mode"] == "ultra"
     assert ctx.tool_metadata["require_declared_shell_outputs"] is True
+    assert ctx.tool_metadata["verification_surface_write_enforcement"] == "warn"
     assert ctx.tool_metadata["default_scope_paths"] == ["src/file.py"]
 
 def test_shared_briefings_flow_into_query_context():
@@ -192,6 +193,7 @@ def test_build_query_context_injects_scope_packet_when_ci_is_available(monkeypat
     assert ctx.tool_metadata["coherence_token"] == "token-1"
     assert ctx.tool_metadata["coordination_mode"] == "ultra"
     assert ctx.tool_metadata["require_declared_shell_outputs"] is True
+    assert ctx.tool_metadata["verification_surface_write_enforcement"] == "warn"
     assert ctx.user_message.startswith("SCOPE token-1\n\n")
 
 
@@ -215,6 +217,7 @@ def test_build_query_context_forwards_execution_scope_fields():
     assert ctx.tool_metadata["owned_failures"] == ["dask/tests/test_cli.py::test_info_versions"]
     assert ctx.tool_metadata["touches_paths"] == ["dask/config.py"]
     assert ctx.tool_metadata["verify"] == ["pytest dask/tests/test_cli.py -q"]
+    assert ctx.tool_metadata["verification_surface_write_enforcement"] == "warn"
 
 
 def test_team_agent_context_tracks_posthook_state_outside_raw_metadata():
