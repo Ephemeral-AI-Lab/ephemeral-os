@@ -5,6 +5,7 @@ Use this reference when `target_paths` is a single file, a short fixed file list
 ## Closure rule
 
 - Must treat the handed scope itself as the deliverable.
+- Must finish with exactly one raw JSON object containing `summary` and `artifact`.
 - If every listed path was mapped, return `scope_coverage: 1.0`, `gaps: ""`, and `suggested_subdivisions: []`.
 - `open_questions` may record uncertainty, but must not be a disguised request to scout the same scope again.
 
@@ -29,3 +30,6 @@ Use this reference when `target_paths` is a single file, a short fixed file list
 - Example: `target_paths=["pkg/io/parquet"]`.
   The package contains `core.py`, `engine_a.py`, `engine_b.py`, and shared helpers.
   Here subdivisions are valid because a downstream worker would otherwise reopen the whole package to rediscover those distinct child owners.
+- Example: you prepared `{"summary": "...", "artifact": {...}}` in scratch output for `target_paths=["pkg/io/json.py"]`.
+  End with that JSON object as the final assistant message.
+  Do not prepend `Here is the brief:` and do not wrap it in ```json fences, because the serializer reads the final message verbatim.

@@ -7,6 +7,7 @@ Use this reference immediately before final plan JSON when there are 4+ candidat
 - An atomic lane that owns several unrelated exact files only because each slice is small is under-decomposed.
 - Local ids such as `misc`, `remaining`, `assorted`, `core_misc`, or `small_fixes` are a stop signal unless scouts already proved one shared owner.
 - If a lane would verify several unrelated test files just to cover bundled leftovers, emit a residual child planner or split direct leaves instead.
+- If a parent plan ends as direct developers for every mapped slice plus one terminal validator, depth probably collapsed too early.
 
 ## Few-shot examples
 
@@ -15,6 +16,7 @@ Use this reference immediately before final plan JSON when there are 4+ candidat
   Emit child planners for `parquet` and `groupby`.
   For the remaining single-file slices, either emit several direct developers if slots remain or one residual child planner whose only job is to schedule `json`, `utils`, `cli`, `config`, and `compat`.
   Never emit one atomic developer that owns all five files.
+  Never flatten the whole root into eight direct developers plus one validator just because every scout already mapped an owner.
 
 - Example: a child planner inherits scout briefs for `pkg/io/json.py`, `pkg/utils.py`, `pkg/cli.py`, `pkg/config.py`, and `pkg/compat.py`.
   The evidence already maps each file.

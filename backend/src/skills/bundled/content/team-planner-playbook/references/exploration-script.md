@@ -8,11 +8,13 @@ Use this reference only on fresh benchmark roots or any turn that still lacks cl
 2. Must follow with `ci_scoped_status(scope_paths=[...])` on exactly one existing production path from that listing.
 3. Must use code intelligence to seed likely owners from live symbols, package structure, and the scoped packet before naming scout slices.
 4. Must translate benchmark failure evidence into production-owner slices before scout launch. Failing test paths stay evidence only.
-5. If another failure family sits outside the current anchor, must branch through the nearest production directory or package for that family before naming a new exact production path.
-6. If more than one owner slice is still unresolved after the anchor, the next planning action must be a scout wave, not more local file-level exploration or final DAG synthesis.
-7. Must launch scouts only after that live anchor exists.
-8. Must keep each scout on one distinct unresolved owner slice.
-9. Must stop exploring once the current plan layer can name ready work plus residual boundaries.
+5. Any exact production file or package named in reasoning, scout input, or plan output must already exist in the current live workspace listing or scoped packet.
+6. If another failure family sits outside the current anchor, must branch through the nearest production directory or package for that family before naming a new exact production path.
+7. If a similar-looking filename is absent from the live listing, keep that owner slice unresolved and scout the nearest existing production boundary instead of inventing a sibling file.
+8. If more than one owner slice is still unresolved after the anchor, the next planning action must be a scout wave, not more local file-level exploration or final DAG synthesis.
+9. Must launch scouts only after that live anchor exists.
+10. Must keep each scout on one distinct unresolved owner slice.
+11. Must stop exploring once the current plan layer can name ready work plus residual boundaries.
 
 ## Scout fanout strategy
 
@@ -56,6 +58,10 @@ Use the existing anchor to launch one scout per exact file or park the overflow 
 If benchmark failures mention `pkg/tests/test_config.py`, `pkg/tests/test_cli.py`, or `pkg/tests/test_compat.py` outside the first anchor, branch through `ci_workspace_structure(path="pkg")` and then anchor exact production paths like `pkg/config.py`, `pkg/cli.py`, or `pkg/compat.py` when they exist.
 Never use those benchmark test files as fallback owner slices.
 
+If benchmark failures mention `pkg/tests/test_utils_dataframe.py`, but the live listing shows `pkg/utils.py` and does not show `pkg/utils_dataframe.py`, do not invent `pkg/utils_dataframe.py`.
+Keep the owner unresolved until a scout maps the existing production surface such as `pkg/utils.py` or another listed dataframe helper.
+The benchmark test basename is evidence only; it is not proof that a same-named production file exists.
+
 If the live anchor confirms `pkg/io/hdf.py` as the dominant owner and a child branch still needs deeper mapping inside `pkg/io/parquet/`, emit one direct developer lane for HDF and park parquet behind a child planner.
 Do not hold the ready HDF lane hostage just because parquet is still exploratory.
 
@@ -71,6 +77,7 @@ Only after those scout briefs return may the planner load decomposition guidance
 - Never spend first-wave scouts on benchmark test files when a plausible production owner exists.
 - Never use a benchmark test file as a temporary `ci_scoped_status(...)` anchor while "figuring out" an out-of-anchor failure family.
 - Never guess missing production files from test names.
+- Never name an exact production file unless that exact path appeared in the current live listing or scoped packet.
 - Never bundle unrelated owner slices into one scout just to reduce lane count.
 - Never sit on an anchor-only picture for a long reasoning pass when unresolved owner slices still exist; scout immediately.
 - Never keep querying every candidate owner locally after the anchor already named distinct unresolved slices; hand file-level reading to scouts.
