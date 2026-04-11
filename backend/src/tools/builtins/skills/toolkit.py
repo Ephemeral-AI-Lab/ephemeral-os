@@ -59,6 +59,40 @@ def make_skills_toolkit(
                 "references": list(skill.references.keys()),
             }
 
+    def _is_benchmark_root_planner(context: ToolExecutionContext) -> bool:
+        if str(context.metadata.get("agent_name") or "").strip() != "team_planner":
+            return False
+        team_run_id = str(context.metadata.get("team_run_id") or "").strip()
+        work_item_id = str(context.metadata.get("work_item_id") or "").strip()
+        if not team_run_id or not work_item_id:
+            return False
+        try:
+            from team.runtime.registry import get as get_team_run
+        except Exception:
+            return False
+        try:
+            team_run = get_team_run(team_run_id)
+        except Exception:
+            return False
+        if team_run is None or work_item_id != str(getattr(team_run, "root_work_item_id", "") or ""):
+            return False
+        graph = getattr(getattr(team_run, "dispatcher", None), "graph", None)
+        if not isinstance(graph, dict):
+            return False
+        root_item = graph.get(work_item_id)
+        payload = getattr(root_item, "payload", None)
+        if not isinstance(payload, dict):
+            return False
+        return bool(payload.get("fail_to_pass") or payload.get("pass_to_pass"))
+
+    def _has_scout_wave(context: ToolExecutionContext) -> bool:
+        raw = context.metadata.get("_scout_target_paths_this_turn", [])
+        if isinstance(raw, str):
+            return bool(raw.strip())
+        if isinstance(raw, list):
+            return any(isinstance(item, str) and item.strip() for item in raw)
+        return False
+
     @tool(
         name="load_skill",
         description="Load the full instructions for a skill. Call this when a task matches a skill's description.",
@@ -148,6 +182,22 @@ def make_skills_toolkit(
                         "error": f"Reference '{reference_name}' not found in skill '{skill_name}'.",
                         "available_references": list(skill.references.keys()),
                     }
+                ),
+                is_error=True,
+            )
+
+        if (
+            skill_name == "team-planner-playbook"
+            and reference_name == "task-planning-decomposition"
+            and _is_benchmark_root_planner(context)
+            and not _has_scout_wave(context)
+        ):
+            return ToolResult(
+                output=(
+                    "Fresh benchmark-root planners must not load "
+                    "`task-planning-decomposition` before the first scout wave. "
+                    "Launch at least one bounded scout on an unresolved owner slice first, "
+                    "then load the decomposition reference when you are ready to draft the DAG."
                 ),
                 is_error=True,
             )

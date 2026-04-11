@@ -12,7 +12,7 @@ Use this reference only when the worker output is malformed, the verification st
 
 - Must choose `replan` for `benchmark_surface_mismatch`.
 - Must choose `replan` when the exact retry target cannot be collected.
-- Must choose `replan` for wrong ownership, partial deterministic failure, or a still-red owned verify surface.
+- Must choose `replan` for wrong ownership, partial deterministic failure, a still-red owned verify surface, or a systemic runtime/control failure that the same worker boundary cannot fix.
 
 ## Retry gate
 
@@ -23,8 +23,10 @@ Use this reference only when the worker output is malformed, the verification st
 
 - Never accept "outdated test", "scope mismatch", or "outside this task" as a substitute for passing owned verification.
 
-## One-shot example
+## Few-shot examples
 
-If the worker reports "fixed" but shows only clean LSP output and the assigned verify target is still red or missing, choose `replan`.
-
-Must not choose `summary`.
+- Example: the worker reports "fixed" but only shows clean LSP output while the assigned verify target is still red or missing.
+  Choose `replan`.
+  Do not choose `summary`.
+- Example: the worker's exact pytest command fails during collection because the repo imports a missing shared symbol before the named target loads.
+  Choose `replan`, not `retry`, unless the worker already proved the same boundary can repair that shared import crash.

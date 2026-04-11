@@ -18,6 +18,7 @@ Use this skill only for stable benchmark policy. Must treat the prompt, payload,
 - Must trust live CI and live file state over cached briefs or old reasoning.
 - Must preserve exact file paths and exact pytest node ids when they are known.
 - Must treat benchmark test files as failure evidence first, not default implementation ownership.
+- Must treat collection or import failures before the named target loads as still-red verification, not as a reason to trim the scope.
 
 ## Benchmark planning rules
 
@@ -43,3 +44,7 @@ Use this skill only for stable benchmark policy. Must treat the prompt, payload,
 ## Cross-surface guardrails
 
 - When a change affects public serialization, schema shape, or docs-visible output, developers and validators must run one nearby same-surface guardrail in addition to the originally failing test.
+
+## Observability note
+
+- When debugging runtime, coordination, retry, or checkpoint behavior, benchmark logs under `.ephemeralos/benchmark-logs/` are supporting evidence only. Live workspace state and current command output still win.

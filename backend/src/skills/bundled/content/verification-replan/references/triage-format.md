@@ -27,11 +27,12 @@ REGRESSIONS:
 - Must keep test ids exact.
 - Must keep owner surfaces concrete.
 - Must mark an unknown sibling task as `unknown` instead of guessing.
+- Must keep collection or import crashes visible instead of replacing them with narrower substitute tests.
 - Never emit a vague summary such as "tests failed".
 
-## One-shot example
+## Few-shot examples
 
-If three failing tests all point to the same serializer output shape, emit one `CLUSTER:` block for that serializer bug, not three independent clusters.
-
-Must group by root cause.
-Must keep each `TEST:` id exact.
+- Example: three failing tests all point to the same serializer output shape.
+  Emit one `CLUSTER:` block for that serializer bug, not three independent clusters.
+- Example: one fail-to-pass target and twenty pass-to-pass tests all die during collection on the same missing import.
+  Emit one systemic-runtime cluster for the collection crash and keep the regressions explicit in `PASS_TO_PASS`.

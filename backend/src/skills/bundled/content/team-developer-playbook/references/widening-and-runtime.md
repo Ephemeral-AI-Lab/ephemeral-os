@@ -20,13 +20,17 @@ Use this reference only when either condition is true:
 - Must not report success on a runtime-owned lane until one assigned runtime verification command passes.
 - Never claim completion from syntax-only, LSP-only, or readback-only evidence.
 
-## One-shot example
+## Runtime mismatch rules
 
-If the lane owns `pkg/io/json.py`, but the exact failure is a missing import from `pkg/_compat.py`, you may widen once:
+- If the exact verify command fails before the named target collects, must treat that as a still-red surface.
+- If the fault is a repo import error, missing symbol, or shared runtime-control problem, must report it as failure or replan evidence instead of narrowing the verify target away.
+- If the fault is purely ambient environment drift that the lane cannot legitimately fix in repo code, must stop and surface that mismatch instead of improvising installs.
 
-- Refresh `ci_scoped_status(...)` on `pkg/_compat.py`
-- Edit `pkg/_compat.py`
-- Run the exact assigned runtime verification command
+## Few-shot examples
 
-Must not patch the failing test first.
-Must not report success from `py_compile` alone.
+- Example: the lane owns `pkg/io/json.py`, but the live traceback points to a helper import in `pkg/_compat.py`.
+  Refresh `ci_scoped_status(...)` on `pkg/_compat.py`, widen once, patch the helper, and rerun the exact assigned verify command.
+  Do not patch the failing test first.
+- Example: the assigned pytest command dies during collection because `pkg/__init__.py` imports a missing compatibility symbol before the named target loads.
+  Keep that collection crash as failure evidence and hand it to replan if the lane boundary is wrong.
+  Do not declare success just because LSP on the owned file is clean.

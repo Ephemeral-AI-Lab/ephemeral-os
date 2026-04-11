@@ -23,6 +23,7 @@ _ALL_SKILLS = _PLAYBOOKS + [
 _REFERENCES = [
     _CONTENT / "team-developer-playbook/references/widening-and-runtime.md",
     _CONTENT / "team-planner-playbook/references/exploration-script.md",
+    _CONTENT / "team-planner-playbook/references/scout-launch-contract.md",
     _CONTENT / "team-planner-playbook/references/non-root-context-reuse.md",
     _CONTENT / "team-planner-playbook/references/task-planning-decomposition.md",
     _CONTENT / "team-posthook-decision-playbook/references/decision-gates.md",
@@ -66,13 +67,18 @@ def test_skills_use_clear_must_never_language() -> None:
 def test_planner_skill_has_explicit_conditional_reference_loading() -> None:
     planner = _read(_CONTENT / "team-planner-playbook/SKILL.md")
     decomposition = _read(_CONTENT / "team-planner-playbook/references/task-planning-decomposition.md")
+    exploration = _read(_CONTENT / "team-planner-playbook/references/exploration-script.md")
+    scout_launch = _read(_CONTENT / "team-planner-playbook/references/scout-launch-contract.md")
     assert "Fresh benchmark root: must load `exploration-script`" in planner
     assert "Fresh benchmark root: must load `task-planning-decomposition`" in planner
     assert "Child or `## Scoped Expansion` turn: must load `non-root-context-reuse`" in planner
+    assert "Before the first scout wave: must load `scout-launch-contract`" in planner
     assert "when `load_skill_reference` is available" in planner
-    assert "Must not attach a validator to a `team_planner` item; child planners own their own validators." in planner
-    assert "Must not attach validator deps to `team_planner`; child planners own their own validation." in decomposition
-    assert "do not add a parent validator that depends on `team_planner` only to simulate whole-branch barrier behavior." in decomposition
+    assert "Atlas is cross-run memory only." in planner
+    assert "Do not create one atomic \"misc fixes\" lane just because those residual slices are individually small." in decomposition
+    assert "Never map a benchmark cluster to a production file solely because the names look similar." in exploration
+    assert 'Must call `run_subagent(agent_name="scout", input={"target_paths": [...]}, task_note="...")`.' in scout_launch
+    assert "Never pass prompt mode to `scout`." in scout_launch
 
 
 def test_replanner_skill_has_explicit_conditional_reference_loading() -> None:

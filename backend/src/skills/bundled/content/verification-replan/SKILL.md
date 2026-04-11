@@ -16,7 +16,8 @@ Use this skill only after verification fails. Must triage failures for retry or 
 
 1. Must cluster failing tests by root cause.
 2. Must map each cluster to the likely owner surface and, when available, the sibling task that touched it.
-3. Must classify each cluster as `implementation_bug`, `integration_gap`, `missing_coverage`, or `transient_runtime`.
+3. Must classify each cluster as `implementation_bug`, `integration_gap`, `missing_coverage`, `systemic_runtime`, or `transient_runtime`.
+4. Must keep pass-to-pass regressions explicit even when fail-to-pass targets are still red.
 
 ## Action rules
 
@@ -27,6 +28,7 @@ Use this skill only after verification fails. Must triage failures for retry or 
 ## Required triage block
 
 Must include:
+
 - `REPLAN_REASON: ...`
 - `FAIL_TO_PASS: N/M failing`
 - One `CLUSTER:` block per root cause with exact test ids, exact error summaries, likely owner surface, and sibling task when known

@@ -14,11 +14,14 @@ Use this reference only when the validator packet already names exact failing py
 - May carry one exact missing import-path file when the parent package already exists live.
 - Never reopen benchmark test bodies, decorators, parametrization markers, or shared plumbing to re-derive semantics.
 - Never merge distinct corrective clusters into one item.
+- If the validator failed before the target collected, must keep that failing command visible and route the correction toward the shared owner or runtime-control surface.
 - If the same owner cluster was already reopened once and is still clear, must emit JSON now.
 
-## One-shot example
+## Few-shot examples
 
-If the validator packet says `tests/test_hdf.py` fails on `from pkg._compat import X` and live structure shows `pkg/` exists, the corrective target may be `pkg/_compat.py`.
-
-Must not reopen the test body to rediscover the same import failure.
-Must not route the corrective task into an unrelated sibling file.
+- Example: the validator packet says `tests/test_hdf.py` fails on `from pkg._compat import X` and live structure shows `pkg/` exists.
+  The corrective target may be `pkg/_compat.py`.
+  Do not reopen the test body to rediscover the same import failure.
+- Example: the validator command never reaches the named test because `pkg/__init__.py` crashes during collection on a missing symbol.
+  Keep that exact command in the corrective payload and replan toward the shared import owner.
+  Do not "fix" the issue by deleting the failing verification step.

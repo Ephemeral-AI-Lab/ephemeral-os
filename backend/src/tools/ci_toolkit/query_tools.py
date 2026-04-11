@@ -214,7 +214,46 @@ def _require_benchmark_root_scope_anchor(
     tool_name: str,
     context: ToolExecutionContext,
 ) -> ToolResult | None:
-    del tool_name, context
+    payload = _benchmark_root_payload(context)
+    if payload is None:
+        return None
+    if str(context.metadata.get("agent_name") or "").strip() != "team_planner":
+        return None
+
+    structure_done = bool(context.metadata.get(_BENCHMARK_ROOT_PREANCHOR_STRUCTURE_KEY))
+    scope_anchor_done = bool(context.metadata.get("_benchmark_root_scope_anchor_done"))
+
+    if tool_name == "ci_status" and not structure_done:
+        return ToolResult(
+            output=(
+                "Fresh benchmark-root planners must begin with one narrow "
+                "`ci_workspace_structure(...)` pass on a likely production "
+                "directory or package before calling `ci_status` or broader CI queries."
+            ),
+            is_error=True,
+        )
+
+    if tool_name in {"ci_query_symbols", "ci_query_references"}:
+        if not structure_done:
+            return ToolResult(
+                output=(
+                    "Fresh benchmark-root planners must first call "
+                    "`ci_workspace_structure(...)` on a likely production "
+                    "directory or package."
+                ),
+                is_error=True,
+            )
+        if not scope_anchor_done:
+            return ToolResult(
+                output=(
+                    "Fresh benchmark-root planners must call "
+                    "`ci_scoped_status(scope_paths=[...])` on one exact existing "
+                    "production path after `ci_workspace_structure(...)` and before "
+                    "symbol or reference queries."
+                ),
+                is_error=True,
+            )
+
     return None
 
 
@@ -224,7 +263,45 @@ def _validate_benchmark_root_preanchor_structure(
     max_depth: int,
     context: ToolExecutionContext,
 ) -> ToolResult | None:
-    del path, max_depth, context
+    payload = _benchmark_root_payload(context)
+    if payload is None:
+        return None
+    if str(context.metadata.get("agent_name") or "").strip() != "team_planner":
+        return None
+    if context.metadata.get("_benchmark_root_scope_anchor_done"):
+        return None
+
+    cleaned = str(path or "").strip().replace("\\", "/").rstrip("/")
+    if not cleaned:
+        return ToolResult(
+            output=(
+                "Fresh benchmark-root planners must open with a narrow "
+                "`ci_workspace_structure(path=...)` pass on a likely production "
+                "directory or package, not the workspace root."
+            ),
+            is_error=True,
+        )
+
+    benchmark_tests = _benchmark_test_files(payload)
+    if cleaned in benchmark_tests or "/tests/" in cleaned or cleaned.startswith("tests/"):
+        return ToolResult(
+            output=(
+                "Fresh benchmark-root planners must anchor on a likely production "
+                "directory or package, not a benchmark test path."
+            ),
+            is_error=True,
+        )
+
+    if max_depth > 3:
+        return ToolResult(
+            output=(
+                "Fresh benchmark-root planners must keep the first "
+                "`ci_workspace_structure(...)` pass narrow. Use `max_depth <= 3` "
+                "for the initial anchor step."
+            ),
+            is_error=True,
+        )
+
     return None
 
 
@@ -903,6 +980,12 @@ async def ci_status(*, context: ToolExecutionContext) -> ToolResult:
     scout_whitelist_err = _reject_scout_non_whitelist(tool_name="ci_status", context=context)
     if scout_whitelist_err is not None:
         return scout_whitelist_err
+    benchmark_anchor_err = _require_benchmark_root_scope_anchor(
+        tool_name="ci_status",
+        context=context,
+    )
+    if benchmark_anchor_err is not None:
+        return benchmark_anchor_err
     svc, err = _svc_or_error(context)
     if err:
         return err
