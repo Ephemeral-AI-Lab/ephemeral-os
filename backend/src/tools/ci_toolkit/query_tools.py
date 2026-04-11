@@ -36,6 +36,7 @@ _SCOUT_ALLOWED_QUERY_TOOLS = frozenset({"ci_workspace_structure"})
 _BENCHMARK_ROOT_PREANCHOR_STRUCTURE_KEY = "_benchmark_root_preanchor_structure_done"
 _BENCHMARK_ROOT_PREANCHOR_STRUCTURE_CLAIM_KEY = "_benchmark_root_preanchor_structure_claimed"
 _BENCHMARK_ROOT_SCOPE_ANCHOR_CLAIM_KEY = "_benchmark_root_scope_anchor_claimed"
+_BENCHMARK_ROOT_FIRST_SCOUT_WAVE_STARTED_KEY = "_benchmark_root_first_scout_wave_started"
 
 
 @dataclass(frozen=True)
@@ -296,6 +297,16 @@ def _validate_benchmark_root_preanchor_structure(
     if str(context.metadata.get("agent_name") or "").strip() != "team_planner":
         return None
     if context.metadata.get("_benchmark_root_scope_anchor_done"):
+        if not context.metadata.get(_BENCHMARK_ROOT_FIRST_SCOUT_WAVE_STARTED_KEY):
+            return ToolResult(
+                output=(
+                    "Fresh benchmark-root planners must launch the first scout wave "
+                    "after the first `ci_scoped_status(...)` anchor. Reuse the anchored "
+                    "scope, use code intelligence, or launch scouts now instead of "
+                    "opening another `ci_workspace_structure(...)` pass."
+                ),
+                is_error=True,
+            )
         return None
     if not _benchmark_root_exploration_reference_loaded(context):
         return ToolResult(
@@ -364,6 +375,16 @@ def _validate_benchmark_root_scope_anchor(
     if str(context.metadata.get("agent_name") or "").strip() != "team_planner":
         return None
     if context.metadata.get("_benchmark_root_scope_anchor_done"):
+        if not context.metadata.get(_BENCHMARK_ROOT_FIRST_SCOUT_WAVE_STARTED_KEY):
+            return ToolResult(
+                output=(
+                    "Fresh benchmark-root planners get one exact "
+                    "`ci_scoped_status(scope_paths=[...])` anchor before the first "
+                    "scout wave. Reuse the anchored production path or launch scouts "
+                    "now instead of opening another scope packet."
+                ),
+                is_error=True,
+            )
         return None
     if not _benchmark_root_exploration_reference_loaded(context):
         return ToolResult(

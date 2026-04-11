@@ -144,13 +144,14 @@ async def run_sweevo_with_agent(
             )
             sandbox_id = sandbox_result["sandbox_id"]
             if printer is not None:
-                _emit_progress(
-                    printer,
-                    (
-                        "[setup] "
-                        f"sandbox_id={sandbox_id} reused_existing={sandbox_result.get('reused_existing', False)}"
-                    ),
+                setup_line = (
+                    "[setup] "
+                    f"sandbox_id={sandbox_id} reused_existing={sandbox_result.get('reused_existing', False)}"
                 )
+                fallback_reason = str(sandbox_result.get("fallback_reason") or "").strip()
+                if fallback_reason:
+                    setup_line += f" fallback_reason={fallback_reason}"
+                _emit_progress(printer, setup_line)
 
             try:
                 team_result = await sweevo_team_runner.run_sweevo_team(

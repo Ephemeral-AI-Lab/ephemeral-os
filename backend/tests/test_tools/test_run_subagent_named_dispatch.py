@@ -510,6 +510,46 @@ async def test_scout_allows_missing_benchmark_root_owner_path(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_scout_marks_first_wave_started_for_benchmark_root_planner(monkeypatch):
+    submitted = SubmittedSummary(
+        summary="scout report",
+        artifact={"target_paths": ["pkg/first_owner.py"], "files": []},
+    )
+    stub, _ = _make_stub_agent(submitted=submitted)
+    _patch_spawn(monkeypatch, stub)
+
+    ctx = _ctx(team_run_id="TR_BENCH")
+    ctx.metadata["agent_name"] = "team_planner"
+    ctx.metadata["work_item_id"] = "ROOT"
+    ctx.metadata["_benchmark_root_scope_anchor_done"] = True
+    team_run = SimpleNamespace(
+        root_work_item_id="ROOT",
+        dispatcher=SimpleNamespace(
+            graph={
+                "ROOT": SimpleNamespace(
+                    payload={"fail_to_pass": ["pkg/tests/test_api.py::test_one"]}
+                )
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        "team.runtime.registry.get",
+        lambda team_run_id: team_run if team_run_id == "TR_BENCH" else None,
+    )
+
+    res = await run_subagent.execute(
+        run_subagent.input_model(
+            agent_name="scout",
+            input={"target_paths": ["pkg/first_owner.py"]},
+        ),
+        ctx,
+    )
+
+    assert not res.is_error
+    assert ctx.metadata["_benchmark_root_first_scout_wave_started"] is True
+
+
+@pytest.mark.asyncio
 async def test_scout_allows_third_root_first_wave_lane_before_any_completion(monkeypatch):
     submitted = SubmittedSummary(
         summary="scout report",

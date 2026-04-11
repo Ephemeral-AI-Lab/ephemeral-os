@@ -59,34 +59,6 @@ def _find_existing_sandbox_by_name(service: Any, name: str) -> dict[str, Any] | 
     return None
 
 
-def _find_latest_started_sweevo_sandbox(
-    service: Any,
-    instance: SWEEvoInstance,
-    *,
-    exclude_name: str = "",
-) -> dict[str, Any] | None:
-    """Return the newest started sandbox for this SWE-EVO instance, if any."""
-    expected_prefix = f"sweevo-test-{instance.instance_id}-"
-    for sandbox in service.list_sandboxes():
-        name = str(sandbox.get("name") or "")
-        if exclude_name and name == exclude_name:
-            continue
-        if str(sandbox.get("state") or "") != "started":
-            continue
-        labels = sandbox.get("labels") or {}
-        same_instance = str(labels.get("sweevo_instance") or "") == instance.instance_id
-        same_name_family = name.startswith(expected_prefix)
-        if same_instance or same_name_family:
-            return sandbox
-    return None
-
-
-def _is_timeout_error(exc: Exception) -> bool:
-    name = exc.__class__.__name__.lower()
-    text = str(exc).lower()
-    return "timeout" in name or "timeout" in text or "timed out" in text
-
-
 def _log_sandbox_creation_failure(
     service: Any,
     *,
@@ -595,30 +567,6 @@ async def create_sweevo_test_sandbox(
             instance=instance,
             exc=exc,
         )
-        if _is_timeout_error(exc):
-            fallback = _find_latest_started_sweevo_sandbox(
-                service,
-                instance,
-                exclude_name=resolved_name,
-            )
-            if fallback is not None:
-                logger.warning(
-                    "Falling back to started SWE-EVO sandbox %s (%s) after fresh build failure",
-                    fallback.get("name", ""),
-                    fallback.get("id", ""),
-                )
-                await setup_sweevo_sandbox(instance, str(fallback["id"]), repo_dir)
-                await ensure_sweevo_test_patch(instance, str(fallback["id"]), repo_dir)
-                _cleanup_failed_sandbox(service, resolved_name)
-                return {
-                    "sandbox_id": fallback["id"],
-                    "sandbox": fallback,
-                    "snapshot_name": "",
-                    "repo_dir": repo_dir,
-                    "reused_existing": True,
-                    "fallback_reason": "fresh_create_timeout_reused_started_sandbox",
-                    "fresh_create_error": str(exc),
-                }
         _cleanup_failed_sandbox(service, resolved_name)
         raise
     sandbox_id = result["id"]

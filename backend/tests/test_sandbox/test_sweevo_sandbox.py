@@ -118,21 +118,15 @@ def test_create_sweevo_test_sandbox_truncates_explicit_name_on_create(monkeypatc
     patch_mock.assert_awaited_once_with(instance, "sb-created", _REPO_DIR)
 
 
-def test_create_sweevo_test_sandbox_falls_back_after_pending_build_timeout(monkeypatch):
+def test_create_sweevo_test_sandbox_rejects_after_pending_build_timeout(monkeypatch):
     from benchmarks.sweevo import sandbox as sweevo_sandbox
 
     instance = _instance()
     fresh_name = "fresh-sandbox"
     pending = {"id": "sb-pending", "name": fresh_name, "state": "pending_build", "labels": {}}
-    started = {
-        "id": "sb-started",
-        "name": f"sweevo-test-{instance.instance_id}-prev",
-        "state": "started",
-        "labels": {"project_dir": _REPO_DIR},
-    }
     deleted: list[str] = []
     service = SimpleNamespace(
-        list_sandboxes=lambda: [pending, started],
+        list_sandboxes=lambda: [pending],
         create_sandbox=lambda **_: (_ for _ in ()).throw(RuntimeError("timed out waiting for build")),
         delete_sandbox=lambda sandbox_id: deleted.append(sandbox_id),
     )
@@ -144,21 +138,17 @@ def test_create_sweevo_test_sandbox_falls_back_after_pending_build_timeout(monke
     monkeypatch.setattr(sweevo_sandbox, "setup_sweevo_sandbox", setup_mock)
     monkeypatch.setattr(sweevo_sandbox, "ensure_sweevo_test_patch", patch_mock)
 
-    result = asyncio.run(
-        sweevo_sandbox.create_sweevo_test_sandbox(
-            instance,
-            register_snapshot=False,
+    with pytest.raises(RuntimeError, match="timed out waiting for build"):
+        asyncio.run(
+            sweevo_sandbox.create_sweevo_test_sandbox(
+                instance,
+                register_snapshot=False,
+            )
         )
-    )
 
     assert deleted == ["sb-pending"]
-    assert result["sandbox_id"] == "sb-started"
-    assert result["sandbox"] == started
-    assert result["reused_existing"] is True
-    assert result["fallback_reason"] == "fresh_create_timeout_reused_started_sandbox"
-    assert "timed out waiting for build" in result["fresh_create_error"]
-    setup_mock.assert_awaited_once_with(instance, "sb-started", _REPO_DIR)
-    patch_mock.assert_awaited_once_with(instance, "sb-started", _REPO_DIR)
+    setup_mock.assert_not_awaited()
+    patch_mock.assert_not_awaited()
 
 
 def test_setup_sweevo_sandbox_preserves_existing_labels(monkeypatch):

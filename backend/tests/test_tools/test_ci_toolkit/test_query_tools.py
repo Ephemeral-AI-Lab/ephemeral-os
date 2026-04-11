@@ -292,6 +292,40 @@ async def test_workspace_structure_rejects_second_preanchor_pass_before_scope_st
     assert "one narrow `ci_workspace_structure(...)` opener" in second.output
 
 
+async def test_workspace_structure_rejects_post_anchor_listing_before_first_scout_wave(monkeypatch):
+    svc = MagicMock()
+    svc.symbol_index = MagicMock()
+    team_run = SimpleNamespace(
+        root_work_item_id="ROOT",
+        dispatcher=SimpleNamespace(
+            graph={
+                "ROOT": SimpleNamespace(
+                    payload={"fail_to_pass": ["pkg/tests/test_api.py::test_one"]}
+                )
+            }
+        ),
+    )
+    monkeypatch.setattr("team.runtime.registry.get", lambda team_run_id: team_run if team_run_id == "TR_POST" else None)
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        result = await ci_workspace_structure.execute(
+            ci_workspace_structure.input_model(path="pkg/utils", max_depth=3),
+            _ctx(
+                _benchmark_root_metadata(
+                    svc,
+                    team_run_id="TR_POST",
+                    loaded_refs=["exploration-script"],
+                    extra={
+                        "_benchmark_root_preanchor_structure_done": True,
+                        "_benchmark_root_scope_anchor_done": True,
+                    },
+                )
+            ),
+        )
+
+    assert result.is_error
+    assert "launch the first scout wave" in result.output
+
+
 async def test_ci_scope_status_allows_missing_paths_on_benchmark_root_planner(monkeypatch):
     svc = MagicMock()
     svc.symbol_index = SimpleNamespace(
@@ -320,7 +354,10 @@ async def test_ci_scope_status_allows_missing_paths_on_benchmark_root_planner(mo
                 _benchmark_root_metadata(
                     svc,
                     team_run_id="TR_MISSING",
-                    extra={"_benchmark_root_scope_anchor_done": True},
+                    extra={
+                        "_benchmark_root_scope_anchor_done": True,
+                        "_benchmark_root_first_scout_wave_started": True,
+                    },
                 )
             ),
         )
@@ -371,6 +408,7 @@ async def test_ci_scope_status_allows_missing_paths_on_benchmark_root_planner_vi
                     team_run_id="TR_REMOTE",
                     extra={
                         "_benchmark_root_scope_anchor_done": True,
+                        "_benchmark_root_first_scout_wave_started": True,
                         "daytona_sandbox": sandbox,
                     },
                 )
@@ -428,10 +466,12 @@ async def test_merge_submission_metadata_propagates_benchmark_root_scope_anchor_
     original = ExecutionMetadata()
     updated = ExecutionMetadata()
     updated["_benchmark_root_scope_anchor_done"] = True
+    updated["_benchmark_root_first_scout_wave_started"] = True
 
     _merge_submission_metadata(original=original, updated=updated, result_metadata=None)
 
     assert original["_benchmark_root_scope_anchor_done"] is True
+    assert original["_benchmark_root_first_scout_wave_started"] is True
 
 
 async def test_workspace_structure_requires_exploration_reference_for_benchmark_root_planner(monkeypatch):
@@ -528,6 +568,46 @@ async def test_ci_scope_status_requires_one_exact_anchor_on_benchmark_root_plann
     assert not structure.is_error
     assert result.is_error
     assert "anchor exactly one existing production path" in result.output
+
+
+async def test_ci_scope_status_rejects_second_anchor_before_first_scout_wave(monkeypatch):
+    svc = MagicMock()
+    svc.ledger.generation = 3
+    svc.ledger.recent_entries.return_value = []
+    svc.arbiter.generation = 7
+    svc.arbiter.active_reservations.return_value = []
+    svc.arbiter.active_edit_intents.return_value = []
+    svc.arbiter.hotspots.return_value = []
+    svc.symbol_index = SimpleNamespace(generation=11, _symbols={"/testbed/pkg/utils.py": []})
+    team_run = SimpleNamespace(
+        root_work_item_id="ROOT",
+        dispatcher=SimpleNamespace(
+            graph={
+                "ROOT": SimpleNamespace(
+                    payload={"fail_to_pass": ["pkg/tests/test_api.py::test_one"]}
+                )
+            }
+        ),
+    )
+    monkeypatch.setattr("team.runtime.registry.get", lambda team_run_id: team_run if team_run_id == "TR_SECOND" else None)
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        result = await ci_scope_status.execute(
+            ci_scope_status.input_model(scope_paths=["pkg/utils.py"]),
+            _ctx(
+                _benchmark_root_metadata(
+                    svc,
+                    team_run_id="TR_SECOND",
+                    loaded_refs=["exploration-script"],
+                    extra={
+                        "_benchmark_root_preanchor_structure_done": True,
+                        "_benchmark_root_scope_anchor_done": True,
+                    },
+                )
+            ),
+        )
+
+    assert result.is_error
+    assert "before the first scout wave" in result.output
 
 
 # ---------------------------------------------------------------------------

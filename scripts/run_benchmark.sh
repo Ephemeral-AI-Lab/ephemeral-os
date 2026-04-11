@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 # Run a SWE-EVO benchmark instance end-to-end (sandbox + required tests).
-# Defaults to direct image sandboxes (no snapshot registration) unless the
-# caller explicitly passes --register-snapshot.
+# Defaults to snapshot-backed sandboxes. Pass --no-register-snapshot only when
+# you intentionally want to create directly from the SWE-EVO image.
 # Usage: ./scripts/run_benchmark.sh <instance-id>        # run a specific instance
 #        ./scripts/run_benchmark.sh list                 # list all instances
 #        ./scripts/run_benchmark.sh pick [size] [target] # auto-pick an instance
 #
 # Examples:
 #   ./scripts/run_benchmark.sh pydantic__pydantic_v2.6.0b1_v2.6.0
-#   ./scripts/run_benchmark.sh pydantic__pydantic_v2.6.0b1_v2.6.0 --register-snapshot
+#   ./scripts/run_benchmark.sh pydantic__pydantic_v2.6.0b1_v2.6.0
+#   ./scripts/run_benchmark.sh pydantic__pydantic_v2.6.0b1_v2.6.0 --no-register-snapshot
 #   ./scripts/run_benchmark.sh list
 #   ./scripts/run_benchmark.sh pick medium 10
 #   ./scripts/run_benchmark.sh pick large
@@ -47,17 +48,6 @@ fi
 NAME="$1"
 shift || true
 
-BENCH_ARGS=()
-ensure_snapshot_mode_default() {
-    BENCH_ARGS=("$@")
-    for arg in "$@"; do
-        if [[ "$arg" == "--no-register-snapshot" || "$arg" == "--register-snapshot" ]]; then
-            return
-        fi
-    done
-    BENCH_ARGS+=("--no-register-snapshot")
-}
-
 case "$NAME" in
     list)
         exec "$PY" -m "$BENCH_MOD" --list
@@ -69,12 +59,9 @@ case "$NAME" in
         if [[ $# -gt 0 ]]; then
             shift || true
         fi
-        ensure_snapshot_mode_default "$@"
         echo "Auto-picking instance: size=$SIZE target-bullets=$TARGET"
-        exec "$PY" -m "$BENCH_MOD" --size "$SIZE" --target-bullets "$TARGET" "${BENCH_ARGS[@]}"
+        exec "$PY" -m "$BENCH_MOD" --size "$SIZE" --target-bullets "$TARGET" "$@"
         ;;
 esac
 
-ensure_snapshot_mode_default "$@"
-
-exec "$PY" -m "$BENCH_MOD" --instance-id "$NAME" "${BENCH_ARGS[@]}"
+exec "$PY" -m "$BENCH_MOD" --instance-id "$NAME" "$@"

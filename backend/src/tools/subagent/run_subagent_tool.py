@@ -443,6 +443,10 @@ def _validate_run_subagent_request(
                 is_error=True,
                 metadata={"scope_packet": subagent_scope_packet or {}, "conflict": True},
             )
+        if isinstance(_benchmark_root_payload(context), dict) and bool(
+            context.metadata.get("_benchmark_root_scope_anchor_done")
+        ):
+            context.metadata["_benchmark_root_first_scout_wave_started"] = True
     elif isinstance(input, dict):
         subagent_scope_paths = scope_paths_from_payload(input)
     else:
