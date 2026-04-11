@@ -2,10 +2,6 @@
 
 Use this reference when the first reproduction still leaves the bug ambiguous, the traceback lands far from the likely source, or you catch yourself cycling through reads without a falsifiable hypothesis.
 
-## Goal
-
-Find the first failing boundary and form one testable root-cause hypothesis before editing code.
-
 ## Required checkpoint before first edit
 
 Before the first source edit, write down all three:
@@ -25,6 +21,14 @@ If you cannot state all three after the first reproduction, gather one more boun
 5. State one hypothesis.
 6. Make one minimal edit or one minimal proving check.
 7. Re-verify on the same narrow surface.
+
+## Dead-cycle breaker
+
+If one scoped packet, one symbol/reference query, and one proving repro all land on the same boundary, stop exploring. The next action must be one of:
+
+1. Make the smallest production edit at that boundary.
+2. Surface one concrete blocker tied to that boundary.
+3. Replan because the boundary is shared or unowned.
 
 ## Bounded evidence you may gather
 
@@ -67,12 +71,11 @@ Do not jump to the deepest stack frame if an earlier owned boundary already expl
 Stop and gather evidence instead of editing when:
 
 - You are about to say "let me read a few more files" without a new question.
-- You want to patch based on test names alone.
 - You are reasoning from failure counts or cluster size instead of runtime evidence.
-- You are about to change multiple files to "cover possibilities".
 - You have re-read the same test or source file and still cannot state a hypothesis.
 - The same boundary already survived one proving repro and you are still reading siblings instead of patching or replanning.
 - You are about to trust an inherited shared note even though the scoped packet already drifted.
+- You have already restated the same boundary in different words and still have not edited, shared a blocker, or replanned.
 
 ## Escalation rules
 
@@ -88,6 +91,9 @@ Stop and gather evidence instead of editing when:
 - Example: `pytest.warns(FutureWarning, match="deprecated_option")` should warn only on an explicit opt-in path, but the default path now warns or errors too.
   Check the deprecation guard or option normalization first.
   Do not chase downstream dtype conversion, parser, or backend code until the quiet default path is restored.
+- Example: a public option is documented and forwarded through `**kwargs`, but the helper that actually converts data still reads only the legacy flag.
+  The first boundary is the handoff into that helper, not the test file or every downstream caller.
+  Prove the handoff once, then patch the helper path or replan; do not keep re-grepping the package to rediscover the same flow.
 - Example: an aggregate result has the right values but the wrong MultiIndex shape or dtype.
   Treat the result-construction step as the first boundary and inspect the constructed index or levels directly. Use one symbol or reference query to map the aggregate builder before inventing custom probe scripts.
   Do not spelunk unrelated grouper internals until the aggregate assembly path is proven correct.

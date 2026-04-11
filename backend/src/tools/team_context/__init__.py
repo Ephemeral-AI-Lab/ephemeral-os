@@ -15,12 +15,9 @@ class ContextInheritanceToolkit(BaseToolkit):
             tools=[inspect_inherited_context],
             instructions=(
                 "Inspect same-run inherited context before reopening Atlas or restating prompt briefs.\n\n"
-                "- `inspect_inherited_context` — show matching shared briefings, provenance, freshness, "
-                "and the current scoped coherence token for one or more paths.\n"
-                "- Treat inherited context as a reusable hint, not as live truth. If the scoped packet "
-                "drifts, refresh and trust current CI/OCC state over an older brief.\n"
-                "- Use this toolkit to confirm same-run reuse; use code_intelligence for live symbol, "
-                "reservation, and call-chain truth."
+                "- `inspect_inherited_context` — show matching shared briefings, provenance, freshness, and the current scoped coherence token.\n"
+                "- Treat inherited context as a reusable hint, not live truth. If the scoped packet drifts, trust current CI/OCC instead.\n"
+                "- If the inherited note already matches the current boundary, use it to shorten the next step instead of reopening the same slice.\n"
             ),
         )
 
@@ -36,10 +33,9 @@ class ContextSharingToolkit(BaseToolkit):
             instructions=(
                 "Publish high-confidence shared context for sibling reuse.\n\n"
                 "- `share_briefing` — attach an inline note or artifact-backed brief to the run's shared context.\n"
-                "- Treat sharing like a coordination write: only publish after the scoped packet for that "
-                "slice is still fresh enough to trust. If coherence drifted, refresh first.\n"
-                "- Prefer concise, scope-keyed notes that future workers can reuse without reopening the "
-                "same boundary."
+                "- Treat sharing like a coordination write: only publish after the scoped packet for that slice is still fresh enough to trust.\n"
+                "- Publish stable boundary notes, verified blockers, or reusable owner maps; do not republish the same unchanged hypothesis loop.\n"
+                "- Prefer concise, scope-keyed notes that future workers can reuse without reopening the same boundary."
             ),
         )
 

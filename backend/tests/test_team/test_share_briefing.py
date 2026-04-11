@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import importlib
 import json
 from types import SimpleNamespace
 
@@ -308,8 +309,10 @@ def test_share_briefing_rejects_stale_overlapping_scope_coherence(monkeypatch):
         ctx = _ctx("T1")
         ctx.metadata["scope_packet"] = {"scope_paths": ["src/auth"], "coherence_token": "old-token"}
         ctx.metadata["coherence_token"] = "old-token"
+        share_briefing_module = importlib.import_module("tools.team_context.share_briefing")
         monkeypatch.setattr(
-            "tools.team_context.share_briefing.build_scope_packet_for_context",
+            share_briefing_module,
+            "build_scope_packet_for_context",
             lambda context, scope_paths, baseline_packet=None: {
                 "scope_paths": list(scope_paths or []),
                 "coherence_token": "new-token",

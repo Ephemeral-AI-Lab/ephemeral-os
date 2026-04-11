@@ -450,7 +450,9 @@ async def capture_sweevo_repo_patch(
         "tmp_index=$(mktemp)\n"
         "cleanup() { rm -f \"$tmp_index\"; }\n"
         "trap cleanup EXIT\n"
-        "if [ -f .git/index ]; then cp .git/index \"$tmp_index\"; else : > \"$tmp_index\"; fi\n"
+        "index_path=$(git rev-parse --git-path index 2>/dev/null || printf .git/index)\n"
+        "if [ -f \"$index_path\" ]; then cp \"$index_path\" \"$tmp_index\"; "
+        "else : > \"$tmp_index\"; GIT_INDEX_FILE=\"$tmp_index\" git read-tree HEAD >/dev/null 2>&1 || true; fi\n"
         "GIT_INDEX_FILE=\"$tmp_index\" git add -A >/dev/null 2>&1 || true\n"
         "GIT_INDEX_FILE=\"$tmp_index\" git diff --cached --binary HEAD 2>/dev/null || true\n"
     )

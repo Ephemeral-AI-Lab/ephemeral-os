@@ -743,6 +743,7 @@ def test_resume_sweevo_team_restores_checkpoint_repo_patch(monkeypatch):
         staticmethod(lambda *_args, **_kwargs: fake_tr),
     )
     monkeypatch.setattr(sweevo_team_runner, "setup_sweevo_sandbox", AsyncMock())
+    monkeypatch.setattr(sweevo_team_runner, "ensure_sweevo_test_patch", AsyncMock())
     monkeypatch.setattr(sweevo_team_runner, "apply_sweevo_repo_patch", AsyncMock())
     monkeypatch.setattr(sweevo_team_runner, "_make_executor_factory", lambda *args, **kwargs: "executor-factory")
     monkeypatch.setattr(
@@ -761,11 +762,89 @@ def test_resume_sweevo_team_restores_checkpoint_repo_patch(monkeypatch):
 
     assert result == {"status": "ok"}
     sweevo_team_runner.setup_sweevo_sandbox.assert_awaited_once_with(instance, "sbx-1", "/testbed")
+    sweevo_team_runner.ensure_sweevo_test_patch.assert_awaited_once_with(
+        instance, "sbx-1", "/testbed"
+    )
     sweevo_team_runner.apply_sweevo_repo_patch.assert_awaited_once_with(
         "sbx-1",
         "diff --git a/x b/x",
         "/testbed",
     )
+    fake_tr.resume.assert_awaited_once()
+
+
+def test_resume_sweevo_team_reapplies_benchmark_patch_when_checkpoint_patch_missing(monkeypatch):
+    instance = SimpleNamespace(
+        repo="dask/dask",
+        instance_id="dask__dask_2023.3.2_2023.4.0",
+        instance_id_swe="dask__dask_2023.3.2_2023.4.0",
+        start_version="2023.3.2",
+        end_version="2023.4.0",
+        docker_image="example/image:latest",
+        test_cmds="pytest -q",
+        problem_statement="- bullet\n" * 80,
+        fail_to_pass=["tests/test_groupby.py::test_value_counts"],
+        pass_to_pass=["tests/test_groupby.py::test_existing"],
+    )
+    fake_tr = SimpleNamespace(
+        id="team-run-1",
+        sandbox_id="sbx-1",
+        session_id="sess-1",
+        budgets=SimpleNamespace(),
+        dispatcher=SimpleNamespace(graph={}, list_checkpoints=lambda: []),
+        resume=AsyncMock(),
+        wait=AsyncMock(),
+    )
+
+    monkeypatch.setattr(sweevo_team_runner, "_register_team_builtins", lambda: None)
+    monkeypatch.setattr(sweevo_team_runner, "_build_benchmark_event_store", lambda **_: object())
+    monkeypatch.setattr(
+        sweevo_team_runner,
+        "_prepare_benchmark_session",
+        lambda **_: (SimpleNamespace(session_id="sess-1"), object()),
+    )
+    monkeypatch.setattr(sweevo_team_runner, "_build_agent_overrides", lambda _instance: {})
+    monkeypatch.setattr(sweevo_team_runner, "_build_team_metrics", lambda: {})
+    monkeypatch.setattr(sweevo_team_runner, "_emit_team_runtime_banner", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        sweevo_team_runner,
+        "_checkpoint_records_from_store",
+        lambda *args, **kwargs: [{"id": "cp-1", "label": "durable:complete:validator:val1", "sequence": 1}],
+    )
+    monkeypatch.setattr(
+        sweevo_team_runner,
+        "_checkpoint_repo_patch_from_store",
+        lambda *args, **kwargs: "",
+    )
+    monkeypatch.setattr(
+        sweevo_team_runner.TeamRun,
+        "resume_from",
+        staticmethod(lambda *_args, **_kwargs: fake_tr),
+    )
+    monkeypatch.setattr(sweevo_team_runner, "setup_sweevo_sandbox", AsyncMock())
+    monkeypatch.setattr(sweevo_team_runner, "ensure_sweevo_test_patch", AsyncMock())
+    monkeypatch.setattr(sweevo_team_runner, "apply_sweevo_repo_patch", AsyncMock())
+    monkeypatch.setattr(sweevo_team_runner, "_make_executor_factory", lambda *args, **kwargs: "executor-factory")
+    monkeypatch.setattr(
+        sweevo_team_runner,
+        "_finalize_team_result",
+        lambda **_: {"status": "ok"},
+    )
+
+    result = asyncio.run(
+        sweevo_team_runner.resume_sweevo_team(
+            instance,
+            "team-run-1",
+            checkpoint_id="cp-1",
+        )
+    )
+
+    assert result == {"status": "ok"}
+    sweevo_team_runner.setup_sweevo_sandbox.assert_awaited_once_with(instance, "sbx-1", "/testbed")
+    sweevo_team_runner.ensure_sweevo_test_patch.assert_awaited_once_with(
+        instance, "sbx-1", "/testbed"
+    )
+    sweevo_team_runner.apply_sweevo_repo_patch.assert_not_awaited()
     fake_tr.resume.assert_awaited_once()
 
 

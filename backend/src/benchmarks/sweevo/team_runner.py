@@ -52,7 +52,12 @@ from tools.daytona_toolkit.coordination import (
 
 from benchmarks.sweevo.dataset import summarize_sweevo_instance
 from benchmarks.sweevo.models import SWEEvoInstance, _REPO_DIR
-from benchmarks.sweevo.sandbox import apply_sweevo_repo_patch, capture_sweevo_repo_patch, setup_sweevo_sandbox
+from benchmarks.sweevo.sandbox import (
+    apply_sweevo_repo_patch,
+    capture_sweevo_repo_patch,
+    ensure_sweevo_test_patch,
+    setup_sweevo_sandbox,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -1473,20 +1478,22 @@ async def resume_sweevo_team(
             f"team run {team_run_id!r} cannot be resumed: missing sandbox_id in persisted header"
         )
     if resolved_checkpoint_id:
+        await setup_sweevo_sandbox(instance, tr.sandbox_id, repo_dir)
+        await ensure_sweevo_test_patch(instance, tr.sandbox_id, repo_dir)
         repo_patch = _checkpoint_repo_patch_from_store(
             event_store,
             team_run_id,
             resolved_checkpoint_id,
         )
         if repo_patch:
-            await setup_sweevo_sandbox(instance, tr.sandbox_id, repo_dir)
             await apply_sweevo_repo_patch(tr.sandbox_id, repo_patch, repo_dir)
             if printer is not None:
                 printer.raw_line(
                     "team",
                     (
                         "[resume_restore] "
-                        f"checkpoint={resolved_checkpoint_id} repo_patch_bytes={len(repo_patch.encode('utf-8'))}"
+                        f"checkpoint={resolved_checkpoint_id} repo_patch_bytes={len(repo_patch.encode('utf-8'))} "
+                        "benchmark_patch=reapplied"
                     ),
                 )
         elif printer is not None:
@@ -1494,7 +1501,8 @@ async def resume_sweevo_team(
                 "team",
                 (
                     "[resume_restore] "
-                    f"checkpoint={resolved_checkpoint_id} repo_patch=<missing>"
+                    f"checkpoint={resolved_checkpoint_id} repo_patch=<missing> "
+                    "benchmark_patch=reapplied"
                 ),
             )
 
