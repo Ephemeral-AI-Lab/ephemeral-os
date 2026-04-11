@@ -157,9 +157,9 @@ def test_phase_a_valid_plan(monkeypatch):
     assert validate_plan_phase_a(plan) == []
 
 
-def test_phase_a_validator_policy_is_budget_driven(monkeypatch):
-    _patch_registry(monkeypatch, {"a"})
-    plan = Plan(
+def test_phase_a_validator_policy_enforces_hard_floor_and_stricter_overrides(monkeypatch):
+    _patch_registry(monkeypatch, {"a", "validator"})
+    no_validator_plan = Plan(
         items=[
             WorkItemSpec(agent_name="a", local_id="w1"),
             WorkItemSpec(agent_name="a", local_id="w2"),
@@ -167,61 +167,211 @@ def test_phase_a_validator_policy_is_budget_driven(monkeypatch):
         ]
     )
 
-    assert validate_plan_phase_a(plan) == []
-    issues = validate_plan_phase_a(plan, require_validator_for_plan_size=3)
-    assert any("3 or more items must include at least one validator" in i["msg"] for i in issues)
+    issues = validate_plan_phase_a(no_validator_plan)
+    assert any(
+        "3 or more concrete non-planner items must include at least one terminal validator"
+        in i["msg"]
+        for i in issues
+    )
+
+    too_many_validators_plan = Plan(
+        items=[
+            WorkItemSpec(agent_name="validator", local_id="v1"),
+            WorkItemSpec(agent_name="validator", local_id="v2"),
+        ]
+    )
+    issues = validate_plan_phase_a(too_many_validators_plan, max_validators_per_plan=1)
+    assert any("submitted plans may have at most 1" in i["msg"] for i in issues)
 
 
-def test_phase_a_requires_direct_validator_for_nontrivial_developer_lane(monkeypatch):
+def test_phase_a_allows_one_or_two_developers_without_validators(monkeypatch):
     _patch_registry(monkeypatch, {"developer", "validator"})
     plan = Plan(
         items=[
-            WorkItemSpec(
-                agent_name="developer",
-                local_id="dev1",
-                payload={"owned_files": ["pkg/a.py", "pkg/b.py"]},
-            )
+            WorkItemSpec(agent_name="developer", local_id="dev1"),
+            WorkItemSpec(agent_name="developer", local_id="dev2"),
+        ]
+    )
+
+    assert validate_plan_phase_a(plan) == []
+
+
+def test_phase_a_requires_terminal_validator_for_three_developers(monkeypatch):
+    _patch_registry(monkeypatch, {"developer", "validator"})
+    plan = Plan(
+        items=[
+            WorkItemSpec(agent_name="developer", local_id="dev1"),
+            WorkItemSpec(agent_name="developer", local_id="dev2"),
+            WorkItemSpec(agent_name="developer", local_id="dev3"),
         ]
     )
 
     issues = validate_plan_phase_a(plan)
 
     assert any(
-        "non-trivial developer lane 'dev1' must have a validator" in issue["msg"]
+        "plans with 3 or more concrete non-planner items must include at least one terminal validator"
+        in issue["msg"]
         for issue in issues
     )
 
 
-def test_phase_a_accepts_direct_validator_for_nontrivial_developer_lane(monkeypatch):
-    _patch_registry(monkeypatch, {"developer", "validator"})
+def test_phase_a_allows_two_developers_plus_child_planner_without_parent_validator(monkeypatch):
+    _patch_registry(monkeypatch, {"developer", "team_planner", "validator"})
     plan = Plan(
         items=[
+            WorkItemSpec(agent_name="developer", local_id="dev1"),
+            WorkItemSpec(agent_name="developer", local_id="dev2"),
             WorkItemSpec(
-                agent_name="developer",
-                local_id="dev1",
-                payload={"owned_failures": ["tests/test_a.py::case_1", "tests/test_a.py::case_2"]},
+                agent_name="team_planner",
+                local_id="child",
+                kind=WorkItemKind.EXPANDABLE,
             ),
-            WorkItemSpec(agent_name="validator", local_id="val1", deps=["dev1"]),
         ]
     )
 
     assert validate_plan_phase_a(plan) == []
 
 
-def test_phase_a_requires_local_id_for_nontrivial_developer_lane(monkeypatch):
+def test_phase_a_accepts_terminal_validator_for_three_developers(monkeypatch):
     _patch_registry(monkeypatch, {"developer", "validator"})
     plan = Plan(
         items=[
+            WorkItemSpec(agent_name="developer", local_id="dev1"),
+            WorkItemSpec(agent_name="developer", local_id="dev2"),
+            WorkItemSpec(agent_name="developer", local_id="dev3"),
             WorkItemSpec(
-                agent_name="developer",
-                payload={"owned_files": ["pkg/a.py", "pkg/b.py"]},
+                agent_name="validator",
+                local_id="val1",
+                deps=["dev1", "dev2", "dev3"],
+            ),
+        ]
+    )
+
+    assert validate_plan_phase_a(plan) == []
+
+
+def test_phase_a_rejects_three_validators(monkeypatch):
+    _patch_registry(monkeypatch, {"validator"})
+    plan = Plan(
+        items=[
+            WorkItemSpec(agent_name="validator", local_id="val1"),
+            WorkItemSpec(agent_name="validator", local_id="val2"),
+            WorkItemSpec(agent_name="validator", local_id="val3"),
+        ]
+    )
+
+    issues = validate_plan_phase_a(plan)
+
+    assert any(
+        "plan has 3 validator items; submitted plans may have at most 2" in issue["msg"]
+        for issue in issues
+    )
+
+
+def test_phase_a_rejects_nonterminal_only_validator(monkeypatch):
+    _patch_registry(monkeypatch, {"developer", "validator", "a"})
+    plan = Plan(
+        items=[
+            WorkItemSpec(agent_name="developer", local_id="dev1"),
+            WorkItemSpec(agent_name="validator", local_id="val1", deps=["dev1"]),
+            WorkItemSpec(agent_name="a", local_id="followup", deps=["val1"]),
+        ]
+    )
+
+    issues = validate_plan_phase_a(plan)
+
+    assert any(
+        "plans with validator items must leave at least one validator as a terminal end-of-chain guard"
+        in issue["msg"]
+        for issue in issues
+    )
+
+
+def test_phase_a_rejects_multiple_terminal_validators(monkeypatch):
+    _patch_registry(monkeypatch, {"developer", "validator"})
+    plan = Plan(
+        items=[
+            WorkItemSpec(agent_name="developer", local_id="dev1"),
+            WorkItemSpec(agent_name="developer", local_id="dev2"),
+            WorkItemSpec(agent_name="validator", local_id="val1", deps=["dev1"]),
+            WorkItemSpec(agent_name="validator", local_id="val2", deps=["dev2"]),
+        ]
+    )
+
+    issues = validate_plan_phase_a(plan)
+
+    assert any(
+        "plans with validator items must keep exactly one validator as the terminal end-of-chain guard"
+        in issue["msg"]
+        for issue in issues
+    )
+
+
+def test_phase_a_allows_midchain_validator_when_plan_still_ends_with_validator(monkeypatch):
+    _patch_registry(monkeypatch, {"developer", "validator", "a"})
+    plan = Plan(
+        items=[
+            WorkItemSpec(agent_name="developer", local_id="dev1"),
+            WorkItemSpec(agent_name="validator", local_id="val_mid", deps=["dev1"]),
+            WorkItemSpec(agent_name="a", local_id="followup", deps=["val_mid"]),
+            WorkItemSpec(agent_name="validator", local_id="val_end", deps=["followup"]),
+        ]
+    )
+
+    assert validate_plan_phase_a(plan) == []
+
+
+def test_phase_a_accepts_one_grouped_validator_for_five_developers(monkeypatch):
+    _patch_registry(monkeypatch, {"developer", "validator"})
+    plan = Plan(
+        items=[
+            WorkItemSpec(agent_name="developer", local_id=f"dev{i}")
+            for i in range(1, 6)
+        ]
+        + [
+            WorkItemSpec(
+                agent_name="validator",
+                local_id="val1",
+                deps=["dev1", "dev2", "dev3", "dev4", "dev5"],
+            )
+        ]
+    )
+
+    assert validate_plan_phase_a(plan) == []
+
+
+def test_phase_a_accepts_one_terminal_validator_for_six_developers(monkeypatch):
+    _patch_registry(monkeypatch, {"developer", "validator"})
+    plan = Plan(
+        items=[
+            WorkItemSpec(agent_name="developer", local_id=f"dev{i}")
+            for i in range(1, 7)
+        ]
+        + [
+            WorkItemSpec(
+                agent_name="validator",
+                local_id="val1",
+                deps=["dev1", "dev2", "dev3"],
             )
         ]
     )
 
     issues = validate_plan_phase_a(plan)
 
-    assert any("non-trivial developer lane must set local_id" in issue["msg"] for issue in issues)
+    assert issues == []
+
+
+def test_phase_a_allows_developer_without_local_id_when_terminal_validator_exists(monkeypatch):
+    _patch_registry(monkeypatch, {"developer", "validator"})
+    plan = Plan(
+        items=[
+            WorkItemSpec(agent_name="developer"),
+            WorkItemSpec(agent_name="developer", local_id="dev2"),
+            WorkItemSpec(agent_name="validator", local_id="val1", deps=["dev2"]),
+        ]
+    )
+
+    assert validate_plan_phase_a(plan) == []
 
 
 def test_phase_a_rejects_unknown_dep_when_external_scope_is_known(monkeypatch):
@@ -392,7 +542,7 @@ def test_phase_b_enforces_max_plan_size(monkeypatch):
         )
 
 
-def test_phase_b_validator_policy_is_budget_driven(monkeypatch):
+def test_phase_b_validator_policy_enforces_hard_floor_and_stricter_overrides(monkeypatch):
     _patch_registry(monkeypatch, {"a", "validator"})
     parent = _parent_wi()
     no_validator_plan = Plan(
@@ -402,30 +552,17 @@ def test_phase_b_validator_policy_is_budget_driven(monkeypatch):
             WorkItemSpec(agent_name="a", local_id="w3"),
         ]
     )
-    counter = {"n": 0}
-
-    def fresh_id():
-        counter["n"] += 1
-        return f"N{counter['n']}"
-
-    new_items = validate_plan_phase_b(
-        {parent.id: parent},
-        no_validator_plan,
-        "T1",
-        parent,
-        new_id_factory=fresh_id,
-        max_depth=5,
-    )
-    assert len(new_items) == 3
-    with pytest.raises(InvalidPlan, match="3 or more items must include at least one validator"):
+    with pytest.raises(
+        InvalidPlan,
+        match="3 or more concrete non-planner items must include at least one terminal validator",
+    ):
         validate_plan_phase_b(
             {parent.id: parent},
             no_validator_plan,
             "T1",
             parent,
-            new_id_factory=fresh_id,
+            new_id_factory=lambda: "N1",
             max_depth=5,
-            require_validator_for_plan_size=3,
         )
     too_many_validators_plan = Plan(
         items=[
@@ -439,28 +576,26 @@ def test_phase_b_validator_policy_is_budget_driven(monkeypatch):
             too_many_validators_plan,
             "T1",
             parent,
-            new_id_factory=fresh_id,
+            new_id_factory=lambda: "N2",
             max_depth=5,
             max_validators_per_plan=1,
         )
 
 
-def test_phase_b_requires_direct_validator_for_nontrivial_developer_lane(monkeypatch):
+def test_phase_b_requires_terminal_validator_for_three_developers(monkeypatch):
     _patch_registry(monkeypatch, {"developer", "validator"})
     parent = _parent_wi()
     plan = Plan(
         items=[
-            WorkItemSpec(
-                agent_name="developer",
-                local_id="dev1",
-                payload={"owned_files": ["pkg/a.py", "pkg/b.py"]},
-            )
+            WorkItemSpec(agent_name="developer", local_id="dev1"),
+            WorkItemSpec(agent_name="developer", local_id="dev2"),
+            WorkItemSpec(agent_name="developer", local_id="dev3"),
         ]
     )
 
     with pytest.raises(
         InvalidPlan,
-        match="non-trivial developer lane 'dev1' must have a validator",
+        match="plans with 3 or more concrete non-planner items must include at least one terminal validator",
     ):
         validate_plan_phase_b(
             {parent.id: parent},
@@ -472,7 +607,7 @@ def test_phase_b_requires_direct_validator_for_nontrivial_developer_lane(monkeyp
         )
 
 
-def test_phase_b_accepts_direct_validator_for_nontrivial_developer_lane(monkeypatch):
+def test_phase_b_accepts_terminal_validator_for_three_developers(monkeypatch):
     _patch_registry(monkeypatch, {"developer", "validator"})
     parent = _parent_wi()
     counter = {"n": 0}
@@ -483,12 +618,10 @@ def test_phase_b_accepts_direct_validator_for_nontrivial_developer_lane(monkeypa
 
     plan = Plan(
         items=[
-            WorkItemSpec(
-                agent_name="developer",
-                local_id="dev1",
-                payload={"owned_files": ["pkg/a.py", "pkg/b.py"]},
-            ),
-            WorkItemSpec(agent_name="validator", local_id="val1", deps=["dev1"]),
+            WorkItemSpec(agent_name="developer", local_id="dev1"),
+            WorkItemSpec(agent_name="developer", local_id="dev2"),
+            WorkItemSpec(agent_name="developer", local_id="dev3"),
+            WorkItemSpec(agent_name="validator", local_id="val1", deps=["dev1", "dev2", "dev3"]),
         ]
     )
 
@@ -501,8 +634,224 @@ def test_phase_b_accepts_direct_validator_for_nontrivial_developer_lane(monkeypa
         max_depth=5,
     )
 
-    assert [wi.local_id for wi in new_items] == ["dev1", "val1"]
+    assert [wi.local_id for wi in new_items] == ["dev1", "dev2", "dev3", "val1"]
+    assert new_items[3].deps == [new_items[0].id, new_items[1].id, new_items[2].id]
+
+
+def test_phase_b_allows_two_developers_plus_child_planner_without_parent_validator(monkeypatch):
+    _patch_registry(monkeypatch, {"developer", "team_planner", "validator"})
+    parent = _parent_wi()
+    counter = {"n": 0}
+
+    def fresh_id():
+        counter["n"] += 1
+        return f"N{counter['n']}"
+
+    plan = Plan(
+        items=[
+            WorkItemSpec(agent_name="developer", local_id="dev1"),
+            WorkItemSpec(agent_name="developer", local_id="dev2"),
+            WorkItemSpec(
+                agent_name="team_planner",
+                local_id="child",
+                kind=WorkItemKind.EXPANDABLE,
+            ),
+        ]
+    )
+
+    new_items = validate_plan_phase_b(
+        {parent.id: parent},
+        plan,
+        "T1",
+        parent,
+        new_id_factory=fresh_id,
+        max_depth=5,
+    )
+
+    assert [wi.local_id for wi in new_items] == ["dev1", "dev2", "child"]
+
+
+def test_phase_b_rejects_three_validators(monkeypatch):
+    _patch_registry(monkeypatch, {"validator"})
+    parent = _parent_wi()
+    plan = Plan(
+        items=[
+            WorkItemSpec(agent_name="validator", local_id="val1"),
+            WorkItemSpec(agent_name="validator", local_id="val2"),
+            WorkItemSpec(agent_name="validator", local_id="val3"),
+        ]
+    )
+
+    with pytest.raises(
+        InvalidPlan,
+        match="plan has 3 validator items; submitted plans may have at most 2",
+    ):
+        validate_plan_phase_b(
+            {parent.id: parent},
+            plan,
+            "T1",
+            parent,
+            new_id_factory=lambda: "N1",
+            max_depth=5,
+        )
+
+
+def test_phase_b_rejects_nonterminal_only_validator(monkeypatch):
+    _patch_registry(monkeypatch, {"developer", "validator", "a"})
+    parent = _parent_wi()
+    plan = Plan(
+        items=[
+            WorkItemSpec(agent_name="developer", local_id="dev1"),
+            WorkItemSpec(agent_name="validator", local_id="val1", deps=["dev1"]),
+            WorkItemSpec(agent_name="a", local_id="followup", deps=["val1"]),
+        ]
+    )
+
+    with pytest.raises(
+        InvalidPlan,
+        match="plans with validator items must leave at least one validator as a terminal end-of-chain guard",
+    ):
+        validate_plan_phase_b(
+            {parent.id: parent},
+            plan,
+            "T1",
+            parent,
+            new_id_factory=lambda: "N1",
+            max_depth=5,
+        )
+
+
+def test_phase_b_rejects_multiple_terminal_validators(monkeypatch):
+    _patch_registry(monkeypatch, {"developer", "validator"})
+    parent = _parent_wi()
+    plan = Plan(
+        items=[
+            WorkItemSpec(agent_name="developer", local_id="dev1"),
+            WorkItemSpec(agent_name="developer", local_id="dev2"),
+            WorkItemSpec(agent_name="validator", local_id="val1", deps=["dev1"]),
+            WorkItemSpec(agent_name="validator", local_id="val2", deps=["dev2"]),
+        ]
+    )
+
+    with pytest.raises(
+        InvalidPlan,
+        match="plans with validator items must keep exactly one validator as the terminal end-of-chain guard",
+    ):
+        validate_plan_phase_b(
+            {parent.id: parent},
+            plan,
+            "T1",
+            parent,
+            new_id_factory=lambda: "N1",
+            max_depth=5,
+        )
+
+
+def test_phase_b_allows_midchain_validator_when_plan_still_ends_with_validator(monkeypatch):
+    _patch_registry(monkeypatch, {"developer", "validator", "a"})
+    parent = _parent_wi()
+    counter = {"n": 0}
+
+    def fresh_id():
+        counter["n"] += 1
+        return f"N{counter['n']}"
+
+    plan = Plan(
+        items=[
+            WorkItemSpec(agent_name="developer", local_id="dev1"),
+            WorkItemSpec(agent_name="validator", local_id="val_mid", deps=["dev1"]),
+            WorkItemSpec(agent_name="a", local_id="followup", deps=["val_mid"]),
+            WorkItemSpec(agent_name="validator", local_id="val_end", deps=["followup"]),
+        ]
+    )
+
+    new_items = validate_plan_phase_b(
+        {parent.id: parent},
+        plan,
+        "T1",
+        parent,
+        new_id_factory=fresh_id,
+        max_depth=5,
+    )
+
+    assert [wi.local_id for wi in new_items] == ["dev1", "val_mid", "followup", "val_end"]
     assert new_items[1].deps == [new_items[0].id]
+    assert new_items[2].deps == [new_items[1].id]
+    assert new_items[3].deps == [new_items[2].id]
+
+
+def test_phase_b_accepts_one_grouped_validator_for_five_developers(monkeypatch):
+    _patch_registry(monkeypatch, {"developer", "validator"})
+    parent = _parent_wi()
+    counter = {"n": 0}
+
+    def fresh_id():
+        counter["n"] += 1
+        return f"N{counter['n']}"
+
+    plan = Plan(
+        items=[
+            WorkItemSpec(agent_name="developer", local_id=f"dev{i}")
+            for i in range(1, 6)
+        ]
+        + [
+            WorkItemSpec(
+                agent_name="validator",
+                local_id="val1",
+                deps=["dev1", "dev2", "dev3", "dev4", "dev5"],
+            )
+        ]
+    )
+
+    new_items = validate_plan_phase_b(
+        {parent.id: parent},
+        plan,
+        "T1",
+        parent,
+        new_id_factory=fresh_id,
+        max_depth=5,
+    )
+
+    assert [wi.local_id for wi in new_items] == ["dev1", "dev2", "dev3", "dev4", "dev5", "val1"]
+    assert new_items[5].deps == [
+        new_items[0].id,
+        new_items[1].id,
+        new_items[2].id,
+        new_items[3].id,
+        new_items[4].id,
+    ]
+
+
+def test_phase_b_accepts_one_terminal_validator_for_six_developers(monkeypatch):
+    _patch_registry(monkeypatch, {"developer", "validator"})
+    parent = _parent_wi()
+    counter = {"n": 0}
+
+    def fresh_id():
+        counter["n"] += 1
+        return f"N{counter['n']}"
+
+    plan = Plan(
+        items=[
+            WorkItemSpec(agent_name="developer", local_id=f"dev{i}")
+            for i in range(1, 7)
+        ]
+        + [
+            WorkItemSpec(agent_name="validator", local_id="val1", deps=["dev1", "dev2", "dev3"])
+        ]
+    )
+
+    new_items = validate_plan_phase_b(
+        {parent.id: parent},
+        plan,
+        "T1",
+        parent,
+        new_id_factory=fresh_id,
+        max_depth=5,
+    )
+
+    assert [wi.local_id for wi in new_items] == ["dev1", "dev2", "dev3", "dev4", "dev5", "dev6", "val1"]
+    assert new_items[6].deps == [new_items[0].id, new_items[1].id, new_items[2].id]
 
 
 def test_phase_b_rejects_agent_without_supported_kind(monkeypatch):
@@ -569,7 +918,7 @@ def test_phase_a_accepts_custom_atomic_agent_with_supported_kind(monkeypatch):
     assert validate_plan_phase_a(plan) == []
 
 
-def test_phase_b_allows_validator_depending_on_expandable_sibling(monkeypatch):
+def test_phase_b_rejects_validator_depending_on_expandable_sibling(monkeypatch):
     from agents.types import AgentDefinition
     from team.planning import validation as _v
 
@@ -611,12 +960,13 @@ def test_phase_b_allows_validator_depending_on_expandable_sibling(monkeypatch):
         ]
     )
 
-    new_items = validate_plan_phase_b(
-        {parent.id: parent}, plan, "T1", parent, new_id_factory=fresh_id, max_depth=5
-    )
-
-    assert [wi.local_id for wi in new_items] == ["dev1", "child", "val1"]
-    assert new_items[2].deps == [new_items[1].id]
+    with pytest.raises(
+        InvalidPlan,
+        match="validator items must not depend on expandable siblings",
+    ):
+        validate_plan_phase_b(
+            {parent.id: parent}, plan, "T1", parent, new_id_factory=fresh_id, max_depth=5
+        )
 
 
 def test_phase_b_combined_cycle(monkeypatch):
@@ -855,7 +1205,7 @@ def test_phase_a_allows_ready_expandable_item_in_mixed_plan(monkeypatch):
     assert not issues
 
 
-def test_phase_a_allows_validator_depending_on_expandable_sibling(monkeypatch):
+def test_phase_a_rejects_validator_depending_on_expandable_sibling(monkeypatch):
     from agents.types import AgentDefinition
     from team.planning import validation as _v
 
@@ -889,7 +1239,12 @@ def test_phase_a_allows_validator_depending_on_expandable_sibling(monkeypatch):
         ]
     )
 
-    assert validate_plan_phase_a(plan) == []
+    issues = validate_plan_phase_a(plan)
+
+    assert any(
+        "validator items must not depend on expandable siblings" in issue["msg"]
+        for issue in issues
+    )
 
 
 def test_submit_plan_item_parses_briefings_and_kind():

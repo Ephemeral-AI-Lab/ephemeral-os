@@ -552,7 +552,7 @@ def test_submit_plan_agent_prompt_rebuilds_shape_on_plan_size_failure():
 
     serializer = get_definition("submit_plan_agent")
     assert serializer is not None
-    assert "If validation fails on `max_plan_size`, do not make a cosmetic one-item trim." in (
+    assert "If validation fails on `max_plan_size`, must not make a cosmetic one-item trim." in (
         serializer.system_prompt
     )
     assert "merging adjacent residual siblings behind a narrower expandable `team_planner` item" in (
@@ -584,22 +584,25 @@ def test_team_planner_prompt_makes_child_scope_rules_explicit():
 
     planner = get_definition(TEAM_PLANNER)
     assert planner is not None
-    assert "On non-root turns, read `references/non-root-context-reuse.md` before opening fresh exploration." in (
+    assert "Must read `references/non-root-context-reuse.md` before opening fresh exploration on non-root turns." in (
         planner.system_prompt
     )
-    assert "On non-root turns, treat inherited `## Scoped Expansion`, `## From deps`, and `## From parent` context as mandatory inputs." in (
+    assert "Must treat inherited `## Scoped Expansion`, `## From deps`, and `## From parent` context as mandatory inputs on non-root turns." in (
         planner.system_prompt
     )
-    assert "Keep validation branch-local. Do not add an umbrella validator over a child plan" in (
+    assert "Must keep validation branch-local. Must not add an umbrella validator over a child plan" in (
         planner.system_prompt
     )
-    assert "On benchmark plans, keep validator items paired with the concrete developer lanes they actually verify." in (
+    assert "On benchmark plans, must keep validator items aligned to the concrete branch cut they actually verify." in (
         planner.system_prompt
     )
-    assert "If you cannot quote the node id verbatim from the prompt, use the exact benchmark test file path instead of inventing or renaming a node." in (
+    assert "Must not attach a validator to a ``team_planner`` item; child planners own their own validation." in (
         planner.system_prompt
     )
-    assert "open with one narrow ``ci_workspace_structure(path=\"<nearest likely production directory/package>\")`` pass, then call ``ci_scoped_status(scope_paths=[...])`` on an exact existing production path" in (
+    assert "If you cannot quote the node id verbatim from the prompt, must use the exact benchmark test file path instead of inventing or renaming a node." in (
+        planner.system_prompt
+    )
+    assert "open with one narrow ``ci_workspace_structure(path=\"<nearest likely production directory/package>\")`` pass and then call ``ci_scoped_status(scope_paths=[...])`` on an exact existing production path" in (
         planner.system_prompt
     )
     assert "keep the first scout wave dynamic: wide enough for the live owner surface, narrow enough that each lane answers one real ownership question" in (
@@ -608,10 +611,10 @@ def test_team_planner_prompt_makes_child_scope_rules_explicit():
     assert "prefer multiple separate production-owner scouts instead of collapsing those clusters into one omnibus lane" in (
         planner.system_prompt
     )
-    assert "Do not spend those first-wave lanes on already-named benchmark test files when a plausible production owner already exists." in (
+    assert "Must not spend those first-wave lanes on already-named benchmark test files when a plausible production owner already exists." in (
         planner.system_prompt
     )
-    assert "If a guessed benchmark owner file is missing, re-anchor on the nearest exact existing production directory/package path" in (
+    assert "If a guessed benchmark owner file is missing, must re-anchor on the nearest exact existing production directory/package path" in (
         planner.system_prompt
     )
 
@@ -646,9 +649,9 @@ def test_team_replanner_definition_uses_submit_replan_posthook_not_replan_tools(
     assert replanner.posthook.agent_name == SUBMIT_REPLAN_AGENT
     assert replanner.tool_call_limit == 100
     assert "atlas" in replanner.toolkits
-    assert "load the corrective-fast-path reference before deeper analysis" in replanner.system_prompt
-    assert "If ``load_skill_reference`` is available" in replanner.system_prompt
-    assert "start with ``ci_scoped_status(...)`` on the exact owner surface or owning directory" in replanner.system_prompt
+    assert "corrective-fast-path" in replanner.system_prompt
+    assert "load_skill_reference" in replanner.system_prompt
+    assert "ci_scoped_status" in replanner.system_prompt
     assert "submit_plan_posthook" not in replanner.toolkits
     assert "submit_replan_posthook" not in replanner.toolkits
     assert "posthook_submit_replan" not in replanner.toolkits

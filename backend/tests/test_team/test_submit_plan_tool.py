@@ -162,7 +162,7 @@ async def test_validator_policy_respects_metadata_overrides():
     )
     res = await tool.execute(no_validator, ctx)
     assert res.is_error
-    assert "3 or more items must include at least one validator" in res.output
+    assert "3 or more concrete non-planner items must include at least one terminal validator" in res.output
 
     too_many_validators = SubmitPlanInput.model_validate(
         {
@@ -180,17 +180,15 @@ async def test_validator_policy_respects_metadata_overrides():
 
 
 @pytest.mark.asyncio
-async def test_submit_plan_requires_direct_validator_for_nontrivial_developer_lane():
+async def test_submit_plan_requires_terminal_validator_for_three_developers():
     tool = SubmitPlanTool()
     ctx = _ctx()
     args = SubmitPlanInput.model_validate(
         {
             "items": [
-                {
-                    "agent_name": "developer",
-                    "local_id": "dev1",
-                    "payload": {"owned_files": ["pkg/a.py", "pkg/b.py"]},
-                }
+                {"agent_name": "developer", "local_id": "dev1"},
+                {"agent_name": "developer", "local_id": "dev2"},
+                {"agent_name": "developer", "local_id": "dev3"},
             ]
         }
     )
@@ -198,7 +196,113 @@ async def test_submit_plan_requires_direct_validator_for_nontrivial_developer_la
     res = await tool.execute(args, ctx)
 
     assert res.is_error
-    assert "non-trivial developer lane 'dev1' must have a validator" in res.output
+    assert "plans with 3 or more concrete non-planner items must include at least one terminal validator" in res.output
+
+
+@pytest.mark.asyncio
+async def test_submit_plan_allows_two_developers_plus_child_planner_without_parent_validator():
+    tool = SubmitPlanTool()
+    ctx = _ctx()
+    args = SubmitPlanInput.model_validate(
+        {
+            "items": [
+                {"agent_name": "developer", "local_id": "dev1"},
+                {"agent_name": "developer", "local_id": "dev2"},
+                {"agent_name": "team_planner", "local_id": "child", "kind": "expandable"},
+            ]
+        }
+    )
+
+    res = await tool.execute(args, ctx)
+
+    assert not res.is_error
+
+
+@pytest.mark.asyncio
+async def test_submit_plan_rejects_three_validators():
+    tool = SubmitPlanTool()
+    ctx = _ctx()
+    args = SubmitPlanInput.model_validate(
+        {
+            "items": [
+                {"agent_name": "validator", "local_id": "val1"},
+                {"agent_name": "validator", "local_id": "val2"},
+                {"agent_name": "validator", "local_id": "val3"},
+            ]
+        }
+    )
+
+    res = await tool.execute(args, ctx)
+
+    assert res.is_error
+    assert "plan has 3 validator items; submitted plans may have at most 2" in res.output
+
+
+@pytest.mark.asyncio
+async def test_submit_plan_requires_terminal_validator_when_any_validator_exists():
+    tool = SubmitPlanTool()
+    ctx = _ctx()
+    args = SubmitPlanInput.model_validate(
+        {
+            "items": [
+                {"agent_name": "developer", "local_id": "dev1"},
+                {"agent_name": "validator", "local_id": "val1", "deps": ["dev1"]},
+                {"agent_name": "a", "local_id": "followup", "deps": ["val1"]},
+            ]
+        }
+    )
+
+    res = await tool.execute(args, ctx)
+
+    assert res.is_error
+    assert (
+        "plans with validator items must leave at least one validator as a terminal end-of-chain guard"
+        in res.output
+    )
+
+
+@pytest.mark.asyncio
+async def test_submit_plan_rejects_multiple_terminal_validators():
+    tool = SubmitPlanTool()
+    ctx = _ctx()
+    args = SubmitPlanInput.model_validate(
+        {
+            "items": [
+                {"agent_name": "developer", "local_id": "dev1"},
+                {"agent_name": "developer", "local_id": "dev2"},
+                {"agent_name": "validator", "local_id": "val1", "deps": ["dev1"]},
+                {"agent_name": "validator", "local_id": "val2", "deps": ["dev2"]},
+            ]
+        }
+    )
+
+    res = await tool.execute(args, ctx)
+
+    assert res.is_error
+    assert (
+        "plans with validator items must keep exactly one validator as the terminal end-of-chain guard"
+        in res.output
+    )
+
+
+@pytest.mark.asyncio
+async def test_submit_plan_rejects_validator_depending_on_expandable_sibling():
+    tool = SubmitPlanTool()
+    ctx = _ctx()
+    args = SubmitPlanInput.model_validate(
+        {
+            "items": [
+                {"agent_name": "developer", "local_id": "dev1"},
+                {"agent_name": "team_planner", "local_id": "child", "kind": "expandable"},
+                {"agent_name": "validator", "local_id": "val1", "deps": ["child"]},
+            ]
+        }
+    )
+
+    res = await tool.execute(args, ctx)
+
+    assert res.is_error
+    assert "validator items must not depend on expandable siblings" in res.output
 
 
 @pytest.mark.asyncio

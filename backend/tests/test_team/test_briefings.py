@@ -17,6 +17,7 @@ from team.models import (
     BudgetState,
     DependencyArtifact,
     WorkItem,
+    WorkItemKind,
     WorkItemStatus,
 )
 from team.runtime.dispatcher import Dispatcher
@@ -255,7 +256,12 @@ def test_dispatcher_complete_snapshots_successor():
 def test_dispatcher_complete_snapshots_full_dependency_subtree():
     async def _run():
         d = _dispatcher()
-        planner = _new_wi("P", status=WorkItemStatus.PENDING, local_id="planner")
+        planner = _new_wi(
+            "P",
+            status=WorkItemStatus.PENDING,
+            kind=WorkItemKind.EXPANDABLE,
+            local_id="planner",
+        )
         validator = _new_wi("V", deps=["P"], agent_name="validator")
         await d.add_work_item(planner)
         await d.add_work_item(validator)
@@ -265,7 +271,7 @@ def test_dispatcher_complete_snapshots_full_dependency_subtree():
             AgentResult(
                 artifact={"target_paths": ["src/plan"]},
                 summary="planned",
-                submitted_plan=Plan(items=[WorkItemSpec(agent_name="developer", local_id="dev1")]),
+                submitted_plan=Plan(items=[WorkItemSpec(agent_name="a", local_id="dev1")]),
             ),
         )
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from team.errors import BudgetExceeded, InvalidPlan
-from team.models import WorkItem, WorkItemKind, WorkItemStatus, _utcnow
+from team.models import WorkItem, WorkItemKind, WorkItemStatus
 from team.persistence.events import make_work_item_added, make_work_item_status, work_item_to_dict
 from team.runtime.dispatcher_mutation_ops import cascade_cancel
 

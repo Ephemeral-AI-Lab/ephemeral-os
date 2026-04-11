@@ -25,47 +25,28 @@ def _validator_count(items: list[WorkItemSpec]) -> int:
     return sum(1 for item in items if item.agent_name == _VALIDATOR_AGENT)
 
 
-def _payload_str_items(payload: dict[str, object], key: str) -> list[str]:
-    raw = payload.get(key)
-    if isinstance(raw, str):
-        value = raw.strip()
-        return [value] if value else []
-    if isinstance(raw, list):
-        return [value.strip() for value in raw if isinstance(value, str) and value.strip()]
-    return []
-
-
-def _payload_positive_int(payload: dict[str, object], key: str) -> int:
-    raw = payload.get(key)
-    if isinstance(raw, bool):
-        return 0
-    if isinstance(raw, int):
-        return raw if raw > 0 else 0
-    if isinstance(raw, str):
-        try:
-            parsed = int(raw)
-        except ValueError:
-            return 0
-        return parsed if parsed > 0 else 0
-    return 0
-
-
-def _is_nontrivial_developer_lane(item: WorkItemSpec) -> bool:
-    if item.agent_name != "developer" or item.kind != WorkItemKind.ATOMIC:
-        return False
-    payload = item.payload if isinstance(item.payload, dict) else {}
-    if len(_payload_str_items(payload, "owned_files")) > 1:
-        return True
-    owned_failure_count = max(
-        len(_payload_str_items(payload, "owned_failures")),
-        _payload_positive_int(payload, "owned_failures_unique_total"),
+def _concrete_execution_count(items: list[WorkItemSpec]) -> int:
+    return sum(
+        1
+        for item in items
+        if item.agent_name != _VALIDATOR_AGENT and item.kind != WorkItemKind.EXPANDABLE
     )
-    return owned_failure_count > 1
 
 
-def _has_direct_validator_dep(items: list[WorkItemSpec], dep_local_id: str) -> bool:
-    return any(
-        item.agent_name == _VALIDATOR_AGENT and dep_local_id in item.deps for item in items
+def _terminal_validator_count(items: list[WorkItemSpec]) -> int:
+    downstream_local_ids = {
+        dep
+        for item in items
+        for dep in item.deps
+        if isinstance(dep, str) and dep
+    }
+    return sum(
+        1
+        for item in items
+        if (
+        item.agent_name == _VALIDATOR_AGENT
+        and (item.local_id is None or item.local_id not in downstream_local_ids)
+        )
     )
 
 
@@ -93,55 +74,81 @@ def _validator_policy_issues(
 ) -> list[Issue]:
     issues: list[Issue] = []
     validator_count = _validator_count(items)
-    if max_validators_per_plan is not None and validator_count > max_validators_per_plan:
+    effective_max_validators = 2 if max_validators_per_plan is None else min(max_validators_per_plan, 2)
+    require_validator_threshold = (
+        3 if require_validator_for_plan_size is None else min(require_validator_for_plan_size, 3)
+    )
+    if validator_count > effective_max_validators:
         issues.append(
             {
                 "field": "items",
                 "msg": (
                     f"plan has {validator_count} validator items; submitted plans may have at most "
-                    f"{max_validators_per_plan}"
+                    f"{effective_max_validators}"
                 ),
             }
         )
-    if (
-        require_validator_for_plan_size is not None
-        and len(items) >= require_validator_for_plan_size
-        and validator_count == 0
-    ):
+    if _concrete_execution_count(items) >= require_validator_threshold and validator_count == 0:
         issues.append(
             {
                 "field": "items",
                 "msg": (
-                    f"plans with {require_validator_for_plan_size} or more items must "
-                    "include at least one validator"
+                    f"plans with {require_validator_threshold} or more concrete non-planner items "
+                    "must include at least one terminal validator"
                 ),
             }
         )
-    for idx, item in enumerate(items):
-        if not _is_nontrivial_developer_lane(item):
-            continue
-        if item.local_id is None:
-            issues.append(
-                {
-                    "field": f"items[{idx}].local_id",
-                    "msg": (
-                        "non-trivial developer lane must set local_id so a validator "
-                        "can depend on that concrete child task"
-                    ),
-                }
-            )
-            continue
-        if _has_direct_validator_dep(items, item.local_id):
-            continue
+    if validator_count == 0:
+        return issues
+
+    terminal_validator_count = _terminal_validator_count(items)
+    if terminal_validator_count == 0:
         issues.append(
             {
-                "field": f"items[{idx}].local_id",
+                "field": "items",
                 "msg": (
-                    f"non-trivial developer lane '{item.local_id}' must have a validator "
-                    "that depends on that concrete child task"
+                    "plans with validator items must leave at least one validator as a "
+                    "terminal end-of-chain guard"
                 ),
             }
         )
+    elif terminal_validator_count > 1:
+        issues.append(
+            {
+                "field": "items",
+                "msg": (
+                    "plans with validator items must keep exactly one validator as the "
+                    "terminal end-of-chain guard"
+                ),
+            }
+        )
+    return issues
+
+
+def _expandable_validator_dep_issues(items: list[WorkItemSpec]) -> list[Issue]:
+    issues: list[Issue] = []
+    local_item_map = {
+        item.local_id: item
+        for item in items
+        if item.local_id is not None
+    }
+    for idx, item in enumerate(items):
+        if item.agent_name != _VALIDATOR_AGENT:
+            continue
+        for dep in item.deps:
+            dep_item = local_item_map.get(dep)
+            if dep_item is None:
+                continue
+            if dep_item.kind == WorkItemKind.EXPANDABLE:
+                issues.append(
+                    {
+                        "field": f"items[{idx}].deps",
+                        "msg": (
+                            "validator items must not depend on expandable siblings "
+                            f"such as '{dep}'; keep validation inside that child planner branch"
+                        ),
+                    }
+                )
     return issues
 
 
@@ -181,6 +188,7 @@ def validate_plan_phase_a(
             require_validator_for_plan_size=require_validator_for_plan_size,
         )
     )
+    issues.extend(_expandable_validator_dep_issues(plan.items))
 
     local_ids: set[str] = set()
     for idx, item in enumerate(plan.items):
@@ -476,6 +484,9 @@ def validate_plan_phase_b(
     )
     if validator_issues:
         raise InvalidPlan("; ".join(issue["msg"] for issue in validator_issues))
+    dep_issues = _expandable_validator_dep_issues(plan.items)
+    if dep_issues:
+        raise InvalidPlan("; ".join(issue["msg"] for issue in dep_issues))
 
     # Re-check local_id uniqueness — Phase A may have been bypassed if a Plan
     # was constructed directly rather than via the submit_plan tool.

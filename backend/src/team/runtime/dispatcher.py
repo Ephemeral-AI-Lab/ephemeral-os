@@ -43,7 +43,6 @@ from team.runtime.dispatcher_checkpoint_ops import (
 from team.runtime.dispatcher_mutation_ops import (
     cancel_all_pending as cancel_dispatcher_pending,
     cancel_running as cancel_dispatcher_running,
-    cascade_cancel,
     cascade_cancel_dependency_subtree,
     fail as fail_work_item,
     retry_work_item as retry_dispatcher_work_item,

@@ -1,128 +1,41 @@
 ---
 name: verification-replan
-description: Skill for verifier agents to analyze test failures and report structured summaries for downstream recovery.
+description: Failure-triage contract for verifier agents that need to request retry or replan.
 ---
 
 # Verification Replan
 
-When assigned as a verifier for a coordination node, use this skill to analyze test results and — if failures are detected — report structured summaries for downstream recovery.
+Use this skill only after verification fails. Must triage failures for retry or replan. Never create fix tasks yourself.
 
-Current runtime note:
-- This repository does not currently expose a universal `request_replan` tool in every verifier run.
-- Some verifier runs now expose `request_retry` alongside `request_replan`.
-- If the tool is present in your runtime surface, use it.
-- If it is absent, emit the same structured triage in your final FAIL summary so a downstream coordinator or human can replan manually.
+## Conditional references
 
-You do NOT create fix tasks. Your job is to test, triage, and report.
-
----
+- Must load `triage-format` when you need to produce a manual FAIL summary because `request_retry()` or `request_replan()` is absent.
+- Must load `triage-format` when multiple failing clusters need to be grouped into one structured report.
 
 ## Workflow
 
-### 1. Run scoped tests
+1. Must cluster failing tests by root cause.
+2. Must map each cluster to the likely owner surface and, when available, the sibling task that touched it.
+3. Must classify each cluster as `implementation_bug`, `integration_gap`, `missing_coverage`, or `transient_runtime`.
 
-Run the FAIL_TO_PASS tests listed in your task description, then run relevant PASS_TO_PASS tests to check for regressions. Collect structured results:
-- Test ID
-- Pass/fail status
-- Error message and traceback (for failures)
-- Which source files the test exercises
+## Action rules
 
-### 2. If all tests pass
+- If `request_retry()` is available and the failure is transient, must use it first.
+- If `request_replan()` is available and the failure is not transient, must use it.
+- If the needed tool is absent, must emit the same triage in the final FAIL summary.
 
-Complete successfully with a summary of test results. No replanning needed.
+## Required triage block
 
-### 3. If tests fail — triage failures
+Must include:
+- `REPLAN_REASON: ...`
+- `FAIL_TO_PASS: N/M failing`
+- One `CLUSTER:` block per root cause with exact test ids, exact error summaries, likely owner surface, and sibling task when known
+- `PASS_TO_PASS:` results and regressions
 
-Before reporting, analyze the failures:
+## Hard rules
 
-1. **Cluster failures by root cause.** Multiple test failures often share a single root cause (e.g., a wrong return type, a missing import, an incorrect conditional). Group related failures together.
-
-2. **Map each cluster to implementation area.** Use test file paths, import chains, and error messages to identify which source files and functions are responsible. Cross-reference with the `touches_paths` of completed sibling tasks to determine which task's work needs rework.
-
-3. **Classify each cluster:**
-   - **Implementation bug** — the sibling task's code has a logic error, missing edge case, or wrong API usage.
-   - **Integration gap** — two sibling tasks' outputs don't connect properly (e.g., mismatched interface, wrong import path).
-   - **Missing coverage** — the original plan didn't include a task for this area.
-   - **Transient runtime fault** — flaky timeout, sandbox instability, or checkpoint/retry corruption where the same task is still the right one.
-
-### 4. Choose `request_retry()` vs `request_replan()` when available
-
-If the runtime exposes `request_retry()` and the failure is a transient runtime fault, prefer it first with a concise reason naming the exact failing command/tool and the repeated transient symptom.
-
-If the failure is not transient, and the runtime exposes `request_replan()`, call it with a structured summary:
-
-- **`reason`**: Brief summary (e.g., `"3/10 FAIL_TO_PASS tests failing: parser return type mismatch and missing validation"`)
-- **`context`**: Full structured test output — failed test IDs, error messages, tracebacks, and your triage analysis (clusters, root causes, affected files).
-- **`suggestion`**: Hints for the replanner — which files need rework, which completed tasks to build on, what the correct behavior should be.
-
-If the runtime does not expose the needed tool, put the same structured content into your final FAIL summary under clearly labeled clusters so retry/replanning can happen outside the verifier turn.
-
----
-
-## Rules
-
-- **Do NOT modify source files.** Your job is verification and reporting only.
-- **Do NOT create tasks.** If `request_replan()` is available, use it. Otherwise your job stops at a structured FAIL summary.
-- **Prefer retry for repeated transient runtime faults.** Use replanning only when the evidence says the task graph or implementation work itself is wrong.
-- **Be specific in your report.** Vague reports like "tests failed" waste the replanner's time. Include test IDs, error messages, file paths, and root cause analysis.
-- **Cluster by root cause.** Don't list every test failure independently — group them so the replanner creates one targeted fix per cluster.
-- **Map failures to sibling tasks.** Tell the replanner which completed task's work needs rework and what files are involved.
-- **Include regression context.** If PASS_TO_PASS tests regressed, note which ones so the replanner knows to preserve existing behavior.
-
----
-
-## Context format
-
-Structure your `context` argument like this:
-
-```
-FAIL_TO_PASS results: N/M failing
-
-Cluster 1 (K tests): <root cause summary>
-  - <test_id>: <error summary>
-  - <test_id>: <error summary>
-  Root: <file:line> — <what's wrong>
-  Sibling task: <task_id that produced the buggy code>
-  Fix: <what the correct behavior should be>
-
-Cluster 2 (K tests): <root cause summary>
-  ...
-
-PASS_TO_PASS results: N/M passing
-  Regressions (if any):
-  - <test_id>: <error summary>
-```
-
----
-
-## Example when `request_replan()` is available
-
-```
-request_replan(
-    reason="2 failure clusters: DateParser.parse returns wrong type, validate_email missing null check",
-    context="""
-FAIL_TO_PASS results: 4/7 failing
-
-Cluster 1 (3 tests): DateParser.parse return type
-  - test_parse_iso_format: AssertionError: expected datetime, got str
-  - test_parse_relative: AssertionError: expected datetime, got str
-  - test_parse_with_timezone: TypeError: strftime requires datetime, not str
-  Root: src/parsers/date_parser.py:45 — parse() returns raw string instead of datetime
-  Sibling task: implement-date-parser
-  Fix: wrap return value with datetime.fromisoformat()
-
-Cluster 2 (1 test): Email validation null handling
-  - test_validate_none_email: AttributeError: 'NoneType' has no attribute 'strip'
-  Root: src/validators/email.py:12 — validate_email() doesn't handle None input
-  Sibling task: implement-validators
-  Fix: add null guard returning ValidationError
-
-PASS_TO_PASS results: 15/15 passing (no regressions)
-    """,
-    suggestion="Two independent fixes needed. fix-date-parser can depend on implement-date-parser. fix-email-validate can depend on implement-validators."
-)
-```
-
-## What happens after
-
-When `request_replan()` is available, your structured triage becomes the input for downstream recovery. When `request_replan()` is not available, the same triage block should appear in the verifier's final FAIL summary and a later coordinator or human turn must perform the replan explicitly.
+1. Must stay read-only.
+2. Must stay specific.
+3. Must group by root cause.
+4. Must preserve regression context.
+5. Never emit vague summaries such as "tests failed".

@@ -64,7 +64,12 @@ Output contract:
 - If a guessed benchmark owner file is missing, must re-anchor on the nearest exact existing production directory/package path or park that slice behind a residual child planner. Must not use benchmark test-file scouts or test-surface symbol hits as a substitute owner map.
 - If a child slice would exceed the runtime `max_plan_size`, must merge adjacent residual work behind a narrower downstream `team_planner` item instead of flattening every cluster into sibling developer/validator pairs.
 - Must keep validation branch-local. Must not add an umbrella validator over a child plan when each concrete developer lane already has its own validator.
-- On benchmark plans, must keep validator items paired with the concrete developer lanes or whole child branches they actually verify. Must keep child-plan validators branch-local instead of layering an umbrella validator over a residual branch. A validator may depend directly on an expandable residual child-planner branch only when you intentionally want a whole-branch barrier on that branch's full descendant subtree.
+- Must keep validator count below 3 at the current plan level.
+- If a plan has validator items, must keep exactly one validator as the terminal end guard in the same-plan DAG.
+- If a plan has 3 or more concrete non-``team_planner`` items, must include that terminal end guard.
+- Must choose validator deps by the branch cut being guarded, not by agent type. Use direct concrete-lane deps for the work being checked. Must not attach a validator to a ``team_planner`` item; child planners own their own validation.
+- Must use `task-planning-decomposition` for the heuristic choice of whether a second validator belongs as the single midflight checkpoint before the final end guard.
+- On benchmark plans, must keep validator items aligned to the concrete branch cut they actually verify. Must keep child-plan validators branch-local instead of layering an umbrella validator over a residual branch.
 - Must not write prose before or after the JSON payload."""
 
 _DEVELOPER_PROMPT = """You are developer. Execute the coding WorkItem described in the payload: read the target files, write or edit code in the sandbox, and verify your changes compile/parse before returning.
@@ -96,6 +101,9 @@ _SUBMIT_PLAN_AGENT_PROMPT = """You are submit_plan_agent. Read the work-phase ou
 - If validation fails, must repair only the specific invalid field(s). Must preserve explicit ordering that the planner asked for, but must not invent new sibling deps that serialize disjoint work.
 - In a mixed plan, a disjoint expandable child planner may remain ready immediately. Must not add a dependency from an expandable residual branch to an unrelated atomic worker just to satisfy symmetry.
 - Must prefer validators attached to the concrete developer lanes they actually verify. A dep on an expandable sibling is allowed, and it now waits for the full descendant subtree rooted at that branch rather than only the planner submission step.
+- Must keep validator count at 2 or fewer.
+- If the submitted plan has validator items, exactly one validator must remain terminal in the same-plan DAG.
+- If the submitted plan has 3 or more items, it must include that terminal validator. Must not repair validation errors by leaving every validator with downstream work items or by ending with multiple terminal validators.
 - If validation fails because validator deps point to unknown local_ids and the current payload only contains validator items, must not delete the deps and submit a validator-only fallback. Must re-read the raw JSON and recover the missing developer items, or must stop without submitting a partial plan.
 - If validation fails on `max_plan_size`, must not make a cosmetic one-item trim. Must rebuild the plan shape so it still preserves the planner's real ownership boundaries, usually by merging adjacent residual siblings behind a narrower expandable `team_planner` item rather than dropping validation or cross-surface coverage.
 - If validation says a benchmark reference must use the exact prompt path/id, must repair only the offending entries. Must keep an exact pytest node id only when it already appears verbatim in the planner output and validator hint; otherwise must downgrade that entry to the exact benchmark test file path instead of guessing a nearby node name.
