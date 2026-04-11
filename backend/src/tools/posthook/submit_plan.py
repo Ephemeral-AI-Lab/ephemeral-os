@@ -47,6 +47,8 @@ def _normalize_submit_plan_item_shape(item: Any) -> Any:
     if isinstance(raw_agent_name, str):
         agent_name = raw_agent_name.strip()
         if agent_name not in {"developer", "validator", "team_planner"}:
+            explicit_agent_name = "agent_name" in item
+            local_id_like_name = any(sep in agent_name for sep in ("_", "-"))
             inferred_agent = None
             explicit_agent = normalized.get("agent")
             if isinstance(explicit_agent, str) and explicit_agent.strip() in {
@@ -55,14 +57,22 @@ def _normalize_submit_plan_item_shape(item: Any) -> Any:
                 "team_planner",
             }:
                 inferred_agent = explicit_agent.strip()
-            elif normalized.get("kind") == WorkItemKind.EXPANDABLE.value:
+            elif (not explicit_agent_name or local_id_like_name) and normalized.get("kind") == WorkItemKind.EXPANDABLE.value:
                 inferred_agent = "team_planner"
-            elif agent_name.startswith("validate") or agent_name.startswith("validator"):
+            elif (not explicit_agent_name or local_id_like_name) and (
+                agent_name.startswith("validate") or agent_name.startswith("validator")
+            ):
                 inferred_agent = "validator"
-            elif _looks_like_validator_payload(payload_dict) and normalized.get("deps"):
+            elif (
+                (not explicit_agent_name or local_id_like_name)
+                and _looks_like_validator_payload(payload_dict)
+                and normalized.get("deps")
+            ):
                 inferred_agent = "validator"
-            else:
+            elif not explicit_agent_name or local_id_like_name:
                 inferred_agent = "developer"
+            else:
+                inferred_agent = agent_name
 
             normalized["agent_name"] = inferred_agent
             if not isinstance(local_id, str) or not local_id.strip():
@@ -343,14 +353,12 @@ class SubmitPlanTool(SubmitPosthookTool):
         benchmark_test_ids: set[str] | None,
         benchmark_test_files: set[str] | None,
     ) -> dict[str, Any]:
-        if not benchmark_test_ids and not benchmark_test_files:
-            return plan_data
         repo_dir = str(
             context.metadata.get("daytona_cwd")
             or context.metadata.get("ci_workspace_root")
             or ""
         ).strip()
-        if not repo_dir:
+        if not benchmark_test_ids and not benchmark_test_files:
             return plan_data
 
         items = plan_data.get("items")
@@ -381,6 +389,8 @@ class SubmitPlanTool(SubmitPosthookTool):
                 ]
             for key in _BENCHMARK_COMMAND_KEYS:
                 raw_value = normalized_payload.get(key)
+                if not repo_dir:
+                    continue
                 if isinstance(raw_value, str):
                     normalized_payload[key] = self._normalize_benchmark_command(
                         raw_value, repo_dir=repo_dir

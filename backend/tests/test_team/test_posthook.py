@@ -601,7 +601,9 @@ def test_submit_plan_agent_prompt_calls_out_validator_dep_repairs_and_local_id_d
     assert serializer is not None
     assert "Must keep exactly one entry per unique ``local_id``." in serializer.system_prompt
     assert "Every validator must depend on at least one upstream sibling." in serializer.system_prompt
-    assert "its ``deps`` must include every terminal concrete sibling" in serializer.system_prompt
+    assert "Validators may depend directly on `team_planner` siblings." in serializer.system_prompt
+    assert "they resolve only after that planner subtree finishes" in serializer.system_prompt
+    assert "its ``deps`` must include every terminal non-validator sibling" in serializer.system_prompt
 
 
 def test_team_planner_prompt_makes_child_scope_rules_explicit():
@@ -618,16 +620,16 @@ def test_team_planner_prompt_makes_child_scope_rules_explicit():
     assert "Must treat inherited `## Scoped Expansion`, `## From deps`, and `## From parent` context as mandatory inputs on non-root turns." in (
         planner.system_prompt
     )
-    assert "Must keep validation branch-local. Must not add an umbrella validator over a child plan" in (
+    assert "Must keep validation aligned to the actual branch cut being guarded." in (
         planner.system_prompt
     )
-    assert "On benchmark plans, must keep validator items aligned to the concrete branch cut they actually verify." in (
+    assert "the validator only becomes ready after the planner subtree resolves." in (
         planner.system_prompt
     )
-    assert "Must not attach a validator to a ``team_planner`` item; child planners own their own validation." in (
+    assert "If a validator depends on a `team_planner` sibling, that planner still counts in the guarded chain" in (
         planner.system_prompt
     )
-    assert "If you cannot quote the node id verbatim from the prompt, must use the exact benchmark test file path instead of inventing or renaming a node." in (
+    assert "If you cannot quote the node id verbatim from the prompt or a live artifact, must use the exact benchmark test file path instead of inventing one." in (
         planner.system_prompt
     )
     assert "open with one narrow ``ci_workspace_structure(path=\"<nearest likely production directory/package>\")`` pass and then call ``ci_scoped_status(scope_paths=[...])`` on an exact existing production path" in (

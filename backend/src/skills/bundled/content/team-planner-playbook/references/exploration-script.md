@@ -4,13 +4,15 @@ Use this reference only on fresh benchmark roots or any turn that still lacks cl
 
 ## Workflow
 
-1. Must start with one narrow `ci_workspace_structure(...)` pass on the nearest likely production directory or package.
-2. Must follow with `ci_scoped_status(scope_paths=[...])` on one exact existing production path from that listing.
+1. Must start with one narrow `ci_workspace_structure(path=...)` pass on the nearest likely production directory or package implied by the prompt failures.
+2. Must follow with `ci_scoped_status(scope_paths=[...])` on exactly one existing production path from that listing.
 3. Must use code intelligence to seed likely owners from live symbols, package structure, and the scoped packet before naming scout slices.
-4. If more than one owner slice is still unresolved after the anchor, the next planning action must be a scout wave, not final DAG synthesis.
-5. Must launch scouts only after that live anchor exists.
-6. Must keep each scout on one distinct unresolved owner slice.
-7. Must stop exploring once the current plan layer can name ready work plus residual boundaries.
+4. Must translate benchmark failure evidence into production-owner slices before scout launch. Failing test paths stay evidence only.
+5. If another failure family sits outside the current anchor, must branch through the nearest production directory or package for that family before naming a new exact production path.
+6. If more than one owner slice is still unresolved after the anchor, the next planning action must be a scout wave, not more local file-level exploration or final DAG synthesis.
+7. Must launch scouts only after that live anchor exists.
+8. Must keep each scout on one distinct unresolved owner slice.
+9. Must stop exploring once the current plan layer can name ready work plus residual boundaries.
 
 ## Scout fanout strategy
 
@@ -33,8 +35,26 @@ Must not split that into one scout per failing test file.
 Must not collapse those three owner slices into one omnibus scout.
 Must stop after that wave if it already identifies the dominant owner slice and the residual boundary.
 
+If benchmark failures mention `pkg/io/tests/test_hdf.py`, `pkg/io/tests/test_parquet.py`, `pkg/tests/test_groupby.py`, and `pkg/tests/test_config.py`, the root anchor should look like:
+
+- `ci_workspace_structure(path="pkg/io")`
+- `ci_scoped_status(scope_paths=["pkg/io"])`
+
+Then scout the production-owner slices such as `pkg/io/hdf.py`, `pkg/io/parquet/`, `pkg/groupby.py`, and `pkg/config.py`.
+Do not anchor on `pkg`, `pkg/tests`, or the failing test files once those production candidates are already visible.
+
+If the first anchor is already inside `pkg/io`, but another failing family is only named by `pkg/tests/test_groupby.py`, the next discovery step must branch through a production-side listing such as `ci_workspace_structure(path="pkg")` or `ci_workspace_structure(path="pkg/dataframe")`.
+If that listing shows `pkg/groupby.py` or `pkg/groupby/`, anchor there.
+Never call `ci_scoped_status(scope_paths=["pkg/tests/test_groupby.py"])` as a substitute for missing production mapping.
+
 If the anchor points to `pkg/groupby.py`, `pkg/io/parquet/`, `pkg/io/json.py`, `pkg/config.py`, and `pkg/compat.py`, do not collapse the last three into one "misc" planner just because they are small.
 Scout them separately until live evidence shows that two or more really converge on the same production owner.
+
+If the prompt plus the first scoped packet already expose exact file candidates like `pkg/config.py`, `pkg/compat.py`, and `pkg/cli.py`, do not widen the first status packet to `pkg` or submit another packet covering all three.
+Use the existing anchor to launch one scout per exact file or park the overflow behind a child planner.
+
+If benchmark failures mention `pkg/tests/test_config.py`, `pkg/tests/test_cli.py`, or `pkg/tests/test_compat.py` outside the first anchor, branch through `ci_workspace_structure(path="pkg")` and then anchor exact production paths like `pkg/config.py`, `pkg/cli.py`, or `pkg/compat.py` when they exist.
+Never use those benchmark test files as fallback owner slices.
 
 If the live anchor confirms `pkg/io/hdf.py` as the dominant owner and a child branch still needs deeper mapping inside `pkg/io/parquet/`, emit one direct developer lane for HDF and park parquet behind a child planner.
 Do not hold the ready HDF lane hostage just because parquet is still exploratory.
@@ -46,10 +66,15 @@ Only after those scout briefs return may the planner load decomposition guidance
 ## Rules
 
 - Never open with root-wide CI queries.
+- Never use the workspace root, repo package root, or a broad top-level package as the first anchor when the prompt already points at a deeper production area.
+- Never call the first `ci_scoped_status(...)` with multiple top-level scope paths.
 - Never spend first-wave scouts on benchmark test files when a plausible production owner exists.
+- Never use a benchmark test file as a temporary `ci_scoped_status(...)` anchor while "figuring out" an out-of-anchor failure family.
 - Never guess missing production files from test names.
 - Never bundle unrelated owner slices into one scout just to reduce lane count.
 - Never sit on an anchor-only picture for a long reasoning pass when unresolved owner slices still exist; scout immediately.
+- Never keep querying every candidate owner locally after the anchor already named distinct unresolved slices; hand file-level reading to scouts.
+- Never copy benchmark test paths or test directories into scout `target_paths` after the anchor exposed production owners for those failures.
 - Never map a benchmark cluster to a production file solely because the names look similar.
 - Never use Atlas as a substitute for the first same-run scout wave.
 - Never keep scouting after owner sufficiency is reached.

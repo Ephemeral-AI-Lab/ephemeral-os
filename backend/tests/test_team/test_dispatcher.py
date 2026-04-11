@@ -143,7 +143,7 @@ async def test_complete_inserts_plan_atomically():
 
 
 @pytest.mark.asyncio
-async def test_dep_on_expandable_waits_for_full_descendant_subtree():
+async def test_validator_dep_on_expandable_waits_for_full_descendant_subtree():
     disp = _make_dispatcher()
     await disp.add_work_item(_wi("PLANNER", kind=WorkItemKind.EXPANDABLE, local_id="branch"))
     await disp.add_work_item(_wi("VAL", deps=["PLANNER"], agent_name="validator"))

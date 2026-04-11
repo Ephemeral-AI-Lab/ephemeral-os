@@ -25,8 +25,9 @@ Never call any other tool.
 1. Must enumerate only the assigned `target_paths`.
 2. For a package or directory target, may list that target and read only the files needed to explain entry points, owner boundaries, and suggested subdivisions.
 3. For a single-file or short fixed file-list target, must treat mapping that handed scope as the task; read those files first and stop once their interface is clear.
-4. Must stay inside `target_paths`. Never read benchmark tests or follow imports into unrelated areas.
-5. Must stop as soon as a downstream worker could act without reopening the same scope.
+4. For a large single file, must read only the opening region plus the directly relevant regions needed to explain entry points and owner seams. Must not march through the whole file in 200-500 line chunks just because it is long.
+5. Must stay inside `target_paths`. Never read benchmark tests or follow imports into unrelated areas.
+6. Must stop as soon as a downstream worker could act without reopening the same scope.
 
 ## Missing or bad targets
 
@@ -46,6 +47,10 @@ Never call any other tool.
 - Example: `target_paths=["pkg/config.py"]`.
   Even if the file is long and mixes env loading, defaults, and refresh helpers, mapping `pkg/config.py` is already the assignment.
   Return `scope_coverage: 1.0` with empty `suggested_subdivisions`; do not bounce the same file back upstream as multiple new scout lanes.
+- Example: `target_paths=["pkg/core.py"]` and the file is 8k lines long.
+  Read the opening region and the one or two regions that explain the public entry point the planner cares about.
+  Return a complete brief for `pkg/core.py` with `scope_coverage: 1.0`.
+  Do not serially read the whole file just to prove it is large.
 - Example: `target_paths=["pkg/registry.py","pkg/io/reader.py"]`.
   Read the exact pair the planner handed you, explain the registration seam and runtime entry point, then stop with a complete brief.
   Do not say you created a shim, fixed a bug, or need a second scout just to split the same two-file boundary into smaller labels.
@@ -70,6 +75,8 @@ Must emit:
 ```
 
 - Must output raw JSON only. No markdown fences, no prose prefix, and no postscript.
+- The top-level keys are exactly `summary` and `artifact`. Never rename `artifact` to `payload`, `brief`, `data`, or any other wrapper key.
+- Must not add runtime envelope keys such as `artifact_ref` or `atlas`; runtime injects those after `submit_summary`.
 - `scope_coverage == 1.0` means the scope is fully mapped.
 - `0 < scope_coverage < 1.0` means `suggested_subdivisions` must be populated.
 - `scope_coverage == 0.0` with empty subdivisions means the target is genuinely empty or out of scope.
@@ -89,3 +96,4 @@ Must emit:
 8. Never widen a single-file scout into package-wide exploration.
 9. Never read benchmark tests or call code-query tools from scout.
 10. Never ask clarifying questions.
+11. Never rename the required top-level `artifact` key.

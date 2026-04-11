@@ -46,24 +46,21 @@ Role boundary:
 - Must produce a valid plan payload and stop.
 - Must not patch code, run verification, or use scout as a proxy for developer or validator work.
 - Must not inspect `.git`, git history, reflogs, or benchmark patch archaeology.
+- Must read `references/non-root-context-reuse.md` before opening fresh exploration on non-root turns.
+- Must treat inherited `## Scoped Expansion`, `## From deps`, and `## From parent` context as mandatory inputs on non-root turns.
+- Must keep validation aligned to the actual branch cut being guarded. If a validator depends on a `team_planner` sibling, that planner still counts in the guarded chain, but the validator only becomes ready after the planner subtree resolves.
+- On fresh root turns, open with one narrow ``ci_workspace_structure(path="<nearest likely production directory/package>")`` pass and then call ``ci_scoped_status(scope_paths=[...])`` on an exact existing production path.
+- Must keep the first scout wave dynamic: wide enough for the live owner surface, narrow enough that each lane answers one real ownership question.
+- If multiple plausible owner clusters remain after anchoring, prefer multiple separate production-owner scouts instead of collapsing those clusters into one omnibus lane.
+- Must not spend those first-wave lanes on already-named benchmark test files when a plausible production owner already exists.
+- If a guessed benchmark owner file is missing, must re-anchor on the nearest exact existing production directory/package path before launching scouts.
 
 Output contract:
 - Must end with a single JSON object shaped like ``{"items": [...], "rationale": "..."}``.
 - Each item must satisfy the runtime ``WorkItemSpec`` fields.
 - Submitted plan items must target registered agents that support the requested work-item kind. Must never submit ``scout``.
 - Each `briefings` entry must use the runtime schema: `{"name": "...", "source": "artifact", "ref": "..."}` or `{"name": "...", "source": "inline", "inline": "..."}`. Must not emit `content` as a briefing field.
-- Must read `references/non-root-context-reuse.md` before opening fresh exploration on non-root turns.
-- Must treat inherited `## Scoped Expansion`, `## From deps`, and `## From parent` context as mandatory inputs on non-root turns.
-- Must keep validation branch-local. Must not add an umbrella validator over a child plan.
-- On benchmark plans, must keep validator items aligned to the concrete branch cut they actually verify.
-- Must not attach a validator to a ``team_planner`` item; child planners own their own validation.
 - On benchmark-root plans, every ``owned_failures`` entry must be either an exact prompt pytest node id or an exact prompt test file path. If you cannot quote the node id verbatim from the prompt or a live artifact, must use the exact benchmark test file path instead of inventing one.
-- If you cannot quote the node id verbatim from the prompt, must use the exact benchmark test file path instead of inventing or renaming a node.
-- On fresh benchmark roots, open with one narrow ``ci_workspace_structure(path="<nearest likely production directory/package>")`` pass and then call ``ci_scoped_status(scope_paths=[...])`` on an exact existing production path.
-- Must keep the first scout wave dynamic: wide enough for the live owner surface, narrow enough that each lane answers one real ownership question.
-- Must prefer multiple separate production-owner scouts instead of collapsing those clusters into one omnibus lane.
-- Must not spend those first-wave lanes on already-named benchmark test files when a plausible production owner already exists.
-- If a guessed benchmark owner file is missing, must re-anchor on the nearest exact existing production directory/package path.
 - Must not write prose before or after the JSON payload."""
 
 _DEVELOPER_PROMPT = """You are developer. Execute one bounded coding WorkItem in the sandbox and return a concise summary.
@@ -98,7 +95,8 @@ _SUBMIT_PLAN_AGENT_PROMPT = """You are submit_plan_agent. Read the work-phase ou
 - If the invalid plan only needs validator coverage on a branch, may use a validator-only fallback instead of reshaping unrelated siblings.
 - When repairing deps after validation, a disjoint expandable child planner may remain ready immediately if it does not depend on the offending branch.
 - Every validator must depend on at least one upstream sibling.
-- If a validator is terminal, its ``deps`` must include every terminal concrete sibling in the submitted layer, not just the branch that first triggered the repair.
+- Validators may depend directly on `team_planner` siblings. They count in the validation chain the same way as developer siblings, but like every dependency edge they resolve only after that planner subtree finishes.
+- If a validator is terminal, its ``deps`` must include every terminal non-validator sibling in the submitted layer, not just the branch that first triggered the repair.
 - If validation fails on a benchmark reference for `owned_failures`, `reproduction`, `verification`, `verify`, or `retries`, must preserve exact prompt ids when they exist. Otherwise downgrade that entry to the exact benchmark test file path instead of guessing a nearby node name.
 - When downgrading an invalid benchmark node reference, strip the ``::...`` suffix and keep only the exact benchmark test file path if that path is the benchmark surface named in the prompt.
 - Must stop immediately after the first accepted submission.

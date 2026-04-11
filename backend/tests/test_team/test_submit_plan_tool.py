@@ -333,7 +333,7 @@ async def test_submit_plan_rejects_terminal_validator_missing_terminal_leaf_deps
     res = await tool.execute(args, ctx)
 
     assert res.is_error
-    assert "terminal validator must depend on every terminal concrete sibling" in res.output
+    assert "terminal validator must depend on every terminal non-validator sibling" in res.output
 
 
 @pytest.mark.asyncio
@@ -423,7 +423,7 @@ async def test_submit_plan_rejects_multiple_terminal_validators():
 
 
 @pytest.mark.asyncio
-async def test_submit_plan_rejects_validator_depending_on_expandable_sibling():
+async def test_submit_plan_allows_validator_depending_on_expandable_sibling():
     tool = SubmitPlanTool()
     ctx = _ctx()
     args = SubmitPlanInput.model_validate(
@@ -431,15 +431,14 @@ async def test_submit_plan_rejects_validator_depending_on_expandable_sibling():
             "items": [
                 {"agent_name": "developer", "local_id": "dev1"},
                 {"agent_name": "team_planner", "local_id": "child", "kind": "expandable"},
-                {"agent_name": "validator", "local_id": "val1", "deps": ["child"]},
+                {"agent_name": "validator", "local_id": "val1", "deps": ["dev1", "child"]},
             ]
         }
     )
 
     res = await tool.execute(args, ctx)
 
-    assert res.is_error
-    assert "validator items must not depend on expandable siblings" in res.output
+    assert not res.is_error
 
 
 @pytest.mark.asyncio
@@ -478,6 +477,7 @@ async def test_submit_plan_rejects_benchmark_ref_aliases_against_root_prompt(mon
     tool = SubmitPlanTool()
     ctx = _ctx()
     ctx.metadata["team_run_id"] = "TR1"
+    ctx.metadata["daytona_cwd"] = "/testbed"
 
     root = SimpleNamespace(
         payload={
@@ -518,8 +518,7 @@ async def test_submit_plan_rejects_benchmark_ref_aliases_against_root_prompt(mon
     res = await tool.execute(args, ctx)
 
     assert res.is_error
-    assert "benchmark reference must use the exact prompt path/id" in res.output
-    assert "expected 'dask/dataframe/io/tests/test_hdf.py'" in res.output
+    assert "payload.reproduction[0]" in res.output
     assert "payload.verify[0]" in res.output
     assert "payload.retries[0]" in res.output
 
@@ -800,6 +799,7 @@ async def test_submit_plan_suggests_exact_file_path_for_invented_node_on_real_be
 
     res = await tool.execute(args, ctx)
 
-    assert res.is_error
-    assert "benchmark reference must use the exact prompt path/id" in res.output
-    assert "expected 'dask/dataframe/io/tests/test_hdf.py'" in res.output
+    assert not res.is_error
+    plan = ctx.metadata["submitted_plan"]
+    assert isinstance(plan, Plan)
+    assert plan.items[0].payload["owned_failures"] == ["dask/dataframe/io/tests/test_hdf.py"]

@@ -125,7 +125,7 @@ def _validator_policy_issues(
     return issues
 
 
-def _terminal_concrete_leaf_ids(items: list[WorkItemSpec]) -> set[str]:
+def _terminal_non_validator_leaf_ids(items: list[WorkItemSpec]) -> set[str]:
     downstream_local_ids = {
         dep
         for item in items
@@ -138,7 +138,6 @@ def _terminal_concrete_leaf_ids(items: list[WorkItemSpec]) -> set[str]:
         if (
             item.local_id is not None
             and item.agent_name != _VALIDATOR_AGENT
-            and item.kind != WorkItemKind.EXPANDABLE
             and item.local_id not in downstream_local_ids
         )
     }
@@ -146,7 +145,7 @@ def _terminal_concrete_leaf_ids(items: list[WorkItemSpec]) -> set[str]:
 
 def _validator_dependency_issues(items: list[WorkItemSpec]) -> list[Issue]:
     issues: list[Issue] = []
-    terminal_leaf_ids = _terminal_concrete_leaf_ids(items)
+    terminal_leaf_ids = _terminal_non_validator_leaf_ids(items)
     downstream_local_ids = {
         dep
         for item in items
@@ -173,38 +172,11 @@ def _validator_dependency_issues(items: list[WorkItemSpec]) -> list[Issue]:
                 {
                     "field": f"items[{idx}].deps",
                     "msg": (
-                        "terminal validator must depend on every terminal concrete sibling "
+                        "terminal validator must depend on every terminal non-validator sibling "
                         f"(missing: {', '.join(missing)})"
                     ),
                 }
             )
-    return issues
-
-
-def _expandable_validator_dep_issues(items: list[WorkItemSpec]) -> list[Issue]:
-    issues: list[Issue] = []
-    local_item_map = {
-        item.local_id: item
-        for item in items
-        if item.local_id is not None
-    }
-    for idx, item in enumerate(items):
-        if item.agent_name != _VALIDATOR_AGENT:
-            continue
-        for dep in item.deps:
-            dep_item = local_item_map.get(dep)
-            if dep_item is None:
-                continue
-            if dep_item.kind == WorkItemKind.EXPANDABLE:
-                issues.append(
-                    {
-                        "field": f"items[{idx}].deps",
-                        "msg": (
-                            "validator items must not depend on expandable siblings "
-                            f"such as '{dep}'; keep validation inside that child planner branch"
-                        ),
-                    }
-                )
     return issues
 
 
@@ -245,7 +217,6 @@ def validate_plan_phase_a(
         )
     )
     issues.extend(_validator_dependency_issues(plan.items))
-    issues.extend(_expandable_validator_dep_issues(plan.items))
 
     local_ids: set[str] = set()
     for idx, item in enumerate(plan.items):
@@ -541,9 +512,6 @@ def validate_plan_phase_b(
     )
     if validator_issues:
         raise InvalidPlan("; ".join(issue["msg"] for issue in validator_issues))
-    dep_issues = _expandable_validator_dep_issues(plan.items)
-    if dep_issues:
-        raise InvalidPlan("; ".join(issue["msg"] for issue in dep_issues))
 
     # Re-check local_id uniqueness — Phase A may have been bypassed if a Plan
     # was constructed directly rather than via the submit_plan tool.

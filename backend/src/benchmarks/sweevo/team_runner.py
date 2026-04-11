@@ -120,12 +120,6 @@ def _checkpoint_repo_patch_from_store(store: Any, team_run_id: str, checkpoint_i
 # ---------------------------------------------------------------------------
 
 
-def _recommended_frontier_cap(instance: SWEEvoInstance) -> int:
-    size = str(summarize_sweevo_instance(instance).get("size") or "medium")
-    size_cap = 3 if size == "large" else 2
-    return max(1, min(size_cap, len(instance.fail_to_pass) or 1))
-
-
 def _derive_sweevo_budgets(instance: SWEEvoInstance) -> BudgetConfig:
     """Return size-aware team budgets for SWE-EVO instead of disabling them."""
     summary = summarize_sweevo_instance(instance)
@@ -202,15 +196,7 @@ def _derive_planner_runtime_limits(instance: SWEEvoInstance) -> dict[str, int]:
 def _build_root_prompt(instance: SWEEvoInstance, repo_dir: str) -> str:
     summary = summarize_sweevo_instance(instance)
     size = str(summary.get("size") or "medium")
-    frontier_cap = _recommended_frontier_cap(instance)
     max_plan_size = _derive_sweevo_budgets(instance).max_plan_size
-    file_counts: Counter[str] = Counter()
-    for test_id in instance.fail_to_pass:
-        file_counts[test_id.split("::", 1)[0]] += 1
-    rendered_clusters = "\n".join(
-        f"- {path}: {count} fail-to-pass target(s)"
-        for path, count in sorted(file_counts.items())
-    )
     return (
         f"You are leading a coding team on a SWE-EVO benchmark instance.\n"
         f"Repository: {instance.repo}\n"
@@ -221,8 +207,6 @@ def _build_root_prompt(instance: SWEEvoInstance, repo_dir: str) -> str:
         f"without regressing the pass-to-pass coverage.\n\n"
         f"The SWE-EVO test patch has already been applied inside the sandbox, so any newly added "
         f"or modified fail-to-pass tests are present in the working tree.\n\n"
-        f"## Fail-To-Pass Summary\n"
-        f"{rendered_clusters}\n\n"
         f"## Fail-To-Pass Targets\n"
         f"{json.dumps(instance.fail_to_pass, indent=2)}\n\n"
         f"## Pass-To-Pass Guardrail\n"
@@ -233,40 +217,15 @@ def _build_root_prompt(instance: SWEEvoInstance, repo_dir: str) -> str:
         f"## Runtime Notes\n"
         f"- Instance size: {size} ({summary.get('bullet_count', 0)} changelog bullets, "
         f"{len(instance.fail_to_pass)} fail-to-pass target(s)).\n"
-        f"- Recommended first-ready frontier cap: {frontier_cap} benchmark-critical "
-        f"implementation lane(s).\n"
-        f"- The submitted root plan must stay within the runtime cap of {max_plan_size} total tasks. "
-        f"If the natural task set is wider, group "
-        f"adjacent sibling work into expandable child planner items instead of flattening "
-        f"every cluster at the root.\n"
-        f"- Use that runtime cap as a budget, not as a fixed graph recipe. "
-        f"Pick however many root developer lanes, validators, and expandable child planners "
-        f"the live owner graph actually warrants; do not force a canned shape just because "
-        f"the instance is large.\n"
-        f"- The first-ready frontier cap limits only simultaneously ready implementation "
-        f"lanes. It does not mean the whole submitted graph should stop at that many items.\n"
-        f"- On large instances with many fail-to-pass clusters, do not hand the whole "
-        f"remaining surface to only the initial developers. If residual owned clusters "
-        f"remain after the first developer lanes are chosen, keep at least one downstream "
-        f"expandable planner item for that residual work unless every cluster already has "
-        f"its own explicit developer owner.\n"
-        f"- Every named fail-to-pass cluster outside the dominant owner surface "
-        f"must still receive its own developer lane or expandable child planner. "
-        f"Do not hide residual unfixed clusters inside validator coverage.\n"
-        f"- Stable SWE-EVO workflow policy lives in the declared skills for this run; "
-        f"use the test targets and grading command above as the source of truth.\n"
-        f"- release notes are intentionally omitted from the root planner prompt; "
-        f"do not treat changelog prose as an implementation checklist.\n"
+        f"- Per-layer plan cap: {max_plan_size} items.\n"
+        f"- Stable workflow policy lives in the declared skills for this run.\n"
         f"- When debugging runtime, coordination, retry, or checkpoint behavior, "
         f"refer to the benchmark run log file under `.ephemeralos/benchmark-logs/` "
         f"as an extra source for debugging context. Use it as supporting evidence, "
         f"not as a replacement for the live workspace and current test output.\n"
-        f"- the root planner must not inspect dependency/version metadata once the "
-        f"live owner surface is clear.\n"
-        f"\n- Fix the repository checkout itself. Do not rely on ad hoc sandbox-only "
+        f"- Fix the repository checkout itself. Do not rely on ad hoc sandbox-only "
         f"package upgrades or ambient environment mutations as the benchmark fix.\n"
-        f"- Stay inside {repo_dir} and treat the named tests as reproduction signals, not as a "
-        f"reason to restate the changelog or inspect unrelated manifests from the root planner."
+        f"- Stay inside {repo_dir}."
     )
 
 
@@ -889,6 +848,11 @@ def _make_runner(
                         f"{effective_defn.name}:{ctx.tool_metadata.get('work_item_id') or tracker.run_id or 'run'}"
                     )
                     checkpoint_id = await team_run.checkpoint(label=checkpoint_label)
+                    retry_count_total = sum(
+                        int(getattr(wi, "retry_count", 0) or 0)
+                        for wi in team_run.dispatcher.graph.values()
+                    )
+                    replans_used = int(getattr(team_run.budget_state, "replans_used", 0) or 0)
                     try:
                         repo_patch = await capture_sweevo_repo_patch(
                             team_run.sandbox_id or sandbox_id,
@@ -913,12 +877,20 @@ def _make_runner(
                             {
                                 "id": checkpoint_id,
                                 "label": checkpoint_label,
+                                "parent_run": team_run.id,
+                                "retry_count_total": retry_count_total,
+                                "replans_used": replans_used,
                             }
                         )
                     if printer is not None:
                         printer.raw_line(
                             effective_defn.name,
-                            f"[checkpoint] id={checkpoint_id} label={checkpoint_label}",
+                            (
+                                "[checkpoint] "
+                                f"id={checkpoint_id} label={checkpoint_label} "
+                                f"parent_run={team_run.id} "
+                                f"retries={retry_count_total} replans={replans_used}"
+                            ),
                         )
             except Exception:
                 logger.debug("Failed to checkpoint after %s", effective_defn.name, exc_info=True)
@@ -1542,13 +1514,21 @@ async def resume_sweevo_team(
             ),
             "",
         )
+        retry_count_total = sum(
+            int(getattr(wi, "retry_count", 0) or 0)
+            for wi in tr.dispatcher.graph.values()
+        )
+        replans_used = int(getattr(tr.budget_state, "replans_used", 0) or 0)
         printer.raw_line(
             "team",
             (
                 "[resume] "
                 f"team_run_id={team_run_id} sandbox_id={tr.sandbox_id} "
                 f"durable_checkpoints={len(checkpoint_ids)} "
-                f"checkpoint={resolved_checkpoint_id or '<latest-state>'}"
+                f"checkpoint={resolved_checkpoint_id or '<latest-state>'} "
+                f"resumed_from={team_run_id} "
+                f"resumed_from_checkpoint={resolved_checkpoint_id or '<latest-state>'} "
+                f"retries={retry_count_total} replans={replans_used}"
                 f"{f' label={checkpoint_label}' if checkpoint_label else ''}"
             ),
         )

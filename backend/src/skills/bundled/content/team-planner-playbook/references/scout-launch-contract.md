@@ -15,6 +15,9 @@ Use this reference immediately before the first scout wave or whenever scout lau
 - Example: the root anchor leaves `pkg/io/hdf.py`, `pkg/io/parquet/`, `pkg/groupby.py`, and `pkg/config.py` unresolved.
   Launch four scouts in one wave, one per slice, because each answers a different ownership question.
   After launch, inspect `bg_*` tasks first; wait only if the plan is blocked on their briefs.
+- Example: the benchmark prompt names `tests/test_groupby.py`, but the root anchor and live symbols point to `pkg/groupby.py`.
+  Launch the scout with `target_paths=["pkg/groupby.py"]`.
+  Keep `tests/test_groupby.py` only in `owned_failures` or the task note; never copy the test path into the scout scope.
 - Example: a child planner inherits a scout ref for `pkg/io/parquet/arrow.py`, but `pkg/io/parquet/fastparquet.py` is still unmapped.
   Reuse the inherited arrow brief and launch one new scout only for `fastparquet.py`.
   Do not relaunch a package-wide parquet scout just because parquet still has open work.
@@ -27,6 +30,7 @@ Use this reference immediately before the first scout wave or whenever scout lau
 - Never pass prompt mode to `scout`.
 - Never wait on a fresh scout before `check_background_progress(...)`.
 - Never launch scouts for benchmark tests when a plausible production owner already exists.
+- Never derive scout `target_paths` by copying failing test paths after the anchor already exposed the production owner.
 - Never launch Atlas before the scout wave has produced reusable output.
 - Never open a second scout on the same slice in the same turn just because the first one is still running.
 - Never launch a scout whose entire target stays inside one exact file already covered by an inherited scout or same-turn scout.

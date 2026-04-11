@@ -6,7 +6,8 @@ Use this reference only after ownership is already clear enough to draft the DAG
 
 1. Make a lane atomic when one owner slice, one patch surface, and one verification family are already clear enough for a leaf worker.
 2. Make a lane expandable when it still hides multiple owner slices, region-level decomposition inside one broad file, or more ready work than the current layer should flatten.
-3. Preserve at least one direct ready leaf lane whenever live evidence already supports it, even if sibling branches still need child planners.
+3. Make a lane expandable when the alternative atomic lane would own several unrelated exact files merely because each slice is small.
+4. Preserve at least one direct ready leaf lane whenever live evidence already supports it, even if sibling branches still need child planners.
 
 ## DAG shaping rules
 
@@ -16,16 +17,19 @@ Use this reference only after ownership is already clear enough to draft the DAG
 - Must let child planners own their own deeper validation instead of using parent validators as decorative barriers.
 - Must add validators only when they reduce uncertainty for concrete lanes.
 - Must keep the plan between 2 items and `max_plan_size`.
+- Must either keep mapped small-file slices as separate leaves or park them behind a residual child planner.
 - Never hide unresolved owner clusters behind validator-only coverage.
 - Never drop validation or cross-surface coverage just to trim one item.
+- Never call a bundled leftovers lane atomic unless one shared live owner explains every file in it.
 
 ## Validator heuristic
 
 - Prefer one terminal validator when several concrete lanes converge on the same public surface.
 - Add one midflight validator only when it protects a genuinely risky branch cut before later lanes build on it.
-- Keep validator deps on the concrete work being checked, not on a child planner node by itself.
-- Every validator must depend on at least one upstream concrete sibling.
-- A terminal validator must depend on every terminal concrete sibling in that layer so it gates the whole ready frontier, not just one branch.
+- Every validator must depend on at least one upstream non-validator sibling.
+- A terminal validator must depend on every terminal non-validator sibling in that layer so it gates the whole ready frontier, not just one branch.
+- Recommend not to have more than three validators in a single layer.
+- Prefer to a midflight validator when the concrete lane is a long path or logically more risky.
 
 ## Few-shot examples
 

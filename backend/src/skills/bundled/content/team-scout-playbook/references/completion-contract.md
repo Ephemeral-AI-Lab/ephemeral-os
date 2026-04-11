@@ -19,6 +19,10 @@ Use this reference when `target_paths` is a single file, a short fixed file list
 - Example: `target_paths=["pkg/config.py"]`.
   The file mixes import-time setup, normalization helpers, and reload logic.
   Read the file, map its entry points, and return coverage `1.0` with no subdivisions; the planner can still assign a developer to two functions inside that file without another scout pass.
+- Example: `target_paths=["pkg/core.py"]` and the file spans thousands of lines.
+  Read the opening region and the directly relevant regions that explain the public seam the planner asked about.
+  Return a complete brief for `pkg/core.py` with no subdivisions.
+  Do not serialize the whole file into repeated `ci_read_file` chunks.
 - Example: `target_paths=["pkg/registry.py","pkg/io/reader.py"]`.
   Those two files already define the public seam the planner cares about.
   Return a complete brief for the pair and put any remaining runtime hypothesis into `open_questions`; do not ask for a new scout lane called "registry" versus "reader" after the planner already bounded the pair.
