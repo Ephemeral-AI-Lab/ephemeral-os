@@ -1133,6 +1133,132 @@ async def test_run_subagent_scout_completion_omits_stale_artifact_ref(monkeypatc
 
 
 @pytest.mark.asyncio
+async def test_run_subagent_forces_promotion_for_root_benchmark_planner_scout(monkeypatch):
+    from tools.posthook import SubmittedSummary
+    from tools.core.runtime import ExecutionMetadata
+    from team.models import WorkItem, WorkItemKind, WorkItemStatus
+    from team.runtime.team_run import TeamRun
+
+    class _ScoutAgent(_StubAgent):
+        def __init__(self) -> None:
+            super().__init__(
+                [ConversationMessage(role="assistant", content=[TextBlock(text="Scout complete")])],
+                usage=UsageSnapshot(input_tokens=5, output_tokens=3),
+                model="mock-scout-model",
+            )
+
+    class _SerializerAgent:
+        def __init__(self) -> None:
+            self.display_messages: list[ConversationMessage] = []
+            self.query_context = type(
+                "_QC",
+                (),
+                {
+                    "tool_metadata": ExecutionMetadata(),
+                    "api_messages_snapshot": None,
+                },
+            )()
+
+        async def run(self, prompt: str):
+            key = self.query_context.tool_metadata.get(
+                "posthook_metadata_key", "submitted_summary"
+            )
+            self.query_context.tool_metadata[key] = SubmittedSummary(
+                summary="Scout summary",
+                artifact={
+                    "target_paths": ["src/auth"],
+                    "canonical_scope": "src/auth",
+                    "summary": "brief",
+                    "files": [],
+                    "entry_points": [],
+                    "open_questions": [],
+                    "scope_coverage": 1.0,
+                    "gaps": "",
+                    "suggested_subdivisions": [],
+                },
+            )
+            yield ("serialized",)
+
+    def _fake_spawn(*args, **kwargs):
+        if kwargs["agent_def"].name == "submit_summary_agent":
+            return _SerializerAgent()
+        return _ScoutAgent()
+
+    monkeypatch.setattr(
+        "engine.runtime.agent.spawn_agent",
+        _fake_spawn,
+        raising=True,
+    )
+    monkeypatch.setattr(
+        "team.context.scout_briefings.store_stable_scout_artifact",
+        lambda *args, **kwargs: "scout:src/auth",
+    )
+
+    run = TeamRun(session_id="S1", user_request="hello", repo_root="/repo")
+    root = WorkItem(
+        id="ROOT1",
+        team_run_id=run.id,
+        agent_name="team_planner",
+        status=WorkItemStatus.RUNNING,
+        kind=WorkItemKind.EXPANDABLE,
+        payload={"fail_to_pass": ["tests/test_auth.py::test_login"]},
+    )
+    run.root_work_item_id = root.id
+    run.dispatcher.graph[root.id] = root
+    monkeypatch.setattr(
+        "team.runtime.registry.get",
+        lambda team_run_id: run if team_run_id == "TR1" else None,
+    )
+
+    bg = BackgroundTaskManager()
+
+    async def _noop_coro() -> ToolResult:
+        return ToolResult(output="placeholder")
+
+    bg.launch(
+        task_id="bg_scout",
+        tool_name="run_subagent",
+        tool_input={"input": {"target_paths": ["src/auth"]}},
+        coro=_noop_coro(),
+        task_note="scout auth",
+        task_type="subagent",
+    )
+
+    class _StubCfg:
+        cwd = Path("/tmp")
+        session_id = "session_abc"
+
+    ctx = ToolExecutionContext(
+        cwd=Path("/tmp"),
+        metadata={
+            "session_config": _StubCfg(),
+            "background_task_manager": bg,
+            "background_task_id": "bg_scout",
+            "sandbox_id": "",
+            "team_run_id": "TR1",
+            "work_item_id": "ROOT1",
+            "agent_name": "team_planner",
+        },
+    )
+
+    result = await run_subagent.execute(
+        run_subagent.input_model(agent_name="scout", input={"target_paths": ["src/auth"]}),
+        ctx,
+    )
+
+    assert result.is_error is False
+    envelope = json.loads(result.output)
+    assert envelope["artifact_ref"] == "scout:src/auth"
+    assert envelope["atlas"] == {
+        "subsystem": "src/auth",
+        "persisted": False,
+        "promoted": True,
+        "artifact_ref": "scout:src/auth",
+        "reason": "run_subagent:scout-complete",
+    }
+
+
+@pytest.mark.asyncio
 async def test_run_subagent_rejects_team_scout_artifact_with_invalid_field_types(monkeypatch):
     from tools.posthook import SubmittedSummary
     from tools.core.runtime import ExecutionMetadata

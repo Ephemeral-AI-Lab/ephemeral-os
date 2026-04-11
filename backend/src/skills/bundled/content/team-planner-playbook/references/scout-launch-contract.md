@@ -29,3 +29,4 @@ Use this reference immediately before the first scout wave or whenever scout lau
 - Never launch scouts for benchmark tests when a plausible production owner already exists.
 - Never launch Atlas before the scout wave has produced reusable output.
 - Never open a second scout on the same slice in the same turn just because the first one is still running.
+- Never launch a scout whose entire target stays inside one exact file already covered by an inherited scout or same-turn scout.

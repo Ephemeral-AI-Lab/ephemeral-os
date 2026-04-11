@@ -318,6 +318,10 @@ def _benchmark_root_scout_policy_error(
     return None
 
 
+def _should_force_promote_benchmark_root_scout(context: ToolExecutionContext) -> bool:
+    return isinstance(_benchmark_root_payload(context), dict)
+
+
 def _validate_run_subagent_request(
     *,
     agent_name: str,
@@ -1098,10 +1102,12 @@ async def run_subagent(
                         )
                         if stored_artifact_ref is not None:
                             ci_service = context.metadata.get("ci_service")
+                            force_promote = _should_force_promote_benchmark_root_scout(context)
                             promoted = auto_promote_scout_briefing(
                                 team_run,
                                 stored_artifact_ref,
                                 ci_service=ci_service,
+                                force=force_promote,
                             )
                             persisted = False
                             if promoted:

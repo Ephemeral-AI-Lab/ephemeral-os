@@ -25,6 +25,7 @@ Use this reference only when either condition is true:
 - If the exact verify command fails before the named target collects, must treat that as a still-red surface.
 - If the fault is a repo import error, missing symbol, or shared runtime-control problem, must report it as failure or replan evidence instead of narrowing the verify target away.
 - If the fault is purely ambient environment drift that the lane cannot legitimately fix in repo code, must stop and surface that mismatch instead of improvising installs.
+- If the runner itself is missing or import-time modules fail before the named test loads, may do one existing-environment probe, then must stop ambient setup retries.
 
 ## Few-shot examples
 
@@ -34,3 +35,6 @@ Use this reference only when either condition is true:
 - Example: the assigned pytest command dies during collection because `pkg/__init__.py` imports a missing compatibility symbol before the named target loads.
   Keep that collection crash as failure evidence and hand it to replan if the lane boundary is wrong.
   Do not declare success just because LSP on the owned file is clean.
+- Example: `python -m pytest ...` reports `No module named pytest`, and a later import probe reports `ModuleNotFoundError: yaml`.
+  Perform at most one existing-runner probe, then read the named test and owned source files and keep diagnosis on the repo surface.
+  Do not turn that into `pip`, `pip3`, `conda`, or `uv` install retries.

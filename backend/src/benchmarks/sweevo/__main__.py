@@ -254,7 +254,7 @@ async def _cmd_run(args: argparse.Namespace) -> int:
     from message.event_printer import MultiAgentEventPrinter
     from benchmarks.sweevo.runner import run_sweevo_with_agent
 
-    use_color = (not args.no_color) and sys.stdout.isatty()
+    use_color = not args.no_color
     quiet = args.no_stream
     printer = MultiAgentEventPrinter(
         color=use_color and not quiet,

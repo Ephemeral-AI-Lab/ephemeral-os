@@ -562,10 +562,10 @@ class EvalAgent:
             elif isinstance(event, BackgroundTaskCompleted):
                 _out(
                     f"    << bg_done:    {event.tool_name}"
-                    f" {_truncate(event.output, 120)}"
+                    f" {event.output}"
                 )
             elif isinstance(event, SystemNotification):
-                _out(f"    [system] {_truncate(event.text, 200)}")
+                _out(f"    [system] {event.text}")
 
         if thinking_buf:
             _out(f"    [thinking] {_truncate(''.join(thinking_buf), 500)}")

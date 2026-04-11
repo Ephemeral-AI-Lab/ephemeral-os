@@ -34,6 +34,8 @@ Use this reference only after ownership is already clear enough to draft the DAG
   Do not collapse parquet and groupby into one residual bucket just because both live under `dataframe/`.
 - Example: one huge `pkg/groupby.py` file contains separate `cov`, `unique`, and `value_counts` regions with different verification families.
   Use a child planner for the file-level region split even though the owner file is singular.
+  If the parent already handed down a scout for `pkg/groupby.py`, reuse that brief plus symbol lookup to emit the three lanes directly.
+  Do not launch fresh `cov`, `unique`, or `value_counts` scouts on the same file unless one family still lacks real owner evidence.
   Do not force one atomic developer just because the file path is singular.
 - Example: `pkg/config.py` and `pkg/compat.py` failures both import the same helper after scouts confirm that helper is the real owner.
   Merge them behind one developer or child planner that targets the shared helper.

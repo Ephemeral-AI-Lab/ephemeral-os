@@ -318,6 +318,7 @@ def auto_promote_scout_briefing(
     artifact_ref: str,
     *,
     ci_service: Any | None = None,
+    force: bool = False,
 ) -> bool:
     """Promote a reusable scout artifact into run-scoped shared briefings."""
     artifact = team_run.artifacts.load(artifact_ref)
@@ -343,7 +344,7 @@ def auto_promote_scout_briefing(
         _artifact_scope_paths(artifact) or [scope],
         ci_service=ci_service,
     )
-    if not pressure["should_promote"]:
+    if not pressure["should_promote"] and not force:
         logger.debug(
             "scout auto-promotion skipped for %s: same-run pressure %.2f below threshold %.2f",
             scope,

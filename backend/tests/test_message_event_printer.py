@@ -74,9 +74,43 @@ def test_printer_keeps_full_background_progress_notification_text() -> None:
         )
     )
 
-    assert lines == [
+    expected = [
         "[team_planner  ] [1a0578d4c4dd7f1f14dd] "
-        f"[system:background_progress] {long_text}"
+        '[system:background_progress] Background task_id="bg_1" status="running" source="engine_progress"',
+        "[team_planner  ] [1a0578d4c4dd7f1f14dd] │ Tool: run_subagent",
+        "[team_planner  ] [1a0578d4c4dd7f1f14dd] │ Note: Scout pydantic/networks.py to understand URL and network type implementations",
+        "[team_planner  ] [1a0578d4c4dd7f1f14dd] │ Run ID: 84a5dde276554528",
+        "[team_planner  ] [1a0578d4c4dd7f1f14dd] │ Running for 19s",
+        "[team_planner  ] [1a0578d4c4dd7f1f14dd] │ No new output in the last 7s",
+        "[team_planner  ] [1a0578d4c4dd7f1f14dd] │ Keep working on any other ready analysis or tool tasks first. Only wait when this background task is the remaining blocker.",
+        "[team_planner  ] [1a0578d4c4dd7f1f14dd] │ ",
+        '[team_planner  ] [1a0578d4c4dd7f1f14dd] │ Background task_id="bg_2" status="running" source="engine_progress"',
+        "[team_planner  ] [1a0578d4c4dd7f1f14dd] │ Tool: run_subagent",
+        "[team_planner  ] [1a0578d4c4dd7f1f14dd] │ Note: Second task still visible at the end of the notification.",
+    ]
+
+    assert lines == expected
+
+
+def test_printer_truncate_none_keeps_full_tool_done_output() -> None:
+    lines: list[str] = []
+    printer = MultiAgentEventPrinter(color=False, sink=lines.append, truncate=None)
+    long_output = '{\n  "scope_paths": ["dask/dataframe/groupby.py", "dask/dataframe/io/hdf.py"],\n  "details": "' + ("x" * 250) + '"\n}'
+
+    printer.emit(
+        ToolExecutionCompleted(
+            tool_name="ci_scoped_status",
+            output=long_output,
+            agent_name="team_planner",
+            work_id="2af5cbde-0bae-4f7f-98f1-5aa6d9a13b6c",
+        )
+    )
+
+    assert lines == [
+        "[team_planner  ] [2af5cbde-0bae-4f7f-98f1-5aa6d9a13b6c] <- tool_done:  ci_scoped_status [ok] {",
+        '[team_planner  ] [2af5cbde-0bae-4f7f-98f1-5aa6d9a13b6c] │   "scope_paths": ["dask/dataframe/groupby.py", "dask/dataframe/io/hdf.py"],',
+        f'[team_planner  ] [2af5cbde-0bae-4f7f-98f1-5aa6d9a13b6c] │   "details": "{"x" * 250}"',
+        "[team_planner  ] [2af5cbde-0bae-4f7f-98f1-5aa6d9a13b6c] │ }",
     ]
 
 

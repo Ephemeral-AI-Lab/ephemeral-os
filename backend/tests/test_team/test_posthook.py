@@ -568,6 +568,9 @@ def test_submit_plan_agent_prompt_hoists_payload_deps_before_submit():
 
     serializer = get_definition("submit_plan_agent")
     assert serializer is not None
+    assert "Must never pass bare benchmark ids, test names, or other scalar strings as plan items." in (
+        serializer.system_prompt
+    )
     assert "payload.deps" in serializer.system_prompt
     assert "top-level ``deps`` field" in serializer.system_prompt
 

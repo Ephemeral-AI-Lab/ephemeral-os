@@ -213,6 +213,26 @@ def test_auto_promote_scout_briefing_requires_same_run_context_pressure():
     assert tr.project_context.shared_briefings == {}
 
 
+def test_auto_promote_scout_briefing_can_be_forced_for_root_scouts():
+    tr = _fake_team_run()
+    tr.artifacts.save(
+        "scout:src/auth",
+        {
+            "summary": "auth scout",
+            "target_paths": ["src/auth"],
+            "canonical_scope": "src/auth",
+            "files": [],
+            "scope_coverage": 1.0,
+            "gaps": "",
+            "suggested_subdivisions": [],
+            "snapshot_time": 100.0,
+        },
+    )
+
+    assert auto_promote_scout_briefing(tr, "scout:src/auth", force=True)
+    assert "src/auth" in tr.project_context.shared_briefings
+
+
 def test_auto_promote_scout_briefing_rejects_invalidated_scout_artifact():
     tr = _fake_team_run()
     tr.project_context.invalidated_scout_scopes["src/auth"] = 150.0

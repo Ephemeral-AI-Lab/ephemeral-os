@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
 from typing import Any
@@ -11,7 +12,7 @@ from pydantic import BaseModel, Field, field_validator
 from team.models import Plan, WorkItemKind
 from team.planning.validation import validate_plan_phase_a
 from tools.core.base import ToolExecutionContext
-from tools.posthook.base import SubmitPosthookTool, _decode_json_array_string
+from tools.posthook.base import SubmitPosthookTool
 
 _BENCHMARK_COMMAND_KEYS = ("reproduction", "verification", "verify", "retries")
 _CD_COMMAND_RE = re.compile(
@@ -73,6 +74,55 @@ def _normalize_submit_plan_item_shape(item: Any) -> Any:
     return normalized
 
 
+def _is_submit_plan_item_list(value: Any) -> bool:
+    return isinstance(value, list) and all(isinstance(item, dict) for item in value)
+
+
+def _decode_submit_plan_items(value: Any) -> Any:
+    """Decode only top-level arrays of plan-item objects.
+
+    The generic array extractor is intentionally permissive so serializer
+    agents can recover arrays embedded in prose. For submit_plan, that
+    permissiveness can misfire on nested benchmark/id arrays inside an
+    otherwise malformed item payload and turn ``items`` into ``list[str]``.
+    Restrict recovery here to arrays whose elements are object-shaped plan
+    items.
+    """
+    if not isinstance(value, str):
+        return value
+
+    text = value.strip()
+    if not text:
+        return value
+
+    if text.startswith("["):
+        try:
+            payload = json.loads(text)
+        except json.JSONDecodeError:
+            payload = None
+        if _is_submit_plan_item_list(payload):
+            return payload
+
+    decoder = json.JSONDecoder()
+    best_payload: list[dict[str, Any]] | None = None
+    best_start: int | None = None
+    best_end = -1
+    for start, char in enumerate(text):
+        if char != "[":
+            continue
+        try:
+            payload, end = decoder.raw_decode(text, idx=start)
+        except ValueError:
+            continue
+        if not _is_submit_plan_item_list(payload):
+            continue
+        if end > best_end or (end == best_end and (best_start is None or start < best_start)):
+            best_payload = payload
+            best_start = start
+            best_end = end
+    return best_payload if best_payload is not None else value
+
+
 def _optional_int(value: Any) -> int | None:
     if value in (None, ""):
         return None
@@ -108,10 +158,35 @@ class SubmitPlanInput(BaseModel):
     @field_validator("items", mode="before")
     @classmethod
     def _deserialize_items(cls, value: Any) -> Any:
-        raw_items = _decode_json_array_string(value)
+        raw_items = _decode_submit_plan_items(value)
+        if isinstance(value, str) and raw_items is value:
+            raise ValueError(
+                "`items` must be a real list of plan item objects or a JSON array string "
+                'that decodes to objects like {"agent_name":"developer","local_id":"w1","payload":{}}.'
+            )
         if not isinstance(raw_items, list):
             return raw_items
-        return [_normalize_submit_plan_item_shape(item) for item in raw_items]
+        bad_entries: list[str] = []
+        normalized_items: list[Any] = []
+        for index, item in enumerate(raw_items):
+            if isinstance(item, _SubmitPlanItem):
+                normalized_items.append(item)
+                continue
+            if not isinstance(item, dict):
+                preview = repr(item)
+                if len(preview) > 80:
+                    preview = preview[:77] + "..."
+                bad_entries.append(f"{index}={preview}")
+                continue
+            normalized_items.append(_normalize_submit_plan_item_shape(item))
+        if bad_entries:
+            joined = ", ".join(bad_entries[:5])
+            raise ValueError(
+                "`items` must contain plan item objects, not bare strings or other scalars. "
+                'Each item should look like {"agent_name":"developer","local_id":"w1","payload":{}}. '
+                f"Invalid entries: {joined}"
+            )
+        return normalized_items
 
 
 class SubmitPlanTool(SubmitPosthookTool):
@@ -119,9 +194,12 @@ class SubmitPlanTool(SubmitPosthookTool):
     description: str = (
         "Submit a Plan to extend the team's DAG. Each item names an existing "
         "agent and an optional list of dependency local_ids or external "
-        "work_item_ids. Validation runs synchronously: if any structural "
-        "issue is found the tool returns a structured error and you MUST "
-        "fix it and call submit_plan again."
+        "work_item_ids. `items` must be a list of object-shaped plan items "
+        "with fields such as `agent_name`, optional `local_id`, `payload`, "
+        "`deps`, and `kind` (`atomic` or `expandable`) — never a list of "
+        "test ids or other bare strings. Validation runs synchronously: if "
+        "any structural issue is found the tool returns a structured error "
+        "and you MUST fix it and call submit_plan again."
     )
     input_model = SubmitPlanInput
     default_metadata_key: str = "submitted_plan"

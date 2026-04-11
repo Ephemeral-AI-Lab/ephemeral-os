@@ -13,9 +13,20 @@ Use this reference immediately before emitting final plan JSON.
 - Must keep `deps` as a top-level item field.
 - Must keep `briefings` at the item top level.
 - Must emit each `local_id` only once.
+
+## Failure-surface rules
+
+- Must keep `owned_failures` exact to the benchmark surface.
+- When one root lane owns many failures from the same benchmark file, prefer that exact benchmark file path over dumping dozens of node ids into the root DAG.
+- When one leaf lane is already narrow to one or a few exact prompt nodes, keep those exact node ids.
+- Must keep `verify` aligned with the chosen benchmark surface.
+
+## Never do
+
 - Never put a human task name into `agent_name`.
 - Never use `kind: "developer"` or `kind: "validator"`.
 - Never bury `deps` inside `payload`.
+- Never dump dozens of same-file pytest nodes into one root-plan `owned_failures` list when the exact benchmark file path names the same surface.
 
 ## Few-shot examples
 
@@ -33,3 +44,9 @@ Use this reference immediately before emitting final plan JSON.
 - Example: terminal validator for `compat_fix` and `config_fix`.
   Emit `{"agent_name":"validator","local_id":"validate_misc","kind":"atomic","deps":["compat_fix","config_fix"],"payload":{"verify":"pytest ..."}}`.
   Do not place `deps` under `payload`, and do not duplicate the validator block later in the same `items` list.
+- Example: one HDF lane covers 32 fail-to-pass targets, all from `pkg/tests/test_hdf.py`.
+  Emit `owned_failures:["pkg/tests/test_hdf.py"]` in the root plan and keep `verify:"pytest pkg/tests/test_hdf.py ..."`.
+  Do not inline 32 node ids into the root DAG just because the prompt listed them.
+- Example: one JSON lane owns only `pkg/tests/test_json.py::test_read_json_chunksize`.
+  Emit that exact node id because the lane is already narrow to one concrete benchmark target.
+  Do not widen it to the whole file unless the planner truly cannot quote the node verbatim.

@@ -16,7 +16,12 @@ import uuid
 from typing import Any
 
 from tools.core.base import ToolExecutionContext, ToolResult
-from tools.daytona_toolkit.tools import _get_cwd, _recover_sandbox, _require_sandbox
+from tools.daytona_toolkit.tools import (
+    _get_cwd,
+    _recover_sandbox,
+    _require_sandbox,
+    _wrap_bash_command,
+)
 from tools.daytona_toolkit.ci_integration import (
     prime_cache_after_write,
     record_edit_in_ledger,
@@ -53,6 +58,7 @@ import base64, hashlib, json, os, subprocess, sys, traceback
 
 _RUN_ID = "{run_id}"
 _MANIFEST = {{"reads": [], "writes": [], "shells": [], "status": "ok", "error": ""}}
+_CODEACT_CWD = {codeact_cwd}
 
 def read(path):
     """Read a file and track the read."""
@@ -69,7 +75,13 @@ def write(path, content):
 def shell(command, timeout=300):
     """Execute a shell command."""
     try:
-        proc = subprocess.run(command, shell=True, capture_output=True, text=True, timeout=timeout)
+        proc = subprocess.run(
+            ["env", "-u", "LC_ALL", "bash", "-lc", command],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            cwd=_CODEACT_CWD or None,
+        )
         result = {{"command": command, "stdout": proc.stdout, "stderr": proc.stderr, "exit_code": proc.returncode}}
     except subprocess.TimeoutExpired:
         result = {{"command": command, "stdout": "", "stderr": "timeout", "exit_code": -1}}
@@ -91,6 +103,22 @@ with open("/tmp/codeact-{run_id}.json", "w") as f:
 
 print(json.dumps({{"manifest": "/tmp/codeact-{run_id}.json", "status": _MANIFEST["status"]}}))
 '''
+
+
+def _build_wrapper(code: str, *, run_id: str, cwd: str | None) -> str:
+    code_b64 = base64.b64encode(code.encode("utf-8")).decode("ascii")
+    return _WRAPPER_TEMPLATE.format(
+        run_id=run_id,
+        code_b64=code_b64,
+        codeact_cwd=json.dumps(cwd) if cwd else "None",
+    )
+
+
+def _build_exec_command(script_path: str, *, cwd: str | None) -> str:
+    command = f"python3 {script_path}"
+    if cwd:
+        command = f"cd {json.dumps(cwd)} && {command}"
+    return _wrap_bash_command(command)
 
 
 def _normalize_repo_relative_path(path: Any, repo_root: str) -> str | None:
@@ -255,7 +283,9 @@ def _team_codeact_manifest_error(
             return (
                 "daytona_codeact: coordinated team developer/validator lanes must not mutate the "
                 "ambient runtime environment with install commands. "
-                f"Observed install command(s): {rendered}."
+                f"Observed install command(s): {rendered}. "
+                "Do not retry with pip/conda/uv install fallbacks; use one existing-runner probe, "
+                "then continue diagnosis on owned repo files or surface ambient mismatch evidence."
             )
 
     writes = manifest.get("writes")
@@ -329,11 +359,11 @@ async def daytona_codeact(
         return ToolResult(output=preflight_error, is_error=True)
 
     run_id = uuid.uuid4().hex[:8]
-    code_b64 = base64.b64encode(code.encode("utf-8")).decode("ascii")
-
     # Build and upload wrapper script
-    wrapper = _WRAPPER_TEMPLATE.format(run_id=run_id, code_b64=code_b64)
+    repo_cwd = _get_cwd(context)
+    wrapper = _build_wrapper(code, run_id=run_id, cwd=repo_cwd)
     script_path = f"/tmp/codeact-wrapper-{run_id}.py"
+    exec_command = _build_exec_command(script_path, cwd=repo_cwd)
 
     try:
         await sandbox.fs.upload_file(wrapper.encode("utf-8"), script_path)
@@ -347,7 +377,7 @@ async def daytona_codeact(
     # Execute
     try:
         response = await sandbox.process.exec(
-            f"python3 {script_path}",
+            exec_command,
             timeout=300,
         )
         stdout = response.result or ""
@@ -355,7 +385,7 @@ async def daytona_codeact(
         try:
             sandbox = await _recover_sandbox(context, exc)
             response = await sandbox.process.exec(
-                f"python3 {script_path}",
+                exec_command,
                 timeout=300,
             )
             stdout = response.result or ""

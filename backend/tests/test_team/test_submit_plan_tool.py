@@ -7,6 +7,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from pydantic import ValidationError
 
 from team.models import Plan, WorkItemKind
 from tools.core.base import ExecutionMetadata, ToolExecutionContext
@@ -30,6 +31,38 @@ def test_submit_plan_input_accepts_json_string_items() -> None:
     )
     assert len(args.items) == 1
     assert args.items[0].agent_name == "developer"
+
+
+def test_submit_plan_input_rejects_scalar_item_entries_with_guidance() -> None:
+    with pytest.raises(ValidationError) as excinfo:
+        SubmitPlanInput.model_validate(
+            {
+                "items": [
+                    "dask/tests/test_cli.py::test_info",
+                    "dask/tests/test_cli.py::test_versions",
+                ]
+            }
+        )
+
+    message = str(excinfo.value)
+    assert "must contain plan item objects" in message
+    assert "not bare strings or other scalars" in message
+
+
+def test_submit_plan_input_does_not_extract_nested_string_arrays_from_malformed_item_text() -> None:
+    with pytest.raises(ValidationError) as excinfo:
+        SubmitPlanInput.model_validate(
+            {
+                "items": (
+                    'planner said: [{"agent_name":"developer","local_id":"w1","payload":'
+                    '{"owned_failures":["dask/tests/test_cli.py::test_info"]},}]'
+                )
+            }
+        )
+
+    message = str(excinfo.value)
+    assert "real list of plan item objects" in message
+    assert "owned_failures" not in message
 
 
 def test_submit_plan_input_normalizes_legacy_agent_and_id_fields() -> None:

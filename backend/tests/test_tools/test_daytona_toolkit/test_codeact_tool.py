@@ -9,7 +9,11 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from tools.core.base import ToolExecutionContext
-from tools.daytona_toolkit.codeact_tool import daytona_codeact
+from tools.daytona_toolkit.codeact_tool import (
+    _build_exec_command,
+    _build_wrapper,
+    daytona_codeact,
+)
 
 
 pytestmark = pytest.mark.asyncio
@@ -187,6 +191,21 @@ async def test_codeact_success_no_writes():
     assert data["cwd"] == "/ws"
 
 
+async def test_build_wrapper_uses_bash_and_repo_cwd_for_shell_helper():
+    wrapper = _build_wrapper("shell('pytest -q')", run_id="abcd1234", cwd="/testbed")
+
+    assert '["env", "-u", "LC_ALL", "bash", "-lc", command]' in wrapper
+    assert 'cwd=_CODEACT_CWD or None' in wrapper
+    assert '_CODEACT_CWD = "/testbed"' in wrapper
+
+
+async def test_build_exec_command_runs_wrapper_from_repo_cwd():
+    command = _build_exec_command("/tmp/codeact-wrapper-abcd1234.py", cwd="/testbed")
+
+    assert "bash -lc" in command
+    assert 'cd "/testbed" && python3 /tmp/codeact-wrapper-abcd1234.py' in command
+
+
 # ---------------------------------------------------------------------------
 # Successful run — with writes committed
 # ---------------------------------------------------------------------------
@@ -206,6 +225,21 @@ async def test_codeact_success_with_writes():
     assert data["files_written"] == 2
     # upload_file called once for the script upload + twice for the writes
     assert sb.fs.upload_file.call_count == 3
+
+
+async def test_codeact_executes_wrapper_from_repo_cwd():
+    manifest = _make_manifest()
+    sb = _make_sandbox(manifest=manifest)
+    ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/testbed"})
+
+    result = await daytona_codeact.execute(
+        daytona_codeact.input_model(code="print('hi')"), ctx
+    )
+
+    assert not result.is_error
+    command = sb.process.exec.await_args.args[0]
+    assert "bash -lc" in command
+    assert 'cd "/testbed" && python3 /tmp/codeact-wrapper-' in command
 
 
 # ---------------------------------------------------------------------------

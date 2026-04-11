@@ -488,6 +488,7 @@ class CodeIntelligenceService:
     def status(self) -> dict[str, Any]:
         """Return service status summary."""
         lsp_tel = self.lsp_client.telemetry
+        atlas_status = self.atlas.status()
         return {
             "sandbox_id": self.sandbox_id,
             "initialized": self.is_initialized,
@@ -504,7 +505,8 @@ class CodeIntelligenceService:
                 "entries": self.ledger.entry_count,
                 "generation": self.ledger.generation,
             },
-            "atlas": self.atlas.status(),
+            "atlas": atlas_status,
+            "atlas_store_initialized": bool(atlas_status.get("store_initialized")),
             "lsp": {
                 "connected": self.lsp_client.connected,
                 "queries": lsp_tel.queries,

@@ -57,6 +57,10 @@ _RESET = "\033[0m"
 _DIM = "\033[2m"
 _RED = "\033[31m"
 _GREEN = "\033[32m"
+_YELLOW = "\033[33m"
+_BLUE = "\033[34m"
+_MAGENTA = "\033[35m"
+_CYAN = "\033[36m"
 
 
 def _truncate(text: str, limit: int | None) -> str:
@@ -184,16 +188,19 @@ class MultiAgentEventPrinter:
             self._line(
                 agent,
                 work_id,
-                f"-> tool_start: {event.tool_name}"
+                f"{self._c('cyan', '-> tool_start:')} {event.tool_name}"
                 f"({_truncate(str(event.tool_input), 120)})",
             )
         elif isinstance(event, ToolExecutionCompleted):
             status = self._c("red", "ERROR") if event.is_error else self._c("green", "ok")
-            limit = 500 if event.is_error else 120
+            if self._truncate_n is None:
+                limit = None
+            else:
+                limit = 500 if event.is_error else 120
             self._line(
                 agent,
                 work_id,
-                f"<- tool_done:  {event.tool_name} [{status}] "
+                f"{self._c('green' if not event.is_error else 'red', '<- tool_done:')}  {event.tool_name} [{status}] "
                 f"{_truncate(event.output, limit)}",
             )
             for extra in _tool_completion_detail_lines(event):
@@ -202,13 +209,13 @@ class MultiAgentEventPrinter:
             self._line(
                 agent,
                 work_id,
-                f".. progress:   {event.tool_name} {_truncate(event.output, 120)}",
+                f"{self._c('yellow', '.. progress:')}   {event.tool_name} {_truncate(event.output, 120)}",
             )
         elif isinstance(event, ToolExecutionCancelled):
             self._line(
                 agent,
                 work_id,
-                f"x  cancelled:  {event.tool_name} {_truncate(event.reason, 240)}",
+                f"{self._c('red', 'x  cancelled:')}  {event.tool_name} {_truncate(event.reason, 240)}",
             )
         elif isinstance(event, BackgroundTaskStarted):
             # run_subagent is a regular background tool — the only thing that
@@ -226,24 +233,27 @@ class MultiAgentEventPrinter:
                 self._line(
                     agent,
                     work_id,
-                    f"~> spawn:      {self._c('bold', child)} "
+                    f"{self._c('magenta', '~> spawn:')}      {self._c('bold', child)} "
                     f"task_id={event.task_id} task={_truncate(task_text, 120)}",
                 )
             else:
                 self._line(
                     agent,
                     work_id,
-                    f">> bg_start:   {event.tool_name} task_id={event.task_id}",
+                    f"{self._c('blue', '>> bg_start:')}   {event.tool_name} task_id={event.task_id}",
                 )
         elif isinstance(event, BackgroundTaskCompleted):
             status = self._c("red", "ERROR") if event.is_error else self._c("green", "ok")
-            limit = 500 if event.is_error else 120
+            if self._truncate_n is None:
+                limit = None
+            else:
+                limit = 500 if event.is_error else 120
             if event.tool_name == "run_subagent":
                 child = self._work_to_agent.get(event.task_id, "subagent")
                 self._line(
                     agent,
                     work_id,
-                    f"<~ return:     {self._c('bold', child)} "
+                    f"{self._c('magenta', '<~ return:')}     {self._c('bold', child)} "
                     f"task_id={event.task_id} [{status}] "
                     f"{_truncate(event.output, limit)}",
                 )
@@ -253,7 +263,7 @@ class MultiAgentEventPrinter:
                 self._line(
                     agent,
                     work_id,
-                    f"<< bg_done:    {event.tool_name} [{status}] "
+                    f"{self._c('blue', '<< bg_done:')}    {event.tool_name} [{status}] "
                     f"{_truncate(event.output, limit)}",
                 )
         elif isinstance(event, AssistantTurnComplete):
@@ -357,16 +367,20 @@ class MultiAgentEventPrinter:
         depth = self._depth.get(work_id, 0) if work_id else 0
         indent = "  " * depth
         tag = self._agent_tag(agent, work_id)
-        if self._timestamps:
-            elapsed = _time.monotonic() - self._start
-            stamp = f"{_DIM}[{elapsed:7.1f}s]{_RESET}" if self._color else f"[{elapsed:7.1f}s]"
-            line = f"{stamp} {tag} {indent}{body}"
-        else:
-            line = f"{tag} {indent}{body}"
-        if self._sink is not None:
-            self._sink(line)
-        else:
-            print(line, flush=True)
+        lines = body.splitlines() or [""]
+        continuation = self._c("dim", "│ ") if self._color else "│ "
+        for idx, segment in enumerate(lines):
+            prefix = continuation if idx else ""
+            if self._timestamps:
+                elapsed = _time.monotonic() - self._start
+                stamp = f"{_DIM}[{elapsed:7.1f}s]{_RESET}" if self._color else f"[{elapsed:7.1f}s]"
+                line = f"{stamp} {tag} {indent}{prefix}{segment}"
+            else:
+                line = f"{tag} {indent}{prefix}{segment}"
+            if self._sink is not None:
+                self._sink(line)
+            else:
+                print(line, flush=True)
 
     def _agent_tag(self, agent: str, work_id: str = "") -> str:
         st = self._agent_totals_for(agent)
@@ -387,6 +401,11 @@ class MultiAgentEventPrinter:
         code = {
             "red": _RED,
             "green": _GREEN,
+            "yellow": _YELLOW,
+            "blue": _BLUE,
+            "magenta": _MAGENTA,
+            "cyan": _CYAN,
+            "dim": _DIM,
             "bold": "\033[1m",
         }.get(key, "")
         return f"{code}{text}{_RESET}" if code else text
