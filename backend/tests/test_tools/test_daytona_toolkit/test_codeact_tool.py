@@ -194,7 +194,7 @@ async def test_codeact_success_no_writes():
 async def test_build_wrapper_uses_bash_and_repo_cwd_for_shell_helper():
     wrapper = _build_wrapper("shell('pytest -q')", run_id="abcd1234", cwd="/testbed")
 
-    assert '["env", "-u", "LC_ALL", "bash", "-lc", command]' in wrapper
+    assert '["env", "-u", "LC_ALL", "bash", "-o", "pipefail", "-lc", command]' in wrapper
     assert 'cwd=_CODEACT_CWD or None' in wrapper
     assert '_CODEACT_CWD = "/testbed"' in wrapper
 
@@ -202,7 +202,7 @@ async def test_build_wrapper_uses_bash_and_repo_cwd_for_shell_helper():
 async def test_build_exec_command_runs_wrapper_from_repo_cwd():
     command = _build_exec_command("/tmp/codeact-wrapper-abcd1234.py", cwd="/testbed")
 
-    assert "bash -lc" in command
+    assert "bash -o pipefail -lc" in command
     assert 'cd "/testbed" && python3 /tmp/codeact-wrapper-abcd1234.py' in command
 
 
@@ -238,7 +238,7 @@ async def test_codeact_executes_wrapper_from_repo_cwd():
 
     assert not result.is_error
     command = sb.process.exec.await_args.args[0]
-    assert "bash -lc" in command
+    assert "bash -o pipefail -lc" in command
     assert 'cd "/testbed" && python3 /tmp/codeact-wrapper-' in command
 
 

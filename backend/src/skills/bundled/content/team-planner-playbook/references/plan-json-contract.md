@@ -19,6 +19,7 @@ Use this reference immediately before emitting final plan JSON.
 - `team_planner` items should be `expandable`; do not use atomic `team_planner` items as disguised developers or scouts.
 - If two exact-file slices arrived through separate scout artifacts, keep them as separate leaves or place them behind one residual child planner. Do not merge them into one atomic developer lane without shared-owner evidence.
 ## Failure-surface rules
+- Before final JSON, build a tiny benchmark-surface ledger from the exact prompt paths or ids plus any validator-backed downgrades. Copy only from that ledger into `owned_failures`, `verify`, `verification`, or `reproduction`.
 - Must keep `owned_failures` exact to the benchmark surface, even when `owned_files` points at a different production owner.
 - When one root lane owns many failures from the same benchmark file, prefer that exact benchmark file path over dumping dozens of node ids into the root DAG.
 - When one leaf lane is already narrow to one or a few exact prompt nodes, keep those exact node ids.
@@ -30,6 +31,7 @@ Use this reference immediately before emitting final plan JSON.
 - If no exact prompt, parent, scout, or validator-backed benchmark surface exists for one narrow lane after that repair, omit that uncertain `owned_failures` entry instead of guessing another sibling path.
 - Must keep `verify` aligned with the exact benchmark surface already named by the prompt or validator packet. Never rewrite a benchmark test path or node to mirror the production owner path.
 - When a leaf lane already owns one or a few exact pytest nodes, `verify` should usually name those exact nodes instead of the whole benchmark file.
+- If the production owner is `pkg/io/json.py` but the prompt surface is `pkg/io/tests/test_json.py`, keep the prompt surface verbatim. Do not synthesize nearby names such as `pkg/io/tests/test_io_json.py`, `pkg/cli/tests/test_cli.py`, or `pkg/pkg/tests/test_cli.py`.
 ## Few-shot examples
 - Example: root scouts already mapped `hdf.py`, `parquet/`, `groupby.py`, and five tiny exact files.
   Emit `developer(hdf_fix)` plus expandable `team_planner` items like `parquet_child` or `groupby_child`, then direct tiny-file developers or one residual child planner for the rest. Do not serialize the whole layer into eight atomic developers only because all owners are known.
@@ -42,16 +44,10 @@ Use this reference immediately before emitting final plan JSON.
   Replace that placeholder with a real explored lane after the scout wave, such as `{"agent_name":"developer","local_id":"hdf_fix","kind":"atomic","payload":{...}}`, and add a terminal validator if the layer now has 3+ concrete non-planner lanes.
 - Example: a parent lane handed down `pkg/tests/test_io_json.py` with no exact node, and the child draft is tempted to invent `::test_chunksize`.
   Keep `owned_failures:["pkg/tests/test_io_json.py"]` until live evidence names an exact existing node. Do not guess a narrower pytest id just to make the child lane look more precise.
-- Example: the prompt named `pkg/io/tests/test_json.py::test_read_json_engine_str[ujson]` and `pkg/tests/test_utils_dataframe.py::test_valid_divisions`, but your draft drifts to `pkg/io/tests/test_io_json.py` or `pkg/io/tests/test_utils_dataframe.py`.
-  Repair the lane by restoring the exact prompt surfaces: keep the exact node ids when present, otherwise downgrade only to `pkg/io/tests/test_json.py` and `pkg/tests/test_utils_dataframe.py`.
-  Do not invent `test_io_json.py`, and do not move `test_utils_dataframe.py` under `io/tests` just because the owner file lives in `io/`.
+- Example: the prompt named `pkg/io/tests/test_json.py::test_read_json_engine_str[ujson]`, `pkg/tests/test_cli.py`, and `pkg/tests/test_utils_dataframe.py::test_valid_divisions`.
+  Repair the lane by restoring those exact prompt surfaces or downgrading only to those same file paths. Do not invent `test_io_json.py`, `pkg/cli/tests/test_cli.py`, or move `test_utils_dataframe.py` under `io/tests` just because the owner file lives in `io/`.
 - Example: the prompt named `pkg/tests/test_cli.py`, but your draft rewrote it to `pkg/cli/tests/test_cli.py` or `pkg/pkg/tests/test_cli.py`.
   Keep both `owned_failures` and `verify` on `pkg/tests/test_cli.py`.
   Do not relocate the benchmark file to mirror the production module or duplicate directory tokens.
 - Example: the prompt named `pkg/tests/test_utils_dataframe.py::test_valid_divisions[a-b]`, but your draft accidentally wrote `pkg/tests/test_utils.py::test_valid_divisions`.
   Repair the entry by restoring the exact prompt surface: either keep the exact node id or downgrade to `pkg/tests/test_utils_dataframe.py`. Do not submit `pkg/tests/test_utils.py`, and do not delete the utils failure from `owned_failures`.
-- Example: validator rejected `pkg/tests/test_utils.py` and `pkg/tests/test_utils_alt.py`, and this narrow leaf has no exact benchmark node or file inherited from the prompt.
-  Submit the lane with its `owned_files`, `verify`, and scout briefings intact, but omit the uncertain `owned_failures` entry for that leaf.
-  Do not keep guessing sibling benchmark paths just to make the plan validate.
-- Example: the owned files are `pkg/config.py` and `pkg/compatibility.py`, but the prompt named `pkg/tests/test_config.py::test_get` and `pkg/tests/test_compatibility.py::test_entry_points`.
-  Keep `owned_failures` and `verify` on those benchmark nodes; do not rewrite them to `pkg/config.py::test_get`, `pkg/compatibility.py::test_entry_points`, `pytest pkg/config.py`, or `pytest pkg/compatibility.py`.

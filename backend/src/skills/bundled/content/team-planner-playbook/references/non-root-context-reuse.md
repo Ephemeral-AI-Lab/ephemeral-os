@@ -18,8 +18,7 @@ Use this reference only on child planning turns or prompts with `## Scoped Expan
 - Must trust the current scoped coherence token over an older inherited brief when they disagree.
 - Must use Atlas only after same-run inherited/shared context is insufficient and the exact owner scope is already named.
 - Must keep direct ready lanes ready even when one residual branch still needs a child planner.
-- Must emit a direct developer lane when the child turn already owns one exact production file or one exact file pair with one verification family.
-- Must decompose one exact inherited owner file with symbol queries and inherited briefs before opening same-file scouts.
+- Must emit a direct developer lane when the child turn already owns one exact production file and inherited evidence already names its internal families. Add direct developer leaves plus at most one terminal validator; do not emit another child planner for that same file, and do not reopen same-file scouts unless live coherence drift erased the family split.
 - Never reopen a broad workspace scan if the parent already handed down the relevant slice boundary.
 - Never publish a new shared briefing from a stale inherited packet. Refresh first.
 - Never invent replacement nodes, replacement files, or broad substitute ownership from a stale test name.
@@ -31,7 +30,7 @@ Use this reference only on child planning turns or prompts with `## Scoped Expan
   Do not emit another `team_planner` child for the same single-file residual.
 - Example: parent hands down one scout for `pkg/groupby.py`, and the child task is to split `cov`, `unique`, and `value_counts`.
   Use `inspect_inherited_context(scope_paths=["pkg/groupby.py"])`, then the inherited scout plus live symbol lookup on `pkg/groupby.py` to emit three developer lanes and one validator.
-  Do not relaunch region scouts on `pkg/groupby.py` just because the families differ.
+  Do not relaunch region scouts or emit another `team_planner` for `pkg/groupby.py` once the family split is already named.
 - Example: the child turn inherits an exact owner scope, but the shared brief is stale and no same-run scout covers the remaining gap.
   Refresh that exact scope once, then try `atlas_lookup(...)` before launching a duplicate scout.
   Do not reopen broad workspace structure or benchmark test paths.
