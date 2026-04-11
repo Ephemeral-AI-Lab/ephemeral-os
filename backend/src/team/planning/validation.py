@@ -125,6 +125,62 @@ def _validator_policy_issues(
     return issues
 
 
+def _terminal_concrete_leaf_ids(items: list[WorkItemSpec]) -> set[str]:
+    downstream_local_ids = {
+        dep
+        for item in items
+        for dep in item.deps
+        if isinstance(dep, str) and dep
+    }
+    return {
+        item.local_id
+        for item in items
+        if (
+            item.local_id is not None
+            and item.agent_name != _VALIDATOR_AGENT
+            and item.kind != WorkItemKind.EXPANDABLE
+            and item.local_id not in downstream_local_ids
+        )
+    }
+
+
+def _validator_dependency_issues(items: list[WorkItemSpec]) -> list[Issue]:
+    issues: list[Issue] = []
+    terminal_leaf_ids = _terminal_concrete_leaf_ids(items)
+    downstream_local_ids = {
+        dep
+        for item in items
+        for dep in item.deps
+        if isinstance(dep, str) and dep
+    }
+    for idx, item in enumerate(items):
+        if item.agent_name != _VALIDATOR_AGENT:
+            continue
+        if not item.deps:
+            issues.append(
+                {
+                    "field": f"items[{idx}].deps",
+                    "msg": "validator items must depend on at least one upstream sibling",
+                }
+            )
+            continue
+        is_terminal = item.local_id is None or item.local_id not in downstream_local_ids
+        if not is_terminal or not terminal_leaf_ids:
+            continue
+        missing = sorted(terminal_leaf_ids.difference(item.deps))
+        if missing:
+            issues.append(
+                {
+                    "field": f"items[{idx}].deps",
+                    "msg": (
+                        "terminal validator must depend on every terminal concrete sibling "
+                        f"(missing: {', '.join(missing)})"
+                    ),
+                }
+            )
+    return issues
+
+
 def _expandable_validator_dep_issues(items: list[WorkItemSpec]) -> list[Issue]:
     issues: list[Issue] = []
     local_item_map = {
@@ -188,6 +244,7 @@ def validate_plan_phase_a(
             require_validator_for_plan_size=require_validator_for_plan_size,
         )
     )
+    issues.extend(_validator_dependency_issues(plan.items))
     issues.extend(_expandable_validator_dep_issues(plan.items))
 
     local_ids: set[str] = set()

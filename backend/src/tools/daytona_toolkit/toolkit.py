@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 _TEAM_SAFE_AGENT_NAMES = frozenset({"developer", "validator"})
 
 
-def _build_tools(*, include_codeact: bool) -> list[Any]:
+def _build_tools(*, include_codeact: bool, include_bash: bool) -> list[Any]:
     tools: list[Any] = [
         # Read tools first (preferred execution order)
         daytona_list_files,
@@ -47,20 +47,31 @@ def _build_tools(*, include_codeact: bool) -> list[Any]:
     ]
     if include_codeact:
         tools.append(daytona_codeact)
-    # Execution
-    tools.append(daytona_bash)
+    if include_bash:
+        tools.append(daytona_bash)
     return tools
 
 
-def _build_instructions(*, include_codeact: bool) -> str:
-    codeact_line = (
-        "- `daytona_codeact` — execute Python with atomic file I/O. "
-        "Use for multi-step transformations that need read/write/shell in one operation.\n"
-        if include_codeact
-        else "- Coordinated team developer/validator lanes intentionally omit "
-        "`daytona_codeact`; keep multi-step changes reviewable with direct "
-        "`daytona_read_file` / `daytona_edit_file` / `daytona_write_file` calls.\n"
-    )
+def _build_instructions(*, include_codeact: bool, include_bash: bool) -> str:
+    codeact_line = ""
+    if include_codeact:
+        codeact_line = (
+            "- `daytona_codeact` — execute Python with atomic file I/O. "
+            "Use for bounded reproductions, verification commands, or multi-step transformations "
+            "that need read/write/shell in one operation.\n"
+        )
+    execute_lines = ""
+    if include_bash:
+        execute_lines += (
+            "- `daytona_bash` — run a shell command. Use for tests, builds, installs, verification. "
+            "In coordinated team runs, mutating commands must pass `declared_output_paths` so the runtime "
+            "can reserve those paths before execution; undeclared mutations are rejected.\n"
+        )
+    else:
+        execute_lines += (
+            "- Coordinated team developer/validator lanes must use `daytona_codeact` instead of raw "
+            "`daytona_bash` for runtime execution.\n"
+        )
     return (
         "Interact with a remote Daytona sandbox for file operations, "
         "code analysis, editing, and command execution. "
@@ -80,7 +91,7 @@ def _build_instructions(*, include_codeact: bool) -> str:
         "- `daytona_write_file` — create or overwrite a file. Use for new files.\n"
         f"{codeact_line}\n"
         "**Execute**\n"
-        "- `daytona_bash` — run a shell command. Use for tests, builds, installs, verification. In coordinated team runs, mutating commands must pass `declared_output_paths` so the runtime can reserve those paths before execution; undeclared mutations are rejected.\n"
+        f"{execute_lines}"
         "- When an injected sandbox cwd/repo root is configured, shell and file tools already run relative to that root. Prefer relative repo paths and do not prepend guessed roots like `/workspace`, `/home/user`, or `/home/user/repos/...` unless you truly need a real subdirectory."
     )
 
@@ -105,21 +116,34 @@ class DaytonaToolkit(BaseToolkit):
     def from_context(cls, ctx: Any) -> DaytonaToolkit:
         sandbox_id = ctx.metadata.get("sandbox_id", "") if ctx is not None else ""
         agent_name = str(ctx.metadata.get("agent_name", "") or "") if ctx is not None else ""
-        include_codeact = agent_name not in _TEAM_SAFE_AGENT_NAMES
-        return cls(sandbox_id=sandbox_id or None, include_codeact=include_codeact)
+        include_codeact = True
+        include_bash = agent_name not in _TEAM_SAFE_AGENT_NAMES
+        return cls(
+            sandbox_id=sandbox_id or None,
+            include_codeact=include_codeact,
+            include_bash=include_bash,
+        )
 
-    def __init__(self, sandbox_id: str | None = None, *, include_codeact: bool = True) -> None:
+    def __init__(
+        self,
+        sandbox_id: str | None = None,
+        *,
+        include_codeact: bool = True,
+        include_bash: bool = True,
+    ) -> None:
         description = (
             "Remote sandbox operations: shell, files, search, "
             "editing, and LSP queries"
         )
         if include_codeact:
             description += ", and CodeAct execution"
+        if not include_bash:
+            description += " (team-safe execution via CodeAct)"
         super().__init__(
             name="sandbox_operations",
             description=description,
-            tools=_build_tools(include_codeact=include_codeact),
-            instructions=_build_instructions(include_codeact=include_codeact),
+            tools=_build_tools(include_codeact=include_codeact, include_bash=include_bash),
+            instructions=_build_instructions(include_codeact=include_codeact, include_bash=include_bash),
         )
         self.sandbox_id = sandbox_id
         self._sandbox: Any | None = None

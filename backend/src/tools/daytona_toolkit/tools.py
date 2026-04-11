@@ -237,6 +237,15 @@ async def daytona_bash(
         stdout (str): Standard output from the command
         exit_code (int): Exit code (0 = success)
     """
+    agent_name = str(context.metadata.get("agent_name", "") or "")
+    if agent_name in {"developer", "validator"}:
+        return ToolResult(
+            output=(
+                "daytona_bash is disabled for coordinated team developer/validator lanes. "
+                "Use structured Daytona tools and `daytona_codeact` for bounded runtime execution."
+            ),
+            is_error=True,
+        )
     sandbox = await _require_sandbox(context)
     cwd = _get_cwd(context)
     on_progress_line = context.metadata.get("on_progress_line")

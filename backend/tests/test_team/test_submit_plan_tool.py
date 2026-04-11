@@ -200,6 +200,48 @@ async def test_submit_plan_requires_terminal_validator_for_three_developers():
 
 
 @pytest.mark.asyncio
+async def test_submit_plan_rejects_terminal_validator_without_deps() -> None:
+    tool = SubmitPlanTool()
+    ctx = _ctx()
+    args = SubmitPlanInput.model_validate(
+        {
+            "items": [
+                {"agent_name": "developer", "local_id": "dev1"},
+                {"agent_name": "developer", "local_id": "dev2"},
+                {"agent_name": "developer", "local_id": "dev3"},
+                {"agent_name": "validator", "local_id": "val"},
+            ]
+        }
+    )
+
+    res = await tool.execute(args, ctx)
+
+    assert res.is_error
+    assert "validator items must depend on at least one upstream sibling" in res.output
+
+
+@pytest.mark.asyncio
+async def test_submit_plan_rejects_terminal_validator_missing_terminal_leaf_deps() -> None:
+    tool = SubmitPlanTool()
+    ctx = _ctx()
+    args = SubmitPlanInput.model_validate(
+        {
+            "items": [
+                {"agent_name": "developer", "local_id": "dev1"},
+                {"agent_name": "developer", "local_id": "dev2"},
+                {"agent_name": "developer", "local_id": "dev3"},
+                {"agent_name": "validator", "local_id": "val", "deps": ["dev1"]},
+            ]
+        }
+    )
+
+    res = await tool.execute(args, ctx)
+
+    assert res.is_error
+    assert "terminal validator must depend on every terminal concrete sibling" in res.output
+
+
+@pytest.mark.asyncio
 async def test_submit_plan_allows_two_developers_plus_child_planner_without_parent_validator():
     tool = SubmitPlanTool()
     ctx = _ctx()

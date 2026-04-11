@@ -26,6 +26,7 @@ _REFERENCES = [
     _CONTENT / "team-planner-playbook/references/scout-launch-contract.md",
     _CONTENT / "team-planner-playbook/references/non-root-context-reuse.md",
     _CONTENT / "team-planner-playbook/references/task-planning-decomposition.md",
+    _CONTENT / "team-scout-playbook/references/completion-contract.md",
     _CONTENT / "team-posthook-decision-playbook/references/decision-gates.md",
     _CONTENT / "team-validator-playbook/references/cross-surface-guardrails.md",
     _CONTENT / "team-replanner-playbook/references/corrective-fast-path.md",
@@ -97,9 +98,13 @@ def test_developer_and_validator_skills_explain_when_to_load_references() -> Non
 
     assert "Must load `widening-and-runtime` before the first widened write outside `owned_files`." in developer
     assert "Must load `widening-and-runtime` before concluding a runtime-owned lane from non-runtime evidence." in developer
+    assert "Must use `daytona_codeact` for bounded runtime reproduction or verification." in developer
+    assert "Never use `daytona_bash` from developer lanes." in developer
     assert "Use this reference only when either condition is true:" in developer_ref
 
     assert "Must load `cross-surface-guardrails` when the touched change affects public serialization, schema shape, or docs-visible output." in validator
+    assert "Must run the exact commands from the payload first via `daytona_codeact`." in validator
+    assert "Never use `daytona_bash` from validator lanes." in validator
     assert "Use this reference only when the touched change affects public serialization, schema shape, or docs-visible output." in validator_ref
 
 
@@ -118,13 +123,20 @@ def test_posthook_and_verification_replan_explain_when_to_load_references() -> N
 
 def test_scout_playbook_keeps_missing_targets_missing() -> None:
     scout = _read(_CONTENT / "team-scout-playbook/SKILL.md")
+    scout_ref = _read(_CONTENT / "team-scout-playbook/references/completion-contract.md")
     assert "must keep that exact path missing" in scout
     assert "Never inspect nearby replacements" in scout
+    assert "Must load `completion-contract` when `target_paths` is a single file" in scout
+    assert "Never claim code was created, fixed, patched, or refactored." in scout
+    assert "For single-file or short fixed file-list scouts, `suggested_subdivisions` should almost always be `[]`." in scout
+    assert "Must treat the handed scope itself as the deliverable." in scout_ref
+    assert "Never subdivide a single file just because it is long" in scout_ref
 
 
 def test_sweevo_context_stays_shared_and_runtime_focused() -> None:
     sweevo = _read(_CONTENT / "sweevo-project-context/SKILL.md")
     assert "Must report a missing named test or node as `benchmark_surface_mismatch`." in sweevo
+    assert "Must not label a missing transitive import, helper, or adjacent production module as `benchmark_surface_mismatch`" in sweevo
     assert "Must keep commands repo-root-relative." in sweevo
     assert "Must keep roles separate" in sweevo
 

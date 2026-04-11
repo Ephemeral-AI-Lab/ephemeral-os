@@ -66,7 +66,7 @@ def test_toolkit_registers_expected_tools():
     assert expected.issubset(names)
 
 
-def test_toolkit_from_context_omits_codeact_for_team_workers():
+def test_toolkit_from_context_uses_codeact_and_omits_bash_for_team_workers():
     developer_tk = DaytonaToolkit.from_context(
         ToolkitContext(metadata={"sandbox_id": "sb-dev", "agent_name": "developer"})
     )
@@ -74,10 +74,10 @@ def test_toolkit_from_context_omits_codeact_for_team_workers():
         ToolkitContext(metadata={"sandbox_id": "sb-val", "agent_name": "validator"})
     )
 
-    assert "daytona_codeact" not in developer_tk.tool_names()
-    assert "daytona_codeact" not in validator_tk.tool_names()
+    assert "daytona_codeact" in developer_tk.tool_names()
+    assert "daytona_codeact" in validator_tk.tool_names()
     assert "daytona_edit_file" in developer_tk.tool_names()
-    assert "daytona_bash" in validator_tk.tool_names()
+    assert "daytona_bash" not in validator_tk.tool_names()
 
 
 def test_toolkit_get_tool():

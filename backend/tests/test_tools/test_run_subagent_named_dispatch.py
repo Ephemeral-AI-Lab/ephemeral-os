@@ -409,14 +409,7 @@ async def test_restricted_run_subagent_tool_forwards_background_preflight(monkey
 
 
 @pytest.mark.asyncio
-async def test_scout_allows_benchmark_test_file_in_root_first_wave_when_planner_chooses_it(monkeypatch):
-    submitted = SubmittedSummary(
-        summary="scout report",
-        artifact={"target_paths": ["pkg/tests/test_api.py"], "files": []},
-    )
-    stub, _ = _make_stub_agent(submitted=submitted)
-    _patch_spawn(monkeypatch, stub)
-
+async def test_scout_rejects_benchmark_test_file_after_root_scope_anchor(monkeypatch):
     ctx = _ctx(team_run_id="TR_BENCH")
     ctx.metadata["agent_name"] = "team_planner"
     ctx.metadata["work_item_id"] = "ROOT"
@@ -441,7 +434,41 @@ async def test_scout_allows_benchmark_test_file_in_root_first_wave_when_planner_
         ctx,
     )
 
-    assert not res.is_error
+    assert res.is_error
+    assert "benchmark test scopes are failure evidence" in res.output
+
+
+@pytest.mark.asyncio
+async def test_scout_rejects_benchmark_test_directory_after_root_scope_anchor(monkeypatch):
+    ctx = _ctx(team_run_id="TR_BENCH")
+    ctx.metadata["agent_name"] = "team_planner"
+    ctx.metadata["work_item_id"] = "ROOT"
+    ctx.metadata["_benchmark_root_scope_anchor_done"] = True
+    team_run = SimpleNamespace(
+        root_work_item_id="ROOT",
+        dispatcher=SimpleNamespace(
+            graph={
+                "ROOT": SimpleNamespace(
+                    payload={"fail_to_pass": ["pkg/tests/test_api.py::test_one"]}
+                )
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        "team.runtime.registry.get",
+        lambda team_run_id: team_run if team_run_id == "TR_BENCH" else None,
+    )
+
+    res = await run_subagent.execute(
+        run_subagent.input_model(
+            agent_name="scout",
+            input={"target_paths": ["pkg/tests"]},
+        ),
+        ctx,
+    )
+
+    assert res.is_error
+    assert "benchmark test scopes are failure evidence" in res.output
 
 
 @pytest.mark.asyncio

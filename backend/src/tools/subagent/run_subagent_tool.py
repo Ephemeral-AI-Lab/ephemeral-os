@@ -186,11 +186,53 @@ def _benchmark_test_files(payload: dict[str, Any]) -> set[str]:
     return refs
 
 
+def _normalize_benchmark_scope_path(path: str) -> str:
+    cleaned = str(path or "").strip().replace("\\", "/")
+    if cleaned.startswith("./"):
+        cleaned = cleaned[2:]
+    return cleaned.rstrip("/")
+
+
+def _is_benchmark_test_scope(target_path: str, benchmark_tests: set[str]) -> bool:
+    target = _normalize_benchmark_scope_path(target_path)
+    if not target:
+        return False
+    for raw_test in benchmark_tests:
+        test_path = _normalize_benchmark_scope_path(raw_test)
+        if not test_path:
+            continue
+        if target == test_path or target.endswith("/" + test_path):
+            return True
+        if "/" not in test_path:
+            continue
+        parent = test_path.rsplit("/", 1)[0]
+        if target == parent or target.endswith("/" + parent):
+            return True
+    return False
+
+
 def _benchmark_root_scout_policy_error(
     context: ToolExecutionContext,
     target_paths: list[str],
 ) -> str | None:
-    del context, target_paths
+    payload = _benchmark_root_payload(context)
+    if not isinstance(payload, dict):
+        return None
+    if not bool(context.metadata.get("_benchmark_root_scope_anchor_done")):
+        return None
+    benchmark_tests = _benchmark_test_files(payload)
+    if not benchmark_tests:
+        return None
+    offenders = [path for path in target_paths if _is_benchmark_test_scope(path, benchmark_tests)]
+    if not offenders:
+        return None
+    rendered = ", ".join(offenders)
+    return (
+        "run_subagent: fresh benchmark-root scouts must stay on production-owner slices after the "
+        f"scope anchor; benchmark test scopes are failure evidence, not scout targets ({rendered}). "
+        "Re-anchor on an exact existing production directory/package/file and use code intelligence "
+        "to seed the owner slice instead of scouting benchmark tests."
+    )
     return None
 
 

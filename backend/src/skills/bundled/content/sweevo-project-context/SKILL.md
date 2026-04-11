@@ -12,6 +12,7 @@ Use this skill only for stable benchmark policy. Must treat the prompt, payload,
 - Must treat the live sandbox checkout as the source of truth.
 - Must treat named `FAIL_TO_PASS`, `PASS_TO_PASS`, and grading commands as authoritative.
 - Must report a missing named test or node as `benchmark_surface_mismatch`. Never guess a replacement node, file, or symbol.
+- Must not label a missing transitive import, helper, or adjacent production module as `benchmark_surface_mismatch` when the prompt-named benchmark files still exist live; that is fixable runtime evidence on the current repository surface.
 - Must keep commands repo-root-relative. Never prepend guessed `cd /workspace`, `cd /home/user`, or similar wrappers.
 - Must fix repository code, not the ambient environment. Never rely on ad hoc package installs as the benchmark fix.
 - Must keep roles separate: planner plans, developer edits, validator verifies, replanner reshapes work.
