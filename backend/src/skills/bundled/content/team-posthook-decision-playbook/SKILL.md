@@ -56,6 +56,7 @@ Checkpoint or replan instability is always systemic, never transient.
 - **`request_replan`**
   - use when the next step needs a new corrective task or a changed task boundary
   - use for deterministic FAIL results from validators and for developer failures that expose a different owner or missing dependent work
+  - use for benchmark surface mismatches such as missing named pytest nodes, uncollectable exact payload targets, or stale retry ids that no longer exist in the live checkout
   - use for checkpoint/retry/replan/posthook runtime bugs
 
 If retry budget is exhausted or the same failure would obviously recur, escalate to `request_replan` when available instead of forcing another retry.
@@ -69,6 +70,8 @@ Interpretation discipline:
 - If the worker says the residual failure is "separate", "pre-existing", or "another issue" but it is still inside the assigned verification command, owned failure list, or same validator packet, do not close the lane with `submit_summary`.
 - A validator FAIL with more than one deterministic cluster, more than one owner family, or explicit `plan_gap` evidence should go to `request_replan` when available.
 - If the retry target turned green but a broader validator command surfaced adjacent deterministic failures on the same owner surface, still choose `request_replan` and preserve both the exact retry target and the broader failing command so replanning can replace or narrow the stale verifier instead of rerunning it unchanged.
+- If the worker only cites `py_compile`, LSP diagnostics, grep/readback, or source inspection and never shows a passing assigned runtime verify command, that is not terminal success on a runtime-owned lane.
+- If the worker reports `benchmark_surface_mismatch`, an absent named pytest node, or that the exact payload node/file cannot be collected in the live checkout, treat that as a stale task boundary and choose `request_replan` when available.
 
 ### 3. Build a surgical payload
 
@@ -103,6 +106,8 @@ When the worker already produced a structured FAIL block, preserve its exact com
 8. **Owned red verify surfaces block summary.** When the assigned verification command, named `verify` target, or owned failure list still contains a deterministic failure after the worker's edit, `submit_summary` is wrong even if another subset now passes.
 9. **Do not write prose outside the tool call.** Once the tool is accepted, stop.
 10. **Malformed worker output still requires a decision.** If the worker text is truncated, tool-limited, or missing the usual labels, infer the best-supported action from the last concrete evidence and call one tool anyway.
+11. **Syntax-only evidence does not close runtime lanes.** `py_compile`, clean LSP diagnostics, source readback, or line-location checks without one passing assigned runtime verify command are not enough for `submit_summary` on runtime-owned work.
+12. **Missing exact retry targets mean replan.** If the worker says the named pytest node/file is absent or uncollectable in the live checkout, treat that as benchmark-surface mismatch and request replan when available instead of summarizing progress.
 
 ---
 

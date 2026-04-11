@@ -252,11 +252,43 @@ def test_dispatcher_complete_snapshots_successor():
     asyncio.run(_run())
 
 
+def test_dispatcher_complete_snapshots_full_dependency_subtree():
+    async def _run():
+        d = _dispatcher()
+        planner = _new_wi("P", status=WorkItemStatus.PENDING, local_id="planner")
+        validator = _new_wi("V", deps=["P"], agent_name="validator")
+        await d.add_work_item(planner)
+        await d.add_work_item(validator)
+        await d.mark_running("P", "run-plan")
+        new_items = await d.complete(
+            "P",
+            AgentResult(
+                artifact={"target_paths": ["src/plan"]},
+                summary="planned",
+                submitted_plan=Plan(items=[WorkItemSpec(agent_name="developer", local_id="dev1")]),
+            ),
+        )
+
+        child = new_items[0]
+        assert validator.status == WorkItemStatus.PENDING
+
+        await d.mark_running(child.id, "run-dev")
+        await d.complete(child.id, AgentResult(artifact={"target_paths": ["src/dev"]}, summary="ok"))
+
+        assert validator.status == WorkItemStatus.READY
+        assert {dep.source_wi_id for dep in validator.dep_artifacts} == {"P", child.id}
+        assert {dep.display_name for dep in validator.dep_artifacts} == {"planner", "dev1"}
+
+    from team.models import Plan, WorkItemSpec
+
+    asyncio.run(_run())
+
+
 def test_dispatcher_promote_rejects_early_promotion():
     d = _dispatcher()
     parent = _new_wi("P", status=WorkItemStatus.PENDING)
     child = _new_wi("C", deps=["P"])
     d.graph["P"] = parent
     d.graph["C"] = child
-    with pytest.raises(RuntimeError, match="not DONE"):
+    with pytest.raises(RuntimeError, match="not resolved"):
         d._promote_to_ready(child)

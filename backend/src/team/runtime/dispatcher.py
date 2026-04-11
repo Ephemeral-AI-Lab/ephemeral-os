@@ -44,6 +44,7 @@ from team.runtime.dispatcher_mutation_ops import (
     cancel_all_pending as cancel_dispatcher_pending,
     cancel_running as cancel_dispatcher_running,
     cascade_cancel,
+    cascade_cancel_dependency_subtree,
     fail as fail_work_item,
     retry_work_item as retry_dispatcher_work_item,
 )
@@ -132,14 +133,93 @@ class Dispatcher:
         )
 
     def _compute_readiness(self, wi: WorkItem) -> bool:
-        """A WorkItem becomes READY iff PENDING and all deps are DONE."""
+        """A WorkItem becomes READY iff PENDING and all dependency subtrees resolve."""
         if wi.status != WorkItemStatus.PENDING:
             return False
         for dep_id in wi.deps:
-            dep = self.graph.get(dep_id)
-            if dep is None or dep.status != WorkItemStatus.DONE:
+            if not self._dependency_satisfied(dep_id):
                 return False
         return True
+
+    def _ancestor_ids(self, wi_id: str) -> list[str]:
+        ancestors: list[str] = []
+        seen: set[str] = set()
+        current = self.graph.get(wi_id)
+        while current is not None and current.parent_id:
+            parent_id = current.parent_id
+            if parent_id in seen:
+                break
+            ancestors.append(parent_id)
+            seen.add(parent_id)
+            current = self.graph.get(parent_id)
+        return ancestors
+
+    def _dependency_root_ids(self, wi_id: str) -> list[str]:
+        return [wi_id, *self._ancestor_ids(wi_id)]
+
+    def _subtree_ids(self, root_id: str) -> list[str]:
+        ordered: list[str] = []
+        stack = [root_id]
+        seen: set[str] = set()
+        while stack:
+            current_id = stack.pop()
+            if current_id in seen:
+                continue
+            seen.add(current_id)
+            ordered.append(current_id)
+            child_ids = [
+                child.id for child in self.graph.values() if child.parent_id == current_id
+            ]
+            stack.extend(reversed(child_ids))
+        return ordered
+
+    def _dependency_satisfied(self, dep_id: str) -> bool:
+        dep = self.graph.get(dep_id)
+        if dep is None or dep.status != WorkItemStatus.DONE:
+            return False
+        for node_id in self._subtree_ids(dep_id):
+            node = self.graph.get(node_id)
+            if node is None:
+                return False
+            if node.status == WorkItemStatus.FAILED:
+                return False
+            if node.status not in (WorkItemStatus.DONE, WorkItemStatus.CANCELLED):
+                return False
+        return True
+
+    def _dependency_artifacts(self, dep_ids: list[str]) -> list[DependencyArtifact]:
+        snapshot: list[DependencyArtifact] = []
+        seen_nodes: set[str] = set()
+        for dep_id in dep_ids:
+            for node_id in self._subtree_ids(dep_id):
+                if node_id in seen_nodes:
+                    continue
+                seen_nodes.add(node_id)
+                node = self.graph.get(node_id)
+                if node is None:
+                    raise RuntimeError(
+                        f"_promote_to_ready called early: dep subtree node {node_id} missing"
+                    )
+                if node.status not in (WorkItemStatus.DONE, WorkItemStatus.CANCELLED):
+                    raise RuntimeError(
+                        f"_promote_to_ready called early: dep subtree node {node_id} "
+                        f"is {node.status.value}, not resolved"
+                    )
+                if node.status != WorkItemStatus.DONE or node.artifact_ref is None:
+                    continue
+                snapshot.append(
+                    DependencyArtifact(
+                        source_wi_id=node.id,
+                        artifact_ref=node.artifact_ref,
+                        display_name=node.local_id or node.agent_name or node.id,
+                    )
+                )
+        return snapshot
+
+    def _promote_ready_work_items(self) -> None:
+        for candidate in list(self.graph.values()):
+            if self._compute_readiness(candidate):
+                self._promote_to_ready(candidate)
 
     def _enqueue(self, wi: WorkItem) -> None:
         wi.status = WorkItemStatus.READY
@@ -148,32 +228,17 @@ class Dispatcher:
         self._emit(make_work_item_status(self.team_run_id, wi.id, "ready"))
 
     def _promote_to_ready(self, wi: WorkItem) -> None:
-        """Single chokepoint for PENDING→READY: snapshots dep artifacts, then enqueues.
+        """Single chokepoint for PENDING→READY: snapshots dependency-subtree artifacts, then enqueues.
 
         Must be called from every path that transitions a WorkItem from
         PENDING to READY so that ``wi.dep_artifacts`` is captured exactly
-        once from the frozen state of each dep at promotion time.
+        once from the frozen state of each satisfied dependency subtree at
+        promotion time.
         """
         assert wi.status == WorkItemStatus.PENDING, (
             f"_promote_to_ready called on {wi.id} in status {wi.status.value}"
         )
-        snapshot: list[DependencyArtifact] = []
-        for dep_id in wi.deps:
-            dep = self.graph.get(dep_id)
-            if dep is None or dep.status != WorkItemStatus.DONE:
-                raise RuntimeError(
-                    f"_promote_to_ready called early: dep {dep_id} not DONE"
-                )
-            if dep.artifact_ref is None:
-                continue
-            snapshot.append(
-                DependencyArtifact(
-                    source_wi_id=dep.id,
-                    artifact_ref=dep.artifact_ref,
-                    display_name=dep.local_id or dep.agent_name or dep.id,
-                )
-            )
-        wi.dep_artifacts = snapshot
+        wi.dep_artifacts = self._dependency_artifacts(wi.deps)
         self._enqueue(wi)
 
     async def add_work_item(self, wi: WorkItem) -> None:
@@ -240,7 +305,7 @@ class Dispatcher:
                     wi,
                     "InvalidPlan: expandable work item did not submit a plan",
                 )
-                cascade_cancel(self, wi_id)
+                cascade_cancel_dependency_subtree(self, wi_id)
                 return []
 
             if result.submitted_plan is not None:
@@ -258,14 +323,14 @@ class Dispatcher:
                     )
                 except InvalidPlan as e:
                     self._mark_failed(wi, f"InvalidPlan: {e}")
-                    cascade_cancel(self, wi_id)
+                    cascade_cancel_dependency_subtree(self, wi_id)
                     return []
                 if (
                     self.budget_state.work_items_used + len(new_items)
                     > self.budgets.max_work_items
                 ):
                     self._mark_failed(wi, "BudgetExceeded: max_work_items")
-                    cascade_cancel(self, wi_id)
+                    cascade_cancel_dependency_subtree(self, wi_id)
                     return []
 
             try:
@@ -282,7 +347,7 @@ class Dispatcher:
                 )
             except ArtifactTooLarge as e:
                 self._mark_failed(wi, f"ArtifactTooLarge: {e}")
-                cascade_cancel(self, wi_id)
+                cascade_cancel_dependency_subtree(self, wi_id)
                 return []
 
             for nwi in new_items:
@@ -305,13 +370,7 @@ class Dispatcher:
             )
             self._emit_budget()
 
-            touched: list[WorkItem] = list(new_items)
-            for other in self.graph.values():
-                if wi_id in other.deps and other.status == WorkItemStatus.PENDING:
-                    touched.append(other)
-            for t in touched:
-                if self._compute_readiness(t):
-                    self._promote_to_ready(t)
+            self._promote_ready_work_items()
 
         # Apply replan outside the lock (apply_replan takes its own lock)
         if result.submitted_replan is not None:

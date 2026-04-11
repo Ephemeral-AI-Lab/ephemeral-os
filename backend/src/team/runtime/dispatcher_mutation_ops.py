@@ -9,8 +9,8 @@ if TYPE_CHECKING:
     from team.runtime.dispatcher import Dispatcher
 
 
-def cascade_cancel(dispatcher: "Dispatcher", wi_id: str) -> None:
-    stack = [wi_id]
+def _cascade_cancel_from_roots(dispatcher: "Dispatcher", roots: list[str]) -> None:
+    stack = list(roots)
     seen: set[str] = set()
     while stack:
         cur = stack.pop()
@@ -18,8 +18,16 @@ def cascade_cancel(dispatcher: "Dispatcher", wi_id: str) -> None:
             if cur in other.deps and other.id not in seen:
                 seen.add(other.id)
                 if other.status not in TERMINAL_WI_STATUSES:
-                    dispatcher._mark_cancelled(other, f"cascaded from {wi_id}")
+                    dispatcher._mark_cancelled(other, f"cascaded from {cur}")
                 stack.append(other.id)
+
+
+def cascade_cancel(dispatcher: "Dispatcher", wi_id: str) -> None:
+    _cascade_cancel_from_roots(dispatcher, [wi_id])
+
+
+def cascade_cancel_dependency_subtree(dispatcher: "Dispatcher", wi_id: str) -> None:
+    _cascade_cancel_from_roots(dispatcher, dispatcher._dependency_root_ids(wi_id))
 
 
 async def fail(dispatcher: "Dispatcher", *, wi_id: str, reason: str) -> None:
@@ -28,7 +36,7 @@ async def fail(dispatcher: "Dispatcher", *, wi_id: str, reason: str) -> None:
         if wi is None or wi.status in TERMINAL_WI_STATUSES:
             return
         dispatcher._mark_failed(wi, reason)
-        cascade_cancel(dispatcher, wi_id)
+        cascade_cancel_dependency_subtree(dispatcher, wi_id)
 
 
 async def retry_work_item(
@@ -43,7 +51,7 @@ async def retry_work_item(
             raise RuntimeError(f"retry: {wi_id} is {wi.status.value}, not RUNNING")
         if wi.retry_count >= wi.max_retries:
             dispatcher._mark_failed(wi, f"retry_exhausted: {request.reason}")
-            cascade_cancel(dispatcher, wi_id)
+            cascade_cancel_dependency_subtree(dispatcher, wi_id)
             return
         wi.retry_count += 1
         wi.agent_run_id = None
@@ -68,7 +76,7 @@ async def retry_work_item(
                 max_retries=wi.max_retries,
             )
         )
-        dispatcher._promote_to_ready(wi)
+        dispatcher._promote_ready_work_items()
 
 async def cancel_all_pending(dispatcher: "Dispatcher") -> None:
     async with dispatcher.lock:

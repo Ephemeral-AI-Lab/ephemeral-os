@@ -6,7 +6,7 @@ priority for dedup (higher tier wins):
 1. ``project_context.shared_briefings`` — run-scoped, keyed by
    canonical_scope. (Phase 1 §13.)
 2. ``wi.dep_artifacts`` — DAG-snapshotted at PENDING→READY by the
-   Dispatcher. (Phase 1 §2.)
+   Dispatcher from each satisfied dependency subtree. (Phase 1 §2.)
 3. ``wi.briefings`` — explicit briefings the planner attached to the
    child's spec. (Phase 1 §1.)
 

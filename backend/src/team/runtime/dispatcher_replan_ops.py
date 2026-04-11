@@ -183,11 +183,7 @@ async def apply_replan(
             dispatcher._emit(make_work_item_status(dispatcher.team_run_id, failed_wi.id, "pending"))
         if new_items:
             dispatcher._emit_budget()
-        for nwi in new_items:
-            if dispatcher._compute_readiness(nwi):
-                dispatcher._promote_to_ready(nwi)
-        if verifier_reset_deps is not None and dispatcher._compute_readiness(failed_wi):
-            dispatcher._promote_to_ready(failed_wi)
+        dispatcher._promote_ready_work_items()
         return {"added": len(new_items), "cancelled": len(cancel_ids)}
 
 

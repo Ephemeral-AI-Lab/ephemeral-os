@@ -39,8 +39,9 @@ def _wi(
     deps: list[str] | None = None,
     depth: int = 0,
     kind: WorkItemKind = WorkItemKind.ATOMIC,
+    **overrides,
 ) -> WorkItem:
-    return WorkItem(
+    base = dict(
         id=id_,
         team_run_id="T1",
         agent_name="a",
@@ -50,6 +51,8 @@ def _wi(
         root_id=id_,
         depth=depth,
     )
+    base.update(overrides)
+    return WorkItem(**base)
 
 
 @pytest.fixture(autouse=True)
@@ -137,6 +140,100 @@ async def test_complete_inserts_plan_atomically():
     # First new item ready, second still PENDING
     statuses = {wi.id: wi.status for wi in new_items}
     assert WorkItemStatus.READY in statuses.values()
+
+
+@pytest.mark.asyncio
+async def test_dep_on_expandable_waits_for_full_descendant_subtree():
+    disp = _make_dispatcher()
+    await disp.add_work_item(_wi("PLANNER", kind=WorkItemKind.EXPANDABLE, local_id="branch"))
+    await disp.add_work_item(_wi("VAL", deps=["PLANNER"], agent_name="validator"))
+
+    assert await disp.pop_ready() == "PLANNER"
+    await disp.mark_running("PLANNER", "AR-plan")
+    new_items = await disp.complete(
+        "PLANNER",
+        AgentResult(
+            artifact={"planner": True},
+            summary="planned",
+            submitted_plan=Plan(
+                items=[WorkItemSpec(agent_name="developer", local_id="dev1")]
+            ),
+        ),
+    )
+
+    child = new_items[0]
+    assert disp.graph["VAL"].status == WorkItemStatus.PENDING
+    assert child.status == WorkItemStatus.READY
+    assert await disp.pop_ready() == child.id
+
+    await disp.mark_running(child.id, "AR-dev")
+    await disp.complete(child.id, AgentResult(artifact={"fixed": True}, summary="done"))
+
+    assert disp.graph["VAL"].status == WorkItemStatus.READY
+    assert {dep.source_wi_id for dep in disp.graph["VAL"].dep_artifacts} == {
+        "PLANNER",
+        child.id,
+    }
+    assert {dep.display_name for dep in disp.graph["VAL"].dep_artifacts} == {
+        "branch",
+        "dev1",
+    }
+
+
+@pytest.mark.asyncio
+async def test_terminal_descendant_failure_cancels_dependents_waiting_on_ancestor_subtree():
+    disp = _make_dispatcher()
+    await disp.add_work_item(_wi("PLANNER", kind=WorkItemKind.EXPANDABLE))
+    await disp.add_work_item(_wi("VAL", deps=["PLANNER"], agent_name="validator"))
+
+    assert await disp.pop_ready() == "PLANNER"
+    await disp.mark_running("PLANNER", "AR-plan")
+    new_items = await disp.complete(
+        "PLANNER",
+        AgentResult(
+            artifact={"planner": True},
+            summary="planned",
+            submitted_plan=Plan(items=[WorkItemSpec(agent_name="developer", local_id="dev1")]),
+        ),
+    )
+
+    child = new_items[0]
+    assert await disp.pop_ready() == child.id
+    await disp.mark_running(child.id, "AR-dev")
+    await disp.fail(child.id, "boom")
+
+    assert disp.graph[child.id].status == WorkItemStatus.FAILED
+    assert disp.graph["VAL"].status == WorkItemStatus.CANCELLED
+
+
+@pytest.mark.asyncio
+async def test_request_replan_keeps_ancestor_subtree_dependent_pending():
+    disp = _make_dispatcher()
+    await disp.add_work_item(_wi("PLANNER", kind=WorkItemKind.EXPANDABLE))
+    await disp.add_work_item(_wi("VAL", deps=["PLANNER"], agent_name="validator"))
+
+    assert await disp.pop_ready() == "PLANNER"
+    await disp.mark_running("PLANNER", "AR-plan")
+    new_items = await disp.complete(
+        "PLANNER",
+        AgentResult(
+            artifact={"planner": True},
+            summary="planned",
+            submitted_plan=Plan(items=[WorkItemSpec(agent_name="developer", local_id="dev1")]),
+        ),
+    )
+
+    child = new_items[0]
+    assert await disp.pop_ready() == child.id
+    await disp.mark_running(child.id, "AR-dev")
+    replanner = await disp.request_replan(
+        child.id,
+        ReplanRequest(reason="need corrective split", context="traceback"),
+    )
+
+    assert disp.graph[child.id].status == WorkItemStatus.FAILED
+    assert disp.graph["VAL"].status == WorkItemStatus.PENDING
+    assert replanner.status == WorkItemStatus.READY
 
 
 @pytest.mark.asyncio

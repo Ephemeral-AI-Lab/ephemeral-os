@@ -103,7 +103,7 @@ def test_planner_playbook_gates_share_briefing_on_tool_availability() -> None:
     assert "Child `owned_files` must contain only confirmed existing checkout-relative paths." in planner
     assert "do not forward that `tests/...` path as the child developer lane's `owned_files` unless live evidence says test/support infrastructure is the real owner." in planner
     assert "keep the exact failing test file in `owned_failures`, move the unresolved production guess into `expansion_hint` or `notes`" in planner
-    assert "An expandable child planner is not a readiness barrier for descendant code verification." in planner
+    assert "A dependency on an expandable child planner now waits for the full descendant subtree rooted at that planner item" in planner
     assert "A broad pytest command over residual test files is proof that the validator is misplaced and must move into the child branch." in planner
     assert "Zero-coverage or wrong-path scout evidence supports only ownership/path-shape conclusions." in planner
     assert "preserve them byte-for-byte downstream" in planner
@@ -155,7 +155,7 @@ def test_sweevo_context_treats_missing_share_briefing_as_non_blocking() -> None:
     assert "Do not widen a validator from `dask/tests/test_compatibility.py` to a repo-wide keyword sweep like `pytest dask/ -k compatibility`" in sweevo
     assert "do not invent a same-stem production helper, public symbol, or replacement node from the missing test name." in sweevo
     assert "At any submitted benchmark plan level, keep validators paired with the concrete developer lanes they actually verify." in sweevo
-    assert "An expandable child planner is not a readiness barrier for descendant code verification." in sweevo
+    assert "A dependency on an expandable child planner now waits for the full descendant subtree rooted at that planner item" in sweevo
     assert "Child benchmark plans should keep validators branch-local and risk-weighted" in sweevo
     assert "instead of emitting one validator per developer or recreating an umbrella validation layer" in sweevo
     assert "choose the graph shape dynamically from the mapped owner surface" in sweevo
@@ -270,12 +270,18 @@ def test_developer_playbook_anchors_import_failures_to_named_pytest_surface() ->
     assert "If the payload cites a missing node such as `test_dataframe_overlap` and the live checkout has no such node, do not invent `dataframe_overlap`, `mask`, or another same-stem helper from that test name alone." in developer
     assert "An absent named pytest node ends the lane." in developer
     assert "do not broaden to whole-file `pytest` runs, `-k` sweeps, or nearby failing tests to guess a substitute target." in developer
+    assert "do not return `code_fix_complete` until at least one assigned runtime reproduction/verification command passes" in developer
+    assert "return `OUTCOME: blocked` with `systemic_runtime` instead of summarizing a syntax-only win" in developer
+    assert "return `benchmark_surface_mismatch` with the exact missing target instead of claiming completion from structural checks" in developer
+    assert "`py_compile`, clean LSP diagnostics, grep/readback, or line-location checks do not by themselves justify `code_fix_complete`" in developer
     sweevo = _read(_SWEEVO_CONTEXT)
     assert "If a product bug manifests as pytest import-time warning/config parsing fallout, keep the developer lane on the product import/export surface first." in sweevo
     assert "Do not retarget the lane to `setup.cfg`, `pytest.ini`, `pyproject.toml`, or warning filters unless live evidence proves the config file itself owns the regression." in sweevo
     assert "when the failing lane already owns a compatibility/import/export module and pytest now dies while parsing warning filters, assume the product module changed import-time warning behavior until a direct read proves otherwise." in sweevo
     assert "A missing named pytest node is terminal for that developer lane." in sweevo
     assert "Do not keep debugging the broader test file, run `-k` sweeps for nearby failures, or substitute a different failing test from the same module" in sweevo
+    assert "A passing `py_compile`, clean LSP result, or source readback is not a passing retry target." in sweevo
+    assert "If the exact runtime retry command never turns green, report the blocker; do not declare the lane fixed from structural checks alone." in sweevo
     assert "keep those entry points behaviorally distinct unless the live failing test proves they should converge" in developer
     assert "If the runtime says `Unknown tool: edit_file`, `write_file`, or `read_file`" in developer
     assert "the default first live coordination step is `ci_scoped_status(scope_paths=[<exact owned file(s) or nearest owning directory>])`" in developer
@@ -324,3 +330,7 @@ def test_posthook_decision_playbook_forbids_clarifying_questions_on_worker_outpu
     assert "If the worker's assigned `verification_command` or named `verify` targets are still red" in posthook
     assert 'If the worker says the residual failure is "separate", "pre-existing", or "another issue"' in posthook
     assert "Owned red verify surfaces block summary." in posthook
+    assert "If the worker only cites `py_compile`, LSP diagnostics, grep/readback, or source inspection and never shows a passing assigned runtime verify command" in posthook
+    assert "If the worker reports `benchmark_surface_mismatch`, an absent named pytest node, or that the exact payload node/file cannot be collected in the live checkout" in posthook
+    assert "Syntax-only evidence does not close runtime lanes." in posthook
+    assert "Missing exact retry targets mean replan." in posthook

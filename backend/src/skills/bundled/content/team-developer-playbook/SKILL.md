@@ -102,6 +102,9 @@ After every edit to a source file you MUST run at least one of:
 - A narrow test run: `daytona_bash("<test command for this specific change>")`.
 
 **If diagnostics report errors, fix them before returning.** Do not hand broken code to the validator.
+These checks are not interchangeable proof. `daytona_lsp_diagnostics(...)` and `python -m py_compile` are structural smoke checks only; they do not prove a runtime bug is fixed.
+If the bug was reproduced through pytest, a CLI invocation, `python -c`, or another runtime command, do not return `code_fix_complete` until at least one assigned runtime reproduction/verification command passes. If that exact runtime command stays blocked by a repeated import/bootstrap/checkpoint fault, return `OUTCOME: blocked` with `systemic_runtime` instead of summarizing a syntax-only win.
+If the exact named pytest node or file cannot be collected in the live checkout, return `benchmark_surface_mismatch` with the exact missing target instead of claiming completion from structural checks.
 
 ### 6. Runtime fault handling
 If a live tool or harness fault blocks normal execution (for example `Event loop is closed`, sandbox session failure, checkpoint restore mismatch, or an obviously corrupted retry/checkpoint state):
@@ -117,12 +120,13 @@ If a live tool or harness fault blocks normal execution (for example `Event loop
 ### 7. Report
 Your final assistant message must contain:
 - `OUTCOME: changed | blocked`
-- `FAILURE_TYPE: code_fix_complete | transient_runtime | systemic_runtime | scope_mismatch` when relevant
+- `FAILURE_TYPE: code_fix_complete | transient_runtime | systemic_runtime | scope_mismatch | benchmark_surface_mismatch` when relevant
 - A 1–3 sentence narrative of what you changed and why.
 - The list of files touched.
 - The verification step you ran and its outcome.
 - The exact verification command, exit code, and any checkpoint / retry / resume identifiers or usage lines that surfaced during the run.
 - Any open questions or follow-ups (kept short; validator will catch regressions).
+- If the exact runtime retry target never turned green, say that explicitly. `py_compile`, clean LSP diagnostics, grep/readback, or line-location checks do not by themselves justify `code_fix_complete` on a runtime-owned lane.
 
 ---
 
