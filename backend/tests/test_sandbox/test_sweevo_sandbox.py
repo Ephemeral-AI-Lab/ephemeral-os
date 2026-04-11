@@ -228,21 +228,18 @@ def test_create_sweevo_test_sandbox_falls_back_to_started_retry_after_fresh_fail
     monkeypatch.setattr(sweevo_sandbox, "setup_sweevo_sandbox", setup_mock)
     monkeypatch.setattr(sweevo_sandbox, "ensure_sweevo_test_patch", patch_mock)
 
-    result = asyncio.run(
-        sweevo_sandbox.create_sweevo_test_sandbox(
-            instance,
-            register_snapshot=False,
+    with pytest.raises(RuntimeError, match="timed out waiting for build"):
+        asyncio.run(
+            sweevo_sandbox.create_sweevo_test_sandbox(
+                instance,
+                register_snapshot=False,
+            )
         )
-    )
 
     assert deleted == ["sb-pending"]
-    assert result["sandbox_id"] == "sb-started"
-    assert result["sandbox"] == started
-    assert result["reused_existing"] is True
-    assert result["fallback_reason"] == "fresh_create_failed_reused_started_sandbox"
     assert list_calls["count"] >= 2
-    setup_mock.assert_awaited_once_with(instance, "sb-started", _REPO_DIR)
-    patch_mock.assert_awaited_once_with(instance, "sb-started", _REPO_DIR)
+    setup_mock.assert_not_awaited()
+    patch_mock.assert_not_awaited()
 
 
 def test_create_sweevo_test_sandbox_recovers_started_fresh_sandbox_after_create_failure(monkeypatch):
@@ -334,18 +331,12 @@ def test_register_sweevo_snapshot_uses_tagged_image_ref(monkeypatch):
     ]
 
 
-def test_create_sweevo_test_sandbox_falls_back_to_direct_image_when_snapshot_needs_version(monkeypatch):
+def test_create_sweevo_test_sandbox_rejects_when_snapshot_needs_version(monkeypatch):
     from benchmarks.sweevo import sandbox as sweevo_sandbox
-
-    created: dict[str, object] = {}
-
-    def create_sandbox(**kwargs):
-        created.update(kwargs)
-        return {"id": "sb-created"}
 
     service = SimpleNamespace(
         list_sandboxes=lambda: [],
-        create_sandbox=create_sandbox,
+        create_sandbox=lambda **_: pytest.fail("should not create sandbox"),
         get_sandbox=lambda sandbox_id: {"id": sandbox_id, "name": "fresh-sandbox"},
     )
     setup_mock = AsyncMock()
@@ -355,16 +346,16 @@ def test_create_sweevo_test_sandbox_falls_back_to_direct_image_when_snapshot_nee
     monkeypatch.setattr(sweevo_sandbox, "setup_sweevo_sandbox", setup_mock)
     monkeypatch.setattr(sweevo_sandbox, "ensure_sweevo_test_patch", patch_mock)
 
-    result = asyncio.run(
-        sweevo_sandbox.create_sweevo_test_sandbox(
-            _instance(),
-            register_snapshot=True,
+    with pytest.raises(RuntimeError, match="requires an explicit non-latest image version"):
+        asyncio.run(
+            sweevo_sandbox.create_sweevo_test_sandbox(
+                _instance(),
+                register_snapshot=True,
+            )
         )
-    )
 
-    assert created["image"] == "xingyaoww/sweb.eval.x86_64.pydantic_s_pydantic-8583"
-    assert "snapshot" not in created
-    assert result["fallback_reason"] == "snapshot_requires_explicit_image_version"
+    setup_mock.assert_not_awaited()
+    patch_mock.assert_not_awaited()
 
 
 def test_setup_sweevo_sandbox_preserves_existing_labels(monkeypatch):

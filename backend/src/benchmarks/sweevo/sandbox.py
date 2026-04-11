@@ -87,37 +87,6 @@ def _find_existing_sandbox_by_name(service: Any, name: str) -> dict[str, Any] | 
     return None
 
 
-def _find_started_sweevo_sandbox_for_instance(
-    service: Any,
-    instance: SWEEvoInstance,
-    *,
-    exclude_name: str = "",
-) -> dict[str, Any] | None:
-    """Return the newest started sandbox for the same SWE-EVO instance."""
-    candidates: list[dict[str, Any]] = []
-    for sandbox in _safe_list_sandboxes(service):
-        labels = sandbox.get("labels") or {}
-        if labels.get("purpose") != "sweevo-test":
-            continue
-        if labels.get("sweevo_instance") != instance.instance_id:
-            continue
-        if exclude_name and sandbox.get("name") == exclude_name:
-            continue
-        if str(sandbox.get("state") or "") != "started":
-            continue
-        candidates.append(sandbox)
-    if not candidates:
-        return None
-    return max(
-        candidates,
-        key=lambda sandbox: (
-            str(sandbox.get("created_at") or ""),
-            str(sandbox.get("updated_at") or ""),
-            str(sandbox.get("id") or ""),
-        ),
-    )
-
-
 def _log_sandbox_creation_failure(
     service: Any,
     *,
@@ -621,14 +590,10 @@ async def create_sweevo_test_sandbox(
             )
             create_kwargs["snapshot"] = resolved_snapshot
         else:
-            fallback_reason = "snapshot_requires_explicit_image_version"
-            logger.info(
-                "Skipping SWE-EVO snapshot registration for %s because image %s "
-                "has no explicit non-latest version",
-                instance.instance_id,
-                instance.docker_image,
+            raise RuntimeError(
+                "SWE-EVO fresh sandbox creation with register_snapshot=True "
+                f"requires an explicit non-latest image version; got {instance.docker_image!r}"
             )
-            create_kwargs["image"] = _normalize_sweevo_image_ref(instance.docker_image)
     elif snapshot_name:
         resolved_snapshot = snapshot_name
         create_kwargs["snapshot"] = resolved_snapshot
@@ -675,30 +640,6 @@ async def create_sweevo_test_sandbox(
                 "fallback_reason": recover_reason,
             }
         _cleanup_failed_sandbox(service, fresh)
-        fallback = _find_started_sweevo_sandbox_for_instance(
-            service,
-            instance,
-            exclude_name=resolved_name,
-        )
-        if fallback is not None:
-            logger.warning(
-                "Falling back to started SWE-EVO sandbox %s (%s) after fresh build failure",
-                fallback.get("name", ""),
-                fallback.get("id", ""),
-            )
-            await setup_sweevo_sandbox(instance, fallback["id"], repo_dir)
-            await ensure_sweevo_test_patch(instance, fallback["id"], repo_dir)
-            reuse_reason = "fresh_create_failed_reused_started_sandbox"
-            if fallback_reason:
-                reuse_reason = f"{fallback_reason};{reuse_reason}"
-            return {
-                "sandbox_id": fallback["id"],
-                "sandbox": fallback,
-                "snapshot_name": "",
-                "repo_dir": repo_dir,
-                "reused_existing": True,
-                "fallback_reason": reuse_reason,
-            }
         raise
     sandbox_id = result["id"]
     await setup_sweevo_sandbox(instance, sandbox_id, repo_dir)
