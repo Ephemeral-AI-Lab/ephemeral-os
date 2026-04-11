@@ -172,6 +172,58 @@ def test_phase_a_validator_policy_is_budget_driven(monkeypatch):
     assert any("3 or more items must include at least one validator" in i["msg"] for i in issues)
 
 
+def test_phase_a_requires_direct_validator_for_nontrivial_developer_lane(monkeypatch):
+    _patch_registry(monkeypatch, {"developer", "validator"})
+    plan = Plan(
+        items=[
+            WorkItemSpec(
+                agent_name="developer",
+                local_id="dev1",
+                payload={"owned_files": ["pkg/a.py", "pkg/b.py"]},
+            )
+        ]
+    )
+
+    issues = validate_plan_phase_a(plan)
+
+    assert any(
+        "non-trivial developer lane 'dev1' must have a validator" in issue["msg"]
+        for issue in issues
+    )
+
+
+def test_phase_a_accepts_direct_validator_for_nontrivial_developer_lane(monkeypatch):
+    _patch_registry(monkeypatch, {"developer", "validator"})
+    plan = Plan(
+        items=[
+            WorkItemSpec(
+                agent_name="developer",
+                local_id="dev1",
+                payload={"owned_failures": ["tests/test_a.py::case_1", "tests/test_a.py::case_2"]},
+            ),
+            WorkItemSpec(agent_name="validator", local_id="val1", deps=["dev1"]),
+        ]
+    )
+
+    assert validate_plan_phase_a(plan) == []
+
+
+def test_phase_a_requires_local_id_for_nontrivial_developer_lane(monkeypatch):
+    _patch_registry(monkeypatch, {"developer", "validator"})
+    plan = Plan(
+        items=[
+            WorkItemSpec(
+                agent_name="developer",
+                payload={"owned_files": ["pkg/a.py", "pkg/b.py"]},
+            )
+        ]
+    )
+
+    issues = validate_plan_phase_a(plan)
+
+    assert any("non-trivial developer lane must set local_id" in issue["msg"] for issue in issues)
+
+
 def test_phase_a_rejects_unknown_dep_when_external_scope_is_known(monkeypatch):
     _patch_registry(monkeypatch, {"developer", "validator"})
     plan = Plan(
@@ -391,6 +443,66 @@ def test_phase_b_validator_policy_is_budget_driven(monkeypatch):
             max_depth=5,
             max_validators_per_plan=1,
         )
+
+
+def test_phase_b_requires_direct_validator_for_nontrivial_developer_lane(monkeypatch):
+    _patch_registry(monkeypatch, {"developer", "validator"})
+    parent = _parent_wi()
+    plan = Plan(
+        items=[
+            WorkItemSpec(
+                agent_name="developer",
+                local_id="dev1",
+                payload={"owned_files": ["pkg/a.py", "pkg/b.py"]},
+            )
+        ]
+    )
+
+    with pytest.raises(
+        InvalidPlan,
+        match="non-trivial developer lane 'dev1' must have a validator",
+    ):
+        validate_plan_phase_b(
+            {parent.id: parent},
+            plan,
+            "T1",
+            parent,
+            new_id_factory=lambda: "N1",
+            max_depth=5,
+        )
+
+
+def test_phase_b_accepts_direct_validator_for_nontrivial_developer_lane(monkeypatch):
+    _patch_registry(monkeypatch, {"developer", "validator"})
+    parent = _parent_wi()
+    counter = {"n": 0}
+
+    def fresh_id():
+        counter["n"] += 1
+        return f"N{counter['n']}"
+
+    plan = Plan(
+        items=[
+            WorkItemSpec(
+                agent_name="developer",
+                local_id="dev1",
+                payload={"owned_files": ["pkg/a.py", "pkg/b.py"]},
+            ),
+            WorkItemSpec(agent_name="validator", local_id="val1", deps=["dev1"]),
+        ]
+    )
+
+    new_items = validate_plan_phase_b(
+        {parent.id: parent},
+        plan,
+        "T1",
+        parent,
+        new_id_factory=fresh_id,
+        max_depth=5,
+    )
+
+    assert [wi.local_id for wi in new_items] == ["dev1", "val1"]
+    assert new_items[1].deps == [new_items[0].id]
 
 
 def test_phase_b_rejects_agent_without_supported_kind(monkeypatch):

@@ -58,14 +58,14 @@ class TestAgentCRUD:
                 "description": "A test coding agent",
                 "model": "minimax",
                 "toolkits": ["sandbox_operations"],
-                "skills": ["codebase-synthesize"],
+                "skills": ["task-decompose"],
             },
         )
         assert resp.status_code == 201, resp.text
         data = resp.json()
         assert data["name"] == "test-coder"
         assert data["toolkits"] == ["sandbox_operations"]
-        assert data["skills"] == ["codebase-synthesize"]
+        assert data["skills"] == ["task-decompose"]
         assert data["model"] == "minimax"
 
     def test_get_agent_returns_toolkits_and_skills(self, app_client):
@@ -78,7 +78,7 @@ class TestAgentCRUD:
                 "description": "Reads code",
                 "model": "minimax",
                 "toolkits": ["sandbox_operations", "code_intelligence"],
-                "skills": ["codebase-synthesize"],
+                "skills": ["task-decompose"],
             },
         )
         # Fetch
@@ -87,7 +87,7 @@ class TestAgentCRUD:
         data = resp.json()
         assert "sandbox_operations" in data["toolkits"]
         assert "code_intelligence" in data["toolkits"]
-        assert "codebase-synthesize" in data["skills"]
+        assert "task-decompose" in data["skills"]
 
     def test_update_agent_toolkits(self, app_client):
         client, _ = app_client

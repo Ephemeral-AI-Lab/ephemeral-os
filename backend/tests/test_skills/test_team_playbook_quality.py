@@ -15,13 +15,6 @@ _PLAYBOOKS = [
     _BACKEND_ROOT / "src/skills/bundled/content/team-replanner-playbook/SKILL.md",
 ]
 _SWEEVO_CONTEXT = _BACKEND_ROOT / "src/skills/bundled/content/sweevo-project-context/SKILL.md"
-_COORDINATION_SKILLS = [
-    _BACKEND_ROOT / "src/skills/bundled/content/coordination-analyze/SKILL.md",
-    _BACKEND_ROOT / "src/skills/bundled/content/coordination-synthesize/SKILL.md",
-    _BACKEND_ROOT / "src/skills/bundled/content/coordination-plan-tasks/SKILL.md",
-    _BACKEND_ROOT / "src/skills/bundled/content/coordination-runtime-basics/SKILL.md",
-    _BACKEND_ROOT / "src/skills/bundled/content/task-decompose/SKILL.md",
-]
 
 
 def _read(path: Path) -> str:
@@ -57,7 +50,7 @@ def test_planner_playbook_gates_share_briefing_on_tool_availability() -> None:
     assert "on fresh benchmark roots, use one narrow `ci_workspace_structure(...)`, then `ci_scoped_status(...)`, then fresh scouts before any atlas lookup" in planner
     assert "Planner sibling-awareness should come from `ci_scoped_status(...)` packets first." in planner
     assert "load `exploration-script` before the first non-reference tool call" in planner
-    assert "Fresh benchmark root: spend exactly one narrow `ci_workspace_structure(path=\"<nearest likely production directory/package>\", max_depth<=4)` pass first, then call `ci_scoped_status(...)` on an exact existing production path from that listing or inherited evidence." in planner
+    assert "Fresh benchmark root: start with a narrow `ci_workspace_structure(path=\"<nearest likely production directory/package>\", max_depth<=4)` pass, then call `ci_scoped_status(...)` on an exact existing production path from that listing or inherited evidence." in planner
     assert "Do not open with root-wide `ci_workspace_structure()`, `ci_query_symbols(...)`, or other broad live CI queries before that sequence completes." in planner
     assert "do not draft or narrate a concrete scout wave until one `ci_workspace_structure(...)` pass and one `ci_scoped_status(...)` anchor" in planner
     assert "listing scout targets or calling `run_subagent(...)` before that scope grounding is not." in planner
@@ -92,9 +85,14 @@ def test_planner_playbook_gates_share_briefing_on_tool_availability() -> None:
     assert "if you cannot quote an exact FAIL_TO_PASS node id verbatim from the prompt, use the exact benchmark test file path instead" in planner
     assert "Keep `owned_failures` entries literal checkout-relative prompt ids only" in planner
     assert "only use a `::pytest_node` suffix in `owned_failures`, `reproduction`, `verification`, or validator `verify` commands when that exact node id was explicitly confirmed" in planner
+    assert "If the benchmark evidence is still file-scoped, keep validator `verify` commands and planner-provided verification commands on that exact checkout-relative test file path." in planner
+    assert 'Broad parametrized clusters are not a license to pick one "representative" node for retry commands.' in planner
+    assert "keep planner-supplied `reproduction`, `verification`, and validator `verify` commands on the exact benchmark test file path until a live runtime artifact proves that specific node still collects in the current checkout." in planner
+    assert "Do not widen to repo-wide keyword sweeps such as `pytest pkg/ -k compatibility`" in planner
     assert "Keep command-bearing payload keys canonical and minimal." in planner
     assert "Do not invent ad hoc command fields like `retries` to smuggle in guessed pytest paths." in planner
     assert "Cluster summaries are not exact retry targets." in planner
+    assert "A copied exact node id is still stale if the current checkout cannot collect it." in planner
     assert "a missing guessed owner file means re-anchor on the nearest exact existing production directory/package or hand the slice to a residual child planner" in planner
     assert "If a proposed first-wave `target_paths` entry still equals a named benchmark test file" in planner
     assert "`ci_query_symbols(...)` results that only point back into the benchmark test files are symptom evidence, not production ownership" in planner
@@ -103,6 +101,7 @@ def test_planner_playbook_gates_share_briefing_on_tool_availability() -> None:
     assert "Do not invent sibling directories like `dask/cli`, and do not redirect the lane into `dask/tests` as a substitute for missing production ownership." in planner
     assert "Do not infer an optional-dependency or environment root cause from cluster size alone." in planner
     assert "Child `owned_files` must contain only confirmed existing checkout-relative paths." in planner
+    assert "do not forward that `tests/...` path as the child developer lane's `owned_files` unless live evidence says test/support infrastructure is the real owner." in planner
     assert "keep the exact failing test file in `owned_failures`, move the unresolved production guess into `expansion_hint` or `notes`" in planner
     assert "An expandable child planner is not a readiness barrier for descendant code verification." in planner
     assert "A broad pytest command over residual test files is proof that the validator is misplaced and must move into the child branch." in planner
@@ -116,6 +115,10 @@ def test_planner_playbook_gates_share_briefing_on_tool_availability() -> None:
     )
     assert "If only one residual owner guess still needs confirmation, spend at most one live confirmation step on that unresolved owner and then emit direct lanes for the already-mapped siblings." in non_root
     assert "keep `owned_failures`, `reproduction`, `verification`, and validator `verify` at the exact file path until a live artifact proves the exact `::pytest_node` suffix" in non_root
+    assert "Do not shorten `compatibility.py` to `compat.py`, `configuration.py` to `config.py`, or similar prompt-shaped aliases while expanding the child plan." in non_root
+    assert "Do not conclude the owner is absent while a same-stem live file such as `compatibility.py` is sitting next to the guessed `compat.py`." in non_root
+    assert "Downgrade the child payload to the exact test file path or report the benchmark-surface mismatch; do not invent a same-stem production helper or replacement node from the missing test name." in non_root
+    assert "Keep that test path in `owned_failures`, but recover a production/export owner or at least a candidate package/directory before emitting a direct developer lane." in non_root
 
 
 def test_sweevo_context_treats_missing_share_briefing_as_non_blocking() -> None:
@@ -146,18 +149,27 @@ def test_sweevo_context_treats_missing_share_briefing_as_non_blocking() -> None:
     assert "Preserve exact pytest node ids verbatim in planner payloads." in sweevo
     assert "Do not shorten `test_info_versions` to `test_info`" in sweevo
     assert "File-level fallback applies to retry commands too." in sweevo
+    assert "Representative node ids are evidence, not automatic retry commands." in sweevo
+    assert "it should still keep `reproduction`, `verification`, and validator `verify` file-scoped until a live worker packet proves that one concrete node still collects in the current checkout." in sweevo
+    assert "Exact-file benchmark evidence should stay exact-file for validation too." in sweevo
+    assert "Do not widen a validator from `dask/tests/test_compatibility.py` to a repo-wide keyword sweep like `pytest dask/ -k compatibility`" in sweevo
+    assert "do not invent a same-stem production helper, public symbol, or replacement node from the missing test name." in sweevo
     assert "At any submitted benchmark plan level, keep validators paired with the concrete developer lanes they actually verify." in sweevo
     assert "An expandable child planner is not a readiness barrier for descendant code verification." in sweevo
     assert "Child benchmark plans should keep validators branch-local and risk-weighted" in sweevo
     assert "instead of emitting one validator per developer or recreating an umbrella validation layer" in sweevo
-    assert "The default large-root benchmark shape for this repo is a small set of concrete developer lanes" in sweevo
+    assert "choose the graph shape dynamically from the mapped owner surface" in sweevo
+    assert "Do not force a fixed lane recipe." in sweevo
     assert "If a guessed production owner file turns out to be missing, re-anchor on the nearest exact existing production directory/package path or park that cluster behind a child planner." in sweevo
+    assert "Do not shorten `compatibility.py` to `compat.py`, `configuration.py` to `config.py`, or similar prompt-shaped guesses when live structure already names the real file." in sweevo
     assert "Prompt-named benchmark test files are symptom evidence, not default implementation ownership." in sweevo
     assert "Do not emit root developer lanes whose `owned_files` contain only those tests unless live evidence says the slice truly belongs to test/support infrastructure." in sweevo
     assert "Treat `owned_files` as a grounded edit surface, not a hypothesis bucket." in sweevo
     assert "Keep missing guessed owners out of `owned_files`" in sweevo
+    assert "Keep benchmark tests in `owned_failures`; use `owned_files` only for confirmed production/support owners or, when still unresolved, a confirmed candidate package/directory." in sweevo
     assert "Root planner symbol hits that only land in benchmark test files are not ownership evidence." in sweevo
     assert "if a validator or inherited note cites a missing alias path such as `pyarrow.py` while live CI resolves the surface to `arrow.py`" in sweevo
+    assert "if live structure resolves `compatibility.py`, do not keep planning against guessed siblings like `compat.py` or `_compat.py`." in sweevo
     assert "When the failure packet itself names a missing module import path such as `from dask._compatibility import PY_VERSION`" in sweevo
     assert 'Do not "repair" the benchmark by editing the unowned test file' in sweevo
     assert "mentioned only in `owned_failures`, `verify`, or a failing command is not test ownership" in sweevo
@@ -244,15 +256,26 @@ def test_developer_playbook_anchors_import_failures_to_named_pytest_surface() ->
     assert "If pytest fails while parsing warning filters or import-time deprecations and your lane already owns a production/import/export surface" in developer
     assert "Treat `owned_files` as the default landing zone, not a hard barrier." in developer
     assert "`owned_files` guides the default edit surface." in developer
+    assert "Widened writes require a fresh scope packet on the widened target." in developer
+    assert "Before the first edit or write to any file outside `owned_files`, call `ci_scoped_status(scope_paths=[<exact widened file or its nearest owning directory>])`" in developer
+    assert "Compose with sibling work on widened files." in developer
+    assert "If that widened target already shows sibling reservations or recent edits, re-read the live file and extend the current implementation instead of overwriting it with a fresh variant." in developer
+    assert "if another lane already created `dask/_compatibility.py`, do not replace that file with a new private shim" in developer
     assert 'if you catch yourself reasoning "the failing test is listed in `owned_failures`, so I should patch that test import first," stop.' in developer
     assert 'Do not claim the test encodes "old behavior", "stale expectations", or needs a test-only follow-up' in developer
     assert "Do not synthesize hybrid public strings to satisfy competing tests." in developer
     assert "read the exact observed-vs-expected mismatch from that failure output before the next edit" in developer
     assert "If a narrow debug probe shows a helper already returns the value or shape the test expects, stop editing that helper." in developer
+    assert "A missing test-node stem is not a product API spec." in developer
+    assert "If the payload cites a missing node such as `test_dataframe_overlap` and the live checkout has no such node, do not invent `dataframe_overlap`, `mask`, or another same-stem helper from that test name alone." in developer
+    assert "An absent named pytest node ends the lane." in developer
+    assert "do not broaden to whole-file `pytest` runs, `-k` sweeps, or nearby failing tests to guess a substitute target." in developer
     sweevo = _read(_SWEEVO_CONTEXT)
     assert "If a product bug manifests as pytest import-time warning/config parsing fallout, keep the developer lane on the product import/export surface first." in sweevo
     assert "Do not retarget the lane to `setup.cfg`, `pytest.ini`, `pyproject.toml`, or warning filters unless live evidence proves the config file itself owns the regression." in sweevo
     assert "when the failing lane already owns a compatibility/import/export module and pytest now dies while parsing warning filters, assume the product module changed import-time warning behavior until a direct read proves otherwise." in sweevo
+    assert "A missing named pytest node is terminal for that developer lane." in sweevo
+    assert "Do not keep debugging the broader test file, run `-k` sweeps for nearby failures, or substitute a different failing test from the same module" in sweevo
     assert "keep those entry points behaviorally distinct unless the live failing test proves they should converge" in developer
     assert "If the runtime says `Unknown tool: edit_file`, `write_file`, or `read_file`" in developer
     assert "the default first live coordination step is `ci_scoped_status(scope_paths=[<exact owned file(s) or nearest owning directory>])`" in developer
@@ -260,6 +283,8 @@ def test_developer_playbook_anchors_import_failures_to_named_pytest_surface() ->
     assert "Do not fall back to `daytona_bash` for file reads, file writes, search, globbing, or ad hoc patch application" in developer
     assert "Do not use `daytona_bash` for `ls`, `pwd`, `cd`, `find`, or other workspace-discovery probes." in developer
     assert "if `dask/dataframe/io/tests/test_hdf.py` fails on `from dask._compatibility import PY_VERSION` while your lane owns only `dask/dataframe/io/hdf.py` / `dask/dataframe/io/json.py`, treat `dask/_compatibility.py` as an allowed supporting edit when it is the clear minimal owner" in developer
+    assert "Cross-lane widening requires live sibling awareness." in developer
+    assert "A widened owner file that another lane already edited is a compose-with-live-state surface, not a blank file you may rewrite from scratch." in developer
 
 
 def test_validator_playbook_mentions_codeact_is_unavailable_in_team_lanes() -> None:
@@ -286,13 +311,6 @@ def test_worker_playbooks_do_not_mention_submitters_or_action_routing() -> None:
         assert "submit_summary" not in content
         assert "submit_replan" not in content
         assert "RECOMMENDED_ACTION" not in content
-
-
-def test_coordination_skills_do_not_tell_main_agents_about_posthook_formatters() -> None:
-    for path in _COORDINATION_SKILLS:
-        content = _read(path)
-        assert "posthook formatter" not in content
-        assert "formatter/posthook" not in content
 
 
 def test_posthook_decision_playbook_forbids_clarifying_questions_on_worker_output() -> None:

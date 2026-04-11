@@ -12,8 +12,8 @@ def test_load_skill_registry_includes_bundled(tmp_path: Path, monkeypatch):
     registry = load_skill_registry()
 
     names = [skill.name for skill in registry.list_skills()]
-    assert "codebase-analysis" in names
     assert "task-decompose" in names
+    assert "team-planner-playbook" in names
 
 
 def test_load_skill_registry_includes_user_skills(tmp_path: Path, monkeypatch):

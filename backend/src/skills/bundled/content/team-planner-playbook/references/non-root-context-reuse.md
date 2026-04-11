@@ -101,6 +101,7 @@ Fresh exploration is not justified when:
 - If the inherited payload names exact benchmark test files, preserve those exact checkout-relative paths in downstream developer and validator payloads. Do not shorten them to `tests/...` aliases or invent exact pytest nodes you do not have.
 - If the parent only gives a benchmark file path plus a prose cluster label, keep `owned_failures`, `reproduction`, `verification`, and validator `verify` at the exact file path until a live artifact proves the exact `::pytest_node` suffix. Child planners should not "helpfully" turn labels like `test_read_json` into guessed retry nodes.
 - Keep benchmark command strings repo-root-relative unless a real child directory is explicitly required. `python -m pytest dask/...` is the default shape; do not prepend guessed absolute hops like `cd /home &&` or `cd /workspace &&` in child-plan payloads.
+- If a parent guess is missing but live structure shows an exact nearby sibling file with the same meaning, promote only the exact live filename. Do not shorten `compatibility.py` to `compat.py`, `configuration.py` to `config.py`, or similar prompt-shaped aliases while expanding the child plan.
 
 ---
 
@@ -122,3 +123,6 @@ Fresh exploration is not justified when:
 - If a parent expansion hint already says "one child for X, one child for Y, one child for Z", your job is to convert X/Y/Z into concrete worker items, not to open a new planning tree for X/Y/Z.
 - If inherited `owned_failures` already contain exact pytest node ids, preserve them verbatim downstream. Do not rename, shorten, de-parameterize, or substitute nearby test names while expanding the child plan.
 - Do not "improve" inherited benchmark filenames into guessed variants such as `test_dask_cli.py`. Preserve the exact basename from the parent or prompt until live structure proves a different exact path exists.
+- If an inherited owner guess is missing, spend one live structure confirmation on the nearest package/directory and recover the exact existing sibling filename when it exists. Do not conclude the owner is absent while a same-stem live file such as `compatibility.py` is sitting next to the guessed `compat.py`.
+- If a child scout or live read shows that an inherited exact pytest node is absent from the referenced test file, stop forwarding that stale node to direct developer lanes. Downgrade the child payload to the exact test file path or report the benchmark-surface mismatch; do not invent a same-stem production helper or replacement node from the missing test name.
+- A benchmark `tests/...` path that appears in inherited `owned_files` or `expansion_hint` is still symptom evidence unless live child-turn evidence proves the slice truly belongs to test/support infrastructure. Keep that test path in `owned_failures`, but recover a production/export owner or at least a candidate package/directory before emitting a direct developer lane.

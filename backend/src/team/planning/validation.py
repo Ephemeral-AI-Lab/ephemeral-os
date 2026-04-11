@@ -25,6 +25,50 @@ def _validator_count(items: list[WorkItemSpec]) -> int:
     return sum(1 for item in items if item.agent_name == _VALIDATOR_AGENT)
 
 
+def _payload_str_items(payload: dict[str, object], key: str) -> list[str]:
+    raw = payload.get(key)
+    if isinstance(raw, str):
+        value = raw.strip()
+        return [value] if value else []
+    if isinstance(raw, list):
+        return [value.strip() for value in raw if isinstance(value, str) and value.strip()]
+    return []
+
+
+def _payload_positive_int(payload: dict[str, object], key: str) -> int:
+    raw = payload.get(key)
+    if isinstance(raw, bool):
+        return 0
+    if isinstance(raw, int):
+        return raw if raw > 0 else 0
+    if isinstance(raw, str):
+        try:
+            parsed = int(raw)
+        except ValueError:
+            return 0
+        return parsed if parsed > 0 else 0
+    return 0
+
+
+def _is_nontrivial_developer_lane(item: WorkItemSpec) -> bool:
+    if item.agent_name != "developer" or item.kind != WorkItemKind.ATOMIC:
+        return False
+    payload = item.payload if isinstance(item.payload, dict) else {}
+    if len(_payload_str_items(payload, "owned_files")) > 1:
+        return True
+    owned_failure_count = max(
+        len(_payload_str_items(payload, "owned_failures")),
+        _payload_positive_int(payload, "owned_failures_unique_total"),
+    )
+    return owned_failure_count > 1
+
+
+def _has_direct_validator_dep(items: list[WorkItemSpec], dep_local_id: str) -> bool:
+    return any(
+        item.agent_name == _VALIDATOR_AGENT and dep_local_id in item.deps for item in items
+    )
+
+
 def _kind_supported(agent_name: str, kind: WorkItemKind) -> Issue | None:
     agent_def = _get_definition(agent_name)
     if agent_def is None:
@@ -70,6 +114,31 @@ def _validator_policy_issues(
                 "msg": (
                     f"plans with {require_validator_for_plan_size} or more items must "
                     "include at least one validator"
+                ),
+            }
+        )
+    for idx, item in enumerate(items):
+        if not _is_nontrivial_developer_lane(item):
+            continue
+        if item.local_id is None:
+            issues.append(
+                {
+                    "field": f"items[{idx}].local_id",
+                    "msg": (
+                        "non-trivial developer lane must set local_id so a validator "
+                        "can depend on that concrete child task"
+                    ),
+                }
+            )
+            continue
+        if _has_direct_validator_dep(items, item.local_id):
+            continue
+        issues.append(
+            {
+                "field": f"items[{idx}].local_id",
+                "msg": (
+                    f"non-trivial developer lane '{item.local_id}' must have a validator "
+                    "that depends on that concrete child task"
                 ),
             }
         )

@@ -180,6 +180,28 @@ async def test_validator_policy_respects_metadata_overrides():
 
 
 @pytest.mark.asyncio
+async def test_submit_plan_requires_direct_validator_for_nontrivial_developer_lane():
+    tool = SubmitPlanTool()
+    ctx = _ctx()
+    args = SubmitPlanInput.model_validate(
+        {
+            "items": [
+                {
+                    "agent_name": "developer",
+                    "local_id": "dev1",
+                    "payload": {"owned_files": ["pkg/a.py", "pkg/b.py"]},
+                }
+            ]
+        }
+    )
+
+    res = await tool.execute(args, ctx)
+
+    assert res.is_error
+    assert "non-trivial developer lane 'dev1' must have a validator" in res.output
+
+
+@pytest.mark.asyncio
 async def test_submit_plan_rejects_unknown_dep_against_live_team_run(monkeypatch):
     tool = SubmitPlanTool()
     ctx = _ctx()

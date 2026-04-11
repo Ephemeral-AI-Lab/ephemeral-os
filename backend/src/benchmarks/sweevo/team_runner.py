@@ -239,6 +239,10 @@ def _build_root_prompt(instance: SWEEvoInstance, repo_dir: str) -> str:
         f"If the natural task set is wider, group "
         f"adjacent sibling work into expandable child planner items instead of flattening "
         f"every cluster at the root.\n"
+        f"- Use that runtime cap as a budget, not as a fixed graph recipe. "
+        f"Pick however many root developer lanes, validators, and expandable child planners "
+        f"the live owner graph actually warrants; do not force a canned shape just because "
+        f"the instance is large.\n"
         f"- The first-ready frontier cap limits only simultaneously ready implementation "
         f"lanes. It does not mean the whole submitted graph should stop at that many items.\n"
         f"- On large instances with many fail-to-pass clusters, do not hand the whole "
@@ -399,6 +403,39 @@ def _peek_plan_item_start_key(
     return key, saw_open_brace
 
 
+def _has_duplicate_top_level_primary_keys(
+    text: str,
+    decoder: json.JSONDecoder,
+) -> bool:
+    idx = _skip_json_whitespace(text, 0)
+    if idx >= len(text) or text[idx] != "{":
+        return False
+    idx = _skip_json_whitespace(text, idx + 1)
+
+    seen_primary: set[str] = set()
+    while idx < len(text):
+        if text[idx] == "}":
+            return False
+        parsed = _parse_json_object_field(text, idx, decoder)
+        if parsed is None:
+            return False
+        key, _, value_end = parsed
+        if key in _PLAN_ITEM_PRIMARY_KEYS:
+            if key in seen_primary:
+                return True
+            seen_primary.add(key)
+
+        idx = _skip_json_whitespace(text, value_end)
+        if idx >= len(text):
+            return False
+        if text[idx] == "}":
+            return False
+        if text[idx] != ",":
+            return False
+        idx = _skip_json_whitespace(text, idx + 1)
+    return False
+
+
 def _parse_repaired_plan_item(
     text: str,
     start: int,
@@ -413,7 +450,9 @@ def _parse_repaired_plan_item(
     except ValueError:
         payload = None
     if isinstance(payload, dict):
-        return payload, end
+        raw_object = text[idx:end]
+        if not _has_duplicate_top_level_primary_keys(raw_object, decoder):
+            return payload, end
 
     saw_open_brace = False
     if text[idx] == "{":
@@ -556,8 +595,13 @@ def _extract_posthook_input_text(
                 text,
                 matcher=lambda candidate: _matches_posthook_payload(candidate, metadata_key),
             )
-            if payload is None and metadata_key == "submitted_plan":
-                payload = _repair_submitted_plan_payload(text)
+            if metadata_key == "submitted_plan":
+                repaired = _repair_submitted_plan_payload(text)
+                if repaired is not None and (
+                    payload is None
+                    or len(repaired.get("items", [])) > len(payload.get("items", []))
+                ):
+                    payload = repaired
             if payload is None or not _matches_posthook_payload(payload, metadata_key):
                 continue
             return json.dumps(payload, ensure_ascii=False)

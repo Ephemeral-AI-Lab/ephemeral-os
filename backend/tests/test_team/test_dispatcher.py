@@ -11,6 +11,8 @@ from team.models import (
     BudgetConfig,
     BudgetState,
     Plan,
+    ReplanPlan,
+    ReplanItemSpec,
     ReplanRequest,
     WorkItem,
     WorkItemKind,
@@ -323,6 +325,55 @@ async def test_apply_replan_leaves_failed_validator_terminal_when_replan_adds_re
 
     assert disp.graph["VAL"].status == WorkItemStatus.FAILED
     assert disp.graph[replacement.id].status == WorkItemStatus.READY
+
+
+@pytest.mark.asyncio
+async def test_complete_applies_submitted_replan_with_replace_failed_validator_flag():
+    disp = _make_dispatcher()
+    developer = _wi("DEV")
+    validator = _wi("VAL", deps=["DEV"])
+    await disp.add_work_item(developer)
+    await disp.add_work_item(validator)
+
+    assert await disp.pop_ready() == "DEV"
+    await disp.mark_running("DEV", "AR-dev")
+    await disp.complete("DEV", AgentResult(artifact={"out": 1}, summary="done"))
+
+    assert await disp.pop_ready() == "VAL"
+    await disp.mark_running("VAL", "AR-val")
+    replanner = await disp.request_replan(
+        "VAL",
+        ReplanRequest(reason="adjacent deterministic failures", context="traceback"),
+    )
+
+    assert await disp.pop_ready() == replanner.id
+    await disp.mark_running(replanner.id, "AR-replan")
+    new_items = await disp.complete(
+        replanner.id,
+        AgentResult(
+            artifact=None,
+            summary="replanned",
+            submitted_replan=ReplanPlan(
+                add_items=[
+                    ReplanItemSpec(agent_name="developer", local_id="fix"),
+                    ReplanItemSpec(
+                        agent_name="validator",
+                        local_id="val-replacement",
+                        deps=["fix"],
+                    ),
+                ],
+                replace_failed_validator=True,
+            ),
+        ),
+    )
+
+    assert len(new_items) == 0
+    assert disp.graph["VAL"].status == WorkItemStatus.FAILED
+
+    fix = next(wi for wi in disp.graph.values() if wi.local_id == "fix")
+    replacement = next(wi for wi in disp.graph.values() if wi.local_id == "val-replacement")
+    assert replacement.deps == [fix.id]
+    assert replacement.status == WorkItemStatus.PENDING
 
 
 @pytest.mark.asyncio

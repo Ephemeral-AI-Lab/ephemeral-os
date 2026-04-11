@@ -215,6 +215,7 @@ class ReplanPlan:
 
     add_items: list[ReplanItemSpec] = field(default_factory=list)
     cancel_ids: list[str] = field(default_factory=list)
+    replace_failed_validator: bool = False
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "ReplanPlan":
@@ -234,6 +235,7 @@ class ReplanPlan:
         return cls(
             add_items=add_items,
             cancel_ids=list(data.get("cancel_ids") or []),
+            replace_failed_validator=bool(data.get("replace_failed_validator", False)),
         )
 
 

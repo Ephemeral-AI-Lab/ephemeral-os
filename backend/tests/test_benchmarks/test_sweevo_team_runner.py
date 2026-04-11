@@ -240,6 +240,64 @@ def test_extract_posthook_input_text_repairs_items_when_later_objects_lose_openi
     }
 
 
+def test_extract_posthook_input_text_repairs_plan_items_when_duplicate_primary_keys_collapse_siblings():
+    extracted = sweevo_team_runner._extract_posthook_input_text(
+        [
+            ConversationMessage(
+                role="assistant",
+                content=[
+                    TextBlock(
+                        text=(
+                            '{"items": ['
+                            '{"local_id": "dev_hdf", "agent_name": "developer", "kind": "atomic", '
+                            '"payload": {"owned_files": ["dask/dataframe/io/hdf.py"]}, '
+                            '"local_id": "dev_cli", "agent_name": "developer", "kind": "atomic", '
+                            '"payload": {"owned_files": ["dask/cli.py"]}, '
+                            '"local_id": "val_root", "agent_name": "validator", "kind": "atomic", '
+                            '"deps": ["dev_hdf", "dev_cli"], '
+                            '"payload": {"verify": ["python -m pytest dask/dataframe/io/tests/test_hdf.py -q", '
+                            '"python -m pytest dask/tests/test_cli.py -q"]}}], '
+                            '"rationale": "Keep validators behind the recovered developer lanes."}'
+                        )
+                    )
+                ],
+            )
+        ],
+        "submitted_plan",
+    )
+
+    assert extracted is not None
+    assert json.loads(extracted) == {
+        "items": [
+            {
+                "local_id": "dev_hdf",
+                "agent_name": "developer",
+                "kind": "atomic",
+                "payload": {"owned_files": ["dask/dataframe/io/hdf.py"]},
+            },
+            {
+                "local_id": "dev_cli",
+                "agent_name": "developer",
+                "kind": "atomic",
+                "payload": {"owned_files": ["dask/cli.py"]},
+            },
+            {
+                "local_id": "val_root",
+                "agent_name": "validator",
+                "kind": "atomic",
+                "deps": ["dev_hdf", "dev_cli"],
+                "payload": {
+                    "verify": [
+                        "python -m pytest dask/dataframe/io/tests/test_hdf.py -q",
+                        "python -m pytest dask/tests/test_cli.py -q",
+                    ]
+                },
+            },
+        ],
+        "rationale": "Keep validators behind the recovered developer lanes.",
+    }
+
+
 def test_extract_matching_json_object_prefers_matching_top_level_plan():
     text = (
         '{"items": [{"local_id": "dev1", "agent_name": "developer", "kind": "atomic", '
@@ -401,6 +459,7 @@ def test_root_prompt_points_to_skill_owned_workflow_policy():
     assert "Stable SWE-EVO workflow policy lives in the declared skills" in prompt
     assert "Recommended first-ready frontier cap" in prompt
     assert "submitted root plan must stay within the runtime cap of 16 total tasks" in prompt
+    assert "Use that runtime cap as a budget, not as a fixed graph recipe" in prompt
     assert "does not mean the whole submitted graph should stop at that many items" in prompt
     assert "do not hand the whole remaining surface to only the initial developers" in prompt
     assert "must still receive its own developer lane or expandable child planner" in prompt
