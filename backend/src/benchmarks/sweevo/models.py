@@ -75,14 +75,27 @@ class SWEEvoResult:
 
 
 def _normalize_sweevo_image_ref(image_ref: str) -> str:
-    """Return the dataset-provided image reference without inventing a tag.
-
-    Daytona snapshot creation rejects ``:latest`` for image-based snapshots.
-    The SWE-EVO dataset often provides repository-only image refs, so we keep
-    them unchanged and let the runtime resolve the registry default rather than
-    forcing a tag that breaks provisioning.
-    """
+    """Return the dataset-provided image reference without altering versioning."""
     return (image_ref or "").strip()
+
+
+def _has_explicit_sweevo_image_version(image_ref: str) -> bool:
+    """Whether an image ref carries a non-`latest` explicit version.
+
+    Daytona snapshot registration requires a concrete image version. Bare
+    repository refs resolve to `latest`, and explicit `:latest` tags are also
+    rejected by the snapshot API.
+    """
+    ref = (image_ref or "").strip()
+    if not ref:
+        return False
+    if "@" in ref:
+        return True
+    last_segment = ref.rsplit("/", 1)[-1]
+    if ":" not in last_segment:
+        return False
+    _, tag = last_segment.rsplit(":", 1)
+    return bool(tag and tag.lower() != "latest")
 
 
 def _truncate_dns_label(name: str, *, limit: int = 63) -> str:

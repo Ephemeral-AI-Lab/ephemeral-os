@@ -8,7 +8,12 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from benchmarks.sweevo.models import _REPO_DIR, SWEEvoInstance, _normalize_sweevo_image_ref
+from benchmarks.sweevo.models import (
+    _REPO_DIR,
+    SWEEvoInstance,
+    _has_explicit_sweevo_image_version,
+    _normalize_sweevo_image_ref,
+)
 
 
 def _instance() -> SWEEvoInstance:
@@ -38,6 +43,39 @@ def test_default_sweevo_sandbox_name_is_unique():
     assert first.startswith("sweevo-test-pydantic__pydantic")
     assert len(first) <= 63
     assert len(second) <= 63
+
+
+def test_get_sandbox_retries_transient_async_client_error(monkeypatch):
+    from benchmarks.sweevo import sandbox as sweevo_sandbox
+
+    fake_sandbox = SimpleNamespace(id="sbx-1")
+    get_mock = AsyncMock(side_effect=[RuntimeError("connection reset"), fake_sandbox])
+    monkeypatch.setattr(sweevo_sandbox, "get_async_sandbox", get_mock)
+
+    result = asyncio.run(sweevo_sandbox._get_sandbox("sbx-1"))
+
+    assert result is fake_sandbox
+    assert get_mock.await_count == 2
+
+
+def test_normalize_sweevo_image_ref_preserves_repo_only_refs():
+    assert _normalize_sweevo_image_ref("example/image") == "example/image"
+    assert _normalize_sweevo_image_ref("ghcr.io/org/repo") == "ghcr.io/org/repo"
+
+
+def test_normalize_sweevo_image_ref_preserves_tagged_and_digest_refs():
+    assert _normalize_sweevo_image_ref("example/image:3.12") == "example/image:3.12"
+    assert (
+        _normalize_sweevo_image_ref("example/image@sha256:deadbeef")
+        == "example/image@sha256:deadbeef"
+    )
+
+
+def test_has_explicit_sweevo_image_version_accepts_concrete_tag_or_digest():
+    assert _has_explicit_sweevo_image_version("example/image:3.12") is True
+    assert _has_explicit_sweevo_image_version("example/image@sha256:deadbeef") is True
+    assert _has_explicit_sweevo_image_version("example/image") is False
+    assert _has_explicit_sweevo_image_version("example/image:latest") is False
 
 
 def test_create_sweevo_test_sandbox_reuses_named_retry(monkeypatch):
@@ -149,6 +187,184 @@ def test_create_sweevo_test_sandbox_rejects_after_pending_build_timeout(monkeypa
     assert deleted == ["sb-pending"]
     setup_mock.assert_not_awaited()
     patch_mock.assert_not_awaited()
+
+
+def test_create_sweevo_test_sandbox_falls_back_to_started_retry_after_fresh_failure(monkeypatch):
+    from benchmarks.sweevo import sandbox as sweevo_sandbox
+
+    instance = _instance()
+    fresh_name = "fresh-sandbox"
+    pending = {"id": "sb-pending", "name": fresh_name, "state": "pending_build", "labels": {}}
+    started = {
+        "id": "sb-started",
+        "name": "healthy-retry",
+        "state": "started",
+        "labels": {
+            "purpose": "sweevo-test",
+            "sweevo_instance": instance.instance_id,
+            "sweevo_repo": instance.repo,
+        },
+        "created_at": "2026-04-12T04:00:00Z",
+    }
+    deleted: list[str] = []
+    list_calls = {"count": 0}
+
+    def _list_sandboxes():
+        list_calls["count"] += 1
+        if list_calls["count"] == 1:
+            raise RuntimeError("connection reset")
+        return [pending, started]
+
+    service = SimpleNamespace(
+        list_sandboxes=_list_sandboxes,
+        create_sandbox=lambda **_: (_ for _ in ()).throw(RuntimeError("timed out waiting for build")),
+        delete_sandbox=lambda sandbox_id: deleted.append(sandbox_id),
+    )
+    setup_mock = AsyncMock()
+    patch_mock = AsyncMock()
+
+    monkeypatch.setattr(sweevo_sandbox, "_service", lambda: service)
+    monkeypatch.setattr(sweevo_sandbox, "_default_sweevo_sandbox_name", lambda _instance: fresh_name)
+    monkeypatch.setattr(sweevo_sandbox, "setup_sweevo_sandbox", setup_mock)
+    monkeypatch.setattr(sweevo_sandbox, "ensure_sweevo_test_patch", patch_mock)
+
+    result = asyncio.run(
+        sweevo_sandbox.create_sweevo_test_sandbox(
+            instance,
+            register_snapshot=False,
+        )
+    )
+
+    assert deleted == ["sb-pending"]
+    assert result["sandbox_id"] == "sb-started"
+    assert result["sandbox"] == started
+    assert result["reused_existing"] is True
+    assert result["fallback_reason"] == "fresh_create_failed_reused_started_sandbox"
+    assert list_calls["count"] >= 2
+    setup_mock.assert_awaited_once_with(instance, "sb-started", _REPO_DIR)
+    patch_mock.assert_awaited_once_with(instance, "sb-started", _REPO_DIR)
+
+
+def test_create_sweevo_test_sandbox_recovers_started_fresh_sandbox_after_create_failure(monkeypatch):
+    from benchmarks.sweevo import sandbox as sweevo_sandbox
+
+    instance = _instance()
+    fresh = {
+        "id": "130d92b1-8f82-4875-b903-114a032599a9",
+        "name": "fresh-sandbox",
+        "state": "started",
+        "labels": {
+            "purpose": "sweevo-test",
+            "sweevo_instance": instance.instance_id,
+            "sweevo_repo": instance.repo,
+        },
+    }
+    list_calls = {"count": 0}
+
+    def _list_sandboxes():
+        list_calls["count"] += 1
+        if list_calls["count"] == 1:
+            raise RuntimeError("connection reset")
+        return [fresh]
+
+    service = SimpleNamespace(
+        list_sandboxes=_list_sandboxes,
+        create_sandbox=lambda **_: (_ for _ in ()).throw(
+            RuntimeError(
+                "Failed to create sandbox: Failed to refresh sandbox data: "
+                "HTTPConnectionPool(host='localhost', port=3000): "
+                "Max retries exceeded with url: /api/sandbox/130d92b1-8f82-4875-b903-114a032599a9"
+            )
+        ),
+        get_build_logs_url=lambda sandbox_id: None,
+    )
+    setup_mock = AsyncMock()
+    patch_mock = AsyncMock()
+
+    monkeypatch.setattr(sweevo_sandbox, "_service", lambda: service)
+    monkeypatch.setattr(sweevo_sandbox, "_default_sweevo_sandbox_name", lambda _instance: "fresh-sandbox")
+    monkeypatch.setattr(sweevo_sandbox, "setup_sweevo_sandbox", setup_mock)
+    monkeypatch.setattr(sweevo_sandbox, "ensure_sweevo_test_patch", patch_mock)
+
+    result = asyncio.run(
+        sweevo_sandbox.create_sweevo_test_sandbox(
+            instance,
+            register_snapshot=False,
+        )
+    )
+
+    assert result["sandbox_id"] == fresh["id"]
+    assert result["sandbox"] == fresh
+    assert result["reused_existing"] is False
+    assert result["fallback_reason"] == "fresh_create_recovered_started_sandbox"
+    assert list_calls["count"] >= 2
+    setup_mock.assert_awaited_once_with(instance, fresh["id"], _REPO_DIR)
+    patch_mock.assert_awaited_once_with(instance, fresh["id"], _REPO_DIR)
+
+
+def test_register_sweevo_snapshot_uses_tagged_image_ref(monkeypatch):
+    from benchmarks.sweevo import sandbox as sweevo_sandbox
+
+    calls: dict[str, object] = {}
+
+    def _run(args, **kwargs):  # type: ignore[no-untyped-def]
+        calls["args"] = args
+        calls["kwargs"] = kwargs
+        return SimpleNamespace(returncode=0, stderr="")
+
+    monkeypatch.setattr("subprocess.run", _run)
+
+    instance = _instance()
+    instance.docker_image = "xingyaoww/sweb.eval.x86_64.pydantic_s_pydantic-8583:v1"
+    sweevo_sandbox.register_sweevo_snapshot(instance, snapshot_name="snap-1")
+
+    assert calls["args"] == [
+        "daytona",
+        "snapshot",
+        "create",
+        "snap-1",
+        "--image",
+        "xingyaoww/sweb.eval.x86_64.pydantic_s_pydantic-8583:v1",
+        "--entrypoint",
+        "sleep infinity",
+        "--cpu",
+        "2",
+        "--disk",
+        "10",
+    ]
+
+
+def test_create_sweevo_test_sandbox_falls_back_to_direct_image_when_snapshot_needs_version(monkeypatch):
+    from benchmarks.sweevo import sandbox as sweevo_sandbox
+
+    created: dict[str, object] = {}
+
+    def create_sandbox(**kwargs):
+        created.update(kwargs)
+        return {"id": "sb-created"}
+
+    service = SimpleNamespace(
+        list_sandboxes=lambda: [],
+        create_sandbox=create_sandbox,
+        get_sandbox=lambda sandbox_id: {"id": sandbox_id, "name": "fresh-sandbox"},
+    )
+    setup_mock = AsyncMock()
+    patch_mock = AsyncMock()
+
+    monkeypatch.setattr(sweevo_sandbox, "_service", lambda: service)
+    monkeypatch.setattr(sweevo_sandbox, "setup_sweevo_sandbox", setup_mock)
+    monkeypatch.setattr(sweevo_sandbox, "ensure_sweevo_test_patch", patch_mock)
+
+    result = asyncio.run(
+        sweevo_sandbox.create_sweevo_test_sandbox(
+            _instance(),
+            register_snapshot=True,
+        )
+    )
+
+    assert created["image"] == "xingyaoww/sweb.eval.x86_64.pydantic_s_pydantic-8583"
+    assert "snapshot" not in created
+    assert result["fallback_reason"] == "snapshot_requires_explicit_image_version"
 
 
 def test_setup_sweevo_sandbox_preserves_existing_labels(monkeypatch):
