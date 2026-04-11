@@ -12,7 +12,7 @@ Use this reference only when either condition is true:
 - Must compose with live sibling edits on widened files.
 - Must keep widened edits to one adjacent supporting owner surface for the same bug.
 - Never widen into tests first when the production owner is still the clearer fix surface.
-- Never widen into config or harness files unless live evidence proves they own the bug.
+- Never widen into config or harness files unless live evidence proves they own the bug, and never use git/history probes to argue that a newly broken shared surface was "pre-existing".
 
 ## Runtime completion rules
 
@@ -32,6 +32,9 @@ Use this reference only when either condition is true:
 - Example: the lane owns `pkg/io/json.py`, but the live traceback points to a helper import in `pkg/_compat.py`.
   Refresh `ci_scoped_status(...)` on `pkg/_compat.py`, widen once, patch the helper, and rerun the exact assigned verify command.
   Do not patch the failing test first.
+- Example: the lane owns `pkg/tests/test_compat.py::test_deprecation`, but a broader assigned verify now crashes in `pkg/config.py` after a sibling edit.
+  Confirm `pkg/config.py` once with live traceback evidence, then either widen exactly to that shared import/config chain or stop with blocker evidence for replanning.
+  Do not reverse-engineer the prior state from `git diff`, and do not treat a contradictory live file as permission to freeform-rewrite an unowned surface.
 - Example: the assigned pytest command dies during collection because `pkg/__init__.py` imports a missing compatibility symbol before the named target loads.
   Keep that collection crash as failure evidence and hand it to replan if the lane boundary is wrong.
   Do not declare success just because LSP on the owned file is clean.

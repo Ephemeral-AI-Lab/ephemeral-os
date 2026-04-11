@@ -8,7 +8,6 @@ Use this reference before the first `daytona_codeact` verification or reproducti
 - The first benchmark reproduction or verify call should usually be a minimal `shell("...")` snippet, not a Python mini-program.
 - Must default to repo-root-relative commands inside the shell string.
 - Must not prepend guessed repo roots like `cd /testbed &&` when the sandbox cwd is already injected; only `cd` into a real repo subdirectory when the command truly needs it.
-- Must not replace a simple repo command with raw Python `subprocess.run(...)` boilerplate.
 - Must treat missing tools, missing modules, or unsupported flags as runtime evidence first.
 - Must not start pip-install loops or ad hoc environment mutation unless repo bootstrap evidence proves the lane owns that setup.
 - Never treat ambient package installation as the default next step just because the first verify command failed.
@@ -16,13 +15,16 @@ Use this reference before the first `daytona_codeact` verification or reproducti
 - Never turn an install rejection into a `pip` -> `pip3` -> `conda` -> `uv` retry ladder.
 - Must treat the object returned by `shell("...")` as a mapping with keys like `stdout`, `stderr`, and `exit_code`.
 - Must not use `git status`, `git log`, `git diff`, `git show`, `git blame`, `git stash`, `git checkout`, `git restore`, or temporary revert probes to prove whether a sibling failure was "already there".
-- If the live source file looks different from what you expected, treat the live file plus payload evidence as authoritative and diagnose that code path directly.
+- If the live source file looks different from what you expected or a `daytona_edit_file` search misses, treat the live file plus payload evidence as authoritative, rebuild the edit from current text, and keep repo writes on edit/write tools instead of `daytona_codeact`.
 - If `shell("...")` output is sparse or truncated, must capture it through shell redirection plus a structured read instead of abandoning the shell helper.
-- Must not broaden from a named failing id or bounded payload command to a much larger suite unless the payload itself assigns that broader command.
+- Must not broaden from a named failing id or bounded payload command to a much larger suite unless the payload itself assigns that broader command; if that assigned broader command fails first in a shared upstream file outside `owned_files`, confirm that path once and either widen one step for the same chain or surface it as shared-blocker evidence.
 - If pytest says a named node is missing, report that exact node mismatch or hand the file surface back to replanning; do not run collect-only or hunt similar names unless the payload already owns the full file.
+- If the failure happens during import, warning-filter parsing, or collection, the first runtime verify after an edit must prove that exact import chain is healthy before any broader sweep.
+- If a shared-module edit creates a new import or collection crash, fix that crash on the same chain before resuming unrelated diagnosis.
+- If a broader verify first crashes in a shared non-owned file and the live text looks half-edited or contradictory, confirm that exact traceback once, then widen one step on the same chain or surface a blocker; do not use git/history probes to decide whether the breakage was older than your lane.
+- When the owned assertion is `pytest.warns(...)` or `pytest.raises(..., match=...)`, verify the live import object model or regex behavior before changing public warning paths or error strings.
 
 ## Few-shot examples
-
 - Example: payload verify command is `python -m pytest dask/tests/test_cli.py -x`.
   Call `daytona_codeact` with code like `shell("python -m pytest dask/tests/test_cli.py -x", timeout=120)`.
   Do not wrap that same command in Python `subprocess.run(...)`.
@@ -30,32 +32,22 @@ Use this reference before the first `daytona_codeact` verification or reproducti
   Wrong: `import subprocess` plus `subprocess.run(["pytest", "pkg/tests/test_hdf.py", "-x"])`.
   Right: `result = shell("pytest pkg/tests/test_hdf.py -x", timeout=120)`.
   Keep the first runtime probe in the shell helper form unless you truly need to parse a prior shell result.
-- Example: `result = shell("pytest pkg/tests/test_cli.py -x", timeout=120)` already ran and you need the exit code.
-  Read `result["exit_code"]` or `result["stdout"]`.
-  Do not use `result.stdout`, `result.stderr`, or `result.returncode` because `shell("...")` does not return a subprocess object.
-- Example: `pytest` is missing from `PATH`.
-  Probe once with `shell("which pytest || python -m pytest --version || which uv", timeout=30)`, then retry with the working command form if one exists.
-  If no runner exists, stop probing the ambient environment and move to `daytona_read_file`, `daytona_grep`, and owned-source diagnosis instead of installing pytest.
-  Do not pivot into `subprocess`, and do not assume the benchmark fix is to install pytest.
 - Example: the exact verify command dies during import because a module like `yaml` or `tlz` is missing before the named test loads.
   Treat that as still-red runtime evidence on the current lane, then inspect the owned test file, owned production file, and nearby repo import path before guessing about the environment.
   If the repository clearly owns the import path, keep diagnosing repo code; if the miss is purely ambient and outside repo ownership, surface runtime mismatch or replan evidence after that one probe.
   Do not start a generic `pip install ...` loop just because `ModuleNotFoundError` appeared first.
-- Example: `python -m pytest ...` fails with `No module named pytest`, then a later probe fails with `ModuleNotFoundError: yaml`.
-  Do one command-form probe, then stop environment improvisation.
-  Read the named test and owned source files, localize the likely code path, and keep progress on the repo surface or escalate as ambient mismatch if the lane cannot legitimately fix it in code.
-- Example: your owned target passes, but another lane reports an unrelated parquet or config failure and you want to prove your patch did not cause it.
-  Stay on your owned verify command and `ci_scoped_status(...)` evidence.
-  Do not run `git status`, `git log`, `git show`, `git blame`, `git stash`, or temporary revert commands inside the benchmark repo to argue about blame.
-- Example: a live import shim or compatibility module looks wrong and you are tempted to compare it with `HEAD`.
-  Read the live file, inspect the immediate import chain, and keep the fix on the payload-owned surface.
-  Do not use `git show HEAD:path`, `git checkout -- path`, or `git restore --source=HEAD` to reconstruct history before you patch.
-- Example: `shell("pytest ...")` returns a green exit code but the adapter shows little stdout.
-  Capture the output in the shell command itself, such as `shell("pytest ... > /tmp/verify.out 2>&1; code=$?; echo EXIT_CODE:$code")`, then inspect `/tmp/verify.out` with a structured read if needed.
-  Do not switch back to `subprocess.run(...)` or a Python wrapper just to print nicer output.
-- Example: payload verify is `pytest pkg/tests/test_io_json.py::test_records_roundtrip -x`, and pytest says the node is not found.
-  Surface that exact missing node or hand the exact file path back to replanning if the parent lane owned the file.
-  Do not run `--collect-only`, grep for similar names, or silently swap in a nearby test id.
-- Example: payload verify is `pytest dask/dataframe/tests/test_groupby.py::test_groupby_unique[disk-uint8] -x`.
-  Keep reproductions and post-edit verifies on that named test or the exact payload command.
-  Do not jump to the entire `dask/dataframe/tests/test_groupby.py` module or a broad `-k` sweep unless the payload already told you to own that larger surface.
+- Example: payload owns `pkg/tests/test_compat.py::test_deprecation`, but collection only becomes healthy after an internal consumer moves from `pkg.compat` to `pkg._compat`.
+  Verify the exact node plus one narrow import-smoke command after the edit, and keep the public module warning-on-import behavior intact while the private module stays quiet for internal imports.
+  Do not "fix" the collection crash by suppressing or deleting the public deprecation warning that the owned test is asserting.
+- Example: your exact owned node is green, but an assigned broader verify now fails first in `pkg/core.py` or another shared upstream file outside `owned_files`.
+  Re-read that upstream path and the traceback once, then either widen one step for the same chain or surface the shared blocker with exact path evidence.
+  Do not keep spelunking your old owned file as if the new traceback were local proof of regression.
+- Example: your assigned verify now dies in `pkg/config.py`, and the live file shows impossible self-assignment or parameter/global conflicts after another worker touched it.
+  Read the exact lines with structured tools, keep the failing command visible, and route the lane through one-step widening or replanning on that shared chain.
+  Do not run `git diff`, `git show`, or a Python subprocess wrapper to argue that the syntax break was "already there".
+- Example: payload owns `pkg/tests/test_compat.py::test_deprecation`, and `from pkg.compat import _FLAG` does not warn.
+  Inspect `pkg.compat.__dict__` or an equivalent live readback before editing; if `_FLAG` already exists on the module, import will bypass `__getattr__`.
+  Do not keep replaying stale search-based edits against an older copy of the file after the live module shape has changed.
+- Example: payload owns `pkg/tests/test_json.py::test_engine_error`, and the assertion is `pytest.raises(ValueError, match="Pandas>=2.0 is required")`.
+  Reproduce the exact regex match before editing product strings; a longer live error message does not prove failure when the pattern is still satisfied.
+  Do not rewrite the production message or patch the test on the assumption that `match=` is plain substring text.

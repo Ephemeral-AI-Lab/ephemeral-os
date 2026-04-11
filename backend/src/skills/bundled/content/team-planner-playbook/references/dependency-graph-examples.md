@@ -1,6 +1,7 @@
 # Dependency Graph Examples
 
 Use this reference immediately before final plan JSON when there are 4+ candidate siblings, one dominant owner plus residual single-file slices, or any temptation to create `misc_*`, `remaining_*`, or `core_misc_*` lanes.
+Do not load it while the first scout wave still has unlaunched exact-file slices.
 
 ## Lane smells
 

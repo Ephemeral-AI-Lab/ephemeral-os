@@ -22,6 +22,7 @@ MERGED_RUNTIME_METADATA_KEYS: tuple[str, ...] = (
     "coherence_token",
     "_benchmark_root_scope_anchor_done",
     "_benchmark_root_preanchor_structure_done",
+    "_loaded_skill_references_by_skill_this_turn",
 )
 
 

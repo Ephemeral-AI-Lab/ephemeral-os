@@ -1,13 +1,14 @@
 # Task Planning Decomposition
 
 Use this reference only after ownership is already clear enough to draft the DAG.
+If any nameable first-wave scout is still unlaunched, or your recap dropped a launched exact-file slice, stop and return to scout launching or scout-ledger reconciliation instead of shaping the DAG.
 
 ## Decide atomic vs expandable
 
 1. Make a lane atomic when one owner slice, one patch surface, and one verification family are already clear enough for a leaf worker.
 2. Make a lane expandable when it still hides multiple owner slices, region-level decomposition inside one broad file, or more ready work than the current layer should flatten.
 3. Make a lane expandable when the owner is already a package, directory, or broad single file and the next useful decision is internal lane shaping rather than direct patching.
-4. Make a lane expandable when the alternative atomic lane would own several unrelated exact files merely because each slice is small.
+4. Make a lane expandable when the alternative atomic lane would own several unrelated exact files or benchmark files merely because each slice is small.
 5. Preserve at least one direct ready leaf lane whenever live evidence already supports it, even if sibling branches still need child planners.
 6. Treat exact-file pairs as separate owner slices unless scouts already proved one shared helper or boundary that truly owns both.
 
@@ -15,6 +16,7 @@ Use this reference only after ownership is already clear enough to draft the DAG
 
 - Must split distinct owner clusters into separate execution lanes.
 - Must keep ready work concrete and residual work explicit.
+- "Launch" at this phase means "emit as a plan item", not "call a tool now", unless the worker is a scout.
 - Must use deps only for real sequencing, shared-risk branch cuts, or verification boundaries.
 - Must let child planners own their own deeper validation instead of using parent validators as decorative barriers.
 - Must add validators only when they reduce uncertainty for concrete lanes.
@@ -23,7 +25,7 @@ Use this reference only after ownership is already clear enough to draft the DAG
 - Must keep broad package or file slices expandable at the parent layer when flattening them would collapse the DAG into one shallow frontier.
 - Never hide unresolved owner clusters behind validator-only coverage.
 - Never drop validation or cross-surface coverage just to trim one item.
-- Never call a bundled leftovers lane atomic unless one shared live owner explains every file in it.
+- Never call a bundled leftovers lane atomic unless one shared live owner explains every file and benchmark verify surface in it.
 
 ## Few-shot examples
 
@@ -36,6 +38,7 @@ Use this reference only after ownership is already clear enough to draft the DAG
 - Example: one dominant cluster has 32 targets, two secondary clusters have 11 and 8 targets, and the remaining slices are `cli`, `config`, `compat`, `json`, and `utils` with only 1-4 targets each.
   Emit the dominant lane directly, keep the two secondary clusters separate, and park the residual small slices behind one or more child planners only if live evidence still leaves them unresolved. Do not create one atomic "misc fixes" lane just because those residual slices are individually small.
 - Example: HDF and parquet are already split, and five remaining single-file production modules each have their own scout brief (`json.py`, `cli.py`, `config.py`, `compatibility.py`, `utils.py`).
-  Either keep those five developers separate or put them behind one residual child planner that can schedule them well. Do not collapse those unrelated files into one atomic developer just to save root-plan slots.
-- Example: a risky serializer change lands early and three later lanes depend on its shape.
-  Place one midflight validator after that serializer lane, then resume the dependent lanes, then keep one final terminal validator.
+  Either keep those five developers separate or put them behind one residual child planner that can schedule them well.
+  Do not collapse those unrelated files into one atomic developer just to save root-plan slots.
+- Example: the wave launched six scouts, but the recap later lists only five and still calls `pkg/compat.py` pending while `pkg/config.py` remains unlaunched.
+  Do not shape the DAG yet. Reconcile the literal scout ledger, keep `pkg/compat.py` mapped, and return to scout launching for `pkg/config.py` before decomposition.
