@@ -19,7 +19,7 @@ Use this reference before the first `daytona_codeact` verification or reproducti
 - If `shell("...")` output is sparse or truncated, must capture it through shell redirection plus a structured read instead of abandoning the shell helper.
 - Must not broaden from a named failing id or bounded payload command to a much larger suite unless the payload itself assigns that broader command; if that assigned broader command fails first in a shared upstream file outside `owned_files`, confirm that path once and either widen one step for the same chain or surface it as shared-blocker evidence.
 - If pytest says a named node is missing, report that exact node mismatch or hand the file surface back to replanning; do not run collect-only or hunt similar names unless the payload already owns the full file.
-- If the failure happens during import, warning-filter parsing, or collection, the first runtime verify after an edit must prove that exact import chain is healthy before any broader sweep.
+- If the failure happens during import, warning-filter parsing, or collection, the first runtime verify after an edit must prove that exact import chain is healthy before any broader sweep; if a private symbol still has internal importers, prove that internal path stays quiet before chasing the public warning contract.
 - If a shared-module edit creates a new import or collection crash, fix that crash on the same chain before resuming unrelated diagnosis.
 - If a broader verify first crashes in a shared non-owned file and the live text looks half-edited or contradictory, confirm that exact traceback once, then widen one step on the same chain or surface a blocker; do not use git/history probes to decide whether the breakage was older than your lane.
 - When the owned assertion is `pytest.warns(...)` or `pytest.raises(..., match=...)`, verify the live import object model or regex behavior before changing public warning paths or error strings.
@@ -36,18 +36,15 @@ Use this reference before the first `daytona_codeact` verification or reproducti
   Treat that as still-red runtime evidence on the current lane, then inspect the owned test file, owned production file, and nearby repo import path before guessing about the environment.
   If the repository clearly owns the import path, keep diagnosing repo code; if the miss is purely ambient and outside repo ownership, surface runtime mismatch or replan evidence after that one probe.
   Do not start a generic `pip install ...` loop just because `ModuleNotFoundError` appeared first.
-- Example: payload owns `pkg/tests/test_compat.py::test_deprecation`, but collection only becomes healthy after an internal consumer moves from `pkg.compat` to `pkg._compat`.
-  Verify the exact node plus one narrow import-smoke command after the edit, and keep the public module warning-on-import behavior intact while the private module stays quiet for internal imports.
-  Do not "fix" the collection crash by suppressing or deleting the public deprecation warning that the owned test is asserting.
-- Example: your exact owned node is green, but an assigned broader verify now fails first in `pkg/core.py` or another shared upstream file outside `owned_files`.
-  Re-read that upstream path and the traceback once, then either widen one step for the same chain or surface the shared blocker with exact path evidence.
-  Do not keep spelunking your old owned file as if the new traceback were local proof of regression.
+- Example: payload owns `pkg/tests/test_compat.py::test_deprecation`, and a private symbol now warns during `pkg/__init__.py` import so pytest dies while parsing warning filters.
+  Verify the exact node plus one narrow import-smoke command after the edit; if `pkg/__init__.py` or `pkg/base.py` still imports that private symbol, keep that internal path quiet and push the warning to the public access path instead.
+  Do not bypass startup with `--override-ini`, `-p no:warnings`, or similar flags, and do not call that live repo traceback pre-existing.
 - Example: your assigned verify now dies in `pkg/config.py`, and the live file shows impossible self-assignment or parameter/global conflicts after another worker touched it.
   Read the exact lines with structured tools, keep the failing command visible, and route the lane through one-step widening or replanning on that shared chain.
   Do not run `git diff`, `git show`, or a Python subprocess wrapper to argue that the syntax break was "already there".
 - Example: payload owns `pkg/tests/test_compat.py::test_deprecation`, and `from pkg.compat import _FLAG` does not warn.
-  Inspect `pkg.compat.__dict__` or an equivalent live readback before editing; if `_FLAG` already exists on the module, import will bypass `__getattr__`.
-  Do not keep replaying stale search-based edits against an older copy of the file after the live module shape has changed.
+  Inspect `pkg.compat.__dict__` and one internal importer before changing module scope; if the importer still needs `_FLAG`, keep the binding quiet for that path and make only the public access route warn.
+  Do not delete `_FLAG` from module scope just to trigger `__getattr__`, and do not keep replaying stale search-based edits against an older copy of the file after the live module shape has changed.
 - Example: payload owns `pkg/tests/test_json.py::test_engine_error`, and the assertion is `pytest.raises(ValueError, match="Pandas>=2.0 is required")`.
   Reproduce the exact regex match before editing product strings; a longer live error message does not prove failure when the pattern is still satisfied.
   Do not rewrite the production message or patch the test on the assumption that `match=` is plain substring text.
