@@ -75,7 +75,7 @@ MAX_CONSECUTIVE_AUTOCOMPACT_FAILURES = 3
 
 # Microcompact defaults
 DEFAULT_KEEP_RECENT = 5
-DEFAULT_GAP_THRESHOLD_MINUTES = 60
+
 
 # Token estimation padding (conservative)
 TOKEN_ESTIMATION_PADDING = 4 / 3

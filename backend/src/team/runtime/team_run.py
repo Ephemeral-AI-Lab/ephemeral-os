@@ -106,6 +106,7 @@ class TeamRun:
         # FileChangeStore for cross-run edit history. Defaults to NullFileChangeStore
         # (no-op) when PostgreSQL is unavailable. Caller replaces with real store.
         from team.persistence.file_change_store import NullFileChangeStore
+
         self.file_change_store: Any = NullFileChangeStore()
 
     # ---- lifecycle -------------------------------------------------------
@@ -120,6 +121,7 @@ class TeamRun:
         root_kind: str = "atomic",
     ) -> None:
         from team.models import Task, TaskStatus
+
         root = Task(
             id=str(uuid.uuid4()),
             team_run_id=self.id,
@@ -249,30 +251,6 @@ class TeamRun:
         self.cancel_event.set()
         await self.dispatcher.cancel_all_pending()
 
-    def note_validator_outcome(
-        self,
-        *,
-        task: "Task",
-        summary: str,
-    ) -> bool:
-        scope_paths = list(task.scope_paths)
-        return persist_memory_record(
-            project_key=self.project_context.project_key,
-            repo_root=self.project_context.repo_root,
-            kind="validation_outcome",
-            scope={"paths": scope_paths},
-            content={
-                "summary": summary,
-                "task_id": task.id,
-                "agent_name": task.agent_name,
-            },
-            source={
-                "team_run_id": self.id,
-                "task_id": task.id,
-                "agent": task.agent_name,
-            },
-        )
-
     def note_conflict_event(
         self,
         *,
@@ -401,9 +379,7 @@ class TeamRun:
 
         created = next((e for e in events if e.kind == "team_run_created"), None)
         if created is None:
-            raise ValueError(
-                f"event log for {team_run_id!r} missing team_run_created header"
-            )
+            raise ValueError(f"event log for {team_run_id!r} missing team_run_created header")
 
         services, run = build_resumed_run(
             team_run_cls=cls,

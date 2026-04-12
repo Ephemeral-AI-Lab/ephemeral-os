@@ -23,22 +23,9 @@ from tools.daytona_toolkit.lsp_tools import (
 )
 from tools.daytona_toolkit.codeact_tool import daytona_codeact
 
-from config.defaults import DEFAULT_TEAM_SAFE_AGENT_NAMES, DEFAULT_SANDBOX_CI_ROOT
+from config.defaults import DEFAULT_SANDBOX_CI_ROOT
 
 logger = logging.getLogger(__name__)
-
-_team_safe_agent_names: frozenset[str] = DEFAULT_TEAM_SAFE_AGENT_NAMES
-
-
-def set_team_safe_agent_names(names: frozenset[str]) -> None:
-    """Configure which agent names use team-safe (CodeAct) execution."""
-    global _team_safe_agent_names
-    _team_safe_agent_names = names
-
-
-def get_team_safe_agent_names() -> frozenset[str]:
-    """Return the current team-safe agent name set."""
-    return _team_safe_agent_names
 
 
 def _build_tools(*, include_codeact: bool) -> list[Any]:
