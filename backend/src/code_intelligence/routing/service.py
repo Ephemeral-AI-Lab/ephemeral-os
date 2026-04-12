@@ -91,7 +91,10 @@ class CodeIntelligenceService:
         self._init_lock = threading.Lock()
 
         self.tree_cache = TreeCache(on_change=self._on_tree_change)
-        self.symbol_index = SymbolIndex(workspace_root=workspace_root)
+        self.symbol_index = SymbolIndex(
+            workspace_root=workspace_root,
+            tree_cache=self.tree_cache,
+        )
         self.arbiter = Arbiter(workspace_root=workspace_root)
         self.time_machine = TimeMachine()
         self.patcher = Patcher()
