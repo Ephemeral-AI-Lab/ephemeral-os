@@ -758,14 +758,6 @@ async def run_subagent(
     subagent_scope_packet = validation.subagent_scope_packet
     subagent_scope_paths = validation.subagent_scope_paths
 
-    try:
-        posthook_cfg, posthook_def = resolve_posthook_definition(
-            sub_def,
-            agent_lookup=get_definition,
-        )
-    except PosthookMisconfigured as exc:
-        return ToolResult(output=str(exc), is_error=True)
-
     # Build the subagent's initial user message: shared_briefings preamble
     # (run-scoped, inherited symmetrically with the DAG executor path) + the
     # caller-supplied prompt or serialized input. Parent ``wi.briefings`` are
