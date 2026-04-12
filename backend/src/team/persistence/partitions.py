@@ -48,6 +48,7 @@ async def create_partitions(conn: AsyncConnection, run_id: str) -> None:
             f"PARTITION OF {table} FOR VALUES IN ('{run_id}')"
         )
         await conn.execute(text(ddl))
+        await _create_partition_indexes(conn, table, partition_name)
         logger.debug("Created partition %s for run %s", partition_name, run_id)
 
 
@@ -69,3 +70,38 @@ async def drop_partitions(conn: AsyncConnection, run_id: str) -> None:
         partition_name = f"{table}_{suffix}"
         await conn.execute(text(f"DROP TABLE IF EXISTS {partition_name}"))
         logger.debug("Dropped partition %s for run %s", partition_name, run_id)
+
+
+async def _create_partition_indexes(
+    conn: AsyncConnection,
+    table: str,
+    partition_name: str,
+) -> None:
+    if table == "task_notes":
+        statements = (
+            f"CREATE INDEX IF NOT EXISTS {partition_name}_task_id_idx "
+            f"ON {partition_name} (task_id)",
+            f"CREATE INDEX IF NOT EXISTS {partition_name}_scope_gist_idx "
+            f"ON {partition_name} USING GIST (scope_ltree)",
+            f"CREATE INDEX IF NOT EXISTS {partition_name}_created_brin_idx "
+            f"ON {partition_name} USING BRIN (created_at)",
+            f"CREATE INDEX IF NOT EXISTS {partition_name}_content_fts_idx "
+            f"ON {partition_name} USING GIN (to_tsvector('english', content))",
+        )
+    elif table == "file_changes":
+        statements = (
+            f"CREATE INDEX IF NOT EXISTS {partition_name}_path_gist_idx "
+            f"ON {partition_name} USING GIST (path_ltree)",
+            f"CREATE INDEX IF NOT EXISTS {partition_name}_created_brin_idx "
+            f"ON {partition_name} USING BRIN (created_at)",
+        )
+    else:
+        statements = (
+            f"CREATE INDEX IF NOT EXISTS {partition_name}_ready_idx "
+            f"ON {partition_name} (status, pending_dep_count, depth, created_at)",
+            f"CREATE INDEX IF NOT EXISTS {partition_name}_parent_idx "
+            f"ON {partition_name} (parent_id, status)",
+        )
+
+    for ddl in statements:
+        await conn.execute(text(ddl))

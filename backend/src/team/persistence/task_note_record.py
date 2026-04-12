@@ -8,11 +8,12 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import Text, DateTime
+from sqlalchemy import DateTime, Text
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from db.base import Base
+from team.persistence.pg_types import LTREE
 
 import uuid as _uuid
 
@@ -37,9 +38,8 @@ class TaskNoteRecord(Base):
     task_id: Mapped[str] = mapped_column(Text, nullable=False, index=True)
     agent_name: Mapped[str] = mapped_column(Text, nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    scope_ltree: Mapped[list[str]] = mapped_column(
-        ARRAY(Text), default=list
-    )
+    scope_paths: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)
+    scope_ltree: Mapped[list[str]] = mapped_column(ARRAY(LTREE()), default=list)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
     )

@@ -19,10 +19,12 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import DateTime, Float, String, Text, BigInteger, text
+from sqlalchemy import BigInteger, DateTime, Float, String, Text, text
 from sqlalchemy.orm import Mapped, Session, mapped_column, sessionmaker
 
 from db.base import Base
+from team.persistence.ltree_utils import path_to_ltree
+from team.persistence.pg_types import LTREE
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +46,7 @@ class FileChangeRecord(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     team_run_id: Mapped[str] = mapped_column(String(64), index=True)
     file_path: Mapped[str] = mapped_column(Text, nullable=False)
+    path_ltree: Mapped[str] = mapped_column(LTREE(), nullable=False)
     agent_id: Mapped[str] = mapped_column(String(64), nullable=False)
     agent_run_id: Mapped[str] = mapped_column(String(64), default="")
     edit_type: Mapped[str] = mapped_column(String(32), default="edit")
@@ -114,6 +117,7 @@ class FileChangeStore:
         record = FileChangeRecord(
             team_run_id=team_run_id,
             file_path=file_path,
+            path_ltree=path_to_ltree(file_path),
             agent_id=agent_id,
             agent_run_id=agent_run_id,
             edit_type=edit_type,
@@ -137,26 +141,22 @@ class FileChangeStore:
         if not scope_prefixes:
             return []
         with self._sf() as session:
-            # Build OR conditions for prefix matching
-            conditions = " OR ".join(
-                f"file_path LIKE :prefix_{i}" for i in range(len(scope_prefixes))
-            )
             params: dict[str, Any] = {
                 "run_id": team_run_id,
-                "since": since,
+                "since": datetime.fromtimestamp(since, tz=timezone.utc),
+                "scopes": [path_to_ltree(prefix.rstrip("/")) for prefix in scope_prefixes],
             }
-            for i, prefix in enumerate(scope_prefixes):
-                params[f"prefix_{i}"] = prefix.rstrip("/") + "%"
 
             result = session.execute(
-                text(f"""
+                text("""
                     SELECT id, team_run_id, file_path, agent_id, agent_run_id,
-                           edit_type, old_hash, new_hash, description, timestamp, created_at
+                           path_ltree, edit_type, old_hash, new_hash,
+                           description, timestamp, created_at
                     FROM file_changes
                     WHERE team_run_id = :run_id
-                      AND timestamp > :since
-                      AND ({conditions})
-                    ORDER BY timestamp DESC
+                      AND created_at > :since
+                      AND path_ltree <@ ANY(:scopes::ltree[])
+                    ORDER BY created_at DESC
                 """),
                 params,
             )
@@ -186,20 +186,18 @@ class FileChangeStore:
         if not scope_prefixes:
             return []
         with self._sf() as session:
-            conditions = " OR ".join(
-                f"file_path LIKE :prefix_{i}" for i in range(len(scope_prefixes))
-            )
-            params: dict[str, Any] = {"lim": limit}
-            for i, prefix in enumerate(scope_prefixes):
-                params[f"prefix_{i}"] = prefix.rstrip("/") + "%"
+            params: dict[str, Any] = {
+                "lim": limit,
+                "scopes": [path_to_ltree(prefix.rstrip("/")) for prefix in scope_prefixes],
+            }
 
             result = session.execute(
-                text(f"""
+                text("""
                     SELECT file_path,
                            COUNT(DISTINCT agent_id) AS agent_count,
                            COUNT(*) AS edit_count
                     FROM file_changes
-                    WHERE {conditions}
+                    WHERE path_ltree <@ ANY(:scopes::ltree[])
                     GROUP BY file_path
                     HAVING COUNT(DISTINCT agent_id) > 1
                     ORDER BY agent_count DESC, edit_count DESC
@@ -223,6 +221,7 @@ class FileChangeStore:
             id=row.id,
             team_run_id=row.team_run_id,
             file_path=row.file_path,
+            path_ltree=row.path_ltree,
             agent_id=row.agent_id,
             agent_run_id=row.agent_run_id,
             edit_type=row.edit_type,

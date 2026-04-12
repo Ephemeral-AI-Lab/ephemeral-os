@@ -2,6 +2,7 @@
 -- Run once during bootstrap. Partitions are created per-run by partitions.py.
 
 CREATE EXTENSION IF NOT EXISTS ltree;
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- Task Center backing store
 CREATE TABLE IF NOT EXISTS task_notes (
@@ -10,6 +11,7 @@ CREATE TABLE IF NOT EXISTS task_notes (
     task_id     TEXT NOT NULL,
     agent_name  TEXT NOT NULL,
     content     TEXT NOT NULL,
+    scope_paths TEXT[] DEFAULT '{}',
     scope_ltree ltree[] DEFAULT '{}',
     created_at  TIMESTAMPTZ DEFAULT NOW(),
     PRIMARY KEY (id, team_run_id)
@@ -22,9 +24,12 @@ CREATE TABLE IF NOT EXISTS file_changes (
     file_path   TEXT NOT NULL,
     path_ltree  ltree NOT NULL DEFAULT '',
     agent_id    TEXT NOT NULL,
+    agent_run_id TEXT DEFAULT '',
     edit_type   TEXT DEFAULT 'edit',
     old_hash    TEXT DEFAULT '',
     new_hash    TEXT DEFAULT '',
+    description TEXT DEFAULT '',
+    timestamp   DOUBLE PRECISION DEFAULT EXTRACT(EPOCH FROM NOW()),
     created_at  TIMESTAMPTZ DEFAULT NOW(),
     PRIMARY KEY (id, team_run_id)
 ) PARTITION BY LIST (team_run_id);
