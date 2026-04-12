@@ -26,12 +26,6 @@ class ToolkitCatalogEntry:
 
 
 def _snapshot_contexts(factory_name: str) -> list[ToolkitContext]:
-    if factory_name == "submission":
-        return [
-            ToolkitContext(metadata={"role": "planner"}),
-            ToolkitContext(metadata={"role": "replanner"}),
-            ToolkitContext(metadata={"role": "developer"}),
-        ]
     return [ToolkitContext()]
 
 

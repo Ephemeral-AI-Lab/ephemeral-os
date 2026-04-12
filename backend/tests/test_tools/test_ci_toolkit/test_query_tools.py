@@ -16,7 +16,6 @@ from tools.ci_toolkit.query_tools import (
     ci_query_symbols,
     ci_query_references,
     ci_edit_hotspots,
-    ci_recent_changes,
 )
 
 
@@ -711,12 +710,13 @@ async def test_edit_hotspots_no_arbiter():
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
         result = await ci_edit_hotspots.execute(ci_edit_hotspots.input_model(), _ctx_with_svc(svc))
 
-    assert "Arbiter not available" in result.output
+    assert "FileChangeStore not available" in result.output
 
 
 async def test_edit_hotspots_no_results():
     svc = MagicMock()
-    svc.arbiter.hotspots.return_value = []
+    svc.arbiter.file_change_store.initialized = True
+    svc.arbiter.file_change_store.hotspots.return_value = []
 
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
         result = await ci_edit_hotspots.execute(ci_edit_hotspots.input_model(), _ctx_with_svc(svc))
@@ -726,7 +726,8 @@ async def test_edit_hotspots_no_results():
 
 async def test_edit_hotspots_returns_results():
     svc = MagicMock()
-    svc.arbiter.hotspots.return_value = [
+    svc.arbiter.file_change_store.initialized = True
+    svc.arbiter.file_change_store.hotspots.return_value = [
         ("src/hot.py", 15),
         ("src/warm.py", 7),
     ]
@@ -741,60 +742,6 @@ async def test_edit_hotspots_returns_results():
     assert len(items) == 2
     assert items[0]["file"] == "src/hot.py"
     assert items[0]["edit_count"] == 15
-    svc.arbiter.hotspots.assert_called_once_with(limit=5)
+    svc.arbiter.file_change_store.hotspots.assert_called_once_with(limit=5)
 
 
-# ---------------------------------------------------------------------------
-# ci_recent_changes
-# ---------------------------------------------------------------------------
-
-
-async def test_recent_changes_no_service():
-    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=None):
-        result = await ci_recent_changes.execute(ci_recent_changes.input_model(), _ctx())
-    data = json.loads(result.output)
-    assert data["status"] == "unavailable"
-
-
-async def test_recent_changes_no_arbiter():
-    svc = MagicMock()
-    svc.arbiter = None
-
-    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
-        result = await ci_recent_changes.execute(
-            ci_recent_changes.input_model(), _ctx_with_svc(svc)
-        )
-
-    assert "Arbiter not available" in result.output
-
-
-async def test_recent_changes_no_files():
-    svc = MagicMock()
-    svc.arbiter.recent_edits.return_value = []
-
-    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
-        result = await ci_recent_changes.execute(
-            ci_recent_changes.input_model(seconds=30.0), _ctx_with_svc(svc)
-        )
-
-    assert "No files changed" in result.output
-    assert "30.0s" in result.output
-
-
-async def test_recent_changes_returns_files():
-    svc = MagicMock()
-    svc.arbiter.recent_edits.return_value = [
-        {"file_path": "src/a.py"},
-        {"file_path": "src/b.py"},
-    ]
-
-    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
-        result = await ci_recent_changes.execute(
-            ci_recent_changes.input_model(seconds=120.0), _ctx_with_svc(svc)
-        )
-
-    assert not result.is_error
-    files = json.loads(result.output)
-    assert "src/a.py" in files
-    assert "src/b.py" in files
-    svc.arbiter.recent_edits.assert_called_once_with(seconds=120.0)

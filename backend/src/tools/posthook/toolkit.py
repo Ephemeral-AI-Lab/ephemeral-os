@@ -1,4 +1,4 @@
-"""Submission toolkit — terminal actions for team-mode agents."""
+"""Posthook toolkit — terminal submission actions for team-mode agents."""
 
 from __future__ import annotations
 
@@ -49,51 +49,17 @@ async def _check_context_freshness(
     Returns a warning string if context is stale, otherwise empty string.
     This is called before submission to attach staleness metadata.
     """
-    import json
+    from tools.context.freshness import check_freshness
 
-    since = context.metadata.get("work_item_started_at", 0)
-    task_id = context.metadata.get("work_item_id", "")
-    agent_run_id = context.metadata.get("agent_run_id", "")
-
-    scope_changes = 0
-    new_dep_notes = 0
-    new_sibling_completions = 0
-
-    arbiter = context.metadata.get("arbiter")
-    scope_paths = context.metadata.get("write_scope") or []
-    if arbiter is not None and scope_paths:
-        changes = arbiter.changes_since(since)
-        scope_changes = sum(
-            1
-            for e in changes
-            if e.agent_id != agent_run_id
-            and any(e.file_path.startswith(p.rstrip("/")) for p in scope_paths)
-        )
-
-    tc = context.metadata.get("task_center")
-    dispatcher = context.metadata.get("dispatcher")
-    if tc is not None:
-        task_deps = set(context.metadata.get("task_deps", []))
-        if task_deps:
-            dep_notes = await tc.read(authors=list(task_deps), since=since)
-            new_dep_notes = len(dep_notes)
-    if dispatcher is not None and hasattr(dispatcher, "done_sibling_ids"):
-        sibling_ids = await dispatcher.done_sibling_ids(
-            task_id=task_id,
-            parent_id=context.metadata.get("task_parent_id"),
-            since=since,
-        )
-        new_sibling_completions = len(sibling_ids)
-
-    stale = scope_changes > 0 or new_dep_notes > 0 or new_sibling_completions > 0
-    if not stale:
+    report = await check_freshness(context)
+    if not report.stale:
         return ""
 
     return (
         f"\n\n[FRESHNESS WARNING] Your context may be stale since task started. "
-        f"Scope changes by others: {scope_changes}, "
-        f"New dependency notes: {new_dep_notes}, "
-        f"New sibling completions: {new_sibling_completions}. "
+        f"Scope changes by others: {report.scope_changes_by_others}, "
+        f"New dependency notes: {report.new_dep_notes}, "
+        f"New sibling completions: {report.new_sibling_completions}. "
         f"Consider re-reading affected files before submitting."
     )
 
@@ -172,7 +138,12 @@ def _note_budget_issues(
 class DoneInput(BaseModel):
     summary: str = Field(
         ...,
-        description="1-3 sentence summary of what you accomplished.",
+        description=(
+            "1-3 sentence summary of what you accomplished, followed by: "
+            "what public interface you exposed (functions, classes, endpoints), "
+            "any breaking changes to existing contracts, "
+            "and new dependencies other agents should know about."
+        ),
         min_length=1,
     )
 
@@ -375,15 +346,17 @@ class SubmitReplanTool(BaseTool):
 
 
 # ---------------------------------------------------------------------------
-# SubmissionToolkit
+# PosthookToolkit
 # ---------------------------------------------------------------------------
 
 
-class SubmissionToolkit(BaseToolkit):
+class PosthookToolkit(BaseToolkit):
     """Role-aware toolkit that exposes the appropriate terminal submission tools."""
 
+    posthook = True
+
     @classmethod
-    def from_context(cls, ctx: object) -> SubmissionToolkit:
+    def from_context(cls, ctx: object) -> PosthookToolkit:
         from agents.registry import get_role
 
         metadata = getattr(ctx, "metadata", {}) or {}  # type: ignore[union-attr]
@@ -399,7 +372,7 @@ class SubmissionToolkit(BaseToolkit):
         else:
             tools = [SubmitSummaryTool(), RequestRetryTool(), RequestReplanTool()]
         return cls(
-            name="submission",
-            description="Terminal submission actions for the current agent role.",
+            name="posthook",
+            description="Posthook submission tools for the current agent role.",
             tools=tools,
         )

@@ -9,6 +9,11 @@ from pydantic import AliasChoices, BaseModel, Field, field_validator
 #: Valid effort level strings.
 EFFORT_LEVELS: tuple[str, ...] = ("low", "medium", "high")
 
+#: Toolkit names that must not appear in the ``toolkits`` list.
+#: Posthook/submission tools are registered via the ``posthook`` field
+#: and managed by the query loop's posthook phase.
+_RESERVED_TOOLKIT_NAMES: frozenset[str] = frozenset({"posthook", "submission"})
+
 
 class AgentDefinition(BaseModel):
     """Full agent definition with all configuration fields."""
@@ -40,6 +45,19 @@ class AgentDefinition(BaseModel):
     # --- skills & toolkits ---
     skills: list[str] = Field(default_factory=list)
     toolkits: list[str] = Field(default_factory=list)
+    blocked_tools: list[str] = Field(
+        default_factory=list,
+        validation_alias=AliasChoices("blocked_tools", "blockedTools"),
+        description="Tool names to remove after toolkit assembly. Use for role-based restrictions.",
+    )
+
+    # --- posthook ---
+    # Tool names the agent must call after its main submission (done /
+    # submit_plan). When non-empty the query loop enters a posthook phase
+    # with the tool registry restricted to these names and nudges the LLM
+    # until at least one is called.  The posthook_prompt metadata field
+    # provides the steering user message for this phase.
+    posthook: list[str] = Field(default_factory=list)
 
     # --- hooks ---
     hooks: dict[str, Any] | None = None
@@ -98,11 +116,22 @@ class AgentDefinition(BaseModel):
 
     model_config = {"populate_by_name": True, "arbitrary_types_allowed": True}
 
-    @field_validator("skills", "toolkits", "permissions", mode="before")
+    @field_validator("skills", "toolkits", "permissions", "blocked_tools", "posthook", mode="before")
     @classmethod
     def _split_csv(cls, v: Any) -> Any:
         if isinstance(v, str):
             return [s.strip() for s in v.split(",") if s.strip()]
+        return v
+
+    @field_validator("toolkits", mode="after")
+    @classmethod
+    def _reject_reserved_toolkits(cls, v: list[str]) -> list[str]:
+        bad = [name for name in v if name in _RESERVED_TOOLKIT_NAMES]
+        if bad:
+            raise ValueError(
+                f"Toolkit(s) {bad} cannot be listed in 'toolkits'. "
+                f"Use the 'posthook' field instead."
+            )
         return v
 
     @field_validator("tool_call_limit", mode="before")

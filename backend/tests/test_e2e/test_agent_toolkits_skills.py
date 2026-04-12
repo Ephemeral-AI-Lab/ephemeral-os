@@ -40,9 +40,9 @@ class TestInfrastructure:
         assert "model" in data["state"]
         assert data["toolkits"] is not None
         toolkits = {entry["name"]: entry["tools"] for entry in data["toolkits"]}
-        assert "submission" in toolkits
-        assert "submit_plan" in toolkits["submission"]
-        assert "submit_replan" in toolkits["submission"]
+        # Submission tools are no longer a factory-registered toolkit —
+        # they are registered individually via agent_def.posthook.
+        assert "submission" not in toolkits
         assert "skills" in toolkits
         assert "background" in toolkits
 

@@ -9,7 +9,7 @@ from team.builtins import register_all as register_team_builtins
 from team.models import BudgetConfig, BudgetState, Task, TaskStatus
 from team.runtime.context_builder import build_work_item_metadata
 from tools.core.base import ToolExecutionContext
-from tools.submission.toolkit import SubmitPlanTool
+from tools.posthook.toolkit import SubmitPlanTool
 
 
 if get_definition("developer") is None:

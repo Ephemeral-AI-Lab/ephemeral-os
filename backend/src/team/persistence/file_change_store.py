@@ -16,10 +16,10 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from sqlalchemy import BigInteger, DateTime, Float, String, Text, text
+from sqlalchemy import BigInteger, DateTime, String, Text, text
 from sqlalchemy.orm import Mapped, Session, mapped_column, sessionmaker
 
 from db.base import Base
@@ -53,7 +53,6 @@ class FileChangeRecord(Base):
     old_hash: Mapped[str] = mapped_column(String(64), default="")
     new_hash: Mapped[str] = mapped_column(String(64), default="")
     description: Mapped[str] = mapped_column(Text, default="")
-    timestamp: Mapped[float] = mapped_column(Float, default=time.time)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
     )
@@ -124,7 +123,6 @@ class FileChangeStore:
             old_hash=old_hash,
             new_hash=new_hash,
             description=description,
-            timestamp=time.time(),
         )
         with self._sf() as session:
             session.add(record)
@@ -151,7 +149,7 @@ class FileChangeStore:
                 text("""
                     SELECT id, team_run_id, file_path, agent_id, agent_run_id,
                            path_ltree, edit_type, old_hash, new_hash,
-                           description, timestamp, created_at
+                           description, created_at
                     FROM file_changes
                     WHERE team_run_id = :run_id
                       AND created_at > :since
@@ -175,20 +173,126 @@ class FileChangeStore:
             changes = [c for c in changes if c.agent_run_id != exclude_run_id]
         return changes
 
+    def changes_since(
+        self,
+        since: float,
+        team_run_id: str | None = None,
+    ) -> list[FileChangeRecord]:
+        """Return all file changes after *since* (epoch float).
+
+        Uses the composite index (team_run_id, created_at DESC).
+        """
+        with self._sf() as session:
+            since_dt = datetime.fromtimestamp(since, tz=timezone.utc)
+            params: dict[str, Any] = {"since": since_dt}
+            if team_run_id is not None:
+                params["run_id"] = team_run_id
+                query = text("""
+                    SELECT id, team_run_id, file_path, agent_id, agent_run_id,
+                           path_ltree, edit_type, old_hash, new_hash,
+                           description, created_at
+                    FROM file_changes
+                    WHERE created_at > :since AND team_run_id = :run_id
+                    ORDER BY created_at ASC
+                """)
+            else:
+                query = text("""
+                    SELECT id, team_run_id, file_path, agent_id, agent_run_id,
+                           path_ltree, edit_type, old_hash, new_hash,
+                           description, created_at
+                    FROM file_changes
+                    WHERE created_at > :since
+                    ORDER BY created_at ASC
+                """)
+            result = session.execute(query, params)
+            return [self._row_to_record(row) for row in result.fetchall()]
+
+    def recent_edits(
+        self,
+        seconds: float = 60.0,
+        team_run_id: str | None = None,
+    ) -> list[FileChangeRecord]:
+        """Return all file changes in the last *seconds*."""
+        since = time.time() - seconds
+        return self.changes_since(since, team_run_id=team_run_id)
+
+    def hotspots(
+        self,
+        limit: int = 10,
+        team_run_id: str | None = None,
+    ) -> list[tuple[str, int]]:
+        """Return top files by edit count."""
+        with self._sf() as session:
+            params: dict[str, Any] = {"lim": limit}
+            if team_run_id is not None:
+                params["run_id"] = team_run_id
+                query = text("""
+                    SELECT file_path, COUNT(*) AS edit_count
+                    FROM file_changes
+                    WHERE team_run_id = :run_id
+                    GROUP BY file_path
+                    ORDER BY edit_count DESC
+                    LIMIT :lim
+                """)
+            else:
+                query = text("""
+                    SELECT file_path, COUNT(*) AS edit_count
+                    FROM file_changes
+                    GROUP BY file_path
+                    ORDER BY edit_count DESC
+                    LIMIT :lim
+                """)
+            result = session.execute(query, params)
+            return [(row.file_path, row.edit_count) for row in result.fetchall()]
+
+    def who_changed(
+        self,
+        file_path: str,
+        team_run_id: str | None = None,
+    ) -> list[FileChangeRecord]:
+        """Return all edit records for a specific file."""
+        with self._sf() as session:
+            params: dict[str, Any] = {"fp": file_path}
+            if team_run_id is not None:
+                params["run_id"] = team_run_id
+                query = text("""
+                    SELECT id, team_run_id, file_path, agent_id, agent_run_id,
+                           path_ltree, edit_type, old_hash, new_hash,
+                           description, created_at
+                    FROM file_changes
+                    WHERE file_path = :fp AND team_run_id = :run_id
+                    ORDER BY created_at ASC
+                """)
+            else:
+                query = text("""
+                    SELECT id, team_run_id, file_path, agent_id, agent_run_id,
+                           path_ltree, edit_type, old_hash, new_hash,
+                           description, created_at
+                    FROM file_changes
+                    WHERE file_path = :fp
+                    ORDER BY created_at ASC
+                """)
+            result = session.execute(query, params)
+            return [self._row_to_record(row) for row in result.fetchall()]
+
     def contention_hotspots(
         self,
         scope_prefixes: list[str],
         limit: int = 10,
+        days: int = 7,
     ) -> list[ContentionHotspot]:
         """Cross-run contention hotspots: files edited by many agents.
 
-        Used by planner's query_edit_history tool to predict conflicts."""
+        Used by planner's query_edit_history tool to predict conflicts.
+        Only considers edits from the last *days* to avoid full table scans.
+        """
         if not scope_prefixes:
             return []
         with self._sf() as session:
             params: dict[str, Any] = {
                 "lim": limit,
                 "scopes": [path_to_ltree(prefix.rstrip("/")) for prefix in scope_prefixes],
+                "cutoff": _utcnow() - timedelta(days=days),
             }
 
             result = session.execute(
@@ -198,6 +302,7 @@ class FileChangeStore:
                            COUNT(*) AS edit_count
                     FROM file_changes
                     WHERE path_ltree <@ ANY(:scopes::ltree[])
+                      AND created_at > :cutoff
                     GROUP BY file_path
                     HAVING COUNT(DISTINCT agent_id) > 1
                     ORDER BY agent_count DESC, edit_count DESC
@@ -223,12 +328,11 @@ class FileChangeStore:
             file_path=row.file_path,
             path_ltree=row.path_ltree,
             agent_id=row.agent_id,
-            agent_run_id=row.agent_run_id,
+            agent_run_id=getattr(row, "agent_run_id", ""),
             edit_type=row.edit_type,
-            old_hash=row.old_hash,
-            new_hash=row.new_hash,
-            description=row.description,
-            timestamp=row.timestamp,
+            old_hash=getattr(row, "old_hash", ""),
+            new_hash=getattr(row, "new_hash", ""),
+            description=getattr(row, "description", ""),
             created_at=row.created_at,
         )
 
@@ -245,6 +349,18 @@ class NullFileChangeStore:
 
     def record(self, **kwargs: Any) -> None:
         pass
+
+    def changes_since(self, *args: Any, **kwargs: Any) -> list:
+        return []
+
+    def recent_edits(self, *args: Any, **kwargs: Any) -> list:
+        return []
+
+    def hotspots(self, *args: Any, **kwargs: Any) -> list:
+        return []
+
+    def who_changed(self, *args: Any, **kwargs: Any) -> list:
+        return []
 
     def changes_in_scope(self, *args: Any, **kwargs: Any) -> list:
         return []

@@ -343,7 +343,6 @@ class TestCodeIntelligenceDeep:
             "lsp",
             "symbol_index",
             "arbiter",
-            "ledger",
         }
         missing = required_keys - set(status.keys())
         assert not missing, f"CI status missing keys: {missing}. Got: {set(status.keys())}"
@@ -371,7 +370,7 @@ class TestCodeIntelligenceDeep:
             "lsp_query_count",
             "lsp_cache_hits",
             "arbiter_active_edits",
-            "ledger_entry_count",
+            "total_edits",
         ]
         for field in int_fields:
             val = getattr(tel, field)

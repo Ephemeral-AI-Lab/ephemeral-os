@@ -90,7 +90,18 @@ class CodeIntelligenceService:
         self._init_lock = threading.Lock()
 
         self.symbol_index = SymbolIndex(workspace_root=workspace_root)
-        self.arbiter = Arbiter(workspace_root=workspace_root)
+
+        # Wire FileChangeStore into the Arbiter for durable edit history.
+        from team.persistence.file_change_store import FileChangeStore, NullFileChangeStore
+        from db.engine import get_session_factory
+        sf = get_session_factory()
+        if sf is not None:
+            _fcs = FileChangeStore()
+            _fcs.initialize(sf)
+        else:
+            _fcs = NullFileChangeStore()
+        self.arbiter = Arbiter(workspace_root=workspace_root, file_change_store=_fcs)
+
         self.time_machine = TimeMachine()
         self.patcher = Patcher()
         self.lsp_client = LspClient(workspace_root=workspace_root, sandbox=sandbox)
@@ -438,33 +449,36 @@ class CodeIntelligenceService:
         """Return the authoritative live coordination snapshot for *scope_paths*."""
         normalized = normalize_scope_paths(scope_paths)
         recent_changes = []
-        for entry in self.arbiter.recent_edits(recent_seconds):
-            file_path = str(entry.file_path or "")
-            if normalized and not any(
-                scope_paths_overlap(file_path, scope) for scope in normalized
-            ):
-                continue
-            recent_changes.append(
-                {
-                    "file_path": file_path,
-                    "agent_id": str(entry.agent_id or ""),
-                    "timestamp": float(entry.timestamp or 0.0),
-                    "edit_type": str(entry.edit_type or ""),
-                }
-            )
+        store = self.arbiter.file_change_store
+        if store is not None and getattr(store, "initialized", False):
+            for entry in store.recent_edits(seconds=recent_seconds):
+                fp = str(entry.file_path or "")
+                if normalized and not any(
+                    scope_paths_overlap(fp, scope) for scope in normalized
+                ):
+                    continue
+                recent_changes.append(
+                    {
+                        "file_path": fp,
+                        "agent_id": str(entry.agent_id or ""),
+                        "timestamp": entry.created_at.timestamp() if entry.created_at else 0.0,
+                        "edit_type": str(entry.edit_type or ""),
+                    }
+                )
         recent_changes.sort(key=lambda item: (item["file_path"], item["timestamp"]))
         active_reservations = self.arbiter.active_reservations(normalized)
         active_edit_intents = self.arbiter.active_edit_intents(normalized)
         hotspots = []
-        for file_path, count in self.arbiter.hotspots(limit=25):
-            file_path = str(file_path)
-            if normalized and not any(
-                scope_paths_overlap(file_path, scope) for scope in normalized
-            ):
-                continue
-            hotspots.append({"file_path": file_path, "edit_count": int(count)})
-            if len(hotspots) >= 10:
-                break
+        if store is not None and getattr(store, "initialized", False):
+            for fp, count in store.hotspots(limit=25):
+                fp = str(fp)
+                if normalized and not any(
+                    scope_paths_overlap(fp, scope) for scope in normalized
+                ):
+                    continue
+                hotspots.append({"file_path": fp, "edit_count": int(count)})
+                if len(hotspots) >= 10:
+                    break
 
         return {
             "scope_paths": normalized,
@@ -494,7 +508,7 @@ class CodeIntelligenceService:
             },
             "arbiter": self.arbiter.status(),
             "edit_buffer": {
-                "entries": self.arbiter.edit_count,
+                "entries": self.arbiter.metrics.total_edits,
                 "generation": self.arbiter.generation,
             },
             "lsp": {
@@ -515,7 +529,7 @@ class CodeIntelligenceService:
             lsp_query_count=lsp_tel.queries,
             lsp_cache_hits=lsp_tel.cache_hits,
             arbiter_active_edits=self.arbiter.active_edit_count,
-            ledger_entry_count=self.arbiter.edit_count,
+            total_edits=self.arbiter.metrics.total_edits,
         )
 
     # -- Cleanup --------------------------------------------------------------

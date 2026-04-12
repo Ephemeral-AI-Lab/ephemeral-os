@@ -90,11 +90,11 @@ class Executor:
         decides whether to proceed or request_replan()."""
         if not task.scope_paths:
             return
-        arbiter = getattr(self.team_run, "arbiter", None)
-        if arbiter is None:
+        store = getattr(self.team_run, "file_change_store", None)
+        if store is None or not getattr(store, "initialized", False):
             return
         created_ts = task.created_at.timestamp() if task.created_at else 0.0
-        changes = arbiter.changes_since(created_ts)
+        changes = store.changes_since(created_ts)
         # Filter to scope and exclude changes by this task's own agent run
         external = [
             e for e in changes
@@ -108,7 +108,7 @@ class Executor:
                  "The following files in your scope were modified externally:"]
         for e in external:
             lines.append(f"- {e.file_path} ({e.edit_type} by {e.agent_id}, "
-                         f"{int(now - e.timestamp)}s ago)")
+                         f"{int(now - e.created_at.timestamp())}s ago)")
         lines.append("Review these changes before proceeding. "
                       "Call request_replan() if your task is no longer valid.")
         from team.models import Note

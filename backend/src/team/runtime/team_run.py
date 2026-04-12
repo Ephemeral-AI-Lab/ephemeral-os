@@ -99,15 +99,13 @@ class TeamRun:
         )
         # Wire TaskCenter into dispatcher for cascade "continue" note injection
         self.dispatcher.task_center = self.task_center
-        # Optional Arbiter reference for file-change awareness in context_for().
-        # Set by the caller if CodeIntelligenceService is available.
-        # Arbiter.changes_since() provides the in-memory hot path for recent edits.
-        self.arbiter: Any = None
-        # FileChangeStore for cross-run edit history. Defaults to NullFileChangeStore
-        # (no-op) when PostgreSQL is unavailable. Caller replaces with real store.
+        # FileChangeStore for edit history. Falls back to NullFileChangeStore
+        # (no-op) when PostgreSQL is unavailable.
         from team.persistence.file_change_store import NullFileChangeStore
 
-        self.file_change_store: Any = NullFileChangeStore()
+        self.file_change_store: Any = (
+            getattr(runtime_services, "file_change_store", None) or NullFileChangeStore()
+        )
 
     # ---- lifecycle -------------------------------------------------------
 

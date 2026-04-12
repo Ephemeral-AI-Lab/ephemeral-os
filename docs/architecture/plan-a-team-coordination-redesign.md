@@ -1,6 +1,6 @@
 # Plan A: Team Coordination Redesign — Task Center Architecture
 
-**Status:** PLAN ONLY — Do not implement  
+**Status:** IMPLEMENTED — Updated 2026-04-13 to reflect final implementation decisions  
 **Date:** 2026-04-12  
 **Branch:** `codex/pydantic-benchmark-loop`  
 **Author:** Architecture session  
@@ -288,24 +288,31 @@ class TaskCenter:
     """Append-only shared context log. Replaces ProjectContext,
     InMemoryArtifactStore, and 3-tier briefing system.
 
-    PostgreSQL is the single source of truth. All writes go to PG via
-    NoteStore. Reads query PG through the same store. No in-memory
-    shadow list — one store, one truth, zero consistency gaps."""
+    PostgreSQL is the source of truth when a NoteStore is attached.
+    All writes go to PG via NoteStore. Reads query PG through the
+    same store. An in-memory fallback list is retained for no-PG mode
+    (tests, local dev without PostgreSQL)."""
 
-    def __init__(self, note_store: NoteStore, team_run_id: str,
-                 goal: str = "", user_request: str = ""):
+    def __init__(self, goal: str = "", user_request: str = "",
+                 note_store: NoteStore | None = None,
+                 team_run_id: str = ""):
+        self._notes: list[Note] = []          # fallback for no-PG mode
         self._note_store = note_store
         self._team_run_id = team_run_id
         self.goal = goal
         self.user_request = user_request
 
     async def post(self, note: Note) -> None:
-        """Insert a note into PostgreSQL. Awaited — the note is visible
-        to all processes and to search_context immediately on return."""
+        """Insert a note. When PG-backed, writes to NoteStore (awaited).
+        Otherwise appends to the in-memory fallback list."""
+        if not self._store_backed():
+            self._notes.append(note)
+            return
         record = TaskNoteRecord(
             id=uuid.UUID(note.id), team_run_id=self._team_run_id,
             task_id=note.task_id, agent_name=note.agent_name,
             content=note.content,
+            scope_paths=list(note.scope_paths) if note.scope_paths else [],
             scope_ltree=[path_to_ltree(p) for p in note.scope_paths] if note.scope_paths else [])
         await self._note_store.insert(record)
 
@@ -314,23 +321,36 @@ class TaskCenter:
                    scope_paths: list[str] | None = None,
                    since: float | None = None,
                    limit: int | None = None) -> list[Note]:
-        """Query notes from PostgreSQL. All filtering happens in SQL
-        (ltree for scope, tsvector for search, B-tree for authors)."""
-        return await self._note_store.query(
-            run_id=self._team_run_id,
-            task_ids=authors,
-            scope_ltrees=[path_to_ltree(p) for p in scope_paths] if scope_paths else None,
-            since=since, limit=limit)
+        """Query notes. PG-backed: delegates to NoteStore.query().
+        No-PG: filters the in-memory list."""
+        if self._store_backed():
+            records = await self._note_store.query(
+                self._team_run_id, task_ids=authors,
+                scope_paths=scope_paths, since=since, limit=limit)
+            return [self._note_from_record(r) for r in records]
+        # In-memory fallback (no PG)
+        results = list(self._notes)
+        if authors:
+            results = [n for n in results if n.task_id in set(authors)]
+        if scope_paths:
+            results = [n for n in results if self._matches_scope(n.scope_paths, scope_paths)]
+        if since is not None:
+            results = [n for n in results if n.timestamp >= since]
+        if limit is not None and limit > 0:
+            results = results[-limit:]
+        return results
 
-    async def context_for(self, task: Task,
-                          ledger: 'Ledger', budget_config: 'BudgetConfig',
+    async def context_for(self, task: Task, *,
+                          file_change_store: Any | None = None,
+                          task_lookup: Callable[[str], Awaitable['Task | None']] | None = None,
                           max_context_bytes: int = 200_000) -> str:
         """Build context string for a task. Fixed priority order:
-        task (never trimmed) → deps → ledger → parent.
-        All reads go to PG via NoteStore — no in-memory graph needed.
+        task (never trimmed) → deps → file changes (FileChangeStore) → parent.
         Implementation in Section 8.2."""
         ...
 ```
+
+**Implementation note — FileChangeStore replaces Arbiter parameter:** The original design specified an `Arbiter` object for file change awareness. The implementation passes `file_change_store` instead — the durable `FileChangeStore` (sync SQLAlchemy, backed by the `file_changes` table) provides cross-process visibility and crash recovery, while the Arbiter's in-memory ring buffer is limited to the current process. The `task_lookup` callable replaces the raw `pool` parameter for parent chain walks — cleaner than inline SQL.
 
 **Multi-process consistency:** PostgreSQL is the single source of truth. Notes written by process A are immediately visible to process B — no hydration step, no sync protocol. `context_for()` and `search_context` both read from the same `task_notes` table, so they always agree on note visibility. The append-only table and `BRIN` index on `created_at` make reads cheap even under high write concurrency.
 
@@ -710,7 +730,7 @@ Agents need three kinds of context. Each comes from the right source:
 | Need | Source | Mechanism |
 |------|--------|-----------|
 | What upstream produced | Task Center | Dep filter: notes from dependency tasks |
-| What changed in my files | Ledger | `changes_since()`: actual file edits in scope |
+| What changed in my files | Arbiter | `arbiter.changes_since()`: actual file edits in scope (Arbiter owns the edit ring buffer) |
 | Why this task exists | Task Center | Parent chain: walk parent_id up to root |
 
 No sibling tag filtering. No dedup machinery. No canonical scopes.
@@ -720,15 +740,16 @@ No sibling tag filtering. No dedup machinery. No canonical scopes.
 ### 8.2 Context Rendering
 
 ```python
-async def context_for(self, task: Task, pool: asyncpg.Pool,
-                      ledger: Ledger, budget_config: BudgetConfig,
+async def context_for(self, task: Task, *,
+                      file_change_store: Any | None = None,
+                      task_lookup: Callable[[str], Awaitable['Task | None']] | None = None,
                       max_context_bytes: int = 200_000) -> str:
     """Build context string for a task. Fixed priority order:
-    task (never trimmed) → deps → ledger → parent.
+    task (never trimmed) → deps → file changes (FileChangeStore) → parent.
 
-    Takes a connection pool instead of an in-memory graph — the
-    PGDispatcher has no in-memory DAG state, so dep notes and
-    parent chain are fetched from PostgreSQL on demand."""
+    Uses FileChangeStore.changes_since() for file change awareness (durable,
+    cross-process visible via PG). task_lookup resolves parent chain via
+    callable instead of raw SQL pool."""
     budget = max_context_bytes
     sections = []
 
@@ -743,21 +764,29 @@ async def context_for(self, task: Task, pool: asyncpg.Pool,
     # Direct deps only -- not transitive. If A → B → C, C sees B's
     # notes but not A's. Transitive inclusion would explode context
     # size and duplicate information (B already incorporated A's output).
-    dep_notes = await self._dep_notes(task, pool)
-    if dep_notes:
-        dep_section = self._render_notes("Context from dependencies", dep_notes)
-        dep_bytes = len(dep_section.encode())
-        if dep_bytes <= budget:
-            sections.append(dep_section)
-            budget -= dep_bytes
-        else:
-            sections.append(self._render_notes_truncated(
-                "Context from dependencies", dep_notes, budget))
-            budget = 0
+    # Deduplicate to latest note per dep (many notes from one dep
+    # would bloat context; we only care about the most recent summary).
+    if task.deps and budget > 0:
+        dep_notes = await self.read(authors=task.deps)
+        if dep_notes:
+            by_dep: dict[str, Note] = {}
+            for n in dep_notes:
+                by_dep[n.task_id] = n
+            dep_notes = list(by_dep.values())
+            dep_section = self._render_notes("Context from dependencies", dep_notes)
+            dep_bytes = len(dep_section.encode())
+            if dep_bytes <= budget:
+                sections.append(dep_section)
+                budget -= dep_bytes
+            else:
+                sections.append(self._truncate_section(
+                    "Context from dependencies", dep_notes, budget))
+                budget = 0
 
-    # Priority 3: Recent file changes in scope (from Ledger -- ground truth)
-    if budget > 0 and task.scope_paths:
-        changes = ledger.changes_since(task.created_at.timestamp())
+    # Priority 3: Recent file changes in scope (from FileChangeStore -- ground truth)
+    if file_change_store is not None and budget > 0 and task.scope_paths:
+        created_ts = task.created_at.timestamp() if task.created_at else 0.0
+        changes = file_change_store.changes_since(created_ts)
         scoped = [e for e in changes
                   if any(e.file_path.startswith(p.rstrip('/'))
                          for p in task.scope_paths)]
@@ -772,15 +801,16 @@ async def context_for(self, task: Task, pool: asyncpg.Pool,
                 budget -= change_bytes
 
     # Priority 4: Parent chain (strategic -- why this task exists)
-    if budget > 0:
-        parent_notes = await self._parent_chain_notes(task, pool)
+    if task.parent_id and budget > 0:
+        parent_ids = await self._parent_chain_ids(task, task_lookup=task_lookup)
+        parent_notes = await self.read(authors=parent_ids)
         if parent_notes:
             parent_section = self._render_notes("Parent context", parent_notes)
             parent_bytes = len(parent_section.encode())
             if parent_bytes <= budget:
                 sections.append(parent_section)
             else:
-                sections.append(self._render_notes_truncated(
+                sections.append(self._truncate_section(
                     "Parent context", parent_notes, budget))
 
     return "\n\n".join(sections)
@@ -970,6 +1000,34 @@ Later, Developer assigned to "Fix auth timeout" (scope_paths=["src/auth"]):
 | Overflow | `max_briefing_bytes` per-item truncation | Priority-based budget with per-section trim |
 | Code size | ~1,420 lines across 9 files | ~250 lines in 1 file |
 
+### 8.8 Dynamic Environment Awareness (Consolidated View)
+
+A fast-changing codebase means the world can change while an agent is working. Four mechanisms handle this at four timescales:
+
+| Timescale | Mechanism | How it works |
+|-----------|-----------|-------------|
+| **Pre-start** | `_check_scope_validity()` (Section 6.6) | Executor checks if files in the task's scope changed externally since the plan was created. If so, injects a warning note — agent decides whether to `request_replan()`. |
+| **At start** | `context_for()` (Section 8.2) | Builds a snapshot including recent file changes from `arbiter.changes_since(task.created_at)`. Agent starts with full picture of what changed since it was planned. |
+| **Mid-task (pull)** | `context_changed_since()` tool (Section 8.2.1) | Agent calls this before committing large changes. Returns new dep notes, sibling completions, and scope file changes since task started. |
+| **Mid-task (push)** | `LISTEN/NOTIFY` (Section 14.7, deferred) | Real-time `SystemReminderBlock` injected into agent conversation when another agent edits files in its scope. Debounced to 5-second batches. |
+| **At edit time** | Arbiter OCC (Section 9.3) | Hard backstop. Content-hash token validation catches stale edits with zero false negatives. Agent gets error, re-reads file, retries. |
+
+**Concrete example — file edited out from under an agent:**
+
+```
+t=0  Agent A reads src/auth/session.py (hash=abc)
+     Arbiter issues token(session.py, hash=abc, agent_A)
+t=1  Agent B edits session.py → hash changes to def
+     Ledger records the edit
+t=2  Agent A tries to edit session.py
+     Arbiter.validate_token(token, session.py, hash=def) → FAIL (abc ≠ def)
+     Agent A gets error: "File changed since you read it"
+     Agent A re-reads session.py (sees B's changes)
+     Agent A re-issues token with new hash, edits successfully
+```
+
+No agent coordination needed. The Arbiter serializes at the file level, and token validation ensures no edit is ever applied against stale content.
+
 ---
 
 ## 9. OCC, Code Intelligence & Exploration Cache
@@ -1062,6 +1120,16 @@ Agent calls edit_file("src/auth/session.py", ...)
 ```
 
 This is completely independent of the Task Center. The Arbiter is per-file, real-time, and operates inside the tool call. No change needed.
+
+**File-level write serialization with region-level OCC:** The file-level `threading.Lock` (`acquire_file_lock`) serializes the physical write I/O — only one agent writes at a time. However, the OCC layer is smarter than pure file-level: when a token's content hash mismatches (another agent edited the file since the token was issued), `_resolve_pending_write()` in `service.py` performs **line-range-based merge** via `detect_edit_window()` + `merge_non_overlapping_edit()`. If the specific target lines are unchanged in the current file, the edit succeeds despite the hash mismatch. Only overlapping-range edits are rejected.
+
+| Scenario | Result |
+|----------|--------|
+| Agent A edits lines 1-10, Agent B edits lines 50-60 | **Both succeed** — non-overlapping merge |
+| Agent A edits lines 1-10, Agent B edits lines 5-15 | B rejected — overlapping range, must re-read and retry |
+| No other agent touched the file | Token hash matches, edit succeeds immediately |
+
+This gives effectively region-level OCC with file-level write serialization — maximizing parallel throughput while keeping the lock implementation simple. The planner further mitigates contention by assigning disjoint `scope_paths` (Section 9.7's `QueryEditHistoryTool` predicts hotspots at decomposition time).
 
 **Rationale for no scope packets in agent prompts:** The Arbiter catches conflicts at edit time with zero false negatives. Deps already prevent agents from starting before their predecessors finish. Showing a contention report to an ephemeral agent that cannot reschedule itself adds prompt noise without actionable benefit. If we later find agents need contention awareness, it can be added as a lazy tool (`check_contention(paths)`) rather than eager prompt injection.
 
@@ -1256,15 +1324,17 @@ Explorer is a subagent spawned via `run_subagent()`, not a dispatched task. Its 
 
 | Toolkit | Planner | Developer | Reviewer | Replanner |
 |---------|:-------:|:---------:|:--------:|:---------:|
-| `code_intelligence` | read | full | full | read |
-| `sandbox_operations` | -- | full | exec-only | -- |
+| `code_intelligence` | read (blocked: ci_read_file, ci_edit_hotspots) | full | full | read (blocked: ci_read_file) |
+| `sandbox_operations` | -- | full | full | -- |
 | `subagent` | spawn (explorer only) | -- | -- | -- |
-| `task_center_read` | yes | yes | yes | yes |
-| `task_center_write` | -- | yes | yes | -- |
-| `exploration_cache` | yes | -- | -- | -- |
-| `edit_history` | yes | -- | -- | -- |
-| `search` | yes | yes | yes | yes |
+| `context` | read-only (blocked: post_note) | full | full | read-only (blocked: post_note) |
 | `submission` | submit_plan | done, retry, replan | done, retry, replan | submit_replan |
+
+**Implementation note — toolkit consolidation:** The original design specified 5 new toolkits (`task_center_read`, `task_center_write`, `exploration_memory`, `edit_history`, `search`). The implementation consolidates to 2:
+- `context` — single unified toolkit merging task_center + search + exploration_memory. Contains `PostNoteTool`, `ReadNotesTool` (with `keyword` param absorbing `search_context`), `ContextChangedSinceTool` (absorbing `scope_changed_since`), and `CheckExplorationMemoryTool`. Role-based read/write restrictions are enforced via `blocked_tools` in agent definitions (e.g., planners block `post_note`) rather than separate toolkit classes.
+- `submission` — unchanged from design.
+
+The `memory` toolkit was absorbed into `context`. `query_edit_history` is backed by `FileChangeStore.contention_hotspots()` but not yet wrapped as a tool. No other capability was removed — tools are bundled into fewer registration names for simplicity.
 
 ### 10.3 Explorer (Subagent)
 
@@ -1284,26 +1354,25 @@ Explorer is the only subagent type. It is NOT dispatched through the executor �
 | Toolkit | Access |
 |---------|--------|
 | `code_intelligence` | read-only |
-| `task_center_read` | yes |
-| `task_center_write` | yes (posts exploration findings) |
-| `search` | yes |
+| `context_read` | yes |
+| `context_write` | yes (posts exploration findings) |
 
 Explorer has NO `submission` toolkit — it does not call `done()`, `request_retry()`, or any terminal tool. Its result is captured by the `run_subagent` infrastructure and returned to the caller.
 
-### 10.4 New Toolkits (5)
+### 10.4 New Toolkits (2)
 
-**`task_center` toolkit** (replaces `context_inheritance`, `context_sharing`, `team_context`):
+**`context` toolkit** (replaces `context_inheritance`, `context_sharing`, `team_context`, `search`, `atlas`):
 
-| Tool | Description |
-|------|------------|
-| `post_note(content, scope_paths?)` | Post a note to Task Center. Inherits task scope_paths by default. |
-| `read_notes(authors?, scope_paths?, limit?)` | Read notes filtered by author or scope. Explicit pull when agent needs more context. |
+Single unified toolkit. Role-based read/write restrictions are enforced via `blocked_tools` in agent definitions (e.g., planners and replanners block `post_note`) rather than separate read/write classes.
 
-**`exploration_memory` toolkit** (replaces `atlas`):
+| Tool | Blocked for | Description |
+|------|:----------:|------------|
+| `read_notes(authors?, scope_paths?, keyword?, limit?)` | — | Read/search notes with optional keyword filter (absorbs former `search_context`). |
+| `context_changed_since()` | — | Check if context is stale: scope changes, dep notes, sibling completions since task started. Absorbs former `scope_changed_since`. |
+| `post_note(content, scope_paths?)` | planner, replanner | Post a note to Task Center. Inherits task scope_paths by default. |
+| `check_exploration_memory(paths)` | — | Check if scope was recently explored. Returns `cached` or `needs_exploration`. |
 
-| Tool | Description |
-|------|------------|
-| `check_exploration_memory(paths)` | Check if scope was recently explored. Returns `cached` or `needs_exploration`. |
+**Note:** `query_edit_history` is backed by `FileChangeStore.contention_hotspots()` but not yet wrapped as a tool. When implemented, it will be added to this toolkit.
 
 **`submission` toolkit** (replaces 5 posthook toolkit classes):
 
@@ -1315,21 +1384,7 @@ Explorer has NO `submission` toolkit — it does not call `done()`, `request_ret
 | `request_replan(reason, suggestion?)` | developer, reviewer | Request replan. Terminal. |
 | `submit_replan(add_tasks, cancel_ids)` | replanner | Submit replan. Terminal. |
 
-**`edit_history` toolkit** (planner-only, queries PostgreSQL Ledger):
-
-| Tool | Description |
-|------|------------|
-| `query_edit_history(paths)` | Query cross-run edit patterns to predict scope conflicts. |
-
-**`search` toolkit** (all roles, queries PostgreSQL):
-
-| Tool | Description |
-|------|------------|
-| `search_context(query, scope_paths?, limit?)` | Full-text search notes in Task Center via PostgreSQL tsvector. |
-| `scope_changed_since(paths, since)` | Check what files changed under scope paths. Queries Ledger via ltree. |
-| `context_changed_since()` | Check if task context is stale (new dep notes, sibling completions, or scope changes since task started). Call before committing multi-file changes. |
-
-### 10.3 Toolkit Factory Changes
+### 10.5 Toolkit Factory Changes
 
 ```python
 # tools/core/factory.py -- registration updates
@@ -1340,37 +1395,53 @@ Explorer has NO `submission` toolkit — it does not call `done()`, `request_ret
 #   posthook_submit_retry, posthook_submit_replan, submit_replan_posthook
 
 # NEW registrations:
-register_toolkit_class("task_center_read", TaskCenterReadToolkit)
-register_toolkit_class("task_center_write", TaskCenterWriteToolkit)
-register_toolkit_class("exploration_memory", ExplorationMemoryToolkit)
-register_toolkit_class("edit_history", EditHistoryToolkit)
-register_toolkit_class("search", SearchToolkit)
-register_toolkit_class("submission", SubmissionToolkit)  # .for_role(role)
+register_toolkit_class("submission", SubmissionToolkit)
+register_toolkit_class("context", ContextToolkit)  # unified read/write/memory
 
 # UNCHANGED:
 #   sandbox_operations, code_intelligence, subagent
 ```
 
-### 10.4 Role Resolution Function
+### 10.6 Role Resolution
 
-```python
-def toolkits_for_role(role: str) -> list[str]:
-    """Resolve toolkits for dispatched roles only. Explorer is a subagent
-    whose toolkits are defined in its agent definition (Section 10.3)."""
-    return {
-        "planner":    ["code_intelligence", "subagent",
-                       "task_center_read", "exploration_cache",
-                       "edit_history", "search", "submission"],
-        "developer":  ["sandbox_operations", "code_intelligence",
-                       "task_center_read", "task_center_write",
-                       "search", "submission"],
-        "reviewer":   ["sandbox_operations_readonly", "code_intelligence",
-                       "task_center_read", "task_center_write",
-                       "search", "submission"],
-        "replanner":  ["code_intelligence",
-                       "task_center_read", "search", "submission"],
-    }[role]
+Toolkit assignment is handled in agent definitions and the context builder rather than a standalone `toolkits_for_role()` function. The effective mapping is:
+
 ```
+planner:    code_intelligence, subagent, context, submission          (blocked_tools: post_note, ci_read_file, ci_edit_hotspots)
+developer:  sandbox_operations, code_intelligence, context, submission
+reviewer:   sandbox_operations, code_intelligence, context, submission
+replanner:  code_intelligence, context, submission                   (blocked_tools: post_note, ci_read_file)
+```
+
+### 10.7 Complete Tool Inventory
+
+**10 new tools in 3 toolkits**, replacing ~15+ tools/toolkits from the old system:
+
+| # | Tool | Toolkit | Available to | Terminal? | Description |
+|---|------|---------|-------------|:---------:|-------------|
+| 1 | `read_notes` | `context_read` | all roles | no | Read/search Task Center notes by author, scope, keyword |
+| 2 | `context_changed_since` | `context_read` | all roles | no | Check staleness: scope changes + dep notes + sibling completions |
+| 3 | `post_note` | `context_write` | developer, reviewer, explorer | no | Post note to Task Center with optional scope |
+| 4 | `check_exploration_memory` | `memory` | planner | no | Check cross-run exploration cache; returns `cached` or `needs_exploration` |
+| 5 | `query_edit_history` | `memory` | planner | no | Query cross-run edit patterns to predict scope conflicts |
+| 6 | `submit_plan` | `submission` | planner | **yes** | Submit plan of TaskSpecs |
+| 7 | `done` | `submission` | developer, reviewer | **yes** | Signal task completion with summary |
+| 8 | `request_retry` | `submission` | developer, reviewer | **yes** | Request task retry with reason |
+| 9 | `request_replan` | `submission` | developer, reviewer | **yes** | Request replan with reason and optional suggestion |
+| 10 | `submit_replan` | `submission` | replanner | **yes** | Submit replan (add/cancel tasks) |
+
+**What these replace:**
+
+| Old tool/toolkit | New equivalent |
+|-----------------|----------------|
+| `share_briefing` | `post_note` |
+| `inspect_inherited_context` | `read_notes` |
+| `atlas/lookup` | `check_exploration_memory` |
+| `scope_packets` tools | Deleted (Arbiter handles at edit time) |
+| `coordination.py` helpers | Deleted (`task.scope_paths` read directly) |
+| 5 posthook toolkit classes | `submission` toolkit (5 tools, no LLM) |
+| `search_context` (standalone) | `read_notes` with `keyword` parameter |
+| `scope_changed_since` (standalone) | `context_changed_since` (unified check) |
 
 ---
 
@@ -1578,20 +1649,6 @@ OCC handles the collision at file level. No coordination needed in the Task Cent
 | 6b | `team/builtins/agents/*.md` | Update toolkit lists to use new toolkit names |
 | 6c | `skills/bundled/content/` | Simplify playbooks (remove contract references) |
 | 6d | Tests | Update all team/posthook/briefing tests |
-
-### Phase 7: Semantic Search (Optional, Deferred)
-
-**Scope:** Add pgvector-based semantic search. Zero impact on core architecture — purely additive.
-
-| Step | Files | Description |
-|------|-------|-------------|
-| 7a | PostgreSQL | `CREATE EXTENSION vector; ALTER TABLE task_notes ADD COLUMN embedding vector(384)` |
-| 7b | `services/embedding.py` | Local `SentenceTransformer("all-MiniLM-L6-v2")` wrapper |
-| 7c | `workers/embed_worker.py` | Background worker: polls for `embedding IS NULL`, fills embeddings |
-| 7d | `tools/search/toolkit.py` | Add semantic branch to `SearchContextTool` with RRF merge |
-| 7e | PostgreSQL | `CREATE INDEX idx_notes_semantic USING hnsw (embedding vector_cosine_ops)` |
-
-**Prerequisite:** Core architecture (Phases 1–6) working and validated. Semantic search adds value only after agents generate enough notes that keyword search misses relevant connections due to vocabulary mismatch.
 
 ---
 
@@ -1810,8 +1867,6 @@ Agent calls edit_file()
 4. **Consistency by construction** — with one store, `search_context` and `context_for` always agree on note visibility. No ordering invariants to maintain.
 
 **Trade-off acknowledged:** Every `read()` and `context_for()` call hits PG. For single-process deployments on localhost this adds ~1ms per query — unmeasurable against LLM latency. If profiling later shows PG reads as a bottleneck (unlikely), a read-through cache can be added as a transparent layer without changing the write path or the consistency model.
-
-**Semantic search embedding** is deferred to Phase 7 and runs as a background worker, not inline. One write per event, not two.
 
 ### 14.4 Schema
 
@@ -2116,7 +2171,9 @@ class PGDispatcher:
 | DAG traversal | Manual walk + parent pointers | `pending_dep_count` column, decremented atomically on completion |
 | State consistency | Single-process only | Multi-process safe |
 
-### 14.7 Real-Time Scope Awareness: LISTEN/NOTIFY
+### 14.7 Real-Time Scope Awareness: LISTEN/NOTIFY (DEFERRED)
+
+> **Status: Not yet implemented.** Agents currently get scope warnings at task start via `_inject_scope_warnings()` (executor) and can call `context_changed_since()` mid-task. LISTEN/NOTIFY adds real-time push during long-running tasks — valuable for high-parallelism but not blocking for the current single-process executor. Implement when multi-worker parallelism warrants it.
 
 Agents discover concurrent file changes via push, not poll. When the Ledger records an edit, a PostgreSQL trigger notifies all listeners:
 
@@ -2311,7 +2368,9 @@ async def check(self, scope_paths, sandbox, run_id,
 
 One batch INSERT, zero schema changes. Cached notes become searchable in the current run.
 
-### 14.11 Advisory Locks for Multi-Process Arbiter
+### 14.11 Advisory Locks for Multi-Process Arbiter (DEFERRED)
+
+> **Status: Not yet implemented.** The current Arbiter uses in-process `threading.Lock` for per-file locking, which is correct for single-process deployments. Advisory locks are needed only for multi-process horizontal scaling, which is not the current deployment model.
 
 The current Arbiter uses in-memory `asyncio.Lock` for per-file locking. For multi-process executor deployments (horizontal scaling), PostgreSQL advisory locks provide distributed file-level locking with zero additional infrastructure:
 
@@ -2348,178 +2407,14 @@ Explorer is a subagent (see Section 10.3) — its toolkits are defined in its ag
 
 | Toolkit | Planner | Developer | Reviewer | Replanner |
 |---------|:-------:|:---------:|:--------:|:---------:|
-| `code_intelligence` | read | full | full | read |
-| `sandbox_operations` | -- | full | exec-only | -- |
+| `code_intelligence` | read (blocked: ci_read_file, ci_edit_hotspots) | full | full | read (blocked: ci_read_file) |
+| `sandbox_operations` | -- | full | full | -- |
 | `subagent` | spawn (explorer only) | -- | -- | -- |
-| `task_center_read` | yes | yes | yes | yes |
-| `task_center_write` | -- | yes | yes | -- |
-| `exploration_cache` | yes | -- | -- | -- |
-| `edit_history` | yes | -- | -- | -- |
-| `search` | yes | yes | yes | yes |
+| `context` | read-only (blocked: post_note) | full | full | read-only (blocked: post_note) |
 | `submission` | submit_plan | done, retry, replan | done, retry, replan | submit_replan |
 
-New rows: `edit_history` (planner-only, cross-run conflict prediction) and `search` (all roles, PostgreSQL FTS + ltree scope queries).
-
-### 14.13 Future: Semantic Search with pgvector (Phase 7)
-
-Keyword search (`to_tsvector`) matches exact terms. Semantic search matches **meaning** — an agent searching "why does login take so long" finds notes about "session timeout", "request latency", and "expiration delay" even though they share no keywords.
-
-This matters for agent swarms: agents use varied vocabulary for the same concepts. One writes "timeout", another "session expiration", a third "request latency." Keyword search misses the connections. Semantic search finds them.
-
-**Extension setup (one-time):**
-
-```sql
-CREATE EXTENSION IF NOT EXISTS vector;
-
-ALTER TABLE task_notes ADD COLUMN embedding vector(384);
-
-CREATE INDEX idx_notes_semantic ON task_notes
-    USING hnsw (embedding vector_cosine_ops)
-    WITH (m = 16, ef_construction = 64);
-```
-
-**Embedding model:** Local `all-MiniLM-L6-v2` via `sentence-transformers`. 384 dimensions, ~50ms per embed, zero API cost. Runs in the same process — no external service dependency.
-
-```python
-from sentence_transformers import SentenceTransformer
-
-class EmbeddingService:
-    """Local embedding. No API calls. ~50ms per text."""
-
-    def __init__(self):
-        self._model = SentenceTransformer("all-MiniLM-L6-v2")
-
-    def embed(self, text: str) -> list[float]:
-        return self._model.encode(text, normalize_embeddings=True).tolist()
-
-    def embed_batch(self, texts: list[str]) -> list[list[float]]:
-        return self._model.encode(texts, normalize_embeddings=True).tolist()
-```
-
-**Triple-write on note creation:**
-
-```
-Agent calls post_note() or done()
-  |
-  +-- 1. Async: NoteStore.insert(record)           via ORM
-  |              (durable FIRST, keyword-searchable immediately)
-  |
-  +-- 2. Sync:  append to in-memory TaskCenter._notes
-  |              (fast read path, used by context_for)
-  |
-  +-- 3. Async: embedding = embed(content)
-                NoteStore.update_embedding(id, vec)  via text()
-                (semantic-searchable within ~50ms of insert)
-```
-
-Agent never waits for step 3. By the time another agent queries, the embedding is ready.
-
-**Hybrid search — keyword + semantic, merged with reciprocal rank fusion:**
-
-Delegates to `NoteStore` methods that use `text()` for PG-specific FTS and pgvector operators:
-
-```python
-class SearchContextTool(BaseTool):
-    """Search notes by keyword AND meaning. Delegates to NoteStore."""
-    name = "search_context"
-
-    async def execute(self, arguments, context):
-        query = arguments.get("query")
-        scope = arguments.get("scope_paths")
-        limit = arguments.get("limit", 10)
-        run_id = context.metadata["team_run_id"]
-        note_store: NoteStore = context.metadata["note_store"]
-
-        ltree_scopes = [path_to_ltree(p) for p in scope] if scope else None
-
-        # Run both searches in parallel via Store methods
-        fts_task = note_store.search_fts(run_id, query, ltree_scopes, limit)
-        sem_task = note_store.search_semantic(
-            run_id, self.embedder.embed(query), ltree_scopes, limit)
-        fts_results, sem_results = await asyncio.gather(fts_task, sem_task)
-
-        return self._merge(fts_results, sem_results, limit)
-
-    def _merge(self, fts, semantic, limit):
-        """Reciprocal rank fusion: interleave by combined rank score."""
-        k = 60  # RRF constant
-        scores: dict[str, float] = {}
-        all_rows: dict[str, Any] = {}
-        for rank, row in enumerate(fts):
-            scores[row.id] = scores.get(row.id, 0) + 1.0 / (rank + k)
-            all_rows[row.id] = row
-        for rank, row in enumerate(semantic):
-            scores[row.id] = scores.get(row.id, 0) + 1.0 / (rank + k)
-            all_rows[row.id] = row
-        ranked = sorted(scores.items(), key=lambda x: x[1], reverse=True)
-        return [{"task_id": all_rows[rid].task_id,
-                 "agent": all_rows[rid].agent_name,
-                 "summary": all_rows[rid].content[:500],
-                 "scope": all_rows[rid].scope_ltree}
-                for rid, _ in ranked[:limit] if rid in all_rows]
-```
-
-**NoteStore methods added for Phase 7** (extend the NoteStore from Section 14.2):
-
-```python
-# In NoteStore:
-async def search_semantic(self, run_id: str, query_vec: list[float],
-                           scope_ltrees: list[str] | None, limit: int) -> list:
-    """pgvector cosine similarity search. Uses text() — PG-specific."""
-    async with self._sf() as db:
-        result = await db.execute(text("""
-            SELECT id, task_id, agent_name, content, scope_ltree,
-                   1 - (embedding <=> :vec::vector) AS rank
-            FROM task_notes
-            WHERE team_run_id = :run_id
-              AND embedding IS NOT NULL
-              AND (:scopes::ltree[] IS NULL OR EXISTS (
-                  SELECT 1 FROM unnest(scope_ltree) AS s
-                  WHERE s <@ ANY(:scopes::ltree[])))
-            ORDER BY embedding <=> :vec::vector LIMIT :lim
-        """), {"run_id": run_id, "vec": query_vec,
-               "scopes": scope_ltrees, "lim": limit})
-        return result.fetchall()
-
-async def update_embedding(self, note_id: str, run_id: str,
-                            embedding: list[float]) -> None:
-    """Set embedding after async compute. Uses text() — pgvector type."""
-    async with self._sf() as db:
-        await db.execute(text(
-            "UPDATE task_notes SET embedding = :vec::vector "
-            "WHERE id = :id AND team_run_id = :run_id"),
-            {"vec": embedding, "id": note_id, "run_id": run_id})
-        await db.commit()
-```
-
-**What the agent experiences:**
-
-```
-Developer working on auth module:
-
-  search_context(query="how are errors propagated in auth")
-
-  FTS finds:      notes containing "errors" and "auth"
-  Semantic finds:  notes about "exception swallowing", "bare except",
-                   "silent failure in middleware"
-
-  Merged result: both sets, ranked by combined relevance.
-  Agent gets complete picture even with vocabulary mismatch.
-```
-
-**Comparison:**
-
-| | FTS only | FTS + pgvector |
-|---|---|---|
-| Query: "timeout handling" | Notes with "timeout" AND "handling" | + notes about "session delay", "expiration" |
-| Query: "error propagation" | Notes with "error" AND "propagation" | + notes about "exception swallowing", "bare except" |
-| Index size | GIN tsvector (~small) | + HNSW vector (~moderate) |
-| Query latency | ~1ms | ~5ms (HNSW ANN + merge) |
-| External dependency | None | `sentence-transformers` (pip install) |
-| API cost | Zero | Zero (local model) |
-
-**Graceful degradation:** If `embedding IS NULL` (model not loaded, or note just inserted), semantic search returns empty and FTS carries the result alone. The tool always works — semantic is additive.
+See Section 10.4 for toolkit consolidation rationale (2 toolkits instead of 5).
 
 ---
 
-*End of plan. Do not implement without explicit go-ahead.*
+*End of document.*

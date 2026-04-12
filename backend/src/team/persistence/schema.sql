@@ -29,7 +29,6 @@ CREATE TABLE IF NOT EXISTS file_changes (
     old_hash    TEXT DEFAULT '',
     new_hash    TEXT DEFAULT '',
     description TEXT DEFAULT '',
-    timestamp   DOUBLE PRECISION DEFAULT EXTRACT(EPOCH FROM NOW()),
     created_at  TIMESTAMPTZ DEFAULT NOW(),
     PRIMARY KEY (id, team_run_id)
 ) PARTITION BY LIST (team_run_id);
@@ -69,8 +68,24 @@ CREATE TABLE IF NOT EXISTS exploration_memory (
     accessed_at  TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Checkpoint snapshots (shared across runs, not partitioned)
+CREATE TABLE IF NOT EXISTS team_run_checkpoints (
+    id              TEXT NOT NULL PRIMARY KEY,
+    team_run_id     TEXT NOT NULL,
+    sequence        INT NOT NULL,
+    taken_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    label           TEXT,
+    work_items      JSONB NOT NULL,
+    ready_queue_order TEXT[] DEFAULT '{}',
+    budget_state    JSONB NOT NULL DEFAULT '{}',
+    project_context JSONB
+);
+
+CREATE INDEX IF NOT EXISTS idx_checkpoints_run
+    ON team_run_checkpoints (team_run_id, sequence DESC);
+
 -- Indexes are created per-partition automatically when partitions are created.
 -- These template indexes guide what each partition gets:
 --   task_notes: (task_id), GiST(scope_ltree), BRIN(created_at), GIN(tsvector)
---   file_changes: GiST(path_ltree), BRIN(created_at)
+--   file_changes: GiST(path_ltree), (team_run_id, created_at DESC)
 --   tasks: (team_run_id, status), (team_run_id, depth, created_at)

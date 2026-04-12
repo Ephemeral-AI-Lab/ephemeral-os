@@ -1,14 +1,17 @@
 """Scope packet builder for write coordination and prompt injection.
 
 Builds machine-checkable live scope packets by gathering state from
-the CI service, team run, ledger, and arbiter.  Migrated from
+the CI service and FileChangeStore.  Migrated from
 tools.daytona_toolkit.coordination.
 """
 
 from __future__ import annotations
 
+import logging
 import time
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from team._path_utils import normalize_scope_paths, scope_paths_overlap
 from tools.core.base import ToolExecutionContext
@@ -26,7 +29,7 @@ def build_scope_packet(
 ) -> dict[str, Any]:
     """Build a machine-checkable live scope packet."""
     normalized = normalize_scope_paths(scope_paths)
-    briefing_versions = _matching_briefing_versions(team_run, normalized)
+    briefing_versions: list[dict[str, Any]] = []
     context_pressure: dict[str, Any] = {}
     shared_context = ""
     scope_status = getattr(svc, "scope_status", None)
@@ -122,39 +125,16 @@ def _get_team_run(team_run_id: str) -> Any | None:
         return None
 
 
-def _matching_briefing_versions(team_run: Any | None, scope_paths: list[str]) -> list[dict[str, Any]]:
-    if team_run is None:
-        return []
-    project_context = getattr(team_run, "project_context", None)
-    versions = getattr(project_context, "stable_scout_versions", {}) or {}
-    out: list[dict[str, Any]] = []
-    for scope, version in versions.items():
-        if scope_paths and not any(
-            scope_paths_overlap(scope_part, target)
-            for scope_part in normalize_scope_paths([scope])
-            for target in scope_paths
-        ):
-            continue
-        if not isinstance(version, dict):
-            continue
-        out.append(
-            {
-                "scope": scope,
-                "snapshot_time": float(version.get("snapshot_time") or 0.0),
-                "run_id": str(version.get("run_id") or ""),
-            }
-        )
-    out.sort(key=lambda item: item["scope"])
-    return out
 
 
 def _recent_changes(svc: Any | None, scope_paths: list[str], *, seconds: float) -> list[dict[str, Any]]:
-    arbiter = getattr(svc, "arbiter", None)
-    if arbiter is None:
+    store = getattr(getattr(svc, "arbiter", None), "file_change_store", None)
+    if store is None or not getattr(store, "initialized", False):
         return []
     try:
-        entries = arbiter.recent_edits(seconds)
+        entries = store.recent_edits(seconds=seconds)
     except Exception:
+        logger.debug("_recent_changes failed", exc_info=True)
         return []
     out: list[dict[str, Any]] = []
     for entry in entries:
@@ -185,12 +165,13 @@ def _active_reservations(svc: Any | None, scope_paths: list[str]) -> list[dict[s
 
 
 def _hotspots(svc: Any | None, scope_paths: list[str]) -> list[dict[str, Any]]:
-    arbiter = getattr(svc, "arbiter", None)
-    if arbiter is None:
+    store = getattr(getattr(svc, "arbiter", None), "file_change_store", None)
+    if store is None or not getattr(store, "initialized", False):
         return []
     try:
-        hotspots = arbiter.hotspots(limit=25)
+        hotspots = store.hotspots(limit=25)
     except Exception:
+        logger.debug("_hotspots failed", exc_info=True)
         return []
     out = [
         {"file_path": str(file_path), "edit_count": int(count)}

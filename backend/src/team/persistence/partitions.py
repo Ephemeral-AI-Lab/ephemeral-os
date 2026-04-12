@@ -92,8 +92,8 @@ async def _create_partition_indexes(
         statements = (
             f"CREATE INDEX IF NOT EXISTS {partition_name}_path_gist_idx "
             f"ON {partition_name} USING GIST (path_ltree)",
-            f"CREATE INDEX IF NOT EXISTS {partition_name}_created_brin_idx "
-            f"ON {partition_name} USING BRIN (created_at)",
+            f"CREATE INDEX IF NOT EXISTS {partition_name}_run_created_idx "
+            f"ON {partition_name} (team_run_id, created_at DESC)",
         )
     else:
         statements = (

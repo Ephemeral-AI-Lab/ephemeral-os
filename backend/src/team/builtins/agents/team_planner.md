@@ -4,7 +4,9 @@ description: "Team-mode planner: decomposes requests and drafts executable plans
 role: planner
 model: inherit
 tool_call_limit: 100
-toolkits: ["code_intelligence", "context_read", "memory", "submission", "subagent"]
+toolkits: ["code_intelligence", "context", "subagent"]
+blocked_tools: ["post_note", "ci_read_file", "ci_edit_hotspots"]
+posthook: ["submit_plan"]
 skills: ["team-planner-playbook"]
 ---
 # Task

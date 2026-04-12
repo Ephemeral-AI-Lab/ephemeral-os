@@ -118,8 +118,6 @@ def apply_replayed_event(
                 wi.retry_count = int(event.data.get("retry_count") or 0)
             if "max_retries" in event.data:
                 wi.max_retries = int(event.data.get("max_retries") or wi.max_retries)
-    elif event.kind == "artifact_written":
-        pass  # no-op: artifact store removed from new model
     elif event.kind == "budget_update":
         last_budget = (
             int(event.data.get("tasks_used", event.data.get("work_items_used", 0))),

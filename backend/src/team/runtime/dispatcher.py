@@ -73,6 +73,7 @@ class Dispatcher:
         store: DispatcherStore,
         max_checkpoints: int = 10,
         event_store: TeamRunStore | None = None,
+        checkpoint_store: Any = None,
     ) -> None:
         self.team_run_id = team_run_id
         self.budgets = budgets
@@ -86,6 +87,7 @@ class Dispatcher:
         self._checkpoint_seq = 0
         self._events: TeamRunStore = event_store or NullTeamRunStore()
         self.task_center: Any = None
+        self._checkpoint_store = checkpoint_store
 
     def _emit(self, event: TeamRunEvent) -> None:
         try:
@@ -498,6 +500,16 @@ class Dispatcher:
                 budget_state=copy.deepcopy(self.budget_state),
             )
             self._checkpoints.append(cp)
+            # Persist to PG for crash recovery
+            if self._checkpoint_store is not None and getattr(
+                self._checkpoint_store, "initialized", False
+            ):
+                try:
+                    await self._checkpoint_store.save(cp)
+                except Exception:
+                    _logger.debug(
+                        "Failed to persist checkpoint %s", cp.id, exc_info=True
+                    )
             self._emit(
                 make_checkpoint_taken(
                     self.team_run_id,
@@ -514,12 +526,63 @@ class Dispatcher:
     def _get_checkpoint(self, checkpoint_id: str) -> TeamRunCheckpoint | None:
         return next((cp for cp in self._checkpoints if cp.id == checkpoint_id), None)
 
+    async def _get_checkpoint_with_fallback(
+        self, checkpoint_id: str
+    ) -> TeamRunCheckpoint | None:
+        """Check in-memory cache first, then fall back to PG."""
+        cp = self._get_checkpoint(checkpoint_id)
+        if cp is not None:
+            return cp
+        if self._checkpoint_store is not None and getattr(
+            self._checkpoint_store, "initialized", False
+        ):
+            from team.persistence.checkpoint_store import CheckpointRecord
+            rec = await self._checkpoint_store.load_by_id(
+                checkpoint_id, self.team_run_id
+            )
+            if rec is not None:
+                return self._record_to_checkpoint(rec)
+        return None
+
+    @staticmethod
+    def _record_to_checkpoint(rec: Any) -> TeamRunCheckpoint:
+        """Reconstruct a TeamRunCheckpoint from a CheckpointRecord."""
+        from team.models import BudgetState, Task, TaskStatus
+        work_items: dict[str, Task] = {}
+        for task_id, task_data in (rec.work_items or {}).items():
+            # Reconstruct datetime fields
+            for field in ("created_at", "started_at", "finished_at"):
+                val = task_data.get(field)
+                if isinstance(val, str) and val:
+                    from datetime import datetime
+                    try:
+                        task_data[field] = datetime.fromisoformat(val)
+                    except ValueError:
+                        task_data[field] = None
+                elif not isinstance(val, datetime):
+                    task_data[field] = None
+            if "status" in task_data:
+                task_data["status"] = TaskStatus(task_data["status"])
+            work_items[task_id] = Task(**task_data)
+        budget = BudgetState(**(rec.budget_state or {}))
+        return TeamRunCheckpoint(
+            id=rec.id,
+            team_run_id=rec.team_run_id,
+            sequence=rec.sequence,
+            taken_at=rec.taken_at,
+            label=rec.label,
+            work_items=work_items,
+            ready_queue_order=list(rec.ready_queue_order or []),
+            project_context=rec.project_context,
+            budget_state=budget,
+        )
+
     async def rollback_to(
         self,
         checkpoint_id: str,
         project_context_setter: Callable[[Any], None],
     ) -> TeamRunCheckpoint:
-        cp = self._get_checkpoint(checkpoint_id)
+        cp = await self._get_checkpoint_with_fallback(checkpoint_id)
         if cp is None:
             raise CheckpointNotFound(checkpoint_id)
         await self.store.replace_run_tasks(self.team_run_id, list(cp.work_items.values()))

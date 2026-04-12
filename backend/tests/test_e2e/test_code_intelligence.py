@@ -49,7 +49,6 @@ class TestCIServiceCreation:
         assert status["workspace_root"] == "/workspace"
         assert "symbol_index" in status
         assert "arbiter" in status
-        assert "ledger" in status
         assert "lsp" in status
 
         # Symbol index details
@@ -84,12 +83,12 @@ class TestCIServiceCreation:
         assert isinstance(tel.lsp_query_count, int)
         assert isinstance(tel.lsp_cache_hits, int)
         assert isinstance(tel.arbiter_active_edits, int)
-        assert isinstance(tel.ledger_entry_count, int)
+        assert isinstance(tel.total_edits, int)
 
         # Initial values should be zero/false
         assert tel.symbol_index_size == 0
         assert tel.lsp_connected is False
-        assert tel.ledger_entry_count == 0
+        assert tel.total_edits == 0
 
     def test_ci_service_dispose(self):
         """Verify dispose cleans up without error."""

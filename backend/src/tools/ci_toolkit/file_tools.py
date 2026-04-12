@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 _MAX_LINES = 500
 _MAX_CHARS = 32_000
-_FILE_READ_DISALLOWED_CALLERS = frozenset({"team_planner", "team_replanner"})
 
 
 def _resolve_ci_file_path(
@@ -84,13 +83,6 @@ async def ci_read_file(
         truncated (bool): Whether file was truncated
         content (str): File contents with line numbers
     """
-    caller_agent = str(context.metadata.get("agent_name") or "").strip()
-    if caller_agent in _FILE_READ_DISALLOWED_CALLERS:
-        return ToolResult(
-            output=(f"ci_read_file: caller '{caller_agent}' may not read files directly."),
-            is_error=True,
-        )
-
     svc = get_ci_service(context)
     workspace_root = str(getattr(svc, "workspace_root", "") or "") if svc is not None else ""
     resolved_path = _resolve_ci_file_path(

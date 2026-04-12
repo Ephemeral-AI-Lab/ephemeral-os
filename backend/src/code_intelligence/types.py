@@ -143,5 +143,5 @@ class CITelemetry:
     lsp_query_count: int = 0
     lsp_cache_hits: int = 0
     arbiter_active_edits: int = 0
-    ledger_entry_count: int = 0
+    total_edits: int = 0
     extra: dict[str, Any] = field(default_factory=dict)

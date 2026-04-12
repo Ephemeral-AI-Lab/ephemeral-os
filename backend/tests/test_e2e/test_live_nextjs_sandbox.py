@@ -396,7 +396,6 @@ class TestCodeIntelligenceOnProject:
         assert "lsp" in status
         assert "symbol_index" in status
         assert "arbiter" in status
-        assert "ledger" in status
 
     def test_ci_telemetry_fields(self, nextjs_sandbox):
         """CITelemetry has all expected integer and boolean fields."""
@@ -417,7 +416,7 @@ class TestCodeIntelligenceOnProject:
             "lsp_query_count",
             "lsp_cache_hits",
             "arbiter_active_edits",
-            "ledger_entry_count",
+            "total_edits",
         ]:
             val = getattr(tel, field)
             assert isinstance(val, int), f"CITelemetry.{field} should be int, got {type(val)}"

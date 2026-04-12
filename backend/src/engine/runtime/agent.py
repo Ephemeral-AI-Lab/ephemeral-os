@@ -229,6 +229,26 @@ def _build_agent_tool_registry(
         # it when agent_def.toolkits is non-empty.
         tool_registry.restrict_to_toolkits(agent_def.toolkits)
 
+    # Remove blocked tools (role-based restrictions from agent definition).
+    if agent_def and agent_def.blocked_tools:
+        tool_registry.remove_tools(agent_def.blocked_tools)
+
+    # Posthook tools — registered separately from the main toolkits so
+    # they survive restrict_to_toolkits(). The query loop hides them
+    # during the main work phase and exposes them during the posthook
+    # phase. Typically these are submission tools (done, submit_plan, etc.).
+    if agent_def and agent_def.posthook:
+        from tools.posthook.toolkit import PosthookToolkit
+
+        posthook_tk = PosthookToolkit.from_context(toolkit_ctx)
+        posthook_names = set(agent_def.posthook)
+        for tool in posthook_tk.list_tools():
+            if tool.name in posthook_names:
+                tool_registry.register(tool)
+                logger.info(
+                    "Registered posthook tool %r for agent %r", tool.name, agent_name,
+                )
+
     # Skills toolkit — opt-out via ``include_skills=False``.
     include_skills = agent_def.include_skills if agent_def else True
     if include_skills:

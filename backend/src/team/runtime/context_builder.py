@@ -59,9 +59,6 @@ def build_work_item_metadata(team_run: "TeamRun", task: Task) -> ExecutionMetada
     # Inject shared resources for tools
     meta["task_center"] = team_run.task_center
     meta["dispatcher"] = team_run.dispatcher
-    arbiter = getattr(team_run, "arbiter", None)
-    if arbiter is not None:
-        meta["arbiter"] = arbiter
     file_change_store = getattr(team_run, "file_change_store", None)
     if file_change_store is not None:
         meta["file_change_store"] = file_change_store
@@ -131,12 +128,12 @@ async def build_initial_user_message(
     prefix: str | None = None,
 ) -> str:
     """Build context string for a task via TaskCenter."""
-    arbiter = getattr(team_run, "arbiter", None)
     dispatcher = getattr(team_run, "dispatcher", None)
     task_lookup = getattr(dispatcher, "get_task_by_id", None)
+    file_change_store = getattr(team_run, "file_change_store", None)
     context = await team_run.task_center.context_for(
         task,
-        arbiter=arbiter,
+        file_change_store=file_change_store,
         task_lookup=task_lookup,
     )
     if prefix:
@@ -154,6 +151,19 @@ async def build_query_context(
 
     meta = build_work_item_metadata(team_run, task)
     meta["role"] = getattr(defn, "role", "")
+    # Wire posthook tool names from the agent definition into metadata.
+    # Posthook tools (typically submission tools like done / submit_plan)
+    # are hidden during the main work phase and exposed only after the
+    # agent produces no more tool calls. The query loop then enters a
+    # posthook phase with a restricted registry containing only these tools.
+    posthook_tools = getattr(defn, "posthook", None) or []
+    if posthook_tools:
+        meta["posthook_tool_names"] = list(posthook_tools)
+        meta["posthook_prompt"] = (
+            "Your main work is complete. You must now submit your results "
+            f"by calling one of: {', '.join(posthook_tools)}. "
+            "Summarize what you accomplished and call the appropriate tool."
+        )
     user_message = await build_initial_user_message(team_run, task)
     roster = getattr(team_run, "roster", None)
     if roster and getattr(defn, "role", None) in ("planner", "replanner"):

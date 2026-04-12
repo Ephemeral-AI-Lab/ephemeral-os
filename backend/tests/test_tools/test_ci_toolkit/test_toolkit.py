@@ -3,8 +3,9 @@
 from tools.ci_toolkit import CIToolkit
 
 
-def test_ci_toolkit_registers_unified_query_tools():
-    tk = CIToolkit()
+def test_ci_toolkit_registers_all_tools():
+    ctx = type("Ctx", (), {"metadata": {}})()
+    tk = CIToolkit.from_context(ctx)
     names = set(tk.tool_names())
     expected = {
         "ci_status",
@@ -14,17 +15,26 @@ def test_ci_toolkit_registers_unified_query_tools():
         "ci_hover",
         "ci_diagnostics",
         "ci_edit_hotspots",
-        "ci_recent_changes",
         "ci_read_file",
     }
-    assert expected.issubset(names)
+    assert expected == names
 
 
-def test_ci_toolkit_without_file_reads_keeps_unified_query_tools():
-    tk = CIToolkit(include_file_reads=False)
-    names = set(tk.tool_names())
-    assert "ci_read_file" not in names
-    assert "ci_hover" in names
-    assert "ci_diagnostics" in names
-    assert "ci_query_symbols" in names
-    assert "ci_query_references" in names
+def test_ci_toolkit_blocked_tools_handled_by_registry():
+    """Verify that ToolRegistry.remove_tools works for role-based restrictions."""
+    from tools.core.base import ToolRegistry
+
+    ctx = type("Ctx", (), {"metadata": {}})()
+    tk = CIToolkit.from_context(ctx)
+
+    registry = ToolRegistry()
+    registry.register_toolkit(tk)
+
+    # Simulate planner blocklist
+    registry.remove_tools(["ci_read_file", "ci_edit_hotspots"])
+    remaining = {t.name for t in registry.list_tools()}
+
+    assert "ci_read_file" not in remaining
+    assert "ci_edit_hotspots" not in remaining
+    assert "ci_query_symbols" in remaining
+    assert "ci_hover" in remaining

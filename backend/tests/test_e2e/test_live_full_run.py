@@ -467,10 +467,10 @@ def test_phase6_ci_components_individually(sandbox_id):
     assert arb_after["total_edits"] >= 1
     assert gen >= 1
 
-    # -- Arbiter edit count --
-    print(f"\n  Arbiter edit_count:")
-    print(f"    edit_count: {svc.arbiter.edit_count}")
-    assert isinstance(svc.arbiter.edit_count, int)
+    # -- Arbiter metrics total_edits --
+    print(f"\n  Arbiter total_edits:")
+    print(f"    total_edits: {svc.arbiter.metrics.total_edits}")
+    assert isinstance(svc.arbiter.metrics.total_edits, int)
 
     # Record an edit via arbiter
     svc.arbiter.record_edit(
@@ -479,8 +479,8 @@ def test_phase6_ci_components_individually(sandbox_id):
         edit_type="edit",
         description="test edit",
     )
-    print(f"    After record_edit — edit_count: {svc.arbiter.edit_count}")
-    assert svc.arbiter.edit_count >= 1
+    print(f"    After record_edit — total_edits: {svc.arbiter.metrics.total_edits}")
+    assert svc.arbiter.metrics.total_edits >= 1
 
     # Cleanup
     svc.dispose()

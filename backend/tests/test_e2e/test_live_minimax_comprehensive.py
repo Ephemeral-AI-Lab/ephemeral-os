@@ -718,7 +718,7 @@ class TestCodeIntelligenceSystem:
         assert tel.lsp_connected is False
         assert tel.lsp_query_count == 0
         assert tel.arbiter_active_edits == 0
-        assert tel.ledger_entry_count == 0
+        assert tel.total_edits == 0
 
     def test_ci_service_dispose_safe(self):
         """Dispose should clean up without raising."""

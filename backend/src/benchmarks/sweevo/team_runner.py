@@ -5,7 +5,7 @@ Drives :class:`team.runtime.team_run.TeamRun` with the builtin
 ``team.builtins``. Each WorkItem's agent is spawned through
 :func:`engine.runtime.agent.spawn_agent` so it runs with its full
 production tool surface (``sandbox_operations``, ``code_intelligence``,
-skills) against the Daytona sandbox that was already
+``context``, skills) against the Daytona sandbox that was already
 prepared by :func:`benchmarks.sweevo.sandbox.create_sweevo_test_sandbox`.
 """
 
@@ -46,7 +46,6 @@ from team.runtime.context_builder import (
 )
 from team.runtime.executor import Executor
 from team.runtime.team_run import TeamRun
-from team._path_utils import scope_paths_for_work_item
 from tools.daytona_toolkit.scope_builder import build_scope_packet, render_scope_packet
 
 from benchmarks.sweevo.dataset import summarize_sweevo_instance
@@ -962,7 +961,7 @@ def _make_context_builders(
             ci_service = None
         if ci_service is not None:
             scope_packet = build_scope_packet(
-                scope_paths=scope_paths_for_work_item(team_run, wi),
+                scope_paths=list(getattr(wi, "scope_paths", None) or []),
                 svc=ci_service,
                 team_run=team_run,
             )

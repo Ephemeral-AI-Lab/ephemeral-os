@@ -231,45 +231,6 @@ def _svc_or_error(context: ToolExecutionContext) -> tuple[Any | None, ToolResult
     return svc, None
 
 
-async def _remote_workspace_structure(
-    context: ToolExecutionContext,
-    *,
-    path: str,
-    max_depth: int,
-) -> str | None:
-    """List a sandbox-backed workspace when the local symbol index is cold."""
-    target = resolve_daytona_path(path, context)
-    command = f"find {shlex.quote(target)} -maxdepth {max(0, int(max_depth))} -print"
-    response, output = await _exec_remote(
-        context,
-        command,
-        log_label=f"Remote workspace listing for {target}",
-    )
-    if response is None:
-        return None
-
-    exit_code = getattr(response, "exit_code", 0)
-    if exit_code != 0:
-        logger.debug(
-            "Remote workspace listing returned exit_code=%s for %s",
-            exit_code,
-            target,
-        )
-        return None
-    if not output:
-        return None
-
-    lines = sorted(line for line in output.splitlines() if line.strip())
-    if not lines:
-        return None
-
-    truncated = len(lines) > 500
-    rendered = "\n".join(lines[:500])
-    if truncated:
-        rendered += "\n... (truncated at 500 files)"
-    return rendered
-
-
 async def _remote_query_symbols(
     context: ToolExecutionContext,
     *,
@@ -517,15 +478,9 @@ async def ci_workspace_structure(
     if output:
         return ToolResult(output=output)
 
-    remote_listing = await _remote_workspace_structure(
-        context,
-        path=path,
-        max_depth=max_depth,
+    return ToolResult(
+        output="No files indexed yet. Use `daytona_glob` for file discovery when the symbol index is cold."
     )
-    if remote_listing:
-        return ToolResult(output=remote_listing)
-
-    return ToolResult(output="No files indexed")
 
 
 # -- Symbol Query -------------------------------------------------------------
@@ -721,11 +676,13 @@ async def ci_query_references(
 
 @tool(
     name="ci_edit_hotspots",
-    description="Return files that have been edited most frequently (conflict-prone).",
+    description="Return files edited most frequently, optionally filtered by scope. Use cross_run for cross-run contention data.",
     read_only=True,
 )
 async def ci_edit_hotspots(
     limit: int = 10,
+    scope_paths: list[str] | None = None,
+    cross_run: bool = False,
     *,
     context: ToolExecutionContext,
 ) -> ToolResult:
@@ -733,63 +690,69 @@ async def ci_edit_hotspots(
 
     Args:
         limit: Max results
+        scope_paths: Filter to files under these path prefixes
+        cross_run: Query cross-run history (FileChangeStore/PG) for multi-agent contention
 
     Returns:
-        items (list): Hotspot entries with file and edit_count
+        hotspots (list): Hotspot entries with file, edit_count, and optionally agents_touched
     """
     svc, err = _svc_or_error(context)
     if err:
         return err
 
-    arbiter = svc.arbiter
-    if arbiter is None:
-        return ToolResult(output="Arbiter not available")
+    # Cross-run path: use FileChangeStore for multi-agent contention data
+    if cross_run:
+        store = context.metadata.get("file_change_store")
+        if store is not None and getattr(store, "initialized", False):
+            hotspots = store.contention_hotspots(
+                scope_prefixes=scope_paths or [],
+                limit=limit,
+            )
+            if hotspots:
+                return ToolResult(
+                    output=json.dumps(
+                        {
+                            "hotspots": [
+                                {
+                                    "file": h.file_path,
+                                    "agents_touched": h.agent_count,
+                                    "total_edits": h.edit_count,
+                                }
+                                for h in hotspots
+                            ],
+                        },
+                        indent=2,
+                    )
+                )
+            return ToolResult(
+                output=json.dumps(
+                    {"hotspots": [], "note": "No cross-run contention history found."}
+                )
+            )
+        return ToolResult(
+            output=json.dumps(
+                {"hotspots": [], "note": "FileChangeStore not available for cross-run queries."}
+            )
+        )
 
-    hotspots = arbiter.hotspots(limit=limit)
+    # Same-run path: use arbiter via CI service
+    store = getattr(svc.arbiter, "file_change_store", None) if svc.arbiter else None
+    if store is None or not getattr(store, "initialized", False):
+        return ToolResult(output="FileChangeStore not available")
+
+    # When scope filtering is needed, fetch a larger candidate set so that
+    # post-filter doesn't return empty when matching entries exist beyond
+    # the initial limit.
+    fetch_limit = limit * 5 if scope_paths else limit
+    hotspots = store.hotspots(limit=fetch_limit)
     if not hotspots:
         return ToolResult(output="No edit hotspots recorded")
 
     items = [{"file": fp, "edit_count": count} for fp, count in hotspots]
-    return ToolResult(output=json.dumps(items, indent=2))
-
-
-# -- Recent Changes -----------------------------------------------------------
-
-
-@tool(
-    name="ci_recent_changes",
-    description="List files changed in the last N seconds for change awareness.",
-    read_only=True,
-)
-async def ci_recent_changes(
-    seconds: float = 60.0,
-    *,
-    context: ToolExecutionContext,
-) -> ToolResult:
-    """See files changed recently (by other agents or shell commands).
-
-    Args:
-        seconds: Look back window in seconds
-
-    Returns:
-        files (list): Recently changed file paths
-    """
-    svc, err = _svc_or_error(context)
-    if err:
-        return err
-
-    arbiter = getattr(svc, "arbiter", None)
-    if arbiter is None:
-        return ToolResult(output="Arbiter not available")
-
-    edits = arbiter.recent_edits(seconds=seconds)
-    seen: set[str] = set()
-    files: list[str] = []
-    for e in edits:
-        if e.file_path not in seen:
-            seen.add(e.file_path)
-            files.append(e.file_path)
-    if not files:
-        return ToolResult(output=f"No files changed in the last {seconds}s")
-
-    return ToolResult(output=json.dumps(files, indent=2))
+    if scope_paths:
+        items = [
+            item
+            for item in items
+            if any(item["file"].startswith(p.rstrip("/")) for p in scope_paths)
+        ]
+    return ToolResult(output=json.dumps(items[:limit], indent=2))

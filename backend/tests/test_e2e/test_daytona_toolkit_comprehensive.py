@@ -1208,7 +1208,7 @@ class TestCITypesDeep:
         assert tel.symbol_index_size == 0
         assert tel.lsp_connected is False
         assert tel.arbiter_active_edits == 0
-        assert tel.ledger_entry_count == 0
+        assert tel.total_edits == 0
 
 
 # ===========================================================================
@@ -1299,15 +1299,6 @@ class TestArbiterOCC:
         arb.record_edit("/ws/a.py")
         arb.record_edit("/ws/a.py")
         assert arb.metrics.total_edits == 2
-
-    def test_hotspots_tracks_frequently_edited_files(self):
-        arb = self._make_arbiter()
-        for _ in range(5):
-            arb.record_edit("/ws/hot.py")
-        arb.record_edit("/ws/cold.py")
-        spots = arb.hotspots(limit=2)
-        assert spots[0] == ("/ws/hot.py", 5)
-        assert spots[1] == ("/ws/cold.py", 1)
 
     def test_on_edit_callback_fires(self):
         calls = []
@@ -1470,75 +1461,39 @@ class TestTimeMachine:
         assert len(snap.content_hash) == 16  # SHA256 prefix
 
 
-class TestArbiterEditBuffer:
-    """Arbiter edit buffer — replaces Ledger tests."""
+class TestArbiterEditRecording:
+    """Arbiter edit recording — generation counter and metrics tracking."""
 
     def _make_arbiter(self):
         from code_intelligence.editing.arbiter import Arbiter
+        from team.persistence.file_change_store import NullFileChangeStore
 
-        return Arbiter(workspace_root="/workspace")
+        return Arbiter(workspace_root="/workspace", file_change_store=NullFileChangeStore())
 
-    def test_record_and_retrieve(self):
+    def test_record_increments_generation(self):
         arbiter = self._make_arbiter()
         gen = arbiter.record_edit("/ws/app.py", "agent-1", edit_type="edit")
         assert gen == 1
-        edits = arbiter.changes_since(0)
-        assert len(edits) == 1
-        assert edits[0].file_path == "/ws/app.py"
-        assert edits[0].agent_id == "agent-1"
-        assert edits[0].edit_type == "edit"
-        assert edits[0].timestamp > 0
+        gen2 = arbiter.record_edit("/ws/b.py", "agent-2")
+        assert gen2 == 2
 
-    def test_who_changed_returns_entries_for_file(self):
+    def test_metrics_track_total_edits(self):
         arbiter = self._make_arbiter()
+        assert arbiter.metrics.total_edits == 0
         arbiter.record_edit("/ws/a.py", "agent-1")
+        assert arbiter.metrics.total_edits == 1
         arbiter.record_edit("/ws/b.py", "agent-2")
-        arbiter.record_edit("/ws/a.py", "agent-3")
+        assert arbiter.metrics.total_edits == 2
 
-        changes = arbiter.who_changed("/ws/a.py")
-        assert len(changes) == 2
-        assert changes[0].agent_id == "agent-1"
-        assert changes[1].agent_id == "agent-3"
-
-    def test_who_changed_empty_file(self):
+    def test_generation_property(self):
         arbiter = self._make_arbiter()
-        assert arbiter.who_changed("/ws/never_edited.py") == []
-
-    def test_changes_since_filters_by_time(self):
-        import time as _t
-
-        arbiter = self._make_arbiter()
-        arbiter.record_edit("/ws/old.py", "agent-1")
-        cutoff = _t.time()
-        _t.sleep(0.01)
-        arbiter.record_edit("/ws/new.py", "agent-2")
-
-        recent = arbiter.changes_since(cutoff)
-        assert len(recent) == 1
-        assert recent[0].file_path == "/ws/new.py"
-
-    def test_recent_edits_deduplicates_by_time(self):
-        arbiter = self._make_arbiter()
+        assert arbiter.generation == 0
         arbiter.record_edit("/ws/a.py", "agent-1")
-        arbiter.record_edit("/ws/b.py", "agent-2")
-        arbiter.record_edit("/ws/a.py", "agent-3")
+        assert arbiter.generation == 1
 
-        edits = arbiter.recent_edits(seconds=10.0)
-        files = [e.file_path for e in edits]
-        assert "/ws/a.py" in files
-        assert "/ws/b.py" in files
-
-    def test_edit_count(self):
+    def test_record_with_all_params(self):
         arbiter = self._make_arbiter()
-        assert arbiter.edit_count == 0
-        arbiter.record_edit("/ws/a.py", "agent-1")
-        assert arbiter.edit_count == 1
-        arbiter.record_edit("/ws/b.py", "agent-2")
-        assert arbiter.edit_count == 2
-
-    def test_record_with_hashes_and_description(self):
-        arbiter = self._make_arbiter()
-        arbiter.record_edit(
+        gen = arbiter.record_edit(
             "/ws/app.py",
             "agent-1",
             edit_type="edit",
@@ -1546,18 +1501,8 @@ class TestArbiterEditBuffer:
             new_hash="bbb222",
             description="Fix null check",
         )
-        edits = arbiter.changes_since(0)
-        assert edits[0].old_hash == "aaa111"
-        assert edits[0].new_hash == "bbb222"
-        assert edits[0].description == "Fix null check"
-
-    def test_edit_types(self):
-        """Arbiter edit buffer should accept all edit types."""
-        arbiter = self._make_arbiter()
-        for et in ("edit", "create", "delete", "shell_mutation"):
-            arbiter.record_edit("/ws/f.py", "agent", edit_type=et)
-        edits = arbiter.changes_since(0)
-        assert [e.edit_type for e in edits] == ["edit", "create", "delete", "shell_mutation"]
+        assert gen == 1
+        assert arbiter.metrics.total_edits == 1
 
 
 class TestOCCEditFlow:

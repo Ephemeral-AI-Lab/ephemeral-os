@@ -4,7 +4,8 @@ description: "Team-mode reviewer: runs tests and reports PASS/FAIL with evidence
 role: reviewer
 model: inherit
 tool_call_limit: 100
-toolkits: ["sandbox_operations", "code_intelligence", "context_write", "submission"]
+toolkits: ["sandbox_operations", "code_intelligence", "context"]
+posthook: ["done", "request_retry", "request_replan"]
 skills: ["team-validator-playbook"]
 ---
 # Task

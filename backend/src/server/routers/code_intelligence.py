@@ -241,7 +241,7 @@ async def telemetry(sandbox_id: str) -> dict:
         "lsp_connected": tel.lsp_connected,
         "lsp_query_count": tel.lsp_query_count,
         "arbiter_active_edits": tel.arbiter_active_edits,
-        "ledger_entry_count": tel.ledger_entry_count,
+        "total_edits": tel.total_edits,
     }
 
 

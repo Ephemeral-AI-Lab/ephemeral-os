@@ -7,7 +7,7 @@ from typing import Any
 
 
 # ---------------------------------------------------------------------------
-# Scope path utilities (moved from scope_packets.py)
+# Scope path utilities
 # ---------------------------------------------------------------------------
 
 
@@ -123,15 +123,16 @@ def _normalise_path(path: str | None) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Scope-aware path utilities (migrated from tools.daytona_toolkit.coordination)
+# Scope-aware path utilities
 # ---------------------------------------------------------------------------
-
-_PY_PATH_RE = re.compile(r"(?<![A-Za-z0-9_./-])([A-Za-z0-9_./-]+\.py)(?![A-Za-z0-9_./-])")
 
 
 def scopes_overlap(path_a: str, path_b: str) -> bool:
     """Return True when two file or directory scopes overlap."""
     return scope_paths_overlap(path_a, path_b)
+
+
+_PY_PATH_RE = re.compile(r"(?<![A-Za-z0-9_./-])([A-Za-z0-9_./-]+\.py)(?![A-Za-z0-9_./-])")
 
 
 def scope_paths_from_payload(payload: Any) -> list[str]:
@@ -166,6 +167,4 @@ def scope_paths_from_payload(payload: Any) -> list[str]:
     return normalize_scope_paths(collected)
 
 
-def scope_paths_for_work_item(team_run: Any, wi: Any) -> list[str]:
-    """Resolve a work item's owned scope from payload."""
-    return scope_paths_from_payload(getattr(wi, "payload", None))
+

@@ -19,7 +19,6 @@ from team.models import Note
 from team.persistence.ltree_utils import path_to_ltree
 
 if TYPE_CHECKING:
-    from code_intelligence.editing.arbiter import Arbiter
     from team.models import Task
 
 logger = logging.getLogger(__name__)
@@ -137,7 +136,7 @@ class TaskCenter:
         self,
         task: "Task",
         *,
-        arbiter: "Arbiter | None" = None,
+        file_change_store: Any | None = None,
         task_lookup: Callable[[str], Awaitable["Task | None"]] | None = None,
         max_context_bytes: int = 200_000,
     ) -> str:
@@ -174,10 +173,10 @@ class TaskCenter:
                     )
                     budget = 0
 
-        # Priority 3: Recent file changes in scope (ground truth from Arbiter)
-        if arbiter is not None and budget > 0 and task.scope_paths:
+        # Priority 3: Recent file changes in scope (from FileChangeStore)
+        if file_change_store is not None and getattr(file_change_store, "initialized", False) and budget > 0 and task.scope_paths:
             created_ts = task.created_at.timestamp() if task.created_at else 0.0
-            changes = arbiter.changes_since(created_ts)
+            changes = file_change_store.changes_since(created_ts)
             scoped = [
                 e
                 for e in changes
@@ -187,7 +186,7 @@ class TaskCenter:
                 now = time.time()
                 lines = [
                     f"- {e.file_path} ({e.edit_type} by {e.agent_id}, "
-                    f"{int(now - e.timestamp)}s ago)"
+                    f"{int(now - e.created_at.timestamp())}s ago)"
                     for e in scoped
                 ]
                 change_section = "## Recent changes in your scope\n" + "\n".join(lines)

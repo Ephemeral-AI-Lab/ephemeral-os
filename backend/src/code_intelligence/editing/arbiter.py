@@ -3,19 +3,19 @@
 Provides per-file write coordination to prevent conflicts when multiple
 agents edit the same file. Uses edit tokens with TTL for staleness detection.
 
+Edit history is persisted via FileChangeStore (PostgreSQL). The Arbiter
+no longer maintains an in-memory edit buffer.
+
 Lock ordering (Group A):
     Arbiter locks < Cache locks < Counter locks
 """
 
 from __future__ import annotations
 
-import bisect
-import hashlib
 import logging
 import threading
 import time
 import uuid
-from collections import deque
 from dataclasses import dataclass
 from typing import Any
 from collections.abc import Callable
@@ -29,10 +29,6 @@ logger = logging.getLogger(__name__)
 
 _EDIT_TOKEN_TTL = 300.0  # 5 minutes
 _EDIT_INTENT_TTL = 300.0  # 5 minutes
-
-
-def _content_hash(content: str) -> str:
-    return hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
 
 
 @dataclass
@@ -74,31 +70,14 @@ class ArbiterMetrics:
     active_locks: int = 0
 
 
-_EDIT_BUFFER_MAX = 10_000
-
-
-@dataclass(frozen=True)
-class EditRecord:
-    """Immutable edit record. Replaces LedgerEntry."""
-
-    file_path: str
-    agent_id: str
-    timestamp: float
-    edit_type: str = "edit"
-    old_hash: str = ""
-    new_hash: str = ""
-    description: str = ""
-
-
-# Type for the optional flush callback (e.g. FileChangeStore.record)
-EditFlushCallback = Callable[["EditRecord"], Any]
-
-
 class Arbiter:
     """Per-file edit arbitration with OCC.
 
     Thread-safe. Uses per-file locks to serialize edits to the same file
     while allowing concurrent edits to different files.
+
+    Edit history is delegated to FileChangeStore (PG). The Arbiter only
+    manages OCC primitives: tokens, intents, and file locks.
 
     Parameters
     ----------
@@ -106,6 +85,10 @@ class Arbiter:
         Root directory for path validation.
     on_edit:
         Optional callback ``(file_path, agent_id, generation)`` after successful edit.
+    file_change_store:
+        Durable store for edit history. When None, edits are not persisted.
+    team_run_id:
+        Team run ID for scoping edits in the store.
     max_concurrent:
         Maximum concurrent file edits.
     """
@@ -114,13 +97,15 @@ class Arbiter:
         self,
         workspace_root: str = "",
         on_edit: Callable[[str, str, int], None] | None = None,
-        on_edit_flush: EditFlushCallback | None = None,
+        file_change_store: Any | None = None,
+        team_run_id: str = "",
         max_concurrent: int = ARBITER_MAX_CONCURRENT_EDITS,
     ) -> None:
         self._workspace_root = workspace_root
         self._on_edit = on_edit
-        self._on_edit_flush = on_edit_flush
         self._max_concurrent = max_concurrent
+        self.file_change_store: Any = file_change_store
+        self.team_run_id: str = team_run_id
 
         self._lock = threading.Lock()
         self._file_locks: dict[str, threading.Lock] = {}
@@ -128,11 +113,6 @@ class Arbiter:
         self._active_intents: dict[str, EditIntent] = {}  # intent_id -> intent
         self._metrics = ArbiterMetrics()
         self._generation = 0
-        # Hotspot tracking: file_path -> edit count
-        self._hotspots: dict[str, int] = {}
-        # Edit buffer (replaces Ledger) — bounded ring for in-process reads
-        self._recent_edits: deque[EditRecord] = deque(maxlen=_EDIT_BUFFER_MAX)
-        self._edit_timestamps: deque[float] = deque(maxlen=_EDIT_BUFFER_MAX)
 
     # -- Token management -----------------------------------------------------
 
@@ -254,35 +234,28 @@ class Arbiter:
     ) -> int:
         """Record a successful edit. Returns the new generation.
 
-        This is the single write point for all file edits — replaces
-        the former Ledger.record() + Arbiter.record_edit() pair.
-        Stores the record in an in-memory ring buffer and optionally
-        flushes to a durable store (e.g. FileChangeStore) via callback.
+        Writes directly to FileChangeStore (PG) when available.
         """
-        now = time.time()
-        record = EditRecord(
-            file_path=file_path,
-            agent_id=agent_id,
-            timestamp=now,
-            edit_type=edit_type,
-            old_hash=old_hash,
-            new_hash=new_hash,
-            description=description,
-        )
         with self._lock:
             self._prune_expired_tokens_locked()
             self._generation += 1
             gen = self._generation
             self._metrics.total_edits += 1
-            self._hotspots[file_path] = self._hotspots.get(file_path, 0) + 1
-            self._recent_edits.append(record)
-            self._edit_timestamps.append(now)
 
-        if self._on_edit_flush:
+        store = self.file_change_store
+        if store is not None and getattr(store, "initialized", False):
             try:
-                self._on_edit_flush(record)
+                store.record(
+                    team_run_id=self.team_run_id or "",
+                    file_path=file_path,
+                    agent_id=agent_id,
+                    edit_type=edit_type,
+                    old_hash=old_hash,
+                    new_hash=new_hash,
+                    description=description,
+                )
             except Exception:
-                logger.debug("on_edit_flush callback failed for %s", file_path)
+                logger.debug("FileChangeStore.record failed for %s", file_path)
 
         if self._on_edit:
             try:
@@ -292,37 +265,7 @@ class Arbiter:
 
         return gen
 
-    def changes_since(self, since: float) -> list[EditRecord]:
-        """Return all edit records after *since* timestamp. O(log n) via bisect."""
-        with self._lock:
-            idx = bisect.bisect_right(list(self._edit_timestamps), since)
-            return list(self._recent_edits)[idx:]
-
-    def recent_edits(self, seconds: float = 60.0) -> list[EditRecord]:
-        """Return all edit records in the last N seconds."""
-        cutoff = time.time() - seconds
-        return self.changes_since(cutoff)
-
-    def who_changed(self, file_path: str) -> list[EditRecord]:
-        """Return all edit records for a file."""
-        with self._lock:
-            return [e for e in self._recent_edits if e.file_path == file_path]
-
-    @property
-    def edit_count(self) -> int:
-        """Number of edit records in the buffer."""
-        with self._lock:
-            return len(self._recent_edits)
-
     # -- Queries --------------------------------------------------------------
-
-    def hotspots(self, limit: int = 10) -> list[tuple[str, int]]:
-        """Return the most frequently edited files."""
-        with self._lock:
-            sorted_files = sorted(
-                self._hotspots.items(), key=lambda x: x[1], reverse=True,
-            )
-            return sorted_files[:limit]
 
     @property
     def metrics(self) -> ArbiterMetrics:

@@ -316,9 +316,10 @@ def test_finalize_ci_write_enriches_prepared_write_with_symbol_boundaries(monkey
 def test_build_scope_packet_coherence_ignores_unrelated_global_generation_changes():
     svc = MagicMock()
     svc.arbiter.generation = 2
-    svc.arbiter.recent_edits.return_value = []
+    svc.arbiter.file_change_store.initialized = True
+    svc.arbiter.file_change_store.recent_edits.return_value = []
     svc.arbiter.active_reservations.return_value = []
-    svc.arbiter.hotspots.return_value = []
+    svc.arbiter.file_change_store.hotspots.return_value = []
     svc.symbol_index.generation = 3
 
     first = build_scope_packet(scope_paths=["src/app.py"], svc=svc)
@@ -335,13 +336,14 @@ def test_build_scope_packet_coherence_changes_when_scope_local_changes_change():
     svc = MagicMock()
     svc.arbiter.generation = 2
     svc.arbiter.active_reservations.return_value = []
-    svc.arbiter.hotspots.return_value = []
+    svc.arbiter.file_change_store.initialized = True
+    svc.arbiter.file_change_store.hotspots.return_value = []
     svc.symbol_index.generation = 3
-    svc.arbiter.recent_edits.return_value = []
+    svc.arbiter.file_change_store.recent_edits.return_value = []
 
     first = build_scope_packet(scope_paths=["src/app.py"], svc=svc)
 
-    svc.arbiter.recent_edits.return_value = [
+    svc.arbiter.file_change_store.recent_edits.return_value = [
         SimpleNamespace(
             file_path="src/app.py",
             agent_id="worker-2",

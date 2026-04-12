@@ -180,6 +180,12 @@ class BaseTool(ABC):
 class BaseToolkit:
     """Named collection of related tools."""
 
+    # Subclasses set this to True to declare that the toolkit's tools
+    # belong to the posthook phase and must not be exposed during the
+    # main work loop. The query loop uses this flag to auto-separate
+    # posthook tools from regular tools without name-based matching.
+    posthook: bool = False
+
     def __init__(
         self,
         name: str,
@@ -271,6 +277,11 @@ class ToolRegistry:
                 allowed_tools.update(tk.tool_names())
         self._toolkits = kept_toolkits
         self._tools = {k: v for k, v in self._tools.items() if k in allowed_tools}
+
+    def remove_tools(self, tool_names: list[str]) -> None:
+        """Remove specific tools by name (blocklist). Toolkits are kept."""
+        blocked = set(tool_names)
+        self._tools = {k: v for k, v in self._tools.items() if k not in blocked}
 
     def to_api_schema(self) -> list[dict[str, Any]]:
         """Return all tool schemas in API format.
