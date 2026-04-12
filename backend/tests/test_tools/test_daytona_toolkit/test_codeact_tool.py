@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from tools.core.base import ToolExecutionContext
+from tools.daytona_toolkit import codeact_tool as codeact_tool_module
 from tools.daytona_toolkit.codeact_tool import (
     _build_exec_command,
     _build_wrapper,
@@ -193,6 +195,19 @@ async def test_build_wrapper_uses_bash_and_repo_cwd_for_shell_helper():
     assert '_CODEACT_CWD = "/testbed"' in wrapper
 
 
+async def test_build_wrapper_embeds_declared_shell_output_guard():
+    wrapper = _build_wrapper(
+        "shell(\"sed -i 's/a/b/' out.py\")",
+        run_id="abcd1234",
+        cwd="/testbed",
+        require_declared_shell_outputs=True,
+        declared_output_paths=[],
+    )
+
+    assert "_REQUIRE_DECLARED_SHELL_OUTPUTS = True" in wrapper
+    assert "Mutating shell calls must declare `declared_output_paths`" in wrapper
+
+
 async def test_build_exec_command_runs_wrapper_from_repo_cwd():
     command = _build_exec_command("/tmp/codeact-wrapper-abcd1234.py", cwd="/testbed")
 
@@ -222,6 +237,106 @@ async def test_codeact_success_with_writes():
     assert data["files_written"] == 2
     # upload_file called once for the script upload + twice for the writes
     assert sb.fs.upload_file.call_count == 3
+
+
+async def test_codeact_uses_ci_write_flow_for_helper_staged_writes(monkeypatch):
+    manifest = _make_manifest(
+        reads=[{"path": "/ws/out.py", "hash": "read-hash-1234"}],
+        writes=[{"path": "/ws/out.py", "content": "x = 42\n"}],
+    )
+    sb = _make_sandbox(manifest=manifest)
+    ctx = _ctx({"daytona_sandbox": sb})
+    prepared = SimpleNamespace(file_path="/ws/out.py")
+    seen: dict[str, object] = {}
+
+    def fake_prepare_ci_write(context, path, *, expected_hash="", allow_scope_drift=False):
+        seen["path"] = path
+        seen["expected_hash"] = expected_hash
+        seen["allow_scope_drift"] = allow_scope_drift
+        return prepared, {"scope_paths": [path], "coherence_token": "tok"}, None
+
+    def fake_prepare_ci_edit_intent(context, prepared_write, *, content):
+        seen["intent_content"] = content
+        return prepared_write, "intent-1"
+
+    def fake_finalize_ci_write(context, prepared_write, *, content, edit_type, description):
+        seen["edit_type"] = edit_type
+        seen["description"] = description
+        return SimpleNamespace(success=True)
+
+    monkeypatch.setattr(codeact_tool_module, "prepare_ci_write", fake_prepare_ci_write)
+    monkeypatch.setattr(
+        codeact_tool_module,
+        "prepare_ci_edit_intent",
+        fake_prepare_ci_edit_intent,
+    )
+    monkeypatch.setattr(codeact_tool_module, "finalize_ci_write", fake_finalize_ci_write)
+    monkeypatch.setattr(codeact_tool_module, "release_ci_edit_intent", lambda *args: None)
+    monkeypatch.setattr(codeact_tool_module, "abort_ci_write", lambda *args: None)
+
+    result = await daytona_codeact.execute(
+        daytona_codeact.input_model(code="write('/ws/out.py', 'x = 42\\n')"),
+        ctx,
+    )
+
+    assert not result.is_error
+    data = json.loads(result.output)
+    assert data["files_written"] == 1
+    assert data["write_errors"] == []
+    assert sb.fs.upload_file.call_count == 1
+    assert seen == {
+        "path": "/ws/out.py",
+        "expected_hash": "read-hash-1234",
+        "allow_scope_drift": True,
+        "intent_content": "x = 42\n",
+        "edit_type": "codeact",
+        "description": "daytona_codeact",
+    }
+
+
+async def test_codeact_surfaces_ci_conflicts_for_helper_staged_writes(monkeypatch):
+    manifest = _make_manifest(
+        reads=[{"path": "/ws/out.py", "hash": "read-hash-1234"}],
+        writes=[{"path": "/ws/out.py", "content": "x = 42\n"}],
+    )
+    sb = _make_sandbox(manifest=manifest)
+    ctx = _ctx({"daytona_sandbox": sb})
+    prepared = SimpleNamespace(file_path="/ws/out.py")
+
+    monkeypatch.setattr(
+        codeact_tool_module,
+        "prepare_ci_write",
+        lambda *args, **kwargs: (prepared, {"scope_paths": ["/ws/out.py"]}, None),
+    )
+    monkeypatch.setattr(
+        codeact_tool_module,
+        "prepare_ci_edit_intent",
+        lambda context, prepared_write, *, content: (prepared_write, "intent-1"),
+    )
+    monkeypatch.setattr(
+        codeact_tool_module,
+        "finalize_ci_write",
+        lambda *args, **kwargs: SimpleNamespace(
+            success=False,
+            conflict=True,
+            message="Write precheck failed: stale_reservation",
+        ),
+    )
+    monkeypatch.setattr(codeact_tool_module, "release_ci_edit_intent", lambda *args: None)
+    monkeypatch.setattr(codeact_tool_module, "abort_ci_write", lambda *args: None)
+
+    result = await daytona_codeact.execute(
+        daytona_codeact.input_model(code="write('/ws/out.py', 'x = 42\\n')"),
+        ctx,
+    )
+
+    assert result.is_error
+    data = json.loads(result.output)
+    assert data["files_written"] == 0
+    assert data["write_conflicts"] == ["/ws/out.py"]
+    assert "stale_reservation" in data["write_errors"][0]
+    assert result.metadata["conflict"] is True
+    assert sb.fs.upload_file.call_count == 1
 
 
 async def test_codeact_executes_wrapper_from_repo_cwd():
@@ -283,6 +398,70 @@ async def test_codeact_shell_summaries():
     assert len(data["shell_outputs"]) == 2
     assert data["shell_outputs"][0]["stdout"] == "file-a\nfile-b\n"
     assert data["shell_outputs"][1]["stderr"] == "assertion failed"
+
+
+async def test_codeact_reserves_and_syncs_declared_shell_outputs(monkeypatch):
+    manifest = _make_manifest(
+        shells=[
+            {
+                "command": "sed -i 's/a/b/' /ws/out.py",
+                "exit_code": 0,
+                "stdout": "",
+                "stderr": "",
+            }
+        ]
+    )
+    sb = _make_sandbox(manifest=manifest)
+    ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/ws"})
+    prepared_item = SimpleNamespace(file_path="/ws/out.py")
+    seen: dict[str, object] = {}
+
+    def fake_prepare_declared_shell_outputs(context, *, declared_output_paths):
+        seen["prepared_paths"] = declared_output_paths
+        return [prepared_item], {"scope_paths": declared_output_paths}, None
+
+    async def fake_sync_shell_mutations(context, *, command, declared_output_paths=None, limit=64):
+        seen["sync_command"] = command
+        seen["sync_paths"] = declared_output_paths
+        return {
+            "enabled": True,
+            "files": 1,
+            "truncated": False,
+            "declared_output_paths": declared_output_paths,
+        }
+
+    def fake_release_declared_shell_outputs(context, prepared_items):
+        seen["released_paths"] = [item.file_path for item in prepared_items]
+
+    monkeypatch.setattr(
+        codeact_tool_module,
+        "prepare_declared_shell_outputs",
+        fake_prepare_declared_shell_outputs,
+    )
+    monkeypatch.setattr(codeact_tool_module, "sync_shell_mutations", fake_sync_shell_mutations)
+    monkeypatch.setattr(
+        codeact_tool_module,
+        "release_declared_shell_outputs",
+        fake_release_declared_shell_outputs,
+    )
+
+    result = await daytona_codeact.execute(
+        daytona_codeact.input_model(
+            code="shell(\"sed -i 's/a/b/' out.py\")",
+            declared_output_paths=["out.py"],
+        ),
+        ctx,
+    )
+
+    assert not result.is_error
+    data = json.loads(result.output)
+    assert data["shell_ci_sync"]["files"] == 1
+    assert seen == {
+        "prepared_paths": ["/ws/out.py"],
+        "sync_command": "sed -i 's/a/b/' /ws/out.py",
+        "sync_paths": ["/ws/out.py"],
+        "released_paths": ["/ws/out.py"],
+    }
 
 
 async def test_codeact_preserves_script_stdout_before_manifest_line():
@@ -409,7 +588,7 @@ async def test_codeact_allows_install_commands_in_team_mode():
 
 
 # ---------------------------------------------------------------------------
-# CI integration: prime_cache and record_edit called on successful write
+# CI integration: helper writes use the coordinated CI commit path
 # ---------------------------------------------------------------------------
 
 
@@ -422,7 +601,9 @@ async def test_codeact_calls_ci_helpers_on_write():
     await daytona_codeact.execute(
         daytona_codeact.input_model(code="write('/ws/f.py', 'content')"), ctx
     )
-    svc.arbiter.record_edit.assert_called_once()
+    svc.prepare_write.assert_called_once()
+    svc.commit_prepared_write.assert_called_once()
+    assert sb.fs.upload_file.call_count == 1
 
 
 # ---------------------------------------------------------------------------
