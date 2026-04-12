@@ -182,6 +182,7 @@ def _build_agent_tool_registry(
     toolkit_ctx = ToolkitContext(
         metadata={
             "agent_name": agent_name,
+            "role": agent_def.role if agent_def else "",
             "cwd": config.cwd,
             "sandbox_id": sandbox_id or "",
         },

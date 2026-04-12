@@ -29,7 +29,9 @@ from message.messages import (
     ConversationMessage,
     ToolResultBlock,
 )
-from engine.runtime.background_dispatch import launch_background_tool as _launch_background_tool_impl
+from engine.runtime.background_dispatch import (
+    launch_background_tool as _launch_background_tool_impl,
+)
 from engine.runtime.background_tasks import BackgroundTaskManager, TrackedBackgroundTask
 from engine.runtime.tool_trace import record_tool_trace as _record_tool_trace
 from message.stream_events import (
@@ -216,10 +218,7 @@ def _build_background_reminder(
             text = f"Running for {elapsed:.0f}s\nNew output (last {len(new_lines)} lines):\n"
             text += "\n".join(new_lines)
         else:
-            text = (
-                f"Running for {elapsed:.0f}s\n"
-                f"No new output in the last {since:.0f}s"
-            )
+            text = f"Running for {elapsed:.0f}s\nNo new output in the last {since:.0f}s"
         text += (
             "\nKeep working on any other ready analysis or tool tasks first. "
             "Only wait when this background task is the remaining blocker."
@@ -259,6 +258,7 @@ def _launch_background_tool(
     The caller is responsible for yielding whichever of the two events is
     non-``None`` so that tests and the router see a single ordered stream.
     """
+
     async def _execute_in_context(
         tool_name: str,
         tool_use_id: str,
@@ -330,9 +330,7 @@ async def _run_query_loop(
             # Append a fresh background reminder to the durable history so
             # the user sees it AND the next compaction pass picks it up.
             if background_manager.has_pending():
-                reminder_event = _append_and_emit_reminder(
-                    background_manager, display_messages
-                )
+                reminder_event = _append_and_emit_reminder(background_manager, display_messages)
                 if reminder_event is not None:
                     yield reminder_event, None
 
@@ -342,9 +340,7 @@ async def _run_query_loop(
                 cwd=context.cwd,
                 metadata=context.tool_metadata,
             ),
-            should_defer=(
-                defer_background_dispatch if background_manager is not None else None
-            ),
+            should_defer=(defer_background_dispatch if background_manager is not None else None),
         )
 
         daytona_toolkit = context.tool_registry.get_toolkit("sandbox_operations")
@@ -357,9 +353,7 @@ async def _run_query_loop(
             try:
                 from tools.daytona_toolkit import DaytonaToolkit
 
-                daytona_toolkit = DaytonaToolkit(
-                    sandbox_id=context.tool_metadata.sandbox_id
-                )
+                daytona_toolkit = DaytonaToolkit(sandbox_id=context.tool_metadata.sandbox_id)
             except Exception as exc:
                 logger.debug(
                     "Temporary DaytonaToolkit creation skipped during CI context injection: %s",
@@ -411,7 +405,8 @@ async def _run_query_loop(
                 tools=decorate_schemas_for_background(
                     context.tool_registry,
                     context.tool_registry.to_api_schema(),
-                ) if context.enable_background_tasks
+                )
+                if context.enable_background_tasks
                 else context.tool_registry.to_api_schema(),
             )
         ):
@@ -511,9 +506,7 @@ async def _run_query_loop(
                 event = _deliver_completed_background_task(completed_task, display_messages)
                 yield event, None
             else:
-                reminder_event = _append_and_emit_reminder(
-                    background_manager, display_messages
-                )
+                reminder_event = _append_and_emit_reminder(background_manager, display_messages)
                 if reminder_event is not None:
                     yield reminder_event, None
             continue
@@ -583,8 +576,7 @@ async def _run_query_loop(
                 tool_def_for_check = context.tool_registry.get(tc.name)
                 force_bg = getattr(tool_def_for_check, "background", "forbidden") == "always"
                 is_background = (
-                    (tc.input.get("background", False) or force_bg)
-                    if background_manager else False
+                    (tc.input.get("background", False) or force_bg) if background_manager else False
                 )
 
                 if is_background:
@@ -694,14 +686,14 @@ async def _run_query_loop(
                 ToolExecutionCompleted(
                     tool_name="",
                     output=(
-                        f"Agent stopped: tool_call_limit "
-                        f"({context.tool_call_limit}) exceeded."
+                        f"Agent stopped: tool_call_limit ({context.tool_call_limit}) exceeded."
                     ),
                     is_error=True,
                 ),
                 None,
             )
             return
+
 
 _STAMPABLE_FIELDS = ("agent_name", "work_id")
 
@@ -816,7 +808,9 @@ async def _execute_tool_call(
         tool_input,
         ToolExecutionContext(cwd=context.cwd, metadata=metadata),
     )
-    _merge_submission_metadata(original=context.tool_metadata, updated=metadata, result_metadata=result.metadata)
+    _merge_submission_metadata(
+        original=context.tool_metadata, updated=metadata, result_metadata=result.metadata
+    )
     if not result.is_error:
         _record_tool_trace(
             context.tool_metadata,
@@ -843,11 +837,19 @@ async def _execute_tool_call(
             },
         )
     return tool_result
+
+
 def _has_submission(metadata: ExecutionMetadata | None) -> bool:
-    """True when a submit tool has accepted a terminal payload for this run."""
+    """True when a submit tool has accepted a terminal payload for this run.
+
+    The posthook_enabled gate ensures standalone (non-team) agents are not
+    affected — they do not set posthook_enabled, so this always returns False
+    for them. Team agents set posthook_enabled=True in their context metadata.
+    """
     if metadata is None:
         return False
+    if not metadata.extras.get("posthook_enabled"):
+        return False
     return any(
-        key.startswith("submitted_") and value is not None
-        for key, value in metadata.extras.items()
+        key.startswith("submitted_") and value is not None for key, value in metadata.extras.items()
     )
