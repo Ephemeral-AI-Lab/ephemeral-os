@@ -192,10 +192,8 @@ class TeamRun:
             self._executor_tasks.append(asyncio.create_task(executor.run_forever()))
 
     async def _is_all_terminal(self) -> bool:
-        """Check terminal state, using async PG path when available."""
-        if self.dispatcher.pg_enabled:
-            return await self.dispatcher.all_terminal_async()
-        return self.dispatcher.all_terminal()
+        """Check whether all tasks are terminal."""
+        return await self.dispatcher.all_terminal()
 
     async def wait(self, *, timeout: float | None = None) -> TeamRunStatus:
         try:
@@ -340,15 +338,11 @@ class TeamRun:
     ) -> "TeamRun":
         """Rehydrate a TeamRun from its durable event log.
 
-        Replays every event emitted for ``team_run_id`` back into a
-        fresh set of runtime objects:
-
-        * ``Dispatcher.graph`` is reconstructed from ``work_item_added``
-          events plus the final ``work_item_status`` seen for each id.
-        * ``BudgetState`` is set from the last ``budget_update`` event
-          (fallback: counted from graph size).
-        * The ready queue is rebuilt to hold every Task that ended
-          up in ``READY`` status at the end of the log.
+        Replays the event log into the dispatcher's cached task graph and
+        restores the last observed budget snapshot. Durable task state still
+        lives in the backing database; the replayed graph is used for metrics,
+        reporting, and checkpoint selection before ``resume(...)`` reattaches
+        executors in the current process.
 
         The returned TeamRun is **paused**: no executors are running.
         Callers resume it explicitly via ``TeamRun.resume(...)`` so they
@@ -413,10 +407,7 @@ class TeamRun:
         else:
             run.budget_state.tasks_used = len(graph)
 
-        services.dispatcher._ready_order = restore_ready_queue(
-            dispatcher=services.dispatcher,
-            graph=graph,
-        )
+        services.dispatcher._ready_order = restore_ready_queue(graph=graph)
 
         run.root_work_item_id = root_id
         if final_status:

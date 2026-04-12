@@ -11,7 +11,6 @@ from team.models import (
     TeamRunStatus,
 )
 from team.persistence.run_store import TeamRunStore
-from team.runtime.dispatcher import Dispatcher
 from team.runtime.services import TeamRuntimeServices, build_team_runtime_services
 
 if TYPE_CHECKING:
@@ -59,17 +58,8 @@ def budget_config_from_event(meta: dict[str, Any]) -> BudgetConfig:
     return BudgetConfig(**{k: v for k, v in dict(meta.get("budgets") or {}).items() if k in valid_keys})
 
 
-def restore_ready_queue(
-    *,
-    dispatcher: Dispatcher,
-    graph: dict[str, Task],
-) -> list[str]:
-    ready_order: list[str] = []
-    for wi in graph.values():
-        if wi.status == TaskStatus.READY:
-            dispatcher._ready_queue.put_nowait(wi.id)
-            ready_order.append(wi.id)
-    return ready_order
+def restore_ready_queue(*, graph: dict[str, Task]) -> list[str]:
+    return [wi.id for wi in graph.values() if wi.status == TaskStatus.READY]
 
 
 def task_from_dict(data: dict[str, Any]) -> Task:
