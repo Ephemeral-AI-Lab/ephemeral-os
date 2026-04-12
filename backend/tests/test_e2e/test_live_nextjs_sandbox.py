@@ -31,10 +31,16 @@ pytestmark = [pytest.mark.e2e, pytest.mark.live]
 # ---------------------------------------------------------------------------
 
 KNOWN_DAYTONA_TOOLS = {
-    "daytona_codeact", "daytona_read_file", "daytona_write_file",
-    "daytona_grep", "daytona_glob",
-    "daytona_edit_file", "ci_hover", "ci_query_symbols",
-    "ci_query_references", "ci_diagnostics",
+    "daytona_codeact",
+    "daytona_read_file",
+    "daytona_write_file",
+    "daytona_grep",
+    "daytona_glob",
+    "daytona_edit_file",
+    "ci_hover",
+    "ci_query_symbols",
+    "ci_query_references",
+    "ci_diagnostics",
 }
 
 NEXTJS_AGENT_PROMPT = (
@@ -163,7 +169,7 @@ async def test_create_page_component(sandbox_id):
     """Agent creates a Next.js page component with TypeScript + React."""
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=NEXTJS_AGENT_PROMPT)
 
-    page_content = '''import React from "react";
+    page_content = """import React from "react";
 
 interface PageProps {
   title: string;
@@ -188,7 +194,7 @@ export default function HomePage(): React.ReactElement {
       />
     </main>
   );
-}'''
+}"""
 
     result = await agent.invoke(
         "Use daytona_codeact to run these commands:\n"
@@ -216,7 +222,7 @@ async def test_create_layout_component(sandbox_id):
     """Agent creates the root layout.tsx with metadata."""
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=NEXTJS_AGENT_PROMPT)
 
-    layout_content = '''import React from "react";
+    layout_content = """import React from "react";
 
 export const metadata = {
   title: "EphemeralOS",
@@ -233,7 +239,7 @@ export default function RootLayout({ children }: RootLayoutProps): React.ReactEl
       <body>{children}</body>
     </html>
   );
-}'''
+}"""
 
     result = await agent.invoke(
         f"Use daytona_write_file to create /workspace/nextjs-app/src/app/layout.tsx with:\n```\n{layout_content}\n```"
@@ -247,7 +253,7 @@ async def test_create_api_route(sandbox_id):
     """Agent creates a Next.js API route handler."""
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=NEXTJS_AGENT_PROMPT)
 
-    api_content = '''import { NextRequest, NextResponse } from "next/server";
+    api_content = """import { NextRequest, NextResponse } from "next/server";
 
 interface HealthResponse {
   status: string;
@@ -262,7 +268,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<HealthResp
     version: "1.0.0",
   };
   return NextResponse.json(response);
-}'''
+}"""
 
     result = await agent.invoke(
         "Do these steps:\n"
@@ -292,9 +298,16 @@ async def test_list_project_structure(sandbox_id):
     outputs = " ".join(e.output for e in completed)
     all_content = (outputs + " " + result.text).lower()
 
-    has_files = any(kw in all_content for kw in [
-        "package.json", "tsconfig", "page.tsx", "layout.tsx", "route.ts",
-    ])
+    has_files = any(
+        kw in all_content
+        for kw in [
+            "package.json",
+            "tsconfig",
+            "page.tsx",
+            "layout.tsx",
+            "route.ts",
+        ]
+    )
     assert has_files or len(started) >= 1, (
         f"Should show project files. Content: {all_content[:400]}"
     )
@@ -347,9 +360,15 @@ async def test_read_page_component(sandbox_id):
     outputs = " ".join(e.output for e in completed)
     all_content = outputs + " " + result.text
     # Should contain key parts of the page component we created
-    has_content = any(kw in all_content for kw in [
-        "HomePage", "HeroSection", "EphemeralOS", "React",
-    ])
+    has_content = any(
+        kw in all_content
+        for kw in [
+            "HomePage",
+            "HeroSection",
+            "EphemeralOS",
+            "React",
+        ]
+    )
     assert has_content or len(started) >= 1, (
         f"Should contain page component content: {all_content[:400]}"
     )
@@ -366,6 +385,7 @@ class TestCodeIntelligenceOnProject:
     def test_ci_service_creates_for_sandbox(self, nextjs_sandbox):
         """CodeIntelligenceService can be instantiated for the sandbox."""
         from code_intelligence.routing.service import CodeIntelligenceService
+
         svc = CodeIntelligenceService(
             sandbox_id=nextjs_sandbox["id"],
             workspace_root="/workspace/nextjs-app",
@@ -374,7 +394,6 @@ class TestCodeIntelligenceOnProject:
 
         assert status["sandbox_id"] == nextjs_sandbox["id"]
         assert "lsp" in status
-        assert "tree_cache" in status
         assert "symbol_index" in status
         assert "arbiter" in status
         assert "ledger" in status
@@ -383,6 +402,7 @@ class TestCodeIntelligenceOnProject:
         """CITelemetry has all expected integer and boolean fields."""
         from code_intelligence.routing.service import CodeIntelligenceService
         from code_intelligence.types import CITelemetry
+
         svc = CodeIntelligenceService(
             sandbox_id=f"ci-tel-{nextjs_sandbox['id'][:8]}",
             workspace_root="/workspace/nextjs-app",
@@ -391,10 +411,13 @@ class TestCodeIntelligenceOnProject:
         assert isinstance(tel, CITelemetry)
 
         for field in [
-            "tree_cache_size", "tree_cache_hits", "tree_cache_misses",
-            "symbol_index_size", "symbol_index_generation", "indexed_files",
-            "lsp_query_count", "lsp_cache_hits",
-            "arbiter_active_edits", "ledger_entry_count",
+            "symbol_index_size",
+            "symbol_index_generation",
+            "indexed_files",
+            "lsp_query_count",
+            "lsp_cache_hits",
+            "arbiter_active_edits",
+            "ledger_entry_count",
         ]:
             val = getattr(tel, field)
             assert isinstance(val, int), f"CITelemetry.{field} should be int, got {type(val)}"
@@ -403,7 +426,11 @@ class TestCodeIntelligenceOnProject:
 
     def test_ci_registry_singleton(self, nextjs_sandbox):
         """get_code_intelligence returns same instance for same sandbox_id."""
-        from code_intelligence.routing.service import get_code_intelligence, dispose_all_code_intelligence
+        from code_intelligence.routing.service import (
+            get_code_intelligence,
+            dispose_all_code_intelligence,
+        )
+
         dispose_all_code_intelligence()
 
         sid = f"singleton-{nextjs_sandbox['id'][:8]}"
@@ -420,9 +447,7 @@ class TestCodeIntelligenceOnProject:
         """CI health endpoint should be reachable."""
         client, _ = app_client
         resp = client.get("/api/code_intelligence/status")
-        assert resp.status_code in (200, 404, 405), (
-            f"CI endpoint unexpected: {resp.status_code}"
-        )
+        assert resp.status_code in (200, 404, 405), f"CI endpoint unexpected: {resp.status_code}"
         if resp.status_code == 200 and resp.content:
             try:
                 data = resp.json()
@@ -433,6 +458,7 @@ class TestCodeIntelligenceOnProject:
     def test_lsp_language_detection(self):
         """LspClient detects TypeScript for .tsx/.ts files."""
         from code_intelligence.lsp.client import LspClient
+
         lsp = LspClient()
         assert lsp._detect_language("page.tsx") == "typescript"
         assert lsp._detect_language("route.ts") == "typescript"
@@ -476,8 +502,7 @@ async def test_query_symbols_on_interface(sandbox_id):
     """Agent uses ci_query_symbols to find the PageProps interface."""
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=NEXTJS_AGENT_PROMPT)
     result = await agent.invoke(
-        "Use ci_query_symbols to find PageProps in "
-        "/workspace/nextjs-app/src/app/page.tsx."
+        "Use ci_query_symbols to find PageProps in /workspace/nextjs-app/src/app/page.tsx."
     )
     started = result.tools_started()
     assert len(started) >= 1
@@ -493,7 +518,7 @@ async def test_add_then_verify_utility_module(sandbox_id):
     """Turn 1: Create utility module. Turn 2: Verify it exists and has correct exports."""
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=NEXTJS_AGENT_PROMPT)
 
-    util_content = '''export function formatDate(date: Date): string {
+    util_content = """export function formatDate(date: Date): string {
   return date.toISOString().split("T")[0];
 }
 
@@ -501,7 +526,7 @@ export function capitalize(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-export const APP_NAME = "EphemeralOS";'''
+export const APP_NAME = "EphemeralOS";"""
 
     # Turn 1: Create
     result1 = await agent.invoke(
@@ -531,7 +556,7 @@ async def test_modify_page_to_import_utils(sandbox_id):
     """Create a component that imports from utils, verify cross-file references."""
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=NEXTJS_AGENT_PROMPT)
 
-    component_content = '''import { capitalize, APP_NAME } from "../lib/utils";
+    component_content = """import { capitalize, APP_NAME } from "../lib/utils";
 
 interface FeatureCardProps {
   name: string;
@@ -546,7 +571,7 @@ export function FeatureCard({ name, description }: FeatureCardProps) {
       <span>Powered by {APP_NAME}</span>
     </div>
   );
-}'''
+}"""
 
     # Create component
     result1 = await agent.invoke(
@@ -628,7 +653,9 @@ async def test_full_component_lifecycle(sandbox_id):
     completed4 = result4.tools_completed()
     outputs4 = " ".join(e.output for e in completed4)
     all4 = outputs4 + " " + result4.text
-    has_both = ("fetchHealth" in all4 and "fetchVersion" in all4) or len(result4.tools_started()) >= 1
+    has_both = ("fetchHealth" in all4 and "fetchVersion" in all4) or len(
+        result4.tools_started()
+    ) >= 1
     assert has_both, f"Should find both functions. Content: {all4[:400]}"
 
 

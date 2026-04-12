@@ -39,7 +39,9 @@ def _make_manifest(
     }
 
 
-def _make_sandbox(*, upload_exc=None, exec_stdout=None, exec_exc=None, manifest=None, download_exc=None):
+def _make_sandbox(
+    *, upload_exc=None, exec_stdout=None, exec_exc=None, manifest=None, download_exc=None
+):
     """Return a sandbox mock configured for codeact scenarios."""
     sb = MagicMock()
 
@@ -69,11 +71,10 @@ def _make_sandbox(*, upload_exc=None, exec_stdout=None, exec_exc=None, manifest=
 # No sandbox
 # ---------------------------------------------------------------------------
 
+
 async def test_codeact_no_sandbox_returns_error():
     ctx = _ctx()
-    result = await daytona_codeact.execute(
-        daytona_codeact.input_model(code="print('hi')"), ctx
-    )
+    result = await daytona_codeact.execute(daytona_codeact.input_model(code="print('hi')"), ctx)
     assert result.is_error
     assert "No Daytona sandbox" in result.output
 
@@ -82,12 +83,11 @@ async def test_codeact_no_sandbox_returns_error():
 # Upload failure
 # ---------------------------------------------------------------------------
 
+
 async def test_codeact_upload_failure():
     sb = _make_sandbox(upload_exc=RuntimeError("disk full"))
     ctx = _ctx({"daytona_sandbox": sb})
-    result = await daytona_codeact.execute(
-        daytona_codeact.input_model(code="x = 1"), ctx
-    )
+    result = await daytona_codeact.execute(daytona_codeact.input_model(code="x = 1"), ctx)
     assert result.is_error
     assert "Failed to upload script" in result.output
 
@@ -96,12 +96,11 @@ async def test_codeact_upload_failure():
 # Execution failure
 # ---------------------------------------------------------------------------
 
+
 async def test_codeact_exec_failure():
     sb = _make_sandbox(exec_exc=RuntimeError("timeout"))
     ctx = _ctx({"daytona_sandbox": sb})
-    result = await daytona_codeact.execute(
-        daytona_codeact.input_model(code="x = 1"), ctx
-    )
+    result = await daytona_codeact.execute(daytona_codeact.input_model(code="x = 1"), ctx)
     assert result.is_error
     assert "Execution failed" in result.output
 
@@ -110,12 +109,11 @@ async def test_codeact_exec_failure():
 # Bad JSON output from script
 # ---------------------------------------------------------------------------
 
+
 async def test_codeact_bad_json_stdout():
     sb = _make_sandbox(exec_stdout="not json at all")
     ctx = _ctx({"daytona_sandbox": sb})
-    result = await daytona_codeact.execute(
-        daytona_codeact.input_model(code="x = 1"), ctx
-    )
+    result = await daytona_codeact.execute(daytona_codeact.input_model(code="x = 1"), ctx)
     # Returns non-error with raw output
     assert not result.is_error
     assert "Script output" in result.output
@@ -124,15 +122,14 @@ async def test_codeact_bad_json_stdout():
 async def test_codeact_empty_stdout():
     sb = _make_sandbox(exec_stdout="")
     ctx = _ctx({"daytona_sandbox": sb})
-    result = await daytona_codeact.execute(
-        daytona_codeact.input_model(code="x = 1"), ctx
-    )
+    result = await daytona_codeact.execute(daytona_codeact.input_model(code="x = 1"), ctx)
     assert not result.is_error  # empty stdout → json.loads("{}") → no status key
 
 
 # ---------------------------------------------------------------------------
 # Script reports error status
 # ---------------------------------------------------------------------------
+
 
 async def test_codeact_script_error_status():
     error_result = json.dumps({"manifest": "/tmp/xxx.json", "status": "error"})
@@ -149,13 +146,12 @@ async def test_codeact_script_error_status():
 # Missing manifest path
 # ---------------------------------------------------------------------------
 
+
 async def test_codeact_no_manifest_path():
     no_manifest = json.dumps({"status": "ok"})  # no "manifest" key
     sb = _make_sandbox(exec_stdout=no_manifest)
     ctx = _ctx({"daytona_sandbox": sb})
-    result = await daytona_codeact.execute(
-        daytona_codeact.input_model(code="x = 1"), ctx
-    )
+    result = await daytona_codeact.execute(daytona_codeact.input_model(code="x = 1"), ctx)
     assert "Script output" in result.output
 
 
@@ -163,12 +159,11 @@ async def test_codeact_no_manifest_path():
 # Manifest unreadable
 # ---------------------------------------------------------------------------
 
+
 async def test_codeact_manifest_download_failure():
     sb = _make_sandbox(download_exc=RuntimeError("gone"))
     ctx = _ctx({"daytona_sandbox": sb})
-    result = await daytona_codeact.execute(
-        daytona_codeact.input_model(code="x = 1"), ctx
-    )
+    result = await daytona_codeact.execute(daytona_codeact.input_model(code="x = 1"), ctx)
     assert "manifest unreadable" in result.output
 
 
@@ -176,13 +171,12 @@ async def test_codeact_manifest_download_failure():
 # Successful run — no writes, no shells
 # ---------------------------------------------------------------------------
 
+
 async def test_codeact_success_no_writes():
     manifest = _make_manifest()
     sb = _make_sandbox(manifest=manifest)
     ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/ws"})
-    result = await daytona_codeact.execute(
-        daytona_codeact.input_model(code="x = 1 + 1"), ctx
-    )
+    result = await daytona_codeact.execute(daytona_codeact.input_model(code="x = 1 + 1"), ctx)
     assert not result.is_error
     data = json.loads(result.output)
     assert data["status"] == "ok"
@@ -195,7 +189,7 @@ async def test_build_wrapper_uses_bash_and_repo_cwd_for_shell_helper():
     wrapper = _build_wrapper("shell('pytest -q')", run_id="abcd1234", cwd="/testbed")
 
     assert '["env", "-u", "LC_ALL", "bash", "-o", "pipefail", "-lc", command]' in wrapper
-    assert 'cwd=_CODEACT_CWD or None' in wrapper
+    assert "cwd=_CODEACT_CWD or None" in wrapper
     assert '_CODEACT_CWD = "/testbed"' in wrapper
 
 
@@ -210,11 +204,14 @@ async def test_build_exec_command_runs_wrapper_from_repo_cwd():
 # Successful run — with writes committed
 # ---------------------------------------------------------------------------
 
+
 async def test_codeact_success_with_writes():
-    manifest = _make_manifest(writes=[
-        {"path": "/ws/out.py", "content": "x = 42\n"},
-        {"path": "/ws/other.py", "content": "y = 1\n"},
-    ])
+    manifest = _make_manifest(
+        writes=[
+            {"path": "/ws/out.py", "content": "x = 42\n"},
+            {"path": "/ws/other.py", "content": "y = 1\n"},
+        ]
+    )
     sb = _make_sandbox(manifest=manifest)
     ctx = _ctx({"daytona_sandbox": sb})
     result = await daytona_codeact.execute(
@@ -232,9 +229,7 @@ async def test_codeact_executes_wrapper_from_repo_cwd():
     sb = _make_sandbox(manifest=manifest)
     ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/testbed"})
 
-    result = await daytona_codeact.execute(
-        daytona_codeact.input_model(code="print('hi')"), ctx
-    )
+    result = await daytona_codeact.execute(daytona_codeact.input_model(code="print('hi')"), ctx)
 
     assert not result.is_error
     command = sb.process.exec.await_args.args[0]
@@ -245,6 +240,7 @@ async def test_codeact_executes_wrapper_from_repo_cwd():
 # ---------------------------------------------------------------------------
 # Write commit failure (partial writes)
 # ---------------------------------------------------------------------------
+
 
 async def test_codeact_write_commit_failure():
     manifest = _make_manifest(writes=[{"path": "/ws/bad.py", "content": "oops"}])
@@ -269,16 +265,17 @@ async def test_codeact_write_commit_failure():
 # Shell summaries
 # ---------------------------------------------------------------------------
 
+
 async def test_codeact_shell_summaries():
-    manifest = _make_manifest(shells=[
-        {"command": "ls -la", "exit_code": 0, "stdout": "file-a\nfile-b\n", "stderr": ""},
-        {"command": "pytest", "exit_code": 1, "stdout": "", "stderr": "assertion failed"},
-    ])
+    manifest = _make_manifest(
+        shells=[
+            {"command": "ls -la", "exit_code": 0, "stdout": "file-a\nfile-b\n", "stderr": ""},
+            {"command": "pytest", "exit_code": 1, "stdout": "", "stderr": "assertion failed"},
+        ]
+    )
     sb = _make_sandbox(manifest=manifest)
     ctx = _ctx({"daytona_sandbox": sb})
-    result = await daytona_codeact.execute(
-        daytona_codeact.input_model(code="shell('ls -la')"), ctx
-    )
+    result = await daytona_codeact.execute(daytona_codeact.input_model(code="shell('ls -la')"), ctx)
     data = json.loads(result.output)
     assert data["shells_run"] == 2
     assert len(data["shell_summaries"]) == 2
@@ -352,7 +349,9 @@ async def test_codeact_allows_writes_from_validator():
 
 async def test_codeact_allows_verify_surface_writes_in_team_mode():
     """CodeAct is team-agnostic — verification surface writes are not blocked."""
-    manifest = _make_manifest(writes=[{"path": "/testbed/dask/tests/test_cli.py", "content": "patched\n"}])
+    manifest = _make_manifest(
+        writes=[{"path": "/testbed/dask/tests/test_cli.py", "content": "patched\n"}]
+    )
     sb = _make_sandbox(manifest=manifest)
     ctx = _ctx(
         {
@@ -413,6 +412,7 @@ async def test_codeact_allows_install_commands_in_team_mode():
 # CI integration: prime_cache and record_edit called on successful write
 # ---------------------------------------------------------------------------
 
+
 async def test_codeact_calls_ci_helpers_on_write():
     manifest = _make_manifest(writes=[{"path": "/ws/f.py", "content": "content"}])
     sb = _make_sandbox(manifest=manifest)
@@ -422,7 +422,6 @@ async def test_codeact_calls_ci_helpers_on_write():
     await daytona_codeact.execute(
         daytona_codeact.input_model(code="write('/ws/f.py', 'content')"), ctx
     )
-    svc.tree_cache.put_content.assert_called_once_with("/ws/f.py", "content")
     svc.arbiter.record_edit.assert_called_once()
 
 
@@ -430,13 +429,12 @@ async def test_codeact_calls_ci_helpers_on_write():
 # Error field included in output when manifest has error
 # ---------------------------------------------------------------------------
 
+
 async def test_codeact_error_field_in_output():
     manifest = _make_manifest(status="error", error="Traceback: ...")
     sb = _make_sandbox(manifest=manifest)
     ctx = _ctx({"daytona_sandbox": sb})
-    result = await daytona_codeact.execute(
-        daytona_codeact.input_model(code="raise"), ctx
-    )
+    result = await daytona_codeact.execute(daytona_codeact.input_model(code="raise"), ctx)
     # status is "error" in manifest but we already parsed past the exec check
     # the manifest path is returned, so we get here
     data = json.loads(result.output)

@@ -1,8 +1,5 @@
 """Memory toolkit — cross-run exploration cache + edit history queries.
 
-Merges the former exploration_memory and edit_history toolkits into one
-toolkit for cross-run persistence and conflict prediction.
-
 Tools:
 - check_exploration_memory — check if a scope was recently explored
 - save_exploration         — cache exploration findings for reuse
@@ -38,20 +35,29 @@ class CheckExplorationMemoryTool(BaseTool):
     )
     input_model = CheckExplorationMemoryInput
 
-    async def execute(self, arguments: CheckExplorationMemoryInput, context: ToolExecutionContext) -> ToolResult:
+    async def execute(
+        self, arguments: CheckExplorationMemoryInput, context: ToolExecutionContext
+    ) -> ToolResult:
         mem = get_exploration_memory()
-        workspace_root = context.metadata.get("daytona_cwd", "") or context.metadata.get("ci_workspace_root", "")
+        workspace_root = context.metadata.get("daytona_cwd", "") or context.metadata.get(
+            "ci_workspace_root", ""
+        )
         cached = await mem.check_async(arguments.paths, workspace_root)
         if cached is not None:
             tc = context.metadata.get("task_center")
             if tc:
                 from team.models import Note
+
                 for note_dict in cached:
                     await tc.post(Note(**note_dict))
-            return ToolResult(output=json.dumps({
-                "status": "cached",
-                "note_count": len(cached),
-            }))
+            return ToolResult(
+                output=json.dumps(
+                    {
+                        "status": "cached",
+                        "note_count": len(cached),
+                    }
+                )
+            )
         return ToolResult(output=json.dumps({"status": "needs_exploration"}))
 
 
@@ -69,19 +75,27 @@ class SaveExplorationTool(BaseTool):
     description = "Save exploration findings to cache for cross-run reuse. Called automatically after explorer completes."
     input_model = SaveExplorationInput
 
-    async def execute(self, arguments: SaveExplorationInput, context: ToolExecutionContext) -> ToolResult:
+    async def execute(
+        self, arguments: SaveExplorationInput, context: ToolExecutionContext
+    ) -> ToolResult:
         mem = get_exploration_memory()
-        workspace_root = context.metadata.get("daytona_cwd", "") or context.metadata.get("ci_workspace_root", "")
+        workspace_root = context.metadata.get("daytona_cwd", "") or context.metadata.get(
+            "ci_workspace_root", ""
+        )
         tc = context.metadata.get("task_center")
         if tc is None:
             return ToolResult(output="No Task Center available.", is_error=True)
         notes = await tc.read(scope_paths=arguments.paths)
         note_dicts = [asdict(n) for n in notes]
         await mem.save_async(arguments.paths, note_dicts, workspace_root)
-        return ToolResult(output=json.dumps({
-            "status": "saved",
-            "note_count": len(note_dicts),
-        }))
+        return ToolResult(
+            output=json.dumps(
+                {
+                    "status": "saved",
+                    "note_count": len(note_dicts),
+                }
+            )
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -102,7 +116,9 @@ class QueryEditHistoryTool(BaseTool):
     )
     input_model = QueryEditHistoryInput
 
-    async def execute(self, arguments: QueryEditHistoryInput, context: ToolExecutionContext) -> ToolResult:
+    async def execute(
+        self, arguments: QueryEditHistoryInput, context: ToolExecutionContext
+    ) -> ToolResult:
         store = context.metadata.get("file_change_store")
 
         if store is not None and getattr(store, "initialized", False):
@@ -111,20 +127,28 @@ class QueryEditHistoryTool(BaseTool):
                 limit=arguments.limit,
             )
             if not hotspots:
-                return ToolResult(output=json.dumps({
-                    "hotspots": [],
-                    "note": "No contention history found for these paths.",
-                }))
-            return ToolResult(output=json.dumps({
-                "hotspots": [
+                return ToolResult(
+                    output=json.dumps(
+                        {
+                            "hotspots": [],
+                            "note": "No contention history found for these paths.",
+                        }
+                    )
+                )
+            return ToolResult(
+                output=json.dumps(
                     {
-                        "file": h.file_path,
-                        "agents_touched": h.agent_count,
-                        "total_edits": h.edit_count,
+                        "hotspots": [
+                            {
+                                "file": h.file_path,
+                                "agents_touched": h.agent_count,
+                                "total_edits": h.edit_count,
+                            }
+                            for h in hotspots
+                        ],
                     }
-                    for h in hotspots
-                ],
-            }))
+                )
+            )
 
         # Fallback: check in-memory Arbiter for same-run history
         arbiter = context.metadata.get("arbiter")
@@ -141,15 +165,23 @@ class QueryEditHistoryTool(BaseTool):
                 if len(agents) > 1
             ]
             multi_agent.sort(key=lambda x: (-x["agents_touched"], -x["total_edits"]))
-            return ToolResult(output=json.dumps({
-                "hotspots": multi_agent[:arguments.limit],
-                "note": "In-memory only (same-run history). Connect PostgreSQL for cross-run data.",
-            }))
+            return ToolResult(
+                output=json.dumps(
+                    {
+                        "hotspots": multi_agent[: arguments.limit],
+                        "note": "In-memory only (same-run history). Connect PostgreSQL for cross-run data.",
+                    }
+                )
+            )
 
-        return ToolResult(output=json.dumps({
-            "hotspots": [],
-            "note": "No edit history available (no Arbiter or FileChangeStore).",
-        }))
+        return ToolResult(
+            output=json.dumps(
+                {
+                    "hotspots": [],
+                    "note": "No edit history available (no Arbiter or FileChangeStore).",
+                }
+            )
+        )
 
 
 # ---------------------------------------------------------------------------

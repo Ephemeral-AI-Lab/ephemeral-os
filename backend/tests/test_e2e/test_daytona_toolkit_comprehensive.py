@@ -636,7 +636,6 @@ class TestCIIntegrationHelpers:
         svc = MagicMock()
         ctx = ToolExecutionContext(cwd=Path("/ws"), metadata={"ci_service": svc})
         prime_cache_after_write(ctx, "/test.py", "content")
-        svc.tree_cache.put_content.assert_called_once_with("/test.py", "content")
         svc.symbol_index.refresh.assert_called_once_with("/test.py", "content")
         svc.lsp_client.invalidate.assert_called_once_with("/test.py")
 
@@ -659,7 +658,7 @@ class TestCIIntegrationHelpers:
         from tools.core.ci_runtime import prime_cache_after_write
 
         svc = MagicMock()
-        svc.tree_cache.put_content = MagicMock(side_effect=RuntimeError("boom"))
+        svc.symbol_index.refresh.side_effect = RuntimeError("boom")
         ctx = ToolExecutionContext(cwd=Path("/ws"), metadata={"ci_service": svc})
         prime_cache_after_write(ctx, "/test.py", "content")  # should not raise
 
@@ -1206,7 +1205,6 @@ class TestCITypesDeep:
         svc = CodeIntelligenceService(sandbox_id="tel-test", workspace_root="/ws")
         tel = svc.get_telemetry()
         assert isinstance(tel, CITelemetry)
-        assert tel.tree_cache_size == 0
         assert tel.symbol_index_size == 0
         assert tel.lsp_connected is False
         assert tel.arbiter_active_edits == 0
@@ -1578,7 +1576,6 @@ class TestOCCEditFlow:
         ci_service = MagicMock()
         ci_service.arbiter = arbiter
         ci_service.time_machine = time_machine
-        ci_service.tree_cache = MagicMock()
         ci_service.symbol_index = MagicMock()
         ci_service.lsp_client = MagicMock()
 

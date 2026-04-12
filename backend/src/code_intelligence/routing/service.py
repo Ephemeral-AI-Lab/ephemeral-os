@@ -24,7 +24,6 @@ from code_intelligence.editing.patcher import Patcher
 from code_intelligence.routing.query_router import IntelligenceQueryRouter
 from code_intelligence.analysis.symbol_index import SymbolIndex
 from code_intelligence.editing.time_machine import TimeMachine
-from code_intelligence.analysis.tree_cache import TreeCache
 from code_intelligence.types import (
     CITelemetry,
     Diagnostic,
@@ -90,11 +89,7 @@ class CodeIntelligenceService:
         self._initialized = False
         self._init_lock = threading.Lock()
 
-        self.tree_cache = TreeCache(on_change=self._on_tree_change)
-        self.symbol_index = SymbolIndex(
-            workspace_root=workspace_root,
-            tree_cache=self.tree_cache,
-        )
+        self.symbol_index = SymbolIndex(workspace_root=workspace_root)
         self.arbiter = Arbiter(workspace_root=workspace_root)
         self.time_machine = TimeMachine()
         self.patcher = Patcher()
@@ -126,13 +121,21 @@ class CodeIntelligenceService:
     # -- Query API ------------------------------------------------------------
 
     def find_definitions(
-        self, file_path: str, symbol: str, line: int = 0, character: int = 0,
+        self,
+        file_path: str,
+        symbol: str,
+        line: int = 0,
+        character: int = 0,
     ) -> list[SymbolInfo]:
         """Find symbol definitions."""
         return self.query_router.find_definitions(file_path, symbol, line, character)
 
     def find_references(
-        self, file_path: str, symbol: str, line: int = 0, character: int = 0,
+        self,
+        file_path: str,
+        symbol: str,
+        line: int = 0,
+        character: int = 0,
     ) -> list[ReferenceInfo]:
         """Find all references to a symbol."""
         return self.query_router.find_references(file_path, symbol, line, character)
@@ -184,7 +187,10 @@ class CodeIntelligenceService:
                     message="; ".join(patch_result.errors),
                 )
             refreshed = self.refresh_prepared_write(prepared)
-            if refreshed.token_id != prepared.token_id or refreshed.current_hash != prepared.current_hash:
+            if (
+                refreshed.token_id != prepared.token_id
+                or refreshed.current_hash != prepared.current_hash
+            ):
                 prepared = refreshed
                 patch_result = self.patcher.apply_edits(
                     prepared.current_content,
@@ -328,7 +334,6 @@ class CodeIntelligenceService:
                 new_hash=new_hash,
                 description=description,
             )
-            self.tree_cache.put_content(prepared.file_path, write_content)
             self.symbol_index.refresh(prepared.file_path, write_content)
             self.lsp_client.invalidate(prepared.file_path)
             self.arbiter.release_token(prepared.token_id)
@@ -415,7 +420,6 @@ class CodeIntelligenceService:
             return _result(file_path, f"Undo write failed: {exc}")
 
         # Refresh caches
-        self.tree_cache.put_content(file_path, snapshot.content)
         self.symbol_index.refresh(file_path, snapshot.content)
         self.lsp_client.invalidate(file_path)
 
@@ -436,7 +440,9 @@ class CodeIntelligenceService:
         recent_changes = []
         for entry in self.arbiter.recent_edits(recent_seconds):
             file_path = str(entry.file_path or "")
-            if normalized and not any(scope_paths_overlap(file_path, scope) for scope in normalized):
+            if normalized and not any(
+                scope_paths_overlap(file_path, scope) for scope in normalized
+            ):
                 continue
             recent_changes.append(
                 {
@@ -452,7 +458,9 @@ class CodeIntelligenceService:
         hotspots = []
         for file_path, count in self.arbiter.hotspots(limit=25):
             file_path = str(file_path)
-            if normalized and not any(scope_paths_overlap(file_path, scope) for scope in normalized):
+            if normalized and not any(
+                scope_paths_overlap(file_path, scope) for scope in normalized
+            ):
                 continue
             hotspots.append({"file_path": file_path, "edit_count": int(count)})
             if len(hotspots) >= 10:
@@ -478,7 +486,6 @@ class CodeIntelligenceService:
             "sandbox_id": self.sandbox_id,
             "initialized": self.is_initialized,
             "workspace_root": self.workspace_root,
-            "tree_cache": self.tree_cache.stats,
             "symbol_index": {
                 "built": self.symbol_index.is_built,
                 "files": self.symbol_index.indexed_files,
@@ -499,12 +506,8 @@ class CodeIntelligenceService:
 
     def get_telemetry(self) -> CITelemetry:
         """Return structured telemetry."""
-        cache_stats = self.tree_cache.stats
         lsp_tel = self.lsp_client.telemetry
         return CITelemetry(
-            tree_cache_size=cache_stats["size"],
-            tree_cache_hits=cache_stats["hits"],
-            tree_cache_misses=cache_stats["misses"],
             symbol_index_size=self.symbol_index.size,
             symbol_index_generation=self.symbol_index.generation,
             indexed_files=self.symbol_index.indexed_files,
@@ -519,16 +522,9 @@ class CodeIntelligenceService:
 
     def dispose(self) -> None:
         """Cleanup all resources."""
-        self.tree_cache.invalidate_all()
         self.arbiter.cleanup_locks()
         self.time_machine.clear()
         logger.info("CodeIntelligenceService disposed for sandbox %s", self.sandbox_id)
-
-    # -- Callbacks ------------------------------------------------------------
-
-    def _on_tree_change(self, file_path: str, old_hash: str, new_hash: str) -> None:
-        """Called when tree cache detects a file change."""
-        self.query_router.register_file_change(file_path)
 
     def _resolve_pending_write(
         self,
@@ -561,20 +557,28 @@ class CodeIntelligenceService:
             )
             if merged_content is not None:
                 return merged_content, current_hash, None
-            return "", current_hash, _result(
-                prepared.file_path,
-                "Write precheck failed: file content changed in an overlapping "
-                "or unsupported range. Re-read the file and retry.",
-                conflict=True,
-                conflict_reason="overlapping_range",
+            return (
+                "",
+                current_hash,
+                _result(
+                    prepared.file_path,
+                    "Write precheck failed: file content changed in an overlapping "
+                    "or unsupported range. Re-read the file and retry.",
+                    conflict=True,
+                    conflict_reason="overlapping_range",
+                ),
             )
 
-        return "", current_hash, _result(
-            prepared.file_path,
-            "Write precheck failed: file content changed before commit. "
-            "Re-read the file and retry.",
-            conflict=True,
-            conflict_reason="version_mismatch",
+        return (
+            "",
+            current_hash,
+            _result(
+                prepared.file_path,
+                "Write precheck failed: file content changed before commit. "
+                "Re-read the file and retry.",
+                conflict=True,
+                conflict_reason="version_mismatch",
+            ),
         )
 
     def _write_content(self, file_path: str, content: str) -> None:

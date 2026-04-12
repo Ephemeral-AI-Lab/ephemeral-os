@@ -136,9 +136,6 @@ class EditResult:
 class CITelemetry:
     """Runtime telemetry for the code intelligence service."""
 
-    tree_cache_size: int = 0
-    tree_cache_hits: int = 0
-    tree_cache_misses: int = 0
     symbol_index_size: int = 0
     symbol_index_generation: int = 0
     indexed_files: int = 0

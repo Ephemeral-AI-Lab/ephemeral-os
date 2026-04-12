@@ -90,18 +90,14 @@ async def test_tool_started_has_correct_tool_name(sandbox_id):
 async def test_tool_started_has_tool_input(sandbox_id):
     """tool_started must contain tool_input dict with expected keys."""
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT)
-    result = await agent.invoke(
-        "Use daytona_codeact to run 'echo INPUT_CHECK' in the sandbox."
-    )
+    result = await agent.invoke("Use daytona_codeact to run 'echo INPUT_CHECK' in the sandbox.")
     started = result.tools_started()
     assert len(started) >= 1
 
     for ev in started:
         tool_input = ev.tool_input
         assert tool_input is not None, f"tool_started missing tool_input: {ev}"
-        assert isinstance(tool_input, dict), (
-            f"tool_input should be dict, got: {type(tool_input)}"
-        )
+        assert isinstance(tool_input, dict), f"tool_input should be dict, got: {type(tool_input)}"
 
         if ev.tool_name == "daytona_codeact":
             assert "command" in tool_input, (
@@ -111,13 +107,9 @@ async def test_tool_started_has_tool_input(sandbox_id):
             assert "file_path" in tool_input, (
                 f"daytona_write_file missing 'file_path': {tool_input}"
             )
-            assert "content" in tool_input, (
-                f"daytona_write_file missing 'content': {tool_input}"
-            )
+            assert "content" in tool_input, f"daytona_write_file missing 'content': {tool_input}"
         elif ev.tool_name == "daytona_read_file":
-            assert "file_path" in tool_input, (
-                f"daytona_read_file missing 'file_path': {tool_input}"
-            )
+            assert "file_path" in tool_input, f"daytona_read_file missing 'file_path': {tool_input}"
 
 
 @pytest.mark.asyncio
@@ -130,9 +122,7 @@ async def test_tool_completed_has_output(sandbox_id):
     completed = result.tools_completed()
 
     if not completed:
-        pytest.skip(
-            "No tool_completed events (sandbox may have errored) — cannot verify output"
-        )
+        pytest.skip("No tool_completed events (sandbox may have errored) — cannot verify output")
 
     for ev in completed:
         assert ev.output, f"tool_completed has empty output: {ev}"
@@ -142,9 +132,7 @@ async def test_tool_completed_has_output(sandbox_id):
 async def test_tool_completed_is_error_false_on_success(sandbox_id):
     """Successful tool calls should have is_error=false in tool_completed."""
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT)
-    result = await agent.invoke(
-        "Use daytona_codeact to run 'echo SUCCESS_CHECK' in the sandbox."
-    )
+    result = await agent.invoke("Use daytona_codeact to run 'echo SUCCESS_CHECK' in the sandbox.")
     completed = result.tools_completed()
     if not completed:
         pytest.skip("No tool_completed events — cannot verify is_error field")
@@ -156,9 +144,7 @@ async def test_tool_completed_is_error_false_on_success(sandbox_id):
 @pytest.mark.asyncio
 async def test_tool_roundtrip_write_then_read(sandbox_id):
     """Agent writes file via tool, then reads it back — output contains original content."""
-    agent = create_eval_agent(
-        sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, tool_call_limit=10
-    )
+    agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, tool_call_limit=10)
     result = await agent.invoke(
         "Do these two steps in the sandbox using tools:\n"
         "1. Use daytona_write_file to write 'ROUNDTRIP_MARKER_XYZ' to /workspace/roundtrip.txt\n"
@@ -174,9 +160,7 @@ async def test_tool_roundtrip_write_then_read(sandbox_id):
     all_outputs = " ".join(e.output for e in completed)
     text = result.text
     has_marker = "ROUNDTRIP_MARKER_XYZ" in all_outputs or "ROUNDTRIP_MARKER_XYZ" in text
-    has_write_tool = any(
-        e.tool_name in ("daytona_write_file", "daytona_codeact") for e in started
-    )
+    has_write_tool = any(e.tool_name in ("daytona_write_file", "daytona_codeact") for e in started)
     assert has_marker or has_write_tool, (
         f"Roundtrip: should find marker in output or at least attempt write tool. "
         f"Tool names: {[e.tool_name for e in started]}, "
@@ -346,7 +330,7 @@ class TestCodeIntelligenceDeep:
         dispose_all_code_intelligence()
 
     def test_ci_status_has_all_subsystems(self):
-        """CI service status() must have lsp, tree_cache, symbol_index, arbiter, ledger."""
+        """CI service status() must have lsp, symbol_index, arbiter, ledger."""
         from code_intelligence.routing.service import CodeIntelligenceService
 
         svc = CodeIntelligenceService(sandbox_id="ci-deep-001", workspace_root="/workspace")
@@ -357,7 +341,6 @@ class TestCodeIntelligenceDeep:
             "initialized",
             "workspace_root",
             "lsp",
-            "tree_cache",
             "symbol_index",
             "arbiter",
             "ledger",
@@ -382,9 +365,6 @@ class TestCodeIntelligenceDeep:
 
         # Verify all fields are integers or bools
         int_fields = [
-            "tree_cache_size",
-            "tree_cache_hits",
-            "tree_cache_misses",
             "symbol_index_size",
             "symbol_index_generation",
             "indexed_files",
@@ -452,9 +432,7 @@ class TestCodeIntelligenceDeep:
 @pytest.mark.asyncio
 async def test_two_turn_write_then_verify(sandbox_id):
     """Turn 1: write file via tool. Turn 2: verify file via tool — check content reference."""
-    agent = create_eval_agent(
-        sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, tool_call_limit=10
-    )
+    agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, tool_call_limit=10)
 
     # Turn 1: Create file
     result1 = await agent.invoke(
@@ -463,9 +441,7 @@ async def test_two_turn_write_then_verify(sandbox_id):
     )
     assert len(result1.assistant_turns()) > 0
     started1 = result1.tools_started()
-    assert len(started1) >= 1, (
-        f"Turn 1 should use a tool. Has errors: {result1.has_errors}"
-    )
+    assert len(started1) >= 1, f"Turn 1 should use a tool. Has errors: {result1.has_errors}"
 
     # Turn 2: Read/verify the file
     result2 = await agent.invoke(
@@ -490,9 +466,7 @@ async def test_two_turn_write_then_verify(sandbox_id):
 @pytest.mark.asyncio
 async def test_three_turn_create_read_modify(sandbox_id):
     """3-turn chain: create -> read -> modify. Verify tool use AND content flow."""
-    agent = create_eval_agent(
-        sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, tool_call_limit=10
-    )
+    agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, tool_call_limit=10)
 
     # Turn 1: Create with a unique marker
     result1 = await agent.invoke(
@@ -502,9 +476,7 @@ async def test_three_turn_create_read_modify(sandbox_id):
     assert len(t1_started) >= 1, f"Turn 1 should use tool. Has errors: {result1.has_errors}"
 
     # Turn 2: Read — verify content marker flows through
-    result2 = await agent.invoke(
-        "Use daytona_codeact to run: cat /workspace/evolving.txt"
-    )
+    result2 = await agent.invoke("Use daytona_codeact to run: cat /workspace/evolving.txt")
     t2_started = result2.tools_started()
     assert len(t2_started) >= 1, f"Turn 2 should use tool. Has errors: {result2.has_errors}"
 
@@ -535,9 +507,7 @@ async def test_three_turn_create_read_modify(sandbox_id):
 @pytest.mark.asyncio
 async def test_react_landing_full_pipeline(sandbox_id):
     """Full pipeline: create React page -> verify structure -> add component."""
-    agent = create_eval_agent(
-        sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, tool_call_limit=10
-    )
+    agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=AGENT_PROMPT, tool_call_limit=10)
 
     # Turn 1: Create React landing page
     result1 = await agent.invoke(
@@ -548,9 +518,7 @@ async def test_react_landing_full_pipeline(sandbox_id):
     )
     assert len(result1.assistant_turns()) > 0
     t1_started = result1.tools_started()
-    assert len(t1_started) >= 1, (
-        f"Should use tool to create file. Has errors: {result1.has_errors}"
-    )
+    assert len(t1_started) >= 1, f"Should use tool to create file. Has errors: {result1.has_errors}"
 
     # Verify tool names
     t1_names = [e.tool_name for e in t1_started]
@@ -570,9 +538,7 @@ async def test_react_landing_full_pipeline(sandbox_id):
     all_content = result2.text + " ".join(e.output for e in completed2)
     all_lower = all_content.lower()
 
-    has_react_ref = any(
-        kw in all_lower for kw in ["react", "unpkg", "html", "component", "index"]
-    )
+    has_react_ref = any(kw in all_lower for kw in ["react", "unpkg", "html", "component", "index"])
     has_tool_use = len(started2) >= 1
     assert has_react_ref or has_tool_use, (
         f"Turn 2 should reference React content or use a tool. "

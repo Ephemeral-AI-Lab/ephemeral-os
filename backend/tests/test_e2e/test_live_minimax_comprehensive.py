@@ -703,7 +703,6 @@ class TestCodeIntelligenceSystem:
         assert status["sandbox_id"] == "ci-test-001"
         assert status["initialized"] is False
         assert "lsp" in status
-        assert "tree_cache" in status
         assert "symbol_index" in status
 
     def test_ci_service_telemetry_fields(self):
@@ -715,7 +714,6 @@ class TestCodeIntelligenceSystem:
         tel = svc.get_telemetry()
 
         assert isinstance(tel, CITelemetry)
-        assert tel.tree_cache_size == 0
         assert tel.symbol_index_size == 0
         assert tel.lsp_connected is False
         assert tel.lsp_query_count == 0

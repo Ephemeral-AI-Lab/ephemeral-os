@@ -17,6 +17,7 @@ router = APIRouter(prefix="/api/code_intelligence", tags=["code_intelligence"])
 # Request / Response models
 # ---------------------------------------------------------------------------
 
+
 class EditRequest(BaseModel):
     file_path: str
     old_text: str
@@ -29,15 +30,18 @@ class EditRequest(BaseModel):
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _get_service(sandbox_id: str, workspace_root: str = "/workspace") -> Any:
     """Get or create a CI service for a sandbox."""
     from code_intelligence.routing.service import get_code_intelligence
+
     return get_code_intelligence(sandbox_id, workspace_root=workspace_root)
 
 
 def _get_service_if_exists(sandbox_id: str) -> Any:
     """Get existing CI service or raise 404."""
     from code_intelligence.routing.service import get_code_intelligence_if_exists
+
     service = get_code_intelligence_if_exists(sandbox_id)
     if service is None:
         raise HTTPException(404, f"No CI service for sandbox '{sandbox_id}'")
@@ -48,10 +52,12 @@ def _get_service_if_exists(sandbox_id: str) -> Any:
 # Status endpoints
 # ---------------------------------------------------------------------------
 
+
 @router.get("/health")
 async def health() -> dict:
     """Code intelligence health check."""
     from code_intelligence.routing.service import get_all_services_status
+
     statuses = get_all_services_status()
     return {"healthy": True, "active_services": len(statuses)}
 
@@ -74,6 +80,7 @@ async def initialize(sandbox_id: str, workspace_root: str = "/workspace") -> dic
 # ---------------------------------------------------------------------------
 # Query endpoints
 # ---------------------------------------------------------------------------
+
 
 @router.get("/{sandbox_id}/query/definitions")
 async def query_definitions(
@@ -181,18 +188,22 @@ async def query_diagnostics(
 # Edit endpoints
 # ---------------------------------------------------------------------------
 
+
 @router.post("/{sandbox_id}/edit")
 async def apply_edit(sandbox_id: str, request: EditRequest) -> dict:
     """Apply an OCC-coordinated edit."""
     service = _get_service_if_exists(sandbox_id)
     from code_intelligence.types import EditRequest as CIEditRequest
-    result = service.apply_edit(CIEditRequest(
-        file_path=request.file_path,
-        old_text=request.old_text,
-        new_text=request.new_text,
-        agent_id=request.agent_id,
-        description=request.description,
-    ))
+
+    result = service.apply_edit(
+        CIEditRequest(
+            file_path=request.file_path,
+            old_text=request.old_text,
+            new_text=request.new_text,
+            agent_id=request.agent_id,
+            description=request.description,
+        )
+    )
     return {
         "success": result.success,
         "file_path": result.file_path,
@@ -217,15 +228,13 @@ async def undo_edit(sandbox_id: str, file_path: str = Query(...)) -> dict:
 # Telemetry
 # ---------------------------------------------------------------------------
 
+
 @router.get("/{sandbox_id}/telemetry")
 async def telemetry(sandbox_id: str) -> dict:
     """Get CI telemetry for a sandbox."""
     service = _get_service_if_exists(sandbox_id)
     tel = service.get_telemetry()
     return {
-        "tree_cache_size": tel.tree_cache_size,
-        "tree_cache_hits": tel.tree_cache_hits,
-        "tree_cache_misses": tel.tree_cache_misses,
         "symbol_index_size": tel.symbol_index_size,
         "symbol_index_generation": tel.symbol_index_generation,
         "indexed_files": tel.indexed_files,
@@ -240,9 +249,11 @@ async def telemetry(sandbox_id: str) -> dict:
 # Lifecycle
 # ---------------------------------------------------------------------------
 
+
 @router.post("/{sandbox_id}/dispose")
 async def dispose_service(sandbox_id: str) -> dict:
     """Dispose CI service for a sandbox."""
     from code_intelligence.routing.service import dispose_code_intelligence
+
     dispose_code_intelligence(sandbox_id)
     return {"disposed": sandbox_id}

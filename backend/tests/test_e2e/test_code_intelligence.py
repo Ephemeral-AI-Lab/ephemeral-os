@@ -47,7 +47,6 @@ class TestCIServiceCreation:
         assert status["sandbox_id"] == "test-status-001"
         assert status["initialized"] is False
         assert status["workspace_root"] == "/workspace"
-        assert "tree_cache" in status
         assert "symbol_index" in status
         assert "arbiter" in status
         assert "ledger" in status
@@ -78,9 +77,6 @@ class TestCIServiceCreation:
         tel = svc.get_telemetry()
 
         assert isinstance(tel, CITelemetry)
-        assert isinstance(tel.tree_cache_size, int)
-        assert isinstance(tel.tree_cache_hits, int)
-        assert isinstance(tel.tree_cache_misses, int)
         assert isinstance(tel.symbol_index_size, int)
         assert isinstance(tel.symbol_index_generation, int)
         assert isinstance(tel.indexed_files, int)
@@ -91,7 +87,6 @@ class TestCIServiceCreation:
         assert isinstance(tel.ledger_entry_count, int)
 
         # Initial values should be zero/false
-        assert tel.tree_cache_size == 0
         assert tel.symbol_index_size == 0
         assert tel.lsp_connected is False
         assert tel.ledger_entry_count == 0
@@ -119,11 +114,13 @@ class TestCIServiceRegistry:
     def setup_method(self):
         """Clean up the global registry before each test."""
         from code_intelligence.routing.service import dispose_all_code_intelligence
+
         dispose_all_code_intelligence()
 
     def teardown_method(self):
         """Clean up after each test."""
         from code_intelligence.routing.service import dispose_all_code_intelligence
+
         dispose_all_code_intelligence()
 
     def test_ci_service_registry_returns_singleton(self):

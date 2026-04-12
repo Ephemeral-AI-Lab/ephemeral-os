@@ -27,6 +27,7 @@ def _ctx(metadata=None) -> ToolExecutionContext:
 # get_ci_service
 # ---------------------------------------------------------------------------
 
+
 def test_get_ci_service_returns_none_when_missing():
     ctx = _ctx()
     assert get_ci_service(ctx) is None
@@ -42,6 +43,7 @@ def test_get_ci_service_returns_value():
 # prime_cache_after_write
 # ---------------------------------------------------------------------------
 
+
 def test_prime_cache_no_service_is_noop():
     ctx = _ctx()
     prime_cache_after_write(ctx, "/some/file.py", "content")  # should not raise
@@ -51,14 +53,13 @@ def test_prime_cache_calls_service_methods():
     svc = MagicMock()
     ctx = _ctx({"ci_service": svc})
     prime_cache_after_write(ctx, "/file.py", "hello")
-    svc.tree_cache.put_content.assert_called_once_with("/file.py", "hello")
     svc.symbol_index.refresh.assert_called_once_with("/file.py", "hello")
     svc.lsp_client.invalidate.assert_called_once_with("/file.py")
 
 
 def test_prime_cache_swallows_exceptions():
     svc = MagicMock()
-    svc.tree_cache.put_content.side_effect = RuntimeError("boom")
+    svc.symbol_index.refresh.side_effect = RuntimeError("boom")
     ctx = _ctx({"ci_service": svc})
     prime_cache_after_write(ctx, "/file.py", "hello")  # must not raise
 
@@ -153,7 +154,10 @@ def test_prepare_ci_write_auto_expands_scope_for_adjacent_write(monkeypatch):
     ctx = _ctx(
         {
             "ci_service": svc,
-            "scope_packet": {"scope_paths": ["/repo/src/owned.py"], "coherence_token": "base-token"},
+            "scope_packet": {
+                "scope_paths": ["/repo/src/owned.py"],
+                "coherence_token": "base-token",
+            },
             "coherence_token": "base-token",
             "agent_run_id": "worker-1",
         }
@@ -208,6 +212,7 @@ def test_prepare_declared_shell_outputs_allows_scope_drift(monkeypatch):
     assert packet["coherence_token"] == "reserved-token"
     assert ctx.metadata["scope_packet"]["coherence_token"] == "reserved-token"
     assert ctx.metadata["coherence_token"] == "reserved-token"
+
 
 def test_abort_ci_write_refreshes_scope_baseline_after_release(monkeypatch):
     svc = MagicMock()
@@ -354,6 +359,7 @@ def test_build_scope_packet_coherence_changes_when_scope_local_changes_change():
 # record_edit_in_arbiter
 # ---------------------------------------------------------------------------
 
+
 def test_record_edit_no_service_is_noop():
     ctx = _ctx()
     record_edit_in_arbiter(ctx, "/file.py")  # should not raise
@@ -363,8 +369,13 @@ def test_record_edit_calls_arbiter():
     svc = MagicMock()
     ctx = _ctx({"ci_service": svc})
     record_edit_in_arbiter(
-        ctx, "/file.py", agent_id="a1", edit_type="edit",
-        old_hash="abc", new_hash="def", description="fix",
+        ctx,
+        "/file.py",
+        agent_id="a1",
+        edit_type="edit",
+        old_hash="abc",
+        new_hash="def",
+        description="fix",
     )
     svc.arbiter.record_edit.assert_called_once_with(
         file_path="/file.py",

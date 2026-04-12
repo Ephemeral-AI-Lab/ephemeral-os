@@ -99,26 +99,17 @@ async def ci_read_file(
         workspace_root=workspace_root,
     )
 
-    # Try reading from tree cache first
+    sandbox = get_daytona_sandbox(context)
     content = None
-    if svc:
-        entry = svc.tree_cache.get_tree(resolved_path)
-        if entry:
-            content = entry.content
+    if sandbox is not None:
+        try:
+            raw = await sandbox.fs.download_file(resolved_path)
+            content = raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
             path = resolved_path
-
-    # Fall back to direct file read
-    if content is None:
-        sandbox = get_daytona_sandbox(context)
-        if sandbox is not None:
-            try:
-                raw = await sandbox.fs.download_file(resolved_path)
-                content = raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
-                path = resolved_path
-            except UnicodeDecodeError:
-                return ToolResult(output=f"Binary file: {resolved_path}", is_error=True)
-            except Exception:
-                logger.debug("Remote ci_read_file failed for %s", resolved_path, exc_info=True)
+        except UnicodeDecodeError:
+            return ToolResult(output=f"Binary file: {resolved_path}", is_error=True)
+        except Exception:
+            logger.debug("Remote ci_read_file failed for %s", resolved_path, exc_info=True)
 
     if content is None:
         try:

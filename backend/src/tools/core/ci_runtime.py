@@ -375,7 +375,6 @@ def prime_cache_after_write(context: ToolExecutionContext, file_path: str, conte
         )
         return
     try:
-        svc.tree_cache.put_content(file_path, content)
         svc.symbol_index.refresh(file_path, content)
         svc.lsp_client.invalidate(file_path)
     except Exception:
@@ -440,7 +439,6 @@ def sync_deleted_file(
         except Exception:
             logger.debug("CI arbiter delete sync failed for %s", file_path, exc_info=True)
         try:
-            svc.tree_cache.invalidate(file_path)
             svc.symbol_index.refresh(file_path, "")
             svc.lsp_client.invalidate(file_path)
         except Exception:

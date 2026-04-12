@@ -51,29 +51,48 @@ AGENT_PROMPT = (
 # File content definitions for the project we'll build
 # ---------------------------------------------------------------------------
 
-PACKAGE_JSON = json.dumps({
-    "name": "ephemeral-fullrun",
-    "version": "1.0.0",
-    "private": True,
-    "scripts": {"dev": "next dev", "build": "next build", "start": "next start"},
-    "dependencies": {"next": "14.0.0", "react": "18.2.0", "react-dom": "18.2.0"},
-    "devDependencies": {"typescript": "5.0.0", "@types/react": "18.2.0", "@types/node": "20.0.0"},
-}, indent=2)
-
-TSCONFIG = json.dumps({
-    "compilerOptions": {
-        "target": "es5", "lib": ["dom", "dom.iterable", "esnext"],
-        "allowJs": True, "skipLibCheck": True, "strict": True, "noEmit": True,
-        "esModuleInterop": True, "module": "esnext", "moduleResolution": "bundler",
-        "resolveJsonModule": True, "isolatedModules": True, "jsx": "preserve",
-        "incremental": True, "plugins": [{"name": "next"}],
-        "paths": {"@/*": ["./src/*"]},
+PACKAGE_JSON = json.dumps(
+    {
+        "name": "ephemeral-fullrun",
+        "version": "1.0.0",
+        "private": True,
+        "scripts": {"dev": "next dev", "build": "next build", "start": "next start"},
+        "dependencies": {"next": "14.0.0", "react": "18.2.0", "react-dom": "18.2.0"},
+        "devDependencies": {
+            "typescript": "5.0.0",
+            "@types/react": "18.2.0",
+            "@types/node": "20.0.0",
+        },
     },
-    "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
-    "exclude": ["node_modules"],
-}, indent=2)
+    indent=2,
+)
 
-PAGE_TSX = '''import React from "react";
+TSCONFIG = json.dumps(
+    {
+        "compilerOptions": {
+            "target": "es5",
+            "lib": ["dom", "dom.iterable", "esnext"],
+            "allowJs": True,
+            "skipLibCheck": True,
+            "strict": True,
+            "noEmit": True,
+            "esModuleInterop": True,
+            "module": "esnext",
+            "moduleResolution": "bundler",
+            "resolveJsonModule": True,
+            "isolatedModules": True,
+            "jsx": "preserve",
+            "incremental": True,
+            "plugins": [{"name": "next"}],
+            "paths": {"@/*": ["./src/*"]},
+        },
+        "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx"],
+        "exclude": ["node_modules"],
+    },
+    indent=2,
+)
+
+PAGE_TSX = """import React from "react";
 
 interface PageProps {
   title: string;
@@ -98,9 +117,9 @@ export default function HomePage(): React.ReactElement {
       />
     </main>
   );
-}'''
+}"""
 
-LAYOUT_TSX = '''import React from "react";
+LAYOUT_TSX = """import React from "react";
 
 export const metadata = {
   title: "EphemeralOS",
@@ -117,9 +136,9 @@ export default function RootLayout({ children }: RootLayoutProps): React.ReactEl
       <body>{children}</body>
     </html>
   );
-}'''
+}"""
 
-UTILS_TS = '''export function formatDate(date: Date): string {
+UTILS_TS = """export function formatDate(date: Date): string {
   return date.toISOString().split("T")[0];
 }
 
@@ -128,9 +147,9 @@ export function capitalize(str: string): string {
 }
 
 export const APP_NAME = "EphemeralOS";
-export const APP_VERSION = "1.0.0";'''
+export const APP_VERSION = "1.0.0";"""
 
-API_ROUTE_TS = '''import { NextRequest, NextResponse } from "next/server";
+API_ROUTE_TS = """import { NextRequest, NextResponse } from "next/server";
 
 interface HealthResponse {
   status: string;
@@ -145,7 +164,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<HealthResp
     version: "1.0.0",
   };
   return NextResponse.json(response);
-}'''
+}"""
 
 # Files to create and their paths
 PROJECT_FILES = {
@@ -204,7 +223,9 @@ async def test_phase1_scaffold_project(agent):
     print(f"  Tools: {result.tool_names}")
     all_started.extend(result.tools_started())
     all_completed.extend(result.tools_completed())
-    assert len(result.tools_started()) >= 1, f"Should use tools. Got tool_names: {result.tool_names}"
+    assert len(result.tools_started()) >= 1, (
+        f"Should use tools. Got tool_names: {result.tool_names}"
+    )
 
     # Step 2: Create each project file
     for i, (path, content) in enumerate(PROJECT_FILES.items(), start=2):
@@ -225,14 +246,16 @@ async def test_phase1_scaffold_project(agent):
     total_errors = len([e for e in all_completed if e.is_error])
     all_tool_names = [e.tool_name for e in all_started]
 
-    print(f"\n{'='*70}")
+    print(f"\n{'=' * 70}")
     print(f"  PHASE 1 AGGREGATE")
     print(f"  Total tool calls: {total_tools}")
     print(f"  Successful: {total_success}, Errors: {total_errors}")
     print(f"  Tool breakdown: {dict(Counter(all_tool_names))}")
-    print(f"{'='*70}")
+    print(f"{'=' * 70}")
 
-    assert total_tools >= 7, f"Should have at least 7 tool calls (1 mkdir + 6 files), got {total_tools}"
+    assert total_tools >= 7, (
+        f"Should have at least 7 tool calls (1 mkdir + 6 files), got {total_tools}"
+    )
 
 
 # ===========================================================================
@@ -300,7 +323,9 @@ async def test_phase3_content_verification(agent):
         all_output = tool_outputs + " " + result.text
         found = marker in all_output
         results[marker] = found
-        status = "FOUND" if found else "TOOL_USED" if len(result.tools_started()) >= 1 else "MISSING"
+        status = (
+            "FOUND" if found else "TOOL_USED" if len(result.tools_started()) >= 1 else "MISSING"
+        )
         print(f"  {marker} ({desc}): {status}")
 
     found_count = sum(1 for v in results.values() if v)
@@ -317,9 +342,7 @@ async def test_phase3_content_verification(agent):
 async def test_phase4_read_and_verify_page(agent):
     """Read page.tsx back and verify its structure."""
     print("\n--- Phase 4: Read page.tsx ---")
-    result = await agent.invoke(
-        "Use daytona_read_file to read /workspace/fullrun/src/app/page.tsx"
-    )
+    result = await agent.invoke("Use daytona_read_file to read /workspace/fullrun/src/app/page.tsx")
     print(f"  Tool calls: {len(result.tools_started())}, latency: {result.latency_ms:.0f}ms")
     print(f"  Tools: {result.tool_names}")
 
@@ -369,12 +392,10 @@ def test_phase5_code_intelligence_metrics(sandbox_id):
     print(f"    LSP connected: {status['lsp']['connected']}")
     print(f"    LSP queries: {status['lsp']['queries']}")
     print(f"    LSP cache_hits: {status['lsp']['cache_hits']}")
-    print(f"    Tree cache: {status['tree_cache']}")
     print(f"    Symbol index: {status['symbol_index']}")
     print(f"    Arbiter: {status['arbiter']}")
     assert status["sandbox_id"] == sandbox_id
     assert "lsp" in status
-    assert "tree_cache" in status
     assert "symbol_index" in status
     assert "arbiter" in status
 
@@ -382,9 +403,6 @@ def test_phase5_code_intelligence_metrics(sandbox_id):
     tel = svc.get_telemetry()
     assert isinstance(tel, CITelemetry)
     print(f"\n  CI Telemetry:")
-    print(f"    tree_cache_size: {tel.tree_cache_size}")
-    print(f"    tree_cache_hits: {tel.tree_cache_hits}")
-    print(f"    tree_cache_misses: {tel.tree_cache_misses}")
     print(f"    symbol_index_size: {tel.symbol_index_size}")
     print(f"    symbol_index_generation: {tel.symbol_index_generation}")
     print(f"    indexed_files: {tel.indexed_files}")
@@ -396,10 +414,13 @@ def test_phase5_code_intelligence_metrics(sandbox_id):
 
     # Type assertions
     for field_name in [
-        "tree_cache_size", "tree_cache_hits", "tree_cache_misses",
-        "symbol_index_size", "symbol_index_generation", "indexed_files",
-        "lsp_query_count", "lsp_cache_hits",
-        "arbiter_active_edits", "arbiter_edit_count",
+        "symbol_index_size",
+        "symbol_index_generation",
+        "indexed_files",
+        "lsp_query_count",
+        "lsp_cache_hits",
+        "arbiter_active_edits",
+        "arbiter_edit_count",
     ]:
         val = getattr(tel, field_name)
         assert isinstance(val, int), f"CITelemetry.{field_name} should be int, got {type(val)}"
@@ -412,7 +433,7 @@ def test_phase5_code_intelligence_metrics(sandbox_id):
 
 
 def test_phase6_ci_components_individually(sandbox_id):
-    """Test each CI component (tree cache, symbol index, arbiter) individually."""
+    """Test each CI component (symbol index, arbiter) individually."""
     from code_intelligence.routing.service import CodeIntelligenceService
 
     print("\n--- Phase 6: CI Component Tests ---")
@@ -421,34 +442,6 @@ def test_phase6_ci_components_individually(sandbox_id):
         sandbox_id=f"components-{sandbox_id[:8]}",
         workspace_root="/workspace/fullrun",
     )
-
-    # -- Tree Cache --
-    print(f"\n  Tree Cache:")
-    cache_stats = svc.tree_cache.stats
-    print(f"    size: {cache_stats['size']}")
-    print(f"    hits: {cache_stats['hits']}")
-    print(f"    misses: {cache_stats['misses']}")
-    assert isinstance(cache_stats, dict)
-    assert "size" in cache_stats
-    assert "hits" in cache_stats
-    assert "misses" in cache_stats
-
-    # Populate cache manually and verify stats change
-    svc.tree_cache.put_content("test.ts", "const x: number = 42;")
-    after_put = svc.tree_cache.stats
-    print(f"    After put_content — size: {after_put['size']}")
-    assert after_put["size"] >= 1
-
-    # Cache hit — get_tree with same content returns cached entry
-    result = svc.tree_cache.get_tree("test.ts", content="const x: number = 42;")
-    after_get = svc.tree_cache.stats
-    print(f"    After cache hit — hits: {after_get['hits']}")
-    assert result is not None
-
-    # Cache miss — different file
-    svc.tree_cache.get_tree("nonexistent.ts", content="different")
-    after_miss = svc.tree_cache.stats
-    print(f"    After new entry — size: {after_miss['size']}")
 
     # -- Symbol Index --
     print(f"\n  Symbol Index:")
@@ -536,9 +529,7 @@ async def test_phase8_edit_workflow_with_streaming(agent):
 
     # Turn 1: Read utils.ts
     print("\n  Turn 1: Read utils.ts")
-    r1 = await agent.invoke(
-        "Use daytona_read_file to read /workspace/fullrun/src/lib/utils.ts"
-    )
+    r1 = await agent.invoke("Use daytona_read_file to read /workspace/fullrun/src/lib/utils.ts")
     print(f"  Tool calls: {len(r1.tools_started())}, latency: {r1.latency_ms:.0f}ms")
     print(f"  Tools: {r1.tool_names}")
     assert len(r1.tools_started()) >= 1
@@ -553,7 +544,7 @@ async def test_phase8_edit_workflow_with_streaming(agent):
         "Use daytona_codeact to append this to /workspace/fullrun/src/lib/utils.ts:\n"
         "echo '' >> /workspace/fullrun/src/lib/utils.ts && "
         "echo 'export function slugify(str: string): string {' >> /workspace/fullrun/src/lib/utils.ts && "
-        "echo '  return str.toLowerCase().replace(/\\\\s+/g, \"-\").replace(/[^a-z0-9-]/g, \"\");' >> /workspace/fullrun/src/lib/utils.ts && "
+        'echo \'  return str.toLowerCase().replace(/\\\\s+/g, "-").replace(/[^a-z0-9-]/g, "");\' >> /workspace/fullrun/src/lib/utils.ts && '
         "echo '}' >> /workspace/fullrun/src/lib/utils.ts"
     )
     print(f"  Tool calls: {len(r2.tools_started())}, latency: {r2.latency_ms:.0f}ms")
@@ -624,7 +615,7 @@ async def test_phase9_final_summary(agent):
         f"Final summary should show project files. Found: {found}"
     )
 
-    print(f"\n{'='*70}")
+    print(f"\n{'=' * 70}")
     print(f"  FULL RUN COMPLETE")
     print(f"  All phases passed.")
-    print(f"{'='*70}")
+    print(f"{'=' * 70}")

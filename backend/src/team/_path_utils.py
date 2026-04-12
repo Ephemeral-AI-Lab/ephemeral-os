@@ -43,6 +43,7 @@ def scope_paths_overlap(path_a: str, path_b: str) -> bool:
         or ("/" + left + "/") in (right + "/")
     )
 
+
 # ---------------------------------------------------------------------------
 # ltree conversion for PostgreSQL hierarchical queries
 # ---------------------------------------------------------------------------
@@ -138,7 +139,14 @@ def scope_paths_from_payload(payload: Any) -> list[str]:
     if not isinstance(payload, dict):
         return []
     collected: list[str] = []
-    for key in ("touches_paths", "target_paths", "stale_subsystems", "paths", "files", "owned_files"):
+    for key in (
+        "touches_paths",
+        "target_paths",
+        "stale_subsystems",
+        "paths",
+        "files",
+        "owned_files",
+    ):
         raw = payload.get(key)
         if isinstance(raw, list):
             collected.extend(str(item) for item in raw if isinstance(item, str))
@@ -146,10 +154,12 @@ def scope_paths_from_payload(payload: Any) -> list[str]:
     if isinstance(raw_verify, list):
         for item in raw_verify:
             if isinstance(item, str):
-                collected.extend(path.split("::", 1)[0].strip() for path in _PY_PATH_RE.findall(item))
+                collected.extend(
+                    path.split("::", 1)[0].strip() for path in _PY_PATH_RE.findall(item)
+                )
     elif isinstance(raw_verify, str):
         collected.extend(path.split("::", 1)[0].strip() for path in _PY_PATH_RE.findall(raw_verify))
-    for key in ("file_path", "path", "subsystem", "canonical_scope"):
+    for key in ("file_path", "path", "subsystem"):
         raw = payload.get(key)
         if isinstance(raw, str) and raw.strip():
             collected.append(raw)
