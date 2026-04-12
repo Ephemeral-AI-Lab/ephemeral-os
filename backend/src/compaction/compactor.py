@@ -18,6 +18,11 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from providers.types import SupportsStreamingMessages
 
+from compaction.prompts import (
+    NO_TOOLS_PREAMBLE,
+    BASE_COMPACT_PROMPT,
+    NO_TOOLS_TRAILER,
+)
 from message import (
     BackgroundTaskStateBlock,
     ConversationMessage,
@@ -42,6 +47,7 @@ def estimate_tokens(text: str) -> int:
     if not text:
         return 0
     return max(1, (len(text) + 3) // 4)
+
 
 # ---------------------------------------------------------------------------
 # Constants (from Claude Code microCompact.ts / autoCompact.ts)
@@ -80,12 +86,8 @@ _BACKGROUND_SNAPSHOT_TOOLS: frozenset[str] = frozenset(
     {"check_background_progress", "wait_for_background_task"}
 )
 _REDUCIBLE_RUNNING_STATUSES: frozenset[str] = frozenset({"running"})
-_REDUCIBLE_TERMINAL_STATUSES: frozenset[str] = frozenset(
-    {"completed", "failed", "cancelled"}
-)
-_REDUCIBLE_STATUSES: frozenset[str] = (
-    _REDUCIBLE_RUNNING_STATUSES | _REDUCIBLE_TERMINAL_STATUSES
-)
+_REDUCIBLE_TERMINAL_STATUSES: frozenset[str] = frozenset({"completed", "failed", "cancelled"})
+_REDUCIBLE_STATUSES: frozenset[str] = _REDUCIBLE_RUNNING_STATUSES | _REDUCIBLE_TERMINAL_STATUSES
 
 
 @dataclass(frozen=True)
@@ -217,9 +219,7 @@ def reduce_for_api(display_messages: list[ConversationMessage]) -> list[Conversa
 
     winners = _pick_winners(candidates)
     keep_state_blocks = {
-        winner.block_ref
-        for winner in winners.values()
-        if winner.block_ref is not None
+        winner.block_ref for winner in winners.values() if winner.block_ref is not None
     }
     keep_snapshot_statuses: dict[str, set[int]] = {}
     for winner in winners.values():
@@ -277,19 +277,11 @@ def reduce_for_api(display_messages: list[ConversationMessage]) -> list[Conversa
 
 
 def _message_tool_use_ids(message: ConversationMessage) -> set[str]:
-    return {
-        block.id
-        for block in message.content
-        if isinstance(block, ToolUseBlock)
-    }
+    return {block.id for block in message.content if isinstance(block, ToolUseBlock)}
 
 
 def _message_tool_result_ids(message: ConversationMessage) -> set[str]:
-    return {
-        block.tool_use_id
-        for block in message.content
-        if isinstance(block, ToolResultBlock)
-    }
+    return {block.tool_use_id for block in message.content if isinstance(block, ToolResultBlock)}
 
 
 def _preserve_recent_split_index(
@@ -297,6 +289,7 @@ def _preserve_recent_split_index(
     preserve_recent: int,
 ) -> int:
     """Return a split index that keeps provider-visible tool sequencing valid."""
+
     def _tool_sequence_valid(msgs: list[ConversationMessage]) -> bool:
         pending: set[str] = set()
         for msg in msgs:
@@ -314,7 +307,9 @@ def _preserve_recent_split_index(
 
     split_idx = max(0, len(messages) - max(0, preserve_recent))
     while 0 < split_idx < len(messages):
-        if _tool_sequence_valid(messages[:split_idx]) and _tool_sequence_valid(messages[split_idx:]):
+        if _tool_sequence_valid(messages[:split_idx]) and _tool_sequence_valid(
+            messages[split_idx:]
+        ):
             break
         split_idx -= 1
     return split_idx
@@ -515,47 +510,6 @@ def microcompact_messages(
     return messages, tokens_saved
 
 
-# ---------------------------------------------------------------------------
-# Full compact — LLM-based summarization
-# ---------------------------------------------------------------------------
-
-NO_TOOLS_PREAMBLE = """\
-CRITICAL: Respond with TEXT ONLY. Do NOT call any tools.
-
-- Do NOT use read_file, bash, grep, glob, edit_file, write_file, or ANY other tool.
-- You already have all the context you need in the conversation above.
-- Tool calls will be REJECTED and will waste your only turn — you will fail the task.
-- Your entire response must be plain text: an <analysis> block followed by a <summary> block.
-
-"""
-
-BASE_COMPACT_PROMPT = """\
-Your task is to create a detailed summary of the conversation so far. This summary will replace the earlier messages, so it must capture all important information.
-
-First, draft your analysis inside <analysis> tags. Walk through the conversation chronologically and extract:
-- Every user request and intent (explicit and implicit)
-- The approach taken and technical decisions made
-- Specific code, files, and configurations discussed (with paths and line numbers where available)
-- All errors encountered and how they were fixed
-- Any user feedback or corrections
-
-Then, produce a structured summary inside <summary> tags with these sections:
-
-1. **Primary Request and Intent**: All user requests in full detail, including nuances and constraints.
-2. **Key Technical Concepts**: Technologies, frameworks, patterns, and conventions discussed.
-3. **Files and Code Sections**: Every file examined or modified, with specific code snippets and line numbers.
-4. **Errors and Fixes**: Every error encountered, its cause, and how it was resolved.
-5. **Problem Solving**: Problems solved and approaches that worked vs. didn't work.
-6. **All User Messages**: Non-tool-result user messages (preserve exact wording for context).
-7. **Pending Tasks**: Explicitly requested work that hasn't been completed yet.
-8. **Current Work**: Detailed description of the last task being worked on before compaction.
-9. **Optional Next Step**: The single most logical next step, directly aligned with the user's recent request.
-"""
-
-NO_TOOLS_TRAILER = """
-REMINDER: Do NOT call any tools. Respond with plain text only — an <analysis> block followed by a <summary> block. Tool calls will be rejected and you will fail the task."""
-
-
 def get_compact_prompt(custom_instructions: str | None = None) -> str:
     """Build the full compaction prompt sent to the model."""
     prompt = NO_TOOLS_PREAMBLE + BASE_COMPACT_PROMPT
@@ -716,8 +670,7 @@ async def compact_conversation(
     sequence_error = _find_tool_sequence_error(messages)
     if sequence_error is not None:
         raise ValueError(
-            "compaction preflight rejected malformed tool sequencing: "
-            f"{sequence_error}"
+            f"compaction preflight rejected malformed tool sequencing: {sequence_error}"
         )
 
     pre_compact_tokens = estimate_message_tokens(messages)
@@ -736,8 +689,7 @@ async def compact_conversation(
     sequence_error = _find_tool_sequence_error(compact_messages)
     if sequence_error is not None:
         raise ValueError(
-            "compaction preflight rejected malformed tool sequencing: "
-            f"{sequence_error}"
+            f"compaction preflight rejected malformed tool sequencing: {sequence_error}"
         )
 
     summary_text = ""
