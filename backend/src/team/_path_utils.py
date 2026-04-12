@@ -5,10 +5,43 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from code_intelligence.routing.scope_packets import (
-    normalize_scope_paths,
-    scope_paths_overlap,
-)
+
+# ---------------------------------------------------------------------------
+# Scope path utilities (moved from scope_packets.py)
+# ---------------------------------------------------------------------------
+
+
+def normalize_scope_paths(paths: list[str] | tuple[str, ...] | None) -> list[str]:
+    out: list[str] = []
+    seen: set[str] = set()
+    for raw in paths or ():
+        if not isinstance(raw, str):
+            continue
+        for part in raw.split("|"):
+            cleaned = part.strip().replace("\\", "/").removeprefix("./").rstrip("/")
+            if not cleaned or cleaned in seen:
+                continue
+            seen.add(cleaned)
+            out.append(cleaned)
+    out.sort()
+    return out
+
+
+def scope_paths_overlap(path_a: str, path_b: str) -> bool:
+    left = (path_a or "").strip().rstrip("/")
+    right = (path_b or "").strip().rstrip("/")
+    if not left or not right:
+        return False
+    if left == right:
+        return True
+    if left.startswith(right + "/") or right.startswith(left + "/"):
+        return True
+    return (
+        left.endswith("/" + right)
+        or right.endswith("/" + left)
+        or ("/" + right + "/") in (left + "/")
+        or ("/" + left + "/") in (right + "/")
+    )
 
 # ---------------------------------------------------------------------------
 # ltree conversion for PostgreSQL hierarchical queries

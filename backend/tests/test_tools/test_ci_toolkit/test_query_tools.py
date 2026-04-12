@@ -12,7 +12,6 @@ from tools.core.base import ToolExecutionContext
 from tools.ci_toolkit.query_tools import (
     _svc_or_error,
     ci_status,
-    ci_scope_status,
     ci_workspace_structure,
     ci_query_symbols,
     ci_query_references,
@@ -32,10 +31,10 @@ def _ctx_with_svc(svc) -> ToolExecutionContext:
     return _ctx({"ci_service": svc})
 
 
-
 # ---------------------------------------------------------------------------
 # _svc_or_error helper
 # ---------------------------------------------------------------------------
+
 
 async def test_svc_or_error_no_service_returns_unavailable():
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=None):
@@ -60,6 +59,7 @@ async def test_svc_or_error_with_service_returns_svc():
 # ci_status
 # ---------------------------------------------------------------------------
 
+
 async def test_ci_status_no_service_returns_unavailable():
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=None):
         result = await ci_status.execute(ci_status.input_model(), _ctx())
@@ -79,100 +79,9 @@ async def test_ci_status_returns_service_status():
     svc.status.assert_called_once()
 
 
-async def test_ci_scope_status_returns_live_scope_packet():
-    svc = MagicMock()
-    svc.arbiter.generation = 7
-    svc.arbiter.recent_edits.return_value = []
-    svc.arbiter.active_reservations.return_value = [
-        {
-            "token_id": "tok-1",
-            "file_path": "src/app.py",
-            "agent_id": "worker-1",
-            "issued_at": 1.0,
-            "expires_at": 2.0,
-        }
-    ]
-    svc.arbiter.active_edit_intents.return_value = [
-        {
-            "intent_id": "intent-1",
-            "file_path": "src/app.py",
-            "agent_id": "worker-1",
-            "scope": "symbol",
-            "symbols": ["app.main"],
-            "issued_at": 1.0,
-            "heartbeat_at": 1.5,
-            "expires_at": 2.0,
-        }
-    ]
-    svc.arbiter.hotspots.return_value = [("src/app.py", 4)]
-    svc.symbol_index.generation = 11
-    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
-        ctx = _ctx_with_svc(svc)
-        result = await ci_scope_status.execute(
-            ci_scope_status.input_model(scope_paths=["src"]),
-            ctx,
-        )
-    assert not result.is_error
-    data = json.loads(result.output)
-    assert data["scope_paths"] == ["src"]
-    assert data["arbiter_generation"] == 7
-    assert data["symbol_index_generation"] == 11
-    assert data["active_reservations"][0]["file_path"] == "src/app.py"
-    assert data["active_edit_intents"][0]["scope"] == "symbol"
-    assert data["coherence_token"]
-    assert data["admission"]["mode"] == "serialize"
-    assert data["admission"]["allow_parallel_fanout"] is False
-    assert result.metadata["scope_packet"]["coherence_token"] == data["coherence_token"]
-    assert result.metadata["coherence_token"] == data["coherence_token"]
-    assert ctx.metadata["scope_packet"]["coherence_token"] == data["coherence_token"]
-    assert ctx.metadata["coherence_token"] == data["coherence_token"]
-
-
-
-
-async def test_ci_scope_status_defaults_to_default_scope_paths_when_unspecified():
-    svc = MagicMock()
-    svc.arbiter.generation = 2
-    svc.arbiter.recent_edits.return_value = []
-    svc.arbiter.active_reservations.return_value = []
-    svc.arbiter.hotspots.return_value = []
-    svc.symbol_index.generation = 3
-    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
-        ctx = _ctx(
-            {
-                "ci_service": svc,
-                "default_scope_paths": ["pydantic/networks.py"],
-            }
-        )
-        result = await ci_scope_status.execute(ci_scope_status.input_model(), ctx)
-
-    assert not result.is_error
-    data = json.loads(result.output)
-    assert data["scope_paths"] == ["pydantic/networks.py"]
-
-
-async def test_ci_scope_status_rejects_scout_caller():
-    svc = MagicMock()
-    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
-        result = await ci_scope_status.execute(
-            ci_scope_status.input_model(scope_paths=["src"]),
-            _ctx({"agent_name": "scout", "ci_service": svc}),
-        )
-
-    assert result.is_error
-    assert "scout is read-only and may use only" in result.output
-    assert "ci_scope_status" in result.output
-
-
-# ---------------------------------------------------------------------------
-# ci_workspace_structure
-# ---------------------------------------------------------------------------
-
 async def test_workspace_structure_no_service():
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=None):
-        result = await ci_workspace_structure.execute(
-            ci_workspace_structure.input_model(), _ctx()
-        )
+        result = await ci_workspace_structure.execute(ci_workspace_structure.input_model(), _ctx())
     data = json.loads(result.output)
     assert data["status"] == "unavailable"
 
@@ -248,86 +157,6 @@ async def test_workspace_structure_filters_by_path():
     assert "tests/c.py" not in result.output
 
 
-async def test_workspace_structure_rejects_scout_listing_outside_assigned_scope():
-    svc = MagicMock()
-    svc.symbol_index = MagicMock()
-
-    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
-        result = await ci_workspace_structure.execute(
-            ci_workspace_structure.input_model(path="src/replacement"),
-            _ctx(
-                {
-                    "agent_name": "scout",
-                    "ci_service": svc,
-                    "scope_packet": {"scope_paths": ["src/owned.py"]},
-                }
-            ),
-        )
-
-    assert result.is_error
-    assert "scout must stay within the assigned `target_paths`" in result.output
-    assert "report zero coverage" in result.output
-
-
-async def test_workspace_structure_rejects_scout_root_listing_when_scope_is_concrete():
-    svc = MagicMock()
-    svc.symbol_index = MagicMock()
-
-    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
-        result = await ci_workspace_structure.execute(
-            ci_workspace_structure.input_model(),
-            _ctx(
-                {
-                    "agent_name": "scout",
-                    "ci_service": svc,
-                    "scope_packet": {"scope_paths": ["src/owned.py"]},
-                }
-            ),
-        )
-
-    assert result.is_error
-    assert "may not list the workspace root" in result.output
-
-
-async def test_workspace_structure_allows_immediate_parent_for_single_file_target():
-    svc = MagicMock()
-    svc.symbol_index = MagicMock()
-
-    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
-        result = await ci_workspace_structure.execute(
-            ci_workspace_structure.input_model(path="src/pkg"),
-            _ctx(
-                {
-                    "agent_name": "scout",
-                    "ci_service": svc,
-                    "scope_packet": {"scope_paths": ["src/pkg/owned.py"]},
-                }
-            ),
-        )
-
-    assert not result.is_error
-
-
-async def test_workspace_structure_rejects_grandparent_for_single_file_target():
-    svc = MagicMock()
-    svc.symbol_index = MagicMock()
-
-    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
-        result = await ci_workspace_structure.execute(
-            ci_workspace_structure.input_model(path="src"),
-            _ctx(
-                {
-                    "agent_name": "scout",
-                    "ci_service": svc,
-                    "scope_packet": {"scope_paths": ["src/pkg/owned.py"]},
-                }
-            ),
-        )
-
-    assert result.is_error
-    assert "Enumerate only the exact target path or, for a single-file target, its immediate parent" in result.output
-
-
 async def test_workspace_structure_non_symbol_index_returns_empty():
     """When symbol_index is not a SymbolIndex instance, returns 'No files indexed'."""
     import threading
@@ -353,26 +182,12 @@ async def test_workspace_structure_non_symbol_index_returns_empty():
 # ci_query_symbols
 # ---------------------------------------------------------------------------
 
+
 async def test_query_symbols_no_service():
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=None):
-        result = await ci_query_symbols.execute(
-            ci_query_symbols.input_model(query="foo"), _ctx()
-        )
+        result = await ci_query_symbols.execute(ci_query_symbols.input_model(query="foo"), _ctx())
     data = json.loads(result.output)
     assert data["status"] == "unavailable"
-
-
-async def test_query_symbols_rejects_scout_caller():
-    svc = MagicMock()
-    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
-        result = await ci_query_symbols.execute(
-            ci_query_symbols.input_model(query="foo"),
-            _ctx({"agent_name": "scout", "ci_service": svc}),
-        )
-
-    assert result.is_error
-    assert "scout is read-only and may use only" in result.output
-    assert "ci_query_symbols" in result.output
 
 
 async def test_query_symbols_no_results():
@@ -527,8 +342,7 @@ async def test_query_symbols_local_workspace_fallback_finds_class(tmp_path):
     source = tmp_path / "pydantic" / "type_adapter.py"
     source.parent.mkdir()
     source.write_text(
-        "class TypeAdapter:\n"
-        "    pass\n",
+        "class TypeAdapter:\n    pass\n",
         encoding="utf-8",
     )
 
@@ -555,8 +369,7 @@ async def test_query_symbols_local_workspace_fallback_finds_partial_function(tmp
     source = tmp_path / "pydantic" / "json_schema.py"
     source.parent.mkdir()
     source.write_text(
-        "def _extract_discriminator(schema):\n"
-        "    return schema\n",
+        "def _extract_discriminator(schema):\n    return schema\n",
         encoding="utf-8",
     )
 
@@ -704,6 +517,7 @@ async def test_query_symbols_invalid_kind_ignored():
 
 async def test_query_symbols_kind_without_value_attr():
     """Symbols whose kind lacks .value use str() fallback."""
+
     # Use a plain object whose str() is predictable
     class NoValueKind:
         def __str__(self):
@@ -733,6 +547,7 @@ async def test_query_symbols_kind_without_value_attr():
 # ---------------------------------------------------------------------------
 # ci_query_references
 # ---------------------------------------------------------------------------
+
 
 async def test_query_references_no_service():
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=None):
@@ -828,11 +643,10 @@ async def test_query_references_truncates_at_50_and_shows_total():
 # ci_edit_hotspots
 # ---------------------------------------------------------------------------
 
+
 async def test_edit_hotspots_no_service():
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=None):
-        result = await ci_edit_hotspots.execute(
-            ci_edit_hotspots.input_model(), _ctx()
-        )
+        result = await ci_edit_hotspots.execute(ci_edit_hotspots.input_model(), _ctx())
     data = json.loads(result.output)
     assert data["status"] == "unavailable"
 
@@ -842,9 +656,7 @@ async def test_edit_hotspots_no_arbiter():
     svc.arbiter = None
 
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
-        result = await ci_edit_hotspots.execute(
-            ci_edit_hotspots.input_model(), _ctx_with_svc(svc)
-        )
+        result = await ci_edit_hotspots.execute(ci_edit_hotspots.input_model(), _ctx_with_svc(svc))
 
     assert "Arbiter not available" in result.output
 
@@ -854,9 +666,7 @@ async def test_edit_hotspots_no_results():
     svc.arbiter.hotspots.return_value = []
 
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
-        result = await ci_edit_hotspots.execute(
-            ci_edit_hotspots.input_model(), _ctx_with_svc(svc)
-        )
+        result = await ci_edit_hotspots.execute(ci_edit_hotspots.input_model(), _ctx_with_svc(svc))
 
     assert "No edit hotspots" in result.output
 
@@ -885,11 +695,10 @@ async def test_edit_hotspots_returns_results():
 # ci_recent_changes
 # ---------------------------------------------------------------------------
 
+
 async def test_recent_changes_no_service():
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=None):
-        result = await ci_recent_changes.execute(
-            ci_recent_changes.input_model(), _ctx()
-        )
+        result = await ci_recent_changes.execute(ci_recent_changes.input_model(), _ctx())
     data = json.loads(result.output)
     assert data["status"] == "unavailable"
 

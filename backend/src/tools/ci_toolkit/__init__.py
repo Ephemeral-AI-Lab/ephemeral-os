@@ -3,7 +3,6 @@
 from tools.core.base import BaseToolkit
 from tools.ci_toolkit.query_tools import (
     ci_status,
-    ci_scope_status,
     ci_edit_hotspots,
     ci_recent_changes,
     ci_query_symbols,
@@ -27,7 +26,6 @@ class CIToolkit(BaseToolkit):
     ) -> None:
         tools = [
             ci_status,
-            ci_scope_status,
             ci_workspace_structure,
             ci_query_symbols,
             ci_query_references,
@@ -38,10 +36,9 @@ class CIToolkit(BaseToolkit):
             "Read-only code intelligence for grounding same-run work. "
             "If Atlas or briefings disagree with current CI state, trust CI.\n\n"
             "- `ci_status` — check if the code intelligence service is available.\n"
-            "- `ci_scope_status` — get a live scope packet with coherence token, active reservations, and recent changes for the paths you are about to edit.\n"
             "- `ci_workspace_structure` — tree view of the project layout.\n"
             "- `ci_query_symbols` / `ci_query_references` — locate definitions and callers.\n"
-            "- Call-chain rule — after one exact `ci_scope_status(...)` packet, use "
+            "- Call-chain rule — use "
             "`ci_query_symbols(...)` or `ci_query_references(...)` before falling back to "
             "custom runtime scripts when localizing a production boundary.\n"
             "- Dead-cycle rule — if the same boundary survives one scoped packet, one owner query, "
@@ -54,18 +51,14 @@ class CIToolkit(BaseToolkit):
             )
         else:
             instructions += (
-            "- `ci_edit_hotspots` and `ci_recent_changes` are intentionally unavailable "
-            "for planner-style agents. Use `ci_scoped_status(scope_paths=[...])` as the live sibling-awareness packet instead.\n"
+                "- `ci_edit_hotspots` and `ci_recent_changes` are intentionally unavailable "
+                "for planner-style agents.\n"
             )
         if include_file_reads:
             tools.append(ci_read_file)
-            instructions += (
-                "- `ci_read_file` — read file contents via the CI service when sandbox tools are unavailable."
-            )
+            instructions += "- `ci_read_file` — read file contents via the CI service when sandbox tools are unavailable."
         else:
-            instructions += (
-            "- `ci_read_file` is intentionally unavailable in planner mode. Use `run_subagent(agent_name=\"scout\", input={\"target_paths\": [...]})` when file contents are needed."
-            )
+            instructions += "- `ci_read_file` is intentionally unavailable in planner mode."
         instructions += (
             "\nTool-choice rule:\n"
             "- use code_intelligence for live symbol truth, recent edits, collision awareness, and call-chain localization"

@@ -56,7 +56,6 @@ def test_toolkit_instructions_surface_scope_and_search_tools() -> None:
     )
 
     assert developer_ci.instructions is not None
-    assert "ci_scope_status" in developer_ci.instructions
 
     assert sandbox_ops.instructions is not None
     assert "daytona_grep" in sandbox_ops.instructions

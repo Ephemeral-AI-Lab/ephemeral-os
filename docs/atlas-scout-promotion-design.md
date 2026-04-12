@@ -164,7 +164,6 @@ Objective:
 Give every developer and validator lane just-in-time awareness of current repo state, not only structural scout memory.
 
 Changes:
-- add `ci_scope_status`
 - add coherent snapshot tokens across shared briefings, ledger, arbiter, and symbol index
 - expose active per-file reservations
 - add startup scope packets plus pre-write and commit/apply rechecks

@@ -284,87 +284,55 @@ class BudgetConfig:
 ### 5.1 Data Structure
 
 ```python
-@dataclass
 class TaskCenter:
     """Append-only shared context log. Replaces ProjectContext,
-    InMemoryArtifactStore, and 3-tier briefing system."""
+    InMemoryArtifactStore, and 3-tier briefing system.
 
-    _notes: list[Note] = field(default_factory=list)
+    PostgreSQL is the single source of truth. All writes go to PG via
+    NoteStore. Reads query PG through the same store. No in-memory
+    shadow list — one store, one truth, zero consistency gaps."""
 
-    # Run-level metadata (formerly on ProjectContext)
-    goal: str = ""
-    user_request: str = ""
+    def __init__(self, note_store: NoteStore, team_run_id: str,
+                 goal: str = "", user_request: str = ""):
+        self._note_store = note_store
+        self._team_run_id = team_run_id
+        self.goal = goal
+        self.user_request = user_request
 
-    def post(self, note: Note) -> None:
-        """Append a note. list.append() is GIL-atomic in CPython.
-        PostgreSQL INSERT handles durability. No application lock needed."""
-        self._notes.append(note)
+    async def post(self, note: Note) -> None:
+        """Insert a note into PostgreSQL. Awaited — the note is visible
+        to all processes and to search_context immediately on return."""
+        record = TaskNoteRecord(
+            id=uuid.UUID(note.id), team_run_id=self._team_run_id,
+            task_id=note.task_id, agent_name=note.agent_name,
+            content=note.content,
+            scope_ltree=[path_to_ltree(p) for p in note.scope_paths] if note.scope_paths else [])
+        await self._note_store.insert(record)
 
-    def read(self, *,
-             authors: list[str] | None = None,
-             scope_paths: list[str] | None = None,
-             since: float | None = None,
-             limit: int | None = None) -> list[Note]:
-        """Filter notes. No lock — safe on append-only list.
-        scope_paths uses prefix matching (same semantics as ltree <@)."""
-        results = self._notes  # snapshot reference
-        if authors:
-            author_set = set(authors)
-            results = [n for n in results if n.task_id in author_set]
-        if scope_paths:
-            results = [n for n in results
-                       if n.scope_paths and any(
-                           note_scope.startswith(query_scope.rstrip('/'))
-                           for note_scope in n.scope_paths
-                           for query_scope in scope_paths
-                       )]
-        if since:
-            results = [n for n in results if n.timestamp >= since]
-        if limit:
-            results = results[-limit:]
-        return results
+    async def read(self, *,
+                   authors: list[str] | None = None,
+                   scope_paths: list[str] | None = None,
+                   since: float | None = None,
+                   limit: int | None = None) -> list[Note]:
+        """Query notes from PostgreSQL. All filtering happens in SQL
+        (ltree for scope, tsvector for search, B-tree for authors)."""
+        return await self._note_store.query(
+            run_id=self._team_run_id,
+            task_ids=authors,
+            scope_ltrees=[path_to_ltree(p) for p in scope_paths] if scope_paths else None,
+            since=since, limit=limit)
 
-    async def context_for(self, task: Task, pool: 'asyncpg.Pool',
+    async def context_for(self, task: Task,
                           ledger: 'Ledger', budget_config: 'BudgetConfig',
                           max_context_bytes: int = 200_000) -> str:
         """Build context string for a task. Fixed priority order:
         task (never trimmed) → deps → ledger → parent.
-        Takes a PG pool — no in-memory graph needed.
+        All reads go to PG via NoteStore — no in-memory graph needed.
         Implementation in Section 8.2."""
         ...
-
-    def snapshot(self) -> list[Note]:
-        """For checkpointing."""
-        return list(self._notes)
-
-    def restore(self, notes: list[Note]) -> None:
-        """For crash recovery."""
-        self._notes = list(notes)
-
-    async def hydrate(self, run_id: str, pool) -> None:
-        """Hydrate in-memory state from PostgreSQL. Required at startup
-        in multi-process deployments where notes written by other executor
-        processes are not visible in this process's _notes list.
-
-        Single-process deployments can skip this — _notes is already
-        complete. Multi-process deployments MUST call hydrate() before
-        context_for() to ensure dependency inheritance and freshness
-        guarantees hold across process boundaries."""
-        note_store: NoteStore = self._note_store
-        rows = await note_store.fetch_all_for_run(run_id)
-        seen = {n.id for n in self._notes}
-        for r in rows:
-            if r["id"] not in seen:
-                self._notes.append(Note(
-                    id=r["id"], task_id=r["task_id"],
-                    agent_name=r["agent_name"], content=r["content"],
-                    timestamp=r["timestamp"],
-                    scope_paths=r["scope_paths"] or []))
 ```
 
-**Multi-process consistency:** In a horizontally scaled deployment (multiple executor processes), notes and Ledger entries written by process A are not visible in process B's in-memory `_notes`. Without hydration, `context_for()` on process B would miss dependency notes, breaking inheritance guarantees. The executor calls `task_center.hydrate(run_id, pool)` before building context for each task. This is a read-only query against the append-only `task_notes` table — no locks, no contention.
-
-For the Ledger, the same pattern applies: `ledger.hydrate(run_id, pool)` loads `file_changes` entries written by other processes. In single-process mode (the default), both `hydrate()` calls are no-ops since `_notes` and the ring buffer already contain all data.
+**Multi-process consistency:** PostgreSQL is the single source of truth. Notes written by process A are immediately visible to process B — no hydration step, no sync protocol. `context_for()` and `search_context` both read from the same `task_notes` table, so they always agree on note visibility. The append-only table and `BRIN` index on `created_at` make reads cheap even under high write concurrency.
 
 ### 5.2 Why Append-Only
 
@@ -1816,34 +1784,34 @@ async with engine.connect() as conn:
 
 **Alternative for large swarms:** Instead of one LISTEN connection per worker, use a single shared listener connection with in-process fan-out to workers. This caps LISTEN connections at 1 regardless of concurrency. Trade-off: adds ~20 lines of fan-out code.
 
-### 14.3 Dual-Write Architecture
+### 14.3 PostgreSQL-Primary Persistence
 
-The Task Center and Ledger each have two backing stores: in-memory for the hot path, PostgreSQL for durability and search.
+PostgreSQL is the single source of truth for all team coordination state. There is no in-memory shadow store. Every write goes to PG (awaited), every read queries PG. This eliminates an entire class of bugs around write ordering, crash windows, and cross-process visibility.
 
 ```
 Agent calls post_note() or done()
   |
-  +-- 1. Async: INSERT INTO task_notes (...)
-  |        Durable FIRST. If process crashes after this, recovery
-  |        restores the note. Cross-run searchable. Full-text indexed.
-  |
-  +-- 2. Sync: append to in-memory TaskCenter._notes
-           Fast read path. Used by context_for() within the same run.
+  +-- await INSERT INTO task_notes (...)
+       Durable. Searchable (tsvector). Scope-indexed (ltree).
+       Visible to all processes immediately on return.
 
 Agent calls edit_file()
   |
-  +-- 1. Async: INSERT INTO file_changes (...)
-  |        Durable FIRST. Queryable via scope_changed_since tool.
-  |
-  +-- 2. Sync: Ledger.record() in-memory ring buffer
-           Used by context_for() ledger query within the same run.
+  +-- await INSERT INTO file_changes (...)
+       Durable. Queryable via scope_changed_since tool.
+       Visible to all processes immediately on return.
 ```
 
-**Write ordering — PG first, in-memory second:** If the process crashes between the two writes, the durable store (PG) already has the note and recovery restores it. The reverse order (in-memory first) would create a crash window where the note exists in-memory but not in PG — lost on recovery, and the retried task may re-post a duplicate or miss context. PG-first eliminates this window.
+**Why not dual-write:** An earlier revision of this plan proposed dual-write (PG + in-memory list). This was rejected because:
 
-**Rationale:** In-memory for speed (context_for runs on every task start). PostgreSQL for durability (crash recovery) and search (agents querying mid-run). Two writes per event, not three — semantic search embedding is deferred to Phase 7 and runs as a background worker, not inline. Reads choose the right store based on latency needs.
+1. **Write ordering bugs** — PG-first-then-in-memory creates a crash window where PG has the note but the in-memory list doesn't. In-memory-first creates the opposite. Either way, the two stores can disagree.
+2. **Hydration complexity** — multi-process deployments require a `hydrate()` call before every `context_for()` to sync the in-memory list from PG. This is easy to forget and hard to test.
+3. **Marginal latency benefit** — `context_for()` runs once per task start, not in a hot loop. A PG round-trip (~1ms on localhost, ~5ms networked) is negligible compared to the LLM call that follows (~seconds).
+4. **Consistency by construction** — with one store, `search_context` and `context_for` always agree on note visibility. No ordering invariants to maintain.
 
-**Consistency guarantee:** The async PostgreSQL INSERT must be `await`ed before the in-memory append — fire-and-forget would let `search_context` miss notes that `context_for()` can see. The "async" label means "non-blocking I/O" (asyncpg), not "background task." Both the PG INSERT and the in-memory append complete before the tool returns to the agent, so search and context_for always agree on note visibility.
+**Trade-off acknowledged:** Every `read()` and `context_for()` call hits PG. For single-process deployments on localhost this adds ~1ms per query — unmeasurable against LLM latency. If profiling later shows PG reads as a bottleneck (unlikely), a read-through cache can be added as a transparent layer without changing the write path or the consistency model.
+
+**Semantic search embedding** is deferred to Phase 7 and runs as a background worker, not inline. One write per event, not two.
 
 ### 14.4 Schema
 

@@ -8,7 +8,6 @@ Use this reference only when either condition is true:
 ## Widening rules
 
 - Must treat `owned_files` as the default edit surface.
-- Must call `ci_scoped_status(...)` before the first edit outside `owned_files`.
 - Must compose with live sibling edits on widened files.
 - Must keep widened edits to one adjacent supporting owner surface for the same bug.
 - Never widen into tests first when the production owner is still the clearer fix surface.
@@ -31,7 +30,7 @@ Use this reference only when either condition is true:
 ## Few-shot examples
 
 - Example: the lane owns `pkg/io/json.py`, but the live traceback points to a helper import in `pkg/_compat.py`.
-  Refresh `ci_scoped_status(...)` on `pkg/_compat.py`, widen once, patch the helper, and rerun the exact assigned verify command.
+  Widen once to `pkg/_compat.py`, patch the helper, and rerun the exact assigned verify command.
   Do not patch the failing test first.
 - Example: the lane owns `pkg/io/hdf.py`, but `pytest pkg/io/tests/test_hdf.py -x` dies during collection because the verify surface imports a deprecated or missing private symbol through `pkg/_compat.py`.
   Confirm that import chain once with live traceback evidence, widen only to the adjacent production/import path if it truly owns the fix, or stop with blocker evidence for replanning; `owned_failures` does not authorize editing the verify file.

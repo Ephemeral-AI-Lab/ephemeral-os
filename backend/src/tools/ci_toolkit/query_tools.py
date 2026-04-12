@@ -21,7 +21,7 @@ from tools.daytona_toolkit.ci_integration import (
     scope_paths_for_write,
     resolve_daytona_path,
 )
-from code_intelligence.routing.scope_packets import normalize_scope_paths
+from team._path_utils import normalize_scope_paths
 from tools.core.decorator import tool
 
 logger = logging.getLogger(__name__)
@@ -93,13 +93,6 @@ def _build_fallback_specs(query: str, *, kind: str = "") -> list[_FallbackSearch
     return specs
 
 
-
-
-
-
-
-
-
 def _extract_match_name(snippet: str, *, query: str, kind: str) -> str:
     """Infer the real symbol name from a matched line when possible."""
     if kind == "function":
@@ -124,12 +117,16 @@ def _dedupe_matches(matches: list[dict[str, Any]]) -> list[dict[str, Any]]:
         suffix = Path(file_path).suffix.lower()
         kind = str(match.get("kind") or "")
         is_text_match = 1 if kind == "text_match" else 0
-        is_doc_path = 1 if (
-            suffix in {".md", ".rst", ".txt"}
-            or "/docs/" in lowered
-            or lowered.endswith("/history.md")
-            or lowered.endswith("/readme.md")
-        ) else 0
+        is_doc_path = (
+            1
+            if (
+                suffix in {".md", ".rst", ".txt"}
+                or "/docs/" in lowered
+                or lowered.endswith("/history.md")
+                or lowered.endswith("/readme.md")
+            )
+            else 0
+        )
         depth = file_path.count("/")
         return (is_text_match, is_doc_path, depth, file_path, int(match.get("line") or 0))
 
@@ -267,9 +264,7 @@ def _local_query_symbols(
             continue
         if not response.stdout:
             continue
-        collected.extend(
-            _parse_rg_matches(response.stdout, query=query, kind=spec.kind)
-        )
+        collected.extend(_parse_rg_matches(response.stdout, query=query, kind=spec.kind))
         if len(collected) >= _SYMBOL_FALLBACK_LIMIT:
             break
 
@@ -337,8 +332,7 @@ def _python_fallback_query_symbols(
     """Last-resort fallback when ripgrep is unavailable."""
     collected: list[dict[str, Any]] = []
     compiled_specs = [
-        (re.compile(spec.pattern), spec.kind)
-        for spec in _build_fallback_specs(query, kind=kind)
+        (re.compile(spec.pattern), spec.kind) for spec in _build_fallback_specs(query, kind=kind)
     ]
     if not compiled_specs:
         return None
@@ -382,7 +376,9 @@ def _svc_or_error(context: ToolExecutionContext) -> tuple[Any | None, ToolResult
     svc = get_ci_service(context)
     if svc is None:
         return None, ToolResult(
-            output=json.dumps({"status": "unavailable", "reason": "Code intelligence not configured"}),
+            output=json.dumps(
+                {"status": "unavailable", "reason": "Code intelligence not configured"}
+            ),
         )
     return svc, None
 
@@ -399,10 +395,7 @@ async def _remote_workspace_structure(
         return None
 
     target = resolve_daytona_path(path, context)
-    command = (
-        f"find {shlex.quote(target)} -maxdepth {max(0, int(max_depth))} "
-        "-print"
-    )
+    command = f"find {shlex.quote(target)} -maxdepth {max(0, int(max_depth))} -print"
     try:
         response = await sandbox.process.exec(command, timeout=30)
     except Exception:
@@ -447,8 +440,7 @@ async def _remote_query_symbols(
     collected: list[dict[str, Any]] = []
     for spec in _build_fallback_specs(query, kind=kind):
         command = (
-            "rg -n --no-heading --color never "
-            f"-e {shlex.quote(spec.pattern)} {shlex.quote(target)}"
+            f"rg -n --no-heading --color never -e {shlex.quote(spec.pattern)} {shlex.quote(target)}"
         )
         try:
             response = await sandbox.process.exec(command, timeout=30)
@@ -460,9 +452,7 @@ async def _remote_query_symbols(
         output = (getattr(response, "result", "") or "").strip()
         if exit_code not in (0, 1) or not output:
             continue
-        collected.extend(
-            _parse_rg_matches(output, query=query, kind=spec.kind)
-        )
+        collected.extend(_parse_rg_matches(output, query=query, kind=spec.kind))
         if len(collected) >= _SYMBOL_FALLBACK_LIMIT:
             break
 
@@ -493,10 +483,7 @@ async def _remote_query_references(
     if not pattern:
         return None
     target = resolve_daytona_path("", context)
-    command = (
-        "rg -n --no-heading --color never "
-        f"-e {shlex.quote(pattern)} {shlex.quote(target)}"
-    )
+    command = f"rg -n --no-heading --color never -e {shlex.quote(pattern)} {shlex.quote(target)}"
     try:
         response = await sandbox.process.exec(command, timeout=30)
     except Exception:
@@ -618,7 +605,12 @@ print(json.dumps(matches))
 
 # -- CI Status ----------------------------------------------------------------
 
-@tool(name="ci_status", description="Check code intelligence readiness: cache, index, LSP, and edit activity.", read_only=True)
+
+@tool(
+    name="ci_status",
+    description="Check code intelligence readiness: cache, index, LSP, and edit activity.",
+    read_only=True,
+)
 async def ci_status(*, context: ToolExecutionContext) -> ToolResult:
     """Check code intelligence service readiness."""
     svc, err = _svc_or_error(context)
@@ -628,60 +620,14 @@ async def ci_status(*, context: ToolExecutionContext) -> ToolResult:
     return ToolResult(output=json.dumps(status, indent=2, default=str))
 
 
-async def _ci_scope_status_impl(
-    *,
-    tool_name: str,
-    scope_paths: list[str] | None,
-    context: ToolExecutionContext,
-) -> ToolResult:
-    svc, err = _svc_or_error(context)
-    if err:
-        return err
-    requested = normalize_scope_paths(scope_paths or [])
-    if not requested:
-        requested = normalize_scope_paths(context.metadata.get("default_scope_paths") or [])
-    if not requested:
-        requested = scope_paths_for_write(context)
-    packet = build_live_scope_packet(
-        context,
-        scope_paths=requested,
-    )
-    refresh_scope_baseline(context, packet=packet)
-    metadata = {
-        "scope_packet": packet,
-        "coherence_token": str(packet.get("coherence_token") or ""),
-    }
-    return ToolResult(
-        output=json.dumps(packet, indent=2, default=str),
-        metadata=metadata,
-    )
+# -- Workspace Structure ------------------------------------------------------
 
 
 @tool(
-    name="ci_scope_status",
-    description=(
-        "Return a live scope packet with coherence token, recent changes, "
-        "reservations, freshness grade, and scout fanout admission for one or more paths."
-    ),
+    name="ci_workspace_structure",
+    description="List files and directories in the workspace, sorted by path.",
     read_only=True,
 )
-async def ci_scope_status(
-    scope_paths: list[str] | None = None,
-    *,
-    context: ToolExecutionContext,
-) -> ToolResult:
-    """Return the current live scope packet for a scope."""
-    return await _ci_scope_status_impl(
-        tool_name="ci_scope_status",
-        scope_paths=scope_paths,
-        context=context,
-    )
-
-
-
-# -- Workspace Structure ------------------------------------------------------
-
-@tool(name="ci_workspace_structure", description="List files and directories in the workspace, sorted by path.", read_only=True)
 async def ci_workspace_structure(
     path: str = "",
     max_depth: int = 3,
@@ -706,6 +652,7 @@ async def ci_workspace_structure(
 
     # Get indexed file paths
     from code_intelligence.analysis.symbol_index import SymbolIndex
+
     if isinstance(si, SymbolIndex):
         with si._lock:
             paths = sorted(si._symbols.keys())
@@ -737,7 +684,12 @@ async def ci_workspace_structure(
 
 # -- Symbol Query -------------------------------------------------------------
 
-@tool(name="ci_query_symbols", description="Find functions, classes, methods, and variables by name.", read_only=True)
+
+@tool(
+    name="ci_query_symbols",
+    description="Find functions, classes, methods, and variables by name.",
+    read_only=True,
+)
 async def ci_query_symbols(
     query: str,
     kind: str = "",
@@ -758,6 +710,7 @@ async def ci_query_symbols(
         return err
 
     from code_intelligence.types import SymbolKind
+
     kind_filter = None
     if kind:
         try:
@@ -807,9 +760,7 @@ async def ci_query_symbols(
         fallback_matches = _dedupe_matches(fallback_matches)
         if drop_text_matches:
             fallback_matches = [
-                match
-                for match in fallback_matches
-                if str(match.get("kind") or "") != "text_match"
+                match for match in fallback_matches if str(match.get("kind") or "") != "text_match"
             ]
         if fallback_matches:
             return ToolResult(output=json.dumps(fallback_matches, indent=2))
@@ -817,20 +768,27 @@ async def ci_query_symbols(
 
     symbols = []
     for s in results[:100]:
-        symbols.append({
-            "name": s.name,
-            "kind": s.kind.value if hasattr(s.kind, "value") else str(s.kind),
-            "file": s.file_path,
-            "line": s.line,
-            "signature": s.signature,
-        })
+        symbols.append(
+            {
+                "name": s.name,
+                "kind": s.kind.value if hasattr(s.kind, "value") else str(s.kind),
+                "file": s.file_path,
+                "line": s.line,
+                "signature": s.signature,
+            }
+        )
 
     return ToolResult(output=json.dumps(symbols, indent=2))
 
 
 # -- Symbol References --------------------------------------------------------
 
-@tool(name="ci_query_references", description="Find all usages of a symbol across the codebase.", read_only=True)
+
+@tool(
+    name="ci_query_references",
+    description="Find all usages of a symbol across the codebase.",
+    read_only=True,
+)
 async def ci_query_references(
     file_path: str,
     symbol: str,
@@ -866,8 +824,10 @@ async def ci_query_references(
             logger.debug("ci_query_references warmup failed", exc_info=True)
 
     results = svc.find_references(
-        file_path, symbol,
-        line, character,
+        file_path,
+        symbol,
+        line,
+        character,
     )
     if not results:
         fallback_refs: list[dict[str, Any]] = []
@@ -912,11 +872,13 @@ async def ci_query_references(
 
     refs = []
     for r in results[:50]:
-        refs.append({
-            "file": r.file_path,
-            "line": r.line,
-            "text": r.text,
-        })
+        refs.append(
+            {
+                "file": r.file_path,
+                "line": r.line,
+                "text": r.text,
+            }
+        )
 
     output = json.dumps(refs, indent=2)
     if len(results) > 50:
@@ -927,7 +889,12 @@ async def ci_query_references(
 
 # -- Edit Hotspots ------------------------------------------------------------
 
-@tool(name="ci_edit_hotspots", description="Return files that have been edited most frequently (conflict-prone).", read_only=True)
+
+@tool(
+    name="ci_edit_hotspots",
+    description="Return files that have been edited most frequently (conflict-prone).",
+    read_only=True,
+)
 async def ci_edit_hotspots(
     limit: int = 10,
     *,
@@ -959,7 +926,12 @@ async def ci_edit_hotspots(
 
 # -- Recent Changes -----------------------------------------------------------
 
-@tool(name="ci_recent_changes", description="List files changed in the last N seconds for change awareness.", read_only=True)
+
+@tool(
+    name="ci_recent_changes",
+    description="List files changed in the last N seconds for change awareness.",
+    read_only=True,
+)
 async def ci_recent_changes(
     seconds: float = 60.0,
     *,

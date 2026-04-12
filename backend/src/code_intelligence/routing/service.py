@@ -9,11 +9,7 @@ import threading
 import time
 from typing import Any
 
-from code_intelligence.routing.scope_packets import (
-    build_scope_packet,
-    normalize_scope_paths,
-    scope_paths_overlap,
-)
+from team._path_utils import normalize_scope_paths, scope_paths_overlap
 from code_intelligence.editing.arbiter import Arbiter
 from code_intelligence.editing.merge import (
     detect_edit_window,
@@ -459,21 +455,16 @@ class CodeIntelligenceService:
             if len(hotspots) >= 10:
                 break
 
-        return build_scope_packet(
-            scope_paths=normalized,
-            briefing_versions=briefing_versions,
-            ledger_generation=self.arbiter.generation,
-            arbiter_generation=self.arbiter.generation,
-            symbol_index_generation=self.symbol_index.generation,
-            recent_changes=recent_changes[:25],
-            active_reservations=[dict(item) for item in active_reservations][:25],
-            active_edit_intents=[dict(item) for item in active_edit_intents][:25],
-            hotspots=hotspots,
-            context_pressure=context_pressure,
-            shared_context=shared_context,
-            generated_at=time.time(),
-            baseline_packet=baseline_packet,
-        )
+        return {
+            "scope_paths": normalized,
+            "arbiter_generation": self.arbiter.generation,
+            "symbol_index_generation": self.symbol_index.generation,
+            "recent_changes": recent_changes[:25],
+            "active_reservations": [dict(item) for item in active_reservations][:25],
+            "active_edit_intents": [dict(item) for item in active_edit_intents][:25],
+            "hotspots": hotspots,
+            "generated_at": time.time(),
+        }
 
     # -- Telemetry ------------------------------------------------------------
 

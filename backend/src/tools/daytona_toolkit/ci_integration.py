@@ -17,7 +17,7 @@ import shlex
 from typing import Any
 
 from code_intelligence.editing.merge import detect_edit_window
-from code_intelligence.routing.scope_packets import normalize_scope_paths
+from team._path_utils import normalize_scope_paths
 from team._path_utils import scopes_overlap
 from tools.daytona_toolkit.scope_builder import build_scope_packet_for_context
 from tools.core.base import ToolExecutionContext
@@ -98,10 +98,14 @@ def refresh_scope_baseline(
     recent_seconds: float = _DEFAULT_SCOPE_RECENT_SECONDS,
 ) -> dict[str, Any]:
     """Persist the latest live scope packet into the tool metadata."""
-    resolved = packet if isinstance(packet, dict) else build_live_scope_packet(
-        context,
-        scope_paths=scope_paths,
-        recent_seconds=recent_seconds,
+    resolved = (
+        packet
+        if isinstance(packet, dict)
+        else build_live_scope_packet(
+            context,
+            scope_paths=scope_paths,
+            recent_seconds=recent_seconds,
+        )
     )
     if not isinstance(resolved, dict):
         return {}
@@ -121,8 +125,7 @@ def enforce_scope_coherence(
     current = str(packet.get("coherence_token") or "")
     if expected and current and expected != current:
         return packet, (
-            "Scope coherence changed since the work item started. "
-            "Refresh live CI state with ci_scope_status before writing."
+            "Scope coherence changed since the work item started. Refresh CI state before writing."
         )
     return packet, None
 
@@ -151,7 +154,9 @@ def _enrich_prepared_write_with_line_range(prepared: Any, content: str) -> Any:
     )
 
 
-def _enrich_prepared_write_with_symbol_boundaries(prepared: Any, context: ToolExecutionContext) -> Any:
+def _enrich_prepared_write_with_symbol_boundaries(
+    prepared: Any, context: ToolExecutionContext
+) -> Any:
     """Widen line anchors to the narrowest enclosing symbol when available."""
     line_start = getattr(prepared, "line_start", None)
     if line_start is None:
@@ -248,7 +253,11 @@ def prepare_ci_edit_intent(
         return prepared, None
 
     symbols = _intent_symbols_for_prepared_write(prepared, context)
-    scope = "symbol" if symbols else ("line" if getattr(prepared, "line_start", None) is not None else "file")
+    scope = (
+        "symbol"
+        if symbols
+        else ("line" if getattr(prepared, "line_start", None) is not None else "file")
+    )
     try:
         intent_id = publish(
             filepath=str(getattr(prepared, "file_path", "") or ""),
@@ -257,7 +266,9 @@ def prepare_ci_edit_intent(
             scope=scope,
         )
     except Exception:
-        logger.debug("publish_edit_intent failed for %s", getattr(prepared, "file_path", ""), exc_info=True)
+        logger.debug(
+            "publish_edit_intent failed for %s", getattr(prepared, "file_path", ""), exc_info=True
+        )
         return prepared, None
 
     heartbeat = getattr(svc, "heartbeat_edit_intent", None)
@@ -349,7 +360,6 @@ def finalize_ci_write(
         description=description,
     )
     if getattr(result, "success", False):
-
         refresh_scope_baseline(
             context,
             scope_paths=scope_paths_for_write(
@@ -361,7 +371,11 @@ def finalize_ci_write(
         _note_team_memory_conflict(
             context,
             file_path=str(getattr(prepared, "file_path", "") or ""),
-            reason=str(getattr(result, "conflict_reason", "") or getattr(result, "message", "") or "write conflict"),
+            reason=str(
+                getattr(result, "conflict_reason", "")
+                or getattr(result, "message", "")
+                or "write conflict"
+            ),
         )
     return result
 
@@ -376,7 +390,9 @@ def abort_ci_write(context: ToolExecutionContext, prepared: Any | None) -> None:
     try:
         svc.abort_prepared_write(prepared)
     except Exception:
-        logger.debug("abort_prepared_write failed for %s", getattr(prepared, "file_path", ""), exc_info=True)
+        logger.debug(
+            "abort_prepared_write failed for %s", getattr(prepared, "file_path", ""), exc_info=True
+        )
     finally:
         refresh_scope_baseline(
             context,
@@ -423,7 +439,6 @@ def prime_cache_after_write(context: ToolExecutionContext, file_path: str, conte
     """Prime the tree cache and refresh the symbol index after a write."""
     svc = get_ci_service(context)
     if svc is None:
-
         refresh_scope_baseline(
             context,
             scope_paths=scope_paths_for_write(context, fallback_paths=[file_path]),
@@ -436,7 +451,6 @@ def prime_cache_after_write(context: ToolExecutionContext, file_path: str, conte
     except Exception:
         logger.debug("CI prime_cache_after_write failed for %s", file_path)
     finally:
-
         refresh_scope_baseline(
             context,
             scope_paths=scope_paths_for_write(context, fallback_paths=[file_path]),
@@ -461,7 +475,8 @@ def sync_write_to_ci(
             arbiter = getattr(svc, "arbiter", None)
             if arbiter is not None:
                 arbiter.record_edit(
-                    file_path, agent_id,
+                    file_path,
+                    agent_id,
                     edit_type=edit_type,
                     old_hash=old_hash,
                     new_hash=new_hash,
@@ -487,7 +502,8 @@ def sync_deleted_file(
             arbiter = getattr(svc, "arbiter", None)
             if arbiter is not None:
                 arbiter.record_edit(
-                    file_path, agent_id,
+                    file_path,
+                    agent_id,
                     edit_type=edit_type,
                     description=description,
                 )
@@ -648,7 +664,9 @@ def prepare_declared_shell_outputs(
     return prepared_items, latest if isinstance(latest, dict) else packet, None
 
 
-def release_declared_shell_outputs(context: ToolExecutionContext, prepared_items: list[Any]) -> None:
+def release_declared_shell_outputs(
+    context: ToolExecutionContext, prepared_items: list[Any]
+) -> None:
     """Release any declared shell reservations."""
     for item in prepared_items:
         abort_ci_write(context, item)
@@ -656,10 +674,7 @@ def release_declared_shell_outputs(context: ToolExecutionContext, prepared_items
         refresh_scope_baseline(
             context,
             scope_paths=normalize_scope_paths(
-                [
-                    str(getattr(item, "file_path", "") or "")
-                    for item in prepared_items
-                ]
+                [str(getattr(item, "file_path", "") or "") for item in prepared_items]
             ),
         )
 
@@ -688,8 +703,6 @@ def record_edit_in_arbiter(
         )
     except Exception:
         logger.debug("CI record_edit_in_arbiter failed for %s", file_path)
-
-
 
 
 def _note_team_memory_conflict(

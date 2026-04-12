@@ -27,6 +27,7 @@ def _ctx_with_svc(svc) -> ToolExecutionContext:
 # No CI service, fallback to direct file read
 # ---------------------------------------------------------------------------
 
+
 async def test_read_file_no_service_reads_directly(tmp_path):
     """Without a CI service, falls back to reading the file from disk."""
     f = tmp_path / "hello.py"
@@ -61,7 +62,7 @@ async def test_read_file_not_found_returns_error(tmp_path):
 
 
 async def test_read_file_rejects_team_planner_even_when_file_exists(tmp_path):
-    """Planners must scout for file contents instead of calling ci_read_file."""
+    """Planners may not call ci_read_file."""
     f = tmp_path / "hello.py"
     f.write_text("line one\n")
 
@@ -73,7 +74,6 @@ async def test_read_file_rejects_team_planner_even_when_file_exists(tmp_path):
 
     assert result.is_error
     assert "may not read files directly" in result.output
-    assert "run_subagent(agent_name=\"scout\"" in result.output
 
 
 async def test_read_file_rejects_team_replanner_even_when_file_exists(tmp_path):
@@ -88,31 +88,6 @@ async def test_read_file_rejects_team_replanner_even_when_file_exists(tmp_path):
 
     assert result.is_error
     assert "may not read files directly" in result.output
-    assert "run_subagent(agent_name=\"scout\"" in result.output
-
-
-async def test_read_file_rejects_scout_reads_outside_assigned_target_paths(tmp_path):
-    """Scout file reads must stay within the injected target_paths scope."""
-    inside = tmp_path / "pkg" / "owned.py"
-    outside = tmp_path / "pkg" / "replacement.py"
-    inside.parent.mkdir(parents=True, exist_ok=True)
-    inside.write_text("owned = True\n")
-    outside.write_text("replacement = True\n")
-
-    ctx = _ctx(
-        {
-            "agent_name": "scout",
-            "scope_packet": {"scope_paths": [str(inside)]},
-        }
-    )
-    result = await ci_read_file.execute(
-        ci_read_file.input_model(path=str(outside)),
-        ctx,
-    )
-
-    assert result.is_error
-    assert "scout must stay within the assigned `target_paths`" in result.output
-    assert "report zero coverage" in result.output
 
 
 async def test_read_file_binary_returns_error(tmp_path):
@@ -152,6 +127,7 @@ async def test_read_file_generic_exception_returns_error(tmp_path):
 # ---------------------------------------------------------------------------
 # CI service tree cache hit
 # ---------------------------------------------------------------------------
+
 
 async def test_read_file_uses_tree_cache_content():
     """When CI service has a cached tree entry, uses that content."""
@@ -197,6 +173,7 @@ async def test_read_file_tree_cache_miss_falls_back_to_disk(tmp_path):
 # ---------------------------------------------------------------------------
 # Line range / pagination
 # ---------------------------------------------------------------------------
+
 
 async def test_read_file_start_line_offset(tmp_path):
     """start_line parameter returns lines starting at that offset."""
@@ -297,6 +274,7 @@ async def test_read_file_no_truncation_for_small_content(tmp_path):
 # ---------------------------------------------------------------------------
 # Result structure
 # ---------------------------------------------------------------------------
+
 
 async def test_read_file_result_has_expected_keys(tmp_path):
     """Result JSON contains all expected keys."""

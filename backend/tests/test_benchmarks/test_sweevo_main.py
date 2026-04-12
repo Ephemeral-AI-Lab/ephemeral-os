@@ -53,7 +53,9 @@ def test_main_writes_plaintext_run_log(monkeypatch, tmp_path):
 
     assert exit_code == 0
 
-    run_logs = sorted(path for path in tmp_path.glob("*.log") if ".code-intelligence." not in path.name)
+    run_logs = sorted(
+        path for path in tmp_path.glob("*.log") if ".code-intelligence." not in path.name
+    )
     assert len(run_logs) == 1
 
     ci_logs = sorted(tmp_path.glob("*.code-intelligence.log"))
@@ -113,7 +115,9 @@ def test_main_run_log_records_info_level_python_logs(monkeypatch, tmp_path):
 
     assert exit_code == 0
 
-    run_logs = sorted(path for path in tmp_path.glob("*.log") if ".code-intelligence." not in path.name)
+    run_logs = sorted(
+        path for path in tmp_path.glob("*.log") if ".code-intelligence." not in path.name
+    )
     assert len(run_logs) == 1
     contents = run_logs[0].read_text(encoding="utf-8")
     assert "INFO benchmarks.sweevo.runner: benchmark info message" in contents
@@ -137,7 +141,9 @@ def test_main_does_not_print_log_paths_into_run_log(monkeypatch, tmp_path):
 
     assert exit_code == 0
 
-    run_logs = sorted(path for path in tmp_path.glob("*.log") if ".code-intelligence." not in path.name)
+    run_logs = sorted(
+        path for path in tmp_path.glob("*.log") if ".code-intelligence." not in path.name
+    )
     assert len(run_logs) == 1
     contents = run_logs[0].read_text(encoding="utf-8")
     assert "benchmark body" in contents
@@ -208,64 +214,13 @@ def test_main_run_log_keeps_full_conversation_messages(monkeypatch, tmp_path):
 
     assert exit_code == 0
 
-    run_logs = sorted(path for path in tmp_path.glob("*.log") if ".code-intelligence." not in path.name)
+    run_logs = sorted(
+        path for path in tmp_path.glob("*.log") if ".code-intelligence." not in path.name
+    )
     assert len(run_logs) == 1
     contents = run_logs[0].read_text(encoding="utf-8")
     assert f"[text] {long_text}" in contents
     assert f"[system:runtime_note] {long_system}" in contents
-
-
-def test_main_run_log_keeps_full_tool_done_messages(monkeypatch, tmp_path):
-    from benchmarks.sweevo import runner as sweevo_runner
-
-    long_tool_output = '{\n  "scope_paths": [\n    "dask/dataframe/groupby.py",\n    "dask/dataframe/io/hdf.py",\n    "dask/dataframe/io/json.py"\n  ],\n  "details": "' + ("benchmark-log-" * 30) + '"\n}'
-
-    async def _fake_run_sweevo_with_agent(*, printer, **kwargs):
-        printer.emit(
-            ToolExecutionCompleted(
-                tool_name="ci_scoped_status",
-                output=long_tool_output,
-                agent_name="team_planner",
-                work_id="2af5cbde-0bae-4f7f-98f1-5aa6d9a13b6c",
-            )
-        )
-        return {
-            "test": {"exit_code": 0},
-            "grading": {},
-            "team": {},
-            "team_status": "succeeded",
-            "agent_events": 1,
-        }
-
-    monkeypatch.setattr(sweevo_runner, "run_sweevo_with_agent", _fake_run_sweevo_with_agent)
-
-    exit_code = sweevo_main.main(
-        [
-            "--instance-id",
-            "pydantic__pydantic_v2.7.0_v2.7.1",
-            "--log-dir",
-            str(tmp_path),
-        ]
-    )
-
-    assert exit_code == 0
-
-    run_logs = sorted(path for path in tmp_path.glob("*.log") if ".code-intelligence." not in path.name)
-    assert len(run_logs) == 1
-    contents = run_logs[0].read_text(encoding="utf-8")
-    assert (
-        "[team_planner  ] [2af5cbde-0bae-4f7f-98f1-5aa6d9a13b6c] "
-        "<- tool_done:  ci_scoped_status [ok] {"
-    ) in contents
-    assert (
-        '[team_planner  ] [2af5cbde-0bae-4f7f-98f1-5aa6d9a13b6c] │   "scope_paths": ['
-    ) in contents
-    assert (
-        '[team_planner  ] [2af5cbde-0bae-4f7f-98f1-5aa6d9a13b6c] │     "dask/dataframe/io/json.py"'
-    ) in contents
-    assert (
-        '[team_planner  ] [2af5cbde-0bae-4f7f-98f1-5aa6d9a13b6c] │   "details": "'
-    ) in contents
 
 
 def test_ansi_stripping_tee_flush_tolerates_closed_mirror(tmp_path):
@@ -303,7 +258,9 @@ def test_cmd_run_forces_color_even_when_stdout_is_not_tty(monkeypatch):
         }
 
     monkeypatch.setattr("message.event_printer.MultiAgentEventPrinter", _FakePrinter)
-    monkeypatch.setattr("benchmarks.sweevo.runner.run_sweevo_with_agent", _fake_run_sweevo_with_agent)
+    monkeypatch.setattr(
+        "benchmarks.sweevo.runner.run_sweevo_with_agent", _fake_run_sweevo_with_agent
+    )
 
     class _FakeStdout:
         def write(self, data):
@@ -317,7 +274,9 @@ def test_cmd_run_forces_color_even_when_stdout_is_not_tty(monkeypatch):
 
     monkeypatch.setattr(sys, "stdout", _FakeStdout())
 
-    args = sweevo_main._build_parser().parse_args(["--instance-id", "pydantic__pydantic_v2.7.0_v2.7.1"])
+    args = sweevo_main._build_parser().parse_args(
+        ["--instance-id", "pydantic__pydantic_v2.7.0_v2.7.1"]
+    )
     exit_code = asyncio.run(sweevo_main._cmd_run(args))
 
     assert exit_code == 0

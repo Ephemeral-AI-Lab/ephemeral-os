@@ -33,7 +33,9 @@ def test_printer_keeps_work_id_for_flushed_thinking() -> None:
     lines: list[str] = []
     printer = MultiAgentEventPrinter(color=False, sink=lines.append)
 
-    printer.emit(ThinkingDelta(text="working", agent_name="team_planner", work_id="b88848c71234425a"))
+    printer.emit(
+        ThinkingDelta(text="working", agent_name="team_planner", work_id="b88848c71234425a")
+    )
     printer.emit(
         AssistantTurnComplete(
             message=ConversationMessage(role="assistant", content=[TextBlock(text="done")]),
@@ -43,9 +45,7 @@ def test_printer_keeps_work_id_for_flushed_thinking() -> None:
         )
     )
 
-    assert lines == [
-        "[team_planner  ] [b88848c71234425a] [thinking] working"
-    ]
+    assert lines == ["[team_planner  ] [b88848c71234425a] [thinking] working"]
 
 
 def test_printer_keeps_full_background_progress_notification_text() -> None:
@@ -90,27 +90,3 @@ def test_printer_keeps_full_background_progress_notification_text() -> None:
     ]
 
     assert lines == expected
-
-
-def test_printer_truncate_none_keeps_full_tool_done_output() -> None:
-    lines: list[str] = []
-    printer = MultiAgentEventPrinter(color=False, sink=lines.append, truncate=None)
-    long_output = '{\n  "scope_paths": ["dask/dataframe/groupby.py", "dask/dataframe/io/hdf.py"],\n  "details": "' + ("x" * 250) + '"\n}'
-
-    printer.emit(
-        ToolExecutionCompleted(
-            tool_name="ci_scoped_status",
-            output=long_output,
-            agent_name="team_planner",
-            work_id="2af5cbde-0bae-4f7f-98f1-5aa6d9a13b6c",
-        )
-    )
-
-    assert lines == [
-        "[team_planner  ] [2af5cbde-0bae-4f7f-98f1-5aa6d9a13b6c] <- tool_done:  ci_scoped_status [ok] {",
-        '[team_planner  ] [2af5cbde-0bae-4f7f-98f1-5aa6d9a13b6c] │   "scope_paths": ["dask/dataframe/groupby.py", "dask/dataframe/io/hdf.py"],',
-        f'[team_planner  ] [2af5cbde-0bae-4f7f-98f1-5aa6d9a13b6c] │   "details": "{"x" * 250}"',
-        "[team_planner  ] [2af5cbde-0bae-4f7f-98f1-5aa6d9a13b6c] │ }",
-    ]
-
-

@@ -25,11 +25,11 @@ Use this skill only for stable benchmark policy. Must treat the prompt, payload,
 
 - Fresh benchmark roots must stay live-first. Must start with a narrow owner-surface pass before broad exploration.
 - On a fresh benchmark root, any plan JSON drafted before one production anchor and one scout wave is invalid, even if the JSON shape looks plausible.
-- Planners must load `team-planner-playbook/exploration-script` before the first non-reference planning tool call on a fresh benchmark root when `load_skill_reference` is available; no `ci_workspace_structure(...)`, `ci_scoped_status(...)`, or test-side scan is valid first.
+- Planners must load `team-planner-playbook/exploration-script` before the first non-reference planning tool call on a fresh benchmark root when `load_skill_reference` is available; no `ci_workspace_structure(...)` or test-side scan is valid first.
 - After the root anchor, planners must execute at least one scout wave on unresolved production-owner slices before loading final-plan references or emitting the root DAG.
 - Planners must load `team-planner-playbook/task-planning-decomposition` immediately before finalizing the root DAG when `load_skill_reference` is available.
 - Child or scoped benchmark planning must load `team-planner-playbook/non-root-context-reuse` before fresh exploration when `load_skill_reference` is available.
-- Must treat skipped references, early test-file census, optional-dependency guessing, test-side `ci_scoped_status(...)`, and repeated source-symbol queries before the first scout wave as planning drift. Reset to `team-planner-playbook/exploration-script`, then one production anchor and one scout wave.
+- Must treat skipped references, early test-file census, optional-dependency guessing, and repeated source-symbol queries before the first scout wave as planning drift. Reset to `team-planner-playbook/exploration-script`, then one production anchor and one scout wave.
 - Must not draft placeholder scout lanes, `plan-anchor-*` work items, or `developer_override` escape hatches into the submitted DAG. Scouts happen through tools; the plan names only real `developer`, `validator`, or expandable `team_planner` lanes.
 - When one dominant production subtree and several scattered sibling families coexist, anchor inside the dominant subtree first, then branch to sibling production modules. Never open a second sibling anchor or a test-side status packet before the scout wave.
 - Must anchor `owned_files`, `owned_failures`, and verification commands on exact live paths. Never keep guessed aliases such as `compat.py` when live structure shows `compatibility.py`, or shorten `pkg/dataframe/utils.py` to `pkg/utils.py` once the live owner is known.

@@ -10,11 +10,7 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from code_intelligence.routing.scope_packets import (
-    build_scope_packet as build_shared_scope_packet,
-    normalize_scope_paths,
-    scope_paths_overlap,
-)
+from team._path_utils import normalize_scope_paths, scope_paths_overlap
 from tools.core.base import ToolExecutionContext
 
 _DEFAULT_RECENT_SECONDS = 300.0
@@ -48,21 +44,20 @@ def build_scope_packet(
             packet = None
         if isinstance(packet, dict):
             return packet
-    return build_shared_scope_packet(
-        scope_paths=normalized,
-        briefing_versions=briefing_versions,
-        ledger_generation=_safe_generation(getattr(svc, "arbiter", None)),
-        arbiter_generation=_safe_generation(getattr(svc, "arbiter", None)),
-        symbol_index_generation=_safe_generation(getattr(svc, "symbol_index", None)),
-        recent_changes=_recent_changes(svc, normalized, seconds=recent_seconds),
-        active_reservations=_active_reservations(svc, normalized),
-        active_edit_intents=_active_edit_intents(svc, normalized),
-        hotspots=_hotspots(svc, normalized),
-        context_pressure=context_pressure,
-        shared_context=shared_context,
-        generated_at=time.time(),
-        baseline_packet=baseline_packet,
-    )
+    recent_changes = _recent_changes(svc, normalized, seconds=recent_seconds)
+    active_reservations = _active_reservations(svc, normalized)
+    active_edit_intents = _active_edit_intents(svc, normalized)
+    hotspots = _hotspots(svc, normalized)
+    return {
+        "scope_paths": normalized,
+        "arbiter_generation": _safe_generation(getattr(svc, "arbiter", None)),
+        "symbol_index_generation": _safe_generation(getattr(svc, "symbol_index", None)),
+        "recent_changes": recent_changes,
+        "active_reservations": active_reservations,
+        "active_edit_intents": active_edit_intents,
+        "hotspots": hotspots,
+        "generated_at": time.time(),
+    }
 
 
 def build_scope_packet_for_context(
@@ -98,33 +93,16 @@ def render_scope_packet(packet: dict[str, Any] | None) -> str:
     scope_paths = ", ".join(packet.get("scope_paths") or []) or "(unscoped)"
     changes = ", ".join(item["file_path"] for item in (packet.get("recent_changes") or [])[:4]) or "none"
     reservations = ", ".join(item["file_path"] for item in (packet.get("active_reservations") or [])[:4]) or "none"
-    admission = packet.get("admission") if isinstance(packet.get("admission"), dict) else {}
-    admission_mode = str(admission.get("mode") or "unknown")
-    reasons = "; ".join(str(item) for item in (admission.get("reasons") or []) if str(item).strip()) or "none"
-    context_pressure = packet.get("context_pressure") if isinstance(packet.get("context_pressure"), dict) else {}
-    context_score = float(context_pressure.get("score") or 0.0)
-    context_level = str(context_pressure.get("level") or "low")
-    context_reasons = "; ".join(
-        str(item) for item in (context_pressure.get("reasons") or []) if str(item).strip()
-    ) or "none"
-    shared_context = packet.get("shared_context") if isinstance(packet.get("shared_context"), list) else []
-    shared_summary = "; ".join(
-        f"{item.get('scope')}:{item.get('kind')}/{item.get('freshness')}"
-        for item in shared_context[:4]
-        if isinstance(item, dict)
+    hotspots = ", ".join(
+        f"{item['file_path']}({item['edit_count']})"
+        for item in (packet.get("hotspots") or [])[:4]
     ) or "none"
     return (
         "## Live scope packet\n"
-        f"- freshness: {packet.get('freshness')}\n"
-        f"- coherence_token: {packet.get('coherence_token')}\n"
         f"- scope_paths: {scope_paths}\n"
         f"- recent_changes: {changes}\n"
         f"- active_reservations: {reservations}\n"
-        f"- context_pressure: {context_level} ({context_score:.2f})\n"
-        f"- context_pressure_reasons: {context_reasons}\n"
-        f"- shared_context: {shared_summary}\n"
-        f"- scout_fanout_mode: {admission_mode}\n"
-        f"- scout_fanout_reasons: {reasons}"
+        f"- hotspots: {hotspots}"
     )
 
 

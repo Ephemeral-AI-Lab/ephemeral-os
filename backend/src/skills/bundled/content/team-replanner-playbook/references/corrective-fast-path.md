@@ -4,10 +4,9 @@ Use this reference only when the validator packet already names exact failing py
 
 ## Workflow
 
-1. Must start with `ci_scoped_status(scope_paths=[...])` on the exact owner surface.
-2. Must confirm the owner surface is still live.
-3. May use `inspect_inherited_context(scope_paths=[...])` to confirm a same-run shared brief on that exact owner surface before asking Atlas or a new scout.
-4. Must draft corrective JSON as soon as the failing cluster, owner surface, and retry target are clear.
+1. Must confirm the owner surface is still live.
+2. May use `inspect_inherited_context(scope_paths=[...])` to confirm a same-run shared brief on that exact owner surface before asking Atlas or a new scout.
+3. Must draft corrective JSON as soon as the failing cluster, owner surface, and retry target are clear.
 
 ## Rules
 
@@ -33,4 +32,4 @@ Use this reference only when the validator packet already names exact failing py
   Do not reopen the benchmark test body, and do not escalate to `benchmark_surface_mismatch`.
 - Example: the failing owner is still `pkg/groupby.py`, and a same-run shared brief already exists for that file.
   Call `inspect_inherited_context(scope_paths=["pkg/groupby.py"])` once. If it is still fresh, reuse that owner map and emit corrective JSON.
-  If it drifted, refresh with `ci_scoped_status(...)` before deciding whether more exploration is necessary.
+   If it drifted, refresh the inherited context before deciding whether more exploration is necessary.

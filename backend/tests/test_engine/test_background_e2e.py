@@ -336,7 +336,9 @@ class TestLLMDecidesToBackground:
         )
         logger.info("[PASS] Background correctly rejected for unsupported tool")
 
-    async def test_run_subagent_preflight_does_not_hard_reject_without_background_launch(self, monkeypatch):
+    async def test_run_subagent_preflight_does_not_hard_reject_without_background_launch(
+        self, monkeypatch
+    ):
         class _StubConfig:
             cwd = Path("/tmp")
             session_id = "S1"
@@ -385,11 +387,9 @@ class TestLLMDecidesToBackground:
         assert bg_started[0].tool_name == "run_subagent"
 
         tool_completed = _events_of_type(events, ToolExecutionCompleted)
-        assert not any(
-            tc.tool_name == "run_subagent"
-            and "ci_scoped_status(scope_paths=[...])" in tc.output
-            for tc in tool_completed
-        ), f"Expected no synchronous hard rejection. Got: {[tc.output for tc in tool_completed]}"
+        assert not any(tc.tool_name == "run_subagent" for tc in tool_completed), (
+            f"Expected no synchronous hard rejection. Got: {[tc.output for tc in tool_completed]}"
+        )
 
 
 # ===========================================================================
@@ -480,7 +480,9 @@ class TestFullBackgroundLifecycle:
                     "fake_edit", {"action": "update changelog"}, text="Also updating the changelog."
                 ),
                 # Turn 3: Check progress
-                _msg_tool("check_background_progress", {"task_id": "all"}, text="Checking build status..."),
+                _msg_tool(
+                    "check_background_progress", {"task_id": "all"}, text="Checking build status..."
+                ),
                 # Turn 4: Go idle — engine will wait and inject result
                 _msg_text("Build should be done soon, waiting..."),
                 # Turn 5: React to completion
@@ -586,9 +588,7 @@ class TestLiveProgressTail:
                 cwd=Path("/tmp"),
                 metadata={"on_progress_line": mgr.make_progress_callback(alias)},
             )
-            return await tool.execute(
-                StreamingToolInput(n_lines=n_lines, interval=interval), ctx
-            )
+            return await tool.execute(StreamingToolInput(n_lines=n_lines, interval=interval), ctx)
 
         mgr.launch(alias, "fake_streaming", {}, _coro())
 

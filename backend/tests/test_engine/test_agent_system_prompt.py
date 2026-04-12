@@ -37,12 +37,9 @@ def test_team_agent_preambles_surface_scope_and_search_guidance() -> None:
     config = SimpleNamespace(cwd=str(_BACKEND_ROOT))
 
     developer = runtime_agent._build_declared_skill_preamble(config, get_definition(DEVELOPER))
-    assert "ci_scoped_status" in developer
     assert "daytona_grep" in developer
 
     validator = runtime_agent._build_declared_skill_preamble(config, get_definition(VALIDATOR))
-    assert "ci_scoped_status" in validator
     assert "daytona_codeact" in validator
 
     planner = runtime_agent._build_declared_skill_preamble(config, get_definition(TEAM_PLANNER))
-    assert "ci_scoped_status" in planner
