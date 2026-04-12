@@ -17,6 +17,7 @@ from agents.api.schemas import (
     AgentValidationResult,
     CloneRequest,
 )
+from tools.core.catalog import collect_tool_catalog, collect_toolkit_catalog
 
 if TYPE_CHECKING:
     from agents.builder.service import AgentBuilderService
@@ -59,14 +60,16 @@ def create_agents_router(
 
     @router.get("/toolkits/available")
     async def list_available_toolkits() -> list[str]:
-        from tools.core.factory import list_factories
-
-        names: set[str] = set()
         tr = get_tool_registry()
-        if tr:
-            names.update(tk.name for tk in tr.list_toolkits())
-        names.update(list_factories())
-        return sorted(names)
+        return [entry.name for entry in collect_toolkit_catalog(tr)]
+
+    @router.get("/tools/available")
+    async def list_available_tools() -> list[dict[str, str]]:
+        tr = get_tool_registry()
+        return [
+            {"name": entry.name, "description": entry.description}
+            for entry in collect_tool_catalog(tr, include_runtime_tools=True)
+        ]
 
     @router.get("/{name}")
     async def get_agent(name: str) -> dict[str, Any]:

@@ -30,6 +30,7 @@ from skills.db.store import SkillDefinitionStore
 from server.protocol import BackendEvent, BackendHostConfig, ToolkitSnapshot
 from providers.types import SupportsStreamingMessages
 from tools import ToolRegistry
+from tools.core.catalog import collect_toolkit_catalog
 from providers.api import create_models_router
 from agents.api.router import create_agents_router
 from server.routers.core import create_core_router
@@ -150,45 +151,18 @@ class SessionState:
     def _toolkit_snapshots(self) -> list[ToolkitSnapshot]:
         if self._tool_registry is None:
             raise RuntimeError("Tool registry not initialised")
-        # Registered toolkits (already instantiated in the default registry)
-        registered_names: set[str] = set()
-        snapshots: list[ToolkitSnapshot] = []
-        for tk in self._tool_registry.list_toolkits():
-            registered_names.add(tk.name)
-            snapshots.append(
-                ToolkitSnapshot(
-                    name=tk.name,
-                    description=tk.description,
-                    tools=tk.tool_names(),
-                )
+        return [
+            ToolkitSnapshot(
+                name=entry.name,
+                description=entry.description,
+                tools=entry.tools,
             )
-        # Factory-registered toolkits (e.g. daytona, ci) — instantiate with
-        # a bare context just to read their tool names for the snapshot.
-        from tools.core.factory import ToolkitContext, list_factories, create_toolkit
-
-        seen_toolkit_names = set(registered_names)
-        for factory_name in list_factories():
-            if factory_name in registered_names:
-                continue
-            try:
-                tk = create_toolkit(factory_name, ToolkitContext())
-                if tk.name in seen_toolkit_names:
-                    continue  # skip aliases that produce duplicate toolkit names
-                seen_toolkit_names.add(tk.name)
-                snapshots.append(
-                    ToolkitSnapshot(
-                        name=tk.name,
-                        description=tk.description,
-                        tools=tk.tool_names(),
-                    )
-                )
-            except Exception:
-                logger.debug(
-                    "Toolkit factory %r skipped (requires runtime context)",
-                    factory_name,
-                    exc_info=True,
-                )
-        return snapshots
+            for entry in collect_toolkit_catalog(
+                self._tool_registry,
+                include_runtime_toolkits=True,
+                cwd=self.cwd,
+            )
+        ]
 
 
 # ---------------------------------------------------------------------------

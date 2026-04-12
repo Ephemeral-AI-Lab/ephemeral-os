@@ -39,9 +39,8 @@ def make_skills_toolkit(
 
     If *allowed_slugs* is None, all registered skills are available.
 
-    The toolkit provides three tools:
+    The toolkit provides two tools:
 
-    - ``list_skills`` — list available skills with descriptions and reference names
     - ``load_skill`` — load the full instructions (SKILL.md) of a skill
     - ``load_skill_reference`` — load a specific reference document from a skill
     """
