@@ -1,222 +1,179 @@
-"""Worker pull loop. Pops ready WorkItems and drives them through execute_with_posthook."""
+"""Executor — pops ready Tasks and runs agents with deterministic posthook."""
 
 from __future__ import annotations
 
 import asyncio
 import logging
+import time
 import uuid
 from collections.abc import Awaitable
 from typing import TYPE_CHECKING, Any, Callable
 
-from agents.registry import has_role as _has_role
-from hooks.agent_posthook import NoPosthookOutput, execute_with_posthook
-from team.models import AgentResult, Plan, ReplanPlan
+from team.models import AgentResult, Plan, ReplanPlan, ReplanRequest, RetryRequest, SubmittedSummary
 from team.runtime.context_builder import TeamAgentContext
-from tools.posthook.types import PosthookSubmission, ReplanRequest, RetryRequest, SubmittedSummary
-
-
-def _is_reviewer(agent_name: str) -> bool:
-    return _has_role(agent_name, "reviewer")
 
 if TYPE_CHECKING:
     from agents.types import AgentDefinition
-    from team.models import WorkItem
+    from team.models import Task
     from team.runtime.team_run import TeamRun
-
-
-# ---------------------------------------------------------------------------
-# Extensible submission → dispatch-result conversion
-# ---------------------------------------------------------------------------
-
-SubmissionConverter = Callable[[Any], "AgentResult | RetryRequest | ReplanRequest"]
-
-_SUBMISSION_CONVERTERS: dict[str, SubmissionConverter] = {}
-
-
-def register_submission_converter(kind: str, converter: SubmissionConverter) -> None:
-    """Register a converter for a new ``submission_kind``.
-
-    This allows new posthook submission types to participate in the
-    executor dispatch without modifying ``_result_from_submission``.
-    """
-    _SUBMISSION_CONVERTERS[kind] = converter
-
-
-def _default_converters() -> None:
-    """Register the built-in converters on first import."""
-
-    def _convert_summary(sub: Any) -> AgentResult:
-        return AgentResult(artifact=sub.artifact, summary=sub.summary)
-
-    def _convert_retry(sub: Any) -> RetryRequest:
-        return sub
-
-    def _convert_replan(sub: Any) -> ReplanRequest:
-        return sub
-
-    register_submission_converter("summary", _convert_summary)
-    register_submission_converter("retry", _convert_retry)
-    register_submission_converter("replan", _convert_replan)
-
-
-_default_converters()
 
 logger = logging.getLogger(__name__)
 
 QueryRunner = Callable[["AgentDefinition", Any], Awaitable[Any]]
-QueryContextBuilder = Callable[["AgentDefinition", "TeamRun", "WorkItem"], TeamAgentContext]
-PosthookContextBuilder = Callable[["AgentDefinition", Any], TeamAgentContext]
 
 
 class Executor:
-    """Runtime invariant: every team agent MUST submit through a posthook.
-
-    Either ``Plan`` (planner) or ``SubmittedSummary`` (worker / scout /
-    validator). Anything else fails the WorkItem with a grep-able reason.
-    Wire ``submit_summary_agent`` as the default posthook for any agent
-    that does not have a domain-specific submission.
-    """
+    """Pops ready tasks, runs agent, deterministic _posthook extracts result."""
 
     def __init__(
         self,
         team_run: "TeamRun",
         runner: QueryRunner,
-        build_query_context: QueryContextBuilder,
-        build_posthook_context: PosthookContextBuilder,
         agent_lookup: Callable[[str], "AgentDefinition | None"],
-        after_dispatch: Callable[["WorkItem", AgentResult, list["WorkItem"]], Any] | None = None,
+        after_dispatch: Callable[["Task", AgentResult, list["Task"]], Any] | None = None,
     ) -> None:
         self.team_run = team_run
         self.runner = runner
-        self.build_query_context = build_query_context
-        self.build_posthook_context = build_posthook_context
         self.agent_lookup = agent_lookup
         self.after_dispatch = after_dispatch
 
-    async def _checkpoint_after_transition(
-        self,
-        wi: "WorkItem",
-        *,
-        outcome: str,
-    ) -> None:
+    async def _checkpoint_after_transition(self, task: "Task", *, outcome: str) -> None:
         """Persist a post-dispatch checkpoint after the dispatcher state mutates."""
         try:
-            label = f"durable:{outcome}:{wi.agent_name}:{wi.local_id or wi.id}"
+            label = f"durable:{outcome}:{task.agent_name}:{task.id}"
             await self.team_run.checkpoint(label=label)
         except Exception:
-            logger.debug("Failed to checkpoint after %s transition for %s", outcome, wi.id, exc_info=True)
+            logger.debug("Failed to checkpoint after %s transition for %s", outcome, task.id, exc_info=True)
 
     async def run_forever(self) -> None:
-        """Pop READY items until cancel_event is set.
-
-        Workers MUST NOT exit just because the graph is momentarily terminal —
-        a peer worker may still complete a planner that submits a fresh Plan,
-        re-populating the queue. Only ``TeamRun`` decides when workers stop,
-        via ``cancel_event``.
-        """
+        """Pop READY tasks until cancel_event is set."""
         dispatcher = self.team_run.dispatcher
         while not self.team_run.cancel_event.is_set():
             try:
-                wi_id = await asyncio.wait_for(dispatcher.pop_ready(), timeout=0.1)
+                task_id = await asyncio.wait_for(dispatcher.pop_ready(), timeout=0.1)
             except asyncio.TimeoutError:
                 continue
-
             try:
-                await self._run_one(wi_id)
-            except Exception as exc:  # worker never dies
-                logger.exception("Worker error on %s: %s", wi_id, exc)
-                await dispatcher.fail(wi_id, f"worker_exception: {exc}")
+                await self._run_one(task_id)
+            except Exception as exc:
+                logger.exception("Worker error on %s: %s", task_id, exc)
+                await dispatcher.fail(task_id, f"worker_exception: {exc}")
 
-    @staticmethod
-    def _result_from_submission(submitted: Any) -> AgentResult | RetryRequest | ReplanRequest | None:
-        if submitted is None:
-            return None
-
-        # Protocol-based dispatch: any type implementing PosthookSubmission
-        # can register a converter via register_submission_converter().
-        if isinstance(submitted, PosthookSubmission):
-            kind = submitted.submission_kind
-            converter = _SUBMISSION_CONVERTERS.get(kind)
-            if converter is not None:
-                return converter(submitted)
-
-        # Team-specific types that don't implement the protocol (Plan,
-        # ReplanPlan) are handled here as a fallback.
-        if isinstance(submitted, Plan):
-            return AgentResult(artifact=None, summary="", submitted_plan=submitted)
-        if isinstance(submitted, ReplanPlan):
-            return AgentResult(artifact=None, summary="", submitted_replan=submitted)
-
-        raise TypeError(type(submitted).__name__)
-
-    async def _run_one(self, wi_id: str) -> None:
+    async def _run_one(self, task_id: str) -> None:
         dispatcher = self.team_run.dispatcher
         agent_run_id = str(uuid.uuid4())
-        wi = await dispatcher.mark_running(wi_id, agent_run_id)
+        task = await dispatcher.mark_running(task_id, agent_run_id)
 
-        defn = self.agent_lookup(wi.agent_name)
+        defn = self.agent_lookup(task.agent_name)
         if defn is None:
-            await dispatcher.fail(wi_id, f"unknown_agent: {wi.agent_name}")
+            await dispatcher.fail(task_id, f"unknown_agent: {task.agent_name}")
             return
 
-        query_ctx = self.build_query_context(defn, self.team_run, wi)
+        # Pre-start: check if files in scope changed externally since task creation
+        self._inject_scope_warnings(task)
+
+        ctx = self._build_context(defn, task)
         try:
-            # work_result is consumed for posthook side-effects only; the
-            # final dispatch result is built from ``submitted`` below.
-            execution = execute_with_posthook(
-                work_defn=defn,
-                work_ctx=query_ctx,
-                runner=self.runner,
-                agent_lookup=self.agent_lookup,
-                posthook_ctx_builder=self.build_posthook_context,
-            )
-            _, submitted = await execution
-        except NoPosthookOutput as exc:
-            await dispatcher.fail(wi_id, f"NoPosthookOutput: {exc}")
+            await self.runner(defn, ctx)
+        except Exception as exc:
+            await dispatcher.fail(task_id, f"runner_exception: {exc}")
             return
 
-        try:
-            dispatch_payload = self._result_from_submission(submitted)
-        except TypeError as exc:
-            await dispatcher.fail(wi_id, f"unexpected_submission_type: {exc}")
-            return
+        result = self._posthook(ctx, defn)
+        await self._dispatch(task_id, task, result)
 
-        if dispatch_payload is None:
-            await dispatcher.fail(
-                wi_id,
-                "no_posthook_submission: team agents must submit via a posthook "
-                "(use submit_summary_agent if no domain-specific posthook applies)",
-            )
-            return
-        artifact = dispatch_payload.artifact if isinstance(dispatch_payload, AgentResult) else None
-        self.team_run.note_context_access(
-            work_item=wi,
-            metadata=query_ctx.tool_metadata,
-            artifact=artifact if isinstance(artifact, dict) else None,
-        )
-        if isinstance(dispatch_payload, RetryRequest):
-            await dispatcher.retry_work_item(wi_id, dispatch_payload)
-            await self._checkpoint_after_transition(wi, outcome="retry")
-            return
-        if isinstance(dispatch_payload, ReplanRequest):
-            await dispatcher.request_replan(wi_id, dispatch_payload)
-            await self._checkpoint_after_transition(wi, outcome="replan_request")
-            return
+    def _inject_scope_warnings(self, task: "Task") -> None:
+        """Check if files in task's scope changed since plan creation.
 
-        new_items = await dispatcher.complete(wi_id, dispatch_payload)
-        if isinstance(dispatch_payload, AgentResult):
-            self.team_run.note_explicit_memory_artifacts(
-                work_item=wi,
-                artifact=dispatch_payload.artifact,
-            )
-            if _is_reviewer(wi.agent_name):
-                self.team_run.note_validator_outcome(
-                    work_item=wi,
-                    summary=dispatch_payload.summary,
-                    artifact=dispatch_payload.artifact,
-                )
+        If external changes are detected, inject a warning note into the
+        Task Center so the agent sees it in context_for(). The agent
+        decides whether to proceed or request_replan()."""
+        if not task.scope_paths:
+            return
+        ledger = getattr(self.team_run, "ledger", None)
+        if ledger is None:
+            return
+        import time
+        created_ts = task.created_at.timestamp() if task.created_at else 0.0
+        changes = ledger.changes_since(created_ts)
+        # Filter to scope and exclude changes by this task's own agent run
+        external = [
+            e for e in changes
+            if e.agent_id != (task.agent_run_id or "")
+            and any(e.file_path.startswith(p.rstrip("/")) for p in task.scope_paths)
+        ]
+        if not external:
+            return
+        now = time.time()
+        lines = ["## Warning: scope changes detected since plan creation",
+                 "The following files in your scope were modified externally:"]
+        for e in external:
+            lines.append(f"- {e.file_path} ({e.edit_type} by {e.agent_id}, "
+                         f"{int(now - e.timestamp)}s ago)")
+        lines.append("Review these changes before proceeding. "
+                      "Call request_replan() if your task is no longer valid.")
+        from team.models import Note
+        self.team_run.task_center.post(Note(
+            id=str(uuid.uuid4()),
+            task_id=task.id,
+            agent_name="system",
+            content="\n".join(lines),
+            timestamp=now,
+            scope_paths=list(task.scope_paths),
+        ))
+
+    def _build_context(self, defn: "AgentDefinition", task: "Task") -> TeamAgentContext:
+        """Build agent context using the canonical build_query_context, plus posthook flag."""
+        from team.runtime.context_builder import build_query_context
+        ctx = build_query_context(defn, self.team_run, task)
+        ctx.tool_metadata["posthook_enabled"] = True
+        return ctx
+
+    @staticmethod
+    def _posthook(ctx: TeamAgentContext, defn: "AgentDefinition") -> AgentResult | RetryRequest | ReplanRequest:
+        """Deterministic posthook — no LLM call, always produces a result."""
+        metadata = ctx.tool_metadata
+        submitted = metadata.get("submitted_output")
+
+        if submitted is not None:
+            if isinstance(submitted, Plan):
+                return AgentResult(summary="", submitted_plan=submitted)
+            if isinstance(submitted, ReplanPlan):
+                return AgentResult(summary="", submitted_replan=submitted)
+            if isinstance(submitted, SubmittedSummary):
+                return AgentResult(summary=submitted.summary)
+            if isinstance(submitted, RetryRequest):
+                return submitted
+            if isinstance(submitted, ReplanRequest):
+                return submitted
+            return AgentResult(summary=str(submitted))
+
+        # No submission — role-aware fallback (use registry for consistency with Dispatcher.complete)
+        from agents.registry import has_role
+        role = getattr(defn, "role", "")
+        if not role and hasattr(defn, "name"):
+            role = "planner" if has_role(defn.name, "planner") else ""
+        if role == "planner":
+            return AgentResult(summary="planner_did_not_submit_plan")
+
+        work_result = metadata.get("work_result")
+        if isinstance(work_result, str) and work_result.strip():
+            return AgentResult(summary=work_result[:2000])
+        return AgentResult(summary="completed (no explicit submission)")
+
+    async def _dispatch(self, task_id: str, task: "Task", result: Any) -> None:
+        dispatcher = self.team_run.dispatcher
+        if isinstance(result, RetryRequest):
+            await dispatcher.retry_work_item(task_id, result)
+            await self._checkpoint_after_transition(task, outcome="retry")
+            return
+        if isinstance(result, ReplanRequest):
+            await dispatcher.request_replan(task_id, result)
+            await self._checkpoint_after_transition(task, outcome="replan_request")
+            return
+        new_items = await dispatcher.complete(task_id, result)
         if self.after_dispatch is not None:
-            callback_result = self.after_dispatch(wi, dispatch_payload, new_items)
-            if isinstance(callback_result, Awaitable):
-                await callback_result
-        await self._checkpoint_after_transition(wi, outcome="complete")
+            cb = self.after_dispatch(task, result, new_items)
+            if isinstance(cb, Awaitable):
+                await cb
+        await self._checkpoint_after_transition(task, outcome="complete")

@@ -87,35 +87,28 @@ def list_factories() -> list[str]:
 
 def _register_builtins() -> None:
     """Register built-in toolkit classes. Each toolkit owns its from_context."""
-    from tools.atlas import AtlasToolkit
     from tools.daytona_toolkit import DaytonaToolkit
     from tools.ci_toolkit import CIToolkit
-    from tools.posthook.toolkits import (
-        SubmitPlanToolkit,
-        SubmitReplanPlanToolkit,
-        SubmitReplanPosthookToolkit,
-        SubmitRetryPosthookToolkit,
-        SubmitSummaryToolkit,
-    )
     from tools.subagent import SubagentToolkit
-    from tools.team_context import (
-        ContextInheritanceToolkit,
-        ContextSharingToolkit,
-        TeamContextToolkit,
-    )
 
+    # Core toolkits (unchanged)
     register_toolkit_class("sandbox_operations", DaytonaToolkit)
     register_toolkit_class("code_intelligence", CIToolkit)
     register_toolkit_class("subagent", SubagentToolkit)
-    register_toolkit_class("context_inheritance", ContextInheritanceToolkit)
-    register_toolkit_class("context_sharing", ContextSharingToolkit)
-    register_toolkit_class("team_context", TeamContextToolkit)
-    register_toolkit_class("atlas", AtlasToolkit)
-    register_toolkit_class("submit_plan_posthook", SubmitPlanToolkit)
-    register_toolkit_class("submit_summary_posthook", SubmitSummaryToolkit)
-    register_toolkit_class("posthook_submit_retry", SubmitRetryPosthookToolkit)
-    register_toolkit_class("posthook_submit_replan", SubmitReplanPosthookToolkit)
-    register_toolkit_class("submit_replan_posthook", SubmitReplanPlanToolkit)
+
+    # Plan A toolkits — Task Center, submission, search, exploration, history
+    from tools.submission import SubmissionToolkit
+    from tools.task_center import TaskCenterReadToolkit, TaskCenterWriteToolkit
+    from tools.search import SearchToolkit
+    from tools.exploration_memory import ExplorationMemoryToolkit
+    from tools.edit_history import EditHistoryToolkit
+
+    register_toolkit_class("submission", SubmissionToolkit)
+    register_toolkit_class("task_center_read", TaskCenterReadToolkit)
+    register_toolkit_class("task_center_write", TaskCenterWriteToolkit)
+    register_toolkit_class("search", SearchToolkit)
+    register_toolkit_class("exploration_memory", ExplorationMemoryToolkit)
+    register_toolkit_class("edit_history", EditHistoryToolkit)
 
 
 _register_builtins()

@@ -1,4 +1,4 @@
-"""Plan validation — Phase A (structural, tool-call time) and Phase B (Dispatcher)."""
+"""Plan validation — single-pass structural, agent-resolution, cycle detection."""
 
 from __future__ import annotations
 
@@ -7,40 +7,14 @@ from typing import Callable, Iterator
 from agents.registry import get_definition as _get_definition, has_role as _has_role
 
 from team.errors import InvalidPlan
-from team.models import Plan, WorkItem, WorkItemKind, WorkItemSpec, WorkItemStatus
-
-# Type alias for pluggable plan validators.  Each callback receives the
-# list of plan items and returns additional issues (same ``Issue`` shape).
-PlanItemValidator = Callable[[list[WorkItemSpec]], list["Issue"]]
-
-_MAX_INLINE_BRIEFING_BYTES_PER_SPEC = 4096
+from team.models import Plan, TaskSpec
 
 Issue = dict[str, str]
 
-# ---------------------------------------------------------------------------
-# Role → kind inference
-# ---------------------------------------------------------------------------
+# Type alias for pluggable plan validators.
+PlanItemValidator = Callable[[list[TaskSpec]], list[Issue]]
 
 _EXPANDABLE_ROLES: frozenset[str] = frozenset({"planner"})
-
-
-def _infer_kind(agent_name: str) -> WorkItemKind:
-    defn = _get_definition(agent_name)
-    if defn is None:
-        return WorkItemKind.ATOMIC
-    if defn.role in _EXPANDABLE_ROLES:
-        return WorkItemKind.EXPANDABLE
-    return WorkItemKind.ATOMIC
-
-
-def normalize_plan_kinds(plan: Plan) -> None:
-    """Auto-set ``kind`` on each item based on the target agent's role.
-
-    Called before Phase-A validation so the planner never needs to
-    specify ``kind`` explicitly.
-    """
-    for item in plan.items:
-        item.kind = _infer_kind(item.agent_name)
 
 
 def _agent_exists(agent_name: str) -> bool:
@@ -48,107 +22,87 @@ def _agent_exists(agent_name: str) -> bool:
 
 
 def _is_validator(agent_name: str) -> bool:
-    """Check whether *agent_name* has the reviewer role (role-based, not name-based)."""
+    """Check whether *agent_name* has the reviewer role."""
     return _has_role(agent_name, "reviewer")
 
 
-def _validator_count(items: list[WorkItemSpec]) -> int:
-    return sum(1 for item in items if _is_validator(item.agent_name))
+def _is_expandable(agent_name: str) -> bool:
+    defn = _get_definition(agent_name)
+    return defn is not None and defn.role in _EXPANDABLE_ROLES
 
 
-def _concrete_execution_count(items: list[WorkItemSpec]) -> int:
+def _validator_count(items: list[TaskSpec]) -> int:
+    return sum(1 for item in items if _is_validator(item.agent))
+
+
+def _concrete_execution_count(items: list[TaskSpec]) -> int:
     return sum(
         1
         for item in items
-        if not _is_validator(item.agent_name) and item.kind != WorkItemKind.EXPANDABLE
+        if not _is_validator(item.agent) and not _is_expandable(item.agent)
     )
 
 
-def _terminal_validator_count(items: list[WorkItemSpec]) -> int:
-    downstream_local_ids = {
-        dep
-        for item in items
-        for dep in item.deps
-        if isinstance(dep, str) and dep
-    }
+def _terminal_validator_count(items: list[TaskSpec]) -> int:
+    downstream_ids = {dep for item in items for dep in item.deps if dep}
     return sum(
         1
         for item in items
-        if (
-        _is_validator(item.agent_name)
-        and (item.local_id is None or item.local_id not in downstream_local_ids)
-        )
+        if _is_validator(item.agent) and item.id not in downstream_ids
     )
-
-
-def _kind_supported(agent_name: str, kind: WorkItemKind) -> Issue | None:
-    agent_def = _get_definition(agent_name)
-    if agent_def is None:
-        return None
-    supported = agent_def.supported_kinds
-    if kind.value in supported:
-        return None
-    return {
-        "field": "agent_name",
-        "msg": (
-            f"agent '{agent_name}' does not support kind '{kind.value}' "
-            f"(supports: {supported})"
-        ),
-    }
 
 
 def _validator_policy_issues(
-    items: list[WorkItemSpec],
+    items: list[TaskSpec],
     *,
     max_reviewers_per_plan: int | None = None,
     require_reviewer_for_plan_size: int | None = None,
 ) -> list[Issue]:
     issues: list[Issue] = []
     validator_count = _validator_count(items)
-    effective_max_validators = 2 if max_reviewers_per_plan is None else min(max_reviewers_per_plan, 2)
-    require_validator_threshold = (
+    effective_max = 2 if max_reviewers_per_plan is None else min(max_reviewers_per_plan, 2)
+    require_threshold = (
         3 if require_reviewer_for_plan_size is None else min(require_reviewer_for_plan_size, 3)
     )
-    if validator_count > effective_max_validators:
+    if validator_count > effective_max:
         issues.append(
             {
-                "field": "items",
+                "field": "tasks",
                 "msg": (
-                    f"plan has {validator_count} validator items; submitted plans may have at most "
-                    f"{effective_max_validators}"
+                    f"plan has {validator_count} validator tasks; submitted plans may have at most "
+                    f"{effective_max}"
                 ),
             }
         )
-    if _concrete_execution_count(items) >= require_validator_threshold and validator_count == 0:
+    if _concrete_execution_count(items) >= require_threshold and validator_count == 0:
         issues.append(
             {
-                "field": "items",
+                "field": "tasks",
                 "msg": (
-                    f"plans with {require_validator_threshold} or more concrete non-planner items "
+                    f"plans with {require_threshold} or more concrete non-planner tasks "
                     "must include at least one terminal validator"
                 ),
             }
         )
     if validator_count == 0:
         return issues
-
-    terminal_validator_count = _terminal_validator_count(items)
-    if terminal_validator_count == 0:
+    terminal_count = _terminal_validator_count(items)
+    if terminal_count == 0:
         issues.append(
             {
-                "field": "items",
+                "field": "tasks",
                 "msg": (
-                    "plans with validator items must leave at least one validator as a "
+                    "plans with validator tasks must leave at least one validator as a "
                     "terminal end-of-chain guard"
                 ),
             }
         )
-    elif terminal_validator_count > 1:
+    elif terminal_count > 1:
         issues.append(
             {
-                "field": "items",
+                "field": "tasks",
                 "msg": (
-                    "plans with validator items must keep exactly one validator as the "
+                    "plans with validator tasks must keep exactly one validator as the "
                     "terminal end-of-chain guard"
                 ),
             }
@@ -156,52 +110,38 @@ def _validator_policy_issues(
     return issues
 
 
-def _terminal_non_validator_leaf_ids(items: list[WorkItemSpec]) -> set[str]:
-    downstream_local_ids = {
-        dep
-        for item in items
-        for dep in item.deps
-        if isinstance(dep, str) and dep
-    }
+def _terminal_non_validator_leaf_ids(items: list[TaskSpec]) -> set[str]:
+    downstream_ids = {dep for item in items for dep in item.deps if dep}
     return {
-        item.local_id
+        item.id
         for item in items
-        if (
-            item.local_id is not None
-            and not _is_validator(item.agent_name)
-            and item.local_id not in downstream_local_ids
-        )
+        if item.id and not _is_validator(item.agent) and item.id not in downstream_ids
     }
 
 
-def _validator_dependency_issues(items: list[WorkItemSpec]) -> list[Issue]:
+def _validator_dependency_issues(items: list[TaskSpec]) -> list[Issue]:
     issues: list[Issue] = []
     terminal_leaf_ids = _terminal_non_validator_leaf_ids(items)
-    downstream_local_ids = {
-        dep
-        for item in items
-        for dep in item.deps
-        if isinstance(dep, str) and dep
-    }
+    downstream_ids = {dep for item in items for dep in item.deps if dep}
     for idx, item in enumerate(items):
-        if not _is_validator(item.agent_name):
+        if not _is_validator(item.agent):
             continue
         if not item.deps:
             issues.append(
                 {
-                    "field": f"items[{idx}].deps",
-                    "msg": "validator items must depend on at least one upstream sibling",
+                    "field": f"tasks[{idx}].deps",
+                    "msg": "validator tasks must depend on at least one upstream sibling",
                 }
             )
             continue
-        is_terminal = item.local_id is None or item.local_id not in downstream_local_ids
+        is_terminal = not item.id or item.id not in downstream_ids
         if not is_terminal or not terminal_leaf_ids:
             continue
         missing = sorted(terminal_leaf_ids.difference(item.deps))
         if missing:
             issues.append(
                 {
-                    "field": f"items[{idx}].deps",
+                    "field": f"tasks[{idx}].deps",
                     "msg": (
                         "terminal validator must depend on every terminal non-validator sibling "
                         f"(missing: {', '.join(missing)})"
@@ -211,7 +151,7 @@ def _validator_dependency_issues(items: list[WorkItemSpec]) -> list[Issue]:
     return issues
 
 
-def validate_plan_phase_a(
+def validate_plan(
     plan: Plan,
     max_plan_size: int = 50,
     *,
@@ -221,156 +161,94 @@ def validate_plan_phase_a(
     require_reviewer_for_plan_size: int | None = None,
     extra_validators: list[PlanItemValidator] | None = None,
 ) -> list[Issue]:
-    """Pure-function structural validation."""
+    """Single-pass structural validation: structural checks, agent resolution, cycle detection."""
     issues: list[Issue] = []
 
-    if len(plan.items) == 0:
+    if len(plan.tasks) == 0:
         if allow_empty:
             return issues
-        issues.append({"field": "items", "msg": "plan has no items"})
+        issues.append({"field": "tasks", "msg": "plan has no tasks"})
         return issues
 
-    if len(plan.items) > max_plan_size:
+    if len(plan.tasks) > max_plan_size:
         issues.append(
             {
-                "field": "items",
-                "msg": f"plan has {len(plan.items)} items, exceeds max_plan_size={max_plan_size}",
+                "field": "tasks",
+                "msg": f"plan has {len(plan.tasks)} tasks, exceeds max_plan_size={max_plan_size}",
             }
         )
         return issues
 
     issues.extend(
         _validator_policy_issues(
-            plan.items,
+            plan.tasks,
             max_reviewers_per_plan=max_reviewers_per_plan,
             require_reviewer_for_plan_size=require_reviewer_for_plan_size,
         )
     )
-    issues.extend(_validator_dependency_issues(plan.items))
+    issues.extend(_validator_dependency_issues(plan.tasks))
 
-    local_ids: set[str] = set()
-    for idx, item in enumerate(plan.items):
-        # local_id uniqueness
-        if item.local_id is not None:
-            if item.local_id in local_ids:
-                issues.append(
-                    {"field": f"items[{idx}].local_id", "msg": f"duplicate local_id '{item.local_id}'"}
-                )
-            local_ids.add(item.local_id)
-        # agent existence
-        if not item.agent_name:
-            issues.append({"field": f"items[{idx}].agent_name", "msg": "agent_name is required"})
-        elif not _agent_exists(item.agent_name):
+    task_ids: set[str] = set()
+    for idx, item in enumerate(plan.tasks):
+        # id is required
+        if not item.id:
             issues.append(
-                {"field": f"items[{idx}].agent_name", "msg": f"unknown agent '{item.agent_name}'"}
+                {"field": f"tasks[{idx}].id", "msg": "task id is required (must be non-empty)"}
+            )
+        elif item.id in task_ids:
+            issues.append(
+                {"field": f"tasks[{idx}].id", "msg": f"duplicate task id '{item.id}'"}
             )
         else:
-            agent_def = _get_definition(item.agent_name)
+            task_ids.add(item.id)
+        # agent existence
+        if not item.agent:
+            issues.append({"field": f"tasks[{idx}].agent", "msg": "agent is required"})
+        elif not _agent_exists(item.agent):
+            issues.append(
+                {"field": f"tasks[{idx}].agent", "msg": f"unknown agent '{item.agent}'"}
+            )
+        else:
+            agent_def = _get_definition(item.agent)
             if agent_def is not None and agent_def.agent_type != "agent":
                 issues.append(
                     {
-                        "field": f"items[{idx}].agent_name",
+                        "field": f"tasks[{idx}].agent",
                         "msg": (
                             f"submitted plans cannot target {getattr(agent_def, 'agent_type', 'agent')!r}-typed "
-                            f"agent '{item.agent_name}'; only team-facing agents are valid plan targets"
+                            f"agent '{item.agent}'; only team-facing agents are valid plan targets"
                         ),
                     }
                 )
-            kind_issue = _kind_supported(item.agent_name, item.kind)
-            if kind_issue is not None:
-                issues.append(
-                    {
-                        "field": f"items[{idx}].agent_name",
-                        "msg": kind_issue["msg"],
-                    }
-                )
-        # Briefings: dup-name check + inline byte cap (XOR+name enforced in __post_init__).
-        seen_brief_names: set[str] = set()
-        inline_bytes = 0
-        for bi, b in enumerate(item.briefings):
-            if b.name in seen_brief_names:
-                issues.append(
-                    {
-                        "field": f"items[{idx}].briefings[{bi}].name",
-                        "msg": f"duplicate briefing name '{b.name}'",
-                    }
-                )
-            seen_brief_names.add(b.name)
-            if b.source == "inline" and b.inline is not None:
-                inline_bytes += len(b.inline.encode("utf-8"))
-        if inline_bytes > _MAX_INLINE_BRIEFING_BYTES_PER_SPEC:
-            issues.append(
-                {
-                    "field": f"items[{idx}].briefings",
-                    "msg": (
-                        f"total inline briefing bytes {inline_bytes} exceeds cap "
-                        f"{_MAX_INLINE_BRIEFING_BYTES_PER_SPEC}"
-                    ),
-                }
-            )
 
-    # Submitted plans may not contain non-team agents. Keep this dependency
-    # guard anyway so direct Plan construction cannot smuggle an atomic worker
-    # behind a same-plan non-team dependency if Phase A is bypassed.
-    non_team_locals: set[str] = set()
-    for item in plan.items:
-        if item.local_id is None:
-            continue
-        agent_def = _get_definition(item.agent_name)
-        if agent_def is not None and agent_def.agent_type != "agent":
-            non_team_locals.add(item.local_id)
-    if non_team_locals:
-        for idx, item in enumerate(plan.items):
-            agent_def = _get_definition(item.agent_name)
-            is_non_team = (
-                agent_def is not None
-                and agent_def.agent_type != "agent"
-            )
-            if is_non_team:
-                continue
-            for dep in item.deps:
-                if dep in non_team_locals:
-                    # planner-typed items (expandable) are allowed; workers (atomic non-planner) not.
-                    if item.kind == WorkItemKind.ATOMIC:
-                        issues.append(
-                            {
-                                "field": f"items[{idx}].deps",
-                                "msg": (
-                                    f"atomic worker '{item.agent_name}' depends on non-team "
-                                    f"sibling '{dep}' — use a chained expandable planner instead"
-                                ),
-                            }
-                        )
-
-    # Dep refs + cycle check on internal subgraph.
-    # Every item gets a node key (local_id or synthetic idx) so cycles
-    # involving items without an explicit local_id are still detected.
-    def _node_key(idx: int, item: "WorkItemSpec") -> str:
-        return item.local_id if item.local_id is not None else f"__idx_{idx}__"
-
-    adj: dict[str, list[str]] = {_node_key(i, it): [] for i, it in enumerate(plan.items)}
-    for idx, item in enumerate(plan.items):
-        node = _node_key(idx, item)
+    # Dep refs + cycle check.
+    adj: dict[str, list[str]] = {
+        (it.id if it.id else f"__idx_{i}__"): [] for i, it in enumerate(plan.tasks)
+    }
+    for idx, item in enumerate(plan.tasks):
+        node = item.id if item.id else f"__idx_{idx}__"
         for dep in item.deps:
-            if dep in local_ids:
+            if dep in task_ids:
                 adj[node].append(dep)
             elif not isinstance(dep, str) or not dep:
                 issues.append(
-                    {"field": f"items[{idx}].deps", "msg": f"invalid dep reference: {dep!r}"}
+                    {"field": f"tasks[{idx}].deps", "msg": f"invalid dep reference: {dep!r}"}
                 )
-            elif known_external_deps is not None and dep not in known_external_deps:
-                issues.append(
-                    {
-                        "field": f"items[{idx}].deps",
-                        "msg": f"unknown dep reference '{dep}'",
-                    }
-                )
+            else:
+                # dep is a non-empty string not in task_ids
+                if known_external_deps is None or dep not in known_external_deps:
+                    issues.append(
+                        {
+                            "field": f"tasks[{idx}].deps",
+                            "msg": f"unknown dep reference '{dep}'",
+                        }
+                    )
 
     if _has_cycle(adj):
-        issues.append({"field": "items", "msg": "cycle detected in submitted Plan"})
+        issues.append({"field": "tasks", "msg": "cycle detected in submitted Plan"})
 
     for validator in extra_validators or []:
-        issues.extend(validator(plan.items))
+        issues.extend(validator(plan.tasks))
 
     return issues
 
@@ -383,7 +261,6 @@ def _has_cycle(adj: dict[str, list[str]]) -> bool:
     for start in list(adj.keys()):
         if color[start] != WHITE:
             continue
-        # stack entries: (node, iterator over its neighbors)
         stack: list[tuple[str, Iterator[str]]] = [(start, iter(adj.get(start, ())))]
         color[start] = GRAY
         while stack:
@@ -400,105 +277,3 @@ def _has_cycle(adj: dict[str, list[str]]) -> bool:
                 color[nxt] = GRAY
                 stack.append((nxt, iter(adj.get(nxt, ()))))
     return False
-
-
-def validate_plan_phase_b(
-    existing_graph: dict[str, WorkItem],
-    plan: Plan,
-    team_run_id: str,
-    parent_wi: WorkItem,
-    *,
-    new_id_factory: Callable[[], str],
-    max_depth: int,
-    max_plan_size: int | None = None,
-    max_reviewers_per_plan: int | None = None,
-    require_reviewer_for_plan_size: int | None = None,
-) -> list[WorkItem]:
-    """Dispatcher-time re-check. Resolves local_ids, checks externals, depth, cycles."""
-    normalize_plan_kinds(plan)
-    if parent_wi.kind != WorkItemKind.EXPANDABLE:
-        raise InvalidPlan(
-            f"work item {parent_wi.id} is {parent_wi.kind.value}; only expandable items may submit a plan"
-        )
-    new_depth = parent_wi.depth + 1
-    if new_depth > max_depth:
-        raise InvalidPlan(f"plan would exceed max_depth={max_depth} (parent depth={parent_wi.depth})")
-    if max_plan_size is not None and len(plan.items) > max_plan_size:
-        raise InvalidPlan(
-            f"plan has {len(plan.items)} items, exceeds max_plan_size={max_plan_size}"
-        )
-    validator_issues = _validator_policy_issues(
-        plan.items,
-        max_reviewers_per_plan=max_reviewers_per_plan,
-        require_reviewer_for_plan_size=require_reviewer_for_plan_size,
-    )
-    if validator_issues:
-        raise InvalidPlan("; ".join(issue["msg"] for issue in validator_issues))
-
-    # Re-check local_id uniqueness — Phase A may have been bypassed if a Plan
-    # was constructed directly rather than via the submit_plan tool.
-    seen_locals: set[str] = set()
-    for item in plan.items:
-        if item.local_id is None:
-            continue
-        if item.local_id in seen_locals:
-            raise InvalidPlan(f"duplicate local_id '{item.local_id}'")
-        seen_locals.add(item.local_id)
-
-    local_to_new: dict[str, str] = {
-        item.local_id: new_id_factory() for item in plan.items if item.local_id is not None
-    }
-    issues: list[str] = []
-    new_items: list[WorkItem] = []
-    for idx, spec in enumerate(plan.items):
-        agent_def = _get_definition(spec.agent_name)
-        if agent_def is not None:
-            supported = agent_def.supported_kinds
-            if spec.kind.value not in supported:
-                issues.append(
-                    f"items[{idx}] agent '{spec.agent_name}' does not support kind '{spec.kind.value}' (supports: {supported})"
-                )
-                continue
-        new_id: str = local_to_new[spec.local_id] if spec.local_id else new_id_factory()
-        resolved_deps: list[str] = []
-        for dep in spec.deps:
-            if dep in local_to_new:
-                resolved_deps.append(local_to_new[dep])
-            else:
-                target = existing_graph.get(dep)
-                if target is None:
-                    issues.append(f"items[{idx}] dep '{dep}' not found in team run {team_run_id}")
-                    continue
-                if target.team_run_id != team_run_id:
-                    issues.append(f"items[{idx}] dep '{dep}' is cross-run (rejected)")
-                    continue
-                resolved_deps.append(dep)
-
-        new_items.append(
-            WorkItem(
-                id=new_id,
-                team_run_id=team_run_id,
-                agent_name=spec.agent_name,
-                status=WorkItemStatus.PENDING,
-                deps=resolved_deps,
-                parent_id=parent_wi.id,
-                root_id=parent_wi.root_id or parent_wi.id,
-                payload=dict(spec.payload),
-                timeout_seconds=spec.timeout_seconds,
-                depth=new_depth,
-                kind=spec.kind,
-                local_id=spec.local_id,
-                briefings=list(spec.briefings),
-            )
-        )
-
-    if issues:
-        raise InvalidPlan("; ".join(issues))
-
-    combined_adj: dict[str, list[str]] = {wi_id: list(wi.deps) for wi_id, wi in existing_graph.items()}
-    for wi in new_items:
-        combined_adj[wi.id] = list(wi.deps)
-    if _has_cycle(combined_adj):
-        raise InvalidPlan("combined graph would contain a cycle")
-
-    return new_items

@@ -818,6 +818,27 @@ async def context_for(self, task: Task, pool: asyncpg.Pool,
     return "\n\n".join(sections)
 ```
 
+#### Design note: dep note dedup (latest-per-dep)
+
+A progressive disclosure layer (`_dep_note_index` returning lightweight `(id, agent, summary, timestamp)` tuples, then selectively loading full content) was considered but rejected as marginal. The current design already handles the expensive case:
+
+- **Direct deps only** — `_dep_notes` fetches immediate dependencies, not transitive. The note set is bounded by plan fan-out, which is typically small.
+- **Byte-budget truncation** — `_render_notes_truncated` degrades gracefully when dep notes exceed the budget.
+- **In-memory reads** — no I/O cost to filter; a two-phase fetch saves nothing in the single-process case.
+
+The one scenario that *can* bloat is a single dependency posting many incremental notes (e.g., a long-running explorer logging progress). The fix is simpler than a full index layer — dedup to **latest note per dep task**:
+
+```python
+dep_notes = await self._dep_notes(task, pool)
+# Keep only the latest note per dep (usually the completion summary)
+seen: dict[str, Note] = {}
+for n in dep_notes:
+    seen[n.task_id] = n  # last wins (notes are append-ordered)
+dep_notes = list(seen.values())
+```
+
+This targets the actual problem (many notes from one dep) without adding an abstraction layer. A two-phase index would become worthwhile only if `TaskCenter` moves to a persistent store where fetching full content has real I/O cost.
+
 ### 8.2.1 Automatic Context Freshness Warning
 
 `context_for()` builds a snapshot at task start that can go stale during long-running tasks. LISTEN/NOTIFY (Section 14.7) handles file-level changes, but dep notes or new sibling completions are invisible after context is built. To close this gap, the executor injects a freshness check tool that agents can call before committing large changes:

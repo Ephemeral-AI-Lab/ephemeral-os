@@ -29,28 +29,12 @@ VALIDATOR = "validator"
 SCOUT = "scout"
 TEAM_REPLANNER = "team_replanner"
 
-SUBMIT_PLAN_AGENT = "submit_plan_agent"
-SUBMIT_SUMMARY_AGENT = "submit_summary_agent"
-DECISION_SUBMIT_RETRY = "decision_submit_retry"
-DECISION_SUBMIT_REPLAN = "decision_submit_replan"
-SUBMIT_REPLAN_AGENT = "submit_replan_agent"
-
 _BUILTINS_DIR = Path(__file__).resolve().parent / "agents"
 
 # Expected number of builtin agents.  If a seed file fails to parse,
 # ``load_agents_dir`` silently skips it — this constant lets us detect
 # that early rather than discovering a missing agent at dispatch time.
-_EXPECTED_BUILTIN_COUNT = 10
-
-# Names of posthook agents that need a one-time DB backfill from
-# agent_type='subagent' → 'posthook' (pre-existing rows).
-_POSTHOOK_AGENT_NAMES = [
-    SUBMIT_PLAN_AGENT,
-    SUBMIT_SUMMARY_AGENT,
-    DECISION_SUBMIT_RETRY,
-    DECISION_SUBMIT_REPLAN,
-    SUBMIT_REPLAN_AGENT,
-]
+_EXPECTED_BUILTIN_COUNT = 5
 
 
 def _load_builtin_definitions() -> list[AgentDefinition]:
@@ -82,12 +66,6 @@ def register_all(*, store: "AgentDefinitionStore | None" = None) -> None:
 
     if store is not None:
         from agents.builder.service import AgentBuilderService
-
-        # One-time backfill: migrate posthook agents from old
-        # agent_type='subagent' to 'posthook' in existing DB rows.
-        backfilled = store.backfill_posthook_agent_type(_POSTHOOK_AGENT_NAMES)
-        if backfilled:
-            logger.info("backfilled %d posthook agents to agent_type='posthook'", backfilled)
 
         for defn in defaults:
             record = store.seed_builtin(defn)

@@ -8,7 +8,6 @@ from collections import deque
 from typing import TYPE_CHECKING, Any, Callable
 
 from team.errors import (
-    ArtifactTooLarge,
     BudgetExceeded,
     InvalidPlan,
 )
@@ -16,25 +15,23 @@ from team.models import (
     AgentResult,
     BudgetConfig,
     BudgetState,
-    DependencyArtifact,
     ReplanRequest,
     RetryRequest,
-    TERMINAL_WI_STATUSES,
-    WorkItem,
-    WorkItemKind,
-    WorkItemStatus,
+    Task,
+    TaskSpec,
+    TaskStatus,
+    TERMINAL_STATUSES,
     _utcnow,
 )
 from team.persistence.events import (
     TeamRunEvent,
-    make_artifact_written,
     make_budget_update,
     make_work_item_added,
     make_work_item_status,
     work_item_to_dict,
 )
 from team.persistence.run_store import NullTeamRunStore, TeamRunStore
-from team.planning.validation import validate_plan_phase_b
+from team.planning.validation import validate_plan
 from team.runtime.dispatcher_checkpoint_ops import (
     checkpoint as checkpoint_dispatcher_state,
     prepare_for_resume as prepare_dispatcher_for_resume,
@@ -48,38 +45,34 @@ from team.runtime.dispatcher_mutation_ops import (
     retry_work_item as retry_dispatcher_work_item,
 )
 from team.runtime.dispatcher_replan_ops import (
-    apply_replan as apply_dispatcher_replan,
     request_replan as request_dispatcher_replan,
 )
 from team.runtime.checkpoint import TeamRunCheckpoint
 
-if TYPE_CHECKING:
-    from team.artifacts.store import InMemoryArtifactStore
-
 
 class Dispatcher:
-    """Owns the WorkItem DAG for one TeamRun. Mutations are lock-protected."""
+    """Owns the Task DAG for one TeamRun. Mutations are lock-protected."""
 
     def __init__(
         self,
         team_run_id: str,
         budgets: BudgetConfig,
         budget_state: BudgetState,
-        artifact_store: "InMemoryArtifactStore",
         max_checkpoints: int = 10,
         event_store: TeamRunStore | None = None,
     ) -> None:
         self.team_run_id = team_run_id
         self.budgets = budgets
         self.budget_state = budget_state
-        self.artifact_store = artifact_store
-        self.graph: dict[str, WorkItem] = {}
+        self.graph: dict[str, Task] = {}
         self._ready_queue: asyncio.Queue[str] = asyncio.Queue()
         self._ready_order: list[str] = []
         self.lock = asyncio.Lock()
         self._checkpoints: deque[TeamRunCheckpoint] = deque(maxlen=max_checkpoints)
         self._checkpoint_seq = 0
         self._events: TeamRunStore = event_store or NullTeamRunStore()
+        # Set by TeamRun after construction so cascade "continue" can inject notes
+        self.task_center: Any = None
 
     # ---- event emission --------------------------------------------------
 
@@ -102,8 +95,8 @@ class Dispatcher:
         self._emit(
             make_budget_update(
                 self.team_run_id,
-                work_items_used=self.budget_state.work_items_used,
-                artifact_bytes_used=self.budget_state.artifact_bytes_used,
+                tasks_used=self.budget_state.tasks_used,
+                note_bytes_used=self.budget_state.note_bytes_used,
                 replans_used=self.budget_state.replans_used,
             )
         )
@@ -111,14 +104,22 @@ class Dispatcher:
     def new_id(self) -> str:
         return str(uuid.uuid4())
 
-    def _mark_failed(self, wi: WorkItem, reason: str) -> None:
-        wi.status = WorkItemStatus.FAILED
+    def _mark_failed(self, wi: Task, reason: str) -> None:
+        wi.status = TaskStatus.FAILED
         wi.finished_at = _utcnow()
         wi.failure_reason = reason
-        self._emit_failed(wi)
+        self._emit(
+            make_work_item_status(
+                self.team_run_id,
+                wi.id,
+                "failed",
+                finished_at=wi.finished_at.isoformat() if wi.finished_at else None,
+                failure_reason=wi.failure_reason,
+            )
+        )
 
-    def _mark_cancelled(self, wi: WorkItem, reason: str) -> None:
-        wi.status = WorkItemStatus.CANCELLED
+    def _mark_cancelled(self, wi: Task, reason: str) -> None:
+        wi.status = TaskStatus.CANCELLED
         wi.finished_at = _utcnow()
         wi.failure_reason = reason
         self._emit(
@@ -131,9 +132,9 @@ class Dispatcher:
             )
         )
 
-    def _compute_readiness(self, wi: WorkItem) -> bool:
-        """A WorkItem becomes READY iff PENDING and all dependency subtrees resolve."""
-        if wi.status != WorkItemStatus.PENDING:
+    def _compute_readiness(self, wi: Task) -> bool:
+        """A Task becomes READY iff PENDING and all dependency subtrees resolve."""
+        if wi.status != TaskStatus.PENDING:
             return False
         for dep_id in wi.deps:
             if not self._dependency_satisfied(dep_id):
@@ -174,60 +175,31 @@ class Dispatcher:
 
     def _dependency_satisfied(self, dep_id: str) -> bool:
         dep = self.graph.get(dep_id)
-        if dep is None or dep.status != WorkItemStatus.DONE:
+        if dep is None or dep.status != TaskStatus.DONE:
             return False
         for node_id in self._subtree_ids(dep_id):
             node = self.graph.get(node_id)
             if node is None:
                 return False
-            if node.status == WorkItemStatus.FAILED:
+            if node.status == TaskStatus.FAILED:
                 return False
-            if node.status not in (WorkItemStatus.DONE, WorkItemStatus.CANCELLED):
+            if node.status not in (TaskStatus.DONE, TaskStatus.CANCELLED):
                 return False
         return True
 
-    def _cancel_superseded_dependency_validators(self, wi: WorkItem) -> None:
+    def _cancel_superseded_dependency_validators(self, wi: Task) -> None:
         from agents.registry import has_role
 
         if not has_role(wi.agent_name, "reviewer") or wi.status not in (
-            WorkItemStatus.PENDING,
-            WorkItemStatus.READY,
-            WorkItemStatus.RUNNING,
+            TaskStatus.PENDING,
+            TaskStatus.READY,
+            TaskStatus.RUNNING,
         ):
             return
         for node_id in {node for dep_id in wi.deps for node in self._subtree_ids(dep_id)}:
             node = self.graph.get(node_id)
-            if node_id != wi.id and node and has_role(node.agent_name, "reviewer") and node.status == WorkItemStatus.FAILED:
+            if node_id != wi.id and node and has_role(node.agent_name, "reviewer") and node.status == TaskStatus.FAILED:
                 self._mark_cancelled(node, f"superseded_by_active_validator_{wi.id}")
-
-    def _dependency_artifacts(self, dep_ids: list[str]) -> list[DependencyArtifact]:
-        snapshot: list[DependencyArtifact] = []
-        seen_nodes: set[str] = set()
-        for dep_id in dep_ids:
-            for node_id in self._subtree_ids(dep_id):
-                if node_id in seen_nodes:
-                    continue
-                seen_nodes.add(node_id)
-                node = self.graph.get(node_id)
-                if node is None:
-                    raise RuntimeError(
-                        f"_promote_to_ready called early: dep subtree node {node_id} missing"
-                    )
-                if node.status not in (WorkItemStatus.DONE, WorkItemStatus.CANCELLED):
-                    raise RuntimeError(
-                        f"_promote_to_ready called early: dep subtree node {node_id} "
-                        f"is {node.status.value}, not resolved"
-                    )
-                if node.status != WorkItemStatus.DONE or node.artifact_ref is None:
-                    continue
-                snapshot.append(
-                    DependencyArtifact(
-                        source_wi_id=node.id,
-                        artifact_ref=node.artifact_ref,
-                        display_name=node.local_id or node.agent_name or node.id,
-                    )
-                )
-        return snapshot
 
     def _promote_ready_work_items(self) -> None:
         for candidate in list(self.graph.values()):
@@ -235,36 +207,29 @@ class Dispatcher:
             if self._compute_readiness(candidate):
                 self._promote_to_ready(candidate)
 
-    def _enqueue(self, wi: WorkItem) -> None:
-        wi.status = WorkItemStatus.READY
+    def _enqueue(self, wi: Task) -> None:
+        wi.status = TaskStatus.READY
         self._ready_queue.put_nowait(wi.id)
         self._ready_order.append(wi.id)
         self._emit(make_work_item_status(self.team_run_id, wi.id, "ready"))
 
-    def _promote_to_ready(self, wi: WorkItem) -> None:
-        """Single chokepoint for PENDING→READY: snapshots dependency-subtree artifacts, then enqueues.
-
-        Must be called from every path that transitions a WorkItem from
-        PENDING to READY so that ``wi.dep_artifacts`` is captured exactly
-        once from the frozen state of each satisfied dependency subtree at
-        promotion time.
-        """
-        assert wi.status == WorkItemStatus.PENDING, (
+    def _promote_to_ready(self, wi: Task) -> None:
+        """Single chokepoint for PENDING→READY: enqueues the work item."""
+        assert wi.status == TaskStatus.PENDING, (
             f"_promote_to_ready called on {wi.id} in status {wi.status.value}"
         )
-        wi.dep_artifacts = self._dependency_artifacts(wi.deps)
         self._enqueue(wi)
 
-    async def add_work_item(self, wi: WorkItem) -> None:
+    async def add_work_item(self, wi: Task) -> None:
         async with self.lock:
-            if self.budget_state.work_items_used >= self.budgets.max_work_items:
+            if self.budget_state.tasks_used >= self.budgets.max_tasks:
                 raise BudgetExceeded(
-                    f"max_work_items={self.budgets.max_work_items} reached"
+                    f"max_tasks={self.budgets.max_tasks} reached"
                 )
             if wi.id in self.graph:
-                raise ValueError(f"WorkItem {wi.id} already exists")
+                raise ValueError(f"Task {wi.id} already exists")
             self.graph[wi.id] = wi
-            self.budget_state.work_items_used += 1
+            self.budget_state.tasks_used += 1
             self._emit(make_work_item_added(self.team_run_id, work_item_to_dict(wi)))
             self._emit_budget()
             if self._compute_readiness(wi):
@@ -279,18 +244,18 @@ class Dispatcher:
                 except ValueError:
                     pass
                 wi = self.graph.get(wi_id)
-                if wi is None or wi.status != WorkItemStatus.READY:
+                if wi is None or wi.status != TaskStatus.READY:
                     continue
                 return wi_id
 
-    async def mark_running(self, wi_id: str, agent_run_id: str) -> WorkItem:
+    async def mark_running(self, wi_id: str, agent_run_id: str) -> Task:
         async with self.lock:
             wi = self.graph[wi_id]
-            if wi.status != WorkItemStatus.READY:
+            if wi.status != TaskStatus.READY:
                 raise RuntimeError(
                     f"mark_running: {wi_id} is {wi.status.value}, not READY"
                 )
-            wi.status = WorkItemStatus.RUNNING
+            wi.status = TaskStatus.RUNNING
             wi.agent_run_id = agent_run_id
             wi.started_at = _utcnow()
             self._emit(
@@ -304,17 +269,18 @@ class Dispatcher:
             )
             return wi
 
-    async def complete(self, wi_id: str, result: AgentResult) -> list[WorkItem]:
+    async def complete(self, wi_id: str, result: AgentResult) -> list[Task]:
         """Mark DONE and atomically insert any submitted Plan."""
-        new_items: list[WorkItem] = []
+        new_items: list[Task] = []
         async with self.lock:
             wi = self.graph[wi_id]
-            if wi.status != WorkItemStatus.RUNNING:
+            if wi.status != TaskStatus.RUNNING:
                 raise RuntimeError(
                     f"complete: {wi_id} is {wi.status.value}, not RUNNING"
                 )
 
-            if wi.kind == WorkItemKind.EXPANDABLE and result.submitted_plan is None:
+            from agents.registry import has_role as _has_role_check
+            if _has_role_check(wi.agent_name, "planner") and result.submitted_plan is None:
                 self._mark_failed(
                     wi,
                     "InvalidPlan: expandable work item did not submit a plan",
@@ -323,55 +289,69 @@ class Dispatcher:
                 return []
 
             if result.submitted_plan is not None:
-                try:
-                    new_items = validate_plan_phase_b(
-                        existing_graph=self.graph,
-                        plan=result.submitted_plan,
-                        team_run_id=self.team_run_id,
-                        parent_wi=wi,
-                        new_id_factory=self.new_id,
-                        max_depth=self.budgets.max_depth,
-                        max_plan_size=self.budgets.max_plan_size,
-                        max_reviewers_per_plan=self.budgets.max_reviewers_per_plan,
-                        require_reviewer_for_plan_size=self.budgets.require_reviewer_for_plan_size,
+                new_depth = wi.depth + 1
+                if new_depth > self.budgets.max_depth:
+                    self._mark_failed(
+                        wi,
+                        f"InvalidPlan: plan would exceed max_depth={self.budgets.max_depth}",
                     )
-                except InvalidPlan as e:
-                    self._mark_failed(wi, f"InvalidPlan: {e}")
                     cascade_cancel_dependency_subtree(self, wi_id)
                     return []
-                if (
-                    self.budget_state.work_items_used + len(new_items)
-                    > self.budgets.max_work_items
-                ):
-                    self._mark_failed(wi, "BudgetExceeded: max_work_items")
-                    cascade_cancel_dependency_subtree(self, wi_id)
-                    return []
-
-            try:
-                self.artifact_store.save(wi_id, result.artifact)
-                wi.artifact_ref = wi_id
-                self._emit(
-                    make_artifact_written(
-                        self.team_run_id,
-                        wi_id=wi_id,
-                        ref=wi_id,
-                        size=self.artifact_store._sizes.get(wi_id, 0),
-                        payload=result.artifact,
-                    )
+                issues = validate_plan(
+                    result.submitted_plan,
+                    max_plan_size=self.budgets.max_plan_size,
+                    known_external_deps=set(self.graph.keys()),
                 )
-            except ArtifactTooLarge as e:
-                self._mark_failed(wi, f"ArtifactTooLarge: {e}")
-                cascade_cancel_dependency_subtree(self, wi_id)
-                return []
+                if issues:
+                    self._mark_failed(
+                        wi,
+                        "InvalidPlan: " + "; ".join(i["msg"] for i in issues),
+                    )
+                    cascade_cancel_dependency_subtree(self, wi_id)
+                    return []
+                # Build Task objects from TaskSpec, resolving local ids → global ids.
+                local_to_global: dict[str, str] = {
+                    spec.id: self.new_id()
+                    for spec in result.submitted_plan.tasks
+                    if spec.id
+                }
+                for spec in result.submitted_plan.tasks:
+                    new_id = local_to_global.get(spec.id) or self.new_id()
+                    resolved_deps: list[str] = [
+                        local_to_global[d] if d in local_to_global else d
+                        for d in spec.deps
+                    ]
+                    new_items.append(
+                        Task(
+                            id=new_id,
+                            team_run_id=self.team_run_id,
+                            agent_name=spec.agent,
+                            status=TaskStatus.PENDING,
+                            task=spec.task,
+                            deps=resolved_deps,
+                            scope_paths=list(spec.scope_paths),
+                            cascade_policy=spec.cascade_policy,
+                            parent_id=wi.id,
+                            root_id=wi.root_id or wi.id,
+                            depth=new_depth,
+                        )
+                    )
+                if (
+                    self.budget_state.tasks_used + len(new_items)
+                    > self.budgets.max_tasks
+                ):
+                    self._mark_failed(wi, "BudgetExceeded: max_tasks")
+                    cascade_cancel_dependency_subtree(self, wi_id)
+                    return []
 
             for nwi in new_items:
                 self.graph[nwi.id] = nwi
-                self.budget_state.work_items_used += 1
+                self.budget_state.tasks_used += 1
                 self._emit(make_work_item_added(self.team_run_id, work_item_to_dict(nwi)))
             if new_items:
                 self._emit_budget()
 
-            wi.status = WorkItemStatus.DONE
+            wi.status = TaskStatus.DONE
             wi.finished_at = _utcnow()
             self._emit(
                 make_work_item_status(
@@ -379,56 +359,27 @@ class Dispatcher:
                     wi_id,
                     "done",
                     finished_at=wi.finished_at.isoformat(),
-                    artifact_ref=wi.artifact_ref,
                 )
             )
-            self._emit_budget()
 
             self._promote_ready_work_items()
 
-        # Apply replan outside the lock (apply_replan takes its own lock)
-        if result.submitted_replan is not None:
-            failed_wi_id = (wi.payload or {}).get("failed_work_item_id")
-            failed_wi = self.graph.get(failed_wi_id) if failed_wi_id else None
-            if failed_wi is not None:
-                await self.apply_replan(
-                    replan_wi_id=wi_id,
-                    add_specs=[
-                        {
-                            "agent_name": s.agent_name,
-                            "payload": s.payload,
-                            "local_id": s.local_id,
-                            "deps": s.deps,
-                            "notes": s.notes,
-                            "timeout_seconds": s.timeout_seconds,
-                            "kind": s.kind.value,
-                            "briefings": [
-                                {"name": b.name, "source": b.source, "ref": b.ref,
-                                 "inline": b.inline, "description": b.description}
-                                for b in s.briefings
-                            ],
-                        }
-                        for s in result.submitted_replan.add_items
-                    ],
+            # Apply replan inside the same lock acquisition to prevent a race
+            # where a newly-promoted task gets dequeued between lock release
+            # and apply_replan's re-acquisition.
+            if result.submitted_replan is not None:
+                from team.runtime.dispatcher_replan_ops import apply_replan_unlocked
+                apply_replan_unlocked(
+                    self,
+                    replan_task_id=wi_id,
+                    add_tasks=result.submitted_replan.add_tasks,
                     cancel_ids=result.submitted_replan.cancel_ids,
-                    replace_failed_validator=result.submitted_replan.replace_failed_validator,
-                    target_depth=failed_wi.depth,
-                    target_parent_id=failed_wi.parent_id,
-                    target_root_id=failed_wi.root_id,
+                    target_depth=wi.depth,
+                    target_parent_id=wi.parent_id,
+                    target_root_id=wi.root_id,
                 )
 
         return new_items
-
-    def _emit_failed(self, wi: WorkItem) -> None:
-        self._emit(
-            make_work_item_status(
-                self.team_run_id,
-                wi.id,
-                "failed",
-                finished_at=wi.finished_at.isoformat() if wi.finished_at else None,
-                failure_reason=wi.failure_reason,
-            )
-        )
 
     async def fail(self, wi_id: str, reason: str) -> None:
         await fail_work_item(self, wi_id=wi_id, reason=reason)
@@ -439,7 +390,7 @@ class Dispatcher:
         """Reset a RUNNING work item back to READY for re-execution."""
         await retry_dispatcher_work_item(self, wi_id=wi_id, request=request)
 
-    async def request_replan(self, wi_id: str, request: ReplanRequest) -> WorkItem:
+    async def request_replan(self, wi_id: str, request: ReplanRequest) -> Task:
         """Fail the work item and spawn an ATOMIC replanner at the same depth level."""
         return await request_dispatcher_replan(
             self,
@@ -455,7 +406,7 @@ class Dispatcher:
         await cancel_dispatcher_running(self, reason=reason)
 
     def all_terminal(self) -> bool:
-        return all(wi.status in TERMINAL_WI_STATUSES for wi in self.graph.values())
+        return all(wi.status in TERMINAL_STATUSES for wi in self.graph.values())
 
     # ---- checkpoint / rollback -------------------------------------------
 
@@ -496,22 +447,22 @@ class Dispatcher:
 
     async def apply_replan(
         self,
-        replan_wi_id: str,
-        add_specs: list[dict],
+        replan_task_id: str,
+        add_tasks: list[TaskSpec],
         cancel_ids: list[str],
         target_depth: int,
         target_parent_id: str | None,
         target_root_id: str,
-        replace_failed_validator: bool = False,
     ) -> dict[str, int]:
         """Atomically cancel stale items and insert corrective items at the target level."""
-        return await apply_dispatcher_replan(
-            self,
-            replan_wi_id=replan_wi_id,
-            add_specs=add_specs,
-            cancel_ids=cancel_ids,
-            replace_failed_validator=replace_failed_validator,
-            target_depth=target_depth,
-            target_parent_id=target_parent_id,
-            target_root_id=target_root_id,
-        )
+        from team.runtime.dispatcher_replan_ops import apply_replan_unlocked
+        async with self.lock:
+            return apply_replan_unlocked(
+                self,
+                replan_task_id=replan_task_id,
+                add_tasks=add_tasks,
+                cancel_ids=cancel_ids,
+                target_depth=target_depth,
+                target_parent_id=target_parent_id,
+                target_root_id=target_root_id,
+            )

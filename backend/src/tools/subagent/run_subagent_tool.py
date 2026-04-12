@@ -318,10 +318,6 @@ def _benchmark_root_scout_policy_error(
     return None
 
 
-def _should_force_promote_benchmark_root_scout(context: ToolExecutionContext) -> bool:
-    return isinstance(_benchmark_root_payload(context), dict)
-
-
 def _validate_run_subagent_request(
     *,
     agent_name: str,
@@ -1072,79 +1068,12 @@ async def run_subagent(
             )
             return ToolResult(output=scout_submission_error, is_error=True)
 
-    stored_artifact_ref: str | None = None
-    atlas_info: dict[str, Any] | None = None
-    if (
-        agent_name == "scout"
-        and parent_team_run_id
-    ):
-        try:
-            from team.context.scout_briefings import (
-                auto_promote_scout_briefing,
-                scout_artifact_reuse_status,
-                store_stable_scout_artifact,
-            )
-            from team.context.canonicalize import scope_of_artifact
-            from team.runtime.registry import get as _get_team_run
-            from tools.posthook import SubmittedSummary
-
-            team_run = _get_team_run(parent_team_run_id)
-            if team_run is not None and isinstance(submitted, SubmittedSummary):
-                artifact = submitted.artifact
-                if isinstance(artifact, dict):
-                    scope = scope_of_artifact(artifact) or ""
-                    reusable, reuse_reason = scout_artifact_reuse_status(
-                        team_run,
-                        artifact,
-                        ci_service=context.metadata.get("ci_service"),
-                    )
-                    if reusable:
-                        stored_artifact_ref = store_stable_scout_artifact(
-                            team_run,
-                            artifact,
-                            run_id=persisted_run_id,
-                        )
-                        if stored_artifact_ref is not None:
-                            ci_service = context.metadata.get("ci_service")
-                            force_promote = _should_force_promote_benchmark_root_scout(context)
-                            promoted = auto_promote_scout_briefing(
-                                team_run,
-                                stored_artifact_ref,
-                                ci_service=ci_service,
-                                force=force_promote,
-                            )
-                            persisted = False
-                            if promoted:
-                                persisted = team_run.note_direct_scout_brief(
-                                    artifact,
-                                    ci_service=ci_service,
-                                    reason="run_subagent:scout-complete",
-                                )
-                            atlas_info = {
-                                "subsystem": scope,
-                                "persisted": bool(persisted),
-                                "promoted": bool(promoted),
-                                "artifact_ref": stored_artifact_ref,
-                                "reason": "run_subagent:scout-complete",
-                            }
-                    else:
-                        atlas_info = {
-                            "subsystem": scope,
-                            "persisted": False,
-                            "promoted": False,
-                            "artifact_ref": None,
-                            "reason": reuse_reason or "scout brief is not safe to reuse",
-                            "stale": True,
-                        }
-        except Exception:
-            logger.debug("run_subagent: scout artifact promotion failed", exc_info=True)
-
     envelope = _build_subagent_envelope(
         submitted,
         sub_run_id,
         final_text,
-        artifact_ref=stored_artifact_ref,
-        atlas=atlas_info,
+        artifact_ref=None,
+        atlas=None,
     )
     if early_stopped:
         envelope["completion_mode"] = "early_stopped"

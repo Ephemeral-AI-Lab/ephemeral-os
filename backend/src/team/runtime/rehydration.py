@@ -4,14 +4,11 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from team.models import (
-    Briefing,
     BudgetConfig,
     BudgetState,
-    DependencyArtifact,
+    Task,
+    TaskStatus,
     TeamRunStatus,
-    WorkItem,
-    WorkItemKind,
-    WorkItemStatus,
 )
 from team.persistence.run_store import TeamRunStore
 from team.runtime.dispatcher import Dispatcher
@@ -50,6 +47,10 @@ def build_resumed_run(
         team_run_id=team_run_id,
         services=services,
     )
+    # Restore roster from the durable event so planner prompts work after resume
+    roster_data = meta.get("roster")
+    if isinstance(roster_data, dict):
+        run.roster = {str(k): list(v) for k, v in roster_data.items()}
     return services, run
 
 
@@ -61,65 +62,60 @@ def budget_config_from_event(meta: dict[str, Any]) -> BudgetConfig:
 def restore_ready_queue(
     *,
     dispatcher: Dispatcher,
-    graph: dict[str, WorkItem],
+    graph: dict[str, Task],
 ) -> list[str]:
     ready_order: list[str] = []
     for wi in graph.values():
-        if wi.status == WorkItemStatus.READY:
+        if wi.status == TaskStatus.READY:
             dispatcher._ready_queue.put_nowait(wi.id)
             ready_order.append(wi.id)
     return ready_order
 
 
-def work_item_from_dict(data: dict[str, Any]) -> WorkItem:
+def task_from_dict(data: dict[str, Any]) -> Task:
     def _parse_dt(iso: str | None) -> datetime | None:
         return datetime.fromisoformat(iso) if iso else None
 
-    return WorkItem(
+    return Task(
         id=data["id"],
         team_run_id=data["team_run_id"],
         agent_name=data["agent_name"],
-        status=WorkItemStatus(data["status"]),
-        kind=WorkItemKind(data.get("kind", "atomic")),
+        status=TaskStatus(data["status"]),
+        task=data.get("task", ""),
         deps=list(data.get("deps") or []),
+        scope_paths=list(data.get("scope_paths") or []),
+        cascade_policy=data.get("cascade_policy", "cancel"),
         parent_id=data.get("parent_id"),
         root_id=data.get("root_id") or "",
-        agent_run_id=data.get("agent_run_id"),
-        payload=dict(data.get("payload") or {}),
-        artifact_ref=data.get("artifact_ref"),
-        timeout_seconds=data.get("timeout_seconds"),
         depth=int(data.get("depth") or 0),
-        local_id=data.get("local_id"),
-        briefings=[Briefing(**b) for b in (data.get("briefings") or [])],
-        dep_artifacts=[DependencyArtifact(**d) for d in (data.get("dep_artifacts") or [])],
+        agent_run_id=data.get("agent_run_id"),
         created_at=_parse_dt(data.get("created_at")) or datetime.now(),
         started_at=_parse_dt(data.get("started_at")),
         finished_at=_parse_dt(data.get("finished_at")),
         failure_reason=data.get("failure_reason"),
         retry_count=int(data.get("retry_count") or 0),
         max_retries=int(data.get("max_retries") or 2),
-        replan_source_id=data.get("replan_source_id"),
     )
 
 
 def apply_replayed_event(
     *,
     event: "TeamRunEvent",
-    graph: dict[str, WorkItem],
+    graph: dict[str, Task],
     services: TeamRuntimeServices,
     root_id: str | None,
 ) -> tuple[str | None, tuple[int, int, int] | None, str | None]:
     last_budget: tuple[int, int, int] | None = None
     final_status: str | None = None
     if event.kind == "work_item_added":
-        wi = work_item_from_dict(event.data["work_item"])
+        wi = task_from_dict(event.data["work_item"])
         graph[wi.id] = wi
         if wi.depth == 0 and root_id is None:
             root_id = wi.id
     elif event.kind == "work_item_status":
         wi = graph.get(event.data["wi_id"])
         if wi is not None:
-            wi.status = WorkItemStatus(event.data["status"])
+            wi.status = TaskStatus(event.data["status"])
             for key in ("started_at", "finished_at"):
                 if key in event.data:
                     iso = event.data.get(key)
@@ -128,21 +124,16 @@ def apply_replayed_event(
                 wi.agent_run_id = event.data["agent_run_id"]
             if "failure_reason" in event.data:
                 wi.failure_reason = event.data["failure_reason"]
-            if "artifact_ref" in event.data:
-                wi.artifact_ref = event.data["artifact_ref"]
             if "retry_count" in event.data:
                 wi.retry_count = int(event.data.get("retry_count") or 0)
             if "max_retries" in event.data:
                 wi.max_retries = int(event.data.get("max_retries") or wi.max_retries)
     elif event.kind == "artifact_written":
-        try:
-            services.artifact_store.save(event.data["wi_id"], event.data["payload"])
-        except Exception:
-            pass
+        pass  # no-op: artifact store removed from new model
     elif event.kind == "budget_update":
         last_budget = (
-            int(event.data["work_items_used"]),
-            int(event.data["artifact_bytes_used"]),
+            int(event.data.get("tasks_used", event.data.get("work_items_used", 0))),
+            int(event.data.get("note_bytes_used", event.data.get("artifact_bytes_used", 0))),
             int(event.data.get("replans_used") or 0),
         )
     elif event.kind == "team_run_status":

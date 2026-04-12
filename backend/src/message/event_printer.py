@@ -70,30 +70,6 @@ def _truncate(text: str, limit: int | None) -> str:
     return text if len(text) <= limit else text[: limit - 1] + "…"
 
 
-def _tool_completion_detail_lines(event: ToolExecutionCompleted) -> list[str]:
-    if event.tool_name != "atlas_lookup":
-        return []
-    meta = event.metadata if isinstance(event.metadata, dict) else {}
-    lookups = meta.get("lookups")
-    if not isinstance(lookups, list):
-        return []
-
-    lines: list[str] = []
-    for raw in lookups:
-        if not isinstance(raw, dict):
-            continue
-        subsystem = str(raw.get("subsystem") or "").strip() or "?"
-        action = str(raw.get("action") or "").strip() or "?"
-        parts = [f"[atlas] subsystem={subsystem}", f"action={action}"]
-        staged_ref = str(raw.get("staged_artifact_ref") or "").strip()
-        if staged_ref:
-            parts.append(f"artifact={staged_ref}")
-        reason = str(raw.get("staleness_reason") or "").strip()
-        if reason:
-            parts.append(f"reason={reason}")
-        lines.append(" ".join(parts))
-    return lines
-
 
 def _subagent_completion_detail_lines(output: str) -> list[str]:
     try:
@@ -203,8 +179,6 @@ class MultiAgentEventPrinter:
                 f"{self._c('green' if not event.is_error else 'red', '<- tool_done:')}  {event.tool_name} [{status}] "
                 f"{_truncate(event.output, limit)}",
             )
-            for extra in _tool_completion_detail_lines(event):
-                self._line(agent, work_id, extra)
         elif isinstance(event, ToolExecutionProgress):
             self._line(
                 agent,

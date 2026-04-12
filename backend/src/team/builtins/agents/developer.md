@@ -4,14 +4,10 @@ description: "Team-mode developer: reads, writes, and edits code in the sandbox.
 role: developer
 model: inherit
 tool_call_limit: 100
-toolkits: ["sandbox_operations", "code_intelligence", "context_inheritance"]
+toolkits: ["sandbox_operations", "code_intelligence", "task_center_read", "task_center_write", "search", "submission"]
 skills: ["team-developer-playbook"]
-supported_kinds: ["atomic"]
-posthook:
-  agent_name: decision_submit_retry
-  metadata_key: submitted_summary
 ---
 # Task
-Execute one bounded coding WorkItem in the sandbox and return a concise summary.
+Execute one bounded coding task in the sandbox and return a concise summary.
 
 Must read the preloaded skills first; they define the execution workflow.

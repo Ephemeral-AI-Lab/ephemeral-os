@@ -11,11 +11,12 @@ from code_intelligence.routing.scope_packets import (
     normalize_scope_paths,
     scope_paths_overlap,
 )
-from team.context.canonicalize import scope_of_artifact
-from team.context.scout_briefings import (
-    context_pressure_for_scope,
-    shared_context_summary_for_scope,
-)
+def __scope_of_artifact(artifact: Any) -> str:
+    if isinstance(artifact, dict):
+        paths = artifact.get("target_paths") or []
+        if paths:
+            return "|".join(sorted(paths))
+    return ""
 from tools.core.base import ToolExecutionContext
 
 _DEFAULT_RECENT_SECONDS = 300.0
@@ -61,14 +62,14 @@ def scope_paths_for_work_item(team_run: Any, wi: Any) -> list[str]:
         if artifact_store is None:
             continue
         body = artifact_store.load(dep.artifact_ref)
-        scope = scope_of_artifact(body)
+        scope = _scope_of_artifact(body)
         if scope:
             candidates.append(scope)
 
     for briefing in getattr(wi, "briefings", []) or ():
         if getattr(briefing, "source", "") == "artifact" and getattr(briefing, "ref", None) and artifact_store is not None:
             body = artifact_store.load(briefing.ref)
-            scope = scope_of_artifact(body)
+            scope = _scope_of_artifact(body)
             if scope:
                 candidates.append(scope)
 
@@ -86,12 +87,8 @@ def build_scope_packet(
     """Build a machine-checkable live scope packet."""
     normalized = normalize_scope_paths(scope_paths)
     briefing_versions = _matching_briefing_versions(team_run, normalized)
-    context_pressure = context_pressure_for_scope(
-        team_run,
-        normalized,
-        ci_service=svc,
-    ) if team_run is not None else {}
-    shared_context = shared_context_summary_for_scope(team_run, normalized)
+    context_pressure: dict[str, Any] = {}
+    shared_context = ""
     scope_status = getattr(svc, "scope_status", None)
     if callable(scope_status):
         try:

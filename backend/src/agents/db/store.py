@@ -96,31 +96,6 @@ class AgentDefinitionStore(DefinitionStoreBase[AgentDefinitionRecord]):
     def soft_delete(self, name: str) -> bool:
         return self._soft_delete_by_name(name)
 
-    def backfill_posthook_agent_type(self, posthook_names: list[str]) -> int:
-        """Migrate posthook agents from agent_type='subagent' to 'posthook'.
-
-        Existing DB rows created before the ``posthook`` agent type was
-        introduced still carry ``agent_type='subagent'``. This one-time
-        backfill corrects them so capability-flag derivation in
-        ``model_post_init`` works correctly.
-        """
-        if not posthook_names:
-            return 0
-        with self._sf() as db:
-            rows = (
-                db.query(AgentDefinitionRecord)
-                .filter(
-                    AgentDefinitionRecord.name.in_(posthook_names),
-                    AgentDefinitionRecord.agent_type != "posthook",
-                )
-                .all()
-            )
-            for rec in rows:
-                rec.agent_type = "posthook"
-                rec.dispatchable_via_run_subagent = False
-                rec.updated_at = datetime.now(UTC)
-            db.commit()
-            return len(rows)
 
     def clone(self, source_name: str, new_name: str) -> AgentDefinitionRecord:
         with self._sf() as db:

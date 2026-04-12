@@ -269,7 +269,7 @@ def replay(events: Iterable[TeamRunEvent]) -> dict:
         "status": None,
         "work_items": {},
         "artifacts": {},
-        "budget": {"work_items_used": 0, "artifact_bytes_used": 0},
+        "budget": {"tasks_used": 0, "note_bytes_used": 0},
         "checkpoints": [],
         "files": [],
     }
@@ -297,8 +297,8 @@ def replay(events: Iterable[TeamRunEvent]) -> dict:
             }
         elif ev.kind == "budget_update":
             view["budget"] = {
-                "work_items_used": ev.data["work_items_used"],
-                "artifact_bytes_used": ev.data["artifact_bytes_used"],
+                "tasks_used": ev.data.get("tasks_used", ev.data.get("work_items_used", 0)),
+                "note_bytes_used": ev.data.get("note_bytes_used", ev.data.get("artifact_bytes_used", 0)),
                 "replans_used": ev.data.get("replans_used", 0),
             }
         elif ev.kind == "checkpoint_taken":

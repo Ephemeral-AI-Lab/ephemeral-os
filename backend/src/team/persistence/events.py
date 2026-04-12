@@ -74,18 +74,22 @@ def make_team_run_created(
     repo_root: str | None,
     sandbox_id: str | None = None,
     budgets: dict[str, Any],
+    roster: dict[str, list[str]] | None = None,
 ) -> TeamRunEvent:
+    data: dict[str, Any] = {
+        "session_id": session_id,
+        "user_request": user_request,
+        "goal": goal,
+        "repo_root": repo_root,
+        "sandbox_id": sandbox_id,
+        "budgets": budgets,
+    }
+    if roster:
+        data["roster"] = roster
     return TeamRunEvent(
         team_run_id=team_run_id,
         kind="team_run_created",
-        data={
-            "session_id": session_id,
-            "user_request": user_request,
-            "goal": goal,
-            "repo_root": repo_root,
-            "sandbox_id": sandbox_id,
-            "budgets": budgets,
-        },
+        data=data,
     )
 
 
@@ -118,34 +122,20 @@ def make_work_item_status(
     return TeamRunEvent(team_run_id=team_run_id, kind="work_item_status", data=payload)
 
 
-def make_artifact_written(
-    team_run_id: str,
-    *,
-    wi_id: str,
-    ref: str,
-    size: int,
-    payload: Any,
-) -> TeamRunEvent:
-    return TeamRunEvent(
-        team_run_id=team_run_id,
-        kind="artifact_written",
-        data={"wi_id": wi_id, "ref": ref, "size": size, "payload": payload},
-    )
-
 
 def make_budget_update(
     team_run_id: str,
     *,
-    work_items_used: int,
-    artifact_bytes_used: int,
+    tasks_used: int,
+    note_bytes_used: int,
     replans_used: int = 0,
 ) -> TeamRunEvent:
     return TeamRunEvent(
         team_run_id=team_run_id,
         kind="budget_update",
         data={
-            "work_items_used": work_items_used,
-            "artifact_bytes_used": artifact_bytes_used,
+            "tasks_used": tasks_used,
+            "note_bytes_used": note_bytes_used,
             "replans_used": replans_used,
         },
     )
@@ -203,37 +193,36 @@ def make_file_changed(
 # ---- helpers for serialising runtime dataclasses ------------------------
 
 
-def work_item_to_dict(wi: Any) -> dict[str, Any]:
-    """Serialise a ``WorkItem`` dataclass to a JSON-safe dict.
+def task_to_dict(task: Any) -> dict[str, Any]:
+    """Serialise a ``Task`` dataclass to a JSON-safe dict.
 
-    Kept here (not on ``WorkItem``) so the runtime dataclass stays a pure
+    Kept here (not on ``Task``) so the runtime dataclass stays a pure
     data container and persistence concerns live in one place.
     """
-    from team.models import WorkItem  # local import to avoid cycles
+    from team.models import Task  # local import to avoid cycles
 
-    assert isinstance(wi, WorkItem)
+    assert isinstance(task, Task)
     return {
-        "id": wi.id,
-        "team_run_id": wi.team_run_id,
-        "agent_name": wi.agent_name,
-        "status": wi.status.value,
-        "kind": wi.kind.value,
-        "deps": list(wi.deps),
-        "parent_id": wi.parent_id,
-        "root_id": wi.root_id,
-        "agent_run_id": wi.agent_run_id,
-        "payload": wi.payload,
-        "artifact_ref": wi.artifact_ref,
-        "timeout_seconds": wi.timeout_seconds,
-        "depth": wi.depth,
-        "local_id": wi.local_id,
-        "briefings": [asdict(b) for b in wi.briefings],
-        "dep_artifacts": [asdict(d) for d in wi.dep_artifacts],
-        "created_at": wi.created_at.isoformat() if wi.created_at else None,
-        "started_at": wi.started_at.isoformat() if wi.started_at else None,
-        "finished_at": wi.finished_at.isoformat() if wi.finished_at else None,
-        "failure_reason": wi.failure_reason,
-        "retry_count": wi.retry_count,
-        "max_retries": wi.max_retries,
-        "replan_source_id": wi.replan_source_id,
+        "id": task.id,
+        "team_run_id": task.team_run_id,
+        "agent_name": task.agent_name,
+        "status": task.status.value,
+        "task": task.task,
+        "deps": list(task.deps),
+        "scope_paths": list(task.scope_paths),
+        "cascade_policy": task.cascade_policy,
+        "parent_id": task.parent_id,
+        "root_id": task.root_id,
+        "depth": task.depth,
+        "retry_count": task.retry_count,
+        "max_retries": task.max_retries,
+        "agent_run_id": task.agent_run_id,
+        "created_at": task.created_at.isoformat() if task.created_at else None,
+        "started_at": task.started_at.isoformat() if task.started_at else None,
+        "finished_at": task.finished_at.isoformat() if task.finished_at else None,
+        "failure_reason": task.failure_reason,
     }
+
+
+# Backward-compat alias used by dispatcher imports
+work_item_to_dict = task_to_dict

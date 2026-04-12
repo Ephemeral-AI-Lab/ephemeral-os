@@ -4,11 +4,7 @@ from __future__ import annotations
 
 
 class InvalidPlan(Exception):
-    """Raised when Phase B validation rejects a submitted Plan."""
-
-
-class ArtifactTooLarge(Exception):
-    """Raised when an artifact exceeds the configured size budget."""
+    """Raised when validation rejects a submitted Plan."""
 
 
 class CheckpointNotFound(Exception):
@@ -16,8 +12,4 @@ class CheckpointNotFound(Exception):
 
 
 class BudgetExceeded(Exception):
-    """Raised when adding a WorkItem would exceed a configured budget."""
-
-
-class NoPosthookOutput(Exception):
-    """Raised when the posthook phase ends without an accepted submission."""
+    """Raised when adding a Task would exceed a configured budget."""

@@ -8,10 +8,6 @@ import uuid
 from dataclasses import asdict
 from typing import Any, Callable
 
-from team.context.scout_briefings import (
-    invalidate_stale_scout_context,
-    note_work_item_context_access,
-)
 from team.memory.runtime import persist_memory_record
 from team.persistence.events import (
     make_team_run_created,
@@ -21,12 +17,11 @@ from team.persistence.run_store import NullTeamRunStore, TeamRunStore
 from team.models import (
     BudgetConfig,
     BudgetState,
+    Task,
     TeamDefinition,
     TeamRunStatus,
-    WorkItem,
-    WorkItemKind,
-    WorkItemStatus,
 )
+from team.task_center import TaskCenter
 from team.runtime.executor import Executor
 from team.runtime.rehydration import (
     apply_replayed_event,
@@ -79,7 +74,6 @@ class TeamRun:
         self.budgets = runtime_services.dispatcher.budgets
         self.budget_state = runtime_services.dispatcher.budget_state
         self.project_context = runtime_services.project_context
-        self.artifacts = runtime_services.artifact_store
         self.dispatcher = runtime_services.dispatcher
         self.event_store: TeamRunStore = getattr(
             runtime_services, "event_store", NullTeamRunStore()
@@ -95,6 +89,13 @@ class TeamRun:
         # Role → agent-name mapping from the TeamDefinition.  Stored at
         # start time so context builders can render it into planner prompts.
         self.roster: dict[str, list[str]] = {}
+        # Shared context log for all tasks in this run.
+        self.task_center = TaskCenter(goal=goal or "", user_request=user_request)
+        # Wire TaskCenter into dispatcher for cascade "continue" note injection
+        self.dispatcher.task_center = self.task_center
+        # Optional Ledger reference for file-change awareness in context_for().
+        # Set by the caller if CodeIntelligenceService is available.
+        self.ledger: Any = None
 
     # ---- lifecycle -------------------------------------------------------
 
@@ -105,16 +106,17 @@ class TeamRun:
         *,
         executor_factory: Callable[["TeamRun"], Executor],
         num_executors: int | None = None,
-        root_kind: WorkItemKind = WorkItemKind.ATOMIC,
+        root_kind: str = "atomic",
     ) -> None:
-        root = WorkItem(
+        from team.models import Task, TaskStatus
+        root = Task(
             id=str(uuid.uuid4()),
             team_run_id=self.id,
             agent_name=agent_name,
-            status=WorkItemStatus.PENDING,
-            payload=dict(payload),
+            status=TaskStatus.PENDING,
+            task=payload.get("task", payload.get("user_request", str(payload))),
+            scope_paths=list(payload.get("scope_paths", [])),
             depth=0,
-            kind=root_kind,
         )
         root.root_id = root.id
         self.root_work_item_id = root.id
@@ -129,6 +131,7 @@ class TeamRun:
                 repo_root=self.project_context.repo_root,
                 sandbox_id=self.sandbox_id,
                 budgets=asdict(self.budgets),
+                roster=dict(self.roster) if self.roster else None,
             )
         )
         await self.dispatcher.add_work_item(root)
@@ -151,7 +154,7 @@ class TeamRun:
         """Start a team run using the team definition's ``entry_planner``.
 
         Validates that ``entry_planner`` resolves in ``agents.registry``
-        before dispatching the root WorkItem.
+        before dispatching the root Task.
         """
         from agents.registry import get_definition
 
@@ -166,7 +169,7 @@ class TeamRun:
             payload=payload,
             executor_factory=executor_factory,
             num_executors=num_executors,
-            root_kind=WorkItemKind.EXPANDABLE,
+            root_kind="expandable",
         )
 
     def _spawn_executors(self) -> None:
@@ -175,10 +178,17 @@ class TeamRun:
             executor = self._executor_factory(self)
             self._executor_tasks.append(asyncio.create_task(executor.run_forever()))
 
-    async def wait(self) -> TeamRunStatus:
+    async def wait(self, *, timeout: float | None = None) -> TeamRunStatus:
         try:
+            elapsed = 0.0
             while not self.dispatcher.all_terminal():
+                if self._executor_tasks and all(t.done() for t in self._executor_tasks):
+                    # All executors died but DAG is not terminal — break to avoid infinite loop
+                    break
                 await asyncio.sleep(0.05)
+                elapsed += 0.05
+                if timeout is not None and elapsed >= timeout:
+                    break
             await self._join_executors()
             self._compute_final_status()
             return self.status
@@ -209,10 +219,10 @@ class TeamRun:
         self.cancel_event.clear()
 
     def _compute_final_status(self) -> None:
-        statuses = {wi.status for wi in self.dispatcher.graph.values()}
-        if WorkItemStatus.FAILED in statuses:
+        statuses = {str(wi.status.value) for wi in self.dispatcher.graph.values()}
+        if "failed" in statuses:
             self.status = TeamRunStatus.FAILED
-        elif WorkItemStatus.CANCELLED in statuses:
+        elif "cancelled" in statuses:
             self.status = TeamRunStatus.CANCELLED
         else:
             self.status = TeamRunStatus.SUCCEEDED
@@ -222,57 +232,13 @@ class TeamRun:
         self.cancel_event.set()
         await self.dispatcher.cancel_all_pending()
 
-    def note_atlas_edit(self, file_path: str, *, reason: str = "edit") -> None:
-        del reason
-        invalidate_stale_scout_context(self, file_path)
-
-    def note_direct_scout_brief(
-        self,
-        brief: dict[str, Any],
-        *,
-        ci_service: Any | None = None,
-        reason: str = "direct-scout",
-    ) -> bool:
-        try:
-            atlas = getattr(ci_service, "atlas", None)
-            if atlas is None:
-                return False
-            return bool(atlas.persist_scout_brief(
-                team_run=self,
-                brief=brief,
-                reason=reason,
-            ))
-        except Exception:
-            import logging
-
-            logging.getLogger(__name__).debug(
-                "atlas direct scout persistence failed",
-                exc_info=True,
-            )
-            return False
-
-    def note_context_access(
-        self,
-        *,
-        work_item: WorkItem,
-        metadata: Any,
-        artifact: dict[str, Any] | None,
-    ) -> list[str]:
-        return note_work_item_context_access(
-            self,
-            work_item,
-            metadata,
-            artifact=artifact,
-        )
-
     def note_validator_outcome(
         self,
         *,
-        work_item: WorkItem,
+        task: "Task",
         summary: str,
-        artifact: dict[str, Any] | None,
     ) -> bool:
-        scope_paths = _memory_scope_paths(work_item, artifact)
+        scope_paths = list(task.scope_paths)
         return persist_memory_record(
             project_key=self.project_context.project_key,
             repo_root=self.project_context.repo_root,
@@ -280,15 +246,13 @@ class TeamRun:
             scope={"paths": scope_paths},
             content={
                 "summary": summary,
-                "artifact": _coerce_memory_payload(artifact),
-                "work_item_id": work_item.id,
-                "agent_name": work_item.agent_name,
+                "task_id": task.id,
+                "agent_name": task.agent_name,
             },
             source={
                 "team_run_id": self.id,
-                "work_item_id": work_item.id,
-                "agent": work_item.agent_name,
-                "artifact_ref": work_item.artifact_ref or "",
+                "task_id": task.id,
+                "agent": task.agent_name,
             },
         )
 
@@ -316,47 +280,6 @@ class TeamRun:
             },
             stale_hint="coordination conflict observed during live execution",
         )
-
-    def note_explicit_memory_artifacts(
-        self,
-        *,
-        work_item: WorkItem,
-        artifact: dict[str, Any] | None,
-    ) -> int:
-        if not isinstance(artifact, dict):
-            return 0
-        raw_records = artifact.get("memory_records")
-        if not isinstance(raw_records, list):
-            return 0
-        persisted = 0
-        for raw in raw_records:
-            if not isinstance(raw, dict):
-                continue
-            kind = str(raw.get("kind") or "").strip()
-            if not kind:
-                continue
-            source = _coerce_memory_dict(raw.get("source"))
-            source.pop("team_run_id", None)
-            source.pop("work_item_id", None)
-            source.pop("agent", None)
-            ok = persist_memory_record(
-                project_key=self.project_context.project_key,
-                repo_root=self.project_context.repo_root,
-                kind=kind,
-                scope=_coerce_memory_dict(raw.get("scope")),
-                content=_coerce_memory_dict(raw.get("content")),
-                source={
-                    **source,
-                    "team_run_id": self.id,
-                    "work_item_id": work_item.id,
-                    "agent": work_item.agent_name,
-                },
-                status=str(raw.get("status") or "active"),
-                stale_hint=str(raw.get("stale_hint") or ""),
-                superseded_by=str(raw.get("superseded_by") or ""),
-            )
-            persisted += int(bool(ok))
-        return persisted
 
     # ---- checkpoint API --------------------------------------------------
 
@@ -427,11 +350,9 @@ class TeamRun:
 
         * ``Dispatcher.graph`` is reconstructed from ``work_item_added``
           events plus the final ``work_item_status`` seen for each id.
-        * ``InMemoryArtifactStore`` is repopulated from
-          ``artifact_written`` events.
         * ``BudgetState`` is set from the last ``budget_update`` event
-          (fallback: counted from graph + artifact sizes).
-        * The ready queue is rebuilt to hold every WorkItem that ended
+          (fallback: counted from graph size).
+        * The ready queue is rebuilt to hold every Task that ended
           up in ``READY`` status at the end of the log.
 
         The returned TeamRun is **paused**: no executors are running.
@@ -493,11 +414,11 @@ class TeamRun:
                 final_status = replayed_status
 
         if last_budget is not None:
-            run.budget_state.work_items_used = last_budget[0]
-            run.budget_state.artifact_bytes_used = last_budget[1]
+            run.budget_state.tasks_used = last_budget[0]
+            run.budget_state.note_bytes_used = last_budget[1]
             run.budget_state.replans_used = last_budget[2]
         else:
-            run.budget_state.work_items_used = len(graph)
+            run.budget_state.tasks_used = len(graph)
 
         services.dispatcher._ready_order = restore_ready_queue(
             dispatcher=services.dispatcher,
@@ -512,32 +433,3 @@ class TeamRun:
                 pass
 
         return run
-
-
-def _coerce_memory_dict(value: Any) -> dict[str, Any]:
-    return dict(value) if isinstance(value, dict) else {}
-
-
-def _coerce_memory_payload(value: Any) -> Any:
-    if isinstance(value, dict):
-        return dict(value)
-    if isinstance(value, list):
-        return list(value)
-    if isinstance(value, (str, int, float, bool)) or value is None:
-        return value
-    return repr(value)
-
-
-def _memory_scope_paths(work_item: WorkItem, artifact: dict[str, Any] | None) -> list[str]:
-    if isinstance(artifact, dict):
-        target_paths = artifact.get("target_paths")
-        if isinstance(target_paths, list):
-            return [str(item) for item in target_paths if isinstance(item, str) and item]
-    payload = work_item.payload if isinstance(work_item.payload, dict) else {}
-    for key in ("verify", "owned_files"):
-        raw = payload.get(key)
-        if isinstance(raw, list):
-            paths = [str(item) for item in raw if isinstance(item, str) and item]
-            if paths:
-                return paths
-    return []

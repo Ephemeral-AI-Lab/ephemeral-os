@@ -352,10 +352,7 @@ async def _run_query_loop(
             daytona_toolkit is None
             and context.tool_metadata is not None
             and context.tool_metadata.sandbox_id
-            and (
-                context.tool_registry.get_toolkit("code_intelligence") is not None
-                or context.tool_registry.get_toolkit("atlas") is not None
-            )
+            and context.tool_registry.get_toolkit("code_intelligence") is not None
         ):
             try:
                 from tools.daytona_toolkit import DaytonaToolkit

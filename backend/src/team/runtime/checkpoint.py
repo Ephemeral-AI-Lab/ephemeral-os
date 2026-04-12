@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from team.models import BudgetState, WorkItem
+from team.models import BudgetState, Task
 
 
 @dataclass
@@ -16,8 +16,7 @@ class TeamRunCheckpoint:
     sequence: int
     taken_at: datetime
     label: str | None
-    work_items: dict[str, WorkItem]
+    work_items: dict[str, Task]
     ready_queue_order: list[str]
-    artifacts: dict[str, Any]
     project_context: Any
     budget_state: BudgetState

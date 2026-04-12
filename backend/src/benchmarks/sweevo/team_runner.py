@@ -28,12 +28,14 @@ from token_tracker.runtime import persist_run_usage
 from code_intelligence.routing.service import get_code_intelligence
 from team.builtins import (
     DEVELOPER,
+    SCOUT,
     TEAM_PLANNER,
     TEAM_REPLANNER,
     VALIDATOR,
     register_all as _register_team_builtins,
 )
-from team.models import BudgetConfig, TeamRunStatus, WorkItemKind
+from team.models import BudgetConfig, TeamDefinition, TeamRunStatus, WorkItemKind
+from team.persistence.store import TeamDefinitionStore
 from team.persistence.events import make_checkpoint_repo_state
 from team.persistence.run_store import build_default_store
 from team.runtime.context_builder import (
@@ -65,6 +67,47 @@ logger = logging.getLogger(__name__)
 # can still override.
 _DEFAULT_NUM_EXECUTORS = 8
 _PROJECT_ROOT = Path(__file__).resolve().parents[4]
+
+# Default roster for the sweevo benchmark team.
+_SWEEVO_TEAM_NAME = "sweevo_benchmark"
+_SWEEVO_DEFAULT_ROSTER: dict[str, list[str]] = {
+    "planner": [TEAM_PLANNER],
+    "developer": [DEVELOPER],
+    "reviewer": [VALIDATOR],
+    "replanner": [TEAM_REPLANNER],
+    "explorer": [SCOUT],
+}
+
+
+def _load_or_create_team_definition(
+    session_factory: object | None,
+) -> TeamDefinition:
+    """Load the sweevo team definition from the DB, or build a default.
+
+    When a DB-backed ``TeamDefinitionStore`` is available the user can
+    customise the roster via the store's CRUD API.  If no DB is present
+    (e.g. local-only benchmark runs) a hard-coded default is returned.
+    """
+    if session_factory is not None:
+        store = TeamDefinitionStore()
+        store.initialize(session_factory)  # type: ignore[arg-type]
+        existing = store.get_by_name(_SWEEVO_TEAM_NAME)
+        if existing is not None:
+            return existing
+        return store.create(
+            name=_SWEEVO_TEAM_NAME,
+            entry_planner=TEAM_PLANNER,
+            roster=_SWEEVO_DEFAULT_ROSTER,
+            description="Default SWE-EVO benchmark team",
+        )
+    # No DB — return an in-memory fallback.
+    return TeamDefinition(
+        id="sweevo-benchmark-default",
+        name=_SWEEVO_TEAM_NAME,
+        description="Default SWE-EVO benchmark team",
+        entry_planner=TEAM_PLANNER,
+        roster=dict(_SWEEVO_DEFAULT_ROSTER),
+    )
 
 
 def _benchmark_team_run_dir() -> Path:
@@ -1133,11 +1176,7 @@ def _build_agent_overrides(instance: SWEEvoInstance) -> dict[str, dict[str, Any]
     agent_overrides: dict[str, dict[str, Any]] = {}
     if planner_def is not None:
         planner_limits = _derive_planner_runtime_limits(instance)
-        planner_toolkits = [
-            toolkit_name
-            for toolkit_name in (planner_def.toolkits or [])
-            if toolkit_name not in {"team_context", "context_sharing"}
-        ]
+        planner_toolkits = list(planner_def.toolkits or [])
         agent_overrides[TEAM_PLANNER] = {
             "skills": _with_extra_skills(planner_def.skills, "sweevo-project-context"),
             "toolkits": planner_toolkits,
@@ -1395,6 +1434,7 @@ async def run_sweevo_team(
 
     session_config, session_factory = _prepare_benchmark_session(repo_dir=repo_dir)
     event_store = _build_benchmark_event_store(session_factory=session_factory)
+    team_def = _load_or_create_team_definition(session_factory)
     root_prompt = _build_root_prompt(instance, repo_dir)
     budgets = _derive_sweevo_budgets(instance)
     agent_overrides = _build_agent_overrides(instance)
@@ -1421,8 +1461,8 @@ async def run_sweevo_team(
         sandbox_id=sandbox_id,
     )
 
-    await tr.start(
-        agent_name=TEAM_PLANNER,
+    await tr.start_with_team_definition(
+        team_def,
         payload={
             "prompt": root_prompt,
             "instance_id": instance.instance_id,
@@ -1441,7 +1481,6 @@ async def run_sweevo_team(
             agent_overrides=agent_overrides,
         ),
         num_executors=num_executors,
-        root_kind=WorkItemKind.EXPANDABLE,
     )
 
     await tr.wait()
