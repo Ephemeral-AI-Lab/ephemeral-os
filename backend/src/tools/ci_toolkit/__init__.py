@@ -36,8 +36,7 @@ class CIToolkit(BaseToolkit):
         if include_change_awareness:
             tools.extend([ci_edit_hotspots, ci_recent_changes])
         instructions = (
-            "Read-only code intelligence for grounding same-run work. "
-            "If Atlas or briefings disagree with current CI state, trust CI.\n\n"
+            "Read-only code intelligence for grounding same-run work.\n"
             "- `ci_status` — check if the code intelligence service is available.\n"
             "- `ci_workspace_structure` — tree view of the project layout.\n"
             "- `ci_query_symbols` / `ci_query_references` — locate definitions and callers.\n"

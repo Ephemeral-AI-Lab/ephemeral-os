@@ -154,7 +154,7 @@ class DaytonaToolkit(BaseToolkit):
         """Inject code intelligence service into context metadata.
 
         Skipped when context.metadata["skip_code_intelligence"] is True.
-        This allows non-team mode to run without CI/Atlas/Scout overhead.
+        This allows non-team mode to skip CI service overhead.
         """
         if context.metadata.get("skip_code_intelligence"):
             return
