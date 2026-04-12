@@ -2,9 +2,110 @@
 
 from __future__ import annotations
 
+import time
+import uuid
+from typing import Any
+
 from pydantic import BaseModel, Field
 
+from agents.registry import get_definition
+from team.errors import BudgetExceeded, InvalidPlan
+from team.planning.validation import validate_plan
 from tools.core.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolResult
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+async def _post_submission_note(
+    context: ToolExecutionContext,
+    *,
+    content: str,
+    scope_paths: list[str] | None = None,
+) -> None:
+    tc = context.metadata.get("task_center")
+    if tc is None:
+        return
+    from team.models import Note
+
+    await tc.post(
+        Note(
+            id=str(uuid.uuid4()),
+            task_id=context.metadata.get("work_item_id", ""),
+            agent_name=context.metadata.get("agent_name", ""),
+            content=content,
+            timestamp=time.time(),
+            scope_paths=list(scope_paths or context.metadata.get("write_scope") or []),
+        )
+    )
+
+
+def _resolve_agent_name(agent_value: str, roster: dict[str, list[str]]) -> str:
+    candidate = agent_value.strip()
+    if not candidate:
+        return candidate
+    if get_definition(candidate) is not None:
+        return candidate
+    role_matches = roster.get(candidate)
+    if role_matches:
+        return str(role_matches[0])
+    return candidate
+
+
+def _resolve_plan_tasks(
+    raw_tasks: list[dict[str, Any]],
+    roster: dict[str, list[str]],
+) -> list[dict[str, Any]]:
+    resolved: list[dict[str, Any]] = []
+    for item in raw_tasks:
+        data = dict(item)
+        data["agent"] = _resolve_agent_name(str(data.get("agent") or ""), roster)
+        resolved.append(data)
+    return resolved
+
+
+async def _known_external_dep_ids(context: ToolExecutionContext) -> set[str] | None:
+    known = context.metadata.get("known_external_dep_ids")
+    if isinstance(known, set):
+        return {str(item) for item in known}
+    if isinstance(known, list):
+        return {str(item) for item in known}
+    dispatcher = context.metadata.get("dispatcher")
+    if dispatcher is None or not hasattr(dispatcher, "known_task_ids"):
+        return None
+    return {str(item) for item in await dispatcher.known_task_ids()}
+
+
+def _roster_from_context(context: ToolExecutionContext) -> dict[str, list[str]]:
+    roster = context.metadata.get("roster")
+    if not isinstance(roster, dict):
+        return {}
+    return {
+        str(role): [str(agent_name) for agent_name in agent_names if isinstance(agent_name, str)]
+        for role, agent_names in roster.items()
+        if isinstance(agent_names, list)
+    }
+
+
+def _note_budget_issues(
+    tasks: list[dict[str, Any]],
+    *,
+    max_note_bytes: int | None,
+) -> list[str]:
+    if not max_note_bytes or max_note_bytes <= 0:
+        return []
+    issues: list[str] = []
+    for item in tasks:
+        task_id = str(item.get("id") or "<unknown>")
+        task_text = str(item.get("task") or "")
+        size = len(task_text.encode("utf-8"))
+        if size > max_note_bytes:
+            issues.append(
+                f"task '{task_id}' is {size} bytes, exceeds max_note_bytes={max_note_bytes}"
+            )
+    return issues
 
 
 # ---------------------------------------------------------------------------
@@ -27,27 +128,14 @@ class DoneTool(BaseTool):
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, DoneInput)
-        from team.models import Note, SubmittedSummary
-        import time
-        import uuid
+        from team.models import SubmittedSummary
 
         summary = arguments.summary.strip()
         if not summary:
             return ToolResult(output="Error: summary must be non-empty", is_error=True)
         submission = SubmittedSummary(summary=summary)
         context.metadata["submitted_output"] = submission
-        tc = context.metadata.get("task_center")
-        if tc:
-            tc.post(
-                Note(
-                    id=str(uuid.uuid4()),
-                    task_id=context.metadata.get("work_item_id", ""),
-                    agent_name=context.metadata.get("agent_name", ""),
-                    content=summary,
-                    timestamp=time.time(),
-                    scope_paths=list(context.metadata.get("write_scope") or []),
-                )
-            )
+        await _post_submission_note(context, content=summary)
         return ToolResult(output=f"Summary accepted ({len(summary)} chars).")
 
 
@@ -76,11 +164,57 @@ class SubmitPlanTool(BaseTool):
         assert isinstance(arguments, SubmitPlanInput)
         from team.models import Plan
 
-        plan = Plan.from_dict({"tasks": arguments.tasks, "rationale": arguments.rationale})
-        if not plan.tasks:
-            if not context.metadata.get("allow_empty_plan"):
-                return ToolResult(output="Error: plan has no tasks", is_error=True)
+        roster = _roster_from_context(context)
+        resolved_tasks = _resolve_plan_tasks(arguments.tasks, roster)
+        try:
+            plan = Plan.from_dict({"tasks": resolved_tasks, "rationale": arguments.rationale})
+        except (TypeError, ValueError) as exc:
+            return ToolResult(output=f"Error: invalid plan payload: {exc}", is_error=True)
+
+        allow_empty = bool(context.metadata.get("allow_empty_plan"))
+        max_plan_size = int(context.metadata.get("max_plan_size", 50) or 50)
+        known_external_dep_ids = await _known_external_dep_ids(context)
+        issues = validate_plan(
+            plan,
+            max_plan_size=max_plan_size,
+            allow_empty=allow_empty,
+            known_external_deps=known_external_dep_ids,
+        )
+
+        max_tasks = int(context.metadata.get("max_tasks", 0) or 0)
+        tasks_used = int(context.metadata.get("tasks_used", 0) or 0)
+        if max_tasks and tasks_used + len(plan.tasks) > max_tasks:
+            issues.append(
+                {
+                    "field": "tasks",
+                    "msg": f"plan would exceed max_tasks={max_tasks} (used={tasks_used}, adding={len(plan.tasks)})",
+                }
+            )
+        max_depth = int(context.metadata.get("max_depth", 0) or 0)
+        task_depth = int(context.metadata.get("task_depth", 0) or 0)
+        if max_depth and plan.tasks and (task_depth + 1) > max_depth:
+            issues.append(
+                {
+                    "field": "tasks",
+                    "msg": f"plan would exceed max_depth={max_depth} from current depth={task_depth}",
+                }
+            )
+
+        note_budget_issues = _note_budget_issues(
+            resolved_tasks,
+            max_note_bytes=int(context.metadata.get("max_note_bytes", 0) or 0),
+        )
+        issues.extend({"field": "tasks", "msg": msg} for msg in note_budget_issues)
+
+        if issues:
+            message = "; ".join(str(issue.get("msg") or "invalid plan") for issue in issues)
+            return ToolResult(output=f"Error: {message}", is_error=True)
+
         context.metadata["submitted_output"] = plan
+        summary = f"Submitted plan with {len(plan.tasks)} task(s)."
+        if arguments.rationale:
+            summary += f"\nRationale: {arguments.rationale.strip()}"
+        await _post_submission_note(context, content=summary)
         return ToolResult(output=f"Plan accepted ({len(plan.tasks)} tasks).")
 
 
@@ -103,6 +237,7 @@ class RequestRetryTool(BaseTool):
         from team.models import RetryRequest
 
         context.metadata["submitted_output"] = RetryRequest(reason=arguments.reason)
+        await _post_submission_note(context, content=f"Requested retry: {arguments.reason}")
         return ToolResult(output="Retry requested.")
 
 
@@ -129,6 +264,10 @@ class RequestReplanTool(BaseTool):
             reason=arguments.reason,
             suggestion=arguments.suggestion,
         )
+        note = f"Requested replan: {arguments.reason}"
+        if arguments.suggestion:
+            note += f"\nSuggestion: {arguments.suggestion}"
+        await _post_submission_note(context, content=note)
         return ToolResult(output="Replan requested.")
 
 
@@ -156,6 +295,13 @@ class SubmitReplanTool(BaseTool):
         )
         context.metadata["submitted_output"] = replan
         count = len(replan.add_tasks)
+        await _post_submission_note(
+            context,
+            content=(
+                f"Submitted corrective replan with {count} new task(s) "
+                f"and {len(replan.cancel_ids)} cancellation(s)."
+            ),
+        )
         return ToolResult(
             output=f"Replan accepted ({count} new tasks, {len(replan.cancel_ids)} cancelled)."
         )
@@ -171,12 +317,17 @@ class SubmissionToolkit(BaseToolkit):
 
     @classmethod
     def from_context(cls, ctx: object) -> SubmissionToolkit:
-        from agents.registry import has_role
+        from agents.registry import get_role
 
-        agent_name: str = getattr(ctx, "metadata", {}).get("agent_name") or ""  # type: ignore[union-attr]
-        if has_role(agent_name, "planner"):
+        metadata = getattr(ctx, "metadata", {}) or {}  # type: ignore[union-attr]
+        role = metadata.get("role")
+        if not isinstance(role, str) or not role.strip():
+            agent_name: str = str(metadata.get("agent_name") or "")
+            role = get_role(agent_name)
+
+        if role == "planner":
             tools = [SubmitPlanTool()]
-        elif has_role(agent_name, "replanner"):
+        elif role == "replanner":
             tools = [SubmitReplanTool()]
         else:
             tools = [DoneTool(), RequestRetryTool(), RequestReplanTool()]

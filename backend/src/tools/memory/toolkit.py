@@ -18,7 +18,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from tools.core.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolResult
-from tools.exploration_memory.toolkit import get_exploration_memory
+from tools.memory.cache import get_exploration_memory
 
 
 # ---------------------------------------------------------------------------
@@ -47,7 +47,7 @@ class CheckExplorationMemoryTool(BaseTool):
             if tc:
                 from team.models import Note
                 for note_dict in cached:
-                    tc.post(Note(**note_dict))
+                    await tc.post(Note(**note_dict))
             return ToolResult(output=json.dumps({
                 "status": "cached",
                 "note_count": len(cached),
@@ -75,7 +75,7 @@ class SaveExplorationTool(BaseTool):
         tc = context.metadata.get("task_center")
         if tc is None:
             return ToolResult(output="No Task Center available.", is_error=True)
-        notes = tc.read(scope_paths=arguments.paths)
+        notes = await tc.read(scope_paths=arguments.paths)
         note_dicts = [asdict(n) for n in notes]
         await mem.save_async(arguments.paths, note_dicts, workspace_root)
         return ToolResult(output=json.dumps({

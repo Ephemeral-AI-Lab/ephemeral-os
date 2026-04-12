@@ -29,9 +29,7 @@ from tools.core.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolRes
 
 class PostNoteInput(BaseModel):
     content: str = Field(..., description="Note content to post", min_length=1)
-    scope_paths: list[str] | None = Field(
-        default=None, description="File/dir scope for filtering"
-    )
+    scope_paths: list[str] | None = Field(default=None, description="File/dir scope for filtering")
 
 
 class PostNoteTool(BaseTool):
@@ -55,7 +53,7 @@ class PostNoteTool(BaseTool):
             timestamp=time.time(),
             scope_paths=scope,
         )
-        tc.post(note)
+        await tc.post(note)
         return ToolResult(output=f"Note posted ({len(arguments.content)} chars).")
 
 
@@ -68,9 +66,7 @@ class ReadNotesInput(BaseModel):
     authors: list[str] | None = Field(
         default=None, description="Filter by task IDs that authored the notes"
     )
-    scope_paths: list[str] | None = Field(
-        default=None, description="Filter by scope path prefix"
-    )
+    scope_paths: list[str] | None = Field(default=None, description="Filter by scope path prefix")
     keyword: str | None = Field(
         default=None, description="Keyword filter (case-insensitive substring match)"
     )
@@ -79,7 +75,9 @@ class ReadNotesInput(BaseModel):
 
 class ReadNotesTool(BaseTool):
     name = "read_notes"
-    description = "Read notes from the Task Center, optionally filtered by author, scope, or keyword."
+    description = (
+        "Read notes from the Task Center, optionally filtered by author, scope, or keyword."
+    )
     input_model = ReadNotesInput
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
@@ -88,7 +86,7 @@ class ReadNotesTool(BaseTool):
         tc = context.metadata.get("task_center")
         if tc is None:
             return ToolResult(output="Error: Task Center not available", is_error=True)
-        notes = tc.read(
+        notes = await tc.read(
             authors=arguments.authors,
             scope_paths=arguments.scope_paths,
             limit=arguments.limit,
@@ -116,7 +114,9 @@ class ReadNotesTool(BaseTool):
 
 class ScopeChangedSinceInput(BaseModel):
     paths: list[str] = Field(..., description="Scope paths to check")
-    since: float | None = Field(default=None, description="Unix timestamp. Defaults to task start time.")
+    since: float | None = Field(
+        default=None, description="Unix timestamp. Defaults to task start time."
+    )
 
 
 class ScopeChangedSinceTool(BaseTool):
@@ -124,14 +124,17 @@ class ScopeChangedSinceTool(BaseTool):
     description = "Check what files changed in your scope since a given time. Uses Arbiter (ground truth) with Task Center note fallback."
     input_model = ScopeChangedSinceInput
 
-    async def execute(self, arguments: ScopeChangedSinceInput, context: ToolExecutionContext) -> ToolResult:
+    async def execute(
+        self, arguments: ScopeChangedSinceInput, context: ToolExecutionContext
+    ) -> ToolResult:
         since = arguments.since or context.metadata.get("work_item_started_at", 0)
         arbiter = context.metadata.get("arbiter")
 
         if arbiter is not None:
             changes = arbiter.changes_since(since)
             scoped = [
-                e for e in changes
+                e
+                for e in changes
                 if any(e.file_path.startswith(p.rstrip("/")) for p in arguments.paths)
             ]
             if not scoped:
@@ -149,7 +152,7 @@ class ScopeChangedSinceTool(BaseTool):
         tc = context.metadata.get("task_center")
         if tc is None:
             return ToolResult(output="No changes detected.")
-        notes = tc.read(scope_paths=arguments.paths, since=since)
+        notes = await tc.read(scope_paths=arguments.paths, since=since)
         if not notes:
             return ToolResult(output="No changes detected in scope since the given time.")
         lines = [f"Changes in scope since {since}:"]
@@ -172,37 +175,58 @@ class ContextChangedSinceTool(BaseTool):
     description = "Check if your context has changed since task started. Call before committing multi-file changes."
     input_model = ContextChangedSinceInput
 
-    async def execute(self, arguments: ContextChangedSinceInput, context: ToolExecutionContext) -> ToolResult:
+    async def execute(
+        self, arguments: ContextChangedSinceInput, context: ToolExecutionContext
+    ) -> ToolResult:
         since = context.metadata.get("work_item_started_at", 0)
         task_id = context.metadata.get("work_item_id", "")
         agent_run_id = context.metadata.get("agent_run_id", "")
 
         scope_changes = 0
-        new_notes_by_others = 0
+        new_dep_notes = 0
+        new_sibling_completions = 0
 
         arbiter = context.metadata.get("arbiter")
         scope_paths = context.metadata.get("write_scope") or []
         if arbiter is not None and scope_paths:
             changes = arbiter.changes_since(since)
             scope_changes = sum(
-                1 for e in changes
+                1
+                for e in changes
                 if e.agent_id != agent_run_id
                 and any(e.file_path.startswith(p.rstrip("/")) for p in scope_paths)
             )
 
         tc = context.metadata.get("task_center")
+        dispatcher = context.metadata.get("dispatcher")
         if tc is not None:
-            all_recent = tc.read(since=since)
-            new_notes_by_others = sum(1 for n in all_recent if n.task_id != task_id)
+            task_deps = set(context.metadata.get("task_deps", []))
+            if task_deps:
+                dep_notes = await tc.read(authors=list(task_deps), since=since)
+                new_dep_notes = len(dep_notes)
+        if dispatcher is not None and hasattr(dispatcher, "done_sibling_ids"):
+            sibling_ids = await dispatcher.done_sibling_ids(
+                task_id=task_id,
+                parent_id=context.metadata.get("task_parent_id"),
+                since=since,
+            )
+            new_sibling_completions = len(sibling_ids)
 
-        stale = scope_changes > 0 or new_notes_by_others > 0
-        return ToolResult(output=json.dumps({
-            "stale": stale,
-            "scope_changes_by_others": scope_changes,
-            "new_notes_by_others": new_notes_by_others,
-            "suggestion": "Re-read affected files and check Task Center "
-                          "for new context before committing." if stale else None,
-        }))
+        stale = scope_changes > 0 or new_dep_notes > 0 or new_sibling_completions > 0
+        return ToolResult(
+            output=json.dumps(
+                {
+                    "stale": stale,
+                    "scope_changes_by_others": scope_changes,
+                    "new_dep_notes": new_dep_notes,
+                    "new_sibling_completions": new_sibling_completions,
+                    "suggestion": "Re-read affected files and check Task Center "
+                    "for new context before committing."
+                    if stale
+                    else None,
+                }
+            )
+        )
 
 
 # ---------------------------------------------------------------------------
