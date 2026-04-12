@@ -677,24 +677,8 @@ def _extract_final_text(messages: list[ConversationMessage]) -> str:
     return ""
 
 
-def _build_posthook_input(final_text: str, messages: list[ConversationMessage]) -> str:
-    """Return the best available serializer input for a partial subagent run."""
-    if final_text.strip():
-        return final_text.strip()
-
-    assistant_text: list[str] = []
-    for msg in messages:
-        if msg.role != "assistant":
-            continue
-        text = msg.text.strip()
-        if text:
-            assistant_text.append(text)
-
-    return "\n\n".join(assistant_text).strip()
-
-
 def _clear_current_task_cancellation() -> None:
-    """Clear pending cancellation so salvage logic can await the posthook."""
+    """Clear pending cancellation so salvage logic can await cleanup."""
     task = asyncio.current_task()
     if task is None:
         return
@@ -705,50 +689,6 @@ def _clear_current_task_cancellation() -> None:
     remaining = int(cancelling() or 0) if callable(cancelling) else 1
     for _ in range(max(1, remaining)):
         uncancel()
-
-
-async def _run_posthook_if_needed(
-    *,
-    posthook_cfg: Any | None,
-    posthook_def: Any | None,
-    submitted: Any | None,
-    final_text: str,
-    parent_cfg: Any,
-    sandbox_id: str | None,
-    base_metadata: ToolExecutionContext,
-) -> Any | None:
-    """Run the subagent's serializer posthook when the work phase did not submit."""
-    if submitted is not None or posthook_cfg is None:
-        return submitted
-
-    from engine.runtime.agent import spawn_agent
-    from hooks.agent_posthook import read_posthook_output, stamp_posthook_metadata_key
-
-    if posthook_def is None:
-        raise RuntimeError(
-            f"run_subagent: posthook agent {posthook_cfg.agent_name!r} is not registered"
-        )
-
-    posthook_agent = spawn_agent(
-        parent_cfg,
-        messages=[],
-        agent_def=posthook_def,
-        latest_user_prompt=final_text,
-        sandbox_id=sandbox_id,
-    )
-    posthook_meta = getattr(posthook_agent.query_context, "tool_metadata", None)
-    if posthook_meta is None or not hasattr(posthook_meta, "update"):
-        posthook_meta = base_metadata.metadata.copy()
-    else:
-        posthook_meta = posthook_meta.copy() if hasattr(posthook_meta, "copy") else posthook_meta
-        posthook_meta.update(base_metadata.metadata)
-    posthook_agent.query_context.tool_metadata = posthook_meta
-    posthook_agent.query_context.tool_metadata.agent_name = posthook_def.name
-    stamp_posthook_metadata_key(posthook_agent.query_context, posthook_cfg.metadata_key)
-
-    try:
-        async for _event in posthook_agent.run(final_text):
-            pass
     except Exception as exc:
         raise RuntimeError(
             f"run_subagent: posthook {posthook_def.name!r} failed: {exc}"
