@@ -36,6 +36,66 @@ _SYMBOL_FALLBACK_LIMIT = 100
 _REFERENCE_FALLBACK_LIMIT = 100
 
 
+def _normalize_workspace_path(path: str, *, workspace_root: str = "") -> str:
+    normalized = str(path or "").replace("\\", "/").strip()
+    root = str(workspace_root or "").replace("\\", "/").rstrip("/")
+    if root and normalized == root:
+        return ""
+    if root and normalized.startswith(root + "/"):
+        normalized = normalized[len(root) + 1 :]
+    return normalized.lstrip("./").strip("/")
+
+
+def _indexed_workspace_paths(
+    paths: list[str],
+    *,
+    workspace_root: str,
+    path_prefix: str,
+    max_depth: int,
+) -> list[str]:
+    normalized_prefix = _normalize_workspace_path(path_prefix, workspace_root=workspace_root)
+    depth_limit = max(0, int(max_depth))
+    rendered: list[str] = []
+    for path in paths:
+        rel_path = _normalize_workspace_path(path, workspace_root=workspace_root)
+        if not rel_path:
+            continue
+        relative_to_prefix = rel_path
+        if normalized_prefix:
+            if rel_path == normalized_prefix:
+                relative_to_prefix = ""
+            elif rel_path.startswith(normalized_prefix + "/"):
+                relative_to_prefix = rel_path[len(normalized_prefix) + 1 :]
+            else:
+                continue
+        depth = (
+            len([part for part in relative_to_prefix.split("/") if part])
+            if relative_to_prefix
+            else 0
+        )
+        if depth <= depth_limit:
+            rendered.append(rel_path)
+    return rendered
+
+
+def _reference_result(
+    references: list[dict[str, Any]],
+    *,
+    total_references: int | None = None,
+) -> ToolResult:
+    total = len(references) if total_references is None else int(total_references)
+    return ToolResult(
+        output=json.dumps(
+            {
+                "references": references[:50],
+                "total_references": total,
+                "truncated": total > 50,
+            },
+            indent=2,
+        )
+    )
+
+
 def _maybe_warm_service(context: ToolExecutionContext, svc: Any, *, label: str) -> None:
     workspace_root = str(getattr(svc, "workspace_root", "") or "")
     has_remote_sandbox = get_daytona_sandbox(context) is not None
@@ -437,6 +497,7 @@ async def ci_workspace_structure(
     si = svc.symbol_index
     if si is None:
         return ToolResult(output="Symbol index not available")
+    workspace_root = str(getattr(svc, "workspace_root", "") or "")
 
     # Get indexed file paths
     from code_intelligence.analysis.symbol_index import SymbolIndex
@@ -447,8 +508,12 @@ async def ci_workspace_structure(
     else:
         paths = []
 
-    if path:
-        paths = [p for p in paths if p.startswith(path)]
+    paths = _indexed_workspace_paths(
+        paths,
+        workspace_root=workspace_root,
+        path_prefix=path,
+        max_depth=max_depth,
+    )
 
     # Limit output
     paths = paths[:500]
@@ -620,7 +685,10 @@ async def ci_query_references(
         if remote_refs:
             fallback_refs.extend(remote_refs)
         if fallback_refs:
-            return ToolResult(output=json.dumps(fallback_refs[:50], indent=2))
+            return _reference_result(
+                fallback_refs,
+                total_references=len(fallback_refs),
+            )
 
         lsp = getattr(svc, "lsp_client", None)
         lsp_connected = bool(getattr(lsp, "connected", True)) if lsp is not None else True
@@ -652,11 +720,7 @@ async def ci_query_references(
             }
         )
 
-    output = json.dumps(refs, indent=2)
-    if len(results) > 50:
-        output += f"\n\n... {len(results)} total (showing 50)"
-
-    return ToolResult(output=output)
+    return _reference_result(refs, total_references=len(results))
 
 
 # -- Edit Hotspots ------------------------------------------------------------

@@ -15,6 +15,7 @@ from typing import Any, Protocol
 
 from tools.core.base import ToolExecutionContext
 
+
 # ---------------------------------------------------------------------------
 # Policy protocol
 # ---------------------------------------------------------------------------
@@ -37,12 +38,12 @@ class CodeActPolicy(Protocol):
 
 
 # ---------------------------------------------------------------------------
-# Null policy — no constraints (standalone / non-team mode)
+# Null policy — no constraints
 # ---------------------------------------------------------------------------
 
 
 class NullPolicy:
-    """No-op policy for standalone (non-team) execution."""
+    """No-op policy for policy-free CodeAct execution."""
 
     def preflight(self, code: str) -> str | None:
         return None
@@ -60,9 +61,6 @@ class NullPolicy:
 
 
 def resolve_policy(context: ToolExecutionContext) -> CodeActPolicy:
-    """CodeAct is decoupled from team coordination — always return NullPolicy.
-
-    Write constraints are enforced at the daytona_write_file / daytona_edit_file
-    layer via write_scope prefix matching. CodeAct execution is unconstrained.
-    """
+    """CodeAct is intentionally policy-free for all callers."""
+    del context
     return NullPolicy()

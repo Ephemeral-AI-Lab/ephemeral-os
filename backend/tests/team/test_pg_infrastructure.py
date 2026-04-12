@@ -1,13 +1,12 @@
 """Tests for Section 14 PostgreSQL infrastructure components.
 
 Tests ltree_utils, partitions validation, ORM models, NoteStore null fallback,
-and PGDispatcher structure. Integration tests with a real PG instance are
+and DispatcherStore structure. Integration tests with a real PG instance are
 separate — these run without a database.
 """
 
 from __future__ import annotations
 
-import asyncio
 import re
 
 import pytest
@@ -167,30 +166,30 @@ class TestNullNoteStore:
 
 
 # ---------------------------------------------------------------------------
-# PGDispatcher — structure check (no DB)
+# DispatcherStore — structure check (no DB)
 # ---------------------------------------------------------------------------
 
-from team.runtime.pg_dispatcher import PGDispatcher
+from team.runtime.dispatcher_store import DispatcherStore
 
 
-class TestPGDispatcherStructure:
+class TestDispatcherStoreStructure:
     def test_has_required_methods(self):
         """Verify the public API matches Section 14.6 spec."""
-        assert callable(getattr(PGDispatcher, 'pop_ready', None))
-        assert callable(getattr(PGDispatcher, 'mark_running', None))
-        assert callable(getattr(PGDispatcher, 'mark_done', None))
-        assert callable(getattr(PGDispatcher, 'insert_plan', None))
-        assert callable(getattr(PGDispatcher, 'mark_failed', None))
-        assert callable(getattr(PGDispatcher, 'mark_cancelled', None))
-        assert callable(getattr(PGDispatcher, 'get_task', None))
-        assert callable(getattr(PGDispatcher, 'all_terminal', None))
-        assert callable(getattr(PGDispatcher, 'cascade_cancel_recursive', None))
-        assert callable(getattr(PGDispatcher, 'recover_running', None))
+        assert callable(getattr(DispatcherStore, 'pop_ready', None))
+        assert callable(getattr(DispatcherStore, 'mark_running', None))
+        assert callable(getattr(DispatcherStore, 'mark_done', None))
+        assert callable(getattr(DispatcherStore, 'insert_plan', None))
+        assert callable(getattr(DispatcherStore, 'mark_failed', None))
+        assert callable(getattr(DispatcherStore, 'mark_cancelled', None))
+        assert callable(getattr(DispatcherStore, 'get_task', None))
+        assert callable(getattr(DispatcherStore, 'all_terminal', None))
+        assert callable(getattr(DispatcherStore, 'cascade_cancel_recursive', None))
+        assert callable(getattr(DispatcherStore, 'recover_running', None))
         # Full mutation ops
-        assert callable(getattr(PGDispatcher, 'fail_task', None))
-        assert callable(getattr(PGDispatcher, 'retry_task', None))
-        assert callable(getattr(PGDispatcher, 'cancel_all_pending', None))
-        assert callable(getattr(PGDispatcher, 'cancel_all_running', None))
-        assert callable(getattr(PGDispatcher, 'request_replan', None))
-        assert callable(getattr(PGDispatcher, 'get_adjacency', None))
-        assert callable(getattr(PGDispatcher, 'get_statuses', None))
+        assert callable(getattr(DispatcherStore, 'fail_task', None))
+        assert callable(getattr(DispatcherStore, 'retry_task', None))
+        assert callable(getattr(DispatcherStore, 'cancel_all_pending', None))
+        assert callable(getattr(DispatcherStore, 'cancel_all_running', None))
+        assert callable(getattr(DispatcherStore, 'request_replan', None))
+        assert callable(getattr(DispatcherStore, 'get_adjacency', None))
+        assert callable(getattr(DispatcherStore, 'get_statuses', None))

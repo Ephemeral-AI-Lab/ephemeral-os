@@ -161,6 +161,40 @@ def _build_glob_result(
         )
     )
 
+
+def _build_glob_command(*, root: str, pattern: str) -> str:
+    patterns = [pattern]
+    if pattern.startswith("**/"):
+        patterns.append(pattern[3:])
+    payload = json.dumps(list(dict.fromkeys(p for p in patterns if p)))
+    script = """
+import fnmatch
+import json
+import os
+import sys
+
+root = sys.argv[1]
+patterns = json.loads(sys.argv[2])
+matches = []
+
+for dirpath, _, filenames in os.walk(root):
+    for filename in filenames:
+        full_path = os.path.join(dirpath, filename)
+        rel_path = os.path.relpath(full_path, root).replace(os.sep, "/")
+        if any(
+            fnmatch.fnmatch(rel_path, pattern) or fnmatch.fnmatch(filename, pattern)
+            for pattern in patterns
+        ):
+            matches.append(full_path)
+            if len(matches) >= 500:
+                break
+    if len(matches) >= 500:
+        break
+
+print("\\n".join(matches))
+"""
+    return f"python3 -c {shlex.quote(script)} {shlex.quote(root)} {shlex.quote(payload)}"
+
 # ---------------------------------------------------------------------------
 # Shell execution
 # ---------------------------------------------------------------------------
@@ -594,13 +628,19 @@ async def daytona_glob(
     cwd = _get_cwd(context) or ""
     path = _resolve_path(path, context) if path != "." else (cwd or ".")
     try:
+        command = _build_glob_command(root=path, pattern=pattern)
         resp = await _run_with_recovery(
             context,
             lambda sandbox: sandbox.process.exec(
-                f"find {path} -name {pattern.replace('**/', '')} -type f",
+                command,
                 timeout=30,
             ),
         )
+        if getattr(resp, "exit_code", 0) not in (0, None):
+            return ToolResult(
+                output=getattr(resp, "result", "") or f"Glob search failed in {path}",
+                is_error=True,
+            )
         file_list = [f for f in (resp.result or "").splitlines() if f.strip()][:500]
         return _build_glob_result(cwd=cwd, pattern=pattern, path=path, files=file_list)
     except Exception as exc:

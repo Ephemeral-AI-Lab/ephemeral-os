@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import logging
+import os
+from pathlib import Path
 
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.daytona_toolkit.ci_integration import (
@@ -18,6 +20,44 @@ logger = logging.getLogger(__name__)
 _MAX_LINES = 500
 _MAX_CHARS = 32_000
 _FILE_READ_DISALLOWED_CALLERS = frozenset({"team_planner", "team_replanner"})
+
+
+def _resolve_ci_file_path(
+    path: str,
+    *,
+    context: ToolExecutionContext,
+    workspace_root: str = "",
+) -> str:
+    if path.startswith("/"):
+        return path
+
+    remote_path = resolve_daytona_path(path, context)
+    if remote_path.startswith("/"):
+        return remote_path
+
+    if workspace_root:
+        return os.path.normpath(f"{workspace_root}/{path}")
+
+    base_cwd = str(getattr(context, "cwd", "") or "").strip()
+    if base_cwd:
+        return os.path.normpath(f"{base_cwd}/{path}")
+    return path
+
+
+def _local_read_candidates(
+    path: str,
+    *,
+    context: ToolExecutionContext,
+    resolved_path: str,
+) -> list[Path]:
+    candidates = [Path(resolved_path)]
+    if not path.startswith("/"):
+        context_candidate = Path(context.cwd) / path
+        if context_candidate not in candidates:
+            candidates.append(context_candidate)
+    elif Path(path) not in candidates:
+        candidates.append(Path(path))
+    return candidates
 
 
 @tool(
@@ -55,36 +95,47 @@ async def ci_read_file(
         )
 
     svc = get_ci_service(context)
+    workspace_root = str(getattr(svc, "workspace_root", "") or "") if svc is not None else ""
+    resolved_path = _resolve_ci_file_path(
+        path,
+        context=context,
+        workspace_root=workspace_root,
+    )
 
     # Try reading from tree cache first
     content = None
     if svc:
-        entry = svc.tree_cache.get_tree(path)
+        entry = svc.tree_cache.get_tree(resolved_path)
         if entry:
             content = entry.content
+            path = resolved_path
 
     # Fall back to direct file read
     if content is None:
         sandbox = get_daytona_sandbox(context)
         if sandbox is not None:
-            remote_path = resolve_daytona_path(path, context)
             try:
-                raw = await sandbox.fs.download_file(remote_path)
+                raw = await sandbox.fs.download_file(resolved_path)
                 content = raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
-                path = remote_path
+                path = resolved_path
             except UnicodeDecodeError:
-                return ToolResult(output=f"Binary file: {remote_path}", is_error=True)
+                return ToolResult(output=f"Binary file: {resolved_path}", is_error=True)
             except Exception:
-                logger.debug("Remote ci_read_file failed for %s", remote_path, exc_info=True)
+                logger.debug("Remote ci_read_file failed for %s", resolved_path, exc_info=True)
 
     if content is None:
         try:
-            from pathlib import Path
-
-            p = Path(path)
-            if not p.is_file():
-                return ToolResult(output=f"File not found: {path}", is_error=True)
-            content = p.read_text(encoding="utf-8")
+            for candidate in _local_read_candidates(
+                path,
+                context=context,
+                resolved_path=resolved_path,
+            ):
+                if candidate.is_file():
+                    content = candidate.read_text(encoding="utf-8")
+                    path = str(candidate)
+                    break
+            if content is None:
+                return ToolResult(output=f"File not found: {resolved_path}", is_error=True)
         except UnicodeDecodeError:
             return ToolResult(output=f"Binary file: {path}", is_error=True)
         except Exception as exc:

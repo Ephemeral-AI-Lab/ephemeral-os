@@ -170,6 +170,41 @@ async def test_read_file_tree_cache_miss_falls_back_to_disk(tmp_path):
     assert "fallback content" in data["content"]
 
 
+async def test_read_file_uses_resolved_path_for_tree_cache_lookup():
+    entry = MagicMock()
+    entry.content = "cached"
+
+    svc = MagicMock()
+    svc.workspace_root = "/workspace"
+    svc.tree_cache.get_tree.return_value = entry
+
+    with patch("tools.ci_toolkit.file_tools.get_ci_service", return_value=svc):
+        ctx = _ctx({"ci_service": svc, "daytona_cwd": "/workspace"})
+        result = await ci_read_file.execute(
+            ci_read_file.input_model(path="pkg/core.py"),
+            ctx,
+        )
+
+    assert not result.is_error
+    svc.tree_cache.get_tree.assert_called_once_with("/workspace/pkg/core.py")
+
+
+async def test_read_file_relative_path_uses_context_cwd(tmp_path):
+    f = tmp_path / "relative.py"
+    f.write_text("print('ok')\n")
+
+    with patch("tools.ci_toolkit.file_tools.get_ci_service", return_value=None):
+        ctx = ToolExecutionContext(cwd=tmp_path, metadata={})
+        result = await ci_read_file.execute(
+            ci_read_file.input_model(path="relative.py"),
+            ctx,
+        )
+
+    assert not result.is_error
+    data = json.loads(result.output)
+    assert data["file_path"] == str(f)
+
+
 # ---------------------------------------------------------------------------
 # Line range / pagination
 # ---------------------------------------------------------------------------

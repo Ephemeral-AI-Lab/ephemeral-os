@@ -12,9 +12,11 @@ from sqlalchemy.orm import sessionmaker
 from db.base import Base
 # Importing the model registers the table on ``Base.metadata`` so
 # ``create_all`` picks it up below.
-from team.models import TeamDefinition, TeamRunStatus
+from team.models import TaskStatus, TeamDefinition, TeamRunStatus
 from team.persistence.model import TeamDefinitionRecord  # noqa: F401
+from team.persistence.run_store import NullTeamRunStore
 from team.persistence.store import TeamDefinitionStore
+from team.runtime.services import TeamRuntimeServices
 from team.runtime.team_run import TeamRun
 
 
@@ -137,6 +139,46 @@ def _noop_executor_factory(team_run: TeamRun) -> _NoopWorker:
     return _NoopWorker(team_run)
 
 
+class _FakeDispatcher:
+    def __init__(self) -> None:
+        from team.models import BudgetConfig, BudgetState
+
+        self.budgets = BudgetConfig()
+        self.budget_state = BudgetState()
+        self.graph = {}
+        self.task_center = None
+
+    async def add_work_item(self, task) -> None:
+        self.budget_state.tasks_used += 1
+        self.graph[task.id] = task
+
+    async def cancel_all_pending(self) -> None:
+        for task in self.graph.values():
+            task.status = TaskStatus.CANCELLED
+
+    async def cancel_running(self, reason: str) -> None:  # noqa: ARG002
+        return None
+
+    async def all_terminal(self) -> bool:
+        return True
+
+    async def compute_final_statuses(self) -> set[str]:
+        return {"cancelled"}
+
+
+def _fake_services() -> TeamRuntimeServices:
+    from team.context.project import ProjectContext
+
+    dispatcher = _FakeDispatcher()
+    return TeamRuntimeServices(
+        project_context=ProjectContext(goal="", user_request="", project_key="", repo_root=""),
+        dispatcher=dispatcher,  # type: ignore[arg-type]
+        event_store=NullTeamRunStore(),
+        note_store=None,
+        exploration_memory_store=None,
+    )
+
+
 def _stub_registry(known: set[str], monkeypatch: pytest.MonkeyPatch) -> None:
     from types import SimpleNamespace
     from agents import registry
@@ -171,7 +213,7 @@ async def test_start_with_team_definition_spawns_root_with_planner(
         entry_planner="my_planner",
         roster={"planner": ["my_planner"]},
     )
-    run = TeamRun(session_id="s", user_request="do stuff")
+    run = TeamRun(session_id="s", user_request="do stuff", services=_fake_services())
     try:
         await run.start_with_team_definition(
             team_def,
@@ -182,7 +224,7 @@ async def test_start_with_team_definition_spawns_root_with_planner(
         assert run.root_work_item_id is not None
         root = run.dispatcher.graph[run.root_work_item_id]
         assert root.agent_name == "my_planner"
-        assert root.payload == {"k": "v"}
+        assert root.task == "{'k': 'v'}"
     finally:
         await _cleanup_run(run)
 
@@ -199,7 +241,7 @@ async def test_start_with_team_definition_rejects_unknown_planner(
         entry_planner="ghost",
         roster={"planner": ["ghost"]},
     )
-    run = TeamRun(session_id="s", user_request="do stuff")
+    run = TeamRun(session_id="s", user_request="do stuff", services=_fake_services())
     with pytest.raises(ValueError, match="ghost"):
         await run.start_with_team_definition(
             team_def,
@@ -223,7 +265,7 @@ async def test_start_with_team_definition_error_message_names_team_and_agent(
         entry_planner="missing_planner",
         roster={"planner": ["missing_planner"]},
     )
-    run = TeamRun(session_id="s", user_request="do stuff")
+    run = TeamRun(session_id="s", user_request="do stuff", services=_fake_services())
     with pytest.raises(ValueError) as exc_info:
         await run.start_with_team_definition(
             team_def,

@@ -408,6 +408,7 @@ class TeamRun:
             run.budget_state.tasks_used = len(graph)
 
         services.dispatcher._ready_order = restore_ready_queue(graph=graph)
+        services.dispatcher._resume_snapshot = list(graph.values())
 
         run.root_work_item_id = root_id
         if final_status:

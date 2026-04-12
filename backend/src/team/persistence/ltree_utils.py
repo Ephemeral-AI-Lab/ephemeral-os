@@ -8,7 +8,6 @@ from __future__ import annotations
 import re
 
 _LTREE_UNSAFE = re.compile(r'[^a-zA-Z0-9_]')
-_LTREE_ESCAPE = re.compile(r'X([0-9a-fA-F]{2})')
 
 
 def _escape_char(ch: str) -> str:
@@ -47,15 +46,3 @@ def path_to_ltree(path: str) -> str:
         if label:
             labels.append(label)
     return '.'.join(labels)
-
-
-def ltree_to_path(ltree_path: str) -> str:
-    """Best-effort decode of an ``ltree`` label path back to a repo path."""
-    if not ltree_path:
-        return ""
-
-    def _decode_label(label: str) -> str:
-        label = label.replace('H', '-').replace('D', '.')
-        return _LTREE_ESCAPE.sub(lambda m: chr(int(m.group(1), 16)), label)
-
-    return '/'.join(_decode_label(part) for part in ltree_path.split('.') if part)

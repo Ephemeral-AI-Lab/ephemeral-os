@@ -10,7 +10,9 @@ from team.context.project import ProjectContext
 from team.memory.model import TeamMemoryRecordModel  # noqa: F401
 from team.memory.runtime import persist_memory_record
 from team.memory.store import TeamMemoryRecord, TeamMemoryStore
-from team.models import Task, TaskStatus
+from team.models import BudgetConfig, BudgetState, Task, TaskStatus
+from team.persistence.run_store import NullTeamRunStore
+from team.runtime.services import TeamRuntimeServices
 from team.runtime.team_run import TeamRun
 
 
@@ -21,6 +23,23 @@ def _memory_store() -> TeamMemoryStore:
     store = TeamMemoryStore()
     store.initialize(factory)
     return store
+
+
+class _FakeDispatcher:
+    def __init__(self) -> None:
+        self.budgets = BudgetConfig()
+        self.budget_state = BudgetState()
+        self.task_center = None
+
+
+def _fake_services() -> TeamRuntimeServices:
+    return TeamRuntimeServices(
+        project_context=ProjectContext(goal="", user_request="", project_key="", repo_root=""),
+        dispatcher=_FakeDispatcher(),  # type: ignore[arg-type]
+        event_store=NullTeamRunStore(),
+        note_store=None,
+        exploration_memory_store=None,
+    )
 
 
 def test_team_memory_store_roundtrip_and_query(monkeypatch) -> None:
@@ -50,7 +69,7 @@ def test_team_run_persists_validator_outcome(monkeypatch) -> None:
     store = _memory_store()
     monkeypatch.setattr("team.memory.runtime.get_default_store", lambda: store)
 
-    run = TeamRun(session_id="S1", user_request="hello", repo_root="/repo")
+    run = TeamRun(session_id="S1", user_request="hello", repo_root="/repo", services=_fake_services())
     run.project_context = ProjectContext(
         goal="g",
         user_request="u",
@@ -85,7 +104,7 @@ def test_team_run_persists_validator_outcome_with_failure_summary(monkeypatch) -
     store = _memory_store()
     monkeypatch.setattr("team.memory.runtime.get_default_store", lambda: store)
 
-    run = TeamRun(session_id="S1", user_request="hello", repo_root="/repo")
+    run = TeamRun(session_id="S1", user_request="hello", repo_root="/repo", services=_fake_services())
     run.project_context = ProjectContext(
         goal="g",
         user_request="u",
@@ -120,7 +139,7 @@ def test_team_run_persists_conflict_event(monkeypatch) -> None:
     store = _memory_store()
     monkeypatch.setattr("team.memory.runtime.get_default_store", lambda: store)
 
-    run = TeamRun(session_id="S1", user_request="hello", repo_root="/repo")
+    run = TeamRun(session_id="S1", user_request="hello", repo_root="/repo", services=_fake_services())
     run.project_context = ProjectContext(
         goal="g",
         user_request="u",

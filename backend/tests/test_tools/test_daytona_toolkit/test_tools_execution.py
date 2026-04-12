@@ -431,5 +431,18 @@ async def test_glob_strips_double_star_prefix():
     ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/ws"})
     await daytona_glob.execute(daytona_glob.input_model(pattern="**/*.py"), ctx)
     call_cmd = sb.process.exec.call_args[0][0]
-    assert "**/" not in call_cmd
-    assert "*.py" in call_cmd
+    assert "**/*.py" in call_cmd
+    assert "python3 -c" in call_cmd
+
+
+async def test_glob_quotes_root_path_and_pattern_payload():
+    sb = _sb(exec_result=MagicMock(result="", exit_code=0))
+    ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/ws with space"})
+    await daytona_glob.execute(
+        daytona_glob.input_model(pattern="*.py; echo boom", path="."),
+        ctx,
+    )
+    call_cmd = sb.process.exec.call_args[0][0]
+    assert "/ws with space" in call_cmd
+    assert "*.py; echo boom" in call_cmd
+    assert "find /ws with space" not in call_cmd

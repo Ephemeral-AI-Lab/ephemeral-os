@@ -157,6 +157,57 @@ async def test_workspace_structure_filters_by_path():
     assert "tests/c.py" not in result.output
 
 
+async def test_workspace_structure_normalizes_absolute_index_paths():
+    import threading
+
+    class FakeSymbolIndex:
+        def __init__(self):
+            self._lock = threading.Lock()
+            self._symbols = {
+                "/repo/src/foo/a.py": [],
+                "/repo/src/bar/b.py": [],
+            }
+
+    svc = MagicMock()
+    svc.workspace_root = "/repo"
+    svc.symbol_index = FakeSymbolIndex()
+
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        with patch("code_intelligence.analysis.symbol_index.SymbolIndex", FakeSymbolIndex):
+            result = await ci_workspace_structure.execute(
+                ci_workspace_structure.input_model(path="src/foo"),
+                _ctx_with_svc(svc),
+            )
+
+    assert result.output.strip() == "src/foo/a.py"
+
+
+async def test_workspace_structure_honors_max_depth_for_warm_index():
+    import threading
+
+    class FakeSymbolIndex:
+        def __init__(self):
+            self._lock = threading.Lock()
+            self._symbols = {
+                "/repo/src/top.py": [],
+                "/repo/src/pkg/nested.py": [],
+            }
+
+    svc = MagicMock()
+    svc.workspace_root = "/repo"
+    svc.symbol_index = FakeSymbolIndex()
+
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        with patch("code_intelligence.analysis.symbol_index.SymbolIndex", FakeSymbolIndex):
+            result = await ci_workspace_structure.execute(
+                ci_workspace_structure.input_model(path="src", max_depth=1),
+                _ctx_with_svc(svc),
+            )
+
+    assert "src/top.py" in result.output
+    assert "src/pkg/nested.py" not in result.output
+
+
 async def test_workspace_structure_non_symbol_index_returns_empty():
     """When symbol_index is not a SymbolIndex instance, returns 'No files indexed'."""
     import threading
@@ -605,7 +656,10 @@ async def test_query_references_returns_results():
         )
 
     assert not result.is_error
-    refs = json.loads(result.output)
+    data = json.loads(result.output)
+    assert data["total_references"] == 1
+    assert data["truncated"] is False
+    refs = data["references"]
     assert len(refs) == 1
     assert refs[0]["file"] == "src/user.py"
     assert refs[0]["line"] == 20
@@ -632,11 +686,10 @@ async def test_query_references_truncates_at_50_and_shows_total():
             _ctx_with_svc(svc),
         )
 
-    # Output has two parts: JSON array + trailing count note
-    parts = result.output.split("\n\n")
-    shown = json.loads(parts[0])
-    assert len(shown) == 50
-    assert "60 total" in parts[1]
+    data = json.loads(result.output)
+    assert data["total_references"] == 60
+    assert data["truncated"] is True
+    assert len(data["references"]) == 50
 
 
 # ---------------------------------------------------------------------------

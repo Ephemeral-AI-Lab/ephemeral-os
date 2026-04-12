@@ -14,11 +14,15 @@ class ExplorationMemory:
 
     def __init__(self) -> None:
         self._store: dict[str, list[dict[str, Any]]] = {}
-        self._pg: Any = None
+        self._persistent_store: Any = None
+
+    def attach_store(self, store: Any) -> None:
+        """Attach a durable store for persistent cache entries."""
+        self._persistent_store = store
 
     def attach_pg(self, pg_store: Any) -> None:
-        """Attach a PG-backed store for durable persistence."""
-        self._pg = pg_store
+        """Backward-compatible alias for the old PG-specific name."""
+        self.attach_store(pg_store)
 
     def check(self, scope_paths: list[str], workspace_root: str = "") -> list[dict[str, Any]] | None:
         """Return cached notes from L1 if files have not changed."""
@@ -31,17 +35,17 @@ class ExplorationMemory:
         scope_paths: list[str],
         workspace_root: str = "",
     ) -> list[dict[str, Any]] | None:
-        """Check L1 cache, then fall through to PG on miss."""
+        """Check L1 cache, then fall through to the durable store on miss."""
         content_hash = self._hash_scope(scope_paths, workspace_root)
         key = self._cache_key(scope_paths, content_hash)
         cached = self._store.get(key)
         if cached is not None:
             return cached
-        if self._pg is not None and getattr(self._pg, "initialized", False):
-            pg_notes = await self._pg.get(key)
-            if pg_notes is not None:
-                self._store[key] = pg_notes
-                return pg_notes
+        if self._persistent_store is not None and getattr(self._persistent_store, "initialized", False):
+            stored_notes = await self._persistent_store.get(key)
+            if stored_notes is not None:
+                self._store[key] = stored_notes
+                return stored_notes
         return None
 
     def save(self, scope_paths: list[str], notes: list[dict[str, Any]], workspace_root: str = "") -> None:
@@ -56,12 +60,12 @@ class ExplorationMemory:
         notes: list[dict[str, Any]],
         workspace_root: str = "",
     ) -> None:
-        """Cache notes in L1 and write through to PG."""
+        """Cache notes in L1 and write through to the durable store."""
         content_hash = self._hash_scope(scope_paths, workspace_root)
         key = self._cache_key(scope_paths, content_hash)
         self._store[key] = notes
-        if self._pg is not None and getattr(self._pg, "initialized", False):
-            await self._pg.put(
+        if self._persistent_store is not None and getattr(self._persistent_store, "initialized", False):
+            await self._persistent_store.put(
                 cache_key=key,
                 scope_paths=sorted(scope_paths),
                 content_hash=content_hash,

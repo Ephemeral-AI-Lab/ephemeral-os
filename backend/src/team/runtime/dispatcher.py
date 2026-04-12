@@ -80,6 +80,7 @@ class Dispatcher:
         self.store = store
         self.graph: dict[str, Task] = {}
         self._ready_order: list[str] = []
+        self._resume_snapshot: list[Task] | None = None
         self.lock = asyncio.Lock()
         self._checkpoints: deque[TeamRunCheckpoint] = deque(maxlen=max_checkpoints)
         self._checkpoint_seq = 0
@@ -529,6 +530,9 @@ class Dispatcher:
         return cp
 
     async def prepare_for_resume(self) -> None:
+        if self._resume_snapshot is not None:
+            await self.store.replace_run_tasks(self.team_run_id, self._resume_snapshot)
+            self._resume_snapshot = None
         recovered = await self.store.recover_running(self.team_run_id)
         if recovered:
             _logger.info("Recovered %d running tasks to ready", len(recovered))
