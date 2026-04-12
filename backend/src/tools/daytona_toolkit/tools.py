@@ -10,22 +10,36 @@ import shlex
 import uuid
 from typing import Any
 
-from config.defaults import DEFAULT_SANDBOX_CI_ROOT, DEFAULT_TEAM_SAFE_AGENT_NAMES
-
-from tools.core.base import ToolExecutionContext, ToolResult
-
-# ---------------------------------------------------------------------------
-# Coordination helpers — centralise agent-role and mode checks so that
-# tool implementations never compare against literal agent names.
-# ---------------------------------------------------------------------------
-
-def is_coordinated_team_agent(context: ToolExecutionContext) -> bool:
-    """True when the current agent is in the team-safe set AND team mode is active."""
-    agent_name = str(context.metadata.get("agent_name") or "").strip()
-    if agent_name not in DEFAULT_TEAM_SAFE_AGENT_NAMES:
-        return False
-    return bool(context.metadata.get("team_mode_enabled"))
 from tools.core.decorator import tool
+from tools.core.base import ToolExecutionContext, ToolResult
+from tools.daytona_toolkit._daytona_utils import (
+    _truncate,
+    _truncate_tail,
+    _format_shell_stdout,
+    _wrap_bash_command,
+    _extract_exit_code,
+    _sandbox_context_error,
+    _is_recoverable_sandbox_error,
+    _attach_sandbox_to_context,
+    _require_sandbox,
+    _recover_sandbox,
+    _path_error,
+    _get_cwd,
+    _resolve_path,
+    _normalize_repo_relative_path,
+    _normalize_string_list,
+    _extract_verify_paths,
+    _verification_surface_enforcement_mode,
+    _normalize_write_scope,
+    _path_under_write_scope,
+    _team_repo_write_error,
+    _team_repo_write_warning,
+    _upload_file_compat,
+    _DEFAULT_TIMEOUT,
+    _OUTPUT_MAX_CHARS,
+    _EXIT_MARKER,
+    is_coordinated_team_agent,
+)
 from tools.daytona_toolkit.ci_integration import (
     abort_ci_write,
     command_may_mutate_workspace,
@@ -40,355 +54,116 @@ from tools.daytona_toolkit.ci_integration import (
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Shared helpers
-# ---------------------------------------------------------------------------
 
-_DEFAULT_TIMEOUT = 120
-_BACKGROUND_DEFAULT_TIMEOUT = 1800
-_OUTPUT_MAX_CHARS = 8000
-_EXIT_MARKER = "__CODEX_EXIT_CODE__="
-_SANDBOX_RECOVERY_KEY = "daytona_recovery_attempts"
-_SANDBOX_RECOVERY_PATTERNS = (
-    "no such container",
-    "container not found",
-    "sandbox container not found",
-)
-_VERIFY_PATH_RE = re.compile(r"(?<![A-Za-z0-9_./-])([A-Za-z0-9_./-]+\.py)(?![A-Za-z0-9_./-])")
-
-
-def _truncate(text: str, max_chars: int = _OUTPUT_MAX_CHARS) -> str:
-    if len(text) <= max_chars:
-        return text
-    half = max_chars // 2
-    return text[:half] + f"\n\n... truncated ({len(text)} chars total) ...\n\n" + text[-half:]
-
-
-def _truncate_tail(text: str, max_chars: int = _OUTPUT_MAX_CHARS) -> str:
-    if len(text) <= max_chars:
-        return text
-    return f"... truncated ({len(text)} chars total, showing last {max_chars}) ...\n\n{text[-max_chars:]}"
-
-
-def _format_shell_stdout(text: str, *, exit_code: int, max_chars: int = _OUTPUT_MAX_CHARS) -> str:
-    """Format shell stdout for model consumption.
-
-    Successful commands keep head+tail context, but failing commands keep the
-    tail because test runners typically print the actionable failure details at
-    the end of stdout.
-    """
-    if exit_code != 0:
-        return _truncate_tail(text, max_chars=max_chars)
-    return _truncate(text, max_chars=max_chars)
-
-
-def _wrap_bash_command(command: str) -> str:
-    """Wrap *command* so we can recover exit code even if the SDK omits it."""
-    script = (
-        f"{command}\n"
-        "__codex_exit_code=$?\n"
-        f'printf "\\n{_EXIT_MARKER}%s\\n" "$__codex_exit_code"\n'
-        'exit "$__codex_exit_code"'
-    )
-    return f"env -u LC_ALL bash -o pipefail -lc {shlex.quote(script)}"
-
-
-def _extract_exit_code(
-    output: str,
-    *,
-    fallback_exit_code: int | None,
-) -> tuple[str, int]:
-    """Strip the synthetic exit marker and return the resolved exit code."""
-    match = re.search(rf"\n?{re.escape(_EXIT_MARKER)}(-?\d+)\s*$", output, flags=re.S)
-    if match:
-        resolved = int(match.group(1))
-        cleaned = output[: match.start()]
-        if cleaned.endswith("\n"):
-            cleaned = cleaned[:-1]
-        return cleaned, resolved
-    return output, 0 if fallback_exit_code is None else int(fallback_exit_code)
-
-
-def _sandbox_context_error(detail: str | None = None) -> str:
-    base = (
-        "No Daytona sandbox in context. "
-        "Ensure DaytonaToolkit was initialized with a valid sandbox_id."
-    )
-    if detail:
-        return f"{base} Last recovery error: {detail}"
-    return base
-
-
-def _is_recoverable_sandbox_error(exc: Exception) -> bool:
-    text = str(exc).lower()
-    return any(pattern in text for pattern in _SANDBOX_RECOVERY_PATTERNS)
-
-
-async def _attach_sandbox_to_context(context: ToolExecutionContext) -> Any:
-    """Lazily attach sandbox + CI when prepare_context did not complete."""
-    sandbox_id = str(context.metadata.get("sandbox_id") or "").strip()
-    if not sandbox_id:
-        raise RuntimeError(_sandbox_context_error())
+async def _run_with_recovery(
+    context: ToolExecutionContext,
+    operation: Any,
+) -> Any:
+    """Run a sandbox operation once, then retry after sandbox recovery."""
+    sandbox = await _require_sandbox(context)
     try:
-        from sandbox.async_client import get_async_sandbox
-        from sandbox.workspace import discover_workspace_async, inject_code_intelligence
-
-        sandbox = await get_async_sandbox(sandbox_id)
-        context.metadata["daytona_sandbox"] = sandbox
-        cwd = context.metadata.get("daytona_cwd")
-        if not cwd:
-            project_dir = getattr(sandbox, "project_dir", None)
-            cwd = project_dir or await discover_workspace_async(sandbox)
-            if cwd:
-                context.metadata["daytona_cwd"] = cwd
-        if "ci_service" not in context.metadata and not context.metadata.get(
-            "skip_code_intelligence"
-        ):
-            ci_root = context.metadata.get("ci_workspace_root") or cwd or DEFAULT_SANDBOX_CI_ROOT
-            inject_code_intelligence(context, sandbox_id, sandbox, ci_root)
-        return sandbox
+        return await operation(sandbox)
     except Exception as exc:
-        raise RuntimeError(_sandbox_context_error(str(exc))) from exc
+        return await operation(await _recover_sandbox(context, exc))
 
 
-async def _require_sandbox(context: ToolExecutionContext) -> Any:
-    sandbox = context.metadata.get("daytona_sandbox")
-    if sandbox is not None:
-        return sandbox
-    return await _attach_sandbox_to_context(context)
-
-
-async def _recover_sandbox(context: ToolExecutionContext, exc: Exception) -> Any:
-    """Restart/rebind the sandbox once after container-loss style failures."""
-    if not _is_recoverable_sandbox_error(exc):
-        raise exc
-    attempts = int(context.metadata.get(_SANDBOX_RECOVERY_KEY) or 0)
-    if attempts >= 1:
-        raise exc
-    sandbox_id = str(context.metadata.get("sandbox_id") or "").strip()
-    if not sandbox_id:
-        raise exc
-    context.metadata[_SANDBOX_RECOVERY_KEY] = attempts + 1
-    logger.warning(
-        "Recovering Daytona sandbox %s after tool failure: %s",
-        sandbox_id,
-        exc,
-    )
-    try:
-        from sandbox.service import SandboxService
-
-        await asyncio.to_thread(SandboxService().ensure_sandbox_running, sandbox_id)
-    finally:
-        context.metadata["daytona_sandbox"] = None
-        context.metadata["ci_service"] = None
-    recovered = await _attach_sandbox_to_context(context)
-    logger.warning("Recovered Daytona sandbox %s and retrying tool once", sandbox_id)
-    return recovered
-
-
-def _path_error(exc: Exception, path: str) -> str | None:
-    """Return a human-readable message if *exc* is a path-not-found error, else None."""
-    msg = str(exc)
-    if isinstance(exc, FileNotFoundError) or "No such file or directory" in msg:
-        return f"Path does not exist: {path}"
-    # Daytona SDK wraps errors and may lose the inner message
-    _sdk_prefixes = ("Failed to list files", "Failed to upload files", "Failed to download")
-    if any(msg.startswith(p) for p in _sdk_prefixes) and msg.rstrip().endswith(":"):
-        return f"Path does not exist: {path}"
-    return None
-
-
-def _get_cwd(context: ToolExecutionContext) -> str | None:
-    """Get working directory, preferring sandbox project dir.
-
-    Returns None if no sandbox-specific cwd is set, letting the sandbox
-    use its default directory (typically /home/daytona).
-    """
-    return context.metadata.get("daytona_cwd")
-
-
-def _resolve_path(path: str, context: ToolExecutionContext) -> str:
-    """Resolve a relative path against the sandbox cwd.
-
-    Absolute paths are returned as-is. Relative paths are joined
-    with the sandbox cwd (detected via pwd on first connect).
-    """
-    if path.startswith("/"):
-        return path
-    cwd = _get_cwd(context)
-    if cwd:
-        return f"{cwd}/{path}"
-    return path
-
-
-def _normalize_repo_relative_path(path: Any, repo_root: str) -> str | None:
-    if not isinstance(path, str):
-        return None
-    cleaned = path.strip().replace("\\", "/")
-    if not cleaned:
-        return None
-    while cleaned.startswith("./"):
-        cleaned = cleaned[2:]
-    cleaned = cleaned.rstrip("/")
-    if not cleaned:
-        return None
-    if not cleaned.startswith("/"):
-        return cleaned
-    root = repo_root.rstrip("/")
-    if root and cleaned.startswith(root + "/"):
-        rel = cleaned[len(root) + 1 :].strip().rstrip("/")
-        return rel or None
-    return None
-
-
-def _normalize_string_list(value: Any, repo_root: str) -> list[str]:
-    if isinstance(value, str):
-        values = [value]
-    elif isinstance(value, list):
-        values = [item for item in value if isinstance(item, str)]
-    else:
-        return []
-    out: list[str] = []
-    for item in values:
-        normalized = _normalize_repo_relative_path(item, repo_root)
-        if normalized:
-            out.append(normalized)
-    return out
-
-
-def _extract_verify_paths(value: Any, repo_root: str) -> list[str]:
-    if isinstance(value, str):
-        candidates = [value]
-    elif isinstance(value, list):
-        candidates = [item for item in value if isinstance(item, str)]
-    else:
-        return []
-    out: list[str] = []
-    for item in candidates:
-        stripped = item.strip()
-        if not stripped:
-            continue
-        if stripped.endswith(".py") or "::" in stripped:
-            normalized = _normalize_repo_relative_path(stripped.split("::", 1)[0], repo_root)
-            if normalized:
-                out.append(normalized)
-        for match in _VERIFY_PATH_RE.findall(stripped):
-            normalized = _normalize_repo_relative_path(match.split("::", 1)[0], repo_root)
-            if normalized:
-                out.append(normalized)
-    return out
-
-
-def _verification_surface_enforcement_mode(context: ToolExecutionContext) -> str:
-    raw = (
-        str(
-            context.metadata.get("verification_surface_write_enforcement")
-            or context.metadata.get("verification_surface_policy")
-            or ""
+def _build_read_file_result(
+    *,
+    context: ToolExecutionContext,
+    file_path: str,
+    content: str,
+    start_line: int,
+    end_line: int | None,
+) -> ToolResult:
+    lines = content.splitlines()
+    total = len(lines)
+    start = max(1, start_line)
+    end = min(total, end_line) if end_line else total
+    selected = [f"{i:4d}: {lines[i - 1]}" for i in range(start, end + 1)]
+    return ToolResult(
+        output=json.dumps(
+            {
+                "cwd": _get_cwd(context) or "",
+                "file_path": file_path,
+                "total_lines": total,
+                "start_line": start,
+                "end_line": end,
+                "content": _truncate("\n".join(selected)),
+            }
         )
-        .strip()
-        .lower()
     )
-    if raw in {"warn", "warning", "soft", "advisory"}:
-        return "warn"
-    return "error"
 
 
-# ---------------------------------------------------------------------------
-# Write-scope helpers — prefix-based scope matching.
-# ---------------------------------------------------------------------------
+def _build_match_result(match: Any) -> dict[str, Any]:
+    return {
+        "file": getattr(match, "file", None) or "",
+        "line": getattr(match, "line", None),
+        "content": (getattr(match, "content", None) or "").rstrip(),
+    }
 
 
-def _normalize_write_scope(raw: Any, repo_root: str) -> list[str]:
-    """Normalize a ``write_scope`` list to repo-relative prefixes."""
-    if not isinstance(raw, list):
-        return []
-    out: list[str] = []
-    for item in raw:
-        if not isinstance(item, str):
-            continue
-        normed = _normalize_repo_relative_path(item.rstrip("/"), repo_root)
-        if normed:
-            out.append(normed)
-    return out
-
-
-def _path_under_write_scope(rel_path: str, write_scope: list[str]) -> bool:
-    """Return True if *rel_path* falls under any prefix in *write_scope*."""
-    for prefix in write_scope:
-        if rel_path == prefix or rel_path.startswith(prefix.rstrip("/") + "/"):
-            return True
-    return False
-
-
-def _team_repo_write_error(
+def _build_write_file_result(
+    *,
     context: ToolExecutionContext,
     file_path: str,
-    *,
-    tool_name: str,
-) -> str | None:
-    """Block writes outside write_scope for coordinated team agents."""
-    if not is_coordinated_team_agent(context):
-        return None
-    repo_root = str(_get_cwd(context) or "")
-    rel_path = _normalize_repo_relative_path(file_path, repo_root)
-    if not rel_path:
-        return None
-    write_scope = _normalize_write_scope(context.metadata.get("write_scope"), repo_root)
-    if not write_scope:
-        return None  # no write_scope set — unconstrained
-    if _path_under_write_scope(rel_path, write_scope):
-        return None  # allowed
-    message = (
-        f"{tool_name}: write to {rel_path} is outside write_scope {write_scope}."
-    )
-    if _verification_surface_enforcement_mode(context) == "warn":
-        logger.warning(message)
-        return None
-    return message
-
-
-def _team_repo_write_warning(
-    context: ToolExecutionContext,
-    file_path: str,
-    *,
-    tool_name: str,
-) -> str | None:
-    """Advisory warning for writes outside write_scope."""
-    if not is_coordinated_team_agent(context):
-        return None
-    if _verification_surface_enforcement_mode(context) != "warn":
-        return None
-    repo_root = str(_get_cwd(context) or "")
-    rel_path = _normalize_repo_relative_path(file_path, repo_root)
-    if not rel_path:
-        return None
-    write_scope = _normalize_write_scope(context.metadata.get("write_scope"), repo_root)
-    if not write_scope:
-        return None  # no write_scope set — unconstrained
-    if _path_under_write_scope(rel_path, write_scope):
-        return None
-    return (
-        f"{tool_name}: write to {rel_path} is outside write_scope "
-        f"{write_scope} (advisory mode)."
+    bytes_written: int,
+    warning: str | None,
+) -> ToolResult:
+    return ToolResult(
+        output=json.dumps(
+            {
+                "cwd": _get_cwd(context) or "",
+                "file_path": file_path,
+                "bytes_written": bytes_written,
+                "ci_sync": True,
+                "warnings": [warning] if warning else [],
+            }
+        )
     )
 
 
-async def _upload_file_compat(sandbox: Any, content: bytes, file_path: str) -> None:
-    """Upload using the SDK signature, with fallback for stale path-first mocks."""
-    try:
-        await sandbox.fs.upload_file(content, file_path)
-    except (AttributeError, TypeError) as exc:
-        if "decode" not in str(exc) and "bytes-like object" not in str(exc):
-            raise
-        await sandbox.fs.upload_file(file_path, content)
+def _build_find_result(
+    *,
+    cwd: str,
+    pattern: str,
+    path: str,
+    matches: list[Any],
+) -> ToolResult:
+    return ToolResult(
+        output=json.dumps(
+            {
+                "cwd": cwd,
+                "pattern": pattern,
+                "path": path,
+                "matches": [_build_match_result(match) for match in matches[:500]],
+                "total_matches": len(matches),
+            }
+        )
+    )
 
+
+def _build_glob_result(
+    *,
+    cwd: str,
+    pattern: str,
+    path: str,
+    files: list[str],
+) -> ToolResult:
+    return ToolResult(
+        output=json.dumps(
+            {
+                "cwd": cwd,
+                "pattern": pattern,
+                "path": path,
+                "files": files,
+                "total_files": len(files),
+            }
+        )
+    )
 
 # ---------------------------------------------------------------------------
 # Shell execution
 # ---------------------------------------------------------------------------
-
-
 
 
 async def _exec_streaming(
@@ -565,62 +340,25 @@ async def daytona_read_file(
         end_line (int): Last line returned (1-based)
         content (str): File content with line numbers
     """
-    sandbox = await _require_sandbox(context)
     file_path = _resolve_path(file_path, context)
-
-    async def _download(active_sandbox: Any) -> Any:
-        return await active_sandbox.fs.download_file(file_path)
-
     try:
-        raw = await _download(sandbox)
-        content = raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
-        lines = content.splitlines()
-        total = len(lines)
-
-        start = max(1, start_line)
-        end = min(total, end_line) if end_line else total
-
-        selected = []
-        for i in range(start, end + 1):
-            selected.append(f"{i:4d}: {lines[i - 1]}")
-
-        output = json.dumps(
-            {
-                "cwd": _get_cwd(context) or "",
-                "file_path": file_path,
-                "total_lines": total,
-                "start_line": start,
-                "end_line": end,
-                "content": _truncate("\n".join(selected)),
-            }
+        raw = await _run_with_recovery(
+            context,
+            lambda sandbox: sandbox.fs.download_file(file_path),
         )
-        return ToolResult(output=output)
+        content = raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
+        return _build_read_file_result(
+            context=context,
+            file_path=file_path,
+            content=content,
+            start_line=start_line,
+            end_line=end_line,
+        )
     except Exception as exc:
-        try:
-            sandbox = await _recover_sandbox(context, exc)
-            raw = await _download(sandbox)
-            content = raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
-            lines = content.splitlines()
-            total = len(lines)
-            start = max(1, start_line)
-            end = min(total, end_line) if end_line else total
-            selected = [f"{i:4d}: {lines[i - 1]}" for i in range(start, end + 1)]
-            output = json.dumps(
-                {
-                    "cwd": _get_cwd(context) or "",
-                    "file_path": file_path,
-                    "total_lines": total,
-                    "start_line": start,
-                    "end_line": end,
-                    "content": _truncate("\n".join(selected)),
-                }
-            )
-            return ToolResult(output=output)
-        except Exception as recovery_exc:
-            return ToolResult(
-                output=_path_error(recovery_exc, file_path) or str(recovery_exc),
-                is_error=True,
-            )
+        return ToolResult(
+            output=_path_error(exc, file_path) or str(exc),
+            is_error=True,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -648,13 +386,13 @@ async def daytona_write_file(
         file_path (str): Path that was written
         bytes_written (int): Number of bytes written
     """
-    sandbox = await _require_sandbox(context)
     file_path = _resolve_path(file_path, context)
     contract_error = _team_repo_write_error(context, file_path, tool_name="daytona_write_file")
     if contract_error is not None:
         return ToolResult(output=contract_error, is_error=True)
     contract_warning = _team_repo_write_warning(context, file_path, tool_name="daytona_write_file")
     prepared = None
+    sandbox = await _require_sandbox(context)
 
     async def _ensure_parent(active_sandbox: Any) -> None:
         parent = "/".join(file_path.split("/")[:-1])
@@ -698,16 +436,12 @@ async def daytona_write_file(
                 edit_type="write",
                 description="daytona_write_file",
             )
-        output = json.dumps(
-            {
-                "cwd": _get_cwd(context) or "",
-                "file_path": file_path,
-                "bytes_written": len(content_bytes),
-                "ci_sync": True,
-                "warnings": [contract_warning] if contract_warning else [],
-            }
+        return _build_write_file_result(
+            context=context,
+            file_path=file_path,
+            bytes_written=len(content_bytes),
+            warning=contract_warning,
         )
-        return ToolResult(output=output)
     except Exception as exc:
         parent = "/".join(file_path.split("/")[:-1])
         try:
@@ -722,16 +456,12 @@ async def daytona_write_file(
                 edit_type="write",
                 description="daytona_write_file",
             )
-            output = json.dumps(
-                {
-                    "cwd": _get_cwd(context) or "",
-                    "file_path": file_path,
-                    "bytes_written": len(content_bytes),
-                    "ci_sync": True,
-                    "warnings": [contract_warning] if contract_warning else [],
-                }
+            return _build_write_file_result(
+                context=context,
+                file_path=file_path,
+                bytes_written=len(content_bytes),
+                warning=contract_warning,
             )
-            return ToolResult(output=output)
         except Exception as recovery_exc:
             return ToolResult(
                 output=_path_error(recovery_exc, parent) or str(recovery_exc),
@@ -765,49 +495,29 @@ async def daytona_list_files(
         directory (str): Directory that was listed
         entries (list): File and directory names
     """
-    sandbox = await _require_sandbox(context)
     directory = (
         _resolve_path(directory, context) if directory != "." else (_get_cwd(context) or ".")
     )
-
-    async def _list(active_sandbox: Any) -> Any:
-        return await active_sandbox.fs.list_files(directory)
-
     try:
-        entries = await _list(sandbox)
-        names = []
-        for entry in entries or []:
-            name = getattr(entry, "name", None) or str(entry)
-            names.append(name)
-        output = json.dumps(
-            {
-                "cwd": _get_cwd(context) or "",
-                "directory": directory,
-                "entries": sorted(names),
-            }
+        entries = await _run_with_recovery(
+            context,
+            lambda sandbox: sandbox.fs.list_files(directory),
         )
-        return ToolResult(output=output)
-    except Exception as exc:
-        try:
-            sandbox = await _recover_sandbox(context, exc)
-            entries = await _list(sandbox)
-            names = []
-            for entry in entries or []:
-                name = getattr(entry, "name", None) or str(entry)
-                names.append(name)
-            output = json.dumps(
+        names = sorted((getattr(entry, "name", None) or str(entry)) for entry in (entries or []))
+        return ToolResult(
+            output=json.dumps(
                 {
                     "cwd": _get_cwd(context) or "",
                     "directory": directory,
-                    "entries": sorted(names),
+                    "entries": names,
                 }
             )
-            return ToolResult(output=output)
-        except Exception as recovery_exc:
-            return ToolResult(
-                output=_path_error(recovery_exc, directory) or str(recovery_exc),
-                is_error=True,
-            )
+        )
+    except Exception as exc:
+        return ToolResult(
+            output=_path_error(exc, directory) or str(exc),
+            is_error=True,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -838,94 +548,19 @@ async def daytona_grep(
         matches (list): Matching results with file, line, content
         total_matches (int): Total matches found
     """
-    sandbox = await _require_sandbox(context)
     cwd = _get_cwd(context) or ""
     path = _resolve_path(path, context) if path != "." else (cwd or ".")
-
-    async def _find(active_sandbox: Any) -> Any:
-        return await active_sandbox.fs.find_files(path, pattern)
-
     try:
-        matches = await _find(sandbox)
-        if not matches:
-            return ToolResult(
-                output=json.dumps(
-                    {
-                        "cwd": cwd,
-                        "pattern": pattern,
-                        "path": path,
-                        "matches": [],
-                        "total_matches": 0,
-                    }
-                )
-            )
-        result_matches = []
-        for match in matches[:500]:
-            file_path = getattr(match, "file", None) or ""
-            line_no = getattr(match, "line", None)
-            content = getattr(match, "content", None) or ""
-            result_matches.append(
-                {
-                    "file": file_path,
-                    "line": line_no,
-                    "content": content.rstrip(),
-                }
-            )
-        return ToolResult(
-            output=json.dumps(
-                {
-                    "cwd": cwd,
-                    "pattern": pattern,
-                    "path": path,
-                    "matches": result_matches,
-                    "total_matches": len(matches),
-                }
-            )
+        matches = await _run_with_recovery(
+            context,
+            lambda sandbox: sandbox.fs.find_files(path, pattern),
         )
+        return _build_find_result(cwd=cwd, pattern=pattern, path=path, matches=matches or [])
     except Exception as exc:
-        try:
-            sandbox = await _recover_sandbox(context, exc)
-            matches = await _find(sandbox)
-            if not matches:
-                return ToolResult(
-                    output=json.dumps(
-                        {
-                            "cwd": cwd,
-                            "pattern": pattern,
-                            "path": path,
-                            "matches": [],
-                            "total_matches": 0,
-                        }
-                    )
-                )
-            result_matches = []
-            for match in matches[:500]:
-                file_path = getattr(match, "file", None) or ""
-                line_no = getattr(match, "line", None)
-                content = getattr(match, "content", None) or ""
-                result_matches.append(
-                    {
-                        "file": file_path,
-                        "line": line_no,
-                        "content": content.rstrip(),
-                    }
-                )
-            return ToolResult(
-                output=json.dumps(
-                    {
-                        "cwd": cwd,
-                        "pattern": pattern,
-                        "path": path,
-                        "matches": result_matches,
-                        "total_matches": len(matches),
-                    }
-                )
-            )
-        except Exception as recovery_exc:
-            return ToolResult(
-                output=_path_error(recovery_exc, path) or str(recovery_exc),
-                is_error=True,
-            )
+        return ToolResult(
+            output=_path_error(exc, path) or str(exc),
+            is_error=True,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -956,47 +591,20 @@ async def daytona_glob(
         files (list): Matching file paths
         total_files (int): Total files found
     """
-    sandbox = await _require_sandbox(context)
     cwd = _get_cwd(context) or ""
     path = _resolve_path(path, context) if path != "." else (cwd or ".")
-
-    async def _run_find(active_sandbox: Any) -> Any:
-        find_pattern = pattern.replace("**/", "")
-        cmd = f"find {path} -name {find_pattern} -type f"
-        return await active_sandbox.process.exec(cmd, timeout=30)
-
     try:
-        resp = await _run_find(sandbox)
-        file_list = [f for f in (resp.result or "").splitlines() if f.strip()][:500]
-        return ToolResult(
-            output=json.dumps(
-                {
-                    "cwd": cwd,
-                    "pattern": pattern,
-                    "path": path,
-                    "files": file_list,
-                    "total_files": len(file_list),
-                }
-            )
+        resp = await _run_with_recovery(
+            context,
+            lambda sandbox: sandbox.process.exec(
+                f"find {path} -name {pattern.replace('**/', '')} -type f",
+                timeout=30,
+            ),
         )
+        file_list = [f for f in (resp.result or "").splitlines() if f.strip()][:500]
+        return _build_glob_result(cwd=cwd, pattern=pattern, path=path, files=file_list)
     except Exception as exc:
-        try:
-            sandbox = await _recover_sandbox(context, exc)
-            resp = await _run_find(sandbox)
-            file_list = [f for f in (resp.result or "").splitlines() if f.strip()][:500]
-            return ToolResult(
-                output=json.dumps(
-                    {
-                        "cwd": cwd,
-                        "pattern": pattern,
-                        "path": path,
-                        "files": file_list,
-                        "total_files": len(file_list),
-                    }
-                )
-            )
-        except Exception as recovery_exc:
-            return ToolResult(
-                output=_path_error(recovery_exc, path) or str(recovery_exc),
-                is_error=True,
-            )
+        return ToolResult(
+            output=_path_error(exc, path) or str(exc),
+            is_error=True,
+        )
