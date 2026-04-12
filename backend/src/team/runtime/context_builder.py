@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from team.context.briefings import render_briefings
-from team.models import WorkItem, WorkItemStatus
+from team.models import WorkItem, WorkItemKind, WorkItemStatus
 from team.runtime.registry import get as _get_team_run
 from tools.core.runtime import ExecutionMetadata
 
@@ -94,7 +94,63 @@ def build_work_item_metadata(team_run: TeamRun, wi: WorkItem) -> ExecutionMetada
         value = payload.get(key)
         if value not in (None, "", [], {}):
             meta[key] = value
+
+    # Pre-populate plan-submission context so SubmitPlanTool can read from
+    # metadata instead of reaching into team.runtime.registry at call time.
+    _populate_plan_submission_context(meta, team_run, wi)
+
     return meta
+
+
+def _populate_plan_submission_context(
+    meta: ExecutionMetadata,
+    team_run: "TeamRun",
+    wi: "WorkItem",
+) -> None:
+    """Inject plan-submission context into metadata.
+
+    This decouples ``SubmitPlanTool`` from the team runtime: the tool
+    reads these flat values from metadata rather than importing
+    ``team.runtime.registry`` and walking the live object graph.
+    """
+    # allow_empty_plan: true for non-root expandable sub-planners
+    root_id = str(getattr(team_run, "root_work_item_id", "") or "")
+    is_sub_planner = (
+        bool(root_id)
+        and wi.id != root_id
+        and wi.agent_name == "team_planner"
+        and wi.kind == WorkItemKind.EXPANDABLE
+    )
+    meta["allow_empty_plan"] = is_sub_planner
+
+    # known_external_dep_ids: all work item IDs in the dispatcher graph
+    graph = getattr(getattr(team_run, "dispatcher", None), "graph", None)
+    if isinstance(graph, dict):
+        meta["known_external_dep_ids"] = {str(wi_id) for wi_id in graph}
+
+    # roster_agent_names: flattened set of all agent names in the roster
+    roster = getattr(team_run, "roster", None)
+    if isinstance(roster, dict):
+        agent_names: set[str] = set()
+        for names in roster.values():
+            if isinstance(names, list):
+                agent_names.update(str(n) for n in names)
+        if agent_names:
+            meta["roster_agent_names"] = agent_names
+
+    # benchmark targets (if benchmark runner populated them)
+    try:
+        from benchmarks.sweevo.plan_normalization import (
+            extract_benchmark_targets_from_team_run,
+        )
+
+        test_ids, test_files = extract_benchmark_targets_from_team_run(team_run.id)
+        if test_ids:
+            meta["benchmark_test_ids"] = test_ids
+        if test_files:
+            meta["benchmark_test_files"] = test_files
+    except ImportError:
+        pass
 
 
 def build_initial_user_message(
@@ -206,8 +262,28 @@ def render_work_item_payload(payload: Any) -> str | None:
     return None
 
 
+def _render_roster(roster: dict[str, list[str]]) -> str:
+    """Render the team roster into a compact reference block for planners."""
+    from agents.registry import get_definition
+
+    lines = ["## Available Agents\n"]
+    for role, agent_names in roster.items():
+        lines.append(f"### {role}")
+        for name in agent_names:
+            defn = get_definition(name)
+            desc = defn.description if defn else ""
+            lines.append(f"- **{name}**: {desc}")
+        lines.append("")
+    lines.append(
+        "When submitting plan items, use these exact agent names. "
+        "`kind` is auto-inferred from the agent's role "
+        "(planner → expandable, all others → atomic)."
+    )
+    return "\n".join(lines)
+
+
 def build_query_context(
-    defn: AgentDefinition,  # noqa: ARG001 — kept for QueryContextBuilder signature parity
+    defn: AgentDefinition,
     team_run: TeamRun,
     wi: WorkItem,
 ) -> TeamAgentContext:
@@ -219,7 +295,13 @@ def build_query_context(
     fields — the briefings-preamble contract lives here.
     """
     meta = build_work_item_metadata(team_run, wi)
-    user_message = build_initial_user_message(team_run, wi, default_base_prompt(wi))
+    base_prompt = default_base_prompt(wi)
+    # Inject roster reference for agents that submit plans (planners and
+    # replanners) so they know which agents are available to target.
+    roster = team_run.roster
+    if roster and defn.role in ("planner", "replanner"):
+        base_prompt = _render_roster(roster) + "\n\n" + base_prompt
+    user_message = build_initial_user_message(team_run, wi, base_prompt)
     return TeamAgentContext(
         user_message=user_message,
         tool_metadata=meta,

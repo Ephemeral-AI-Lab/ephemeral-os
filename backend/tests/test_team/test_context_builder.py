@@ -144,7 +144,7 @@ def test_build_query_context_carries_team_metadata_and_briefings():
     assert isinstance(ctx.tool_metadata.get("work_item_started_at"), float)
     # Coordination metadata is no longer hardcoded — it flows from
     # team_run.coordination_metadata which defaults to empty.
-    assert ctx.tool_metadata.get("coordination_mode") is None
+    assert ctx.tool_metadata.get("team_mode_enabled") is None
 
 def test_shared_briefings_flow_into_query_context():
     store = InMemoryArtifactStore(BudgetConfig(), BudgetState())
@@ -166,7 +166,7 @@ def test_build_query_context_applies_coordination_metadata_from_team_run():
     store = InMemoryArtifactStore(BudgetConfig(), BudgetState())
     tr = _fake_team_run(store, sandbox_id="sbx-1", repo_root="/testbed")
     tr.coordination_metadata = {
-        "coordination_mode": "ultra",
+        "team_mode_enabled": True,
         "require_declared_shell_outputs": True,
         "verification_surface_write_enforcement": "warn",
     }
@@ -178,7 +178,7 @@ def test_build_query_context_applies_coordination_metadata_from_team_run():
     assert ctx.tool_metadata.sandbox_id == "sbx-1"
     assert ctx.tool_metadata.daytona_cwd == "/testbed"
     assert ctx.tool_metadata["ci_workspace_root"] == "/testbed"
-    assert ctx.tool_metadata["coordination_mode"] == "ultra"
+    assert ctx.tool_metadata["team_mode_enabled"] is True
     assert ctx.tool_metadata["require_declared_shell_outputs"] is True
     assert ctx.tool_metadata["verification_surface_write_enforcement"] == "warn"
 

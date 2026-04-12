@@ -16,11 +16,11 @@ def _utcnow() -> datetime:
 
 
 class TeamDefinitionRecord(Base):
-    """A team composition blob stored in the database.
+    """Role-based team composition stored in the database.
 
-    ``roster`` maps slot labels to agent-definition names looked up in
-    ``agents.registry``.  Broken references are caught at ``TeamRun``
-    start time.
+    ``entry_planner`` is the agent that receives the user request first.
+    ``roster`` maps role names to lists of agent-definition names.
+    Broken references are caught at ``TeamRun`` start time.
     """
 
     __tablename__ = "team_definitions"
@@ -28,7 +28,8 @@ class TeamDefinitionRecord(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     name: Mapped[str] = mapped_column(String(128), unique=True, index=True)
     description: Mapped[str] = mapped_column(Text, default="")
-    roster: Mapped[dict[str, str]] = mapped_column(JSON, default=dict)
+    entry_planner: Mapped[str] = mapped_column(String(128))
+    roster: Mapped[dict[str, list[str]]] = mapped_column(JSON, default=dict)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
@@ -38,4 +39,4 @@ class TeamDefinitionRecord(Base):
     )
 
     def __repr__(self) -> str:
-        return f"<TeamDefinitionRecord name={self.name!r} roster={self.roster!r}>"
+        return f"<TeamDefinitionRecord name={self.name!r} entry_planner={self.entry_planner!r}>"

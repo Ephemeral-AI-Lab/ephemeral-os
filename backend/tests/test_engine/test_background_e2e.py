@@ -68,7 +68,7 @@ if _get_agent_def("scout") is None:
 
 
 # ---------------------------------------------------------------------------
-# Fake slow tool — simulates daytona_bash with configurable delay and output
+# Fake slow tool — simulates daytona_codeact with configurable delay and output
 # ---------------------------------------------------------------------------
 
 

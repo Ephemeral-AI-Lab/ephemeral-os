@@ -53,7 +53,7 @@ def test_toolkit_registers_expected_tools():
     tk = DaytonaToolkit()
     names = set(tk.tool_names())
     expected = {
-        "daytona_bash",
+        "daytona_codeact",
         "daytona_read_file",
         "daytona_write_file",
         "daytona_list_files",
@@ -69,7 +69,7 @@ def test_toolkit_registers_expected_tools():
     assert expected.issubset(names)
 
 
-def test_toolkit_from_context_uses_codeact_and_omits_bash_for_team_workers():
+def test_toolkit_from_context_includes_codeact():
     developer_tk = DaytonaToolkit.from_context(
         ToolkitContext(metadata={"sandbox_id": "sb-dev", "agent_name": "developer"})
     )
@@ -80,14 +80,15 @@ def test_toolkit_from_context_uses_codeact_and_omits_bash_for_team_workers():
     assert "daytona_codeact" in developer_tk.tool_names()
     assert "daytona_codeact" in validator_tk.tool_names()
     assert "daytona_edit_file" in developer_tk.tool_names()
+    assert "daytona_bash" not in developer_tk.tool_names()
     assert "daytona_bash" not in validator_tk.tool_names()
 
 
 def test_toolkit_get_tool():
     tk = DaytonaToolkit()
-    tool = tk.get("daytona_bash")
+    tool = tk.get("daytona_codeact")
     assert tool is not None
-    assert tool.name == "daytona_bash"
+    assert tool.name == "daytona_codeact"
 
 
 def test_toolkit_get_missing_tool():
@@ -97,14 +98,6 @@ def test_toolkit_get_missing_tool():
 
 def test_toolkit_list_tools_length():
     tk = DaytonaToolkit()
-    tools = tk.list_tools()
-    assert len(tools) == 12
-
-
-def test_team_worker_toolkit_list_tools_length():
-    tk = DaytonaToolkit.from_context(
-        ToolkitContext(metadata={"sandbox_id": "sb-dev", "agent_name": "developer"})
-    )
     tools = tk.list_tools()
     assert len(tools) == 11
 
@@ -355,7 +348,7 @@ def test_toolkit_has_description():
 def test_toolkit_has_instructions():
     tk = DaytonaToolkit()
     assert tk.instructions
-    assert "daytona_bash" in tk.instructions
+    assert "daytona_codeact" in tk.instructions
 
 
 # ---------------------------------------------------------------------------

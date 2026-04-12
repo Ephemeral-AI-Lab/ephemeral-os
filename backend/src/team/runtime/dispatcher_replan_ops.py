@@ -13,14 +13,14 @@ if TYPE_CHECKING:
 
 def should_reattach_failed_verifier(failed_wi: WorkItem) -> bool:
     from agents.registry import has_role
-    return has_role(failed_wi.agent_name, "validator") and failed_wi.status == WorkItemStatus.FAILED
+    return has_role(failed_wi.agent_name, "reviewer") and failed_wi.status == WorkItemStatus.FAILED
 
 
 def _replan_adds_replacement_validator(add_specs: list[dict]) -> bool:
     from agents.registry import has_role
 
     return any(
-        has_role(str(spec.get("agent_name") or "").strip(), "validator")
+        has_role(str(spec.get("agent_name") or "").strip(), "reviewer")
         for spec in add_specs
         if isinstance(spec, dict)
     )

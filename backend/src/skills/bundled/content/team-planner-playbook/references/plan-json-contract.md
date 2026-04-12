@@ -6,10 +6,9 @@ Use this reference immediately before emitting final plan JSON.
 - After this reference loads, the very next assistant content must be the final JSON object only. No recap, no checklist, no "now emit", and no extra prose.
 - Must keep each item on the runtime `WorkItemSpec` shape.
 - Never load this reference in parallel with `root-plan-self-check`; wait for that tool call to finish first.
-- Must use `agent_name` only for registered workers: `developer`, `validator`, or `team_planner`.
+- Must use `agent_name` only for agents listed in the roster injected into your context. If no roster is present, the defaults are `developer`, `validator`, and `team_planner`.
 - Must use `local_id` for the lane label such as `compat_fix` or `validate_misc`.
-- Must use only `kind: "atomic"` or `kind: "expandable"`.
-- `developer` and `validator` items must be `atomic`; only `team_planner` items may be `expandable`.
+- Do NOT set `kind` — it is auto-inferred from the target agent's role (planner-role → expandable, all others → atomic).
 - Must put `owned_files`, `owned_failures`, `verify`, `verification`, `touches_paths`, and similar execution details under `payload`.
 - Must keep `deps` as a top-level item field.
 - Must keep `briefings` at the item top level.
@@ -18,7 +17,7 @@ Use this reference immediately before emitting final plan JSON.
 - Must emit each `local_id` only once.
 - Must not submit placeholder scout scaffolds such as `plan-anchor-*`, `*_scout`, or `developer_override`. Scouts are tool calls, not plan items.
 - If the submitted layer has 3 or more concrete non-planner lanes, end with one terminal `validator` whose `deps` cover those terminal siblings; do not add per-branch validators at the same parent layer unless a real shared-risk branch cut needs one.
-- `team_planner` items should be `expandable`; do not use atomic `team_planner` items as disguised developers or scouts.
+- Planner-role items are expandable (further decomposition); do not use planner-role items as disguised developers or scouts.
 - If two exact-file slices arrived through separate scout artifacts, keep them as separate leaves or place them behind one residual child planner. Do not merge them into one atomic developer lane without shared-owner evidence.
 ## Failure-surface rules
 - Before final JSON, freeze a tiny benchmark-surface ledger from the exact prompt paths or ids plus any validator-backed downgrades. Copy only from that ledger into `owned_failures`, `verify`, `verification`, or `reproduction`.
@@ -39,9 +38,9 @@ Use this reference immediately before emitting final plan JSON.
 ## Few-shot examples
 - Example: root scouts already mapped `hdf.py`, `parquet/`, `groupby.py`, and five tiny exact files.
   Emit `developer(hdf_fix)` plus expandable `team_planner` items like `parquet_child` or `groupby_child`, then direct tiny-file developers or one residual child planner for the rest. Do not serialize the whole layer into eight atomic developers only because all owners are known.
-- Example: the parquet package still needs internal decomposition, and your draft says `{"agent_name":"developer","local_id":"parquet_fix","kind":"expandable",...}`.
-  Change that lane to `{"agent_name":"team_planner","local_id":"parquet_child","kind":"expandable",...}` or collapse it to one bounded atomic developer if the scope is already leaf-ready.
-  Do not submit an expandable `developer`.
+- Example: the parquet package still needs internal decomposition, and your draft says `{"agent_name":"developer","local_id":"parquet_fix",...}`.
+  Change that lane to `{"agent_name":"team_planner","local_id":"parquet_child",...}` (auto-expandable) or collapse it to one bounded atomic developer if the scope is already leaf-ready.
+  Do not target a developer for work that needs further decomposition.
 - Example: you queued `root-plan-self-check` and this contract together, or after loading this contract you start saying "Now I need to map test ids" or "Now emit the final JSON".
   That means you loaded the contract too early. Reload the ending chain sequentially if the self-check never finished; otherwise fall back to the prompt-backed benchmark file paths you already have, keep any exact known nodes, and emit the JSON object as the next assistant content.
 - Example: a parent lane handed down `pkg/tests/test_io_json.py` with no exact node, and the child draft is tempted to invent `::test_chunksize`.

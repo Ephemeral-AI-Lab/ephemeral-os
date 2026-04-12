@@ -25,7 +25,6 @@ from tools.daytona_toolkit.coordination import (
 from tools.core.base import ToolExecutionContext
 
 logger = logging.getLogger(__name__)
-_DEFAULT_SCOPE_RECENT_SECONDS = 300.0
 
 _SHELL_MUTATION_PATTERN = re.compile(
     r"(^|[;&|]\s*)("
@@ -80,7 +79,6 @@ def build_live_scope_packet(
     context: ToolExecutionContext,
     *,
     scope_paths: list[str] | None = None,
-    recent_seconds: float = _DEFAULT_SCOPE_RECENT_SECONDS,
 ) -> dict[str, Any]:
     """Build the current live scope packet for *scope_paths*."""
     baseline = context.metadata.get("scope_packet")
@@ -88,7 +86,6 @@ def build_live_scope_packet(
         context,
         scope_paths=scope_paths,
         baseline_packet=baseline if isinstance(baseline, dict) else None,
-        recent_seconds=recent_seconds,
     )
 
 
@@ -97,13 +94,11 @@ def refresh_scope_baseline(
     *,
     scope_paths: list[str] | None = None,
     packet: dict[str, Any] | None = None,
-    recent_seconds: float = _DEFAULT_SCOPE_RECENT_SECONDS,
 ) -> dict[str, Any]:
     """Persist the latest live scope packet into the tool metadata."""
     resolved = packet if isinstance(packet, dict) else build_live_scope_packet(
         context,
         scope_paths=scope_paths,
-        recent_seconds=recent_seconds,
     )
     if not isinstance(resolved, dict):
         return {}
@@ -415,7 +410,7 @@ def shell_mutation_declaration_error(
     if normalize_scope_paths(declared_output_paths or []):
         return None
     return (
-        "Mutating daytona_bash calls must declare `declared_output_paths` in ultra "
+        "Mutating shell calls must declare `declared_output_paths` in team "
         "coordination mode. Prefer daytona_write_file/daytona_edit_file, or list every "
         "path the command may create, modify, move, or delete before running it."
     )
@@ -538,7 +533,7 @@ async def sync_shell_mutations(
     This is intentionally conservative: it only runs for commands that look
     mutating and only when the sandbox cwd is a git checkout. The goal is to
     keep CI caches, ledger, hotspots, and atlas invalidation in sync when an
-    agent edits files via ``daytona_bash`` instead of structured edit tools.
+    agent edits files via shell commands instead of structured edit tools.
     """
     declared_output_paths = normalize_scope_paths(declared_output_paths or [])
     missing_decl = shell_mutation_declaration_error(

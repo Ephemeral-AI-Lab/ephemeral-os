@@ -148,7 +148,7 @@ async def test_no_streaming_means_no_output_field_while_running() -> None:
 
 
 # ===========================================================================
-# Real Daytona: daytona_bash streams stdout via on_progress_line while running
+# Real Daytona: daytona_codeact streams stdout via on_progress_line while running
 # ===========================================================================
 
 
@@ -158,7 +158,7 @@ async def test_no_streaming_means_no_output_field_while_running() -> None:
     not EvalAgent.has_daytona(), reason="Daytona credentials required for live streaming test"
 )
 class TestDaytonaBashLiveStreaming:
-    """Verify daytona_bash uses session-based streaming when launched as a
+    """Verify daytona_codeact uses session-based streaming when launched as a
     background task, so check_background_progress sees partial output mid-run."""
 
     @pytest.fixture(scope="class")
@@ -169,11 +169,11 @@ class TestDaytonaBashLiveStreaming:
 
     @pytest.mark.asyncio
     async def test_streaming_visible_via_background_manager(self, sandbox) -> None:
-        """Drive daytona_bash directly through BackgroundTaskManager (no LLM):
+        """Drive daytona_codeact directly through BackgroundTaskManager (no LLM):
         a slow loop must surface lines through check_background_progress
         BEFORE the command finishes."""
         from sandbox.async_client import get_async_daytona_client
-        from tools.daytona_toolkit.tools import daytona_bash
+        from tools.daytona_toolkit.codeact_tool import daytona_codeact
 
         client = get_async_daytona_client()
         sb = await client.get(sandbox["id"])
@@ -191,13 +191,13 @@ class TestDaytonaBashLiveStreaming:
                     "background_task_id": alias,
                 },
             )
-            args = daytona_bash.input_model(
+            args = daytona_codeact.input_model(
                 command='for i in $(seq 1 8); do echo "step_$i"; sleep 2; done',
                 timeout=60,
             )
-            return await daytona_bash.execute(args, ctx)
+            return await daytona_codeact.execute(args, ctx)
 
-        mgr.launch(alias, "daytona_bash", {}, _coro())
+        mgr.launch(alias, "daytona_codeact", {}, _coro())
 
         # Allow time for session creation + WebSocket connect + ~3 lines
         # to stream through (~6s of command output).
@@ -253,7 +253,7 @@ and wait_for_background_task to block until they finish.
 @pytest.mark.skipif(not EvalAgent.has_all(), reason="API + Daytona both required")
 class TestSupernovaLiveTail:
     """An LLM-driven check that the agent can observe streaming output from a
-    long-running daytona_bash task while it is still running."""
+    long-running daytona_codeact task while it is still running."""
 
     @pytest.fixture(scope="class")
     def sandbox(self):
@@ -273,7 +273,7 @@ class TestSupernovaLiveTail:
             '  for i in $(seq 1 10); do echo "step_$i"; sleep 3; done\n\n'
             "(Total runtime ~30 seconds.)\n\n"
             "Then:\n"
-            "1. Sleep ~8 seconds in the FOREGROUND (use daytona_bash with `sleep 8`,\n"
+            "1. Sleep ~8 seconds in the FOREGROUND (use daytona_codeact with `sleep 8`,\n"
             "   background=false).\n"
             "2. Call check_background_progress(task_id='bg_1', last_n_lines=20)\n"
             "   and read the partial output. The background task should still be running.\n"

@@ -96,35 +96,45 @@ def test_submit_plan_input_normalizes_legacy_agent_and_id_fields() -> None:
     assert "briefings" not in args.items[1].payload
 
 
-def test_submit_plan_input_infers_registered_agent_name_from_local_id_like_name() -> None:
-    args = SubmitPlanInput.model_validate(
+def test_resolve_plan_item_agent_names_with_roster() -> None:
+    """Agent-name inference uses the roster (populated in metadata at runtime)."""
+    from tools.posthook.submit_plan import _resolve_plan_item_agent_names
+
+    roster = {"developer", "validator", "team_planner"}
+    items = [
         {
-            "items": [
-                {
-                    "agent_name": "fix_config_cli_integration",
-                    "kind": "atomic",
-                    "payload": {"owned_files": ["dask/config.py", "dask/cli.py"]},
-                },
-                {
-                    "agent_name": "validate_all",
-                    "kind": "atomic",
-                    "deps": ["fix_config_cli_integration"],
-                    "payload": {"verify": ["pytest dask/tests/test_config.py -q"]},
-                },
-                {
-                    "agent_name": "misc_dask_child_planner",
-                    "kind": "expandable",
-                    "payload": {"owned_files": ["dask/config.py"]},
-                },
-            ]
-        }
-    )
-    assert args.items[0].agent_name == "developer"
-    assert args.items[0].local_id == "fix_config_cli_integration"
-    assert args.items[1].agent_name == "validator"
-    assert args.items[1].local_id == "validate_all"
-    assert args.items[2].agent_name == "team_planner"
-    assert args.items[2].local_id == "misc_dask_child_planner"
+            "agent_name": "fix_config_cli_integration",
+            "kind": "atomic",
+            "payload": {"owned_files": ["dask/config.py", "dask/cli.py"]},
+        },
+        {
+            "agent_name": "validate_all",
+            "kind": "atomic",
+            "deps": ["fix_config_cli_integration"],
+            "payload": {"verify": ["pytest dask/tests/test_config.py -q"]},
+        },
+        {
+            "agent_name": "misc_dask_child_planner",
+            "kind": "expandable",
+            "payload": {"owned_files": ["dask/config.py"]},
+        },
+    ]
+    resolved = _resolve_plan_item_agent_names(items, roster)
+    assert resolved[0]["agent_name"] == "developer"
+    assert resolved[0]["local_id"] == "fix_config_cli_integration"
+    assert resolved[1]["agent_name"] == "validator"
+    assert resolved[1]["local_id"] == "validate_all"
+    assert resolved[2]["agent_name"] == "team_planner"
+    assert resolved[2]["local_id"] == "misc_dask_child_planner"
+
+
+def test_resolve_plan_item_agent_names_no_roster_passes_through() -> None:
+    """Without a roster, agent names are accepted as-is."""
+    from tools.posthook.submit_plan import _resolve_plan_item_agent_names
+
+    items = [{"agent_name": "my_custom_agent", "payload": {}}]
+    resolved = _resolve_plan_item_agent_names(items, None)
+    assert resolved[0]["agent_name"] == "my_custom_agent"
 
 
 @pytest.mark.asyncio
@@ -243,8 +253,8 @@ async def test_submit_plan_accepts_empty_plan_for_non_root_child_planner(monkeyp
 async def test_validator_policy_respects_metadata_overrides():
     tool = SubmitPlanTool()
     ctx = _ctx()
-    ctx.metadata["max_validators_per_plan"] = 1
-    ctx.metadata["require_validator_for_plan_size"] = 3
+    ctx.metadata["max_reviewers_per_plan"] = 1
+    ctx.metadata["require_reviewer_for_plan_size"] = 3
 
     no_validator = SubmitPlanInput.model_validate(
         {
@@ -268,7 +278,7 @@ async def test_validator_policy_respects_metadata_overrides():
         }
     )
     fresh_ctx = _ctx()
-    fresh_ctx.metadata["max_validators_per_plan"] = 1
+    fresh_ctx.metadata["max_reviewers_per_plan"] = 1
     res = await tool.execute(too_many_validators, fresh_ctx)
     assert res.is_error
     assert "submitted plans may have at most 1" in res.output

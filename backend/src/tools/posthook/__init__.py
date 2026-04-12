@@ -15,6 +15,7 @@ from __future__ import annotations
 from importlib import import_module
 
 __all__ = [
+    "PosthookSubmission",
     "SubmitPosthookTool",
     "SubmitPlanInput",
     "SubmitPlanTool",
@@ -25,17 +26,21 @@ __all__ = [
     "SubmitSummaryTool",
     "RequestRetryTool",
     "RequestReplanTool",
+    "RetryRequest",
+    "ReplanRequest",
 ]
 
 
 def __getattr__(name: str):
+    if name in {"PosthookSubmission", "SubmittedSummary", "RetryRequest", "ReplanRequest"}:
+        return getattr(import_module("tools.posthook.types"), name)
     if name == "SubmitPosthookTool":
         return import_module("tools.posthook.base").SubmitPosthookTool
     if name in {"SubmitPlanInput", "SubmitPlanTool"}:
         return getattr(import_module("tools.posthook.submit_plan"), name)
     if name in {"SubmitReplanInput", "SubmitReplanTool"}:
         return getattr(import_module("tools.posthook.submit_replan"), name)
-    if name in {"SubmittedSummary", "SubmitSummaryInput", "SubmitSummaryTool"}:
+    if name in {"SubmitSummaryInput", "SubmitSummaryTool"}:
         return getattr(import_module("tools.posthook.submit_summary"), name)
     if name == "RequestRetryTool":
         return import_module("tools.posthook.request_retry").RequestRetryTool

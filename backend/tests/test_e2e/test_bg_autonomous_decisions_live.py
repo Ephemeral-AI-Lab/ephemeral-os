@@ -26,7 +26,7 @@ You are test-decision-agent, a developer with a remote Daytona sandbox.
 
 IMPORTANT RULES:
 - You MUST use tools for every action — never just describe what you'd do.
-- Use daytona_bash to run commands, daytona_write_file to create files.
+- Use daytona_codeact to run commands, daytona_write_file to create files.
 - You have background task support: add "background": true to tool input for long-running operations.
 - Use check_background_progress for instant status snapshots.
 - Use wait_for_background_task to block when you have no foreground work.
@@ -170,7 +170,7 @@ class TestDecisionActOnWaitResult:
             f"Expected DEPLOY_READY content. Got: {[tc.input.get('content') for tc in write_calls]}"
         # Verification cat of deploy.txt must appear in fg bash calls
         fg_bash = [tc for tc in result.tool_calls
-                   if tc.name == "daytona_bash" and not tc.input.get("background")]
+                   if tc.name == "daytona_codeact" and not tc.input.get("background")]
         assert any("cat" in str(tc.input) and "deploy" in str(tc.input) for tc in fg_bash), \
             f"Expected 'cat deploy.txt' verification. Got fg calls: {[tc.input for tc in fg_bash]}"
         # wait must appear before write in tool sequence
@@ -227,7 +227,7 @@ class TestDecisionSelectiveCancel:
 
         # Must have launched 3 background tasks
         bg_bash = [tc for tc in result.tool_calls
-                   if tc.name == "daytona_bash" and tc.input.get("background") is True]
+                   if tc.name == "daytona_codeact" and tc.input.get("background") is True]
         assert len(bg_bash) >= 3, \
             f"Expected 3+ background launches. Got {len(bg_bash)}"
         assert result.has_tool("wait_for_background_task"), \
@@ -357,7 +357,7 @@ class TestDecisionChainedWorkflow:
             f"Expected 2+ wait_for_background_task calls. Got {waits}"
         # Verification cat of test_report.txt must appear
         fg_bash = [tc for tc in result.tool_calls
-                   if tc.name == "daytona_bash" and not tc.input.get("background")]
+                   if tc.name == "daytona_codeact" and not tc.input.get("background")]
         assert any("cat" in str(tc.input) and "test_report" in str(tc.input) for tc in fg_bash), \
             f"Expected 'cat test_report.txt' verification. Got fg calls: {[tc.input for tc in fg_bash]}"
         # LLM text must acknowledge the pipeline
@@ -409,12 +409,12 @@ class TestDecisionFullPipeline:
 
         # Must have launched 2+ background tasks
         bg_bash = [tc for tc in result.tool_calls
-                   if tc.name == "daytona_bash" and tc.input.get("background") is True]
+                   if tc.name == "daytona_codeact" and tc.input.get("background") is True]
         assert len(bg_bash) >= 2, \
             f"Expected 2+ background launches. Got {len(bg_bash)}"
         # Must have done 2+ foreground bash calls
         fg_bash = [tc for tc in result.tool_calls
-                   if tc.name == "daytona_bash" and not tc.input.get("background")]
+                   if tc.name == "daytona_codeact" and not tc.input.get("background")]
         assert len(fg_bash) >= 2, \
             f"Expected 2+ foreground bash calls. Got {len(fg_bash)}"
         # Must have checked progress at least twice (steps 4 and 6)

@@ -211,7 +211,7 @@ def _scout_fanout_admission_error(
     context: ToolExecutionContext,
     target_paths: list[str],
 ) -> tuple[dict[str, Any] | None, str | None]:
-    if str(context.metadata.get("coordination_mode") or "") != "ultra":
+    if not context.metadata.get("team_mode_enabled"):
         return None, None
     prior_scouts = _normalize_target_paths(context.metadata.get("_scout_target_paths_this_turn", []))
     if not prior_scouts:
@@ -372,11 +372,11 @@ def _validate_run_subagent_request(
             output=f"run_subagent: agent '{agent_name}' is not registered.",
             is_error=True,
         )
-    if getattr(sub_def, "agent_type", "agent") != "subagent":
+    if sub_def.agent_type != "subagent":
         return ToolResult(
             output=(
                 f"run_subagent: agent '{agent_name}' is not a subagent "
-                f"(agent_type={getattr(sub_def, 'agent_type', 'agent')!r}); "
+                f"(agent_type={sub_def.agent_type!r}); "
                 "only subagent-typed agents may be dispatched here. "
                 "This is terminal evidence for planners: do not retry or wait "
                 "on this background task. If you need coding, validation, or "

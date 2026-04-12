@@ -15,14 +15,13 @@ import re
 import uuid
 from typing import Any
 
-from config.defaults import DEFAULT_TEAM_SAFE_AGENT_NAMES
-
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.daytona_toolkit.tools import (
     _get_cwd,
     _recover_sandbox,
     _require_sandbox,
     _verification_surface_enforcement_mode,
+    is_coordinated_team_agent,
     _wrap_bash_command,
 )
 from tools.daytona_toolkit.ci_integration import (
@@ -236,11 +235,9 @@ def _detect_disallowed_runtime_calls(code: str) -> list[str]:
 
 
 def _team_codeact_contract(context: ToolExecutionContext) -> dict[str, Any] | None:
+    if not is_coordinated_team_agent(context):
+        return None
     agent_name = str(context.metadata.get("agent_name") or "").strip()
-    if agent_name not in DEFAULT_TEAM_SAFE_AGENT_NAMES:
-        return None
-    if str(context.metadata.get("coordination_mode") or "").strip() != "ultra":
-        return None
     repo_root = str(_get_cwd(context) or "")
     owned_files = set(_normalize_string_list(context.metadata.get("owned_files"), repo_root))
     touches_paths = set(_normalize_string_list(context.metadata.get("touches_paths"), repo_root))
@@ -319,14 +316,6 @@ def _team_codeact_manifest_error(
     ]
     if not write_paths:
         return None
-
-    agent_name = str(contract.get("agent_name") or "")
-    if agent_name == "validator":
-        rendered = ", ".join(sorted(set(write_paths))[:3])
-        return (
-            "daytona_codeact: validator lanes must not write repository files. "
-            f"Observed repo write(s): {rendered}."
-        )
 
     allowed_write_paths = set(contract.get("owned_files") or ())
     allowed_write_paths.update(contract.get("touches_paths") or ())

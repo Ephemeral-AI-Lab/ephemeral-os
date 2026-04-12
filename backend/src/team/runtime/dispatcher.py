@@ -189,7 +189,7 @@ class Dispatcher:
     def _cancel_superseded_dependency_validators(self, wi: WorkItem) -> None:
         from agents.registry import has_role
 
-        if not has_role(wi.agent_name, "validator") or wi.status not in (
+        if not has_role(wi.agent_name, "reviewer") or wi.status not in (
             WorkItemStatus.PENDING,
             WorkItemStatus.READY,
             WorkItemStatus.RUNNING,
@@ -197,7 +197,7 @@ class Dispatcher:
             return
         for node_id in {node for dep_id in wi.deps for node in self._subtree_ids(dep_id)}:
             node = self.graph.get(node_id)
-            if node_id != wi.id and node and has_role(node.agent_name, "validator") and node.status == WorkItemStatus.FAILED:
+            if node_id != wi.id and node and has_role(node.agent_name, "reviewer") and node.status == WorkItemStatus.FAILED:
                 self._mark_cancelled(node, f"superseded_by_active_validator_{wi.id}")
 
     def _dependency_artifacts(self, dep_ids: list[str]) -> list[DependencyArtifact]:
@@ -332,8 +332,8 @@ class Dispatcher:
                         new_id_factory=self.new_id,
                         max_depth=self.budgets.max_depth,
                         max_plan_size=self.budgets.max_plan_size,
-                        max_validators_per_plan=self.budgets.max_validators_per_plan,
-                        require_validator_for_plan_size=self.budgets.require_validator_for_plan_size,
+                        max_reviewers_per_plan=self.budgets.max_reviewers_per_plan,
+                        require_reviewer_for_plan_size=self.budgets.require_reviewer_for_plan_size,
                     )
                 except InvalidPlan as e:
                     self._mark_failed(wi, f"InvalidPlan: {e}")

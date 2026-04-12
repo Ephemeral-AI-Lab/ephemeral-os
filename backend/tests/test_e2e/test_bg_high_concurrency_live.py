@@ -25,7 +25,7 @@ You are test-concurrency-agent, a developer with a remote Daytona sandbox.
 
 IMPORTANT RULES:
 - You MUST use tools for every action — never just describe what you'd do.
-- Use daytona_bash to run commands, daytona_write_file to create files.
+- Use daytona_codeact to run commands, daytona_write_file to create files.
 - You have background task support: add "background": true to tool input for long-running operations.
 - Use check_background_progress to monitor background tasks.
 - Use cancel_background_task to cancel running background tasks.
@@ -44,13 +44,13 @@ Always be concise. Execute tools, don't just describe them.
 def _assert_fg_during_bg(result, min_fg: int = 1) -> None:
     """Assert that foreground tool calls happened WHILE background tasks were running.
 
-    Verifies that at least *min_fg* foreground daytona_bash calls occurred between
+    Verifies that at least *min_fg* foreground daytona_codeact calls occurred between
     the first BackgroundTaskStarted event and the first check_background_progress
     or cancel_background_task call. This proves true fg+bg concurrency.
     """
     bg_start_indices = [
         i for i, tc in enumerate(result.tool_calls)
-        if tc.name == "daytona_bash" and tc.input.get("background") is True
+        if tc.name == "daytona_codeact" and tc.input.get("background") is True
     ]
     lifecycle_indices = [
         i for i, tc in enumerate(result.tool_calls)
@@ -65,7 +65,7 @@ def _assert_fg_during_bg(result, min_fg: int = 1) -> None:
     fg_during_bg = [
         tc for i, tc in enumerate(result.tool_calls)
         if first_bg < i < first_lifecycle
-        and tc.name in ("daytona_bash", "daytona_write_file")
+        and tc.name in ("daytona_codeact", "daytona_write_file")
         and not tc.input.get("background")
     ]
     assert len(fg_during_bg) >= min_fg, (
@@ -137,14 +137,14 @@ class TestTripleBackgroundConcurrency:
         bg_started = result.background_started()
         assert len(bg_started) >= 3, \
             f"Expected 3+ background tasks started. Got {len(bg_started)}"
-        # Strict: all 3 bg tasks must use background: true on daytona_bash
+        # Strict: all 3 bg tasks must use background: true on daytona_codeact
         bg_bash_calls = [tc for tc in result.tool_calls
-                         if tc.name == "daytona_bash" and tc.input.get("background") is True]
+                         if tc.name == "daytona_codeact" and tc.input.get("background") is True]
         assert len(bg_bash_calls) >= 3, \
-            f"Expected 3+ daytona_bash calls with background: true. Got {len(bg_bash_calls)}: {result.tool_calls}"
+            f"Expected 3+ daytona_codeact calls with background: true. Got {len(bg_bash_calls)}: {result.tool_calls}"
         # Strict: foreground calls must NOT have background flag
         fg_bash_calls = [tc for tc in result.tool_calls
-                         if tc.name == "daytona_bash" and not tc.input.get("background")]
+                         if tc.name == "daytona_codeact" and not tc.input.get("background")]
         assert len(fg_bash_calls) >= 2, \
             f"Expected 2+ foreground bash calls (no background flag). Got {len(fg_bash_calls)}"
         # Background launches appear as BackgroundTaskStarted, not ToolExecutionStarted
@@ -199,16 +199,16 @@ class TestInterleavedBgFg:
 
         # Strict: exactly 2 background launches
         bg_bash = [tc for tc in result.tool_calls
-                   if tc.name == "daytona_bash" and tc.input.get("background") is True]
+                   if tc.name == "daytona_codeact" and tc.input.get("background") is True]
         assert len(bg_bash) >= 2, \
-            f"Expected 2+ daytona_bash with background: true. Got {len(bg_bash)}"
+            f"Expected 2+ daytona_codeact with background: true. Got {len(bg_bash)}"
         # Strict: 3+ foreground bash calls without background flag
         fg_bash = [tc for tc in result.tool_calls
-                   if tc.name == "daytona_bash" and not tc.input.get("background")]
+                   if tc.name == "daytona_codeact" and not tc.input.get("background")]
         assert len(fg_bash) >= 3, \
             f"Expected 3+ foreground bash calls. Got {len(fg_bash)}"
         # Strict: interleaving order — first fg call should appear before second bg call
-        all_bash = [(i, tc) for i, tc in enumerate(result.tool_calls) if tc.name == "daytona_bash"]
+        all_bash = [(i, tc) for i, tc in enumerate(result.tool_calls) if tc.name == "daytona_codeact"]
         bg_indices = [i for i, tc in all_bash if tc.input.get("background") is True]
         fg_indices = [i for i, tc in all_bash if not tc.input.get("background")]
         if len(bg_indices) >= 2 and len(fg_indices) >= 1:
@@ -262,9 +262,9 @@ class TestBgWithFileCreation:
 
         # Strict: 2 background tasks with background: true
         bg_bash = [tc for tc in result.tool_calls
-                   if tc.name == "daytona_bash" and tc.input.get("background") is True]
+                   if tc.name == "daytona_codeact" and tc.input.get("background") is True]
         assert len(bg_bash) >= 2, \
-            f"Expected 2+ daytona_bash with background: true. Got {len(bg_bash)}"
+            f"Expected 2+ daytona_codeact with background: true. Got {len(bg_bash)}"
         assert len(result.background_started()) >= 2, \
             f"Expected 2+ BackgroundTaskStarted events. Got {len(result.background_started())}"
         # Strict: exactly 2 file writes with correct paths
@@ -278,7 +278,7 @@ class TestBgWithFileCreation:
             f"Expected readme.txt write. Got paths: {write_paths}"
         # Strict: verification ls command ran in foreground
         fg_bash = [tc for tc in result.tool_calls
-                   if tc.name == "daytona_bash" and not tc.input.get("background")]
+                   if tc.name == "daytona_codeact" and not tc.input.get("background")]
         assert any("ls" in str(tc.input) for tc in fg_bash), \
             f"Expected 'ls' foreground command for verification. Got fg calls: {[tc.input for tc in fg_bash]}"
         assert result.has_tool("check_background_progress"), \
@@ -325,20 +325,20 @@ class TestHighVolumeForegroundBurst:
             f"{fg_steps}\n"
             "13. Check background progress using check_background_progress\n"
             "14. Cancel all background tasks\n\n"
-            "Use background: true for steps 1-2 ONLY. Execute each step with daytona_bash."
+            "Use background: true for steps 1-2 ONLY. Execute each step with daytona_codeact."
         )
         _log_result(result, "burst")
 
         # Strict: 2 background launches with background: true
         bg_bash = [tc for tc in result.tool_calls
-                   if tc.name == "daytona_bash" and tc.input.get("background") is True]
+                   if tc.name == "daytona_codeact" and tc.input.get("background") is True]
         assert len(bg_bash) >= 2, \
-            f"Expected 2+ daytona_bash with background: true. Got {len(bg_bash)}"
+            f"Expected 2+ daytona_codeact with background: true. Got {len(bg_bash)}"
         assert len(result.background_started()) >= 2, \
             f"Expected 2+ BackgroundTaskStarted events. Got {len(result.background_started())}"
         # Strict: at least 8 foreground bash calls (10 requested, allow some merging)
         fg_bash = [tc for tc in result.tool_calls
-                   if tc.name == "daytona_bash" and not tc.input.get("background")]
+                   if tc.name == "daytona_codeact" and not tc.input.get("background")]
         assert len(fg_bash) >= 8, \
             f"Expected 8+ foreground bash calls for 10 echo steps. Got {len(fg_bash)}"
         # Strict: total tool count must reflect full workload
@@ -399,14 +399,14 @@ class TestFourBackgroundMaxConcurrency:
 
         # Strict: exactly 4 background launches with background: true
         bg_bash = [tc for tc in result.tool_calls
-                   if tc.name == "daytona_bash" and tc.input.get("background") is True]
+                   if tc.name == "daytona_codeact" and tc.input.get("background") is True]
         assert len(bg_bash) >= 4, \
-            f"Expected 4+ daytona_bash with background: true. Got {len(bg_bash)}"
+            f"Expected 4+ daytona_codeact with background: true. Got {len(bg_bash)}"
         assert len(result.background_started()) >= 4, \
             f"Expected 4+ BackgroundTaskStarted events. Got {len(result.background_started())}"
         # Strict: foreground work must include bash + write_file
         fg_bash = [tc for tc in result.tool_calls
-                   if tc.name == "daytona_bash" and not tc.input.get("background")]
+                   if tc.name == "daytona_codeact" and not tc.input.get("background")]
         assert len(fg_bash) >= 2, \
             f"Expected 2+ foreground bash calls. Got {len(fg_bash)}"
         assert result.has_tool("daytona_write_file"), \

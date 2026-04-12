@@ -13,6 +13,18 @@ from typing import Any
 from config.defaults import DEFAULT_SANDBOX_CI_ROOT, DEFAULT_TEAM_SAFE_AGENT_NAMES
 
 from tools.core.base import ToolExecutionContext, ToolResult
+
+# ---------------------------------------------------------------------------
+# Coordination helpers — centralise agent-role and mode checks so that
+# tool implementations never compare against literal agent names.
+# ---------------------------------------------------------------------------
+
+def is_coordinated_team_agent(context: ToolExecutionContext) -> bool:
+    """True when the current agent is in the team-safe set AND team mode is active."""
+    agent_name = str(context.metadata.get("agent_name") or "").strip()
+    if agent_name not in DEFAULT_TEAM_SAFE_AGENT_NAMES:
+        return False
+    return bool(context.metadata.get("team_mode_enabled"))
 from tools.core.decorator import tool
 from tools.daytona_toolkit.ci_integration import (
     abort_ci_write,
@@ -288,20 +300,12 @@ def _team_repo_write_error(
     *,
     tool_name: str,
 ) -> str | None:
-    agent_name = str(context.metadata.get("agent_name") or "").strip()
-    if agent_name not in DEFAULT_TEAM_SAFE_AGENT_NAMES:
-        return None
-    if str(context.metadata.get("coordination_mode") or "").strip() != "ultra":
+    if not is_coordinated_team_agent(context):
         return None
     repo_root = str(_get_cwd(context) or "")
     rel_path = _normalize_repo_relative_path(file_path, repo_root)
     if not rel_path:
         return None
-    if agent_name == "validator":
-        return (
-            f"{tool_name}: validator lanes must not write repository files. "
-            f"Observed repo write: {rel_path}."
-        )
     allowed_write_paths = set(
         _normalize_string_list(context.metadata.get("owned_files"), repo_root)
     )
@@ -329,10 +333,7 @@ def _team_repo_write_warning(
     *,
     tool_name: str,
 ) -> str | None:
-    agent_name = str(context.metadata.get("agent_name") or "").strip()
-    if agent_name not in DEFAULT_TEAM_SAFE_AGENT_NAMES or agent_name == "validator":
-        return None
-    if str(context.metadata.get("coordination_mode") or "").strip() != "ultra":
+    if not is_coordinated_team_agent(context):
         return None
     if _verification_surface_enforcement_mode(context) != "warn":
         return None
@@ -371,169 +372,6 @@ async def _upload_file_compat(sandbox: Any, content: bytes, file_path: str) -> N
 # ---------------------------------------------------------------------------
 
 
-@tool(
-    name="daytona_bash",
-    description="Run a shell command and return stdout and exit code.",
-    background="optional",
-)
-async def daytona_bash(
-    command: str,
-    timeout: int = _DEFAULT_TIMEOUT,
-    declared_output_paths: list[str] | None = None,
-    *,
-    context: ToolExecutionContext,
-) -> ToolResult:
-    """Execute a shell command in a Daytona sandbox.
-
-    Args:
-        command: Shell command to execute in the sandbox
-        timeout: Timeout in seconds
-
-    Returns:
-        stdout (str): Standard output from the command
-        exit_code (int): Exit code (0 = success)
-    """
-    agent_name = str(context.metadata.get("agent_name", "") or "")
-    if agent_name in {"developer", "validator"}:
-        return ToolResult(
-            output=(
-                "daytona_bash is disabled for coordinated team developer/validator lanes. "
-                "Use structured Daytona tools and `daytona_codeact` for bounded runtime execution."
-            ),
-            is_error=True,
-        )
-    sandbox = await _require_sandbox(context)
-    cwd = _get_cwd(context)
-    on_progress_line = context.metadata.get("on_progress_line")
-    mutates_workspace = command_may_mutate_workspace(command)
-    effective_declared_output_paths = declared_output_paths if mutates_workspace else None
-    declaration_error = shell_mutation_declaration_error(
-        context,
-        command=command,
-        declared_output_paths=effective_declared_output_paths,
-    )
-    if declaration_error is not None:
-        return ToolResult(
-            output=declaration_error,
-            is_error=True,
-            metadata={"missing_declarations": True, "conflict": True},
-        )
-    if mutates_workspace or effective_declared_output_paths:
-        declared_shell_prepared, scope_packet, precheck_error = prepare_declared_shell_outputs(
-            context,
-            declared_output_paths=effective_declared_output_paths,
-        )
-    else:
-        declared_shell_prepared = []
-        scope_packet = context.metadata.get("scope_packet")
-        if not isinstance(scope_packet, dict):
-            scope_packet = {}
-        precheck_error = None
-    if precheck_error is not None:
-        return ToolResult(
-            output=precheck_error,
-            is_error=True,
-            metadata={"scope_packet": scope_packet, "conflict": True},
-        )
-
-    wrapped = _wrap_bash_command(command)
-
-    # Streaming path: when launched as a background task, query.py injects
-    # ``on_progress_line`` into the metadata. Use a Daytona session so we can
-    # tail stdout/stderr live and feed each line into the BackgroundTaskManager,
-    # making the partial output visible via check_background_progress mid-run.
-    if callable(on_progress_line):
-        bg_timeout = timeout if timeout != _DEFAULT_TIMEOUT else _BACKGROUND_DEFAULT_TIMEOUT
-        try:
-            result = await _exec_streaming(
-                sandbox=sandbox,
-                command=wrapped,
-                cwd=cwd,
-                timeout=bg_timeout,
-                on_progress_line=on_progress_line,
-            )
-            sync_info = await sync_shell_mutations(
-                context,
-                command=command,
-                declared_output_paths=effective_declared_output_paths,
-            )
-            if sync_info.get("enabled"):
-                try:
-                    data = json.loads(result.output)
-                    data["ci_sync"] = sync_info
-                    return ToolResult(
-                        output=json.dumps(data),
-                        is_error=result.is_error,
-                        metadata=dict(result.metadata),
-                    )
-                except Exception:
-                    logger.debug("Failed to attach shell CI sync metadata", exc_info=True)
-            return result
-        finally:
-            release_declared_shell_outputs(context, declared_shell_prepared)
-
-    async def _exec_command(active_sandbox: Any) -> Any:
-        kwargs: dict[str, object] = {"timeout": timeout}
-        if cwd:
-            kwargs["cwd"] = cwd
-        return await active_sandbox.process.exec(wrapped, **kwargs)
-
-    try:
-        response = await _exec_command(sandbox)
-        stdout, exit_code = _extract_exit_code(
-            getattr(response, "result", "") or "",
-            fallback_exit_code=getattr(response, "exit_code", None),
-        )
-        payload = {
-            "cwd": cwd or "",
-            "stdout": _format_shell_stdout(stdout, exit_code=exit_code),
-            "exit_code": exit_code,
-        }
-        try:
-            sync_info = await sync_shell_mutations(
-                context,
-                command=command,
-                declared_output_paths=effective_declared_output_paths,
-            )
-            if sync_info.get("enabled"):
-                payload["ci_sync"] = sync_info
-            output = json.dumps(payload)
-            return ToolResult(
-                output=output,
-                is_error=exit_code != 0,
-                metadata={"exit_code": exit_code},
-            )
-        finally:
-            release_declared_shell_outputs(context, declared_shell_prepared)
-    except Exception as exc:
-        try:
-            sandbox = await _recover_sandbox(context, exc)
-            response = await _exec_command(sandbox)
-            stdout, exit_code = _extract_exit_code(
-                getattr(response, "result", "") or "",
-                fallback_exit_code=getattr(response, "exit_code", None),
-            )
-            payload = {
-                "cwd": cwd or "",
-                "stdout": _format_shell_stdout(stdout, exit_code=exit_code),
-                "exit_code": exit_code,
-            }
-            sync_info = await sync_shell_mutations(
-                context,
-                command=command,
-                declared_output_paths=effective_declared_output_paths,
-            )
-            if sync_info.get("enabled"):
-                payload["ci_sync"] = sync_info
-            return ToolResult(
-                output=json.dumps(payload),
-                is_error=exit_code != 0,
-                metadata={"exit_code": exit_code},
-            )
-        except Exception as recovery_exc:
-            return ToolResult(output=str(recovery_exc), is_error=True)
-        finally:
-            release_declared_shell_outputs(context, declared_shell_prepared)
 
 
 async def _exec_streaming(

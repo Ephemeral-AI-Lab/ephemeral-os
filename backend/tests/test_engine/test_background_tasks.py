@@ -1127,7 +1127,7 @@ async def test_wait_tool_allows_immediate_join_for_non_subagent_task() -> None:
     mgr = BackgroundTaskManager()
     mgr.launch(
         task_id="bg_1",
-        tool_name="daytona_bash",
+        tool_name="daytona_codeact",
         tool_input={"command": "sleep 1"},
         coro=_make_tool_coro(delay=10),
         task_type="agent",

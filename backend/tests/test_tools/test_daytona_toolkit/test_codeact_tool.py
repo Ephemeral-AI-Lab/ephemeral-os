@@ -306,7 +306,7 @@ async def test_codeact_rejects_raw_subprocess_calls_for_team_developer():
         {
             "daytona_sandbox": sb,
             "agent_name": "developer",
-            "coordination_mode": "ultra",
+            "team_mode_enabled": True,
         }
     )
 
@@ -330,7 +330,7 @@ async def test_codeact_rejects_repo_writes_from_validator():
             "daytona_sandbox": sb,
             "daytona_cwd": "/testbed",
             "agent_name": "validator",
-            "coordination_mode": "ultra",
+            "team_mode_enabled": True,
         }
     )
 
@@ -352,7 +352,7 @@ async def test_codeact_rejects_verify_surface_write_outside_owned_scope():
             "daytona_sandbox": sb,
             "daytona_cwd": "/testbed",
             "agent_name": "developer",
-            "coordination_mode": "ultra",
+            "team_mode_enabled": True,
             "verification_surface_write_enforcement": "error",
             "owned_files": ["dask/cli.py"],
             "owned_failures": ["dask/tests/test_cli.py"],
@@ -378,7 +378,7 @@ async def test_codeact_allows_verify_surface_write_in_advisory_mode():
             "daytona_sandbox": sb,
             "daytona_cwd": "/testbed",
             "agent_name": "developer",
-            "coordination_mode": "ultra",
+            "team_mode_enabled": True,
             "verification_surface_write_enforcement": "warn",
             "owned_files": ["dask/cli.py"],
             "owned_failures": ["dask/tests/test_cli.py"],
@@ -414,7 +414,7 @@ async def test_codeact_rejects_install_commands_for_team_developer():
         {
             "daytona_sandbox": sb,
             "agent_name": "developer",
-            "coordination_mode": "ultra",
+            "team_mode_enabled": True,
         }
     )
 

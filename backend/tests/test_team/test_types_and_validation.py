@@ -91,11 +91,32 @@ def test_plan_from_dict_preserves_all_unique_owned_failures():
 # ---------- Phase A ----------------------------------------------------------
 
 
+_BUILTIN_ROLES = {
+    "team_planner": "planner",
+    "developer": "developer",
+    "validator": "reviewer",
+    "scout": "explorer",
+    "team_replanner": "replanner",
+}
+
+
+def _fake_definition(name: str):
+    from agents.types import AgentDefinition
+
+    role = _BUILTIN_ROLES.get(name)
+    return AgentDefinition(name=name, description=name, role=role)
+
+
 def _patch_registry(monkeypatch, known_agents):
     from team.planning import validation
 
     monkeypatch.setattr(
         validation, "_agent_exists", lambda name: name in known_agents
+    )
+    monkeypatch.setattr(
+        validation,
+        "_get_definition",
+        lambda name: _fake_definition(name) if name in known_agents else None,
     )
 
 
@@ -182,7 +203,7 @@ def test_phase_a_validator_policy_enforces_hard_floor_and_stricter_overrides(mon
             WorkItemSpec(agent_name="validator", local_id="v2"),
         ]
     )
-    issues = validate_plan_phase_a(too_many_validators_plan, max_validators_per_plan=1)
+    issues = validate_plan_phase_a(too_many_validators_plan, max_reviewers_per_plan=1)
     assert any("submitted plans may have at most 1" in i["msg"] for i in issues)
 
 
@@ -593,7 +614,7 @@ def test_phase_b_validator_policy_enforces_hard_floor_and_stricter_overrides(mon
             parent,
             new_id_factory=lambda: "N2",
             max_depth=5,
-            max_validators_per_plan=1,
+            max_reviewers_per_plan=1,
         )
 
 
@@ -874,7 +895,7 @@ def test_phase_b_rejects_agent_without_supported_kind(monkeypatch):
     from team.planning import validation as _v
 
     atomic_only = AgentDefinition(
-        name="atomic_only", description="d", supported_kinds=["atomic"]
+        name="atomic_only", description="d", role="planner", supported_kinds=["atomic"]
     )
     monkeypatch.setattr(_v, "_get_definition", lambda n: atomic_only if n == "atomic_only" else None)
     parent = _parent_wi()
@@ -1161,7 +1182,7 @@ def test_phase_a_rejects_worker_depending_on_subagent_sibling(monkeypatch):
         ]
     )
     issues = validate_plan_phase_a(plan)
-    assert any("subagent sibling" in i["msg"] for i in issues)
+    assert any("non-team" in i["msg"] for i in issues)
 
 
 def test_phase_a_allows_expandable_planner_depending_on_subagent(monkeypatch):
@@ -1187,7 +1208,7 @@ def test_phase_a_allows_expandable_planner_depending_on_subagent(monkeypatch):
         ]
     )
     issues = validate_plan_phase_a(plan)
-    assert not any("subagent sibling" in i["msg"] for i in issues)
+    assert not any("non-team" in i["msg"] for i in issues)
 
 
 def test_phase_a_allows_ready_expandable_item_in_mixed_plan(monkeypatch):

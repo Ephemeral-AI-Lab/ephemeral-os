@@ -44,10 +44,10 @@ class TestToolCallingAndSkillLoading:
     # -- 1a: Sandbox tool execution --
 
     @pytest.mark.asyncio
-    async def test_daytona_bash_tool_executes(self, sandbox):
-        """Model should invoke daytona_bash and return real output."""
+    async def test_daytona_codeact_tool_executes(self, sandbox):
+        """Model should invoke daytona_codeact and return real output."""
         agent = create_eval_agent(
-            system_prompt="You have a remote sandbox. Use daytona_bash to run commands. Always use tools.",
+            system_prompt="You have a remote sandbox. Use daytona_codeact to run commands. Always use tools.",
             sandbox_id=sandbox["id"],
         )
 
@@ -122,7 +122,7 @@ class TestToolCallingAndSkillLoading:
     async def test_multiple_tool_calls_single_turn(self, sandbox):
         """Model should handle multiple tool calls in a single turn."""
         agent = create_eval_agent(
-            system_prompt="Use daytona_bash for all commands. Execute every step.",
+            system_prompt="Use daytona_codeact for all commands. Execute every step.",
             sandbox_id=sandbox["id"],
         )
 
@@ -581,7 +581,7 @@ class TestComplexLongTasks:
         agent = create_eval_agent(
             system_prompt=(
                 "You have sandbox access. Use daytona_write_file to write files and "
-                "daytona_bash to run them. Execute ALL requested steps using tools."
+                "daytona_codeact to run them. Execute ALL requested steps using tools."
             ),
             sandbox_id=sandbox["id"],
         )
@@ -605,7 +605,7 @@ class TestComplexLongTasks:
         """Model should execute a multi-step pipeline: create, modify, verify."""
         agent = create_eval_agent(
             system_prompt=(
-                "You are a coding assistant with sandbox access. Use daytona_bash, "
+                "You are a coding assistant with sandbox access. Use daytona_codeact, "
                 "daytona_write_file, and daytona_read_file tools. Execute every step."
             ),
             sandbox_id=sandbox["id"],
@@ -623,7 +623,7 @@ class TestComplexLongTasks:
     async def test_tool_error_handling(self, sandbox):
         """Model should handle tool errors gracefully."""
         agent = create_eval_agent(
-            system_prompt="Use daytona_bash for commands. If a command fails, explain the error.",
+            system_prompt="Use daytona_codeact for commands. If a command fails, explain the error.",
             sandbox_id=sandbox["id"],
         )
 
@@ -640,7 +640,7 @@ class TestComplexLongTasks:
     async def test_sequential_tool_calls_preserve_state(self, sandbox):
         """Sequential tool calls should see each other's results in the sandbox."""
         agent = create_eval_agent(
-            system_prompt="Use daytona_bash for all commands.",
+            system_prompt="Use daytona_codeact for all commands.",
             sandbox_id=sandbox["id"],
         )
 
@@ -656,7 +656,7 @@ class TestComplexLongTasks:
     async def test_long_output_handling(self, sandbox):
         """Model should handle large tool output without crashing."""
         agent = create_eval_agent(
-            system_prompt="Use daytona_bash for commands.",
+            system_prompt="Use daytona_codeact for commands.",
             sandbox_id=sandbox["id"],
         )
 

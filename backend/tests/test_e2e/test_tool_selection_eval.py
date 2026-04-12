@@ -94,14 +94,14 @@ EVAL_CASES = [
     EvalCase(
         name="run_command",
         prompt="Run 'python -m pytest tests/ -v' in the sandbox.",
-        expected_tools=["daytona_bash"],
-        required_params={"daytona_bash": ["command"]},
+        expected_tools=["daytona_codeact"],
+        required_params={"daytona_codeact": ["command"]},
     ),
     EvalCase(
         name="install_package",
         prompt="Install the requests library using pip.",
-        expected_tools=["daytona_bash"],
-        required_params={"daytona_bash": ["command"]},
+        expected_tools=["daytona_codeact"],
+        required_params={"daytona_codeact": ["command"]},
     ),
     # -- LSP operations --
     EvalCase(

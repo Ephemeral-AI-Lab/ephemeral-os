@@ -10,8 +10,6 @@ import pytest
 
 from tools.core.base import ToolExecutionContext
 from tools.daytona_toolkit.tools import (
-    _EXIT_MARKER,
-    daytona_bash,
     daytona_read_file,
     daytona_write_file,
     daytona_list_files,
@@ -34,243 +32,6 @@ def _sb(*, exec_result=None, download=None, list_result=None, find_result=None):
     sb.fs.list_files = AsyncMock(return_value=list_result or [])
     sb.fs.find_files = AsyncMock(return_value=find_result or [])
     return sb
-
-
-# ---------------------------------------------------------------------------
-# daytona_bash
-# ---------------------------------------------------------------------------
-
-async def test_bash_success():
-    sb = _sb(exec_result=MagicMock(result="hello world", exit_code=0))
-    ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/workspace"})
-    result = await daytona_bash.execute(daytona_bash.input_model(command="echo hello"), ctx)
-    assert not result.is_error
-    data = json.loads(result.output)
-    assert data["stdout"] == "hello world"
-    assert data["exit_code"] == 0
-    assert data["cwd"] == "/workspace"
-
-
-async def test_bash_nonzero_exit_is_error():
-    sb = _sb(exec_result=MagicMock(result="err", exit_code=1))
-    ctx = _ctx({"daytona_sandbox": sb})
-    result = await daytona_bash.execute(daytona_bash.input_model(command="bad"), ctx)
-    assert result.is_error
-    assert json.loads(result.output)["exit_code"] == 1
-
-
-async def test_bash_prefers_marker_exit_code_when_sdk_reports_success():
-    sb = _sb(
-        exec_result=MagicMock(
-            result=f"bash: line 1: pytest: command not found\n{_EXIT_MARKER}127\n",
-            exit_code=0,
-        )
-    )
-    ctx = _ctx({"daytona_sandbox": sb})
-    result = await daytona_bash.execute(daytona_bash.input_model(command="pytest"), ctx)
-    data = json.loads(result.output)
-    assert result.is_error
-    assert data["exit_code"] == 127
-    assert _EXIT_MARKER not in data["stdout"]
-
-
-async def test_bash_exception_returns_error():
-    sb = MagicMock()
-    sb.process.exec = AsyncMock(side_effect=RuntimeError("boom"))
-    ctx = _ctx({"daytona_sandbox": sb})
-    result = await daytona_bash.execute(daytona_bash.input_model(command="fail"), ctx)
-    assert result.is_error
-    assert "boom" in result.output
-
-
-async def test_bash_lazily_attaches_sandbox_from_sandbox_id():
-    sb = _sb(exec_result=MagicMock(result="hello", exit_code=0))
-    ctx = _ctx({"sandbox_id": "sb-attached", "daytona_cwd": "/workspace"})
-
-    async def fake_get_async_sandbox(sandbox_id):
-        assert sandbox_id == "sb-attached"
-        return sb
-
-    workspace_module = MagicMock()
-    workspace_module.discover_workspace_async = AsyncMock(return_value="/workspace")
-    workspace_module.inject_code_intelligence = MagicMock()
-    async_client_module = MagicMock()
-    async_client_module.get_async_sandbox = fake_get_async_sandbox
-
-    with patch.dict(
-        "sys.modules",
-        {
-            "sandbox.async_client": async_client_module,
-            "sandbox.workspace": workspace_module,
-        },
-    ):
-        result = await daytona_bash.execute(
-            daytona_bash.input_model(command="echo hello"),
-            ctx,
-        )
-
-    assert not result.is_error
-    assert ctx.metadata["daytona_sandbox"] is sb
-    assert json.loads(result.output)["stdout"] == "hello"
-
-
-async def test_bash_recovers_after_container_loss_once():
-    stale = _sb()
-    stale.process.exec = AsyncMock(side_effect=RuntimeError("No such container: sb-stale"))
-    fresh = _sb(exec_result=MagicMock(result="recovered", exit_code=0))
-    ctx = _ctx({"daytona_sandbox": stale, "sandbox_id": "sb-stale"})
-
-    with patch(
-        "tools.daytona_toolkit.tools._recover_sandbox",
-        new=AsyncMock(return_value=fresh),
-    ) as recover_mock:
-        result = await daytona_bash.execute(
-            daytona_bash.input_model(command="echo recovered"),
-            ctx,
-        )
-
-    assert not result.is_error
-    assert json.loads(result.output)["stdout"] == "recovered"
-    recover_mock.assert_awaited_once()
-
-
-async def test_bash_no_sandbox_raises():
-    with pytest.raises(RuntimeError, match="No Daytona sandbox"):
-        await daytona_bash.execute(daytona_bash.input_model(command="echo"), _ctx())
-
-
-async def test_bash_no_cwd_empty_string():
-    sb = _sb(exec_result=MagicMock(result="ok", exit_code=0))
-    ctx = _ctx({"daytona_sandbox": sb})
-    result = await daytona_bash.execute(daytona_bash.input_model(command="echo ok"), ctx)
-    assert json.loads(result.output)["cwd"] == ""
-
-
-async def test_bash_truncates_long_output():
-    sb = _sb(exec_result=MagicMock(result="x" * 20_000, exit_code=0))
-    ctx = _ctx({"daytona_sandbox": sb})
-    result = await daytona_bash.execute(daytona_bash.input_model(command="big"), ctx)
-    assert "truncated" in json.loads(result.output)["stdout"]
-
-
-async def test_bash_nonzero_long_output_preserves_tail():
-    stdout = "suite header\n" + ("x" * 15_000) + "\nFAILURES\nnodeid::test_case\nassert 1 == 2\n"
-    sb = _sb(exec_result=MagicMock(result=stdout, exit_code=1))
-    ctx = _ctx({"daytona_sandbox": sb})
-    result = await daytona_bash.execute(daytona_bash.input_model(command="pytest"), ctx)
-
-    assert result.is_error
-    rendered = json.loads(result.output)["stdout"]
-    assert "truncated" in rendered
-    assert "suite header" not in rendered
-    assert "FAILURES" in rendered
-    assert "nodeid::test_case" in rendered
-
-
-async def test_bash_passes_cwd_to_exec():
-    sb = _sb(exec_result=MagicMock(result="", exit_code=0))
-    ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/proj"})
-    await daytona_bash.execute(daytona_bash.input_model(command="ls"), ctx)
-    call_kwargs = sb.process.exec.call_args[1]
-    assert call_kwargs.get("cwd") == "/proj"
-
-
-async def test_bash_rejects_mutating_command_without_declared_outputs_in_ultra_mode():
-    sb = _sb(exec_result=MagicMock(result="ok", exit_code=0))
-    ctx = _ctx(
-        {
-            "daytona_sandbox": sb,
-            "coordination_mode": "ultra",
-            "require_declared_shell_outputs": True,
-        }
-    )
-
-    result = await daytona_bash.execute(daytona_bash.input_model(command="touch tmp.txt"), ctx)
-
-    assert result.is_error
-    assert "must declare `declared_output_paths`" in result.output
-    sb.process.exec.assert_not_called()
-
-
-async def test_bash_allows_mutating_command_with_declared_outputs_in_ultra_mode():
-    sb = _sb(exec_result=MagicMock(result="ok", exit_code=0))
-    ctx = _ctx(
-        {
-            "daytona_sandbox": sb,
-            "daytona_cwd": "/workspace",
-            "coordination_mode": "ultra",
-            "require_declared_shell_outputs": True,
-        }
-    )
-
-    result = await daytona_bash.execute(
-        daytona_bash.input_model(
-            command="touch tmp.txt",
-            declared_output_paths=["tmp.txt"],
-        ),
-        ctx,
-    )
-
-    assert not result.is_error
-    assert json.loads(result.output)["exit_code"] == 0
-    assert sb.process.exec.called
-
-
-async def test_bash_allows_read_only_stderr_redirection_without_declared_outputs():
-    sb = _sb(exec_result=MagicMock(result="ok", exit_code=0))
-    ctx = _ctx(
-        {
-            "daytona_sandbox": sb,
-            "coordination_mode": "ultra",
-            "require_declared_shell_outputs": True,
-        }
-    )
-
-    result = await daytona_bash.execute(
-        daytona_bash.input_model(command="pytest tests/test_networks.py -x -v 2>&1 | head -100"),
-        ctx,
-    )
-
-    assert not result.is_error
-    assert json.loads(result.output)["exit_code"] == 0
-    sb.process.exec.assert_called_once()
-
-
-async def test_bash_read_only_pytest_ignores_declared_outputs_and_stale_scope_coherence():
-    sb = _sb(exec_result=MagicMock(result="ok", exit_code=0))
-    svc = MagicMock()
-    svc.ledger.generation = 1
-    svc.ledger.recent_entries.return_value = []
-    svc.arbiter.generation = 1
-    svc.arbiter.active_reservations.return_value = []
-    svc.arbiter.hotspots.return_value = []
-    svc.symbol_index.generation = 1
-    ctx = _ctx(
-        {
-            "daytona_sandbox": sb,
-            "daytona_cwd": "/workspace",
-            "coordination_mode": "ultra",
-            "require_declared_shell_outputs": True,
-            "ci_service": svc,
-            "scope_packet": {
-                "scope_paths": ["pydantic/networks.py"],
-                "coherence_token": "stale-token",
-            },
-            "coherence_token": "stale-token",
-        }
-    )
-
-    result = await daytona_bash.execute(
-        daytona_bash.input_model(
-            command="pytest tests/test_networks.py -x -v 2>&1 | head -100",
-            declared_output_paths=["tests/test_networks.py", ".pytest_cache"],
-        ),
-        ctx,
-    )
-
-    assert not result.is_error
-    assert json.loads(result.output)["exit_code"] == 0
-    sb.process.exec.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
@@ -402,7 +163,7 @@ async def test_write_file_rejects_verify_surface_write_outside_owned_scope():
             "daytona_sandbox": sb,
             "daytona_cwd": "/testbed",
             "agent_name": "developer",
-            "coordination_mode": "ultra",
+            "team_mode_enabled": True,
             "verification_surface_write_enforcement": "error",
             "owned_files": ["dask/config.py"],
             "owned_failures": ["dask/tests/test_config.py"],
@@ -432,7 +193,7 @@ async def test_write_file_allows_verify_surface_write_in_advisory_mode():
             "daytona_sandbox": sb,
             "daytona_cwd": "/testbed",
             "agent_name": "developer",
-            "coordination_mode": "ultra",
+            "team_mode_enabled": True,
             "verification_surface_write_enforcement": "warn",
             "owned_files": ["dask/config.py"],
             "owned_failures": ["dask/tests/test_config.py"],
@@ -461,7 +222,7 @@ async def test_write_file_rejects_repo_write_from_validator():
             "daytona_sandbox": sb,
             "daytona_cwd": "/testbed",
             "agent_name": "validator",
-            "coordination_mode": "ultra",
+            "team_mode_enabled": True,
         }
     )
 

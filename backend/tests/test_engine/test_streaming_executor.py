@@ -402,7 +402,7 @@ class BgBashInput(BaseModel):
 class BgBashTool(BaseTool):
     """A tool that supports background execution."""
 
-    name = "daytona_bash"
+    name = "daytona_codeact"
     description = "Run a command in the sandbox."
     input_model = BgBashInput
     background = "optional"  # LLM may opt in via input.background=true
@@ -441,7 +441,7 @@ async def test_add_tool_skips_background_tool():
 
     event = ApiToolUseDeltaEvent(
         id="tool_bg",
-        name="daytona_bash",
+        name="daytona_codeact",
         input={"command": "sleep 10", "background": True},
     )
 
@@ -461,7 +461,7 @@ async def test_add_tool_runs_foreground_when_background_false():
 
     event = ApiToolUseDeltaEvent(
         id="tool_fg",
-        name="daytona_bash",
+        name="daytona_codeact",
         input={"command": "echo hello", "background": False},
     )
 
@@ -503,7 +503,7 @@ async def test_mixed_foreground_and_background_tools():
 
     bg_event = ApiToolUseDeltaEvent(
         id="tool_bg",
-        name="daytona_bash",
+        name="daytona_codeact",
         input={"command": "sleep 10", "background": True},
     )
     fg_event = ApiToolUseDeltaEvent(

@@ -90,8 +90,11 @@ class TeamRun:
         self._executor_factory: Callable[["TeamRun"], Executor] | None = None
         self._num_executors: int = _default_num_executors()
         # Per-run metadata injected into every work-item's ExecutionMetadata.
-        # Benchmark runners set coordination_mode, enforcement flags, etc.
+        # Benchmark runners set team_mode_enabled, enforcement flags, etc.
         self.coordination_metadata: dict[str, Any] = {}
+        # Role → agent-name mapping from the TeamDefinition.  Stored at
+        # start time so context builders can render it into planner prompts.
+        self.roster: dict[str, list[str]] = {}
 
     # ---- lifecycle -------------------------------------------------------
 
@@ -145,32 +148,21 @@ class TeamRun:
         executor_factory: Callable[["TeamRun"], Executor],
         num_executors: int | None = None,
     ) -> None:
-        """Start a team run using a ``TeamDefinition`` roster.
+        """Start a team run using the team definition's ``entry_planner``.
 
-        Finds the first roster entry whose registered agent has
-        ``role == "planner"`` and uses it as the root WorkItem agent.
-        Broken references fail fast with a descriptive error.
+        Validates that ``entry_planner`` resolves in ``agents.registry``
+        before dispatching the root WorkItem.
         """
-        from agents.registry import get_definition, has_role
+        from agents.registry import get_definition
 
-        planner_agent: str | None = None
-        for _slot, agent_name in team_def.roster.items():
-            defn = get_definition(agent_name)
-            if defn is None:
-                raise ValueError(
-                    f"team_definition '{team_def.name}' roster references "
-                    f"agent '{agent_name}' which does not exist"
-                )
-            if planner_agent is None and has_role(agent_name, "planner"):
-                planner_agent = agent_name
-
-        if planner_agent is None:
+        if get_definition(team_def.entry_planner) is None:
             raise ValueError(
-                f"team_definition '{team_def.name}' roster has no agent "
-                f"with role='planner'"
+                f"team_definition '{team_def.name}' entry_planner "
+                f"'{team_def.entry_planner}' does not exist"
             )
+        self.roster = dict(team_def.roster)
         await self.start(
-            agent_name=planner_agent,
+            agent_name=team_def.entry_planner,
             payload=payload,
             executor_factory=executor_factory,
             num_executors=num_executors,

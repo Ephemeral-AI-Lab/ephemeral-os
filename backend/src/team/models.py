@@ -15,8 +15,8 @@ from config.defaults import (
     DEFAULT_MAX_WORK_ITEMS,
     DEFAULT_MAX_DEPTH,
     DEFAULT_MAX_PLAN_SIZE,
-    DEFAULT_MAX_VALIDATORS_PER_PLAN,
-    DEFAULT_REQUIRE_VALIDATOR_FOR_PLAN_SIZE,
+    DEFAULT_MAX_REVIEWERS_PER_PLAN,
+    DEFAULT_REQUIRE_REVIEWER_FOR_PLAN_SIZE,
     DEFAULT_MAX_ARTIFACT_BYTES,
     DEFAULT_MAX_TOTAL_ARTIFACT_BYTES,
     DEFAULT_WORK_ITEM_TIMEOUT,
@@ -25,6 +25,11 @@ from config.defaults import (
     DEFAULT_MAX_RETRIES_PER_ITEM,
     DEFAULT_MAX_REPLANS_PER_RUN,
 )
+
+# Re-export generic posthook submission types so existing ``from
+# team.models import RetryRequest, ReplanRequest`` continues to work.
+# Canonical definitions live in ``tools.posthook.types``.
+from tools.posthook.types import ReplanRequest, RetryRequest  # noqa: F401
 
 
 def _utcnow() -> datetime:
@@ -185,36 +190,8 @@ class Plan:
         return cls(items=items, rationale=data.get("rationale"))
 
 
-@dataclass
-class RetryRequest:
-    """Posthook decision: retry the current work item."""
-
-    reason: str
-    retry_count: int = 0
-    max_retries: int = 2
-
-
-@dataclass
-class ReplanRequest:
-    """Posthook decision: replan at the current node level."""
-
-    reason: str
-    context: str
-    suggestion: str = ""
-
-
-@dataclass
-class ReplanItemSpec:
-    """Specification for a corrective work item added by the replanner."""
-
-    agent_name: str
-    payload: dict[str, Any] = field(default_factory=dict)
-    local_id: str | None = None
-    deps: list[str] = field(default_factory=list)
-    notes: str | None = None
-    timeout_seconds: float | None = None
-    kind: WorkItemKind = WorkItemKind.ATOMIC
-    briefings: list[Briefing] = field(default_factory=list)
+# Replan items share the exact same shape as regular plan items.
+ReplanItemSpec = WorkItemSpec
 
 
 @dataclass
@@ -228,7 +205,7 @@ class ReplanPlan:
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "ReplanPlan":
         add_items = [
-            ReplanItemSpec(
+            WorkItemSpec(
                 agent_name=str(it["agent_name"]),
                 payload=_normalize_payload(it.get("payload") or {}),
                 local_id=it.get("local_id"),
@@ -262,8 +239,8 @@ class BudgetConfig:
     max_work_items: int = DEFAULT_MAX_WORK_ITEMS
     max_depth: int = DEFAULT_MAX_DEPTH
     max_plan_size: int = DEFAULT_MAX_PLAN_SIZE
-    max_validators_per_plan: int | None = DEFAULT_MAX_VALIDATORS_PER_PLAN
-    require_validator_for_plan_size: int | None = DEFAULT_REQUIRE_VALIDATOR_FOR_PLAN_SIZE
+    max_reviewers_per_plan: int | None = DEFAULT_MAX_REVIEWERS_PER_PLAN
+    require_reviewer_for_plan_size: int | None = DEFAULT_REQUIRE_REVIEWER_FOR_PLAN_SIZE
     max_artifact_bytes: int = DEFAULT_MAX_ARTIFACT_BYTES
     max_total_artifact_bytes: int = DEFAULT_MAX_TOTAL_ARTIFACT_BYTES
     default_work_item_timeout: float | None = DEFAULT_WORK_ITEM_TIMEOUT
@@ -282,29 +259,19 @@ class BudgetState:
 
 @dataclass
 class TeamDefinition:
-    """Composition blob naming which agents fill which slots in a team run.
+    """Role-based team composition.
 
-    ``roster`` maps freeform slot labels to agent-definition names looked
-    up in ``agents.registry`` at team-run start time.  At least one entry
-    must resolve to an agent whose ``role == "planner"``; beyond that any
-    combination is valid.
+    ``entry_planner`` is the agent name used as the root work item when
+    the team run starts — it receives the user request first.
+
+    ``roster`` maps canonical role names to lists of agent-definition
+    names.  Canonical roles: ``planner``, ``replanner``, ``developer``,
+    ``reviewer``, ``explorer``.  Custom role keys are allowed.
     """
 
     id: str
     name: str
     description: str
-    roster: dict[str, str] = field(default_factory=dict)
+    entry_planner: str
+    roster: dict[str, list[str]] = field(default_factory=dict)
 
-    # Back-compat helpers for code that still uses the old fields.
-    @property
-    def planner_agent(self) -> str:
-        from agents.registry import has_role
-        for agent_name in self.roster.values():
-            if has_role(agent_name, "planner"):
-                return agent_name
-        return next(iter(self.roster.values()), "")
-
-    @property
-    def worker_agents(self) -> list[str]:
-        from agents.registry import has_role
-        return [n for n in self.roster.values() if not has_role(n, "planner")]

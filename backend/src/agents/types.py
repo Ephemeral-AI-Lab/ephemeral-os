@@ -53,7 +53,7 @@ class AgentDefinition(BaseModel):
     # --- team role category ---
     # Freeform tag used by team-mode validation and dispatch instead of
     # hard-coded agent-name comparisons.  Canonical values: "planner",
-    # "developer", "validator", "scout", "replanner".  ``None`` for
+    # "developer", "reviewer", "explorer", "replanner".  ``None`` for
     # engine-internal agents (serialisers, decision posthooks).
     role: str | None = None
 
@@ -67,10 +67,12 @@ class AgentDefinition(BaseModel):
     permissions: list[str] = Field(default_factory=list)
     source: Literal["builtin", "user", "plugin"] = "builtin"
 
-    # --- agent type: regular agent or subagent (worker) ---
+    # --- agent type: regular agent, subagent (worker), or posthook ---
     # Descriptive label kept for logging / UI. Engine behaviour is driven
     # by the explicit capability flags below, not by this string.
-    agent_type: Literal["agent", "subagent"] = "agent"
+    # "posthook" denotes internal serialiser / decision agents that run
+    # after a work phase to validate and submit structured output.
+    agent_type: Literal["agent", "subagent", "posthook"] = "agent"
 
     # --- team-mode work item kinds this agent is allowed to serve ---
     # Values: "atomic", "expandable". Defaults to both so existing
@@ -91,11 +93,13 @@ class AgentDefinition(BaseModel):
     can_spawn_subagents: bool = True
     require_fresh_client: bool = False
     include_skills: bool = True
-    # Whether this subagent should appear as a valid ``run_subagent``
-    # target in tool schemas and pass the runtime dispatch gate. Internal
-    # serializer/decision subagents set this false so planners do not see
+    # Whether this agent should appear as a valid ``run_subagent``
+    # target in tool schemas and pass the runtime dispatch gate.
+    # Defaults to False — only ``agent_type="subagent"`` agents are
+    # promoted to True in ``model_post_init``.  Internal posthook agents
+    # (serializers, decision agents) stay False so planners do not see
     # engine-owned helper agents as delegable workers.
-    dispatchable_via_run_subagent: bool = True
+    dispatchable_via_run_subagent: bool = False
 
     # --- posthook ---
     # Optional structured-output posthook. When set, the engine runs this
@@ -144,11 +148,16 @@ class AgentDefinition(BaseModel):
         return bool(v) if v is not None else False
 
     def model_post_init(self, __context: Any) -> None:
-        # Keep legacy ``agent_type`` strings in sync with capability flags
-        # so existing callers that read ``agent_def.agent_type`` continue
-        # to work without caring that the flags are now authoritative.
+        # Keep ``agent_type`` strings in sync with capability flags so
+        # existing callers that read ``agent_def.agent_type`` continue to
+        # work without caring that the flags are now authoritative.
         if self.agent_type == "subagent":
             self.can_spawn_subagents = False
             self.require_fresh_client = True
-        else:
-            self.dispatchable_via_run_subagent = False
+            self.dispatchable_via_run_subagent = True
+        elif self.agent_type == "posthook":
+            # Posthook agents are internal serialisers / decision agents.
+            # They cannot spawn subagents, need their own client, and must
+            # never appear as run_subagent targets.
+            self.can_spawn_subagents = False
+            self.require_fresh_client = True

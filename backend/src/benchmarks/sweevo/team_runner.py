@@ -173,8 +173,8 @@ def _derive_sweevo_budgets(instance: SWEEvoInstance) -> BudgetConfig:
         max_work_items=work_items,
         max_depth=int(base["max_depth"]),
         max_plan_size=plan_size,
-        max_validators_per_plan=None,
-        require_validator_for_plan_size=None,
+        max_reviewers_per_plan=None,
+        require_reviewer_for_plan_size=None,
         max_artifact_bytes=1_000_000,
         max_total_artifact_bytes=50_000_000,
         default_work_item_timeout=None,
@@ -646,7 +646,7 @@ def _enforce_validation_evidence(
     if agent_name != VALIDATOR:
         return
     tool_names = _tool_names_from_messages(display_messages)
-    if "daytona_codeact" in tool_names or "daytona_bash" in tool_names:
+    if "daytona_codeact" in tool_names:
         return
     raise RuntimeError(
         "validator_missing_tool_evidence: validator must execute at least one "
@@ -970,7 +970,7 @@ def _build_runtime_metadata(
     meta["sandbox_id"] = sandbox_id
     meta["daytona_cwd"] = repo_dir
     meta["ci_workspace_root"] = repo_dir
-    meta["coordination_mode"] = "ultra"
+    meta["team_mode_enabled"] = True
     meta["require_declared_shell_outputs"] = True
     meta["verification_surface_write_enforcement"] = "warn"
     return meta
@@ -1055,15 +1055,15 @@ def _make_context_builders(
                 max_plan_size = getattr(budgets, "max_plan_size", None)
                 if max_plan_size is not None:
                     meta["max_plan_size"] = int(max_plan_size)
-                max_validators_per_plan = getattr(budgets, "max_validators_per_plan", None)
-                if max_validators_per_plan is not None:
-                    meta["max_validators_per_plan"] = int(max_validators_per_plan)
-                require_validator_for_plan_size = getattr(
-                    budgets, "require_validator_for_plan_size", None
+                max_reviewers_per_plan = getattr(budgets, "max_reviewers_per_plan", None)
+                if max_reviewers_per_plan is not None:
+                    meta["max_reviewers_per_plan"] = int(max_reviewers_per_plan)
+                require_reviewer_for_plan_size = getattr(
+                    budgets, "require_reviewer_for_plan_size", None
                 )
-                if require_validator_for_plan_size is not None:
-                    meta["require_validator_for_plan_size"] = int(
-                        require_validator_for_plan_size
+                if require_reviewer_for_plan_size is not None:
+                    meta["require_reviewer_for_plan_size"] = int(
+                        require_reviewer_for_plan_size
                     )
             posthook_input_text = work_result.get("posthook_input_text")
             if isinstance(posthook_input_text, str) and posthook_input_text.strip():
@@ -1410,7 +1410,7 @@ async def run_sweevo_team(
         event_store=event_store,
     )
     tr.coordination_metadata = {
-        "coordination_mode": "ultra",
+        "team_mode_enabled": True,
         "require_declared_shell_outputs": True,
         "verification_surface_write_enforcement": "warn",
     }

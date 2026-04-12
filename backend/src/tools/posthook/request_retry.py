@@ -6,7 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from team.models import RetryRequest
+from tools.posthook.types import RetryRequest
 from tools.core.base import ToolExecutionContext
 from tools.posthook.base import SubmitPosthookTool
 

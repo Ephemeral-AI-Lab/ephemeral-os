@@ -6,7 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from team.models import ReplanRequest
+from tools.posthook.types import ReplanRequest
 from tools.core.base import ToolExecutionContext
 from tools.posthook.base import SubmitPosthookTool
 

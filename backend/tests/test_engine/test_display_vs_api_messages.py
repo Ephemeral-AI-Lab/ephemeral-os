@@ -354,7 +354,7 @@ class TestBuildBackgroundReminder:
 
         mgr.launch(
             "bg_1",
-            "daytona_bash",
+            "daytona_codeact",
             {"command": "sleep 10"},
             _coro(),
             task_note="long sleep",

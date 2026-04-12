@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -10,19 +9,7 @@ from pydantic import BaseModel, Field
 from team.context.canonicalize import scope_of_artifact
 from tools.core.base import ToolExecutionContext
 from tools.posthook.base import SubmitPosthookTool
-
-
-@dataclass
-class SubmittedSummary:
-    """Posthook-validated worker output.
-
-    ``summary`` is the 1-3 sentence gloss peers and the orchestrator
-    consume. ``artifact`` is optional structured output (files changed,
-    findings, etc.).
-    """
-
-    summary: str
-    artifact: dict[str, Any] | None = None
+from tools.posthook.types import SubmittedSummary
 
 
 class SubmitSummaryInput(BaseModel):

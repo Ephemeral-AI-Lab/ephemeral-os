@@ -549,7 +549,7 @@ class TestDaytonaToolkitIntegration:
         assert len(tools) == 12, f"Expected 12 tools, got {len(tools)}: {names}"
 
         expected = {
-            "daytona_bash", "daytona_read_file", "daytona_write_file",
+            "daytona_codeact", "daytona_read_file", "daytona_write_file",
             "daytona_list_files", "daytona_grep", "daytona_glob",
             "daytona_edit_file",
             "daytona_lsp_hover", "daytona_lsp_definition",
@@ -572,7 +572,7 @@ class TestDaytonaToolkitIntegration:
     def test_toolkit_get_tool_by_name(self):
         from tools.daytona_toolkit import DaytonaToolkit
         toolkit = DaytonaToolkit(sandbox_id="test")
-        for name in ["daytona_bash", "daytona_edit_file", "daytona_codeact"]:
+        for name in ["daytona_codeact", "daytona_edit_file", "daytona_codeact"]:
             tool = toolkit.get(name)
             assert tool is not None, f"Tool {name} not found"
             assert tool.name == name
@@ -609,7 +609,7 @@ class TestDaytonaToolkitIntegration:
         registry.register_toolkit(toolkit)
 
         assert registry.get_toolkit("sandbox_operations") is toolkit
-        assert registry.get("daytona_bash") is not None
+        assert registry.get("daytona_codeact") is not None
         assert registry.get("daytona_codeact") is not None
         assert len(registry.to_api_schema()) == 12
 
@@ -623,7 +623,7 @@ class TestDaytonaToolkitIntegration:
         registry.restrict_to_toolkits(["sandbox_operations"])
 
         assert len(registry.list_tools()) == 12
-        assert registry.get("daytona_bash") is not None
+        assert registry.get("daytona_codeact") is not None
 
 
 # ===========================================================================
@@ -721,7 +721,7 @@ class TestDaytonaToolkitLive:
     # -- Live bash --
 
     def test_live_bash_echo(self, live_sandbox):
-        from tools.daytona_toolkit.tools import daytona_bash as DaytonaBashTool
+        from tools.daytona_toolkit.codeact_tool import daytona_codeact as DaytonaBashTool
         tool = DaytonaBashTool
         ctx = self._ctx(live_sandbox)
         result = _run(tool.execute(tool.input_model(command="echo LIVE_BASH_OK"), ctx))
@@ -729,7 +729,7 @@ class TestDaytonaToolkitLive:
         assert "LIVE_BASH_OK" in result.output
 
     def test_live_bash_python_version(self, live_sandbox):
-        from tools.daytona_toolkit.tools import daytona_bash as DaytonaBashTool
+        from tools.daytona_toolkit.codeact_tool import daytona_codeact as DaytonaBashTool
         tool = DaytonaBashTool
         ctx = self._ctx(live_sandbox)
         result = _run(tool.execute(tool.input_model(command="python3 --version"), ctx))
@@ -737,7 +737,7 @@ class TestDaytonaToolkitLive:
         assert "Python" in result.output
 
     def test_live_bash_nonzero_exit(self, live_sandbox):
-        from tools.daytona_toolkit.tools import daytona_bash as DaytonaBashTool
+        from tools.daytona_toolkit.codeact_tool import daytona_codeact as DaytonaBashTool
         tool = DaytonaBashTool
         ctx = self._ctx(live_sandbox)
         result = _run(tool.execute(tool.input_model(command="cat /nonexistent_file_xyz"), ctx))
@@ -750,7 +750,7 @@ class TestDaytonaToolkitLive:
     # so we use bash for write+read in a single call where needed.
 
     def test_live_write_then_read(self, live_sandbox):
-        from tools.daytona_toolkit.tools import daytona_bash as DaytonaBashTool
+        from tools.daytona_toolkit.codeact_tool import daytona_codeact as DaytonaBashTool
         ctx = self._ctx(live_sandbox)
         bash_tool = DaytonaBashTool
 
@@ -765,7 +765,7 @@ class TestDaytonaToolkitLive:
     # -- Live list files --
 
     def test_live_list_tmp(self, live_sandbox):
-        from tools.daytona_toolkit.tools import daytona_bash as DaytonaBashTool
+        from tools.daytona_toolkit.codeact_tool import daytona_codeact as DaytonaBashTool
         ctx = self._ctx(live_sandbox)
         tool = DaytonaBashTool
         result = _run(tool.execute(tool.input_model(command="ls /tmp"), ctx))
@@ -774,7 +774,7 @@ class TestDaytonaToolkitLive:
     # -- Live grep --
 
     def test_live_grep_etc(self, live_sandbox):
-        from tools.daytona_toolkit.tools import daytona_bash as DaytonaBashTool
+        from tools.daytona_toolkit.codeact_tool import daytona_codeact as DaytonaBashTool
         tool = DaytonaBashTool
         ctx = self._ctx(live_sandbox)
         # Wrap in bash -c to support shell operators
@@ -787,7 +787,7 @@ class TestDaytonaToolkitLive:
     # -- Live glob --
 
     def test_live_glob_tmp(self, live_sandbox):
-        from tools.daytona_toolkit.tools import daytona_bash as DaytonaBashTool
+        from tools.daytona_toolkit.codeact_tool import daytona_codeact as DaytonaBashTool
         ctx = self._ctx(live_sandbox)
         bash_tool = DaytonaBashTool
 
@@ -801,7 +801,7 @@ class TestDaytonaToolkitLive:
     # -- Live edit --
 
     def test_live_edit_file(self, live_sandbox):
-        from tools.daytona_toolkit.tools import daytona_bash as DaytonaBashTool
+        from tools.daytona_toolkit.codeact_tool import daytona_codeact as DaytonaBashTool
         ctx = self._ctx(live_sandbox)
         bash_tool = DaytonaBashTool
 
@@ -827,7 +827,7 @@ class TestToolSelectionAndOrdering:
     """
 
     EXPECTED_TOOLS = {
-        "daytona_bash", "daytona_read_file", "daytona_write_file",
+        "daytona_codeact", "daytona_read_file", "daytona_write_file",
         "daytona_list_files", "daytona_grep", "daytona_glob",
         "daytona_edit_file", "daytona_lsp_hover", "daytona_lsp_definition",
         "daytona_lsp_references", "daytona_lsp_diagnostics", "daytona_codeact",
@@ -894,7 +894,7 @@ class TestToolSelectionAndOrdering:
     def test_bash_is_last(self):
         """Shell execution should be the last tool (most dangerous)."""
         names = self._get_tool_names()
-        assert names[-1] == "daytona_bash"
+        assert names[-1] == "daytona_codeact"
 
     # -- Schema validation --
 
@@ -915,7 +915,7 @@ class TestToolSelectionAndOrdering:
             )
 
     def test_bash_requires_command(self):
-        from tools.daytona_toolkit.tools import daytona_bash as DaytonaBashTool
+        from tools.daytona_toolkit.codeact_tool import daytona_codeact as DaytonaBashTool
         schema = DaytonaBashTool.to_api_schema()["input_schema"]
         assert "command" in schema.get("required", [])
 

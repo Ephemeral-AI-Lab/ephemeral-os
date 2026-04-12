@@ -17,13 +17,39 @@ _MAX_INLINE_BRIEFING_BYTES_PER_SPEC = 4096
 
 Issue = dict[str, str]
 
+# ---------------------------------------------------------------------------
+# Role → kind inference
+# ---------------------------------------------------------------------------
+
+_EXPANDABLE_ROLES: frozenset[str] = frozenset({"planner"})
+
+
+def _infer_kind(agent_name: str) -> WorkItemKind:
+    defn = _get_definition(agent_name)
+    if defn is None:
+        return WorkItemKind.ATOMIC
+    if defn.role in _EXPANDABLE_ROLES:
+        return WorkItemKind.EXPANDABLE
+    return WorkItemKind.ATOMIC
+
+
+def normalize_plan_kinds(plan: Plan) -> None:
+    """Auto-set ``kind`` on each item based on the target agent's role.
+
+    Called before Phase-A validation so the planner never needs to
+    specify ``kind`` explicitly.
+    """
+    for item in plan.items:
+        item.kind = _infer_kind(item.agent_name)
+
 
 def _agent_exists(agent_name: str) -> bool:
     return _get_definition(agent_name) is not None
 
 
 def _is_validator(agent_name: str) -> bool:
-    return _has_role(agent_name, "validator")
+    """Check whether *agent_name* has the reviewer role (role-based, not name-based)."""
+    return _has_role(agent_name, "reviewer")
 
 
 def _validator_count(items: list[WorkItemSpec]) -> int:
@@ -59,7 +85,7 @@ def _kind_supported(agent_name: str, kind: WorkItemKind) -> Issue | None:
     agent_def = _get_definition(agent_name)
     if agent_def is None:
         return None
-    supported = getattr(agent_def, "supported_kinds", None) or ["atomic", "expandable"]
+    supported = agent_def.supported_kinds
     if kind.value in supported:
         return None
     return {
@@ -74,14 +100,14 @@ def _kind_supported(agent_name: str, kind: WorkItemKind) -> Issue | None:
 def _validator_policy_issues(
     items: list[WorkItemSpec],
     *,
-    max_validators_per_plan: int | None = None,
-    require_validator_for_plan_size: int | None = None,
+    max_reviewers_per_plan: int | None = None,
+    require_reviewer_for_plan_size: int | None = None,
 ) -> list[Issue]:
     issues: list[Issue] = []
     validator_count = _validator_count(items)
-    effective_max_validators = 2 if max_validators_per_plan is None else min(max_validators_per_plan, 2)
+    effective_max_validators = 2 if max_reviewers_per_plan is None else min(max_reviewers_per_plan, 2)
     require_validator_threshold = (
-        3 if require_validator_for_plan_size is None else min(require_validator_for_plan_size, 3)
+        3 if require_reviewer_for_plan_size is None else min(require_reviewer_for_plan_size, 3)
     )
     if validator_count > effective_max_validators:
         issues.append(
@@ -191,8 +217,8 @@ def validate_plan_phase_a(
     *,
     allow_empty: bool = False,
     known_external_deps: set[str] | None = None,
-    max_validators_per_plan: int | None = None,
-    require_validator_for_plan_size: int | None = None,
+    max_reviewers_per_plan: int | None = None,
+    require_reviewer_for_plan_size: int | None = None,
     extra_validators: list[PlanItemValidator] | None = None,
 ) -> list[Issue]:
     """Pure-function structural validation."""
@@ -216,8 +242,8 @@ def validate_plan_phase_a(
     issues.extend(
         _validator_policy_issues(
             plan.items,
-            max_validators_per_plan=max_validators_per_plan,
-            require_validator_for_plan_size=require_validator_for_plan_size,
+            max_reviewers_per_plan=max_reviewers_per_plan,
+            require_reviewer_for_plan_size=require_reviewer_for_plan_size,
         )
     )
     issues.extend(_validator_dependency_issues(plan.items))
@@ -240,13 +266,13 @@ def validate_plan_phase_a(
             )
         else:
             agent_def = _get_definition(item.agent_name)
-            if agent_def is not None and getattr(agent_def, "agent_type", "agent") == "subagent":
+            if agent_def is not None and agent_def.agent_type != "agent":
                 issues.append(
                     {
                         "field": f"items[{idx}].agent_name",
                         "msg": (
-                            f"submitted plans cannot target subagent '{item.agent_name}'; "
-                            "use run_subagent in-turn or emit a chained planner instead"
+                            f"submitted plans cannot target {getattr(agent_def, 'agent_type', 'agent')!r}-typed "
+                            f"agent '{item.agent_name}'; only team-facing agents are valid plan targets"
                         ),
                     }
                 )
@@ -283,34 +309,34 @@ def validate_plan_phase_a(
                 }
             )
 
-    # Submitted plans may not contain subagents. Keep this dependency guard
-    # anyway so direct Plan construction cannot smuggle an atomic worker behind
-    # a same-plan subagent dependency if Phase A is bypassed.
-    subagent_locals: set[str] = set()
+    # Submitted plans may not contain non-team agents. Keep this dependency
+    # guard anyway so direct Plan construction cannot smuggle an atomic worker
+    # behind a same-plan non-team dependency if Phase A is bypassed.
+    non_team_locals: set[str] = set()
     for item in plan.items:
         if item.local_id is None:
             continue
         agent_def = _get_definition(item.agent_name)
-        if agent_def is not None and getattr(agent_def, "agent_type", "agent") == "subagent":
-            subagent_locals.add(item.local_id)
-    if subagent_locals:
+        if agent_def is not None and agent_def.agent_type != "agent":
+            non_team_locals.add(item.local_id)
+    if non_team_locals:
         for idx, item in enumerate(plan.items):
             agent_def = _get_definition(item.agent_name)
-            is_self_subagent = (
+            is_non_team = (
                 agent_def is not None
-                and getattr(agent_def, "agent_type", "agent") == "subagent"
+                and agent_def.agent_type != "agent"
             )
-            if is_self_subagent:
+            if is_non_team:
                 continue
             for dep in item.deps:
-                if dep in subagent_locals:
+                if dep in non_team_locals:
                     # planner-typed items (expandable) are allowed; workers (atomic non-planner) not.
                     if item.kind == WorkItemKind.ATOMIC:
                         issues.append(
                             {
                                 "field": f"items[{idx}].deps",
                                 "msg": (
-                                    f"atomic worker '{item.agent_name}' depends on subagent "
+                                    f"atomic worker '{item.agent_name}' depends on non-team "
                                     f"sibling '{dep}' — use a chained expandable planner instead"
                                 ),
                             }
@@ -385,10 +411,11 @@ def validate_plan_phase_b(
     new_id_factory: Callable[[], str],
     max_depth: int,
     max_plan_size: int | None = None,
-    max_validators_per_plan: int | None = None,
-    require_validator_for_plan_size: int | None = None,
+    max_reviewers_per_plan: int | None = None,
+    require_reviewer_for_plan_size: int | None = None,
 ) -> list[WorkItem]:
     """Dispatcher-time re-check. Resolves local_ids, checks externals, depth, cycles."""
+    normalize_plan_kinds(plan)
     if parent_wi.kind != WorkItemKind.EXPANDABLE:
         raise InvalidPlan(
             f"work item {parent_wi.id} is {parent_wi.kind.value}; only expandable items may submit a plan"
@@ -402,8 +429,8 @@ def validate_plan_phase_b(
         )
     validator_issues = _validator_policy_issues(
         plan.items,
-        max_validators_per_plan=max_validators_per_plan,
-        require_validator_for_plan_size=require_validator_for_plan_size,
+        max_reviewers_per_plan=max_reviewers_per_plan,
+        require_reviewer_for_plan_size=require_reviewer_for_plan_size,
     )
     if validator_issues:
         raise InvalidPlan("; ".join(issue["msg"] for issue in validator_issues))
@@ -426,7 +453,7 @@ def validate_plan_phase_b(
     for idx, spec in enumerate(plan.items):
         agent_def = _get_definition(spec.agent_name)
         if agent_def is not None:
-            supported = getattr(agent_def, "supported_kinds", None) or ["atomic", "expandable"]
+            supported = agent_def.supported_kinds
             if spec.kind.value not in supported:
                 issues.append(
                     f"items[{idx}] agent '{spec.agent_name}' does not support kind '{spec.kind.value}' (supports: {supported})"

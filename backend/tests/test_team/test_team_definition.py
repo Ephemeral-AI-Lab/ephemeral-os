@@ -45,24 +45,31 @@ def store(session_factory) -> TeamDefinitionStore:
 def test_create_and_get_by_name(store: TeamDefinitionStore) -> None:
     td = store.create(
         name="default",
-        roster={"planner": "team_planner", "dev": "developer", "val": "validator"},
+        entry_planner="team_planner",
+        roster={
+            "planner": ["team_planner"],
+            "developer": ["developer"],
+            "reviewer": ["validator"],
+        },
         description="default team",
     )
     assert td.name == "default"
-    assert td.roster["planner"] == "team_planner"
+    assert td.entry_planner == "team_planner"
+    assert td.roster["developer"] == ["developer"]
     assert td.description == "default team"
     assert td.id  # uuid assigned
 
     fetched = store.get_by_name("default")
     assert fetched is not None
     assert fetched.id == td.id
-    assert fetched.roster["planner"] == "team_planner"
+    assert fetched.entry_planner == "team_planner"
+    assert fetched.roster["planner"] == ["team_planner"]
 
 
 def test_create_rejects_duplicate_name(store: TeamDefinitionStore) -> None:
-    store.create(name="dup", roster={"planner": "planner_a"})
+    store.create(name="dup", entry_planner="p", roster={"planner": ["p"]})
     with pytest.raises(ValueError, match="already exists"):
-        store.create(name="dup", roster={"planner": "planner_b"})
+        store.create(name="dup", entry_planner="p2", roster={"planner": ["p2"]})
 
 
 def test_get_by_name_missing_returns_none(store: TeamDefinitionStore) -> None:
@@ -70,27 +77,47 @@ def test_get_by_name_missing_returns_none(store: TeamDefinitionStore) -> None:
 
 
 def test_list_all_sorted_by_name(store: TeamDefinitionStore) -> None:
-    store.create(name="zebra", roster={"planner": "p"})
-    store.create(name="alpha", roster={"planner": "p"})
-    store.create(name="mike", roster={"planner": "p"})
+    store.create(name="zebra", entry_planner="p", roster={"planner": ["p"]})
+    store.create(name="alpha", entry_planner="p", roster={"planner": ["p"]})
+    store.create(name="mike", entry_planner="p", roster={"planner": ["p"]})
     names = [td.name for td in store.list_all()]
     assert names == ["alpha", "mike", "zebra"]
 
 
 def test_delete_removes_row(store: TeamDefinitionStore) -> None:
-    store.create(name="x", roster={"planner": "p"})
+    store.create(name="x", entry_planner="p", roster={"planner": ["p"]})
     assert store.delete("x") is True
     assert store.get_by_name("x") is None
     # Idempotent on missing row.
     assert store.delete("x") is False
 
 
+def test_roster_with_multiple_agents_per_role(store: TeamDefinitionStore) -> None:
+    td = store.create(
+        name="multi",
+        entry_planner="team_planner",
+        roster={
+            "planner": ["team_planner"],
+            "developer": ["dev_python", "dev_rust", "dev_go"],
+            "reviewer": ["unit_tester", "integration_tester"],
+            "explorer": ["scout"],
+        },
+    )
+    assert td.roster["developer"] == ["dev_python", "dev_rust", "dev_go"]
+    assert td.roster["reviewer"] == ["unit_tester", "integration_tester"]
+
+    fetched = store.get_by_name("multi")
+    assert fetched is not None
+    assert fetched.roster["developer"] == ["dev_python", "dev_rust", "dev_go"]
+
+
 def test_roster_defaults_to_empty_dict(store: TeamDefinitionStore) -> None:
-    td = store.create(name="bare", roster={})
+    td = store.create(name="bare", entry_planner="p", roster={})
     assert td.roster == {}
     fetched = store.get_by_name("bare")
     assert fetched is not None
     assert fetched.roster == {}
+
 
 
 # ---------------------------------------------------------------------------
@@ -99,13 +126,6 @@ def test_roster_defaults_to_empty_dict(store: TeamDefinitionStore) -> None:
 
 
 class _NoopWorker:
-    """A ``Worker`` stand-in whose ``run_forever`` exits immediately.
-
-    Lets us drive ``TeamRun.start(...)`` without spinning up the real
-    engine. Since no worker ever pops the ready queue, we rely on
-    ``TeamRun.cancel`` to drive every WorkItem to a terminal state.
-    """
-
     def __init__(self, team_run: TeamRun) -> None:
         self.team_run = team_run
 
@@ -117,28 +137,21 @@ def _noop_executor_factory(team_run: TeamRun) -> _NoopWorker:
     return _NoopWorker(team_run)
 
 
-def _stub_registry(known: set[str], monkeypatch: pytest.MonkeyPatch, *, planners: set[str] | None = None) -> None:
-    """Patch ``agents.registry.get_definition`` to return a truthy
-    placeholder for names in *known* and ``None`` for everything else.
-    """
+def _stub_registry(known: set[str], monkeypatch: pytest.MonkeyPatch) -> None:
     from types import SimpleNamespace
     from agents import registry
-
-    _planners = planners or known
 
     def _fake(name: str):
         if name not in known:
             return None
-        role = "planner" if name in _planners else "worker"
-        return SimpleNamespace(role=role, name=name)
+        return SimpleNamespace(role="planner", name=name)
 
     monkeypatch.setattr(registry, "get_definition", _fake)
 
 
 async def _cleanup_run(run: TeamRun) -> None:
-    """Drive a successfully-started ``TeamRun`` to a terminal state."""
     if run.root_work_item_id is None:
-        return  # start() never happened; nothing to clean up
+        return
     await run.cancel()
     try:
         await asyncio.wait_for(run.wait(), timeout=2.0)
@@ -150,12 +163,13 @@ async def _cleanup_run(run: TeamRun) -> None:
 async def test_start_with_team_definition_spawns_root_with_planner(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _stub_registry({"my_planner", "my_worker"}, monkeypatch, planners={"my_planner"})
+    _stub_registry({"my_planner"}, monkeypatch)
     team_def = TeamDefinition(
         id="tdef-1",
         name="default",
         description="",
-        roster={"planner": "my_planner", "worker": "my_worker"},
+        entry_planner="my_planner",
+        roster={"planner": ["my_planner"]},
     )
     run = TeamRun(session_id="s", user_request="do stuff")
     try:
@@ -177,12 +191,13 @@ async def test_start_with_team_definition_spawns_root_with_planner(
 async def test_start_with_team_definition_rejects_unknown_planner(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    _stub_registry(set(), monkeypatch)  # no known agents
+    _stub_registry(set(), monkeypatch)
     team_def = TeamDefinition(
         id="tdef-2",
         name="broken",
         description="",
-        roster={"planner": "ghost"},
+        entry_planner="ghost",
+        roster={"planner": ["ghost"]},
     )
     run = TeamRun(session_id="s", user_request="do stuff")
     with pytest.raises(ValueError, match="ghost"):
@@ -191,7 +206,6 @@ async def test_start_with_team_definition_rejects_unknown_planner(
             payload={},
             executor_factory=_noop_executor_factory,
         )
-    # No root WorkItem should have been inserted; TeamRun stays PENDING.
     assert run.root_work_item_id is None
     assert run.status == TeamRunStatus.PENDING
     assert len(run.dispatcher.graph) == 0
@@ -206,7 +220,8 @@ async def test_start_with_team_definition_error_message_names_team_and_agent(
         id="tdef-3",
         name="frontend_team",
         description="",
-        roster={"planner": "missing_planner"},
+        entry_planner="missing_planner",
+        roster={"planner": ["missing_planner"]},
     )
     run = TeamRun(session_id="s", user_request="do stuff")
     with pytest.raises(ValueError) as exc_info:

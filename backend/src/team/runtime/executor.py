@@ -8,20 +8,58 @@ import uuid
 from collections.abc import Awaitable
 from typing import TYPE_CHECKING, Any, Callable
 
-from agents.registry import has_role as _has_validator_role_check
+from agents.registry import has_role as _has_role
 from hooks.agent_posthook import NoPosthookOutput, execute_with_posthook
-from team.models import AgentResult, Plan, ReplanPlan, ReplanRequest, RetryRequest
+from team.models import AgentResult, Plan, ReplanPlan
 from team.runtime.context_builder import TeamAgentContext
-from tools.posthook import SubmittedSummary
+from tools.posthook.types import PosthookSubmission, ReplanRequest, RetryRequest, SubmittedSummary
 
 
-def _has_validator_role(agent_name: str) -> bool:
-    return _has_validator_role_check(agent_name, "validator")
+def _is_reviewer(agent_name: str) -> bool:
+    return _has_role(agent_name, "reviewer")
 
 if TYPE_CHECKING:
     from agents.types import AgentDefinition
     from team.models import WorkItem
     from team.runtime.team_run import TeamRun
+
+
+# ---------------------------------------------------------------------------
+# Extensible submission → dispatch-result conversion
+# ---------------------------------------------------------------------------
+
+SubmissionConverter = Callable[[Any], "AgentResult | RetryRequest | ReplanRequest"]
+
+_SUBMISSION_CONVERTERS: dict[str, SubmissionConverter] = {}
+
+
+def register_submission_converter(kind: str, converter: SubmissionConverter) -> None:
+    """Register a converter for a new ``submission_kind``.
+
+    This allows new posthook submission types to participate in the
+    executor dispatch without modifying ``_result_from_submission``.
+    """
+    _SUBMISSION_CONVERTERS[kind] = converter
+
+
+def _default_converters() -> None:
+    """Register the built-in converters on first import."""
+
+    def _convert_summary(sub: Any) -> AgentResult:
+        return AgentResult(artifact=sub.artifact, summary=sub.summary)
+
+    def _convert_retry(sub: Any) -> RetryRequest:
+        return sub
+
+    def _convert_replan(sub: Any) -> ReplanRequest:
+        return sub
+
+    register_submission_converter("summary", _convert_summary)
+    register_submission_converter("retry", _convert_retry)
+    register_submission_converter("replan", _convert_replan)
+
+
+_default_converters()
 
 logger = logging.getLogger(__name__)
 
@@ -93,18 +131,22 @@ class Executor:
     def _result_from_submission(submitted: Any) -> AgentResult | RetryRequest | ReplanRequest | None:
         if submitted is None:
             return None
-        if isinstance(submitted, (RetryRequest, ReplanRequest)):
-            return submitted
+
+        # Protocol-based dispatch: any type implementing PosthookSubmission
+        # can register a converter via register_submission_converter().
+        if isinstance(submitted, PosthookSubmission):
+            kind = submitted.submission_kind
+            converter = _SUBMISSION_CONVERTERS.get(kind)
+            if converter is not None:
+                return converter(submitted)
+
+        # Team-specific types that don't implement the protocol (Plan,
+        # ReplanPlan) are handled here as a fallback.
         if isinstance(submitted, Plan):
             return AgentResult(artifact=None, summary="", submitted_plan=submitted)
         if isinstance(submitted, ReplanPlan):
             return AgentResult(artifact=None, summary="", submitted_replan=submitted)
-        if isinstance(submitted, SubmittedSummary):
-            return AgentResult(
-                artifact=submitted.artifact,
-                summary=submitted.summary,
-                submitted_plan=None,
-            )
+
         raise TypeError(type(submitted).__name__)
 
     async def _run_one(self, wi_id: str) -> None:
@@ -167,7 +209,7 @@ class Executor:
                 work_item=wi,
                 artifact=dispatch_payload.artifact,
             )
-            if _has_validator_role(wi.agent_name):
+            if _is_reviewer(wi.agent_name):
                 self.team_run.note_validator_outcome(
                     work_item=wi,
                     summary=dispatch_payload.summary,

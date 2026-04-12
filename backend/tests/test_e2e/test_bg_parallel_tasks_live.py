@@ -21,7 +21,7 @@ You are test-parallel-agent, a developer with a remote Daytona sandbox.
 
 IMPORTANT RULES:
 - You MUST use tools for every action — never just describe what you'd do.
-- Use daytona_bash to run commands, daytona_write_file to create files.
+- Use daytona_codeact to run commands, daytona_write_file to create files.
 - You have background task support: add "background": true to tool input for long-running operations.
 - Use check_background_progress for instant status snapshots.
 - Use wait_for_background_task to block when you have no foreground work.
@@ -96,14 +96,14 @@ class TestParallelBgWithFgInterleaving:
 
         # 3+ background launches
         bg_bash = [tc for tc in result.tool_calls
-                   if tc.name == "daytona_bash" and tc.input.get("background") is True]
+                   if tc.name == "daytona_codeact" and tc.input.get("background") is True]
         assert len(bg_bash) >= 3, \
             f"Expected 3+ background launches. Got {len(bg_bash)}: {result.tool_names}"
         assert len(result.background_started()) >= 3, \
             f"Expected 3+ BackgroundTaskStarted events. Got {len(result.background_started())}"
         # 3+ foreground bash calls (not background)
         fg_bash = [tc for tc in result.tool_calls
-                   if tc.name == "daytona_bash" and not tc.input.get("background")]
+                   if tc.name == "daytona_codeact" and not tc.input.get("background")]
         assert len(fg_bash) >= 3, \
             f"Expected 3+ foreground bash calls. Got {len(fg_bash)}: {result.tool_names}"
         # check_background_progress must be called
@@ -167,7 +167,7 @@ class TestParallelBgStaggeredFinish:
 
         # 3+ background launches
         bg_bash = [tc for tc in result.tool_calls
-                   if tc.name == "daytona_bash" and tc.input.get("background") is True]
+                   if tc.name == "daytona_codeact" and tc.input.get("background") is True]
         assert len(bg_bash) >= 3, \
             f"Expected 3+ background launches. Got {len(bg_bash)}: {result.tool_names}"
         assert len(result.background_started()) >= 3, \
@@ -236,14 +236,14 @@ class TestParallelFgBgMix:
 
         # 1 background launch
         bg_bash = [tc for tc in result.tool_calls
-                   if tc.name == "daytona_bash" and tc.input.get("background") is True]
+                   if tc.name == "daytona_codeact" and tc.input.get("background") is True]
         assert len(bg_bash) >= 1, \
             f"Expected 1+ background launch. Got {len(bg_bash)}: {result.tool_names}"
         assert len(result.background_started()) >= 1, \
             f"Expected BackgroundTaskStarted event. Got {len(result.background_started())}"
         # 5+ foreground bash calls
         fg_bash = [tc for tc in result.tool_calls
-                   if tc.name == "daytona_bash" and not tc.input.get("background")]
+                   if tc.name == "daytona_codeact" and not tc.input.get("background")]
         assert len(fg_bash) >= 5, \
             f"Expected 5+ foreground bash calls. Got {len(fg_bash)}: {result.tool_names}"
         # check_background_progress must be called
@@ -299,7 +299,7 @@ class TestParallelBgSameCommand:
 
         # 4+ background launches
         bg_bash = [tc for tc in result.tool_calls
-                   if tc.name == "daytona_bash" and tc.input.get("background") is True]
+                   if tc.name == "daytona_codeact" and tc.input.get("background") is True]
         assert len(bg_bash) >= 4, \
             f"Expected 4+ background launches (shards). Got {len(bg_bash)}: {result.tool_names}"
         assert len(result.background_started()) >= 4, \
@@ -362,7 +362,7 @@ class TestParallelBgOneFailsOthersSucceed:
 
         # 3 background launches
         bg_bash = [tc for tc in result.tool_calls
-                   if tc.name == "daytona_bash" and tc.input.get("background") is True]
+                   if tc.name == "daytona_codeact" and tc.input.get("background") is True]
         assert len(bg_bash) >= 3, \
             f"Expected 3+ background launches. Got {len(bg_bash)}: {result.tool_names}"
         assert len(result.background_started()) >= 3, \
@@ -426,7 +426,7 @@ class TestParallelBgCancelAllRemaining:
 
         # 4 background launches
         bg_bash = [tc for tc in result.tool_calls
-                   if tc.name == "daytona_bash" and tc.input.get("background") is True]
+                   if tc.name == "daytona_codeact" and tc.input.get("background") is True]
         assert len(bg_bash) >= 4, \
             f"Expected 4+ background launches. Got {len(bg_bash)}: {result.tool_names}"
         assert len(result.background_started()) >= 4, \

@@ -25,6 +25,11 @@ class AgentBuilderService:
 
     @staticmethod
     def record_to_definition(record: AgentDefinitionRecord) -> AgentDefinition:
+        posthook = None
+        if isinstance(record.posthook, dict) and "agent_name" in record.posthook:
+            from hooks.agent_posthook import PosthookConfig
+            posthook = PosthookConfig(**record.posthook)
+
         return AgentDefinition(
             name=record.name,
             description=record.description,
@@ -37,7 +42,15 @@ class AgentBuilderService:
             hooks=record.hooks,
             background=record.background,
             initial_prompt=record.initial_prompt,
-            source="user",
+            role=record.role,
+            agent_type=record.agent_type or "agent",
+            supported_kinds=record.supported_kinds or ["atomic", "expandable"],
+            posthook=posthook,
+            source=record.source or "user",
+            can_spawn_subagents=record.can_spawn_subagents,
+            require_fresh_client=record.require_fresh_client,
+            include_skills=record.include_skills,
+            dispatchable_via_run_subagent=record.dispatchable_via_run_subagent,
         )
 
     @staticmethod

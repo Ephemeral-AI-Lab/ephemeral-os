@@ -570,6 +570,43 @@ async def test_ci_scope_status_requires_one_exact_anchor_on_benchmark_root_plann
     assert "anchor exactly one existing production path" in result.output
 
 
+async def test_ci_scope_status_waits_for_preanchor_structure_result(monkeypatch):
+    svc = MagicMock()
+    svc.ledger.generation = 3
+    svc.ledger.recent_entries.return_value = []
+    svc.arbiter.generation = 7
+    svc.arbiter.active_reservations.return_value = []
+    svc.arbiter.active_edit_intents.return_value = []
+    svc.arbiter.hotspots.return_value = []
+    svc.symbol_index = SimpleNamespace(generation=11, _symbols={"/testbed/pkg/core.py": []})
+    team_run = SimpleNamespace(
+        root_work_item_id="ROOT",
+        dispatcher=SimpleNamespace(
+            graph={
+                "ROOT": SimpleNamespace(
+                    payload={"fail_to_pass": ["pkg/tests/test_api.py::test_one"]}
+                )
+            }
+        ),
+    )
+    monkeypatch.setattr("team.runtime.registry.get", lambda team_run_id: team_run if team_run_id == "TR_CLAIM" else None)
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        result = await ci_scope_status.execute(
+            ci_scope_status.input_model(scope_paths=["pkg/core.py"]),
+            _ctx(
+                _benchmark_root_metadata(
+                    svc,
+                    team_run_id="TR_CLAIM",
+                    loaded_refs=["exploration-script"],
+                    extra={"_benchmark_root_preanchor_structure_claimed": True},
+                )
+            ),
+        )
+
+    assert result.is_error
+    assert "wait for the first narrow" in result.output
+
+
 async def test_ci_scope_status_rejects_second_anchor_before_first_scout_wave(monkeypatch):
     svc = MagicMock()
     svc.ledger.generation = 3
@@ -608,6 +645,46 @@ async def test_ci_scope_status_rejects_second_anchor_before_first_scout_wave(mon
 
     assert result.is_error
     assert "before the first scout wave" in result.output
+
+
+async def test_ci_scope_status_rejects_sibling_anchor_while_first_anchor_claimed(monkeypatch):
+    svc = MagicMock()
+    svc.ledger.generation = 3
+    svc.ledger.recent_entries.return_value = []
+    svc.arbiter.generation = 7
+    svc.arbiter.active_reservations.return_value = []
+    svc.arbiter.active_edit_intents.return_value = []
+    svc.arbiter.hotspots.return_value = []
+    svc.symbol_index = SimpleNamespace(generation=11, _symbols={"/testbed/pkg/utils.py": []})
+    team_run = SimpleNamespace(
+        root_work_item_id="ROOT",
+        dispatcher=SimpleNamespace(
+            graph={
+                "ROOT": SimpleNamespace(
+                    payload={"fail_to_pass": ["pkg/tests/test_api.py::test_one"]}
+                )
+            }
+        ),
+    )
+    monkeypatch.setattr("team.runtime.registry.get", lambda team_run_id: team_run if team_run_id == "TR_SIBLING" else None)
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        result = await ci_scope_status.execute(
+            ci_scope_status.input_model(scope_paths=["pkg/utils.py"]),
+            _ctx(
+                _benchmark_root_metadata(
+                    svc,
+                    team_run_id="TR_SIBLING",
+                    loaded_refs=["exploration-script"],
+                    extra={
+                        "_benchmark_root_preanchor_structure_done": True,
+                        "_benchmark_root_scope_anchor_claimed": True,
+                    },
+                )
+            ),
+        )
+
+    assert result.is_error
+    assert "sibling anchor" in result.output
 
 
 # ---------------------------------------------------------------------------

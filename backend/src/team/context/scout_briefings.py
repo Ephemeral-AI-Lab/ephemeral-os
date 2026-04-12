@@ -90,7 +90,7 @@ def note_work_item_context_access(
         stats["last_accessed_at"] = time.time()
         if role == "developer":
             stats["developer_lane_ids"].add(lane_id or role)
-        elif role == "validator" and stats["developer_lane_ids"]:
+        elif role == "reviewer" and stats["developer_lane_ids"]:
             stats["validator_after_developer"] = True
         touched_scopes.append(scope)
 
@@ -117,7 +117,7 @@ def context_pressure_for_scope(
     briefing_hits = int(merged["briefing_hits"])
 
     score = max(0, lane_count - 1)
-    if {"developer", "validator"}.issubset(merged["roles"]):
+    if {"developer", "reviewer"}.issubset(merged["roles"]):
         score += 1.0
     elif len(merged["roles"]) > 1:
         score += 0.5
@@ -134,7 +134,7 @@ def context_pressure_for_scope(
     reasons: list[str] = []
     if lane_count > 1:
         reasons.append(f"{lane_count} distinct lanes read this scope")
-    if {"developer", "validator"}.issubset(merged["roles"]):
+    if {"developer", "reviewer"}.issubset(merged["roles"]):
         reasons.append("developer and validator both depend on it")
     elif len(merged["roles"]) > 1:
         reasons.append("multiple agent roles depend on it")

@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 from datetime import datetime, UTC
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 from agents.db.model import AgentDefinitionRecord
 from db.stores.definition_store import DefinitionStoreBase
+
+if TYPE_CHECKING:
+    from agents.types import AgentDefinition
 
 
 class AgentDefinitionStore(DefinitionStoreBase[AgentDefinitionRecord]):
@@ -17,6 +20,56 @@ class AgentDefinitionStore(DefinitionStoreBase[AgentDefinitionRecord]):
 
     def get_by_name(self, name: str, *, active_only: bool = True) -> AgentDefinitionRecord | None:
         return self._get_by_name(name, active_only=active_only)
+
+    def seed_builtin(self, defn: "AgentDefinition") -> AgentDefinitionRecord:
+        """Insert a builtin agent definition if it doesn't already exist.
+
+        Existing records (even inactive) are left untouched so user
+        customisations are never overwritten by a restart.
+        """
+        from dataclasses import asdict as _dc_asdict
+
+        with self._sf() as db:
+            existing = self._get_by_name_with_session(db, defn.name, active_only=False)
+            if existing is not None:
+                return existing
+
+            posthook_data = None
+            if defn.posthook is not None:
+                posthook_data = _dc_asdict(defn.posthook)
+
+            now = datetime.now(UTC)
+            record = AgentDefinitionRecord(
+                id=str(uuid4()),
+                name=defn.name,
+                description=defn.description,
+                system_prompt=defn.system_prompt,
+                model=defn.model or "inherit",
+                effort=str(defn.effort) if defn.effort else None,
+                tool_call_limit=defn.tool_call_limit,
+                toolkits=defn.toolkits or [],
+                skills=defn.skills or [],
+                hooks=defn.hooks,
+                background=defn.background,
+                initial_prompt=defn.initial_prompt,
+                role=defn.role,
+                agent_type=defn.agent_type,
+                supported_kinds=defn.supported_kinds,
+                posthook=posthook_data,
+                source=defn.source,
+                can_spawn_subagents=defn.can_spawn_subagents,
+                require_fresh_client=defn.require_fresh_client,
+                include_skills=defn.include_skills,
+                dispatchable_via_run_subagent=defn.dispatchable_via_run_subagent,
+                version=1,
+                is_active=True,
+                created_at=now,
+                updated_at=now,
+            )
+            db.add(record)
+            db.commit()
+            db.refresh(record)
+            return record
 
     def list_active(
         self, *, tags: list[str] | None = None, limit: int = 50, offset: int = 0
@@ -43,18 +96,28 @@ class AgentDefinitionStore(DefinitionStoreBase[AgentDefinitionRecord]):
     def soft_delete(self, name: str) -> bool:
         return self._soft_delete_by_name(name)
 
-    def backfill_model_key(self, default_model_key: str) -> int:
-        """Set model_key to *default_model_key* for all agents that have NULL or empty model."""
+    def backfill_posthook_agent_type(self, posthook_names: list[str]) -> int:
+        """Migrate posthook agents from agent_type='subagent' to 'posthook'.
+
+        Existing DB rows created before the ``posthook`` agent type was
+        introduced still carry ``agent_type='subagent'``. This one-time
+        backfill corrects them so capability-flag derivation in
+        ``model_post_init`` works correctly.
+        """
+        if not posthook_names:
+            return 0
         with self._sf() as db:
             rows = (
                 db.query(AgentDefinitionRecord)
                 .filter(
-                    (AgentDefinitionRecord.model.is_(None)) | (AgentDefinitionRecord.model == "")
+                    AgentDefinitionRecord.name.in_(posthook_names),
+                    AgentDefinitionRecord.agent_type != "posthook",
                 )
                 .all()
             )
             for rec in rows:
-                rec.model = default_model_key
+                rec.agent_type = "posthook"
+                rec.dispatchable_via_run_subagent = False
                 rec.updated_at = datetime.now(UTC)
             db.commit()
             return len(rows)
@@ -105,6 +168,15 @@ class AgentDefinitionStore(DefinitionStoreBase[AgentDefinitionRecord]):
             "hooks": source.hooks,
             "background": source.background,
             "initial_prompt": source.initial_prompt,
+            "role": source.role,
+            "agent_type": source.agent_type,
+            "supported_kinds": source.supported_kinds,
+            "posthook": source.posthook,
+            "source": source.source,
+            "can_spawn_subagents": source.can_spawn_subagents,
+            "require_fresh_client": source.require_fresh_client,
+            "include_skills": source.include_skills,
+            "dispatchable_via_run_subagent": source.dispatchable_via_run_subagent,
             "created_by": source.created_by,
             "tags": source.tags,
             "metadata_json": source.metadata_json,

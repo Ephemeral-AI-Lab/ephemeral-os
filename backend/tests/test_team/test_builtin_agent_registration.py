@@ -72,7 +72,7 @@ def test_toolkit_instructions_surface_scope_and_search_tools() -> None:
     assert "daytona_grep" in sandbox_ops.instructions
 
 
-def test_team_worker_sandbox_toolkit_prefers_codeact_over_bash() -> None:
+def test_team_worker_sandbox_toolkit_includes_codeact() -> None:
     developer_sandbox = create_toolkit(
         "sandbox_operations",
         ToolkitContext(metadata={"agent_name": DEVELOPER, "sandbox_id": "sb-dev"}),
@@ -85,4 +85,6 @@ def test_team_worker_sandbox_toolkit_prefers_codeact_over_bash() -> None:
     assert "daytona_codeact" in developer_sandbox.tool_names()
     assert "daytona_codeact" in validator_sandbox.tool_names()
     assert "daytona_edit_file" in developer_sandbox.tool_names()
+    # daytona_bash has been removed — all agents use daytona_codeact
+    assert "daytona_bash" not in developer_sandbox.tool_names()
     assert "daytona_bash" not in validator_sandbox.tool_names()

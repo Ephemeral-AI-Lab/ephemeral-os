@@ -172,7 +172,7 @@ def test_developer_and_validator_skills_explain_when_to_load_references() -> Non
     assert "root or OS permission mismatches as failures or blockers" in developer
     assert "UID 0 bypassing a test's permission setup" in developer
     assert "root-only skips, xfails, or verify-file rewrites" in developer
-    assert "`daytona_bash`" in developer
+    assert "generic `edit_file`, `write_file`, or `read_file`" in developer
     assert "treat `Unknown tool` as your own Daytona tool-name error" in developer_codeact_ref
     assert "verification-surface write allowed in advisory mode" in developer_ref
     assert "Must not use raw Python `subprocess.run(...)` snippets" in developer
@@ -194,7 +194,7 @@ def test_developer_and_validator_skills_explain_when_to_load_references() -> Non
 
     assert "Must load `cross-surface-guardrails` when the touched change affects public serialization, schema shape, or docs-visible output." in validator
     assert "Must run the exact commands from the payload first via `daytona_codeact`." in validator
-    assert "Never use `daytona_bash` from validator lanes." in validator
+    assert "Use `daytona_codeact` for all runtime execution." in validator
     assert "Use this reference only when the touched change affects public serialization, schema shape, or docs-visible output." in validator_ref
 
 

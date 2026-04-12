@@ -333,8 +333,8 @@ def test_posthook_ctx_propagates_live_team_plan_budget(monkeypatch):
             SimpleNamespace(
                 budgets=SimpleNamespace(
                     max_plan_size=10,
-                    max_validators_per_plan=2,
-                    require_validator_for_plan_size=3,
+                    max_reviewers_per_plan=2,
+                    require_reviewer_for_plan_size=3,
                 )
             )
             if team_run_id == "T1"
@@ -352,8 +352,8 @@ def test_posthook_ctx_propagates_live_team_plan_budget(monkeypatch):
     )
 
     assert ctx.tool_metadata["max_plan_size"] == 10
-    assert ctx.tool_metadata["max_validators_per_plan"] == 2
-    assert ctx.tool_metadata["require_validator_for_plan_size"] == 3
+    assert ctx.tool_metadata["max_reviewers_per_plan"] == 2
+    assert ctx.tool_metadata["require_reviewer_for_plan_size"] == 3
 
 
 def test_query_ctx_seeds_repo_root_for_daytona_and_ci():
@@ -382,7 +382,7 @@ def test_query_ctx_seeds_repo_root_for_daytona_and_ci():
     assert ctx.tool_metadata.sandbox_id == "sbx-1"
     assert ctx.tool_metadata.daytona_cwd == "/testbed"
     assert ctx.tool_metadata["ci_workspace_root"] == "/testbed"
-    assert ctx.tool_metadata["coordination_mode"] == "ultra"
+    assert ctx.tool_metadata["team_mode_enabled"] is True
     assert ctx.tool_metadata["require_declared_shell_outputs"] is True
     assert ctx.tool_metadata["verification_surface_write_enforcement"] == "warn"
     assert "Repo root inside the sandbox: /testbed" in ctx.user_message
@@ -433,7 +433,7 @@ def test_query_ctx_injects_scope_packet_when_ci_is_available(monkeypatch):
 
     assert ctx.tool_metadata["scope_packet"]["coherence_token"] == "token-1"
     assert ctx.tool_metadata["coherence_token"] == "token-1"
-    assert ctx.tool_metadata["coordination_mode"] == "ultra"
+    assert ctx.tool_metadata["team_mode_enabled"] is True
     assert ctx.tool_metadata["require_declared_shell_outputs"] is True
     assert ctx.tool_metadata["verification_surface_write_enforcement"] == "warn"
     assert ctx.user_message.startswith("SCOPE token-1\n\n")
@@ -579,7 +579,7 @@ def test_checkpoint_repo_patch_from_store_returns_latest_matching_patch():
     assert _checkpoint_repo_patch_from_store(store, "T1", "cp-2") == "patch-b"
     assert _checkpoint_repo_patch_from_store(store, "T1", "missing") == ""
 
-def test_enforce_validation_evidence_requires_daytona_bash():
+def test_enforce_validation_evidence_requires_daytona_codeact():
     with pytest.raises(RuntimeError, match="validator_missing_tool_evidence"):
         _enforce_validation_evidence(
             "validator",
@@ -594,8 +594,8 @@ def test_enforce_validation_evidence_requires_daytona_bash():
                 content=[
                     ToolUseBlock(
                         id="tc1",
-                        name="daytona_bash",
-                        input={"command": "pytest -q"},
+                        name="daytona_codeact",
+                        input={"code": "shell('pytest -q')"},
                     )
                 ],
             )

@@ -26,7 +26,7 @@ You are test-wait-agent, a developer with a remote Daytona sandbox.
 
 IMPORTANT RULES:
 - You MUST use tools for every action — never just describe what you'd do.
-- Use daytona_bash to run commands, daytona_write_file to create files.
+- Use daytona_codeact to run commands, daytona_write_file to create files.
 - You have background task support: add "background": true to tool input for long-running operations.
 - Use check_background_progress to get an instant status snapshot of background tasks.
 - Use wait_for_background_task to block until background tasks complete (only when no foreground work remains).
@@ -96,8 +96,8 @@ class TestWaitForSingleTask:
         )
         _log_result(result, "wait_single")
 
-        assert result.has_tool_with_background("daytona_bash"), \
-            f"Expected daytona_bash with background: true. Got: {result.tool_calls}"
+        assert result.has_tool_with_background("daytona_codeact"), \
+            f"Expected daytona_codeact with background: true. Got: {result.tool_calls}"
         assert result.background_started() >= 1 if isinstance(result.background_started(), int) \
             else len(result.background_started()) >= 1, \
             f"Expected BackgroundTaskStarted event. Got: {result.tool_names}"
@@ -172,9 +172,9 @@ class TestWaitWithSpecificTaskId:
         _log_result(result, "wait_specific_id")
 
         bg_bash = [tc for tc in result.tool_calls
-                   if tc.name == "daytona_bash" and tc.input.get("background") is True]
+                   if tc.name == "daytona_codeact" and tc.input.get("background") is True]
         assert len(bg_bash) >= 2, \
-            f"Expected 2+ daytona_bash with background: true. Got {len(bg_bash)}"
+            f"Expected 2+ daytona_codeact with background: true. Got {len(bg_bash)}"
         assert len(result.background_started()) >= 2, \
             f"Expected 2+ BackgroundTaskStarted events. Got {len(result.background_started())}"
 
@@ -243,9 +243,9 @@ class TestWaitForAllTasks:
         _log_result(result, "wait_for_all")
 
         bg_bash = [tc for tc in result.tool_calls
-                   if tc.name == "daytona_bash" and tc.input.get("background") is True]
+                   if tc.name == "daytona_codeact" and tc.input.get("background") is True]
         assert len(bg_bash) >= 2, \
-            f"Expected 2+ daytona_bash with background: true. Got {len(bg_bash)}"
+            f"Expected 2+ daytona_codeact with background: true. Got {len(bg_bash)}"
         assert len(result.background_started()) >= 2, \
             f"Expected 2+ BackgroundTaskStarted events. Got {len(result.background_started())}"
 
@@ -409,7 +409,7 @@ class TestWaitNoBackgroundTasks:
 
         # No background launches should have happened
         bg_bash = [tc for tc in result.tool_calls
-                   if tc.name == "daytona_bash" and tc.input.get("background") is True]
+                   if tc.name == "daytona_codeact" and tc.input.get("background") is True]
         assert len(bg_bash) == 0, \
             f"Expected no background launches. Got {len(bg_bash)}: {result.tool_names}"
         assert len(result.background_started()) == 0, \

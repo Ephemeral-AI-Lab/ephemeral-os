@@ -26,7 +26,7 @@ You are test-autonomy-agent, a developer with a remote Daytona sandbox.
 
 IMPORTANT RULES:
 - You MUST use tools for every action — never just describe what you'd do.
-- Use daytona_bash to run commands, daytona_write_file to create files.
+- Use daytona_codeact to run commands, daytona_write_file to create files.
 - You have background task support: add "background": true to tool input for long-running operations.
 - Use check_background_progress to monitor background tasks.
 - Use cancel_background_task to cancel running background tasks.
@@ -85,15 +85,15 @@ class TestAutonomousProgressCheck:
             "I need you to do two things:\n"
             "- Run a long build: 'sleep 20 && echo BUILD_OK' in background\n"
             "- While it runs, create a file /workspace/readme.txt with "
-            "'Hello World' using daytona_bash: echo 'Hello World' > /workspace/readme.txt\n"
+            "'Hello World' using daytona_codeact: echo 'Hello World' > /workspace/readme.txt\n"
             "- Then read it back: cat /workspace/readme.txt\n\n"
             "Let me know when everything is done."
         )
         _log_result(result, "autonomous_check")
 
         assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
-        assert result.has_tool_with_background("daytona_bash"), \
-            f"Expected daytona_bash called with background: true. Got tool calls: {result.tool_calls}"
+        assert result.has_tool_with_background("daytona_codeact"), \
+            f"Expected daytona_codeact called with background: true. Got tool calls: {result.tool_calls}"
         assert len(result.background_started()) >= 1, \
             f"Expected BackgroundTaskStarted event. Got tools: {result.tool_names}"
         assert len(result.tool_names) >= 3, \
@@ -135,8 +135,8 @@ class TestAutonomousCancel:
         _log_result(result, "autonomous_cancel")
 
         assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
-        assert result.has_tool_with_background("daytona_bash"), \
-            f"Expected daytona_bash called with background: true. Got tool calls: {result.tool_calls}"
+        assert result.has_tool_with_background("daytona_codeact"), \
+            f"Expected daytona_codeact called with background: true. Got tool calls: {result.tool_calls}"
         assert len(result.background_started()) >= 1, \
             f"Expected BackgroundTaskStarted event. Got tools: {result.tool_names}"
         assert len(result.tool_names) >= 2, \
@@ -176,18 +176,18 @@ class TestAutonomousMultiTask:
             "- A fast build: 'sleep 10 && echo FAST_BUILD_DONE' in background\n"
             "- A slow test suite: 'sleep 60 && echo SLOW_TESTS_DONE' in background\n\n"
             "While those run, create /workspace/status.txt with 'waiting for builds' "
-            "using daytona_bash.\n\n"
+            "using daytona_codeact.\n\n"
             "Manage the background tasks as you see fit."
         )
         _log_result(result, "autonomous_multi")
 
         assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
-        assert result.has_tool_with_background("daytona_bash"), \
-            f"Expected daytona_bash called with background: true. Got tool calls: {result.tool_calls}"
+        assert result.has_tool_with_background("daytona_codeact"), \
+            f"Expected daytona_codeact called with background: true. Got tool calls: {result.tool_calls}"
         assert len(result.background_started()) >= 2, \
             f"Expected 2+ BackgroundTaskStarted events (two background tasks). Got: {result.background_started()}"
 
-        bash_calls = result.tool_count("daytona_bash")
+        bash_calls = result.tool_count("daytona_codeact")
         assert bash_calls >= 3, \
             f"Expected 3+ bash calls (2 background + 1 foreground). Got: {result.tool_names}"
         assert result.has_tool("check_background_progress"), \

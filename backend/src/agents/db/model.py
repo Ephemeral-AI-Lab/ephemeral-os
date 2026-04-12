@@ -38,6 +38,19 @@ class AgentDefinitionRecord(Base):
     background: Mapped[bool] = mapped_column(Boolean, default=False)
     initial_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    # Team-mode fields
+    role: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    agent_type: Mapped[str] = mapped_column(String(32), default="agent")
+    supported_kinds: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    posthook: Mapped[dict[str, str] | None] = mapped_column(JSON, nullable=True)
+    source: Mapped[str] = mapped_column(String(32), default="user")
+
+    # Capability flags
+    can_spawn_subagents: Mapped[bool] = mapped_column(Boolean, default=True)
+    require_fresh_client: Mapped[bool] = mapped_column(Boolean, default=False)
+    include_skills: Mapped[bool] = mapped_column(Boolean, default=True)
+    dispatchable_via_run_subagent: Mapped[bool] = mapped_column(Boolean, default=True)
+
     # Metadata & versioning
     version: Mapped[int] = mapped_column(Integer, default=1)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)

@@ -94,18 +94,8 @@ def prepare_background_launch(
 ) -> tuple[dict[str, Any], KillCallback | None]:
     """Return ``(prepared_input, kill_callback)`` for a background launch.
 
-    Tools that need physical cancel semantics (currently ``daytona_bash``)
-    get their input rewritten and a kill_callback attached. All other
-    tools get their input returned unchanged with ``None`` for the
+    All tools get their input returned unchanged with ``None`` for the
     callback. The engine calls this unconditionally so it never has to
     know which tools need special handling.
     """
-    if tool_name != "daytona_bash" or "command" not in tool_input:
-        return tool_input, None
-    if sandbox is None:
-        return tool_input, None
-    prepared = dict(tool_input)
-    prepared["command"] = _wrap_command_with_pid_tracking(
-        str(prepared["command"]), task_id
-    )
-    return prepared, _make_kill_callback(sandbox, task_id)
+    return tool_input, None

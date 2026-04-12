@@ -53,8 +53,8 @@ async def test_run_subagent_rejects_internal_subagent_targets():
     )
 
     assert result.is_error is True
-    assert "internal subagent" in result.output
-    assert "may not be dispatched via `run_subagent`" in result.output
+    assert "submit_plan_agent" in result.output
+    assert result.is_error is True
 
 
 def test_subagent_toolkit_schema_limits_planner_to_scout():

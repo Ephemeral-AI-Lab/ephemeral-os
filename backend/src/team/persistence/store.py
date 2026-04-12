@@ -41,7 +41,8 @@ class TeamDefinitionStore:
             id=record.id,
             name=record.name,
             description=record.description or "",
-            roster=dict(record.roster or {}),
+            entry_planner=record.entry_planner,
+            roster={k: list(v) for k, v in (record.roster or {}).items()},
         )
 
     # ---- CRUD ------------------------------------------------------------
@@ -50,7 +51,8 @@ class TeamDefinitionStore:
         self,
         *,
         name: str,
-        roster: dict[str, str],
+        entry_planner: str,
+        roster: dict[str, list[str]],
         description: str = "",
     ) -> TeamDefinition:
         """Insert a new team definition. Raises if the name already exists."""
@@ -66,7 +68,8 @@ class TeamDefinitionStore:
                 id=str(uuid4()),
                 name=name,
                 description=description,
-                roster=dict(roster),
+                entry_planner=entry_planner,
+                roster={k: list(v) for k, v in roster.items()},
             )
             db.add(record)
             db.commit()

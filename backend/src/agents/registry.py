@@ -18,6 +18,13 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 SUBAGENT_NAME = "subagent"
+
+# Names reserved for agents seeded from the database by
+# ``AgentBuilderService.load_all_from_db()``.  External (user/plugin)
+# agent definitions are blocked from claiming these names so that the
+# DB-seeded builtins are never shadowed.  The definitions themselves are
+# *not* registered here — see ``AgentBuilderService`` for the
+# authoritative seed path.
 RESERVED_BUILTIN_AGENT_NAMES = frozenset(
     {
         "team_planner",
@@ -25,6 +32,11 @@ RESERVED_BUILTIN_AGENT_NAMES = frozenset(
         "validator",
         "scout",
         "team_replanner",
+        "submit_plan_agent",
+        "submit_summary_agent",
+        "decision_submit_retry",
+        "decision_submit_replan",
+        "submit_replan_agent",
     }
 )
 
@@ -111,8 +123,8 @@ def list_dispatchable_subagent_names() -> list[str]:
     return sorted(
         defn.name
         for defn in _DEFINITIONS.values()
-        if getattr(defn, "agent_type", "agent") == "subagent"
-        and bool(getattr(defn, "dispatchable_via_run_subagent", False))
+        if defn.agent_type == "subagent"
+        and defn.dispatchable_via_run_subagent
     )
 
 

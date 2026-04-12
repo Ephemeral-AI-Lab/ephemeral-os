@@ -25,7 +25,7 @@ You are test-idle-agent, a developer with a remote Daytona sandbox.
 
 IMPORTANT RULES:
 - You MUST use tools for every action — never just describe what you'd do.
-- Use daytona_bash to run commands, daytona_write_file to create files.
+- Use daytona_codeact to run commands, daytona_write_file to create files.
 - You have background task support: add "background": true to tool input for long-running operations.
 - Use check_background_progress to monitor background tasks.
 - Use cancel_background_task to cancel running background tasks.
@@ -46,7 +46,7 @@ def _assert_fg_during_bg(result, min_fg: int = 1) -> None:
     """Assert that foreground tool calls happened WHILE background tasks were running."""
     bg_start_indices = [
         i for i, tc in enumerate(result.tool_calls)
-        if tc.name == "daytona_bash" and tc.input.get("background") is True
+        if tc.name == "daytona_codeact" and tc.input.get("background") is True
     ]
     lifecycle_indices = [
         i for i, tc in enumerate(result.tool_calls)
@@ -61,7 +61,7 @@ def _assert_fg_during_bg(result, min_fg: int = 1) -> None:
     fg_during_bg = [
         tc for i, tc in enumerate(result.tool_calls)
         if first_bg < i < first_lifecycle
-        and tc.name in ("daytona_bash", "daytona_write_file")
+        and tc.name in ("daytona_codeact", "daytona_write_file")
         and not tc.input.get("background")
     ]
     assert len(fg_during_bg) >= min_fg, (
@@ -124,13 +124,13 @@ class TestWaitForShortTask:
         _log_result(result, "wait_short")
 
         # Strict: background task must use background: true
-        assert result.has_tool_with_background("daytona_bash"), \
-            f"Expected daytona_bash with background: true. Got: {result.tool_calls}"
+        assert result.has_tool_with_background("daytona_codeact"), \
+            f"Expected daytona_codeact with background: true. Got: {result.tool_calls}"
         assert len(result.background_started()) >= 1, \
             f"Expected BackgroundTaskStarted event. Got: {result.tool_names}"
         # Strict: foreground prep work happened
         fg_bash = [tc for tc in result.tool_calls
-                   if tc.name == "daytona_bash" and not tc.input.get("background")]
+                   if tc.name == "daytona_codeact" and not tc.input.get("background")]
         assert len(fg_bash) >= 1, \
             f"Expected 1+ foreground bash call. Got {len(fg_bash)}"
         # Strict: at least 1 progress check
@@ -187,13 +187,13 @@ class TestIdleAfterForegroundExhausted:
         _log_result(result, "idle_exhausted")
 
         # Strict: background task must use background: true
-        assert result.has_tool_with_background("daytona_bash"), \
-            f"Expected daytona_bash with background: true. Got: {result.tool_calls}"
+        assert result.has_tool_with_background("daytona_codeact"), \
+            f"Expected daytona_codeact with background: true. Got: {result.tool_calls}"
         assert len(result.background_started()) >= 1, \
             f"Expected BackgroundTaskStarted event. Got: {result.tool_names}"
         # Strict: 2 foreground bash calls completed before idle phase
         fg_bash = [tc for tc in result.tool_calls
-                   if tc.name == "daytona_bash" and not tc.input.get("background")]
+                   if tc.name == "daytona_codeact" and not tc.input.get("background")]
         assert len(fg_bash) >= 2, \
             f"Expected 2+ foreground bash calls (FG_TASK_1/2). Got {len(fg_bash)}"
         # Strict: 2+ progress checks during idle phase
@@ -258,9 +258,9 @@ class TestStaggeredCompletion:
 
         # Strict: 2 background launches with background: true
         bg_bash = [tc for tc in result.tool_calls
-                   if tc.name == "daytona_bash" and tc.input.get("background") is True]
+                   if tc.name == "daytona_codeact" and tc.input.get("background") is True]
         assert len(bg_bash) >= 2, \
-            f"Expected 2+ daytona_bash with background: true. Got {len(bg_bash)}"
+            f"Expected 2+ daytona_codeact with background: true. Got {len(bg_bash)}"
         assert len(result.background_started()) >= 2, \
             f"Expected 2 BackgroundTaskStarted events. Got {len(result.background_started())}"
         # Strict: 2+ progress checks
@@ -324,14 +324,14 @@ class TestPureBackgroundMonitoring:
 
         # Strict: 2 background launches with background: true
         bg_bash = [tc for tc in result.tool_calls
-                   if tc.name == "daytona_bash" and tc.input.get("background") is True]
+                   if tc.name == "daytona_codeact" and tc.input.get("background") is True]
         assert len(bg_bash) >= 2, \
-            f"Expected 2+ daytona_bash with background: true. Got {len(bg_bash)}"
+            f"Expected 2+ daytona_codeact with background: true. Got {len(bg_bash)}"
         assert len(result.background_started()) >= 2, \
             f"Expected 2 BackgroundTaskStarted events. Got {len(result.background_started())}"
         # Strict: NO foreground bash calls (pure monitoring, no fg work)
         fg_bash = [tc for tc in result.tool_calls
-                   if tc.name == "daytona_bash" and not tc.input.get("background")]
+                   if tc.name == "daytona_codeact" and not tc.input.get("background")]
         assert len(fg_bash) == 0, \
             f"Expected NO foreground bash calls (pure monitor mode). Got {len(fg_bash)}: {[tc.input for tc in fg_bash]}"
         # Strict: 1+ progress checks
@@ -390,8 +390,8 @@ class TestWaitThenAct:
         _log_result(result, "wait_then_act")
 
         # Strict: background task with background: true
-        assert result.has_tool_with_background("daytona_bash"), \
-            f"Expected daytona_bash with background: true. Got: {result.tool_calls}"
+        assert result.has_tool_with_background("daytona_codeact"), \
+            f"Expected daytona_codeact with background: true. Got: {result.tool_calls}"
         assert len(result.background_started()) >= 1, \
             f"Expected BackgroundTaskStarted event. Got: {result.tool_names}"
         # Strict: progress check happened
@@ -417,7 +417,7 @@ class TestWaitThenAct:
             f"File write must happen after progress check. checks={check_indices}, writes={write_indices}"
         # Strict: verification read of the file
         fg_bash = [tc for tc in result.tool_calls
-                   if tc.name == "daytona_bash" and not tc.input.get("background")]
+                   if tc.name == "daytona_codeact" and not tc.input.get("background")]
         assert any("cat" in str(tc.input) and "deploy_ready" in str(tc.input) for tc in fg_bash), \
             f"Expected 'cat deploy_ready.txt' verification. Got fg calls: {[tc.input for tc in fg_bash]}"
         # Background launches appear as BackgroundTaskStarted, not ToolExecutionStarted

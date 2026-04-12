@@ -8,7 +8,7 @@ from typing import Any
 from pydantic import BaseModel, Field, field_validator
 
 from team.models import Plan, WorkItemKind
-from team.planning.validation import validate_plan_phase_a
+from team.planning.validation import normalize_plan_kinds, validate_plan_phase_a
 from tools.core.base import ToolExecutionContext
 from tools.posthook.base import SubmitPosthookTool
 
@@ -18,6 +18,12 @@ def _looks_like_validator_payload(payload: dict[str, Any]) -> bool:
 
 
 def _normalize_submit_plan_item_shape(item: Any) -> Any:
+    """Structural aliasing only — field renaming, no agent-name inference.
+
+    Agent-name resolution requires the roster and is deferred to
+    ``_resolve_plan_item_agent_names`` which runs inside ``_build_payload``
+    where the execution context is available.
+    """
     if not isinstance(item, dict):
         return item
 
@@ -34,46 +40,93 @@ def _normalize_submit_plan_item_shape(item: Any) -> Any:
     if "agent_name" not in normalized and isinstance(normalized.get("agent"), str):
         normalized["agent_name"] = normalized["agent"]
 
-    raw_agent_name = normalized.get("agent_name")
-    local_id = normalized.get("local_id")
-    if isinstance(raw_agent_name, str):
-        agent_name = raw_agent_name.strip()
-        if agent_name not in {"developer", "validator", "team_planner"}:
-            explicit_agent_name = "agent_name" in item
-            local_id_like_name = any(sep in agent_name for sep in ("_", "-"))
-            inferred_agent = None
-            explicit_agent = normalized.get("agent")
-            if isinstance(explicit_agent, str) and explicit_agent.strip() in {
-                "developer",
-                "validator",
-                "team_planner",
-            }:
-                inferred_agent = explicit_agent.strip()
-            elif (not explicit_agent_name or local_id_like_name) and normalized.get("kind") == WorkItemKind.EXPANDABLE.value:
-                inferred_agent = "team_planner"
-            elif (not explicit_agent_name or local_id_like_name) and (
-                agent_name.startswith("validate") or agent_name.startswith("validator")
-            ):
-                inferred_agent = "validator"
-            elif (
-                (not explicit_agent_name or local_id_like_name)
-                and _looks_like_validator_payload(payload_dict)
-                and normalized.get("deps")
-            ):
-                inferred_agent = "validator"
-            elif not explicit_agent_name or local_id_like_name:
-                inferred_agent = "developer"
-            else:
-                inferred_agent = agent_name
-
-            normalized["agent_name"] = inferred_agent
-            if not isinstance(local_id, str) or not local_id.strip():
-                normalized["local_id"] = agent_name
-
     if payload_dict:
         normalized["payload"] = payload_dict
 
     return normalized
+
+
+def _resolve_plan_item_agent_names(
+    items: list[dict[str, Any]],
+    roster_agent_names: set[str] | None,
+) -> list[dict[str, Any]]:
+    """Infer canonical agent names using the roster.
+
+    When ``roster_agent_names`` is ``None`` (single-agent mode or no
+    roster available), agent names are accepted as-is with no inference.
+    """
+    if roster_agent_names is None:
+        return items
+
+    resolved: list[dict[str, Any]] = []
+    for raw_item in items:
+        if not isinstance(raw_item, dict):
+            resolved.append(raw_item)
+            continue
+        item = dict(raw_item)
+        raw_agent_name = item.get("agent_name")
+        if not isinstance(raw_agent_name, str):
+            resolved.append(item)
+            continue
+
+        agent_name = raw_agent_name.strip()
+        if agent_name in roster_agent_names:
+            resolved.append(item)
+            continue
+
+        # Agent name not in roster — attempt inference.
+        local_id = item.get("local_id")
+        explicit_agent_name = "agent_name" in raw_item
+        local_id_like_name = any(sep in agent_name for sep in ("_", "-"))
+        payload = item.get("payload")
+        payload_dict = dict(payload) if isinstance(payload, dict) else {}
+        inferred_agent = None
+
+        # Check if the "agent" field (before aliasing) is a known name.
+        explicit_agent = item.get("agent")
+        if isinstance(explicit_agent, str) and explicit_agent.strip() in roster_agent_names:
+            inferred_agent = explicit_agent.strip()
+        elif (not explicit_agent_name or local_id_like_name) and item.get("kind") == WorkItemKind.EXPANDABLE.value:
+            # Expandable items map to planner-role agents.
+            inferred_agent = _find_roster_agent_by_role(roster_agent_names, "planner")
+        elif (not explicit_agent_name or local_id_like_name) and (
+            agent_name.startswith("validate") or agent_name.startswith("validator")
+        ):
+            inferred_agent = _find_roster_agent_by_role(roster_agent_names, "validator")
+        elif (
+            (not explicit_agent_name or local_id_like_name)
+            and _looks_like_validator_payload(payload_dict)
+            and item.get("deps")
+        ):
+            inferred_agent = _find_roster_agent_by_role(roster_agent_names, "validator")
+        elif not explicit_agent_name or local_id_like_name:
+            inferred_agent = _find_roster_agent_by_role(roster_agent_names, "developer")
+        else:
+            inferred_agent = agent_name
+
+        if inferred_agent is not None:
+            item["agent_name"] = inferred_agent
+            if not isinstance(local_id, str) or not local_id.strip():
+                item["local_id"] = agent_name
+
+        resolved.append(item)
+    return resolved
+
+
+def _find_roster_agent_by_role(
+    roster_agent_names: set[str],
+    role_hint: str,
+) -> str | None:
+    """Find a roster agent name matching a role hint.
+
+    Uses simple substring matching: "planner" matches "team_planner",
+    "validator" matches "validator", "developer" matches "dev_python", etc.
+    Returns the first match or ``None``.
+    """
+    for name in sorted(roster_agent_names):
+        if role_hint in name or name in role_hint:
+            return name
+    return None
 
 
 def _is_submit_plan_item_list(value: Any) -> bool:
@@ -198,10 +251,11 @@ class SubmitPlanTool(SubmitPosthookTool):
         "agent and an optional list of dependency local_ids or external "
         "work_item_ids. `items` must be a list of object-shaped plan items "
         "with fields such as `agent_name`, optional `local_id`, `payload`, "
-        "`deps`, and `kind` (`atomic` or `expandable`) — never a list of "
-        "test ids or other bare strings. Validation runs synchronously: if "
-        "any structural issue is found the tool returns a structured error "
-        "and you MUST fix it and call submit_plan again."
+        "and `deps` — never a list of test ids or other bare strings. "
+        "`kind` is auto-inferred from the target agent's role (planner → "
+        "expandable, all others → atomic). Validation runs synchronously: "
+        "if any structural issue is found the tool returns a structured "
+        "error and you MUST fix it and call submit_plan again."
     )
     input_model = SubmitPlanInput
     default_metadata_key: str = "submitted_plan"
@@ -210,34 +264,46 @@ class SubmitPlanTool(SubmitPosthookTool):
         self, arguments: BaseModel, context: ToolExecutionContext
     ) -> tuple[Any, str | None]:
         assert isinstance(arguments, SubmitPlanInput)
-        benchmark_test_ids, benchmark_test_files = self._known_benchmark_targets(context)
+        benchmark_test_ids = context.metadata.get("benchmark_test_ids")
+        benchmark_test_files = context.metadata.get("benchmark_test_files")
         raw_plan = self._normalize_benchmark_command_payloads(
             arguments.model_dump(),
             context=context,
             benchmark_test_ids=benchmark_test_ids,
             benchmark_test_files=benchmark_test_files,
         )
+        # Resolve agent names against the roster before parsing into Plan.
+        roster_agent_names = context.metadata.get("roster_agent_names")
+        raw_items = raw_plan.get("items")
+        if isinstance(raw_items, list):
+            raw_plan["items"] = _resolve_plan_item_agent_names(raw_items, roster_agent_names)
         try:
             plan = Plan.from_dict(raw_plan)
         except Exception as exc:
             return None, f"Invalid Plan shape: {exc}"
 
+        normalize_plan_kinds(plan)
+
         max_plan_size = int(context.metadata.get("max_plan_size", 50) or 50)
-        max_validators_per_plan = _optional_int(context.metadata.get("max_validators_per_plan"))
-        require_validator_for_plan_size = _optional_int(
-            context.metadata.get("require_validator_for_plan_size")
+        max_reviewers_per_plan = _optional_int(context.metadata.get("max_reviewers_per_plan"))
+        require_reviewer_for_plan_size = _optional_int(
+            context.metadata.get("require_reviewer_for_plan_size")
         )
         extra_validators = self._build_extra_validators(
             benchmark_test_ids=benchmark_test_ids,
             benchmark_test_files=benchmark_test_files,
         )
+        # Read pre-populated context from metadata (set by team runtime's
+        # build_work_item_metadata or by single-agent callers directly).
+        allow_empty = bool(context.metadata.get("allow_empty_plan", False))
+        known_external_deps = context.metadata.get("known_external_dep_ids")
         issues = validate_plan_phase_a(
             plan,
             max_plan_size=max_plan_size,
-            allow_empty=self._allow_empty_plan(context),
-            known_external_deps=self._known_external_dep_ids(context),
-            max_validators_per_plan=max_validators_per_plan,
-            require_validator_for_plan_size=require_validator_for_plan_size,
+            allow_empty=allow_empty,
+            known_external_deps=known_external_deps,
+            max_reviewers_per_plan=max_reviewers_per_plan,
+            require_reviewer_for_plan_size=require_reviewer_for_plan_size,
             extra_validators=extra_validators,
         )
         if issues:
@@ -253,52 +319,8 @@ class SubmitPlanTool(SubmitPosthookTool):
         assert isinstance(payload, Plan)
         return f"Plan accepted: {len(payload.items)} item(s) queued for dispatch."
 
-    def _allow_empty_plan(self, context: ToolExecutionContext) -> bool:
-        team_run_id = str(context.metadata.get("team_run_id") or "").strip()
-        work_item_id = str(context.metadata.get("work_item_id") or "").strip()
-        if not team_run_id or not work_item_id:
-            return False
-        try:
-            from team.runtime.registry import get as get_team_run
-
-            team_run = get_team_run(team_run_id)
-        except Exception:
-            return False
-        if team_run is None:
-            return False
-        root_id = str(getattr(team_run, "root_work_item_id", "") or "")
-        if not root_id or work_item_id == root_id:
-            return False
-        graph = getattr(getattr(team_run, "dispatcher", None), "graph", None)
-        if not isinstance(graph, dict):
-            return False
-        work_item = graph.get(work_item_id)
-        if work_item is None:
-            return False
-        return (
-            str(getattr(work_item, "agent_name", "") or "") == "team_planner"
-            and getattr(work_item, "kind", None) == WorkItemKind.EXPANDABLE
-        )
-
-    def _known_external_dep_ids(self, context: ToolExecutionContext) -> set[str] | None:
-        team_run_id = str(context.metadata.get("team_run_id") or "").strip()
-        if not team_run_id:
-            return None
-        try:
-            from team.runtime.registry import get as get_team_run
-
-            team_run = get_team_run(team_run_id)
-        except Exception:
-            return None
-        if team_run is None:
-            return None
-        graph = getattr(getattr(team_run, "dispatcher", None), "graph", None)
-        if not isinstance(graph, dict):
-            return None
-        return {str(wi_id) for wi_id in graph}
-
+    @staticmethod
     def _build_extra_validators(
-        self,
         *,
         benchmark_test_ids: set[str] | None,
         benchmark_test_files: set[str] | None,
@@ -318,19 +340,6 @@ class SubmitPlanTool(SubmitPosthookTool):
             ]
         except ImportError:
             return None
-
-    def _known_benchmark_targets(
-        self, context: ToolExecutionContext
-    ) -> tuple[set[str] | None, set[str] | None]:
-        team_run_id = str(context.metadata.get("team_run_id") or "").strip()
-        try:
-            from benchmarks.sweevo.plan_normalization import (
-                extract_benchmark_targets_from_team_run,
-            )
-
-            return extract_benchmark_targets_from_team_run(team_run_id)
-        except ImportError:
-            return None, None
 
     def _normalize_benchmark_command_payloads(
         self,

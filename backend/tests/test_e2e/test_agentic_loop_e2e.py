@@ -41,11 +41,11 @@ def sandbox_id():
 
 @pytest.mark.asyncio
 async def test_correct_tool_selected_for_file_write(sandbox_id):
-    """Agent should use daytona_write_file, not daytona_bash, for file creation."""
+    """Agent should use daytona_write_file, not daytona_codeact, for file creation."""
     agent = create_eval_agent(
         sandbox_id=sandbox_id,
         system_prompt=(
-            "You have sandbox access via daytona_write_file and daytona_bash. "
+            "You have sandbox access via daytona_write_file and daytona_codeact. "
             "When asked to create a file, ALWAYS use daytona_write_file."
         ),
     )
@@ -58,22 +58,22 @@ async def test_correct_tool_selected_for_file_write(sandbox_id):
     assert "daytona_write_file" in result.tool_names, (
         f"Should use daytona_write_file for file creation. Tools used: {result.tool_names}"
     )
-    # Should NOT use daytona_bash for file creation (wrong tool)
+    # Should NOT use daytona_codeact for file creation (wrong tool)
     bash_for_write = [
         ts
         for ts in result.tools_started()
-        if ts.tool_name == "daytona_bash" and "write" in str(ts.tool_input).lower()
+        if ts.tool_name == "daytona_codeact" and "write" in str(ts.tool_input).lower()
     ]
-    assert not bash_for_write, "Should not use daytona_bash for file write operations"
+    assert not bash_for_write, "Should not use daytona_codeact for file write operations"
 
 
 @pytest.mark.asyncio
 async def test_correct_tool_selected_for_command_execution(sandbox_id):
-    """Agent should use daytona_bash, not daytona_write_file, for command execution."""
+    """Agent should use daytona_codeact, not daytona_write_file, for command execution."""
     agent = create_eval_agent(
         sandbox_id=sandbox_id,
         system_prompt=(
-            "You have sandbox access. Use daytona_bash for running commands. "
+            "You have sandbox access. Use daytona_codeact for running commands. "
             "Use daytona_write_file only for creating files."
         ),
     )
@@ -82,9 +82,9 @@ async def test_correct_tool_selected_for_command_execution(sandbox_id):
         "Run this command in the sandbox: echo 'CORRECT_TOOL_BASH'"
     )
 
-    # Should use daytona_bash for command execution
-    assert "daytona_bash" in result.tool_names, (
-        f"Should use daytona_bash for commands. Tools used: {result.tool_names}"
+    # Should use daytona_codeact for command execution
+    assert "daytona_codeact" in result.tool_names, (
+        f"Should use daytona_codeact for commands. Tools used: {result.tool_names}"
     )
 
 
@@ -138,13 +138,13 @@ async def test_multiple_tools_different_purposes(sandbox_id):
     assert "daytona_write_file" in result.tool_names, (
         f"Missing write tool. Tools: {result.tool_names}"
     )
-    assert "daytona_bash" in result.tool_names, (
+    assert "daytona_codeact" in result.tool_names, (
         f"Missing bash tool. Tools: {result.tool_names}"
     )
 
     # Verify sequence: write should come before bash
     write_idx = result.tool_names.index("daytona_write_file")
-    bash_idx = result.tool_names.index("daytona_bash")
+    bash_idx = result.tool_names.index("daytona_codeact")
     assert write_idx < bash_idx, f"Write should come before bash. Order: {result.tool_names}"
 
 
@@ -219,7 +219,7 @@ async def test_skill_not_loaded_when_not_needed(sandbox_id):
     """Verify agent does not use unnecessary tools for a simple task.
 
     Adapted: since load_skill is not registered, we verify the agent only
-    uses daytona_bash (the minimal required tool) for a simple echo.
+    uses daytona_codeact (the minimal required tool) for a simple echo.
     """
     agent = create_eval_agent(
         sandbox_id=sandbox_id,
@@ -230,9 +230,9 @@ async def test_skill_not_loaded_when_not_needed(sandbox_id):
         "Simply run: echo 'NO_SKILL_NEEDED' and tell me the result."
     )
 
-    # Should only use daytona_bash for simple echo command
-    assert "daytona_bash" in result.tool_names, (
-        f"Should use daytona_bash for echo. Tools used: {result.tool_names}"
+    # Should only use daytona_codeact for simple echo command
+    assert "daytona_codeact" in result.tool_names, (
+        f"Should use daytona_codeact for echo. Tools used: {result.tool_names}"
     )
 
 
@@ -251,7 +251,7 @@ async def test_five_step_task_completes_all_steps(sandbox_id):
             "Report completion of EACH step. "
             "Continue working — do not stop to summarize results unless the task is done. "
             "You MUST use daytona_write_file for EACH file creation step - "
-            "do NOT use daytona_bash to create files."
+            "do NOT use daytona_codeact to create files."
         ),
         tool_call_limit=200,
     )
@@ -301,7 +301,7 @@ async def test_agent_continues_after_tool_error(sandbox_id):
         "Use your tools to complete these steps. "
         "You MUST call a tool for EACH step — do not skip any.\n"
         "Step 1: Use daytona_write_file to create /workspace/recover1.txt with content 'RECOVER1'\n"
-        "Step 2: Use daytona_bash to run: cat /nonexistent/file.txt (expect error)\n"
+        "Step 2: Use daytona_codeact to run: cat /nonexistent/file.txt (expect error)\n"
         "Step 3: Use daytona_write_file to create /workspace/recover3.txt with content 'RECOVER3'\n"
         "Report what happened at each step."
     )
@@ -315,7 +315,7 @@ async def test_agent_continues_after_tool_error(sandbox_id):
     )
 
     # Should have tried to read nonexistent file (step 2)
-    bash_calls = [ts for ts in tool_started if ts.tool_name == "daytona_bash"]
+    bash_calls = [ts for ts in tool_started if ts.tool_name == "daytona_codeact"]
     assert bash_calls, f"Should attempt step 2 (read nonexistent file). Tools: {tool_names}"
 
     # Should have write for step 3 (continued after error)
@@ -389,11 +389,11 @@ async def test_no_early_stop_verification(sandbox_id):
     tool_names = [ts.tool_name for ts in tool_started]
 
     # Should have a listing/verification step (step 4) — model may use
-    # daytona_bash with ls, or daytona_list_files, or cat to verify.
-    bash_calls = [ts for ts in tool_started if ts.tool_name == "daytona_bash"]
+    # daytona_codeact with ls, or daytona_list_files, or cat to verify.
+    bash_calls = [ts for ts in tool_started if ts.tool_name == "daytona_codeact"]
     list_calls = [ts for ts in tool_started if ts.tool_name == "daytona_list_files"]
 
-    # Accept either daytona_bash (ls/cat) or daytona_list_files for verification
+    # Accept either daytona_codeact (ls/cat) or daytona_list_files for verification
     has_verification_step = bool(bash_calls) or bool(list_calls)
     assert has_verification_step, (
         f"Should execute a verification step (ls or list_files). Tools: {tool_names}"

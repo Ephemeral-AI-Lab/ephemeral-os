@@ -31,7 +31,7 @@ pytestmark = [pytest.mark.e2e, pytest.mark.live]
 # ---------------------------------------------------------------------------
 
 KNOWN_DAYTONA_TOOLS = {
-    "daytona_bash", "daytona_read_file", "daytona_write_file",
+    "daytona_codeact", "daytona_read_file", "daytona_write_file",
     "daytona_list_files", "daytona_grep", "daytona_glob",
     "daytona_edit_file", "daytona_lsp_hover", "daytona_lsp_definition",
     "daytona_lsp_references", "daytona_lsp_diagnostics", "daytona_codeact",
@@ -40,7 +40,7 @@ KNOWN_DAYTONA_TOOLS = {
 NEXTJS_AGENT_PROMPT = (
     "You are a senior fullstack developer with a remote Daytona sandbox. "
     "You MUST use tools for every action — never just describe what you'd do. "
-    "Use daytona_write_file to create files, daytona_bash to run commands, "
+    "Use daytona_write_file to create files, daytona_codeact to run commands, "
     "daytona_read_file to read files, daytona_list_files to list dirs. "
     "You specialize in Next.js, React, and TypeScript projects. "
     "Always execute every step using tools. Be concise."
@@ -135,7 +135,7 @@ async def test_create_package_json(sandbox_id):
     assert len(started) >= 1, f"Should use tool. Tool names: {result.tool_names}"
 
     tool_names = [e.tool_name for e in started]
-    assert any(n in ("daytona_write_file", "daytona_bash") for n in tool_names), (
+    assert any(n in ("daytona_write_file", "daytona_codeact") for n in tool_names), (
         f"Should use write tool: {tool_names}"
     )
 
@@ -191,7 +191,7 @@ export default function HomePage(): React.ReactElement {
 }'''
 
     result = await agent.invoke(
-        "Use daytona_bash to run these commands:\n"
+        "Use daytona_codeact to run these commands:\n"
         "mkdir -p /workspace/nextjs-app/src/app\n"
         "Then use daytona_write_file to create /workspace/nextjs-app/src/app/page.tsx "
         f"with this exact content:\n```\n{page_content}\n```"
@@ -201,7 +201,7 @@ export default function HomePage(): React.ReactElement {
 
     # Verify file was created
     result_verify = await agent.invoke(
-        "Use daytona_bash to run: cat /workspace/nextjs-app/src/app/page.tsx | head -5"
+        "Use daytona_codeact to run: cat /workspace/nextjs-app/src/app/page.tsx | head -5"
     )
     completed = result_verify.tools_completed()
     outputs = " ".join(e.output for e in completed)
@@ -266,7 +266,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<HealthResp
 
     result = await agent.invoke(
         "Do these steps:\n"
-        "1. Use daytona_bash to run: mkdir -p /workspace/nextjs-app/src/app/api/health\n"
+        "1. Use daytona_codeact to run: mkdir -p /workspace/nextjs-app/src/app/api/health\n"
         f"2. Use daytona_write_file to create /workspace/nextjs-app/src/app/api/health/route.ts with:\n```\n{api_content}\n```"
     )
     started = result.tools_started()
@@ -328,7 +328,7 @@ async def test_grep_find_react_imports(sandbox_id):
     assert len(started) >= 1
 
     tool_names = [e.tool_name for e in started]
-    assert any(n in ("daytona_grep", "daytona_bash") for n in tool_names), (
+    assert any(n in ("daytona_grep", "daytona_codeact") for n in tool_names), (
         f"Should use grep or bash: {tool_names}"
     )
 
@@ -506,7 +506,7 @@ export const APP_NAME = "EphemeralOS";'''
     # Turn 1: Create
     result1 = await agent.invoke(
         "Do these steps:\n"
-        "1. Use daytona_bash to run: mkdir -p /workspace/nextjs-app/src/lib\n"
+        "1. Use daytona_codeact to run: mkdir -p /workspace/nextjs-app/src/lib\n"
         f"2. Use daytona_write_file to create /workspace/nextjs-app/src/lib/utils.ts with:\n```\n{util_content}\n```"
     )
     assert len(result1.tools_started()) >= 1
@@ -551,7 +551,7 @@ export function FeatureCard({ name, description }: FeatureCardProps) {
     # Create component
     result1 = await agent.invoke(
         "Do these steps:\n"
-        "1. Use daytona_bash to run: mkdir -p /workspace/nextjs-app/src/components\n"
+        "1. Use daytona_codeact to run: mkdir -p /workspace/nextjs-app/src/components\n"
         f"2. Use daytona_write_file to create /workspace/nextjs-app/src/components/FeatureCard.tsx with:\n```\n{component_content}\n```"
     )
     assert len(result1.tools_started()) >= 1
@@ -609,7 +609,7 @@ async def test_full_component_lifecycle(sandbox_id):
 
     # Step 3: Append a new function
     result3 = await agent.invoke(
-        "Use daytona_bash to append this to /workspace/nextjs-app/src/lib/api-client.ts:\n"
+        "Use daytona_codeact to append this to /workspace/nextjs-app/src/lib/api-client.ts:\n"
         "echo '' >> /workspace/nextjs-app/src/lib/api-client.ts && "
         "echo 'export async function fetchVersion(): Promise<string> {' >> /workspace/nextjs-app/src/lib/api-client.ts && "
         "echo '  const res = await fetch(`${API_BASE}/health`);' >> /workspace/nextjs-app/src/lib/api-client.ts && "
@@ -637,7 +637,7 @@ async def test_final_project_structure_summary(sandbox_id):
     """Verify the final project has all expected files."""
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=NEXTJS_AGENT_PROMPT)
     result = await agent.invoke(
-        "Use daytona_bash to run: find /workspace/nextjs-app -type f -name '*.ts' -o -name '*.tsx' -o -name '*.json' | sort"
+        "Use daytona_codeact to run: find /workspace/nextjs-app -type f -name '*.ts' -o -name '*.tsx' -o -name '*.json' | sort"
     )
     started = result.tools_started()
     assert len(started) >= 1

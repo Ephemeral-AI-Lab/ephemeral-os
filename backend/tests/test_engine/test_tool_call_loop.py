@@ -608,12 +608,3 @@ class TestDaytonaToolSchemas:
             )
             assert "properties" in schema["output_schema"]
 
-    def test_daytona_bash_schema(self):
-        from tools.daytona_toolkit.tools import daytona_bash
-
-        schema = daytona_bash.output_schema()
-        assert schema is not None
-        assert "stdout" in schema["properties"]
-        assert "exit_code" in schema["properties"]
-        assert schema["properties"]["stdout"]["type"] == "string"
-        assert schema["properties"]["exit_code"]["type"] == "integer"

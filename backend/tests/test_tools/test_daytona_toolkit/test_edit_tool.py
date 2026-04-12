@@ -205,7 +205,7 @@ async def test_edit_rejects_verify_surface_write_outside_owned_scope():
             "daytona_sandbox": sb,
             "daytona_cwd": "/testbed",
             "agent_name": "developer",
-            "coordination_mode": "ultra",
+            "team_mode_enabled": True,
             "verification_surface_write_enforcement": "error",
             "owned_files": ["dask/config.py"],
             "owned_failures": ["dask/tests/test_config.py"],
@@ -234,7 +234,7 @@ async def test_edit_allows_verify_surface_write_in_advisory_mode():
             "daytona_sandbox": sb,
             "daytona_cwd": "/testbed",
             "agent_name": "developer",
-            "coordination_mode": "ultra",
+            "team_mode_enabled": True,
             "verification_surface_write_enforcement": "warn",
             "owned_files": ["dask/config.py"],
             "owned_failures": ["dask/tests/test_config.py"],
@@ -265,7 +265,7 @@ async def test_edit_rejects_repo_write_from_validator():
             "daytona_sandbox": sb,
             "daytona_cwd": "/testbed",
             "agent_name": "validator",
-            "coordination_mode": "ultra",
+            "team_mode_enabled": True,
         }
     )
 
