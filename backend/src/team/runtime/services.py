@@ -52,16 +52,22 @@ def build_team_runtime_services(
     )
     store = event_store if event_store is not None else build_default_store()
 
-    # Team coordination is PG-backed only. Bootstrap the shared async engine
-    # lazily when the caller did not inject a session factory.
+    # Team coordination is store-backed only. Bootstrap the shared async
+    # engine lazily when the caller did not inject a session factory.
     session_factory = pg_session_factory or get_team_session_factory()
     if session_factory is None:
-        _, session_factory = create_team_engine()
+        try:
+            _, session_factory = create_team_engine()
+        except RuntimeError as exc:
+            raise RuntimeError(
+                "Team runtime requires a configured async database. "
+                "Set EPHEMERALOS_DATABASE_URL or pass pg_session_factory explicitly."
+            ) from exc
 
     note_store: Any = None
     exploration_memory_store: Any = None
-    from team.runtime.pg_dispatcher import PGDispatcher
-    pg = PGDispatcher(session_factory)
+    from team.runtime.dispatcher_store import DispatcherStore
+    store_driver = DispatcherStore(session_factory)
 
     # Initialize NoteStore for Task Center persistence
     from team.persistence.note_store import NoteStore
@@ -81,8 +87,8 @@ def build_team_runtime_services(
         team_run_id=team_run_id,
         budgets=budgets,
         budget_state=budget_state,
+        store=store_driver,
         event_store=store,
-        pg=pg,
     )
     return TeamRuntimeServices(
         project_context=project_context,

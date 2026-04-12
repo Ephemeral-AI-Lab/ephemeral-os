@@ -209,9 +209,11 @@ class Dispatcher:
                 return []
 
             adj = await self.store.get_adjacency(self.team_run_id)
+            allow_empty = bool(rec.root_id) and wi_id != (rec.root_id or wi_id)
             issues = validate_plan(
                 result.submitted_plan,
                 max_plan_size=self.budgets.max_plan_size,
+                allow_empty=allow_empty,
                 known_external_deps=set(adj.keys()),
             )
             if issues:
@@ -465,6 +467,15 @@ class Dispatcher:
             parent_id=parent_id,
             since=since,
         )
+
+    async def get_task_by_id(self, task_id: str) -> Task | None:
+        """Fetch a task by ID from durable storage and refresh the cache."""
+        rec = await self.store.get_task(task_id, self.team_run_id)
+        if rec is None:
+            return None
+        task = _record_to_task(rec)
+        self.graph[task.id] = task
+        return task
 
     async def checkpoint(
         self,
