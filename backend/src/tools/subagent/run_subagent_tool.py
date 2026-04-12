@@ -537,10 +537,7 @@ def _extract_submitted_output(agent: Any) -> Any | None:
     qc = getattr(agent, "query_context", None)
     if qc is None or qc.tool_metadata is None:
         return None
-    key = qc.tool_metadata.get("posthook_metadata_key", _DIRECT_SUBMISSION_METADATA_KEY)
-    if not isinstance(key, str) or not key.strip():
-        key = _DIRECT_SUBMISSION_METADATA_KEY
-    return qc.tool_metadata.get(key)
+    return qc.tool_metadata.get(_DIRECT_SUBMISSION_METADATA_KEY)
 
 
 def _coerce_payload_object(value: Any) -> dict[str, Any]:
@@ -598,11 +595,10 @@ def _build_subagent_envelope(
         - other structured data  → kind="summary", payload=best-effort JSON
                                    object, summary derived from the submission
                                    or final_text.
-        - no posthook submission → kind="raw",    payload={"final_text": ...}
+        - no submission          → kind="raw",    payload={"final_text": ...}
     """
     # Lazy imports — avoid pulling team into tools at import time.
-    from team.models import Plan
-    from tools.posthook import SubmittedSummary
+    from team.models import Plan, SubmittedSummary
 
     if isinstance(submitted, Plan):
         envelope = {
@@ -662,8 +658,6 @@ def _build_subagent_envelope(
         "artifact_ref": None,
         "payload": {"final_text": final_text},
     }
-    if atlas:
-        envelope["atlas"] = dict(atlas)
     return envelope
 
 

@@ -1,7 +1,7 @@
 """CI integration helpers for the Daytona toolkit.
 
 Provides service acquisition, tree cache priming after writes,
-lightweight shell-mutation reconciliation, and atlas dirty-marking.
+lightweight shell-mutation reconciliation.
 All CI features are optional — tools degrade gracefully if no CI service
 is configured.
 """
@@ -537,7 +537,7 @@ async def sync_shell_mutations(
 
     This is intentionally conservative: it only runs for commands that look
     mutating and only when the sandbox cwd is a git checkout. The goal is to
-    keep CI caches, ledger, hotspots, and atlas invalidation in sync when an
+    keep CI caches, ledger, and hotspots in sync when an
     agent edits files via shell commands instead of structured edit tools.
     """
     declared_output_paths = normalize_scope_paths(declared_output_paths or [])
