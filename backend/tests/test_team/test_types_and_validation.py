@@ -37,17 +37,14 @@ def test_plan_from_dict_roundtrip():
     assert plan.rationale == "why"
 
 
-def test_plan_from_dict_normalizes_redundant_failure_payload_fields():
-    repeated = ["tests/test_networks.py::test_any_url_success"] * 70
+def test_plan_from_dict_normalizes_redundant_write_scope():
     data = {
         "items": [
             {
                 "agent_name": "developer",
                 "local_id": "dev1",
                 "payload": {
-                    "owned_files": ["pydantic/networks.py", "pydantic/networks.py"],
-                    "owned_failures": repeated + ["tests/test_networks.py::test_address_valid"],
-                    "verify": ["pytest tests/test_networks.py -q", "pytest tests/test_networks.py -q"],
+                    "write_scope": ["src/auth/", "src/auth/", "src/utils/"],
                 },
             }
         ]
@@ -56,36 +53,7 @@ def test_plan_from_dict_normalizes_redundant_failure_payload_fields():
     plan = Plan.from_dict(data)
     payload = plan.items[0].payload
 
-    assert payload["owned_files"] == ["pydantic/networks.py"]
-    assert payload["verify"] == ["pytest tests/test_networks.py -q"]
-    # Generic normalize only dedupes — no truncation or total annotations.
-    assert payload["owned_failures"] == [
-        "tests/test_networks.py::test_any_url_success",
-        "tests/test_networks.py::test_address_valid",
-    ]
-    assert "owned_failures_total" not in payload
-
-
-def test_plan_from_dict_preserves_all_unique_owned_failures():
-    """Generic _normalize_payload dedupes but does not truncate."""
-    failures = [f"tests/test_networks.py::case_{idx}" for idx in range(80)]
-    data = {
-        "items": [
-            {
-                "agent_name": "developer",
-                "local_id": "dev1",
-                "payload": {"owned_failures": failures},
-            }
-        ]
-    }
-
-    plan = Plan.from_dict(data)
-    payload = plan.items[0].payload
-
-    assert len(payload["owned_failures"]) == 80
-    assert payload["owned_failures"][0] == "tests/test_networks.py::case_0"
-    assert payload["owned_failures"][-1] == "tests/test_networks.py::case_79"
-    assert "owned_failures_unique_total" not in payload
+    assert payload["write_scope"] == ["src/auth/", "src/utils/"]
 
 
 # ---------- Phase A ----------------------------------------------------------

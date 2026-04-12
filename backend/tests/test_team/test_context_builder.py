@@ -189,20 +189,16 @@ def test_build_query_context_forwards_execution_scope_fields():
     wi = _wi(
         payload={
             "task": "fix cli",
-            "owned_files": ["dask/cli.py"],
-            "owned_failures": ["dask/tests/test_cli.py::test_info_versions"],
-            "touches_paths": ["dask/config.py"],
-            "verify": ["pytest dask/tests/test_cli.py -q"],
+            "write_scope": ["dask/"],
+            "verification": {"command": "pytest dask/tests/test_cli.py -q", "expect": "pass"},
         }
     )
     defn = SimpleNamespace(name="developer")
 
     ctx = build_query_context(defn, tr, wi)
 
-    assert ctx.tool_metadata["owned_files"] == ["dask/cli.py"]
-    assert ctx.tool_metadata["owned_failures"] == ["dask/tests/test_cli.py::test_info_versions"]
-    assert ctx.tool_metadata["touches_paths"] == ["dask/config.py"]
-    assert ctx.tool_metadata["verify"] == ["pytest dask/tests/test_cli.py -q"]
+    assert ctx.tool_metadata["write_scope"] == ["dask/"]
+    assert ctx.tool_metadata["verification"] == {"command": "pytest dask/tests/test_cli.py -q", "expect": "pass"}
 
 
 def test_team_agent_context_tracks_posthook_state_outside_raw_metadata():
