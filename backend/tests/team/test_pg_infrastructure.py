@@ -177,6 +177,7 @@ class TestPGDispatcherStructure:
     def test_has_required_methods(self):
         """Verify the public API matches Section 14.6 spec."""
         assert callable(getattr(PGDispatcher, 'pop_ready', None))
+        assert callable(getattr(PGDispatcher, 'mark_running', None))
         assert callable(getattr(PGDispatcher, 'mark_done', None))
         assert callable(getattr(PGDispatcher, 'insert_plan', None))
         assert callable(getattr(PGDispatcher, 'mark_failed', None))

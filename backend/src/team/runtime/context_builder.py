@@ -125,10 +125,17 @@ def _populate_plan_submission_context(
         pass
 
 
-async def build_initial_user_message(team_run: "TeamRun", task: Task) -> str:
+async def build_initial_user_message(
+    team_run: "TeamRun",
+    task: Task,
+    prefix: str | None = None,
+) -> str:
     """Build context string for a task via TaskCenter."""
     arbiter = getattr(team_run, "arbiter", None)
-    return await team_run.task_center.context_for(task, arbiter=arbiter)
+    context = await team_run.task_center.context_for(task, arbiter=arbiter)
+    if prefix:
+        return f"{prefix}\n\n{context}" if context else prefix
+    return context
 
 
 async def build_query_context(
