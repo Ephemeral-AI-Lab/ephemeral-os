@@ -1,8 +1,15 @@
-"""Dispatcher — DAG, ready queue, and atomic mutations for one TeamRun."""
+"""Dispatcher — DAG, ready queue, and atomic mutations for one TeamRun.
+
+Supports an optional PostgreSQL backing store (PGDispatcher) for durability
+and multi-process coordination. When enabled, state transitions write to PG
+first (durable), then in-memory (cache) — per Section 14.3 dual-write
+architecture. The in-memory graph remains the hot-path read source.
+"""
 
 from __future__ import annotations
 
 import asyncio
+import logging
 import uuid
 from collections import deque
 from typing import TYPE_CHECKING, Any, Callable
@@ -49,9 +56,18 @@ from team.runtime.dispatcher_replan_ops import (
 )
 from team.runtime.checkpoint import TeamRunCheckpoint
 
+if TYPE_CHECKING:
+    from team.runtime.pg_dispatcher import PGDispatcher
+
+_logger = logging.getLogger(__name__)
+
 
 class Dispatcher:
-    """Owns the Task DAG for one TeamRun. Mutations are lock-protected."""
+    """Owns the Task DAG for one TeamRun. Mutations are lock-protected.
+
+    When ``pg`` is provided, every state transition writes to PostgreSQL
+    first (durable) then updates the in-memory graph (cache).
+    """
 
     def __init__(
         self,
@@ -60,6 +76,7 @@ class Dispatcher:
         budget_state: BudgetState,
         max_checkpoints: int = 10,
         event_store: TeamRunStore | None = None,
+        pg: "PGDispatcher | None" = None,
     ) -> None:
         self.team_run_id = team_run_id
         self.budgets = budgets
@@ -71,6 +88,7 @@ class Dispatcher:
         self._checkpoints: deque[TeamRunCheckpoint] = deque(maxlen=max_checkpoints)
         self._checkpoint_seq = 0
         self._events: TeamRunStore = event_store or NullTeamRunStore()
+        self._pg: "PGDispatcher | None" = pg
         # Set by TeamRun after construction so cascade "continue" can inject notes
         self.task_center: Any = None
 
@@ -100,6 +118,35 @@ class Dispatcher:
                 replans_used=self.budget_state.replans_used,
             )
         )
+
+    async def _pg_sync_status(self, wi_id: str, status: str) -> None:
+        """Best-effort sync of a task's status to PG.
+
+        Used for transitions where the sync helper (_mark_failed,
+        _mark_cancelled) is synchronous but the caller is async.
+        """
+        if self._pg is None:
+            return
+        try:
+            wi = self.graph.get(wi_id)
+            if wi is None:
+                return
+            if status == "failed":
+                await self._pg.mark_failed(
+                    wi_id, self.team_run_id, wi.failure_reason or ""
+                )
+            elif status == "cancelled":
+                await self._pg.mark_cancelled(
+                    wi_id, self.team_run_id, wi.failure_reason or ""
+                )
+            elif status == "running":
+                # pop_ready in PG already sets running; this is a no-op sync
+                pass
+        except Exception:
+            _logger.debug(
+                "PG sync failed for %s -> %s; in-memory state is authoritative",
+                wi_id, status, exc_info=True,
+            )
 
     def new_id(self) -> str:
         return str(uuid.uuid4())
@@ -228,6 +275,21 @@ class Dispatcher:
                 )
             if wi.id in self.graph:
                 raise ValueError(f"Task {wi.id} already exists")
+
+            # PG first (durable), then in-memory (cache)
+            if self._pg is not None:
+                await self._pg.insert_plan(
+                    self.team_run_id,
+                    [TaskSpec(
+                        id=wi.id, task=wi.task, agent=wi.agent_name,
+                        deps=list(wi.deps), scope_paths=list(wi.scope_paths),
+                        cascade_policy=wi.cascade_policy,
+                    )],
+                    parent_id=wi.parent_id,
+                    parent_depth=max(0, wi.depth - 1) if wi.parent_id else 0,
+                    parent_root_id=wi.root_id or None,
+                )
+
             self.graph[wi.id] = wi
             self.budget_state.tasks_used += 1
             self._emit(make_work_item_added(self.team_run_id, work_item_to_dict(wi)))
@@ -267,6 +329,9 @@ class Dispatcher:
                     started_at=wi.started_at.isoformat(),
                 )
             )
+            # Sync to PG after in-memory (mark_running is not a
+            # crash-critical transition — pop_ready already claimed it)
+            await self._pg_sync_status(wi_id, "running")
             return wi
 
     async def complete(self, wi_id: str, result: AgentResult) -> list[Task]:
@@ -344,12 +409,33 @@ class Dispatcher:
                     cascade_cancel_dependency_subtree(self, wi_id)
                     return []
 
+            # PG first: insert child plan atomically
+            if self._pg is not None and new_items:
+                pg_specs = [
+                    TaskSpec(
+                        id=nwi.id, task=nwi.task, agent=nwi.agent_name,
+                        deps=list(nwi.deps), scope_paths=list(nwi.scope_paths),
+                        cascade_policy=nwi.cascade_policy,
+                    )
+                    for nwi in new_items
+                ]
+                await self._pg.insert_plan(
+                    self.team_run_id, pg_specs,
+                    parent_id=wi.id,
+                    parent_depth=wi.depth,
+                    parent_root_id=wi.root_id or wi.id,
+                )
+
             for nwi in new_items:
                 self.graph[nwi.id] = nwi
                 self.budget_state.tasks_used += 1
                 self._emit(make_work_item_added(self.team_run_id, work_item_to_dict(nwi)))
             if new_items:
                 self._emit_budget()
+
+            # PG first: mark done and promote dependents atomically
+            if self._pg is not None:
+                await self._pg.mark_done(wi_id, self.team_run_id)
 
             wi.status = TaskStatus.DONE
             wi.finished_at = _utcnow()
@@ -383,6 +469,7 @@ class Dispatcher:
 
     async def fail(self, wi_id: str, reason: str) -> None:
         await fail_work_item(self, wi_id=wi_id, reason=reason)
+        await self._pg_sync_status(wi_id, "failed")
 
     # ---- retry / replan --------------------------------------------------
 

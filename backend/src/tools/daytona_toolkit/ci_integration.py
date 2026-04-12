@@ -17,11 +17,9 @@ import shlex
 from typing import Any
 
 from code_intelligence.editing.merge import detect_edit_window
-from tools.daytona_toolkit.coordination import (
-    build_scope_packet_for_context,
-    normalize_scope_paths,
-    scopes_overlap,
-)
+from code_intelligence.routing.scope_packets import normalize_scope_paths
+from team._path_utils import scopes_overlap
+from tools.daytona_toolkit.scope_builder import build_scope_packet_for_context
 from tools.core.base import ToolExecutionContext
 
 logger = logging.getLogger(__name__)

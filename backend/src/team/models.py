@@ -1,7 +1,7 @@
 """Core team-mode dataclasses and enums.
 
 Simplified per Plan A: Task Center replaces briefings, Note replaces
-Briefing + DependencyArtifact, TaskSpec replaces WorkItemSpec.
+Briefing + DependencyArtifact, TaskSpec replaces the former WorkItemSpec.
 """
 
 from __future__ import annotations
@@ -73,7 +73,7 @@ class Note:
 
 
 # ---------------------------------------------------------------------------
-# TaskSpec — what the planner submits (replaces WorkItemSpec)
+# TaskSpec — what the planner submits
 # ---------------------------------------------------------------------------
 
 
@@ -182,7 +182,7 @@ def _taskspec_from_dict(it: dict[str, Any]) -> TaskSpec:
 
 
 # ---------------------------------------------------------------------------
-# Submission types (moved from tools.posthook.types)
+# Submission types
 # ---------------------------------------------------------------------------
 
 

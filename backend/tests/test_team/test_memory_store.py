@@ -10,7 +10,7 @@ from team.context.project import ProjectContext
 from team.memory.model import TeamMemoryRecordModel  # noqa: F401
 from team.memory.runtime import persist_memory_record
 from team.memory.store import TeamMemoryRecord, TeamMemoryStore
-from team.models import WorkItem, WorkItemStatus
+from team.models import Task, TaskStatus
 from team.runtime.team_run import TeamRun
 
 
@@ -57,18 +57,18 @@ def test_team_run_persists_validator_outcome(monkeypatch) -> None:
         project_key="P1",
         repo_root="/repo",
     )
-    work_item = WorkItem(
+    task = Task(
         id="W1",
         team_run_id=run.id,
         agent_name="validator",
-        status=WorkItemStatus.DONE,
-        payload={"verify": ["src/runtime/dispatcher.py"]},
+        status=TaskStatus.DONE,
+        task="verify src/runtime/dispatcher.py",
+        scope_paths=["src/runtime/dispatcher.py"],
     )
 
     persisted = run.note_validator_outcome(
-        work_item=work_item,
+        task=task,
         summary="PASS: targeted pytest node passed",
-        artifact={"target_paths": ["src/runtime/dispatcher.py"], "result": "pass"},
     )
 
     assert persisted is True
@@ -81,7 +81,7 @@ def test_team_run_persists_validator_outcome(monkeypatch) -> None:
     assert results[0].content["summary"] == "PASS: targeted pytest node passed"
 
 
-def test_team_run_persists_validator_outcome_with_non_mapping_artifact(monkeypatch) -> None:
+def test_team_run_persists_validator_outcome_with_failure_summary(monkeypatch) -> None:
     store = _memory_store()
     monkeypatch.setattr("team.memory.runtime.get_default_store", lambda: store)
 
@@ -92,18 +92,18 @@ def test_team_run_persists_validator_outcome_with_non_mapping_artifact(monkeypat
         project_key="P1",
         repo_root="/repo",
     )
-    work_item = WorkItem(
+    task = Task(
         id="W1",
         team_run_id=run.id,
         agent_name="validator",
-        status=WorkItemStatus.DONE,
-        payload={"verify": ["src/runtime/dispatcher.py"]},
+        status=TaskStatus.DONE,
+        task="verify src/runtime/dispatcher.py",
+        scope_paths=["src/runtime/dispatcher.py"],
     )
 
     persisted = run.note_validator_outcome(
-        work_item=work_item,
+        task=task,
         summary="FAIL: command timed out",
-        artifact="timeout while running pytest",
     )
 
     assert persisted is True
@@ -113,7 +113,7 @@ def test_team_run_persists_validator_outcome_with_non_mapping_artifact(monkeypat
         scope_paths=["src/runtime/dispatcher.py"],
     )
     assert len(results) == 1
-    assert results[0].content["artifact"] == "timeout while running pytest"
+    assert results[0].content["summary"] == "FAIL: command timed out"
 
 
 def test_team_run_persists_conflict_event(monkeypatch) -> None:
@@ -143,56 +143,6 @@ def test_team_run_persists_conflict_event(monkeypatch) -> None:
     )
     assert len(results) == 1
     assert results[0].content["reason"].startswith("Scope coherence changed")
-
-
-def test_team_run_explicit_memory_keeps_runtime_provenance(monkeypatch) -> None:
-    store = _memory_store()
-    monkeypatch.setattr("team.memory.runtime.get_default_store", lambda: store)
-
-    run = TeamRun(session_id="S1", user_request="hello", repo_root="/repo")
-    run.project_context = ProjectContext(
-        goal="g",
-        user_request="u",
-        project_key="P1",
-        repo_root="/repo",
-    )
-    work_item = WorkItem(
-        id="W1",
-        team_run_id=run.id,
-        agent_name="developer",
-        status=WorkItemStatus.DONE,
-    )
-
-    persisted = run.note_explicit_memory_artifacts(
-        work_item=work_item,
-        artifact={
-            "memory_records": [
-                {
-                    "kind": "architecture_decision",
-                    "scope": {"paths": ["src/runtime"]},
-                    "content": {"decision": "publish from worker, not hook"},
-                    "source": {
-                        "team_run_id": "forged-run",
-                        "work_item_id": "forged-work-item",
-                        "agent": "forged-agent",
-                        "note": "child metadata",
-                    },
-                }
-            ]
-        },
-    )
-
-    assert persisted == 1
-    results = store.query(
-        project_key="P1",
-        kinds=["architecture_decision"],
-        scope_paths=["src/runtime"],
-    )
-    assert len(results) == 1
-    assert results[0].source["team_run_id"] == run.id
-    assert results[0].source["work_item_id"] == "W1"
-    assert results[0].source["agent"] == "developer"
-    assert results[0].source["note"] == "child metadata"
 
 
 def test_team_memory_query_applies_scope_filter_before_limit() -> None:

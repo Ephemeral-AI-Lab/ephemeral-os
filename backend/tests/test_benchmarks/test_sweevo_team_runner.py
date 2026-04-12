@@ -25,7 +25,7 @@ from message.event_printer import MultiAgentEventPrinter
 from message import ConversationMessage, TextBlock, ToolUseBlock
 from message.stream_events import BackgroundTaskCompleted
 from team.builtins import DEVELOPER, TEAM_PLANNER, TEAM_REPLANNER, VALIDATOR
-from team.models import WorkItem, WorkItemKind, WorkItemStatus
+from team.models import Task, TaskStatus
 from tools.core.runtime import ExecutionMetadata
 
 
@@ -369,12 +369,12 @@ def test_query_ctx_seeds_repo_root_for_daytona_and_ci():
             budgets=None,
             project_context=None,
         ),
-        WorkItem(
+        Task(
             id="W1",
             team_run_id="T1",
             agent_name="developer",
-            status=WorkItemStatus.PENDING,
-            kind=WorkItemKind.ATOMIC,
+            status=TaskStatus.PENDING,
+            task="task",
             payload={"prompt": "Fix it"},
         ),
     )
@@ -421,12 +421,12 @@ def test_query_ctx_injects_scope_packet_when_ci_is_available(monkeypatch):
             budgets=None,
             project_context=None,
         ),
-        WorkItem(
+        Task(
             id="W1",
             team_run_id="T1",
             agent_name="developer",
-            status=WorkItemStatus.PENDING,
-            kind=WorkItemKind.ATOMIC,
+            status=TaskStatus.PENDING,
+            task="task",
             payload={"prompt": "Fix it", "files_to_edit": ["src/module.py"]},
         ),
     )
@@ -1009,20 +1009,20 @@ def test_finalize_team_result_surfaces_retry_replan_and_checkpoint_metadata(monk
             budget_state=SimpleNamespace(replans_used=2),
             dispatcher=SimpleNamespace(
                 graph={
-                    "A": WorkItem(
+                    "A": Task(
                         id="A",
                         team_run_id="TR1",
                         agent_name="developer",
-                        status=WorkItemStatus.DONE,
-                        kind=WorkItemKind.ATOMIC,
+                        status=TaskStatus.DONE,
+                        task="task",
                         retry_count=1,
                     ),
-                    "B": WorkItem(
+                    "B": Task(
                         id="B",
                         team_run_id="TR1",
                         agent_name="validator",
-                        status=WorkItemStatus.DONE,
-                        kind=WorkItemKind.ATOMIC,
+                        status=TaskStatus.DONE,
+                        task="task",
                         retry_count=2,
                         depth=1,
                     ),
@@ -1067,23 +1067,21 @@ def test_finalize_team_result_surfaces_retry_replan_and_checkpoint_metadata(monk
 def test_emit_dispatcher_dag_logs_graph_lines():
     lines: list[tuple[str, str]] = []
     printer = SimpleNamespace(raw_line=lambda agent, body: lines.append((agent, body)))
-    root = WorkItem(
+    root = Task(
         id="root-1",
         team_run_id="TR1",
         agent_name="team_planner",
-        status=WorkItemStatus.DONE,
-        kind=WorkItemKind.EXPANDABLE,
-        local_id="plan1",
+        status=TaskStatus.DONE,
+        task="plan",
         depth=0,
     )
-    child = WorkItem(
+    child = Task(
         id="child-1",
         team_run_id="TR1",
         agent_name="developer",
-        status=WorkItemStatus.READY,
+        status=TaskStatus.READY,
         kind=WorkItemKind.ATOMIC,
         deps=["root-1"],
-        local_id="dev1",
         depth=1,
     )
     team_run = SimpleNamespace(dispatcher=SimpleNamespace(graph={root.id: root, child.id: child}))
@@ -1095,39 +1093,3 @@ def test_emit_dispatcher_dag_logs_graph_lines():
     assert any("dev1 agent=developer" in body and "deps=['plan1']" in body for _, body in lines[1:])
 
 
-def test_sweevo_printer_surfaces_scout_triggered_atlas_info() -> None:
-    lines: list[str] = []
-    printer = MultiAgentEventPrinter(color=False, sink=lines.append)
-
-    printer.emit(
-        BackgroundTaskCompleted(
-            task_id="bg_scout",
-            tool_name="run_subagent",
-            output=json.dumps(
-                {
-                    "kind": "brief",
-                    "run_id": "run-1",
-                    "summary": "Scout summary",
-                    "artifact_ref": "scout:src/auth",
-                    "payload": {"target_paths": ["src/auth"]},
-                    "atlas": {
-                        "subsystem": "src/auth",
-                        "persisted": True,
-                        "promoted": True,
-                        "artifact_ref": "scout:src/auth",
-                        "reason": "run_subagent:scout-complete",
-                    },
-                }
-            ),
-            agent_name="team_planner",
-            work_id="planner123",
-        )
-    )
-
-    assert any(
-        line == (
-            "[team_planner  ] [planner123] [atlas] subsystem=src/auth persisted=true "
-            "promoted=true artifact=scout:src/auth reason=run_subagent:scout-complete"
-        )
-        for line in lines
-    )

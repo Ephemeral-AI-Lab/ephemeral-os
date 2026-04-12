@@ -22,7 +22,7 @@ from tools.daytona_toolkit.ci_integration import (
     scope_paths_for_write,
     resolve_daytona_path,
 )
-from tools.daytona_toolkit.coordination import normalize_scope_paths
+from code_intelligence.routing.scope_packets import normalize_scope_paths
 from tools.core.decorator import tool
 
 logger = logging.getLogger(__name__)

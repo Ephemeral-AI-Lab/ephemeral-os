@@ -79,7 +79,7 @@ class Executor:
             await dispatcher.fail(task_id, f"runner_exception: {exc}")
             return
 
-        result = self._posthook(ctx, defn)
+        result = self._extract_result(ctx, defn)
         await self._dispatch(task_id, task, result)
 
     def _inject_scope_warnings(self, task: "Task") -> None:
@@ -127,7 +127,7 @@ class Executor:
         return build_query_context(defn, self.team_run, task)
 
     @staticmethod
-    def _posthook(ctx: TeamAgentContext, defn: "AgentDefinition") -> AgentResult | RetryRequest | ReplanRequest:
+    def _extract_result(ctx: TeamAgentContext, defn: "AgentDefinition") -> AgentResult | RetryRequest | ReplanRequest:
         """Deterministic result extraction — no LLM call, always produces a result."""
         metadata = ctx.tool_metadata
         submitted = metadata.get("submitted_output")

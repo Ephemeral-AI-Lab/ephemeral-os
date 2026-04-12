@@ -64,7 +64,7 @@ class TrackedBackgroundTask:
     cancel_reason: str | None = None
     # Cancellation / stop mode requested by the manager. Ordinary tools use
     # "cancel"; subagents may use "early_stop" so the task can salvage a
-    # partial result and still run its serializer posthook.
+    # partial result before reaching a terminal state.
     stop_mode: str | None = None
     # Final completion flavor for successful-but-interrupted tasks.
     completion_mode: str | None = None

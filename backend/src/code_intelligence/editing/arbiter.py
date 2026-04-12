@@ -9,11 +9,13 @@ Lock ordering (Group A):
 
 from __future__ import annotations
 
+import bisect
 import hashlib
 import logging
 import threading
 import time
 import uuid
+from collections import deque
 from dataclasses import dataclass
 from typing import Any
 from collections.abc import Callable
@@ -72,6 +74,26 @@ class ArbiterMetrics:
     active_locks: int = 0
 
 
+_EDIT_BUFFER_MAX = 10_000
+
+
+@dataclass(frozen=True)
+class EditRecord:
+    """Immutable edit record. Replaces LedgerEntry."""
+
+    file_path: str
+    agent_id: str
+    timestamp: float
+    edit_type: str = "edit"
+    old_hash: str = ""
+    new_hash: str = ""
+    description: str = ""
+
+
+# Type for the optional flush callback (e.g. FileChangeStore.record)
+EditFlushCallback = Callable[["EditRecord"], Any]
+
+
 class Arbiter:
     """Per-file edit arbitration with OCC.
 
@@ -92,10 +114,12 @@ class Arbiter:
         self,
         workspace_root: str = "",
         on_edit: Callable[[str, str, int], None] | None = None,
+        on_edit_flush: EditFlushCallback | None = None,
         max_concurrent: int = ARBITER_MAX_CONCURRENT_EDITS,
     ) -> None:
         self._workspace_root = workspace_root
         self._on_edit = on_edit
+        self._on_edit_flush = on_edit_flush
         self._max_concurrent = max_concurrent
 
         self._lock = threading.Lock()
@@ -106,6 +130,9 @@ class Arbiter:
         self._generation = 0
         # Hotspot tracking: file_path -> edit count
         self._hotspots: dict[str, int] = {}
+        # Edit buffer (replaces Ledger) — bounded ring for in-process reads
+        self._recent_edits: deque[EditRecord] = deque(maxlen=_EDIT_BUFFER_MAX)
+        self._edit_timestamps: deque[float] = deque(maxlen=_EDIT_BUFFER_MAX)
 
     # -- Token management -----------------------------------------------------
 
@@ -216,14 +243,46 @@ class Arbiter:
         except RuntimeError:
             pass  # Already released
 
-    def record_edit(self, file_path: str, agent_id: str = "") -> int:
-        """Record a successful edit. Returns the new generation."""
+    def record_edit(
+        self,
+        file_path: str,
+        agent_id: str = "",
+        edit_type: str = "edit",
+        old_hash: str = "",
+        new_hash: str = "",
+        description: str = "",
+    ) -> int:
+        """Record a successful edit. Returns the new generation.
+
+        This is the single write point for all file edits — replaces
+        the former Ledger.record() + Arbiter.record_edit() pair.
+        Stores the record in an in-memory ring buffer and optionally
+        flushes to a durable store (e.g. FileChangeStore) via callback.
+        """
+        now = time.time()
+        record = EditRecord(
+            file_path=file_path,
+            agent_id=agent_id,
+            timestamp=now,
+            edit_type=edit_type,
+            old_hash=old_hash,
+            new_hash=new_hash,
+            description=description,
+        )
         with self._lock:
             self._prune_expired_tokens_locked()
             self._generation += 1
             gen = self._generation
             self._metrics.total_edits += 1
             self._hotspots[file_path] = self._hotspots.get(file_path, 0) + 1
+            self._recent_edits.append(record)
+            self._edit_timestamps.append(now)
+
+        if self._on_edit_flush:
+            try:
+                self._on_edit_flush(record)
+            except Exception:
+                logger.debug("on_edit_flush callback failed for %s", file_path)
 
         if self._on_edit:
             try:
@@ -232,6 +291,28 @@ class Arbiter:
                 logger.debug("on_edit callback failed for %s", file_path)
 
         return gen
+
+    def changes_since(self, since: float) -> list[EditRecord]:
+        """Return all edit records after *since* timestamp. O(log n) via bisect."""
+        with self._lock:
+            idx = bisect.bisect_right(list(self._edit_timestamps), since)
+            return list(self._recent_edits)[idx:]
+
+    def recent_edits(self, seconds: float = 60.0) -> list[EditRecord]:
+        """Return all edit records in the last N seconds."""
+        cutoff = time.time() - seconds
+        return self.changes_since(cutoff)
+
+    def who_changed(self, file_path: str) -> list[EditRecord]:
+        """Return all edit records for a file."""
+        with self._lock:
+            return [e for e in self._recent_edits if e.file_path == file_path]
+
+    @property
+    def edit_count(self) -> int:
+        """Number of edit records in the buffer."""
+        with self._lock:
+            return len(self._recent_edits)
 
     # -- Queries --------------------------------------------------------------
 

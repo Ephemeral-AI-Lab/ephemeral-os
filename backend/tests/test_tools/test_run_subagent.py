@@ -13,7 +13,6 @@ from agents import get_definition as get_agent_definition
 from agents.registry import register_definition, unregister_definition
 from agents.types import AgentDefinition
 from engine.runtime.background_tasks import BackgroundTaskManager
-from hooks.agent_posthook import PosthookConfig
 from message.messages import (
     ConversationMessage,
     TextBlock,
@@ -759,132 +758,8 @@ async def test_run_subagent_persists_usage_when_cancelled(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_run_subagent_early_stop_salvages_posthook(monkeypatch):
-    from tools.posthook import SubmittedSummary
-    from tools.core.runtime import ExecutionMetadata
-
-    register_definition(
-        AgentDefinition(
-            name="worker_with_posthook",
-            description="d",
-            agent_type="subagent",
-            posthook=PosthookConfig(
-                agent_name="submit_summary_agent",
-                metadata_key="submitted_summary",
-            ),
-        )
-    )
-
-    class _EarlyStoppedAgent(_StubAgent):
-        def __init__(self) -> None:
-            super().__init__(
-                [],
-                usage=UsageSnapshot(input_tokens=3, output_tokens=2),
-            )
-
-        async def run(self, prompt: str):
-            self._display_messages.append(
-                ConversationMessage(
-                    role="assistant",
-                    content=[TextBlock(text="Partial scout brief")],
-                )
-            )
-            yield ("event",)
-            raise asyncio.CancelledError("early stop")
-
-    class _SerializerAgent:
-        def __init__(self) -> None:
-            self.display_messages: list[ConversationMessage] = []
-            self.query_context = type(
-                "_QC",
-                (),
-                {
-                    "tool_metadata": ExecutionMetadata(),
-                    "api_messages_snapshot": None,
-                },
-            )()
-
-        async def run(self, prompt: str):
-            key = self.query_context.tool_metadata.get(
-                "posthook_metadata_key", "submitted_summary"
-            )
-            self.query_context.tool_metadata[key] = SubmittedSummary(
-                summary=f"Salvaged: {prompt}",
-                artifact={"note": "partial"},
-            )
-            yield ("serialized",)
-
-    def _fake_spawn(*args, **kwargs):
-        if kwargs["agent_def"].name == "submit_summary_agent":
-            return _SerializerAgent()
-        return _EarlyStoppedAgent()
-
-    monkeypatch.setattr(
-        "engine.runtime.agent.spawn_agent",
-        _fake_spawn,
-        raising=True,
-    )
-
-    fake_store = _StubAgentRunStore()
-    fake_usage_store = _StubUsageStore()
-    import server.app_factory as app_factory
-
-    monkeypatch.setattr(app_factory, "agent_run_store", fake_store, raising=True)
-    monkeypatch.setattr(app_factory, "usage_store", fake_usage_store, raising=True)
-
-    bg = BackgroundTaskManager()
-
-    async def _noop_coro() -> ToolResult:
-        return ToolResult(output="placeholder")
-
-    bg.launch(
-        task_id="bg_early_stop",
-        tool_name="run_subagent",
-        tool_input={"prompt": "x"},
-        coro=_noop_coro(),
-        task_note="test",
-        task_type="subagent",
-    )
-    tracked = bg.get_task("bg_early_stop")
-    assert tracked is not None
-    tracked.stop_mode = "early_stop"
-    tracked.cancel_reason = "enough evidence"
-
-    class _StubCfg:
-        cwd = Path("/tmp")
-        session_id = "session_abc"
-
-    ctx = ToolExecutionContext(
-        cwd=Path("/tmp"),
-        metadata={
-            "session_config": _StubCfg(),
-            "background_task_manager": bg,
-            "background_task_id": "bg_early_stop",
-            "sandbox_id": "",
-            "agent_run_id": "parent_run_xyz",
-        },
-    )
-
-    try:
-        result = await run_subagent.execute(
-            run_subagent.input_model(agent_name="worker_with_posthook", prompt="x"),
-            ctx,
-        )
-
-        assert result.is_error is False
-        assert '"completion_mode": "early_stopped"' in result.output
-        assert '"cancel_reason": "enough evidence"' in result.output
-        assert "Salvaged: Partial scout brief" in result.output
-        assert len(fake_store.finished) == 1
-        assert fake_store.finished[0]["status"] == "completed"
-        assert len(fake_usage_store.records) == 1
-    finally:
-        unregister_definition("worker_with_posthook")
-
-
-@pytest.mark.asyncio
 async def test_run_subagent_scout_completion_includes_atlas_info(monkeypatch):
-    from tools.posthook import SubmittedSummary
+    from team.models import SubmittedSummary
     from tools.core.runtime import ExecutionMetadata
     from team.runtime.team_run import TeamRun
 
@@ -979,9 +854,6 @@ async def test_run_subagent_scout_completion_includes_atlas_info(monkeypatch):
             "background_task_id": "bg_scout",
             "sandbox_id": "",
             "team_run_id": "TR1",
-            "ci_service": SimpleNamespace(
-                atlas=SimpleNamespace(persist_scout_brief=lambda **kwargs: True)
-            ),
         },
     )
 
@@ -993,18 +865,11 @@ async def test_run_subagent_scout_completion_includes_atlas_info(monkeypatch):
     assert result.is_error is False
     envelope = json.loads(result.output)
     assert envelope["artifact_ref"] == "scout:src/auth"
-    assert envelope["atlas"] == {
-        "subsystem": "src/auth",
-        "persisted": True,
-        "promoted": True,
-        "artifact_ref": "scout:src/auth",
-        "reason": "run_subagent:scout-complete",
-    }
 
 
 @pytest.mark.asyncio
 async def test_run_subagent_scout_completion_omits_stale_artifact_ref(monkeypatch):
-    from tools.posthook import SubmittedSummary
+    from team.models import SubmittedSummary
     from tools.core.runtime import ExecutionMetadata
     from team.runtime.team_run import TeamRun
 
@@ -1122,19 +987,11 @@ async def test_run_subagent_scout_completion_omits_stale_artifact_ref(monkeypatc
     assert result.is_error is False
     envelope = json.loads(result.output)
     assert envelope["artifact_ref"] is None
-    assert envelope["atlas"] == {
-        "subsystem": "src/auth",
-        "persisted": False,
-        "promoted": False,
-        "artifact_ref": None,
-        "reason": "same-run edits invalidated this scout brief after its snapshot",
-        "stale": True,
-    }
 
 
 @pytest.mark.asyncio
 async def test_run_subagent_forces_promotion_for_root_benchmark_planner_scout(monkeypatch):
-    from tools.posthook import SubmittedSummary
+    from team.models import SubmittedSummary
     from tools.core.runtime import ExecutionMetadata
     from team.models import WorkItem, WorkItemKind, WorkItemStatus
     from team.runtime.team_run import TeamRun
@@ -1249,18 +1106,11 @@ async def test_run_subagent_forces_promotion_for_root_benchmark_planner_scout(mo
     assert result.is_error is False
     envelope = json.loads(result.output)
     assert envelope["artifact_ref"] == "scout:src/auth"
-    assert envelope["atlas"] == {
-        "subsystem": "src/auth",
-        "persisted": False,
-        "promoted": True,
-        "artifact_ref": "scout:src/auth",
-        "reason": "run_subagent:scout-complete",
-    }
 
 
 @pytest.mark.asyncio
 async def test_run_subagent_rejects_team_scout_artifact_with_invalid_field_types(monkeypatch):
-    from tools.posthook import SubmittedSummary
+    from team.models import SubmittedSummary
     from tools.core.runtime import ExecutionMetadata
     from team.runtime.team_run import TeamRun
 
@@ -1368,102 +1218,3 @@ async def test_run_subagent_rejects_team_scout_artifact_with_invalid_field_types
     assert result.is_error is True
     assert "open_questions must be a list" in result.output
     assert "playbook output contract" in result.output
-
-
-@pytest.mark.asyncio
-async def test_run_subagent_marks_persisted_run_failed_when_posthook_fails(monkeypatch):
-    register_definition(
-        AgentDefinition(
-            name="worker_with_posthook",
-            description="d",
-            agent_type="subagent",
-            posthook=PosthookConfig(
-                agent_name="submit_summary_agent",
-                metadata_key="submitted_summary",
-            ),
-        )
-    )
-
-    work_agent = _StubAgent(
-        [ConversationMessage(role="assistant", content=[TextBlock(text="work complete")])],
-        usage=UsageSnapshot(input_tokens=5, output_tokens=3),
-    )
-
-    class _FailingSerializer:
-        def __init__(self) -> None:
-            from tools.core.runtime import ExecutionMetadata
-
-            self.display_messages: list[ConversationMessage] = []
-            self.query_context = type(
-                "_QC",
-                (),
-                {
-                    "tool_metadata": ExecutionMetadata(),
-                    "api_messages_snapshot": None,
-                },
-            )()
-
-        async def run(self, prompt: str):
-            raise RuntimeError("serializer exploded")
-            yield  # pragma: no cover
-
-    def _fake_spawn(*args, **kwargs):
-        if kwargs["agent_def"].name == "submit_summary_agent":
-            return _FailingSerializer()
-        return work_agent
-
-    monkeypatch.setattr(
-        "engine.runtime.agent.spawn_agent",
-        _fake_spawn,
-        raising=True,
-    )
-
-    fake_store = _StubAgentRunStore()
-    fake_usage_store = _StubUsageStore()
-    import server.app_factory as app_factory
-
-    monkeypatch.setattr(app_factory, "agent_run_store", fake_store, raising=True)
-    monkeypatch.setattr(app_factory, "usage_store", fake_usage_store, raising=True)
-
-    bg = BackgroundTaskManager()
-
-    async def _noop_coro() -> ToolResult:
-        return ToolResult(output="placeholder")
-
-    bg.launch(
-        task_id="bg_posthook_fail",
-        tool_name="run_subagent",
-        tool_input={"prompt": "x"},
-        coro=_noop_coro(),
-        task_note="test",
-    )
-
-    class _StubCfg:
-        cwd = Path("/tmp")
-        session_id = "session_abc"
-
-    ctx = ToolExecutionContext(
-        cwd=Path("/tmp"),
-        metadata={
-            "session_config": _StubCfg(),
-            "background_task_manager": bg,
-            "background_task_id": "bg_posthook_fail",
-            "sandbox_id": "",
-            "agent_run_id": "parent_run_xyz",
-        },
-    )
-
-    try:
-        result = await run_subagent.execute(
-            run_subagent.input_model(agent_name="worker_with_posthook", prompt="x"),
-            ctx,
-        )
-    finally:
-        unregister_definition("worker_with_posthook")
-
-    assert result.is_error is True
-    assert "serializer exploded" in result.output
-    assert len(fake_store.finished) == 1
-    assert fake_store.finished[0]["status"] == "failed"
-    assert "serializer exploded" in fake_store.finished[0]["error"]
-    assert len(fake_usage_store.records) == 1

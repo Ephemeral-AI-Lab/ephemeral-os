@@ -4,7 +4,7 @@ Use this reference immediately before emitting final plan JSON.
 - Must emit `{"items": [...], "rationale": "..."}`.
 - Finish the benchmark-surface ledger, deps, briefings, and item shapes before loading this reference.
 - After this reference loads, the very next assistant content must be the final JSON object only. No recap, no checklist, no "now emit", and no extra prose.
-- Must keep each item on the runtime `WorkItemSpec` shape.
+- Must keep each item on the runtime `TaskSpec` shape.
 - Never load this reference in parallel with `root-plan-self-check`; wait for that tool call to finish first.
 - Must use `agent_name` only for agents listed in the roster injected into your context. If no roster is present, the defaults are `developer`, `validator`, and `team_planner`.
 - Must use `local_id` for the lane label such as `compat_fix` or `validate_misc`.

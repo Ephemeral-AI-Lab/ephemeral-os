@@ -74,7 +74,7 @@ class AgentDefinition(BaseModel):
     # --- team-mode work item kinds this agent is allowed to serve ---
     # Values: "atomic", "expandable". Defaults to both so existing
     # builtin agents remain compatible. Phase B validation rejects any
-    # WorkItemSpec whose ``kind`` is not in the target agent's list.
+    # TaskSpec whose ``kind`` is not in the target agent's list.
     supported_kinds: list[str] = Field(
         default_factory=lambda: ["atomic", "expandable"]
     )

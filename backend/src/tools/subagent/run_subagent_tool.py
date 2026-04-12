@@ -40,11 +40,10 @@ from message.messages import (
 from token_tracker.runtime import persist_run_usage
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.decorator import tool
-from tools.daytona_toolkit.coordination import (
+from team._path_utils import scope_paths_from_payload, scopes_overlap
+from tools.daytona_toolkit.scope_builder import (
     build_scope_packet_for_context,
     render_scope_packet,
-    scope_paths_from_payload,
-    scopes_overlap,
 )
 from tools.subagent.policy import SCOUT_ONLY_CALLERS
 
@@ -650,7 +649,7 @@ def _build_subagent_envelope(
 
         return envelope
 
-    # No posthook submission — fall back to raw final text.
+    # No submission — fall back to raw final text.
     envelope = {
         "kind": "raw",
         "run_id": sub_run_id,
@@ -847,10 +846,6 @@ async def run_subagent(
         merged.update(subagent_ctx.metadata)
         merged.agent_name = sub_def.name
         qc.tool_metadata = merged
-        stamp_posthook_metadata_key(
-            qc,
-            posthook_cfg.metadata_key if posthook_cfg is not None else _DIRECT_SUBMISSION_METADATA_KEY,
-        )
 
     # Register the live-peek progress provider — closes over the inner agent's
     # _messages list, so each peek returns a fresh snapshot of the last N
@@ -920,7 +915,6 @@ async def run_subagent(
             cancel_reason = tracked.cancel_reason
 
     final_text = _extract_final_text(agent.display_messages)
-    posthook_input = _build_posthook_input(final_text, agent.display_messages)
     # Tolerate test stubs that don't expose a query_context.
     api_snapshot = qc.api_messages_snapshot if qc is not None else None
     # Test stubs may not expose ``agent_name``/``model``/``total_usage`` —
@@ -968,27 +962,6 @@ async def run_subagent(
         return ToolResult(output=f"run_subagent: subagent crashed: {run_error}", is_error=True)
 
     submitted = _extract_submitted_output(agent)
-    try:
-        if submitted is None and (not early_stopped or posthook_input):
-            submitted = await _run_posthook_if_needed(
-                posthook_cfg=posthook_cfg,
-                posthook_def=posthook_def,
-                submitted=submitted,
-                final_text=posthook_input,
-                parent_cfg=parent_cfg,
-                sandbox_id=sandbox_id,
-                base_metadata=subagent_ctx,
-            )
-    except Exception as exc:
-        tracker.finish(
-            status="failed",
-            display_messages=agent.display_messages,
-            api_messages_snapshot=api_snapshot,
-            error=str(exc),
-            final_text=final_text,
-            cancellation_reason=cancel_reason,
-        )
-        return ToolResult(output=str(exc), is_error=True)
 
     if agent_name == "scout" and parent_team_run_id:
         scout_submission_error = _validate_team_scout_submission(submitted)

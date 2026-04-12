@@ -101,7 +101,7 @@ class CancelBackgroundTaskTool(BaseTool):
                     output=(
                         f"Background task {task_id} early-stop requested.{reason_msg} "
                         "The subagent was interrupted and will salvage any partial "
-                        "result through its posthook before it reaches a terminal state."
+                        "result before it reaches a terminal state."
                     ),
                     is_error=False,
                 )

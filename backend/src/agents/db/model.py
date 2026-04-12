@@ -42,7 +42,6 @@ class AgentDefinitionRecord(Base):
     role: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     agent_type: Mapped[str] = mapped_column(String(32), default="agent")
     supported_kinds: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
-    posthook: Mapped[dict[str, str] | None] = mapped_column(JSON, nullable=True)
     source: Mapped[str] = mapped_column(String(32), default="user")
 
     # Capability flags
