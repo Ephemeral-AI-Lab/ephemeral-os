@@ -88,6 +88,23 @@ def list_definitions(source: str | None = None) -> list[AgentDefinition]:
     return defs
 
 
+def get_role(agent_name: str) -> str | None:
+    """Return the ``role`` tag for *agent_name*, or ``None``."""
+    defn = get_definition(agent_name)
+    return defn.role if defn is not None else None
+
+
+def has_role(agent_name: str, role: str) -> bool:
+    """Check whether *agent_name* is registered with the given *role*."""
+    return get_role(agent_name) == role
+
+
+def find_by_role(role: str) -> list[AgentDefinition]:
+    """Return all registered definitions whose ``role`` matches."""
+    _ensure_external_loaded()
+    return [d for d in _DEFINITIONS.values() if d.role == role]
+
+
 def list_dispatchable_subagent_names() -> list[str]:
     """Return registered subagent names that may be targeted by run_subagent."""
     _ensure_external_loaded()

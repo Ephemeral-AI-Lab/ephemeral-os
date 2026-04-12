@@ -19,7 +19,7 @@ Use this skill only for stable benchmark policy. Must treat the prompt, payload,
 - Must preserve exact file paths and exact pytest node ids when they are known.
 - Must treat benchmark test files as failure evidence first, not default implementation ownership.
 - Must treat collection or import failures before the named target loads as still-red verification, not as a reason to trim the scope.
-- If benchmark-path validation fails, must rebuild a prompt-surface ledger from the exact `FAIL_TO_PASS`/`PASS_TO_PASS` text and copy from that ledger verbatim. Never repair benchmark paths by filename intuition.
+- If benchmark-path validation fails, must rebuild a prompt-surface ledger from the exact `FAIL_TO_PASS`/`PASS_TO_PASS` text and copy from that ledger verbatim; keep named nodes as-is or downgrade only to that same prompt file path. Never repair benchmark paths by filename intuition or by swapping in a same-family sibling node.
 
 ## Benchmark planning rules
 

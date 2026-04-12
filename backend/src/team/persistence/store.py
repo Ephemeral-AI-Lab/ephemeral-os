@@ -41,8 +41,7 @@ class TeamDefinitionStore:
             id=record.id,
             name=record.name,
             description=record.description or "",
-            planner_agent=record.planner_agent,
-            worker_agents=list(record.worker_agents or []),
+            roster=dict(record.roster or {}),
         )
 
     # ---- CRUD ------------------------------------------------------------
@@ -51,8 +50,7 @@ class TeamDefinitionStore:
         self,
         *,
         name: str,
-        planner_agent: str,
-        worker_agents: list[str] | None = None,
+        roster: dict[str, str],
         description: str = "",
     ) -> TeamDefinition:
         """Insert a new team definition. Raises if the name already exists."""
@@ -68,8 +66,7 @@ class TeamDefinitionStore:
                 id=str(uuid4()),
                 name=name,
                 description=description,
-                planner_agent=planner_agent,
-                worker_agents=list(worker_agents or []),
+                roster=dict(roster),
             )
             db.add(record)
             db.commit()

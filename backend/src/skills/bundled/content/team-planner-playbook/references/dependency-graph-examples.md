@@ -15,9 +15,9 @@ Do not load it while the first scout wave still has unlaunched exact-file slices
 - Example: root scouts land `pkg/io/hdf.py`, `pkg/io/parquet/`, `pkg/groupby.py`, `pkg/io/json.py`, `pkg/utils.py`, `pkg/cli.py`, `pkg/config.py`, and `pkg/compat.py`.
   Emit `developer(hdf)` now.
   Emit child planners for `parquet` and `groupby`.
-  For the remaining single-file slices, either emit several direct developers if slots remain or one residual child planner whose only job is to schedule `json`, `utils`, `cli`, `config`, and `compat`.
+  For the remaining single-file slices, either emit several direct developers if slots remain or one residual child planner whose only job is to schedule `json`, `utils`, `cli`, `config`, and `compat`, then finish with one terminal validator.
   Never emit one atomic developer that owns all five files.
-  Never flatten the whole root into eight direct developers plus one validator just because every scout already mapped an owner.
+  Never flatten the whole root into eight direct developers plus one validator, and never add per-branch validators at the same parent layer, just because every scout already mapped an owner.
 
 - Example: a child planner inherits scout briefs for `pkg/io/json.py`, `pkg/utils.py`, `pkg/cli.py`, `pkg/config.py`, and `pkg/compat.py`.
   The evidence already maps each file.

@@ -58,14 +58,16 @@ def test_plan_from_dict_normalizes_redundant_failure_payload_fields():
 
     assert payload["owned_files"] == ["pydantic/networks.py"]
     assert payload["verify"] == ["pytest tests/test_networks.py -q"]
+    # Generic normalize only dedupes — no truncation or total annotations.
     assert payload["owned_failures"] == [
         "tests/test_networks.py::test_any_url_success",
         "tests/test_networks.py::test_address_valid",
     ]
-    assert payload["owned_failures_total"] == 71
+    assert "owned_failures_total" not in payload
 
 
-def test_plan_from_dict_caps_owned_failures_to_representative_subset():
+def test_plan_from_dict_preserves_all_unique_owned_failures():
+    """Generic _normalize_payload dedupes but does not truncate."""
     failures = [f"tests/test_networks.py::case_{idx}" for idx in range(80)]
     data = {
         "items": [
@@ -80,10 +82,10 @@ def test_plan_from_dict_caps_owned_failures_to_representative_subset():
     plan = Plan.from_dict(data)
     payload = plan.items[0].payload
 
-    assert len(payload["owned_failures"]) == 64
+    assert len(payload["owned_failures"]) == 80
     assert payload["owned_failures"][0] == "tests/test_networks.py::case_0"
-    assert payload["owned_failures"][-1] == "tests/test_networks.py::case_63"
-    assert payload["owned_failures_unique_total"] == 80
+    assert payload["owned_failures"][-1] == "tests/test_networks.py::case_79"
+    assert "owned_failures_unique_total" not in payload
 
 
 # ---------- Phase A ----------------------------------------------------------
@@ -404,9 +406,16 @@ def test_phase_a_rejects_benchmark_test_ref_aliases(monkeypatch):
         ]
     )
 
+    from benchmarks.sweevo.plan_validation import build_benchmark_payload_ref_validator
+
     issues = validate_plan_phase_a(
         plan,
-        benchmark_test_files={"dask/dataframe/io/tests/test_hdf.py"},
+        extra_validators=[
+            build_benchmark_payload_ref_validator(
+                benchmark_test_ids=set(),
+                benchmark_test_files={"dask/dataframe/io/tests/test_hdf.py"},
+            )
+        ],
     )
 
     assert any(
@@ -434,10 +443,16 @@ def test_phase_a_accepts_exact_benchmark_test_refs(monkeypatch):
         ]
     )
 
+    from benchmarks.sweevo.plan_validation import build_benchmark_payload_ref_validator
+
     issues = validate_plan_phase_a(
         plan,
-        benchmark_test_ids={exact_node},
-        benchmark_test_files={"dask/dataframe/io/tests/test_hdf.py"},
+        extra_validators=[
+            build_benchmark_payload_ref_validator(
+                benchmark_test_ids={exact_node},
+                benchmark_test_files={"dask/dataframe/io/tests/test_hdf.py"},
+            )
+        ],
     )
 
     assert issues == []

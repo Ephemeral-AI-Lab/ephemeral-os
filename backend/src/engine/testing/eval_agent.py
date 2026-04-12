@@ -22,6 +22,7 @@ Usage::
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 import time
@@ -75,6 +76,7 @@ class EvalResult:
     events: list[StreamEvent] = field(default_factory=list)
     tool_calls: list[ToolCallResult] = field(default_factory=list)
     latency_ms: float = 0.0
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     # -- Text helpers --
 
@@ -114,10 +116,7 @@ class EvalResult:
 
     def has_tool_with_background(self, name: str) -> bool:
         """Check if a tool was called with background: true in its input."""
-        return any(
-            tc.name == name and tc.input.get("background") is True
-            for tc in self.tool_calls
-        )
+        return any(tc.name == name and tc.input.get("background") is True for tc in self.tool_calls)
 
     # -- Event type accessors --
 
@@ -165,12 +164,12 @@ class EvalResult:
           killed by cancellation or transient SDK failure)
         - BackgroundTaskCompleted with "Cancelled" output
         """
+
         def _is_killed_process(output: str) -> bool:
             """Check if output is from a killed/cancelled process (exit_code -1, empty stdout)."""
             if '"exit_code": -1' not in output:
                 return False
             try:
-                import json
                 data = json.loads(output)
                 return data.get("exit_code") == -1 and not (data.get("stdout") or "").strip()
             except (json.JSONDecodeError, AttributeError):
@@ -321,6 +320,7 @@ class EvalAgent:
         tool_call_limit: int | None = None,
         max_tokens: int | None = None,
         settings: Settings | None = None,
+        toolkits: list[str] | None = None,
     ) -> EvalAgent:
         """Create a configured EvalAgent.
 
@@ -339,6 +339,8 @@ class EvalAgent:
             tool_call_limit: Optional cap on tool dispatches for the ephemeral run.
             max_tokens: Override max_tokens from settings.
             settings: Override auto-loaded settings.
+            toolkits: List of toolkit names to register. Defaults to
+                ["sandbox_operations", "subagent"].
 
         Returns:
             Configured EvalAgent ready to invoke.
@@ -359,17 +361,13 @@ class EvalAgent:
 
         db_kwargs = try_get_active_model_kwargs() or {}
         if not db_kwargs:
-            raise NoActiveModelError(
-                "EvalAgent requires an active model_registrations row."
-            )
+            raise NoActiveModelError("EvalAgent requires an active model_registrations row.")
         resolved_model = db_kwargs.get("model")
         if not resolved_model:
             raise RuntimeError("Active model registration has no 'model' id")
         api_client = make_api_client(db_kwargs=db_kwargs)
         if db_kwargs:
-            logger.info(
-                "[EvalAgent] Using DB model: model=%s", db_kwargs.get("model", "?")
-            )
+            logger.info("[EvalAgent] Using DB model: model=%s", db_kwargs.get("model", "?"))
 
         # Build a real SessionConfig so subagents persist agent_run rows
         # with a valid parent session_id.
@@ -383,11 +381,13 @@ class EvalAgent:
         # Tune the AgentDefinition so spawn_agent produces the same tool
         # surface EvalAgent historically exposed: Daytona + subagent, no
         # auto-loaded skills, the raw test system prompt.
+        if toolkits is None:
+            toolkits = ["sandbox_operations", "subagent"]
         agent_def = AgentDefinition(
             name="eval_agent",
             description="Test harness eval agent",
             system_prompt=system_prompt or DEFAULT_SYSTEM_PROMPT,
-            toolkits=["sandbox_operations", "subagent"],
+            toolkits=toolkits,
             tool_call_limit=tool_call_limit,
             include_skills=False,
             source="builtin",
@@ -426,10 +426,10 @@ class EvalAgent:
         try:
             from server.app_factory import agent_run_store, model_store, session_store
 
-            needs_init = any(
-                not store.is_ready
-                for store in (agent_run_store, session_store)
-            ) or not model_store.is_available
+            needs_init = (
+                any(not store.is_ready for store in (agent_run_store, session_store))
+                or not model_store.is_available
+            )
 
             if needs_init and settings.database.url:
                 from db.engine import initialize_db
@@ -459,9 +459,7 @@ class EvalAgent:
                     message_count=0,
                 )
         except Exception:
-            logger.debug(
-                "[EvalAgent] session_store.upsert failed", exc_info=True
-            )
+            logger.debug("[EvalAgent] session_store.upsert failed", exc_info=True)
 
     @classmethod
     def from_settings(cls, settings: Settings) -> EvalAgent:
@@ -470,7 +468,12 @@ class EvalAgent:
 
     # -- Invocation --
 
-    async def invoke(self, prompt: str, verbose: bool = True) -> EvalResult:
+    async def invoke(
+        self,
+        prompt: str,
+        verbose: bool = True,
+        metadata: dict[str, Any] | None = None,
+    ) -> EvalResult:
         """Send a prompt through the full agent loop and collect results.
 
         Each invocation starts with a clean conversation history so that
@@ -481,6 +484,7 @@ class EvalAgent:
             prompt: The user prompt to send.
             verbose: If True, print streaming events in real-time (thinking,
                      text, tool calls). If False, suppress output.
+            metadata: Optional dict of custom metadata to include in result.
         """
         self._display_messages.clear()
         self._display_messages.append(ConversationMessage.from_user_text(prompt))
@@ -542,28 +546,18 @@ class EvalAgent:
 
             if isinstance(event, ToolExecutionStarted):
                 _out(
-                    f"    -> tool_start: {event.tool_name}"
-                    f"({_truncate(str(event.tool_input), 120)})"
+                    f"    -> tool_start: {event.tool_name}({_truncate(str(event.tool_input), 120)})"
                 )
             elif isinstance(event, ToolExecutionCompleted):
                 status = "ERROR" if event.is_error else "ok"
-                _out(
-                    f"    <- tool_done:  {event.tool_name}"
-                    f" [{status}] {event.output}"
-                )
+                _out(f"    <- tool_done:  {event.tool_name} [{status}] {event.output}")
             elif isinstance(event, AssistantTurnComplete):
                 for tb in event.message.tool_uses:
                     tool_calls.append(ToolCallResult(name=tb.name, input=tb.input))
             elif isinstance(event, BackgroundTaskStarted):
-                _out(
-                    f"    >> bg_start:   {event.tool_name}"
-                    f" task_id={event.task_id}"
-                )
+                _out(f"    >> bg_start:   {event.tool_name} task_id={event.task_id}")
             elif isinstance(event, BackgroundTaskCompleted):
-                _out(
-                    f"    << bg_done:    {event.tool_name}"
-                    f" {event.output}"
-                )
+                _out(f"    << bg_done:    {event.tool_name} {event.output}")
             elif isinstance(event, SystemNotification):
                 _out(f"    [system] {event.text}")
 
@@ -583,8 +577,7 @@ class EvalAgent:
         if st is not None and compacted_before is not None:
             new_compactions = int(st.compacted) - compacted_before
             compaction_note = (
-                f", compactions={'+1' if new_compactions > 0 else '0'}"
-                f" (compacted={st.compacted})"
+                f", compactions={'+1' if new_compactions > 0 else '0'} (compacted={st.compacted})"
             )
         _out(
             f"  [EvalAgent] done: {len(tool_calls)} tool calls, "
@@ -599,6 +592,7 @@ class EvalAgent:
             events=events,
             tool_calls=tool_calls,
             latency_ms=latency_ms,
+            metadata=metadata or {},
         )
 
     async def close(self) -> None:

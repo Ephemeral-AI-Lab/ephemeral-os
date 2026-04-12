@@ -142,10 +142,9 @@ def test_build_query_context_carries_team_metadata_and_briefings():
     assert ctx.tool_metadata.agent_run_id is None
     assert ctx.tool_metadata.agent_name == "worker"
     assert isinstance(ctx.tool_metadata.get("work_item_started_at"), float)
-    assert ctx.tool_metadata["coordination_mode"] == "ultra"
-    assert ctx.tool_metadata["require_declared_shell_outputs"] is True
-    assert ctx.tool_metadata["verification_surface_write_enforcement"] == "warn"
-    assert ctx.tool_metadata["default_scope_paths"] == ["src/file.py"]
+    # Coordination metadata is no longer hardcoded — it flows from
+    # team_run.coordination_metadata which defaults to empty.
+    assert ctx.tool_metadata.get("coordination_mode") is None
 
 def test_shared_briefings_flow_into_query_context():
     store = InMemoryArtifactStore(BudgetConfig(), BudgetState())
@@ -162,40 +161,26 @@ def test_shared_briefings_flow_into_query_context():
     assert "context: tier=shared" in ctx.user_message
 
 
-def test_build_query_context_injects_scope_packet_when_ci_is_available(monkeypatch):
+def test_build_query_context_applies_coordination_metadata_from_team_run():
+    """Coordination metadata flows from team_run.coordination_metadata, not hardcoded."""
     store = InMemoryArtifactStore(BudgetConfig(), BudgetState())
     tr = _fake_team_run(store, sandbox_id="sbx-1", repo_root="/testbed")
+    tr.coordination_metadata = {
+        "coordination_mode": "ultra",
+        "require_declared_shell_outputs": True,
+        "verification_surface_write_enforcement": "warn",
+    }
     wi = _wi(payload={"prompt": "Fix it", "target_paths": ["src/module.py"]})
     defn = SimpleNamespace(name="developer")
-
-    monkeypatch.setattr(context_builder_module, "get_code_intelligence", lambda **_: object())
-    monkeypatch.setattr(
-        context_builder_module,
-        "build_scope_packet",
-        lambda **_: {
-            "coherence_token": "token-1",
-            "freshness": "fresh",
-            "scope_paths": ["src/module.py"],
-        },
-    )
-    monkeypatch.setattr(
-        context_builder_module,
-        "render_scope_packet",
-        lambda packet: f"SCOPE {packet['coherence_token']}",
-    )
 
     ctx = build_query_context(defn, tr, wi)
 
     assert ctx.tool_metadata.sandbox_id == "sbx-1"
     assert ctx.tool_metadata.daytona_cwd == "/testbed"
     assert ctx.tool_metadata["ci_workspace_root"] == "/testbed"
-    assert ctx.tool_metadata["default_scope_paths"] == ["src/module.py"]
-    assert ctx.tool_metadata["scope_packet"]["coherence_token"] == "token-1"
-    assert ctx.tool_metadata["coherence_token"] == "token-1"
     assert ctx.tool_metadata["coordination_mode"] == "ultra"
     assert ctx.tool_metadata["require_declared_shell_outputs"] is True
     assert ctx.tool_metadata["verification_surface_write_enforcement"] == "warn"
-    assert ctx.user_message.startswith("SCOPE token-1\n\n")
 
 
 def test_build_query_context_forwards_execution_scope_fields():
@@ -218,7 +203,6 @@ def test_build_query_context_forwards_execution_scope_fields():
     assert ctx.tool_metadata["owned_failures"] == ["dask/tests/test_cli.py::test_info_versions"]
     assert ctx.tool_metadata["touches_paths"] == ["dask/config.py"]
     assert ctx.tool_metadata["verify"] == ["pytest dask/tests/test_cli.py -q"]
-    assert ctx.tool_metadata["verification_surface_write_enforcement"] == "warn"
 
 
 def test_team_agent_context_tracks_posthook_state_outside_raw_metadata():

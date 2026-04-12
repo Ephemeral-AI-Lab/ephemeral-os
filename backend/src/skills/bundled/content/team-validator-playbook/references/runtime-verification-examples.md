@@ -8,7 +8,7 @@ Use this reference before the first `daytona_codeact` verification command on a 
 - If output capture is awkward, may redirect inside `shell("...")` and inspect the saved file with a structured read.
 - Must not switch to `subprocess.run(...)`, `subprocess.Popen(...)`, or helper Python wrappers just because `shell(...)` output is short.
 - Must not rerun a green command with `--collect-only`, `ls`, or extra probes to "confirm" the pass.
-- Must not rerun a failing broad regression command once it already printed the failing ids you need.
+- Must not rerun a failing broad regression command once it already printed the failing ids or original-message producer you need.
 - After one exact-command `transient_runtime` failure with no failing ids, may shard only the same owned payload targets into disjoint equivalent chunks.
 - Must turn the first red run into a root-cause packet with `phase`, `boundary`, and `next_question`. Never replace that packet with vibes.
 ## Few-shot examples

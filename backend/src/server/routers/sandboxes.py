@@ -9,6 +9,7 @@ from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
+from config.defaults import DEFAULT_SANDBOX_CI_ROOT
 from sandbox.service import SandboxService
 
 logger = logging.getLogger(__name__)
@@ -121,19 +122,23 @@ def create_sandbox_router(service: SandboxService | None = None) -> APIRouter:
         try:
             sb = await asyncio.to_thread(svc.get_sandbox_object, sandbox_id)
             resp = sb.process.exec(req.command, timeout=req.timeout)
-            return JSONResponse(content={
-                "result": resp.result,
-                "exit_code": resp.exit_code,
-            })
+            return JSONResponse(
+                content={
+                    "result": resp.result,
+                    "exit_code": resp.exit_code,
+                }
+            )
         except Exception as exc:
             return JSONResponse(status_code=500, content={"error": str(exc)})
 
     @router.get("/{sandbox_id}/files")
-    async def list_sandbox_files(sandbox_id: str, path: str = "/home/daytona"):
+    async def list_sandbox_files(sandbox_id: str, path: str = DEFAULT_SANDBOX_CI_ROOT):
         """List files in a sandbox directory."""
         try:
             items = await asyncio.to_thread(
-                svc.list_files_recursive, sandbox_id, path,
+                svc.list_files_recursive,
+                sandbox_id,
+                path,
             )
             return JSONResponse(content=items)
         except Exception as exc:
@@ -147,7 +152,9 @@ def create_sandbox_router(service: SandboxService | None = None) -> APIRouter:
         """Get a preview URL for a sandbox port."""
         try:
             result = await asyncio.to_thread(
-                svc.get_signed_preview_url, sandbox_id, port,
+                svc.get_signed_preview_url,
+                sandbox_id,
+                port,
             )
             return JSONResponse(content=result)
         except Exception as exc:

@@ -11,7 +11,20 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
-_OWNED_FAILURES_PREVIEW_LIMIT = 64
+from config.defaults import (
+    DEFAULT_MAX_WORK_ITEMS,
+    DEFAULT_MAX_DEPTH,
+    DEFAULT_MAX_PLAN_SIZE,
+    DEFAULT_MAX_VALIDATORS_PER_PLAN,
+    DEFAULT_REQUIRE_VALIDATOR_FOR_PLAN_SIZE,
+    DEFAULT_MAX_ARTIFACT_BYTES,
+    DEFAULT_MAX_TOTAL_ARTIFACT_BYTES,
+    DEFAULT_WORK_ITEM_TIMEOUT,
+    DEFAULT_MAX_BRIEFING_BYTES,
+    DEFAULT_MAX_SHARED_BRIEFINGS,
+    DEFAULT_MAX_RETRIES_PER_ITEM,
+    DEFAULT_MAX_REPLANS_PER_RUN,
+)
 
 
 def _utcnow() -> datetime:
@@ -35,24 +48,19 @@ def _dedupe_str_list(values: Any) -> list[str] | None:
 
 
 def _normalize_payload(payload: Any) -> dict[str, Any]:
+    """Deduplicate well-known string-list payload fields.
+
+    This is intentionally generic — benchmark-specific truncation (e.g.
+    capping ``owned_failures`` to a preview limit) belongs in the
+    benchmark layer, not here.
+    """
     if not isinstance(payload, dict):
         return {}
     normalized = dict(payload)
-    for key in ("owned_files", "verify"):
+    for key in ("owned_files", "owned_failures", "verify"):
         deduped = _dedupe_str_list(normalized.get(key))
         if deduped is not None:
             normalized[key] = deduped
-    deduped_failures = _dedupe_str_list(normalized.get("owned_failures"))
-    if deduped_failures is not None:
-        raw_total = len(
-            [item for item in normalized.get("owned_failures") or [] if isinstance(item, str) and item.strip()]
-        )
-        if raw_total > len(deduped_failures):
-            normalized["owned_failures_total"] = raw_total
-        if len(deduped_failures) > _OWNED_FAILURES_PREVIEW_LIMIT:
-            normalized["owned_failures_unique_total"] = len(deduped_failures)
-            deduped_failures = deduped_failures[:_OWNED_FAILURES_PREVIEW_LIMIT]
-        normalized["owned_failures"] = deduped_failures
     return normalized
 
 
@@ -251,18 +259,18 @@ class AgentResult:
 
 @dataclass
 class BudgetConfig:
-    max_work_items: int = 200
-    max_depth: int = 5
-    max_plan_size: int = 50
-    max_validators_per_plan: int | None = None
-    require_validator_for_plan_size: int | None = None
-    max_artifact_bytes: int = 1_000_000
-    max_total_artifact_bytes: int = 50_000_000
-    default_work_item_timeout: float | None = None
-    max_briefing_bytes: int = 32_000
-    max_shared_briefings: int = 1000
-    max_retries_per_item: int = 2
-    max_replans_per_run: int = 5
+    max_work_items: int = DEFAULT_MAX_WORK_ITEMS
+    max_depth: int = DEFAULT_MAX_DEPTH
+    max_plan_size: int = DEFAULT_MAX_PLAN_SIZE
+    max_validators_per_plan: int | None = DEFAULT_MAX_VALIDATORS_PER_PLAN
+    require_validator_for_plan_size: int | None = DEFAULT_REQUIRE_VALIDATOR_FOR_PLAN_SIZE
+    max_artifact_bytes: int = DEFAULT_MAX_ARTIFACT_BYTES
+    max_total_artifact_bytes: int = DEFAULT_MAX_TOTAL_ARTIFACT_BYTES
+    default_work_item_timeout: float | None = DEFAULT_WORK_ITEM_TIMEOUT
+    max_briefing_bytes: int = DEFAULT_MAX_BRIEFING_BYTES
+    max_shared_briefings: int = DEFAULT_MAX_SHARED_BRIEFINGS
+    max_retries_per_item: int = DEFAULT_MAX_RETRIES_PER_ITEM
+    max_replans_per_run: int = DEFAULT_MAX_REPLANS_PER_RUN
 
 
 @dataclass

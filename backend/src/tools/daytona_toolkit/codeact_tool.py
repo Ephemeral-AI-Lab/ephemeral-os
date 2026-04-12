@@ -15,6 +15,8 @@ import re
 import uuid
 from typing import Any
 
+from config.defaults import DEFAULT_TEAM_SAFE_AGENT_NAMES
+
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.daytona_toolkit.tools import (
     _get_cwd,
@@ -30,8 +32,6 @@ from tools.daytona_toolkit.ci_integration import (
 from tools.core.decorator import tool
 
 logger = logging.getLogger(__name__)
-
-_TEAM_CONTRACT_AGENT_NAMES = frozenset({"developer", "validator"})
 _VERIFY_PATH_RE = re.compile(r"(?<![A-Za-z0-9_./-])([A-Za-z0-9_./-]+\.py)(?![A-Za-z0-9_./-])")
 _DISALLOWED_RUNTIME_CALLS = frozenset(
     {
@@ -237,7 +237,7 @@ def _detect_disallowed_runtime_calls(code: str) -> list[str]:
 
 def _team_codeact_contract(context: ToolExecutionContext) -> dict[str, Any] | None:
     agent_name = str(context.metadata.get("agent_name") or "").strip()
-    if agent_name not in _TEAM_CONTRACT_AGENT_NAMES:
+    if agent_name not in DEFAULT_TEAM_SAFE_AGENT_NAMES:
         return None
     if str(context.metadata.get("coordination_mode") or "").strip() != "ultra":
         return None
@@ -265,7 +265,7 @@ def _team_codeact_preflight_error(code: str, contract: dict[str, Any] | None) ->
     rendered = ", ".join(offenders)
     return (
         "daytona_codeact: coordinated team developer/validator lanes must execute repo commands "
-        "through the provided `shell(\"...\")` helper, not raw Python process APIs. "
+        'through the provided `shell("...")` helper, not raw Python process APIs. '
         f"Found disallowed call(s): {rendered}."
     )
 
@@ -453,7 +453,10 @@ async def daytona_codeact(
     committed = 0
     errors = []
     warnings = []
-    if team_contract is not None and team_contract.get("verification_surface_write_enforcement") == "warn":
+    if (
+        team_contract is not None
+        and team_contract.get("verification_surface_write_enforcement") == "warn"
+    ):
         write_paths = [
             rel
             for rel in (

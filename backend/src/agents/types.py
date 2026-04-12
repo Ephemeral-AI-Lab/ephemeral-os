@@ -50,6 +50,13 @@ class AgentDefinition(BaseModel):
         default=None, validation_alias=AliasChoices("initial_prompt", "initialPrompt")
     )
 
+    # --- team role category ---
+    # Freeform tag used by team-mode validation and dispatch instead of
+    # hard-coded agent-name comparisons.  Canonical values: "planner",
+    # "developer", "validator", "scout", "replanner".  ``None`` for
+    # engine-internal agents (serialisers, decision posthooks).
+    role: str | None = None
+
     # --- metadata ---
     critical_system_reminder: str | None = Field(
         default=None,

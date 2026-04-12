@@ -12,15 +12,15 @@ if TYPE_CHECKING:
 
 
 def should_reattach_failed_verifier(failed_wi: WorkItem) -> bool:
-    from team.builtins import VALIDATOR
-    return failed_wi.agent_name == VALIDATOR and failed_wi.status == WorkItemStatus.FAILED
+    from agents.registry import has_role
+    return has_role(failed_wi.agent_name, "validator") and failed_wi.status == WorkItemStatus.FAILED
 
 
 def _replan_adds_replacement_validator(add_specs: list[dict]) -> bool:
-    from team.builtins import VALIDATOR
+    from agents.registry import has_role
 
     return any(
-        str(spec.get("agent_name") or "").strip() == VALIDATOR
+        has_role(str(spec.get("agent_name") or "").strip(), "validator")
         for spec in add_specs
         if isinstance(spec, dict)
     )
@@ -193,7 +193,7 @@ async def request_replan(
     wi_id: str,
     request: object,
 ) -> WorkItem:
-    from team.builtins import TEAM_REPLANNER
+    from agents.registry import find_by_role
     from team.models import ReplanRequest
     assert isinstance(request, ReplanRequest)
     async with dispatcher.lock:
@@ -221,11 +221,15 @@ async def request_replan(
             and other.id != wi_id
             and other.status == WorkItemStatus.DONE
         ]
+        replanners = find_by_role("replanner")
+        if not replanners:
+            raise RuntimeError("no agent with role='replanner' is registered")
+        replanner_agent_name = replanners[0].name
         replanner_id = dispatcher.new_id()
         replanner = WorkItem(
             id=replanner_id,
             team_run_id=dispatcher.team_run_id,
-            agent_name=TEAM_REPLANNER,
+            agent_name=replanner_agent_name,
             status=WorkItemStatus.PENDING,
             kind=WorkItemKind.ATOMIC,
             deps=done_sibling_ids,

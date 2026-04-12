@@ -182,3 +182,26 @@ async def test_skills_toolkit_allows_final_plan_reference_after_scout_wave():
         assert result.output == "plan-json"
     finally:
         unregister_team_run("team-run-1")
+
+
+@pytest.mark.asyncio
+async def test_skills_toolkit_allows_sequential_root_self_check_before_plan_contract():
+    _register_benchmark_root_team_run()
+    try:
+        toolkit = make_skills_toolkit(_registry(), allowed_slugs=["team-planner-playbook"])
+        tool = toolkit.get("load_skill_reference")
+        assert tool is not None
+        ctx = _benchmark_root_context()
+
+        assert not (await _execute_reference(tool, ctx, "exploration-script")).is_error
+        assert not (await _execute_reference(tool, ctx, "scout-launch-contract")).is_error
+        ctx.metadata["_scout_target_paths_this_turn"] = ["pkg/cli.py"]
+        assert not (await _execute_reference(tool, ctx, "task-planning-decomposition")).is_error
+        assert not (await _execute_reference(tool, ctx, "dependency-graph-examples")).is_error
+        assert not (await _execute_reference(tool, ctx, "root-plan-self-check")).is_error
+        result = await _execute_reference(tool, ctx, "plan-json-contract")
+
+        assert not result.is_error
+        assert result.output == "plan-json"
+    finally:
+        unregister_team_run("team-run-1")

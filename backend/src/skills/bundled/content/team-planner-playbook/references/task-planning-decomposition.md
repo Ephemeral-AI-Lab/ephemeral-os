@@ -10,12 +10,12 @@ If any nameable first-wave scout is still unlaunched, or your recap dropped a la
 3. Make a lane expandable when the owner is already a package, directory, or broad single file and the next useful decision is internal lane shaping rather than direct patching.
 4. Make a lane expandable when the alternative atomic lane would own several unrelated exact files or benchmark files merely because each slice is small.
 5. Preserve at least one direct ready leaf lane whenever live evidence already supports it, even if sibling branches still need child planners.
-6. Treat exact-file pairs as separate owner slices unless scouts already proved one shared helper or boundary that truly owns both.
+6. Treat exact-file pairs as separate owner slices unless scouts already proved one shared helper or boundary that truly owns both, and keep same-signature failures in one broad file behind a shared-boundary lane before leaf splits.
 
 ## DAG shaping rules
 
 - Must split distinct owner clusters into separate execution lanes.
-- Must keep ready work concrete and residual work explicit.
+- Must keep ready work concrete and residual work explicit, and finish surface-ledger, deps, and briefing prep before `plan-json-contract`.
 - "Launch" at this phase means "emit as a plan item", not "call a tool now", unless the worker is a scout.
 - Must use deps only for real sequencing, shared-risk branch cuts, or verification boundaries.
 - Must let child planners own their own deeper validation instead of using parent validators as decorative barriers.

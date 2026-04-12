@@ -18,9 +18,9 @@ def _utcnow() -> datetime:
 class TeamDefinitionRecord(Base):
     """A team composition blob stored in the database.
 
-    ``planner_agent`` and each entry in ``worker_agents`` are name
-    references into ``agents.registry``. No cross-store foreign keys —
-    broken references are caught at ``TeamRun`` start time.
+    ``roster`` maps slot labels to agent-definition names looked up in
+    ``agents.registry``.  Broken references are caught at ``TeamRun``
+    start time.
     """
 
     __tablename__ = "team_definitions"
@@ -28,8 +28,7 @@ class TeamDefinitionRecord(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     name: Mapped[str] = mapped_column(String(128), unique=True, index=True)
     description: Mapped[str] = mapped_column(Text, default="")
-    planner_agent: Mapped[str] = mapped_column(String(128))
-    worker_agents: Mapped[list[str]] = mapped_column(JSON, default=list)
+    roster: Mapped[dict[str, str]] = mapped_column(JSON, default=dict)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
@@ -39,4 +38,4 @@ class TeamDefinitionRecord(Base):
     )
 
     def __repr__(self) -> str:
-        return f"<TeamDefinitionRecord name={self.name!r} planner={self.planner_agent!r}>"
+        return f"<TeamDefinitionRecord name={self.name!r} roster={self.roster!r}>"

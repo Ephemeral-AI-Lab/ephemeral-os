@@ -12,7 +12,6 @@ from tools.daytona_toolkit.tools import (
     _truncate,
     _truncate_tail,
     _format_shell_stdout,
-    _get_sandbox,
     _path_error,
     _get_cwd,
     _resolve_path,
@@ -26,6 +25,7 @@ def _ctx(metadata=None) -> ToolExecutionContext:
 # ---------------------------------------------------------------------------
 # _truncate
 # ---------------------------------------------------------------------------
+
 
 def test_truncate_short_passthrough():
     assert _truncate("hello") == "hello"
@@ -76,24 +76,9 @@ def test_format_shell_stdout_keeps_head_and_tail_for_success():
 
 
 # ---------------------------------------------------------------------------
-# _get_sandbox
-# ---------------------------------------------------------------------------
-
-def test_get_sandbox_returns_sandbox():
-    sb = MagicMock()
-    ctx = _ctx({"daytona_sandbox": sb})
-    assert _get_sandbox(ctx) is sb
-
-
-def test_get_sandbox_raises_when_missing():
-    ctx = _ctx()
-    with pytest.raises(RuntimeError, match="No Daytona sandbox"):
-        _get_sandbox(ctx)
-
-
-# ---------------------------------------------------------------------------
 # _path_error
 # ---------------------------------------------------------------------------
+
 
 def test_path_error_file_not_found():
     exc = FileNotFoundError("gone")
@@ -126,6 +111,7 @@ def test_path_error_sdk_prefix_without_trailing_colon():
 # _get_cwd
 # ---------------------------------------------------------------------------
 
+
 def test_get_cwd_returns_value():
     ctx = _ctx({"daytona_cwd": "/workspace/project"})
     assert _get_cwd(ctx) == "/workspace/project"
@@ -138,6 +124,7 @@ def test_get_cwd_returns_none_when_missing():
 # ---------------------------------------------------------------------------
 # _resolve_path
 # ---------------------------------------------------------------------------
+
 
 def test_resolve_path_absolute_unchanged():
     ctx = _ctx({"daytona_cwd": "/workspace"})

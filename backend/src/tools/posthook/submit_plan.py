@@ -235,15 +235,18 @@ class SubmitPlanTool(SubmitPosthookTool):
         require_validator_for_plan_size = _optional_int(
             context.metadata.get("require_validator_for_plan_size")
         )
+        extra_validators = self._build_extra_validators(
+            benchmark_test_ids=benchmark_test_ids,
+            benchmark_test_files=benchmark_test_files,
+        )
         issues = validate_plan_phase_a(
             plan,
             max_plan_size=max_plan_size,
             allow_empty=self._allow_empty_plan(context),
             known_external_deps=self._known_external_dep_ids(context),
-            benchmark_test_ids=benchmark_test_ids,
-            benchmark_test_files=benchmark_test_files,
             max_validators_per_plan=max_validators_per_plan,
             require_validator_for_plan_size=require_validator_for_plan_size,
+            extra_validators=extra_validators,
         )
         if issues:
             lines = [f"- {i['field']}: {i['msg']}" for i in issues]
@@ -301,6 +304,28 @@ class SubmitPlanTool(SubmitPosthookTool):
         if not isinstance(graph, dict):
             return None
         return {str(wi_id) for wi_id in graph}
+
+    def _build_extra_validators(
+        self,
+        *,
+        benchmark_test_ids: set[str] | None,
+        benchmark_test_files: set[str] | None,
+    ) -> list[Any] | None:
+        if not benchmark_test_ids and not benchmark_test_files:
+            return None
+        try:
+            from benchmarks.sweevo.plan_validation import (
+                build_benchmark_payload_ref_validator,
+            )
+
+            return [
+                build_benchmark_payload_ref_validator(
+                    benchmark_test_ids=benchmark_test_ids or set(),
+                    benchmark_test_files=benchmark_test_files or set(),
+                )
+            ]
+        except ImportError:
+            return None
 
     def _known_benchmark_targets(
         self, context: ToolExecutionContext

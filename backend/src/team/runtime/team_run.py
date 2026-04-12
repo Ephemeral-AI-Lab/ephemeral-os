@@ -89,6 +89,9 @@ class TeamRun:
         self._executor_tasks: list[asyncio.Task[None]] = []
         self._executor_factory: Callable[["TeamRun"], Executor] | None = None
         self._num_executors: int = _default_num_executors()
+        # Per-run metadata injected into every work-item's ExecutionMetadata.
+        # Benchmark runners set coordination_mode, enforcement flags, etc.
+        self.coordination_metadata: dict[str, Any] = {}
 
     # ---- lifecycle -------------------------------------------------------
 

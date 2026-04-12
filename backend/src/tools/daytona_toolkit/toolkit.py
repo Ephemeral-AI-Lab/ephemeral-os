@@ -24,9 +24,22 @@ from tools.daytona_toolkit.lsp_tools import (
 )
 from tools.daytona_toolkit.codeact_tool import daytona_codeact
 
+from config.defaults import DEFAULT_TEAM_SAFE_AGENT_NAMES, DEFAULT_SANDBOX_CI_ROOT
+
 logger = logging.getLogger(__name__)
 
-_TEAM_SAFE_AGENT_NAMES = frozenset({"developer", "validator"})
+_team_safe_agent_names: frozenset[str] = DEFAULT_TEAM_SAFE_AGENT_NAMES
+
+
+def set_team_safe_agent_names(names: frozenset[str]) -> None:
+    """Configure which agent names use team-safe (CodeAct) execution."""
+    global _team_safe_agent_names
+    _team_safe_agent_names = names
+
+
+def get_team_safe_agent_names() -> frozenset[str]:
+    """Return the current team-safe agent name set."""
+    return _team_safe_agent_names
 
 
 def _build_tools(*, include_codeact: bool, include_bash: bool) -> list[Any]:
@@ -117,7 +130,7 @@ class DaytonaToolkit(BaseToolkit):
         sandbox_id = ctx.metadata.get("sandbox_id", "") if ctx is not None else ""
         agent_name = str(ctx.metadata.get("agent_name", "") or "") if ctx is not None else ""
         include_codeact = True
-        include_bash = agent_name not in _TEAM_SAFE_AGENT_NAMES
+        include_bash = agent_name not in _team_safe_agent_names
         return cls(
             sandbox_id=sandbox_id or None,
             include_codeact=include_codeact,
@@ -131,10 +144,7 @@ class DaytonaToolkit(BaseToolkit):
         include_codeact: bool = True,
         include_bash: bool = True,
     ) -> None:
-        description = (
-            "Remote sandbox operations: shell, files, search, "
-            "editing, and LSP queries"
-        )
+        description = "Remote sandbox operations: shell, files, search, editing, and LSP queries"
         if include_codeact:
             description += ", and CodeAct execution"
         if not include_bash:
@@ -143,7 +153,9 @@ class DaytonaToolkit(BaseToolkit):
             name="sandbox_operations",
             description=description,
             tools=_build_tools(include_codeact=include_codeact, include_bash=include_bash),
-            instructions=_build_instructions(include_codeact=include_codeact, include_bash=include_bash),
+            instructions=_build_instructions(
+                include_codeact=include_codeact, include_bash=include_bash
+            ),
         )
         self.sandbox_id = sandbox_id
         self._sandbox: Any | None = None
@@ -203,6 +215,13 @@ class DaytonaToolkit(BaseToolkit):
         return await discover_workspace_async(sandbox)
 
     def _inject_ci(self, context: Any, sandbox: Any, workspace_root: str) -> None:
+        """Inject code intelligence service into context metadata.
+
+        Skipped when context.metadata["skip_code_intelligence"] is True.
+        This allows non-team mode to run without CI/Atlas/Scout overhead.
+        """
+        if context.metadata.get("skip_code_intelligence"):
+            return
         from sandbox.workspace import inject_code_intelligence
 
         inject_code_intelligence(context, self.sandbox_id, sandbox, workspace_root)
@@ -219,7 +238,7 @@ class DaytonaToolkit(BaseToolkit):
         cwd = context.metadata.get("daytona_cwd") or self._resolve_cwd_sync(sandbox)
         if cwd:
             context.metadata["daytona_cwd"] = cwd
-        ci_root = context.metadata.get("ci_workspace_root") or cwd or "/home/daytona"
+        ci_root = context.metadata.get("ci_workspace_root") or cwd or DEFAULT_SANDBOX_CI_ROOT
         self._inject_ci(context, sandbox, ci_root)
 
     async def prepare_context_async(self, context: Any) -> None:
@@ -233,5 +252,5 @@ class DaytonaToolkit(BaseToolkit):
         cwd = context.metadata.get("daytona_cwd") or await self._resolve_cwd_async(sandbox)
         if cwd:
             context.metadata["daytona_cwd"] = cwd
-        ci_root = context.metadata.get("ci_workspace_root") or cwd or "/home/daytona"
+        ci_root = context.metadata.get("ci_workspace_root") or cwd or DEFAULT_SANDBOX_CI_ROOT
         self._inject_ci(context, sandbox, ci_root)

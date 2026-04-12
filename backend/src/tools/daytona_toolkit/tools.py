@@ -10,6 +10,8 @@ import shlex
 import uuid
 from typing import Any
 
+from config.defaults import DEFAULT_SANDBOX_CI_ROOT, DEFAULT_TEAM_SAFE_AGENT_NAMES
+
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.decorator import tool
 from tools.daytona_toolkit.ci_integration import (
@@ -40,7 +42,6 @@ _SANDBOX_RECOVERY_PATTERNS = (
     "container not found",
     "sandbox container not found",
 )
-_TEAM_CONTRACT_AGENT_NAMES = frozenset({"developer", "validator"})
 _VERIFY_PATH_RE = re.compile(r"(?<![A-Za-z0-9_./-])([A-Za-z0-9_./-]+\.py)(?![A-Za-z0-9_./-])")
 
 
@@ -128,8 +129,10 @@ async def _attach_sandbox_to_context(context: ToolExecutionContext) -> Any:
             cwd = project_dir or await discover_workspace_async(sandbox)
             if cwd:
                 context.metadata["daytona_cwd"] = cwd
-        if "ci_service" not in context.metadata:
-            ci_root = context.metadata.get("ci_workspace_root") or cwd or "/home/daytona"
+        if "ci_service" not in context.metadata and not context.metadata.get(
+            "skip_code_intelligence"
+        ):
+            ci_root = context.metadata.get("ci_workspace_root") or cwd or DEFAULT_SANDBOX_CI_ROOT
             inject_code_intelligence(context, sandbox_id, sandbox, ci_root)
         return sandbox
     except Exception as exc:
@@ -265,11 +268,15 @@ def _extract_verify_paths(value: Any, repo_root: str) -> list[str]:
 
 
 def _verification_surface_enforcement_mode(context: ToolExecutionContext) -> str:
-    raw = str(
-        context.metadata.get("verification_surface_write_enforcement")
-        or context.metadata.get("verification_surface_policy")
-        or ""
-    ).strip().lower()
+    raw = (
+        str(
+            context.metadata.get("verification_surface_write_enforcement")
+            or context.metadata.get("verification_surface_policy")
+            or ""
+        )
+        .strip()
+        .lower()
+    )
     if raw in {"warn", "warning", "soft", "advisory"}:
         return "warn"
     return "error"
@@ -282,7 +289,7 @@ def _team_repo_write_error(
     tool_name: str,
 ) -> str | None:
     agent_name = str(context.metadata.get("agent_name") or "").strip()
-    if agent_name not in _TEAM_CONTRACT_AGENT_NAMES:
+    if agent_name not in DEFAULT_TEAM_SAFE_AGENT_NAMES:
         return None
     if str(context.metadata.get("coordination_mode") or "").strip() != "ultra":
         return None
@@ -295,8 +302,12 @@ def _team_repo_write_error(
             f"{tool_name}: validator lanes must not write repository files. "
             f"Observed repo write: {rel_path}."
         )
-    allowed_write_paths = set(_normalize_string_list(context.metadata.get("owned_files"), repo_root))
-    allowed_write_paths.update(_normalize_string_list(context.metadata.get("touches_paths"), repo_root))
+    allowed_write_paths = set(
+        _normalize_string_list(context.metadata.get("owned_files"), repo_root)
+    )
+    allowed_write_paths.update(
+        _normalize_string_list(context.metadata.get("touches_paths"), repo_root)
+    )
     verify_paths = set(_extract_verify_paths(context.metadata.get("verify"), repo_root))
     verify_paths.update(_extract_verify_paths(context.metadata.get("owned_failures"), repo_root))
     if rel_path in verify_paths and rel_path not in allowed_write_paths:
@@ -319,7 +330,7 @@ def _team_repo_write_warning(
     tool_name: str,
 ) -> str | None:
     agent_name = str(context.metadata.get("agent_name") or "").strip()
-    if agent_name not in _TEAM_CONTRACT_AGENT_NAMES or agent_name == "validator":
+    if agent_name not in DEFAULT_TEAM_SAFE_AGENT_NAMES or agent_name == "validator":
         return None
     if str(context.metadata.get("coordination_mode") or "").strip() != "ultra":
         return None
@@ -329,8 +340,12 @@ def _team_repo_write_warning(
     rel_path = _normalize_repo_relative_path(file_path, repo_root)
     if not rel_path:
         return None
-    allowed_write_paths = set(_normalize_string_list(context.metadata.get("owned_files"), repo_root))
-    allowed_write_paths.update(_normalize_string_list(context.metadata.get("touches_paths"), repo_root))
+    allowed_write_paths = set(
+        _normalize_string_list(context.metadata.get("owned_files"), repo_root)
+    )
+    allowed_write_paths.update(
+        _normalize_string_list(context.metadata.get("touches_paths"), repo_root)
+    )
     verify_paths = set(_extract_verify_paths(context.metadata.get("verify"), repo_root))
     verify_paths.update(_extract_verify_paths(context.metadata.get("owned_failures"), repo_root))
     if rel_path in verify_paths and rel_path not in allowed_write_paths:
@@ -356,7 +371,11 @@ async def _upload_file_compat(sandbox: Any, content: bytes, file_path: str) -> N
 # ---------------------------------------------------------------------------
 
 
-@tool(name="daytona_bash", description="Run a shell command and return stdout and exit code.", background="optional")
+@tool(
+    name="daytona_bash",
+    description="Run a shell command and return stdout and exit code.",
+    background="optional",
+)
 async def daytona_bash(
     command: str,
     timeout: int = _DEFAULT_TIMEOUT,
@@ -693,8 +712,10 @@ async def daytona_read_file(
     """
     sandbox = await _require_sandbox(context)
     file_path = _resolve_path(file_path, context)
+
     async def _download(active_sandbox: Any) -> Any:
         return await active_sandbox.fs.download_file(file_path)
+
     try:
         raw = await _download(sandbox)
         content = raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
@@ -753,7 +774,8 @@ async def daytona_read_file(
 
 
 @tool(
-    name="daytona_write_file", description="Create a new file or overwrite an existing file with the given content."
+    name="daytona_write_file",
+    description="Create a new file or overwrite an existing file with the given content.",
 )
 async def daytona_write_file(
     file_path: str,
@@ -778,10 +800,12 @@ async def daytona_write_file(
         return ToolResult(output=contract_error, is_error=True)
     contract_warning = _team_repo_write_warning(context, file_path, tool_name="daytona_write_file")
     prepared = None
+
     async def _ensure_parent(active_sandbox: Any) -> None:
         parent = "/".join(file_path.split("/")[:-1])
         if parent:
             await active_sandbox.process.exec(f"mkdir -p {shlex.quote(parent)}")
+
     try:
         content_bytes = content.encode("utf-8")
         await _ensure_parent(sandbox)
@@ -887,9 +911,13 @@ async def daytona_list_files(
         entries (list): File and directory names
     """
     sandbox = await _require_sandbox(context)
-    directory = _resolve_path(directory, context) if directory != "." else (_get_cwd(context) or ".")
+    directory = (
+        _resolve_path(directory, context) if directory != "." else (_get_cwd(context) or ".")
+    )
+
     async def _list(active_sandbox: Any) -> Any:
         return await active_sandbox.fs.list_files(directory)
+
     try:
         entries = await _list(sandbox)
         names = []
@@ -958,8 +986,10 @@ async def daytona_grep(
     sandbox = await _require_sandbox(context)
     cwd = _get_cwd(context) or ""
     path = _resolve_path(path, context) if path != "." else (cwd or ".")
+
     async def _find(active_sandbox: Any) -> Any:
         return await active_sandbox.fs.find_files(path, pattern)
+
     try:
         matches = await _find(sandbox)
         if not matches:
@@ -1074,10 +1104,12 @@ async def daytona_glob(
     sandbox = await _require_sandbox(context)
     cwd = _get_cwd(context) or ""
     path = _resolve_path(path, context) if path != "." else (cwd or ".")
+
     async def _run_find(active_sandbox: Any) -> Any:
         find_pattern = pattern.replace("**/", "")
         cmd = f"find {path} -name {find_pattern} -type f"
         return await active_sandbox.process.exec(cmd, timeout=30)
+
     try:
         resp = await _run_find(sandbox)
         file_list = [f for f in (resp.result or "").splitlines() if f.strip()][:500]

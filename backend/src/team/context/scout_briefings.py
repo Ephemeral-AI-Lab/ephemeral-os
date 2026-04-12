@@ -12,6 +12,14 @@ from code_intelligence.atlas.freshness import (
     brief_reuse_status,
     freshness_status,
 )
+from team._path_utils import (
+    coerce_str_set,
+    normalize_path_list,
+    normalize_string_list,
+    paths_overlap,
+    scope_overlaps_file,
+    summarise_values,
+)
 from team.context.canonicalize import canonicalize_scope, scope_of_artifact
 from team.models import Briefing
 
@@ -41,7 +49,7 @@ def note_work_item_context_access(
     project_ctx = getattr(team_run, "project_context", None)
     if project_ctx is None:
         return []
-    read_paths = _normalize_path_list(metadata.get("_read_paths_this_turn", []))
+    read_paths = normalize_path_list(metadata.get("_read_paths_this_turn", []))
     if not read_paths:
         return []
     repo_root = str(getattr(project_ctx, "repo_root", "") or "")
@@ -52,15 +60,19 @@ def note_work_item_context_access(
         if fallback_scope:
             scope_sources = {fallback_scope: {"read_paths"}}
 
-    lane_id = str(getattr(work_item, "local_id", None) or getattr(work_item, "id", "") or "").strip()
+    lane_id = str(
+        getattr(work_item, "local_id", None) or getattr(work_item, "id", "") or ""
+    ).strip()
     role = str(getattr(work_item, "agent_name", "") or metadata.get("agent_name") or "").strip()
-    verify_refs = _normalize_path_list(payload.get("verify") if isinstance(payload, dict) else [])
-    failure_refs = _normalize_string_list(payload.get("owned_failures") if isinstance(payload, dict) else [])
+    verify_refs = normalize_path_list(payload.get("verify") if isinstance(payload, dict) else [])
+    failure_refs = normalize_string_list(
+        payload.get("owned_failures") if isinstance(payload, dict) else []
+    )
     touched_scopes: list[str] = []
 
     for scope, source_refs in scope_sources.items():
         overlapping_reads = [
-            path for path in read_paths if _scope_overlaps_file(scope, path, repo_root=repo_root)
+            path for path in read_paths if scope_overlaps_file(scope, path, repo_root=repo_root)
         ]
         if not overlapping_reads:
             continue
@@ -288,10 +300,10 @@ def invalidate_stale_scout_context(team_run: Any, file_path: str) -> list[str]:
     for scope, briefing in list(shared_briefings.items()):
         if not _is_scout_briefing(briefing):
             continue
-        if _scope_overlaps_file(scope, file_path, repo_root=repo_root):
+        if scope_overlaps_file(scope, file_path, repo_root=repo_root):
             stale_scopes.add(scope)
     for scope in list(stable_versions.keys()):
-        if _scope_overlaps_file(scope, file_path, repo_root=repo_root):
+        if scope_overlaps_file(scope, file_path, repo_root=repo_root):
             stale_scopes.add(scope)
 
     if not stale_scopes:
@@ -392,7 +404,9 @@ def auto_promote_scout_briefing(
         name=stable_scout_artifact_ref(scope),
         source="artifact",
         ref=artifact_ref,
-        description=_build_scope_dossier(team_run, scope, artifact, pressure, ci_service=ci_service),
+        description=_build_scope_dossier(
+            team_run, scope, artifact, pressure, ci_service=ci_service
+        ),
     )
     stamp_shared_briefing_meta(
         project_ctx,
@@ -406,7 +420,9 @@ def auto_promote_scout_briefing(
         replaceable_scopes.add(scope)
     else:
         replaceable_scopes.discard(scope)
-    project_ctx.scope_promotion_counts[scope] = int(project_ctx.scope_promotion_counts.get(scope, 0)) + 1
+    project_ctx.scope_promotion_counts[scope] = (
+        int(project_ctx.scope_promotion_counts.get(scope, 0)) + 1
+    )
     record_context_promotion_signal(team_run, artifact, pressure)
     return True
 
@@ -605,7 +621,9 @@ def _merge_scope_stats(project_ctx: Any, scope_paths: list[str]) -> dict[str, An
         return merged
     repo_root = str(getattr(project_ctx, "repo_root", "") or "")
     for scope, stats in stats_map.items():
-        if scope_paths and not any(_scope_overlaps_file(scope, path, repo_root=repo_root) for path in scope_paths):
+        if scope_paths and not any(
+            scope_overlaps_file(scope, path, repo_root=repo_root) for path in scope_paths
+        ):
             continue
         for key in (
             "lane_ids",
@@ -619,7 +637,7 @@ def _merge_scope_stats(project_ctx: Any, scope_paths: list[str]) -> dict[str, An
             "briefing_roles",
             "briefing_tiers",
         ):
-            merged[key].update(_coerce_str_set(stats.get(key)))
+            merged[key].update(coerce_str_set(stats.get(key)))
         merged["validator_after_developer"] = bool(
             merged["validator_after_developer"] or stats.get("validator_after_developer")
         )
@@ -638,9 +656,9 @@ def _build_scope_dossier(
     project_ctx = getattr(team_run, "project_context", None)
     merged = _merge_scope_stats(project_ctx, _artifact_scope_paths(artifact) or [scope])
     key_symbols, neighborhood = _symbol_dossier(ci_service, artifact)
-    verify_surface = _summarize_values(merged["verify_refs"])
-    failure_surface = _summarize_values(merged["failure_refs"])
-    source_refs = _summarize_values(list(merged["source_refs"]) + [stable_scout_artifact_ref(scope)])
+    verify_surface = summarise_values(merged["verify_refs"])
+    failure_surface = summarise_values(merged["failure_refs"])
+    source_refs = summarise_values(list(merged["source_refs"]) + [stable_scout_artifact_ref(scope)])
     version = getattr(project_ctx, "stable_scout_versions", {}).get(scope, {})
     freshness_parts = [f"snapshot_time={_snapshot_time(artifact):.3f}"]
     run_id = _version_run_id(version)
@@ -654,7 +672,7 @@ def _build_scope_dossier(
             f"- key symbols: {key_symbols or 'none'}",
             f"- one-hop symbol neighborhood: {neighborhood or 'none'}",
             f"- verification surface: verify={verify_surface}; failures={failure_surface}",
-            f"- inherited reuse: briefing_hits={int(merged['briefing_hits'])}; briefing_lanes={_summarize_values(merged['briefing_lane_ids'])}",
+            f"- inherited reuse: briefing_hits={int(merged['briefing_hits'])}; briefing_lanes={summarise_values(merged['briefing_lane_ids'])}",
             f"- freshness: {', '.join(freshness_parts)}",
             f"- source artifact refs: {source_refs}",
         ]
@@ -679,7 +697,9 @@ def stamp_shared_briefing_meta(
     meta["kind"] = kind
     meta["provenance"] = provenance or _briefing_provenance(briefing=briefing, artifact=artifact)
     meta["scope_paths"] = _shared_scope_paths(scope, artifact)
-    meta["stale_on_write"] = bool(stale_on_write if stale_on_write is not None else kind != "structural")
+    meta["stale_on_write"] = bool(
+        stale_on_write if stale_on_write is not None else kind != "structural"
+    )
     meta["created_at"] = float(meta.get("created_at") or now)
     meta["updated_at"] = now
     meta["repo_epoch"] = int(getattr(project_ctx, "repo_epoch", 0) or 0)
@@ -701,7 +721,9 @@ def note_inherited_context_render(
     """Record that inherited context for *scope* was rendered into a prompt."""
     if project_ctx is None or not scope:
         return
-    lane_id = str(getattr(work_item, "local_id", None) or getattr(work_item, "id", "") or "").strip()
+    lane_id = str(
+        getattr(work_item, "local_id", None) or getattr(work_item, "id", "") or ""
+    ).strip()
     role = str(getattr(work_item, "agent_name", "") or "").strip()
     if tier == "shared":
         meta = _ensure_shared_briefing_meta(project_ctx, scope)
@@ -742,9 +764,11 @@ def inherited_context_line(
         return f"context: tier={tier}; freshness={freshness}; scope={scope}"
     meta = _ensure_shared_briefing_meta(project_ctx, scope)
     kind = str(meta.get("kind") or _briefing_kind(briefing=briefing, artifact=artifact))
-    provenance = str(meta.get("provenance") or _briefing_provenance(briefing=briefing, artifact=artifact))
+    provenance = str(
+        meta.get("provenance") or _briefing_provenance(briefing=briefing, artifact=artifact)
+    )
     freshness = _shared_context_freshness(project_ctx, scope, artifact=artifact)
-    consumer_count = len(_coerce_str_set(meta.get("consumer_lane_ids")))
+    consumer_count = len(coerce_str_set(meta.get("consumer_lane_ids")))
     return (
         f"context: tier={tier}; kind={kind}; provenance={provenance}; "
         f"freshness={freshness}; consumers={consumer_count}"
@@ -765,9 +789,9 @@ def _symbol_dossier(ci_service: Any | None, artifact: dict[str, Any]) -> tuple[s
             name = getattr(sym, "name", None)
             if isinstance(name, str) and name.strip():
                 symbol_names.append(name.strip())
-    key_symbols = _summarize_values(symbol_names[:_DOSSIER_LIST_LIMIT])
-    neighborhood = _summarize_values(
-        _normalize_string_list(artifact.get("entry_points")) or symbol_names[_DOSSIER_LIST_LIMIT:]
+    key_symbols = summarise_values(symbol_names[:_DOSSIER_LIST_LIMIT])
+    neighborhood = summarise_values(
+        normalize_string_list(artifact.get("entry_points")) or symbol_names[_DOSSIER_LIST_LIMIT:]
     )
     return key_symbols, neighborhood
 
@@ -782,7 +806,7 @@ def _hotspot_edit_count(ci_service: Any | None, scope_paths: list[str]) -> int:
         return 0
     max_edits = 0
     for file_path, count in hotspots:
-        if scope_paths and not any(_paths_overlap(str(file_path), scope) for scope in scope_paths):
+        if scope_paths and not any(paths_overlap(str(file_path), scope) for scope in scope_paths):
             continue
         max_edits = max(max_edits, int(count))
     return max_edits
@@ -814,9 +838,11 @@ def _note_context_write(project_ctx: Any, file_path: str) -> None:
         epochs = {}
         setattr(project_ctx, "scope_write_epochs", epochs)
     setattr(project_ctx, "repo_epoch", int(getattr(project_ctx, "repo_epoch", 0) or 0) + 1)
-    scope_keys = set(shared_briefings.keys()) | set(shared_meta.keys()) | set(stable_versions.keys())
+    scope_keys = (
+        set(shared_briefings.keys()) | set(shared_meta.keys()) | set(stable_versions.keys())
+    )
     for scope in scope_keys:
-        if _scope_overlaps_file(scope, file_path, repo_root=repo_root):
+        if scope_overlaps_file(scope, file_path, repo_root=repo_root):
             epochs[scope] = int(epochs.get(scope) or 0) + 1
 
 
@@ -923,7 +949,7 @@ def shared_context_summary_for_scope(
     out: list[dict[str, Any]] = []
     for scope, briefing in shared_briefings.items():
         if normalized and not any(
-            _scope_overlaps_file(scope, path, repo_root=repo_root) for path in normalized
+            scope_overlaps_file(scope, path, repo_root=repo_root) for path in normalized
         ):
             continue
         artifact = None
@@ -936,12 +962,15 @@ def shared_context_summary_for_scope(
         out.append(
             {
                 "scope": scope,
-                "kind": str(meta.get("kind") or _briefing_kind(briefing=briefing, artifact=artifact)),
+                "kind": str(
+                    meta.get("kind") or _briefing_kind(briefing=briefing, artifact=artifact)
+                ),
                 "provenance": str(
-                    meta.get("provenance") or _briefing_provenance(briefing=briefing, artifact=artifact)
+                    meta.get("provenance")
+                    or _briefing_provenance(briefing=briefing, artifact=artifact)
                 ),
                 "freshness": _shared_context_freshness(project_ctx, scope, artifact=artifact),
-                "consumer_count": len(_coerce_str_set(meta.get("consumer_lane_ids"))),
+                "consumer_count": len(coerce_str_set(meta.get("consumer_lane_ids"))),
                 "render_count": int(meta.get("render_count") or 0),
                 "scope_write_epoch": _shared_scope_write_epoch(project_ctx, scope),
             }
@@ -953,96 +982,3 @@ def shared_context_summary_for_scope(
 def _normalize_scope_parts(raw: Any) -> list[str]:
     scope = _canonical_scope(raw)
     return [part for part in scope.split("|") if part]
-
-
-def _normalize_path_list(raw: Any) -> list[str]:
-    out: list[str] = []
-    for item in raw if isinstance(raw, list) else [raw] if isinstance(raw, str) else []:
-        if isinstance(item, str):
-            cleaned = item.strip()
-            if cleaned:
-                out.append(cleaned)
-    return out
-
-
-def _normalize_string_list(raw: Any) -> list[str]:
-    out: list[str] = []
-    if not isinstance(raw, list):
-        return out
-    seen: set[str] = set()
-    for item in raw:
-        if not isinstance(item, str):
-            continue
-        cleaned = item.strip()
-        if not cleaned or cleaned in seen:
-            continue
-        seen.add(cleaned)
-        out.append(cleaned)
-    return out
-
-
-def _coerce_str_set(raw: Any) -> set[str]:
-    if isinstance(raw, set):
-        return {item for item in raw if isinstance(item, str) and item}
-    if isinstance(raw, list):
-        return {item for item in raw if isinstance(item, str) and item}
-    return set()
-
-
-def _summarize_values(raw: Any) -> str:
-    values = sorted(_coerce_str_set(raw) if not isinstance(raw, list) else set(_normalize_string_list(raw)))
-    if not values:
-        return "none"
-    limited = values[:_DOSSIER_LIST_LIMIT]
-    suffix = "…" if len(values) > _DOSSIER_LIST_LIMIT else ""
-    return ", ".join(limited) + suffix
-
-
-def _scope_overlaps_file(scope: str, file_path: str, *, repo_root: str) -> bool:
-    scope_parts = [part for part in str(scope or "").split("|") if part.strip()]
-    if not scope_parts:
-        return False
-    file_variants = _path_variants(file_path, repo_root=repo_root)
-    for part in scope_parts:
-        scope_variants = _path_variants(part, repo_root=repo_root)
-        for candidate in file_variants:
-            for target in scope_variants:
-                if _paths_overlap(candidate, target):
-                    return True
-    return False
-
-
-def _path_variants(path: str, *, repo_root: str) -> set[str]:
-    cleaned = _normalise_path(path)
-    if not cleaned:
-        return set()
-    out = {cleaned}
-    root = _normalise_path(repo_root)
-    if not root:
-        return out
-    if cleaned.startswith(root + "/"):
-        out.add(cleaned[len(root) + 1 :])
-    elif not cleaned.startswith("/"):
-        out.add(f"{root}/{cleaned}")
-    return out
-
-
-def _normalise_path(path: str) -> str:
-    return str(path or "").strip().replace("\\", "/").removeprefix("./").rstrip("/")
-
-
-def _paths_overlap(path_a: str, path_b: str) -> bool:
-    left = _normalise_path(path_a)
-    right = _normalise_path(path_b)
-    if not left or not right:
-        return False
-    if left == right:
-        return True
-    if left.startswith(right + "/") or right.startswith(left + "/"):
-        return True
-    return (
-        left.endswith("/" + right)
-        or right.endswith("/" + left)
-        or ("/" + right + "/") in (left + "/")
-        or ("/" + left + "/") in (right + "/")
-    )

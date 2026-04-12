@@ -6,6 +6,8 @@ import shlex
 import time
 from pathlib import Path
 
+from config.defaults import DEFAULT_SANDBOX_CI_ROOT
+
 
 EVAL_SANDBOX_FILES: dict[str, str] = {
     "src/__init__.py": "",
@@ -205,7 +207,7 @@ def populate_sandbox_files(sandbox_id: str) -> None:
     raw_sandbox = svc.get_sandbox_object(sandbox_id)
 
     home_resp = raw_sandbox.process.exec("pwd", timeout=10)
-    home = home_resp.result.strip() if home_resp.result else "/home/daytona"
+    home = home_resp.result.strip() if home_resp.result else DEFAULT_SANDBOX_CI_ROOT
 
     resolved_files: dict[str, str] = {}
     for fp, content in EVAL_SANDBOX_FILES.items():

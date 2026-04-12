@@ -187,9 +187,9 @@ class Dispatcher:
         return True
 
     def _cancel_superseded_dependency_validators(self, wi: WorkItem) -> None:
-        from team.builtins import VALIDATOR
+        from agents.registry import has_role
 
-        if wi.agent_name != VALIDATOR or wi.status not in (
+        if not has_role(wi.agent_name, "validator") or wi.status not in (
             WorkItemStatus.PENDING,
             WorkItemStatus.READY,
             WorkItemStatus.RUNNING,
@@ -197,7 +197,7 @@ class Dispatcher:
             return
         for node_id in {node for dep_id in wi.deps for node in self._subtree_ids(dep_id)}:
             node = self.graph.get(node_id)
-            if node_id != wi.id and node and node.agent_name == VALIDATOR and node.status == WorkItemStatus.FAILED:
+            if node_id != wi.id and node and has_role(node.agent_name, "validator") and node.status == WorkItemStatus.FAILED:
                 self._mark_cancelled(node, f"superseded_by_active_validator_{wi.id}")
 
     def _dependency_artifacts(self, dep_ids: list[str]) -> list[DependencyArtifact]:

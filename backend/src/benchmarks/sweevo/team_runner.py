@@ -1409,6 +1409,11 @@ async def run_sweevo_team(
         repo_root=repo_dir,
         event_store=event_store,
     )
+    tr.coordination_metadata = {
+        "coordination_mode": "ultra",
+        "require_declared_shell_outputs": True,
+        "verification_surface_write_enforcement": "warn",
+    }
     _emit_team_identity_banner(
         printer,
         team_run_id=tr.id,

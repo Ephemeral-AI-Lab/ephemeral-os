@@ -8,10 +8,15 @@ import uuid
 from collections.abc import Awaitable
 from typing import TYPE_CHECKING, Any, Callable
 
+from agents.registry import has_role as _has_validator_role_check
 from hooks.agent_posthook import NoPosthookOutput, execute_with_posthook
 from team.models import AgentResult, Plan, ReplanPlan, ReplanRequest, RetryRequest
 from team.runtime.context_builder import TeamAgentContext
 from tools.posthook import SubmittedSummary
+
+
+def _has_validator_role(agent_name: str) -> bool:
+    return _has_validator_role_check(agent_name, "validator")
 
 if TYPE_CHECKING:
     from agents.types import AgentDefinition
@@ -162,7 +167,7 @@ class Executor:
                 work_item=wi,
                 artifact=dispatch_payload.artifact,
             )
-            if wi.agent_name == "validator":
+            if _has_validator_role(wi.agent_name):
                 self.team_run.note_validator_outcome(
                     work_item=wi,
                     summary=dispatch_payload.summary,

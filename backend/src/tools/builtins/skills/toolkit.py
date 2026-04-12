@@ -23,12 +23,12 @@ from __future__ import annotations
 
 import json
 
+from config.defaults import SKILL_REFERENCE_TRACE_LIMIT
 from tools.core.base import BaseToolkit, ToolExecutionContext, ToolResult
 from tools.core.decorator import tool
 from skills.core.registry import SkillRegistry
 
 _LOADED_SKILL_REFERENCES_KEY = "_loaded_skill_references_by_skill_this_turn"
-_SKILL_REFERENCE_TRACE_LIMIT = 32
 
 
 def make_skills_toolkit(
@@ -77,7 +77,9 @@ def make_skills_toolkit(
             team_run = get_team_run(team_run_id)
         except Exception:
             return False
-        if team_run is None or work_item_id != str(getattr(team_run, "root_work_item_id", "") or ""):
+        if team_run is None or work_item_id != str(
+            getattr(team_run, "root_work_item_id", "") or ""
+        ):
             return False
         graph = getattr(getattr(team_run, "dispatcher", None), "graph", None)
         if not isinstance(graph, dict):
@@ -125,8 +127,8 @@ def make_skills_toolkit(
         loaded = raw.copy() if isinstance(raw, dict) else {}
         refs = _loaded_skill_references(context, skill_name=skill_name)
         refs.append(reference_name)
-        if len(refs) > _SKILL_REFERENCE_TRACE_LIMIT:
-            refs = refs[-_SKILL_REFERENCE_TRACE_LIMIT:]
+        if len(refs) > SKILL_REFERENCE_TRACE_LIMIT:
+            refs = refs[-SKILL_REFERENCE_TRACE_LIMIT:]
         loaded[skill_name] = refs
         context.metadata[_LOADED_SKILL_REFERENCES_KEY] = loaded
 
@@ -194,14 +196,17 @@ def make_skills_toolkit(
                     "Fresh benchmark-root planners must not load final-plan references "
                     f"like `{reference_name}` before the first scout wave. "
                     "Launch at least one bounded scout now with "
-                    "`run_subagent(agent_name=\"scout\", input={\"target_paths\": [...]}, task_note=\"...\")` "
+                    '`run_subagent(agent_name="scout", input={"target_paths": [...]}, task_note="...")` '
                     "on the next unresolved production-owner slice, wait for the scout brief, "
                     "then load the final-plan reference when you are ready to draft the DAG."
                 ),
                 is_error=True,
             )
 
-        if reference_name == "dependency-graph-examples" and last_ref != "task-planning-decomposition":
+        if (
+            reference_name == "dependency-graph-examples"
+            and last_ref != "task-planning-decomposition"
+        ):
             return ToolResult(
                 output=(
                     "Fresh benchmark-root planners must load "
@@ -225,7 +230,10 @@ def make_skills_toolkit(
                 is_error=True,
             )
 
-        if reference_name == "plan-json-contract" and "task-planning-decomposition" not in loaded_ref_set:
+        if (
+            reference_name == "plan-json-contract"
+            and "task-planning-decomposition" not in loaded_ref_set
+        ):
             return ToolResult(
                 output=(
                     "Fresh benchmark-root planners must load "

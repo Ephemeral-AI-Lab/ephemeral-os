@@ -26,8 +26,10 @@ def _ctx(metadata=None) -> ToolExecutionContext:
 # __init__ and module-level import
 # ---------------------------------------------------------------------------
 
+
 def test_init_import():
     from tools.daytona_toolkit import DaytonaToolkit as DT
+
     assert DT is DaytonaToolkit
 
 
@@ -45,6 +47,7 @@ def test_toolkit_no_sandbox_id():
 # ---------------------------------------------------------------------------
 # Tool registration
 # ---------------------------------------------------------------------------
+
 
 def test_toolkit_registers_expected_tools():
     tk = DaytonaToolkit()
@@ -110,6 +113,7 @@ def test_team_worker_toolkit_list_tools_length():
 # _get_sandbox (sync)
 # ---------------------------------------------------------------------------
 
+
 def test_get_sandbox_no_id_raises():
     tk = DaytonaToolkit()
     with pytest.raises(RuntimeError, match="No sandbox_id"):
@@ -138,6 +142,7 @@ def test_get_sandbox_uses_cached():
 # _get_sandbox_async
 # ---------------------------------------------------------------------------
 
+
 async def test_get_sandbox_async_no_id_raises():
     tk = DaytonaToolkit()
     with pytest.raises(RuntimeError, match="No sandbox_id"):
@@ -154,6 +159,7 @@ async def test_get_sandbox_async_caches_per_loop():
     with patch("sandbox.async_client.get_async_sandbox", new=fake_get_async, create=True):
         # Patch the import inside the method
         import sys
+
         mock_module = MagicMock()
         mock_module.get_async_sandbox = fake_get_async
         with patch.dict("sys.modules", {"sandbox.async_client": mock_module}):
@@ -172,12 +178,14 @@ async def test_get_sandbox_async_invalidates_on_new_loop():
     tk._sandbox_loop_id = 999999  # fake old loop id
 
     new_sb = MagicMock()
+
     async def fake_get_async(sandbox_id):
         return new_sb
 
     mock_module = MagicMock()
     mock_module.get_async_sandbox = fake_get_async
     import sys
+
     with patch.dict("sys.modules", {"sandbox.async_client": mock_module}):
         result = await tk._get_sandbox_async()
         assert result is new_sb
@@ -187,14 +195,17 @@ async def test_get_sandbox_async_invalidates_on_new_loop():
 # prepare_context (sync)
 # ---------------------------------------------------------------------------
 
+
 def test_prepare_context_injects_sandbox_and_cwd():
     tk = DaytonaToolkit(sandbox_id="sb-test")
     fake_sb = MagicMock()
     ctx = _ctx()
 
-    with patch.object(tk, "_get_sandbox", return_value=fake_sb), \
-         patch.object(DaytonaToolkit, "_resolve_cwd_sync", return_value="/workspace"), \
-         patch.object(tk, "_inject_ci"):
+    with (
+        patch.object(tk, "_get_sandbox", return_value=fake_sb),
+        patch.object(DaytonaToolkit, "_resolve_cwd_sync", return_value="/workspace"),
+        patch.object(tk, "_inject_ci"),
+    ):
         tk.prepare_context(ctx)
 
     assert ctx.metadata["daytona_sandbox"] is fake_sb
@@ -206,9 +217,11 @@ def test_prepare_context_no_cwd_skips_metadata_key():
     fake_sb = MagicMock()
     ctx = _ctx()
 
-    with patch.object(tk, "_get_sandbox", return_value=fake_sb), \
-         patch.object(DaytonaToolkit, "_resolve_cwd_sync", return_value=None), \
-         patch.object(tk, "_inject_ci"):
+    with (
+        patch.object(tk, "_get_sandbox", return_value=fake_sb),
+        patch.object(DaytonaToolkit, "_resolve_cwd_sync", return_value=None),
+        patch.object(tk, "_inject_ci"),
+    ):
         tk.prepare_context(ctx)
 
     assert ctx.metadata["daytona_sandbox"] is fake_sb
@@ -220,9 +233,13 @@ def test_prepare_context_respects_preseeded_workspace_root_override():
     fake_sb = MagicMock()
     ctx = _ctx({"daytona_cwd": "/testbed", "ci_workspace_root": "/testbed"})
 
-    with patch.object(tk, "_get_sandbox", return_value=fake_sb), \
-         patch.object(DaytonaToolkit, "_resolve_cwd_sync", return_value="/workspace") as resolve_mock, \
-         patch.object(tk, "_inject_ci") as inject_mock:
+    with (
+        patch.object(tk, "_get_sandbox", return_value=fake_sb),
+        patch.object(
+            DaytonaToolkit, "_resolve_cwd_sync", return_value="/workspace"
+        ) as resolve_mock,
+        patch.object(tk, "_inject_ci") as inject_mock,
+    ):
         tk.prepare_context(ctx)
 
     resolve_mock.assert_not_called()
@@ -235,6 +252,7 @@ def test_prepare_context_respects_preseeded_workspace_root_override():
 # prepare_context_async
 # ---------------------------------------------------------------------------
 
+
 async def test_prepare_context_async_injects_sandbox_and_cwd():
     tk = DaytonaToolkit(sandbox_id="sb-test")
     fake_sb = MagicMock()
@@ -246,9 +264,13 @@ async def test_prepare_context_async_injects_sandbox_and_cwd():
     async def fake_resolve_cwd(sb):
         return "/async/workspace"
 
-    with patch.object(tk, "_get_sandbox_async", new=AsyncMock(return_value=fake_sb)), \
-         patch.object(DaytonaToolkit, "_resolve_cwd_async", new=AsyncMock(return_value="/async/workspace")), \
-         patch.object(tk, "_inject_ci"):
+    with (
+        patch.object(tk, "_get_sandbox_async", new=AsyncMock(return_value=fake_sb)),
+        patch.object(
+            DaytonaToolkit, "_resolve_cwd_async", new=AsyncMock(return_value="/async/workspace")
+        ),
+        patch.object(tk, "_inject_ci"),
+    ):
         await tk.prepare_context_async(ctx)
 
     assert ctx.metadata["daytona_sandbox"] is fake_sb
@@ -260,9 +282,11 @@ async def test_prepare_context_async_no_cwd():
     fake_sb = MagicMock()
     ctx = _ctx()
 
-    with patch.object(tk, "_get_sandbox_async", new=AsyncMock(return_value=fake_sb)), \
-         patch.object(DaytonaToolkit, "_resolve_cwd_async", new=AsyncMock(return_value=None)), \
-         patch.object(tk, "_inject_ci"):
+    with (
+        patch.object(tk, "_get_sandbox_async", new=AsyncMock(return_value=fake_sb)),
+        patch.object(DaytonaToolkit, "_resolve_cwd_async", new=AsyncMock(return_value=None)),
+        patch.object(tk, "_inject_ci"),
+    ):
         await tk.prepare_context_async(ctx)
 
     assert ctx.metadata["daytona_sandbox"] is fake_sb
@@ -274,9 +298,13 @@ async def test_prepare_context_async_respects_preseeded_workspace_root_override(
     fake_sb = MagicMock()
     ctx = _ctx({"daytona_cwd": "/testbed", "ci_workspace_root": "/testbed"})
 
-    with patch.object(tk, "_get_sandbox_async", new=AsyncMock(return_value=fake_sb)), \
-         patch.object(DaytonaToolkit, "_resolve_cwd_async", new=AsyncMock(return_value="/workspace")) as resolve_mock, \
-         patch.object(tk, "_inject_ci") as inject_mock:
+    with (
+        patch.object(tk, "_get_sandbox_async", new=AsyncMock(return_value=fake_sb)),
+        patch.object(
+            DaytonaToolkit, "_resolve_cwd_async", new=AsyncMock(return_value="/workspace")
+        ) as resolve_mock,
+        patch.object(tk, "_inject_ci") as inject_mock,
+    ):
         await tk.prepare_context_async(ctx)
 
     resolve_mock.assert_not_called()
@@ -289,11 +317,13 @@ async def test_prepare_context_async_respects_preseeded_workspace_root_override(
 # _resolve_cwd_sync / _resolve_cwd_async (static methods via patch)
 # ---------------------------------------------------------------------------
 
+
 def test_resolve_cwd_sync_calls_discover_workspace():
     fake_sb = MagicMock()
     mock_module = MagicMock()
     mock_module.discover_workspace.return_value = "/found/workspace"
     import sys
+
     with patch.dict("sys.modules", {"sandbox.workspace": mock_module}):
         result = DaytonaToolkit._resolve_cwd_sync(fake_sb)
         assert result == "/found/workspace"
@@ -305,6 +335,7 @@ async def test_resolve_cwd_async_calls_discover_workspace_async():
     mock_module = MagicMock()
     mock_module.discover_workspace_async = AsyncMock(return_value="/async/found")
     import sys
+
     with patch.dict("sys.modules", {"sandbox.workspace": mock_module}):
         result = await DaytonaToolkit._resolve_cwd_async(fake_sb)
         assert result == "/async/found"
@@ -313,6 +344,7 @@ async def test_resolve_cwd_async_calls_discover_workspace_async():
 # ---------------------------------------------------------------------------
 # Toolkit description/instructions present
 # ---------------------------------------------------------------------------
+
 
 def test_toolkit_has_description():
     tk = DaytonaToolkit()
@@ -330,14 +362,28 @@ def test_toolkit_has_instructions():
 # _inject_ci
 # ---------------------------------------------------------------------------
 
+
 def test_inject_ci_calls_inject_code_intelligence():
     tk = DaytonaToolkit(sandbox_id="sb-ci")
     fake_sb = MagicMock()
     ctx = _ctx()
     mock_module = MagicMock()
     import sys
+
     with patch.dict("sys.modules", {"sandbox.workspace": mock_module}):
         tk._inject_ci(ctx, fake_sb, "/workspace")
     mock_module.inject_code_intelligence.assert_called_once_with(
         ctx, "sb-ci", fake_sb, "/workspace"
     )
+
+
+def test_inject_ci_skipped_when_skip_code_intelligence_flag_set():
+    tk = DaytonaToolkit(sandbox_id="sb-ci")
+    fake_sb = MagicMock()
+    ctx = _ctx({"skip_code_intelligence": True})
+    mock_module = MagicMock()
+    import sys
+
+    with patch.dict("sys.modules", {"sandbox.workspace": mock_module}):
+        tk._inject_ci(ctx, fake_sb, "/workspace")
+    mock_module.inject_code_intelligence.assert_not_called()

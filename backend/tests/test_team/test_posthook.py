@@ -530,7 +530,7 @@ def test_submit_plan_agent_registry_strictly_contains_only_submit_tool():
     assert tool_names == {"submit_plan"}, f"expected only submit_plan, got {tool_names}"
 
 
-def test_submit_plan_agent_prompt_preserves_parallel_expandable_children():
+def test_submit_plan_agent_prompt_has_generic_validation_repair_rules():
     from team.builtins import register_all
     from agents.registry import get_definition
 
@@ -538,13 +538,13 @@ def test_submit_plan_agent_prompt_preserves_parallel_expandable_children():
 
     serializer = get_definition("submit_plan_agent")
     assert serializer is not None
-    assert (
-        "a disjoint expandable child planner may remain ready immediately"
-        in serializer.system_prompt
-    )
+    # Generic rules that should survive any prompt cleanup:
+    assert "invalid_plan:" in serializer.system_prompt
+    assert "Every validator must depend on at least one upstream sibling" in serializer.system_prompt
+    assert "Must stop immediately after the first accepted submission" in serializer.system_prompt
 
 
-def test_submit_plan_agent_prompt_rebuilds_shape_on_plan_size_failure():
+def test_submit_plan_agent_prompt_has_dep_hoisting_and_dedup_rules():
     from team.builtins import register_all
     from agents.registry import get_definition
 
@@ -552,57 +552,9 @@ def test_submit_plan_agent_prompt_rebuilds_shape_on_plan_size_failure():
 
     serializer = get_definition("submit_plan_agent")
     assert serializer is not None
-    assert "If validation fails on `max_plan_size`, must not make a cosmetic one-item trim." in (
-        serializer.system_prompt
-    )
-    assert "merging adjacent residual siblings behind a narrower expandable `team_planner` item" in (
-        serializer.system_prompt
-    )
-
-
-def test_submit_plan_agent_prompt_hoists_payload_deps_before_submit():
-    from team.builtins import register_all
-    from agents.registry import get_definition
-
-    register_all()  # idempotent
-
-    serializer = get_definition("submit_plan_agent")
-    assert serializer is not None
-    assert "Must never pass bare benchmark ids, test names, or other scalar strings as plan items." in (
-        serializer.system_prompt
-    )
     assert "payload.deps" in serializer.system_prompt
     assert "top-level ``deps`` field" in serializer.system_prompt
-
-
-def test_submit_plan_agent_prompt_repairs_benchmark_refs_without_locking_old_validator_wording():
-    from team.builtins import register_all
-    from agents.registry import get_definition
-
-    register_all()  # idempotent
-
-    serializer = get_definition("submit_plan_agent")
-    assert serializer is not None
-    assert "downgrade that entry to the exact benchmark test file path instead of guessing a nearby node name" in (
-        serializer.system_prompt
-    )
-    assert "strip the ``::...`` suffix and keep only the exact benchmark test file path" in (
-        serializer.system_prompt
-    )
-
-
-def test_submit_plan_agent_prompt_calls_out_validator_dep_repairs_and_local_id_dedup():
-    from team.builtins import register_all
-    from agents.registry import get_definition
-
-    register_all()  # idempotent
-
-    serializer = get_definition("submit_plan_agent")
-    assert serializer is not None
-    assert "Must keep exactly one entry per unique ``local_id``." in serializer.system_prompt
-    assert "Every validator must depend on at least one upstream sibling." in serializer.system_prompt
-    assert "Validators may depend directly on `team_planner` siblings." in serializer.system_prompt
-    assert "they resolve only after that planner subtree finishes" in serializer.system_prompt
+    assert "Must keep exactly one entry per unique ``local_id``" in serializer.system_prompt
     assert "its ``deps`` must include every terminal non-validator sibling" in serializer.system_prompt
 
 
@@ -621,11 +573,9 @@ def test_team_planner_prompt_delegates_workflow_to_skills():
     assert "Must not patch code, run verification, or use scout as a proxy for developer or validator work." in (
         planner.system_prompt
     )
-    assert "If you cannot quote the node id verbatim from the prompt or a live artifact, must use the exact benchmark test file path instead of inventing one." in (
-        planner.system_prompt
-    )
-    assert "references/non-root-context-reuse.md" not in planner.system_prompt
-    assert "keep the first scout wave dynamic" not in planner.system_prompt
+    # Benchmark-specific rules (owned_failures node-id formatting) belong in
+    # playbook skills, not the system prompt.
+    assert "benchmark" not in planner.system_prompt.lower()
 
 
 def test_team_planner_definition_uses_submit_plan_posthook_not_submit_toolkit():
@@ -640,7 +590,6 @@ def test_team_planner_definition_uses_submit_plan_posthook_not_submit_toolkit():
     assert serializer is not None
     assert planner.posthook is not None
     assert planner.posthook.agent_name == SUBMIT_PLAN_AGENT
-    assert "validator-only fallback" in serializer.system_prompt
     assert "context_inheritance" in planner.toolkits
     assert "context_sharing" in planner.toolkits
     assert "team_context" not in planner.toolkits

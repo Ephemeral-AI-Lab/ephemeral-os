@@ -16,16 +16,10 @@ import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from code_intelligence.routing.service import get_code_intelligence
 from team.context.briefings import render_briefings
 from team.models import WorkItem, WorkItemStatus
 from team.runtime.registry import get as _get_team_run
 from tools.core.runtime import ExecutionMetadata
-from tools.daytona_toolkit.coordination import (
-    build_scope_packet,
-    render_scope_packet,
-    scope_paths_for_work_item,
-)
 
 if TYPE_CHECKING:
     from agents.types import AgentDefinition
@@ -74,7 +68,6 @@ class TeamAgentContext:
 
 def build_work_item_metadata(team_run: TeamRun, wi: WorkItem) -> ExecutionMetadata:
     """Build the canonical routing metadata for a team work item."""
-    default_scope_paths = scope_paths_for_work_item(team_run, wi)
     payload = wi.payload if isinstance(wi.payload, dict) else {}
     meta = ExecutionMetadata(
         team_run_id=team_run.id,
@@ -89,62 +82,19 @@ def build_work_item_metadata(team_run: TeamRun, wi: WorkItem) -> ExecutionMetada
     meta["work_item_started_at"] = time.time()
     meta["retry_count"] = wi.retry_count
     meta["max_retries"] = wi.max_retries
-    meta["coordination_mode"] = "ultra"
-    meta["require_declared_shell_outputs"] = True
-    meta["verification_surface_write_enforcement"] = "warn"
     repo_root = str(getattr(getattr(team_run, "project_context", None), "repo_root", "") or "")
     if repo_root:
         meta["daytona_cwd"] = repo_root
         meta["ci_workspace_root"] = repo_root
-    if default_scope_paths:
-        meta["default_scope_paths"] = default_scope_paths
+    # Apply run-level coordination overrides (set by benchmark runners or
+    # other callers via team_run.coordination_metadata).
+    for key, value in getattr(team_run, "coordination_metadata", {}).items():
+        meta[key] = value
     for key in ("owned_files", "owned_failures", "touches_paths", "verify"):
         value = payload.get(key)
         if value not in (None, "", [], {}):
             meta[key] = value
     return meta
-
-
-def _maybe_attach_live_scope_packet(
-    team_run: TeamRun,
-    wi: WorkItem,
-    *,
-    meta: ExecutionMetadata,
-    user_message: str,
-) -> tuple[ExecutionMetadata, str]:
-    """Attach scope metadata and prompt preamble when CI is available."""
-    sandbox_id = meta.sandbox_id or ""
-    repo_root = str(meta.get("ci_workspace_root") or "")
-    if not sandbox_id or not repo_root:
-        return meta, user_message
-
-    try:
-        ci_service = get_code_intelligence(
-            sandbox_id=sandbox_id,
-            workspace_root=repo_root,
-        )
-    except Exception:
-        logger.debug(
-            "scope packet injection skipped for run=%s wi=%s",
-            getattr(team_run, "id", ""),
-            getattr(wi, "id", ""),
-            exc_info=True,
-        )
-        return meta, user_message
-
-    scope_packet = build_scope_packet(
-        scope_paths=scope_paths_for_work_item(team_run, wi),
-        svc=ci_service,
-        team_run=team_run,
-    )
-    meta["scope_packet"] = scope_packet
-    coherence_token = str(scope_packet.get("coherence_token") or "")
-    if coherence_token:
-        meta["coherence_token"] = coherence_token
-    rendered_packet = render_scope_packet(scope_packet)
-    if rendered_packet:
-        user_message = f"{rendered_packet}\n\n{user_message}"
-    return meta, user_message
 
 
 def build_initial_user_message(
@@ -270,12 +220,6 @@ def build_query_context(
     """
     meta = build_work_item_metadata(team_run, wi)
     user_message = build_initial_user_message(team_run, wi, default_base_prompt(wi))
-    meta, user_message = _maybe_attach_live_scope_packet(
-        team_run,
-        wi,
-        meta=meta,
-        user_message=user_message,
-    )
     return TeamAgentContext(
         user_message=user_message,
         tool_metadata=meta,

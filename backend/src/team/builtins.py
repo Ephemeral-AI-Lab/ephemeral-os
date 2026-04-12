@@ -8,6 +8,8 @@ from agents.registry import register_definition
 from agents.types import AgentDefinition
 from hooks.agent_posthook import PosthookConfig
 
+from config.defaults import DEFAULT_TEAM_TOOL_CALL_LIMIT
+
 logger = logging.getLogger(__name__)
 
 TEAM_PLANNER = "team_planner"
@@ -20,8 +22,6 @@ DECISION_SUBMIT_REPLAN = "decision_submit_replan"
 SUBMIT_REPLAN_AGENT = "submit_replan_agent"
 TEAM_REPLANNER = "team_replanner"
 SCOUT = "scout"
-
-_DEFAULT_TEAM_TOOL_CALL_LIMIT = 100
 
 _SCOUT_PROMPT = """You are scout. Produce a compact read-only brief for the concrete list of paths supplied as ``target_paths``.
 
@@ -45,14 +45,12 @@ Must read the preloaded skills first; they define the planning workflow, explora
 Role boundary:
 - Must produce a valid plan payload and stop.
 - Must not patch code, run verification, or use scout as a proxy for developer or validator work.
-- Must not inspect `.git`, git history, reflogs, or benchmark patch archaeology.
 
 Output contract:
 - Must end with a single JSON object shaped like ``{"items": [...], "rationale": "..."}``.
 - Each item must satisfy the runtime ``WorkItemSpec`` fields.
 - Submitted plan items must target registered agents that support the requested work-item kind. Must never submit ``scout``.
 - Each `briefings` entry must use the runtime schema: `{"name": "...", "source": "artifact", "ref": "..."}` or `{"name": "...", "source": "inline", "inline": "..."}`. Must not emit `content` as a briefing field.
-- On benchmark-root plans, every ``owned_failures`` entry must be either an exact prompt pytest node id or an exact prompt test file path. If you cannot quote the node id verbatim from the prompt or a live artifact, must use the exact benchmark test file path instead of inventing one.
 - Must not write prose before or after the JSON payload."""
 
 _DEVELOPER_PROMPT = """You are developer. Execute one bounded coding WorkItem in the sandbox and return a concise summary.
@@ -74,27 +72,21 @@ Role boundary:
 - Must run the scoped verification commands required by the payload or runtime context and capture evidence faithfully.
 - Must return a concise PASS or FAIL verdict plus command, exit-code, and failure evidence."""
 
-_SUBMIT_PLAN_AGENT_PROMPT = """You are submit_plan_agent. Read the work-phase output above and call submit_plan with a Plan whose items match it.
+SUBMIT_PLAN_AGENT_PROMPT = """You are submit_plan_agent. Read the work-phase output above and call submit_plan with a Plan whose items match it.
 
 - The work-phase output must be a JSON object with ``items`` and optional ``rationale``. Must parse that JSON and pass it through unchanged unless validation requires a fix.
 - If the work-phase output is not parseable JSON with a top-level ``items`` list, must not infer or invent a plan from prose or notes. Must stop without calling any tool.
 - ``items`` must be passed to ``submit_plan`` as a real list object, never as a JSON string.
-- Each entry in ``items`` must be an object-shaped plan item with ``agent_name`` and optional ``local_id``, ``payload``, ``deps``, ``kind``, ``notes``, ``timeout_seconds``, or ``briefings``. Must never pass bare benchmark ids, test names, or other scalar strings as plan items.
+- Each entry in ``items`` must be an object-shaped plan item with ``agent_name`` and optional ``local_id``, ``payload``, ``deps``, ``kind``, ``notes``, ``timeout_seconds``, or ``briefings``. Must never pass bare strings as plan items.
 - If an item puts dependency local_ids under ``payload.deps``, must hoist them into the item's top-level ``deps`` field before calling ``submit_plan``.
 - Must keep exactly one entry per unique ``local_id``. If a repair pass encounters duplicate ``local_id`` values, deduplicate the list instead of submitting the duplicates again.
 - If submit_plan returns an `invalid_plan:` error block, must fix only the offending field(s) and call submit_plan again in the same turn.
-- If validation fails on `max_plan_size`, must not make a cosmetic one-item trim. Repair the shape by merging adjacent residual siblings behind a narrower expandable `team_planner` item or by another targeted structural fix that preserves the planner's intent.
-- If the invalid plan only needs validator coverage on a branch, may use a validator-only fallback instead of reshaping unrelated siblings.
-- When repairing deps after validation, a disjoint expandable child planner may remain ready immediately if it does not depend on the offending branch.
 - Every validator must depend on at least one upstream sibling.
-- Validators may depend directly on `team_planner` siblings. They count in the validation chain the same way as developer siblings, but like every dependency edge they resolve only after that planner subtree finishes.
-- If a validator is terminal, its ``deps`` must include every terminal non-validator sibling in the submitted layer, not just the branch that first triggered the repair.
-- If validation fails on a benchmark reference for `owned_failures`, `reproduction`, `verification`, `verify`, or `retries`, must preserve exact prompt ids when they exist. Otherwise downgrade that entry to the exact benchmark test file path instead of guessing a nearby node name.
-- When downgrading an invalid benchmark node reference, strip the ``::...`` suffix and keep only the exact benchmark test file path if that path is the benchmark surface named in the prompt.
+- If a validator is terminal, its ``deps`` must include every terminal non-validator sibling in the submitted layer.
 - Must stop immediately after the first accepted submission.
 - Must not write prose. You have no other tools."""
 
-_SUBMIT_SUMMARY_AGENT_PROMPT = """You are submit_summary_agent. Read the work-phase output above and call submit_summary exactly once with a concise 1-3 sentence summary of what the worker accomplished. Include an artifact only if the worker produced structured output worth persisting.
+SUBMIT_SUMMARY_AGENT_PROMPT = """You are submit_summary_agent. Read the work-phase output above and call submit_summary exactly once with a concise 1-3 sentence summary of what the worker accomplished. Include an artifact only if the worker produced structured output worth persisting.
 
 - If the work-phase output is a JSON object with ``summary`` and optional ``artifact``, must use those fields directly.
 - Must call submit_summary exactly once with valid arguments.
@@ -125,7 +117,7 @@ Output contract:
 - New items will be inserted as siblings of the failed item at the same DAG level.
 - Must not write prose before or after the JSON payload."""
 
-_SUBMIT_REPLAN_AGENT_PROMPT = """You are submit_replan_agent. Read the work-phase output above and call submit_replan exactly once with the corrective plan.
+SUBMIT_REPLAN_AGENT_PROMPT = """You are submit_replan_agent. Read the work-phase output above and call submit_replan exactly once with the corrective plan.
 
 - The work-phase output must be a JSON object with ``add_items`` and optional ``cancel_ids``. Must parse that JSON and pass it through unchanged unless validation requires a fix.
 - ``add_items`` must be passed to ``submit_replan`` as a real list object, never as a JSON string.
@@ -136,11 +128,12 @@ _SUBMIT_REPLAN_AGENT_PROMPT = """You are submit_replan_agent. Read the work-phas
 
 
 def register_all() -> None:
+    # --- Internal serialiser / decision posthook agents (no role) ---
     register_definition(
         AgentDefinition(
             name=SUBMIT_PLAN_AGENT,
             description="Serializes a planner's free-form output into a validated Plan via submit_plan.",
-            system_prompt=_SUBMIT_PLAN_AGENT_PROMPT,
+            system_prompt=SUBMIT_PLAN_AGENT_PROMPT,
             model="inherit",
             toolkits=["submit_plan_posthook"],
             skills=[],
@@ -152,26 +145,9 @@ def register_all() -> None:
     )
     register_definition(
         AgentDefinition(
-            name=TEAM_PLANNER,
-            description="Team-mode planner agent: decomposes requests and drafts executable plan payloads.",
-            system_prompt=_PLANNER_PROMPT,
-            model="inherit",
-            tool_call_limit=_DEFAULT_TEAM_TOOL_CALL_LIMIT,
-            toolkits=["code_intelligence", "context_inheritance", "context_sharing", "atlas", "subagent"],
-            skills=["team-planner-playbook"],
-            include_skills=True,
-            source="builtin",
-            posthook=PosthookConfig(
-                agent_name=SUBMIT_PLAN_AGENT,
-                metadata_key="submitted_plan",
-            ),
-        )
-    )
-    register_definition(
-        AgentDefinition(
             name=SUBMIT_SUMMARY_AGENT,
             description="Serializes a worker's free-form output into a validated SubmittedSummary via submit_summary.",
-            system_prompt=_SUBMIT_SUMMARY_AGENT_PROMPT,
+            system_prompt=SUBMIT_SUMMARY_AGENT_PROMPT,
             model="inherit",
             toolkits=["submit_summary_posthook"],
             skills=[],
@@ -181,72 +157,6 @@ def register_all() -> None:
             source="builtin",
         )
     )
-    register_definition(
-        AgentDefinition(
-            name=DEVELOPER,
-            description=(
-                "Team-mode developer agent: reads, writes, and edits code in the "
-                "sandbox to satisfy an atomic coding WorkItem. Verifies changes "
-                "with CI / LSP diagnostics before returning."
-            ),
-            system_prompt=_DEVELOPER_PROMPT,
-            model="inherit",
-            tool_call_limit=_DEFAULT_TEAM_TOOL_CALL_LIMIT,
-            toolkits=["sandbox_operations", "code_intelligence", "context_inheritance"],
-            skills=["team-developer-playbook"],
-            include_skills=True,
-            supported_kinds=["atomic"],
-            source="builtin",
-            posthook=PosthookConfig(
-                agent_name=DECISION_SUBMIT_RETRY,
-                metadata_key="submitted_summary",
-            ),
-        )
-    )
-    register_definition(
-        AgentDefinition(
-            name=VALIDATOR,
-            description=(
-                "Team-mode validator agent: runs tests, linters, and diagnostics "
-                "against the developer's output and reports a PASS/FAIL verdict "
-                "with evidence. Does not edit production source."
-            ),
-            system_prompt=_VALIDATOR_PROMPT,
-            model="inherit",
-            tool_call_limit=_DEFAULT_TEAM_TOOL_CALL_LIMIT,
-            toolkits=["sandbox_operations", "code_intelligence", "context_inheritance"],
-            skills=["team-validator-playbook"],
-            include_skills=True,
-            supported_kinds=["atomic"],
-            source="builtin",
-            posthook=PosthookConfig(
-                agent_name=DECISION_SUBMIT_REPLAN,
-                metadata_key="submitted_summary",
-            ),
-        )
-    )
-    register_definition(
-        AgentDefinition(
-            name=SCOUT,
-            description=(
-                "Read-only exploration of a concrete list of paths. Produces a "
-                "compact brief; never edits files."
-            ),
-            system_prompt=_SCOUT_PROMPT,
-            model="inherit",
-            toolkits=["code_intelligence"],
-            skills=["team-scout-playbook"],
-            include_skills=True,
-            agent_type="subagent",
-            tool_call_limit=_DEFAULT_TEAM_TOOL_CALL_LIMIT,
-            posthook=PosthookConfig(
-                agent_name=SUBMIT_SUMMARY_AGENT,
-                metadata_key="submitted_summary",
-            ),
-            source="builtin",
-        )
-    )
-    # --- Decision posthook agents ---
     register_definition(
         AgentDefinition(
             name=DECISION_SUBMIT_RETRY,
@@ -275,12 +185,11 @@ def register_all() -> None:
             source="builtin",
         )
     )
-    # --- Replan serializer + replanner agent ---
     register_definition(
         AgentDefinition(
             name=SUBMIT_REPLAN_AGENT,
             description="Serializes a replanner's output into a validated ReplanPlan via submit_replan.",
-            system_prompt=_SUBMIT_REPLAN_AGENT_PROMPT,
+            system_prompt=SUBMIT_REPLAN_AGENT_PROMPT,
             model="inherit",
             toolkits=["submit_replan_posthook"],
             skills=[],
@@ -290,30 +199,85 @@ def register_all() -> None:
             source="builtin",
         )
     )
+
+    # --- Team-facing agents (with role) ---
     register_definition(
         AgentDefinition(
-            name=TEAM_REPLANNER,
+            name="team_planner",
+            role="planner",
+            description="Team-mode planner agent: decomposes requests and drafts executable plan payloads.",
+            system_prompt=_PLANNER_PROMPT,
+            model="inherit",
+            tool_call_limit=DEFAULT_TEAM_TOOL_CALL_LIMIT,
+            toolkits=["code_intelligence", "context_inheritance", "context_sharing", "atlas", "subagent"],
+            skills=["team-planner-playbook"],
+            include_skills=True,
+            source="builtin",
+            posthook=PosthookConfig(agent_name=SUBMIT_PLAN_AGENT, metadata_key="submitted_plan"),
+        )
+    )
+    register_definition(
+        AgentDefinition(
+            name="developer",
+            role="developer",
+            description="Team-mode developer agent: reads, writes, and edits code in the sandbox.",
+            system_prompt=_DEVELOPER_PROMPT,
+            model="inherit",
+            tool_call_limit=DEFAULT_TEAM_TOOL_CALL_LIMIT,
+            toolkits=["sandbox_operations", "code_intelligence", "context_inheritance"],
+            skills=["team-developer-playbook"],
+            include_skills=True,
+            supported_kinds=["atomic"],
+            source="builtin",
+            posthook=PosthookConfig(agent_name=DECISION_SUBMIT_RETRY, metadata_key="submitted_summary"),
+        )
+    )
+    register_definition(
+        AgentDefinition(
+            name="validator",
+            role="validator",
+            description="Team-mode validator agent: runs tests and reports PASS/FAIL with evidence.",
+            system_prompt=_VALIDATOR_PROMPT,
+            model="inherit",
+            tool_call_limit=DEFAULT_TEAM_TOOL_CALL_LIMIT,
+            toolkits=["sandbox_operations", "code_intelligence", "context_inheritance"],
+            skills=["team-validator-playbook"],
+            include_skills=True,
+            supported_kinds=["atomic"],
+            source="builtin",
+            posthook=PosthookConfig(agent_name=DECISION_SUBMIT_REPLAN, metadata_key="submitted_summary"),
+        )
+    )
+    register_definition(
+        AgentDefinition(
+            name="scout",
+            role="scout",
+            description="Read-only exploration of a concrete list of paths.",
+            system_prompt=_SCOUT_PROMPT,
+            model="inherit",
+            toolkits=["code_intelligence"],
+            skills=["team-scout-playbook"],
+            include_skills=True,
+            agent_type="subagent",
+            tool_call_limit=DEFAULT_TEAM_TOOL_CALL_LIMIT,
+            posthook=PosthookConfig(agent_name=SUBMIT_SUMMARY_AGENT, metadata_key="submitted_summary"),
+            source="builtin",
+        )
+    )
+    register_definition(
+        AgentDefinition(
+            name="team_replanner",
+            role="replanner",
             description="Replanner: reads failure context and produces corrective sibling work items.",
             system_prompt=_REPLANNER_PROMPT,
             model="inherit",
-            tool_call_limit=_DEFAULT_TEAM_TOOL_CALL_LIMIT,
+            tool_call_limit=DEFAULT_TEAM_TOOL_CALL_LIMIT,
             toolkits=["code_intelligence", "context_inheritance", "context_sharing", "atlas", "subagent"],
             skills=["team-replanner-playbook"],
             include_skills=True,
             supported_kinds=["atomic"],
             source="builtin",
-            posthook=PosthookConfig(
-                agent_name=SUBMIT_REPLAN_AGENT,
-                metadata_key="submitted_replan",
-            ),
+            posthook=PosthookConfig(agent_name=SUBMIT_REPLAN_AGENT, metadata_key="submitted_replan"),
         )
     )
-    logger.info(
-        "team builtins registered: %s",
-        ", ".join([
-            TEAM_PLANNER, DEVELOPER, VALIDATOR,
-            SUBMIT_PLAN_AGENT, SUBMIT_SUMMARY_AGENT, SCOUT,
-            DECISION_SUBMIT_RETRY, DECISION_SUBMIT_REPLAN,
-            SUBMIT_REPLAN_AGENT, TEAM_REPLANNER,
-        ]),
-    )
+    logger.info("team builtins registered")
