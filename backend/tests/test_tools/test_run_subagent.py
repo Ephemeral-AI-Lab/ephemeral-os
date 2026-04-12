@@ -359,6 +359,60 @@ async def test_run_subagent_registers_provider_and_returns_final_text(monkeypatc
 
 
 @pytest.mark.asyncio
+async def test_run_subagent_does_not_inject_scope_packets_into_prompt(monkeypatch):
+    scripted = [
+        ConversationMessage(role="assistant", content=[TextBlock(text="DONE: scoped read complete")]),
+    ]
+    stub_agent = _StubAgent(scripted)
+    captured: dict[str, str] = {}
+
+    def _fake_spawn_agent(*args, **kwargs):
+        captured["prompt"] = kwargs["latest_user_prompt"]
+        return stub_agent
+
+    monkeypatch.setattr(
+        "engine.runtime.agent.spawn_agent", _fake_spawn_agent, raising=True
+    )
+
+    bg = BackgroundTaskManager()
+
+    async def _noop_coro() -> ToolResult:
+        return ToolResult(output="placeholder")
+
+    bg.launch(
+        task_id="bg_scope_prompt",
+        tool_name="run_subagent",
+        tool_input={"prompt": "inspect auth"},
+        coro=_noop_coro(),
+        task_note="test",
+    )
+
+    class _StubConfig:
+        cwd = Path("/tmp")
+        session_id = "session_abc"
+
+    ctx = ToolExecutionContext(
+        cwd=Path("/tmp"),
+        metadata={
+            "session_config": _StubConfig(),
+            "background_task_manager": bg,
+            "background_task_id": "bg_scope_prompt",
+            "sandbox_id": "",
+            "scope_packet": {"scope_paths": ["src/auth"], "coherence_token": "abc123"},
+        },
+    )
+
+    result = await run_subagent.execute(
+        run_subagent.input_model(agent_name="subagent", prompt="inspect auth"),
+        ctx,
+    )
+
+    assert result.is_error is False
+    assert captured["prompt"] == "inspect auth"
+    assert "coherence_token" not in captured["prompt"]
+
+
+@pytest.mark.asyncio
 async def test_run_subagent_missing_session_config_returns_error():
     ctx = ToolExecutionContext(cwd=Path("/tmp"), metadata={})
     result = await run_subagent.execute(
