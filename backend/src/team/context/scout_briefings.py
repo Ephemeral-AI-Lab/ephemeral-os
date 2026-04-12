@@ -66,10 +66,6 @@ def note_work_item_context_access(
     agent_name = str(getattr(work_item, "agent_name", "") or metadata.get("agent_name") or "").strip()
     from agents.registry import get_role
     role = get_role(agent_name) or agent_name
-    verify_refs = normalize_path_list(payload.get("verify") if isinstance(payload, dict) else [])
-    failure_refs = normalize_string_list(
-        payload.get("owned_failures") if isinstance(payload, dict) else []
-    )
     touched_scopes: list[str] = []
 
     for scope, source_refs in scope_sources.items():
@@ -85,8 +81,6 @@ def note_work_item_context_access(
             stats["roles"].add(role)
         stats["source_refs"].update(source_refs)
         stats["read_paths"].update(overlapping_reads)
-        stats["verify_refs"].update(verify_refs)
-        stats["failure_refs"].update(failure_refs)
         stats["last_accessed_at"] = time.time()
         if role == "developer":
             stats["developer_lane_ids"].add(lane_id or role)

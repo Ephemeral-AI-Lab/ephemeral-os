@@ -25,6 +25,7 @@ from tools.daytona_toolkit.coordination import (
 from tools.core.base import ToolExecutionContext
 
 logger = logging.getLogger(__name__)
+_DEFAULT_SCOPE_RECENT_SECONDS = 300.0
 
 _SHELL_MUTATION_PATTERN = re.compile(
     r"(^|[;&|]\s*)("
@@ -79,6 +80,7 @@ def build_live_scope_packet(
     context: ToolExecutionContext,
     *,
     scope_paths: list[str] | None = None,
+    recent_seconds: float = _DEFAULT_SCOPE_RECENT_SECONDS,
 ) -> dict[str, Any]:
     """Build the current live scope packet for *scope_paths*."""
     baseline = context.metadata.get("scope_packet")
@@ -86,6 +88,7 @@ def build_live_scope_packet(
         context,
         scope_paths=scope_paths,
         baseline_packet=baseline if isinstance(baseline, dict) else None,
+        recent_seconds=recent_seconds,
     )
 
 
@@ -94,11 +97,13 @@ def refresh_scope_baseline(
     *,
     scope_paths: list[str] | None = None,
     packet: dict[str, Any] | None = None,
+    recent_seconds: float = _DEFAULT_SCOPE_RECENT_SECONDS,
 ) -> dict[str, Any]:
     """Persist the latest live scope packet into the tool metadata."""
     resolved = packet if isinstance(packet, dict) else build_live_scope_packet(
         context,
         scope_paths=scope_paths,
+        recent_seconds=recent_seconds,
     )
     if not isinstance(resolved, dict):
         return {}

@@ -44,6 +44,7 @@ LIVE_TESTS=(
     test_live_agent_react_landing.py    # React page agent
     test_live_nextjs_sandbox.py         # Next.js sandbox agent
     test_live_minimax_comprehensive.py  # MiniMax comprehensive tests
+    test_live_codeact_edge_cases.py     # CodeAct: pip install, CWD, team constraints
 )
 
 # Mock/unit tests (no real API needed)

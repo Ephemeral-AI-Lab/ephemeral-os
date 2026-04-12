@@ -198,7 +198,7 @@ async def test_edit_direct_write_success():
     assert b"goodbye world" in written_bytes
 
 
-async def test_edit_rejects_verify_surface_write_outside_owned_scope():
+async def test_edit_rejects_write_outside_write_scope():
     sb = _make_sandbox(download_content="original")
     ctx = _ctx(
         {
@@ -206,10 +206,7 @@ async def test_edit_rejects_verify_surface_write_outside_owned_scope():
             "daytona_cwd": "/testbed",
             "agent_name": "developer",
             "team_mode_enabled": True,
-            "verification_surface_write_enforcement": "error",
-            "owned_files": ["dask/config.py"],
-            "owned_failures": ["dask/tests/test_config.py"],
-            "verify": ["pytest dask/tests/test_config.py -q"],
+            "write_scope": ["dask/config.py"],
         }
     )
 
@@ -223,11 +220,11 @@ async def test_edit_rejects_verify_surface_write_outside_owned_scope():
     )
 
     assert result.is_error
-    assert "verification surfaces read-only" in result.output
+    assert "outside write_scope" in result.output
     sb.fs.upload_file.assert_not_called()
 
 
-async def test_edit_allows_verify_surface_write_in_advisory_mode():
+async def test_edit_allows_write_inside_write_scope():
     sb = _make_sandbox(download_content="original")
     ctx = _ctx(
         {
@@ -235,10 +232,7 @@ async def test_edit_allows_verify_surface_write_in_advisory_mode():
             "daytona_cwd": "/testbed",
             "agent_name": "developer",
             "team_mode_enabled": True,
-            "verification_surface_write_enforcement": "warn",
-            "owned_files": ["dask/config.py"],
-            "owned_failures": ["dask/tests/test_config.py"],
-            "verify": ["pytest dask/tests/test_config.py -q"],
+            "write_scope": ["dask/"],
         }
     )
 
@@ -254,7 +248,6 @@ async def test_edit_allows_verify_surface_write_in_advisory_mode():
     assert not result.is_error
     data = json.loads(result.output)
     assert data["status"] == "edited"
-    assert any("advisory mode" in warning for warning in data["warnings"])
     sb.fs.upload_file.assert_called_once()
 
 

@@ -300,8 +300,15 @@ async def test_codeact_preserves_script_stdout_before_manifest_line():
     assert data["script_stdout"] == "hello from codeact"
 
 
-async def test_codeact_rejects_raw_subprocess_calls_for_team_developer():
-    sb = _make_sandbox()
+# ---------------------------------------------------------------------------
+# Team-mode agnostic: codeact does NOT enforce team constraints
+# ---------------------------------------------------------------------------
+
+
+async def test_codeact_allows_subprocess_calls_in_team_mode():
+    """CodeAct is team-agnostic — subprocess calls are not blocked."""
+    manifest = _make_manifest()
+    sb = _make_sandbox(manifest=manifest)
     ctx = _ctx(
         {
             "daytona_sandbox": sb,
@@ -317,12 +324,11 @@ async def test_codeact_rejects_raw_subprocess_calls_for_team_developer():
         ctx,
     )
 
-    assert result.is_error
-    assert "shell(\"...\")" in result.output
-    sb.process.exec.assert_not_called()
+    assert not result.is_error
 
 
-async def test_codeact_rejects_repo_writes_from_validator():
+async def test_codeact_allows_writes_from_validator():
+    """CodeAct is team-agnostic — validators can write files."""
     manifest = _make_manifest(writes=[{"path": "/testbed/pkg/core.py", "content": "x = 1\n"}])
     sb = _make_sandbox(manifest=manifest)
     ctx = _ctx(
@@ -339,12 +345,13 @@ async def test_codeact_rejects_repo_writes_from_validator():
         ctx,
     )
 
-    assert result.is_error
-    assert "must not write repository files" in result.output
-    assert sb.fs.upload_file.call_count == 1
+    assert not result.is_error
+    data = json.loads(result.output)
+    assert data["files_written"] == 1
 
 
-async def test_codeact_rejects_verify_surface_write_outside_owned_scope():
+async def test_codeact_allows_verify_surface_writes_in_team_mode():
+    """CodeAct is team-agnostic — verification surface writes are not blocked."""
     manifest = _make_manifest(writes=[{"path": "/testbed/dask/tests/test_cli.py", "content": "patched\n"}])
     sb = _make_sandbox(manifest=manifest)
     ctx = _ctx(
@@ -365,40 +372,14 @@ async def test_codeact_rejects_verify_surface_write_outside_owned_scope():
         ctx,
     )
 
-    assert result.is_error
-    assert "verification surfaces read-only" in result.output
-    assert sb.fs.upload_file.call_count == 1
-
-
-async def test_codeact_allows_verify_surface_write_in_advisory_mode():
-    manifest = _make_manifest(writes=[{"path": "/testbed/dask/tests/test_cli.py", "content": "patched\n"}])
-    sb = _make_sandbox(manifest=manifest)
-    ctx = _ctx(
-        {
-            "daytona_sandbox": sb,
-            "daytona_cwd": "/testbed",
-            "agent_name": "developer",
-            "team_mode_enabled": True,
-            "verification_surface_write_enforcement": "warn",
-            "owned_files": ["dask/cli.py"],
-            "owned_failures": ["dask/tests/test_cli.py"],
-            "verify": ["pytest dask/tests/test_cli.py -q"],
-        }
-    )
-
-    result = await daytona_codeact.execute(
-        daytona_codeact.input_model(code="write('/testbed/dask/tests/test_cli.py', 'patched\\n')"),
-        ctx,
-    )
-
     assert not result.is_error
     data = json.loads(result.output)
     assert data["files_written"] == 1
-    assert any("advisory mode" in warning for warning in data["warnings"])
-    assert sb.fs.upload_file.call_count == 2
+    assert data["warnings"] == []
 
 
-async def test_codeact_rejects_install_commands_for_team_developer():
+async def test_codeact_allows_install_commands_in_team_mode():
+    """CodeAct is team-agnostic — pip install is allowed."""
     manifest = _make_manifest(
         shells=[
             {
@@ -423,8 +404,9 @@ async def test_codeact_rejects_install_commands_for_team_developer():
         ctx,
     )
 
-    assert result.is_error
-    assert "ambient runtime environment" in result.output
+    assert not result.is_error
+    data = json.loads(result.output)
+    assert data["shells_run"] == 1
 
 
 # ---------------------------------------------------------------------------

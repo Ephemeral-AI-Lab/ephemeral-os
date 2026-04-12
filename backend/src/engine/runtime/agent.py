@@ -26,6 +26,7 @@ from hooks import make_hook_executor
 from providers.provider import make_api_client
 from providers.types import UsageSnapshot
 from prompts import build_runtime_system_prompt
+from prompts.agent_templates import build_role_section, build_type_section
 from tools import create_default_tool_registry
 from tools.core.factory import create_toolkit, has_factory, ToolkitContext
 
@@ -255,12 +256,21 @@ def _build_agent_system_prompt(
 ) -> str:
     """Return the base system prompt for *agent_def*.
 
-    If the definition provides its own prompt, use it verbatim; otherwise
-    build the runtime prompt (memory, issue context, PR comments, etc.)
-    that the server-side path normally produces.
+    If the definition provides its own prompt, compose the structured
+    layers (type section + role section + agent body); otherwise build the
+    runtime prompt (memory, issue context, PR comments, etc.) that the
+    server-side path normally produces.
     """
     if agent_def and agent_def.system_prompt:
-        base = agent_def.system_prompt
+        parts: list[str] = []
+        type_section = build_type_section(agent_def.agent_type, agent_def.name)
+        if type_section:
+            parts.append(type_section)
+        role_section = build_role_section(agent_def.role)
+        if role_section:
+            parts.append(role_section)
+        parts.append(agent_def.system_prompt)
+        base = "\n\n".join(parts)
     else:
         base = build_runtime_system_prompt(
             settings,

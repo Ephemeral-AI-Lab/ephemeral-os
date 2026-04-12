@@ -90,7 +90,7 @@ def build_work_item_metadata(team_run: TeamRun, wi: WorkItem) -> ExecutionMetada
     # other callers via team_run.coordination_metadata).
     for key, value in getattr(team_run, "coordination_metadata", {}).items():
         meta[key] = value
-    for key in ("owned_files", "owned_failures", "touches_paths", "verify"):
+    for key in ("write_scope", "verification"):
         value = payload.get(key)
         if value not in (None, "", [], {}):
             meta[key] = value
@@ -298,8 +298,8 @@ def build_query_context(
     base_prompt = default_base_prompt(wi)
     # Inject roster reference for agents that submit plans (planners and
     # replanners) so they know which agents are available to target.
-    roster = team_run.roster
-    if roster and defn.role in ("planner", "replanner"):
+    roster = getattr(team_run, "roster", None)
+    if roster and getattr(defn, "role", None) in ("planner", "replanner"):
         base_prompt = _render_roster(roster) + "\n\n" + base_prompt
     user_message = build_initial_user_message(team_run, wi, base_prompt)
     return TeamAgentContext(

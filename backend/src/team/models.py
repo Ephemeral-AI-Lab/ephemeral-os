@@ -62,7 +62,7 @@ def _normalize_payload(payload: Any) -> dict[str, Any]:
     if not isinstance(payload, dict):
         return {}
     normalized = dict(payload)
-    for key in ("owned_files", "owned_failures", "verify"):
+    for key in ("write_scope",):
         deduped = _dedupe_str_list(normalized.get(key))
         if deduped is not None:
             normalized[key] = deduped

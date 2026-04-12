@@ -294,37 +294,58 @@ def _verification_surface_enforcement_mode(context: ToolExecutionContext) -> str
     return "error"
 
 
+# ---------------------------------------------------------------------------
+# Write-scope helpers — prefix-based scope matching.
+# ---------------------------------------------------------------------------
+
+
+def _normalize_write_scope(raw: Any, repo_root: str) -> list[str]:
+    """Normalize a ``write_scope`` list to repo-relative prefixes."""
+    if not isinstance(raw, list):
+        return []
+    out: list[str] = []
+    for item in raw:
+        if not isinstance(item, str):
+            continue
+        normed = _normalize_repo_relative_path(item.rstrip("/"), repo_root)
+        if normed:
+            out.append(normed)
+    return out
+
+
+def _path_under_write_scope(rel_path: str, write_scope: list[str]) -> bool:
+    """Return True if *rel_path* falls under any prefix in *write_scope*."""
+    for prefix in write_scope:
+        if rel_path == prefix or rel_path.startswith(prefix.rstrip("/") + "/"):
+            return True
+    return False
+
+
 def _team_repo_write_error(
     context: ToolExecutionContext,
     file_path: str,
     *,
     tool_name: str,
 ) -> str | None:
+    """Block writes outside write_scope for coordinated team agents."""
     if not is_coordinated_team_agent(context):
         return None
     repo_root = str(_get_cwd(context) or "")
     rel_path = _normalize_repo_relative_path(file_path, repo_root)
     if not rel_path:
         return None
-    allowed_write_paths = set(
-        _normalize_string_list(context.metadata.get("owned_files"), repo_root)
+    write_scope = _normalize_write_scope(context.metadata.get("write_scope"), repo_root)
+    if not write_scope:
+        return None  # no write_scope set — unconstrained
+    if _path_under_write_scope(rel_path, write_scope):
+        return None  # allowed
+    message = (
+        f"{tool_name}: write to {rel_path} is outside write_scope {write_scope}."
     )
-    allowed_write_paths.update(
-        _normalize_string_list(context.metadata.get("touches_paths"), repo_root)
-    )
-    verify_paths = set(_extract_verify_paths(context.metadata.get("verify"), repo_root))
-    verify_paths.update(_extract_verify_paths(context.metadata.get("owned_failures"), repo_root))
-    if rel_path in verify_paths and rel_path not in allowed_write_paths:
-        message = (
-            f"{tool_name}: developer lanes must keep verification surfaces read-only unless the "
-            "WorkItem explicitly owns or widens to them. "
-            f"Observed write on verification path: {rel_path}."
-        )
-        if _verification_surface_enforcement_mode(context) == "warn":
-            logger.warning(message)
-            return None
-        return message
-    return None
+    if _verification_surface_enforcement_mode(context) == "warn":
+        logger.warning(message)
+        return None
+    return message
 
 
 def _team_repo_write_warning(
@@ -333,6 +354,7 @@ def _team_repo_write_warning(
     *,
     tool_name: str,
 ) -> str | None:
+    """Advisory warning for writes outside write_scope."""
     if not is_coordinated_team_agent(context):
         return None
     if _verification_surface_enforcement_mode(context) != "warn":
@@ -341,20 +363,15 @@ def _team_repo_write_warning(
     rel_path = _normalize_repo_relative_path(file_path, repo_root)
     if not rel_path:
         return None
-    allowed_write_paths = set(
-        _normalize_string_list(context.metadata.get("owned_files"), repo_root)
+    write_scope = _normalize_write_scope(context.metadata.get("write_scope"), repo_root)
+    if not write_scope:
+        return None  # no write_scope set — unconstrained
+    if _path_under_write_scope(rel_path, write_scope):
+        return None
+    return (
+        f"{tool_name}: write to {rel_path} is outside write_scope "
+        f"{write_scope} (advisory mode)."
     )
-    allowed_write_paths.update(
-        _normalize_string_list(context.metadata.get("touches_paths"), repo_root)
-    )
-    verify_paths = set(_extract_verify_paths(context.metadata.get("verify"), repo_root))
-    verify_paths.update(_extract_verify_paths(context.metadata.get("owned_failures"), repo_root))
-    if rel_path in verify_paths and rel_path not in allowed_write_paths:
-        return (
-            f"{tool_name}: verification-surface write allowed in advisory mode. "
-            f"Observed write on verification path: {rel_path}."
-        )
-    return None
 
 
 async def _upload_file_compat(sandbox: Any, content: bytes, file_path: str) -> None:

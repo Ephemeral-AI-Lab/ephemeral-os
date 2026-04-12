@@ -18,6 +18,7 @@ from team.context.scout_briefings import (
 )
 from tools.core.base import ToolExecutionContext
 
+_DEFAULT_RECENT_SECONDS = 300.0
 _PY_PATH_RE = re.compile(r"(?<![A-Za-z0-9_./-])([A-Za-z0-9_./-]+\.py)(?![A-Za-z0-9_./-])")
 
 
@@ -80,6 +81,7 @@ def build_scope_packet(
     svc: Any | None = None,
     team_run: Any | None = None,
     baseline_packet: dict[str, Any] | None = None,
+    recent_seconds: float = _DEFAULT_RECENT_SECONDS,
 ) -> dict[str, Any]:
     """Build a machine-checkable live scope packet."""
     normalized = normalize_scope_paths(scope_paths)
@@ -99,7 +101,7 @@ def build_scope_packet(
                 context_pressure=context_pressure,
                 shared_context=shared_context,
                 baseline_packet=baseline_packet,
-                recent_seconds=300.0,
+                recent_seconds=recent_seconds,
             )
         except Exception:
             packet = None
@@ -111,7 +113,7 @@ def build_scope_packet(
         ledger_generation=_safe_generation(getattr(svc, "ledger", None)),
         arbiter_generation=_safe_generation(getattr(svc, "arbiter", None)),
         symbol_index_generation=_safe_generation(getattr(svc, "symbol_index", None)),
-        recent_changes=_recent_changes(svc, normalized, seconds=300.0),
+        recent_changes=_recent_changes(svc, normalized, seconds=recent_seconds),
         active_reservations=_active_reservations(svc, normalized),
         active_edit_intents=_active_edit_intents(svc, normalized),
         hotspots=_hotspots(svc, normalized),
@@ -127,6 +129,7 @@ def build_scope_packet_for_context(
     *,
     scope_paths: list[str] | tuple[str, ...] | None = None,
     baseline_packet: dict[str, Any] | None = None,
+    recent_seconds: float = _DEFAULT_RECENT_SECONDS,
 ) -> dict[str, Any]:
     """Build a scope packet using the current tool context."""
     svc = context.metadata.get("ci_service")
@@ -143,6 +146,7 @@ def build_scope_packet_for_context(
         svc=svc,
         team_run=team_run,
         baseline_packet=baseline_packet,
+        recent_seconds=recent_seconds,
     )
 
 
