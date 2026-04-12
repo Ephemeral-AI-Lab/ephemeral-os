@@ -90,12 +90,19 @@ class TeamRun:
         # start time so context builders can render it into planner prompts.
         self.roster: dict[str, list[str]] = {}
         # Shared context log for all tasks in this run.
-        self.task_center = TaskCenter(goal=goal or "", user_request=user_request)
+        note_store = getattr(runtime_services, "note_store", None)
+        self.task_center = TaskCenter(
+            goal=goal or "",
+            user_request=user_request,
+            note_store=note_store,
+            team_run_id=self.id,
+        )
         # Wire TaskCenter into dispatcher for cascade "continue" note injection
         self.dispatcher.task_center = self.task_center
-        # Optional Ledger reference for file-change awareness in context_for().
+        # Optional Arbiter reference for file-change awareness in context_for().
         # Set by the caller if CodeIntelligenceService is available.
-        self.ledger: Any = None
+        # Arbiter.changes_since() provides the in-memory hot path for recent edits.
+        self.arbiter: Any = None
         # FileChangeStore for cross-run edit history. Defaults to NullFileChangeStore
         # (no-op) when PostgreSQL is unavailable. Caller replaces with real store.
         from team.persistence.file_change_store import NullFileChangeStore
@@ -182,10 +189,16 @@ class TeamRun:
             executor = self._executor_factory(self)
             self._executor_tasks.append(asyncio.create_task(executor.run_forever()))
 
+    async def _is_all_terminal(self) -> bool:
+        """Check terminal state, using async PG path when available."""
+        if self.dispatcher.pg_enabled:
+            return await self.dispatcher.all_terminal_async()
+        return self.dispatcher.all_terminal()
+
     async def wait(self, *, timeout: float | None = None) -> TeamRunStatus:
         try:
             elapsed = 0.0
-            while not self.dispatcher.all_terminal():
+            while not await self._is_all_terminal():
                 if self._executor_tasks and all(t.done() for t in self._executor_tasks):
                     # All executors died but DAG is not terminal — break to avoid infinite loop
                     break
@@ -194,7 +207,7 @@ class TeamRun:
                 if timeout is not None and elapsed >= timeout:
                     break
             await self._join_executors()
-            self._compute_final_status()
+            await self._compute_final_status()
             return self.status
         finally:
             _unregister_team_run(self.id)
@@ -222,8 +235,8 @@ class TeamRun:
         self._executor_tasks = []
         self.cancel_event.clear()
 
-    def _compute_final_status(self) -> None:
-        statuses = {str(wi.status.value) for wi in self.dispatcher.graph.values()}
+    async def _compute_final_status(self) -> None:
+        statuses = await self.dispatcher.compute_final_statuses()
         if "failed" in statuses:
             self.status = TeamRunStatus.FAILED
         elif "cancelled" in statuses:
@@ -317,7 +330,7 @@ class TeamRun:
         resumed_from_checkpoint: str | None = None,
     ) -> None:
         """Resume a rehydrated TeamRun in the current process."""
-        if self.dispatcher.all_terminal():
+        if await self._is_all_terminal():
             return
 
         await self.dispatcher.prepare_for_resume()

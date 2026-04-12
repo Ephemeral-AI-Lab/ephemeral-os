@@ -16,7 +16,6 @@ from tools.core.base import ToolExecutionContext, ToolResult
 from tools.daytona_toolkit.ci_integration import (
     build_live_scope_packet,
     get_ci_service,
-    get_daytona_cwd,
     get_daytona_sandbox,
     refresh_scope_baseline,
     scope_paths_for_write,
@@ -32,11 +31,6 @@ _IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _PY_DEF_RE = re.compile(r"^\s*(?:async\s+def|def)\s+([A-Za-z_][A-Za-z0-9_]*)\b")
 _PY_CLASS_RE = re.compile(r"^\s*class\s+([A-Za-z_][A-Za-z0-9_]*)\b")
 _ASSIGN_RE = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=")
-_SCOUT_ALLOWED_QUERY_TOOLS = frozenset({"ci_workspace_structure"})
-_BENCHMARK_ROOT_PREANCHOR_STRUCTURE_KEY = "_benchmark_root_preanchor_structure_done"
-_BENCHMARK_ROOT_PREANCHOR_STRUCTURE_CLAIM_KEY = "_benchmark_root_preanchor_structure_claimed"
-_BENCHMARK_ROOT_SCOPE_ANCHOR_CLAIM_KEY = "_benchmark_root_scope_anchor_claimed"
-_BENCHMARK_ROOT_FIRST_SCOUT_WAVE_STARTED_KEY = "_benchmark_root_first_scout_wave_started"
 
 
 @dataclass(frozen=True)
@@ -99,499 +93,11 @@ def _build_fallback_specs(query: str, *, kind: str = "") -> list[_FallbackSearch
     return specs
 
 
-def _immediate_parent(path: str) -> str:
-    cleaned = str(path).strip().replace("\\", "/").rstrip("/")
-    if not cleaned or "/" not in cleaned:
-        return ""
-    return cleaned.rsplit("/", 1)[0]
 
 
-def _loaded_skill_references(
-    context: ToolExecutionContext,
-    *,
-    skill_name: str,
-) -> list[str]:
-    raw = context.metadata.get("_loaded_skill_references_by_skill_this_turn", {})
-    if not isinstance(raw, dict):
-        return []
-    refs = raw.get(skill_name)
-    if not isinstance(refs, list):
-        return []
-    return [str(ref).strip() for ref in refs if str(ref).strip()]
 
 
-def _benchmark_root_exploration_reference_loaded(context: ToolExecutionContext) -> bool:
-    return "exploration-script" in _loaded_skill_references(
-        context,
-        skill_name="team-planner-playbook",
-    )
 
-
-def _has_tests_segment(path: str) -> bool:
-    return "tests" in {segment for segment in path.split("/") if segment}
-
-
-def _looks_like_file_target(path: str) -> bool:
-    leaf = str(path).strip().replace("\\", "/").rstrip("/").rsplit("/", 1)[-1]
-    return "." in leaf if leaf else False
-
-
-def _scout_structure_request_allowed(candidate: str, allowed: list[str]) -> bool:
-    for scope in allowed:
-        normalized_scope = str(scope).strip().replace("\\", "/").rstrip("/")
-        if not normalized_scope:
-            continue
-        if candidate == normalized_scope:
-            return True
-        if _looks_like_file_target(normalized_scope) and candidate == _immediate_parent(normalized_scope):
-            return True
-    return False
-
-
-def _scout_scope_violation(
-    *,
-    path: str,
-    context: ToolExecutionContext,
-) -> ToolResult | None:
-    caller_agent = str(context.metadata.get("agent_name") or "").strip()
-    if caller_agent != "scout":
-        return None
-    scope_packet = context.metadata.get("scope_packet")
-    if not isinstance(scope_packet, dict):
-        return None
-    allowed = normalize_scope_paths(scope_packet.get("scope_paths") or [])
-    if not allowed:
-        return None
-    requested = normalize_scope_paths([path])
-    if not requested:
-        return ToolResult(
-            output=(
-                "ci_workspace_structure: scout may not list the workspace root when "
-                "assigned concrete `target_paths`. Enumerate the exact target path or "
-                "its immediate parent only."
-            ),
-            is_error=True,
-        )
-    candidate = requested[0]
-    if _scout_structure_request_allowed(candidate, allowed):
-        return None
-    joined = ", ".join(allowed)
-    return ToolResult(
-        output=(
-            "ci_workspace_structure: scout must stay within the assigned "
-            f"`target_paths` ({joined}); got {path!r}. Enumerate only the exact "
-            "target path or, for a single-file target, its immediate parent. If a "
-            "target path is missing, keep the scope at that missing path and report "
-            "zero coverage instead of enumerating nearby replacements."
-        ),
-        is_error=True,
-    )
-
-
-def _reject_scout_non_whitelist(
-    *,
-    tool_name: str,
-    context: ToolExecutionContext,
-) -> ToolResult | None:
-    caller_agent = str(context.metadata.get("agent_name") or "").strip()
-    if caller_agent != "scout" or tool_name in _SCOUT_ALLOWED_QUERY_TOOLS:
-        return None
-    allowed = ", ".join(sorted(_SCOUT_ALLOWED_QUERY_TOOLS | {"ci_read_file"}))
-    return ToolResult(
-        output=(
-            f"{tool_name}: scout is read-only and may use only {allowed}. "
-            "Stay inside the assigned `target_paths` with structural listing plus "
-            "bounded file reads; downstream planners or developers can run broader "
-            "queries if needed."
-        ),
-        is_error=True,
-    )
-
-
-def _benchmark_root_payload(context: ToolExecutionContext) -> dict[str, Any] | None:
-    agent_name = str(context.metadata.get("agent_name") or "").strip()
-    if agent_name != "team_planner":
-        return None
-    team_run_id = str(context.metadata.get("team_run_id") or "").strip()
-    work_item_id = str(context.metadata.get("work_item_id") or "").strip()
-    if not team_run_id or not work_item_id:
-        return None
-    try:
-        from team.runtime.registry import get as get_team_run
-    except Exception:
-        return None
-    try:
-        team_run = get_team_run(team_run_id)
-    except Exception:
-        return None
-    if team_run is None or work_item_id != str(getattr(team_run, "root_work_item_id", "") or ""):
-        return None
-    graph = getattr(getattr(team_run, "dispatcher", None), "graph", None)
-    if not isinstance(graph, dict):
-        return None
-    root_item = graph.get(work_item_id)
-    payload = getattr(root_item, "payload", None)
-    if not isinstance(payload, dict):
-        return None
-    has_benchmark_targets = bool(payload.get("fail_to_pass") or payload.get("pass_to_pass"))
-    return payload if has_benchmark_targets else None
-
-
-def _require_benchmark_root_scope_anchor(
-    *,
-    tool_name: str,
-    context: ToolExecutionContext,
-) -> ToolResult | None:
-    payload = _benchmark_root_payload(context)
-    if payload is None:
-        return None
-    if str(context.metadata.get("agent_name") or "").strip() != "team_planner":
-        return None
-
-    structure_done = bool(context.metadata.get(_BENCHMARK_ROOT_PREANCHOR_STRUCTURE_KEY))
-    scope_anchor_done = bool(context.metadata.get("_benchmark_root_scope_anchor_done"))
-
-    if tool_name == "ci_status" and not structure_done:
-        return ToolResult(
-            output=(
-                "Fresh benchmark-root planners must begin with one narrow "
-                "`ci_workspace_structure(...)` pass on a likely production "
-                "directory or package before calling `ci_status` or broader CI queries."
-            ),
-            is_error=True,
-        )
-
-    if tool_name in {"ci_query_symbols", "ci_query_references"}:
-        if not structure_done:
-            return ToolResult(
-                output=(
-                    "Fresh benchmark-root planners must first call "
-                    "`ci_workspace_structure(...)` on a likely production "
-                    "directory or package."
-                ),
-                is_error=True,
-            )
-        if not scope_anchor_done:
-            return ToolResult(
-                output=(
-                    "Fresh benchmark-root planners must call "
-                    "`ci_scoped_status(scope_paths=[...])` on one exact existing "
-                    "production path after `ci_workspace_structure(...)` and before "
-                    "symbol or reference queries."
-                ),
-                is_error=True,
-            )
-
-    return None
-
-
-def _validate_benchmark_root_preanchor_structure(
-    *,
-    path: str,
-    max_depth: int,
-    context: ToolExecutionContext,
-) -> ToolResult | None:
-    payload = _benchmark_root_payload(context)
-    if payload is None:
-        return None
-    if str(context.metadata.get("agent_name") or "").strip() != "team_planner":
-        return None
-    if context.metadata.get("_benchmark_root_scope_anchor_done"):
-        if not context.metadata.get(_BENCHMARK_ROOT_FIRST_SCOUT_WAVE_STARTED_KEY):
-            return ToolResult(
-                output=(
-                    "Fresh benchmark-root planners must launch the first scout wave "
-                    "after the first `ci_scoped_status(...)` anchor. Reuse the anchored "
-                    "scope, use code intelligence, or launch scouts now instead of "
-                    "opening another `ci_workspace_structure(...)` pass."
-                ),
-                is_error=True,
-            )
-        return None
-    if not _benchmark_root_exploration_reference_loaded(context):
-        return ToolResult(
-            output=(
-                "Fresh benchmark-root planners must load "
-                "`team-planner-playbook/exploration-script` before the first non-reference "
-                "planning tool call. Call "
-                "`load_skill_reference(skill_name=\"team-planner-playbook\", reference_name=\"exploration-script\")` "
-                "first."
-            ),
-            is_error=True,
-        )
-    if context.metadata.get(_BENCHMARK_ROOT_PREANCHOR_STRUCTURE_CLAIM_KEY):
-        return ToolResult(
-            output=(
-                "Fresh benchmark-root planners get one narrow "
-                "`ci_workspace_structure(...)` opener before the first "
-                "`ci_scoped_status(...)` anchor. Reuse that production listing and anchor "
-                "one exact path now instead of opening a sibling structure pass."
-            ),
-            is_error=True,
-        )
-
-    cleaned = str(path or "").strip().replace("\\", "/").rstrip("/")
-    if not cleaned:
-        return ToolResult(
-            output=(
-                "Fresh benchmark-root planners must open with a narrow "
-                "`ci_workspace_structure(path=...)` pass on a likely production "
-                "directory or package, not the workspace root."
-            ),
-            is_error=True,
-        )
-
-    benchmark_tests = _benchmark_test_files(payload)
-    if cleaned in benchmark_tests or _has_tests_segment(cleaned):
-        return ToolResult(
-            output=(
-                "Fresh benchmark-root planners must anchor on a likely production "
-                "directory or package, not a benchmark test path."
-            ),
-            is_error=True,
-        )
-
-    if max_depth > 3:
-        return ToolResult(
-            output=(
-                "Fresh benchmark-root planners must keep the first "
-                "`ci_workspace_structure(...)` pass narrow. Use `max_depth <= 3` "
-                "for the initial anchor step."
-            ),
-            is_error=True,
-        )
-
-    return None
-
-
-def _validate_benchmark_root_scope_anchor(
-    *,
-    requested: list[str],
-    context: ToolExecutionContext,
-) -> ToolResult | None:
-    payload = _benchmark_root_payload(context)
-    if payload is None:
-        return None
-    if str(context.metadata.get("agent_name") or "").strip() != "team_planner":
-        return None
-    if context.metadata.get("_benchmark_root_scope_anchor_done"):
-        if not context.metadata.get(_BENCHMARK_ROOT_FIRST_SCOUT_WAVE_STARTED_KEY):
-            return ToolResult(
-                output=(
-                    "Fresh benchmark-root planners get one exact "
-                    "`ci_scoped_status(scope_paths=[...])` anchor before the first "
-                    "scout wave. Reuse the anchored production path or launch scouts "
-                    "now instead of opening another scope packet."
-                ),
-                is_error=True,
-            )
-        return None
-    if not _benchmark_root_exploration_reference_loaded(context):
-        return ToolResult(
-            output=(
-                "Fresh benchmark-root planners must load "
-                "`team-planner-playbook/exploration-script` before the first "
-                "`ci_scoped_status(...)` anchor."
-            ),
-            is_error=True,
-        )
-    if not context.metadata.get(_BENCHMARK_ROOT_PREANCHOR_STRUCTURE_KEY):
-        if context.metadata.get(_BENCHMARK_ROOT_PREANCHOR_STRUCTURE_CLAIM_KEY):
-            return ToolResult(
-                output=(
-                    "Fresh benchmark-root planners must wait for the first narrow "
-                    "`ci_workspace_structure(...)` result, then anchor one exact existing "
-                    "production path from that listing."
-                ),
-                is_error=True,
-            )
-        return ToolResult(
-            output=(
-                "Fresh benchmark-root planners must begin with one narrow "
-                "`ci_workspace_structure(...)` pass on a likely production directory or "
-                "package before the first `ci_scoped_status(...)` anchor."
-            ),
-            is_error=True,
-        )
-    if context.metadata.get(_BENCHMARK_ROOT_SCOPE_ANCHOR_CLAIM_KEY):
-        return ToolResult(
-            output=(
-                "Fresh benchmark-root planners get one exact "
-                "`ci_scoped_status(scope_paths=[...])` anchor before the first scout wave. "
-                "Reuse the anchored production path or launch scouts now instead of opening a "
-                "sibling anchor."
-            ),
-            is_error=True,
-        )
-    if len(requested) != 1:
-        return ToolResult(
-            output=(
-                "Fresh benchmark-root planners must anchor exactly one existing production "
-                "path in the first `ci_scoped_status(scope_paths=[...])` packet."
-            ),
-            is_error=True,
-        )
-    cleaned = requested[0]
-    if cleaned in _benchmark_test_files(payload) or _has_tests_segment(cleaned):
-        return ToolResult(
-            output=(
-                "Fresh benchmark-root planners must use one exact production path for the "
-                "first `ci_scoped_status(...)` anchor, not a benchmark test path."
-            ),
-            is_error=True,
-        )
-    return None
-
-
-def _benchmark_test_files(payload: dict[str, Any]) -> set[str]:
-    refs: set[str] = set()
-    for key in ("fail_to_pass", "pass_to_pass"):
-        raw = payload.get(key) or []
-        if not isinstance(raw, list):
-            continue
-        for item in raw:
-            if not isinstance(item, str):
-                continue
-            value = item.strip()
-            if not value:
-                continue
-            refs.add(value.split("::", 1)[0].strip())
-    return refs
-
-
-def _benchmark_root_missing_scope_paths(
-    *,
-    context: ToolExecutionContext,
-    requested: list[str],
-    svc: Any,
-) -> list[str]:
-    payload = _benchmark_root_payload(context)
-    if payload is None or not requested:
-        return []
-    symbol_index = getattr(svc, "symbol_index", None)
-    raw_symbols = getattr(symbol_index, "_symbols", None)
-    if not isinstance(raw_symbols, dict) or not raw_symbols:
-        return []
-    indexed_paths = {
-        str(path).strip().replace("/testbed/", "", 1).lstrip("/")
-        for path in raw_symbols.keys()
-        if str(path).strip()
-    }
-    if not indexed_paths:
-        return []
-
-    missing: list[str] = []
-    for candidate in requested:
-        normalized = str(candidate).strip().lstrip("/")
-        if not normalized:
-            continue
-        prefix = normalized.rstrip("/") + "/"
-        if normalized in indexed_paths or any(path.startswith(prefix) for path in indexed_paths):
-            continue
-        missing.append(candidate)
-    return missing
-
-
-async def _benchmark_root_missing_scope_paths_remote(
-    *,
-    context: ToolExecutionContext,
-    requested: list[str],
-) -> list[str]:
-    payload = _benchmark_root_payload(context)
-    if payload is None or not requested:
-        return []
-    sandbox = get_daytona_sandbox(context)
-    if sandbox is None:
-        return []
-    cwd = get_daytona_cwd(context)
-    if not cwd:
-        cwd = str(context.metadata.get("ci_workspace_root") or "").strip()
-    if not cwd:
-        team_run_id = str(context.metadata.get("team_run_id") or "").strip()
-        if team_run_id:
-            try:
-                from team.runtime.registry import get as get_team_run
-
-                team_run = get_team_run(team_run_id)
-            except Exception:
-                team_run = None
-            cwd = str(getattr(getattr(team_run, "project_context", None), "repo_root", "") or "").strip()
-    if not cwd:
-        cwd = str(getattr(sandbox, "project_dir", "") or "").strip()
-    if not cwd:
-        try:
-            from sandbox.workspace import discover_workspace_async
-
-            cwd = str(await discover_workspace_async(sandbox) or "").strip()
-        except Exception:
-            logger.debug("Remote workspace discovery failed for benchmark-root scope check", exc_info=True)
-    if cwd:
-        context.metadata["daytona_cwd"] = cwd
-    if not cwd:
-        try:
-            response = await sandbox.process.exec("pwd", timeout=10)
-        except Exception:
-            logger.debug("Remote cwd resolution failed for benchmark-root scope check", exc_info=True)
-            return []
-        cwd = (
-            getattr(response, "result", "")
-            or getattr(response, "stdout", "")
-            or ""
-        ).strip()
-        if cwd:
-            context.metadata["daytona_cwd"] = cwd
-
-    missing: list[str] = []
-    for candidate in requested:
-        target = resolve_daytona_path(candidate, context)
-        command = (
-            "python -c "
-            + shlex.quote("import os,sys; print('1' if os.path.exists(sys.argv[1]) else '0')")
-            + f" {shlex.quote(target)}"
-        )
-        try:
-            response = await sandbox.process.exec(command, timeout=10)
-        except Exception:
-            logger.debug("Remote scope existence check failed for %s", candidate, exc_info=True)
-            return []
-        output = (
-            getattr(response, "result", "")
-            or getattr(response, "stdout", "")
-            or ""
-        ).strip()
-        if output != "1":
-            missing.append(candidate)
-    return missing
-
-
-def _reject_test_only_symbol_hits(
-    *,
-    context: ToolExecutionContext,
-    matches: list[dict[str, Any]],
-) -> ToolResult | None:
-    payload = _benchmark_root_payload(context)
-    if payload is None or not matches:
-        return None
-    benchmark_files = _benchmark_test_files(payload)
-    if not benchmark_files:
-        return None
-    normalized = []
-    for match in matches:
-        file_path = str(match.get("file") or "").strip()
-        if not file_path:
-            return None
-        candidate = file_path.replace("/testbed/", "", 1).lstrip("/")
-        normalized.append(candidate)
-    if normalized and all(path in benchmark_files for path in normalized):
-        return ToolResult(
-            output=(
-                "ci_query_symbols: matches landed only inside already-named benchmark test files. "
-                "Those hits are symptom evidence, not production ownership. Re-anchor on the nearest "
-                "exact existing production path or leave the slice behind a residual child planner."
-            ),
-            is_error=True,
-        )
-    return None
 
 
 def _extract_match_name(snippet: str, *, query: str, kind: str) -> str:
@@ -1115,15 +621,6 @@ print(json.dumps(matches))
 @tool(name="ci_status", description="Check code intelligence readiness: cache, index, LSP, and edit activity.", read_only=True)
 async def ci_status(*, context: ToolExecutionContext) -> ToolResult:
     """Check code intelligence service readiness."""
-    scout_whitelist_err = _reject_scout_non_whitelist(tool_name="ci_status", context=context)
-    if scout_whitelist_err is not None:
-        return scout_whitelist_err
-    benchmark_anchor_err = _require_benchmark_root_scope_anchor(
-        tool_name="ci_status",
-        context=context,
-    )
-    if benchmark_anchor_err is not None:
-        return benchmark_anchor_err
     svc, err = _svc_or_error(context)
     if err:
         return err
@@ -1137,9 +634,6 @@ async def _ci_scope_status_impl(
     scope_paths: list[str] | None,
     context: ToolExecutionContext,
 ) -> ToolResult:
-    scout_whitelist_err = _reject_scout_non_whitelist(tool_name=tool_name, context=context)
-    if scout_whitelist_err is not None:
-        return scout_whitelist_err
     svc, err = _svc_or_error(context)
     if err:
         return err
@@ -1148,32 +642,15 @@ async def _ci_scope_status_impl(
         requested = normalize_scope_paths(context.metadata.get("default_scope_paths") or [])
     if not requested:
         requested = scope_paths_for_write(context)
-    benchmark_anchor_err = _validate_benchmark_root_scope_anchor(
-        requested=requested,
-        context=context,
-    )
-    if benchmark_anchor_err is not None:
-        return benchmark_anchor_err
-    benchmark_payload = _benchmark_root_payload(context)
-    metadata = None
-    if benchmark_payload is not None and not context.metadata.get("_benchmark_root_scope_anchor_done"):
-        context.metadata[_BENCHMARK_ROOT_SCOPE_ANCHOR_CLAIM_KEY] = True
-        metadata = {_BENCHMARK_ROOT_SCOPE_ANCHOR_CLAIM_KEY: True}
     packet = build_live_scope_packet(
         context,
         scope_paths=requested,
     )
-    if benchmark_payload is not None:
-        context.metadata["_benchmark_root_scope_anchor_done"] = True
-        if metadata is None:
-            metadata = {}
-        metadata["_benchmark_root_scope_anchor_done"] = True
-        metadata[_BENCHMARK_ROOT_SCOPE_ANCHOR_CLAIM_KEY] = True
     refresh_scope_baseline(context, packet=packet)
-    if metadata is None:
-        metadata = {}
-    metadata["scope_packet"] = packet
-    metadata["coherence_token"] = str(packet.get("coherence_token") or "")
+    metadata = {
+        "scope_packet": packet,
+        "coherence_token": str(packet.get("coherence_token") or ""),
+    }
     return ToolResult(
         output=json.dumps(packet, indent=2, default=str),
         metadata=metadata,
@@ -1201,26 +678,6 @@ async def ci_scope_status(
     )
 
 
-@tool(
-    name="ci_scoped_status",
-    description=(
-        "Return a live scope packet with coherence token, recent changes, "
-        "reservations, freshness grade, and scout fanout admission for one or more paths."
-    ),
-    read_only=True,
-)
-async def ci_scoped_status(
-    scope_paths: list[str] | None = None,
-    *,
-    context: ToolExecutionContext,
-) -> ToolResult:
-    """Compatibility alias for ci_scope_status."""
-    return await _ci_scope_status_impl(
-        tool_name="ci_scoped_status",
-        scope_paths=scope_paths,
-        context=context,
-    )
-
 
 # -- Workspace Structure ------------------------------------------------------
 
@@ -1240,24 +697,9 @@ async def ci_workspace_structure(
     Returns:
         output (str): File listing
     """
-    preanchor_structure = False
-    preanchor_err = _validate_benchmark_root_preanchor_structure(
-        path=path,
-        max_depth=max_depth,
-        context=context,
-    )
-    if preanchor_err is not None:
-        return preanchor_err
-    if _benchmark_root_payload(context) is not None and not context.metadata.get("_benchmark_root_scope_anchor_done"):
-        preanchor_structure = True
-        context.metadata[_BENCHMARK_ROOT_PREANCHOR_STRUCTURE_CLAIM_KEY] = True
     svc, err = _svc_or_error(context)
     if err:
         return err
-    scout_scope_err = _scout_scope_violation(path=path, context=context)
-    if scout_scope_err is not None:
-        return scout_scope_err
-
     si = svc.symbol_index
     if si is None:
         return ToolResult(output="Symbol index not available")
@@ -1279,16 +721,8 @@ async def ci_workspace_structure(
     if len(paths) == 500:
         output += "\n... (truncated at 500 files)"
 
-    metadata = None
-    if preanchor_structure:
-        context.metadata[_BENCHMARK_ROOT_PREANCHOR_STRUCTURE_KEY] = True
-        metadata = {
-            _BENCHMARK_ROOT_PREANCHOR_STRUCTURE_KEY: True,
-            _BENCHMARK_ROOT_PREANCHOR_STRUCTURE_CLAIM_KEY: True,
-        }
-
     if output:
-        return ToolResult(output=output, metadata=metadata)
+        return ToolResult(output=output)
 
     remote_listing = await _remote_workspace_structure(
         context,
@@ -1296,9 +730,9 @@ async def ci_workspace_structure(
         max_depth=max_depth,
     )
     if remote_listing:
-        return ToolResult(output=remote_listing, metadata=metadata)
+        return ToolResult(output=remote_listing)
 
-    return ToolResult(output="No files indexed", metadata=metadata)
+    return ToolResult(output="No files indexed")
 
 
 # -- Symbol Query -------------------------------------------------------------
@@ -1319,15 +753,6 @@ async def ci_query_symbols(
     Returns:
         symbols (list): Matching symbol entries
     """
-    scout_whitelist_err = _reject_scout_non_whitelist(tool_name="ci_query_symbols", context=context)
-    if scout_whitelist_err is not None:
-        return scout_whitelist_err
-    benchmark_anchor_err = _require_benchmark_root_scope_anchor(
-        tool_name="ci_query_symbols",
-        context=context,
-    )
-    if benchmark_anchor_err is not None:
-        return benchmark_anchor_err
     svc, err = _svc_or_error(context)
     if err:
         return err
@@ -1387,9 +812,6 @@ async def ci_query_symbols(
                 if str(match.get("kind") or "") != "text_match"
             ]
         if fallback_matches:
-            test_only_err = _reject_test_only_symbol_hits(context=context, matches=fallback_matches)
-            if test_only_err is not None:
-                return test_only_err
             return ToolResult(output=json.dumps(fallback_matches, indent=2))
         return ToolResult(output=f"No symbols matching '{query}'")
 
@@ -1403,9 +825,6 @@ async def ci_query_symbols(
             "signature": s.signature,
         })
 
-    test_only_err = _reject_test_only_symbol_hits(context=context, matches=symbols)
-    if test_only_err is not None:
-        return test_only_err
     return ToolResult(output=json.dumps(symbols, indent=2))
 
 
@@ -1431,9 +850,6 @@ async def ci_query_references(
     Returns:
         refs (list): Reference locations
     """
-    scout_whitelist_err = _reject_scout_non_whitelist(tool_name="ci_query_references", context=context)
-    if scout_whitelist_err is not None:
-        return scout_whitelist_err
     svc, err = _svc_or_error(context)
     if err:
         return err
@@ -1525,9 +941,6 @@ async def ci_edit_hotspots(
     Returns:
         items (list): Hotspot entries with file and edit_count
     """
-    scout_whitelist_err = _reject_scout_non_whitelist(tool_name="ci_edit_hotspots", context=context)
-    if scout_whitelist_err is not None:
-        return scout_whitelist_err
     svc, err = _svc_or_error(context)
     if err:
         return err
@@ -1560,18 +973,21 @@ async def ci_recent_changes(
     Returns:
         files (list): Recently changed file paths
     """
-    scout_whitelist_err = _reject_scout_non_whitelist(tool_name="ci_recent_changes", context=context)
-    if scout_whitelist_err is not None:
-        return scout_whitelist_err
     svc, err = _svc_or_error(context)
     if err:
         return err
 
-    ledger = svc.ledger
-    if ledger is None:
-        return ToolResult(output="Ledger not available")
+    arbiter = getattr(svc, "arbiter", None)
+    if arbiter is None:
+        return ToolResult(output="Arbiter not available")
 
-    files = ledger.recent_files(seconds=seconds)
+    edits = arbiter.recent_edits(seconds=seconds)
+    seen: set[str] = set()
+    files: list[str] = []
+    for e in edits:
+        if e.file_path not in seen:
+            seen.add(e.file_path)
+            files.append(e.file_path)
     if not files:
         return ToolResult(output=f"No files changed in the last {seconds}s")
 

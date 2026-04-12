@@ -21,7 +21,7 @@ from tools.daytona_toolkit.tools import (
 )
 from tools.daytona_toolkit.ci_integration import (
     prime_cache_after_write,
-    record_edit_in_ledger,
+    record_edit_in_arbiter,
 )
 from tools.daytona_toolkit.codeact_policy import resolve_policy
 from tools.core.decorator import tool
@@ -209,7 +209,7 @@ async def daytona_codeact(
         try:
             await sandbox.fs.upload_file(content.encode("utf-8"), path)
             prime_cache_after_write(context, path, content)
-            record_edit_in_ledger(context, path, edit_type="codeact")
+            record_edit_in_arbiter(context, path, edit_type="codeact")
             committed += 1
         except Exception as exc:
             errors.append(f"{path}: {exc}")

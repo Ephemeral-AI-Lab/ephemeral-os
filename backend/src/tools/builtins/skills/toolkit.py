@@ -62,42 +62,6 @@ def make_skills_toolkit(
                 "references": list(skill.references.keys()),
             }
 
-    def _is_benchmark_root_planner(context: ToolExecutionContext) -> bool:
-        if str(context.metadata.get("agent_name") or "").strip() != "team_planner":
-            return False
-        team_run_id = str(context.metadata.get("team_run_id") or "").strip()
-        work_item_id = str(context.metadata.get("work_item_id") or "").strip()
-        if not team_run_id or not work_item_id:
-            return False
-        try:
-            from team.runtime.registry import get as get_team_run
-        except Exception:
-            return False
-        try:
-            team_run = get_team_run(team_run_id)
-        except Exception:
-            return False
-        if team_run is None or work_item_id != str(
-            getattr(team_run, "root_work_item_id", "") or ""
-        ):
-            return False
-        graph = getattr(getattr(team_run, "dispatcher", None), "graph", None)
-        if not isinstance(graph, dict):
-            return False
-        root_item = graph.get(work_item_id)
-        payload = getattr(root_item, "payload", None)
-        if not isinstance(payload, dict):
-            return False
-        return bool(payload.get("fail_to_pass") or payload.get("pass_to_pass"))
-
-    def _has_scout_wave(context: ToolExecutionContext) -> bool:
-        raw = context.metadata.get("_scout_target_paths_this_turn", [])
-        if isinstance(raw, str):
-            return bool(raw.strip())
-        if isinstance(raw, list):
-            return any(isinstance(item, str) and item.strip() for item in raw)
-        return False
-
     def _loaded_skill_references(
         context: ToolExecutionContext,
         *,
@@ -131,134 +95,6 @@ def make_skills_toolkit(
             refs = refs[-SKILL_REFERENCE_TRACE_LIMIT:]
         loaded[skill_name] = refs
         context.metadata[_LOADED_SKILL_REFERENCES_KEY] = loaded
-
-    def _team_planner_reference_order_error(
-        *,
-        reference_name: str,
-        context: ToolExecutionContext,
-    ) -> ToolResult | None:
-        if not _is_benchmark_root_planner(context):
-            return None
-
-        loaded_refs = _loaded_skill_references(context, skill_name="team-planner-playbook")
-        loaded_ref_set = set(loaded_refs)
-        last_ref = loaded_refs[-1] if loaded_refs else ""
-        post_scout_refs = {
-            "task-planning-decomposition",
-            "dependency-graph-examples",
-            "root-plan-self-check",
-            "plan-json-contract",
-        }
-
-        if "plan-json-contract" in loaded_ref_set and reference_name != "plan-json-contract":
-            return ToolResult(
-                output=(
-                    "Fresh benchmark-root planners must stop loading further "
-                    "`team-planner-playbook` references after `plan-json-contract`. "
-                    "Emit the final plan JSON next instead of reopening reference loading."
-                ),
-                is_error=True,
-            )
-
-        if reference_name != "exploration-script" and "exploration-script" not in loaded_ref_set:
-            return ToolResult(
-                output=(
-                    "Fresh benchmark-root planners must start the reference sequence with "
-                    "`team-planner-playbook/exploration-script`. Load that reference first, "
-                    "then continue into anchor and scout preparation."
-                ),
-                is_error=True,
-            )
-
-        if reference_name == "scout-launch-contract" and _has_scout_wave(context):
-            return ToolResult(
-                output=(
-                    "Fresh benchmark-root planners must load "
-                    "`team-planner-playbook/scout-launch-contract` before the first scout wave, "
-                    "not after scouts already launched."
-                ),
-                is_error=True,
-            )
-
-        if reference_name in post_scout_refs and "scout-launch-contract" not in loaded_ref_set:
-            return ToolResult(
-                output=(
-                    "Fresh benchmark-root planners must load "
-                    "`team-planner-playbook/scout-launch-contract` before post-scout planning "
-                    "references. Load it before decomposition or plan-contract guidance."
-                ),
-                is_error=True,
-            )
-
-        if reference_name in post_scout_refs and not _has_scout_wave(context):
-            return ToolResult(
-                output=(
-                    "Fresh benchmark-root planners must not load final-plan references "
-                    f"like `{reference_name}` before the first scout wave. "
-                    "Launch at least one bounded scout now with "
-                    '`run_subagent(agent_name="scout", input={"target_paths": [...]}, task_note="...")` '
-                    "on the next unresolved production-owner slice, wait for the scout brief, "
-                    "then load the final-plan reference when you are ready to draft the DAG."
-                ),
-                is_error=True,
-            )
-
-        if (
-            reference_name == "dependency-graph-examples"
-            and last_ref != "task-planning-decomposition"
-        ):
-            return ToolResult(
-                output=(
-                    "Fresh benchmark-root planners must load "
-                    "`team-planner-playbook/dependency-graph-examples` immediately after "
-                    "`task-planning-decomposition` when that extra decomposition pass is needed."
-                ),
-                is_error=True,
-            )
-
-        if reference_name == "root-plan-self-check" and last_ref not in {
-            "task-planning-decomposition",
-            "dependency-graph-examples",
-        }:
-            return ToolResult(
-                output=(
-                    "Fresh benchmark-root planners must load "
-                    "`team-planner-playbook/root-plan-self-check` only after "
-                    "`task-planning-decomposition` and any immediately-following decomposition "
-                    "examples, and still before `plan-json-contract`."
-                ),
-                is_error=True,
-            )
-
-        if (
-            reference_name == "plan-json-contract"
-            and "task-planning-decomposition" not in loaded_ref_set
-        ):
-            return ToolResult(
-                output=(
-                    "Fresh benchmark-root planners must load "
-                    "`team-planner-playbook/task-planning-decomposition` before "
-                    "`plan-json-contract`. Decomposition guidance must come first."
-                ),
-                is_error=True,
-            )
-
-        if reference_name == "plan-json-contract" and last_ref not in {
-            "task-planning-decomposition",
-            "dependency-graph-examples",
-            "root-plan-self-check",
-            "plan-json-contract",
-        }:
-            return ToolResult(
-                output=(
-                    "Fresh benchmark-root planners must load "
-                    "`team-planner-playbook/plan-json-contract` only at the end of the "
-                    "reference sequence, immediately before final plan JSON."
-                ),
-                is_error=True,
-            )
-
-        return None
 
     @tool(
         name="load_skill",
@@ -352,14 +188,6 @@ def make_skills_toolkit(
                 ),
                 is_error=True,
             )
-
-        if skill_name == "team-planner-playbook":
-            order_err = _team_planner_reference_order_error(
-                reference_name=reference_name,
-                context=context,
-            )
-            if order_err is not None:
-                return order_err
 
         _record_loaded_skill_reference(
             context,

@@ -96,19 +96,15 @@ def _register_builtins() -> None:
     register_toolkit_class("code_intelligence", CIToolkit)
     register_toolkit_class("subagent", SubagentToolkit)
 
-    # Plan A toolkits — Task Center, submission, search, exploration, history
+    # Plan A toolkits — context (notes + scope awareness), memory, submission
     from tools.submission import SubmissionToolkit
-    from tools.task_center import TaskCenterReadToolkit, TaskCenterWriteToolkit
-    from tools.search import SearchToolkit
-    from tools.exploration_memory import ExplorationMemoryToolkit
-    from tools.edit_history import EditHistoryToolkit
+    from tools.context import ContextReadToolkit, ContextWriteToolkit
+    from tools.memory import MemoryToolkit
 
     register_toolkit_class("submission", SubmissionToolkit)
-    register_toolkit_class("task_center_read", TaskCenterReadToolkit)
-    register_toolkit_class("task_center_write", TaskCenterWriteToolkit)
-    register_toolkit_class("search", SearchToolkit)
-    register_toolkit_class("exploration_memory", ExplorationMemoryToolkit)
-    register_toolkit_class("edit_history", EditHistoryToolkit)
+    register_toolkit_class("context_read", ContextReadToolkit)
+    register_toolkit_class("context_write", ContextWriteToolkit)
+    register_toolkit_class("memory", MemoryToolkit)
 
 
 _register_builtins()

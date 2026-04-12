@@ -250,9 +250,8 @@ async def test_write_file_refreshes_stale_scope_coherence():
     svc = MagicMock()
     svc.prepare_write.return_value = MagicMock()
     svc.commit_prepared_write.return_value = MagicMock(success=True, message="ok")
-    svc.ledger.generation = 1
-    svc.ledger.recent_entries.return_value = []
     svc.arbiter.generation = 1
+    svc.arbiter.recent_edits.return_value = []
     svc.arbiter.active_reservations.return_value = []
     svc.arbiter.hotspots.return_value = []
     svc.symbol_index.generation = 1

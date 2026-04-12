@@ -49,11 +49,11 @@ class QueryEditHistoryTool(BaseTool):
             }))
 
         # Fallback: check in-memory Ledger for same-run history
-        ledger = context.metadata.get("ledger")
-        if ledger is not None:
+        arbiter = context.metadata.get("arbiter")
+        if arbiter is not None:
             hotspots_map: dict[str, set[str]] = {}
             edit_counts: dict[str, int] = {}
-            for entry in ledger.changes_since(0):
+            for entry in arbiter.changes_since(0):
                 if any(entry.file_path.startswith(p.rstrip("/")) for p in arguments.paths):
                     hotspots_map.setdefault(entry.file_path, set()).add(entry.agent_id)
                     edit_counts[entry.file_path] = edit_counts.get(entry.file_path, 0) + 1

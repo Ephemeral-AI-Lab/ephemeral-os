@@ -2,7 +2,9 @@
 
 Content-addressed: cache key = hash(scope_paths + file content hashes).
 If any file in scope changed since last exploration, cache misses automatically.
-Replaces Atlas (~400 lines) with ~80 lines.
+
+Persistence: in-memory L1 cache + optional PG backend via ExplorationMemoryStore.
+When PG is available, saves survive process restarts and are visible cross-process.
 """
 
 from __future__ import annotations
@@ -24,22 +26,63 @@ from tools.core.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolRes
 
 
 class ExplorationMemory:
-    """Cross-run note cache. Content-addressed by file hashes. Replaces Atlas."""
+    """Cross-run note cache. Content-addressed by file hashes.
+
+    In-memory dict serves as L1 cache. When a PG store is attached,
+    misses fall through to PG and saves are written to both layers.
+    """
 
     def __init__(self) -> None:
         self._store: dict[str, list[dict[str, Any]]] = {}
+        self._pg: Any = None  # ExplorationMemoryStore | NullExplorationMemoryStore
+
+    def attach_pg(self, pg_store: Any) -> None:
+        """Attach a PG-backed store for durable persistence."""
+        self._pg = pg_store
 
     def check(self, scope_paths: list[str], workspace_root: str = "") -> list[dict[str, Any]] | None:
-        """Return cached notes if files haven't changed. None = re-explore."""
+        """Return cached notes from L1 if files haven't changed. None = miss.
+
+        For PG fallback on L1 miss, use ``check_async`` instead.
+        """
         content_hash = self._hash_scope(scope_paths, workspace_root)
         key = self._cache_key(scope_paths, content_hash)
         return self._store.get(key)
 
+    async def check_async(self, scope_paths: list[str], workspace_root: str = "") -> list[dict[str, Any]] | None:
+        """Check L1 cache, then fall through to PG on miss."""
+        content_hash = self._hash_scope(scope_paths, workspace_root)
+        key = self._cache_key(scope_paths, content_hash)
+        # L1 hit
+        cached = self._store.get(key)
+        if cached is not None:
+            return cached
+        # PG fallback
+        if self._pg is not None and getattr(self._pg, "initialized", False):
+            pg_notes = await self._pg.get(key)
+            if pg_notes is not None:
+                self._store[key] = pg_notes  # warm L1
+                return pg_notes
+        return None
+
     def save(self, scope_paths: list[str], notes: list[dict[str, Any]], workspace_root: str = "") -> None:
-        """Cache notes after explorer completes."""
+        """Cache notes in L1. For PG write-through, use ``save_async``."""
         content_hash = self._hash_scope(scope_paths, workspace_root)
         key = self._cache_key(scope_paths, content_hash)
         self._store[key] = notes
+
+    async def save_async(self, scope_paths: list[str], notes: list[dict[str, Any]], workspace_root: str = "") -> None:
+        """Cache notes in L1 and write through to PG."""
+        content_hash = self._hash_scope(scope_paths, workspace_root)
+        key = self._cache_key(scope_paths, content_hash)
+        self._store[key] = notes
+        if self._pg is not None and getattr(self._pg, "initialized", False):
+            await self._pg.put(
+                cache_key=key,
+                scope_paths=sorted(scope_paths),
+                content_hash=content_hash,
+                notes=notes,
+            )
 
     def _cache_key(self, scope_paths: list[str], content_hash: str) -> str:
         scope_str = "|".join(sorted(scope_paths))
@@ -91,6 +134,11 @@ class ExplorationMemory:
 _exploration_memory = ExplorationMemory()
 
 
+def get_exploration_memory() -> ExplorationMemory:
+    """Module accessor for the singleton."""
+    return _exploration_memory
+
+
 # ---------------------------------------------------------------------------
 # Tool
 # ---------------------------------------------------------------------------
@@ -110,7 +158,7 @@ class CheckExplorationMemoryTool(BaseTool):
 
     async def execute(self, arguments: CheckExplorationMemoryInput, context: ToolExecutionContext) -> ToolResult:
         workspace_root = context.metadata.get("daytona_cwd", "") or context.metadata.get("ci_workspace_root", "")
-        cached = _exploration_memory.check(arguments.paths, workspace_root)
+        cached = await _exploration_memory.check_async(arguments.paths, workspace_root)
         if cached is not None:
             # Inject cached notes into Task Center
             tc = context.metadata.get("task_center")
@@ -138,7 +186,7 @@ class SaveExplorationTool(BaseTool):
         # Collect notes for these scope paths from Task Center
         notes = tc.read(scope_paths=arguments.paths)
         note_dicts = [asdict(n) for n in notes]
-        _exploration_memory.save(arguments.paths, note_dicts, workspace_root)
+        await _exploration_memory.save_async(arguments.paths, note_dicts, workspace_root)
         return ToolResult(output=json.dumps({
             "status": "saved",
             "note_count": len(note_dicts),

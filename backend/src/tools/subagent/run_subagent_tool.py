@@ -40,12 +40,11 @@ from message.messages import (
 from token_tracker.runtime import persist_run_usage
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.decorator import tool
-from team._path_utils import scope_paths_from_payload, scopes_overlap
+from team._path_utils import scope_paths_from_payload
 from tools.daytona_toolkit.scope_builder import (
     build_scope_packet_for_context,
     render_scope_packet,
 )
-from tools.subagent.policy import SCOUT_ONLY_CALLERS
 
 logger = logging.getLogger(__name__)
 
@@ -58,15 +57,6 @@ PEEK_MESSAGE_MAX = 10
 _PEEK_BLOCK_CHAR_CAP = 200
 # Total character cap for the peek view.
 _PEEK_TOTAL_CHAR_CAP = 2048
-_SCOUT_REQUIRED_ARTIFACT_KEYS = (
-    "target_paths",
-    "files",
-    "entry_points",
-    "open_questions",
-    "scope_coverage",
-    "gaps",
-    "suggested_subdivisions",
-)
 
 
 @dataclass
@@ -106,244 +96,9 @@ def _normalize_target_paths(value: Any) -> list[str]:
     return out
 
 
-def _normalize_string_list(value: Any) -> list[str]:
-    if not isinstance(value, list):
-        return []
-    out: list[str] = []
-    for item in value:
-        if isinstance(item, str):
-            stripped = item.strip()
-            if stripped:
-                out.append(stripped)
-    return out
 
 
-def _validate_team_scout_artifact(artifact: Any) -> str | None:
-    if not isinstance(artifact, dict):
-        return (
-            "run_subagent: scout artifact invalid: missing structured artifact payload. "
-            "Team-mode scouts must submit summary+artifact that matches the scout playbook contract."
-        )
 
-    issues: list[str] = []
-    missing = [key for key in _SCOUT_REQUIRED_ARTIFACT_KEYS if key not in artifact]
-    if missing:
-        issues.append(f"missing required fields: {', '.join(missing)}")
-
-    if not _normalize_target_paths(artifact.get("target_paths")):
-        issues.append("target_paths must be a non-empty string list")
-    for key in ("files", "entry_points", "open_questions", "suggested_subdivisions"):
-        if key in artifact and not isinstance(artifact.get(key), list):
-            issues.append(f"{key} must be a list")
-    if "gaps" in artifact and not isinstance(artifact.get("gaps"), str):
-        issues.append("gaps must be a string")
-
-    coverage = artifact.get("scope_coverage")
-    if coverage is None:
-        pass
-    elif not isinstance(coverage, (int, float)):
-        issues.append("scope_coverage must be numeric")
-    else:
-        coverage_value = float(coverage)
-        if coverage_value < 0.0 or coverage_value > 1.0:
-            issues.append("scope_coverage must be between 0.0 and 1.0")
-        if 0.0 < coverage_value < 1.0 and not _normalize_string_list(
-            artifact.get("suggested_subdivisions")
-        ):
-            issues.append("partial coverage requires non-empty suggested_subdivisions")
-        gaps = artifact.get("gaps")
-        if coverage_value >= 0.9 and isinstance(gaps, str) and gaps.strip():
-            issues.append("high-coverage scout briefs must keep gaps empty")
-
-    if not issues:
-        return None
-    return (
-        "run_subagent: scout artifact invalid: "
-        + "; ".join(issues)
-        + ". Team-mode scouts must satisfy the playbook output contract before planners can reuse the brief."
-    )
-
-
-def _normalize_scout_artifact_contract(
-    artifact: dict[str, Any] | None,
-) -> dict[str, Any] | None:
-    """Fill omitted scout brief fields before runtime validation."""
-    if not isinstance(artifact, dict):
-        return artifact
-    target_paths = artifact.get("target_paths")
-    if not isinstance(target_paths, list):
-        return artifact
-    normalized = dict(artifact)
-    changed = False
-    for key in ("files", "entry_points", "open_questions", "suggested_subdivisions"):
-        if key not in normalized:
-            normalized[key] = []
-            changed = True
-    if "gaps" not in normalized:
-        normalized["gaps"] = ""
-        changed = True
-    if "scope_coverage" not in normalized:
-        subdivisions = normalized.get("suggested_subdivisions")
-        if isinstance(subdivisions, list) and any(
-            isinstance(item, str) and item.strip() for item in subdivisions
-        ):
-            normalized["scope_coverage"] = 0.6
-        else:
-            normalized["scope_coverage"] = 0.9
-        changed = True
-    return normalized if changed else artifact
-
-
-def _validate_team_scout_submission(submitted: Any) -> str | None:
-    from team.models import SubmittedSummary
-
-    if not isinstance(submitted, SubmittedSummary):
-        return (
-            "run_subagent: scout output invalid: expected submit_summary payload with scout artifact. "
-            "Team-mode scouts must end with one summary+artifact brief."
-        )
-    normalized = _normalize_scout_artifact_contract(submitted.artifact)
-    if normalized is not submitted.artifact:
-        submitted.artifact = normalized
-    return _validate_team_scout_artifact(submitted.artifact)
-
-
-def _already_covered_scout_targets(context: ToolExecutionContext, target_paths: list[str]) -> list[str]:
-    metadata = context.metadata
-    current_tool_id = str(getattr(metadata, "tool_id", None) or metadata.get("tool_id") or "").strip()
-    trace_targets = metadata.get("_scout_trace_targets_by_tool_use_id", {})
-    self_targets: list[str] = []
-    if isinstance(trace_targets, dict) and current_tool_id:
-        self_targets = _normalize_target_paths(trace_targets.get(current_tool_id))
-    prior_scouts: list[str] = []
-    if isinstance(trace_targets, dict):
-        for tool_id, raw_paths in trace_targets.items():
-            if current_tool_id and str(tool_id).strip() == current_tool_id:
-                continue
-            prior_scouts.extend(_normalize_target_paths(raw_paths))
-    if not prior_scouts:
-        prior_scouts = [
-            path
-            for path in _normalize_target_paths(metadata.get("_scout_target_paths_this_turn", []))
-            if path not in self_targets
-        ]
-    overlaps: set[str] = set()
-    for target in target_paths:
-        for prior in prior_scouts:
-            if scopes_overlap(target, prior):
-                overlaps.add(prior)
-    return sorted(overlaps)
-
-
-def _scout_fanout_admission_error(
-    context: ToolExecutionContext,
-    target_paths: list[str],
-) -> tuple[dict[str, Any] | None, str | None]:
-    if not context.metadata.get("team_mode_enabled"):
-        return None, None
-    prior_scouts = _normalize_target_paths(context.metadata.get("_scout_target_paths_this_turn", []))
-    if not prior_scouts:
-        return None, None
-    packet = build_scope_packet_for_context(
-        context,
-        scope_paths=target_paths,
-        baseline_packet=None,
-    )
-    return packet if isinstance(packet, dict) else None, None
-
-
-def _benchmark_root_payload(context: ToolExecutionContext) -> dict[str, Any] | None:
-    agent_name = str(context.metadata.get("agent_name") or "").strip()
-    if agent_name != "team_planner":
-        return None
-    team_run_id = str(context.metadata.get("team_run_id") or "").strip()
-    work_item_id = str(context.metadata.get("work_item_id") or "").strip()
-    if not team_run_id or not work_item_id:
-        return None
-    try:
-        from team.runtime.registry import get as get_team_run
-    except Exception:
-        return None
-    try:
-        team_run = get_team_run(team_run_id)
-    except Exception:
-        return None
-    if team_run is None or work_item_id != str(getattr(team_run, "root_work_item_id", "") or ""):
-        return None
-    graph = getattr(getattr(team_run, "dispatcher", None), "graph", None)
-    if not isinstance(graph, dict):
-        return None
-    root_item = graph.get(work_item_id)
-    payload = getattr(root_item, "payload", None)
-    if not isinstance(payload, dict):
-        return None
-    has_benchmark_targets = bool(payload.get("fail_to_pass") or payload.get("pass_to_pass"))
-    return payload if has_benchmark_targets else None
-
-
-def _benchmark_test_files(payload: dict[str, Any]) -> set[str]:
-    refs: set[str] = set()
-    for key in ("fail_to_pass", "pass_to_pass"):
-        raw = payload.get(key) or []
-        if not isinstance(raw, list):
-            continue
-        for item in raw:
-            if not isinstance(item, str):
-                continue
-            value = item.strip()
-            if value:
-                refs.add(value.split("::", 1)[0].strip())
-    return refs
-
-
-def _normalize_benchmark_scope_path(path: str) -> str:
-    cleaned = str(path or "").strip().replace("\\", "/")
-    if cleaned.startswith("./"):
-        cleaned = cleaned[2:]
-    return cleaned.rstrip("/")
-
-
-def _is_benchmark_test_scope(target_path: str, benchmark_tests: set[str]) -> bool:
-    target = _normalize_benchmark_scope_path(target_path)
-    if not target:
-        return False
-    for raw_test in benchmark_tests:
-        test_path = _normalize_benchmark_scope_path(raw_test)
-        if not test_path:
-            continue
-        if target == test_path or target.endswith("/" + test_path):
-            return True
-        if "/" not in test_path:
-            continue
-        parent = test_path.rsplit("/", 1)[0]
-        if target == parent or target.endswith("/" + parent):
-            return True
-    return False
-
-
-def _benchmark_root_scout_policy_error(
-    context: ToolExecutionContext,
-    target_paths: list[str],
-) -> str | None:
-    payload = _benchmark_root_payload(context)
-    if not isinstance(payload, dict):
-        return None
-    if not bool(context.metadata.get("_benchmark_root_scope_anchor_done")):
-        return None
-    benchmark_tests = _benchmark_test_files(payload)
-    if not benchmark_tests:
-        return None
-    offenders = [path for path in target_paths if _is_benchmark_test_scope(path, benchmark_tests)]
-    if not offenders:
-        return None
-    rendered = ", ".join(offenders)
-    return (
-        "run_subagent: fresh benchmark-root scouts must stay on production-owner slices after the "
-        f"scope anchor; benchmark test scopes are failure evidence, not scout targets ({rendered}). "
-        "Re-anchor on an exact existing production directory/package/file and use code intelligence "
-        "to seed the owner slice instead of scouting benchmark tests."
-    )
-    return None
 
 
 def _validate_run_subagent_request(
@@ -370,22 +125,6 @@ def _validate_run_subagent_request(
                 "`input` (dict). For team planners, prefer "
                 "`agent_name=\"scout\"` with `input={\"target_paths\": [...]}`; "
                 "do not retry with `prompt=null`."
-            ),
-            is_error=True,
-        )
-
-    caller_agent = str(context.metadata.get("agent_name") or "").strip()
-    if caller_agent in SCOUT_ONLY_CALLERS and agent_name != "scout":
-        return ToolResult(
-            output=(
-                f"run_subagent: caller '{caller_agent}' may dispatch only 'scout', "
-                f"got '{agent_name}'. Use "
-                "`run_subagent(agent_name=\"scout\", input={\"target_paths\": [...]})` "
-                "for bounded exploration only. If you need runtime execution, "
-                "coding, or validation, emit `developer` / `validator` WorkItems "
-                "in the Plan instead of trying to spawn them here. This is "
-                "terminal evidence for planners: the next action must be a "
-                "bounded scout or a submitted Plan."
             ),
             is_error=True,
         )
@@ -422,55 +161,10 @@ def _validate_run_subagent_request(
 
     subagent_scope_packet: dict[str, Any] | None = None
     subagent_scope_paths: list[str] = []
-    if agent_name == "scout":
-        if prompt is not None:
-            return ToolResult(
-                output=(
-                    "run_subagent: scout requires structured "
-                    "`input={\"target_paths\": [...]}`; prompt-mode scout "
-                    "calls are rejected. If you need to run tests, shell "
-                    "commands, or other execution work, emit `developer` / "
-                    "`validator` WorkItems instead."
-                ),
-                is_error=True,
-            )
-        target_paths = input.get("target_paths") if isinstance(input, dict) else None
+    if agent_name == "scout" and isinstance(input, dict):
+        target_paths = input.get("target_paths")
         valid_paths = _normalize_target_paths(target_paths)
-        if not valid_paths:
-            return ToolResult(
-                output=(
-                    "run_subagent: scout requires non-empty "
-                    "`input={\"target_paths\": [...]}`. Scout is for path-bounded "
-                    "read-only exploration only; do not use it as a proxy for "
-                    "test execution, shell commands, or validation."
-                ),
-                is_error=True,
-            )
-        covered_paths = _already_covered_scout_targets(context, valid_paths)
-        if covered_paths:
-            return ToolResult(
-                output=(
-                    "run_subagent: scout target_paths overlap a scope already covered in this turn "
-                    f"({', '.join(covered_paths)}). Reuse the file reads or prior scout "
-                    "you already have and submit the plan instead of re-exploring the same area."
-                ),
-                is_error=True,
-            )
-        benchmark_policy_err = _benchmark_root_scout_policy_error(context, valid_paths)
-        if benchmark_policy_err is not None:
-            return ToolResult(output=benchmark_policy_err, is_error=True)
         subagent_scope_paths = valid_paths
-        subagent_scope_packet, fanout_err = _scout_fanout_admission_error(context, valid_paths)
-        if fanout_err is not None:
-            return ToolResult(
-                output=fanout_err,
-                is_error=True,
-                metadata={"scope_packet": subagent_scope_packet or {}, "conflict": True},
-            )
-        if isinstance(_benchmark_root_payload(context), dict) and bool(
-            context.metadata.get("_benchmark_root_scope_anchor_done")
-        ):
-            context.metadata["_benchmark_root_first_scout_wave_started"] = True
     elif isinstance(input, dict):
         subagent_scope_paths = scope_paths_from_payload(input)
     else:
@@ -757,16 +451,8 @@ async def run_subagent(
     subagent_scope_packet = validation.subagent_scope_packet
     subagent_scope_paths = validation.subagent_scope_paths
 
-    # Build the subagent's initial user message: shared_briefings preamble
-    # (run-scoped, inherited symmetrically with the DAG executor path) + the
-    # caller-supplied prompt or serialized input. Parent ``wi.briefings`` are
-    # NOT forwarded — only ``shared_briefings`` cross the subagent boundary.
     body = prompt if prompt is not None else json.dumps(input, separators=(",", ":"), default=str)
-    # Local import — avoids dragging team.runtime into tools.subagent at module
-    # load time and keeps the dependency direction tools→team explicit.
-    from team.runtime.context_builder import prepend_shared_briefings_for_subagent
-
-    final_prompt = prepend_shared_briefings_for_subagent(parent_team_run_id, body)
+    final_prompt = body
     if subagent_scope_packet is None and subagent_scope_paths:
         maybe_packet = build_scope_packet_for_context(
             context,
@@ -962,19 +648,6 @@ async def run_subagent(
         return ToolResult(output=f"run_subagent: subagent crashed: {run_error}", is_error=True)
 
     submitted = _extract_submitted_output(agent)
-
-    if agent_name == "scout" and parent_team_run_id:
-        scout_submission_error = _validate_team_scout_submission(submitted)
-        if scout_submission_error is not None:
-            tracker.finish(
-                status="failed",
-                display_messages=agent.display_messages,
-                api_messages_snapshot=api_snapshot,
-                error=scout_submission_error,
-                final_text=final_text,
-                cancellation_reason=cancel_reason,
-            )
-            return ToolResult(output=scout_submission_error, is_error=True)
 
     envelope = _build_subagent_envelope(
         submitted,

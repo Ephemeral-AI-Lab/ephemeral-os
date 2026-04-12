@@ -122,7 +122,7 @@ def enforce_scope_coherence(
     if expected and current and expected != current:
         return packet, (
             "Scope coherence changed since the work item started. "
-            "Refresh live CI state with ci_scoped_status before writing."
+            "Refresh live CI state with ci_scope_status before writing."
         )
     return packet, None
 
@@ -454,24 +454,21 @@ def sync_write_to_ci(
     old_hash: str = "",
     new_hash: str = "",
 ) -> None:
-    """Record a write in the ledger/arbiter and refresh CI caches."""
+    """Record a write in the arbiter and refresh CI caches."""
     svc = get_ci_service(context)
     if svc is not None:
         try:
             arbiter = getattr(svc, "arbiter", None)
             if arbiter is not None:
-                arbiter.record_edit(file_path, agent_id)
+                arbiter.record_edit(
+                    file_path, agent_id,
+                    edit_type=edit_type,
+                    old_hash=old_hash,
+                    new_hash=new_hash,
+                    description=description,
+                )
         except Exception:
             logger.debug("CI arbiter sync failed for %s", file_path, exc_info=True)
-    record_edit_in_ledger(
-        context,
-        file_path,
-        agent_id=agent_id,
-        edit_type=edit_type,
-        old_hash=old_hash,
-        new_hash=new_hash,
-        description=description,
-    )
     prime_cache_after_write(context, file_path, content)
 
 
@@ -489,7 +486,11 @@ def sync_deleted_file(
         try:
             arbiter = getattr(svc, "arbiter", None)
             if arbiter is not None:
-                arbiter.record_edit(file_path, agent_id)
+                arbiter.record_edit(
+                    file_path, agent_id,
+                    edit_type=edit_type,
+                    description=description,
+                )
         except Exception:
             logger.debug("CI arbiter delete sync failed for %s", file_path, exc_info=True)
         try:
@@ -498,13 +499,6 @@ def sync_deleted_file(
             svc.lsp_client.invalidate(file_path)
         except Exception:
             logger.debug("CI delete invalidation failed for %s", file_path, exc_info=True)
-    record_edit_in_ledger(
-        context,
-        file_path,
-        agent_id=agent_id,
-        edit_type=edit_type,
-        description=description,
-    )
 
     refresh_scope_baseline(
         context,
@@ -670,7 +664,7 @@ def release_declared_shell_outputs(context: ToolExecutionContext, prepared_items
         )
 
 
-def record_edit_in_ledger(
+def record_edit_in_arbiter(
     context: ToolExecutionContext,
     file_path: str,
     agent_id: str = "",
@@ -679,12 +673,12 @@ def record_edit_in_ledger(
     new_hash: str = "",
     description: str = "",
 ) -> None:
-    """Record an edit in the CI ledger if available."""
+    """Record an edit in the CI arbiter if available."""
     svc = get_ci_service(context)
     if svc is None:
         return
     try:
-        svc.ledger.record(
+        svc.arbiter.record_edit(
             file_path=file_path,
             agent_id=agent_id,
             edit_type=edit_type,
@@ -693,7 +687,7 @@ def record_edit_in_ledger(
             description=description,
         )
     except Exception:
-        logger.debug("CI record_edit_in_ledger failed for %s", file_path)
+        logger.debug("CI record_edit_in_arbiter failed for %s", file_path)
 
 
 

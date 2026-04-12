@@ -3,7 +3,6 @@
 from tools.core.base import BaseToolkit
 from tools.ci_toolkit.query_tools import (
     ci_status,
-    ci_scoped_status,
     ci_scope_status,
     ci_edit_hotspots,
     ci_recent_changes,
@@ -28,7 +27,6 @@ class CIToolkit(BaseToolkit):
     ) -> None:
         tools = [
             ci_status,
-            ci_scoped_status,
             ci_scope_status,
             ci_workspace_structure,
             ci_query_symbols,
@@ -40,11 +38,10 @@ class CIToolkit(BaseToolkit):
             "Read-only code intelligence for grounding same-run work. "
             "If Atlas or briefings disagree with current CI state, trust CI.\n\n"
             "- `ci_status` — check if the code intelligence service is available.\n"
-            "- `ci_scoped_status` — get a live scope packet with coherence token, active reservations, and recent changes for the paths you are about to edit.\n"
-            "- `ci_scope_status` — compatibility alias for the same live scope packet.\n"
+            "- `ci_scope_status` — get a live scope packet with coherence token, active reservations, and recent changes for the paths you are about to edit.\n"
             "- `ci_workspace_structure` — tree view of the project layout.\n"
             "- `ci_query_symbols` / `ci_query_references` — locate definitions and callers.\n"
-            "- Call-chain rule — after one exact `ci_scoped_status(...)` packet, use "
+            "- Call-chain rule — after one exact `ci_scope_status(...)` packet, use "
             "`ci_query_symbols(...)` or `ci_query_references(...)` before falling back to "
             "custom runtime scripts when localizing a production boundary.\n"
             "- Dead-cycle rule — if the same boundary survives one scoped packet, one owner query, "

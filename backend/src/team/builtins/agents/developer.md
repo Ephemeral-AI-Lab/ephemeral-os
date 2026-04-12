@@ -4,7 +4,7 @@ description: "Team-mode developer: reads, writes, and edits code in the sandbox.
 role: developer
 model: inherit
 tool_call_limit: 100
-toolkits: ["sandbox_operations", "code_intelligence", "task_center_read", "task_center_write", "search", "submission"]
+toolkits: ["sandbox_operations", "code_intelligence", "context_write", "submission"]
 skills: ["team-developer-playbook"]
 ---
 # Task

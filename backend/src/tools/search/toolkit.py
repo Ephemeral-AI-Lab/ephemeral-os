@@ -51,11 +51,11 @@ class ScopeChangedSinceTool(BaseTool):
 
     async def execute(self, arguments: ScopeChangedSinceInput, context: ToolExecutionContext) -> ToolResult:
         since = arguments.since or context.metadata.get("work_item_started_at", 0)
-        ledger = context.metadata.get("ledger")
+        arbiter = context.metadata.get("arbiter")
 
-        if ledger is not None:
-            # Ground truth: query actual file changes from Ledger
-            changes = ledger.changes_since(since)
+        if arbiter is not None:
+            # Ground truth: query actual file changes from Arbiter
+            changes = arbiter.changes_since(since)
             scoped = [
                 e for e in changes
                 if any(e.file_path.startswith(p.rstrip("/")) for p in arguments.paths)
@@ -101,11 +101,11 @@ class ContextChangedSinceTool(BaseTool):
         scope_changes = 0
         new_notes_by_others = 0
 
-        # Check Ledger for file changes in scope by other agents
-        ledger = context.metadata.get("ledger")
+        # Check Arbiter for file changes in scope by other agents
+        arbiter = context.metadata.get("arbiter")
         scope_paths = context.metadata.get("write_scope") or []
-        if ledger is not None and scope_paths:
-            changes = ledger.changes_since(since)
+        if arbiter is not None and scope_paths:
+            changes = arbiter.changes_since(since)
             scope_changes = sum(
                 1 for e in changes
                 if e.agent_id != agent_run_id

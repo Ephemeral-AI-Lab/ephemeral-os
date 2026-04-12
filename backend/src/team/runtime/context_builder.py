@@ -58,9 +58,9 @@ def build_work_item_metadata(team_run: "TeamRun", task: Task) -> ExecutionMetada
 
     # Inject shared resources for tools
     meta["task_center"] = team_run.task_center
-    ledger = getattr(team_run, "ledger", None)
-    if ledger is not None:
-        meta["ledger"] = ledger
+    arbiter = getattr(team_run, "arbiter", None)
+    if arbiter is not None:
+        meta["arbiter"] = arbiter
     file_change_store = getattr(team_run, "file_change_store", None)
     if file_change_store is not None:
         meta["file_change_store"] = file_change_store
@@ -111,8 +111,8 @@ def _populate_plan_submission_context(
 
 def build_initial_user_message(team_run: "TeamRun", task: Task) -> str:
     """Build context string for a task via TaskCenter."""
-    ledger = getattr(team_run, "ledger", None)
-    return team_run.task_center.context_for(task, ledger=ledger)
+    arbiter = getattr(team_run, "arbiter", None)
+    return team_run.task_center.context_for(task, arbiter=arbiter)
 
 
 def build_query_context(

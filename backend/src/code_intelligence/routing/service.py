@@ -23,7 +23,6 @@ from code_intelligence.routing.backend_protocol import (
     LspBackendAdapter,
     SymbolIndexBackendAdapter,
 )
-from code_intelligence.editing.ledger import Ledger
 from code_intelligence.lsp.client import LspClient
 from code_intelligence.editing.patcher import Patcher
 from code_intelligence.routing.query_router import IntelligenceQueryRouter
@@ -98,7 +97,6 @@ class CodeIntelligenceService:
         self.tree_cache = TreeCache(on_change=self._on_tree_change)
         self.symbol_index = SymbolIndex(workspace_root=workspace_root)
         self.arbiter = Arbiter(workspace_root=workspace_root)
-        self.ledger = Ledger()
         self.time_machine = TimeMachine()
         self.patcher = Patcher()
         self.lsp_client = LspClient(workspace_root=workspace_root, sandbox=sandbox)
@@ -161,7 +159,7 @@ class CodeIntelligenceService:
         2. Validate edit token (if provided)
         3. Save snapshot for undo
         4. Apply edit via patcher
-        5. Record in ledger
+        5. Record edit in arbiter
         6. Refresh symbol index
         7. Release lock
         """
@@ -323,7 +321,7 @@ class CodeIntelligenceService:
                 return _result(prepared.file_path, f"Write failed: {exc}")
 
             new_hash = _content_hash(write_content)
-            self.ledger.record(
+            gen = self.arbiter.record_edit(
                 file_path=prepared.file_path,
                 agent_id=prepared.agent_id,
                 edit_type=edit_type,
@@ -331,7 +329,6 @@ class CodeIntelligenceService:
                 new_hash=new_hash,
                 description=description,
             )
-            gen = self.arbiter.record_edit(prepared.file_path, prepared.agent_id)
             self.tree_cache.put_content(prepared.file_path, write_content)
             self.symbol_index.refresh(prepared.file_path, write_content)
             self.lsp_client.invalidate(prepared.file_path)
@@ -438,16 +435,16 @@ class CodeIntelligenceService:
         """Return the authoritative live coordination snapshot for *scope_paths*."""
         normalized = normalize_scope_paths(scope_paths)
         recent_changes = []
-        for entry in self.ledger.recent_entries(recent_seconds):
-            file_path = str(getattr(entry, "file_path", "") or "")
+        for entry in self.arbiter.recent_edits(recent_seconds):
+            file_path = str(entry.file_path or "")
             if normalized and not any(scope_paths_overlap(file_path, scope) for scope in normalized):
                 continue
             recent_changes.append(
                 {
                     "file_path": file_path,
-                    "agent_id": str(getattr(entry, "agent_id", "") or ""),
-                    "timestamp": float(getattr(entry, "timestamp", 0.0) or 0.0),
-                    "edit_type": str(getattr(entry, "edit_type", "") or ""),
+                    "agent_id": str(entry.agent_id or ""),
+                    "timestamp": float(entry.timestamp or 0.0),
+                    "edit_type": str(entry.edit_type or ""),
                 }
             )
         recent_changes.sort(key=lambda item: (item["file_path"], item["timestamp"]))
@@ -465,7 +462,7 @@ class CodeIntelligenceService:
         return build_scope_packet(
             scope_paths=normalized,
             briefing_versions=briefing_versions,
-            ledger_generation=self.ledger.generation,
+            ledger_generation=self.arbiter.generation,
             arbiter_generation=self.arbiter.generation,
             symbol_index_generation=self.symbol_index.generation,
             recent_changes=recent_changes[:25],
@@ -495,9 +492,9 @@ class CodeIntelligenceService:
                 "generation": self.symbol_index.generation,
             },
             "arbiter": self.arbiter.status(),
-            "ledger": {
-                "entries": self.ledger.entry_count,
-                "generation": self.ledger.generation,
+            "edit_buffer": {
+                "entries": self.arbiter.edit_count,
+                "generation": self.arbiter.generation,
             },
             "lsp": {
                 "connected": self.lsp_client.connected,
@@ -521,7 +518,7 @@ class CodeIntelligenceService:
             lsp_query_count=lsp_tel.queries,
             lsp_cache_hits=lsp_tel.cache_hits,
             arbiter_active_edits=self.arbiter.active_edit_count,
-            ledger_entry_count=self.ledger.entry_count,
+            ledger_entry_count=self.arbiter.edit_count,
         )
 
     # -- Cleanup --------------------------------------------------------------

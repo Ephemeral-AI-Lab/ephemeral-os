@@ -17,7 +17,7 @@ from tools.daytona_toolkit.ci_integration import (
     prepare_declared_shell_outputs,
     prepare_ci_write,
     prime_cache_after_write,
-    record_edit_in_ledger,
+    record_edit_in_arbiter,
 )
 from tools.daytona_toolkit.scope_builder import build_scope_packet
 
@@ -313,16 +313,14 @@ def test_finalize_ci_write_enriches_prepared_write_with_symbol_boundaries(monkey
 
 def test_build_scope_packet_coherence_ignores_unrelated_global_generation_changes():
     svc = MagicMock()
-    svc.ledger.generation = 1
-    svc.ledger.recent_entries.return_value = []
     svc.arbiter.generation = 2
+    svc.arbiter.recent_edits.return_value = []
     svc.arbiter.active_reservations.return_value = []
     svc.arbiter.hotspots.return_value = []
     svc.symbol_index.generation = 3
 
     first = build_scope_packet(scope_paths=["src/app.py"], svc=svc)
 
-    svc.ledger.generation = 11
     svc.arbiter.generation = 12
     svc.symbol_index.generation = 13
     second = build_scope_packet(scope_paths=["src/app.py"], svc=svc, baseline_packet=first)
@@ -333,16 +331,15 @@ def test_build_scope_packet_coherence_ignores_unrelated_global_generation_change
 
 def test_build_scope_packet_coherence_changes_when_scope_local_changes_change():
     svc = MagicMock()
-    svc.ledger.generation = 1
     svc.arbiter.generation = 2
     svc.arbiter.active_reservations.return_value = []
     svc.arbiter.hotspots.return_value = []
     svc.symbol_index.generation = 3
-    svc.ledger.recent_entries.return_value = []
+    svc.arbiter.recent_edits.return_value = []
 
     first = build_scope_packet(scope_paths=["src/app.py"], svc=svc)
 
-    svc.ledger.recent_entries.return_value = [
+    svc.arbiter.recent_edits.return_value = [
         SimpleNamespace(
             file_path="src/app.py",
             agent_id="worker-2",
@@ -357,22 +354,22 @@ def test_build_scope_packet_coherence_changes_when_scope_local_changes_change():
 
 
 # ---------------------------------------------------------------------------
-# record_edit_in_ledger
+# record_edit_in_arbiter
 # ---------------------------------------------------------------------------
 
 def test_record_edit_no_service_is_noop():
     ctx = _ctx()
-    record_edit_in_ledger(ctx, "/file.py")  # should not raise
+    record_edit_in_arbiter(ctx, "/file.py")  # should not raise
 
 
-def test_record_edit_calls_ledger():
+def test_record_edit_calls_arbiter():
     svc = MagicMock()
     ctx = _ctx({"ci_service": svc})
-    record_edit_in_ledger(
+    record_edit_in_arbiter(
         ctx, "/file.py", agent_id="a1", edit_type="edit",
         old_hash="abc", new_hash="def", description="fix",
     )
-    svc.ledger.record.assert_called_once_with(
+    svc.arbiter.record_edit.assert_called_once_with(
         file_path="/file.py",
         agent_id="a1",
         edit_type="edit",
@@ -385,8 +382,8 @@ def test_record_edit_calls_ledger():
 def test_record_edit_default_args():
     svc = MagicMock()
     ctx = _ctx({"ci_service": svc})
-    record_edit_in_ledger(ctx, "/file.py")
-    svc.ledger.record.assert_called_once_with(
+    record_edit_in_arbiter(ctx, "/file.py")
+    svc.arbiter.record_edit.assert_called_once_with(
         file_path="/file.py",
         agent_id="",
         edit_type="edit",
@@ -398,6 +395,6 @@ def test_record_edit_default_args():
 
 def test_record_edit_swallows_exceptions():
     svc = MagicMock()
-    svc.ledger.record.side_effect = RuntimeError("boom")
+    svc.arbiter.record_edit.side_effect = RuntimeError("boom")
     ctx = _ctx({"ci_service": svc})
-    record_edit_in_ledger(ctx, "/file.py")  # must not raise
+    record_edit_in_arbiter(ctx, "/file.py")  # must not raise

@@ -51,7 +51,7 @@ def build_scope_packet(
     return build_shared_scope_packet(
         scope_paths=normalized,
         briefing_versions=briefing_versions,
-        ledger_generation=_safe_generation(getattr(svc, "ledger", None)),
+        ledger_generation=_safe_generation(getattr(svc, "arbiter", None)),
         arbiter_generation=_safe_generation(getattr(svc, "arbiter", None)),
         symbol_index_generation=_safe_generation(getattr(svc, "symbol_index", None)),
         recent_changes=_recent_changes(svc, normalized, seconds=recent_seconds),
@@ -171,11 +171,11 @@ def _matching_briefing_versions(team_run: Any | None, scope_paths: list[str]) ->
 
 
 def _recent_changes(svc: Any | None, scope_paths: list[str], *, seconds: float) -> list[dict[str, Any]]:
-    ledger = getattr(svc, "ledger", None)
-    if ledger is None:
+    arbiter = getattr(svc, "arbiter", None)
+    if arbiter is None:
         return []
     try:
-        entries = ledger.recent_entries(seconds)
+        entries = arbiter.recent_edits(seconds)
     except Exception:
         return []
     out: list[dict[str, Any]] = []

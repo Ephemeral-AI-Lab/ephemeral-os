@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from agents.registry import get_definition
 from team.builtins import (
-    DECISION_SUBMIT_REPLAN,
-    DECISION_SUBMIT_RETRY,
     DEVELOPER,
     SCOUT,
     TEAM_PLANNER,
@@ -33,14 +31,6 @@ def test_builtin_team_agents_use_default_tool_call_limits() -> None:
         assert defn.tool_call_limit == 100
 
 
-def test_decision_posthook_agents_preload_decision_playbook_without_lazy_skill_toolkit() -> None:
-    for name in (DECISION_SUBMIT_RETRY, DECISION_SUBMIT_REPLAN):
-        defn = get_definition(name)
-        assert defn is not None
-        assert defn.include_skills is True
-        assert defn.skills == ["team-posthook-decision-playbook"]
-
-
 def test_team_planner_code_intelligence_toolkit_omits_ci_read_file() -> None:
     planner_ci = create_toolkit(
         "code_intelligence",
@@ -66,7 +56,7 @@ def test_toolkit_instructions_surface_scope_and_search_tools() -> None:
     )
 
     assert developer_ci.instructions is not None
-    assert "ci_scoped_status" in developer_ci.instructions
+    assert "ci_scope_status" in developer_ci.instructions
 
     assert sandbox_ops.instructions is not None
     assert "daytona_grep" in sandbox_ops.instructions

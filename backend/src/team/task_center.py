@@ -1,30 +1,77 @@
 """Task Center — append-only shared context log.
 
 Replaces ProjectContext, InMemoryArtifactStore, and 3-tier briefing system.
+
+When a NoteStore (PG-backed) is attached, notes are written through to
+PostgreSQL for cross-process visibility and crash recovery. The in-memory
+list remains the hot-path for reads within the same process.
 """
 from __future__ import annotations
 
+import asyncio
+import logging
 import time
-from typing import TYPE_CHECKING
+import uuid as _uuid
+from typing import TYPE_CHECKING, Any
 
 from team.models import Note
 
 if TYPE_CHECKING:
-    from code_intelligence.editing.ledger import Ledger
+    from code_intelligence.editing.arbiter import Arbiter
     from team.models import Task
+
+logger = logging.getLogger(__name__)
 
 
 class TaskCenter:
-    """Append-only shared context log."""
+    """Append-only shared context log with optional PG write-through."""
 
-    def __init__(self, goal: str = "", user_request: str = "") -> None:
+    def __init__(
+        self,
+        goal: str = "",
+        user_request: str = "",
+        note_store: Any = None,
+        team_run_id: str = "",
+    ) -> None:
         self._notes: list[Note] = []
         self.goal = goal
         self.user_request = user_request
+        self._note_store = note_store  # NoteStore | NullNoteStore | None
+        self._team_run_id = team_run_id
 
     def post(self, note: Note) -> None:
-        """Append a note. list.append() is GIL-atomic in CPython."""
+        """Append a note. list.append() is GIL-atomic in CPython.
+
+        If a PG-backed NoteStore is attached, the note is also flushed
+        asynchronously via fire-and-forget task on the running event loop.
+        """
         self._notes.append(note)
+        if self._note_store is not None and getattr(self._note_store, "initialized", False):
+            self._schedule_pg_flush(note)
+
+    def _schedule_pg_flush(self, note: Note) -> None:
+        """Fire-and-forget flush of a single note to PG."""
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return  # No event loop — skip PG flush (sync context)
+        loop.create_task(self._flush_note(note))
+
+    async def _flush_note(self, note: Note) -> None:
+        """Convert Note dataclass to TaskNoteRecord and insert."""
+        try:
+            from team.persistence.task_note_record import TaskNoteRecord
+            record = TaskNoteRecord(
+                id=_uuid.UUID(note.id) if note.id else _uuid.uuid4(),
+                team_run_id=self._team_run_id,
+                task_id=note.task_id,
+                agent_name=note.agent_name,
+                content=note.content,
+                scope_ltree=list(note.scope_paths) if note.scope_paths else [],
+            )
+            await self._note_store.insert(record)
+        except Exception:
+            logger.debug("Failed to flush note %s to PG", note.id, exc_info=True)
 
     def read(self, *, authors: list[str] | None = None,
              scope_paths: list[str] | None = None,
@@ -52,11 +99,11 @@ class TaskCenter:
         self,
         task: "Task",
         *,
-        ledger: "Ledger | None" = None,
+        arbiter: "Arbiter | None" = None,
         max_context_bytes: int = 200_000,
     ) -> str:
         """Build context string for a task. Fixed priority order:
-        task (never trimmed) -> deps -> ledger changes -> parent chain."""
+        task (never trimmed) -> deps -> file changes -> parent chain."""
         budget = max_context_bytes
         sections: list[str] = []
 
@@ -81,10 +128,10 @@ class TaskCenter:
                         "Context from dependencies", dep_notes, budget))
                     budget = 0
 
-        # Priority 3: Recent file changes in scope (ground truth from Ledger)
-        if ledger is not None and budget > 0 and task.scope_paths:
+        # Priority 3: Recent file changes in scope (ground truth from Arbiter)
+        if arbiter is not None and budget > 0 and task.scope_paths:
             created_ts = task.created_at.timestamp() if task.created_at else 0.0
-            changes = ledger.changes_since(created_ts)
+            changes = arbiter.changes_since(created_ts)
             scoped = [
                 e for e in changes
                 if any(
@@ -135,6 +182,33 @@ class TaskCenter:
             if n.id not in seen:
                 self._notes.append(n)
                 seen.add(n.id)
+
+    async def hydrate_from_pg(self, task_ids: list[str]) -> None:
+        """Hydrate notes from PG for specific task IDs (dependency context).
+
+        Called before context_for() when cross-process notes may exist.
+        """
+        if self._note_store is None or not getattr(self._note_store, "initialized", False):
+            return
+        if not task_ids:
+            return
+        try:
+            records = await self._note_store.query_by_task_ids(
+                self._team_run_id, task_ids,
+            )
+            pg_notes = [
+                Note(
+                    id=str(rec.id),
+                    task_id=rec.task_id,
+                    agent_name=rec.agent_name,
+                    content=rec.content,
+                    scope_paths=list(rec.scope_ltree) if rec.scope_ltree else [],
+                )
+                for rec in records
+            ]
+            self.hydrate(pg_notes)
+        except Exception:
+            logger.debug("Failed to hydrate notes from PG", exc_info=True)
 
     def snapshot(self) -> list[Note]:
         return list(self._notes)

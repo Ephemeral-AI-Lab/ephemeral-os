@@ -661,16 +661,16 @@ class TestCIIntegrationHelpers:
         svc.lsp_client.invalidate.assert_called_once_with("/test.py")
 
     def test_record_edit_no_ci(self):
-        from tools.daytona_toolkit.ci_integration import record_edit_in_ledger
+        from tools.daytona_toolkit.ci_integration import record_edit_in_arbiter
         ctx = ToolExecutionContext(cwd=Path("/ws"), metadata={})
-        record_edit_in_ledger(ctx, "/test.py")  # should not raise
+        record_edit_in_arbiter(ctx, "/test.py")  # should not raise
 
     def test_record_edit_with_ci(self):
-        from tools.daytona_toolkit.ci_integration import record_edit_in_ledger
+        from tools.daytona_toolkit.ci_integration import record_edit_in_arbiter
         svc = MagicMock()
         ctx = ToolExecutionContext(cwd=Path("/ws"), metadata={"ci_service": svc})
-        record_edit_in_ledger(ctx, "/test.py", edit_type="edit", old_hash="aaa", new_hash="bbb")
-        svc.ledger.record.assert_called_once()
+        record_edit_in_arbiter(ctx, "/test.py", edit_type="edit", old_hash="aaa", new_hash="bbb")
+        svc.arbiter.record_edit.assert_called_once()
 
     def test_prime_cache_exception_swallowed(self):
         """CI exceptions should be swallowed gracefully."""
@@ -1450,104 +1450,89 @@ class TestTimeMachine:
         assert len(snap.content_hash) == 16  # SHA256 prefix
 
 
-class TestLedger:
-    """Ledger — bounded edit audit log with O(1) filepath lookup."""
+class TestArbiterEditBuffer:
+    """Arbiter edit buffer — replaces Ledger tests."""
 
-    def _make_ledger(self, **kwargs):
-        from code_intelligence.editing.ledger import Ledger
-        return Ledger(**kwargs)
+    def _make_arbiter(self):
+        from code_intelligence.editing.arbiter import Arbiter
+        return Arbiter(workspace_root="/workspace")
 
     def test_record_and_retrieve(self):
-        ledger = self._make_ledger()
-        entry = ledger.record("/ws/app.py", "agent-1", edit_type="edit")
-        assert entry.file_path == "/ws/app.py"
-        assert entry.agent_id == "agent-1"
-        assert entry.edit_type == "edit"
-        assert entry.timestamp > 0
+        arbiter = self._make_arbiter()
+        gen = arbiter.record_edit("/ws/app.py", "agent-1", edit_type="edit")
+        assert gen == 1
+        edits = arbiter.changes_since(0)
+        assert len(edits) == 1
+        assert edits[0].file_path == "/ws/app.py"
+        assert edits[0].agent_id == "agent-1"
+        assert edits[0].edit_type == "edit"
+        assert edits[0].timestamp > 0
 
     def test_who_changed_returns_entries_for_file(self):
-        ledger = self._make_ledger()
-        ledger.record("/ws/a.py", "agent-1")
-        ledger.record("/ws/b.py", "agent-2")
-        ledger.record("/ws/a.py", "agent-3")
+        arbiter = self._make_arbiter()
+        arbiter.record_edit("/ws/a.py", "agent-1")
+        arbiter.record_edit("/ws/b.py", "agent-2")
+        arbiter.record_edit("/ws/a.py", "agent-3")
 
-        changes = ledger.who_changed("/ws/a.py")
+        changes = arbiter.who_changed("/ws/a.py")
         assert len(changes) == 2
         assert changes[0].agent_id == "agent-1"
         assert changes[1].agent_id == "agent-3"
 
     def test_who_changed_empty_file(self):
-        ledger = self._make_ledger()
-        assert ledger.who_changed("/ws/never_edited.py") == []
+        arbiter = self._make_arbiter()
+        assert arbiter.who_changed("/ws/never_edited.py") == []
 
     def test_changes_since_filters_by_time(self):
         import time as _t
-        ledger = self._make_ledger()
-        ledger.record("/ws/old.py", "agent-1")
+        arbiter = self._make_arbiter()
+        arbiter.record_edit("/ws/old.py", "agent-1")
         cutoff = _t.time()
         _t.sleep(0.01)
-        ledger.record("/ws/new.py", "agent-2")
+        arbiter.record_edit("/ws/new.py", "agent-2")
 
-        recent = ledger.changes_since(cutoff)
+        recent = arbiter.changes_since(cutoff)
         assert len(recent) == 1
         assert recent[0].file_path == "/ws/new.py"
 
-    def test_recent_files_deduplicates(self):
-        ledger = self._make_ledger()
-        ledger.record("/ws/a.py", "agent-1")
-        ledger.record("/ws/b.py", "agent-2")
-        ledger.record("/ws/a.py", "agent-3")  # duplicate file
+    def test_recent_edits_deduplicates_by_time(self):
+        arbiter = self._make_arbiter()
+        arbiter.record_edit("/ws/a.py", "agent-1")
+        arbiter.record_edit("/ws/b.py", "agent-2")
+        arbiter.record_edit("/ws/a.py", "agent-3")
 
-        files = ledger.recent_files(seconds=10.0)
+        edits = arbiter.recent_edits(seconds=10.0)
+        files = [e.file_path for e in edits]
         assert "/ws/a.py" in files
         assert "/ws/b.py" in files
-        assert len(files) == 2  # deduplicated
 
-    def test_bounded_deque_eviction(self):
-        ledger = self._make_ledger(max_entries=3)
-        ledger.record("/ws/1.py", "a1")
-        ledger.record("/ws/2.py", "a2")
-        ledger.record("/ws/3.py", "a3")
-        ledger.record("/ws/4.py", "a4")  # evicts /ws/1.py
-
-        assert ledger.entry_count == 3
-        # /ws/1.py should be evicted from who_changed
-        changes = ledger.who_changed("/ws/1.py")
-        assert len(changes) == 0
-
-    def test_entry_count(self):
-        ledger = self._make_ledger()
-        assert ledger.entry_count == 0
-        ledger.record("/ws/a.py", "agent-1")
-        assert ledger.entry_count == 1
-        ledger.record("/ws/b.py", "agent-2")
-        assert ledger.entry_count == 2
-
-    def test_clear(self):
-        ledger = self._make_ledger()
-        ledger.record("/ws/a.py", "agent-1")
-        ledger.record("/ws/b.py", "agent-2")
-        ledger.clear()
-        assert ledger.entry_count == 0
-        assert ledger.who_changed("/ws/a.py") == []
+    def test_edit_count(self):
+        arbiter = self._make_arbiter()
+        assert arbiter.edit_count == 0
+        arbiter.record_edit("/ws/a.py", "agent-1")
+        assert arbiter.edit_count == 1
+        arbiter.record_edit("/ws/b.py", "agent-2")
+        assert arbiter.edit_count == 2
 
     def test_record_with_hashes_and_description(self):
-        ledger = self._make_ledger()
-        entry = ledger.record(
+        arbiter = self._make_arbiter()
+        arbiter.record_edit(
             "/ws/app.py", "agent-1",
             edit_type="edit", old_hash="aaa111", new_hash="bbb222",
             description="Fix null check",
         )
-        assert entry.old_hash == "aaa111"
-        assert entry.new_hash == "bbb222"
-        assert entry.description == "Fix null check"
+        edits = arbiter.changes_since(0)
+        assert edits[0].old_hash == "aaa111"
+        assert edits[0].new_hash == "bbb222"
+        assert edits[0].description == "Fix null check"
 
     def test_edit_types(self):
-        """Ledger should accept all edit types."""
-        ledger = self._make_ledger()
+        """Arbiter edit buffer should accept all edit types."""
+        arbiter = self._make_arbiter()
         for et in ("edit", "create", "delete", "shell_mutation"):
-            entry = ledger.record("/ws/f.py", "agent", edit_type=et)
-            assert entry.edit_type == et
+            arbiter.record_edit("/ws/f.py", "agent", edit_type=et)
+        edits = arbiter.changes_since(0)
+        assert [e.edit_type for e in edits] == ["edit", "create", "delete", "shell_mutation"]
 
 
 class TestOCCEditFlow:
@@ -1557,28 +1542,25 @@ class TestOCCEditFlow:
         """Create a context with mock sandbox + real arbiter + time_machine."""
         from code_intelligence.editing.arbiter import Arbiter
         from code_intelligence.editing.time_machine import TimeMachine
-        from code_intelligence.editing.ledger import Ledger
 
         sandbox = _make_mock_sandbox(files=files)
 
         arbiter = Arbiter(workspace_root="/workspace")
         time_machine = TimeMachine()
-        ledger = Ledger()
 
         ci_service = MagicMock()
         ci_service.arbiter = arbiter
         ci_service.time_machine = time_machine
-        ci_service.ledger = ledger
         ci_service.tree_cache = MagicMock()
         ci_service.symbol_index = MagicMock()
         ci_service.lsp_client = MagicMock()
 
         ctx = _make_context(sandbox, ci_service=ci_service)
-        return ctx, sandbox, arbiter, time_machine, ledger
+        return ctx, sandbox, arbiter, time_machine
 
     def test_occ_edit_acquires_and_releases_lock(self):
         from tools.daytona_toolkit.edit_tool import daytona_edit_file as _edit_tool
-        ctx, sandbox, arbiter, _, _ = self._make_occ_context({"/ws/app.py": "x = 1"})
+        ctx, sandbox, arbiter, _ = self._make_occ_context({"/ws/app.py": "x = 1"})
         tool = _edit_tool
 
         result = _run(tool.execute(tool.input_model(
@@ -1593,7 +1575,7 @@ class TestOCCEditFlow:
 
     def test_occ_edit_saves_snapshot_for_undo(self):
         from tools.daytona_toolkit.edit_tool import daytona_edit_file as _edit_tool
-        ctx, _, _, time_machine, _ = self._make_occ_context({"/ws/app.py": "original"})
+        ctx, _, _, time_machine = self._make_occ_context({"/ws/app.py": "original"})
         tool = _edit_tool
 
         _run(tool.execute(tool.input_model(
@@ -1606,7 +1588,7 @@ class TestOCCEditFlow:
 
     def test_occ_edit_records_in_arbiter(self):
         from tools.daytona_toolkit.edit_tool import daytona_edit_file as _edit_tool
-        ctx, _, arbiter, _, _ = self._make_occ_context({"/ws/app.py": "content"})
+        ctx, _, arbiter, _ = self._make_occ_context({"/ws/app.py": "content"})
         tool = _edit_tool
 
         _run(tool.execute(tool.input_model(
@@ -1618,7 +1600,7 @@ class TestOCCEditFlow:
     def test_occ_conflict_when_lock_held(self):
         """Edit should fail with conflict when another agent holds the lock."""
         from tools.daytona_toolkit.edit_tool import daytona_edit_file as _edit_tool
-        ctx, _, arbiter, _, _ = self._make_occ_context({"/ws/app.py": "content"})
+        ctx, _, arbiter, _ = self._make_occ_context({"/ws/app.py": "content"})
         tool = _edit_tool
 
         # Simulate another agent holding the lock
@@ -1650,7 +1632,7 @@ class TestOCCEditFlow:
     def test_sequential_occ_edits_both_succeed(self):
         """Two sequential edits to the same file should both succeed."""
         from tools.daytona_toolkit.edit_tool import daytona_edit_file as _edit_tool
-        ctx, sandbox, arbiter, _, _ = self._make_occ_context({"/ws/app.py": "a = 1\nb = 2"})
+        ctx, sandbox, arbiter, _ = self._make_occ_context({"/ws/app.py": "a = 1\nb = 2"})
         tool = _edit_tool
 
         r1 = _run(tool.execute(tool.input_model(
@@ -1669,7 +1651,7 @@ class TestOCCEditFlow:
     def test_dry_run_does_not_acquire_lock(self):
         """Dry run should preview without touching arbiter or time_machine."""
         from tools.daytona_toolkit.edit_tool import daytona_edit_file as _edit_tool
-        ctx, sandbox, arbiter, time_machine, _ = self._make_occ_context({"/ws/app.py": "content"})
+        ctx, sandbox, arbiter, time_machine = self._make_occ_context({"/ws/app.py": "content"})
         tool = _edit_tool
 
         result = _run(tool.execute(tool.input_model(

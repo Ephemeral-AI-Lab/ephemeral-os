@@ -90,11 +90,11 @@ class Executor:
         decides whether to proceed or request_replan()."""
         if not task.scope_paths:
             return
-        ledger = getattr(self.team_run, "ledger", None)
-        if ledger is None:
+        arbiter = getattr(self.team_run, "arbiter", None)
+        if arbiter is None:
             return
         created_ts = task.created_at.timestamp() if task.created_at else 0.0
-        changes = ledger.changes_since(created_ts)
+        changes = arbiter.changes_since(created_ts)
         # Filter to scope and exclude changes by this task's own agent run
         external = [
             e for e in changes

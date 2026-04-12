@@ -423,7 +423,7 @@ async def test_codeact_calls_ci_helpers_on_write():
         daytona_codeact.input_model(code="write('/ws/f.py', 'content')"), ctx
     )
     svc.tree_cache.put_content.assert_called_once_with("/ws/f.py", "content")
-    svc.ledger.record.assert_called_once()
+    svc.arbiter.record_edit.assert_called_once()
 
 
 # ---------------------------------------------------------------------------

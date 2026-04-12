@@ -9,8 +9,7 @@ A single, end-to-end test that:
    - Tool use: which tools were called, how many times, input/output shapes
    - Correctness: all required files exist with correct content
    - Code Intelligence: CI service status, LSP language detection, tree cache, symbol index
-   - Arbiter: edit tracking, conflict detection
-   - Ledger: audit journal entries
+   - Arbiter: edit tracking, conflict detection, audit journal
    - Event stream: correct ordering, all event types present
 
 Run with:
@@ -373,14 +372,11 @@ def test_phase5_code_intelligence_metrics(sandbox_id):
     print(f"    Tree cache: {status['tree_cache']}")
     print(f"    Symbol index: {status['symbol_index']}")
     print(f"    Arbiter: {status['arbiter']}")
-    print(f"    Ledger entries: {status['ledger']['entries']}")
-
     assert status["sandbox_id"] == sandbox_id
     assert "lsp" in status
     assert "tree_cache" in status
     assert "symbol_index" in status
     assert "arbiter" in status
-    assert "ledger" in status
 
     # Telemetry
     tel = svc.get_telemetry()
@@ -396,14 +392,14 @@ def test_phase5_code_intelligence_metrics(sandbox_id):
     print(f"    lsp_query_count: {tel.lsp_query_count}")
     print(f"    lsp_cache_hits: {tel.lsp_cache_hits}")
     print(f"    arbiter_active_edits: {tel.arbiter_active_edits}")
-    print(f"    ledger_entry_count: {tel.ledger_entry_count}")
+    print(f"    arbiter_edit_count: {tel.arbiter_edit_count}")
 
     # Type assertions
     for field_name in [
         "tree_cache_size", "tree_cache_hits", "tree_cache_misses",
         "symbol_index_size", "symbol_index_generation", "indexed_files",
         "lsp_query_count", "lsp_cache_hits",
-        "arbiter_active_edits", "ledger_entry_count",
+        "arbiter_active_edits", "arbiter_edit_count",
     ]:
         val = getattr(tel, field_name)
         assert isinstance(val, int), f"CITelemetry.{field_name} should be int, got {type(val)}"
@@ -411,12 +407,12 @@ def test_phase5_code_intelligence_metrics(sandbox_id):
 
 
 # ===========================================================================
-# Phase 6: Tree cache, symbol index, arbiter, ledger (sync — no agent)
+# Phase 6: Tree cache, symbol index, arbiter (sync — no agent)
 # ===========================================================================
 
 
 def test_phase6_ci_components_individually(sandbox_id):
-    """Test each CI component (tree cache, symbol index, arbiter, ledger) individually."""
+    """Test each CI component (tree cache, symbol index, arbiter) individually."""
     from code_intelligence.routing.service import CodeIntelligenceService
 
     print("\n--- Phase 6: CI Component Tests ---")
@@ -478,20 +474,20 @@ def test_phase6_ci_components_individually(sandbox_id):
     assert arb_after["total_edits"] >= 1
     assert gen >= 1
 
-    # -- Ledger --
-    print(f"\n  Ledger:")
-    print(f"    entry_count: {svc.ledger.entry_count}")
-    assert isinstance(svc.ledger.entry_count, int)
+    # -- Arbiter edit count --
+    print(f"\n  Arbiter edit_count:")
+    print(f"    edit_count: {svc.arbiter.edit_count}")
+    assert isinstance(svc.arbiter.edit_count, int)
 
-    # Record a ledger entry
-    svc.ledger.record(
+    # Record an edit via arbiter
+    svc.arbiter.record_edit(
         file_path="test.ts",
         agent_id="test-agent",
         edit_type="edit",
         description="test edit",
     )
-    print(f"    After record — entry_count: {svc.ledger.entry_count}")
-    assert svc.ledger.entry_count >= 1
+    print(f"    After record_edit — edit_count: {svc.arbiter.edit_count}")
+    assert svc.arbiter.edit_count >= 1
 
     # Cleanup
     svc.dispose()

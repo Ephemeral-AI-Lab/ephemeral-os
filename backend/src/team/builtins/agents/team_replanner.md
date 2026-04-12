@@ -4,7 +4,7 @@ description: "Replanner: reads failure context and produces corrective sibling t
 role: replanner
 model: inherit
 tool_call_limit: 100
-toolkits: ["code_intelligence", "task_center_read", "search", "submission"]
+toolkits: ["code_intelligence", "context_read", "submission"]
 skills: ["team-replanner-playbook"]
 ---
 # Task

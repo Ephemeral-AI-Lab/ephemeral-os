@@ -5,7 +5,7 @@ role: explorer
 model: inherit
 agent_type: subagent
 tool_call_limit: 100
-toolkits: ["code_intelligence", "task_center_read", "task_center_write", "search"]
+toolkits: ["code_intelligence", "context_write"]
 skills: ["team-scout-playbook"]
 ---
 # Task
