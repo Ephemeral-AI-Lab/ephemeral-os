@@ -1,7 +1,7 @@
 """SQLAlchemy ORM model for the ``tasks`` table (dispatcher work queue).
 
 See Section 14.4 of the coordination redesign doc for schema.
-This model is used by PGDispatcher for PostgreSQL-backed task management.
+This model is used by DispatcherStore for durable task management.
 The table is partitioned by team_run_id (LIST partitioning).
 """
 
