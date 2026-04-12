@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import time
 from typing import Any
 
 from code_intelligence.editing.patcher import LineRangeEdit, Patcher, SearchReplaceEdit
@@ -36,6 +37,50 @@ _OUTPUT_MAX_CHARS = 8000
 
 def _content_hash(content: str) -> str:
     return hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
+
+
+def _scope_overlap_warning(
+    context: ToolExecutionContext,
+    file_path: str,
+) -> str:
+    """Check if other agents edited files in the same scope during this edit.
+
+    Returns a warning string if another agent edited a file in the agent's scope,
+    otherwise empty string. Call after a successful edit to alert the agent
+    about potential concurrent changes in their scope.
+    """
+    arbiter = getattr(context, "metadata", {}).get("arbiter")
+    if arbiter is None:
+        return ""
+
+    agent_run_id = getattr(context, "metadata", {}).get("agent_run_id", "")
+    write_scope: list[str] = getattr(context, "metadata", {}).get("write_scope", [])
+    if not write_scope:
+        return ""
+
+    task_started_at = getattr(context, "metadata", {}).get("work_item_started_at", 0.0)
+    if not task_started_at:
+        return ""
+
+    changes = arbiter.changes_since(task_started_at)
+    now = time.time()
+    overlap_lines: list[str] = []
+    for e in changes:
+        if e.agent_id == agent_run_id:
+            continue
+        if not any(e.file_path.startswith(p.rstrip("/")) for p in write_scope):
+            continue
+        overlap_lines.append(
+            f"  - {e.file_path} ({e.edit_type} by {e.agent_id}, {int(now - e.timestamp)}s ago)"
+        )
+
+    if not overlap_lines:
+        return ""
+
+    return (
+        f"\n[SCOPE OVERLAP WARNING] Other agents edited files in your scope "
+        f"while you were editing {file_path}:\n" + "\n".join(overlap_lines)
+    )
 
 
 @tool(
@@ -136,7 +181,8 @@ async def daytona_edit_file(
                 current_hash = _content_hash(current)
             except Exception as recovery_exc:
                 return ToolResult(
-                    output=_path_error(recovery_exc, file_path) or f"Cannot read file: {recovery_exc}",
+                    output=_path_error(recovery_exc, file_path)
+                    or f"Cannot read file: {recovery_exc}",
                     is_error=True,
                 )
 
@@ -224,6 +270,9 @@ async def daytona_edit_file(
             release_ci_edit_intent(context, intent_id)
             abort_ci_write(context, prepared)
         if getattr(result, "success", False):
+            scope_warning = _scope_overlap_warning(context, file_path)
+            if scope_warning:
+                warnings.append(scope_warning)
             output = json.dumps(
                 {
                     "cwd": _get_cwd(context) or "",
@@ -247,6 +296,9 @@ async def daytona_edit_file(
         # Direct write (no CI)
         try:
             await _upload_file_compat(sandbox, new_content.encode("utf-8"), file_path)
+            scope_warning = _scope_overlap_warning(context, file_path)
+            if scope_warning:
+                warnings.append(scope_warning)
             output = json.dumps(
                 {
                     "cwd": _get_cwd(context) or "",
@@ -264,13 +316,16 @@ async def daytona_edit_file(
             try:
                 sandbox = await _recover_sandbox(context, exc)
                 await _upload_file_compat(sandbox, new_content.encode("utf-8"), file_path)
+                scope_warning = _scope_overlap_warning(context, file_path)
+                if scope_warning:
+                    warnings.append(scope_warning)
                 output = json.dumps(
                     {
                         "cwd": _get_cwd(context) or "",
                         "file_path": file_path,
                         "status": "edited",
                         "occ": False,
-                        "warnings": list(patch_result.warnings),
+                        "warnings": warnings + list(patch_result.warnings),
                     }
                 )
                 return ToolResult(
@@ -303,17 +358,29 @@ def _normalize_edits(
                 search = edit.get("search")
                 replace = edit.get("replace")
                 if not isinstance(search, str) or not isinstance(replace, str):
-                    return [], f"Edit {index}: search_replace requires string `search` and `replace`.", False
+                    return (
+                        [],
+                        f"Edit {index}: search_replace requires string `search` and `replace`.",
+                        False,
+                    )
                 normalized.append(SearchReplaceEdit(old_text=search, new_text=replace))
             elif strategy == "line_range":
                 start_line = edit.get("start_line")
                 end_line = edit.get("end_line")
                 new_content = edit.get("new_content")
-                if not isinstance(start_line, int) or not isinstance(end_line, int) or not isinstance(new_content, str):
-                    return [], (
-                        f"Edit {index}: line_range requires integer `start_line`, integer `end_line`, "
-                        "and string `new_content`."
-                    ), False
+                if (
+                    not isinstance(start_line, int)
+                    or not isinstance(end_line, int)
+                    or not isinstance(new_content, str)
+                ):
+                    return (
+                        [],
+                        (
+                            f"Edit {index}: line_range requires integer `start_line`, integer `end_line`, "
+                            "and string `new_content`."
+                        ),
+                        False,
+                    )
                 normalized.append(
                     LineRangeEdit(
                         start_line=start_line,

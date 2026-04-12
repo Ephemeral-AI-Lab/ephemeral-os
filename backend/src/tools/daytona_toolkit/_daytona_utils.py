@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import re
 import shlex
-import uuid
 from typing import TYPE_CHECKING, Any
 
 from config.defaults import DEFAULT_SANDBOX_CI_ROOT, DEFAULT_TEAM_SAFE_AGENT_NAMES
@@ -23,7 +21,6 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 _DEFAULT_TIMEOUT = 120
-_BACKGROUND_DEFAULT_TIMEOUT = 1800
 _OUTPUT_MAX_CHARS = 8000
 _EXIT_MARKER = "__CODEX_EXIT_CODE__="
 _SANDBOX_RECOVERY_KEY = "daytona_recovery_attempts"
