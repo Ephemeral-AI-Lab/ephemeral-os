@@ -28,6 +28,7 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "sqlalchemy>=2.0.43",
     "psycopg[binary]>=3.2.9",
+    "asyncpg>=0.29.0",
 ]
 
 [project.optional-dependencies]

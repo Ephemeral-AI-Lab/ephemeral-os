@@ -132,7 +132,13 @@ async def build_initial_user_message(
 ) -> str:
     """Build context string for a task via TaskCenter."""
     arbiter = getattr(team_run, "arbiter", None)
-    context = await team_run.task_center.context_for(task, arbiter=arbiter)
+    dispatcher = getattr(team_run, "dispatcher", None)
+    task_lookup = getattr(dispatcher, "get_task_by_id", None)
+    context = await team_run.task_center.context_for(
+        task,
+        arbiter=arbiter,
+        task_lookup=task_lookup,
+    )
     if prefix:
         return f"{prefix}\n\n{context}" if context else prefix
     return context

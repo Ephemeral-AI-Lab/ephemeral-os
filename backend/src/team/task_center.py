@@ -12,9 +12,11 @@ from __future__ import annotations
 import logging
 import time
 import uuid as _uuid
+from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Any
 
 from team.models import Note
+from team.persistence.ltree_utils import path_to_ltree
 
 if TYPE_CHECKING:
     from code_intelligence.editing.arbiter import Arbiter
@@ -67,7 +69,7 @@ class TaskCenter:
             agent_name=record.agent_name,
             content=record.content,
             timestamp=timestamp,
-            scope_paths=list(record.scope_ltree) if getattr(record, "scope_ltree", None) else [],
+            scope_paths=list(record.scope_paths) if getattr(record, "scope_paths", None) else [],
         )
 
     async def post(self, note: Note) -> None:
@@ -84,7 +86,12 @@ class TaskCenter:
                 task_id=note.task_id,
                 agent_name=note.agent_name,
                 content=note.content,
-                scope_ltree=list(note.scope_paths) if note.scope_paths else [],
+                scope_paths=list(note.scope_paths) if note.scope_paths else [],
+                scope_ltree=[
+                    path_to_ltree(scope.rstrip("/"))
+                    for scope in note.scope_paths
+                    if isinstance(scope, str) and scope.strip()
+                ] if note.scope_paths else [],
             )
             await self._note_store.insert(record)
         except Exception:
@@ -131,6 +138,7 @@ class TaskCenter:
         task: "Task",
         *,
         arbiter: "Arbiter | None" = None,
+        task_lookup: Callable[[str], Awaitable["Task | None"]] | None = None,
         max_context_bytes: int = 200_000,
     ) -> str:
         """Build context string for a task. Fixed priority order:
@@ -190,7 +198,8 @@ class TaskCenter:
 
         # Priority 4: Parent chain (why this task exists)
         if task.parent_id and budget > 0:
-            parent_notes = await self.read(authors=[task.parent_id])
+            parent_ids = await self._parent_chain_ids(task, task_lookup=task_lookup)
+            parent_notes = await self.read(authors=parent_ids)
             if parent_notes:
                 parent_section = self._render_notes("Parent context", parent_notes)
                 parent_bytes = len(parent_section.encode())
@@ -235,3 +244,23 @@ class TaskCenter:
                 lines.append(truncated + "\n...[truncated]")
                 break
         return sep.join(lines)
+
+    async def _parent_chain_ids(
+        self,
+        task: "Task",
+        *,
+        task_lookup: Callable[[str], Awaitable["Task | None"]] | None,
+    ) -> list[str]:
+        if task.parent_id is None:
+            return []
+        if task_lookup is None:
+            return [task.parent_id]
+        parent_ids: list[str] = []
+        seen: set[str] = set()
+        current_id = task.parent_id
+        while current_id and current_id not in seen:
+            parent_ids.append(current_id)
+            seen.add(current_id)
+            parent = await task_lookup(current_id)
+            current_id = parent.parent_id if parent is not None else None
+        return parent_ids

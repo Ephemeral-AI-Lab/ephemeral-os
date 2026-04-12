@@ -37,6 +37,10 @@ def build_team_runtime_services(
     event_store: TeamRunStore | None = None,
     pg_session_factory: "async_sessionmaker[AsyncSession] | None" = None,
 ) -> TeamRuntimeServices:
+    from team.persistence.team_engine import (
+        create_team_engine,
+        get_team_session_factory,
+    )
     from team.runtime.dispatcher import Dispatcher
 
     project_key = repo_root or ""
@@ -48,27 +52,30 @@ def build_team_runtime_services(
     )
     store = event_store if event_store is not None else build_default_store()
 
-    # Build PG dispatcher when an async session factory is available
-    pg = None
+    # Team coordination is PG-backed only. Bootstrap the shared async engine
+    # lazily when the caller did not inject a session factory.
+    session_factory = pg_session_factory or get_team_session_factory()
+    if session_factory is None:
+        _, session_factory = create_team_engine()
+
     note_store: Any = None
     exploration_memory_store: Any = None
-    if pg_session_factory is not None:
-        from team.runtime.pg_dispatcher import PGDispatcher
-        pg = PGDispatcher(pg_session_factory)
+    from team.runtime.pg_dispatcher import PGDispatcher
+    pg = PGDispatcher(session_factory)
 
-        # Initialize NoteStore for Task Center persistence
-        from team.persistence.note_store import NoteStore
-        note_store = NoteStore()
-        note_store.initialize(pg_session_factory)
+    # Initialize NoteStore for Task Center persistence
+    from team.persistence.note_store import NoteStore
+    note_store = NoteStore()
+    note_store.initialize(session_factory)
 
-        # Initialize ExplorationMemoryStore for cross-run cache
-        from team.persistence.exploration_memory_store import ExplorationMemoryStore
-        exploration_memory_store = ExplorationMemoryStore()
-        exploration_memory_store.initialize(pg_session_factory)
+    # Initialize ExplorationMemoryStore for cross-run cache
+    from team.persistence.exploration_memory_store import ExplorationMemoryStore
+    exploration_memory_store = ExplorationMemoryStore()
+    exploration_memory_store.initialize(session_factory)
 
-        # Attach PG store to the exploration memory singleton
-        from tools.memory import get_exploration_memory
-        get_exploration_memory().attach_pg(exploration_memory_store)
+    # Attach PG store to the exploration memory singleton
+    from tools.memory import get_exploration_memory
+    get_exploration_memory().attach_pg(exploration_memory_store)
 
     dispatcher = Dispatcher(
         team_run_id=team_run_id,

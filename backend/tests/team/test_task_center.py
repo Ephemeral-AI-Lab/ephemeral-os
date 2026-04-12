@@ -284,6 +284,24 @@ def test_context_for_includes_parent_notes_when_parent_id_matches():
     assert "parent reasoning" in ctx
 
 
+def test_context_for_walks_parent_chain_when_lookup_available():
+    tc = TaskCenter()
+    _run(tc.post(_note("n1", "root-task", "root rationale", agent_name="team_planner")))
+    _run(tc.post(_note("n2", "parent-task", "parent reasoning", agent_name="team_planner")))
+    task = _task("work-1", task="child task", parent_id="parent-task")
+
+    async def _lookup(task_id: str):
+        if task_id == "parent-task":
+            return _task("parent-task", task="parent", parent_id="root-task")
+        if task_id == "root-task":
+            return _task("root-task", task="root")
+        return None
+
+    ctx = _run(tc.context_for(task, task_lookup=_lookup))
+    assert "root rationale" in ctx
+    assert "parent reasoning" in ctx
+
+
 def test_context_for_no_parent_notes_when_parent_id_is_none():
     tc = TaskCenter()
     _run(tc.post(_note("n1", "some-task", "context")))
