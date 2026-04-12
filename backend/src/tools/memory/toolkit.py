@@ -2,7 +2,6 @@
 
 Tools:
 - check_exploration_memory — check if a scope was recently explored
-- save_exploration         — cache exploration findings for reuse
 - query_edit_history       — query cross-run edit patterns for conflict prediction
 """
 
@@ -64,38 +63,6 @@ class CheckExplorationMemoryTool(BaseTool):
 # ---------------------------------------------------------------------------
 # SaveExplorationTool
 # ---------------------------------------------------------------------------
-
-
-class SaveExplorationInput(BaseModel):
-    paths: list[str] = Field(..., description="Scope paths whose exploration to save")
-
-
-class SaveExplorationTool(BaseTool):
-    name = "save_exploration"
-    description = "Save exploration findings to cache for cross-run reuse. Called automatically after explorer completes."
-    input_model = SaveExplorationInput
-
-    async def execute(
-        self, arguments: SaveExplorationInput, context: ToolExecutionContext
-    ) -> ToolResult:
-        mem = get_exploration_memory()
-        workspace_root = context.metadata.get("daytona_cwd", "") or context.metadata.get(
-            "ci_workspace_root", ""
-        )
-        tc = context.metadata.get("task_center")
-        if tc is None:
-            return ToolResult(output="No Task Center available.", is_error=True)
-        notes = await tc.read(scope_paths=arguments.paths)
-        note_dicts = [asdict(n) for n in notes]
-        await mem.save_async(arguments.paths, note_dicts, workspace_root)
-        return ToolResult(
-            output=json.dumps(
-                {
-                    "status": "saved",
-                    "note_count": len(note_dicts),
-                }
-            )
-        )
 
 
 # ---------------------------------------------------------------------------
@@ -196,7 +163,6 @@ class MemoryToolkit(BaseToolkit):
             description="Cross-run memory: exploration cache and edit history for conflict prediction.",
             tools=[
                 CheckExplorationMemoryTool(),
-                SaveExplorationTool(),
                 QueryEditHistoryTool(),
             ],
         )
