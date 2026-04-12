@@ -43,10 +43,10 @@ KNOWN_DAYTONA_TOOLS = {
     "daytona_grep",
     "daytona_glob",
     "daytona_edit_file",
-    "ci_lsp_hover",
-    "ci_lsp_definition",
-    "ci_lsp_references",
-    "ci_lsp_diagnostics",
+    "ci_hover",
+    "ci_query_symbols",
+    "ci_query_references",
+    "ci_diagnostics",
 }
 
 

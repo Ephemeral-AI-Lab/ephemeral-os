@@ -3,7 +3,7 @@
 
 Covers sandbox and CI concerns:
   OCC Editing:         daytona_edit_file with Arbiter lock/token/conflict
-  LSP via CI toolkit:  ci_lsp_hover, definition, references, diagnostics
+  CI toolkit:  ci_hover, ci_query_symbols, ci_query_references, ci_diagnostics
   CodeAct:             daytona_codeact multi-step execution
   Tool Selection:      ordering, schema validation, completeness
   Code Intelligence:   CI service, LSP client, registry, types
@@ -339,184 +339,77 @@ class TestDaytonaEditTool:
 # ===========================================================================
 
 
-class TestDaytonaLspTools:
-    """Test all 4 LSP tools: hover, definition, references, diagnostics."""
+class TestDaytonaCiTools:
+    """Test unified code intelligence tools: hover and diagnostics."""
 
     # -- Hover --
 
     def test_lsp_hover_no_ci_service(self):
-        from tools.ci_toolkit.lsp_tools import ci_lsp_hover as DaytonaLspHoverTool
+        from tools.ci_toolkit.lsp_tools import ci_hover as DaytonaHoverTool
 
         sandbox = _make_mock_sandbox()
         ctx = _make_context(sandbox)  # no ci_service
-        tool = DaytonaLspHoverTool
+        tool = DaytonaHoverTool
         result = _run(tool.execute(tool.input_model(file_path="/test.py", line=1), ctx))
         assert result.is_error
         assert "not available" in result.output
 
     def test_lsp_hover_with_result(self):
-        from tools.ci_toolkit.lsp_tools import ci_lsp_hover as DaytonaLspHoverTool
+        from tools.ci_toolkit.lsp_tools import ci_hover as DaytonaHoverTool
         from code_intelligence.types import HoverResult
 
         svc = MagicMock()
         svc.hover.return_value = HoverResult(content="def foo() -> int", language="python")
         sandbox = _make_mock_sandbox()
         ctx = _make_context(sandbox, ci_service=svc)
-        tool = DaytonaLspHoverTool
+        tool = DaytonaHoverTool
         result = _run(tool.execute(tool.input_model(file_path="/test.py", line=1), ctx))
         assert not result.is_error
         assert "foo" in result.output
 
     def test_lsp_hover_no_result(self):
-        from tools.ci_toolkit.lsp_tools import ci_lsp_hover as DaytonaLspHoverTool
+        from tools.ci_toolkit.lsp_tools import ci_hover as DaytonaHoverTool
 
         svc = MagicMock()
         svc.hover.return_value = None
         sandbox = _make_mock_sandbox()
         ctx = _make_context(sandbox, ci_service=svc)
-        tool = DaytonaLspHoverTool
+        tool = DaytonaHoverTool
         result = _run(tool.execute(tool.input_model(file_path="/test.py", line=99), ctx))
         assert not result.is_error
         assert "No hover" in result.output
 
     def test_lsp_hover_is_read_only(self):
-        from tools.ci_toolkit.lsp_tools import ci_lsp_hover as DaytonaLspHoverTool
+        from tools.ci_toolkit.lsp_tools import ci_hover as DaytonaHoverTool
 
-        tool = DaytonaLspHoverTool
+        tool = DaytonaHoverTool
         assert tool.is_read_only(tool.input_model(file_path="/test.py", line=1))
-
-    # -- Definition --
-
-    def test_lsp_definition_no_ci(self):
-        from tools.ci_toolkit.lsp_tools import ci_lsp_definition as DaytonaLspDefinitionTool
-
-        sandbox = _make_mock_sandbox()
-        ctx = _make_context(sandbox)
-        tool = DaytonaLspDefinitionTool
-        result = _run(tool.execute(tool.input_model(file_path="/test.py", line=1), ctx))
-        assert result.is_error
-
-    def test_lsp_definition_found(self):
-        from tools.ci_toolkit.lsp_tools import ci_lsp_definition as DaytonaLspDefinitionTool
-        from code_intelligence.types import SymbolInfo
-
-        svc = MagicMock()
-        svc.find_definitions.return_value = [
-            SymbolInfo(
-                name="MyClass",
-                kind="class",
-                file_path="/workspace/models.py",
-                line=10,
-                character=0,
-                signature="class MyClass",
-            ),
-        ]
-        sandbox = _make_mock_sandbox()
-        ctx = _make_context(sandbox, ci_service=svc)
-        tool = DaytonaLspDefinitionTool
-        result = _run(
-            tool.execute(tool.input_model(file_path="/test.py", line=5, symbol="MyClass"), ctx)
-        )
-        assert not result.is_error
-        assert "MyClass" in result.output
-        assert "models.py" in result.output
-
-    def test_lsp_definition_not_found(self):
-        from tools.ci_toolkit.lsp_tools import ci_lsp_definition as DaytonaLspDefinitionTool
-
-        svc = MagicMock()
-        svc.find_definitions.return_value = []
-        sandbox = _make_mock_sandbox()
-        ctx = _make_context(sandbox, ci_service=svc)
-        tool = DaytonaLspDefinitionTool
-        result = _run(tool.execute(tool.input_model(file_path="/test.py", line=1), ctx))
-        assert "No definitions" in result.output
-
-    # -- References --
-
-    def test_lsp_references_no_ci(self):
-        from tools.ci_toolkit.lsp_tools import ci_lsp_references as DaytonaLspReferencesTool
-
-        sandbox = _make_mock_sandbox()
-        ctx = _make_context(sandbox)
-        tool = DaytonaLspReferencesTool
-        result = _run(tool.execute(tool.input_model(file_path="/test.py", line=1), ctx))
-        assert result.is_error
-
-    def test_lsp_references_found(self):
-        from tools.ci_toolkit.lsp_tools import ci_lsp_references as DaytonaLspReferencesTool
-        from code_intelligence.types import ReferenceInfo
-
-        svc = MagicMock()
-        svc.find_references.return_value = [
-            ReferenceInfo(file_path="/workspace/a.py", line=5, character=0, text="foo()"),
-            ReferenceInfo(file_path="/workspace/b.py", line=10, character=4, text="self.foo()"),
-        ]
-        sandbox = _make_mock_sandbox()
-        ctx = _make_context(sandbox, ci_service=svc)
-        tool = DaytonaLspReferencesTool
-        result = _run(
-            tool.execute(tool.input_model(file_path="/test.py", line=1, symbol="foo"), ctx)
-        )
-        assert not result.is_error
-        assert "a.py" in result.output
-        assert "b.py" in result.output
-
-    def test_lsp_references_not_found(self):
-        from tools.ci_toolkit.lsp_tools import ci_lsp_references as DaytonaLspReferencesTool
-
-        svc = MagicMock()
-        svc.find_references.return_value = []
-        sandbox = _make_mock_sandbox()
-        ctx = _make_context(sandbox, ci_service=svc)
-        tool = DaytonaLspReferencesTool
-        result = _run(tool.execute(tool.input_model(file_path="/test.py", line=1), ctx))
-        assert "No references" in result.output
-
-    def test_lsp_references_truncates_at_50(self):
-        from tools.ci_toolkit.lsp_tools import ci_lsp_references as DaytonaLspReferencesTool
-        from code_intelligence.types import ReferenceInfo
-
-        svc = MagicMock()
-        svc.find_references.return_value = [
-            ReferenceInfo(file_path=f"/workspace/file{i}.py", line=i, character=0, text=f"ref{i}")
-            for i in range(100)
-        ]
-        sandbox = _make_mock_sandbox()
-        ctx = _make_context(sandbox, ci_service=svc)
-        tool = DaytonaLspReferencesTool
-        result = _run(tool.execute(tool.input_model(file_path="/test.py", line=1, symbol="x"), ctx))
-        assert '"total_references": 100' in result.output
-        # Output should contain the first 50 references (truncated)
-        data = json.loads(result.output)
-        assert data["total_references"] == 100
-        assert len(data["references"]) == 50
 
     # -- Diagnostics --
 
     def test_lsp_diagnostics_no_ci(self):
-        from tools.ci_toolkit.lsp_tools import ci_lsp_diagnostics as DaytonaLspDiagnosticsTool
+        from tools.ci_toolkit.lsp_tools import ci_diagnostics as DaytonaDiagnosticsTool
 
         sandbox = _make_mock_sandbox()
         ctx = _make_context(sandbox)
-        tool = DaytonaLspDiagnosticsTool
+        tool = DaytonaDiagnosticsTool
         result = _run(tool.execute(tool.input_model(file_path="/test.py"), ctx))
         assert result.is_error
 
     def test_lsp_diagnostics_clean(self):
-        from tools.ci_toolkit.lsp_tools import ci_lsp_diagnostics as DaytonaLspDiagnosticsTool
+        from tools.ci_toolkit.lsp_tools import ci_diagnostics as DaytonaDiagnosticsTool
 
         svc = MagicMock()
         svc.diagnostics.return_value = []
         sandbox = _make_mock_sandbox()
         ctx = _make_context(sandbox, ci_service=svc)
-        tool = DaytonaLspDiagnosticsTool
+        tool = DaytonaDiagnosticsTool
         result = _run(tool.execute(tool.input_model(file_path="/test.py"), ctx))
         assert not result.is_error
         assert "clean" in result.output
 
     def test_lsp_diagnostics_with_errors(self):
-        from tools.ci_toolkit.lsp_tools import ci_lsp_diagnostics as DaytonaLspDiagnosticsTool
+        from tools.ci_toolkit.lsp_tools import ci_diagnostics as DaytonaDiagnosticsTool
         from code_intelligence.types import Diagnostic
 
         svc = MagicMock()
@@ -532,7 +425,7 @@ class TestDaytonaLspTools:
         ]
         sandbox = _make_mock_sandbox()
         ctx = _make_context(sandbox, ci_service=svc)
-        tool = DaytonaLspDiagnosticsTool
+        tool = DaytonaDiagnosticsTool
         result = _run(tool.execute(tool.input_model(file_path="/test.py"), ctx))
         assert not result.is_error
         assert "undefined name" in result.output
@@ -1041,24 +934,18 @@ class TestToolSelectionAndOrdering:
         assert "old_text" in required
         assert "new_text" in required
 
-    def test_lsp_navigation_tools_require_file_path_and_line(self):
-        """Hover, definition, references all require file_path and line."""
-        from tools.ci_toolkit.lsp_tools import (
-            ci_lsp_hover,
-            ci_lsp_definition,
-            ci_lsp_references,
-        )
+    def test_ci_hover_requires_file_path_and_line(self):
+        from tools.ci_toolkit.lsp_tools import ci_hover
 
-        for tool in [ci_lsp_hover, ci_lsp_definition, ci_lsp_references]:
-            schema = tool.to_api_schema()["input_schema"]
-            required = schema.get("required", [])
-            assert "file_path" in required, f"{tool.name} missing file_path"
-            assert "line" in required, f"{tool.name} missing line"
+        schema = ci_hover.to_api_schema()["input_schema"]
+        required = schema.get("required", [])
+        assert "file_path" in required
+        assert "line" in required
 
     def test_lsp_diagnostics_requires_file_path_only(self):
-        from tools.ci_toolkit.lsp_tools import ci_lsp_diagnostics as DaytonaLspDiagnosticsTool
+        from tools.ci_toolkit.lsp_tools import ci_diagnostics as DaytonaDiagnosticsTool
 
-        schema = DaytonaLspDiagnosticsTool.to_api_schema()["input_schema"]
+        schema = DaytonaDiagnosticsTool.to_api_schema()["input_schema"]
         required = schema.get("required", [])
         assert "file_path" in required
         assert "line" not in required

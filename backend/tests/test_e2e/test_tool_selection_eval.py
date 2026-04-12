@@ -103,30 +103,30 @@ EVAL_CASES = [
         expected_tools=["daytona_codeact"],
         required_params={"daytona_codeact": ["command"]},
     ),
-    # -- LSP operations --
+    # -- Code intelligence operations --
     EvalCase(
         name="hover_info",
         prompt="What is the type of the symbol at line 15, column 10 in src/main.py?",
-        expected_tools=["ci_lsp_hover"],
-        required_params={"ci_lsp_hover": ["file_path", "line"]},
+        expected_tools=["ci_hover"],
+        required_params={"ci_hover": ["file_path", "line"]},
     ),
     EvalCase(
         name="goto_definition",
-        prompt="Find the definition of the function used at line 42 in src/app.py",
-        expected_tools=["ci_lsp_definition", "daytona_read_file"],
-        required_params={},
+        prompt="Find the definition of build_app in src/app.py",
+        expected_tools=["ci_query_symbols", "daytona_read_file"],
+        required_params={"ci_query_symbols": ["query"]},
     ),
     EvalCase(
         name="find_references",
         prompt="Find all usages of the symbol at line 5 in src/models.py across the codebase.",
-        expected_tools=["ci_lsp_references"],
-        required_params={"ci_lsp_references": ["file_path", "line"]},
+        expected_tools=["ci_query_references"],
+        required_params={"ci_query_references": ["file_path", "line", "symbol"]},
     ),
     EvalCase(
         name="check_errors",
         prompt="Check src/main.py for syntax errors and type errors.",
-        expected_tools=["ci_lsp_diagnostics"],
-        required_params={"ci_lsp_diagnostics": ["file_path"]},
+        expected_tools=["ci_diagnostics"],
+        required_params={"ci_diagnostics": ["file_path"]},
     ),
     # -- Behavioral --
     EvalCase(

@@ -1,23 +1,14 @@
-"""Tests for tools.ci_toolkit.lsp_tools."""
+"""Tests for hover and diagnostics tools in tools.ci_toolkit.lsp_tools."""
 
 from __future__ import annotations
 
+import asyncio
 import json
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import pytest
-
 from tools.core.base import ToolExecutionContext
-from tools.ci_toolkit.lsp_tools import (
-    ci_lsp_definition,
-    ci_lsp_diagnostics,
-    ci_lsp_hover,
-    ci_lsp_references,
-)
-
-
-pytestmark = pytest.mark.asyncio
+from tools.ci_toolkit.lsp_tools import ci_diagnostics, ci_hover
 
 
 def _ctx(metadata=None) -> ToolExecutionContext:
@@ -28,33 +19,33 @@ def _ctx_with_svc(svc) -> ToolExecutionContext:
     return _ctx({"ci_service": svc})
 
 
-async def test_hover_no_service_returns_error():
+def test_hover_no_service_returns_error():
     ctx = _ctx()
-    result = await ci_lsp_hover.execute(
-        ci_lsp_hover.input_model(file_path="/f.py", line=1), ctx
+    result = asyncio.run(
+        ci_hover.execute(ci_hover.input_model(file_path="/f.py", line=1), ctx)
     )
     assert result.is_error
     assert "LSP not available" in result.output
 
 
-async def test_hover_no_result():
+def test_hover_no_result():
     svc = MagicMock()
     svc.hover.return_value = None
     ctx = _ctx_with_svc(svc)
-    result = await ci_lsp_hover.execute(
-        ci_lsp_hover.input_model(file_path="/f.py", line=5, character=3), ctx
+    result = asyncio.run(
+        ci_hover.execute(ci_hover.input_model(file_path="/f.py", line=5, character=3), ctx)
     )
     assert not result.is_error
     assert "No hover information" in result.output
 
 
-async def test_hover_success():
+def test_hover_success():
     hover_result = MagicMock(content="int foo()", language="python")
     svc = MagicMock()
     svc.hover.return_value = hover_result
     ctx = _ctx({"ci_service": svc, "daytona_cwd": "/ws"})
-    result = await ci_lsp_hover.execute(
-        ci_lsp_hover.input_model(file_path="/f.py", line=10, character=5), ctx
+    result = asyncio.run(
+        ci_hover.execute(ci_hover.input_model(file_path="/f.py", line=10, character=5), ctx)
     )
     assert not result.is_error
     data = json.loads(result.output)
@@ -64,137 +55,21 @@ async def test_hover_success():
     svc.hover.assert_called_once_with("/f.py", 10, 5)
 
 
-async def test_definition_no_service_returns_error():
+def test_diagnostics_no_service_returns_error():
     ctx = _ctx()
-    result = await ci_lsp_definition.execute(
-        ci_lsp_definition.input_model(file_path="/f.py", line=1), ctx
+    result = asyncio.run(
+        ci_diagnostics.execute(ci_diagnostics.input_model(file_path="/f.py"), ctx)
     )
     assert result.is_error
     assert "LSP not available" in result.output
 
 
-async def test_definition_no_results():
-    svc = MagicMock()
-    svc.find_definitions.return_value = []
-    ctx = _ctx_with_svc(svc)
-    result = await ci_lsp_definition.execute(
-        ci_lsp_definition.input_model(file_path="/f.py", line=5), ctx
-    )
-    assert not result.is_error
-    assert "No definitions found" in result.output
-
-
-async def test_definition_success():
-    sym = MagicMock()
-    sym.name = "foo"
-    sym.kind = MagicMock(value="function")
-    sym.file_path = "/other.py"
-    sym.line = 42
-    sym.character = 0
-    sym.signature = "def foo(): ..."
-    svc = MagicMock()
-    svc.find_definitions.return_value = [sym]
-    ctx = _ctx({"ci_service": svc, "daytona_cwd": "/ws"})
-    result = await ci_lsp_definition.execute(
-        ci_lsp_definition.input_model(
-            file_path="/f.py", line=10, character=3, symbol="foo"
-        ),
-        ctx,
-    )
-    assert not result.is_error
-    data = json.loads(result.output)
-    assert len(data["definitions"]) == 1
-    definition = data["definitions"][0]
-    assert definition["name"] == "foo"
-    assert definition["kind"] == "function"
-    assert definition["file_path"] == "/other.py"
-    assert definition["line"] == 42
-
-
-async def test_definition_kind_without_value_attr():
-    sym = MagicMock(spec=["name", "kind", "file_path", "line", "character", "signature"])
-    sym.name = "bar"
-    sym.kind = "variable"
-    sym.file_path = "/x.py"
-    sym.line = 1
-    sym.character = 0
-    sym.signature = "bar = 1"
-    svc = MagicMock()
-    svc.find_definitions.return_value = [sym]
-    ctx = _ctx_with_svc(svc)
-    result = await ci_lsp_definition.execute(
-        ci_lsp_definition.input_model(file_path="/f.py", line=1), ctx
-    )
-    data = json.loads(result.output)
-    assert data["definitions"][0]["kind"] == "variable"
-
-
-async def test_references_no_service_returns_error():
-    ctx = _ctx()
-    result = await ci_lsp_references.execute(
-        ci_lsp_references.input_model(file_path="/f.py", line=1), ctx
-    )
-    assert result.is_error
-    assert "LSP not available" in result.output
-
-
-async def test_references_no_results():
-    svc = MagicMock()
-    svc.find_references.return_value = []
-    ctx = _ctx_with_svc(svc)
-    result = await ci_lsp_references.execute(
-        ci_lsp_references.input_model(file_path="/f.py", line=3), ctx
-    )
-    assert not result.is_error
-    assert "No references found" in result.output
-
-
-async def test_references_success():
-    ref = MagicMock(file_path="/a.py", line=7, character=2, text="foo()")
-    svc = MagicMock()
-    svc.find_references.return_value = [ref]
-    ctx = _ctx({"ci_service": svc, "daytona_cwd": "/ws"})
-    result = await ci_lsp_references.execute(
-        ci_lsp_references.input_model(
-            file_path="/f.py", line=1, character=0, symbol="foo"
-        ),
-        ctx,
-    )
-    assert not result.is_error
-    data = json.loads(result.output)
-    assert data["total_references"] == 1
-    assert data["references"][0]["file_path"] == "/a.py"
-    assert data["references"][0]["text"] == "foo()"
-
-
-async def test_references_capped_at_50():
-    refs = [MagicMock(file_path=f"/f{i}.py", line=i, character=0, text="x") for i in range(100)]
-    svc = MagicMock()
-    svc.find_references.return_value = refs
-    ctx = _ctx_with_svc(svc)
-    result = await ci_lsp_references.execute(
-        ci_lsp_references.input_model(file_path="/f.py", line=1), ctx
-    )
-    data = json.loads(result.output)
-    assert data["total_references"] == 100
-    assert len(data["references"]) == 50
-
-
-async def test_diagnostics_no_service_returns_error():
-    ctx = _ctx()
-    result = await ci_lsp_diagnostics.execute(
-        ci_lsp_diagnostics.input_model(file_path="/f.py"), ctx
-    )
-    assert result.is_error
-    assert "LSP not available" in result.output
-
-
-async def test_diagnostics_clean():
+def test_diagnostics_clean():
     svc = MagicMock()
     svc.diagnostics.return_value = []
     ctx = _ctx({"ci_service": svc, "daytona_cwd": "/ws"})
-    result = await ci_lsp_diagnostics.execute(
-        ci_lsp_diagnostics.input_model(file_path="/f.py"), ctx
+    result = asyncio.run(
+        ci_diagnostics.execute(ci_diagnostics.input_model(file_path="/f.py"), ctx)
     )
     assert not result.is_error
     data = json.loads(result.output)
@@ -202,7 +77,7 @@ async def test_diagnostics_clean():
     assert data["diagnostics"] == []
 
 
-async def test_diagnostics_with_errors():
+def test_diagnostics_with_errors():
     diag = MagicMock()
     diag.line = 5
     diag.character = 3
@@ -212,8 +87,8 @@ async def test_diagnostics_with_errors():
     svc = MagicMock()
     svc.diagnostics.return_value = [diag]
     ctx = _ctx({"ci_service": svc, "daytona_cwd": "/ws"})
-    result = await ci_lsp_diagnostics.execute(
-        ci_lsp_diagnostics.input_model(file_path="/f.py"), ctx
+    result = asyncio.run(
+        ci_diagnostics.execute(ci_diagnostics.input_model(file_path="/f.py"), ctx)
     )
     assert not result.is_error
     data = json.loads(result.output)
@@ -226,7 +101,7 @@ async def test_diagnostics_with_errors():
     assert diagnostic["source"] == "pyright"
 
 
-async def test_diagnostics_severity_without_value_attr():
+def test_diagnostics_severity_without_value_attr():
     diag = MagicMock(spec=["line", "character", "severity", "message", "source"])
     diag.line = 1
     diag.character = 0
@@ -236,8 +111,8 @@ async def test_diagnostics_severity_without_value_attr():
     svc = MagicMock()
     svc.diagnostics.return_value = [diag]
     ctx = _ctx_with_svc(svc)
-    result = await ci_lsp_diagnostics.execute(
-        ci_lsp_diagnostics.input_model(file_path="/f.py"), ctx
+    result = asyncio.run(
+        ci_diagnostics.execute(ci_diagnostics.input_model(file_path="/f.py"), ctx)
     )
     data = json.loads(result.output)
     assert data["diagnostics"][0]["severity"] == "warning"

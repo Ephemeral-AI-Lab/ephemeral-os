@@ -32,8 +32,8 @@ pytestmark = [pytest.mark.e2e, pytest.mark.live, pytest.mark.asyncio]
 KNOWN_DAYTONA_TOOLS = {
     "daytona_codeact", "daytona_read_file", "daytona_write_file",
     "daytona_grep", "daytona_glob",
-    "daytona_edit_file", "ci_lsp_hover", "ci_lsp_definition",
-    "ci_lsp_references", "ci_lsp_diagnostics",
+    "daytona_edit_file", "ci_hover", "ci_query_symbols",
+    "ci_query_references", "ci_diagnostics",
 }
 
 AGENT_PROMPT = (

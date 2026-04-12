@@ -33,8 +33,8 @@ pytestmark = [pytest.mark.e2e, pytest.mark.live]
 KNOWN_DAYTONA_TOOLS = {
     "daytona_codeact", "daytona_read_file", "daytona_write_file",
     "daytona_grep", "daytona_glob",
-    "daytona_edit_file", "ci_lsp_hover", "ci_lsp_definition",
-    "ci_lsp_references", "ci_lsp_diagnostics",
+    "daytona_edit_file", "ci_hover", "ci_query_symbols",
+    "ci_query_references", "ci_diagnostics",
 }
 
 NEXTJS_AGENT_PROMPT = (
@@ -447,11 +447,11 @@ class TestCodeIntelligenceOnProject:
 
 
 @pytest.mark.asyncio
-async def test_lsp_hover_on_component(sandbox_id):
-    """Agent uses ci_lsp_hover to inspect a React component."""
+async def test_hover_on_component(sandbox_id):
+    """Agent uses ci_hover to inspect a React component."""
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=NEXTJS_AGENT_PROMPT)
     result = await agent.invoke(
-        "Use ci_lsp_hover on /workspace/nextjs-app/src/app/page.tsx "
+        "Use ci_hover on /workspace/nextjs-app/src/app/page.tsx "
         "at line 9, character 10 to get type info for the HeroSection function."
     )
     started = result.tools_started()
@@ -460,11 +460,11 @@ async def test_lsp_hover_on_component(sandbox_id):
 
 
 @pytest.mark.asyncio
-async def test_lsp_diagnostics_on_page(sandbox_id):
-    """Agent uses ci_lsp_diagnostics to check page.tsx for errors."""
+async def test_diagnostics_on_page(sandbox_id):
+    """Agent uses ci_diagnostics to check page.tsx for errors."""
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=NEXTJS_AGENT_PROMPT)
     result = await agent.invoke(
-        "Use ci_lsp_diagnostics on /workspace/nextjs-app/src/app/page.tsx "
+        "Use ci_diagnostics on /workspace/nextjs-app/src/app/page.tsx "
         "to check for any syntax or type errors."
     )
     started = result.tools_started()
@@ -472,12 +472,12 @@ async def test_lsp_diagnostics_on_page(sandbox_id):
 
 
 @pytest.mark.asyncio
-async def test_lsp_definition_on_interface(sandbox_id):
-    """Agent uses ci_lsp_definition to find PageProps interface definition."""
+async def test_query_symbols_on_interface(sandbox_id):
+    """Agent uses ci_query_symbols to find the PageProps interface."""
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=NEXTJS_AGENT_PROMPT)
     result = await agent.invoke(
-        "Use ci_lsp_definition on /workspace/nextjs-app/src/app/page.tsx "
-        "at line 9, character 40 to find the definition of PageProps."
+        "Use ci_query_symbols to find PageProps in "
+        "/workspace/nextjs-app/src/app/page.tsx."
     )
     started = result.tools_started()
     assert len(started) >= 1
