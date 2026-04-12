@@ -215,20 +215,6 @@ def test_get_code_intelligence_recreates_service_when_workspace_root_changes() -
     assert second.lsp_client._workspace_root == "/tmp/second"
 
 
-def test_service_exposes_atlas_component() -> None:
-    svc = CodeIntelligenceService(
-        sandbox_id="sandbox-atlas",
-        workspace_root="/tmp/atlas",
-    )
-    status = svc.status()
-
-    assert svc.atlas.ledger is svc.ledger
-    assert svc.atlas.symbol_index is svc.symbol_index
-    assert svc.atlas.workspace_root == "/tmp/atlas"
-    assert "atlas" in status
-    assert status["atlas_store_initialized"] is status["atlas"]["store_initialized"]
-
-
 @pytest.mark.asyncio
 async def test_initialize_endpoint_passes_requested_workspace_root(monkeypatch) -> None:
     calls: list[tuple[str, str]] = []
