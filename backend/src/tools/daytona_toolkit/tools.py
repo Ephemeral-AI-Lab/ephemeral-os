@@ -40,16 +40,17 @@ from tools.daytona_toolkit._daytona_utils import (
     _EXIT_MARKER,
     is_coordinated_team_agent,
 )
-from tools.daytona_toolkit.ci_integration import (
+from tools.core.ci_runtime import (
     abort_ci_write,
-    command_may_mutate_workspace,
     finalize_ci_write,
     prepare_ci_write,
     prepare_declared_shell_outputs,
     release_declared_shell_outputs,
+    sync_write_to_ci,
+)
+from tools.daytona_toolkit.ci_integration import (
     shell_mutation_declaration_error,
     sync_shell_mutations,
-    sync_write_to_ci,
 )
 
 logger = logging.getLogger(__name__)
@@ -503,55 +504,6 @@ async def daytona_write_file(
             )
     finally:
         abort_ci_write(context, prepared)
-
-
-# ---------------------------------------------------------------------------
-# List files
-# ---------------------------------------------------------------------------
-
-
-@tool(
-    name="daytona_list_files",
-    description="List files and directories in a given path.",
-    read_only=True,
-)
-async def daytona_list_files(
-    directory: str = ".",
-    *,
-    context: ToolExecutionContext,
-) -> ToolResult:
-    """List files in a directory in the Daytona sandbox.
-
-    Args:
-        directory: Directory path to list
-
-    Returns:
-        directory (str): Directory that was listed
-        entries (list): File and directory names
-    """
-    directory = (
-        _resolve_path(directory, context) if directory != "." else (_get_cwd(context) or ".")
-    )
-    try:
-        entries = await _run_with_recovery(
-            context,
-            lambda sandbox: sandbox.fs.list_files(directory),
-        )
-        names = sorted((getattr(entry, "name", None) or str(entry)) for entry in (entries or []))
-        return ToolResult(
-            output=json.dumps(
-                {
-                    "cwd": _get_cwd(context) or "",
-                    "directory": directory,
-                    "entries": names,
-                }
-            )
-        )
-    except Exception as exc:
-        return ToolResult(
-            output=_path_error(exc, directory) or str(exc),
-            is_error=True,
-        )
 
 
 # ---------------------------------------------------------------------------

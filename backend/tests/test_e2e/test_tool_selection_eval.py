@@ -50,8 +50,8 @@ EVAL_CASES = [
     EvalCase(
         name="list_directory",
         prompt="Show me what files are in the src directory.",
-        expected_tools=["daytona_list_files"],
-        required_params={"daytona_list_files": ["directory"]},
+        expected_tools=["daytona_codeact"],
+        required_params={"daytona_codeact": ["command"]},
     ),
     EvalCase(
         name="read_file",
@@ -107,26 +107,26 @@ EVAL_CASES = [
     EvalCase(
         name="hover_info",
         prompt="What is the type of the symbol at line 15, column 10 in src/main.py?",
-        expected_tools=["daytona_lsp_hover"],
-        required_params={"daytona_lsp_hover": ["file_path", "line"]},
+        expected_tools=["ci_lsp_hover"],
+        required_params={"ci_lsp_hover": ["file_path", "line"]},
     ),
     EvalCase(
         name="goto_definition",
         prompt="Find the definition of the function used at line 42 in src/app.py",
-        expected_tools=["daytona_lsp_definition", "daytona_read_file"],
+        expected_tools=["ci_lsp_definition", "daytona_read_file"],
         required_params={},
     ),
     EvalCase(
         name="find_references",
         prompt="Find all usages of the symbol at line 5 in src/models.py across the codebase.",
-        expected_tools=["daytona_lsp_references"],
-        required_params={"daytona_lsp_references": ["file_path", "line"]},
+        expected_tools=["ci_lsp_references"],
+        required_params={"ci_lsp_references": ["file_path", "line"]},
     ),
     EvalCase(
         name="check_errors",
         prompt="Check src/main.py for syntax errors and type errors.",
-        expected_tools=["daytona_lsp_diagnostics"],
-        required_params={"daytona_lsp_diagnostics": ["file_path"]},
+        expected_tools=["ci_lsp_diagnostics"],
+        required_params={"ci_lsp_diagnostics": ["file_path"]},
     ),
     # -- Behavioral --
     EvalCase(

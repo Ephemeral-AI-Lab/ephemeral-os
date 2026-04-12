@@ -1,4 +1,4 @@
-"""DaytonaToolkit — groups all Daytona sandbox tools into a single toolkit."""
+"""DaytonaToolkit — groups Daytona sandbox file/edit/exec tools."""
 
 from __future__ import annotations
 
@@ -10,17 +10,10 @@ from tools.core.base import BaseToolkit
 from tools.daytona_toolkit.tools import (
     daytona_glob,
     daytona_grep,
-    daytona_list_files,
     daytona_read_file,
     daytona_write_file,
 )
 from tools.daytona_toolkit.edit_tool import daytona_edit_file
-from tools.daytona_toolkit.lsp_tools import (
-    daytona_lsp_definition,
-    daytona_lsp_diagnostics,
-    daytona_lsp_hover,
-    daytona_lsp_references,
-)
 from tools.daytona_toolkit.codeact_tool import daytona_codeact
 
 from config.defaults import DEFAULT_SANDBOX_CI_ROOT
@@ -30,14 +23,9 @@ logger = logging.getLogger(__name__)
 
 def _build_tools(*, include_codeact: bool) -> list[Any]:
     tools: list[Any] = [
-        daytona_list_files,
         daytona_grep,
         daytona_glob,
         daytona_read_file,
-        daytona_lsp_hover,
-        daytona_lsp_definition,
-        daytona_lsp_references,
-        daytona_lsp_diagnostics,
         daytona_write_file,
         daytona_edit_file,
     ]
@@ -59,15 +47,9 @@ def _build_instructions(*, include_codeact: bool) -> str:
         "code analysis, editing, and command execution. "
         "Read before you write — explore and understand context first.\n\n"
         "**Explore & Search**\n"
-        "- `daytona_list_files` — list directory contents. Use to orient yourself.\n"
         "- `daytona_glob` — find files by pattern (e.g. `**/*.py`). Use to locate files.\n"
         "- `daytona_grep` — search file contents by regex. Use to find code patterns.\n"
         "- `daytona_read_file` — read a file. Use before editing to understand context.\n\n"
-        "**Analyze**\n"
-        "- `daytona_lsp_hover` — type info and docs for a symbol at a position.\n"
-        "- `daytona_lsp_definition` — jump to where a symbol is defined.\n"
-        "- `daytona_lsp_references` — find all usages of a symbol across files.\n"
-        "- `daytona_lsp_diagnostics` — check a file for errors and warnings.\n\n"
         "**Edit**\n"
         "- `daytona_edit_file` — atomic file edits using `search_replace` or `line_range`, including small batched edits.\n"
         "- `daytona_write_file` — create or overwrite a file. Use for new files.\n"
@@ -79,7 +61,7 @@ def _build_instructions(*, include_codeact: bool) -> str:
 
 
 class DaytonaToolkit(BaseToolkit):
-    """Daytona sandbox toolkit — file I/O, editing, LSP, shell, and CodeAct.
+    """Daytona sandbox toolkit — file I/O, editing, and CodeAct.
 
     Requires a pre-created sandbox_id. The sandbox is fetched lazily
     on first tool invocation and injected into ToolExecutionContext.metadata
@@ -107,7 +89,7 @@ class DaytonaToolkit(BaseToolkit):
     ) -> None:
         super().__init__(
             name="sandbox_operations",
-            description="Remote sandbox operations: files, search, editing, LSP queries, and CodeAct execution",
+            description="Remote sandbox operations: files, search, editing, and CodeAct execution",
             tools=_build_tools(include_codeact=include_codeact),
             instructions=_build_instructions(include_codeact=include_codeact),
         )

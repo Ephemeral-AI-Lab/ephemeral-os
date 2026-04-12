@@ -9,6 +9,14 @@ from typing import Any
 
 from code_intelligence.editing.patcher import LineRangeEdit, Patcher, SearchReplaceEdit
 from tools.core.base import ToolExecutionContext, ToolResult
+from tools.core.ci_runtime import (
+    abort_ci_write,
+    finalize_ci_write,
+    get_ci_service,
+    prepare_ci_edit_intent,
+    prepare_ci_write,
+    release_ci_edit_intent,
+)
 from tools.daytona_toolkit.tools import (
     _get_cwd,
     _path_error,
@@ -18,14 +26,6 @@ from tools.daytona_toolkit.tools import (
     _team_repo_write_error,
     _team_repo_write_warning,
     _upload_file_compat,
-)
-from tools.daytona_toolkit.ci_integration import (
-    abort_ci_write,
-    finalize_ci_write,
-    get_ci_service,
-    prepare_ci_write,
-    prepare_ci_edit_intent,
-    release_ci_edit_intent,
 )
 from tools.core.decorator import tool
 

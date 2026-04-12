@@ -43,7 +43,7 @@ AGENT_PROMPT = (
     "You are test-anthropic-native-agent, a developer with a remote Daytona sandbox. "
     "You MUST use tools for every action — never just describe what you'd do. "
     "Use daytona_write_file to create files, daytona_codeact to run commands, "
-    "daytona_read_file to read files, daytona_list_files to list directories. "
+    "daytona_read_file to read files. "
     "Always execute every step using tools. Be concise."
 )
 

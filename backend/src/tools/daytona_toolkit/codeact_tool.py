@@ -13,17 +13,13 @@ import logging
 import uuid
 
 from tools.core.base import ToolExecutionContext, ToolResult
+from tools.core.ci_runtime import prime_cache_after_write, record_edit_in_arbiter
 from tools.daytona_toolkit.tools import (
     _get_cwd,
     _recover_sandbox,
     _require_sandbox,
     _wrap_bash_command,
 )
-from tools.daytona_toolkit.ci_integration import (
-    prime_cache_after_write,
-    record_edit_in_arbiter,
-)
-from tools.daytona_toolkit.codeact_policy import resolve_policy
 from tools.core.decorator import tool
 
 logger = logging.getLogger(__name__)
@@ -122,12 +118,6 @@ async def daytona_codeact(
     except Exception as exc:
         return ToolResult(output=str(exc), is_error=True)
 
-    policy = resolve_policy(context)
-
-    preflight_error = policy.preflight(code)
-    if preflight_error is not None:
-        return ToolResult(output=preflight_error, is_error=True)
-
     run_id = uuid.uuid4().hex[:8]
     # Build and upload wrapper script
     repo_cwd = _get_cwd(context)
@@ -193,15 +183,11 @@ async def daytona_codeact(
     except Exception:
         return ToolResult(output=f"Script completed but manifest unreadable:\n{stdout[:4000]}")
 
-    manifest_error = policy.post_manifest(manifest)
-    if manifest_error is not None:
-        return ToolResult(output=manifest_error, is_error=True)
-
     # Commit staged writes
     writes = manifest.get("writes", [])
     committed = 0
     errors = []
-    warnings = policy.commit_warnings(writes)
+    warnings: list[str] = []
 
     for w in writes:
         path = w.get("path", "")

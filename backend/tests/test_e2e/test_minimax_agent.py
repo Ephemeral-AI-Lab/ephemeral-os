@@ -30,7 +30,7 @@ MINIMAX_AGENT_PROMPT = (
     "You are test-minimax-agent, a developer with a remote Daytona sandbox. "
     "You MUST use tools for every action — never just describe what you'd do. "
     "Use daytona_write_file to create files, daytona_codeact to run commands, "
-    "daytona_read_file to read files, daytona_list_files to list directories, "
+    "daytona_read_file to read files, "
     "daytona_grep to search content, daytona_glob to find files. "
     "Always execute every step using tools. Be concise."
 )
@@ -109,14 +109,14 @@ async def test_agent_write_and_read_file(sandbox_id):
 @pytest.mark.asyncio
 async def test_agent_lists_files(sandbox_id):
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=MINIMAX_AGENT_PROMPT)
-    result = await agent.invoke("Use daytona_list_files to list the /workspace directory")
+    result = await agent.invoke("Use daytona_codeact to run 'ls /workspace'")
 
     assert len(result.assistant_turns()) > 0
 
     tool_started = result.tools_started()
     tool_names = [ev.tool_name for ev in tool_started]
-    assert any("daytona_list_files" in t or "daytona_codeact" in t for t in tool_names), (
-        f"Expected list_files or bash tool. Got: {tool_names}"
+    assert any("daytona_codeact" in t for t in tool_names), (
+        f"Expected listing via codeact. Got: {tool_names}"
     )
 
 

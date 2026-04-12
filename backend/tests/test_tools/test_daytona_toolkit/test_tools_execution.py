@@ -12,7 +12,6 @@ from tools.core.base import ToolExecutionContext
 from tools.daytona_toolkit.tools import (
     daytona_read_file,
     daytona_write_file,
-    daytona_list_files,
     daytona_grep,
     daytona_glob,
 )
@@ -274,62 +273,6 @@ async def test_write_file_refreshes_stale_scope_coherence():
     assert json.loads(result.output)["file_path"] == "/ws/new.txt"
     svc.prepare_write.assert_called_once()
     svc.commit_prepared_write.assert_called_once()
-
-
-# ---------------------------------------------------------------------------
-# daytona_list_files
-# ---------------------------------------------------------------------------
-
-async def test_list_files_success():
-    e1, e2 = MagicMock(), MagicMock()
-    e1.name = "a.py"
-    e2.name = "b.py"
-    sb = _sb(list_result=[e1, e2])
-    ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/workspace"})
-    result = await daytona_list_files.execute(
-        daytona_list_files.input_model(directory="."), ctx
-    )
-    assert not result.is_error
-    data = json.loads(result.output)
-    assert "a.py" in data["entries"]
-    assert "b.py" in data["entries"]
-
-
-async def test_list_files_empty():
-    sb = _sb(list_result=[])
-    ctx = _ctx({"daytona_sandbox": sb})
-    result = await daytona_list_files.execute(
-        daytona_list_files.input_model(directory="/empty"), ctx
-    )
-    assert not result.is_error
-    assert json.loads(result.output)["entries"] == []
-
-
-async def test_list_files_exception():
-    sb = _sb()
-    sb.fs.list_files = AsyncMock(side_effect=FileNotFoundError("gone"))
-    ctx = _ctx({"daytona_sandbox": sb})
-    result = await daytona_list_files.execute(
-        daytona_list_files.input_model(directory="/missing"), ctx
-    )
-    assert result.is_error
-    assert "does not exist" in result.output
-
-
-async def test_list_files_dot_uses_cwd():
-    sb = _sb(list_result=[])
-    ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/workspace"})
-    await daytona_list_files.execute(daytona_list_files.input_model(directory="."), ctx)
-    sb.fs.list_files.assert_called_once_with("/workspace")
-
-
-async def test_list_files_absolute_path():
-    sb = _sb(list_result=[])
-    ctx = _ctx({"daytona_sandbox": sb})
-    await daytona_list_files.execute(
-        daytona_list_files.input_model(directory="/abs/dir"), ctx
-    )
-    sb.fs.list_files.assert_called_once_with("/abs/dir")
 
 
 # ---------------------------------------------------------------------------

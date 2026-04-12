@@ -5,11 +5,11 @@ Tests the full pipeline: agent creation, sandbox attachment, tool invocation,
 result verification — using real LLM + real Daytona sandbox.
 
 Single-agent tests verify:
-- Agent can invoke individual Daytona tools (bash, write, read, grep, glob, list)
+- Agent can invoke individual Daytona tools (bash, write, read, grep, glob)
 - Tool events flow correctly (tool_started → tool_completed)
 - File roundtrips work (write → read with content verification)
 - Multi-turn tool chaining preserves sandbox state
-- LSP tools are available in the schema
+- CI-owned LSP tools are available in the schema when code intelligence is enabled
 
 Run with: pytest tests/test_e2e/test_live_sandbox_agents.py -m live -v
 """
@@ -31,16 +31,16 @@ pytestmark = [pytest.mark.e2e, pytest.mark.live, pytest.mark.asyncio]
 
 KNOWN_DAYTONA_TOOLS = {
     "daytona_codeact", "daytona_read_file", "daytona_write_file",
-    "daytona_list_files", "daytona_grep", "daytona_glob",
-    "daytona_edit_file", "daytona_lsp_hover", "daytona_lsp_definition",
-    "daytona_lsp_references", "daytona_lsp_diagnostics", "daytona_codeact",
+    "daytona_grep", "daytona_glob",
+    "daytona_edit_file", "ci_lsp_hover", "ci_lsp_definition",
+    "ci_lsp_references", "ci_lsp_diagnostics",
 }
 
 AGENT_PROMPT = (
     "You are a developer with a remote Daytona sandbox. "
     "You MUST use tools for every action — never just describe what you'd do. "
     "Use daytona_write_file to create files, daytona_codeact to run commands, "
-    "daytona_read_file to read files, daytona_list_files to list directories, "
+    "daytona_read_file to read files, "
     "daytona_grep to search content, daytona_glob to find files. "
     "Always execute every step using tools. Be concise."
 )
@@ -104,13 +104,13 @@ async def test_write_file_tool(agent):
 
 
 async def test_list_files_tool(agent):
-    """Agent uses daytona_list_files to list a directory."""
+    """Agent uses daytona_codeact to list a directory."""
     # First create a file so there's something to list
     await agent.invoke(
         "Use daytona_codeact to run 'touch /workspace/listable.txt'"
     )
     result = await agent.invoke(
-        "Use daytona_list_files to list the /workspace directory."
+        "Use daytona_codeact to run 'ls /workspace'."
     )
     started = result.tools_started()
     assert len(started) >= 1, f"No tools used. Tool names: {result.tool_names}"

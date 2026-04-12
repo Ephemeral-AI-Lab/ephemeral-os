@@ -32,16 +32,16 @@ pytestmark = [pytest.mark.e2e, pytest.mark.live]
 
 KNOWN_DAYTONA_TOOLS = {
     "daytona_codeact", "daytona_read_file", "daytona_write_file",
-    "daytona_list_files", "daytona_grep", "daytona_glob",
-    "daytona_edit_file", "daytona_lsp_hover", "daytona_lsp_definition",
-    "daytona_lsp_references", "daytona_lsp_diagnostics", "daytona_codeact",
+    "daytona_grep", "daytona_glob",
+    "daytona_edit_file", "ci_lsp_hover", "ci_lsp_definition",
+    "ci_lsp_references", "ci_lsp_diagnostics",
 }
 
 NEXTJS_AGENT_PROMPT = (
     "You are a senior fullstack developer with a remote Daytona sandbox. "
     "You MUST use tools for every action — never just describe what you'd do. "
     "Use daytona_write_file to create files, daytona_codeact to run commands, "
-    "daytona_read_file to read files, daytona_list_files to list dirs. "
+    "daytona_read_file to read files. "
     "You specialize in Next.js, React, and TypeScript projects. "
     "Always execute every step using tools. Be concise."
 )
@@ -280,10 +280,10 @@ export async function GET(request: NextRequest): Promise<NextResponse<HealthResp
 
 @pytest.mark.asyncio
 async def test_list_project_structure(sandbox_id):
-    """daytona_list_files shows the project directory structure."""
+    """daytona_codeact can show the project directory structure."""
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=NEXTJS_AGENT_PROMPT)
     result = await agent.invoke(
-        "Use daytona_list_files to list /workspace/nextjs-app/ recursively"
+        "Use daytona_codeact to run: find /workspace/nextjs-app -maxdepth 4 | sort"
     )
     started = result.tools_started()
     assert len(started) >= 1
@@ -448,10 +448,10 @@ class TestCodeIntelligenceOnProject:
 
 @pytest.mark.asyncio
 async def test_lsp_hover_on_component(sandbox_id):
-    """Agent uses daytona_lsp_hover to inspect a React component."""
+    """Agent uses ci_lsp_hover to inspect a React component."""
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=NEXTJS_AGENT_PROMPT)
     result = await agent.invoke(
-        "Use daytona_lsp_hover on /workspace/nextjs-app/src/app/page.tsx "
+        "Use ci_lsp_hover on /workspace/nextjs-app/src/app/page.tsx "
         "at line 9, character 10 to get type info for the HeroSection function."
     )
     started = result.tools_started()
@@ -461,10 +461,10 @@ async def test_lsp_hover_on_component(sandbox_id):
 
 @pytest.mark.asyncio
 async def test_lsp_diagnostics_on_page(sandbox_id):
-    """Agent uses daytona_lsp_diagnostics to check page.tsx for errors."""
+    """Agent uses ci_lsp_diagnostics to check page.tsx for errors."""
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=NEXTJS_AGENT_PROMPT)
     result = await agent.invoke(
-        "Use daytona_lsp_diagnostics on /workspace/nextjs-app/src/app/page.tsx "
+        "Use ci_lsp_diagnostics on /workspace/nextjs-app/src/app/page.tsx "
         "to check for any syntax or type errors."
     )
     started = result.tools_started()
@@ -473,10 +473,10 @@ async def test_lsp_diagnostics_on_page(sandbox_id):
 
 @pytest.mark.asyncio
 async def test_lsp_definition_on_interface(sandbox_id):
-    """Agent uses daytona_lsp_definition to find PageProps interface definition."""
+    """Agent uses ci_lsp_definition to find PageProps interface definition."""
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=NEXTJS_AGENT_PROMPT)
     result = await agent.invoke(
-        "Use daytona_lsp_definition on /workspace/nextjs-app/src/app/page.tsx "
+        "Use ci_lsp_definition on /workspace/nextjs-app/src/app/page.tsx "
         "at line 9, character 40 to find the definition of PageProps."
     )
     started = result.tools_started()

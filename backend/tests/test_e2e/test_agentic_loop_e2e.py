@@ -389,14 +389,12 @@ async def test_no_early_stop_verification(sandbox_id):
     tool_names = [ts.tool_name for ts in tool_started]
 
     # Should have a listing/verification step (step 4) — model may use
-    # daytona_codeact with ls, or daytona_list_files, or cat to verify.
+    # daytona_codeact with ls/cat to verify.
     bash_calls = [ts for ts in tool_started if ts.tool_name == "daytona_codeact"]
-    list_calls = [ts for ts in tool_started if ts.tool_name == "daytona_list_files"]
 
-    # Accept either daytona_codeact (ls/cat) or daytona_list_files for verification
-    has_verification_step = bool(bash_calls) or bool(list_calls)
+    has_verification_step = bool(bash_calls)
     assert has_verification_step, (
-        f"Should execute a verification step (ls or list_files). Tools: {tool_names}"
+        f"Should execute a verification step (ls/cat). Tools: {tool_names}"
     )
 
 

@@ -8,11 +8,8 @@ import os
 from pathlib import Path
 
 from tools.core.base import ToolExecutionContext, ToolResult
-from tools.daytona_toolkit.ci_integration import (
-    get_ci_service,
-    get_daytona_sandbox,
-    resolve_daytona_path,
-)
+from tools.core.ci_runtime import get_ci_service
+from tools.core.sandbox_runtime import get_daytona_sandbox, resolve_daytona_path
 from tools.core.decorator import tool
 
 logger = logging.getLogger(__name__)

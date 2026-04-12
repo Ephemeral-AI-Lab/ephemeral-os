@@ -56,17 +56,12 @@ def test_toolkit_registers_expected_tools():
         "daytona_codeact",
         "daytona_read_file",
         "daytona_write_file",
-        "daytona_list_files",
         "daytona_grep",
         "daytona_glob",
         "daytona_edit_file",
-        "daytona_lsp_hover",
-        "daytona_lsp_definition",
-        "daytona_lsp_references",
-        "daytona_lsp_diagnostics",
-        "daytona_codeact",
     }
-    assert expected.issubset(names)
+    assert names == expected
+    assert not any(name.startswith("daytona_lsp_") for name in names)
 
 
 def test_toolkit_from_context_includes_codeact():
@@ -80,8 +75,8 @@ def test_toolkit_from_context_includes_codeact():
     assert "daytona_codeact" in developer_tk.tool_names()
     assert "daytona_codeact" in validator_tk.tool_names()
     assert "daytona_edit_file" in developer_tk.tool_names()
-    assert "daytona_bash" not in developer_tk.tool_names()
-    assert "daytona_bash" not in validator_tk.tool_names()
+    assert "daytona_list_files" not in developer_tk.tool_names()
+    assert "daytona_list_files" not in validator_tk.tool_names()
 
 
 def test_toolkit_get_tool():
@@ -99,7 +94,7 @@ def test_toolkit_get_missing_tool():
 def test_toolkit_list_tools_length():
     tk = DaytonaToolkit()
     tools = tk.list_tools()
-    assert len(tools) == 11
+    assert len(tools) == 6
 
 
 # ---------------------------------------------------------------------------

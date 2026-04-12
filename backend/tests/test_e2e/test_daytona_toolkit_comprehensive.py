@@ -1,9 +1,9 @@
 # ruff: noqa
-"""Comprehensive Daytona toolkit tests — OCC, LSP, CI, conflict resolution.
+"""Comprehensive sandbox and CI tool tests — OCC, LSP, CI, conflict resolution.
 
-Covers Daytona-specific concerns:
+Covers sandbox and CI concerns:
   OCC Editing:         daytona_edit_file with Arbiter lock/token/conflict
-  LSP:                 daytona_lsp_hover, definition, references, diagnostics
+  LSP via CI toolkit:  ci_lsp_hover, definition, references, diagnostics
   CodeAct:             daytona_codeact multi-step execution
   Tool Selection:      ordering, schema validation, completeness
   Code Intelligence:   CI service, LSP client, registry, types
@@ -37,11 +37,13 @@ pytestmark = [pytest.mark.e2e]
 # Credential loading
 # ---------------------------------------------------------------------------
 
+
 def _load_settings() -> dict:
     settings_path = Path.home() / ".ephemeralos" / "settings.json"
     if settings_path.exists():
         return json.loads(settings_path.read_text())
     return {}
+
 
 _SETTINGS = _load_settings()
 DAYTONA_KEY = os.environ.get("DAYTONA_API_KEY") or _SETTINGS.get("daytona_api_key", "")
@@ -53,6 +55,7 @@ HAS_DAYTONA = bool(DAYTONA_KEY and DAYTONA_URL)
 # ---------------------------------------------------------------------------
 # Mock sandbox factory
 # ---------------------------------------------------------------------------
+
 
 def _make_mock_sandbox(
     *,
@@ -95,19 +98,6 @@ def _make_mock_sandbox(
 
     sandbox.fs.upload_file = _mock_upload
 
-    # -- fs.list_files mock (async) --
-    async def _mock_list_files(directory: str):
-        entries = []
-        for p in file_store:
-            parent = str(Path(p).parent)
-            if parent == directory or p.startswith(directory.rstrip("/") + "/"):
-                entry = MagicMock()
-                entry.name = Path(p).name
-                entries.append(entry)
-        return entries
-
-    sandbox.fs.list_files = _mock_list_files
-
     # -- fs.find_files mock (async) --
     async def _mock_find_files(path: str, pattern: str):
         matches = []
@@ -125,6 +115,7 @@ def _make_mock_sandbox(
     # -- fs.search_files mock (async) --
     async def _mock_search_files(path: str, pattern: str):
         import fnmatch
+
         result = MagicMock()
         matched = [p for p in file_store if fnmatch.fnmatch(Path(p).name, pattern)]
         result.files = matched
@@ -137,7 +128,9 @@ def _make_mock_sandbox(
     return sandbox
 
 
-def _make_context(sandbox: Any, *, cwd: str = "/workspace", ci_service: Any = None) -> ToolExecutionContext:
+def _make_context(
+    sandbox: Any, *, cwd: str = "/workspace", ci_service: Any = None
+) -> ToolExecutionContext:
     """Create a ToolExecutionContext with sandbox injected."""
     metadata: dict[str, Any] = {
         "daytona_sandbox": sandbox,
@@ -164,8 +157,8 @@ def _run(coro):
     return _get_test_loop().run_until_complete(coro)
 
 
-# NOTE: Core I/O tool tests (bash, read_file, write_file, list_files, grep,
-# glob) removed — focus is on Daytona-specific concerns: OCC, LSP, CI,
+# NOTE: Core I/O tool tests (bash, read_file, write_file, grep, glob)
+# removed — focus is on Daytona-specific concerns: OCC, LSP, CI,
 # conflict resolution, tool selection/ordering.
 
 # ===========================================================================
@@ -178,17 +171,23 @@ class TestDaytonaEditTool:
 
     def _tool(self):
         from tools.daytona_toolkit.edit_tool import daytona_edit_file
+
         return daytona_edit_file
 
     def test_edit_basic_replace(self):
         sandbox = _make_mock_sandbox(files={"/workspace/app.py": "def foo():\n    return 1"})
         ctx = _make_context(sandbox)
         tool = self._tool()
-        result = _run(tool.execute(tool.input_model(
-            file_path="/workspace/app.py",
-            old_text="return 1",
-            new_text="return 42",
-        ), ctx))
+        result = _run(
+            tool.execute(
+                tool.input_model(
+                    file_path="/workspace/app.py",
+                    old_text="return 1",
+                    new_text="return 42",
+                ),
+                ctx,
+            )
+        )
         assert not result.is_error
         assert "edited" in result.output
         assert sandbox._file_store["/workspace/app.py"] == "def foo():\n    return 42"
@@ -197,12 +196,17 @@ class TestDaytonaEditTool:
         sandbox = _make_mock_sandbox(files={"/workspace/app.py": "old_value = 1"})
         ctx = _make_context(sandbox)
         tool = self._tool()
-        result = _run(tool.execute(tool.input_model(
-            file_path="/workspace/app.py",
-            old_text="old_value",
-            new_text="new_value",
-            dry_run=True,
-        ), ctx))
+        result = _run(
+            tool.execute(
+                tool.input_model(
+                    file_path="/workspace/app.py",
+                    old_text="old_value",
+                    new_text="new_value",
+                    dry_run=True,
+                ),
+                ctx,
+            )
+        )
         assert not result.is_error
         assert "dry_run" in result.output
         # File should NOT be modified
@@ -212,11 +216,16 @@ class TestDaytonaEditTool:
         sandbox = _make_mock_sandbox(files={"/workspace/f.py": "aaa\naaa\naaa"})
         ctx = _make_context(sandbox)
         tool = self._tool()
-        result = _run(tool.execute(tool.input_model(
-            file_path="/workspace/f.py",
-            old_text="aaa",
-            new_text="bbb",
-        ), ctx))
+        result = _run(
+            tool.execute(
+                tool.input_model(
+                    file_path="/workspace/f.py",
+                    old_text="aaa",
+                    new_text="bbb",
+                ),
+                ctx,
+            )
+        )
         assert not result.is_error
         assert sandbox._file_store["/workspace/f.py"] == "bbb\naaa\naaa"
 
@@ -226,11 +235,16 @@ class TestDaytonaEditTool:
         sandbox = _make_mock_sandbox(files={"/workspace/f.py": "hello"})
         ctx = _make_context(sandbox)
         tool = self._tool()
-        result = _run(tool.execute(tool.input_model(
-            file_path="/workspace/f.py",
-            old_text="MISSING_TEXT",
-            new_text="replacement",
-        ), ctx))
+        result = _run(
+            tool.execute(
+                tool.input_model(
+                    file_path="/workspace/f.py",
+                    old_text="MISSING_TEXT",
+                    new_text="replacement",
+                ),
+                ctx,
+            )
+        )
         assert result.is_error
         assert "not found" in result.output.lower()
 
@@ -238,42 +252,66 @@ class TestDaytonaEditTool:
         sandbox = _make_mock_sandbox()
         ctx = _make_context(sandbox)
         tool = self._tool()
-        result = _run(tool.execute(tool.input_model(
-            file_path="/nonexistent.py",
-            old_text="x",
-            new_text="y",
-        ), ctx))
+        result = _run(
+            tool.execute(
+                tool.input_model(
+                    file_path="/nonexistent.py",
+                    old_text="x",
+                    new_text="y",
+                ),
+                ctx,
+            )
+        )
         assert result.is_error
 
     def test_edit_no_sandbox(self):
         ctx = ToolExecutionContext(cwd=Path("/workspace"), metadata={})
         tool = self._tool()
-        result = _run(tool.execute(tool.input_model(
-            file_path="/test.py", old_text="a", new_text="b",
-        ), ctx))
+        result = _run(
+            tool.execute(
+                tool.input_model(
+                    file_path="/test.py",
+                    old_text="a",
+                    new_text="b",
+                ),
+                ctx,
+            )
+        )
         assert result.is_error
 
     def test_edit_with_description(self):
         sandbox = _make_mock_sandbox(files={"/workspace/f.py": "x = 1"})
         ctx = _make_context(sandbox)
         tool = self._tool()
-        result = _run(tool.execute(tool.input_model(
-            file_path="/workspace/f.py",
-            old_text="x = 1",
-            new_text="x = 2",
-            description="Bump value",
-        ), ctx))
+        result = _run(
+            tool.execute(
+                tool.input_model(
+                    file_path="/workspace/f.py",
+                    old_text="x = 1",
+                    new_text="x = 2",
+                    description="Bump value",
+                ),
+                ctx,
+            )
+        )
         assert not result.is_error
 
     def test_edit_multiline_replace(self):
-        sandbox = _make_mock_sandbox(files={"/workspace/f.py": "def foo():\n    pass\n\ndef bar():\n    pass"})
+        sandbox = _make_mock_sandbox(
+            files={"/workspace/f.py": "def foo():\n    pass\n\ndef bar():\n    pass"}
+        )
         ctx = _make_context(sandbox)
         tool = self._tool()
-        result = _run(tool.execute(tool.input_model(
-            file_path="/workspace/f.py",
-            old_text="def foo():\n    pass",
-            new_text="def foo():\n    return 42",
-        ), ctx))
+        result = _run(
+            tool.execute(
+                tool.input_model(
+                    file_path="/workspace/f.py",
+                    old_text="def foo():\n    pass",
+                    new_text="def foo():\n    return 42",
+                ),
+                ctx,
+            )
+        )
         assert not result.is_error
         assert "return 42" in sandbox._file_store["/workspace/f.py"]
         assert "def bar():\n    pass" in sandbox._file_store["/workspace/f.py"]
@@ -283,11 +321,16 @@ class TestDaytonaEditTool:
         sandbox.fs.upload_file = MagicMock(side_effect=OSError("write failed"))
         ctx = _make_context(sandbox)
         tool = self._tool()
-        result = _run(tool.execute(tool.input_model(
-            file_path="/workspace/f.py",
-            old_text="content",
-            new_text="new",
-        ), ctx))
+        result = _run(
+            tool.execute(
+                tool.input_model(
+                    file_path="/workspace/f.py",
+                    old_text="content",
+                    new_text="new",
+                ),
+                ctx,
+            )
+        )
         assert result.is_error
 
 
@@ -302,7 +345,8 @@ class TestDaytonaLspTools:
     # -- Hover --
 
     def test_lsp_hover_no_ci_service(self):
-        from tools.daytona_toolkit.lsp_tools import daytona_lsp_hover as DaytonaLspHoverTool
+        from tools.ci_toolkit.lsp_tools import ci_lsp_hover as DaytonaLspHoverTool
+
         sandbox = _make_mock_sandbox()
         ctx = _make_context(sandbox)  # no ci_service
         tool = DaytonaLspHoverTool
@@ -311,7 +355,7 @@ class TestDaytonaLspTools:
         assert "not available" in result.output
 
     def test_lsp_hover_with_result(self):
-        from tools.daytona_toolkit.lsp_tools import daytona_lsp_hover as DaytonaLspHoverTool
+        from tools.ci_toolkit.lsp_tools import ci_lsp_hover as DaytonaLspHoverTool
         from code_intelligence.types import HoverResult
 
         svc = MagicMock()
@@ -324,7 +368,8 @@ class TestDaytonaLspTools:
         assert "foo" in result.output
 
     def test_lsp_hover_no_result(self):
-        from tools.daytona_toolkit.lsp_tools import daytona_lsp_hover as DaytonaLspHoverTool
+        from tools.ci_toolkit.lsp_tools import ci_lsp_hover as DaytonaLspHoverTool
+
         svc = MagicMock()
         svc.hover.return_value = None
         sandbox = _make_mock_sandbox()
@@ -335,14 +380,16 @@ class TestDaytonaLspTools:
         assert "No hover" in result.output
 
     def test_lsp_hover_is_read_only(self):
-        from tools.daytona_toolkit.lsp_tools import daytona_lsp_hover as DaytonaLspHoverTool
+        from tools.ci_toolkit.lsp_tools import ci_lsp_hover as DaytonaLspHoverTool
+
         tool = DaytonaLspHoverTool
         assert tool.is_read_only(tool.input_model(file_path="/test.py", line=1))
 
     # -- Definition --
 
     def test_lsp_definition_no_ci(self):
-        from tools.daytona_toolkit.lsp_tools import daytona_lsp_definition as DaytonaLspDefinitionTool
+        from tools.ci_toolkit.lsp_tools import ci_lsp_definition as DaytonaLspDefinitionTool
+
         sandbox = _make_mock_sandbox()
         ctx = _make_context(sandbox)
         tool = DaytonaLspDefinitionTool
@@ -350,23 +397,33 @@ class TestDaytonaLspTools:
         assert result.is_error
 
     def test_lsp_definition_found(self):
-        from tools.daytona_toolkit.lsp_tools import daytona_lsp_definition as DaytonaLspDefinitionTool
+        from tools.ci_toolkit.lsp_tools import ci_lsp_definition as DaytonaLspDefinitionTool
         from code_intelligence.types import SymbolInfo
 
         svc = MagicMock()
         svc.find_definitions.return_value = [
-            SymbolInfo(name="MyClass", kind="class", file_path="/workspace/models.py", line=10, character=0, signature="class MyClass"),
+            SymbolInfo(
+                name="MyClass",
+                kind="class",
+                file_path="/workspace/models.py",
+                line=10,
+                character=0,
+                signature="class MyClass",
+            ),
         ]
         sandbox = _make_mock_sandbox()
         ctx = _make_context(sandbox, ci_service=svc)
         tool = DaytonaLspDefinitionTool
-        result = _run(tool.execute(tool.input_model(file_path="/test.py", line=5, symbol="MyClass"), ctx))
+        result = _run(
+            tool.execute(tool.input_model(file_path="/test.py", line=5, symbol="MyClass"), ctx)
+        )
         assert not result.is_error
         assert "MyClass" in result.output
         assert "models.py" in result.output
 
     def test_lsp_definition_not_found(self):
-        from tools.daytona_toolkit.lsp_tools import daytona_lsp_definition as DaytonaLspDefinitionTool
+        from tools.ci_toolkit.lsp_tools import ci_lsp_definition as DaytonaLspDefinitionTool
+
         svc = MagicMock()
         svc.find_definitions.return_value = []
         sandbox = _make_mock_sandbox()
@@ -378,7 +435,8 @@ class TestDaytonaLspTools:
     # -- References --
 
     def test_lsp_references_no_ci(self):
-        from tools.daytona_toolkit.lsp_tools import daytona_lsp_references as DaytonaLspReferencesTool
+        from tools.ci_toolkit.lsp_tools import ci_lsp_references as DaytonaLspReferencesTool
+
         sandbox = _make_mock_sandbox()
         ctx = _make_context(sandbox)
         tool = DaytonaLspReferencesTool
@@ -386,7 +444,7 @@ class TestDaytonaLspTools:
         assert result.is_error
 
     def test_lsp_references_found(self):
-        from tools.daytona_toolkit.lsp_tools import daytona_lsp_references as DaytonaLspReferencesTool
+        from tools.ci_toolkit.lsp_tools import ci_lsp_references as DaytonaLspReferencesTool
         from code_intelligence.types import ReferenceInfo
 
         svc = MagicMock()
@@ -397,13 +455,16 @@ class TestDaytonaLspTools:
         sandbox = _make_mock_sandbox()
         ctx = _make_context(sandbox, ci_service=svc)
         tool = DaytonaLspReferencesTool
-        result = _run(tool.execute(tool.input_model(file_path="/test.py", line=1, symbol="foo"), ctx))
+        result = _run(
+            tool.execute(tool.input_model(file_path="/test.py", line=1, symbol="foo"), ctx)
+        )
         assert not result.is_error
         assert "a.py" in result.output
         assert "b.py" in result.output
 
     def test_lsp_references_not_found(self):
-        from tools.daytona_toolkit.lsp_tools import daytona_lsp_references as DaytonaLspReferencesTool
+        from tools.ci_toolkit.lsp_tools import ci_lsp_references as DaytonaLspReferencesTool
+
         svc = MagicMock()
         svc.find_references.return_value = []
         sandbox = _make_mock_sandbox()
@@ -413,7 +474,7 @@ class TestDaytonaLspTools:
         assert "No references" in result.output
 
     def test_lsp_references_truncates_at_50(self):
-        from tools.daytona_toolkit.lsp_tools import daytona_lsp_references as DaytonaLspReferencesTool
+        from tools.ci_toolkit.lsp_tools import ci_lsp_references as DaytonaLspReferencesTool
         from code_intelligence.types import ReferenceInfo
 
         svc = MagicMock()
@@ -434,7 +495,8 @@ class TestDaytonaLspTools:
     # -- Diagnostics --
 
     def test_lsp_diagnostics_no_ci(self):
-        from tools.daytona_toolkit.lsp_tools import daytona_lsp_diagnostics as DaytonaLspDiagnosticsTool
+        from tools.ci_toolkit.lsp_tools import ci_lsp_diagnostics as DaytonaLspDiagnosticsTool
+
         sandbox = _make_mock_sandbox()
         ctx = _make_context(sandbox)
         tool = DaytonaLspDiagnosticsTool
@@ -442,7 +504,8 @@ class TestDaytonaLspTools:
         assert result.is_error
 
     def test_lsp_diagnostics_clean(self):
-        from tools.daytona_toolkit.lsp_tools import daytona_lsp_diagnostics as DaytonaLspDiagnosticsTool
+        from tools.ci_toolkit.lsp_tools import ci_lsp_diagnostics as DaytonaLspDiagnosticsTool
+
         svc = MagicMock()
         svc.diagnostics.return_value = []
         sandbox = _make_mock_sandbox()
@@ -453,14 +516,18 @@ class TestDaytonaLspTools:
         assert "clean" in result.output
 
     def test_lsp_diagnostics_with_errors(self):
-        from tools.daytona_toolkit.lsp_tools import daytona_lsp_diagnostics as DaytonaLspDiagnosticsTool
+        from tools.ci_toolkit.lsp_tools import ci_lsp_diagnostics as DaytonaLspDiagnosticsTool
         from code_intelligence.types import Diagnostic
 
         svc = MagicMock()
         svc.diagnostics.return_value = [
             Diagnostic(
-                file_path="/test.py", line=5, character=10,
-                severity="error", message="undefined name 'foo'", source="pyright",
+                file_path="/test.py",
+                line=5,
+                character=10,
+                severity="error",
+                message="undefined name 'foo'",
+                source="pyright",
             ),
         ]
         sandbox = _make_mock_sandbox()
@@ -482,6 +549,7 @@ class TestDaytonaCodeActTool:
 
     def _tool(self):
         from tools.daytona_toolkit.codeact_tool import daytona_codeact as DaytonaCodeActTool
+
         return DaytonaCodeActTool
 
     def test_codeact_no_sandbox(self):
@@ -514,7 +582,11 @@ class TestDaytonaCodeActTool:
         tool = self._tool()
         result = _run(tool.execute(tool.input_model(code="print('hello')"), ctx))
         # Should not crash — returns script output
-        assert "not json" in result.output or "hello" in result.output or "Script output" in result.output
+        assert (
+            "not json" in result.output
+            or "hello" in result.output
+            or "Script output" in result.output
+        )
 
     def test_codeact_error_status_in_manifest(self):
         """When script reports error status, result should be is_error."""
@@ -527,6 +599,7 @@ class TestDaytonaCodeActTool:
 
     def test_codeact_input_model_accepts_multiline_code(self):
         from tools.daytona_toolkit.codeact_tool import daytona_codeact
+
         inp = daytona_codeact.input_model(code="import os\nprint(os.getcwd())\nresult = 42")
         assert "import os" in inp.code
         assert "result = 42" in inp.code
@@ -540,45 +613,52 @@ class TestDaytonaCodeActTool:
 class TestDaytonaToolkitIntegration:
     """Test the DaytonaToolkit orchestrator."""
 
-    def test_toolkit_registers_all_12_tools(self):
+    def test_toolkit_registers_all_6_tools(self):
         from tools.daytona_toolkit import DaytonaToolkit
+
         toolkit = DaytonaToolkit(sandbox_id="test-123")
         tools = toolkit.list_tools()
         names = toolkit.tool_names()
 
-        assert len(tools) == 12, f"Expected 12 tools, got {len(tools)}: {names}"
+        assert len(tools) == 6, f"Expected 6 tools, got {len(tools)}: {names}"
 
         expected = {
-            "daytona_codeact", "daytona_read_file", "daytona_write_file",
-            "daytona_list_files", "daytona_grep", "daytona_glob",
-            "daytona_edit_file",
-            "daytona_lsp_hover", "daytona_lsp_definition",
-            "daytona_lsp_references", "daytona_lsp_diagnostics",
             "daytona_codeact",
+            "daytona_read_file",
+            "daytona_write_file",
+            "daytona_grep",
+            "daytona_glob",
+            "daytona_edit_file",
         }
-        assert set(names) == expected, f"Missing: {expected - set(names)}, Extra: {set(names) - expected}"
+        assert set(names) == expected, (
+            f"Missing: {expected - set(names)}, Extra: {set(names) - expected}"
+        )
 
     def test_toolkit_name_is_sandbox_operations(self):
         from tools.daytona_toolkit import DaytonaToolkit
+
         toolkit = DaytonaToolkit()
         assert toolkit.name == "sandbox_operations"
 
     def test_toolkit_no_sandbox_id_raises_on_get(self):
         from tools.daytona_toolkit import DaytonaToolkit
+
         toolkit = DaytonaToolkit()
         with pytest.raises(RuntimeError, match="No sandbox_id"):
             toolkit._get_sandbox()
 
     def test_toolkit_get_tool_by_name(self):
         from tools.daytona_toolkit import DaytonaToolkit
+
         toolkit = DaytonaToolkit(sandbox_id="test")
-        for name in ["daytona_codeact", "daytona_edit_file", "daytona_codeact"]:
+        for name in ["daytona_codeact", "daytona_edit_file"]:
             tool = toolkit.get(name)
             assert tool is not None, f"Tool {name} not found"
             assert tool.name == name
 
     def test_toolkit_tools_have_api_schema(self):
         from tools.daytona_toolkit import DaytonaToolkit
+
         toolkit = DaytonaToolkit(sandbox_id="test")
         for tool in toolkit.list_tools():
             schema = tool.to_api_schema()
@@ -590,10 +670,13 @@ class TestDaytonaToolkitIntegration:
     def test_toolkit_read_only_tools(self):
         """Read-only tools should report is_read_only correctly."""
         from tools.daytona_toolkit import DaytonaToolkit
+
         toolkit = DaytonaToolkit(sandbox_id="test")
-        read_only_tools = {"daytona_read_file", "daytona_list_files", "daytona_grep", "daytona_glob",
-                           "daytona_lsp_hover", "daytona_lsp_definition", "daytona_lsp_references",
-                           "daytona_lsp_diagnostics"}
+        read_only_tools = {
+            "daytona_read_file",
+            "daytona_grep",
+            "daytona_glob",
+        }
         for tool in toolkit.list_tools():
             dummy_input = tool.input_model.model_construct()
             if tool.name in read_only_tools:
@@ -611,7 +694,7 @@ class TestDaytonaToolkitIntegration:
         assert registry.get_toolkit("sandbox_operations") is toolkit
         assert registry.get("daytona_codeact") is not None
         assert registry.get("daytona_codeact") is not None
-        assert len(registry.to_api_schema()) == 12
+        assert len(registry.to_api_schema()) == 6
 
     def test_toolkit_restrict_preserves_sandbox_tools(self):
         """restrict_to_toolkits should keep sandbox_operations."""
@@ -622,7 +705,7 @@ class TestDaytonaToolkitIntegration:
         registry.register_toolkit(DaytonaToolkit(sandbox_id="test"))
         registry.restrict_to_toolkits(["sandbox_operations"])
 
-        assert len(registry.list_tools()) == 12
+        assert len(registry.list_tools()) == 6
         assert registry.get("daytona_codeact") is not None
 
 
@@ -632,27 +715,31 @@ class TestDaytonaToolkitIntegration:
 
 
 class TestCIIntegrationHelpers:
-    """Test ci_integration.py helper functions."""
+    """Test shared CI runtime helper functions."""
 
     def test_get_ci_service_returns_none_when_missing(self):
-        from tools.daytona_toolkit.ci_integration import get_ci_service
+        from tools.core.ci_runtime import get_ci_service
+
         ctx = ToolExecutionContext(cwd=Path("/ws"), metadata={})
         assert get_ci_service(ctx) is None
 
     def test_get_ci_service_returns_service(self):
-        from tools.daytona_toolkit.ci_integration import get_ci_service
+        from tools.core.ci_runtime import get_ci_service
+
         svc = MagicMock()
         ctx = ToolExecutionContext(cwd=Path("/ws"), metadata={"ci_service": svc})
         assert get_ci_service(ctx) is svc
 
     def test_prime_cache_no_ci(self):
         """prime_cache_after_write should not raise without CI service."""
-        from tools.daytona_toolkit.ci_integration import prime_cache_after_write
+        from tools.core.ci_runtime import prime_cache_after_write
+
         ctx = ToolExecutionContext(cwd=Path("/ws"), metadata={})
         prime_cache_after_write(ctx, "/test.py", "content")  # should not raise
 
     def test_prime_cache_with_ci(self):
-        from tools.daytona_toolkit.ci_integration import prime_cache_after_write
+        from tools.core.ci_runtime import prime_cache_after_write
+
         svc = MagicMock()
         ctx = ToolExecutionContext(cwd=Path("/ws"), metadata={"ci_service": svc})
         prime_cache_after_write(ctx, "/test.py", "content")
@@ -661,12 +748,14 @@ class TestCIIntegrationHelpers:
         svc.lsp_client.invalidate.assert_called_once_with("/test.py")
 
     def test_record_edit_no_ci(self):
-        from tools.daytona_toolkit.ci_integration import record_edit_in_arbiter
+        from tools.core.ci_runtime import record_edit_in_arbiter
+
         ctx = ToolExecutionContext(cwd=Path("/ws"), metadata={})
         record_edit_in_arbiter(ctx, "/test.py")  # should not raise
 
     def test_record_edit_with_ci(self):
-        from tools.daytona_toolkit.ci_integration import record_edit_in_arbiter
+        from tools.core.ci_runtime import record_edit_in_arbiter
+
         svc = MagicMock()
         ctx = ToolExecutionContext(cwd=Path("/ws"), metadata={"ci_service": svc})
         record_edit_in_arbiter(ctx, "/test.py", edit_type="edit", old_hash="aaa", new_hash="bbb")
@@ -674,7 +763,8 @@ class TestCIIntegrationHelpers:
 
     def test_prime_cache_exception_swallowed(self):
         """CI exceptions should be swallowed gracefully."""
-        from tools.daytona_toolkit.ci_integration import prime_cache_after_write
+        from tools.core.ci_runtime import prime_cache_after_write
+
         svc = MagicMock()
         svc.tree_cache.put_content = MagicMock(side_effect=RuntimeError("boom"))
         ctx = ToolExecutionContext(cwd=Path("/ws"), metadata={"ci_service": svc})
@@ -694,6 +784,7 @@ class TestDaytonaToolkitLive:
     @pytest.fixture(scope="class")
     def live_sandbox(self):
         from sandbox.service import SandboxService
+
         svc = SandboxService()
         sb = svc.create_sandbox(
             name=f"toolkit-test-{int(time.time())}",
@@ -702,6 +793,7 @@ class TestDaytonaToolkitLive:
         )
         # Get async sandbox — tools use `await sandbox.process.exec(...)` etc.
         from tools.daytona_toolkit.async_client import get_async_sandbox
+
         async_sb = _run(get_async_sandbox(sb["id"]))
         yield {"info": sb, "raw": async_sb}
         try:
@@ -722,6 +814,7 @@ class TestDaytonaToolkitLive:
 
     def test_live_bash_echo(self, live_sandbox):
         from tools.daytona_toolkit.codeact_tool import daytona_codeact as DaytonaBashTool
+
         tool = DaytonaBashTool
         ctx = self._ctx(live_sandbox)
         result = _run(tool.execute(tool.input_model(command="echo LIVE_BASH_OK"), ctx))
@@ -730,6 +823,7 @@ class TestDaytonaToolkitLive:
 
     def test_live_bash_python_version(self, live_sandbox):
         from tools.daytona_toolkit.codeact_tool import daytona_codeact as DaytonaBashTool
+
         tool = DaytonaBashTool
         ctx = self._ctx(live_sandbox)
         result = _run(tool.execute(tool.input_model(command="python3 --version"), ctx))
@@ -738,6 +832,7 @@ class TestDaytonaToolkitLive:
 
     def test_live_bash_nonzero_exit(self, live_sandbox):
         from tools.daytona_toolkit.codeact_tool import daytona_codeact as DaytonaBashTool
+
         tool = DaytonaBashTool
         ctx = self._ctx(live_sandbox)
         result = _run(tool.execute(tool.input_model(command="cat /nonexistent_file_xyz"), ctx))
@@ -751,13 +846,19 @@ class TestDaytonaToolkitLive:
 
     def test_live_write_then_read(self, live_sandbox):
         from tools.daytona_toolkit.codeact_tool import daytona_codeact as DaytonaBashTool
+
         ctx = self._ctx(live_sandbox)
         bash_tool = DaytonaBashTool
 
         # Write and read in one call to avoid process isolation issues
-        result = _run(bash_tool.execute(bash_tool.input_model(
-            command="bash -c \"echo 'toolkit e2e content' > /tmp/toolkit_test.txt && echo 'second line' >> /tmp/toolkit_test.txt && cat /tmp/toolkit_test.txt\"",
-        ), ctx))
+        result = _run(
+            bash_tool.execute(
+                bash_tool.input_model(
+                    command="bash -c \"echo 'toolkit e2e content' > /tmp/toolkit_test.txt && echo 'second line' >> /tmp/toolkit_test.txt && cat /tmp/toolkit_test.txt\"",
+                ),
+                ctx,
+            )
+        )
         assert not result.is_error
         assert "toolkit e2e content" in result.output
         assert "second line" in result.output
@@ -766,6 +867,7 @@ class TestDaytonaToolkitLive:
 
     def test_live_list_tmp(self, live_sandbox):
         from tools.daytona_toolkit.codeact_tool import daytona_codeact as DaytonaBashTool
+
         ctx = self._ctx(live_sandbox)
         tool = DaytonaBashTool
         result = _run(tool.execute(tool.input_model(command="ls /tmp"), ctx))
@@ -775,12 +877,18 @@ class TestDaytonaToolkitLive:
 
     def test_live_grep_etc(self, live_sandbox):
         from tools.daytona_toolkit.codeact_tool import daytona_codeact as DaytonaBashTool
+
         tool = DaytonaBashTool
         ctx = self._ctx(live_sandbox)
         # Wrap in bash -c to support shell operators
-        result = _run(tool.execute(tool.input_model(
-            command="bash -c \"grep 'root' /etc/passwd\"",
-        ), ctx))
+        result = _run(
+            tool.execute(
+                tool.input_model(
+                    command="bash -c \"grep 'root' /etc/passwd\"",
+                ),
+                ctx,
+            )
+        )
         assert not result.is_error
         assert "root" in result.output
 
@@ -788,13 +896,19 @@ class TestDaytonaToolkitLive:
 
     def test_live_glob_tmp(self, live_sandbox):
         from tools.daytona_toolkit.codeact_tool import daytona_codeact as DaytonaBashTool
+
         ctx = self._ctx(live_sandbox)
         bash_tool = DaytonaBashTool
 
         # Create and find in one call
-        result = _run(bash_tool.execute(bash_tool.input_model(
-            command="bash -c \"echo pass > /tmp/globtest.py && find /tmp -name 'globtest*'\"",
-        ), ctx))
+        result = _run(
+            bash_tool.execute(
+                bash_tool.input_model(
+                    command="bash -c \"echo pass > /tmp/globtest.py && find /tmp -name 'globtest*'\"",
+                ),
+                ctx,
+            )
+        )
         assert not result.is_error
         assert "globtest" in result.output
 
@@ -802,13 +916,19 @@ class TestDaytonaToolkitLive:
 
     def test_live_edit_file(self, live_sandbox):
         from tools.daytona_toolkit.codeact_tool import daytona_codeact as DaytonaBashTool
+
         ctx = self._ctx(live_sandbox)
         bash_tool = DaytonaBashTool
 
         # Write, edit via sed, and verify — all in one call
-        result = _run(bash_tool.execute(bash_tool.input_model(
-            command="bash -c \"printf 'x = 1\\ny = 2\\nz = 3' > /tmp/edit_test.py && sed -i 's/y = 2/y = 999/' /tmp/edit_test.py && cat /tmp/edit_test.py\"",
-        ), ctx))
+        result = _run(
+            bash_tool.execute(
+                bash_tool.input_model(
+                    command="bash -c \"printf 'x = 1\\ny = 2\\nz = 3' > /tmp/edit_test.py && sed -i 's/y = 2/y = 999/' /tmp/edit_test.py && cat /tmp/edit_test.py\"",
+                ),
+                ctx,
+            )
+        )
         assert not result.is_error
         assert "y = 999" in result.output
         assert "x = 1" in result.output
@@ -827,14 +947,17 @@ class TestToolSelectionAndOrdering:
     """
 
     EXPECTED_TOOLS = {
-        "daytona_codeact", "daytona_read_file", "daytona_write_file",
-        "daytona_list_files", "daytona_grep", "daytona_glob",
-        "daytona_edit_file", "daytona_lsp_hover", "daytona_lsp_definition",
-        "daytona_lsp_references", "daytona_lsp_diagnostics", "daytona_codeact",
+        "daytona_codeact",
+        "daytona_read_file",
+        "daytona_write_file",
+        "daytona_grep",
+        "daytona_glob",
+        "daytona_edit_file",
     }
 
     def _get_toolkit(self):
         from tools.daytona_toolkit import DaytonaToolkit
+
         return DaytonaToolkit(sandbox_id="ordering-test")
 
     def _get_tool_names(self) -> list[str]:
@@ -853,8 +976,8 @@ class TestToolSelectionAndOrdering:
         unexpected = names - self.EXPECTED_TOOLS
         assert not unexpected, f"Unexpected tools: {unexpected}"
 
-    def test_exactly_12_tools(self):
-        assert len(self._get_tool_names()) == 12
+    def test_exactly_6_tools(self):
+        assert len(self._get_tool_names()) == 6
 
     # -- Ordering: read tools before write tools --
 
@@ -862,34 +985,9 @@ class TestToolSelectionAndOrdering:
         names = self._get_tool_names()
         assert names.index("daytona_read_file") < names.index("daytona_write_file")
 
-    def test_list_files_before_write(self):
-        names = self._get_tool_names()
-        assert names.index("daytona_list_files") < names.index("daytona_write_file")
-
     def test_grep_before_write(self):
         names = self._get_tool_names()
         assert names.index("daytona_grep") < names.index("daytona_write_file")
-
-    def test_lsp_tools_before_write_tools(self):
-        """LSP query tools should precede write/execution tools."""
-        names = self._get_tool_names()
-        lsp_tools = ["daytona_lsp_hover", "daytona_lsp_definition",
-                     "daytona_lsp_references", "daytona_lsp_diagnostics"]
-        write_tools = ["daytona_write_file", "daytona_edit_file", "daytona_codeact"]
-        for lsp in lsp_tools:
-            for write in write_tools:
-                assert names.index(lsp) < names.index(write), (
-                    f"{lsp} should precede {write} in tool order"
-                )
-
-    def test_lsp_tools_grouped_together(self):
-        """LSP tools should appear as a contiguous block."""
-        names = self._get_tool_names()
-        lsp_names = [n for n in names if n.startswith("daytona_lsp_")]
-        lsp_indices = [names.index(n) for n in lsp_names]
-        assert max(lsp_indices) - min(lsp_indices) == len(lsp_names) - 1, (
-            f"LSP tools not contiguous. Indices: {lsp_indices}"
-        )
 
     def test_bash_is_last(self):
         """Shell execution should be the last tool (most dangerous)."""
@@ -916,16 +1014,19 @@ class TestToolSelectionAndOrdering:
 
     def test_bash_requires_command(self):
         from tools.daytona_toolkit.codeact_tool import daytona_codeact as DaytonaBashTool
+
         schema = DaytonaBashTool.to_api_schema()["input_schema"]
         assert "command" in schema.get("required", [])
 
     def test_read_file_requires_file_path(self):
         from tools.daytona_toolkit.tools import daytona_read_file as DaytonaFileReadTool
+
         schema = DaytonaFileReadTool.to_api_schema()["input_schema"]
         assert "file_path" in schema.get("required", [])
 
     def test_write_file_requires_file_path_and_content(self):
         from tools.daytona_toolkit.tools import daytona_write_file as DaytonaFileWriteTool
+
         schema = DaytonaFileWriteTool.to_api_schema()["input_schema"]
         required = schema.get("required", [])
         assert "file_path" in required
@@ -933,6 +1034,7 @@ class TestToolSelectionAndOrdering:
 
     def test_edit_requires_file_path_old_text_new_text(self):
         from tools.daytona_toolkit.edit_tool import daytona_edit_file as _edit_tool
+
         schema = _edit_tool.to_api_schema()["input_schema"]
         required = schema.get("required", [])
         assert "file_path" in required
@@ -941,17 +1043,21 @@ class TestToolSelectionAndOrdering:
 
     def test_lsp_navigation_tools_require_file_path_and_line(self):
         """Hover, definition, references all require file_path and line."""
-        from tools.daytona_toolkit.lsp_tools import (
-            daytona_lsp_hover, daytona_lsp_definition, daytona_lsp_references,
+        from tools.ci_toolkit.lsp_tools import (
+            ci_lsp_hover,
+            ci_lsp_definition,
+            ci_lsp_references,
         )
-        for tool in [daytona_lsp_hover, daytona_lsp_definition, daytona_lsp_references]:
+
+        for tool in [ci_lsp_hover, ci_lsp_definition, ci_lsp_references]:
             schema = tool.to_api_schema()["input_schema"]
             required = schema.get("required", [])
             assert "file_path" in required, f"{tool.name} missing file_path"
             assert "line" in required, f"{tool.name} missing line"
 
     def test_lsp_diagnostics_requires_file_path_only(self):
-        from tools.daytona_toolkit.lsp_tools import daytona_lsp_diagnostics as DaytonaLspDiagnosticsTool
+        from tools.ci_toolkit.lsp_tools import ci_lsp_diagnostics as DaytonaLspDiagnosticsTool
+
         schema = DaytonaLspDiagnosticsTool.to_api_schema()["input_schema"]
         required = schema.get("required", [])
         assert "file_path" in required
@@ -959,12 +1065,13 @@ class TestToolSelectionAndOrdering:
 
     def test_codeact_requires_code(self):
         from tools.daytona_toolkit.codeact_tool import daytona_codeact as DaytonaCodeActTool
+
         schema = DaytonaCodeActTool.to_api_schema()["input_schema"]
         assert "code" in schema.get("required", [])
 
 
 # ===========================================================================
-# LSP query routing with fake sandbox process (ported from synthetic-os)
+# LSP query routing through the CI toolkit (ported from synthetic-os)
 # ===========================================================================
 
 
@@ -996,6 +1103,7 @@ class TestLspQueryRouting:
     def _make_ci_service(self, sandbox=None):
         """Create a real CI service with a mock sandbox."""
         from code_intelligence.routing.service import CodeIntelligenceService
+
         return CodeIntelligenceService(
             sandbox_id="lsp-test",
             workspace_root="/workspace",
@@ -1006,6 +1114,7 @@ class TestLspQueryRouting:
 
     def test_lsp_client_python_detection(self):
         from code_intelligence.lsp.client import LspClient
+
         lsp = LspClient(workspace_root="/workspace")
         assert lsp._detect_language("main.py") == "python"
         assert lsp._detect_language("app.ts") == "typescript"
@@ -1096,9 +1205,12 @@ class TestLspQueryRouting:
 
     def test_ci_registry_dispose_removes_service(self):
         from code_intelligence.routing.service import (
-            get_code_intelligence, get_code_intelligence_if_exists,
-            dispose_code_intelligence, dispose_all_code_intelligence,
+            get_code_intelligence,
+            get_code_intelligence_if_exists,
+            dispose_code_intelligence,
+            dispose_all_code_intelligence,
         )
+
         dispose_all_code_intelligence()
 
         get_code_intelligence("disposable", "/ws")
@@ -1109,8 +1221,11 @@ class TestLspQueryRouting:
 
     def test_ci_registry_all_status(self):
         from code_intelligence.routing.service import (
-            get_code_intelligence, get_all_services_status, dispose_all_code_intelligence,
+            get_code_intelligence,
+            get_all_services_status,
+            dispose_all_code_intelligence,
         )
+
         dispose_all_code_intelligence()
 
         get_code_intelligence("svc-a", "/ws")
@@ -1134,9 +1249,13 @@ class TestCITypesDeep:
 
     def test_edit_request_all_fields(self):
         from code_intelligence.types import EditRequest
+
         req = EditRequest(
-            file_path="/ws/app.py", old_text="old", new_text="new",
-            agent_id="agent-1", description="Fix bug",
+            file_path="/ws/app.py",
+            old_text="old",
+            new_text="new",
+            agent_id="agent-1",
+            description="Fix bug",
         )
         assert req.file_path == "/ws/app.py"
         assert req.old_text == "old"
@@ -1146,24 +1265,28 @@ class TestCITypesDeep:
 
     def test_edit_result_success(self):
         from code_intelligence.types import EditResult
+
         r = EditResult(success=True, file_path="/test.py", message="Applied")
         assert r.success is True
         assert r.conflict is not True
 
     def test_edit_result_conflict(self):
         from code_intelligence.types import EditResult
+
         r = EditResult(success=False, file_path="/test.py", message="Conflict", conflict=True)
         assert r.success is False
         assert r.conflict is True
 
     def test_hover_result_fields(self):
         from code_intelligence.types import HoverResult
+
         h = HoverResult(content="def foo() -> int", language="python")
         assert h.content == "def foo() -> int"
         assert h.language == "python"
 
     def test_symbol_info_fields(self):
         from code_intelligence.types import SymbolInfo
+
         s = SymbolInfo(name="MyClass", kind="class", file_path="/ws/m.py", line=10, character=0)
         assert s.name == "MyClass"
         assert s.kind == "class"
@@ -1171,14 +1294,20 @@ class TestCITypesDeep:
 
     def test_reference_info_fields(self):
         from code_intelligence.types import ReferenceInfo
+
         r = ReferenceInfo(file_path="/ws/a.py", line=5, character=3)
         assert r.file_path == "/ws/a.py"
 
     def test_diagnostic_fields(self):
         from code_intelligence.types import Diagnostic
+
         d = Diagnostic(
-            file_path="/test.py", line=5, character=10,
-            severity="error", message="Undefined 'x'", source="pyright",
+            file_path="/test.py",
+            line=5,
+            character=10,
+            severity="error",
+            message="Undefined 'x'",
+            source="pyright",
         )
         assert d.severity == "error"
         assert d.source == "pyright"
@@ -1207,12 +1336,14 @@ class TestArbiterOCC:
 
     def _make_arbiter(self, **kwargs):
         from code_intelligence.editing.arbiter import Arbiter
+
         return Arbiter(workspace_root="/workspace", **kwargs)
 
     # -- Token lifecycle --
 
     def test_issue_token_returns_valid_token(self):
         from code_intelligence.editing.arbiter import EditToken
+
         arb = self._make_arbiter()
         token = arb.issue_token("/ws/app.py", "abc123", agent_id="agent-1")
         assert isinstance(token, EditToken)
@@ -1304,6 +1435,7 @@ class TestArbiterOCC:
     def test_on_edit_callback_exception_swallowed(self):
         def _boom(fp, aid, gen):
             raise RuntimeError("callback crash")
+
         arb = self._make_arbiter(on_edit=_boom)
         arb.record_edit("/ws/app.py")  # should not raise
 
@@ -1334,6 +1466,7 @@ class TestArbiterOCC:
     def test_concurrent_lock_only_one_wins(self):
         """Two threads acquiring same file lock — only one should succeed immediately."""
         import threading
+
         arb = self._make_arbiter()
         results = []
 
@@ -1342,6 +1475,7 @@ class TestArbiterOCC:
             results.append((thread_id, got))
             if got:
                 import time as _t
+
                 _t.sleep(0.1)  # hold lock briefly
                 arb.release_file_lock("/ws/contested.py")
 
@@ -1363,6 +1497,7 @@ class TestTimeMachine:
 
     def _make_tm(self, **kwargs):
         from code_intelligence.editing.time_machine import TimeMachine
+
         return TimeMachine(**kwargs)
 
     def test_save_and_rollback(self):
@@ -1455,6 +1590,7 @@ class TestArbiterEditBuffer:
 
     def _make_arbiter(self):
         from code_intelligence.editing.arbiter import Arbiter
+
         return Arbiter(workspace_root="/workspace")
 
     def test_record_and_retrieve(self):
@@ -1485,6 +1621,7 @@ class TestArbiterEditBuffer:
 
     def test_changes_since_filters_by_time(self):
         import time as _t
+
         arbiter = self._make_arbiter()
         arbiter.record_edit("/ws/old.py", "agent-1")
         cutoff = _t.time()
@@ -1517,8 +1654,11 @@ class TestArbiterEditBuffer:
     def test_record_with_hashes_and_description(self):
         arbiter = self._make_arbiter()
         arbiter.record_edit(
-            "/ws/app.py", "agent-1",
-            edit_type="edit", old_hash="aaa111", new_hash="bbb222",
+            "/ws/app.py",
+            "agent-1",
+            edit_type="edit",
+            old_hash="aaa111",
+            new_hash="bbb222",
             description="Fix null check",
         )
         edits = arbiter.changes_since(0)
@@ -1560,12 +1700,20 @@ class TestOCCEditFlow:
 
     def test_occ_edit_acquires_and_releases_lock(self):
         from tools.daytona_toolkit.edit_tool import daytona_edit_file as _edit_tool
+
         ctx, sandbox, arbiter, _ = self._make_occ_context({"/ws/app.py": "x = 1"})
         tool = _edit_tool
 
-        result = _run(tool.execute(tool.input_model(
-            file_path="/ws/app.py", old_text="x = 1", new_text="x = 2",
-        ), ctx))
+        result = _run(
+            tool.execute(
+                tool.input_model(
+                    file_path="/ws/app.py",
+                    old_text="x = 1",
+                    new_text="x = 2",
+                ),
+                ctx,
+            )
+        )
         assert not result.is_error
         assert "edited" in result.output
 
@@ -1575,12 +1723,20 @@ class TestOCCEditFlow:
 
     def test_occ_edit_saves_snapshot_for_undo(self):
         from tools.daytona_toolkit.edit_tool import daytona_edit_file as _edit_tool
+
         ctx, _, _, time_machine = self._make_occ_context({"/ws/app.py": "original"})
         tool = _edit_tool
 
-        _run(tool.execute(tool.input_model(
-            file_path="/ws/app.py", old_text="original", new_text="modified",
-        ), ctx))
+        _run(
+            tool.execute(
+                tool.input_model(
+                    file_path="/ws/app.py",
+                    old_text="original",
+                    new_text="modified",
+                ),
+                ctx,
+            )
+        )
 
         snap = time_machine.rollback("/ws/app.py")
         assert snap is not None
@@ -1588,27 +1744,43 @@ class TestOCCEditFlow:
 
     def test_occ_edit_records_in_arbiter(self):
         from tools.daytona_toolkit.edit_tool import daytona_edit_file as _edit_tool
+
         ctx, _, arbiter, _ = self._make_occ_context({"/ws/app.py": "content"})
         tool = _edit_tool
 
-        _run(tool.execute(tool.input_model(
-            file_path="/ws/app.py", old_text="content", new_text="new",
-        ), ctx))
+        _run(
+            tool.execute(
+                tool.input_model(
+                    file_path="/ws/app.py",
+                    old_text="content",
+                    new_text="new",
+                ),
+                ctx,
+            )
+        )
 
         assert arbiter.metrics.total_edits >= 1
 
     def test_occ_conflict_when_lock_held(self):
         """Edit should fail with conflict when another agent holds the lock."""
         from tools.daytona_toolkit.edit_tool import daytona_edit_file as _edit_tool
+
         ctx, _, arbiter, _ = self._make_occ_context({"/ws/app.py": "content"})
         tool = _edit_tool
 
         # Simulate another agent holding the lock
         arbiter.acquire_file_lock("/ws/app.py")
 
-        result = _run(tool.execute(tool.input_model(
-            file_path="/ws/app.py", old_text="content", new_text="new",
-        ), ctx))
+        result = _run(
+            tool.execute(
+                tool.input_model(
+                    file_path="/ws/app.py",
+                    old_text="content",
+                    new_text="new",
+                ),
+                ctx,
+            )
+        )
         assert result.is_error
         assert "conflict" in result.output.lower() or "lock" in result.output.lower()
         assert result.metadata.get("conflict") is True
@@ -1618,13 +1790,21 @@ class TestOCCEditFlow:
     def test_occ_edit_without_ci_falls_back_to_direct(self):
         """Without CI service, edit should use direct write (no OCC)."""
         from tools.daytona_toolkit.edit_tool import daytona_edit_file as _edit_tool
+
         sandbox = _make_mock_sandbox(files={"/ws/app.py": "old"})
         ctx = _make_context(sandbox)  # no ci_service
         tool = _edit_tool
 
-        result = _run(tool.execute(tool.input_model(
-            file_path="/ws/app.py", old_text="old", new_text="new",
-        ), ctx))
+        result = _run(
+            tool.execute(
+                tool.input_model(
+                    file_path="/ws/app.py",
+                    old_text="old",
+                    new_text="new",
+                ),
+                ctx,
+            )
+        )
         assert not result.is_error
         assert '"occ": false' in result.output
         assert sandbox._file_store["/ws/app.py"] == "new"
@@ -1632,17 +1812,32 @@ class TestOCCEditFlow:
     def test_sequential_occ_edits_both_succeed(self):
         """Two sequential edits to the same file should both succeed."""
         from tools.daytona_toolkit.edit_tool import daytona_edit_file as _edit_tool
+
         ctx, sandbox, arbiter, _ = self._make_occ_context({"/ws/app.py": "a = 1\nb = 2"})
         tool = _edit_tool
 
-        r1 = _run(tool.execute(tool.input_model(
-            file_path="/ws/app.py", old_text="a = 1", new_text="a = 10",
-        ), ctx))
+        r1 = _run(
+            tool.execute(
+                tool.input_model(
+                    file_path="/ws/app.py",
+                    old_text="a = 1",
+                    new_text="a = 10",
+                ),
+                ctx,
+            )
+        )
         assert not r1.is_error
 
-        r2 = _run(tool.execute(tool.input_model(
-            file_path="/ws/app.py", old_text="b = 2", new_text="b = 20",
-        ), ctx))
+        r2 = _run(
+            tool.execute(
+                tool.input_model(
+                    file_path="/ws/app.py",
+                    old_text="b = 2",
+                    new_text="b = 20",
+                ),
+                ctx,
+            )
+        )
         assert not r2.is_error
 
         assert sandbox._file_store["/ws/app.py"] == "a = 10\nb = 20"
@@ -1651,12 +1846,21 @@ class TestOCCEditFlow:
     def test_dry_run_does_not_acquire_lock(self):
         """Dry run should preview without touching arbiter or time_machine."""
         from tools.daytona_toolkit.edit_tool import daytona_edit_file as _edit_tool
+
         ctx, sandbox, arbiter, time_machine = self._make_occ_context({"/ws/app.py": "content"})
         tool = _edit_tool
 
-        result = _run(tool.execute(tool.input_model(
-            file_path="/ws/app.py", old_text="content", new_text="new", dry_run=True,
-        ), ctx))
+        result = _run(
+            tool.execute(
+                tool.input_model(
+                    file_path="/ws/app.py",
+                    old_text="content",
+                    new_text="new",
+                    dry_run=True,
+                ),
+                ctx,
+            )
+        )
         assert not result.is_error
         assert "dry_run" in result.output
         assert sandbox._file_store["/ws/app.py"] == "content"  # unchanged

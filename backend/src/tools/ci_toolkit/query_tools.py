@@ -20,15 +20,8 @@ from code_intelligence.query_helpers import (
 )
 from code_intelligence.constants import SKIP_DIRECTORIES, SUPPORTED_EXTENSIONS
 from tools.core.base import ToolExecutionContext, ToolResult
-from tools.daytona_toolkit.ci_integration import (
-    build_live_scope_packet,
-    get_ci_service,
-    get_daytona_sandbox,
-    refresh_scope_baseline,
-    scope_paths_for_write,
-    resolve_daytona_path,
-)
-from team._path_utils import normalize_scope_paths
+from tools.core.ci_runtime import get_ci_service
+from tools.core.sandbox_runtime import get_daytona_sandbox, resolve_daytona_path
 from tools.core.decorator import tool
 
 logger = logging.getLogger(__name__)

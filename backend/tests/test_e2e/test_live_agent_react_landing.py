@@ -3,7 +3,7 @@
 
 Verifies the FULL agent pipeline with deep assertions:
 1. Daytona tool use — tool_name, tool_input keys, tool_completed output content
-2. Skill & toolkit availability — 12 tools in schema, skill registry, sandbox health
+2. Skill & toolkit availability — sandbox/code intelligence toolkits, skill registry, sandbox health
 3. Reasoning/thinking blocks — ordering, content, API param exclusion
 4. Code intelligence — service status, LSP client, registry singleton
 5. Multi-turn tool chaining — create → read → modify with content verification
@@ -40,15 +40,13 @@ KNOWN_DAYTONA_TOOLS = {
     "daytona_codeact",
     "daytona_read_file",
     "daytona_write_file",
-    "daytona_list_files",
     "daytona_grep",
     "daytona_glob",
     "daytona_edit_file",
-    "daytona_lsp_hover",
-    "daytona_lsp_definition",
-    "daytona_lsp_references",
-    "daytona_lsp_diagnostics",
-    "daytona_codeact",
+    "ci_lsp_hover",
+    "ci_lsp_definition",
+    "ci_lsp_references",
+    "ci_lsp_diagnostics",
 }
 
 
@@ -203,8 +201,8 @@ class TestSkillAndToolkitAvailability:
         assert "sandbox_operations" in toolkits, f"Missing sandbox_operations. Got: {toolkits}"
         assert "code_intelligence" in toolkits, f"Missing code_intelligence. Got: {toolkits}"
 
-    def test_sandbox_operations_has_all_12_tools(self):
-        """DaytonaToolkit must register exactly 12 tools."""
+    def test_sandbox_operations_has_current_tools(self):
+        """DaytonaToolkit should expose only sandbox file/edit/exec tools."""
         from tools.daytona_toolkit import DaytonaToolkit
 
         toolkit = DaytonaToolkit(sandbox_id="schema-test")
@@ -214,15 +212,9 @@ class TestSkillAndToolkitAvailability:
                 "daytona_codeact",
                 "daytona_read_file",
                 "daytona_write_file",
-                "daytona_list_files",
                 "daytona_grep",
                 "daytona_glob",
                 "daytona_edit_file",
-                "daytona_lsp_hover",
-                "daytona_lsp_definition",
-                "daytona_lsp_references",
-                "daytona_lsp_diagnostics",
-                "daytona_codeact",
             ]
         )
         assert names == expected, f"Tool mismatch.\nGot:      {names}\nExpected: {expected}"

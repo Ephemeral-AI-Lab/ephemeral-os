@@ -14,7 +14,6 @@ from message.messages import ToolResultBlock, ToolUseBlock
 from message.stream_events import BackgroundTaskStarted, ToolExecutionCompleted
 from tools.core.base import BaseTool, ToolExecutionContext, ToolRegistry, ToolResult
 from tools.core.runtime import ExecutionMetadata, merge_runtime_metadata
-from tools.daytona_toolkit.background import prepare_background_launch
 
 ToolCallExecutor = Callable[
     [str, str, dict[str, object], ExecutionMetadata | dict[str, Any] | None],
@@ -42,8 +41,7 @@ def run_background_preflight(
         parsed_input = tool_def.input_model.model_validate(clean_input)
     except ValidationError as exc:
         errors = "; ".join(
-            f"{'.'.join(str(p) for p in e['loc'])}: {e['msg']}"
-            for e in exc.errors()
+            f"{'.'.join(str(p) for p in e['loc'])}: {e['msg']}" for e in exc.errors()
         )
         return (
             ToolResult(
@@ -92,9 +90,7 @@ def launch_background_tool(
     execute_tool_call: ToolCallExecutor,
 ) -> tuple[ToolResultBlock, BackgroundTaskStarted | None, ToolExecutionCompleted | None]:
     """Dispatch a single tool use through the background path."""
-    clean_input = {
-        k: v for k, v in tool_use.input.items() if k not in ("background", "task_note")
-    }
+    clean_input = {k: v for k, v in tool_use.input.items() if k not in ("background", "task_note")}
 
     tool_def = tool_registry.get(tool_use.name)
     if tool_def is None or getattr(tool_def, "background", "forbidden") == "forbidden":
@@ -168,11 +164,11 @@ def launch_background_tool(
     tool_result = ToolResultBlock(
         tool_use_id=tool_use.id,
         content=(
-            f"[BACKGROUND LAUNCHED] task_id=\"{bg_alias}\" tool={tool_use.name}\n"
+            f'[BACKGROUND LAUNCHED] task_id="{bg_alias}" tool={tool_use.name}\n'
             f"Use this task_id with "
-            f"check_background_progress(task_id=\"{bg_alias}\"), "
-            f"wait_for_background_task(task_id=\"{bg_alias}\"), or "
-            f"cancel_background_task(task_id=\"{bg_alias}\"). "
+            f'check_background_progress(task_id="{bg_alias}"), '
+            f'wait_for_background_task(task_id="{bg_alias}"), or '
+            f'cancel_background_task(task_id="{bg_alias}"). '
             f"Keep using the current turn on other ready work first; do not "
             f"wait immediately unless this task is the only blocker left. "
             f"A [BACKGROUND {bg_alias} COMPLETED] message will arrive automatically."

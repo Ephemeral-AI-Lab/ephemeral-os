@@ -1,0 +1,43 @@
+"""Shared execution-context helpers for sandbox-backed toolkits."""
+
+from __future__ import annotations
+
+import os
+from typing import Any
+
+from tools.core.base import ToolExecutionContext
+
+
+def get_daytona_sandbox(context: ToolExecutionContext) -> Any | None:
+    """Get the injected Daytona sandbox object, if available."""
+    return context.metadata.get("daytona_sandbox")
+
+
+def get_daytona_cwd(context: ToolExecutionContext) -> str:
+    """Get the injected Daytona working directory, if available."""
+    return context.metadata.get("daytona_cwd") or ""
+
+
+def require_declared_shell_outputs(context: ToolExecutionContext) -> bool:
+    """Return True when mutating shell commands must predeclare output paths."""
+    return bool(context.metadata.get("require_declared_shell_outputs"))
+
+
+def resolve_daytona_path(path: str, context: ToolExecutionContext) -> str:
+    """Resolve *path* against the injected Daytona cwd."""
+    if not path:
+        return get_daytona_cwd(context) or "."
+    if path.startswith("/"):
+        return path
+    cwd = get_daytona_cwd(context)
+    if not cwd:
+        return path
+    return os.path.normpath(f"{cwd}/{path}")
+
+
+__all__ = [
+    "get_daytona_cwd",
+    "get_daytona_sandbox",
+    "require_declared_shell_outputs",
+    "resolve_daytona_path",
+]

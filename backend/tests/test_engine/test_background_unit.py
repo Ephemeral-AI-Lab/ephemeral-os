@@ -1,18 +1,15 @@
 """Unit tests for background-task tool plumbing.
 
-Covers three layers, all offline (no sandbox, no LLM):
+Covers two layers, all offline (no sandbox, no LLM):
 
     1. `_common.apply_last_n_lines` — line trim, char cap, total budget.
     2. `CheckBackgroundProgress` / `WaitForBackgroundTask` schemas and
        `execute` branches that don't require a running loop to assert.
-    3. `tools.daytona_toolkit.background._wrap_command_with_pid_tracking` —
-       pure string helper that can be inspected without a sandbox.
 """
 
 from __future__ import annotations
 
 import asyncio
-import base64
 
 import pytest
 from pathlib import Path
@@ -39,7 +36,6 @@ from tools.builtins.background.cancel_background_task import (
 )
 from tools.core.base import ToolExecutionContext, ToolResult
 from engine.runtime.background_tasks import BackgroundTaskManager
-from tools.daytona_toolkit.background import _wrap_command_with_pid_tracking
 
 
 # ---------------------------------------------------------------------------
@@ -283,7 +279,10 @@ class TestBackgroundSnapshotHelpers:
         statuses = [{"task_id": "bg_1", "status": "running", "output": "hello"}]
         output = render_background_snapshot("progress", statuses)
         metadata = build_background_snapshot_metadata("progress", "all", statuses)
-        assert output == '[\n  {\n    "task_id": "bg_1",\n    "status": "running",\n    "output": "hello"\n  }\n]'
+        assert (
+            output
+            == '[\n  {\n    "task_id": "bg_1",\n    "status": "running",\n    "output": "hello"\n  }\n]'
+        )
         assert metadata["background_snapshot"]["scope"] == "all"
 
     def test_wait_completed_render_matches_tool_branch(self) -> None:
@@ -308,43 +307,6 @@ class TestBackgroundSnapshotHelpers:
 
 
 # ---------------------------------------------------------------------------
-# _wrap_command_with_pid_tracking — pure string
-# ---------------------------------------------------------------------------
-
-
-class TestWrapCommand:
-    def test_uses_setsid_and_pid_file(self) -> None:
-        wrapped = _wrap_command_with_pid_tracking("echo hi", "bg_1")
-        assert wrapped.startswith("setsid sh -c '")
-        assert "/tmp/.eos_bg_bg_1.pid" in wrapped
-        assert "echo $$ >" in wrapped
-        assert "< /dev/null" in wrapped
-
-    def test_command_is_base64_encoded(self) -> None:
-        cmd = "echo 'hello world'"
-        wrapped = _wrap_command_with_pid_tracking(cmd, "bg_2")
-        encoded = base64.b64encode(cmd.encode()).decode("ascii")
-        assert encoded in wrapped
-        # Raw single-quoted command must NOT leak into the wrapper —
-        # that would indicate the injection-unsafe path.
-        assert "hello world" not in wrapped
-
-    def test_single_quote_in_command_does_not_break_wrapper(self) -> None:
-        # A bare single quote would close the `sh -c '...'` wrapper in
-        # the old implementation. With base64 encoding the wrapper is
-        # safe regardless of command contents.
-        cmd = "echo it's fine"
-        wrapped = _wrap_command_with_pid_tracking(cmd, "bg_3")
-        # Exactly two single quotes: one opening + one closing the sh -c arg.
-        assert wrapped.count("'") == 2
-
-    def test_different_task_ids_produce_different_pid_files(self) -> None:
-        a = _wrap_command_with_pid_tracking("x", "bg_a")
-        b = _wrap_command_with_pid_tracking("x", "bg_b")
-        assert ".eos_bg_bg_a.pid" in a and ".eos_bg_bg_b.pid" in b
-
-
-# ---------------------------------------------------------------------------
 # CancelBackgroundTaskTool branches
 # ---------------------------------------------------------------------------
 
@@ -365,9 +327,7 @@ class TestCancelBackgroundTaskExecute:
     async def test_unknown_task_id_returns_error(self) -> None:
         tool = CancelBackgroundTaskTool()
         mgr = BackgroundTaskManager()
-        result = await tool.execute(
-            CancelBackgroundTaskInput(task_id="bg_missing"), _ctx(mgr)
-        )
+        result = await tool.execute(CancelBackgroundTaskInput(task_id="bg_missing"), _ctx(mgr))
         assert result.is_error
         assert "bg_missing" in result.output
 

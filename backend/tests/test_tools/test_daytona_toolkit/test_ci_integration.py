@@ -1,4 +1,4 @@
-"""Tests for tools.daytona_toolkit.ci_integration."""
+"""Tests for shared CI runtime helpers."""
 
 from __future__ import annotations
 
@@ -6,11 +6,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-from team.context.project import ProjectContext
-
-from team.runtime.registry import register, unregister
 from tools.core.base import ToolExecutionContext
-from tools.daytona_toolkit.ci_integration import (
+from tools.core.ci_runtime import (
     abort_ci_write,
     finalize_ci_write,
     get_ci_service,
@@ -80,7 +77,7 @@ def test_prepare_ci_write_refreshes_scope_baseline_after_reservation(monkeypatch
         {"scope_paths": ["src"], "coherence_token": "reserved-token"},
     ]
     monkeypatch.setattr(
-        "tools.daytona_toolkit.ci_integration.build_scope_packet_for_context",
+        "tools.core.ci_runtime.build_scope_packet_for_context",
         lambda *args, **kwargs: dict(packets.pop(0)),
     )
     ctx = _ctx(
@@ -110,7 +107,7 @@ def test_prepare_ci_write_allows_scope_drift_when_opted_in(monkeypatch):
         {"scope_paths": ["src"], "coherence_token": "reserved-token"},
     ]
     monkeypatch.setattr(
-        "tools.daytona_toolkit.ci_integration.build_scope_packet_for_context",
+        "tools.core.ci_runtime.build_scope_packet_for_context",
         lambda *args, **kwargs: dict(packets.pop(0)),
     )
     ctx = _ctx(
@@ -150,7 +147,7 @@ def test_prepare_ci_write_auto_expands_scope_for_adjacent_write(monkeypatch):
         },
     ]
     monkeypatch.setattr(
-        "tools.daytona_toolkit.ci_integration.build_scope_packet_for_context",
+        "tools.core.ci_runtime.build_scope_packet_for_context",
         lambda *args, **kwargs: dict(packets.pop(0)),
     )
     ctx = _ctx(
@@ -189,7 +186,7 @@ def test_prepare_declared_shell_outputs_allows_scope_drift(monkeypatch):
         {"scope_paths": ["/repo/new.py"], "coherence_token": "reserved-token"},
     ]
     monkeypatch.setattr(
-        "tools.daytona_toolkit.ci_integration.build_scope_packet_for_context",
+        "tools.core.ci_runtime.build_scope_packet_for_context",
         lambda *args, **kwargs: dict(packets.pop(0)),
     )
     ctx = _ctx(
@@ -216,7 +213,7 @@ def test_abort_ci_write_refreshes_scope_baseline_after_release(monkeypatch):
     svc = MagicMock()
     packets = [{"scope_paths": ["src"], "coherence_token": "released-token"}]
     monkeypatch.setattr(
-        "tools.daytona_toolkit.ci_integration.build_scope_packet_for_context",
+        "tools.core.ci_runtime.build_scope_packet_for_context",
         lambda *args, **kwargs: dict(packets.pop(0)),
     )
     ctx = _ctx(
@@ -240,7 +237,7 @@ def test_finalize_ci_write_refreshes_scope_baseline_after_commit(monkeypatch):
     svc.commit_prepared_write.return_value = SimpleNamespace(success=True)
     packets = [{"scope_paths": ["src"], "coherence_token": "after-commit"}]
     monkeypatch.setattr(
-        "tools.daytona_toolkit.ci_integration.build_scope_packet_for_context",
+        "tools.core.ci_runtime.build_scope_packet_for_context",
         lambda *args, **kwargs: dict(packets.pop(0)),
     )
     ctx = _ctx(
@@ -280,7 +277,7 @@ def test_finalize_ci_write_enriches_prepared_write_with_symbol_boundaries(monkey
     svc.symbol_index.symbol_boundaries_for_file.return_value = [("foo", 3, 4)]
     packets = [{"scope_paths": ["src"], "coherence_token": "after-commit"}]
     monkeypatch.setattr(
-        "tools.daytona_toolkit.ci_integration.build_scope_packet_for_context",
+        "tools.core.ci_runtime.build_scope_packet_for_context",
         lambda *args, **kwargs: dict(packets.pop(0)),
     )
     ctx = _ctx(

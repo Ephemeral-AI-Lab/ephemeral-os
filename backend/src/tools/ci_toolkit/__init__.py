@@ -1,4 +1,4 @@
-"""Read-only code intelligence queries for agents."""
+"""Read-only code intelligence tools for agents."""
 
 from tools.core.base import BaseToolkit
 from tools.ci_toolkit.query_tools import (
@@ -10,6 +10,7 @@ from tools.ci_toolkit.query_tools import (
     ci_workspace_structure,
 )
 from tools.ci_toolkit.file_tools import ci_read_file
+from tools.ci_toolkit.lsp_tools import ci_diagnostics, ci_hover
 
 
 class CIToolkit(BaseToolkit):
@@ -29,6 +30,8 @@ class CIToolkit(BaseToolkit):
             ci_workspace_structure,
             ci_query_symbols,
             ci_query_references,
+            ci_hover,
+            ci_diagnostics,
         ]
         if include_change_awareness:
             tools.extend([ci_edit_hotspots, ci_recent_changes])
@@ -38,9 +41,12 @@ class CIToolkit(BaseToolkit):
             "- `ci_status` — check if the code intelligence service is available.\n"
             "- `ci_workspace_structure` — tree view of the project layout.\n"
             "- `ci_query_symbols` / `ci_query_references` — locate definitions and callers.\n"
+            "- `ci_hover` — precise position-based symbol info backed by the CI service.\n"
+            "- `ci_diagnostics` — syntax and type diagnostics for a file.\n"
             "- Call-chain rule — use "
-            "`ci_query_symbols(...)` or `ci_query_references(...)` before falling back to "
-            "custom runtime scripts when localizing a production boundary.\n"
+            "`ci_query_symbols(...)`, `ci_query_references(...)`, `ci_hover(...)`, or "
+            "`ci_diagnostics(...)` before "
+            "falling back to custom runtime scripts when localizing a production boundary.\n"
             "- Dead-cycle rule — if the same boundary survives one scoped packet, one owner query, "
             "and one narrow repro, stop opening more greps or readbacks and move to edit, blocker, or replan.\n"
         )
@@ -65,7 +71,7 @@ class CIToolkit(BaseToolkit):
         )
         super().__init__(
             name="code_intelligence",
-            description="Read-only code intelligence: symbols, structure, changes",
+            description="Read-only code intelligence: symbols, LSP, structure, changes",
             tools=tools,
             instructions=instructions,
         )
