@@ -28,8 +28,8 @@ Use this reference only when the validator packet already names exact failing py
   Keep that exact command in the corrective payload and replan toward the shared import owner.
   Do not "fix" the issue by deleting the failing verification step.
 - Example: the validator packet says `pytest pkg/utils.py -x -q` collected zero tests, and the same packet still names `pkg/tests/test_utils_dataframe.py` as the live benchmark file.
-  Keep `owned_files=["pkg/utils.py"]`, switch `verify` to `pytest pkg/tests/test_utils_dataframe.py -x -q`, and stop.
+  Keep `scope_paths=["pkg/utils.py"]`, switch the retry target in task prose to `pytest pkg/tests/test_utils_dataframe.py -x -q`, and stop.
   Do not reopen the benchmark test body, and do not escalate to `benchmark_surface_mismatch`.
 - Example: the failing owner is still `pkg/groupby.py`, and a same-run shared brief already exists for that file.
   Call `read_notes(scope_paths=["pkg/groupby.py"])` once. If it is still fresh, reuse that owner map and emit corrective JSON.
-   If it drifted, refresh the inherited context before deciding whether more exploration is necessary.
+  If it drifted, refresh the inherited context before deciding whether more exploration is necessary.

@@ -57,6 +57,7 @@ async def run_sweevo_with_agent(
     resume_team_run_id: str | None = None,
     resume_checkpoint_id: str | None = None,
     resume_latest_checkpoint: bool = False,
+    structured_log_path: str | None = None,
     on_line: "Any" = None,
 ) -> dict[str, Any]:
     """Drive a team against a SWE-EVO instance and grade it.
@@ -110,6 +111,7 @@ async def run_sweevo_with_agent(
                     printer=printer,
                     checkpoint_id=resume_checkpoint_id,
                     use_latest_checkpoint=resume_latest_checkpoint,
+                    structured_log_path=structured_log_path,
                 )
             finally:
                 try:
@@ -159,6 +161,7 @@ async def run_sweevo_with_agent(
                     sandbox_id,
                     repo_dir=repo_dir,
                     printer=printer,
+                    structured_log_path=structured_log_path,
                 )
             finally:
                 try:
@@ -202,6 +205,7 @@ async def run_sweevo_with_agent(
             "snapshot_name": sandbox_result["snapshot_name"],
             "sandbox": sandbox_result["sandbox"],
             "repo_dir": repo_dir,
+            "structured_log_path": structured_log_path,
             "agent_patch": agent_patch,
             "team_run_id": team_details.get("team_run_id"),
             "team_status": (

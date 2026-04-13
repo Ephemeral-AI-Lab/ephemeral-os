@@ -18,8 +18,9 @@ def _utcnow() -> datetime:
 class TeamDefinitionRecord(Base):
     """Role-based team composition stored in the database.
 
-    ``entry_planner`` is the agent that receives the user request first.
-    ``roster`` maps role names to lists of agent-definition names.
+    ``planner_agent`` / ``worker_agents`` are the current durable columns.
+    ``entry_planner`` / ``roster`` remain as compatibility mirrors so older
+    code paths and stored events can still round-trip.
     Broken references are caught at ``TeamRun`` start time.
     """
 
@@ -28,8 +29,10 @@ class TeamDefinitionRecord(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     name: Mapped[str] = mapped_column(String(128), unique=True, index=True)
     description: Mapped[str] = mapped_column(Text, default="")
-    entry_planner: Mapped[str] = mapped_column(String(128))
-    roster: Mapped[dict[str, list[str]]] = mapped_column(JSON, default=dict)
+    planner_agent: Mapped[str] = mapped_column(String(128))
+    worker_agents: Mapped[list[str]] = mapped_column(JSON, default=list)
+    roster: Mapped[dict[str, list[str]] | None] = mapped_column(JSON, default=dict, nullable=True)
+    entry_planner: Mapped[str | None] = mapped_column(String(128), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow
@@ -39,4 +42,5 @@ class TeamDefinitionRecord(Base):
     )
 
     def __repr__(self) -> str:
-        return f"<TeamDefinitionRecord name={self.name!r} entry_planner={self.entry_planner!r}>"
+        planner = self.entry_planner or self.planner_agent
+        return f"<TeamDefinitionRecord name={self.name!r} planner={planner!r}>"

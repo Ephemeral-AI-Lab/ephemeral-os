@@ -12,6 +12,7 @@ prepared by :func:`benchmarks.sweevo.sandbox.create_sweevo_test_sandbox`.
 from __future__ import annotations
 
 from collections import Counter
+from datetime import datetime, timezone
 import json
 import logging
 from pathlib import Path
@@ -56,6 +57,26 @@ from benchmarks.sweevo.sandbox import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _utc_iso_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _append_benchmark_event(
+    team_metrics: dict[str, Any] | None,
+    event: dict[str, Any],
+) -> None:
+    if not team_metrics:
+        return
+    path_value = team_metrics.get("structured_log_path")
+    if not path_value:
+        return
+    path = Path(str(path_value))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {"ts": _utc_iso_now(), **event}
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(payload, default=str) + "\n")
 
 
 def _ensure_team_builtins() -> None:
@@ -769,6 +790,29 @@ def _make_runner(
                     effective_defn.name,
                     usage_line,
                 )
+            tool_names = _tool_names_from_messages(list(agent.display_messages))
+            _append_benchmark_event(
+                team_metrics,
+                {
+                    "event": "agent_complete",
+                    "team_run_id": ctx.tool_metadata.get("team_run_id"),
+                    "work_item_id": ctx.tool_metadata.get("work_item_id"),
+                    "agent_run_id": tracker.run_id,
+                    "agent": effective_defn.name,
+                    "status": "failed" if run_error else "completed",
+                    "prompt_tokens": int(getattr(agent.total_usage, "input_tokens", 0) or 0),
+                    "completion_tokens": int(getattr(agent.total_usage, "output_tokens", 0) or 0),
+                    "total_tokens": int(getattr(agent.total_usage, "input_tokens", 0) or 0)
+                    + int(getattr(agent.total_usage, "output_tokens", 0) or 0),
+                    "tool_calls_used": int(getattr(qc, "tool_calls_used", 0) or 0),
+                    "tool_call_limit": getattr(qc, "tool_call_limit", None),
+                    "tool_names": tool_names,
+                    "tool_counts": dict(Counter(tool_names)),
+                    "final_context_tokens": final_context_tokens,
+                    "compactions_added": new_compactions,
+                    "compacted": compacted_total,
+                },
+            )
 
         if run_error is None:
             _enforce_validation_evidence(
@@ -827,6 +871,21 @@ def _make_runner(
                                 "replans_used": replans_used,
                             }
                         )
+                    _append_benchmark_event(
+                        team_metrics,
+                        {
+                            "event": "checkpoint",
+                            "team_run_id": team_run.id,
+                            "checkpoint_id": checkpoint_id,
+                            "label": checkpoint_label,
+                            "parent_run": team_run.id,
+                            "agent": effective_defn.name,
+                            "work_item_id": ctx.tool_metadata.get("work_item_id"),
+                            "agent_run_id": tracker.run_id,
+                            "retry_count_total": retry_count_total,
+                            "replans_used": replans_used,
+                        },
+                    )
                     if printer is not None:
                         printer.raw_line(
                             effective_defn.name,
@@ -1065,6 +1124,7 @@ def _build_team_metrics() -> dict[str, Any]:
         "agent_counts": Counter(),
         "checkpoint_ids": [],
         "checkpoints": [],
+        "structured_log_path": None,
     }
 
 
@@ -1185,6 +1245,28 @@ def _finalize_team_result(
                 f"retries={retry_count_total} replans={replans_used}"
             ),
         )
+    _append_benchmark_event(
+        team_metrics,
+        {
+            "event": "team_result",
+            "team_run_id": tr.id,
+            "sandbox_id": tr.sandbox_id,
+            "session_id": session_config.session_id,
+            "status": getattr(status, "value", status),
+            "work_items": task_count,
+            "max_depth_reached": max_depth_reached,
+            "agent_runs": int(team_metrics["agent_runs"]),
+            "agent_counts": dict(team_metrics["agent_counts"]),
+            "checkpoint_ids": resolved_checkpoint_ids,
+            "latest_checkpoint_id": resolved_checkpoint_ids[-1] if resolved_checkpoint_ids else None,
+            "retry_count_total": retry_count_total,
+            "replans_used": replans_used,
+            "usage": usage_summary,
+            "usage_by_model": usage_by_model,
+            "resumed_from": resumed_from,
+            "resumed_from_checkpoint": resumed_from_checkpoint,
+        },
+    )
 
     return {
         "status": status,
@@ -1192,6 +1274,7 @@ def _finalize_team_result(
         "team_run_id": tr.id,
         "sandbox_id": tr.sandbox_id,
         "session_id": session_config.session_id,
+        "structured_log_path": team_metrics.get("structured_log_path"),
         "usage": usage_summary,
         "usage_by_model": usage_by_model,
         "checkpoints": resolved_checkpoint_records,
@@ -1229,6 +1312,7 @@ async def run_sweevo_team(
     repo_dir: str = _REPO_DIR,
     printer: MultiAgentEventPrinter | None = None,
     num_executors: int = _DEFAULT_NUM_EXECUTORS,
+    structured_log_path: str | None = None,
 ) -> dict[str, Any]:
     """Run the builtin planner/developer/validator team against the sandbox.
 
@@ -1245,6 +1329,7 @@ async def run_sweevo_team(
     budgets = _derive_sweevo_budgets(instance)
     agent_overrides = _build_agent_overrides(instance)
     team_metrics = _build_team_metrics()
+    team_metrics["structured_log_path"] = structured_log_path
     _emit_team_runtime_banner(printer, budgets=budgets)
 
     tr = TeamRun(
@@ -1265,6 +1350,23 @@ async def run_sweevo_team(
         team_run_id=tr.id,
         session_id=getattr(session_config, "session_id", "sweevo"),
         sandbox_id=sandbox_id,
+    )
+    _append_benchmark_event(
+        team_metrics,
+        {
+            "event": "team_start",
+            "team_run_id": tr.id,
+            "session_id": getattr(session_config, "session_id", "sweevo"),
+            "sandbox_id": sandbox_id,
+            "instance_id": instance.instance_id,
+            "repo": instance.repo,
+            "repo_dir": repo_dir,
+            "budgets": {
+                "max_tasks": budgets.max_tasks,
+                "max_depth": budgets.max_depth,
+                "max_plan_size": budgets.max_plan_size,
+            },
+        },
     )
 
     await tr.start_with_team_definition(
@@ -1310,6 +1412,7 @@ async def resume_sweevo_team(
     num_executors: int = _DEFAULT_NUM_EXECUTORS,
     checkpoint_id: str | None = None,
     use_latest_checkpoint: bool = False,
+    structured_log_path: str | None = None,
 ) -> dict[str, Any]:
     """Resume a persisted SWE-EVO TeamRun in a fresh process."""
     _ensure_team_builtins()
@@ -1367,7 +1470,15 @@ async def resume_sweevo_team(
     budgets = tr.budgets
     agent_overrides = _build_agent_overrides(instance)
     team_metrics = _build_team_metrics()
+    team_metrics["structured_log_path"] = structured_log_path
     _emit_team_runtime_banner(printer, budgets=budgets)
+    checkpoint_label = ""
+    retry_count_total = sum(
+        int(getattr(wi, "retry_count", 0) or 0)
+        for wi in tr.dispatcher.graph.values()
+    )
+    budget_state = getattr(tr, "budget_state", None)
+    replans_used = int(getattr(budget_state, "replans_used", 0) or 0)
     if printer is not None:
         checkpoint_label = next(
             (
@@ -1377,11 +1488,6 @@ async def resume_sweevo_team(
             ),
             "",
         )
-        retry_count_total = sum(
-            int(getattr(wi, "retry_count", 0) or 0)
-            for wi in tr.dispatcher.graph.values()
-        )
-        replans_used = int(getattr(tr.budget_state, "replans_used", 0) or 0)
         printer.raw_line(
             "team",
             (
@@ -1395,6 +1501,19 @@ async def resume_sweevo_team(
                 f"{f' label={checkpoint_label}' if checkpoint_label else ''}"
             ),
         )
+    _append_benchmark_event(
+        team_metrics,
+        {
+            "event": "resume",
+            "team_run_id": team_run_id,
+            "sandbox_id": tr.sandbox_id,
+            "instance_id": instance.instance_id,
+            "checkpoint_id": resolved_checkpoint_id,
+            "durable_checkpoint_count": len(checkpoint_ids),
+            "retry_count_total": retry_count_total,
+            "replans_used": replans_used,
+        },
+    )
     _emit_team_identity_banner(
         printer,
         team_run_id=tr.id,

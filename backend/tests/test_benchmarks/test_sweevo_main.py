@@ -232,6 +232,33 @@ def test_ansi_stripping_tee_flush_tolerates_closed_mirror(tmp_path):
     tee.flush()
 
 
+def test_ansi_stripping_tee_write_tolerates_broken_primary(tmp_path):
+    class _BrokenPrimary:
+        def __init__(self) -> None:
+            self.encoding = "utf-8"
+            self.errors = "strict"
+            self.flush_calls = 0
+
+        def write(self, _data: str) -> int:
+            raise BrokenPipeError()
+
+        def flush(self) -> None:
+            self.flush_calls += 1
+            raise BrokenPipeError()
+
+    mirror_path = tmp_path / "run.log"
+    with mirror_path.open("w", encoding="utf-8") as mirror:
+        primary = _BrokenPrimary()
+        tee = sweevo_main._AnsiStrippingTee(primary, mirror)
+
+        written = tee.write("\033[32m[pass]\033[0m recorded\n")
+        tee.flush()
+
+    assert written == len("\033[32m[pass]\033[0m recorded\n")
+    assert primary.flush_calls == 0
+    assert mirror_path.read_text(encoding="utf-8") == "[pass] recorded\n"
+
+
 def test_cmd_run_forces_color_even_when_stdout_is_not_tty(monkeypatch):
     created: dict[str, object] = {}
 

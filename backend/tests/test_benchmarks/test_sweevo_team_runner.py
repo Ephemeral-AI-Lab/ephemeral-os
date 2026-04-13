@@ -74,6 +74,7 @@ def _patch_resume_sweevo_common(monkeypatch, *, checkpoint_records=None, checkpo
     if checkpoint_records is None:
         checkpoint_records = []
     monkeypatch.setattr(sweevo_team_runner, "_register_team_builtins", lambda: None)
+    monkeypatch.setattr("server.app_factory.ensure_runtime_stores_ready", lambda: object())
     monkeypatch.setattr(sweevo_team_runner, "_build_benchmark_event_store", lambda **_: object())
     monkeypatch.setattr(
         sweevo_team_runner,
@@ -647,5 +648,4 @@ def test_emit_dispatcher_dag_logs_graph_lines():
     assert lines[0] == ("team", "[dag] after=team_planner nodes=2")
     assert any("root-1 agent=team_planner" in body for _, body in lines[1:])
     assert any("child-1 agent=developer" in body and "deps=['root-1']" in body for _, body in lines[1:])
-
 

@@ -48,11 +48,19 @@ class _AnsiStrippingTee:
     def __init__(self, primary: Any, mirror: Any) -> None:
         self._primary = primary
         self._mirror = mirror
+        self._primary_broken = False
         self.encoding = getattr(primary, "encoding", "utf-8")
         self.errors = getattr(primary, "errors", "strict")
 
     def write(self, data: str) -> int:
-        written = self._primary.write(data)
+        if self._primary_broken:
+            written = len(data)
+        else:
+            try:
+                written = self._primary.write(data)
+            except BrokenPipeError:
+                self._primary_broken = True
+                written = len(data)
         try:
             self._mirror.write(_ANSI_ESCAPE_RE.sub("", data))
         except ValueError:
@@ -66,7 +74,11 @@ class _AnsiStrippingTee:
             self.write(line)
 
     def flush(self) -> None:
-        self._primary.flush()
+        if not self._primary_broken:
+            try:
+                self._primary.flush()
+            except BrokenPipeError:
+                self._primary_broken = True
         try:
             self._mirror.flush()
         except ValueError:
@@ -99,6 +111,18 @@ def _build_run_log_path(args: argparse.Namespace, *, timestamp: str) -> Path:
 
 def _build_code_intelligence_log_path(run_log_path: Path) -> Path:
     return run_log_path.with_name(f"{run_log_path.stem}.code-intelligence{run_log_path.suffix}")
+
+
+def _build_structured_log_path(run_log_path: Path) -> Path:
+    return run_log_path.with_name(f"{run_log_path.stem}.events.jsonl")
+
+
+def _append_jsonl(path: Path | None, event: dict[str, Any]) -> None:
+    if path is None:
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(event, default=str) + "\n")
 
 
 def _build_file_handler(path: Path, *, level: int) -> logging.FileHandler:
@@ -298,6 +322,17 @@ async def _cmd_run(args: argparse.Namespace) -> int:
     from message.event_printer import MultiAgentEventPrinter
     from benchmarks.sweevo.runner import run_sweevo_with_agent
 
+    run_log_path = Path(getattr(args, "run_log_path", "")) if getattr(args, "run_log_path", None) else None
+    structured_log_path = (
+        Path(getattr(args, "structured_log_path", ""))
+        if getattr(args, "structured_log_path", None)
+        else None
+    )
+    ci_log_path = (
+        Path(getattr(args, "code_intelligence_log_path", ""))
+        if getattr(args, "code_intelligence_log_path", None)
+        else None
+    )
     use_color = not args.no_color
     quiet = args.no_stream
     printer = MultiAgentEventPrinter(
@@ -314,25 +349,59 @@ async def _cmd_run(args: argparse.Namespace) -> int:
         print(f"  SWE-EVO run  instance={args.instance_id or f'<auto size={args.size}>'}", flush=True)
         print(header, flush=True)
 
-    result = await run_sweevo_with_agent(
-        printer=printer,
-        source=args.source,
-        instance_id=args.instance_id,
-        size=args.size,
-        target_bullets=args.target_bullets,
-        snapshot_name=args.snapshot_name,
-        sandbox_name=args.sandbox_name,
-        register_snapshot=args.register_snapshot,
-        cpu=args.cpu,
-        disk=args.disk,
-        repo_dir=args.repo_dir,
-        test_command=args.test_command,
-        test_timeout=args.test_timeout,
-        resume_team_run_id=args.resume_team_run_id,
-        resume_checkpoint_id=args.resume_checkpoint_id,
-        resume_latest_checkpoint=args.resume_latest_checkpoint,
-        on_line=on_line,
+    _append_jsonl(
+        structured_log_path,
+        {
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "event": "run_start",
+            "instance_id": args.instance_id,
+            "size": args.size,
+            "target_bullets": args.target_bullets,
+            "resume_team_run_id": args.resume_team_run_id,
+            "resume_checkpoint_id": args.resume_checkpoint_id,
+            "resume_latest_checkpoint": bool(args.resume_latest_checkpoint),
+            "fresh_run": not bool(args.resume_team_run_id),
+            "run_log_path": str(run_log_path) if run_log_path is not None else None,
+            "structured_log_path": str(structured_log_path) if structured_log_path is not None else None,
+            "code_intelligence_log_path": str(ci_log_path) if ci_log_path is not None else None,
+        },
     )
+
+    try:
+        result = await run_sweevo_with_agent(
+            printer=printer,
+            source=args.source,
+            instance_id=args.instance_id,
+            size=args.size,
+            target_bullets=args.target_bullets,
+            snapshot_name=args.snapshot_name,
+            sandbox_name=args.sandbox_name,
+            register_snapshot=args.register_snapshot,
+            cpu=args.cpu,
+            disk=args.disk,
+            repo_dir=args.repo_dir,
+            test_command=args.test_command,
+            test_timeout=args.test_timeout,
+            resume_team_run_id=args.resume_team_run_id,
+            resume_checkpoint_id=args.resume_checkpoint_id,
+            resume_latest_checkpoint=args.resume_latest_checkpoint,
+            structured_log_path=(
+                str(structured_log_path) if structured_log_path is not None else None
+            ),
+            on_line=on_line,
+        )
+    except Exception as exc:
+        _append_jsonl(
+            structured_log_path,
+            {
+                "ts": datetime.now(timezone.utc).isoformat(),
+                "event": "run_error",
+                "instance_id": args.instance_id,
+                "resume_team_run_id": args.resume_team_run_id,
+                "error": str(exc),
+            },
+        )
+        raise
 
     test = result.get("test", {})
     grading = result.get("grading", {})
@@ -345,6 +414,33 @@ async def _cmd_run(args: argparse.Namespace) -> int:
     result["health_ok"] = not health_issues
     result["health_issues"] = health_issues
     result["stream_summary"] = stream_summary
+    _append_jsonl(
+        structured_log_path,
+        {
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "event": "run_finish",
+            "instance_id": result.get("instance", {}).get("instance_id", args.instance_id),
+            "team_run_id": result.get("team_run_id"),
+            "team_status": team_status,
+            "test_exit_code": exit_code,
+            "health_ok": not health_issues,
+            "health_issues": health_issues,
+            "passed": counts["passed"],
+            "failed": counts["failed"],
+            "errors": counts["errors"],
+            "grading": grading,
+            "team": {
+                "work_items": team.get("work_items"),
+                "agent_runs": team.get("agent_runs"),
+                "checkpoint_ids": team.get("checkpoint_ids"),
+                "latest_checkpoint_id": team.get("latest_checkpoint_id"),
+                "retry_count_total": team.get("retry_count_total"),
+                "replans_used": team.get("replans_used"),
+                "usage": team.get("usage"),
+                "usage_by_model": team.get("usage_by_model"),
+            },
+        },
+    )
 
     if not quiet:
         print("=" * 72, flush=True)
@@ -463,6 +559,9 @@ def main(argv: list[str] | None = None) -> int:
                 handlers=[root_handler],
                 force=True,
             )
+            args.run_log_path = str(log_path)
+            args.structured_log_path = str(_build_structured_log_path(log_path))
+            args.code_intelligence_log_path = str(ci_log_path)
             try:
                 return asyncio.run(_cmd_run(args))
             except KeyboardInterrupt:

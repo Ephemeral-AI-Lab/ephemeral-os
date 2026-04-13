@@ -2,12 +2,12 @@
 
 Use this reference only when either condition is true:
 
-1. You need to edit a file outside `owned_files`.
+1. You need to edit a file outside `scope_paths`.
 2. The lane is runtime-owned and your evidence is still only syntax, LSP, or readback.
 
 ## Widening rules
 
-- Must treat `owned_files` as the default edit surface.
+- Must treat `scope_paths` as the default edit surface.
 - Must compose with live sibling edits on widened files.
 - Must keep widened edits to one adjacent supporting owner surface for the same bug.
 - Never widen into tests first when the production owner is still the clearer fix surface.
@@ -29,11 +29,11 @@ Use this reference only when either condition is true:
 
 ## Few-shot examples
 
-- Example: the lane owns `pkg/io/json.py`, but the live traceback points to a helper import in `pkg/_compat.py`.
+- Example: the lane focuses `pkg/io/json.py`, but the live traceback points to a helper import in `pkg/_compat.py`.
   Widen once to `pkg/_compat.py`, patch the helper, and rerun the exact assigned verify command.
   Do not patch the failing test first.
-- Example: the lane owns `pkg/io/hdf.py`, but `pytest pkg/io/tests/test_hdf.py -x` dies during collection because the verify surface imports a deprecated or missing private symbol through `pkg/_compat.py`.
-  Confirm that import chain once with live traceback evidence, widen only to the adjacent production/import path if it truly owns the fix, or stop with blocker evidence for replanning; `owned_failures` does not authorize editing the verify file.
+- Example: the lane focuses `pkg/io/hdf.py`, but `pytest pkg/io/tests/test_hdf.py -x` dies during collection because the verify surface imports a deprecated or missing private symbol through `pkg/_compat.py`.
+  Confirm that import chain once with live traceback evidence, widen only to the adjacent production/import path if it truly owns the fix, or stop with blocker evidence for replanning; the verify target list does not authorize editing the verify file.
   Do not patch `pkg/io/tests/test_hdf.py`, `pkg/tests/test_compat.py`, or any other verification-surface import just to make collection pass, and if you add a compat shim, prove the exact import path and symbol spelling before returning to pytest.
 - Example: editing `pkg/tests/test_compat.py` returns `daytona_edit_file: verification-surface write allowed in advisory mode`.
   Revert that test edit, keep the red runtime surface, and widen only to the adjacent production/import chain that owns the failure.

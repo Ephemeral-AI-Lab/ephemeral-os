@@ -46,17 +46,22 @@ _INSTRUCTIONS = (
 class CIToolkit(BaseToolkit):
     """Read-only code intelligence toolkit.
 
-    All tools are always registered. Role-based restrictions (e.g. blocking
-    ci_read_file for planners) are handled via ``blocked_tools`` in agent
-    definitions.
+    Planner-family agents do not get ``ci_read_file`` because they should
+    anchor ownership through symbols, references, and scoped structure.
     """
 
     @classmethod
     def from_context(cls, ctx):  # type: ignore[override]
+        from agents.registry import has_role
+
+        agent_name = str(ctx.metadata.get("agent_name") or "")
+        tools = list(_ALL_TOOLS)
+        if has_role(agent_name, "planner") or has_role(agent_name, "replanner"):
+            tools = [tool for tool in tools if tool.name != "ci_read_file"]
         return cls(
             name="code_intelligence",
             description="Read-only code intelligence: symbols, LSP, structure, changes",
-            tools=list(_ALL_TOOLS),
+            tools=tools,
             instructions=_INSTRUCTIONS,
         )
 

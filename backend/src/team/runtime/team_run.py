@@ -106,6 +106,9 @@ class TeamRun:
         self.file_change_store: Any = (
             getattr(runtime_services, "file_change_store", None) or NullFileChangeStore()
         )
+        # LISTEN/NOTIFY scope change listener (Section 14.7).
+        # Started in start() when an async engine is available.
+        self.scope_listener: Any = None
 
     # ---- lifecycle -------------------------------------------------------
 
@@ -149,6 +152,8 @@ class TeamRun:
         self.status = TeamRunStatus.RUNNING
         self.event_store.append(make_team_run_status(self.id, self.status.value))
         _register_team_run(self)
+        # Start LISTEN/NOTIFY scope change listener if async engine available.
+        await self._start_scope_listener()
         self._executor_factory = executor_factory
         if num_executors is not None:
             self._num_executors = max(1, int(num_executors))
@@ -205,6 +210,7 @@ class TeamRun:
                 if timeout is not None and elapsed >= timeout:
                     break
             await self._join_executors()
+            await self._stop_scope_listener()
             await self._compute_final_status()
             return self.status
         finally:
@@ -246,6 +252,34 @@ class TeamRun:
     async def cancel(self) -> None:
         self.cancel_event.set()
         await self.dispatcher.cancel_all_pending()
+        await self._stop_scope_listener()
+
+    async def _start_scope_listener(self) -> None:
+        """Start the LISTEN/NOTIFY scope change listener if an async engine exists."""
+        try:
+            from team.persistence.team_engine import get_team_engine
+            from team.runtime.scope_change_listener import ScopeChangeListener
+
+            engine = get_team_engine()
+            if engine is None:
+                return
+            self.scope_listener = ScopeChangeListener(engine, self.id)
+            await self.scope_listener.start()
+        except Exception:
+            import logging
+            logging.getLogger(__name__).debug(
+                "ScopeChangeListener not started — falling back to pull-based detection",
+                exc_info=True,
+            )
+
+    async def _stop_scope_listener(self) -> None:
+        """Stop the scope change listener if running."""
+        if self.scope_listener is not None:
+            try:
+                await self.scope_listener.stop()
+            except Exception:
+                pass
+            self.scope_listener = None
 
     def note_conflict_event(
         self,
@@ -270,6 +304,24 @@ class TeamRun:
                 "agent": agent_name,
             },
             stale_hint="coordination conflict observed during live execution",
+        )
+
+    def note_validator_outcome(self, *, task: Task, summary: str) -> bool:
+        return persist_memory_record(
+            project_key=self.project_context.project_key,
+            repo_root=self.project_context.repo_root,
+            kind="validation_outcome",
+            scope={"paths": list(task.scope_paths)},
+            content={
+                "task_id": task.id,
+                "summary": summary,
+            },
+            source={
+                "team_run_id": self.id,
+                "work_item_id": task.id,
+                "agent": task.agent_name,
+            },
+            stale_hint="validator result captured during live execution",
         )
 
     # ---- checkpoint API --------------------------------------------------

@@ -1,0 +1,166 @@
+"""ScopeChangeListener — single LISTEN connection with in-process fan-out.
+
+One instance per TeamRun. Executors subscribe/unsubscribe as tasks
+start/finish. Notifications from PostgreSQL are routed to per-executor
+ScopeChangeBuffers based on scope_paths filtering.
+
+Uses a dedicated async connection outside the pool to avoid tying up a
+pooled connection for the lifetime of the run. The connection runs
+LISTEN and polls for notifications in a background asyncio task.
+
+See Section 14.7 of the coordination redesign doc.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import logging
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncEngine
+
+from team.runtime.scope_change_buffer import ScopeChangeBuffer
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class _Subscription:
+    scope_paths: list[str]
+    buffer: ScopeChangeBuffer
+    agent_run_id: str
+
+
+class ScopeChangeListener:
+    """Single shared LISTEN connection with in-process fan-out.
+
+    One instance per TeamRun. Executors register/unregister as tasks
+    start/finish. The listener filters notifications by scope and
+    routes them to per-executor ScopeChangeBuffers.
+
+    Notifications are buffered in each ScopeChangeBuffer and flushed
+    at the top of each query loop turn — no timer-based flush loop.
+    """
+
+    def __init__(self, engine: "AsyncEngine", run_id: str) -> None:
+        self._engine = engine
+        self._run_id = run_id
+        self._channel = f"scope_change_{run_id}"
+        self._subscribers: dict[str, _Subscription] = {}
+        self._conn = None
+        self._listen_task: asyncio.Task | None = None
+        self._running = False
+
+    async def start(self) -> None:
+        """Attach a LISTEN listener on a dedicated connection."""
+        try:
+            self._conn = await self._engine.connect()
+            raw = await self._conn.get_raw_connection()
+            dbapi_conn = raw.dbapi_connection
+
+            # psycopg (async): use .execute() for LISTEN, then poll
+            # via connection.notifies() in a background task.
+            await raw.cursor().execute(f"LISTEN {self._channel}")
+            self._running = True
+            self._listen_task = asyncio.create_task(
+                self._poll_loop(dbapi_conn),
+                name=f"scope_listener_{self._run_id}",
+            )
+            logger.info("ScopeChangeListener started on channel %s", self._channel)
+        except Exception:
+            logger.warning(
+                "ScopeChangeListener failed to start — scope notifications "
+                "will not be pushed. Pull-based detection still works.",
+                exc_info=True,
+            )
+            self._running = False
+
+    async def _poll_loop(self, dbapi_conn) -> None:  # type: ignore[no-untyped-def]
+        """Poll for NOTIFY events and route to subscribers.
+
+        Uses psycopg's async notifies() generator when available,
+        falls back to a polling loop with short sleep.
+        """
+        try:
+            # psycopg3 async connection exposes .notifies() async generator
+            if hasattr(dbapi_conn, "notifies"):
+                async for notify in dbapi_conn.notifies():
+                    if not self._running:
+                        break
+                    self._route_notification(notify.payload)
+            else:
+                # Fallback: poll with short sleep (for psycopg2 or other drivers)
+                while self._running:
+                    await asyncio.sleep(0.5)
+                    if hasattr(dbapi_conn, "poll"):
+                        dbapi_conn.poll()
+                    while dbapi_conn.notifies:
+                        notify = dbapi_conn.notifies.pop(0)
+                        self._route_notification(notify.payload)
+        except asyncio.CancelledError:
+            pass
+        except Exception:
+            if self._running:
+                logger.warning("ScopeChangeListener poll loop error", exc_info=True)
+
+    def _route_notification(self, payload: str) -> None:
+        """Parse a NOTIFY payload and route to matching subscribers."""
+        try:
+            change = json.loads(payload)
+        except (json.JSONDecodeError, TypeError):
+            logger.debug("Ignoring malformed NOTIFY payload: %s", payload[:100])
+            return
+
+        file_path = change.get("file_path", "")
+        change_agent_run_id = change.get("agent_run_id", "")
+
+        for sub in self._subscribers.values():
+            # Don't notify agent about its own edits
+            if change_agent_run_id and change_agent_run_id == sub.agent_run_id:
+                continue
+            # Only notify if file is in agent's scope
+            if any(file_path.startswith(p.rstrip("/")) for p in sub.scope_paths):
+                sub.buffer.buffer(change)
+
+    def subscribe(
+        self,
+        agent_run_id: str,
+        scope_paths: list[str],
+        buffer: ScopeChangeBuffer,
+    ) -> None:
+        """Register an executor's buffer for scope notifications."""
+        self._subscribers[agent_run_id] = _Subscription(
+            scope_paths=scope_paths,
+            buffer=buffer,
+            agent_run_id=agent_run_id,
+        )
+
+    def unsubscribe(self, agent_run_id: str) -> None:
+        """Unregister an executor's buffer."""
+        self._subscribers.pop(agent_run_id, None)
+
+    async def stop(self) -> None:
+        """Stop listening and close the dedicated connection."""
+        self._running = False
+        if self._listen_task is not None:
+            self._listen_task.cancel()
+            try:
+                await self._listen_task
+            except (asyncio.CancelledError, Exception):
+                pass
+            self._listen_task = None
+        if self._conn is not None:
+            try:
+                await self._conn.close()
+            except Exception:
+                pass
+            self._conn = None
+        self._subscribers.clear()
+        logger.info("ScopeChangeListener stopped on channel %s", self._channel)
+
+    @property
+    def is_running(self) -> bool:
+        return self._running

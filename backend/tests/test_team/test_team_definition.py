@@ -68,6 +68,55 @@ def test_create_and_get_by_name(store: TeamDefinitionStore) -> None:
     assert fetched.roster["planner"] == ["team_planner"]
 
 
+def test_create_populates_current_schema_columns(store: TeamDefinitionStore) -> None:
+    store.create(
+        name="dual-write",
+        entry_planner="team_planner",
+        roster={
+            "planner": ["team_planner"],
+            "developer": ["developer"],
+            "reviewer": ["validator"],
+            "explorer": ["scout"],
+        },
+    )
+
+    with store._sf() as db:  # noqa: SLF001
+        record = (
+            db.query(TeamDefinitionRecord)
+            .filter(TeamDefinitionRecord.name == "dual-write")
+            .one()
+        )
+
+    assert record.entry_planner == "team_planner"
+    assert record.planner_agent == "team_planner"
+    assert record.worker_agents == ["developer", "validator", "scout"]
+
+
+def test_get_by_name_falls_back_to_current_schema_columns(store: TeamDefinitionStore) -> None:
+    with store._sf() as db:  # noqa: SLF001
+        db.add(
+            TeamDefinitionRecord(
+                id="current-schema-row",
+                name="current-schema",
+                description="current only",
+                planner_agent="team_planner",
+                worker_agents=["developer", "validator"],
+                roster=None,
+                entry_planner=None,
+            )
+        )
+        db.commit()
+
+    fetched = store.get_by_name("current-schema")
+
+    assert fetched is not None
+    assert fetched.entry_planner == "team_planner"
+    assert fetched.roster == {
+        "planner": ["team_planner"],
+        "worker": ["developer", "validator"],
+    }
+
+
 def test_create_rejects_duplicate_name(store: TeamDefinitionStore) -> None:
     store.create(name="dup", entry_planner="p", roster={"planner": ["p"]})
     with pytest.raises(ValueError, match="already exists"):
@@ -119,6 +168,34 @@ def test_roster_defaults_to_empty_dict(store: TeamDefinitionStore) -> None:
     fetched = store.get_by_name("bare")
     assert fetched is not None
     assert fetched.roster == {}
+
+
+def test_seed_builtin_populates_current_schema_columns(store: TeamDefinitionStore) -> None:
+    td = store.seed_builtin(
+        TeamDefinition(
+            id="builtin-1",
+            name="builtin",
+            description="builtin team",
+            entry_planner="team_planner",
+            roster={
+                "planner": ["team_planner"],
+                "developer": ["developer"],
+                "reviewer": ["validator"],
+            },
+        )
+    )
+
+    assert td.entry_planner == "team_planner"
+
+    with store._sf() as db:  # noqa: SLF001
+        record = (
+            db.query(TeamDefinitionRecord)
+            .filter(TeamDefinitionRecord.name == "builtin")
+            .one()
+        )
+
+    assert record.planner_agent == "team_planner"
+    assert record.worker_agents == ["developer", "validator"]
 
 
 

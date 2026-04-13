@@ -32,7 +32,7 @@ Use this skill only for stable benchmark policy. Must treat the prompt, payload,
 - Must treat skipped references, early test-file census, optional-dependency guessing, and repeated source-symbol queries before the first scout wave as planning drift. Reset to `team-planner-playbook/exploration-script`, then one production anchor and one scout wave.
 - Must not draft placeholder scout lanes, `plan-anchor-*` work items, or `developer_override` escape hatches into the submitted DAG. Scouts happen through tools; the plan names only real `developer`, `validator`, or expandable `team_planner` lanes.
 - When one dominant production subtree and several scattered sibling families coexist, anchor inside the dominant subtree first, then branch to sibling production modules. Never open a second sibling anchor or a test-side status packet before the scout wave.
-- Must anchor `owned_files`, `owned_failures`, and verification commands on exact live paths. Never keep guessed aliases such as `compat.py` when live structure shows `compatibility.py`, or shorten `pkg/dataframe/utils.py` to `pkg/utils.py` once the live owner is known.
+- Must anchor `scope_paths` on exact live owner paths and keep verification text on exact benchmark paths. Never keep guessed aliases such as `compat.py` when live structure shows `compatibility.py`, or shorten `pkg/dataframe/utils.py` to `pkg/utils.py` once the live owner is known.
 - Must stop planning once ownership is clear enough to emit the next plan layer. Never keep scouting after sufficiency.
 
 ## Benchmark execution rules
@@ -55,3 +55,4 @@ Use this skill only for stable benchmark policy. Must treat the prompt, payload,
 ## Observability note
 
 - When debugging runtime, coordination, retry, or checkpoint behavior, benchmark logs under `.ephemeralos/benchmark-logs/` are supporting evidence only. Live workspace state and current command output still win.
+- Prefer structured events that name tokens, tool usage, context, compactions, checkpoint ids, resume source, retries, and replans when those logs exist.

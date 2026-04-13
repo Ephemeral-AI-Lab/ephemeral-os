@@ -84,6 +84,29 @@ CREATE TABLE IF NOT EXISTS team_run_checkpoints (
 CREATE INDEX IF NOT EXISTS idx_checkpoints_run
     ON team_run_checkpoints (team_run_id, sequence DESC);
 
+-- LISTEN/NOTIFY trigger for real-time scope change awareness (Section 14.7).
+-- Fires on every INSERT into file_changes, pushing the change to all
+-- listeners on the run's channel. ScopeChangeListener filters by scope
+-- and routes to per-executor ScopeChangeBuffers.
+CREATE OR REPLACE FUNCTION notify_scope_change() RETURNS trigger AS $$
+BEGIN
+    PERFORM pg_notify(
+        'scope_change_' || NEW.team_run_id,
+        json_build_object(
+            'file_path', NEW.file_path,
+            'agent_id', NEW.agent_id,
+            'agent_run_id', COALESCE(NEW.agent_run_id, ''),
+            'edit_type', NEW.edit_type
+        )::text
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_scope_change
+    AFTER INSERT ON file_changes
+    FOR EACH ROW EXECUTE FUNCTION notify_scope_change();
+
 -- Indexes are created per-partition automatically when partitions are created.
 -- These template indexes guide what each partition gets:
 --   task_notes: (task_id), GiST(scope_ltree), BRIN(created_at), GIN(tsvector)

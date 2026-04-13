@@ -36,13 +36,53 @@ class TeamDefinitionStore:
     # ---- conversions -----------------------------------------------------
 
     @staticmethod
-    def _record_to_definition(record: TeamDefinitionRecord) -> TeamDefinition:
+    def _normalize_roster(raw_roster: object) -> dict[str, list[str]]:
+        if not isinstance(raw_roster, dict):
+            return {}
+        roster: dict[str, list[str]] = {}
+        for role, agents in raw_roster.items():
+            names = [str(agent) for agent in (agents or []) if str(agent)]
+            if names:
+                roster[str(role)] = names
+        return roster
+
+    @classmethod
+    def _worker_agents_from_roster(
+        cls,
+        *,
+        entry_planner: str,
+        roster: dict[str, list[str]],
+    ) -> list[str]:
+        worker_agents: list[str] = []
+        seen: set[str] = set()
+        for agents in cls._normalize_roster(roster).values():
+            for agent in agents:
+                if agent == entry_planner or agent in seen:
+                    continue
+                seen.add(agent)
+                worker_agents.append(agent)
+        return worker_agents
+
+    @classmethod
+    def _record_to_definition(cls, record: TeamDefinitionRecord) -> TeamDefinition:
+        raw_roster = record.roster if isinstance(record.roster, dict) else None
+        roster = cls._normalize_roster(raw_roster) if raw_roster is not None else {}
+        entry_planner = str(
+            record.entry_planner
+            or record.planner_agent
+            or next(iter(roster.get("planner", [])), "")
+        )
+        if raw_roster is None:
+            if entry_planner:
+                roster["planner"] = [entry_planner]
+            if record.worker_agents:
+                roster["worker"] = [str(agent) for agent in record.worker_agents if str(agent)]
         return TeamDefinition(
             id=record.id,
             name=record.name,
             description=record.description or "",
-            entry_planner=record.entry_planner,
-            roster={k: list(v) for k, v in (record.roster or {}).items()},
+            entry_planner=entry_planner,
+            roster=roster,
         )
 
     # ---- CRUD ------------------------------------------------------------
@@ -64,12 +104,18 @@ class TeamDefinitionStore:
             )
             if existing is not None:
                 raise ValueError(f"team_definition '{name}' already exists")
+            normalized_roster = self._normalize_roster(roster)
             record = TeamDefinitionRecord(
                 id=str(uuid4()),
                 name=name,
                 description=description,
+                planner_agent=entry_planner,
+                worker_agents=self._worker_agents_from_roster(
+                    entry_planner=entry_planner,
+                    roster=normalized_roster,
+                ),
                 entry_planner=entry_planner,
-                roster={k: list(v) for k, v in roster.items()},
+                roster=normalized_roster,
             )
             db.add(record)
             db.commit()
@@ -108,12 +154,18 @@ class TeamDefinitionStore:
             )
             if existing is not None:
                 return self._record_to_definition(existing)
+            normalized_roster = self._normalize_roster(defn.roster)
             record = TeamDefinitionRecord(
                 id=str(uuid4()),
                 name=defn.name,
                 description=defn.description,
+                planner_agent=defn.entry_planner,
+                worker_agents=self._worker_agents_from_roster(
+                    entry_planner=defn.entry_planner,
+                    roster=normalized_roster,
+                ),
                 entry_planner=defn.entry_planner,
-                roster={k: list(v) for k, v in defn.roster.items()},
+                roster=normalized_roster,
             )
             db.add(record)
             db.commit()
