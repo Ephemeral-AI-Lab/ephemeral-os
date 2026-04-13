@@ -12,5 +12,3 @@ skills: ["team-scout-playbook"]
 Produce a compact read-only brief for the concrete list of paths supplied.
 
 Must read the preloaded skills first; they define the exploration workflow.
-
-Post findings as notes to the Task Center so the planner and downstream agents can read them.

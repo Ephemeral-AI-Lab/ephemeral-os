@@ -1,7 +1,7 @@
 """SWE-EVO team runner.
 
 Drives a full builtin team (planner → developer → validator) against a
-SWE-EVO instance inside its Daytona sandbox. Each WorkItem spawned by
+SWE-EVO instance inside its Daytona sandbox. Each task spawned by
 the team dispatcher runs through :func:`engine.runtime.agent.spawn_agent`
 with its full production tool surface, and every ``StreamEvent`` is
 forwarded to the shared :class:`MultiAgentEventPrinter` so the CLI shows
@@ -68,8 +68,8 @@ async def run_sweevo_with_agent(
     grader.
 
     Returns a dict with ``instance``, ``sandbox``, ``team_status``,
-    ``team_work_items`` (count), ``agent_patch`` (combined git diff),
-    ``test`` (required-test result), and ``grading`` (F2P/P2P metrics).
+    ``agent_patch`` (combined git diff), ``test`` (required-test result),
+    and ``grading`` (F2P/P2P metrics).
     """
     from benchmarks.sweevo import team_runner as sweevo_team_runner
 
@@ -166,13 +166,9 @@ async def run_sweevo_with_agent(
                 except Exception:
                     pass
 
-        if isinstance(team_result, tuple):
-            team_status, team_work_items = team_result
-            team_details: dict[str, Any] = {}
-        else:
-            team_status = team_result.get("status")
-            team_work_items = int(team_result.get("work_items") or 0)
-            team_details = dict(team_result)
+        team_status = team_result.get("status")
+        task_count = int(team_result.get("work_items") or 0)
+        team_details = dict(team_result)
 
         agent_patch = await _extract_combined_patch(sandbox_id, repo_dir)
 
@@ -195,7 +191,7 @@ async def run_sweevo_with_agent(
                 instance_id=instance.instance_id,
                 status="completed",
                 agent_patch=agent_patch,
-                task_count=team_work_items,
+                task_count=task_count,
             ),
             sandbox_id,
             repo_dir=repo_dir,
@@ -211,12 +207,9 @@ async def run_sweevo_with_agent(
             "team_status": (
                 team_status.value if hasattr(team_status, "value") else team_status
             ),
-            "team_work_items": team_work_items,
+            "team_work_items": task_count,
             "team": team_details,
-            # Legacy fields kept so existing CLI banners (``agent_events``)
-            # still render without KeyErrors.
-            "agent_name": "team",
-            "agent_events": team_work_items,
+            "agent_events": task_count,
             "test": test_result,
             "grading": {
                 "resolved": grading_result.resolved,

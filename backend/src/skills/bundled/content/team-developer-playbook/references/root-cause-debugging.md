@@ -35,7 +35,7 @@ If one scoped packet, one symbol/reference query, and one proving repro all land
 
 - Read the owned production file and the immediate consumer or importer.
 - Use `ci_query_symbols(...)` or `ci_query_references(...)` once to identify the next caller/callee boundary before writing custom runtime probes.
-- Use `inspect_inherited_context(...)` once when a shared brief might answer the question, but only if you also keep the current scoped coherence token in view.
+- Use `read_notes(scope_paths=[...])` and `context_changed_since()` once when a shared brief might answer the question, but only if you also keep the current scoped coherence token in view.
 - Run one narrow import-smoke, assertion-smoke, or helper-level repro through `daytona_codeact`.
 - Read one adjacent shared production file when the traceback first lands there.
 

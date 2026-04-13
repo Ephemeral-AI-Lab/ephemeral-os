@@ -11,9 +11,7 @@ Use this reference immediately before emitting final plan JSON.
 - Do NOT set `kind` — it is auto-inferred from the target agent's role (planner-role → expandable, all others → atomic).
 - Must put `owned_files`, `owned_failures`, `verify`, `verification`, `touches_paths`, and similar execution details under `payload`.
 - Must keep `deps` as a top-level item field.
-- Must keep `briefings` at the item top level.
-- Each briefing must be exactly `{"name":"...","source":"artifact","ref":"..."}` or `{"name":"...","source":"inline","inline":"..."}`.
-- Atlas or staged refs still use `source:"artifact"` with the `atlas:...` or `scout:...` ref. Never emit `source:"atlas"`, and never pair `source:"inline"` with `ref`.
+- The `task` field is the agent's sole briefing — write clear, actionable prose. No separate briefing objects needed.
 - Must emit each `local_id` only once.
 - Must not submit placeholder scout scaffolds such as `plan-anchor-*`, `*_scout`, or `developer_override`. Scouts are tool calls, not plan items.
 - If the submitted layer has 3 or more concrete non-planner lanes, end with one terminal `validator` whose `deps` cover those terminal siblings; do not add per-branch validators at the same parent layer unless a real shared-risk branch cut needs one.

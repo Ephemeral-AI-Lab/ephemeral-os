@@ -2,7 +2,7 @@
 
 Drives :class:`team.runtime.team_run.TeamRun` with the builtin
 ``team_planner`` / ``developer`` / ``validator`` agents from
-``team.builtins``. Each WorkItem's agent is spawned through
+``team.builtins``. Each Task's agent is spawned through
 :func:`engine.runtime.agent.spawn_agent` so it runs with its full
 production tool surface (``sandbox_operations``, ``code_intelligence``,
 ``context``, skills) against the Daytona sandbox that was already
@@ -42,7 +42,6 @@ from team.runtime.context_builder import (
     TeamAgentContext,
     build_initial_user_message,
     build_work_item_metadata,
-    render_work_item_payload,
 )
 from team.runtime.executor import Executor
 from team.runtime.team_run import TeamRun
@@ -181,54 +180,23 @@ def _derive_sweevo_budgets(instance: SWEEvoInstance) -> BudgetConfig:
     f2p_targets = max(1, len(instance.fail_to_pass))
 
     base = {
-        "small": {
-            "max_depth": 4,
-            "max_plan_size": 8,
-            "max_work_items": 24,
-            "max_shared_briefings": 1000,
-            "max_briefing_bytes": 24_000,
-        },
-        "medium": {
-            "max_depth": 5,
-            "max_plan_size": 12,
-            "max_work_items": 40,
-            "max_shared_briefings": 1000,
-            "max_briefing_bytes": 48_000,
-        },
-        "large": {
-            "max_depth": 6,
-            "max_plan_size": 16,
-            "max_work_items": 64,
-            "max_shared_briefings": 1000,
-            "max_briefing_bytes": 64_000,
-        },
-    }.get(size, {
-        "max_depth": 5,
-        "max_plan_size": 12,
-        "max_work_items": 40,
-        "max_shared_briefings": 1000,
-        "max_briefing_bytes": 48_000,
-    })
+        "small":  {"max_depth": 4, "max_plan_size": 8,  "max_tasks": 24},
+        "medium": {"max_depth": 5, "max_plan_size": 12, "max_tasks": 40},
+        "large":  {"max_depth": 6, "max_plan_size": 16, "max_tasks": 64},
+    }.get(size, {"max_depth": 5, "max_plan_size": 12, "max_tasks": 40})
 
     # Keep each planner level inside the benchmark-size ceiling. When the
     # natural task set is wider than that, compress adjacent work into
     # expandable child-planner lanes rather than flattening more siblings.
     plan_size = int(base["max_plan_size"])
-    work_items = max(
-        int(base["max_work_items"]),
+    max_tasks = max(
+        int(base["max_tasks"]),
         max(4, min(plan_size, f2p_targets)) * int(base["max_depth"]),
     )
     return BudgetConfig(
-        max_work_items=work_items,
+        max_tasks=max_tasks,
         max_depth=int(base["max_depth"]),
         max_plan_size=plan_size,
-        max_reviewers_per_plan=None,
-        require_reviewer_for_plan_size=None,
-        max_artifact_bytes=1_000_000,
-        max_total_artifact_bytes=50_000_000,
-        default_work_item_timeout=None,
-        max_briefing_bytes=int(base["max_briefing_bytes"]),
-        max_shared_briefings=int(base["max_shared_briefings"]),
     )
 
 
@@ -294,11 +262,20 @@ def _build_root_prompt(instance: SWEEvoInstance, repo_dir: str) -> str:
     )
 
 
-def _work_item_base_prompt(payload: Any) -> str:
-    rendered = render_work_item_payload(payload)
-    if rendered is not None:
-        return rendered
-    return f"Payload: {payload!r}"
+def _task_base_prompt(task_text: Any) -> str:
+    if isinstance(task_text, dict) and task_text:
+        rendered = json.dumps(task_text, indent=2, default=str)
+        primary: list[str] = []
+        for key in ("task", "prompt", "description", "instructions"):
+            value = task_text.get(key)
+            if isinstance(value, str) and value.strip():
+                primary.append(value.strip())
+        if primary:
+            return "\n\n".join(primary) + "\n\nTask context:\n" + rendered
+        return "Task context:\n" + rendered
+    if isinstance(task_text, str):
+        return task_text
+    return f"Task: {task_text!r}"
 
 
 def _extract_final_text(messages: list[Any]) -> str:
@@ -368,7 +345,7 @@ def _find_matching_delimiter(text: str, start: int, open_char: str, close_char: 
     return -1
 
 
-_PLAN_ITEM_PRIMARY_KEYS = frozenset({"local_id", "agent_name"})
+_PLAN_ITEM_PRIMARY_KEYS = frozenset({"id", "agent_name"})
 
 
 def _skip_json_whitespace(text: str, start: int) -> int:
@@ -651,7 +628,7 @@ def _make_runner(
             overrides = agent_overrides.get(defn.name)
             if overrides:
                 effective_defn = defn.model_copy(update=overrides)
-        prompt = ctx.user_message or _work_item_base_prompt(None)
+        prompt = ctx.user_message or _task_base_prompt(None)
         tracker = AgentRunTracker.create(
             session_id=getattr(session_config, "session_id", None),
             run_id=getattr(ctx.tool_metadata, "agent_run_id", None),
@@ -895,17 +872,15 @@ def _emit_dispatcher_dag(
     )
     for wi in ordered:
         deps = [
-            by_id.get(dep_id).local_id or dep_id[:8]
-            if by_id.get(dep_id) is not None
-            else dep_id[:8]
+            dep_id[:8]
             for dep_id in wi.deps
         ]
-        label = wi.local_id or wi.id[:8]
+        label = wi.id[:8]
         printer.raw_line(
             "team",
             (
                 "[dag] "
-                f"{label} agent={wi.agent_name} kind={wi.kind.value} status={wi.status.value} "
+                f"{label} agent={wi.agent_name} status={wi.status.value} "
                 f"depth={wi.depth} deps={deps or []}"
             ),
         )
@@ -940,15 +915,15 @@ def _make_context_builders(
         "`/home/user/repos/...` unless the payload names a real child directory.\n\n"
     )
 
-    def build_query_ctx(defn, team_run, wi):
+    async def build_query_ctx(defn, team_run, wi):
         if wi.depth == 0 and wi.agent_name == TEAM_PLANNER:
             # The root planner already receives the benchmark prompt via
             # ``team_run.user_request``. Re-rendering the full payload here
             # duplicates the prompt and the full FAIL_TO_PASS list.
             base_prompt = team_run.user_request
         else:
-            base_prompt = sandbox_note + _work_item_base_prompt(wi.payload)
-        user_message = build_initial_user_message(team_run, wi, base_prompt)
+            base_prompt = sandbox_note + _task_base_prompt(wi.task)
+        user_message = await build_initial_user_message(team_run, wi, base_prompt)
         meta = _build_runtime_metadata(
             sandbox_id=team_run.sandbox_id or sandbox_id,
             repo_dir=repo_dir,
@@ -1059,8 +1034,7 @@ def _emit_team_runtime_banner(
         (
             "[planning_budget] "
             f"max_plan_size={budgets.max_plan_size} max_depth={budgets.max_depth} "
-            f"max_work_items={budgets.max_work_items} "
-            f"max_shared_briefings={budgets.max_shared_briefings}"
+            f"max_tasks={budgets.max_tasks}"
         ),
     )
 
@@ -1135,12 +1109,12 @@ def _finalize_team_result(
     resumed_from_checkpoint: str | None = None,
 ) -> dict[str, Any]:
     status = tr.status
-    work_items = len(tr.dispatcher.graph)
+    task_count = len(tr.dispatcher.graph)
     logger.info(
-        "sweevo team run %s finished: status=%s work_items=%d",
+        "sweevo team run %s finished: status=%s tasks=%d",
         tr.id,
         getattr(status, "value", status),
-        work_items,
+        task_count,
     )
     if status != TeamRunStatus.SUCCEEDED:
         failures = [
@@ -1148,20 +1122,18 @@ def _finalize_team_result(
         ]
         for wi in failures:
             logger.warning(
-                "sweevo failed work item: id=%s agent=%s local_id=%s kind=%s reason=%s",
+                "sweevo failed task: id=%s agent=%s reason=%s",
                 wi.id,
                 wi.agent_name,
-                wi.local_id,
-                wi.kind.value,
                 wi.failure_reason,
             )
             if printer is not None:
                 printer.raw_line(
                     "team",
                     (
-                        "[failed_work_item] "
-                        f"agent={wi.agent_name} local_id={wi.local_id or '-'} "
-                        f"kind={wi.kind.value} reason={wi.failure_reason or 'unknown'}"
+                        "[failed_task] "
+                        f"agent={wi.agent_name} id={wi.id[:8]} "
+                        f"reason={wi.failure_reason or 'unknown'}"
                     ),
                 )
 
@@ -1207,7 +1179,7 @@ def _finalize_team_result(
             "team",
             (
                 "[team_stats] "
-                f"work_items={work_items} max_depth={max_depth_reached} "
+                f"tasks={task_count} max_depth={max_depth_reached} "
                 f"agent_runs={team_metrics['agent_runs']} "
                 f"checkpoints={len(resolved_checkpoint_ids)} "
                 f"retries={retry_count_total} replans={replans_used}"
@@ -1216,7 +1188,7 @@ def _finalize_team_result(
 
     return {
         "status": status,
-        "work_items": work_items,
+        "work_items": task_count,
         "team_run_id": tr.id,
         "sandbox_id": tr.sandbox_id,
         "session_id": session_config.session_id,
@@ -1236,11 +1208,9 @@ def _finalize_team_result(
         "retry_count_total": retry_count_total,
         "replans_used": replans_used,
         "budgets": {
-            "max_work_items": budgets.max_work_items,
+            "max_tasks": budgets.max_tasks,
             "max_depth": budgets.max_depth,
             "max_plan_size": budgets.max_plan_size,
-            "max_shared_briefings": budgets.max_shared_briefings,
-            "max_briefing_bytes": budgets.max_briefing_bytes,
         },
         "resumed_from": resumed_from,
         "resumed_from_checkpoint": resumed_from_checkpoint,
@@ -1259,11 +1229,10 @@ async def run_sweevo_team(
     repo_dir: str = _REPO_DIR,
     printer: MultiAgentEventPrinter | None = None,
     num_executors: int = _DEFAULT_NUM_EXECUTORS,
-    work_item_timeout: float | None = None,  # noqa: ARG001 — kept for CLI compat; no-op
 ) -> dict[str, Any]:
     """Run the builtin planner/developer/validator team against the sandbox.
 
-    Returns a metrics dict including ``status`` and ``work_items``.
+    Returns a metrics dict including ``status`` and ``work_items`` (task count).
     Does not raise on team failure — the caller grades the result via
     the sweevo test command.
     """

@@ -419,8 +419,7 @@ async def _cmd_run(args: argparse.Namespace) -> int:
                 print(
                     f"  budgets: plan_size={budgets.get('max_plan_size', 0)}  "
                     f"depth={budgets.get('max_depth', 0)}  "
-                    f"work_items={budgets.get('max_work_items', 0)}  "
-                    f"shared_briefings={budgets.get('max_shared_briefings', 0)}",
+                    f"max_tasks={budgets.get('max_tasks', 0)}",
                     flush=True,
                 )
             if agent_counts:
