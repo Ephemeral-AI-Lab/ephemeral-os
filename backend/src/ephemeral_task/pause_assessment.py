@@ -3,9 +3,24 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Literal
+
+from pydantic import BaseModel, field_validator
 
 from ephemeral_task.core import EphemeralTaskResult, Snapshot
+
+
+class _PauseVerdictInput(BaseModel):
+    """Pydantic validation for pause_verdict tool response."""
+
+    answer: Literal["YES", "NO"]
+    reason: str = ""
+
+    @field_validator("answer", mode="before")
+    @classmethod
+    def normalize_answer(cls, v: str) -> str:
+        v = str(v).strip().upper()
+        return v if v in ("YES", "NO") else "NO"
 
 PAUSE_VERDICT_TOOL = {
     "name": "pause_verdict",
@@ -44,7 +59,6 @@ async def assess_pause(
     broken_files: list[str],
     problem: str,
     api_client: Any,
-    timeout_seconds: int = 30,
     model: str | None = None,
 ) -> PauseVerdict:
     """Assess whether a running agent is affected by a blocker.
@@ -70,12 +84,11 @@ async def assess_pause(
         tool=PAUSE_VERDICT_TOOL,
         api_client=api_client,
         max_tokens=200,
-        timeout_seconds=timeout_seconds,
         model=model,
     )
 
     tid = snapshot.task_id
-    base = dict(text=result.text, timed_out=result.timed_out, elapsed_seconds=result.elapsed_seconds)
+    base = dict(text=result.text, timed_out=result.timed_out)
 
     if result.timed_out:
         return PauseVerdict(
@@ -85,13 +98,12 @@ async def assess_pause(
 
     # Structured tool_input is always present when tool_choice="any" succeeds
     if result.tool_input is not None:
-        answer = result.tool_input.get("answer", "NO")
-        reason = result.tool_input.get("reason", "")
+        validated = _PauseVerdictInput.model_validate(result.tool_input)
         conversation.append({
             "role": "assistant",
             "content": [{"type": "tool_use", "name": "pause_verdict", "input": result.tool_input}],
         })
-        return PauseVerdict(**base, task_id=tid, answer=answer, reason=reason, conversation=conversation)
+        return PauseVerdict(**base, task_id=tid, answer=validated.answer, reason=validated.reason, conversation=conversation)
 
     # Fallback: tool call failed somehow — treat as NO
     return PauseVerdict(**base, task_id=tid, answer="NO", reason="tool call failed", conversation=conversation)

@@ -219,14 +219,23 @@ class TaskCenter:
 
         if snapshot and api_client:
             from ephemeral_task import (
+                CHECKPOINT_SYSTEM_PROMPT,
                 EDIT_CHECKPOINT_PROMPT,
                 TURN_CHECKPOINT_PROMPT,
-                run_checkpoint,
+                Snapshot,
+                run_ephemeral_task,
             )
             prompt = EDIT_CHECKPOINT_PROMPT if trigger == "edit" else TURN_CHECKPOINT_PROMPT
-            result = await run_checkpoint(
-                snapshot=snapshot,
+            snap = Snapshot(
+                task_id=task_id,
+                agent_run_id=task.agent_run_id or task_id if task else task_id,
+                messages=snapshot,
+                system_prompt=CHECKPOINT_SYSTEM_PROMPT,
+            )
+            result = await run_ephemeral_task(
+                snapshot=snap,
                 prompt=prompt,
+                trigger=trigger,
                 api_client=api_client,
                 model=model,
             )

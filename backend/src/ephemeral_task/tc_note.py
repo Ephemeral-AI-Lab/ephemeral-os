@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
 
 from ephemeral_task.core import EphemeralTaskResult, Snapshot
 
@@ -40,21 +39,17 @@ POST_NOTE_TOOL = {
     "input_schema": {
         "type": "object",
         "properties": {
-            "note": {
+            "content": {
                 "type": "string",
-                "description": "The progress note content. Include file paths, changes made, and current status.",
+                "description": "Note content to post. Include file paths, changes made, and current status.",
             },
-            "status": {
-                "type": "string",
-                "enum": ["working", "stuck", "nearly_done", "blocked"],
-                "description": "Current status of the agent's work.",
-            },
-            "blocked_by": {
-                "type": "string",
-                "description": "If status is 'blocked', the file path or dependency causing the block. Empty string otherwise.",
+            "scope_paths": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "File/dir scope for filtering. Defaults to the task's write_scope.",
             },
         },
-        "required": ["note", "status"],
+        "required": ["content"],
     },
 }
 
@@ -65,16 +60,14 @@ class NoteSummary(EphemeralTaskResult):
 
     task_id: str = ""
     trigger: str = ""  # "edit" or "turn"
-    status: str = ""  # "working", "stuck", "nearly_done", "blocked"
-    blocked_by: str = ""
+    note_summary: str = ""
 
 
-async def run_checkpoint(
+async def run_ephemeral_task(
     *,
     snapshot: Snapshot,
     prompt: str,
     trigger: str = "",
-    timeout_seconds: int = 30,
     max_tokens: int = 500,
     model: str | None = None,
     api_client: object,
@@ -85,25 +78,20 @@ async def run_checkpoint(
         tool=POST_NOTE_TOOL,
         api_client=api_client,
         max_tokens=max_tokens,
-        timeout_seconds=timeout_seconds,
         model=model,
     )
 
     note_text = result.text
-    status = ""
-    blocked_by = ""
+    note_summary = ""
 
     if result.tool_input is not None:
-        note_text = result.tool_input.get("note", result.text)
-        status = result.tool_input.get("status", "")
-        blocked_by = result.tool_input.get("blocked_by", "")
+        note_summary = str(result.tool_input.get("content", ""))
+        note_text = note_summary or result.text
 
     return NoteSummary(
         text=note_text,
         timed_out=result.timed_out,
-        elapsed_seconds=result.elapsed_seconds,
         task_id=snapshot.task_id,
         trigger=trigger,
-        status=status,
-        blocked_by=blocked_by,
+        note_summary=note_summary,
     )
