@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import inspect
 import logging
-from pathlib import Path
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -117,8 +116,8 @@ def inject_code_intelligence(
             )
             try:
                 if eager_warmup_safe:
-                    if _sandbox_project_root(ci_sandbox) or Path(ci_workspace_root).is_dir():
-                        svc.ensure_initialized(wait=False)
+                    if str(ci_workspace_root or "").strip():
+                        svc.ensure_initialized(wait=True)
                     else:
                         svc.lsp_client.ensure_ready(install_missing=False)
                 else:

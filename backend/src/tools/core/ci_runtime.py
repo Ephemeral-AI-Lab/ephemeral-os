@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import dataclasses
+import hashlib
 import logging
 from typing import Any
 
@@ -12,6 +13,10 @@ from team._path_utils import normalize_scope_paths
 from tools.core.base import ToolExecutionContext
 
 logger = logging.getLogger(__name__)
+
+
+def _content_hash(content: str) -> str:
+    return hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
 
 
 def get_ci_service(context: ToolExecutionContext) -> Any | None:
@@ -197,6 +202,18 @@ def finalize_ci_write(
         edit_type=edit_type,
         description=description,
     )
+    if bool(getattr(result, "success", False)):
+        _propagate_team_edit(
+            context,
+            file_path=str(getattr(prepared, "file_path", "") or ""),
+            agent_id=_resolved_agent_id(context),
+            agent_run_id=str(context.metadata.get("agent_run_id") or ""),
+            edit_type=edit_type,
+            old_hash=str(getattr(prepared, "current_hash", "") or ""),
+            new_hash=_content_hash(content),
+            description=description,
+            ci_store=getattr(getattr(svc, "arbiter", None), "file_change_store", None),
+        )
     if bool(getattr(result, "conflict", False)):
         _note_team_memory_conflict(
             context,
@@ -251,16 +268,29 @@ def record_edit_in_arbiter(
     svc = get_ci_service(context)
     if svc is None:
         return
+    resolved_agent_id = _resolved_agent_id(context, preferred=agent_id)
+    agent_run_id = str(context.metadata.get("agent_run_id") or "")
     try:
         arbiter = getattr(svc, "arbiter", None)
         if arbiter is not None:
             arbiter.record_edit(
-                file_path=file_path, agent_id=agent_id,
+                file_path=file_path, agent_id=resolved_agent_id,
                 edit_type=edit_type, old_hash=old_hash,
                 new_hash=new_hash, description=description,
             )
     except Exception:
         logger.debug("CI arbiter sync failed for %s", file_path, exc_info=True)
+    _propagate_team_edit(
+        context,
+        file_path=file_path,
+        agent_id=resolved_agent_id,
+        agent_run_id=agent_run_id,
+        edit_type=edit_type,
+        old_hash=old_hash,
+        new_hash=new_hash,
+        description=description,
+        ci_store=getattr(getattr(svc, "arbiter", None), "file_change_store", None),
+    )
 
 
 def sync_write_to_ci(
@@ -359,6 +389,70 @@ def _note_team_memory_conflict(
         )
     except Exception:
         logger.debug("team memory conflict persistence failed for %s", file_path, exc_info=True)
+
+
+def _resolved_agent_id(context: ToolExecutionContext, *, preferred: str = "") -> str:
+    agent_id = str(preferred or "").strip()
+    if agent_id:
+        return agent_id
+    agent_name = str(context.metadata.get("agent_name") or "").strip()
+    if agent_name:
+        return agent_name
+    return str(context.metadata.get("agent_run_id") or "").strip()
+
+
+def _propagate_team_edit(
+    context: ToolExecutionContext,
+    *,
+    file_path: str,
+    agent_id: str,
+    agent_run_id: str,
+    edit_type: str,
+    old_hash: str,
+    new_hash: str,
+    description: str,
+    ci_store: Any | None,
+) -> None:
+    """Mirror successful edits into the team-run coordination stream."""
+    team_run_id = str(context.metadata.get("team_run_id") or "")
+    if not team_run_id or not file_path:
+        return
+    team_run = _get_team_run(team_run_id)
+    if team_run is None:
+        return
+
+    store = getattr(team_run, "file_change_store", None)
+    if (
+        store is not None
+        and getattr(store, "initialized", False)
+        and store is not ci_store
+    ):
+        try:
+            store.record(
+                team_run_id=team_run_id,
+                file_path=file_path,
+                agent_id=agent_id,
+                agent_run_id=agent_run_id,
+                edit_type=edit_type,
+                old_hash=old_hash,
+                new_hash=new_hash,
+                description=description,
+            )
+        except Exception:
+            logger.debug("team file_change_store mirror failed for %s", file_path, exc_info=True)
+
+    listener = getattr(team_run, "scope_listener", None)
+    publish = getattr(listener, "publish_change", None) if listener is not None else None
+    if callable(publish):
+        try:
+            publish(
+                file_path=file_path,
+                agent_id=agent_id,
+                agent_run_id=agent_run_id,
+                edit_type=edit_type,
+            )
+        except Exception:
+            logger.debug("scope listener publish failed for %s", file_path, exc_info=True)
 
 
 def _get_team_run(team_run_id: str) -> Any | None:

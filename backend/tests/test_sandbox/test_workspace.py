@@ -132,7 +132,7 @@ class TestInjectCodeIntelligence:
         inject_code_intelligence(mock_context, "sb-123", mock_sandbox, "/workspace")
 
         assert captured["workspace_root"] == "/testbed"
-        mock_svc.ensure_initialized.assert_called_once_with(wait=False)
+        mock_svc.ensure_initialized.assert_called_once_with(wait=True)
 
     def test_skips_when_ci_import_fails(self, monkeypatch):
         from sandbox.workspace import inject_code_intelligence
@@ -189,8 +189,8 @@ class TestInjectCodeIntelligence:
 
         assert mock_context.metadata["ci_service"] == mock_svc
         assert captured["sandbox"] is sync_sandbox
-        mock_svc.ensure_initialized.assert_not_called()
-        mock_svc.lsp_client.ensure_ready.assert_called_once_with(install_missing=False)
+        mock_svc.ensure_initialized.assert_called_once_with(wait=True)
+        mock_svc.lsp_client.ensure_ready.assert_not_called()
 
     def test_skips_eager_warmup_when_async_remote_sandbox_has_no_sync_handle(self, monkeypatch):
         from sandbox.workspace import inject_code_intelligence

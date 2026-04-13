@@ -17,6 +17,8 @@ Use this skill only for stable benchmark policy. Treat the prompt, payload, live
 - Must fix repository code, not the ambient environment. Never rely on ad hoc package installs as the benchmark fix.
 - Must keep roles separate, preserve exact file paths and exact pytest node ids when they are known, and trust live file state over cached briefs or old reasoning.
 - Must treat benchmark test files as failure evidence first, not default implementation ownership.
+- Must keep benchmark test files and pytest node ids literal in task prose or retry targets, but must not create planner/scout ownership tasks whose scope is benchmark-test archaeology unless the prompt explicitly makes tests the owner surface.
+- Must not derive an exact production file from benchmark filename resemblance alone, including `tests/test_foo.py -> pkg/foo.py` or public/private compat-name swaps without live import or note evidence.
 - Must treat collection or import failures before the named target loads as still-red verification, not as a reason to trim the scope.
 
 ## Coordination redesign focus

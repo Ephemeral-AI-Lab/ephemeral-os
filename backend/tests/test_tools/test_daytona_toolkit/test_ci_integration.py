@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from tools.core.base import ToolExecutionContext
 from tools.core.ci_runtime import (
@@ -158,6 +159,56 @@ def test_finalize_ci_write_enriches_prepared_write_with_symbol_boundaries():
     assert getattr(enriched, "operation_type", None) == "replace"
 
 
+def test_finalize_ci_write_mirrors_team_edit_and_notifies_listener():
+    svc = MagicMock()
+    svc.commit_prepared_write.return_value = SimpleNamespace(success=True)
+    svc.arbiter = SimpleNamespace(file_change_store=object())
+    team_store = MagicMock()
+    team_store.initialized = True
+    listener = SimpleNamespace(publish_change=MagicMock())
+    team_run = SimpleNamespace(file_change_store=team_store, scope_listener=listener)
+    ctx = _ctx(
+        {
+            "ci_service": svc,
+            "team_run_id": "team-1",
+            "agent_run_id": "agent-run-1",
+            "agent_name": "developer",
+        }
+    )
+    prepared = SimpleNamespace(
+        file_path="/repo/file.py",
+        current_content="before\n",
+        current_hash="old-hash",
+    )
+
+    with patch("tools.core.ci_runtime._get_team_run", return_value=team_run):
+        result = finalize_ci_write(
+            ctx,
+            prepared,
+            content="after\n",
+            edit_type="write",
+            description="update file",
+        )
+
+    assert result.success is True
+    team_store.record.assert_called_once_with(
+        team_run_id="team-1",
+        file_path="/repo/file.py",
+        agent_id="developer",
+        agent_run_id="agent-run-1",
+        edit_type="write",
+        old_hash="old-hash",
+        new_hash=hashlib.sha256("after\n".encode("utf-8")).hexdigest()[:16],
+        description="update file",
+    )
+    listener.publish_change.assert_called_once_with(
+        file_path="/repo/file.py",
+        agent_id="developer",
+        agent_run_id="agent-run-1",
+        edit_type="write",
+    )
+
+
 # ---------------------------------------------------------------------------
 # abort_ci_write
 # ---------------------------------------------------------------------------
@@ -221,6 +272,51 @@ def test_record_edit_default_args():
         old_hash="",
         new_hash="",
         description="",
+    )
+
+
+def test_record_edit_mirrors_team_store_and_scope_listener():
+    svc = MagicMock()
+    svc.arbiter.file_change_store = object()
+    team_store = MagicMock()
+    team_store.initialized = True
+    listener = SimpleNamespace(publish_change=MagicMock())
+    team_run = SimpleNamespace(file_change_store=team_store, scope_listener=listener)
+    ctx = _ctx(
+        {
+            "ci_service": svc,
+            "team_run_id": "team-1",
+            "agent_run_id": "agent-run-1",
+            "agent_name": "developer",
+        }
+    )
+
+    with patch("tools.core.ci_runtime._get_team_run", return_value=team_run):
+        record_edit_in_arbiter(ctx, "/file.py")
+
+    svc.arbiter.record_edit.assert_called_once_with(
+        file_path="/file.py",
+        agent_id="developer",
+        edit_type="edit",
+        old_hash="",
+        new_hash="",
+        description="",
+    )
+    team_store.record.assert_called_once_with(
+        team_run_id="team-1",
+        file_path="/file.py",
+        agent_id="developer",
+        agent_run_id="agent-run-1",
+        edit_type="edit",
+        old_hash="",
+        new_hash="",
+        description="",
+    )
+    listener.publish_change.assert_called_once_with(
+        file_path="/file.py",
+        agent_id="developer",
+        agent_run_id="agent-run-1",
+        edit_type="edit",
     )
 
 

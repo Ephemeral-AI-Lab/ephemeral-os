@@ -511,6 +511,39 @@ def test_run_one_subscribes_and_unsubscribes_scope_listener():
     dispatcher.fail.assert_not_called()
 
 
+def test_run_forever_survives_transient_pop_ready_error():
+    import asyncio
+
+    class FakeDispatcher:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        async def pop_ready(self) -> str:
+            self.calls += 1
+            if self.calls == 1:
+                raise RuntimeError("db down")
+            return "task-1"
+
+    team_run = FakeTeamRun(dispatcher=FakeDispatcher())
+    team_run.cancel_event = asyncio.Event()
+    executor = Executor(
+        team_run=team_run,
+        runner=AsyncMock(),
+        agent_lookup=lambda name: FakeDefn(),
+    )
+
+    async def _run_one(task_id: str) -> None:
+        assert task_id == "task-1"
+        team_run.cancel_event.set()
+
+    executor._run_one = AsyncMock(side_effect=_run_one)
+
+    asyncio.run(executor.run_forever())
+
+    assert team_run.dispatcher.calls >= 2
+    executor._run_one.assert_awaited_once_with("task-1")
+
+
 # ---------------------------------------------------------------------------
 # _plan_health_prefix tests
 # ---------------------------------------------------------------------------

@@ -70,6 +70,10 @@ def _rebind_service_sandbox(service: CodeIntelligenceService, sandbox: Any) -> N
     if sandbox is None:
         return
     service._sandbox = sandbox
+    symbol_index = getattr(service, "symbol_index", None)
+    bind_sandbox = getattr(symbol_index, "bind_sandbox", None)
+    if callable(bind_sandbox):
+        bind_sandbox(sandbox)
     lsp = getattr(service, "lsp_client", None)
     if lsp is not None:
         old_sandbox = getattr(lsp, "_sandbox", None)
@@ -96,7 +100,7 @@ class CodeIntelligenceService:
         self._lsp_bootstrap_attempted = False
         self._init_lock = threading.Lock()
 
-        self.symbol_index = SymbolIndex(workspace_root=workspace_root)
+        self.symbol_index = SymbolIndex(workspace_root=workspace_root, sandbox=sandbox)
 
         # In-memory file change tracking.
         from team.persistence.file_change_store import FileChangeStore
@@ -128,13 +132,19 @@ class CodeIntelligenceService:
             self.lsp_client.ensure_ready(install_missing=True)
 
         with self._init_lock:
-            self._initialized = ready
-        return ready
+            self._initialized = ready or self.symbol_index.is_built
+        return self.is_initialized
 
     @property
     def is_initialized(self) -> bool:
         with self._init_lock:
-            return self._initialized
+            if self._initialized:
+                return True
+        if self.symbol_index.is_built:
+            with self._init_lock:
+                self._initialized = True
+            return True
+        return False
 
     # -- Query API ------------------------------------------------------------
 

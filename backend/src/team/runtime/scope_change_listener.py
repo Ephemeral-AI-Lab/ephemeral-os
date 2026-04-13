@@ -16,7 +16,8 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from dataclasses import dataclass, field
+import re
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -25,6 +26,12 @@ if TYPE_CHECKING:
 from team.runtime.scope_change_buffer import ScopeChangeBuffer
 
 logger = logging.getLogger(__name__)
+
+
+def _build_channel_name(run_id: str) -> str:
+    """Return a PostgreSQL-safe channel name derived from *run_id*."""
+    sanitized = re.sub(r"[^a-zA-Z0-9_]", "_", str(run_id or ""))
+    return f"scope_change_{sanitized or 'run'}"
 
 
 @dataclass
@@ -48,35 +55,50 @@ class ScopeChangeListener:
     def __init__(self, engine: "AsyncEngine", run_id: str) -> None:
         self._engine = engine
         self._run_id = run_id
-        self._channel = f"scope_change_{run_id}"
+        self._channel = _build_channel_name(run_id)
         self._subscribers: dict[str, _Subscription] = {}
         self._conn = None
+        self._driver_conn = None
         self._listen_task: asyncio.Task | None = None
         self._running = False
+        self._db_listen_active = False
 
     async def start(self) -> None:
-        """Attach a LISTEN listener on a dedicated connection."""
+        """Attach a LISTEN listener on a dedicated connection when possible."""
+        self._running = True
         try:
             self._conn = await self._engine.connect()
             raw = await self._conn.get_raw_connection()
-            dbapi_conn = raw.dbapi_connection
+            self._driver_conn = getattr(raw, "driver_connection", None)
+            if self._driver_conn is None:
+                self._driver_conn = getattr(raw, "dbapi_connection", None)
+            if self._driver_conn is None:
+                raise RuntimeError("raw connection does not expose a driver connection")
 
-            # psycopg (async): use .execute() for LISTEN, then poll
-            # via connection.notifies() in a background task.
-            await raw.cursor().execute(f"LISTEN {self._channel}")
+            # Use the async SQLAlchemy connection for LISTEN setup so greenlet
+            # handoff stays inside SQLAlchemy's supported async boundary.
+            await self._conn.exec_driver_sql(f"LISTEN {self._channel}")
+            self._db_listen_active = True
             self._running = True
             self._listen_task = asyncio.create_task(
-                self._poll_loop(dbapi_conn),
+                self._poll_loop(self._driver_conn),
                 name=f"scope_listener_{self._run_id}",
             )
             logger.info("ScopeChangeListener started on channel %s", self._channel)
         except Exception:
             logger.warning(
-                "ScopeChangeListener failed to start — scope notifications "
-                "will not be pushed. Pull-based detection still works.",
+                "ScopeChangeListener failed to attach PostgreSQL LISTEN; "
+                "continuing with in-process fan-out only.",
                 exc_info=True,
             )
-            self._running = False
+            self._db_listen_active = False
+            if self._conn is not None:
+                try:
+                    await self._conn.close()
+                except Exception:
+                    pass
+            self._conn = None
+            self._driver_conn = None
 
     async def _poll_loop(self, dbapi_conn) -> None:  # type: ignore[no-untyped-def]
         """Poll for NOTIFY events and route to subscribers.
@@ -86,8 +108,9 @@ class ScopeChangeListener:
         """
         try:
             # psycopg3 async connection exposes .notifies() async generator
-            if hasattr(dbapi_conn, "notifies"):
-                async for notify in dbapi_conn.notifies():
+            notifies = getattr(dbapi_conn, "notifies", None)
+            if callable(notifies):
+                async for notify in notifies():
                     if not self._running:
                         break
                     self._route_notification(notify.payload)
@@ -105,6 +128,8 @@ class ScopeChangeListener:
         except Exception:
             if self._running:
                 logger.warning("ScopeChangeListener poll loop error", exc_info=True)
+        finally:
+            self._db_listen_active = False
 
     def _route_notification(self, payload: str) -> None:
         """Parse a NOTIFY payload and route to matching subscribers."""
@@ -114,8 +139,15 @@ class ScopeChangeListener:
             logger.debug("Ignoring malformed NOTIFY payload: %s", payload[:100])
             return
 
+        self._route_change(change)
+
+    def _route_change(self, change: dict[str, object]) -> None:
+        """Route a parsed scope-change payload to matching subscribers."""
         file_path = change.get("file_path", "")
         change_agent_run_id = change.get("agent_run_id", "")
+        if not isinstance(file_path, str) or not file_path:
+            return
+        change_agent_run_id = str(change_agent_run_id or "")
 
         for sub in self._subscribers.values():
             # Don't notify agent about its own edits
@@ -123,7 +155,34 @@ class ScopeChangeListener:
                 continue
             # Only notify if file is in agent's scope
             if any(file_path.startswith(p.rstrip("/")) for p in sub.scope_paths):
-                sub.buffer.buffer(change)
+                sub.buffer.buffer(
+                    {
+                        "file_path": file_path,
+                        "agent_id": str(change.get("agent_id", "") or ""),
+                        "agent_run_id": change_agent_run_id,
+                        "edit_type": str(change.get("edit_type", "") or "edit"),
+                    }
+                )
+
+    def publish_change(
+        self,
+        *,
+        file_path: str,
+        agent_id: str = "",
+        agent_run_id: str = "",
+        edit_type: str = "edit",
+    ) -> None:
+        """Fan out a same-process scope change to subscribed executors."""
+        if not self._running:
+            return
+        self._route_change(
+            {
+                "file_path": file_path,
+                "agent_id": agent_id,
+                "agent_run_id": agent_run_id,
+                "edit_type": edit_type,
+            }
+        )
 
     def subscribe(
         self,
@@ -145,6 +204,7 @@ class ScopeChangeListener:
     async def stop(self) -> None:
         """Stop listening and close the dedicated connection."""
         self._running = False
+        self._db_listen_active = False
         if self._listen_task is not None:
             self._listen_task.cancel()
             try:
@@ -158,6 +218,7 @@ class ScopeChangeListener:
             except Exception:
                 pass
             self._conn = None
+        self._driver_conn = None
         self._subscribers.clear()
         logger.info("ScopeChangeListener stopped on channel %s", self._channel)
 

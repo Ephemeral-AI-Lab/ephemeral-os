@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
+import asyncio
 import ast
+import concurrent.futures
+import inspect
 import logging
+import posixpath
 import re
 import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from code_intelligence.constants import (
     SKIP_DIRECTORIES,
@@ -48,9 +53,11 @@ class SymbolIndex:
         self,
         workspace_root: str,
         max_files: int = SYMBOL_INDEX_MAX_FILES,
+        sandbox: Any = None,
     ) -> None:
         self._workspace_root = workspace_root
         self._max_files = max_files
+        self._sandbox = sandbox
 
         self._lock = threading.Lock()
         self._symbols: dict[str, _FileSymbols] = {}
@@ -157,6 +164,10 @@ class SymbolIndex:
         with self._lock:
             return len(self._symbols)
 
+    def bind_sandbox(self, sandbox: Any) -> None:
+        """Update the sandbox used for remote file access."""
+        self._sandbox = sandbox
+
     # -- Background build -----------------------------------------------------
 
     def _start_build(self) -> None:
@@ -174,23 +185,26 @@ class SymbolIndex:
         """Index all files in the workspace."""
         try:
             root = Path(self._workspace_root)
-            if not root.is_dir():
-                logger.warning("Workspace root does not exist: %s", self._workspace_root)
-                with self._lock:
-                    self._building = False
-                    self._build_event.set()
-                return
+            if root.is_dir():
+                files = [str(fp) for fp in self._collect_local_files(root)]
+            else:
+                files = self._collect_remote_files(self._workspace_root)
+                if files is None:
+                    logger.warning("Workspace root does not exist: %s", self._workspace_root)
+                    with self._lock:
+                        self._building = False
+                        self._build_event.set()
+                    return
 
-            files = self._collect_files(root)
             logger.info(
                 "Symbol index: building for %d files in %s",
                 len(files), self._workspace_root,
             )
 
             batch: list[tuple[str, list[SymbolInfo]]] = []
-            for fp in files:
-                symbols = self._extract_symbols_from_file(str(fp))
-                batch.append((str(fp), symbols))
+            for file_path in files:
+                symbols = self._extract_symbols_from_file(file_path)
+                batch.append((file_path, symbols))
 
                 if len(batch) >= SYMBOL_INDEX_BATCH_SIZE:
                     self._commit_batch(batch)
@@ -236,8 +250,8 @@ class SymbolIndex:
                     indexed_at=time.time(),
                 )
 
-    def _collect_files(self, root: Path) -> list[Path]:
-        """Collect indexable files under root."""
+    def _collect_local_files(self, root: Path) -> list[Path]:
+        """Collect indexable files from a local workspace root."""
         files: list[Path] = []
         for path in root.rglob("*"):
             if len(files) >= self._max_files:
@@ -246,6 +260,44 @@ class SymbolIndex:
                 continue
             if path.is_file() and path.suffix in SUPPORTED_EXTENSIONS:
                 files.append(path)
+        files.sort()
+        return files
+
+    def _collect_remote_files(self, root: str) -> list[str] | None:
+        """Collect indexable files from a sandbox workspace root."""
+        sandbox = self._sandbox
+        fs = getattr(sandbox, "fs", None) if sandbox is not None else None
+        list_files_fn = getattr(fs, "list_files", None)
+        if not callable(list_files_fn):
+            return None
+
+        files: list[str] = []
+        pending: list[str] = [str(root).rstrip("/") or "/"]
+
+        while pending and len(files) < self._max_files:
+            current = pending.pop()
+            try:
+                entries = self._resolve(list_files_fn(current)) or []
+            except Exception:
+                logger.debug("Remote list_files failed for %s", current, exc_info=True)
+                return None
+
+            for entry in entries:
+                if len(files) >= self._max_files:
+                    break
+                name = getattr(entry, "name", None)
+                if not isinstance(name, str) or not name or name in {".", ".."}:
+                    continue
+                child = posixpath.join(current, name)
+                parts = Path(child).parts
+                if any(part in SKIP_DIRECTORIES for part in parts):
+                    continue
+                if bool(getattr(entry, "is_dir", False)):
+                    pending.append(child)
+                    continue
+                if Path(child).suffix.lower() in SUPPORTED_EXTENSIONS:
+                    files.append(child)
+
         files.sort()
         return files
 
@@ -362,12 +414,41 @@ class SymbolIndex:
 
         return symbols
 
-    @staticmethod
-    def _read_file_content(file_path: str) -> str | None:
+    def _read_file_content(self, file_path: str) -> str | None:
         try:
             return Path(file_path).read_text(encoding="utf-8")
         except Exception:
+            pass
+
+        sandbox = self._sandbox
+        fs = getattr(sandbox, "fs", None) if sandbox is not None else None
+        download_fn = getattr(fs, "download_file", None)
+        if not callable(download_fn):
             return None
+
+        try:
+            raw = self._resolve(download_fn(file_path))
+        except Exception:
+            logger.debug("Remote download_file failed for %s", file_path, exc_info=True)
+            return None
+
+        if isinstance(raw, bytes):
+            return raw.decode("utf-8")
+        return str(raw)
+
+    @staticmethod
+    def _resolve(result: Any) -> Any:
+        """Resolve possibly-async sandbox results inside sync indexing code."""
+        if inspect.isawaitable(result):
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+            if loop and loop.is_running():
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                    return pool.submit(asyncio.run, result).result()
+            return asyncio.run(result)
+        return result
 
     @staticmethod
     def _build_symbol_info(

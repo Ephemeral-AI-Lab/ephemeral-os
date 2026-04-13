@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 import time
 from types import SimpleNamespace
 from unittest.mock import MagicMock
@@ -226,6 +227,7 @@ def test_get_code_intelligence_rebind_resets_lsp_backend_cache_for_new_sandbox()
     rebound = get_code_intelligence("sandbox-rebind", "/tmp/workspace", sandbox=second_sandbox)
 
     assert rebound is service
+    assert rebound.symbol_index._sandbox is second_sandbox
     assert rebound.lsp_client._sandbox is second_sandbox
     assert rebound.lsp_client._py_available is None
     assert rebound.lsp_client._ts_available is None
@@ -251,7 +253,36 @@ def test_ensure_initialized_bootstraps_missing_lsp_once(tmp_path) -> None:
     svc.ensure_initialized(wait=False)
     svc.ensure_initialized(wait=False)
 
-    assert calls == [False, True, False]
+    assert calls[:2] == [False, True]
+    assert calls.count(True) == 1
+
+
+def test_is_initialized_tracks_background_build_completion() -> None:
+    svc = CodeIntelligenceService(
+        sandbox_id="sandbox-background-init",
+        workspace_root="/tmp/nonexistent-background-init",
+    )
+    build_event = svc.symbol_index._build_event
+
+    def fake_ensure_built(*, wait: bool = True, timeout: float = 30.0) -> bool:
+        def complete_build() -> None:
+            with svc.symbol_index._lock:
+                svc.symbol_index._built = True
+                svc.symbol_index._building = False
+                build_event.set()
+
+        timer = threading.Timer(0.01, complete_build)
+        timer.start()
+        return False
+
+    svc.symbol_index.ensure_built = fake_ensure_built  # type: ignore[method-assign]
+
+    svc.ensure_initialized(wait=False)
+
+    assert build_event.wait(timeout=1.0) is True
+    assert svc.symbol_index.is_built is True
+    assert svc.is_initialized is True
+    assert svc.status()["initialized"] is True
 
 
 @pytest.mark.asyncio
@@ -291,6 +322,42 @@ def test_symbol_index_missing_root_unblocks_waiters() -> None:
     assert ready is False
     assert idx._building is False
     assert idx._build_event.is_set() is True
+
+
+def test_symbol_index_builds_from_remote_sandbox_workspace() -> None:
+    def list_files(path: str):
+        entries = {
+            "/repo": [
+                SimpleNamespace(name="pkg", is_dir=True),
+                SimpleNamespace(name="README.md", is_dir=False),
+            ],
+            "/repo/pkg": [
+                SimpleNamespace(name="module.py", is_dir=False),
+                SimpleNamespace(name="ignore.bin", is_dir=False),
+            ],
+        }
+        return entries.get(path, [])
+
+    def download_file(path: str):
+        contents = {
+            "/repo/README.md": b"# Remote repo\n",
+            "/repo/pkg/module.py": b"class Remote:\n    def run(self):\n        return 1\n",
+        }
+        return contents[path]
+
+    sandbox = SimpleNamespace(
+        fs=SimpleNamespace(list_files=list_files, download_file=download_file),
+    )
+    idx = SymbolIndex("/repo", sandbox=sandbox)
+
+    ready = idx.ensure_built(wait=True, timeout=1.0)
+
+    assert ready is True
+    assert idx.is_built is True
+    assert idx.indexed_files == 2
+    names = {symbol.name for symbol in idx.file_symbols("/repo/pkg/module.py")}
+    assert "Remote" in names
+    assert "Remote.run" in names
 
 
 def test_symbol_index_returns_symbol_boundaries_for_python_symbols(tmp_path) -> None:

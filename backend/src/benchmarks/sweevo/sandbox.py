@@ -91,7 +91,11 @@ def _prune_auto_sweevo_sandboxes_for_fresh_run(
     service: Any,
     instance: SWEEvoInstance,
 ) -> list[str]:
-    """Delete older auto-generated sandboxes for the same instance before a fresh run."""
+    """Delete older inactive auto-generated sandboxes before a fresh run.
+
+    Fresh runs must not delete active sandboxes that may still back another
+    in-flight run for the same instance.
+    """
     expected_prefix = f"sweevo-test-{instance.instance_id}-"
     deleted: list[str] = []
     for sandbox in _safe_list_sandboxes(service):
@@ -99,7 +103,7 @@ def _prune_auto_sweevo_sandboxes_for_fresh_run(
         if not name.startswith(expected_prefix):
             continue
         state = str(sandbox.get("state") or "")
-        if state not in {"started", "stopped", "pending_build", "build_failed", "error"}:
+        if state not in {"stopped", "build_failed", "error"}:
             continue
         sandbox_id = str(sandbox.get("id") or "")
         if not sandbox_id:

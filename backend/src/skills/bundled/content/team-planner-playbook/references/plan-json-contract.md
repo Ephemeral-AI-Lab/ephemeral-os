@@ -16,6 +16,7 @@ Use this reference immediately before emitting final plan JSON.
 - The `task` field is the agent's sole briefing. Put exact owner, retry target, and recovery question there.
 - Use exact live-confirmed or explorer-confirmed paths in `scope_paths`; if the exact owner is still uncertain, keep the broader boundary and assign it to `team_planner`.
 - Keep at most one terminal validator in a submitted plan.
+- Before loading this reference, confirm that the terminal validator depends on every terminal non-validator sibling. Do not learn that from a submit error.
 - Do not submit an expandable `developer`.
 - Do not serialize the whole layer into eight atomic developers only because all owners are known.
 - Reload the ending chain sequentially if the self-check never finished.

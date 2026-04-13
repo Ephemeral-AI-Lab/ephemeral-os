@@ -152,7 +152,7 @@ async def build_query_context(
     meta = build_work_item_metadata(team_run, task)
     meta["role"] = getattr(defn, "role", "")
     # Wire posthook tool names from the agent definition into metadata.
-    # Posthook tools (typically submission tools like done / submit_plan)
+    # Posthook tools (typically submission tools like submit_summary / submit_plan)
     # are hidden during the main work phase and exposed only after the
     # agent produces no more tool calls. The query loop then enters a
     # posthook phase with a restricted registry containing only these tools.

@@ -103,6 +103,11 @@ def test_planner_skill_has_explicit_conditional_reference_loading() -> None:
         in planner
     )
     assert (
+        "Never create a planner or scout lane whose main job is to locate, reread, or summarize a benchmark test file or pytest node."
+        in planner
+    )
+    assert "never synthesize an exact owner by stripping `test_`, `_test`" in planner.lower()
+    assert (
         "Child or `## Scoped Expansion` turn: must load `non-root-context-reuse` before fresh exploration when `load_skill_reference` is available."
         in planner
     )
@@ -110,6 +115,7 @@ def test_planner_skill_has_explicit_conditional_reference_loading() -> None:
     assert "never batch or parallelize it with `root-plan-self-check`" in planner
     assert "Atlas/check_exploration_memory is cross-run memory only." in planner
     assert "The sequence is `anchor -> scout wave -> decomposition -> plan JSON`." in planner
+    assert "The first wave must target only live production boundaries" in planner
     assert "Must reuse inherited notes and known owner boundaries before fresh exploration." in non_root
     assert "parent `bg_*` ids are not child-turn handles" in non_root
     assert (
@@ -127,6 +133,10 @@ def test_planner_skill_has_explicit_conditional_reference_loading() -> None:
     assert "keep only those exact nodes or broaden to that same prompt file path" in plan_json.lower()
     assert "same-family sibling node" in plan_json
     assert "If validation rejects a guessed benchmark node" in plan_json
+    assert (
+        "Before loading this reference, confirm that the terminal validator depends on every terminal non-validator sibling."
+        in plan_json
+    )
     assert "Do not submit an expandable `developer`." in plan_json
     assert (
         "Do not serialize the whole layer into eight atomic developers only because all owners are known."
@@ -158,6 +168,8 @@ def test_planner_skill_has_explicit_conditional_reference_loading() -> None:
         "Never map a benchmark cluster to a production file solely because the names look similar."
         in exploration
     )
+    assert "If a first-wave guessed exact path returns `File not found`, delete that leaf" in exploration
+    assert "Never derive `pkg/foo.py`, `pkg/foo_bar.py`, or a private compat module" in exploration
     assert "the next planning action must be a scout wave, not final DAG synthesis" in exploration
     assert (
         'run_subagent(agent_name="scout", input={"target_paths":["pkg/io/parquet"]}' in exploration
@@ -169,10 +181,12 @@ def test_planner_skill_has_explicit_conditional_reference_loading() -> None:
         in scout_launch
     )
     assert "Never pass prompt mode to `scout`." in scout_launch
+    assert "Never launch explorers on `*/tests/test_*.py` or grouped benchmark test files" in scout_launch
     assert "overwrite any stale guessed aliases in the first-wave ledger" in scout_launch
     assert "delete any earlier `pkg/dataframe/utils_dataframe.py` brainstorm" in scout_launch
     assert "before any progress check or reaction to early scout output" in scout_launch
     assert 'Do not jump to `check_background_progress(task_id="bg_3")`' in scout_launch
+    assert "Never revive a disproved or unconfirmed owner by renaming benchmark files" in planner
 
 
 def test_replanner_skill_has_explicit_conditional_reference_loading() -> None:
@@ -242,6 +256,8 @@ def test_developer_and_validator_skills_explain_when_to_load_references() -> Non
     assert "even if the packet lists it or the assertion looks inverted" in developer
     assert "root or OS permission mismatches as failures or blockers" in developer
     assert "UID 0 bypassing a test's permission setup" in developer
+    assert "If the assigned exact file is missing or disproved" in developer
+    assert "outside-write-scope warnings on a non-adjacent file" in developer
     assert "root-only skips, xfails, or verify-file rewrites" in developer
     assert "generic `edit_file`, `write_file`, or `read_file`" in developer
     assert "treat `Unknown tool` as your own Daytona tool-name error" in developer_codeact_ref
@@ -257,6 +273,8 @@ def test_developer_and_validator_skills_explain_when_to_load_references() -> Non
     assert "Use this reference only when either condition is true:" in developer_ref
     assert "root or OS permission semantics that invalidate a test setup" in developer_ref
     assert "Do not skip, xfail, or rewrite the verify file" in developer_ref
+    assert "must not widen by filename similarity alone" in developer_ref.lower()
+    assert "Do not hop to `pkg/foo_bar.py`, `pkg/_foo.py`, or another lookalike path" in developer_ref
     assert 'or a "wrong" test' in root_cause
     assert "Deprecation hooks belong on explicit public access paths only" in root_cause
     assert (
@@ -323,6 +341,9 @@ def test_scout_playbook_keeps_missing_targets_missing() -> None:
     scout_launch = _read(_CONTENT / "team-planner-playbook/references/scout-launch-contract.md")
     assert "keep that exact path missing" in scout
     assert "Never inspect nearby replacements" in scout
+    assert "post an evidence-only note and stop" in scout
+    assert "only benchmark test files" in scout
+    assert "unless every target path is a benchmark test file" in scout
     assert (
         "Must load `completion-contract` before the first read when `target_paths` is a single file"
         in scout
@@ -351,6 +372,11 @@ def test_sweevo_context_stays_shared_and_runtime_focused() -> None:
     assert "Must keep roles separate" in sweevo
     assert "Must treat `docs/architecture/plan-a-team-coordination-redesign.md` as the design intent" in sweevo
     assert "Must keep shared context in the Task Center" in sweevo
+    assert (
+        "must not create planner/scout ownership tasks whose scope is benchmark-test archaeology"
+        in sweevo.lower()
+    )
+    assert "Must not derive an exact production file from benchmark filename resemblance alone" in sweevo
     assert "Must use `check_exploration_memory(paths=[...])` only after same-run notes are insufficient" in sweevo
     assert "Must treat scope-change notifications and `context_changed_since()` as freshness signals." in sweevo
     assert "Must keep `scope_paths` as soft focus hints." in sweevo

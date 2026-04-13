@@ -56,6 +56,10 @@ class Executor:
                 task_id = await asyncio.wait_for(dispatcher.pop_ready(), timeout=0.1)
             except asyncio.TimeoutError:
                 continue
+            except Exception as exc:
+                logger.exception("Dispatcher pop_ready failed: %s", exc)
+                await asyncio.sleep(0.2)
+                continue
             try:
                 await self._run_one(task_id)
             except Exception as exc:
@@ -356,7 +360,7 @@ class Executor:
             )
 
         # Post with task_id=parent_id so it flows through parent chain
-        # reads (Priority 4), not dep reads (avoids shadowing done() notes).
+        # reads (Priority 4), not dep reads (avoids shadowing submit_summary() notes).
         note_owner = task.parent_id or task.id
         from team.models import Note
         try:

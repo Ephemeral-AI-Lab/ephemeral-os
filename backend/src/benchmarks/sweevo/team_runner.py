@@ -1071,6 +1071,11 @@ def _build_agent_overrides(instance: SWEEvoInstance) -> dict[str, dict[str, Any]
         agent_overrides[DEVELOPER] = {
             "skills": _with_extra_skills(developer_def.skills, "sweevo-project-context"),
         }
+    scout_def = get_definition(SCOUT)
+    if scout_def is not None:
+        agent_overrides[SCOUT] = {
+            "skills": _with_extra_skills(scout_def.skills, "sweevo-project-context"),
+        }
     validator_def = get_definition(VALIDATOR)
     if validator_def is not None:
         agent_overrides[VALIDATOR] = {

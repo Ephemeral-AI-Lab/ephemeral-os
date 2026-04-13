@@ -189,11 +189,11 @@ def test_create_sweevo_test_sandbox_rejects_after_pending_build_timeout(monkeypa
     patch_mock.assert_not_awaited()
 
 
-def test_create_sweevo_test_sandbox_prunes_auto_generated_family_for_fresh_run(monkeypatch):
+def test_create_sweevo_test_sandbox_prunes_only_inactive_auto_generated_family_for_fresh_run(monkeypatch):
     from benchmarks.sweevo import sandbox as sweevo_sandbox
 
     instance = _instance()
-    stale_started = {
+    active_started = {
         "id": "sb-started",
         "name": f"sweevo-test-{instance.instance_id}-old1",
         "state": "started",
@@ -202,10 +202,28 @@ def test_create_sweevo_test_sandbox_prunes_auto_generated_family_for_fresh_run(m
             "sweevo_instance": instance.instance_id,
         },
     }
-    stale_pending = {
+    active_pending = {
         "id": "sb-pending",
         "name": f"sweevo-test-{instance.instance_id}-old2",
         "state": "pending_build",
+        "labels": {
+            "purpose": "sweevo-test",
+            "sweevo_instance": instance.instance_id,
+        },
+    }
+    stale_stopped = {
+        "id": "sb-stopped",
+        "name": f"sweevo-test-{instance.instance_id}-old3",
+        "state": "stopped",
+        "labels": {
+            "purpose": "sweevo-test",
+            "sweevo_instance": instance.instance_id,
+        },
+    }
+    stale_error = {
+        "id": "sb-error",
+        "name": f"sweevo-test-{instance.instance_id}-old4",
+        "state": "error",
         "labels": {
             "purpose": "sweevo-test",
             "sweevo_instance": instance.instance_id,
@@ -224,7 +242,13 @@ def test_create_sweevo_test_sandbox_prunes_auto_generated_family_for_fresh_run(m
     created: dict[str, object] = {}
 
     service = SimpleNamespace(
-        list_sandboxes=lambda: [stale_started, stale_pending, named_retry],
+        list_sandboxes=lambda: [
+            active_started,
+            active_pending,
+            stale_stopped,
+            stale_error,
+            named_retry,
+        ],
         create_sandbox=lambda **kwargs: created.update(kwargs) or {"id": "sb-new"},
         delete_sandbox=lambda sandbox_id: deleted.append(sandbox_id),
         get_sandbox=lambda sandbox_id: {"id": sandbox_id, "name": created["name"]},
@@ -243,7 +267,7 @@ def test_create_sweevo_test_sandbox_prunes_auto_generated_family_for_fresh_run(m
         )
     )
 
-    assert deleted == ["sb-started", "sb-pending"]
+    assert deleted == ["sb-stopped", "sb-error"]
     assert result["sandbox_id"] == "sb-new"
     assert result["reused_existing"] is False
     assert str(created["name"]).startswith(f"sweevo-test-{instance.instance_id}-")

@@ -24,7 +24,7 @@ from team.persistence.events import TeamRunEvent
 from message.event_printer import MultiAgentEventPrinter
 from message import ConversationMessage, TextBlock, ToolUseBlock
 from message.stream_events import BackgroundTaskCompleted
-from team.builtins import DEVELOPER, TEAM_PLANNER, TEAM_REPLANNER, VALIDATOR
+from team.builtins import DEVELOPER, SCOUT, TEAM_PLANNER, TEAM_REPLANNER, VALIDATOR
 from team.models import Task, TaskStatus
 from tools.core.runtime import ExecutionMetadata
 
@@ -176,6 +176,8 @@ def test_agent_overrides_attach_sweevo_skills_without_prompt_duplication():
     assert overrides[TEAM_PLANNER]["tool_call_limit"] == 100
     assert "system_prompt" not in overrides[DEVELOPER]
     assert "sweevo-project-context" in overrides[DEVELOPER]["skills"]
+    assert "system_prompt" not in overrides[SCOUT]
+    assert "sweevo-project-context" in overrides[SCOUT]["skills"]
     assert "system_prompt" not in overrides[VALIDATOR]
     assert "sweevo-project-context" in overrides[VALIDATOR]["skills"]
     assert "verification-replan" in overrides[VALIDATOR]["skills"]

@@ -10,6 +10,7 @@ Use this reference only when either condition is true:
 - Must treat `scope_paths` as the default edit surface.
 - Must compose with live sibling edits on widened files.
 - Must keep widened edits to one adjacent supporting owner surface for the same bug.
+- If the scoped file is missing or disproved, must not widen by filename similarity alone; confirm one adjacent live import/runtime chain or stop with blocker evidence for replanning.
 - Never widen into tests first when the production owner is still the clearer fix surface.
 - Never widen into config or harness files unless live evidence proves they own the bug, and never use git/history probes to argue that a newly broken shared surface was "pre-existing".
 
@@ -35,6 +36,9 @@ Use this reference only when either condition is true:
 - Example: the lane focuses `pkg/io/hdf.py`, but `pytest pkg/io/tests/test_hdf.py -x` dies during collection because the verify surface imports a deprecated or missing private symbol through `pkg/_compat.py`.
   Confirm that import chain once with live traceback evidence, widen only to the adjacent production/import path if it truly owns the fix, or stop with blocker evidence for replanning; the verify target list does not authorize editing the verify file.
   Do not patch `pkg/io/tests/test_hdf.py`, `pkg/tests/test_compat.py`, or any other verification-surface import just to make collection pass, and if you add a compat shim, prove the exact import path and symbol spelling before returning to pytest.
+- Example: the lane names `pkg/foo.py`, but that file is absent and the only nearby clue is `tests/test_foo.py`.
+  Do not hop to `pkg/foo_bar.py`, `pkg/_foo.py`, or another lookalike path by filename resemblance alone.
+  Confirm one adjacent import/runtime chain from live evidence or stop with a blocker note for replanning.
 - Example: editing `pkg/tests/test_compat.py` returns `daytona_edit_file: verification-surface write allowed in advisory mode`.
   Revert that test edit, keep the red runtime surface, and widen only to the adjacent production/import chain that owns the failure.
   Do not keep the modified test in the fix packet.
