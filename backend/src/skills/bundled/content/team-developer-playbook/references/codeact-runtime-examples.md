@@ -10,6 +10,7 @@ Use this reference before the first `daytona_codeact` verification or reproducti
 - Must not start pip-install loops or ad hoc environment mutation unless repo bootstrap evidence proves the lane owns that setup.
 - Must treat the object returned by `shell("...")` as a mapping with keys like `stdout`, `stderr`, and `exit_code`.
 - Must judge pass/fail from that same run's `exit_code`; wrapper status and `__CODEX_EXIT_CODE__` are instrumentation only.
+- Must not inspect benchmark test files with `daytona_read_file(...)` before the first exact `shell("...")` repro; use the named node, scout note, and runtime traceback first.
 - If a `daytona_codeact` snippet returns manifest `status: error`, Python traceback text, or no trustworthy `shell(...)["exit_code"]`, treat that probe as broken instrumentation and simplify the next retry.
 - If `shell("...")` output is sparse or piped through `head` or `tail`, use `set -o pipefail` or rerun the exact command before treating `exit_code` as success.
 - Must not broaden from a named failing id or bounded task command to a much larger suite, and must not narrow by `-k`, `--ignore`, `--deselect`, or skip edits to verify around a still-red failure.
@@ -21,9 +22,5 @@ Use this reference before the first `daytona_codeact` verification or reproducti
 - Example: the task says `pytest pkg/tests/test_hdf.py -x`, and you feel like writing a helper script first.
   Wrong first probe: `subprocess.run(...)` or a helper that shells out to pytest.
   Right first probe: `result = shell("pytest pkg/tests/test_hdf.py -x", timeout=120)`.
-- Example: the shell wrapper looks green, but the command may have failed.
-  Emit a packet like `{"exit_code": 1, "phase": "collection", "failed_ids": ["pkg/tests/test_hdf.py"], "next_question": "which import edge owns the crash?"}` from the same run's output.
-- Example: the exact node stays red and a broader suite minus that node goes green.
-  Keep the exact node in scope. Do not use `--deselect`, `--ignore`, or `-k "not ..."`.
 - Example: a permission test runs as root and `chmod` still leaves the file readable.
   Treat that as still-red runtime evidence, inspect the owned loader or access gate, and do not skip or rewrite the verify file.

@@ -1,10 +1,10 @@
 """IntelligenceQueryRouter — priority-based multi-backend query routing.
 
 Routes queries by descending priority across registered backends
-(LSP > SymbolIndex). Fallback on ``unsupported``, ``unavailable``, or
-``empty`` results so higher-priority backends that miss (e.g. Jedi with
-an unresolvable path) don't block lower-priority backends that could
-succeed (e.g. SymbolIndex / ripgrep).
+(LSP > SymbolIndex). Fallback on ``unsupported``, ``unavailable``,
+``empty``, or ``error`` results so higher-priority backends that miss
+(e.g. Jedi with an unresolvable path or invalid line) don't block
+lower-priority backends that could succeed (e.g. SymbolIndex / ripgrep).
 """
 
 from __future__ import annotations
@@ -24,16 +24,22 @@ from code_intelligence.types import (
 
 logger = logging.getLogger(__name__)
 
-# Statuses that trigger fallback to next backend
-_FALLBACK_STATUSES = {QueryStatus.UNSUPPORTED, QueryStatus.UNAVAILABLE, QueryStatus.EMPTY}
+# Statuses that trigger fallback to next backend.
+# ERROR is included so that a transient LSP failure (e.g. Jedi crash on
+# invalid line) does not block the SymbolIndex or ripgrep fallback.
+_FALLBACK_STATUSES = {
+    QueryStatus.UNSUPPORTED,
+    QueryStatus.UNAVAILABLE,
+    QueryStatus.EMPTY,
+    QueryStatus.ERROR,
+}
 
 
 class IntelligenceQueryRouter:
     """Routes CI queries across multiple backends by priority.
 
-    Backends are tried in descending priority order. ``empty``,
-    ``unsupported``, or ``unavailable`` results trigger fallback to the
-    next backend.
+    Backends are tried in descending priority order.  Any non-SUCCESS
+    status triggers fallback to the next backend.
     """
 
     def __init__(self) -> None:
@@ -56,10 +62,9 @@ class IntelligenceQueryRouter:
                 continue
             outcome = backend.find_definitions(file_path, symbol, line, character)
             if outcome.status in _FALLBACK_STATUSES:
+                if outcome.status == QueryStatus.ERROR:
+                    logger.warning("Backend %s error (falling back): %s", backend.name, outcome.error)
                 continue
-            if outcome.status == QueryStatus.ERROR:
-                logger.warning("Backend %s error: %s", backend.name, outcome.error)
-                return []
             return outcome.results or []
         return []
 
@@ -72,10 +77,9 @@ class IntelligenceQueryRouter:
                 continue
             outcome = backend.find_references(file_path, symbol, line, character)
             if outcome.status in _FALLBACK_STATUSES:
+                if outcome.status == QueryStatus.ERROR:
+                    logger.warning("Backend %s error (falling back): %s", backend.name, outcome.error)
                 continue
-            if outcome.status == QueryStatus.ERROR:
-                logger.warning("Backend %s error: %s", backend.name, outcome.error)
-                return []
             return outcome.results or []
         return []
 
@@ -88,10 +92,9 @@ class IntelligenceQueryRouter:
                 continue
             outcome = backend.hover(file_path, line, character)
             if outcome.status in _FALLBACK_STATUSES:
+                if outcome.status == QueryStatus.ERROR:
+                    logger.warning("Backend %s error (falling back): %s", backend.name, outcome.error)
                 continue
-            if outcome.status == QueryStatus.ERROR:
-                logger.warning("Backend %s error: %s", backend.name, outcome.error)
-                return None
             results = outcome.results or []
             return results[0] if results else None
         return None
@@ -103,10 +106,9 @@ class IntelligenceQueryRouter:
                 continue
             outcome = backend.diagnostics(file_path)
             if outcome.status in _FALLBACK_STATUSES:
+                if outcome.status == QueryStatus.ERROR:
+                    logger.warning("Backend %s error (falling back): %s", backend.name, outcome.error)
                 continue
-            if outcome.status == QueryStatus.ERROR:
-                logger.warning("Backend %s error: %s", backend.name, outcome.error)
-                return []
             return outcome.results or []
         return []
 
@@ -119,4 +121,3 @@ class IntelligenceQueryRouter:
                     invalidate(file_path)
                 except Exception:
                     logger.debug("Cache invalidation failed for %s on %s", backend.name, file_path, exc_info=True)
-

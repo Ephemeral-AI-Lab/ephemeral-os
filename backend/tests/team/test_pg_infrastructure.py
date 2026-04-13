@@ -7,6 +7,7 @@ without a database.
 
 from __future__ import annotations
 
+import asyncio
 import re
 
 # ---------------------------------------------------------------------------
@@ -122,3 +123,53 @@ class TestDispatcherStoreStructure:
         assert callable(getattr(DispatcherStore, 'request_replan', None))
         assert callable(getattr(DispatcherStore, 'get_adjacency', None))
         assert callable(getattr(DispatcherStore, 'get_statuses', None))
+
+
+class _FakeCascadeResult:
+    def fetchall(self):
+        return []
+
+
+class _FakeCascadeSession:
+    def __init__(self) -> None:
+        self.statements: list[str] = []
+
+    async def execute(self, statement, params):
+        del params
+        self.statements.append(str(statement))
+        return _FakeCascadeResult()
+
+    async def commit(self) -> None:
+        return None
+
+
+class _FakeSessionFactory:
+    def __init__(self, session: _FakeCascadeSession) -> None:
+        self._session = session
+
+    def __call__(self):
+        session = self._session
+
+        class _Ctx:
+            async def __aenter__(self_inner):
+                return session
+
+            async def __aexit__(self_inner, exc_type, exc, tb):
+                del exc_type, exc, tb
+                return False
+
+        return _Ctx()
+
+
+def test_cascade_cancel_recursive_seeds_root_then_walks_dependents():
+    session = _FakeCascadeSession()
+    store = DispatcherStore(_FakeSessionFactory(session))
+
+    asyncio.run(store.cascade_cancel_recursive("run-1", "task-1"))
+
+    sql = session.statements[0]
+    assert "WITH RECURSIVE dep_chain AS" in sql
+    assert "AND id = :task_id" in sql
+    assert "JOIN dep_chain dc ON dc.id = ANY(t.deps)" in sql
+    assert "JOIN dep_chain dc ON t.parent_id = dc.id" in sql
+    assert "WHERE id != :task_id" in sql

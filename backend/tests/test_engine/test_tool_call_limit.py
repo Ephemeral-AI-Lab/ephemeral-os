@@ -95,6 +95,22 @@ def test_budget_warning_fires_at_one_call_remaining():
     assert "1 of 5" in event.text
 
 
+def test_budget_warning_guides_planner_to_submit_plan():
+    ctx = _ctx(100, 75)
+    ctx.tool_metadata["role"] = "planner"
+    _, event = build_budget_warning(ctx)
+    assert "submit_plan()" in event.text
+    assert "submit_summary()" not in event.text
+
+
+def test_budget_warning_guides_validator_to_replan_on_red():
+    ctx = _ctx(100, 75)
+    ctx.tool_metadata["role"] = "reviewer"
+    _, event = build_budget_warning(ctx)
+    assert "request_replan()" in event.text
+    assert "submit_summary()" in event.text
+
+
 def test_budget_warning_emits_once_per_remaining_count():
     ctx = _ctx(10, 7)
     assert build_budget_warning(ctx) is not None

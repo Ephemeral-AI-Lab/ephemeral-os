@@ -156,6 +156,20 @@ def test_read_scope_paths_trailing_slash_stripped():
     assert len(results) == 1
 
 
+def test_read_scope_paths_matches_broader_note_scope_from_narrow_query():
+    tc = TaskCenter()
+    _run(tc.post(_note("n1", "task-1", scope_paths=["src/auth"])))
+    results = _run(tc.read(scope_paths=["src/auth/session.py"]))
+    assert len(results) == 1
+    assert results[0].id == "n1"
+
+
+def test_read_scope_paths_respects_component_boundaries():
+    tc = TaskCenter()
+    _run(tc.post(_note("n1", "task-1", scope_paths=["src/authz.py"])))
+    assert _run(tc.read(scope_paths=["src/auth"])) == []
+
+
 # ---------------------------------------------------------------------------
 # Filtering: since
 # ---------------------------------------------------------------------------

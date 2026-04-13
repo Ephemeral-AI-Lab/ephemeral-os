@@ -208,18 +208,46 @@ class LspClient:
             p = Path(self._workspace_root) / p
         return str(p)
 
+    # Pattern matching Python def/class lines to locate the symbol name.
+    _DEF_CLASS_RE = __import__("re").compile(
+        r"^(\s*(?:async\s+)?(?:def|class)\s+)"
+    )
+
     def _resolve_column(self, file_path: str, line: int, character: int) -> int:
-        """When character is 0, advance to the first non-whitespace column.
+        """When character is 0, advance to the actual symbol name column.
 
         Jedi's ``help()``, ``get_references()``, and ``goto()`` need the
         cursor on the actual symbol text.  Callers (ci_hover,
         ci_query_references) often pass ``character=0`` which lands on
         leading indentation — producing empty results.
 
+        For ``def``/``class`` lines the cursor is placed on the symbol
+        name (after the keyword), not on ``def``/``class`` itself, so
+        Jedi resolves the function/class rather than the keyword.
+
         Returns the resolved column (0-indexed).
         """
         if character != 0:
             return character
+        try:
+            text = self._read_line(file_path, line)
+            if text is None:
+                return 0
+            stripped = text.lstrip()
+            if not stripped:
+                return 0
+            indent = len(text) - len(stripped)
+            # For def/class lines, jump past the keyword to the symbol name
+            m = self._DEF_CLASS_RE.match(text)
+            if m:
+                return len(m.group(1))
+            return indent
+        except Exception:
+            logger.debug("_resolve_column failed for %s:%d", file_path, line)
+            return 0
+
+    def _read_line(self, file_path: str, line: int) -> str | None:
+        """Read a single line from a local or sandbox file (1-indexed)."""
         try:
             abs_path = self._resolve_path(file_path)
             if self._sandbox:
@@ -229,22 +257,16 @@ class LspClient:
                         timeout=5,
                     )
                 )
-                text = str(getattr(resp, "result", "") or "")
-            else:
-                p = Path(abs_path)
-                if not p.exists():
-                    return 0
-                lines = p.read_text(encoding="utf-8").splitlines()
-                if line < 1 or line > len(lines):
-                    return 0
-                text = lines[line - 1]
-            stripped = text.lstrip()
-            if not stripped:
-                return 0
-            return len(text) - len(stripped)
+                return str(getattr(resp, "result", "") or "")
+            p = Path(abs_path)
+            if not p.exists():
+                return None
+            lines = p.read_text(encoding="utf-8").splitlines()
+            if line < 1 or line > len(lines):
+                return None
+            return lines[line - 1]
         except Exception:
-            logger.debug("_resolve_column failed for %s:%d", file_path, line)
-            return 0
+            return None
 
     def _python_definitions(
         self, file_path: str, line: int, character: int,

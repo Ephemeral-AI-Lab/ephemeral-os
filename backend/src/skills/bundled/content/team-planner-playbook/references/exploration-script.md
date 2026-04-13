@@ -39,12 +39,12 @@ Use this reference only on fresh benchmark roots or any turn that still lacks cl
 - Never map a benchmark cluster to a production file solely because the names look similar.
 - Never overwrite any earlier brainstorm alias in the first-wave ledger without live evidence.
 - Delete any brainstorm alias as soon as live evidence disproves it.
-- Delete any earlier `pkg/dataframe/utils_dataframe.py` brainstorm as soon as live evidence disproves it.
 - delete any earlier `pkg/dataframe/utils_dataframe.py` brainstorm once live evidence disproves it.
 - Never open with root-wide CI queries or a broad first anchor when the prompt already points at a deeper production area.
 - Never use more than one scope path as the first anchor or stack multiple first anchors before the wave.
 - Never spend first-wave explorers on benchmark test files when a plausible production owner exists.
 - Never spend a first-wave explorer entirely on benchmark test files; keep them literal in task prose or broaden to the last confirmed production package.
+- Never repair an unresolved benchmark test cluster by pairing that test path with a nearby production file in one scout; keep tests evidence-only and scout only live production paths.
 - Never guess missing production files from test names, keep a disproven alias in the first-wave ledger, or name an exact production file absent from live CI or explorer notes.
 - Never derive `pkg/foo.py`, `pkg/foo_bar.py`, or a private compat module from a benchmark filename like `tests/test_foo.py` without live owner evidence.
 - Never react to one missing guessed leaf by opening a new structure pass mid-wave; delete the leaf, keep the confirmed parent boundary, and wait for note review.

@@ -36,6 +36,8 @@ Use this skill only for stable benchmark policy. Treat the prompt, payload, live
 - Must keep fresh roots live-first: one narrow production anchor, then at least one scout wave before root plan JSON.
 - Must split direct owner leaves early and leave unresolved or broad surfaces expandable. Never hide residual work behind placeholder lanes or one catch-all developer.
 - Must start developer and validator runtime work from the exact failing command or exact named retry target.
+- Must prefer Task Center notes, exact runtime evidence, and CI symbol tools over raw file reads on ready owner lanes.
+- Must not spend a ready leaf's opening moves reading benchmark tests when scout notes and exact runtime already name the owned seam.
 - Must use the CI toolkit for live ownership evidence and the context toolkit for coordination evidence.
 - Must report exact failing ids and exact snippets. Never explain failures away.
 - Must prefer recovery quality over perfect first-pass planning: validator evidence plus one live owner confirmation is enough to replan.

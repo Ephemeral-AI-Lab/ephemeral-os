@@ -140,17 +140,35 @@ class TestResolveColumn:
         client, f = self._make_client(tmp_path, "    def foo():\n        pass\n")
         assert client._resolve_column(str(f), 1, 7) == 7
 
-    def test_zero_character_resolves_to_indentation(self, tmp_path):
-        """character=0 on an indented line → column of first non-whitespace."""
+    def test_zero_character_resolves_to_symbol_on_def(self, tmp_path):
+        """character=0 on an indented def line → column of the symbol name."""
         content = "class Foo:\n    def bar(self):\n        pass\n"
         client, f = self._make_client(tmp_path, content)
-        # Line 2: "    def bar(self):" → first non-ws at column 4
-        assert client._resolve_column(str(f), 2, 0) == 4
+        # Line 2: "    def bar(self):" → 'bar' starts at column 8
+        assert client._resolve_column(str(f), 2, 0) == 8
+
+    def test_zero_character_resolves_to_symbol_on_class(self, tmp_path):
+        """character=0 on a class line → column of the class name."""
+        client, f = self._make_client(tmp_path, "class Foo:\n    pass\n")
+        # Line 1: "class Foo:" → 'Foo' starts at column 6
+        assert client._resolve_column(str(f), 1, 0) == 6
+
+    def test_zero_character_resolves_to_symbol_on_async_def(self, tmp_path):
+        """character=0 on an async def line → column of the function name."""
+        client, f = self._make_client(tmp_path, "    async def fetch(self):\n        pass\n")
+        # Line 1: "    async def fetch(self):" → 'fetch' starts at column 14
+        assert client._resolve_column(str(f), 1, 0) == 14
 
     def test_zero_character_no_indentation(self, tmp_path):
         """character=0 on a non-indented line → column 0."""
         client, f = self._make_client(tmp_path, "import os\n")
         assert client._resolve_column(str(f), 1, 0) == 0
+
+    def test_top_level_def_resolves_to_name(self, tmp_path):
+        """character=0 on top-level def → column of function name."""
+        client, f = self._make_client(tmp_path, "def get_config():\n    pass\n")
+        # "def get_config():" → 'get_config' starts at column 4
+        assert client._resolve_column(str(f), 1, 0) == 4
 
     def test_blank_line_returns_zero(self, tmp_path):
         """character=0 on a blank line → 0."""
@@ -168,8 +186,14 @@ class TestResolveColumn:
         assert client._resolve_column("/tmp/no_such_file.py", 1, 0) == 0
 
     def test_tabs_resolved(self, tmp_path):
-        """Tab indentation is counted correctly."""
+        """Tab-indented def resolves to the symbol name column."""
         client, f = self._make_client(tmp_path, "\t\tdef foo():\n")
+        # "\t\tdef foo():" → 'foo' starts at column 6 (2 tabs + "def " = 6 chars)
+        assert client._resolve_column(str(f), 1, 0) == 6
+
+    def test_tabs_non_def_line(self, tmp_path):
+        """Tab indentation on a non-def line resolves to first non-whitespace."""
+        client, f = self._make_client(tmp_path, "\t\treturn x\n")
         assert client._resolve_column(str(f), 1, 0) == 2
 
     def test_deeply_nested(self, tmp_path):

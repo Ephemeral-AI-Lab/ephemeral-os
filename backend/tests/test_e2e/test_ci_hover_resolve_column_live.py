@@ -118,70 +118,11 @@ from tests.test_e2e.conftest import (
 )
 
 
-# Custom sandbox files with indented class methods to test column resolution
-_RESOLVE_COLUMN_FILES: dict[str, str] = {
-    "src/__init__.py": "",
-    "src/main.py": '''"""Main module with indented methods for column resolve testing."""
-import os
-from typing import Optional
-
-
-DEBUG = False
-VERSION = "1.0.0"
-
-
-def get_config() -> dict:
-    """Get application configuration."""
-    return {
-        "debug": DEBUG,
-        "version": VERSION,
-        "env": os.getenv("APP_ENV", "development"),
-    }
-
-
-class App:
-    """Main application class."""
-
-    def __init__(self, name: str):
-        self.name = name
-        self.running = False
-
-    def start(self) -> None:
-        """Start the application."""
-        self.running = True
-
-    def stop(self) -> None:
-        """Stop the application."""
-        self.running = False
-
-    def restart(self) -> None:
-        """Restart the application."""
-        self.stop()
-        self.start()
-
-
-def main() -> None:
-    """Entry point."""
-    app = App("MyApp")
-    app.start()
-    print(f"Started {app.name}")
-''',
-    "src/utils.py": '''"""Utility functions."""
-import json
-import hashlib
-from typing import Any
-
-
-def sha256(data: str) -> str:
-    """Compute SHA-256 hash."""
-    return hashlib.sha256(data.encode()).hexdigest()
-
-
-def format_json(data: Any) -> str:
-    """Format data as JSON."""
-    return json.dumps(data, indent=2)
-''',
-}
+# Uses the default EVAL_SANDBOX_FILES which include src/main.py with:
+#   - class App (line ~38) with indented methods start/stop
+#   - def get_config() (line ~19) top-level function
+#   - def main() (line ~54) which calls App("MyApp").start()
+# These are sufficient to test column resolution on indented symbols.
 
 
 @pytest.fixture(scope="module")
@@ -189,7 +130,7 @@ def live_sandbox_id():
     if not EvalAgent.has_daytona():
         pytest.skip("Daytona credentials required")
     sb = create_test_sandbox("ci-col-resolve")
-    populate_sandbox_files(sb["id"], files=_RESOLVE_COLUMN_FILES)
+    populate_sandbox_files(sb["id"])
     yield sb["id"]
     delete_test_sandbox(sb["id"])
 
@@ -233,12 +174,12 @@ class TestLiveHoverResolveColumn:
         ci_svc, ctx = _build_ci_context(live_sandbox_id)
         workspace_root = ci_svc.workspace_root
 
-        # Line 29 in our file: "    def start(self) -> None:"
+        # EVAL_SANDBOX_FILES src/main.py line 32: "    def start(self) -> None:"
         # character=0 lands on whitespace — _resolve_column should fix this
         result = await ci_hover.execute(
             ci_hover.input_model(
                 file_path=f"{workspace_root}/src/main.py",
-                line=29,
+                line=32,
                 character=0,
             ),
             ctx,
@@ -257,18 +198,17 @@ class TestLiveHoverResolveColumn:
         ci_svc, ctx = _build_ci_context(live_sandbox_id)
         workspace_root = ci_svc.workspace_root
 
-        # Line 10: "def get_config() -> dict:"
+        # EVAL_SANDBOX_FILES src/main.py line 9: "def get_config() -> dict:"
         result = await ci_hover.execute(
             ci_hover.input_model(
                 file_path=f"{workspace_root}/src/main.py",
-                line=10,
+                line=9,
                 character=0,
             ),
             ctx,
         )
 
         assert not result.is_error
-        # Top-level function — character=0 is already on 'def', should still work
         assert "No hover information" not in result.output, (
             f"Hover failed for top-level function: {result.output}"
         )
@@ -278,11 +218,11 @@ class TestLiveHoverResolveColumn:
         ci_svc, ctx = _build_ci_context(live_sandbox_id)
         workspace_root = ci_svc.workspace_root
 
-        # Line 20: "class App:"
+        # EVAL_SANDBOX_FILES src/main.py line 25: "class App:"
         result = await ci_hover.execute(
             ci_hover.input_model(
                 file_path=f"{workspace_root}/src/main.py",
-                line=20,
+                line=25,
                 character=0,
             ),
             ctx,
@@ -298,16 +238,17 @@ class TestLiveReferencesResolveColumn:
     """Live: ci_query_references finds refs for indented symbols with character=0."""
 
     async def test_references_indented_method_character_zero(self, live_sandbox_id):
-        """References for 'start' method at character=0 should find self.start() calls."""
+        """References for 'start' method at character=0 should find app.start() calls."""
         ci_svc, ctx = _build_ci_context(live_sandbox_id)
         workspace_root = ci_svc.workspace_root
 
         with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=ci_svc):
+            # EVAL_SANDBOX_FILES src/main.py line 32: "    def start(self) -> None:"
             result = await ci_query_references.execute(
                 ci_query_references.input_model(
                     file_path=f"{workspace_root}/src/main.py",
                     symbol="start",
-                    line=29,
+                    line=32,
                     character=0,
                 ),
                 ctx,
@@ -315,7 +256,7 @@ class TestLiveReferencesResolveColumn:
 
         assert not result.is_error
         data = json.loads(result.output)
-        # 'start' is called in restart() as self.start() and in main() as app.start()
+        # 'start' is called in main() as app.start()
         assert data["total_references"] >= 1, (
             f"Expected references for 'start', got: {result.output}"
         )
@@ -326,11 +267,12 @@ class TestLiveReferencesResolveColumn:
         workspace_root = ci_svc.workspace_root
 
         with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=ci_svc):
+            # EVAL_SANDBOX_FILES src/main.py line 25: "class App:"
             result = await ci_query_references.execute(
                 ci_query_references.input_model(
                     file_path=f"{workspace_root}/src/main.py",
                     symbol="App",
-                    line=20,
+                    line=25,
                     character=0,
                 ),
                 ctx,
@@ -366,7 +308,7 @@ class TestLiveAgentHoverResolveColumn:
 
         result = await agent.invoke(
             "Use ci_hover to get hover info for file_path='src/main.py' "
-            "line=29 character=0. This is the 'start' method of the App class."
+            "line=32 character=0. This is the 'start' method of the App class."
         )
 
         completed = result.tools_completed()

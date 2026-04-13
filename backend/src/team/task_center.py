@@ -39,11 +39,23 @@ class TaskCenter:
     def _matches_scope(note_scopes: list[str], query_scopes: list[str]) -> bool:
         if not note_scopes:
             return True
-        normalized_queries = [scope.rstrip("/") for scope in query_scopes]
+        normalized_queries = [scope.rstrip("/") for scope in query_scopes if scope]
         return any(
-            note_scope.startswith(query_scope)
+            TaskCenter._scope_overlaps(note_scope, query_scope)
             for note_scope in note_scopes
             for query_scope in normalized_queries
+        )
+
+    @staticmethod
+    def _scope_overlaps(note_scope: str, query_scope: str) -> bool:
+        note = note_scope.rstrip("/")
+        query = query_scope.rstrip("/")
+        if not note or not query:
+            return False
+        return (
+            note == query
+            or note.startswith(query + "/")
+            or query.startswith(note + "/")
         )
 
     async def post(self, note: Note) -> None:

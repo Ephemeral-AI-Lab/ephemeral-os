@@ -321,22 +321,20 @@ class DispatcherStore:
             result = await db.execute(
                 text("""
                     WITH RECURSIVE dep_chain AS (
-                        -- seed: direct dep dependents
-                        SELECT id, cascade_policy FROM tasks
+                        -- seed on the root task itself, then walk outward in
+                        -- one recursive term. PostgreSQL only permits a single
+                        -- recursive branch after the non-recursive seed.
+                        SELECT id FROM tasks
                         WHERE team_run_id = :run_id
-                          AND :task_id = ANY(deps)
-                          AND status IN ('pending', 'ready', 'expanded')
-                          AND cascade_policy != 'continue'
+                          AND id = :task_id
                         UNION
-                        -- follow deps edges
-                        SELECT t.id, t.cascade_policy FROM tasks t
+                        SELECT t.id FROM tasks t
                         JOIN dep_chain dc ON dc.id = ANY(t.deps)
                         WHERE t.team_run_id = :run_id
                           AND t.status IN ('pending', 'ready', 'expanded')
                           AND t.cascade_policy != 'continue'
                         UNION
-                        -- follow parent_id edges (children of expanded tasks)
-                        SELECT t.id, t.cascade_policy FROM tasks t
+                        SELECT t.id FROM tasks t
                         JOIN dep_chain dc ON t.parent_id = dc.id
                         WHERE t.team_run_id = :run_id
                           AND t.status IN ('pending', 'ready', 'expanded')
@@ -344,7 +342,9 @@ class DispatcherStore:
                     UPDATE tasks SET status = 'cancelled', finished_at = NOW(),
                         failure_reason = 'cascaded from ' || :task_id
                     WHERE team_run_id = :run_id
-                      AND id IN (SELECT id FROM dep_chain)
+                      AND id IN (
+                          SELECT id FROM dep_chain WHERE id != :task_id
+                      )
                     RETURNING id
                 """),
                 {"run_id": run_id, "task_id": root_task_id},

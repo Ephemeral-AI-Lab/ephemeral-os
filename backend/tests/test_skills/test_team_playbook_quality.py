@@ -244,6 +244,12 @@ def test_developer_and_validator_skills_explain_when_to_load_references() -> Non
         in developer
     )
     assert (
+        "the next step after `read_notes(...)` must be the exact `daytona_codeact` repro, not `daytona_read_file(...)` on a source file or benchmark test."
+        in developer
+    )
+    assert "Must not open benchmark test files with `daytona_read_file(...)` before the first exact repro" in developer
+    assert "use `daytona_read_file(...)` only for owned production files or saved output artifacts" in developer
+    assert (
         'and the provided `shell("...")` helper for repo commands inside `daytona_codeact`'
         in developer
     )
@@ -287,6 +293,7 @@ def test_developer_and_validator_skills_explain_when_to_load_references() -> Non
         'The only benchmark-lane repo-command form inside `daytona_codeact` is direct `shell("...")`'
         in developer_codeact_ref
     )
+    assert "Must not inspect benchmark test files with `daytona_read_file(...)` before the first exact `shell(\"...\")` repro" in developer_codeact_ref
     assert (
         "Must not start pip-install loops or ad hoc environment mutation" in developer_codeact_ref
     )
@@ -386,12 +393,17 @@ def test_scout_playbook_keeps_missing_targets_missing() -> None:
     assert "Task Center note should usually cover `Scope`, `Files mapped`, `Entry points`, `Owner seam`, `Suggested subdivisions`, and `Gaps`." in scout
     assert "Final assistant message should be one short prose sentence" in scout
     assert "Never dump JSON artifacts" in scout
+    assert "Use CI symbol/reference/hover evidence before any file read" in scout
+    assert "ci_read_file(path=...)` only after CI symbol/reference/hover evidence named the seam" in scout
+    assert "If a bad assignment mixes a benchmark test file with a live production path" in scout
+    assert "Never use `ci_read_file` as your primary navigation tool" in scout
     assert "Treat the handed scope itself as the deliverable." in scout_ref
     assert "The Task Center note is the durable handoff. The final message is only a short prose acknowledgment." in scout_ref
     assert "If the draft is only a JSON object or only `Mapped pkg/cli.py`, it is unfinished." in scout_ref
     assert "Never subdivide a single file just because it is long" in scout_ref
     assert "same-turn overlap is a reuse signal" in scout_launch
     assert "not a cue to relaunch the same explorer" in scout_launch
+    assert "Never launch a scout with mixed benchmark-test and production `target_paths`" in scout_launch
 
 
 def test_sweevo_context_stays_shared_and_runtime_focused() -> None:
@@ -405,6 +417,8 @@ def test_sweevo_context_stays_shared_and_runtime_focused() -> None:
     assert "Must keep roles separate" in sweevo
     assert "Must treat `docs/architecture/plan-a-team-coordination-redesign.md` as the design intent" in sweevo
     assert "Must keep shared context in the Task Center" in sweevo
+    assert "Must prefer Task Center notes, exact runtime evidence, and CI symbol tools over raw file reads on ready owner lanes." in sweevo
+    assert "Must not spend a ready leaf's opening moves reading benchmark tests" in sweevo
     assert (
         "must not create planner/scout ownership tasks whose scope is benchmark-test archaeology"
         in sweevo.lower()

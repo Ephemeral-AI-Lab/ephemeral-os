@@ -26,7 +26,7 @@ Use this reference immediately before the first scout wave or whenever scout lau
   "anti_patterns": [
     {"target_paths": ["tests/test_utils_dataframe.py"]},
     {"target_paths": ["tests/test_cli.py", "tests/test_compatibility.py"]},
-    {"target_paths": ["pkg/utils_dataframe.py"]},
+    {"target_paths": ["tests/test_utils_dataframe.py", "pkg/io/utils.py"]},
     {"target_paths": ["pkg/io/hdf.py", "pkg/groupby.py"]}
   ]
 }
@@ -39,6 +39,7 @@ Use this reference immediately before the first scout wave or whenever scout lau
 - Never wait on a fresh or uninspected explorer before `check_background_progress(...)`.
 - Never launch explorers for benchmark tests when a plausible production owner already exists.
 - Never launch explorers on `*/tests/test_*.py` or grouped benchmark test files; keep those test paths literal in task prose or broaden to the nearest live production package.
+- Never launch a scout with mixed benchmark-test and production `target_paths`; keep the benchmark test path in task prose and scout only the live production scope.
 - Never derive explorer `target_paths` by copying failing test paths after the anchor already exposed the production owner.
 - Never bundle unrelated exact files or the whole first-wave ledger into one explorer.
 - Never launch a second explorer on the same slice in the same turn just because the first one is still running.

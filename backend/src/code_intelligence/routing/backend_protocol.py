@@ -147,6 +147,8 @@ class LspBackendAdapter:
     def find_definitions(
         self, file_path: str, symbol: str, line: int, character: int,
     ) -> BackendQueryOutcome:
+        if line < 1:
+            return BackendQueryOutcome(status=QueryStatus.EMPTY)
         try:
             results = self._lsp.goto_definition(file_path, line, character)
             if not results:
@@ -158,6 +160,10 @@ class LspBackendAdapter:
     def find_references(
         self, file_path: str, symbol: str, line: int, character: int,
     ) -> BackendQueryOutcome:
+        if line < 1:
+            # Jedi requires 1-indexed lines; line=0 means "no position known"
+            # — fall through to ripgrep-based search.
+            return BackendQueryOutcome(status=QueryStatus.EMPTY)
         try:
             results = self._lsp.find_references(file_path, line, character)
             if not results:
@@ -169,6 +175,8 @@ class LspBackendAdapter:
     def hover(
         self, file_path: str, line: int, character: int,
     ) -> BackendQueryOutcome:
+        if line < 1:
+            return BackendQueryOutcome(status=QueryStatus.EMPTY)
         try:
             result = self._lsp.hover(file_path, line, character)
             if result is None:
