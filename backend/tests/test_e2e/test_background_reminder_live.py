@@ -12,46 +12,19 @@ Run with: .venv/bin/python -m pytest backend/tests/test_e2e/test_background_remi
 
 from __future__ import annotations
 
-import logging
-
 import pytest
 
 from engine.testing.eval_agent import EvalAgent
+from tests.test_e2e.bg_prompts import _build_prompt
 from tests.test_e2e.conftest import create_eval_agent, create_test_sandbox, delete_test_sandbox
+from tests.test_e2e.helpers import log_result
 
+import logging
 logger = logging.getLogger(__name__)
 
 pytestmark = [pytest.mark.e2e, pytest.mark.live]
 
-AGENT_PROMPT = """\
-You are test-reminder-agent, a developer with a remote Daytona sandbox.
-
-IMPORTANT RULES:
-- You MUST use tools for every action — never just describe what you'd do.
-- Use daytona_codeact to run commands, daytona_write_file to create files.
-- You have background task support: add "background": true to tool input for long-running operations.
-- Use check_background_progress to monitor background tasks.
-- Use cancel_background_task to cancel running background tasks.
-
-BACKGROUND EXECUTION GUIDELINES:
-- For commands that take >5 seconds (test suites, builds, npm install), run in background.
-- For quick commands (<5 seconds like echo, pwd, cat), run in foreground.
-- When running in background, continue with other useful work.
-- Periodically check progress of background tasks.
-- Cancel background tasks that appear stuck or failing.
-
-Always be concise. Execute tools, don't just describe them.
-"""
-
-
-def _log_result(result, label: str) -> None:
-    started = result.tools_started()
-    logger.info(
-        f"\n{'='*60}\n[{label}] {len(result.events)} events:\n"
-        f"  Tools: {len(started)}\n"
-        f"  Tool names: {result.tool_names}\n"
-        f"{'='*60}\n"
-    )
+AGENT_PROMPT = _build_prompt(agent_name="test-reminder-agent")
 
 
 @pytest.mark.skipif(not EvalAgent.has_all(), reason="API + Daytona both required")
@@ -82,7 +55,7 @@ class TestEphemeralBackgroundReminder:
             "4. Now check on the background task status\n\n"
             "Use background: true for step 1 only."
         )
-        _log_result(result, "reminder_nudge")
+        log_result(result, "reminder_nudge")
 
         assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
         assert len(result.tools_started()) >= 3, \
@@ -143,7 +116,7 @@ class TestEphemeralBackgroundReminder:
             "Run 'echo NO_BACKGROUND_HERE' using daytona_codeact. "
             "Do NOT use background. Keep it simple."
         )
-        _log_result(result, "no_reminder")
+        log_result(result, "no_reminder")
 
         assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
         assert len(result.tools_started()) >= 1, \

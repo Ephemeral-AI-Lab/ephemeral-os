@@ -17,8 +17,6 @@ logger = logging.getLogger(__name__)
 # Builtin definitions
 # ---------------------------------------------------------------------------
 
-SUBAGENT_NAME = "subagent"
-
 # Names reserved for agents seeded from the database by
 # ``AgentBuilderService.load_all_from_db()``.  External (user/plugin)
 # agent definitions are blocked from claiming these names so that the
@@ -39,32 +37,6 @@ RESERVED_BUILTIN_AGENT_NAMES = frozenset(
         "submit_replan_agent",
     }
 )
-
-_SUBAGENT_SYSTEM_PROMPT = """You are a focused worker subagent handling one delegated task.
-
-Return the result as plain text in your final assistant message; the parent only sees that final message.
-Stay within scope. Do not ask clarifying questions. If something is ambiguous, make a reasonable choice and mention it briefly in the final answer.
-Follow literal output, marker, and formatting requirements exactly.
-Default to answering from the delegated prompt itself. Do not inspect the workspace or call tools unless the prompt explicitly requires external information or file changes.
-Do not spawn subagents or launch background tasks.
-When the task is done, stop and give a concise final result."""
-
-
-def _builtin_definitions() -> list[AgentDefinition]:
-    return [
-        AgentDefinition(
-            name=SUBAGENT_NAME,
-            description=(
-                "Focused worker subagent spawned by parent agents via run_subagent "
-                "to complete one delegated task in isolation."
-            ),
-            system_prompt=_SUBAGENT_SYSTEM_PROMPT,
-            model="inherit",
-            toolkits=["sandbox_operations", "code_intelligence"],
-            agent_type="subagent",
-            source="builtin",
-        ),
-    ]
 
 
 # ---------------------------------------------------------------------------
@@ -152,7 +124,3 @@ def _ensure_external_loaded() -> None:
     except Exception:
         logger.debug("Failed to load external agent definitions", exc_info=True)
 
-
-# Seed builtins at import time.
-for _defn in _builtin_definitions():
-    _DEFINITIONS.setdefault(_defn.name, _defn)

@@ -303,66 +303,64 @@ def create_core_router(get_session: Callable[[], SessionState]) -> APIRouter:
                         )
                     )
 
+                def _stream_event_to_backend(event: StreamEvent) -> BackendEvent | None:
+                    if isinstance(event, ThinkingDelta):
+                        return BackendEvent(type="thinking_delta", message=event.text)
+                    if isinstance(event, AssistantTextDelta):
+                        return BackendEvent(type="assistant_delta", message=event.text)
+                    if isinstance(event, AssistantTurnComplete):
+                        text = event.message.text.strip()
+                        return BackendEvent(
+                            type="assistant_complete",
+                            message=text,
+                            item=TranscriptItem(role="assistant", text=text),
+                        )
+                    if isinstance(event, ToolExecutionStarted):
+                        return BackendEvent(
+                            type="tool_started",
+                            tool_name=event.tool_name,
+                            tool_input=event.tool_input,
+                            item=TranscriptItem(
+                                role="tool",
+                                text=f"{event.tool_name} {json.dumps(event.tool_input, ensure_ascii=True)}",
+                                tool_name=event.tool_name,
+                                tool_input=event.tool_input,
+                            ),
+                        )
+                    if isinstance(event, ToolExecutionCompleted):
+                        return BackendEvent(
+                            type="tool_completed",
+                            tool_name=event.tool_name,
+                            output=event.output,
+                            is_error=event.is_error,
+                            item=TranscriptItem(
+                                role="tool_result",
+                                text=event.output,
+                                tool_name=event.tool_name,
+                                is_error=event.is_error,
+                            ),
+                        )
+                    if isinstance(event, ToolExecutionCancelled):
+                        return BackendEvent(
+                            type="tool_cancelled",
+                            tool_name=event.tool_name,
+                            cancel_reason=event.reason,
+                            item=TranscriptItem(
+                                role="tool_result",
+                                text=f"[CANCELLED] {event.tool_name}: {event.reason}",
+                                tool_name=event.tool_name,
+                                is_error=True,
+                            ),
+                        )
+                    return None
+
                 async def _on_agent_event(event: StreamEvent) -> None:
                     if isinstance(event, SystemNotification):
                         await _on_system_notification(event.text)
-                    elif isinstance(event, ThinkingDelta):
-                        await session.emit(BackendEvent(type="thinking_delta", message=event.text))
-                    elif isinstance(event, AssistantTextDelta):
-                        await session.emit(BackendEvent(type="assistant_delta", message=event.text))
-                    elif isinstance(event, AssistantTurnComplete):
-                        await session.emit(
-                            BackendEvent(
-                                type="assistant_complete",
-                                message=event.message.text.strip(),
-                                item=TranscriptItem(
-                                    role="assistant", text=event.message.text.strip()
-                                ),
-                            )
-                        )
-                    elif isinstance(event, ToolExecutionStarted):
-                        await session.emit(
-                            BackendEvent(
-                                type="tool_started",
-                                tool_name=event.tool_name,
-                                tool_input=event.tool_input,
-                                item=TranscriptItem(
-                                    role="tool",
-                                    text=f"{event.tool_name} {json.dumps(event.tool_input, ensure_ascii=True)}",
-                                    tool_name=event.tool_name,
-                                    tool_input=event.tool_input,
-                                ),
-                            )
-                        )
-                    elif isinstance(event, ToolExecutionCompleted):
-                        await session.emit(
-                            BackendEvent(
-                                type="tool_completed",
-                                tool_name=event.tool_name,
-                                output=event.output,
-                                is_error=event.is_error,
-                                item=TranscriptItem(
-                                    role="tool_result",
-                                    text=event.output,
-                                    tool_name=event.tool_name,
-                                    is_error=event.is_error,
-                                ),
-                            )
-                        )
-                    elif isinstance(event, ToolExecutionCancelled):
-                        await session.emit(
-                            BackendEvent(
-                                type="tool_cancelled",
-                                tool_name=event.tool_name,
-                                cancel_reason=event.reason,
-                                item=TranscriptItem(
-                                    role="tool_result",
-                                    text=f"[CANCELLED] {event.tool_name}: {event.reason}",
-                                    tool_name=event.tool_name,
-                                    is_error=True,
-                                ),
-                            )
-                        )
+                        return
+                    backend_event = _stream_event_to_backend(event)
+                    if backend_event is not None:
+                        await session.emit(backend_event)
 
                 # Resolve agent definition if requested
                 agent_def = None

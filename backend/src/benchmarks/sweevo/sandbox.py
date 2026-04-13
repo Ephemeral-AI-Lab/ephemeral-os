@@ -205,6 +205,34 @@ async def _upload_file_compat(sandbox: Any, content: bytes, path: str) -> None:
         await sandbox.fs.upload_file(path, content)
 
 
+async def _upload_file_with_fallback(
+    sandbox_id: str,
+    path: str,
+    content: bytes,
+) -> None:
+    """Upload a file to the sandbox, falling back to chunked base64 exec on failure."""
+    try:
+        sandbox = await _get_sandbox(sandbox_id)
+        await _upload_file_compat(sandbox, content, path)
+    except Exception:
+        await _write_file_via_chunked_base64_exec(sandbox_id, path, content)
+
+
+def _dispose_code_intelligence_quietly(sandbox_id: str, context: str) -> None:
+    """Dispose code intelligence for a sandbox, logging debug on failure."""
+    try:
+        from code_intelligence.routing.service import dispose_code_intelligence
+
+        dispose_code_intelligence(sandbox_id)
+    except Exception:
+        logger.debug(
+            "CI disposal skipped after %s for sandbox %s",
+            context,
+            sandbox_id,
+            exc_info=True,
+        )
+
+
 async def _write_file_via_chunked_base64_exec(
     sandbox_id: str,
     path: str,
@@ -424,15 +452,7 @@ async def ensure_sweevo_test_patch(
         return
 
     patch_path = "/tmp/sweevo_test.patch"
-    try:
-        sandbox = await _get_sandbox(sandbox_id)
-        await _upload_file_compat(sandbox, test_patch.encode("utf-8"), patch_path)
-    except Exception:
-        await _write_file_via_chunked_base64_exec(
-            sandbox_id,
-            patch_path,
-            test_patch.encode("utf-8"),
-        )
+    await _upload_file_with_fallback(sandbox_id, patch_path, test_patch.encode("utf-8"))
 
     patch_status = await _exec(
         sandbox_id,
@@ -473,16 +493,7 @@ async def ensure_sweevo_test_patch(
             patch_status[:300],
         )
 
-    try:
-        from code_intelligence.routing.service import dispose_code_intelligence
-
-        dispose_code_intelligence(sandbox_id)
-    except Exception:
-        logger.debug(
-            "CI disposal skipped after test patch for sandbox %s",
-            sandbox_id,
-            exc_info=True,
-        )
+    _dispose_code_intelligence_quietly(sandbox_id, "test patch")
 
 
 async def capture_sweevo_repo_patch(
@@ -516,16 +527,7 @@ async def apply_sweevo_repo_patch(
         return
 
     patch_path = "/tmp/sweevo_repo_state.patch"
-    patch_bytes = repo_patch.encode("utf-8")
-    try:
-        sandbox = await _get_sandbox(sandbox_id)
-        await _upload_file_compat(sandbox, patch_bytes, patch_path)
-    except Exception:
-        await _write_file_via_chunked_base64_exec(
-            sandbox_id,
-            patch_path,
-            patch_bytes,
-        )
+    await _upload_file_with_fallback(sandbox_id, patch_path, repo_patch.encode("utf-8"))
 
     check_out = await _exec(
         sandbox_id,
@@ -543,16 +545,7 @@ async def apply_sweevo_repo_patch(
     if "error:" in apply_out.lower():
         raise RuntimeError(f"failed to apply checkpoint repo patch: {apply_out[:300]}")
 
-    try:
-        from code_intelligence.routing.service import dispose_code_intelligence
-
-        dispose_code_intelligence(sandbox_id)
-    except Exception:
-        logger.debug(
-            "CI disposal skipped after repo patch restore for sandbox %s",
-            sandbox_id,
-            exc_info=True,
-        )
+    _dispose_code_intelligence_quietly(sandbox_id, "repo patch restore")
 
 
 async def create_sweevo_test_sandbox(

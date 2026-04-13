@@ -46,7 +46,6 @@ from team.runtime.context_builder import (
 )
 from team.runtime.executor import Executor
 from team.runtime.team_run import TeamRun
-from tools.daytona_toolkit.scope_builder import build_scope_packet, render_scope_packet
 
 from benchmarks.sweevo.dataset import summarize_sweevo_instance
 from benchmarks.sweevo.models import SWEEvoInstance, _REPO_DIR
@@ -59,50 +58,61 @@ from benchmarks.sweevo.sandbox import (
 
 logger = logging.getLogger(__name__)
 
+
+def _ensure_team_builtins() -> None:
+    try:
+        _register_team_builtins()
+    except Exception:
+        logger.debug("team builtins already registered", exc_info=True)
+
+
 # Default pool size for the team's Executor workers. Not a cap — callers
 # can still override.
 _DEFAULT_NUM_EXECUTORS = 8
 _PROJECT_ROOT = Path(__file__).resolve().parents[4]
 
-# Default roster for the sweevo benchmark team.
 _SWEEVO_TEAM_NAME = "sweevo_benchmark"
-_SWEEVO_DEFAULT_ROSTER: dict[str, list[str]] = {
-    "planner": [TEAM_PLANNER],
-    "developer": [DEVELOPER],
-    "reviewer": [VALIDATOR],
-    "replanner": [TEAM_REPLANNER],
-    "explorer": [SCOUT],
-}
 
 
 def _load_or_create_team_definition(
     session_factory: object | None,
 ) -> TeamDefinition:
-    """Load the sweevo team definition from the DB, or build a default.
+    """Load the sweevo team definition from file registry or DB.
 
-    When a DB-backed ``TeamDefinitionStore`` is available the user can
-    customise the roster via the store's CRUD API.  If no DB is present
-    (e.g. local-only benchmark runs) a hard-coded default is returned.
+    Priority:
+    1. File-based builtin (already in registry via ``register_all``).
+    2. DB dual-write via ``seed_builtin`` when file found + DB available.
+    3. DB fallback when file is missing but DB has an existing record.
+
+    Raises ``RuntimeError`` if the team definition is not found in either
+    the file registry or the database.
     """
+    from team.registry import get_team_definition
+
+    defn = get_team_definition(_SWEEVO_TEAM_NAME)
+
     if session_factory is not None:
         store = TeamDefinitionStore()
         store.initialize(session_factory)  # type: ignore[arg-type]
+        if defn is not None:
+            # File found — dual-write to DB (idempotent).
+            return store.seed_builtin(defn)
+        # File missing — try DB fallback.
         existing = store.get_by_name(_SWEEVO_TEAM_NAME)
         if existing is not None:
             return existing
-        return store.create(
-            name=_SWEEVO_TEAM_NAME,
-            entry_planner=TEAM_PLANNER,
-            roster=_SWEEVO_DEFAULT_ROSTER,
-            description="Default SWE-EVO benchmark team",
+        raise RuntimeError(
+            f"Team definition {_SWEEVO_TEAM_NAME!r} not found — "
+            "ensure backend/config/teams/sweevo_benchmark.md exists "
+            "or seed the database via the CRUD API."
         )
-    # No DB — return an in-memory fallback.
-    return TeamDefinition(
-        id="sweevo-benchmark-default",
-        name=_SWEEVO_TEAM_NAME,
-        description="Default SWE-EVO benchmark team",
-        entry_planner=TEAM_PLANNER,
-        roster=dict(_SWEEVO_DEFAULT_ROSTER),
+
+    # No DB — return file-based definition.
+    if defn is not None:
+        return defn
+    raise RuntimeError(
+        f"Team definition {_SWEEVO_TEAM_NAME!r} not found — "
+        "ensure backend/config/teams/sweevo_benchmark.md exists."
     )
 
 
@@ -330,13 +340,6 @@ def _extract_json_object(
             best_end = end
     return best_payload
 
-
-def _extract_matching_json_object(
-    text: str,
-    matcher: Callable[[dict[str, Any]], bool],
-) -> dict[str, Any] | None:
-    """Backward-compatible wrapper for matcher-filtered JSON extraction."""
-    return _extract_json_object(text, matcher=matcher)
 
 
 def _find_matching_delimiter(text: str, start: int, open_char: str, close_char: str) -> int:
@@ -699,7 +702,6 @@ def _make_runner(
                 if printer is None:
                     continue
                 try:
-                    object.__setattr__(event, "agent_name", defn.name)
                     object.__setattr__(event, "agent_name", effective_defn.name)
                 except Exception:
                     pass
@@ -953,21 +955,12 @@ def _make_context_builders(
             base=build_work_item_metadata(team_run, wi),
         )
         try:
-            ci_service = get_code_intelligence(
+            get_code_intelligence(
                 sandbox_id=team_run.sandbox_id or sandbox_id,
                 workspace_root=repo_dir,
             )
         except Exception:
-            ci_service = None
-        if ci_service is not None:
-            scope_packet = build_scope_packet(
-                scope_paths=list(getattr(wi, "scope_paths", None) or []),
-                svc=ci_service,
-                team_run=team_run,
-            )
-            meta["scope_packet"] = scope_packet
-            meta["coherence_token"] = scope_packet.get("coherence_token")
-            user_message = render_scope_packet(scope_packet) + "\n\n" + user_message
+            pass
         return TeamAgentContext(user_message=user_message, tool_metadata=meta)
 
     return build_query_ctx
@@ -1274,10 +1267,7 @@ async def run_sweevo_team(
     Does not raise on team failure — the caller grades the result via
     the sweevo test command.
     """
-    try:
-        _register_team_builtins()
-    except Exception:
-        logger.debug("team builtins already registered", exc_info=True)
+    _ensure_team_builtins()
 
     session_config, session_factory = _prepare_benchmark_session(repo_dir=repo_dir)
     event_store = _build_benchmark_event_store(session_factory=session_factory)
@@ -1353,10 +1343,7 @@ async def resume_sweevo_team(
     use_latest_checkpoint: bool = False,
 ) -> dict[str, Any]:
     """Resume a persisted SWE-EVO TeamRun in a fresh process."""
-    try:
-        _register_team_builtins()
-    except Exception:
-        logger.debug("team builtins already registered", exc_info=True)
+    _ensure_team_builtins()
 
     from server.app_factory import ensure_runtime_stores_ready
 
@@ -1389,21 +1376,17 @@ async def resume_sweevo_team(
         )
         if repo_patch:
             await apply_sweevo_repo_patch(tr.sandbox_id, repo_patch, repo_dir)
-            if printer is not None:
-                printer.raw_line(
-                    "team",
-                    (
-                        "[resume_restore] "
-                        f"checkpoint={resolved_checkpoint_id} repo_patch_bytes={len(repo_patch.encode('utf-8'))} "
-                        "benchmark_patch=reapplied"
-                    ),
-                )
-        elif printer is not None:
+        if printer is not None:
+            patch_info = (
+                f"repo_patch_bytes={len(repo_patch.encode('utf-8'))}"
+                if repo_patch
+                else "repo_patch=<missing>"
+            )
             printer.raw_line(
                 "team",
                 (
                     "[resume_restore] "
-                    f"checkpoint={resolved_checkpoint_id} repo_patch=<missing> "
+                    f"checkpoint={resolved_checkpoint_id} {patch_info} "
                     "benchmark_patch=reapplied"
                 ),
             )

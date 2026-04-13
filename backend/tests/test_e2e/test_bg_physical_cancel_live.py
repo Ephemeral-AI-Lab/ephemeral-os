@@ -9,14 +9,11 @@ Run with: .venv/bin/python -m pytest backend/tests/test_e2e/test_bg_physical_can
 
 from __future__ import annotations
 
-import logging
-
 import pytest
 
 from engine.testing.eval_agent import EvalAgent
 from tests.test_e2e.conftest import create_eval_agent, create_test_sandbox, delete_test_sandbox
-
-logger = logging.getLogger(__name__)
+from tests.test_e2e.helpers import log_result
 
 pytestmark = [pytest.mark.e2e, pytest.mark.live]
 
@@ -32,22 +29,6 @@ IMPORTANT RULES:
 
 Always be concise. Execute tools, don't just describe them.
 """
-
-
-def _log_result(result, label: str) -> None:
-    checks = result.tool_count("check_background_progress")
-    cancels = result.tool_count("cancel_background_task")
-
-    logger.info(
-        f"\n{'='*60}\n[{label}] Physical cancel summary:\n"
-        f"  Tools started: {len(result.tools_started())}\n"
-        f"  Background started: {len(result.background_started())}\n"
-        f"  Background completed: {len(result.background_completed())}\n"
-        f"  Progress checks: {checks}\n"
-        f"  Cancels: {cancels}\n"
-        f"  Tool sequence: {result.tool_names}\n"
-        f"{'='*60}"
-    )
 
 
 # ===========================================================================
@@ -92,7 +73,7 @@ class TestPhysicalCancelKillsProcess:
             "7. Report the result of step 6\n\n"
             "Use background: true for step 1 ONLY."
         )
-        _log_result(result, "physical_cancel")
+        log_result(result, "physical_cancel")
 
         # --- Assertions ---
 
@@ -170,7 +151,7 @@ class TestPhysicalCancelPidGone:
             "7. Report what step 6 showed\n\n"
             "Use background: true for step 1 ONLY."
         )
-        _log_result(result, "pid_gone")
+        log_result(result, "pid_gone")
 
         # --- Assertions ---
 

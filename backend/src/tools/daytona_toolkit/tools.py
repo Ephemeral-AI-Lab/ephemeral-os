@@ -201,6 +201,39 @@ print("\\n".join(matches))
 # ---------------------------------------------------------------------------
 
 
+class _DaytonaSession:
+    """Async context manager for a Daytona shell session."""
+
+    def __init__(self, process: Any) -> None:
+        self._process = process
+        self.session_id = f"bash-{uuid.uuid4().hex[:12]}"
+
+    async def __aenter__(self) -> "_DaytonaSession":
+        await self._process.create_session(self.session_id)
+        return self
+
+    async def __aexit__(self, *exc: Any) -> None:
+        try:
+            await self._process.delete_session(self.session_id)
+        except Exception as e:
+            logger.debug("failed to delete daytona session %s: %s", self.session_id, e)
+
+    async def start(self, command: str) -> str | None:
+        from daytona_sdk import SessionExecuteRequest
+        resp = await self._process.execute_session_command(
+            self.session_id, SessionExecuteRequest(command=command, run_async=True),
+        )
+        return getattr(resp, "cmd_id", None) or getattr(resp, "command_id", None)
+
+    async def poll_logs(self, cmd_id: str) -> tuple[str, str]:
+        logs = await self._process.get_session_command_logs(self.session_id, cmd_id)
+        return getattr(logs, "stdout", "") or "", getattr(logs, "stderr", "") or ""
+
+    async def poll_exit_code(self, cmd_id: str) -> int | None:
+        info = await self._process.get_session_command(self.session_id, cmd_id)
+        return getattr(info, "exit_code", None)
+
+
 async def _exec_streaming(
     *,
     sandbox: Any,
@@ -209,139 +242,86 @@ async def _exec_streaming(
     timeout: int,
     on_progress_line: Any,
 ) -> ToolResult:
-    """Run *command* via a Daytona session and stream stdout lines live.
-
-    Each newline-terminated chunk from stdout/stderr is forwarded to
-    ``on_progress_line`` so the BackgroundTaskManager can surface a live
-    tail through check_background_progress while the task is still running.
-    """
-    from daytona_sdk import SessionExecuteRequest
-
-    session_id = f"bash-{uuid.uuid4().hex[:12]}"
-    process = sandbox.process
+    """Run *command* via a Daytona session and stream stdout lines live."""
     poll_interval = 0.5
     deadline = asyncio.get_event_loop().time() + timeout
-
-    last_emitted = 0  # number of stdout chars already forwarded as progress
+    last_emitted = 0
     line_buf = ""
 
-    def _flush_lines(new_text: str) -> None:
+    def _flush(new_text: str) -> None:
         nonlocal line_buf
         if not new_text:
             return
         line_buf += new_text
         while "\n" in line_buf:
             line, line_buf = line_buf.split("\n", 1)
-            if line.startswith(_EXIT_MARKER):
-                continue
-            try:
-                on_progress_line(line)
-            except Exception as cb_exc:
-                logger.debug("on_progress_line callback failed: %s", cb_exc)
+            if not line.startswith(_EXIT_MARKER):
+                try:
+                    on_progress_line(line)
+                except Exception as e:
+                    logger.debug("on_progress_line callback failed: %s", e)
 
     try:
-        await process.create_session(session_id)
-    except Exception as exc:
-        return ToolResult(output=f"failed to create sandbox session: {exc}", is_error=True)
+        session = _DaytonaSession(sandbox.process)
+        async with session:
+            full_cmd = f"cd {shlex.quote(cwd)} && {command}" if cwd else command
+            cmd_id = await session.start(full_cmd)
+            if not cmd_id:
+                return ToolResult(output="daytona session did not return a cmd_id", is_error=True)
 
-    final_stdout = ""
-    final_stderr = ""
-    exit_code: int | None = None
-    try:
-        full_cmd = f"cd {shlex.quote(cwd)} && {command}" if cwd else command
-        req = SessionExecuteRequest(command=full_cmd, run_async=True)
-        try:
-            resp = await process.execute_session_command(session_id, req)
-        except Exception as exc:
-            return ToolResult(output=f"failed to start command: {exc}", is_error=True)
+            final_stdout = ""
+            exit_code: int | None = None
+            while True:
+                try:
+                    stdout_text, _ = await session.poll_logs(cmd_id)
+                except Exception:
+                    stdout_text = final_stdout
+                if len(stdout_text) > last_emitted:
+                    _flush(stdout_text[last_emitted:])
+                    last_emitted = len(stdout_text)
+                final_stdout = stdout_text
+                try:
+                    exit_code = await session.poll_exit_code(cmd_id)
+                except Exception:
+                    pass
+                if exit_code is not None:
+                    break
+                if asyncio.get_event_loop().time() >= deadline:
+                    return ToolResult(
+                        output=f"command timed out after {timeout}s",
+                        is_error=True, metadata={"exit_code": None},
+                    )
+                await asyncio.sleep(poll_interval)
 
-        cmd_id = getattr(resp, "cmd_id", None) or getattr(resp, "command_id", None)
-        if not cmd_id:
-            return ToolResult(
-                output=f"daytona session did not return a cmd_id: {resp!r}",
-                is_error=True,
-            )
-
-        # Poll logs and command status until the command exits.
-        while True:
+            # Final poll to capture tail output.
             try:
-                logs = await process.get_session_command_logs(session_id, cmd_id)
-                stdout_text = getattr(logs, "stdout", "") or ""
-                stderr_text = getattr(logs, "stderr", "") or ""
-            except Exception as exc:
-                logger.debug("get_session_command_logs failed: %s", exc)
-                stdout_text = final_stdout
-                stderr_text = final_stderr
-
-            if len(stdout_text) > last_emitted:
-                new_text = stdout_text[last_emitted:]
-                last_emitted = len(stdout_text)
-                _flush_lines(new_text)
-
-            final_stdout = stdout_text
-            final_stderr = stderr_text
-
-            try:
-                cmd_info = await process.get_session_command(session_id, cmd_id)
-                exit_code = getattr(cmd_info, "exit_code", None)
+                tail_stdout, _ = await session.poll_logs(cmd_id)
+                if len(tail_stdout) > last_emitted:
+                    _flush(tail_stdout[last_emitted:])
+                final_stdout = tail_stdout
             except Exception:
-                exit_code = None
-
-            if exit_code is not None:
-                break
-            if asyncio.get_event_loop().time() >= deadline:
-                return ToolResult(
-                    output=f"command timed out after {timeout}s",
-                    is_error=True,
-                    metadata={"exit_code": None},
-                )
-            await asyncio.sleep(poll_interval)
-
-        # One final poll to capture any tail logs written between the last
-        # poll and the exit_code becoming visible.
-        try:
-            logs = await process.get_session_command_logs(session_id, cmd_id)
-            tail_stdout = getattr(logs, "stdout", "") or ""
-            tail_stderr = getattr(logs, "stderr", "") or ""
-            if len(tail_stdout) > last_emitted:
-                _flush_lines(tail_stdout[last_emitted:])
-            final_stdout = tail_stdout
-            final_stderr = tail_stderr
-        except Exception as exc:
-            logger.debug("final log poll failed: %s", exc)
-
-        if line_buf:
-            if not line_buf.startswith(_EXIT_MARKER):
+                pass
+            # Flush remaining partial line.
+            if line_buf and not line_buf.startswith(_EXIT_MARKER):
                 try:
                     on_progress_line(line_buf)
-                except Exception as cb_exc:
-                    logger.debug("on_progress_line callback failed (flush): %s", cb_exc)
-            line_buf = ""
+                except Exception:
+                    pass
 
-        cleaned_stdout, resolved_exit_code = _extract_exit_code(
-            final_stdout,
-            fallback_exit_code=exit_code,
-        )
-        output = json.dumps(
-            {
-                "cwd": cwd or "",
-                "stdout": _format_shell_stdout(
-                    cleaned_stdout,
-                    exit_code=resolved_exit_code,
-                ),
-                "exit_code": resolved_exit_code,
-            }
-        )
-        return ToolResult(
-            output=output,
-            is_error=resolved_exit_code != 0,
-            metadata={"exit_code": resolved_exit_code},
-        )
-    finally:
-        try:
-            await process.delete_session(session_id)
-        except Exception as exc:
-            logger.debug("failed to delete daytona session %s: %s", session_id, exc)
+            cleaned_stdout, resolved_exit_code = _extract_exit_code(
+                final_stdout, fallback_exit_code=exit_code,
+            )
+            return ToolResult(
+                output=json.dumps({
+                    "cwd": cwd or "",
+                    "stdout": _format_shell_stdout(cleaned_stdout, exit_code=resolved_exit_code),
+                    "exit_code": resolved_exit_code,
+                }),
+                is_error=resolved_exit_code != 0,
+                metadata={"exit_code": resolved_exit_code},
+            )
+    except Exception as exc:
+        return ToolResult(output=f"streaming exec failed: {exc}", is_error=True)
 
 
 # ---------------------------------------------------------------------------
@@ -401,6 +381,18 @@ async def daytona_read_file(
 # ---------------------------------------------------------------------------
 
 
+async def _do_raw_write(
+    sandbox: Any,
+    context: ToolExecutionContext,
+    file_path: str,
+    content: str,
+    content_bytes: bytes,
+) -> None:
+    """Upload file and sync CI state (no prepared-write path)."""
+    await _upload_file_compat(sandbox, content_bytes, file_path)
+    sync_write_to_ci(context, file_path, content, edit_type="write", description="daytona_write_file")
+
+
 @tool(
     name="daytona_write_file",
     description="Create a new file or overwrite an existing file with the given content.",
@@ -427,34 +419,28 @@ async def daytona_write_file(
         return ToolResult(output=contract_error, is_error=True)
     contract_warning = _team_repo_write_warning(context, file_path, tool_name="daytona_write_file")
     prepared = None
-    sandbox = await _require_sandbox(context)
+    content_bytes = content.encode("utf-8")
 
     async def _ensure_parent(active_sandbox: Any) -> None:
         parent = "/".join(file_path.split("/")[:-1])
         if parent:
             await active_sandbox.process.exec(f"mkdir -p {shlex.quote(parent)}")
 
-    try:
-        content_bytes = content.encode("utf-8")
-        await _ensure_parent(sandbox)
+    async def _attempt(active_sandbox: Any) -> ToolResult:
+        nonlocal prepared
+        await _ensure_parent(active_sandbox)
         prepared, scope_packet, err = prepare_ci_write(
-            context,
-            file_path,
-            allow_scope_drift=True,
+            context, file_path, allow_scope_drift=True,
         )
         if err is not None:
             return ToolResult(
-                output=err,
-                is_error=True,
+                output=err, is_error=True,
                 metadata={"scope_packet": scope_packet, "conflict": True},
             )
         if prepared is not None:
             result = finalize_ci_write(
-                context,
-                prepared,
-                content=content,
-                edit_type="write",
-                description="daytona_write_file",
+                context, prepared, content=content,
+                edit_type="write", description="daytona_write_file",
             )
             if not getattr(result, "success", False):
                 return ToolResult(
@@ -463,41 +449,26 @@ async def daytona_write_file(
                     metadata={"conflict": bool(getattr(result, "conflict", False))},
                 )
         else:
-            await _upload_file_compat(sandbox, content_bytes, file_path)
-            sync_write_to_ci(
-                context,
-                file_path,
-                content,
-                edit_type="write",
-                description="daytona_write_file",
-            )
+            await _do_raw_write(active_sandbox, context, file_path, content, content_bytes)
         return _build_write_file_result(
-            context=context,
-            file_path=file_path,
-            bytes_written=len(content_bytes),
-            warning=contract_warning,
+            context=context, file_path=file_path,
+            bytes_written=len(content_bytes), warning=contract_warning,
         )
+
+    try:
+        sandbox = await _require_sandbox(context)
+        return await _attempt(sandbox)
     except Exception as exc:
-        parent = "/".join(file_path.split("/")[:-1])
         try:
             sandbox = await _recover_sandbox(context, exc)
-            content_bytes = content.encode("utf-8")
             await _ensure_parent(sandbox)
-            await _upload_file_compat(sandbox, content_bytes, file_path)
-            sync_write_to_ci(
-                context,
-                file_path,
-                content,
-                edit_type="write",
-                description="daytona_write_file",
-            )
+            await _do_raw_write(sandbox, context, file_path, content, content_bytes)
             return _build_write_file_result(
-                context=context,
-                file_path=file_path,
-                bytes_written=len(content_bytes),
-                warning=contract_warning,
+                context=context, file_path=file_path,
+                bytes_written=len(content_bytes), warning=contract_warning,
             )
         except Exception as recovery_exc:
+            parent = "/".join(file_path.split("/")[:-1])
             return ToolResult(
                 output=_path_error(recovery_exc, parent) or str(recovery_exc),
                 is_error=True,

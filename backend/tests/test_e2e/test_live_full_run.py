@@ -38,6 +38,24 @@ pytestmark = [pytest.mark.e2e, pytest.mark.live]
 # Helpers
 # ---------------------------------------------------------------------------
 
+
+def _all_output(result) -> str:
+    """Concatenate all tool outputs and assistant text from a result."""
+    tool_outputs = " ".join(e.output for e in result.tools_completed())
+    return tool_outputs + " " + result.text
+
+
+def _all_text(result) -> str:
+    """Like _all_output but also includes thinking text."""
+    return _all_output(result) + " " + result.thinking_text
+
+
+def _print_result(result) -> None:
+    """Print the standard per-turn tool-call summary line."""
+    print(f"  Tool calls: {len(result.tools_started())}, latency: {result.latency_ms:.0f}ms")
+    print(f"  Tools: {result.tool_names}")
+
+
 AGENT_PROMPT = (
     "You are a senior fullstack developer with a remote Daytona sandbox. "
     "You MUST use tools for every action — never just describe what you'd do. "
@@ -219,8 +237,7 @@ async def test_phase1_scaffold_project(agent):
         "mkdir -p /workspace/fullrun/src/lib\n"
         "mkdir -p /workspace/fullrun/src/components"
     )
-    print(f"  Tool calls: {len(result.tools_started())}, latency: {result.latency_ms:.0f}ms")
-    print(f"  Tools: {result.tool_names}")
+    _print_result(result)
     all_started.extend(result.tools_started())
     all_completed.extend(result.tools_completed())
     assert len(result.tools_started()) >= 1, (
@@ -234,8 +251,7 @@ async def test_phase1_scaffold_project(agent):
         result = await agent.invoke(
             f"Use daytona_write_file to create {path} with this exact content:\n```\n{content}\n```"
         )
-        print(f"  Tool calls: {len(result.tools_started())}, latency: {result.latency_ms:.0f}ms")
-        print(f"  Tools: {result.tool_names}")
+        _print_result(result)
         all_started.extend(result.tools_started())
         all_completed.extend(result.tools_completed())
         assert len(result.tools_started()) >= 1, f"Should use tool for {filename}"
@@ -271,17 +287,15 @@ async def test_phase2_verify_files_exist(agent):
         "Use daytona_codeact to run this command and show the output:\n"
         "find /workspace/fullrun -type f \\( -name '*.ts' -o -name '*.tsx' -o -name '*.json' \\) | sort"
     )
-    print(f"  Tool calls: {len(result.tools_started())}, latency: {result.latency_ms:.0f}ms")
-    print(f"  Tools: {result.tool_names}")
+    _print_result(result)
 
     assert len(result.tools_started()) >= 1
 
-    tool_outputs = " ".join(e.output for e in result.tools_completed())
-    all_output = tool_outputs + " " + result.text
+    all_output = _all_output(result)
     print(f"  File listing output:\n{all_output[:600]}")
 
     # Check each expected file appears in the output
-    all_text = all_output + " " + result.thinking_text
+    all_text = _all_text(result)
     found_files = []
     missing_files = []
     for fpath in EXPECTED_FILES:
@@ -319,9 +333,7 @@ async def test_phase3_content_verification(agent):
         result = await agent.invoke(
             f"Use daytona_grep to search for '{marker}' in /workspace/fullrun/src/"
         )
-        tool_outputs = " ".join(e.output for e in result.tools_completed())
-        all_output = tool_outputs + " " + result.text
-        found = marker in all_output
+        found = marker in _all_output(result)
         results[marker] = found
         status = (
             "FOUND" if found else "TOOL_USED" if len(result.tools_started()) >= 1 else "MISSING"
@@ -343,14 +355,11 @@ async def test_phase4_read_and_verify_page(agent):
     """Read page.tsx back and verify its structure."""
     print("\n--- Phase 4: Read page.tsx ---")
     result = await agent.invoke("Use daytona_read_file to read /workspace/fullrun/src/app/page.tsx")
-    print(f"  Tool calls: {len(result.tools_started())}, latency: {result.latency_ms:.0f}ms")
-    print(f"  Tools: {result.tool_names}")
+    _print_result(result)
 
     assert len(result.tools_started()) >= 1
 
-    tool_outputs = " ".join(e.output for e in result.tools_completed())
-    all_output = tool_outputs + " " + result.text
-    all_text = all_output + " " + result.thinking_text
+    all_text = _all_text(result)
 
     # Verify key structural elements in any text source
     checks = {
@@ -530,13 +539,9 @@ async def test_phase8_edit_workflow_with_streaming(agent):
     # Turn 1: Read utils.ts
     print("\n  Turn 1: Read utils.ts")
     r1 = await agent.invoke("Use daytona_read_file to read /workspace/fullrun/src/lib/utils.ts")
-    print(f"  Tool calls: {len(r1.tools_started())}, latency: {r1.latency_ms:.0f}ms")
-    print(f"  Tools: {r1.tool_names}")
+    _print_result(r1)
     assert len(r1.tools_started()) >= 1
-
-    # Print streaming text
-    full_stream = r1.thinking_text + r1.text
-    print(f"  Streamed text: {full_stream[:400]}")
+    print(f"  Streamed text: {(r1.thinking_text + r1.text)[:400]}")
 
     # Turn 2: Append a new function
     print("\n  Turn 2: Append function")
@@ -547,8 +552,7 @@ async def test_phase8_edit_workflow_with_streaming(agent):
         'echo \'  return str.toLowerCase().replace(/\\\\s+/g, "-").replace(/[^a-z0-9-]/g, "");\' >> /workspace/fullrun/src/lib/utils.ts && '
         "echo '}' >> /workspace/fullrun/src/lib/utils.ts"
     )
-    print(f"  Tool calls: {len(r2.tools_started())}, latency: {r2.latency_ms:.0f}ms")
-    print(f"  Tools: {r2.tool_names}")
+    _print_result(r2)
     assert len(r2.tools_started()) >= 1
 
     # Turn 3: Verify the new function exists
@@ -556,13 +560,10 @@ async def test_phase8_edit_workflow_with_streaming(agent):
     r3 = await agent.invoke(
         "Use daytona_grep to search for 'slugify' in /workspace/fullrun/src/lib/utils.ts"
     )
-    print(f"  Tool calls: {len(r3.tools_started())}, latency: {r3.latency_ms:.0f}ms")
-    print(f"  Tools: {r3.tool_names}")
+    _print_result(r3)
     assert len(r3.tools_started()) >= 1
 
-    tool_outputs = " ".join(e.output for e in r3.tools_completed())
-    all_output = tool_outputs + " " + r3.text
-    has_slugify = "slugify" in all_output
+    has_slugify = "slugify" in _all_output(r3)
     print(f"  slugify found in output: {has_slugify}")
     assert has_slugify or len(r3.tools_started()) >= 1
 
@@ -592,8 +593,7 @@ async def test_phase9_final_summary(agent):
         "find /workspace/fullrun -type f -name '*.ts' -o -name '*.tsx' | "
         "xargs wc -l 2>/dev/null"
     )
-    print(f"  Tool calls: {len(result.tools_started())}, latency: {result.latency_ms:.0f}ms")
-    print(f"  Tools: {result.tool_names}")
+    _print_result(result)
 
     # Print all streamed content
     print(f"\n  --- Full Streaming Output ---")
@@ -605,8 +605,7 @@ async def test_phase9_final_summary(agent):
         print(f"  [TOOL_OUTPUT {i}] {tc.output[:500]}")
 
     # Final assertions
-    tool_outputs = " ".join(e.output for e in result.tools_completed())
-    all_output = tool_outputs + " " + result.text
+    all_output = _all_output(result)
     expected = ["package.json", "tsconfig.json", "page.tsx", "layout.tsx", "utils.ts", "route.ts"]
     found = [f for f in expected if f in all_output]
     print(f"\n  Files found in output: {found}")

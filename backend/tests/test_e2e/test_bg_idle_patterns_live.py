@@ -8,55 +8,16 @@ between active work and idle monitoring phases.
 Run with: .venv/bin/python -m pytest backend/tests/test_e2e/test_bg_idle_patterns_live.py -v -s --log-cli-level=INFO
 """
 from __future__ import annotations
-import logging
 import pytest
 from engine.testing.eval_agent import EvalAgent
 from message.stream_events import ToolExecutionCompleted
 from tests.test_e2e.conftest import create_eval_agent, create_test_sandbox, delete_test_sandbox
+from tests.test_e2e.helpers import log_result
+from tests.test_e2e.bg_prompts import BG_IDLE_PATTERNS
 
-logger = logging.getLogger(__name__)
 pytestmark = [pytest.mark.e2e, pytest.mark.live]
 
-AGENT_PROMPT = """\
-You are test-idle-agent, a developer with a remote Daytona sandbox.
-
-IMPORTANT RULES:
-- You MUST use tools for every action — never just describe what you'd do.
-- Use daytona_codeact to run commands, daytona_write_file to create files.
-- You have background task support: add "background": true to tool input for long-running operations.
-- Use check_background_progress for instant status snapshots.
-- Use wait_for_background_task to block when you have no foreground work left.
-- Use cancel_background_task to cancel tasks.
-
-IDLE AND WAIT STRATEGY:
-- When you have foreground work, do it while background runs.
-- When foreground is exhausted, transition to idle monitoring:
-  1. Call check_background_progress first
-  2. Then use wait_for_background_task to block efficiently
-- Use short timeouts (3-5s) for periodic check-ins on long tasks.
-- Use longer timeouts (10-15s) when you expect tasks to finish soon.
-- Cancel tasks that exceed reasonable time limits.
-
-Always be concise. Execute tools, don't just describe them.
-"""
-
-
-def _log_result(result, label: str) -> None:
-    checks = result.tool_count("check_background_progress")
-    cancels = result.tool_count("cancel_background_task")
-    waits = result.tool_count("wait_for_background_task")
-
-    logger.info(
-        f"\n{'='*60}\n[{label}] Idle/Wait summary:\n"
-        f"  Tools started: {len(result.tools_started())}\n"
-        f"  Background started: {len(result.background_started())}\n"
-        f"  Background completed: {len(result.background_completed())}\n"
-        f"  Progress checks: {checks}\n"
-        f"  Wait calls: {waits}\n"
-        f"  Cancels: {cancels}\n"
-        f"  Tool sequence: {result.tool_names}\n"
-        f"{'='*60}"
-    )
+AGENT_PROMPT = BG_IDLE_PATTERNS
 
 
 # ===========================================================================
@@ -91,7 +52,7 @@ class TestIdleTransitionFromFgToBgWait:
             "5. Call wait_for_background_task with timeout=12 to block until it finishes\n"
             "6. Report: foreground tasks completed, then waited for bg, final result"
         )
-        _log_result(result, "fg_to_idle_wait")
+        log_result(result, "fg_to_idle_wait")
 
         # 1 background launch
         bg_bash = [tc for tc in result.tool_calls
@@ -167,7 +128,7 @@ class TestIdlePeriodicPolling:
             "6. wait_for_background_task timeout=30 — should complete this time\n"
             "Report: each wait attempt and when it finally completed."
         )
-        _log_result(result, "periodic_polling")
+        log_result(result,"periodic_polling")
 
         # tool_count("wait_for_background_task") >= 2
         wait_count = result.tool_count("wait_for_background_task")
@@ -227,7 +188,7 @@ class TestIdleNoFgWorkPureWait:
             "reason='No longer needed'\n"
             "7. Report both task outcomes"
         )
-        _log_result(result, "pure_idle_wait")
+        log_result(result,"pure_idle_wait")
 
         # 2 background launches
         bg_bash = [tc for tc in result.tool_calls
@@ -298,7 +259,7 @@ class TestIdleWaitThenResumeFg:
             "5. Run 'cat /home/daytona/config.json' to verify\n"
             "Report the three phases."
         )
-        _log_result(result, "wait_then_resume_fg")
+        log_result(result,"wait_then_resume_fg")
 
         # 1 background launch
         bg_bash = [tc for tc in result.tool_calls
@@ -378,7 +339,7 @@ class TestIdleEscalatingTimeout:
             "6. wait_for_background_task timeout=30 — should finally complete\n"
             "Report: each timeout attempt and when it finally succeeded."
         )
-        _log_result(result, "escalating_timeout")
+        log_result(result,"escalating_timeout")
 
         # tool_count("wait_for_background_task") >= 3
         wait_count = result.tool_count("wait_for_background_task")
@@ -440,7 +401,7 @@ class TestIdleMultipleBgStaggeredWait:
             "This cancel step is MANDATORY — you MUST call cancel_background_task before reporting.\n"
             "10. Report: completion order and final states"
         )
-        _log_result(result, "staggered_multi_bg")
+        log_result(result,"staggered_multi_bg")
 
         # 3 background launches
         bg_bash = [tc for tc in result.tool_calls

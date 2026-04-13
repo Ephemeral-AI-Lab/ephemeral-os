@@ -120,29 +120,33 @@ class EvalResult:
 
     # -- Event type accessors --
 
+    def _of_type(self, cls: type) -> list:
+        """Return all events that are instances of *cls*."""
+        return [e for e in self.events if isinstance(e, cls)]
+
     def tools_started(self) -> list[ToolExecutionStarted]:
-        return [e for e in self.events if isinstance(e, ToolExecutionStarted)]
+        return self._of_type(ToolExecutionStarted)
 
     def tools_completed(self) -> list[ToolExecutionCompleted]:
-        return [e for e in self.events if isinstance(e, ToolExecutionCompleted)]
+        return self._of_type(ToolExecutionCompleted)
 
     def tools_cancelled(self) -> list[ToolExecutionCancelled]:
-        return [e for e in self.events if isinstance(e, ToolExecutionCancelled)]
+        return self._of_type(ToolExecutionCancelled)
 
     def background_started(self) -> list[BackgroundTaskStarted]:
-        return [e for e in self.events if isinstance(e, BackgroundTaskStarted)]
+        return self._of_type(BackgroundTaskStarted)
 
     def background_completed(self) -> list[BackgroundTaskCompleted]:
-        return [e for e in self.events if isinstance(e, BackgroundTaskCompleted)]
+        return self._of_type(BackgroundTaskCompleted)
 
     def system_notifications(self) -> list[SystemNotification]:
-        return [e for e in self.events if isinstance(e, SystemNotification)]
+        return self._of_type(SystemNotification)
 
     def assistant_turns(self) -> list[AssistantTurnComplete]:
-        return [e for e in self.events if isinstance(e, AssistantTurnComplete)]
+        return self._of_type(AssistantTurnComplete)
 
     def text_deltas(self) -> list[AssistantTextDelta]:
-        return [e for e in self.events if isinstance(e, AssistantTextDelta)]
+        return self._of_type(AssistantTextDelta)
 
     # -- Error helpers --
 

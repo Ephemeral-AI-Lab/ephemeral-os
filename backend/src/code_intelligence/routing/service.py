@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import inspect
 import logging
@@ -176,20 +177,18 @@ class CodeIntelligenceService:
         6. Refresh symbol index
         7. Release lock
         """
-        prepared = self.prepare_write(
+        from code_intelligence.editing.patcher import SearchReplaceEdit
+
+        with self._prepared_write_guard(
             request.file_path,
             agent_id=request.agent_id,
             expected_hash=request.expected_hash,
-        )
-        if isinstance(prepared, EditResult):
-            return prepared
-        try:
-            from code_intelligence.editing.patcher import SearchReplaceEdit
+        ) as prepared:
+            if isinstance(prepared, EditResult):
+                return prepared
 
-            patch_result = self.patcher.apply_edits(
-                prepared.current_content,
-                [SearchReplaceEdit(old_text=request.old_text, new_text=request.new_text)],
-            )
+            edit = SearchReplaceEdit(old_text=request.old_text, new_text=request.new_text)
+            patch_result = self._attempt_patch(prepared, edit)
             if not patch_result.success:
                 self.time_machine.discard_snapshot(request.file_path)
                 return EditResult(
@@ -197,16 +196,14 @@ class CodeIntelligenceService:
                     file_path=request.file_path,
                     message="; ".join(patch_result.errors),
                 )
+
             refreshed = self.refresh_prepared_write(prepared)
             if (
                 refreshed.token_id != prepared.token_id
                 or refreshed.current_hash != prepared.current_hash
             ):
                 prepared = refreshed
-                patch_result = self.patcher.apply_edits(
-                    prepared.current_content,
-                    [SearchReplaceEdit(old_text=request.old_text, new_text=request.new_text)],
-                )
+                patch_result = self._attempt_patch(prepared, edit)
                 if not patch_result.success:
                     self.time_machine.discard_snapshot(request.file_path)
                     return EditResult(
@@ -219,6 +216,7 @@ class CodeIntelligenceService:
                         conflict=True,
                         conflict_reason="version_mismatch",
                     )
+
             return self.commit_prepared_write(
                 prepared,
                 patch_result.content,
@@ -226,20 +224,17 @@ class CodeIntelligenceService:
                 description=request.description,
                 message=f"Applied {patch_result.edits_applied} edit(s)",
             )
-        finally:
-            self.abort_prepared_write(prepared)
 
     def apply_write(self, request: WriteRequest) -> EditResult:
         """Apply an OCC-coordinated full-file write."""
-        prepared = self.prepare_write(
+        with self._prepared_write_guard(
             request.file_path,
             agent_id=request.agent_id,
             expected_hash=request.expected_hash,
             allow_missing=True,
-        )
-        if isinstance(prepared, EditResult):
-            return prepared
-        try:
+        ) as prepared:
+            if isinstance(prepared, EditResult):
+                return prepared
             return self.commit_prepared_write(
                 prepared,
                 request.content,
@@ -247,8 +242,6 @@ class CodeIntelligenceService:
                 description=request.description,
                 message="Wrote file",
             )
-        finally:
-            self.abort_prepared_write(prepared)
 
     def prepare_write(
         self,
@@ -495,7 +488,7 @@ class CodeIntelligenceService:
 
     def status(self) -> dict[str, Any]:
         """Return service status summary."""
-        lsp_tel = self.lsp_client.telemetry
+        lsp = self._lsp_telemetry_fields()
         return {
             "sandbox_id": self.sandbox_id,
             "initialized": self.is_initialized,
@@ -511,23 +504,19 @@ class CodeIntelligenceService:
                 "entries": self.arbiter.metrics.total_edits,
                 "generation": self.arbiter.generation,
             },
-            "lsp": {
-                "connected": self.lsp_client.connected,
-                "queries": lsp_tel.queries,
-                "cache_hits": lsp_tel.cache_hits,
-            },
+            "lsp": lsp,
         }
 
     def get_telemetry(self) -> CITelemetry:
         """Return structured telemetry."""
-        lsp_tel = self.lsp_client.telemetry
+        lsp = self._lsp_telemetry_fields()
         return CITelemetry(
             symbol_index_size=self.symbol_index.size,
             symbol_index_generation=self.symbol_index.generation,
             indexed_files=self.symbol_index.indexed_files,
-            lsp_connected=self.lsp_client.connected,
-            lsp_query_count=lsp_tel.queries,
-            lsp_cache_hits=lsp_tel.cache_hits,
+            lsp_connected=lsp["connected"],
+            lsp_query_count=lsp["queries"],
+            lsp_cache_hits=lsp["cache_hits"],
             arbiter_active_edits=self.arbiter.active_edit_count,
             total_edits=self.arbiter.metrics.total_edits,
         )
@@ -539,6 +528,48 @@ class CodeIntelligenceService:
         self.arbiter.cleanup_locks()
         self.time_machine.clear()
         logger.info("CodeIntelligenceService disposed for sandbox %s", self.sandbox_id)
+
+    # -- Private helpers ------------------------------------------------------
+
+    @contextlib.contextmanager
+    def _prepared_write_guard(
+        self,
+        file_path: str,
+        *,
+        agent_id: str = "",
+        expected_hash: str = "",
+        allow_missing: bool = False,
+    ):
+        """Context manager that prepares a write and always aborts the token on exit.
+
+        Yields the PreparedWrite (or an EditResult on early failure).  The
+        caller must check ``isinstance(value, EditResult)`` and return it
+        immediately when true — the guard still cleans up safely in that case.
+        """
+        prepared = self.prepare_write(
+            file_path,
+            agent_id=agent_id,
+            expected_hash=expected_hash,
+            allow_missing=allow_missing,
+        )
+        try:
+            yield prepared
+        finally:
+            if not isinstance(prepared, EditResult):
+                self.abort_prepared_write(prepared)
+
+    def _attempt_patch(self, prepared: "PreparedWrite", edit: Any) -> Any:
+        """Run the patcher against *prepared*'s current content for a single edit."""
+        return self.patcher.apply_edits(prepared.current_content, [edit])
+
+    def _lsp_telemetry_fields(self) -> dict[str, Any]:
+        """Return the three LSP telemetry values shared by status() and get_telemetry()."""
+        tel = self.lsp_client.telemetry
+        return {
+            "connected": self.lsp_client.connected,
+            "queries": tel.queries,
+            "cache_hits": tel.cache_hits,
+        }
 
     def _resolve_pending_write(
         self,

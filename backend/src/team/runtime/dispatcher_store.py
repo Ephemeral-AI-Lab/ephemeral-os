@@ -27,6 +27,41 @@ from team.persistence.task_record import TaskRecord
 
 logger = logging.getLogger(__name__)
 
+_RETURNING = (
+    "id, team_run_id, agent_name, status, task,"
+    " deps, scope_paths, scope_ltree,"
+    " cascade_policy, parent_id, root_id, depth,"
+    " pending_dep_count, retry_count, max_retries,"
+    " agent_run_id, created_at, started_at,"
+    " finished_at, failure_reason"
+)
+
+
+def _row_to_record(row: Any) -> TaskRecord:
+    """Convert a raw SQL row to a TaskRecord ORM instance."""
+    return TaskRecord(
+        id=row.id,
+        team_run_id=row.team_run_id,
+        agent_name=row.agent_name,
+        status=row.status,
+        task=row.task,
+        deps=list(row.deps) if row.deps else [],
+        scope_paths=list(row.scope_paths) if row.scope_paths else [],
+        scope_ltree=list(row.scope_ltree) if row.scope_ltree else [],
+        cascade_policy=row.cascade_policy,
+        parent_id=row.parent_id,
+        root_id=row.root_id or "",
+        depth=row.depth,
+        pending_dep_count=row.pending_dep_count,
+        retry_count=row.retry_count,
+        max_retries=row.max_retries,
+        agent_run_id=row.agent_run_id,
+        created_at=row.created_at,
+        started_at=row.started_at,
+        finished_at=row.finished_at,
+        failure_reason=row.failure_reason,
+    )
+
 
 class DispatcherStore:
     """Durable task store for Dispatcher.
@@ -44,7 +79,7 @@ class DispatcherStore:
         async with self._sf() as db:
             row = (
                 await db.execute(
-                    text("""
+                    text(f"""
                         UPDATE tasks SET status = 'running', started_at = NOW()
                         WHERE (id, team_run_id) = (
                             SELECT t.id, t.team_run_id FROM tasks t
@@ -55,12 +90,7 @@ class DispatcherStore:
                             LIMIT 1
                             FOR UPDATE SKIP LOCKED
                         )
-                        RETURNING id, team_run_id, agent_name, status, task,
-                                  deps, scope_paths, scope_ltree,
-                                  cascade_policy, parent_id, root_id, depth,
-                                  pending_dep_count, retry_count, max_retries,
-                                  agent_run_id, created_at, started_at,
-                                  finished_at, failure_reason
+                        RETURNING {_RETURNING}
                     """),
                     {"run_id": run_id},
                 )
@@ -78,19 +108,14 @@ class DispatcherStore:
         async with self._sf() as db:
             row = (
                 await db.execute(
-                    text("""
+                    text(f"""
                         UPDATE tasks
                         SET agent_run_id = :agent_run_id,
                             started_at = COALESCE(started_at, NOW())
                         WHERE id = :task_id
                           AND team_run_id = :run_id
                           AND status = 'running'
-                        RETURNING id, team_run_id, agent_name, status, task,
-                                  deps, scope_paths, scope_ltree,
-                                  cascade_policy, parent_id, root_id, depth,
-                                  pending_dep_count, retry_count, max_retries,
-                                  agent_run_id, created_at, started_at,
-                                  finished_at, failure_reason
+                        RETURNING {_RETURNING}
                     """),
                     {
                         "run_id": run_id,
@@ -139,12 +164,13 @@ class DispatcherStore:
             await db.commit()
             return [r.promoted_id for r in promoted if r.promoted_id is not None]
 
-    async def mark_failed(self, task_id: str, run_id: str, reason: str) -> None:
-        """Mark a task as failed."""
+    async def _mark_terminal(
+        self, task_id: str, run_id: str, status: str, reason: str
+    ) -> None:
         async with self._sf() as db:
             await db.execute(
                 text(
-                    "UPDATE tasks SET status = 'failed', finished_at = NOW(), "
+                    f"UPDATE tasks SET status = '{status}', finished_at = NOW(), "
                     "failure_reason = :reason "
                     "WHERE id = :task_id AND team_run_id = :run_id"
                 ),
@@ -152,18 +178,13 @@ class DispatcherStore:
             )
             await db.commit()
 
+    async def mark_failed(self, task_id: str, run_id: str, reason: str) -> None:
+        """Mark a task as failed."""
+        await self._mark_terminal(task_id, run_id, "failed", reason)
+
     async def mark_cancelled(self, task_id: str, run_id: str, reason: str) -> None:
         """Mark a task as cancelled."""
-        async with self._sf() as db:
-            await db.execute(
-                text(
-                    "UPDATE tasks SET status = 'cancelled', finished_at = NOW(), "
-                    "failure_reason = :reason "
-                    "WHERE id = :task_id AND team_run_id = :run_id"
-                ),
-                {"task_id": task_id, "run_id": run_id, "reason": reason},
-            )
-            await db.commit()
+        await self._mark_terminal(task_id, run_id, "cancelled", reason)
 
     # ---- plan insertion --------------------------------------------------
 
@@ -671,22 +692,53 @@ class DispatcherStore:
             )
             return result.scalar() or 0
 
+    # ---- sibling stats (plan health) ------------------------------------
+
+    async def sibling_stats(
+        self,
+        run_id: str,
+        parent_id: str | None,
+    ) -> dict[str, int]:
+        """Aggregate status counts for sibling tasks under the same parent.
+
+        Returns dict with keys: done, failed, cancelled, running, pending,
+        ready, retry_total.  Used by the checkpoint note mechanism to detect
+        systemic plan failures.
+        """
+        async with self._sf() as db:
+            result = await db.execute(
+                text("""
+                    SELECT status,
+                           COUNT(*)            AS cnt,
+                           SUM(retry_count)    AS retries
+                    FROM tasks
+                    WHERE team_run_id = :run_id
+                      AND parent_id IS NOT DISTINCT FROM :parent_id
+                    GROUP BY status
+                """),
+                {"run_id": run_id, "parent_id": parent_id},
+            )
+            stats: dict[str, int] = {
+                "done": 0, "failed": 0, "cancelled": 0,
+                "running": 0, "pending": 0, "ready": 0,
+                "retry_total": 0,
+            }
+            for row in result.fetchall():
+                stats[row.status] = row.cnt
+                stats["retry_total"] += int(row.retries or 0)
+            return stats
+
     # ---- crash recovery --------------------------------------------------
 
     async def recover_running(self, run_id: str) -> list[TaskRecord]:
         """Reset stuck 'running' tasks to 'ready' after crash."""
         async with self._sf() as db:
             result = await db.execute(
-                text("""
+                text(f"""
                     UPDATE tasks
                     SET status = 'ready', started_at = NULL, agent_run_id = NULL
                     WHERE team_run_id = :run_id AND status = 'running'
-                    RETURNING id, team_run_id, agent_name, status, task,
-                              deps, scope_paths, scope_ltree,
-                              cascade_policy, parent_id, root_id, depth,
-                              pending_dep_count, retry_count, max_retries,
-                              agent_run_id, created_at, started_at,
-                              finished_at, failure_reason
+                    RETURNING {_RETURNING}
                 """),
                 {"run_id": run_id},
             )
@@ -729,29 +781,3 @@ class DispatcherStore:
             ]
             db.add_all(records)
             await db.commit()
-
-
-def _row_to_record(row: Any) -> TaskRecord:
-    """Convert a raw SQL row to a TaskRecord ORM instance."""
-    return TaskRecord(
-        id=row.id,
-        team_run_id=row.team_run_id,
-        agent_name=row.agent_name,
-        status=row.status,
-        task=row.task,
-        deps=list(row.deps) if row.deps else [],
-        scope_paths=list(row.scope_paths) if row.scope_paths else [],
-        scope_ltree=list(row.scope_ltree) if row.scope_ltree else [],
-        cascade_policy=row.cascade_policy,
-        parent_id=row.parent_id,
-        root_id=row.root_id or "",
-        depth=row.depth,
-        pending_dep_count=row.pending_dep_count,
-        retry_count=row.retry_count,
-        max_retries=row.max_retries,
-        agent_run_id=row.agent_run_id,
-        created_at=row.created_at,
-        started_at=row.started_at,
-        finished_at=row.finished_at,
-        failure_reason=row.failure_reason,
-    )

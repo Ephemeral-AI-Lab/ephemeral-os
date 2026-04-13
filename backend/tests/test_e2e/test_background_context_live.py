@@ -18,48 +18,14 @@ import pytest
 
 from engine.testing.eval_agent import EvalAgent
 from tests.test_e2e.conftest import create_eval_agent, create_test_sandbox, delete_test_sandbox
+from tests.test_e2e.helpers import log_result
+from tests.test_e2e.bg_prompts import _build_prompt
 
 logger = logging.getLogger(__name__)
 
 pytestmark = [pytest.mark.e2e, pytest.mark.live]
 
-AGENT_PROMPT = """\
-You are test-context-agent, a developer with a remote Daytona sandbox.
-
-IMPORTANT RULES:
-- You MUST use tools for every action — never just describe what you'd do.
-- Use daytona_codeact to run commands, daytona_write_file to create files.
-- You have background task support: add "background": true to tool input for long-running operations.
-- Use check_background_progress to monitor background tasks.
-- Use cancel_background_task to cancel running background tasks.
-
-BACKGROUND EXECUTION GUIDELINES:
-- For commands that take >5 seconds (test suites, builds, npm install), run in background.
-- For quick commands (<5 seconds like echo, pwd, cat), run in foreground.
-- When running in background, continue with other useful work.
-- Periodically check progress of background tasks.
-- Cancel background tasks that appear stuck or failing.
-
-Always be concise. Execute tools, don't just describe them.
-"""
-
-
-def _log_result(result, label: str) -> None:
-    started = result.tools_started()
-    completed = result.tools_completed()
-    turns = result.assistant_turns()
-    bg_started = result.background_started()
-
-    logger.info(
-        f"\n{'='*60}\n[{label}] Event summary:\n"
-        f"  Total events: {len(result.events)}\n"
-        f"  Tool started: {len(started)}\n"
-        f"  Tool completed: {len(completed)}\n"
-        f"  Assistant turns: {len(turns)}\n"
-        f"  Background started: {len(bg_started)}\n"
-        f"  Tool sequence: {result.tool_names}\n"
-        f"{'='*60}"
-    )
+AGENT_PROMPT = _build_prompt(agent_name="test-context-agent")
 
 
 # ===========================================================================
@@ -99,7 +65,7 @@ class TestReminderDoesNotAccumulate:
             "10. Report what happened\n\n"
             "Use background: true for step 1 ONLY. All other steps are foreground."
         )
-        _log_result(result, "reminder_accumulation")
+        log_result(result, "reminder_accumulation")
 
         assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
         assert result.has_tool_with_background("daytona_codeact"), \
@@ -152,7 +118,7 @@ class TestLargeOutputWithBackground:
             "6. Report: how much output did you see from the seq command?\n\n"
             "Use background: true for step 1 ONLY."
         )
-        _log_result(result, "large_output")
+        log_result(result, "large_output")
 
         assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
         assert result.has_tool_with_background("daytona_codeact"), \
@@ -210,7 +176,7 @@ class TestSustainedBackgroundStress:
             "What was the background task status when you checked?\n\n"
             "Use background: true for step 1 ONLY. Execute each step with daytona_codeact."
         )
-        _log_result(result, "stress_test")
+        log_result(result, "stress_test")
 
         assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
         assert result.has_tool_with_background("daytona_codeact"), \

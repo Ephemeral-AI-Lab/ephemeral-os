@@ -1,8 +1,9 @@
-"""Builtin team-mode agent definitions and internal runtime helpers.
+"""Builtin team-mode agent and team definitions.
 
-Definitions live as Markdown+YAML-frontmatter files in this package's
-directory.  ``register_all()`` loads them at boot, seeds the database,
-and populates the in-memory registry.
+Definitions live as Markdown+YAML-frontmatter files in
+``backend/config/agents/`` and ``backend/config/teams/``.
+``register_all()`` loads them at boot, optionally seeds the database,
+and populates the in-memory registries.
 """
 
 from __future__ import annotations
@@ -14,9 +15,11 @@ from typing import TYPE_CHECKING
 from agents.loader import load_agents_dir
 from agents.registry import register_definition
 from agents.types import AgentDefinition
+from team.models import TeamDefinition
 
 if TYPE_CHECKING:
     from agents.db.store import AgentDefinitionStore
+    from team.persistence.store import TeamDefinitionStore
 
 logger = logging.getLogger(__name__)
 
@@ -29,12 +32,15 @@ VALIDATOR = "validator"
 SCOUT = "scout"
 TEAM_REPLANNER = "team_replanner"
 
-_BUILTINS_DIR = Path(__file__).resolve().parent / "agents"
+_CONFIG_ROOT = Path(__file__).resolve().parents[3] / "config"
+_BUILTINS_DIR = _CONFIG_ROOT / "agents"
+_TEAMS_BUILTIN_DIR = _CONFIG_ROOT / "teams"
 
 # Expected number of builtin agents.  If a seed file fails to parse,
 # ``load_agents_dir`` silently skips it — this constant lets us detect
 # that early rather than discovering a missing agent at dispatch time.
 _EXPECTED_BUILTIN_COUNT = 5
+_EXPECTED_BUILTIN_TEAM_COUNT = 1
 
 
 def _load_builtin_definitions() -> list[AgentDefinition]:
@@ -54,14 +60,38 @@ def _load_builtin_definitions() -> list[AgentDefinition]:
     return defs
 
 
-def register_all(*, store: "AgentDefinitionStore | None" = None) -> None:
-    """Register all builtin team agents.
+def _load_builtin_team_definitions() -> list[TeamDefinition]:
+    """Load all builtin team definitions from the seed files."""
+    from team.loader import load_teams_dir
 
-    When *store* is provided, each definition is seeded into the database
-    first (skipped if already present), then loaded from DB into the
-    in-memory registry.  This lets users customise builtins via the DB
-    while keeping a code-level fallback for environments without a DB.
+    defs = load_teams_dir(_TEAMS_BUILTIN_DIR)
+    if len(defs) != _EXPECTED_BUILTIN_TEAM_COUNT:
+        logger.error(
+            "Expected %d builtin teams but loaded %d from %s — "
+            "check seed files for parse errors",
+            _EXPECTED_BUILTIN_TEAM_COUNT,
+            len(defs),
+            _TEAMS_BUILTIN_DIR,
+        )
+    return defs
+
+
+def register_all(
+    *,
+    store: "AgentDefinitionStore | None" = None,
+    team_store: "TeamDefinitionStore | None" = None,
+) -> None:
+    """Register all builtin team agents and team definitions.
+
+    When *store* / *team_store* are provided, each definition is seeded
+    into the database first (skipped if already present), then loaded
+    from DB into the in-memory registry.  This lets users customise
+    builtins via the DB while keeping a code-level fallback for
+    environments without a DB.
     """
+    from team.registry import register_team_definition
+
+    # --- agent definitions ---
     defaults = _load_builtin_definitions()
 
     if store is not None:
@@ -75,4 +105,20 @@ def register_all(*, store: "AgentDefinitionStore | None" = None) -> None:
         for defn in defaults:
             register_definition(defn)
 
-    logger.info("team builtins registered (%d agents, db=%s)", len(defaults), store is not None)
+    # --- team definitions ---
+    team_defaults = _load_builtin_team_definitions()
+
+    if team_store is not None:
+        for tdefn in team_defaults:
+            live = team_store.seed_builtin(tdefn)
+            register_team_definition(live)
+    else:
+        for tdefn in team_defaults:
+            register_team_definition(tdefn)
+
+    logger.info(
+        "team builtins registered (%d agents, %d teams, db=%s)",
+        len(defaults),
+        len(team_defaults),
+        store is not None,
+    )

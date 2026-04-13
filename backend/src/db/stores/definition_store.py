@@ -7,25 +7,16 @@ from typing import Any, Generic, TypeVar
 
 from sqlalchemy.orm import Session, sessionmaker
 
+from db.stores.base import SyncStoreMixin
+
 RecordT = TypeVar("RecordT")
 
 
-class DefinitionStoreBase(Generic[RecordT]):
+class DefinitionStoreBase(SyncStoreMixin, Generic[RecordT]):
     """Provide common CRUD primitives for name-keyed definition records."""
 
     record_type: type[RecordT]
     immutable_fields: tuple[str, ...] = ("id", "name", "created_at", "version")
-
-    def __init__(self) -> None:
-        self._session_factory: sessionmaker[Session] | None = None
-
-    def initialize(self, session_factory: sessionmaker[Session]) -> None:
-        self._session_factory = session_factory
-
-    @property
-    def _sf(self) -> sessionmaker[Session]:
-        assert self._session_factory is not None, f"{self.__class__.__name__} not initialised"
-        return self._session_factory
 
     def create(self, record: RecordT) -> RecordT:
         with self._sf() as db:

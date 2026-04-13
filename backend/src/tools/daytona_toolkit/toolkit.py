@@ -1,4 +1,4 @@
-"""DaytonaToolkit — groups Daytona sandbox file/edit/exec tools."""
+"""Daytona sandbox tools — file I/O, editing, and CodeAct execution."""
 
 from __future__ import annotations
 

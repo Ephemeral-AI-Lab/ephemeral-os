@@ -90,20 +90,6 @@ _REDUCIBLE_TERMINAL_STATUSES: frozenset[str] = frozenset({"completed", "failed",
 _REDUCIBLE_STATUSES: frozenset[str] = _REDUCIBLE_RUNNING_STATUSES | _REDUCIBLE_TERMINAL_STATUSES
 
 
-@dataclass(frozen=True)
-class _ReductionCandidate:
-    task_id: str
-    status: str
-    sort_key: tuple[int, int, int]
-    block_ref: tuple[int, int] | None = None
-    tool_use_id: str | None = None
-    status_idx: int | None = None
-
-    @property
-    def is_terminal(self) -> bool:
-        return self.status in _REDUCIBLE_TERMINAL_STATUSES
-
-
 # ---------------------------------------------------------------------------
 # Token estimation
 # ---------------------------------------------------------------------------
@@ -156,91 +142,74 @@ def _background_snapshot_info(
     }
 
 
-def _pick_winners(
-    candidates: list[_ReductionCandidate],
-) -> dict[str, _ReductionCandidate]:
-    winners: dict[str, _ReductionCandidate] = {}
-    for candidate in candidates:
-        current = winners.get(candidate.task_id)
-        if current is None or (candidate.is_terminal, candidate.sort_key) > (
-            current.is_terminal,
-            current.sort_key,
-        ):
-            winners[candidate.task_id] = candidate
-    return winners
-
-
 def reduce_for_api(display_messages: list[ConversationMessage]) -> list[ConversationMessage]:
-    """Return a reduced provider view that keeps only the latest task state."""
+    """Return a reduced provider view that keeps only the latest task state.
+
+    For each background task_id, keeps only the most recent (or terminal)
+    state block / snapshot entry. All older duplicates are dropped.
+    """
+    # Pass 1: build tool_use map and find the "winner" location for each task.
+    # Winner = latest occurrence, preferring terminal statuses.
     tool_use_map: dict[str, tuple[int, int, str]] = {}
     snapshot_tool_use_ids: set[str] = set()
-    for msg_idx, msg in enumerate(display_messages):
-        if msg.role != "assistant":
-            continue
-        for block_idx, block in enumerate(msg.content):
-            if isinstance(block, ToolUseBlock):
-                tool_use_map[block.id] = (msg_idx, block_idx, block.name)
+    _WinnerKey = tuple[bool, int, int, int, tuple[int, int] | None, str | None, int | None]
+    winners: dict[str, _WinnerKey] = {}
 
-    candidates: list[_ReductionCandidate] = []
+    for msg_idx, msg in enumerate(display_messages):
+        if msg.role == "assistant":
+            for block_idx, block in enumerate(msg.content):
+                if isinstance(block, ToolUseBlock):
+                    tool_use_map[block.id] = (msg_idx, block_idx, block.name)
+
+    key: _WinnerKey
     for msg_idx, msg in enumerate(display_messages):
         for block_idx, block in enumerate(msg.content):
-            if isinstance(block, BackgroundTaskStateBlock):
-                if block.status in _REDUCIBLE_STATUSES:
-                    candidates.append(
-                        _ReductionCandidate(
-                            task_id=block.task_id,
-                            status=block.status,
-                            sort_key=(msg_idx, block_idx, -1),
-                            block_ref=(msg_idx, block_idx),
-                        )
-                    )
+            if isinstance(block, BackgroundTaskStateBlock) and block.status in _REDUCIBLE_STATUSES:
+                is_term = block.status in _REDUCIBLE_TERMINAL_STATUSES
+                key = (is_term, msg_idx, block_idx, -1, (msg_idx, block_idx), None, None)
+                cur = winners.get(block.task_id)
+                if cur is None or key[:4] > cur[:4]:
+                    winners[block.task_id] = key
                 continue
-
             if not isinstance(block, ToolResultBlock):
                 continue
             snapshot = _background_snapshot_info(block, tool_use_map)
             if snapshot is None:
                 continue
             snapshot_tool_use_ids.add(block.tool_use_id)
-            for status_idx, status_entry in enumerate(snapshot["statuses"]):
-                task_id = status_entry.get("task_id")
-                status = status_entry.get("status")
-                if not isinstance(task_id, str) or status not in _REDUCIBLE_STATUSES:
+            for si, entry in enumerate(snapshot["statuses"]):
+                tid = entry.get("task_id")
+                status = entry.get("status")
+                if not isinstance(tid, str) or status not in _REDUCIBLE_STATUSES:
                     continue
-                candidates.append(
-                    _ReductionCandidate(
-                        task_id=task_id,
-                        status=status,
-                        sort_key=(msg_idx, block_idx, status_idx),
-                        tool_use_id=block.tool_use_id,
-                        status_idx=status_idx,
-                    )
-                )
+                is_term = status in _REDUCIBLE_TERMINAL_STATUSES
+                key = (is_term, msg_idx, block_idx, si, None, block.tool_use_id, si)
+                cur = winners.get(tid)
+                if cur is None or key[:4] > cur[:4]:
+                    winners[tid] = key
 
-    winners = _pick_winners(candidates)
-    keep_state_blocks = {
-        winner.block_ref for winner in winners.values() if winner.block_ref is not None
-    }
+    # Build keep-sets from winners.
+    keep_state_blocks: set[tuple[int, int]] = set()
     keep_snapshot_statuses: dict[str, set[int]] = {}
-    for winner in winners.values():
-        if winner.tool_use_id is None or winner.status_idx is None:
-            continue
-        keep_snapshot_statuses.setdefault(winner.tool_use_id, set()).add(winner.status_idx)
+    for w in winners.values():
+        if w[4] is not None:  # block_ref
+            keep_state_blocks.add(w[4])
+        if w[5] is not None and w[6] is not None:  # tool_use_id, status_idx
+            keep_snapshot_statuses.setdefault(w[5], set()).add(w[6])
 
     drop_tool_use_ids = snapshot_tool_use_ids - keep_snapshot_statuses.keys()
+
+    # Pass 2: rebuild messages keeping only winners.
     reduced: list[ConversationMessage] = []
     for msg_idx, msg in enumerate(display_messages):
         new_content: list[ContentBlock] = []
         for block_idx, block in enumerate(msg.content):
             if isinstance(block, BackgroundTaskStateBlock):
-                if (msg_idx, block_idx) not in keep_state_blocks:
-                    continue
-                new_content.append(block.model_copy(deep=True))
+                if (msg_idx, block_idx) in keep_state_blocks:
+                    new_content.append(block.model_copy(deep=True))
                 continue
-
             if isinstance(block, ToolUseBlock) and block.id in drop_tool_use_ids:
                 continue
-
             if isinstance(block, ToolResultBlock):
                 snapshot = _background_snapshot_info(block, tool_use_map)
                 if snapshot is None:
@@ -249,28 +218,21 @@ def reduce_for_api(display_messages: list[ConversationMessage]) -> list[Conversa
                 keep_idxs = keep_snapshot_statuses.get(block.tool_use_id)
                 if not keep_idxs:
                     continue
-                filtered_statuses = [
-                    copy.deepcopy(status_entry)
-                    for idx, status_entry in enumerate(snapshot["statuses"])
-                    if idx in keep_idxs
+                filtered = [
+                    copy.deepcopy(s) for i, s in enumerate(snapshot["statuses"])
+                    if i in keep_idxs
                 ]
                 rebuilt = block.model_copy(deep=True)
                 rebuilt.content = render_background_snapshot(
-                    snapshot["kind"],
-                    filtered_statuses,
-                    elapsed_seconds=snapshot["elapsed_seconds"],
+                    snapshot["kind"], filtered, elapsed_seconds=snapshot["elapsed_seconds"],
                 )
                 rebuilt.metadata = build_background_snapshot_metadata(
-                    snapshot["kind"],
-                    snapshot["scope"],
-                    filtered_statuses,
+                    snapshot["kind"], snapshot["scope"], filtered,
                     elapsed_seconds=snapshot["elapsed_seconds"],
                 )
                 new_content.append(rebuilt)
                 continue
-
             new_content.append(block.model_copy(deep=True))
-
         if new_content:
             reduced.append(ConversationMessage(role=msg.role, content=new_content))
     return reduced
@@ -315,16 +277,31 @@ def _preserve_recent_split_index(
     return split_idx
 
 
-def _find_tool_sequence_error(messages: list[ConversationMessage]) -> str | None:
-    """Return a human-readable tool sequencing error, or ``None`` when valid.
+def _walk_tool_sequence(
+    messages: list[ConversationMessage],
+    *,
+    strict: bool = False,
+) -> str | None:
+    """Validate or sanitize tool-use/result pairing in a single pass.
 
-    Anthropic requires every assistant message containing ``tool_use`` blocks
-    to be followed immediately by a user message containing matching
-    ``tool_result`` blocks. Full compaction sends older history back through
-    the provider, so we validate that history before making the summary call.
+    When *strict* is ``True``, return a human-readable error on the first
+    violation (used before sending to the summary LLM). When ``False``,
+    silently strip orphaned tool_use / tool_result blocks in-place so the
+    provider never sees invalid sequencing.
+
+    Returns an error string in strict mode, or ``None`` when valid / sanitized.
     """
     pending_ids: set[str] = set()
     pending_msg_idx: int | None = None
+
+    def _strip_tool_uses(idx: int | None, ids: set[str]) -> None:
+        if idx is None or not ids:
+            return
+        msg = messages[idx]
+        msg.content = [
+            b for b in msg.content
+            if not (isinstance(b, ToolUseBlock) and b.id in ids)
+        ]
 
     for msg_idx, message in enumerate(messages):
         tool_use_ids = _message_tool_use_ids(message)
@@ -332,95 +309,52 @@ def _find_tool_sequence_error(messages: list[ConversationMessage]) -> str | None
         satisfied_pending = False
 
         if pending_ids:
-            expected_ids = set(pending_ids)
-            if message.role != "user":
-                return (
-                    "assistant tool_use message at index "
-                    f"{pending_msg_idx} is followed by non-user message at index {msg_idx}"
-                )
-            missing = expected_ids - tool_result_ids
-            if missing:
-                return (
-                    "assistant tool_use message at index "
-                    f"{pending_msg_idx} is followed by user message at index {msg_idx} "
-                    f"without matching tool_result blocks for {sorted(missing)}"
-                )
-            extra = tool_result_ids - expected_ids
-            if extra:
-                return (
-                    "user message at index "
-                    f"{msg_idx} includes unexpected tool_result blocks {sorted(extra)} "
-                    f"alongside the response to assistant tool_use message at index "
-                    f"{pending_msg_idx}"
-                )
-            pending_ids = set()
-            pending_msg_idx = None
-            satisfied_pending = True
-
-        if tool_result_ids and not tool_use_ids and not satisfied_pending:
-            prev_idx = msg_idx - 1
-            return (
-                f"user message at index {msg_idx} contains tool_result blocks "
-                f"{sorted(tool_result_ids)} without an immediately preceding assistant "
-                f"tool_use message (previous index {prev_idx})"
-            )
-
-        if tool_use_ids:
-            pending_ids = set(tool_use_ids)
-            pending_msg_idx = msg_idx
-
-    if pending_ids:
-        return (
-            "assistant tool_use message at index "
-            f"{pending_msg_idx} is missing its trailing user tool_result message "
-            f"for {sorted(pending_ids)}"
-        )
-    return None
-
-
-def _sanitize_tool_sequence(messages: list[ConversationMessage]) -> list[ConversationMessage]:
-    """Drop malformed stale tool-use/result blocks from the provider view."""
-    sanitized = copy.deepcopy(messages)
-    pending_ids: set[str] = set()
-    pending_msg_idx: int | None = None
-
-    def _strip_tool_uses(msg_idx: int | None, ids: set[str]) -> None:
-        if msg_idx is None or not ids:
-            return
-        message = sanitized[msg_idx]
-        message.content = [
-            block
-            for block in message.content
-            if not (isinstance(block, ToolUseBlock) and block.id in ids)
-        ]
-
-    for msg_idx, message in enumerate(sanitized):
-        tool_use_ids = _message_tool_use_ids(message)
-        tool_result_ids = _message_tool_result_ids(message)
-        satisfied_pending = False
-
-        if pending_ids:
-            if message.role != "user" or not pending_ids.issubset(tool_result_ids):
-                _strip_tool_uses(pending_msg_idx, pending_ids)
-                pending_ids = set()
-                pending_msg_idx = None
-                tool_result_ids = _message_tool_result_ids(message)
-            else:
+            if strict:
+                if message.role != "user":
+                    return (
+                        f"assistant tool_use at index {pending_msg_idx} "
+                        f"followed by non-user at index {msg_idx}"
+                    )
+                missing = pending_ids - tool_result_ids
+                if missing:
+                    return (
+                        f"assistant tool_use at index {pending_msg_idx} "
+                        f"missing tool_results {sorted(missing)} at index {msg_idx}"
+                    )
                 extra = tool_result_ids - pending_ids
                 if extra:
-                    message.content = [
-                        block
-                        for block in message.content
-                        if not (isinstance(block, ToolResultBlock) and block.tool_use_id in extra)
-                    ]
+                    return (
+                        f"unexpected tool_results {sorted(extra)} "
+                        f"at index {msg_idx}"
+                    )
                 pending_ids = set()
                 pending_msg_idx = None
-                tool_result_ids = _message_tool_result_ids(message)
                 satisfied_pending = True
+            else:
+                if message.role != "user" or not pending_ids.issubset(tool_result_ids):
+                    _strip_tool_uses(pending_msg_idx, pending_ids)
+                    pending_ids = set()
+                    pending_msg_idx = None
+                    tool_result_ids = _message_tool_result_ids(message)
+                else:
+                    extra = tool_result_ids - pending_ids
+                    if extra:
+                        message.content = [
+                            b for b in message.content
+                            if not (isinstance(b, ToolResultBlock) and b.tool_use_id in extra)
+                        ]
+                    pending_ids = set()
+                    pending_msg_idx = None
+                    tool_result_ids = _message_tool_result_ids(message)
+                    satisfied_pending = True
 
-        if tool_result_ids and not satisfied_pending:
+        if tool_result_ids and not tool_use_ids and not satisfied_pending:
+            if strict:
+                return (
+                    f"orphaned tool_results {sorted(tool_result_ids)} at index {msg_idx}"
+                )
             message.content = [
-                block for block in message.content if not isinstance(block, ToolResultBlock)
+                b for b in message.content if not isinstance(b, ToolResultBlock)
             ]
 
         tool_use_ids = _message_tool_use_ids(message)
@@ -429,8 +363,20 @@ def _sanitize_tool_sequence(messages: list[ConversationMessage]) -> list[Convers
             pending_msg_idx = msg_idx
 
     if pending_ids:
+        if strict:
+            return (
+                f"assistant tool_use at index {pending_msg_idx} "
+                f"missing trailing tool_results for {sorted(pending_ids)}"
+            )
         _strip_tool_uses(pending_msg_idx, pending_ids)
 
+    return None
+
+
+def _sanitize_tool_sequence(messages: list[ConversationMessage]) -> list[ConversationMessage]:
+    """Drop malformed stale tool-use/result blocks from the provider view."""
+    sanitized = copy.deepcopy(messages)
+    _walk_tool_sequence(sanitized, strict=False)
     return [msg for msg in sanitized if msg.content]
 
 
@@ -667,7 +613,7 @@ async def compact_conversation(
     if not skip_microcompact:
         microcompact_messages(messages, keep_recent=DEFAULT_KEEP_RECENT)
 
-    sequence_error = _find_tool_sequence_error(messages)
+    sequence_error = _walk_tool_sequence(messages, strict=True)
     if sequence_error is not None:
         raise ValueError(
             f"compaction preflight rejected malformed tool sequencing: {sequence_error}"
@@ -686,7 +632,7 @@ async def compact_conversation(
     # Step 3: build compact request — send older messages + compact prompt
     compact_prompt = get_compact_prompt(custom_instructions)
     compact_messages = list(older) + [ConversationMessage.from_user_text(compact_prompt)]
-    sequence_error = _find_tool_sequence_error(compact_messages)
+    sequence_error = _walk_tool_sequence(compact_messages, strict=True)
     if sequence_error is not None:
         raise ValueError(
             f"compaction preflight rejected malformed tool sequencing: {sequence_error}"

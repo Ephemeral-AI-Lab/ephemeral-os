@@ -14,52 +14,16 @@ Run with: .venv/bin/python -m pytest backend/tests/test_e2e/test_background_live
 
 from __future__ import annotations
 
-import logging
-
 import pytest
 
 from engine.testing.eval_agent import EvalAgent
+from tests.test_e2e.bg_prompts import BG_STANDARD
 from tests.test_e2e.conftest import create_eval_agent, create_test_sandbox, delete_test_sandbox
-
-logger = logging.getLogger(__name__)
+from tests.test_e2e.helpers import log_result
 
 pytestmark = [pytest.mark.e2e, pytest.mark.live]
 
-AGENT_PROMPT = """\
-You are test-background-agent, a developer with a remote Daytona sandbox.
-
-IMPORTANT RULES:
-- You MUST use tools for every action — never just describe what you'd do.
-- Use daytona_codeact to run commands, daytona_write_file to create files.
-- You have background task support: add "background": true to tool input for long-running operations.
-- Use check_background_progress to monitor background tasks.
-- Use cancel_background_task to cancel running background tasks.
-
-BACKGROUND EXECUTION GUIDELINES:
-- For commands that take >5 seconds (test suites, builds, npm install), run in background.
-- For quick commands (<5 seconds like echo, pwd, cat), run in foreground.
-- When running in background, continue with other useful work.
-- Periodically check progress of background tasks.
-- Cancel background tasks that appear stuck or failing.
-
-Always be concise. Execute tools, don't just describe them.
-"""
-
-
-def _log_result(result, label: str) -> None:
-    """Log EvalResult for debugging."""
-    started = result.tools_started()
-    completed = result.tools_completed()
-    bg_started = result.background_started()
-
-    logger.info(
-        f"\n{'='*60}\n[{label}] Event summary:\n"
-        f"  Tools started: {len(started)}\n"
-        f"  Tools completed: {len(completed)}\n"
-        f"  Background started: {len(bg_started)}\n"
-        f"  Tool names: {result.tool_names}\n"
-        f"{'='*60}\n"
-    )
+AGENT_PROMPT = BG_STANDARD
 
 
 # ===========================================================================
@@ -92,7 +56,7 @@ class TestLLMBackgroundDecision:
             "Run this quick command in the sandbox: echo 'HELLO_FOREGROUND'. "
             "This is a fast command, do NOT run it in background."
         )
-        _log_result(result, "quick_foreground")
+        log_result(result, "quick_foreground")
 
         assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
         assert len(result.tools_started()) >= 1, "Should use at least one tool"
@@ -110,7 +74,7 @@ class TestLLMBackgroundDecision:
             "2. While waiting, run 'echo FOREGROUND_DONE' in foreground\n\n"
             "You MUST use background: true for the sleep command."
         )
-        _log_result(result, "long_background")
+        log_result(result, "long_background")
 
         assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
         assert result.has_tool_with_background("daytona_codeact"), \
@@ -151,7 +115,7 @@ class TestForegroundAndIdleWait:
             "4. After foreground tasks, check on the background task using check_background_progress\n\n"
             "Make sure to use background: true for step 1."
         )
-        _log_result(result, "foreground_idle")
+        log_result(result, "foreground_idle")
 
         assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
         assert result.has_tool_with_background("daytona_codeact"), \
@@ -196,7 +160,7 @@ class TestProactiveProgressCheck:
             "4. Report what you see\n\n"
             "You MUST call check_background_progress at step 3."
         )
-        _log_result(result, "progress_check")
+        log_result(result, "progress_check")
 
         assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
         assert result.has_tool_with_background("daytona_codeact"), \
@@ -242,7 +206,7 @@ class TestCancelFailingTask:
             "5. Confirm the cancellation\n\n"
             "You MUST follow all 5 steps in order. Use background: true for step 1."
         )
-        _log_result(result, "cancel_failing")
+        log_result(result, "cancel_failing")
 
         assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
         assert result.has_tool_with_background("daytona_codeact"), \
@@ -289,7 +253,7 @@ class TestCancelHangingTask:
             "5. Report what happened\n\n"
             "You MUST use background: true for step 1 and follow all steps."
         )
-        _log_result(result, "cancel_hanging")
+        log_result(result, "cancel_hanging")
 
         assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
         assert result.has_tool_with_background("daytona_codeact"), \

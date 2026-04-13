@@ -25,8 +25,79 @@ from message.event_printer import MultiAgentEventPrinter
 from message import ConversationMessage, TextBlock, ToolUseBlock
 from message.stream_events import BackgroundTaskCompleted
 from team.builtins import DEVELOPER, TEAM_PLANNER, TEAM_REPLANNER, VALIDATOR
-from team.models import Task, TaskStatus
+from team.models import Task, TaskStatus, WorkItemKind
 from tools.core.runtime import ExecutionMetadata
+
+
+# ---------------------------------------------------------------------------
+# Shared factories
+# ---------------------------------------------------------------------------
+
+def _pydantic_instance(**overrides) -> SimpleNamespace:
+    """Return a minimal pydantic SWE-EVO instance namespace."""
+    base = SimpleNamespace(
+        repo="pydantic/pydantic",
+        instance_id="pydantic__pydantic_v2.6.0b1_v2.6.0",
+        instance_id_swe="pydantic__pydantic_v2.6.0b1_v2.6.0",
+        base_commit="deadbeef",
+        start_version="2.6.0b1",
+        end_version="2.6.0",
+        docker_image="example/image:latest",
+        test_cmds="pytest -q",
+        problem_statement="- bullet\n" * 80,
+        fail_to_pass=["tests/test_foo.py::test_bar"],
+        pass_to_pass=["tests/test_foo.py::test_existing"],
+    )
+    for k, v in overrides.items():
+        setattr(base, k, v)
+    return base
+
+
+def _fake_team_run(**overrides) -> SimpleNamespace:
+    """Return a minimal fake TeamRun namespace."""
+    base = SimpleNamespace(
+        id="team-run-1",
+        sandbox_id="sbx-1",
+        session_id="sess-1",
+        budgets=SimpleNamespace(),
+        dispatcher=SimpleNamespace(graph={}, list_checkpoints=lambda: []),
+        resume=AsyncMock(),
+        wait=AsyncMock(),
+    )
+    for k, v in overrides.items():
+        setattr(base, k, v)
+    return base
+
+
+def _patch_resume_sweevo_common(monkeypatch, *, checkpoint_records=None, checkpoint_patch="") -> None:
+    """Apply the shared monkeypatches needed by resume_sweevo_team tests."""
+    if checkpoint_records is None:
+        checkpoint_records = []
+    monkeypatch.setattr(sweevo_team_runner, "_register_team_builtins", lambda: None)
+    monkeypatch.setattr(sweevo_team_runner, "_build_benchmark_event_store", lambda **_: object())
+    monkeypatch.setattr(
+        sweevo_team_runner,
+        "_prepare_benchmark_session",
+        lambda **_: (SimpleNamespace(session_id="sess-1"), object()),
+    )
+    monkeypatch.setattr(sweevo_team_runner, "_build_agent_overrides", lambda _instance: {})
+    monkeypatch.setattr(sweevo_team_runner, "_build_team_metrics", lambda: {})
+    monkeypatch.setattr(sweevo_team_runner, "_emit_team_runtime_banner", lambda *args, **kwargs: None)
+    monkeypatch.setattr(
+        sweevo_team_runner,
+        "_checkpoint_records_from_store",
+        lambda *args, **kwargs: checkpoint_records,
+    )
+    monkeypatch.setattr(
+        sweevo_team_runner,
+        "_checkpoint_repo_patch_from_store",
+        lambda *args, **kwargs: checkpoint_patch,
+    )
+    monkeypatch.setattr(
+        sweevo_team_runner,
+        "_finalize_team_result",
+        lambda **_: {"status": "ok"},
+    )
 
 
 def test_posthook_ctx_prefers_final_text_over_wrapped_work_result():
@@ -389,70 +460,9 @@ def test_query_ctx_seeds_repo_root_for_daytona_and_ci():
     assert "Do not prepend guessed roots" in ctx.user_message
 
 
-def test_query_ctx_injects_scope_packet_when_ci_is_available(monkeypatch):
-    build_query_ctx, _ = _make_context_builders("sbx-1", repo_dir="/testbed")
-    fake_ci = object()
-
-    monkeypatch.setattr(sweevo_team_runner, "get_code_intelligence", lambda **_: fake_ci)
-    monkeypatch.setattr(
-        sweevo_team_runner,
-        "build_scope_packet",
-        lambda **_: {
-            "coherence_token": "token-1",
-            "freshness": "fresh",
-            "scope_paths": ["src/module.py"],
-        },
-    )
-    monkeypatch.setattr(
-        sweevo_team_runner,
-        "render_scope_packet",
-        lambda packet: f"SCOPE {packet['coherence_token']}",
-    )
-
-    ctx = build_query_ctx(
-        SimpleNamespace(name="developer"),
-        SimpleNamespace(
-            id="TR1",
-            sandbox_id="sbx-1",
-            user_request="Root prompt",
-            dispatcher=SimpleNamespace(
-                artifact_store=SimpleNamespace(load=lambda _ref: None)
-            ),
-            budgets=None,
-            project_context=None,
-        ),
-        Task(
-            id="W1",
-            team_run_id="T1",
-            agent_name="developer",
-            status=TaskStatus.PENDING,
-            task="task",
-            payload={"prompt": "Fix it", "files_to_edit": ["src/module.py"]},
-        ),
-    )
-
-    assert ctx.tool_metadata["scope_packet"]["coherence_token"] == "token-1"
-    assert ctx.tool_metadata["coherence_token"] == "token-1"
-    assert ctx.tool_metadata["team_mode_enabled"] is True
-    assert ctx.tool_metadata["require_declared_shell_outputs"] is True
-    assert ctx.tool_metadata["verification_surface_write_enforcement"] == "warn"
-    assert ctx.user_message.startswith("SCOPE token-1\n\n")
-
 
 def test_root_prompt_points_to_skill_owned_workflow_policy():
-    instance = SimpleNamespace(
-        repo="pydantic/pydantic",
-        instance_id="pydantic__pydantic_v2.6.0b1_v2.6.0",
-        instance_id_swe="pydantic__pydantic_v2.6.0b1_v2.6.0",
-        base_commit="deadbeef",
-        start_version="2.6.0b1",
-        end_version="2.6.0",
-        docker_image="example/image:latest",
-        test_cmds="pytest -q",
-        problem_statement="- bullet\n" * 80,
-        fail_to_pass=["tests/test_foo.py::test_bar"],
-        pass_to_pass=["tests/test_foo.py::test_existing"],
-    )
+    instance = _pydantic_instance()
 
     prompt = _build_root_prompt(instance, "/repo")
 
@@ -471,18 +481,7 @@ def test_root_prompt_points_to_skill_owned_workflow_policy():
 
 def test_agent_overrides_attach_sweevo_skills_without_prompt_duplication():
     sweevo_team_runner._register_team_builtins()
-    instance = SimpleNamespace(
-        repo="pydantic/pydantic",
-        instance_id="pydantic__pydantic_v2.6.0b1_v2.6.0",
-        instance_id_swe="pydantic__pydantic_v2.6.0b1_v2.6.0",
-        start_version="2.6.0b1",
-        end_version="2.6.0",
-        docker_image="example/image:latest",
-        test_cmds="pytest -q",
-        problem_statement="- bullet\n" * 80,
-        fail_to_pass=["tests/test_foo.py::test_bar"],
-        pass_to_pass=["tests/test_foo.py::test_existing"],
-    )
+    instance = _pydantic_instance()
 
     overrides = _build_agent_overrides(instance)
 
@@ -502,30 +501,25 @@ def test_agent_overrides_attach_sweevo_skills_without_prompt_duplication():
 
 
 def test_planner_runtime_limits_preserve_shared_agent_budget():
-    large_single_target = SimpleNamespace(
+    large_single_target = _pydantic_instance(
         instance_id="large-one",
         instance_id_swe="large-one",
         repo="example/repo",
         start_version="1.0.0",
         end_version="1.0.1",
-        docker_image="example/image:latest",
-        test_cmds="pytest -q",
         fail_to_pass=["tests/test_foo.py::test_bar"],
         pass_to_pass=[],
-        problem_statement="- bullet\n" * 80,
     )
     assert _derive_planner_runtime_limits(large_single_target) == {
         "tool_call_limit": 100,
     }
 
-    medium_multi_target = SimpleNamespace(
+    medium_multi_target = _pydantic_instance(
         instance_id="medium-three",
         instance_id_swe="medium-three",
         repo="example/repo",
         start_version="1.0.0",
         end_version="1.0.1",
-        docker_image="example/image:latest",
-        test_cmds="pytest -q",
         fail_to_pass=["a", "b", "c"],
         pass_to_pass=[],
         problem_statement="- bullet\n" * 10,
@@ -536,15 +530,9 @@ def test_planner_runtime_limits_preserve_shared_agent_budget():
 
 
 def test_sweevo_budgets_follow_instance_size_ceiling():
-    instance = SimpleNamespace(
-        repo="pydantic/pydantic",
+    instance = _pydantic_instance(
         instance_id="wide-plan",
         instance_id_swe="wide-plan",
-        start_version="2.6.0b1",
-        end_version="2.6.0",
-        docker_image="example/image:latest",
-        test_cmds="pytest -q",
-        problem_statement="- bullet\n" * 80,
         fail_to_pass=[f"tests/test_{i}.py::test_case" for i in range(20)],
         pass_to_pass=["tests/test_guard.py::test_existing"],
     )
@@ -604,40 +592,11 @@ def test_enforce_validation_evidence_requires_daytona_codeact():
 
 
 def test_resume_sweevo_team_uses_default_executor_factory_signature(monkeypatch):
-    instance = SimpleNamespace(
-        repo="pydantic/pydantic",
-        instance_id="pydantic__pydantic_v2.6.0b1_v2.6.0",
-        instance_id_swe="pydantic__pydantic_v2.6.0b1_v2.6.0",
-        start_version="2.6.0b1",
-        end_version="2.6.0",
-        docker_image="example/image:latest",
-        test_cmds="pytest -q",
-        problem_statement="- bullet\n" * 80,
-        fail_to_pass=["tests/test_foo.py::test_bar"],
-        pass_to_pass=["tests/test_foo.py::test_existing"],
-    )
-    fake_tr = SimpleNamespace(
-        id="team-run-1",
-        sandbox_id="sbx-1",
-        session_id="sess-1",
-        budgets=SimpleNamespace(),
-        dispatcher=SimpleNamespace(graph={}, list_checkpoints=lambda: []),
-        resume=AsyncMock(),
-        wait=AsyncMock(),
-    )
+    instance = _pydantic_instance()
+    fake_tr = _fake_team_run()
 
-    monkeypatch.setattr(sweevo_team_runner, "_register_team_builtins", lambda: None)
-    monkeypatch.setattr(sweevo_team_runner, "_build_benchmark_event_store", lambda **_: object())
-    monkeypatch.setattr(
-        sweevo_team_runner,
-        "_prepare_benchmark_session",
-        lambda **_: (SimpleNamespace(session_id="sess-1"), object()),
-    )
-    monkeypatch.setattr(sweevo_team_runner, "_build_agent_overrides", lambda _instance: {})
-    monkeypatch.setattr(sweevo_team_runner, "_build_team_metrics", lambda: {})
-    monkeypatch.setattr(sweevo_team_runner, "_emit_team_runtime_banner", lambda *args, **kwargs: None)
-    monkeypatch.setattr(sweevo_team_runner, "_checkpoint_records_from_store", lambda *args, **kwargs: [])
-    monkeypatch.setattr(sweevo_team_runner, "_checkpoint_repo_patch_from_store", lambda *args, **kwargs: "")
+    _patch_resume_sweevo_common(monkeypatch)
+
     def fake_resume_from(_store, _team_run_id, *, checkpoint_id=None):
         assert checkpoint_id is None
         return fake_tr
@@ -670,11 +629,6 @@ def test_resume_sweevo_team_uses_default_executor_factory_signature(monkeypatch)
         return "executor-factory"
 
     monkeypatch.setattr(sweevo_team_runner, "_make_executor_factory", fake_make_executor_factory)
-    monkeypatch.setattr(
-        sweevo_team_runner,
-        "_finalize_team_result",
-        lambda **_: {"status": "ok"},
-    )
 
     result = asyncio.run(
         sweevo_team_runner.resume_sweevo_team(
@@ -695,47 +649,13 @@ def test_resume_sweevo_team_uses_default_executor_factory_signature(monkeypatch)
 
 
 def test_resume_sweevo_team_restores_checkpoint_repo_patch(monkeypatch):
-    instance = SimpleNamespace(
-        repo="pydantic/pydantic",
-        instance_id="pydantic__pydantic_v2.6.0b1_v2.6.0",
-        instance_id_swe="pydantic__pydantic_v2.6.0b1_v2.6.0",
-        start_version="2.6.0b1",
-        end_version="2.6.0",
-        docker_image="example/image:latest",
-        test_cmds="pytest -q",
-        problem_statement="- bullet\n" * 80,
-        fail_to_pass=["tests/test_foo.py::test_bar"],
-        pass_to_pass=["tests/test_foo.py::test_existing"],
-    )
-    fake_tr = SimpleNamespace(
-        id="team-run-1",
-        sandbox_id="sbx-1",
-        session_id="sess-1",
-        budgets=SimpleNamespace(),
-        dispatcher=SimpleNamespace(graph={}, list_checkpoints=lambda: []),
-        resume=AsyncMock(),
-        wait=AsyncMock(),
-    )
+    instance = _pydantic_instance()
+    fake_tr = _fake_team_run()
 
-    monkeypatch.setattr(sweevo_team_runner, "_register_team_builtins", lambda: None)
-    monkeypatch.setattr(sweevo_team_runner, "_build_benchmark_event_store", lambda **_: object())
-    monkeypatch.setattr(
-        sweevo_team_runner,
-        "_prepare_benchmark_session",
-        lambda **_: (SimpleNamespace(session_id="sess-1"), object()),
-    )
-    monkeypatch.setattr(sweevo_team_runner, "_build_agent_overrides", lambda _instance: {})
-    monkeypatch.setattr(sweevo_team_runner, "_build_team_metrics", lambda: {})
-    monkeypatch.setattr(sweevo_team_runner, "_emit_team_runtime_banner", lambda *args, **kwargs: None)
-    monkeypatch.setattr(
-        sweevo_team_runner,
-        "_checkpoint_records_from_store",
-        lambda *args, **kwargs: [{"id": "cp-1", "label": "durable:complete:developer:dev1", "sequence": 1}],
-    )
-    monkeypatch.setattr(
-        sweevo_team_runner,
-        "_checkpoint_repo_patch_from_store",
-        lambda *args, **kwargs: "diff --git a/x b/x",
+    _patch_resume_sweevo_common(
+        monkeypatch,
+        checkpoint_records=[{"id": "cp-1", "label": "durable:complete:developer:dev1", "sequence": 1}],
+        checkpoint_patch="diff --git a/x b/x",
     )
     monkeypatch.setattr(
         sweevo_team_runner.TeamRun,
@@ -746,11 +666,6 @@ def test_resume_sweevo_team_restores_checkpoint_repo_patch(monkeypatch):
     monkeypatch.setattr(sweevo_team_runner, "ensure_sweevo_test_patch", AsyncMock())
     monkeypatch.setattr(sweevo_team_runner, "apply_sweevo_repo_patch", AsyncMock())
     monkeypatch.setattr(sweevo_team_runner, "_make_executor_factory", lambda *args, **kwargs: "executor-factory")
-    monkeypatch.setattr(
-        sweevo_team_runner,
-        "_finalize_team_result",
-        lambda **_: {"status": "ok"},
-    )
 
     result = asyncio.run(
         sweevo_team_runner.resume_sweevo_team(
@@ -774,47 +689,21 @@ def test_resume_sweevo_team_restores_checkpoint_repo_patch(monkeypatch):
 
 
 def test_resume_sweevo_team_reapplies_benchmark_patch_when_checkpoint_patch_missing(monkeypatch):
-    instance = SimpleNamespace(
+    instance = _pydantic_instance(
         repo="dask/dask",
         instance_id="dask__dask_2023.3.2_2023.4.0",
         instance_id_swe="dask__dask_2023.3.2_2023.4.0",
         start_version="2023.3.2",
         end_version="2023.4.0",
-        docker_image="example/image:latest",
-        test_cmds="pytest -q",
-        problem_statement="- bullet\n" * 80,
         fail_to_pass=["tests/test_groupby.py::test_value_counts"],
         pass_to_pass=["tests/test_groupby.py::test_existing"],
     )
-    fake_tr = SimpleNamespace(
-        id="team-run-1",
-        sandbox_id="sbx-1",
-        session_id="sess-1",
-        budgets=SimpleNamespace(),
-        dispatcher=SimpleNamespace(graph={}, list_checkpoints=lambda: []),
-        resume=AsyncMock(),
-        wait=AsyncMock(),
-    )
+    fake_tr = _fake_team_run()
 
-    monkeypatch.setattr(sweevo_team_runner, "_register_team_builtins", lambda: None)
-    monkeypatch.setattr(sweevo_team_runner, "_build_benchmark_event_store", lambda **_: object())
-    monkeypatch.setattr(
-        sweevo_team_runner,
-        "_prepare_benchmark_session",
-        lambda **_: (SimpleNamespace(session_id="sess-1"), object()),
-    )
-    monkeypatch.setattr(sweevo_team_runner, "_build_agent_overrides", lambda _instance: {})
-    monkeypatch.setattr(sweevo_team_runner, "_build_team_metrics", lambda: {})
-    monkeypatch.setattr(sweevo_team_runner, "_emit_team_runtime_banner", lambda *args, **kwargs: None)
-    monkeypatch.setattr(
-        sweevo_team_runner,
-        "_checkpoint_records_from_store",
-        lambda *args, **kwargs: [{"id": "cp-1", "label": "durable:complete:validator:val1", "sequence": 1}],
-    )
-    monkeypatch.setattr(
-        sweevo_team_runner,
-        "_checkpoint_repo_patch_from_store",
-        lambda *args, **kwargs: "",
+    _patch_resume_sweevo_common(
+        monkeypatch,
+        checkpoint_records=[{"id": "cp-1", "label": "durable:complete:validator:val1", "sequence": 1}],
+        checkpoint_patch="",
     )
     monkeypatch.setattr(
         sweevo_team_runner.TeamRun,
@@ -825,11 +714,6 @@ def test_resume_sweevo_team_reapplies_benchmark_patch_when_checkpoint_patch_miss
     monkeypatch.setattr(sweevo_team_runner, "ensure_sweevo_test_patch", AsyncMock())
     monkeypatch.setattr(sweevo_team_runner, "apply_sweevo_repo_patch", AsyncMock())
     monkeypatch.setattr(sweevo_team_runner, "_make_executor_factory", lambda *args, **kwargs: "executor-factory")
-    monkeypatch.setattr(
-        sweevo_team_runner,
-        "_finalize_team_result",
-        lambda **_: {"status": "ok"},
-    )
 
     result = asyncio.run(
         sweevo_team_runner.resume_sweevo_team(

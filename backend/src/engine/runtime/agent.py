@@ -238,9 +238,9 @@ def _build_agent_tool_registry(
     # during the main work phase and exposes them during the posthook
     # phase. Typically these are submission tools (done, submit_plan, etc.).
     if agent_def and agent_def.posthook:
-        from tools.posthook.toolkit import PosthookToolkit
+        from tools.posthook.toolkit import PosthookTools
 
-        posthook_tk = PosthookToolkit.from_context(toolkit_ctx)
+        posthook_tk = PosthookTools.from_context(toolkit_ctx)
         posthook_names = set(agent_def.posthook)
         for tool in posthook_tk.list_tools():
             if tool.name in posthook_names:

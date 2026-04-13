@@ -6,6 +6,7 @@ import logging
 import os
 import re
 import shlex
+from typing import Any
 
 from team._path_utils import normalize_scope_paths
 from tools.core.ci_runtime import sync_deleted_file, sync_write_to_ci

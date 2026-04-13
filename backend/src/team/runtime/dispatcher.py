@@ -105,6 +105,17 @@ class Dispatcher:
             )
         )
 
+    def _charge_tasks(self, n: int = 1) -> None:
+        """Increment tasks_used by n and emit the budget event."""
+        self.budget_state.tasks_used += n
+        self._emit_budget()
+
+    async def _mark_failed_and_cascade(self, wi_id: str, reason: str) -> None:
+        """Mark a work item failed, cancel its dependants, and refresh the graph."""
+        await self.store.mark_failed(wi_id, self.team_run_id, reason)
+        await self.store.cascade_cancel_recursive(self.team_run_id, wi_id)
+        await self.refresh_graph()
+
     def new_id(self) -> str:
         return str(uuid.uuid4())
 
@@ -190,25 +201,13 @@ class Dispatcher:
         from agents.registry import has_role as _has_role
 
         if _has_role(rec.agent_name, "planner") and result.submitted_plan is None:
-            await self.store.mark_failed(
-                wi_id,
-                self.team_run_id,
-                "InvalidPlan: expandable work item did not submit a plan",
-            )
-            await self.store.cascade_cancel_recursive(self.team_run_id, wi_id)
-            await self.refresh_graph()
+            await self._mark_failed_and_cascade(wi_id, "InvalidPlan: expandable work item did not submit a plan")
             return []
 
         if result.submitted_plan is not None:
             new_depth = (rec.depth or 0) + 1
             if new_depth > self.budgets.max_depth:
-                await self.store.mark_failed(
-                    wi_id,
-                    self.team_run_id,
-                    f"InvalidPlan: plan would exceed max_depth={self.budgets.max_depth}",
-                )
-                await self.store.cascade_cancel_recursive(self.team_run_id, wi_id)
-                await self.refresh_graph()
+                await self._mark_failed_and_cascade(wi_id, f"InvalidPlan: plan would exceed max_depth={self.budgets.max_depth}")
                 return []
 
             adj = await self.store.get_adjacency(self.team_run_id)
@@ -220,13 +219,7 @@ class Dispatcher:
                 known_external_deps=set(adj.keys()),
             )
             if issues:
-                await self.store.mark_failed(
-                    wi_id,
-                    self.team_run_id,
-                    "InvalidPlan: " + "; ".join(i["msg"] for i in issues),
-                )
-                await self.store.cascade_cancel_recursive(self.team_run_id, wi_id)
-                await self.refresh_graph()
+                await self._mark_failed_and_cascade(wi_id, "InvalidPlan: " + "; ".join(i["msg"] for i in issues))
                 return []
 
             local_to_global: dict[str, str] = {
@@ -265,9 +258,7 @@ class Dispatcher:
                 )
 
             if self.budget_state.tasks_used + len(new_items) > self.budgets.max_tasks:
-                await self.store.mark_failed(wi_id, self.team_run_id, "BudgetExceeded: max_tasks")
-                await self.store.cascade_cancel_recursive(self.team_run_id, wi_id)
-                await self.refresh_graph()
+                await self._mark_failed_and_cascade(wi_id, "BudgetExceeded: max_tasks")
                 return []
 
             await self.store.insert_plan(
@@ -433,8 +424,7 @@ class Dispatcher:
                 parent_depth=max(0, target_depth - 1),
                 parent_root_id=target_root_id or None,
             )
-            self.budget_state.tasks_used += len(specs)
-            self._emit_budget()
+            self._charge_tasks(len(specs))
 
         await self.refresh_graph()
         return {"added": len(specs), "cancelled": len(cancel_ids)}
@@ -470,6 +460,10 @@ class Dispatcher:
             parent_id=parent_id,
             since=since,
         )
+
+    async def sibling_stats(self, parent_id: str | None) -> dict[str, int]:
+        """Aggregate status counts for sibling tasks under the same parent."""
+        return await self.store.sibling_stats(self.team_run_id, parent_id)
 
     async def get_task_by_id(self, task_id: str) -> Task | None:
         """Fetch a task by ID from durable storage and refresh the cache."""

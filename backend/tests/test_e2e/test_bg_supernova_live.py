@@ -19,34 +19,15 @@ import textwrap
 import pytest
 
 from engine.testing.eval_agent import EvalAgent
+from tests.test_e2e.bg_prompts import BG_SUPERNOVA
 from tests.test_e2e.conftest import create_eval_agent, create_test_sandbox, delete_test_sandbox
+from tests.test_e2e.helpers import log_result
 
 logger = logging.getLogger(__name__)
 
 pytestmark = [pytest.mark.e2e, pytest.mark.live]
 
-AGENT_PROMPT = """\
-You are a senior developer with a remote Daytona sandbox.
-
-You MUST use tools for every action. Never describe what you'd do — execute it.
-Use whichever tools are appropriate for the task.
-
-For long-running commands (tests, builds), run them in background with "background": true,
-then use wait_for_background_task to wait for the final result.
-
-You also have check_background_progress, which is non-blocking and now returns a
-LIVE TAIL of stdout lines that the background command has emitted so far. Use it
-to peek at partial output while a task is still running and make autonomous
-decisions early — for example:
-  * If the live tail already shows an obvious failure (FAIL, IMPORT ERROR, SYNTAX
-    ERROR, STAGE FAILED, traceback...), you may cancel the task with
-    cancel_background_task, fix the bug, and re-run instead of waiting for the
-    full timeout.
-  * If the live tail looks healthy, keep waiting with wait_for_background_task.
-
-You are an autonomous agent. Analyze failures, reason about root causes, apply fixes,
-and verify your fixes work. Keep iterating until the problem is solved.
-"""
+AGENT_PROMPT = BG_SUPERNOVA
 
 
 def _verify_tests_pass(
@@ -65,26 +46,6 @@ def _verify_tests_pass(
     output = getattr(resp, "result", "") or getattr(resp, "stdout", "") or ""
     exit_code = getattr(resp, "exit_code", None)
     return (marker in output and (exit_code == 0 or exit_code is None)), output
-
-
-def _log_result(result, label: str) -> None:
-    waits = result.tool_count("wait_for_background_task")
-    checks = result.tool_count("check_background_progress")
-    writes = result.tool_count("daytona_write_file")
-    bg_started = len(result.background_started())
-    bg_completed = len(result.background_completed())
-
-    logger.info(
-        f"\n{'='*60}\n[{label}] Supernova summary:\n"
-        f"  Tools used: {len(result.tool_calls)}\n"
-        f"  Background started: {bg_started}\n"
-        f"  Background completed: {bg_completed}\n"
-        f"  Progress checks: {checks}\n"
-        f"  Wait calls: {waits}\n"
-        f"  File writes: {writes}\n"
-        f"  Tool sequence: {result.tool_names}\n"
-        f"{'='*60}"
-    )
 
 
 # ===========================================================================
@@ -400,19 +361,55 @@ FLAKY_INITIAL_CONFIG = json.dumps({
 
 
 # ===========================================================================
+# Shared base for all Supernova test classes
+# ===========================================================================
+
+
+class _SupernovaBase:
+    """Shared helpers for Supernova autonomous-fix test classes."""
+
+    _sandbox_label: str  # set by each subclass
+
+    @pytest.fixture(scope="class")
+    def sandbox(self):
+        sb = create_test_sandbox(self._sandbox_label)
+        yield sb
+        delete_test_sandbox(sb["id"])
+
+    async def _run_and_verify(
+        self,
+        sandbox,
+        prompt: str,
+        log_label: str,
+        verify_command: str,
+        success_marker: str,
+    ) -> None:
+        agent = create_eval_agent(
+            system_prompt=AGENT_PROMPT,
+            sandbox_id=sandbox["id"],
+            enable_background_tasks=True,
+        )
+        result = await agent.invoke(prompt)
+        log_result(result, log_label)
+
+        passed, output = _verify_tests_pass(
+            sandbox["id"], verify_command, success_marker
+        )
+        assert passed, (
+            f"Tests still failing after agent iteration. Output:\n{output[-1500:]}"
+        )
+
+
+# ===========================================================================
 # Test 1: Cascading calculator bugs — 3 iterations to fix all
 # ===========================================================================
 
 
 @pytest.mark.skipif(not EvalAgent.has_all(), reason="API + Daytona both required")
-class TestSupernovaCascadingBugs:
+class TestSupernovaCascadingBugs(_SupernovaBase):
     """Agent fixes 3 cascading bugs in a calculator, one per test run iteration."""
 
-    @pytest.fixture(scope="class")
-    def sandbox(self):
-        sb = create_test_sandbox("nova-cascade")
-        yield sb
-        delete_test_sandbox(sb["id"])
+    _sandbox_label = "nova-cascade"
 
     @pytest.fixture(scope="class", autouse=True)
     def seed_files(self, sandbox):
@@ -429,34 +426,24 @@ class TestSupernovaCascadingBugs:
     @pytest.mark.asyncio
     async def test_autonomous_cascading_fix_cycle(self, sandbox):
         """Agent gets buggy code + failing tests. No guidance. Fix all bugs."""
-        agent = create_eval_agent(
-            system_prompt=AGENT_PROMPT,
-            sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
-        )
-        result = await agent.invoke(
-            "There is a Python project at /home/daytona/project/ with:\n"
-            "- calc.py — a calculator module with add, subtract, multiply, divide\n"
-            "- test_calc.py — a test suite that validates all operations\n\n"
-            "The tests are currently failing. Your job:\n"
-            "1. Run the test suite in background and wait for results\n"
-            "2. Read the output, diagnose what's wrong\n"
-            "3. Fix the bug in calc.py\n"
-            "4. Re-run the tests and wait for results\n"
-            "5. Repeat until ALL tests pass\n\n"
-            "The test suite takes ~20 seconds to run. Use background execution "
-            "and wait_for_background_task."
-        )
-        _log_result(result, "cascading_bugs")
-
-        # Ground truth: re-run the tests and verify they actually pass
-        passed, output = _verify_tests_pass(
-            sandbox["id"],
-            "cd /home/daytona/project && python3 test_calc.py",
-            "ALL TESTS PASSED",
-        )
-        assert passed, (
-            f"Tests still failing after agent iteration. Output:\n{output[-1500:]}"
+        await self._run_and_verify(
+            sandbox,
+            prompt=(
+                "There is a Python project at /home/daytona/project/ with:\n"
+                "- calc.py — a calculator module with add, subtract, multiply, divide\n"
+                "- test_calc.py — a test suite that validates all operations\n\n"
+                "The tests are currently failing. Your job:\n"
+                "1. Run the test suite in background and wait for results\n"
+                "2. Read the output, diagnose what's wrong\n"
+                "3. Fix the bug in calc.py\n"
+                "4. Re-run the tests and wait for results\n"
+                "5. Repeat until ALL tests pass\n\n"
+                "The test suite takes ~20 seconds to run. Use background execution "
+                "and wait_for_background_task."
+            ),
+            log_label="cascading_bugs",
+            verify_command="cd /home/daytona/project && python3 test_calc.py",
+            success_marker="ALL TESTS PASSED",
         )
 
 
@@ -466,14 +453,10 @@ class TestSupernovaCascadingBugs:
 
 
 @pytest.mark.skipif(not EvalAgent.has_all(), reason="API + Daytona both required")
-class TestSupernovaPipelineDebug:
+class TestSupernovaPipelineDebug(_SupernovaBase):
     """Agent debugs a 3-stage CI pipeline that fails at different stages."""
 
-    @pytest.fixture(scope="class")
-    def sandbox(self):
-        sb = create_test_sandbox("nova-pipeline")
-        yield sb
-        delete_test_sandbox(sb["id"])
+    _sandbox_label = "nova-pipeline"
 
     @pytest.fixture(scope="class", autouse=True)
     def seed_files(self, sandbox):
@@ -493,29 +476,19 @@ class TestSupernovaPipelineDebug:
     @pytest.mark.asyncio
     async def test_autonomous_pipeline_debug(self, sandbox):
         """Agent gets a failing CI pipeline. Must fix bugs stage by stage."""
-        agent = create_eval_agent(
-            system_prompt=AGENT_PROMPT,
-            sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
-        )
-        result = await agent.invoke(
-            "There is a webapp project at /home/daytona/webapp/ with:\n"
-            "- app.py, routes.py, models.py — source code\n"
-            "- test_webapp.py — unit tests\n"
-            "- pipeline.sh — a CI pipeline that runs lint, tests, then integration check\n\n"
-            "The pipeline is failing. Run it and fix all issues until it passes.\n"
-            "The pipeline takes ~10 seconds per run. Use background execution."
-        )
-        _log_result(result, "pipeline_debug")
-
-        # Ground truth: re-run the pipeline and verify it actually passes
-        passed, output = _verify_tests_pass(
-            sandbox["id"],
-            "cd /home/daytona/webapp && bash pipeline.sh",
-            "ALL STAGES PASSED",
-        )
-        assert passed, (
-            f"Pipeline still failing after agent iteration. Output:\n{output[-1500:]}"
+        await self._run_and_verify(
+            sandbox,
+            prompt=(
+                "There is a webapp project at /home/daytona/webapp/ with:\n"
+                "- app.py, routes.py, models.py — source code\n"
+                "- test_webapp.py — unit tests\n"
+                "- pipeline.sh — a CI pipeline that runs lint, tests, then integration check\n\n"
+                "The pipeline is failing. Run it and fix all issues until it passes.\n"
+                "The pipeline takes ~10 seconds per run. Use background execution."
+            ),
+            log_label="pipeline_debug",
+            verify_command="cd /home/daytona/webapp && bash pipeline.sh",
+            success_marker="ALL STAGES PASSED",
         )
 
 
@@ -525,14 +498,10 @@ class TestSupernovaPipelineDebug:
 
 
 @pytest.mark.skipif(not EvalAgent.has_all(), reason="API + Daytona both required")
-class TestSupernovaConfigTuning:
+class TestSupernovaConfigTuning(_SupernovaBase):
     """Agent iteratively tunes config by reading test output until all tests pass."""
 
-    @pytest.fixture(scope="class")
-    def sandbox(self):
-        sb = create_test_sandbox("nova-config")
-        yield sb
-        delete_test_sandbox(sb["id"])
+    _sandbox_label = "nova-config"
 
     @pytest.fixture(scope="class", autouse=True)
     def seed_files(self, sandbox):
@@ -542,40 +511,26 @@ class TestSupernovaConfigTuning:
         svc = get_sandbox_service()
         sb = svc.get_sandbox_object(sandbox["id"])
         sb.process.exec("mkdir -p /home/daytona/flaky")
-        sb.fs.upload_file(
-            FLAKY_TEST_SCRIPT.encode(), "/home/daytona/flaky/run_tests.py"
-        )
-        sb.fs.upload_file(
-            FLAKY_INITIAL_CONFIG.encode(), "/home/daytona/flaky/config.json"
-        )
+        sb.fs.upload_file(FLAKY_TEST_SCRIPT.encode(), "/home/daytona/flaky/run_tests.py")
+        sb.fs.upload_file(FLAKY_INITIAL_CONFIG.encode(), "/home/daytona/flaky/config.json")
         sb.process.exec("chmod +x /home/daytona/flaky/run_tests.py")
 
     @pytest.mark.asyncio
     async def test_autonomous_config_tuning_cycle(self, sandbox):
         """Agent reads test failures, adjusts config, re-runs. 3 config bugs to fix."""
-        agent = create_eval_agent(
-            system_prompt=AGENT_PROMPT,
-            sandbox_id=sandbox["id"],
-            enable_background_tasks=True,
-        )
-        result = await agent.invoke(
-            "There is a test suite at /home/daytona/flaky/ with:\n"
-            "- run_tests.py — integration tests that read config.json\n"
-            "- config.json — configuration that controls test behavior\n\n"
-            "The tests are failing. Run the test suite, read the output to understand "
-            "why each test fails, update config.json to fix the issue, and re-run.\n"
-            "Keep iterating until all 4 tests pass.\n\n"
-            "The test suite takes ~12 seconds per run. Use background execution "
-            "and wait_for_background_task."
-        )
-        _log_result(result, "config_tuning")
-
-        # Ground truth: re-run the tests and verify they actually pass
-        passed, output = _verify_tests_pass(
-            sandbox["id"],
-            "cd /home/daytona/flaky && python3 run_tests.py",
-            "ALL 4 TESTS PASSED",
-        )
-        assert passed, (
-            f"Tests still failing after agent iteration. Output:\n{output[-1500:]}"
+        await self._run_and_verify(
+            sandbox,
+            prompt=(
+                "There is a test suite at /home/daytona/flaky/ with:\n"
+                "- run_tests.py — integration tests that read config.json\n"
+                "- config.json — configuration that controls test behavior\n\n"
+                "The tests are failing. Run the test suite, read the output to understand "
+                "why each test fails, update config.json to fix the issue, and re-run.\n"
+                "Keep iterating until all 4 tests pass.\n\n"
+                "The test suite takes ~12 seconds per run. Use background execution "
+                "and wait_for_background_task."
+            ),
+            log_label="config_tuning",
+            verify_command="cd /home/daytona/flaky && python3 run_tests.py",
+            success_marker="ALL 4 TESTS PASSED",
         )

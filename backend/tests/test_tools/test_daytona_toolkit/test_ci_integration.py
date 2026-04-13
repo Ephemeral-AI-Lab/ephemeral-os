@@ -11,12 +11,10 @@ from tools.core.ci_runtime import (
     abort_ci_write,
     finalize_ci_write,
     get_ci_service,
-    prepare_declared_shell_outputs,
     prepare_ci_write,
     prime_cache_after_write,
     record_edit_in_arbiter,
 )
-from tools.daytona_toolkit.scope_builder import build_scope_packet
 
 
 def _ctx(metadata=None) -> ToolExecutionContext:
@@ -65,209 +63,67 @@ def test_prime_cache_swallows_exceptions():
 
 
 # ---------------------------------------------------------------------------
-# finalize_ci_write
+# prepare_ci_write
 # ---------------------------------------------------------------------------
 
 
-def test_prepare_ci_write_refreshes_scope_baseline_after_reservation(monkeypatch):
+def test_prepare_ci_write_returns_none_without_service():
+    ctx = _ctx()
+    result, packet, err = prepare_ci_write(ctx, "/repo/file.py")
+    assert result is None
+    assert err is None
+
+
+def test_prepare_ci_write_calls_service():
     svc = MagicMock()
     prepared = SimpleNamespace(file_path="/repo/file.py", token_id="tok-1")
     svc.prepare_write.return_value = prepared
-    packets = [
-        {"scope_paths": ["src"], "coherence_token": "base-token"},
-        {"scope_paths": ["src"], "coherence_token": "reserved-token"},
-    ]
-    monkeypatch.setattr(
-        "tools.core.ci_runtime.build_scope_packet_for_context",
-        lambda *args, **kwargs: dict(packets.pop(0)),
-    )
-    ctx = _ctx(
-        {
-            "ci_service": svc,
-            "agent_run_id": "worker-1",
-            "scope_packet": {"scope_paths": ["/repo"], "coherence_token": "base-token"},
-            "coherence_token": "base-token",
-        }
-    )
+    ctx = _ctx({"ci_service": svc, "agent_run_id": "worker-1"})
 
     result, packet, err = prepare_ci_write(ctx, "/repo/file.py")
 
     assert err is None
     assert result is prepared
-    assert packet["coherence_token"] == "reserved-token"
-    assert ctx.metadata["scope_packet"]["coherence_token"] == "reserved-token"
-    assert ctx.metadata["coherence_token"] == "reserved-token"
-
-
-def test_prepare_ci_write_allows_scope_drift_when_opted_in(monkeypatch):
-    svc = MagicMock()
-    prepared = SimpleNamespace(file_path="/repo/file.py", token_id="tok-1")
-    svc.prepare_write.return_value = prepared
-    packets = [
-        {"scope_paths": ["src"], "coherence_token": "drifted-token"},
-        {"scope_paths": ["src"], "coherence_token": "reserved-token"},
-    ]
-    monkeypatch.setattr(
-        "tools.core.ci_runtime.build_scope_packet_for_context",
-        lambda *args, **kwargs: dict(packets.pop(0)),
-    )
-    ctx = _ctx(
-        {
-            "ci_service": svc,
-            "agent_run_id": "worker-1",
-            "scope_packet": {"scope_paths": ["/repo"], "coherence_token": "base-token"},
-            "coherence_token": "base-token",
-        }
-    )
-
-    result, packet, err = prepare_ci_write(
-        ctx,
-        "/repo/file.py",
-        allow_scope_drift=True,
-    )
-
-    assert err is None
-    assert result is prepared
-    assert packet["coherence_token"] == "reserved-token"
-    assert ctx.metadata["scope_packet"]["coherence_token"] == "reserved-token"
-    assert ctx.metadata["coherence_token"] == "reserved-token"
-
-
-def test_prepare_ci_write_auto_expands_scope_for_adjacent_write(monkeypatch):
-    svc = MagicMock()
-    prepared = SimpleNamespace(file_path="/repo/tests/test_owned.py", token_id="tok-1")
-    svc.prepare_write.return_value = prepared
-    packets = [
-        {
-            "scope_paths": ["/repo/src/owned.py", "/repo/tests/test_owned.py"],
-            "coherence_token": "base-token",
-        },
-        {
-            "scope_paths": ["/repo/src/owned.py", "/repo/tests/test_owned.py"],
-            "coherence_token": "reserved-token",
-        },
-    ]
-    monkeypatch.setattr(
-        "tools.core.ci_runtime.build_scope_packet_for_context",
-        lambda *args, **kwargs: dict(packets.pop(0)),
-    )
-    ctx = _ctx(
-        {
-            "ci_service": svc,
-            "scope_packet": {
-                "scope_paths": ["/repo/src/owned.py"],
-                "coherence_token": "base-token",
-            },
-            "coherence_token": "base-token",
-            "agent_run_id": "worker-1",
-        }
-    )
-
-    result, packet, err = prepare_ci_write(ctx, "/repo/tests/test_owned.py")
-
-    assert err is None
-    assert result is prepared
-    assert packet["scope_paths"] == ["/repo/src/owned.py", "/repo/tests/test_owned.py"]
-    assert ctx.metadata["scope_packet"]["scope_paths"] == [
-        "/repo/src/owned.py",
-        "/repo/tests/test_owned.py",
-    ]
     svc.prepare_write.assert_called_once_with(
-        "/repo/tests/test_owned.py",
+        "/repo/file.py",
         agent_id="worker-1",
         expected_hash="",
         allow_missing=True,
     )
 
 
-def test_prepare_declared_shell_outputs_allows_scope_drift(monkeypatch):
+def test_prepare_ci_write_reports_failure():
     svc = MagicMock()
-    prepared = SimpleNamespace(file_path="/repo/new.py", token_id="tok-1")
-    svc.prepare_write.return_value = prepared
-    packets = [
-        {"scope_paths": ["/repo/new.py"], "coherence_token": "drifted-token"},
-        {"scope_paths": ["/repo/new.py"], "coherence_token": "reserved-token"},
-        {"scope_paths": ["/repo/new.py"], "coherence_token": "reserved-token"},
-    ]
-    monkeypatch.setattr(
-        "tools.core.ci_runtime.build_scope_packet_for_context",
-        lambda *args, **kwargs: dict(packets.pop(0)),
+    svc.prepare_write.return_value = SimpleNamespace(
+        file_path="/repo/file.py", success=False, message="locked"
     )
-    ctx = _ctx(
-        {
-            "ci_service": svc,
-            "agent_run_id": "worker-1",
-            "scope_packet": {"scope_paths": ["/repo/new.py"], "coherence_token": "base-token"},
-            "coherence_token": "base-token",
-        }
-    )
+    ctx = _ctx({"ci_service": svc, "agent_run_id": "worker-1"})
 
-    prepared_items, packet, err = prepare_declared_shell_outputs(
-        ctx,
-        declared_output_paths=["/repo/new.py"],
-    )
+    result, packet, err = prepare_ci_write(ctx, "/repo/file.py")
 
-    assert err is None
-    assert prepared_items == [prepared]
-    assert packet["coherence_token"] == "reserved-token"
-    assert ctx.metadata["scope_packet"]["coherence_token"] == "reserved-token"
-    assert ctx.metadata["coherence_token"] == "reserved-token"
+    assert result is None
+    assert err == "locked"
 
 
-def test_abort_ci_write_refreshes_scope_baseline_after_release(monkeypatch):
-    svc = MagicMock()
-    packets = [{"scope_paths": ["src"], "coherence_token": "released-token"}]
-    monkeypatch.setattr(
-        "tools.core.ci_runtime.build_scope_packet_for_context",
-        lambda *args, **kwargs: dict(packets.pop(0)),
-    )
-    ctx = _ctx(
-        {
-            "ci_service": svc,
-            "scope_packet": {"scope_paths": ["src"], "coherence_token": "reserved-token"},
-            "coherence_token": "reserved-token",
-        }
-    )
-    prepared = SimpleNamespace(file_path="/repo/file.py", token_id="tok-1")
-
-    abort_ci_write(ctx, prepared)
-
-    svc.abort_prepared_write.assert_called_once_with(prepared)
-    assert ctx.metadata["scope_packet"]["coherence_token"] == "released-token"
-    assert ctx.metadata["coherence_token"] == "released-token"
+# ---------------------------------------------------------------------------
+# finalize_ci_write
+# ---------------------------------------------------------------------------
 
 
-def test_finalize_ci_write_refreshes_scope_baseline_after_commit(monkeypatch):
+def test_finalize_ci_write_commits():
     svc = MagicMock()
     svc.commit_prepared_write.return_value = SimpleNamespace(success=True)
-    packets = [{"scope_paths": ["src"], "coherence_token": "after-commit"}]
-    monkeypatch.setattr(
-        "tools.core.ci_runtime.build_scope_packet_for_context",
-        lambda *args, **kwargs: dict(packets.pop(0)),
-    )
-    ctx = _ctx(
-        {
-            "ci_service": svc,
-            "scope_packet": {"scope_paths": ["src"], "coherence_token": "reserved-token"},
-            "coherence_token": "reserved-token",
-        }
-    )
+    ctx = _ctx({"ci_service": svc})
     prepared = SimpleNamespace(file_path="/repo/file.py")
 
     result = finalize_ci_write(
-        ctx,
-        prepared,
-        content="hello",
-        edit_type="write",
-        description="desc",
+        ctx, prepared, content="hello", edit_type="write", description="desc",
     )
 
     assert result.success is True
-    assert ctx.metadata["scope_packet"]["coherence_token"] == "after-commit"
-    assert ctx.metadata["coherence_token"] == "after-commit"
 
 
-def test_finalize_ci_write_enriches_prepared_write_with_symbol_boundaries(monkeypatch):
+def test_finalize_ci_write_enriches_prepared_write_with_symbol_boundaries():
     captured: dict[str, object] = {}
 
     def commit(prepared, content, *, edit_type, description):
@@ -280,18 +136,7 @@ def test_finalize_ci_write_enriches_prepared_write_with_symbol_boundaries(monkey
     svc = MagicMock()
     svc.commit_prepared_write.side_effect = commit
     svc.symbol_index.symbol_boundaries_for_file.return_value = [("foo", 3, 4)]
-    packets = [{"scope_paths": ["src"], "coherence_token": "after-commit"}]
-    monkeypatch.setattr(
-        "tools.core.ci_runtime.build_scope_packet_for_context",
-        lambda *args, **kwargs: dict(packets.pop(0)),
-    )
-    ctx = _ctx(
-        {
-            "ci_service": svc,
-            "scope_packet": {"scope_paths": ["src"], "coherence_token": "reserved-token"},
-            "coherence_token": "reserved-token",
-        }
-    )
+    ctx = _ctx({"ci_service": svc})
     prepared = SimpleNamespace(
         file_path="/repo/file.py",
         current_content="header\n\ndef foo():\n    return 1\n",
@@ -313,48 +158,24 @@ def test_finalize_ci_write_enriches_prepared_write_with_symbol_boundaries(monkey
     assert getattr(enriched, "operation_type", None) == "replace"
 
 
-def test_build_scope_packet_coherence_ignores_unrelated_global_generation_changes():
+# ---------------------------------------------------------------------------
+# abort_ci_write
+# ---------------------------------------------------------------------------
+
+
+def test_abort_ci_write_calls_service():
     svc = MagicMock()
-    svc.arbiter.generation = 2
-    svc.arbiter.file_change_store.initialized = True
-    svc.arbiter.file_change_store.recent_edits.return_value = []
-    svc.arbiter.active_reservations.return_value = []
-    svc.arbiter.file_change_store.hotspots.return_value = []
-    svc.symbol_index.generation = 3
+    ctx = _ctx({"ci_service": svc})
+    prepared = SimpleNamespace(file_path="/repo/file.py", token_id="tok-1")
 
-    first = build_scope_packet(scope_paths=["src/app.py"], svc=svc)
+    abort_ci_write(ctx, prepared)
 
-    svc.arbiter.generation = 12
-    svc.symbol_index.generation = 13
-    second = build_scope_packet(scope_paths=["src/app.py"], svc=svc, baseline_packet=first)
-
-    assert first["coherence_token"] == second["coherence_token"]
-    assert second["freshness"] == "fresh"
+    svc.abort_prepared_write.assert_called_once_with(prepared)
 
 
-def test_build_scope_packet_coherence_changes_when_scope_local_changes_change():
-    svc = MagicMock()
-    svc.arbiter.generation = 2
-    svc.arbiter.active_reservations.return_value = []
-    svc.arbiter.file_change_store.initialized = True
-    svc.arbiter.file_change_store.hotspots.return_value = []
-    svc.symbol_index.generation = 3
-    svc.arbiter.file_change_store.recent_edits.return_value = []
-
-    first = build_scope_packet(scope_paths=["src/app.py"], svc=svc)
-
-    svc.arbiter.file_change_store.recent_edits.return_value = [
-        SimpleNamespace(
-            file_path="src/app.py",
-            agent_id="worker-2",
-            timestamp=123.0,
-            edit_type="edit",
-        )
-    ]
-    second = build_scope_packet(scope_paths=["src/app.py"], svc=svc, baseline_packet=first)
-
-    assert first["coherence_token"] != second["coherence_token"]
-    assert second["freshness"] == "touched"
+def test_abort_ci_write_noop_when_none():
+    ctx = _ctx()
+    abort_ci_write(ctx, None)  # should not raise
 
 
 # ---------------------------------------------------------------------------

@@ -2,6 +2,6 @@
 
 from __future__ import annotations
 
-from tools.posthook.toolkit import PosthookToolkit
+from tools.posthook.toolkit import PosthookTools
 
-__all__ = ["PosthookToolkit"]
+__all__ = ["PosthookTools"]

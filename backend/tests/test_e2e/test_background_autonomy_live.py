@@ -10,51 +10,25 @@ Run with: .venv/bin/python -m pytest backend/tests/test_e2e/test_background_auto
 
 from __future__ import annotations
 
-import logging
-
 import pytest
 
 from engine.testing.eval_agent import EvalAgent
+from tests.test_e2e.bg_prompts import _build_prompt, _BG_GUIDELINES
 from tests.test_e2e.conftest import create_eval_agent, create_test_sandbox, delete_test_sandbox
+from tests.test_e2e.helpers import log_result
 
+import logging
 logger = logging.getLogger(__name__)
 
 pytestmark = [pytest.mark.e2e, pytest.mark.live]
 
-AGENT_PROMPT = """\
-You are test-autonomy-agent, a developer with a remote Daytona sandbox.
-
-IMPORTANT RULES:
-- You MUST use tools for every action — never just describe what you'd do.
-- Use daytona_codeact to run commands, daytona_write_file to create files.
-- You have background task support: add "background": true to tool input for long-running operations.
-- Use check_background_progress to monitor background tasks.
-- Use cancel_background_task to cancel running background tasks.
-
-BACKGROUND EXECUTION GUIDELINES:
-- For commands that take >5 seconds (test suites, builds, npm install), run in background.
-- For quick commands (<5 seconds like echo, pwd, cat), run in foreground.
-- When running in background, continue with other useful work.
-- Periodically check progress of background tasks.
-- Cancel background tasks that appear stuck or failing.
-- Use your own judgment on when to check or cancel background tasks.
-
-Always be concise. Execute tools, don't just describe them.
-"""
-
-
-def _log_result(result, label: str) -> None:
-    checks = result.tool_count("check_background_progress")
-    cancels = result.tool_count("cancel_background_task")
-
-    logger.info(
-        f"\n{'='*60}\n[{label}]\n"
-        f"  Tools: {len(result.tools_started())} started, {len(result.tools_completed())} completed\n"
-        f"  Turns: {len(result.assistant_turns())}\n"
-        f"  Sequence: {result.tool_names}\n"
-        f"  LLM autonomous decisions: {checks} progress checks, {cancels} cancels\n"
-        f"{'='*60}"
-    )
+AGENT_PROMPT = _build_prompt(
+    agent_name="test-autonomy-agent",
+    extra_sections=(
+        _BG_GUIDELINES
+        + "\n- Use your own judgment on when to check or cancel background tasks."
+    ),
+)
 
 
 # ===========================================================================
@@ -89,7 +63,7 @@ class TestAutonomousProgressCheck:
             "- Then read it back: cat /workspace/readme.txt\n\n"
             "Let me know when everything is done."
         )
-        _log_result(result, "autonomous_check")
+        log_result(result,"autonomous_check")
 
         assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
         assert result.has_tool_with_background("daytona_codeact"), \
@@ -132,7 +106,7 @@ class TestAutonomousCancel:
             "The background task simulates a very slow npm install. "
             "Use your judgment on what to do about it."
         )
-        _log_result(result, "autonomous_cancel")
+        log_result(result,"autonomous_cancel")
 
         assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
         assert result.has_tool_with_background("daytona_codeact"), \
@@ -179,7 +153,7 @@ class TestAutonomousMultiTask:
             "using daytona_codeact.\n\n"
             "Manage the background tasks as you see fit."
         )
-        _log_result(result, "autonomous_multi")
+        log_result(result,"autonomous_multi")
 
         assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
         assert result.has_tool_with_background("daytona_codeact"), \

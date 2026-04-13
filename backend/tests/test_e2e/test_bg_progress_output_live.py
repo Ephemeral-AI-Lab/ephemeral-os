@@ -15,6 +15,7 @@ import pytest
 
 from engine.testing.eval_agent import EvalAgent
 from tests.test_e2e.conftest import create_eval_agent, create_test_sandbox, delete_test_sandbox
+from tests.test_e2e.helpers import log_result
 
 logger = logging.getLogger(__name__)
 
@@ -44,25 +45,6 @@ BACKGROUND WORKFLOW:
 
 Always be concise. Execute tools, don't just describe them.
 """
-
-
-def _log_result(result, label: str) -> None:
-    checks = result.tool_count("check_background_progress")
-    waits = result.tool_count("wait_for_background_task")
-    cancels = result.tool_count("cancel_background_task")
-    bg_completed = result.background_completed()
-
-    logger.info(
-        f"\n{'='*60}\n[{label}] Progress/output summary:\n"
-        f"  Tools started: {len(result.tools_started())}\n"
-        f"  Background started: {len(result.background_started())}\n"
-        f"  Background completed: {len(bg_completed)}\n"
-        f"  Progress checks: {checks}\n"
-        f"  Waits: {waits}\n"
-        f"  Cancels: {cancels}\n"
-        f"  Tool sequence: {result.tool_names}\n"
-        f"{'='*60}"
-    )
 
 
 # ===========================================================================
@@ -98,7 +80,7 @@ class TestCheckProgressRunningStatus:
             "Then cancel it with cancel_background_task using reason 'Test complete'. "
             "Report which tick_N lines you saw in the live tail."
         )
-        _log_result(result, "running_status")
+        log_result(result,"running_status")
 
         assert result.has_tool("check_background_progress"), \
             f"Expected check_background_progress. Got: {result.tool_names}"
@@ -159,7 +141,7 @@ class TestCheckProgressCompletedOutput:
             "Then call check_background_progress to see the completed output. "
             "Report what lines you see in the output."
         )
-        _log_result(result, "completed_output")
+        log_result(result,"completed_output")
 
         assert result.has_tool("wait_for_background_task"), \
             f"Expected wait_for_background_task. Got: {result.tool_names}"
@@ -202,7 +184,7 @@ class TestCheckProgressLastNLines:
             "Then call check_background_progress with last_n_lines=5. "
             "Report how many lines you see in the output."
         )
-        _log_result(result, "last_n_lines")
+        log_result(result,"last_n_lines")
 
         assert result.has_tool("wait_for_background_task"), \
             f"Expected wait_for_background_task. Got: {result.tool_names}"
@@ -253,7 +235,7 @@ class TestCheckProgressMultipleTasks:
             "Cancel the running one with cancel_background_task. "
             "Report status of both tasks."
         )
-        _log_result(result, "multi_tasks")
+        log_result(result,"multi_tasks")
 
         bg_bash = [tc for tc in result.tool_calls
                    if tc.name == "daytona_codeact" and tc.input.get("background") is True]
@@ -308,7 +290,7 @@ class TestCheckProgressFilterByTaskId:
             "Cancel the other task with cancel_background_task. "
             "Report what you saw."
         )
-        _log_result(result, "filter_by_taskid")
+        log_result(result,"filter_by_taskid")
 
         bg_bash = [tc for tc in result.tool_calls
                    if tc.name == "daytona_codeact" and tc.input.get("background") is True]
@@ -357,7 +339,7 @@ class TestWaitLastNLinesOutput:
             "Then call wait_for_background_task with timeout=10 and last_n_lines=10. "
             "Report how many output lines you received."
         )
-        _log_result(result, "wait_last_n")
+        log_result(result,"wait_last_n")
 
         assert result.has_tool("wait_for_background_task"), \
             f"Expected wait_for_background_task. Got: {result.tool_names}"
@@ -411,7 +393,7 @@ class TestLiveTailAutonomousDecision:
             "wait_for_background_task — that would block for the full ~45s. "
             "Report the offending line and how many polls it took."
         )
-        _log_result(result, "live_tail_decision")
+        log_result(result,"live_tail_decision")
 
         # The agent must have polled check_background_progress at least once
         # and cancelled — never waited.

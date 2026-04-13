@@ -8,6 +8,7 @@ from datetime import datetime, UTC
 from sqlalchemy.orm import Session, sessionmaker
 
 from db.models.agent_run import AgentResponseChunkRecord, AgentRunRecord
+from db.stores.base import SyncStoreMixin
 
 logger = logging.getLogger(__name__)
 
@@ -30,26 +31,8 @@ def _serialize_run_summary(r: AgentRunRecord) -> dict:
     }
 
 
-class AgentRunStore:
+class AgentRunStore(SyncStoreMixin):
     """CRUD operations for agent run records and response chunks."""
-
-    def __init__(self) -> None:
-        self._session_factory: sessionmaker[Session] | None = None
-
-    def initialize(self, session_factory: sessionmaker[Session]) -> None:
-        self._session_factory = session_factory
-        logger.info("AgentRunStore initialised")
-
-    @property
-    def is_ready(self) -> bool:
-        """True once ``initialize`` has been called with a session factory."""
-        return self._session_factory is not None
-
-    @property
-    def _sf(self) -> sessionmaker[Session]:
-        if self._session_factory is None:
-            raise RuntimeError("AgentRunStore not initialised")
-        return self._session_factory
 
     # -- run CRUD --------------------------------------------------------------
 

@@ -9,91 +9,16 @@ Run with: .venv/bin/python -m pytest backend/tests/test_e2e/test_bg_high_concurr
 
 from __future__ import annotations
 
-import logging
-
 import pytest
 
 from engine.testing.eval_agent import EvalAgent
+from tests.test_e2e.bg_prompts import BG_CONCURRENCY
 from tests.test_e2e.conftest import create_eval_agent, create_test_sandbox, delete_test_sandbox
-
-logger = logging.getLogger(__name__)
+from tests.test_e2e.helpers import assert_fg_during_bg, log_result
 
 pytestmark = [pytest.mark.e2e, pytest.mark.live]
 
-AGENT_PROMPT = """\
-You are test-concurrency-agent, a developer with a remote Daytona sandbox.
-
-IMPORTANT RULES:
-- You MUST use tools for every action — never just describe what you'd do.
-- Use daytona_codeact to run commands, daytona_write_file to create files.
-- You have background task support: add "background": true to tool input for long-running operations.
-- Use check_background_progress to monitor background tasks.
-- Use cancel_background_task to cancel running background tasks.
-
-BACKGROUND EXECUTION GUIDELINES:
-- For commands that take >5 seconds (test suites, builds, npm install), run in background.
-- For quick commands (<5 seconds like echo, pwd, cat), run in foreground.
-- When running in background, continue with other useful work.
-- Periodically check progress of background tasks.
-- Cancel background tasks that appear stuck or failing.
-
-Always be concise. Execute tools, don't just describe them.
-"""
-
-
-def _assert_fg_during_bg(result, min_fg: int = 1) -> None:
-    """Assert that foreground tool calls happened WHILE background tasks were running.
-
-    Verifies that at least *min_fg* foreground daytona_codeact calls occurred between
-    the first BackgroundTaskStarted event and the first check_background_progress
-    or cancel_background_task call. This proves true fg+bg concurrency.
-    """
-    bg_start_indices = [
-        i for i, tc in enumerate(result.tool_calls)
-        if tc.name == "daytona_codeact" and tc.input.get("background") is True
-    ]
-    lifecycle_indices = [
-        i for i, tc in enumerate(result.tool_calls)
-        if tc.name in ("check_background_progress", "cancel_background_task")
-    ]
-    assert bg_start_indices, "No background launches found"
-    assert lifecycle_indices, "No check/cancel calls found"
-
-    first_bg = bg_start_indices[0]
-    first_lifecycle = lifecycle_indices[0]
-
-    fg_during_bg = [
-        tc for i, tc in enumerate(result.tool_calls)
-        if first_bg < i < first_lifecycle
-        and tc.name in ("daytona_codeact", "daytona_write_file")
-        and not tc.input.get("background")
-    ]
-    assert len(fg_during_bg) >= min_fg, (
-        f"Expected {min_fg}+ foreground calls BETWEEN bg launch (idx {first_bg}) "
-        f"and first check/cancel (idx {first_lifecycle}). "
-        f"Got {len(fg_during_bg)} fg calls in that window. "
-        f"Full sequence: {result.tool_names}"
-    )
-
-
-def _log_result(result, label: str) -> None:
-    bg_started = result.background_started()
-    bg_completed = result.background_completed()
-    checks = result.tool_count("check_background_progress")
-    cancels = result.tool_count("cancel_background_task")
-
-    logger.info(
-        f"\n{'='*60}\n[{label}] Event summary:\n"
-        f"  Total events: {len(result.events)}\n"
-        f"  Tools started: {len(result.tools_started())}\n"
-        f"  Tools completed: {len(result.tools_completed())}\n"
-        f"  Background started: {len(bg_started)}\n"
-        f"  Background completed: {len(bg_completed)}\n"
-        f"  Progress checks: {checks}\n"
-        f"  Cancels: {cancels}\n"
-        f"  Tool sequence: {result.tool_names}\n"
-        f"{'='*60}"
-    )
+AGENT_PROMPT = BG_CONCURRENCY
 
 
 # ===========================================================================
@@ -130,7 +55,7 @@ class TestTripleBackgroundConcurrency:
             "Then check progress on all background tasks using check_background_progress.\n"
             "Use background: true for steps 1-3 ONLY."
         )
-        _log_result(result, "triple_bg")
+        log_result(result, "triple_bg")
 
         assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
         # Strict: exactly 3 background tasks must be launched
@@ -156,7 +81,7 @@ class TestTripleBackgroundConcurrency:
         assert result.has_tool("check_background_progress"), \
             f"Expected check_background_progress. Got: {result.tool_names}"
         # Strict: fg calls must happen WHILE bg tasks are running (true concurrency)
-        _assert_fg_during_bg(result, min_fg=2)
+        assert_fg_during_bg(result, min_fg=2)
         assert not result.has_non_cancel_errors, \
             f"Unexpected errors: {[e.output[:200] for e in result.non_cancel_error_events]}"
 
@@ -195,7 +120,7 @@ class TestInterleavedBgFg:
             "7. Cancel all background tasks using cancel_background_task\n\n"
             "Use background: true ONLY for steps 2 and 4."
         )
-        _log_result(result, "interleaved")
+        log_result(result, "interleaved")
 
         # Strict: exactly 2 background launches
         bg_bash = [tc for tc in result.tool_calls
@@ -219,7 +144,7 @@ class TestInterleavedBgFg:
         assert result.has_tool("cancel_background_task"), \
             f"Expected cancel. Got: {result.tool_names}"
         # Strict: fg calls must happen WHILE bg tasks are running (true concurrency)
-        _assert_fg_during_bg(result, min_fg=1)
+        assert_fg_during_bg(result, min_fg=1)
         assert not result.has_non_cancel_errors, \
             f"Unexpected errors: {[e.output[:200] for e in result.non_cancel_error_events]}"
 
@@ -258,7 +183,7 @@ class TestBgWithFileCreation:
             "7. Cancel all background tasks\n\n"
             "Use background: true for steps 1-2 ONLY."
         )
-        _log_result(result, "bg_files")
+        log_result(result, "bg_files")
 
         # Strict: 2 background tasks with background: true
         bg_bash = [tc for tc in result.tool_calls
@@ -286,7 +211,7 @@ class TestBgWithFileCreation:
         assert result.has_tool("cancel_background_task"), \
             f"Expected cancel. Got: {result.tool_names}"
         # Strict: fg file ops must happen WHILE bg tasks are running (true concurrency)
-        _assert_fg_during_bg(result, min_fg=2)
+        assert_fg_during_bg(result, min_fg=2)
         assert not result.has_non_cancel_errors, \
             f"Unexpected errors: {[e.output[:200] for e in result.non_cancel_error_events]}"
 
@@ -327,7 +252,7 @@ class TestHighVolumeForegroundBurst:
             "14. Cancel all background tasks\n\n"
             "Use background: true for steps 1-2 ONLY. Execute each step with daytona_codeact."
         )
-        _log_result(result, "burst")
+        log_result(result, "burst")
 
         # Strict: 2 background launches with background: true
         bg_bash = [tc for tc in result.tool_calls
@@ -353,7 +278,7 @@ class TestHighVolumeForegroundBurst:
         assert result.has_tool("cancel_background_task"), \
             f"Expected cancel. Got: {result.tool_names}"
         # Strict: fg burst must happen WHILE bg tasks are running (true concurrency)
-        _assert_fg_during_bg(result, min_fg=5)
+        assert_fg_during_bg(result, min_fg=5)
         assert not result.has_non_cancel_errors, \
             f"Errors under high concurrency: {[e.output[:200] for e in result.non_cancel_error_events]}"
 
@@ -395,7 +320,7 @@ class TestFourBackgroundMaxConcurrency:
             "10. Report how many background tasks were running\n\n"
             "Use background: true for steps 1-4 ONLY."
         )
-        _log_result(result, "max_concurrency")
+        log_result(result, "max_concurrency")
 
         # Strict: exactly 4 background launches with background: true
         bg_bash = [tc for tc in result.tool_calls
@@ -426,6 +351,6 @@ class TestFourBackgroundMaxConcurrency:
         assert len(result.tools_started()) + len(result.background_started()) >= 9, \
             f"Expected 9+ total actions (fg + bg). Got {len(result.tools_started())} fg + {len(result.background_started())} bg"
         # Strict: fg calls must happen WHILE bg tasks are running (true concurrency)
-        _assert_fg_during_bg(result, min_fg=2)
+        assert_fg_during_bg(result, min_fg=2)
         assert not result.has_non_cancel_errors, \
             f"Errors under max concurrency: {[e.output[:200] for e in result.non_cancel_error_events]}"

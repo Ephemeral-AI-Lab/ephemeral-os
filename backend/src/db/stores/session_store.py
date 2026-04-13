@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy.orm import Session, sessionmaker
 
 from db.models.session import SessionRecord
+from db.stores.base import SyncStoreMixin
 from message import ConversationMessage
 
 if TYPE_CHECKING:
@@ -18,26 +19,8 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class SessionStore:
+class SessionStore(SyncStoreMixin):
     """CRUD operations for session records."""
-
-    def __init__(self) -> None:
-        self._session_factory: sessionmaker[Session] | None = None
-
-    def initialize(self, session_factory: sessionmaker[Session]) -> None:
-        self._session_factory = session_factory
-        logger.info("SessionStore initialised")
-
-    @property
-    def is_ready(self) -> bool:
-        """True once ``initialize`` has been called with a session factory."""
-        return self._session_factory is not None
-
-    @property
-    def _sf(self) -> sessionmaker[Session]:
-        if self._session_factory is None:
-            raise RuntimeError("SessionStore not initialised")
-        return self._session_factory
 
     # -- writes ----------------------------------------------------------------
 

@@ -30,6 +30,12 @@ pytestmark = [pytest.mark.e2e, pytest.mark.live]
 # ---------------------------------------------------------------------------
 
 
+def _require_credentials() -> None:
+    """Skip the test at runtime if LLM credentials are unavailable."""
+    if not EvalAgent.has_credentials():
+        pytest.skip("LLM credentials required")
+
+
 def _looks_like_minimax_tool_validation_error(message: str | None) -> bool:
     """Return True when the event payload looks like a tool-input validation failure."""
     if not message:
@@ -175,13 +181,21 @@ SANDBOX_AGENT_PROMPT = (
 )
 
 
-@pytest.fixture(scope="module")
-def sandbox_for_agent():
-    if not EvalAgent.has_all():
-        pytest.skip("LLM + Daytona credentials required")
-    sb = create_test_sandbox("agent-chat")
-    yield sb["id"]
-    delete_test_sandbox(sb["id"])
+def _sandbox_module_fixture(label: str):
+    """Return a module-scoped fixture that creates/tears down a real sandbox."""
+    @pytest.fixture(scope="module")
+    def _fixture():
+        if not EvalAgent.has_all():
+            pytest.skip("LLM + Daytona credentials required")
+        sb = create_test_sandbox(label)
+        yield sb["id"]
+        delete_test_sandbox(sb["id"])
+    return _fixture
+
+
+sandbox_for_agent = _sandbox_module_fixture("agent-chat")
+sandbox_for_complex = _sandbox_module_fixture("complex-task")
+sandbox_for_model_key = _sandbox_module_fixture("model-key-multi-tool")
 
 
 @pytest.mark.skipif(not HAS_BOTH, reason="MiniMax + Daytona both required")
@@ -234,8 +248,7 @@ async def test_live_agent_sandbox_bash_tool(sandbox_for_agent):
 @pytest.mark.asyncio
 async def test_live_multiturn_context_retention():
     """Send 3 sequential messages and verify context retention."""
-    if not EvalAgent.has_credentials():
-        pytest.skip("LLM credentials required")
+    _require_credentials()
 
     agent = create_eval_agent()
 
@@ -268,8 +281,7 @@ async def test_live_multiturn_context_retention():
 @pytest.mark.asyncio
 async def test_live_multiturn_tool_followup():
     """Send a tool-using prompt then a follow-up referencing the output."""
-    if not EvalAgent.has_credentials():
-        pytest.skip("LLM credentials required")
+    _require_credentials()
 
     agent = create_eval_agent()
 
@@ -294,8 +306,7 @@ async def test_live_multiturn_tool_followup():
 @pytest.mark.asyncio
 async def test_live_thinking_block_streamed():
     """Send a reasoning-requiring prompt and check for thinking events."""
-    if not EvalAgent.has_credentials():
-        pytest.skip("LLM credentials required")
+    _require_credentials()
 
     agent = create_eval_agent()
     result = await agent.invoke(
@@ -312,8 +323,7 @@ async def test_live_thinking_block_streamed():
 @pytest.mark.asyncio
 async def test_live_thinking_then_text():
     """If thinking events exist, they should come before assistant text."""
-    if not EvalAgent.has_credentials():
-        pytest.skip("LLM credentials required")
+    _require_credentials()
 
     agent = create_eval_agent()
     result = await agent.invoke(
@@ -326,15 +336,6 @@ async def test_live_thinking_then_text():
 # ===========================================================================
 # US-015: Complex long task with multiple tool calls
 # ===========================================================================
-
-
-@pytest.fixture(scope="module")
-def sandbox_for_complex():
-    if not EvalAgent.has_all():
-        pytest.skip("LLM + Daytona credentials required")
-    sb = create_test_sandbox("complex-task")
-    yield sb["id"]
-    delete_test_sandbox(sb["id"])
 
 
 @pytest.mark.skipif(not HAS_BOTH, reason="MiniMax + Daytona both required")
@@ -370,15 +371,6 @@ async def test_live_complex_multi_tool_task(sandbox_for_complex):
 # ===========================================================================
 # US-016: Model key integration + explicit multi-tool calls
 # ===========================================================================
-
-
-@pytest.fixture(scope="module")
-def sandbox_for_model_key():
-    if not EvalAgent.has_all():
-        pytest.skip("LLM + Daytona credentials required")
-    sb = create_test_sandbox("model-key-multi-tool")
-    yield sb["id"]
-    delete_test_sandbox(sb["id"])
 
 
 MULTI_TOOL_WRITE_PROMPT = (
@@ -544,8 +536,7 @@ async def test_live_parallel_tool_batch_bash_and_write_with_model_key(sandbox_fo
 @pytest.mark.asyncio
 async def test_minimax_simple_chat():
     """Send a simple prompt and verify we get a response."""
-    if not EvalAgent.has_credentials():
-        pytest.skip("LLM credentials required")
+    _require_credentials()
 
     agent = create_eval_agent()
     result = await agent.invoke("Reply with exactly one word: PONG")
@@ -560,8 +551,7 @@ async def test_minimax_simple_chat():
 @pytest.mark.asyncio
 async def test_minimax_custom_agent_chat():
     """Create a custom agent and chat with it using real API."""
-    if not EvalAgent.has_credentials():
-        pytest.skip("LLM credentials required")
+    _require_credentials()
 
     agent = create_eval_agent(
         system_prompt="You are a helpful test assistant. Always respond in exactly one sentence.",
@@ -577,8 +567,7 @@ async def test_minimax_custom_agent_chat():
 @pytest.mark.asyncio
 async def test_minimax_chat_with_tools():
     """Chat with tools available and verify the model can use them."""
-    if not EvalAgent.has_credentials():
-        pytest.skip("LLM credentials required")
+    _require_credentials()
 
     agent = create_eval_agent()
     result = await agent.invoke("Use the skill tool to list available skills.")

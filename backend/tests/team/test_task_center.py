@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import time
+from datetime import datetime, timezone
+from types import SimpleNamespace
 
 import pytest
 
@@ -332,6 +334,35 @@ def test_context_for_task_section_never_trimmed():
     ctx = _run(tc.context_for(task, max_context_bytes=100))
     # Task section is priority 1 and never trimmed
     assert "important task description" in ctx
+
+
+def test_context_for_includes_recent_scope_changes_from_file_change_store():
+    tc = TaskCenter()
+    task = _task("work-1", task="do auth", scope_paths=["src/auth/"])
+    task.created_at = datetime(2026, 4, 12, 12, 0, tzinfo=timezone.utc)
+    file_change_store = SimpleNamespace(
+        initialized=True,
+        changes_since=lambda since: [
+            SimpleNamespace(
+                file_path="src/auth/session.py",
+                edit_type="edit",
+                agent_id="reviewer",
+                created_at=datetime(2026, 4, 12, 12, 1, tzinfo=timezone.utc),
+            ),
+            SimpleNamespace(
+                file_path="src/billing/invoice.py",
+                edit_type="edit",
+                agent_id="reviewer",
+                created_at=datetime(2026, 4, 12, 12, 1, tzinfo=timezone.utc),
+            ),
+        ],
+    )
+
+    ctx = _run(tc.context_for(task, file_change_store=file_change_store))
+
+    assert "## Recent changes in your scope" in ctx
+    assert "src/auth/session.py" in ctx
+    assert "src/billing/invoice.py" not in ctx
 
 
 # ---------------------------------------------------------------------------

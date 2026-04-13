@@ -19,7 +19,6 @@ Run with: .venv/bin/python -m pytest backend/tests/test_e2e/test_bg_long_suite_l
 from __future__ import annotations
 
 import json
-import logging
 import shlex
 import textwrap
 
@@ -27,8 +26,7 @@ import pytest
 
 from engine.testing.eval_agent import EvalAgent
 from tests.test_e2e.conftest import create_eval_agent, create_test_sandbox, delete_test_sandbox
-
-logger = logging.getLogger(__name__)
+from tests.test_e2e.helpers import log_result
 
 pytestmark = [pytest.mark.e2e, pytest.mark.live]
 
@@ -56,25 +54,6 @@ You are an autonomous agent. Analyze failures, reason about root causes, apply f
 and verify your fixes work. Keep iterating until the problem is solved.
 """
 
-
-def _log_result(result, label: str) -> None:
-    waits = result.tool_count("wait_for_background_task")
-    checks = result.tool_count("check_background_progress")
-    cancels = result.tool_count("cancel_background_task")
-    bg_started = len(result.background_started())
-    bg_completed = len(result.background_completed())
-
-    logger.info(
-        f"\n{'='*60}\n[{label}] Long-suite summary:\n"
-        f"  Tools used: {len(result.tool_calls)}\n"
-        f"  Background started: {bg_started}\n"
-        f"  Background completed: {bg_completed}\n"
-        f"  Progress checks: {checks}\n"
-        f"  Wait calls: {waits}\n"
-        f"  Cancel calls: {cancels}\n"
-        f"  Tool sequence: {result.tool_names}\n"
-        f"{'='*60}"
-    )
 
 
 def _verify_suite_passes(
@@ -296,7 +275,7 @@ class TestLongSuiteEarlyCancel:
             "a short timeout, (2) check_background_progress (live tail, "
             "non-blocking)."
         )
-        _log_result(result, "long_suite_cancel")
+        log_result(result, "long_suite_cancel")
 
         # Behavioral check: the agent must exercise the background workflow —
         # without backgrounding, there's no way to read the live log while the

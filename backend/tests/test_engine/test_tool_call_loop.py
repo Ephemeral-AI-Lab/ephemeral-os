@@ -167,6 +167,45 @@ class FakeStreamingApiClient:
 
 
 # ---------------------------------------------------------------------------
+# Helpers: reduce per-test boilerplate
+# ---------------------------------------------------------------------------
+
+
+def _make_context(
+    client,
+    registry: ToolRegistry,
+    tmp_path: Path,
+    **kwargs,
+) -> QueryContext:
+    return QueryContext(
+        api_client=client,
+        tool_registry=registry,
+        cwd=tmp_path,
+        model="test",
+        system_prompt="test",
+        max_tokens=100,
+        **kwargs,
+    )
+
+
+def _tool_reply(*tool_uses: ToolUseBlock) -> ConversationMessage:
+    return ConversationMessage(role="assistant", content=list(tool_uses))
+
+
+def _text_reply(text: str = "ok") -> ConversationMessage:
+    return ConversationMessage(role="assistant", content=[TextBlock(text=text)])
+
+
+async def _collect_events(context: QueryContext, user_text: str) -> list:
+    messages = [ConversationMessage.from_user_text(user_text)]
+    events = []
+    _messages, event_stream = await run_query(context, messages)
+    async for event, _usage in event_stream:
+        events.append(event)
+    return events
+
+
+# ---------------------------------------------------------------------------
 # Tests: tool registration
 # ---------------------------------------------------------------------------
 
@@ -248,39 +287,15 @@ class TestOutputSchema:
 async def test_single_tool_call(tmp_path: Path):
     """Model calls a tool, gets result, then responds with text."""
     registry = _make_registry(EchoTool())
-    client = FakeApiClient(
-        [
-            ConversationMessage(
-                role="assistant",
-                content=[
-                    ToolUseBlock(id="tc1", name="echo", input={"message": "hello"}),
-                ],
-            ),
-            ConversationMessage(
-                role="assistant",
-                content=[
-                    TextBlock(text="Done."),
-                ],
-            ),
-        ]
-    )
-    context = QueryContext(
-        api_client=client,
-        tool_registry=registry,
-        cwd=tmp_path,
-        model="test",
-        system_prompt="test",
-        max_tokens=100,
-    )
-    messages = [ConversationMessage.from_user_text("echo hello")]
-    events = []
-    _messages, event_stream = await run_query(context, messages)
-    async for event, _usage in event_stream:
-        events.append(event)
+    client = FakeApiClient([
+        _tool_reply(ToolUseBlock(id="tc1", name="echo", input={"message": "hello"})),
+        _text_reply("Done."),
+    ])
+    context = _make_context(client, registry, tmp_path)
+    events = await _collect_events(context, "echo hello")
 
     tool_starts = [e for e in events if isinstance(e, ToolExecutionStarted)]
     tool_completes = [e for e in events if isinstance(e, ToolExecutionCompleted)]
-    turns = [e for e in events if isinstance(e, AssistantTurnComplete)]
 
     assert len(tool_starts) == 1
     assert tool_starts[0].tool_name == "echo"
@@ -293,13 +308,10 @@ async def test_single_tool_call(tmp_path: Path):
 @pytest.mark.asyncio
 async def test_background_scout_trace_is_recorded_after_launch_not_before(tmp_path: Path):
     registry = _make_registry(SpyRunSubagentTool())
-    context = QueryContext(
-        api_client=FakeApiClient([]),
-        tool_registry=registry,
-        cwd=tmp_path,
-        model="test",
-        system_prompt="test",
-        max_tokens=100,
+    context = _make_context(
+        FakeApiClient([]),
+        registry,
+        tmp_path,
         tool_metadata=ExecutionMetadata(),
     )
     manager = BackgroundTaskManager()
@@ -341,35 +353,12 @@ async def test_background_scout_trace_is_recorded_after_launch_not_before(tmp_pa
 async def test_unknown_tool_returns_error(tmp_path: Path):
     """Model calls a tool that doesn't exist — should get an error result."""
     registry = _make_registry(EchoTool())
-    client = FakeApiClient(
-        [
-            ConversationMessage(
-                role="assistant",
-                content=[
-                    ToolUseBlock(id="tc1", name="nonexistent_tool", input={}),
-                ],
-            ),
-            ConversationMessage(
-                role="assistant",
-                content=[
-                    TextBlock(text="ok"),
-                ],
-            ),
-        ]
-    )
-    context = QueryContext(
-        api_client=client,
-        tool_registry=registry,
-        cwd=tmp_path,
-        model="test",
-        system_prompt="test",
-        max_tokens=100,
-    )
-    messages = [ConversationMessage.from_user_text("do something")]
-    events = []
-    _messages, event_stream = await run_query(context, messages)
-    async for event, _usage in event_stream:
-        events.append(event)
+    client = FakeApiClient([
+        _tool_reply(ToolUseBlock(id="tc1", name="nonexistent_tool", input={})),
+        _text_reply("ok"),
+    ])
+    context = _make_context(client, registry, tmp_path)
+    events = await _collect_events(context, "do something")
 
     tool_completes = [e for e in events if isinstance(e, ToolExecutionCompleted)]
     assert len(tool_completes) == 1
@@ -381,35 +370,12 @@ async def test_unknown_tool_returns_error(tmp_path: Path):
 async def test_invalid_input_returns_error(tmp_path: Path):
     """Model passes invalid input to a tool — should get a validation error."""
     registry = _make_registry(AddTool())
-    client = FakeApiClient(
-        [
-            ConversationMessage(
-                role="assistant",
-                content=[
-                    ToolUseBlock(id="tc1", name="add", input={"a": "not_a_number", "b": 2}),
-                ],
-            ),
-            ConversationMessage(
-                role="assistant",
-                content=[
-                    TextBlock(text="ok"),
-                ],
-            ),
-        ]
-    )
-    context = QueryContext(
-        api_client=client,
-        tool_registry=registry,
-        cwd=tmp_path,
-        model="test",
-        system_prompt="test",
-        max_tokens=100,
-    )
-    messages = [ConversationMessage.from_user_text("add")]
-    events = []
-    _messages, event_stream = await run_query(context, messages)
-    async for event, _usage in event_stream:
-        events.append(event)
+    client = FakeApiClient([
+        _tool_reply(ToolUseBlock(id="tc1", name="add", input={"a": "not_a_number", "b": 2})),
+        _text_reply("ok"),
+    ])
+    context = _make_context(client, registry, tmp_path)
+    events = await _collect_events(context, "add")
 
     tool_completes = [e for e in events if isinstance(e, ToolExecutionCompleted)]
     assert len(tool_completes) == 1
@@ -421,35 +387,12 @@ async def test_invalid_input_returns_error(tmp_path: Path):
 async def test_tool_error_propagated(tmp_path: Path):
     """Tool returns is_error=True — should be reflected in events."""
     registry = _make_registry(FailingTool())
-    client = FakeApiClient(
-        [
-            ConversationMessage(
-                role="assistant",
-                content=[
-                    ToolUseBlock(id="tc1", name="failing", input={"message": "x"}),
-                ],
-            ),
-            ConversationMessage(
-                role="assistant",
-                content=[
-                    TextBlock(text="ok"),
-                ],
-            ),
-        ]
-    )
-    context = QueryContext(
-        api_client=client,
-        tool_registry=registry,
-        cwd=tmp_path,
-        model="test",
-        system_prompt="test",
-        max_tokens=100,
-    )
-    messages = [ConversationMessage.from_user_text("fail")]
-    events = []
-    _messages, event_stream = await run_query(context, messages)
-    async for event, _usage in event_stream:
-        events.append(event)
+    client = FakeApiClient([
+        _tool_reply(ToolUseBlock(id="tc1", name="failing", input={"message": "x"})),
+        _text_reply("ok"),
+    ])
+    context = _make_context(client, registry, tmp_path)
+    events = await _collect_events(context, "fail")
 
     tool_completes = [e for e in events if isinstance(e, ToolExecutionCompleted)]
     assert len(tool_completes) == 1
@@ -461,36 +404,15 @@ async def test_tool_error_propagated(tmp_path: Path):
 async def test_parallel_tool_calls(tmp_path: Path):
     """Model calls multiple tools in one turn — should execute in parallel."""
     registry = _make_registry(EchoTool(), AddTool())
-    client = FakeApiClient(
-        [
-            ConversationMessage(
-                role="assistant",
-                content=[
-                    ToolUseBlock(id="tc1", name="echo", input={"message": "hi"}),
-                    ToolUseBlock(id="tc2", name="add", input={"a": 3, "b": 4}),
-                ],
-            ),
-            ConversationMessage(
-                role="assistant",
-                content=[
-                    TextBlock(text="Both done."),
-                ],
-            ),
-        ]
-    )
-    context = QueryContext(
-        api_client=client,
-        tool_registry=registry,
-        cwd=tmp_path,
-        model="test",
-        system_prompt="test",
-        max_tokens=100,
-    )
-    messages = [ConversationMessage.from_user_text("do both")]
-    events = []
-    _messages, event_stream = await run_query(context, messages)
-    async for event, _usage in event_stream:
-        events.append(event)
+    client = FakeApiClient([
+        _tool_reply(
+            ToolUseBlock(id="tc1", name="echo", input={"message": "hi"}),
+            ToolUseBlock(id="tc2", name="add", input={"a": 3, "b": 4}),
+        ),
+        _text_reply("Both done."),
+    ])
+    context = _make_context(client, registry, tmp_path)
+    events = await _collect_events(context, "do both")
 
     tool_completes = [e for e in events if isinstance(e, ToolExecutionCompleted)]
     assert len(tool_completes) == 2
@@ -532,20 +454,8 @@ async def test_streaming_tool_calls_respect_planner_soft_limit(tmp_path: Path):
             ],
         ]
     )
-    context = QueryContext(
-        api_client=client,
-        tool_registry=registry,
-        cwd=tmp_path,
-        model="test",
-        system_prompt="test",
-        max_tokens=100,
-        tool_call_limit=1,
-    )
-    messages = [ConversationMessage.from_user_text("echo twice")]
-    events = []
-    _messages, event_stream = await run_query(context, messages)
-    async for event, _usage in event_stream:
-        events.append(event)
+    context = _make_context(client, registry, tmp_path, tool_call_limit=1)
+    events = await _collect_events(context, "echo twice")
 
     tool_starts = [e for e in events if isinstance(e, ToolExecutionStarted)]
     tool_completes = [e for e in events if isinstance(e, ToolExecutionCompleted)]
@@ -560,29 +470,9 @@ async def test_streaming_tool_calls_respect_planner_soft_limit(tmp_path: Path):
 async def test_no_tool_calls_returns_immediately(tmp_path: Path):
     """Model responds with text only — loop should end after one turn."""
     registry = _make_registry(EchoTool())
-    client = FakeApiClient(
-        [
-            ConversationMessage(
-                role="assistant",
-                content=[
-                    TextBlock(text="Just text."),
-                ],
-            ),
-        ]
-    )
-    context = QueryContext(
-        api_client=client,
-        tool_registry=registry,
-        cwd=tmp_path,
-        model="test",
-        system_prompt="test",
-        max_tokens=100,
-    )
-    messages = [ConversationMessage.from_user_text("hello")]
-    events = []
-    _messages, event_stream = await run_query(context, messages)
-    async for event, _usage in event_stream:
-        events.append(event)
+    client = FakeApiClient([_text_reply("Just text.")])
+    context = _make_context(client, registry, tmp_path)
+    events = await _collect_events(context, "hello")
 
     turns = [e for e in events if isinstance(e, AssistantTurnComplete)]
     assert len(turns) == 1
@@ -607,4 +497,3 @@ class TestDaytonaToolSchemas:
                 f"{tool.name} missing output_schema — add Returns: to docstring"
             )
             assert "properties" in schema["output_schema"]
-

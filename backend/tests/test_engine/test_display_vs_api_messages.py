@@ -51,6 +51,68 @@ from tools.builtins.background._common import (
 
 
 # ---------------------------------------------------------------------------
+# Message factory helpers
+# ---------------------------------------------------------------------------
+
+
+def _user(text: str) -> ConversationMessage:
+    return ConversationMessage.from_user_text(text)
+
+
+def _assistant(text: str) -> ConversationMessage:
+    return ConversationMessage(role="assistant", content=[TextBlock(text=text)])
+
+
+def _tool_use(id: str, name: str, input: dict) -> ConversationMessage:  # noqa: A002
+    return ConversationMessage(
+        role="assistant",
+        content=[ToolUseBlock(id=id, name=name, input=input)],
+    )
+
+
+def _tool_result(tool_use_id: str, content: str) -> ConversationMessage:
+    return ConversationMessage(
+        role="user",
+        content=[ToolResultBlock(tool_use_id=tool_use_id, content=content)],
+    )
+
+
+def _bg_state(
+    task_id: str,
+    tool_name: str,
+    task_type: str,
+    status: str,
+    source: str,
+    text: str,
+) -> ConversationMessage:
+    return ConversationMessage(
+        role="user",
+        content=[
+            BackgroundTaskStateBlock(
+                task_id=task_id,
+                tool_name=tool_name,
+                task_type=task_type,
+                status=status,
+                source=source,
+                text=text,
+            )
+        ],
+    )
+
+
+async def _slow_coro() -> ToolResult:
+    """Coroutine that never completes naturally (used to simulate running tasks)."""
+    await asyncio.sleep(10)
+    return ToolResult(output="done")
+
+
+def _force_autocompact(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Patch should_autocompact to always return True for the current test."""
+    from compaction import compactor as compactor_mod
+    monkeypatch.setattr(compactor_mod, "should_autocompact", lambda msgs, model, state: True)
+
+
+# ---------------------------------------------------------------------------
 # Stub API client
 # ---------------------------------------------------------------------------
 
@@ -97,8 +159,8 @@ class _ToolPairValidatingApiClient(_StubApiClient):
             yield event
 
 
-def _make_user(text: str) -> ConversationMessage:
-    return ConversationMessage.from_user_text(text)
+# Kept for backward compatibility with tests that already use the old name.
+_make_user = _user
 
 
 # ---------------------------------------------------------------------------
@@ -111,7 +173,7 @@ class TestCompactForApiPurity:
 
     @pytest.mark.asyncio
     async def test_below_threshold_returns_fresh_list(self) -> None:
-        display = [_make_user("hello"), _make_user("world")]
+        display = [_user("hello"), _user("world")]
         snapshot = copy.deepcopy(display)
 
         api = await compact_for_api(
@@ -137,7 +199,7 @@ class TestCompactForApiPurity:
         from compaction import compactor as compactor_mod
 
         display = [
-            _make_user(f"message {i} with some content to count tokens")
+            _user(f"message {i} with some content to count tokens")
             for i in range(20)
         ]
         snapshot = copy.deepcopy(display)
@@ -172,15 +234,10 @@ class TestCompactForApiPurity:
     ) -> None:
         """When microcompact alone is insufficient, full compact runs and
         produces a summary-prefixed list. display_messages stays untouched."""
-        from compaction import compactor as compactor_mod
-
-        display = [_make_user(f"msg {i}") for i in range(15)]
+        display = [_user(f"msg {i}") for i in range(15)]
         snapshot = copy.deepcopy(display)
 
-        # Always say compaction is needed so the full path runs.
-        monkeypatch.setattr(
-            compactor_mod, "should_autocompact", lambda msgs, model, state: True
-        )
+        _force_autocompact(monkeypatch)
 
         client = _StubApiClient(summary="<summary>compressed</summary>")
         api = await compact_for_api(
@@ -201,23 +258,10 @@ class TestCompactForApiPurity:
         self,
     ) -> None:
         messages = [
-            _make_user("older context"),
-            ConversationMessage(
-                role="assistant",
-                content=[
-                    ToolUseBlock(id="toolu_pair", name="check_background_progress", input={"task_id": "bg_1"})
-                ],
-            ),
-            ConversationMessage(
-                role="user",
-                content=[
-                    ToolResultBlock(
-                        tool_use_id="toolu_pair",
-                        content="background snapshot",
-                    )
-                ],
-            ),
-            _make_user("newer context"),
+            _user("older context"),
+            _tool_use("toolu_pair", "check_background_progress", {"task_id": "bg_1"}),
+            _tool_result("toolu_pair", "background snapshot"),
+            _user("newer context"),
         ]
 
         result = await compact_conversation(
@@ -233,12 +277,9 @@ class TestCompactForApiPurity:
 
     def test_sanitize_tool_sequence_drops_orphaned_tool_results(self) -> None:
         messages = [
-            _make_user("prompt"),
-            ConversationMessage(role="assistant", content=[TextBlock(text="no tools here")]),
-            ConversationMessage(
-                role="user",
-                content=[ToolResultBlock(tool_use_id="toolu_orphan", content="stale result")],
-            ),
+            _user("prompt"),
+            _assistant("no tools here"),
+            _tool_result("toolu_orphan", "stale result"),
         ]
 
         sanitized = _sanitize_tool_sequence(messages)
@@ -255,17 +296,9 @@ class TestCompactForApiPurity:
     ) -> None:
         client = _StubApiClient()
         messages = [
-            _make_user("older context"),
-            ConversationMessage(
-                role="user",
-                content=[
-                    ToolResultBlock(
-                        tool_use_id="toolu_orphan",
-                        content="orphaned tool result",
-                    )
-                ],
-            ),
-            _make_user("newer context"),
+            _user("older context"),
+            _tool_result("toolu_orphan", "orphaned tool result"),
+            _user("newer context"),
         ]
 
         with pytest.raises(ValueError, match="compaction preflight rejected malformed tool sequencing"):
@@ -283,20 +316,13 @@ class TestCompactForApiPurity:
     async def test_compact_for_api_sanitizes_invalid_history_before_provider_call(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        from compaction import compactor as compactor_mod
-
-        monkeypatch.setattr(
-            compactor_mod, "should_autocompact", lambda msgs, model, state: True
-        )
+        _force_autocompact(monkeypatch)
 
         display = [
-            _make_user("prefix 0"),
-            _make_user("prefix 1"),
-            _make_user("older context"),
-            ConversationMessage(
-                role="assistant",
-                content=[ToolUseBlock(id="toolu_pair", name="echo", input={"value": "x"})],
-            ),
+            _user("prefix 0"),
+            _user("prefix 1"),
+            _user("older context"),
+            _tool_use("toolu_pair", "echo", {"value": "x"}),
             ConversationMessage(
                 role="user",
                 content=[
@@ -310,10 +336,10 @@ class TestCompactForApiPurity:
                     ),
                 ],
             ),
-            _make_user("suffix 0"),
-            _make_user("suffix 1"),
-            _make_user("suffix 2"),
-            _make_user("newer context"),
+            _user("suffix 0"),
+            _user("suffix 1"),
+            _user("suffix 2"),
+            _user("newer context"),
         ]
         state = SessionState()
         client = _StubApiClient()
@@ -347,16 +373,11 @@ class TestBuildBackgroundReminder:
     @pytest.mark.asyncio
     async def test_includes_task_id_and_label(self) -> None:
         mgr = BackgroundTaskManager()
-
-        async def _coro() -> ToolResult:
-            await asyncio.sleep(10)
-            return ToolResult(output="done")
-
         mgr.launch(
             "bg_1",
             "daytona_codeact",
             {"command": "sleep 10"},
-            _coro(),
+            _slow_coro(),
             task_note="long sleep",
         )
         # Append a progress line so get_reminder_diff returns something.
@@ -392,13 +413,8 @@ class TestBuildBackgroundReminder:
         """Sanity check: the reminder can be appended and survives as a
         regular message (it is NOT a separate ephemeral type)."""
         mgr = BackgroundTaskManager()
-
-        async def _coro() -> ToolResult:
-            await asyncio.sleep(10)
-            return ToolResult(output="done")
-
-        mgr.launch("bg_1", "tool", {}, _coro())
-        display: list[ConversationMessage] = [_make_user("hi")]
+        mgr.launch("bg_1", "tool", {}, _slow_coro())
+        display: list[ConversationMessage] = [_user("hi")]
 
         reminder = _build_background_reminder(mgr)
         assert reminder is not None
@@ -551,7 +567,7 @@ class TestCompactForApiState:
 
     @pytest.mark.asyncio
     async def test_state_unchanged_when_below_threshold(self) -> None:
-        display = [_make_user("hi")]
+        display = [_user("hi")]
         state = SessionState(
             compacted=False, turn_counter=0, consecutive_failures=0
         )
@@ -571,12 +587,8 @@ class TestCompactForApiState:
     async def test_state_marks_compacted_after_full_compact(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        from compaction import compactor as compactor_mod
-
-        monkeypatch.setattr(
-            compactor_mod, "should_autocompact", lambda msgs, model, state: True
-        )
-        display = [_make_user(f"m {i}") for i in range(10)]
+        _force_autocompact(monkeypatch)
+        display = [_user(f"m {i}") for i in range(10)]
         state = SessionState(
             compacted=False, turn_counter=0, consecutive_failures=0
         )
@@ -600,12 +612,8 @@ class TestCompactForApiState:
         compact_for_api swallows the exception, increments
         consecutive_failures, and returns the microcompacted working
         list (NOT the original display_messages)."""
-        from compaction import compactor as compactor_mod
-
-        monkeypatch.setattr(
-            compactor_mod, "should_autocompact", lambda msgs, model, state: True
-        )
-        display = [_make_user(f"m {i}") for i in range(10)]
+        _force_autocompact(monkeypatch)
+        display = [_user(f"m {i}") for i in range(10)]
         snapshot = copy.deepcopy(display)
         state = SessionState(
             compacted=False, turn_counter=5, consecutive_failures=1
@@ -633,29 +641,14 @@ class TestCompactForApiState:
     ) -> None:
         """A recent background state must survive the
         compaction round-trip when it falls within preserve_recent."""
-        from compaction import compactor as compactor_mod
-
-        monkeypatch.setattr(
-            compactor_mod, "should_autocompact", lambda msgs, model, state: True
-        )
+        _force_autocompact(monkeypatch)
         # Build a long history with the reminder at the end (recent).
         display: list[ConversationMessage] = [
-            _make_user(f"old msg {i}") for i in range(30)
+            _user(f"old msg {i}") for i in range(30)
         ]
-        reminder_msg = ConversationMessage(
-            role="user",
-            content=[
-                BackgroundTaskStateBlock(
-                    task_id="bg_1",
-                    tool_name="run_subagent",
-                    task_type="subagent",
-                    status="running",
-                    source="engine_progress",
-                    text="bg_1 still running",
-                )
-            ],
+        display.append(
+            _bg_state("bg_1", "run_subagent", "subagent", "running", "engine_progress", "bg_1 still running")
         )
-        display.append(reminder_msg)
 
         api = await compact_for_api(
             display,
@@ -672,12 +665,7 @@ class TestCompactForApiState:
 
     def test_reduce_for_api_drops_stale_snapshot_pairs_but_not_display_history(self) -> None:
         display = [
-            ConversationMessage(
-                role="assistant",
-                content=[
-                    ToolUseBlock(id="toolu_1", name="check_background_progress", input={"task_id": "all"})
-                ],
-            ),
+            _tool_use("toolu_1", "check_background_progress", {"task_id": "all"}),
             ConversationMessage(
                 role="user",
                 content=[
@@ -695,19 +683,7 @@ class TestCompactForApiState:
                     )
                 ],
             ),
-            ConversationMessage(
-                role="user",
-                content=[
-                    BackgroundTaskStateBlock(
-                        task_id="bg_1",
-                        tool_name="run_subagent",
-                        task_type="subagent",
-                        status="completed",
-                        source="engine_terminal",
-                        text="done",
-                    )
-                ],
-            ),
+            _bg_state("bg_1", "run_subagent", "subagent", "completed", "engine_terminal", "done"),
         ]
         snapshot = copy.deepcopy(display)
 
@@ -737,13 +713,8 @@ class TestBuildReminderEdgeCases:
     @pytest.mark.asyncio
     async def test_multiple_pending_tasks_all_appear(self) -> None:
         mgr = BackgroundTaskManager()
-
-        async def _coro() -> ToolResult:
-            await asyncio.sleep(10)
-            return ToolResult(output="done")
-
-        mgr.launch("bg_1", "tool_a", {}, _coro(), task_note="first task")
-        mgr.launch("bg_2", "tool_b", {}, _coro(), task_note="second task")
+        mgr.launch("bg_1", "tool_a", {}, _slow_coro(), task_note="first task")
+        mgr.launch("bg_2", "tool_b", {}, _slow_coro(), task_note="second task")
         mgr.append_progress("bg_1", "alpha")
         mgr.append_progress("bg_2", "beta")
 
@@ -763,12 +734,8 @@ class TestBuildReminderEdgeCases:
         async def _quick() -> ToolResult:
             return ToolResult(output="finished")
 
-        async def _slow() -> ToolResult:
-            await asyncio.sleep(10)
-            return ToolResult(output="done")
-
         mgr.launch("bg_done", "tool_quick", {}, _quick(), task_note="quick")
-        mgr.launch("bg_running", "tool_slow", {}, _slow(), task_note="slow")
+        mgr.launch("bg_running", "tool_slow", {}, _slow_coro(), task_note="slow")
         # Let the quick task finish.
         await asyncio.sleep(0.05)
 
@@ -784,12 +751,7 @@ class TestBuildReminderEdgeCases:
     async def test_no_progress_branch_uses_seconds_since_format(self) -> None:
         """Tasks with no new progress lines render the 'No new output' body."""
         mgr = BackgroundTaskManager()
-
-        async def _coro() -> ToolResult:
-            await asyncio.sleep(10)
-            return ToolResult(output="done")
-
-        mgr.launch("bg_x", "tool", {}, _coro())
+        mgr.launch("bg_x", "tool", {}, _slow_coro())
         # Don't append any progress lines. The startup-stamp line counts as
         # initial progress, so the FIRST reminder will include it.
         first = _build_background_reminder(mgr)

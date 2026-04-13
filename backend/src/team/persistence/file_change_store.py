@@ -23,10 +23,17 @@ from sqlalchemy import BigInteger, DateTime, String, Text, text
 from sqlalchemy.orm import Mapped, Session, mapped_column, sessionmaker
 
 from db.base import Base
+from db.stores.base import SyncStoreMixin
 from team.persistence.ltree_utils import path_to_ltree
 from team.persistence.pg_types import LTREE
 
 logger = logging.getLogger(__name__)
+
+_FC_SELECT = (
+    "SELECT id, team_run_id, file_path, agent_id, agent_run_id,"
+    " path_ltree, edit_type, old_hash, new_hash,"
+    " description, created_at FROM file_changes"
+)
 
 
 def _utcnow() -> datetime:
@@ -81,24 +88,8 @@ class ContentionHotspot:
 # ---------------------------------------------------------------------------
 
 
-class FileChangeStore:
+class FileChangeStore(SyncStoreMixin):
     """Durable file-change persistence. Sync SQLAlchemy, existing Store pattern."""
-
-    def __init__(self) -> None:
-        self._session_factory: sessionmaker[Session] | None = None
-
-    def initialize(self, session_factory: sessionmaker[Session]) -> None:
-        self._session_factory = session_factory
-        logger.info("FileChangeStore initialised")
-
-    @property
-    def initialized(self) -> bool:
-        return self._session_factory is not None
-
-    @property
-    def _sf(self) -> sessionmaker[Session]:
-        assert self._session_factory is not None, "FileChangeStore not initialised"
-        return self._session_factory
 
     def record(
         self,
@@ -146,16 +137,13 @@ class FileChangeStore:
             }
 
             result = session.execute(
-                text("""
-                    SELECT id, team_run_id, file_path, agent_id, agent_run_id,
-                           path_ltree, edit_type, old_hash, new_hash,
-                           description, created_at
-                    FROM file_changes
-                    WHERE team_run_id = :run_id
-                      AND created_at > :since
-                      AND path_ltree <@ ANY(:scopes::ltree[])
-                    ORDER BY created_at DESC
-                """),
+                text(
+                    f"{_FC_SELECT}"
+                    " WHERE team_run_id = :run_id"
+                    " AND created_at > :since"
+                    " AND path_ltree <@ ANY(:scopes::ltree[])"
+                    " ORDER BY created_at DESC"
+                ),
                 params,
             )
             return [self._row_to_record(row) for row in result.fetchall()]
@@ -178,33 +166,19 @@ class FileChangeStore:
         since: float,
         team_run_id: str | None = None,
     ) -> list[FileChangeRecord]:
-        """Return all file changes after *since* (epoch float).
-
-        Uses the composite index (team_run_id, created_at DESC).
-        """
+        """Return all file changes after *since* (epoch float)."""
+        where = "WHERE created_at > :since"
+        params: dict[str, Any] = {
+            "since": datetime.fromtimestamp(since, tz=timezone.utc),
+        }
+        if team_run_id is not None:
+            where += " AND team_run_id = :run_id"
+            params["run_id"] = team_run_id
         with self._sf() as session:
-            since_dt = datetime.fromtimestamp(since, tz=timezone.utc)
-            params: dict[str, Any] = {"since": since_dt}
-            if team_run_id is not None:
-                params["run_id"] = team_run_id
-                query = text("""
-                    SELECT id, team_run_id, file_path, agent_id, agent_run_id,
-                           path_ltree, edit_type, old_hash, new_hash,
-                           description, created_at
-                    FROM file_changes
-                    WHERE created_at > :since AND team_run_id = :run_id
-                    ORDER BY created_at ASC
-                """)
-            else:
-                query = text("""
-                    SELECT id, team_run_id, file_path, agent_id, agent_run_id,
-                           path_ltree, edit_type, old_hash, new_hash,
-                           description, created_at
-                    FROM file_changes
-                    WHERE created_at > :since
-                    ORDER BY created_at ASC
-                """)
-            result = session.execute(query, params)
+            result = session.execute(
+                text(f"{_FC_SELECT} {where} ORDER BY created_at ASC"),
+                params,
+            )
             return [self._row_to_record(row) for row in result.fetchall()]
 
     def recent_edits(
@@ -222,27 +196,19 @@ class FileChangeStore:
         team_run_id: str | None = None,
     ) -> list[tuple[str, int]]:
         """Return top files by edit count."""
+        where = "WHERE team_run_id = :run_id" if team_run_id else ""
+        params: dict[str, Any] = {"lim": limit}
+        if team_run_id is not None:
+            params["run_id"] = team_run_id
         with self._sf() as session:
-            params: dict[str, Any] = {"lim": limit}
-            if team_run_id is not None:
-                params["run_id"] = team_run_id
-                query = text("""
-                    SELECT file_path, COUNT(*) AS edit_count
-                    FROM file_changes
-                    WHERE team_run_id = :run_id
-                    GROUP BY file_path
-                    ORDER BY edit_count DESC
-                    LIMIT :lim
-                """)
-            else:
-                query = text("""
-                    SELECT file_path, COUNT(*) AS edit_count
-                    FROM file_changes
-                    GROUP BY file_path
-                    ORDER BY edit_count DESC
-                    LIMIT :lim
-                """)
-            result = session.execute(query, params)
+            result = session.execute(
+                text(
+                    f"SELECT file_path, COUNT(*) AS edit_count"
+                    f" FROM file_changes {where}"
+                    f" GROUP BY file_path ORDER BY edit_count DESC LIMIT :lim"
+                ),
+                params,
+            )
             return [(row.file_path, row.edit_count) for row in result.fetchall()]
 
     def who_changed(
@@ -251,28 +217,36 @@ class FileChangeStore:
         team_run_id: str | None = None,
     ) -> list[FileChangeRecord]:
         """Return all edit records for a specific file."""
+        where = "WHERE file_path = :fp"
+        params: dict[str, Any] = {"fp": file_path}
+        if team_run_id is not None:
+            where += " AND team_run_id = :run_id"
+            params["run_id"] = team_run_id
         with self._sf() as session:
-            params: dict[str, Any] = {"fp": file_path}
-            if team_run_id is not None:
-                params["run_id"] = team_run_id
-                query = text("""
-                    SELECT id, team_run_id, file_path, agent_id, agent_run_id,
-                           path_ltree, edit_type, old_hash, new_hash,
-                           description, created_at
-                    FROM file_changes
-                    WHERE file_path = :fp AND team_run_id = :run_id
-                    ORDER BY created_at ASC
-                """)
-            else:
-                query = text("""
-                    SELECT id, team_run_id, file_path, agent_id, agent_run_id,
-                           path_ltree, edit_type, old_hash, new_hash,
-                           description, created_at
-                    FROM file_changes
-                    WHERE file_path = :fp
-                    ORDER BY created_at ASC
-                """)
-            result = session.execute(query, params)
+            result = session.execute(
+                text(f"{_FC_SELECT} {where} ORDER BY created_at ASC"),
+                params,
+            )
+            return [self._row_to_record(row) for row in result.fetchall()]
+
+    def changes_by_agent_run(
+        self,
+        team_run_id: str,
+        agent_run_id: str,
+    ) -> list[FileChangeRecord]:
+        """Return all file changes made by a specific agent run."""
+        if not agent_run_id:
+            return []
+        with self._sf() as session:
+            result = session.execute(
+                text(
+                    f"{_FC_SELECT}"
+                    " WHERE team_run_id = :run_id"
+                    " AND agent_run_id = :agent_run_id"
+                    " ORDER BY created_at ASC"
+                ),
+                {"run_id": team_run_id, "agent_run_id": agent_run_id},
+            )
             return [self._row_to_record(row) for row in result.fetchall()]
 
     def contention_hotspots(
@@ -366,6 +340,9 @@ class NullFileChangeStore:
         return []
 
     def external_changes_in_scope(self, *args: Any, **kwargs: Any) -> list:
+        return []
+
+    def changes_by_agent_run(self, *args: Any, **kwargs: Any) -> list:
         return []
 
     def contention_hotspots(self, *args: Any, **kwargs: Any) -> list:

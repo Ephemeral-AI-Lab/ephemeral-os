@@ -8,52 +8,15 @@ resource usage, and result aggregation.
 Run with: .venv/bin/python -m pytest backend/tests/test_e2e/test_bg_parallel_tasks_live.py -v -s --log-cli-level=INFO
 """
 from __future__ import annotations
-import logging
 import pytest
 from engine.testing.eval_agent import EvalAgent
+from tests.test_e2e.bg_prompts import BG_PARALLEL
 from tests.test_e2e.conftest import create_eval_agent, create_test_sandbox, delete_test_sandbox
+from tests.test_e2e.helpers import log_result
 
-logger = logging.getLogger(__name__)
 pytestmark = [pytest.mark.e2e, pytest.mark.live]
 
-AGENT_PROMPT = """\
-You are test-parallel-agent, a developer with a remote Daytona sandbox.
-
-IMPORTANT RULES:
-- You MUST use tools for every action — never just describe what you'd do.
-- Use daytona_codeact to run commands, daytona_write_file to create files.
-- You have background task support: add "background": true to tool input for long-running operations.
-- Use check_background_progress for instant status snapshots.
-- Use wait_for_background_task to block when you have no foreground work.
-- Use cancel_background_task to cancel tasks.
-
-PARALLEL EXECUTION:
-- Launch multiple background tasks simultaneously when they are independent.
-- Continue foreground work while background tasks run.
-- Use check_background_progress to monitor, wait_for_background_task when idle.
-- Aggregate results from multiple completed tasks.
-
-Always be concise. Execute tools, don't just describe them.
-"""
-
-
-def _log_result(result, label: str) -> None:
-    checks = result.tool_count("check_background_progress")
-    waits = result.tool_count("wait_for_background_task")
-    cancels = result.tool_count("cancel_background_task")
-    bg_completed = result.background_completed()
-
-    logger.info(
-        f"\n{'='*60}\n[{label}] Parallel summary:\n"
-        f"  Tools started: {len(result.tools_started())}\n"
-        f"  Background started: {len(result.background_started())}\n"
-        f"  Background completed: {len(bg_completed)}\n"
-        f"  Wait calls: {waits}\n"
-        f"  Check calls: {checks}\n"
-        f"  Cancel calls: {cancels}\n"
-        f"  Tool sequence: {result.tool_names}\n"
-        f"{'='*60}"
-    )
+AGENT_PROMPT = BG_PARALLEL
 
 
 # ===========================================================================
@@ -92,7 +55,7 @@ class TestParallelBgWithFgInterleaving:
             "Wait for all tasks with wait_for_background_task using task_id=\"all\" and timeout=15. "
             "Report all results."
         )
-        _log_result(result, "three_bg_fg_interleave")
+        log_result(result, "three_bg_fg_interleave")
 
         # 3+ background launches
         bg_bash = [tc for tc in result.tool_calls
@@ -163,7 +126,7 @@ class TestParallelBgStaggeredFinish:
             "Create /home/daytona/results.txt with a summary of all 3 task outcomes using daytona_write_file. "
             "Report."
         )
-        _log_result(result, "staggered_finish")
+        log_result(result, "staggered_finish")
 
         # 3+ background launches
         bg_bash = [tc for tc in result.tool_calls
@@ -232,7 +195,7 @@ class TestParallelFgBgMix:
             "Then wait for the background task with wait_for_background_task timeout=15. "
             "Report: how many fg tasks completed, bg result."
         )
-        _log_result(result, "heavy_fg_bg_mix")
+        log_result(result, "heavy_fg_bg_mix")
 
         # 1 background launch
         bg_bash = [tc for tc in result.tool_calls
@@ -295,7 +258,7 @@ class TestParallelBgSameCommand:
             "Collect all results and create /home/daytona/test_summary.txt with the combined "
             "shard results using daytona_write_file. Report total pass/fail."
         )
-        _log_result(result, "same_command_shards")
+        log_result(result, "same_command_shards")
 
         # 4+ background launches
         bg_bash = [tc for tc in result.tool_calls
@@ -358,7 +321,7 @@ class TestParallelBgOneFailsOthersSucceed:
             "Check progress again to see all statuses. "
             "Report: which succeeded, which failed, and note the exit code of the failed task."
         )
-        _log_result(result, "one_fails_others_succeed")
+        log_result(result, "one_fails_others_succeed")
 
         # 3 background launches
         bg_bash = [tc for tc in result.tool_calls
@@ -422,7 +385,7 @@ class TestParallelBgCancelAllRemaining:
             "(cancel each one individually with reason 'Race won, no longer needed'). "
             "Report the winner and which tasks were cancelled."
         )
-        _log_result(result, "cancel_all_remaining")
+        log_result(result, "cancel_all_remaining")
 
         # 4 background launches
         bg_bash = [tc for tc in result.tool_calls

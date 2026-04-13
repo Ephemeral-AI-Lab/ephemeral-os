@@ -15,7 +15,7 @@ from prompts.agent_templates import (
     build_type_section,
 )
 
-_BUILTINS_DIR = Path(__file__).resolve().parents[2] / "src" / "team" / "builtins" / "agents"
+_BUILTINS_DIR = Path(__file__).resolve().parents[2] / "config" / "agents"
 
 
 # ---------------------------------------------------------------------------

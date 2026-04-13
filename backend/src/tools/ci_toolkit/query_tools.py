@@ -11,14 +11,12 @@ from typing import Any
 
 from code_intelligence.query_helpers import (
     _build_fallback_specs,
-    _extract_match_name,
     _dedupe_matches,
     _parse_rg_matches,
     _build_reference_pattern,
     _parse_reference_matches,
     _python_fallback_query_symbols,
 )
-from code_intelligence.constants import SKIP_DIRECTORIES, SUPPORTED_EXTENSIONS
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.ci_runtime import get_ci_service
 from tools.core.sandbox_runtime import get_daytona_sandbox, resolve_daytona_path
@@ -121,102 +119,87 @@ async def _exec_remote(
     return response, (getattr(response, "result", "") or "").strip()
 
 
-def _local_query_symbols(
-    *,
-    workspace_root: str,
+def _run_rg_local(pattern: str, root: str) -> tuple[int, str] | None:
+    """Run ripgrep locally, return (exit_code, stdout) or None on error."""
+    try:
+        response = subprocess.run(
+            ["rg", "-n", "--no-heading", "--color", "never", "-e", pattern, root],
+            capture_output=True, text=True, timeout=30, check=False,
+        )
+    except FileNotFoundError:
+        return None
+    except Exception:
+        logger.debug("Local rg query failed for pattern %s", pattern, exc_info=True)
+        return None
+    return response.returncode, response.stdout
+
+
+async def _run_rg_remote(
+    context: ToolExecutionContext, pattern: str, target: str, label: str,
+) -> tuple[int, str] | None:
+    """Run ripgrep on the remote sandbox, return (exit_code, stdout) or None."""
+    command = f"rg -n --no-heading --color never -e {shlex.quote(pattern)} {shlex.quote(target)}"
+    response, output = await _exec_remote(context, command, log_label=label)
+    if response is None:
+        return None
+    return getattr(response, "exit_code", 0), output
+
+
+def _fallback_query_symbols(
+    rg_results: list[tuple[int, str] | None],
+    specs: list[Any],
     query: str,
-    kind: str = "",
+) -> list[dict[str, Any]]:
+    """Parse ripgrep results from multiple fallback specs into symbol matches."""
+    collected: list[dict[str, Any]] = []
+    for rg_result, spec in zip(rg_results, specs):
+        if rg_result is None:
+            continue
+        exit_code, stdout = rg_result
+        if exit_code not in (0, 1) or not stdout:
+            continue
+        collected.extend(_parse_rg_matches(stdout, query=query, kind=spec.kind))
+        if len(collected) >= _SYMBOL_FALLBACK_LIMIT:
+            break
+    return collected
+
+
+def _local_query_symbols(
+    *, workspace_root: str, query: str, kind: str = "",
 ) -> list[dict[str, Any]] | None:
     """Search the local workspace when the symbol index is cold or incomplete."""
     root = Path(workspace_root)
     if not root.is_dir():
         return None
-
-    collected: list[dict[str, Any]] = []
-    for spec in _build_fallback_specs(query, kind=kind):
-        try:
-            response = subprocess.run(
-                [
-                    "rg",
-                    "-n",
-                    "--no-heading",
-                    "--color",
-                    "never",
-                    "-e",
-                    spec.pattern,
-                    str(root),
-                ],
-                capture_output=True,
-                text=True,
-                timeout=30,
-                check=False,
-            )
-        except FileNotFoundError:
-            return _python_fallback_query_symbols(root=root, query=query, kind=kind)
-        except Exception:
-            logger.debug("Local symbol query failed for %s", query, exc_info=True)
-            continue
-        if response.returncode not in (0, 1):
-            continue
-        if not response.stdout:
-            continue
-        collected.extend(_parse_rg_matches(response.stdout, query=query, kind=spec.kind))
-        if len(collected) >= _SYMBOL_FALLBACK_LIMIT:
-            break
-
+    specs = _build_fallback_specs(query, kind=kind)
+    rg_results = [_run_rg_local(spec.pattern, str(root)) for spec in specs]
+    if any(r is None for r in rg_results):
+        py = _python_fallback_query_symbols(root=root, query=query, kind=kind)
+        if py:
+            return py
+    collected = _fallback_query_symbols(rg_results, specs, query)
     python_matches = _python_fallback_query_symbols(root=root, query=query, kind=kind)
     if python_matches:
         collected.extend(python_matches)
-    deduped = _dedupe_matches(collected)
-    return deduped or None
+    return _dedupe_matches(collected) or None
 
 
 def _local_query_references(
-    *,
-    workspace_root: str,
-    symbol: str,
-    skip_file: str = "",
-    skip_line: int = 0,
+    *, workspace_root: str, symbol: str, skip_file: str = "", skip_line: int = 0,
 ) -> list[dict[str, Any]] | None:
     root = Path(workspace_root)
     if not root.is_dir():
         return None
-
     pattern = _build_reference_pattern(symbol)
     if not pattern:
         return None
-    try:
-        response = subprocess.run(
-            [
-                "rg",
-                "-n",
-                "--no-heading",
-                "--color",
-                "never",
-                "-e",
-                pattern,
-                str(root),
-            ],
-            capture_output=True,
-            text=True,
-            timeout=30,
-            check=False,
-        )
-    except FileNotFoundError:
+    rg_result = _run_rg_local(pattern, str(root))
+    if rg_result is None:
         return None
-    except Exception:
-        logger.debug("Local reference query failed for %s", symbol, exc_info=True)
+    exit_code, stdout = rg_result
+    if exit_code not in (0, 1) or not stdout:
         return None
-
-    if response.returncode not in (0, 1) or not response.stdout:
-        return None
-    refs = _parse_reference_matches(
-        response.stdout,
-        symbol=symbol,
-        skip_file=skip_file,
-        skip_line=skip_line,
-    )
-    return refs or None
+    return _parse_reference_matches(stdout, symbol=symbol, skip_file=skip_file, skip_line=skip_line) or None
 
 
 def _svc_or_error(context: ToolExecutionContext) -> tuple[Any | None, ToolResult | None]:
@@ -232,177 +215,34 @@ def _svc_or_error(context: ToolExecutionContext) -> tuple[Any | None, ToolResult
 
 
 async def _remote_query_symbols(
-    context: ToolExecutionContext,
-    *,
-    query: str,
-    kind: str = "",
+    context: ToolExecutionContext, *, query: str, kind: str = "",
 ) -> list[dict[str, Any]] | None:
     """Best-effort remote fallback for symbol search on cold starts."""
     target = resolve_daytona_path("", context)
-    collected: list[dict[str, Any]] = []
-    for spec in _build_fallback_specs(query, kind=kind):
-        command = (
-            f"rg -n --no-heading --color never -e {shlex.quote(spec.pattern)} {shlex.quote(target)}"
-        )
-        response, output = await _exec_remote(
-            context,
-            command,
-            log_label=f"Remote symbol query for {query}",
-        )
-        if response is None:
-            return None
-        exit_code = getattr(response, "exit_code", 0)
-        if exit_code not in (0, 1) or not output:
-            continue
-        collected.extend(_parse_rg_matches(output, query=query, kind=spec.kind))
-        if len(collected) >= _SYMBOL_FALLBACK_LIMIT:
-            break
-
-    sandbox = get_daytona_sandbox(context)
-    if sandbox is None:
+    specs = _build_fallback_specs(query, kind=kind)
+    rg_results = [
+        await _run_rg_remote(context, spec.pattern, target, f"Remote symbol query for {query}")
+        for spec in specs
+    ]
+    if any(r is None for r in rg_results):
         return None
-    python_matches = await _remote_query_symbols_via_python(
-        sandbox=sandbox,
-        target=target,
-        query=query,
-        kind=kind,
-    )
-    if python_matches:
-        collected.extend(python_matches)
-    deduped = _dedupe_matches(collected)
-    return deduped or None
+    return _dedupe_matches(_fallback_query_symbols(rg_results, specs, query)) or None
 
 
 async def _remote_query_references(
-    context: ToolExecutionContext,
-    *,
-    symbol: str,
-    skip_file: str = "",
-    skip_line: int = 0,
+    context: ToolExecutionContext, *, symbol: str, skip_file: str = "", skip_line: int = 0,
 ) -> list[dict[str, Any]] | None:
     pattern = _build_reference_pattern(symbol)
     if not pattern:
         return None
     target = resolve_daytona_path("", context)
-    command = f"rg -n --no-heading --color never -e {shlex.quote(pattern)} {shlex.quote(target)}"
-    response, output = await _exec_remote(
-        context,
-        command,
-        log_label=f"Remote reference query for {symbol}",
-    )
-    if response is None:
+    rg_result = await _run_rg_remote(context, pattern, target, f"Remote ref query for {symbol}")
+    if rg_result is None:
         return None
-
-    exit_code = getattr(response, "exit_code", 0)
-    if exit_code not in (0, 1) or not output:
+    exit_code, stdout = rg_result
+    if exit_code not in (0, 1) or not stdout:
         return None
-    refs = _parse_reference_matches(
-        output,
-        symbol=symbol,
-        skip_file=skip_file,
-        skip_line=skip_line,
-    )
-    return refs or None
-
-
-async def _remote_query_symbols_via_python(
-    *,
-    sandbox: Any,
-    target: str,
-    query: str,
-    kind: str = "",
-) -> list[dict[str, Any]] | None:
-    """Portable remote fallback when ripgrep is unavailable in the sandbox."""
-    specs = _build_fallback_specs(query, kind=kind)
-    if not specs:
-        return None
-
-    payload = json.dumps(
-        {
-            "root": target,
-            "patterns": [{"pattern": spec.pattern, "kind": spec.kind} for spec in specs],
-            "skip_dirs": sorted(SKIP_DIRECTORIES),
-            "extensions": sorted(SUPPORTED_EXTENSIONS),
-            "limit": _SYMBOL_FALLBACK_LIMIT,
-        }
-    )
-    script = """
-import json
-import os
-import re
-import sys
-
-payload = json.loads(sys.argv[1])
-root = payload["root"]
-patterns = [(re.compile(item["pattern"]), item["kind"]) for item in payload["patterns"]]
-skip_dirs = set(payload["skip_dirs"])
-extensions = tuple(payload["extensions"])
-limit = int(payload["limit"])
-matches = []
-
-for dirpath, dirnames, filenames in os.walk(root):
-    dirnames[:] = [name for name in dirnames if name not in skip_dirs]
-    for filename in filenames:
-        if not filename.endswith(extensions):
-            continue
-        path = os.path.join(dirpath, filename)
-        try:
-            with open(path, encoding="utf-8") as handle:
-                for lineno, line in enumerate(handle, start=1):
-                    for pattern, match_kind in patterns:
-                        if pattern.search(line):
-                            matches.append(
-                                {
-                                    "file": path,
-                                    "line": lineno,
-                                    "kind": match_kind,
-                                    "snippet": line.strip()[:200],
-                                }
-                            )
-                            break
-                    if len(matches) >= limit:
-                        break
-        except Exception:
-            continue
-        if len(matches) >= limit:
-            break
-    if len(matches) >= limit:
-        break
-
-print(json.dumps(matches))
-"""
-    command = f"python -c {shlex.quote(script)} {shlex.quote(payload)}"
-    try:
-        response = await sandbox.process.exec(command, timeout=30)
-    except Exception:
-        logger.debug("Remote python symbol query failed for %s", query, exc_info=True)
-        return None
-
-    exit_code = getattr(response, "exit_code", 0)
-    output = (getattr(response, "result", "") or "").strip()
-    if exit_code != 0 or not output:
-        return None
-    try:
-        raw_matches = json.loads(output)
-    except Exception:
-        logger.debug("Remote python symbol query produced invalid JSON for %s", query)
-        return None
-
-    collected: list[dict[str, Any]] = []
-    for item in raw_matches:
-        snippet = str(item.get("snippet") or "")
-        matched_kind = str(item.get("kind") or "text_match")
-        collected.append(
-            {
-                "name": _extract_match_name(snippet, query=query, kind=matched_kind),
-                "kind": matched_kind,
-                "file": str(item.get("file") or ""),
-                "line": int(item.get("line") or 0),
-                "signature": snippet[:200],
-            }
-        )
-    deduped = _dedupe_matches(collected)
-    return deduped or None
+    return _parse_reference_matches(stdout, symbol=symbol, skip_file=skip_file, skip_line=skip_line) or None
 
 
 # -- CI Status ----------------------------------------------------------------

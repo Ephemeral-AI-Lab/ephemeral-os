@@ -5,12 +5,35 @@ from __future__ import annotations
 import asyncio
 from contextlib import suppress
 import time
+from typing import Any
 
 from engine.core.query import _record_tool_trace
 from engine.runtime.background_tasks import BackgroundTaskManager
 from message.stream_events import BackgroundTaskStarted
+from tools.builtins.background._common import (
+    MAX_TOTAL_OUTPUT_CHARS,
+    MIN_PER_ENTRY_CHARS,
+    apply_last_n_lines,
+)
+from tools.builtins.background.cancel_background_task import (
+    CancelBackgroundTaskInput,
+    CancelBackgroundTaskTool,
+)
+from tools.builtins.background.check_background_progress import (
+    CheckBackgroundProgressInput,
+    CheckBackgroundProgressTool,
+)
+from tools.builtins.background.wait_for_background_task import (
+    WaitForBackgroundTaskInput,
+    WaitForBackgroundTaskTool,
+)
+from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.runtime import ExecutionMetadata
-from tools.core.base import ToolResult
+
+
+# ---------------------------------------------------------------------------
+# Shared helpers
+# ---------------------------------------------------------------------------
 
 
 async def _make_tool_coro(
@@ -19,6 +42,52 @@ async def _make_tool_coro(
     if delay:
         await asyncio.sleep(delay)
     return ToolResult(output=output, is_error=is_error)
+
+
+def _launch(
+    mgr: BackgroundTaskManager,
+    *,
+    task_id: str = "t1",
+    tool_name: str = "test_tool",
+    tool_input: dict[str, Any] | None = None,
+    delay: float = 0.0,
+    output: str = "ok",
+    exit_code: int = 0,
+    kill_callback=None,
+    task_type: str = "tool",
+):
+    """Thin wrapper: creates the coro and calls mgr.launch with sensible defaults."""
+    kwargs: dict[str, Any] = dict(
+        task_id=task_id,
+        tool_name=tool_name,
+        tool_input=tool_input if tool_input is not None else {},
+        coro=_make_tool_coro(output=output, delay=delay),
+        task_type=task_type,
+    )
+    if kill_callback is not None:
+        kwargs["kill_callback"] = kill_callback
+    return mgr.launch(**kwargs)
+
+
+def _launch_subagent(
+    mgr: BackgroundTaskManager,
+    *,
+    task_id: str = "bg_1",
+    delay: float = 10.0,
+    coro=None,
+):
+    """Launch a subagent-typed task (run_subagent / scout pattern)."""
+    return mgr.launch(
+        task_id=task_id,
+        tool_name="run_subagent",
+        tool_input={"agent_name": "scout"},
+        coro=coro if coro is not None else _make_tool_coro(delay=delay),
+        task_type="subagent",
+    )
+
+
+def _make_ctx(mgr: BackgroundTaskManager) -> ToolExecutionContext:
+    return ToolExecutionContext(cwd="/tmp", metadata={"background_task_manager": mgr})
 
 
 # ---------------------------------------------------------------------------
@@ -50,12 +119,7 @@ async def test_launch_creates_task() -> None:
 
 async def test_collect_completed_after_task_finishes() -> None:
     mgr = BackgroundTaskManager()
-    mgr.launch(
-        task_id="t1",
-        tool_name="fast_tool",
-        tool_input={},
-        coro=_make_tool_coro(output="hello"),
-    )
+    _launch(mgr, task_id="t1", tool_name="fast_tool", output="hello")
     await asyncio.sleep(0.01)
 
     completed = mgr.collect_completed()
@@ -73,12 +137,7 @@ async def test_collect_completed_after_task_finishes() -> None:
 
 async def test_collect_completed_only_once() -> None:
     mgr = BackgroundTaskManager()
-    mgr.launch(
-        task_id="t1",
-        tool_name="tool",
-        tool_input={},
-        coro=_make_tool_coro(),
-    )
+    _launch(mgr)
     await asyncio.sleep(0.01)
 
     first = mgr.collect_completed()
@@ -97,12 +156,7 @@ async def test_has_pending() -> None:
     mgr = BackgroundTaskManager()
     assert mgr.has_pending() is False
 
-    mgr.launch(
-        task_id="t1",
-        tool_name="slow",
-        tool_input={},
-        coro=_make_tool_coro(delay=1.0),
-    )
+    _launch(mgr, delay=1.0)
     assert mgr.has_pending() is True
 
     # Cancel so we don't leak the slow task.
@@ -117,12 +171,7 @@ async def test_has_pending() -> None:
 
 async def test_wait_any_returns_on_completion() -> None:
     mgr = BackgroundTaskManager()
-    mgr.launch(
-        task_id="t1",
-        tool_name="tool",
-        tool_input={},
-        coro=_make_tool_coro(output="waited", delay=0.1),
-    )
+    _launch(mgr, output="waited", delay=0.1)
 
     start = time.monotonic()
     result = await mgr.wait_any(timeout=5)
@@ -164,12 +213,7 @@ def test_record_tool_trace_dedupes_background_scout_launch_by_tool_use_id() -> N
 
 async def test_wait_any_timeout() -> None:
     mgr = BackgroundTaskManager()
-    mgr.launch(
-        task_id="t1",
-        tool_name="very_slow",
-        tool_input={},
-        coro=_make_tool_coro(delay=10),
-    )
+    _launch(mgr, delay=10)
 
     result = await mgr.wait_any(timeout=0.1)
     assert result is None
@@ -195,12 +239,7 @@ async def test_wait_any_no_pending() -> None:
 
 async def test_cancel_running_task() -> None:
     mgr = BackgroundTaskManager()
-    mgr.launch(
-        task_id="t1",
-        tool_name="slow",
-        tool_input={},
-        coro=_make_tool_coro(delay=10),
-    )
+    _launch(mgr, tool_name="slow", delay=10)
 
     ok = await mgr.cancel("t1", "test reason")
     assert ok is True
@@ -230,12 +269,7 @@ async def test_cancel_nonexistent_task() -> None:
 async def test_cancel_all() -> None:
     mgr = BackgroundTaskManager()
     for i in range(3):
-        mgr.launch(
-            task_id=f"t{i}",
-            tool_name=f"tool{i}",
-            tool_input={},
-            coro=_make_tool_coro(delay=10),
-        )
+        _launch(mgr, task_id=f"t{i}", tool_name=f"tool{i}", delay=10)
 
     await mgr.cancel_all()
 
@@ -256,13 +290,7 @@ async def test_cancel_all_marks_subagent_cancelled_without_asyncio_cancel() -> N
             raise
         return ToolResult(output="done")
 
-    mgr.launch(
-        task_id="bg_1",
-        tool_name="run_subagent",
-        tool_input={"agent_name": "scout"},
-        coro=_subagent_coro(),
-        task_type="subagent",
-    )
+    _launch_subagent(mgr, task_id="bg_1", coro=_subagent_coro())
 
     await mgr.cancel_all()
     await asyncio.sleep(0)
@@ -291,13 +319,7 @@ async def test_cancel_subagent_requests_early_stop_and_preserves_result() -> Non
             return ToolResult(output="partial brief")
         return ToolResult(output="done")
 
-    mgr.launch(
-        task_id="bg_early",
-        tool_name="run_subagent",
-        tool_input={"agent_name": "scout"},
-        coro=_subagent_coro(),
-        task_type="subagent",
-    )
+    _launch_subagent(mgr, task_id="bg_early", coro=_subagent_coro())
 
     ok = await mgr.cancel("bg_early", "enough evidence")
     assert ok is True
@@ -349,18 +371,8 @@ async def test_task_that_raises_exception() -> None:
 
 async def test_get_status_all() -> None:
     mgr = BackgroundTaskManager()
-    mgr.launch(
-        task_id="t1",
-        tool_name="tool_a",
-        tool_input={},
-        coro=_make_tool_coro(delay=10),
-    )
-    mgr.launch(
-        task_id="t2",
-        tool_name="tool_b",
-        tool_input={},
-        coro=_make_tool_coro(delay=10),
-    )
+    _launch(mgr, task_id="t1", tool_name="tool_a", delay=10)
+    _launch(mgr, task_id="t2", tool_name="tool_b", delay=10)
 
     statuses = mgr.get_status()
     assert len(statuses) == 2
@@ -383,18 +395,8 @@ async def test_get_status_all() -> None:
 
 async def test_get_status_by_id() -> None:
     mgr = BackgroundTaskManager()
-    mgr.launch(
-        task_id="t1",
-        tool_name="tool_a",
-        tool_input={},
-        coro=_make_tool_coro(delay=10),
-    )
-    mgr.launch(
-        task_id="t2",
-        tool_name="tool_b",
-        tool_input={},
-        coro=_make_tool_coro(delay=10),
-    )
+    _launch(mgr, task_id="t1", tool_name="tool_a", delay=10)
+    _launch(mgr, task_id="t2", tool_name="tool_b", delay=10)
 
     statuses = mgr.get_status(task_id="t1")
     assert len(statuses) == 1
@@ -419,12 +421,7 @@ async def test_get_status_returns_full_output_for_tool_layer_to_trim() -> None:
     """
     mgr = BackgroundTaskManager()
     long_output = "x" * 5000
-    mgr.launch(
-        task_id="t1",
-        tool_name="tool",
-        tool_input={},
-        coro=_make_tool_coro(output=long_output),
-    )
+    _launch(mgr, output=long_output)
     await asyncio.sleep(0.01)
 
     statuses = mgr.get_status()
@@ -432,11 +429,6 @@ async def test_get_status_returns_full_output_for_tool_layer_to_trim() -> None:
     assert statuses[0]["output"] == long_output
 
     # Tool-layer trim is what bounds context: verify the helper caps it.
-    from tools.builtins.background._common import (
-        MAX_TOTAL_OUTPUT_CHARS,
-        apply_last_n_lines,
-    )
-
     apply_last_n_lines(statuses, last_n_lines=20)
     # Single-entry case: per-entry budget == total budget.
     assert len(statuses[0]["output"]) <= MAX_TOTAL_OUTPUT_CHARS + len(
@@ -451,12 +443,7 @@ async def test_get_status_returns_full_output_for_tool_layer_to_trim() -> None:
 
 async def test_progress_lines_populated() -> None:
     mgr = BackgroundTaskManager()
-    mgr.launch(
-        task_id="t1",
-        tool_name="tool",
-        tool_input={},
-        coro=_make_tool_coro(output="line1\nline2\nline3"),
-    )
+    _launch(mgr, output="line1\nline2\nline3")
     await asyncio.sleep(0.01)
 
     tracked = mgr._tasks["t1"]
@@ -470,24 +457,9 @@ async def test_progress_lines_populated() -> None:
 
 async def test_multiple_concurrent_tasks() -> None:
     mgr = BackgroundTaskManager()
-    mgr.launch(
-        task_id="fast",
-        tool_name="fast",
-        tool_input={},
-        coro=_make_tool_coro(output="fast_done", delay=0.01),
-    )
-    mgr.launch(
-        task_id="medium",
-        tool_name="medium",
-        tool_input={},
-        coro=_make_tool_coro(output="medium_done", delay=0.05),
-    )
-    mgr.launch(
-        task_id="slow",
-        tool_name="slow",
-        tool_input={},
-        coro=_make_tool_coro(output="slow_done", delay=0.1),
-    )
+    _launch(mgr, task_id="fast", tool_name="fast", output="fast_done", delay=0.01)
+    _launch(mgr, task_id="medium", tool_name="medium", output="medium_done", delay=0.05)
+    _launch(mgr, task_id="slow", tool_name="slow", output="slow_done", delay=0.1)
 
     # wait_any should return the fastest first.
     first = await mgr.wait_any(timeout=5)
@@ -515,13 +487,7 @@ async def test_cancel_invokes_kill_callback() -> None:
         killed.append("killed")
 
     mgr = BackgroundTaskManager()
-    mgr.launch(
-        task_id="t1",
-        tool_name="slow",
-        tool_input={},
-        coro=_make_tool_coro(delay=10),
-        kill_callback=_fake_kill,
-    )
+    _launch(mgr, tool_name="slow", delay=10, kill_callback=_fake_kill)
 
     ok = await mgr.cancel("t1", "test kill")
     assert ok is True
@@ -549,20 +515,8 @@ async def test_cancel_all_invokes_kill_callbacks() -> None:
         killed.append("t2")
 
     mgr = BackgroundTaskManager()
-    mgr.launch(
-        task_id="t1",
-        tool_name="tool1",
-        tool_input={},
-        coro=_make_tool_coro(delay=10),
-        kill_callback=_fake_kill_1,
-    )
-    mgr.launch(
-        task_id="t2",
-        tool_name="tool2",
-        tool_input={},
-        coro=_make_tool_coro(delay=10),
-        kill_callback=_fake_kill_2,
-    )
+    _launch(mgr, task_id="t1", tool_name="tool1", delay=10, kill_callback=_fake_kill_1)
+    _launch(mgr, task_id="t2", tool_name="tool2", delay=10, kill_callback=_fake_kill_2)
 
     await mgr.cancel_all()
     assert set(killed) == {"t1", "t2"}, f"Expected both callbacks invoked, got {killed}"
@@ -577,13 +531,7 @@ async def test_cancel_all_invokes_kill_callbacks() -> None:
 async def test_cancel_without_kill_callback() -> None:
     """cancel() with no kill_callback should still mark as cancelled."""
     mgr = BackgroundTaskManager()
-    mgr.launch(
-        task_id="t1",
-        tool_name="slow",
-        tool_input={},
-        coro=_make_tool_coro(delay=10),
-        # No kill_callback
-    )
+    _launch(mgr, tool_name="slow", delay=10)
 
     ok = await mgr.cancel("t1", "no kill cb")
     assert ok is True
@@ -597,17 +545,12 @@ async def test_cancel_without_kill_callback() -> None:
 
 async def test_kill_callback_exception_does_not_prevent_cancel() -> None:
     """If kill_callback raises, the task should still be marked cancelled."""
+
     async def _bad_kill() -> None:
         raise RuntimeError("sandbox connection lost")
 
     mgr = BackgroundTaskManager()
-    mgr.launch(
-        task_id="t1",
-        tool_name="slow",
-        tool_input={},
-        coro=_make_tool_coro(delay=10),
-        kill_callback=_bad_kill,
-    )
+    _launch(mgr, tool_name="slow", delay=10, kill_callback=_bad_kill)
 
     ok = await mgr.cancel("t1", "kill failed but cancel ok")
     assert ok is True
@@ -629,18 +572,8 @@ async def test_wait_for_does_not_consume_other_task_completions() -> None:
     tasks before the engine could deliver them.
     """
     mgr = BackgroundTaskManager()
-    mgr.launch(
-        task_id="fast",
-        tool_name="fast",
-        tool_input={},
-        coro=_make_tool_coro(output="fast-done", delay=0.01),
-    )
-    mgr.launch(
-        task_id="slow",
-        tool_name="slow",
-        tool_input={},
-        coro=_make_tool_coro(output="slow-done", delay=0.30),
-    )
+    _launch(mgr, task_id="fast", tool_name="fast", output="fast-done", delay=0.01)
+    _launch(mgr, task_id="slow", tool_name="slow", output="slow-done", delay=0.30)
 
     result = await mgr.wait_for("slow", timeout=0.05)
     assert result is None
@@ -662,12 +595,7 @@ async def test_wait_for_does_not_consume_other_task_completions() -> None:
 
 async def test_wait_for_returns_immediately_for_finished_task() -> None:
     mgr = BackgroundTaskManager()
-    mgr.launch(
-        task_id="t1",
-        tool_name="t",
-        tool_input={},
-        coro=_make_tool_coro(output="ok"),
-    )
+    _launch(mgr)
     await asyncio.sleep(0.01)
 
     start = time.monotonic()
@@ -698,12 +626,7 @@ async def test_wait_for_unknown_id_returns_none() -> None:
 async def test_get_status_unknown_id_returns_empty() -> None:
     """Unknown task_id must return [] — never silently fall through to 'all'."""
     mgr = BackgroundTaskManager()
-    mgr.launch(
-        task_id="real",
-        tool_name="t",
-        tool_input={},
-        coro=_make_tool_coro(),
-    )
+    _launch(mgr, task_id="real", tool_name="t")
 
     assert mgr.get_status("ghost") == []
     assert len(mgr.get_status("real")) == 1
@@ -727,13 +650,7 @@ async def test_cancel_all_skips_asyncio_cancel_when_kill_callback_present() -> N
         kill_called.append("yes")
 
     mgr = BackgroundTaskManager()
-    mgr.launch(
-        task_id="t1",
-        tool_name="slow",
-        tool_input={},
-        coro=_make_tool_coro(delay=10),
-        kill_callback=_kill,
-    )
+    _launch(mgr, tool_name="slow", delay=10, kill_callback=_kill)
     task = mgr._tasks["t1"].asyncio_task
 
     await mgr.cancel_all()
@@ -754,12 +671,7 @@ async def test_cancel_all_skips_asyncio_cancel_when_kill_callback_present() -> N
 
 async def test_cancel_all_falls_back_to_asyncio_cancel_without_kill_callback() -> None:
     mgr = BackgroundTaskManager()
-    mgr.launch(
-        task_id="t1",
-        tool_name="slow",
-        tool_input={},
-        coro=_make_tool_coro(delay=10),
-    )
+    _launch(mgr, tool_name="slow", delay=10)
     task = mgr._tasks["t1"].asyncio_task
 
     await mgr.cancel_all()
@@ -777,12 +689,7 @@ async def test_done_callback_skips_cancelled_status() -> None:
     """If cancel() ran first, the asyncio task completing later must not
     overwrite the cancelled state with completed."""
     mgr = BackgroundTaskManager()
-    mgr.launch(
-        task_id="t1",
-        tool_name="t",
-        tool_input={},
-        coro=_make_tool_coro(output="late-completion", delay=0.05),
-    )
+    _launch(mgr, output="late-completion", delay=0.05)
     await mgr.cancel("t1", "early")
     await asyncio.sleep(0.10)
 
@@ -804,12 +711,7 @@ async def test_done_callback_handles_asyncio_cancel_without_loop_error() -> None
 
     loop.set_exception_handler(_handler)
     try:
-        mgr.launch(
-            task_id="t_cancel",
-            tool_name="t",
-            tool_input={},
-            coro=_make_tool_coro(delay=10),
-        )
+        _launch(mgr, task_id="t_cancel", tool_name="t", delay=10)
         await mgr.cancel("t_cancel", "stop")
         await asyncio.sleep(0)
     finally:
@@ -826,8 +728,6 @@ async def test_done_callback_handles_asyncio_cancel_without_loop_error() -> None
 
 
 def test_apply_last_n_lines_keeps_tail() -> None:
-    from tools.builtins.background._common import apply_last_n_lines
-
     entries = [{"output": "\n".join(f"line{i}" for i in range(50))}]
     apply_last_n_lines(entries, last_n_lines=5)
     assert entries[0]["output"].splitlines() == [
@@ -836,11 +736,6 @@ def test_apply_last_n_lines_keeps_tail() -> None:
 
 
 def test_apply_last_n_lines_char_cap_with_marker() -> None:
-    from tools.builtins.background._common import (
-        MAX_TOTAL_OUTPUT_CHARS,
-        apply_last_n_lines,
-    )
-
     entries = [{"output": "x" * (MAX_TOTAL_OUTPUT_CHARS * 2)}]
     apply_last_n_lines(entries, last_n_lines=100)
     out = entries[0]["output"]
@@ -850,11 +745,6 @@ def test_apply_last_n_lines_char_cap_with_marker() -> None:
 
 
 def test_apply_last_n_lines_drops_leading_partial_line() -> None:
-    from tools.builtins.background._common import (
-        MAX_TOTAL_OUTPUT_CHARS,
-        apply_last_n_lines,
-    )
-
     big_line = "A" * 500
     text = "\n".join([big_line] * 20)
     entries = [{"output": text}]
@@ -870,12 +760,6 @@ def test_apply_last_n_lines_drops_leading_partial_line() -> None:
 
 
 def test_apply_last_n_lines_budget_split_across_entries() -> None:
-    from tools.builtins.background._common import (
-        MAX_TOTAL_OUTPUT_CHARS,
-        MIN_PER_ENTRY_CHARS,
-        apply_last_n_lines,
-    )
-
     entries = [{"output": "y" * (MAX_TOTAL_OUTPUT_CHARS * 2)} for _ in range(4)]
     apply_last_n_lines(entries, last_n_lines=1000)
 
@@ -888,11 +772,6 @@ def test_apply_last_n_lines_budget_split_across_entries() -> None:
 
 def test_apply_last_n_lines_floor_per_entry() -> None:
     """With many entries, the per-entry floor (MIN_PER_ENTRY_CHARS) must hold."""
-    from tools.builtins.background._common import (
-        MIN_PER_ENTRY_CHARS,
-        apply_last_n_lines,
-    )
-
     entries = [{"output": "z" * 5000} for _ in range(100)]
     apply_last_n_lines(entries, last_n_lines=1000)
     for e in entries:
@@ -910,25 +789,12 @@ def test_apply_last_n_lines_floor_per_entry() -> None:
 
 
 async def test_cancel_tool_rejects_all_sentinel() -> None:
-    from tools.builtins.background.cancel_background_task import (
-        CancelBackgroundTaskInput,
-        CancelBackgroundTaskTool,
-    )
-    from tools.core.base import ToolExecutionContext
-
     mgr = BackgroundTaskManager()
-    mgr.launch(
-        task_id="bg_1",
-        tool_name="t",
-        tool_input={},
-        coro=_make_tool_coro(delay=10),
-    )
+    _launch(mgr, task_id="bg_1", tool_name="t", delay=10)
 
     tool = CancelBackgroundTaskTool()
     args = CancelBackgroundTaskInput(task_id="all")
-    ctx = ToolExecutionContext(cwd="/tmp", metadata={"background_task_manager": mgr})
-
-    result = await tool.execute(args, ctx)
+    result = await tool.execute(args, _make_ctx(mgr))
     assert result.is_error is True
     assert "does not support" in result.output
     assert mgr._tasks["bg_1"].status == "running"
@@ -942,26 +808,13 @@ async def test_cancel_tool_rejects_all_sentinel() -> None:
 
 
 async def test_wait_tool_already_completed_returns_stale_notice() -> None:
-    from tools.builtins.background.wait_for_background_task import (
-        WaitForBackgroundTaskInput,
-        WaitForBackgroundTaskTool,
-    )
-    from tools.core.base import ToolExecutionContext
-
     mgr = BackgroundTaskManager()
-    mgr.launch(
-        task_id="bg_1",
-        tool_name="t",
-        tool_input={},
-        coro=_make_tool_coro(output="finished"),
-    )
+    _launch(mgr, task_id="bg_1", tool_name="t", output="finished")
     await asyncio.sleep(0.01)
 
     tool = WaitForBackgroundTaskTool()
     args = WaitForBackgroundTaskInput(task_id="bg_1", timeout=5)
-    ctx = ToolExecutionContext(cwd="/tmp", metadata={"background_task_manager": mgr})
-
-    result = await tool.execute(args, ctx)
+    result = await tool.execute(args, _make_ctx(mgr))
     assert result.is_error is False
     assert "ALREADY_COMPLETED" in result.output
 
@@ -972,50 +825,25 @@ async def test_wait_tool_already_completed_returns_stale_notice() -> None:
 
 
 async def test_check_progress_unknown_id_is_error() -> None:
-    from tools.builtins.background.check_background_progress import (
-        CheckBackgroundProgressInput,
-        CheckBackgroundProgressTool,
-    )
-    from tools.core.base import ToolExecutionContext
-
     mgr = BackgroundTaskManager()
     tool = CheckBackgroundProgressTool()
     args = CheckBackgroundProgressInput(task_id="ghost")
-    ctx = ToolExecutionContext(cwd="/tmp", metadata={"background_task_manager": mgr})
-
-    result = await tool.execute(args, ctx)
+    result = await tool.execute(args, _make_ctx(mgr))
     assert result.is_error is True
     assert "ghost" in result.output
 
 
 async def test_wait_tool_rejects_immediate_join_on_fresh_subagent() -> None:
-    from tools.builtins.background.check_background_progress import (
-        CheckBackgroundProgressInput,
-        CheckBackgroundProgressTool,
-    )
-    from tools.builtins.background.wait_for_background_task import (
-        WaitForBackgroundTaskInput,
-        WaitForBackgroundTaskTool,
-    )
-    from tools.core.base import ToolExecutionContext
-
     mgr = BackgroundTaskManager()
-    mgr.launch(
-        task_id="bg_1",
-        tool_name="run_subagent",
-        tool_input={"agent_name": "scout"},
-        coro=_make_tool_coro(delay=10),
-        task_type="subagent",
-    )
+    _launch_subagent(mgr, task_id="bg_1")
 
+    ctx = _make_ctx(mgr)
     check_tool = CheckBackgroundProgressTool()
-    tool = WaitForBackgroundTaskTool()
-    ctx = ToolExecutionContext(cwd="/tmp", metadata={"background_task_manager": mgr})
     check_result = await check_tool.execute(CheckBackgroundProgressInput(task_id="bg_1"), ctx)
     assert check_result.is_error is False
 
-    args = WaitForBackgroundTaskInput(task_id="bg_1", timeout=5)
-    result = await tool.execute(args, ctx)
+    tool = WaitForBackgroundTaskTool()
+    result = await tool.execute(WaitForBackgroundTaskInput(task_id="bg_1", timeout=5), ctx)
     assert result.is_error is True
     assert "WAIT_TOO_EARLY" in result.output
 
@@ -1023,40 +851,17 @@ async def test_wait_tool_rejects_immediate_join_on_fresh_subagent() -> None:
 
 
 async def test_wait_tool_rejects_wait_all_for_only_fresh_subagents() -> None:
-    from tools.builtins.background.check_background_progress import (
-        CheckBackgroundProgressInput,
-        CheckBackgroundProgressTool,
-    )
-    from tools.builtins.background.wait_for_background_task import (
-        WaitForBackgroundTaskInput,
-        WaitForBackgroundTaskTool,
-    )
-    from tools.core.base import ToolExecutionContext
-
     mgr = BackgroundTaskManager()
-    mgr.launch(
-        task_id="bg_1",
-        tool_name="run_subagent",
-        tool_input={"agent_name": "scout"},
-        coro=_make_tool_coro(delay=10),
-        task_type="subagent",
-    )
-    mgr.launch(
-        task_id="bg_2",
-        tool_name="run_subagent",
-        tool_input={"agent_name": "scout"},
-        coro=_make_tool_coro(delay=10),
-        task_type="subagent",
-    )
+    _launch_subagent(mgr, task_id="bg_1")
+    _launch_subagent(mgr, task_id="bg_2")
 
+    ctx = _make_ctx(mgr)
     check_tool = CheckBackgroundProgressTool()
-    tool = WaitForBackgroundTaskTool()
-    ctx = ToolExecutionContext(cwd="/tmp", metadata={"background_task_manager": mgr})
     check_result = await check_tool.execute(CheckBackgroundProgressInput(task_id="all"), ctx)
     assert check_result.is_error is False
 
-    args = WaitForBackgroundTaskInput(task_id="all", timeout=5)
-    result = await tool.execute(args, ctx)
+    tool = WaitForBackgroundTaskTool()
+    result = await tool.execute(WaitForBackgroundTaskInput(task_id="all", timeout=5), ctx)
     assert result.is_error is True
     assert "WAIT_TOO_EARLY" in result.output
 
@@ -1064,24 +869,11 @@ async def test_wait_tool_rejects_wait_all_for_only_fresh_subagents() -> None:
 
 
 async def test_wait_tool_requires_progress_check_before_joining_subagent() -> None:
-    from tools.builtins.background.wait_for_background_task import (
-        WaitForBackgroundTaskInput,
-        WaitForBackgroundTaskTool,
-    )
-    from tools.core.base import ToolExecutionContext
-
     mgr = BackgroundTaskManager()
-    mgr.launch(
-        task_id="bg_1",
-        tool_name="run_subagent",
-        tool_input={"agent_name": "scout"},
-        coro=_make_tool_coro(delay=10),
-        task_type="subagent",
-    )
+    _launch_subagent(mgr, task_id="bg_1")
 
+    ctx = _make_ctx(mgr)
     tool = WaitForBackgroundTaskTool()
-    ctx = ToolExecutionContext(cwd="/tmp", metadata={"background_task_manager": mgr})
-
     result = await tool.execute(WaitForBackgroundTaskInput(task_id="bg_1", timeout=5), ctx)
     assert result.is_error is True
     assert "WAIT_REQUIRES_PROGRESS_CHECK" in result.output
@@ -1090,23 +882,11 @@ async def test_wait_tool_requires_progress_check_before_joining_subagent() -> No
 
 
 async def test_check_progress_marks_subagent_as_inspected() -> None:
-    from tools.builtins.background.check_background_progress import (
-        CheckBackgroundProgressInput,
-        CheckBackgroundProgressTool,
-    )
-    from tools.core.base import ToolExecutionContext
-
     mgr = BackgroundTaskManager()
-    mgr.launch(
-        task_id="bg_1",
-        tool_name="run_subagent",
-        tool_input={"agent_name": "scout"},
-        coro=_make_tool_coro(delay=10),
-        task_type="subagent",
-    )
+    _launch_subagent(mgr, task_id="bg_1")
 
+    ctx = _make_ctx(mgr)
     tool = CheckBackgroundProgressTool()
-    ctx = ToolExecutionContext(cwd="/tmp", metadata={"background_task_manager": mgr})
     result = await tool.execute(CheckBackgroundProgressInput(task_id="bg_1"), ctx)
 
     assert result.is_error is False
@@ -1118,12 +898,6 @@ async def test_check_progress_marks_subagent_as_inspected() -> None:
 
 
 async def test_wait_tool_allows_immediate_join_for_non_subagent_task() -> None:
-    from tools.builtins.background.wait_for_background_task import (
-        WaitForBackgroundTaskInput,
-        WaitForBackgroundTaskTool,
-    )
-    from tools.core.base import ToolExecutionContext
-
     mgr = BackgroundTaskManager()
     mgr.launch(
         task_id="bg_1",
@@ -1135,9 +909,7 @@ async def test_wait_tool_allows_immediate_join_for_non_subagent_task() -> None:
 
     tool = WaitForBackgroundTaskTool()
     args = WaitForBackgroundTaskInput(task_id="bg_1", timeout=1)
-    ctx = ToolExecutionContext(cwd="/tmp", metadata={"background_task_manager": mgr})
-
-    result = await tool.execute(args, ctx)
+    result = await tool.execute(args, _make_ctx(mgr))
     assert result.is_error is False
     assert "WAIT_TOO_EARLY" not in result.output
 

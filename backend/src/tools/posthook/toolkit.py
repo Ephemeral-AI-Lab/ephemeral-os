@@ -346,17 +346,17 @@ class SubmitReplanTool(BaseTool):
 
 
 # ---------------------------------------------------------------------------
-# PosthookToolkit
+# PosthookTools
 # ---------------------------------------------------------------------------
 
 
-class PosthookToolkit(BaseToolkit):
-    """Role-aware toolkit that exposes the appropriate terminal submission tools."""
+class PosthookTools(BaseToolkit):
+    """Role-aware tool set that exposes the appropriate terminal submission tools."""
 
     posthook = True
 
     @classmethod
-    def from_context(cls, ctx: object) -> PosthookToolkit:
+    def from_context(cls, ctx: object) -> PosthookTools:
         from agents.registry import get_role
 
         metadata = getattr(ctx, "metadata", {}) or {}  # type: ignore[union-attr]

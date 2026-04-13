@@ -26,6 +26,44 @@ from tests.test_e2e.conftest import (
 pytestmark = [pytest.mark.e2e, pytest.mark.live]
 
 
+# ---------------------------------------------------------------------------
+# Shared helpers
+# ---------------------------------------------------------------------------
+
+
+def _sandbox_fixture(label: str):
+    """Return a class-scoped sandbox fixture for the given label."""
+    import pytest as _pytest
+
+    @_pytest.fixture(scope="class")
+    def sandbox(self):
+        sb = create_test_sandbox(label)
+        yield sb
+        delete_test_sandbox(sb["id"])
+
+    return sandbox
+
+
+async def _invoke_with_sandbox_agent(
+    sandbox,
+    system_prompt: str,
+    message: str,
+) -> object:
+    """Create a sandboxed agent, invoke message, assert at least one assistant turn, return result."""
+    agent = create_eval_agent(system_prompt=system_prompt, sandbox_id=sandbox["id"])
+    result = await agent.invoke(message)
+    assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
+    return result
+
+
+def _assert_daytona_tools_used(result) -> None:
+    """If any tools were called, assert at least one is a daytona_ tool."""
+    tool_started = result.tools_started()
+    if tool_started:
+        daytona_tools = [t for t in result.tool_names if t.startswith("daytona_")]
+        assert len(daytona_tools) >= 1, f"Expected at least one daytona tool, got: {result.tool_names}"
+
+
 # ===========================================================================
 # AREA 1: Tool Calling & Skill Loading in Daytona Sandbox
 # ===========================================================================
@@ -46,43 +84,27 @@ class TestToolCallingAndSkillLoading:
     @pytest.mark.asyncio
     async def test_daytona_codeact_tool_executes(self, sandbox):
         """Model should invoke daytona_codeact and return real output."""
-        agent = create_eval_agent(
+        result = await _invoke_with_sandbox_agent(
+            sandbox,
             system_prompt="You have a remote sandbox. Use daytona_codeact to run commands. Always use tools.",
-            sandbox_id=sandbox["id"],
+            message="Run this exact command in the sandbox: echo 'TOOL_CALL_E2E_PASS'",
         )
-
-        result = await agent.invoke(
-            "Run this exact command in the sandbox: echo 'TOOL_CALL_E2E_PASS'"
-        )
-        assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
-
         # Check tool events — tool may or may not be used depending on model behavior
-        tool_started = result.tools_started()
-        if tool_started:
-            tool_names = result.tool_names
-            assert any("daytona" in t for t in tool_names), f"No daytona tool used: {tool_names}"
+        if result.tools_started():
+            assert any("daytona" in t for t in result.tool_names), f"No daytona tool used: {result.tool_names}"
 
     @pytest.mark.asyncio
     async def test_daytona_write_and_read_file(self, sandbox):
         """Model should write a file and read it back using sandbox tools."""
-        agent = create_eval_agent(
+        result = await _invoke_with_sandbox_agent(
+            sandbox,
             system_prompt=(
                 "You have sandbox access via daytona_write_file and daytona_read_file. "
                 "Always use the tools, never simulate."
             ),
-            sandbox_id=sandbox["id"],
+            message="Write the text 'E2E_FILE_TEST' to /workspace/e2e_check.txt, then read it back and tell me the content.",
         )
-
-        result = await agent.invoke(
-            "Write the text 'E2E_FILE_TEST' to /workspace/e2e_check.txt, then read it back and tell me the content."
-        )
-        assert len(result.assistant_turns()) >= 1
-
-        tool_started = result.tools_started()
-        if tool_started:
-            tool_names = result.tool_names
-            daytona_tools = [t for t in tool_names if t.startswith("daytona_")]
-            assert len(daytona_tools) >= 1, f"Expected at least one daytona tool, got: {tool_names}"
+        _assert_daytona_tools_used(result)
 
     # -- 1b: Skill loading --
 
@@ -121,20 +143,14 @@ class TestToolCallingAndSkillLoading:
     @pytest.mark.asyncio
     async def test_multiple_tool_calls_single_turn(self, sandbox):
         """Model should handle multiple tool calls in a single turn."""
-        agent = create_eval_agent(
+        result = await _invoke_with_sandbox_agent(
+            sandbox,
             system_prompt="Use daytona_codeact for all commands. Execute every step.",
-            sandbox_id=sandbox["id"],
+            message="Run these two commands in the sandbox: 'echo FIRST' and then 'echo SECOND'",
         )
-
-        result = await agent.invoke(
-            "Run these two commands in the sandbox: 'echo FIRST' and then 'echo SECOND'"
-        )
-        assert len(result.assistant_turns()) >= 1
-
-        tool_started = result.tools_started()
         # Model should have at least attempted tool calls
-        if tool_started:
-            assert len(tool_started) >= 1
+        if result.tools_started():
+            assert len(result.tools_started()) >= 1
 
 
 # ===========================================================================
@@ -175,25 +191,14 @@ class TestMultiTurnConversation:
         """Five-turn conversation should maintain deep context."""
         agent = create_eval_agent()
 
-        # Turn 1
-        result1 = await agent.invoke(
-            "I'm building a Python class called DataProcessor. Just acknowledge."
-        )
-        assert result1.text
-
-        # Turn 2
-        result2 = await agent.invoke(
-            "It should have a method called transform() that takes a list. Acknowledge."
-        )
-        assert result2.text
-
-        # Turn 3
-        result3 = await agent.invoke("The transform method should square each number. Acknowledge.")
-        assert result3.text
-
-        # Turn 4
-        result4 = await agent.invoke("Add error handling for non-numeric values. Acknowledge.")
-        assert result4.text
+        # Turns 1-4: build up context, each must produce a response
+        for msg in [
+            "I'm building a Python class called DataProcessor. Just acknowledge.",
+            "It should have a method called transform() that takes a list. Acknowledge.",
+            "The transform method should square each number. Acknowledge.",
+            "Add error handling for non-numeric values. Acknowledge.",
+        ]:
+            assert (await agent.invoke(msg)).text
 
         # Turn 5: test recall of accumulated context
         result5 = await agent.invoke(
@@ -578,46 +583,37 @@ class TestComplexLongTasks:
     @pytest.mark.asyncio
     async def test_create_and_run_python_script(self, sandbox):
         """Model should create a Python file and execute it in the sandbox."""
-        agent = create_eval_agent(
+        result = await _invoke_with_sandbox_agent(
+            sandbox,
             system_prompt=(
                 "You have sandbox access. Use daytona_write_file to write files and "
                 "daytona_codeact to run them. Execute ALL requested steps using tools."
             ),
-            sandbox_id=sandbox["id"],
+            message=(
+                "Do these steps in the sandbox:\n"
+                "1. Write a file /workspace/greet.py with: print('COMPLEX_TASK_OK')\n"
+                "2. Run: python /workspace/greet.py\n"
+                "3. Tell me the output"
+            ),
         )
-
-        result = await agent.invoke(
-            "Do these steps in the sandbox:\n"
-            "1. Write a file /workspace/greet.py with: print('COMPLEX_TASK_OK')\n"
-            "2. Run: python /workspace/greet.py\n"
-            "3. Tell me the output"
-        )
-        assert len(result.assistant_turns()) >= 1, "Missing assistant turn"
-
-        tool_started = result.tools_started()
-        if tool_started:
-            tool_names = result.tool_names
-            daytona_tools = [t for t in tool_names if t.startswith("daytona_")]
-            assert len(daytona_tools) >= 1, f"Expected daytona tools, got: {tool_names}"
+        _assert_daytona_tools_used(result)
 
     @pytest.mark.asyncio
     async def test_multi_step_file_pipeline(self, sandbox):
         """Model should execute a multi-step pipeline: create, modify, verify."""
-        agent = create_eval_agent(
+        await _invoke_with_sandbox_agent(
+            sandbox,
             system_prompt=(
                 "You are a coding assistant with sandbox access. Use daytona_codeact, "
                 "daytona_write_file, and daytona_read_file tools. Execute every step."
             ),
-            sandbox_id=sandbox["id"],
+            message=(
+                "In the sandbox:\n"
+                "1. Create /workspace/data.txt with the text: alpha beta gamma\n"
+                "2. Run: wc -w /workspace/data.txt\n"
+                "3. Report the word count"
+            ),
         )
-
-        result = await agent.invoke(
-            "In the sandbox:\n"
-            "1. Create /workspace/data.txt with the text: alpha beta gamma\n"
-            "2. Run: wc -w /workspace/data.txt\n"
-            "3. Report the word count"
-        )
-        assert len(result.assistant_turns()) >= 1
 
     @pytest.mark.asyncio
     async def test_tool_error_handling(self, sandbox):
@@ -626,7 +622,6 @@ class TestComplexLongTasks:
             system_prompt="Use daytona_codeact for commands. If a command fails, explain the error.",
             sandbox_id=sandbox["id"],
         )
-
         result = await agent.invoke(
             "Run this in the sandbox: cat /nonexistent/file/that/does/not/exist"
         )
@@ -639,29 +634,25 @@ class TestComplexLongTasks:
     @pytest.mark.asyncio
     async def test_sequential_tool_calls_preserve_state(self, sandbox):
         """Sequential tool calls should see each other's results in the sandbox."""
-        agent = create_eval_agent(
+        await _invoke_with_sandbox_agent(
+            sandbox,
             system_prompt="Use daytona_codeact for all commands.",
-            sandbox_id=sandbox["id"],
+            message=(
+                "In the sandbox, run these commands one after another:\n"
+                "1. echo 'STATE_TEST' > /workspace/state_test.txt\n"
+                "2. cat /workspace/state_test.txt\n"
+                "3. Report what you see"
+            ),
         )
-
-        result = await agent.invoke(
-            "In the sandbox, run these commands one after another:\n"
-            "1. echo 'STATE_TEST' > /workspace/state_test.txt\n"
-            "2. cat /workspace/state_test.txt\n"
-            "3. Report what you see"
-        )
-        assert len(result.assistant_turns()) >= 1
 
     @pytest.mark.asyncio
     async def test_long_output_handling(self, sandbox):
         """Model should handle large tool output without crashing."""
-        agent = create_eval_agent(
+        await _invoke_with_sandbox_agent(
+            sandbox,
             system_prompt="Use daytona_codeact for commands.",
-            sandbox_id=sandbox["id"],
+            message="Run in the sandbox: seq 1 200",
         )
-
-        result = await agent.invoke("Run in the sandbox: seq 1 200")
-        assert len(result.assistant_turns()) >= 1
 
 
 # ===========================================================================

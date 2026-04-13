@@ -1,4 +1,4 @@
-"""Subagent toolkit — spawn focused worker subagents."""
+"""Subagent tools — spawn focused worker subagents."""
 
 from __future__ import annotations
 
@@ -8,15 +8,11 @@ from pydantic import Field, field_validator
 
 from agents.registry import list_dispatchable_subagent_names
 from tools.core.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolResult
-from tools.subagent.policy import SCOUT_ONLY_CALLERS
 from tools.subagent.run_subagent_tool import run_subagent
 
 
 def _allowed_subagent_names_for_caller(caller_agent: str) -> tuple[str, ...]:
-    names = tuple(list_dispatchable_subagent_names())
-    if caller_agent in SCOUT_ONLY_CALLERS:
-        return tuple(name for name in names if name == "scout")
-    return names
+    return tuple(list_dispatchable_subagent_names())
 
 
 def _build_restricted_input_model(allowed_agent_names: tuple[str, ...]):
@@ -104,7 +100,7 @@ class SubagentToolkit(BaseToolkit):
                 "- Emit multiple `run_subagent` calls in one turn only for disjoint work and only when live scope status still admits parallel fan-out.\n"
                 "- After spawning a worker, keep doing disjoint foreground work or launch other independent workers. Do not immediately block on the new task unless its result is the only remaining blocker.\n"
                 f"- Valid `agent_name` values for this caller: {allowed_text}.\n"
-                "- Only dispatchable subagent targets are valid. Planner-class callers may launch only `scout`; they must not launch `developer`, `validator`, or `team_planner` here.\n"
+                "- Only dispatchable subagent targets are valid.\n"
                 "- Prefer `check_background_progress(task_id=...)` to inspect a running worker before you wait on it.\n"
                 "- For a fresh subagent, inspect that exact `task_id` with `check_background_progress` before the first `wait_for_background_task`.\n"
                 "- Use `wait_for_background_task(task_id=...)` to join a worker when you are ready for its final answer.\n"

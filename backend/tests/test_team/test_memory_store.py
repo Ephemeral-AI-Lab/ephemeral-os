@@ -42,6 +42,26 @@ def _fake_services() -> TeamRuntimeServices:
     )
 
 
+def _make_run_with_context(
+    monkeypatch, store: TeamMemoryStore
+) -> tuple[TeamRun, Task]:
+    """Return a (run, task) pair wired to *store* via monkeypatch."""
+    monkeypatch.setattr("team.memory.runtime.get_default_store", lambda: store)
+    run = TeamRun(session_id="S1", user_request="hello", repo_root="/repo", services=_fake_services())
+    run.project_context = ProjectContext(
+        goal="g", user_request="u", project_key="P1", repo_root="/repo"
+    )
+    task = Task(
+        id="W1",
+        team_run_id=run.id,
+        agent_name="validator",
+        status=TaskStatus.DONE,
+        task="verify src/runtime/dispatcher.py",
+        scope_paths=["src/runtime/dispatcher.py"],
+    )
+    return run, task
+
+
 def test_team_memory_store_roundtrip_and_query(monkeypatch) -> None:
     store = _memory_store()
     monkeypatch.setattr("team.memory.runtime.get_default_store", lambda: store)
@@ -67,28 +87,9 @@ def test_team_memory_store_roundtrip_and_query(monkeypatch) -> None:
 
 def test_team_run_persists_validator_outcome(monkeypatch) -> None:
     store = _memory_store()
-    monkeypatch.setattr("team.memory.runtime.get_default_store", lambda: store)
+    run, task = _make_run_with_context(monkeypatch, store)
 
-    run = TeamRun(session_id="S1", user_request="hello", repo_root="/repo", services=_fake_services())
-    run.project_context = ProjectContext(
-        goal="g",
-        user_request="u",
-        project_key="P1",
-        repo_root="/repo",
-    )
-    task = Task(
-        id="W1",
-        team_run_id=run.id,
-        agent_name="validator",
-        status=TaskStatus.DONE,
-        task="verify src/runtime/dispatcher.py",
-        scope_paths=["src/runtime/dispatcher.py"],
-    )
-
-    persisted = run.note_validator_outcome(
-        task=task,
-        summary="PASS: targeted pytest node passed",
-    )
+    persisted = run.note_validator_outcome(task=task, summary="PASS: targeted pytest node passed")
 
     assert persisted is True
     results = store.query(
@@ -102,28 +103,9 @@ def test_team_run_persists_validator_outcome(monkeypatch) -> None:
 
 def test_team_run_persists_validator_outcome_with_failure_summary(monkeypatch) -> None:
     store = _memory_store()
-    monkeypatch.setattr("team.memory.runtime.get_default_store", lambda: store)
+    run, task = _make_run_with_context(monkeypatch, store)
 
-    run = TeamRun(session_id="S1", user_request="hello", repo_root="/repo", services=_fake_services())
-    run.project_context = ProjectContext(
-        goal="g",
-        user_request="u",
-        project_key="P1",
-        repo_root="/repo",
-    )
-    task = Task(
-        id="W1",
-        team_run_id=run.id,
-        agent_name="validator",
-        status=TaskStatus.DONE,
-        task="verify src/runtime/dispatcher.py",
-        scope_paths=["src/runtime/dispatcher.py"],
-    )
-
-    persisted = run.note_validator_outcome(
-        task=task,
-        summary="FAIL: command timed out",
-    )
+    persisted = run.note_validator_outcome(task=task, summary="FAIL: command timed out")
 
     assert persisted is True
     results = store.query(
@@ -137,15 +119,7 @@ def test_team_run_persists_validator_outcome_with_failure_summary(monkeypatch) -
 
 def test_team_run_persists_conflict_event(monkeypatch) -> None:
     store = _memory_store()
-    monkeypatch.setattr("team.memory.runtime.get_default_store", lambda: store)
-
-    run = TeamRun(session_id="S1", user_request="hello", repo_root="/repo", services=_fake_services())
-    run.project_context = ProjectContext(
-        goal="g",
-        user_request="u",
-        project_key="P1",
-        repo_root="/repo",
-    )
+    run, _ = _make_run_with_context(monkeypatch, store)
 
     persisted = run.note_conflict_event(
         file_path="src/runtime/dispatcher.py",

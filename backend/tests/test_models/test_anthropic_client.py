@@ -118,6 +118,40 @@ async def _collect_events(client: AnthropicClient, request: ApiMessageRequest) -
     return events
 
 
+async def _run_stream(
+    events: list[MockEvent],
+    final: MockFinalMessage,
+    request: ApiMessageRequest | None = None,
+) -> list[Any]:
+    """Wire up a MockStream on a fresh client and collect all events."""
+    client = _build_client()
+    client._client.messages.stream = MagicMock(return_value=MockStream(events, final))
+    return await _collect_events(client, request or _make_request())
+
+
+def _make_single_text_stream(text: str, input_tokens: int = 5, output_tokens: int = 2) -> tuple[list[MockEvent], MockFinalMessage]:
+    """Return (events, final) for a minimal single-text-delta stream."""
+    events = [
+        MockEvent(type="content_block_start", index=0, content_block=MockContentBlock(type="text")),
+        MockEvent(type="content_block_delta", index=0, delta=MockDelta(type="text_delta", text=text)),
+        MockEvent(type="content_block_stop", index=0),
+        MockEvent(type="message_stop"),
+    ]
+    final = MockFinalMessage(
+        content=[_make_text_block(text)],
+        usage=MockUsage(input_tokens=input_tokens, output_tokens=output_tokens),
+    )
+    return events, final
+
+
+def _make_api_status_error(status_code: int, message: str) -> anthropic.APIStatusError:
+    """Build an APIStatusError with the given HTTP status code."""
+    mock_response = MagicMock()
+    mock_response.status_code = status_code
+    mock_response.headers = {}
+    return anthropic.APIStatusError(message=message, response=mock_response, body=None)
+
+
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
@@ -156,10 +190,7 @@ class TestTextOnlyResponse:
             usage=MockUsage(input_tokens=10, output_tokens=5),
         )
 
-        client = _build_client()
-        client._client.messages.stream = MagicMock(return_value=MockStream(events, final))
-
-        result = await _collect_events(client, _make_request())
+        result = await _run_stream(events, final)
 
         text_deltas = [e for e in result if isinstance(e, ApiTextDeltaEvent)]
         assert len(text_deltas) == 3
@@ -221,10 +252,7 @@ class TestToolUseMidStream:
             usage=MockUsage(input_tokens=20, output_tokens=15),
         )
 
-        client = _build_client()
-        client._client.messages.stream = MagicMock(return_value=MockStream(events, final))
-
-        result = await _collect_events(client, _make_request())
+        result = await _run_stream(events, final)
 
         tool_events = [e for e in result if isinstance(e, ApiToolUseDeltaEvent)]
         assert len(tool_events) == 2
@@ -298,10 +326,7 @@ class TestMixedTextAndTools:
             usage=MockUsage(input_tokens=30, output_tokens=20),
         )
 
-        client = _build_client()
-        client._client.messages.stream = MagicMock(return_value=MockStream(events, final))
-
-        result = await _collect_events(client, _make_request())
+        result = await _run_stream(events, final)
 
         # Filter to the meaningful event types
         meaningful = [
@@ -341,10 +366,7 @@ class TestThinkingDelta:
             usage=MockUsage(input_tokens=5, output_tokens=10),
         )
 
-        client = _build_client()
-        client._client.messages.stream = MagicMock(return_value=MockStream(events, final))
-
-        result = await _collect_events(client, _make_request())
+        result = await _run_stream(events, final)
 
         thinking = [e for e in result if isinstance(e, ApiThinkingDeltaEvent)]
         assert len(thinking) == 1
@@ -370,10 +392,7 @@ class TestEmptyToolInput:
             usage=MockUsage(input_tokens=8, output_tokens=4),
         )
 
-        client = _build_client()
-        client._client.messages.stream = MagicMock(return_value=MockStream(events, final))
-
-        result = await _collect_events(client, _make_request())
+        result = await _run_stream(events, final)
 
         tool_events = [e for e in result if isinstance(e, ApiToolUseDeltaEvent)]
         assert len(tool_events) == 1
@@ -386,34 +405,10 @@ class TestRetryOn429:
     @pytest.mark.asyncio
     async def test_retry_on_429(self) -> None:
         """First call raises 429, second call succeeds — events from second call are yielded."""
-        success_events = [
-            MockEvent(
-                type="content_block_start",
-                index=0,
-                content_block=MockContentBlock(type="text"),
-            ),
-            MockEvent(
-                type="content_block_delta",
-                index=0,
-                delta=MockDelta(type="text_delta", text="ok"),
-            ),
-            MockEvent(type="content_block_stop", index=0),
-            MockEvent(type="message_stop"),
-        ]
-        success_final = MockFinalMessage(
-            content=[_make_text_block("ok")],
-            usage=MockUsage(input_tokens=1, output_tokens=1),
-        )
+        success_events, success_final = _make_single_text_stream("ok", input_tokens=1, output_tokens=1)
 
         # Build a 429 error
-        mock_response = MagicMock()
-        mock_response.status_code = 429
-        mock_response.headers = {}
-        error_429 = anthropic.APIStatusError(
-            message="rate limited",
-            response=mock_response,
-            body=None,
-        )
+        error_429 = _make_api_status_error(429, "rate limited")
 
         call_count = 0
 
@@ -440,14 +435,7 @@ class TestNoRetryOn401:
     @pytest.mark.asyncio
     async def test_no_retry_on_401(self) -> None:
         """401 error raises AuthenticationFailure immediately with no retry."""
-        mock_response = MagicMock()
-        mock_response.status_code = 401
-        mock_response.headers = {}
-        error_401 = anthropic.APIStatusError(
-            message="invalid api key",
-            response=mock_response,
-            body=None,
-        )
+        error_401 = _make_api_status_error(401, "invalid api key")
 
         client = _build_client()
         client._client.messages.stream = MagicMock(side_effect=error_401)
@@ -463,14 +451,7 @@ class TestRateLimitError:
     @pytest.mark.asyncio
     async def test_rate_limit_error(self) -> None:
         """All retries fail with 429 — raises RateLimitFailure."""
-        mock_response = MagicMock()
-        mock_response.status_code = 429
-        mock_response.headers = {}
-        error_429 = anthropic.APIStatusError(
-            message="rate limited",
-            response=mock_response,
-            body=None,
-        )
+        error_429 = _make_api_status_error(429, "rate limited")
 
         client = _build_client()
         client._client.messages.stream = MagicMock(side_effect=error_429)
@@ -487,24 +468,7 @@ class TestOutputSchemaStripped:
     @pytest.mark.asyncio
     async def test_output_schema_stripped(self) -> None:
         """Tools with output_schema have that key stripped before sending to the API."""
-        events = [
-            MockEvent(
-                type="content_block_start",
-                index=0,
-                content_block=MockContentBlock(type="text"),
-            ),
-            MockEvent(
-                type="content_block_delta",
-                index=0,
-                delta=MockDelta(type="text_delta", text="hi"),
-            ),
-            MockEvent(type="content_block_stop", index=0),
-            MockEvent(type="message_stop"),
-        ]
-        final = MockFinalMessage(
-            content=[_make_text_block("hi")],
-            usage=MockUsage(input_tokens=5, output_tokens=2),
-        )
+        events, final = _make_single_text_stream("hi")
 
         captured_kwargs: dict[str, Any] = {}
 
@@ -541,29 +505,9 @@ class TestUsageSnapshot:
     @pytest.mark.asyncio
     async def test_usage_snapshot(self) -> None:
         """ApiMessageCompleteEvent carries correct UsageSnapshot from the final message."""
-        events = [
-            MockEvent(
-                type="content_block_start",
-                index=0,
-                content_block=MockContentBlock(type="text"),
-            ),
-            MockEvent(
-                type="content_block_delta",
-                index=0,
-                delta=MockDelta(type="text_delta", text="x"),
-            ),
-            MockEvent(type="content_block_stop", index=0),
-            MockEvent(type="message_stop"),
-        ]
-        final = MockFinalMessage(
-            content=[_make_text_block("x")],
-            usage=MockUsage(input_tokens=100, output_tokens=50),
-        )
+        events, final = _make_single_text_stream("x", input_tokens=100, output_tokens=50)
 
-        client = _build_client()
-        client._client.messages.stream = MagicMock(return_value=MockStream(events, final))
-
-        result = await _collect_events(client, _make_request())
+        result = await _run_stream(events, final)
 
         complete = [e for e in result if isinstance(e, ApiMessageCompleteEvent)]
         assert len(complete) == 1

@@ -10,55 +10,29 @@ Run with: .venv/bin/python -m pytest backend/tests/test_e2e/test_bg_autonomous_d
 
 from __future__ import annotations
 
-import logging
-
 import pytest
 
 from engine.testing.eval_agent import EvalAgent
 from tests.test_e2e.conftest import create_eval_agent, create_test_sandbox, delete_test_sandbox
-
-logger = logging.getLogger(__name__)
+from tests.test_e2e.helpers import log_result
+from tests.test_e2e.bg_prompts import _build_prompt
 
 pytestmark = [pytest.mark.e2e, pytest.mark.live]
 
-AGENT_PROMPT = """\
-You are test-decision-agent, a developer with a remote Daytona sandbox.
-
-IMPORTANT RULES:
-- You MUST use tools for every action — never just describe what you'd do.
-- Use daytona_codeact to run commands, daytona_write_file to create files.
-- You have background task support: add "background": true to tool input for long-running operations.
-- Use check_background_progress for instant status snapshots.
-- Use wait_for_background_task to block when you have no foreground work.
-- Use cancel_background_task to cancel tasks.
-- Make autonomous decisions based on task status and output.
-
-BACKGROUND WORKFLOW:
-1. Launch background tasks, do foreground work
-2. Check progress, then wait when idle
-3. Make decisions based on results: cancel slow tasks, act on output, create files
-
-Always be concise. Execute tools, don't just describe them.
-"""
-
-
-def _log_result(result, label: str) -> None:
-    checks = result.tool_count("check_background_progress")
-    waits = result.tool_count("wait_for_background_task")
-    cancels = result.tool_count("cancel_background_task")
-    bg_completed = result.background_completed()
-
-    logger.info(
-        f"\n{'='*60}\n[{label}] Decision summary:\n"
-        f"  Tools started: {len(result.tools_started())}\n"
-        f"  Background started: {len(result.background_started())}\n"
-        f"  Background completed: {len(bg_completed)}\n"
-        f"  Progress checks: {checks}\n"
-        f"  Wait calls: {waits}\n"
-        f"  Cancels: {cancels}\n"
-        f"  Tool sequence: {result.tool_names}\n"
-        f"{'='*60}"
-    )
+AGENT_PROMPT = _build_prompt(
+    agent_name="test-decision-agent",
+    extra_sections=(
+        "- Use check_background_progress for instant status snapshots.\n"
+        "- Use wait_for_background_task to block when you have no foreground work.\n"
+        "- Use cancel_background_task to cancel tasks.\n"
+        "- Make autonomous decisions based on task status and output.\n"
+        "\n"
+        "BACKGROUND WORKFLOW:\n"
+        "1. Launch background tasks, do foreground work\n"
+        "2. Check progress, then wait when idle\n"
+        "3. Make decisions based on results: cancel slow tasks, act on output, create files"
+    ),
+)
 
 
 # ===========================================================================
@@ -93,7 +67,7 @@ class TestDecisionCancelSlowAfterWaitTimeout:
             "because it's too slow. Cancel with reason \"Build too slow\". "
             "Report your decision."
         )
-        _log_result(result, "cancel_slow_after_timeout")
+        log_result(result, "cancel_slow_after_timeout")
 
         assert result.has_tool("check_background_progress"), \
             f"Expected check_background_progress. Got: {result.tool_names}"
@@ -156,7 +130,7 @@ class TestDecisionActOnWaitResult:
             "Then verify with 'cat /home/daytona/deploy.txt'. "
             "Report the full workflow."
         )
-        _log_result(result, "act_on_result")
+        log_result(result, "act_on_result")
 
         assert result.has_tool("wait_for_background_task"), \
             f"Expected wait_for_background_task. Got: {result.tool_names}"
@@ -223,7 +197,7 @@ class TestDecisionSelectiveCancel:
             "Wait for the medium task with wait_for_background_task. "
             "Report: which completed, which was cancelled."
         )
-        _log_result(result, "selective_cancel")
+        log_result(result, "selective_cancel")
 
         # Must have launched 3 background tasks
         bg_bash = [tc for tc in result.tool_calls
@@ -286,7 +260,7 @@ class TestDecisionPeriodicCheckIn:
             "The second wait should complete successfully with DEPLOY_DONE. "
             "Report: how many wait attempts you made, and the final result."
         )
-        _log_result(result, "periodic_checkin")
+        log_result(result, "periodic_checkin")
 
         # Must have called wait at least twice (first times out, second completes)
         waits = result.tool_count("wait_for_background_task")
@@ -340,7 +314,7 @@ class TestDecisionChainedWorkflow:
             "Step 4: Verify deploy by running 'cat /home/daytona/test_report.txt' in foreground. "
             "Report complete pipeline status."
         )
-        _log_result(result, "chained_workflow")
+        log_result(result, "chained_workflow")
 
         # Must have launched at least 2 background tasks (tests + deploy)
         assert len(result.background_started()) >= 2, \
@@ -405,7 +379,7 @@ class TestDecisionFullPipeline:
             "9. Verify with 'cat /home/daytona/pipeline_result.txt'\n"
             "10. Report final summary"
         )
-        _log_result(result, "full_pipeline")
+        log_result(result, "full_pipeline")
 
         # Must have launched 2+ background tasks
         bg_bash = [tc for tc in result.tool_calls

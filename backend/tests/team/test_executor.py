@@ -1,15 +1,25 @@
-"""Unit tests for the deterministic _posthook() in team.runtime.executor.Executor."""
+"""Unit tests for the deterministic _posthook() and _post_checkpoint_note()
+in team.runtime.executor.Executor."""
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
+
+import pytest
+
 from team.models import (
     AgentResult,
+    Note,
     Plan,
     ReplanPlan,
     ReplanRequest,
     RetryRequest,
     SubmittedSummary,
+    Task,
     TaskSpec,
+    TaskStatus,
 )
 from team.runtime.context_builder import TeamAgentContext
 from team.runtime.executor import Executor
@@ -29,6 +39,60 @@ class FakeDefn:
 class FakePlannerDefn:
     role = "planner"
     name = "team_planner"
+
+
+class FakeTaskCenter:
+    """Captures posted notes for assertion."""
+    def __init__(self):
+        self.notes: list[Note] = []
+
+    async def post(self, note: Note) -> None:
+        self.notes.append(note)
+
+
+class FakeDispatcher:
+    """Returns canned sibling_stats."""
+    def __init__(self, stats: dict[str, int] | None = None):
+        self._stats = stats or {"done": 0, "failed": 0, "pending": 0,
+                                "ready": 0, "running": 0, "cancelled": 0,
+                                "retry_total": 0}
+
+    async def sibling_stats(self, parent_id):
+        return dict(self._stats)
+
+
+class FakeTeamRun:
+    """Minimal team run stub for checkpoint note tests."""
+    def __init__(self, dispatcher=None, task_center=None, file_change_store=None):
+        self.id = "test-run-001"
+        self.dispatcher = dispatcher or FakeDispatcher()
+        self.task_center = task_center or FakeTaskCenter()
+        self.file_change_store = file_change_store
+
+    async def checkpoint(self, label: str = "") -> None:
+        pass
+
+
+def _make_task(
+    *,
+    status: str = "done",
+    parent_id: str | None = "parent-1",
+    failure_reason: str | None = None,
+    agent_run_id: str = "agent-run-1",
+) -> Task:
+    return Task(
+        id="task-1",
+        team_run_id="test-run-001",
+        agent_name="developer",
+        status=TaskStatus(status),
+        task="fix the bug",
+        scope_paths=["src/auth/"],
+        parent_id=parent_id,
+        root_id="root-1",
+        agent_run_id=agent_run_id,
+        created_at=datetime.now(timezone.utc),
+        failure_reason=failure_reason,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -190,3 +254,334 @@ def test_posthook_plan_has_empty_summary():
     result = Executor._posthook(ctx, FakeDefn())
     assert isinstance(result, AgentResult)
     assert result.summary == ""
+
+
+# ---------------------------------------------------------------------------
+# _post_checkpoint_note tests
+# ---------------------------------------------------------------------------
+
+
+def _make_executor(
+    stats: dict[str, int] | None = None,
+    file_change_store=None,
+) -> tuple[Executor, FakeTaskCenter]:
+    tc = FakeTaskCenter()
+    dispatcher = FakeDispatcher(stats)
+    team_run = FakeTeamRun(
+        dispatcher=dispatcher,
+        task_center=tc,
+        file_change_store=file_change_store,
+    )
+    executor = Executor(
+        team_run=team_run,
+        runner=AsyncMock(),
+        agent_lookup=lambda name: FakeDefn(),
+    )
+    return executor, tc
+
+
+def test_checkpoint_note_posted_on_completion():
+    """A checkpoint note is posted after every task dispatch."""
+    import asyncio
+    executor, tc = _make_executor(stats={"done": 1, "failed": 0,
+                                         "pending": 0, "ready": 0,
+                                         "running": 0, "cancelled": 0,
+                                         "retry_total": 0})
+    task = _make_task()
+    result = AgentResult(summary="all good")
+    action = asyncio.run(executor._post_checkpoint_note(task, result))
+
+    assert action is None
+    assert len(tc.notes) == 1
+    assert "Checkpoint: task-1" in tc.notes[0].content
+    assert tc.notes[0].agent_name == "checkpoint"
+    # Note is attributed to parent_id so it flows through parent chain
+    # reads, not dep reads (avoids shadowing the task's done() summary).
+    assert tc.notes[0].task_id == "parent-1"
+
+
+def test_checkpoint_note_includes_failure_reason():
+    import asyncio
+    executor, tc = _make_executor(stats={"done": 0, "failed": 1,
+                                         "pending": 0, "ready": 0,
+                                         "running": 0, "cancelled": 0,
+                                         "retry_total": 0})
+    task = _make_task(status="failed", failure_reason="sandbox timeout")
+    action = asyncio.run(executor._post_checkpoint_note(task, None))
+
+    assert len(tc.notes) == 1
+    assert "sandbox timeout" in tc.notes[0].content
+
+
+def test_checkpoint_note_critical_when_high_failure_rate():
+    """When >40% of 3+ started siblings failed, action is 'replan'."""
+    import asyncio
+    executor, tc = _make_executor(stats={"done": 1, "failed": 2,
+                                         "pending": 0, "ready": 0,
+                                         "running": 0, "cancelled": 0,
+                                         "retry_total": 0})
+    task = _make_task(status="failed")
+    action = asyncio.run(executor._post_checkpoint_note(task, None))
+
+    assert action == "replan"
+    assert "PLAN HEALTH CRITICAL" in tc.notes[0].content
+    assert "2/3" in tc.notes[0].content
+
+
+def test_checkpoint_note_no_critical_below_threshold():
+    """1 failure out of 3 (33%) should NOT trigger replan."""
+    import asyncio
+    executor, tc = _make_executor(stats={"done": 2, "failed": 1,
+                                         "pending": 0, "ready": 0,
+                                         "running": 0, "cancelled": 0,
+                                         "retry_total": 0})
+    task = _make_task(status="failed")
+    action = asyncio.run(executor._post_checkpoint_note(task, None))
+
+    assert action is None
+    assert "PLAN HEALTH CRITICAL" not in tc.notes[0].content
+
+
+def test_checkpoint_note_no_critical_when_few_started():
+    """Even 100% failure rate with <3 started should NOT trigger."""
+    import asyncio
+    executor, tc = _make_executor(stats={"done": 0, "failed": 2,
+                                         "pending": 3, "ready": 0,
+                                         "running": 0, "cancelled": 0,
+                                         "retry_total": 0})
+    task = _make_task(status="failed")
+    action = asyncio.run(executor._post_checkpoint_note(task, None))
+
+    assert action is None
+
+
+def test_checkpoint_note_retry_warning():
+    """3+ retries across siblings triggers a warning."""
+    import asyncio
+    executor, tc = _make_executor(stats={"done": 2, "failed": 0,
+                                         "pending": 1, "ready": 0,
+                                         "running": 0, "cancelled": 0,
+                                         "retry_total": 4})
+    task = _make_task()
+    action = asyncio.run(executor._post_checkpoint_note(task, None))
+
+    assert action is None  # warning, not replan
+    assert "PLAN HEALTH WARNING" in tc.notes[0].content
+    assert "4 retries" in tc.notes[0].content
+
+
+def test_checkpoint_note_survives_dispatcher_error():
+    """If sibling_stats raises, checkpoint note is skipped gracefully."""
+    import asyncio
+    tc = FakeTaskCenter()
+    bad_dispatcher = FakeDispatcher()
+    bad_dispatcher.sibling_stats = AsyncMock(side_effect=RuntimeError("db down"))
+    team_run = FakeTeamRun(dispatcher=bad_dispatcher, task_center=tc)
+    executor = Executor(team_run=team_run, runner=AsyncMock(),
+                        agent_lookup=lambda n: FakeDefn())
+
+    task = _make_task()
+    action = asyncio.run(executor._post_checkpoint_note(task, None))
+
+    assert action is None
+    assert len(tc.notes) == 0  # no note posted, no crash
+
+
+def test_inject_scope_warnings_posts_note_for_external_scoped_changes():
+    import asyncio
+
+    created_at = datetime(2026, 4, 12, 12, 0, tzinfo=timezone.utc)
+    external_change = SimpleNamespace(
+        file_path="src/auth/session.py",
+        edit_type="edit",
+        agent_id="other-agent",
+        agent_run_id="other-run",
+        created_at=datetime(2026, 4, 12, 12, 1, tzinfo=timezone.utc),
+    )
+    own_change = SimpleNamespace(
+        file_path="src/auth/local.py",
+        edit_type="edit",
+        agent_id="developer",
+        agent_run_id="agent-run-1",
+        created_at=datetime(2026, 4, 12, 12, 1, tzinfo=timezone.utc),
+    )
+    out_of_scope_change = SimpleNamespace(
+        file_path="src/billing/invoice.py",
+        edit_type="edit",
+        agent_id="other-agent",
+        agent_run_id="other-run",
+        created_at=datetime(2026, 4, 12, 12, 1, tzinfo=timezone.utc),
+    )
+    file_change_store = SimpleNamespace(
+        initialized=True,
+        changes_since=lambda since: [external_change, own_change, out_of_scope_change],
+    )
+
+    executor, tc = _make_executor(file_change_store=file_change_store)
+    task = _make_task(agent_run_id="agent-run-1")
+    task.created_at = created_at
+
+    asyncio.run(executor._inject_scope_warnings(task))
+
+    assert len(tc.notes) == 1
+    assert tc.notes[0].task_id == task.id
+    assert "Warning: scope changes detected since plan creation" in tc.notes[0].content
+    assert "src/auth/session.py" in tc.notes[0].content
+    assert "src/auth/local.py" not in tc.notes[0].content
+    assert "src/billing/invoice.py" not in tc.notes[0].content
+    assert "Call request_replan()" in tc.notes[0].content
+
+
+def test_inject_scope_warnings_skips_when_store_not_initialized():
+    import asyncio
+
+    file_change_store = SimpleNamespace(
+        initialized=False,
+        changes_since=lambda since: pytest.fail("changes_since should not be called"),
+    )
+    executor, tc = _make_executor(file_change_store=file_change_store)
+    task = _make_task()
+
+    asyncio.run(executor._inject_scope_warnings(task))
+
+    assert tc.notes == []
+
+
+# ---------------------------------------------------------------------------
+# _plan_health_prefix tests
+# ---------------------------------------------------------------------------
+
+
+def test_plan_health_prefix_returns_none_when_healthy():
+    import asyncio
+    executor, _ = _make_executor(stats={"done": 3, "failed": 0,
+                                        "pending": 0, "ready": 0,
+                                        "running": 0, "cancelled": 0,
+                                        "retry_total": 0})
+    task = _make_task()
+    prefix = asyncio.run(executor._plan_health_prefix(task))
+    assert prefix is None
+
+
+def test_plan_health_prefix_critical_on_high_failure():
+    import asyncio
+    executor, _ = _make_executor(stats={"done": 1, "failed": 2,
+                                        "pending": 0, "ready": 0,
+                                        "running": 0, "cancelled": 0,
+                                        "retry_total": 0})
+    task = _make_task()
+    prefix = asyncio.run(executor._plan_health_prefix(task))
+    assert prefix is not None
+    assert "PLAN HEALTH CRITICAL" in prefix
+    assert "2/3" in prefix
+
+
+def test_plan_health_prefix_none_when_no_parent():
+    """Root tasks have no siblings — skip health check."""
+    import asyncio
+    executor, _ = _make_executor()
+    task = _make_task(parent_id=None)
+    prefix = asyncio.run(executor._plan_health_prefix(task))
+    assert prefix is None
+
+
+def test_plan_health_prefix_retry_warning():
+    import asyncio
+    executor, _ = _make_executor(stats={"done": 2, "failed": 0,
+                                        "pending": 0, "ready": 0,
+                                        "running": 0, "cancelled": 0,
+                                        "retry_total": 5})
+    task = _make_task()
+    prefix = asyncio.run(executor._plan_health_prefix(task))
+    assert prefix is not None
+    assert "PLAN HEALTH WARNING" in prefix
+    assert "5 retries" in prefix
+
+
+# ---------------------------------------------------------------------------
+# _tag_if_scope_drifted tests
+# ---------------------------------------------------------------------------
+
+
+def test_tag_drift_appends_warning_when_scope_changed():
+    import asyncio
+    external_change = SimpleNamespace(
+        file_path="src/auth/session.py",
+        agent_run_id="other-run",
+        created_at=datetime(2026, 4, 12, 12, 5, tzinfo=timezone.utc),
+    )
+    fc_store = SimpleNamespace(
+        initialized=True,
+        changes_since=lambda since: [external_change],
+    )
+    executor, _ = _make_executor(file_change_store=fc_store)
+    task = _make_task()
+    task.started_at = datetime(2026, 4, 12, 12, 0, tzinfo=timezone.utc)
+
+    original = AgentResult(summary="fixed the bug")
+    ctx = TeamAgentContext(tool_metadata={})
+    tagged = asyncio.run(executor._tag_if_scope_drifted(task, original, ctx))
+
+    assert isinstance(tagged, AgentResult)
+    assert "fixed the bug" in tagged.summary
+    assert "DRIFT WARNING" in tagged.summary
+    assert "src/auth/session.py" in tagged.summary
+
+
+def test_tag_drift_no_warning_when_agent_checked_freshness():
+    """If agent called context_changed_since, don't tag — it's aware."""
+    import asyncio
+    external_change = SimpleNamespace(
+        file_path="src/auth/session.py",
+        agent_run_id="other-run",
+        created_at=datetime(2026, 4, 12, 12, 5, tzinfo=timezone.utc),
+    )
+    fc_store = SimpleNamespace(
+        initialized=True,
+        changes_since=lambda since: [external_change],
+    )
+    executor, _ = _make_executor(file_change_store=fc_store)
+    task = _make_task()
+    task.started_at = datetime(2026, 4, 12, 12, 0, tzinfo=timezone.utc)
+
+    original = AgentResult(summary="fixed the bug")
+    ctx = TeamAgentContext(tool_metadata={"checked_context_freshness": True})
+    tagged = asyncio.run(executor._tag_if_scope_drifted(task, original, ctx))
+
+    assert tagged is original  # unchanged
+
+
+def test_tag_drift_no_warning_when_no_external_changes():
+    import asyncio
+    own_change = SimpleNamespace(
+        file_path="src/auth/session.py",
+        agent_run_id="agent-run-1",  # same as task
+        created_at=datetime(2026, 4, 12, 12, 5, tzinfo=timezone.utc),
+    )
+    fc_store = SimpleNamespace(
+        initialized=True,
+        changes_since=lambda since: [own_change],
+    )
+    executor, _ = _make_executor(file_change_store=fc_store)
+    task = _make_task()
+    task.started_at = datetime(2026, 4, 12, 12, 0, tzinfo=timezone.utc)
+
+    original = AgentResult(summary="all good")
+    ctx = TeamAgentContext(tool_metadata={})
+    tagged = asyncio.run(executor._tag_if_scope_drifted(task, original, ctx))
+
+    assert tagged is original  # own changes don't trigger drift
+
+
+def test_tag_drift_skips_non_agent_results():
+    """RetryRequest/ReplanRequest should pass through unchanged."""
+    import asyncio
+    executor, _ = _make_executor()
+    task = _make_task()
+    task.started_at = datetime(2026, 4, 12, 12, 0, tzinfo=timezone.utc)
+
+    retry = RetryRequest(reason="timeout")
+    ctx = TeamAgentContext(tool_metadata={})
+    tagged = asyncio.run(executor._tag_if_scope_drifted(task, retry, ctx))
+
+    assert tagged is retry

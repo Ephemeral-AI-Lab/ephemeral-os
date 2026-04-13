@@ -10,58 +10,27 @@ Run with: .venv/bin/python -m pytest backend/tests/test_e2e/test_bg_mixed_chaos_
 
 from __future__ import annotations
 
-import logging
-
 import pytest
 
 from engine.testing.eval_agent import EvalAgent
 from tests.test_e2e.conftest import create_eval_agent, create_test_sandbox, delete_test_sandbox
-
-logger = logging.getLogger(__name__)
+from tests.test_e2e.helpers import log_result
+from tests.test_e2e.bg_prompts import _build_prompt
 
 pytestmark = [pytest.mark.e2e, pytest.mark.live]
 
-AGENT_PROMPT = """\
-You are test-chaos-agent, a developer with a remote Daytona sandbox.
-
-IMPORTANT RULES:
-- You MUST use tools for every action — never just describe what you'd do.
-- Use daytona_codeact to run commands, daytona_write_file to create files.
-- You have background task support: add "background": true to tool input for long-running operations.
-- Use check_background_progress to monitor background tasks.
-- Use cancel_background_task to cancel running background tasks.
-
-BACKGROUND EXECUTION GUIDELINES:
-- For commands that take >5 seconds (test suites, builds, npm install), run in background.
-- For quick commands (<5 seconds like echo, pwd, cat), run in foreground.
-- When running in background, continue with other useful work.
-- Periodically check progress of background tasks.
-- Cancel background tasks that appear stuck or failing.
-- Use your judgment — cancel and re-launch tasks when it makes sense.
-
-Always be concise. Execute tools, don't just describe them.
-"""
-
-
-def _log_result(result, label: str) -> None:
-    checks = result.tool_count("check_background_progress") + result.tool_count("wait_for_background_task")
-    cancels = result.tool_count("cancel_background_task")
-    bg_started = result.background_started()
-    bg_completed = result.background_completed()
-
-    logger.info(
-        f"\n{'='*60}\n[{label}] Chaos summary:\n"
-        f"  Total events: {len(result.events)}\n"
-        f"  Tools started: {len(result.tools_started())}\n"
-        f"  Tools completed: {len(result.tools_completed())}\n"
-        f"  Background started: {len(bg_started)}\n"
-        f"  Background completed: {len(bg_completed)}\n"
-        f"  Progress checks: {checks}\n"
-        f"  Cancels: {cancels}\n"
-        f"  Has errors: {result.has_errors}\n"
-        f"  Tool sequence: {result.tool_names}\n"
-        f"{'='*60}"
-    )
+AGENT_PROMPT = _build_prompt(
+    agent_name="test-chaos-agent",
+    extra_sections=(
+        "BACKGROUND EXECUTION GUIDELINES:\n"
+        "- For commands that take >5 seconds (test suites, builds, npm install), run in background.\n"
+        "- For quick commands (<5 seconds like echo, pwd, cat), run in foreground.\n"
+        "- When running in background, continue with other useful work.\n"
+        "- Periodically check progress of background tasks.\n"
+        "- Cancel background tasks that appear stuck or failing.\n"
+        "- Use your judgment — cancel and re-launch tasks when it makes sense."
+    ),
+)
 
 
 # ===========================================================================
@@ -103,7 +72,7 @@ class TestCancelAndRelaunch:
             "9. Report the workflow\n\n"
             "Use background: true for steps 1 and 7 ONLY."
         )
-        _log_result(result, "cancel_relaunch")
+        log_result(result, "cancel_relaunch")
 
         assert len(result.background_started()) >= 2, \
             f"Expected 2 background launches (original + retry). Got {len(result.background_started())}"
@@ -152,7 +121,7 @@ class TestBgErrorFgRecovery:
             "7. Report: what was the error and what recovery steps were taken?\n\n"
             "Use background: true for step 1 ONLY."
         )
-        _log_result(result, "bg_error_recovery")
+        log_result(result, "bg_error_recovery")
 
         assert len(result.background_started()) >= 1, \
             f"Expected background task. Got: {result.tool_names}"
@@ -207,7 +176,7 @@ class TestFullPipelineSimulation:
             "11. Report pipeline summary\n\n"
             "Use background: true for steps 1 and 5 ONLY."
         )
-        _log_result(result, "pipeline")
+        log_result(result, "pipeline")
 
         assert len(result.background_started()) >= 2, \
             f"Expected 2 background phases. Got {len(result.background_started())}"
@@ -259,7 +228,7 @@ class TestRapidFireLifecycle:
             "10. Report: how many attempts were made and what's the final status?\n\n"
             "Use background: true for steps 1, 4, and 7."
         )
-        _log_result(result, "rapid_fire")
+        log_result(result, "rapid_fire")
 
         assert len(result.background_started()) >= 3, \
             f"Expected 3 background launches. Got {len(result.background_started())}"
@@ -314,7 +283,7 @@ class TestNotificationDrivenWorkflow:
             "10. Report the full pipeline result\n\n"
             "Use background: true for steps 1 and 5 ONLY."
         )
-        _log_result(result, "notify_workflow")
+        log_result(result, "notify_workflow")
 
         assert len(result.background_started()) >= 2, \
             f"Expected 2 background phases. Got {len(result.background_started())}"

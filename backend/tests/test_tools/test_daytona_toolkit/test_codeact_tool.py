@@ -42,12 +42,20 @@ def _make_manifest(
 
 
 def _make_sandbox(
-    *, upload_exc=None, exec_stdout=None, exec_exc=None, manifest=None, download_exc=None
+    *,
+    upload_exc=None,
+    upload_side_effect=None,
+    exec_stdout=None,
+    exec_exc=None,
+    manifest=None,
+    download_exc=None,
 ):
     """Return a sandbox mock configured for codeact scenarios."""
     sb = MagicMock()
 
-    if upload_exc:
+    if upload_side_effect is not None:
+        sb.fs.upload_file = AsyncMock(side_effect=upload_side_effect)
+    elif upload_exc:
         sb.fs.upload_file = AsyncMock(side_effect=upload_exc)
     else:
         sb.fs.upload_file = AsyncMock()
@@ -67,6 +75,21 @@ def _make_sandbox(
         sb.fs.download_file = AsyncMock(return_value=json.dumps(default_manifest).encode())
 
     return sb
+
+
+def _assert_ok(result) -> dict:
+    """Assert result is not an error and return the parsed JSON output."""
+    assert not result.is_error
+    return json.loads(result.output)
+
+
+def _patch_ci_write_helpers(monkeypatch, *, prepare_fn, prepare_intent_fn, finalize_fn):
+    """Apply the standard set of CI-write monkeypatches used across coordinated-write tests."""
+    monkeypatch.setattr(codeact_tool_module, "prepare_ci_write", prepare_fn)
+    monkeypatch.setattr(codeact_tool_module, "prepare_ci_edit_intent", prepare_intent_fn)
+    monkeypatch.setattr(codeact_tool_module, "finalize_ci_write", finalize_fn)
+    monkeypatch.setattr(codeact_tool_module, "release_ci_edit_intent", lambda *args: None)
+    monkeypatch.setattr(codeact_tool_module, "abort_ci_write", lambda *args: None)
 
 
 # ---------------------------------------------------------------------------
@@ -179,8 +202,7 @@ async def test_codeact_success_no_writes():
     sb = _make_sandbox(manifest=manifest)
     ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/ws"})
     result = await daytona_codeact.execute(daytona_codeact.input_model(code="x = 1 + 1"), ctx)
-    assert not result.is_error
-    data = json.loads(result.output)
+    data = _assert_ok(result)
     assert data["status"] == "ok"
     assert data["files_written"] == 0
     assert data["shells_run"] == 0
@@ -232,8 +254,7 @@ async def test_codeact_success_with_writes():
     result = await daytona_codeact.execute(
         daytona_codeact.input_model(code="write('/ws/out.py', 'x = 42\\n')"), ctx
     )
-    assert not result.is_error
-    data = json.loads(result.output)
+    data = _assert_ok(result)
     assert data["files_written"] == 2
     # upload_file called once for the script upload + twice for the writes
     assert sb.fs.upload_file.call_count == 3
@@ -264,23 +285,19 @@ async def test_codeact_uses_ci_write_flow_for_helper_staged_writes(monkeypatch):
         seen["description"] = description
         return SimpleNamespace(success=True)
 
-    monkeypatch.setattr(codeact_tool_module, "prepare_ci_write", fake_prepare_ci_write)
-    monkeypatch.setattr(
-        codeact_tool_module,
-        "prepare_ci_edit_intent",
-        fake_prepare_ci_edit_intent,
+    _patch_ci_write_helpers(
+        monkeypatch,
+        prepare_fn=fake_prepare_ci_write,
+        prepare_intent_fn=fake_prepare_ci_edit_intent,
+        finalize_fn=fake_finalize_ci_write,
     )
-    monkeypatch.setattr(codeact_tool_module, "finalize_ci_write", fake_finalize_ci_write)
-    monkeypatch.setattr(codeact_tool_module, "release_ci_edit_intent", lambda *args: None)
-    monkeypatch.setattr(codeact_tool_module, "abort_ci_write", lambda *args: None)
 
     result = await daytona_codeact.execute(
         daytona_codeact.input_model(code="write('/ws/out.py', 'x = 42\\n')"),
         ctx,
     )
 
-    assert not result.is_error
-    data = json.loads(result.output)
+    data = _assert_ok(result)
     assert data["files_written"] == 1
     assert data["write_errors"] == []
     assert sb.fs.upload_file.call_count == 1
@@ -303,27 +320,16 @@ async def test_codeact_surfaces_ci_conflicts_for_helper_staged_writes(monkeypatc
     ctx = _ctx({"daytona_sandbox": sb})
     prepared = SimpleNamespace(file_path="/ws/out.py")
 
-    monkeypatch.setattr(
-        codeact_tool_module,
-        "prepare_ci_write",
-        lambda *args, **kwargs: (prepared, {"scope_paths": ["/ws/out.py"]}, None),
-    )
-    monkeypatch.setattr(
-        codeact_tool_module,
-        "prepare_ci_edit_intent",
-        lambda context, prepared_write, *, content: (prepared_write, "intent-1"),
-    )
-    monkeypatch.setattr(
-        codeact_tool_module,
-        "finalize_ci_write",
-        lambda *args, **kwargs: SimpleNamespace(
+    _patch_ci_write_helpers(
+        monkeypatch,
+        prepare_fn=lambda *args, **kwargs: (prepared, {"scope_paths": ["/ws/out.py"]}, None),
+        prepare_intent_fn=lambda context, prepared_write, *, content: (prepared_write, "intent-1"),
+        finalize_fn=lambda *args, **kwargs: SimpleNamespace(
             success=False,
             conflict=True,
             message="Write precheck failed: stale_reservation",
         ),
     )
-    monkeypatch.setattr(codeact_tool_module, "release_ci_edit_intent", lambda *args: None)
-    monkeypatch.setattr(codeact_tool_module, "abort_ci_write", lambda *args: None)
 
     result = await daytona_codeact.execute(
         daytona_codeact.input_model(code="write('/ws/out.py', 'x = 42\\n')"),
@@ -346,7 +352,7 @@ async def test_codeact_executes_wrapper_from_repo_cwd():
 
     result = await daytona_codeact.execute(daytona_codeact.input_model(code="print('hi')"), ctx)
 
-    assert not result.is_error
+    _assert_ok(result)
     command = sb.process.exec.await_args.args[0]
     assert "bash -o pipefail -lc" in command
     assert 'cd "/testbed" && python3 /tmp/codeact-wrapper-' in command
@@ -359,12 +365,8 @@ async def test_codeact_executes_wrapper_from_repo_cwd():
 
 async def test_codeact_write_commit_failure():
     manifest = _make_manifest(writes=[{"path": "/ws/bad.py", "content": "oops"}])
-    sb = MagicMock()
-    sb.fs.download_file = AsyncMock(return_value=json.dumps(manifest).encode())
     # First upload (script) succeeds, second (write commit) fails
-    sb.fs.upload_file = AsyncMock(side_effect=[None, RuntimeError("commit fail")])
-    result_line = json.dumps({"manifest": "/tmp/codeact-xxx.json", "status": "ok"})
-    sb.process.exec = AsyncMock(return_value=MagicMock(result=result_line))
+    sb = _make_sandbox(manifest=manifest, upload_side_effect=[None, RuntimeError("commit fail")])
     ctx = _ctx({"daytona_sandbox": sb})
 
     result = await daytona_codeact.execute(
@@ -391,7 +393,7 @@ async def test_codeact_shell_summaries():
     sb = _make_sandbox(manifest=manifest)
     ctx = _ctx({"daytona_sandbox": sb})
     result = await daytona_codeact.execute(daytona_codeact.input_model(code="shell('ls -la')"), ctx)
-    data = json.loads(result.output)
+    data = _assert_ok(result)
     assert data["shells_run"] == 2
     assert len(data["shell_summaries"]) == 2
     assert "ls -la" in data["shell_summaries"][0]
@@ -453,8 +455,7 @@ async def test_codeact_reserves_and_syncs_declared_shell_outputs(monkeypatch):
         ctx,
     )
 
-    assert not result.is_error
-    data = json.loads(result.output)
+    data = _assert_ok(result)
     assert data["shell_ci_sync"]["files"] == 1
     assert seen == {
         "prepared_paths": ["/ws/out.py"],
@@ -472,7 +473,7 @@ async def test_codeact_preserves_script_stdout_before_manifest_line():
     result = await daytona_codeact.execute(
         daytona_codeact.input_model(code="print('hello from codeact')"), ctx
     )
-    data = json.loads(result.output)
+    data = _assert_ok(result)
     assert data["script_stdout"] == "hello from codeact"
 
 
@@ -521,8 +522,7 @@ async def test_codeact_allows_writes_from_validator():
         ctx,
     )
 
-    assert not result.is_error
-    data = json.loads(result.output)
+    data = _assert_ok(result)
     assert data["files_written"] == 1
 
 
@@ -550,8 +550,7 @@ async def test_codeact_allows_verify_surface_writes_in_team_mode():
         ctx,
     )
 
-    assert not result.is_error
-    data = json.loads(result.output)
+    data = _assert_ok(result)
     assert data["files_written"] == 1
     assert data["warnings"] == []
 
@@ -582,8 +581,7 @@ async def test_codeact_allows_install_commands_in_team_mode():
         ctx,
     )
 
-    assert not result.is_error
-    data = json.loads(result.output)
+    data = _assert_ok(result)
     assert data["shells_run"] == 1
 
 

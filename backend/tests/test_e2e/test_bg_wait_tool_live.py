@@ -16,6 +16,7 @@ import pytest
 
 from engine.testing.eval_agent import EvalAgent
 from tests.test_e2e.conftest import create_eval_agent, create_test_sandbox, delete_test_sandbox
+from tests.test_e2e.helpers import log_result
 
 logger = logging.getLogger(__name__)
 
@@ -40,25 +41,6 @@ BACKGROUND WORKFLOW:
 
 Always be concise. Execute tools, don't just describe them.
 """
-
-
-def _log_result(result, label: str) -> None:
-    waits = result.tool_count("wait_for_background_task")
-    checks = result.tool_count("check_background_progress")
-    cancels = result.tool_count("cancel_background_task")
-    bg_completed = result.background_completed()
-
-    logger.info(
-        f"\n{'='*60}\n[{label}] Wait-tool summary:\n"
-        f"  Tools started: {len(result.tools_started())}\n"
-        f"  Background started: {len(result.background_started())}\n"
-        f"  Background completed: {len(bg_completed)}\n"
-        f"  Wait calls: {waits}\n"
-        f"  Check calls: {checks}\n"
-        f"  Cancel calls: {cancels}\n"
-        f"  Tool sequence: {result.tool_names}\n"
-        f"{'='*60}"
-    )
 
 
 # ===========================================================================
@@ -94,7 +76,7 @@ class TestWaitForSingleTask:
             "Use background: true for step 1 ONLY. "
             "You MUST call check_background_progress before wait_for_background_task."
         )
-        _log_result(result, "wait_single")
+        log_result(result,"wait_single")
 
         assert result.has_tool_with_background("daytona_codeact"), \
             f"Expected daytona_codeact with background: true. Got: {result.tool_calls}"
@@ -169,7 +151,7 @@ class TestWaitWithSpecificTaskId:
             "Use background: true for steps 1 and 2 ONLY. "
             "You MUST pass task_id to wait_for_background_task to wait for TASK A specifically."
         )
-        _log_result(result, "wait_specific_id")
+        log_result(result,"wait_specific_id")
 
         bg_bash = [tc for tc in result.tool_calls
                    if tc.name == "daytona_codeact" and tc.input.get("background") is True]
@@ -240,7 +222,7 @@ class TestWaitForAllTasks:
             "Use background: true for steps 1 and 2 ONLY. "
             "You MUST use task_id=\"all\" in step 5."
         )
-        _log_result(result, "wait_for_all")
+        log_result(result,"wait_for_all")
 
         bg_bash = [tc for tc in result.tool_calls
                    if tc.name == "daytona_codeact" and tc.input.get("background") is True]
@@ -302,7 +284,7 @@ class TestWaitTimeout:
             "Use background: true for step 1 ONLY. "
             "Use a SHORT timeout (5 seconds) in step 4 — the task should time out."
         )
-        _log_result(result, "wait_timeout")
+        log_result(result,"wait_timeout")
 
         assert result.has_tool("wait_for_background_task"), \
             f"Expected wait_for_background_task. Got: {result.tool_names}"
@@ -357,7 +339,7 @@ class TestWaitAlreadyCompleted:
             "5. Report what you found — was the task already completed when you waited?\n\n"
             "Use background: true for step 1 ONLY."
         )
-        _log_result(result, "wait_already_done")
+        log_result(result,"wait_already_done")
 
         assert result.has_tool("check_background_progress"), \
             f"Expected check_background_progress. Got: {result.tool_names}"
@@ -402,7 +384,7 @@ class TestWaitNoBackgroundTasks:
             "3. Report what the tool returned\n\n"
             "Do NOT launch any background tasks. Run everything in foreground."
         )
-        _log_result(result, "wait_none")
+        log_result(result,"wait_none")
 
         assert result.has_tool("wait_for_background_task"), \
             f"Expected wait_for_background_task. Got: {result.tool_names}"
@@ -456,7 +438,7 @@ class TestCheckThenWaitOrdering:
             "Use background: true for step 1 ONLY. "
             "CRITICAL: check_background_progress MUST come before wait_for_background_task."
         )
-        _log_result(result, "wait_ordering")
+        log_result(result,"wait_ordering")
 
         assert result.has_tool("check_background_progress"), \
             f"Expected check_background_progress. Got: {result.tool_names}"

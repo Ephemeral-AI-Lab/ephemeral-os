@@ -39,15 +39,13 @@ must drive: run_subagent → check_background_progress → wait / cancel.
 """
 from __future__ import annotations
 
-import logging
 import textwrap
 
 import pytest
 
 from engine.testing.eval_agent import EvalAgent
 from tests.test_e2e.conftest import create_test_sandbox, delete_test_sandbox
-
-logger = logging.getLogger(__name__)
+from tests.test_e2e.helpers import log_result
 
 pytestmark = [pytest.mark.e2e, pytest.mark.live]
 
@@ -88,43 +86,6 @@ You are a coordinator. Delegate only through ``run_subagent``.
 - Keep narration minimal and synthesize actual worker outputs in the final answer.
 """
 
-
-# ---------------------------------------------------------------------------
-# Shared logging helper
-# ---------------------------------------------------------------------------
-
-
-def _log_result(result, label: str) -> None:
-    subagent_starts = [
-        e for e in result.background_started() if e.tool_name == "run_subagent"
-    ]
-    subagent_done = [
-        e for e in result.background_completed() if e.tool_name == "run_subagent"
-    ]
-    checks = result.tool_count("check_background_progress")
-    waits = result.tool_count("wait_for_background_task")
-    cancels = result.tool_count("cancel_background_task")
-
-    logger.info(
-        "\n%s\n[%s] Subagent complex summary:\n"
-        "  Total tool calls   : %d\n"
-        "  run_subagent starts: %d\n"
-        "  run_subagent done  : %d\n"
-        "  progress checks    : %d\n"
-        "  wait calls         : %d\n"
-        "  cancel calls       : %d\n"
-        "  Tool sequence      : %s\n%s",
-        "=" * 60,
-        label,
-        len(result.tool_calls),
-        len(subagent_starts),
-        len(subagent_done),
-        checks,
-        waits,
-        cancels,
-        result.tool_names,
-        "=" * 60,
-    )
 
 
 # ===========================================================================
@@ -211,7 +172,7 @@ class TestSubagentParallelResearchSynthesis:
             """)
         )
 
-        _log_result(result, "parallel_research_synthesis")
+        log_result(result, "parallel_research_synthesis")
 
         # At least 3 background subagent launches (RESEARCH_* triad mandatory)
         subagent_starts = [
@@ -351,7 +312,7 @@ class TestSubagentTwoWaveRefinement:
             """)
         )
 
-        _log_result(result, "two_wave_refinement")
+        log_result(result, "two_wave_refinement")
 
         # At least 4 run_subagent launches total (2 wave-1 + 2 wave-2)
         subagent_starts = [
@@ -505,7 +466,7 @@ class TestSubagentFanoutWithCancellationAndRecovery:
             """)
         )
 
-        _log_result(result, "fanout_cancel_replace")
+        log_result(result, "fanout_cancel_replace")
 
         # At least 4 initial run_subagent launches (the fan-out wave)
         subagent_starts = [
@@ -761,7 +722,7 @@ class TestSubagentLargeFanoutThreeWave:
             """)
         )
 
-        _log_result(result, "large_fanout_three_wave")
+        log_result(result, "large_fanout_three_wave")
 
         subagent_starts = [
             e for e in result.background_started() if e.tool_name == "run_subagent"
@@ -990,7 +951,7 @@ class TestSubagentDynamicReplanning:
             """)
         )
 
-        _log_result(result, "dynamic_replanning")
+        log_result(result, "dynamic_replanning")
 
         subagent_starts = [
             e for e in result.background_started() if e.tool_name == "run_subagent"
@@ -1209,7 +1170,7 @@ class TestSubagentPartialFailuresAndMultiRetry:
             """)
         )
 
-        _log_result(result, "partial_failures_multi_retry")
+        log_result(result, "partial_failures_multi_retry")
 
         subagent_starts = [
             e for e in result.background_started() if e.tool_name == "run_subagent"
@@ -1495,7 +1456,7 @@ Rules:
             """)
         )
 
-        _log_result(result, "massive_concurrent_adaptive_pruning")
+        log_result(result, "massive_concurrent_adaptive_pruning")
 
         # ── Assertion 1: high concurrency ────────────────────────────────
         subagent_starts = [

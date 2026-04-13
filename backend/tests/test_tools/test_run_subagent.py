@@ -259,6 +259,62 @@ class _StubAgent:
         pass
 
 
+# ---------------------------------------------------------------------------
+# Shared context/bg-manager helpers
+# ---------------------------------------------------------------------------
+
+
+class _StubCfg:
+    cwd = Path("/tmp")
+    session_id = "session_abc"
+
+
+def _make_bg_manager(task_id: str, prompt: str = "task") -> BackgroundTaskManager:
+    """Create a BackgroundTaskManager with one pre-launched noop task."""
+    bg = BackgroundTaskManager()
+
+    async def _noop_coro() -> ToolResult:
+        return ToolResult(output="placeholder")
+
+    bg.launch(
+        task_id=task_id,
+        tool_name="run_subagent",
+        tool_input={"prompt": prompt},
+        coro=_noop_coro(),
+        task_note="test",
+    )
+    return bg
+
+
+def _make_ctx(
+    *,
+    bg: BackgroundTaskManager | None = None,
+    task_id: str | None = None,
+    extra_meta: dict | None = None,
+) -> ToolExecutionContext:
+    """Build a ToolExecutionContext with standard defaults for run_subagent tests."""
+    metadata: dict = {"session_config": _StubCfg()}
+    if bg is not None:
+        metadata["background_task_manager"] = bg
+    if task_id is not None:
+        metadata["background_task_id"] = task_id
+    metadata["sandbox_id"] = ""
+    metadata["agent_run_id"] = "parent_run_xyz"
+    if extra_meta:
+        metadata.update(extra_meta)
+    return ToolExecutionContext(cwd=Path("/tmp"), metadata=metadata)
+
+
+def _patch_stores(monkeypatch) -> tuple[object, object]:
+    """Patch app_factory agent_run_store and usage_store; return (fake_store, fake_usage_store)."""
+    fake_store = _StubAgentRunStore()
+    fake_usage_store = _StubUsageStore()
+    import server.app_factory as app_factory
+    monkeypatch.setattr(app_factory, "agent_run_store", fake_store, raising=True)
+    monkeypatch.setattr(app_factory, "usage_store", fake_usage_store, raising=True)
+    return fake_store, fake_usage_store
+
+
 @pytest.mark.asyncio
 async def test_run_subagent_rejects_non_subagent_targets_with_plan_guidance(
     monkeypatch,
@@ -269,13 +325,9 @@ async def test_run_subagent_rejects_non_subagent_targets_with_plan_guidance(
 
     monkeypatch.setattr("agents.get_definition", lambda _name: _NonSubagentDef())
 
-    class _StubConfig:
-        cwd = Path("/tmp")
-        session_id = "session_abc"
-
     ctx = ToolExecutionContext(
         cwd=Path("/tmp"),
-        metadata={"session_config": _StubConfig()},
+        metadata={"session_config": _StubCfg()},
     )
 
     result = await run_subagent.execute(
@@ -308,39 +360,12 @@ async def test_run_subagent_registers_provider_and_returns_final_text(monkeypatc
         scripted,
         usage=UsageSnapshot(input_tokens=21, output_tokens=9),
     )
-
-    def _fake_spawn_agent(*args, **kwargs):
-        return stub_agent
-
     monkeypatch.setattr(
-        "engine.runtime.agent.spawn_agent", _fake_spawn_agent, raising=True
+        "engine.runtime.agent.spawn_agent", lambda *a, **kw: stub_agent, raising=True
     )
 
-    bg = BackgroundTaskManager()
-
-    async def _noop_coro() -> ToolResult:
-        return ToolResult(output="placeholder")
-
-    bg.launch(
-        task_id="bg_test",
-        tool_name="run_subagent",
-        tool_input={"prompt": "task"},
-        coro=_noop_coro(),
-        task_note="test",
-    )
-
-    class _StubConfig:
-        cwd = Path("/tmp")
-
-    ctx = ToolExecutionContext(
-        cwd=Path("/tmp"),
-        metadata={
-            "session_config": _StubConfig(),
-            "background_task_manager": bg,
-            "background_task_id": "bg_test",
-            "sandbox_id": "",
-        },
-    )
+    bg = _make_bg_manager("bg_test")
+    ctx = _make_ctx(bg=bg, task_id="bg_test")
 
     result = await run_subagent.execute(
         run_subagent.input_model(agent_name="subagent", prompt="task"), ctx
@@ -374,32 +399,11 @@ async def test_run_subagent_does_not_inject_scope_packets_into_prompt(monkeypatc
         "engine.runtime.agent.spawn_agent", _fake_spawn_agent, raising=True
     )
 
-    bg = BackgroundTaskManager()
-
-    async def _noop_coro() -> ToolResult:
-        return ToolResult(output="placeholder")
-
-    bg.launch(
+    bg = _make_bg_manager("bg_scope_prompt", prompt="inspect auth")
+    ctx = _make_ctx(
+        bg=bg,
         task_id="bg_scope_prompt",
-        tool_name="run_subagent",
-        tool_input={"prompt": "inspect auth"},
-        coro=_noop_coro(),
-        task_note="test",
-    )
-
-    class _StubConfig:
-        cwd = Path("/tmp")
-        session_id = "session_abc"
-
-    ctx = ToolExecutionContext(
-        cwd=Path("/tmp"),
-        metadata={
-            "session_config": _StubConfig(),
-            "background_task_manager": bg,
-            "background_task_id": "bg_scope_prompt",
-            "sandbox_id": "",
-            "scope_packet": {"scope_paths": ["src/auth"], "coherence_token": "abc123"},
-        },
+        extra_meta={"scope_packet": {"scope_paths": ["src/auth"], "coherence_token": "abc123"}},
     )
 
     result = await run_subagent.execute(
@@ -499,48 +503,15 @@ async def test_run_subagent_persists_run_with_parent_ids(monkeypatch):
         scripted,
         usage=UsageSnapshot(input_tokens=21, output_tokens=9),
     )
-
     monkeypatch.setattr(
         "engine.runtime.agent.spawn_agent",
         lambda *a, **kw: stub_agent,
         raising=True,
     )
 
-    # Inject a stub agent_run_store that records calls.
-    fake_store = _StubAgentRunStore()
-    fake_usage_store = _StubUsageStore()
-    import server.app_factory as app_factory
-
-    monkeypatch.setattr(app_factory, "agent_run_store", fake_store, raising=True)
-    monkeypatch.setattr(app_factory, "usage_store", fake_usage_store, raising=True)
-
-    bg = BackgroundTaskManager()
-
-    async def _noop_coro() -> ToolResult:
-        return ToolResult(output="placeholder")
-
-    bg.launch(
-        task_id="bg_persist",
-        tool_name="run_subagent",
-        tool_input={"prompt": "task"},
-        coro=_noop_coro(),
-        task_note="test",
-    )
-
-    class _StubCfg:
-        cwd = Path("/tmp")
-        session_id = "session_abc"
-
-    ctx = ToolExecutionContext(
-        cwd=Path("/tmp"),
-        metadata={
-            "session_config": _StubCfg(),
-            "background_task_manager": bg,
-            "background_task_id": "bg_persist",
-            "sandbox_id": "",
-            "agent_run_id": "parent_run_xyz",
-        },
-    )
+    fake_store, fake_usage_store = _patch_stores(monkeypatch)
+    bg = _make_bg_manager("bg_persist")
+    ctx = _make_ctx(bg=bg, task_id="bg_persist")
 
     result = await run_subagent.execute(
         run_subagent.input_model(agent_name="subagent", prompt="do the thing"), ctx
@@ -589,16 +560,7 @@ async def test_run_subagent_persists_spawn_failure(monkeypatch):
 
     monkeypatch.setattr("engine.runtime.agent.spawn_agent", _boom, raising=True)
 
-    fake_store = _StubAgentRunStore()
-    fake_usage_store = _StubUsageStore()
-    import server.app_factory as app_factory
-
-    monkeypatch.setattr(app_factory, "agent_run_store", fake_store, raising=True)
-    monkeypatch.setattr(app_factory, "usage_store", fake_usage_store, raising=True)
-
-    class _StubCfg:
-        cwd = Path("/tmp")
-        session_id = "session_abc"
+    fake_store, fake_usage_store = _patch_stores(monkeypatch)
 
     ctx = ToolExecutionContext(
         cwd=Path("/tmp"),
@@ -649,40 +611,9 @@ async def test_run_subagent_persists_failure(monkeypatch):
         raising=True,
     )
 
-    fake_store = _StubAgentRunStore()
-    fake_usage_store = _StubUsageStore()
-    import server.app_factory as app_factory
-
-    monkeypatch.setattr(app_factory, "agent_run_store", fake_store, raising=True)
-    monkeypatch.setattr(app_factory, "usage_store", fake_usage_store, raising=True)
-
-    bg = BackgroundTaskManager()
-
-    async def _noop_coro() -> ToolResult:
-        return ToolResult(output="placeholder")
-
-    bg.launch(
-        task_id="bg_fail",
-        tool_name="run_subagent",
-        tool_input={"prompt": "x"},
-        coro=_noop_coro(),
-        task_note="test",
-    )
-
-    class _StubCfg:
-        cwd = Path("/tmp")
-        session_id = "session_abc"
-
-    ctx = ToolExecutionContext(
-        cwd=Path("/tmp"),
-        metadata={
-            "session_config": _StubCfg(),
-            "background_task_manager": bg,
-            "background_task_id": "bg_fail",
-            "sandbox_id": "",
-            "agent_run_id": "parent_run_xyz",
-        },
-    )
+    fake_store, fake_usage_store = _patch_stores(monkeypatch)
+    bg = _make_bg_manager("bg_fail", prompt="x")
+    ctx = _make_ctx(bg=bg, task_id="bg_fail")
 
     result = await run_subagent.execute(run_subagent.input_model(agent_name="subagent", prompt="x"), ctx)
 
@@ -719,44 +650,14 @@ async def test_run_subagent_persists_usage_when_cancelled(monkeypatch):
         raising=True,
     )
 
-    fake_store = _StubAgentRunStore()
-    fake_usage_store = _StubUsageStore()
-    import server.app_factory as app_factory
-
-    monkeypatch.setattr(app_factory, "agent_run_store", fake_store, raising=True)
-    monkeypatch.setattr(app_factory, "usage_store", fake_usage_store, raising=True)
-
-    bg = BackgroundTaskManager()
-
-    async def _noop_coro() -> ToolResult:
-        return ToolResult(output="placeholder")
-
-    bg.launch(
-        task_id="bg_cancel",
-        tool_name="run_subagent",
-        tool_input={"prompt": "x"},
-        coro=_noop_coro(),
-        task_note="test",
-    )
+    fake_store, fake_usage_store = _patch_stores(monkeypatch)
+    bg = _make_bg_manager("bg_cancel", prompt="x")
     tracked = bg.get_task("bg_cancel")
     assert tracked is not None
     tracked.status = "cancelled"
     tracked.cancel_reason = "user requested stop"
 
-    class _StubCfg:
-        cwd = Path("/tmp")
-        session_id = "session_abc"
-
-    ctx = ToolExecutionContext(
-        cwd=Path("/tmp"),
-        metadata={
-            "session_config": _StubCfg(),
-            "background_task_manager": bg,
-            "background_task_id": "bg_cancel",
-            "sandbox_id": "",
-            "agent_run_id": "parent_run_xyz",
-        },
-    )
+    ctx = _make_ctx(bg=bg, task_id="bg_cancel")
 
     with pytest.raises(asyncio.CancelledError):
         await run_subagent.execute(run_subagent.input_model(agent_name="subagent", prompt="x"), ctx)

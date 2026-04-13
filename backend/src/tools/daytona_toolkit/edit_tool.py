@@ -39,6 +39,31 @@ def _content_hash(content: str) -> str:
     return hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
 
 
+def _edit_success_result(
+    *,
+    context: ToolExecutionContext,
+    file_path: str,
+    warnings: list[str],
+    patch_warnings: list[str],
+    occ: bool,
+    expected_hash: str = "",
+) -> ToolResult:
+    """Build a successful-edit ToolResult with consistent JSON output."""
+    payload: dict[str, Any] = {
+        "cwd": _get_cwd(context) or "",
+        "file_path": file_path,
+        "status": "edited",
+        "occ": occ,
+        "warnings": warnings + patch_warnings,
+    }
+    if occ and expected_hash:
+        payload["expected_hash"] = expected_hash
+    return ToolResult(
+        output=json.dumps(payload),
+        metadata={"file_path": file_path, "occ": occ},
+    )
+
+
 def _scope_overlap_warning(
     context: ToolExecutionContext,
     file_path: str,
@@ -273,19 +298,13 @@ async def daytona_edit_file(
             scope_warning = _scope_overlap_warning(context, file_path)
             if scope_warning:
                 warnings.append(scope_warning)
-            output = json.dumps(
-                {
-                    "cwd": _get_cwd(context) or "",
-                    "file_path": file_path,
-                    "status": "edited",
-                    "occ": True,
-                    "expected_hash": current_hash,
-                    "warnings": warnings + list(patch_result.warnings),
-                }
-            )
-            return ToolResult(
-                output=output,
-                metadata={"file_path": file_path, "occ": True},
+            return _edit_success_result(
+                context=context,
+                file_path=file_path,
+                warnings=warnings,
+                patch_warnings=list(patch_result.warnings),
+                occ=True,
+                expected_hash=current_hash,
             )
         return ToolResult(
             output=str(getattr(result, "message", "") or "Edit failed"),
@@ -299,18 +318,12 @@ async def daytona_edit_file(
             scope_warning = _scope_overlap_warning(context, file_path)
             if scope_warning:
                 warnings.append(scope_warning)
-            output = json.dumps(
-                {
-                    "cwd": _get_cwd(context) or "",
-                    "file_path": file_path,
-                    "status": "edited",
-                    "occ": False,
-                    "warnings": warnings + list(patch_result.warnings),
-                }
-            )
-            return ToolResult(
-                output=output,
-                metadata={"file_path": file_path, "occ": False},
+            return _edit_success_result(
+                context=context,
+                file_path=file_path,
+                warnings=warnings,
+                patch_warnings=list(patch_result.warnings),
+                occ=False,
             )
         except Exception as exc:
             try:
@@ -319,18 +332,12 @@ async def daytona_edit_file(
                 scope_warning = _scope_overlap_warning(context, file_path)
                 if scope_warning:
                     warnings.append(scope_warning)
-                output = json.dumps(
-                    {
-                        "cwd": _get_cwd(context) or "",
-                        "file_path": file_path,
-                        "status": "edited",
-                        "occ": False,
-                        "warnings": warnings + list(patch_result.warnings),
-                    }
-                )
-                return ToolResult(
-                    output=output,
-                    metadata={"file_path": file_path, "occ": False},
+                return _edit_success_result(
+                    context=context,
+                    file_path=file_path,
+                    warnings=warnings,
+                    patch_warnings=list(patch_result.warnings),
+                    occ=False,
                 )
             except Exception as recovery_exc:
                 return ToolResult(

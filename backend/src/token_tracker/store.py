@@ -8,31 +8,14 @@ from collections.abc import Iterable
 from sqlalchemy import func
 from sqlalchemy.orm import Session, sessionmaker
 
+from db.stores.base import SyncStoreMixin
 from token_tracker.models import TokenUsageRecord
 
 logger = logging.getLogger(__name__)
 
 
-class UsageStore:
+class UsageStore(SyncStoreMixin):
     """Records and queries token consumption."""
-
-    def __init__(self) -> None:
-        self._session_factory: sessionmaker[Session] | None = None
-
-    def initialize(self, session_factory: sessionmaker[Session]) -> None:
-        self._session_factory = session_factory
-        logger.info("UsageStore initialised")
-
-    @property
-    def is_ready(self) -> bool:
-        """True once ``initialize`` has been called with a session factory."""
-        return self._session_factory is not None
-
-    @property
-    def _sf(self) -> sessionmaker[Session]:
-        if self._session_factory is None:
-            raise RuntimeError("UsageStore not initialised")
-        return self._session_factory
 
     def record(
         self,

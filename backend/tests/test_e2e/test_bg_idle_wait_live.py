@@ -9,83 +9,16 @@ Run with: .venv/bin/python -m pytest backend/tests/test_e2e/test_bg_idle_wait_li
 
 from __future__ import annotations
 
-import logging
-
 import pytest
 
 from engine.testing.eval_agent import EvalAgent
+from tests.test_e2e.bg_prompts import BG_IDLE_WAIT
 from tests.test_e2e.conftest import create_eval_agent, create_test_sandbox, delete_test_sandbox
-
-logger = logging.getLogger(__name__)
+from tests.test_e2e.helpers import assert_fg_during_bg, log_result
 
 pytestmark = [pytest.mark.e2e, pytest.mark.live]
 
-AGENT_PROMPT = """\
-You are test-idle-agent, a developer with a remote Daytona sandbox.
-
-IMPORTANT RULES:
-- You MUST use tools for every action — never just describe what you'd do.
-- Use daytona_codeact to run commands, daytona_write_file to create files.
-- You have background task support: add "background": true to tool input for long-running operations.
-- Use check_background_progress to monitor background tasks.
-- Use cancel_background_task to cancel running background tasks.
-
-BACKGROUND EXECUTION GUIDELINES:
-- For commands that take >5 seconds (test suites, builds, npm install), run in background.
-- For quick commands (<5 seconds like echo, pwd, cat), run in foreground.
-- When running in background, continue with other useful work.
-- Periodically check progress of background tasks.
-- Cancel background tasks that appear stuck or failing.
-- When all foreground work is done, poll background tasks until they complete or you decide to cancel.
-
-Always be concise. Execute tools, don't just describe them.
-"""
-
-
-def _assert_fg_during_bg(result, min_fg: int = 1) -> None:
-    """Assert that foreground tool calls happened WHILE background tasks were running."""
-    bg_start_indices = [
-        i for i, tc in enumerate(result.tool_calls)
-        if tc.name == "daytona_codeact" and tc.input.get("background") is True
-    ]
-    lifecycle_indices = [
-        i for i, tc in enumerate(result.tool_calls)
-        if tc.name in ("check_background_progress", "cancel_background_task")
-    ]
-    assert bg_start_indices, "No background launches found"
-    assert lifecycle_indices, "No check/cancel calls found"
-
-    first_bg = bg_start_indices[0]
-    first_lifecycle = lifecycle_indices[0]
-
-    fg_during_bg = [
-        tc for i, tc in enumerate(result.tool_calls)
-        if first_bg < i < first_lifecycle
-        and tc.name in ("daytona_codeact", "daytona_write_file")
-        and not tc.input.get("background")
-    ]
-    assert len(fg_during_bg) >= min_fg, (
-        f"Expected {min_fg}+ foreground calls BETWEEN bg launch (idx {first_bg}) "
-        f"and first check/cancel (idx {first_lifecycle}). "
-        f"Got {len(fg_during_bg)} fg calls in that window. "
-        f"Full sequence: {result.tool_names}"
-    )
-
-
-def _log_result(result, label: str) -> None:
-    checks = result.tool_count("check_background_progress")
-    cancels = result.tool_count("cancel_background_task")
-
-    logger.info(
-        f"\n{'='*60}\n[{label}] Idle/Wait summary:\n"
-        f"  Tools started: {len(result.tools_started())}\n"
-        f"  Background started: {len(result.background_started())}\n"
-        f"  Background completed: {len(result.background_completed())}\n"
-        f"  Progress checks: {checks}\n"
-        f"  Cancels: {cancels}\n"
-        f"  Tool sequence: {result.tool_names}\n"
-        f"{'='*60}"
-    )
+AGENT_PROMPT = BG_IDLE_WAIT
 
 
 # ===========================================================================
@@ -121,7 +54,7 @@ class TestWaitForShortTask:
             "Use background: true for step 1 ONLY. "
             "You MUST call check_background_progress at least once."
         )
-        _log_result(result, "wait_short")
+        log_result(result, "wait_short")
 
         # Strict: background task must use background: true
         assert result.has_tool_with_background("daytona_codeact"), \
@@ -143,7 +76,7 @@ class TestWaitForShortTask:
         assert any(word in text_lower for word in ["done", "complet", "quick_build_done", "finish", "success"]), \
             f"Expected LLM to report task outcome. Got: {result.text[:300]}"
         # Strict: fg prep must happen WHILE bg task is running (true concurrency)
-        _assert_fg_during_bg(result, min_fg=1)
+        assert_fg_during_bg(result, min_fg=1)
         assert not result.has_non_cancel_errors, \
             f"Unexpected errors: {[e.output[:200] for e in result.non_cancel_error_events]}"
 
@@ -184,7 +117,7 @@ class TestIdleAfterForegroundExhausted:
             "8. Report what happened\n\n"
             "Use background: true for step 1 ONLY."
         )
-        _log_result(result, "idle_exhausted")
+        log_result(result, "idle_exhausted")
 
         # Strict: background task must use background: true
         assert result.has_tool_with_background("daytona_codeact"), \
@@ -214,7 +147,7 @@ class TestIdleAfterForegroundExhausted:
         assert cancel_indices[0] > check_indices[0], \
             f"Cancel must happen after progress checks. checks={check_indices}, cancels={cancel_indices}"
         # Strict: fg work must happen WHILE bg task is running (true concurrency)
-        _assert_fg_during_bg(result, min_fg=2)
+        assert_fg_during_bg(result, min_fg=2)
         assert not result.has_non_cancel_errors, \
             f"Unexpected errors: {[e.output[:200] for e in result.non_cancel_error_events]}"
 
@@ -254,7 +187,7 @@ class TestStaggeredCompletion:
             "7. Report: which task finished and which was cancelled?\n\n"
             "Use background: true for steps 1-2 ONLY."
         )
-        _log_result(result, "staggered")
+        log_result(result, "staggered")
 
         # Strict: 2 background launches with background: true
         bg_bash = [tc for tc in result.tool_calls
@@ -280,7 +213,7 @@ class TestStaggeredCompletion:
         assert any(w in text_lower for w in ["cancel", "slow", "stop"]), \
             f"Expected LLM to mention slow task cancellation. Got: {result.text[:300]}"
         # Strict: fg prep must happen WHILE bg tasks are running (true concurrency)
-        _assert_fg_during_bg(result, min_fg=1)
+        assert_fg_during_bg(result, min_fg=1)
         assert not result.has_non_cancel_errors, \
             f"Unexpected errors: {[e.output[:200] for e in result.non_cancel_error_events]}"
 
@@ -320,7 +253,7 @@ class TestPureBackgroundMonitoring:
             "- Report final status of both tasks\n\n"
             "Use background: true for steps 1-2."
         )
-        _log_result(result, "pure_monitor")
+        log_result(result, "pure_monitor")
 
         # Strict: 2 background launches with background: true
         bg_bash = [tc for tc in result.tool_calls
@@ -387,7 +320,7 @@ class TestWaitThenAct:
             "7. Report the complete workflow\n\n"
             "Use background: true for step 1 ONLY."
         )
-        _log_result(result, "wait_then_act")
+        log_result(result, "wait_then_act")
 
         # Strict: background task with background: true
         assert result.has_tool_with_background("daytona_codeact"), \
@@ -427,7 +360,7 @@ class TestWaitThenAct:
         assert len(result.tools_started()) + len(result.background_started()) >= 5, \
             f"Expected 5+ total actions (fg + bg). Got {len(result.tools_started())} fg + {len(result.background_started())} bg"
         # Strict: fg prep must happen WHILE bg task is running (true concurrency)
-        _assert_fg_during_bg(result, min_fg=1)
+        assert_fg_during_bg(result, min_fg=1)
         # Use unrecovered: agent may hit transient errors (e.g. cat before
         # write_file flushes) and retry successfully — that's acceptable.
         assert not result.has_unrecovered_errors, \

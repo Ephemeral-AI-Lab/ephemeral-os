@@ -15,30 +15,15 @@ from typing import Any
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from db.stores.base import AsyncStoreMixin
 from team.persistence.ltree_utils import path_to_ltree
 from team.persistence.task_note_record import TaskNoteRecord
 
 logger = logging.getLogger(__name__)
 
 
-class NoteStore:
+class NoteStore(AsyncStoreMixin):
     """Async Task Center persistence. Follows existing Store pattern."""
-
-    def __init__(self) -> None:
-        self._session_factory: async_sessionmaker[AsyncSession] | None = None
-
-    def initialize(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
-        self._session_factory = session_factory
-        logger.info("NoteStore initialised (async)")
-
-    @property
-    def initialized(self) -> bool:
-        return self._session_factory is not None
-
-    @property
-    def _sf(self) -> async_sessionmaker[AsyncSession]:
-        assert self._session_factory is not None, "NoteStore not initialised"
-        return self._session_factory
 
     async def insert(self, note: TaskNoteRecord) -> None:
         """Insert a single note."""

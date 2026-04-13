@@ -1,4 +1,4 @@
-"""Context toolkit — unified Task Center notes + staleness + exploration memory.
+"""Context tools — unified Task Center notes + staleness + exploration memory.
 
 Tools:
 - post_note                — post a note for other agents

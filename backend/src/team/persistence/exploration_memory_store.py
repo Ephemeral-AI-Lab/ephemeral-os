@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import Mapped, mapped_column
 
 from db.base import Base
+from db.stores.base import AsyncStoreMixin
 
 logger = logging.getLogger(__name__)
 
@@ -56,24 +57,8 @@ class ExplorationMemoryRecord(Base):
 # ---------------------------------------------------------------------------
 
 
-class ExplorationMemoryStore:
+class ExplorationMemoryStore(AsyncStoreMixin):
     """Async PG persistence for exploration cache. Follows NoteStore pattern."""
-
-    def __init__(self) -> None:
-        self._session_factory: async_sessionmaker[AsyncSession] | None = None
-
-    def initialize(self, session_factory: async_sessionmaker[AsyncSession]) -> None:
-        self._session_factory = session_factory
-        logger.info("ExplorationMemoryStore initialised (async)")
-
-    @property
-    def initialized(self) -> bool:
-        return self._session_factory is not None
-
-    @property
-    def _sf(self) -> async_sessionmaker[AsyncSession]:
-        assert self._session_factory is not None, "ExplorationMemoryStore not initialised"
-        return self._session_factory
 
     async def get(self, cache_key: str) -> list[dict[str, Any]] | None:
         """Fetch cached notes by key. Returns None on miss."""

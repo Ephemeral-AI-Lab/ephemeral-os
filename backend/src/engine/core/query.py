@@ -267,6 +267,32 @@ def _build_background_reminder(
     return ConversationMessage(role="user", content=content)
 
 
+def _launch_and_collect_bg_events(
+    context: QueryContext,
+    background_manager: BackgroundTaskManager,
+    tc: object,  # ToolUseBlock
+    task_note: str,
+    tool_results: list[ToolResultBlock],
+) -> list[tuple[StreamEvent, UsageSnapshot | None]]:
+    """Launch *tc* as a background tool, append its ToolResultBlock to
+    *tool_results*, and return a list of ``(event, None)`` pairs to yield.
+
+    Handles both the ``BackgroundTaskStarted`` and the ``ToolExecutionCompleted``
+    (rejection) cases, so the two identical call-sites don't need to repeat the
+    same append-then-conditional-yield dance.
+    """
+    tool_result, bg_event, reject_event = _launch_background_tool(
+        context, background_manager, tc, task_note
+    )
+    tool_results.append(tool_result)
+    events: list[tuple[StreamEvent, UsageSnapshot | None]] = []
+    if bg_event is not None:
+        events.append((bg_event, None))
+    if reject_event is not None:
+        events.append((reject_event, None))
+    return events
+
+
 def _launch_background_tool(
     context: QueryContext,
     background_manager: BackgroundTaskManager,
@@ -673,14 +699,10 @@ async def _run_query_loop(
                 if tc.id not in deferred_bg:
                     continue
                 task_note = str(tc.input.get("task_note", ""))
-                tool_result, bg_event, reject_event = _launch_background_tool(
-                    context, background_manager, tc, task_note
-                )
-                tool_results.append(tool_result)
-                if bg_event is not None:
-                    yield bg_event, None
-                if reject_event is not None:
-                    yield reject_event, None
+                for ev in _launch_and_collect_bg_events(
+                    context, background_manager, tc, task_note, tool_results
+                ):
+                    yield ev
 
         if not tool_results:
             executor.cancel_all()
@@ -697,14 +719,10 @@ async def _run_query_loop(
                 )
 
                 if is_background:
-                    tool_result, bg_event, reject_event = _launch_background_tool(
-                        context, background_manager, tc, task_note
-                    )
-                    tool_results.append(tool_result)
-                    if bg_event is not None:
-                        yield bg_event, None
-                    if reject_event is not None:
-                        yield reject_event, None
+                    for ev in _launch_and_collect_bg_events(
+                        context, background_manager, tc, task_note, tool_results
+                    ):
+                        yield ev
                 else:
                     foreground_calls.append(tc)
 

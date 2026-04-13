@@ -94,6 +94,32 @@ class TeamDefinitionStore:
             )
             return [self._record_to_definition(r) for r in records]
 
+    def seed_builtin(self, defn: TeamDefinition) -> TeamDefinition:
+        """Insert a team definition if it doesn't already exist.
+
+        Existing records are left untouched so user customisations via the
+        CRUD API are never overwritten by a restart.
+        """
+        with self._sf() as db:
+            existing = (
+                db.query(TeamDefinitionRecord)
+                .filter(TeamDefinitionRecord.name == defn.name)
+                .first()
+            )
+            if existing is not None:
+                return self._record_to_definition(existing)
+            record = TeamDefinitionRecord(
+                id=str(uuid4()),
+                name=defn.name,
+                description=defn.description,
+                entry_planner=defn.entry_planner,
+                roster={k: list(v) for k, v in defn.roster.items()},
+            )
+            db.add(record)
+            db.commit()
+            db.refresh(record)
+            return self._record_to_definition(record)
+
     def delete(self, name: str) -> bool:
         """Hard delete by name. Returns True if a row was removed."""
         with self._sf() as db:
