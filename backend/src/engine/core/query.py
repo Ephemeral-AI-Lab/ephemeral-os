@@ -59,6 +59,7 @@ from tools.core.base import (
     run_tool_safely,
 )
 from tools.core.runtime import merge_runtime_metadata as _merge_submission_metadata
+from tools.builtins.skills.toolkit import clear_required_next_tool, get_required_next_tool
 
 logger = logging.getLogger(__name__)
 
@@ -313,6 +314,27 @@ def _launch_background_tool(
     The caller is responsible for yielding whichever of the two events is
     non-``None`` so that tests and the router see a single ordered stream.
     """
+    pending = get_required_next_tool(context.tool_metadata)
+    tool_name = str(getattr(tool_use, "name", "") or "")
+    tool_id = str(getattr(tool_use, "id", "") or "")
+    if pending is not None and tool_name != pending["tool_name"]:
+        message = (
+            f"{pending.get('reason') or 'A terminal tool-call guard is active.'} "
+            f"You called `{tool_name}` instead. "
+            f"{pending.get('reset_hint') or ''}"
+        ).strip()
+        return (
+            ToolResultBlock(tool_use_id=tool_id, content=message, is_error=True),
+            None,
+            ToolExecutionCompleted(
+                tool_name=tool_name,
+                output=message,
+                is_error=True,
+                tool_id=tool_id,
+            ),
+        )
+    if pending is not None and tool_name == pending["tool_name"]:
+        clear_required_next_tool(context.tool_metadata)
 
     async def _execute_in_context(
         tool_name: str,
@@ -951,6 +973,21 @@ async def _execute_tool_call(
     tool_input: dict[str, object],
     extra_metadata: ExecutionMetadata | dict[str, Any] | None = None,
 ) -> ToolResultBlock:
+    pending = get_required_next_tool(context.tool_metadata)
+    if pending is not None and tool_name != pending["tool_name"]:
+        message = (
+            f"{pending.get('reason') or 'A terminal tool-call guard is active.'} "
+            f"You called `{tool_name}` instead. "
+            f"{pending.get('reset_hint') or ''}"
+        ).strip()
+        return ToolResultBlock(
+            tool_use_id=tool_use_id,
+            content=message,
+            is_error=True,
+        )
+    if pending is not None and tool_name == pending["tool_name"]:
+        clear_required_next_tool(context.tool_metadata)
+
     budget_rejection = _consume_tool_budget_or_reject(context, tool_use_id)
     if budget_rejection is not None:
         return budget_rejection

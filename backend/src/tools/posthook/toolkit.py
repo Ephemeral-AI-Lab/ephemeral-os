@@ -64,6 +64,26 @@ async def _check_context_freshness(
     )
 
 
+async def _freshness_submission_gate(
+    context: ToolExecutionContext,
+    *,
+    action: str,
+) -> ToolResult | None:
+    """Reject terminal submissions when the task context has gone stale."""
+    freshness_warning = await _check_context_freshness(context)
+    if not freshness_warning:
+        return None
+    return ToolResult(
+        output=(
+            f"Error: `{action}` is blocked because your task context changed since the "
+            "last acknowledged baseline. Call `context_changed_since()` now, refresh with "
+            "`read_notes(...)` or targeted rereads if needed, then either retry the "
+            f"submission or call `request_replan()`. {freshness_warning.strip()}"
+        ),
+        is_error=True,
+    )
+
+
 def _resolve_agent_name(agent_value: str, roster: dict[str, list[str]]) -> str:
     candidate = agent_value.strip()
     if not candidate:
@@ -209,14 +229,9 @@ class SubmitSummaryTool(BaseTool):
         warning_gate = _coordination_warning_gate(context, action="submit_summary()")
         if warning_gate is not None:
             return warning_gate
-
-        freshness_warning = await _check_context_freshness(context)
-        # Never hard-reject here.  submit_summary is a posthook-only tool,
-        # so context_changed_since is NOT in the registry — the agent cannot
-        # call it, and rejecting creates an unbreakable loop.  Instead,
-        # always append the warning so downstream tasks see it.
-        if freshness_warning:
-            summary += freshness_warning
+        freshness_gate = await _freshness_submission_gate(context, action="submit_summary()")
+        if freshness_gate is not None:
+            return freshness_gate
 
         submission = SubmittedSummary(summary=summary)
         context.metadata["submitted_output"] = submission
@@ -306,15 +321,14 @@ class SubmitPlanTool(BaseTool):
         if issues:
             message = "; ".join(str(issue.get("msg") or "invalid plan") for issue in issues)
             return ToolResult(output=f"Error: {message}", is_error=True)
-
-        freshness_warning = await _check_context_freshness(context)
+        freshness_gate = await _freshness_submission_gate(context, action="submit_plan()")
+        if freshness_gate is not None:
+            return freshness_gate
 
         context.metadata["submitted_output"] = plan
         summary = f"Submitted plan with {len(plan.tasks)} task(s)."
         if arguments.rationale:
             summary += f"\nRationale: {arguments.rationale.strip()}"
-        if freshness_warning:
-            summary += freshness_warning
         await _post_submission_note(context, content=summary)
         return ToolResult(output=f"Plan accepted ({len(plan.tasks)} tasks).")
 
@@ -437,14 +451,13 @@ class SubmitReplanTool(BaseTool):
         replan = ReplanPlan.from_dict(
             {"add_tasks": arguments.add_tasks, "cancel_ids": arguments.cancel_ids}
         )
-
-        freshness_warning = await _check_context_freshness(context)
+        freshness_gate = await _freshness_submission_gate(context, action="submit_replan()")
+        if freshness_gate is not None:
+            return freshness_gate
         note_content = (
             f"Submitted corrective replan with {len(replan.add_tasks)} new task(s) "
             f"and {len(replan.cancel_ids)} cancellation(s)."
         )
-        if freshness_warning:
-            note_content += freshness_warning
 
         context.metadata["submitted_output"] = replan
         await _post_submission_note(context, content=note_content)

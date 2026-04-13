@@ -7,6 +7,7 @@ writes are committed after the script finishes.
 
 from __future__ import annotations
 
+import ast
 import base64
 import json
 import logging
@@ -30,6 +31,7 @@ from tools.daytona_toolkit.ci_integration import (
     snapshot_dirty_files,
     sync_shell_mutations,
 )
+from tools.daytona_toolkit._daytona_utils import is_coordinated_team_agent
 from tools.daytona_toolkit.tools import (
     _get_cwd,
     _recover_sandbox,
@@ -43,6 +45,99 @@ from tools.daytona_toolkit.tools import (
 from tools.core.decorator import tool
 
 logger = logging.getLogger(__name__)
+
+_BLOCKED_CODEACT_MODULES = frozenset({"subprocess", "shutil"})
+_BLOCKED_CODEACT_CALLS = frozenset(
+    {
+        "subprocess.run",
+        "subprocess.Popen",
+        "subprocess.call",
+        "subprocess.check_call",
+        "subprocess.check_output",
+        "os.system",
+        "os.popen",
+    }
+)
+
+
+def _dotted_name(node: ast.AST) -> str:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        base = _dotted_name(node.value)
+        return f"{base}.{node.attr}" if base else node.attr
+    return ""
+
+
+def _detect_blocked_codeact_usage(code: str) -> list[str]:
+    """Return shell-policy violations in *code* before sandbox execution."""
+    try:
+        tree = ast.parse(code)
+    except SyntaxError:
+        return []
+
+    violations: list[str] = []
+    seen: set[str] = set()
+
+    def _note(message: str) -> None:
+        if message not in seen:
+            seen.add(message)
+            violations.append(message)
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                root = alias.name.split(".", 1)[0]
+                if root in _BLOCKED_CODEACT_MODULES:
+                    _note(f"import {root}")
+        elif isinstance(node, ast.ImportFrom):
+            root = (node.module or "").split(".", 1)[0]
+            if root in _BLOCKED_CODEACT_MODULES:
+                _note(f"from {root} import ...")
+        elif isinstance(node, ast.Call):
+            func_name = _dotted_name(node.func)
+            if func_name in _BLOCKED_CODEACT_CALLS:
+                _note(f"{func_name}(...)")
+                continue
+            if func_name in {"__import__", "builtins.__import__", "importlib.import_module"}:
+                if node.args and isinstance(node.args[0], ast.Constant):
+                    value = node.args[0].value
+                    if isinstance(value, str) and value.split(".", 1)[0] in _BLOCKED_CODEACT_MODULES:
+                        _note(f"{func_name}({value!r})")
+    return violations
+
+
+def _codeact_shell_policy_error(violations: list[str]) -> ToolResult:
+    preview = ", ".join(violations[:3])
+    if len(violations) > 3:
+        preview += ", ..."
+    return ToolResult(
+        output=(
+            "CodeAct policy error: coordinated team lanes must use `shell(\"...\")` "
+            "for repo commands inside `daytona_codeact`. "
+            f"Blocked pattern(s): {preview}. "
+            "Replace subprocess/os process wrappers with `shell(...)`."
+        ),
+        is_error=True,
+        metadata={"status": "blocked_shell_policy"},
+    )
+
+
+def _format_codeact_error(
+    *,
+    stdout: str,
+    manifest_error: str = "",
+) -> str:
+    detail = manifest_error.strip() or stdout[:4000]
+    lines = ["CodeAct execution error:"]
+    if detail:
+        lines.append(detail)
+    if "blocked in codeact" in detail or "subprocess" in detail or "os.system" in detail:
+        lines.append(
+            "Use `shell(\"...\")` for commands inside `daytona_codeact`; "
+            "do not import `subprocess` or call `os.system()`."
+        )
+    return "\n".join(lines)
 
 _WRAPPER_TEMPLATE = r'''
 import base64, hashlib, json, os, re, subprocess, sys, traceback
@@ -344,6 +439,11 @@ async def daytona_codeact(
         shells_run (int): Number of shell commands executed
         error (str): Error message if failed
     """
+    if is_coordinated_team_agent(context):
+        violations = _detect_blocked_codeact_usage(code)
+        if violations:
+            return _codeact_shell_policy_error(violations)
+
     try:
         sandbox = await _require_sandbox(context)
     except Exception as exc:
@@ -459,7 +559,7 @@ async def daytona_codeact(
         except Exception:
             if result.get("status") == "error":
                 return ToolResult(
-                    output=f"CodeAct execution error:\n{stdout[:4000]}",
+                    output=_format_codeact_error(stdout=stdout),
                     is_error=True,
                 )
             return ToolResult(output=f"Script completed but manifest unreadable:\n{stdout[:4000]}")
@@ -498,8 +598,12 @@ async def daytona_codeact(
                 )
 
         if result.get("status") == "error":
+            manifest_error = str(manifest.get("error", "") or "")
             return ToolResult(
-                output=f"CodeAct execution error:\n{stdout[:4000]}",
+                output=_format_codeact_error(
+                    stdout=stdout,
+                    manifest_error=manifest_error,
+                ),
                 is_error=True,
                 metadata={
                     "status": manifest.get("status", "error"),
