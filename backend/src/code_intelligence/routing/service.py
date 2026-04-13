@@ -93,6 +93,7 @@ class CodeIntelligenceService:
         self.workspace_root = workspace_root
         self._sandbox = sandbox
         self._initialized = False
+        self._lsp_bootstrap_attempted = False
         self._init_lock = threading.Lock()
 
         self.symbol_index = SymbolIndex(workspace_root=workspace_root)
@@ -117,7 +118,14 @@ class CodeIntelligenceService:
                 return True
 
         ready = self.symbol_index.ensure_built(wait=wait)
-        self.lsp_client.ensure_ready()
+        lsp_ready = self.lsp_client.ensure_ready()
+        if (
+            self._sandbox is not None
+            and (not lsp_ready.get("python") or not lsp_ready.get("typescript"))
+            and not self._lsp_bootstrap_attempted
+        ):
+            self._lsp_bootstrap_attempted = True
+            self.lsp_client.ensure_ready(install_missing=True)
 
         with self._init_lock:
             self._initialized = ready

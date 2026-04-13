@@ -144,16 +144,12 @@ def test_root_prompt_points_to_skill_owned_workflow_policy():
     prompt = _build_root_prompt(instance, "/repo")
 
     assert "The SWE-EVO test patch has already been applied inside the sandbox" in prompt
-    assert "release notes are intentionally omitted from the root planner prompt" in prompt
-    assert "Stable SWE-EVO workflow policy lives in the declared skills" in prompt
-    assert "Recommended first-ready frontier cap" in prompt
-    assert "submitted root plan must stay within the runtime cap of 16 total tasks" in prompt
-    assert "Use that runtime cap as a budget, not as a fixed graph recipe" in prompt
-    assert "does not mean the whole submitted graph should stop at that many items" in prompt
-    assert "do not hand the whole remaining surface to only the initial developers" in prompt
-    assert "must still receive its own developer lane or expandable child planner" in prompt
-    assert "must not inspect dependency/version metadata" in prompt
-    assert "benchmark run log file under `.ephemeralos/benchmark-logs/`" in prompt
+    assert "This run is primarily evaluating the coordination behavior described in" in prompt
+    assert "`docs/architecture/plan-a-team-coordination-redesign.md`" in prompt
+    assert "let the declared skills own the detailed workflow policy" in prompt
+    assert "Task Center, scout waves, scoped-path freshness, and recovery/replanning loop" in prompt
+    assert "per-layer cap of 16 tasks as a budgeting guardrail" in prompt
+    assert "`.ephemeralos/benchmark-logs/` only as supporting evidence" in prompt
 
 
 def test_root_prompt_summarizes_large_pass_to_pass_guardrail():

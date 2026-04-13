@@ -108,6 +108,32 @@ class TestInjectCodeIntelligence:
 
         assert mock_context.metadata["ci_service"] == mock_svc
 
+    def test_prefers_sandbox_project_dir_for_ci_workspace(self, monkeypatch):
+        from sandbox.workspace import inject_code_intelligence
+
+        mock_context = MagicMock()
+        mock_context.metadata = {}
+        mock_sandbox = MagicMock()
+        mock_sandbox.configure_mock(project_dir="/testbed")
+        mock_svc = MagicMock()
+        captured = {}
+
+        def fake_get_ci(sandbox_id, workspace_root, sandbox):
+            captured["workspace_root"] = workspace_root
+            return mock_svc
+
+        import sys
+        import types
+
+        fake_ci_module = types.ModuleType("code_intelligence.routing.service")
+        fake_ci_module.get_code_intelligence = fake_get_ci
+        monkeypatch.setitem(sys.modules, "code_intelligence.routing.service", fake_ci_module)
+
+        inject_code_intelligence(mock_context, "sb-123", mock_sandbox, "/workspace")
+
+        assert captured["workspace_root"] == "/testbed"
+        mock_svc.ensure_initialized.assert_called_once_with(wait=False)
+
     def test_skips_when_ci_import_fails(self, monkeypatch):
         from sandbox.workspace import inject_code_intelligence
 
@@ -164,7 +190,7 @@ class TestInjectCodeIntelligence:
         assert mock_context.metadata["ci_service"] == mock_svc
         assert captured["sandbox"] is sync_sandbox
         mock_svc.ensure_initialized.assert_not_called()
-        mock_svc.lsp_client.ensure_ready.assert_called_once_with()
+        mock_svc.lsp_client.ensure_ready.assert_called_once_with(install_missing=False)
 
     def test_skips_eager_warmup_when_async_remote_sandbox_has_no_sync_handle(self, monkeypatch):
         from sandbox.workspace import inject_code_intelligence

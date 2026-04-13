@@ -4,6 +4,7 @@ Use this reference only when `target_paths` is a single file or a short fixed fi
 
 ## Rules
 
+- Must treat the handed scope itself as the deliverable.
 - Treat the handed scope itself as the deliverable.
 - The Task Center note is the durable handoff. The final message is only a short prose acknowledgment.
 - The note should usually cover `Scope`, `Files mapped`, `Entry points`, `Owner seam`, `Suggested subdivisions`, and `Gaps`.

@@ -3,15 +3,17 @@ Use this reference immediately before the first scout wave or whenever scout lau
 
 ## Launch workflow
 
-1. Call `run_subagent(agent_name="scout", input={"target_paths":[...]}, task_note="...")` exactly.
+1. Must call `run_subagent(agent_name="scout", input={"target_paths": [...]}, task_note="...")` exactly.
 2. Give each scout one unresolved owner slice, not a bundle of unrelated files.
 3. Queue the whole useful wave before any progress check, wait, or reaction to early output.
-4. Inspect fresh scouts with `check_background_progress(...)` before any `wait_for_background_task(...)`.
-5. Scouts must `post_note(scope_paths=[...])`. After the wave, planners must `read_notes(scope_paths=[...])`.
-6. Reuse existing Task Center notes when the same scope already has coverage; same-turn overlap is a reuse signal, not a relaunch signal.
-7. If cold CI blocked exact-file confirmation, launch the nearest stable production boundary instead of synthesizing a guessed exact path.
-8. Record the exact returned `task_id` for every scout and use only those literal ids in progress checks or waits.
-9. After the wave, if `context_changed_since()` or a scope-change warning says the layer moved, refresh notes before shaping the DAG.
+4. Must finish queuing the useful wave before any progress check or reaction to early scout output.
+5. Inspect fresh scouts with `check_background_progress(...)` before any `wait_for_background_task(...)`.
+6. Scouts must `post_note(scope_paths=[...])`. After the wave, planners must `read_notes(scope_paths=[...])`.
+7. Reuse existing Task Center notes when the same scope already has coverage; same-turn overlap is a reuse signal, not a cue to relaunch the same explorer.
+8. If cold CI blocked exact-file confirmation, overwrite any stale guessed aliases in the first-wave ledger and launch the nearest stable production boundary instead of synthesizing a guessed exact path.
+9. Record the exact returned `task_id` for every scout and use only those literal ids in progress checks or waits.
+10. After the wave, if `context_changed_since()` or a scope-change warning says the layer moved, refresh notes before shaping the DAG.
+11. delete any earlier `pkg/dataframe/utils_dataframe.py` brainstorm once live evidence disproves it.
 
 ```json
 {
@@ -32,6 +34,7 @@ Use this reference immediately before the first scout wave or whenever scout lau
 ## Rules
 
 - Never pass prompt mode to `scout`.
+- Do not jump to `check_background_progress(task_id="bg_3")` on an inferred id or before the useful wave is fully queued.
 - Never wait on a fresh or uninspected explorer before `check_background_progress(...)`.
 - Never launch explorers for benchmark tests when a plausible production owner already exists.
 - Never derive explorer `target_paths` by copying failing test paths after the anchor already exposed the production owner.

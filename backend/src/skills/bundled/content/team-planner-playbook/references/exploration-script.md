@@ -4,14 +4,15 @@ Use this reference only on fresh benchmark roots or any turn that still lacks cl
 
 ## Workflow
 
-1. Start with exactly one narrow `ci_workspace_structure(path=...)` on the deepest shared production boundary already implied by the prompt.
-2. Use `ci_query_symbols(...)`, `ci_query_references(...)`, `ci_hover(...)`, or `ci_diagnostics(...)` only to refine likely owners from that anchor.
-3. If the first anchor is empty, or `ci_status()` reports `initialized=false`, stop exact-file guessing immediately. This is a cold-CI branch.
-4. On cold CI, keep unresolved work on stable directories/packages and let scouts confirm exact files. Failing benchmark tests remain evidence only.
-5. If more than one owner slice is still unresolved after the first anchor, the next planning action must be a scout wave, not another anchor or final DAG synthesis.
-6. On repeated work, if one canonical owner is already exact and same-run reuse is empty, call `check_exploration_memory(paths=[...])` before relaunching that scout.
-7. After the wave, `read_notes(scope_paths=[...])`; if `context_changed_since()` or a scope-change warning says the layer moved, refresh only stale slices.
-8. Stop exploring once the current layer can name ready work plus residual boundaries.
+1. Must keep the first-turn exploration script explicit and live-evidence-first.
+2. Start with exactly one narrow `ci_workspace_structure(path=...)` on the deepest shared production boundary already implied by the prompt.
+3. Use `ci_query_symbols(...)`, `ci_query_references(...)`, `ci_hover(...)`, or `ci_diagnostics(...)` only to refine likely owners from that anchor.
+4. If the first anchor is empty, or `ci_status()` reports `initialized=false`, stop exact-file guessing immediately. This is a cold-CI branch.
+5. On cold CI, keep unresolved work on stable directories/packages and let scouts confirm exact files. Failing benchmark tests remain evidence only.
+6. If more than one owner slice is still unresolved after the first anchor, the next planning action must be a scout wave, not final DAG synthesis.
+7. On repeated work, if one canonical owner is already exact and same-run reuse is empty, call `check_exploration_memory(paths=[...])` before relaunching that scout.
+8. After the wave, `read_notes(scope_paths=[...])`; if `context_changed_since()` or a scope-change warning says the layer moved, refresh only stale slices.
+9. Stop exploring once the current layer can name ready work plus residual boundaries.
 
 ```json
 {
@@ -34,6 +35,9 @@ Use this reference only on fresh benchmark roots or any turn that still lacks cl
 
 ## Rules
 
+- Never map a benchmark cluster to a production file solely because the names look similar.
+- Never overwrite any earlier brainstorm alias in the first-wave ledger without live evidence.
+- Delete any brainstorm alias as soon as live evidence disproves it.
 - Never open with root-wide CI queries or a broad first anchor when the prompt already points at a deeper production area.
 - Never use more than one scope path as the first anchor or stack multiple first anchors before the wave.
 - Never spend first-wave explorers on benchmark test files when a plausible production owner exists.
@@ -41,3 +45,7 @@ Use this reference only on fresh benchmark roots or any turn that still lacks cl
 - Never bundle unrelated owner slices or the whole first-wave ledger into one explorer.
 - Never start loading decomposition or plan-json references while the first explorer wave still has unlaunched exact-file slices.
 - Never turn benchmark test filename tokens into nested directories, inserted path segments, or composite production files absent from live evidence.
+- Never create a separate root task just to describe a benchmark mismatch; carry confirmed owners forward and drop disproved leaves.
+
+Example scout launch shape:
+`run_subagent(agent_name="scout", input={"target_paths":["pkg/io/parquet"]}, task_note="map the parquet owner surface")`

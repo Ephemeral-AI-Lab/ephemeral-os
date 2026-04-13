@@ -231,6 +231,29 @@ def test_get_code_intelligence_rebind_resets_lsp_backend_cache_for_new_sandbox()
     assert rebound.lsp_client._ts_available is None
 
 
+def test_ensure_initialized_bootstraps_missing_lsp_once(tmp_path) -> None:
+    svc = CodeIntelligenceService(
+        sandbox_id="sandbox-bootstrap",
+        workspace_root=str(tmp_path),
+        sandbox=SimpleNamespace(),
+    )
+
+    calls: list[bool] = []
+
+    def fake_ensure_ready(*, install_missing: bool = False):
+        calls.append(install_missing)
+        if install_missing:
+            return {"python": True, "typescript": True}
+        return {"python": False, "typescript": False}
+
+    svc.lsp_client.ensure_ready = fake_ensure_ready  # type: ignore[method-assign]
+
+    svc.ensure_initialized(wait=False)
+    svc.ensure_initialized(wait=False)
+
+    assert calls == [False, True, False]
+
+
 @pytest.mark.asyncio
 async def test_initialize_endpoint_passes_requested_workspace_root(monkeypatch) -> None:
     calls: list[tuple[str, str]] = []

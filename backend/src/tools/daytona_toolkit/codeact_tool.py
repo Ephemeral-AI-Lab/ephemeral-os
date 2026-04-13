@@ -58,6 +58,9 @@ _READ_ONLY_TEST_COMMAND_PATTERN = re.compile(
     r"^\s*(?:python(?:\d+(?:\.\d+)*)?\s+-m\s+)?(?:pytest|py\.test)\b",
     flags=re.IGNORECASE,
 )
+_USER_LOCAL_BIN_EXPORT = 'export PATH="$HOME/.local/bin:$PATH"'
+_PROJECT_VENV_BIN_EXPORT = 'if [ -d .venv/bin ]; then export PATH="$PWD/.venv/bin:$PATH"; fi'
+_PYTHON3_SHIM = 'if command -v python3 >/dev/null 2>&1; then python() {{ command python3 "$@"; }}; fi'
 
 def _command_may_mutate_workspace(command):
     stripped = (command or "").strip()
@@ -103,8 +106,9 @@ def shell(command, timeout=300):
         )
         raise RuntimeError(message)
     try:
+        wrapped = f"{{_USER_LOCAL_BIN_EXPORT}} && {{_PROJECT_VENV_BIN_EXPORT}} && {{_PYTHON3_SHIM}} && {{command}}"
         proc = subprocess.run(
-            ["env", "-u", "LC_ALL", "bash", "-o", "pipefail", "-lc", command],
+            ["env", "-u", "LC_ALL", "bash", "-o", "pipefail", "-lc", wrapped],
             capture_output=True,
             text=True,
             timeout=timeout,

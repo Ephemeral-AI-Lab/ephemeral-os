@@ -5,7 +5,7 @@ role: planner
 model: inherit
 tool_call_limit: 100
 toolkits: ["code_intelligence", "context", "subagent"]
-blocked_tools: ["post_note", "ci_read_file", "ci_edit_hotspots"]
+blocked_tools: ["post_note", "ci_read_file"]
 posthook: ["submit_plan"]
 skills: ["team-planner-playbook"]
 ---

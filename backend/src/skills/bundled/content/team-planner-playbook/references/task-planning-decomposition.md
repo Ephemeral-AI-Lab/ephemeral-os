@@ -5,6 +5,7 @@ If any nameable first-wave explorer is still unlaunched, stop and return to laun
 
 ## Decide atomic vs expandable
 
+0. Must keep decomposition explicit enough that the next layer can act without reopening the same ownership question.
 1. Make a lane atomic when one owner slice, one patch surface, and one verification family are already clear enough for a leaf worker.
 2. Make a lane expandable when it still hides multiple owner slices, region-level decomposition inside one broad file, or more ready work than the current layer should flatten.
 3. Make a lane expandable when the owner is already a package, directory, or broad single file and the next useful decision is internal lane shaping rather than direct patching.
@@ -24,6 +25,8 @@ If any nameable first-wave explorer is still unlaunched, stop and return to laun
 - Refresh with `read_notes(...)` and respect freshness signals before turning a formerly broad boundary into an exact-file leaf.
 - Never hide unresolved owner clusters behind validator-only coverage.
 - Never call a leftovers lane atomic unless one shared live owner explains every file and benchmark verify surface in it.
+- Do not create one atomic "misc fixes" lane just because those residual slices are individually small.
+- Do not collapse those unrelated files into one atomic developer just to save root-plan slots.
 
 ## Few-shot examples
 

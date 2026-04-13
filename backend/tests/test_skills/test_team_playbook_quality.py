@@ -349,7 +349,11 @@ def test_sweevo_context_stays_shared_and_runtime_focused() -> None:
     )
     assert "Must keep commands repo-root-relative." in sweevo
     assert "Must keep roles separate" in sweevo
-    assert "same-family sibling node" in sweevo
+    assert "Must treat `docs/architecture/plan-a-team-coordination-redesign.md` as the design intent" in sweevo
+    assert "Must keep shared context in the Task Center" in sweevo
+    assert "Must use `check_exploration_memory(paths=[...])` only after same-run notes are insufficient" in sweevo
+    assert "Must treat scope-change notifications and `context_changed_since()` as freshness signals." in sweevo
+    assert "Must keep `scope_paths` as soft focus hints." in sweevo
 
 
 def test_posthook_decision_playbook_forbids_clarifying_questions() -> None:

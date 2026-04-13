@@ -126,12 +126,24 @@ def get_exploration_memory() -> ExplorationMemory:
 
 class PostNoteInput(BaseModel):
     content: str = Field(..., description="Note content to post", min_length=1)
-    scope_paths: list[str] | None = Field(default=None, description="File/dir scope for filtering")
+    scope_paths: list[str] | None = Field(
+        default=None,
+        description=(
+            "File/dir scope for filtering. If omitted, defaults to the task's "
+            "write_scope. Other agents can find this note via read_notes(scope_paths=[...])."
+        ),
+    )
 
 
 class PostNoteTool(BaseTool):
     name = "post_note"
-    description = "Post a note to the Task Center for other agents to read."
+    description = (
+        "Post a note to the Task Center for other agents to read. "
+        "Use for: blockers that siblings should know about, partial progress "
+        "updates on long tasks, discoveries about the codebase that downstream "
+        "tasks need, and exploration findings (scouts). Notes are append-only "
+        "and immutable — post a new note to update, don't try to edit."
+    )
     input_model = PostNoteInput
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
@@ -161,19 +173,32 @@ class PostNoteTool(BaseTool):
 
 class ReadNotesInput(BaseModel):
     authors: list[str] | None = Field(
-        default=None, description="Filter by task IDs that authored the notes"
+        default=None,
+        description=(
+            "Filter by task IDs that authored the notes. Task IDs appear in "
+            "your context under 'Context from dependencies' headers as (task_id)."
+        ),
     )
-    scope_paths: list[str] | None = Field(default=None, description="Filter by scope path prefix")
+    scope_paths: list[str] | None = Field(
+        default=None,
+        description=(
+            "Filter by scope path prefix — returns notes whose scope_paths "
+            "overlap with these prefixes (e.g. 'src/auth/' matches 'src/auth/session.py')."
+        ),
+    )
     keyword: str | None = Field(
-        default=None, description="Keyword filter (case-insensitive substring match)"
+        default=None, description="Keyword filter (case-insensitive substring match on note content)"
     )
-    limit: int | None = Field(default=None, description="Max notes to return")
+    limit: int | None = Field(default=None, description="Max notes to return (most recent first)")
 
 
 class ReadNotesTool(BaseTool):
     name = "read_notes"
     description = (
-        "Read notes from the Task Center, optionally filtered by author, scope, or keyword."
+        "Read notes from the Task Center, optionally filtered by scope, author, "
+        "or keyword. Use scope_paths to find notes about specific files/dirs. "
+        "Use after explorer waves to read findings, before widening into shared "
+        "scopes to check sibling activity, and before retrying to see what changed."
     )
     input_model = ReadNotesInput
 

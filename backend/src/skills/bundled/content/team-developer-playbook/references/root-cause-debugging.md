@@ -41,6 +41,7 @@ If one scoped packet, one symbol/reference query, and one proving repro all land
 - You are about to treat payload prose, repo history, or failure counts as stronger evidence than the current red node.
 - You are about to call a still-red owned verify failure "pre-existing" or plan to ignore it.
 - The same boundary already survived one proving repro and you are still reading siblings instead of patching or replanning.
+- Do not call the red verify target inverted or a "wrong" test while the owned loader or access gate is still red.
 
 ## Few-shot examples
 
@@ -52,6 +53,10 @@ If one scoped packet, one symbol/reference query, and one proving repro all land
     "hypothesis": "a new deprecation hook now fires during package import instead of only on explicit public access"
   }
   ```
-  Confirm the importer chain once, then switch startup callers like `pkg/base.py` to a quiet supported path and rerun the exact verify command.
+  The first failing boundary is the shared compat/export surface. Deprecation hooks belong on explicit public access paths only.
+  Confirm the importer chain once, then switch startup callers like `pkg/base.py` to a quiet supported path such as `pkg._compat` and rerun the exact verify command.
+  do not rewrite the test import or add a module-level deprecation hook on the public wrapper while startup still uses it.
 - Example: the exact pytest target returns `ERROR: not found`, exit code 4, or `no tests ran`.
   Treat that as a wrong-target or stale-target control failure, not proof the owned surface is green. Re-collect the current target or replan from the latest healthy checkpoint.
+- Example: a verify file is red only because startup still imports the noisy public wrapper.
+  Do not treat the verify target list as edit ownership, and never reach for a root-only skip, xfail, or verify-file rewrite instead of fixing the owned loader or access gate.

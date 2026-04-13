@@ -9,47 +9,35 @@ Use this skill only for stable benchmark policy. Treat the prompt, payload, live
 
 ## Shared rules
 
-- Treat the live sandbox checkout as the source of truth.
-- Treat named `FAIL_TO_PASS`, `PASS_TO_PASS`, and grading commands as authoritative.
-- Report a missing named test or node as `benchmark_surface_mismatch`. Never guess a replacement node, file, or symbol.
-- Keep commands repo-root-relative. Never prepend guessed `cd /workspace`, `cd /home/user`, or similar wrappers.
-- Fix repository code, not the ambient environment. Never rely on ad hoc package installs as the benchmark fix.
-- Keep roles separate, use the upgraded CI toolkit (`ci_status`, `ci_workspace_structure`, `ci_query_symbols`, `ci_query_references`, `ci_hover`, `ci_diagnostics`) for live ownership evidence, and trust live file state over cached briefs or old reasoning.
-- Preserve exact file paths and exact pytest node ids when they are known.
-- Treat benchmark test files as failure evidence first, not default implementation ownership.
-- Treat collection or import failures before the named target loads as still-red verification, not as a reason to trim the scope.
+- Must treat the live sandbox checkout as the source of truth.
+- Must treat named `FAIL_TO_PASS`, `PASS_TO_PASS`, and grading commands as authoritative.
+- Must report a missing named test or node as `benchmark_surface_mismatch`. Must not guess a replacement node, file, or symbol.
+- Must not label a missing transitive import, helper, or adjacent production module as `benchmark_surface_mismatch`.
+- Must keep commands repo-root-relative. Never prepend guessed `cd /workspace`, `cd /home/user`, or similar wrappers.
+- Must fix repository code, not the ambient environment. Never rely on ad hoc package installs as the benchmark fix.
+- Must keep roles separate, preserve exact file paths and exact pytest node ids when they are known, and trust live file state over cached briefs or old reasoning.
+- Must treat benchmark test files as failure evidence first, not default implementation ownership.
+- Must treat collection or import failures before the named target loads as still-red verification, not as a reason to trim the scope.
 
-## Benchmark planning rules
+## Coordination redesign focus
 
-- Fresh benchmark roots must stay live-first. Start with a narrow owner-surface pass before broad exploration.
-- Any plan JSON drafted before one production anchor and one explorer wave is invalid, even if the JSON shape looks plausible.
-- Planners must load `team-planner-playbook/exploration-script` before the first non-reference planning tool call on a fresh root.
-- After the root anchor, planners must execute at least one explorer wave on unresolved production-owner slices before loading final-plan references or emitting the root DAG; explorers must `post_note` findings and planners must `read_notes` before decomposition or duplicate scouting.
-- If `ci_status()` reports `initialized=false` or the first anchor is empty, planners must stop exact-file guessing and launch the first wave on stable production boundaries that explorers can confirm live.
-- Child or scoped benchmark planning must load `team-planner-playbook/non-root-context-reuse` before fresh exploration.
-- Must not draft placeholder scout lanes, `plan-anchor-*` work items, or `developer_override` escape hatches into the submitted DAG.
-- Must anchor `scope_paths` on exact live owner paths and keep verification text on exact benchmark paths. Never keep guessed aliases once the live owner is known.
-- Stop planning once ownership is clear enough to emit the next plan layer.
+- Must treat `docs/architecture/plan-a-team-coordination-redesign.md` as the design intent for this benchmark.
+- Must keep shared context in the Task Center: scouts, developers, and validators post durable notes; planners, developers, validators, and replanners reuse them with `read_notes(...)`.
+- Must use `check_exploration_memory(paths=[...])` only after same-run notes are insufficient and the scope is already exact.
+- Must treat scope-change notifications and `context_changed_since()` as freshness signals. Refresh with `read_notes(...)` before committing, verifying, or replanning on a drifting surface.
+- Must keep `scope_paths` as soft focus hints. Never turn them into rigid ownership bans.
 
-## Benchmark execution rules
+## Planning and execution emphasis
 
-- Developers must start from the exact failing command or exact named retry target.
-- Developers must keep product-code fixes on the real owner surface first, use the current role-appropriate read tool, `read_notes` before widening into a shared chain, and `post_note` blockers that siblings or replanners need.
-- If a scope-change warning or listener notification arrives mid-flight, developers, validators, and replanners must treat it as a freshness signal: refresh with `read_notes(...)`, then use `context_changed_since()` before committing or re-verifying.
-- Developers and validators must treat `shell(...)["exit_code"]` as the command verdict. Wrapper success or manifest output does not turn a killed or timed-out shell run green.
-- Validators must start with the exact retry target. After one broader same-surface check, they must stop.
-- Validators must report exact failing ids and exact snippets. Never explain failures away.
-- Replanners must `read_notes` on the failing scope before new archaeology, try `check_exploration_memory(paths=[...])` before duplicate recovery exploration, and treat validator evidence plus one live owner confirmation as enough to act.
+- Must keep fresh roots live-first: one narrow production anchor, then at least one scout wave before root plan JSON.
+- Must split direct owner leaves early and leave unresolved or broad surfaces expandable. Never hide residual work behind placeholder lanes or one catch-all developer.
+- Must start developer and validator runtime work from the exact failing command or exact named retry target.
+- Must use the CI toolkit for live ownership evidence and the context toolkit for coordination evidence.
+- Must report exact failing ids and exact snippets. Never explain failures away.
+- Must prefer recovery quality over perfect first-pass planning: validator evidence plus one live owner confirmation is enough to replan.
 
-## Mandatory benchmark references
+## Observability
 
-- Replanners on resume or corrective turns where the validator packet already names exact failing pytest ids plus exact existing owner files must load `team-replanner-playbook/corrective-fast-path` before deeper analysis.
-
-## Cross-surface guardrails
-
-- When a change affects public serialization, schema shape, or docs-visible output, developers and validators must run one nearby same-surface guardrail in addition to the originally failing test.
-
-## Observability note
-
-- When debugging runtime, coordination, retry, or checkpoint behavior, benchmark logs under `.ephemeralos/benchmark-logs/` are supporting evidence only. Live workspace state and current command output still win.
-- Prefer structured events that name prompt/completion/total tokens, tool usage and limits, final context size, compactions, checkpoint id/label/parent, resume source, retries, and replans when those logs exist.
+- Must use `.ephemeralos/benchmark-logs/` as supporting evidence for runtime, coordination, retry, checkpoint, and scoped-path notification behavior.
+- Must prefer structured evidence that shows prompt/completion/total tokens, tool usage and limits, note flow, checkpoint lineage, retries, and replans when those logs exist.
+- Never let logs outrank the live workspace, current test output, or current Task Center state.

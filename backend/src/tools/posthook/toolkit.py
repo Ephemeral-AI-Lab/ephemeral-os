@@ -142,15 +142,22 @@ class DoneInput(BaseModel):
             "1-3 sentence summary of what you accomplished, followed by: "
             "what public interface you exposed (functions, classes, endpoints), "
             "any breaking changes to existing contracts, "
-            "and new dependencies other agents should know about."
+            "and new dependencies other agents should know about. "
+            "This summary is posted to the Task Center and becomes the primary "
+            "context for downstream dependent tasks."
         ),
         min_length=1,
     )
 
 
 class SubmitSummaryTool(BaseTool):
-    name = "done"
-    description = "Signal task completion with a summary. Must be called exactly once."
+    name = "submit_summary"
+    description = (
+        "Signal task completion with a summary. Must be called exactly once. "
+        "Use this when your task is finished successfully. If you hit a transient "
+        "failure (timeout, sandbox error), use request_retry instead. If the task "
+        "scope is wrong or needs restructuring, use request_replan instead."
+    )
     input_model = DoneInput
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
@@ -162,6 +169,16 @@ class SubmitSummaryTool(BaseTool):
             return ToolResult(output="Error: summary must be non-empty", is_error=True)
 
         freshness_warning = await _check_context_freshness(context)
+        already_checked = bool(context.metadata.get("checked_context_freshness"))
+        if freshness_warning and not already_checked:
+            return ToolResult(
+                output=(
+                    "Error: context is stale — call context_changed_since() first, "
+                    "refresh affected files, re-verify, then call submit_summary() again."
+                    + freshness_warning
+                ),
+                is_error=True,
+            )
         if freshness_warning:
             summary += freshness_warning
 
@@ -179,17 +196,29 @@ class SubmitSummaryTool(BaseTool):
 class SubmitPlanInput(BaseModel):
     tasks: list[dict] = Field(
         ...,
-        description="List of TaskSpec dicts with id, task, agent, deps, scope_paths",
+        description=(
+            "List of TaskSpec dicts. Each must have: "
+            "id (unique string), task (prose instruction — this is the agent's sole briefing), "
+            "agent (agent name or role hint, e.g. 'developer', 'team_planner', 'validator'), "
+            "deps (list of task ids this depends on, default []), "
+            "scope_paths (file/dir hints for OCC and note scoping, default []), "
+            "cascade_policy ('cancel' | 'retry_first' | 'continue', default 'cancel')."
+        ),
     )
     rationale: str | None = Field(
         default=None,
-        description="Why this decomposition was chosen",
+        description="Why this decomposition was chosen — helps replanners if tasks fail",
     )
 
 
 class SubmitPlanTool(BaseTool):
     name = "submit_plan"
-    description = "Submit a plan. Terminal action for planners."
+    description = (
+        "Submit a plan decomposition. Terminal action for planners. "
+        "Each task's 'task' field is the agent's sole briefing — write clear, "
+        "actionable prose. Items targeting a planner-role agent are expandable "
+        "(further decomposed); all others are atomic."
+    )
     input_model = SubmitPlanInput
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
@@ -260,12 +289,24 @@ class SubmitPlanTool(BaseTool):
 
 
 class RequestRetryInput(BaseModel):
-    reason: str = Field(..., description="Why retry is needed")
+    reason: str = Field(
+        ...,
+        description=(
+            "Why retry is needed. Include the specific transient error "
+            "(e.g. 'sandbox timeout after 30s', 'network error downloading file'). "
+            "This reason is posted to the Task Center and visible on the next attempt."
+        ),
+    )
 
 
 class RequestRetryTool(BaseTool):
     name = "request_retry"
-    description = "Request a retry of the current task."
+    description = (
+        "Request a retry of the current task. Use for transient failures "
+        "(sandbox timeout, network error, flaky test) where re-running the same "
+        "task with fresh state is likely to succeed. If the task scope itself is "
+        "wrong or needs restructuring, use request_replan instead."
+    )
     input_model = RequestRetryInput
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
@@ -283,13 +324,29 @@ class RequestRetryTool(BaseTool):
 
 
 class RequestReplanInput(BaseModel):
-    reason: str = Field(..., description="Why replan is needed")
-    suggestion: str | None = Field(default=None, description="Suggestion for the replanner")
+    reason: str = Field(
+        ...,
+        description=(
+            "Why replan is needed. Describe the structural problem — e.g. "
+            "'auth spans 3 services, need separate tasks' or 'wrong owner file, "
+            "actual owner is src/utils.py not src/helpers.py'."
+        ),
+    )
+    suggestion: str | None = Field(
+        default=None,
+        description="Optional suggestion for the replanner on how to restructure the work",
+    )
 
 
 class RequestReplanTool(BaseTool):
     name = "request_replan"
-    description = "Request a replan of the current task scope."
+    description = (
+        "Request a replan of the current task scope. Use when the task itself is "
+        "mis-scoped — wrong files, scope too broad, missing dependencies, or the "
+        "decomposition needs restructuring. A replanner agent will create corrective "
+        "sibling tasks. If the failure is transient (timeout, flaky), use "
+        "request_retry instead."
+    )
     input_model = RequestReplanInput
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
@@ -313,13 +370,25 @@ class RequestReplanTool(BaseTool):
 
 
 class SubmitReplanInput(BaseModel):
-    add_tasks: list[dict] = Field(default_factory=list, description="New tasks to add")
-    cancel_ids: list[str] = Field(default_factory=list, description="Task IDs to cancel")
+    add_tasks: list[dict] = Field(
+        default_factory=list,
+        description=(
+            "New TaskSpec dicts to add as corrective siblings. Same shape as "
+            "submit_plan tasks: id, task (prose), agent, deps, scope_paths, cascade_policy."
+        ),
+    )
+    cancel_ids: list[str] = Field(
+        default_factory=list,
+        description="Task IDs to cancel from the existing plan (stale or superseded tasks)",
+    )
 
 
 class SubmitReplanTool(BaseTool):
     name = "submit_replan"
-    description = "Submit a corrective replan. Terminal action for replanners."
+    description = (
+        "Submit a corrective replan. Terminal action for replanners. "
+        "New tasks are inserted as siblings at the same DAG level as the failed task."
+    )
     input_model = SubmitReplanInput
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:

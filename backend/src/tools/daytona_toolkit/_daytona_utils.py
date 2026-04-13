@@ -30,6 +30,9 @@ _SANDBOX_RECOVERY_PATTERNS = (
     "sandbox container not found",
 )
 _VERIFY_PATH_RE = re.compile(r"(?<![A-Za-z0-9_./-])([A-Za-z0-9_./-]+\.py)(?![A-Za-z0-9_./-])")
+_USER_LOCAL_BIN_EXPORT = 'export PATH="$HOME/.local/bin:$PATH"'
+_PROJECT_VENV_BIN_EXPORT = 'if [ -d .venv/bin ]; then export PATH="$PWD/.venv/bin:$PATH"; fi'
+_PYTHON3_SHIM = 'if command -v python3 >/dev/null 2>&1; then python() { command python3 "$@"; }; fi'
 
 
 # ---------------------------------------------------------------------------
@@ -83,6 +86,9 @@ def _format_shell_stdout(text: str, *, exit_code: int, max_chars: int = _OUTPUT_
 def _wrap_bash_command(command: str) -> str:
     """Wrap *command* so we can recover exit code even if the SDK omits it."""
     script = (
+        f"{_USER_LOCAL_BIN_EXPORT}\n"
+        f"{_PROJECT_VENV_BIN_EXPORT}\n"
+        f"{_PYTHON3_SHIM}\n"
         f"{command}\n"
         "__codex_exit_code=$?\n"
         f'printf "\\n{_EXIT_MARKER}%s\\n" "$__codex_exit_code"\n'

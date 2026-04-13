@@ -8,7 +8,11 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 from tools.core.base import ToolExecutionContext
-from tools.daytona_toolkit.edit_tool import daytona_edit_file, _content_hash
+from tools.daytona_toolkit.edit_tool import (
+    _content_hash,
+    _scope_overlap_warning,
+    daytona_edit_file,
+)
 
 
 # pytest-asyncio runs in auto mode — async tests are handled
@@ -249,6 +253,39 @@ async def test_edit_allows_write_inside_write_scope():
     data = json.loads(result.output)
     assert data["status"] == "edited"
     sb.fs.upload_file.assert_called_once()
+
+
+def test_scope_overlap_warning_ignores_same_agent_run_id():
+    own_change = SimpleNamespace(
+        file_path="dask/config.py",
+        edit_type="edit",
+        agent_id="developer",
+        agent_run_id="run-1",
+        created_at=SimpleNamespace(timestamp=lambda: 0),
+    )
+    other_change = SimpleNamespace(
+        file_path="dask/compatibility.py",
+        edit_type="edit",
+        agent_id="peer",
+        agent_run_id="run-2",
+        created_at=SimpleNamespace(timestamp=lambda: 0),
+    )
+    ctx = _ctx(
+        {
+            "file_change_store": SimpleNamespace(
+                initialized=True,
+                changes_since=lambda _since: [own_change, other_change],
+            ),
+            "agent_run_id": "run-1",
+            "write_scope": ["dask/"],
+            "work_item_started_at": 1.0,
+        }
+    )
+
+    warning = _scope_overlap_warning(ctx, "dask/config.py")
+
+    assert "dask/compatibility.py" in warning
+    assert "dask/config.py (" not in warning
 
 
 async def test_edit_rejects_repo_write_from_validator():

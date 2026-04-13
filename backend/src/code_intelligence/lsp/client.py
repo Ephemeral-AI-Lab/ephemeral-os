@@ -126,12 +126,21 @@ class LspClient:
             for k in to_remove:
                 del self._cache[k]
 
-    def ensure_ready(self) -> dict[str, bool]:
-        """Check which language backends are available."""
+    def ensure_ready(self, *, install_missing: bool = False) -> dict[str, bool]:
+        """Check which language backends are available.
+
+        When attached to a sandbox, optionally install bounded missing
+        dependencies so CI can recover from a cold image.
+        """
         if self._py_available is None:
             self._py_available = self._check_python_backend()
         if self._ts_available is None:
             self._ts_available = self._check_typescript_backend()
+        if install_missing and self._sandbox:
+            if not self._py_available:
+                self._py_available = self._install_python_backend()
+            if not self._ts_available:
+                self._ts_available = self._install_typescript_backend()
         return {"python": self._py_available or False, "typescript": self._ts_available or False}
 
     def reset_backend_availability(self) -> None:
@@ -362,6 +371,40 @@ class LspClient:
             )
             return proc.returncode == 0
         except Exception:
+            return False
+
+    def _install_python_backend(self) -> bool:
+        if not self._sandbox:
+            return False
+        return self._run_sandbox_install(
+            "pip install --quiet --no-cache-dir jedi",
+        )
+
+    def _install_typescript_backend(self) -> bool:
+        if not self._sandbox:
+            return False
+        try:
+            check = self._resolve(
+                self._sandbox.process.exec(
+                    "node -e \"require('typescript')\" 2>/dev/null && echo ok || echo missing",
+                    timeout=15,
+                )
+            )
+            result = str(getattr(check, "result", "") or "")
+            if "missing" not in result:
+                return True
+        except Exception:
+            logger.debug("LSP TypeScript preinstall check failed", exc_info=True)
+        return self._run_sandbox_install(
+            "npm install --global --quiet typescript",
+        )
+
+    def _run_sandbox_install(self, command: str) -> bool:
+        try:
+            resp = self._resolve(self._sandbox.process.exec(command, timeout=120))
+            return getattr(resp, "exit_code", 1) in (0, None)
+        except Exception:
+            logger.debug("LSP backend install failed: %s", command, exc_info=True)
             return False
 
     # -- Cache ----------------------------------------------------------------

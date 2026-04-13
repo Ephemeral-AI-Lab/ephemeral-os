@@ -215,6 +215,8 @@ async def test_build_wrapper_uses_bash_and_repo_cwd_for_shell_helper():
     assert '["env", "-u", "LC_ALL", "bash", "-o", "pipefail", "-lc", command]' in wrapper
     assert "cwd=_CODEACT_CWD or None" in wrapper
     assert '_CODEACT_CWD = "/testbed"' in wrapper
+    assert 'export PATH="$HOME/.local/bin:$PATH"' in wrapper
+    assert 'if [ -d .venv/bin ]; then export PATH="$PWD/.venv/bin:$PATH"; fi' in wrapper
 
 
 async def test_build_wrapper_embeds_declared_shell_output_guard():
@@ -234,6 +236,7 @@ async def test_build_exec_command_runs_wrapper_from_repo_cwd():
     command = _build_exec_command("/tmp/codeact-wrapper-abcd1234.py", cwd="/testbed")
 
     assert "bash -o pipefail -lc" in command
+    assert 'export PATH="$HOME/.local/bin:$PATH"' in command
     assert 'cd "/testbed" && python3 /tmp/codeact-wrapper-abcd1234.py' in command
 
 

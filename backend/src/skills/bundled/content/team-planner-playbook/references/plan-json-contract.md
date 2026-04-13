@@ -6,19 +6,28 @@ Use this reference immediately before emitting final plan JSON.
 - Emit `{"tasks": [...], "rationale": "..."}` as the tool-call payload shape.
 - Finish the benchmark-surface ledger, deps, and task prose before loading this reference.
 - After this reference loads, the very next terminal action must be `submit_plan(tasks=[...], rationale="...")`.
+- No more tool calls, ownership recounts, or task-count debates are allowed after this reference loads.
 - Never load this reference in parallel with `root-plan-self-check`.
-- Use `agent` only for registered workers: `developer`, `validator`, or `team_planner`.
+- Must use `agent` only for registered workers: `developer`, `validator`, or `team_planner`.
+- Must use `id` for the lane label.
+- Must keep `deps` as a top-level item field.
+- Must emit each `id` only once.
 - Keep each task on the runtime `TaskSpec` shape: `id`, `task`, `agent`, `deps`, `scope_paths`, `cascade_policy`.
 - The `task` field is the agent's sole briefing. Put exact owner, retry target, and recovery question there.
 - Use exact live-confirmed or explorer-confirmed paths in `scope_paths`; if the exact owner is still uncertain, keep the broader boundary and assign it to `team_planner`.
 - Keep at most one terminal validator in a submitted plan.
+- Do not submit an expandable `developer`.
+- Do not serialize the whole layer into eight atomic developers only because all owners are known.
+- Reload the ending chain sequentially if the self-check never finished.
 
 ## Failure-surface rules
 
 - Freeze a tiny benchmark-surface ledger from the exact prompt paths or ids plus any validator-backed downgrades.
 - On any submit retry, edit benchmark paths only by copying from that frozen ledger or exact validator packet text.
 - Keep only those exact nodes or broaden to that same prompt file path; never substitute a same-family sibling node.
+- If validation rejects a guessed benchmark node, keep only the validator-backed file path or remove that narrow node entirely.
 - If no exact prompt, parent, scout, or validator-backed benchmark surface exists for one narrow lane after repair, omit that uncertain node instead of guessing another sibling.
+- If a scout disproved an exact file, that file cannot appear in `tasks`, `scope_paths`, `task`, or `rationale`.
 
 ## Few-shot examples
 
@@ -26,6 +35,20 @@ Use this reference immediately before emitting final plan JSON.
   Emit `developer(hdf_fix)` plus expandable `team_planner` items like `parquet_child` or `groupby_child`, then direct tiny-file developers or one residual child planner for the rest.
 - Example: the index was cold and the first wave only confirmed `dask/dataframe/` broadly.
   Keep `scope_paths=["dask/dataframe/"]` on a `team_planner` item. Do not emit `dask/dataframe/utils_dataframe.py` or another guessed leaf path.
+- Example:
+  ```json
+  {
+    "good_after_load": [
+      "load_skill_reference(plan-json-contract)",
+      "submit_plan(...)"
+    ],
+    "bad_after_load": [
+      "load_skill_reference(plan-json-contract)",
+      "write another ownership recap",
+      "debate task counts"
+    ]
+  }
+  ```
 - Example:
   ```json
   {

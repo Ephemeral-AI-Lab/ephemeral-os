@@ -10,6 +10,25 @@ from typing import Any
 logger = logging.getLogger(__name__)
 
 
+def _sandbox_project_root(sandbox: Any) -> str | None:
+    project_dir = getattr(sandbox, "project_dir", None)
+    if isinstance(project_dir, str) and project_dir.strip():
+        return project_dir.strip()
+    labels = getattr(sandbox, "labels", None)
+    if isinstance(labels, dict):
+        label_dir = labels.get("project_dir")
+        if isinstance(label_dir, str) and label_dir.strip():
+            return label_dir.strip()
+    return None
+
+
+def _ci_workspace_root(workspace_root: str, sandbox: Any) -> str:
+    resolved = _sandbox_project_root(sandbox)
+    if resolved:
+        return resolved
+    return str(workspace_root or "").strip()
+
+
 def _sandbox_exec_is_async(sandbox: Any) -> bool:
     """Best-effort detection for async Daytona sandbox wrappers.
 
@@ -54,7 +73,7 @@ def _ci_sandbox_handle(sandbox_id: str | None, sandbox: Any) -> tuple[Any, bool]
 
 
 def discover_workspace(sandbox: Any) -> str | None:
-    project_dir = getattr(sandbox, "project_dir", None)
+    project_dir = _sandbox_project_root(sandbox)
     if project_dir:
         return project_dir
     try:
@@ -67,7 +86,7 @@ def discover_workspace(sandbox: Any) -> str | None:
 
 
 async def discover_workspace_async(sandbox: Any) -> str | None:
-    project_dir = getattr(sandbox, "project_dir", None)
+    project_dir = _sandbox_project_root(sandbox)
     if project_dir:
         return project_dir
     try:
@@ -90,17 +109,18 @@ def inject_code_intelligence(
             from code_intelligence.routing.service import get_code_intelligence
 
             ci_sandbox, eager_warmup_safe = _ci_sandbox_handle(sandbox_id, sandbox)
+            ci_workspace_root = _ci_workspace_root(workspace_root, ci_sandbox)
             svc = get_code_intelligence(
                 sandbox_id=sandbox_id,
-                workspace_root=workspace_root,
+                workspace_root=ci_workspace_root,
                 sandbox=ci_sandbox,
             )
             try:
                 if eager_warmup_safe:
-                    if Path(workspace_root).is_dir():
+                    if _sandbox_project_root(ci_sandbox) or Path(ci_workspace_root).is_dir():
                         svc.ensure_initialized(wait=False)
                     else:
-                        svc.lsp_client.ensure_ready()
+                        svc.lsp_client.ensure_ready(install_missing=False)
                 else:
                     logger.debug(
                         "Skipping eager CI warmup for async sandbox %s because "

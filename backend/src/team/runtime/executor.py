@@ -303,7 +303,7 @@ class Executor:
         not the completed task itself). This is critical for read-path
         visibility:
 
-        - **Avoids shadowing** the task's own ``done()`` summary note.
+        - **Avoids shadowing** the task's own ``submit_summary()`` note.
           ``context_for`` deduplicates dep notes to latest-per-task_id.
           Posting with the task's own id would overwrite the work summary.
         - **Parent chain visibility.** ``context_for`` walks the parent
