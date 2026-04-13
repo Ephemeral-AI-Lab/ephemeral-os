@@ -30,18 +30,29 @@ class ScopeChangeBuffer:
       (alongside background task collection). It produces at most one
       ``SystemReminderBlock`` per flush and replaces any previous
       notification to prevent context accumulation.
+
+    Anti-aggression safeguards:
+    - **Minimum interval**: skips flush if fewer than ``min_turns_between``
+      turns have passed since the last notification (changes stay buffered).
+    - **Batched buffer**: accumulates changes across skipped turns and
+      delivers them all in one coalesced notification when the interval
+      elapses. Single-file edits that arrive in isolation are held until
+      the next batch window rather than firing immediately.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, min_turns_between: int = 5) -> None:
         self._pending: dict[str, dict[str, str]] = {}  # file_path → latest change
         self._last_notification_idx: int | None = None
+        self._min_turns_between = min_turns_between
+        self._turns_since_last_flush = 0
 
     def buffer(self, change: dict[str, str]) -> None:
         """Buffer a scope change notification. Deduplicates by file_path.
 
-        Called from the ScopeChangeListener's asyncpg callback. Safe under
-        the GIL — dict.__setitem__ is atomic with respect to the flush_into
-        call on the same event loop.
+        Called from the ScopeChangeListener's callback. Safe under the GIL —
+        dict.__setitem__ is atomic with respect to the flush_into call on
+        the same event loop. Changes accumulate across turns until the
+        minimum interval elapses.
         """
         self._pending[change["file_path"]] = change
 
@@ -51,22 +62,37 @@ class ScopeChangeBuffer:
         Called at the top of each query loop turn. Returns True if a
         notification was injected.
 
+        Skips the flush if the minimum turn interval hasn't elapsed —
+        changes stay in the buffer and are coalesced into the next
+        notification. This prevents spamming the agent on every turn
+        during bursts of concurrent edits.
+
         Replaces the previous scope_change notification (if any) by marking
         it as superseded — the compactor can safely drop superseded messages.
         """
         if not self._pending:
+            # No changes — still count the turn for interval tracking.
+            self._turns_since_last_flush += 1
             return False
 
+        self._turns_since_last_flush += 1
+
+        # Hold changes until minimum interval elapses (batched buffer).
+        if self._turns_since_last_flush < self._min_turns_between:
+            return False
+
+        # Interval met — drain the entire buffer into one notification.
         changes = list(self._pending.values())
         self._pending.clear()
+        self._turns_since_last_flush = 0
 
         lines = [
             f"- {c['file_path']} ({c.get('edit_type', 'edit')} by {c.get('agent_id', 'unknown')})"
             for c in changes
         ]
         text = (
-            "Files in your scope were edited by other agents since your "
-            "last action. Re-read before editing:\n" + "\n".join(lines)
+            "Files in your scope were edited by other agents. "
+            "Re-read before editing:\n" + "\n".join(lines)
         )
 
         # Mark previous notification as superseded so compactor can drop it.

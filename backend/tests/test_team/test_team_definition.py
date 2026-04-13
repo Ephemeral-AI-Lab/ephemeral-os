@@ -251,8 +251,6 @@ def _fake_services() -> TeamRuntimeServices:
         project_context=ProjectContext(goal="", user_request="", project_key="", repo_root=""),
         dispatcher=dispatcher,  # type: ignore[arg-type]
         event_store=NullTeamRunStore(),
-        note_store=None,
-        exploration_memory_store=None,
     )
 
 
@@ -302,6 +300,7 @@ async def test_start_with_team_definition_spawns_root_with_planner(
         root = run.dispatcher.graph[run.root_work_item_id]
         assert root.agent_name == "my_planner"
         assert root.task == "{'k': 'v'}"
+        assert getattr(root, "payload") == {"k": "v"}
     finally:
         await _cleanup_run(run)
 

@@ -92,16 +92,9 @@ class CodeIntelligenceService:
 
         self.symbol_index = SymbolIndex(workspace_root=workspace_root)
 
-        # Wire FileChangeStore into the Arbiter for durable edit history.
-        from team.persistence.file_change_store import FileChangeStore, NullFileChangeStore
-        from db.engine import get_session_factory
-        sf = get_session_factory()
-        if sf is not None:
-            _fcs = FileChangeStore()
-            _fcs.initialize(sf)
-        else:
-            _fcs = NullFileChangeStore()
-        self.arbiter = Arbiter(workspace_root=workspace_root, file_change_store=_fcs)
+        # In-memory file change tracking.
+        from team.persistence.file_change_store import FileChangeStore
+        self.arbiter = Arbiter(workspace_root=workspace_root, file_change_store=FileChangeStore())
 
         self.time_machine = TimeMachine()
         self.patcher = Patcher()

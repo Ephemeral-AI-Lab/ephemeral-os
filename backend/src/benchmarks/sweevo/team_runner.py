@@ -240,6 +240,7 @@ def _build_root_prompt(instance: SWEEvoInstance, repo_dir: str) -> str:
     summary = summarize_sweevo_instance(instance)
     size = str(summary.get("size") or "medium")
     max_plan_size = _derive_sweevo_budgets(instance).max_plan_size
+    pass_to_pass_summary = _summarize_guardrail_tests(instance.pass_to_pass)
     return (
         f"You are leading a coding team on a SWE-EVO benchmark instance.\n"
         f"Repository: {instance.repo}\n"
@@ -253,7 +254,7 @@ def _build_root_prompt(instance: SWEEvoInstance, repo_dir: str) -> str:
         f"## Fail-To-Pass Targets\n"
         f"{json.dumps(instance.fail_to_pass, indent=2)}\n\n"
         f"## Pass-To-Pass Guardrail\n"
-        f"{json.dumps(instance.pass_to_pass, indent=2)}\n\n"
+        f"{json.dumps(pass_to_pass_summary, indent=2)}\n\n"
         f"## Grading command\n"
         f"After your team finishes, this exact command will be executed in the sandbox "
         f"to grade the work:\n```\n{instance.test_cmds}\n```\n\n"
@@ -281,6 +282,23 @@ def _build_root_prompt(instance: SWEEvoInstance, repo_dir: str) -> str:
         f"package upgrades or ambient environment mutations as the benchmark fix.\n"
         f"- Stay inside {repo_dir}."
     )
+
+
+def _summarize_guardrail_tests(test_ids: list[str]) -> dict[str, Any]:
+    file_counts = Counter(
+        item.split("::", 1)[0]
+        for item in test_ids
+        if isinstance(item, str) and item.strip()
+    )
+    return {
+        "total_tests": len(test_ids),
+        "unique_files": len(file_counts),
+        "top_files_by_test_count": [
+            {"file": file_path, "tests": count}
+            for file_path, count in file_counts.most_common(10)
+        ],
+        "sample_test_ids": list(test_ids[:20]),
+    }
 
 
 def _task_base_prompt(task_text: Any) -> str:
@@ -1372,6 +1390,7 @@ async def run_sweevo_team(
     await tr.start_with_team_definition(
         team_def,
         payload={
+            "task": "Produce the initial root plan for this SWE-EVO benchmark instance.",
             "prompt": root_prompt,
             "instance_id": instance.instance_id,
             "repo": instance.repo,

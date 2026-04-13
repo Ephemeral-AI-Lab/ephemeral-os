@@ -156,6 +156,18 @@ def test_root_prompt_points_to_skill_owned_workflow_policy():
     assert "benchmark run log file under `.ephemeralos/benchmark-logs/`" in prompt
 
 
+def test_root_prompt_summarizes_large_pass_to_pass_guardrail():
+    instance = _pydantic_instance(
+        pass_to_pass=[f"tests/test_guard.py::test_case_{idx}" for idx in range(5000)],
+    )
+
+    prompt = _build_root_prompt(instance, "/repo")
+
+    assert len(prompt.encode()) < 20000
+    assert '"total_tests": 5000' in prompt
+    assert '"sample_test_ids"' in prompt
+
+
 def test_agent_overrides_attach_sweevo_skills_without_prompt_duplication():
     sweevo_team_runner._register_team_builtins()
     instance = _pydantic_instance()
@@ -648,4 +660,3 @@ def test_emit_dispatcher_dag_logs_graph_lines():
     assert lines[0] == ("team", "[dag] after=team_planner nodes=2")
     assert any("root-1 agent=team_planner" in body for _, body in lines[1:])
     assert any("child-1 agent=developer" in body and "deps=['root-1']" in body for _, body in lines[1:])
-

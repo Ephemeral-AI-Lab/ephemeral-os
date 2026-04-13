@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 logger = logging.getLogger(__name__)
 
 _VALID_RUN_ID = re.compile(r'^[a-zA-Z0-9_\-]+$')
-_PARTITIONED_TABLES = ("task_notes", "file_changes", "tasks")
+_PARTITIONED_TABLES = ("tasks",)
 
 
 def _partition_suffix(run_id: str) -> str:
@@ -77,25 +77,7 @@ async def _create_partition_indexes(
     table: str,
     partition_name: str,
 ) -> None:
-    if table == "task_notes":
-        statements = (
-            f"CREATE INDEX IF NOT EXISTS {partition_name}_task_id_idx "
-            f"ON {partition_name} (task_id)",
-            f"CREATE INDEX IF NOT EXISTS {partition_name}_scope_gist_idx "
-            f"ON {partition_name} USING GIST (scope_ltree)",
-            f"CREATE INDEX IF NOT EXISTS {partition_name}_created_brin_idx "
-            f"ON {partition_name} USING BRIN (created_at)",
-            f"CREATE INDEX IF NOT EXISTS {partition_name}_content_fts_idx "
-            f"ON {partition_name} USING GIN (to_tsvector('english', content))",
-        )
-    elif table == "file_changes":
-        statements = (
-            f"CREATE INDEX IF NOT EXISTS {partition_name}_path_gist_idx "
-            f"ON {partition_name} USING GIST (path_ltree)",
-            f"CREATE INDEX IF NOT EXISTS {partition_name}_run_created_idx "
-            f"ON {partition_name} (team_run_id, created_at DESC)",
-        )
-    else:
+    if table == "tasks":
         statements = (
             f"CREATE INDEX IF NOT EXISTS {partition_name}_ready_idx "
             f"ON {partition_name} (status, pending_dep_count, depth, created_at)",

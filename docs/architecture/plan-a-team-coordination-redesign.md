@@ -1009,7 +1009,7 @@ A fast-changing codebase means the world can change while an agent is working. F
 | **Pre-start** | `_check_scope_validity()` (Section 6.6) | Executor checks if files in the task's scope changed externally since the plan was created. If so, injects a warning note — agent decides whether to `request_replan()`. |
 | **At start** | `context_for()` (Section 8.2) | Builds a snapshot including recent file changes from `arbiter.changes_since(task.created_at)`. Agent starts with full picture of what changed since it was planned. |
 | **Mid-task (pull)** | `context_changed_since()` tool (Section 8.2.1) | Agent calls this before committing large changes. Returns new dep notes, sibling completions, and scope file changes since task started. |
-| **Mid-task (push)** | `LISTEN/NOTIFY` (Section 14.7, deferred) | Real-time `SystemReminderBlock` injected into agent conversation when another agent edits files in its scope. Debounced to 5-second batches. |
+| **Mid-task (push)** | `LISTEN/NOTIFY` (Section 14.7) | Real-time `SystemReminderBlock` injected into agent conversation when another agent edits files in its scope. Buffered per-executor and flushed at the top of each query loop turn with replacement semantics (no accumulation). |
 | **At edit time** | Arbiter OCC (Section 9.3) | Hard backstop. Content-hash token validation catches stale edits with zero false negatives. Agent gets error, re-reads file, retries. |
 
 **Concrete example — file edited out from under an agent:**
@@ -2171,11 +2171,11 @@ class PGDispatcher:
 | DAG traversal | Manual walk + parent pointers | `pending_dep_count` column, decremented atomically on completion |
 | State consistency | Single-process only | Multi-process safe |
 
-### 14.7 Real-Time Scope Awareness: LISTEN/NOTIFY (DEFERRED)
+### 14.7 Real-Time Scope Awareness: LISTEN/NOTIFY
 
-> **Status: Not yet implemented.** Agents currently get scope warnings at task start via `_inject_scope_warnings()` (executor) and can call `context_changed_since()` mid-task. LISTEN/NOTIFY adds real-time push during long-running tasks — valuable for high-parallelism but not blocking for the current single-process executor. Implement when multi-worker parallelism warrants it.
+> **Status: IMPLEMENTED** — Updated 2026-04-13. Uses a buffered flush design where notifications are held in a per-executor `ScopeChangeBuffer` and flushed at the top of each query loop turn, eliminating the need for a timer-based flush loop.
 
-Agents discover concurrent file changes via push, not poll. When the Ledger records an edit, a PostgreSQL trigger notifies all listeners:
+Agents discover concurrent file changes via push, not poll. When the Arbiter records an edit to `file_changes`, a PostgreSQL trigger notifies all listeners:
 
 ```sql
 CREATE OR REPLACE FUNCTION notify_scope_change() RETURNS trigger AS $$
@@ -2185,6 +2185,7 @@ BEGIN
         json_build_object(
             'file_path', NEW.file_path,
             'agent_id', NEW.agent_id,
+            'agent_run_id', COALESCE(NEW.agent_run_id, ''),
             'edit_type', NEW.edit_type
         )::text
     );
@@ -2197,77 +2198,152 @@ CREATE TRIGGER trg_scope_change
     FOR EACH ROW EXECUTE FUNCTION notify_scope_change();
 ```
 
-**Executor-side listener:**
+#### Architecture: Three Components
 
-Uses the engine's existing synthetic message pattern — a `SystemReminderBlock` appended to both `api_messages` (so the agent sees it on the current turn) and `display_messages` (so it's persisted in conversation history). This is the same dual-write mechanism the engine uses for budget warnings and background task notifications.
-
-```python
-async def _listen_scope_changes(self, engine, run_id: str,
-                                 scope_paths: list[str],
-                                 api_messages: list[ConversationMessage]):
-    """Subscribe to file changes in agent's scope via SQLAlchemy async engine.
-    Drops to raw asyncpg connection for LISTEN — no SQLAlchemy abstraction exists.
-    Appends SystemReminderBlock to api_messages on scope change."""
-    channel = f"scope_change_{run_id}"
-    self._pending_scope_changes: list[dict] = []
-    self._last_flush = time.monotonic()
-
-    # Access raw asyncpg connection through SQLAlchemy async
-    self._listen_conn = await engine.connect()
-    raw = await self._listen_conn.get_raw_connection()
-    asyncpg_conn = raw.driver_connection
-    await asyncpg_conn.add_listener(channel, lambda *args:
-        self._buffer_scope_change(args, scope_paths))
-
-def _buffer_scope_change(self, args, scope_paths):
-    """Buffer scope changes for debounced flushing."""
-    conn, pid, channel, payload = args
-    change = json.loads(payload)
-    if any(change["file_path"].startswith(p) for p in scope_paths):
-        self._pending_scope_changes.append(change)
-
-def _flush_scope_changes(self,
-                         api_messages: list[ConversationMessage],
-                         display_messages: list[ConversationMessage]):
-    """Flush buffered scope changes as a single SystemReminderBlock.
-    Called by the executor every 5 seconds (debounce window).
-    Writes to both api_messages (immediate LLM visibility) and
-    display_messages (persistent history)."""
-    if not self._pending_scope_changes:
-        return
-    now = time.monotonic()
-    if now - self._last_flush < 5.0:
-        return
-
-    # Deduplicate by file_path, keep latest
-    seen = {}
-    for change in self._pending_scope_changes:
-        seen[change["file_path"]] = change
-    changes = list(seen.values())
-    self._pending_scope_changes.clear()
-    self._last_flush = now
-
-    lines = [f"- {c['file_path']} edited by {c['agent_id']} ({c['edit_type']})"
-             for c in changes]
-    text = ("Warning: files in your scope were edited by other agents. "
-            "Re-read before editing:\n" + "\n".join(lines))
-
-    msg = ConversationMessage(role="user", content=[
-        SystemReminderBlock(category="scope_change", text=text)
-    ])
-    api_messages.append(msg)       # agent sees it on current turn
-    display_messages.append(msg)   # persisted for history + compaction
+```
+Arbiter.record_edit()
+  → INSERT INTO file_changes
+    → trg_scope_change (PG trigger)
+      → pg_notify('scope_change_{run_id}', payload)
+        │
+        │ pushed over dedicated PG connection
+        ▼
+ScopeChangeListener (1 per TeamRun, 1 PG connection)
+  → _route_notification(payload)
+    → filter: skip own agent_run_id
+    → filter: file_path must match subscriber's scope_paths
+    → buffer.buffer(change) into per-executor ScopeChangeBuffer
+        │
+        │ held until top of next query loop turn
+        ▼
+Query loop top-of-turn flush
+  → scope_buffer.flush_into(display_messages)
+    → ONE SystemReminderBlock (replaces previous)
+    → compact_for_api() picks it up → LLM sees it
 ```
 
-**What this solves:** `context_for()` builds context at task start — a snapshot that goes stale during long-running tasks. `LISTEN/NOTIFY` closes this gap with push-based, real-time warnings about concurrent edits in the agent's scope. Near-zero cost — built into PostgreSQL's connection protocol, no additional process or polling.
+#### ScopeChangeListener
 
-**Why `SystemReminderBlock` into both `api_messages` and `display_messages`, not `inject_system_message()`:** The engine has no `inject_system_message()` API. It uses synthetic user messages with typed content blocks — the same pattern used for budget warnings (`notifications.py`) and background task notifications. Dual-write ensures:
-1. **Immediate** — `api_messages` insertion means the agent sees scope changes on its current reasoning turn, before it acts on stale data
-2. **Persistent** — `display_messages` insertion means the warning is part of conversation history, so the agent can reference it on later turns and the user can see what happened
-3. **Compactable** — old scope-change warnings in `display_messages` are subject to the engine's compaction strategy, preventing unbounded accumulation
-4. **Categorized** — `category="scope_change"` lets the engine filter or batch these blocks in both lists
+One shared instance per `TeamRun`. Uses a single dedicated async connection outside the pool for `LISTEN`. Routes notifications to per-executor `ScopeChangeBuffer` instances based on scope and agent identity filtering.
 
-**Backpressure:** In high-parallelism runs, an agent editing many files generates many NOTIFY events. The executor-side listener debounces: notifications for the same scope are batched into a single `SystemReminderBlock` every 5 seconds, deduplicated by file path. This prevents context window flooding while keeping agents informed.
+```python
+class ScopeChangeListener:
+    """Single shared LISTEN connection with in-process fan-out."""
+
+    def __init__(self, engine: AsyncEngine, run_id: str):
+        self._engine = engine
+        self._channel = f"scope_change_{run_id}"
+        self._subscribers: dict[str, _Subscription] = {}  # agent_run_id → sub
+
+    async def start(self) -> None:
+        # Dedicated connection outside pool for LISTEN
+        self._conn = await self._engine.connect()
+        raw = await self._conn.get_raw_connection()
+        # LISTEN via psycopg, poll via notifies() async generator
+        await raw.cursor().execute(f"LISTEN {self._channel}")
+        self._listen_task = asyncio.create_task(self._poll_loop(raw.dbapi_connection))
+
+    def _route_notification(self, payload: str) -> None:
+        change = json.loads(payload)
+        for sub in self._subscribers.values():
+            if change["agent_run_id"] == sub.agent_run_id:
+                continue  # don't notify about own edits
+            if any(change["file_path"].startswith(p.rstrip("/"))
+                   for p in sub.scope_paths):
+                sub.buffer.buffer(change)
+
+    def subscribe(self, agent_run_id, scope_paths, buffer): ...
+    def unsubscribe(self, agent_run_id): ...
+    async def stop(self) -> None: ...
+```
+
+**Files:** `team/runtime/scope_change_listener.py` (~50 lines)
+
+#### ScopeChangeBuffer
+
+Per-executor notification buffer with replacement semantics. Buffers scope change notifications and flushes them as a single `SystemReminderBlock` at the top of each query loop turn. Only one active notification exists in `display_messages` at a time — previous notifications are marked with `category="scope_change_superseded"` so the compactor can drop them.
+
+```python
+class ScopeChangeBuffer:
+    """Per-executor buffer. Flushed at top of each query loop turn."""
+
+    def buffer(self, change: dict) -> None:
+        """Called by ScopeChangeListener. Deduplicates by file_path."""
+        self._pending[change["file_path"]] = change
+
+    def flush_into(self, display_messages: list) -> bool:
+        """Flush ONE SystemReminderBlock, replacing previous notification."""
+        if not self._pending:
+            return False
+        changes = list(self._pending.values())
+        self._pending.clear()
+        # Mark previous notification as superseded
+        if self._last_notification_idx is not None:
+            old = display_messages[self._last_notification_idx]
+            old.content[0].category = "scope_change_superseded"
+        self._last_notification_idx = len(display_messages)
+        display_messages.append(ConversationMessage(role="user", content=[
+            SystemReminderBlock(category="scope_change", text=...)]))
+        return True
+```
+
+**Files:** `team/runtime/scope_change_buffer.py` (~30 lines)
+
+#### Lifecycle Wiring
+
+```
+TeamRun.start()
+  → _start_scope_listener()
+    → ScopeChangeListener(get_team_engine(), self.id).start()
+
+Executor._run_one(task_id)
+  → _subscribe_scope_listener(task, agent_run_id, ctx)
+    → ScopeChangeBuffer() created
+    → listener.subscribe(agent_run_id, scope_paths, buffer)
+    → buffer injected into ctx.tool_metadata.extras["scope_change_buffer"]
+  → await self.runner(defn, ctx)
+    # Query loop: each turn calls scope_buffer.flush_into(display_messages)
+  → finally: _unsubscribe_scope_listener(agent_run_id)
+
+TeamRun.wait() / TeamRun.cancel()
+  → _stop_scope_listener()
+    → listener.stop()
+```
+
+#### Why Buffered Flush, Not Timer-Based
+
+The original design (pre-implementation) specified a 5-second timer-based flush loop. The implementation uses the query loop's natural turn boundary instead:
+
+| Aspect | Timer flush (original) | Turn-boundary flush (implemented) |
+|---|---|---|
+| Timing | Fixed 5s interval via `asyncio.sleep` | Top of each query loop turn |
+| Extra coroutine | Yes — `_flush_loop()` task | No — flush is a sync call in the loop |
+| Thread safety | Callback appends to list read by loop | Buffer in callback, flush synchronously in loop |
+| Accumulation | Append-only, grows forever | Replace previous, compactor drops superseded |
+| Lifecycle | Timer must be started/cancelled | No lifecycle — buffer exists, loop calls flush |
+
+The query loop rebuilds `api_messages` from `display_messages` via `compact_for_api()` at the start of every turn. This means anything appended to `display_messages` between turns is automatically picked up. The turn boundary IS the natural flush point — no timer needed.
+
+#### Backpressure
+
+Three filters stack to keep notification volume low:
+
+1. **Scope filter** — agent only sees NOTIFYs for files matching its `scope_paths`. With disjoint scopes (the expected case), most agents see zero notifications.
+2. **Self-filter** — `agent_run_id` check excludes the agent's own edits.
+3. **File-path dedup** — `ScopeChangeBuffer._pending` deduplicates by file_path (latest wins). Multiple edits to the same file produce one notification line.
+4. **Replacement semantics** — `flush_into()` replaces the previous `SystemReminderBlock` instead of accumulating. The agent sees at most one scope notification at any time, containing only changes since the last flush.
+
+#### Graceful Degradation
+
+If `get_team_engine()` returns `None` (no PG configured) or the LISTEN connection fails, `_start_scope_listener` logs a debug message and returns. The `scope_listener` attribute remains `None`. The executor's `_subscribe_scope_listener` checks `is_running` and skips subscription. All pull-based mechanisms (`_inject_scope_warnings`, `context_changed_since`) continue to work unchanged.
+
+#### What This Solves
+
+`context_for()` builds a snapshot at task start that goes stale during long-running tasks. `LISTEN/NOTIFY` closes this gap with push-based, real-time warnings about concurrent edits in the agent's scope. The notification arrives one turn late (buffered during tool execution, visible on the next LLM call), which is acceptable because:
+
+1. The LLM cannot act on information mid-stream — it's committed to its current tool call
+2. The Arbiter catches actual file conflicts at edit time regardless of notification timing
+3. One turn of latency is negligible compared to the information value of the notification
 
 ### 14.8 Agent Search Tools
 

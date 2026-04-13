@@ -1,8 +1,6 @@
 -- Team coordination schema (Section 14.4).
 -- Run once during bootstrap. Partitions are created per-run by partitions.py.
-
-CREATE EXTENSION IF NOT EXISTS ltree;
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
+-- No PostgreSQL extensions required (ltree/pgcrypto removed).
 
 -- Task Center backing store
 CREATE TABLE IF NOT EXISTS task_notes (
@@ -12,7 +10,7 @@ CREATE TABLE IF NOT EXISTS task_notes (
     agent_name  TEXT NOT NULL,
     content     TEXT NOT NULL,
     scope_paths TEXT[] DEFAULT '{}',
-    scope_ltree ltree[] DEFAULT '{}',
+    scope_ltree TEXT[] DEFAULT '{}',
     created_at  TIMESTAMPTZ DEFAULT NOW(),
     PRIMARY KEY (id, team_run_id)
 ) PARTITION BY LIST (team_run_id);
@@ -22,7 +20,7 @@ CREATE TABLE IF NOT EXISTS file_changes (
     id          BIGSERIAL NOT NULL,
     team_run_id TEXT NOT NULL,
     file_path   TEXT NOT NULL,
-    path_ltree  ltree NOT NULL DEFAULT '',
+    path_ltree  TEXT NOT NULL DEFAULT '',
     agent_id    TEXT NOT NULL,
     agent_run_id TEXT DEFAULT '',
     edit_type   TEXT DEFAULT 'edit',
@@ -42,7 +40,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     task            TEXT NOT NULL,
     deps            TEXT[] DEFAULT '{}',
     scope_paths     TEXT[] DEFAULT '{}',
-    scope_ltree     ltree[] DEFAULT '{}',
+    scope_ltree     TEXT[] DEFAULT '{}',
     cascade_policy  TEXT DEFAULT 'cancel',
     parent_id       TEXT,
     root_id         TEXT DEFAULT '',
@@ -109,6 +107,6 @@ CREATE TRIGGER trg_scope_change
 
 -- Indexes are created per-partition automatically when partitions are created.
 -- These template indexes guide what each partition gets:
---   task_notes: (task_id), GiST(scope_ltree), BRIN(created_at), GIN(tsvector)
---   file_changes: GiST(path_ltree), (team_run_id, created_at DESC)
+--   task_notes: (task_id), BRIN(created_at), GIN(tsvector)
+--   file_changes: (path_ltree), (team_run_id, created_at DESC)
 --   tasks: (team_run_id, status), (team_run_id, depth, created_at)

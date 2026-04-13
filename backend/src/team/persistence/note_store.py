@@ -116,9 +116,10 @@ class NoteStore(AsyncStoreMixin):
         scope_ltrees: list[str] | None = None,
         limit: int = 10,
     ) -> list[Any]:
-        """Full-text + optional ltree scope search.
+        """Full-text + optional scope search.
 
-        Uses text() for PG-specific tsvector and ltree operators.
+        Uses text() for PG-specific tsvector. Scope filtering uses plain
+        text prefix matching (no ltree extension required).
         """
         async with self._sf() as db:
             result = await db.execute(
@@ -128,9 +129,10 @@ class NoteStore(AsyncStoreMixin):
                     WHERE team_run_id = :run_id
                       AND to_tsvector('english', content)
                           @@ plainto_tsquery('english', :query)
-                      AND (:scopes::ltree[] IS NULL OR EXISTS (
-                          SELECT 1 FROM unnest(scope_ltree) AS s
-                          WHERE s <@ ANY(:scopes::ltree[])))
+                      AND (:scopes::text[] IS NULL OR EXISTS (
+                          SELECT 1 FROM unnest(scope_ltree) AS sl,
+                                       unnest(:scopes::text[]) AS qs
+                          WHERE sl = qs OR sl LIKE qs || '.%'))
                     ORDER BY created_at DESC LIMIT :lim
                 """),
                 {

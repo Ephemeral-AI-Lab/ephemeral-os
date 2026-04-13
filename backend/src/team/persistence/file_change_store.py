@@ -1,39 +1,23 @@
-"""FileChangeStore — durable file-change persistence for cross-run history.
+"""FileChangeStore — in-memory file-change tracking for team coordination.
 
-Dual-write companion to the in-memory Ledger. The Ledger handles hot-path
-reads (context_for, same-run scope queries). This store handles:
+Tracks file edits made by agents during a team run. All data is in-memory;
+no PostgreSQL dependency. The Ledger handles hot-path reads (context_for,
+same-run scope queries). This store handles:
 
   1. Cross-run contention history (query_edit_history for planner)
-  2. Multi-process visibility (edits by process A visible to process B)
-  3. Crash recovery (edit history survives process restart)
-
-Follows the existing Store pattern (TeamDefinitionStore, etc.):
-sync SQLAlchemy sessionmaker, initialize() contract, null fallback.
+  2. Multi-process visibility (edits visible across executors in same process)
 """
 
 from __future__ import annotations
 
 import logging
 import time
-from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from collections import Counter
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import BigInteger, DateTime, String, Text, text
-from sqlalchemy.orm import Mapped, Session, mapped_column, sessionmaker
-
-from db.base import Base
-from db.stores.base import SyncStoreMixin
-from team.persistence.ltree_utils import path_to_ltree
-from team.persistence.pg_types import LTREE
-
 logger = logging.getLogger(__name__)
-
-_FC_SELECT = (
-    "SELECT id, team_run_id, file_path, agent_id, agent_run_id,"
-    " path_ltree, edit_type, old_hash, new_hash,"
-    " description, created_at FROM file_changes"
-)
 
 
 def _utcnow() -> datetime:
@@ -41,28 +25,24 @@ def _utcnow() -> datetime:
 
 
 # ---------------------------------------------------------------------------
-# ORM Model
+# Record dataclass (replaces ORM model)
 # ---------------------------------------------------------------------------
 
 
-class FileChangeRecord(Base):
-    """Durable record of a file edit by an agent."""
+@dataclass
+class FileChangeRecord:
+    """Record of a file edit by an agent."""
 
-    __tablename__ = "file_changes"
-
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    team_run_id: Mapped[str] = mapped_column(String(64), index=True)
-    file_path: Mapped[str] = mapped_column(Text, nullable=False)
-    path_ltree: Mapped[str] = mapped_column(LTREE(), nullable=False)
-    agent_id: Mapped[str] = mapped_column(String(64), nullable=False)
-    agent_run_id: Mapped[str] = mapped_column(String(64), default="")
-    edit_type: Mapped[str] = mapped_column(String(32), default="edit")
-    old_hash: Mapped[str] = mapped_column(String(64), default="")
-    new_hash: Mapped[str] = mapped_column(String(64), default="")
-    description: Mapped[str] = mapped_column(Text, default="")
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow
-    )
+    file_path: str
+    agent_id: str
+    team_run_id: str = ""
+    agent_run_id: str = ""
+    edit_type: str = "edit"
+    old_hash: str = ""
+    new_hash: str = ""
+    description: str = ""
+    created_at: datetime = field(default_factory=_utcnow)
+    id: int = 0
 
     def __repr__(self) -> str:
         return (
@@ -84,12 +64,22 @@ class ContentionHotspot:
 
 
 # ---------------------------------------------------------------------------
-# Store
+# In-memory Store
 # ---------------------------------------------------------------------------
 
 
-class FileChangeStore(SyncStoreMixin):
-    """Durable file-change persistence. Sync SQLAlchemy, existing Store pattern."""
+class FileChangeStore:
+    """In-memory file-change tracking. No PostgreSQL dependency."""
+
+    initialized: bool = True
+
+    def __init__(self) -> None:
+        self._records: list[FileChangeRecord] = []
+        self._next_id = 1
+
+    def initialize(self, *args: Any, **kwargs: Any) -> None:
+        """No-op — kept for backwards compatibility with SyncStoreMixin callers."""
+        self.initialized = True
 
     def record(
         self,
@@ -104,10 +94,10 @@ class FileChangeStore(SyncStoreMixin):
         description: str = "",
     ) -> FileChangeRecord:
         """Insert a file change record."""
-        record = FileChangeRecord(
+        rec = FileChangeRecord(
+            id=self._next_id,
             team_run_id=team_run_id,
             file_path=file_path,
-            path_ltree=path_to_ltree(file_path),
             agent_id=agent_id,
             agent_run_id=agent_run_id,
             edit_type=edit_type,
@@ -115,10 +105,9 @@ class FileChangeStore(SyncStoreMixin):
             new_hash=new_hash,
             description=description,
         )
-        with self._sf() as session:
-            session.add(record)
-            session.commit()
-        return record
+        self._next_id += 1
+        self._records.append(rec)
+        return rec
 
     def changes_in_scope(
         self,
@@ -129,24 +118,14 @@ class FileChangeStore(SyncStoreMixin):
         """Return file changes under scope prefixes since a timestamp."""
         if not scope_prefixes:
             return []
-        with self._sf() as session:
-            params: dict[str, Any] = {
-                "run_id": team_run_id,
-                "since": datetime.fromtimestamp(since, tz=timezone.utc),
-                "scopes": [path_to_ltree(prefix.rstrip("/")) for prefix in scope_prefixes],
-            }
-
-            result = session.execute(
-                text(
-                    f"{_FC_SELECT}"
-                    " WHERE team_run_id = :run_id"
-                    " AND created_at > :since"
-                    " AND path_ltree <@ ANY(:scopes::ltree[])"
-                    " ORDER BY created_at DESC"
-                ),
-                params,
-            )
-            return [self._row_to_record(row) for row in result.fetchall()]
+        cutoff = datetime.fromtimestamp(since, tz=timezone.utc)
+        normalized = [p.rstrip("/") for p in scope_prefixes]
+        return [
+            r for r in self._records
+            if r.team_run_id == team_run_id
+            and r.created_at > cutoff
+            and any(r.file_path.startswith(prefix) for prefix in normalized)
+        ]
 
     def external_changes_in_scope(
         self,
@@ -155,7 +134,7 @@ class FileChangeStore(SyncStoreMixin):
         since: float,
         exclude_run_id: str | None = None,
     ) -> list[FileChangeRecord]:
-        """Return changes in scope NOT made by agents in this team run."""
+        """Return changes in scope NOT made by a specific agent run."""
         changes = self.changes_in_scope(team_run_id, scope_prefixes, since)
         if exclude_run_id:
             changes = [c for c in changes if c.agent_run_id != exclude_run_id]
@@ -167,19 +146,11 @@ class FileChangeStore(SyncStoreMixin):
         team_run_id: str | None = None,
     ) -> list[FileChangeRecord]:
         """Return all file changes after *since* (epoch float)."""
-        where = "WHERE created_at > :since"
-        params: dict[str, Any] = {
-            "since": datetime.fromtimestamp(since, tz=timezone.utc),
-        }
+        cutoff = datetime.fromtimestamp(since, tz=timezone.utc)
+        results = [r for r in self._records if r.created_at > cutoff]
         if team_run_id is not None:
-            where += " AND team_run_id = :run_id"
-            params["run_id"] = team_run_id
-        with self._sf() as session:
-            result = session.execute(
-                text(f"{_FC_SELECT} {where} ORDER BY created_at ASC"),
-                params,
-            )
-            return [self._row_to_record(row) for row in result.fetchall()]
+            results = [r for r in results if r.team_run_id == team_run_id]
+        return results
 
     def recent_edits(
         self,
@@ -196,20 +167,11 @@ class FileChangeStore(SyncStoreMixin):
         team_run_id: str | None = None,
     ) -> list[tuple[str, int]]:
         """Return top files by edit count."""
-        where = "WHERE team_run_id = :run_id" if team_run_id else ""
-        params: dict[str, Any] = {"lim": limit}
+        records = self._records
         if team_run_id is not None:
-            params["run_id"] = team_run_id
-        with self._sf() as session:
-            result = session.execute(
-                text(
-                    f"SELECT file_path, COUNT(*) AS edit_count"
-                    f" FROM file_changes {where}"
-                    f" GROUP BY file_path ORDER BY edit_count DESC LIMIT :lim"
-                ),
-                params,
-            )
-            return [(row.file_path, row.edit_count) for row in result.fetchall()]
+            records = [r for r in records if r.team_run_id == team_run_id]
+        counter: Counter[str] = Counter(r.file_path for r in records)
+        return counter.most_common(limit)
 
     def who_changed(
         self,
@@ -217,17 +179,10 @@ class FileChangeStore(SyncStoreMixin):
         team_run_id: str | None = None,
     ) -> list[FileChangeRecord]:
         """Return all edit records for a specific file."""
-        where = "WHERE file_path = :fp"
-        params: dict[str, Any] = {"fp": file_path}
+        results = [r for r in self._records if r.file_path == file_path]
         if team_run_id is not None:
-            where += " AND team_run_id = :run_id"
-            params["run_id"] = team_run_id
-        with self._sf() as session:
-            result = session.execute(
-                text(f"{_FC_SELECT} {where} ORDER BY created_at ASC"),
-                params,
-            )
-            return [self._row_to_record(row) for row in result.fetchall()]
+            results = [r for r in results if r.team_run_id == team_run_id]
+        return results
 
     def changes_by_agent_run(
         self,
@@ -237,17 +192,10 @@ class FileChangeStore(SyncStoreMixin):
         """Return all file changes made by a specific agent run."""
         if not agent_run_id:
             return []
-        with self._sf() as session:
-            result = session.execute(
-                text(
-                    f"{_FC_SELECT}"
-                    " WHERE team_run_id = :run_id"
-                    " AND agent_run_id = :agent_run_id"
-                    " ORDER BY created_at ASC"
-                ),
-                {"run_id": team_run_id, "agent_run_id": agent_run_id},
-            )
-            return [self._row_to_record(row) for row in result.fetchall()]
+        return [
+            r for r in self._records
+            if r.team_run_id == team_run_id and r.agent_run_id == agent_run_id
+        ]
 
     def contention_hotspots(
         self,
@@ -255,69 +203,43 @@ class FileChangeStore(SyncStoreMixin):
         limit: int = 10,
         days: int = 7,
     ) -> list[ContentionHotspot]:
-        """Cross-run contention hotspots: files edited by many agents.
-
-        Used by planner's query_edit_history tool to predict conflicts.
-        Only considers edits from the last *days* to avoid full table scans.
-        """
+        """Cross-run contention hotspots: files edited by many agents."""
         if not scope_prefixes:
             return []
-        with self._sf() as session:
-            params: dict[str, Any] = {
-                "lim": limit,
-                "scopes": [path_to_ltree(prefix.rstrip("/")) for prefix in scope_prefixes],
-                "cutoff": _utcnow() - timedelta(days=days),
-            }
-
-            result = session.execute(
-                text("""
-                    SELECT file_path,
-                           COUNT(DISTINCT agent_id) AS agent_count,
-                           COUNT(*) AS edit_count
-                    FROM file_changes
-                    WHERE path_ltree <@ ANY(:scopes::ltree[])
-                      AND created_at > :cutoff
-                    GROUP BY file_path
-                    HAVING COUNT(DISTINCT agent_id) > 1
-                    ORDER BY agent_count DESC, edit_count DESC
-                    LIMIT :lim
-                """),
-                params,
+        from datetime import timedelta
+        cutoff = _utcnow() - timedelta(days=days)
+        normalized = [p.rstrip("/") for p in scope_prefixes]
+        scoped = [
+            r for r in self._records
+            if r.created_at > cutoff
+            and any(r.file_path.startswith(prefix) for prefix in normalized)
+        ]
+        # Group by file_path
+        by_file: dict[str, set[str]] = {}
+        counts: Counter[str] = Counter()
+        for r in scoped:
+            by_file.setdefault(r.file_path, set()).add(r.agent_id)
+            counts[r.file_path] += 1
+        results = [
+            ContentionHotspot(
+                file_path=fp,
+                agent_count=len(agents),
+                edit_count=counts[fp],
             )
-            return [
-                ContentionHotspot(
-                    file_path=row.file_path,
-                    agent_count=row.agent_count,
-                    edit_count=row.edit_count,
-                )
-                for row in result.fetchall()
-            ]
-
-    @staticmethod
-    def _row_to_record(row: Any) -> FileChangeRecord:
-        """Convert a raw SQL row to a FileChangeRecord."""
-        return FileChangeRecord(
-            id=row.id,
-            team_run_id=row.team_run_id,
-            file_path=row.file_path,
-            path_ltree=row.path_ltree,
-            agent_id=row.agent_id,
-            agent_run_id=getattr(row, "agent_run_id", ""),
-            edit_type=row.edit_type,
-            old_hash=getattr(row, "old_hash", ""),
-            new_hash=getattr(row, "new_hash", ""),
-            description=getattr(row, "description", ""),
-            created_at=row.created_at,
-        )
+            for fp, agents in by_file.items()
+            if len(agents) > 1
+        ]
+        results.sort(key=lambda h: (-h.agent_count, -h.edit_count))
+        return results[:limit]
 
 
 # ---------------------------------------------------------------------------
-# Null fallback (no-PG / tests)
+# Null fallback (no-op for tests)
 # ---------------------------------------------------------------------------
 
 
 class NullFileChangeStore:
-    """No-op store for when PostgreSQL is unavailable."""
+    """No-op store for tests that don't need file change tracking."""
 
     initialized: bool = False
 

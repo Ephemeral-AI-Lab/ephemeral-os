@@ -297,7 +297,20 @@ class Dispatcher:
         return new_items
 
     async def fail(self, wi_id: str, reason: str) -> None:
-        await self.store.fail_task(self.team_run_id, wi_id, reason)
+        warnings = await self.store.fail_task(self.team_run_id, wi_id, reason)
+        # Post warnings for 'continue' policy dependents via TaskCenter
+        if warnings and self.task_center is not None:
+            from team.models import Note
+            for dep_task_id, warning_msg in warnings:
+                note = Note(
+                    task_id=dep_task_id,
+                    agent_name="system",
+                    content=warning_msg,
+                )
+                try:
+                    await self.task_center.post(note)
+                except Exception:
+                    _logger.debug("Failed to post warning note for %s", dep_task_id, exc_info=True)
         await self.refresh_graph()
 
     async def retry_work_item(self, wi_id: str, request: RetryRequest) -> None:

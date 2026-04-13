@@ -14,7 +14,6 @@ from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column
 
 from db.base import Base
-from team.persistence.pg_types import LTREE
 
 
 def _utcnow() -> datetime:
@@ -39,7 +38,7 @@ class TaskRecord(Base):
     scope_paths: Mapped[list[str]] = mapped_column(
         ARRAY(Text), default=list
     )
-    scope_ltree: Mapped[list[str]] = mapped_column(ARRAY(LTREE()), default=list)
+    scope_ltree: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)
     cascade_policy: Mapped[str] = mapped_column(
         String(16), default="cancel"
     )

@@ -18,7 +18,9 @@ from team.runtime.team_run import TeamRun
 
 def _memory_store() -> TeamMemoryStore:
     engine = create_engine("sqlite:///:memory:", echo=False)
-    Base.metadata.create_all(engine)
+    # Only create the tables this test needs (ARRAY columns in other
+    # models are incompatible with SQLite).
+    TeamMemoryRecordModel.__table__.create(engine, checkfirst=True)
     factory = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
     store = TeamMemoryStore()
     store.initialize(factory)
@@ -37,8 +39,6 @@ def _fake_services() -> TeamRuntimeServices:
         project_context=ProjectContext(goal="", user_request="", project_key="", repo_root=""),
         dispatcher=_FakeDispatcher(),  # type: ignore[arg-type]
         event_store=NullTeamRunStore(),
-        note_store=None,
-        exploration_memory_store=None,
     )
 
 

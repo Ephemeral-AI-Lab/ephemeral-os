@@ -33,34 +33,30 @@ from tools.core.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolRes
 class ExplorationMemory:
     """Cross-run note cache. Content-addressed by file hashes.
 
-    All reads and writes go through the durable PG store
-    (ExplorationMemoryStore). No in-memory cache.
+    Uses an in-memory LRU dict. No PostgreSQL dependency.
     """
 
     _MAX_FILES_TO_HASH = 500
+    _MAX_CACHE_ENTRIES = 256
 
     def __init__(self) -> None:
-        self._persistent_store: Any = None
+        self._cache: dict[str, list[dict[str, Any]]] = {}
 
     def attach_store(self, store: Any) -> None:
-        """Attach a durable store for persistent cache entries."""
-        self._persistent_store = store
+        """No-op — kept for backwards compatibility."""
 
     def attach_pg(self, pg_store: Any) -> None:
-        """Backward-compatible alias for the old PG-specific name."""
-        self.attach_store(pg_store)
+        """No-op — kept for backwards compatibility."""
 
     async def check_async(
         self,
         scope_paths: list[str],
         workspace_root: str = "",
     ) -> list[dict[str, Any]] | None:
-        """Check the durable store for cached notes."""
-        if self._persistent_store is None or not getattr(self._persistent_store, "initialized", False):
-            return None
+        """Check the in-memory cache for cached notes."""
         content_hash = self._hash_scope(scope_paths, workspace_root)
         key = self._cache_key(scope_paths, content_hash)
-        return await self._persistent_store.get(key)
+        return self._cache.get(key)
 
     async def save_async(
         self,
@@ -68,17 +64,14 @@ class ExplorationMemory:
         notes: list[dict[str, Any]],
         workspace_root: str = "",
     ) -> None:
-        """Write notes to the durable store."""
-        if self._persistent_store is None or not getattr(self._persistent_store, "initialized", False):
-            return
+        """Write notes to the in-memory cache."""
         content_hash = self._hash_scope(scope_paths, workspace_root)
         key = self._cache_key(scope_paths, content_hash)
-        await self._persistent_store.put(
-            cache_key=key,
-            scope_paths=sorted(scope_paths),
-            content_hash=content_hash,
-            notes=notes,
-        )
+        # Simple LRU: evict oldest when full
+        if len(self._cache) >= self._MAX_CACHE_ENTRIES and key not in self._cache:
+            oldest = next(iter(self._cache))
+            del self._cache[oldest]
+        self._cache[key] = notes
 
     def _cache_key(self, scope_paths: list[str], content_hash: str) -> str:
         scope_str = "|".join(sorted(scope_paths))

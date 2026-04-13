@@ -393,6 +393,16 @@ async def _run_query_loop(
                 if reminder_event is not None:
                     yield reminder_event, None
 
+        # Flush buffered scope change notifications (Section 14.7).
+        # ScopeChangeBuffer is injected by the executor when LISTEN/NOTIFY
+        # is active. Flushing here — at the top of each turn, alongside
+        # background task collection — ensures the agent sees scope changes
+        # on the next LLM call without accumulating stale notifications.
+        if context.tool_metadata is not None:
+            _scope_buf = context.tool_metadata.extras.get("scope_change_buffer")
+            if _scope_buf is not None:
+                _scope_buf.flush_into(display_messages)
+
         executor = StreamingToolExecutor(
             tool_registry=context.tool_registry,
             context=ToolExecutionContext(

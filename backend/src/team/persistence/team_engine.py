@@ -6,6 +6,7 @@ import importlib.util
 import logging
 
 from sqlalchemy import text
+from sqlalchemy.engine import Engine
 from sqlalchemy.engine import URL, make_url
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 
@@ -17,12 +18,21 @@ logger = logging.getLogger(__name__)
 
 _async_engine: AsyncEngine | None = None
 _async_session_factory: async_sessionmaker[AsyncSession] | None = None
+_LEGACY_LTREE_COLUMNS: tuple[tuple[str, str, str, str], ...] = (
+    (
+        "tasks",
+        "scope_ltree",
+        "ltree[]",
+        "ALTER TABLE tasks ALTER COLUMN scope_ltree TYPE TEXT[] "
+        "USING COALESCE(scope_ltree::text[], ARRAY[]::text[])",
+    ),
+)
 
 
 def _ensure_team_models_registered() -> None:
-    from team.persistence.exploration_memory_store import ExplorationMemoryRecord  # noqa: F401
-    from team.persistence.file_change_store import FileChangeRecord  # noqa: F401
-    from team.persistence.task_note_record import TaskNoteRecord  # noqa: F401
+    # Only register ORM models that still use PostgreSQL tables.
+    # ExplorationMemoryRecord, FileChangeRecord, TaskNoteRecord, and
+    # CheckpointRecord have been moved to in-memory implementations.
     from team.persistence.task_record import TaskRecord  # noqa: F401
 
 
@@ -35,6 +45,39 @@ def _async_database_url(url: str) -> URL:
     if parsed.drivername == "sqlite":
         return parsed.set(drivername="sqlite+aiosqlite")
     return parsed
+
+
+def _legacy_column_type(engine: Engine, table_name: str, column_name: str) -> str | None:
+    with engine.begin() as conn:
+        return conn.execute(
+            text(
+                """
+                SELECT pg_catalog.format_type(a.atttypid, a.atttypmod)
+                FROM pg_attribute a
+                WHERE a.attrelid = to_regclass(:table_name)
+                  AND a.attname = :column_name
+                  AND a.attnum > 0
+                  AND NOT a.attisdropped
+                """
+            ),
+            {"table_name": table_name, "column_name": column_name},
+        ).scalar()
+
+
+def _normalize_legacy_ltree_columns(engine: Engine) -> None:
+    if engine.dialect.name != "postgresql":
+        return
+    for table_name, column_name, legacy_type, ddl in _LEGACY_LTREE_COLUMNS:
+        if _legacy_column_type(engine, table_name, column_name) != legacy_type:
+            continue
+        logger.info(
+            "Converting legacy team column %s.%s from %s to TEXT storage",
+            table_name,
+            column_name,
+            legacy_type,
+        )
+        with engine.begin() as conn:
+            conn.execute(text(ddl))
 
 
 def get_team_engine() -> AsyncEngine | None:
@@ -64,10 +107,8 @@ def create_team_engine(
         raise RuntimeError("Team runtime requires a configured database.")
 
     _ensure_team_models_registered()
-    with sync_engine.begin() as conn:
-        conn.execute(text("CREATE EXTENSION IF NOT EXISTS ltree"))
-        conn.execute(text("CREATE EXTENSION IF NOT EXISTS pgcrypto"))
     Base.metadata.create_all(sync_engine)
+    _normalize_legacy_ltree_columns(sync_engine)
     _add_missing_columns(sync_engine)
     _ensure_indexes(sync_engine)
 

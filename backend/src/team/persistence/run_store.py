@@ -322,13 +322,13 @@ def build_default_store(
 
     Precedence:
 
-    1. ``session_factory`` provided → ``SqlTeamRunStore``.
-    2. ``base_dir`` provided or ``EPHEMERALOS_TEAM_RUN_DIR`` set →
+    1. ``base_dir`` provided or ``EPHEMERALOS_TEAM_RUN_DIR`` set →
        ``JsonlTeamRunStore``.
-    3. Neither → ``NullTeamRunStore`` (legacy in-memory behaviour).
+    2. Neither → ``NullTeamRunStore`` (in-memory only).
+
+    The ``session_factory`` parameter is accepted but ignored (SQL store
+    removed in favour of JSONL).
     """
-    if session_factory is not None:
-        return SqlTeamRunStore(session_factory)
     env_dir = os.environ.get("EPHEMERALOS_TEAM_RUN_DIR")
     chosen = base_dir or env_dir
     if chosen:

@@ -89,12 +89,10 @@ class TeamRun:
         # Role → agent-name mapping from the TeamDefinition.  Stored at
         # start time so context builders can render it into planner prompts.
         self.roster: dict[str, list[str]] = {}
-        # Shared context log for all tasks in this run.
-        note_store = getattr(runtime_services, "note_store", None)
+        # Shared context log for all tasks in this run (in-memory).
         self.task_center = TaskCenter(
             goal=goal or "",
             user_request=user_request,
-            note_store=note_store,
             team_run_id=self.id,
         )
         # Wire TaskCenter into dispatcher for cascade "continue" note injection
@@ -132,6 +130,7 @@ class TeamRun:
             scope_paths=list(payload.get("scope_paths", [])),
             depth=0,
         )
+        root.payload = dict(payload)
         root.root_id = root.id
         self.root_work_item_id = root.id
         # Durable record of the run *before* any work items exist so a

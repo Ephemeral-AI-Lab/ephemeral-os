@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 QueryRunner = Callable[["AgentDefinition", Any], Awaitable[Any]]
+QueryContextBuilder = Callable[["AgentDefinition", "TeamRun", "Task"], Awaitable[TeamAgentContext]]
 
 
 class Executor:
@@ -30,11 +31,13 @@ class Executor:
         team_run: "TeamRun",
         runner: QueryRunner,
         agent_lookup: Callable[[str], "AgentDefinition | None"],
+        build_query_context: QueryContextBuilder | None = None,
         after_dispatch: Callable[["Task", AgentResult, list["Task"]], Any] | None = None,
     ) -> None:
         self.team_run = team_run
         self.runner = runner
         self.agent_lookup = agent_lookup
+        self.build_query_context = build_query_context
         self.after_dispatch = after_dispatch
 
     async def _checkpoint_after_transition(self, task: "Task", *, outcome: str) -> None:
@@ -80,11 +83,28 @@ class Executor:
         if health_prefix:
             ctx.user_message = health_prefix + "\n\n" + ctx.user_message
 
+        # Subscribe to real-time scope change notifications when available.
+        listener = getattr(self.team_run, "scope_listener", None)
+        if (
+            listener is not None
+            and getattr(listener, "is_running", False)
+            and task.scope_paths
+        ):
+            from team.runtime.scope_change_buffer import ScopeChangeBuffer
+
+            scope_buffer = ScopeChangeBuffer()
+            listener.subscribe(agent_run_id, list(task.scope_paths), scope_buffer)
+            if ctx.tool_metadata is not None:
+                ctx.tool_metadata.extras["scope_change_buffer"] = scope_buffer
+
         try:
             await self.runner(defn, ctx)
         except Exception as exc:
             await dispatcher.fail(task_id, f"runner_exception: {exc}")
             return
+        finally:
+            if listener is not None:
+                listener.unsubscribe(agent_run_id)
 
         result = self._posthook(ctx, defn)
 
@@ -140,7 +160,9 @@ class Executor:
             logger.debug("Failed to persist scope warning for %s", task.id, exc_info=True)
 
     async def _build_context(self, defn: "AgentDefinition", task: "Task") -> TeamAgentContext:
-        """Build agent context using the canonical build_query_context."""
+        """Build agent context using an override when provided."""
+        if self.build_query_context is not None:
+            return await self.build_query_context(defn, self.team_run, task)
         from team.runtime.context_builder import build_query_context
         return await build_query_context(defn, self.team_run, task)
 

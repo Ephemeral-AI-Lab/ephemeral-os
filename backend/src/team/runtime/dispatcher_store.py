@@ -22,7 +22,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from team.models import Task, TaskSpec, TaskStatus, _utcnow
 from team.persistence.ltree_utils import path_to_ltree
-from team.persistence.task_note_record import TaskNoteRecord
 from team.persistence.task_record import TaskRecord
 
 logger = logging.getLogger(__name__)
@@ -285,13 +284,19 @@ class DispatcherStore:
 
     # ---- fail with cascade policy ----------------------------------------
 
-    async def fail_task(self, run_id: str, task_id: str, reason: str) -> None:
+    async def fail_task(
+        self, run_id: str, task_id: str, reason: str
+    ) -> list[tuple[str, str]]:
         """Fail a task, respecting cascade policies of dependents.
 
         Handles retry_first: if any non-terminal dependent has retry_first
         policy and the task has retries remaining, retry instead of failing.
         Otherwise, marks failed and cascades per dependent policies.
+
+        Returns list of (dependent_task_id, warning_message) for 'continue'
+        policy dependents that the caller should post as notes.
         """
+        warnings: list[tuple[str, str]] = []
         async with self._sf() as db:
             # Fetch the task
             rec = (
@@ -305,7 +310,7 @@ class DispatcherStore:
             ).fetchone()
             if rec is None or rec.status in ("done", "failed", "cancelled"):
                 await db.commit()
-                return
+                return warnings
 
             # Check retry_first policy on dependents
             if rec.retry_count < rec.max_retries:
@@ -339,7 +344,7 @@ class DispatcherStore:
                         {"task_id": task_id, "run_id": run_id},
                     )
                     await db.commit()
-                    return
+                    return warnings
 
             # Mark failed
             await db.execute(
@@ -351,7 +356,7 @@ class DispatcherStore:
                 {"task_id": task_id, "run_id": run_id, "reason": reason},
             )
 
-            # Inject warning notes for 'continue' dependents (they aren't cancelled)
+            # Collect 'continue' dependents — caller posts warnings via TaskCenter
             continue_deps = (
                 await db.execute(
                     text("""
@@ -365,19 +370,16 @@ class DispatcherStore:
                 )
             ).fetchall()
             for dep_rec in continue_deps:
-                note = TaskNoteRecord(
-                    id=uuid.uuid4(),
-                    team_run_id=run_id,
-                    task_id=dep_rec.id,
-                    agent_name="system",
-                    content=f"Warning: dependency {task_id} failed: {reason}. Proceed with caution.",
-                )
-                db.add(note)
+                warnings.append((
+                    dep_rec.id,
+                    f"Warning: dependency {task_id} failed: {reason}. Proceed with caution.",
+                ))
             await db.commit()
 
         # Cascade cancel 'cancel' policy dependents (separate transaction for recursive CTE)
-        # 'continue' dependents were already handled above with warning notes
+        # 'continue' dependents were already handled above with warning collection
         await self.cascade_cancel_recursive(run_id, task_id)
+        return warnings
 
     # ---- retry -----------------------------------------------------------
 

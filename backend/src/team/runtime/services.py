@@ -9,12 +9,7 @@ from team.persistence.run_store import TeamRunStore, build_default_store
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
-    from team.persistence.exploration_memory_store import (
-        ExplorationMemoryStore,
-        NullExplorationMemoryStore,
-    )
     from team.persistence.file_change_store import FileChangeStore, NullFileChangeStore
-    from team.persistence.note_store import NoteStore, NullNoteStore
     from team.runtime.dispatcher import Dispatcher
 
 
@@ -23,8 +18,6 @@ class TeamRuntimeServices:
     project_context: ProjectContext
     dispatcher: "Dispatcher"
     event_store: TeamRunStore
-    note_store: "NoteStore | NullNoteStore | None" = None
-    exploration_memory_store: "ExplorationMemoryStore | NullExplorationMemoryStore | None" = None
     file_change_store: "FileChangeStore | NullFileChangeStore | None" = None
 
 
@@ -66,34 +59,12 @@ def build_team_runtime_services(
                 "Set EPHEMERALOS_DATABASE_URL or pass session_factory explicitly."
             ) from exc
 
-    note_store: Any = None
-    exploration_memory_store: Any = None
     from team.runtime.dispatcher_store import DispatcherStore
     store_driver = DispatcherStore(task_session_factory)
 
-    # Initialize NoteStore for Task Center persistence
-    from team.persistence.note_store import NoteStore
-    note_store = NoteStore()
-    note_store.initialize(task_session_factory)
-
-    # Initialize ExplorationMemoryStore for cross-run cache
-    from team.persistence.exploration_memory_store import ExplorationMemoryStore
-    exploration_memory_store = ExplorationMemoryStore()
-    exploration_memory_store.initialize(task_session_factory)
-
-    # Initialize FileChangeStore for durable edit history (sync sessionmaker).
-    # Uses the existing sync engine from db.engine — same as CIService/Arbiter.
-    from team.persistence.file_change_store import FileChangeStore, NullFileChangeStore
-    from db.engine import get_session_factory
-    file_change_store: Any = NullFileChangeStore()
-    sync_sf = get_session_factory()
-    if sync_sf is not None:
-        file_change_store = FileChangeStore()
-        file_change_store.initialize(sync_sf)
-
-    # Attach the durable store to the exploration memory singleton
-    from tools.context.toolkit import get_exploration_memory
-    get_exploration_memory().attach_store(exploration_memory_store)
+    # In-memory file change tracking — no PostgreSQL dependency.
+    from team.persistence.file_change_store import FileChangeStore
+    file_change_store: Any = FileChangeStore()
 
     dispatcher = Dispatcher(
         team_run_id=team_run_id,
@@ -106,7 +77,5 @@ def build_team_runtime_services(
         project_context=project_context,
         dispatcher=dispatcher,
         event_store=store,
-        note_store=note_store,
-        exploration_memory_store=exploration_memory_store,
         file_change_store=file_change_store,
     )

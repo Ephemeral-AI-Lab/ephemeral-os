@@ -1,22 +1,18 @@
 """Task Center — append-only shared context log.
 
-Replaces ProjectContext, InMemoryArtifactStore, and the 3-tier briefing system.
-
-When a NoteStore is attached, PostgreSQL is the source of truth: writes are
-awaited and reads query the store directly so every worker sees the same note
-set. The in-memory list is retained only for no-PG mode and local snapshots.
+All notes are kept in-memory within the TaskCenter instance. Since all
+executors in a TeamRun share the same TaskCenter, cross-executor visibility
+is guaranteed without needing PostgreSQL persistence.
 """
 
 from __future__ import annotations
 
 import logging
 import time
-import uuid as _uuid
 from collections.abc import Awaitable, Callable
 from typing import TYPE_CHECKING, Any
 
 from team.models import Note
-from team.persistence.ltree_utils import path_to_ltree
 
 if TYPE_CHECKING:
     from team.models import Task
@@ -25,23 +21,19 @@ logger = logging.getLogger(__name__)
 
 
 class TaskCenter:
-    """Append-only shared context log with optional PG-primary persistence."""
+    """Append-only shared context log (in-memory)."""
 
     def __init__(
         self,
         goal: str = "",
         user_request: str = "",
-        note_store: Any = None,
         team_run_id: str = "",
+        **_kwargs: Any,
     ) -> None:
         self._notes: list[Note] = []
         self.goal = goal
         self.user_request = user_request
-        self._note_store = note_store  # NoteStore | NullNoteStore | None
         self._team_run_id = team_run_id
-
-    def _store_backed(self) -> bool:
-        return self._note_store is not None and getattr(self._note_store, "initialized", False)
 
     @staticmethod
     def _matches_scope(note_scopes: list[str], query_scopes: list[str]) -> bool:
@@ -54,48 +46,9 @@ class TaskCenter:
             for query_scope in normalized_queries
         )
 
-    @staticmethod
-    def _note_from_record(record: Any) -> Note:
-        created_at = getattr(record, "created_at", None)
-        timestamp = (
-            created_at.timestamp()
-            if created_at is not None and hasattr(created_at, "timestamp")
-            else time.time()
-        )
-        return Note(
-            id=str(record.id),
-            task_id=record.task_id,
-            agent_name=record.agent_name,
-            content=record.content,
-            timestamp=timestamp,
-            scope_paths=list(record.scope_paths) if getattr(record, "scope_paths", None) else [],
-        )
-
     async def post(self, note: Note) -> None:
-        """Append a note to the active backing store."""
-        if not self._store_backed():
-            self._notes.append(note)
-            return
-        try:
-            from team.persistence.task_note_record import TaskNoteRecord
-
-            record = TaskNoteRecord(
-                id=_uuid.UUID(note.id) if note.id else _uuid.uuid4(),
-                team_run_id=self._team_run_id,
-                task_id=note.task_id,
-                agent_name=note.agent_name,
-                content=note.content,
-                scope_paths=list(note.scope_paths) if note.scope_paths else [],
-                scope_ltree=[
-                    path_to_ltree(scope.rstrip("/"))
-                    for scope in note.scope_paths
-                    if isinstance(scope, str) and scope.strip()
-                ] if note.scope_paths else [],
-            )
-            await self._note_store.insert(record)
-        except Exception:
-            logger.debug("Failed to persist note %s", note.id, exc_info=True)
-            raise
+        """Append a note."""
+        self._notes.append(note)
 
     async def read(
         self,
@@ -105,21 +58,7 @@ class TaskCenter:
         since: float | None = None,
         limit: int | None = None,
     ) -> list[Note]:
-        """Read notes using the configured backing store."""
-        if self._store_backed():
-            try:
-                records = await self._note_store.query(
-                    self._team_run_id,
-                    task_ids=authors,
-                    scope_paths=scope_paths,
-                    since=since,
-                    limit=limit,
-                )
-                return [self._note_from_record(record) for record in records]
-            except Exception:
-                logger.debug("Failed to read notes from PG", exc_info=True)
-                raise
-
+        """Read notes with optional filters."""
         results = list(self._notes)
         if authors:
             author_set = set(authors)
@@ -153,8 +92,6 @@ class TaskCenter:
         budget -= len(task_section.encode())
 
         # Priority 2: Dep notes (direct deps only, not transitive)
-        # Deduplicate to latest note per dep — many notes from one dep
-        # would bloat context; we only care about the most recent summary
         if task.deps and budget > 0:
             dep_notes = await self.read(authors=task.deps)
             if dep_notes:
@@ -230,7 +167,6 @@ class TaskCenter:
         lines = [header_line]
         for n in notes:
             entry = f"### {n.agent_name} ({n.task_id})\n{n.content}"
-            # Account for the separator that join() will insert before this entry
             entry_cost = len(entry.encode()) + len(sep.encode())
             if entry_cost <= remaining:
                 lines.append(entry)

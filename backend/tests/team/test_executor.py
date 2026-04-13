@@ -447,6 +447,70 @@ def test_inject_scope_warnings_skips_when_store_not_initialized():
     assert tc.notes == []
 
 
+def test_build_context_uses_override_when_provided():
+    import asyncio
+
+    team_run = FakeTeamRun()
+    defn = FakeDefn()
+    expected = TeamAgentContext(user_message="override", tool_metadata={"source": "override"})
+    build_query_context = AsyncMock(return_value=expected)
+    executor = Executor(
+        team_run=team_run,
+        runner=AsyncMock(),
+        agent_lookup=lambda name: FakeDefn(),
+        build_query_context=build_query_context,
+    )
+    task = _make_task()
+
+    result = asyncio.run(executor._build_context(defn, task))
+
+    assert result is expected
+    build_query_context.assert_awaited_once_with(defn, team_run, task)
+
+
+def test_run_one_subscribes_and_unsubscribes_scope_listener():
+    import asyncio
+
+    class FakeScopeListener:
+        def __init__(self):
+            self.is_running = True
+            self.subscribed: list[tuple[str, list[str]]] = []
+            self.unsubscribed: list[str] = []
+
+        def subscribe(self, agent_run_id: str, scope_paths: list[str], _buffer) -> None:
+            self.subscribed.append((agent_run_id, scope_paths))
+
+        def unsubscribe(self, agent_run_id: str) -> None:
+            self.unsubscribed.append(agent_run_id)
+
+    task = _make_task(status="pending")
+    dispatcher = SimpleNamespace(
+        mark_running=AsyncMock(return_value=task),
+        fail=AsyncMock(),
+        complete=AsyncMock(return_value=[]),
+        sibling_stats=AsyncMock(return_value={"done": 0, "failed": 0, "retry_total": 0}),
+    )
+    team_run = FakeTeamRun(dispatcher=dispatcher)
+    team_run.scope_listener = FakeScopeListener()
+
+    async def runner(_defn, ctx):
+        assert "scope_change_buffer" in ctx.tool_metadata.extras
+
+    executor = Executor(
+        team_run=team_run,
+        runner=runner,
+        agent_lookup=lambda name: FakeDefn(),
+        build_query_context=AsyncMock(return_value=TeamAgentContext(user_message="ctx")),
+    )
+
+    asyncio.run(executor._run_one(task.id))
+
+    assert len(team_run.scope_listener.subscribed) == 1
+    assert team_run.scope_listener.subscribed[0][1] == ["src/auth/"]
+    assert len(team_run.scope_listener.unsubscribed) == 1
+    dispatcher.fail.assert_not_called()
+
+
 # ---------------------------------------------------------------------------
 # _plan_health_prefix tests
 # ---------------------------------------------------------------------------
