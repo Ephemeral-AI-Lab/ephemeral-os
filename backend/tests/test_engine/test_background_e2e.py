@@ -363,8 +363,8 @@ class TestLLMDecidesToBackground:
             work_item_id="ROOT",
         )
         team_run = SimpleNamespace(
-            root_work_item_id="ROOT",
-            dispatcher=SimpleNamespace(
+            root_task_id="ROOT",
+            task_center=SimpleNamespace(
                 graph={
                     "ROOT": SimpleNamespace(
                         payload={"fail_to_pass": ["pkg/tests/test_api.py::test_one"]}

@@ -96,10 +96,10 @@ def _register_builtins() -> None:
     register_toolkit_class("code_intelligence", CIToolkit)
     register_toolkit_class("subagent", SubagentToolkit)
 
-    # Plan A toolkits — context (notes + scope awareness + exploration cache)
-    from tools.context import ContextToolkit
+    # Plan A toolkits — Task Center (notes + scope awareness)
+    from tools.context import TaskCenterToolkit
 
-    register_toolkit_class("context", ContextToolkit)
+    register_toolkit_class("task_center", TaskCenterToolkit)
     # NOTE: Submission tools are no longer registered as a toolkit.
     # They are registered individually via agent_def.posthook in
     # engine/runtime/agent.py:_build_agent_tool_registry().

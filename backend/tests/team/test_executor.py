@@ -50,24 +50,26 @@ class FakeTaskCenter:
         self.notes.append(note)
 
 
-class FakeDispatcher:
-    """Returns canned sibling_stats."""
-    def __init__(self, stats: dict[str, int] | None = None):
-        self._stats = stats or {"done": 0, "failed": 0, "pending": 0,
-                                "ready": 0, "running": 0, "cancelled": 0,
-                                "retry_total": 0}
-
-    async def sibling_stats(self, parent_id):
-        return dict(self._stats)
-
-
 class FakeTeamRun:
     """Minimal team run stub for checkpoint note tests."""
-    def __init__(self, dispatcher=None, task_center=None, file_change_store=None):
+    def __init__(self, task_center=None, dispatch_queue=None, file_change_store=None,
+                 stats=None):
         self.id = "test-run-001"
-        self.dispatcher = dispatcher or FakeDispatcher()
-        self.task_center = task_center or FakeTaskCenter()
+        _default_stats = stats or {"done": 0, "failed": 0, "pending": 0,
+                                   "ready": 0, "running": 0, "cancelled": 0,
+                                   "retry_total": 0}
+        tc = task_center or FakeTaskCenter()
+        if not hasattr(tc, "sibling_stats"):
+            tc.sibling_stats = self._make_sibling_stats(_default_stats)
+        self.task_center = tc
+        self.dispatch_queue = dispatch_queue
         self.file_change_store = file_change_store
+
+    @staticmethod
+    def _make_sibling_stats(stats):
+        async def sibling_stats(parent_id):
+            return dict(stats)
+        return sibling_stats
 
     async def checkpoint(self, label: str = "") -> None:
         pass
@@ -266,11 +268,10 @@ def _make_executor(
     file_change_store=None,
 ) -> tuple[Executor, FakeTaskCenter]:
     tc = FakeTaskCenter()
-    dispatcher = FakeDispatcher(stats)
     team_run = FakeTeamRun(
-        dispatcher=dispatcher,
         task_center=tc,
         file_change_store=file_change_store,
+        stats=stats,
     )
     executor = Executor(
         team_run=team_run,
@@ -370,13 +371,12 @@ def test_checkpoint_note_retry_warning():
     assert "4 retries" in tc.notes[0].content
 
 
-def test_checkpoint_note_survives_dispatcher_error():
+def test_checkpoint_note_survives_sibling_stats_error():
     """If sibling_stats raises, checkpoint note is skipped gracefully."""
     import asyncio
     tc = FakeTaskCenter()
-    bad_dispatcher = FakeDispatcher()
-    bad_dispatcher.sibling_stats = AsyncMock(side_effect=RuntimeError("db down"))
-    team_run = FakeTeamRun(dispatcher=bad_dispatcher, task_center=tc)
+    tc.sibling_stats = AsyncMock(side_effect=RuntimeError("db down"))
+    team_run = FakeTeamRun(task_center=tc)
     executor = Executor(team_run=team_run, runner=AsyncMock(),
                         agent_lookup=lambda n: FakeDefn())
 
@@ -484,13 +484,13 @@ def test_run_one_subscribes_and_unsubscribes_scope_listener():
             self.unsubscribed.append(agent_run_id)
 
     task = _make_task(status="pending")
-    dispatcher = SimpleNamespace(
-        mark_running=AsyncMock(return_value=task),
-        fail=AsyncMock(),
-        complete=AsyncMock(return_value=[]),
-        sibling_stats=AsyncMock(return_value={"done": 0, "failed": 0, "retry_total": 0}),
-    )
-    team_run = FakeTeamRun(dispatcher=dispatcher)
+    tc = FakeTaskCenter()
+    tc.graph = {}
+    tc.mark_running = AsyncMock(return_value=task)
+    tc.fail = AsyncMock()
+    tc.complete_task = AsyncMock(return_value=[])
+    tc.sibling_stats = AsyncMock(return_value={"done": 0, "failed": 0, "retry_total": 0})
+    team_run = FakeTeamRun(task_center=tc)
     team_run.scope_listener = FakeScopeListener()
 
     async def runner(_defn, ctx):
@@ -503,28 +503,42 @@ def test_run_one_subscribes_and_unsubscribes_scope_listener():
         build_query_context=AsyncMock(return_value=TeamAgentContext(user_message="ctx")),
     )
 
-    asyncio.run(executor._run_one(task.id))
+    asyncio.run(executor._run_one(task))
 
     assert len(team_run.scope_listener.subscribed) == 1
     assert team_run.scope_listener.subscribed[0][1] == ["src/auth/"]
     assert len(team_run.scope_listener.unsubscribed) == 1
-    dispatcher.fail.assert_not_called()
+    tc.fail.assert_not_called()
 
 
 def test_run_forever_survives_transient_pop_ready_error():
     import asyncio
+    from types import SimpleNamespace
 
-    class FakeDispatcher:
+    class FakeQueue:
         def __init__(self) -> None:
             self.calls = 0
 
-        async def pop_ready(self) -> str:
+        async def pop_ready(self, run_id: str) -> Any:
             self.calls += 1
             if self.calls == 1:
                 raise RuntimeError("db down")
-            return "task-1"
+            # Return a fake record that _record_to_task can handle
+            return SimpleNamespace(
+                id="task-1", team_run_id=run_id, agent_name="dev",
+                status="running", task="t", deps=[], scope_paths=[],
+                scope_ltree=[], cascade_policy="cancel", parent_id=None,
+                root_id="", depth=0, pending_dep_count=0,
+                retry_count=0, max_retries=2, agent_run_id=None,
+                created_at=None, started_at=None, finished_at=None,
+                failure_reason=None,
+            )
 
-    team_run = FakeTeamRun(dispatcher=FakeDispatcher())
+    fake_queue = FakeQueue()
+    tc = FakeTaskCenter()
+    tc.graph = {}
+    tc.sibling_stats = AsyncMock(return_value={})
+    team_run = FakeTeamRun(task_center=tc, dispatch_queue=fake_queue)
     team_run.cancel_event = asyncio.Event()
     executor = Executor(
         team_run=team_run,
@@ -532,16 +546,15 @@ def test_run_forever_survives_transient_pop_ready_error():
         agent_lookup=lambda name: FakeDefn(),
     )
 
-    async def _run_one(task_id: str) -> None:
-        assert task_id == "task-1"
+    async def _run_one(task) -> None:
         team_run.cancel_event.set()
 
     executor._run_one = AsyncMock(side_effect=_run_one)
 
     asyncio.run(executor.run_forever())
 
-    assert team_run.dispatcher.calls >= 2
-    executor._run_one.assert_awaited_once_with("task-1")
+    assert fake_queue.calls >= 2
+    executor._run_one.assert_awaited_once()
 
 
 # ---------------------------------------------------------------------------

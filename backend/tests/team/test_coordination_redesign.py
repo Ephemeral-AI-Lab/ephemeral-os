@@ -7,7 +7,7 @@ import pytest
 from agents.registry import get_definition
 from team.builtins import register_all as register_team_builtins
 from team.models import BudgetConfig, BudgetState, Task, TaskStatus
-from team.runtime.context_builder import build_work_item_metadata
+from team.runtime.context_builder import build_task_metadata
 from tools.core.base import ToolExecutionContext
 from tools.posthook.toolkit import SubmitPlanTool
 
@@ -32,7 +32,7 @@ class _AsyncDispatcherStub:
         return set(self._known_ids)
 
 
-def test_build_work_item_metadata_enables_team_runtime_flags():
+def test_build_task_metadata_enables_team_runtime_flags():
     task = Task(
         id="task-1",
         team_run_id="run-1",
@@ -49,23 +49,21 @@ def test_build_work_item_metadata_enables_team_runtime_flags():
         project_context=SimpleNamespace(repo_root="/repo"),
         coordination_metadata={"require_declared_shell_outputs": True},
         task_center=object(),
-        dispatcher=object(),
         arbiter=None,
         file_change_store=None,
         budgets=BudgetConfig(max_tasks=12, max_depth=4, max_plan_size=6, max_note_bytes=2048),
         budget_state=BudgetState(tasks_used=3, note_bytes_used=128, replans_used=1),
-        root_work_item_id="root-1",
+        root_task_id="root-1",
         roster={"developer": ["developer"]},
     )
 
-    meta = build_work_item_metadata(team_run, task)
+    meta = build_task_metadata(team_run, task)
 
     assert meta["posthook_enabled"] is True
     assert meta["team_mode_enabled"] is True
     assert meta["task_deps"] == ["dep-1", "dep-2"]
     assert meta["task_parent_id"] is None
     assert meta["task_depth"] == 2
-    assert meta["dispatcher"] is team_run.dispatcher
     assert meta["task_center"] is team_run.task_center
     assert meta["max_plan_size"] == 6
     assert meta["max_tasks"] == 12
@@ -84,7 +82,7 @@ async def test_submit_plan_resolves_roster_role_hints():
         cwd="/tmp",
         metadata={
             "task_center": task_center,
-            "dispatcher": dispatcher,
+            "task_center_ref": dispatcher,
             "work_item_id": "planner-task",
             "agent_name": "team_planner",
             "allow_empty_plan": False,
@@ -131,7 +129,7 @@ async def test_submit_plan_rejects_oversize_task_notes():
         cwd="/tmp",
         metadata={
             "task_center": task_center,
-            "dispatcher": dispatcher,
+            "task_center_ref": dispatcher,
             "work_item_id": "planner-task",
             "agent_name": "team_planner",
             "allow_empty_plan": False,

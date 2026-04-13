@@ -30,7 +30,7 @@ class TeamAgentContext:
             self.tool_metadata = meta
 
 
-def build_work_item_metadata(team_run: "TeamRun", task: Task) -> ExecutionMetadata:
+def build_task_metadata(team_run: "TeamRun", task: Task) -> ExecutionMetadata:
     """Build the canonical routing metadata for a team task."""
     meta = ExecutionMetadata(
         team_run_id=team_run.id,
@@ -56,9 +56,7 @@ def build_work_item_metadata(team_run: "TeamRun", task: Task) -> ExecutionMetada
     if task.scope_paths:
         meta["write_scope"] = task.scope_paths
 
-    # Inject shared resources for tools
     meta["task_center"] = team_run.task_center
-    meta["dispatcher"] = team_run.dispatcher
     file_change_store = getattr(team_run, "file_change_store", None)
     if file_change_store is not None:
         meta["file_change_store"] = file_change_store
@@ -78,30 +76,41 @@ def build_work_item_metadata(team_run: "TeamRun", task: Task) -> ExecutionMetada
         meta["replans_used"] = budget_state.replans_used
 
     _populate_plan_submission_context(meta, team_run, task)
+
+    # Inject active blocker info so replanners can decide whether to
+    # merge into an existing blocker or create a new one.
+    conductor = getattr(team_run, "conductor", None)
+    if conductor is not None and conductor.has_active_blocker():
+        meta["active_blockers"] = [
+            {
+                "id": b.id,
+                "reason": b.reason,
+                "root_cause_paths": b.root_cause_paths,
+                "status": b.status.value,
+                "initiating_task_id": b.initiating_task_id,
+            }
+            for b in conductor.active_blockers()
+        ]
+
     return meta
 
 
 def _populate_plan_submission_context(
-    meta: ExecutionMetadata,
-    team_run: "TeamRun",
-    task: Task,
+    meta: ExecutionMetadata, team_run: "TeamRun", task: Task,
 ) -> None:
-    """Inject plan-submission context into metadata."""
-    root_id = str(getattr(team_run, "root_work_item_id", "") or "")
+    root_id = str(getattr(team_run, "root_task_id", "") or "")
     is_sub_planner = (
-        bool(root_id)
-        and task.id != root_id
-        and task.agent_name == "team_planner"
+        bool(root_id) and task.id != root_id and task.agent_name == "team_planner"
     )
     meta["allow_empty_plan"] = is_sub_planner
 
-    graph = getattr(getattr(team_run, "dispatcher", None), "graph", None)
+    graph = getattr(team_run.task_center, "graph", None)
     if isinstance(graph, dict):
         meta["known_external_dep_ids"] = {str(tid) for tid in graph}
 
     roster = getattr(team_run, "roster", None)
     if isinstance(roster, dict):
-        meta["roster"] = {str(role): list(agent_names) for role, agent_names in roster.items()}
+        meta["roster"] = {str(role): list(names) for role, names in roster.items()}
         agent_names: set[str] = set()
         for names in roster.values():
             if isinstance(names, list):
@@ -110,9 +119,7 @@ def _populate_plan_submission_context(
             meta["roster_agent_names"] = agent_names
 
     try:
-        from benchmarks.sweevo.plan_normalization import (
-            extract_benchmark_targets_from_team_run,
-        )
+        from benchmarks.sweevo.plan_normalization import extract_benchmark_targets_from_team_run
         test_ids, test_files = extract_benchmark_targets_from_team_run(team_run.id)
         if test_ids:
             meta["benchmark_test_ids"] = test_ids
@@ -122,40 +129,30 @@ def _populate_plan_submission_context(
         pass
 
 
-async def build_initial_user_message(
-    team_run: "TeamRun",
-    task: Task,
-    prefix: str | None = None,
-) -> str:
+async def build_initial_user_message(team_run: "TeamRun", task: Task, prefix: str | None = None) -> str:
     """Build context string for a task via TaskCenter."""
-    dispatcher = getattr(team_run, "dispatcher", None)
-    task_lookup = getattr(dispatcher, "get_task_by_id", None)
-    file_change_store = getattr(team_run, "file_change_store", None)
-    context = await team_run.task_center.context_for(
-        task,
-        file_change_store=file_change_store,
-        task_lookup=task_lookup,
-    )
+    context = await team_run.task_center.context_for(task)
+    # Priority 0: resume message for formerly-paused tasks
+    if getattr(task, 'pause_checkpoint', None) and getattr(task, 'pause_verdict', None):
+        resume_msg = (
+            "## RESUME AFTER BLOCKER FIX\n"
+            f"Your task was paused because: {task.pause_verdict}\n"
+            "The root cause has been fixed. Continue your work from where you left off."
+        )
+        context = f"{resume_msg}\n\n{context}" if context else resume_msg
     if prefix:
         return f"{prefix}\n\n{context}" if context else prefix
     return context
 
 
 async def build_query_context(
-    defn: "AgentDefinition",
-    team_run: "TeamRun",
-    task: Task,
+    defn: "AgentDefinition", team_run: "TeamRun", task: Task,
 ) -> TeamAgentContext:
     """Default production QueryContextBuilder."""
     from agents.registry import get_definition
 
-    meta = build_work_item_metadata(team_run, task)
+    meta = build_task_metadata(team_run, task)
     meta["role"] = getattr(defn, "role", "")
-    # Wire posthook tool names from the agent definition into metadata.
-    # Posthook tools (typically submission tools like submit_summary / submit_plan)
-    # are hidden during the main work phase and exposed only after the
-    # agent produces no more tool calls. The query loop then enters a
-    # posthook phase with a restricted registry containing only these tools.
     posthook_tools = getattr(defn, "posthook", None) or []
     if posthook_tools:
         meta["posthook_tool_names"] = list(posthook_tools)
@@ -166,6 +163,20 @@ async def build_query_context(
         )
     user_message = await build_initial_user_message(team_run, task)
     roster = getattr(team_run, "roster", None)
+    if getattr(defn, "role", None) == "replanner" and meta.get("active_blockers"):
+        blocker_lines = ["## Active Blockers\n",
+                         "The following blockers are currently active for sibling tasks. "
+                         "If this failure is related to an existing blocker, use `declare_blocker` "
+                         "with the same root cause paths to merge into the existing blocker "
+                         "rather than creating a new one.\n"]
+        for b in meta["active_blockers"]:
+            blocker_lines.append(
+                f"- **{b['id'][:8]}** ({b['status']}): {b['reason']}\n"
+                f"  Root cause: {', '.join(b['root_cause_paths'])}"
+            )
+        blocker_lines.append("")
+        user_message = "\n".join(blocker_lines) + "\n" + user_message
+
     if roster and getattr(defn, "role", None) in ("planner", "replanner"):
         lines = ["## Available Agents\n"]
         for role, agent_names in roster.items():

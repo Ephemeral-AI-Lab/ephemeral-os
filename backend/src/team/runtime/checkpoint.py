@@ -16,7 +16,7 @@ class TeamRunCheckpoint:
     sequence: int
     taken_at: datetime
     label: str | None
-    work_items: dict[str, Task]
+    tasks: dict[str, Task]
     ready_queue_order: list[str]
     project_context: Any
     budget_state: BudgetState

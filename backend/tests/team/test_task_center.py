@@ -6,16 +6,40 @@ import asyncio
 import time
 from datetime import datetime, timezone
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 
-from team.models import Note, Task, TaskStatus
+from team.models import BudgetConfig, BudgetState, Note, Task, TaskStatus
 from team.task_center import TaskCenter
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+class _FakeSessionFactory:
+    """No-op session factory for tests that only exercise in-memory notes."""
+    def __call__(self):
+        class _Ctx:
+            async def __aenter__(self_inner):
+                return None
+            async def __aexit__(self_inner, *a):
+                return False
+        return _Ctx()
+
+
+def _tc(**kwargs) -> TaskCenter:
+    """Create a TaskCenter with test defaults for required params."""
+    defaults = dict(
+        session_factory=_FakeSessionFactory(),
+        team_run_id="run-1",
+        budgets=BudgetConfig(),
+        budget_state=BudgetState(),
+    )
+    defaults.update(kwargs)
+    return TaskCenter(**defaults)
 
 
 def _note(
@@ -68,12 +92,12 @@ def _run(awaitable):
 
 
 def test_empty_task_center_returns_empty_reads():
-    tc = TaskCenter()
+    tc = _tc()
     assert _run(tc.read()) == []
 
 
 def test_post_appends_notes():
-    tc = TaskCenter()
+    tc = _tc()
     n1 = _note("n1", "task-1", "hello")
     n2 = _note("n2", "task-2", "world")
     _run(tc.post(n1))
@@ -90,7 +114,7 @@ def test_post_appends_notes():
 
 
 def test_read_filters_by_task_id():
-    tc = TaskCenter()
+    tc = _tc()
     _run(tc.post(_note("n1", "task-A")))
     _run(tc.post(_note("n2", "task-B")))
     _run(tc.post(_note("n3", "task-A")))
@@ -101,7 +125,7 @@ def test_read_filters_by_task_id():
 
 
 def test_read_authors_multiple():
-    tc = TaskCenter()
+    tc = _tc()
     _run(tc.post(_note("n1", "task-A")))
     _run(tc.post(_note("n2", "task-B")))
     _run(tc.post(_note("n3", "task-C")))
@@ -111,7 +135,7 @@ def test_read_authors_multiple():
 
 
 def test_read_authors_no_match_returns_empty():
-    tc = TaskCenter()
+    tc = _tc()
     _run(tc.post(_note("n1", "task-A")))
     assert _run(tc.read(authors=["task-Z"])) == []
 
@@ -122,10 +146,8 @@ def test_read_authors_no_match_returns_empty():
 
 
 def test_read_scope_paths_prefix_match():
-    tc = TaskCenter()
-    # note scoped to a file inside src/auth/
+    tc = _tc()
     _run(tc.post(_note("n1", "task-1", scope_paths=["src/auth/session.py"])))
-    # note scoped elsewhere
     _run(tc.post(_note("n2", "task-2", scope_paths=["src/billing/invoice.py"])))
 
     results = _run(tc.read(scope_paths=["src/auth"]))
@@ -134,30 +156,28 @@ def test_read_scope_paths_prefix_match():
 
 
 def test_read_scope_paths_exact_match():
-    tc = TaskCenter()
+    tc = _tc()
     _run(tc.post(_note("n1", "task-1", scope_paths=["src/auth"])))
     results = _run(tc.read(scope_paths=["src/auth"]))
     assert len(results) == 1
 
 
 def test_read_scope_paths_no_scope_on_note_includes_note():
-    tc = TaskCenter()
-    # unscoped notes are visible to all scope queries
+    tc = _tc()
     _run(tc.post(_note("n1", "task-1")))
     results = _run(tc.read(scope_paths=["src/auth"]))
     assert [note.id for note in results] == ["n1"]
 
 
 def test_read_scope_paths_trailing_slash_stripped():
-    tc = TaskCenter()
+    tc = _tc()
     _run(tc.post(_note("n1", "task-1", scope_paths=["src/auth/session.py"])))
-    # query with trailing slash should still match
     results = _run(tc.read(scope_paths=["src/auth/"]))
     assert len(results) == 1
 
 
 def test_read_scope_paths_matches_broader_note_scope_from_narrow_query():
-    tc = TaskCenter()
+    tc = _tc()
     _run(tc.post(_note("n1", "task-1", scope_paths=["src/auth"])))
     results = _run(tc.read(scope_paths=["src/auth/session.py"]))
     assert len(results) == 1
@@ -165,7 +185,7 @@ def test_read_scope_paths_matches_broader_note_scope_from_narrow_query():
 
 
 def test_read_scope_paths_respects_component_boundaries():
-    tc = TaskCenter()
+    tc = _tc()
     _run(tc.post(_note("n1", "task-1", scope_paths=["src/authz.py"])))
     assert _run(tc.read(scope_paths=["src/auth"])) == []
 
@@ -176,7 +196,7 @@ def test_read_scope_paths_respects_component_boundaries():
 
 
 def test_read_since_filters_by_timestamp():
-    tc = TaskCenter()
+    tc = _tc()
     _run(tc.post(_note("n1", "t1", timestamp=100.0)))
     _run(tc.post(_note("n2", "t2", timestamp=200.0)))
     _run(tc.post(_note("n3", "t3", timestamp=300.0)))
@@ -187,7 +207,7 @@ def test_read_since_filters_by_timestamp():
 
 
 def test_read_since_none_returns_all():
-    tc = TaskCenter()
+    tc = _tc()
     _run(tc.post(_note("n1", "t1", timestamp=100.0)))
     _run(tc.post(_note("n2", "t2", timestamp=200.0)))
     assert len(_run(tc.read(since=None))) == 2
@@ -199,7 +219,7 @@ def test_read_since_none_returns_all():
 
 
 def test_read_limit_returns_last_n():
-    tc = TaskCenter()
+    tc = _tc()
     for i in range(5):
         _run(tc.post(_note(f"n{i}", f"t{i}")))
 
@@ -210,7 +230,7 @@ def test_read_limit_returns_last_n():
 
 
 def test_read_limit_larger_than_total_returns_all():
-    tc = TaskCenter()
+    tc = _tc()
     _run(tc.post(_note("n1", "t1")))
     results = _run(tc.read(limit=100))
     assert len(results) == 1
@@ -222,7 +242,7 @@ def test_read_limit_larger_than_total_returns_all():
 
 
 def test_read_combined_authors_and_since():
-    tc = TaskCenter()
+    tc = _tc()
     _run(tc.post(_note("n1", "task-A", timestamp=100.0)))
     _run(tc.post(_note("n2", "task-A", timestamp=300.0)))
     _run(tc.post(_note("n3", "task-B", timestamp=300.0)))
@@ -233,7 +253,7 @@ def test_read_combined_authors_and_since():
 
 
 def test_read_combined_scope_and_limit():
-    tc = TaskCenter()
+    tc = _tc()
     _run(tc.post(_note("n1", "t1", scope_paths=["src/auth/a.py"])))
     _run(tc.post(_note("n2", "t2", scope_paths=["src/auth/b.py"])))
     _run(tc.post(_note("n3", "t3", scope_paths=["src/auth/c.py"])))
@@ -250,7 +270,7 @@ def test_read_combined_scope_and_limit():
 
 
 def test_context_for_always_includes_task_section():
-    tc = TaskCenter()
+    tc = _tc()
     task = _task("work-1", task="implement login flow")
     ctx = _run(tc.context_for(task))
     assert "## Your task" in ctx
@@ -258,7 +278,7 @@ def test_context_for_always_includes_task_section():
 
 
 def test_context_for_includes_scope_paths_when_present():
-    tc = TaskCenter()
+    tc = _tc()
     task = _task("work-1", task="do auth", scope_paths=["src/auth/"])
     ctx = _run(tc.context_for(task))
     assert "Scope:" in ctx
@@ -266,15 +286,14 @@ def test_context_for_includes_scope_paths_when_present():
 
 
 def test_context_for_no_scope_paths_omits_scope_line():
-    tc = TaskCenter()
+    tc = _tc()
     task = _task("work-1", task="general work")
     ctx = _run(tc.context_for(task))
     assert "Scope:" not in ctx
 
 
 def test_context_for_includes_dep_notes_when_deps_exist():
-    tc = TaskCenter()
-    # dep task posted a note
+    tc = _tc()
     _run(tc.post(_note("n1", "dep-task", "dependency output", agent_name="developer")))
     task = _task("work-1", task="build on dep", deps=["dep-task"])
     ctx = _run(tc.context_for(task))
@@ -283,7 +302,7 @@ def test_context_for_includes_dep_notes_when_deps_exist():
 
 
 def test_context_for_dep_notes_absent_when_no_deps():
-    tc = TaskCenter()
+    tc = _tc()
     _run(tc.post(_note("n1", "unrelated", "some output")))
     task = _task("work-1", task="standalone work")
     ctx = _run(tc.context_for(task))
@@ -291,35 +310,45 @@ def test_context_for_dep_notes_absent_when_no_deps():
 
 
 def test_context_for_includes_parent_notes_when_parent_id_matches():
-    tc = TaskCenter()
-    # parent task posted a note
+    tc = _tc()
     _run(tc.post(_note("n1", "parent-task", "parent reasoning", agent_name="team_planner")))
     task = _task("work-1", task="child task", parent_id="parent-task")
+
+    # Mock get_task so _parent_chain_ids doesn't hit DB
+    parent = _task("parent-task", task="parent")
+    async def _mock_get_task(task_id):
+        return parent if task_id == "parent-task" else None
+    tc.get_task = _mock_get_task
+
     ctx = _run(tc.context_for(task))
     assert "Parent context" in ctx
     assert "parent reasoning" in ctx
 
 
-def test_context_for_walks_parent_chain_when_lookup_available():
-    tc = TaskCenter()
+def test_context_for_walks_parent_chain_via_internal_get_task():
+    tc = _tc()
     _run(tc.post(_note("n1", "root-task", "root rationale", agent_name="team_planner")))
     _run(tc.post(_note("n2", "parent-task", "parent reasoning", agent_name="team_planner")))
     task = _task("work-1", task="child task", parent_id="parent-task")
 
-    async def _lookup(task_id: str):
+    # Mock get_task to simulate parent chain without DB
+    parent = _task("parent-task", task="parent", parent_id="root-task")
+    root = _task("root-task", task="root")
+    async def _mock_get_task(task_id):
         if task_id == "parent-task":
-            return _task("parent-task", task="parent", parent_id="root-task")
+            return parent
         if task_id == "root-task":
-            return _task("root-task", task="root")
+            return root
         return None
+    tc.get_task = _mock_get_task
 
-    ctx = _run(tc.context_for(task, task_lookup=_lookup))
+    ctx = _run(tc.context_for(task))
     assert "root rationale" in ctx
     assert "parent reasoning" in ctx
 
 
 def test_context_for_no_parent_notes_when_parent_id_is_none():
-    tc = TaskCenter()
+    tc = _tc()
     _run(tc.post(_note("n1", "some-task", "context")))
     task = _task("work-1", task="root level task")
     ctx = _run(tc.context_for(task))
@@ -327,33 +356,26 @@ def test_context_for_no_parent_notes_when_parent_id_is_none():
 
 
 def test_context_for_respects_max_context_bytes():
-    tc = TaskCenter()
-    # Post a very large dep note
+    tc = _tc()
     big_content = "x" * 100_000
     _run(tc.post(_note("n1", "dep-task", big_content, agent_name="developer")))
     task = _task("work-1", task="build on dep", deps=["dep-task"])
 
-    # With a tight budget, dep context should be truncated
     ctx = _run(tc.context_for(task, max_context_bytes=500))
     assert "## Your task" in ctx
-    # The context should be well under the original size
     assert len(ctx.encode()) < 100_000
 
 
 def test_context_for_task_section_never_trimmed():
-    tc = TaskCenter()
+    tc = _tc()
     big_content = "z" * 200_000
     _run(tc.post(_note("n1", "dep-task", big_content)))
     task = _task("work-1", task="important task description", deps=["dep-task"])
     ctx = _run(tc.context_for(task, max_context_bytes=100))
-    # Task section is priority 1 and never trimmed
     assert "important task description" in ctx
 
 
 def test_context_for_includes_recent_scope_changes_from_file_change_store():
-    tc = TaskCenter()
-    task = _task("work-1", task="do auth", scope_paths=["src/auth/"])
-    task.created_at = datetime(2026, 4, 12, 12, 0, tzinfo=timezone.utc)
     file_change_store = SimpleNamespace(
         initialized=True,
         changes_since=lambda since: [
@@ -371,8 +393,11 @@ def test_context_for_includes_recent_scope_changes_from_file_change_store():
             ),
         ],
     )
+    tc = _tc(file_change_store=file_change_store)
+    task = _task("work-1", task="do auth", scope_paths=["src/auth/"])
+    task.created_at = datetime(2026, 4, 12, 12, 0, tzinfo=timezone.utc)
 
-    ctx = _run(tc.context_for(task, file_change_store=file_change_store))
+    ctx = _run(tc.context_for(task))
 
     assert "## Recent changes in your scope" in ctx
     assert "src/auth/session.py" in ctx
@@ -385,32 +410,30 @@ def test_context_for_includes_recent_scope_changes_from_file_change_store():
 
 
 def test_snapshot_returns_copy_of_notes():
-    tc = TaskCenter()
+    tc = _tc()
     _run(tc.post(_note("n1", "t1")))
     _run(tc.post(_note("n2", "t2")))
 
     snap = tc.snapshot()
     assert len(snap) == 2
-    assert snap is not tc._notes  # must be a copy
+    assert snap is not tc._notes
 
 
 def test_snapshot_copy_is_independent():
-    tc = TaskCenter()
+    tc = _tc()
     _run(tc.post(_note("n1", "t1")))
     snap = tc.snapshot()
     _run(tc.post(_note("n2", "t2")))
-    # snapshot should not reflect new posts
     assert len(snap) == 1
     assert len(_run(tc.read())) == 2
 
 
 def test_restore_replaces_notes():
-    tc = TaskCenter()
+    tc = _tc()
     _run(tc.post(_note("n1", "t1")))
     _run(tc.post(_note("n2", "t2")))
 
     backup = tc.snapshot()
-    # Post more notes
     _run(tc.post(_note("n3", "t3")))
     assert len(_run(tc.read())) == 3
 
@@ -421,7 +444,7 @@ def test_restore_replaces_notes():
 
 
 def test_restore_empty_list_clears_notes():
-    tc = TaskCenter()
+    tc = _tc()
     _run(tc.post(_note("n1", "t1")))
     tc.restore([])
     assert _run(tc.read()) == []
@@ -433,6 +456,6 @@ def test_restore_empty_list_clears_notes():
 
 
 def test_task_center_stores_goal_and_user_request():
-    tc = TaskCenter(goal="build feature", user_request="please add auth")
+    tc = _tc(goal="build feature", user_request="please add auth")
     assert tc.goal == "build feature"
     assert tc.user_request == "please add auth"

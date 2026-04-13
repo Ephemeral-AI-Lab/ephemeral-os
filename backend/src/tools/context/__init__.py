@@ -1,7 +1,7 @@
-"""Context toolkit — Task Center notes + scope change awareness + exploration cache."""
+"""Task Center toolkit — notes + scope change awareness."""
 
 from __future__ import annotations
 
-from tools.context.toolkit import ContextToolkit
+from tools.context.toolkit import TaskCenterToolkit
 
-__all__ = ["ContextToolkit"]
+__all__ = ["TaskCenterToolkit"]

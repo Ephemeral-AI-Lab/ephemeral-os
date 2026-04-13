@@ -16,7 +16,7 @@ Use this reference only on child planning turns or prompts with `## Scoped Expan
 - Must recover real live filenames instead of guessed aliases.
 - Must deepen the DAG only for the unresolved branch. Do not serially re-plan already-settled siblings.
 - Must trust current live evidence over older inherited notes when they disagree.
-- Must use `check_exploration_memory` only after same-run inherited/shared context is insufficient and the exact owner scope is already named.
+- Must use `read_notes(scope_paths=[...])` to check for existing findings when same-run inherited/shared context is insufficient and the exact owner scope is already named.
 - Must keep direct ready lanes ready even when one residual branch still needs a child planner.
 - Must emit a direct developer lane when the child turn already owns one exact production file and inherited evidence already names its internal families. Add direct developer leaves plus at most one terminal validator; do not emit another child planner for that same file, and do not reopen same-file scouts unless live coherence drift erased the family split.
 - Never reopen a broad workspace scan if the parent already handed down the relevant slice boundary, and never probe parent background ids such as `bg_2`; reuse existing Task Center notes or refresh via `read_notes(...)` first.

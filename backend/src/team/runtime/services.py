@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from team.context.project import ProjectContext
@@ -10,13 +10,15 @@ from team.persistence.run_store import TeamRunStore, build_default_store
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
     from team.persistence.file_change_store import FileChangeStore, NullFileChangeStore
-    from team.runtime.dispatcher import Dispatcher
+    from team.runtime.dispatch_queue import DispatchQueue
+    from team.task_center import TaskCenter
 
 
 @dataclass(frozen=True)
 class TeamRuntimeServices:
     project_context: ProjectContext
-    dispatcher: "Dispatcher"
+    task_center: "TaskCenter"
+    dispatch_queue: "DispatchQueue"
     event_store: TeamRunStore
     file_change_store: "FileChangeStore | NullFileChangeStore | None" = None
 
@@ -32,23 +34,16 @@ def build_team_runtime_services(
     event_store: TeamRunStore | None = None,
     session_factory: "async_sessionmaker[AsyncSession] | None" = None,
 ) -> TeamRuntimeServices:
-    from team.persistence.team_engine import (
-        create_team_engine,
-        get_team_session_factory,
-    )
-    from team.runtime.dispatcher import Dispatcher
+    from team.persistence.team_engine import create_team_engine, get_team_session_factory
+    from team.runtime.dispatch_queue import DispatchQueue
+    from team.task_center import TaskCenter
 
-    project_key = repo_root or ""
     project_context = ProjectContext(
-        goal=goal or user_request,
-        user_request=user_request,
-        repo_root=repo_root or "",
-        project_key=project_key,
+        goal=goal or user_request, user_request=user_request,
+        repo_root=repo_root or "", project_key=repo_root or "",
     )
     store = event_store if event_store is not None else build_default_store()
 
-    # Team coordination is store-backed only. Bootstrap the shared async
-    # engine lazily when the caller did not inject a session factory.
     task_session_factory = session_factory or get_team_session_factory()
     if task_session_factory is None:
         try:
@@ -59,23 +54,25 @@ def build_team_runtime_services(
                 "Set EPHEMERALOS_DATABASE_URL or pass session_factory explicitly."
             ) from exc
 
-    from team.runtime.dispatcher_store import DispatcherStore
-    store_driver = DispatcherStore(task_session_factory)
-
-    # In-memory file change tracking — no PostgreSQL dependency.
     from team.persistence.file_change_store import FileChangeStore
     file_change_store: Any = FileChangeStore()
 
-    dispatcher = Dispatcher(
+    task_center = TaskCenter(
+        session_factory=task_session_factory,
         team_run_id=team_run_id,
         budgets=budgets,
         budget_state=budget_state,
-        store=store_driver,
+        goal=goal or "",
+        user_request=user_request,
+        file_change_store=file_change_store,
         event_store=store,
     )
+    dispatch_queue = DispatchQueue(task_session_factory)
+
     return TeamRuntimeServices(
         project_context=project_context,
-        dispatcher=dispatcher,
+        task_center=task_center,
+        dispatch_queue=dispatch_queue,
         event_store=store,
         file_change_store=file_change_store,
     )

@@ -10,7 +10,7 @@ Use this reference only on fresh benchmark roots or any turn that still lacks cl
 4. If the first anchor is empty, or `ci_status()` reports `initialized=false`, stop exact-file guessing immediately. This is a cold-CI branch.
 5. On cold CI, keep unresolved work on stable directories/packages and let scouts confirm exact files. Failing benchmark tests remain evidence only.
 6. If more than one owner slice is still unresolved after the first anchor, the next planning action must be a scout wave, not final DAG synthesis.
-7. On repeated work, if one canonical owner is already exact and same-run reuse is empty, call `check_exploration_memory(paths=[...])` before relaunching that scout.
+7. On repeated work, if one canonical owner is already exact and same-run reuse is empty, call `read_notes(scope_paths=[...])` to check for existing findings before relaunching that scout.
 8. If a first-wave guessed exact path returns `File not found`, delete that leaf and wait for the scout note. Do not start a replacement ownership search mid-wave; keep the last confirmed parent boundary until note review.
 9. After the wave, `read_notes(scope_paths=[...])`; if `context_changed_since()` or a scope-change warning says the layer moved, refresh only stale slices.
 10. Stop exploring once the current layer can name ready work plus residual boundaries.

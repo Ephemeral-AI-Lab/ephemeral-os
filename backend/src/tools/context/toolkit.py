@@ -1,10 +1,9 @@
-"""Context tools — unified Task Center notes + staleness + exploration memory.
+"""Task Center tools — notes + staleness.
 
 Tools:
 - post_note                — post a note for other agents
 - read_notes               — read/search notes with optional keyword filter
 - context_changed_since    — check if context is stale (other agents' edits)
-- check_exploration_memory — check if a scope was recently explored
 
 Role-based restrictions are handled via ``blocked_tools`` in agent definitions
 rather than separate read/write toolkit variants.
@@ -12,111 +11,14 @@ rather than separate read/write toolkit variants.
 
 from __future__ import annotations
 
-import hashlib
 import json
-import os
 import time
 import uuid
-from typing import Any
 
 from pydantic import BaseModel, Field
 
 from tools.context.freshness import check_freshness
 from tools.core.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolResult
-
-
-# ---------------------------------------------------------------------------
-# ExplorationMemory — cross-run note cache (moved from tools.memory.cache)
-# ---------------------------------------------------------------------------
-
-
-class ExplorationMemory:
-    """Cross-run note cache. Content-addressed by file hashes.
-
-    Uses an in-memory LRU dict. No PostgreSQL dependency.
-    """
-
-    _MAX_FILES_TO_HASH = 500
-    _MAX_CACHE_ENTRIES = 256
-
-    def __init__(self) -> None:
-        self._cache: dict[str, list[dict[str, Any]]] = {}
-
-    def attach_store(self, store: Any) -> None:
-        """No-op — kept for backwards compatibility."""
-
-    def attach_pg(self, pg_store: Any) -> None:
-        """No-op — kept for backwards compatibility."""
-
-    async def check_async(
-        self,
-        scope_paths: list[str],
-        workspace_root: str = "",
-    ) -> list[dict[str, Any]] | None:
-        """Check the in-memory cache for cached notes."""
-        content_hash = self._hash_scope(scope_paths, workspace_root)
-        key = self._cache_key(scope_paths, content_hash)
-        return self._cache.get(key)
-
-    async def save_async(
-        self,
-        scope_paths: list[str],
-        notes: list[dict[str, Any]],
-        workspace_root: str = "",
-    ) -> None:
-        """Write notes to the in-memory cache."""
-        content_hash = self._hash_scope(scope_paths, workspace_root)
-        key = self._cache_key(scope_paths, content_hash)
-        # Simple LRU: evict oldest when full
-        if len(self._cache) >= self._MAX_CACHE_ENTRIES and key not in self._cache:
-            oldest = next(iter(self._cache))
-            del self._cache[oldest]
-        self._cache[key] = notes
-
-    def _cache_key(self, scope_paths: list[str], content_hash: str) -> str:
-        scope_str = "|".join(sorted(scope_paths))
-        return hashlib.sha256(f"{scope_str}:{content_hash}".encode()).hexdigest()[:24]
-
-    def _hash_scope(self, scope_paths: list[str], workspace_root: str) -> str:
-        """Hash files under scope_paths to invalidate stale cache entries."""
-        digest = hashlib.sha256()
-        file_count = 0
-        for scope in sorted(scope_paths):
-            full_path = os.path.join(workspace_root, scope) if workspace_root else scope
-            if os.path.isfile(full_path):
-                digest.update(self._hash_file(full_path).encode())
-                file_count += 1
-            elif os.path.isdir(full_path):
-                for root, _dirs, files in sorted(os.walk(full_path)):
-                    for fname in sorted(files):
-                        if file_count >= self._MAX_FILES_TO_HASH:
-                            digest.update(f"capped:{file_count}".encode())
-                            return digest.hexdigest()[:16]
-                        file_path = os.path.join(root, fname)
-                        digest.update(self._hash_file(file_path).encode())
-                        file_count += 1
-            else:
-                digest.update(f"missing:{scope}".encode())
-        return digest.hexdigest()[:16]
-
-    @staticmethod
-    def _hash_file(path: str) -> str:
-        try:
-            digest = hashlib.sha256()
-            with open(path, "rb") as handle:
-                for chunk in iter(lambda: handle.read(8192), b""):
-                    digest.update(chunk)
-            return digest.hexdigest()[:16]
-        except (OSError, PermissionError):
-            return ""
-
-
-_exploration_memory = ExplorationMemory()
-
-
-def get_exploration_memory() -> ExplorationMemory:
-    """Return the process-wide exploration cache singleton."""
-    return _exploration_memory
 
 
 # ---------------------------------------------------------------------------
@@ -163,11 +65,6 @@ class PostNoteTool(BaseTool):
             scope_paths=scope,
         )
         await tc.post(note)
-        # Reset edit counter so the note nudge doesn't fire until the
-        # next batch of edits.  See _track_edit_for_note_nudge().
-        context.metadata["edits_since_last_note"] = 0
-        context.metadata["files_edited_since_last_note"] = []
-        context.metadata["_note_nudge_at_edit"] = 0
         return ToolResult(output=f"Note posted ({len(arguments.content)} chars).")
 
 
@@ -276,49 +173,6 @@ class ContextChangedSinceTool(BaseTool):
 
 
 # ---------------------------------------------------------------------------
-# CheckExplorationMemoryTool (absorbed from tools.memory)
-# ---------------------------------------------------------------------------
-
-
-class CheckExplorationMemoryInput(BaseModel):
-    paths: list[str] = Field(..., description="Scope paths to check for cached exploration")
-
-
-class CheckExplorationMemoryTool(BaseTool):
-    name = "check_exploration_memory"
-    description = (
-        "Check if a scope was recently explored and files haven't changed. "
-        "Returns 'cached' (with notes injected into Task Center) or 'needs_exploration'."
-    )
-    input_model = CheckExplorationMemoryInput
-
-    async def execute(
-        self, arguments: CheckExplorationMemoryInput, context: ToolExecutionContext
-    ) -> ToolResult:
-        mem = get_exploration_memory()
-        workspace_root = context.metadata.get("daytona_cwd", "") or context.metadata.get(
-            "ci_workspace_root", ""
-        )
-        cached = await mem.check_async(arguments.paths, workspace_root)
-        if cached is not None:
-            tc = context.metadata.get("task_center")
-            if tc:
-                from team.models import Note
-
-                for note_dict in cached:
-                    await tc.post(Note(**note_dict))
-            return ToolResult(
-                output=json.dumps(
-                    {
-                        "status": "cached",
-                        "note_count": len(cached),
-                    }
-                )
-            )
-        return ToolResult(output=json.dumps({"status": "needs_exploration"}))
-
-
-# ---------------------------------------------------------------------------
 # Toolkit
 # ---------------------------------------------------------------------------
 
@@ -326,12 +180,11 @@ _ALL_TOOLS = [
     PostNoteTool(),
     ReadNotesTool(),
     ContextChangedSinceTool(),
-    CheckExplorationMemoryTool(),
 ]
 
 
-class ContextToolkit(BaseToolkit):
-    """Task Center notes, scope change queries, and exploration cache.
+class TaskCenterToolkit(BaseToolkit):
+    """Task Center notes and scope change queries.
 
     All tools are registered; role-based restrictions (e.g. blocking
     ``post_note`` for planners) are handled via ``blocked_tools`` in
@@ -339,9 +192,9 @@ class ContextToolkit(BaseToolkit):
     """
 
     @classmethod
-    def from_context(cls, ctx: object) -> ContextToolkit:
+    def from_context(cls, ctx: object) -> TaskCenterToolkit:
         return cls(
-            name="context",
-            description="Post/read notes, check scope changes, and query exploration cache.",
+            name="task_center",
+            description="Post/read notes and check scope changes.",
             tools=list(_ALL_TOOLS),
         )

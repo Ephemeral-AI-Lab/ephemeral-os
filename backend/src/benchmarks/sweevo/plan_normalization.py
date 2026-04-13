@@ -32,8 +32,8 @@ def extract_benchmark_targets_from_team_run(
         return None, None
     if team_run is None:
         return None, None
-    graph = getattr(getattr(team_run, "dispatcher", None), "graph", None)
-    root_id = getattr(team_run, "root_work_item_id", None)
+    graph = getattr(getattr(team_run, "task_center", None), "graph", None)
+    root_id = getattr(team_run, "root_task_id", None)
     if not isinstance(graph, dict) or not isinstance(root_id, str):
         return None, None
     root = graph.get(root_id)

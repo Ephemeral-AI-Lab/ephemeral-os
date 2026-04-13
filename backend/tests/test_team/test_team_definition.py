@@ -218,25 +218,27 @@ def _noop_executor_factory(team_run: TeamRun) -> _NoopWorker:
     return _NoopWorker(team_run)
 
 
-class _FakeDispatcher:
+class _FakeTaskCenter:
     def __init__(self) -> None:
         from team.models import BudgetConfig, BudgetState
 
         self.budgets = BudgetConfig()
         self.budget_state = BudgetState()
         self.graph = {}
-        self.task_center = None
+        self._events = NullTeamRunStore()
+        self._notes = []
 
-    async def add_work_item(self, task) -> None:
+    async def add_task(self, task) -> None:
         self.budget_state.tasks_used += 1
         self.graph[task.id] = task
 
-    async def cancel_all_pending(self) -> None:
+    async def cancel_all_pending(self) -> int:
         for task in self.graph.values():
             task.status = TaskStatus.CANCELLED
+        return len(self.graph)
 
-    async def cancel_running(self, reason: str) -> None:  # noqa: ARG002
-        return None
+    async def cancel_all_running(self, reason: str) -> int:
+        return 0
 
     async def all_terminal(self) -> bool:
         return True
@@ -245,13 +247,19 @@ class _FakeDispatcher:
         return {"cancelled"}
 
 
+class _FakeDispatchQueue:
+    async def pop_ready(self, run_id: str):
+        return None
+
+
 def _fake_services() -> TeamRuntimeServices:
     from team.context.project import ProjectContext
 
-    dispatcher = _FakeDispatcher()
+    tc = _FakeTaskCenter()
     return TeamRuntimeServices(
         project_context=ProjectContext(goal="", user_request="", project_key="", repo_root=""),
-        dispatcher=dispatcher,  # type: ignore[arg-type]
+        task_center=tc,  # type: ignore[arg-type]
+        dispatch_queue=_FakeDispatchQueue(),  # type: ignore[arg-type]
         event_store=NullTeamRunStore(),
     )
 
@@ -269,7 +277,7 @@ def _stub_registry(known: set[str], monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 async def _cleanup_run(run: TeamRun) -> None:
-    if run.root_work_item_id is None:
+    if run.root_task_id is None:
         return
     await run.cancel()
     try:
@@ -298,8 +306,8 @@ async def test_start_with_team_definition_spawns_root_with_planner(
             executor_factory=_noop_executor_factory,
         )
         assert run.status == TeamRunStatus.RUNNING
-        assert run.root_work_item_id is not None
-        root = run.dispatcher.graph[run.root_work_item_id]
+        assert run.root_task_id is not None
+        root = run.task_center.graph[run.root_task_id]
         assert root.agent_name == "my_planner"
         assert root.task == "{'k': 'v'}"
         assert getattr(root, "payload") == {"k": "v"}
@@ -326,9 +334,9 @@ async def test_start_with_team_definition_rejects_unknown_planner(
             payload={},
             executor_factory=_noop_executor_factory,
         )
-    assert run.root_work_item_id is None
+    assert run.root_task_id is None
     assert run.status == TeamRunStatus.PENDING
-    assert len(run.dispatcher.graph) == 0
+    assert len(run.task_center.graph) == 0
 
 
 @pytest.mark.asyncio

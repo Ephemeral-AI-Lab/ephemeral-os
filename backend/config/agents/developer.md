@@ -5,7 +5,7 @@ role: developer
 model: inherit
 tool_call_limit: 100
 toolkits: ["sandbox_operations", "code_intelligence", "context"]
-posthook: ["submit_summary", "request_retry", "request_replan"]
+posthook: ["submit_summary", "request_replan"]
 skills: ["team-developer-playbook"]
 ---
 # Task

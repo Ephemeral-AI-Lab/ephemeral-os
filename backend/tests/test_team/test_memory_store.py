@@ -27,17 +27,25 @@ def _memory_store() -> TeamMemoryStore:
     return store
 
 
-class _FakeDispatcher:
+class _FakeTaskCenter:
     def __init__(self) -> None:
         self.budgets = BudgetConfig()
         self.budget_state = BudgetState()
-        self.task_center = None
+        self.graph = {}
+        self._notes = []
+        self._events = NullTeamRunStore()
+
+
+class _FakeDispatchQueue:
+    async def pop_ready(self, run_id: str):
+        return None
 
 
 def _fake_services() -> TeamRuntimeServices:
     return TeamRuntimeServices(
         project_context=ProjectContext(goal="", user_request="", project_key="", repo_root=""),
-        dispatcher=_FakeDispatcher(),  # type: ignore[arg-type]
+        task_center=_FakeTaskCenter(),  # type: ignore[arg-type]
+        dispatch_queue=_FakeDispatchQueue(),  # type: ignore[arg-type]
         event_store=NullTeamRunStore(),
     )
 

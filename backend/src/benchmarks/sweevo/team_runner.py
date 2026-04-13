@@ -42,7 +42,7 @@ from team.persistence.run_store import build_default_store
 from team.runtime.context_builder import (
     TeamAgentContext,
     build_initial_user_message,
-    build_work_item_metadata,
+    build_task_metadata,
 )
 from team.runtime.executor import Executor
 from team.runtime.team_run import TeamRun
@@ -729,7 +729,6 @@ def _make_runner(
         final_text = ""
         try:
             async for event in agent.run(prompt):
-                event_count += 1
                 if printer is None:
                     continue
                 try:
@@ -886,7 +885,7 @@ def _make_runner(
                     checkpoint_id = await team_run.checkpoint(label=checkpoint_label)
                     retry_count_total = sum(
                         int(getattr(wi, "retry_count", 0) or 0)
-                        for wi in team_run.dispatcher.graph.values()
+                        for wi in team_run.task_center.graph.values()
                     )
                     replans_used = int(getattr(team_run.budget_state, "replans_used", 0) or 0)
                     try:
@@ -966,7 +965,7 @@ def _emit_dispatcher_dag(
 ) -> None:
     if printer is None:
         return
-    graph = team_run.dispatcher.graph
+    graph = team_run.task_center.graph
     by_id = graph
     printer.raw_line(
         "team",
@@ -1033,7 +1032,7 @@ def _make_context_builders(
         meta = _build_runtime_metadata(
             sandbox_id=team_run.sandbox_id or sandbox_id,
             repo_dir=repo_dir,
-            base=build_work_item_metadata(team_run, wi),
+            base=build_task_metadata(team_run, wi),
         )
         try:
             get_code_intelligence(
@@ -1225,7 +1224,7 @@ def _finalize_team_result(
     resumed_from_checkpoint: str | None = None,
 ) -> dict[str, Any]:
     status = tr.status
-    task_count = len(tr.dispatcher.graph)
+    task_count = len(tr.task_center.graph)
     logger.info(
         "sweevo team run %s finished: status=%s tasks=%d",
         tr.id,
@@ -1234,7 +1233,7 @@ def _finalize_team_result(
     )
     if status != TeamRunStatus.SUCCEEDED:
         failures = [
-            wi for wi in tr.dispatcher.graph.values() if wi.status.value == "failed"
+            wi for wi in tr.task_center.graph.values() if wi.status.value == "failed"
         ]
         for wi in failures:
             logger.warning(
@@ -1259,15 +1258,15 @@ def _finalize_team_result(
             "label": cp.label,
             "sequence": cp.sequence,
         }
-        for cp in tr.dispatcher.list_checkpoints()
+        for cp in tr.task_center.list_checkpoints()
     ]
     resolved_checkpoint_ids = [
         str(record.get("id") or "").strip()
         for record in resolved_checkpoint_records
         if str(record.get("id") or "").strip()
     ]
-    max_depth_reached = max((wi.depth for wi in tr.dispatcher.graph.values()), default=0)
-    retry_count_total = sum(int(getattr(wi, "retry_count", 0) or 0) for wi in tr.dispatcher.graph.values())
+    max_depth_reached = max((wi.depth for wi in tr.task_center.graph.values()), default=0)
+    retry_count_total = sum(int(getattr(wi, "retry_count", 0) or 0) for wi in tr.task_center.graph.values())
     replans_used = int(getattr(tr.budget_state, "replans_used", 0) or 0)
     usage_summary = None
     usage_by_model: list[dict[str, Any]] = []
@@ -1532,7 +1531,7 @@ async def resume_sweevo_team(
     checkpoint_label = ""
     retry_count_total = sum(
         int(getattr(wi, "retry_count", 0) or 0)
-        for wi in tr.dispatcher.graph.values()
+        for wi in tr.task_center.graph.values()
     )
     budget_state = getattr(tr, "budget_state", None)
     replans_used = int(getattr(budget_state, "replans_used", 0) or 0)

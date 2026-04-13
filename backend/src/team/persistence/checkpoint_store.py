@@ -4,7 +4,7 @@ Stores TeamRunCheckpoint snapshots in PostgreSQL so that checkpoints
 survive process restarts. The in-memory deque in Dispatcher remains
 the hot-path read cache; this store handles durability.
 
-Uses async_sessionmaker, matching the DispatcherStore pattern.
+Uses async_sessionmaker, matching the TaskCenter pattern.
 """
 
 from __future__ import annotations
@@ -47,7 +47,7 @@ class CheckpointRecord(Base):
         DateTime(timezone=True), nullable=False, default=_utcnow
     )
     label: Mapped[str | None] = mapped_column(Text, nullable=True)
-    work_items: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    tasks: Mapped[dict] = mapped_column(JSONB, nullable=False)
     ready_queue_order: Mapped[list[str]] = mapped_column(
         ARRAY(Text), default=list
     )
@@ -67,21 +67,21 @@ class CheckpointRecord(Base):
 
 
 class CheckpointStore(AsyncStoreMixin):
-    """Async checkpoint persistence. Follows DispatcherStore pattern."""
+    """Async checkpoint persistence. Follows TaskCenter pattern."""
 
     async def save(self, checkpoint: Any) -> None:
         """Persist a TeamRunCheckpoint snapshot.
 
-        Serializes work_items (dict[str, Task]) and budget_state via
+        Serializes tasks (dict[str, Task]) and budget_state via
         dataclasses.asdict(). project_context is stored as-is (must be
         JSON-serializable or None).
         """
-        work_items_json = {
+        tasks_json = {
             task_id: asdict(task)
-            for task_id, task in checkpoint.work_items.items()
+            for task_id, task in checkpoint.tasks.items()
         }
         # Convert non-serializable fields
-        for task_data in work_items_json.values():
+        for task_data in tasks_json.values():
             for field in ("created_at", "started_at", "finished_at"):
                 val = task_data.get(field)
                 if isinstance(val, datetime):
@@ -95,7 +95,7 @@ class CheckpointStore(AsyncStoreMixin):
             sequence=checkpoint.sequence,
             taken_at=checkpoint.taken_at,
             label=checkpoint.label,
-            work_items=work_items_json,
+            tasks=tasks_json,
             ready_queue_order=list(checkpoint.ready_queue_order),
             budget_state=asdict(checkpoint.budget_state),
             project_context=self._safe_json(checkpoint.project_context),
@@ -111,7 +111,7 @@ class CheckpointStore(AsyncStoreMixin):
                 await db.execute(
                     text("""
                         SELECT id, team_run_id, sequence, taken_at, label,
-                               work_items, ready_queue_order, budget_state,
+                               tasks, ready_queue_order, budget_state,
                                project_context
                         FROM team_run_checkpoints
                         WHERE team_run_id = :run_id
@@ -129,7 +129,7 @@ class CheckpointStore(AsyncStoreMixin):
                 sequence=row.sequence,
                 taken_at=row.taken_at,
                 label=row.label,
-                work_items=row.work_items,
+                tasks=row.tasks,
                 ready_queue_order=list(row.ready_queue_order or []),
                 budget_state=row.budget_state or {},
                 project_context=row.project_context,
@@ -144,7 +144,7 @@ class CheckpointStore(AsyncStoreMixin):
                 await db.execute(
                     text("""
                         SELECT id, team_run_id, sequence, taken_at, label,
-                               work_items, ready_queue_order, budget_state,
+                               tasks, ready_queue_order, budget_state,
                                project_context
                         FROM team_run_checkpoints
                         WHERE id = :cp_id AND team_run_id = :run_id
@@ -160,7 +160,7 @@ class CheckpointStore(AsyncStoreMixin):
                 sequence=row.sequence,
                 taken_at=row.taken_at,
                 label=row.label,
-                work_items=row.work_items,
+                tasks=row.tasks,
                 ready_queue_order=list(row.ready_queue_order or []),
                 budget_state=row.budget_state or {},
                 project_context=row.project_context,
@@ -173,7 +173,7 @@ class CheckpointStore(AsyncStoreMixin):
                 await db.execute(
                     text("""
                         SELECT id, team_run_id, sequence, taken_at, label,
-                               work_items, ready_queue_order, budget_state,
+                               tasks, ready_queue_order, budget_state,
                                project_context
                         FROM team_run_checkpoints
                         WHERE team_run_id = :run_id
@@ -189,7 +189,7 @@ class CheckpointStore(AsyncStoreMixin):
                     sequence=r.sequence,
                     taken_at=r.taken_at,
                     label=r.label,
-                    work_items=r.work_items,
+                    tasks=r.tasks,
                     ready_queue_order=list(r.ready_queue_order or []),
                     budget_state=r.budget_state or {},
                     project_context=r.project_context,

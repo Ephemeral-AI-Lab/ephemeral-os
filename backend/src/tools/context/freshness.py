@@ -63,22 +63,21 @@ async def check_freshness(context: ToolExecutionContext) -> FreshnessReport:
         )
 
     tc = context.metadata.get("task_center")
-    dispatcher = context.metadata.get("dispatcher")
     if tc is not None:
         task_deps = set(context.metadata.get("task_deps", []))
         if task_deps:
             dep_notes = await tc.read(authors=list(task_deps), since=since)
             new_dep_notes = len(dep_notes)
-    if dispatcher is not None and hasattr(dispatcher, "done_sibling_ids"):
-        sibling_ids = await dispatcher.done_sibling_ids(
+    if tc is not None and hasattr(tc, "done_sibling_ids"):
+        sibling_ids = await tc.done_sibling_ids(
             task_id=task_id,
             parent_id=context.metadata.get("task_parent_id"),
             since=since,
         )
-        if sibling_ids and scope_paths and hasattr(dispatcher, "get_task_by_id"):
+        if sibling_ids and scope_paths and hasattr(tc, "get_task"):
             relevant = 0
             for sibling_id in sibling_ids:
-                sibling = await dispatcher.get_task_by_id(sibling_id)
+                sibling = await tc.get_task(sibling_id)
                 sibling_scopes = list(getattr(sibling, "scope_paths", None) or [])
                 if not sibling_scopes or any(
                     scope_paths_overlap(scope, sibling_scope)

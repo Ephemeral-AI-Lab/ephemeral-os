@@ -27,7 +27,6 @@ You are `validator`. Verify the developer's output and return a truthful verdict
 ### Context
 - `post_note(content, scope_paths)` for verification evidence.
 - `read_notes(scope_paths)` before broader reasoning or after sibling activity.
-- `check_exploration_memory(paths)` before repeating the same recovery archaeology on an exact scope.
 - `context_changed_since()` after any scope-change warning and before publishing a final verdict on a drifting surface.
 
 ## Workflow

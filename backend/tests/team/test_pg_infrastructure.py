@@ -96,33 +96,43 @@ class TestTaskRecord:
 
 
 # ---------------------------------------------------------------------------
-# DispatcherStore — structure check (no DB)
+# TaskCenter — structure check (no DB)
 # ---------------------------------------------------------------------------
 
-from team.runtime.dispatcher_store import DispatcherStore
+from team.task_center import TaskCenter
 
 
-class TestDispatcherStoreStructure:
+class TestTaskCenterStructure:
     def test_has_required_methods(self):
-        """Verify the public API matches Section 14.6 spec."""
-        assert callable(getattr(DispatcherStore, 'pop_ready', None))
-        assert callable(getattr(DispatcherStore, 'mark_running', None))
-        assert callable(getattr(DispatcherStore, 'mark_done', None))
-        assert callable(getattr(DispatcherStore, 'insert_plan', None))
-        assert callable(getattr(DispatcherStore, 'mark_failed', None))
-        assert callable(getattr(DispatcherStore, 'mark_cancelled', None))
-        assert callable(getattr(DispatcherStore, 'get_task', None))
-        assert callable(getattr(DispatcherStore, 'all_terminal', None))
-        assert callable(getattr(DispatcherStore, 'cascade_cancel_recursive', None))
-        assert callable(getattr(DispatcherStore, 'recover_running', None))
-        # Full mutation ops
-        assert callable(getattr(DispatcherStore, 'fail_task', None))
-        assert callable(getattr(DispatcherStore, 'retry_task', None))
-        assert callable(getattr(DispatcherStore, 'cancel_all_pending', None))
-        assert callable(getattr(DispatcherStore, 'cancel_all_running', None))
-        assert callable(getattr(DispatcherStore, 'request_replan', None))
-        assert callable(getattr(DispatcherStore, 'get_adjacency', None))
-        assert callable(getattr(DispatcherStore, 'get_statuses', None))
+        """Verify the unified TaskCenter API has all required methods."""
+        assert callable(getattr(TaskCenter, 'mark_running', None))
+        assert callable(getattr(TaskCenter, 'insert_plan', None))
+        assert callable(getattr(TaskCenter, 'get_task', None))
+        assert callable(getattr(TaskCenter, 'all_terminal', None))
+        assert callable(getattr(TaskCenter, 'cascade_cancel_recursive', None))
+        assert callable(getattr(TaskCenter, 'recover_running', None))
+        assert callable(getattr(TaskCenter, 'fail', None))
+        assert callable(getattr(TaskCenter, 'retry_task', None))
+        assert callable(getattr(TaskCenter, 'cancel_all_pending', None))
+        assert callable(getattr(TaskCenter, 'cancel_all_running', None))
+        assert callable(getattr(TaskCenter, 'request_replan', None))
+        assert callable(getattr(TaskCenter, 'get_adjacency', None))
+        assert callable(getattr(TaskCenter, 'get_statuses', None))
+        # Unified: notes + context
+        assert callable(getattr(TaskCenter, 'post', None))
+        assert callable(getattr(TaskCenter, 'read', None))
+        assert callable(getattr(TaskCenter, 'context_for', None))
+        # Orchestration
+        assert callable(getattr(TaskCenter, 'complete_task', None))
+        assert callable(getattr(TaskCenter, 'apply_replan', None))
+
+
+from team.runtime.dispatch_queue import DispatchQueue
+
+
+class TestDispatchQueueStructure:
+    def test_has_pop_ready(self):
+        assert callable(getattr(DispatchQueue, 'pop_ready', None))
 
 
 class _FakeCascadeResult:
@@ -163,13 +173,20 @@ class _FakeSessionFactory:
 
 def test_cascade_cancel_recursive_seeds_root_then_walks_dependents():
     session = _FakeCascadeSession()
-    store = DispatcherStore(_FakeSessionFactory(session))
+    from team.task_center import TaskCenter
+    from team.models import BudgetConfig, BudgetState
+    tc = TaskCenter(
+        session_factory=_FakeSessionFactory(session),
+        team_run_id="run-1",
+        budgets=BudgetConfig(),
+        budget_state=BudgetState(),
+    )
 
-    asyncio.run(store.cascade_cancel_recursive("run-1", "task-1"))
+    asyncio.run(tc.cascade_cancel_recursive("task-1"))
 
     sql = session.statements[0]
     assert "WITH RECURSIVE dep_chain AS" in sql
-    assert "AND id = :task_id" in sql
+    assert "AND id=:tid" in sql
     assert "JOIN dep_chain dc ON dc.id = ANY(t.deps)" in sql
     assert "JOIN dep_chain dc ON t.parent_id = dc.id" in sql
-    assert "WHERE id != :task_id" in sql
+    assert "WHERE id != :tid" in sql

@@ -37,6 +37,7 @@ class TaskStatus(str, Enum):
     READY = "ready"
     RUNNING = "running"
     EXPANDED = "expanded"  # planner submitted children, waiting for them to finish
+    PAUSED = "paused"
     DONE = "done"
     FAILED = "failed"
     CANCELLED = "cancelled"
@@ -119,6 +120,9 @@ class Task:
     started_at: datetime | None = None
     finished_at: datetime | None = None
     failure_reason: str | None = None
+    blocker_id: str | None = None
+    pause_checkpoint: str | None = None
+    pause_verdict: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -224,6 +228,14 @@ class ReplanRequest:
     submission_kind: str = field(default="replan", init=False, repr=False)
 
 
+@dataclass
+class BlockerDeclaration:
+    root_cause_paths: list[str]
+    reason: str
+    suggestion: str | None = None
+    submission_kind: str = field(default="blocker", init=False, repr=False)
+
+
 # ---------------------------------------------------------------------------
 # Result type for executor dispatch
 # ---------------------------------------------------------------------------
@@ -277,3 +289,31 @@ class TeamDefinition:
     description: str
     entry_planner: str
     roster: dict[str, list[str]] = field(default_factory=dict)
+
+
+# ---------------------------------------------------------------------------
+# Blocker protocol
+# ---------------------------------------------------------------------------
+
+
+class BlockerStatus(str, Enum):
+    ASSESSING = "assessing"
+    FIXING = "fixing"
+    RESOLVED = "resolved"
+    FAILED = "failed"
+
+
+@dataclass
+class Blocker:
+    id: str
+    team_run_id: str
+    status: BlockerStatus
+    reason: str
+    root_cause_paths: list[str]
+    initiating_task_id: str
+    fix_task_id: str | None = None
+    declared_by: str | None = None
+    fix_summary: str | None = None
+    pending_assessments: int = 0
+    created_at: float = field(default_factory=time.time)
+    resolved_at: float | None = None

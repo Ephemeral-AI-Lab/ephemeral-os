@@ -60,7 +60,7 @@ def _fake_team_run(**overrides) -> SimpleNamespace:
         sandbox_id="sbx-1",
         session_id="sess-1",
         budgets=SimpleNamespace(),
-        dispatcher=SimpleNamespace(graph={}, list_checkpoints=lambda: []),
+        task_center=SimpleNamespace(graph={}, list_checkpoints=lambda: []),
         resume=AsyncMock(),
         wait=AsyncMock(),
     )
@@ -111,8 +111,7 @@ async def test_query_ctx_seeds_repo_root_for_daytona_and_ci():
         SimpleNamespace(
             id="TR1",
             sandbox_id="sbx-1",
-            dispatcher=SimpleNamespace(),
-            task_center=SimpleNamespace(context_for=AsyncMock(return_value="")),
+            task_center=SimpleNamespace(context_for=AsyncMock(return_value=""), graph={}),
             budgets=None,
             budget_state=None,
             project_context=SimpleNamespace(repo_root="/testbed"),
@@ -593,7 +592,7 @@ def test_finalize_team_result_surfaces_retry_replan_and_checkpoint_metadata(monk
             status=sweevo_team_runner.TeamRunStatus.SUCCEEDED,
             sandbox_id="sbx-1",
             budget_state=SimpleNamespace(replans_used=2),
-            dispatcher=SimpleNamespace(
+            task_center=SimpleNamespace(
                 graph={
                     "A": Task(
                         id="A",
@@ -668,7 +667,7 @@ def test_emit_dispatcher_dag_logs_graph_lines():
         deps=["root-1"],
         depth=1,
     )
-    team_run = SimpleNamespace(dispatcher=SimpleNamespace(graph={root.id: root, child.id: child}))
+    team_run = SimpleNamespace(task_center=SimpleNamespace(graph={root.id: root, child.id: child}))
 
     _emit_dispatcher_dag(printer, team_run, trigger_agent="team_planner")
 

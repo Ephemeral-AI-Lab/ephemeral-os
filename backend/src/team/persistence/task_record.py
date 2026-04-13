@@ -1,7 +1,7 @@
 """SQLAlchemy ORM model for the ``tasks`` table (dispatcher work queue).
 
 See Section 14.4 of the coordination redesign doc for schema.
-This model is used by DispatcherStore for durable task management.
+This model is used by TaskCenter for durable task management.
 The table is partitioned by team_run_id (LIST partitioning).
 """
 
@@ -59,6 +59,9 @@ class TaskRecord(Base):
         DateTime(timezone=True), nullable=True
     )
     failure_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    blocker_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    pause_checkpoint: Mapped[str | None] = mapped_column(Text, nullable=True)
+    pause_verdict: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     def __repr__(self) -> str:
         return (

@@ -56,9 +56,11 @@ With this protocol: the replanner detects the systemic pattern, declares a block
 | G-2 | Single decision point | Replanner owns all failure recovery decisions. Three clear actions, zero overlap. |
 | G-3 | Conductor is deterministic | Conductor executes blocker mechanics. No LLM calls. Fully testable. |
 | G-4 | query.py untouched | Blocker protocol operates outside the query loop. No injection, no halt directives, no buffer flushes. |
-| G-5 | Sibling scoped | Blocker affects siblings and their children only. No cross-subtree coordination. Simple and predictable. |
+| G-5 | Sibling scoped | Blocker assesses all siblings of the initiating task plus their subtree children. No cross-subtree coordination. Simple and predictable. |
 | G-6 | Zero impact on unaffected agents | EphemeralTask-based assessment means agents that are not affected never see the blocker notification. |
-| G-7 | Non-running tasks untouched | Only RUNNING agents are assessed and potentially paused. READY/PENDING/FAILED tasks keep their status — the pop_ready guard prevents dispatch during fix, but never mutates task state. |
+| G-7 | Non-running tasks untouched | Only RUNNING agents are assessed and potentially paused. READY/PENDING/FAILED tasks keep their status unchanged. |
+| G-8 | Replanner sees active blockers | Replanner context includes active blocker info so it can merge related failures into existing blockers rather than creating duplicates. |
+| G-9 | Durable blocker state | Blockers are persisted to the database and restored on crash/restart. |
 
 ---
 
@@ -191,13 +193,16 @@ Only RUNNING tasks can transition to PAUSED (via PauseAssessmentTask YES verdict
         status              BlockerStatus       ASSESSING | FIXING | RESOLVED | FAILED
         reason              str                 human-readable description of the problem
         root_cause_paths    list of str         the broken files (fix target)
-        blast_radius        list of str         broader scope of affected consumers
+        initiating_task_id  str                 the failed task that triggered the blocker
         fix_task_id         str or None         the task assigned to fix the root cause
         declared_by         str or None         the replanner task that declared this
-        initiating_task_id  str                 the failed task that triggered the blocker
         fix_summary         str or None         filled when fix completes
         pending_assessments  int                 PauseAssessmentTasks still awaiting response
         created_at          float               timestamp
+
+    Assessment scope is determined structurally: all siblings of the
+    initiating task plus their entire subtrees.  blast_radius has been
+    removed — there is no file-path guard on pop_ready.
         resolved_at         float or None       timestamp
 
 ### BlockerStatus
@@ -358,17 +363,18 @@ Each attempt is a new task with a clean record. The original stays FAILED with i
     +-----------------------------------------------------------+
     |                 ASSESSMENT PHASE                           |
     |                                                           |
+    |  Scope: all siblings of the initiating task plus their    |
+    |  entire subtrees (structural, not file-path based).       |
+    |                                                           |
     |  Non-running tasks (READY / PENDING / FAILED):            |
     |    UNTOUCHED. Status remains as-is.                       |
-    |    Pop_ready guard prevents READY tasks from dispatching  |
-    |    while the blocker is active.                           |
     |                                                           |
-    |  Running tasks (ALL of them in blocker scope):            |
+    |  Running tasks (ALL siblings+descendants):                |
     |    Spawn PauseAssessmentTask per agent (parallel).        |
     |    Let the EphemeralTask decide YES or NO.                |
     |    YES: terminate original, save conversation, PAUSED.    |
     |    NO: discard, original continues unaware.               |
-    |    TIMEOUT (30s): treat as YES.                           |
+    |    TIMEOUT / error: skip (agent keeps running).           |
     |                                                           |
     |  No tiers. No auto-halt. No scope classification.         |
     |  One rule: running = EphemeralTask decides.               |
@@ -380,29 +386,18 @@ Each attempt is a new task with a clean record. The original stays FAILED with i
           v
     FIXING phase begins
 
-### Pop-Ready Guard
+### Pop-Ready Guard — REMOVED
 
-While any blocker is active, the dispatcher's pop_ready must not dispatch tasks whose scope overlaps with the blocker's blast_radius. This prevents new tasks (whose deps just completed) from running into broken code during the fix phase.
-
-    pop_ready()
-          |
-          v
-    Select next READY task with pending_dep_count = 0
-          |
-          v
-    Any active blocker's blast_radius overlaps this task's scope?
-          |
-         YES ---> skip candidate (leave READY), try next candidate
-          |
-         NO ----> dispatch normally (READY to RUNNING)
-
-    The guard NEVER changes task status. It only skips candidates.
-    When the blocker resolves and the guard lifts, skipped tasks
-    become eligible for dispatch on the next pop_ready cycle.
+The pop_ready guard based on blast_radius has been removed.
+Assessment scope is structural (siblings + descendants), not
+file-path based.  Tasks that become READY during a blocker are
+dispatched normally.  If they hit the same broken dependency,
+the replanner receives active blocker context and can merge
+the failure into the existing blocker via declare_blocker.
 
 ### Dedup and Merge
 
-When a second blocker declaration targets the same root cause (same paths or same fingerprint), the Conductor merges into the existing blocker rather than creating a new one:
+When a second blocker declaration targets the same root cause (overlapping paths), the Conductor merges into the existing blocker rather than creating a new one:
 
     declare_blocker(paths, reason)
           |
@@ -424,7 +419,7 @@ When a second blocker declaration targets the same root cause (same paths or sam
     for new
     scope
 
-On merge, assess_running re-runs with expanded paths. Tasks already PAUSED are skipped. Only newly-in-scope RUNNING agents get assessed. Non-running tasks remain untouched — the expanded blast_radius automatically extends the pop_ready guard.
+On merge, assess_running re-runs against siblings+descendants. Tasks already PAUSED (blocker_id set) are skipped. Only newly-RUNNING agents that were not yet assessed get assessed. Non-running tasks remain untouched.
 
 ---
 
@@ -590,17 +585,23 @@ The EphemeralTask has full context — it saw every tool call the original agent
           +--- LLM takes more than 30 seconds ---> timeout
                     |
                     v
-               Treat as YES (conservative)
-               Terminate original, mark PAUSED
-               pause_verdict = "TIMEOUT: assumed affected"
+               Skip (agent keeps running)
+               A slow LLM call should not pause an unaffected agent.
+               If the agent is actually affected, it will fail later
+               and the replanner will see active blocker context.
 
 #### Termination — External, No query.py Changes
 
 The executor manages the agent run as an asyncio task. The Conductor terminates by cancelling the asyncio task. This is standard asyncio cancellation. The query loop catches CancelledError and cleans up. No modification to query.py required.
 
-#### Safety Net
+#### Safety Net — Replanner-Based
 
-If a PauseAssessmentTask says NO but the original agent later fails with the same error fingerprint as the blocker, the Conductor's on_task_failed catches it and auto-pauses the task. The assessment was wrong, and the system self-corrects.
+If a PauseAssessmentTask says NO (or was skipped due to timeout)
+but the original agent later fails, the normal replanner flow handles
+it.  The replanner receives active blocker context (see G-8) and can
+decide whether to merge the failure into the existing blocker via
+declare_blocker, or treat it as an independent failure via add_tasks.
+No Conductor.on_task_failed method is needed.
 
 ### CheckpointTask — Progress Reporter
 
@@ -644,7 +645,7 @@ If a PauseAssessmentTask says NO but the original agent later fails with the sam
              Keep under 300 words."
 
         The turn checkpoint explicitly asks about blockers. This feeds
-        the replanner's decision when it calls read_sibling_notes.
+        the replanner's decision (sibling notes via read_notes(scope="siblings")).
 
 #### Note Attribution
 
@@ -711,27 +712,18 @@ The Conductor spawns resolver tasks (a dedicated role, not a normal developer) f
     Conductor
         Constructor
             team_run            reference to the owning TeamRun
-            dispatcher          reference to the Dispatcher
-            task_center         reference to the TaskCenter
-            blocker_store       persistence for Blocker records
-            _executor_registry  dict mapping task_id to Executor
+            blocker_store       BlockerStore for durable persistence
             _active_blockers    dict mapping blocker_id to Blocker
+            _executor_snapshots dict mapping task_id to display_messages
 
-        Executor Registration
-            register_executor(task_id, executor)
-                Track which executor is running which task.
-                Called by executor at task start.
+        Snapshot Registry
+            register_snapshot(task_id, snapshot)
+                Track display_messages for running tasks.
+                Called by executor after each tool result.
 
-            unregister_executor(task_id)
-                Remove tracking when task completes.
-
-        Detection
-            on_task_failed(task, failure_reason)
-                Called after every task failure.
-                Checks if failure matches an active blocker's fingerprint.
-                If match: add task to blocker's affected set (skip normal replan).
-                If no match and 2+ correlated failures: trigger request_replan
-                on one of them (replanner will assess).
+        Recovery
+            restore()
+                Reload active blockers from the store on crash/restart.
 
         Blocker Lifecycle
             create_blocker(replanner_verdict)
@@ -741,10 +733,11 @@ The Conductor spawns resolver tasks (a dedicated role, not a normal developer) f
                 Activates pop_ready guard, then calls assess_running.
 
             assess_running(blocker)
-                Spawns one PauseAssessmentTask per RUNNING executor in
-                blocker scope via asyncio.gather. Every running agent is
-                assessed by an EphemeralTask — no tier classification,
-                no auto-halt. Each assessment is a single LLM call.
+                Queries all siblings of the initiating task plus their
+                subtree children.  Filters to RUNNING status only.
+                Spawns one PauseAssessmentTask per RUNNING task via
+                asyncio.gather. Each assessment is a single LLM call.
+                TIMEOUT / error → skip (agent keeps running).
                 Non-running tasks (READY/PENDING/FAILED) are NEVER touched.
 
             _run_pause_assessment(executor, blocker) returns PauseVerdict
@@ -804,10 +797,6 @@ The Conductor spawns resolver tasks (a dedicated role, not a normal developer) f
                 overlaps the task's scope_paths.
                 If True: task is skipped (stays READY, not dispatched).
                 Task status is NEVER changed by this guard.
-
-            match_fingerprint(task, failure_reason) returns bool
-                Checks if a failure reason matches an active blocker's
-                error fingerprint. Used by on_task_failed for the safety net.
 
         Intercept
             intercept_retry_replan(task_id) returns bool
@@ -1086,51 +1075,46 @@ Non-running tasks (READY, PENDING, FAILED) are never paused by the blocker proto
 
 ## 13. Task Center Integration
 
-The Task Center is the shared context backbone of the coordination system. Two additions strengthen it for the replanner and improve note discipline across all agents.
+The Task Center is the shared context backbone of the coordination system. The following additions strengthen it for the replanner and improve note discipline across all agents.
 
-### 13.1 read_sibling_notes — Replanner's Source of Truth
+### 13.1 read_notes — Extended with Scope Mode
 
-The existing read_notes tool filters by author task IDs or scope_paths. The replanner needs neither — it needs "everything my siblings and their children have posted." Today it would have to manually enumerate sibling IDs, query each one's children, and pass them all as authors. That is fragile and slow.
+The existing `read_notes` tool gains a `scope` parameter that controls which tasks' notes are returned. This replaces the need for a separate `read_sibling_notes` tool — the replanner calls `read_notes(scope="siblings")` instead.
 
-A new tool, read_sibling_notes, resolves the sibling subtree automatically from the replanner's own parent_id and returns all notes in one call.
+#### Current Parameters (unchanged)
 
-#### How It Works
+    authors         list[str] | None    filter by task IDs
+    scope_paths     list[str] | None    filter by file/dir prefix overlap
+    keyword         str | None          case-insensitive substring match
+    limit           int | None          max notes (most recent first)
 
-    Replanner is inserted at parent_id = P (same parent as the failed task)
+#### New Parameter
 
-    read_sibling_notes()
-          |
-          v
-    Resolve from replanner's metadata:
-        parent_id = P
-          |
-          v
-    Query all tasks where parent_id = P (siblings)
-    + all tasks whose root traces to any sibling (children, recursively)
-          |
-          v
-    Collect task IDs: {sibling_1, sibling_2, ..., child_1a, child_1b, ...}
-          |
-          v
-    TaskCenter.read(authors = collected IDs)
-          |
-          v
-    Return notes grouped by task, most recent first
+    scope           "all" | "siblings"  which tasks' notes to include
+                    default: "all"
 
-    Each note includes:
-        agent_name      who posted it
-        task_id         which task posted it
-        content         the note body
-        scope_paths     which files it relates to
-        timestamp       when it was posted
+    "all"       — entire Task Center (current behavior, unchanged)
+    "siblings"  — the calling task's siblings and their descendants only.
+                  Resolves parent_id from the caller's metadata, collects
+                  sibling + child task IDs, filters notes to those authors.
+                  Combinable with keyword, scope_paths, and limit.
+
+#### Why a Parameter, Not a Separate Tool
+
+The replanner needs the same filtering capabilities as any other `read_notes` caller (keyword, scope_paths, limit). Adding `scope` to the existing tool avoids duplicating those parameters on a second tool. The sibling resolution is a ~5-line addition to `ReadNotesTool.execute`:
+
+    if arguments.scope == "siblings":
+        parent_id = context.metadata["parent_id"]
+        sibling_ids = dispatcher.get_children(run_id, parent_id)
+        # union with descendants if needed
+        arguments.authors = sibling_ids
 
 #### What the Replanner Sees
 
-    read_sibling_notes() returns:
+    read_notes(scope="siblings") returns:
 
     --- task hdf-01 (developer) [scope: dask/dataframe/io/hdf.py] ---
-    "Edited _read_hdf to use new parse API. Tests 1-15 passing.
-     Hit ImportError on dask.compatibility.parse — file was changed
+    "Hit ImportError on dask.compatibility.parse — file was changed
      by fix-compat task. This is a shared dependency issue."
 
     --- task hdf-02 (developer) [scope: dask/dataframe/io/hdf.py] ---
@@ -1141,73 +1125,13 @@ A new tool, read_sibling_notes, resolves the sibling subtree automatically from 
     "Replaced _EMSCRIPTEN with __getattr__ mechanism. Removed direct
      parse import in favor of lazy attribute lookup."
 
-    --- task array-01 (developer) [scope: dask/array/overlap.py] ---
-    "Overlap computation rewritten. 3 of 5 tests passing.
-     Remaining 2 need rechunk fix."
-
-The replanner reads this and immediately sees: fix-compat broke a shared dependency, hdf-01 and hdf-02 both report the same ImportError, and array-01 is working on something unrelated. This is the evidence it needs to call declare_blocker versus add_tasks.
-
-#### Tool Definition
-
-    read_sibling_notes
-        Parameters:
-            keyword         str or None     optional keyword filter on note content
-            scope_paths     list of str or None     optional additional scope filter
-            include_children    bool, default True      include notes from children
-                                                        of siblings, not just siblings
-
-        Available to: replanner role
-
-        Returns: all notes from sibling tasks and their descendants,
-                 grouped by task, most recent first
-
-        Implementation: resolves parent_id from replanner's metadata,
-        queries dispatcher for sibling + descendant task IDs,
-        passes them as authors to TaskCenter.read
-
-#### Why Not Just read_notes
-
-read_notes requires the caller to know which task IDs or scope paths to filter on. The replanner does not know sibling IDs upfront — they are in the dispatcher, not in the replanner's context. read_sibling_notes bridges the gap by doing the lookup automatically.
-
-This also keeps read_notes simple and general-purpose. The sibling resolution logic lives in the new tool, not buried inside read_notes as a special case.
-
-#### Data Flow
-
-    Replanner calls read_sibling_notes()
-          |
-          v
-    Tool resolves replanner's parent_id from context.metadata
-          |
-          v
-    Tool queries DispatcherStore.get_subtree_task_ids(run_id, parent_id)
-          |
-          |   returns: {sibling_1, sibling_2, child_1a, child_2a, ...}
-          v
-    Tool calls TaskCenter.read(authors = subtree_ids)
-          |
-          v
-    Tool applies optional keyword / scope_paths filter
-          |
-          v
-    Returns formatted notes to replanner
-
-    DispatcherStore.get_subtree_task_ids is a new query method:
-
-        WITH RECURSIVE subtree AS (
-            SELECT id FROM tasks
-            WHERE team_run_id = run_id AND parent_id = parent_id
-          UNION ALL
-            SELECT t.id FROM tasks t
-            JOIN subtree s ON t.parent_id = s.id
-            WHERE t.team_run_id = run_id
-        )
-        SELECT id FROM subtree
+The replanner reads this and immediately sees: fix-compat broke a shared dependency, hdf-01 and hdf-02 both report the same ImportError. This is the evidence it needs to call declare_blocker versus add_tasks.
 
 ### 13.2 TaskCenter Active Mode
 
 See separate document: [task-center-active-mode.md](task-center-active-mode.md)
 
-The TaskCenter gains an active mode where it tracks agent activity (edits, turns, posthook calls) and spawns EphemeralTasks to auto-generate progress notes when agents are silent too long. This is an independent feature that complements the blocker protocol by ensuring the replanner has rich context from all siblings when it calls read_sibling_notes.
+The TaskCenter gains an active mode where it tracks agent activity (edits, turns, posthook calls) and spawns EphemeralTasks to auto-generate progress notes when agents are silent too long. This is an independent feature that complements the blocker protocol by ensuring the replanner has rich sibling context (via read_notes(scope="siblings")).
 
 Key relationship to the blocker protocol: the turn-trigger EphemeralTask prompt explicitly asks about blockers. Auto-generated notes surface blocker evidence early, giving the replanner higher-confidence signals for declare_blocker decisions.
 
@@ -1339,60 +1263,28 @@ The Blocker is stored in-memory on the Conductor, NOT in PostgreSQL. This is a d
 
 ### 13.6 Concurrent Blockers on the Same Task
 
-A task has a single blocker_id field. If two blockers want to pause the same task, use a list:
+A task has a single `blocker_id` field. If a second blocker wants to pause an already-paused task, skip it — it is already paused. On resume, check if any other active blocker still covers this task's scope before transitioning to READY.
 
-    TaskRecord.blocker_ids    list of str (ARRAY in PostgreSQL)
+    resume_paused_tasks(blocker_id):
+        for each task with this blocker_id and status=PAUSED:
+            if any OTHER active blocker's blast_radius overlaps task.scope_paths:
+                skip (still blocked by the other blocker)
+            else:
+                transition to READY
 
-    A task is unblocked only when ALL its blocker_ids are resolved.
-    resume_paused_tasks removes one blocker_id from the list. When the
-    list is empty, the task transitions back to its resume status.
+This avoids the complexity of a `blocker_ids` list. A task is paused by one blocker and checked against others on resume.
 
-    This handles the edge case where blast_radius of two independent
-    blockers overlaps on the same task.
-
-### 13.7 Correlation Engine
-
-The Conductor monitors task failures for patterns. This is a lightweight mechanism, not a full feature:
-
-    on_task_failed(task, failure_reason):
-        fingerprint = normalize_fingerprint(failure_reason)
-        self._recent_failures.append((task.id, fingerprint, time.time()))
-
-        # Prune old entries (older than 5 minutes)
-        cutoff = time.time() - 300
-        self._recent_failures = [f for f in self._recent_failures if f[2] > cutoff]
-
-        # Check for cluster
-        matching = [f for f in self._recent_failures if f[1] == fingerprint]
-        if len(matching) >= 2:
-            # Trigger request_replan on the latest failure
-            # The replanner will see the pattern and may declare_blocker
-            await self.dispatcher.request_replan(task.id, ...)
-
-    normalize_fingerprint(reason):
-        Strip UUIDs, line numbers, file paths, timestamps.
-        Return SHA-256 prefix of the normalized string.
-
-    This is Phase D (Conductor) implementation, not a separate phase.
-
-### 13.8 Database Migration
+### 13.7 Database Migration
 
 The following schema changes require a migration:
 
-    ALTER TABLE tasks ADD COLUMN blocker_ids TEXT[] DEFAULT '{}';
+    ALTER TABLE tasks ADD COLUMN blocker_id TEXT;
     ALTER TABLE tasks ADD COLUMN pause_checkpoint BYTEA;
     ALTER TABLE tasks ADD COLUMN pause_verdict TEXT;
 
     No paused_from column — only RUNNING tasks can be paused.
     No new tables. Blocker is in-memory (Section 13.5).
     Migration is part of Phase B (PAUSED Status + Blocker Model).
-
-### 13.3 DispatcherStore Addition
-
-    get_subtree_task_ids(run_id, parent_id) returns set of str
-        Recursive CTE that returns all task IDs under a given parent,
-        including the parent's direct children and all their descendants.
-        Used by read_sibling_notes to resolve the sibling subtree.
 
 ---
 
@@ -1473,12 +1365,6 @@ This is slightly redundant (two fix tasks for the same file) but correct and dra
                                                  mark team run as FAILED
                                                  failure_reason includes
                                                  blocker.reason
-
-### Correlation Engine
-
-The Conductor monitors task failures for patterns. When 2 or more tasks fail within 5 minutes with the same normalized error fingerprint, the Conductor triggers request_replan on one of them. The replanner then has the evidence to decide whether to declare_blocker.
-
-Fingerprint normalization strips variable parts (UUIDs, line numbers, file paths, timestamps) to expose the structural error pattern. Two failures with the same normalized fingerprint are likely the same root cause.
 
 ---
 
@@ -1610,7 +1496,6 @@ hdf-01 resumes and completes. hdf-03 to hdf-32 dispatch and complete. The replan
             + pause_running_task (RUNNING → PAUSED with checkpoint)
             + resume_paused_tasks (PAUSED → READY for assessed agents)
             + cancel_paused_tasks (PAUSED → CANCELLED on resolver failure)
-            + get_subtree_task_ids (recursive CTE for sibling note resolution)
             pop_ready: add blocker blast_radius guard (skip, not pause)
 
         team/runtime/executor.py
@@ -1624,7 +1509,7 @@ hdf-01 resumes and completes. hdf-03 to hdf-32 dispatch and complete. The replan
             + Active mode: on_edit, on_posthook, tick, on_note_posted
               (see task-center-active-mode.md for full spec)
             + check (spawn EphemeralTask when thresholds crossed)
-            + read_sibling_notes (subtree note query for replanner)
+            read_notes: add scope="siblings" mode (Section 13.1)
             + ActivityCounters per-task internal state
             context_for: add resume message injection at Priority 0
 
@@ -1702,8 +1587,8 @@ Six phases. Phases within the same tier have no dependencies on each other and c
     | pause/fix/resume |     | add_tasks        |     | on_edit/tick/    |
     | PauseAssessment  |     | declare_blocker  |     | check + auto    |
     |                  |     | cancel_and_redraft|    | note generation |
-    |                  |     | remove old tools |     | read_sibling_   |
-    |                  |     |                  |     | notes            |
+    |                  |     | remove old tools |     | read_notes       |
+    |                  |     |                  |     | scope param      |
     | deps: A, B       |     | deps: C          |     | deps: A          |
     +------------------+     +------------------+     +------------------+
 
@@ -1754,7 +1639,6 @@ Six phases. Phases within the same tier have no dependencies on each other and c
             - pause_running_task(task_id, blocker_id, checkpoint, verdict)
             - resume_paused_tasks(run_id, blocker_id) returns count
             - cancel_paused_tasks(run_id, blocker_id) returns count
-            - get_subtree_task_ids(run_id, parent_id) returns set of str
         [ ] pop_ready: add blocker blast_radius guard (skip, not pause)
 
     Tests:
@@ -1763,7 +1647,6 @@ Six phases. Phases within the same tier have no dependencies on each other and c
         [ ] resume_paused_tasks transitions PAUSED to READY
         [ ] cancel_paused_tasks transitions PAUSED to CANCELLED
         [ ] pop_ready skips (not pauses) tasks overlapping active blocker blast_radius
-        [ ] get_subtree_task_ids returns full recursive subtree
 
 ### Phase C — Dispatcher request_replan Change
 
@@ -1807,7 +1690,7 @@ Six phases. Phases within the same tier have no dependencies on each other and c
             - on_fix_failed: cancel PAUSED tasks, mark team run FAILED
             - resume_assessed (PAUSED → READY with checkpoint restore)
             - guard_pop_ready (skip candidates, never change status)
-            - match_fingerprint (safety net)
+            - (correlation engine deferred — not in this protocol)
             - intercept_retry_replan
         [ ] Wire Conductor into TeamRun lifecycle (team_run.py)
         [ ] Executor changes:
@@ -1827,7 +1710,7 @@ Six phases. Phases within the same tier have no dependencies on each other and c
         [ ] on_fix_failed cancels PAUSED tasks and marks team run FAILED
         [ ] resume from checkpoint starts new agent run with saved messages
         [ ] guard_pop_ready skips (not pauses) blocked candidates
-        [ ] fingerprint safety net catches missed tasks
+        [ ] on_task_failed auto-pauses when scope overlaps active blocker
         [ ] post-fix replanner is scoped to initiating_task_id
 
 ### Phase E — Replanner Toolkit
@@ -1886,7 +1769,7 @@ Six phases. Phases within the same tier have no dependencies on each other and c
             - tick(task_id)
             - on_note_posted(task_id) — reset counters, called by post()
             - check(task_id, executor) — spawn EphemeralTask if threshold crossed
-            - read_sibling_notes(parent_id, dispatcher_store, keyword, scope_paths)
+            read_notes: add scope="siblings" mode (Section 13.1)
         [ ] Executor changes:
             - call task_center.on_edit when edit tool completes
             - call task_center.on_posthook when posthook tool completes
@@ -1908,7 +1791,7 @@ Six phases. Phases within the same tier have no dependencies on each other and c
         [ ] check spawns EphemeralTask after 10 turns without posthook
         [ ] Auto-generated note posted with "(auto)" suffix
         [ ] post() calls on_note_posted to reset counters
-        [ ] read_sibling_notes resolves subtree and returns notes
+        [ ] read_notes scope="siblings" resolves sibling subtree and returns notes
         [ ] Existing edit nudge logic removed from query.py
         [ ] Resume message injected at Priority 0 for formerly-paused tasks
 
@@ -1968,7 +1851,7 @@ Six phases. Phases within the same tier have no dependencies on each other and c
 
     Correctness                 8/10        PAUSED non-terminal keeps parents safe.
                                             Pause checkpoint is clean resume point.
-                                            Fingerprint safety net catches missed tasks.
+                                            Scope-overlap safety net catches missed tasks.
                                             Clear fallback when fix fails.
 
     Overall                     8/10

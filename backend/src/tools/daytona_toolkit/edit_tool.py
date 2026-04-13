@@ -26,7 +26,6 @@ from tools.daytona_toolkit.tools import (
     _resolve_path,
     _team_repo_write_error,
     _team_repo_write_warning,
-    _track_edit_for_note_nudge,
     _upload_file_compat,
     record_coordination_warning,
 )
@@ -51,7 +50,6 @@ def _edit_success_result(
     expected_hash: str = "",
 ) -> ToolResult:
     """Build a successful-edit ToolResult with consistent JSON output."""
-    _track_edit_for_note_nudge(context, file_path)
     payload: dict[str, Any] = {
         "cwd": _get_cwd(context) or "",
         "file_path": file_path,

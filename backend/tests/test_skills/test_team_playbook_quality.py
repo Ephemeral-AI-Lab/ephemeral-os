@@ -115,7 +115,6 @@ def test_planner_skill_has_explicit_conditional_reference_loading() -> None:
     )
     assert "let that tool call finish, and only then load `plan-json-contract`" in planner.lower()
     assert "never batch or parallelize it with `root-plan-self-check`" in planner
-    assert "Atlas/check_exploration_memory is cross-run memory only." in planner
     assert "The sequence is `anchor -> scout wave -> decomposition -> plan JSON`." in planner
     assert "The first wave must target only live production boundaries" in planner
     assert "Must reuse inherited notes and known owner boundaries before fresh exploration." in non_root
@@ -424,7 +423,7 @@ def test_sweevo_context_stays_shared_and_runtime_focused() -> None:
         in sweevo.lower()
     )
     assert "Must not derive an exact production file from benchmark filename resemblance alone" in sweevo
-    assert "Must use `check_exploration_memory(paths=[...])` only after same-run notes are insufficient" in sweevo
+    assert "Must use `read_notes(scope_paths=[...])` to check for existing findings before launching duplicate scouts." in sweevo
     assert "Must treat scope-change notifications and `context_changed_since()` as freshness signals." in sweevo
     assert "Must keep `scope_paths` as soft coordination hints" in sweevo
     assert "Must treat any advisory outside-scope write as a tainted packet" in sweevo

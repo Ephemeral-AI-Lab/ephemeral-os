@@ -114,10 +114,10 @@ async def _known_external_dep_ids(context: ToolExecutionContext) -> set[str] | N
         return {str(item) for item in known}
     if isinstance(known, list):
         return {str(item) for item in known}
-    dispatcher = context.metadata.get("dispatcher")
-    if dispatcher is None or not hasattr(dispatcher, "known_task_ids"):
+    tc = context.metadata.get("task_center")
+    if tc is None or not hasattr(tc, "known_task_ids"):
         return None
-    return {str(item) for item in await dispatcher.known_task_ids()}
+    return {str(item) for item in await tc.known_task_ids()}
 
 
 def _roster_from_context(context: ToolExecutionContext) -> dict[str, list[str]]:

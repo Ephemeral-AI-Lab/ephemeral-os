@@ -110,11 +110,11 @@ async def test_context_changed_since_ignores_unrelated_sibling_completion():
 
 @pytest.mark.asyncio
 async def test_context_changed_since_counts_overlapping_sibling_completion():
-    class _Dispatcher:
+    class _FakeTaskCenter:
         async def done_sibling_ids(self, **_kwargs):
             return ["sib-1"]
 
-        async def get_task_by_id(self, _task_id):
+        async def get_task(self, _task_id):
             return SimpleNamespace(scope_paths=["src/auth/session.py"])
 
     ctx = _ctx(
@@ -123,7 +123,7 @@ async def test_context_changed_since_counts_overlapping_sibling_completion():
             "work_item_id": "task-1",
             "task_parent_id": "parent-1",
             "write_scope": ["src/auth/"],
-            "dispatcher": _Dispatcher(),
+            "task_center": _FakeTaskCenter(),
         }
     )
 

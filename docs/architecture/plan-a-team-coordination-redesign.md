@@ -17,7 +17,7 @@
 6. [Plan & Execution](#6-plan--execution)
 7. [Submission & PostAgentHook](#7-submission--postagenthook)
 8. [Context Sharing & Inheritance](#8-context-sharing--inheritance)
-9. [OCC, Code Intelligence & Exploration Cache](#9-occ-code-intelligence--exploration-cache)
+9. [OCC & Code Intelligence](#9-occ--code-intelligence)
 10. [Toolkit Assignment](#10-toolkit-assignment)
 11. [Task-Agnostic Flows](#11-task-agnostic-flows)
 12. [Migration Phases](#12-migration-phases)
@@ -154,7 +154,7 @@ PLAN A: 2 layers
 
 The `Note` type is the single context primitive in the Task Center. Each note has an id, the task and agent that wrote it, plain-text content of any length and format, a wall-clock timestamp, an optional list of `scope_paths` for scope-filtered reads, and an optional `parent_note_id` for threading subagent notes back to their parent.
 
-**Why `scope_paths` on Note:** The PostgreSQL schema stores `scope_ltree` on `task_notes`, and tools like `post_note(content, scope_paths?)`, `search_context(scope_paths?)`, and `ExplorationCache.check()` all rely on per-note scope metadata. Without `scope_paths` on the in-memory `Note`, the in-memory TaskCenter cannot reproduce the same scope-filtered reads that PostgreSQL provides, causing same-run context sharing to diverge from search/cache behavior. The field defaults to empty (unscoped notes are visible to all queries).
+**Why `scope_paths` on Note:** The PostgreSQL schema stores `scope_ltree` on `task_notes`, and tools like `post_note(content, scope_paths?)` and `search_context(scope_paths?)` rely on per-note scope metadata. Without `scope_paths` on the in-memory `Note`, the in-memory TaskCenter cannot reproduce the same scope-filtered reads that PostgreSQL provides, causing same-run context sharing to diverge from search/cache behavior. The field defaults to empty (unscoped notes are visible to all queries).
 
 **Rationale:** One type replaces the former `Briefing`, `DependencyArtifact`, and `InMemoryArtifactStore`. LLMs parse prose better than JSON schemas. Agents post what they know; consumers read what's relevant.
 
@@ -695,7 +695,7 @@ No agent coordination needed. The Arbiter serializes at the file level, and toke
 
 ---
 
-## 9. OCC, Code Intelligence & Exploration Cache
+## 9. OCC & Code Intelligence
 
 ### 9.1 Design Principle: Two Layers, Not Three
 
@@ -733,7 +733,7 @@ The current system has three coordination layers: briefings (knowledge), scope p
 
 ### 9.2 What Stays, What Goes
 
-Within `code_intelligence`, the entire `editing/` layer (Arbiter, Ledger, patcher, merge, time_machine) is kept untouched. The `routing/` layer keeps the CI service, query router, and backend protocol, but deletes `scope_packets.py` (agents cannot act on contention reports). The `analysis/` and `lsp/` layers are kept untouched. The entire `atlas/` directory is deleted and replaced by `ExplorationMemory`. In `tools/daytona_toolkit/`, the `coordination.py` module is deleted — `task.scope_paths` is read directly wherever scope information is needed.
+Within `code_intelligence`, the entire `editing/` layer (Arbiter, Ledger, patcher, merge, time_machine) is kept untouched. The `routing/` layer keeps the CI service, query router, and backend protocol, but deletes `scope_packets.py` (agents cannot act on contention reports). The `analysis/` and `lsp/` layers are kept untouched. The entire `atlas/` directory is deleted — planners use `read_notes(scope_paths=[...])` to check for existing scout findings before launching duplicates. In `tools/daytona_toolkit/`, the `coordination.py` module is deleted — `task.scope_paths` is read directly wherever scope information is needed.
 
 ### 9.3 OCC During Agent Execution
 
@@ -798,17 +798,9 @@ Plan A explorer output (free prose):
 
 The second is more useful to a developer. LLMs consume prose better than JSON schemas.
 
-### 9.5 Exploration Cache (Replaces Atlas)
+### 9.5 Planner's Exploration Flow
 
-**What Atlas solves:** Don't re-explore unchanged code across runs. The current Atlas achieves this across 6 files. The actual mechanism is a content-addressed cache. Everything else is overhead.
-
-**Exploration Cache** — `ExplorationMemory` exposes two operations: `check(scope_paths, sandbox)` hashes the files in the given paths and returns cached notes if the hash matches a prior run, or `None` if re-exploration is needed; and `save(scope_paths, notes, sandbox)` stores notes keyed by a hash of the scope paths plus the current file content hash. The cache key is a SHA-256 digest of sorted scope paths and content hash.
-
-Content hash IS the freshness check. No subsystem model, no auto-promotion, no coherence tokens, no complex persistence model.
-
-### 9.6 Planner's Exploration Flow
-
-The planner gets one tool — `check_exploration_memory` — to check the cache before spawning explorers. On a cache hit, it loads the cached notes into the Task Center and returns `{"status": "cached"}`. On a miss, it returns `{"status": "needs_exploration"}` and the planner spawns an explorer subagent.
+The planner uses `read_notes(scope_paths=[...])` to check for existing scout findings before spawning explorers. If relevant notes already exist, the planner skips the scout. Otherwise, it spawns an explorer subagent.
 
 The flow:
 
@@ -817,24 +809,19 @@ Planner starts
   |
   +-- For each scope it wants to understand:
   |     |
-  |     +-- check_exploration_memory(["src/auth/"])
+  |     +-- read_notes(scope_paths=["src/auth/"])
   |     |     |
-  |     |     +-- CACHED -> notes loaded into Task Center
-  |     |     |              skip explorer (save ~15 tool calls)
+  |     |     +-- NOTES EXIST -> skip explorer
   |     |     |
-  |     |     +-- NEEDS_EXPLORATION -> spawn explorer subagent
-  |     |           Explorer posts findings -> notes auto-saved to cache
+  |     |     +-- NO NOTES -> spawn explorer subagent
+  |     |           Explorer posts findings to Task Center
   |     |
   |     +-- Read Task Center -> has findings either way
   |
   +-- submit_plan(tasks=[...])
 ```
 
-**Cache behavior in a fast-changing codebase:** Content hash won't match if files changed since last exploration. Returns `None`. Explorer re-explores. The cache is self-invalidating with zero staleness tracking.
-
-**Cache is optional and zero-cost when unused:** If `ExplorationCache` is not wired up, `check_exploration_cache` always returns `needs_exploration`. Explorer runs every time. No harm.
-
-### 9.7 Planner Conflict Prediction
+### 9.6 Planner Conflict Prediction
 
 **What it solves:** Scope packets gave agents pre-flight contention reports they couldn't act on (agents can't reschedule). But the **planner** can act — it can restructure decomposition to avoid overlapping scopes. The Ledger's historical edit data, stored in PostgreSQL, gives the planner cross-run intelligence about which files are contentious.
 
@@ -858,17 +845,9 @@ or sequence it explicitly before parallel work.
 | Agent (worker) | No — ephemeral, can't reschedule | No — sees only its task | Scope packets were here (wrong layer, deleted) |
 | Planner | **Yes** — chooses decomposition | **Yes** — via PostgreSQL | Conflict prediction is here (right layer) |
 
-### 9.8 Atlas to Exploration Cache Comparison
+### 9.7 Atlas Removal
 
-| Current Atlas (6 files) | Exploration Cache |
-|------|------|
-| Service layer — lookup subsystems, persist scout briefs | `ExplorationMemory.check/save` |
-| SQL persistence store with chunk storage | Simple key-value store |
-| ORM model | Not needed (key-value) |
-| Durable persistence module | Built into cache |
-| Reuse status and staleness checks | Content hash comparison |
-| Project key identity module | Scope paths are the identity |
-| Planner-facing lookup tool | `check_exploration_memory` tool |
+The entire Atlas directory (service, store, model, persistence, freshness, identity) was deleted. Planners now use `read_notes(scope_paths=[...])` to check for existing scout findings before launching duplicates. This eliminates the content-addressed cache layer entirely — the Task Center is the single source of exploration context.
 
 ---
 
@@ -898,10 +877,10 @@ Explorer is a subagent spawned via `run_subagent()`, not a dispatched task. Its 
 | `submission` | submit_plan | done, retry, replan | done, retry, replan | submit_replan |
 
 **Implementation note — toolkit consolidation:** The original design specified 5 new toolkits (`task_center_read`, `task_center_write`, `exploration_memory`, `edit_history`, `search`). The implementation consolidates to 2:
-- `context` — single unified toolkit merging task_center + search + exploration_memory. Contains `PostNoteTool`, `ReadNotesTool` (with `keyword` param absorbing `search_context`), `ContextChangedSinceTool` (absorbing `scope_changed_since`), and `CheckExplorationMemoryTool`. Role-based read/write restrictions are enforced via `blocked_tools` in agent definitions (e.g., planners block `post_note`) rather than separate toolkit classes.
+- `context` — single unified toolkit merging task_center + search. Contains `PostNoteTool`, `ReadNotesTool` (with `keyword` param absorbing `search_context`), and `ContextChangedSinceTool` (absorbing `scope_changed_since`). Role-based read/write restrictions are enforced via `blocked_tools` in agent definitions (e.g., planners block `post_note`) rather than separate toolkit classes. The exploration cache (`ExplorationMemory`) was removed — `read_notes` replaces it for dedup.
 - `submission` — unchanged from design.
 
-The `memory` toolkit was absorbed into `context`. `query_edit_history` is backed by `FileChangeStore.contention_hotspots()` and is wrapped as a tool in `tools/ci_toolkit/query_tools.py`. No other capability was removed — tools are bundled into fewer registration names for simplicity.
+`query_edit_history` is backed by `FileChangeStore.contention_hotspots()` and is wrapped as a tool in `tools/ci_toolkit/query_tools.py`. No other capability was removed — tools are bundled into fewer registration names for simplicity.
 
 ### 10.3 Explorer (Subagent)
 
@@ -937,8 +916,6 @@ Single unified toolkit. Role-based read/write restrictions are enforced via `blo
 | `read_notes(authors?, scope_paths?, keyword?, limit?)` | — | Read/search notes with optional keyword filter (absorbs former `search_context`). |
 | `context_changed_since()` | — | Check if context is stale: scope changes, dep notes, sibling completions since task started. Absorbs former `scope_changed_since`. |
 | `post_note(content, scope_paths?)` | planner, replanner | Post a note to Task Center. Inherits task scope_paths by default. |
-| `check_exploration_memory(paths)` | — | Check if scope was recently explored. Returns `cached` or `needs_exploration`. |
-
 **Note:** `query_edit_history` is backed by `FileChangeStore.contention_hotspots()` and is implemented in `tools/ci_toolkit/query_tools.py`.
 
 **`submission` toolkit** (replaces 5 posthook toolkit classes):
@@ -968,8 +945,7 @@ Toolkit assignment is handled in agent definitions and the context builder rathe
 | 1 | `read_notes` | `context_read` | all roles | no | Read/search Task Center notes by author, scope, keyword |
 | 2 | `context_changed_since` | `context_read` | all roles | no | Check staleness: scope changes + dep notes + sibling completions |
 | 3 | `post_note` | `context_write` | developer, reviewer, explorer | no | Post note to Task Center with optional scope |
-| 4 | `check_exploration_memory` | `memory` | planner | no | Check cross-run exploration cache; returns `cached` or `needs_exploration` |
-| 5 | `query_edit_history` | `memory` | planner | no | Query cross-run edit patterns to predict scope conflicts |
+| 4 | `query_edit_history` | `memory` | planner | no | Query cross-run edit patterns to predict scope conflicts |
 | 6 | `submit_plan` | `submission` | planner | **yes** | Submit plan of TaskSpecs |
 | 7 | `submit_summary` | `submission` | developer, reviewer | **yes** | Signal task completion with summary |
 | 8 | `request_retry` | `submission` | developer, reviewer | **yes** | Request task retry with reason |
@@ -982,7 +958,7 @@ Toolkit assignment is handled in agent definitions and the context builder rathe
 |-----------------|----------------|
 | `share_briefing` | `post_note` |
 | `inspect_inherited_context` | `read_notes` |
-| `atlas/lookup` | `check_exploration_memory` |
+| `atlas/lookup` | Deleted (use `read_notes` to check for existing scout findings) |
 | `scope_packets` tools | Deleted (Arbiter handles at edit time) |
 | `coordination.py` helpers | Deleted (`task.scope_paths` read directly) |
 | 5 posthook toolkit classes | `submission` toolkit (5 tools, no LLM) |
@@ -1017,7 +993,7 @@ Planner calls submit_plan:
 ```
 User: "Fix the login timeout bug"
 
-Planner checks exploration cache: miss (first time seeing src/auth/)
+Planner checks read_notes: no notes for src/auth/ yet
 Planner spawns explorer subagent:
   run_subagent(agent_name="explorer", prompt="Read src/auth/. Find timeout handling.")
 
@@ -1035,21 +1011,21 @@ Planner calls submit_plan:
            agent="reviewer", deps=["fix"], scope_paths=["tests/test_auth.py"])
 ```
 
-**Why it works:** Planner optionally spawns explorer. Explorer posts prose (no JSON contract). Planner reads prose and plans accordingly. Explorer findings cached for next run.
+**Why it works:** Planner optionally spawns explorer. Explorer posts prose (no JSON contract). Planner reads prose and plans accordingly.
 
 ### 11.3 Existing Project: Feature Implementation
 
 ```
 User: "Add OAuth2 support to the auth module"
 
-Planner checks exploration cache:
-  src/auth/  -> CACHED (explored 3 min ago, files unchanged)
-  src/api/routes/ -> NEEDS_EXPLORATION
+Planner checks read_notes:
+  src/auth/  -> notes exist from prior scout
+  src/api/routes/ -> no notes yet
 
-Planner spawns 1 explorer (not 2 -- cache saved one):
+Planner spawns 1 explorer (not 2 -- existing notes saved one):
   Explorer: "Read src/api/routes/ for existing endpoint patterns"
 
-Planner reads Task Center (has both cached + fresh findings), decomposes:
+Planner reads Task Center (has both existing + fresh findings), decomposes:
 
   TaskSpec(id="model",    task="Add OAuth2Provider model and token storage",
            agent="developer", scope_paths=["src/auth/models.py"])
@@ -1119,7 +1095,7 @@ OCC handles the collision at file level. No coordination needed in the Task Cent
 
 All six phases are complete.
 
-**Phase 1 — Task Center + Submission Tools + Exploration Cache:** New code only, no deletions. The in-memory `TaskCenter` was introduced, all five submission tools were consolidated into a single toolkit file, the unified `context` toolkit was created (including `PostNoteTool`, `ReadNotesTool`, `ContextChangedSinceTool`, `CheckExplorationMemoryTool`, and `ExplorationMemory`), the freshness detection helper was added, and the `query_edit_history` tool was wired to `FileChangeStore`. Prerequisite: PostgreSQL schema migration to create the `file_changes` and `tasks` tables with ltree extension.
+**Phase 1 — Task Center + Submission Tools:** New code only, no deletions. The in-memory `TaskCenter` was introduced, all five submission tools were consolidated into a single toolkit file, the unified `context` toolkit was created (including `PostNoteTool`, `ReadNotesTool`, and `ContextChangedSinceTool`), the freshness detection helper was added, and the `query_edit_history` tool was wired to `FileChangeStore`. Prerequisite: PostgreSQL schema migration to create the `file_changes` and `tasks` tables with ltree extension.
 
 **Phase 2 — Query Engine Gate:** A two-line gate was added to `_has_submission()` to check `posthook_enabled` before inspecting submitted output keys. No other changes to the query engine.
 
@@ -1137,7 +1113,7 @@ All six phases are complete.
 
 The following components were deleted entirely as part of this redesign:
 
-The posthook agent infrastructure (`agent_posthook.py` and five posthook agent definition files) was replaced by the deterministic `_posthook()` function in the executor. The briefing layer (`briefings.py`, `scout_briefings.py`, `canonicalize.py`) and the artifact store were replaced by the append-only Task Center. The entire Atlas directory (service, store, model, persistence, freshness, identity) was replaced by `ExplorationMemory`. The scope packets module and the coordination helper were deleted outright — the Arbiter handles file conflicts at edit time, and `task.scope_paths` is read directly. The per-tool posthook source files and the legacy toolkit class file were consolidated into a single submission toolkit file. The old team-context tools for sharing and inspecting briefings were replaced by `PostNoteTool` and `ReadNotesTool` in the context toolkit. In aggregate, the deletions far outweigh the new additions, resulting in a substantially smaller and simpler coordination layer.
+The posthook agent infrastructure (`agent_posthook.py` and five posthook agent definition files) was replaced by the deterministic `_posthook()` function in the executor. The briefing layer (`briefings.py`, `scout_briefings.py`, `canonicalize.py`) and the artifact store were replaced by the append-only Task Center. The entire Atlas directory (service, store, model, persistence, freshness, identity) was deleted — planners use `read_notes` to check for existing scout findings. The scope packets module and the coordination helper were deleted outright — the Arbiter handles file conflicts at edit time, and `task.scope_paths` is read directly. The per-tool posthook source files and the legacy toolkit class file were consolidated into a single submission toolkit file. The old team-context tools for sharing and inspecting briefings were replaced by `PostNoteTool` and `ReadNotesTool` in the context toolkit. In aggregate, the deletions far outweigh the new additions, resulting in a substantially smaller and simpler coordination layer.
 
 ---
 
@@ -1157,7 +1133,7 @@ Most multi-agent frameworks build custom coordination infrastructure — in-memo
 | Set/hierarchy membership | Custom tag matching | `ltree` + GiST |
 | Crash recovery | Checkpoint + replay | WAL (built-in) |
 
-One database replaces an entire microservice-style coordination stack. Every component in this plan — dispatcher, Ledger, Task Center, Arbiter, ExplorationMemory — reads and writes PostgreSQL. The in-memory layer is a performance cache, not a source of truth.
+One database replaces an entire microservice-style coordination stack. Every component in this plan — dispatcher, Ledger, Task Center, Arbiter — reads and writes PostgreSQL. The in-memory layer is a performance cache, not a source of truth.
 
 **Trade-off acknowledged:** PostgreSQL becomes a single point of failure — if it's down, all coordination primitives fail simultaneously. This is accepted because: (1) a single managed PG instance is operationally simpler than 7 independent subsystems, (2) PG has mature HA solutions (streaming replication, patroni) that protect all primitives at once, and (3) the in-memory cache allows agents already running to complete their current task even during a brief PG outage.
 
@@ -1225,8 +1201,6 @@ Four tables are created, all requiring the `ltree` extension:
 **`file_changes`** — Ledger backing store. Partitioned by `team_run_id`. Columns: `id` (bigserial), `team_run_id`, `file_path`, `path_ltree` (scalar ltree), `agent_id`, `edit_type`, `old_hash`, `new_hash`, `created_at`. Indexes: GiST on `path_ltree`, BRIN on `created_at`.
 
 **`tasks`** — Dispatcher work queue. Partitioned by `team_run_id`. Columns mirror the `Task` data model (Section 4.3): `id`, `team_run_id`, `agent_name`, `status`, `task`, `deps` (text array), `scope_paths` (text array), `scope_ltree` (ltree array), `cascade_policy`, `parent_id`, `root_id`, `depth`, `pending_dep_count`, `retry_count`, `max_retries`, `agent_run_id`, and timestamp fields. Indexes: B-tree on `(team_run_id, status)` for work queue pops, B-tree on `(team_run_id, depth, created_at)` for ordered dispatch.
-
-**`exploration_memory`** — Cross-run exploration cache. Not partitioned (shared across runs). Columns: `cache_key` (primary key), `scope_paths`, `content_hash`, `notes` (JSONB), `created_at`, `accessed_at`.
 
 Partition lifecycle is managed by `TeamRun` setup and teardown: `create_partitions(run_id)` creates one partition per table for the run, and `drop_partitions(run_id)` drops them instantly on completion with no vacuum needed. `run_id` is validated against `[a-zA-Z0-9_\-]` before use in partition names.
 
@@ -1405,17 +1379,7 @@ Developer starts working on src/auth/middleware.py
         Arbiter handles it inside the tool (in-memory or advisory lock)
 ```
 
-### 14.10 Cache/Search Consistency
-
-> **Status: N/A.** Both `TaskCenter` and `ExplorationMemory` are in-memory (no PG-backed `NoteStore`). Since both live in the same process, cached exploration notes inserted into `TaskCenter._notes` are immediately visible to all reads including `read_notes(keyword=...)`. There are no separate PG partitions to synchronize.
->
-> If `NoteStore` is reintroduced for multi-process scaling, the batch-insert fix described below would become relevant.
-
-~~When `ExplorationMemory.check()` returns cached notes from a previous run, those notes exist in in-memory `TaskCenter._notes` but NOT in the current run's `task_notes` partition. Agents using `search_context` won't find cached exploration data.~~
-
-~~**Fix:** On cache hit, batch-insert cached notes via NoteStore.~~
-
-### 14.11 Advisory Locks for Multi-Process Arbiter (DEFERRED)
+### 14.10 Advisory Locks for Multi-Process Arbiter (DEFERRED)
 
 > **Status: Not yet implemented.** The current Arbiter uses in-process `threading.Lock` for per-file locking, which is correct for single-process deployments. Advisory locks are needed only for multi-process horizontal scaling, which is not the current deployment model.
 
@@ -1453,7 +1417,6 @@ See Section 10.4 for toolkit consolidation rationale (2 toolkits instead of 5).
 | Deterministic `_posthook()` | **ACTIVE** | No posthook LLM calls — executor calls `_posthook(ctx, defn)` directly |
 | Scope change injection | **WIRED** | `_inject_scope_warnings()` and `_tag_if_scope_drifted()` run per task |
 | LISTEN/NOTIFY | **WIRED** | `ScopeChangeListener` subscribes executors, `ScopeChangeBuffer` flushes at turn boundary |
-| `check_exploration_memory()` | **NOT CALLED** | Expected on fresh runs (no prior cache). Playbooks reference it but agents skip it |
 | `context_changed_since()` | **NOT CALLED** | No agent checks freshness mid-task. Submission freshness gate untested |
 | `query_edit_history()` | **NOT CALLED** | No cross-run edit history on fresh instances |
 | `post_note()` by developers | **NOT CALLED** | Fixed: executor now auto-posts completion summaries via `_post_completion_note()` |
@@ -1468,6 +1431,6 @@ See Section 10.4 for toolkit consolidation rationale (2 toolkits instead of 5).
 ### Open Items (Not Yet Addressed)
 
 - `context_changed_since()` is voluntary — agents never call it. Consider making the executor inject a freshness check automatically before `_posthook()`.
-- Cross-run tools (`check_exploration_memory`, `query_edit_history`) are structurally useless on `fresh_run: true`. Playbooks should conditionally skip these instructions.
+- Cross-run tools (`query_edit_history`) are structurally useless on `fresh_run: true`. Playbooks should conditionally skip these instructions.
 
 *End of document.*
