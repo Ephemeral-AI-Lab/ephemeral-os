@@ -24,7 +24,12 @@ from tools.core.ci_runtime import (
     release_ci_edit_intent,
     sync_write_to_ci,
 )
-from tools.daytona_toolkit.ci_integration import command_may_mutate_workspace, sync_shell_mutations
+from tools.daytona_toolkit.ci_integration import (
+    command_may_mutate_workspace,
+    detect_workspace_regression,
+    snapshot_dirty_files,
+    sync_shell_mutations,
+)
 from tools.daytona_toolkit.tools import (
     _get_cwd,
     _recover_sandbox,
@@ -50,7 +55,7 @@ _DECLARED_OUTPUT_PATHS = {declared_output_paths}
 _SHELL_MUTATION_PATTERN = re.compile(
     r"(^|[;&|]\s*)("
     r"cat\s+>|tee\s|cp\s|mv\s|rm\s|touch\s|mkdir\s|install\s|ln\s|"
-    r"git\s+(apply|checkout|restore|reset|clean|mv|rm)\b|"
+    r"git\s+(apply|checkout|restore|reset|clean|stash|merge|rebase|cherry-pick|mv|rm)\b|"
     r"sed\s+-i\b|perl\s+-pi\b|patch\b|ed\b|ex\b|"
     r".*>>|.*[^<]>(?!&)[^>]"
     r")",
@@ -84,8 +89,33 @@ def write(path, content):
     """Stage a file write (not written to disk until commit)."""
     _MANIFEST["writes"].append({{"path": path, "content": content}})
 
+_DESTRUCTIVE_GIT_PATTERN = re.compile(
+    r"git\s+(stash|reset\s+--hard|checkout\s+--\s|checkout\s+\.\s*$|clean\s+-[fd])",
+    flags=re.IGNORECASE,
+)
+
 def shell(command, timeout=900):
     """Execute a shell command."""
+    # Hard block: destructive git commands that destroy the shared workspace.
+    # These bypass OCC and undo other agents' work. Always blocked — cannot
+    # be overridden with declared_output_paths or coordination-mode flags.
+    if _DESTRUCTIVE_GIT_PATTERN.search(command or ""):
+        message = (
+            "BLOCKED: destructive git commands (stash, reset --hard, checkout --, clean) "
+            "are forbidden in team coordination mode. They destroy other agents' work "
+            "and bypass OCC. Use daytona_edit_file to revert specific edits instead."
+        )
+        _MANIFEST["shells"].append(
+            {{
+                "command": command,
+                "stdout": "",
+                "stderr": message,
+                "exit_code": -1,
+                "declared_output_paths": _DECLARED_OUTPUT_PATHS,
+                "blocked": True,
+            }}
+        )
+        raise RuntimeError(message)
     if (
         _REQUIRE_DECLARED_SHELL_OUTPUTS
         and _command_may_mutate_workspace(command)
@@ -142,9 +172,25 @@ def shell(command, timeout=900):
     _MANIFEST["shells"].append(result)
     return result
 
+import builtins as _builtins_mod
+_BLOCKED_MODULES = frozenset({{"subprocess", "shutil"}})
+_real_import = _builtins_mod.__import__
+
+def _guarded_import(name, *args, **kwargs):
+    top = name.split(".")[0]
+    if top in _BLOCKED_MODULES:
+        raise ImportError(
+            f"import {{name!r}} is blocked in codeact. "
+            "Use shell() for commands and read()/write() for file I/O."
+        )
+    return _real_import(name, *args, **kwargs)
+
+_sandbox_builtins = dict(vars(_builtins_mod))
+_sandbox_builtins["__import__"] = _guarded_import
+
 try:
     _CODE = base64.b64decode("{code_b64}").decode("utf-8")
-    exec(_CODE, {{"read": read, "write": write, "shell": shell, "__name__": "__codeact__"}})
+    exec(_CODE, {{"read": read, "write": write, "shell": shell, "__name__": "__codeact__", "__builtins__": _sandbox_builtins}})
 except Exception as e:
     _MANIFEST["status"] = "error"
     _MANIFEST["error"] = traceback.format_exc()[:2000]
@@ -353,6 +399,10 @@ async def daytona_codeact(
                 metadata={"scope_packet": scope_packet, "conflict": True},
             )
 
+    # Layer 2: snapshot dirty files before execution so we can detect
+    # regressions (e.g. git stash wiping the working tree).
+    pre_dirty_snapshot = await snapshot_dirty_files(context)
+
     try:
         try:
             await _upload_file_compat(sandbox, wrapper.encode("utf-8"), script_path)
@@ -430,6 +480,22 @@ async def daytona_codeact(
             sync_error = str(shell_sync.get("error", "") or "")
             if sync_error:
                 warnings.append(sync_error)
+
+        # Layer 2: detect workspace regressions — files that were dirty
+        # before execution but are now clean (reverted by destructive
+        # commands like git stash, git checkout, etc.).
+        if shells:
+            regressed = await detect_workspace_regression(
+                context, pre_snapshot=pre_dirty_snapshot,
+            )
+            if regressed:
+                sample = ", ".join(regressed[:10])
+                suffix = f" (and {len(regressed) - 10} more)" if len(regressed) > 10 else ""
+                warnings.append(
+                    f"WORKSPACE REGRESSION: {len(regressed)} file(s) were silently "
+                    f"reverted by a shell command: {sample}{suffix}. "
+                    f"Other agents' work may have been lost."
+                )
 
         if result.get("status") == "error":
             return ToolResult(

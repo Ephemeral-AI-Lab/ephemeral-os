@@ -207,7 +207,12 @@ class Dispatcher:
         if result.submitted_plan is not None:
             new_depth = (rec.depth or 0) + 1
             if new_depth > self.budgets.max_depth:
-                await self._mark_failed_and_cascade(wi_id, f"InvalidPlan: plan would exceed max_depth={self.budgets.max_depth}")
+                await self._mark_failed_and_cascade(
+                    wi_id,
+                    f"InvalidPlan: plan would exceed max_depth={self.budgets.max_depth} "
+                    f"(current depth={rec.depth or 0}). Planners at the depth limit must "
+                    f"emit developer tasks with broader scopes instead of nested team_planner tasks.",
+                )
                 return []
 
             adj = await self.store.get_adjacency(self.team_run_id)

@@ -1,6 +1,7 @@
 import { Fragment, useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useParams, useNavigate } from 'react-router'
 import { fetchDbSession, fetchSessionRuns, fetchSessionUsage, fetchRunChunks, fetchRunDetail, fetchSessionMessages } from '../lib/api'
+import { ErrorBox, EmptyState, StatusBadge } from '../lib/components'
 import type {
   AgentRunSummary,
   AgentRunDetail,
@@ -51,13 +52,6 @@ type MessageBlock = {
   name?: string
   input?: Record<string, unknown>
   content?: string
-}
-
-const STATUS_COLORS: Record<string, string> = {
-  completed: 'bg-emerald-500/20 text-emerald-400',
-  running: 'bg-blue-500/20 text-blue-400',
-  failed: 'bg-red-500/20 text-red-400',
-  pending: 'bg-zinc-500/20 text-zinc-400',
 }
 
 const EVENT_KIND_COLORS: Record<string, string> = {
@@ -413,9 +407,7 @@ function SubagentRunsTable({ runs }: { runs: SubagentRunSummary[] }) {
                 <td className="px-3 py-2 text-zinc-100">{run.agent_name}</td>
                 <td className="px-3 py-2 font-mono text-zinc-500">{run.usage?.model_id || '\u2014'}</td>
                 <td className="px-3 py-2">
-                  <span className={`inline-block rounded px-2 py-0.5 text-[11px] font-medium ${STATUS_COLORS[run.status] ?? STATUS_COLORS.pending}`}>
-                    {run.status}
-                  </span>
+                  <StatusBadge status={run.status} />
                 </td>
                 <td className="max-w-xs truncate px-3 py-2 text-zinc-400">{run.input_query || '\u2014'}</td>
                 <td className="px-3 py-2 text-right font-mono text-zinc-400">
@@ -719,10 +711,10 @@ export default function AgentRunsPage() {
       )}
 
       {loading && <p className="text-sm text-zinc-500">Loading agent runs...</p>}
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      {error && <ErrorBox message={error} />}
 
       {!loading && runs.length === 0 && (
-        <p className="text-sm text-zinc-500">No ephemeral agents have run in this session yet.</p>
+        <EmptyState message="No ephemeral agents have run in this session yet." />
       )}
 
       {!loading && runs.length > 0 && (
@@ -763,11 +755,7 @@ export default function AgentRunsPage() {
                         </span>
                       </td>
                       <td className="px-4 py-2.5">
-                        <span
-                          className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[r.status] ?? STATUS_COLORS.pending}`}
-                        >
-                          {r.status}
-                        </span>
+                        <StatusBadge status={r.status} />
                       </td>
                       <td className="max-w-xs truncate px-4 py-2.5 text-xs text-zinc-400">
                         {r.input_query || '\u2014'}

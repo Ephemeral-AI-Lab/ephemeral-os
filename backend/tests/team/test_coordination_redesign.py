@@ -108,6 +108,7 @@ async def test_submit_plan_resolves_roster_role_hints():
                     "task": "Validate the API changes",
                     "agent": "reviewer",
                     "deps": ["impl"],
+                    "cascade_policy": "continue",
                 },
             ],
             rationale="Implementation then review.",

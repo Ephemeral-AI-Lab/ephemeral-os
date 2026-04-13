@@ -8,6 +8,8 @@ from unittest.mock import AsyncMock
 from benchmarks.sweevo.__main__ import _collect_health_issues
 from benchmarks.sweevo.models import SWEEvoInstance
 from benchmarks.sweevo.runner import run_sweevo_with_agent
+from benchmarks.sweevo.team_runner import _background_tool_names_from_messages
+from message.messages import ConversationMessage, ToolUseBlock
 
 
 def _instance() -> SWEEvoInstance:
@@ -23,6 +25,34 @@ def _instance() -> SWEEvoInstance:
         test_cmds="pytest --continue-on-collection-errors -rA",
         environment_setup_commit="",
     )
+
+
+def test_background_tool_names_from_messages_only_keeps_explicit_background_calls():
+    messages = [
+        ConversationMessage(
+            role="assistant",
+            content=[
+                ToolUseBlock(name="daytona_codeact", input={"code": "print(1)"}),
+                ToolUseBlock(
+                    name="daytona_codeact",
+                    input={"code": "print(2)", "background": True},
+                ),
+                ToolUseBlock(
+                    name="run_subagent",
+                    input={"agent_name": "scout", "background": True},
+                ),
+                ToolUseBlock(
+                    name="daytona_codeact",
+                    input={"code": "print(3)", "background": False},
+                ),
+            ],
+        )
+    ]
+
+    assert _background_tool_names_from_messages(messages) == [
+        "daytona_codeact",
+        "run_subagent",
+    ]
 
 
 def test_run_sweevo_with_agent_returns_structured_grading(monkeypatch):

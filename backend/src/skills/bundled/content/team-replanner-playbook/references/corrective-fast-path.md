@@ -11,6 +11,7 @@ Use this reference only when the validator packet already names exact failing py
 ## Rules
 
 - Must keep owner paths exact.
+- **Validator cascade_policy must be `"continue"`** — the validator must run even if the corrective developer fails, so it can report results and trigger further replanning. Using `"cancel"` breaks the recovery cycle.
 - May carry one exact missing import-path file when the parent package already exists live.
 - If a narrowed pytest node is missing but the parent packet still owns the exact benchmark file, keep the retry surface on that file path.
 - If the validator packet already names the live benchmark file and only the current verify command is wrong, correct the retry target and stop.

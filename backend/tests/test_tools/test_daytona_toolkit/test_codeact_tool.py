@@ -485,26 +485,43 @@ async def test_codeact_preserves_script_stdout_before_manifest_line():
 # ---------------------------------------------------------------------------
 
 
-async def test_codeact_allows_subprocess_calls_in_team_mode():
-    """CodeAct is team-agnostic — subprocess calls are not blocked."""
-    manifest = _make_manifest()
-    sb = _make_sandbox(manifest=manifest)
-    ctx = _ctx(
-        {
-            "daytona_sandbox": sb,
-            "agent_name": "developer",
-            "team_mode_enabled": True,
-        }
+async def test_codeact_blocks_subprocess_import_in_sandbox():
+    """subprocess import is blocked in the exec namespace to force shell() usage."""
+    wrapper = _build_wrapper(
+        "import subprocess\nsubprocess.run(['echo', 'hi'])",
+        run_id="block-test",
+        cwd="/testbed",
     )
+    assert "_guarded_import" in wrapper
+    assert "_BLOCKED_MODULES" in wrapper
 
-    result = await daytona_codeact.execute(
-        daytona_codeact.input_model(
-            code="import subprocess\nsubprocess.run(['pytest'], check=False)"
-        ),
-        ctx,
+
+async def test_build_wrapper_contains_subprocess_guard():
+    """The wrapper template includes the guarded import mechanism."""
+    wrapper = _build_wrapper("shell('ls')", run_id="guard-test", cwd="/testbed")
+    assert "subprocess" in wrapper  # wrapper itself still uses subprocess internally
+    assert "_guarded_import" in wrapper
+    assert "_BLOCKED_MODULES" in wrapper
+
+
+async def test_build_wrapper_blocks_destructive_git_unconditionally():
+    """Destructive git commands are blocked even without coordination mode."""
+    wrapper = _build_wrapper(
+        "shell('git stash')",
+        run_id="git-block-test",
+        cwd="/testbed",
+        require_declared_shell_outputs=False,
     )
-
-    assert not result.is_error
+    # The block should NOT be gated on _REQUIRE_DECLARED_SHELL_OUTPUTS
+    # Look for the unconditional pattern
+    assert "_DESTRUCTIVE_GIT_PATTERN.search(command" in wrapper
+    # The block line should NOT have _REQUIRE_DECLARED_SHELL_OUTPUTS as a prefix condition
+    lines = wrapper.split("\n")
+    for line in lines:
+        if "_DESTRUCTIVE_GIT_PATTERN.search" in line:
+            assert "_REQUIRE_DECLARED_SHELL_OUTPUTS" not in line, (
+                "Destructive git block must be unconditional"
+            )
 
 
 async def test_codeact_allows_writes_from_validator():

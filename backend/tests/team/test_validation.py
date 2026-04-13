@@ -264,6 +264,84 @@ def test_dep_in_known_external_deps_passes():
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# Validator cascade_policy enforcement
+# ---------------------------------------------------------------------------
+
+
+def _mock_validator_agent():
+    """Return a namespace that looks like a validator AgentDefinition."""
+    class _Defn:
+        role = "reviewer"
+        agent_type = "agent"
+    return _Defn()
+
+
+def test_validator_with_cancel_cascade_policy_fails():
+    """Validators must use cascade_policy='continue' to ensure recovery cycle works."""
+    dev = _spec("dev-1")
+    val = TaskSpec(
+        id="val-root",
+        task="validate",
+        agent="validator",
+        deps=["dev-1"],
+        cascade_policy="cancel",
+    )
+    plan = _plan(dev, val)
+
+    def side_effect_exists(name):
+        return True
+
+    def side_effect_role(name, role):
+        return name == "validator" and role == "reviewer"
+
+    def side_effect_defn(name):
+        if name == "validator":
+            return _mock_validator_agent()
+        return _mock_agent()
+
+    with patch(_AGENT_EXISTS_PATH, side_effect=side_effect_exists), \
+         patch(_HAS_ROLE_PATH, side_effect=side_effect_role), \
+         patch(_GET_DEFN_PATH, side_effect=side_effect_defn):
+        issues = validate_plan(plan)
+    assert any("cascade_policy" in i["msg"] and "continue" in i["msg"] for i in issues)
+
+
+def test_validator_with_continue_cascade_policy_passes():
+    """Validators with cascade_policy='continue' should not trigger the check."""
+    dev = _spec("dev-1")
+    val = TaskSpec(
+        id="val-root",
+        task="validate",
+        agent="validator",
+        deps=["dev-1"],
+        cascade_policy="continue",
+    )
+    plan = _plan(dev, val)
+
+    def side_effect_exists(name):
+        return True
+
+    def side_effect_role(name, role):
+        return name == "validator" and role == "reviewer"
+
+    def side_effect_defn(name):
+        if name == "validator":
+            return _mock_validator_agent()
+        return _mock_agent()
+
+    with patch(_AGENT_EXISTS_PATH, side_effect=side_effect_exists), \
+         patch(_HAS_ROLE_PATH, side_effect=side_effect_role), \
+         patch(_GET_DEFN_PATH, side_effect=side_effect_defn):
+        issues = validate_plan(plan)
+    assert not any("cascade_policy" in i["msg"] for i in issues)
+
+
+# ---------------------------------------------------------------------------
+# Extra validators
+# ---------------------------------------------------------------------------
+
+
 def test_extra_validators_are_called():
     a = _spec("A")
     plan = _plan(a)

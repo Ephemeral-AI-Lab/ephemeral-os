@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { ErrorBox, EmptyState, SectionHeader } from '../lib/components'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -423,11 +424,7 @@ function AgentBuilderForm({
         </button>
       </div>
 
-      {error && (
-        <div className="rounded-lg border border-red-800 bg-red-950 px-4 py-3 text-sm text-red-300">
-          {error}
-        </div>
-      )}
+      {error && <ErrorBox message={error} />}
 
       {validation && (
         <div className={`rounded-lg border px-4 py-3 text-sm ${
@@ -443,7 +440,7 @@ function AgentBuilderForm({
 
       {/* Basic Info */}
       <section className="space-y-3">
-        <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Basic Info</h3>
+        <SectionHeader>Basic Info</SectionHeader>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <TextField label="Name" value={form.name} onChange={v => set('name', v)} placeholder="my-agent" />
           <TextField label="Subagent Type" value={form.subagent_type} onChange={v => set('subagent_type', v)} placeholder="Defaults to name" />
@@ -453,14 +450,14 @@ function AgentBuilderForm({
 
       {/* System Prompt */}
       <section className="space-y-3">
-        <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">System Prompt</h3>
+        <SectionHeader>System Prompt</SectionHeader>
         <TextField label="System Prompt" value={form.system_prompt} onChange={v => set('system_prompt', v)} placeholder="You are a..." multiline mono />
         <TextField label="Initial Prompt" value={form.initial_prompt} onChange={v => set('initial_prompt', v)} placeholder="Prepended to first user turn" />
       </section>
 
       {/* Model & Behavior */}
       <section className="space-y-3">
-        <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Model & Behavior</h3>
+        <SectionHeader>Model &amp; Behavior</SectionHeader>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <TextField label="Model Key *" value={form.model} onChange={v => set('model', v)} placeholder="minimax" />
           <SelectField label="Effort" value={form.effort} onChange={v => set('effort', v)} options={EFFORT_LEVELS} />
@@ -470,7 +467,7 @@ function AgentBuilderForm({
 
       {/* Tools & Skills */}
       <section className="space-y-3">
-        <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Tools & Skills</h3>
+        <SectionHeader>Tools &amp; Skills</SectionHeader>
         <TextField label="Allowed Tools" value={form.tools} onChange={v => set('tools', v)} placeholder="Read, Write, Bash (comma-separated, empty = all)" />
         {availableTools.length > 0 && (
           <div className="flex flex-wrap gap-1">
@@ -516,7 +513,7 @@ function AgentBuilderForm({
 
       {/* UI & Lifecycle */}
       <section className="space-y-3">
-        <h3 className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">UI & Lifecycle</h3>
+        <SectionHeader>UI &amp; Lifecycle</SectionHeader>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div>
             <label className="block text-xs font-medium text-zinc-400 uppercase tracking-wide mb-1">Background</label>
@@ -778,18 +775,12 @@ export default function AgentsPage() {
             </div>
           </div>
 
-          {error && (
-            <div className="rounded-lg border border-red-800 bg-red-950 px-4 py-3 text-sm text-red-300">
-              {error}
-            </div>
-          )}
+          {error && <ErrorBox message={error} />}
 
           {loading ? (
             <div className="text-center text-sm text-zinc-500 py-8">Loading...</div>
           ) : filtered.length === 0 ? (
-            <div className="rounded-lg border border-zinc-800 px-4 py-8 text-center text-sm text-zinc-600">
-              No agents found
-            </div>
+            <EmptyState message="No agents found" />
           ) : (
             <div className="space-y-2">
               {filtered.map(agent => (

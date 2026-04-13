@@ -101,3 +101,38 @@ async def test_start_falls_back_to_local_publish_when_listen_fails() -> None:
     assert "developer" in text
 
     await listener.stop()
+
+
+@pytest.mark.asyncio
+async def test_start_without_engine_enables_in_process_fanout() -> None:
+    """When no async engine is available, in-process fan-out still works."""
+    listener = ScopeChangeListener(None, "run-no-pg")
+    buf_a = ScopeChangeBuffer()
+    buf_b = ScopeChangeBuffer()
+
+    await listener.start()
+    assert listener.is_running is True
+    assert listener._db_listen_active is False
+
+    listener.subscribe("agent-a", ["src/"], buf_a)
+    listener.subscribe("agent-b", ["src/"], buf_b)
+
+    listener.publish_change(
+        file_path="src/foo.py",
+        agent_id="dev",
+        agent_run_id="agent-a",
+        edit_type="write",
+    )
+
+    # agent-a authored the edit → should NOT receive it
+    assert buf_a.has_pending is False
+    # agent-b is a different agent → should receive it
+    assert buf_b.has_pending is True
+
+    msgs: list[object] = []
+    text = buf_b.flush_into(msgs)
+    assert text is not None
+    assert "src/foo.py" in text
+
+    await listener.stop()
+    assert listener.is_running is False

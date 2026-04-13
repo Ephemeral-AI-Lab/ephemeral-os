@@ -626,6 +626,21 @@ def _tool_names_from_messages(messages: list[ConversationMessage]) -> list[str]:
     return names
 
 
+def _background_tool_names_from_messages(
+    messages: list[ConversationMessage],
+) -> list[str]:
+    names: list[str] = []
+    for msg in messages:
+        for block in getattr(msg, "content", []):
+            if (
+                isinstance(block, ToolUseBlock)
+                and isinstance(block.input, dict)
+                and block.input.get("background") is True
+            ):
+                names.append(block.name)
+    return names
+
+
 def _enforce_validation_evidence(
     agent_name: str,
     display_messages: list[ConversationMessage],
@@ -790,6 +805,15 @@ def _make_runner(
                 if tool_call_limit is not None:
                     usage_line += f"/{tool_call_limit}"
                 usage_line += f" final_context={final_context_tokens}"
+                background_tool_names = _background_tool_names_from_messages(
+                    list(agent.display_messages)
+                )
+                if background_tool_names:
+                    bg_counts = Counter(background_tool_names)
+                    bg_summary = ", ".join(
+                        f"{name}={count}" for name, count in sorted(bg_counts.items())
+                    )
+                    usage_line += f" background_tools={bg_summary}"
                 if compacted_before is not None:
                     compactions_delta = f"+{new_compactions}" if new_compactions > 0 else str(new_compactions)
                     usage_line += (
@@ -801,6 +825,9 @@ def _make_runner(
                     usage_line,
                 )
             tool_names = _tool_names_from_messages(list(agent.display_messages))
+            background_tool_names = _background_tool_names_from_messages(
+                list(agent.display_messages)
+            )
             _append_benchmark_event(
                 team_metrics,
                 {
@@ -818,6 +845,8 @@ def _make_runner(
                     "tool_call_limit": getattr(qc, "tool_call_limit", None),
                     "tool_names": tool_names,
                     "tool_counts": dict(Counter(tool_names)),
+                    "background_tool_names": background_tool_names,
+                    "background_tool_counts": dict(Counter(background_tool_names)),
                     "final_context_tokens": final_context_tokens,
                     "compactions_added": new_compactions,
                     "compacted": compacted_total,

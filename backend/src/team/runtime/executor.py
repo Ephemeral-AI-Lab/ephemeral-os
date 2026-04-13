@@ -409,9 +409,41 @@ class Executor:
 
         return action
 
+    async def _post_retry_reason_note(self, task: "Task", result: RetryRequest) -> None:
+        """Post the retry reason as a TaskCenter note on the task itself.
+
+        This note is visible to the retried agent via ``context_for()``'s
+        dep filter (Priority 2) because the note's ``task_id`` matches the
+        task being retried. Without this, the developer on retry sees the
+        same context as before and may repeat the same failing approach.
+        """
+        reason = getattr(result, "reason", "") or "no reason given"
+        content = (
+            f"**RETRY #{task.retry_count + 1}** — Previous attempt failed.\n"
+            f"Reason: {reason}\n"
+            f"Do NOT repeat the same approach. If this is your last retry "
+            f"(max_retries={task.max_retries}), call `request_replan()` "
+            f"instead of `request_retry()` so a replanner can restructure the work."
+        )
+        from team.models import Note
+        try:
+            await self.team_run.task_center.post(
+                Note(
+                    id=str(uuid.uuid4()),
+                    task_id=task.id,
+                    agent_name="system",
+                    content=content,
+                    timestamp=time.time(),
+                    scope_paths=list(task.scope_paths) if task.scope_paths else [],
+                )
+            )
+        except Exception:
+            logger.debug("retry reason note: post failed for %s", task.id, exc_info=True)
+
     async def _dispatch(self, task_id: str, task: "Task", result: Any) -> None:
         dispatcher = self.team_run.dispatcher
         if isinstance(result, RetryRequest):
+            await self._post_retry_reason_note(task, result)
             await dispatcher.retry_work_item(task_id, result)
             await self._checkpoint_after_transition(task, outcome="retry")
             await self._post_checkpoint_note(task, result)

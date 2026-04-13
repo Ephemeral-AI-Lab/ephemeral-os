@@ -52,7 +52,7 @@ class ScopeChangeListener:
     at the top of each query loop turn — no timer-based flush loop.
     """
 
-    def __init__(self, engine: "AsyncEngine", run_id: str) -> None:
+    def __init__(self, engine: "AsyncEngine | None", run_id: str) -> None:
         self._engine = engine
         self._run_id = run_id
         self._channel = _build_channel_name(run_id)
@@ -64,8 +64,20 @@ class ScopeChangeListener:
         self._db_listen_active = False
 
     async def start(self) -> None:
-        """Attach a LISTEN listener on a dedicated connection when possible."""
+        """Attach a LISTEN listener on a dedicated connection when possible.
+
+        When no engine is available, starts in in-process-only mode:
+        ``publish_change`` still fans out to subscribed buffers, but
+        cross-process PostgreSQL LISTEN/NOTIFY is skipped.
+        """
         self._running = True
+        if self._engine is None:
+            logger.info(
+                "ScopeChangeListener started in in-process-only mode "
+                "(no async engine) on channel %s",
+                self._channel,
+            )
+            return
         try:
             self._conn = await self._engine.connect()
             raw = await self._conn.get_raw_connection()

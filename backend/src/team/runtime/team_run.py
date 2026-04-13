@@ -254,14 +254,17 @@ class TeamRun:
         await self._stop_scope_listener()
 
     async def _start_scope_listener(self) -> None:
-        """Start the LISTEN/NOTIFY scope change listener if an async engine exists."""
+        """Start the scope change listener for in-process fan-out.
+
+        Uses PostgreSQL LISTEN/NOTIFY for cross-process notifications when
+        an async engine is available; falls back to in-process-only mode
+        otherwise (sufficient for single-process benchmark runs).
+        """
         try:
             from team.persistence.team_engine import get_team_engine
             from team.runtime.scope_change_listener import ScopeChangeListener
 
-            engine = get_team_engine()
-            if engine is None:
-                return
+            engine = get_team_engine()  # None when no PG / no async engine
             self.scope_listener = ScopeChangeListener(engine, self.id)
             await self.scope_listener.start()
         except Exception:

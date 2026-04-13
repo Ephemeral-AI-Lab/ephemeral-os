@@ -84,12 +84,44 @@ class TaskCenter:
         budget = max_context_bytes
         sections: list[str] = []
 
+        # Priority 0: Retry context (never trimmed, shown before task)
+        if task.retry_count and task.retry_count > 0:
+            retry_section = (
+                f"## ⚠ RETRY #{task.retry_count} of {task.max_retries}\n"
+                f"Your previous attempt at this task failed. "
+                f"Do NOT repeat the same approach — read the retry notes below "
+                f"for what went wrong."
+            )
+            if task.retry_count >= task.max_retries:
+                retry_section += (
+                    f"\n\n**This is your LAST attempt.** If you cannot fix the "
+                    f"issue with a different approach, call `request_replan()` "
+                    f"with a clear diagnostic so the replanner can restructure the work."
+                )
+            sections.append(retry_section)
+            budget -= len(retry_section.encode())
+
         # Priority 1: The task itself (never trimmed)
         task_section = f"## Your task\n{task.task}"
         if task.scope_paths:
             task_section += f"\n\nScope: {', '.join(task.scope_paths)}"
         sections.append(task_section)
         budget -= len(task_section.encode())
+
+        # Priority 1.5: Self-notes on retry (retry reasons, previous attempt context)
+        if task.retry_count and task.retry_count > 0 and budget > 0:
+            self_notes = await self.read(authors=[task.id])
+            if self_notes:
+                self_section = self._render_notes("Previous attempt context", self_notes)
+                self_bytes = len(self_section.encode())
+                if self_bytes <= budget:
+                    sections.append(self_section)
+                    budget -= self_bytes
+                else:
+                    sections.append(
+                        self._truncate_section("Previous attempt context", self_notes, budget)
+                    )
+                    budget = 0
 
         # Priority 2: Dep notes (direct deps only, not transitive)
         if task.deps and budget > 0:

@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 _SHELL_MUTATION_PATTERN = re.compile(
     r"(^|[;&|]\s*)("
     r"cat\s+>|tee\s|cp\s|mv\s|rm\s|touch\s|mkdir\s|install\s|ln\s|"
-    r"git\s+(apply|checkout|restore|reset|clean|mv|rm)\b|"
+    r"git\s+(apply|checkout|restore|reset|clean|stash|merge|rebase|cherry-pick|mv|rm)\b|"
     r"sed\s+-i\b|perl\s+-pi\b|patch\b|ed\b|ex\b|"
     r".*>>|.*[^<]>(?!&)[^>]"
     r")",
@@ -191,8 +191,82 @@ def _parse_git_status_paths(output: str, git_root: str) -> list[str]:
     return paths
 
 
+# ---------------------------------------------------------------------------
+# Layer 2: Post-shell workspace regression detection
+# ---------------------------------------------------------------------------
+
+
+async def snapshot_dirty_files(
+    context: ToolExecutionContext,
+) -> set[str] | None:
+    """Capture the set of dirty file paths in the sandbox working tree.
+
+    Returns ``None`` if the sandbox is unavailable or not a git checkout
+    (callers should treat ``None`` as "skip regression check").
+    """
+    sandbox = get_daytona_sandbox(context)
+    cwd = get_daytona_cwd(context)
+    if sandbox is None or not cwd:
+        return None
+    try:
+        root_resp = await sandbox.process.exec(
+            f"git -C {shlex.quote(cwd)} rev-parse --show-toplevel",
+            timeout=20,
+        )
+    except Exception:
+        return None
+    git_root = (getattr(root_resp, "result", "") or "").strip()
+    if getattr(root_resp, "exit_code", 1) != 0 or not git_root:
+        return None
+    try:
+        status_resp = await sandbox.process.exec(
+            f"git -C {shlex.quote(git_root)} status --porcelain --untracked-files=all",
+            timeout=30,
+        )
+    except Exception:
+        return None
+    if getattr(status_resp, "exit_code", 1) != 0:
+        return None
+    paths = _parse_git_status_paths(
+        (getattr(status_resp, "result", "") or ""), git_root,
+    )
+    return set(paths)
+
+
+async def detect_workspace_regression(
+    context: ToolExecutionContext,
+    *,
+    pre_snapshot: set[str] | None,
+) -> list[str]:
+    """Compare pre- and post-execution dirty files to find regressions.
+
+    A *regression* is a file that was dirty before the shell command(s) ran
+    but is clean afterward — meaning the command silently reverted tracked
+    work (e.g. ``git stash``, ``git checkout -- .``).
+
+    Returns a list of absolute paths that regressed. Empty list means no
+    regression detected (or snapshot was unavailable).
+    """
+    if pre_snapshot is None or not pre_snapshot:
+        return []
+    post_snapshot = await snapshot_dirty_files(context)
+    if post_snapshot is None:
+        # Can't verify — sandbox or git unavailable after execution.
+        return []
+    regressed = sorted(pre_snapshot - post_snapshot)
+    if regressed:
+        logger.warning(
+            "Workspace regression detected: %d file(s) reverted by shell command: %s",
+            len(regressed),
+            ", ".join(regressed[:10]),
+        )
+    return regressed
+
+
 __all__ = [
     "command_may_mutate_workspace",
+    "detect_workspace_regression",
     "shell_mutation_declaration_error",
+    "snapshot_dirty_files",
     "sync_shell_mutations",
 ]

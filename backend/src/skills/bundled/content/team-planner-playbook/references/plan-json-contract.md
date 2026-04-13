@@ -17,6 +17,8 @@ Use this reference immediately before emitting final plan JSON.
 - Use exact live-confirmed or explorer-confirmed paths in `scope_paths`; if the exact owner is still uncertain, keep the broader boundary and assign it to `team_planner`.
 - Keep at most one terminal validator in a submitted plan.
 - Before loading this reference, confirm that the terminal validator depends on every terminal non-validator sibling. Do not learn that from a submit error.
+- **Validator cascade_policy must be `"continue"`**, not `"cancel"`. The validator must run even when some developer deps fail — it reports which fixes worked and triggers replanning for failures. Using `"cancel"` kills the validator and prevents the recovery cycle.
+- Developer and team_planner tasks should use `"cancel"` (default) for strict dependency chains.
 - Do not submit an expandable `developer`.
 - Do not serialize the whole layer into eight atomic developers only because all owners are known.
 - Reload the ending chain sequentially if the self-check never finished.
@@ -57,7 +59,7 @@ Use this reference immediately before emitting final plan JSON.
     "tasks": [
       {"id": "dev-hdf", "agent": "developer", "deps": [], "scope_paths": ["pkg/io/hdf.py"], "cascade_policy": "cancel", "task": "Restore the shared HDF export in pkg/io/hdf.py. Reproduce and keep verification on pytest pkg/tests/test_hdf.py -x."},
       {"id": "plan-parquet", "agent": "team_planner", "deps": [], "scope_paths": ["pkg/io/parquet/"], "cascade_policy": "cancel", "task": "Decompose parquet IO failures across engine backends."},
-      {"id": "val-root", "agent": "validator", "deps": ["dev-hdf", "plan-parquet"], "scope_paths": ["pkg/io/hdf.py", "pkg/io/parquet/"], "cascade_policy": "cancel", "task": "Run the terminal verification gate for the root layer."}
+      {"id": "val-root", "agent": "validator", "deps": ["dev-hdf", "plan-parquet"], "scope_paths": ["pkg/io/hdf.py", "pkg/io/parquet/"], "cascade_policy": "continue", "task": "Run the terminal verification gate for the root layer."}
     ],
     "rationale": "One direct leaf is ready, parquet stays expandable, and the terminal validator depends on every terminal non-validator sibling."
   }
