@@ -217,7 +217,7 @@ async def test_edit_warns_write_outside_write_scope():
 
     result = await daytona_edit_file.execute(
         daytona_edit_file.input_model(
-            file_path="/testbed/dask/tests/test_config.py",
+            file_path="/testbed/dask/_compatibility.py",
             old_text="original",
             new_text="patched",
         ),
@@ -238,13 +238,13 @@ async def test_edit_allows_write_inside_write_scope():
             "daytona_cwd": "/testbed",
             "agent_name": "developer",
             "team_mode_enabled": True,
-            "write_scope": ["dask/"],
+            "write_scope": ["dask/config.py"],
         }
     )
 
     result = await daytona_edit_file.execute(
         daytona_edit_file.input_model(
-            file_path="/testbed/dask/tests/test_config.py",
+            file_path="/testbed/dask/config.py",
             old_text="original",
             new_text="patched",
         ),
@@ -257,7 +257,7 @@ async def test_edit_allows_write_inside_write_scope():
     sb.fs.upload_file.assert_called_once()
 
 
-async def test_edit_records_scope_warning_on_advisory_verification_surface_write():
+async def test_edit_rejects_test_suite_write():
     sb = _make_sandbox(download_content="original")
     ctx = _ctx(
         {
@@ -266,7 +266,6 @@ async def test_edit_records_scope_warning_on_advisory_verification_surface_write
             "agent_name": "developer",
             "team_mode_enabled": True,
             "write_scope": ["dask/cli.py"],
-            "verification_surface_write_enforcement": "warn",
             "owned_failures": ["dask/tests/test_cli.py"],
             "verify": ["pytest dask/tests/test_cli.py -q"],
         }
@@ -281,12 +280,9 @@ async def test_edit_records_scope_warning_on_advisory_verification_surface_write
         ctx,
     )
 
-    assert not result.is_error
-    data = json.loads(result.output)
-    assert data["warnings"]
-    warnings = ctx.metadata["coordination_warnings"]
-    assert warnings
-    assert "outside write_scope" in warnings[0]["message"]
+    assert result.is_error
+    assert "test suite" in result.output
+    sb.fs.upload_file.assert_not_called()
 
 
 async def test_edit_warns_non_verify_surface_write_in_warn_mode():

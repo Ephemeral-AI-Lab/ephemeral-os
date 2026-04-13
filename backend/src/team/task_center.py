@@ -236,29 +236,25 @@ class TaskCenter:
         content: str | None = None
 
         if snapshot and api_client:
-            from ephemeral_task import (
-                CHECKPOINT_SYSTEM_PROMPT,
+            from external_trigger.checkpoint_note import (
                 EDIT_CHECKPOINT_PROMPT,
                 TURN_CHECKPOINT_PROMPT,
-                Snapshot,
-                run_ephemeral_task,
+                run_checkpoint_note,
             )
             prompt = EDIT_CHECKPOINT_PROMPT if trigger == "edit" else TURN_CHECKPOINT_PROMPT
-            snap = Snapshot(
+            agent_run_id = task.agent_run_id or task_id if task else task_id
+            result = await run_checkpoint_note(
                 task_id=task_id,
-                agent_run_id=task.agent_run_id or task_id if task else task_id,
+                agent_run_id=agent_run_id,
                 messages=snapshot,
-                system_prompt=CHECKPOINT_SYSTEM_PROMPT,
-            )
-            result = await run_ephemeral_task(
-                snapshot=snap,
                 prompt=prompt,
                 trigger=trigger,
-                api_client=api_client,
+                max_tokens=500,
                 model=model,
+                api_client=api_client,
             )
-            if result.text:
-                content = result.text
+            if result.note_summary:
+                content = result.note_summary
 
         # Fallback: factual note when no LLM available or LLM returned empty
         if content is None:

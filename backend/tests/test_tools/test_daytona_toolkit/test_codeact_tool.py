@@ -743,8 +743,8 @@ async def test_codeact_rejects_writes_from_validator():
     assert "validator lanes must not write repository files" in data["write_errors"][0]
 
 
-async def test_codeact_warns_verify_surface_writes_when_enforcement_is_error():
-    """Write-scope is advisory — verification-surface writes succeed with a warning."""
+async def test_codeact_blocks_test_suite_writes():
+    """Test-suite writes are hard-blocked for coordinated agents."""
     manifest = _make_manifest(
         writes=[{"path": "/testbed/dask/tests/test_cli.py", "content": "patched\n"}]
     )
@@ -755,7 +755,6 @@ async def test_codeact_warns_verify_surface_writes_when_enforcement_is_error():
             "daytona_cwd": "/testbed",
             "agent_name": "developer",
             "team_mode_enabled": True,
-            "verification_surface_write_enforcement": "error",
             "write_scope": ["dask/cli.py"],
             "owned_files": ["dask/cli.py"],
             "owned_failures": ["dask/tests/test_cli.py"],
@@ -768,42 +767,11 @@ async def test_codeact_warns_verify_surface_writes_when_enforcement_is_error():
         ctx,
     )
 
-    data = _assert_ok(result)
-    assert data["files_written"] == 1
-    assert any("outside write_scope" in w for w in data["warnings"])
-
-
-async def test_codeact_records_scope_warning_on_advisory_write():
-    manifest = _make_manifest(
-        writes=[{"path": "/testbed/dask/tests/test_cli.py", "content": "patched\n"}]
-    )
-    sb = _make_sandbox(manifest=manifest)
-    ctx = _ctx(
-        {
-            "daytona_sandbox": sb,
-            "daytona_cwd": "/testbed",
-            "agent_name": "developer",
-            "team_mode_enabled": True,
-            "write_scope": ["dask/cli.py"],
-            "verification_surface_write_enforcement": "warn",
-            "owned_failures": ["dask/tests/test_cli.py"],
-            "verify": ["pytest dask/tests/test_cli.py -q"],
-        }
-    )
-
-    result = await daytona_codeact.execute(
-        daytona_codeact.input_model(
-            code="write('/testbed/dask/tests/test_cli.py', 'patched\\n')"
-        ),
-        ctx,
-    )
-
-    data = _assert_ok(result)
-    assert data["files_written"] == 1
-    assert any("outside write_scope" in warning for warning in data["warnings"])
-    warnings = ctx.metadata["coordination_warnings"]
-    assert warnings
-    assert "outside write_scope" in warnings[0]["message"]
+    assert result.is_error
+    data = json.loads(result.output)
+    assert data["files_written"] == 0
+    assert data["write_errors"]
+    assert "test suite" in data["write_errors"][0]
 
 
 async def test_codeact_warns_non_verify_surface_write_in_warn_mode():

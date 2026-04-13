@@ -228,6 +228,7 @@ class SubmitSummaryTool(BaseTool):
         "scope is wrong or needs restructuring, use request_replan instead."
     )
     input_model = DoneInput
+    tool_types = frozenset({"post_run"})
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, DoneInput)
@@ -281,6 +282,7 @@ class SubmitPlanTool(BaseTool):
         "(further decomposed); all others are atomic."
     )
     input_model = SubmitPlanInput
+    tool_types = frozenset({"post_run"})
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, SubmitPlanInput)
@@ -368,6 +370,7 @@ class RequestRetryTool(BaseTool):
         "wrong or needs restructuring, use request_replan instead."
     )
     input_model = RequestRetryInput
+    tool_types = frozenset({"post_run"})
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, RequestRetryInput)
@@ -411,6 +414,7 @@ class RequestReplanTool(BaseTool):
         "request_retry instead."
     )
     input_model = RequestReplanInput
+    tool_types = frozenset({"post_run"})
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, RequestReplanInput)
@@ -453,6 +457,7 @@ class AddTasksTool(BaseTool):
         "Use when the failed task needs follow-up work but other siblings can continue."
     )
     input_model = SubmitReplanInput
+    tool_types = frozenset({"post_run"})
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, SubmitReplanInput)
@@ -488,6 +493,7 @@ class DeclareBlockerTool(BaseTool):
         "spawn one resolver, and resume work after the fix lands."
     )
     input_model = DeclareBlockerInput
+    tool_types = frozenset({"post_run"})
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, DeclareBlockerInput)
@@ -518,6 +524,7 @@ class SubmitReplanTool(BaseTool):
         "New tasks are inserted as siblings at the same DAG level as the failed task."
     )
     input_model = SubmitReplanInput
+    tool_types = frozenset({"post_run"})
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, SubmitReplanInput)
@@ -539,6 +546,7 @@ class CancelAndRedraftTool(BaseTool):
         "Use when the existing subtree decomposition is wrong, not just incomplete."
     )
     input_model = SubmitReplanInput
+    tool_types = frozenset({"post_run"})
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, SubmitReplanInput)

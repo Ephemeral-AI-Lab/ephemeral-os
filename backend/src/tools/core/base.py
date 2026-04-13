@@ -19,12 +19,14 @@ __all__ = [
     "ToolExecutionContext",
     "ToolRegistry",
     "ToolResult",
+    "ToolType",
     "decorate_schemas_for_background",
     "run_tool_safely",
 ]
 
 
 BackgroundMode = Literal["forbidden", "optional", "always"]
+ToolType = Literal["normal", "post_run", "external_trigger"]
 
 
 @dataclass
@@ -136,6 +138,12 @@ class BaseTool(ABC):
     # "agent" is the default for ordinary background tools; tools that spawn a
     # nested agent (e.g. run_subagent) override it to "subagent".
     task_type: str = "agent"
+    # Which execution phases this tool participates in.
+    # "normal"           — available during main agent work loop
+    # "post_run"         — available after agent finishes (submission tools)
+    # "external_trigger" — used by external callers (conductor, task_center)
+    # A tool can have multiple types (e.g. post_note is both external_trigger and post_run).
+    tool_types: set[ToolType] = frozenset({"normal"})
 
     @abstractmethod
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
@@ -179,12 +187,6 @@ class BaseTool(ABC):
 
 class BaseToolkit:
     """Named collection of related tools."""
-
-    # Subclasses set this to True to declare that the toolkit's tools
-    # belong to the posthook phase and must not be exposed during the
-    # main work loop. The query loop uses this flag to auto-separate
-    # posthook tools from regular tools without name-based matching.
-    posthook: bool = False
 
     def __init__(
         self,
@@ -277,6 +279,14 @@ class ToolRegistry:
                 allowed_tools.update(tk.tool_names())
         self._toolkits = kept_toolkits
         self._tools = {k: v for k, v in self._tools.items() if k in allowed_tools}
+
+    def filter_by_type(self, tool_type: ToolType) -> ToolRegistry:
+        """Return a new registry containing only tools matching the given type."""
+        filtered = ToolRegistry()
+        for tool in self._tools.values():
+            if tool_type in getattr(tool, "tool_types", frozenset({"normal"})):
+                filtered.register(tool)
+        return filtered
 
     def remove_tools(self, tool_names: list[str]) -> None:
         """Remove specific tools by name (blocklist). Toolkits are kept."""

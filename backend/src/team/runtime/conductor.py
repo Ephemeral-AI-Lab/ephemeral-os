@@ -136,34 +136,32 @@ class Conductor:
         api_client = getattr(self._team_run, "api_client", None)
 
         async def _assess_one(rec: object) -> "PauseVerdict | None":
-            from ephemeral_task import PauseVerdict, Snapshot, assess_pause
+            from external_trigger.pause_assessment import PauseVerdict, assess_pause
 
             task_id: str = rec.id  # type: ignore[attr-defined]
             agent_run_id = getattr(rec, "agent_run_id", None) or task_id
-            snap = Snapshot(
-                task_id=task_id,
-                agent_run_id=agent_run_id,
-                messages=self._executor_snapshots.get(task_id, []),
-                system_prompt="You are a blocker assessment assistant.",
-            )
+            messages = self._executor_snapshots.get(task_id, [])
             if api_client is None:
                 logger.warning("No api_client on team_run; auto-pausing task %s", task_id)
                 return PauseVerdict(
                     task_id=task_id,
                     answer="YES",
                     reason="no api_client available for assessment",
-                    conversation=snap.messages,
+                    conversation=messages,
                 )
             try:
                 verdict = await assess_pause(
-                    snapshot=snap,
+                    task_id=task_id,
+                    agent_run_id=agent_run_id,
+                    messages=messages,
+                    system_prompt="You are a blocker assessment assistant.",
                     broken_files=blocker.root_cause_paths,
                     problem=blocker.reason,
                     api_client=api_client,
                 )
             except Exception as exc:
                 logger.warning("PauseAssessmentTask failed for %s: %s — skipping", task_id, exc)
-                return None  # TIMEOUT / error → skip, don't pause
+                return None  # error → skip, don't pause
             return verdict
 
         verdicts = await asyncio.gather(*[_assess_one(r) for r in running])
@@ -178,7 +176,7 @@ class Conductor:
                 logger.debug("Task %s not affected by blocker %s", verdict.task_id, blocker.id)
 
     async def _pause_task(self, task_id: str, blocker_id: str, verdict: "PauseVerdict") -> None:
-        from ephemeral_task import PauseVerdict  # noqa: F811 — type narrowing
+        from external_trigger.pause_assessment import PauseVerdict  # noqa: F811 — type narrowing
         tc = self._team_run.task_center
         checkpoint = json.dumps(verdict.conversation)
         await tc.pause_running_task(task_id, blocker_id, checkpoint, verdict.reason)

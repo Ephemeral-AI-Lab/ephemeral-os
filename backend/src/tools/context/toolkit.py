@@ -47,6 +47,7 @@ class PostNoteTool(BaseTool):
         "and immutable — post a new note to update, don't try to edit."
     )
     input_model = PostNoteInput
+    tool_types = frozenset({"external_trigger", "post_run"})
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, PostNoteInput)

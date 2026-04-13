@@ -120,7 +120,7 @@ class Executor:
             if listener is not None:
                 listener.unsubscribe(agent_run_id)
 
-        result = self._posthook(ctx, defn)
+        result = self._posthook_legacy(ctx, defn)
         result = await self._tag_if_scope_drifted(task, result, ctx)
         await self._dispatch(task, result)
 
@@ -217,7 +217,8 @@ class Executor:
         )
 
     @staticmethod
-    def _posthook(ctx: TeamAgentContext, defn: "AgentDefinition") -> AgentResult | RetryRequest | ReplanRequest:
+    def _posthook_legacy(ctx: TeamAgentContext, defn: "AgentDefinition") -> AgentResult | RetryRequest | ReplanRequest:
+        """Legacy fallback: extract result from metadata when runner is unavailable."""
         metadata = ctx.tool_metadata
         submitted = metadata.get("submitted_output")
         if submitted is not None:
@@ -245,7 +246,7 @@ class Executor:
             return AgentResult(summary=work_result[:2000])
         return AgentResult(summary="completed (no explicit submission)")
 
-    _extract_result = _posthook
+    _extract_result = _posthook_legacy
 
     async def _post_completion_note(self, task: "Task", summary: str) -> None:
         if not summary or summary in ("completed (no explicit submission)", "planner_did_not_submit_plan"):

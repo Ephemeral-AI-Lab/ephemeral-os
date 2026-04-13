@@ -1,9 +1,10 @@
-"""Tests for advisory write-scope enforcement.
+"""Tests for coordinated Daytona repo-write enforcement.
 
 Write-scope was changed from hard-blocking to advisory: developers can write
 outside their assigned scope_paths with a warning instead of an error.
-Validators remain hard-blocked. The coordination warning gate in posthook
-no longer blocks submission.
+Validators remain hard-blocked, and test-suite paths are always hard-blocked
+for coordinated agents. The coordination warning gate in posthook no longer
+blocks submission.
 """
 
 from __future__ import annotations
@@ -28,7 +29,7 @@ def _ctx(metadata=None) -> ToolExecutionContext:
 
 
 # ---------------------------------------------------------------------------
-# _team_repo_write_error: hard block removed for developers
+# _team_repo_write_error: developers stay advisory except on test-suite paths
 # ---------------------------------------------------------------------------
 
 
@@ -40,7 +41,7 @@ def test_write_error_returns_none_for_developer_outside_scope():
         "daytona_cwd": "/testbed",
         "write_scope": ["dask/config.py"],
     })
-    result = _team_repo_write_error(ctx, "/testbed/dask/tests/test_config.py", tool_name="edit")
+    result = _team_repo_write_error(ctx, "/testbed/dask/_compatibility.py", tool_name="edit")
     assert result is None
 
 
@@ -102,6 +103,19 @@ def test_write_error_returns_none_for_non_team_mode():
     })
     result = _team_repo_write_error(ctx, "/testbed/dask/tests/test_config.py", tool_name="edit")
     assert result is None
+
+
+def test_write_error_blocks_test_suite_path():
+    ctx = _ctx({
+        "agent_name": "developer",
+        "team_mode_enabled": True,
+        "daytona_cwd": "/testbed",
+        "write_scope": ["dask/cli.py"],
+    })
+    result = _team_repo_write_error(ctx, "/testbed/dask/tests/test_cli.py", tool_name="edit")
+    assert result is not None
+    assert "test suite" in result
+    assert "dask/tests/test_cli.py" in result
 
 
 def test_write_error_returns_none_for_absolute_path_outside_repo():
@@ -185,8 +199,8 @@ def test_write_warning_includes_tool_name_and_path():
     assert "src/auth" in result
 
 
-def test_write_warning_for_non_verification_surface_path():
-    """Advisory warnings apply to all out-of-scope paths, not just verification surfaces."""
+def test_write_warning_for_non_test_path():
+    """Advisory warnings apply to non-test out-of-scope paths."""
     ctx = _ctx({
         "agent_name": "developer",
         "team_mode_enabled": True,

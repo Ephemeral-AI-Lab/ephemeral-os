@@ -418,13 +418,25 @@ def _path_under_write_scope(rel_path: str, write_scope: list[str]) -> bool:
     return False
 
 
+def _is_test_suite_path(rel_path: str) -> bool:
+    """Return True when *rel_path* points into the repository test suite."""
+    normalized = str(rel_path or "").strip().replace("\\", "/")
+    if not normalized:
+        return False
+    lowered = normalized.lower()
+    if lowered.startswith("tests/") or "/tests/" in lowered:
+        return True
+    name = lowered.rsplit("/", 1)[-1]
+    return name.startswith("test_") or name.endswith("_test.py")
+
+
 def _team_repo_write_error(
     context: ToolExecutionContext,
     file_path: str,
     *,
     tool_name: str,
 ) -> str | None:
-    """Block writes for validator lanes only; write_scope is advisory."""
+    """Return a hard policy error for repo writes that coordinated agents must not perform."""
     if not is_coordinated_team_agent(context):
         return None
     repo_root = str(_get_cwd(context) or "")
@@ -436,6 +448,11 @@ def _team_repo_write_error(
             f"{tool_name}: validator lanes must not write repository files "
             f"({rel_path})."
         )
+    if _is_test_suite_path(rel_path):
+        return (
+            f"{tool_name}: write to {rel_path} touches the test suite and is blocked "
+            "in team coordination mode. Fix production code instead of editing tests."
+        )
     return None
 
 
@@ -445,7 +462,7 @@ def _team_repo_write_warning(
     *,
     tool_name: str,
 ) -> str | None:
-    """Advisory warning for writes outside write_scope."""
+    """Return an advisory warning for risky-but-allowed coordinated repo writes."""
     if not is_coordinated_team_agent(context):
         return None
     repo_root = str(_get_cwd(context) or "")
