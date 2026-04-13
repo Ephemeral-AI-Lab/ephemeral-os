@@ -471,13 +471,17 @@ async def daytona_codeact(
         code,
         run_id=run_id,
         cwd=repo_cwd,
-        require_declared_shell_outputs=bool(context.metadata.get("require_declared_shell_outputs")),
+        require_declared_shell_outputs=(
+            bool(context.metadata.get("require_declared_shell_outputs"))
+            or is_coordinated_team_agent(context)
+        ),
         declared_output_paths=resolved_declared_output_paths,
     )
     script_path = f"/tmp/codeact-wrapper-{run_id}.py"
     exec_command = _build_exec_command(script_path, cwd=repo_cwd)
     prepared_shell_outputs: list[object] = []
     shell_sync: dict[str, object] = {"enabled": False, "files": 0, "truncated": False}
+    shell_write_errors: list[str] = []
     warnings: list[str] = []
 
     for path in resolved_declared_output_paths:
@@ -596,9 +600,22 @@ async def daytona_codeact(
                 command=" && ".join(mutating_shell_commands),
                 declared_output_paths=resolved_declared_output_paths or None,
             )
+            shell_write_errors.extend(
+                str(item)
+                for item in (shell_sync.get("write_errors") or [])
+                if str(item).strip()
+            )
+            warnings.extend(
+                str(item)
+                for item in (shell_sync.get("write_warnings") or [])
+                if str(item).strip()
+            )
             sync_error = str(shell_sync.get("error", "") or "")
             if sync_error:
-                warnings.append(sync_error)
+                if bool(shell_sync.get("missing_declarations")):
+                    shell_write_errors.append(sync_error)
+                else:
+                    warnings.append(sync_error)
 
         # Layer 2: detect workspace regressions — files that were dirty
         # before execution but are now clean (reverted by destructive
@@ -637,6 +654,7 @@ async def daytona_codeact(
         committed = 0
         errors = []
         conflicts = []
+        errors.extend(shell_write_errors)
 
         for path, content in _coalesce_staged_writes(writes):
             ok, error, conflict, contract_warning = await _commit_staged_write(

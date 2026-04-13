@@ -744,6 +744,99 @@ async def test_query_references_truncates_at_50_and_shows_total():
     assert len(data["references"]) == 50
 
 
+async def test_resolve_sandbox_returns_existing_sandbox():
+    """_resolve_sandbox returns sandbox already in metadata."""
+    from tools.ci_toolkit.query_tools import _resolve_sandbox
+
+    sandbox = MagicMock()
+    ctx = _ctx({"daytona_sandbox": sandbox})
+    result = await _resolve_sandbox(ctx)
+    assert result is sandbox
+
+
+async def test_resolve_sandbox_lazy_attaches_from_sandbox_id():
+    """_resolve_sandbox lazily resolves sandbox from sandbox_id when missing."""
+    from tools.ci_toolkit.query_tools import _resolve_sandbox
+
+    sandbox = MagicMock()
+    ctx = _ctx({"sandbox_id": "sb-123"})
+
+    with patch("tools.ci_toolkit.query_tools.get_daytona_sandbox", return_value=None):
+        with patch(
+            "sandbox.async_client.get_async_sandbox",
+            new_callable=AsyncMock,
+            return_value=sandbox,
+        ):
+            result = await _resolve_sandbox(ctx)
+
+    assert result is sandbox
+    assert ctx.metadata["daytona_sandbox"] is sandbox
+
+
+async def test_resolve_sandbox_returns_none_without_sandbox_id():
+    """_resolve_sandbox returns None when neither sandbox nor sandbox_id is available."""
+    from tools.ci_toolkit.query_tools import _resolve_sandbox
+
+    ctx = _ctx({})
+    result = await _resolve_sandbox(ctx)
+    assert result is None
+
+
+async def test_resolve_sandbox_returns_none_on_attach_failure():
+    """_resolve_sandbox returns None when lazy attach fails."""
+    from tools.ci_toolkit.query_tools import _resolve_sandbox
+
+    ctx = _ctx({"sandbox_id": "sb-bad"})
+
+    with patch("tools.ci_toolkit.query_tools.get_daytona_sandbox", return_value=None):
+        with patch(
+            "sandbox.async_client.get_async_sandbox",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("connection refused"),
+        ):
+            result = await _resolve_sandbox(ctx)
+
+    assert result is None
+
+
+async def test_query_references_lazy_sandbox_remote_fallback():
+    """ci_query_references uses lazy sandbox attach for remote ripgrep fallback."""
+    svc = MagicMock()
+    svc.is_initialized = True
+    svc.workspace_root = "/testbed"
+    svc.find_references.return_value = []
+
+    sandbox = MagicMock()
+    sandbox.process.exec = AsyncMock(
+        return_value=MagicMock(
+            exit_code=0,
+            result="/testbed/src/engine.py:10:class Engine:\n/testbed/src/runner.py:5:from engine import Engine\n",
+        )
+    )
+
+    ctx = _ctx_with_svc(svc)
+    ctx.metadata["sandbox_id"] = "sb-123"
+    ctx.metadata["daytona_cwd"] = "/testbed"
+    # No daytona_sandbox in metadata — lazy attach should kick in
+
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        with patch("tools.ci_toolkit.query_tools.get_daytona_sandbox", return_value=None):
+            with patch(
+                "sandbox.async_client.get_async_sandbox",
+                new_callable=AsyncMock,
+                return_value=sandbox,
+            ):
+                result = await ci_query_references.execute(
+                    ci_query_references.input_model(file_path="/testbed/src/engine.py", symbol="Engine"),
+                    ctx,
+                )
+
+    assert not result.is_error
+    data = json.loads(result.output)
+    assert data["total_references"] >= 1
+    assert any("Engine" in r["text"] for r in data["references"])
+
+
 # ---------------------------------------------------------------------------
 # ci_edit_hotspots
 # ---------------------------------------------------------------------------

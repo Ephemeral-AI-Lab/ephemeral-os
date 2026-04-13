@@ -389,7 +389,7 @@ async def test_single_tool_call(tmp_path: Path):
         _tool_reply(ToolUseBlock(id="tc1", name="echo", input={"message": "hello"})),
         _text_reply("Done."),
     ])
-    context = _make_context(client, registry, tmp_path)
+    context = _make_context(client, registry, tmp_path, enable_background_tasks=True)
     events = await _collect_events(context, "echo hello")
 
     tool_starts = [e for e in events if isinstance(e, ToolExecutionStarted)]

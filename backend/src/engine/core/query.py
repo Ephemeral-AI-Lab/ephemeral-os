@@ -866,6 +866,9 @@ async def _run_query_loop(
             for tc in final_message.tool_uses:
                 if tc.id not in deferred_bg:
                     continue
+                tool_def_for_check = context.tool_registry.get(tc.name)
+                if not defer_background_dispatch(tool_def_for_check, tc.input):
+                    continue
                 task_note = str(tc.input.get("task_note", ""))
                 for ev in _launch_and_collect_bg_events(
                     context, background_manager, tc, task_note, tool_results

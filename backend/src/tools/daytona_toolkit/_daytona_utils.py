@@ -441,7 +441,10 @@ def _team_repo_write_error(
         return None  # no write_scope set — unconstrained
     if _path_under_write_scope(rel_path, write_scope):
         return None  # allowed
-    message = f"{tool_name}: write to {rel_path} is outside write_scope {write_scope}."
+    message = (
+        f"{tool_name}: write to {rel_path} is outside write_scope {write_scope}. "
+        "Refresh notes/context and call request_replan() if this path is actually required."
+    )
     if (
         _verification_surface_enforcement_mode(context) == "warn"
         and _is_verification_surface_path(context, rel_path, repo_root)

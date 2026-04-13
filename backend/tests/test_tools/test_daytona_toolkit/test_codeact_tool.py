@@ -248,6 +248,29 @@ async def test_build_wrapper_embeds_declared_shell_output_guard():
     assert "Mutating shell calls must declare `declared_output_paths`" in wrapper
 
 
+async def test_codeact_team_mode_enables_declared_shell_output_guard_in_wrapper():
+    manifest = _make_manifest()
+    sb = _make_sandbox(manifest=manifest)
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "daytona_cwd": "/testbed",
+            "agent_name": "developer",
+            "team_mode_enabled": True,
+        }
+    )
+
+    result = await daytona_codeact.execute(
+        daytona_codeact.input_model(code='shell("echo hi > dask/_compatibility.py")'),
+        ctx,
+    )
+
+    _assert_ok(result)
+    wrapper_bytes = sb.fs.upload_file.await_args_list[0].args[0]
+    wrapper = wrapper_bytes.decode("utf-8") if isinstance(wrapper_bytes, bytes) else wrapper_bytes
+    assert "_REQUIRE_DECLARED_SHELL_OUTPUTS = True" in wrapper
+
+
 async def test_build_exec_command_runs_wrapper_from_repo_cwd():
     command = _build_exec_command("/tmp/codeact-wrapper-abcd1234.py", cwd="/testbed")
 
@@ -482,6 +505,56 @@ async def test_codeact_reserves_and_syncs_declared_shell_outputs(monkeypatch):
         "sync_paths": ["/ws/out.py"],
         "released_paths": ["/ws/out.py"],
     }
+
+
+async def test_codeact_surfaces_shell_sync_scope_errors(monkeypatch):
+    manifest = _make_manifest(
+        shells=[
+            {
+                "command": "cat > /testbed/dask/_compatibility.py",
+                "exit_code": 0,
+                "stdout": "",
+                "stderr": "",
+            }
+        ]
+    )
+    sb = _make_sandbox(manifest=manifest)
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "daytona_cwd": "/testbed",
+            "agent_name": "developer",
+            "team_mode_enabled": True,
+            "write_scope": ["dask/compatibility.py"],
+            "verification_surface_write_enforcement": "warn",
+        }
+    )
+
+    async def fake_sync_shell_mutations(context, *, command, declared_output_paths=None, limit=64):
+        return {
+            "enabled": True,
+            "files": 0,
+            "truncated": False,
+            "write_errors": [
+                "shell_mutation: write to dask/_compatibility.py is outside write_scope "
+                "['dask/compatibility.py']. Refresh notes/context and call request_replan() "
+                "if this path is actually required."
+            ],
+            "write_warnings": [],
+        }
+
+    monkeypatch.setattr(codeact_tool_module, "sync_shell_mutations", fake_sync_shell_mutations)
+
+    result = await daytona_codeact.execute(
+        daytona_codeact.input_model(code='shell("cat > dask/_compatibility.py")'),
+        ctx,
+    )
+
+    assert result.is_error
+    data = json.loads(result.output)
+    assert data["files_written"] == 0
+    assert data["write_errors"]
+    assert "request_replan()" in data["write_errors"][0]
 
 
 async def test_codeact_preserves_script_stdout_before_manifest_line():

@@ -16,6 +16,12 @@ from tools.core.sandbox_runtime import (
     require_declared_shell_outputs,
 )
 from tools.core.base import ToolExecutionContext
+from tools.daytona_toolkit._daytona_utils import (
+    _team_repo_write_error,
+    _team_repo_write_warning,
+    is_coordinated_team_agent,
+    record_coordination_warning,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +47,7 @@ def shell_mutation_declaration_error(
     declared_output_paths: list[str] | None,
 ) -> str | None:
     """Return an error when a mutating shell command lacks declared outputs."""
-    if not require_declared_shell_outputs(context):
+    if not require_declared_shell_outputs(context) and not is_coordinated_team_agent(context):
         return None
     if not command_may_mutate_workspace(command):
         return None
@@ -136,7 +142,29 @@ async def sync_shell_mutations(
         dirty_paths = _parse_git_status_paths((getattr(status_resp, "result", "") or ""), git_root)
     truncated = len(dirty_paths) > limit
     changed_count = 0
+    write_errors: list[str] = []
+    write_warnings: list[str] = []
     for file_path in dirty_paths[:limit]:
+        contract_error = _team_repo_write_error(
+            context,
+            file_path,
+            tool_name="shell_mutation",
+        )
+        if contract_error is not None:
+            write_errors.append(contract_error)
+            continue
+        contract_warning = _team_repo_write_warning(
+            context,
+            file_path,
+            tool_name="shell_mutation",
+        )
+        if contract_warning is not None:
+            write_warnings.append(contract_warning)
+            record_coordination_warning(
+                context,
+                category="write_scope",
+                message=contract_warning,
+            )
         try:
             raw = await sandbox.fs.download_file(file_path)
         except Exception:
@@ -164,6 +192,8 @@ async def sync_shell_mutations(
         "files": changed_count,
         "truncated": truncated,
         "declared_output_paths": declared_output_paths,
+        "write_errors": write_errors,
+        "write_warnings": write_warnings,
     }
 
 

@@ -124,6 +124,25 @@ def _maybe_warm_service(context: ToolExecutionContext, svc: Any, *, label: str) 
         logger.debug("%s warmup failed", label, exc_info=True)
 
 
+async def _resolve_sandbox(context: ToolExecutionContext) -> Any | None:
+    """Get sandbox, lazily attaching from sandbox_id if needed."""
+    sandbox = get_daytona_sandbox(context)
+    if sandbox is not None:
+        return sandbox
+    sandbox_id = str((context.metadata or {}).get("sandbox_id") or "").strip()
+    if not sandbox_id:
+        return None
+    try:
+        from sandbox.async_client import get_async_sandbox
+
+        sandbox = await get_async_sandbox(sandbox_id)
+        context.metadata["daytona_sandbox"] = sandbox
+        return sandbox
+    except Exception:
+        logger.debug("Lazy sandbox attach failed for %s", sandbox_id, exc_info=True)
+        return None
+
+
 async def _exec_remote(
     context: ToolExecutionContext,
     command: str,
@@ -131,7 +150,7 @@ async def _exec_remote(
     timeout: int = 30,
     log_label: str,
 ) -> tuple[Any | None, str]:
-    sandbox = get_daytona_sandbox(context)
+    sandbox = await _resolve_sandbox(context)
     if sandbox is None:
         return None, ""
     try:

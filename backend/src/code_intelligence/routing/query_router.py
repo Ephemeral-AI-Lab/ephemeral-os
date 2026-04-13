@@ -31,9 +31,9 @@ _FALLBACK_STATUSES = {QueryStatus.UNSUPPORTED, QueryStatus.UNAVAILABLE, QuerySta
 class IntelligenceQueryRouter:
     """Routes CI queries across multiple backends by priority.
 
-    Backends are tried in descending priority order. A backend's empty
-    result is authoritative (no further fallback). Only ``unsupported``
-    or ``unavailable`` triggers fallback.
+    Backends are tried in descending priority order. ``empty``,
+    ``unsupported``, or ``unavailable`` results trigger fallback to the
+    next backend.
     """
 
     def __init__(self) -> None:
