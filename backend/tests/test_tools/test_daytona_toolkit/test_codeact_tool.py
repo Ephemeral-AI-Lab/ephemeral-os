@@ -167,6 +167,22 @@ async def test_codeact_script_error_status():
     assert "CodeAct execution error" in result.output
 
 
+async def test_codeact_script_error_status_includes_manifest_traceback():
+    error_result = json.dumps({"manifest": "/tmp/xxx.json", "status": "error"})
+    manifest = _make_manifest(
+        status="error",
+        error="ImportError: import 'subprocess' is blocked in codeact.",
+    )
+    sb = _make_sandbox(exec_stdout=error_result, manifest=manifest)
+    ctx = _ctx({"daytona_sandbox": sb})
+    result = await daytona_codeact.execute(
+        daytona_codeact.input_model(code="raise RuntimeError('boom')"), ctx
+    )
+    assert result.is_error
+    assert "ImportError" in result.output
+    assert "Use `shell(\"...\")`" in result.output
+
+
 # ---------------------------------------------------------------------------
 # Missing manifest path
 # ---------------------------------------------------------------------------
@@ -481,7 +497,7 @@ async def test_codeact_preserves_script_stdout_before_manifest_line():
 
 
 # ---------------------------------------------------------------------------
-# Team-mode agnostic: codeact does NOT enforce team constraints
+# Team-mode policy: coordinated lanes must use shell()
 # ---------------------------------------------------------------------------
 
 
@@ -504,6 +520,29 @@ async def test_build_wrapper_contains_subprocess_guard():
     assert "_BLOCKED_MODULES" in wrapper
 
 
+async def test_codeact_rejects_subprocess_patterns_for_team_agents():
+    sb = _make_sandbox()
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "agent_name": "developer",
+            "team_mode_enabled": True,
+            "work_item_id": "task-1",
+        }
+    )
+
+    result = await daytona_codeact.execute(
+        daytona_codeact.input_model(
+            code="import subprocess\nsubprocess.run(['python', '-m', 'pytest'])"
+        ),
+        ctx,
+    )
+
+    assert result.is_error
+    assert "must use `shell(\"...\")`" in result.output
+    sb.fs.upload_file.assert_not_called()
+
+
 async def test_build_wrapper_blocks_destructive_git_unconditionally():
     """Destructive git commands are blocked even without coordination mode."""
     wrapper = _build_wrapper(
@@ -524,8 +563,8 @@ async def test_build_wrapper_blocks_destructive_git_unconditionally():
             )
 
 
-async def test_codeact_allows_writes_from_validator():
-    """CodeAct is team-agnostic — validators can write files."""
+async def test_codeact_rejects_writes_from_validator():
+    """CodeAct staged writes must respect the validator no-write contract."""
     manifest = _make_manifest(writes=[{"path": "/testbed/pkg/core.py", "content": "x = 1\n"}])
     sb = _make_sandbox(manifest=manifest)
     ctx = _ctx(
@@ -542,12 +581,15 @@ async def test_codeact_allows_writes_from_validator():
         ctx,
     )
 
-    data = _assert_ok(result)
-    assert data["files_written"] == 1
+    assert result.is_error
+    data = json.loads(result.output)
+    assert data["files_written"] == 0
+    assert data["write_errors"]
+    assert "validator lanes must not write repository files" in data["write_errors"][0]
 
 
-async def test_codeact_allows_verify_surface_writes_in_team_mode():
-    """CodeAct is team-agnostic — verification surface writes are not blocked."""
+async def test_codeact_rejects_verify_surface_writes_when_enforcement_is_error():
+    """Verification-surface writes are only advisory in warn mode."""
     manifest = _make_manifest(
         writes=[{"path": "/testbed/dask/tests/test_cli.py", "content": "patched\n"}]
     )
@@ -559,6 +601,7 @@ async def test_codeact_allows_verify_surface_writes_in_team_mode():
             "agent_name": "developer",
             "team_mode_enabled": True,
             "verification_surface_write_enforcement": "error",
+            "write_scope": ["dask/cli.py"],
             "owned_files": ["dask/cli.py"],
             "owned_failures": ["dask/tests/test_cli.py"],
             "verify": ["pytest dask/tests/test_cli.py -q"],
@@ -570,12 +613,47 @@ async def test_codeact_allows_verify_surface_writes_in_team_mode():
         ctx,
     )
 
-    data = _assert_ok(result)
-    assert data["files_written"] == 1
-    assert data["warnings"] == []
+    assert result.is_error
+    data = json.loads(result.output)
+    assert data["files_written"] == 0
+    assert data["write_errors"]
+    assert "outside write_scope" in data["write_errors"][0]
 
 
 async def test_codeact_records_scope_warning_on_advisory_write():
+    manifest = _make_manifest(
+        writes=[{"path": "/testbed/dask/tests/test_cli.py", "content": "patched\n"}]
+    )
+    sb = _make_sandbox(manifest=manifest)
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "daytona_cwd": "/testbed",
+            "agent_name": "developer",
+            "team_mode_enabled": True,
+            "write_scope": ["dask/cli.py"],
+            "verification_surface_write_enforcement": "warn",
+            "owned_failures": ["dask/tests/test_cli.py"],
+            "verify": ["pytest dask/tests/test_cli.py -q"],
+        }
+    )
+
+    result = await daytona_codeact.execute(
+        daytona_codeact.input_model(
+            code="write('/testbed/dask/tests/test_cli.py', 'patched\\n')"
+        ),
+        ctx,
+    )
+
+    data = _assert_ok(result)
+    assert data["files_written"] == 1
+    assert any("outside write_scope" in warning for warning in data["warnings"])
+    warnings = ctx.metadata["coordination_warnings"]
+    assert warnings
+    assert "outside write_scope" in warnings[0]["message"]
+
+
+async def test_codeact_rejects_non_verify_surface_write_in_warn_mode():
     manifest = _make_manifest(
         writes=[{"path": "/testbed/dask/_compatibility.py", "content": "patched\n"}]
     )
@@ -588,6 +666,8 @@ async def test_codeact_records_scope_warning_on_advisory_write():
             "team_mode_enabled": True,
             "write_scope": ["dask/compatibility.py"],
             "verification_surface_write_enforcement": "warn",
+            "owned_failures": ["dask/tests/test_cli.py"],
+            "verify": ["pytest dask/tests/test_cli.py -q"],
         }
     )
 
@@ -598,12 +678,39 @@ async def test_codeact_records_scope_warning_on_advisory_write():
         ctx,
     )
 
-    data = _assert_ok(result)
-    assert data["files_written"] == 1
-    assert any("outside write_scope" in warning for warning in data["warnings"])
-    warnings = ctx.metadata["coordination_warnings"]
-    assert warnings
-    assert "outside write_scope" in warnings[0]["message"]
+    assert result.is_error
+    data = json.loads(result.output)
+    assert data["files_written"] == 0
+    assert data["write_errors"]
+    assert "outside write_scope" in data["write_errors"][0]
+
+
+async def test_codeact_rejects_declared_output_outside_scope_in_warn_mode():
+    manifest = _make_manifest()
+    sb = _make_sandbox(manifest=manifest)
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "daytona_cwd": "/testbed",
+            "agent_name": "developer",
+            "team_mode_enabled": True,
+            "write_scope": ["dask/compatibility.py"],
+            "verification_surface_write_enforcement": "warn",
+            "owned_failures": ["dask/tests/test_cli.py"],
+            "verify": ["pytest dask/tests/test_cli.py -q"],
+        }
+    )
+
+    result = await daytona_codeact.execute(
+        daytona_codeact.input_model(
+            code="print('noop')",
+            declared_output_paths=["/testbed/dask/_compatibility.py"],
+        ),
+        ctx,
+    )
+
+    assert result.is_error
+    assert "outside write_scope" in result.output
 
 
 async def test_codeact_allows_install_commands_in_team_mode():

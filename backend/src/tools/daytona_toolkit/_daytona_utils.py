@@ -336,6 +336,46 @@ def _extract_verify_paths(value: Any, repo_root: str) -> list[str]:
     return out
 
 
+def _verification_surface_paths(
+    context: ToolExecutionContext,
+    repo_root: str,
+) -> list[str]:
+    """Return repo-relative verification-surface paths named in the task metadata."""
+    raw_candidates = (
+        context.metadata.get("owned_failures"),
+        context.metadata.get("benchmark_test_files"),
+        context.metadata.get("benchmark_test_ids"),
+        context.metadata.get("verify"),
+        context.metadata.get("verification"),
+        context.metadata.get("retries"),
+        context.metadata.get("reproduction"),
+    )
+    collected: list[str] = []
+    for value in raw_candidates:
+        collected.extend(_normalize_string_list(value, repo_root))
+        collected.extend(_extract_verify_paths(value, repo_root))
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for item in collected:
+        if not item or item in seen:
+            continue
+        seen.add(item)
+        deduped.append(item)
+    return deduped
+
+
+def _is_verification_surface_path(
+    context: ToolExecutionContext,
+    rel_path: str,
+    repo_root: str,
+) -> bool:
+    """True when *rel_path* belongs to an explicitly named verification surface."""
+    verification_paths = _verification_surface_paths(context, repo_root)
+    if not verification_paths:
+        return False
+    return _path_under_write_scope(rel_path, verification_paths)
+
+
 # ---------------------------------------------------------------------------
 # Write-scope helpers
 # ---------------------------------------------------------------------------
@@ -402,7 +442,10 @@ def _team_repo_write_error(
     if _path_under_write_scope(rel_path, write_scope):
         return None  # allowed
     message = f"{tool_name}: write to {rel_path} is outside write_scope {write_scope}."
-    if _verification_surface_enforcement_mode(context) == "warn":
+    if (
+        _verification_surface_enforcement_mode(context) == "warn"
+        and _is_verification_surface_path(context, rel_path, repo_root)
+    ):
         logger.warning(message)
         return None
     return message
@@ -427,6 +470,8 @@ def _team_repo_write_warning(
     if not write_scope:
         return None  # no write_scope set — unconstrained
     if _path_under_write_scope(rel_path, write_scope):
+        return None
+    if not _is_verification_surface_path(context, rel_path, repo_root):
         return None
     return f"{tool_name}: write to {rel_path} is outside write_scope {write_scope} (advisory mode)."
 

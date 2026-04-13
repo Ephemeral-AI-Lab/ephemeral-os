@@ -201,12 +201,20 @@ class LspClient:
 
     # -- Python backend (jedi) ------------------------------------------------
 
+    def _resolve_path(self, file_path: str) -> str:
+        """Resolve a potentially relative file path against workspace root."""
+        p = Path(file_path)
+        if not p.is_absolute() and self._workspace_root:
+            p = Path(self._workspace_root) / p
+        return str(p)
+
     def _python_definitions(
         self, file_path: str, line: int, character: int,
     ) -> list[SymbolInfo]:
+        abs_path = self._resolve_path(file_path)
         script = (
             f"import jedi, json\n"
-            f"s = jedi.Script(path='{file_path}')\n"
+            f"s = jedi.Script(path='{abs_path}')\n"
             f"defs = s.goto(line={line}, column={character})\n"
             f"print(json.dumps([{{'name': d.name, 'path': str(d.module_path or ''), "
             f"'line': d.line or 0, 'col': d.column or 0, "
@@ -231,9 +239,10 @@ class LspClient:
     def _python_references(
         self, file_path: str, line: int, character: int,
     ) -> list[ReferenceInfo]:
+        abs_path = self._resolve_path(file_path)
         script = (
             f"import jedi, json\n"
-            f"s = jedi.Script(path='{file_path}')\n"
+            f"s = jedi.Script(path='{abs_path}')\n"
             f"refs = s.get_references(line={line}, column={character})\n"
             f"print(json.dumps([{{'path': str(r.module_path or ''), "
             f"'line': r.line or 0, 'col': r.column or 0}} for r in refs]))"
@@ -255,9 +264,10 @@ class LspClient:
     def _python_hover(
         self, file_path: str, line: int, character: int,
     ) -> HoverResult | None:
+        abs_path = self._resolve_path(file_path)
         script = (
             f"import jedi, json\n"
-            f"s = jedi.Script(path='{file_path}')\n"
+            f"s = jedi.Script(path='{abs_path}')\n"
             f"names = s.help(line={line}, column={character})\n"
             f"if names:\n"
             f"    n = names[0]\n"
@@ -320,12 +330,33 @@ class LspClient:
         return result
 
     def _run_python_script(self, script: str) -> str:
-        """Run a Python script locally or in the sandbox."""
+        """Run a Python script locally or in the sandbox.
+
+        For sandbox execution, the script is written to a temp file first
+        because ``python3 -c {script!r}`` breaks multi-line scripts: repr
+        escapes newlines to literal ``\\n`` which the shell passes as-is,
+        causing Python to see a single line with literal backslash-n.
+        """
         try:
             if self._sandbox:
+                import hashlib
+                tag = hashlib.md5(script.encode()).hexdigest()[:8]
+                remote_path = f"/tmp/_lsp_query_{tag}.py"
+                try:
+                    self._sandbox.fs.upload_file(
+                        script.encode("utf-8"), remote_path,
+                    )
+                except Exception:
+                    # Fallback: write via shell
+                    import shlex
+                    self._resolve(self._sandbox.process.exec(
+                        f"printf %s {shlex.quote(script)} > {remote_path}",
+                        timeout=5,
+                    ))
+                cmd = f"python3 {remote_path}"
                 response = self._resolve(
                     self._sandbox.process.exec(
-                        f"python3 -c {script!r}",
+                        cmd,
                         timeout=int(LSP_QUERY_TIMEOUT),
                     )
                 )

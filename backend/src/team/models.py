@@ -133,7 +133,7 @@ class Plan:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Plan:
-        tasks = [_taskspec_from_dict(it) for it in (data.get("tasks") or [])]
+        tasks = _taskspec_list_from_field(data, field_name="tasks")
         return cls(tasks=tasks, rationale=data.get("rationale"))
 
 
@@ -144,7 +144,7 @@ class ReplanPlan:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ReplanPlan:
-        add_tasks = [_taskspec_from_dict(it) for it in (data.get("add_tasks") or [])]
+        add_tasks = _taskspec_list_from_field(data, field_name="add_tasks")
         return cls(
             add_tasks=add_tasks,
             cancel_ids=list(data.get("cancel_ids") or []),
@@ -152,6 +152,26 @@ class ReplanPlan:
 
 
 _VALID_CASCADE_POLICIES: frozenset[str] = frozenset({"cancel", "retry_first", "continue"})
+
+
+def _taskspec_list_from_field(
+    data: dict[str, Any],
+    *,
+    field_name: str,
+) -> list[TaskSpec]:
+    raw_items = data.get(field_name) or []
+    if not isinstance(raw_items, list):
+        raise ValueError(f"'{field_name}' must be a list")
+
+    items: list[TaskSpec] = []
+    for index, item in enumerate(raw_items):
+        if not isinstance(item, dict):
+            raise ValueError(f"{field_name}[{index}] must be an object")
+        try:
+            items.append(_taskspec_from_dict(item))
+        except ValueError as exc:
+            raise ValueError(f"{field_name}[{index}]: {exc}") from exc
+    return items
 
 
 def _taskspec_from_dict(it: dict[str, Any]) -> TaskSpec:

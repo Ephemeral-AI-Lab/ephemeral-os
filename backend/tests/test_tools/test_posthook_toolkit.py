@@ -6,7 +6,9 @@ from pathlib import Path
 
 import pytest
 
+import tools.context.freshness as freshness_module
 from tools.core.base import ToolExecutionContext
+from tools.context.freshness import FreshnessReport
 from tools.posthook.toolkit import RequestRetryTool, SubmitSummaryTool
 
 
@@ -64,3 +66,21 @@ async def test_request_retry_rejects_tainted_coordination_packet():
     assert result.is_error
     assert "request_replan()" in result.output
     assert "outside write_scope" in result.output
+
+
+@pytest.mark.asyncio
+async def test_submit_summary_rejects_stale_context(monkeypatch):
+    async def _stale(_context):
+        return FreshnessReport(new_dep_notes=1)
+
+    monkeypatch.setattr(freshness_module, "check_freshness", _stale)
+    ctx = _ctx({"checked_context_freshness": False})
+
+    result = await SubmitSummaryTool().execute(
+        SubmitSummaryTool.input_model(summary="done"),
+        ctx,
+    )
+
+    assert result.is_error
+    assert "context_changed_since()" in result.output
+    assert "request_replan()" in result.output

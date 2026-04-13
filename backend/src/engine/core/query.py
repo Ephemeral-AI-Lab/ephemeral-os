@@ -59,7 +59,11 @@ from tools.core.base import (
     run_tool_safely,
 )
 from tools.core.runtime import merge_runtime_metadata as _merge_submission_metadata
-from tools.builtins.skills.toolkit import clear_required_next_tool, get_required_next_tool
+from tools.builtins.skills.toolkit import (
+    clear_required_next_tool,
+    get_reference_terminal_action,
+    get_required_next_tool,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -201,6 +205,61 @@ def _deliver_completed_background_task(
     )
 
 
+def _reject_tool_batch(
+    tool_calls: list[Any],
+    *,
+    message: str,
+) -> list[ToolResultBlock]:
+    return [
+        ToolResultBlock(tool_use_id=str(tc.id), content=message, is_error=True)
+        for tc in tool_calls
+    ]
+
+
+def _validate_tool_batch(
+    context: QueryContext,
+    tool_calls: list[Any],
+) -> list[ToolResultBlock] | None:
+    if not tool_calls:
+        return None
+
+    pending = get_required_next_tool(context.tool_metadata)
+    if pending is not None:
+        if len(tool_calls) != 1 or tool_calls[0].name != pending["tool_name"]:
+            called = ", ".join(f"`{tc.name}`" for tc in tool_calls)
+            message = (
+                f"{pending.get('reason') or 'A terminal tool-call guard is active.'} "
+                f"The next tool must be `{pending['tool_name']}(...)`. "
+                f"This response tried to call {called}. "
+                f"Submit only `{pending['tool_name']}(...)` in the next tool batch. "
+                f"{pending.get('reset_hint') or ''}"
+            ).strip()
+            return _reject_tool_batch(tool_calls, message=message)
+        return None
+
+    terminal_reference = None
+    for tc in tool_calls:
+        terminal_reference = get_reference_terminal_action(tc.name, tc.input)
+        if terminal_reference is not None:
+            break
+    if terminal_reference is None:
+        return None
+    if len(tool_calls) == 1:
+        return None
+
+    called = ", ".join(f"`{tc.name}`" for tc in tool_calls)
+    message = (
+        f"{terminal_reference.get('reason') or 'A terminal reference is active.'} "
+        f"`{terminal_reference['skill_name']}/{terminal_reference['reference_name']}` "
+        "must be loaded alone so the next tool batch can end with the required "
+        f"`{terminal_reference['tool_name']}(...)` action. "
+        f"This response tried to call {called}. "
+        "Restart the ending chain sequentially instead of batching the final references. "
+        f"{terminal_reference.get('reset_hint') or ''}"
+    ).strip()
+    return _reject_tool_batch(tool_calls, message=message)
+
+
 def _append_and_emit_reminder(
     background_manager: BackgroundTaskManager,
     display_messages: list[ConversationMessage],
@@ -320,6 +379,7 @@ def _launch_background_tool(
     if pending is not None and tool_name != pending["tool_name"]:
         message = (
             f"{pending.get('reason') or 'A terminal tool-call guard is active.'} "
+            f"The next tool must be `{pending['tool_name']}(...)`. "
             f"You called `{tool_name}` instead. "
             f"{pending.get('reset_hint') or ''}"
         ).strip()
@@ -775,85 +835,14 @@ async def _run_query_loop(
             executor.cancel_all()
 
             tool_calls = final_message.tool_uses
-            foreground_calls = []
-
-            for tc in tool_calls:
-                task_note = str(tc.input.get("task_note", ""))
-                tool_def_for_check = context.tool_registry.get(tc.name)
-                force_bg = getattr(tool_def_for_check, "background", "forbidden") == "always"
-                is_background = (
-                    (tc.input.get("background", False) or force_bg) if background_manager else False
-                )
-
-                if is_background:
-                    for ev in _launch_and_collect_bg_events(
-                        context, background_manager, tc, task_note, tool_results
-                    ):
-                        yield ev
-                else:
-                    foreground_calls.append(tc)
-
-            if len(foreground_calls) == 1:
-                tc = foreground_calls[0]
-                logger.info(
-                    "STREAM: Executing single foreground tool: name=%s id=%s", tc.name, tc.id
-                )
-                yield (
-                    ToolExecutionStarted(
-                        tool_name=tc.name,
-                        tool_input=tc.input,
-                    ),
-                    None,
-                )
-                result = await _execute_tool_call(context, tc.name, tc.id, tc.input)
-                tool_results.append(result)
-                yield (
-                    ToolExecutionCompleted(
-                        tool_name=tc.name,
-                        output=result.content,
-                        is_error=result.is_error,
-                        metadata=dict(result.metadata or {}),
-                    ),
-                    None,
-                )
-            elif foreground_calls:
-                logger.info(
-                    "STREAM: Executing PARALLEL foreground tools: count=%d names=%s",
-                    len(foreground_calls),
-                    [tc.name for tc in foreground_calls],
-                )
-                started_events = []
-                for tc in foreground_calls:
-                    started_events.append(
-                        ToolExecutionStarted(
-                            tool_name=tc.name,
-                            tool_input=tc.input,
-                        )
-                    )
+            batch_rejection = _validate_tool_batch(context, tool_calls)
+            if batch_rejection is not None:
+                tool_results.extend(batch_rejection)
+                for tc, result in zip(tool_calls, batch_rejection, strict=True):
                     logger.info(
-                        "STREAM: Yielding parallel ToolExecutionStarted: name=%s id=%s",
+                        "STREAM: Rejecting tool batch entry: name=%s id=%s",
                         tc.name,
                         tc.id,
-                    )
-                    yield started_events[-1], None
-
-                logger.debug(
-                    "STREAM: Launching asyncio.gather for %d parallel tools", len(foreground_calls)
-                )
-                results = await asyncio.gather(
-                    *[
-                        _execute_tool_call(context, tc.name, tc.id, tc.input)
-                        for tc in foreground_calls
-                    ]
-                )
-                logger.info("STREAM: All parallel tools completed, gathering results")
-                tool_results.extend(results)
-                for tc, result in zip(foreground_calls, results, strict=True):
-                    logger.info(
-                        "STREAM: Yielding parallel ToolExecutionCompleted: name=%s is_error=%s output_len=%d",
-                        tc.name,
-                        result.is_error,
-                        len(result.content) if result.content else 0,
                     )
                     yield (
                         ToolExecutionCompleted(
@@ -864,6 +853,96 @@ async def _run_query_loop(
                         ),
                         None,
                     )
+            else:
+                foreground_calls = []
+
+                for tc in tool_calls:
+                    task_note = str(tc.input.get("task_note", ""))
+                    tool_def_for_check = context.tool_registry.get(tc.name)
+                    force_bg = getattr(tool_def_for_check, "background", "forbidden") == "always"
+                    is_background = (
+                        (tc.input.get("background", False) or force_bg) if background_manager else False
+                    )
+
+                    if is_background:
+                        for ev in _launch_and_collect_bg_events(
+                            context, background_manager, tc, task_note, tool_results
+                        ):
+                            yield ev
+                    else:
+                        foreground_calls.append(tc)
+
+                if len(foreground_calls) == 1:
+                    tc = foreground_calls[0]
+                    logger.info(
+                        "STREAM: Executing single foreground tool: name=%s id=%s", tc.name, tc.id
+                    )
+                    yield (
+                        ToolExecutionStarted(
+                            tool_name=tc.name,
+                            tool_input=tc.input,
+                        ),
+                        None,
+                    )
+                    result = await _execute_tool_call(context, tc.name, tc.id, tc.input)
+                    tool_results.append(result)
+                    yield (
+                        ToolExecutionCompleted(
+                            tool_name=tc.name,
+                            output=result.content,
+                            is_error=result.is_error,
+                            metadata=dict(result.metadata or {}),
+                        ),
+                        None,
+                    )
+                elif foreground_calls:
+                    logger.info(
+                        "STREAM: Executing PARALLEL foreground tools: count=%d names=%s",
+                        len(foreground_calls),
+                        [tc.name for tc in foreground_calls],
+                    )
+                    started_events = []
+                    for tc in foreground_calls:
+                        started_events.append(
+                            ToolExecutionStarted(
+                                tool_name=tc.name,
+                                tool_input=tc.input,
+                            )
+                        )
+                        logger.info(
+                            "STREAM: Yielding parallel ToolExecutionStarted: name=%s id=%s",
+                            tc.name,
+                            tc.id,
+                        )
+                        yield started_events[-1], None
+
+                    logger.debug(
+                        "STREAM: Launching asyncio.gather for %d parallel tools", len(foreground_calls)
+                    )
+                    results = await asyncio.gather(
+                        *[
+                            _execute_tool_call(context, tc.name, tc.id, tc.input)
+                            for tc in foreground_calls
+                        ]
+                    )
+                    logger.info("STREAM: All parallel tools completed, gathering results")
+                    tool_results.extend(results)
+                    for tc, result in zip(foreground_calls, results, strict=True):
+                        logger.info(
+                            "STREAM: Yielding parallel ToolExecutionCompleted: name=%s is_error=%s output_len=%d",
+                            tc.name,
+                            result.is_error,
+                            len(result.content) if result.content else 0,
+                        )
+                        yield (
+                            ToolExecutionCompleted(
+                                tool_name=tc.name,
+                                output=result.content,
+                                is_error=result.is_error,
+                                metadata=dict(result.metadata or {}),
+                            ),
+                            None,
+                        )
 
         assigned_ids: set[str] = {tr.tool_use_id for tr in tool_results if tr.tool_use_id}
         unassigned_ids = [tu.id for tu in final_message.tool_uses if tu.id not in assigned_ids]
@@ -977,6 +1056,7 @@ async def _execute_tool_call(
     if pending is not None and tool_name != pending["tool_name"]:
         message = (
             f"{pending.get('reason') or 'A terminal tool-call guard is active.'} "
+            f"The next tool must be `{pending['tool_name']}(...)`. "
             f"You called `{tool_name}` instead. "
             f"{pending.get('reset_hint') or ''}"
         ).strip()

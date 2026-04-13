@@ -223,6 +223,9 @@ def test_developer_and_validator_skills_explain_when_to_load_references() -> Non
     validator_ref = _read(
         _CONTENT / "team-validator-playbook/references/cross-surface-guardrails.md"
     )
+    validator_runtime = _read(
+        _CONTENT / "team-validator-playbook/references/runtime-verification-examples.md"
+    )
 
     assert (
         "Must load `widening-and-runtime` before the first widened write outside `scope_paths`."
@@ -315,6 +318,19 @@ def test_developer_and_validator_skills_explain_when_to_load_references() -> Non
     )
     assert "Must run the exact commands from the payload first via `daytona_codeact`" in validator
     assert "Use `daytona_codeact` for all runtime execution." in validator
+    assert (
+        "the first exact-command verification must use `background=true`, then `check_background_progress(...)` before any wait."
+        in validator
+    )
+    assert (
+        "cancel that background task and use the partial output as the verdict evidence"
+        in validator
+    )
+    assert "Must not route a FAILURE verdict through completion" in validator
+    assert (
+        "cancel the task and use that partial output as the runtime evidence"
+        in validator_runtime
+    )
     assert (
         "Use this reference only when the touched change affects public serialization, schema shape, or docs-visible output."
         in validator_ref

@@ -31,12 +31,13 @@ from tools.daytona_toolkit.ci_integration import (
     snapshot_dirty_files,
     sync_shell_mutations,
 )
-from tools.daytona_toolkit._daytona_utils import is_coordinated_team_agent
+from tools.daytona_toolkit._daytona_utils import _extract_exit_code, is_coordinated_team_agent
 from tools.daytona_toolkit.tools import (
     _get_cwd,
     _recover_sandbox,
     _require_sandbox,
     _resolve_path,
+    _team_repo_write_error,
     _team_repo_write_warning,
     _upload_file_compat,
     _wrap_bash_command,
@@ -359,6 +360,13 @@ async def _commit_staged_write(
     """Commit a helper-staged write with CI coordination when available."""
     prepared = None
     intent_id = None
+    contract_error = _team_repo_write_error(
+        context,
+        path,
+        tool_name="daytona_codeact.write",
+    )
+    if contract_error is not None:
+        return False, contract_error, False, None
     contract_warning = _team_repo_write_warning(
         context,
         path,
@@ -473,6 +481,13 @@ async def daytona_codeact(
     warnings: list[str] = []
 
     for path in resolved_declared_output_paths:
+        contract_error = _team_repo_write_error(
+            context,
+            path,
+            tool_name="daytona_codeact.declared_output",
+        )
+        if contract_error is not None:
+            return ToolResult(output=contract_error, is_error=True)
         contract_warning = _team_repo_write_warning(
             context,
             path,
@@ -530,6 +545,10 @@ async def daytona_codeact(
                 stdout = response.result or ""
             except Exception as recovery_exc:
                 return ToolResult(output=f"Execution failed: {recovery_exc}", is_error=True)
+
+        # Strip the __CODEX_EXIT_CODE__ marker appended by _wrap_bash_command
+        # so the last line of stdout is the JSON manifest line, not the marker.
+        stdout, _ = _extract_exit_code(stdout, fallback_exit_code=0)
 
         # Parse output
         stdout_lines = stdout.splitlines()

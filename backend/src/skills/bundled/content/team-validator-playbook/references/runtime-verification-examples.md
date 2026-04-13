@@ -51,6 +51,7 @@ check_background_progress(task_id="bg_1", last_n_lines=20)
 - Non-blocking. Returns current status (`running`, `completed`, `failed`, `cancelled`) and recent output lines.
 - Call this periodically while doing other work. Do not tight-loop — space checks out.
 - You **must** call this at least once before `wait_for_background_task` will accept the task.
+- If a poll already shows a deterministic failure id, `FAILED`, `ERROR`, `ImportError`, or traceback, cancel the task and use that partial output as the runtime evidence.
 
 ### Step 3 — Collect with wait_for_background_task
 
@@ -73,3 +74,4 @@ cancel_background_task(task_id="bg_1", reason="test suite hung after 10 minutes"
 - The `shell()` timeout default is 900s (15 min). For suites known to run longer, pass an explicit `timeout=` to `shell()`.
 - Do not fall back to `subprocess.run(...)` or `subprocess.Popen(...)` to work around timeouts — use `shell()` with a higher timeout or background execution.
 - Do not call `wait_for_background_task` immediately after launch — the engine will reject it. Do other work or call `check_background_progress` first.
+- Do not leave a clearly red background suite running after a progress check already exposed the decisive failure.

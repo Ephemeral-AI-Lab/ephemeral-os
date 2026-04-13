@@ -215,14 +215,16 @@ async def test_write_file_records_scope_warning_on_advisory_write():
             "daytona_cwd": "/testbed",
             "agent_name": "developer",
             "team_mode_enabled": True,
-            "write_scope": ["dask/compatibility.py"],
+            "write_scope": ["dask/cli.py"],
             "verification_surface_write_enforcement": "warn",
+            "owned_failures": ["dask/tests/test_cli.py"],
+            "verify": ["pytest dask/tests/test_cli.py -q"],
         }
     )
 
     result = await daytona_write_file.execute(
         daytona_write_file.input_model(
-            file_path="/testbed/dask/_compatibility.py",
+            file_path="/testbed/dask/tests/test_cli.py",
             content="patched",
         ),
         ctx,
@@ -234,6 +236,34 @@ async def test_write_file_records_scope_warning_on_advisory_write():
     warnings = ctx.metadata["coordination_warnings"]
     assert warnings
     assert "outside write_scope" in warnings[0]["message"]
+
+
+async def test_write_file_rejects_non_verify_surface_write_even_in_warn_mode():
+    sb = _sb()
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "daytona_cwd": "/testbed",
+            "agent_name": "developer",
+            "team_mode_enabled": True,
+            "write_scope": ["dask/compatibility.py"],
+            "verification_surface_write_enforcement": "warn",
+            "owned_failures": ["dask/tests/test_cli.py"],
+            "verify": ["pytest dask/tests/test_cli.py -q"],
+        }
+    )
+
+    result = await daytona_write_file.execute(
+        daytona_write_file.input_model(
+            file_path="/testbed/dask/_compatibility.py",
+            content="patched",
+        ),
+        ctx,
+    )
+
+    assert result.is_error
+    assert "outside write_scope" in result.output
+    sb.fs.upload_file.assert_not_called()
 
 
 async def test_write_file_rejects_repo_write_from_validator():

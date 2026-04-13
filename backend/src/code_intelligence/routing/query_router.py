@@ -1,8 +1,10 @@
 """IntelligenceQueryRouter — priority-based multi-backend query routing.
 
 Routes queries by descending priority across registered backends
-(LSP > SymbolIndex). Fallback only on ``unsupported`` or ``unavailable``,
-never on error. Authoritative empty answers stop the search.
+(LSP > SymbolIndex). Fallback on ``unsupported``, ``unavailable``, or
+``empty`` results so higher-priority backends that miss (e.g. Jedi with
+an unresolvable path) don't block lower-priority backends that could
+succeed (e.g. SymbolIndex / ripgrep).
 """
 
 from __future__ import annotations
@@ -23,7 +25,7 @@ from code_intelligence.types import (
 logger = logging.getLogger(__name__)
 
 # Statuses that trigger fallback to next backend
-_FALLBACK_STATUSES = {QueryStatus.UNSUPPORTED, QueryStatus.UNAVAILABLE}
+_FALLBACK_STATUSES = {QueryStatus.UNSUPPORTED, QueryStatus.UNAVAILABLE, QueryStatus.EMPTY}
 
 
 class IntelligenceQueryRouter:

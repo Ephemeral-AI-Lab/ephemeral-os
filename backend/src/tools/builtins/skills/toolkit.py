@@ -49,6 +49,32 @@ _REFERENCE_TERMINAL_ACTIONS: dict[tuple[str, str], dict[str, str]] = {
 }
 
 
+def get_reference_terminal_action(
+    tool_name: str,
+    tool_input: dict[str, object] | None,
+) -> dict[str, str] | None:
+    """Return terminal-action metadata for a terminal skill reference load."""
+    if tool_name != "load_skill_reference" or not isinstance(tool_input, dict):
+        return None
+    skill_name = str(tool_input.get("skill_name") or "").strip()
+    reference_name = str(tool_input.get("reference_name") or "").strip()
+    if not skill_name or not reference_name:
+        return None
+    action = _REFERENCE_TERMINAL_ACTIONS.get((skill_name, reference_name))
+    if action is None:
+        return None
+    out = {
+        "tool_name": action["tool_name"],
+        "skill_name": skill_name,
+        "reference_name": reference_name,
+        "reason": action["reason"],
+    }
+    reset_hint = str(action.get("reset_hint") or "").strip()
+    if reset_hint:
+        out["reset_hint"] = reset_hint
+    return out
+
+
 def get_required_next_tool(metadata: Any) -> dict[str, str] | None:
     """Return the active next-tool guard stored in runtime metadata."""
     if metadata is None:
@@ -262,7 +288,10 @@ def make_skills_toolkit(
             skill_name=skill_name,
             reference_name=reference_name,
         )
-        terminal_action = _REFERENCE_TERMINAL_ACTIONS.get((skill_name, reference_name))
+        terminal_action = get_reference_terminal_action(
+            "load_skill_reference",
+            {"skill_name": skill_name, "reference_name": reference_name},
+        )
         if terminal_action is not None:
             set_required_next_tool(
                 context,

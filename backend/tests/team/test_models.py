@@ -93,6 +93,30 @@ def test_taskspec_with_all_fields():
     assert spec.cascade_policy == "propagate"
 
 
+def test_plan_from_dict_reports_invalid_task_index_for_missing_id():
+    with pytest.raises(ValueError, match=r"tasks\[1\]: TaskSpec requires a non-empty 'id'"):
+        Plan.from_dict(
+            {
+                "tasks": [
+                    {"id": "ok", "task": "do work", "agent": "developer"},
+                    {"task": "missing id", "agent": "developer"},
+                ]
+            }
+        )
+
+
+def test_replan_from_dict_reports_non_object_index():
+    with pytest.raises(ValueError, match=r"add_tasks\[1\] must be an object"):
+        ReplanPlan.from_dict(
+            {
+                "add_tasks": [
+                    {"id": "ok", "task": "do work", "agent": "developer"},
+                    "not-a-task",
+                ]
+            }
+        )
+
+
 # ---------------------------------------------------------------------------
 # Task
 # ---------------------------------------------------------------------------

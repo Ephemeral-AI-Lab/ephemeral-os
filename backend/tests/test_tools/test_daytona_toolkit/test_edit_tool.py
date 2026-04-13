@@ -255,6 +255,67 @@ async def test_edit_allows_write_inside_write_scope():
     sb.fs.upload_file.assert_called_once()
 
 
+async def test_edit_records_scope_warning_on_advisory_verification_surface_write():
+    sb = _make_sandbox(download_content="original")
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "daytona_cwd": "/testbed",
+            "agent_name": "developer",
+            "team_mode_enabled": True,
+            "write_scope": ["dask/cli.py"],
+            "verification_surface_write_enforcement": "warn",
+            "owned_failures": ["dask/tests/test_cli.py"],
+            "verify": ["pytest dask/tests/test_cli.py -q"],
+        }
+    )
+
+    result = await daytona_edit_file.execute(
+        daytona_edit_file.input_model(
+            file_path="/testbed/dask/tests/test_cli.py",
+            old_text="original",
+            new_text="patched",
+        ),
+        ctx,
+    )
+
+    assert not result.is_error
+    data = json.loads(result.output)
+    assert data["warnings"]
+    warnings = ctx.metadata["coordination_warnings"]
+    assert warnings
+    assert "outside write_scope" in warnings[0]["message"]
+
+
+async def test_edit_rejects_non_verify_surface_write_even_in_warn_mode():
+    sb = _make_sandbox(download_content="original")
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "daytona_cwd": "/testbed",
+            "agent_name": "developer",
+            "team_mode_enabled": True,
+            "write_scope": ["dask/compatibility.py"],
+            "verification_surface_write_enforcement": "warn",
+            "owned_failures": ["dask/tests/test_cli.py"],
+            "verify": ["pytest dask/tests/test_cli.py -q"],
+        }
+    )
+
+    result = await daytona_edit_file.execute(
+        daytona_edit_file.input_model(
+            file_path="/testbed/dask/_compatibility.py",
+            old_text="original",
+            new_text="patched",
+        ),
+        ctx,
+    )
+
+    assert result.is_error
+    assert "outside write_scope" in result.output
+    sb.fs.upload_file.assert_not_called()
+
+
 def test_scope_overlap_warning_ignores_same_agent_run_id():
     own_change = SimpleNamespace(
         file_path="dask/config.py",

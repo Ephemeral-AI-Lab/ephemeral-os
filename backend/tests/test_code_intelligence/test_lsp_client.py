@@ -51,6 +51,93 @@ def test_reset_backend_availability_clears_cached_readiness() -> None:
     assert lsp._ts_available is None
 
 
+def test_resolve_path_prepends_workspace_root() -> None:
+    lsp = LspClient(workspace_root="/testbed")
+    assert lsp._resolve_path("dask/core.py") == "/testbed/dask/core.py"
+
+
+def test_resolve_path_leaves_absolute_unchanged() -> None:
+    lsp = LspClient(workspace_root="/testbed")
+    assert lsp._resolve_path("/testbed/dask/core.py") == "/testbed/dask/core.py"
+
+
+def test_resolve_path_no_workspace_root_keeps_relative() -> None:
+    lsp = LspClient(workspace_root="")
+    assert lsp._resolve_path("dask/core.py") == "dask/core.py"
+
+
+def test_sandbox_exec_uploads_script_and_uses_cd() -> None:
+    """Verify _run_python_script uploads to a temp file and cds when workspace_root is set."""
+    captured_cmds: list[str] = []
+    uploaded: dict[str, bytes] = {}
+
+    class _SandboxFs:
+        def upload_file(self, content: bytes, path: str):
+            uploaded[path] = content
+
+    class _SandboxProcess:
+        def exec(self, command: str, timeout: int = 0):
+            captured_cmds.append(command)
+            return SimpleNamespace(exit_code=0, result="[]")
+
+    sandbox = SimpleNamespace(process=_SandboxProcess(), fs=_SandboxFs())
+    lsp = LspClient(workspace_root="/testbed", sandbox=sandbox)
+
+    lsp._run_python_script("print('hello')")
+
+    # Script should be uploaded to /tmp
+    assert len(uploaded) == 1
+    path = list(uploaded.keys())[0]
+    assert path.startswith("/tmp/_lsp_query_")
+    assert uploaded[path] == b"print('hello')"
+
+    # Exec command should run the file (no cd — paths are already absolute)
+    assert len(captured_cmds) == 1
+    assert captured_cmds[0].startswith("python3 /tmp/_lsp_query_")
+
+
+def test_sandbox_exec_no_cd_without_workspace_root() -> None:
+    """Without workspace_root, no cd prefix is added."""
+    captured_cmds: list[str] = []
+
+    class _SandboxFs:
+        def upload_file(self, content: bytes, path: str):
+            pass
+
+    class _SandboxProcess:
+        def exec(self, command: str, timeout: int = 0):
+            captured_cmds.append(command)
+            return SimpleNamespace(exit_code=0, result="[]")
+
+    sandbox = SimpleNamespace(process=_SandboxProcess(), fs=_SandboxFs())
+    lsp = LspClient(workspace_root="", sandbox=sandbox)
+
+    lsp._run_python_script("print('hello')")
+
+    assert len(captured_cmds) == 1
+    assert captured_cmds[0].startswith("python3 /tmp/_lsp_query_")
+    assert "cd " not in captured_cmds[0]
+
+
+def test_python_hover_uses_resolved_path(monkeypatch) -> None:
+    """Verify hover resolves relative path before injecting into Jedi script."""
+    captured_scripts: list[str] = []
+    lsp = LspClient(workspace_root="/testbed")
+    original_run = lsp._run_python_script
+
+    def _capture(script: str) -> str:
+        captured_scripts.append(script)
+        return "null"
+
+    monkeypatch.setattr(lsp, "_run_python_script", _capture)
+
+    lsp._python_hover("dask/groupby.py", 100, 0)
+
+    assert len(captured_scripts) == 1
+    assert "/testbed/dask/groupby.py" in captured_scripts[0]
+    assert "path='dask/groupby.py'" not in captured_scripts[0]
+
+
 def test_ensure_ready_installs_missing_sandbox_deps() -> None:
     class _SandboxProcess:
         def __init__(self) -> None:
@@ -70,7 +157,11 @@ def test_ensure_ready_installs_missing_sandbox_deps() -> None:
                 return SimpleNamespace(exit_code=0, result="")
             raise AssertionError(f"unexpected command: {command}")
 
-    sandbox = SimpleNamespace(process=_SandboxProcess())
+    class _SandboxFs:
+        def upload_file(self, content: bytes, path: str):
+            pass
+
+    sandbox = SimpleNamespace(process=_SandboxProcess(), fs=_SandboxFs())
     lsp = LspClient(workspace_root="/workspace", sandbox=sandbox)
 
     readiness = lsp.ensure_ready(install_missing=True)
