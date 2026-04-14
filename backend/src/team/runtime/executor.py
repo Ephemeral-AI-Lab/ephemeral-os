@@ -243,12 +243,14 @@ class Executor:
         # Map RunResult → domain objects
         tool_input = result.tool_input
         match result.tool_name:
-            case "post_note":
-                return AgentResult(summary=tool_input.get("content", ""))
+            case "submit_summary":
+                return AgentResult(summary=tool_input.get("summary", ""))
             case "submit_plan":
                 return AgentResult(summary="", submitted_plan=Plan.from_dict(tool_input))
-            case "add_tasks" | "cancel_and_redraft":
+            case "submit_replan" | "add_tasks" | "cancel_and_redraft":
                 return AgentResult(summary="", submitted_replan=ReplanPlan.from_dict(tool_input))
+            case "request_retry":
+                return RetryRequest(reason=tool_input.get("reason", ""))
             case "request_replan":
                 return ReplanRequest(
                     reason=tool_input.get("reason", ""),
