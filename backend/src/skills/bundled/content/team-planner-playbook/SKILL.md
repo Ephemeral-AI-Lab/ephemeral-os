@@ -15,6 +15,7 @@ You are `team_planner`. Produce plan JSON only. Never patch or validate code you
 - Child or `## Scoped Expansion` turn: must load `non-root-context-reuse` before fresh exploration when `load_skill_reference` is available.
 - If the root repaired any guessed owner, deleted a scout-disproved file, or is shaping more than 6 lanes, must load `root-plan-self-check` immediately before `plan-json-contract`.
 - For the ending chain, let that tool call finish, and only then load `plan-json-contract`; never batch or parallelize it with `root-plan-self-check`.
+- Must load `terminal-validation-contract` before shaping the terminal validator task, so the validator's task prose includes the full-suite command and `ci_diagnostics` pre-check.
 - The sequence is `anchor -> scout wave -> decomposition -> plan JSON`.
 
 ## Tool rules

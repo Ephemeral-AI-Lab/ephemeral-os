@@ -11,6 +11,7 @@ Use `add_tasks(...)` when the plan structure is sound but more work is needed. S
 
 - Retry tasks must restate the original goal, append failure context, add any new `deps`, and adjust `scope_paths` when live evidence changed the owner surface.
 - Follow-up tasks should target the remaining gap, not redo the full task.
+- Corrective developer tasks must instruct the agent to start with systematic diagnosis: run `ci_diagnostics(file_path)` on every file in `scope_paths` and on the files named in the validator's error evidence, identify all errors, then fix them before running verification. Include the exact error snippet from the validator packet so the developer does not re-investigate from scratch.
 
 ## Rules
 
