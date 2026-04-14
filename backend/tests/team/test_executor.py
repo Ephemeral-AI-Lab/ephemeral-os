@@ -134,7 +134,7 @@ async def test_run_post_run_uses_external_trigger_agent(monkeypatch):
             turns_used=1,
         )
 
-    monkeypatch.setattr("external_trigger.agent.run_external_trigger", fake_run_external_trigger)
+    monkeypatch.setattr("external_trigger.runner.run", fake_run_external_trigger)
 
     executor, _ = _make_executor()
     executor.team_run.api_client = object()
@@ -178,7 +178,7 @@ async def test_run_post_run_planner_submit_plan(monkeypatch):
             turns_used=1,
         )
 
-    monkeypatch.setattr("external_trigger.agent.run_external_trigger", fake_run_external_trigger)
+    monkeypatch.setattr("external_trigger.runner.run", fake_run_external_trigger)
 
     executor, _ = _make_executor()
     executor.team_run.api_client = object()
@@ -208,6 +208,49 @@ async def test_run_post_run_planner_submit_plan(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_run_post_run_prefers_resolved_plan_metadata(monkeypatch):
+    resolved_plan = Plan.from_dict(
+        {"tasks": [{"id": "t1", "task": "fix it", "agent": "validator"}]}
+    )
+
+    async def fake_run_external_trigger(**kwargs):
+        del kwargs
+        return SimpleNamespace(
+            tool_name="submit_plan",
+            tool_input={"tasks": [{"id": "", "task": "broken raw payload", "agent": ""}]},
+            tool_result=SimpleNamespace(metadata={"resolved_plan": resolved_plan}),
+            validated=None,
+            turns_used=2,
+        )
+
+    monkeypatch.setattr("external_trigger.runner.run", fake_run_external_trigger)
+
+    executor, _ = _make_executor()
+    executor.team_run.api_client = object()
+    executor.team_run.conductor = SimpleNamespace(
+        _executor_snapshots={"task-1": [{"role": "assistant", "content": "frozen"}]},
+    )
+    ctx = TeamAgentContext(
+        tool_metadata={
+            "agent_name": "team_planner",
+            "role": "planner",
+            "posthook_prompt": "Submit your plan.",
+            "work_result": '{"tasks":[{"id":"t1","task":"legacy text plan","agent":"developer"}]}',
+        }
+    )
+
+    result = await executor._run_post_run(
+        task=SimpleNamespace(id="task-1", agent_name="team_planner"),
+        defn=FakePlannerDefn(),
+        ctx=ctx,
+    )
+
+    assert isinstance(result, AgentResult)
+    assert result.submitted_plan is not None
+    assert result.submitted_plan.tasks[0].agent == "validator"
+
+
+@pytest.mark.asyncio
 async def test_run_post_run_no_api_client_returns_sentinel(monkeypatch):
     executor, _ = _make_executor()
     executor.team_run.api_client = None
@@ -228,7 +271,7 @@ async def test_run_post_run_runner_failure_returns_sentinel(monkeypatch):
     async def failing_trigger(**kwargs):
         raise RuntimeError("LLM down")
 
-    monkeypatch.setattr("external_trigger.agent.run_external_trigger", failing_trigger)
+    monkeypatch.setattr("external_trigger.runner.run", failing_trigger)
 
     executor, _ = _make_executor()
     executor.team_run.api_client = object()

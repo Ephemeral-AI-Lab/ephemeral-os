@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import sys
 import time
 import uuid
 from collections.abc import Awaitable
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
-from team.models import AgentResult, BlockerDeclaration, Plan, ReplanPlan, ReplanRequest, RetryRequest, TaskStatus
+from team.models import AgentResult, BlockerDeclaration, Plan, ReplanPlan, ReplanRequest, TaskStatus
 from team.runtime.context_builder import TeamAgentContext
 from tools.core.base import ToolExecutionContext
 
@@ -54,6 +55,15 @@ class Executor:
         except Exception:
             logger.debug("Failed to checkpoint after %s transition for %s", outcome, task.id, exc_info=True)
 
+    async def _handle_worker_exception(self, task: "Task", reason: str) -> None:
+        await self.team_run.task_center.fail(task.id, reason)
+        conductor = getattr(self.team_run, "conductor", None)
+        if conductor is None:
+            return
+        blocker = conductor.blocker_for_fix_task(task.id)
+        if blocker is not None:
+            await conductor.on_fix_failed(blocker.id, reason)
+
     async def run_forever(self) -> None:
         tc = self.team_run.task_center
         dq = self.team_run.dispatch_queue
@@ -74,11 +84,7 @@ class Executor:
                 await self._run_one(task)
             except Exception as exc:
                 logger.exception("Worker error on %s: %s", task.id, exc)
-                await tc.fail(task.id, f"worker_exception: {exc}")
-                if conductor is not None:
-                    blocker = conductor.blocker_for_fix_task(task.id)
-                    if blocker is not None:
-                        await conductor.on_fix_failed(blocker.id, f"worker_exception: {exc}")
+                await self._handle_worker_exception(task, f"worker_exception: {exc}")
 
     async def _run_one(self, task: "Task") -> None:
         tc = self.team_run.task_center
@@ -128,11 +134,7 @@ class Executor:
                 return
             raise
         except Exception as exc:
-            await tc.fail(task.id, f"runner_exception: {exc}")
-            if conductor is not None:
-                blocker = conductor.blocker_for_fix_task(task.id)
-                if blocker is not None:
-                    await conductor.on_fix_failed(blocker.id, f"runner_exception: {exc}")
+            await self._handle_worker_exception(task, f"runner_exception: {exc}")
             return
         finally:
             unregister_agent_run = getattr(self.team_run, "unregister_agent_run", None)
@@ -215,13 +217,13 @@ class Executor:
         task: "Task",
         defn: "AgentDefinition",
         ctx: TeamAgentContext,
-    ) -> AgentResult | RetryRequest | ReplanRequest | BlockerDeclaration:
+    ) -> AgentResult | ReplanRequest | BlockerDeclaration:
         """Post-run phase: re-prompt agent with posthook tools only.
 
         The agent is re-prompted with ONLY its posthook tools and must call
         one of them. Loops up to 5 tool calls until a successful submission.
         """
-        from external_trigger.agent import run_external_trigger
+        from external_trigger.runner import run as run_trigger
         from tools.posthook.toolkit import PosthookTools
 
         api_client = getattr(self.team_run, "api_client", None)
@@ -272,7 +274,7 @@ class Executor:
         )
 
         try:
-            result = await run_external_trigger(
+            result = await run_trigger(
                 agent_name=f"posthook:{task.agent_name}:{task.id}",
                 messages=messages,
                 system_prompt=(
@@ -289,24 +291,37 @@ class Executor:
                 execution_context=execution_context,
                 execute_tools=True,
             )
-        except (RuntimeError, Exception):
-            logger.warning(
-                "post_run streaming runner failed for task %s",
-                task.id, exc_info=True,
-            )
+        except (RuntimeError, Exception) as exc:
+            msg = f"[posthook] FAILED for task {task.id} ({task.agent_name}): {exc}"
+            print(msg, file=sys.stdout, flush=True)
+            logger.warning(msg, exc_info=True)
             return AgentResult(summary="completed (posthook runner failed)")
 
+        msg = f"[posthook] completed for task {task.id} ({task.agent_name}): tool={result.tool_name} turns={result.turns_used}"
+        print(msg, file=sys.stdout, flush=True)
+        logger.info(msg)
+
         # Map RunResult → domain objects
+        # Prefer resolved objects stashed in tool_result.metadata by the
+        # posthook tools (roster-resolved, already validated) to avoid a
+        # lossy re-parse of raw LLM input that drops roster resolution
+        # and can fail task_center's second validation pass.
         tool_input = result.tool_input
+        _tool_result = getattr(result, "tool_result", None)
+        _meta = getattr(_tool_result, "metadata", None) or {}
         match result.tool_name:
             case "post_note":
                 return AgentResult(summary=tool_input.get("content", ""))
             case "submit_plan":
-                return AgentResult(summary="", submitted_plan=Plan.from_dict(tool_input))
-            case "submit_replan" | "add_tasks" | "cancel_and_redraft":
-                return AgentResult(summary="", submitted_replan=ReplanPlan.from_dict(tool_input))
-            case "request_retry":
-                return RetryRequest(reason=tool_input.get("reason", ""))
+                plan = _meta.get("resolved_plan")
+                if plan is None:
+                    plan = Plan.from_dict(tool_input)
+                return AgentResult(summary="", submitted_plan=plan)
+            case "add_tasks" | "cancel_and_redraft":
+                replan = _meta.get("resolved_replan")
+                if replan is None:
+                    replan = ReplanPlan.from_dict(tool_input)
+                return AgentResult(summary="", submitted_replan=replan)
             case "request_replan":
                 return ReplanRequest(
                     reason=tool_input.get("reason", ""),
@@ -376,40 +391,10 @@ class Executor:
             logger.debug("checkpoint note: post failed for %s", task.id, exc_info=True)
         return action
 
-    async def _post_retry_reason_note(self, task: "Task", result: RetryRequest) -> None:
-        reason = getattr(result, "reason", "") or "no reason given"
-        content = (
-            f"**RETRY #{task.retry_count + 1}** — Previous attempt failed.\n"
-            f"Reason: {reason}\n"
-            f"Do NOT repeat the same approach. If this is your last retry "
-            f"(max_retries={task.max_retries}), call `request_replan()` "
-            f"so a replanner can restructure the work."
-        )
-        from team.models import Note
-        try:
-            await self.team_run.task_center.post(Note(
-                id=str(uuid.uuid4()), task_id=task.id, agent_name="system",
-                content=content, timestamp=time.time(),
-                scope_paths=list(task.scope_paths) if task.scope_paths else [],
-            ))
-        except Exception:
-            logger.debug("retry reason note: post failed for %s", task.id, exc_info=True)
-
     async def _dispatch(self, task: "Task", result: Any) -> None:
         tc = self.team_run.task_center
         conductor = getattr(self.team_run, "conductor", None)
         fix_blocker = conductor.blocker_for_fix_task(task.id) if conductor is not None else None
-        if isinstance(result, RetryRequest):
-            if fix_blocker is not None and conductor is not None:
-                await tc.fail(task.id, f"blocker_fix_retry_requested: {result.reason}")
-                await conductor.on_fix_failed(fix_blocker.id, result.reason)
-                await self._checkpoint_after_transition(task, outcome="blocker_fix_failed")
-                return
-            await self._post_retry_reason_note(task, result)
-            await tc.retry_task(task.id, result)
-            await self._checkpoint_after_transition(task, outcome="retry")
-            await self._post_checkpoint_note(task, result)
-            return
         if isinstance(result, ReplanRequest):
             if fix_blocker is not None and conductor is not None:
                 await tc.fail(task.id, f"blocker_fix_failed: {result.reason}")

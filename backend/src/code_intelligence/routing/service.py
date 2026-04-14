@@ -8,7 +8,7 @@ import inspect
 import logging
 import threading
 import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from team._path_utils import normalize_scope_paths, scope_paths_overlap
 from code_intelligence.editing.arbiter import Arbiter
@@ -36,6 +36,9 @@ from code_intelligence.types import (
     SymbolInfo,
     WriteRequest,
 )
+
+if TYPE_CHECKING:
+    pass
 
 logger = logging.getLogger(__name__)
 _DEFAULT_SCOPE_RECENT_SECONDS = 300.0
@@ -65,6 +68,123 @@ def _result(
     )
 
 
+# ---------------------------------------------------------------------------
+# ContentManager - handles all file read/write for local and sandbox contexts
+# ---------------------------------------------------------------------------
+
+
+class ContentManager:
+    """Handles file content read/write for local or sandbox workspaces."""
+
+    def __init__(self, workspace_root: str, sandbox: Any = None) -> None:
+        self._workspace_root = workspace_root
+        self._sandbox = sandbox
+
+    def read(self, file_path: str, *, allow_missing: bool = False) -> tuple[str, bool]:
+        """Read content, returning (content, existed)."""
+        if self._sandbox:
+            return self._read_remote(file_path, allow_missing=allow_missing)
+        return self._read_local(file_path, allow_missing=allow_missing)
+
+    def write(self, file_path: str, content: str) -> None:
+        """Write content to file."""
+        if self._sandbox:
+            self._write_remote(file_path, content.encode("utf-8"))
+        else:
+            from pathlib import Path
+
+            Path(file_path).write_text(content, encoding="utf-8")
+
+    def bind_sandbox(self, sandbox: Any) -> None:
+        """Update the sandbox handle."""
+        self._sandbox = sandbox
+
+    # -- Private --------------------------------------------------------------
+
+    def _read_local(self, file_path: str, *, allow_missing: bool) -> tuple[str, bool]:
+        from pathlib import Path
+
+        path = Path(file_path)
+        if not path.exists():
+            if allow_missing:
+                return "", False
+            raise FileNotFoundError(file_path)
+        return path.read_text(encoding="utf-8"), True
+
+    def _read_remote(self, file_path: str, *, allow_missing: bool) -> tuple[str, bool]:
+        try:
+            raw = self._resolve(self._sandbox.fs.download_file(file_path))
+        except Exception as exc:
+            if allow_missing and self._is_missing_error(exc):
+                return "", False
+            raise
+        if isinstance(raw, bytes):
+            return raw.decode("utf-8"), True
+        return str(raw), True
+
+    def _write_remote(self, file_path: str, payload: bytes) -> None:
+        fs = self._sandbox.fs
+        upload_fn = getattr(fs, "upload_file", None)
+        if not callable(upload_fn):
+            raise RuntimeError("Sandbox fs has no upload_file method")
+
+        # Try canonical (payload, path) order first, fallback to (path, payload)
+        try:
+            result = upload_fn(payload, file_path)
+        except (AttributeError, TypeError) as exc:
+            if "decode" not in str(exc) and "bytes-like object" not in str(exc):
+                raise
+            result = upload_fn(file_path, payload)
+        self._resolve(result)
+
+    @staticmethod
+    def _is_missing_error(exc: Exception) -> bool:
+        text = str(exc).lower()
+        if isinstance(exc, FileNotFoundError):
+            return True
+        return "not found" in text or "no such file" in text or "does not exist" in text
+
+    @staticmethod
+    def _resolve(result: Any) -> Any:
+        """Run any awaitable synchronously."""
+        if inspect.isawaitable(result):
+            import asyncio
+            import concurrent.futures
+
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = None
+            if loop and loop.is_running():
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                    return pool.submit(asyncio.run, result).result()
+            return asyncio.run(result)
+        return result
+
+
+# ---------------------------------------------------------------------------
+# TelemetryCollector - centralized LSP telemetry
+# ---------------------------------------------------------------------------
+
+
+class TelemetryCollector:
+    """Collects and formats LSP telemetry from an LspClient."""
+
+    __slots__ = ("_lsp_client",)
+
+    def __init__(self, lsp_client: LspClient) -> None:
+        self._lsp_client = lsp_client
+
+    def fields(self) -> dict[str, Any]:
+        """Return {connected, queries, cache_hits} dict for status/telemetry."""
+        tel = self._lsp_client.telemetry
+        return {
+            "connected": self._lsp_client.connected,
+            "queries": tel.queries,
+            "cache_hits": tel.cache_hits,
+        }
+
+
 def _rebind_service_sandbox(service: CodeIntelligenceService, sandbox: Any) -> None:
     """Refresh the sandbox handle carried by a cached CI service."""
     if sandbox is None:
@@ -82,6 +202,9 @@ def _rebind_service_sandbox(service: CodeIntelligenceService, sandbox: Any) -> N
             reset = getattr(lsp, "reset_backend_availability", None)
             if callable(reset):
                 reset()
+    content = getattr(service, "_content", None)
+    if content is not None:
+        content.bind_sandbox(sandbox)
 
 
 class CodeIntelligenceService:
@@ -104,11 +227,13 @@ class CodeIntelligenceService:
 
         self.tree_cache = TreeCache(sandbox=sandbox)
         self.symbol_index = SymbolIndex(
-            workspace_root=workspace_root, sandbox=sandbox, tree_cache=self.tree_cache,
+            workspace_root=workspace_root,
+            sandbox=sandbox,
+            tree_cache=self.tree_cache,
         )
 
-        # In-memory file change tracking.
         from team.persistence.file_change_store import FileChangeStore
+
         self.arbiter = Arbiter(workspace_root=workspace_root, file_change_store=FileChangeStore())
 
         self.time_machine = TimeMachine()
@@ -117,6 +242,9 @@ class CodeIntelligenceService:
         self.query_router = IntelligenceQueryRouter()
         self.query_router.register(LspBackendAdapter(self.lsp_client))
         self.query_router.register(SymbolIndexBackendAdapter(self.symbol_index))
+
+        self._content = ContentManager(workspace_root, sandbox=sandbox)
+        self._telemetry = TelemetryCollector(self.lsp_client)
 
     # -- Initialization -------------------------------------------------------
 
@@ -467,9 +595,7 @@ class CodeIntelligenceService:
         if store is not None and getattr(store, "initialized", False):
             for entry in store.recent_edits(seconds=recent_seconds):
                 fp = str(entry.file_path or "")
-                if normalized and not any(
-                    scope_paths_overlap(fp, scope) for scope in normalized
-                ):
+                if normalized and not any(scope_paths_overlap(fp, scope) for scope in normalized):
                     continue
                 recent_changes.append(
                     {
@@ -486,9 +612,7 @@ class CodeIntelligenceService:
         if store is not None and getattr(store, "initialized", False):
             for fp, count in store.hotspots(limit=25):
                 fp = str(fp)
-                if normalized and not any(
-                    scope_paths_overlap(fp, scope) for scope in normalized
-                ):
+                if normalized and not any(scope_paths_overlap(fp, scope) for scope in normalized):
                     continue
                 hotspots.append({"file_path": fp, "edit_count": int(count)})
                 if len(hotspots) >= 10:
@@ -584,13 +708,7 @@ class CodeIntelligenceService:
         return self.patcher.apply_edits(prepared.current_content, [edit])
 
     def _lsp_telemetry_fields(self) -> dict[str, Any]:
-        """Return the three LSP telemetry values shared by status() and get_telemetry()."""
-        tel = self.lsp_client.telemetry
-        return {
-            "connected": self.lsp_client.connected,
-            "queries": tel.queries,
-            "cache_hits": tel.cache_hits,
-        }
+        return self._telemetry.fields()
 
     def _resolve_pending_write(
         self,
@@ -648,30 +766,7 @@ class CodeIntelligenceService:
         )
 
     def _write_content(self, file_path: str, content: str) -> None:
-        """Write content locally or to the attached sandbox."""
-        from pathlib import Path
-
-        if self._sandbox:
-            self._write_content_to_sandbox(file_path, content.encode("utf-8"))
-            return
-        Path(file_path).write_text(content, encoding="utf-8")
-
-    def _write_content_to_sandbox(self, file_path: str, payload: bytes) -> None:
-        """Handle both known upload_file argument orders exposed by sandboxes."""
-        try:
-            result = self._sandbox.fs.upload_file(
-                payload,
-                file_path,
-            )
-            self._resolve(result)
-        except (AttributeError, TypeError) as exc:
-            if "decode" not in str(exc) and "bytes-like object" not in str(exc):
-                raise
-            result = self._sandbox.fs.upload_file(
-                file_path,
-                payload,
-            )
-            self._resolve(result)
+        self._content.write(file_path, content)
 
     def _read_content(
         self,
@@ -679,50 +774,7 @@ class CodeIntelligenceService:
         *,
         allow_missing: bool = False,
     ) -> tuple[str, bool]:
-        """Read content locally or from the attached sandbox."""
-        from pathlib import Path
-
-        if self._sandbox:
-            try:
-                raw = self._resolve(self._sandbox.fs.download_file(file_path))
-            except Exception as exc:
-                if allow_missing and self._is_missing_error(exc):
-                    return "", False
-                raise
-            if isinstance(raw, bytes):
-                return raw.decode("utf-8"), True
-            return str(raw), True
-
-        path = Path(file_path)
-        if not path.exists():
-            if allow_missing:
-                return "", False
-            raise FileNotFoundError(file_path)
-        return path.read_text(encoding="utf-8"), True
-
-    @staticmethod
-    def _is_missing_error(exc: Exception) -> bool:
-        text = str(exc).lower()
-        if isinstance(exc, FileNotFoundError):
-            return True
-        return "not found" in text or "no such file" in text or "does not exist" in text
-
-    @staticmethod
-    def _resolve(result: Any) -> Any:
-        """If *result* is awaitable, run it synchronously."""
-        import asyncio
-        import concurrent.futures
-
-        if inspect.isawaitable(result):
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                loop = None
-            if loop and loop.is_running():
-                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                    return pool.submit(asyncio.run, result).result()
-            return asyncio.run(result)
-        return result
+        return self._content.read(file_path, allow_missing=allow_missing)
 
 
 # ---------------------------------------------------------------------------

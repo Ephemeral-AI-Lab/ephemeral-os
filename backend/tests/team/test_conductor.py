@@ -125,3 +125,70 @@ def test_on_fix_failed_falls_back_to_status_when_team_run_has_no_handler():
 
     assert team_run.status == TeamRunStatus.FAILED
     assert blocker_store.saved[-1].status == BlockerStatus.FAILED
+
+
+def test_assess_running_emits_pause_assess_events(monkeypatch):
+    events: list[dict] = []
+    task_center = SimpleNamespace(
+        get_siblings_and_descendants=AsyncMock(return_value=[
+            SimpleNamespace(
+                id="task-2",
+                status="running",
+                agent_name="developer",
+                agent_run_id="agent-run-2",
+                blocker_id=None,
+            )
+        ]),
+        pause_running_task=AsyncMock(return_value=False),
+    )
+    team_run = SimpleNamespace(
+        id="run-1",
+        task_center=task_center,
+        api_client=object(),
+        coordination_metadata={"external_hook_emitter": events.append},
+    )
+    conductor = Conductor(team_run)
+    blocker = Blocker(
+        id="blocker-1",
+        team_run_id="run-1",
+        status=BlockerStatus.ASSESSING,
+        reason="shared import crash",
+        root_cause_paths=["pkg/_compat.py"],
+        initiating_task_id="task-1",
+    )
+
+    async def fake_assess_pause(**kwargs):
+        from external_trigger.pause_assessment import PauseVerdict
+
+        return PauseVerdict(
+            task_id=kwargs["task_id"],
+            answer="NO",
+            reason="unaffected",
+            conversation=[],
+        )
+
+    monkeypatch.setattr("external_trigger.pause_assessment.assess_pause", fake_assess_pause)
+
+    asyncio.run(conductor._assess_running(blocker))
+
+    assert events == [
+        {
+            "event": "external_hook",
+            "team_run_id": "run-1",
+            "hook": "pause_assess",
+            "work_item_id": "task-2",
+            "agent": "developer",
+            "blocker_id": "blocker-1",
+            "status": "started",
+        },
+        {
+            "event": "external_hook",
+            "team_run_id": "run-1",
+            "hook": "pause_assess",
+            "work_item_id": "task-2",
+            "agent": "developer",
+            "blocker_id": "blocker-1",
+            "status": "completed",
+            "answer": "NO",
+        },
+    ]

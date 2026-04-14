@@ -59,6 +59,13 @@ class AgentDefinition(BaseModel):
     # provides the steering user message for this phase.
     posthook: list[str] = Field(default_factory=list)
 
+    # --- external triggers ---
+    # Trigger types this agent is allowed to receive.  Currently supported:
+    # "tc_note" — checkpoint note generation via TaskCenter.
+    # Defaults to empty (no triggers).  Developers and validators should
+    # set ``["tc_note"]``.
+    allowed_triggers: list[str] = Field(default_factory=list)
+
     # --- hooks ---
     hooks: dict[str, Any] | None = None
 
@@ -116,7 +123,7 @@ class AgentDefinition(BaseModel):
 
     model_config = {"populate_by_name": True, "arbitrary_types_allowed": True}
 
-    @field_validator("skills", "toolkits", "permissions", "blocked_tools", "posthook", mode="before")
+    @field_validator("skills", "toolkits", "permissions", "blocked_tools", "posthook", "allowed_triggers", mode="before")
     @classmethod
     def _split_csv(cls, v: Any) -> Any:
         if isinstance(v, str):

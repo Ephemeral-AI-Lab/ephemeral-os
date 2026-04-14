@@ -47,6 +47,7 @@ class AgentDefinitionStore(DefinitionStoreBase[AgentDefinitionRecord]):
                 skills=defn.skills or [],
                 posthook=defn.posthook or [],
                 blocked_tools=defn.blocked_tools or [],
+                allowed_triggers=defn.allowed_triggers or [],
                 hooks=defn.hooks,
                 background=defn.background,
                 initial_prompt=defn.initial_prompt,

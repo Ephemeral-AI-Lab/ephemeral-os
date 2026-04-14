@@ -583,6 +583,7 @@ async def test_full_roundtrip_pause_resolve_resume_real_llm(api_client):
 
     # --- Phase 4: Run resumed agent (real LLM) ---
     result = await run_trigger(
+        agent_name="test:blocker_resume_roundtrip",
         messages=resume_messages,
         system_prompt="You are a developer agent. Your task was paused due to a blocker and has now resumed.",
         prompt=user_message,

@@ -9,6 +9,8 @@ tool call, max turns exhausted, or asyncio cancellation.
 from __future__ import annotations
 
 import logging
+import sys
+import uuid
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -18,6 +20,12 @@ from providers.types import ApiMessageRequest, ApiToolUseDeltaEvent, ApiMessageC
 from tools.core.base import BaseTool, ToolExecutionContext, ToolResult
 
 logger = logging.getLogger(__name__)
+
+
+def _emit(msg: str) -> None:
+    """Print to stdout (visible in benchmark tee) AND log at INFO level."""
+    print(f"[runner] {msg}", file=sys.stdout, flush=True)
+    logger.info(msg)
 
 
 @dataclass
@@ -77,6 +85,7 @@ async def _stream_to_response(api_client: Any, request: ApiMessageRequest) -> An
 
 async def run(
     *,
+    agent_name: str,
     messages: list[dict[str, Any]],
     system_prompt: str,
     prompt: str,
@@ -92,6 +101,8 @@ async def run(
 
     Parameters
     ----------
+    agent_name:
+        Identity for logging/observability (e.g. "checkpoint:task_123").
     messages:
         Frozen conversation snapshot (read-only context for the LLM).
     system_prompt:
@@ -113,6 +124,10 @@ async def run(
         errors are fed back into the frozen conversation as ``tool_result``
         blocks so the LLM can retry with corrected input.
     """
+    run_id = uuid.uuid4().hex[:8]
+    tool_names = [t.name for t in tools]
+    _emit(f"{agent_name} (run={run_id}) starting with tools={tool_names}")
+
     api_tools = [tool.to_api_schema() for tool in tools]
     tool_map = {tool.name: tool for tool in tools}
     if len(api_tools) == 1:
@@ -186,6 +201,7 @@ async def run(
         tool = tool_map.get(tool_name)
         if tool is None:
             tool_names = list(tool_map.keys())
+            _emit(f"{agent_name} (run={run_id}) turn {turn}: unknown tool '{tool_name}' (available: {tool_names})")
             conversation.append({
                 "role": "user",
                 "content": [{"type": "tool_result", "tool_use_id": tool_id,
@@ -200,6 +216,7 @@ async def run(
         try:
             validated = tool.input_model.model_validate(tool_input)
         except Exception as exc:
+            _emit(f"{agent_name} (run={run_id}) turn {turn}: pydantic validation failed for {tool_name}: {exc}")
             conversation.append({
                 "role": "user",
                 "content": [{"type": "tool_result", "tool_use_id": tool_id,
@@ -215,6 +232,7 @@ async def run(
             try:
                 tool_result = await tool.execute(validated, execution_context)
             except Exception as exc:
+                _emit(f"{agent_name} (run={run_id}) turn {turn}: tool {tool_name} raised: {exc}")
                 tool_result = ToolResult(
                     output=f"Tool execution failed: {exc}",
                     is_error=True,
@@ -229,9 +247,11 @@ async def run(
                 }],
             })
             if tool_result.is_error:
+                _emit(f"{agent_name} (run={run_id}) turn {turn}: tool {tool_name} returned error: {tool_result.output}")
                 continue
 
         # Success
+        _emit(f"{agent_name} (run={run_id}) completed: tool={tool_name} turns={turn}")
         return RunResult(
             tool_name=tool_name,
             tool_input=tool_input,
@@ -241,4 +261,13 @@ async def run(
             turns_used=turn,
         )
 
-    raise RuntimeError(f"external_trigger runner: exhausted {max_turns} turns without valid tool call")
+    # Print the conversation trail for debugging before raising
+    trail = "\n".join(
+        f"  [{m.get('role', '?')}] {str(m.get('content', ''))[:300]}"
+        for m in conversation[-10:]  # last 10 messages to avoid log explosion
+    )
+    _emit(
+        f"{agent_name} (run={run_id}): EXHAUSTED {max_turns} turns. "
+        f"Conversation trail ({len(conversation)} messages):\n{trail}"
+    )
+    raise RuntimeError(f"runner.run {agent_name}: exhausted {max_turns} turns without valid tool call")

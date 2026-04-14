@@ -46,7 +46,7 @@ def record_to_task(rec: Any) -> Task:
 
 
 class TaskStore:
-    """SQL persistence for tasks. Owns session_factory and team_run_id."""
+    """SQL persistence for tasks. Owns session_factory, team_run_id, and in-memory task graph."""
 
     def __init__(
         self,
@@ -55,6 +55,19 @@ class TaskStore:
     ) -> None:
         self._sf = session_factory
         self._team_run_id = team_run_id
+        self.graph: dict[str, Task] = {}
+        self._ready_order: list[str] = []
+
+    def get_task(self, task_id: str) -> Task | None:
+        """Fast in-memory lookup — no DB call."""
+        return self.graph.get(task_id)
+
+    async def refresh_graph(self) -> dict[str, Task]:
+        """Sync in-memory graph from DB. Returns the graph."""
+        records = await self.get_all_tasks()
+        self.graph = {r.id: record_to_task(r) for r in records}
+        self._ready_order = [r.id for r in records if r.status == "ready"]
+        return self.graph
 
     # ---- queries -------------------------------------------------------------
 
@@ -100,10 +113,16 @@ class TaskStore:
             return {str(row.id) for row in result.fetchall()}
 
     async def get_done_sibling_ids(
-        self, *, task_id: str, parent_id: str | None, since: float | None = None,
+        self,
+        *,
+        task_id: str,
+        parent_id: str | None,
+        since: float | None = None,
     ) -> list[str]:
         params: dict[str, Any] = {
-            "run_id": self._team_run_id, "task_id": task_id, "parent_id": parent_id,
+            "run_id": self._team_run_id,
+            "task_id": task_id,
+            "parent_id": parent_id,
         }
         since_clause = ""
         if since is not None:
@@ -145,8 +164,14 @@ class TaskStore:
                 {"run_id": self._team_run_id, "parent_id": parent_id},
             )
             stats: dict[str, int] = {
-                "done": 0, "failed": 0, "cancelled": 0, "running": 0,
-                "pending": 0, "ready": 0, "expanded": 0, "retry_total": 0,
+                "done": 0,
+                "failed": 0,
+                "cancelled": 0,
+                "running": 0,
+                "pending": 0,
+                "ready": 0,
+                "expanded": 0,
+                "retry_total": 0,
             }
             for row in result.fetchall():
                 stats[row.status] = row.cnt
@@ -155,7 +180,8 @@ class TaskStore:
 
     async def sibling_subtree_ids(self, parent_id: str | None) -> list[str]:
         async with self._sf() as db:
-            result = await db.execute(text("""
+            result = await db.execute(
+                text("""
                 WITH RECURSIVE subtree AS (
                     SELECT id
                     FROM tasks
@@ -168,7 +194,9 @@ class TaskStore:
                     WHERE child.team_run_id = :rid
                 )
                 SELECT id FROM subtree
-            """), {"rid": self._team_run_id, "pid": parent_id})
+            """),
+                {"rid": self._team_run_id, "pid": parent_id},
+            )
             return [str(row.id) for row in result.fetchall()]
 
     async def get_siblings_and_descendants(self, initiating_task_id: str) -> list[TaskRecord]:
@@ -178,7 +206,8 @@ class TaskStore:
         CTE on parent_id. The initiating task itself is excluded.
         """
         async with self._sf() as db:
-            result = await db.execute(text("""
+            result = await db.execute(
+                text("""
                 WITH initiator AS (
                     SELECT parent_id FROM tasks
                     WHERE id = :tid AND team_run_id = :rid
@@ -200,7 +229,9 @@ class TaskStore:
                 SELECT t.* FROM tasks t
                 WHERE t.team_run_id = :rid AND t.id IN (SELECT id FROM subtree)
                 ORDER BY t.depth, t.created_at
-            """), {"rid": self._team_run_id, "tid": initiating_task_id})
+            """),
+                {"rid": self._team_run_id, "tid": initiating_task_id},
+            )
             return [row_to_record(row) for row in result.fetchall()]
 
     # ---- mutations -----------------------------------------------------------
@@ -208,19 +239,36 @@ class TaskStore:
     async def mark_done(self, task_id: str) -> list[str]:
         async with self._sf() as db:
             await db.execute(
-                text("UPDATE tasks SET status='done', finished_at=NOW() WHERE id=:tid AND team_run_id=:rid"),
+                text(
+                    "UPDATE tasks SET status='done', finished_at=NOW() WHERE id=:tid AND team_run_id=:rid"
+                ),
                 {"tid": task_id, "rid": self._team_run_id},
             )
-            promoted = (await db.execute(text("""
+            promoted = (
+                await db.execute(
+                    text("""
                 UPDATE tasks t
                 SET pending_dep_count = pending_dep_count - 1,
                     status = CASE WHEN pending_dep_count - 1 = 0 THEN 'ready' ELSE status END
                 WHERE t.team_run_id = :rid AND t.status = 'pending'
                   AND :tid = ANY(t.deps) AND t.pending_dep_count > 0
                 RETURNING CASE WHEN pending_dep_count = 0 THEN t.id ELSE NULL END AS promoted_id
-            """), {"rid": self._team_run_id, "tid": task_id})).fetchall()
+            """),
+                    {"rid": self._team_run_id, "tid": task_id},
+                )
+            ).fetchall()
             await db.commit()
-            return [r.promoted_id for r in promoted if r.promoted_id is not None]
+            promoted_ids = [r.promoted_id for r in promoted if r.promoted_id is not None]
+        if task_id in self.graph:
+            self.graph[task_id].status = TaskStatus.DONE
+        if task_id in self._ready_order:
+            self._ready_order.remove(task_id)
+        for pid in promoted_ids:
+            if pid in self.graph:
+                self.graph[pid].status = TaskStatus.READY
+            if pid not in self._ready_order:
+                self._ready_order.append(pid)
+        return promoted_ids
 
     async def mark_expanded(self, task_id: str) -> None:
         async with self._sf() as db:
@@ -229,13 +277,17 @@ class TaskStore:
                 {"tid": task_id, "rid": self._team_run_id},
             )
             await db.commit()
+        if task_id in self.graph:
+            self.graph[task_id].status = TaskStatus.EXPANDED
 
     async def maybe_promote_expanded_parent(self, child_id: str) -> list[str]:
         promoted_all: list[str] = []
         current = child_id
         while True:
             async with self._sf() as db:
-                row = (await db.execute(text("""
+                row = (
+                    await db.execute(
+                        text("""
                     WITH child AS (SELECT parent_id FROM tasks WHERE id=:cid AND team_run_id=:rid)
                     SELECT p.id FROM tasks p, child c
                     WHERE p.id = c.parent_id AND p.team_run_id=:rid AND p.status='expanded'
@@ -243,7 +295,10 @@ class TaskStore:
                           SELECT 1 FROM tasks s WHERE s.parent_id=p.id AND s.team_run_id=:rid
                             AND s.status NOT IN ('done','failed','cancelled')
                       )
-                """), {"cid": current, "rid": self._team_run_id})).fetchone()
+                """),
+                        {"cid": current, "rid": self._team_run_id},
+                    )
+                ).fetchone()
             if row is None:
                 break
             pid = str(row.id)
@@ -263,28 +318,44 @@ class TaskStore:
                 {"status": status, "tid": task_id, "rid": self._team_run_id, "reason": reason},
             )
             await db.commit()
+        if task_id in self.graph:
+            self.graph[task_id].status = TaskStatus(status)
+            self.graph[task_id].failure_reason = reason
+        if task_id in self._ready_order:
+            self._ready_order.remove(task_id)
 
     async def insert_plan(
-        self, specs: list[TaskSpec], parent_id: str | None = None,
-        parent_depth: int = 0, parent_root_id: str | None = None,
+        self,
+        specs: list[TaskSpec],
+        parent_id: str | None = None,
+        parent_depth: int = 0,
+        parent_root_id: str | None = None,
     ) -> list[TaskRecord]:
         async with self._sf() as db:
             records: list[TaskRecord] = []
             for spec in specs:
                 status = "ready" if not spec.deps else "pending"
                 root_id = parent_root_id if parent_id else spec.id
-                records.append(TaskRecord(
-                    id=spec.id, team_run_id=self._team_run_id, agent_name=spec.agent,
-                    status=status, task=spec.task, deps=list(spec.deps),
-                    scope_paths=list(spec.scope_paths),
-                    scope_ltree=[path_to_ltree(p) for p in spec.scope_paths],
-                    parent_id=parent_id, root_id=root_id or "",
-                    depth=(parent_depth + 1) if parent_id else 0,
-                    pending_dep_count=len(spec.deps),
-                ))
+                records.append(
+                    TaskRecord(
+                        id=spec.id,
+                        team_run_id=self._team_run_id,
+                        agent_name=spec.agent,
+                        status=status,
+                        task=spec.task,
+                        deps=list(spec.deps),
+                        scope_paths=list(spec.scope_paths),
+                        scope_ltree=[path_to_ltree(p) for p in spec.scope_paths],
+                        parent_id=parent_id,
+                        root_id=root_id or "",
+                        depth=(parent_depth + 1) if parent_id else 0,
+                        pending_dep_count=len(spec.deps),
+                    )
+                )
             db.add_all(records)
             await db.flush()
-            await db.execute(text("""
+            await db.execute(
+                text("""
                 WITH already_done AS (SELECT id FROM tasks WHERE team_run_id=:rid AND status='done')
                 UPDATE tasks t
                 SET pending_dep_count = pending_dep_count - (
@@ -295,7 +366,9 @@ class TaskStore:
                         THEN 'ready' ELSE status END
                 WHERE t.team_run_id=:rid AND t.status='pending'
                   AND t.deps && (SELECT array_agg(id) FROM already_done)
-            """), {"rid": self._team_run_id})
+            """),
+                {"rid": self._team_run_id},
+            )
             inserted_ids = [record.id for record in records]
             rows = []
             if inserted_ids:
@@ -310,11 +383,18 @@ class TaskStore:
                     )
                 ).fetchall()
             await db.commit()
-            return [row_to_record(row) for row in rows]
+            result_records = [row_to_record(row) for row in rows]
+            for rec in result_records:
+                task = record_to_task(rec)
+                self.graph[task.id] = task
+                if task.status == TaskStatus.READY and task.id not in self._ready_order:
+                    self._ready_order.append(task.id)
+            return result_records
 
     async def cascade_cancel_recursive(self, root_task_id: str) -> list[str]:
         async with self._sf() as db:
-            result = await db.execute(text("""
+            result = await db.execute(
+                text("""
                 WITH RECURSIVE dep_chain AS (
                     SELECT id FROM tasks WHERE team_run_id=:rid AND id=:tid
                     UNION ALL
@@ -329,18 +409,30 @@ class TaskStore:
                     failure_reason='cascaded from ' || :tid
                 WHERE team_run_id=:rid AND id IN (SELECT DISTINCT id FROM dep_chain WHERE id != :tid)
                 RETURNING id
-            """), {"rid": self._team_run_id, "tid": root_task_id})
+            """),
+                {"rid": self._team_run_id, "tid": root_task_id},
+            )
             cancelled = [r.id for r in result.fetchall()]
             await db.commit()
-            return cancelled
+        for cid in cancelled:
+            if cid in self.graph:
+                self.graph[cid].status = TaskStatus.CANCELLED
+            if cid in self._ready_order:
+                self._ready_order.remove(cid)
+        return cancelled
 
     async def fail_task(self, task_id: str, reason: str) -> list[tuple[str, str]]:
         warnings: list[tuple[str, str]] = []
         rid = self._team_run_id
         async with self._sf() as db:
-            rec = (await db.execute(text(
-                "SELECT id, status, retry_count, max_retries FROM tasks WHERE id=:id AND team_run_id=:rid"
-            ), {"id": task_id, "rid": rid})).fetchone()
+            rec = (
+                await db.execute(
+                    text(
+                        "SELECT id, status, retry_count, max_retries FROM tasks WHERE id=:id AND team_run_id=:rid"
+                    ),
+                    {"id": task_id, "rid": rid},
+                )
+            ).fetchone()
             if rec is None or rec.status in ("done", "failed", "cancelled"):
                 await db.commit()
                 return warnings
@@ -348,191 +440,320 @@ class TaskStore:
             if rec.retry_count < rec.max_retries:
                 should_retry = is_infra
                 if not should_retry:
-                    should_retry = (await db.execute(text("""
+                    should_retry = (
+                        await db.execute(
+                            text("""
                         SELECT EXISTS (SELECT 1 FROM tasks WHERE team_run_id=:rid
                           AND :tid = ANY(deps) AND cascade_policy='retry_first'
                           AND status NOT IN ('done','failed','cancelled'))
-                    """), {"rid": rid, "tid": task_id})).scalar()
+                    """),
+                            {"rid": rid, "tid": task_id},
+                        )
+                    ).scalar()
                 if should_retry:
-                    await db.execute(text("""
+                    await db.execute(
+                        text("""
                         UPDATE tasks SET status='ready', retry_count=retry_count+1,
                             agent_run_id=NULL, started_at=NULL, finished_at=NULL, failure_reason=NULL
                         WHERE id=:tid AND team_run_id=:rid
-                    """), {"tid": task_id, "rid": rid})
+                    """),
+                        {"tid": task_id, "rid": rid},
+                    )
                     await db.commit()
+                    if task_id in self.graph:
+                        self.graph[task_id].status = TaskStatus.READY
                     return warnings
-            await db.execute(text(
-                "UPDATE tasks SET status='failed', finished_at=NOW(), failure_reason=:reason "
-                "WHERE id=:tid AND team_run_id=:rid"
-            ), {"tid": task_id, "rid": rid, "reason": reason})
-            cont = (await db.execute(text("""
+            await db.execute(
+                text(
+                    "UPDATE tasks SET status='failed', finished_at=NOW(), failure_reason=:reason "
+                    "WHERE id=:tid AND team_run_id=:rid"
+                ),
+                {"tid": task_id, "rid": rid, "reason": reason},
+            )
+            cont = (
+                await db.execute(
+                    text("""
                 SELECT id FROM tasks WHERE team_run_id=:rid AND :tid = ANY(deps)
                   AND cascade_policy='continue' AND status NOT IN ('done','failed','cancelled')
-            """), {"rid": rid, "tid": task_id})).fetchall()
+            """),
+                    {"rid": rid, "tid": task_id},
+                )
+            ).fetchall()
             for dep in cont:
-                warnings.append((dep.id, f"Warning: dependency {task_id} failed: {reason}. Proceed with caution."))
+                warnings.append(
+                    (
+                        dep.id,
+                        f"Warning: dependency {task_id} failed: {reason}. Proceed with caution.",
+                    )
+                )
             await db.commit()
+        if task_id in self.graph:
+            self.graph[task_id].status = TaskStatus.FAILED
+            self.graph[task_id].failure_reason = reason
+        if task_id in self._ready_order:
+            self._ready_order.remove(task_id)
         await self.cascade_cancel_recursive(task_id)
         return warnings
 
     async def retry_task(self, task_id: str, max_retries: int) -> bool:
         rid = self._team_run_id
         async with self._sf() as db:
-            rec = (await db.execute(text(
-                "SELECT retry_count FROM tasks WHERE id=:id AND team_run_id=:rid"
-            ), {"id": task_id, "rid": rid})).fetchone()
+            rec = (
+                await db.execute(
+                    text("SELECT retry_count FROM tasks WHERE id=:id AND team_run_id=:rid"),
+                    {"id": task_id, "rid": rid},
+                )
+            ).fetchone()
             if rec is None:
                 return False
             if rec.retry_count >= max_retries:
-                await db.execute(text(
-                    "UPDATE tasks SET status='failed', finished_at=NOW(), failure_reason='retry_exhausted' "
-                    "WHERE id=:tid AND team_run_id=:rid"
-                ), {"tid": task_id, "rid": rid})
+                await db.execute(
+                    text(
+                        "UPDATE tasks SET status='failed', finished_at=NOW(), failure_reason='retry_exhausted' "
+                        "WHERE id=:tid AND team_run_id=:rid"
+                    ),
+                    {"tid": task_id, "rid": rid},
+                )
                 await db.commit()
-                await self.cascade_cancel_recursive(task_id)
-                return False
-            await db.execute(text("""
-                UPDATE tasks SET status='ready', retry_count=retry_count+1,
-                    agent_run_id=NULL, started_at=NULL, finished_at=NULL, failure_reason=NULL
-                WHERE id=:tid AND team_run_id=:rid
-            """), {"tid": task_id, "rid": rid})
-            await db.commit()
-            return True
+            else:
+                await db.execute(
+                    text("""
+                    UPDATE tasks SET status='ready', retry_count=retry_count+1,
+                        agent_run_id=NULL, started_at=NULL, finished_at=NULL, failure_reason=NULL
+                    WHERE id=:tid AND team_run_id=:rid
+                """),
+                    {"tid": task_id, "rid": rid},
+                )
+                await db.commit()
+                if task_id in self.graph:
+                    self.graph[task_id].status = TaskStatus.READY
+                if task_id not in self._ready_order:
+                    self._ready_order.append(task_id)
+                return True
+        if task_id in self.graph:
+            self.graph[task_id].status = TaskStatus.FAILED
+        if task_id in self._ready_order:
+            self._ready_order.remove(task_id)
+        await self.cascade_cancel_recursive(task_id)
+        return False
 
     async def cancel_all_pending(self) -> int:
         async with self._sf() as db:
-            result = await db.execute(text("""
+            result = await db.execute(
+                text("""
                 UPDATE tasks SET status='cancelled', finished_at=NOW(), failure_reason='team_run cancelled'
                 WHERE team_run_id=:rid AND status IN ('pending','ready','expanded')
-            """), {"rid": self._team_run_id})
+            """),
+                {"rid": self._team_run_id},
+            )
             await db.commit()
             return result.rowcount
+        await self.refresh_graph()
 
     async def cancel_all_running(self, reason: str) -> int:
         async with self._sf() as db:
-            result = await db.execute(text(
-                "UPDATE tasks SET status='cancelled', finished_at=NOW(), failure_reason=:reason "
-                "WHERE team_run_id=:rid AND status='running'"
-            ), {"rid": self._team_run_id, "reason": reason})
+            result = await db.execute(
+                text(
+                    "UPDATE tasks SET status='cancelled', finished_at=NOW(), failure_reason=:reason "
+                    "WHERE team_run_id=:rid AND status='running'"
+                ),
+                {"rid": self._team_run_id, "reason": reason},
+            )
             await db.commit()
             return result.rowcount
+        await self.refresh_graph()
 
     async def pause_running_task(
-        self, task_id: str, blocker_id: str, checkpoint: str, verdict: str,
+        self,
+        task_id: str,
+        blocker_id: str,
+        checkpoint: str,
+        verdict: str,
     ) -> bool:
-        """Transition a RUNNING task to PAUSED with blocker metadata."""
         async with self._sf() as db:
-            result = await db.execute(text(
-                "UPDATE tasks SET status='paused', blocker_id=:bid, "
-                "pause_checkpoint=:cp, pause_verdict=:v "
-                "WHERE id=:tid AND team_run_id=:rid AND status='running'"
-            ), {"tid": task_id, "rid": self._team_run_id, "bid": blocker_id, "cp": checkpoint, "v": verdict})
+            result = await db.execute(
+                text(
+                    "UPDATE tasks SET status='paused', blocker_id=:bid, "
+                    "pause_checkpoint=:cp, pause_verdict=:v "
+                    "WHERE id=:tid AND team_run_id=:rid AND status='running'"
+                ),
+                {
+                    "tid": task_id,
+                    "rid": self._team_run_id,
+                    "bid": blocker_id,
+                    "cp": checkpoint,
+                    "v": verdict,
+                },
+            )
             await db.commit()
+            if result.rowcount > 0 and task_id in self.graph:
+                self.graph[task_id].status = TaskStatus.PAUSED
+                self.graph[task_id].blocker_id = blocker_id
+                self.graph[task_id].pause_checkpoint = checkpoint
+                self.graph[task_id].pause_verdict = verdict
             return result.rowcount > 0
 
     async def resume_paused_tasks(self, blocker_id: str) -> int:
-        """Transition all PAUSED tasks for a blocker back to READY."""
         async with self._sf() as db:
-            result = await db.execute(text(
-                "UPDATE tasks SET status='ready', blocker_id=NULL, "
-                "agent_run_id=NULL, started_at=NULL, finished_at=NULL, failure_reason=NULL "
-                "WHERE team_run_id=:rid AND blocker_id=:bid AND status='paused'"
-            ), {"rid": self._team_run_id, "bid": blocker_id})
+            result = await db.execute(
+                text(
+                    "UPDATE tasks SET status='ready', blocker_id=NULL, "
+                    "agent_run_id=NULL, started_at=NULL, finished_at=NULL, failure_reason=NULL "
+                    "WHERE team_run_id=:rid AND blocker_id=:bid AND status='paused'"
+                ),
+                {"rid": self._team_run_id, "bid": blocker_id},
+            )
             await db.commit()
             return result.rowcount
+        await self.refresh_graph()
 
     async def cancel_paused_tasks(self, blocker_id: str) -> int:
-        """Cancel all PAUSED tasks for a failed blocker."""
         async with self._sf() as db:
-            result = await db.execute(text(
-                "UPDATE tasks SET status='cancelled', finished_at=NOW(), "
-                "failure_reason='blocker_failed', blocker_id=NULL "
-                "WHERE team_run_id=:rid AND blocker_id=:bid AND status='paused'"
-            ), {"rid": self._team_run_id, "bid": blocker_id})
+            result = await db.execute(
+                text(
+                    "UPDATE tasks SET status='cancelled', finished_at=NOW(), "
+                    "failure_reason='blocker_failed', blocker_id=NULL "
+                    "WHERE team_run_id=:rid AND blocker_id=:bid AND status='paused'"
+                ),
+                {"rid": self._team_run_id, "bid": blocker_id},
+            )
             await db.commit()
             return result.rowcount
+        await self.refresh_graph()
 
     async def cancel_by_ids(self, task_ids: list[str], reason: str) -> int:
         if not task_ids:
             return 0
         async with self._sf() as db:
-            result = await db.execute(text("""
+            result = await db.execute(
+                text("""
                 UPDATE tasks SET status='cancelled', finished_at=NOW(), failure_reason=:reason
                 WHERE team_run_id=:rid AND id = ANY(:ids) AND status IN ('pending','ready','expanded')
-            """), {"rid": self._team_run_id, "ids": task_ids, "reason": reason})
+            """),
+                {"rid": self._team_run_id, "ids": task_ids, "reason": reason},
+            )
             await db.commit()
             return result.rowcount
+        await self.refresh_graph()
 
     async def mark_running_sql(self, task_id: str, agent_run_id: str) -> TaskRecord | None:
-        """SQL-only part of mark_running. Returns TaskRecord or None."""
         async with self._sf() as db:
-            row = (await db.execute(text(f"""
+            row = (
+                await db.execute(
+                    text(f"""
                 UPDATE tasks SET agent_run_id=:arid, started_at=COALESCE(started_at, NOW())
                 WHERE id=:tid AND team_run_id=:rid AND status='running'
                 RETURNING {TASK_RETURNING}
-            """), {"rid": self._team_run_id, "tid": task_id, "arid": agent_run_id})).fetchone()
+            """),
+                    {"rid": self._team_run_id, "tid": task_id, "arid": agent_run_id},
+                )
+            ).fetchone()
             await db.commit()
         if row is None:
             return None
-        return row_to_record(row)
+        rec = row_to_record(row)
+        task = record_to_task(rec)
+        self.graph[task.id] = task
+        return rec
 
     async def recover_running(self) -> list[TaskRecord]:
         async with self._sf() as db:
-            result = await db.execute(text(f"""
+            result = await db.execute(
+                text(f"""
                 UPDATE tasks SET status='ready', started_at=NULL, agent_run_id=NULL
                 WHERE team_run_id=:rid AND status='running'
                 RETURNING {TASK_RETURNING}
-            """), {"rid": self._team_run_id})
+            """),
+                {"rid": self._team_run_id},
+            )
             rows = result.fetchall()
             await db.commit()
-            return [row_to_record(r) for r in rows]
+            recs = [row_to_record(r) for r in rows]
+            for rec in recs:
+                task = record_to_task(rec)
+                self.graph[task.id] = task
+                if task.id not in self._ready_order:
+                    self._ready_order.append(task.id)
+            return recs
 
     async def replace_run_tasks(self, tasks: list[Task]) -> None:
         done_ids = {t.id for t in tasks if t.status == TaskStatus.DONE}
         async with self._sf() as db:
-            await db.execute(text("DELETE FROM tasks WHERE team_run_id=:rid"), {"rid": self._team_run_id})
-            db.add_all([
-                TaskRecord(
-                    id=t.id, team_run_id=self._team_run_id, agent_name=t.agent_name,
-                    status=t.status.value, task=t.task, deps=list(t.deps),
-                    scope_paths=list(t.scope_paths),
-                    scope_ltree=[path_to_ltree(p) for p in t.scope_paths],
-                    cascade_policy=t.cascade_policy, parent_id=t.parent_id,
-                    root_id=t.root_id or "", depth=t.depth,
-                    pending_dep_count=len([d for d in t.deps if d not in done_ids]),
-                    retry_count=t.retry_count, max_retries=t.max_retries,
-                    agent_run_id=t.agent_run_id, created_at=t.created_at,
-                    started_at=t.started_at, finished_at=t.finished_at,
-                    failure_reason=t.failure_reason,
-                    blocker_id=t.blocker_id,
-                    pause_checkpoint=t.pause_checkpoint,
-                    pause_verdict=t.pause_verdict,
-                )
-                for t in tasks
-            ])
+            await db.execute(
+                text("DELETE FROM tasks WHERE team_run_id=:rid"), {"rid": self._team_run_id}
+            )
+            db.add_all(
+                [
+                    TaskRecord(
+                        id=t.id,
+                        team_run_id=self._team_run_id,
+                        agent_name=t.agent_name,
+                        status=t.status.value,
+                        task=t.task,
+                        deps=list(t.deps),
+                        scope_paths=list(t.scope_paths),
+                        scope_ltree=[path_to_ltree(p) for p in t.scope_paths],
+                        cascade_policy=t.cascade_policy,
+                        parent_id=t.parent_id,
+                        root_id=t.root_id or "",
+                        depth=t.depth,
+                        pending_dep_count=len([d for d in t.deps if d not in done_ids]),
+                        retry_count=t.retry_count,
+                        max_retries=t.max_retries,
+                        agent_run_id=t.agent_run_id,
+                        created_at=t.created_at,
+                        started_at=t.started_at,
+                        finished_at=t.finished_at,
+                        failure_reason=t.failure_reason,
+                        blocker_id=t.blocker_id,
+                        pause_checkpoint=t.pause_checkpoint,
+                        pause_verdict=t.pause_verdict,
+                    )
+                    for t in tasks
+                ]
+            )
             await db.commit()
+        self.graph = {t.id: t for t in tasks}
+        self._ready_order = [t.id for t in tasks if t.status == TaskStatus.READY]
 
     async def request_replan(
-        self, task_id: str, reason: str, suggestion: str | None, replanner_agent: str,
+        self,
+        task_id: str,
+        reason: str,
+        suggestion: str | None,
+        replanner_agent: str,
     ) -> TaskRecord:
         rid = self._team_run_id
         async with self._sf() as db:
-            rec = (await db.execute(text(
-                "SELECT id, parent_id, root_id, depth, agent_name, scope_paths "
-                "FROM tasks WHERE id=:id AND team_run_id=:rid"
-            ), {"id": task_id, "rid": rid})).fetchone()
+            rec = (
+                await db.execute(
+                    text(
+                        "SELECT id, parent_id, root_id, depth, agent_name, scope_paths "
+                        "FROM tasks WHERE id=:id AND team_run_id=:rid"
+                    ),
+                    {"id": task_id, "rid": rid},
+                )
+            ).fetchone()
             if rec is None:
                 raise RuntimeError(f"replan: {task_id} not found")
-            await db.execute(text(
-                "UPDATE tasks SET status='failed', finished_at=NOW(), "
-                "failure_reason=:reason WHERE id=:tid AND team_run_id=:rid"
-            ), {"tid": task_id, "rid": rid, "reason": f"replan_requested: {reason}"})
+            await db.execute(
+                text(
+                    "UPDATE tasks SET status='failed', finished_at=NOW(), "
+                    "failure_reason=:reason WHERE id=:tid AND team_run_id=:rid"
+                ),
+                {"tid": task_id, "rid": rid, "reason": f"replan_requested: {reason}"},
+            )
             await db.commit()
         async with self._sf() as db:
-            done_sibs = (await db.execute(text("""
+            done_sibs = (
+                await db.execute(
+                    text("""
                 SELECT id FROM tasks WHERE team_run_id=:rid
                   AND parent_id IS NOT DISTINCT FROM :pid AND id != :tid AND status='done'
-            """), {"rid": rid, "tid": task_id, "pid": rec.parent_id})).fetchall()
+            """),
+                    {"rid": rid, "tid": task_id, "pid": rec.parent_id},
+                )
+            ).fetchall()
             dep_ids = [r.id for r in done_sibs]
             replanner_id = str(uuid.uuid4())
             task_text = f"Replan: {rec.agent_name} failed on task {task_id}: {reason}"
@@ -540,13 +761,28 @@ class TaskStore:
                 task_text += f"\nSuggestion: {suggestion}"
             scope_paths = list(rec.scope_paths) if rec.scope_paths else []
             replanner = TaskRecord(
-                id=replanner_id, team_run_id=rid, agent_name=replanner_agent,
-                task=task_text, status="ready" if not dep_ids else "pending",
-                deps=dep_ids, scope_paths=scope_paths,
+                id=replanner_id,
+                team_run_id=rid,
+                agent_name=replanner_agent,
+                task=task_text,
+                status="ready" if not dep_ids else "pending",
+                deps=dep_ids,
+                scope_paths=scope_paths,
                 scope_ltree=[path_to_ltree(p) for p in scope_paths],
-                parent_id=rec.parent_id, root_id=rec.root_id or "",
-                depth=rec.depth or 0, pending_dep_count=len(dep_ids),
+                parent_id=rec.parent_id,
+                root_id=rec.root_id or "",
+                depth=rec.depth or 0,
+                pending_dep_count=len(dep_ids),
             )
             db.add(replanner)
             await db.commit()
-            return replanner
+        if task_id in self.graph:
+            self.graph[task_id].status = TaskStatus.FAILED
+            self.graph[task_id].failure_reason = f"replan_requested: {reason}"
+        if task_id in self._ready_order:
+            self._ready_order.remove(task_id)
+        replanner_task = record_to_task(replanner)
+        self.graph[replanner_task.id] = replanner_task
+        if replanner_task.status == TaskStatus.READY and replanner_task.id not in self._ready_order:
+            self._ready_order.append(replanner_task.id)
+        return replanner

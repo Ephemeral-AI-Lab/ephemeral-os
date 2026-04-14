@@ -14,6 +14,7 @@ from benchmarks.sweevo.team_runner import (
     _derive_sweevo_budgets,
     _enforce_validation_evidence,
     _build_agent_overrides,
+    _make_external_hook_emitter,
     _build_root_prompt,
     _checkpoint_repo_patch_from_store,
     _derive_planner_runtime_limits,
@@ -166,6 +167,40 @@ def test_root_prompt_summarizes_large_pass_to_pass_guardrail():
     assert len(prompt.encode()) < 20000
     assert '"total_tests": 5000' in prompt
     assert '"sample_test_ids"' in prompt
+
+
+def test_external_hook_emitter_writes_raw_and_structured_logs(tmp_path):
+    structured_log = tmp_path / "events.jsonl"
+    lines: list[tuple[str, str]] = []
+
+    class _Printer:
+        def raw_line(self, agent_name: str, line: str) -> None:
+            lines.append((agent_name, line))
+
+    emitter = _make_external_hook_emitter(
+        printer=_Printer(),
+        team_metrics={"structured_log_path": str(structured_log)},
+    )
+    emitter({
+        "event": "external_hook",
+        "hook": "pause_assess",
+        "team_run_id": "run-1",
+        "work_item_id": "task-1",
+        "blocker_id": "blocker-1",
+        "status": "completed",
+        "answer": "YES",
+    })
+
+    payload = json.loads(structured_log.read_text(encoding="utf-8").strip())
+    assert payload["hook"] == "pause_assess"
+    assert payload["blocker_id"] == "blocker-1"
+    assert payload["answer"] == "YES"
+    assert lines == [
+        (
+            "team",
+            "[external_hook] pause_assess task=task-1 blocker=blocker- answer=YES status=completed",
+        )
+    ]
 
 
 def test_agent_overrides_attach_sweevo_skills_without_prompt_duplication():
@@ -515,12 +550,8 @@ def test_make_runner_uses_agent_definition_limits(monkeypatch):
         captured_agents.append(agent)
         return agent
 
-    monkeypatch.setattr(
-        sweevo_team_runner,
-        "AgentRunTracker",
-        SimpleNamespace(create=lambda **_: _Tracker()),
-    )
-    monkeypatch.setattr(sweevo_team_runner, "spawn_agent", fake_spawn_agent)
+    monkeypatch.setattr("team.runtime.runner.AgentRunTracker", SimpleNamespace(create=lambda **_: _Tracker()))
+    monkeypatch.setattr("team.runtime.runner.spawn_agent", fake_spawn_agent)
 
     runner = _make_runner(
         session_config=SimpleNamespace(session_id="sess-1"),
@@ -581,12 +612,8 @@ def test_make_runner_persists_full_compaction_delta(monkeypatch):
         run=_fake_run,
     )
 
-    monkeypatch.setattr(
-        sweevo_team_runner,
-        "AgentRunTracker",
-        SimpleNamespace(create=lambda **_: _Tracker()),
-    )
-    monkeypatch.setattr(sweevo_team_runner, "spawn_agent", lambda *_args, **_kwargs: agent)
+    monkeypatch.setattr("team.runtime.runner.AgentRunTracker", SimpleNamespace(create=lambda **_: _Tracker()))
+    monkeypatch.setattr("team.runtime.runner.spawn_agent", lambda *_args, **_kwargs: agent)
     monkeypatch.setattr(sweevo_team_runner, "_estimate_final_context", lambda _messages: 321)
     monkeypatch.setattr(sweevo_team_runner, "_persist_benchmark_session", lambda **_: None)
 
@@ -605,7 +632,7 @@ def test_make_runner_persists_full_compaction_delta(monkeypatch):
 
     asyncio.run(
         runner(
-            SimpleNamespace(name="developer", model_copy=lambda update: SimpleNamespace(name="developer", **update)),
+            SimpleNamespace(name="developer", allowed_triggers=["tc_note"], model_copy=lambda update: SimpleNamespace(name="developer", allowed_triggers=["tc_note"], **update)),
             ctx,
         )
     )
@@ -667,12 +694,8 @@ def test_make_runner_persists_work_result_and_final_snapshot(monkeypatch):
 
     fake_team_run = SimpleNamespace(conductor=_Conductor())
 
-    monkeypatch.setattr(
-        sweevo_team_runner,
-        "AgentRunTracker",
-        SimpleNamespace(create=lambda **_: _Tracker()),
-    )
-    monkeypatch.setattr(sweevo_team_runner, "spawn_agent", lambda *_args, **_kwargs: agent)
+    monkeypatch.setattr("team.runtime.runner.AgentRunTracker", SimpleNamespace(create=lambda **_: _Tracker()))
+    monkeypatch.setattr("team.runtime.runner.spawn_agent", lambda *_args, **_kwargs: agent)
     monkeypatch.setattr(sweevo_team_runner, "_estimate_final_context", lambda _messages: 0)
     monkeypatch.setattr(sweevo_team_runner, "_persist_benchmark_session", lambda **_: None)
     monkeypatch.setattr("team.runtime.registry.get", lambda _team_run_id: fake_team_run)
@@ -784,12 +807,8 @@ def test_make_runner_logs_tc_note_external_hook(monkeypatch, tmp_path: Path):
         task_center=_TaskCenter(),
     )
 
-    monkeypatch.setattr(
-        sweevo_team_runner,
-        "AgentRunTracker",
-        SimpleNamespace(create=lambda **_: _Tracker()),
-    )
-    monkeypatch.setattr(sweevo_team_runner, "spawn_agent", lambda *_args, **_kwargs: agent)
+    monkeypatch.setattr("team.runtime.runner.AgentRunTracker", SimpleNamespace(create=lambda **_: _Tracker()))
+    monkeypatch.setattr("team.runtime.runner.spawn_agent", lambda *_args, **_kwargs: agent)
     monkeypatch.setattr(sweevo_team_runner, "_estimate_final_context", lambda _messages: 0)
     monkeypatch.setattr(sweevo_team_runner, "_persist_benchmark_session", lambda **_: None)
     monkeypatch.setattr("team.runtime.registry.get", lambda _team_run_id: fake_team_run)
@@ -810,7 +829,7 @@ def test_make_runner_logs_tc_note_external_hook(monkeypatch, tmp_path: Path):
 
     asyncio.run(
         runner(
-            SimpleNamespace(name="developer", model_copy=lambda update: SimpleNamespace(name="developer", **update)),
+            SimpleNamespace(name="developer", allowed_triggers=["tc_note"], model_copy=lambda update: SimpleNamespace(name="developer", allowed_triggers=["tc_note"], **update)),
             ctx,
         )
     )
@@ -826,6 +845,98 @@ def test_make_runner_logs_tc_note_external_hook(monkeypatch, tmp_path: Path):
     assert all(event["hook"] == "tc_note" for event in hook_events)
     assert any("status=started" in body for _, body in raw_lines)
     assert any("status=completed" in body for _, body in raw_lines)
+
+
+def test_make_runner_skips_tc_note_when_trigger_not_allowed(monkeypatch, tmp_path):
+    """Checkpoint should NOT fire when allowed_triggers omits 'tc_note'."""
+    checkpoint_calls: list[dict[str, object]] = []
+    structured_log_path = tmp_path / "log.jsonl"
+
+    class _Tracker:
+        run_id = "R1"
+        def finish(self, **_kw): pass
+
+    class _TaskCenter:
+        def tick(self, _task_id: str) -> None:
+            return None
+
+        def should_checkpoint(self, _task_id: str) -> str | None:
+            return "turn"  # always eligible
+
+        async def check(self, task_id, *, snapshot=None, api_client=None, model=None):
+            checkpoint_calls.append({"task_id": task_id})
+            return True
+
+        def on_edit(self, _task_id: str, _file_path: str) -> None:
+            return None
+
+        def on_posthook(self, _task_id: str) -> None:
+            return None
+
+    class _Conductor:
+        def register_snapshot(self, task_id, snapshot): pass
+
+    query_context = SimpleNamespace(
+        tool_metadata=ExecutionMetadata(session_config="cfg", sandbox_id="sbx-1"),
+        run_id="",
+        tool_call_limit=10,
+        tool_calls_used=0,
+        session_state=None,
+        api_messages_snapshot=[],
+        api_client=object(),
+        on_turn=None,
+    )
+
+    async def _fake_run(_prompt: str):
+        agent.display_messages = [
+            ConversationMessage(role="assistant", content=[TextBlock(text="Working")])
+        ]
+        query_context.on_turn(list(agent.display_messages))
+        if False:
+            yield None
+
+    agent = SimpleNamespace(
+        query_context=query_context,
+        display_messages=[],
+        total_usage=SimpleNamespace(input_tokens=0, output_tokens=0),
+        model="test-model",
+        run=_fake_run,
+    )
+    fake_team_run = SimpleNamespace(
+        conductor=_Conductor(),
+        task_center=_TaskCenter(),
+    )
+
+    monkeypatch.setattr("team.runtime.runner.AgentRunTracker", SimpleNamespace(create=lambda **_: _Tracker()))
+    monkeypatch.setattr("team.runtime.runner.spawn_agent", lambda *_args, **_kwargs: agent)
+    monkeypatch.setattr(sweevo_team_runner, "_estimate_final_context", lambda _messages: 0)
+    monkeypatch.setattr(sweevo_team_runner, "_persist_benchmark_session", lambda **_: None)
+    monkeypatch.setattr("team.runtime.registry.get", lambda _team_run_id: fake_team_run)
+
+    runner = _make_runner(
+        session_config=SimpleNamespace(session_id="sess-1"),
+        sandbox_id="sbx-1",
+        printer=SimpleNamespace(
+            raw_line=lambda who, body: None,
+            emit=lambda _event: None,
+        ),
+        team_metrics={"structured_log_path": str(structured_log_path)},
+    )
+    ctx = sweevo_team_runner.TeamAgentContext(
+        user_message="Fix it",
+        tool_metadata=ExecutionMetadata(team_run_id="TR1", work_item_id="W1"),
+    )
+
+    # Agent definition WITHOUT tc_note in allowed_triggers
+    asyncio.run(
+        runner(
+            SimpleNamespace(name="scout", allowed_triggers=[], model_copy=lambda update: SimpleNamespace(name="scout", allowed_triggers=[], **update)),
+            ctx,
+        )
+    )
+
+    # Checkpoint should NOT have been called despite should_checkpoint returning "turn"
+    assert checkpoint_calls == []
 
 
 def test_finalize_team_result_surfaces_retry_replan_and_checkpoint_metadata(monkeypatch):

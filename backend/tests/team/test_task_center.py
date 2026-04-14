@@ -429,7 +429,7 @@ def test_check_falls_back_when_checkpoint_note_generation_raises(monkeypatch):
         status=TaskStatus.RUNNING,
         task="fix parser",
     )
-    for _ in range(10):
+    for _ in range(15):
         tc.tick("t1")
 
     async def _boom(**_kwargs):
@@ -443,7 +443,7 @@ def test_check_falls_back_when_checkpoint_note_generation_raises(monkeypatch):
     notes = _run(tc.read())
     assert len(notes) == 1
     assert "Auto-checkpoint" in notes[0].content
-    assert "10 turns" in notes[0].content
+    assert "15 turns" in notes[0].content
 
 
 def test_context_for_respects_max_context_bytes():

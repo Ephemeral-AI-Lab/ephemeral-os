@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 import json
 import logging
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from agents.run_tracker import AgentRunTracker
 from agents.registry import get_definition
@@ -47,6 +47,7 @@ from team.runtime.context_builder import (
     build_task_metadata,
 )
 from team.runtime.executor import Executor
+from team.runtime.runner import AgentRunState, TeamAgentRunner
 from team.runtime.team_run import TeamRun
 
 from benchmarks.sweevo.dataset import summarize_sweevo_instance
@@ -79,6 +80,39 @@ def _append_benchmark_event(
     payload = {"ts": _utc_iso_now(), **event}
     with path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(payload, default=str) + "\n")
+
+
+def _make_external_hook_emitter(
+    *,
+    printer: MultiAgentEventPrinter | None,
+    team_metrics: dict[str, Any] | None,
+):
+    def _emit(payload: dict[str, Any]) -> None:
+        _append_benchmark_event(team_metrics, payload)
+        if printer is None:
+            return
+        hook = str(payload.get("hook") or "hook")
+        task_id = str(payload.get("work_item_id") or "")[:8]
+        status = str(payload.get("status") or "unknown")
+        parts = [f"[external_hook] {hook}"]
+        if task_id:
+            parts.append(f"task={task_id}")
+        blocker_id = str(payload.get("blocker_id") or "")[:8]
+        if blocker_id:
+            parts.append(f"blocker={blocker_id}")
+        trigger = str(payload.get("trigger") or "")
+        if trigger:
+            parts.append(f"trigger={trigger}")
+        answer = str(payload.get("answer") or "")
+        if answer:
+            parts.append(f"answer={answer}")
+        parts.append(f"status={status}")
+        error = str(payload.get("error") or "")
+        if error:
+            parts.append(f"error={error}")
+        printer.raw_line("team", " ".join(parts))
+
+    return _emit
 
 
 def _ensure_team_builtins() -> None:
@@ -318,267 +352,6 @@ def _task_base_prompt(task_text: Any) -> str:
     return f"Task: {task_text!r}"
 
 
-def _extract_final_text(messages: list[Any]) -> str:
-    """Return the last assistant text emitted by an agent run."""
-    for msg in reversed(messages):
-        if getattr(msg, "role", None) != "assistant":
-            continue
-        text = getattr(msg, "text", "")
-        if text:
-            return str(text).strip()
-    return ""
-
-
-def _extract_json_object(
-    text: str,
-    *,
-    matcher: Callable[[dict[str, Any]], bool] | None = None,
-) -> dict[str, Any] | None:
-    if not text.strip():
-        return None
-
-    decoder = json.JSONDecoder()
-    best_payload: dict[str, Any] | None = None
-    best_start: int | None = None
-    best_end = -1
-
-    for start, char in enumerate(text):
-        if char != "{":
-            continue
-        try:
-            payload, end = decoder.raw_decode(text, idx=start)
-        except ValueError:
-            continue
-        if not isinstance(payload, dict) or (matcher is not None and not matcher(payload)):
-            continue
-        if end > best_end or (end == best_end and (best_start is None or start < best_start)):
-            best_payload = payload
-            best_start = start
-            best_end = end
-    return best_payload
-
-
-
-def _find_matching_delimiter(text: str, start: int, open_char: str, close_char: str) -> int:
-    depth = 0
-    in_string = False
-    escape = False
-    for idx in range(start, len(text)):
-        char = text[idx]
-        if in_string:
-            if escape:
-                escape = False
-            elif char == "\\":
-                escape = True
-            elif char == '"':
-                in_string = False
-            continue
-        if char == '"':
-            in_string = True
-            continue
-        if char == open_char:
-            depth += 1
-        elif char == close_char:
-            depth -= 1
-            if depth == 0:
-                return idx
-    return -1
-
-
-_PLAN_ITEM_PRIMARY_KEYS = frozenset({"id", "agent_name"})
-
-
-def _skip_json_whitespace(text: str, start: int) -> int:
-    idx = start
-    while idx < len(text) and text[idx].isspace():
-        idx += 1
-    return idx
-
-
-def _parse_json_object_field(
-    text: str,
-    start: int,
-    decoder: json.JSONDecoder,
-) -> tuple[str, Any, int] | None:
-    idx = _skip_json_whitespace(text, start)
-    try:
-        key, key_end = decoder.raw_decode(text, idx)
-    except ValueError:
-        return None
-    if not isinstance(key, str):
-        return None
-    colon = _skip_json_whitespace(text, key_end)
-    if colon >= len(text) or text[colon] != ":":
-        return None
-    value_start = _skip_json_whitespace(text, colon + 1)
-    try:
-        value, value_end = decoder.raw_decode(text, value_start)
-    except ValueError:
-        return None
-    return key, value, value_end
-
-
-def _peek_plan_item_start_key(
-    text: str,
-    start: int,
-    decoder: json.JSONDecoder,
-) -> tuple[str | None, bool]:
-    idx = _skip_json_whitespace(text, start)
-    saw_open_brace = False
-    if idx < len(text) and text[idx] == "{":
-        saw_open_brace = True
-        idx = _skip_json_whitespace(text, idx + 1)
-    parsed = _parse_json_object_field(text, idx, decoder)
-    if parsed is None:
-        return None, saw_open_brace
-    key, _, _ = parsed
-    if key not in _PLAN_ITEM_PRIMARY_KEYS:
-        return None, saw_open_brace
-    return key, saw_open_brace
-
-
-def _has_duplicate_top_level_primary_keys(
-    text: str,
-    decoder: json.JSONDecoder,
-) -> bool:
-    idx = _skip_json_whitespace(text, 0)
-    if idx >= len(text) or text[idx] != "{":
-        return False
-    idx = _skip_json_whitespace(text, idx + 1)
-
-    seen_primary: set[str] = set()
-    while idx < len(text):
-        if text[idx] == "}":
-            return False
-        parsed = _parse_json_object_field(text, idx, decoder)
-        if parsed is None:
-            return False
-        key, _, value_end = parsed
-        if key in _PLAN_ITEM_PRIMARY_KEYS:
-            if key in seen_primary:
-                return True
-            seen_primary.add(key)
-
-        idx = _skip_json_whitespace(text, value_end)
-        if idx >= len(text):
-            return False
-        if text[idx] == "}":
-            return False
-        if text[idx] != ",":
-            return False
-        idx = _skip_json_whitespace(text, idx + 1)
-    return False
-
-
-def _parse_repaired_plan_item(
-    text: str,
-    start: int,
-    decoder: json.JSONDecoder,
-) -> tuple[dict[str, Any], int] | None:
-    idx = _skip_json_whitespace(text, start)
-    if idx >= len(text):
-        return None
-
-    try:
-        payload, end = decoder.raw_decode(text, idx)
-    except ValueError:
-        payload = None
-    if isinstance(payload, dict):
-        raw_object = text[idx:end]
-        if not _has_duplicate_top_level_primary_keys(raw_object, decoder):
-            return payload, end
-
-    saw_open_brace = False
-    if text[idx] == "{":
-        saw_open_brace = True
-        idx = _skip_json_whitespace(text, idx + 1)
-
-    item: dict[str, Any] = {}
-    saw_non_primary_key = False
-    while idx < len(text):
-        while idx < len(text) and text[idx] == "}":
-            idx += 1
-            idx = _skip_json_whitespace(text, idx)
-        parsed = _parse_json_object_field(text, idx, decoder)
-        if parsed is None:
-            break
-        key, value, value_end = parsed
-        item[key] = value
-        if key not in _PLAN_ITEM_PRIMARY_KEYS:
-            saw_non_primary_key = True
-
-        idx = _skip_json_whitespace(text, value_end)
-        while idx < len(text) and text[idx] == "}":
-            idx += 1
-            idx = _skip_json_whitespace(text, idx)
-            if saw_open_brace:
-                return item, idx
-
-        if idx >= len(text) or text[idx] != ",":
-            break
-
-        next_key, next_has_open_brace = _peek_plan_item_start_key(text, idx + 1, decoder)
-        should_split = (
-            next_key in _PLAN_ITEM_PRIMARY_KEYS
-            and bool(item)
-            and (next_has_open_brace or saw_non_primary_key or item.keys() >= _PLAN_ITEM_PRIMARY_KEYS)
-        )
-        idx += 1
-        if should_split:
-            break
-        idx = _skip_json_whitespace(text, idx)
-
-    if not item:
-        return None
-    return item, idx
-
-
-def _repair_submitted_plan_payload(text: str) -> dict[str, Any] | None:
-    items_key = text.find('"items"')
-    if items_key < 0:
-        return None
-    array_start = text.find("[", items_key)
-    if array_start < 0:
-        return None
-    array_end = _find_matching_delimiter(text, array_start, "[", "]")
-    if array_end < 0:
-        return None
-
-    decoder = json.JSONDecoder()
-    raw_items = text[array_start + 1 : array_end]
-
-    items: list[dict[str, Any]] = []
-    idx = 0
-    while True:
-        idx = _skip_json_whitespace(raw_items, idx)
-        while idx < len(raw_items) and raw_items[idx] in ",}":
-            idx += 1
-            idx = _skip_json_whitespace(raw_items, idx)
-        if idx >= len(raw_items):
-            break
-        parsed_item = _parse_repaired_plan_item(raw_items, idx, decoder)
-        if parsed_item is None:
-            return None
-        item, idx = parsed_item
-        items.append(item)
-    if not items:
-        return None
-
-    repaired: dict[str, Any] = {"items": items}
-    rationale_key = text.find('"rationale"', array_end)
-    if rationale_key >= 0:
-        colon = text.find(":", rationale_key)
-        if colon >= 0:
-            raw_tail = text[colon + 1 :].lstrip()
-            try:
-                rationale, _ = decoder.raw_decode(raw_tail)
-            except ValueError:
-                rationale = None
-            if isinstance(rationale, str):
-                repaired["rationale"] = rationale
-    return repaired
-
-
 def _estimate_final_context(messages: list[ConversationMessage] | None) -> int:
     """Best-effort token estimate for the final compacted provider context."""
     if not messages:
@@ -676,428 +449,279 @@ def _make_runner(
     printer: MultiAgentEventPrinter | None,
     team_metrics: dict[str, Any] | None = None,
     agent_overrides: dict[str, dict[str, Any]] | None = None,
+    *,
+    repo_dir: str = _REPO_DIR,
 ):
-    async def _run(defn, ctx: TeamAgentContext):
-        effective_defn = defn
-        if agent_overrides:
-            overrides = agent_overrides.get(defn.name)
-            if overrides:
-                effective_defn = defn.model_copy(update=overrides)
-        prompt = ctx.user_message or _task_base_prompt(None)
-        tracker = AgentRunTracker.create(
-            session_id=getattr(session_config, "session_id", None),
-            run_id=getattr(ctx.tool_metadata, "agent_run_id", None),
-            agent_name=effective_defn.name,
-            input_query=prompt,
+    """Build the benchmark agent runner by wrapping :class:`TeamAgentRunner`.
+
+    Benchmark-specific telemetry lives in the hooks (printer, structured
+    logging, benchmark session, usage store, validation evidence). After
+    the agent returns, captures a sweevo-specific durable checkpoint with
+    the repo patch via daytona.
+    """
+
+    external_hook_emit = _make_external_hook_emitter(
+        printer=printer, team_metrics=team_metrics,
+    )
+
+    def _on_spawned(state: AgentRunState) -> None:
+        if printer is None or state.defn.name != TEAM_PLANNER:
+            return
+        printer.raw_line(
+            state.defn.name,
+            f"[runtime_limits] tool_call_limit={state.agent.query_context.tool_call_limit}",
         )
-        if tracker.run_id is not None:
-            ctx.tool_metadata.agent_run_id = tracker.run_id
 
-        agent = spawn_agent(
-            session_config,
-            messages=list(ctx.initial_messages),
-            agent_def=effective_defn,
-            latest_user_prompt=prompt,
-            sandbox_id=sandbox_id,
-        )
-        compacted_before = None
-        if getattr(agent.query_context, "session_state", None) is not None:
-            compacted_before = int(agent.query_context.session_state.compacted)
-
-        # Redirect the spawned agent's tool_metadata to the team ctx so
-        # submit_plan / post_note tools write into the correct slot.
-        # Preserve session_config and sandbox_id that spawn_agent installed.
-        spawned_meta = agent.query_context.tool_metadata
-        if getattr(spawned_meta, "session_config", None) is not None:
-            ctx.tool_metadata.session_config = spawned_meta.session_config
-        sb = getattr(spawned_meta, "sandbox_id", None) or ""
-        if sb:
-            ctx.tool_metadata["sandbox_id"] = sb
-        ctx.tool_metadata.agent_name = effective_defn.name
-        agent.query_context.tool_metadata = ctx.tool_metadata
-        agent.query_context.run_id = tracker.run_id or ""
-        team_run_id = str(ctx.tool_metadata.get("team_run_id") or "")
-        work_item_id = str(ctx.tool_metadata.get("work_item_id") or "")
-        pending_tool_inputs: dict[str, list[dict[str, Any]]] = {}
-        checkpoint_task: asyncio.Task[None] | None = None
-
-        def _snapshot_messages() -> list[dict[str, Any]]:
-            return [m.model_dump(mode="json") for m in agent.display_messages]
-
-        def _schedule_checkpoint(snapshot: list[dict[str, Any]] | None = None) -> None:
-            nonlocal checkpoint_task
-            if not team_run_id or not work_item_id:
-                return
-            try:
-                from team.runtime.registry import get as get_team_run
-
-                team_run = get_team_run(team_run_id)
-                if team_run is None:
-                    return
-                frozen_snapshot = snapshot if snapshot is not None else _snapshot_messages()
-                team_run.conductor.register_snapshot(work_item_id, frozen_snapshot)
-                trigger = team_run.task_center.should_checkpoint(work_item_id)
-                if trigger is None:
-                    return
-                if checkpoint_task is not None and not checkpoint_task.done():
-                    return
-
-                async def _run_checkpoint() -> None:
-                    event_base = {
-                        "event": "external_hook",
-                        "hook": "tc_note",
-                        "team_run_id": team_run_id,
-                        "work_item_id": work_item_id,
-                        "agent": effective_defn.name,
-                        "trigger": trigger,
-                    }
-                    _append_benchmark_event(
-                        team_metrics,
-                        {**event_base, "status": "started"},
-                    )
-                    if printer is not None:
-                        printer.raw_line(
-                            "team",
-                            f"[external_hook] tc_note task={work_item_id[:8]} trigger={trigger} status=started",
-                        )
-                    try:
-                        posted = await team_run.task_center.check(
-                            work_item_id,
-                            snapshot=frozen_snapshot,
-                            api_client=agent.query_context.api_client,
-                            model=agent.model,
-                        )
-                    except Exception as exc:
-                        _append_benchmark_event(
-                            team_metrics,
-                            {**event_base, "status": "failed", "error": str(exc)},
-                        )
-                        if printer is not None:
-                            printer.raw_line(
-                                "team",
-                                f"[external_hook] tc_note task={work_item_id[:8]} trigger={trigger} status=failed error={exc}",
-                            )
-                        raise
-                    status = "completed" if posted else "skipped"
-                    _append_benchmark_event(
-                        team_metrics,
-                        {**event_base, "status": status},
-                    )
-                    if printer is not None:
-                        printer.raw_line(
-                            "team",
-                            f"[external_hook] tc_note task={work_item_id[:8]} trigger={trigger} status={status}",
-                        )
-
-                checkpoint_task = asyncio.create_task(_run_checkpoint())
-            except Exception:
-                logger.debug("Failed to schedule task-center checkpoint for %s", work_item_id, exc_info=True)
-
-        def _on_turn(display_messages: list[ConversationMessage]) -> None:
-            if not team_run_id or not work_item_id:
-                return
-            try:
-                from team.runtime.registry import get as get_team_run
-
-                team_run = get_team_run(team_run_id)
-                if team_run is None:
-                    return
-                snapshot = [m.model_dump(mode="json") for m in display_messages]
-                team_run.conductor.register_snapshot(work_item_id, snapshot)
-                team_run.task_center.tick(work_item_id)
-                _schedule_checkpoint(snapshot)
-            except Exception:
-                logger.debug("Failed to observe turn for %s", work_item_id, exc_info=True)
-
-        agent.query_context.on_turn = _on_turn
-        if printer is not None and effective_defn.name == TEAM_PLANNER:
+    def _on_event(event: Any, state: AgentRunState) -> None:
+        if printer is None:
+            return
+        try:
+            object.__setattr__(event, "agent_name", state.defn.name)
+        except Exception:
+            pass
+        try:
+            printer.emit(event)
+        except Exception:
+            logger.debug("printer.emit failed", exc_info=True)
+        if state.defn.name == TEAM_PLANNER and isinstance(event, ToolExecutionCompleted):
             printer.raw_line(
-                effective_defn.name,
+                state.defn.name,
                 (
-                    "[runtime_limits] "
-                    f"tool_call_limit={agent.query_context.tool_call_limit}"
+                    "[runtime_budget] "
+                    f"used={state.agent.query_context.tool_calls_used} "
+                    f"limit={state.agent.query_context.tool_call_limit}"
                 ),
             )
 
-        event_count = 0
-        run_error: str | None = None
-        final_text = ""
-        try:
-            async for event in agent.run(prompt):
-                if isinstance(event, ToolExecutionStarted):
-                    pending_tool_inputs.setdefault(event.tool_name, []).append(event.tool_input)
-                elif isinstance(event, ToolExecutionCompleted) and team_run_id and work_item_id:
-                    try:
-                        from team.runtime.registry import get as get_team_run
+    async def _on_complete(state: AgentRunState) -> None:
+        agent = state.agent
+        ctx = state.ctx
+        qc = getattr(agent, "query_context", None)
+        session_state = getattr(qc, "session_state", None)
+        compacted_total = int(getattr(session_state, "compacted", 0) or 0)
+        new_compactions = 0
+        if session_state is not None and state.compacted_before is not None:
+            new_compactions = compacted_total - state.compacted_before
+        final_context_tokens = _estimate_final_context(
+            getattr(qc, "api_messages_snapshot", None),
+        )
+        prompt_tokens = int(getattr(agent.total_usage, "input_tokens", 0) or 0)
+        completion_tokens = int(getattr(agent.total_usage, "output_tokens", 0) or 0)
+        tool_calls_used = int(getattr(qc, "tool_calls_used", 0) or 0)
+        tool_call_limit = getattr(qc, "tool_call_limit", None)
 
-                        team_run = get_team_run(team_run_id)
-                        tool_inputs = pending_tool_inputs.get(event.tool_name) or []
-                        tool_input = tool_inputs.pop(0) if tool_inputs else {}
-                        if team_run is not None and not event.is_error:
-                            if event.tool_name in {"daytona_edit_file", "daytona_write_file"}:
-                                file_path = str(
-                                    tool_input.get("file_path")
-                                    or tool_input.get("path")
-                                    or ""
-                                ).strip()
-                                if file_path:
-                                    team_run.task_center.on_edit(work_item_id, file_path)
-                            if event.tool_name in {
-                                "post_note",
-                                "submit_plan",
-                                "post_note",
-                                "request_replan",
-                                "add_tasks",
-                                "declare_blocker",
-                                "cancel_and_redraft",
-                            }:
-                                team_run.task_center.on_posthook(work_item_id)
-                            _schedule_checkpoint()
-                    except Exception:
-                        logger.debug("Failed to observe tool completion for %s", work_item_id, exc_info=True)
-                if printer is None:
-                    continue
-                try:
-                    object.__setattr__(event, "agent_name", effective_defn.name)
-                except Exception:
-                    pass
-                try:
-                    printer.emit(event)
-                except Exception:
-                    logger.debug("printer.emit failed", exc_info=True)
-                if effective_defn.name == TEAM_PLANNER and isinstance(event, ToolExecutionCompleted):
-                    printer.raw_line(
-                        effective_defn.name,
-                        (
-                            "[runtime_budget] "
-                            f"used={agent.query_context.tool_calls_used} "
-                            f"limit={agent.query_context.tool_call_limit}"
-                        ),
-                    )
-        except Exception as exc:
-            run_error = str(exc)
-            logger.exception("sweevo team runner: agent %s crashed", defn.name)
-            raise
-        finally:
-            if checkpoint_task is not None:
-                await asyncio.gather(checkpoint_task, return_exceptions=True)
-            qc = getattr(agent, "query_context", None)
-            final_text = _extract_final_text(agent.display_messages)
-            if final_text:
-                ctx.tool_metadata["work_result"] = final_text
-            if team_run_id and work_item_id:
-                try:
-                    from team.runtime.registry import get as get_team_run
-
-                    team_run = get_team_run(team_run_id)
-                    if team_run is not None:
-                        team_run.conductor.register_snapshot(work_item_id, _snapshot_messages())
-                except Exception:
-                    logger.debug(
-                        "Failed to persist final agent snapshot for %s",
-                        work_item_id,
-                        exc_info=True,
-                    )
-            session_state = getattr(qc, "session_state", None)
-            compacted_total = int(getattr(session_state, "compacted", 0) or 0)
-            new_compactions = 0
-            if session_state is not None and compacted_before is not None:
-                new_compactions = compacted_total - compacted_before
-            final_context_tokens = _estimate_final_context(
-                getattr(qc, "api_messages_snapshot", None),
-            )
-            response_payload = {
-                "final_text": final_text,
-                "tool_calls_used": int(getattr(qc, "tool_calls_used", 0) or 0),
-                "tool_call_limit": getattr(qc, "tool_call_limit", None),
+        state.tracker.finish(
+            status="failed" if state.error else "completed",
+            display_messages=list(agent.display_messages),
+            api_messages_snapshot=getattr(qc, "api_messages_snapshot", None),
+            response={
+                "final_text": state.final_text,
+                "tool_calls_used": tool_calls_used,
+                "tool_call_limit": tool_call_limit,
                 "final_context_tokens": final_context_tokens,
                 "compactions_added": new_compactions,
                 "compacted": compacted_total,
-            }
-            tracker.finish(
-                status="failed" if run_error else "completed",
-                display_messages=list(agent.display_messages),
-                api_messages_snapshot=getattr(qc, "api_messages_snapshot", None),
-                response=response_payload,
-                error=run_error,
-                final_text=final_text,
-                event_count=event_count,
+            },
+            error=state.error,
+            final_text=state.final_text,
+            event_count=0,
+        )
+        _persist_benchmark_session(
+            session_config=session_config,
+            agent=agent,
+            summary_text=state.final_text or ctx.user_message or "",
+        )
+        try:
+            from server.app_factory import usage_store
+        except Exception:
+            usage_store = None
+        if usage_store is not None:
+            persist_run_usage(
+                usage_store=usage_store,
+                session_id=getattr(session_config, "session_id", None),
+                run_id=state.tracker.run_id,
+                agent_name=state.defn.name,
+                model_id=agent.model,
+                usage=agent.total_usage,
             )
-            _persist_benchmark_session(
-                session_config=session_config,
-                agent=agent,
-                summary_text=final_text or prompt,
+
+        display_messages_list = list(agent.display_messages)
+        bg_tool_names = _background_tool_names_from_messages(display_messages_list)
+        if printer is not None:
+            usage_line = (
+                f"[usage] prompt={prompt_tokens} "
+                f"completion={completion_tokens} "
+                f"total={prompt_tokens + completion_tokens} "
+                f"tool_calls={tool_calls_used}"
             )
-            try:
-                from server.app_factory import usage_store
-            except Exception:
-                usage_store = None
-            if usage_store is not None:
-                persist_run_usage(
-                    usage_store=usage_store,
-                    session_id=getattr(session_config, "session_id", None),
-                    run_id=tracker.run_id,
-                    agent_name=effective_defn.name,
-                    model_id=agent.model,
-                    usage=agent.total_usage,
+            if tool_call_limit is not None:
+                usage_line += f"/{tool_call_limit}"
+            usage_line += f" final_context={final_context_tokens}"
+            if bg_tool_names:
+                bg_counts = Counter(bg_tool_names)
+                bg_summary = ", ".join(
+                    f"{name}={count}" for name, count in sorted(bg_counts.items())
                 )
-            if printer is not None:
-                prompt_tokens = int(getattr(agent.total_usage, "input_tokens", 0) or 0)
-                completion_tokens = int(getattr(agent.total_usage, "output_tokens", 0) or 0)
-                total = prompt_tokens + completion_tokens
-                tool_calls_used = int(getattr(qc, "tool_calls_used", 0) or 0)
-                tool_call_limit = getattr(qc, "tool_call_limit", None)
-                usage_line = (
-                    f"[usage] prompt={prompt_tokens} "
-                    f"completion={completion_tokens} total={total} "
-                    f"tool_calls={tool_calls_used}"
+                usage_line += f" background_tools={bg_summary}"
+            if state.compacted_before is not None:
+                compactions_delta = (
+                    f"+{new_compactions}" if new_compactions > 0 else str(new_compactions)
                 )
-                if tool_call_limit is not None:
-                    usage_line += f"/{tool_call_limit}"
-                usage_line += f" final_context={final_context_tokens}"
-                background_tool_names = _background_tool_names_from_messages(
-                    list(agent.display_messages)
-                )
-                if background_tool_names:
-                    bg_counts = Counter(background_tool_names)
-                    bg_summary = ", ".join(
-                        f"{name}={count}" for name, count in sorted(bg_counts.items())
-                    )
-                    usage_line += f" background_tools={bg_summary}"
-                if compacted_before is not None:
-                    compactions_delta = f"+{new_compactions}" if new_compactions > 0 else str(new_compactions)
-                    usage_line += (
-                        f" compactions={compactions_delta}"
-                        f"(total={compacted_total})"
-                    )
-                printer.raw_line(
-                    effective_defn.name,
-                    usage_line,
-                )
-            tool_names = _tool_names_from_messages(list(agent.display_messages))
-            background_tool_names = _background_tool_names_from_messages(
-                list(agent.display_messages)
-            )
-            _append_benchmark_event(
-                team_metrics,
-                {
-                    "event": "agent_complete",
-                    "team_run_id": ctx.tool_metadata.get("team_run_id"),
-                    "work_item_id": ctx.tool_metadata.get("work_item_id"),
-                    "agent_run_id": tracker.run_id,
-                    "agent": effective_defn.name,
-                    "status": "failed" if run_error else "completed",
-                    "prompt_tokens": int(getattr(agent.total_usage, "input_tokens", 0) or 0),
-                    "completion_tokens": int(getattr(agent.total_usage, "output_tokens", 0) or 0),
-                    "total_tokens": int(getattr(agent.total_usage, "input_tokens", 0) or 0)
-                    + int(getattr(agent.total_usage, "output_tokens", 0) or 0),
-                    "tool_calls_used": int(getattr(qc, "tool_calls_used", 0) or 0),
-                    "tool_call_limit": getattr(qc, "tool_call_limit", None),
-                    "tool_names": tool_names,
-                    "tool_counts": dict(Counter(tool_names)),
-                    "background_tool_names": background_tool_names,
-                    "background_tool_counts": dict(Counter(background_tool_names)),
-                    "final_context_tokens": final_context_tokens,
-                    "compactions_added": new_compactions,
-                    "compacted": compacted_total,
-                },
-            )
+                usage_line += f" compactions={compactions_delta}(total={compacted_total})"
+            printer.raw_line(state.defn.name, usage_line)
 
-        if run_error is None:
-            _enforce_validation_evidence(
-                effective_defn.name,
-                list(agent.display_messages),
-            )
+        tool_names = _tool_names_from_messages(display_messages_list)
+        _append_benchmark_event(
+            team_metrics,
+            {
+                "event": "agent_complete",
+                "team_run_id": ctx.tool_metadata.get("team_run_id"),
+                "work_item_id": ctx.tool_metadata.get("work_item_id"),
+                "agent_run_id": state.tracker.run_id,
+                "agent": state.defn.name,
+                "status": "failed" if state.error else "completed",
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": prompt_tokens + completion_tokens,
+                "tool_calls_used": tool_calls_used,
+                "tool_call_limit": tool_call_limit,
+                "tool_names": tool_names,
+                "tool_counts": dict(Counter(tool_names)),
+                "background_tool_names": bg_tool_names,
+                "background_tool_counts": dict(Counter(bg_tool_names)),
+                "final_context_tokens": final_context_tokens,
+                "compactions_added": new_compactions,
+                "compacted": compacted_total,
+            },
+        )
 
-        if team_metrics is not None:
-            team_metrics["agent_runs"] = int(team_metrics.get("agent_runs", 0)) + 1
-            counts = team_metrics.setdefault("agent_counts", Counter())
-            counts[defn.name] += 1
+        if state.error is None:
+            _enforce_validation_evidence(state.defn.name, display_messages_list)
+            if team_metrics is not None:
+                team_metrics["agent_runs"] = int(team_metrics.get("agent_runs", 0)) + 1
+                counts = team_metrics.setdefault("agent_counts", Counter())
+                counts[state.defn.name] += 1
 
-        checkpoint_id = None
-        if run_error is None:
-            try:
-                from team.runtime.registry import get as get_team_run
+    core_runner = TeamAgentRunner(
+        session_config=session_config,
+        sandbox_id=sandbox_id,
+        agent_overrides=agent_overrides,
+        on_spawned=_on_spawned,
+        on_event=_on_event,
+        on_complete=_on_complete,
+        on_checkpoint_event=external_hook_emit,
+    )
 
-                team_run_id = ctx.tool_metadata.get("team_run_id")
-                team_run = get_team_run(team_run_id) if team_run_id else None
-                if team_run is not None and effective_defn.name in {TEAM_PLANNER, "developer", "validator"}:
-                    checkpoint_label = (
-                        f"{effective_defn.name}:{ctx.tool_metadata.get('work_item_id') or tracker.run_id or 'run'}"
-                    )
-                    checkpoint_id = await team_run.checkpoint(label=checkpoint_label)
-                    retry_count_total = sum(
-                        int(getattr(wi, "retry_count", 0) or 0)
-                        for wi in team_run.task_center.graph.values()
-                    )
-                    replans_used = int(getattr(team_run.budget_state, "replans_used", 0) or 0)
-                    try:
-                        repo_patch = await capture_sweevo_repo_patch(
-                            team_run.sandbox_id or sandbox_id,
-                            repo_dir=repo_dir,
-                        )
-                        team_run.event_store.append(
-                            make_checkpoint_repo_state(
-                                team_run.id,
-                                checkpoint_id=checkpoint_id,
-                                repo_patch=repo_patch,
-                            )
-                        )
-                    except Exception:
-                        logger.debug(
-                            "Failed to capture repo patch for checkpoint %s",
-                            checkpoint_id,
-                            exc_info=True,
-                        )
-                    if team_metrics is not None:
-                        team_metrics.setdefault("checkpoint_ids", []).append(checkpoint_id)
-                        team_metrics.setdefault("checkpoints", []).append(
-                            {
-                                "id": checkpoint_id,
-                                "label": checkpoint_label,
-                                "parent_run": team_run.id,
-                                "retry_count_total": retry_count_total,
-                                "replans_used": replans_used,
-                            }
-                        )
-                    _append_benchmark_event(
-                        team_metrics,
-                        {
-                            "event": "checkpoint",
-                            "team_run_id": team_run.id,
-                            "checkpoint_id": checkpoint_id,
-                            "label": checkpoint_label,
-                            "parent_run": team_run.id,
-                            "agent": effective_defn.name,
-                            "work_item_id": ctx.tool_metadata.get("work_item_id"),
-                            "agent_run_id": tracker.run_id,
-                            "retry_count_total": retry_count_total,
-                            "replans_used": replans_used,
-                        },
-                    )
-                    if printer is not None:
-                        printer.raw_line(
-                            effective_defn.name,
-                            (
-                                "[checkpoint] "
-                                f"id={checkpoint_id} label={checkpoint_label} "
-                                f"parent_run={team_run.id} "
-                                f"retries={retry_count_total} replans={replans_used}"
-                            ),
-                        )
-            except Exception:
-                logger.debug("Failed to checkpoint after %s", effective_defn.name, exc_info=True)
-
-        return {
-            "agent": effective_defn.name,
-            "final_text": final_text,
-            "team_run_id": ctx.tool_metadata.get("team_run_id"),
-            "work_item_id": ctx.tool_metadata.get("work_item_id"),
-            "agent_run_id": ctx.tool_metadata.get("agent_run_id"),
-            "checkpoint_id": checkpoint_id,
-        }
+    async def _run(defn, ctx: TeamAgentContext):
+        result = await core_runner(defn, ctx)
+        result["checkpoint_id"] = await _capture_post_run_repo_checkpoint(
+            agent_name=result["agent"],
+            ctx=ctx,
+            tracker_run_id=result.get("agent_run_id"),
+            sandbox_id=sandbox_id,
+            repo_dir=repo_dir,
+            printer=printer,
+            team_metrics=team_metrics,
+        )
+        return result
 
     return _run
+
+
+async def _capture_post_run_repo_checkpoint(
+    *,
+    agent_name: str,
+    ctx: TeamAgentContext,
+    tracker_run_id: str | None,
+    sandbox_id: str,
+    repo_dir: str,
+    printer: MultiAgentEventPrinter | None,
+    team_metrics: dict[str, Any] | None,
+) -> str | None:
+    """Durable checkpoint for planner/developer/validator runs.
+
+    Captures the sweevo repo patch via daytona and appends a
+    ``checkpoint_repo_state`` event so resume_sweevo_team can rehydrate the
+    working tree. Returns the checkpoint id or ``None`` when no checkpoint
+    was taken (unsupported agent role, missing team_run, or failure).
+    """
+    if agent_name not in {TEAM_PLANNER, "developer", "validator"}:
+        return None
+    try:
+        from team.runtime.registry import get as get_team_run
+
+        team_run_id = ctx.tool_metadata.get("team_run_id")
+        team_run = get_team_run(team_run_id) if team_run_id else None
+        if team_run is None:
+            return None
+        label = (
+            f"{agent_name}:{ctx.tool_metadata.get('work_item_id') or tracker_run_id or 'run'}"
+        )
+        checkpoint_id = await team_run.checkpoint(label=label)
+        retry_count_total = sum(
+            int(getattr(wi, "retry_count", 0) or 0)
+            for wi in team_run.task_center.graph.values()
+        )
+        replans_used = int(getattr(team_run.budget_state, "replans_used", 0) or 0)
+        try:
+            repo_patch = await capture_sweevo_repo_patch(
+                team_run.sandbox_id or sandbox_id,
+                repo_dir=repo_dir,
+            )
+            team_run.event_store.append(
+                make_checkpoint_repo_state(
+                    team_run.id,
+                    checkpoint_id=checkpoint_id,
+                    repo_patch=repo_patch,
+                )
+            )
+        except Exception:
+            logger.debug(
+                "Failed to capture repo patch for checkpoint %s",
+                checkpoint_id,
+                exc_info=True,
+            )
+        if team_metrics is not None:
+            team_metrics.setdefault("checkpoint_ids", []).append(checkpoint_id)
+            team_metrics.setdefault("checkpoints", []).append(
+                {
+                    "id": checkpoint_id,
+                    "label": label,
+                    "parent_run": team_run.id,
+                    "retry_count_total": retry_count_total,
+                    "replans_used": replans_used,
+                }
+            )
+        _append_benchmark_event(
+            team_metrics,
+            {
+                "event": "checkpoint",
+                "team_run_id": team_run.id,
+                "checkpoint_id": checkpoint_id,
+                "label": label,
+                "parent_run": team_run.id,
+                "agent": agent_name,
+                "work_item_id": ctx.tool_metadata.get("work_item_id"),
+                "agent_run_id": tracker_run_id,
+                "retry_count_total": retry_count_total,
+                "replans_used": replans_used,
+            },
+        )
+        if printer is not None:
+            printer.raw_line(
+                agent_name,
+                (
+                    "[checkpoint] "
+                    f"id={checkpoint_id} label={label} "
+                    f"parent_run={team_run.id} "
+                    f"retries={retry_count_total} replans={replans_used}"
+                ),
+            )
+        return checkpoint_id
+    except Exception:
+        logger.debug("Failed to checkpoint after %s", agent_name, exc_info=True)
+        return None
+
 
 
 def _emit_dispatcher_dag(
@@ -1134,26 +758,18 @@ def _emit_dispatcher_dag(
         )
 
 
-def _build_runtime_metadata(
-    *,
-    sandbox_id: str,
-    repo_dir: str,
-    base: dict[str, Any] | None = None,
-) -> dict[str, Any]:
-    meta = dict(base or {})
-    meta["sandbox_id"] = sandbox_id
-    meta["daytona_cwd"] = repo_dir
-    meta["ci_workspace_root"] = repo_dir
-    meta["team_mode_enabled"] = True
-    meta["require_declared_shell_outputs"] = True
-    meta["verification_surface_write_enforcement"] = "warn"
-    return meta
-
-
 def _make_context_builders(
     sandbox_id: str,
     repo_dir: str = _REPO_DIR,
 ):
+    """Return a ``QueryContextBuilder`` that adds sandbox/repo awareness.
+
+    Wraps the default :func:`team.runtime.context_builder.build_task_metadata`
+    by injecting a sandbox-note prompt prefix, the benchmark coordination
+    flags, and the per-agent ``role`` / posthook hints. The root planner
+    receives ``team_run.user_request`` directly (avoids re-rendering the
+    full FAIL_TO_PASS payload).
+    """
     sandbox_note = (
         "## Sandbox Working Directory\n"
         f"- Repo root inside the sandbox: {repo_dir}\n"
@@ -1165,18 +781,17 @@ def _make_context_builders(
 
     async def build_query_ctx(defn, team_run, wi):
         if wi.depth == 0 and wi.agent_name == TEAM_PLANNER:
-            # The root planner already receives the benchmark prompt via
-            # ``team_run.user_request``. Re-rendering the full payload here
-            # duplicates the prompt and the full FAIL_TO_PASS list.
             base_prompt = team_run.user_request
         else:
             base_prompt = sandbox_note + _task_base_prompt(wi.task)
         user_message = await build_initial_user_message(team_run, wi, base_prompt)
-        meta = _build_runtime_metadata(
-            sandbox_id=team_run.sandbox_id or sandbox_id,
-            repo_dir=repo_dir,
-            base=build_task_metadata(team_run, wi),
-        )
+        meta = build_task_metadata(team_run, wi)
+        meta["sandbox_id"] = team_run.sandbox_id or sandbox_id
+        meta["daytona_cwd"] = repo_dir
+        meta["ci_workspace_root"] = repo_dir
+        meta["team_mode_enabled"] = True
+        meta["require_declared_shell_outputs"] = True
+        meta["verification_surface_write_enforcement"] = "warn"
         meta["role"] = getattr(defn, "role", "") or ""
         posthook_tools = getattr(defn, "posthook", None) or []
         if posthook_tools:
@@ -1555,6 +1170,10 @@ async def run_sweevo_team(
         "team_mode_enabled": True,
         "require_declared_shell_outputs": True,
         "verification_surface_write_enforcement": "warn",
+        "external_hook_emitter": _make_external_hook_emitter(
+            printer=printer,
+            team_metrics=team_metrics,
+        ),
     }
     _emit_team_identity_banner(
         printer,

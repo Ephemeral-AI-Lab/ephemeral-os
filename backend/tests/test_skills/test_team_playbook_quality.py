@@ -246,7 +246,7 @@ def test_developer_and_validator_skills_explain_when_to_load_references() -> Non
         in developer
     )
     assert (
-        "the next step after `read_notes(...)` must be the exact `daytona_codeact` repro, not `daytona_read_file(...)` on a source file or benchmark test."
+        "the next step after that first `read_notes(...)` must be the exact `daytona_codeact` repro, not `daytona_read_file(...)` on a source file or benchmark test."
         in developer
     )
     assert "Must not open benchmark test files with `daytona_read_file(...)` before the first exact repro" in developer

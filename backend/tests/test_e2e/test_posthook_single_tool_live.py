@@ -68,6 +68,7 @@ async def test_planner_submits_plan_single_tool(api_client):
     ]
 
     result = await run_trigger(
+        agent_name="test:planner_submit",
         messages=messages,
         system_prompt=(
             "You are a planner agent. Decompose work into subtasks. "
@@ -129,6 +130,7 @@ async def test_explorer_posts_note_single_tool(api_client):
     ]
 
     result = await run_trigger(
+        agent_name="test:explorer_note",
         messages=messages,
         system_prompt="You are an explorer agent. Report your findings.",
         prompt=(
@@ -172,6 +174,7 @@ async def test_planner_submits_plan_with_deps(api_client):
     ]
 
     result = await run_trigger(
+        agent_name="test:planner_submit_deps",
         messages=messages,
         system_prompt=(
             "You are a planner agent. Create a plan with sequential dependencies. "

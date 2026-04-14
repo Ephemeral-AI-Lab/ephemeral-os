@@ -116,6 +116,7 @@ def _build_replanner_prompt(
 async def _run_replanner(api_client, prompt: str) -> str:
     """Run the replanner and return the tool name it chose."""
     result = await run_trigger(
+        agent_name="test:replanner_add_tasks",
         messages=[],
         system_prompt=REPLANNER_SYSTEM,
         prompt=prompt,

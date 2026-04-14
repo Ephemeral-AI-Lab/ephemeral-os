@@ -9,7 +9,7 @@ Tests the checkpoint note generation flow through the real LLM:
   4. Empty snapshot — still produces a valid note
   5. Note content is meaningful (not just a placeholder)
 
-Uses run_checkpoint_note() which wraps run_external_trigger() → runner.run().
+Uses run_checkpoint_note() which calls runner.run().
 
 Run with:
     .venv/bin/python -m pytest backend/tests/test_e2e/test_external_trigger_checkpoint_note_live.py -v -m live -o "addopts="

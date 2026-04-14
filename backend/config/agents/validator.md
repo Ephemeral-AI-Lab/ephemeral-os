@@ -7,6 +7,7 @@ tool_call_limit: 100
 toolkits: ["sandbox_operations", "code_intelligence", "context"]
 blocked_tools: ["ci_read_file"]
 posthook: ["post_note", "request_replan"]
+allowed_triggers: ["tc_note"]
 skills: ["team-validator-playbook"]
 ---
 # Task

@@ -141,6 +141,7 @@ def _build_replanner_prompt(
 async def _run_replanner(api_client, prompt: str) -> tuple[str, dict]:
     """Run the replanner and return (tool_name, tool_input)."""
     result = await run_trigger(
+        agent_name="test:replanner_cancel_redraft",
         messages=[],
         system_prompt=REPLANNER_SYSTEM,
         prompt=prompt,

@@ -365,6 +365,7 @@ async def test_full_lifecycle_resolve_and_resume_agent(api_client):
     )
 
     result = await run_trigger(
+        agent_name="test:blocker_resume",
         messages=resume_messages,
         system_prompt="You are a developer agent. Your task was paused due to a blocker and has now resumed.",
         prompt=resume_notification,

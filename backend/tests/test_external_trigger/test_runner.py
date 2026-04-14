@@ -50,6 +50,7 @@ async def test_runner_executes_tools_and_retries_on_tool_error(monkeypatch):
     tool = _RetryingTool()
     context = ToolExecutionContext(cwd=Path("."), metadata={"agent_name": "planner"})
     result = await run(
+        agent_name="test:submit",
         messages=[{"role": "assistant", "content": "frozen"}],
         system_prompt="system",
         prompt="submit now",

@@ -10,7 +10,7 @@ Tests the full pause assessment flow through the real LLM:
   5. Verdict conversation trail preserves original snapshot + blocker Q + answer
   6. Pydantic validation — answer is always "YES" or "NO" (Literal type)
 
-Uses assess_pause() which wraps run_external_trigger() → runner.run().
+Uses assess_pause() which calls runner.run().
 
 Run with:
     .venv/bin/python -m pytest backend/tests/test_e2e/test_external_trigger_pause_assessment_live.py -v -m live -o "addopts="

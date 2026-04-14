@@ -102,7 +102,8 @@ async def _accept_replan_submission(
         return freshness_gate
     await _post_submission_note(context, content=note_content)
     return ToolResult(
-        output=f"Replan accepted ({len(replan.add_tasks)} new tasks, {len(replan.cancel_ids)} cancelled)."
+        output=f"Replan accepted ({len(replan.add_tasks)} new tasks, {len(replan.cancel_ids)} cancelled).",
+        metadata={"resolved_replan": replan},
     )
 
 
@@ -290,7 +291,10 @@ class SubmitPlanTool(BaseTool):
         if arguments.rationale:
             summary += f"\nRationale: {arguments.rationale.strip()}"
         await _post_submission_note(context, content=summary)
-        return ToolResult(output=f"Plan accepted ({len(plan.tasks)} tasks).")
+        return ToolResult(
+            output=f"Plan accepted ({len(plan.tasks)} tasks).",
+            metadata={"resolved_plan": plan},
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -326,8 +330,6 @@ class RequestReplanTool(BaseTool):
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, RequestReplanInput)
-        from team.models import ReplanRequest
-
         note = f"Requested replan: {arguments.reason}"
         if arguments.suggestion:
             note += f"\nSuggestion: {arguments.suggestion}"
@@ -336,7 +338,7 @@ class RequestReplanTool(BaseTool):
 
 
 # ---------------------------------------------------------------------------
-# SubmitReplanTool
+# Replanner tools — add_tasks / declare_blocker / cancel_and_redraft
 # ---------------------------------------------------------------------------
 
 
@@ -407,8 +409,6 @@ class DeclareBlockerTool(BaseTool):
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, DeclareBlockerInput)
-        from team.models import BlockerDeclaration
-
         freshness_gate = await _freshness_submission_gate(context, action="declare_blocker()")
         if freshness_gate is not None:
             return freshness_gate
@@ -459,10 +459,14 @@ class PosthookTools(BaseToolkit):
     def from_context(cls, ctx: object) -> PosthookTools:
         from agents.registry import get_role
 
-        metadata = getattr(ctx, "metadata", {}) or {}  # type: ignore[union-attr]
-        role = metadata.get("role")
+        metadata = (
+            getattr(ctx, "metadata", None)
+            or getattr(ctx, "tool_metadata", None)
+            or {}
+        )
+        role = metadata.get("role") if hasattr(metadata, "get") else None
         if not isinstance(role, str) or not role.strip():
-            agent_name: str = str(metadata.get("agent_name") or "")
+            agent_name = str(metadata.get("agent_name") or "") if hasattr(metadata, "get") else ""
             role = get_role(agent_name)
 
         if role == "planner":

@@ -77,6 +77,7 @@ async def test_developer_picks_post_note_on_success(api_client):
     ]
 
     result = await run_trigger(
+        agent_name="test:developer_post_note",
         messages=messages,
         system_prompt=(
             "You are a developer agent. You have two options:\n"
@@ -120,6 +121,7 @@ async def test_developer_picks_request_replan_on_misscope(api_client):
     ]
 
     result = await run_trigger(
+        agent_name="test:developer_replan",
         messages=messages,
         system_prompt=(
             "You are a developer agent. You have two options:\n"
@@ -173,6 +175,7 @@ async def test_replanner_picks_add_tasks_for_transient_failure(api_client):
     )
 
     result = await run_trigger(
+        agent_name="test:replanner_add_tasks",
         messages=[],
         system_prompt=(
             "You are a replanner agent. A task has failed. Call exactly ONE action:\n"
@@ -222,6 +225,7 @@ async def test_replanner_picks_declare_blocker_for_shared_break(api_client):
     )
 
     result = await run_trigger(
+        agent_name="test:replanner_declare_blocker",
         messages=[],
         system_prompt=(
             "You are a replanner agent. A task has failed. Read the failure context, "
@@ -283,6 +287,7 @@ async def test_replanner_picks_cancel_and_redraft_for_wrong_decomposition(api_cl
     )
 
     result = await run_trigger(
+        agent_name="test:replanner_cancel_redraft",
         messages=[],
         system_prompt=(
             "You are a replanner agent. A task has failed. Read the failure context, "

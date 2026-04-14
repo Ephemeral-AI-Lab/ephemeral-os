@@ -9,7 +9,7 @@ import pytest
 from pydantic import BaseModel, Field
 
 from message import ConversationMessage, TextBlock, ToolUseBlock
-from engine.core.query import QueryContext, _execute_tool_call, _launch_background_tool, run_query
+from engine.core.query import QueryContext, _execute_tool_call, run_query
 from engine.runtime.background_tasks import BackgroundTaskManager
 from message.stream_events import (
     AssistantTurnComplete,
@@ -112,7 +112,9 @@ class SubmitPlanTool(BaseTool):
     def __init__(self) -> None:
         self.calls = 0
 
-    async def execute(self, arguments: SubmitPlanInput, context: ToolExecutionContext) -> ToolResult:
+    async def execute(
+        self, arguments: SubmitPlanInput, context: ToolExecutionContext
+    ) -> ToolResult:
         del arguments, context
         self.calls += 1
         return ToolResult(output="submitted")
@@ -138,27 +140,6 @@ class FailingTool(BaseTool):
 
     async def execute(self, arguments: EchoInput, context: ToolExecutionContext) -> ToolResult:
         return ToolResult(output="something went wrong", is_error=True)
-
-
-class SpyRunSubagentInput(BaseModel):
-    agent_name: str = Field(description="Subagent name")
-    input: dict = Field(description="Structured payload")
-
-
-class SpyRunSubagentTool(BaseTool):
-    """Background tool that reports what scout traces are visible during execution."""
-
-    name = "run_subagent"
-    description = "Spy background subagent launcher."
-    input_model = SpyRunSubagentInput
-    background = "always"
-
-    async def execute(
-        self, arguments: SpyRunSubagentInput, context: ToolExecutionContext
-    ) -> ToolResult:
-        del arguments
-        seen = list(context.metadata.get("_scout_target_paths_this_turn", []))
-        return ToolResult(output=json.dumps({"seen_paths": seen}), is_error=False)
 
 
 def _make_toolkit(*tools: BaseTool) -> BaseToolkit:
@@ -376,10 +357,12 @@ class TestOutputSchema:
 async def test_single_tool_call(tmp_path: Path):
     """Model calls a tool, gets result, then responds with text."""
     registry = _make_registry(EchoTool())
-    client = FakeApiClient([
-        _tool_reply(ToolUseBlock(id="tc1", name="echo", input={"message": "hello"})),
-        _text_reply("Done."),
-    ])
+    client = FakeApiClient(
+        [
+            _tool_reply(ToolUseBlock(id="tc1", name="echo", input={"message": "hello"})),
+            _text_reply("Done."),
+        ]
+    )
     context = _make_context(client, registry, tmp_path, enable_background_tasks=True)
     events = await _collect_events(context, "echo hello")
 
@@ -395,57 +378,15 @@ async def test_single_tool_call(tmp_path: Path):
 
 
 @pytest.mark.asyncio
-async def test_background_scout_trace_is_recorded_after_launch_not_before(tmp_path: Path):
-    registry = _make_registry(SpyRunSubagentTool())
-    context = _make_context(
-        FakeApiClient([]),
-        registry,
-        tmp_path,
-        tool_metadata=ExecutionMetadata(),
-    )
-    manager = BackgroundTaskManager()
-    tool_use = ToolUseBlock(
-        id="tc1",
-        name="run_subagent",
-        input={
-            "agent_name": "scout",
-            "input": {"target_paths": ["/testbed/pydantic/json_schema.py"]},
-        },
-    )
-
-    result, started, rejected = _launch_background_tool(
-        context,
-        manager,
-        tool_use,
-        task_note="launch scout",
-    )
-
-    assert not result.is_error
-    assert started is not None
-    assert rejected is None
-    assert "Keep using the current turn on other ready work first" in result.content
-    assert "do not wait immediately unless this task is the only blocker left" in result.content
-
-    completed = await manager.wait_any(timeout=1.0)
-    assert completed is not None
-    assert completed.result is not None
-    payload = json.loads(completed.result.output)
-    assert payload["seen_paths"] == ["/testbed/pydantic/json_schema.py"]
-    assert context.tool_metadata is not None
-    assert context.tool_metadata["_scout_launches_this_turn"] == 1
-    assert context.tool_metadata["_scout_target_paths_this_turn"] == [
-        "/testbed/pydantic/json_schema.py"
-    ]
-
-
-@pytest.mark.asyncio
 async def test_unknown_tool_returns_error(tmp_path: Path):
     """Model calls a tool that doesn't exist — should get an error result."""
     registry = _make_registry(EchoTool())
-    client = FakeApiClient([
-        _tool_reply(ToolUseBlock(id="tc1", name="nonexistent_tool", input={})),
-        _text_reply("ok"),
-    ])
+    client = FakeApiClient(
+        [
+            _tool_reply(ToolUseBlock(id="tc1", name="nonexistent_tool", input={})),
+            _text_reply("ok"),
+        ]
+    )
     context = _make_context(client, registry, tmp_path)
     events = await _collect_events(context, "do something")
 
@@ -459,10 +400,12 @@ async def test_unknown_tool_returns_error(tmp_path: Path):
 async def test_invalid_input_returns_error(tmp_path: Path):
     """Model passes invalid input to a tool — should get a validation error."""
     registry = _make_registry(AddTool())
-    client = FakeApiClient([
-        _tool_reply(ToolUseBlock(id="tc1", name="add", input={"a": "not_a_number", "b": 2})),
-        _text_reply("ok"),
-    ])
+    client = FakeApiClient(
+        [
+            _tool_reply(ToolUseBlock(id="tc1", name="add", input={"a": "not_a_number", "b": 2})),
+            _text_reply("ok"),
+        ]
+    )
     context = _make_context(client, registry, tmp_path)
     events = await _collect_events(context, "add")
 
@@ -476,10 +419,12 @@ async def test_invalid_input_returns_error(tmp_path: Path):
 async def test_tool_error_propagated(tmp_path: Path):
     """Tool returns is_error=True — should be reflected in events."""
     registry = _make_registry(FailingTool())
-    client = FakeApiClient([
-        _tool_reply(ToolUseBlock(id="tc1", name="failing", input={"message": "x"})),
-        _text_reply("ok"),
-    ])
+    client = FakeApiClient(
+        [
+            _tool_reply(ToolUseBlock(id="tc1", name="failing", input={"message": "x"})),
+            _text_reply("ok"),
+        ]
+    )
     context = _make_context(client, registry, tmp_path)
     events = await _collect_events(context, "fail")
 
@@ -493,13 +438,15 @@ async def test_tool_error_propagated(tmp_path: Path):
 async def test_parallel_tool_calls(tmp_path: Path):
     """Model calls multiple tools in one turn — should execute in parallel."""
     registry = _make_registry(EchoTool(), AddTool())
-    client = FakeApiClient([
-        _tool_reply(
-            ToolUseBlock(id="tc1", name="echo", input={"message": "hi"}),
-            ToolUseBlock(id="tc2", name="add", input={"a": 3, "b": 4}),
-        ),
-        _text_reply("Both done."),
-    ])
+    client = FakeApiClient(
+        [
+            _tool_reply(
+                ToolUseBlock(id="tc1", name="echo", input={"message": "hi"}),
+                ToolUseBlock(id="tc2", name="add", input={"a": 3, "b": 4}),
+            ),
+            _text_reply("Both done."),
+        ]
+    )
     context = _make_context(client, registry, tmp_path)
     events = await _collect_events(context, "do both")
 
@@ -516,17 +463,19 @@ async def test_parallel_batch_rejects_sibling_tool_when_terminal_guard_is_active
     submit_plan = SubmitPlanTool()
     echo = EchoTool()
     registry = _make_registry(submit_plan, echo)
-    client = FakeApiClient([
-        _tool_reply(
-            ToolUseBlock(
-                id="tc1",
-                name="submit_plan",
-                input={"tasks": [], "rationale": "ready"},
+    client = FakeApiClient(
+        [
+            _tool_reply(
+                ToolUseBlock(
+                    id="tc1",
+                    name="submit_plan",
+                    input={"tasks": [], "rationale": "ready"},
+                ),
+                ToolUseBlock(id="tc2", name="echo", input={"message": "extra"}),
             ),
-            ToolUseBlock(id="tc2", name="echo", input={"message": "extra"}),
-        ),
-        _text_reply("Recovered."),
-    ])
+            _text_reply("Recovered."),
+        ]
+    )
     metadata = ExecutionMetadata()
     metadata["_required_next_tool"] = {
         "tool_name": "submit_plan",
@@ -543,7 +492,10 @@ async def test_parallel_batch_rejects_sibling_tool_when_terminal_guard_is_active
     assert tool_starts == []
     assert len(tool_completes) == 2
     assert all(event.is_error for event in tool_completes)
-    assert all("Submit only `submit_plan(...)` in the next tool batch." in event.output for event in tool_completes)
+    assert all(
+        "Submit only `submit_plan(...)` in the next tool batch." in event.output
+        for event in tool_completes
+    )
     assert submit_plan.calls == 0
 
 
@@ -642,8 +594,12 @@ async def test_streaming_tool_calls_respect_planner_soft_limit(tmp_path: Path):
 
     assert len(tool_starts) == 1
     assert tool_starts[0].tool_name == "echo"
-    assert any(not event.is_error and '"echoed": "first"' in event.output for event in tool_completes)
-    assert any(event.is_error and "tool_call_limit exceeded" in event.output for event in tool_completes)
+    assert any(
+        not event.is_error and '"echoed": "first"' in event.output for event in tool_completes
+    )
+    assert any(
+        event.is_error and "tool_call_limit exceeded" in event.output for event in tool_completes
+    )
 
 
 @pytest.mark.asyncio

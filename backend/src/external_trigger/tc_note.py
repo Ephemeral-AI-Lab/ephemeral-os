@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from external_trigger.agent import run_external_trigger
+from external_trigger.runner import run
 from tools.context.toolkit import PostNoteTool, PostNoteInput
 
 
@@ -63,7 +63,7 @@ async def run_checkpoint_note(
     The agent inherits the task's conversation snapshot and has only the
     post_note tool available. Uses runner.run() for guaranteed tool call.
     """
-    result = await run_external_trigger(
+    result = await run(
         agent_name=f"checkpoint:{task_id}",
         messages=messages,
         system_prompt=CHECKPOINT_SYSTEM_PROMPT,

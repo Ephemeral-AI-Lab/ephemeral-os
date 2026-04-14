@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass, field, replace
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 MERGED_RUNTIME_METADATA_KEYS: tuple[str, ...] = (
     "scope_packet",

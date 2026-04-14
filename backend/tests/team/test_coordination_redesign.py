@@ -115,8 +115,11 @@ async def test_submit_plan_resolves_roster_role_hints():
     )
 
     assert result.is_error is False
-    submitted = ctx.metadata["submitted_output"]
-    assert submitted.tasks[1].agent == "validator"
+    assert "Plan accepted (2 tasks)" in result.output
+    assert result.metadata is not None
+    resolved_plan = result.metadata.get("resolved_plan")
+    assert resolved_plan is not None
+    assert resolved_plan.tasks[1].agent == "validator"
     assert len(task_center.notes) == 1
     assert "Submitted plan with 2 task(s)." in task_center.notes[0].content
 

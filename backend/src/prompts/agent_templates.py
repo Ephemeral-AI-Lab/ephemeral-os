@@ -86,6 +86,13 @@ ROLE_TEMPLATES: MappingProxyType[str, str] = MappingProxyType({
         "workspace areas.\n"
         "- Stop once a downstream worker could act without reopening the same scope."
     ),
+    "resolver": (
+        "# Role Boundary\n"
+        "- Must fix only the specific root cause identified in the blocker. "
+        "Do not refactor unrelated code or add speculative features.\n"
+        "- Must stay within the named files and their immediate dependents.\n"
+        "- Must not spawn subagents or hand off work."
+    ),
     "replanner": (
         "# Role Boundary\n"
         "- Must read the failure context, completed sibling artifacts, and the "

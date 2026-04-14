@@ -36,6 +36,110 @@ _GENERIC_SYMBOL_PATTERNS: tuple[tuple[re.Pattern[str], SymbolKind], ...] = (
 )
 
 
+# ---------------------------------------------------------------------------
+# TreeSitterNode - clean wrapper around tree-sitter node API
+# ---------------------------------------------------------------------------
+
+
+class TreeSitterNode:
+    __slots__ = ("_node", "_content")
+
+    def __init__(self, node: Any, content: str) -> None:
+        self._node = node
+        self._content = content
+
+    @property
+    def type(self) -> str:
+        return str(getattr(self._node, "type", "") or "")
+
+    @property
+    def children(self) -> list["TreeSitterNode"]:
+        children = getattr(self._node, "children", None) or []
+        return [TreeSitterNode(c, self._content) for c in children]
+
+    def child_by_field(self, name: str) -> "TreeSitterNode | None":
+        child_by_field = getattr(self._node, "child_by_field_name", None)
+        if callable(child_by_field):
+            result = child_by_field(name)
+            return TreeSitterNode(result, self._content) if result else None
+        return None
+
+    def name_child(self) -> "TreeSitterNode | None":
+        for child in self.children:
+            if child.type in {
+                "identifier",
+                "type_identifier",
+                "property_identifier",
+                "shorthand_property_identifier",
+            }:
+                return child
+        return None
+
+    @property
+    def text(self) -> str:
+        start = getattr(self._node, "start_byte", None)
+        end = getattr(self._node, "end_byte", None)
+        if isinstance(start, int) and isinstance(end, int):
+            return self._content[start:end]
+        return str(getattr(self._node, "text", "") or "")
+
+    @property
+    def name(self) -> str:
+        named = self.child_by_field("name")
+        if named is not None:
+            return named.text.strip()
+        name_child = self.name_child()
+        if name_child is not None:
+            return name_child.text.strip()
+        return ""
+
+    def start_point(self) -> tuple[int, int]:
+        pt = getattr(self._node, "start_point", None)
+        return self._point_to_position(pt)
+
+    def end_point(self) -> tuple[int, int]:
+        pt = getattr(self._node, "end_point", None)
+        return self._point_to_position(pt)
+
+    @staticmethod
+    def _point_to_position(point: Any) -> tuple[int, int]:
+        if isinstance(point, tuple) and len(point) >= 2:
+            return int(point[0]) + 1, int(point[1])
+        row = getattr(point, "row", None)
+        column = getattr(point, "column", None)
+        if row is not None and column is not None:
+            return int(row) + 1, int(column)
+        return 0, 0
+
+    def signature_text(self) -> str:
+        text = self.text.strip()
+        if not text:
+            return ""
+        return text.splitlines()[0][:100]
+
+    def is_const_declaration(self) -> bool:
+        node = self._node
+        current = getattr(node, "parent", None)
+        while current is not None:
+            if str(getattr(current, "type", "") or "") == "lexical_declaration":
+                for child in getattr(current, "children", None) or []:
+                    if str(getattr(child, "type", "") or "") == "const":
+                        return True
+                    if self._node_text(child).strip() == "const":
+                        return True
+                return False
+            current = getattr(current, "parent", None)
+        return False
+
+    @staticmethod
+    def _node_text(node: Any) -> str:
+        start = getattr(node, "start_byte", None)
+        end = getattr(node, "end_byte", None)
+        if isinstance(start, int) and isinstance(end, int):
+            return "<content slice>"
+        return str(getattr(node, "text", "") or "")
+
+
 @dataclass
 class _FileSymbols:
     """Symbols extracted from a single file."""
@@ -44,6 +148,26 @@ class _FileSymbols:
     symbols: list[SymbolInfo] = field(default_factory=list)
     generation: int = 0
     indexed_at: float = 0.0
+
+
+# ---------------------------------------------------------------------------
+# Node type dispatch table for _walk_tree_sitter
+# Maps node type -> (SymbolKind | None, sets_container)
+# Kind=None means derive from context (variableDeclarator needs const check)
+# ---------------------------------------------------------------------------
+
+_TREE_SITTER_KINDS: dict[str, tuple[SymbolKind | None, bool]] = {
+    "class_declaration": (SymbolKind.CLASS, True),
+    "class_definition": (SymbolKind.CLASS, True),
+    "function_declaration": (SymbolKind.FUNCTION, False),
+    "generator_function_declaration": (SymbolKind.FUNCTION, False),
+    "method_definition": (SymbolKind.METHOD, False),
+    "method_signature": (SymbolKind.METHOD, False),
+    "interface_declaration": (SymbolKind.INTERFACE, True),
+    "variable_declarator": (None, False),
+    "public_field_definition": (SymbolKind.PROPERTY, False),
+    "field_definition": (SymbolKind.PROPERTY, False),
+}
 
 
 class SymbolIndex:
@@ -200,7 +324,8 @@ class SymbolIndex:
 
             logger.info(
                 "Symbol index: building for %d files in %s",
-                len(files), self._workspace_root,
+                len(files),
+                self._workspace_root,
             )
 
             # For remote sandboxes, download files concurrently to reduce
@@ -217,7 +342,8 @@ class SymbolIndex:
 
             logger.info(
                 "Symbol index: built (%d files, %d symbols)",
-                self.indexed_files, self.size,
+                self.indexed_files,
+                self.size,
             )
 
             # Check for pending rebuild
@@ -291,7 +417,9 @@ class SymbolIndex:
             except Exception:
                 logger.debug(
                     "Batch download_files failed for chunk %d–%d, falling back",
-                    i, i + len(chunk), exc_info=True,
+                    i,
+                    i + len(chunk),
+                    exc_info=True,
                 )
                 self._build_remote_individual(chunk)
                 continue
@@ -302,7 +430,9 @@ class SymbolIndex:
                 if fp is None:
                     continue
                 if getattr(resp, "error", None) or getattr(resp, "result", None) is None:
-                    logger.debug("Batch download skipped %s: %s", fp, getattr(resp, "error", "no data"))
+                    logger.debug(
+                        "Batch download skipped %s: %s", fp, getattr(resp, "error", "no data")
+                    )
                     continue
                 raw = resp.result
                 content = raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
@@ -375,7 +505,9 @@ class SymbolIndex:
         return self._collect_remote_files_via_list(fs, root)
 
     def _collect_remote_files_via_search(
-        self, fs: Any, root: str,
+        self,
+        fs: Any,
+        root: str,
     ) -> list[str] | None:
         """Use sandbox.fs.search_files to discover files in one call."""
         search_fn = getattr(fs, "search_files", None)
@@ -387,7 +519,11 @@ class SymbolIndex:
             return None
 
         try:
-            result = self._resolve(search_fn(root, "*.{py,js,ts,jsx,tsx,java,go,rs,rb,php,c,cpp,h,hpp,cs,swift,kt,scala,sh}"))
+            result = self._resolve(
+                search_fn(
+                    root, "*.{py,js,ts,jsx,tsx,java,go,rs,rb,php,c,cpp,h,hpp,cs,swift,kt,scala,sh}"
+                )
+            )
             raw_files = getattr(result, "files", None) or []
         except Exception:
             logger.debug("search_files failed, falling back to list_files", exc_info=True)
@@ -409,7 +545,9 @@ class SymbolIndex:
         return files
 
     def _collect_remote_files_via_list(
-        self, fs: Any, root: str,
+        self,
+        fs: Any,
+        root: str,
     ) -> list[str] | None:
         """Fallback: recursive list_files directory traversal."""
         list_files_fn = getattr(fs, "list_files", None)
@@ -449,7 +587,9 @@ class SymbolIndex:
     # -- Symbol extraction ----------------------------------------------------
 
     def _extract_symbols_from_file(
-        self, file_path: str, content: str | None = None,
+        self,
+        file_path: str,
+        content: str | None = None,
     ) -> list[SymbolInfo]:
         """Extract symbols from a file."""
         if content is None:
@@ -479,73 +619,52 @@ class SymbolIndex:
             return []
 
         symbols: list[SymbolInfo] = []
-        self._walk_tree_sitter(root, file_path, content, symbols, container="")
+        ts_root = TreeSitterNode(root, content)
+        self._walk_tree_sitter(ts_root, file_path, content, symbols, container="")
         return symbols
 
     def _walk_tree_sitter(
         self,
-        node: Any,
+        node: TreeSitterNode,
         file_path: str,
         content: str,
         bucket: list[SymbolInfo],
         container: str,
     ) -> None:
-        node_type = str(getattr(node, "type", "") or "")
+        kind_and_container = _TREE_SITTER_KINDS.get(node.type)
         current_container = container
 
-        if node_type in {"class_declaration", "class_definition"}:
-            symbol = self._tree_sitter_symbol(node, file_path, content, SymbolKind.CLASS, container)
+        if kind_and_container is not None:
+            kind, sets_container = kind_and_container
+            if kind is None:
+                kind = SymbolKind.CONSTANT if node.is_const_declaration() else SymbolKind.VARIABLE
+            symbol = self._tree_sitter_symbol(node, file_path, kind, container)
             if symbol is not None:
                 bucket.append(symbol)
-                current_container = symbol.name
-        elif node_type in {"function_declaration", "generator_function_declaration"}:
-            symbol = self._tree_sitter_symbol(node, file_path, content, SymbolKind.FUNCTION, container)
-            if symbol is not None:
-                bucket.append(symbol)
-        elif node_type in {"method_definition", "method_signature"}:
-            symbol = self._tree_sitter_symbol(node, file_path, content, SymbolKind.METHOD, container)
-            if symbol is not None:
-                bucket.append(symbol)
-        elif node_type == "interface_declaration":
-            symbol = self._tree_sitter_symbol(node, file_path, content, SymbolKind.INTERFACE, container)
-            if symbol is not None:
-                bucket.append(symbol)
-                current_container = symbol.name
-        elif node_type == "variable_declarator":
-            kind = (
-                SymbolKind.CONSTANT
-                if self._is_const_declaration(node, content)
-                else SymbolKind.VARIABLE
-            )
-            symbol = self._tree_sitter_symbol(node, file_path, content, kind, container)
-            if symbol is not None:
-                bucket.append(symbol)
-        elif node_type in {"public_field_definition", "field_definition"}:
-            symbol = self._tree_sitter_symbol(node, file_path, content, SymbolKind.PROPERTY, container)
-            if symbol is not None:
-                bucket.append(symbol)
+                if sets_container:
+                    current_container = symbol.name
 
-        for child in self._node_children(node):
+        for child in node.children:
             self._walk_tree_sitter(child, file_path, content, bucket, current_container)
 
     def _tree_sitter_symbol(
         self,
-        node: Any,
+        node: TreeSitterNode,
         file_path: str,
-        content: str,
         kind: SymbolKind,
         container: str,
     ) -> SymbolInfo | None:
-        name_node = self._node_name(node)
-        if name_node is None:
-            return None
-        name = self._node_text(name_node, content).strip()
+        name = node.name
         if not name:
             return None
-        full_name = f"{container}.{name}" if container and kind in {SymbolKind.METHOD, SymbolKind.PROPERTY} else name
-        start_line, start_char = self._node_start(node)
-        end_line, _ = self._node_end(node)
-        signature = self._signature_text(node, content)
+        full_name = (
+            f"{container}.{name}"
+            if container and kind in {SymbolKind.METHOD, SymbolKind.PROPERTY}
+            else name
+        )
+        start_line, start_char = node.start_point()
+        end_line, _ = node.end_point()
+        signature = node.signature_text()
         return SymbolInfo(
             name=full_name,
             kind=kind,
@@ -556,76 +675,6 @@ class SymbolIndex:
             signature=signature,
             container=container,
         )
-
-    @staticmethod
-    def _node_children(node: Any) -> list[Any]:
-        children = getattr(node, "children", None)
-        if children is None:
-            return []
-        return list(children)
-
-    def _node_name(self, node: Any) -> Any | None:
-        child_by_field = getattr(node, "child_by_field_name", None)
-        if callable(child_by_field):
-            named = child_by_field("name")
-            if named is not None:
-                return named
-        for child in self._node_children(node):
-            child_type = str(getattr(child, "type", "") or "")
-            if child_type in {
-                "identifier",
-                "type_identifier",
-                "property_identifier",
-                "shorthand_property_identifier",
-            }:
-                return child
-        return None
-
-    @staticmethod
-    def _node_text(node: Any, content: str) -> str:
-        start_byte = getattr(node, "start_byte", None)
-        end_byte = getattr(node, "end_byte", None)
-        if isinstance(start_byte, int) and isinstance(end_byte, int):
-            return content[start_byte:end_byte]
-        return str(getattr(node, "text", "") or "")
-
-    @staticmethod
-    def _point_to_position(point: Any) -> tuple[int, int]:
-        if isinstance(point, tuple) and len(point) >= 2:
-            return int(point[0]) + 1, int(point[1])
-        row = getattr(point, "row", None)
-        column = getattr(point, "column", None)
-        if row is not None and column is not None:
-            return int(row) + 1, int(column)
-        return 0, 0
-
-    def _node_start(self, node: Any) -> tuple[int, int]:
-        return self._point_to_position(getattr(node, "start_point", None))
-
-    def _node_end(self, node: Any) -> tuple[int, int]:
-        return self._point_to_position(getattr(node, "end_point", None))
-
-    def _signature_text(self, node: Any, content: str) -> str:
-        text = self._node_text(node, content).strip()
-        if not text:
-            return ""
-        return text.splitlines()[0][:100]
-
-    def _is_const_declaration(self, node: Any, content: str) -> bool:
-        current = getattr(node, "parent", None)
-        while current is not None:
-            current_type = str(getattr(current, "type", "") or "")
-            if current_type == "lexical_declaration":
-                for child in self._node_children(current):
-                    child_type = str(getattr(child, "type", "") or "")
-                    if child_type == "const":
-                        return True
-                    child_text = self._node_text(child, content).strip()
-                    if child_text == "const":
-                        return True
-                return False
-            current = getattr(current, "parent", None)
-        return False
 
     def _extract_python_symbols(self, file_path: str, content: str) -> list[SymbolInfo]:
         """Extract symbols from Python source using ast."""

@@ -57,6 +57,18 @@ class Conductor:
     def register_snapshot(self, task_id: str, snapshot: list[dict]) -> None:
         self._executor_snapshots[task_id] = snapshot
 
+    def _emit_external_hook(self, payload: dict[str, object]) -> None:
+        emitter = getattr(self._team_run, "coordination_metadata", {}).get("external_hook_emitter")
+        if callable(emitter):
+            try:
+                emitter({
+                    "event": "external_hook",
+                    "team_run_id": self._team_run.id,
+                    **payload,
+                })
+            except Exception:
+                logger.debug("Failed to emit external hook payload", exc_info=True)
+
     # ------------------------------------------------------------------
     # Active blocker queries
     # ------------------------------------------------------------------
@@ -133,16 +145,33 @@ class Conductor:
             from external_trigger.pause_assessment import PauseVerdict, assess_pause
 
             task_id: str = rec.id  # type: ignore[attr-defined]
+            agent_name = str(getattr(rec, "agent_name", "") or "")
+            self._emit_external_hook({
+                "hook": "pause_assess",
+                "work_item_id": task_id,
+                "agent": agent_name,
+                "blocker_id": blocker.id,
+                "status": "started",
+            })
             agent_run_id = getattr(rec, "agent_run_id", None) or task_id
             messages = self._executor_snapshots.get(task_id, [])
             if api_client is None:
                 logger.warning("No api_client on team_run; auto-pausing task %s", task_id)
-                return PauseVerdict(
+                verdict = PauseVerdict(
                     task_id=task_id,
                     answer="YES",
                     reason="no api_client available for assessment",
                     conversation=messages,
                 )
+                self._emit_external_hook({
+                    "hook": "pause_assess",
+                    "work_item_id": task_id,
+                    "agent": agent_name,
+                    "blocker_id": blocker.id,
+                    "status": "completed",
+                    "answer": verdict.answer,
+                })
+                return verdict
             try:
                 verdict = await assess_pause(
                     task_id=task_id,
@@ -155,7 +184,23 @@ class Conductor:
                 )
             except Exception as exc:
                 logger.warning("PauseAssessmentTask failed for %s: %s — skipping", task_id, exc)
+                self._emit_external_hook({
+                    "hook": "pause_assess",
+                    "work_item_id": task_id,
+                    "agent": agent_name,
+                    "blocker_id": blocker.id,
+                    "status": "failed",
+                    "error": str(exc),
+                })
                 return None  # error → skip, don't pause
+            self._emit_external_hook({
+                "hook": "pause_assess",
+                "work_item_id": task_id,
+                "agent": agent_name,
+                "blocker_id": blocker.id,
+                "status": "completed",
+                "answer": verdict.answer,
+            })
             return verdict
 
         verdicts = await asyncio.gather(*[_assess_one(r) for r in running])

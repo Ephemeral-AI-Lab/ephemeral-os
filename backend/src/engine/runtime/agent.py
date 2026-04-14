@@ -235,7 +235,7 @@ def _build_agent_tool_registry(
 
     # Posthook tools are NOT registered in the main query loop.
     # Submissions happen exclusively in the post-run phase via
-    # run_external_trigger (see executor._run_post_run).
+    # runner.run() (see executor._run_post_run).
 
     # Skills toolkit — opt-out via ``include_skills=False``.
     include_skills = agent_def.include_skills if agent_def else True

@@ -107,9 +107,9 @@ def _register_builtins() -> None:
 
     register_toolkit_class("context", TaskCenterToolkit)
     register_toolkit_class("task_center", TaskCenterToolkit)
-    # NOTE: Submission tools are no longer registered as a toolkit.
-    # They are registered individually via agent_def.posthook in
-    # engine/runtime/agent.py:_build_agent_tool_registry().
+    # NOTE: Posthook submission tools are NOT registered in the main
+    # query loop. They are only used in the executor's post-run phase
+    # via runner.run() (see team/runtime/executor.py).
 
 
 _register_builtins()

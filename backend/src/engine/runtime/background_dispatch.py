@@ -4,16 +4,24 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import ValidationError
 
 from engine.runtime.background_tasks import BackgroundTaskManager
 from engine.runtime.tool_trace import record_tool_trace
 from message.messages import ToolResultBlock, ToolUseBlock
-from message.stream_events import BackgroundTaskStarted, ToolExecutionCompleted
+from message.stream_events import (
+    BackgroundTaskStarted,
+    StreamEvent,
+    ToolExecutionCompleted,
+)
+from providers.types import UsageSnapshot
 from tools.core.base import BaseTool, ToolExecutionContext, ToolRegistry, ToolResult
 from tools.core.runtime import ExecutionMetadata, merge_runtime_metadata
+
+if TYPE_CHECKING:
+    from engine.core.query import QueryContext
 
 ToolCallExecutor = Callable[
     [str, str, dict[str, object], ExecutionMetadata | dict[str, Any] | None],
@@ -173,3 +181,74 @@ def launch_background_tool(
         is_error=False,
     )
     return tool_result, bg_event, None
+
+
+def launch_and_collect_bg_events(
+    context: QueryContext,
+    background_manager: BackgroundTaskManager,
+    tc: ToolUseBlock,
+    task_note: str,
+    tool_results: list[ToolResultBlock],
+) -> list[tuple[StreamEvent, UsageSnapshot | None]]:
+    from tools.builtins.skills.toolkit import (
+        clear_required_next_tool,
+        get_required_next_tool,
+    )
+
+    tool_name = str(getattr(tc, "name", "") or "")
+    tool_id = str(getattr(tc, "id", "") or "")
+    pending = get_required_next_tool(context.tool_metadata)
+    if pending is not None and tool_name != pending["tool_name"]:
+        message = (
+            f"{pending.get('reason') or 'A terminal tool-call guard is active.'} "
+            f"The next tool must be `{pending['tool_name']}(...)`. "
+            f"You called `{tool_name}` instead. "
+            f"{pending.get('reset_hint') or ''}"
+        ).strip()
+        tool_results.append(ToolResultBlock(tool_use_id=tool_id, content=message, is_error=True))
+        return [
+            (
+                ToolExecutionCompleted(
+                    tool_name=tool_name,
+                    output=message,
+                    is_error=True,
+                    tool_id=tool_id,
+                ),
+                None,
+            )
+        ]
+    if pending is not None and tool_name == pending["tool_name"]:
+        clear_required_next_tool(context.tool_metadata)
+
+    async def _execute_in_context(
+        tool_name: str,
+        tool_use_id: str,
+        tool_input: dict[str, object],
+        extra_metadata: ExecutionMetadata | dict[str, Any] | None = None,
+    ) -> ToolResultBlock:
+        from tools.core.tool_execution import execute_tool_call
+
+        return await execute_tool_call(
+            context,
+            tool_name,
+            tool_use_id,
+            tool_input,
+            extra_metadata=extra_metadata,
+        )
+
+    tool_result, bg_event, reject_event = launch_background_tool(
+        tool_registry=context.tool_registry,
+        tool_metadata=context.tool_metadata,
+        cwd=context.cwd,
+        background_manager=background_manager,
+        tool_use=tc,
+        task_note=task_note,
+        execute_tool_call=_execute_in_context,
+    )
+    tool_results.append(tool_result)
+    events: list[tuple[StreamEvent, UsageSnapshot | None]] = []
+    if bg_event is not None:
+        events.append((bg_event, None))
+    if reject_event is not None:
+        events.append((reject_event, None))
+    return events

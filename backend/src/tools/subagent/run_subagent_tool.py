@@ -207,15 +207,6 @@ def format_last_n_messages(messages: list[ConversationMessage], n: int) -> str:
 
 
 _ENVELOPE_SUMMARY_CAP = 500
-_DIRECT_SUBMISSION_METADATA_KEY = "submitted_output"
-
-
-def _extract_submitted_output(agent: Any) -> Any | None:
-    """Return the agent's accepted submitted output from the active slot."""
-    qc = getattr(agent, "query_context", None)
-    if qc is None or qc.tool_metadata is None:
-        return None
-    return qc.tool_metadata.get(_DIRECT_SUBMISSION_METADATA_KEY)
 
 
 def _coerce_payload_object(value: Any) -> dict[str, Any]:
@@ -615,10 +606,8 @@ async def run_subagent(
         )
         return ToolResult(output=f"run_subagent: subagent crashed: {run_error}", is_error=True)
 
-    submitted = _extract_submitted_output(agent)
-
     envelope = _build_subagent_envelope(
-        submitted,
+        None,
         sub_run_id,
         final_text,
         artifact_ref=None,

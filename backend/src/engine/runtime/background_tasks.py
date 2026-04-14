@@ -11,7 +11,10 @@ from enum import StrEnum
 from typing import Any
 
 from tools.core.base import ToolResult
-from message.stream_events import BackgroundTaskStarted
+from message.messages import BackgroundTaskStateBlock, ConversationMessage
+from message.stream_events import BackgroundTaskCompleted, BackgroundTaskStarted, SystemNotification
+
+MAX_OUTPUT_LENGTH: int = 2000
 
 logger = logging.getLogger(__name__)
 
@@ -273,9 +276,7 @@ class BackgroundTaskManager:
         for piece in str(line).splitlines() or [""]:
             tracked.progress_lines.append(piece)
 
-    def set_progress_provider(
-        self, task_id: str, provider: Callable[[int], str]
-    ) -> None:
+    def set_progress_provider(self, task_id: str, provider: Callable[[int], str]) -> None:
         """Register a pull-callback for live progress on *task_id*.
 
         The provider is invoked synchronously by ``get_status`` while the task
@@ -297,9 +298,7 @@ class BackgroundTaskManager:
         """
         return lambda line: self.append_progress(task_id, line)
 
-    def get_status(
-        self, task_id: str | None = None, last_n: int = 20
-    ) -> list[dict[str, Any]]:
+    def get_status(self, task_id: str | None = None, last_n: int = 20) -> list[dict[str, Any]]:
         """Return JSON-serializable status for tasks.
 
         If *task_id* is given, only that task is returned. Otherwise all
@@ -388,9 +387,7 @@ class BackgroundTaskManager:
         tracked.cancel_reason = reason or None
         if tracked.task_type == "subagent":
             tracked.stop_mode = "early_stop"
-            tracked.progress_lines = [
-                f"Early stop requested{': ' + reason if reason else ''}"
-            ]
+            tracked.progress_lines = [f"Early stop requested{': ' + reason if reason else ''}"]
             # Give a freshly launched subagent one event-loop turn to reach its
             # first cooperative await so cancellation can be salvaged into a
             # partial result instead of short-circuiting before user code runs.
@@ -484,3 +481,120 @@ class BackgroundTaskManager:
                     # logically but let them drain instead of hard-cancelling.
                     if tracked.task_type != "subagent":
                         tracked.asyncio_task.cancel()
+
+
+# ---------------------------------------------------------------------------
+# Helpers extracted from engine/core/query.py
+# ---------------------------------------------------------------------------
+
+
+def deliver_completed_background_task(
+    task: TrackedBackgroundTask,
+    display_messages: list[ConversationMessage],
+) -> BackgroundTaskCompleted:
+    """Append a completion message to *display_messages* and return the event."""
+    output = task.result.output if task.result else "No output"
+    if task.tool_name != "run_subagent" and len(output) > MAX_OUTPUT_LENGTH:
+        output = (
+            f"[truncated, showing last {MAX_OUTPUT_LENGTH} chars]\n...{output[-MAX_OUTPUT_LENGTH:]}"
+        )
+    terminal_status = (
+        "cancelled"
+        if str(task.status) == "cancelled"
+        else "failed"
+        if str(task.status) == "failed"
+        else "completed"
+    )
+    display_messages.append(
+        ConversationMessage(
+            role="user",
+            content=[
+                BackgroundTaskStateBlock(
+                    task_id=task.task_id,
+                    tool_name=task.tool_name,
+                    task_type=task.task_type,
+                    status=terminal_status,
+                    source="engine_terminal",
+                    text=output,
+                    task_note=task.task_note,
+                    run_id=task.run_id,
+                    cancel_reason=task.cancel_reason,
+                    completion_mode=getattr(task, "completion_mode", None),
+                )
+            ],
+        )
+    )
+    return BackgroundTaskCompleted(
+        task_id=task.task_id,
+        tool_name=task.tool_name,
+        output=output,
+        is_error=task.result.is_error if task.result else False,
+    )
+
+
+def build_background_reminder(
+    background_manager: BackgroundTaskManager,
+) -> ConversationMessage | None:
+    """Build a single durable user message summarising live background tasks.
+
+    Returns ``None`` if no tasks are running. The returned message is a
+    regular ``ConversationMessage`` and is appended to *display_messages*
+    so the user (and subsequent compaction passes) can see it. It is NOT
+    a separate ephemeral concept — once appended, it lives in history.
+
+    Calling this advances the per-task reminder cursor via
+    :meth:`BackgroundTaskManager.get_reminder_diff`, so each call yields
+    only progress lines that have appeared since the previous reminder.
+    """
+    pending = list(background_manager.iter_running())
+    if not pending:
+        return None
+
+    content: list[BackgroundTaskStateBlock] = []
+    for t in pending:
+        elapsed = time.monotonic() - t.started_at
+        label = t.task_note or t.tool_name
+        new_lines, since = background_manager.get_reminder_diff(t.task_id)
+        if new_lines:
+            text = f"Running for {elapsed:.0f}s\nNew output (last {len(new_lines)} lines):\n"
+            text += "\n".join(new_lines)
+        else:
+            text = f"Running for {elapsed:.0f}s\nNo new output in the last {since:.0f}s"
+        text += (
+            "\nKeep working on any other ready analysis or tool tasks first. "
+            "Only wait when this background task is the remaining blocker."
+        )
+        content.append(
+            BackgroundTaskStateBlock(
+                task_id=t.task_id,
+                tool_name=t.tool_name,
+                task_type=t.task_type,
+                status="running",
+                source="engine_progress",
+                text=text,
+                task_note=label,
+                run_id=t.run_id,
+            )
+        )
+
+    return ConversationMessage(role="user", content=content)
+
+
+def append_and_emit_reminder(
+    background_manager: BackgroundTaskManager,
+    display_messages: list[ConversationMessage],
+) -> SystemNotification | None:
+    """Append a background reminder message and return the matching event.
+
+    Returns ``None`` when no reminder is produced (no running tasks).
+    The append + yield pairing is packaged here so the caller cannot
+    drift the two sides apart.
+    """
+    reminder_msg = build_background_reminder(background_manager)
+    if reminder_msg is None:
+        return None
+    display_messages.append(reminder_msg)
+    return SystemNotification(
+        text=reminder_msg.background_task_state_text,
+        category="background_progress",
+    )
