@@ -33,27 +33,6 @@ def _record_to_task(rec: Any) -> "Task":
     return record_to_task(rec)
 
 
-def _extract_replan_from_messages(messages: list[dict]) -> "ReplanRequest | None":
-    """Detect if the main run attempted ``request_replan`` (posthook-only tool).
-
-    The agent may call ``request_replan`` during the main run, which fails
-    with "Unknown tool". We honour that intent so the posthook LLM doesn't
-    silently downgrade it to ``post_note``.
-    """
-    for msg in reversed(messages):
-        # assistant messages contain tool_use blocks
-        content = msg.get("content")
-        if not isinstance(content, list):
-            continue
-        for block in content:
-            if isinstance(block, dict) and block.get("type") == "tool_use" and block.get("name") == "request_replan":
-                inp = block.get("input", {})
-                return ReplanRequest(
-                    reason=inp.get("reason", "request_replan called during main run"),
-                    suggestion=inp.get("suggestion"),
-                )
-    return None
-
 
 def _extract_json_payload(text: str) -> dict[str, Any] | None:
     """Extract the first dict-shaped JSON object from free text, preferring fences."""
@@ -264,14 +243,6 @@ class Executor:
         messages: list[dict] = []
         if conductor is not None:
             messages = conductor._executor_snapshots.get(task.id, [])
-
-        # Detect if the main run attempted request_replan (it's posthook-only,
-        # so the call would have failed with "Unknown tool").  Honour the
-        # agent's intent directly instead of relying on the posthook LLM.
-        replan_from_main_run = _extract_replan_from_messages(messages)
-        if replan_from_main_run is not None:
-            logger.info("[posthook] honouring request_replan from main run for task %s (%s)", task.id, task.agent_name)
-            return replan_from_main_run
 
         toolkit = PosthookTools.from_context(ctx)
         post_run_tools = toolkit.list_tools()
