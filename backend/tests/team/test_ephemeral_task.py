@@ -56,14 +56,14 @@ async def test_check_falls_back_to_factual_without_api_client():
     tc = _tc()
     _seed_task(tc)
     for i in range(5):
-        tc.on_edit("t1", f"file{i}.py")
+        tc.activity.on_edit("t1", f"file{i}.py")
 
-    result = await tc.check("t1")
+    result = await tc.activity.check("t1")
     assert result is True
 
-    notes = await tc.read()
+    notes = await tc.notes.read()
     assert len(notes) == 1
-    assert "Auto-checkpoint" in notes[0].content
+    assert "Auto note" in notes[0].content
     assert "5 edits" in notes[0].content
 
 
@@ -72,25 +72,25 @@ async def test_check_uses_llm_when_snapshot_provided():
     tc = _tc()
     _seed_task(tc)
     for i in range(5):
-        tc.on_edit("t1", f"file{i}.py")
+        tc.activity.on_edit("t1", f"file{i}.py")
 
     from external_trigger.tc_note import NoteSummary
 
     mock_result = NoteSummary(
         task_id="t1", trigger="edit",
-        note_summary="Edited 5 files to fix parser indentation.",
+        content="Edited 5 files to fix parser indentation.",
         turns_used=1,
     )
 
-    with patch("external_trigger.tc_note.run_checkpoint_note", new_callable=AsyncMock, return_value=mock_result):
+    with patch("external_trigger.tc_note.run_tc_note", new_callable=AsyncMock, return_value=mock_result):
         snapshot = [
             {"role": "user", "content": "Fix the bug in parser.py"},
             {"role": "assistant", "content": "I'll look at parser.py now."},
         ]
-        result = await tc.check("t1", snapshot=snapshot, api_client=AsyncMock())
+        result = await tc.activity.check("t1", snapshot=snapshot, api_client=AsyncMock())
 
     assert result is True
-    notes = await tc.read()
+    notes = await tc.notes.read()
     assert len(notes) == 1
     assert notes[0].content == "Edited 5 files to fix parser indentation."
     assert notes[0].agent_name == "developer (auto)"
@@ -101,18 +101,18 @@ async def test_check_falls_back_on_empty_llm_response():
     tc = _tc()
     _seed_task(tc)
     for _ in range(15):
-        tc.tick("t1")
+        tc.activity.tick("t1")
 
     from external_trigger.tc_note import NoteSummary
 
-    mock_result = NoteSummary(task_id="t1", trigger="turn", note_summary="", turns_used=1)
+    mock_result = NoteSummary(task_id="t1", trigger="turn", content="", turns_used=1)
 
-    with patch("external_trigger.tc_note.run_checkpoint_note", new_callable=AsyncMock, return_value=mock_result):
-        result = await tc.check("t1", snapshot=[], api_client=AsyncMock())
+    with patch("external_trigger.tc_note.run_tc_note", new_callable=AsyncMock, return_value=mock_result):
+        result = await tc.activity.check("t1", snapshot=[], api_client=AsyncMock())
 
     assert result is True
-    notes = await tc.read()
-    assert "Auto-checkpoint" in notes[0].content
+    notes = await tc.notes.read()
+    assert "Auto note" in notes[0].content
     assert "15 turns" in notes[0].content
 
 
@@ -120,11 +120,11 @@ async def test_check_falls_back_on_empty_llm_response():
 async def test_check_no_threshold_crossed():
     tc = _tc()
     _seed_task(tc)
-    tc.on_edit("t1", "a.py")  # Only 1 edit, threshold is 5
+    tc.activity.on_edit("t1", "a.py")  # Only 1 edit, threshold is 5
 
-    result = await tc.check("t1")
+    result = await tc.activity.check("t1")
     assert result is False
-    assert len(await tc.read()) == 0
+    assert len(await tc.notes.read()) == 0
 
 
 @pytest.mark.asyncio
@@ -133,11 +133,11 @@ async def test_check_turn_threshold_is_15():
     tc = _tc()
     _seed_task(tc)
     for _ in range(14):
-        tc.tick("t1")
-    assert tc.should_checkpoint("t1") is None
+        tc.activity.tick("t1")
+    assert tc.activity.should_take_note("t1") is None
 
-    tc.tick("t1")
-    assert tc.should_checkpoint("t1") == "turn"
+    tc.activity.tick("t1")
+    assert tc.activity.should_take_note("t1") == "turn"
 
 
 @pytest.mark.asyncio
@@ -145,9 +145,9 @@ async def test_check_edit_resets_turn_counter():
     tc = _tc()
     _seed_task(tc)
     for _ in range(10):
-        tc.tick("t1")
-    tc.on_edit("t1", "a.py")
-    assert tc._get_counters("t1")["turns"] == 0
+        tc.activity.tick("t1")
+    tc.activity.on_edit("t1", "a.py")
+    assert tc.activity._get_counters("t1")["turns"] == 0
 
 
 @pytest.mark.asyncio
@@ -155,9 +155,9 @@ async def test_check_resets_counters_after_note():
     tc = _tc()
     _seed_task(tc)
     for i in range(5):
-        tc.on_edit("t1", f"file{i}.py")
+        tc.activity.on_edit("t1", f"file{i}.py")
 
-    await tc.check("t1")
+    await tc.activity.check("t1")
 
     # Counters should be reset after note posted
-    assert tc.should_checkpoint("t1") is None
+    assert tc.activity.should_take_note("t1") is None

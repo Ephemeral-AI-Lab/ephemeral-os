@@ -62,19 +62,16 @@ async def assess_pause(
     )
 
     validated = result.validated
-    if isinstance(validated, PauseVerdictInput):
-        return PauseVerdict(
-            task_id=task_id,
-            answer=validated.answer,
-            reason=validated.reason,
-            conversation=result.conversation,
-            turns_used=result.turns_used,
+    if not isinstance(validated, PauseVerdictInput):
+        raise RuntimeError(
+            f"assess_pause (task={task_id}): runner returned unexpected "
+            f"validated type {type(validated).__name__}, expected PauseVerdictInput"
         )
 
-    # Should not reach here — runner guarantees validated output.
     return PauseVerdict(
         task_id=task_id,
-        answer="NO",
-        reason="unexpected validation state",
+        answer=validated.answer,
+        reason=validated.reason,
         conversation=result.conversation,
+        turns_used=result.turns_used,
     )

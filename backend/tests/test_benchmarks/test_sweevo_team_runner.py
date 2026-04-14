@@ -741,7 +741,7 @@ def test_make_runner_logs_tc_note_external_hook(monkeypatch, tmp_path: Path):
         def tick(self, _task_id: str) -> None:
             return None
 
-        def should_checkpoint(self, _task_id: str) -> str | None:
+        def should_take_note(self, _task_id: str) -> str | None:
             if self._triggered:
                 return None
             self._triggered = True
@@ -861,7 +861,7 @@ def test_make_runner_skips_tc_note_when_trigger_not_allowed(monkeypatch, tmp_pat
         def tick(self, _task_id: str) -> None:
             return None
 
-        def should_checkpoint(self, _task_id: str) -> str | None:
+        def should_take_note(self, _task_id: str) -> str | None:
             return "turn"  # always eligible
 
         async def check(self, task_id, *, snapshot=None, api_client=None, model=None):
@@ -936,7 +936,7 @@ def test_make_runner_skips_tc_note_when_trigger_not_allowed(monkeypatch, tmp_pat
         )
     )
 
-    # Checkpoint should NOT have been called despite should_checkpoint returning "turn"
+    # Checkpoint should NOT have been called despite should_take_note returning "turn"
     assert checkpoint_calls == []
 
 

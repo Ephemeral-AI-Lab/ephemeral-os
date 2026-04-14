@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import time
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker

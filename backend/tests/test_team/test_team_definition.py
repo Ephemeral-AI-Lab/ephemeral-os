@@ -227,6 +227,7 @@ class _FakeTaskCenter:
         self.graph = {}
         self._events = NullTeamRunStore()
         self._notes = []
+        self.store = self  # production reads all_terminal/get_statuses via tc.store
 
     async def add_task(self, task) -> None:
         self.budget_state.tasks_used += 1
@@ -243,8 +244,8 @@ class _FakeTaskCenter:
     async def all_terminal(self) -> bool:
         return True
 
-    async def compute_final_statuses(self) -> set[str]:
-        return {"cancelled"}
+    async def get_statuses(self) -> dict[str, str]:
+        return {"task-1": "cancelled"}
 
 
 class _FakeDispatchQueue:

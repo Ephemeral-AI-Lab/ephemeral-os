@@ -13,6 +13,8 @@ from typing import TYPE_CHECKING, Any, Callable
 
 from team.models import AgentResult, BlockerDeclaration, Plan, ReplanPlan, ReplanRequest, TaskStatus
 from team.runtime.context_builder import TeamAgentContext
+from team.runtime.plan_health_monitor import PlanHealthMonitor
+from team.runtime.scope_change_notifier import ScopeChangeNotifier
 from tools.core.base import ToolExecutionContext
 
 if TYPE_CHECKING:
@@ -78,6 +80,8 @@ class Executor:
         self.agent_lookup = agent_lookup
         self.build_query_context = build_query_context
         self.after_dispatch = after_dispatch
+        self.plan_health = PlanHealthMonitor(team_run)
+        self.scope_notifier = ScopeChangeNotifier(team_run)
 
     async def _checkpoint_after_transition(self, task: "Task", *, outcome: str) -> None:
         try:
@@ -183,34 +187,7 @@ class Executor:
         await self._dispatch(task, result)
 
     async def _inject_scope_warnings(self, task: "Task") -> None:
-        if not task.scope_paths:
-            return
-        store = getattr(self.team_run, "file_change_store", None)
-        if store is None or not getattr(store, "initialized", False):
-            return
-        created_ts = task.created_at.timestamp() if task.created_at else 0.0
-        changes = store.changes_since(created_ts)
-        external = [
-            e for e in changes
-            if e.agent_run_id != (task.agent_run_id or "")
-            and any(e.file_path.startswith(p.rstrip("/")) for p in task.scope_paths)
-        ]
-        if not external:
-            return
-        now = time.time()
-        lines = ["## Warning: scope changes detected since plan creation",
-                 "The following files in your scope were modified externally:"]
-        for e in external:
-            lines.append(f"- {e.file_path} ({e.edit_type} by {e.agent_id}, {int(now - e.created_at.timestamp())}s ago)")
-        lines.append("Review these changes before proceeding. Call request_replan() if your task is no longer valid.")
-        from team.models import Note
-        try:
-            await self.team_run.task_center.post(Note(
-                id=str(uuid.uuid4()), task_id=task.id, agent_name="system",
-                content="\n".join(lines), timestamp=now, scope_paths=list(task.scope_paths),
-            ))
-        except Exception:
-            logger.debug("Failed to persist scope warning for %s", task.id, exc_info=True)
+        await self.scope_notifier.inject_warning(task)
 
     async def _build_context(self, defn: "AgentDefinition", task: "Task") -> TeamAgentContext:
         if self.build_query_context is not None:
@@ -219,29 +196,7 @@ class Executor:
         return await build_query_context(defn, self.team_run, task)
 
     async def _plan_health_prefix(self, task: "Task") -> str | None:
-        if not task.parent_id:
-            return None
-        try:
-            stats = await self.team_run.task_center.sibling_stats(task.parent_id)
-        except Exception:
-            return None
-        lines: list[str] = []
-        done = stats.get("done", 0)
-        failed = stats.get("failed", 0)
-        started = done + failed
-        retry_total = stats.get("retry_total", 0)
-        if started >= 3 and started > 0 and failed / started > 0.4:
-            lines.append(
-                f"**PLAN HEALTH CRITICAL:** {failed}/{started} sibling tasks "
-                f"have failed. Consider calling `request_replan()` if your "
-                f"task depends on their output."
-            )
-        if retry_total >= 3:
-            lines.append(
-                f"**PLAN HEALTH WARNING:** {retry_total} retries across "
-                f"sibling tasks. Check for systemic issues before proceeding."
-            )
-        return "\n".join(lines) if lines else None
+        return await self.plan_health.compute_prefix(task)
 
     async def _run_post_run(
         self,
@@ -418,7 +373,7 @@ class Executor:
         max_bytes = getattr(budget, "max_note_bytes", 100_000) if budget else 100_000
         from team.models import Note
         try:
-            await self.team_run.task_center.post(Note(
+            await self.team_run.task_center.notes.post(Note(
                 id=str(uuid.uuid4()), task_id=task.id,
                 agent_name=task.agent_name or "unknown",
                 content=summary[:max_bytes], timestamp=time.time(),
@@ -428,43 +383,7 @@ class Executor:
             logger.debug("completion note: post failed for %s", task.id, exc_info=True)
 
     async def _post_checkpoint_note(self, task: "Task", result: Any) -> str | None:
-        tc = self.team_run.task_center
-        try:
-            stats = await tc.sibling_stats(task.parent_id)
-        except Exception:
-            logger.debug("checkpoint note: sibling_stats failed for %s", task.id, exc_info=True)
-            return None
-        lines = [f"**Checkpoint: {task.id} ({task.agent_name}) → {task.status}**"]
-        if task.failure_reason:
-            lines.append(f"Failure: {task.failure_reason}")
-        fc_store = getattr(self.team_run, "file_change_store", None)
-        if fc_store is not None and getattr(fc_store, "initialized", False) and task.agent_run_id:
-            try:
-                changes = fc_store.changes_by_agent_run(self.team_run.id, task.agent_run_id)
-                if changes:
-                    lines.append(f"Files touched: {', '.join(c.file_path for c in changes[:10])}")
-            except Exception:
-                pass
-        action = None
-        done, failed = stats.get("done", 0), stats.get("failed", 0)
-        started = done + failed
-        retry_total = stats.get("retry_total", 0)
-        if started >= 3 and started > 0 and failed / started > 0.4:
-            lines.append(f"PLAN HEALTH CRITICAL: {failed}/{started} sibling tasks failed")
-            action = "replan"
-        elif retry_total >= 3:
-            lines.append(f"PLAN HEALTH WARNING: {retry_total} retries across sibling tasks")
-        note_owner = task.parent_id or task.id
-        from team.models import Note
-        try:
-            await tc.post(Note(
-                id=str(uuid.uuid4()), task_id=note_owner, agent_name="checkpoint",
-                content="\n".join(lines), timestamp=time.time(),
-                scope_paths=list(task.scope_paths) if task.scope_paths else [],
-            ))
-        except Exception:
-            logger.debug("checkpoint note: post failed for %s", task.id, exc_info=True)
-        return action
+        return await self.plan_health.post_checkpoint_note(task, result)
 
     async def _dispatch(self, task: "Task", result: Any) -> None:
         tc = self.team_run.task_center

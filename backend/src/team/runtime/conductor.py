@@ -133,7 +133,7 @@ class Conductor:
     async def _assess_running(self, blocker: Blocker) -> None:
         """Assess all RUNNING siblings+descendants of the initiating task."""
         tc = self._team_run.task_center
-        candidates = await tc.get_siblings_and_descendants(blocker.initiating_task_id)
+        candidates = await tc.store.get_siblings_and_descendants(blocker.initiating_task_id)
         running = [r for r in candidates if r.status == TaskStatus.RUNNING.value]
 
         # Skip tasks already paused by this or another blocker
@@ -270,7 +270,7 @@ class Conductor:
                 deps=[],
                 scope_paths=task.scope_paths,
             )
-            await tc.insert_plan([spec])
+            await tc.store.insert_plan([spec])
         blocker.fix_task_id = resolver_id
         logger.info("Spawned resolver task %s for blocker %s", resolver_id, blocker.id)
         await self._persist(blocker)
@@ -302,7 +302,7 @@ class Conductor:
             deps=[],
             scope_paths=list(blocker.root_cause_paths),
         )
-        await tc.insert_plan([spec])
+        await tc.store.insert_plan([spec])
 
     # ------------------------------------------------------------------
     # Fix outcome handlers

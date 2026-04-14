@@ -66,10 +66,11 @@ async def check_freshness(context: ToolExecutionContext) -> FreshnessReport:
     if tc is not None:
         task_deps = set(context.metadata.get("task_deps", []))
         if task_deps:
-            dep_notes = await tc.read(authors=list(task_deps), since=since)
+            dep_notes = await tc.notes.read(authors=list(task_deps), since=since)
             new_dep_notes = len(dep_notes)
-    if tc is not None and hasattr(tc, "done_sibling_ids"):
-        sibling_ids = await tc.done_sibling_ids(
+    store = getattr(tc, "store", None) if tc is not None else None
+    if store is not None and hasattr(store, "get_done_sibling_ids"):
+        sibling_ids = await store.get_done_sibling_ids(
             task_id=task_id,
             parent_id=context.metadata.get("task_parent_id"),
             since=since,

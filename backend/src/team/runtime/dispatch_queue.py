@@ -9,7 +9,7 @@ from __future__ import annotations
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from team.persistence.task_record import TaskRecord, row_to_record
+from team.persistence.task_record import TaskRecord
 
 
 class DispatchQueue:
@@ -49,6 +49,6 @@ class DispatchQueue:
                 .returning(TaskRecord)
                 .execution_options(synchronize_session=False)
             )
-            row = (await db.execute(stmt)).scalar_one_or_none()
+            rec = (await db.execute(stmt)).scalar_one_or_none()
             await db.commit()
-            return row_to_record(row) if row else None
+            return rec

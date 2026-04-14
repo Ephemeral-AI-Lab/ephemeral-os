@@ -129,7 +129,7 @@ def test_on_fix_failed_falls_back_to_status_when_team_run_has_no_handler():
 
 def test_assess_running_emits_pause_assess_events(monkeypatch):
     events: list[dict] = []
-    task_center = SimpleNamespace(
+    fake_store = SimpleNamespace(
         get_siblings_and_descendants=AsyncMock(return_value=[
             SimpleNamespace(
                 id="task-2",
@@ -139,6 +139,9 @@ def test_assess_running_emits_pause_assess_events(monkeypatch):
                 blocker_id=None,
             )
         ]),
+    )
+    task_center = SimpleNamespace(
+        store=fake_store,
         pause_running_task=AsyncMock(return_value=False),
     )
     team_run = SimpleNamespace(

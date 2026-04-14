@@ -42,13 +42,20 @@ class FakePlannerDefn:
     name = "team_planner"
 
 
+class _NotesProxy(list):
+    """List that also exposes ``.post()`` so production code (``tc.notes.post(...)``)
+    appends here while tests can still treat ``tc.notes`` as a plain list."""
+
+    async def post(self, note):
+        self.append(note)
+
+
 class FakeTaskCenter:
     """Captures posted notes for assertion."""
     def __init__(self):
-        self.notes: list[Note] = []
-
-    async def post(self, note: Note) -> None:
-        self.notes.append(note)
+        self.notes = _NotesProxy()
+        self.store = self  # production reads sibling_stats via tc.store
+        self.activity = self  # production routes activity calls via tc.activity
 
 
 class FakeTeamRun:

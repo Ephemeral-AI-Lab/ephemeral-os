@@ -106,24 +106,18 @@ class TestTaskCenterStructure:
     def test_has_required_methods(self):
         """Verify the unified TaskCenter API has all required methods."""
         assert callable(getattr(TaskCenter, 'mark_running', None))
-        assert callable(getattr(TaskCenter, 'insert_plan', None))
         assert callable(getattr(TaskCenter, 'get_task', None))
-        assert callable(getattr(TaskCenter, 'all_terminal', None))
-        assert callable(getattr(TaskCenter, 'cascade_cancel_recursive', None))
-        assert callable(getattr(TaskCenter, 'recover_running', None))
         assert callable(getattr(TaskCenter, 'fail', None))
         assert callable(getattr(TaskCenter, 'cancel_all_pending', None))
         assert callable(getattr(TaskCenter, 'cancel_all_running', None))
         assert callable(getattr(TaskCenter, 'request_replan', None))
-        assert callable(getattr(TaskCenter, 'get_adjacency', None))
-        assert callable(getattr(TaskCenter, 'get_statuses', None))
-        # Unified: notes + context
-        assert callable(getattr(TaskCenter, 'post', None))
-        assert callable(getattr(TaskCenter, 'read', None))
-        assert callable(getattr(TaskCenter, 'context_for', None))
         # Orchestration
         assert callable(getattr(TaskCenter, 'complete_task', None))
         assert callable(getattr(TaskCenter, 'apply_replan', None))
+        # Manager accessors (notes/store/activity exposed as properties)
+        assert isinstance(getattr(TaskCenter, 'notes', None), property)
+        assert isinstance(getattr(TaskCenter, 'store', None), property)
+        assert isinstance(getattr(TaskCenter, 'activity', None), property)
 
 
 from team.runtime.dispatch_queue import DispatchQueue
@@ -143,8 +137,8 @@ class _FakeCascadeSession:
     def __init__(self) -> None:
         self.statements: list[str] = []
 
-    async def execute(self, statement, params):
-        del params
+    async def execute(self, statement, *args, **kwargs):
+        del args, kwargs
         self.statements.append(str(statement))
         return _FakeCascadeResult()
 
@@ -181,11 +175,13 @@ def test_cascade_cancel_recursive_seeds_root_then_walks_dependents():
         budget_state=BudgetState(),
     )
 
-    asyncio.run(tc.cascade_cancel_recursive("task-1"))
+    asyncio.run(tc.store.cascade_cancel_recursive("task-1"))
 
     sql = session.statements[0]
-    assert "WITH RECURSIVE dep_chain AS" in sql
-    assert "AND id=:tid" in sql
-    assert "dc.id = ANY(t.deps)" in sql
-    assert "t.parent_id = dc.id" in sql
-    assert "WHERE id != :tid" in sql
+    assert "WITH RECURSIVE dep_chain" in sql
+    assert "UNION ALL" in sql
+    assert "= ANY (descendant.deps)" in sql
+    assert "descendant.parent_id = dep_chain.id" in sql
+    assert "UPDATE tasks" in sql
+    assert "dep_chain.id !=" in sql
+    assert "RETURNING tasks.id" in sql

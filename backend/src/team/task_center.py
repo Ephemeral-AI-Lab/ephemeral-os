@@ -8,7 +8,7 @@ the runtime:
 - ``PlanExpander``    — submitted-plan validation, expansion, replan apply
 - ``TransitionTracker`` — diff/emit task state-change events
 - ``NoteManager``     — note posting, scope filtering, context building
-- ``ActivityTracker`` — edit/turn counters, auto-checkpoint triggers
+- ``ActivityTracker`` — edit/turn counters, auto note triggers
 - ``CheckpointManager`` — snapshot ring buffer + rollback
 """
 
@@ -104,6 +104,7 @@ class TaskCenter:
             event_store_cb=self._emit,
             get_task_fn=lambda tid: self.get_task(tid),
             task_store=self._store,
+            file_change_store=file_change_store,
         )
 
         def _on_note_posted(note: Note) -> None:
@@ -112,6 +113,8 @@ class TaskCenter:
         self._activity = ActivityTracker(
             team_run_id=team_run_id,
             note_posted_cb=_on_note_posted,
+            graph_getter=lambda: self._store.graph,
+            post_note_cb=self._notes.post,
         )
 
         self._checkpoints = CheckpointManager(
@@ -437,164 +440,4 @@ class TaskCenter:
         self._resume_snapshot = None
         await self._store.refresh_graph()
 
-    # ---- notes -----------------------------------------------------------
 
-    def set_blocker_provider(
-        self, provider: Callable[[], Awaitable[list[Any]]] | None
-    ) -> None:
-        """Register an async callable that returns current active blockers.
-
-        Used by ``context_for`` to surface in-progress blockers to the
-        replanner. Skill-level instructions (see team-replanner-playbook) tell
-        the replanner to prefer ``add_tasks(deps=[fix_task_id])`` over
-        ``declare_blocker`` when root_cause_paths overlap an existing entry.
-        """
-        self._blocker_provider = provider
-
-    async def context_for(self, task: Task, *, max_context_bytes: int = 200_000) -> str:
-        active_blockers: list[Any] = []
-        if self._blocker_provider is not None:
-            try:
-                active_blockers = await self._blocker_provider()
-            except Exception:
-                logger.exception("blocker_provider failed; continuing without blockers")
-                active_blockers = []
-        return await self._notes.context_for(
-            task,
-            max_context_bytes=max_context_bytes,
-            file_change_store=self._file_change_store,
-            active_blockers=active_blockers,
-        )
-
-    async def post(self, note: Note) -> None:
-        await self._notes.post(note)
-
-    async def read(
-        self,
-        *,
-        authors: list[str] | None = None,
-        scope_paths: list[str] | None = None,
-        since: float | None = None,
-        limit: int | None = None,
-    ) -> list[Note]:
-        return await self._notes.read(
-            authors=authors, scope_paths=scope_paths, since=since, limit=limit
-        )
-
-    async def read_notes(
-        self,
-        *,
-        task_id: str,
-        scope: str = "full",
-        keyword: str | None = None,
-        scope_paths: list[str] | None = None,
-        limit: int | None = None,
-    ) -> list[Note]:
-        return await self._notes.read_notes(
-            task_id=task_id, scope=scope, keyword=keyword, scope_paths=scope_paths, limit=limit
-        )
-
-    async def read_sibling_notes(
-        self, parent_id: str, *, keyword: str | None = None, scope_paths: list[str] | None = None
-    ) -> str:
-        return await self._notes.read_sibling_notes(
-            parent_id=parent_id, keyword=keyword, scope_paths=scope_paths
-        )
-
-    def snapshot(self) -> list[Note]:
-        return self._notes.snapshot()
-
-    def restore(self, notes: list[Note]) -> None:
-        self._notes.restore(notes)
-
-    # ---- activity --------------------------------------------------------
-
-    def on_edit(self, task_id: str, file_path: str) -> None:
-        self._activity.on_edit(task_id, file_path)
-
-    def on_posthook(self, task_id: str) -> None:
-        self._activity.on_posthook(task_id)
-
-    def tick(self, task_id: str) -> None:
-        self._activity.tick(task_id)
-
-    def should_checkpoint(self, task_id: str) -> str | None:
-        return self._activity.should_checkpoint(task_id)
-
-    def _get_counters(self, task_id: str) -> dict[str, Any]:
-        return self._activity._get_counters(task_id)
-
-    async def check(
-        self,
-        task_id: str,
-        *,
-        snapshot: list[dict] | None = None,
-        api_client: Any = None,
-        model: str | None = None,
-    ) -> bool:
-        task = self.graph.get(task_id)
-        agent_name = task.agent_name if task else "unknown"
-        scope_paths = list(task.scope_paths) if task and task.scope_paths else []
-        agent_run_id = task.agent_run_id if task else task_id
-        return await self._activity.check(
-            task_id=task_id,
-            graph=self.graph,
-            scope_paths=scope_paths,
-            agent_name=agent_name,
-            agent_run_id=agent_run_id,
-            snapshot=snapshot,
-            api_client=api_client,
-            model=model,
-            post_note_cb=self._notes.post,
-        )
-
-    # ---- store passthrough -----------------------------------------------
-
-    async def recover_running(self) -> list[TaskRecord]:
-        return await self._store.recover_running()
-
-    async def cascade_cancel_recursive(self, root_task_id: str) -> list[str]:
-        return await self._store.cascade_cancel_recursive(root_task_id)
-
-    async def compute_final_statuses(self) -> set[str]:
-        return set((await self._store.get_statuses()).values())
-
-    async def known_task_ids(self) -> set[str]:
-        return await self._store.get_task_ids()
-
-    async def done_sibling_ids(
-        self, *, task_id: str, parent_id: str | None, since: float | None = None
-    ) -> list[str]:
-        return await self._store.get_done_sibling_ids(
-            task_id=task_id, parent_id=parent_id, since=since
-        )
-
-    async def all_terminal(self) -> bool:
-        return await self._store.all_terminal()
-
-    async def sibling_stats(self, parent_id: str | None) -> dict[str, int]:
-        return await self._store.sibling_stats(parent_id)
-
-    async def insert_plan(
-        self,
-        specs: list[TaskSpec],
-        parent_id: str | None = None,
-        parent_depth: int = 0,
-        parent_root_id: str | None = None,
-    ) -> list[TaskRecord]:
-        return await self._store.insert_plan(specs, parent_id, parent_depth, parent_root_id)
-
-    async def get_all_tasks(self) -> list[TaskRecord]:
-        return await self._store.get_all_tasks()
-
-    async def get_adjacency(self) -> dict[str, list[str]]:
-        return await self._store.get_adjacency()
-
-    async def get_statuses(self) -> dict[str, str]:
-        return await self._store.get_statuses()
-
-    async def get_task_ids(self) -> set[str]:
-        return await self._store.get_task_ids()
-
-    async def get_siblings_and_descendants(self, initiating_task_id: str) -> list[TaskRecord]:
-        return await self._store.get_siblings_and_descendants(initiating_task_id)

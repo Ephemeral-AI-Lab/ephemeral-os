@@ -160,7 +160,7 @@ def build_initial_messages(task: Task) -> list[ConversationMessage]:
 
 async def build_initial_user_message(team_run: "TeamRun", task: Task, prefix: str | None = None) -> str:
     """Build context string for a task via TaskCenter."""
-    context = await team_run.task_center.context_for(task)
+    context = await team_run.task_center.notes.context_for(task)
     # Priority 0: resume message for formerly-paused tasks
     if getattr(task, 'pause_checkpoint', None) and getattr(task, 'pause_verdict', None):
         resume_msg = (

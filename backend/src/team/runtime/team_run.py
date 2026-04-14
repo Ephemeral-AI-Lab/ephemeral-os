@@ -82,7 +82,7 @@ class TeamRun:
         blocker_store = BlockerStore(sf, self.id) if sf is not None else None
         self.conductor: Conductor = Conductor(self, blocker_store=blocker_store)
         if blocker_store is not None:
-            self.task_center.set_blocker_provider(blocker_store.load_active)
+            self.task_center.notes.set_blocker_provider(blocker_store.load_active)
 
     @staticmethod
     def _resolve_api_client() -> Any:
@@ -172,7 +172,7 @@ class TeamRun:
             self._executor_tasks.append(asyncio.create_task(executor.run_forever()))
 
     async def _is_all_terminal(self) -> bool:
-        return await self.task_center.all_terminal()
+        return await self.task_center.store.all_terminal()
 
     async def wait(self, *, timeout: float | None = None) -> TeamRunStatus:
         try:
@@ -209,7 +209,7 @@ class TeamRun:
         self.cancel_event.clear()
 
     async def _compute_final_status(self) -> None:
-        statuses = await self.task_center.compute_final_statuses()
+        statuses = set((await self.task_center.store.get_statuses()).values())
         if "failed" in statuses:
             self.status = TeamRunStatus.FAILED
         elif "cancelled" in statuses:

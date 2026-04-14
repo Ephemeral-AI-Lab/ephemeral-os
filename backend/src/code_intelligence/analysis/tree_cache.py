@@ -16,10 +16,7 @@ Lock ordering (Group A):
 from __future__ import annotations
 
 import ast
-import asyncio
-import concurrent.futures
 import hashlib
-import inspect
 import logging
 import threading
 import time
@@ -29,6 +26,7 @@ from pathlib import Path
 from typing import Any
 from collections.abc import Callable
 
+from code_intelligence._async_bridge import run_sync
 from code_intelligence.constants import (
     TREE_CACHE_MAX_FILE_SIZE,
     TREE_CACHE_MAX_FILES,
@@ -193,7 +191,7 @@ class TreeCache:
 
         if callable(get_info):
             try:
-                info = self._resolve(get_info(file_path))
+                info = run_sync(get_info(file_path))
                 with self._counter_lock:
                     self._stat_calls += 1
                 return str(getattr(info, "mod_time", "") or "")
@@ -214,7 +212,7 @@ class TreeCache:
 
         if callable(download):
             try:
-                raw = self._resolve(download(file_path))
+                raw = run_sync(download(file_path))
                 if isinstance(raw, bytes):
                     return raw.decode("utf-8")
                 return str(raw) if raw is not None else None
@@ -230,20 +228,6 @@ class TreeCache:
             return p.read_text(encoding="utf-8")
         except Exception:
             return None
-
-    @staticmethod
-    def _resolve(result: Any) -> Any:
-        """Resolve possibly-async sandbox results in sync context."""
-        if inspect.isawaitable(result):
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                loop = None
-            if loop and loop.is_running():
-                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                    return pool.submit(asyncio.run, result).result()
-            return asyncio.run(result)
-        return result
 
     # -- Internal -------------------------------------------------------------
 

@@ -18,10 +18,11 @@ if get_definition("developer") is None:
 
 class _AsyncTaskCenterStub:
     def __init__(self) -> None:
-        self.notes = []
+        self.posted: list = []
+        self.notes = self  # production code calls tc.notes.post(note)
 
     async def post(self, note) -> None:
-        self.notes.append(note)
+        self.posted.append(note)
 
 
 class _AsyncDispatcherStub:
@@ -120,8 +121,8 @@ async def test_submit_plan_resolves_roster_role_hints():
     resolved_plan = result.metadata.get("resolved_plan")
     assert resolved_plan is not None
     assert resolved_plan.tasks[1].agent == "validator"
-    assert len(task_center.notes) == 1
-    assert "Submitted plan with 2 task(s)." in task_center.notes[0].content
+    assert len(task_center.posted) == 1
+    assert "Submitted plan with 2 task(s)." in task_center.posted[0].content
 
 
 @pytest.mark.asyncio
@@ -162,4 +163,4 @@ async def test_submit_plan_rejects_oversize_task_notes():
     assert result.is_error is True
     assert "max_note_bytes" in result.output
     assert ctx.metadata.get("submitted_output") is None
-    assert task_center.notes == []
+    assert task_center.posted == []

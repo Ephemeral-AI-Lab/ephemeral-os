@@ -1,5 +1,5 @@
 # ruff: noqa
-"""Live e2e tests — External trigger: checkpoint note via run_checkpoint_note().
+"""Live e2e tests — External trigger: checkpoint note via run_tc_note().
 
 Tests the checkpoint note generation flow through the real LLM:
 
@@ -9,7 +9,7 @@ Tests the checkpoint note generation flow through the real LLM:
   4. Empty snapshot — still produces a valid note
   5. Note content is meaningful (not just a placeholder)
 
-Uses run_checkpoint_note() which calls runner.run().
+Uses run_tc_note() which calls runner.run().
 
 Run with:
     .venv/bin/python -m pytest backend/tests/test_e2e/test_external_trigger_checkpoint_note_live.py -v -m live -o "addopts="
@@ -21,9 +21,9 @@ import pytest
 
 from engine.testing.eval_agent import EvalAgent
 from external_trigger.tc_note import (
-    EDIT_CHECKPOINT_PROMPT,
-    TURN_CHECKPOINT_PROMPT,
-    run_checkpoint_note,
+    TC_NOTE_EDIT_PROMPT,
+    TC_NOTE_TURN_PROMPT,
+    run_tc_note,
 )
 from tests.test_e2e.conftest import create_eval_agent
 
@@ -74,22 +74,22 @@ async def test_edit_checkpoint_mentions_files(api_client):
         )},
     ]
 
-    result = await run_checkpoint_note(
+    result = await run_tc_note(
         task_id="fix-io",
         agent_run_id="run-fix-io",
         messages=messages,
-        prompt=EDIT_CHECKPOINT_PROMPT,
+        prompt=TC_NOTE_EDIT_PROMPT,
         trigger="edit",
         api_client=api_client,
     )
 
     assert result.task_id == "fix-io"
     assert result.trigger == "edit"
-    assert len(result.note_summary) > 20, f"Note too short: {result.note_summary}"
+    assert len(result.content) > 20, f"Note too short: {result.content}"
     # Should mention the edited file
-    note_lower = result.note_summary.lower()
+    note_lower = result.content.lower()
     assert "io" in note_lower or "pkg" in note_lower, (
-        f"Edit note should mention the file: {result.note_summary}"
+        f"Edit note should mention the file: {result.content}"
     )
     assert result.turns_used >= 1
 
@@ -115,18 +115,18 @@ async def test_turn_checkpoint_reports_status(api_client):
         )},
     ]
 
-    result = await run_checkpoint_note(
+    result = await run_tc_note(
         task_id="fix-auth",
         agent_run_id="run-fix-auth",
         messages=messages,
-        prompt=TURN_CHECKPOINT_PROMPT,
+        prompt=TC_NOTE_TURN_PROMPT,
         trigger="turn",
         api_client=api_client,
     )
 
     assert result.task_id == "fix-auth"
     assert result.trigger == "turn"
-    assert len(result.note_summary) > 20, f"Note too short: {result.note_summary}"
+    assert len(result.content) > 20, f"Note too short: {result.content}"
 
 
 # ---------------------------------------------------------------------------
@@ -153,24 +153,24 @@ async def test_stuck_agent_checkpoint_reflects_blocked(api_client):
         )},
     ]
 
-    result = await run_checkpoint_note(
+    result = await run_tc_note(
         task_id="fix-serializer",
         agent_run_id="run-fix-serializer",
         messages=messages,
-        prompt=TURN_CHECKPOINT_PROMPT,
+        prompt=TC_NOTE_TURN_PROMPT,
         trigger="turn",
         api_client=api_client,
     )
 
-    assert len(result.note_summary) > 20
-    note_lower = result.note_summary.lower()
+    assert len(result.content) > 20
+    note_lower = result.content.lower()
     # Should mention the error or blocked state
     has_blocked_signal = any(
         kw in note_lower
         for kw in ("error", "block", "fail", "cannot", "stuck", "schema", "validation")
     )
     assert has_blocked_signal, (
-        f"Stuck agent note should mention the error/blocked state: {result.note_summary}"
+        f"Stuck agent note should mention the error/blocked state: {result.content}"
     )
 
 
@@ -183,16 +183,16 @@ async def test_stuck_agent_checkpoint_reflects_blocked(api_client):
 @pytest.mark.asyncio
 async def test_empty_snapshot_produces_note(api_client):
     """Even with no prior conversation, checkpoint should produce a valid note."""
-    result = await run_checkpoint_note(
+    result = await run_tc_note(
         task_id="new-task",
         agent_run_id="run-new-task",
         messages=[],
-        prompt=TURN_CHECKPOINT_PROMPT,
+        prompt=TC_NOTE_TURN_PROMPT,
         trigger="turn",
         api_client=api_client,
     )
 
-    assert len(result.note_summary) > 0, "Should produce some note even with empty snapshot"
+    assert len(result.content) > 0, "Should produce some note even with empty snapshot"
     assert result.turns_used >= 1
 
 
@@ -214,28 +214,28 @@ async def test_edit_and_turn_prompts_differ(api_client):
         )},
     ]
 
-    edit_result = await run_checkpoint_note(
+    edit_result = await run_tc_note(
         task_id="fix-parser",
         agent_run_id="run-fix-parser-edit",
         messages=messages,
-        prompt=EDIT_CHECKPOINT_PROMPT,
+        prompt=TC_NOTE_EDIT_PROMPT,
         trigger="edit",
         api_client=api_client,
     )
 
-    turn_result = await run_checkpoint_note(
+    turn_result = await run_tc_note(
         task_id="fix-parser",
         agent_run_id="run-fix-parser-turn",
         messages=messages,
-        prompt=TURN_CHECKPOINT_PROMPT,
+        prompt=TC_NOTE_TURN_PROMPT,
         trigger="turn",
         api_client=api_client,
     )
 
     # Both should produce meaningful content
-    assert len(edit_result.note_summary) > 20
-    assert len(turn_result.note_summary) > 20
+    assert len(edit_result.content) > 20
+    assert len(turn_result.content) > 20
     # They should not be identical (different prompt focus)
-    assert edit_result.note_summary != turn_result.note_summary, (
+    assert edit_result.content != turn_result.content, (
         "Edit and turn notes should differ in focus"
     )

@@ -8,6 +8,7 @@ tool call, max turns exhausted, or asyncio cancellation.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import sys
 import uuid
@@ -157,6 +158,8 @@ async def run(
 
         try:
             response = await _stream_to_response(api_client, request)
+        except asyncio.CancelledError:
+            raise
         except Exception:
             logger.warning(
                 "external_trigger runner: API call failed on turn %d/%d, retrying",
@@ -231,6 +234,8 @@ async def run(
                 raise RuntimeError("external_trigger runner: execute_tools=True requires execution_context")
             try:
                 tool_result = await tool.execute(validated, execution_context)
+            except asyncio.CancelledError:
+                raise
             except Exception as exc:
                 _emit(f"{agent_name} (run={run_id}) turn {turn}: tool {tool_name} raised: {exc}")
                 tool_result = ToolResult(

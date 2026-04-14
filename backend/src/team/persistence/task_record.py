@@ -8,7 +8,6 @@ The table is partitioned by team_run_id (LIST partitioning).
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any
 
 from sqlalchemy import DateTime, Integer, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY
@@ -19,35 +18,6 @@ from db.base import Base
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
-
-
-def row_to_record(row: Any) -> "TaskRecord":
-    """Convert a raw SQL row to a TaskRecord instance."""
-    return TaskRecord(
-        id=row.id,
-        team_run_id=row.team_run_id,
-        agent_name=row.agent_name,
-        status=row.status,
-        task=row.task,
-        deps=list(row.deps) if row.deps else [],
-        scope_paths=list(row.scope_paths) if row.scope_paths else [],
-        scope_ltree=list(row.scope_ltree) if getattr(row, "scope_ltree", None) else [],
-        cascade_policy=row.cascade_policy,
-        parent_id=row.parent_id,
-        root_id=row.root_id or "",
-        depth=row.depth,
-        pending_dep_count=row.pending_dep_count,
-        retry_count=row.retry_count,
-        max_retries=row.max_retries,
-        agent_run_id=row.agent_run_id,
-        created_at=row.created_at,
-        started_at=row.started_at,
-        finished_at=row.finished_at,
-        failure_reason=row.failure_reason,
-        blocker_id=getattr(row, "blocker_id", None),
-        pause_checkpoint=getattr(row, "pause_checkpoint", None),
-        pause_verdict=getattr(row, "pause_verdict", None),
-    )
 
 
 class TaskRecord(Base):

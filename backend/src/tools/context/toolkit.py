@@ -67,7 +67,7 @@ class PostNoteTool(BaseTool):
             timestamp=time.time(),
             scope_paths=scope,
         )
-        await tc.post(note)
+        await tc.notes.post(note)
         return ToolResult(output=f"Note posted ({len(arguments.content)} chars).")
 
 
@@ -121,7 +121,7 @@ class ReadNotesTool(BaseTool):
         if tc is None:
             return ToolResult(output="Error: Task Center not available", is_error=True)
         if arguments.scope:
-            notes = await tc.read_notes(
+            notes = await tc.notes.read_notes(
                 task_id=str(context.metadata.get("work_item_id") or ""),
                 scope=arguments.scope,
                 keyword=arguments.keyword,
@@ -129,7 +129,7 @@ class ReadNotesTool(BaseTool):
                 limit=arguments.limit,
             )
         else:
-            notes = await tc.read(
+            notes = await tc.notes.read(
                 authors=arguments.authors,
                 scope_paths=arguments.scope_paths,
                 limit=arguments.limit,

@@ -109,16 +109,16 @@ def _run(awaitable):
 
 def test_empty_task_center_returns_empty_reads():
     tc = _tc()
-    assert _run(tc.read()) == []
+    assert _run(tc.notes.read()) == []
 
 
 def test_post_appends_notes():
     tc = _tc()
     n1 = _note("n1", "task-1", "hello")
     n2 = _note("n2", "task-2", "world")
-    _run(tc.post(n1))
-    _run(tc.post(n2))
-    notes = _run(tc.read())
+    _run(tc.notes.post(n1))
+    _run(tc.notes.post(n2))
+    notes = _run(tc.notes.read())
     assert len(notes) == 2
     assert notes[0].id == "n1"
     assert notes[1].id == "n2"
@@ -128,7 +128,7 @@ def test_post_emits_note_posted_event():
     store = _RecordingStore()
     tc = _tc(event_store=store)
 
-    _run(tc.post(_note(
+    _run(tc.notes.post(_note(
         "n1",
         "task-1",
         "first line\nsecond line",
@@ -150,7 +150,7 @@ def test_post_logs_auto_note(caplog):
     tc = _tc()
 
     with caplog.at_level("INFO", logger="team.task_center"):
-        _run(tc.post(_note("n1", "task-1", "checkpoint summary", agent_name="developer (auto)")))
+        _run(tc.notes.post(_note("n1", "task-1", "checkpoint summary", agent_name="developer (auto)")))
 
     assert "[task_center] auto-note task=task-1" in caplog.text
 
@@ -162,29 +162,29 @@ def test_post_logs_auto_note(caplog):
 
 def test_read_filters_by_task_id():
     tc = _tc()
-    _run(tc.post(_note("n1", "task-A")))
-    _run(tc.post(_note("n2", "task-B")))
-    _run(tc.post(_note("n3", "task-A")))
+    _run(tc.notes.post(_note("n1", "task-A")))
+    _run(tc.notes.post(_note("n2", "task-B")))
+    _run(tc.notes.post(_note("n3", "task-A")))
 
-    results = _run(tc.read(authors=["task-A"]))
+    results = _run(tc.notes.read(authors=["task-A"]))
     assert len(results) == 2
     assert all(n.task_id == "task-A" for n in results)
 
 
 def test_read_authors_multiple():
     tc = _tc()
-    _run(tc.post(_note("n1", "task-A")))
-    _run(tc.post(_note("n2", "task-B")))
-    _run(tc.post(_note("n3", "task-C")))
+    _run(tc.notes.post(_note("n1", "task-A")))
+    _run(tc.notes.post(_note("n2", "task-B")))
+    _run(tc.notes.post(_note("n3", "task-C")))
 
-    results = _run(tc.read(authors=["task-A", "task-C"]))
+    results = _run(tc.notes.read(authors=["task-A", "task-C"]))
     assert {n.task_id for n in results} == {"task-A", "task-C"}
 
 
 def test_read_authors_no_match_returns_empty():
     tc = _tc()
-    _run(tc.post(_note("n1", "task-A")))
-    assert _run(tc.read(authors=["task-Z"])) == []
+    _run(tc.notes.post(_note("n1", "task-A")))
+    assert _run(tc.notes.read(authors=["task-Z"])) == []
 
 
 # ---------------------------------------------------------------------------
@@ -194,47 +194,47 @@ def test_read_authors_no_match_returns_empty():
 
 def test_read_scope_paths_prefix_match():
     tc = _tc()
-    _run(tc.post(_note("n1", "task-1", scope_paths=["src/auth/session.py"])))
-    _run(tc.post(_note("n2", "task-2", scope_paths=["src/billing/invoice.py"])))
+    _run(tc.notes.post(_note("n1", "task-1", scope_paths=["src/auth/session.py"])))
+    _run(tc.notes.post(_note("n2", "task-2", scope_paths=["src/billing/invoice.py"])))
 
-    results = _run(tc.read(scope_paths=["src/auth"]))
+    results = _run(tc.notes.read(scope_paths=["src/auth"]))
     assert len(results) == 1
     assert results[0].id == "n1"
 
 
 def test_read_scope_paths_exact_match():
     tc = _tc()
-    _run(tc.post(_note("n1", "task-1", scope_paths=["src/auth"])))
-    results = _run(tc.read(scope_paths=["src/auth"]))
+    _run(tc.notes.post(_note("n1", "task-1", scope_paths=["src/auth"])))
+    results = _run(tc.notes.read(scope_paths=["src/auth"]))
     assert len(results) == 1
 
 
 def test_read_scope_paths_no_scope_on_note_includes_note():
     tc = _tc()
-    _run(tc.post(_note("n1", "task-1")))
-    results = _run(tc.read(scope_paths=["src/auth"]))
+    _run(tc.notes.post(_note("n1", "task-1")))
+    results = _run(tc.notes.read(scope_paths=["src/auth"]))
     assert [note.id for note in results] == ["n1"]
 
 
 def test_read_scope_paths_trailing_slash_stripped():
     tc = _tc()
-    _run(tc.post(_note("n1", "task-1", scope_paths=["src/auth/session.py"])))
-    results = _run(tc.read(scope_paths=["src/auth/"]))
+    _run(tc.notes.post(_note("n1", "task-1", scope_paths=["src/auth/session.py"])))
+    results = _run(tc.notes.read(scope_paths=["src/auth/"]))
     assert len(results) == 1
 
 
 def test_read_scope_paths_matches_broader_note_scope_from_narrow_query():
     tc = _tc()
-    _run(tc.post(_note("n1", "task-1", scope_paths=["src/auth"])))
-    results = _run(tc.read(scope_paths=["src/auth/session.py"]))
+    _run(tc.notes.post(_note("n1", "task-1", scope_paths=["src/auth"])))
+    results = _run(tc.notes.read(scope_paths=["src/auth/session.py"]))
     assert len(results) == 1
     assert results[0].id == "n1"
 
 
 def test_read_scope_paths_respects_component_boundaries():
     tc = _tc()
-    _run(tc.post(_note("n1", "task-1", scope_paths=["src/authz.py"])))
-    assert _run(tc.read(scope_paths=["src/auth"])) == []
+    _run(tc.notes.post(_note("n1", "task-1", scope_paths=["src/authz.py"])))
+    assert _run(tc.notes.read(scope_paths=["src/auth"])) == []
 
 
 # ---------------------------------------------------------------------------
@@ -244,20 +244,20 @@ def test_read_scope_paths_respects_component_boundaries():
 
 def test_read_since_filters_by_timestamp():
     tc = _tc()
-    _run(tc.post(_note("n1", "t1", timestamp=100.0)))
-    _run(tc.post(_note("n2", "t2", timestamp=200.0)))
-    _run(tc.post(_note("n3", "t3", timestamp=300.0)))
+    _run(tc.notes.post(_note("n1", "t1", timestamp=100.0)))
+    _run(tc.notes.post(_note("n2", "t2", timestamp=200.0)))
+    _run(tc.notes.post(_note("n3", "t3", timestamp=300.0)))
 
-    results = _run(tc.read(since=200.0))
+    results = _run(tc.notes.read(since=200.0))
     assert len(results) == 2
     assert {n.id for n in results} == {"n2", "n3"}
 
 
 def test_read_since_none_returns_all():
     tc = _tc()
-    _run(tc.post(_note("n1", "t1", timestamp=100.0)))
-    _run(tc.post(_note("n2", "t2", timestamp=200.0)))
-    assert len(_run(tc.read(since=None))) == 2
+    _run(tc.notes.post(_note("n1", "t1", timestamp=100.0)))
+    _run(tc.notes.post(_note("n2", "t2", timestamp=200.0)))
+    assert len(_run(tc.notes.read(since=None))) == 2
 
 
 # ---------------------------------------------------------------------------
@@ -268,9 +268,9 @@ def test_read_since_none_returns_all():
 def test_read_limit_returns_last_n():
     tc = _tc()
     for i in range(5):
-        _run(tc.post(_note(f"n{i}", f"t{i}")))
+        _run(tc.notes.post(_note(f"n{i}", f"t{i}")))
 
-    results = _run(tc.read(limit=3))
+    results = _run(tc.notes.read(limit=3))
     assert len(results) == 3
     assert results[0].id == "n2"
     assert results[-1].id == "n4"
@@ -278,8 +278,8 @@ def test_read_limit_returns_last_n():
 
 def test_read_limit_larger_than_total_returns_all():
     tc = _tc()
-    _run(tc.post(_note("n1", "t1")))
-    results = _run(tc.read(limit=100))
+    _run(tc.notes.post(_note("n1", "t1")))
+    results = _run(tc.notes.read(limit=100))
     assert len(results) == 1
 
 
@@ -290,22 +290,22 @@ def test_read_limit_larger_than_total_returns_all():
 
 def test_read_combined_authors_and_since():
     tc = _tc()
-    _run(tc.post(_note("n1", "task-A", timestamp=100.0)))
-    _run(tc.post(_note("n2", "task-A", timestamp=300.0)))
-    _run(tc.post(_note("n3", "task-B", timestamp=300.0)))
+    _run(tc.notes.post(_note("n1", "task-A", timestamp=100.0)))
+    _run(tc.notes.post(_note("n2", "task-A", timestamp=300.0)))
+    _run(tc.notes.post(_note("n3", "task-B", timestamp=300.0)))
 
-    results = _run(tc.read(authors=["task-A"], since=200.0))
+    results = _run(tc.notes.read(authors=["task-A"], since=200.0))
     assert len(results) == 1
     assert results[0].id == "n2"
 
 
 def test_read_combined_scope_and_limit():
     tc = _tc()
-    _run(tc.post(_note("n1", "t1", scope_paths=["src/auth/a.py"])))
-    _run(tc.post(_note("n2", "t2", scope_paths=["src/auth/b.py"])))
-    _run(tc.post(_note("n3", "t3", scope_paths=["src/auth/c.py"])))
+    _run(tc.notes.post(_note("n1", "t1", scope_paths=["src/auth/a.py"])))
+    _run(tc.notes.post(_note("n2", "t2", scope_paths=["src/auth/b.py"])))
+    _run(tc.notes.post(_note("n3", "t3", scope_paths=["src/auth/c.py"])))
 
-    results = _run(tc.read(scope_paths=["src/auth"], limit=2))
+    results = _run(tc.notes.read(scope_paths=["src/auth"], limit=2))
     assert len(results) == 2
     assert results[0].id == "n2"
     assert results[1].id == "n3"
@@ -319,7 +319,7 @@ def test_read_combined_scope_and_limit():
 def test_context_for_always_includes_task_section():
     tc = _tc()
     task = _task("work-1", task="implement login flow")
-    ctx = _run(tc.context_for(task))
+    ctx = _run(tc.notes.context_for(task))
     assert "## Your task" in ctx
     assert "implement login flow" in ctx
 
@@ -327,7 +327,7 @@ def test_context_for_always_includes_task_section():
 def test_context_for_includes_scope_paths_when_present():
     tc = _tc()
     task = _task("work-1", task="do auth", scope_paths=["src/auth/"])
-    ctx = _run(tc.context_for(task))
+    ctx = _run(tc.notes.context_for(task))
     assert "Scope:" in ctx
     assert "src/auth/" in ctx
 
@@ -335,30 +335,30 @@ def test_context_for_includes_scope_paths_when_present():
 def test_context_for_no_scope_paths_omits_scope_line():
     tc = _tc()
     task = _task("work-1", task="general work")
-    ctx = _run(tc.context_for(task))
+    ctx = _run(tc.notes.context_for(task))
     assert "Scope:" not in ctx
 
 
 def test_context_for_includes_dep_notes_when_deps_exist():
     tc = _tc()
-    _run(tc.post(_note("n1", "dep-task", "dependency output", agent_name="developer")))
+    _run(tc.notes.post(_note("n1", "dep-task", "dependency output", agent_name="developer")))
     task = _task("work-1", task="build on dep", deps=["dep-task"])
-    ctx = _run(tc.context_for(task))
+    ctx = _run(tc.notes.context_for(task))
     assert "Context from dependencies" in ctx
     assert "dependency output" in ctx
 
 
 def test_context_for_dep_notes_absent_when_no_deps():
     tc = _tc()
-    _run(tc.post(_note("n1", "unrelated", "some output")))
+    _run(tc.notes.post(_note("n1", "unrelated", "some output")))
     task = _task("work-1", task="standalone work")
-    ctx = _run(tc.context_for(task))
+    ctx = _run(tc.notes.context_for(task))
     assert "Context from dependencies" not in ctx
 
 
 def test_context_for_includes_parent_notes_when_parent_id_matches():
     tc = _tc()
-    _run(tc.post(_note("n1", "parent-task", "parent reasoning", agent_name="team_planner")))
+    _run(tc.notes.post(_note("n1", "parent-task", "parent reasoning", agent_name="team_planner")))
     task = _task("work-1", task="child task", parent_id="parent-task")
 
     # Mock get_task so _parent_chain_ids doesn't hit DB
@@ -367,15 +367,15 @@ def test_context_for_includes_parent_notes_when_parent_id_matches():
         return parent if task_id == "parent-task" else None
     tc.get_task = _mock_get_task
 
-    ctx = _run(tc.context_for(task))
+    ctx = _run(tc.notes.context_for(task))
     assert "Parent context" in ctx
     assert "parent reasoning" in ctx
 
 
 def test_context_for_walks_parent_chain_via_internal_get_task():
     tc = _tc()
-    _run(tc.post(_note("n1", "root-task", "root rationale", agent_name="team_planner")))
-    _run(tc.post(_note("n2", "parent-task", "parent reasoning", agent_name="team_planner")))
+    _run(tc.notes.post(_note("n1", "root-task", "root rationale", agent_name="team_planner")))
+    _run(tc.notes.post(_note("n2", "parent-task", "parent reasoning", agent_name="team_planner")))
     task = _task("work-1", task="child task", parent_id="parent-task")
 
     # Mock get_task to simulate parent chain without DB
@@ -389,15 +389,15 @@ def test_context_for_walks_parent_chain_via_internal_get_task():
         return None
     tc.get_task = _mock_get_task
 
-    ctx = _run(tc.context_for(task))
+    ctx = _run(tc.notes.context_for(task))
     assert "root rationale" in ctx
     assert "parent reasoning" in ctx
 
 
 def test_context_for_dedupes_parent_notes_by_task_id():
     tc = _tc()
-    _run(tc.post(_note("n1", "parent-task", "stale parent note", agent_name="team_planner (auto)", timestamp=100.0)))
-    _run(tc.post(_note("n2", "parent-task", "fresh parent note", agent_name="team_planner (auto)", timestamp=200.0)))
+    _run(tc.notes.post(_note("n1", "parent-task", "stale parent note", agent_name="team_planner (auto)", timestamp=100.0)))
+    _run(tc.notes.post(_note("n2", "parent-task", "fresh parent note", agent_name="team_planner (auto)", timestamp=200.0)))
     task = _task("work-1", task="child task", parent_id="parent-task")
 
     parent = _task("parent-task", task="parent")
@@ -407,16 +407,16 @@ def test_context_for_dedupes_parent_notes_by_task_id():
 
     tc.get_task = _mock_get_task
 
-    ctx = _run(tc.context_for(task))
+    ctx = _run(tc.notes.context_for(task))
     assert "fresh parent note" in ctx
     assert "stale parent note" not in ctx
 
 
 def test_context_for_no_parent_notes_when_parent_id_is_none():
     tc = _tc()
-    _run(tc.post(_note("n1", "some-task", "context")))
+    _run(tc.notes.post(_note("n1", "some-task", "context")))
     task = _task("work-1", task="root level task")
-    ctx = _run(tc.context_for(task))
+    ctx = _run(tc.notes.context_for(task))
     assert "Parent context" not in ctx
 
 
@@ -430,29 +430,29 @@ def test_check_falls_back_when_checkpoint_note_generation_raises(monkeypatch):
         task="fix parser",
     )
     for _ in range(15):
-        tc.tick("t1")
+        tc.activity.tick("t1")
 
     async def _boom(**_kwargs):
         raise RuntimeError("llm unavailable")
 
-    monkeypatch.setattr("external_trigger.tc_note.run_checkpoint_note", _boom)
+    monkeypatch.setattr("external_trigger.tc_note.run_tc_note", _boom)
 
-    result = _run(tc.check("t1", snapshot=[{"role": "user", "content": "status"}], api_client=object()))
+    result = _run(tc.activity.check("t1", snapshot=[{"role": "user", "content": "status"}], api_client=object()))
 
     assert result is True
-    notes = _run(tc.read())
+    notes = _run(tc.notes.read())
     assert len(notes) == 1
-    assert "Auto-checkpoint" in notes[0].content
+    assert "Auto note" in notes[0].content
     assert "15 turns" in notes[0].content
 
 
 def test_context_for_respects_max_context_bytes():
     tc = _tc()
     big_content = "x" * 100_000
-    _run(tc.post(_note("n1", "dep-task", big_content, agent_name="developer")))
+    _run(tc.notes.post(_note("n1", "dep-task", big_content, agent_name="developer")))
     task = _task("work-1", task="build on dep", deps=["dep-task"])
 
-    ctx = _run(tc.context_for(task, max_context_bytes=500))
+    ctx = _run(tc.notes.context_for(task, max_context_bytes=500))
     assert "## Your task" in ctx
     assert len(ctx.encode()) < 100_000
 
@@ -460,9 +460,9 @@ def test_context_for_respects_max_context_bytes():
 def test_context_for_task_section_never_trimmed():
     tc = _tc()
     big_content = "z" * 200_000
-    _run(tc.post(_note("n1", "dep-task", big_content)))
+    _run(tc.notes.post(_note("n1", "dep-task", big_content)))
     task = _task("work-1", task="important task description", deps=["dep-task"])
-    ctx = _run(tc.context_for(task, max_context_bytes=100))
+    ctx = _run(tc.notes.context_for(task, max_context_bytes=100))
     assert "important task description" in ctx
 
 
@@ -480,9 +480,9 @@ def test_context_for_includes_active_blockers_section_when_provider_set():
             )
         ]
 
-    tc.set_blocker_provider(_provider)
+    tc.notes.set_blocker_provider(_provider)
     task = _task("work-1", task="replan failed work")
-    ctx = _run(tc.context_for(task))
+    ctx = _run(tc.notes.context_for(task))
 
     assert "## Active Blockers (in-progress)" in ctx
     assert "blk_abc" in ctx
@@ -498,9 +498,9 @@ def test_context_for_omits_active_blockers_section_when_none():
     async def _provider():
         return []
 
-    tc.set_blocker_provider(_provider)
+    tc.notes.set_blocker_provider(_provider)
     task = _task("work-1", task="nothing is broken")
-    ctx = _run(tc.context_for(task))
+    ctx = _run(tc.notes.context_for(task))
 
     assert "## Active Blockers" not in ctx
 
@@ -508,7 +508,7 @@ def test_context_for_omits_active_blockers_section_when_none():
 def test_context_for_omits_active_blockers_section_when_no_provider():
     tc = _tc()
     task = _task("work-1", task="no provider registered")
-    ctx = _run(tc.context_for(task))
+    ctx = _run(tc.notes.context_for(task))
     assert "## Active Blockers" not in ctx
 
 
@@ -518,9 +518,9 @@ def test_context_for_survives_blocker_provider_exception():
     async def _bad_provider():
         raise RuntimeError("db unreachable")
 
-    tc.set_blocker_provider(_bad_provider)
+    tc.notes.set_blocker_provider(_bad_provider)
     task = _task("work-1", task="provider should not crash context_for")
-    ctx = _run(tc.context_for(task))
+    ctx = _run(tc.notes.context_for(task))
     assert "## Your task" in ctx
     assert "## Active Blockers" not in ctx
 
@@ -543,13 +543,13 @@ def test_two_replanners_with_active_blocker_see_fix_task_id():
             )
         ]
 
-    tc.set_blocker_provider(_provider)
+    tc.notes.set_blocker_provider(_provider)
 
     replanner_a = _task("replan-a", task="recover from failure in task A")
     replanner_b = _task("replan-b", task="recover from failure in task B")
 
-    ctx_a = _run(tc.context_for(replanner_a))
-    ctx_b = _run(tc.context_for(replanner_b))
+    ctx_a = _run(tc.notes.context_for(replanner_a))
+    ctx_b = _run(tc.notes.context_for(replanner_b))
 
     for ctx in (ctx_a, ctx_b):
         assert "## Active Blockers (in-progress)" in ctx
@@ -580,7 +580,7 @@ def test_context_for_includes_recent_scope_changes_from_file_change_store():
     task = _task("work-1", task="do auth", scope_paths=["src/auth/"])
     task.created_at = datetime(2026, 4, 12, 12, 0, tzinfo=timezone.utc)
 
-    ctx = _run(tc.context_for(task))
+    ctx = _run(tc.notes.context_for(task))
 
     assert "## Recent changes in your scope" in ctx
     assert "src/auth/session.py" in ctx
@@ -594,43 +594,43 @@ def test_context_for_includes_recent_scope_changes_from_file_change_store():
 
 def test_snapshot_returns_copy_of_notes():
     tc = _tc()
-    _run(tc.post(_note("n1", "t1")))
-    _run(tc.post(_note("n2", "t2")))
+    _run(tc.notes.post(_note("n1", "t1")))
+    _run(tc.notes.post(_note("n2", "t2")))
 
-    snap = tc.snapshot()
+    snap = tc.notes.snapshot()
     assert len(snap) == 2
     assert snap is not tc._notes
 
 
 def test_snapshot_copy_is_independent():
     tc = _tc()
-    _run(tc.post(_note("n1", "t1")))
-    snap = tc.snapshot()
-    _run(tc.post(_note("n2", "t2")))
+    _run(tc.notes.post(_note("n1", "t1")))
+    snap = tc.notes.snapshot()
+    _run(tc.notes.post(_note("n2", "t2")))
     assert len(snap) == 1
-    assert len(_run(tc.read())) == 2
+    assert len(_run(tc.notes.read())) == 2
 
 
 def test_restore_replaces_notes():
     tc = _tc()
-    _run(tc.post(_note("n1", "t1")))
-    _run(tc.post(_note("n2", "t2")))
+    _run(tc.notes.post(_note("n1", "t1")))
+    _run(tc.notes.post(_note("n2", "t2")))
 
-    backup = tc.snapshot()
-    _run(tc.post(_note("n3", "t3")))
-    assert len(_run(tc.read())) == 3
+    backup = tc.notes.snapshot()
+    _run(tc.notes.post(_note("n3", "t3")))
+    assert len(_run(tc.notes.read())) == 3
 
-    tc.restore(backup)
-    assert len(_run(tc.read())) == 2
-    assert _run(tc.read())[0].id == "n1"
-    assert _run(tc.read())[1].id == "n2"
+    tc.notes.restore(backup)
+    assert len(_run(tc.notes.read())) == 2
+    assert _run(tc.notes.read())[0].id == "n1"
+    assert _run(tc.notes.read())[1].id == "n2"
 
 
 def test_restore_empty_list_clears_notes():
     tc = _tc()
-    _run(tc.post(_note("n1", "t1")))
-    tc.restore([])
-    assert _run(tc.read()) == []
+    _run(tc.notes.post(_note("n1", "t1")))
+    tc.notes.restore([])
+    assert _run(tc.notes.read()) == []
 
 
 # ---------------------------------------------------------------------------

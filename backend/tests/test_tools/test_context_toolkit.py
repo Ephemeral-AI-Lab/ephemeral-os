@@ -111,7 +111,10 @@ async def test_context_changed_since_ignores_unrelated_sibling_completion():
 @pytest.mark.asyncio
 async def test_context_changed_since_counts_overlapping_sibling_completion():
     class _FakeTaskCenter:
-        async def done_sibling_ids(self, **_kwargs):
+        def __init__(self):
+            self.store = self  # production reads get_done_sibling_ids via tc.store
+
+        async def get_done_sibling_ids(self, **_kwargs):
             return ["sib-1"]
 
         async def get_task(self, _task_id):

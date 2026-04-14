@@ -30,7 +30,7 @@ async def _post_submission_note(
         return
     from team.models import Note
 
-    await tc.post(
+    await tc.notes.post(
         Note(
             id=str(uuid.uuid4()),
             task_id=context.metadata.get("work_item_id", ""),
@@ -138,9 +138,10 @@ async def _known_external_dep_ids(context: ToolExecutionContext) -> set[str] | N
     if isinstance(known, list):
         return {str(item) for item in known}
     tc = context.metadata.get("task_center")
-    if tc is None or not hasattr(tc, "known_task_ids"):
+    store = getattr(tc, "store", None) if tc is not None else None
+    if store is None or not hasattr(store, "get_task_ids"):
         return None
-    return {str(item) for item in await tc.known_task_ids()}
+    return {str(item) for item in await store.get_task_ids()}
 
 
 def _roster_from_context(context: ToolExecutionContext) -> dict[str, list[str]]:

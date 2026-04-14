@@ -1,7 +1,7 @@
-"""ActivityTracker — edit/turn counting and auto-checkpoint triggering.
+"""ActivityTracker — edit/turn counting and auto note triggering.
 
 Extracted from TaskCenter. Tracks per-task edit counts, turn counts,
-and decides when to fire auto-checkpoints.
+and decides when to fire auto notes.
 """
 
 from __future__ import annotations
@@ -17,18 +17,22 @@ logger = logging.getLogger(__name__)
 
 
 class ActivityTracker:
-    """Tracks edit/turn activity per task and triggers auto-checkpoints."""
+    """Tracks edit/turn activity per task and triggers auto notes."""
 
     def __init__(
         self,
         team_run_id: str,
         note_posted_cb: Callable[[Note], None] | None = None,
+        graph_getter: Callable[[], dict[str, Any]] | None = None,
+        post_note_cb: Callable[[Note], Any] | None = None,
     ) -> None:
         self._activity_counters: dict[str, dict[str, Any]] = {}
-        self._checkpoint_inflight: set[str] = set()
-        self._checkpoint_snapshots: dict[str, dict[str, int]] = {}
+        self._note_inflight: set[str] = set()
+        self._note_snapshots: dict[str, dict[str, int]] = {}
         self._team_run_id = team_run_id
         self._note_posted_cb = note_posted_cb
+        self._graph_getter = graph_getter
+        self._post_note_cb = post_note_cb
         self._skipped_resets: dict[str, int] = {
             "system_or_checkpoint_sender": 0,
             "no_counters": 0,
@@ -55,12 +59,12 @@ class ActivityTracker:
         if note.agent_name in {"system", "checkpoint"}:
             self._skipped_resets["system_or_checkpoint_sender"] += 1
             return
-        self._checkpoint_inflight.discard(note.task_id)
+        self._note_inflight.discard(note.task_id)
         if note.task_id not in self._activity_counters:
             self._skipped_resets["no_counters"] += 1
             return
         c = self._activity_counters[note.task_id]
-        snapshot = self._checkpoint_snapshots.pop(note.task_id, None)
+        snapshot = self._note_snapshots.pop(note.task_id, None)
         if snapshot is None:
             self._activity_counters[note.task_id] = {"edits": 0, "turns": 0, "edit_history": []}
             return
@@ -74,8 +78,8 @@ class ActivityTracker:
         """Return counters for skipped auto-resets (telemetry)."""
         return dict(self._skipped_resets)
 
-    def should_checkpoint(self, task_id: str) -> str | None:
-        if task_id in self._checkpoint_inflight:
+    def should_take_note(self, task_id: str) -> str | None:
+        if task_id in self._note_inflight:
             return None
         c = self._get_counters(task_id)
         if c["edits"] >= 5:
@@ -101,26 +105,28 @@ class ActivityTracker:
     async def check(
         self,
         task_id: str,
-        graph: dict[str, Any],
-        scope_paths: list[str],
-        agent_name: str,
-        agent_run_id: str | None,
-        snapshot: list[dict] | None,
-        api_client: Any,
-        model: str | None,
-        post_note_cb: Callable[[Note], Any],
+        *,
+        snapshot: list[dict] | None = None,
+        api_client: Any = None,
+        model: str | None = None,
     ) -> bool:
-        trigger = self.should_checkpoint(task_id)
+        graph = self._graph_getter() if self._graph_getter is not None else {}
+        task = graph.get(task_id)
+        agent_name = task.agent_name if task else "unknown"
+        scope_paths = list(task.scope_paths) if task and task.scope_paths else []
+        agent_run_id = task.agent_run_id if task else task_id
+        post_note_cb = self._post_note_cb
+        trigger = self.should_take_note(task_id)
         if trigger is None:
             return False
-        self._checkpoint_inflight.add(task_id)
+        self._note_inflight.add(task_id)
         c = self._get_counters(task_id)
         counter_snapshot = {
             "edits": int(c["edits"]),
             "turns": int(c["turns"]),
             "edit_history_len": len(c["edit_history"]),
         }
-        self._checkpoint_snapshots[task_id] = counter_snapshot
+        self._note_snapshots[task_id] = counter_snapshot
 
         logger.info(
             "[activity_tracker] auto-note trigger=%s task=%s agent=%s edits=%d turns=%d scope=%s",
@@ -137,14 +143,14 @@ class ActivityTracker:
         try:
             if api_client and snapshot is not None:
                 from external_trigger.tc_note import (
-                    EDIT_CHECKPOINT_PROMPT,
-                    TURN_CHECKPOINT_PROMPT,
-                    run_checkpoint_note,
+                    TC_NOTE_EDIT_PROMPT,
+                    TC_NOTE_TURN_PROMPT,
+                    run_tc_note,
                 )
 
-                prompt = EDIT_CHECKPOINT_PROMPT if trigger == "edit" else TURN_CHECKPOINT_PROMPT
+                prompt = TC_NOTE_EDIT_PROMPT if trigger == "edit" else TC_NOTE_TURN_PROMPT
                 try:
-                    result = await run_checkpoint_note(
+                    result = await run_tc_note(
                         task_id=task_id,
                         agent_run_id=agent_run_id or task_id,
                         messages=snapshot or [],
@@ -156,14 +162,14 @@ class ActivityTracker:
                     )
                 except Exception:
                     logger.warning(
-                        "[activity_tracker] checkpoint note generation failed for task=%s trigger=%s; falling back to factual note",
+                        "[activity_tracker] tc_note generation failed for task=%s trigger=%s; falling back to factual note",
                         task_id,
                         trigger,
                         exc_info=True,
                     )
                 else:
-                    if result.note_summary:
-                        content = result.note_summary
+                    if result.content:
+                        content = result.content
 
             if content is None:
                 if trigger == "edit":
@@ -172,10 +178,10 @@ class ActivityTracker:
                             c["edit_history"][: counter_snapshot["edit_history_len"]],
                         ),
                     )
-                    content = f"Auto-checkpoint ({counter_snapshot['edits']} edits): {files}"
+                    content = f"Auto note ({counter_snapshot['edits']} edits): {files}"
                 else:
                     content = (
-                        f"Auto-checkpoint: {counter_snapshot['turns']} turns without progress note"
+                        f"Auto note: {counter_snapshot['turns']} turns without progress note"
                     )
 
             note = Note(
@@ -186,12 +192,13 @@ class ActivityTracker:
                 timestamp=time.time(),
                 scope_paths=scope_paths,
             )
-            await post_note_cb(note)
+            if post_note_cb is not None:
+                await post_note_cb(note)
             if self._note_posted_cb is not None:
                 self._note_posted_cb(note)
             posted = True
             return True
         finally:
-            self._checkpoint_inflight.discard(task_id)
+            self._note_inflight.discard(task_id)
             if not posted:
-                self._checkpoint_snapshots.pop(task_id, None)
+                self._note_snapshots.pop(task_id, None)

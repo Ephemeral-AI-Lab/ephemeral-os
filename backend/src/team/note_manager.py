@@ -40,12 +40,14 @@ class NoteManager:
         event_store_cb: Callable[[TeamRunEvent], None] | None = None,
         get_task_fn: Callable[[str], Any] | None = None,
         task_store: Any = None,
+        file_change_store: Any = None,
     ) -> None:
         self._notes: list[Note] = []
         self._team_run_id = team_run_id
         self._event_store_cb = event_store_cb
         self._get_task_fn = get_task_fn
         self._task_store = task_store
+        self._file_change_store = file_change_store
         self._blocker_provider: Callable[[], Awaitable[list[Any]]] | None = None
 
     def set_blocker_provider(
@@ -276,6 +278,8 @@ class NoteManager:
         file_change_store: Any = None,
         active_blockers: list[Any] | None = None,
     ) -> str:
+        if file_change_store is None:
+            file_change_store = self._file_change_store
         """Build context string for a task. No external callbacks needed.
 
         ``active_blockers`` — optional list of in-progress Blocker records. When

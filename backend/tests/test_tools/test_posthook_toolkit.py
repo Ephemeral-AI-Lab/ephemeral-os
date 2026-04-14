@@ -19,6 +19,9 @@ from tools.posthook.toolkit import (
 
 
 class _FakeTaskCenter:
+    def __init__(self):
+        self.notes = self  # production code calls tc.notes.post(note)
+
     async def post(self, note):
         pass
 

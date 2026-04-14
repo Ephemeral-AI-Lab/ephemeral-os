@@ -178,7 +178,7 @@ class TeamAgentRunner:
                     return
                 frozen = snapshot if snapshot is not None else _snapshot()
                 team_run.conductor.register_snapshot(work_item_id, frozen)
-                trigger = team_run.task_center.should_checkpoint(work_item_id)
+                trigger = team_run.task_center.activity.should_take_note(work_item_id)
                 if trigger is None:
                     return
                 if checkpoint_task is not None and not checkpoint_task.done():
@@ -196,7 +196,7 @@ class TeamAgentRunner:
                     if self.on_checkpoint_event is not None:
                         self.on_checkpoint_event({**event_base, "status": "started"})
                     try:
-                        posted = await team_run.task_center.check(
+                        posted = await team_run.task_center.activity.check(
                             work_item_id,
                             snapshot=frozen,
                             api_client=agent.query_context.api_client,
@@ -231,7 +231,7 @@ class TeamAgentRunner:
                     return
                 snap = [m.model_dump(mode="json") for m in display_messages]
                 team_run.conductor.register_snapshot(work_item_id, snap)
-                team_run.task_center.tick(work_item_id)
+                team_run.task_center.activity.tick(work_item_id)
                 _schedule_checkpoint(snap)
             except Exception:
                 logger.debug("Failed to observe turn for %s", work_item_id, exc_info=True)
@@ -266,9 +266,9 @@ class TeamAgentRunner:
                                     or ""
                                 ).strip()
                                 if file_path:
-                                    team_run.task_center.on_edit(work_item_id, file_path)
+                                    team_run.task_center.activity.on_edit(work_item_id, file_path)
                             if event.tool_name in POSTHOOK_TOOL_NAMES:
-                                team_run.task_center.on_posthook(work_item_id)
+                                team_run.task_center.activity.on_posthook(work_item_id)
                             _schedule_checkpoint()
                     except Exception:
                         logger.debug(

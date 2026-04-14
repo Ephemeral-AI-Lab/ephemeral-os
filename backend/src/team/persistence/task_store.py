@@ -8,18 +8,19 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
-from typing import Any
 
-from sqlalchemy import delete, func, select, text, update
+from sqlalchemy import and_, case, delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.orm import aliased
 
 from team.models import Task, TaskSpec, TaskStatus, _utcnow
 from team.persistence.ltree_utils import path_to_ltree
-from team.persistence.task_record import TaskRecord, row_to_record
+from team.persistence.task_graph import TaskGraph
+from team.persistence.task_record import TaskRecord
 
 
-def record_to_task(rec: Any) -> Task:
-    """Convert a TaskRecord (or any duck-typed object) to a domain Task."""
+def record_to_task(rec: TaskRecord) -> Task:
+    """Convert a TaskRecord ORM row to a domain Task."""
     return Task(
         id=rec.id,
         team_run_id=rec.team_run_id,
@@ -46,7 +47,9 @@ def record_to_task(rec: Any) -> Task:
 
 
 class TaskStore:
-    """SQL persistence for tasks. Owns session_factory, team_run_id, and in-memory task graph."""
+    """SQL persistence for tasks. Owns session_factory and team_run_id; delegates
+    in-memory task graph / ready-queue bookkeeping to :class:`TaskGraph`.
+    """
 
     def __init__(
         self,
@@ -55,19 +58,35 @@ class TaskStore:
     ) -> None:
         self._sf = session_factory
         self._team_run_id = team_run_id
-        self.graph: dict[str, Task] = {}
-        self._ready_order: list[str] = []
+        self._tg = TaskGraph()
+
+    # ---- in-memory graph proxy --------------------------------------------
+
+    @property
+    def graph(self) -> dict[str, Task]:
+        return self._tg.tasks
+
+    @graph.setter
+    def graph(self, value: dict[str, Task]) -> None:
+        self._tg.tasks = value
+
+    @property
+    def _ready_order(self) -> list[str]:
+        return self._tg.ready_order
+
+    @_ready_order.setter
+    def _ready_order(self, value: list[str]) -> None:
+        self._tg.ready_order = value
 
     def get_task(self, task_id: str) -> Task | None:
         """Fast in-memory lookup — no DB call."""
-        return self.graph.get(task_id)
+        return self._tg.tasks.get(task_id)
 
     async def refresh_graph(self) -> dict[str, Task]:
         """Sync in-memory graph from DB. Returns the graph."""
         records = await self.get_all_tasks()
-        self.graph = {r.id: record_to_task(r) for r in records}
-        self._ready_order = [r.id for r in records if r.status == "ready"]
-        return self.graph
+        self._tg.load(record_to_task(r) for r in records)
+        return self._tg.tasks
 
     # ---- queries -------------------------------------------------------------
 
@@ -175,25 +194,24 @@ class TaskStore:
             return stats
 
     async def sibling_subtree_ids(self, parent_id: str | None) -> list[str]:
-        async with self._sf() as db:
-            result = await db.execute(
-                text("""
-                WITH RECURSIVE subtree AS (
-                    SELECT id
-                    FROM tasks
-                    WHERE team_run_id = :rid
-                      AND parent_id IS NOT DISTINCT FROM :pid
-                    UNION ALL
-                    SELECT child.id
-                    FROM tasks child
-                    JOIN subtree s ON child.parent_id = s.id
-                    WHERE child.team_run_id = :rid
-                )
-                SELECT id FROM subtree
-            """),
-                {"rid": self._team_run_id, "pid": parent_id},
+        rid = self._team_run_id
+        subtree = (
+            select(TaskRecord.id)
+            .where(
+                TaskRecord.team_run_id == rid,
+                TaskRecord.parent_id.is_not_distinct_from(parent_id),
             )
-            return [str(row.id) for row in result.fetchall()]
+            .cte("subtree", recursive=True)
+        )
+        child = aliased(TaskRecord, name="child")
+        subtree = subtree.union_all(
+            select(child.id)
+            .join(subtree, child.parent_id == subtree.c.id)
+            .where(child.team_run_id == rid)
+        )
+        async with self._sf() as db:
+            rows = (await db.execute(select(subtree.c.id))).all()
+        return [str(r.id) for r in rows]
 
     async def get_siblings_and_descendants(self, initiating_task_id: str) -> list[TaskRecord]:
         """Return all siblings of the initiating task plus their entire subtrees.
@@ -201,34 +219,38 @@ class TaskStore:
         Siblings share the same parent_id. Descendants are found via recursive
         CTE on parent_id. The initiating task itself is excluded.
         """
-        async with self._sf() as db:
-            result = await db.execute(
-                text("""
-                WITH initiator AS (
-                    SELECT parent_id FROM tasks
-                    WHERE id = :tid AND team_run_id = :rid
-                ),
-                siblings AS (
-                    SELECT t.id FROM tasks t, initiator i
-                    WHERE t.team_run_id = :rid
-                      AND t.parent_id IS NOT DISTINCT FROM i.parent_id
-                      AND t.id != :tid
-                ),
-                subtree AS (
-                    SELECT t.id FROM tasks t
-                    WHERE t.team_run_id = :rid AND t.id IN (SELECT id FROM siblings)
-                    UNION ALL
-                    SELECT c.id FROM tasks c
-                    INNER JOIN subtree s ON c.parent_id = s.id
-                    WHERE c.team_run_id = :rid
-                )
-                SELECT t.* FROM tasks t
-                WHERE t.team_run_id = :rid AND t.id IN (SELECT id FROM subtree)
-                ORDER BY t.depth, t.created_at
-            """),
-                {"rid": self._team_run_id, "tid": initiating_task_id},
+        rid = self._team_run_id
+        initiator = aliased(TaskRecord, name="initiator")
+        parent_of_initiator = (
+            select(initiator.parent_id)
+            .where(initiator.id == initiating_task_id, initiator.team_run_id == rid)
+            .scalar_subquery()
+        )
+        subtree = (
+            select(TaskRecord.id)
+            .where(
+                TaskRecord.team_run_id == rid,
+                TaskRecord.parent_id.is_not_distinct_from(parent_of_initiator),
+                TaskRecord.id != initiating_task_id,
             )
-            return [row_to_record(row) for row in result.fetchall()]
+            .cte("subtree", recursive=True)
+        )
+        child = aliased(TaskRecord, name="child")
+        subtree = subtree.union_all(
+            select(child.id)
+            .join(subtree, child.parent_id == subtree.c.id)
+            .where(child.team_run_id == rid)
+        )
+        stmt = (
+            select(TaskRecord)
+            .where(
+                TaskRecord.team_run_id == rid,
+                TaskRecord.id.in_(select(subtree.c.id)),
+            )
+            .order_by(TaskRecord.depth, TaskRecord.created_at)
+        )
+        async with self._sf() as db:
+            return list((await db.execute(stmt)).scalars().all())
 
     # ---- mutations -----------------------------------------------------------
 
@@ -242,30 +264,28 @@ class TaskStore:
                 )
                 .values(status="done", finished_at=func.now())
             )
-            promoted = (
-                await db.execute(
-                    text("""
-                UPDATE tasks t
-                SET pending_dep_count = pending_dep_count - 1,
-                    status = CASE WHEN pending_dep_count - 1 = 0 THEN 'ready' ELSE status END
-                WHERE t.team_run_id = :rid AND t.status = 'pending'
-                  AND :tid = ANY(t.deps) AND t.pending_dep_count > 0
-                RETURNING CASE WHEN pending_dep_count = 0 THEN t.id ELSE NULL END AS promoted_id
-            """),
-                    {"rid": self._team_run_id, "tid": task_id},
+            promote_stmt = (
+                update(TaskRecord)
+                .where(
+                    TaskRecord.team_run_id == self._team_run_id,
+                    TaskRecord.status == "pending",
+                    TaskRecord.deps.any(task_id),
+                    TaskRecord.pending_dep_count > 0,
                 )
-            ).fetchall()
+                .values(
+                    pending_dep_count=TaskRecord.pending_dep_count - 1,
+                    status=case(
+                        ((TaskRecord.pending_dep_count - 1) == 0, "ready"),
+                        else_=TaskRecord.status,
+                    ),
+                )
+                .returning(TaskRecord.id, TaskRecord.pending_dep_count)
+                .execution_options(synchronize_session=False)
+            )
+            promoted_rows = (await db.execute(promote_stmt)).all()
             await db.commit()
-            promoted_ids = [r.promoted_id for r in promoted if r.promoted_id is not None]
-        if task_id in self.graph:
-            self.graph[task_id].status = TaskStatus.DONE
-        if task_id in self._ready_order:
-            self._ready_order.remove(task_id)
-        for pid in promoted_ids:
-            if pid in self.graph:
-                self.graph[pid].status = TaskStatus.READY
-            if pid not in self._ready_order:
-                self._ready_order.append(pid)
+            promoted_ids = [r.id for r in promoted_rows if r.pending_dep_count == 0]
+        self._tg.mark_done(task_id, promoted_ids)
         return promoted_ids
 
     async def mark_expanded(self, task_id: str) -> None:
@@ -279,28 +299,37 @@ class TaskStore:
                 .values(status="expanded")
             )
             await db.commit()
-        if task_id in self.graph:
-            self.graph[task_id].status = TaskStatus.EXPANDED
+        self._tg.mark_expanded(task_id)
 
     async def maybe_promote_expanded_parent(self, child_id: str) -> list[str]:
+        rid = self._team_run_id
         promoted_all: list[str] = []
         current = child_id
         while True:
+            child = aliased(TaskRecord, name="child")
+            parent_id_sub = (
+                select(child.parent_id)
+                .where(child.id == current, child.team_run_id == rid)
+                .scalar_subquery()
+            )
+            sibling = aliased(TaskRecord, name="sibling")
+            unfinished_sibling = (
+                select(1)
+                .where(
+                    sibling.parent_id == TaskRecord.id,
+                    sibling.team_run_id == rid,
+                    sibling.status.notin_(("done", "failed", "cancelled")),
+                )
+                .exists()
+            )
+            stmt = select(TaskRecord.id).where(
+                TaskRecord.id == parent_id_sub,
+                TaskRecord.team_run_id == rid,
+                TaskRecord.status == "expanded",
+                ~unfinished_sibling,
+            )
             async with self._sf() as db:
-                row = (
-                    await db.execute(
-                        text("""
-                    WITH child AS (SELECT parent_id FROM tasks WHERE id=:cid AND team_run_id=:rid)
-                    SELECT p.id FROM tasks p, child c
-                    WHERE p.id = c.parent_id AND p.team_run_id=:rid AND p.status='expanded'
-                      AND NOT EXISTS (
-                          SELECT 1 FROM tasks s WHERE s.parent_id=p.id AND s.team_run_id=:rid
-                            AND s.status NOT IN ('done','failed','cancelled')
-                      )
-                """),
-                        {"cid": current, "rid": self._team_run_id},
-                    )
-                ).fetchone()
+                row = (await db.execute(stmt)).first()
             if row is None:
                 break
             pid = str(row.id)
@@ -326,11 +355,7 @@ class TaskStore:
         async with self._sf() as db:
             await self._mark_terminal_sql(db, task_id, status, reason)
             await db.commit()
-        if task_id in self.graph:
-            self.graph[task_id].status = TaskStatus(status)
-            self.graph[task_id].failure_reason = reason
-        if task_id in self._ready_order:
-            self._ready_order.remove(task_id)
+        self._tg.mark_terminal(task_id, status, reason)
 
     async def _insert_plan_sql(
         self,
@@ -364,21 +389,33 @@ class TaskStore:
             )
         db.add_all(records)
         await db.flush()
-        await db.execute(
-            text("""
-            WITH already_done AS (SELECT id FROM tasks WHERE team_run_id=:rid AND status='done')
-            UPDATE tasks t
-            SET pending_dep_count = pending_dep_count - (
-                    SELECT COUNT(*) FROM already_done ad WHERE ad.id = ANY(t.deps)),
-                status = CASE
-                    WHEN pending_dep_count - (
-                        SELECT COUNT(*) FROM already_done ad WHERE ad.id = ANY(t.deps)) = 0
-                    THEN 'ready' ELSE status END
-            WHERE t.team_run_id=:rid AND t.status='pending'
-              AND t.deps && (SELECT array_agg(id) FROM already_done)
-        """),
-            {"rid": self._team_run_id},
-        )
+        # Backfill pending_dep_count for newly-inserted tasks whose deps include
+        # already-completed tasks. Only freshly-inserted records can need this
+        # adjustment — pre-existing pending rows are already correct.
+        if any(rec.status == "pending" and rec.deps for rec in records):
+            done_ids: set[str] = set(
+                (
+                    await db.execute(
+                        select(TaskRecord.id).where(
+                            TaskRecord.team_run_id == self._team_run_id,
+                            TaskRecord.status == "done",
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            if done_ids:
+                for rec in records:
+                    if rec.status != "pending" or not rec.deps:
+                        continue
+                    satisfied = sum(1 for d in rec.deps if d in done_ids)
+                    if satisfied == 0:
+                        continue
+                    rec.pending_dep_count = rec.pending_dep_count - satisfied
+                    if rec.pending_dep_count == 0:
+                        rec.status = "ready"
+                await db.flush()
         inserted_ids = [record.id for record in records]
         stmt = (
             select(TaskRecord)
@@ -403,46 +440,63 @@ class TaskStore:
                 db, specs, parent_id, parent_depth, parent_root_id
             )
             await db.commit()
-        for rec in result_records:
-            task = record_to_task(rec)
-            self.graph[task.id] = task
-            if task.status == TaskStatus.READY and task.id not in self._ready_order:
-                self._ready_order.append(task.id)
+        self._tg.insert_tasks(record_to_task(rec) for rec in result_records)
         return result_records
 
     async def _cascade_recursive_sql(
         self, db: AsyncSession, root_task_id: str
     ) -> list[str]:
-        result = await db.execute(
-            text("""
-            WITH RECURSIVE dep_chain AS (
-                SELECT id FROM tasks WHERE team_run_id=:rid AND id=:tid
-                UNION ALL
-                SELECT t.id FROM tasks t
-                JOIN dep_chain dc ON (
-                    (dc.id = ANY(t.deps) AND t.cascade_policy != 'continue')
-                    OR t.parent_id = dc.id
-                )
-                WHERE t.team_run_id=:rid AND t.status IN ('pending','ready','expanded')
-            )
-            UPDATE tasks SET status='cancelled', finished_at=NOW(),
-                failure_reason='cascaded from ' || :tid
-            WHERE team_run_id=:rid AND id IN (SELECT DISTINCT id FROM dep_chain WHERE id != :tid)
-            RETURNING id
-        """),
-            {"rid": self._team_run_id, "tid": root_task_id},
+        rid = self._team_run_id
+        dep_chain = (
+            select(TaskRecord.id)
+            .where(TaskRecord.team_run_id == rid, TaskRecord.id == root_task_id)
+            .cte("dep_chain", recursive=True)
         )
+        descendant = aliased(TaskRecord, name="descendant")
+        dep_chain = dep_chain.union_all(
+            select(descendant.id)
+            .join(
+                dep_chain,
+                or_(
+                    and_(
+                        descendant.deps.any(dep_chain.c.id),
+                        descendant.cascade_policy != "continue",
+                    ),
+                    descendant.parent_id == dep_chain.c.id,
+                ),
+            )
+            .where(
+                descendant.team_run_id == rid,
+                descendant.status.in_(("pending", "ready", "expanded")),
+            )
+        )
+        cascade_ids = (
+            select(dep_chain.c.id)
+            .where(dep_chain.c.id != root_task_id)
+            .distinct()
+        )
+        stmt = (
+            update(TaskRecord)
+            .where(
+                TaskRecord.team_run_id == rid,
+                TaskRecord.id.in_(cascade_ids),
+            )
+            .values(
+                status="cancelled",
+                finished_at=func.now(),
+                failure_reason=f"cascaded from {root_task_id}",
+            )
+            .returning(TaskRecord.id)
+            .execution_options(synchronize_session=False)
+        )
+        result = await db.execute(stmt)
         return [r.id for r in result.fetchall()]
 
     async def cascade_cancel_recursive(self, root_task_id: str) -> list[str]:
         async with self._sf() as db:
             cancelled = await self._cascade_recursive_sql(db, root_task_id)
             await db.commit()
-        for cid in cancelled:
-            if cid in self.graph:
-                self.graph[cid].status = TaskStatus.CANCELLED
-            if cid in self._ready_order:
-                self._ready_order.remove(cid)
+        self._tg.mark_cancelled(cancelled)
         return cancelled
 
     async def fail_with_cascade(self, task_id: str, reason: str) -> list[str]:
@@ -512,8 +566,7 @@ class TaskStore:
                         )
                     )
                     await db.commit()
-                    if task_id in self.graph:
-                        self.graph[task_id].status = TaskStatus.READY
+                    self._tg.set_ready_status(task_id)
                     return warnings
             await db.execute(
                 update(TaskRecord)
@@ -538,11 +591,7 @@ class TaskStore:
                     )
                 )
             await db.commit()
-        if task_id in self.graph:
-            self.graph[task_id].status = TaskStatus.FAILED
-            self.graph[task_id].failure_reason = reason
-        if task_id in self._ready_order:
-            self._ready_order.remove(task_id)
+        self._tg.mark_failed(task_id, reason)
         await self.cascade_cancel_recursive(task_id)
         return warnings
 
@@ -583,15 +632,9 @@ class TaskStore:
                     )
                 )
                 await db.commit()
-                if task_id in self.graph:
-                    self.graph[task_id].status = TaskStatus.READY
-                if task_id not in self._ready_order:
-                    self._ready_order.append(task_id)
+                self._tg.requeue_ready(task_id)
                 return True
-        if task_id in self.graph:
-            self.graph[task_id].status = TaskStatus.FAILED
-        if task_id in self._ready_order:
-            self._ready_order.remove(task_id)
+        self._tg.mark_failed(task_id)
         await self.cascade_cancel_recursive(task_id)
         return False
 
@@ -650,11 +693,8 @@ class TaskStore:
                 )
             )
             await db.commit()
-            if result.rowcount > 0 and task_id in self.graph:
-                self.graph[task_id].status = TaskStatus.PAUSED
-                self.graph[task_id].blocker_id = blocker_id
-                self.graph[task_id].pause_checkpoint = checkpoint
-                self.graph[task_id].pause_verdict = verdict
+            if result.rowcount > 0:
+                self._tg.pause(task_id, blocker_id, checkpoint, verdict)
             return result.rowcount > 0
 
     async def resume_paused_tasks(self, blocker_id: str) -> int:
@@ -768,8 +808,7 @@ class TaskStore:
             await db.commit()
         if rec is None:
             return None
-        task = record_to_task(rec)
-        self.graph[task.id] = task
+        self._tg.upsert(record_to_task(rec))
         return rec
 
     async def recover_running(self) -> list[TaskRecord]:
@@ -786,11 +825,7 @@ class TaskStore:
             )
             recs = list((await db.execute(stmt)).scalars().all())
             await db.commit()
-            for rec in recs:
-                task = record_to_task(rec)
-                self.graph[task.id] = task
-                if task.id not in self._ready_order:
-                    self._ready_order.append(task.id)
+            self._tg.recover_running(record_to_task(rec) for rec in recs)
             return recs
 
     async def replace_run_tasks(self, tasks: list[Task]) -> None:
@@ -830,8 +865,7 @@ class TaskStore:
                 ]
             )
             await db.commit()
-        self.graph = {t.id: t for t in tasks}
-        self._ready_order = [t.id for t in tasks if t.status == TaskStatus.READY]
+        self._tg.load(tasks)
 
     async def request_replan(
         self,
@@ -900,13 +934,9 @@ class TaskStore:
             )
             db.add(replanner)
             await db.commit()
-        if task_id in self.graph:
-            self.graph[task_id].status = TaskStatus.FAILED
-            self.graph[task_id].failure_reason = f"replan_requested: {reason}"
-        if task_id in self._ready_order:
-            self._ready_order.remove(task_id)
-        replanner_task = record_to_task(replanner)
-        self.graph[replanner_task.id] = replanner_task
-        if replanner_task.status == TaskStatus.READY and replanner_task.id not in self._ready_order:
-            self._ready_order.append(replanner_task.id)
+        self._tg.apply_replan(
+            failed_task_id=task_id,
+            reason=reason,
+            replanner_task=record_to_task(replanner),
+        )
         return replanner

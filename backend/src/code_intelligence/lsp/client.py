@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import logging
+import re
+import shlex
 import subprocess
 import threading
 import time
@@ -12,6 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from code_intelligence._async_bridge import run_sync
 from code_intelligence.constants import (
     LSP_CACHE_MAX_ENTRIES,
     LSP_CACHE_TTL,
@@ -208,10 +211,7 @@ class LspClient:
             p = Path(self._workspace_root) / p
         return str(p)
 
-    # Pattern matching Python def/class lines to locate the symbol name.
-    _DEF_CLASS_RE = __import__("re").compile(
-        r"^(\s*(?:async\s+)?(?:def|class)\s+)"
-    )
+    _DEF_CLASS_RE = re.compile(r"^(\s*(?:async\s+)?(?:def|class)\s+)")
     def _resolve_column(self, file_path: str, line: int, character: int) -> int:
         """When character is 0, advance to the actual symbol name column.
 
@@ -250,9 +250,9 @@ class LspClient:
         try:
             abs_path = self._resolve_path(file_path)
             if self._sandbox:
-                resp = self._resolve(
+                resp = run_sync(
                     self._sandbox.process.exec(
-                        f"sed -n '{line}p' {abs_path!r}",
+                        f"sed -n {int(line)}p {shlex.quote(abs_path)}",
                         timeout=5,
                     )
                 )
@@ -271,10 +271,10 @@ class LspClient:
         self, file_path: str, line: int, character: int,
     ) -> list[SymbolInfo]:
         character = self._resolve_column(file_path, line, character)
-        abs_path = self._resolve_path(file_path)
+        path_literal = json.dumps(self._resolve_path(file_path))
         script = (
             f"import jedi, json\n"
-            f"s = jedi.Script(path='{abs_path}')\n"
+            f"s = jedi.Script(path={path_literal})\n"
             f"defs = s.goto(line={line}, column={character})\n"
             f"print(json.dumps([{{'name': d.name, 'path': str(d.module_path or ''), "
             f"'line': d.line or 0, 'col': d.column or 0, "
@@ -300,10 +300,10 @@ class LspClient:
         self, file_path: str, line: int, character: int,
     ) -> list[ReferenceInfo]:
         character = self._resolve_column(file_path, line, character)
-        abs_path = self._resolve_path(file_path)
+        path_literal = json.dumps(self._resolve_path(file_path))
         script = (
             f"import jedi, json\n"
-            f"s = jedi.Script(path='{abs_path}')\n"
+            f"s = jedi.Script(path={path_literal})\n"
             f"refs = s.get_references(line={line}, column={character})\n"
             f"print(json.dumps([{{'path': str(r.module_path or ''), "
             f"'line': r.line or 0, 'col': r.column or 0}} for r in refs]))"
@@ -326,10 +326,10 @@ class LspClient:
         self, file_path: str, line: int, character: int,
     ) -> HoverResult | None:
         character = self._resolve_column(file_path, line, character)
-        abs_path = self._resolve_path(file_path)
+        path_literal = json.dumps(self._resolve_path(file_path))
         script = (
             f"import jedi, json\n"
-            f"s = jedi.Script(path='{abs_path}')\n"
+            f"s = jedi.Script(path={path_literal})\n"
             f"names = s.help(line={line}, column={character})\n"
             f"if names:\n"
             f"    n = names[0]\n"
@@ -373,24 +373,6 @@ class LspClient:
 
     # -- Script execution -----------------------------------------------------
 
-    @staticmethod
-    def _resolve(result: Any) -> Any:
-        """If *result* is a coroutine (async sandbox), run it synchronously."""
-        import asyncio
-        import inspect
-
-        if inspect.isawaitable(result):
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                loop = None
-            if loop and loop.is_running():
-                import concurrent.futures
-                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-                    return pool.submit(asyncio.run, result).result()
-            return asyncio.run(result)
-        return result
-
     def _run_python_script(self, script: str) -> str:
         """Run a Python script locally or in the sandbox.
 
@@ -402,21 +384,19 @@ class LspClient:
         try:
             if self._sandbox:
                 import hashlib
-                tag = hashlib.md5(script.encode()).hexdigest()[:8]
+                tag = hashlib.md5(script.encode(), usedforsecurity=False).hexdigest()[:8]
                 remote_path = f"/tmp/_lsp_query_{tag}.py"
                 try:
                     self._sandbox.fs.upload_file(
                         script.encode("utf-8"), remote_path,
                     )
                 except Exception:
-                    # Fallback: write via shell
-                    import shlex
-                    self._resolve(self._sandbox.process.exec(
-                        f"printf %s {shlex.quote(script)} > {remote_path}",
+                    run_sync(self._sandbox.process.exec(
+                        f"printf %s {shlex.quote(script)} > {shlex.quote(remote_path)}",
                         timeout=5,
                     ))
-                cmd = f"python3 {remote_path}"
-                response = self._resolve(
+                cmd = f"python3 {shlex.quote(remote_path)}"
+                response = run_sync(
                     self._sandbox.process.exec(
                         cmd,
                         timeout=int(LSP_QUERY_TIMEOUT),
@@ -456,7 +436,7 @@ class LspClient:
     def _check_backend(self, *, local_cmd: list[str], sandbox_cmd: str) -> bool:
         try:
             if self._sandbox:
-                resp = self._resolve(self._sandbox.process.exec(sandbox_cmd, timeout=10))
+                resp = run_sync(self._sandbox.process.exec(sandbox_cmd, timeout=10))
                 return getattr(resp, "exit_code", 1) == 0
             proc = subprocess.run(
                 local_cmd,
@@ -477,7 +457,7 @@ class LspClient:
         if not self._sandbox:
             return False
         try:
-            check = self._resolve(
+            check = run_sync(
                 self._sandbox.process.exec(
                     "node -e \"require('typescript')\" 2>/dev/null && echo ok || echo missing",
                     timeout=15,
@@ -494,7 +474,7 @@ class LspClient:
 
     def _run_sandbox_install(self, command: str) -> bool:
         try:
-            resp = self._resolve(self._sandbox.process.exec(command, timeout=120))
+            resp = run_sync(self._sandbox.process.exec(command, timeout=120))
             return getattr(resp, "exit_code", 1) in (0, None)
         except Exception:
             logger.debug("LSP backend install failed: %s", command, exc_info=True)
