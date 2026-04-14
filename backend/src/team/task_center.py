@@ -238,7 +238,7 @@ class TaskCenter:
         content: str | None = None
 
         if snapshot and api_client:
-            from external_trigger.checkpoint_note import (
+            from external_trigger.tc_note import (
                 EDIT_CHECKPOINT_PROMPT,
                 TURN_CHECKPOINT_PROMPT,
                 run_checkpoint_note,

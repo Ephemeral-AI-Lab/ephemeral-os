@@ -1,12 +1,15 @@
-"""Pause assessment — blocker impact check via external_trigger runner."""
+"""Pause assessment — spawns an ephemeral agent to assess blocker impact."""
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from typing import Any
 
-from external_trigger.runner import run
+from external_trigger.agent import spawn_and_run
 from tools.external_trigger.pause_verdict import PauseVerdictInput, PauseVerdictTool
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -31,10 +34,10 @@ async def assess_pause(
     api_client: Any,
     model: str | None = None,
 ) -> PauseVerdict:
-    """Assess whether a running agent is affected by a blocker.
+    """Spawn an ephemeral agent to assess whether a running task is affected by a blocker.
 
-    Uses the shared external_trigger runner with PauseVerdictTool.
-    Retries until a valid pause_verdict tool call succeeds.
+    The agent inherits the task's conversation snapshot and has only the
+    pause_verdict tool available. Uses runner.run() for guaranteed tool call.
     """
     prompt = (
         "BLOCKER CHECK\n"
@@ -47,7 +50,8 @@ async def assess_pause(
         "Call the pause_verdict tool with your assessment."
     )
 
-    result = await run(
+    result = await spawn_and_run(
+        agent_name=f"pause_assessor:{task_id}",
         messages=messages,
         system_prompt=system_prompt,
         prompt=prompt,

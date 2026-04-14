@@ -1,11 +1,11 @@
-"""Checkpoint note — progress note generation via external_trigger runner."""
+"""Checkpoint note — spawns an ephemeral agent to generate a progress note."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any
 
-from external_trigger.runner import run
+from external_trigger.agent import spawn_and_run
 from tools.context.toolkit import PostNoteTool, PostNoteInput
 
 
@@ -58,12 +58,13 @@ async def run_checkpoint_note(
     model: str | None = None,
     api_client: Any,
 ) -> NoteSummary:
-    """Generate a checkpoint note via the shared external_trigger runner.
+    """Spawn an ephemeral agent to generate a checkpoint note.
 
-    Uses PostNoteTool from TaskCenterToolkit. Retries until a valid
-    post_note tool call succeeds.
+    The agent inherits the task's conversation snapshot and has only the
+    post_note tool available. Uses runner.run() for guaranteed tool call.
     """
-    result = await run(
+    result = await spawn_and_run(
+        agent_name=f"checkpoint:{task_id}",
         messages=messages,
         system_prompt=CHECKPOINT_SYSTEM_PROMPT,
         prompt=prompt,
