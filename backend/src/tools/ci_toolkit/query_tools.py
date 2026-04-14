@@ -623,8 +623,8 @@ def _file_query_symbols(
         "before patching to see the full blast radius. Pass bare symbol names like `Git` or "
         "`_fill_stage_outputs`, not snippets like `def Git` or `class Git`. If you only know "
         "an exact file path, one file-path query returns the indexed definitions in that file "
-        "so you can continue with real symbol names. ALWAYS prefer this over daytona_grep "
-        "when you know a symbol name."
+        "so you can continue with real symbol names. ALWAYS prefer this over daytona_read_file "
+        "and daytona_grep — it is cheaper, faster, and returns structured data."
     ),
     read_only=True,
 )

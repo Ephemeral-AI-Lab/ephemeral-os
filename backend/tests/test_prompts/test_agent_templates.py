@@ -70,9 +70,9 @@ class TestBuildRoleSection:
         assert 'result = shell("...", timeout=N)' in result
         assert "subprocess" in result
 
-    def test_reviewer_read_only_constraint(self) -> None:
+    def test_reviewer_may_fix_constraint(self) -> None:
         result = build_role_section("reviewer")
-        assert "Must not modify" in result
+        assert "May apply targeted fixes" in result
         assert 'result = shell("...", timeout=N)' in result
 
     def test_planner_no_code_constraint(self) -> None:

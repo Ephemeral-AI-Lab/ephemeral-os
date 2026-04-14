@@ -20,11 +20,9 @@ TC_NOTE_EDIT_PROMPT = (
 )
 
 TC_NOTE_TURN_PROMPT = (
-    "Write a progress note for the Task Center about this agent's work.\n"
-    "Include: accomplishments, status (working/stuck/done), and whether "
-    "blocked by another task's changes (name the file and error).\n"
-    "Call post_note with:\n"
-    "- content: name specific files, errors, and scope paths (under 300 words)\n"
+    "Call post_note now. The 'content' field is REQUIRED.\n"
+    "- content: what this agent accomplished and current status "
+    "(working/stuck/done). Name specific files and errors. Under 300 words.\n"
     "- paths: list every file/dir path relevant to the work\n"
     "- tags: one or more of implementation, bug_fix, blocker, warning, discovery "
     "(use 'blocker' if stuck or blocked by another task)"
@@ -56,7 +54,7 @@ async def run_tc_note(
     messages: list[dict[str, Any]],
     prompt: str,
     trigger: str,
-    max_tokens: int = 500,
+    max_tokens: int = 1024,
     model: str | None = None,
     api_client: Any,
 ) -> NoteSummary:

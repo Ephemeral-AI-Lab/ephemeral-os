@@ -68,8 +68,8 @@ def test_write_error_returns_none_when_no_write_scope():
     assert result is None
 
 
-def test_write_error_blocks_validator_even_inside_scope():
-    """Validators must never write repo files, regardless of scope."""
+def test_write_error_allows_validator_inside_scope():
+    """Validators may write repo files for targeted fixes."""
     ctx = _ctx({
         "agent_name": "validator",
         "team_mode_enabled": True,
@@ -77,20 +77,18 @@ def test_write_error_blocks_validator_even_inside_scope():
         "write_scope": ["dask/"],
     })
     result = _team_repo_write_error(ctx, "/testbed/dask/config.py", tool_name="edit")
-    assert result is not None
-    assert "validator lanes must not write" in result
+    assert result is None
 
 
-def test_write_error_blocks_validator_without_scope():
-    """Validators are blocked even when no write_scope is set."""
+def test_write_error_allows_validator_without_scope():
+    """Validators may write repo files even when no write_scope is set."""
     ctx = _ctx({
         "agent_name": "validator",
         "team_mode_enabled": True,
         "daytona_cwd": "/testbed",
     })
     result = _team_repo_write_error(ctx, "/testbed/dask/config.py", tool_name="edit")
-    assert result is not None
-    assert "validator" in result
+    assert result is None
 
 
 def test_write_error_returns_none_for_non_team_mode():

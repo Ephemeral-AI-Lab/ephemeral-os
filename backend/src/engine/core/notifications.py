@@ -44,8 +44,9 @@ def _budget_warning_steps(context: "QueryContext") -> str:
         )
     return (
         "1. Run one final verification command (daytona_codeact) on your most critical test.\n"
-        "2. Call context_changed_since() if you have not already.\n"
-        "3. Wrap up — summarize what you accomplished and what remains in your final message."
+        "2. Run ci_diagnostics(file_path) on every file you edited.\n"
+        "3. If your verification still fails, signal request_replan in your posthook with the exact failure evidence — do not claim completion for work that did not pass verification.\n"
+        "4. If verification passed, summarize what you accomplished and what remains in your final message."
     )
 
 

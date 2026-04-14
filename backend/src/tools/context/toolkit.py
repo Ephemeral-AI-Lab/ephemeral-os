@@ -182,11 +182,11 @@ class ReadNotesInput(BaseModel):
 class ReadNotesTool(BaseTool):
     name = "read_notes"
     description = (
-        "Read notes from the Task Center, optionally filtered by paths, tags, "
-        "or keyword. Use paths to find notes about specific files/dirs. "
-        "Use tags to find specific note types (e.g. 'blocker', 'discovery'). "
-        "Use after explorer waves to read findings, before starting work to "
-        "absorb context, and before retrying to see what changed."
+        "Read notes from the Task Center. ALWAYS include paths=[<your_scope_paths>] "
+        "to scope reads to relevant files — unfiltered reads waste context and miss nothing useful. "
+        "Also use tags= to find specific note types (e.g. 'blocker', 'discovery') "
+        "and keyword= for text search. "
+        "Call as your FIRST tool on every fresh developer or validator lane."
     )
     input_model = ReadNotesInput
 
@@ -278,10 +278,10 @@ class ReadSiblingNotesInput(BaseModel):
 class ReadSiblingNotesTool(BaseTool):
     name = "read_sibling_notes"
     description = (
-        "Read notes from sibling tasks and their descendants. Use to check "
-        "sibling activity before widening scope, to assess shared failures "
-        "before replanning, and to avoid duplicating work another sibling "
-        "already completed."
+        "Read notes from sibling tasks and their descendants. Developers MUST call this "
+        "before any edit outside original scope_paths and after any verification failure "
+        "to check if siblings hit the same issue. Replanners MUST call this before choosing "
+        "an action. Include paths=[...] to scope to relevant files."
     )
     input_model = ReadSiblingNotesInput
 

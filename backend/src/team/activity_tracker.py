@@ -157,7 +157,7 @@ class ActivityTracker:
                         messages=snapshot or [],
                         prompt=prompt,
                         trigger=trigger,
-                        max_tokens=500,
+                        max_tokens=1024,
                         model=model,
                         api_client=api_client,
                     )

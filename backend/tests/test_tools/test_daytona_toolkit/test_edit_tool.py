@@ -349,7 +349,7 @@ def test_scope_overlap_warning_ignores_same_agent_run_id():
     assert "dask/config.py (" not in warning
 
 
-async def test_edit_rejects_repo_write_from_validator():
+async def test_edit_allows_repo_write_from_validator():
     sb = _make_sandbox(download_content="original")
     ctx = _ctx(
         {
@@ -369,9 +369,7 @@ async def test_edit_rejects_repo_write_from_validator():
         ctx,
     )
 
-    assert result.is_error
-    assert "validator lanes must not write repository files" in result.output
-    sb.fs.upload_file.assert_not_called()
+    assert not result.is_error
 
 
 async def test_edit_direct_write_exception():

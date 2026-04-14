@@ -738,8 +738,8 @@ def test_destructive_shell_pattern_does_not_match_safe_commands(command):
     assert not pattern.search(command), f"Pattern should NOT match: {command}"
 
 
-async def test_codeact_rejects_writes_from_validator():
-    """CodeAct staged writes must respect the validator no-write contract."""
+async def test_codeact_allows_writes_from_validator():
+    """CodeAct staged writes are allowed for validators (targeted fixes)."""
     manifest = _make_manifest(writes=[{"path": "/testbed/pkg/core.py", "content": "x = 1\n"}])
     sb = _make_sandbox(manifest=manifest)
     ctx = _ctx(
@@ -756,11 +756,8 @@ async def test_codeact_rejects_writes_from_validator():
         ctx,
     )
 
-    assert result.is_error
     data = json.loads(result.output)
-    assert data["files_written"] == 0
-    assert data["write_errors"]
-    assert "validator lanes must not write repository files" in data["write_errors"][0]
+    assert not data.get("write_errors")
 
 
 async def test_codeact_blocks_test_suite_writes():

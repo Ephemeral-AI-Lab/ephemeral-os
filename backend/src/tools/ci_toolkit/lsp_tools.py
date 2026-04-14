@@ -21,7 +21,7 @@ def _ci_cwd(context: ToolExecutionContext) -> str | None:
 
 @tool(
     name="ci_diagnostics",
-    description="Check a file for syntax errors, type errors, and warnings after edits. Use before running full test suites to catch obvious mistakes early.",
+    description="Check a file for syntax errors, import errors, undefined names, and type warnings. Developers MUST call this on every edited file before signaling completion — a single unresolved NameError in a shared file cascades to every downstream test. Validators MUST call this on each scope_paths file before the full test suite.",
     read_only=True,
 )
 async def ci_diagnostics(

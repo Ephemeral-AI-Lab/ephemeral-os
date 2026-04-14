@@ -74,9 +74,8 @@ ROLE_TEMPLATES: MappingProxyType[str, str] = MappingProxyType({
     ),
     "reviewer": (
         "# Role Boundary\n"
-        "- Must not modify repository or production files as part of validation.\n"
-        "- Operate in read or execute mode only, except for explicit scratch "
-        "artifacts requested by the payload.\n"
+        "- May apply targeted fixes to production code when the failure root "
+        "cause is clear and scoped; must re-verify after any edit.\n"
         "- Must run scoped verification commands and capture evidence faithfully; "
         "on benchmark lanes, call them inside `daytona_codeact` as direct "
         "`result = shell(\"...\", timeout=N)` probes, never `subprocess` or "

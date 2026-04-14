@@ -336,7 +336,7 @@ async def test_write_file_warns_non_verify_surface_write_in_warn_mode():
     assert any("outside write_scope" in w for w in data["warnings"])
 
 
-async def test_write_file_rejects_repo_write_from_validator():
+async def test_write_file_allows_repo_write_from_validator():
     sb = _sb()
     ctx = _ctx(
         {
@@ -355,10 +355,7 @@ async def test_write_file_rejects_repo_write_from_validator():
         ctx,
     )
 
-    assert result.is_error
-    assert "validator lanes must not write repository files" in result.output
-    sb.fs.upload_file.assert_not_called()
-    sb.process.exec.assert_not_called()
+    assert not result.is_error
 
 
 async def test_write_file_exception_returns_error():

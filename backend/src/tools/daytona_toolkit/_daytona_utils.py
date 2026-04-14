@@ -403,8 +403,6 @@ def _team_repo_write_error(
     rel_path = _normalize_repo_relative_path(file_path, repo_root)
     if not rel_path:
         return None
-    if str(context.metadata.get("agent_name") or "").strip() == "validator":
-        return f"{tool_name}: validator lanes must not write repository files ({rel_path})."
     if _is_test_suite_path(rel_path):
         return (
             f"{tool_name}: write to {rel_path} touches the test suite and is blocked "
@@ -431,7 +429,28 @@ def _team_repo_write_warning(
         return None  # no write_scope set — unconstrained
     if _path_under_write_scope(rel_path, write_scope):
         return None
-    return f"{tool_name}: write to {rel_path} is outside write_scope {write_scope} (advisory)."
+    record_coordination_warning(
+        context,
+        category="outside_write_scope",
+        message=f"{tool_name}: {rel_path} outside {write_scope}",
+    )
+    warnings = context.metadata.get("coordination_warnings") or []
+    scope_warnings = sum(
+        1
+        for w in warnings
+        if isinstance(w, dict) and w.get("category") == "outside_write_scope"
+    )
+    if scope_warnings >= 3:
+        return (
+            f"{tool_name}: write to {rel_path} is outside write_scope {write_scope} (advisory). "
+            "You have 3+ outside-scope warnings — your assigned scope likely does not match what this task requires. "
+            "Stop editing and call request_replan with the correct file paths instead of working around scope warnings."
+        )
+    return (
+        f"{tool_name}: write to {rel_path} is outside write_scope {write_scope} (advisory). "
+        "If this is an adjacent shim, proceed then call read_sibling_notes. "
+        "If your task fundamentally requires files outside your scope, call request_replan now."
+    )
 
 
 # ---------------------------------------------------------------------------
