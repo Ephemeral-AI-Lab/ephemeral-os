@@ -21,17 +21,6 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
-TASK_RETURNING = (
-    "id, team_run_id, agent_name, status, task,"
-    " deps, scope_paths, scope_ltree,"
-    " cascade_policy, parent_id, root_id, depth,"
-    " pending_dep_count, retry_count, max_retries,"
-    " agent_run_id, created_at, started_at,"
-    " finished_at, failure_reason,"
-    " blocker_id, pause_checkpoint, pause_verdict"
-)
-
-
 def row_to_record(row: Any) -> "TaskRecord":
     """Convert a raw SQL row to a TaskRecord instance."""
     return TaskRecord(

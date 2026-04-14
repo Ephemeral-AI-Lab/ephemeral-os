@@ -112,7 +112,6 @@ class TestTaskCenterStructure:
         assert callable(getattr(TaskCenter, 'cascade_cancel_recursive', None))
         assert callable(getattr(TaskCenter, 'recover_running', None))
         assert callable(getattr(TaskCenter, 'fail', None))
-        assert callable(getattr(TaskCenter, 'retry_task', None))
         assert callable(getattr(TaskCenter, 'cancel_all_pending', None))
         assert callable(getattr(TaskCenter, 'cancel_all_running', None))
         assert callable(getattr(TaskCenter, 'request_replan', None))

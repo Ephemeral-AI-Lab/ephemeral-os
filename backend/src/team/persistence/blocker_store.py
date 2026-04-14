@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import time
 
-from sqlalchemy import text
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from team.models import Blocker, BlockerStatus
@@ -54,26 +54,30 @@ class BlockerStore:
     async def load_active(self) -> list[Blocker]:
         """Load all non-terminal blockers for this team run."""
         async with self._sf() as db:
-            result = await db.execute(text(
-                "SELECT * FROM blockers "
-                "WHERE team_run_id = :rid AND status NOT IN ('resolved', 'failed') "
-                "ORDER BY created_at"
-            ), {"rid": self._team_run_id})
-            return [self._row_to_blocker(row) for row in result.fetchall()]
+            stmt = (
+                select(BlockerRecord)
+                .where(
+                    BlockerRecord.team_run_id == self._team_run_id,
+                    BlockerRecord.status.notin_(("resolved", "failed")),
+                )
+                .order_by(BlockerRecord.created_at)
+            )
+            rows = (await db.execute(stmt)).scalars().all()
+            return [self._record_to_blocker(rec) for rec in rows]
 
     @staticmethod
-    def _row_to_blocker(row) -> Blocker:
+    def _record_to_blocker(rec: BlockerRecord) -> Blocker:
         return Blocker(
-            id=row.id,
-            team_run_id=row.team_run_id,
-            status=BlockerStatus(row.status),
-            reason=row.reason,
-            root_cause_paths=list(row.root_cause_paths) if row.root_cause_paths else [],
-            initiating_task_id=row.initiating_task_id,
-            fix_task_id=row.fix_task_id,
-            declared_by=row.declared_by,
-            fix_summary=row.fix_summary,
-            pending_assessments=row.pending_assessments,
-            created_at=row.created_at,
-            resolved_at=row.resolved_at,
+            id=rec.id,
+            team_run_id=rec.team_run_id,
+            status=BlockerStatus(rec.status),
+            reason=rec.reason,
+            root_cause_paths=list(rec.root_cause_paths) if rec.root_cause_paths else [],
+            initiating_task_id=rec.initiating_task_id,
+            fix_task_id=rec.fix_task_id,
+            declared_by=rec.declared_by,
+            fix_summary=rec.fix_summary,
+            pending_assessments=rec.pending_assessments,
+            created_at=rec.created_at,
+            resolved_at=rec.resolved_at,
         )

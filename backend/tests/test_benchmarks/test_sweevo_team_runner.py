@@ -27,7 +27,7 @@ from message.event_printer import MultiAgentEventPrinter
 from message import ConversationMessage, TextBlock, ToolUseBlock
 from message.stream_events import BackgroundTaskCompleted
 from team.builtins import DEVELOPER, SCOUT, TEAM_PLANNER, TEAM_REPLANNER, VALIDATOR
-from team.models import Task, TaskStatus
+from team.models import Task, TaskStatus, TeamRunStatus
 from tools.core.runtime import ExecutionMetadata
 
 
@@ -136,28 +136,28 @@ async def test_query_ctx_seeds_repo_root_for_daytona_and_ci():
     assert ctx.tool_metadata["team_mode_enabled"] is True
     assert ctx.tool_metadata["role"] == "developer"
     assert ctx.tool_metadata["posthook_tool_names"] == ["post_note", "request_replan"]
-    assert "call the appropriate tool" in ctx.tool_metadata["posthook_prompt"]
+    assert "submit your results" in ctx.tool_metadata["posthook_prompt"].lower()
     assert "Repo root inside the sandbox: /testbed" in ctx.user_message
     assert "Do not prepend guessed roots" in ctx.user_message
 
 
 
-def test_root_prompt_points_to_skill_owned_workflow_policy():
+def test_root_prompt_includes_instance_essentials():
+    """Root prompt carries only instance-specific info — agent skills/system
+    prompts (loaded from DB) supply the rest of the workflow policy."""
     instance = _pydantic_instance()
 
     prompt = _build_root_prompt(instance, "/repo")
 
-    assert "The SWE-EVO test patch has already been applied inside the sandbox" in prompt
-    assert "This run is primarily evaluating the coordination behavior described in" in prompt
-    assert "`docs/architecture/task-center-redesign-summary.md`" in prompt
-    assert "`docs/architecture/plan-a-team-coordination-redesign.md`" not in prompt
-    assert "let the declared skills own the detailed workflow policy" in prompt
-    assert "Task Center, scout waves, scoped-path freshness, and recovery/replanning loop" in prompt
-    assert "per-layer cap of 16 tasks as a budgeting guardrail" in prompt
-    assert "`.ephemeralos/benchmark-logs/` only as supporting evidence" in prompt
+    assert instance.repo in prompt
+    assert instance.base_commit in prompt
+    assert instance.test_cmds in prompt
+    assert "fail-to-pass" in prompt.lower()
+    assert json.dumps(instance.fail_to_pass, indent=2) in prompt
+    assert "/repo" in prompt
 
 
-def test_root_prompt_summarizes_large_pass_to_pass_guardrail():
+def test_root_prompt_stays_compact_for_large_pass_to_pass():
     instance = _pydantic_instance(
         pass_to_pass=[f"tests/test_guard.py::test_case_{idx}" for idx in range(5000)],
     )
@@ -165,8 +165,7 @@ def test_root_prompt_summarizes_large_pass_to_pass_guardrail():
     prompt = _build_root_prompt(instance, "/repo")
 
     assert len(prompt.encode()) < 20000
-    assert '"total_tests": 5000' in prompt
-    assert '"sample_test_ids"' in prompt
+    assert "Pass-To-Pass count: 5000" in prompt
 
 
 def test_external_hook_emitter_writes_raw_and_structured_logs(tmp_path):
@@ -356,15 +355,19 @@ def test_checkpoint_repo_patch_from_store_returns_latest_matching_patch():
     assert _checkpoint_repo_patch_from_store(store, "T1", "missing") == ""
 
 def test_enforce_validation_evidence_requires_daytona_codeact():
+    def _state(messages):
+        return SimpleNamespace(
+            defn=SimpleNamespace(name="validator"),
+            agent=SimpleNamespace(display_messages=messages),
+        )
+
     with pytest.raises(RuntimeError, match="validator_missing_tool_evidence"):
         _enforce_validation_evidence(
-            "validator",
-            [ConversationMessage(role="assistant", content=[TextBlock(text="VERDICT: PASS")])],
+            _state([ConversationMessage(role="assistant", content=[TextBlock(text="VERDICT: PASS")])])
         )
 
     _enforce_validation_evidence(
-        "validator",
-        [
+        _state([
             ConversationMessage(
                 role="assistant",
                 content=[
@@ -375,7 +378,7 @@ def test_enforce_validation_evidence_requires_daytona_codeact():
                     )
                 ],
             )
-        ],
+        ])
     )
 
 
@@ -614,8 +617,8 @@ def test_make_runner_persists_full_compaction_delta(monkeypatch):
 
     monkeypatch.setattr("team.runtime.runner.AgentRunTracker", SimpleNamespace(create=lambda **_: _Tracker()))
     monkeypatch.setattr("team.runtime.runner.spawn_agent", lambda *_args, **_kwargs: agent)
-    monkeypatch.setattr(sweevo_team_runner, "_estimate_final_context", lambda _messages: 321)
-    monkeypatch.setattr(sweevo_team_runner, "_persist_benchmark_session", lambda **_: None)
+    monkeypatch.setattr("team.runtime.telemetry.estimate_final_context", lambda _messages: 321)
+    monkeypatch.setattr("team.runtime.telemetry.persist_session_snapshot", lambda **_: None)
 
     runner = _make_runner(
         session_config=SimpleNamespace(session_id="sess-1"),
@@ -696,8 +699,8 @@ def test_make_runner_persists_work_result_and_final_snapshot(monkeypatch):
 
     monkeypatch.setattr("team.runtime.runner.AgentRunTracker", SimpleNamespace(create=lambda **_: _Tracker()))
     monkeypatch.setattr("team.runtime.runner.spawn_agent", lambda *_args, **_kwargs: agent)
-    monkeypatch.setattr(sweevo_team_runner, "_estimate_final_context", lambda _messages: 0)
-    monkeypatch.setattr(sweevo_team_runner, "_persist_benchmark_session", lambda **_: None)
+    monkeypatch.setattr("team.runtime.telemetry.estimate_final_context", lambda _messages: 0)
+    monkeypatch.setattr("team.runtime.telemetry.persist_session_snapshot", lambda **_: None)
     monkeypatch.setattr("team.runtime.registry.get", lambda _team_run_id: fake_team_run)
 
     runner = _make_runner(
@@ -809,8 +812,8 @@ def test_make_runner_logs_tc_note_external_hook(monkeypatch, tmp_path: Path):
 
     monkeypatch.setattr("team.runtime.runner.AgentRunTracker", SimpleNamespace(create=lambda **_: _Tracker()))
     monkeypatch.setattr("team.runtime.runner.spawn_agent", lambda *_args, **_kwargs: agent)
-    monkeypatch.setattr(sweevo_team_runner, "_estimate_final_context", lambda _messages: 0)
-    monkeypatch.setattr(sweevo_team_runner, "_persist_benchmark_session", lambda **_: None)
+    monkeypatch.setattr("team.runtime.telemetry.estimate_final_context", lambda _messages: 0)
+    monkeypatch.setattr("team.runtime.telemetry.persist_session_snapshot", lambda **_: None)
     monkeypatch.setattr("team.runtime.registry.get", lambda _team_run_id: fake_team_run)
 
     runner = _make_runner(
@@ -909,8 +912,8 @@ def test_make_runner_skips_tc_note_when_trigger_not_allowed(monkeypatch, tmp_pat
 
     monkeypatch.setattr("team.runtime.runner.AgentRunTracker", SimpleNamespace(create=lambda **_: _Tracker()))
     monkeypatch.setattr("team.runtime.runner.spawn_agent", lambda *_args, **_kwargs: agent)
-    monkeypatch.setattr(sweevo_team_runner, "_estimate_final_context", lambda _messages: 0)
-    monkeypatch.setattr(sweevo_team_runner, "_persist_benchmark_session", lambda **_: None)
+    monkeypatch.setattr("team.runtime.telemetry.estimate_final_context", lambda _messages: 0)
+    monkeypatch.setattr("team.runtime.telemetry.persist_session_snapshot", lambda **_: None)
     monkeypatch.setattr("team.runtime.registry.get", lambda _team_run_id: fake_team_run)
 
     runner = _make_runner(
@@ -956,7 +959,7 @@ def test_finalize_team_result_surfaces_retry_replan_and_checkpoint_metadata(monk
     result = sweevo_team_runner._finalize_team_result(
         tr=SimpleNamespace(
             id="TR1",
-            status=sweevo_team_runner.TeamRunStatus.SUCCEEDED,
+            status=TeamRunStatus.SUCCEEDED,
             sandbox_id="sbx-1",
             budget_state=SimpleNamespace(replans_used=2),
             task_center=SimpleNamespace(

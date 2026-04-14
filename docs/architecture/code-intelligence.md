@@ -4,45 +4,66 @@ The Code Intelligence subsystem orchestrates multi-backend semantic and structur
 
 ## Architecture Overview
 
-```mermaid
-graph TB
-    subgraph Client["Client"]
-        Tool["ci_query_symbol<br/>ci_workspace_structure<br/>ci_status"]
-    end
-    
-    subgraph Service["CodeIntelligenceService"]
-        QueryRouter["IntelligenceQueryRouter<br/>(priority-based dispatch)"]
-        SymbolIdx["SymbolIndex<br/>(background build)"]
-        LSPClient["LspClient<br/>(Python: Jedi)"]
-        TreeCache["TreeCache<br/>(tree-sitter)"]
-        Arbiter["Arbiter<br/>(OCC edits)"]
-        TimeMachine["TimeMachine<br/>(undo snapshots)"]
-        Patcher["Patcher<br/>(merge logic)"]
-    end
-    
-    subgraph Backends["Backend Adapters"]
-        LspAdapter["LspBackendAdapter<br/>(priority: 100)"]
-        SymbolAdapter["SymbolIndexBackendAdapter<br/>(priority: 50)"]
-    end
-    
-    subgraph Storage["File Storage"]
-        LocalFS["Local Filesystem"]
-        SandboxFS["Sandbox Filesystem<br/>(daytona_sdk)"]
-    end
-    
-    Tool -->|query_symbol<br/>find_definitions| Service
-    Service -->|route| QueryRouter
-    QueryRouter -->|try LSP first| LspAdapter
-    QueryRouter -->|fallback| SymbolAdapter
-    LspAdapter -->|goto_definition<br/>find_references| LSPClient
-    SymbolAdapter -->|find<br/>file_symbols| SymbolIdx
-    SymbolIdx -->|cache| TreeCache
-    SymbolIdx -->|read files| Storage
-    LSPClient -->|subprocess<br/>jedi script| LocalFS
-    LSPClient -->|sandbox.process.exec| SandboxFS
-    Service -->|prepare/commit| Arbiter
-    Service -->|snapshot| TimeMachine
-    Service -->|merge edits| Patcher
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Client                                                                      │
+│  ┌──────────────────────────────────────────┐                               │
+│  │  ci_query_symbol                         │                               │
+│  │  ci_workspace_structure                  │                               │
+│  │  ci_status                               │                               │
+│  └──────────────────────┬───────────────────┘                               │
+└─────────────────────────┼───────────────────────────────────────────────────┘
+            query_symbol / find_definitions │
+                                            ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  CodeIntelligenceService                                                     │
+│                                                                              │
+│  ┌──────────────────────────────┐    ┌───────────┐    ┌──────────────────┐  │
+│  │  IntelligenceQueryRouter     │    │ SymbolIndex│    │   LspClient      │  │
+│  │  (priority-based dispatch)   │    │ (background│    │  (Python: Jedi)  │  │
+│  └────────────┬─────────────────┘    │   build)  │    └──────────────────┘  │
+│       try LSP │        │ fallback    └─────┬──────┘                         │
+│               │        │                   │ cache                           │
+│               ▼        ▼             ┌─────▼──────┐                         │
+│  ┌──────────────┐  ┌────────────┐    │  TreeCache │    ┌──────────────────┐  │
+│  │LspBackend-   │  │SymbolIndex-│    │ (tree-     │    │   Arbiter        │  │
+│  │Adapter       │  │Backend-    │    │  sitter)   │    │  (OCC edits)     │  │
+│  │(priority:100)│  │Adapter     │    └────────────┘    └──────────────────┘  │
+│  └──────┬───────┘  │(priority:  │                                            │
+│         │          │  50)       │                      ┌──────────────────┐  │
+│         │          └────────────┘                      │  TimeMachine     │  │
+│         │                                              │ (undo snapshots) │  │
+│         │                                              └──────────────────┘  │
+│         │                                                                    │
+│         │                                              ┌──────────────────┐  │
+│         │                                              │  Patcher         │  │
+│         │                                              │ (merge logic)    │  │
+│         │                                              └──────────────────┘  │
+└─────────┼──────────────────────────────────────────────────────────────────-┘
+          │ goto_definition / find_references
+          ▼
+┌──────────────────────────────────────────────────┐
+│  Backend Adapters                                 │
+│                                                   │
+│  ┌────────────────────────┐  ┌─────────────────┐  │
+│  │  LspBackendAdapter     │  │ SymbolIndexBack- │  │
+│  │  (priority: 100)       │  │ endAdapter       │  │
+│  │  goto_definition       │  │ (priority: 50)   │  │
+│  │  find_references       │  │ find / file_syms │  │
+│  └──────────┬─────────────┘  └────────┬────────┘  │
+└─────────────┼──────────────────────────┼───────────┘
+              │                          │ read files
+  subprocess / │                          ▼
+  sandbox exec │          ┌──────────────────────────┐
+              │          │  File Storage             │
+              │          │  ┌──────────────────────┐ │
+              ▼          │  │  Local Filesystem    │ │
+┌─────────────────────┐  │  └──────────────────────┘ │
+│  Local Filesystem   │  │  ┌──────────────────────┐ │
+│  (jedi script)      │  │  │  Sandbox Filesystem  │ │
+└─────────────────────┘  │  │  (daytona_sdk)       │ │
+                         │  └──────────────────────┘ │
+                         └──────────────────────────┘
 ```
 
 ## Components
@@ -183,192 +204,279 @@ Attempts to merge concurrent edits when file changes between prepare and commit.
 
 ## Symbol Indexing Workflow
 
-```mermaid
-sequenceDiagram
-    participant Client as Tool (ci_query_symbol)
-    participant Service as CodeIntelligenceService
-    participant Router as IntelligenceQueryRouter
-    participant LspAdapter as LspBackendAdapter
-    participant SymAdapter as SymbolIndexBackendAdapter
-    participant Lsp as LspClient
-    participant Index as SymbolIndex
-
-    Client->>Service: query_symbols(query)
-    Service->>Index: find(query)
-    alt Index already built
-        Index-->>Service: list[SymbolInfo]
-    else Index building
-        Index-->>Service: [] (empty until build completes)
-        Service-->>Client: fallback via ripgrep/Python regex
-    end
-    
-    alt references=true
-        Service->>Router: find_references(file_path, symbol, line, char)
-        Router->>LspAdapter: supports check
-        alt Python/TypeScript file
-            Router->>Lsp: find_references()
-            Lsp->>Lsp: run jedi script in subprocess
-            Lsp-->>Router: list[ReferenceInfo]
-            Router-->>Service: results
-        else Unsupported
-            Router->>SymAdapter: find_references()
-            SymAdapter-->>Router: UNSUPPORTED (no fallback)
-            Router-->>Service: []
-        end
-        Service-->>Client: definitions + references
-    else references=false
-        Service-->>Client: definitions only
-    end
+```
+  Tool (ci_query_symbol)        CodeIntelligenceService     IntelligenceQueryRouter
+           │                              │                           │
+           │── query_symbols(query) ─────▶│                           │
+           │                              │── find(query) ──▶ SymbolIndex
+           │                              │                           │
+           │              ┌───────────────┤ [Index already built]     │
+           │              │               │◀── list[SymbolInfo] ──────┤
+           │              │               │                           │
+           │              └───────────────┤ [Index building]          │
+           │                              │◀── [] (empty) ────────────┤
+           │◀─ fallback (ripgrep/regex) ──│                           │
+           │                              │                           │
+           │         [references=true]    │                           │
+           │                              │── find_references() ─────▶│
+           │                              │                           │── supports check
+           │                              │          [Python/TypeScript file]
+           │                              │                           │── find_references()
+           │                              │                           │      │
+           │                              │                       LspClient  │
+           │                              │                           │◀─ run jedi subprocess
+           │                              │◀── list[ReferenceInfo] ───│
+           │◀─ definitions + references ──│                           │
+           │                              │          [Unsupported]    │
+           │                              │                           │── find_references()
+           │                              │                           │      │
+           │                              │                  SymbolIndexAdapter
+           │                              │                           │◀─ UNSUPPORTED
+           │◀─ [] ────────────────────────│◀─── [] ──────────────────-│
+           │                              │                           │
+           │         [references=false]   │                           │
+           │◀─ definitions only ──────────│                           │
 ```
 
 ## LSP Query Sequence
 
-```mermaid
-sequenceDiagram
-    participant Client as ci_query_symbol Tool
-    participant Service as CodeIntelligenceService
-    participant Cache as LspClient (cache)
-    participant Jedi as Python/Jedi
-
-    Client->>Service: find_definitions(file_path, symbol, line, char)
-    Service->>Service: _resolve_symbol_column()
-    Service->>Service: find_definitions() via router
-    Service->>Cache: Check cache (key = def:file:line:char)
-    alt Cache hit
-        Cache-->>Service: cached results
-    else Cache miss
-        Cache->>Jedi: import jedi; s=Script(); s.goto(line, column)
-        Jedi-->>Cache: JSON [{"name": ..., "path": ..., "line": ..., "type": ...}]
-        Cache->>Cache: parse JSON, build SymbolInfo list
-        Cache->>Cache: store in LRU cache (TTL 60s)
-        Cache-->>Service: results
-    end
-    Service->>Service: return results
-    Service-->>Client: definitions
+```
+  ci_query_symbol Tool    CodeIntelligenceService    LspClient (cache)    Python/Jedi
+         │                          │                       │                   │
+         │── find_definitions() ───▶│                       │                   │
+         │                          │── _resolve_symbol_column()                │
+         │                          │── find_definitions() via router            │
+         │                          │── Check cache (key=def:file:line:char) ──▶│
+         │                          │                       │                   │
+         │             ┌────────────┤  [Cache hit]          │                   │
+         │             │            │◀── cached results ────│                   │
+         │             │            │                       │                   │
+         │             └────────────┤  [Cache miss]         │                   │
+         │                          │                       │── import jedi     │
+         │                          │                       │   s=Script()      │
+         │                          │                       │── s.goto(ln, col)▶│
+         │                          │                       │◀─ JSON results ───│
+         │                          │                       │── parse JSON      │
+         │                          │                       │── store in LRU    │
+         │                          │◀── results ───────────│   (TTL 60s)       │
+         │◀─── definitions ─────────│                       │                   │
 ```
 
 ## Backend Adapter Protocol
 
-```mermaid
-classDiagram
-    class CodeIntelligenceBackend {
-        +name: str
-        +priority: int
-        +supports(file_path): bool
-        +find_definitions(...): BackendQueryOutcome
-        +find_references(...): BackendQueryOutcome
-        +hover(...): BackendQueryOutcome
-        +diagnostics(...): BackendQueryOutcome
-    }
-
-    class BackendQueryOutcome {
-        +status: QueryStatus (SUCCESS, EMPTY, UNSUPPORTED, UNAVAILABLE, ERROR)
-        +results: list[Any]
-        +error: str
-    }
-
-    class LspBackendAdapter {
-        -_lsp: LspClient
-        +priority = 100
-        +supports(...): bool (checks .py, .ts, .js, .tsx, .jsx)
-    }
-
-    class SymbolIndexBackendAdapter {
-        -_index: SymbolIndex
-        +priority = 50
-        +supports(...): bool (returns True for all)
-    }
-
-    CodeIntelligenceBackend <|.. LspBackendAdapter
-    CodeIntelligenceBackend <|.. SymbolIndexBackendAdapter
-    LspBackendAdapter --> BackendQueryOutcome
-    SymbolIndexBackendAdapter --> BackendQueryOutcome
+```
+┌──────────────────────────────────────────────────────────┐
+│  <<interface>> CodeIntelligenceBackend                    │
+│                                                           │
+│  + name: str                                              │
+│  + priority: int                                          │
+│  + supports(file_path): bool                             │
+│  + find_definitions(...): BackendQueryOutcome             │
+│  + find_references(...): BackendQueryOutcome              │
+│  + hover(...): BackendQueryOutcome                        │
+│  + diagnostics(...): BackendQueryOutcome                  │
+└───────────────────────┬──────────────────────────────────┘
+                        │ implements
+          ┌─────────────┴─────────────┐
+          ▼                           ▼
+┌──────────────────────┐   ┌───────────────────────────┐
+│  LspBackendAdapter   │   │ SymbolIndexBackendAdapter  │
+│                      │   │                            │
+│  - _lsp: LspClient   │   │  - _index: SymbolIndex     │
+│  + priority = 100    │   │  + priority = 50           │
+│  + supports(...):    │   │  + supports(...):          │
+│    .py .ts .js       │   │    True for all            │
+│    .tsx .jsx         │   │                            │
+└──────────┬───────────┘   └────────────┬───────────────┘
+           │                            │
+           ▼                            ▼
+┌────────────────────────────────────────────────────────┐
+│  BackendQueryOutcome                                    │
+│                                                        │
+│  + status: QueryStatus                                 │
+│      (SUCCESS | EMPTY | UNSUPPORTED | UNAVAILABLE      │
+│       | ERROR)                                         │
+│  + results: list[Any]                                  │
+│  + error: str                                          │
+└────────────────────────────────────────────────────────┘
 ```
 
 ## Edit Coordination Workflow
 
-```mermaid
-flowchart TD
-    A["Agent requests edit<br/>apply_edit EditRequest"]
-    B["_prepared_write_guard<br/>prepare_write file_path"]
-    C["Read current content<br/>Compute hash"]
-    D{Hash matches<br/>expected?}
-    E["Arbiter.issue_token<br/>return PreparedWrite"]
-    F["Try patch on<br/>prepared.current_content"]
-    G{Patch<br/>success?}
-    H["Refresh prepared via<br/>arbiter state"]
-    I{Hash still<br/>matches?}
-    J["commit_prepared_write<br/>with new_content"]
-    K["Acquire file lock"]
-    L["Validate token"]
-    M{Token<br/>valid?}
-    N["Re-read current file"]
-    O{Hashes<br/>match?}
-    P["Write content<br/>to disk"]
-    Q["Arbiter.record_edit"]
-    R["symbol_index.refresh<br/>lsp_client.invalidate"]
-    S["Return EditResult<br/>success=true"]
-    T["Return conflict<br/>or error"]
-    
-    A --> B
-    B --> C
-    C --> D
-    D -->|no| T
-    D -->|yes| E
-    E --> F
-    F --> G
-    G -->|no| T
-    G -->|yes| H
-    H --> I
-    I -->|no| F
-    I -->|yes| J
-    J --> K
-    K --> L
-    L --> M
-    M -->|no| T
-    M -->|yes| N
-    N --> O
-    O -->|no: merge| J
-    O -->|yes| P
-    P --> Q
-    Q --> R
-    R --> S
-    
-    style S fill:#90EE90
-    style T fill:#FFB6C6
+```
+┌─────────────────────────────────────┐
+│  Agent requests edit                │
+│  apply_edit EditRequest             │
+└──────────────────┬──────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────┐
+│  _prepared_write_guard              │
+│  prepare_write(file_path)           │
+└──────────────────┬──────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────┐
+│  Read current content               │
+│  Compute hash                       │
+└──────────────────┬──────────────────┘
+                   │
+                   ▼
+            ┌──────┴───────┐
+            │ Hash matches  │
+            │  expected?    │
+            └──────┬───────┘
+           no │         │ yes
+              ▼         ▼
+          [conflict]  ┌─────────────────────┐
+                      │ Arbiter.issue_token  │
+                      │ return PreparedWrite │
+                      └──────────┬──────────┘
+                                 │
+                                 ▼
+                      ┌──────────────────────┐
+                      │ Try patch on         │
+                      │ prepared.current_    │
+                      │ content              │
+                      └──────────┬───────────┘
+                                 │
+                          ┌──────┴───────┐
+                          │   Patch      │
+                          │  success?    │
+                          └──────┬───────┘
+                         no │        │ yes
+                            ▼        ▼
+                        [conflict] ┌──────────────────────┐
+                                   │ Refresh prepared via  │
+                                   │ arbiter state         │
+                                   └──────────┬───────────┘
+                                              │
+                                       ┌──────┴──────┐
+                                       │ Hash still   │
+                                       │  matches?    │
+                                       └──────┬───────┘
+                                      no │        │ yes
+                                         │        ▼
+                                         │   ┌──────────────────────┐
+                                         │   │ commit_prepared_write │
+                                         │   │ with new_content      │
+                                         │   └──────────┬───────────┘
+                                         │              │
+                                         └──────────────┤ (retry patch)
+                                                        ▼
+                                             ┌──────────────────────┐
+                                             │  Acquire file lock   │
+                                             └──────────┬───────────┘
+                                                        │
+                                                        ▼
+                                             ┌──────────────────────┐
+                                             │  Validate token      │
+                                             └──────────┬───────────┘
+                                                        │
+                                                 ┌──────┴──────┐
+                                                 │   Token     │
+                                                 │   valid?    │
+                                                 └──────┬───────┘
+                                                no │        │ yes
+                                                   ▼        ▼
+                                               [conflict] ┌──────────────────┐
+                                                          │ Re-read current  │
+                                                          │ file             │
+                                                          └──────┬───────────┘
+                                                                 │
+                                                          ┌──────┴──────┐
+                                                          │   Hashes    │
+                                                          │   match?    │
+                                                          └──────┬───────┘
+                                                    no (merge) │      │ yes
+                                                               │      ▼
+                                                               │  ┌───────────────┐
+                                                               │  │ Write content │
+                                                               │  │ to disk       │
+                                                               │  └──────┬────────┘
+                                                               │         │
+                                                               │         ▼
+                                                               │  ┌───────────────┐
+                                                               │  │Arbiter.record │
+                                                               │  │_edit          │
+                                                               │  └──────┬────────┘
+                                                               │         │
+                                                               │         ▼
+                                                               │  ┌───────────────────────┐
+                                                               │  │ symbol_index.refresh  │
+                                                               │  │ lsp_client.invalidate │
+                                                               │  └──────┬────────────────┘
+                                                               │         │
+                                                               │         ▼
+                                                               │  ┌───────────────────────┐
+                                                               │  │  Return EditResult    │
+                                                               │  │  success=true         │
+                                                               │  └───────────────────────┘
+                                                               │
+                                                  commit_prepared_write (retry)
 ```
 
 ## LSP Server Lifecycle
 
-```mermaid
-flowchart LR
-    A["CodeIntelligenceService.__init__"]
-    B["LspClient(workspace_root, sandbox)"]
-    C["ensure_ready()<br/>check backends"]
-    D{Python available?<br/>TypeScript available?}
-    E["Remote sandbox +<br/>missing backends?"]
-    F["install_python_backend<br/>pip install jedi"]
-    G["install_typescript_backend<br/>npm install typescript"]
-    H["_check_python_backend<br/>python3 -c import jedi"]
-    I["_check_typescript_backend<br/>npx tsc --version"]
-    
-    A --> B
-    B --> C
-    C --> H
-    C --> I
-    H --> D
-    I --> D
-    D -->|local + missing| E
-    E -->|yes: install| F
-    E -->|yes: install| G
-    F --> C
-    G --> C
-    D -->|ready| A
-    
-    style H fill:#E6F3FF
-    style I fill:#E6F3FF
-    style F fill:#FFF0E6
-    style G fill:#FFF0E6
+```
+┌──────────────────────────────────┐
+│  CodeIntelligenceService.__init__│
+└──────────────────┬───────────────┘
+                   │
+                   ▼
+┌──────────────────────────────────┐
+│  LspClient(workspace_root,       │
+│            sandbox)              │
+└──────────────────┬───────────────┘
+                   │
+                   ▼
+┌──────────────────────────────────┐
+│  ensure_ready()                  │
+│  check backends                  │
+└──────────┬───────────────────────┘
+           │
+     ┌─────┴──────────────────┐
+     │                        │
+     ▼                        ▼
+┌────────────────┐   ┌─────────────────────┐
+│_check_python_  │   │_check_typescript_   │
+│backend         │   │backend              │
+│python3 -c      │   │npx tsc --version    │
+│  import jedi   │   │                     │
+└───────┬────────┘   └──────────┬──────────┘
+        │                       │
+        └──────────┬────────────┘
+                   │
+                   ▼
+          ┌────────┴─────────┐
+          │ Python available? │
+          │ TypeScript avail? │
+          └────────┬──────────┘
+                   │
+      ┌────────────┴─────────────┐
+      │ local + missing          │ ready
+      ▼                          ▼
+┌────────────────┐      ┌───────────────────────────┐
+│  Remote sandbox│      │  CodeIntelligenceService  │
+│  + missing     │      │  (initialization done)    │
+│  backends?     │      └───────────────────────────┘
+└────────┬───────┘
+    yes  │
+    ┌────┴──────────────────────┐
+    │                           │
+    ▼                           ▼
+┌──────────────────┐  ┌──────────────────────┐
+│install_python_   │  │install_typescript_   │
+│backend           │  │backend               │
+│pip install jedi  │  │npm install typescript│
+└────────┬─────────┘  └──────────┬───────────┘
+         │                       │
+         └──────────┬────────────┘
+                    │ (retry ensure_ready)
+                    ▼
+         ┌──────────────────────┐
+         │  ensure_ready()      │
+         └──────────────────────┘
 ```
 
 ## Types and Data Structures
@@ -500,4 +608,3 @@ Runtime metrics aggregated from service components:
 - `total_edits: int` – edits recorded in arbiter ledger
 
 Accessible via `service.status()` → dict or `service.get_telemetry()` → CITelemetry.
-

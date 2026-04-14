@@ -8,43 +8,57 @@ EphemeralOS provides two complementary patterns for concurrent work: **backgroun
 
 When an agent calls a tool marked with `background="always"`, the engine dispatches it asynchronously instead of blocking the query loop. The parent agent receives a task_id immediately and can continue work while the task runs in the background.
 
-```mermaid
-sequenceDiagram
-    participant Agent as Parent Agent
-    participant QueryLoop as Query Loop
-    participant BGMgr as Background Task Manager
-    participant Tool as Background Tool
-    participant Sandbox as Sandbox/Runtime
-
-    Agent->>QueryLoop: emit tool_use block with background flag
-    QueryLoop->>QueryLoop: check tool definition<br/>for background support
-    
-    rect rgb(200, 220, 255)
-        note over QueryLoop,BGMgr: launch_background_tool
-        QueryLoop->>QueryLoop: run background_preflight<br/>(validate input)
-        QueryLoop->>BGMgr: launch(task_id, tool_name, input)
-        BGMgr->>BGMgr: create TrackedBackgroundTask<br/>+ asyncio.Task
-    end
-
-    BGMgr-->>QueryLoop: return BackgroundTaskStarted event
-    QueryLoop->>Agent: [BACKGROUND LAUNCHED] task_id="bg_1"
-    
-    rect rgb(220, 255, 220)
-        par Tool Execution
-            Tool->>Sandbox: execute asynchronously
-            Tool-->>BGMgr: append_progress(line)
-            Sandbox-->>Tool: return result
-            Tool->>BGMgr: mark task COMPLETED
-        and Query Loop
-            Agent->>QueryLoop: check_background_progress(task_id)
-            QueryLoop->>BGMgr: get_status(task_id)
-            BGMgr-->>QueryLoop: progress snapshot
-            QueryLoop->>Agent: output (live tail or provider)
-        end
-    end
-    
-    BGMgr->>QueryLoop: collect_completed() → ready tasks
-    QueryLoop->>Agent: [BACKGROUND bg_1 COMPLETED] result
+```
+┌─────────────┐   ┌─────────────┐   ┌─────────────────────┐   ┌───────────────┐   ┌─────────────────┐
+│ Parent Agent│   │ Query Loop  │   │ Background Task Mgr │   │ Background    │   │ Sandbox/Runtime │
+│             │   │             │   │                     │   │ Tool          │   │                 │
+└──────┬──────┘   └──────┬──────┘   └──────────┬──────────┘   └───────┬───────┘   └────────┬────────┘
+       │                 │                      │                      │                    │
+       │ emit tool_use   │                      │                      │                    │
+       │ (background)    │                      │                      │                    │
+       │────────────────▶│                      │                      │                    │
+       │                 │                      │                      │                    │
+       │                 │ check tool def for   │                      │                    │
+       │                 │ background support   │                      │                    │
+       │                 │◀────────────────────▶│                      │                    │
+       │                 │                      │                      │                    │
+       │           ┌─────┴──────────────────────┴─────┐               │                    │
+       │           │      launch_background_tool       │               │                    │
+       │           │  run background_preflight()       │               │                    │
+       │           │  launch(task_id, tool_name, input)│               │                    │
+       │           │  create TrackedBackgroundTask     │               │                    │
+       │           │  + asyncio.Task                   │               │                    │
+       │           └─────┬──────────────────────┬─────┘               │                    │
+       │                 │                      │                      │                    │
+       │                 │◀─ BackgroundTaskStarted event ─────────────│                    │
+       │                 │                      │                      │                    │
+       │ [BACKGROUND LAUNCHED] task_id="bg_1"   │                      │                    │
+       │◀────────────────│                      │                      │                    │
+       │                 │                      │                      │                    │
+       │           ╔═════╧══════════════════════╧══════╗               │                    │
+       │           ║  parallel execution               ║               │                    │
+       │           ╠════════════════════════╗          ║               │                    │
+       │           ║  Tool Execution        ║          ║               │                    │
+       │           ║                        ║──────────╫───────────────╫───────────────────▶│
+       │           ║                        ║          ║ append_       ║                    │
+       │           ║                        ║◀─────────╫──────────────▶│ progress(line)     │
+       │           ║                        ║          ║               │◀───────────────────│
+       │           ║                        ║          ║               │ mark COMPLETED      │
+       │           ╠════════════════════════╣          ║               │                    │
+       │           ║  Query Loop            ║          ║               │                    │
+       │ check_background_progress(task_id) ║          ║               │                    │
+       │────────────────▶║                  ║          ║               │                    │
+       │           ║     ║──────────────────╫─────────▶│ get_status   │                    │
+       │           ║     ║                  ║◀─────────╫── snapshot   │                    │
+       │ output (live tail or provider)     ║          ║               │                    │
+       │◀───────────────▶║                  ║          ║               │                    │
+       │           ╚═════╧══════════════════╝          ║               │                    │
+       │                 │                      │      ║               │                    │
+       │                 │◀─────────────── collect_completed() ────────│                    │
+       │                 │                      │                      │                    │
+       │ [BACKGROUND bg_1 COMPLETED] result     │                      │                    │
+       │◀────────────────│                      │                      │                    │
+       │                 │                      │                      │                    │
 ```
 
 ### Key Components
@@ -91,49 +105,70 @@ sequenceDiagram
 
 Unlike ephemeral agents (one-shot snapshots), subagents have a complete task loop—they can reason, call tools, and iterate until they submit or timeout.
 
-```mermaid
-sequenceDiagram
-    participant Parent as Parent Agent
-    participant BGMgr as Background Task Manager
-    participant RunSubagent as run_subagent Tool
-    participant SpawnAgent as spawn_agent()
-    participant SubAgent as Subagent Instance
-    participant SubQuery as Subagent Query Loop
-    participant ProgressProvider as Progress Provider
-
-    Parent->>RunSubagent: run_subagent(agent_name, prompt)
-    
-    rect rgb(255, 220, 200)
-        note over RunSubagent: validation & setup
-        RunSubagent->>RunSubagent: validate agent_name<br/>check can_spawn_subagents
-        RunSubagent->>RunSubagent: create AgentRunTracker<br/>(persist audit row)
-    end
-    
-    RunSubagent->>SpawnAgent: spawn_agent(agent_def=subagent)
-    SpawnAgent->>SubAgent: return EphemeralAgent<br/>with subagent toolkits
-    RunSubagent->>BGMgr: set_progress_provider(task_id, provider_fn)
-    
-    rect rgb(200, 255, 200)
-        par Subagent Execution
-            RunSubagent->>SubAgent: await agent.run(final_prompt)
-            SubAgent->>SubQuery: run_query()
-            SubQuery->>SubQuery: query loop:
-            Note over SubQuery: LLM call → tool calls<br/>→ iterate
-            SubQuery-->>SubAgent: append to display_messages
-        and Parent Polling
-            Parent->>BGMgr: check_background_progress(task_id, last_n=5)
-            BGMgr->>ProgressProvider: invoke provider(last_n)
-            ProgressProvider->>SubAgent: read SubAgent.display_messages[-n:]
-            ProgressProvider-->>BGMgr: formatted snapshot
-            BGMgr-->>Parent: peek response
-        end
-    end
-    
-    SubAgent-->>RunSubagent: agent.display_messages finalized
-    RunSubagent->>RunSubagent: extract final_text<br/>build envelope<br/>(kind, summary, payload)
-    RunSubagent->>RunSubagent: tracker.finish(status, messages)
-    RunSubagent-->>BGMgr: return ToolResult(envelope)
-    BGMgr->>Parent: [BACKGROUND bg_2 COMPLETED]
+```
+┌──────────────┐  ┌─────────────────────┐  ┌────────────────┐  ┌─────────────┐  ┌───────────────┐  ┌──────────────┐  ┌─────────────────┐
+│ Parent Agent │  │ Background Task Mgr │  │ run_subagent   │  │ spawn_agent │  │ Subagent      │  │ Subagent     │  │ Progress        │
+│              │  │                     │  │ Tool           │  │ ()          │  │ Instance      │  │ Query Loop   │  │ Provider        │
+└──────┬───────┘  └──────────┬──────────┘  └───────┬────────┘  └──────┬──────┘  └───────┬───────┘  └──────┬───────┘  └────────┬────────┘
+       │                     │                     │                  │                  │                 │                  │
+       │ run_subagent(        │                     │                  │                  │                 │                  │
+       │   agent_name, prompt)│                     │                  │                  │                 │                  │
+       │─────────────────────────────────────────▶│                  │                  │                 │                  │
+       │                     │             ┌───────┴────────┐         │                  │                 │                  │
+       │                     │             │ validation &   │         │                  │                 │                  │
+       │                     │             │ setup          │         │                  │                 │                  │
+       │                     │             │ validate name  │         │                  │                 │                  │
+       │                     │             │ check perms    │         │                  │                 │                  │
+       │                     │             │ create         │         │                  │                 │                  │
+       │                     │             │ AgentRunTracker│         │                  │                 │                  │
+       │                     │             └───────┬────────┘         │                  │                 │                  │
+       │                     │                     │                  │                  │                 │                  │
+       │                     │                     │ spawn_agent(     │                  │                 │                  │
+       │                     │                     │  agent_def=sub)  │                  │                 │                  │
+       │                     │                     │─────────────────▶│                  │                 │                  │
+       │                     │                     │                  │ return           │                 │                  │
+       │                     │                     │                  │ EphemeralAgent   │                 │                  │
+       │                     │                     │◀─────────────────│                  │                 │                  │
+       │                     │                     │                  │                  │                 │                  │
+       │                     │ set_progress_provider(task_id, fn)     │                  │                 │                  │
+       │                     │◀────────────────────│                  │                  │                 │                  │
+       │                     │                     │                  │                  │                 │                  │
+       │             ╔════════╧═════════════════════╧════╗            │                  │                 │                  │
+       │             ║  parallel execution               ║            │                  │                 │                  │
+       │             ╠═══════════════════════╗           ║            │                  │                 │                  │
+       │             ║  Subagent Execution   ║           ║            │                  │                 │                  │
+       │             ║                       ║ agent.run(final_prompt)│                  │                 │                  │
+       │             ║                       ║──────────────────────────────────────────▶│                 │                  │
+       │             ║                       ║           ║            │  run_query()     │                 │                  │
+       │             ║                       ║           ║            │─────────────────────────────────▶│                  │
+       │             ║                       ║           ║            │  LLM call →      │                 │                  │
+       │             ║                       ║           ║            │  tool calls →    │                 │                  │
+       │             ║                       ║           ║            │  iterate         │                 │                  │
+       │             ║                       ║           ║            │  append to       │                 │                  │
+       │             ║                       ║           ║            │  display_messages│                 │                  │
+       │             ╠═══════════════════════╣           ║            │                  │                 │                  │
+       │             ║  Parent Polling       ║           ║            │                  │                 │                  │
+       │ check_background_progress(task_id)  ║           ║            │                  │                 │                  │
+       │────────────▶║                       ║           ║            │                  │                 │                  │
+       │             ║ invoke provider(last_n)           ║            │                  │                 │                  │
+       │             ║──────────────────────────────────────────────────────────────────────────────────────────────────────▶│
+       │             ║                       ║           ║            │ read             │                 │                  │
+       │             ║                       ║           ║            │ display_messages[-n:]             │                  │
+       │             ║◀──────────────────────────────────────────────────────────────────────────────────────── snapshot ───│
+       │ peek response                       ║           ║            │                  │                 │                  │
+       │◀────────────║                       ║           ║            │                  │                 │                  │
+       │             ╚════════════╤══════════╝           ║            │                  │                 │                  │
+       │                         │                      │            │                  │                 │                  │
+       │                         │◀─ display_messages finalized ─────│                  │                 │                  │
+       │                         │                      │            │                  │                 │                  │
+       │                         │              extract final_text   │                  │                 │                  │
+       │                         │              build envelope       │                  │                 │                  │
+       │                         │              tracker.finish()     │                  │                 │                  │
+       │                         │              return ToolResult    │                  │                 │                  │
+       │                         │◀─────────────────────│            │                  │                 │                  │
+       │ [BACKGROUND bg_2 COMPLETED]          │                      │                  │                 │                  │
+       │◀────────────────────────│            │                      │                  │                 │                  │
+       │                         │                      │            │                  │                 │                  │
 ```
 
 ### Subagent Lifecycle

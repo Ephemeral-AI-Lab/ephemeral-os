@@ -31,6 +31,37 @@ def _record_to_task(rec: Any) -> "Task":
     return record_to_task(rec)
 
 
+def _extract_json_payload(text: str) -> dict[str, Any] | None:
+    """Extract the first dict-shaped JSON object from free text, preferring fences."""
+    import json, re
+
+    for block in re.findall(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", text):
+        try:
+            obj = json.loads(block)
+            if isinstance(obj, dict):
+                return obj
+        except Exception:
+            continue
+    start = text.find("{")
+    while start != -1:
+        depth = 0
+        for i in range(start, len(text)):
+            if text[i] == "{":
+                depth += 1
+            elif text[i] == "}":
+                depth -= 1
+                if depth == 0:
+                    try:
+                        obj = json.loads(text[start : i + 1])
+                        if isinstance(obj, dict):
+                            return obj
+                    except Exception:
+                        pass
+                    break
+        start = text.find("{", start + 1)
+    return None
+
+
 class Executor:
     """Pops ready tasks, runs agent, deterministic result extraction."""
 
@@ -236,7 +267,6 @@ class Executor:
         if conductor is not None:
             messages = conductor._executor_snapshots.get(task.id, [])
 
-        # Get post_run tools by role
         toolkit = PosthookTools.from_context(ctx)
         post_run_tools = toolkit.list_tools()
         if not post_run_tools:
@@ -244,6 +274,15 @@ class Executor:
             return AgentResult(summary="completed (no posthook tools)")
         tool_summary = ", ".join(f"{t.name}: {t.description}" for t in post_run_tools)
         work_result = str(ctx.tool_metadata.get("work_result") or "").strip()
+        if work_result:
+            deterministic = self._deterministic_result(
+                {t.name for t in post_run_tools}, work_result
+            )
+            if deterministic is not None:
+                logger.info(
+                    "[posthook] deterministic payload for task %s (%s)", task.id, task.agent_name,
+                )
+                return deterministic
         handoff = ""
         if work_result:
             handoff = (
@@ -256,9 +295,11 @@ class Executor:
         posthook_prompt = str(ctx.tool_metadata.get("posthook_prompt") or "").strip()
         if not posthook_prompt:
             posthook_prompt = (
-                "Your main work is complete. You must now submit your results "
-                f"by calling one of: {tool_summary}. "
-                "Summarize what you accomplished and call the appropriate tool."
+                "Your main work is complete. Submit your results by calling one of: "
+                f"{tool_summary}. If your prior output already contains structured "
+                "JSON matching a tool's schema (e.g. a plan with a 'tasks' array), "
+                "pass that exact payload as the tool arguments — never call the tool "
+                "with empty or placeholder input."
             )
 
         posthook_cwd = Path(
@@ -291,7 +332,7 @@ class Executor:
                 execution_context=execution_context,
                 execute_tools=True,
             )
-        except (RuntimeError, Exception) as exc:
+        except Exception as exc:
             msg = f"[posthook] FAILED for task {task.id} ({task.agent_name}): {exc}"
             print(msg, file=sys.stdout, flush=True)
             logger.warning(msg, exc_info=True)
@@ -335,6 +376,40 @@ class Executor:
                 )
             case _:
                 return AgentResult(summary=str(tool_input))
+
+    @staticmethod
+    def _deterministic_result(
+        tool_names: set[str], work_result: str,
+    ) -> "AgentResult | ReplanRequest | BlockerDeclaration | None":
+        """Build a terminal result directly from JSON embedded in ``work_result``.
+
+        Short-circuits the posthook LLM when the agent's final text already
+        contains a parseable submission payload.
+        """
+        payload = _extract_json_payload(work_result)
+        if payload is None:
+            return None
+        if "submit_plan" in tool_names and isinstance(payload.get("tasks"), list):
+            try:
+                return AgentResult(summary="", submitted_plan=Plan.from_dict(payload))
+            except Exception:
+                return None
+        if "add_tasks" in tool_names and "add_tasks" in payload:
+            try:
+                return AgentResult(summary="", submitted_replan=ReplanPlan.from_dict(payload))
+            except Exception:
+                return None
+        if (
+            "declare_blocker" in tool_names
+            and "root_cause_paths" in payload
+            and "reason" in payload
+        ):
+            return BlockerDeclaration(
+                root_cause_paths=list(payload.get("root_cause_paths") or []),
+                reason=str(payload.get("reason") or ""),
+                suggestion=payload.get("suggestion"),
+            )
+        return None
 
     async def _post_completion_note(self, task: "Task", summary: str) -> None:
         if not summary or summary.startswith("completed ("):
@@ -406,7 +481,6 @@ class Executor:
             await self._post_checkpoint_note(task, result)
             return
         if isinstance(result, BlockerDeclaration):
-            conductor = getattr(self.team_run, "conductor", None)
             if conductor is not None:
                 await conductor.create_blocker(
                     reason=result.reason,

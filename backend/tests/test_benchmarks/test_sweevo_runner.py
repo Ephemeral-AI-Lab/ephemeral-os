@@ -8,7 +8,9 @@ from unittest.mock import AsyncMock
 from benchmarks.sweevo.__main__ import _collect_health_issues
 from benchmarks.sweevo.models import SWEEvoInstance
 from benchmarks.sweevo.runner import run_sweevo_with_agent
-from benchmarks.sweevo.team_runner import _background_tool_names_from_messages
+from team.runtime.telemetry import (
+    background_tool_names_from_messages as _background_tool_names_from_messages,
+)
 from message.messages import ConversationMessage, ToolUseBlock
 
 

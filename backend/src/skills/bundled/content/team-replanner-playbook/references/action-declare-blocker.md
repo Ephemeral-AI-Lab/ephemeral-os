@@ -38,4 +38,9 @@ declare_blocker(
 - Must name specific affected siblings in the reason — vague "multiple tasks affected" is not enough.
 - Must only declare a blocker when ≥2 siblings are affected or will be affected.
 - Never declare a blocker when only the failed task is affected — use `add_tasks` instead.
+- **Must check the Active Blockers section of your context first.** If any in-progress blocker (status `assessing` or `fixing`) has `root_cause_paths` overlapping your intended paths, do **not** declare a new blocker. A Resolver is already fixing that surface — use `add_tasks(deps=[fix_task_id])` to queue the failed task's retry behind the existing fix.
 - Must call `context_changed_since()` before submitting if freshness moved.
+
+## Overlap check
+
+Two independent replanners can fire simultaneously when multiple siblings fail on the same shared file. Both see the same validator evidence. Dedup is handled at the skill layer, not the conductor: every replanner is required to read its own context's Active Blockers section before emitting `declare_blocker`. If the paths overlap, switch to `add_tasks` with a dependency on the existing `fix_task_id`.

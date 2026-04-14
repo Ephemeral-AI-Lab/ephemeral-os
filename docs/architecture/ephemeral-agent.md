@@ -14,52 +14,118 @@ Key properties:
 
 ## High-Level Architecture
 
-```mermaid
-graph LR
-    A["Primary Agent\n(running task)"] -->|register_snapshot| Conductor["Conductor\nSnapshot Registry"]
-    Blocker["Blocker Declared\n(by replanner)"] -->|create_blocker| Conductor
-    Conductor -->|_assess_running| ETA["Ephemeral Task Agent\n(assess_pause)"]
-    ETA -->|runner.run| LLM["Claude API\n(tool_choice=any)"]
-    LLM -->|pause_verdict| ETA
-    ETA -->|verdict result| Conductor
-    Conductor -->|_pause_task| TaskCenter["TaskCenter\n(checkpoint store)"]
-    
-    TC["TaskCenter Active Mode"] -->|threshold hit| ETC["Ephemeral Checkpoint Agent\n(auto-note)"]
-    ETC -->|runner.run| LLM
-    LLM -->|post_note| ETC
-    ETC -->|note content| TC
-    TC -->|post| NoteManager["Note Manager\n(task notes)"]
+```
+┌─────────────────────┐  register_snapshot  ┌──────────────────────┐
+│   Primary Agent     │ ──────────────────▶ │      Conductor       │
+│   (running task)    │                     │   Snapshot Registry  │
+└─────────────────────┘                     └──────────┬───────────┘
+                                                        │
+┌─────────────────────┐  create_blocker                │ _assess_running
+│  Blocker Declared   │ ──────────────────▶            │
+│   (by replanner)    │                                 ▼
+└─────────────────────┘              ┌──────────────────────────────┐
+                                     │    Ephemeral Task Agent      │
+                                     │       (assess_pause)         │
+                                     └──────────────┬───────────────┘
+                                                    │ runner.run
+                                                    ▼
+                                     ┌──────────────────────────────┐
+                                     │        Claude API            │
+                                     │     (tool_choice=any)        │
+                                     └──────────────┬───────────────┘
+                                                    │ pause_verdict
+                                                    ▼
+                                     ┌──────────────────────────────┐
+                                     │    Ephemeral Task Agent      │◀─ (verdict result)
+                                     └──────────────┬───────────────┘
+                                                    │ verdict result
+                                                    ▼
+                                     ┌──────────────────────────────┐
+                                     │          Conductor           │
+                                     └──────────────┬───────────────┘
+                                                    │ _pause_task
+                                                    ▼
+                                     ┌──────────────────────────────┐
+                                     │         TaskCenter           │
+                                     │      (checkpoint store)      │
+                                     └──────────────────────────────┘
+
+┌─────────────────────┐  threshold hit  ┌──────────────────────────────┐
+│  TaskCenter         │ ──────────────▶ │  Ephemeral Checkpoint Agent  │
+│  (Active Mode)      │                 │        (auto-note)           │
+└─────────────────────┘                 └──────────────┬───────────────┘
+         ▲                                             │ runner.run
+         │                                             ▼
+         │                              ┌──────────────────────────────┐
+         │                              │          Claude API           │
+         │                              │      (tool_choice=any)        │
+         │                              └──────────────┬───────────────┘
+         │                                             │ post_note
+         │                                             ▼
+         │  note content                ┌──────────────────────────────┐
+         │◀──────────────────────────── │  Ephemeral Checkpoint Agent  │
+         │                              └──────────────────────────────┘
+         │ post
+         ▼
+┌─────────────────────┐
+│    Note Manager     │
+│    (task notes)     │
+└─────────────────────┘
 ```
 
 ## Lifecycle and Snapshot Mechanism
 
 Ephemeral agents operate on snapshots registered during primary agent execution:
 
-```mermaid
-sequenceDiagram
-    participant PrimaryAgent as Primary Agent
-    participant Conductor as Conductor
-    participant SnapshotRegistry as Snapshot Registry
-    participant EphemeralAgent as Ephemeral Agent
-    participant LLM as Claude API
-    participant TaskCenter as TaskCenter
-    
-    PrimaryAgent->>Conductor: register_snapshot(task_id, messages)
-    Note over SnapshotRegistry: Frozen conversation<br/>at this tool call
-    
-    Note over Conductor: (blocker declared or<br/>checkpoint threshold hit)
-    
-    Conductor->>EphemeralAgent: spawn with task_id
-    activate EphemeralAgent
-    EphemeralAgent->>SnapshotRegistry: retrieve snapshot
-    EphemeralAgent->>EphemeralAgent: build final prompt
-    EphemeralAgent->>LLM: stream_message(single tool only)
-    LLM->>EphemeralAgent: tool_use block
-    EphemeralAgent->>EphemeralAgent: pydantic validate
-    deactivate EphemeralAgent
-    EphemeralAgent->>Conductor: return RunResult
-    Conductor->>TaskCenter: apply verdict/note<br/>(side effects only)
-    Note over TaskCenter: Pauses task or posts note<br/>Does NOT interrupt primary agent
+```
+ Primary Agent    Conductor    Snapshot Registry   Ephemeral Agent   Claude API   TaskCenter
+      │               │               │                   │               │             │
+      │ register_snapshot             │                   │               │             │
+      │  (task_id, messages)          │                   │               │             │
+      │──────────────▶│               │                   │               │             │
+      │               │    ┌──────────────────────┐       │               │             │
+      │               │    │ Frozen conversation  │       │               │             │
+      │               │    │ at this tool call    │       │               │             │
+      │               │    └──────────────────────┘       │               │             │
+      │               │    ┌──────────────────────────┐   │               │             │
+      │               │    │ blocker declared or      │   │               │             │
+      │               │    │ checkpoint threshold hit │   │               │             │
+      │               │    └──────────────────────────┘   │               │             │
+      │               │  spawn with task_id               │               │             │
+      │               │──────────────────────────────────▶│               │             │
+      │               │               │                   │               │             │
+      │               │               │  retrieve snapshot│               │             │
+      │               │               │◀──────────────────│               │             │
+      │               │               │                   │               │             │
+      │               │               │  snapshot data    │               │             │
+      │               │               │──────────────────▶│               │             │
+      │               │               │                   │ build final   │             │
+      │               │               │                   │ prompt        │             │
+      │               │               │                   │───────────┐   │             │
+      │               │               │                   │◀──────────┘   │             │
+      │               │               │                   │               │             │
+      │               │               │                   │ stream_message│             │
+      │               │               │                   │ (single tool) │             │
+      │               │               │                   │──────────────▶│             │
+      │               │               │                   │               │             │
+      │               │               │                   │  tool_use     │             │
+      │               │               │                   │     block     │             │
+      │               │               │                   │◀──────────────│             │
+      │               │               │                   │               │             │
+      │               │               │                   │ pydantic      │             │
+      │               │               │                   │ validate      │             │
+      │               │               │                   │───────────┐   │             │
+      │               │               │                   │◀──────────┘   │             │
+      │               │  return RunResult                 │               │             │
+      │               │◀──────────────────────────────────│               │             │
+      │               │                                   │               │             │
+      │               │  apply verdict/note (side effects only)           │             │
+      │               │───────────────────────────────────────────────────────────────▶│
+      │               │                                   │               │    ┌────────────────────────┐
+      │               │                                   │               │    │ Pauses task or posts   │
+      │               │                                   │               │    │ note. Does NOT         │
+      │               │                                   │               │    │ interrupt primary agent│
+      │               │                                   │               │    └────────────────────────┘
 ```
 
 **Snapshot registration:** After each successful tool execution, the primary agent's executor calls `conductor.register_snapshot(task_id, display_messages)`. The snapshot is immutable; the agent continues running.
@@ -70,37 +136,78 @@ sequenceDiagram
 
 The `runner.run()` function implements a guaranteed tool-call loop:
 
-```mermaid
-stateDiagram-v2
-    [*] --> BuildRequest: Initialize<br/>tool_choice based<br/>on tool count
-    
-    BuildRequest --> StreamCall: Build API request<br/>with frozen messages<br/>+ final prompt
-    
-    StreamCall --> ParseResponse: Stream API response<br/>collect tool_use events
-    
-    ParseResponse --> CheckToolUse{Tool use<br/>block present?}
-    
-    CheckToolUse -->|No| Retry: Log warning
-    
-    CheckToolUse -->|Yes| ValidateTool{Tool name<br/>recognized?}
-    
-    ValidateTool -->|No| ToolError: Add tool_result<br/>error to conversation
-    
-    ValidateTool -->|Yes| ValidatePydantic{Input passes<br/>Pydantic<br/>validation?}
-    
-    ValidatePydantic -->|No| ValidationError: Add validation<br/>error to conversation
-    
-    ValidatePydantic -->|Yes| Success: Return RunResult<br/>with validated input
-    
-    Retry --> TurnCheck{Turns < max_turns?}
-    ToolError --> TurnCheck
-    ValidationError --> TurnCheck
-    
-    TurnCheck -->|Yes| StreamCall
-    TurnCheck -->|No| Exhausted: Raise RuntimeError<br/>exhausted max_turns
-    
-    Success --> [*]
-    Exhausted --> [*]
+```
+        ●  (start)
+        │
+        │  Initialize tool_choice
+        │  based on tool count
+        ▼
+┌───────────────────┐
+│   BuildRequest    │  Build API request with
+│                   │  frozen messages + final prompt
+└────────┬──────────┘
+         │
+         ▼
+┌───────────────────┐
+│    StreamCall     │  Stream API response,
+│                   │  collect tool_use events
+└────────┬──────────┘
+         │
+         ▼
+┌───────────────────┐
+│   ParseResponse   │
+└────────┬──────────┘
+         │
+         ▼
+  ┌──────────────┐
+  │ Tool use     │
+  │ block        │
+  │ present?     │
+  └──┬───────┬───┘
+     │ No    │ Yes
+     │       │
+     ▼       ▼
+┌────────┐  ┌──────────────────┐
+│ Retry  │  │  ValidateTool    │  Tool name
+│(log    │  │                  │  recognized?
+│warning)│  └────┬─────────┬───┘
+└────┬───┘       │ No      │ Yes
+     │           │         │
+     │           ▼         ▼
+     │  ┌─────────────┐  ┌──────────────────┐
+     │  │  ToolError  │  │ ValidatePydantic  │  Input passes
+     │  │ (add error  │  │                  │  Pydantic
+     │  │  to conv.)  │  │   validation?    │
+     │  └──────┬──────┘  └────┬─────────┬───┘
+     │         │         No ◀─┘         │ Yes
+     │         │          │             │
+     │         │          ▼             ▼
+     │         │  ┌──────────────┐  ┌───────────────────┐
+     │         │  │Validation    │  │     Success       │
+     │         │  │Error (add    │  │  Return RunResult │
+     │         │  │error to conv)│  │  with validated   │
+     │         │  └──────┬───────┘  │  input            │
+     │         │         │          └────────┬──────────┘
+     │         │         │                   │
+     └────┬────┘─────────┘                   │
+          │                                   │
+          ▼                                   │
+  ┌───────────────┐                           │
+  │ Turns <       │                           │
+  │ max_turns?    │                           │
+  └──┬────────┬───┘                           │
+     │ Yes    │ No                            │
+     │        │                              │
+     ▼        ▼                              │
+ StreamCall  ┌───────────────────┐           │
+  (retry)    │    Exhausted      │           │
+             │ Raise RuntimeError│           │
+             │ exhausted max_    │           │
+             │ turns             │           │
+             └────────┬──────────┘           │
+                      │                      │
+                      ▼                      ▼
+                      ◉ (end)            ◉ (end)
 ```
 
 **Key properties:**

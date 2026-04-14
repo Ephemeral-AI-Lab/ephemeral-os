@@ -81,6 +81,8 @@ class TeamRun:
         sf = getattr(self.task_center, "_sf", None)
         blocker_store = BlockerStore(sf, self.id) if sf is not None else None
         self.conductor: Conductor = Conductor(self, blocker_store=blocker_store)
+        if blocker_store is not None:
+            self.task_center.set_blocker_provider(blocker_store.load_active)
 
     @staticmethod
     def _resolve_api_client() -> Any:

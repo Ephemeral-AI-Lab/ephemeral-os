@@ -6,76 +6,89 @@ EphemeralOS team coordination separates work execution, failure recovery, and bl
 
 ## Three Roles with Strict Separation
 
-```mermaid
-graph TB
-    subgraph Developer["👨‍💼 Developer (Work Agent)"]
-        D1["Executes task"]
-        D2["Posts notes to TaskCenter"]
-        D3["Calls request_replan on failure"]
-        D1 --> D2
-        D2 --> D3
-        D3 -.->|"No blocker awareness"| D3
-    end
-
-    subgraph Replanner["🧠 Replanner (LLM Agent)"]
-        R1["Reads failure context"]
-        R2["Analyzes sibling notes"]
-        R3["Assesses plan health"]
-        R4["Decides: 3 actions only"]
-        R1 --> R2
-        R2 --> R3
-        R3 --> R4
-    end
-
-    subgraph Conductor["⚙️ Conductor (Deterministic)"]
-        C1["Executes blocker mechanics"]
-        C2["Spawns external triggers"]
-        C3["Manages pause/resume"]
-        C4["Spawns resolver task"]
-        C1 --> C2
-        C2 --> C3
-        C3 --> C4
-        C4 -.->|"Zero LLM calls"| C4
-    end
-
-    D3 -->|request_replan| R1
-    R4 -->|declare_blocker| C1
-    C3 -->|resume| TaskCenter["TaskCenter<br/>Unified Task Lifecycle"]
-
-    style Developer fill:#e3f2fd
-    style Replanner fill:#f3e5f5
-    style Conductor fill:#fff3e0
-    style TaskCenter fill:#e8f5e9
+```
+┌─────────────────────────────────┐   ┌─────────────────────────────────┐   ┌─────────────────────────────────┐
+│   Developer (Work Agent)        │   │   Replanner (LLM Agent)         │   │   Conductor (Deterministic)     │
+│                                 │   │                                 │   │                                 │
+│  ┌───────────────────────┐      │   │  ┌───────────────────────┐      │   │  ┌───────────────────────┐      │
+│  │   Executes task       │      │   │  │  Reads failure context│      │   │  │ Executes blocker      │      │
+│  └───────────┬───────────┘      │   │  └───────────┬───────────┘      │   │  │ mechanics             │      │
+│              │                  │   │              │                  │   │  └───────────┬───────────┘      │
+│  ┌───────────▼───────────┐      │   │  ┌───────────▼───────────┐      │   │              │                  │
+│  │ Posts notes to        │      │   │  │ Analyzes sibling notes│      │   │  ┌───────────▼───────────┐      │
+│  │ TaskCenter            │      │   │  └───────────┬───────────┘      │   │  │ Spawns external       │      │
+│  └───────────┬───────────┘      │   │              │                  │   │  │ triggers              │      │
+│              │                  │   │  ┌───────────▼───────────┐      │   │  └───────────┬───────────┘      │
+│  ┌───────────▼───────────┐      │   │  │  Assesses plan health │      │   │              │                  │
+│  │ Calls request_replan  │      │   │  └───────────┬───────────┘      │   │  ┌───────────▼───────────┐      │
+│  │ on failure            │      │   │              │                  │   │  │ Manages pause/resume  │      │
+│  │ (no blocker awareness)│      │   │  ┌───────────▼───────────┐      │   │  └───────────┬───────────┘      │
+│  └───────────┬───────────┘      │   │  │ Decides: 3 actions    │      │   │              │                  │
+│              │                  │   │  │ only                  │      │   │  ┌───────────▼───────────┐      │
+└──────────────┼──────────────────┘   │  └───────────┬───────────┘      │   │  │ Spawns resolver task  │      │
+               │                      │              │                  │   │  │ (zero LLM calls)      │      │
+               │  request_replan      └──────────────┼──────────────────┘   │  └───────────┬───────────┘      │
+               └─────────────────────────────────────▶                      └──────────────┼──────────────────┘
+                                                      │  declare_blocker                   │
+                                                      └────────────────────────────────────▶
+                                                                                            │ resume
+                                                                                            ▼
+                                                                            ┌───────────────────────────────┐
+                                                                            │  TaskCenter                   │
+                                                                            │  (Unified Task Lifecycle)     │
+                                                                            └───────────────────────────────┘
 ```
 
 ---
 
 ## Plan & Dispatch
 
-```mermaid
-sequenceDiagram
-    participant Planner as Planner<br/>(LLM Agent)
-    participant TaskCenter as TaskCenter<br/>(Unified Log)
-    participant DispatchQueue as DispatchQueue<br/>(Pop Ready)
-    participant Developer as Developer<br/>(Work Agent)
-
-    Planner->>TaskCenter: submit_plan(tasks=[...])
-    Note over TaskCenter: Validate & insert<br/>TaskSpecs into DAG
-    TaskCenter-->>Planner: plan submitted
-
-    Note over DispatchQueue: Ready queue monitors<br/>dependencies
-
-    Developer->>DispatchQueue: pop_ready()
-    DispatchQueue-->>Developer: Task
-    Developer->>TaskCenter: context_for(task)<br/>deps + parent + notes
-    TaskCenter-->>Developer: prioritized context
-
-    Developer->>Developer: query.py loop<br/>(work, tools, posts notes)
-    Note over Developer: reads code, edits files<br/>posts progress notes
-
-    Developer->>Developer: _run_post_run()<br/>(posthook phase)
-    Developer->>TaskCenter: submit_summary | submit_plan<br/>| request_retry | request_replan
-    TaskCenter-->>Developer: submission confirmed
+```
+  Planner            TaskCenter           DispatchQueue         Developer
+  (LLM Agent)        (Unified Log)        (Pop Ready)           (Work Agent)
+      │                   │                    │                     │
+      │ submit_plan(       │                    │                     │
+      │  tasks=[...])      │                    │                     │
+      │──────────────────▶│                    │                     │
+      │                   │ Validate & insert  │                     │
+      │                   │ TaskSpecs into DAG │                     │
+      │                   │                    │                     │
+      │◀ ─ ─ ─ ─ ─ ─ ─ ─ ─│                    │                     │
+      │  plan submitted   │                    │                     │
+      │                   │         Ready queue monitors             │
+      │                   │         dependencies                     │
+      │                   │                    │                     │
+      │                   │                    │◀────────────────────│
+      │                   │                    │  pop_ready()        │
+      │                   │                    │                     │
+      │                   │                    │────────────────────▶│
+      │                   │                    │  Task               │
+      │                   │                    │                     │
+      │                   │◀────────────────────────────────────────│
+      │                   │  context_for(task) │                     │
+      │                   │  deps+parent+notes │                     │
+      │                   │                    │                     │
+      │                   │─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─▶│
+      │                   │  prioritized context                     │
+      │                   │                    │                     │
+      │                   │                    │         ┌───────────┴───────────┐
+      │                   │                    │         │ query.py loop         │
+      │                   │                    │         │ (work, tools, notes)  │
+      │                   │                    │         │ reads code, edits     │
+      │                   │                    │         │ files, posts progress │
+      │                   │                    │         └───────────┬───────────┘
+      │                   │                    │                     │
+      │                   │                    │         ┌───────────┴───────────┐
+      │                   │                    │         │ _run_post_run()       │
+      │                   │                    │         │ (posthook phase)      │
+      │                   │                    │         └───────────┬───────────┘
+      │                   │                    │                     │
+      │                   │◀────────────────────────────────────────│
+      │                   │  submit_summary | submit_plan            │
+      │                   │  | request_retry | request_replan        │
+      │                   │                    │                     │
+      │                   │─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─▶│
+      │                   │  submission confirmed                    │
 ```
 
 ---
@@ -84,36 +97,70 @@ sequenceDiagram
 
 When a Developer calls `request_replan()`, the Replanner reads failure context and sibling notes, then decides one of three actions:
 
-```mermaid
-sequenceDiagram
-    participant Developer as Failed Developer
-    participant TaskCenter as TaskCenter<br/>(Notes & Context)
-    participant Replanner as Replanner<br/>(LLM)
-    participant Conductor as Conductor<br/>(Mechanics)
-
-    Developer->>TaskCenter: request_replan(reason, suggestion)
-    Note over TaskCenter: Mark task FAILED<br/>Spawn Replanner
-
-    Replanner->>TaskCenter: context_for(replanner_task)<br/>read sibling notes, plan health
-    TaskCenter-->>Replanner: failure reason + siblings<br/>+ completed notes
-
-    Replanner->>Replanner: Assess failure pattern<br/>3 scenarios
-
-    alt Branch 1: add_tasks
-        Note over Replanner: "Plan has a gap.<br/>Missing work or<br/>retry needed."
-        Replanner->>TaskCenter: submit_replan(add_tasks=[...])
-        Note over TaskCenter: Insert new tasks<br/>Siblings untouched
-    else Branch 2: declare_blocker
-        Note over Replanner: "Shared dependency broken.<br/>Multiple siblings will fail<br/>same way."
-        Replanner->>Conductor: declare_blocker(paths, reason)
-        Note over Conductor: Pause RUNNING siblings<br/>Spawn resolver<br/>Resume after fix
-    else Branch 3: cancel_and_redraft
-        Note over Replanner: "Plan fundamentally wrong.<br/>Restart from scratch."
-        Replanner->>TaskCenter: submit_replan(cancel_ids=[...],<br/>add_tasks=[new plan])
-        Note over TaskCenter: Cancel all siblings<br/>Insert new plan
-    end
-
-    TaskCenter-->>Replanner: replan confirmed
+```
+  Failed             TaskCenter           Replanner            Conductor
+  Developer          (Notes & Context)    (LLM)                (Mechanics)
+      │                   │                   │                    │
+      │ request_replan(   │                   │                    │
+      │  reason,          │                   │                    │
+      │  suggestion)      │                   │                    │
+      │──────────────────▶│                   │                    │
+      │                   │ Mark task FAILED  │                    │
+      │                   │ Spawn Replanner   │                    │
+      │                   │──────────────────▶│                    │
+      │                   │                   │                    │
+      │                   │◀──────────────────│                    │
+      │                   │ context_for(      │                    │
+      │                   │  replanner_task)  │                    │
+      │                   │                   │                    │
+      │                   │──────────────────▶│                    │
+      │                   │ failure reason +  │                    │
+      │                   │ siblings +        │                    │
+      │                   │ completed notes   │                    │
+      │                   │                   │                    │
+      │                   │         ┌─────────┴──────────┐         │
+      │                   │         │ Assess failure      │         │
+      │                   │         │ pattern: 3 scenarios│         │
+      │                   │         └─────────┬──────────┘         │
+      │                   │                   │                    │
+      │         ┌─────────┴──────────────────┐│                    │
+      │         │ Branch 1: add_tasks         ││                    │
+      │         │ "Plan has a gap. Missing    ││                    │
+      │         │  work or retry needed."     ││                    │
+      │         └─────────┬──────────────────┘│                    │
+      │                   │ submit_replan(     │                    │
+      │                   │  add_tasks=[...])  │                    │
+      │                   │◀──────────────────│                    │
+      │                   │ Insert new tasks   │                    │
+      │                   │ Siblings untouched │                    │
+      │                   │                   │                    │
+      │         ┌─────────┴──────────────────┐│                    │
+      │         │ Branch 2: declare_blocker   ││                    │
+      │         │ "Shared dependency broken.  ││                    │
+      │         │  Multiple siblings will     ││                    │
+      │         │  fail same way."            ││                    │
+      │         └─────────┬──────────────────┘│                    │
+      │                   │                   │ declare_blocker(   │
+      │                   │                   │  paths, reason)    │
+      │                   │                   │───────────────────▶│
+      │                   │                   │                    │ Pause RUNNING siblings
+      │                   │                   │                    │ Spawn resolver
+      │                   │                   │                    │ Resume after fix
+      │                   │                   │                    │
+      │         ┌─────────┴──────────────────┐│                    │
+      │         │ Branch 3: cancel_and_redraft││                    │
+      │         │ "Plan fundamentally wrong.  ││                    │
+      │         │  Restart from scratch."     ││                    │
+      │         └─────────┬──────────────────┘│                    │
+      │                   │ submit_replan(     │                    │
+      │                   │  cancel_ids=[...], │                    │
+      │                   │  add_tasks=[new])  │                    │
+      │                   │◀──────────────────│                    │
+      │                   │ Cancel all siblings│                    │
+      │                   │ Insert new plan    │                    │
+      │                   │                   │                    │
+      │                   │──────────────────▶│                    │
+      │                   │ replan confirmed   │                    │
 ```
 
 ---
@@ -122,87 +169,150 @@ sequenceDiagram
 
 When the Replanner declares a blocker, the Conductor mechanically executes the pause/fix/resume sequence:
 
-```mermaid
-sequenceDiagram
-    participant Replanner as Replanner
-    participant Conductor as Conductor<br/>(Deterministic)
-    participant ExternalTrigger as External Trigger<br/>(PauseAssessment)
-    participant RunningAgent as RUNNING Agents<br/>(Paused)
-    participant Resolver as Resolver<br/>(Fix Task)
-    participant TaskCenter as TaskCenter
-
-    Replanner->>Conductor: declare_blocker(root_cause_paths, reason)
-
-    Note over Conductor: ASSESSING Phase<br/>—————————————<br/>Identify RUNNING siblings<br/>+ descendants
-
-    Conductor->>ExternalTrigger: assess_pause per RUNNING agent<br/>(parallel)
-    Note over ExternalTrigger: "Does your task depend<br/>on {broken_files}?"
-    ExternalTrigger-->>Conductor: PauseVerdict: YES/NO
-
-    par Verdict YES
-        Conductor->>RunningAgent: terminate + save checkpoint
-        RunningAgent->>TaskCenter: mark PAUSED<br/>(blocker_id, pause_checkpoint)
-    and Verdict NO
-        Note over ExternalTrigger: discard, agent<br/>continues unaware
-    end
-
-    Note over Conductor: FIXING Phase<br/>—————————————<br/>All assessments resolved
-
-    Conductor->>Resolver: spawn fix task (depth=0)<br/>scoped to broken files
-    Resolver->>Resolver: main loop<br/>(repair shared surface)
-    alt Fix succeeds
-        Resolver->>TaskCenter: post_note(fix summary)
-        Conductor->>Conductor: on_fix_complete()
-    else Fix fails
-        Resolver->>TaskCenter: request_replan(concrete reason)
-        Conductor->>Conductor: on_fix_failed()<br/>Cancel PAUSED tasks<br/>Fail team run
-    end
-
-    Note over Conductor: RESOLVED Phase<br/>—————————————
-
-    Conductor->>RunningAgent: resume_paused_tasks(blocker_id)<br/>mark READY from PAUSED
-    Note over TaskCenter: Load pause_checkpoint<br/>Inject fix summary<br/>Spawn new agent run
-    RunningAgent->>RunningAgent: Resume from checkpoint<br/>+ fix context
-
-    Conductor->>Replanner: spawn post-fix replanner<br/>for initiating task
+```
+  Replanner    Conductor         ExternalTrigger    RUNNING Agents    Resolver      TaskCenter
+               (Deterministic)   (PauseAssessment)  (Paused)          (Fix Task)
+      │              │                  │                 │                │              │
+      │ declare_     │                  │                 │                │              │
+      │ blocker(     │                  │                 │                │              │
+      │  root_cause_ │                  │                 │                │              │
+      │  paths,      │                  │                 │                │              │
+      │  reason)     │                  │                 │                │              │
+      │─────────────▶│                  │                 │                │              │
+      │              │                  │                 │                │              │
+      │              │  ASSESSING Phase │                 │                │              │
+      │              │  ─────────────── │                 │                │              │
+      │              │  Identify RUNNING│                 │                │              │
+      │              │  siblings +      │                 │                │              │
+      │              │  descendants     │                 │                │              │
+      │              │                  │                 │                │              │
+      │              │ assess_pause per │                 │                │              │
+      │              │ RUNNING agent    │                 │                │              │
+      │              │ (parallel)       │                 │                │              │
+      │              │─────────────────▶│                 │                │              │
+      │              │                  │ "Does your task │                │              │
+      │              │                  │  depend on      │                │              │
+      │              │                  │  {broken_files}"│                │              │
+      │              │◀─────────────────│                 │                │              │
+      │              │ PauseVerdict:    │                 │                │              │
+      │              │ YES / NO         │                 │                │              │
+      │              │                  │                 │                │              │
+      │              │── Verdict YES ──▶│                 │                │              │
+      │              │  terminate +     │                 │                │              │
+      │              │  save checkpoint │                 │                │              │
+      │              │─────────────────────────────────▶│                │              │
+      │              │                  │                 │ mark PAUSED    │              │
+      │              │                  │                 │ (blocker_id,   │              │
+      │              │                  │                 │  pause_        │              │
+      │              │                  │                 │  checkpoint)   │              │
+      │              │                  │                 │───────────────────────────▶│
+      │              │                  │                 │                │              │
+      │              │── Verdict NO ───▶│                 │                │              │
+      │              │  discard, agent  │                 │                │              │
+      │              │  continues       │                 │                │              │
+      │              │                  │                 │                │              │
+      │              │  FIXING Phase    │                 │                │              │
+      │              │  ─────────────── │                 │                │              │
+      │              │  All assessments │                 │                │              │
+      │              │  resolved        │                 │                │              │
+      │              │                  │                 │                │              │
+      │              │ spawn fix task   │                 │                │              │
+      │              │ (depth=0)        │                 │                │              │
+      │              │─────────────────────────────────────────────────▶│              │
+      │              │                  │                 │     ┌──────────┴─────────┐   │
+      │              │                  │                 │     │ main loop          │   │
+      │              │                  │                 │     │ (repair shared     │   │
+      │              │                  │                 │     │  surface)          │   │
+      │              │                  │                 │     └──────────┬─────────┘   │
+      │              │                  │                 │                │              │
+      │              │                  │     Fix succeeds:               │              │
+      │              │                  │                 │     post_note( │              │
+      │              │                  │                 │      fix summary)             │
+      │              │                  │                 │                │─────────────▶│
+      │              │◀─────────────────────────────────────────────────│              │
+      │              │ on_fix_complete() │                 │                │              │
+      │              │                  │                 │                │              │
+      │              │                  │     Fix fails:  │                │              │
+      │              │                  │                 │ request_replan(│              │
+      │              │                  │                 │  concrete      │              │
+      │              │                  │                 │  reason)       │              │
+      │              │                  │                 │                │─────────────▶│
+      │              │◀─────────────────────────────────────────────────│              │
+      │              │ on_fix_failed()  │                 │                │              │
+      │              │ Cancel PAUSED    │                 │                │              │
+      │              │ tasks / Fail run │                 │                │              │
+      │              │                  │                 │                │              │
+      │              │  RESOLVED Phase  │                 │                │              │
+      │              │  ─────────────── │                 │                │              │
+      │              │                  │                 │                │              │
+      │              │ resume_paused_   │                 │                │              │
+      │              │ tasks(blocker_id)│                 │                │              │
+      │              │ mark READY from  │                 │                │              │
+      │              │ PAUSED           │                 │                │              │
+      │              │─────────────────────────────────▶│                │              │
+      │              │                  │     Load pause_checkpoint       │              │
+      │              │                  │     Inject fix summary          │              │
+      │              │                  │     Spawn new agent run         │              │
+      │              │                  │                 │                │              │
+      │              │                  │     Resume from checkpoint      │              │
+      │              │                  │     + fix context               │              │
+      │              │                  │                 │                │              │
+      │ spawn post-fix│                 │                 │                │              │
+      │ replanner for│                  │                 │                │              │
+      │ initiating   │                  │                 │                │              │
+      │ task         │                  │                 │                │              │
+      │◀─────────────│                  │                 │                │              │
 ```
 
 ---
 
 ## Task Status Transitions with Blocker
 
-```mermaid
-stateDiagram-v2
-    [*] --> PENDING: task created
+```
+                        ┌─────────┐
+           task created │         │
+        ┌───────────────▶ PENDING │
+        │               │         │
+        │               └────┬────┘
+        │                    │ deps satisfied
+        │               ┌────▼────┐
+        │               │         │
+        │               │  READY  │
+        │               │         │
+        │               └────┬────┘
+        │                    │ pop_ready
+        │               ┌────▼────┐
+        │               │         │◀────────────────────────────────────────────┐
+        │               │ RUNNING │                                              │
+        │               │         │                                              │
+        │               └──┬──┬───┘                                             │
+        │                  │  │  │  \                                            │
+        │    completes      │  │  │   \ Conductor                                │
+        │    successfully   │  │  │    \ assess YES                              │
+        │   ┌───────────────┘  │  │     \ (blocker pause)                       │
+        │   │                  │  │      ▼                                       │
+        │   │    fails         │  │   ┌──────┐    blocker resolved               │
+        │   │    (no retry)    │  │   │      │    (_resume_paused)               │
+        │   │  ┌───────────────┘  │   │PAUSED├─────────────────────────────────┘
+        │   │  │                  │   │      │
+        │   │  │    submits plan  │   └──────┘
+        │   │  │   ┌─────────────┘      Non-terminal. RUNNING agents only.
+        │   │  │   │                    Checkpoint saved. Resume from here.
+        │   │  │   │
+        ▼   ▼  ▼   ▼
+      ┌────┐ ┌───────┐ ┌──────────┐   ┌───────────┐
+      │DONE│ │FAILED │ │ EXPANDED │   │ CANCELLED │
+      └──┬─┘ └───┬───┘ └────┬─────┘   └─────┬─────┘
+         │       │     children│             │
+         │       │     complete│             │
+         │       │      ┌──────▼──────┐      │
+         │       │      │    DONE     │      │
+         │       │      └──────┬──────┘      │
+         │       │             │             │
+         ▼       ▼             ▼             ▼
+        [*]     [*]           [*]           [*]
 
-    PENDING --> READY: deps satisfied
-    READY --> RUNNING: pop_ready
-
-    RUNNING --> DONE: completes successfully
-    RUNNING --> FAILED: fails (no retry)
-    RUNNING --> EXPANDED: submits plan
-    EXPANDED --> DONE: children complete
-
-    RUNNING --> PAUSED: Conductor assess YES<br/>(blocker pause)
-    PAUSED --> READY: blocker resolved<br/>(_resume_paused)
-
-    FAILED --> [*]
-    DONE --> [*]
-    CANCELLED --> [*]
-
-    note right of PAUSED
-        Non-terminal.
-        RUNNING agents only.
-        Checkpoint saved.
-        Resume from here.
-    end note
-
-    note right of RUNNING
-        READY/PENDING tasks
-        during blocker stay
-        unchanged.
-        Free to dispatch.
-    end note
+  Note: READY/PENDING tasks during a blocker stay unchanged — free to dispatch.
 ```
 
 ---
@@ -211,40 +321,31 @@ stateDiagram-v2
 
 When a PAUSED task transitions back to READY, the Executor resumes from the saved checkpoint with additional context about the fix:
 
-```mermaid
-graph LR
-    subgraph Paused["PAUSED State"]
-        P1["Agent cancelled"]
-        P2["Conversation snapshot<br/>saved in pause_checkpoint"]
-        P3["blocker_id tracked"]
-        P1 --> P2
-        P2 --> P3
-    end
-
-    subgraph Resume["Resume Flow"]
-        R1["TaskCenter transitions<br/>PAUSED → READY"]
-        R2["Executor loads<br/>pause_checkpoint"]
-        R3["Inject fix message:<br/>reason + fix_summary"]
-        R4["Spawn new agent run<br/>from frozen checkpoint"]
-        R1 --> R2
-        R2 --> R3
-        R3 --> R4
-    end
-
-    subgraph Execution["Resumed Agent"]
-        E1["Sees full prior<br/>conversation"]
-        E2["Sees fix context"]
-        E3["Continues normally<br/>from that point"]
-        E1 --> E2
-        E2 --> E3
-    end
-
-    Paused --> Resume
-    Resume --> Execution
-
-    style Paused fill:#ffcccc
-    style Resume fill:#ffffcc
-    style Execution fill:#ccffcc
+```
+┌──────────────────────────────┐        ┌──────────────────────────────┐        ┌──────────────────────────────┐
+│       PAUSED State           │        │        Resume Flow            │        │       Resumed Agent          │
+│                              │        │                               │        │                              │
+│  ┌────────────────────────┐  │        │  ┌─────────────────────────┐ │        │  ┌────────────────────────┐  │
+│  │   Agent cancelled      │  │        │  │ TaskCenter transitions   │ │        │  │ Sees full prior        │  │
+│  └───────────┬────────────┘  │        │  │ PAUSED → READY          │ │        │  │ conversation           │  │
+│              │               │        │  └────────────┬────────────┘ │        │  └───────────┬────────────┘  │
+│  ┌───────────▼────────────┐  │        │               │              │        │              │               │
+│  │ Conversation snapshot  │  │        │  ┌────────────▼────────────┐ │        │  ┌───────────▼────────────┐  │
+│  │ saved in               │  │        │  │ Executor loads          │ │        │  │ Sees fix context       │  │
+│  │ pause_checkpoint       │  │        │  │ pause_checkpoint        │ │        │  └───────────┬────────────┘  │
+│  └───────────┬────────────┘  │        │  └────────────┬────────────┘ │        │              │               │
+│              │               │        │               │              │        │  ┌───────────▼────────────┐  │
+│  ┌───────────▼────────────┐  │        │  ┌────────────▼────────────┐ │        │  │ Continues normally     │  │
+│  │ blocker_id tracked     │  │        │  │ Inject fix message:     │ │        │  │ from that point        │  │
+│  └────────────────────────┘  │        │  │ reason + fix_summary    │ │        │  └────────────────────────┘  │
+│                              │        │  └────────────┬────────────┘ │        │                              │
+└──────────────┬───────────────┘        │               │              │        └──────────────▲───────────────┘
+               │                        │  ┌────────────▼────────────┐ │                       │
+               │                        │  │ Spawn new agent run     │ │                       │
+               │                        │  │ from frozen checkpoint  │ │                       │
+               │                        │  └────────────────────────┘ │                       │
+               │                        │                              │                       │
+               └───────────────────────▶└──────────────────────────────┘──────────────────────┘
 ```
 
 ---
@@ -275,4 +376,3 @@ graph LR
 - Every task exits via the post-run phase (`_run_post_run`), which always completes.
 - Tools: `SubmitPlanTool`, `RequestReplanTool`, `DeclareBlockerTool`, `PauseVerdictTool`.
 - PosthookTools manage the posthook phase exclusively.
-

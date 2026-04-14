@@ -4,35 +4,46 @@
 
 The `ToolType` literal defines three execution phases where tools participate:
 
-```mermaid
-stateDiagram-v2
-    [*] --> Normal
-    Normal --> PostRun: Query loop completes
-    PostRun --> [*]
-    
-    Normal: "normal" — Main agent loop
-    PostRun: "post_run" — After query ends
-    ExternalTrigger: "external_trigger" — Mid-run ephemeral agent
-    
-    Normal --> ExternalTrigger: Conductor/TaskCenter spawns
-    ExternalTrigger --> [*]
-    
-    note right of Normal
-        Available during agent work.
-        Tools: read_file, run_command, etc.
-    end note
-    
-    note right of PostRun
-        Available after query loop.
-        Tools: submit_plan, post_note,
-        request_replan, declare_blocker.
-    end note
-    
-    note right of ExternalTrigger
-        Frozen conversation snapshot.
-        Separate ephemeral agent.
-        Tools: pause_verdict, post_note.
-    end note
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          ToolType State Diagram                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+                              ┌──────────────┐
+                         ──▶  │    Normal    │  ──▶ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─┐
+                              │ "normal"     │                            │
+                              │ Main agent   │  Query loop                │
+                              │ loop         │  completes                 │
+                              └──────┬───────┘         │                  │
+                                     │                  ▼                  │
+                         Conductor/  │         ┌───────────────┐          │
+                         TaskCenter  │         │   PostRun     │          │
+                         spawns      │         │ "post_run"    │  ──▶  [*]│
+                                     │         │ After query   │          │
+                                     │         │ ends          │          │
+                                     │         └───────────────┘          │
+                                     ▼                                     │
+                         ┌───────────────────────┐                        │
+                         │   ExternalTrigger     │                        │
+                         │ "external_trigger"    │  ──▶  [*]  ◀ ─ ─ ─ ─ ┘
+                         │ Mid-run ephemeral     │
+                         │ agent                 │
+                         └───────────────────────┘
+
+  ┌──────────────┬─────────────────────────────────────────────────────────┐
+  │  Phase       │  Notes                                                  │
+  ├──────────────┼─────────────────────────────────────────────────────────┤
+  │ Normal       │ Available during agent work.                            │
+  │              │ Tools: read_file, run_command, etc.                     │
+  ├──────────────┼─────────────────────────────────────────────────────────┤
+  │ PostRun      │ Available after query loop.                             │
+  │              │ Tools: submit_plan, post_note,                          │
+  │              │        request_replan, declare_blocker.                 │
+  ├──────────────┼─────────────────────────────────────────────────────────┤
+  │ External     │ Frozen conversation snapshot.                           │
+  │ Trigger      │ Separate ephemeral agent.                               │
+  │              │ Tools: pause_verdict, post_note.                        │
+  └──────────────┴─────────────────────────────────────────────────────────┘
 ```
 
 A tool's `tool_types` attribute is a `frozenset[ToolType]`; tools can belong to multiple phases. For example, `PostNoteTool` has `tool_types = frozenset({"post_run", "external_trigger"})`.
@@ -43,44 +54,60 @@ A tool's `tool_types` attribute is a `frozenset[ToolType]`; tools can belong to 
 
 After the main query loop completes, the `Executor` invokes the post-run phase via `_run_post_run()`. The agent is re-prompted with role-specific posthook tools and must call exactly one to submit its work.
 
-```mermaid
-sequenceDiagram
-    participant Agent as Agent (query loop)
-    participant Executor
-    participant Runner as runner.run()
-    participant LLM
-    participant TC as TaskCenter
-
-    Agent->>Executor: query loop returns
-    Executor->>Executor: get PosthookTools by agent role
-    
-    alt No posthook tools
-        Executor->>TC: complete_task(AgentResult)
-    else Has posthook tools
-        Executor->>Runner: run_trigger(messages, posthook_tools)
-        
-        loop Until valid tool call (max 10 turns)
-            Runner->>LLM: stream_message(tool_choice="any")
-            LLM->>Runner: tool_use block
-            Runner->>Runner: pydantic validation
-            
-            alt Validation fails
-                Runner->>LLM: tool_result with error
-            else Validation succeeds
-                Runner->>Runner: execute tool
-                
-                alt Tool execution succeeds
-                    Runner->>Executor: RunResult
-                    break
-                else Tool execution fails
-                    Runner->>LLM: tool_result with error
-                end
-            end
-        end
-        
-        Executor->>Executor: map RunResult → domain object
-        Executor->>TC: complete_task(result)
-    end
+```
+  Agent         Executor        Runner          LLM           TaskCenter
+(query loop)                  runner.run()
+    │               │               │              │               │
+    │ query loop    │               │              │               │
+    │ returns       │               │              │               │
+    │──────────────▶│               │              │               │
+    │               │               │              │               │
+    │               │ get PosthookTools             │               │
+    │               │ by agent role │              │               │
+    │               │◀─────────────▶│              │               │
+    │               │               │              │               │
+    │    [No posthook tools]         │              │               │
+    │               │ complete_task(AgentResult)    │               │
+    │               │──────────────────────────────────────────────▶│
+    │               │               │              │               │
+    │    [Has posthook tools]        │              │               │
+    │               │ run_trigger(messages,         │               │
+    │               │  posthook_tools)              │               │
+    │               │──────────────▶│              │               │
+    │               │               │              │               │
+    │               │   ┌───────────────────────────────────────┐  │
+    │               │   │  Loop: until valid tool call (max 10) │  │
+    │               │   │                                       │  │
+    │               │   │           │ stream_message(           │  │
+    │               │   │           │  tool_choice="any")       │  │
+    │               │   │           │─────────────────────────▶ │  │
+    │               │   │           │              │            │  │
+    │               │   │           │ tool_use block            │  │
+    │               │   │           │◀─────────────────────────┤  │
+    │               │   │           │              │            │  │
+    │               │   │           │ pydantic validation       │  │
+    │               │   │           │◀─────────────▶            │  │
+    │               │   │           │              │            │  │
+    │               │   │  [Validation fails]       │            │  │
+    │               │   │           │ tool_result with error    │  │
+    │               │   │           │─────────────────────────▶ │  │
+    │               │   │           │              │            │  │
+    │               │   │  [Validation succeeds → execute tool] │  │
+    │               │   │           │              │            │  │
+    │               │   │    [Tool execution succeeds]          │  │
+    │               │   │           │ RunResult ── break        │  │
+    │               │   │           │◀──────────────            │  │
+    │               │   │    [Tool execution fails]             │  │
+    │               │   │           │ tool_result with error    │  │
+    │               │   │           │─────────────────────────▶ │  │
+    │               │   └───────────────────────────────────────┘  │
+    │               │               │              │               │
+    │               │ map RunResult → domain object │               │
+    │               │◀──────────────│              │               │
+    │               │               │              │               │
+    │               │ complete_task(result)         │               │
+    │               │──────────────────────────────────────────────▶│
+    │               │               │              │               │
 ```
 
 **PosthookTools role mapping:**
@@ -99,34 +126,54 @@ Post-run tools use `runner.run()` with `execute_tools=True`, meaning tool execut
 
 Mid-run, the Conductor and TaskCenter may spawn ephemeral agents with a frozen conversation snapshot. These agents assess impact (pause verdict) or generate progress notes without interrupting the main task.
 
-```mermaid
-sequenceDiagram
-    participant Conductor as Conductor / TaskCenter
-    participant Ephemeral as Ephemeral Agent
-    participant Runner as runner.run()
-    participant LLM
-    participant Task as Running Task
-
-    Task->>Conductor: blocker declared / checkpoint triggered
-    Conductor->>Ephemeral: spawn with frozen snapshot
-    
-    Ephemeral->>Runner: run(messages=snapshot, tools=[pause_verdict|post_note])
-    
-    loop Until valid tool call (max 10 turns)
-        Runner->>LLM: stream_message(tool_choice="any")
-        LLM->>Runner: tool_use block
-        Runner->>Runner: pydantic validation
-        
-        alt Validation fails
-            Runner->>LLM: tool_result with error
-        else Validation succeeds
-            Runner->>Ephemeral: RunResult
-            break
-        end
-    end
-    
-    Ephemeral->>Conductor: RunResult with assessment
-    Conductor->>Task: pause / post note (task continues unaware)
+```
+  Conductor /      Ephemeral        Runner           LLM         Running
+  TaskCenter        Agent         runner.run()                     Task
+      │               │               │               │              │
+      │               │               │               │              │
+      │◀──────────────────────────────────────────────────────────── │
+      │  blocker declared / checkpoint triggered                      │
+      │               │               │               │              │
+      │ spawn with    │               │               │              │
+      │ frozen        │               │               │              │
+      │ snapshot      │               │               │              │
+      │──────────────▶│               │               │              │
+      │               │               │               │              │
+      │               │ run(messages=snapshot,         │              │
+      │               │  tools=[pause_verdict|post_note])             │
+      │               │──────────────▶│               │              │
+      │               │               │               │              │
+      │               │   ┌───────────────────────────────────────┐  │
+      │               │   │  Loop: until valid tool call (max 10) │  │
+      │               │   │                                       │  │
+      │               │   │           │ stream_message(           │  │
+      │               │   │           │  tool_choice="any")       │  │
+      │               │   │           │──────────────────────────▶│  │
+      │               │   │           │               │           │  │
+      │               │   │           │ tool_use block            │  │
+      │               │   │           │◀──────────────────────────│  │
+      │               │   │           │               │           │  │
+      │               │   │           │ pydantic validation       │  │
+      │               │   │           │◀─────────────▶            │  │
+      │               │   │           │               │           │  │
+      │               │   │  [Validation fails]        │           │  │
+      │               │   │           │ tool_result with error    │  │
+      │               │   │           │──────────────────────────▶│  │
+      │               │   │           │               │           │  │
+      │               │   │  [Validation succeeds]     │           │  │
+      │               │   │           │ RunResult ── break        │  │
+      │               │   │           │◀──────────────            │  │
+      │               │   └───────────────────────────────────────┘  │
+      │               │               │               │              │
+      │               │ RunResult     │               │              │
+      │               │◀──────────────│               │              │
+      │               │               │               │              │
+      │ RunResult with assessment      │               │              │
+      │◀──────────────│               │               │              │
+      │               │               │               │              │
+      │ pause / post note             │               │              │
+      │ (task continues unaware)      │               │ ─ ─ ─ ─ ─ ─▶│
+      │               │               │               │              │
 ```
 
 Two external-trigger use cases:
@@ -143,36 +190,72 @@ External-trigger runners use `execute_tools=False` by default. The LLM is constr
 
 Both post-run and external-trigger phases use the same `runner.run()` loop defined in `external_trigger/runner.py`. The loop guarantees a valid tool call via Pydantic validation retry.
 
-```mermaid
-flowchart TD
-    Start["runner.run()"] --> Setup["Prepare ApiMessageRequest<br/>tool_choice: auto or exact"]
-    Setup --> Loop["Turn loop<br/>(max 10 turns)"]
-    
-    Loop --> API["Call LLM<br/>stream_message"]
-    API --> Parse["Extract tool_use block"]
-    
-    Parse --> ValidTool{"Tool in registry?"}
-    ValidTool -->|No| ErrorTool["Post tool_result error<br/>Append to conversation"]
-    ErrorTool --> Loop
-    
-    ValidTool -->|Yes| ValidInput{"Pydantic validates?"}
-    ValidInput -->|No| ErrorInput["Post tool_result error<br/>Append to conversation"]
-    ErrorInput --> Loop
-    
-    ValidInput -->|Yes| Execute{"execute_tools?"}
-    Execute -->|No| Success["Return RunResult<br/>with validated input"]
-    
-    Execute -->|Yes| RunTool["Execute tool in context"]
-    RunTool --> ToolOK{"Tool success?"}
-    ToolOK -->|Error| PostError["Post tool_result error"]
-    PostError --> Loop
-    
-    ToolOK -->|Success| Success
-    
-    Loop -->|Max turns reached| Exhausted["Raise RuntimeError<br/>exhausted turns"]
-    
-    Success --> [*]
-    Exhausted --> [*]
+```
+  ┌─────────────────┐
+  │  runner.run()   │
+  └────────┬────────┘
+           │
+           ▼
+  ┌─────────────────────────────────────┐
+  │  Prepare ApiMessageRequest          │
+  │  tool_choice: auto or exact         │
+  └────────┬────────────────────────────┘
+           │
+           ▼
+  ┌─────────────────────────────────────┐ ◀─────────────────────────────────┐
+  │  Turn loop (max 10 turns)           │                                   │
+  └────────┬────────────────────────────┘                                   │
+           │                                                                 │
+           ▼                                                                 │
+  ┌─────────────────────────────────────┐                                   │
+  │  Call LLM — stream_message          │                                   │
+  └────────┬────────────────────────────┘                                   │
+           │                                                                 │
+           ▼                                                                 │
+  ┌─────────────────────────────────────┐                                   │
+  │  Extract tool_use block             │                                   │
+  └────────┬────────────────────────────┘                                   │
+           │                                                                 │
+           ▼                                                                 │
+  ┌─────────────────────┐   No   ┌──────────────────────────────────────┐  │
+  │  Tool in registry?  │───────▶│  Post tool_result error              │──┘
+  └────────┬────────────┘        │  Append to conversation              │
+           │ Yes                 └──────────────────────────────────────┘
+           ▼
+  ┌─────────────────────┐   No   ┌──────────────────────────────────────┐  │
+  │  Pydantic validates?│───────▶│  Post tool_result error              │──┘
+  └────────┬────────────┘        │  Append to conversation              │
+           │ Yes                 └──────────────────────────────────────┘
+           │
+           ▼
+  ┌─────────────────────┐
+  │  execute_tools?     │
+  └──────┬──────────────┘
+         │                  No
+         │─────────────────────────────▶ ┌───────────────────────────────┐
+         │                               │  Return RunResult             │
+         │ Yes                           │  with validated input         │
+         ▼                               └───────────────────────────────┘
+  ┌─────────────────────────────────────┐              ▲
+  │  Execute tool in context            │              │
+  └────────┬────────────────────────────┘              │
+           │                                           │
+           ▼                                           │
+  ┌─────────────────────┐  Success                    │
+  │  Tool success?      │────────────────────────────▶┘
+  └──────┬──────────────┘
+         │ Error
+         ▼
+  ┌──────────────────────────────────────┐
+  │  Post tool_result error              │──▶  (back to Turn loop)
+  └──────────────────────────────────────┘
+
+  [Max turns reached]
+         │
+         ▼
+  ┌──────────────────────────────────────┐
+  │  Raise RuntimeError (exhausted)      │
+  └──────────────────────────────────────┘
 ```
 
 **Loop behavior:**

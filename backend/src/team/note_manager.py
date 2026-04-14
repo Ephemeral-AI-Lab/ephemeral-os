@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import time
 import uuid
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any, Awaitable, Callable
 
 from team.models import Note, Task
 
@@ -46,6 +46,17 @@ class NoteManager:
         self._event_store_cb = event_store_cb
         self._get_task_fn = get_task_fn
         self._task_store = task_store
+        self._blocker_provider: Callable[[], Awaitable[list[Any]]] | None = None
+
+    def set_blocker_provider(
+        self, provider: Callable[[], Awaitable[list[Any]]] | None
+    ) -> None:
+        """Register an async callable that returns current active blockers.
+
+        When set, ``context_for`` will fetch active blockers automatically
+        (caller may also pass ``active_blockers`` explicitly to override).
+        """
+        self._blocker_provider = provider
 
     @staticmethod
     def _matches_scope(note_scopes: list[str], query_scopes: list[str]) -> bool:
@@ -242,14 +253,43 @@ class NoteManager:
             return ""
         return self._render_notes("Sibling notes", notes)
 
+    @staticmethod
+    def _render_active_blockers(active_blockers: list[Any]) -> str:
+        lines = ["## Active Blockers (in-progress)"]
+        for b in active_blockers:
+            status = getattr(b.status, "value", b.status)
+            paths = list(getattr(b, "root_cause_paths", []) or [])
+            reason = getattr(b, "reason", "") or ""
+            fix_task_id = getattr(b, "fix_task_id", None)
+            lines.append(f"### {b.id} ({status})")
+            lines.append(f"- root_cause_paths: {paths}")
+            lines.append(f"- reason: {reason}")
+            if fix_task_id:
+                lines.append(f"- fix_task_id: {fix_task_id}")
+        return "\n".join(lines)
+
     async def context_for(
         self,
         task: Task,
         *,
         max_context_bytes: int = 200_000,
         file_change_store: Any = None,
+        active_blockers: list[Any] | None = None,
     ) -> str:
-        """Build context string for a task. No external callbacks needed."""
+        """Build context string for a task. No external callbacks needed.
+
+        ``active_blockers`` — optional list of in-progress Blocker records. When
+        present, a high-priority section is rendered so the replanner can see
+        existing ASSESSING/FIXING blockers before deciding whether to call
+        ``declare_blocker`` (dedup is skill-driven, not mechanical).
+        """
+        if active_blockers is None and self._blocker_provider is not None:
+            try:
+                active_blockers = await self._blocker_provider()
+            except Exception:
+                logger.exception("blocker_provider failed; continuing without blockers")
+                active_blockers = []
+
         budget = max_context_bytes
         sections: list[str] = []
 
@@ -274,6 +314,13 @@ class NoteManager:
             task_section += f"\n\nScope: {', '.join(task.scope_paths)}"
         sections.append(task_section)
         budget -= len(task_section.encode())
+
+        if active_blockers and budget > 0:
+            sec = self._render_active_blockers(active_blockers)
+            b = len(sec.encode())
+            if b <= budget:
+                sections.append(sec)
+                budget -= b
 
         if task.retry_count and task.retry_count > 0 and budget > 0:
             self_notes = await self.read(authors=[task.id])

@@ -15,7 +15,7 @@ from dataclasses import asdict
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import DateTime, Integer, String, Text, text
+from sqlalchemy import DateTime, Integer, String, Text, delete, select
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import Mapped, mapped_column
@@ -107,106 +107,42 @@ class CheckpointStore(AsyncStoreMixin):
     async def load_latest(self, team_run_id: str) -> CheckpointRecord | None:
         """Load the most recent checkpoint for a run."""
         async with self._sf() as db:
-            row = (
-                await db.execute(
-                    text("""
-                        SELECT id, team_run_id, sequence, taken_at, label,
-                               tasks, ready_queue_order, budget_state,
-                               project_context
-                        FROM team_run_checkpoints
-                        WHERE team_run_id = :run_id
-                        ORDER BY sequence DESC
-                        LIMIT 1
-                    """),
-                    {"run_id": team_run_id},
-                )
-            ).fetchone()
-            if row is None:
-                return None
-            return CheckpointRecord(
-                id=row.id,
-                team_run_id=row.team_run_id,
-                sequence=row.sequence,
-                taken_at=row.taken_at,
-                label=row.label,
-                tasks=row.tasks,
-                ready_queue_order=list(row.ready_queue_order or []),
-                budget_state=row.budget_state or {},
-                project_context=row.project_context,
+            stmt = (
+                select(CheckpointRecord)
+                .where(CheckpointRecord.team_run_id == team_run_id)
+                .order_by(CheckpointRecord.sequence.desc())
+                .limit(1)
             )
+            return (await db.execute(stmt)).scalar_one_or_none()
 
     async def load_by_id(
         self, checkpoint_id: str, team_run_id: str
     ) -> CheckpointRecord | None:
         """Load a specific checkpoint by ID."""
         async with self._sf() as db:
-            row = (
-                await db.execute(
-                    text("""
-                        SELECT id, team_run_id, sequence, taken_at, label,
-                               tasks, ready_queue_order, budget_state,
-                               project_context
-                        FROM team_run_checkpoints
-                        WHERE id = :cp_id AND team_run_id = :run_id
-                    """),
-                    {"cp_id": checkpoint_id, "run_id": team_run_id},
-                )
-            ).fetchone()
-            if row is None:
-                return None
-            return CheckpointRecord(
-                id=row.id,
-                team_run_id=row.team_run_id,
-                sequence=row.sequence,
-                taken_at=row.taken_at,
-                label=row.label,
-                tasks=row.tasks,
-                ready_queue_order=list(row.ready_queue_order or []),
-                budget_state=row.budget_state or {},
-                project_context=row.project_context,
+            stmt = select(CheckpointRecord).where(
+                CheckpointRecord.id == checkpoint_id,
+                CheckpointRecord.team_run_id == team_run_id,
             )
+            return (await db.execute(stmt)).scalar_one_or_none()
 
     async def list_for_run(self, team_run_id: str) -> list[CheckpointRecord]:
         """List all checkpoints for a run, ordered by sequence."""
         async with self._sf() as db:
-            rows = (
-                await db.execute(
-                    text("""
-                        SELECT id, team_run_id, sequence, taken_at, label,
-                               tasks, ready_queue_order, budget_state,
-                               project_context
-                        FROM team_run_checkpoints
-                        WHERE team_run_id = :run_id
-                        ORDER BY sequence ASC
-                    """),
-                    {"run_id": team_run_id},
-                )
-            ).fetchall()
-            return [
-                CheckpointRecord(
-                    id=r.id,
-                    team_run_id=r.team_run_id,
-                    sequence=r.sequence,
-                    taken_at=r.taken_at,
-                    label=r.label,
-                    tasks=r.tasks,
-                    ready_queue_order=list(r.ready_queue_order or []),
-                    budget_state=r.budget_state or {},
-                    project_context=r.project_context,
-                )
-                for r in rows
-            ]
+            stmt = (
+                select(CheckpointRecord)
+                .where(CheckpointRecord.team_run_id == team_run_id)
+                .order_by(CheckpointRecord.sequence.asc())
+            )
+            return list((await db.execute(stmt)).scalars().all())
 
     async def delete_for_run(self, team_run_id: str) -> int:
         """Delete all checkpoints for a run. Returns count deleted."""
         async with self._sf() as db:
-            result = await db.execute(
-                text(
-                    "DELETE FROM team_run_checkpoints "
-                    "WHERE team_run_id = :run_id"
-                ),
-                {"run_id": team_run_id},
+            stmt = delete(CheckpointRecord).where(
+                CheckpointRecord.team_run_id == team_run_id
             )
+            result = await db.execute(stmt)
             await db.commit()
             return result.rowcount
 

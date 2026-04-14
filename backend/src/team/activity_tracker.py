@@ -29,6 +29,10 @@ class ActivityTracker:
         self._checkpoint_snapshots: dict[str, dict[str, int]] = {}
         self._team_run_id = team_run_id
         self._note_posted_cb = note_posted_cb
+        self._skipped_resets: dict[str, int] = {
+            "system_or_checkpoint_sender": 0,
+            "no_counters": 0,
+        }
 
     def _get_counters(self, task_id: str) -> dict[str, Any]:
         if task_id not in self._activity_counters:
@@ -49,9 +53,11 @@ class ActivityTracker:
 
     def on_note_posted(self, note: Note) -> None:
         if note.agent_name in {"system", "checkpoint"}:
+            self._skipped_resets["system_or_checkpoint_sender"] += 1
             return
         self._checkpoint_inflight.discard(note.task_id)
         if note.task_id not in self._activity_counters:
+            self._skipped_resets["no_counters"] += 1
             return
         c = self._activity_counters[note.task_id]
         snapshot = self._checkpoint_snapshots.pop(note.task_id, None)
@@ -63,6 +69,10 @@ class ActivityTracker:
         covered_history = snapshot.get("edit_history_len", 0)
         if covered_history > 0:
             c["edit_history"] = c["edit_history"][covered_history:]
+
+    def metrics(self) -> dict[str, int]:
+        """Return counters for skipped auto-resets (telemetry)."""
+        return dict(self._skipped_resets)
 
     def should_checkpoint(self, task_id: str) -> str | None:
         if task_id in self._checkpoint_inflight:

@@ -190,7 +190,7 @@ async def test_run_post_run_planner_submit_plan(monkeypatch):
             "agent_name": "team_planner",
             "role": "planner",
             "posthook_prompt": "Submit your plan.",
-            "work_result": '{"tasks":[{"id":"t1","task":"legacy text plan","agent":"developer"}]}',
+            "work_result": "Legacy plan text without parseable JSON",
         }
     )
 
@@ -235,7 +235,7 @@ async def test_run_post_run_prefers_resolved_plan_metadata(monkeypatch):
             "agent_name": "team_planner",
             "role": "planner",
             "posthook_prompt": "Submit your plan.",
-            "work_result": '{"tasks":[{"id":"t1","task":"legacy text plan","agent":"developer"}]}',
+            "work_result": "Legacy plan text without parseable JSON",
         }
     )
 
