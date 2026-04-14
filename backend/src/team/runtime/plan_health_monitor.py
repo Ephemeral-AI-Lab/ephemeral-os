@@ -48,8 +48,8 @@ class PlanHealthMonitor:
         ):
             lines.append(
                 f"**PLAN HEALTH CRITICAL:** {failed}/{started} sibling tasks "
-                f"have failed. Consider calling `request_replan()` if your "
-                f"task depends on their output."
+                f"have failed. If your task depends on their output, stop and "
+                f"note the dependency — the posthook will handle replanning."
             )
         if retry_total >= RETRY_WARNING_THRESHOLD:
             lines.append(

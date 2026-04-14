@@ -57,9 +57,9 @@ def record_coordination_warning(
 ) -> None:
     """Persist a coordination warning on the live tool context.
 
-    Warnings are advisory, but they taint the current task packet so posthook
-    tools can steer the agent toward ``request_replan()`` instead of reporting
-    success after a scope mismatch.
+    Warnings are advisory, but they taint the current task packet so the
+    posthook can steer toward a replan instead of reporting success after
+    a scope mismatch.  ``request_replan`` is only available in the posthook.
     """
     raw = context.metadata.get("coordination_warnings")
     warnings: list[dict[str, Any]]
@@ -444,12 +444,12 @@ def _team_repo_write_warning(
         return (
             f"{tool_name}: write to {rel_path} is outside write_scope {write_scope} (advisory). "
             "You have 3+ outside-scope warnings — your assigned scope likely does not match what this task requires. "
-            "Stop editing and call request_replan with the correct file paths instead of working around scope warnings."
+            "Stop editing — the posthook will request a replan automatically. Do NOT call request_replan yourself; it is not available during the main run."
         )
     return (
         f"{tool_name}: write to {rel_path} is outside write_scope {write_scope} (advisory). "
         "If this is an adjacent shim, proceed then call read_sibling_notes. "
-        "If your task fundamentally requires files outside your scope, call request_replan now."
+        "If your task fundamentally requires files outside your scope, stop and note it — the posthook will handle replanning. Do NOT call request_replan yourself."
     )
 
 

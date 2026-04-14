@@ -249,7 +249,7 @@ class Conductor:
                 f"Root cause paths: {', '.join(blocker.root_cause_paths)}\n"
                 f"Problem: {blocker.reason}\n"
                 "Repair the shared surface directly. When fixed, use `post_note` with the exact fix summary. "
-                "If the blocker cannot be repaired within this scope, use `request_replan` with the concrete reason."
+                "If the blocker cannot be repaired within this scope, note the reason — the posthook will handle replanning."
             ),
             deps=[],
             scope_paths=list(blocker.root_cause_paths),

@@ -310,8 +310,8 @@ class NoteManager:
             if task.retry_count >= task.max_retries:
                 s += (
                     f"\n\n**This is your LAST attempt.** If you cannot fix the "
-                    f"issue with a different approach, call `request_replan()` "
-                    f"with a clear diagnostic so the replanner can restructure the work."
+                    f"issue with a different approach, stop and note the diagnostic clearly "
+                    f"— the posthook will trigger a replan so the replanner can restructure the work."
                 )
             sections.append(s)
             budget -= len(s.encode())
