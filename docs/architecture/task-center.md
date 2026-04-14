@@ -110,33 +110,36 @@ DispatchQueue
               │     └────┬────┘                           │          │
               │          │                                │          │
         ┌─────┴──┬───────┴──────┬────────────┐           │          │
-        │        │              │            │           │          │
-        ▼        ▼              ▼            ▼           │          │
-  ┌──────────┐ ┌────────┐ ┌──────────┐ ┌────────┐       │          │
-  │   DONE   │ │ FAILED │ │ EXPANDED │ │ PAUSED │       │          │
-  └──────┬───┘ └───┬────┘ └────┬─────┘ └───┬────┘       │          │
-         │         │           │            │            │          │
-         │         │           │ all        │ blocker    │          │
-         │         │           │ children   │ resolved   │          │
-         │         │           │ completed  └────────────┘          │
-         │         │           ▼                                     │
-         │         │      ┌──────────┐                               │
-         │         │      │   DONE   │                               │
-         │         │      └──────┬───┘                               │
-         │         │             │                                   │
-         ▼         ▼             ▼                                   │
-       ┌───┐     ┌───┐         ┌───┐                                 │
-       │[*]│     │[*]│         │[*]│                                 │
-       └───┘     └───┘         └───┘                                 │
-                                                                     │
-  PAUSED ──── blocker fix failed ────► CANCELLED ──► [*]            │
-  READY  ──── cascade / cancel_by_ids ► CANCELLED ──► [*]           │
-  PENDING ─── cascade / cancel_by_ids ► CANCELLED ──► [*]           │
+         │        │           │            │            │          │
+         ▼        ▼              ▼            ▼           ▼          │
+  ┌──────────┐ ┌────────┐ ┌──────────┐ ┌────────┐  ┌────────────┐      │
+  │   DONE   │ │ FAILED │ │ EXPANDED │ │ PAUSED │  │ REPLANNING │     │
+  └──────┬───┘ └───┬────┘ └────┬─────┘ └───┬────┘  └─────┬─────┘      │
+         │         │           │            │           │              │
+         │         │           │ all        │ blocker   │ replan      │
+         │         │           │ children   │ resolved  │ produces    │
+         │         │           │ completed  └───────────┤ tasks        │
+         │         │           ▼                  ┌──────▼───────┐     │
+         │         │      ┌──────────┐            │ Dependents   │     │
+         │         │      │   DONE   │            │ rewired to   │     │
+         │         │      └──────┬───┘            │ new tasks    │     │
+         │         │             │                 └──────┬──────┘     │
+         │         │             │                        │             │
+         ▼         ▼             ▼                        ▼             │
+        ┌───┐     ┌───┐         ┌───┐                  ┌───┐          │
+        │[*]│     │[*]│         │[*]│                  │[*]│          │
+        └───┘     └───┘         └───┘                  └───┘          │
+                                                                       │
+   PAUSED ──── blocker fix failed ────► CANCELLED ──► [*]             │
+   READY  ──── cascade / cancel_by_ids ► CANCELLED ──► [*]            │
+   PENDING ─── cascade / cancel_by_ids ► CANCELLED ──► [*]            │
 
-  Notes:
-  - Only RUNNING tasks can pause. READY/PENDING tasks are unaffected during a blocker.
-  - Parent stays EXPANDED while any child is PAUSED.
-  - If result.submitted_plan exists, insert_plan() is called and task becomes EXPANDED.
+   Notes:
+   - Only RUNNING tasks can pause. READY/PENDING tasks are unaffected during a blocker.
+   - REPLANNING tasks are non-terminal: dependents stay PENDING (not cascade-cancelled).
+   - When replan succeeds, dependents are rewired to new replacement tasks; original marked FAILED.
+   - Parent stays EXPANDED while any child is PAUSED.
+   - If result.submitted_plan exists, insert_plan() is called and task becomes EXPANDED.
 ```
 
 ---
@@ -190,6 +193,8 @@ DispatchQueue
 
 The blocker protocol detects when a systemic failure affects multiple siblings and coordinates a single fix before resuming.
 
+**Key behavior change with REPLANNING:** When a task requests replan, it enters `REPLANNING` status (non-terminal) instead of `FAILED`. Its dependents stay `PENDING` — they are NOT cascade-cancelled. The replanner's outcome determines how dependents get rewired.
+
 ```
   Running Agent      TaskCenter         Replanner        Conductor        Resolver       Resumed Agents
        │                 │                  │                │               │                 │
@@ -197,9 +202,14 @@ The blocker protocol detects when a systemic failure affects multiple siblings a
        │   task_id,      │                  │                │               │                 │
        │   reason)       │                  │                │               │                 │
        │────────────────►│                  │                │               │                 │
-       │                 │ Mark task FAILED │                │               │                 │
+       │                 │ Mark task         │                │               │                 │
+       │                 │ REPLANNING       │                │               │                 │
+       │                 │ (not FAILED)     │                │               │                 │
+       │                 │ dependents stay  │                │               │                 │
+       │                 │ PENDING          │                │               │                 │
        │                 │ spawn replanner  │                │               │                 │
-       │                 │─────────────────►│                │               │                 │
+       │                 │ (fired_by=X.id)  │                │               │                 │
+       │                 │─────────────────►│                │               │                 |
        │                 │                  │ read_sibling_  │               │                 │
        │                 │                  │ notes(parent_id│               │                 │
        │                 │◄─────────────────│                │               │                 │
@@ -431,10 +441,11 @@ TaskCenter handles everything else: `mark_running()`, status transitions, plan i
 **Task Lifecycle:**
 - `mark_running(task_id, agent_run_id)` — Transition RUNNING, charge budget
 - `complete_task(task_id, result)` — Mark DONE, decrement pending_dep_count, promote parent, handle plan expansion
-- `fail(task_id, reason)` — Mark FAILED, cascade cancel dependents
+- `fail(task_id, reason)` — Mark FAILED, cascade cancel dependents; if replanner fails, also fails original
 - `retry_task(task_id, request)` — Reset to READY if retries remaining, else FAILED
-- `request_replan(task_id, request)` — Mark FAILED, spawn replanner task
-- `apply_replan(replan_id, add_tasks, cancel_ids)` — Validate, cancel, and insert new tasks
+- `request_replan(task_id, request)` — Mark REPLANNING (non-terminal), spawn replanner with `fired_by_task_id`; dependents stay PENDING
+- `apply_replan(replan_id, add_tasks, cancel_ids)` — After expander returns, rewire dependents if replanner was fired by REPLANNING task
+- `rewire_dependents(original_task_id, new_dep_ids)` — Redirect dependents from original to new tasks, promote eligible tasks to READY
 
 **Blocker Protocol:**
 - `pause_running_task(task_id, blocker_id, checkpoint, verdict)` — Transition PAUSED
@@ -460,14 +471,17 @@ TaskCenter handles everything else: `mark_running()`, status transitions, plan i
 **Core:**
 - `backend/src/team/task_center.py` — Unified TaskCenter
 - `backend/src/team/runtime/dispatch_queue.py` — Thin queue extraction
-- `backend/src/team/persistence/task_store.py` — SQL persistence delegation
-- `backend/src/team/models.py` — Task/Plan/Blocker data classes
+- `backend/src/team/persistence/task_store.py` — SQL persistence delegation, rewire_dependents
+- `backend/src/team/models.py` — Task/Plan/Blocker data classes (REPLANNING status, fired_by_task_id)
+- `backend/src/team/persistence/task_record.py` — TaskRecord with fired_by_task_id column
+- `backend/src/team/persistence/task_graph.py` — In-memory graph REPLANNING state
+- `backend/src/team/planning/expander.py` — apply_replan returns inserted_ids
 
 **Supporting:**
 - `backend/src/team/note_manager.py` — Note storage and querying
 - `backend/src/team/activity_tracker.py` — Edit/turn counter tracking
 - `backend/src/team/checkpoint_manager.py` — Pause checkpoint rehydration
-- `backend/src/team/runtime/conductor.py` — Blocker execution
+- `backend/src/team/runtime/conductor.py` — Blocker execution, post-fix replanner targeting
 - `backend/src/team/runtime/executor.py` — Task dispatch loop
 
-**Date:** 2026-04-14
+**Date:** 2026-04-15

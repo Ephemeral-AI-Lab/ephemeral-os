@@ -60,8 +60,27 @@ case "$NAME" in
             shift || true
         fi
         echo "Auto-picking instance: size=$SIZE target-bullets=$TARGET"
+        # Kill any running benchmark processes before starting a new one
+        existing=$(pgrep -f "$BENCH_MOD" || true)
+        if [[ -n "$existing" ]]; then
+            echo "Killing existing benchmark processes: $existing"
+            kill $existing 2>/dev/null || true
+            sleep 1
+            # Force-kill if still alive
+            kill -9 $existing 2>/dev/null || true
+        fi
         exec "$PY" -m "$BENCH_MOD" --size "$SIZE" --target-bullets "$TARGET" "$@"
         ;;
 esac
+
+# Kill any running benchmark processes before starting a new one
+existing=$(pgrep -f "$BENCH_MOD" || true)
+if [[ -n "$existing" ]]; then
+    echo "Killing existing benchmark processes: $existing"
+    kill $existing 2>/dev/null || true
+    sleep 1
+    # Force-kill if still alive
+    kill -9 $existing 2>/dev/null || true
+fi
 
 exec "$PY" -m "$BENCH_MOD" --instance-id "$NAME" "$@"

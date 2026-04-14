@@ -95,7 +95,9 @@ EphemeralOS team coordination separates work execution, failure recovery, and bl
 
 ## Replan on Failure: Three Decision Branches
 
-When a Developer calls `request_replan()`, the Replanner reads failure context and sibling notes, then decides one of three actions:
+When a Developer calls `request_replan()`, the Replanner reads failure context and sibling notes, then decides one of three actions.
+
+**Key change:** The failed task enters `REPLANNING` status (non-terminal). Its dependents stay `PENDING` — they are NOT cascade-cancelled. When the replan succeeds, dependents are rewired to the new replacement tasks.
 
 ```
   Failed             TaskCenter           Replanner            Conductor
@@ -105,8 +107,13 @@ When a Developer calls `request_replan()`, the Replanner reads failure context a
       │  reason,          │                   │                    │
       │  suggestion)      │                   │                    │
       │──────────────────▶│                   │                    │
-      │                   │ Mark task FAILED  │                    │
+      │                   │ Mark task          │                    │
+      │                   │ REPLANNING        │                    │
+      │                   │ (non-terminal)    │                    │
+      │                   │ dependents stay   │                    │
+      │                   │ PENDING           │                    │
       │                   │ Spawn Replanner   │                    │
+      │                   │ (fired_by=X.id)  │                    │
       │                   │──────────────────▶│                    │
       │                   │                   │                    │
       │                   │◀──────────────────│                    │
@@ -118,21 +125,24 @@ When a Developer calls `request_replan()`, the Replanner reads failure context a
       │                   │ siblings +        │                    │
       │                   │ completed notes   │                    │
       │                   │                   │                    │
-      │                   │         ┌─────────┴──────────┐         │
-      │                   │         │ Assess failure      │         │
-      │                   │         │ pattern: 3 scenarios│         │
-      │                   │         └─────────┬──────────┘         │
-      │                   │                   │                    │
+      │         ┌─────────┴──────────┐         │                    │
+      │         │ Assess failure      │         │                    │
+      │         │ pattern: 3 scenarios│         │                    │
+      │         └─────────┬──────────┘         │                    │
+      │                   │                    │                    │
       │         ┌─────────┴──────────────────┐│                    │
       │         │ Branch 1: add_tasks         ││                    │
       │         │ "Plan has a gap. Missing    ││                    │
       │         │  work or retry needed."     ││                    │
       │         └─────────┬──────────────────┘│                    │
       │                   │ submit_replan(     │                    │
-      │                   │  add_tasks=[...])  │                    │
+      │                   │  add_tasks=[...]) │                    │
       │                   │◀──────────────────│                    │
       │                   │ Insert new tasks   │                    │
-      │                   │ Siblings untouched │                    │
+      │                   │ REWIRE dependents  │                    │
+      │                   │ to new tasks      │                    │
+      │                   │ Mark original      │                    │
+      │                   │ REPLANNING → FAILED│                    │
       │                   │                   │                    │
       │         ┌─────────┴──────────────────┐│                    │
       │         │ Branch 2: declare_blocker   ││                    │
@@ -143,10 +153,11 @@ When a Developer calls `request_replan()`, the Replanner reads failure context a
       │                   │                   │ declare_blocker(   │
       │                   │                   │  paths, reason)    │
       │                   │                   │───────────────────▶│
-      │                   │                   │                    │ Pause RUNNING siblings
-      │                   │                   │                    │ Spawn resolver
+      │                   │ Original stays    │                    │ Pause RUNNING siblings
+      │                   │ REPLANNING        │                    │ Spawn resolver
       │                   │                   │                    │ Resume after fix
-      │                   │                   │                    │
+      │                   │                   │                    │ → post-fix replanner
+      │                   │                   │                    │   targets original
       │         ┌─────────┴──────────────────┐│                    │
       │         │ Branch 3: cancel_and_redraft││                    │
       │         │ "Plan fundamentally wrong.  ││                    │
@@ -156,8 +167,11 @@ When a Developer calls `request_replan()`, the Replanner reads failure context a
       │                   │  cancel_ids=[...], │                    │
       │                   │  add_tasks=[new])  │                    │
       │                   │◀──────────────────│                    │
-      │                   │ Cancel all siblings│                    │
-      │                   │ Insert new plan    │                    │
+      │                   │ Cancel siblings    │                    │
+      │                   │ REWIRE dependents │                    │
+      │                   │ to new tasks      │                    │
+      │                   │ Mark original     │                    │
+      │                   │ REPLANNING → FAILED│                   │
       │                   │                   │                    │
       │                   │──────────────────▶│                    │
       │                   │ replan confirmed   │                    │
@@ -271,6 +285,74 @@ When the Replanner declares a blocker, the Conductor mechanically executes the p
 ```
                         ┌─────────┐
            task created │         │
+         ┌──────────────▶ PENDING │
+         │               │         │
+         │               └────┬────┘
+         │                    │ deps satisfied
+         │               ┌────▼────┐
+         │               │         │
+         │               │  READY  │
+         │               │         │
+         │               └────┬────┘
+         │                    │ pop_ready
+         │               ┌────▼────┐
+         │               │         │◀────────────────────────────────────────────┐
+         │               │ RUNNING │                                              │
+         │               │         │                                              │
+         │               └──┬──┬───┘                                             │
+         │                  │  │  │  \                                            │
+         │    completes      │  │  │   \ Conductor                                │
+         │    successfully   │  │  │    \ assess YES                              │
+         │   ┌───────────────┘  │  │     \ (blocker pause)                       │
+         │   │                  │  │      ▼                                       │
+         │   │    fails         │  │   ┌──────┐    blocker resolved               │
+         │   │    (no retry)    │  │   │      │    (_resume_paused)               │
+         │   │  ┌───────────────┘  │   │PAUSED├─────────────────────────────────┘
+         │   │  │                  │   │      │
+         │   │  │    submits plan  │   └──────┘
+         │   │  │   ┌─────────────┘      Non-terminal. RUNNING agents only.
+         │   │  │   │                    Checkpoint saved. Resume from here.
+         │   │  │   │
+         │   │  │   │ request_replan
+         │   │  │   ▼
+         │   │  │ ┌───────────┐
+         │   │  │ │REPLANNING│◀─── Non-terminal. Dependents stay PENDING.
+         │   │  │ └───┬─────┘
+         │   │  │     │ replan succeeds / fails
+         │   │  │     ▼
+         ▼   ▼  ▼ ┌───────┐
+       ┌────┐ ┌───────┐ │FAILED│
+       │DONE│ │FAILED │ └───┬─┘
+       └──┬─┘ └───┬───┘     │
+          │       │    dependents │
+          │       │    rewired   │
+          │       │     ┌──────▼──────┐
+          │       │     │ Dependents   │
+          │       │     │ now point to │
+          │       │     │ replacements │
+          │       │     └──────┬──────┘
+          │       │            │
+          │       │     ┌─────▼─────┐
+          │       │     │  (tasks)  │
+          │       │     └───────────┘
+          ▼       ▼
+       ┌────┐ ┌───────┐ ┌──────────┐   ┌───────────┐
+       │DONE│ │FAILED │ │ EXPANDED │   │ CANCELLED │
+       └──┬─┘ └───┬───┘ └────┬─────┘   └─────┬─────┘
+          │       │     children│             │
+          │       │     complete│             │
+          │       │      ┌──────▼──────┐      │
+          │       │      │    DONE     │      │
+          │       │      └──────┬──────┘      │
+          │       │             │             │
+          ▼       ▼             ▼             ▼
+         [*]     [*]           [*]           [*]
+
+  Note: READY/PENDING tasks during a blocker stay unchanged — free to dispatch.
+  Note: REPLANNING is non-terminal; dependents are NOT cascade-cancelled.
+```
+                        ┌─────────┐
+           task created │         │
         ┌───────────────▶ PENDING │
         │               │         │
         │               └────┬────┘
@@ -361,6 +443,14 @@ When a PAUSED task transitions back to READY, the Executor resumes from the save
 - Tasks dispatch freely during active blockers.
 - READY/PENDING tasks are never touched by the blocker protocol.
 - Non-RUNNING tasks continue normally; if they hit the broken dependency, they fail and trigger their own `request_replan()`.
+
+**Dependent Rewiring on Replan**
+- When a task enters REPLANNING, its dependents stay PENDING (not cascade-cancelled).
+- The replanner's outcome (add_tasks, cancel_and_redraft) determines how dependents get rewired.
+- Replanner is spawned with `fired_by_task_id` pointing to the original task.
+- If replanner produces tasks: dependents are rewired from original to new tasks.
+- If replanner declares blocker: original stays REPLANNING, post-fix replanner inherits `fired_by_task_id`.
+- If replanner fails: original is marked FAILED with cascade.
 
 **Parallel Safety**
 - Only RUNNING agents are assessed for pause.

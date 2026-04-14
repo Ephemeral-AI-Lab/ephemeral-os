@@ -968,6 +968,8 @@ class TaskStore:
                         TaskRecord.depth,
                         TaskRecord.agent_name,
                         TaskRecord.scope_paths,
+                        TaskRecord.status,
+                        TaskRecord.fired_by_task_id,
                     ).where(TaskRecord.id == task_id, TaskRecord.team_run_id == rid)
                 )
             ).first()
