@@ -18,9 +18,6 @@ LSP_QUERY_TIMEOUT = 10.0  # seconds
 LSP_CACHE_TTL = 60.0  # seconds
 LSP_CACHE_MAX_ENTRIES = 200
 
-# Ledger
-LEDGER_MAX_ENTRIES = 10_000
-
 # Patcher
 PATCHER_MAX_DIFF_SIZE = 100_000  # characters
 

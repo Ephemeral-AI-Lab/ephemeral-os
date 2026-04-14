@@ -336,46 +336,6 @@ def _extract_verify_paths(value: Any, repo_root: str) -> list[str]:
     return out
 
 
-def _verification_surface_paths(
-    context: ToolExecutionContext,
-    repo_root: str,
-) -> list[str]:
-    """Return repo-relative verification-surface paths named in the task metadata."""
-    raw_candidates = (
-        context.metadata.get("owned_failures"),
-        context.metadata.get("benchmark_test_files"),
-        context.metadata.get("benchmark_test_ids"),
-        context.metadata.get("verify"),
-        context.metadata.get("verification"),
-        context.metadata.get("retries"),
-        context.metadata.get("reproduction"),
-    )
-    collected: list[str] = []
-    for value in raw_candidates:
-        collected.extend(_normalize_string_list(value, repo_root))
-        collected.extend(_extract_verify_paths(value, repo_root))
-    deduped: list[str] = []
-    seen: set[str] = set()
-    for item in collected:
-        if not item or item in seen:
-            continue
-        seen.add(item)
-        deduped.append(item)
-    return deduped
-
-
-def _is_verification_surface_path(
-    context: ToolExecutionContext,
-    rel_path: str,
-    repo_root: str,
-) -> bool:
-    """True when *rel_path* belongs to an explicitly named verification surface."""
-    verification_paths = _verification_surface_paths(context, repo_root)
-    if not verification_paths:
-        return False
-    return _path_under_write_scope(rel_path, verification_paths)
-
-
 # ---------------------------------------------------------------------------
 # Write-scope helpers
 # ---------------------------------------------------------------------------
@@ -444,10 +404,7 @@ def _team_repo_write_error(
     if not rel_path:
         return None
     if str(context.metadata.get("agent_name") or "").strip() == "validator":
-        return (
-            f"{tool_name}: validator lanes must not write repository files "
-            f"({rel_path})."
-        )
+        return f"{tool_name}: validator lanes must not write repository files ({rel_path})."
     if _is_test_suite_path(rel_path):
         return (
             f"{tool_name}: write to {rel_path} touches the test suite and is blocked "

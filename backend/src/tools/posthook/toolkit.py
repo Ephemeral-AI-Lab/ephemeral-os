@@ -94,9 +94,7 @@ async def _accept_replan_submission(
 ) -> ToolResult:
     from team.models import ReplanPlan
 
-    replan = ReplanPlan.from_dict(
-        {"add_tasks": add_tasks, "cancel_ids": cancel_ids}
-    )
+    replan = ReplanPlan.from_dict({"add_tasks": add_tasks, "cancel_ids": cancel_ids})
     freshness_gate = await _freshness_submission_gate(context, action="replan_submission()")
     if freshness_gate is not None:
         return freshness_gate
@@ -190,15 +188,6 @@ def _coordination_warnings(context: ToolExecutionContext) -> list[str]:
         seen.add(message)
         messages.append(message)
     return messages
-
-
-def _coordination_warning_gate(
-    context: ToolExecutionContext,
-    *,
-    action: str,
-) -> ToolResult | None:
-    """Coordination warnings are now advisory — never block submission."""
-    return None
 
 
 # ---------------------------------------------------------------------------
@@ -413,10 +402,7 @@ class DeclareBlockerTool(BaseTool):
         freshness_gate = await _freshness_submission_gate(context, action="declare_blocker()")
         if freshness_gate is not None:
             return freshness_gate
-        note = (
-            f"Declared blocker on {', '.join(arguments.root_cause_paths)}: "
-            f"{arguments.reason}"
-        )
+        note = f"Declared blocker on {', '.join(arguments.root_cause_paths)}: {arguments.reason}"
         if arguments.suggestion:
             note += f"\nSuggestion: {arguments.suggestion}"
         await _post_submission_note(context, content=note)
@@ -460,11 +446,7 @@ class PosthookTools(BaseToolkit):
     def from_context(cls, ctx: object) -> PosthookTools:
         from agents.registry import get_role
 
-        metadata = (
-            getattr(ctx, "metadata", None)
-            or getattr(ctx, "tool_metadata", None)
-            or {}
-        )
+        metadata = getattr(ctx, "metadata", None) or getattr(ctx, "tool_metadata", None) or {}
         role = metadata.get("role") if hasattr(metadata, "get") else None
         if not isinstance(role, str) or not role.strip():
             agent_name = str(metadata.get("agent_name") or "") if hasattr(metadata, "get") else ""

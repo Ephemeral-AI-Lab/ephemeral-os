@@ -66,7 +66,6 @@ class TaskCenter:
         file_change_store: Any = None,
         max_checkpoints: int = 10,
         event_store: TeamRunStore | None = None,
-        checkpoint_store: Any = None,
     ) -> None:
         self.goal = goal
         self.user_request = user_request
@@ -120,7 +119,6 @@ class TaskCenter:
         self._checkpoints = CheckpointManager(
             team_run_id=team_run_id,
             max_checkpoints=max_checkpoints,
-            checkpoint_store=checkpoint_store,
         )
 
     # ---- manager access (public) ----------------------------------------
@@ -144,10 +142,6 @@ class TaskCenter:
     @property
     def budget(self) -> BudgetManager:
         return self._budget
-
-    @property
-    def transitions(self) -> TransitionTracker:
-        return self._transitions
 
     # ---- budget attribute aliases ---------------------------------------
 
@@ -200,7 +194,9 @@ class TaskCenter:
             if rec is not None and rec.retry_count < rec.max_retries:
                 await self._notes.post(
                     Note(
-                        id=self._new_id(), task_id=task_id, agent_name="system",
+                        id=self._new_id(),
+                        task_id=task_id,
+                        agent_name="system",
                         content=(
                             f"Plan validation failed: {reason}\n"
                             f"Retry #{rec.retry_count + 1}: emit a corrected plan that avoids "
@@ -272,14 +268,10 @@ class TaskCenter:
 
         if result.submitted_plan is not None:
             await self._store.mark_expanded(task_id)
-            self._transitions.emit_status(
-                task_id, "expanded", finished_at=_utcnow().isoformat()
-            )
+            self._transitions.emit_status(task_id, "expanded", finished_at=_utcnow().isoformat())
         else:
             promoted_ready = await self._store.mark_done(task_id)
-            self._transitions.emit_status(
-                task_id, "done", finished_at=_utcnow().isoformat()
-            )
+            self._transitions.emit_status(task_id, "done", finished_at=_utcnow().isoformat())
             for dep_id in promoted_ready:
                 dep_task = self.graph.get(dep_id)
                 if dep_task is None:
@@ -439,5 +431,3 @@ class TaskCenter:
         )
         self._resume_snapshot = None
         await self._store.refresh_graph()
-
-

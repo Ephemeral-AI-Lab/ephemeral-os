@@ -5,7 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Sequence
 
 from pydantic import BaseModel, ValidationError
 
@@ -143,7 +143,7 @@ class BaseTool(ABC):
     # "post_run"         — available after agent finishes (submission tools)
     # "external_trigger" — used by external callers (conductor, task_center)
     # A tool can have multiple types (e.g. post_note is both external_trigger and post_run).
-    tool_types: set[ToolType] = frozenset({"normal"})
+    tool_types: frozenset = frozenset({"normal"})
 
     @abstractmethod
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
@@ -190,9 +190,9 @@ class BaseToolkit:
 
     def __init__(
         self,
-        name: str,
-        description: str,
-        tools: list[BaseTool] | None = None,
+        name: str = "",
+        description: str = "",
+        tools: Sequence[BaseTool] | None = None,
         instructions: str | None = None,
     ) -> None:
         self.name = name
@@ -320,8 +320,7 @@ async def run_tool_safely(
         parsed_input = tool.input_model.model_validate(raw_input)
     except ValidationError as exc:
         errors = "; ".join(
-            f"{'.'.join(str(p) for p in e['loc'])}: {e['msg']}"
-            for e in exc.errors()
+            f"{'.'.join(str(p) for p in e['loc'])}: {e['msg']}" for e in exc.errors()
         )
         return ToolResult(
             output=(

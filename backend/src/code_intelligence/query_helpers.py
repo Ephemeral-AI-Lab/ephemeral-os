@@ -2,11 +2,8 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import re
-import shlex
-import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -15,7 +12,6 @@ from code_intelligence.constants import SKIP_DIRECTORIES, SUPPORTED_EXTENSIONS
 
 logger = logging.getLogger(__name__)
 _SYMBOL_FALLBACK_LIMIT = 100
-_REFERENCE_FALLBACK_LIMIT = 100
 _IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _PY_DEF_RE = re.compile(r"^\s*(?:async\s+def|def)\s+([A-Za-z_][A-Za-z0-9_]*)\b")
 _PY_CLASS_RE = re.compile(r"^\s*class\s+([A-Za-z_][A-Za-z0-9_]*)\b")
@@ -166,52 +162,6 @@ def _parse_rg_matches(
         if len(matches) >= _SYMBOL_FALLBACK_LIMIT:
             break
     return matches
-
-
-def _build_reference_pattern(symbol: str) -> str:
-    needle = symbol.strip()
-    if not needle:
-        return ""
-    escaped = re.escape(needle)
-    if _IDENTIFIER_RE.fullmatch(needle):
-        return rf"\b{escaped}\b"
-    return escaped
-
-
-def _parse_reference_matches(
-    output: str,
-    *,
-    symbol: str,
-    skip_file: str = "",
-    skip_line: int = 0,
-) -> list[dict[str, Any]]:
-    refs: list[dict[str, Any]] = []
-    seen: set[tuple[str, int, str]] = set()
-    for line in output.splitlines():
-        parts = line.split(":", 2)
-        if len(parts) != 3:
-            continue
-        file_path, line_no, snippet = parts
-        try:
-            parsed_line = int(line_no)
-        except ValueError:
-            parsed_line = 0
-        if skip_file and file_path == skip_file and skip_line and parsed_line == skip_line:
-            continue
-        key = (file_path, parsed_line, snippet.strip())
-        if key in seen:
-            continue
-        seen.add(key)
-        refs.append(
-            {
-                "file": file_path,
-                "line": parsed_line,
-                "text": snippet.strip()[:200],
-            }
-        )
-        if len(refs) >= _REFERENCE_FALLBACK_LIMIT:
-            break
-    return refs
 
 
 def _python_fallback_query_symbols(
