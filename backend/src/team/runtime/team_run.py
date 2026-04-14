@@ -78,7 +78,7 @@ class TeamRun:
         self.api_client: Any = self._resolve_api_client()
         from team.persistence.blocker_store import BlockerStore
         from team.runtime.conductor import Conductor
-        sf = getattr(self.task_center, "_sf", None)
+        sf = getattr(getattr(self.task_center, "store", None), "_sf", None)
         blocker_store = BlockerStore(sf, self.id) if sf is not None else None
         self.conductor: Conductor = Conductor(self, blocker_store=blocker_store)
         if blocker_store is not None:

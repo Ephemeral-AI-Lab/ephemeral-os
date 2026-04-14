@@ -11,7 +11,8 @@ import logging
 import os
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Engine, create_engine, inspect, text
+from sqlalchemy import Engine, Index, create_engine, inspect, text
+from sqlalchemy.schema import CreateIndex
 from sqlalchemy.orm import Session, sessionmaker
 
 from db.base import Base
@@ -34,6 +35,7 @@ _INDEX_DDL: tuple[tuple[str, str, str], ...] = (
         'CREATE INDEX IF NOT EXISTS "ix_token_usage_run_id" ON "token_usage" ("run_id")',
     ),
 )
+
 
 def get_engine() -> Engine | None:
     """Return the shared engine (None if DB is not configured)."""
@@ -74,6 +76,8 @@ def _add_missing_columns(engine: Engine) -> None:
 
 def _ensure_indexes(engine: Engine) -> None:
     """Create indexes that may be missing on upgraded databases."""
+    import re
+
     insp = inspect(engine)
     for table_name, index_name, ddl in _INDEX_DDL:
         if not insp.has_table(table_name):
@@ -82,13 +86,25 @@ def _ensure_indexes(engine: Engine) -> None:
         if index_name in existing:
             continue
         logger.info("Adding missing index %s on %s", index_name, table_name)
+        table = Base.metadata.tables.get(table_name)
+        if table is None:
+            continue
+        # Extract column name from DDL: ON "table" ("column")
+        m = re.search(r'ON\s+"[^"]+"\s*\("([^"]+)"\)', ddl)
+        if m is None:
+            continue
+        col_name = m.group(1)
+        col = table.c.get(col_name)
+        if col is None:
+            continue
         with engine.begin() as conn:
-            conn.execute(text(ddl))
+            conn.execute(CreateIndex(Index(index_name, col)).compile(dialect=engine.dialect))
 
 
 def _async_database_url(url: str) -> "URL":
     """Convert a sync database URL to an async-compatible driver."""
     from sqlalchemy.engine import URL, make_url
+
     parsed = make_url(url)
     if parsed.drivername in {"postgresql+psycopg", "postgresql+asyncpg"}:
         return parsed
@@ -153,11 +169,13 @@ def initialize_db(
 
     # Create async engine from the same URL for DispatcherStore.
     import importlib.util
+
     if importlib.util.find_spec("greenlet") is not None:
         from sqlalchemy.ext.asyncio import (
             create_async_engine,
             async_sessionmaker as _asm,
         )
+
         _async_engine = create_async_engine(
             _async_database_url(url),
             pool_pre_ping=pool_pre_ping,

@@ -75,6 +75,54 @@ def test_build_task_metadata_enables_team_runtime_flags():
     assert meta["replans_used"] == 1
 
 
+def test_build_task_metadata_exposes_active_blocker_fix_task_ids():
+    task = Task(
+        id="task-1",
+        team_run_id="run-1",
+        agent_name="team_replanner",
+        status=TaskStatus.PENDING,
+        task="recover from shared failure",
+    )
+    team_run = SimpleNamespace(
+        id="run-1",
+        sandbox_id="sbx-1",
+        project_context=SimpleNamespace(repo_root="/repo"),
+        coordination_metadata={},
+        task_center=object(),
+        file_change_store=None,
+        budgets=None,
+        budget_state=None,
+        root_task_id="root-1",
+        roster={"replanner": ["team_replanner"]},
+        conductor=SimpleNamespace(
+            has_active_blocker=lambda: True,
+            active_blockers=lambda: [
+                SimpleNamespace(
+                    id="blk-1",
+                    reason="shared import broken",
+                    root_cause_paths=["pkg/shared.py"],
+                    status=SimpleNamespace(value="fixing"),
+                    initiating_task_id="dev-1",
+                    fix_task_id="resolver-1",
+                )
+            ],
+        ),
+    )
+
+    meta = build_task_metadata(team_run, task)
+
+    assert meta["active_blockers"] == [
+        {
+            "id": "blk-1",
+            "reason": "shared import broken",
+            "root_cause_paths": ["pkg/shared.py"],
+            "status": "fixing",
+            "initiating_task_id": "dev-1",
+            "fix_task_id": "resolver-1",
+        }
+    ]
+
+
 @pytest.mark.asyncio
 async def test_submit_plan_resolves_roster_role_hints():
     task_center = _AsyncTaskCenterStub()

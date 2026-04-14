@@ -84,13 +84,6 @@ class SymbolIndex:
                 return self._built
         return False
 
-    def rebuild(self) -> None:
-        """Force a full rebuild."""
-        with self._lock:
-            self._built = False
-            self._build_event.clear()
-            self._start_build()
-
     def refresh(self, file_path: str, content: str | None = None) -> int:
         """Re-index a single file. Returns the new generation."""
         if content is None:
@@ -253,8 +246,7 @@ class SymbolIndex:
                 self._build_remote_individual(chunk)
                 continue
             commit = [
-                (fp, extract_symbols(fp, content, self._tree_cache))
-                for fp, content in downloaded
+                (fp, extract_symbols(fp, content, self._tree_cache)) for fp, content in downloaded
             ]
             if commit:
                 self._commit_batch(commit)

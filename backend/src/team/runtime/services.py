@@ -39,8 +39,10 @@ def build_team_runtime_services(
     from team.task_center import TaskCenter
 
     project_context = ProjectContext(
-        goal=goal or user_request, user_request=user_request,
-        repo_root=repo_root or "", project_key=repo_root or "",
+        goal=goal or user_request,
+        user_request=user_request,
+        repo_root=repo_root or "",
+        project_key=repo_root or "",
     )
     store = event_store if event_store is not None else build_default_store()
 
@@ -55,6 +57,7 @@ def build_team_runtime_services(
             ) from exc
 
     from team.persistence.file_change_store import FileChangeStore
+
     file_change_store: Any = FileChangeStore()
 
     task_center = TaskCenter(
@@ -62,8 +65,6 @@ def build_team_runtime_services(
         team_run_id=team_run_id,
         budgets=budgets,
         budget_state=budget_state,
-        goal=goal or "",
-        user_request=user_request,
         file_change_store=file_change_store,
         event_store=store,
     )

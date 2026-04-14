@@ -21,12 +21,15 @@ from team.task_center import TaskCenter
 
 class _FakeSessionFactory:
     """No-op session factory for tests that only exercise in-memory notes."""
+
     def __call__(self):
         class _Ctx:
             async def __aenter__(self_inner):
                 return None
+
             async def __aexit__(self_inner, *a):
                 return False
+
         return _Ctx()
 
 
@@ -128,13 +131,17 @@ def test_post_emits_note_posted_event():
     store = _RecordingStore()
     tc = _tc(event_store=store)
 
-    _run(tc.notes.post(_note(
-        "n1",
-        "task-1",
-        "first line\nsecond line",
-        agent_name="developer (auto)",
-        scope_paths=["src/auth"],
-    )))
+    _run(
+        tc.notes.post(
+            _note(
+                "n1",
+                "task-1",
+                "first line\nsecond line",
+                agent_name="developer (auto)",
+                scope_paths=["src/auth"],
+            )
+        )
+    )
 
     assert len(store.events) == 1
     event = store.events[0]
@@ -150,7 +157,11 @@ def test_post_logs_auto_note(caplog):
     tc = _tc()
 
     with caplog.at_level("INFO", logger="team.task_center"):
-        _run(tc.notes.post(_note("n1", "task-1", "checkpoint summary", agent_name="developer (auto)")))
+        _run(
+            tc.notes.post(
+                _note("n1", "task-1", "checkpoint summary", agent_name="developer (auto)")
+            )
+        )
 
     assert "[task_center] auto-note task=task-1" in caplog.text
 
@@ -363,8 +374,10 @@ def test_context_for_includes_parent_notes_when_parent_id_matches():
 
     # Mock get_task so _parent_chain_ids doesn't hit DB
     parent = _task("parent-task", task="parent")
+
     async def _mock_get_task(task_id):
         return parent if task_id == "parent-task" else None
+
     tc.get_task = _mock_get_task
 
     ctx = _run(tc.notes.context_for(task))
@@ -381,12 +394,14 @@ def test_context_for_walks_parent_chain_via_internal_get_task():
     # Mock get_task to simulate parent chain without DB
     parent = _task("parent-task", task="parent", parent_id="root-task")
     root = _task("root-task", task="root")
+
     async def _mock_get_task(task_id):
         if task_id == "parent-task":
             return parent
         if task_id == "root-task":
             return root
         return None
+
     tc.get_task = _mock_get_task
 
     ctx = _run(tc.notes.context_for(task))
@@ -396,8 +411,28 @@ def test_context_for_walks_parent_chain_via_internal_get_task():
 
 def test_context_for_dedupes_parent_notes_by_task_id():
     tc = _tc()
-    _run(tc.notes.post(_note("n1", "parent-task", "stale parent note", agent_name="team_planner (auto)", timestamp=100.0)))
-    _run(tc.notes.post(_note("n2", "parent-task", "fresh parent note", agent_name="team_planner (auto)", timestamp=200.0)))
+    _run(
+        tc.notes.post(
+            _note(
+                "n1",
+                "parent-task",
+                "stale parent note",
+                agent_name="team_planner (auto)",
+                timestamp=100.0,
+            )
+        )
+    )
+    _run(
+        tc.notes.post(
+            _note(
+                "n2",
+                "parent-task",
+                "fresh parent note",
+                agent_name="team_planner (auto)",
+                timestamp=200.0,
+            )
+        )
+    )
     task = _task("work-1", task="child task", parent_id="parent-task")
 
     parent = _task("parent-task", task="parent")
@@ -437,7 +472,11 @@ def test_check_falls_back_when_checkpoint_note_generation_raises(monkeypatch):
 
     monkeypatch.setattr("external_trigger.tc_note.run_tc_note", _boom)
 
-    result = _run(tc.activity.check("t1", snapshot=[{"role": "user", "content": "status"}], api_client=object()))
+    result = _run(
+        tc.activity.check(
+            "t1", snapshot=[{"role": "user", "content": "status"}], api_client=object()
+        )
+    )
 
     assert result is True
     notes = _run(tc.notes.read())
@@ -636,9 +675,3 @@ def test_restore_empty_list_clears_notes():
 # ---------------------------------------------------------------------------
 # TaskCenter initialization
 # ---------------------------------------------------------------------------
-
-
-def test_task_center_stores_goal_and_user_request():
-    tc = _tc(goal="build feature", user_request="please add auth")
-    assert tc.goal == "build feature"
-    assert tc.user_request == "please add auth"

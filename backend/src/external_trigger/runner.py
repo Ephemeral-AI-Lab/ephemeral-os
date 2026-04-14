@@ -219,11 +219,17 @@ async def run(
         try:
             validated = tool.input_model.model_validate(tool_input)
         except Exception as exc:
+            required = tool.input_model.model_json_schema().get("required") or []
+            required_hint = (
+                f" Required fields for `{tool_name}`: {', '.join(map(str, required))}."
+                if required
+                else ""
+            )
             _emit(f"{agent_name} (run={run_id}) turn {turn}: pydantic validation failed for {tool_name}: {exc}")
             conversation.append({
                 "role": "user",
                 "content": [{"type": "tool_result", "tool_use_id": tool_id,
-                             "content": f"Validation error: {exc}. Fix and retry.",
+                             "content": f"Validation error: {exc}.{required_hint} Fix and retry.",
                              "is_error": True}],
             })
             continue

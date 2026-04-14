@@ -37,6 +37,7 @@ logger = logging.getLogger(__name__)
 # Try to import tree-sitter; fall back gracefully
 try:
     import tree_sitter  # type: ignore[import-untyped]
+
     _HAS_TREE_SITTER = True
 except ImportError:
     tree_sitter = None  # type: ignore[assignment]
@@ -92,10 +93,6 @@ class TreeCache:
         self._misses = 0
         self._stat_calls = 0
 
-    def update_sandbox(self, sandbox: Any) -> None:
-        """Replace the sandbox used for remote file access."""
-        self._sandbox = sandbox
-
     # -- Public API -----------------------------------------------------------
 
     def get_tree(
@@ -147,24 +144,6 @@ class TreeCache:
 
             # True miss: parse
             return self._parse_and_cache(file_path, content, entry, current_mtime)
-
-    def put_content(self, file_path: str, content: str) -> CacheEntry | None:
-        """Pre-populate cache with known content (no I/O).
-
-        Used during batch downloads to avoid redundant re-downloads
-        when get_tree is called shortly after.
-        """
-        return self.get_tree(file_path, content=content)
-
-    def invalidate(self, file_path: str) -> None:
-        """Remove a file from the cache."""
-        with self._dict_lock:
-            self._cache.pop(file_path, None)
-
-    def invalidate_all(self) -> None:
-        """Clear the entire cache."""
-        with self._dict_lock:
-            self._cache.clear()
 
     @property
     def size(self) -> int:

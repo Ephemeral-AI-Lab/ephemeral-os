@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from sqlalchemy import text
+from sqlalchemy import inspect as sqla_inspect, text
 from sqlalchemy.engine import Engine
 
 from db.base import Base
@@ -48,18 +48,16 @@ def _ensure_team_models_registered() -> None:
 
 
 def _legacy_column_type(engine: Engine, table_name: str, column_name: str) -> str | None:
-    """Check the current column type in PG catalog."""
+    """Check the current column type via pg_catalog.format_type (PostgreSQL)."""
     with engine.begin() as conn:
         return conn.execute(
             text(
-                """
-                SELECT pg_catalog.format_type(a.atttypid, a.atttypmod)
-                FROM pg_attribute a
-                WHERE a.attrelid = to_regclass(:table_name)
-                  AND a.attname = :column_name
-                  AND a.attnum > 0
-                  AND NOT a.attisdropped
-                """
+                "SELECT pg_catalog.format_type(a.atttypid, a.atttypmod) "
+                "FROM pg_attribute a "
+                "WHERE a.attrelid = to_regclass(:table_name) "
+                "AND a.attname = :column_name "
+                "AND a.attnum > 0 "
+                "AND NOT a.attisdropped"
             ),
             {"table_name": table_name, "column_name": column_name},
         ).scalar()
@@ -122,6 +120,7 @@ def create_team_engine(
             initialize_db(settings.database)
         else:
             from config.settings import load_settings
+
             initialize_db(load_settings().database)
 
     if sync_engine is None:

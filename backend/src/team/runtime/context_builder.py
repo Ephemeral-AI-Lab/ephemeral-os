@@ -94,6 +94,7 @@ def build_task_metadata(team_run: "TeamRun", task: Task) -> ExecutionMetadata:
                 "root_cause_paths": b.root_cause_paths,
                 "status": b.status.value,
                 "initiating_task_id": b.initiating_task_id,
+                "fix_task_id": b.fix_task_id,
             }
             for b in conductor.active_blockers()
         ]
@@ -195,13 +196,14 @@ async def build_query_context(
     if getattr(defn, "role", None) == "replanner" and meta.get("active_blockers"):
         blocker_lines = ["## Active Blockers\n",
                          "The following blockers are currently active for sibling tasks. "
-                         "If this failure is related to an existing blocker, use `declare_blocker` "
-                         "with the same root cause paths to merge into the existing blocker "
-                         "rather than creating a new one.\n"]
+                         "If an active blocker already covers the same root-cause paths, do not "
+                         "call `declare_blocker` again. Use `add_tasks(...)` instead, and depend "
+                         "on that blocker's `fix_task_id` so the retry runs after the shared fix.\n"]
         for b in meta["active_blockers"]:
             blocker_lines.append(
                 f"- **{b['id'][:8]}** ({b['status']}): {b['reason']}\n"
-                f"  Root cause: {', '.join(b['root_cause_paths'])}"
+                f"  Root cause: {', '.join(b['root_cause_paths'])}\n"
+                f"  Fix task: {b.get('fix_task_id') or 'pending assignment'}"
             )
         blocker_lines.append("")
         user_message = "\n".join(blocker_lines) + "\n" + user_message

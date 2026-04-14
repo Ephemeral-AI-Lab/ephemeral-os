@@ -61,14 +61,10 @@ class TaskCenter:
         team_run_id: str,
         budgets: BudgetConfig,
         budget_state: BudgetState,
-        goal: str = "",
-        user_request: str = "",
         file_change_store: Any = None,
         max_checkpoints: int = 10,
         event_store: TeamRunStore | None = None,
     ) -> None:
-        self.goal = goal
-        self.user_request = user_request
         self._team_run_id = team_run_id
         self._store = TaskStore(session_factory, team_run_id)
         self._file_change_store = file_change_store

@@ -97,6 +97,12 @@ def test_toolkit_list_tools_length():
     assert len(tools) == 6
 
 
+def test_toolkit_instructions_prioritize_ci_before_raw_file_reads():
+    tk = DaytonaToolkit()
+    assert "Use CI/navigation tools first" in tk.instructions
+    assert "after CI/search narrowed the target" in tk.instructions
+
+
 # ---------------------------------------------------------------------------
 # _get_sandbox (sync)
 # ---------------------------------------------------------------------------
