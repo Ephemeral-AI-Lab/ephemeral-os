@@ -101,9 +101,8 @@ def _benchmark_team_run_dir() -> Path:
     return get_project_config_dir(_PROJECT_ROOT) / "team-runs"
 
 
-def _build_benchmark_event_store(*, session_factory: object | None) -> Any:
-    """Use a stable project-local TeamRun event log for benchmark observability."""
-    del session_factory
+def _build_benchmark_event_store() -> Any:
+    """Project-local TeamRun event log used for benchmark observability."""
     return build_default_store(base_dir=_benchmark_team_run_dir())
 
 
@@ -493,7 +492,7 @@ async def run_sweevo_team(
     """
     _ensure_team_builtins()
     session_config, session_factory = _prepare_benchmark_session(repo_dir=repo_dir)
-    event_store = _build_benchmark_event_store(session_factory=session_factory)
+    event_store = _build_benchmark_event_store()
     team_def = _load_or_create_team_definition(session_factory)
     root_prompt = _build_root_prompt(instance, repo_dir)
     budgets = _derive_sweevo_budgets(instance)
@@ -572,7 +571,8 @@ async def resume_sweevo_team(
     _ensure_team_builtins()
     from server.app_factory import ensure_runtime_stores_ready
 
-    event_store = _build_benchmark_event_store(session_factory=ensure_runtime_stores_ready())
+    ensure_runtime_stores_ready()
+    event_store = _build_benchmark_event_store()
     initial_records = _checkpoint_records_from_store(event_store, team_run_id)
     available_ids = [r["id"] for r in initial_records]
     resume_id = checkpoint_id or (available_ids[-1] if use_latest_checkpoint and available_ids else None)

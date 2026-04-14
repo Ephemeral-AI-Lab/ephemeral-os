@@ -23,9 +23,7 @@ from benchmarks.sweevo.team_runner import (
     _make_runner,
 )
 from team.persistence.events import TeamRunEvent
-from message.event_printer import MultiAgentEventPrinter
 from message import ConversationMessage, TextBlock, ToolUseBlock
-from message.stream_events import BackgroundTaskCompleted
 from team.builtins import DEVELOPER, SCOUT, TEAM_PLANNER, TEAM_REPLANNER, VALIDATOR
 from team.models import Task, TaskStatus, TeamRunStatus
 from tools.core.runtime import ExecutionMetadata
@@ -268,7 +266,7 @@ def test_build_benchmark_event_store_uses_project_local_team_run_dir(monkeypatch
 
     monkeypatch.setattr(sweevo_team_runner, "build_default_store", fake_build_default_store)
 
-    store = sweevo_team_runner._build_benchmark_event_store(session_factory=object())
+    store = sweevo_team_runner._build_benchmark_event_store()
 
     assert store is sentinel
     assert captured["base_dir"] == sweevo_team_runner._benchmark_team_run_dir()
