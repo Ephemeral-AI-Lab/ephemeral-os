@@ -43,9 +43,7 @@ KNOWN_DAYTONA_TOOLS = {
     "daytona_grep",
     "daytona_glob",
     "daytona_edit_file",
-    "ci_hover",
-    "ci_query_symbols",
-    "ci_query_references",
+    "ci_query_symbol",
     "ci_diagnostics",
 }
 

@@ -216,9 +216,9 @@ class LspClient:
         """When character is 0, advance to the actual symbol name column.
 
         Jedi's ``help()``, ``get_references()``, and ``goto()`` need the
-        cursor on the actual symbol text.  Callers (ci_hover,
-        ci_query_references) often pass ``character=0`` which lands on
-        leading indentation — producing empty results.
+        cursor on the actual symbol text.  Callers (ci_query_symbol)
+        often pass ``character=0`` which lands on leading indentation —
+        producing empty results.
 
         For ``def``/``class`` lines the cursor is placed on the symbol
         name (after the keyword), not on ``def``/``class`` itself, so

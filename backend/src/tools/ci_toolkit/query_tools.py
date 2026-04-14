@@ -663,11 +663,6 @@ async def ci_query_symbol(
     )
 
 
-# Backward-compatible aliases so existing imports still work.
-ci_query_symbols = ci_query_symbol
-ci_query_references = ci_query_symbol
-
-
 # -- Edit Hotspots ------------------------------------------------------------
 
 

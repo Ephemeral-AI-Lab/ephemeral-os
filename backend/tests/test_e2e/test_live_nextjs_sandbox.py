@@ -37,9 +37,7 @@ KNOWN_DAYTONA_TOOLS = {
     "daytona_grep",
     "daytona_glob",
     "daytona_edit_file",
-    "ci_hover",
-    "ci_query_symbols",
-    "ci_query_references",
+    "ci_query_symbol",
     "ci_diagnostics",
 }
 
@@ -473,10 +471,10 @@ class TestCodeIntelligenceOnProject:
 
 @pytest.mark.asyncio
 async def test_hover_on_component(sandbox_id):
-    """Agent uses ci_hover to inspect a React component."""
+    """Agent uses ci_query_symbol to inspect a React component."""
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=NEXTJS_AGENT_PROMPT)
     result = await agent.invoke(
-        "Use ci_hover on /workspace/nextjs-app/src/app/page.tsx "
+        "Use ci_query_symbol on /workspace/nextjs-app/src/app/page.tsx "
         "at line 9, character 10 to get type info for the HeroSection function."
     )
     started = result.tools_started()
@@ -498,10 +496,10 @@ async def test_diagnostics_on_page(sandbox_id):
 
 @pytest.mark.asyncio
 async def test_query_symbols_on_interface(sandbox_id):
-    """Agent uses ci_query_symbols to find the PageProps interface."""
+    """Agent uses ci_query_symbol to find the PageProps interface."""
     agent = create_eval_agent(sandbox_id=sandbox_id, system_prompt=NEXTJS_AGENT_PROMPT)
     result = await agent.invoke(
-        "Use ci_query_symbols to find PageProps in /workspace/nextjs-app/src/app/page.tsx."
+        "Use ci_query_symbol to find PageProps in /workspace/nextjs-app/src/app/page.tsx."
     )
     started = result.tools_started()
     assert len(started) >= 1

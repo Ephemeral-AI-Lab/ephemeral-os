@@ -4,7 +4,7 @@
 Exercises the full cold-start flow that team_planner hits:
   1. inject_code_intelligence with an async sandbox (no sync handle)
   2. ci_workspace_structure — should wait for the index and return indexed paths
-  3. ci_query_symbols — should find symbols from the indexed workspace
+  3. ci_query_symbol — should find symbols from the indexed workspace
 
 Also includes a live sandbox variant that runs against a real Daytona sandbox.
 
@@ -205,9 +205,9 @@ class TestSymbolIndexColdStart:
         assert "src/utils.py" in output
         assert "src/models.py" in output
 
-    def test_ci_query_symbols_waits_on_remote_cold_start(self):
-        """ci_query_symbols should wait for remote symbol index and find symbols."""
-        from tools.ci_toolkit.query_tools import ci_query_symbols
+    def test_ci_query_symbol_waits_on_remote_cold_start(self):
+        """ci_query_symbol should wait for remote symbol index and find symbols."""
+        from tools.ci_toolkit.query_tools import ci_query_symbol
 
         sandbox = _make_async_sandbox(WORKSPACE_FILES)
         svc = self._create_ci_service(sandbox)
@@ -224,8 +224,8 @@ class TestSymbolIndexColdStart:
         loop = asyncio.new_event_loop()
         try:
             result = loop.run_until_complete(
-                ci_query_symbols.execute(
-                    ci_query_symbols.input_model(query="App"),
+                ci_query_symbol.execute(
+                    ci_query_symbol.input_model(query="App"),
                     ctx,
                 )
             )
@@ -244,7 +244,7 @@ class TestSymbolIndexColdStart:
         Simulates the exact team_planner cold-start sequence.
         """
         from sandbox.workspace import inject_code_intelligence
-        from tools.ci_toolkit.query_tools import ci_workspace_structure, ci_query_symbols
+        from tools.ci_toolkit.query_tools import ci_workspace_structure, ci_query_symbol
 
         sandbox = _make_async_sandbox(WORKSPACE_FILES)
         context = MagicMock()
@@ -274,10 +274,10 @@ class TestSymbolIndexColdStart:
             assert not ws_result.is_error
             assert "src/main.py" in ws_result.output
 
-            # Step 3: ci_query_symbols (should work now — index was built)
+            # Step 3: ci_query_symbol (should work now — index was built)
             sym_result = loop.run_until_complete(
-                ci_query_symbols.execute(
-                    ci_query_symbols.input_model(query="User"),
+                ci_query_symbol.execute(
+                    ci_query_symbol.input_model(query="User"),
                     tool_ctx,
                 )
             )
@@ -288,8 +288,8 @@ class TestSymbolIndexColdStart:
 
             # Also verify a function query
             fn_result = loop.run_until_complete(
-                ci_query_symbols.execute(
-                    ci_query_symbols.input_model(query="main", kind="function"),
+                ci_query_symbol.execute(
+                    ci_query_symbol.input_model(query="main", kind="function"),
                     tool_ctx,
                 )
             )
@@ -331,10 +331,10 @@ class TestLiveColdStart:
     """Live sandbox tests for symbol index cold start."""
 
     async def test_live_ci_tools_after_cold_inject(self, live_sandbox_id):
-        """Inject CI into a live sandbox and verify ci_query_symbols works."""
+        """Inject CI into a live sandbox and verify ci_query_symbol works."""
         from sandbox.service import SandboxService
         from sandbox.workspace import discover_workspace, inject_code_intelligence
-        from tools.ci_toolkit.query_tools import ci_workspace_structure, ci_query_symbols
+        from tools.ci_toolkit.query_tools import ci_workspace_structure, ci_query_symbol
 
         svc = SandboxService()
         sandbox = svc.get_sandbox_object(live_sandbox_id)
@@ -368,17 +368,17 @@ class TestLiveColdStart:
         assert not ws_result.is_error
         assert "src/main.py" in ws_result.output
 
-        # Run ci_query_symbols — should find indexed symbols
-        sym_result = await ci_query_symbols.execute(
-            ci_query_symbols.input_model(query="App"),
+        # Run ci_query_symbol — should find indexed symbols
+        sym_result = await ci_query_symbol.execute(
+            ci_query_symbol.input_model(query="App"),
             tool_ctx,
         )
         assert not sym_result.is_error
         symbols = json.loads(sym_result.output)
         assert len(symbols) >= 1, f"Should find App class, got: {sym_result.output}"
 
-    async def test_live_agent_ci_query_symbols(self, live_sandbox_id):
-        """EvalAgent test: verify ci_query_symbols is available and works.
+    async def test_live_agent_ci_query_symbol(self, live_sandbox_id):
+        """EvalAgent test: verify ci_query_symbol is available and works.
 
         Uses a direct tool invocation through EvalAgent rather than
         relying on the LLM to choose the right tool.
@@ -390,29 +390,29 @@ class TestLiveColdStart:
             sandbox_id=live_sandbox_id,
             system_prompt=(
                 "You have a remote sandbox with Python files in the src/ directory. "
-                "When asked to find symbols, you MUST use the ci_query_symbols tool. "
+                "When asked to find symbols, you MUST use the ci_query_symbol tool. "
                 "Do NOT use daytona_grep or any other tool. "
-                "ONLY use ci_query_symbols. Be concise."
+                "ONLY use ci_query_symbol. Be concise."
             ),
         )
         result = await agent.invoke(
-            "Find the class named 'App' using ci_query_symbols with query='App'."
+            "Find the class named 'App' using ci_query_symbol with query='App'."
         )
 
         tool_names = [t.name for t in result.tool_calls]
-        # Accept either ci_query_symbols or fallback tools — the key assertion
-        # is that if ci_query_symbols was used, it should not return cold results
+        # Accept either ci_query_symbol or fallback tools — the key assertion
+        # is that if ci_query_symbol was used, it should not return cold results
         completed = result.tools_completed()
-        ci_calls = [e for e in completed if e.tool_name == "ci_query_symbols"]
+        ci_calls = [e for e in completed if e.tool_name == "ci_query_symbol"]
         if ci_calls:
             for call in ci_calls:
                 assert "No symbols matching" not in (call.output or ""), (
-                    f"ci_query_symbols still cold: {call.output}"
+                    f"ci_query_symbol still cold: {call.output}"
                 )
         else:
-            # If ci_query_symbols wasn't in the tool list, that's an env issue
+            # If ci_query_symbol wasn't in the tool list, that's an env issue
             # not a cold-start issue — skip rather than fail
             pytest.skip(
-                f"ci_query_symbols not used by agent (used: {tool_names}). "
+                f"ci_query_symbol not used by agent (used: {tool_names}). "
                 "Tool may not be registered for this agent config."
             )

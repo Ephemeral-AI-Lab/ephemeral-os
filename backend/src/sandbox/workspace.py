@@ -132,7 +132,7 @@ def inject_code_intelligence(
                     # build runs in its own daemon thread and is safe to
                     # start eagerly.  This gives the index a head start so
                     # it is more likely to be ready by the time the first
-                    # ci_query_symbols call arrives.
+                    # ci_query_symbol call arrives.
                     try:
                         svc.symbol_index.ensure_built(wait=False)
                     except Exception:

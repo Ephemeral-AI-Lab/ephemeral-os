@@ -3,7 +3,7 @@
 
 Covers sandbox and CI concerns:
   OCC Editing:         daytona_edit_file with Arbiter lock/token/conflict
-  CI toolkit:  ci_hover, ci_query_symbols, ci_query_references, ci_diagnostics
+  CI toolkit:  ci_query_symbol, ci_query_symbol, ci_query_symbol, ci_diagnostics
   CodeAct:             daytona_codeact multi-step execution
   Tool Selection:      ordering, schema validation, completeness
   Code Intelligence:   CI service, LSP client, registry, types
@@ -366,43 +366,6 @@ class TestDaytonaEditTool:
 
 class TestDaytonaCiTools:
     """Test unified code intelligence tools: hover and diagnostics."""
-
-    # -- Hover --
-
-    def test_lsp_hover_no_ci_service(self):
-        from tools.ci_toolkit.lsp_tools import ci_hover
-
-        sandbox = _make_mock_sandbox()
-        ctx = _make_context(sandbox)  # no ci_service
-        result = _run(ci_hover.execute(ci_hover.input_model(file_path="/test.py", line=1), ctx))
-        assert result.is_error
-        assert "not available" in result.output
-
-    def test_lsp_hover_with_result(self):
-        from tools.ci_toolkit.lsp_tools import ci_hover
-        from code_intelligence.types import HoverResult
-
-        svc = MagicMock()
-        svc.hover.return_value = HoverResult(content="def foo() -> int", language="python")
-        ctx = _make_context(_make_mock_sandbox(), ci_service=svc)
-        result = _run(ci_hover.execute(ci_hover.input_model(file_path="/test.py", line=1), ctx))
-        _assert_success(result)
-        assert "foo" in result.output
-
-    def test_lsp_hover_no_result(self):
-        from tools.ci_toolkit.lsp_tools import ci_hover
-
-        svc = MagicMock()
-        svc.hover.return_value = None
-        ctx = _make_context(_make_mock_sandbox(), ci_service=svc)
-        result = _run(ci_hover.execute(ci_hover.input_model(file_path="/test.py", line=99), ctx))
-        _assert_success(result)
-        assert "No hover" in result.output
-
-    def test_lsp_hover_is_read_only(self):
-        from tools.ci_toolkit.lsp_tools import ci_hover
-
-        assert ci_hover.is_read_only(ci_hover.input_model(file_path="/test.py", line=1))
 
     # -- Diagnostics --
 
@@ -943,13 +906,12 @@ class TestToolSelectionAndOrdering:
         assert "old_text" in required
         assert "new_text" in required
 
-    def test_ci_hover_requires_file_path_and_line(self):
-        from tools.ci_toolkit.lsp_tools import ci_hover
+    def test_ci_query_symbol_requires_query(self):
+        from tools.ci_toolkit.query_tools import ci_query_symbol
 
-        schema = ci_hover.to_api_schema()["input_schema"]
+        schema = ci_query_symbol.to_api_schema()["input_schema"]
         required = schema.get("required", [])
-        assert "file_path" in required
-        assert "line" in required
+        assert "query" in required
 
     def test_lsp_diagnostics_requires_file_path_only(self):
         from tools.ci_toolkit.lsp_tools import ci_diagnostics as DaytonaDiagnosticsTool

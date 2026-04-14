@@ -113,14 +113,14 @@ EVAL_CASES = [
     EvalCase(
         name="goto_definition",
         prompt="Find the definition of build_app in src/app.py",
-        expected_tools=["ci_query_symbols", "daytona_read_file"],
-        required_params={"ci_query_symbols": ["query"]},
+        expected_tools=["ci_query_symbol", "daytona_read_file"],
+        required_params={"ci_query_symbol": ["query"]},
     ),
     EvalCase(
         name="find_references",
         prompt="Find all usages of the User symbol across the codebase.",
-        expected_tools=["ci_query_references"],
-        required_params={"ci_query_references": ["symbol"]},
+        expected_tools=["ci_query_symbol"],
+        required_params={"ci_query_symbol": ["query"]},
     ),
     EvalCase(
         name="check_errors",

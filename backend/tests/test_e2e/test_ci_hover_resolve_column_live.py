@@ -1,7 +1,7 @@
 # ruff: noqa
-"""E2E: ci_query_references with symbol-index-first approach.
+"""E2E: ci_query_symbol with symbol-index-first approach.
 
-Verifies that ci_query_references resolves symbols via the index,
+Verifies that ci_query_symbol resolves symbols via the index,
 then calls LSP with correct coordinates.
 
 Run with: pytest tests/test_e2e/test_ci_hover_resolve_column_live.py -v -m live
@@ -18,7 +18,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from tools.core.base import ToolExecutionContext
-from tools.ci_toolkit.query_tools import ci_query_references
+from tools.ci_toolkit.query_tools import ci_query_symbol
 
 pytestmark = [pytest.mark.e2e]
 
@@ -47,7 +47,7 @@ def _svc_stub(*, workspace_root: str = "/testbed", initialized: bool = True) -> 
 
 
 class TestReferencesResolveColumnUnit:
-    """Verify ci_query_references resolves symbol via index then calls LSP."""
+    """Verify ci_query_symbol resolves symbol via index then calls LSP."""
 
     async def test_references_resolves_via_symbol_index(self):
         """Symbol index finds the definition, then LSP is called with resolved coords."""
@@ -56,17 +56,19 @@ class TestReferencesResolveColumnUnit:
         defn.file_path = "/testbed/src/engine.py"
         defn.line = 10
         defn.kind.value = "class"
+        defn.signature = "class Engine"
 
         svc = _svc_stub()
         svc.symbol_index.is_built = True
         svc.symbol_index.find.return_value = [defn]
+        svc.query_symbols.return_value = [defn]
         svc.tree_cache = None
         svc.lsp_client._read_line = MagicMock(return_value=None)
         ctx = _ctx({"ci_service": svc})
 
         with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
-            await ci_query_references.execute(
-                ci_query_references.input_model(symbol="Engine"),
+            await ci_query_symbol.execute(
+                ci_query_symbol.input_model(query="Engine", references=True),
                 ctx,
             )
         svc.find_references.assert_called_once()
@@ -139,15 +141,15 @@ def _build_ci_context(sandbox_id: str) -> tuple[Any, ToolExecutionContext]:
 @pytest.mark.live
 @pytest.mark.asyncio
 class TestLiveReferencesResolveColumn:
-    """Live: ci_query_references finds refs for indented symbols with character=0."""
+    """Live: ci_query_symbol finds refs for indented symbols with character=0."""
 
     async def test_references_indented_method(self, live_sandbox_id):
         """References for 'start' method should find app.start() calls via symbol index."""
         ci_svc, ctx = _build_ci_context(live_sandbox_id)
 
         with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=ci_svc):
-            result = await ci_query_references.execute(
-                ci_query_references.input_model(symbol="start"),
+            result = await ci_query_symbol.execute(
+                ci_query_symbol.input_model(query="start", references=True),
                 ctx,
             )
 
@@ -163,8 +165,8 @@ class TestLiveReferencesResolveColumn:
         ci_svc, ctx = _build_ci_context(live_sandbox_id)
 
         with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=ci_svc):
-            result = await ci_query_references.execute(
-                ci_query_references.input_model(symbol="App"),
+            result = await ci_query_symbol.execute(
+                ci_query_symbol.input_model(query="App", references=True),
                 ctx,
             )
 
