@@ -40,7 +40,8 @@ def _build_instructions(*, include_codeact: bool) -> str:
         codeact_line = (
             "- `daytona_codeact` — execute Python with atomic file I/O. "
             "Use for tests, builds, verification, reproductions, or multi-step transformations "
-            "that need read/write/shell in one operation.\n"
+            "that need read/write/shell in one operation. Inside codeact, run repo commands via "
+            "`shell(\"pytest ...\", timeout=N)`; do not import `subprocess` and do not append `2>&1`.\n"
         )
     return (
         "Interact with a remote Daytona sandbox for file operations, "
@@ -52,7 +53,10 @@ def _build_instructions(*, include_codeact: bool) -> str:
         "- `daytona_grep` — search file contents by regex. Use to find code patterns.\n"
         "- `daytona_read_file` — read a file. Use after CI/search narrowed the target and before editing exact lines.\n\n"
         "**Edit**\n"
-        "- `daytona_edit_file` — atomic file edits using `old_text`/`new_text` or batched `search_replace` edits.\n"
+        "- `daytona_edit_file` — atomic file edits. Use exactly one mode: "
+        "`old_text` + `new_text` for a single replacement, or "
+        "`edits=[{\"strategy\":\"search_replace\",\"search\":\"...\",\"replace\":\"...\"}]` for batched replacements. "
+        "Never send `new_text` together with `edits`.\n"
         "- `daytona_write_file` — create or overwrite a file. Use for new files.\n"
         f"{codeact_line}\n"
         "**Execute**\n"

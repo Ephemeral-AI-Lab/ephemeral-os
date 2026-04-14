@@ -441,18 +441,6 @@ def _propagate_team_edit(
         except Exception:
             logger.debug("team file_change_store mirror failed for %s", file_path, exc_info=True)
 
-    listener = getattr(team_run, "scope_listener", None)
-    publish = getattr(listener, "publish_change", None) if listener is not None else None
-    if callable(publish):
-        try:
-            publish(
-                file_path=file_path,
-                agent_id=agent_id,
-                agent_run_id=agent_run_id,
-                edit_type=edit_type,
-            )
-        except Exception:
-            logger.debug("scope listener publish failed for %s", file_path, exc_info=True)
 
 
 def _get_team_run(team_run_id: str) -> Any | None:

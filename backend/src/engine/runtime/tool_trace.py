@@ -40,6 +40,13 @@ def _append_trace_values(
     metadata[key] = existing
 
 
+def _increment_trace_counter(metadata: ExecutionMetadata | None, key: str) -> None:
+    if metadata is None:
+        return
+    current = metadata.get(key, 0)
+    metadata[key] = int(current) + 1 if isinstance(current, (int, float)) else 1
+
+
 def record_tool_trace(
     metadata: ExecutionMetadata | None,
     tool_name: str,
@@ -48,6 +55,12 @@ def record_tool_trace(
     tool_use_id: str | None = None,
 ) -> None:
     if metadata is None:
+        return
+    if tool_name == "ci_query_symbol":
+        _increment_trace_counter(metadata, "_ci_query_symbol_calls")
+        return
+    if tool_name == "daytona_codeact":
+        _increment_trace_counter(metadata, "_daytona_codeact_calls")
         return
     if tool_name in {"ci_read_file", "daytona_read_file"}:
         _append_trace_values(

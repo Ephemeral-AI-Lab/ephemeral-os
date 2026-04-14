@@ -90,6 +90,103 @@ async def test_read_file_not_blocked_at_tool_level_for_replanner(tmp_path):
     assert not result.is_error
 
 
+async def test_read_file_blocks_benchmark_source_before_symbol_navigation(tmp_path):
+    f = tmp_path / "pkg" / "mod.py"
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text("print('ok')\n")
+
+    ctx = ToolExecutionContext(
+        cwd=tmp_path,
+        metadata={
+            "agent_name": "scout",
+            "team_mode_enabled": True,
+            "benchmark_test_ids": ["tests/test_mod.py::test_it"],
+        },
+    )
+    result = await ci_read_file.execute(ci_read_file.input_model(path=str(f)), ctx)
+
+    assert result.is_error
+    assert "Scout read guard" in result.output
+    assert "ci_query_symbol(...)" in result.output
+
+
+async def test_read_file_blocks_benchmark_test_files_for_coordinated_agents(tmp_path):
+    f = tmp_path / "tests" / "test_mod.py"
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text("def test_it():\n    pass\n")
+
+    ctx = ToolExecutionContext(
+        cwd=tmp_path,
+        metadata={
+            "agent_name": "scout",
+            "team_mode_enabled": True,
+            "_ci_symbol_navigation_calls": 1,
+            "benchmark_test_files": ["tests/test_mod.py"],
+        },
+    )
+    result = await ci_read_file.execute(ci_read_file.input_model(path=str(f)), ctx)
+
+    assert result.is_error
+    assert "Scout read guard" in result.output
+
+
+async def test_read_file_blocks_benchmark_source_for_scout_even_after_symbol_navigation(tmp_path):
+    f = tmp_path / "pkg" / "mod.py"
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text("print('ok')\n")
+
+    ctx = ToolExecutionContext(
+        cwd=tmp_path,
+        metadata={
+            "agent_name": "scout",
+            "team_mode_enabled": True,
+            "_ci_symbol_navigation_calls": 1,
+            "benchmark_test_ids": ["tests/test_mod.py::test_it"],
+        },
+    )
+    result = await ci_read_file.execute(ci_read_file.input_model(path=str(f)), ctx)
+
+    assert result.is_error
+    assert "Scout read guard" in result.output
+
+
+async def test_read_file_blocks_team_scout_source_without_benchmark_metadata(tmp_path):
+    f = tmp_path / "pkg" / "mod.py"
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text("print('ok')\n")
+
+    ctx = ToolExecutionContext(
+        cwd=tmp_path,
+        metadata={
+            "agent_name": "scout",
+            "team_mode_enabled": True,
+        },
+    )
+    result = await ci_read_file.execute(ci_read_file.input_model(path=str(f)), ctx)
+
+    assert result.is_error
+    assert "Scout read guard" in result.output
+
+
+async def test_read_file_allows_benchmark_source_after_symbol_navigation_for_developer(tmp_path):
+    f = tmp_path / "pkg" / "mod.py"
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text("print('ok')\n")
+
+    ctx = ToolExecutionContext(
+        cwd=tmp_path,
+        metadata={
+            "agent_name": "developer",
+            "team_mode_enabled": True,
+            "_ci_symbol_navigation_calls": 1,
+            "benchmark_test_ids": ["tests/test_mod.py::test_it"],
+        },
+    )
+    result = await ci_read_file.execute(ci_read_file.input_model(path=str(f)), ctx)
+
+    assert not result.is_error
+
+
 async def test_read_file_binary_returns_error(tmp_path):
     """Binary file returns is_error=True with 'Binary file' message."""
     f = tmp_path / "bin.dat"

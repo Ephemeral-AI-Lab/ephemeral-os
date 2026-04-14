@@ -56,8 +56,8 @@ ROLE_TEMPLATES: MappingProxyType[str, str] = MappingProxyType({
         "- Must produce a valid plan payload and stop. Do not execute code, "
         "run tests, or write files.\n"
         "- Must not use scout as a proxy for developer or validator work.\n"
-        "- Must not add speculative items or items outside the scope of the "
-        "incoming request.\n"
+        "- Must not add speculative items, or plan new compat/re-export files "
+        "at missing benchmark-import paths just because tests mention them.\n"
         "- Must never submit scout directly as a WorkItem target."
     ),
     "developer": (
@@ -65,7 +65,9 @@ ROLE_TEMPLATES: MappingProxyType[str, str] = MappingProxyType({
         "- Must stay within the exact scope of the WorkItem payload. Do not "
         "refactor unrelated code or add speculative features.\n"
         "- Must use the literal sandbox tool names exposed at runtime; do not "
-        "assume generic aliases.\n"
+        "assume generic aliases. On benchmark lanes, make the first "
+        "`daytona_codeact` probe a direct `result = shell(\"...\", timeout=N)` "
+        "call, never `subprocess` or `2>&1`.\n"
         "- Must not mutate repo files through shell when direct edit or write "
         "tools are the better fit.\n"
         "- Must not spawn subagents or hand off work."
@@ -75,7 +77,10 @@ ROLE_TEMPLATES: MappingProxyType[str, str] = MappingProxyType({
         "- Must not modify repository or production files as part of validation.\n"
         "- Operate in read or execute mode only, except for explicit scratch "
         "artifacts requested by the payload.\n"
-        "- Must run scoped verification commands and capture evidence faithfully.\n"
+        "- Must run scoped verification commands and capture evidence faithfully; "
+        "on benchmark lanes, call them inside `daytona_codeact` as direct "
+        "`result = shell(\"...\", timeout=N)` probes, never `subprocess` or "
+        "`2>&1`.\n"
         "- Must return a truthful PASS or FAIL verdict with command, exit-code, "
         "and failure evidence."
     ),

@@ -7,7 +7,6 @@ import json
 import logging
 import re
 import shlex
-import uuid
 from typing import Any
 
 from tools.core.decorator import tool
@@ -15,7 +14,6 @@ from tools.core.base import ToolExecutionContext, ToolResult
 from tools.daytona_toolkit._daytona_utils import (
     _truncate,
     _truncate_tail,
-    _format_shell_stdout,
     _wrap_bash_command,
     _extract_exit_code,
     _sandbox_context_error,
@@ -28,8 +26,6 @@ from tools.daytona_toolkit._daytona_utils import (
     _resolve_path,
     _normalize_repo_relative_path,
     _normalize_string_list,
-    _extract_verify_paths,
-    _verification_surface_enforcement_mode,
     _normalize_write_scope,
     _path_under_write_scope,
     _team_repo_write_error,
@@ -37,7 +33,6 @@ from tools.daytona_toolkit._daytona_utils import (
     _upload_file_compat,
     _DEFAULT_TIMEOUT,
     _OUTPUT_MAX_CHARS,
-    _EXIT_MARKER,
     is_coordinated_team_agent,
     record_coordination_warning,
 )
@@ -163,6 +158,32 @@ def _build_glob_result(
     )
 
 
+def _benchmark_read_guard(context: ToolExecutionContext, file_path: str) -> str | None:
+    if not is_coordinated_team_agent(context):
+        return None
+    repo_root = str(_get_cwd(context) or "").strip()
+    benchmark_files = _normalize_string_list(
+        context.metadata.get("benchmark_test_files"),
+        repo_root,
+    )
+    if not benchmark_files and not context.metadata.get("benchmark_test_ids"):
+        return None
+    rel_path = _normalize_repo_relative_path(file_path, repo_root) or ""
+    if rel_path and rel_path in benchmark_files:
+        return (
+            "Benchmark read guard: do not open benchmark test files with "
+            "`daytona_read_file(...)` on coordinated lanes. Use the named pytest "
+            "ids, scout notes, and runtime traceback instead."
+        )
+    if int(context.metadata.get("_daytona_codeact_calls") or 0) <= 0:
+        return (
+            "Benchmark read guard: on coordinated benchmark lanes, run the exact "
+            "repro first via `daytona_codeact` and direct `shell(\"pytest ...\", "
+            "timeout=N)` before using `daytona_read_file(...)`."
+        )
+    return None
+
+
 def _build_glob_command(*, root: str, pattern: str) -> str:
     patterns = [pattern]
     if pattern.startswith("**/"):
@@ -201,128 +222,6 @@ print("\\n".join(matches))
 # ---------------------------------------------------------------------------
 
 
-class _DaytonaSession:
-    """Async context manager for a Daytona shell session."""
-
-    def __init__(self, process: Any) -> None:
-        self._process = process
-        self.session_id = f"bash-{uuid.uuid4().hex[:12]}"
-
-    async def __aenter__(self) -> "_DaytonaSession":
-        await self._process.create_session(self.session_id)
-        return self
-
-    async def __aexit__(self, *exc: Any) -> None:
-        try:
-            await self._process.delete_session(self.session_id)
-        except Exception as e:
-            logger.debug("failed to delete daytona session %s: %s", self.session_id, e)
-
-    async def start(self, command: str) -> str | None:
-        from daytona_sdk import SessionExecuteRequest
-        resp = await self._process.execute_session_command(
-            self.session_id, SessionExecuteRequest(command=command, run_async=True),
-        )
-        return getattr(resp, "cmd_id", None) or getattr(resp, "command_id", None)
-
-    async def poll_logs(self, cmd_id: str) -> tuple[str, str]:
-        logs = await self._process.get_session_command_logs(self.session_id, cmd_id)
-        return getattr(logs, "stdout", "") or "", getattr(logs, "stderr", "") or ""
-
-    async def poll_exit_code(self, cmd_id: str) -> int | None:
-        info = await self._process.get_session_command(self.session_id, cmd_id)
-        return getattr(info, "exit_code", None)
-
-
-async def _exec_streaming(
-    *,
-    sandbox: Any,
-    command: str,
-    cwd: str | None,
-    timeout: int,
-    on_progress_line: Any,
-) -> ToolResult:
-    """Run *command* via a Daytona session and stream stdout lines live."""
-    poll_interval = 0.5
-    deadline = asyncio.get_event_loop().time() + timeout
-    last_emitted = 0
-    line_buf = ""
-
-    def _flush(new_text: str) -> None:
-        nonlocal line_buf
-        if not new_text:
-            return
-        line_buf += new_text
-        while "\n" in line_buf:
-            line, line_buf = line_buf.split("\n", 1)
-            if not line.startswith(_EXIT_MARKER):
-                try:
-                    on_progress_line(line)
-                except Exception as e:
-                    logger.debug("on_progress_line callback failed: %s", e)
-
-    try:
-        session = _DaytonaSession(sandbox.process)
-        async with session:
-            full_cmd = f"cd {shlex.quote(cwd)} && {command}" if cwd else command
-            cmd_id = await session.start(full_cmd)
-            if not cmd_id:
-                return ToolResult(output="daytona session did not return a cmd_id", is_error=True)
-
-            final_stdout = ""
-            exit_code: int | None = None
-            while True:
-                try:
-                    stdout_text, _ = await session.poll_logs(cmd_id)
-                except Exception:
-                    stdout_text = final_stdout
-                if len(stdout_text) > last_emitted:
-                    _flush(stdout_text[last_emitted:])
-                    last_emitted = len(stdout_text)
-                final_stdout = stdout_text
-                try:
-                    exit_code = await session.poll_exit_code(cmd_id)
-                except Exception:
-                    pass
-                if exit_code is not None:
-                    break
-                if asyncio.get_event_loop().time() >= deadline:
-                    return ToolResult(
-                        output=f"command timed out after {timeout}s",
-                        is_error=True, metadata={"exit_code": None},
-                    )
-                await asyncio.sleep(poll_interval)
-
-            # Final poll to capture tail output.
-            try:
-                tail_stdout, _ = await session.poll_logs(cmd_id)
-                if len(tail_stdout) > last_emitted:
-                    _flush(tail_stdout[last_emitted:])
-                final_stdout = tail_stdout
-            except Exception:
-                pass
-            # Flush remaining partial line.
-            if line_buf and not line_buf.startswith(_EXIT_MARKER):
-                try:
-                    on_progress_line(line_buf)
-                except Exception:
-                    pass
-
-            cleaned_stdout, resolved_exit_code = _extract_exit_code(
-                final_stdout, fallback_exit_code=exit_code,
-            )
-            return ToolResult(
-                output=json.dumps({
-                    "cwd": cwd or "",
-                    "stdout": _format_shell_stdout(cleaned_stdout, exit_code=resolved_exit_code),
-                    "exit_code": resolved_exit_code,
-                }),
-                is_error=resolved_exit_code != 0,
-                metadata={"exit_code": resolved_exit_code},
-            )
-    except Exception as exc:
-        return ToolResult(output=f"streaming exec failed: {exc}", is_error=True)
-
 
 # ---------------------------------------------------------------------------
 # File read
@@ -331,7 +230,11 @@ async def _exec_streaming(
 
 @tool(
     name="daytona_read_file",
-    description="Read file contents, optionally specifying a line range.",
+    description=(
+        "Read file contents, optionally specifying a line range. On coordinated "
+        "benchmark lanes, run the exact runtime repro first and do not use this "
+        "to open benchmark test files."
+    ),
     read_only=True,
 )
 async def daytona_read_file(
@@ -356,6 +259,9 @@ async def daytona_read_file(
         content (str): File content with line numbers
     """
     file_path = _resolve_path(file_path, context)
+    contract_error = _benchmark_read_guard(context, file_path)
+    if contract_error is not None:
+        return ToolResult(output=contract_error, is_error=True)
     try:
         raw = await _run_with_recovery(
             context,

@@ -37,6 +37,39 @@ def _normalize_workspace_path(path: str, *, workspace_root: str = "") -> str:
     return normalized.lstrip("./").strip("/")
 
 
+def _normalize_symbol_query(query: str) -> str:
+    normalized = str(query or "").strip().strip("`'\"")
+    for prefix in ("async def ", "def ", "class ", "function "):
+        if normalized.startswith(prefix):
+            normalized = normalized[len(prefix) :].strip()
+            break
+    if "(" in normalized:
+        normalized = normalized.split("(", 1)[0].strip()
+    if normalized.endswith(":"):
+        normalized = normalized[:-1].strip()
+    return normalized
+
+
+def _looks_like_file_query(query: str) -> bool:
+    candidate = str(query or "").strip()
+    if not candidate:
+        return False
+    if "/" in candidate or "\\" in candidate:
+        return True
+    lowered = candidate.lower()
+    return any(lowered.endswith(ext) for ext in SUPPORTED_EXTENSIONS)
+
+
+def _record_symbol_navigation(context: ToolExecutionContext) -> None:
+    metadata = getattr(context, "metadata", None)
+    if metadata is None:
+        return
+    current = metadata.get("_ci_symbol_navigation_calls", 0)
+    metadata["_ci_symbol_navigation_calls"] = (
+        int(current) + 1 if isinstance(current, (int, float)) else 1
+    )
+
+
 def _indexed_workspace_paths(
     paths: list[str],
     *,
@@ -464,6 +497,53 @@ def _reference_definition_priority(workspace_root: str, definition: Any) -> tupl
     return (is_test, is_init, len(fp))
 
 
+def _symbol_leaf_name(name: str) -> str:
+    return str(name or "").rsplit(".", 1)[-1]
+
+
+def _symbol_match_rank(name: str, query: str) -> tuple[int, int, int, str]:
+    """Rank symbol matches by exactness, then by specificity.
+
+    Exact matches win on either the full symbol path or the leaf symbol name.
+    This keeps queries like ``Git`` focused on ``Git`` rather than unrelated
+    symbols such as ``CheckoutErrorSuggestGit``.
+    """
+    lowered_name = str(name or "").strip().lower()
+    lowered_query = str(query or "").strip().lower()
+    leaf = _symbol_leaf_name(lowered_name)
+    exact = lowered_name == lowered_query or leaf == lowered_query
+    prefix = lowered_name.startswith(lowered_query) or leaf.startswith(lowered_query)
+    contains = lowered_query in lowered_name or lowered_query in leaf
+    category = 3
+    if exact:
+        category = 0
+    elif prefix:
+        category = 1
+    elif contains:
+        category = 2
+    member_penalty = 1 if "." in str(name or "") else 0
+    return (category, member_penalty, len(lowered_name), lowered_name)
+
+
+def _prioritize_symbol_matches(
+    matches: list[Any],
+    query: str,
+    *,
+    get_name: Any,
+    get_kind: Any | None = None,
+) -> list[Any]:
+    lowered_query = str(query or "").strip().lower()
+    if not lowered_query or not matches:
+        return list(matches)
+    ranked = sorted(matches, key=lambda item: _symbol_match_rank(get_name(item), lowered_query))
+    exact = [item for item in ranked if _symbol_match_rank(get_name(item), lowered_query)[0] == 0]
+    if exact and get_kind is not None:
+        structured_exact = [item for item in exact if str(get_kind(item) or "") != "text_match"]
+        if structured_exact:
+            exact = structured_exact
+    return exact or ranked
+
+
 def _resolve_symbol_column(svc: Any, file_path: str, line: int, symbol_name: str) -> int:
     """Best-effort 0-based column for *symbol_name* on *line*.
 
@@ -503,14 +583,48 @@ def _resolve_symbol_column(svc: Any, file_path: str, line: int, symbol_name: str
     return idx if idx >= 0 else 0
 
 
+def _file_query_symbols(
+    svc: Any,
+    *,
+    query: str,
+    context: ToolExecutionContext,
+    workspace_root: str,
+) -> tuple[str, list[dict[str, Any]]] | None:
+    if not _looks_like_file_query(query):
+        return None
+    resolved = resolve_daytona_path(query, context)
+    rel_path = _normalize_workspace_path(resolved or query, workspace_root=workspace_root)
+    symbol_index = getattr(svc, "symbol_index", None)
+    file_symbols = getattr(symbol_index, "file_symbols", None)
+    if not rel_path or not callable(file_symbols):
+        return rel_path, []
+    matches = file_symbols(rel_path)
+    definitions = [
+        {
+            "name": symbol.name,
+            "kind": (
+                symbol.kind.value if hasattr(symbol.kind, "value") else str(symbol.kind)
+            ),
+            "file": symbol.file_path,
+            "line": symbol.line,
+            "signature": symbol.signature,
+        }
+        for symbol in matches[:100]
+    ]
+    return rel_path, definitions
+
+
 @tool(
     name="ci_query_symbol",
     description=(
         "Find where a symbol is defined across the codebase, and optionally trace all its "
         "callers and import sites. Returns file path, line number, kind, and signature for each "
         "definition. With references=true, also returns every usage site via LSP — essential "
-        "before patching to see the full blast radius. "
-        "ALWAYS prefer this over daytona_grep when you know a symbol name."
+        "before patching to see the full blast radius. Pass bare symbol names like `Git` or "
+        "`_fill_stage_outputs`, not snippets like `def Git` or `class Git`. If you only know "
+        "an exact file path, one file-path query returns the indexed definitions in that file "
+        "so you can continue with real symbol names. ALWAYS prefer this over daytona_grep "
+        "when you know a symbol name."
     ),
     read_only=True,
 )
@@ -532,6 +646,7 @@ async def ci_query_symbol(
         definitions (list): Matching symbol entries with name, kind, file, line, signature.
         references (list, optional): Usage sites when references=true.
     """
+    query = _normalize_symbol_query(query)
     svc, err = _svc_or_error(context)
     if err:
         return err
@@ -548,8 +663,42 @@ async def ci_query_symbol(
     workspace_root = str(getattr(svc, "workspace_root", "") or "")
     _maybe_warm_service(context, svc, label="ci_query_symbol")
 
+    file_query = _file_query_symbols(
+        svc,
+        query=query,
+        context=context,
+        workspace_root=workspace_root,
+    )
+    if file_query is not None:
+        rel_path, definitions = file_query
+        if not definitions:
+            return ToolResult(
+                output=(
+                    f"No indexed symbols found for file '{rel_path or query}'. "
+                    "The file may be missing, cold, or have no indexable definitions. "
+                    "Use `ci_workspace_structure(...)` to confirm the path, then continue "
+                    "with adjacent symbol evidence or report the gap."
+                ),
+                is_error=True,
+            )
+        _record_symbol_navigation(context)
+        payload: dict[str, Any] = {
+            "file": rel_path,
+            "definitions": definitions,
+            "confidence": "file_symbols",
+        }
+        if references:
+            payload["references"] = []
+            payload["total_references"] = 0
+            payload["hint"] = (
+                "File-path bootstrap query. Use one of the returned symbol names with "
+                "`references=true` to trace callers/import sites."
+            )
+        return ToolResult(output=json.dumps(payload, indent=2))
+
     agent_name = str((context.metadata or {}).get("agent_name") or "").strip()
     drop_text_matches = agent_name == "team_planner"
+    _record_symbol_navigation(context)
 
     results = svc.query_symbols(query)
     if kind_filter:
@@ -563,6 +712,14 @@ async def ci_query_symbol(
                 != "text_match"
             )
         ]
+    results = _prioritize_symbol_matches(
+        results,
+        query,
+        get_name=lambda s: str(s.name or ""),
+        get_kind=lambda s: getattr(getattr(s, "kind", None), "value", None) or str(
+            getattr(s, "kind", "")
+        ),
+    )
 
     if not results:
         fallback_matches: list[dict[str, Any]] = []
@@ -581,6 +738,12 @@ async def ci_query_symbol(
             fallback_matches = [
                 match for match in fallback_matches if str(match.get("kind") or "") != "text_match"
             ]
+        fallback_matches = _prioritize_symbol_matches(
+            fallback_matches,
+            query,
+            get_name=lambda match: str(match.get("name") or ""),
+            get_kind=lambda match: str(match.get("kind") or ""),
+        )
         if fallback_matches:
             output: dict[str, Any] = {"definitions": fallback_matches}
             if references:

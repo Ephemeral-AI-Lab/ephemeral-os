@@ -42,7 +42,7 @@ def test_note_creation_with_all_fields():
         agent_name="developer",
         content="some output",
         timestamp=1000.0,
-        scope_paths=["src/auth/session.py"],
+        paths=["src/auth/session.py"],
         parent_note_id="n0",
     )
     assert note.id == "n1"
@@ -50,13 +50,13 @@ def test_note_creation_with_all_fields():
     assert note.agent_name == "developer"
     assert note.content == "some output"
     assert note.timestamp == 1000.0
-    assert note.scope_paths == ["src/auth/session.py"]
+    assert note.paths == ["src/auth/session.py"]
     assert note.parent_note_id == "n0"
 
 
 def test_note_defaults():
     note = Note(id="n2", task_id="t", agent_name="a", content="c", timestamp=0.0)
-    assert note.scope_paths == []
+    assert note.paths == []
     assert note.parent_note_id is None
 
 

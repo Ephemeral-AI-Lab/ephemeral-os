@@ -108,13 +108,16 @@ async def test_query_ctx_seeds_repo_root_for_daytona_and_ci():
     build_query_ctx = _make_context_builders("sbx-1", repo_dir="/testbed")
     ctx = await build_query_ctx(
         SimpleNamespace(name="developer", role="developer", posthook=["post_note", "request_replan"]),
-        SimpleNamespace(
-            id="TR1",
-            sandbox_id="sbx-1",
-            task_center=SimpleNamespace(context_for=AsyncMock(return_value=""), graph={}),
-            budgets=None,
-            budget_state=None,
-            project_context=SimpleNamespace(repo_root="/testbed"),
+            SimpleNamespace(
+                id="TR1",
+                sandbox_id="sbx-1",
+                task_center=SimpleNamespace(
+                    notes=SimpleNamespace(context_for=AsyncMock(return_value="")),
+                    graph={},
+                ),
+                budgets=None,
+                budget_state=None,
+                project_context=SimpleNamespace(repo_root="/testbed"),
             coordination_metadata={},
             user_request="Fix it",
             file_change_store=None,
@@ -136,6 +139,8 @@ async def test_query_ctx_seeds_repo_root_for_daytona_and_ci():
     assert ctx.tool_metadata["posthook_tool_names"] == ["post_note", "request_replan"]
     assert "submit your results" in ctx.tool_metadata["posthook_prompt"].lower()
     assert "Repo root inside the sandbox: /testbed" in ctx.user_message
+    assert 'result = shell("...", timeout=N)' in ctx.user_message
+    assert "never `subprocess` or `2>&1`" in ctx.user_message
     assert "Do not prepend guessed roots" in ctx.user_message
 
 
@@ -230,14 +235,17 @@ async def test_root_planner_runtime_prompt_hides_posthook_tool_names():
     build_query_ctx = _make_context_builders("sbx-1", repo_dir="/testbed")
     ctx = await build_query_ctx(
         SimpleNamespace(name="team_planner", role="planner", posthook=["submit_plan"]),
-        SimpleNamespace(
-            id="TR1",
-            sandbox_id="sbx-1",
-            user_request="Root plan the repo.",
-            task_center=SimpleNamespace(context_for=AsyncMock(return_value=""), graph={}),
-            budgets=None,
-            budget_state=None,
-            project_context=SimpleNamespace(repo_root="/testbed"),
+            SimpleNamespace(
+                id="TR1",
+                sandbox_id="sbx-1",
+                user_request="Root plan the repo.",
+                task_center=SimpleNamespace(
+                    notes=SimpleNamespace(context_for=AsyncMock(return_value="")),
+                    graph={},
+                ),
+                budgets=None,
+                budget_state=None,
+                project_context=SimpleNamespace(repo_root="/testbed"),
             coordination_metadata={},
             file_change_store=None,
         ),
@@ -737,6 +745,7 @@ def test_make_runner_logs_tc_note_external_hook(monkeypatch, tmp_path: Path):
     class _TaskCenter:
         def __init__(self) -> None:
             self._triggered = False
+            self.activity = self
 
         def tick(self, _task_id: str) -> None:
             return None
@@ -858,6 +867,9 @@ def test_make_runner_skips_tc_note_when_trigger_not_allowed(monkeypatch, tmp_pat
         def finish(self, **_kw): pass
 
     class _TaskCenter:
+        def __init__(self) -> None:
+            self.activity = self
+
         def tick(self, _task_id: str) -> None:
             return None
 

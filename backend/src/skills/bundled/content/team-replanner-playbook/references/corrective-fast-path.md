@@ -5,32 +5,14 @@ Use this reference only when the validator packet already names exact failing py
 ## Workflow
 
 1. Must confirm the owner surface is still live.
-2. May use `read_notes(scope_paths=[...])` to confirm a same-run shared brief on that exact owner surface before checking cross-run cache or spawning a new scout.
+2. May use `read_notes(paths=[...])` once to confirm a same-run shared brief on that exact owner surface before deeper archaeology.
 3. Must draft corrective JSON as soon as the failing cluster, owner surface, and retry target are clear.
 
 ## Rules
 
-- Must keep owner paths exact.
-- **Validator cascade_policy must be `"continue"`** — the validator must run even if the corrective developer fails, so it can report results and trigger further replanning. Using `"cancel"` breaks the recovery cycle.
+- Must keep owner paths exact and keep the failing command visible when the validator failed before target collection.
+- Validator `cascade_policy` must stay `"continue"` so the validator still runs after corrective developer failure.
 - May carry one exact missing import-path file when the parent package already exists live.
-- If a narrowed pytest node is missing but the parent packet still owns the exact benchmark file, keep the retry surface on that file path.
 - If the validator packet already names the live benchmark file and only the current verify command is wrong, correct the retry target and stop.
 - Never reopen benchmark test bodies, decorators, parametrization markers, or shared plumbing to re-derive semantics.
 - Never merge distinct corrective clusters into one item.
-- If the validator failed before the target collected, must keep that failing command visible and route the correction toward the shared owner or runtime-control surface.
-- If the same owner cluster was already reopened once and is still clear, must emit JSON now.
-- If inherited context for that owner already drifted, must refresh the scoped packet before trusting or re-sharing it.
-
-## Few-shot examples
-- Example: the validator packet says `tests/test_hdf.py` fails on `from pkg._compat import X` and live structure shows `pkg/` exists.
-  The corrective target may be `pkg/_compat.py`.
-  Do not reopen the test body to rediscover the same import failure.
-- Example: the validator command never reaches the named test because `pkg/__init__.py` crashes during collection on a missing symbol.
-  Keep that exact command in the corrective payload and replan toward the shared import owner.
-  Do not "fix" the issue by deleting the failing verification step.
-- Example: the validator packet says `pytest pkg/utils.py -x -q` collected zero tests, and the same packet still names `pkg/tests/test_utils_dataframe.py` as the live benchmark file.
-  Keep `scope_paths=["pkg/utils.py"]`, switch the retry target in task prose to `pytest pkg/tests/test_utils_dataframe.py -x -q`, and stop.
-  Do not reopen the benchmark test body, and do not escalate to `benchmark_surface_mismatch`.
-- Example: the failing owner is still `pkg/groupby.py`, and a same-run shared brief already exists for that file.
-  Call `read_notes(scope_paths=["pkg/groupby.py"])` once. If it is still fresh, reuse that owner map and emit corrective JSON.
-  If it drifted, refresh the inherited context before deciding whether more exploration is necessary.

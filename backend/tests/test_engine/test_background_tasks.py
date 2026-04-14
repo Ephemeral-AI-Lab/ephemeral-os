@@ -7,7 +7,7 @@ from contextlib import suppress
 import time
 from typing import Any
 
-from engine.core.query import _record_tool_trace
+from engine.runtime.tool_trace import record_tool_trace as _record_tool_trace
 from engine.runtime.background_tasks import BackgroundTaskManager
 from message.stream_events import BackgroundTaskStarted
 from tools.builtins.background._common import (
@@ -204,6 +204,16 @@ def test_record_tool_trace_dedupes_background_scout_launch_by_tool_use_id() -> N
     assert meta["_scout_launches_this_turn"] == 1
     assert meta["_scout_target_paths_this_turn"] == ["pkg/core.py"]
     assert meta["_scout_launch_order_by_tool_use_id"] == {"toolu_1": 1}
+
+
+def test_record_tool_trace_counts_ci_query_and_codeact() -> None:
+    meta = ExecutionMetadata()
+
+    _record_tool_trace(meta, "ci_query_symbol", {"query": "Git"})
+    _record_tool_trace(meta, "daytona_codeact", {"code": "shell('pytest -q')"})
+
+    assert meta["_ci_query_symbol_calls"] == 1
+    assert meta["_daytona_codeact_calls"] == 1
 
 
 # ---------------------------------------------------------------------------

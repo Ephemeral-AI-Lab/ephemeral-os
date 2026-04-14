@@ -7,10 +7,15 @@ import logging
 import os
 from pathlib import Path
 
+from code_intelligence.constants import SUPPORTED_EXTENSIONS
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.ci_runtime import get_ci_service
 from tools.core.sandbox_runtime import get_daytona_sandbox, resolve_daytona_path
 from tools.core.decorator import tool
+from tools.daytona_toolkit._daytona_utils import (
+    _normalize_repo_relative_path,
+    _normalize_string_list,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -56,9 +61,80 @@ def _local_read_candidates(
     return candidates
 
 
+def _is_benchmark_ci_reader(context: ToolExecutionContext) -> bool:
+    if not bool(context.metadata.get("team_mode_enabled")):
+        return False
+    return str(context.metadata.get("agent_name") or "").strip() in {
+        "developer",
+        "validator",
+        "scout",
+    }
+
+
+def _team_scout_source_guard(
+    *,
+    context: ToolExecutionContext,
+    resolved_path: str,
+) -> str | None:
+    if not bool(context.metadata.get("team_mode_enabled")):
+        return None
+    if str(context.metadata.get("agent_name") or "").strip() != "scout":
+        return None
+    if Path(resolved_path).suffix.lower() not in SUPPORTED_EXTENSIONS:
+        return None
+    return (
+        "Scout read guard: team scouts must stay on `ci_query_symbol(...)`, "
+        "`ci_workspace_structure(...)`, and `ci_diagnostics(...)` for source "
+        "mapping. Keep missing targets missing and report gaps instead of "
+        "opening source files with `ci_read_file(...)`."
+    )
+
+
+def _benchmark_ci_read_guard(
+    *,
+    context: ToolExecutionContext,
+    resolved_path: str,
+    workspace_root: str,
+) -> str | None:
+    if not _is_benchmark_ci_reader(context):
+        return None
+    if Path(resolved_path).suffix.lower() not in SUPPORTED_EXTENSIONS:
+        return None
+    repo_root = (
+        str(workspace_root or "")
+        or str(context.metadata.get("daytona_cwd") or "")
+        or str(context.cwd or "")
+    ).strip()
+    benchmark_files = _normalize_string_list(
+        context.metadata.get("benchmark_test_files"),
+        repo_root,
+    )
+    if not benchmark_files and not context.metadata.get("benchmark_test_ids"):
+        return None
+    rel_path = _normalize_repo_relative_path(resolved_path, repo_root) or ""
+    if rel_path and rel_path in benchmark_files:
+        return (
+            "Benchmark read guard: do not open benchmark test files with "
+            "`ci_read_file(...)` on coordinated lanes. Keep benchmark tests as "
+            "evidence and navigate through CI symbols instead."
+        )
+    if int(context.metadata.get("_ci_symbol_navigation_calls") or 0) <= 0:
+        return (
+            "Benchmark read guard: on coordinated benchmark lanes, use "
+            "`ci_query_symbol(name)` or `ci_query_symbol(name, references=true)` "
+            "before `ci_read_file(...)`. `ci_read_file` is confirmatory only after "
+            "CI symbol/reference evidence narrowed the seam."
+        )
+    return None
+
+
 @tool(
     name="ci_read_file",
-    description="Read file contents from the workspace sandbox with line numbers.",
+    description=(
+        "Read file contents from the workspace sandbox with line numbers. On "
+        "coordinated benchmark lanes this is confirmatory only after CI symbol "
+        "queries narrowed the seam."
+    ),
     read_only=True,
 )
 async def ci_read_file(
@@ -90,6 +166,19 @@ async def ci_read_file(
         context=context,
         workspace_root=workspace_root,
     )
+    scout_guard = _team_scout_source_guard(
+        context=context,
+        resolved_path=resolved_path,
+    )
+    if scout_guard:
+        return ToolResult(output=scout_guard, is_error=True)
+    guard = _benchmark_ci_read_guard(
+        context=context,
+        resolved_path=resolved_path,
+        workspace_root=workspace_root,
+    )
+    if guard:
+        return ToolResult(output=guard, is_error=True)
 
     sandbox = get_daytona_sandbox(context)
     content = None

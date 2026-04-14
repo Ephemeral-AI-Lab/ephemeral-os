@@ -65,7 +65,7 @@ class ScopeChangeNotifier:
                     agent_name="system",
                     content="\n".join(lines),
                     timestamp=now,
-                    scope_paths=list(task.scope_paths),
+                    paths=list(task.scope_paths),
                 )
             )
         except Exception:

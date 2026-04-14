@@ -356,8 +356,10 @@ def test_symbol_index_builds_from_remote_sandbox_workspace() -> None:
     assert idx.is_built is True
     assert idx.indexed_files == 2
     names = {symbol.name for symbol in idx.file_symbols("/repo/pkg/module.py")}
+    rel_names = {symbol.name for symbol in idx.file_symbols("pkg/module.py")}
     assert "Remote" in names
     assert "Remote.run" in names
+    assert rel_names == names
 
 
 def test_symbol_index_returns_symbol_boundaries_for_python_symbols(tmp_path) -> None:

@@ -562,7 +562,8 @@ def build_background_reminder(
             text = f"Running for {elapsed:.0f}s\nNo new output in the last {since:.0f}s"
         text += (
             "\nKeep working on any other ready analysis or tool tasks first. "
-            "Only wait when this background task is the remaining blocker."
+            "Only wait when this background task is the remaining blocker. "
+            "This reminder does not replace check_background_progress(...)."
         )
         content.append(
             BackgroundTaskStateBlock(

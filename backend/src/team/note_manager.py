@@ -61,15 +61,15 @@ class NoteManager:
         self._blocker_provider = provider
 
     @staticmethod
-    def _matches_scope(note_scopes: list[str], query_scopes: list[str]) -> bool:
-        if not note_scopes:
+    def _matches_paths(note_paths: list[str], query_paths: list[str]) -> bool:
+        if not note_paths:
             return True
-        normalized = [s.rstrip("/") for s in query_scopes if s]
-        return any(NoteManager._scope_overlaps(ns, qs) for ns in note_scopes for qs in normalized)
+        normalized = [s.rstrip("/") for s in query_paths if s]
+        return any(NoteManager._path_overlaps(np, qp) for np in note_paths for qp in normalized)
 
     @staticmethod
-    def _scope_overlaps(note_scope: str, query_scope: str) -> bool:
-        n, q = note_scope.rstrip("/"), query_scope.rstrip("/")
+    def _path_overlaps(note_path: str, query_path: str) -> bool:
+        n, q = note_path.rstrip("/"), query_path.rstrip("/")
         if not n or not q:
             return False
         return n == q or n.startswith(q + "/") or q.startswith(n + "/")
@@ -153,7 +153,7 @@ class NoteManager:
             "auto-" if auto_generated else "",
             note.task_id,
             note.agent_name,
-            ",".join(note.scope_paths) if note.scope_paths else "-",
+            ",".join(note.paths) if note.paths else "-",
             preview,
         )
         if self._event_store_cb is not None:
@@ -165,7 +165,7 @@ class NoteManager:
                     task_id=note.task_id,
                     agent_name=note.agent_name,
                     auto=auto_generated,
-                    scope_paths=note.scope_paths,
+                    scope_paths=note.paths,
                     content_preview=preview,
                     content_bytes=len(note.content.encode("utf-8")),
                 )
@@ -175,56 +175,48 @@ class NoteManager:
         self,
         *,
         authors: list[str] | None = None,
-        scope_paths: list[str] | None = None,
+        paths: list[str] | None = None,
+        tags: list[str] | None = None,
+        keyword: str | None = None,
         since: float | None = None,
-        limit: int | None = None,
+        last_n: int | None = None,
     ) -> list[Note]:
-        """Filter and return notes by author, scope, timestamp, and limit."""
+        """Filter and return notes by author, paths, tags, keyword, timestamp, and last_n."""
         results = list(self._notes)
         if authors:
             s = set(authors)
             results = [n for n in results if n.task_id in s]
-        if scope_paths:
-            results = [n for n in results if self._matches_scope(n.scope_paths, scope_paths)]
+        if paths:
+            results = [n for n in results if self._matches_paths(n.paths, paths)]
+        if tags:
+            tag_set = set(tags)
+            results = [n for n in results if tag_set & set(n.tags)]
+        if keyword:
+            keywords = [k.strip().lower() for k in keyword.split("|") if k.strip()]
+            if keywords:
+                results = [
+                    n for n in results
+                    if any(kw in n.content.lower() for kw in keywords)
+                ]
         if since is not None:
             results = [n for n in results if n.timestamp >= since]
-        if limit is not None and limit > 0:
-            results = results[-limit:]
+        if last_n is not None and last_n > 0:
+            results = results[-last_n:]
         return results
 
     async def read_notes(
         self,
         *,
-        task_id: str,
-        scope: str = "full",
+        paths: list[str] | None = None,
+        tags: list[str] | None = None,
         keyword: str | None = None,
-        scope_paths: list[str] | None = None,
-        limit: int | None = None,
+        last_n: int | None = None,
+        parent_note_id: str | None = None,
     ) -> list[Note]:
-        """Read notes with scope filtering.
-
-        Scopes:
-            full — entire note store
-            siblings — sibling tasks and their children
-        """
-        if scope == "full":
-            notes = await self.read(scope_paths=scope_paths, limit=limit)
-        elif scope == "siblings":
-            task = await self.get_task(task_id)
-            if task is None:
-                return []
-            sibling_ids = await self._sibling_subtree_ids(task.parent_id)
-            sibling_ids = [tid for tid in sibling_ids if tid != task_id]
-            notes = await self.read(
-                authors=sibling_ids,
-                scope_paths=scope_paths,
-                limit=limit,
-            )
-        else:
-            notes = await self.read(scope_paths=scope_paths, limit=limit)
-        if keyword:
-            kw = keyword.lower()
-            notes = [n for n in notes if kw in n.content.lower()]
+        """Read notes filtered by paths, tags, keyword, and last_n."""
+        notes = await self.read(paths=paths, tags=tags, keyword=keyword, last_n=last_n)
+        if parent_note_id:
+            notes = [n for n in notes if n.parent_note_id == parent_note_id]
         return notes
 
     async def _sibling_subtree_ids(self, parent_id: str | None) -> list[str]:
@@ -235,25 +227,36 @@ class NoteManager:
 
     async def read_sibling_notes(
         self,
-        parent_id: str,
+        task_id: str,
         *,
+        paths: list[str] | None = None,
+        tags: list[str] | None = None,
         keyword: str | None = None,
-        scope_paths: list[str] | None = None,
-    ) -> str:
-        """Read notes from sibling tasks under the same parent."""
-        sibling_ids = await self._sibling_subtree_ids(parent_id)
+        last_n: int | None = None,
+    ) -> list[Note]:
+        """Read notes from sibling tasks and their descendants.
+
+        Resolves the calling task's parent, then finds all sibling subtree
+        task IDs (excluding the caller), and filters their notes.
+        """
+        task = await self.get_task(task_id)
+        if task is None or task.parent_id is None:
+            return []
+        sibling_ids = await self._sibling_subtree_ids(task.parent_id)
+        sibling_ids = [tid for tid in sibling_ids if tid != task_id]
         if not sibling_ids:
-            return ""
-        notes = await self.read(
+            return []
+        return await self.read(
             authors=sibling_ids,
-            scope_paths=scope_paths,
+            paths=paths,
+            tags=tags,
+            keyword=keyword,
+            last_n=last_n,
         )
-        if keyword:
-            kw = keyword.lower()
-            notes = [n for n in notes if kw in n.content.lower()]
-        if not notes:
-            return ""
-        return self._render_notes("Sibling notes", notes)
+
+    def known_paths(self) -> list[str]:
+        """Return sorted unique paths across all notes (for validation errors)."""
+        return sorted({p for n in self._notes for p in n.paths})
 
     @staticmethod
     def _render_active_blockers(active_blockers: list[Any]) -> str:

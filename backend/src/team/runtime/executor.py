@@ -99,10 +99,26 @@ class Executor:
         if blocker is not None:
             await conductor.on_fix_failed(blocker.id, reason)
 
+    _DEADLOCK_IDLE_THRESHOLD = 100  # ~5s of idle polls (100 * 50ms)
+
+    async def _check_deadlock(self) -> bool:
+        """Return True if all remaining tasks are stuck (no ready, no running)."""
+        active = getattr(self.team_run, "_active_agent_runs", {})
+        if active:
+            return False
+        try:
+            statuses = await self.team_run.task_center._store.get_statuses()
+        except Exception:
+            return False
+        has_pending = any(s in ("pending", "ready") for s in statuses.values())
+        has_running = any(s == "running" for s in statuses.values())
+        return has_pending and not has_running
+
     async def run_forever(self) -> None:
         tc = self.team_run.task_center
         dq = self.team_run.dispatch_queue
         pop_ready = dq.pop_ready
+        idle_polls = 0
         while not self.team_run.cancel_event.is_set():
             try:
                 rec = await pop_ready(self.team_run.id)
@@ -111,8 +127,14 @@ class Executor:
                 await asyncio.sleep(0.2)
                 continue
             if rec is None:
+                idle_polls += 1
+                if idle_polls >= self._DEADLOCK_IDLE_THRESHOLD and await self._check_deadlock():
+                    logger.error("Deadlock detected: pending tasks remain but none are ready or running")
+                    self.team_run.cancel_event.set()
+                    break
                 await asyncio.sleep(0.05)
                 continue
+            idle_polls = 0
             task = _record_to_task(rec)
             tc.graph[task.id] = task
             try:
@@ -148,14 +170,6 @@ class Executor:
         if health_prefix:
             ctx.user_message = health_prefix + "\n\n" + ctx.user_message
 
-        listener = getattr(self.team_run, "scope_listener", None)
-        if listener is not None and getattr(listener, "is_running", False) and task.scope_paths:
-            from team.runtime.scope_change_buffer import ScopeChangeBuffer
-            scope_buffer = ScopeChangeBuffer()
-            listener.subscribe(agent_run_id, list(task.scope_paths), scope_buffer)
-            if ctx.tool_metadata is not None:
-                ctx.tool_metadata.extras["scope_change_buffer"] = scope_buffer
-
         runner_task: asyncio.Task[object] = asyncio.create_task(self.runner(defn, ctx))
         register_agent_run = getattr(self.team_run, "register_agent_run", None)
         if callable(register_agent_run):
@@ -175,8 +189,6 @@ class Executor:
             unregister_agent_run = getattr(self.team_run, "unregister_agent_run", None)
             if callable(unregister_agent_run):
                 unregister_agent_run(task.id, runner_task)
-            if listener is not None:
-                listener.unsubscribe(agent_run_id)
 
         current = await _current_task_state()
         if current is not None and current.status == TaskStatus.PAUSED:
@@ -377,7 +389,7 @@ class Executor:
                 id=str(uuid.uuid4()), task_id=task.id,
                 agent_name=task.agent_name or "unknown",
                 content=summary[:max_bytes], timestamp=time.time(),
-                scope_paths=list(task.scope_paths) if task.scope_paths else [],
+                paths=list(task.scope_paths) if task.scope_paths else [],
             ))
         except Exception:
             logger.debug("completion note: post failed for %s", task.id, exc_info=True)

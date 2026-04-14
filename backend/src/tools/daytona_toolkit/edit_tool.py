@@ -111,7 +111,12 @@ def _scope_overlap_warning(
 
 @tool(
     name="daytona_edit_file",
-    description="Edit a file atomically using search_replace operations.",
+    description=(
+        "Edit a file atomically. Use exactly one mode: "
+        "(1) `old_text` + `new_text` for a single replacement or "
+        "(2) `edits=[{\"strategy\":\"search_replace\",\"search\":\"...\",\"replace\":\"...\"}]` "
+        "for batched replacements. Never send `new_text` together with `edits`."
+    ),
 )
 async def daytona_edit_file(
     file_path: str,
@@ -127,8 +132,8 @@ async def daytona_edit_file(
 
     Args:
         file_path: Path to the file to edit
-        old_text: Text to find and replace (legacy single-edit mode)
-        new_text: Replacement text for legacy single-edit mode
+        old_text: Text to find and replace in single-edit mode. Pair only with ``new_text``.
+        new_text: Replacement text for single-edit mode. Do not send when using ``edits``.
         edits: Optional batch edit list. Each edit must use strategy ``search_replace``:
             ``{"strategy": "search_replace", "search": "...", "replace": "..."}``
         description: Optional description of the edit

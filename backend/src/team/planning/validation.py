@@ -177,8 +177,9 @@ def _crowded_layer_expandability_issues(items: list[TaskSpec]) -> list[Issue]:
             {
                 "field": "tasks",
                 "msg": (
-                    "crowded plans with more than 6 concrete execution lanes must keep at least "
-                    "one expandable planner lane instead of flattening the whole layer"
+                    "crowded plans with more than 6 concrete non-validator execution lanes "
+                    f"must keep at least one expandable planner lane instead of flattening "
+                    f"the whole layer (found {concrete_count})"
                 ),
             }
         )
@@ -325,6 +326,16 @@ def validate_plan(
                         "msg": (
                             f"submitted plans cannot target {getattr(agent_def, 'agent_type', 'agent')!r}-typed "
                             f"agent '{item.agent}'; only team-facing agents are valid plan targets"
+                        ),
+                    }
+                )
+            if agent_def is not None and agent_def.role == "replanner":
+                issues.append(
+                    {
+                        "field": f"tasks[{idx}].agent",
+                        "msg": (
+                            f"submitted plans cannot include replanner agent '{item.agent}'; "
+                            "replanners are spawned reactively via request_replan, not planned"
                         ),
                     }
                 )

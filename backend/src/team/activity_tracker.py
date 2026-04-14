@@ -11,7 +11,7 @@ import time
 import uuid
 from typing import Any, Callable
 
-from team.models import Note
+from team.models import Note, NoteTag
 
 logger = logging.getLogger(__name__)
 
@@ -190,7 +190,8 @@ class ActivityTracker:
                 agent_name=f"{agent_name} (auto)",
                 content=content,
                 timestamp=time.time(),
-                scope_paths=scope_paths,
+                paths=scope_paths,
+                tags=[NoteTag.IMPLEMENTATION.value],
             )
             if post_note_cb is not None:
                 await post_note_cb(note)

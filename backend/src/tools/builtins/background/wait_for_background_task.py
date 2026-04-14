@@ -53,12 +53,18 @@ def _fresh_wait_rejection(task_ids: list[str]) -> ToolResult:
 
 def _unchecked_wait_rejection(task_ids: list[str]) -> ToolResult:
     joined = ", ".join(task_ids)
+    suggestion = (
+        'check_background_progress(task_id="all")'
+        if len(task_ids) > 1
+        else f'check_background_progress(task_id="{task_ids[0]}")'
+    )
     return ToolResult(
         output=(
             "[WAIT_REQUIRES_PROGRESS_CHECK] The requested background join targets "
             f"subagent task(s) ({joined}) that you have not inspected yet. "
-            "Call check_background_progress first, then keep working other ready "
-            "branches or wait only once the inspected subagent is the remaining blocker."
+            f"Call {suggestion} first. Engine reminders or streamed progress snippets "
+            "do not count as that inspection. Then keep working other ready branches "
+            "or wait only once the inspected subagent is the remaining blocker."
         ),
         is_error=True,
     )

@@ -613,6 +613,26 @@ async def test_codeact_rejects_subprocess_patterns_for_team_agents():
     sb.fs.upload_file.assert_not_called()
 
 
+async def test_codeact_rejects_stderr_merge_patterns_for_team_agents():
+    sb = _make_sandbox()
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "agent_name": "developer",
+            "team_mode_enabled": True,
+        }
+    )
+
+    result = await daytona_codeact.execute(
+        daytona_codeact.input_model(code='shell("pytest tests/unit/test_x.py -q 2>&1")'),
+        ctx,
+    )
+
+    assert result.is_error
+    assert "2>&1" in result.output
+    sb.fs.upload_file.assert_not_called()
+
+
 async def test_build_wrapper_blocks_destructive_git_unconditionally():
     """Destructive git commands are blocked even without coordination mode."""
     wrapper = _build_wrapper(

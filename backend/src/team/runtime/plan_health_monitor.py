@@ -119,7 +119,7 @@ class PlanHealthMonitor:
                     agent_name="checkpoint",
                     content="\n".join(lines),
                     timestamp=time.time(),
-                    scope_paths=list(task.scope_paths) if task.scope_paths else [],
+                    paths=list(task.scope_paths) if task.scope_paths else [],
                 )
             )
         except Exception:

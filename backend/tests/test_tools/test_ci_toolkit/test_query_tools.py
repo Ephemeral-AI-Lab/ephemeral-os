@@ -349,6 +349,55 @@ async def test_query_symbols_no_results():
     assert "No symbols matching" in result.output
 
 
+async def test_query_symbols_normalize_definition_snippets():
+    svc = MagicMock()
+    svc.is_initialized = True
+    svc.query_symbols.return_value = []
+
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        with patch("code_intelligence.types.SymbolKind"):
+            await ci_query_symbol.execute(
+                ci_query_symbol.input_model(query="def reproduce()"),
+                _ctx_with_svc(svc),
+            )
+
+    svc.query_symbols.assert_called_once_with("reproduce")
+
+
+async def test_query_symbols_file_path_bootstrap_returns_file_definitions():
+    svc = _svc_with_index(symbols=[])
+    sym = _make_symbol_info("CmdRun", "dvc/command/run.py", 10, "class")
+    svc.symbol_index.file_symbols.return_value = [sym]
+
+    ctx = _ctx_with_svc(svc)
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        result = await ci_query_symbol.execute(
+            ci_query_symbol.input_model(query="dvc/command/run.py", references=True),
+            ctx,
+        )
+
+    assert not result.is_error
+    data = json.loads(result.output)
+    assert data["file"] == "dvc/command/run.py"
+    assert data["definitions"][0]["name"] == "CmdRun"
+    assert data["confidence"] == "file_symbols"
+    assert ctx.metadata["_ci_symbol_navigation_calls"] == 1
+
+
+async def test_query_symbols_file_path_bootstrap_errors_when_file_has_no_indexed_symbols():
+    svc = _svc_with_index(symbols=[])
+    svc.symbol_index.file_symbols.return_value = []
+
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        result = await ci_query_symbol.execute(
+            ci_query_symbol.input_model(query="dvc/command/missing.py"),
+            _ctx_with_svc(svc),
+        )
+
+    assert result.is_error
+    assert "No indexed symbols found for file" in result.output
+
+
 async def test_query_symbols_remote_fallback_on_cold_remote_workspace():
     svc = MagicMock()
     svc.is_initialized = False
@@ -497,6 +546,31 @@ async def test_query_symbols_local_workspace_fallback_finds_partial_function(tmp
     assert symbols[0]["file"].endswith("json_schema.py")
 
 
+async def test_query_symbols_local_fallback_prefers_exact_leaf_match(tmp_path):
+    source = tmp_path / "dvc" / "scm" / "git.py"
+    source.parent.mkdir(parents=True)
+    source.write_text(
+        "class CheckoutErrorSuggestGit:\n    pass\n\nclass Git:\n    pass\n",
+        encoding="utf-8",
+    )
+
+    svc = MagicMock()
+    svc.is_initialized = False
+    svc.workspace_root = str(tmp_path)
+    svc.query_symbols.return_value = []
+
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        with patch("code_intelligence.types.SymbolKind"):
+            result = await ci_query_symbol.execute(
+                ci_query_symbol.input_model(query="Git"),
+                _ctx_with_svc(svc),
+            )
+
+    data = json.loads(result.output)
+    symbols = data["definitions"]
+    assert [symbol["name"] for symbol in symbols] == ["Git"]
+
+
 async def test_query_symbols_returns_results():
     sym = MagicMock()
     sym.name = "my_func"
@@ -522,6 +596,37 @@ async def test_query_symbols_returns_results():
     assert symbols[0]["name"] == "my_func"
     assert symbols[0]["file"] == "src/mod.py"
     assert symbols[0]["line"] == 10
+
+
+async def test_query_symbols_prefers_exact_leaf_match_over_substring_noise():
+    exact = MagicMock()
+    exact.name = "Git"
+    exact.kind.value = "class"
+    exact.file_path = "dvc/scm/git/__init__.py"
+    exact.line = 61
+    exact.signature = "class Git"
+
+    noisy = MagicMock()
+    noisy.name = "CheckoutErrorSuggestGit"
+    noisy.kind.value = "class"
+    noisy.file_path = "dvc/exceptions.py"
+    noisy.line = 205
+    noisy.signature = "class CheckoutErrorSuggestGit"
+
+    svc = MagicMock()
+    svc.is_initialized = True
+    svc.query_symbols.return_value = [noisy, exact]
+
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        with patch("code_intelligence.types.SymbolKind"):
+            result = await ci_query_symbol.execute(
+                ci_query_symbol.input_model(query="Git"),
+                _ctx_with_svc(svc),
+            )
+
+    data = json.loads(result.output)
+    symbols = data["definitions"]
+    assert [symbol["name"] for symbol in symbols] == ["Git"]
 
 
 async def test_query_symbols_waits_for_cold_index():
@@ -848,4 +953,3 @@ async def test_edit_hotspots_returns_results():
     assert items[0]["file"] == "src/hot.py"
     assert items[0]["edit_count"] == 15
     svc.arbiter.file_change_store.hotspots.assert_called_once_with(limit=5)
-

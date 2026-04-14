@@ -15,7 +15,9 @@ TC_NOTE_EDIT_PROMPT = (
     "Focus on: what files were edited and why.\n"
     "Include file paths and specific changes made.\n"
     "Keep under 300 words.\n"
-    "Call the post_note tool with your note."
+    "Call the post_note tool with your note. Include a 'tags' field "
+    "with one or more of: implementation, bug_fix, refactor, blocker, warning. "
+    "Use 'blocker' if the agent appears stuck."
 )
 
 TC_NOTE_TURN_PROMPT = (
@@ -27,7 +29,9 @@ TC_NOTE_TURN_PROMPT = (
     "3. Whether the agent appears blocked by code that another "
     "task broke (include the file path and error if so)\n"
     "Keep under 300 words.\n"
-    "Call the post_note tool with your note."
+    "Call the post_note tool with your note. Include a 'tags' field "
+    "with one or more of: implementation, bug_fix, blocker, warning, discovery. "
+    "Use 'blocker' if the agent appears stuck or blocked by another task's changes."
 )
 
 TC_NOTE_SYSTEM_PROMPT = (

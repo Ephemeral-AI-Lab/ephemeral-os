@@ -901,18 +901,6 @@ class TaskStore:
             )
             await db.commit()
         async with self._sf() as db:
-            dep_ids = list(
-                (
-                    await db.execute(
-                        select(TaskRecord.id).where(
-                            TaskRecord.team_run_id == rid,
-                            TaskRecord.parent_id.is_not_distinct_from(rec.parent_id),
-                            TaskRecord.id != task_id,
-                            TaskRecord.status == "done",
-                        )
-                    )
-                ).scalars().all()
-            )
             replanner_id = str(uuid.uuid4())
             task_text = f"Replan: {rec.agent_name} failed on task {task_id}: {reason}"
             if suggestion:
@@ -923,14 +911,14 @@ class TaskStore:
                 team_run_id=rid,
                 agent_name=replanner_agent,
                 task=task_text,
-                status="ready" if not dep_ids else "pending",
-                deps=dep_ids,
+                status="ready",
+                deps=[],
                 scope_paths=scope_paths,
                 scope_ltree=[path_to_ltree(p) for p in scope_paths],
                 parent_id=rec.parent_id,
                 root_id=rec.root_id or "",
                 depth=rec.depth or 0,
-                pending_dep_count=len(dep_ids),
+                pending_dep_count=0,
             )
             db.add(replanner)
             await db.commit()

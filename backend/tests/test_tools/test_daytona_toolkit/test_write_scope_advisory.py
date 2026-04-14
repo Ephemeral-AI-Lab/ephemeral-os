@@ -21,7 +21,7 @@ from tools.daytona_toolkit._daytona_utils import (
     is_coordinated_team_agent,
     record_coordination_warning,
 )
-from tools.posthook.toolkit import _coordination_warning_gate, _coordination_warnings
+from tools.posthook.toolkit import _coordination_warnings
 
 
 def _ctx(metadata=None) -> ToolExecutionContext:
@@ -213,48 +213,6 @@ def test_write_warning_for_non_test_path():
     result = _team_repo_write_warning(ctx, "/testbed/dask/_compatibility.py", tool_name="edit")
     assert result is not None
     assert "advisory" in result
-
-
-# ---------------------------------------------------------------------------
-# _coordination_warning_gate: never blocks submission
-# ---------------------------------------------------------------------------
-
-
-def test_coordination_gate_returns_none_with_warnings():
-    """Gate must never block — warnings are advisory."""
-    ctx = _ctx({
-        "coordination_warnings": [
-            {"category": "write_scope", "message": "some warning"},
-        ],
-    })
-    result = _coordination_warning_gate(ctx, action="post_note()")
-    assert result is None
-
-
-def test_coordination_gate_returns_none_without_warnings():
-    """Gate returns None even with empty warnings list."""
-    ctx = _ctx({"coordination_warnings": []})
-    result = _coordination_warning_gate(ctx, action="post_note()")
-    assert result is None
-
-
-def test_coordination_gate_returns_none_with_no_metadata():
-    """Gate returns None when no coordination_warnings key exists."""
-    ctx = _ctx({})
-    result = _coordination_warning_gate(ctx, action="request_replan()")
-    assert result is None
-
-
-def test_coordination_gate_returns_none_with_many_warnings():
-    """Gate returns None even with multiple accumulated warnings."""
-    ctx = _ctx({
-        "coordination_warnings": [
-            {"category": "write_scope", "message": f"warning {i}"}
-            for i in range(10)
-        ],
-    })
-    result = _coordination_warning_gate(ctx, action="post_note()")
-    assert result is None
 
 
 # ---------------------------------------------------------------------------

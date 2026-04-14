@@ -20,7 +20,7 @@ Use this reference immediately before emitting final plan JSON.
 - **Validator cascade_policy must be `"continue"`**, not `"cancel"`. The validator must run even when some developer deps fail — it reports which fixes worked and triggers replanning for failures. Using `"cancel"` kills the validator and prevents the recovery cycle.
 - Developer and team_planner tasks should use `"cancel"` (default) for strict dependency chains.
 - Do not submit an expandable `developer`.
-- Do not serialize the whole layer into eight atomic developers only because all owners are known.
+- Count crowded-layer width using non-planner, non-validator tasks only: `6 developers + 1 validator` is fine, but `7 developers + 1 validator` still needs a residual `team_planner`.
 - On crowded layers, zero-expandable all-developer plans are invalid when any residual branch is still multi-file, shared-risk, or otherwise broad enough for child decomposition.
 - Reload the ending chain sequentially if the self-check never finished.
 
@@ -32,6 +32,7 @@ Use this reference immediately before emitting final plan JSON.
 - If validation rejects a guessed benchmark node, keep only the validator-backed file path or remove that narrow node entirely.
 - If no exact prompt, parent, scout, or validator-backed benchmark surface exists for one narrow lane after repair, omit that uncertain node instead of guessing another sibling.
 - If a scout disproved an exact file, that file cannot appear in `tasks`, `scope_paths`, `task`, or `rationale`.
+- If a scout disproved a benchmark-import path, do not emit a task whose main job is to create a compat/re-export file at that missing path unless live production references also name it.
 - A structure-only listing or import intuition is not "live-confirmed" owner evidence. If a scout disproved an exact file or marked a directory tests-only, do not replace that branch with a sibling exact file; broaden to the last confirmed parent boundary and keep it on `team_planner`.
 
 ## Few-shot examples

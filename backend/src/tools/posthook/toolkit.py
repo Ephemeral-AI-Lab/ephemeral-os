@@ -37,7 +37,7 @@ async def _post_submission_note(
             agent_name=context.metadata.get("agent_name", ""),
             content=content,
             timestamp=time.time(),
-            scope_paths=list(scope_paths or context.metadata.get("write_scope") or []),
+            paths=list(scope_paths or context.metadata.get("write_scope") or []),
         )
     )
 

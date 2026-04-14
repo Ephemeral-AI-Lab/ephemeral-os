@@ -29,6 +29,7 @@ from team.models import (
     BudgetConfig,
     BudgetState,
     Note,
+    NoteTag,
     ReplanRequest,
     Task,
     TaskSpec,
@@ -198,6 +199,7 @@ class TaskCenter:
                             f"Retry #{rec.retry_count + 1}: emit a corrected plan that avoids "
                             "the reported issues (lane count, scope_path overlaps, cycles)."
                         ),
+                        tags=[NoteTag.BLOCKER.value],
                     )
                 )
                 before = self._transitions.snapshot({task_id})
@@ -297,7 +299,7 @@ class TaskCenter:
         for dep_id, msg in warnings:
             try:
                 await self._notes.post(
-                    Note(id=self._new_id(), task_id=dep_id, agent_name="system", content=msg)
+                    Note(id=self._new_id(), task_id=dep_id, agent_name="system", content=msg, tags=[NoteTag.WARNING.value])
                 )
             except Exception:
                 logger.debug("Failed to post warning note for %s", dep_id, exc_info=True)

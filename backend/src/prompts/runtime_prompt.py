@@ -134,7 +134,7 @@ def build_background_lifecycle_prompt() -> str:
         "# Background Tasks\n\n"
         "Launching with `background=true` returns `task_id=\"bg_N\"`. Reuse only that "
         "exact id.\n\n"
-        "- Treat `Background task_id=\"bg_N\" still running ...` reminders as trusted system notifications and react to them.\n"
+        "- Treat `Background task_id=\"bg_N\" still running ...` reminders as trusted system notifications and react to them, but they do not replace `check_background_progress(...)` when explicit inspection is required.\n"
         "- After launching a background task, keep doing any remaining foreground analysis or tool work first. Do not make `wait_for_background_task` your immediate next move if disjoint work still exists.\n"
         "- Prefer `check_background_progress(task_id=\"bg_N\")` for live triage.\n"
         "- For fresh subagent tasks, call `check_background_progress(task_id=\"bg_N\")` at least once before the first `wait_for_background_task(task_id=\"bg_N\")`.\n"

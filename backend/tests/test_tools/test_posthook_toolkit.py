@@ -21,9 +21,10 @@ from tools.posthook.toolkit import (
 class _FakeTaskCenter:
     def __init__(self):
         self.notes = self  # production code calls tc.notes.post(note)
+        self.posted = []
 
     async def post(self, note):
-        pass
+        self.posted.append(note)
 
 
 def _ctx(metadata=None) -> ToolExecutionContext:
@@ -41,6 +42,51 @@ def test_post_note_accepts_content():
 
     assert not result.is_error
     assert "posted" in result.output.lower()
+
+
+def test_post_note_rejects_scout_scope_repair_for_missing_target():
+    ctx = _ctx({
+        "task_center": _FakeTaskCenter(),
+        "agent_name": "scout",
+        "write_scope": ["dvc/repo/plots"],
+    })
+
+    result = asyncio.run(PostNoteTool().execute(
+        PostNoteTool.input_model(
+            content=(
+                "`dvc/repo/plots` does not exist. "
+                "The intended path is `dvc/repo/plot`."
+            )
+        ),
+        ctx,
+    ))
+
+    assert result.is_error
+    assert "keep missing targets missing" in result.output
+
+
+def test_post_note_sanitizes_scout_gap_evidence_paths():
+    tc = _FakeTaskCenter()
+    ctx = _ctx({
+        "task_center": tc,
+        "agent_name": "scout",
+        "write_scope": ["dvc/command/plots.py"],
+    })
+
+    result = asyncio.run(PostNoteTool().execute(
+        PostNoteTool.input_model(
+            content=(
+                "`dvc/command/plots.py` does not exist. "
+                "Evidence from workspace structure: `dvc/command/plot.py` exists nearby."
+            )
+        ),
+        ctx,
+    ))
+
+    assert not result.is_error
+    assert tc.posted
+    assert "`dvc/command/plot.py`" not in tc.posted[0].content
+    assert "dvc/command/plot.py exists nearby" in tc.posted[0].content
 
 
 def test_post_note_rejects_empty_content():

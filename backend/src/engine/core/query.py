@@ -23,7 +23,7 @@ from providers.types import (
     SupportsStreamingMessages,
     UsageSnapshot,
 )
-from message.messages import ConversationMessage, ToolResultBlock
+from message.messages import ConversationMessage, SystemReminderBlock, ToolResultBlock
 from message.stream_events import (
     AssistantTextDelta,
     AssistantTurnComplete,
@@ -37,7 +37,6 @@ from message.stream_events import (
 from engine.core.notifications import build_budget_warning
 from engine.core.streaming_executor import StreamingToolExecutor, defer_background_dispatch
 from engine.runtime.background_tasks import BackgroundTaskManager
-from engine.runtime.tool_trace import record_tool_trace as _record_tool_trace
 from tools.core.base import (
     ExecutionMetadata,
     ToolExecutionContext,
@@ -119,6 +118,109 @@ _build_background_reminder = build_background_reminder
 
 
 # ---------------------------------------------------------------------------
+# Scope-change auto-check (replaces ScopeChangeBuffer push system)
+# ---------------------------------------------------------------------------
+
+SCOPE_CHANGE_CATEGORY = "scope_change"
+SCOPE_CHANGE_SUPERSEDED = "scope_change_superseded"
+
+_MIN_TURNS_BETWEEN_NOTIFICATIONS = 1
+
+
+def _scope_change_auto_check(
+    metadata: ExecutionMetadata,
+    display_messages: list[ConversationMessage],
+) -> str | None:
+    """Check file_change_store for scope changes by other agents.
+
+    Called at the top of each query loop turn. Returns notification text
+    when changes are found (and the turn-gate allows), otherwise None.
+    Replaces the old ScopeChangeBuffer push system with a pull from the
+    single file_change_store source of truth.
+    """
+    file_change_store = metadata.get("file_change_store")
+    if file_change_store is None or not getattr(file_change_store, "initialized", False):
+        return None
+
+    scope_paths = metadata.get("write_scope") or []
+    if not scope_paths:
+        return None
+
+    agent_run_id = metadata.get("agent_run_id", "")
+
+    # Turn-gating state
+    turn_state = metadata.extras.setdefault(
+        "_scope_change_turn_state",
+        {"turns_since_last_notification": 0},
+    )
+    turn_state["turns_since_last_notification"] += 1
+
+    if turn_state["turns_since_last_notification"] < _MIN_TURNS_BETWEEN_NOTIFICATIONS:
+        return None
+
+    # Use the most recent baseline: auto-check, explicit tool check, or task start
+    since = max(
+        float(metadata.get("_auto_freshness_checked_at") or 0),
+        float(metadata.get("freshness_checked_at") or 0),
+        float(metadata.get("work_item_started_at") or 0),
+    )
+
+    changes = file_change_store.changes_since(since)
+    # Filter to scope and exclude self
+    relevant = [
+        c for c in changes
+        if c.agent_run_id != agent_run_id
+        and any(c.file_path.startswith(p.rstrip("/")) for p in scope_paths)
+    ]
+
+    if not relevant:
+        return None
+
+    # Build notification text with per-file detail
+    lines = [
+        f"- {c.file_path} ({c.edit_type} by {c.agent_id})"
+        for c in relevant
+    ]
+    text = (
+        "Files in your scope were edited by other agents. "
+        "Re-read before editing:\n" + "\n".join(lines)
+    )
+
+    # Mark previous scope_change notification as superseded for compaction
+    last_idx = metadata.extras.get("_scope_change_last_msg_idx")
+    if last_idx is not None:
+        try:
+            old_msg = display_messages[last_idx]
+            if (
+                old_msg.content
+                and hasattr(old_msg.content[0], "category")
+                and old_msg.content[0].category == SCOPE_CHANGE_CATEGORY
+            ):
+                old_msg.content[0].category = SCOPE_CHANGE_SUPERSEDED
+        except (IndexError, AttributeError):
+            pass  # display_messages may have been compacted
+
+    metadata.extras["_scope_change_last_msg_idx"] = len(display_messages)
+    display_messages.append(
+        ConversationMessage(
+            role="user",
+            content=[SystemReminderBlock(category=SCOPE_CHANGE_CATEGORY, text=text)],
+        )
+    )
+
+    # Update baseline and reset turn counter
+    import time
+    metadata["_auto_freshness_checked_at"] = time.time()
+    turn_state["turns_since_last_notification"] = 0
+
+    logger.info(
+        "[scope_auto_check] injected %d file change(s) into agent context",
+        len(relevant),
+    )
+    return text
+
+
+# ---------------------------------------------------------------------------
 # Query loop
 # ---------------------------------------------------------------------------
 
@@ -142,6 +244,14 @@ async def _run_query_loop(
         background_manager = BackgroundTaskManager()
         context.tool_metadata.background_task_manager = background_manager
 
+    # When a wait_for_background_task call is rejected (WAIT_TOO_EARLY /
+    # WAIT_REQUIRES_PROGRESS_CHECK), the tool result already tells the
+    # planner to back off. Emitting an engine_progress reminder on the
+    # very next turn would contradict that rejection and mislead the
+    # planner into thinking meaningful progress arrived. This flag
+    # suppresses exactly one reminder cycle after such a rejection.
+    suppress_bg_reminder: bool = False
+
     while True:
         streamed_rejections: list[ToolResultBlock] = []
         budget_warning = build_budget_warning(context)
@@ -155,17 +265,16 @@ async def _run_query_loop(
                 event = deliver_completed_background_task(completed_task, display_messages)
                 yield event, None
 
-            if background_manager.has_pending():
+            if background_manager.has_pending() and not suppress_bg_reminder:
                 reminder_event = append_and_emit_reminder(background_manager, display_messages)
                 if reminder_event is not None:
                     yield reminder_event, None
+            suppress_bg_reminder = False
 
         if context.tool_metadata is not None:
-            scope_buf = context.tool_metadata.extras.get("scope_change_buffer")
-            if scope_buf is not None:
-                scope_change_text = scope_buf.flush_into(display_messages)
-                if scope_change_text:
-                    yield SystemNotification(text=scope_change_text, category="scope_change"), None
+            scope_notification = _scope_change_auto_check(context.tool_metadata, display_messages)
+            if scope_notification is not None:
+                yield SystemNotification(text=scope_notification, category="scope_change"), None
 
         if context.on_turn is not None:
             try:
@@ -438,6 +547,14 @@ async def _run_query_loop(
                 tr.tool_use_id = unassigned_ids.pop(0)
 
         display_messages.append(ConversationMessage(role="user", content=tool_results))
+
+        # Detect wait rejections so the next iteration suppresses the
+        # engine_progress reminder that would otherwise contradict them.
+        _WAIT_REJECTION_PREFIXES = ("[WAIT_TOO_EARLY]", "[WAIT_REQUIRES_PROGRESS_CHECK]")
+        suppress_bg_reminder = any(
+            tr.is_error and tr.content.startswith(_WAIT_REJECTION_PREFIXES)
+            for tr in tool_results
+        )
 
         if (
             context.tool_call_limit is not None

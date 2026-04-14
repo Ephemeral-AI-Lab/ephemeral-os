@@ -24,6 +24,7 @@ from providers.types import UsageSnapshot
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.subagent.run_subagent_tool import (
     PEEK_MESSAGE_MAX,
+    _validate_run_subagent_request,
     format_last_n_messages,
     run_subagent,
 )
@@ -341,6 +342,87 @@ async def test_run_subagent_rejects_non_subagent_targets_with_plan_guidance(
     assert "emit `developer` / `validator` WorkItems" in result.output
 
 
+def test_validate_run_subagent_rejects_multi_bucket_scout_bundle():
+    ctx = ToolExecutionContext(
+        cwd=Path("/tmp"),
+        metadata={"session_config": _StubCfg()},
+    )
+
+    result = _validate_run_subagent_request(
+        agent_name="scout",
+        prompt=None,
+        input={"target_paths": ["dvc/command/diff.py", "dvc/repo/diff.py"]},
+        context=ctx,
+    )
+
+    assert isinstance(result, ToolResult)
+    assert result.is_error is True
+    assert "one unresolved owner slice" in result.output
+    assert "`dvc/command`" in result.output
+    assert "`dvc/repo`" in result.output
+
+
+def test_validate_run_subagent_allows_same_bucket_scout_list():
+    ctx = ToolExecutionContext(
+        cwd=Path("/tmp"),
+        metadata={"session_config": _StubCfg()},
+    )
+
+    result = _validate_run_subagent_request(
+        agent_name="scout",
+        prompt=None,
+        input={"target_paths": ["dvc/command/run.py", "dvc/command/repro.py"]},
+        context=ctx,
+    )
+
+    assert not isinstance(result, ToolResult)
+    assert result.subagent_scope_paths == ["dvc/command/run.py", "dvc/command/repro.py"]
+
+
+def test_validate_run_subagent_rejects_all_test_file_scout():
+    ctx = ToolExecutionContext(
+        cwd=Path("/tmp"),
+        metadata={"session_config": _StubCfg()},
+    )
+
+    result = _validate_run_subagent_request(
+        agent_name="scout",
+        prompt=None,
+        input={"target_paths": [
+            "tests/unit/command/test_diff.py",
+            "tests/unit/command/test_plots.py",
+        ]},
+        context=ctx,
+    )
+
+    assert isinstance(result, ToolResult)
+    assert result.is_error is True
+    assert "production source boundaries" in result.output
+    assert "test files" in result.output
+
+
+def test_validate_run_subagent_allows_mixed_prod_and_test_scout():
+    ctx = ToolExecutionContext(
+        cwd=Path("/tmp"),
+        metadata={"session_config": _StubCfg()},
+    )
+
+    result = _validate_run_subagent_request(
+        agent_name="scout",
+        prompt=None,
+        input={"target_paths": [
+            "dvc/command/diff.py",
+            "tests/unit/command/test_diff.py",
+        ]},
+        context=ctx,
+    )
+
+    # Mixed paths pass the test-file guard (scout playbook handles mixed separately)
+    # but may fail the multi-bucket check — either way, not the test-file error
+    if isinstance(result, ToolResult):
+        assert "test files" not in result.output
+
+
 @pytest.mark.asyncio
 async def test_run_subagent_registers_provider_and_returns_final_text(monkeypatch):
     scripted = [
@@ -468,6 +550,38 @@ async def test_run_subagent_does_not_inject_scope_packets_into_prompt(monkeypatc
     assert result.is_error is False
     assert captured["prompt"] == "inspect auth"
     assert "coherence_token" not in captured["prompt"]
+
+
+@pytest.mark.asyncio
+async def test_run_subagent_injects_read_free_exact_file_scout_contract(monkeypatch):
+    scripted = [
+        ConversationMessage(role="assistant", content=[TextBlock(text="DONE: scoped read complete")]),
+    ]
+    stub_agent = _StubAgent(scripted)
+    captured: dict[str, str] = {}
+
+    def _fake_spawn_agent(*args, **kwargs):
+        captured["prompt"] = kwargs["latest_user_prompt"]
+        return stub_agent
+
+    monkeypatch.setattr(
+        "engine.runtime.agent.spawn_agent", _fake_spawn_agent, raising=True
+    )
+
+    bg = _make_bg_manager("bg_exact_file_contract")
+    ctx = _make_ctx(bg=bg, task_id="bg_exact_file_contract")
+
+    result = await run_subagent.execute(
+        run_subagent.input_model(
+            agent_name="scout",
+            input={"target_paths": ["pkg/config.py"]},
+        ),
+        ctx,
+    )
+
+    assert result.is_error is False
+    assert "stay read-free and finish from CI evidence" in captured["prompt"]
+    assert "exact-file and short fixed-file scouts do not use `ci_read_file(...)`" in captured["prompt"]
 
 
 @pytest.mark.asyncio

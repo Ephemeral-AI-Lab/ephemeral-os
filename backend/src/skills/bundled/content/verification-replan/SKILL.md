@@ -9,8 +9,8 @@ Use this skill only after verification fails. Triage failures for retry or repla
 
 ## Conditional references
 
-- Load `triage-format` when you need to produce a manual FAIL summary because `request_replan()` is absent.
-- Load `triage-format` when multiple failing clusters need to be grouped into one structured report.
+- Must load `triage-format` when you need to produce a manual FAIL summary because `request_replan()` is absent.
+- Must load `triage-format` when multiple failing clusters need to be grouped into one structured report.
 
 ## Workflow
 
@@ -22,18 +22,9 @@ Use this skill only after verification fails. Triage failures for retry or repla
 
 ## Action rules
 
-- If `request_replan()` is available, use it for any failure (transient or structural).
+- If `request_replan()` is available, use it for any failure.
 - If the needed tool is absent, emit the same triage in the final FAIL summary.
-
-## Required triage block
-
-Must include:
-
-- `REPLAN_REASON: ...`
-- `FAIL_TO_PASS: N/M failing`
-- `ROOT_CAUSE_PACKET: {"observed_failure":"...","first_boundary":"...","hypothesis":"..."}`
-- One `CLUSTER:` block per root cause with exact test ids, exact error summaries, likely owner surface, and sibling task when known
-- `PASS_TO_PASS:` results and regressions
+- Must keep `REPLAN_REASON`, `FAIL_TO_PASS`, `ROOT_CAUSE_PACKET`, one `CLUSTER:` block per root cause, and `PASS_TO_PASS` results explicit.
 
 ## Hard rules
 

@@ -338,7 +338,10 @@ def _make_context_builders(
         "## Sandbox Working Directory\n"
         f"- Repo root inside the sandbox: {repo_dir}\n"
         "- `daytona_codeact`, `daytona_read_file`, `daytona_edit_file`, and related "
-        "tools already execute relative to that repo root when you use relative paths.\n"
+        "tools already execute relative to that repo root when you use relative "
+        "paths; inside `daytona_codeact`, repo commands must be direct "
+        "`result = shell(\"...\", timeout=N)` calls, never `subprocess` or "
+        "`2>&1`.\n"
         "- Do not prepend guessed roots such as `/workspace`, `/home/user`, or "
         "`/home/user/repos/...` unless the payload names a real child directory.\n\n"
     )

@@ -112,6 +112,8 @@ def test_planner_skill_has_explicit_conditional_reference_loading() -> None:
     assert "never synthesize an exact owner by stripping `test_`, `_test`" in planner.lower()
     assert "A later `ci_workspace_structure(...)` listing only proves nearby files exist." in planner
     assert "Never treat a structure-only sibling listing as exact-owner confirmation" in planner
+    assert "compat/re-export stub path copied from benchmark imports" in planner
+    assert "neighboring singular path does not authorize a new plural shim" in planner
     assert (
         "Child or `## Scoped Expansion` turn: must load `non-root-context-reuse` before fresh exploration when `load_skill_reference` is available."
         in planner
@@ -120,6 +122,7 @@ def test_planner_skill_has_explicit_conditional_reference_loading() -> None:
     assert "never batch or parallelize it with `root-plan-self-check`" in planner
     assert "The sequence is `anchor -> scout wave -> decomposition -> plan JSON`." in planner
     assert "The first wave must target only live production boundaries" in planner
+    assert "Count crowded-layer width using non-planner, non-validator lanes only." in planner
     assert "Must reuse inherited notes and known owner boundaries before fresh exploration." in non_root
     assert "parent `bg_*` ids are not child-turn handles" in non_root
     assert (
@@ -137,6 +140,7 @@ def test_planner_skill_has_explicit_conditional_reference_loading() -> None:
     assert "keep only those exact nodes or broaden to that same prompt file path" in plan_json.lower()
     assert "same-family sibling node" in plan_json
     assert "If validation rejects a guessed benchmark node" in plan_json
+    assert "compat/re-export file at that missing path" in plan_json
     assert 'A structure-only listing or import intuition is not "live-confirmed" owner evidence.' in plan_json
     assert (
         "Before loading this reference, confirm that the terminal validator depends on every terminal non-validator sibling."
@@ -144,7 +148,7 @@ def test_planner_skill_has_explicit_conditional_reference_loading() -> None:
     )
     assert "Do not submit an expandable `developer`." in plan_json
     assert (
-        "Do not serialize the whole layer into eight atomic developers only because all owners are known."
+        "Count crowded-layer width using non-planner, non-validator tasks only"
         in plan_json
     )
     assert "Never load this reference in parallel with `root-plan-self-check`" in plan_json
@@ -164,7 +168,13 @@ def test_planner_skill_has_explicit_conditional_reference_loading() -> None:
     assert "keep that benchmark ledger literal through submit retries" in _read(
         _CONTENT / "team-planner-playbook/references/root-plan-self-check.md"
     )
+    assert "7 developers + 1 validator" in _read(
+        _CONTENT / "team-planner-playbook/references/root-plan-self-check.md"
+    )
     assert "You repaired a scout-disproved file or tests-only directory into a sibling exact file" in _read(
+        _CONTENT / "team-planner-playbook/references/root-plan-self-check.md"
+    )
+    assert "compat/re-export shim at a scout-disproved benchmark-import path" in _read(
         _CONTENT / "team-planner-playbook/references/root-plan-self-check.md"
     )
     assert (
@@ -383,6 +393,7 @@ def test_scout_playbook_keeps_missing_targets_missing() -> None:
     scout_launch = _read(_CONTENT / "team-planner-playbook/references/scout-launch-contract.md")
     assert "keep that exact path missing" in scout
     assert "Never inspect nearby replacements" in scout
+    assert 'Never suggest an "intended" or "correct" nearby path' in scout
     assert "post an evidence-only note and stop" in scout
     assert "only benchmark test files" in scout
     assert "unless every target path is a benchmark test file" in scout
@@ -396,7 +407,10 @@ def test_scout_playbook_keeps_missing_targets_missing() -> None:
     assert "Final assistant message should be one short prose sentence" in scout
     assert "Never dump JSON artifacts" in scout
     assert "Use CI symbol/reference/hover evidence before any file read" in scout
+    assert "one file-path bootstrap query is allowed only to list indexed definitions" in scout
     assert "ci_read_file(path=...)` only after CI symbol/reference/hover evidence named the seam" in scout
+    assert "Do not start with `ci_read_file(...)` on a source file." in scout
+    assert "if the exact file query still yields no symbols, post that gap and stop" in scout
     assert "If a bad assignment mixes a benchmark test file with a live production path" in scout
     assert "Never use `ci_read_file` as your primary navigation tool" in scout
     assert "Treat the handed scope itself as the deliverable." in scout_ref
@@ -416,6 +430,9 @@ def test_sweevo_context_stays_shared_and_runtime_focused() -> None:
         in sweevo
     )
     assert "Must keep commands repo-root-relative." in sweevo
+    assert 'result = shell("...", timeout=N)' in sweevo
+    assert "Python process wrappers" in sweevo
+    assert "append `2>&1`" in sweevo
     assert "Must keep roles separate" in sweevo
     assert "Must treat `docs/architecture/plan-a-team-coordination-redesign.md` as the design intent" in sweevo
     assert "Must keep shared context in the Task Center" in sweevo
@@ -426,7 +443,7 @@ def test_sweevo_context_stays_shared_and_runtime_focused() -> None:
         in sweevo.lower()
     )
     assert "Must not derive an exact production file from benchmark filename resemblance alone" in sweevo
-    assert "Must use `read_notes(scope_paths=[...])` to check for existing findings before launching duplicate scouts." in sweevo
+    assert "Must use `read_notes(paths=[...])` to check for existing findings before launching duplicate scouts." in sweevo
     assert "Must treat scope-change notifications and `context_changed_since()` as freshness signals." in sweevo
     assert "Must keep `scope_paths` as soft coordination hints" in sweevo
     assert "Must treat any advisory outside-scope write as a tainted packet" in sweevo

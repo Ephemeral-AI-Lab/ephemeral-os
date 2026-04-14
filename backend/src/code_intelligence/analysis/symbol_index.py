@@ -120,9 +120,21 @@ class SymbolIndex:
 
     def file_symbols(self, file_path: str) -> list[SymbolInfo]:
         """Return all symbols in a specific file."""
+        candidates = [str(file_path or "")]
+        root = str(self._workspace_root or "").rstrip("/\\")
+        normalized = candidates[0].replace("\\", "/")
+        if root:
+            root_prefix = root.replace("\\", "/").rstrip("/")
+            if normalized.startswith(root_prefix + "/"):
+                candidates.append(normalized[len(root_prefix) + 1 :])
+            elif normalized and not normalized.startswith("/"):
+                candidates.append(f"{root_prefix}/{normalized}")
         with self._lock:
-            fs = self._symbols.get(file_path)
-            return list(fs.symbols) if fs else []
+            for candidate in candidates:
+                fs = self._symbols.get(candidate)
+                if fs:
+                    return list(fs.symbols)
+            return []
 
     def symbol_boundaries_for_file(self, file_path: str) -> list[tuple[str, int, int]]:
         """Return ``(symbol_name, start_line, end_line)`` for indexed symbols."""

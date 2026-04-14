@@ -68,7 +68,7 @@ def _note(
     *,
     agent_name: str = "developer",
     timestamp: float | None = None,
-    scope_paths: list[str] | None = None,
+    paths: list[str] | None = None,
     parent_note_id: str | None = None,
 ) -> Note:
     return Note(
@@ -77,7 +77,7 @@ def _note(
         agent_name=agent_name,
         content=content,
         timestamp=timestamp if timestamp is not None else time.time(),
-        scope_paths=scope_paths or [],
+        paths=paths or [],
         parent_note_id=parent_note_id,
     )
 
@@ -138,7 +138,7 @@ def test_post_emits_note_posted_event():
                 "task-1",
                 "first line\nsecond line",
                 agent_name="developer (auto)",
-                scope_paths=["src/auth"],
+                paths=["src/auth"],
             )
         )
     )
@@ -203,49 +203,49 @@ def test_read_authors_no_match_returns_empty():
 # ---------------------------------------------------------------------------
 
 
-def test_read_scope_paths_prefix_match():
+def test_read_paths_prefix_match():
     tc = _tc()
-    _run(tc.notes.post(_note("n1", "task-1", scope_paths=["src/auth/session.py"])))
-    _run(tc.notes.post(_note("n2", "task-2", scope_paths=["src/billing/invoice.py"])))
+    _run(tc.notes.post(_note("n1", "task-1", paths=["src/auth/session.py"])))
+    _run(tc.notes.post(_note("n2", "task-2", paths=["src/billing/invoice.py"])))
 
-    results = _run(tc.notes.read(scope_paths=["src/auth"]))
+    results = _run(tc.notes.read(paths=["src/auth"]))
     assert len(results) == 1
     assert results[0].id == "n1"
 
 
-def test_read_scope_paths_exact_match():
+def test_read_paths_exact_match():
     tc = _tc()
-    _run(tc.notes.post(_note("n1", "task-1", scope_paths=["src/auth"])))
-    results = _run(tc.notes.read(scope_paths=["src/auth"]))
+    _run(tc.notes.post(_note("n1", "task-1", paths=["src/auth"])))
+    results = _run(tc.notes.read(paths=["src/auth"]))
     assert len(results) == 1
 
 
-def test_read_scope_paths_no_scope_on_note_includes_note():
+def test_read_paths_no_paths_on_note_includes_note():
     tc = _tc()
     _run(tc.notes.post(_note("n1", "task-1")))
-    results = _run(tc.notes.read(scope_paths=["src/auth"]))
+    results = _run(tc.notes.read(paths=["src/auth"]))
     assert [note.id for note in results] == ["n1"]
 
 
-def test_read_scope_paths_trailing_slash_stripped():
+def test_read_paths_trailing_slash_stripped():
     tc = _tc()
-    _run(tc.notes.post(_note("n1", "task-1", scope_paths=["src/auth/session.py"])))
-    results = _run(tc.notes.read(scope_paths=["src/auth/"]))
+    _run(tc.notes.post(_note("n1", "task-1", paths=["src/auth/session.py"])))
+    results = _run(tc.notes.read(paths=["src/auth/"]))
     assert len(results) == 1
 
 
-def test_read_scope_paths_matches_broader_note_scope_from_narrow_query():
+def test_read_paths_matches_broader_note_paths_from_narrow_query():
     tc = _tc()
-    _run(tc.notes.post(_note("n1", "task-1", scope_paths=["src/auth"])))
-    results = _run(tc.notes.read(scope_paths=["src/auth/session.py"]))
+    _run(tc.notes.post(_note("n1", "task-1", paths=["src/auth"])))
+    results = _run(tc.notes.read(paths=["src/auth/session.py"]))
     assert len(results) == 1
     assert results[0].id == "n1"
 
 
-def test_read_scope_paths_respects_component_boundaries():
+def test_read_paths_respects_component_boundaries():
     tc = _tc()
-    _run(tc.notes.post(_note("n1", "task-1", scope_paths=["src/authz.py"])))
-    assert _run(tc.notes.read(scope_paths=["src/auth"])) == []
+    _run(tc.notes.post(_note("n1", "task-1", paths=["src/authz.py"])))
+    assert _run(tc.notes.read(paths=["src/auth"])) == []
 
 
 # ---------------------------------------------------------------------------
@@ -281,7 +281,7 @@ def test_read_limit_returns_last_n():
     for i in range(5):
         _run(tc.notes.post(_note(f"n{i}", f"t{i}")))
 
-    results = _run(tc.notes.read(limit=3))
+    results = _run(tc.notes.read(last_n=3))
     assert len(results) == 3
     assert results[0].id == "n2"
     assert results[-1].id == "n4"
@@ -290,7 +290,7 @@ def test_read_limit_returns_last_n():
 def test_read_limit_larger_than_total_returns_all():
     tc = _tc()
     _run(tc.notes.post(_note("n1", "t1")))
-    results = _run(tc.notes.read(limit=100))
+    results = _run(tc.notes.read(last_n=100))
     assert len(results) == 1
 
 
@@ -310,13 +310,13 @@ def test_read_combined_authors_and_since():
     assert results[0].id == "n2"
 
 
-def test_read_combined_scope_and_limit():
+def test_read_combined_paths_and_last_n():
     tc = _tc()
-    _run(tc.notes.post(_note("n1", "t1", scope_paths=["src/auth/a.py"])))
-    _run(tc.notes.post(_note("n2", "t2", scope_paths=["src/auth/b.py"])))
-    _run(tc.notes.post(_note("n3", "t3", scope_paths=["src/auth/c.py"])))
+    _run(tc.notes.post(_note("n1", "t1", paths=["src/auth/a.py"])))
+    _run(tc.notes.post(_note("n2", "t2", paths=["src/auth/b.py"])))
+    _run(tc.notes.post(_note("n3", "t3", paths=["src/auth/c.py"])))
 
-    results = _run(tc.notes.read(scope_paths=["src/auth"], limit=2))
+    results = _run(tc.notes.read(paths=["src/auth"], last_n=2))
     assert len(results) == 2
     assert results[0].id == "n2"
     assert results[1].id == "n3"

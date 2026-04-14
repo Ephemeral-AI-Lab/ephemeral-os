@@ -70,6 +70,20 @@ def _dotted_name(node: ast.AST) -> str:
     return ""
 
 
+def _string_literal(node: ast.AST) -> str | None:
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    if isinstance(node, ast.JoinedStr):
+        parts: list[str] = []
+        for value in node.values:
+            if isinstance(value, ast.Constant) and isinstance(value.value, str):
+                parts.append(value.value)
+            else:
+                return None
+        return "".join(parts)
+    return None
+
+
 def _detect_blocked_codeact_usage(code: str) -> list[str]:
     """Return shell-policy violations in *code* before sandbox execution."""
     try:
@@ -100,6 +114,10 @@ def _detect_blocked_codeact_usage(code: str) -> list[str]:
             if func_name in _BLOCKED_CODEACT_CALLS:
                 _note(f"{func_name}(...)")
                 continue
+            if func_name == "shell" and node.args:
+                command = _string_literal(node.args[0])
+                if command and "2>&1" in command:
+                    _note("shell(... 2>&1 ...)")
             if func_name in {"__import__", "builtins.__import__", "importlib.import_module"}:
                 if node.args and isinstance(node.args[0], ast.Constant):
                     value = node.args[0].value
@@ -458,7 +476,11 @@ async def _commit_staged_write(
 
 @tool(
     name="daytona_codeact",
-    description="Execute Python code with staged file I/O via read(), write(), and shell() helpers.",
+    description=(
+        "Execute Python code with staged file I/O via read(), write(), and shell() helpers. "
+        "For repo commands, call `shell(\"pytest ...\", timeout=N)` directly; do not import "
+        "`subprocess` or append `2>&1`."
+    ),
     background="optional",
 )
 async def daytona_codeact(
@@ -470,7 +492,12 @@ async def daytona_codeact(
     """Execute multi-step code with staged file I/O in the Daytona sandbox.
 
     Args:
-        code: Python code to execute in the sandbox. Has access to read(path), write(path, content), and shell(command, timeout=900). Helper-based writes are staged and committed after execution.
+        code: Python code to execute in the sandbox. Has access to read(path),
+            write(path, content), and shell(command, timeout=900). Use
+            ``shell("pytest ...", timeout=900)`` for repo commands instead of
+            ``subprocess.run(...)``, and do not append ``2>&1`` because stdout/stderr
+            are already captured separately. Helper-based writes are staged and
+            committed after execution.
 
     Returns:
         status (str): Execution status — ok or error

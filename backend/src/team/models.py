@@ -57,6 +57,24 @@ TERMINAL_STATUSES: frozenset[TaskStatus] = frozenset(
 
 
 # ---------------------------------------------------------------------------
+# Note tags — controlled vocabulary for note classification
+# ---------------------------------------------------------------------------
+
+
+class NoteTag(str, Enum):
+    DISCOVERY = "discovery"
+    IMPLEMENTATION = "implementation"
+    BUG_FIX = "bug_fix"
+    BLOCKER = "blocker"
+    PROPOSAL = "proposal"
+    VERIFICATION = "verification"
+    ARCHITECTURE = "architecture"
+    DEPENDENCY = "dependency"
+    WARNING = "warning"
+    REFACTOR = "refactor"
+
+
+# ---------------------------------------------------------------------------
 # Note — the only context primitive (replaces Briefing + DependencyArtifact)
 # ---------------------------------------------------------------------------
 
@@ -70,7 +88,8 @@ class Note:
     agent_name: str
     content: str
     timestamp: float = field(default_factory=time.time)
-    scope_paths: list[str] = field(default_factory=list)
+    paths: list[str] = field(default_factory=list)
+    tags: list[str] = field(default_factory=list)
     parent_note_id: str | None = None
 
 

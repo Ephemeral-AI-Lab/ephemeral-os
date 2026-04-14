@@ -8,9 +8,10 @@ Use this reference after decomposition examples and immediately before `plan-jso
 - Your draft contains an exact owner path that is not live-confirmed by CI or explorer notes, especially after a cold-CI opener.
 - Your draft keeps a scout-disproved file, missing file, or test file as a fallback owner.
 - You repaired a scout-disproved file or tests-only directory into a sibling exact file using only `ci_workspace_structure(...)`, package listings, or import-name intuition.
+- Your draft creates a compat/re-export shim at a scout-disproved benchmark-import path (`plots.py`, `plots/diff.py`, etc.) only because tests mention it or a singular neighbor exists.
 - Your draft adds a root lane whose main purpose is to describe a benchmark mismatch instead of assigning confirmed work.
 - A package path, directory path, or broad single file survived the explorer wave but no child planner owns its internal split.
-- Your draft has more than 6 concrete non-validator lanes and zero residual `team_planner` lanes.
+- Your draft has more than 6 concrete non-validator lanes (for example, `7 developers + 1 validator`) and zero residual `team_planner` lanes.
 - An atomic leftovers lane owns several unrelated exact files even though one child planner could schedule them without another explorer wave.
 - The terminal validator widened to a repo-scale command mainly because the parent layer flattened everything, or you still need to refresh notes after a scope-change signal.
 - You are still recounting tests or rewriting the same ownership summary even though the gate is already satisfied.
@@ -22,6 +23,7 @@ Use this reference after decomposition examples and immediately before `plan-jso
 - restart the ending chain sequentially if a final-reference ordering guard fired.
 - Delete any scout-disproved exact leaf. Either broaden to the last confirmed parent boundary or drop the branch for this layer.
 - If the only new evidence is a structure listing that shows neighboring files, do not claim an exact repair. Restore the parent boundary as `team_planner` until live symbol/import/note evidence confirms the exact owner.
+- Replace any planned compat/re-export shim at a missing benchmark-import path with the confirmed live owner surface unless live production references also name that missing path.
 - Replace any mismatch-only lane with the confirmed production owner or remove it from this layer.
 - Promote package or directory slices to `team_planner` when their next decision is internal decomposition.
 - Promote a broad single file to `team_planner` when families or verification surfaces inside it are still separable.

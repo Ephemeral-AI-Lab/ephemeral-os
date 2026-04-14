@@ -104,6 +104,75 @@ async def test_read_file_str_content():
     assert not result.is_error
 
 
+async def test_read_file_blocks_benchmark_lane_before_first_repro():
+    sb = _sb(download=b"should not read")
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "daytona_cwd": "/testbed",
+            "agent_name": "developer",
+            "team_mode_enabled": True,
+            "benchmark_test_ids": ["tests/unit/command/test_update.py::test_update"],
+            "benchmark_test_files": ["tests/unit/command/test_update.py"],
+        }
+    )
+
+    result = await daytona_read_file.execute(
+        daytona_read_file.input_model(file_path="dvc/command/update.py"),
+        ctx,
+    )
+
+    assert result.is_error
+    assert "run the exact repro first" in result.output
+    sb.fs.download_file.assert_not_called()
+
+
+async def test_read_file_blocks_benchmark_test_files_after_repro():
+    sb = _sb(download=b"should not read")
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "daytona_cwd": "/testbed",
+            "agent_name": "developer",
+            "team_mode_enabled": True,
+            "benchmark_test_ids": ["tests/unit/command/test_update.py::test_update"],
+            "benchmark_test_files": ["tests/unit/command/test_update.py"],
+            "_daytona_codeact_calls": 1,
+        }
+    )
+
+    result = await daytona_read_file.execute(
+        daytona_read_file.input_model(file_path="tests/unit/command/test_update.py"),
+        ctx,
+    )
+
+    assert result.is_error
+    assert "do not open benchmark test files" in result.output
+    sb.fs.download_file.assert_not_called()
+
+
+async def test_read_file_allows_production_reads_after_repro():
+    sb = _sb(download=b"ok")
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "daytona_cwd": "/testbed",
+            "agent_name": "developer",
+            "team_mode_enabled": True,
+            "benchmark_test_ids": ["tests/unit/command/test_update.py::test_update"],
+            "benchmark_test_files": ["tests/unit/command/test_update.py"],
+            "_daytona_codeact_calls": 1,
+        }
+    )
+
+    result = await daytona_read_file.execute(
+        daytona_read_file.input_model(file_path="dvc/command/update.py"),
+        ctx,
+    )
+
+    assert not result.is_error
+
+
 # ---------------------------------------------------------------------------
 # daytona_write_file
 # ---------------------------------------------------------------------------
