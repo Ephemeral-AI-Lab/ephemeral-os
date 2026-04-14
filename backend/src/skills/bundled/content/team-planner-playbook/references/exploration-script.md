@@ -6,7 +6,7 @@ Use this reference only on fresh benchmark roots or any turn that still lacks cl
 
 1. Must keep the first-turn exploration script explicit and live-evidence-first.
 2. Start with exactly one narrow `ci_workspace_structure(path=...)` on the deepest shared production boundary already implied by the prompt.
-3. Use `ci_query_symbols(...)`, `ci_query_references(...)`, `ci_hover(...)`, or `ci_diagnostics(...)` only to refine likely owners from that anchor.
+3. Use `ci_query_symbol(...)` or `ci_diagnostics(...)` only to refine likely owners from that anchor.
 4. If the first anchor is empty, or `ci_status()` reports `initialized=false`, stop exact-file guessing immediately. This is a cold-CI branch.
 5. On cold CI, keep unresolved work on stable directories/packages and let scouts confirm exact files. Failing benchmark tests remain evidence only.
 6. If more than one owner slice is still unresolved after the first anchor, the next planning action must be a scout wave, not final DAG synthesis.

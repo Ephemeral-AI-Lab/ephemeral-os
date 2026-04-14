@@ -10,9 +10,7 @@ def test_ci_toolkit_registers_all_tools():
     expected = {
         "ci_status",
         "ci_workspace_structure",
-        "ci_query_symbols",
-        "ci_query_references",
-        "ci_hover",
+        "ci_query_symbol",
         "ci_diagnostics",
         "ci_edit_hotspots",
         "ci_read_file",
@@ -36,5 +34,5 @@ def test_ci_toolkit_blocked_tools_handled_by_registry():
 
     assert "ci_read_file" not in remaining
     assert "ci_edit_hotspots" not in remaining
-    assert "ci_query_symbols" in remaining
-    assert "ci_hover" in remaining
+    assert "ci_query_symbol" in remaining
+    assert "ci_diagnostics" in remaining

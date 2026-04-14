@@ -98,6 +98,7 @@ class TaskCenter:
         self._checkpoints: deque[TeamRunCheckpoint] = deque(maxlen=max_checkpoints)
         self._checkpoint_seq = 0
         self._checkpoint_store = checkpoint_store
+        self._checkpoint_inflight: set[str] = set()
 
     # ---- activity tracking (active mode) -----------------------------------
 
@@ -127,11 +128,14 @@ class TaskCenter:
         """Reset counters only for agent-authored or auto-generated task notes."""
         if note.agent_name in {"system", "checkpoint"}:
             return
+        self._checkpoint_inflight.discard(note.task_id)
         if hasattr(self, '_activity_counters') and note.task_id in self._activity_counters:
             self._activity_counters[note.task_id] = {"edits": 0, "turns": 0, "files_edited": []}
 
     def should_checkpoint(self, task_id: str) -> str | None:
         """Check if auto-checkpoint should fire. Returns trigger type or None."""
+        if task_id in self._checkpoint_inflight:
+            return None
         c = self._get_counters(task_id)
         if c["edits"] >= 5:
             return "edit"
@@ -158,6 +162,7 @@ class TaskCenter:
         trigger = self.should_checkpoint(task_id)
         if trigger is None:
             return False
+        self._checkpoint_inflight.add(task_id)
         task = self.graph.get(task_id)
         agent_name = task.agent_name if task else "unknown"
         scope_paths = list(task.scope_paths) if task and task.scope_paths else []
@@ -175,44 +180,58 @@ class TaskCenter:
 
         content: str | None = None
 
-        if snapshot and api_client:
-            from external_trigger.tc_note import (
-                EDIT_CHECKPOINT_PROMPT,
-                TURN_CHECKPOINT_PROMPT,
-                run_checkpoint_note,
-            )
-            prompt = EDIT_CHECKPOINT_PROMPT if trigger == "edit" else TURN_CHECKPOINT_PROMPT
-            agent_run_id = task.agent_run_id or task_id if task else task_id
-            result = await run_checkpoint_note(
+        try:
+            if snapshot and api_client:
+                from external_trigger.tc_note import (
+                    EDIT_CHECKPOINT_PROMPT,
+                    TURN_CHECKPOINT_PROMPT,
+                    run_checkpoint_note,
+                )
+
+                prompt = EDIT_CHECKPOINT_PROMPT if trigger == "edit" else TURN_CHECKPOINT_PROMPT
+                agent_run_id = task.agent_run_id or task_id if task else task_id
+                try:
+                    result = await run_checkpoint_note(
+                        task_id=task_id,
+                        agent_run_id=agent_run_id,
+                        messages=snapshot,
+                        prompt=prompt,
+                        trigger=trigger,
+                        max_tokens=500,
+                        model=model,
+                        api_client=api_client,
+                    )
+                except Exception:
+                    logger.warning(
+                        "[task_center] checkpoint note generation failed for task=%s trigger=%s; "
+                        "falling back to factual note",
+                        task_id,
+                        trigger,
+                        exc_info=True,
+                    )
+                else:
+                    if result.note_summary:
+                        content = result.note_summary
+
+            # Fallback: factual note when no LLM available or LLM returned empty
+            if content is None:
+                if trigger == "edit":
+                    files = ", ".join(c["files_edited"][-10:])
+                    content = f"Auto-checkpoint ({c['edits']} edits): {files}"
+                else:
+                    content = f"Auto-checkpoint: {c['turns']} turns without progress note"
+
+            await self.post(Note(
+                id=str(uuid.uuid4()),
                 task_id=task_id,
-                agent_run_id=agent_run_id,
-                messages=snapshot,
-                prompt=prompt,
-                trigger=trigger,
-                max_tokens=500,
-                model=model,
-                api_client=api_client,
-            )
-            if result.note_summary:
-                content = result.note_summary
-
-        # Fallback: factual note when no LLM available or LLM returned empty
-        if content is None:
-            if trigger == "edit":
-                files = ", ".join(c["files_edited"][-10:])
-                content = f"Auto-checkpoint ({c['edits']} edits): {files}"
-            else:
-                content = f"Auto-checkpoint: {c['turns']} turns without progress note"
-
-        await self.post(Note(
-            id=str(uuid.uuid4()),
-            task_id=task_id,
-            agent_name=f"{agent_name} (auto)",
-            content=content,
-            timestamp=time.time(),
-            scope_paths=scope_paths,
-        ))
-        return True
+                agent_name=f"{agent_name} (auto)",
+                content=content,
+                timestamp=time.time(),
+                scope_paths=scope_paths,
+            ))
+            return True
+        finally:
+            self._checkpoint_inflight.discard(task_id)
 
     async def read_sibling_notes(
         self,
@@ -461,10 +480,7 @@ class TaskCenter:
         if task.deps and budget > 0:
             dep_notes = await self.read(authors=task.deps)
             if dep_notes:
-                by_dep: dict[str, Note] = {}
-                for n in dep_notes:
-                    by_dep[n.task_id] = n
-                deduped = list(by_dep.values())
+                deduped = self._latest_notes_per_task(dep_notes)
                 sec = self._render_notes("Context from dependencies", deduped)
                 b = len(sec.encode())
                 if b <= budget:
@@ -499,13 +515,14 @@ class TaskCenter:
             parent_ids = await self._parent_chain_ids(task)
             parent_notes = await self.read(authors=parent_ids)
             if parent_notes:
-                sec = self._render_notes("Parent context", parent_notes)
+                deduped = self._latest_notes_per_task(parent_notes)
+                sec = self._render_notes("Parent context", deduped)
                 b = len(sec.encode())
                 if b <= budget:
                     sections.append(sec)
                     budget -= b
                 else:
-                    sections.append(self._truncate_section("Parent context", parent_notes, budget))
+                    sections.append(self._truncate_section("Parent context", deduped, budget))
 
         return "\n\n".join(sections)
 
@@ -521,6 +538,13 @@ class TaskCenter:
             lines.append(f"### {n.agent_name} ({n.task_id})")
             lines.append(n.content)
         return "\n".join(lines)
+
+    @staticmethod
+    def _latest_notes_per_task(notes: list[Note]) -> list[Note]:
+        latest: dict[str, Note] = {}
+        for note in notes:
+            latest[note.task_id] = note
+        return list(latest.values())
 
     def _truncate_section(self, header: str, notes: list[Note], budget: int) -> str:
         sep = "\n"

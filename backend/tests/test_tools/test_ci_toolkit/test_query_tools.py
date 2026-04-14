@@ -13,8 +13,7 @@ from tools.ci_toolkit.query_tools import (
     _svc_or_error,
     ci_status,
     ci_workspace_structure,
-    ci_query_symbols,
-    ci_query_references,
+    ci_query_symbol,
     ci_edit_hotspots,
 )
 
@@ -324,13 +323,13 @@ async def test_workspace_structure_remote_fallback_for_cold_index():
 
 
 # ---------------------------------------------------------------------------
-# ci_query_symbols
+# ci_query_symbol
 # ---------------------------------------------------------------------------
 
 
 async def test_query_symbols_no_service():
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=None):
-        result = await ci_query_symbols.execute(ci_query_symbols.input_model(query="foo"), _ctx())
+        result = await ci_query_symbol.execute(ci_query_symbol.input_model(query="foo"), _ctx())
     data = json.loads(result.output)
     assert data["status"] == "unavailable"
 
@@ -343,8 +342,8 @@ async def test_query_symbols_no_results():
     # SymbolKind is a lazy import inside the function; patch at its source module
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
         with patch("code_intelligence.types.SymbolKind"):
-            result = await ci_query_symbols.execute(
-                ci_query_symbols.input_model(query="nonexistent"), _ctx_with_svc(svc)
+            result = await ci_query_symbol.execute(
+                ci_query_symbol.input_model(query="nonexistent"), _ctx_with_svc(svc)
             )
 
     assert "No symbols matching" in result.output
@@ -371,13 +370,14 @@ async def test_query_symbols_remote_fallback_on_cold_remote_workspace():
 
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
         with patch("code_intelligence.types.SymbolKind"):
-            result = await ci_query_symbols.execute(
-                ci_query_symbols.input_model(query="generate_definitions"),
+            result = await ci_query_symbol.execute(
+                ci_query_symbol.input_model(query="generate_definitions"),
                 ctx,
             )
 
     assert not result.is_error
-    symbols = json.loads(result.output)
+    data = json.loads(result.output)
+    symbols = data.get("definitions", data) if isinstance(data, dict) else data
     assert symbols[0]["kind"] == "function"
     assert symbols[0]["name"] == "generate_definitions"
     assert symbols[0]["file"] == "/testbed/pydantic/json_schema.py"
@@ -456,13 +456,14 @@ async def test_query_symbols_local_workspace_fallback_finds_class(tmp_path):
 
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
         with patch("code_intelligence.types.SymbolKind"):
-            result = await ci_query_symbols.execute(
-                ci_query_symbols.input_model(query="TypeAdapter"),
+            result = await ci_query_symbol.execute(
+                ci_query_symbol.input_model(query="TypeAdapter"),
                 _ctx_with_svc(svc),
             )
 
     assert not result.is_error
-    symbols = json.loads(result.output)
+    data = json.loads(result.output)
+    symbols = data.get("definitions", data) if isinstance(data, dict) else data
     assert symbols[0]["name"] == "TypeAdapter"
     assert symbols[0]["kind"] == "class"
     assert symbols[0]["file"].endswith("type_adapter.py")
@@ -483,13 +484,14 @@ async def test_query_symbols_local_workspace_fallback_finds_partial_function(tmp
 
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
         with patch("code_intelligence.types.SymbolKind"):
-            result = await ci_query_symbols.execute(
-                ci_query_symbols.input_model(query="discriminator", kind="function"),
+            result = await ci_query_symbol.execute(
+                ci_query_symbol.input_model(query="discriminator", kind="function"),
                 _ctx_with_svc(svc),
             )
 
     assert not result.is_error
-    symbols = json.loads(result.output)
+    data = json.loads(result.output)
+    symbols = data.get("definitions", data) if isinstance(data, dict) else data
     assert symbols[0]["name"] == "_extract_discriminator"
     assert symbols[0]["kind"] == "function"
     assert symbols[0]["file"].endswith("json_schema.py")
@@ -509,12 +511,13 @@ async def test_query_symbols_returns_results():
 
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
         with patch("code_intelligence.types.SymbolKind"):
-            result = await ci_query_symbols.execute(
-                ci_query_symbols.input_model(query="my_func"), _ctx_with_svc(svc)
+            result = await ci_query_symbol.execute(
+                ci_query_symbol.input_model(query="my_func"), _ctx_with_svc(svc)
             )
 
     assert not result.is_error
-    symbols = json.loads(result.output)
+    data = json.loads(result.output)
+    symbols = data["definitions"]
     assert len(symbols) == 1
     assert symbols[0]["name"] == "my_func"
     assert symbols[0]["file"] == "src/mod.py"
@@ -535,8 +538,8 @@ async def test_query_symbols_waits_for_cold_index():
 
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
         with patch("code_intelligence.types.SymbolKind"):
-            result = await ci_query_symbols.execute(
-                ci_query_symbols.input_model(query="fresh_symbol"),
+            result = await ci_query_symbol.execute(
+                ci_query_symbol.input_model(query="fresh_symbol"),
                 _ctx_with_svc(svc),
             )
 
@@ -580,12 +583,13 @@ async def test_query_symbols_with_valid_kind_filter():
 
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
         with patch("code_intelligence.types.SymbolKind", mock_kind_cls):
-            result = await ci_query_symbols.execute(
-                ci_query_symbols.input_model(query="", kind="function"),
+            result = await ci_query_symbol.execute(
+                ci_query_symbol.input_model(query="", kind="function"),
                 _ctx_with_svc(svc),
             )
 
-    symbols = json.loads(result.output)
+    data = json.loads(result.output)
+    symbols = data["definitions"]
     names = [s["name"] for s in symbols]
     assert "my_func" in names
     assert "MyClass" not in names
@@ -608,13 +612,14 @@ async def test_query_symbols_invalid_kind_ignored():
 
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
         with patch("code_intelligence.types.SymbolKind", mock_kind_cls):
-            result = await ci_query_symbols.execute(
-                ci_query_symbols.input_model(query="anything", kind="bogus"),
+            result = await ci_query_symbol.execute(
+                ci_query_symbol.input_model(query="anything", kind="bogus"),
                 _ctx_with_svc(svc),
             )
 
     # No filter applied → symbol still in results
-    symbols = json.loads(result.output)
+    data = json.loads(result.output)
+    symbols = data["definitions"]
     assert len(symbols) == 1
 
 
@@ -638,17 +643,18 @@ async def test_query_symbols_kind_without_value_attr():
 
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
         with patch("code_intelligence.types.SymbolKind"):
-            result = await ci_query_symbols.execute(
-                ci_query_symbols.input_model(query="bare_sym"), _ctx_with_svc(svc)
+            result = await ci_query_symbol.execute(
+                ci_query_symbol.input_model(query="bare_sym"), _ctx_with_svc(svc)
             )
 
     assert not result.is_error
-    symbols = json.loads(result.output)
+    data = json.loads(result.output)
+    symbols = data["definitions"]
     assert symbols[0]["name"] == "bare_sym"
 
 
 # ---------------------------------------------------------------------------
-# ci_query_references (symbol-index-first approach)
+# ci_query_symbol (symbol-index-first approach)
 # ---------------------------------------------------------------------------
 
 
@@ -658,6 +664,7 @@ def _make_symbol_info(name="foo", file_path="src/mod.py", line=10, kind_value="f
     sym.file_path = file_path
     sym.line = line
     sym.kind.value = kind_value
+    sym.signature = f"{kind_value} {name}"
     return sym
 
 
@@ -677,40 +684,24 @@ def _svc_with_index(symbols=None, refs=None, *, initialized=True, is_built=True)
 
 async def test_query_references_no_service():
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=None):
-        result = await ci_query_references.execute(
-            ci_query_references.input_model(symbol="foo"), _ctx()
+        result = await ci_query_symbol.execute(
+            ci_query_symbol.input_model(query="foo", references=True), _ctx()
         )
     data = json.loads(result.output)
     assert data["status"] == "unavailable"
 
 
-async def test_query_references_index_not_built():
-    svc = _svc_with_index(is_built=False, initialized=False)
-
-    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
-        result = await ci_query_references.execute(
-            ci_query_references.input_model(symbol="foo"),
-            _ctx_with_svc(svc),
-        )
-
-    data = json.loads(result.output)
-    assert data["confidence"] == "unavailable"
-    assert "not ready" in data["message"]
-
-
-async def test_query_references_symbol_not_in_index():
+async def test_query_references_no_results():
     svc = _svc_with_index(symbols=[])
+    svc.query_symbols.return_value = []
 
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
-        result = await ci_query_references.execute(
-            ci_query_references.input_model(symbol="nonexistent"),
+        result = await ci_query_symbol.execute(
+            ci_query_symbol.input_model(query="nonexistent", references=True),
             _ctx_with_svc(svc),
         )
 
-    data = json.loads(result.output)
-    assert data["total_references"] == 0
-    assert data["confidence"] == "full"
-    assert "No symbol named" in data["message"]
+    assert "No symbols matching" in result.output
 
 
 async def test_query_references_lsp_returns_results():
@@ -719,10 +710,11 @@ async def test_query_references_lsp_returns_results():
     ref2 = MagicMock(file_path="src/main.py", line=20, text="engine = Engine(config)")
 
     svc = _svc_with_index(symbols=[defn], refs=[ref1, ref2])
+    svc.query_symbols.return_value = [defn]
 
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
-        result = await ci_query_references.execute(
-            ci_query_references.input_model(symbol="Engine"),
+        result = await ci_query_symbol.execute(
+            ci_query_symbol.input_model(query="Engine", references=True),
             _ctx_with_svc(svc),
         )
 
@@ -730,6 +722,7 @@ async def test_query_references_lsp_returns_results():
     data = json.loads(result.output)
     assert data["confidence"] == "full"
     assert data["total_references"] == 2
+    assert "definitions" in data
     files = [r["file"] for r in data["references"]]
     assert "src/runner.py" in files
     assert "src/main.py" in files
@@ -738,11 +731,12 @@ async def test_query_references_lsp_returns_results():
 async def test_query_references_lsp_fails_falls_back_to_definitions():
     defn = _make_symbol_info("Engine", "src/engine.py", 10, "class")
     svc = _svc_with_index(symbols=[defn], refs=[])
+    svc.query_symbols.return_value = [defn]
     svc.find_references.side_effect = RuntimeError("LSP timeout")
 
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
-        result = await ci_query_references.execute(
-            ci_query_references.input_model(symbol="Engine"),
+        result = await ci_query_symbol.execute(
+            ci_query_symbol.input_model(query="Engine", references=True),
             _ctx_with_svc(svc),
         )
 
@@ -755,10 +749,11 @@ async def test_query_references_lsp_fails_falls_back_to_definitions():
 async def test_query_references_lsp_empty_falls_back_to_definitions():
     defn = _make_symbol_info("Engine", "src/engine.py", 10, "class")
     svc = _svc_with_index(symbols=[defn], refs=[])
+    svc.query_symbols.return_value = [defn]
 
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
-        result = await ci_query_references.execute(
-            ci_query_references.input_model(symbol="Engine"),
+        result = await ci_query_symbol.execute(
+            ci_query_symbol.input_model(query="Engine", references=True),
             _ctx_with_svc(svc),
         )
 
@@ -774,10 +769,11 @@ async def test_query_references_prefers_production_over_test_definitions():
     ref = MagicMock(file_path="src/main.py", line=1, text="Engine()")
 
     svc = _svc_with_index(symbols=[test_defn, prod_defn], refs=[ref])
+    svc.query_symbols.return_value = [test_defn, prod_defn]
 
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
-        result = await ci_query_references.execute(
-            ci_query_references.input_model(symbol="Engine"),
+        result = await ci_query_symbol.execute(
+            ci_query_symbol.input_model(query="Engine", references=True),
             _ctx_with_svc(svc),
         )
 

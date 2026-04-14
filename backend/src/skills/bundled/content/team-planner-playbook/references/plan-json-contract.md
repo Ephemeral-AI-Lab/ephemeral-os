@@ -21,6 +21,7 @@ Use this reference immediately before emitting final plan JSON.
 - Developer and team_planner tasks should use `"cancel"` (default) for strict dependency chains.
 - Do not submit an expandable `developer`.
 - Do not serialize the whole layer into eight atomic developers only because all owners are known.
+- On crowded layers, zero-expandable all-developer plans are invalid when any residual branch is still multi-file, shared-risk, or otherwise broad enough for child decomposition.
 - Reload the ending chain sequentially if the self-check never finished.
 
 ## Failure-surface rules

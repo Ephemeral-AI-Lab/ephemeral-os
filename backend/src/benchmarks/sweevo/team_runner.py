@@ -144,9 +144,8 @@ def _benchmark_team_run_dir() -> Path:
 
 
 def _build_benchmark_event_store(*, session_factory: object | None) -> Any:
-    """Prefer DB-backed durability, else fall back to a stable project-local JSONL log."""
-    if session_factory is not None:
-        return build_default_store(session_factory=session_factory)
+    """Use a stable project-local TeamRun event log for benchmark observability."""
+    del session_factory
     return build_default_store(base_dir=_benchmark_team_run_dir())
 
 
@@ -272,7 +271,7 @@ def _build_root_prompt(instance: SWEEvoInstance, repo_dir: str) -> str:
         f"- Instance size: {size} ({summary.get('bullet_count', 0)} changelog bullets, "
         f"{len(instance.fail_to_pass)} fail-to-pass target(s)).\n"
         f"- This run is primarily evaluating the coordination behavior described in "
-        f"`docs/architecture/plan-a-team-coordination-redesign.md`.\n"
+        f"`docs/architecture/task-center-redesign-summary.md` and its referenced designs.\n"
         f"- Keep the prompt light and let the declared skills own the detailed workflow policy.\n"
         f"- Prioritize evidence that the Task Center, scout waves, scoped-path freshness, "
         f"and recovery/replanning loop behave as designed under live repository change.\n"
@@ -720,12 +719,13 @@ def _make_runner(
         team_run_id = str(ctx.tool_metadata.get("team_run_id") or "")
         work_item_id = str(ctx.tool_metadata.get("work_item_id") or "")
         pending_tool_inputs: dict[str, list[dict[str, Any]]] = {}
-        checkpoint_tasks: set[asyncio.Task[None]] = set()
+        checkpoint_task: asyncio.Task[None] | None = None
 
         def _snapshot_messages() -> list[dict[str, Any]]:
             return [m.model_dump(mode="json") for m in agent.display_messages]
 
-        def _schedule_checkpoint() -> None:
+        def _schedule_checkpoint(snapshot: list[dict[str, Any]] | None = None) -> None:
+            nonlocal checkpoint_task
             if not team_run_id or not work_item_id:
                 return
             try:
@@ -734,18 +734,62 @@ def _make_runner(
                 team_run = get_team_run(team_run_id)
                 if team_run is None:
                     return
-                snapshot = _snapshot_messages()
-                team_run.conductor.register_snapshot(work_item_id, snapshot)
-                task = asyncio.create_task(
-                    team_run.task_center.check(
-                        work_item_id,
-                        snapshot=snapshot,
-                        api_client=agent.query_context.api_client,
-                        model=agent.model,
+                frozen_snapshot = snapshot if snapshot is not None else _snapshot_messages()
+                team_run.conductor.register_snapshot(work_item_id, frozen_snapshot)
+                trigger = team_run.task_center.should_checkpoint(work_item_id)
+                if trigger is None:
+                    return
+                if checkpoint_task is not None and not checkpoint_task.done():
+                    return
+
+                async def _run_checkpoint() -> None:
+                    event_base = {
+                        "event": "external_hook",
+                        "hook": "tc_note",
+                        "team_run_id": team_run_id,
+                        "work_item_id": work_item_id,
+                        "agent": effective_defn.name,
+                        "trigger": trigger,
+                    }
+                    _append_benchmark_event(
+                        team_metrics,
+                        {**event_base, "status": "started"},
                     )
-                )
-                checkpoint_tasks.add(task)
-                task.add_done_callback(lambda done: checkpoint_tasks.discard(done))
+                    if printer is not None:
+                        printer.raw_line(
+                            "team",
+                            f"[external_hook] tc_note task={work_item_id[:8]} trigger={trigger} status=started",
+                        )
+                    try:
+                        posted = await team_run.task_center.check(
+                            work_item_id,
+                            snapshot=frozen_snapshot,
+                            api_client=agent.query_context.api_client,
+                            model=agent.model,
+                        )
+                    except Exception as exc:
+                        _append_benchmark_event(
+                            team_metrics,
+                            {**event_base, "status": "failed", "error": str(exc)},
+                        )
+                        if printer is not None:
+                            printer.raw_line(
+                                "team",
+                                f"[external_hook] tc_note task={work_item_id[:8]} trigger={trigger} status=failed error={exc}",
+                            )
+                        raise
+                    status = "completed" if posted else "skipped"
+                    _append_benchmark_event(
+                        team_metrics,
+                        {**event_base, "status": status},
+                    )
+                    if printer is not None:
+                        printer.raw_line(
+                            "team",
+                            f"[external_hook] tc_note task={work_item_id[:8]} trigger={trigger} status={status}",
+                        )
+
+                checkpoint_task = asyncio.create_task(_run_checkpoint())
             except Exception:
                 logger.debug("Failed to schedule task-center checkpoint for %s", work_item_id, exc_info=True)
 
@@ -761,16 +805,7 @@ def _make_runner(
                 snapshot = [m.model_dump(mode="json") for m in display_messages]
                 team_run.conductor.register_snapshot(work_item_id, snapshot)
                 team_run.task_center.tick(work_item_id)
-                task = asyncio.create_task(
-                    team_run.task_center.check(
-                        work_item_id,
-                        snapshot=snapshot,
-                        api_client=agent.query_context.api_client,
-                        model=agent.model,
-                    )
-                )
-                checkpoint_tasks.add(task)
-                task.add_done_callback(lambda done: checkpoint_tasks.discard(done))
+                _schedule_checkpoint(snapshot)
             except Exception:
                 logger.debug("Failed to observe turn for %s", work_item_id, exc_info=True)
 
@@ -844,8 +879,8 @@ def _make_runner(
             logger.exception("sweevo team runner: agent %s crashed", defn.name)
             raise
         finally:
-            if checkpoint_tasks:
-                await asyncio.gather(*checkpoint_tasks, return_exceptions=True)
+            if checkpoint_task is not None:
+                await asyncio.gather(checkpoint_task, return_exceptions=True)
             qc = getattr(agent, "query_context", None)
             final_text = _extract_final_text(agent.display_messages)
             if final_text:

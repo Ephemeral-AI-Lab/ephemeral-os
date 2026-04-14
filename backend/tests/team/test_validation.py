@@ -277,6 +277,14 @@ def _mock_validator_agent():
     return _Defn()
 
 
+def _mock_planner_agent():
+    """Return a namespace that looks like an expandable planner AgentDefinition."""
+    class _Defn:
+        role = "planner"
+        agent_type = "agent"
+    return _Defn()
+
+
 def test_validator_with_cancel_cascade_policy_fails():
     """Validators must use cascade_policy='continue' to ensure recovery cycle works."""
     dev = _spec("dev-1")
@@ -357,3 +365,92 @@ def test_extra_validators_are_called():
         issues = validate_plan(plan, extra_validators=[extra])
     assert called
     assert any("custom error" in i["msg"] for i in issues)
+
+
+def test_crowded_plan_without_expandable_lane_fails():
+    specs = [_spec(f"dev-{idx}") for idx in range(7)]
+    validator = TaskSpec(
+        id="val-root",
+        task="validate",
+        agent="validator",
+        deps=[spec.id for spec in specs],
+        cascade_policy="continue",
+    )
+    plan = _plan(*specs, validator)
+
+    def side_effect_role(name, role):
+        return name == "validator" and role == "reviewer"
+
+    def side_effect_defn(name):
+        if name == "validator":
+            return _mock_validator_agent()
+        return _mock_agent()
+
+    with patch(_AGENT_EXISTS_PATH, return_value=True), \
+         patch(_HAS_ROLE_PATH, side_effect=side_effect_role), \
+         patch(_GET_DEFN_PATH, side_effect=side_effect_defn):
+        issues = validate_plan(plan)
+
+    assert any("expandable planner lane" in i["msg"] for i in issues)
+
+
+def test_crowded_plan_with_expandable_lane_passes_expandability_check():
+    specs = [_spec(f"dev-{idx}") for idx in range(6)]
+    planner = TaskSpec(
+        id="plan-residual",
+        task="split the residual branch",
+        agent="team_planner",
+        deps=[],
+        scope_paths=["pkg/residual/"],
+    )
+    validator = TaskSpec(
+        id="val-root",
+        task="validate",
+        agent="validator",
+        deps=[spec.id for spec in specs] + [planner.id],
+        cascade_policy="continue",
+    )
+    plan = _plan(*specs, planner, validator)
+
+    def side_effect_role(name, role):
+        return name == "validator" and role == "reviewer"
+
+    def side_effect_defn(name):
+        if name == "validator":
+            return _mock_validator_agent()
+        if name == "team_planner":
+            return _mock_planner_agent()
+        return _mock_agent()
+
+    with patch(_AGENT_EXISTS_PATH, return_value=True), \
+         patch(_HAS_ROLE_PATH, side_effect=side_effect_role), \
+         patch(_GET_DEFN_PATH, side_effect=side_effect_defn):
+        issues = validate_plan(plan)
+
+    assert not any("expandable planner lane" in i["msg"] for i in issues)
+
+
+def test_parallel_tasks_with_shared_scope_paths_require_sequencing():
+    left = _spec("dev-plot", scope_paths=["dvc/command/plot.py", "dvc/repo/plot/data.py"])
+    right = _spec("dev-cli", scope_paths=["dvc/command/plot.py", "dvc/command/update.py"])
+    plan = _plan(left, right)
+
+    with patch(_AGENT_EXISTS_PATH, return_value=True), \
+         patch(_HAS_ROLE_PATH, return_value=False), \
+         patch(_GET_DEFN_PATH, return_value=_mock_agent()):
+        issues = validate_plan(plan)
+
+    assert any("share overlapping scope_paths" in i["msg"] for i in issues)
+
+
+def test_sequenced_tasks_with_shared_scope_paths_pass():
+    left = _spec("dev-plot", scope_paths=["dvc/command/plot.py"])
+    right = _spec("dev-cli", deps=["dev-plot"], scope_paths=["dvc/command/plot.py"])
+    plan = _plan(left, right)
+
+    with patch(_AGENT_EXISTS_PATH, return_value=True), \
+         patch(_HAS_ROLE_PATH, return_value=False), \
+         patch(_GET_DEFN_PATH, return_value=_mock_agent()):
+        issues = validate_plan(plan)
+
+    assert not any("share overlapping scope_paths" in i["msg"] for i in issues)

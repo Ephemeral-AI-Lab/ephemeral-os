@@ -1,8 +1,9 @@
 """Shared LLM loop for external_trigger and post_run tool phases.
 
-Always uses ``tool_choice={"type": "any"}`` so every turn produces a tool call.
-Retries up to ``max_turns`` until a valid tool call passes Pydantic validation.
-Exit paths: successful tool call, max turns exhausted, or asyncio cancellation.
+Uses an exact single-tool choice when only one tool is available, otherwise
+falls back to ``tool_choice={"type": "any"}``. Retries up to ``max_turns``
+until a valid tool call passes Pydantic validation. Exit paths: successful
+tool call, max turns exhausted, or asyncio cancellation.
 """
 
 from __future__ import annotations
@@ -105,6 +106,13 @@ async def run(
     """
     api_tools = [tool.to_api_schema() for tool in tools]
     tool_map = {tool.name: tool for tool in tools}
+    if len(api_tools) == 1:
+        tool_choice: dict[str, Any] = {
+            "type": "tool",
+            "name": str(api_tools[0].get("name") or tools[0].name),
+        }
+    else:
+        tool_choice = {"type": "any"}
 
     conversation: list[dict[str, Any]] = list(messages) + [
         {"role": "user", "content": prompt},
@@ -119,7 +127,7 @@ async def run(
             max_tokens=max_tokens_per_turn,
             system_prompt=system_prompt,
             tools=api_tools,
-            tool_choice={"type": "any"},
+            tool_choice=tool_choice,
             raw_messages=conversation,
         )
 

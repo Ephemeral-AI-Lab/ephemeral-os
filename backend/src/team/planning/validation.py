@@ -131,6 +131,101 @@ def _terminal_non_validator_leaf_ids(items: list[TaskSpec]) -> set[str]:
     }
 
 
+def _sequenced_pair(adj: dict[str, list[str]], left: str, right: str) -> bool:
+    """Return True when *left* and *right* are ordered by any dependency path."""
+    stack = [left]
+    seen: set[str] = set()
+    while stack:
+        node = stack.pop()
+        if node == right:
+            return True
+        if node in seen:
+            continue
+        seen.add(node)
+        stack.extend(adj.get(node, []))
+    stack = [right]
+    seen.clear()
+    while stack:
+        node = stack.pop()
+        if node == left:
+            return True
+        if node in seen:
+            continue
+        seen.add(node)
+        stack.extend(adj.get(node, []))
+    return False
+
+
+def _scope_overlaps(left: str, right: str) -> bool:
+    lval = left.rstrip("/")
+    rval = right.rstrip("/")
+    if not lval or not rval:
+        return False
+    return (
+        lval == rval
+        or lval.startswith(rval + "/")
+        or rval.startswith(lval + "/")
+    )
+
+
+def _crowded_layer_expandability_issues(items: list[TaskSpec]) -> list[Issue]:
+    issues: list[Issue] = []
+    expandable_count = sum(1 for item in items if _is_expandable(item.agent))
+    concrete_count = _concrete_execution_count(items)
+    if concrete_count > 6 and expandable_count == 0:
+        issues.append(
+            {
+                "field": "tasks",
+                "msg": (
+                    "crowded plans with more than 6 concrete execution lanes must keep at least "
+                    "one expandable planner lane instead of flattening the whole layer"
+                ),
+            }
+        )
+    return issues
+
+
+def _shared_scope_conflict_issues(
+    items: list[TaskSpec],
+    adj: dict[str, list[str]],
+) -> list[Issue]:
+    issues: list[Issue] = []
+    actionable = [
+        item
+        for item in items
+        if item.id and not _is_validator(item.agent) and not _is_expandable(item.agent)
+    ]
+    for idx, left in enumerate(actionable):
+        if not left.scope_paths:
+            continue
+        for right in actionable[idx + 1 :]:
+            if not right.scope_paths:
+                continue
+            if _sequenced_pair(adj, left.id, right.id):
+                continue
+            overlaps = [
+                (l_scope, r_scope)
+                for l_scope in left.scope_paths
+                for r_scope in right.scope_paths
+                if _scope_overlaps(l_scope, r_scope)
+            ]
+            if not overlaps:
+                continue
+            overlap_preview = ", ".join(
+                f"{l_scope} <-> {r_scope}" for l_scope, r_scope in overlaps[:3]
+            )
+            issues.append(
+                {
+                    "field": "tasks",
+                    "msg": (
+                        f"parallel concrete tasks '{left.id}' and '{right.id}' share overlapping "
+                        f"scope_paths ({overlap_preview}) but have no sequencing dependency"
+                    ),
+                }
+            )
+    return issues
+
+
 def _validator_dependency_issues(items: list[TaskSpec]) -> list[Issue]:
     issues: list[Issue] = []
     terminal_leaf_ids = _terminal_non_validator_leaf_ids(items)
@@ -198,6 +293,7 @@ def validate_plan(
             require_reviewer_for_plan_size=require_reviewer_for_plan_size,
         )
     )
+    issues.extend(_crowded_layer_expandability_issues(plan.tasks))
     issues.extend(_validator_dependency_issues(plan.tasks))
 
     task_ids: set[str] = set()
@@ -255,6 +351,8 @@ def validate_plan(
                             "msg": f"unknown dep reference '{dep}'",
                         }
                     )
+
+    issues.extend(_shared_scope_conflict_issues(plan.tasks, adj))
 
     if _has_cycle(adj):
         issues.append({"field": "tasks", "msg": "cycle detected in submitted Plan"})

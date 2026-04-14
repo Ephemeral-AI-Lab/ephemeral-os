@@ -105,10 +105,10 @@ EVAL_CASES = [
     ),
     # -- Code intelligence operations --
     EvalCase(
-        name="hover_info",
-        prompt="What is the type of the symbol at line 15, column 10 in src/main.py?",
-        expected_tools=["ci_hover"],
-        required_params={"ci_hover": ["file_path", "line"]},
+        name="check_diagnostics",
+        prompt="Check if src/main.py has any syntax or type errors.",
+        expected_tools=["ci_diagnostics"],
+        required_params={"ci_diagnostics": ["file_path"]},
     ),
     EvalCase(
         name="goto_definition",

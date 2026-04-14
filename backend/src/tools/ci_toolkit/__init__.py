@@ -4,19 +4,16 @@ from tools.core.base import BaseToolkit
 from tools.ci_toolkit.query_tools import (
     ci_status,
     ci_edit_hotspots,
-    ci_query_symbols,
-    ci_query_references,
+    ci_query_symbol,
     ci_workspace_structure,
 )
 from tools.ci_toolkit.file_tools import ci_read_file
-from tools.ci_toolkit.lsp_tools import ci_diagnostics, ci_hover
+from tools.ci_toolkit.lsp_tools import ci_diagnostics
 
 _ALL_TOOLS = [
     ci_status,
     ci_workspace_structure,
-    ci_query_symbols,
-    ci_query_references,
-    ci_hover,
+    ci_query_symbol,
     ci_diagnostics,
     ci_edit_hotspots,
     ci_read_file,
@@ -26,23 +23,18 @@ _INSTRUCTIONS = (
     "Read-only code intelligence for grounding same-run work.\n\n"
     "## CI-first discovery rule\n"
     "Always start with CI tools before falling back to grep or raw file reads:\n"
-    "1. `ci_query_symbols(name)` — find where a function/class/method is defined. "
+    "1. `ci_query_symbol(name)` — find where a function/class/method is defined. "
     "Use this first when you need to locate code, not grep.\n"
-    "2. `ci_query_references(symbol)` — trace all callers and import sites. "
-    "Use this to follow import chains and find who depends on a symbol.\n"
-    "3. `ci_hover(file, line)` — get type signature and docstring at a position "
-    "without reading the whole file. Use this to check return types, parameter types, "
-    "and API contracts before diving into implementation.\n"
-    "4. `ci_diagnostics(file)` — check for errors after edits, before running full test suites.\n"
+    "2. `ci_query_symbol(name, references=true)` — also trace all callers and import sites. "
+    "Use this to follow import chains and find who depends on a symbol before editing it.\n"
+    "3. `ci_diagnostics(file)` — check for errors after edits, before running full test suites.\n"
     "Only fall back to `daytona_grep`/`daytona_read_file` when CI tools return no results "
     "(cold index) or when you need content not captured by symbol queries.\n\n"
     "## Typical CI workflow\n"
-    "- Localizing a bug: `ci_query_symbols` → find definition → `ci_query_references` → "
-    "trace callers → `ci_hover` on suspicious call sites → read only the relevant lines.\n"
-    "- Tracing an import chain: `ci_query_symbols(name)` → get file:line → "
-    "`ci_query_references(name)` → see all import sites and usages.\n"
-    "- Checking edit safety: `ci_query_references` on the symbol you plan to change → "
-    "see all downstream callers → `ci_diagnostics` after patching.\n\n"
+    "- Localizing a bug: `ci_query_symbol(name)` → find definition → "
+    "`ci_query_symbol(name, references=true)` → trace callers → read only the relevant lines.\n"
+    "- Checking edit safety: `ci_query_symbol(name, references=true)` on the symbol you plan "
+    "to change → see all downstream callers → `ci_diagnostics` after patching.\n\n"
     "## Other tools\n"
     "- `ci_status` — check if the code intelligence service is available.\n"
     "- `ci_workspace_structure` — tree view of the project layout.\n"
@@ -50,9 +42,9 @@ _INSTRUCTIONS = (
     "Use `cross_run=True` for cross-run multi-agent contention data.\n"
     "- `ci_read_file` — read file contents via the CI service when sandbox tools are unavailable.\n\n"
     "## Anti-patterns\n"
-    "- Do not grep for a symbol name when `ci_query_symbols` can find its definition directly.\n"
-    "- Do not read an entire file to find a function signature when `ci_hover` returns it in one call.\n"
-    "- Do not trace callers by grepping import statements when `ci_query_references` maps the full call graph.\n"
+    "- Do not grep for a symbol name when `ci_query_symbol` can find its definition directly.\n"
+    "- Do not trace callers by grepping import statements when `ci_query_symbol(name, references=true)` "
+    "maps the full call graph.\n"
     "- Dead-cycle rule — if the same boundary survives one scoped packet, one owner query, "
     "and one narrow repro, stop opening more greps or readbacks and move to edit, blocker, or replan."
 )

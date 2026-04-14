@@ -1,12 +1,8 @@
 # ruff: noqa
-"""E2E: ci_hover and ci_query_references with character=0 on indented lines.
+"""E2E: ci_query_references with symbol-index-first approach.
 
-Exercises the bug where ci_hover and ci_query_references return empty when
-called with character=0 on indented lines. Jedi's help()/get_references()
-receive column=0 (whitespace) and find nothing.
-
-The fix adds _resolve_column in LspClient which auto-detects the first
-non-whitespace column when character=0.
+Verifies that ci_query_references resolves symbols via the index,
+then calls LSP with correct coordinates.
 
 Run with: pytest tests/test_e2e/test_ci_hover_resolve_column_live.py -v -m live
 """
@@ -22,7 +18,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from tools.core.base import ToolExecutionContext
-from tools.ci_toolkit.lsp_tools import ci_hover
 from tools.ci_toolkit.query_tools import ci_query_references
 
 pytestmark = [pytest.mark.e2e]
@@ -49,36 +44,6 @@ def _svc_stub(*, workspace_root: str = "/testbed", initialized: bool = True) -> 
 # ---------------------------------------------------------------------------
 # Unit: mock-based tests to verify the fix wiring
 # ---------------------------------------------------------------------------
-
-
-class TestHoverResolveColumnUnit:
-    """Verify ci_hover passes resolved character to svc.hover()."""
-
-    async def test_hover_passes_character_unchanged_when_nonzero(self):
-        """Non-zero character is forwarded as-is to svc.hover()."""
-        hover_result = MagicMock(content="def foo()", language="python")
-        svc = MagicMock()
-        svc.hover.return_value = hover_result
-        ctx = _ctx({"ci_service": svc})
-
-        await ci_hover.execute(
-            ci_hover.input_model(file_path="/f.py", line=10, character=5),
-            ctx,
-        )
-        svc.hover.assert_called_once_with("/f.py", 10, 5)
-
-    async def test_hover_character_zero_forwarded(self):
-        """character=0 is forwarded to svc.hover (resolution happens in LspClient)."""
-        svc = MagicMock()
-        svc.hover.return_value = None
-        ctx = _ctx({"ci_service": svc})
-
-        await ci_hover.execute(
-            ci_hover.input_model(file_path="/f.py", line=10, character=0),
-            ctx,
-        )
-        # ci_hover tool passes character=0 through; LspClient._resolve_column handles it
-        svc.hover.assert_called_once_with("/f.py", 10, 0)
 
 
 class TestReferencesResolveColumnUnit:
@@ -173,74 +138,6 @@ def _build_ci_context(sandbox_id: str) -> tuple[Any, ToolExecutionContext]:
 
 @pytest.mark.live
 @pytest.mark.asyncio
-class TestLiveHoverResolveColumn:
-    """Live: ci_hover returns results for indented symbols with character=0."""
-
-    async def test_hover_indented_method_character_zero(self, live_sandbox_id):
-        """Hover on 'def start(self)' at character=0 should return docstring."""
-        ci_svc, ctx = _build_ci_context(live_sandbox_id)
-        workspace_root = ci_svc.workspace_root
-
-        # EVAL_SANDBOX_FILES src/main.py line 32: "    def start(self) -> None:"
-        # character=0 lands on whitespace — _resolve_column should fix this
-        result = await ci_hover.execute(
-            ci_hover.input_model(
-                file_path=f"{workspace_root}/src/main.py",
-                line=32,
-                character=0,
-            ),
-            ctx,
-        )
-
-        assert not result.is_error, f"ci_hover error: {result.output}"
-        # Should NOT say "No hover information" — the fix should resolve the column
-        assert "No hover information" not in result.output, (
-            f"Hover returned empty for indented method with character=0: {result.output}"
-        )
-        data = json.loads(result.output)
-        assert data.get("content"), f"Empty hover content: {data}"
-
-    async def test_hover_top_level_function_character_zero(self, live_sandbox_id):
-        """Hover on top-level 'def get_config()' at character=0 should work."""
-        ci_svc, ctx = _build_ci_context(live_sandbox_id)
-        workspace_root = ci_svc.workspace_root
-
-        # EVAL_SANDBOX_FILES src/main.py line 9: "def get_config() -> dict:"
-        result = await ci_hover.execute(
-            ci_hover.input_model(
-                file_path=f"{workspace_root}/src/main.py",
-                line=9,
-                character=0,
-            ),
-            ctx,
-        )
-
-        assert not result.is_error
-        assert "No hover information" not in result.output, (
-            f"Hover failed for top-level function: {result.output}"
-        )
-
-    async def test_hover_class_character_zero(self, live_sandbox_id):
-        """Hover on 'class App' at character=0 should return class info."""
-        ci_svc, ctx = _build_ci_context(live_sandbox_id)
-        workspace_root = ci_svc.workspace_root
-
-        # EVAL_SANDBOX_FILES src/main.py line 25: "class App:"
-        result = await ci_hover.execute(
-            ci_hover.input_model(
-                file_path=f"{workspace_root}/src/main.py",
-                line=25,
-                character=0,
-            ),
-            ctx,
-        )
-
-        assert not result.is_error
-        assert "No hover information" not in result.output
-
-
-@pytest.mark.live
-@pytest.mark.asyncio
 class TestLiveReferencesResolveColumn:
     """Live: ci_query_references finds refs for indented symbols with character=0."""
 
@@ -279,38 +176,3 @@ class TestLiveReferencesResolveColumn:
         )
 
 
-@pytest.mark.live
-@pytest.mark.asyncio
-class TestLiveAgentHoverResolveColumn:
-    """Live agent test: agent uses ci_hover on indented symbols."""
-
-    async def test_agent_hover_indented_method(self, live_sandbox_id):
-        """Agent calling ci_hover on an indented method should get results."""
-        if not EvalAgent.has_all():
-            pytest.skip("LLM + Daytona credentials required")
-
-        agent = create_eval_agent(
-            sandbox_id=live_sandbox_id,
-            toolkits=["sandbox_operations", "code_intelligence"],
-            system_prompt=(
-                "You have a remote sandbox with Python files in src/. "
-                "When asked to get hover info, ONLY use ci_hover. "
-                "Be concise."
-            ),
-        )
-
-        result = await agent.invoke(
-            "Use ci_hover to get hover info for file_path='src/main.py' "
-            "line=32 character=0. This is the 'start' method of the App class."
-        )
-
-        completed = result.tools_completed()
-        hover_calls = [e for e in completed if e.tool_name == "ci_hover"]
-        assert hover_calls, (
-            f"Expected ci_hover to be called, but agent used: "
-            f"{[t.name for t in result.tool_calls]}"
-        )
-        for call in hover_calls:
-            assert "No hover information" not in (call.output or ""), (
-                f"ci_hover returned empty for indented method: {call.output}"
-            )

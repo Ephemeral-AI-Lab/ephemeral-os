@@ -446,105 +446,7 @@ async def ci_workspace_structure(
     )
 
 
-# -- Symbol Query -------------------------------------------------------------
-
-
-@tool(
-    name="ci_query_symbols",
-    description=(
-        "Find where a function, class, method, or variable is defined across the entire codebase. "
-        "Returns file path, line number, and signature. "
-        "ALWAYS prefer this over daytona_grep or manual file reads when you know a symbol name — "
-        "it is faster, cheaper, and searches the full index. "
-        "Example: ci_query_symbols('PANDAS_GT_200') instantly locates the version gate "
-        "instead of grepping file by file."
-    ),
-    read_only=True,
-)
-async def ci_query_symbols(
-    query: str,
-    kind: str = "",
-    *,
-    context: ToolExecutionContext,
-) -> ToolResult:
-    """Search for symbols by name.
-
-    Args:
-        query: Symbol name or partial name to search for
-        kind: Filter by kind: function, class, method, variable
-
-    Returns:
-        symbols (list): Matching symbol entries
-    """
-    svc, err = _svc_or_error(context)
-    if err:
-        return err
-
-    from code_intelligence.types import SymbolKind
-
-    kind_filter = None
-    if kind:
-        try:
-            kind_filter = SymbolKind(kind.lower())
-        except ValueError:
-            pass
-
-    workspace_root = str(getattr(svc, "workspace_root", "") or "")
-    _maybe_warm_service(context, svc, label="ci_query_symbols")
-
-    agent_name = str((context.metadata or {}).get("agent_name") or "").strip()
-    drop_text_matches = agent_name == "team_planner"
-
-    results = svc.query_symbols(query)
-    if kind_filter:
-        results = [s for s in results if s.kind == kind_filter]
-    if drop_text_matches:
-        results = [
-            s
-            for s in results
-            if (
-                (getattr(getattr(s, "kind", None), "value", None) or str(getattr(s, "kind", "")))
-                != "text_match"
-            )
-        ]
-
-    if not results:
-        fallback_matches: list[dict[str, Any]] = []
-        local_matches = _local_query_symbols(
-            workspace_root=workspace_root,
-            query=query,
-            kind=kind,
-        )
-        if local_matches:
-            fallback_matches.extend(local_matches)
-        remote_matches = await _remote_query_symbols(context, query=query, kind=kind)
-        if remote_matches:
-            fallback_matches.extend(remote_matches)
-        fallback_matches = _dedupe_matches(fallback_matches)
-        if drop_text_matches:
-            fallback_matches = [
-                match for match in fallback_matches if str(match.get("kind") or "") != "text_match"
-            ]
-        if fallback_matches:
-            return ToolResult(output=json.dumps(fallback_matches, indent=2))
-        return ToolResult(output=f"No symbols matching '{query}'")
-
-    symbols = []
-    for s in results[:100]:
-        symbols.append(
-            {
-                "name": s.name,
-                "kind": s.kind.value if hasattr(s.kind, "value") else str(s.kind),
-                "file": s.file_path,
-                "line": s.line,
-                "signature": s.signature,
-            }
-        )
-
-    return ToolResult(output=json.dumps(symbols, indent=2))
-
-
-# -- Symbol References --------------------------------------------------------
+# -- Symbol Query (unified) ---------------------------------------------------
 
 
 _MAX_REFERENCE_DEFINITIONS = 5
@@ -602,73 +504,116 @@ def _resolve_symbol_column(svc: Any, file_path: str, line: int, symbol_name: str
 
 
 @tool(
-    name="ci_query_references",
+    name="ci_query_symbol",
     description=(
-        "Find all callers, import sites, and usages of a symbol across the codebase. "
-        "Uses the symbol index to locate definitions, then LSP to trace references. "
-        "Essential before patching: shows every file that will break if you change a symbol."
+        "Find where a symbol is defined across the codebase, and optionally trace all its "
+        "callers and import sites. Returns file path, line number, kind, and signature for each "
+        "definition. With references=true, also returns every usage site via LSP — essential "
+        "before patching to see the full blast radius. "
+        "ALWAYS prefer this over daytona_grep when you know a symbol name."
     ),
     read_only=True,
 )
-async def ci_query_references(
-    symbol: str,
+async def ci_query_symbol(
+    query: str,
+    kind: str = "",
+    references: bool = False,
     *,
     context: ToolExecutionContext,
 ) -> ToolResult:
-    """Find all references to a symbol across files.
-
-    Resolves the symbol via the symbol index first, then queries LSP with
-    the correct file/line/column coordinates.  Falls back to returning
-    definitions with ``confidence: unavailable`` when LSP is cold.
+    """Search for symbol definitions and optionally trace references.
 
     Args:
-        symbol: Symbol name to find references for
+        query: Symbol name or partial name to search for
+        kind: Filter by kind: function, class, method, variable
+        references: If true, also trace all callers/import sites via LSP
 
     Returns:
-        refs (list): Reference locations with file, line, text
+        definitions (list): Matching symbol entries with name, kind, file, line, signature.
+        references (list, optional): Usage sites when references=true.
     """
     svc, err = _svc_or_error(context)
     if err:
         return err
 
-    _maybe_warm_service(context, svc, label="ci_query_references")
+    from code_intelligence.types import SymbolKind
 
-    symbol_index = getattr(svc, "symbol_index", None)
-    if symbol_index is None or not getattr(symbol_index, "is_built", False):
-        return ToolResult(
-            output=json.dumps(
-                {
-                    "references": [],
-                    "total_references": 0,
-                    "confidence": "unavailable",
-                    "message": "Symbol index not ready — try again after CI warmup.",
-                },
-                indent=2,
-            )
-        )
+    kind_filter = None
+    if kind:
+        try:
+            kind_filter = SymbolKind(kind.lower())
+        except ValueError:
+            pass
 
     workspace_root = str(getattr(svc, "workspace_root", "") or "")
-    definitions = sorted(
-        symbol_index.find(symbol),
+    _maybe_warm_service(context, svc, label="ci_query_symbol")
+
+    agent_name = str((context.metadata or {}).get("agent_name") or "").strip()
+    drop_text_matches = agent_name == "team_planner"
+
+    results = svc.query_symbols(query)
+    if kind_filter:
+        results = [s for s in results if s.kind == kind_filter]
+    if drop_text_matches:
+        results = [
+            s
+            for s in results
+            if (
+                (getattr(getattr(s, "kind", None), "value", None) or str(getattr(s, "kind", "")))
+                != "text_match"
+            )
+        ]
+
+    if not results:
+        fallback_matches: list[dict[str, Any]] = []
+        local_matches = _local_query_symbols(
+            workspace_root=workspace_root,
+            query=query,
+            kind=kind,
+        )
+        if local_matches:
+            fallback_matches.extend(local_matches)
+        remote_matches = await _remote_query_symbols(context, query=query, kind=kind)
+        if remote_matches:
+            fallback_matches.extend(remote_matches)
+        fallback_matches = _dedupe_matches(fallback_matches)
+        if drop_text_matches:
+            fallback_matches = [
+                match for match in fallback_matches if str(match.get("kind") or "") != "text_match"
+            ]
+        if fallback_matches:
+            output: dict[str, Any] = {"definitions": fallback_matches}
+            if references:
+                output["references"] = []
+                output["confidence"] = "unavailable"
+            return ToolResult(output=json.dumps(output, indent=2))
+        return ToolResult(output=f"No symbols matching '{query}'")
+
+    definitions = []
+    for s in results[:100]:
+        definitions.append(
+            {
+                "name": s.name,
+                "kind": s.kind.value if hasattr(s.kind, "value") else str(s.kind),
+                "file": s.file_path,
+                "line": s.line,
+                "signature": s.signature,
+            }
+        )
+
+    if not references:
+        return ToolResult(output=json.dumps({"definitions": definitions}, indent=2))
+
+    # -- Trace references via LSP ---------------------------------------------
+
+    sorted_defs = sorted(
+        results,
         key=lambda d: _reference_definition_priority(workspace_root, d),
     )[:_MAX_REFERENCE_DEFINITIONS]
 
-    if not definitions:
-        return ToolResult(
-            output=json.dumps(
-                {
-                    "references": [],
-                    "total_references": 0,
-                    "confidence": "full",
-                    "message": f"No symbol named '{symbol}' found in index",
-                },
-                indent=2,
-            )
-        )
-
-    references: list[dict[str, Any]] = []
+    ref_list: list[dict[str, Any]] = []
     used_lsp = False
-    for defn in definitions:
+    for defn in sorted_defs:
         try:
             col = _resolve_symbol_column(
                 svc, defn.file_path, defn.line, defn.name,
@@ -679,25 +624,25 @@ async def ci_query_references(
             if lsp_refs:
                 used_lsp = True
                 for ref in lsp_refs:
-                    references.append(
+                    ref_list.append(
                         {
                             "file": ref.file_path,
                             "line": ref.line,
                             "text": getattr(ref, "text", ""),
                         }
                     )
-                    if len(references) >= _MAX_REFERENCES:
+                    if len(ref_list) >= _MAX_REFERENCES:
                         break
         except Exception:
-            logger.debug("LSP find_references failed for %s", symbol, exc_info=True)
-        if used_lsp and references:
+            logger.debug("LSP find_references failed for %s", query, exc_info=True)
+        if used_lsp and ref_list:
             break
-        if len(references) >= _MAX_REFERENCES:
+        if len(ref_list) >= _MAX_REFERENCES:
             break
 
     if not used_lsp:
-        for defn in definitions:
-            references.append(
+        for defn in sorted_defs:
+            ref_list.append(
                 {
                     "file": defn.file_path,
                     "line": defn.line,
@@ -705,17 +650,22 @@ async def ci_query_references(
                 }
             )
 
-    confidence = "full" if used_lsp else "unavailable"
     return ToolResult(
         output=json.dumps(
             {
-                "references": references[:_MAX_REFERENCES],
-                "total_references": len(references),
-                "confidence": confidence,
+                "definitions": definitions,
+                "references": ref_list[:_MAX_REFERENCES],
+                "total_references": len(ref_list),
+                "confidence": "full" if used_lsp else "unavailable",
             },
             indent=2,
         )
     )
+
+
+# Backward-compatible aliases so existing imports still work.
+ci_query_symbols = ci_query_symbol
+ci_query_references = ci_query_symbol
 
 
 # -- Edit Hotspots ------------------------------------------------------------

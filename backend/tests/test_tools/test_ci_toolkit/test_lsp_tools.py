@@ -1,4 +1,4 @@
-"""Tests for hover and diagnostics tools in tools.ci_toolkit.lsp_tools."""
+"""Tests for diagnostics tool in tools.ci_toolkit.lsp_tools."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ import pytest
 
 from code_intelligence.lsp.client import LspClient
 from tools.core.base import ToolExecutionContext
-from tools.ci_toolkit.lsp_tools import ci_diagnostics, ci_hover
+from tools.ci_toolkit.lsp_tools import ci_diagnostics
 
 
 def _ctx(metadata=None) -> ToolExecutionContext:
@@ -21,42 +21,6 @@ def _ctx(metadata=None) -> ToolExecutionContext:
 
 def _ctx_with_svc(svc) -> ToolExecutionContext:
     return _ctx({"ci_service": svc})
-
-
-def test_hover_no_service_returns_error():
-    ctx = _ctx()
-    result = asyncio.run(
-        ci_hover.execute(ci_hover.input_model(file_path="/f.py", line=1), ctx)
-    )
-    assert result.is_error
-    assert "LSP not available" in result.output
-
-
-def test_hover_no_result():
-    svc = MagicMock()
-    svc.hover.return_value = None
-    ctx = _ctx_with_svc(svc)
-    result = asyncio.run(
-        ci_hover.execute(ci_hover.input_model(file_path="/f.py", line=5, character=3), ctx)
-    )
-    assert not result.is_error
-    assert "No hover information" in result.output
-
-
-def test_hover_success():
-    hover_result = MagicMock(content="int foo()", language="python")
-    svc = MagicMock()
-    svc.hover.return_value = hover_result
-    ctx = _ctx({"ci_service": svc, "daytona_cwd": "/ws"})
-    result = asyncio.run(
-        ci_hover.execute(ci_hover.input_model(file_path="/f.py", line=10, character=5), ctx)
-    )
-    assert not result.is_error
-    data = json.loads(result.output)
-    assert data["content"] == "int foo()"
-    assert data["language"] == "python"
-    assert data["cwd"] == "/ws"
-    svc.hover.assert_called_once_with("/f.py", 10, 5)
 
 
 def test_diagnostics_no_service_returns_error():
@@ -215,40 +179,6 @@ except ImportError:
     pass
 
 _skip_no_jedi = pytest.mark.skipif(not _has_jedi, reason="jedi not installed")
-
-
-@_skip_no_jedi
-class TestHoverWithResolveColumn:
-    """Verify hover returns results when character=0 on indented lines."""
-
-    def test_hover_indented_def_local(self, tmp_path):
-        """Hover on an indented method with character=0 should return results."""
-        content = textwrap.dedent("""\
-            class MyClass:
-                def my_method(self, x: int) -> str:
-                    \"\"\"Convert x to string.\"\"\"
-                    return str(x)
-        """)
-        f = tmp_path / "sample.py"
-        f.write_text(content, encoding="utf-8")
-        client = LspClient(workspace_root=str(tmp_path))
-
-        # character=0 should auto-resolve to column 4 (the 'd' in 'def')
-        result = client.hover(str(f), 2, 0)
-        assert result is not None, (
-            "hover returned None for indented method with character=0 "
-            "(resolve_column should have fixed the column)"
-        )
-
-    def test_hover_explicit_column_still_works(self, tmp_path):
-        """Explicit non-zero column should work as before."""
-        content = "def top_level():\n    pass\n"
-        f = tmp_path / "sample.py"
-        f.write_text(content, encoding="utf-8")
-        client = LspClient(workspace_root=str(tmp_path))
-
-        result = client.hover(str(f), 1, 4)  # 't' in 'top_level'
-        assert result is not None
 
 
 @_skip_no_jedi

@@ -1,7 +1,7 @@
 # ruff: noqa
-"""E2E: ci_query_references symbol-index-first approach for planner agents.
+"""E2E: ci_query_symbol symbol-index-first approach for planner agents.
 
-Tests that ci_query_references uses the symbol index to resolve definitions,
+Tests that ci_query_symbol uses the symbol index to resolve definitions,
 then queries LSP with correct coordinates — eliminating the old ripgrep
 fallback chain that was unreliable in planner/sandbox contexts.
 
@@ -17,7 +17,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from tools.core.base import ToolExecutionContext
-from tools.ci_toolkit.query_tools import ci_query_references
+from tools.ci_toolkit.query_tools import ci_query_symbol
 
 pytestmark = [pytest.mark.e2e]
 
@@ -37,6 +37,7 @@ def _make_defn(name: str, file_path: str, line: int, kind_value: str = "function
     defn.file_path = file_path
     defn.line = line
     defn.kind.value = kind_value
+    defn.signature = f"{kind_value} {name}"
     return defn
 
 
@@ -53,6 +54,7 @@ def _svc_stub(
     svc.workspace_root = workspace_root
     svc.symbol_index.is_built = is_built
     svc.symbol_index.find.return_value = symbols or []
+    svc.query_symbols.return_value = symbols or []
     svc.find_references.return_value = refs or []
     svc.tree_cache = None
     svc.lsp_client = MagicMock()
@@ -86,8 +88,8 @@ class TestCIQueryReferencesSymbolIndex:
         })
 
         with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
-            result = await ci_query_references.execute(
-                ci_query_references.input_model(symbol="Engine"),
+            result = await ci_query_symbol.execute(
+                ci_query_symbol.input_model(query="Engine", references=True),
                 ctx,
             )
 
@@ -113,8 +115,8 @@ class TestCIQueryReferencesSymbolIndex:
         })
 
         with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
-            result = await ci_query_references.execute(
-                ci_query_references.input_model(symbol="fs_copy"),
+            result = await ci_query_symbol.execute(
+                ci_query_symbol.input_model(query="fs_copy", references=True),
                 ctx,
             )
 
@@ -135,35 +137,28 @@ class TestCIQueryReferencesSymbolIndex:
         })
 
         with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
-            result = await ci_query_references.execute(
-                ci_query_references.input_model(symbol="nonexistent"),
+            result = await ci_query_symbol.execute(
+                ci_query_symbol.input_model(query="nonexistent", references=True),
                 ctx,
             )
 
-        data = json.loads(result.output)
-        assert data["total_references"] == 0
-        assert data["confidence"] == "full"
-        assert "No symbol named" in data["message"]
+        assert "No symbols matching" in result.output
 
-    async def test_index_not_built_returns_unavailable(self):
-        """When symbol index is not built, returns unavailable status."""
-        svc = _svc_stub(is_built=False, initialized=False)
-
+    async def test_no_service_returns_unavailable(self):
+        """When CI service is not available, returns unavailable status."""
         ctx = _ctx({
-            "ci_service": svc,
             "sandbox_id": "sb-planner",
             "daytona_cwd": "/testbed",
         })
 
-        with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
-            result = await ci_query_references.execute(
-                ci_query_references.input_model(symbol="Engine"),
+        with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=None):
+            result = await ci_query_symbol.execute(
+                ci_query_symbol.input_model(query="Engine", references=True),
                 ctx,
             )
 
         data = json.loads(result.output)
-        assert data["confidence"] == "unavailable"
-        assert "not ready" in data["message"]
+        assert data["status"] == "unavailable"
 
     async def test_prefers_production_definitions_over_test(self):
         """Production files are queried before test files."""
@@ -180,8 +175,8 @@ class TestCIQueryReferencesSymbolIndex:
         })
 
         with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
-            result = await ci_query_references.execute(
-                ci_query_references.input_model(symbol="CmdDiff"),
+            result = await ci_query_symbol.execute(
+                ci_query_symbol.input_model(query="CmdDiff", references=True),
                 ctx,
             )
 
@@ -219,10 +214,10 @@ def live_sandbox_id():
 @pytest.mark.live
 @pytest.mark.asyncio
 class TestLiveSymbolIndexReferences:
-    """Live sandbox tests for symbol-index-first ci_query_references."""
+    """Live sandbox tests for symbol-index-first ci_query_symbol."""
 
     async def test_live_references_via_symbol_index(self, live_sandbox_id):
-        """Live: ci_query_references finds references using symbol index + LSP."""
+        """Live: ci_query_symbol finds references using symbol index + LSP."""
         from sandbox.service import SandboxService
         from sandbox.workspace import discover_workspace, inject_code_intelligence
 
@@ -245,8 +240,8 @@ class TestLiveSymbolIndexReferences:
             "agent_name": "team_planner",
         })
 
-        result = await ci_query_references.execute(
-            ci_query_references.input_model(symbol="App"),
+        result = await ci_query_symbol.execute(
+            ci_query_symbol.input_model(query="App", references=True),
             planner_ctx,
         )
 

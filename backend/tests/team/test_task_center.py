@@ -394,12 +394,56 @@ def test_context_for_walks_parent_chain_via_internal_get_task():
     assert "parent reasoning" in ctx
 
 
+def test_context_for_dedupes_parent_notes_by_task_id():
+    tc = _tc()
+    _run(tc.post(_note("n1", "parent-task", "stale parent note", agent_name="team_planner (auto)", timestamp=100.0)))
+    _run(tc.post(_note("n2", "parent-task", "fresh parent note", agent_name="team_planner (auto)", timestamp=200.0)))
+    task = _task("work-1", task="child task", parent_id="parent-task")
+
+    parent = _task("parent-task", task="parent")
+
+    async def _mock_get_task(task_id):
+        return parent if task_id == "parent-task" else None
+
+    tc.get_task = _mock_get_task
+
+    ctx = _run(tc.context_for(task))
+    assert "fresh parent note" in ctx
+    assert "stale parent note" not in ctx
+
+
 def test_context_for_no_parent_notes_when_parent_id_is_none():
     tc = _tc()
     _run(tc.post(_note("n1", "some-task", "context")))
     task = _task("work-1", task="root level task")
     ctx = _run(tc.context_for(task))
     assert "Parent context" not in ctx
+
+
+def test_check_falls_back_when_checkpoint_note_generation_raises(monkeypatch):
+    tc = _tc()
+    tc.graph["t1"] = Task(
+        id="t1",
+        team_run_id="run-1",
+        agent_name="developer",
+        status=TaskStatus.RUNNING,
+        task="fix parser",
+    )
+    for _ in range(10):
+        tc.tick("t1")
+
+    async def _boom(**_kwargs):
+        raise RuntimeError("llm unavailable")
+
+    monkeypatch.setattr("external_trigger.tc_note.run_checkpoint_note", _boom)
+
+    result = _run(tc.check("t1", snapshot=[{"role": "user", "content": "status"}], api_client=object()))
+
+    assert result is True
+    notes = _run(tc.read())
+    assert len(notes) == 1
+    assert "Auto-checkpoint" in notes[0].content
+    assert "10 turns" in notes[0].content
 
 
 def test_context_for_respects_max_context_bytes():

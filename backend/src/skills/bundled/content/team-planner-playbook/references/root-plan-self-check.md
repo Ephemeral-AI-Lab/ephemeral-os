@@ -10,6 +10,7 @@ Use this reference after decomposition examples and immediately before `plan-jso
 - You repaired a scout-disproved file or tests-only directory into a sibling exact file using only `ci_workspace_structure(...)`, package listings, or import-name intuition.
 - Your draft adds a root lane whose main purpose is to describe a benchmark mismatch instead of assigning confirmed work.
 - A package path, directory path, or broad single file survived the explorer wave but no child planner owns its internal split.
+- Your draft has more than 6 concrete non-validator lanes and zero residual `team_planner` lanes.
 - An atomic leftovers lane owns several unrelated exact files even though one child planner could schedule them without another explorer wave.
 - The terminal validator widened to a repo-scale command mainly because the parent layer flattened everything, or you still need to refresh notes after a scope-change signal.
 - You are still recounting tests or rewriting the same ownership summary even though the gate is already satisfied.
@@ -24,6 +25,7 @@ Use this reference after decomposition examples and immediately before `plan-jso
 - Replace any mismatch-only lane with the confirmed production owner or remove it from this layer.
 - Promote package or directory slices to `team_planner` when their next decision is internal decomposition.
 - Promote a broad single file to `team_planner` when families or verification surfaces inside it are still separable.
+- If a crowded layer flattened into all-developer execution, convert at least one broad, shared-risk, or still-multi-file branch back into `team_planner`.
 - Replace any atomic leftovers lane that owns unrelated exact files with either direct leaves, one residual child planner, or a return to explorer launching for any still-nameable exact owner.
 - If the layer already has at least one direct leaf plus one residual expandable lane, stop repairing and submit.
 

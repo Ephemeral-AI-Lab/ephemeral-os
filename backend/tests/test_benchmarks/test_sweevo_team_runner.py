@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from collections import Counter
 import json
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -147,7 +148,8 @@ def test_root_prompt_points_to_skill_owned_workflow_policy():
 
     assert "The SWE-EVO test patch has already been applied inside the sandbox" in prompt
     assert "This run is primarily evaluating the coordination behavior described in" in prompt
-    assert "`docs/architecture/plan-a-team-coordination-redesign.md`" in prompt
+    assert "`docs/architecture/task-center-redesign-summary.md`" in prompt
+    assert "`docs/architecture/plan-a-team-coordination-redesign.md`" not in prompt
     assert "let the declared skills own the detailed workflow policy" in prompt
     assert "Task Center, scout waves, scoped-path freshness, and recovery/replanning loop" in prompt
     assert "per-layer cap of 16 tasks as a budgeting guardrail" in prompt
@@ -189,6 +191,53 @@ def test_agent_overrides_attach_sweevo_skills_without_prompt_duplication():
     assert "system_prompt" not in overrides[TEAM_REPLANNER]
     assert "sweevo-project-context" in overrides[TEAM_REPLANNER]["skills"]
     assert overrides[TEAM_REPLANNER]["tool_call_limit"] == 50
+
+
+@pytest.mark.asyncio
+async def test_root_planner_runtime_prompt_hides_posthook_tool_names():
+    build_query_ctx = _make_context_builders("sbx-1", repo_dir="/testbed")
+    ctx = await build_query_ctx(
+        SimpleNamespace(name="team_planner", role="planner", posthook=["submit_plan"]),
+        SimpleNamespace(
+            id="TR1",
+            sandbox_id="sbx-1",
+            user_request="Root plan the repo.",
+            task_center=SimpleNamespace(context_for=AsyncMock(return_value=""), graph={}),
+            budgets=None,
+            budget_state=None,
+            project_context=SimpleNamespace(repo_root="/testbed"),
+            coordination_metadata={},
+            file_change_store=None,
+        ),
+        Task(
+            id="W1",
+            team_run_id="T1",
+            agent_name="team_planner",
+            status=TaskStatus.PENDING,
+            task="Root planning task",
+            depth=0,
+        ),
+    )
+
+    assert ctx.user_message == "Root plan the repo."
+    assert "submit_plan" not in ctx.user_message
+    assert ctx.tool_metadata["posthook_tool_names"] == ["submit_plan"]
+
+
+def test_build_benchmark_event_store_uses_project_local_team_run_dir(monkeypatch):
+    captured: dict[str, object] = {}
+    sentinel = object()
+
+    def fake_build_default_store(*, base_dir):
+        captured["base_dir"] = base_dir
+        return sentinel
+
+    monkeypatch.setattr(sweevo_team_runner, "build_default_store", fake_build_default_store)
+
+    store = sweevo_team_runner._build_benchmark_event_store(session_factory=object())
+
+    assert store is sentinel
+    assert captured["base_dir"] == sweevo_team_runner._benchmark_team_run_dir()
 
 
 def test_planner_runtime_limits_preserve_shared_agent_budget():
@@ -648,6 +697,135 @@ def test_make_runner_persists_work_result_and_final_snapshot(monkeypatch):
     assert ctx.tool_metadata["work_result"] == final_text
     assert "W1" in snapshots
     assert snapshots["W1"][-1]["role"] == "assistant"
+
+
+def test_make_runner_logs_tc_note_external_hook(monkeypatch, tmp_path: Path):
+    structured_log_path = tmp_path / "benchmark.events.jsonl"
+    raw_lines: list[tuple[str, str]] = []
+    checkpoint_calls: list[dict[str, object]] = []
+
+    class _Tracker:
+        run_id = "run-1"
+
+        def finish(self, **_: object) -> None:
+            return None
+
+    class _TaskCenter:
+        def __init__(self) -> None:
+            self._triggered = False
+
+        def tick(self, _task_id: str) -> None:
+            return None
+
+        def should_checkpoint(self, _task_id: str) -> str | None:
+            if self._triggered:
+                return None
+            self._triggered = True
+            return "turn"
+
+        async def check(
+            self,
+            task_id: str,
+            *,
+            snapshot: list[dict[str, object]] | None = None,
+            api_client: object | None = None,
+            model: str | None = None,
+        ) -> bool:
+            checkpoint_calls.append(
+                {
+                    "task_id": task_id,
+                    "snapshot": snapshot,
+                    "api_client": api_client,
+                    "model": model,
+                }
+            )
+            return True
+
+        def on_edit(self, _task_id: str, _file_path: str) -> None:
+            return None
+
+        def on_posthook(self, _task_id: str) -> None:
+            return None
+
+    snapshots: dict[str, list[dict[str, object]]] = {}
+
+    class _Conductor:
+        def register_snapshot(self, task_id: str, snapshot: list[dict[str, object]]) -> None:
+            snapshots[task_id] = snapshot
+
+    query_context = SimpleNamespace(
+        tool_metadata=ExecutionMetadata(session_config="cfg", sandbox_id="sbx-1"),
+        run_id="",
+        tool_call_limit=10,
+        tool_calls_used=0,
+        session_state=None,
+        api_messages_snapshot=[],
+        api_client=object(),
+        on_turn=None,
+    )
+
+    async def _fake_run(_prompt: str):
+        agent.display_messages = [
+            ConversationMessage(role="assistant", content=[TextBlock(text="Working through the task")])
+        ]
+        query_context.on_turn(list(agent.display_messages))
+        if False:
+            yield None
+
+    agent = SimpleNamespace(
+        query_context=query_context,
+        display_messages=[],
+        total_usage=SimpleNamespace(input_tokens=0, output_tokens=0),
+        model="test-model",
+        run=_fake_run,
+    )
+    fake_team_run = SimpleNamespace(
+        conductor=_Conductor(),
+        task_center=_TaskCenter(),
+    )
+
+    monkeypatch.setattr(
+        sweevo_team_runner,
+        "AgentRunTracker",
+        SimpleNamespace(create=lambda **_: _Tracker()),
+    )
+    monkeypatch.setattr(sweevo_team_runner, "spawn_agent", lambda *_args, **_kwargs: agent)
+    monkeypatch.setattr(sweevo_team_runner, "_estimate_final_context", lambda _messages: 0)
+    monkeypatch.setattr(sweevo_team_runner, "_persist_benchmark_session", lambda **_: None)
+    monkeypatch.setattr("team.runtime.registry.get", lambda _team_run_id: fake_team_run)
+
+    runner = _make_runner(
+        session_config=SimpleNamespace(session_id="sess-1"),
+        sandbox_id="sbx-1",
+        printer=SimpleNamespace(
+            raw_line=lambda who, body: raw_lines.append((who, body)),
+            emit=lambda _event: None,
+        ),
+        team_metrics={"structured_log_path": str(structured_log_path)},
+    )
+    ctx = sweevo_team_runner.TeamAgentContext(
+        user_message="Fix it",
+        tool_metadata=ExecutionMetadata(team_run_id="TR1", work_item_id="W1"),
+    )
+
+    asyncio.run(
+        runner(
+            SimpleNamespace(name="developer", model_copy=lambda update: SimpleNamespace(name="developer", **update)),
+            ctx,
+        )
+    )
+
+    assert checkpoint_calls and checkpoint_calls[0]["task_id"] == "W1"
+    assert checkpoint_calls[0]["model"] == "test-model"
+    assert snapshots["W1"][-1]["role"] == "assistant"
+
+    events = [json.loads(line) for line in structured_log_path.read_text(encoding="utf-8").splitlines()]
+    hook_events = [event for event in events if event.get("event") == "external_hook"]
+    assert [event["status"] for event in hook_events] == ["started", "completed"]
+    assert hook_events
+    assert all(event["hook"] == "tc_note" for event in hook_events)
+    assert any("status=started" in body for _, body in raw_lines)
+    assert any("status=completed" in body for _, body in raw_lines)
 
 
 def test_finalize_team_result_surfaces_retry_replan_and_checkpoint_metadata(monkeypatch):

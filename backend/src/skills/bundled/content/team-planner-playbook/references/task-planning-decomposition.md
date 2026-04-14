@@ -16,14 +16,14 @@ If any nameable first-wave explorer is still unlaunched, stop and return to laun
 
 ## Shared-file detection
 
-Before shaping the DAG, check whether any file appears in scout notes or `ci_query_references` results for more than one owner slice being split into parallel lanes. A file imported or modified by two planned developer scopes is a **shared file**.
+Before shaping the DAG, check whether any file appears in scout notes or `ci_query_symbol(..., references=true)` results for more than one owner slice being split into parallel lanes. A file imported or modified by two planned developer scopes is a **shared file**.
 
 When a shared file is found:
 - If one owner slice is the primary author and others only read it, assign the shared file to the primary author's scope and add a dep edge from consumers.
 - If both slices need to edit the shared file, create a dedicated sequenced `developer` task for that file and make both consumer lanes depend on it.
 - Never split a shared file across parallel developers with no dep edge between them.
 
-Use `ci_query_references(symbol)` on symbols that appear as imports in multiple scout notes to confirm cross-slice usage before finalising the DAG.
+Use `ci_query_symbol(..., references=true)(symbol)` on symbols that appear as imports in multiple scout notes to confirm cross-slice usage before finalising the DAG.
 
 ## DAG shaping rules
 

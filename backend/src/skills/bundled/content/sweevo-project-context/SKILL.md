@@ -35,6 +35,7 @@ Use this skill only for stable benchmark policy. Treat the prompt, payload, live
 
 - Must keep fresh roots live-first: one narrow production anchor, then at least one scout wave before root plan JSON.
 - Must split direct owner leaves early and leave unresolved or broad surfaces expandable. Never hide residual work behind placeholder lanes or one catch-all developer.
+- Must start developer and validator execution lanes with `read_notes(scope_paths=[...])` before opening files or reproducing, even when the note set may be empty.
 - Must start developer and validator runtime work from the exact failing command or exact named retry target.
 - Must prefer Task Center notes, exact runtime evidence, and CI symbol tools over raw file reads on ready owner lanes.
 - Must not spend a ready leaf's opening moves reading benchmark tests when scout notes and exact runtime already name the owned seam.

@@ -1,4 +1,4 @@
-"""Hover and diagnostics tools owned by the code intelligence toolkit."""
+"""Diagnostics tool owned by the code intelligence toolkit."""
 
 from __future__ import annotations
 
@@ -17,38 +17,6 @@ def _ci_cwd(context: ToolExecutionContext) -> str | None:
         or context.cwd
         or ""
     ).strip() or None
-
-
-@tool(
-    name="ci_hover",
-    description="Get type signature, return type, and docstring for a symbol at a file:line position — without reading the whole file. Use to check API contracts and parameter types before diving into implementation.",
-    read_only=True,
-)
-async def ci_hover(
-    file_path: str,
-    line: int,
-    character: int = 0,
-    *,
-    context: ToolExecutionContext,
-) -> ToolResult:
-    """Get type, signature, and docstring for a symbol."""
-    svc = get_ci_service(context)
-    if svc is None:
-        return ToolResult(output="LSP not available", is_error=True)
-
-    result = svc.hover(file_path, line, character)
-    if result is None:
-        return ToolResult(output=f"No hover information at {file_path}:{line}")
-
-    return ToolResult(
-        output=json.dumps(
-            {
-                "cwd": _ci_cwd(context) or "",
-                "content": result.content,
-                "language": result.language,
-            }
-        )
-    )
 
 
 @tool(
