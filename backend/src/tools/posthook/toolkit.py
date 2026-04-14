@@ -97,7 +97,7 @@ async def _accept_replan_submission(
     replan = ReplanPlan.from_dict(
         {"add_tasks": add_tasks, "cancel_ids": cancel_ids}
     )
-    freshness_gate = await _freshness_submission_gate(context, action="submit_replan()")
+    freshness_gate = await _freshness_submission_gate(context, action="replan_submission()")
     if freshness_gate is not None:
         return freshness_gate
     context.metadata["submitted_output"] = replan
@@ -350,21 +350,27 @@ class SubmitReplanInput(BaseModel):
     add_tasks: list[dict] = Field(
         default_factory=list,
         description=(
-            "New TaskSpec dicts to add as corrective siblings. Same shape as "
-            "submit_plan tasks: id, task (prose), agent, deps, scope_paths, cascade_policy."
+            "New TaskSpec dicts inserted at the current DAG level as corrective siblings. "
+            "Same shape as submit_plan tasks: id, task (prose), agent, deps, scope_paths, "
+            "cascade_policy. Plan at this level only — assign agent='team_planner' for "
+            "tasks that need further decomposition into subtrees."
         ),
     )
     cancel_ids: list[str] = Field(
         default_factory=list,
-        description="Task IDs to cancel from the existing plan (stale or superseded tasks)",
+        description=(
+            "Task IDs to cancel. Cancelling a node cancels its entire subtree. "
+            "Targets can be atomic or expandable, running or pending."
+        ),
     )
 
 
 class AddTasksTool(BaseTool):
     name = "add_tasks"
     description = (
-        "Add corrective sibling tasks without cancelling the existing subtree. "
-        "Use when the failed task needs follow-up work but other siblings can continue."
+        "Add corrective sibling tasks without cancelling existing work. "
+        "Use for isolated failures, transient retries, or follow-up work "
+        "when other siblings can continue unchanged."
     )
     input_model = SubmitReplanInput
     tool_types = frozenset({"post_run"})
@@ -427,33 +433,12 @@ class DeclareBlockerTool(BaseTool):
         return ToolResult(output="Blocker declared.")
 
 
-class SubmitReplanTool(BaseTool):
-    name = "submit_replan"
-    description = (
-        "Submit a corrective replan. Terminal action for replanners. "
-        "New tasks are inserted as siblings at the same DAG level as the failed task."
-    )
-    input_model = SubmitReplanInput
-    tool_types = frozenset({"post_run"})
-
-    async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
-        assert isinstance(arguments, SubmitReplanInput)
-        return await _accept_replan_submission(
-            context,
-            add_tasks=arguments.add_tasks,
-            cancel_ids=arguments.cancel_ids,
-            note_content=(
-                f"Submitted corrective replan with {len(arguments.add_tasks)} new task(s) "
-                f"and {len(arguments.cancel_ids)} cancellation(s)."
-            ),
-        )
-
-
 class CancelAndRedraftTool(BaseTool):
     name = "cancel_and_redraft"
     description = (
-        "Cancel stale sibling work and replace it with a new corrective task set. "
-        "Use when the existing subtree decomposition is wrong, not just incomplete."
+        "Cancel stale sibling nodes (and their subtrees) and replace with corrective "
+        "tasks at the current DAG level. Use when stale tasks must be stopped, not "
+        "just supplemented. Scope can be narrow (one node) or broad (many)."
     )
     input_model = SubmitReplanInput
     tool_types = frozenset({"post_run"})
@@ -498,7 +483,6 @@ class PosthookTools(BaseToolkit):
                 AddTasksTool(),
                 DeclareBlockerTool(),
                 CancelAndRedraftTool(),
-                SubmitReplanTool(),
             ]
         elif role == "explorer":
             tools = [PostNoteTool()]

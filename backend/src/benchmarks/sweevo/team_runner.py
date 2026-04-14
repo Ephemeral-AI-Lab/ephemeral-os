@@ -811,7 +811,6 @@ def _make_runner(
                                 "post_note",
                                 "submit_plan",
                                 "post_note",
-                                "submit_replan",
                                 "request_replan",
                                 "add_tasks",
                                 "declare_blocker",

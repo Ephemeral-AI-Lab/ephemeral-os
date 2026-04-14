@@ -109,7 +109,10 @@ class AnthropicClient:
 
     async def _stream_once(self, request: ApiMessageRequest) -> AsyncIterator[ApiStreamEvent]:
         """Single streaming attempt against the Anthropic API."""
-        messages = [msg.to_api_param() for msg in request.messages]
+        if request.raw_messages is not None:
+            messages = request.raw_messages
+        else:
+            messages = [msg.to_api_param() for msg in request.messages]
 
         # Strip output_schema — the Anthropic API does not accept it in tool defs.
         tools = (
@@ -126,6 +129,8 @@ class AnthropicClient:
         }
         if tools:
             params["tools"] = tools
+        if request.tool_choice:
+            params["tool_choice"] = request.tool_choice
 
         # Track content blocks by index for reassembly.
         collected_content_blocks: dict[int, dict[str, Any]] = {}

@@ -764,7 +764,11 @@ class TaskCenter:
             if rec is None:
                 raise InvalidPlan(f"cancel target {cid} not found")
             if rec.parent_id != target_parent_id:
-                raise InvalidPlan(f"cancel target {cid} has parent {rec.parent_id!r}, but replan scoped to {target_parent_id!r}")
+                raise InvalidPlan(
+                    f"cancel target '{cid}' is a child of '{rec.parent_id}', not a sibling at your level. "
+                    f"You can only cancel siblings (tasks with parent_id={target_parent_id!r}). "
+                    f"To cancel '{cid}' and its entire subtree, cancel its parent '{rec.parent_id}' instead."
+                )
             if rec.status not in ("pending", "ready", "expanded"):
                 raise InvalidPlan(f"cancel target {cid} is {rec.status}; can only cancel PENDING, READY, or EXPANDED")
         local_to_new: dict[str, str] = {}

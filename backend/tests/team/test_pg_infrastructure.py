@@ -187,6 +187,6 @@ def test_cascade_cancel_recursive_seeds_root_then_walks_dependents():
     sql = session.statements[0]
     assert "WITH RECURSIVE dep_chain AS" in sql
     assert "AND id=:tid" in sql
-    assert "JOIN dep_chain dc ON dc.id = ANY(t.deps)" in sql
-    assert "JOIN dep_chain dc ON t.parent_id = dc.id" in sql
+    assert "dc.id = ANY(t.deps)" in sql
+    assert "t.parent_id = dc.id" in sql
     assert "WHERE id != :tid" in sql

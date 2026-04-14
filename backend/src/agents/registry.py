@@ -33,7 +33,6 @@ RESERVED_BUILTIN_AGENT_NAMES = frozenset(
         "submit_plan_agent",
         "decision_submit_retry",
         "decision_submit_replan",
-        "submit_replan_agent",
     }
 )
 

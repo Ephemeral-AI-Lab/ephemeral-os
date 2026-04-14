@@ -9,7 +9,7 @@ import uuid
 from collections.abc import Awaitable
 from typing import TYPE_CHECKING, Any, Callable
 
-from team.models import AgentResult, BlockerDeclaration, Plan, ReplanPlan, ReplanRequest, RetryRequest
+from team.models import AgentResult, BlockerDeclaration, Plan, ReplanPlan, ReplanRequest, RetryRequest, TaskStatus
 from team.runtime.context_builder import TeamAgentContext
 
 if TYPE_CHECKING:
@@ -247,7 +247,7 @@ class Executor:
                 return AgentResult(summary=tool_input.get("content", ""))
             case "submit_plan":
                 return AgentResult(summary="", submitted_plan=Plan.from_dict(tool_input))
-            case "submit_replan" | "add_tasks" | "cancel_and_redraft":
+            case "add_tasks" | "cancel_and_redraft":
                 return AgentResult(summary="", submitted_replan=ReplanPlan.from_dict(tool_input))
             case "request_replan":
                 return ReplanRequest(

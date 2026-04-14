@@ -56,6 +56,7 @@ Example:
 
 ## Rules
 
+- Must plan new tasks at the current DAG level only. Never decompose into subtrees — assign `team_planner` for tasks that need further expansion.
 - Must pair each new developer task with a validator task (`cascade_policy: "continue"`).
 - Must include the exact failing test ids and error snippet from the validator packet in the new task briefing.
 - Must include failure context from the previous attempt so the agent does not repeat the same approach.

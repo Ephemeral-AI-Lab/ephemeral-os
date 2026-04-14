@@ -134,7 +134,7 @@ class TestAgentCRUD:
         tools = {entry["name"] for entry in resp.json()}
         assert "daytona_codeact" in tools
         assert "submit_plan" in tools
-        assert "submit_replan" in tools
+        assert "cancel_and_redraft" in tools
         assert "load_skill" in tools
         assert "check_background_progress" in tools
 

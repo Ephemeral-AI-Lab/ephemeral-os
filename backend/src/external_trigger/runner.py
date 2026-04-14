@@ -1,9 +1,8 @@
 """Shared LLM loop for external_trigger and post_run tool phases.
 
-Always uses ``tool_choice="any"`` so every turn produces a tool call attempt.
-Retries indefinitely until a valid tool call passes Pydantic validation.
-The only exit paths are a successful tool call or asyncio cancellation
-by the caller.
+Always uses ``tool_choice={"type": "any"}`` so every turn produces a tool call.
+Retries up to ``max_turns`` until a valid tool call passes Pydantic validation.
+Exit paths: successful tool call, max turns exhausted, or asyncio cancellation.
 """
 
 from __future__ import annotations
@@ -14,6 +13,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from providers.types import ApiMessageRequest, ApiToolUseDeltaEvent, ApiMessageCompleteEvent
 from tools.core.base import BaseTool
 
 logger = logging.getLogger(__name__)
@@ -28,6 +28,49 @@ class RunResult:
     validated: BaseModel | None = None
     conversation: list[dict[str, Any]] = field(default_factory=list)
     turns_used: int = 0
+
+
+async def _stream_to_response(api_client: Any, request: ApiMessageRequest) -> Any:
+    """Consume stream_message and collect tool_use events + final message."""
+    tool_uses: list[dict[str, Any]] = []
+    text_parts: list[str] = []
+    final_message: Any = None
+
+    async for event in api_client.stream_message(request):
+        if isinstance(event, ApiToolUseDeltaEvent):
+            tool_uses.append({
+                "type": "tool_use",
+                "id": event.id,
+                "name": event.name,
+                "input": event.input,
+            })
+        elif isinstance(event, ApiMessageCompleteEvent):
+            final_message = event.message
+
+    # Build a lightweight response-like object
+    class _Block:
+        def __init__(self, d: dict[str, Any]) -> None:
+            self.type = d.get("type", "")
+            self.name = d.get("name", "")
+            self.input = d.get("input", {})
+            self.id = d.get("id", "")
+            self.text = d.get("text", "")
+
+    blocks: list[_Block] = []
+    # Extract text from final message if available
+    if final_message is not None:
+        for cb in final_message.content:
+            if hasattr(cb, "text") and getattr(cb, "text", None):
+                blocks.append(_Block({"type": "text", "text": cb.text}))
+    # Add tool_use blocks from mid-stream events
+    for tu in tool_uses:
+        blocks.append(_Block(tu))
+
+    class _Response:
+        def __init__(self, content: list[_Block]) -> None:
+            self.content = content
+
+    return _Response(blocks)
 
 
 async def run(
@@ -53,7 +96,7 @@ async def run(
     tools:
         Constrained tool set — the LLM must call one of these.
     api_client:
-        Anthropic-compatible client with ``create_message()``.
+        Client implementing ``stream_message(ApiMessageRequest)``.
     max_tokens_per_turn:
         Max tokens per LLM response.
     model:
@@ -66,23 +109,27 @@ async def run(
         {"role": "user", "content": prompt},
     ]
 
+    max_turns = 10
     turn = 0
-    while True:
+    while turn < max_turns:
         turn += 1
 
+        request = ApiMessageRequest(
+            model=model or "claude-sonnet-4-20250514",
+            max_tokens=max_tokens_per_turn,
+            system_prompt=system_prompt,
+            tools=api_tools,
+            tool_choice={"type": "any"},
+            raw_messages=conversation,
+        )
+
         try:
-            response = await api_client.create_message(
-                model=model or "claude-sonnet-4-20250514",
-                max_tokens=max_tokens_per_turn,
-                system=system_prompt,
-                messages=conversation,
-                tools=api_tools,
-                tool_choice={"type": "any"},
-            )
+            response = await _stream_to_response(api_client, request)
         except Exception:
             logger.warning(
-                "external_trigger runner: API call failed on turn %d, retrying",
+                "external_trigger runner: API call failed on turn %d/%d, retrying",
                 turn,
+                max_turns,
                 exc_info=True,
             )
             continue
@@ -152,3 +199,5 @@ async def run(
             conversation=conversation,
             turns_used=turn,
         )
+
+    raise RuntimeError(f"external_trigger runner: exhausted {max_turns} turns without valid tool call")

@@ -75,11 +75,25 @@ class TeamRun:
             getattr(runtime_services, "file_change_store", None) or NullFileChangeStore()
         )
         self.scope_listener: Any = None
+        self.api_client: Any = self._resolve_api_client()
         from team.persistence.blocker_store import BlockerStore
         from team.runtime.conductor import Conductor
         sf = getattr(self.task_center, "_sf", None)
         blocker_store = BlockerStore(sf, self.id) if sf is not None else None
         self.conductor: Conductor = Conductor(self, blocker_store=blocker_store)
+
+    @staticmethod
+    def _resolve_api_client() -> Any:
+        """Build an API client from the DB-registered active model, or None."""
+        try:
+            from providers.provider import make_api_client
+            return make_api_client()
+        except Exception:
+            import logging
+            logging.getLogger(__name__).debug(
+                "Could not resolve api_client from model store", exc_info=True,
+            )
+            return None
 
     # ---- live agent run registry ----------------------------------------
 

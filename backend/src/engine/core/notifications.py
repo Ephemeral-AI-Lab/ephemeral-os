@@ -34,7 +34,7 @@ def _budget_warning_steps(context: "QueryContext") -> str:
         return (
             "1. Stop reopening ownership questions immediately.\n"
             "2. Call context_changed_since() if you have not already.\n"
-            "3. Call submit_replan() with the corrective split you can already justify."
+            "3. Call add_tasks(), declare_blocker(), or cancel_and_redraft() with the corrective action you can already justify."
         )
     if role == "reviewer":
         return (

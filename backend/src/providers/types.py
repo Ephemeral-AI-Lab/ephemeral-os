@@ -39,10 +39,12 @@ class ApiMessageRequest:
     """Input parameters for a model invocation."""
 
     model: str
-    messages: list[ConversationMessage]
+    messages: list[ConversationMessage] = field(default_factory=list)
     system_prompt: str | None = None
     max_tokens: int = 4096
     tools: list[dict[str, Any]] = field(default_factory=list)
+    tool_choice: dict[str, Any] | None = None
+    raw_messages: list[dict[str, Any]] | None = None
 
 
 @dataclass(frozen=True)
