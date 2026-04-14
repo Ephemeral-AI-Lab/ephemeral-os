@@ -91,6 +91,7 @@ sequenceDiagram
     Loop->>LLM: compact_for_api(display_messages)
     LLM-->>Loop: [api_messages...]
     Note over Loop: Next iteration uses compacted history
+```
 
 ## Tool Execution Dispatch
 
@@ -133,6 +134,7 @@ graph TD
     style Defer fill:#ffccbc
     style Start fill:#c8e6c9
     style BGPath fill:#f8bbd0
+```
 
 ## Background Task Lifecycle
 
@@ -169,6 +171,7 @@ stateDiagram-v2
         agent sees BackgroundTaskCompleted event
         Removed from polling in next iteration
     end note
+```
 
 ## Loop Termination and Exit Conditions
 
@@ -194,13 +197,14 @@ graph TD
     Reminder -->|loop continues| Loop
     
     BudgetExit -->|cancel all pending| CancelBG["background_manager.cancel_all()"]
-    CancelBG --> [*]
-    Exit1 --> [*]
+    CancelBG --> EndNode(["END"])
+    Exit1 --> EndNode
     
     style FinalMsg fill:#fff3e0
     style BudgetExit fill:#ffcccc
     style WaitBG fill:#ffe0b2
     style Loop fill:#c8e6c9
+```
 
 ## Integration Points: Hooks, External Triggers, and Snapshots
 
@@ -229,6 +233,7 @@ graph LR
     style External2 fill:#d1c4e9
     style External3 fill:#b2dfdb
     style External4 fill:#f1c6e8
+```
 
 ## Conversation State and Streaming
 
@@ -261,6 +266,7 @@ graph TB
     style M4 fill:#f3e5f5
     style Compact fill:#e8f5e9
     style APIMessages fill:#fce4ec
+```
 
 ## Agent Runtime Wrapper
 
@@ -297,3 +303,4 @@ graph TD
     style Prompt fill:#f8bbd0
     style Agent fill:#e1f5ff
     style Run fill:#f3e5f5
+```

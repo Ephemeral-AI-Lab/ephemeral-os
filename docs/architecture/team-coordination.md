@@ -46,6 +46,7 @@ graph TB
     style Replanner fill:#f3e5f5
     style Conductor fill:#fff3e0
     style TaskCenter fill:#e8f5e9
+```
 
 ---
 
@@ -75,6 +76,7 @@ sequenceDiagram
     Developer->>Developer: _run_post_run()<br/>(posthook phase)
     Developer->>TaskCenter: submit_summary | submit_plan<br/>| request_retry | request_replan
     TaskCenter-->>Developer: submission confirmed
+```
 
 ---
 
