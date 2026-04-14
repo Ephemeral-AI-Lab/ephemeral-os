@@ -1,0 +1,239 @@
+# Posthook and External Trigger
+
+## ToolType Classification
+
+The `ToolType` literal defines three execution phases where tools participate:
+
+```mermaid
+stateDiagram-v2
+    [*] --> Normal
+    Normal --> PostRun: Query loop completes
+    PostRun --> [*]
+    
+    Normal: "normal" — Main agent loop
+    PostRun: "post_run" — After query ends
+    ExternalTrigger: "external_trigger" — Mid-run ephemeral agent
+    
+    Normal --> ExternalTrigger: Conductor/TaskCenter spawns
+    ExternalTrigger --> [*]
+    
+    note right of Normal
+        Available during agent work.
+        Tools: read_file, run_command, etc.
+    end note
+    
+    note right of PostRun
+        Available after query loop.
+        Tools: submit_plan, post_note,
+        request_replan, declare_blocker.
+    end note
+    
+    note right of ExternalTrigger
+        Frozen conversation snapshot.
+        Separate ephemeral agent.
+        Tools: pause_verdict, post_note.
+    end note
+```
+
+A tool's `tool_types` attribute is a `frozenset[ToolType]`; tools can belong to multiple phases. For example, `PostNoteTool` has `tool_types = frozenset({"post_run", "external_trigger"})`.
+
+---
+
+## Post-Run Phase
+
+After the main query loop completes, the `Executor` invokes the post-run phase via `_run_post_run()`. The agent is re-prompted with role-specific posthook tools and must call exactly one to submit its work.
+
+```mermaid
+sequenceDiagram
+    participant Agent as Agent (query loop)
+    participant Executor
+    participant Runner as runner.run()
+    participant LLM
+    participant TC as TaskCenter
+
+    Agent->>Executor: query loop returns
+    Executor->>Executor: get PosthookTools by agent role
+    
+    alt No posthook tools
+        Executor->>TC: complete_task(AgentResult)
+    else Has posthook tools
+        Executor->>Runner: run_trigger(messages, posthook_tools)
+        
+        loop Until valid tool call (max 10 turns)
+            Runner->>LLM: stream_message(tool_choice="any")
+            LLM->>Runner: tool_use block
+            Runner->>Runner: pydantic validation
+            
+            alt Validation fails
+                Runner->>LLM: tool_result with error
+            else Validation succeeds
+                Runner->>Runner: execute tool
+                
+                alt Tool execution succeeds
+                    Runner->>Executor: RunResult
+                    break
+                else Tool execution fails
+                    Runner->>LLM: tool_result with error
+                end
+            end
+        end
+        
+        Executor->>Executor: map RunResult → domain object
+        Executor->>TC: complete_task(result)
+    end
+```
+
+**PosthookTools role mapping:**
+
+- **planner**: `SubmitPlanTool` only
+- **replanner**: `AddTasksTool`, `DeclareBlockerTool`, `CancelAndRedraftTool`
+- **resolver**: `PostNoteTool`, `RequestReplanTool`
+- **explorer**: `PostNoteTool`
+- **default**: `PostNoteTool`, `RequestReplanTool`
+
+Post-run tools use `runner.run()` with `execute_tools=True`, meaning tool execution happens inside the loop. Validation errors and tool errors are fed back as `tool_result` blocks so the LLM can retry.
+
+---
+
+## External-Trigger Phase
+
+Mid-run, the Conductor and TaskCenter may spawn ephemeral agents with a frozen conversation snapshot. These agents assess impact (pause verdict) or generate progress notes without interrupting the main task.
+
+```mermaid
+sequenceDiagram
+    participant Conductor as Conductor / TaskCenter
+    participant Ephemeral as Ephemeral Agent
+    participant Runner as runner.run()
+    participant LLM
+    participant Task as Running Task
+
+    Task->>Conductor: blocker declared / checkpoint triggered
+    Conductor->>Ephemeral: spawn with frozen snapshot
+    
+    Ephemeral->>Runner: run(messages=snapshot, tools=[pause_verdict|post_note])
+    
+    loop Until valid tool call (max 10 turns)
+        Runner->>LLM: stream_message(tool_choice="any")
+        LLM->>Runner: tool_use block
+        Runner->>Runner: pydantic validation
+        
+        alt Validation fails
+            Runner->>LLM: tool_result with error
+        else Validation succeeds
+            Runner->>Ephemeral: RunResult
+            break
+        end
+    end
+    
+    Ephemeral->>Conductor: RunResult with assessment
+    Conductor->>Task: pause / post note (task continues unaware)
+```
+
+Two external-trigger use cases:
+
+1. **Pause assessment** (`pause_assessment.py`): When a blocker is declared, ephemeral agents assess each running sibling. The agent is given only `PauseVerdictTool` and must respond YES or NO to: "Does your task depend on these broken files?"
+
+2. **Checkpoint notes** (`tc_note.py`): TaskCenter spawns an ephemeral agent with the task's conversation snapshot and `PostNoteTool`. The agent summarizes progress (files edited, current status, suspected blockers) without being noticed by the main task loop.
+
+External-trigger runners use `execute_tools=False` by default. The LLM is constrained to call exactly one tool, and `runner.run()` captures the validated tool input in the `RunResult`. The calling code (Conductor, TaskCenter) then interprets the result.
+
+---
+
+## Shared Runner Loop & Retry Logic
+
+Both post-run and external-trigger phases use the same `runner.run()` loop defined in `external_trigger/runner.py`. The loop guarantees a valid tool call via Pydantic validation retry.
+
+```mermaid
+flowchart TD
+    Start["runner.run()"] --> Setup["Prepare ApiMessageRequest<br/>tool_choice: auto or exact"]
+    Setup --> Loop["Turn loop<br/>(max 10 turns)"]
+    
+    Loop --> API["Call LLM<br/>stream_message"]
+    API --> Parse["Extract tool_use block"]
+    
+    Parse --> ValidTool{"Tool in registry?"}
+    ValidTool -->|No| ErrorTool["Post tool_result error<br/>Append to conversation"]
+    ErrorTool --> Loop
+    
+    ValidTool -->|Yes| ValidInput{"Pydantic validates?"}
+    ValidInput -->|No| ErrorInput["Post tool_result error<br/>Append to conversation"]
+    ErrorInput --> Loop
+    
+    ValidInput -->|Yes| Execute{"execute_tools?"}
+    Execute -->|No| Success["Return RunResult<br/>with validated input"]
+    
+    Execute -->|Yes| RunTool["Execute tool in context"]
+    RunTool --> ToolOK{"Tool success?"}
+    ToolOK -->|Error| PostError["Post tool_result error"]
+    PostError --> Loop
+    
+    ToolOK -->|Success| Success
+    
+    Loop -->|Max turns reached| Exhausted["Raise RuntimeError<br/>exhausted turns"]
+    
+    Success --> [*]
+    Exhausted --> [*]
+```
+
+**Loop behavior:**
+
+- `max_turns` (default 10): Retry limit. Exhaustion raises `RuntimeError`.
+- `tool_choice`: Single tool → `{"type": "tool", "name": "..."}`. Multiple tools → `{"type": "any"}`.
+- Validation and execution errors are non-fatal; they are appended to the frozen conversation and the loop retries.
+- Once a tool call validates (and succeeds if `execute_tools=True`), the loop exits and returns `RunResult`.
+
+`RunResult` captures the tool name, raw input dict, validated Pydantic model, optional tool execution result, and full conversation trail.
+
+---
+
+## Use Sites
+
+### Executor: Post-run submission
+
+**Location:** `backend/src/team/runtime/executor.py:_run_post_run()`
+
+After the agent's query loop completes, the executor re-prompts with posthook tools. The agent's `ToolExecutionContext` carries task metadata (task_center, work_item_id, agent_name, write_scope). The runner executes tools immediately and maps the result:
+
+- `post_note` → `AgentResult(summary=note_content)`
+- `submit_plan` → `AgentResult(submitted_plan=plan)` (roster-resolved)
+- `request_replan` → `ReplanRequest`
+- `declare_blocker` → `BlockerDeclaration`
+
+The result is passed to `_dispatch()`, which routes to `TaskCenter.complete_task()`, `request_replan()`, or triggers conductor blocker mechanics.
+
+### Conductor: Pause assessment (external_trigger)
+
+**Location:** `backend/src/external_trigger/pause_assessment.py:assess_pause()`
+
+When a blocker is declared, the Conductor spawns an ephemeral agent for each running sibling task. The agent receives the task's conversation snapshot and the single `PauseVerdictTool`. The Conductor collects verdicts (YES/NO) and pauses all YES tasks.
+
+Example prompt injected: "A shared dependency has been reported broken. Does your task depend on [files]? Call pause_verdict with your assessment."
+
+The runner does not execute the tool; it returns the validated input only. The Conductor interprets the `PauseVerdictInput.answer` ("YES" or "NO").
+
+### TaskCenter: Checkpoint notes (external_trigger)
+
+**Location:** `backend/src/external_trigger/tc_note.py:run_checkpoint_note()`
+
+TaskCenter active mode monitors edit and turn counters. When a threshold is crossed (5 edits or 10 turns since last note), TaskCenter spawns an ephemeral agent with the task's conversation snapshot and `PostNoteTool`.
+
+Two prompts are available:
+
+- `EDIT_CHECKPOINT_PROMPT`: "What files were edited and why?"
+- `TURN_CHECKPOINT_PROMPT`: "Status, findings, and blockers?"
+
+The runner captures the validated `PostNoteInput.content` and TaskCenter posts it as an auto-generated note (`agent_name + " (auto)"`).
+
+---
+
+## Key Design Points
+
+1. **Frozen snapshot invariant:** External-trigger agents receive a read-only conversation snapshot. The original task is never interrupted.
+
+2. **Tool validation guarantee:** The `runner.run()` loop retries up to `max_turns` until Pydantic validation succeeds. It raises `RuntimeError` only if exhausted, never returns invalid input.
+
+3. **Execution context separation:** Post-run tools and external-trigger tools receive the same `ToolExecutionContext` structure but with different metadata (task metadata for post-run, task ID and trigger type for external-trigger).
+
+4. **Roster resolution:** `PosthookTools` resolves agent names and role hints (e.g., "developer" → actual agent name) via `_resolve_agent_name()`. Plans and replans are validated and roster-resolved before being returned to the executor, avoiding lossy re-parsing.
+
+5. **Tool type filtering:** `ToolRegistry.filter_by_type()` returns a new registry containing only tools matching a given `ToolType`. This enables strict phase separation.
