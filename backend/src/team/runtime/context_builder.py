@@ -5,10 +5,13 @@ Assembles a TeamAgentContext for a Task using TaskCenter.context_for().
 
 from __future__ import annotations
 
+import json
+import logging
 import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
+from message import ConversationMessage
 from team.models import Task
 from tools.core.runtime import ExecutionMetadata
 
@@ -16,11 +19,14 @@ if TYPE_CHECKING:
     from agents.types import AgentDefinition
     from team.runtime.team_run import TeamRun
 
+logger = logging.getLogger(__name__)
+
 @dataclass
 class TeamAgentContext:
     """Canonical team-runtime context for work runners."""
 
     user_message: str = ""
+    initial_messages: list[ConversationMessage] = field(default_factory=list)
     tool_metadata: ExecutionMetadata = field(default_factory=ExecutionMetadata)
 
     def __post_init__(self) -> None:
@@ -129,6 +135,29 @@ def _populate_plan_submission_context(
         pass
 
 
+def build_initial_messages(task: Task) -> list[ConversationMessage]:
+    checkpoint = getattr(task, "pause_checkpoint", None)
+    if not checkpoint:
+        return []
+    try:
+        payload = json.loads(checkpoint)
+    except Exception:
+        logger.debug("Invalid pause_checkpoint for task %s", task.id, exc_info=True)
+        return []
+    if not isinstance(payload, list):
+        return []
+    messages: list[ConversationMessage] = []
+    for raw in payload:
+        if not isinstance(raw, dict):
+            continue
+        try:
+            messages.append(ConversationMessage.model_validate(raw))
+        except Exception:
+            logger.debug("Invalid resume message for task %s", task.id, exc_info=True)
+            return []
+    return messages
+
+
 async def build_initial_user_message(team_run: "TeamRun", task: Task, prefix: str | None = None) -> str:
     """Build context string for a task via TaskCenter."""
     context = await team_run.task_center.context_for(task)
@@ -192,4 +221,8 @@ async def build_query_context(
             "(planner → expandable, all others → atomic)."
         )
         user_message = "\n".join(lines) + "\n\n" + user_message
-    return TeamAgentContext(user_message=user_message, tool_metadata=meta)
+    return TeamAgentContext(
+        user_message=user_message,
+        initial_messages=build_initial_messages(task),
+        tool_metadata=meta,
+    )

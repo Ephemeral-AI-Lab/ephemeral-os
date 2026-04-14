@@ -107,8 +107,16 @@ class Executor:
             if ctx.tool_metadata is not None:
                 ctx.tool_metadata.extras["scope_change_buffer"] = scope_buffer
 
+        runner_task: asyncio.Task[object] = asyncio.create_task(self.runner(defn, ctx))
+        self.team_run.register_agent_run(task.id, runner_task)
         try:
-            await self.runner(defn, ctx)
+            await runner_task
+        except asyncio.CancelledError:
+            current = await tc.get_task(task.id)
+            if current is not None and current.status == TaskStatus.PAUSED:
+                logger.info("Task %s paused during execution; dropping in-flight runner", task.id)
+                return
+            raise
         except Exception as exc:
             await tc.fail(task.id, f"runner_exception: {exc}")
             if conductor is not None:
@@ -117,11 +125,16 @@ class Executor:
                     await conductor.on_fix_failed(blocker.id, f"runner_exception: {exc}")
             return
         finally:
+            self.team_run.unregister_agent_run(task.id, runner_task)
             if listener is not None:
                 listener.unsubscribe(agent_run_id)
 
-        result = self._posthook_legacy(ctx, defn)
-        result = await self._tag_if_scope_drifted(task, result, ctx)
+        current = await tc.get_task(task.id)
+        if current is not None and current.status == TaskStatus.PAUSED:
+            logger.info("Task %s completed after pause; ignoring stale result", task.id)
+            return
+
+        result = await self._run_post_run(task, defn, ctx)
         await self._dispatch(task, result)
 
     async def _inject_scope_warnings(self, task: "Task") -> None:
@@ -185,36 +198,72 @@ class Executor:
             )
         return "\n".join(lines) if lines else None
 
-    async def _tag_if_scope_drifted(self, task: "Task", result: Any, ctx: TeamAgentContext) -> Any:
-        if not isinstance(result, AgentResult) or not task.scope_paths or not task.started_at:
-            return result
-        if ctx.tool_metadata.get("checked_context_freshness"):
-            return result
-        fc_store = getattr(self.team_run, "file_change_store", None)
-        if fc_store is None or not getattr(fc_store, "initialized", False):
-            return result
-        try:
-            changes = fc_store.changes_since(task.started_at.timestamp())
-            external = [
-                e for e in changes
-                if e.agent_run_id != (task.agent_run_id or "")
-                and any(e.file_path.startswith(p.rstrip("/")) for p in task.scope_paths)
-            ]
-        except Exception:
-            return result
-        if not external:
-            return result
-        drift_files = [e.file_path for e in external[:5]]
-        warning = (
-            f"\n\n[DRIFT WARNING: {len(external)} file(s) in scope were "
-            f"modified by other agents during execution: "
-            f"{', '.join(drift_files)}. Results may be based on stale state.]"
+    async def _run_post_run(
+        self,
+        task: "Task",
+        defn: "AgentDefinition",
+        ctx: TeamAgentContext,
+    ) -> AgentResult | RetryRequest | ReplanRequest | BlockerDeclaration:
+        """Post-run phase: call external_trigger runner with post_run tools.
+
+        Same runner.run() interface as conductor (pause assessment) and
+        task_center (checkpoint notes) — frozen snapshot + constrained tools.
+        """
+        from external_trigger.runner import run as run_trigger
+        from tools.posthook.toolkit import PosthookTools
+
+        # Get conversation snapshot from conductor
+        conductor = getattr(self.team_run, "conductor", None)
+        messages: list[dict] = []
+        if conductor is not None:
+            messages = conductor._executor_snapshots.get(task.id, [])
+
+        api_client = getattr(self.team_run, "api_client", None)
+        if api_client is None or not messages:
+            return self._posthook_legacy(ctx, defn)
+
+        # Get post_run tools by role
+        toolkit = PosthookTools.from_context(ctx)
+        post_run_tools = toolkit.list_tools()
+        tool_names = [t.name for t in post_run_tools]
+
+        result = await run_trigger(
+            messages=messages,
+            system_prompt="You are a task submission assistant.",
+            prompt=(
+                "Your main work is complete. You must now submit your results "
+                f"by calling one of: {', '.join(tool_names)}. "
+                "Summarize what you accomplished and call the appropriate tool."
+            ),
+            tools=post_run_tools,
+            api_client=api_client,
+            max_tokens_per_turn=1000,
         )
-        return AgentResult(
-            summary=(result.summary or "") + warning,
-            submitted_plan=result.submitted_plan,
-            submitted_replan=result.submitted_replan,
-        )
+
+        # Map RunResult → domain objects
+        tool_input = result.tool_input
+        match result.tool_name:
+            case "submit_summary":
+                return AgentResult(summary=tool_input.get("summary", ""))
+            case "submit_plan":
+                return AgentResult(summary="", submitted_plan=Plan.from_dict(tool_input))
+            case "submit_replan" | "add_tasks" | "cancel_and_redraft":
+                return AgentResult(summary="", submitted_replan=ReplanPlan.from_dict(tool_input))
+            case "request_retry":
+                return RetryRequest(reason=tool_input.get("reason", ""))
+            case "request_replan":
+                return ReplanRequest(
+                    reason=tool_input.get("reason", ""),
+                    suggestion=tool_input.get("suggestion"),
+                )
+            case "declare_blocker":
+                return BlockerDeclaration(
+                    root_cause_paths=tool_input.get("root_cause_paths", []),
+                    reason=tool_input.get("reason", ""),
+                    suggestion=tool_input.get("suggestion"),
+                )
+            case _:
+                return AgentResult(summary=str(tool_input))
 
     @staticmethod
     def _posthook_legacy(ctx: TeamAgentContext, defn: "AgentDefinition") -> AgentResult | RetryRequest | ReplanRequest:

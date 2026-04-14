@@ -185,10 +185,12 @@ class TaskCenter:
         """Increment turn counter after each tool result."""
         self._get_counters(task_id)["turns"] += 1
 
-    def on_note_posted(self, task_id: str) -> None:
-        """Reset all counters after a note is posted."""
-        if hasattr(self, '_activity_counters') and task_id in self._activity_counters:
-            self._activity_counters[task_id] = {"edits": 0, "turns": 0, "files_edited": []}
+    def on_note_posted(self, note: Note) -> None:
+        """Reset counters only for agent-authored or auto-generated task notes."""
+        if note.agent_name in {"system", "checkpoint"}:
+            return
+        if hasattr(self, '_activity_counters') and note.task_id in self._activity_counters:
+            self._activity_counters[note.task_id] = {"edits": 0, "turns": 0, "files_edited": []}
 
     def should_checkpoint(self, task_id: str) -> str | None:
         """Check if auto-checkpoint should fire. Returns trigger type or None."""
@@ -340,7 +342,7 @@ class TaskCenter:
 
     async def post(self, note: Note) -> None:
         self._notes.append(note)
-        self.on_note_posted(note.task_id)
+        self.on_note_posted(note)
         auto_generated = note.agent_name.endswith(" (auto)")
         preview = _note_preview(note.content)
         logger.info(
@@ -871,7 +873,8 @@ class TaskCenter:
         """Transition all PAUSED tasks for a blocker back to READY."""
         async with self._sf() as db:
             result = await db.execute(text(
-                "UPDATE tasks SET status='ready', blocker_id=NULL "
+                "UPDATE tasks SET status='ready', blocker_id=NULL, "
+                "agent_run_id=NULL, started_at=NULL, finished_at=NULL, failure_reason=NULL "
                 "WHERE team_run_id=:rid AND blocker_id=:bid AND status='paused'"
             ), {"rid": self._team_run_id, "bid": blocker_id})
             await db.commit()
@@ -975,7 +978,6 @@ class TaskCenter:
                 "failure_reason=:reason WHERE id=:tid AND team_run_id=:rid"
             ), {"tid": task_id, "rid": rid, "reason": f"replan_requested: {reason}"})
             await db.commit()
-        await self.cascade_cancel_recursive(task_id)
         async with self._sf() as db:
             done_sibs = (await db.execute(text("""
                 SELECT id FROM tasks WHERE team_run_id=:rid

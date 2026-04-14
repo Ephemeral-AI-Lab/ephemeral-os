@@ -70,34 +70,6 @@ logger = logging.getLogger(__name__)
 MAX_OUTPUT_LENGTH: int = 2000
 BACKGROUND_IDLE_TIMEOUT: int = 30  # Safety net — LLM should use wait_for_background_task explicitly
 CANCEL_PATTERN = re.compile(r'\[CANCEL:(\S+)(?:\s+reason="([^"]*)")?\]')
-POSTHOOK_MAX_RETRIES: int = 2  # Max nudges before giving up on posthook tool enforcement
-
-
-def _split_posthook_tools(
-    original: ToolRegistry,
-    posthook_names: list[str],
-) -> tuple[ToolRegistry, ToolRegistry]:
-    """Split *original* into a main-phase and posthook-phase registry.
-
-    Tools are classified as posthook if they appear in *posthook_names*
-    OR belong to a toolkit with ``posthook=True``. Everything else goes
-    into the main-phase registry. Neither registry mutates *original*.
-    """
-    posthook_set: set[str] = set(posthook_names)
-    # Collect tool names from posthook-flagged toolkits
-    for tk in original.list_toolkits():
-        if getattr(tk, "posthook", False):
-            posthook_set.update(tk.tool_names())
-
-    main = ToolRegistry()
-    posthook = ToolRegistry()
-    for tool in original.list_tools():
-        if tool.name in posthook_set:
-            posthook.register(tool)
-        else:
-            main.register(tool)
-    return main, posthook
-
 
 @dataclass
 class QueryContext:
@@ -490,11 +462,6 @@ async def _run_query_loop(
         background_manager = BackgroundTaskManager()
         context.tool_metadata.background_task_manager = background_manager
 
-    posthook_phase = False
-    posthook_injected = False
-    posthook_retries = 0
-    original_tool_registry: ToolRegistry | None = None
-
     while True:
         streamed_rejections: list[ToolResultBlock] = []
         budget_warning = build_budget_warning(context)
@@ -594,40 +561,6 @@ async def _run_query_loop(
             system_prompt=context.system_prompt,
             state=compact_state,
         )
-        # Posthook phase: inject steering messages into both
-        # display_messages (for observability / persistence) and
-        # api_messages (so the LLM sees them on this turn).
-        # Only injected once — on the first posthook iteration.
-        if posthook_phase and not posthook_injected:
-            posthook_injected = True
-            posthook_prompt = str(
-                context.tool_metadata.extras.get("posthook_prompt", "")
-            )
-            if posthook_prompt:
-                assistant_steering = ConversationMessage(
-                    role="assistant",
-                    content=[TextBlock(text="Submission accepted. Entering posthook phase.")],
-                )
-                user_steering = ConversationMessage.from_user_text(posthook_prompt)
-                display_messages.append(assistant_steering)
-                display_messages.append(user_steering)
-                yield (
-                    SystemNotification(
-                        text="Entering posthook phase.",
-                        category="posthook",
-                    ),
-                    None,
-                )
-                # Rebuild api_messages so they include the steering
-                # messages that were just appended to display_messages.
-                api_messages = await compact_for_api(
-                    display_messages,
-                    api_client=context.api_client,
-                    model=context.model,
-                    system_prompt=context.system_prompt,
-                    state=compact_state,
-                )
-
         # Persistence + introspection hook: callers can read this AFTER the
         # loop returns to capture the final compacted view sent to the LLM.
         # The system prompt is prepended as a synthetic user-text message so
@@ -735,61 +668,12 @@ async def _run_query_loop(
         yield AssistantTurnComplete(message=final_message, usage=usage), usage
 
         if not final_message.tool_uses:
-            # Posthook entry: the agent produced no tool calls (work is
-            # done). If posthook tools are configured and we haven't
-            # entered posthook yet, split the registry and continue.
-            posthook_tool_names = context.tool_metadata.extras.get("posthook_tool_names") if context.tool_metadata else None
-            if (
-                not posthook_phase
-                and posthook_tool_names
-                and isinstance(posthook_tool_names, list)
-                and context.tool_metadata.extras.get("posthook_prompt")
-            ):
-                if background_manager is not None:
-                    await background_manager.cancel_all()
-                posthook_phase = True
-                original_tool_registry = context.tool_registry
-                _, posthook_registry = _split_posthook_tools(
-                    original_tool_registry, posthook_tool_names,
-                )
-                context.tool_registry = posthook_registry
-                logger.info(
-                    "LOOP: entering posthook phase for agent=%s tools=%s",
-                    context.agent_name,
-                    [t.name for t in posthook_registry.list_tools()],
-                )
-                continue
-
-            # Posthook enforcement: if the agent skipped tool calls during
-            # the posthook phase, nudge it up to POSTHOOK_MAX_RETRIES times.
-            if posthook_phase and posthook_retries < POSTHOOK_MAX_RETRIES:
-                posthook_retries += 1
-                available = (
-                    [t.name for t in context.tool_registry.list_tools()]
-                    if context.tool_registry.list_tools()
-                    else ["(none)"]
-                )
-                nudge = ConversationMessage.from_user_text(
-                    "You must call one of the available posthook tools before "
-                    f"finishing: {', '.join(available)}. Do not respond with "
-                    "text only."
-                )
-                display_messages.append(nudge)
-                logger.info(
-                    "LOOP: posthook nudge %d/%d for agent=%s",
-                    posthook_retries,
-                    POSTHOOK_MAX_RETRIES,
-                    context.agent_name,
-                )
-                continue
-
             # The model produced no tool calls this turn. If we have no
-            # background work either, we're done. Otherwise, idle-wait
-            # briefly so a pending job can land and drive the next turn
-            # instead of returning to the caller half-finished.
+            # background work either, we're done. Post-run submission is
+            # handled by the executor via external_trigger.runner after
+            # this loop returns. Otherwise, idle-wait briefly so a
+            # pending job can land and drive the next turn.
             if background_manager is None or not background_manager.has_pending():
-                if original_tool_registry is not None:
-                    context.tool_registry = original_tool_registry
                 return
 
             completed_task = await background_manager.wait_any(timeout=BACKGROUND_IDLE_TIMEOUT)
@@ -977,15 +861,6 @@ async def _run_query_loop(
 
         display_messages.append(ConversationMessage(role="user", content=tool_results))  # type: ignore[arg-type]
 
-        if _has_submission(context.tool_metadata):
-            # Submission tool was called — exit the loop. Restore the
-            # original registry if we swapped it for posthook phase.
-            if original_tool_registry is not None:
-                context.tool_registry = original_tool_registry
-            if background_manager is not None:
-                await background_manager.cancel_all()
-            return
-
         if (
             context.tool_call_limit is not None
             and context.tool_calls_used >= context.tool_call_limit
@@ -1164,18 +1039,3 @@ async def _execute_tool_call(
         )
     return tool_result
 
-
-def _has_submission(metadata: ExecutionMetadata | None) -> bool:
-    """True when a submit tool has accepted a terminal payload for this run.
-
-    The posthook_enabled gate ensures standalone (non-team) agents are not
-    affected — they do not set posthook_enabled, so this always returns False
-    for them. Team agents set posthook_enabled=True in their context metadata.
-    """
-    if metadata is None:
-        return False
-    if not metadata.extras.get("posthook_enabled"):
-        return False
-    return any(
-        key.startswith("submitted_") and value is not None for key, value in metadata.extras.items()
-    )

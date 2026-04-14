@@ -65,6 +65,7 @@ class TeamRun:
         self.cancel_event = asyncio.Event()
         self.root_task_id: str | None = None
         self._executor_tasks: list[asyncio.Task[None]] = []
+        self._active_agent_runs: dict[str, asyncio.Task[object]] = {}
         self._executor_factory: Callable[["TeamRun"], Executor] | None = None
         self._num_executors: int = _default_num_executors()
         self.coordination_metadata: dict[str, Any] = {}
@@ -79,6 +80,23 @@ class TeamRun:
         sf = getattr(self.task_center, "_sf", None)
         blocker_store = BlockerStore(sf, self.id) if sf is not None else None
         self.conductor: Conductor = Conductor(self, blocker_store=blocker_store)
+
+    # ---- live agent run registry ----------------------------------------
+
+    def register_agent_run(self, task_id: str, runner_task: asyncio.Task[object]) -> None:
+        self._active_agent_runs[task_id] = runner_task
+
+    def unregister_agent_run(self, task_id: str, runner_task: asyncio.Task[object]) -> None:
+        current = self._active_agent_runs.get(task_id)
+        if current is runner_task:
+            self._active_agent_runs.pop(task_id, None)
+
+    def cancel_agent_run(self, task_id: str) -> bool:
+        runner_task = self._active_agent_runs.get(task_id)
+        if runner_task is None or runner_task.done():
+            return False
+        runner_task.cancel()
+        return True
 
     # ---- lifecycle -------------------------------------------------------
 

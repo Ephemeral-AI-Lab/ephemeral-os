@@ -42,6 +42,7 @@ from team.persistence.events import make_checkpoint_repo_state
 from team.persistence.run_store import build_default_store
 from team.runtime.context_builder import (
     TeamAgentContext,
+    build_initial_messages,
     build_initial_user_message,
     build_task_metadata,
 )
@@ -695,7 +696,7 @@ def _make_runner(
 
         agent = spawn_agent(
             session_config,
-            messages=[],
+            messages=list(ctx.initial_messages),
             agent_def=effective_defn,
             latest_user_prompt=prompt,
             sandbox_id=sandbox_id,
@@ -1135,7 +1136,11 @@ def _make_context_builders(
             )
         except Exception:
             pass
-        return TeamAgentContext(user_message=user_message, tool_metadata=meta)
+        return TeamAgentContext(
+            user_message=user_message,
+            initial_messages=build_initial_messages(wi),
+            tool_metadata=meta,
+        )
 
     return build_query_ctx
 
