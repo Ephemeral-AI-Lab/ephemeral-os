@@ -233,10 +233,20 @@ def _build_agent_tool_registry(
     if agent_def and agent_def.blocked_tools:
         tool_registry.remove_tools(agent_def.blocked_tools)
 
-    # Posthook tools — NOT registered in the query-loop tool registry.
-    # They are provided exclusively by the executor's post_run phase
-    # via external_trigger.runner, so agents cannot call submission
-    # tools (submit_plan, submit_summary, etc.) during the main work loop.
+    # Posthook tools — registered in the query-loop registry so agents can
+    # call them during their work phase. The executor's _run_post_run honours
+    # submissions already made via metadata before trying the streaming runner.
+    if agent_def and agent_def.posthook:
+        from tools.posthook.toolkit import PosthookTools
+
+        posthook_tk = PosthookTools.from_context(toolkit_ctx)
+        posthook_names = set(agent_def.posthook)
+        for tool in posthook_tk.list_tools():
+            if tool.name in posthook_names:
+                tool_registry.register(tool)
+                logger.info(
+                    "Registered posthook tool %r for agent %r", tool.name, agent_name,
+                )
 
     # Skills toolkit — opt-out via ``include_skills=False``.
     include_skills = agent_def.include_skills if agent_def else True

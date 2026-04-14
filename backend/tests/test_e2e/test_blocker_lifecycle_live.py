@@ -323,9 +323,40 @@ async def test_full_lifecycle_resolve_and_resume_agent(api_client):
     # PHASE 3: Resumed agent run (real LLM)
     #
     # Per the fork diagram, the resumed agent gets:
-    #   messages = checkpoint_messages (snapshot + blocker Q + YES answer)
+    #   messages = checkpoint (snapshot + blocker Q + YES answer)
     #   + a new user message with resume notification
+    #
+    # The checkpoint conversation may contain tool_use/tool_result
+    # blocks from the pause assessment runner. The real executor
+    # normalizes these via build_initial_messages() → ConversationMessage.
+    # For the test, we strip tool blocks and keep only user/assistant
+    # text messages to create a valid conversation for the API.
     # =========================================================
+    def _sanitize_checkpoint(messages: list[dict]) -> list[dict]:
+        """Extract valid user/assistant text messages from checkpoint."""
+        clean = []
+        for msg in messages:
+            role = msg.get("role")
+            if role not in ("user", "assistant"):
+                continue
+            content = msg.get("content")
+            # Skip messages with tool_use/tool_result content blocks
+            if isinstance(content, list):
+                text_parts = []
+                for block in content:
+                    if isinstance(block, dict) and block.get("type") == "text":
+                        text_parts.append(block["text"])
+                    elif isinstance(block, str):
+                        text_parts.append(block)
+                if text_parts:
+                    clean.append({"role": role, "content": "\n".join(text_parts)})
+            elif isinstance(content, str) and content.strip():
+                clean.append({"role": role, "content": content})
+        return clean
+
+    resume_messages = _sanitize_checkpoint(checkpoint_messages)
+    assert len(resume_messages) >= 2, f"Should have at least original snapshot messages, got {len(resume_messages)}"
+
     resume_notification = (
         "## RESUME AFTER BLOCKER FIX\n"
         f"Your task was paused because: {io_task.pause_verdict}\n"
@@ -334,7 +365,7 @@ async def test_full_lifecycle_resolve_and_resume_agent(api_client):
     )
 
     result = await run_trigger(
-        messages=checkpoint_messages,
+        messages=resume_messages,
         system_prompt="You are a developer agent. Your task was paused due to a blocker and has now resumed.",
         prompt=resume_notification,
         tools=[PostNoteTool()],

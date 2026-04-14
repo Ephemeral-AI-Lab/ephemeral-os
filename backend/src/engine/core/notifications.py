@@ -28,7 +28,7 @@ def _budget_warning_steps(context: "QueryContext") -> str:
         return (
             "1. Stop exploring and shaping new lanes immediately.\n"
             "2. Call context_changed_since() if you have not already.\n"
-            "3. Call submit_plan() with the strongest decomposition you can defend right now."
+            "3. Emit the plan JSON as your final text output with the strongest decomposition you can defend right now."
         )
     if role == "replanner":
         return (

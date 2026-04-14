@@ -15,7 +15,7 @@ Decompose the incoming request into an executable plan and produce the plan payl
 Must read the preloaded skills first; they define the planning workflow, exploration policy, and stop conditions.
 
 ## Output Contract
-- Must call ``submit_plan(tasks=[...], rationale="...")`` as the terminal action.
+- Emit the plan JSON ``{"tasks": [...], "rationale": "..."}`` as your **final text output**. Do not call ``submit_plan`` directly — the runtime's post-run phase handles submission automatically.
 - Each item must satisfy the ``TaskSpec`` fields: ``id``, ``task`` (prose instruction), ``agent`` (agent name), ``deps``, ``scope_paths``, ``cascade_policy``.
 - ``kind`` is auto-inferred from the target agent's role (planner-role → expandable, all others → atomic).
 - Items targeting a planner-role agent are expandable (that planner will further decompose). Items targeting developer, reviewer, or other non-planner roles are atomic.

@@ -82,6 +82,7 @@ async def run(
     api_client: Any,
     max_tokens_per_turn: int = 500,
     model: str | None = None,
+    max_turns: int = 10,
 ) -> RunResult:
     """Execute the LLM loop until a valid tool call succeeds.
 
@@ -109,7 +110,6 @@ async def run(
         {"role": "user", "content": prompt},
     ]
 
-    max_turns = 10
     turn = 0
     while turn < max_turns:
         turn += 1

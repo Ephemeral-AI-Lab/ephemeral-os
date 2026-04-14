@@ -204,47 +204,72 @@ class Executor:
         defn: "AgentDefinition",
         ctx: TeamAgentContext,
     ) -> AgentResult | RetryRequest | ReplanRequest | BlockerDeclaration:
-        """Post-run phase: call external_trigger runner with post_run tools.
+        """Post-run phase: extract submission from query-loop metadata.
 
-        Same runner.run() interface as conductor (pause assessment) and
-        task_center (checkpoint notes) — frozen snapshot + constrained tools.
+        If the agent already submitted during the query loop (submit_plan,
+        post_note, etc.), honour that directly. Only fall back to the
+        streaming runner when no submission was captured in metadata.
         """
+        legacy = self._posthook_legacy(ctx, defn)
+
+        # If legacy extracted a real submission, use it directly
+        if isinstance(legacy, (RetryRequest, ReplanRequest, BlockerDeclaration)):
+            return legacy
+        if isinstance(legacy, AgentResult) and (
+            legacy.submitted_plan is not None
+            or legacy.submitted_replan is not None
+            or legacy.summary not in ("completed (no explicit submission)", "planner_did_not_submit_plan", "")
+        ):
+            return legacy
+
+        # No submission in metadata — run post-run phase with posthook tools.
+        # The agent is re-prompted with ONLY its posthook tools and must call
+        # one of them. Loops up to 5 tool calls until a successful submission.
         from external_trigger.runner import run as run_trigger
         from tools.posthook.toolkit import PosthookTools
 
-        # Get conversation snapshot from conductor
+        api_client = getattr(self.team_run, "api_client", None)
+        if api_client is None:
+            return legacy
+
         conductor = getattr(self.team_run, "conductor", None)
         messages: list[dict] = []
         if conductor is not None:
             messages = conductor._executor_snapshots.get(task.id, [])
 
-        api_client = getattr(self.team_run, "api_client", None)
-        if api_client is None or not messages:
-            return self._posthook_legacy(ctx, defn)
-
         # Get post_run tools by role
         toolkit = PosthookTools.from_context(ctx)
         post_run_tools = toolkit.list_tools()
-        tool_names = [t.name for t in post_run_tools]
+        if not post_run_tools:
+            return legacy
+        tool_summary = ", ".join(f"{t.name}: {t.description}" for t in post_run_tools)
 
-        result = await run_trigger(
-            messages=messages,
-            system_prompt="You are a task submission assistant.",
-            prompt=(
-                "Your main work is complete. You must now submit your results "
-                f"by calling one of: {', '.join(tool_names)}. "
-                "Summarize what you accomplished and call the appropriate tool."
-            ),
-            tools=post_run_tools,
-            api_client=api_client,
-            max_tokens_per_turn=1000,
-        )
+        try:
+            result = await run_trigger(
+                messages=messages,
+                system_prompt="You are a task submission assistant.",
+                prompt=(
+                    "Your main work is complete. You must now submit your results "
+                    f"by calling one of: {tool_summary}. "
+                    "Summarize what you accomplished and call the appropriate tool."
+                ),
+                tools=post_run_tools,
+                api_client=api_client,
+                max_tokens_per_turn=1000,
+                max_turns=5,
+            )
+        except (RuntimeError, Exception):
+            logger.warning(
+                "post_run streaming runner failed for task %s, falling back to legacy",
+                task.id, exc_info=True,
+            )
+            return legacy
 
         # Map RunResult → domain objects
         tool_input = result.tool_input
         match result.tool_name:
-            case "submit_summary":
-                return AgentResult(summary=tool_input.get("summary", ""))
+            case "post_note":
+                return AgentResult(summary=tool_input.get("content", ""))
             case "submit_plan":
                 return AgentResult(summary="", submitted_plan=Plan.from_dict(tool_input))
             case "submit_replan" | "add_tasks" | "cancel_and_redraft":

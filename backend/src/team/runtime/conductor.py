@@ -179,7 +179,8 @@ class Conductor:
         from external_trigger.pause_assessment import PauseVerdict  # noqa: F811 — type narrowing
         tc = self._team_run.task_center
         checkpoint = json.dumps(verdict.conversation)
-        paused = await tc.pause_running_task(task_id, blocker_id, checkpoint, verdict.reason)
+        reason = verdict.reason or f"Paused by blocker {blocker_id}"
+        paused = await tc.pause_running_task(task_id, blocker_id, checkpoint, reason)
         if paused:
             cancelled = self._team_run.cancel_agent_run(task_id)
             logger.info(
