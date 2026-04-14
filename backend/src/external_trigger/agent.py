@@ -11,7 +11,7 @@ import uuid
 from typing import Any
 
 from external_trigger.runner import RunResult, run
-from tools.core.base import BaseTool
+from tools.core.base import BaseTool, ToolExecutionContext
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +26,8 @@ async def run_external_trigger(
     api_client: Any,
     max_tokens_per_turn: int = 500,
     model: str | None = None,
+    execution_context: ToolExecutionContext | None = None,
+    execute_tools: bool = False,
 ) -> RunResult:
     """Spawn an ephemeral agent and run until a valid tool call succeeds.
 
@@ -71,6 +73,8 @@ async def run_external_trigger(
         api_client=api_client,
         max_tokens_per_turn=max_tokens_per_turn,
         model=model,
+        execution_context=execution_context,
+        execute_tools=execute_tools,
     )
 
     logger.info(

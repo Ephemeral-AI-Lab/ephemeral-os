@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import time
 import uuid
 from collections.abc import Awaitable
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
 from team.models import AgentResult, BlockerDeclaration, Plan, ReplanPlan, ReplanRequest, RetryRequest, TaskStatus
 from team.runtime.context_builder import TeamAgentContext
+from tools.core.base import ToolExecutionContext
 
 if TYPE_CHECKING:
     from agents.types import AgentDefinition
@@ -27,69 +28,6 @@ QueryContextBuilder = Callable[["AgentDefinition", "TeamRun", "Task"], Awaitable
 def _record_to_task(rec: Any) -> "Task":
     from team.persistence.task_store import record_to_task
     return record_to_task(rec)
-
-
-def _extract_json_object(
-    text: str,
-    *,
-    matcher: Callable[[dict[str, Any]], bool] | None = None,
-) -> dict[str, Any] | None:
-    if not text.strip():
-        return None
-
-    decoder = json.JSONDecoder()
-    best_payload: dict[str, Any] | None = None
-    best_start: int | None = None
-    best_end = -1
-
-    for start, char in enumerate(text):
-        if char != "{":
-            continue
-        try:
-            payload, end = decoder.raw_decode(text, idx=start)
-        except ValueError:
-            continue
-        if not isinstance(payload, dict) or (matcher is not None and not matcher(payload)):
-            continue
-        if end > best_end or (end == best_end and (best_start is None or start < best_start)):
-            best_payload = payload
-            best_start = start
-            best_end = end
-    return best_payload
-
-
-def _extract_submission_from_text(
-    text: str,
-    *,
-    role: str,
-) -> AgentResult | None:
-    if role == "planner":
-        payload = _extract_json_object(
-            text,
-            matcher=lambda value: isinstance(value.get("tasks"), list),
-        )
-        if payload is None:
-            return None
-        try:
-            return AgentResult(summary="", submitted_plan=Plan.from_dict(payload))
-        except (TypeError, ValueError):
-            return None
-
-    if role == "replanner":
-        payload = _extract_json_object(
-            text,
-            matcher=lambda value: (
-                isinstance(value.get("add_tasks"), list) or isinstance(value.get("cancel_ids"), list)
-            ),
-        )
-        if payload is None:
-            return None
-        try:
-            return AgentResult(summary="", submitted_replan=ReplanPlan.from_dict(payload))
-        except (TypeError, ValueError):
-            return None
-
-    return None
 
 
 class Executor:
@@ -278,32 +216,18 @@ class Executor:
         defn: "AgentDefinition",
         ctx: TeamAgentContext,
     ) -> AgentResult | RetryRequest | ReplanRequest | BlockerDeclaration:
-        """Post-run phase: extract submission from query-loop metadata.
+        """Post-run phase: re-prompt agent with posthook tools only.
 
-        If the agent already submitted during the query loop (submit_plan,
-        post_note, etc.), honour that directly. Only fall back to the
-        streaming runner when no submission was captured in metadata.
+        The agent is re-prompted with ONLY its posthook tools and must call
+        one of them. Loops up to 5 tool calls until a successful submission.
         """
-        legacy = self._posthook_legacy(ctx, defn)
-
-        # If legacy extracted a real submission, use it directly
-        if isinstance(legacy, (RetryRequest, ReplanRequest, BlockerDeclaration)):
-            return legacy
-        if isinstance(legacy, AgentResult) and (
-            legacy.submitted_plan is not None
-            or legacy.submitted_replan is not None
-        ):
-            return legacy
-
-        # No submission in metadata — run post-run phase with posthook tools.
-        # The agent is re-prompted with ONLY its posthook tools and must call
-        # one of them. Loops up to 5 tool calls until a successful submission.
         from external_trigger.agent import run_external_trigger
         from tools.posthook.toolkit import PosthookTools
 
         api_client = getattr(self.team_run, "api_client", None)
         if api_client is None:
-            return legacy
+            logger.warning("No api_client for post-run on task %s; returning empty result", task.id)
+            return AgentResult(summary="completed (no api_client for posthook)")
 
         conductor = getattr(self.team_run, "conductor", None)
         messages: list[dict] = []
@@ -314,7 +238,8 @@ class Executor:
         toolkit = PosthookTools.from_context(ctx)
         post_run_tools = toolkit.list_tools()
         if not post_run_tools:
-            return legacy
+            logger.warning("No posthook tools for task %s; returning empty result", task.id)
+            return AgentResult(summary="completed (no posthook tools)")
         tool_summary = ", ".join(f"{t.name}: {t.description}" for t in post_run_tools)
         work_result = str(ctx.tool_metadata.get("work_result") or "").strip()
         handoff = ""
@@ -334,6 +259,18 @@ class Executor:
                 "Summarize what you accomplished and call the appropriate tool."
             )
 
+        posthook_cwd = Path(
+            str(
+                ctx.tool_metadata.get("daytona_cwd")
+                or ctx.tool_metadata.get("cwd")
+                or "."
+            )
+        )
+        execution_context = ToolExecutionContext(
+            cwd=posthook_cwd,
+            metadata=ctx.tool_metadata,
+        )
+
         try:
             result = await run_external_trigger(
                 agent_name=f"posthook:{task.agent_name}:{task.id}",
@@ -341,19 +278,23 @@ class Executor:
                 system_prompt=(
                     "You are a task submission assistant. "
                     "The conversation history is frozen. Do not continue the task itself; "
-                    "focus only on choosing the correct terminal submission tool."
+                    "focus only on producing a valid terminal submission. "
+                    "If a submission tool returns an error, revise the submission payload "
+                    "to satisfy that error and retry."
                 ),
                 prompt=f"{posthook_prompt}{handoff}",
                 tools=post_run_tools,
                 api_client=api_client,
                 max_tokens_per_turn=1000,
+                execution_context=execution_context,
+                execute_tools=True,
             )
         except (RuntimeError, Exception):
             logger.warning(
-                "post_run streaming runner failed for task %s, falling back to legacy",
+                "post_run streaming runner failed for task %s",
                 task.id, exc_info=True,
             )
-            return legacy
+            return AgentResult(summary="completed (posthook runner failed)")
 
         # Map RunResult → domain objects
         tool_input = result.tool_input
@@ -380,42 +321,8 @@ class Executor:
             case _:
                 return AgentResult(summary=str(tool_input))
 
-    @staticmethod
-    def _posthook_legacy(ctx: TeamAgentContext, defn: "AgentDefinition") -> AgentResult | RetryRequest | ReplanRequest:
-        """Legacy fallback: extract result from metadata when runner is unavailable."""
-        metadata = ctx.tool_metadata
-        submitted = metadata.get("submitted_output")
-        if submitted is not None:
-            if isinstance(submitted, Plan):
-                return AgentResult(summary="", submitted_plan=submitted)
-            if isinstance(submitted, ReplanPlan):
-                return AgentResult(summary="", submitted_replan=submitted)
-            if isinstance(submitted, RetryRequest):
-                return submitted
-            if isinstance(submitted, ReplanRequest):
-                return submitted
-            if isinstance(submitted, BlockerDeclaration):
-                return submitted
-            return AgentResult(summary=str(submitted))
-        from agents.registry import has_role
-        role = getattr(defn, "role", "")
-        if not role and hasattr(defn, "name"):
-            role = "planner" if has_role(defn.name, "planner") else ""
-        work_result = metadata.get("work_result")
-        if isinstance(work_result, str) and work_result.strip():
-            extracted = _extract_submission_from_text(work_result, role=role)
-            if extracted is not None:
-                return extracted
-        if role == "planner":
-            return AgentResult(summary="planner_did_not_submit_plan")
-        if isinstance(work_result, str) and work_result.strip():
-            return AgentResult(summary=work_result[:2000])
-        return AgentResult(summary="completed (no explicit submission)")
-
-    _extract_result = _posthook_legacy
-
     async def _post_completion_note(self, task: "Task", summary: str) -> None:
-        if not summary or summary in ("completed (no explicit submission)", "planner_did_not_submit_plan"):
+        if not summary or summary.startswith("completed ("):
             return
         budget = getattr(self.team_run, "budgets", None)
         max_bytes = getattr(budget, "max_note_bytes", 100_000) if budget else 100_000

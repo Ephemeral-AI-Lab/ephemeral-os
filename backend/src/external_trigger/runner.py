@@ -15,7 +15,7 @@ from typing import Any
 from pydantic import BaseModel
 
 from providers.types import ApiMessageRequest, ApiToolUseDeltaEvent, ApiMessageCompleteEvent
-from tools.core.base import BaseTool
+from tools.core.base import BaseTool, ToolExecutionContext, ToolResult
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +27,7 @@ class RunResult:
     tool_name: str
     tool_input: dict[str, Any]
     validated: BaseModel | None = None
+    tool_result: ToolResult | None = None
     conversation: list[dict[str, Any]] = field(default_factory=list)
     turns_used: int = 0
 
@@ -84,6 +85,8 @@ async def run(
     max_tokens_per_turn: int = 500,
     model: str | None = None,
     max_turns: int = 10,
+    execution_context: ToolExecutionContext | None = None,
+    execute_tools: bool = False,
 ) -> RunResult:
     """Execute the LLM loop until a valid tool call succeeds.
 
@@ -103,6 +106,12 @@ async def run(
         Max tokens per LLM response.
     model:
         Model override. Defaults to claude-sonnet-4.
+    execution_context:
+        Tool execution context used when ``execute_tools`` is enabled.
+    execute_tools:
+        When ``True``, validated tool calls are executed immediately. Tool
+        errors are fed back into the frozen conversation as ``tool_result``
+        blocks so the LLM can retry with corrected input.
     """
     api_tools = [tool.to_api_schema() for tool in tools]
     tool_map = {tool.name: tool for tool in tools}
@@ -199,11 +208,35 @@ async def run(
             })
             continue
 
+        tool_result: ToolResult | None = None
+        if execute_tools:
+            if execution_context is None:
+                raise RuntimeError("external_trigger runner: execute_tools=True requires execution_context")
+            try:
+                tool_result = await tool.execute(validated, execution_context)
+            except Exception as exc:
+                tool_result = ToolResult(
+                    output=f"Tool execution failed: {exc}",
+                    is_error=True,
+                )
+            conversation.append({
+                "role": "user",
+                "content": [{
+                    "type": "tool_result",
+                    "tool_use_id": tool_id,
+                    "content": tool_result.output,
+                    "is_error": tool_result.is_error,
+                }],
+            })
+            if tool_result.is_error:
+                continue
+
         # Success
         return RunResult(
             tool_name=tool_name,
             tool_input=tool_input,
             validated=validated,
+            tool_result=tool_result,
             conversation=conversation,
             turns_used=turn,
         )

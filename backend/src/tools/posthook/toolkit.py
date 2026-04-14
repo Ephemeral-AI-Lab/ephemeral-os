@@ -100,7 +100,6 @@ async def _accept_replan_submission(
     freshness_gate = await _freshness_submission_gate(context, action="replan_submission()")
     if freshness_gate is not None:
         return freshness_gate
-    context.metadata["submitted_output"] = replan
     await _post_submission_note(context, content=note_content)
     return ToolResult(
         output=f"Replan accepted ({len(replan.add_tasks)} new tasks, {len(replan.cancel_ids)} cancelled)."
@@ -287,7 +286,6 @@ class SubmitPlanTool(BaseTool):
         if freshness_gate is not None:
             return freshness_gate
 
-        context.metadata["submitted_output"] = plan
         summary = f"Submitted plan with {len(plan.tasks)} task(s)."
         if arguments.rationale:
             summary += f"\nRationale: {arguments.rationale.strip()}"
@@ -330,10 +328,6 @@ class RequestReplanTool(BaseTool):
         assert isinstance(arguments, RequestReplanInput)
         from team.models import ReplanRequest
 
-        context.metadata["submitted_output"] = ReplanRequest(
-            reason=arguments.reason,
-            suggestion=arguments.suggestion,
-        )
         note = f"Requested replan: {arguments.reason}"
         if arguments.suggestion:
             note += f"\nSuggestion: {arguments.suggestion}"
@@ -418,11 +412,6 @@ class DeclareBlockerTool(BaseTool):
         freshness_gate = await _freshness_submission_gate(context, action="declare_blocker()")
         if freshness_gate is not None:
             return freshness_gate
-        context.metadata["submitted_output"] = BlockerDeclaration(
-            root_cause_paths=list(arguments.root_cause_paths),
-            reason=arguments.reason,
-            suggestion=arguments.suggestion,
-        )
         note = (
             f"Declared blocker on {', '.join(arguments.root_cause_paths)}: "
             f"{arguments.reason}"

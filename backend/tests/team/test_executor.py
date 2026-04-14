@@ -1,10 +1,11 @@
-"""Unit tests for the deterministic _posthook() and _post_checkpoint_note()
-in team.runtime.executor.Executor."""
+"""Unit tests for the Executor post-run, checkpoint, dispatch, and scope
+injection in team.runtime.executor.Executor."""
 
 from __future__ import annotations
 
 from datetime import datetime, timezone
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import AsyncMock
 
 import pytest
@@ -97,122 +98,27 @@ def _make_task(
     )
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _ctx(submitted_output=None, work_result=None) -> TeamAgentContext:
-    meta: dict = {}
-    if submitted_output is not None:
-        meta["submitted_output"] = submitted_output
-    if work_result is not None:
-        meta["work_result"] = work_result
-    return TeamAgentContext(tool_metadata=meta)
-
-
-# ---------------------------------------------------------------------------
-# submitted_output is a Plan
-# ---------------------------------------------------------------------------
-
-
-def test_posthook_with_plan_returns_agent_result_with_submitted_plan():
-    plan = Plan(tasks=[TaskSpec(id="t1", task="do it", agent="developer")])
-    ctx = _ctx(submitted_output=plan)
-    result = Executor._posthook_legacy(ctx, FakeDefn())
-    assert isinstance(result, AgentResult)
-    assert result.submitted_plan is plan
-    assert result.submitted_replan is None
-
-
-# ---------------------------------------------------------------------------
-# submitted_output is a ReplanPlan
-# ---------------------------------------------------------------------------
-
-
-def test_posthook_with_replan_returns_agent_result_with_submitted_replan():
-    replan = ReplanPlan(
-        add_tasks=[TaskSpec(id="fix", task="fix bug", agent="developer")],
-        cancel_ids=["old-1"],
+def _make_executor(
+    stats: dict[str, int] | None = None,
+    file_change_store=None,
+) -> tuple[Executor, FakeTaskCenter]:
+    tc = FakeTaskCenter()
+    team_run = FakeTeamRun(
+        task_center=tc,
+        file_change_store=file_change_store,
+        stats=stats,
     )
-    ctx = _ctx(submitted_output=replan)
-    result = Executor._posthook_legacy(ctx, FakeDefn())
-    assert isinstance(result, AgentResult)
-    assert result.submitted_replan is replan
-    assert result.submitted_plan is None
-
-
-# ---------------------------------------------------------------------------
-# submitted_output is a RetryRequest
-# ---------------------------------------------------------------------------
-
-
-def test_posthook_with_retry_request_returns_retry_request_directly():
-    retry = RetryRequest(reason="flaky test, retrying")
-    ctx = _ctx(submitted_output=retry)
-    result = Executor._posthook_legacy(ctx, FakeDefn())
-    assert result is retry
-    assert isinstance(result, RetryRequest)
-
-
-# ---------------------------------------------------------------------------
-# submitted_output is a ReplanRequest
-# ---------------------------------------------------------------------------
-
-
-def test_posthook_with_replan_request_returns_replan_request_directly():
-    replan_req = ReplanRequest(reason="scope mismatch", suggestion="split task")
-    ctx = _ctx(submitted_output=replan_req)
-    result = Executor._posthook_legacy(ctx, FakeDefn())
-    assert result is replan_req
-    assert isinstance(result, ReplanRequest)
-
-
-def test_posthook_with_blocker_declaration_returns_blocker_directly():
-    blocker = BlockerDeclaration(
-        root_cause_paths=["src/auth/session.py"],
-        reason="shared auth helper is broken",
-        suggestion="repair the shared helper first",
+    executor = Executor(
+        team_run=team_run,
+        runner=AsyncMock(),
+        agent_lookup=lambda name: FakeDefn(),
     )
-    ctx = _ctx(submitted_output=blocker)
-    result = Executor._posthook_legacy(ctx, FakeDefn())
-    assert result is blocker
-    assert isinstance(result, BlockerDeclaration)
+    return executor, tc
 
 
 # ---------------------------------------------------------------------------
-# No submission — role-aware fallbacks
+# _run_post_run tests — posthook re-prompt via external trigger
 # ---------------------------------------------------------------------------
-
-
-def test_posthook_no_submission_planner_role_returns_sentinel():
-    ctx = _ctx()  # no submitted_output
-    result = Executor._posthook_legacy(ctx, FakePlannerDefn())
-    assert isinstance(result, AgentResult)
-    assert result.summary == "planner_did_not_submit_plan"
-
-
-def test_posthook_no_submission_developer_with_work_result_uses_it():
-    ctx = _ctx(work_result="test output here")
-    result = Executor._posthook_legacy(ctx, FakeDefn())
-    assert isinstance(result, AgentResult)
-    assert result.summary == "test output here"
-
-
-def test_posthook_no_submission_planner_extracts_plan_from_work_result():
-    work_result = """
-Planner synthesis complete.
-
-```json
-{"tasks":[{"id":"dev-auth","task":"Fix auth","agent":"developer","deps":[],"scope_paths":["src/auth"],"cascade_policy":"cancel"}],"rationale":"split by owner"}
-```
-"""
-    ctx = _ctx(work_result=work_result)
-    result = Executor._posthook_legacy(ctx, FakePlannerDefn())
-    assert isinstance(result, AgentResult)
-    assert result.submitted_plan is not None
-    assert len(result.submitted_plan.tasks) == 1
-    assert result.submitted_plan.tasks[0].id == "dev-auth"
 
 
 @pytest.mark.asyncio
@@ -256,85 +162,92 @@ async def test_run_post_run_uses_external_trigger_agent(monkeypatch):
     assert captured["messages"] == [{"role": "assistant", "content": "frozen"}]
     assert "Developer summary" in str(captured["prompt"])
     assert [tool.name for tool in captured["tools"]] == ["post_note", "request_replan"]
+    assert captured["execute_tools"] is True
 
 
-def test_posthook_no_submission_work_result_truncated_to_2000_chars():
-    long_result = "A" * 5000
-    ctx = _ctx(work_result=long_result)
-    result = Executor._posthook_legacy(ctx, FakeDefn())
+@pytest.mark.asyncio
+async def test_run_post_run_planner_submit_plan(monkeypatch):
+    captured: dict[str, object] = {}
+
+    async def fake_run_external_trigger(**kwargs):
+        captured.update(kwargs)
+        return SimpleNamespace(
+            tool_name="submit_plan",
+            tool_input={"tasks": [{"id": "t1", "task": "fix it", "agent": "developer"}]},
+            validated=None,
+            turns_used=1,
+        )
+
+    monkeypatch.setattr("external_trigger.agent.run_external_trigger", fake_run_external_trigger)
+
+    executor, _ = _make_executor()
+    executor.team_run.api_client = object()
+    executor.team_run.conductor = SimpleNamespace(
+        _executor_snapshots={"task-1": [{"role": "assistant", "content": "frozen"}]},
+    )
+    ctx = TeamAgentContext(
+        tool_metadata={
+            "agent_name": "team_planner",
+            "role": "planner",
+            "posthook_prompt": "Submit your plan.",
+            "work_result": '{"tasks":[{"id":"t1","task":"legacy text plan","agent":"developer"}]}',
+        }
+    )
+
+    result = await executor._run_post_run(
+        task=SimpleNamespace(id="task-1", agent_name="team_planner"),
+        defn=FakePlannerDefn(),
+        ctx=ctx,
+    )
+
     assert isinstance(result, AgentResult)
-    assert len(result.summary) == 2000
-    assert result.summary == "A" * 2000
+    assert result.submitted_plan is not None
+    assert len(result.submitted_plan.tasks) == 1
+    assert captured["agent_name"] == "posthook:team_planner:task-1"
+    assert captured["execute_tools"] is True
 
 
-def test_posthook_no_submission_no_work_result_returns_default():
-    ctx = _ctx()
-    result = Executor._posthook_legacy(ctx, FakeDefn())
+@pytest.mark.asyncio
+async def test_run_post_run_no_api_client_returns_sentinel(monkeypatch):
+    executor, _ = _make_executor()
+    executor.team_run.api_client = None
+    ctx = TeamAgentContext(tool_metadata={"role": "developer"})
+
+    result = await executor._run_post_run(
+        task=SimpleNamespace(id="task-1", agent_name="developer"),
+        defn=FakeDefn(),
+        ctx=ctx,
+    )
+
     assert isinstance(result, AgentResult)
-    assert result.summary == "completed (no explicit submission)"
+    assert "no api_client" in result.summary
 
 
-def test_posthook_no_submission_empty_work_result_returns_default():
-    ctx = _ctx(work_result="   ")  # whitespace only
-    result = Executor._posthook_legacy(ctx, FakeDefn())
+@pytest.mark.asyncio
+async def test_run_post_run_runner_failure_returns_sentinel(monkeypatch):
+    async def failing_trigger(**kwargs):
+        raise RuntimeError("LLM down")
+
+    monkeypatch.setattr("external_trigger.agent.run_external_trigger", failing_trigger)
+
+    executor, _ = _make_executor()
+    executor.team_run.api_client = object()
+    executor.team_run.conductor = SimpleNamespace(_executor_snapshots={})
+    ctx = TeamAgentContext(tool_metadata={"role": "developer"})
+
+    result = await executor._run_post_run(
+        task=SimpleNamespace(id="task-1", agent_name="developer"),
+        defn=FakeDefn(),
+        ctx=ctx,
+    )
+
     assert isinstance(result, AgentResult)
-    assert result.summary == "completed (no explicit submission)"
-
-
-# ---------------------------------------------------------------------------
-# Unknown submitted_output type
-# ---------------------------------------------------------------------------
-
-
-def test_posthook_unknown_submitted_type_coerces_to_string():
-    ctx = _ctx(submitted_output={"unexpected": "dict"})
-    result = Executor._posthook_legacy(ctx, FakeDefn())
-    assert isinstance(result, AgentResult)
-    assert "unexpected" in result.summary
-
-
-# ---------------------------------------------------------------------------
-# Edge cases with metadata
-# ---------------------------------------------------------------------------
-
-
-def test_posthook_empty_tool_metadata_dict():
-    # TeamAgentContext with empty dict
-    ctx = TeamAgentContext(tool_metadata={})
-    result = Executor._posthook_legacy(ctx, FakeDefn())
-    assert isinstance(result, AgentResult)
-    assert result.summary == "completed (no explicit submission)"
-
-
-def test_posthook_plan_has_empty_summary():
-    plan = Plan(tasks=[])
-    ctx = _ctx(submitted_output=plan)
-    result = Executor._posthook_legacy(ctx, FakeDefn())
-    assert isinstance(result, AgentResult)
-    assert result.summary == ""
+    assert "posthook runner failed" in result.summary
 
 
 # ---------------------------------------------------------------------------
 # _post_checkpoint_note tests
 # ---------------------------------------------------------------------------
-
-
-def _make_executor(
-    stats: dict[str, int] | None = None,
-    file_change_store=None,
-) -> tuple[Executor, FakeTaskCenter]:
-    tc = FakeTaskCenter()
-    team_run = FakeTeamRun(
-        task_center=tc,
-        file_change_store=file_change_store,
-        stats=stats,
-    )
-    executor = Executor(
-        team_run=team_run,
-        runner=AsyncMock(),
-        agent_lookup=lambda name: FakeDefn(),
-    )
-    return executor, tc
 
 
 def test_checkpoint_note_posted_on_completion():
