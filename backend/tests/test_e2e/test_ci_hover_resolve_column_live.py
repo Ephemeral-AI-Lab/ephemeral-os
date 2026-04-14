@@ -82,26 +82,33 @@ class TestHoverResolveColumnUnit:
 
 
 class TestReferencesResolveColumnUnit:
-    """Verify ci_query_references passes character through correctly."""
+    """Verify ci_query_references resolves symbol via index then calls LSP."""
 
-    async def test_references_character_zero_forwarded(self):
-        """character=0 is passed to svc.find_references (LspClient resolves it)."""
+    async def test_references_resolves_via_symbol_index(self):
+        """Symbol index finds the definition, then LSP is called with resolved coords."""
+        defn = MagicMock()
+        defn.name = "Engine"
+        defn.file_path = "/testbed/src/engine.py"
+        defn.line = 10
+        defn.kind.value = "class"
+
         svc = _svc_stub()
+        svc.symbol_index.is_built = True
+        svc.symbol_index.find.return_value = [defn]
+        svc.tree_cache = None
+        svc.lsp_client._read_line = MagicMock(return_value=None)
         ctx = _ctx({"ci_service": svc})
 
         with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
             await ci_query_references.execute(
-                ci_query_references.input_model(
-                    file_path="/testbed/src/engine.py",
-                    symbol="Engine",
-                    line=10,
-                    character=0,
-                ),
+                ci_query_references.input_model(symbol="Engine"),
                 ctx,
             )
-        svc.find_references.assert_called_once_with(
-            "/testbed/src/engine.py", "Engine", 10, 0,
-        )
+        svc.find_references.assert_called_once()
+        call_args = svc.find_references.call_args[0]
+        assert call_args[0] == "/testbed/src/engine.py"
+        assert call_args[1] == "Engine"
+        assert call_args[2] == 10
 
 
 # ---------------------------------------------------------------------------
@@ -237,20 +244,13 @@ class TestLiveHoverResolveColumn:
 class TestLiveReferencesResolveColumn:
     """Live: ci_query_references finds refs for indented symbols with character=0."""
 
-    async def test_references_indented_method_character_zero(self, live_sandbox_id):
-        """References for 'start' method at character=0 should find app.start() calls."""
+    async def test_references_indented_method(self, live_sandbox_id):
+        """References for 'start' method should find app.start() calls via symbol index."""
         ci_svc, ctx = _build_ci_context(live_sandbox_id)
-        workspace_root = ci_svc.workspace_root
 
         with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=ci_svc):
-            # EVAL_SANDBOX_FILES src/main.py line 32: "    def start(self) -> None:"
             result = await ci_query_references.execute(
-                ci_query_references.input_model(
-                    file_path=f"{workspace_root}/src/main.py",
-                    symbol="start",
-                    line=32,
-                    character=0,
-                ),
+                ci_query_references.input_model(symbol="start"),
                 ctx,
             )
 
@@ -261,20 +261,13 @@ class TestLiveReferencesResolveColumn:
             f"Expected references for 'start', got: {result.output}"
         )
 
-    async def test_references_class_character_zero(self, live_sandbox_id):
-        """References for 'App' class at character=0 should find usages."""
+    async def test_references_class(self, live_sandbox_id):
+        """References for 'App' class should find usages via symbol index."""
         ci_svc, ctx = _build_ci_context(live_sandbox_id)
-        workspace_root = ci_svc.workspace_root
 
         with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=ci_svc):
-            # EVAL_SANDBOX_FILES src/main.py line 25: "class App:"
             result = await ci_query_references.execute(
-                ci_query_references.input_model(
-                    file_path=f"{workspace_root}/src/main.py",
-                    symbol="App",
-                    line=25,
-                    character=0,
-                ),
+                ci_query_references.input_model(symbol="App"),
                 ctx,
             )
 

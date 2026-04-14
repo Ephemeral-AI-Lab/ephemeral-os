@@ -95,11 +95,12 @@ def test_budget_warning_fires_at_one_call_remaining():
     assert "1 of 5" in event.text
 
 
-def test_budget_warning_guides_planner_to_submit_plan():
+def test_budget_warning_guides_planner_to_finalize_plan_handoff():
     ctx = _ctx(100, 75)
     ctx.tool_metadata["role"] = "planner"
     _, event = build_budget_warning(ctx)
-    assert "submit_plan()" in event.text
+    assert "plan json" in event.text.lower()
+    assert "post-run submission phase" in event.text.lower()
 
 
 def test_budget_warning_guides_validator_to_wrap_up():

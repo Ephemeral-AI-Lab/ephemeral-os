@@ -5,7 +5,7 @@ Use this reference immediately before emitting final plan JSON.
 
 - Emit `{"tasks": [...], "rationale": "..."}` as the tool-call payload shape.
 - Finish the benchmark-surface ledger, deps, and task prose before loading this reference.
-- After this reference loads, the very next action must be emitting the plan JSON as your final text output. Do not make any more tool calls — the runtime's post-run phase will submit the plan automatically.
+- After this reference loads, the very next action must be emitting the plan JSON as your final text output for the post-run submission phase. Do not make any more tool calls in the main loop after this reference loads.
 - No more tool calls, ownership recounts, or task-count debates are allowed after this reference loads.
 - Never load this reference in parallel with `root-plan-self-check`.
 - Must use `agent` only for registered workers: `developer`, `validator`, or `team_planner`.

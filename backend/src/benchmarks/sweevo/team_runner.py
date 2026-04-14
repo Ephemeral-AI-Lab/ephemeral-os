@@ -848,6 +848,21 @@ def _make_runner(
                 await asyncio.gather(*checkpoint_tasks, return_exceptions=True)
             qc = getattr(agent, "query_context", None)
             final_text = _extract_final_text(agent.display_messages)
+            if final_text:
+                ctx.tool_metadata["work_result"] = final_text
+            if team_run_id and work_item_id:
+                try:
+                    from team.runtime.registry import get as get_team_run
+
+                    team_run = get_team_run(team_run_id)
+                    if team_run is not None:
+                        team_run.conductor.register_snapshot(work_item_id, _snapshot_messages())
+                except Exception:
+                    logger.debug(
+                        "Failed to persist final agent snapshot for %s",
+                        work_item_id,
+                        exc_info=True,
+                    )
             session_state = getattr(qc, "session_state", None)
             compacted_total = int(getattr(session_state, "compacted", 0) or 0)
             new_compactions = 0
@@ -1127,6 +1142,15 @@ def _make_context_builders(
             repo_dir=repo_dir,
             base=build_task_metadata(team_run, wi),
         )
+        meta["role"] = getattr(defn, "role", "") or ""
+        posthook_tools = getattr(defn, "posthook", None) or []
+        if posthook_tools:
+            meta["posthook_tool_names"] = list(posthook_tools)
+            meta["posthook_prompt"] = (
+                "Your main work is complete. You must now submit your results "
+                f"by calling one of: {', '.join(posthook_tools)}. "
+                "Summarize what you accomplished and call the appropriate tool."
+            )
         try:
             get_code_intelligence(
                 sandbox_id=team_run.sandbox_id or sandbox_id,

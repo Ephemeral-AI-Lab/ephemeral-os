@@ -118,9 +118,9 @@ EVAL_CASES = [
     ),
     EvalCase(
         name="find_references",
-        prompt="Find all usages of the symbol at line 5 in src/models.py across the codebase.",
+        prompt="Find all usages of the User symbol across the codebase.",
         expected_tools=["ci_query_references"],
-        required_params={"ci_query_references": ["file_path", "line", "symbol"]},
+        required_params={"ci_query_references": ["symbol"]},
     ),
     EvalCase(
         name="check_errors",

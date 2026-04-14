@@ -37,7 +37,7 @@
 
 **Blocker lifecycle:** declare -> assess running siblings+descendants via external_trigger agent -> pause YES verdicts -> spawn resolver fix task -> fix completes -> resume paused agents with checkpoint rehydration.
 
-**DispatchQueue integration:** `pop_ready` accepts a `blocker_guard` callable from the Conductor. During an active blocker, `guard_pop_ready` allows only the resolver fix task to dispatch; all other READY candidates are skipped without mutating their state.
+**DispatchQueue integration:** `pop_ready` is a simple atomic claim with no guard logic. During an active blocker, tasks that hit the broken dependency will fail naturally and trigger their own `request_replan`. The replanner reads sibling notes (including auto-notes from active mode) and sees the existing blocker, allowing it to make informed recovery decisions without a dispatch-level throttle.
 
 ### 3. TaskCenter active mode replaces passive nudges
 
@@ -78,8 +78,7 @@ TaskCenter (unified)
 
 DispatchQueue (thin)
     pop_ready only (mark_running moved to TaskCenter)
-    accepts blocker_guard from Conductor
-    guard returns True=allow, False=skip (no mutation)
+    no guard logic — tasks dispatch freely
 
 External Trigger Module (external_trigger/)
     runner.run()            shared LLM loop (tool_choice="any", retry until success)
@@ -116,7 +115,7 @@ task_center.post(completion_note)
 
 **After (2 components, 4-step lifecycle per task):**
 ```
-rec = dispatch_queue.pop_ready(run_id, conductor.guard_pop_ready)
+rec = dispatch_queue.pop_ready(run_id)
 task = task_center.mark_running(task.id, agent_run_id)
 ctx = task_center.context_for(task)
 run_agent(ctx)                              # query loop

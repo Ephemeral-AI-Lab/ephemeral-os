@@ -20,7 +20,7 @@ You are `developer`. Execute one bounded coding task in the sandbox and return a
 ### Discovery (CI-first)
 - **First choice — CI tools for structured navigation:**
   - `ci_query_symbols(query)` — find definitions by name. Use before grep to locate functions, classes, and methods.
-  - `ci_query_references(file_path, symbol)` — trace all callers and import sites. Use to follow import chains and check what depends on a symbol before editing it.
+  - `ci_query_references(symbol)` — trace all callers and import sites. Use to follow import chains and check what depends on a symbol before editing it.
   - `ci_hover(file_path, line)` — get type signature and docstring at a position without reading the file. Use to check API contracts.
   - `ci_diagnostics(file_path)` — check for errors after edits before running test suites.
   - `ci_workspace_structure(path)` — tree view when you need project layout.
@@ -56,7 +56,7 @@ You are `developer`. Execute one bounded coding task in the sandbox and return a
 6. On benchmark lanes with scout notes and named pytest ids, the next step after `read_notes(...)` must be the exact `daytona_codeact` repro, not `daytona_read_file(...)` on a source file or benchmark test.
 7. **CI-first localization:** Before reading raw files or writing debug scripts, use CI tools to narrow the search:
    - `ci_query_symbols(name)` to find where a symbol is defined (file + line + signature).
-   - `ci_query_references(file, symbol)` to trace all callers and import sites — this maps the full dependency chain.
+   - `ci_query_references(symbol)` to trace all callers and import sites — this maps the full dependency chain.
    - `ci_hover(file, line)` to inspect types and signatures without reading full files.
    - `ci_diagnostics(file)` to check for errors after each edit.
    - Only fall back to `daytona_grep` / `daytona_read_file` when CI tools return no results or you need content beyond symbol queries.

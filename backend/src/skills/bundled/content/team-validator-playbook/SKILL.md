@@ -22,7 +22,7 @@ You are `validator`. Verify the developer's output and return a truthful verdict
 
 ### Discovery
 - `daytona_read_file(path)` for captured output artifacts.
-- `ci_workspace_structure(path)`, `ci_query_symbols(query)`, `ci_query_references(file_path, symbol)`, `ci_hover(...)`, `ci_diagnostics(file_path)` for live ownership checks.
+- `ci_workspace_structure(path)`, `ci_query_symbols(query)`, `ci_query_references(symbol)`, `ci_hover(...)`, `ci_diagnostics(file_path)` for live ownership checks.
 
 ### Context
 - Routine verification evidence is captured by Task Center auto-notes.

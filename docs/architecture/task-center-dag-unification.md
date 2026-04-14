@@ -392,16 +392,10 @@ between them. The boundary is a liability, not an asset.
         Constructor
             session_factory     async_sessionmaker (same PostgreSQL connection)
 
-        pop_ready(run_id, blocker_guard) returns TaskRecord or None
+        pop_ready(run_id) returns TaskRecord or None
             Atomically claim the next READY task.
             Uses FOR UPDATE SKIP LOCKED for concurrent safety.
-            Calls blocker_guard(candidate) before returning.
-            Guard returns True to ALLOW dispatch, False to SKIP.
-            Skipped candidates are not mutated — just passed over.
-
-            Implementation: SELECTs up to 32 READY candidates with
-            SKIP LOCKED, iterates until one passes the guard, then
-            UPDATEs that single row to 'running'.
+            Single subquery UPDATE — selects and claims in one statement.
 
     One method. Same SQL. Same atomicity guarantees.
     The only difference: it is no longer bundled with 800 lines
@@ -411,27 +405,11 @@ between them. The boundary is a liability, not an asset.
     TaskCenter.mark_running(task_id, agent_run_id) which assigns
     the agent_run_id after pop_ready returns.
 
-### Blocker Guard Integration
-
-    DispatchQueue does NOT know about blockers.
-    It accepts a guard function from the Conductor:
-
-    Executor calls:
-        task = dispatch_queue.pop_ready(
-            run_id,
-            blocker_guard=conductor.guard_pop_ready
-        )
-
-    The guard is a callable:
-        guard(task) returns True if task is ALLOWED to dispatch
-        guard(task) returns False if task should be SKIPPED
-
-    Conductor.guard_pop_ready: allows only resolver fix tasks
-    while any blocker is active. All other candidates are skipped
-    (their status stays READY — no mutation).
-
-    This keeps DispatchQueue free of blocker knowledge.
-    The Conductor owns the guard logic.
+    No dispatch guard: tasks dispatch freely during active blockers.
+    Tasks that hit the broken dependency fail naturally and trigger
+    request_replan. The replanner reads sibling notes (including
+    auto-notes) and sees the existing blocker context, allowing
+    informed recovery decisions without a dispatch-level throttle.
 
 ---
 
@@ -500,7 +478,7 @@ between them. The boundary is a liability, not an asset.
 
     DispatcherStore method             DispatchQueue / TaskCenter method
     ────────────────────               ────────────────────────────────
-    pop_ready                          DispatchQueue.pop_ready (with blocker_guard)
+    pop_ready                          DispatchQueue.pop_ready
     mark_running                       TaskCenter.mark_running (assigns agent_run_id)
 
 ### From Dispatcher to TaskCenter
@@ -553,7 +531,7 @@ between them. The boundary is a liability, not an asset.
         self.team_run.conductor         (Conductor)
 
     Task lifecycle:
-        rec = dispatch_queue.pop_ready(run_id, conductor.guard_pop_ready)
+        rec = dispatch_queue.pop_ready(run_id)
         task = task_center.mark_running(task.id, agent_run_id)
         ctx = task_center.context_for(task)
         run_agent(ctx)                              # query loop
@@ -813,11 +791,10 @@ Two phases. Phase 1 has no dependencies. Phase 2 depends on Phase 1.
     Deliverables:
         [x] team/runtime/dispatch_queue.py — new file
         [x] DispatchQueue class with:
-            - pop_ready(run_id, blocker_guard) — same SQL as current
+            - pop_ready(run_id) — same SQL as current
             (mark_running moved to TaskCenter instead of DispatchQueue)
-        [x] blocker_guard parameter (callable, provided by Conductor)
-        [x] Tests: pop_ready returns READY task, skips blocked,
-            respects SKIP LOCKED, calls blocker_guard
+        [x] Tests: pop_ready returns READY task,
+            respects SKIP LOCKED
 
 ### Phase 2 — Rewire and Delete
 

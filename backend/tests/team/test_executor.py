@@ -11,6 +11,7 @@ import pytest
 
 from team.models import (
     AgentResult,
+    BlockerDeclaration,
     Note,
     Plan,
     ReplanPlan,
@@ -167,6 +168,18 @@ def test_posthook_with_replan_request_returns_replan_request_directly():
     assert isinstance(result, ReplanRequest)
 
 
+def test_posthook_with_blocker_declaration_returns_blocker_directly():
+    blocker = BlockerDeclaration(
+        root_cause_paths=["src/auth/session.py"],
+        reason="shared auth helper is broken",
+        suggestion="repair the shared helper first",
+    )
+    ctx = _ctx(submitted_output=blocker)
+    result = Executor._posthook_legacy(ctx, FakeDefn())
+    assert result is blocker
+    assert isinstance(result, BlockerDeclaration)
+
+
 # ---------------------------------------------------------------------------
 # No submission — role-aware fallbacks
 # ---------------------------------------------------------------------------
@@ -184,6 +197,65 @@ def test_posthook_no_submission_developer_with_work_result_uses_it():
     result = Executor._posthook_legacy(ctx, FakeDefn())
     assert isinstance(result, AgentResult)
     assert result.summary == "test output here"
+
+
+def test_posthook_no_submission_planner_extracts_plan_from_work_result():
+    work_result = """
+Planner synthesis complete.
+
+```json
+{"tasks":[{"id":"dev-auth","task":"Fix auth","agent":"developer","deps":[],"scope_paths":["src/auth"],"cascade_policy":"cancel"}],"rationale":"split by owner"}
+```
+"""
+    ctx = _ctx(work_result=work_result)
+    result = Executor._posthook_legacy(ctx, FakePlannerDefn())
+    assert isinstance(result, AgentResult)
+    assert result.submitted_plan is not None
+    assert len(result.submitted_plan.tasks) == 1
+    assert result.submitted_plan.tasks[0].id == "dev-auth"
+
+
+@pytest.mark.asyncio
+async def test_run_post_run_uses_external_trigger_agent(monkeypatch):
+    captured: dict[str, object] = {}
+
+    async def fake_run_external_trigger(**kwargs):
+        captured.update(kwargs)
+        return SimpleNamespace(
+            tool_name="post_note",
+            tool_input={"content": "done"},
+            validated=None,
+            turns_used=1,
+        )
+
+    monkeypatch.setattr("external_trigger.agent.run_external_trigger", fake_run_external_trigger)
+
+    executor, _ = _make_executor()
+    executor.team_run.api_client = object()
+    executor.team_run.conductor = SimpleNamespace(
+        _executor_snapshots={"task-1": [{"role": "assistant", "content": "frozen"}]},
+    )
+    ctx = TeamAgentContext(
+        tool_metadata={
+            "agent_name": "developer",
+            "role": "developer",
+            "posthook_prompt": "Submit your result.",
+            "work_result": "Developer summary",
+        }
+    )
+
+    result = await executor._run_post_run(
+        task=SimpleNamespace(id="task-1", agent_name="developer"),
+        defn=FakeDefn(),
+        ctx=ctx,
+    )
+
+    assert isinstance(result, AgentResult)
+    assert result.summary == "done"
+    assert captured["agent_name"] == "posthook:developer:task-1"
+    assert captured["messages"] == [{"role": "assistant", "content": "frozen"}]
+    assert "Developer summary" in str(captured["prompt"])
+    assert [tool.name for tool in captured["tools"]] == ["post_note", "request_replan"]
 
 
 def test_posthook_no_submission_work_result_truncated_to_2000_chars():
@@ -541,6 +613,42 @@ def test_run_forever_survives_transient_pop_ready_error():
     executor._run_one.assert_awaited_once()
 
 
+def test_dispatch_blocker_declaration_creates_blocker_and_completes_task():
+    import asyncio
+
+    task = _make_task(status="running")
+    tc = FakeTaskCenter()
+    tc.complete_task = AsyncMock(return_value=[])
+    team_run = FakeTeamRun(task_center=tc)
+    team_run.conductor = SimpleNamespace(
+        blocker_for_fix_task=lambda task_id: None,
+        create_blocker=AsyncMock(),
+    )
+    executor = Executor(
+        team_run=team_run,
+        runner=AsyncMock(),
+        agent_lookup=lambda name: FakeDefn(),
+    )
+    declaration = BlockerDeclaration(
+        root_cause_paths=["src/auth/session.py"],
+        reason="shared auth helper is broken",
+        suggestion="repair helper before resuming sibling work",
+    )
+
+    asyncio.run(executor._dispatch(task, declaration))
+
+    team_run.conductor.create_blocker.assert_awaited_once_with(
+        reason="shared auth helper is broken",
+        root_cause_paths=["src/auth/session.py"],
+        initiating_task_id=task.id,
+        declared_by=task.id,
+    )
+    tc.complete_task.assert_awaited_once()
+    completed_result = tc.complete_task.await_args.args[1]
+    assert isinstance(completed_result, AgentResult)
+    assert completed_result.summary == "Declared blocker: shared auth helper is broken"
+
+
 # ---------------------------------------------------------------------------
 # _plan_health_prefix tests
 # ---------------------------------------------------------------------------
@@ -590,5 +698,3 @@ def test_plan_health_prefix_retry_warning():
     assert prefix is not None
     assert "PLAN HEALTH WARNING" in prefix
     assert "5 retries" in prefix
-
-

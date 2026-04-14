@@ -28,9 +28,7 @@
 14. [Scope and Boundaries](#14-scope-and-boundaries)
 15. [Budget and Safety](#15-budget-and-safety)
 16. [Walkthrough — The compatibility.py Scenario](#16-walkthrough--the-compatibilitypy-scenario)
-17. [Files Changed](#17-files-changed)
-18. [Implementation Phases](#18-implementation-phases)
-19. [Tradeoffs and Scores](#19-tradeoffs-and-scores)
+17. [Implementation Snapshot](#17-implementation-snapshot)
 
 ---
 
@@ -84,7 +82,6 @@ With this protocol: the replanner detects the systemic pattern, declares a block
          |                                           normal developer posthook tools)
          v
     Conductor       "Post-fix coordination"         resume assessed agents,
-         |                                          lift pop_ready guard,
          |                                          spawn replanner for initiator
          v
     Resumed Agents  "Continuing from checkpoint"    resume from external trigger checkpoint state
@@ -145,7 +142,7 @@ With this protocol: the replanner detects the systemic pattern, declares a block
 
 PAUSED is non-terminal. This is the critical property: a parent with a PAUSED child stays EXPANDED. The maybe_promote_expanded_parent function will not promote the parent to DONE while any child is PAUSED. No ancestor chain reopening is needed in the common case.
 
-Only RUNNING tasks can transition to PAUSED (via pause assessment YES verdict). Non-running tasks (READY, PENDING, FAILED) are never touched by the blocker protocol — the pop_ready guard prevents dispatch during an active blocker, but their status remains unchanged.
+Only RUNNING tasks can transition to PAUSED (via pause assessment YES verdict). Non-running tasks (READY, PENDING, FAILED) are never touched by the blocker protocol. READY tasks continue to dispatch normally — if they hit the broken dependency, they fail and trigger their own request_replan, where the replanner sees the existing blocker context via sibling notes.
 
 ### Transition Diagram
 
@@ -178,8 +175,8 @@ Only RUNNING tasks can transition to PAUSED (via pause assessment YES verdict). 
        |
        |   Non-running tasks (READY, PENDING, FAILED):
        |     Status UNCHANGED during blocker.
-       |     Pop_ready guard blocks dispatch while blocker active.
-       |     Guard lifts on blocker resolution — normal dispatch resumes.
+       |     READY tasks dispatch normally — if they hit the broken
+       |     dependency, they fail and the replanner sees blocker context.
 
 ---
 
@@ -232,7 +229,7 @@ Only RUNNING tasks can transition to PAUSED (via pause assessment YES verdict). 
     plus what was fixed.
 
     Non-running tasks are not resumed — they were never paused.
-    READY tasks dispatch normally once the pop_ready guard lifts.
+    READY tasks dispatch normally throughout the blocker lifecycle.
     PENDING tasks continue waiting for deps.
     The initiating FAILED task is handled by a post-fix replanner spawn
     (see Conductor.on_fix_complete).
@@ -326,7 +323,6 @@ Each attempt is a new task with a clean record. The original stays FAILED with i
                         |            |
                         | spawn pause assessments for RUNNING agents
                         | non-running tasks UNTOUCHED (stay as-is)
-                        | pop_ready guard blocks all non-fix dispatch
                         +-----+------+
                               |
                               | all assessments resolved (YES/NO/timeout)
@@ -386,18 +382,18 @@ Each attempt is a new task with a clean record. The original stays FAILED with i
           v
     FIXING phase begins
 
-### Pop-Ready Guard — Simplified
+### No Dispatch Guard
 
-The pop_ready guard based on blast_radius file paths has been
-replaced with a simpler structural guard.  Assessment scope is
-structural (siblings + descendants), not file-path based.
+There is no dispatch guard. Tasks dispatch freely during active
+blockers. Assessment scope is structural (siblings + descendants),
+not file-path based.
 
-During an active blocker, `Conductor.guard_pop_ready` blocks
-dispatch of ALL tasks except the resolver fix task.  The guard
-returns True (allow) only for the fix_task_id of an active blocker;
-all other candidates are skipped (their status stays READY — no
-mutation).  Once the blocker resolves, the guard lifts and normal
-dispatch resumes.
+Tasks that hit the broken dependency fail naturally and trigger
+their own `request_replan`. The replanner reads sibling notes
+(including auto-notes from active mode) and sees the existing
+blocker context — allowing informed recovery decisions without
+a dispatch-level throttle. This maximizes parallelism: unaffected
+tasks continue working while the resolver fixes the root cause.
 
 ### Dedup and Merge
 
@@ -672,7 +668,8 @@ No Conductor.on_task_failed method is needed.
              Keep under 300 words."
 
         The turn checkpoint explicitly asks about blockers. This feeds
-        the replanner's decision (sibling notes via read_notes(scope="siblings")).
+        the replanner's decision via sibling notes from
+        `read_sibling_notes(...)`.
 
 #### Note Attribution
 
@@ -757,7 +754,7 @@ The Conductor spawns resolver tasks (a dedicated role, not a normal developer) f
                 Called when replanner invokes declare_blocker.
                 Creates Blocker record from replanner's assessment
                 (including initiating_task_id from the failed task).
-                Activates pop_ready guard, then calls assess_running.
+                Calls assess_running.
 
             assess_running(blocker)
                 Queries all siblings of the initiating task plus their
@@ -798,7 +795,7 @@ The Conductor spawns resolver tasks (a dedicated role, not a normal developer) f
                 (typically after `post_note(...)`).
                 Stores fix_summary on blocker.
                 Calls resume_assessed(blocker, fix_summary).
-                Lifts pop_ready guard (blocker no longer active).
+                Removes blocker from active set.
                 Requests a post-fix replanner for blocker.initiating_task_id.
                 Blocker status set to RESOLVED.
 
@@ -813,16 +810,14 @@ The Conductor spawns resolver tasks (a dedicated role, not a normal developer) f
                 Transitions all PAUSED tasks with this blocker_id to READY.
                 For each: new agent run from pause_checkpoint with resume
                 message appended. Only formerly-RUNNING tasks are in this set.
-                Non-running tasks were never paused — they resume naturally
-                when the pop_ready guard lifts.
+                Non-running tasks were never paused — they dispatch
+                normally throughout the blocker lifecycle.
 
-        Guards
-            guard_pop_ready(task) returns bool
-                Called by pop_ready before dispatching.
-                Returns True when no blocker is active, or when the
-                candidate task is an active resolver fix task.
-                All other READY tasks are skipped while a blocker is active.
-                Task status is NEVER changed by this guard.
+        Queries
+            has_active_blocker() returns bool
+                Whether any blocker is currently active.
+            blocker_for_fix_task(task_id) returns Blocker or None
+                Look up whether a task is a resolver fix task.
 
 ---
 
@@ -990,25 +985,16 @@ The replanner now sees live siblings. It can assess their state, read their note
             AND status = 'paused'
         Used when resolver fails and team run is marked FAILED.
 
-### pop_ready Modification
+### pop_ready — No Guard
 
-    pop_ready gains a guard that checks active blockers before dispatching:
+    pop_ready is a simple atomic claim with no guard logic.
+    SQL selects the next READY candidate with pending_dep_count = 0
+    and atomically sets it to RUNNING.
 
-    SELECT t.id FROM tasks t
-    WHERE t.team_run_id = run_id
-      AND t.status = 'ready'
-      AND t.pending_dep_count = 0
-      AND NOT EXISTS (
-          SELECT 1 FROM blockers b
-          WHERE b.team_run_id = run_id
-            AND b.status IN ('active', 'fixing')
-            AND t.scope_paths overlaps b.blast_radius
-      )
-    ORDER BY t.depth, t.created_at
-    LIMIT 1
-    FOR UPDATE SKIP LOCKED
-
-Tasks that overlap with an active blocker's blast_radius are skipped (not dispatched, not status-changed). This prevents new tasks from running into broken code during the fix phase. When the blocker resolves and the guard lifts, these tasks become eligible for dispatch on the next pop_ready cycle.
+    During an active blocker, READY tasks continue to dispatch normally.
+    Tasks that hit the broken dependency fail and trigger request_replan.
+    The replanner reads sibling notes (including auto-notes) and sees
+    the existing blocker context for informed recovery decisions.
 
 ---
 
@@ -1059,10 +1045,10 @@ The agent naturally continues from the snapshot point.
 
 Non-running tasks (READY, PENDING, FAILED) are never paused by the blocker protocol. Their status remains unchanged throughout the blocker lifecycle.
 
-    READY tasks: blocked from dispatch by pop_ready guard while blocker
-    is active. Once the blocker resolves and the guard lifts, they dispatch
-    normally on the next pop_ready cycle. No resume message needed — these
-    tasks start fresh and the fix is already applied to the codebase.
+    READY tasks: dispatch normally throughout the blocker lifecycle. If
+    they hit the broken dependency, they fail and trigger request_replan.
+    The replanner sees the existing blocker context via sibling notes
+    and can make informed recovery decisions. No resume message needed.
 
     PENDING tasks: continue waiting for dependencies. Unaffected.
 
@@ -1179,87 +1165,51 @@ The query loop (run_query_loop) maintains display_messages internally. To expose
     Conductor or TaskCenter reads snapshot when needed:
         snapshot = list(self._latest_messages)
 
-### 13.4 Pop-Ready Blocker Guard — Python-Side Filtering
+### 13.4 No Dispatch Guard
 
-The proposed SQL using PostgreSQL array overlap (&&) cannot perform path-prefix matching. blast_radius=["dask/"] will not match scope_paths=["dask/dataframe/io/hdf.py"] via array overlap because they are not exact element matches. The guard must use Python-side filtering with the existing scope_paths_overlap function.
+There is no dispatch guard on `pop_ready`. Tasks dispatch freely during
+active blockers. This maximizes parallelism: unaffected tasks continue
+working while the resolver fixes the root cause.
 
-#### Design
-
-The Conductor maintains an in-memory set of active blockers. The pop_ready guard is a Python-side check AFTER the SQL query returns a candidate, not a SQL-level filter.
-
-    pop_ready flow (revised):
-
-    1. SQL: SELECT next READY task with pending_dep_count = 0
-       (existing query, unchanged)
-
-    2. Python: Conductor.guard_pop_ready(candidate) -> bool
-       Checks candidate.scope_paths against all active blockers'
-       blast_radius using scope_paths_overlap (prefix matching).
-
-    3. If blocked:
-       Skip the candidate (stays READY, not dispatched).
-       pop_ready retries with next candidate.
-
-    4. If not blocked:
-       Return candidate for dispatch.
-
-    Conductor.guard_pop_ready(task):
-        for blocker in self._active_blockers.values():
-            for task_path in task.scope_paths:
-                for blast_path in blocker.blast_radius:
-                    if scope_paths_overlap(task_path, blast_path):
-                        return True  # blocked
-        return False  # clear
-
-#### Why Python-Side, Not SQL
-
-    scope_paths_overlap does prefix matching:
-        "dask/" overlaps "dask/dataframe/io/hdf.py"     (prefix)
-        "dask/dataframe" overlaps "dask/dataframe/io/"   (prefix)
-        "pandas/" does NOT overlap "dask/compatibility.py"
-
-    PostgreSQL array overlap (&&) checks exact element matches:
-        ARRAY['dask/'] && ARRAY['dask/dataframe/io/hdf.py']  -> FALSE
-
-    The existing scope_paths_overlap function in team/_path_utils.py
-    already handles all the edge cases (trailing slashes, prefix
-    containment, bidirectional checks). Reusing it in Python is
-    simpler and more correct than reimplementing in SQL.
-
-#### Performance
-
-    The guard runs once per pop_ready call. pop_ready is called
-    when an executor needs work — typically a few times per second
-    at most. The guard iterates over active blockers (max 3) and
-    scope_paths (typically 1-3 per task). This is O(blockers * paths)
-    per pop_ready call — negligible.
+Tasks that hit the broken dependency fail naturally and trigger
+`request_replan`. The replanner reads sibling notes (including auto-notes
+from active mode) and sees the existing blocker context, allowing
+informed recovery decisions. This is simpler and more concurrent than
+a global dispatch throttle.
 
 ### 13.5 Blocker Persistence
 
-The Blocker is stored in-memory on the Conductor, NOT in PostgreSQL. This is a deliberate choice:
+The active-blocker set is cached in-memory on the Conductor for fast
+lookups, and blocker records are also persisted through `BlockerStore`.
 
     In-memory:
-        Fast (no SQL round-trip for guard_pop_ready)
-        Simple (no migration, no table, no ORM)
-        Blocker lifetime = TeamRun lifetime (appropriate scope)
+        Fast access for fix-task lookup and active blocker queries.
 
-    Risk: if the process crashes mid-blocker, PAUSED tasks stay PAUSED.
-    Mitigation: on TeamRun restart, scan for tasks with status=PAUSED
-    and blocker_id set. If no active blocker matches, cancel them
-    and mark team run as FAILED. This is a recovery path, not a normal path.
+    Durable:
+        BlockerStore saves blocker status, root_cause_paths, initiating task,
+        fix_task_id, and resolution/failure metadata.
+
+    Recovery:
+        On TeamRun restart, Conductor.restore() reloads active blockers from
+        BlockerStore and task replay restores paused-task metadata from the
+        event log and task rows.
 
 ### 13.6 Concurrent Blockers on the Same Task
 
-A task has a single `blocker_id` field. If a second blocker wants to pause an already-paused task, skip it — it is already paused. On resume, check if any other active blocker still covers this task's scope before transitioning to READY.
+A task has a single `blocker_id` field. If a second blocker encounters an
+already-paused task, it skips that task. Resume is intentionally simple:
+the original blocker clears `blocker_id` and returns the task to READY.
+If another blocker is still active and the task hits the same broken
+dependency again after resuming, it fails and the replanner sees the
+second blocker context via sibling notes.
 
     resume_paused_tasks(blocker_id):
         for each task with this blocker_id and status=PAUSED:
-            if any OTHER active blocker's blast_radius overlaps task.scope_paths:
-                skip (still blocked by the other blocker)
-            else:
-                transition to READY
+            transition to READY
+            clear blocker_id
 
-This avoids the complexity of a `blocker_ids` list. A task is paused by one blocker and checked against others on resume.
+This avoids the complexity of a `blocker_ids` list while preserving safety
+through the note-based replanner awareness.
 
 ### 13.7 Database Migration
 
@@ -1270,8 +1220,8 @@ The following schema changes require a migration:
     ALTER TABLE tasks ADD COLUMN pause_verdict TEXT;
 
     No paused_from column — only RUNNING tasks can be paused.
-    No new tables. Blocker is in-memory (Section 13.5).
-    Migration is part of Phase B (PAUSED Status + Blocker Model).
+    Blockers themselves are persisted through BlockerStore and restored
+    on restart. Migration is part of the blocker-protocol rollout.
 
 ---
 
@@ -1302,56 +1252,56 @@ If the same broken dependency affects tasks in a different subtree (different pa
 
 This is slightly redundant (two fix tasks for the same file) but correct and dramatically simpler than cross-subtree coordination. The second fix task sees the file already repaired and completes immediately.
 
-### Blast Radius vs Root Cause Paths
+### Root Cause Paths vs Structural Scope
 
-    root_cause_paths    The specific broken files. Used by the fix task to know
-                        what to repair. Included in pause assessment prompts
-                        so the external trigger can identify direct impact.
+    root_cause_paths    The specific broken files. Used by the resolver task
+                        and included in pause-assessment prompts.
 
-    blast_radius        The broader scope of files that might be affected.
-                        Declared by the replanner based on its assessment of
-                        the codebase structure. Used by the pause phase
-                        and the pop_ready guard.
+    structural scope    The initiating task's siblings plus their descendants.
+                        Used to decide which RUNNING tasks are assessed.
 
-    Example:
-        root_cause_paths = ["dask/compatibility.py"]
-        blast_radius = ["dask/"]
-
-        The fix task repairs dask/compatibility.py.
-        All tasks with scope under dask/ are paused.
-        Tasks under pandas/ or numpy/ are unaffected.
+There is no separate `blast_radius` field in the implemented protocol.
+Shared impact is inferred structurally from the task tree, not from a
+replanner-supplied path superset.
 
 ---
 
 ## 15. Budget and Safety
 
-### Budget Guards
+### Safety Properties
 
-    max_active_blockers         3           prevent blocker storms
-    assessment_timeout          30 sec      single LLM call should be fast
-    assessment_max_tokens       200         just need YES/NO + reason
-    fix_max_retries             1           if fix fails twice, abandon
-    assessment_gather_timeout   5 min       don't wait forever for all assessments
-    max_paused_ratio            60%         don't pause the entire run
+    request_replan
+        Fails only the calling task and spawns a replanner.
+        It does not auto-cancel siblings.
 
-### Blocker Failure Policy
+    declare_blocker
+        Touches only RUNNING siblings + descendants during assessment.
+        READY/PENDING/FAILED tasks keep their state.
+
+    no dispatch guard
+        READY tasks dispatch freely during blockers. Tasks that hit
+        the broken dependency fail naturally and trigger request_replan,
+        where the replanner sees blocker context via sibling notes.
+
+    resolver failure
+        Cancels PAUSED tasks for that blocker and fails the run.
+
+    event + task persistence
+        Blocker metadata, pause checkpoints, and pause verdicts are emitted
+        and replayed so resume/failure cycles survive restart.
+
+### Resolver Outcome Policy
 
     Resolver task completes
           |
-          +--- submit_fix ----> blocker RESOLVED
-          |                     resume assessed agents with fix context
-          |                     lift pop_ready guard
-          |                     spawn replanner for initiating task
+          +--- post_note ---------> blocker RESOLVED
+          |                        resume assessed agents with fix context
+          |                        remove blocker from active set
+          |                        spawn replanner for initiating task
           |
-          +--- abandon_fix --> retry resolver (max 1 retry)
-                            |
-                            +--- submit_fix ----> blocker RESOLVED (as above)
-                            |
-                            +--- abandon_fix --> blocker FAILED
-                                                 cancel all PAUSED tasks
-                                                 mark team run as FAILED
-                                                 failure_reason includes
-                                                 blocker.reason
+          +--- request_replan ---> blocker FAILED
+                                   cancel all PAUSED tasks
+                                   mark team run as FAILED
 
 ---
 
@@ -1386,7 +1336,9 @@ Replanner spawns and reads context:
 
 Replanner judges: fix-compat broke a shared dependency. This is systemic. All dask tasks will hit the same error.
 
-Replanner calls declare_blocker with root_cause_paths=["dask/compatibility.py"], blast_radius=["dask/"], reason="fix-compat introduced broken __getattr__ that removes parse import", suggestion="revert __getattr__, restore direct imports".
+Replanner calls declare_blocker with root_cause_paths=["dask/compatibility.py"],
+reason="fix-compat introduced broken __getattr__ that removes parse import",
+suggestion="revert __getattr__, restore direct imports".
 
 ### Step 3 — Conductor Assesses
 
@@ -1416,7 +1368,7 @@ Conductor creates Blocker with initiating_task_id=hdf-02. Begins assess_running:
         +-- fix-compat       DONE
         +-- hdf-01           PAUSED (has pause_checkpoint)
         +-- hdf-02           FAILED (untouched, initiating task)
-        +-- hdf-03 .. hdf-32 READY  (untouched, blocked by pop_ready guard)
+        +-- hdf-03 .. hdf-32 READY  (dispatch normally, fail if they hit broken dep)
         +-- replanner        DONE
     
     resolver-node (READY, depth=0, parent=None)   <-- spawned by Conductor
@@ -1425,7 +1377,9 @@ plan-A stays EXPANDED because hdf-01 is PAUSED (non-terminal).
 
 ### Step 5 — Fix
 
-resolver-node dispatches. A resolver agent scoped to dask/compatibility.py reads the file, reverts the __getattr__ mechanism, restores the direct parse import. Calls submit_fix. DONE.
+resolver-node dispatches. A resolver agent scoped to dask/compatibility.py
+reads the file, reverts the __getattr__ mechanism, restores the direct parse
+import, and reports success with post_note. DONE.
 
 Conductor receives on_fix_complete. fix_summary = "restored direct parse import in compatibility.py".
 
@@ -1441,12 +1395,7 @@ Conductor executes on_fix_complete:
             Resume message appended: "Fix applied: restored direct parse import.
             Continue from where you left off."
 
-    2. Lift pop_ready guard:
-        hdf-03 to hdf-32 (READY, were blocked by guard):
-            Now eligible for dispatch. Pop_ready picks them up normally.
-            No resume message needed — they start fresh, fix already in codebase.
-
-    3. Spawn replanner for initiating task (hdf-02):
+    2. Spawn replanner for initiating task (hdf-02):
         Replanner reads: hdf-02's failure reason, fix_summary, current state.
         Replanner calls add_tasks with a retry task for hdf-02's goal,
         including fix context in the new task description.
@@ -1469,388 +1418,79 @@ hdf-01 resumes and completes. hdf-03 to hdf-32 dispatch and complete. The replan
 
 ---
 
-## 17. Files Changed
-
-    MODIFIED
-        team/models.py
-            + PAUSED in TaskStatus
-            + Blocker dataclass
-            + PauseVerdict dataclass
-            + BlockerStatus enum
-
-        team/runtime/dispatcher_store.py
-            request_replan: remove auto-cancel of siblings
-            + pause_running_task (RUNNING → PAUSED with checkpoint)
-            + resume_paused_tasks (PAUSED → READY for assessed agents)
-            + cancel_paused_tasks (PAUSED → CANCELLED on resolver failure)
-            pop_ready: add blocker blast_radius guard (skip, not pause)
-
-        team/runtime/executor.py
-            + on_turn callback for conversation snapshot (see Section 13.3)
-            handle asyncio.CancelledError from external termination
-            support resume from pause_checkpoint (new agent run from saved messages)
-            call TaskCenter.on_edit / on_posthook / tick / check (outside query loop)
-            register/unregister with Conductor
-
-        team/task_center.py
-            + Active mode: on_edit, on_posthook, tick, on_note_posted
-              (see task-center-active-mode.md for full spec)
-            + check (spawn external trigger agent when thresholds crossed)
-            read_notes: add scope="siblings" mode (Section 13.1)
-            + ActivityCounters per-task internal state
-            context_for: add resume message injection at Priority 0
-
-        tools/posthook/toolkit.py
-            Remove: RequestRetryTool, SubmitReplanTool
-            Add: AddTasksTool, DeclareBlockerTool, CancelAndRedraftTool
-            Add: SubmitFixTool, AbandonFixTool (resolver role)
-            PosthookTools.from_context: update role-to-tools mapping
-            Add resolver role → {SubmitFixTool, AbandonFixTool}
-
-        tools/context/toolkit.py
-            PostNoteTool.execute: call task_center.on_note_posted
-
-        team/runtime/team_run.py
-            Wire Conductor into lifecycle
-
-    NEW
-        external_trigger/
-            external trigger base (single LLM call mechanism)
-            RunResult dataclass
-            pause assessment (used by Conductor for blocker impact assessment)
-            PauseVerdict (parsed YES/NO result)
-
-        team/runtime/conductor.py
-            Conductor class (all methods defined in Section 9)
-
-        docs/architecture/task-center-active-mode.md
-            Full spec for TaskCenter active mode (split from this doc)
-
-    MINIMAL TOUCH
-        engine/core/query.py
-            + one optional on_turn callback parameter to run_query_loop
-            + one callback invocation at top of each turn
-            Remove inline edit-based note nudge logic (lines 536-559)
-            No message injection. No display_messages mutation.
-
-        tools/daytona_toolkit/tools.py
-            _track_edit_for_note_nudge: redirect to task_center.on_edit
-
-        tools/core/runtime.py
-            Remove edits_since_last_note, files_edited_since_last_note,
-            _note_nudge_at_edit from MERGED_RUNTIME_METADATA_KEYS
-
-    NOT TOUCHED
-        engine/core/notifications.py
-
-    REMOVED (from developer toolkit)
-        RequestRetryTool                    absorbed into replanner's add_tasks
-
----
-
-## 18. Implementation Phases
-
-Six phases. Phases within the same tier have no dependencies on each other and can be implemented in parallel. Phases in a later tier depend on at least one phase from an earlier tier.
-
-### Dependency Graph
-
-    TIER 0 (foundations — no dependencies, all parallel)
-    +------------------+     +------------------+     +------------------+
-    | Phase A          |     | Phase B          |     | Phase C          |
-    | external trigger    |     | PAUSED Status    |     | Dispatcher       |
-    | Module           |     | + Blocker Model  |     | request_replan   |
-    |                  |     |                  |     | remove auto-     |
-    | external_trigger/  |     | team/models.py   |     | cancel           |
-    |                  |     |                  |     |                  |
-    | deps: none       |     | deps: none       |     | deps: none       |
-    +------------------+     +------------------+     +------------------+
-
-    TIER 1 (core protocol — depends on Tier 0)
-    +------------------+     +------------------+     +------------------+
-    | Phase D          |     | Phase E          |     | Phase F          |
-    | Conductor        |     | Replanner        |     | TaskCenter       |
-    |                  |     | Toolkit          |     | Active Mode      |
-    | conductor.py     |     |                  |     |                  |
-    | pause/fix/resume |     | add_tasks        |     | on_edit/tick/    |
-    | PauseAssessment  |     | declare_blocker  |     | check + auto    |
-    |                  |     | cancel_and_redraft|    | note generation |
-    |                  |     | remove old tools |     | read_notes       |
-    |                  |     |                  |     | scope param      |
-    | deps: A, B       |     | deps: C          |     | deps: A          |
-    +------------------+     +------------------+     +------------------+
-
-### Phase A — External Trigger Module
-
-    Status: [ ]
-    Deps: none
-    Parallel with: B, C
-
-    Deliverables:
-        [ ] external_trigger/__init__.py
-        [ ] external trigger base class
-            - Fields: task_id, snapshot, prompt, system_prompt,
-              max_tokens, model, timeout_seconds
-            - run() method: single LLM call, no tools, returns RunResult
-        [ ] RunResult dataclass
-            - Fields: text, timed_out, elapsed_seconds
-        [ ] pause assessment (extends external trigger concept)
-            - Builds blocker check prompt
-            - Parses YES/NO/TIMEOUT from response
-        [ ] PauseVerdict dataclass
-            - Fields: task_id, answer (YES/NO/TIMEOUT), reason, conversation
-
-    Tests:
-        [ ] external trigger.run returns result with mock API client
-        [ ] external trigger.run returns timed_out=True on timeout
-        [ ] pause assessment parses YES correctly
-        [ ] pause assessment parses NO correctly
-        [ ] pause assessment returns TIMEOUT on slow response
-
-### Phase B — PAUSED Status + Blocker Model
-
-    Status: [ ]
-    Deps: none
-    Parallel with: A, C
-
-    Deliverables:
-        [ ] Add PAUSED to TaskStatus enum in team/models.py
-        [ ] Verify PAUSED is NOT in TERMINAL_STATUSES frozenset
-        [ ] Blocker dataclass in team/models.py
-            - Fields: id, team_run_id, status, reason, root_cause_paths,
-              blast_radius, fix_task_id, declared_by, initiating_task_id,
-              fix_summary, pending_assessments, created_at, resolved_at
-        [ ] BlockerStatus enum: ASSESSING, FIXING, RESOLVED, FAILED
-        [ ] TaskRecord additions: blocker_id, pause_checkpoint, pause_verdict
-            (no paused_from — only RUNNING tasks can be paused)
-        [ ] DispatcherStore new methods:
-            - pause_running_task(task_id, blocker_id, checkpoint, verdict)
-            - resume_paused_tasks(run_id, blocker_id) returns count
-            - cancel_paused_tasks(run_id, blocker_id) returns count
-        [ ] pop_ready: add blocker blast_radius guard (skip, not pause)
-
-    Tests:
-        [ ] PAUSED task does not trigger maybe_promote_expanded_parent
-        [ ] pause_running_task only accepts RUNNING tasks
-        [ ] resume_paused_tasks transitions PAUSED to READY
-        [ ] cancel_paused_tasks transitions PAUSED to CANCELLED
-        [ ] pop_ready skips (not pauses) tasks overlapping active blocker blast_radius
-
-### Phase C — Dispatcher request_replan Change
-
-    Status: [ ]
-    Deps: none
-    Parallel with: A, B
-
-    Deliverables:
-        [ ] dispatcher_store.py request_replan:
-            remove step 2 (cancel pending/ready/expanded siblings)
-            remove step 3 (cascade cancel dependents)
-            keep step 1 (mark task FAILED) and step 5 (insert replanner)
-        [ ] Replanner now sees live siblings when it runs
-
-    Tests:
-        [ ] request_replan no longer cancels siblings
-        [ ] request_replan still marks the failing task FAILED
-        [ ] request_replan still inserts replanner task
-        [ ] Siblings remain in their original status after request_replan
-
-### Phase D — Conductor
-
-    Status: [ ]
-    Deps: Phase A (external trigger), Phase B (PAUSED + Blocker model)
-    Parallel with: E, F
-
-    Deliverables:
-        [ ] team/runtime/conductor.py — new file
-        [ ] Conductor class with:
-            - register_executor / unregister_executor
-            - create_blocker (from replanner's declare_blocker verdict)
-            - assess_running (spawn pause assessments for RUNNING agents only;
-              non-running tasks are NEVER touched)
-            - _spawn_pause_assessments (asyncio.gather, parallel)
-            - _run_pause_assessment (uses pause assessment from Phase A)
-            - _on_pause_yes (terminate executor, save checkpoint, mark PAUSED)
-            - _on_pause_no (discard, log)
-            - spawn_resolver (create resolver task at depth=0, dedicated role)
-            - on_fix_complete: resume assessed agents, lift pop_ready guard,
-              spawn replanner for initiating_task_id
-            - on_fix_failed: cancel PAUSED tasks, mark team run FAILED
-            - resume_assessed (PAUSED → READY with checkpoint restore)
-            - guard_pop_ready (skip candidates, never change status)
-            - (correlation engine deferred — not in this protocol)
-            - intercept_retry_replan
-        [ ] Wire Conductor into TeamRun lifecycle (team_run.py)
-        [ ] Executor changes:
-            - expose display_messages snapshot
-            - handle asyncio.CancelledError from external termination
-            - support resume from pause_checkpoint
-            - register/unregister with Conductor
-
-    Tests:
-        [ ] assess_running spawns pause assessment ONLY for RUNNING agents
-        [ ] assess_running does NOT touch READY/PENDING/FAILED tasks
-        [ ] YES verdict terminates executor and saves checkpoint
-        [ ] NO verdict discards assessment, original continues
-        [ ] TIMEOUT treated as YES
-        [ ] spawn_resolver creates resolver-role task at depth=0
-        [ ] on_fix_complete resumes assessed agents + lifts guard + spawns replanner
-        [ ] on_fix_failed cancels PAUSED tasks and marks team run FAILED
-        [ ] resume from checkpoint starts new agent run with saved messages
-        [ ] guard_pop_ready skips (not pauses) blocked candidates
-        [ ] on_task_failed auto-pauses when scope overlaps active blocker
-        [ ] post-fix replanner is scoped to initiating_task_id
-
-### Phase E — Replanner Toolkit
-
-    Status: [ ]
-    Deps: Phase C (request_replan no longer auto-cancels)
-    Parallel with: D, F
-
-    Deliverables:
-        [ ] tools/posthook/toolkit.py changes:
-            - Remove: RequestRetryTool
-            - Remove: SubmitReplanTool
-            - Add: AddTasksTool
-                params: tasks (list of TaskSpec)
-                inserts tasks as siblings, no cancellation
-            - Add: DeclareBlockerTool
-                params: root_cause_paths, blast_radius, reason, suggestion
-                triggers Conductor.create_blocker
-            - Add: CancelAndRedraftTool
-                params: tasks (list of TaskSpec)
-                cancels all siblings + children, inserts new plan
-            - PosthookTools.from_context: update replanner role mapping
-            - Add: SubmitFixTool (resolver role)
-                params: fix_summary
-                triggers Conductor.on_fix_complete
-            - Add: AbandonFixTool (resolver role)
-                params: reason
-                triggers Conductor.on_fix_failed
-            - PosthookTools.from_context: add resolver role mapping
-        [ ] Remove RequestRetryTool from developer/reviewer tool list
-        [ ] Update replanner playbook SKILL.md with decision guidance
-        [ ] Update developer playbook SKILL.md to remove request_retry references
-
-    Tests:
-        [ ] AddTasksTool inserts tasks without cancelling siblings
-        [ ] DeclareBlockerTool triggers Conductor
-        [ ] CancelAndRedraftTool cancels siblings then inserts new tasks
-        [ ] Developer posthook only has `post_note` + `request_replan`
-        [ ] Replanner posthook has add_tasks + declare_blocker + cancel_and_redraft
-        [ ] Resolver posthook has submit_fix + abandon_fix (nothing else)
-        [ ] SubmitFixTool triggers Conductor.on_fix_complete
-        [ ] AbandonFixTool triggers Conductor.on_fix_failed
-
-### Phase F — TaskCenter Active Mode
-
-    Status: [ ]
-    Deps: Phase A (external trigger)
-    Parallel with: D, E
-
-    Deliverables:
-        [ ] team/task_center.py additions:
-            - ActivityCounters per-task internal state
-            - _counters dict mapping task_id to ActivityCounters
-            - on_edit(task_id, file_path)
-            - on_posthook(task_id)
-            - tick(task_id)
-            - on_note_posted(task_id) — reset counters, called by post()
-            - check(task_id, executor) — spawn external trigger agent if threshold crossed
-            read_notes: add scope="siblings" mode (Section 13.1)
-        [ ] Executor changes:
-            - call task_center.on_edit when edit tool completes
-            - call task_center.on_posthook when posthook tool completes
-            - call task_center.tick after each tool result
-            - call task_center.check after tick
-        [ ] context_for: add resume message injection at Priority 0
-        [ ] Remove existing nudge:
-            - Remove query.py lines 536-559 (inline edit nudge)
-            - Remove _track_edit_for_note_nudge from daytona tools
-            - Remove edits_since_last_note, files_edited_since_last_note,
-              _note_nudge_at_edit from MERGED_RUNTIME_METADATA_KEYS
-            - Remove manual counter resets from PostNoteTool.execute
-
-    Tests:
-        [ ] on_edit increments edit counter
-        [ ] on_posthook resets turn counter
-        [ ] tick increments turn counter
-        [ ] check spawns external trigger after 5 edits
-        [ ] check spawns external trigger after 10 turns without posthook
-        [ ] Auto-generated note posted with "(auto)" suffix
-        [ ] post() calls on_note_posted to reset counters
-        [ ] read_notes scope="siblings" resolves sibling subtree and returns notes
-        [ ] Existing edit nudge logic removed from query.py
-        [ ] Resume message injected at Priority 0 for formerly-paused tasks
-
-### Parallelism Map
-
-    Time ---->
-
-    Week 1:     Phase A          Phase B          Phase C
-                external trigger    PAUSED + Blocker  Dispatcher change
-                (standalone)     (models + store)  (remove auto-cancel)
-                    |                |                 |
-                    |                |                 |
-    Week 2:     Phase D          Phase E          Phase F
-                Conductor        Replanner tools   TaskCenter active
-                (needs A, B)     (needs C)         (needs A)
-                    |                |                 |
-                    |                |                 |
-    Week 3:     Integration testing across D + E + F
-                End-to-end walkthrough of the compatibility.py scenario
-
-    3 developers can work in parallel:
-        Dev 1: Phase A then Phase D (external trigger → Conductor)
-        Dev 2: Phase B then Phase E (Models → Replanner toolkit)
-        Dev 3: Phase C then Phase F (Dispatcher → TaskCenter active)
-
-    Each developer owns a vertical slice from foundation to feature.
-    No cross-developer blocking within a tier.
-
----
-
-## 19. Tradeoffs and Scores
-
-### Scoring
-
-    Dimension                   Score       Notes
-    
-    Simplicity                  9/10        2 dev tools, 3 replanner tools, 1 new
-                                            status, 1 new actor. Sibling scope kills
-                                            cross-tree complexity entirely.
-
-    Coherence with existing     8/10        Builds on replan mechanism, same parent
-                                            scope, same replanner role. One behavior
-                                            change: request_replan stops auto-cancel.
-                                            This is an improvement, not a compromise.
-
-    Role clarity                9/10        Developer: "I failed." Replanner: assess
-                                            and pick 1 of 3. Conductor: execute.
-                                            Zero overlap. Zero new roles.
-
-    Completeness                7/10        Solves the scenario fully within a subtree.
-                                            Cross-subtree handled independently.
-                                            Deliberate tradeoff for simplicity.
-
-    Blast radius of changes     8/10        1 tool removed, 1 flow changed, 3 tools
-                                            added replacing 1. query.py untouched.
-                                            Surgical additions, not a rewrite.
-
-    Correctness                 8/10        PAUSED non-terminal keeps parents safe.
-                                            Pause checkpoint is clean resume point.
-                                            Scope-overlap safety net catches missed tasks.
-                                            Clear fallback when fix fails.
-
-    Overall                     8/10
-
-### What Costs the 2 Points
-
-Every failure now spawns a replanner. The old request_retry was a zero-cost status reset. The new design trades one extra LLM call per failure for better decisions. This is buying judgment with compute.
-
-Cross-subtree blockers are handled independently. Same broken file in two subtrees means two fix tasks. The second fix task sees the file already repaired and completes immediately. Slightly redundant but correct.
-
-The replanner must correctly triage. If it calls add_tasks when it should declare_blocker, the retried task fails again, triggering another replan. Self-correcting but burns one extra cycle.
-
-### What Earns the 8
-
-Developer is trivially simple. Single decision point for all failure recovery. Conductor is fully testable and deterministic. pause assessment is zero-impact when the answer is NO. query.py is completely untouched. PAUSED status solves parent-promotion invariant cleanly. Scoped to siblings means no ancestor reopening in the common case. Maps onto existing models. Three replanner tools have zero semantic overlap.
+## 17. Implementation Snapshot
+
+This section is the authoritative benchmark-facing summary of the current
+implementation. Earlier planning notes with alternative resolver tooling or
+sibling-note APIs are superseded by the runtime contract below.
+
+### Runtime Files
+
+    backend/src/team/runtime/conductor.py
+        Blocker lifecycle, pause-assessment fan-out, resolver spawning,
+        dispatch guard, post-fix replanning, and run-failure handling.
+
+    backend/src/team/runtime/executor.py
+        Conversation snapshot registration, post-run submission routing,
+        resolver success/failure handoff, pause-aware completion, and
+        backward-compatible integration with lightweight queue/run stubs.
+
+    backend/src/team/task_center.py
+        Unified task lifecycle, pause/resume/cancel transitions,
+        sibling-note helpers, active-mode counters, and event emission.
+
+    backend/src/team/persistence/task_store.py
+        SQL persistence for task graph mutations, including paused-task
+        blocker fields and resumed task replacement.
+
+    backend/src/team/persistence/events.py
+    backend/src/team/runtime/rehydration.py
+        Event payloads and replay for blocker_id, pause_checkpoint,
+        pause_verdict, pending_dep_count, and task status transitions.
+
+    backend/src/tools/posthook/toolkit.py
+        Role-aware terminal tools:
+            developer/reviewer/resolver -> post_note, request_replan
+            replanner                   -> add_tasks, declare_blocker,
+                                           cancel_and_redraft
+
+    backend/src/tools/context/toolkit.py
+        Main-loop context toolkit remains read-only:
+            read_notes
+            context_changed_since
+        `post_note` is defined here but exposed only in post-run and
+        external-trigger phases.
+
+### Behavioral Invariants
+
+    request_replan(task_id, request)
+        Marks only the failing task FAILED and inserts a replanner task.
+        Siblings are not auto-cancelled.
+
+    create_blocker(...)
+        Assesses RUNNING siblings + descendants only.
+        READY/PENDING/FAILED tasks keep their status unchanged.
+
+    no dispatch guard
+        READY tasks dispatch freely during blockers. Tasks that hit
+        the broken dependency fail and the replanner sees blocker
+        context via sibling notes.
+
+    resolver task
+        Dedicated role when available.
+        Success via post_note      -> on_fix_complete.
+        Failure via request_replan -> on_fix_failed.
+
+    on_fix_failed(...)
+        Cancels PAUSED tasks for the blocker and fails the team run.
+
+    active mode
+        Auto-notes are generated by TaskCenter through external-trigger
+        execution, not by interrupting the running agent.
+
+### Verification Focus
+
+    - Replanners read sibling-visible notes before recovery decisions.
+    - Auto-notes surface blockers early with file/error/scope specificity.
+    - Pause checkpoints and blocker metadata survive event replay.
+    - Resolver failure is terminal for the run, not a silent unblock.

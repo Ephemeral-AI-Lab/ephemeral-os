@@ -107,7 +107,7 @@ def _patch_resume_sweevo_common(monkeypatch, *, checkpoint_records=None, checkpo
 async def test_query_ctx_seeds_repo_root_for_daytona_and_ci():
     build_query_ctx = _make_context_builders("sbx-1", repo_dir="/testbed")
     ctx = await build_query_ctx(
-        SimpleNamespace(name="developer"),
+        SimpleNamespace(name="developer", role="developer", posthook=["post_note", "request_replan"]),
         SimpleNamespace(
             id="TR1",
             sandbox_id="sbx-1",
@@ -132,6 +132,9 @@ async def test_query_ctx_seeds_repo_root_for_daytona_and_ci():
     assert ctx.tool_metadata.daytona_cwd == "/testbed"
     assert ctx.tool_metadata["ci_workspace_root"] == "/testbed"
     assert ctx.tool_metadata["team_mode_enabled"] is True
+    assert ctx.tool_metadata["role"] == "developer"
+    assert ctx.tool_metadata["posthook_tool_names"] == ["post_note", "request_replan"]
+    assert "call the appropriate tool" in ctx.tool_metadata["posthook_prompt"]
     assert "Repo root inside the sandbox: /testbed" in ctx.user_message
     assert "Do not prepend guessed roots" in ctx.user_message
 
@@ -570,6 +573,81 @@ def test_make_runner_persists_full_compaction_delta(monkeypatch):
         body == "[usage] prompt=12 completion=8 total=20 tool_calls=4/10 final_context=321 compactions=+2(total=3)"
         for _, body in printed
     )
+
+
+def test_make_runner_persists_work_result_and_final_snapshot(monkeypatch):
+    class _Tracker:
+        run_id = "run-1"
+
+        def finish(self, **_: object) -> None:
+            return None
+
+    final_text = (
+        '{"tasks":[{"id":"dev-1","task":"Fix auth","agent":"developer","deps":[],'
+        '"scope_paths":["src/auth"],"cascade_policy":"cancel"}],"rationale":"split by owner"}'
+    )
+
+    async def _fake_run(_prompt: str):
+        agent.display_messages = [
+            ConversationMessage(role="assistant", content=[TextBlock(text=final_text)])
+        ]
+        if False:
+            yield None
+
+    query_context = SimpleNamespace(
+        tool_metadata=ExecutionMetadata(session_config="cfg", sandbox_id="sbx-1"),
+        run_id="",
+        tool_call_limit=10,
+        tool_calls_used=0,
+        session_state=None,
+        api_messages_snapshot=[],
+    )
+    agent = SimpleNamespace(
+        query_context=query_context,
+        display_messages=[],
+        total_usage=SimpleNamespace(input_tokens=0, output_tokens=0),
+        model="test-model",
+        run=_fake_run,
+    )
+
+    snapshots: dict[str, list[dict[str, object]]] = {}
+
+    class _Conductor:
+        def register_snapshot(self, task_id: str, snapshot: list[dict[str, object]]) -> None:
+            snapshots[task_id] = snapshot
+
+    fake_team_run = SimpleNamespace(conductor=_Conductor())
+
+    monkeypatch.setattr(
+        sweevo_team_runner,
+        "AgentRunTracker",
+        SimpleNamespace(create=lambda **_: _Tracker()),
+    )
+    monkeypatch.setattr(sweevo_team_runner, "spawn_agent", lambda *_args, **_kwargs: agent)
+    monkeypatch.setattr(sweevo_team_runner, "_estimate_final_context", lambda _messages: 0)
+    monkeypatch.setattr(sweevo_team_runner, "_persist_benchmark_session", lambda **_: None)
+    monkeypatch.setattr("team.runtime.registry.get", lambda _team_run_id: fake_team_run)
+
+    runner = _make_runner(
+        session_config=SimpleNamespace(session_id="sess-1"),
+        sandbox_id="sbx-1",
+        printer=None,
+    )
+    ctx = sweevo_team_runner.TeamAgentContext(
+        user_message="Plan it",
+        tool_metadata=ExecutionMetadata(team_run_id="TR1", work_item_id="W1"),
+    )
+
+    asyncio.run(
+        runner(
+            SimpleNamespace(name="team_planner", model_copy=lambda update: SimpleNamespace(name="team_planner", **update)),
+            ctx,
+        )
+    )
+
+    assert ctx.tool_metadata["work_result"] == final_text
+    assert "W1" in snapshots
+    assert snapshots["W1"][-1]["role"] == "assistant"
 
 
 def test_finalize_team_result_surfaces_retry_replan_and_checkpoint_metadata(monkeypatch):

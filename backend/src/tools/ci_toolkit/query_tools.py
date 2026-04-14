@@ -15,8 +15,6 @@ from code_intelligence.query_helpers import (
     _build_fallback_specs,
     _dedupe_matches,
     _parse_rg_matches,
-    _build_reference_pattern,
-    _parse_reference_matches,
     _python_fallback_query_symbols,
 )
 from tools.core.base import ToolExecutionContext, ToolResult
@@ -26,7 +24,6 @@ from tools.core.decorator import tool
 
 logger = logging.getLogger(__name__)
 _SYMBOL_FALLBACK_LIMIT = 100
-_REFERENCE_FALLBACK_LIMIT = 100
 _STRUCTURE_FALLBACK_LIMIT = 500
 
 
@@ -71,23 +68,6 @@ def _indexed_workspace_paths(
             rendered.append(rel_path)
     return rendered
 
-
-def _reference_result(
-    references: list[dict[str, Any]],
-    *,
-    total_references: int | None = None,
-) -> ToolResult:
-    total = len(references) if total_references is None else int(total_references)
-    return ToolResult(
-        output=json.dumps(
-            {
-                "references": references[:50],
-                "total_references": total,
-                "truncated": total > 50,
-            },
-            indent=2,
-        )
-    )
 
 
 def _render_workspace_paths(paths: list[str]) -> str:
@@ -225,23 +205,6 @@ def _local_query_symbols(
         collected.extend(python_matches)
     return _dedupe_matches(collected) or None
 
-
-def _local_query_references(
-    *, workspace_root: str, symbol: str, skip_file: str = "", skip_line: int = 0,
-) -> list[dict[str, Any]] | None:
-    root = Path(workspace_root)
-    if not root.is_dir():
-        return None
-    pattern = _build_reference_pattern(symbol)
-    if not pattern:
-        return None
-    rg_result = _run_rg_local(pattern, str(root))
-    if rg_result is None:
-        return None
-    exit_code, stdout = rg_result
-    if exit_code not in (0, 1) or not stdout:
-        return None
-    return _parse_reference_matches(stdout, symbol=symbol, skip_file=skip_file, skip_line=skip_line) or None
 
 
 def _local_workspace_structure(
@@ -382,21 +345,6 @@ async def _remote_query_symbols(
         return None
     return _dedupe_matches(_fallback_query_symbols(rg_results, specs, query)) or None
 
-
-async def _remote_query_references(
-    context: ToolExecutionContext, *, symbol: str, skip_file: str = "", skip_line: int = 0,
-) -> list[dict[str, Any]] | None:
-    pattern = _build_reference_pattern(symbol)
-    if not pattern:
-        return None
-    target = resolve_daytona_path("", context)
-    rg_result = await _run_rg_remote(context, pattern, target, f"Remote ref query for {symbol}")
-    if rg_result is None:
-        return None
-    exit_code, stdout = rg_result
-    if exit_code not in (0, 1) or not stdout:
-        return None
-    return _parse_reference_matches(stdout, symbol=symbol, skip_file=skip_file, skip_line=skip_line) or None
 
 
 # -- CI Status ----------------------------------------------------------------
@@ -599,105 +547,175 @@ async def ci_query_symbols(
 # -- Symbol References --------------------------------------------------------
 
 
+_MAX_REFERENCE_DEFINITIONS = 5
+_MAX_REFERENCES = 50
+
+
+def _reference_definition_priority(workspace_root: str, definition: Any) -> tuple[int, int, int]:
+    """Prefer production definitions over test or package-init stubs."""
+    fp = str(getattr(definition, "file_path", "") or "").lower()
+    basename = os.path.basename(fp)
+    is_test = int(
+        "/tests/" in fp or basename.startswith("test_") or basename.endswith("_test.py")
+    )
+    is_init = int(basename == "__init__.py")
+    return (is_test, is_init, len(fp))
+
+
+def _resolve_symbol_column(svc: Any, file_path: str, line: int, symbol_name: str) -> int:
+    """Best-effort 0-based column for *symbol_name* on *line*.
+
+    Uses the tree cache when available, otherwise falls back to
+    the LSP client's ``_read_line`` helper.
+    """
+    tree_cache = getattr(svc, "tree_cache", None)
+    content: bytes = b""
+    if tree_cache is not None:
+        get_entry = getattr(tree_cache, "get_entry", None)
+        entry = get_entry(file_path) if callable(get_entry) else None
+        content = getattr(entry, "content", b"") if entry is not None else b""
+
+    source: str | None = None
+    if content:
+        try:
+            source = content.decode("utf-8")
+        except UnicodeDecodeError:
+            source = content.decode("utf-8", errors="ignore")
+    else:
+        lsp = getattr(svc, "lsp_client", None)
+        read_line = getattr(lsp, "_read_line", None)
+        if callable(read_line):
+            line_text = read_line(file_path, line)
+            if line_text is not None:
+                idx = line_text.find(symbol_name)
+                return idx if idx >= 0 else 0
+        return 0
+
+    if source is None:
+        return 0
+    lines = source.splitlines()
+    if line <= 0 or line > len(lines):
+        return 0
+    line_text = lines[line - 1]
+    idx = line_text.find(symbol_name)
+    return idx if idx >= 0 else 0
+
+
 @tool(
     name="ci_query_references",
     description=(
-        "Trace ALL callers, import sites, and usages of a symbol across the entire codebase in one call. "
-        "ALWAYS use this before daytona_grep when tracing how a function/class is used — "
-        "it reveals the full call graph, import chains, and downstream dependents. "
-        "Essential before patching: shows every file that will break if you change a symbol. "
-        "Example: ci_query_references('read_json') reveals the full pipeline "
-        "(blocked vs file-per-partition) and fsspec integration points."
+        "Find all callers, import sites, and usages of a symbol across the codebase. "
+        "Uses the symbol index to locate definitions, then LSP to trace references. "
+        "Essential before patching: shows every file that will break if you change a symbol."
     ),
     read_only=True,
 )
 async def ci_query_references(
-    file_path: str,
     symbol: str,
-    line: int = 0,
-    character: int = 0,
     *,
     context: ToolExecutionContext,
 ) -> ToolResult:
     """Find all references to a symbol across files.
 
+    Resolves the symbol via the symbol index first, then queries LSP with
+    the correct file/line/column coordinates.  Falls back to returning
+    definitions with ``confidence: unavailable`` when LSP is cold.
+
     Args:
-        file_path: File containing the symbol
         symbol: Symbol name to find references for
-        line: Line number of the symbol
-        character: Character offset
 
     Returns:
-        refs (list): Reference locations
+        refs (list): Reference locations with file, line, text
     """
     svc, err = _svc_or_error(context)
     if err:
         return err
 
-    workspace_root = str(getattr(svc, "workspace_root", "") or "")
     _maybe_warm_service(context, svc, label="ci_query_references")
 
-    results = svc.find_references(
-        file_path,
-        symbol,
-        line,
-        character,
-    )
-    if not results:
-        fallback_refs: list[dict[str, Any]] = []
-        local_refs = _local_query_references(
-            workspace_root=workspace_root,
-            symbol=symbol,
-            skip_file=file_path,
-            skip_line=line,
+    symbol_index = getattr(svc, "symbol_index", None)
+    if symbol_index is None or not getattr(symbol_index, "is_built", False):
+        return ToolResult(
+            output=json.dumps(
+                {
+                    "references": [],
+                    "total_references": 0,
+                    "confidence": "unavailable",
+                    "message": "Symbol index not ready — try again after CI warmup.",
+                },
+                indent=2,
+            )
         )
-        if local_refs:
-            fallback_refs.extend(local_refs)
-        remote_refs = await _remote_query_references(
-            context,
-            symbol=symbol,
-            skip_file=file_path,
-            skip_line=line,
+
+    workspace_root = str(getattr(svc, "workspace_root", "") or "")
+    definitions = sorted(
+        symbol_index.find(symbol),
+        key=lambda d: _reference_definition_priority(workspace_root, d),
+    )[:_MAX_REFERENCE_DEFINITIONS]
+
+    if not definitions:
+        return ToolResult(
+            output=json.dumps(
+                {
+                    "references": [],
+                    "total_references": 0,
+                    "confidence": "full",
+                    "message": f"No symbol named '{symbol}' found in index",
+                },
+                indent=2,
+            )
         )
-        if remote_refs:
-            fallback_refs.extend(remote_refs)
-        if fallback_refs:
-            return _reference_result(
-                fallback_refs,
-                total_references=len(fallback_refs),
+
+    references: list[dict[str, Any]] = []
+    used_lsp = False
+    for defn in definitions:
+        try:
+            col = _resolve_symbol_column(
+                svc, defn.file_path, defn.line, defn.name,
+            )
+            lsp_refs = svc.find_references(
+                defn.file_path, defn.name, defn.line, col,
+            )
+            if lsp_refs:
+                used_lsp = True
+                for ref in lsp_refs:
+                    references.append(
+                        {
+                            "file": ref.file_path,
+                            "line": ref.line,
+                            "text": getattr(ref, "text", ""),
+                        }
+                    )
+                    if len(references) >= _MAX_REFERENCES:
+                        break
+        except Exception:
+            logger.debug("LSP find_references failed for %s", symbol, exc_info=True)
+        if used_lsp and references:
+            break
+        if len(references) >= _MAX_REFERENCES:
+            break
+
+    if not used_lsp:
+        for defn in definitions:
+            references.append(
+                {
+                    "file": defn.file_path,
+                    "line": defn.line,
+                    "text": f"definition: {defn.kind.value if hasattr(defn.kind, 'value') else defn.kind} {defn.name}",
+                }
             )
 
-        lsp = getattr(svc, "lsp_client", None)
-        lsp_connected = bool(getattr(lsp, "connected", True)) if lsp is not None else True
-        if not getattr(svc, "is_initialized", True) or not lsp_connected:
-            return ToolResult(
-                output=json.dumps(
-                    {
-                        "status": "cold",
-                        "symbol": symbol,
-                        "initialized": bool(getattr(svc, "is_initialized", False)),
-                        "lsp_connected": lsp_connected,
-                        "message": (
-                            "Reference search returned no results while code intelligence "
-                            "was still warming up or LSP was unavailable."
-                        ),
-                    },
-                    indent=2,
-                )
-            )
-        return ToolResult(output=f"No references found for '{symbol}'")
-
-    refs = []
-    for r in results[:50]:
-        refs.append(
+    confidence = "full" if used_lsp else "unavailable"
+    return ToolResult(
+        output=json.dumps(
             {
-                "file": r.file_path,
-                "line": r.line,
-                "text": r.text,
-            }
+                "references": references[:_MAX_REFERENCES],
+                "total_references": len(references),
+                "confidence": confidence,
+            },
+            indent=2,
         )
-
-    return _reference_result(refs, total_references=len(results))
+    )
 
 
 # -- Edit Hotspots ------------------------------------------------------------

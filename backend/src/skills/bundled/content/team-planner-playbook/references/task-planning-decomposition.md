@@ -23,7 +23,7 @@ When a shared file is found:
 - If both slices need to edit the shared file, create a dedicated sequenced `developer` task for that file and make both consumer lanes depend on it.
 - Never split a shared file across parallel developers with no dep edge between them.
 
-Use `ci_query_references(file_path, symbol)` on files that appear as imports in multiple scout notes to confirm cross-slice usage before finalising the DAG.
+Use `ci_query_references(symbol)` on symbols that appear as imports in multiple scout notes to confirm cross-slice usage before finalising the DAG.
 
 ## DAG shaping rules
 

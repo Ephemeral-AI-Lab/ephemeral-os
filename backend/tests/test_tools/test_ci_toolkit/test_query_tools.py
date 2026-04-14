@@ -648,193 +648,156 @@ async def test_query_symbols_kind_without_value_attr():
 
 
 # ---------------------------------------------------------------------------
-# ci_query_references
+# ci_query_references (symbol-index-first approach)
 # ---------------------------------------------------------------------------
+
+
+def _make_symbol_info(name="foo", file_path="src/mod.py", line=10, kind_value="function"):
+    sym = MagicMock()
+    sym.name = name
+    sym.file_path = file_path
+    sym.line = line
+    sym.kind.value = kind_value
+    return sym
+
+
+def _svc_with_index(symbols=None, refs=None, *, initialized=True, is_built=True):
+    """Build a mock CI service with symbol index and optional LSP refs."""
+    svc = MagicMock()
+    svc.is_initialized = initialized
+    svc.workspace_root = "/testbed"
+    svc.symbol_index.is_built = is_built
+    svc.symbol_index.find.return_value = symbols or []
+    svc.find_references.return_value = refs or []
+    svc.tree_cache = None
+    svc.lsp_client = MagicMock()
+    svc.lsp_client._read_line = MagicMock(return_value=None)
+    return svc
 
 
 async def test_query_references_no_service():
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=None):
         result = await ci_query_references.execute(
-            ci_query_references.input_model(file_path="/f.py", symbol="foo"), _ctx()
+            ci_query_references.input_model(symbol="foo"), _ctx()
         )
     data = json.loads(result.output)
     assert data["status"] == "unavailable"
 
 
-async def test_query_references_no_results():
-    svc = MagicMock()
-    svc.find_references.return_value = []
+async def test_query_references_index_not_built():
+    svc = _svc_with_index(is_built=False, initialized=False)
 
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
         result = await ci_query_references.execute(
-            ci_query_references.input_model(file_path="/f.py", symbol="missing"),
-            _ctx_with_svc(svc),
-        )
-
-    assert "No references found" in result.output
-
-
-async def test_query_references_reports_cold_state_when_ci_not_ready():
-    svc = MagicMock()
-    svc.is_initialized = False
-    svc.workspace_root = "/missing"
-    svc.find_references.return_value = []
-    svc.lsp_client.connected = False
-
-    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
-        result = await ci_query_references.execute(
-            ci_query_references.input_model(file_path="/f.py", symbol="missing"),
+            ci_query_references.input_model(symbol="foo"),
             _ctx_with_svc(svc),
         )
 
     data = json.loads(result.output)
-    assert data["status"] == "cold"
-    assert data["lsp_connected"] is False
+    assert data["confidence"] == "unavailable"
+    assert "not ready" in data["message"]
 
 
-async def test_query_references_returns_results():
-    ref = MagicMock()
-    ref.file_path = "src/user.py"
-    ref.line = 20
-    ref.text = "result = foo(x)"
-
-    svc = MagicMock()
-    svc.find_references.return_value = [ref]
+async def test_query_references_symbol_not_in_index():
+    svc = _svc_with_index(symbols=[])
 
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
         result = await ci_query_references.execute(
-            ci_query_references.input_model(file_path="/f.py", symbol="foo", line=5, character=3),
+            ci_query_references.input_model(symbol="nonexistent"),
+            _ctx_with_svc(svc),
+        )
+
+    data = json.loads(result.output)
+    assert data["total_references"] == 0
+    assert data["confidence"] == "full"
+    assert "No symbol named" in data["message"]
+
+
+async def test_query_references_lsp_returns_results():
+    defn = _make_symbol_info("Engine", "src/engine.py", 10, "class")
+    ref1 = MagicMock(file_path="src/runner.py", line=5, text="from engine import Engine")
+    ref2 = MagicMock(file_path="src/main.py", line=20, text="engine = Engine(config)")
+
+    svc = _svc_with_index(symbols=[defn], refs=[ref1, ref2])
+
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        result = await ci_query_references.execute(
+            ci_query_references.input_model(symbol="Engine"),
             _ctx_with_svc(svc),
         )
 
     assert not result.is_error
     data = json.loads(result.output)
+    assert data["confidence"] == "full"
+    assert data["total_references"] == 2
+    files = [r["file"] for r in data["references"]]
+    assert "src/runner.py" in files
+    assert "src/main.py" in files
+
+
+async def test_query_references_lsp_fails_falls_back_to_definitions():
+    defn = _make_symbol_info("Engine", "src/engine.py", 10, "class")
+    svc = _svc_with_index(symbols=[defn], refs=[])
+    svc.find_references.side_effect = RuntimeError("LSP timeout")
+
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        result = await ci_query_references.execute(
+            ci_query_references.input_model(symbol="Engine"),
+            _ctx_with_svc(svc),
+        )
+
+    data = json.loads(result.output)
+    assert data["confidence"] == "unavailable"
     assert data["total_references"] == 1
-    assert data["truncated"] is False
-    refs = data["references"]
-    assert len(refs) == 1
-    assert refs[0]["file"] == "src/user.py"
-    assert refs[0]["line"] == 20
-    assert refs[0]["text"] == "result = foo(x)"
-    svc.find_references.assert_called_once_with("/f.py", "foo", 5, 3)
+    assert "definition:" in data["references"][0]["text"]
 
 
-async def test_query_references_truncates_at_50_and_shows_total():
-    """More than 50 results are truncated; total count shown in output."""
-    refs = []
-    for i in range(60):
-        r = MagicMock()
-        r.file_path = f"file{i}.py"
-        r.line = i
-        r.text = f"ref {i}"
-        refs.append(r)
-
-    svc = MagicMock()
-    svc.find_references.return_value = refs
+async def test_query_references_lsp_empty_falls_back_to_definitions():
+    defn = _make_symbol_info("Engine", "src/engine.py", 10, "class")
+    svc = _svc_with_index(symbols=[defn], refs=[])
 
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
         result = await ci_query_references.execute(
-            ci_query_references.input_model(file_path="/f.py", symbol="big"),
+            ci_query_references.input_model(symbol="Engine"),
             _ctx_with_svc(svc),
         )
 
     data = json.loads(result.output)
-    assert data["total_references"] == 60
-    assert data["truncated"] is True
-    assert len(data["references"]) == 50
+    assert data["confidence"] == "unavailable"
+    assert data["total_references"] == 1
+    assert data["references"][0]["file"] == "src/engine.py"
 
 
-async def test_resolve_sandbox_returns_existing_sandbox():
-    """_resolve_sandbox returns sandbox already in metadata."""
-    from tools.ci_toolkit.query_tools import _resolve_sandbox
+async def test_query_references_prefers_production_over_test_definitions():
+    test_defn = _make_symbol_info("Engine", "tests/test_engine.py", 5, "class")
+    prod_defn = _make_symbol_info("Engine", "src/engine.py", 10, "class")
+    ref = MagicMock(file_path="src/main.py", line=1, text="Engine()")
 
-    sandbox = MagicMock()
-    ctx = _ctx({"daytona_sandbox": sandbox})
-    result = await _resolve_sandbox(ctx)
-    assert result is sandbox
-
-
-async def test_resolve_sandbox_lazy_attaches_from_sandbox_id():
-    """_resolve_sandbox lazily resolves sandbox from sandbox_id when missing."""
-    from tools.ci_toolkit.query_tools import _resolve_sandbox
-
-    sandbox = MagicMock()
-    ctx = _ctx({"sandbox_id": "sb-123"})
-
-    with patch("tools.ci_toolkit.query_tools.get_daytona_sandbox", return_value=None):
-        with patch(
-            "sandbox.async_client.get_async_sandbox",
-            new_callable=AsyncMock,
-            return_value=sandbox,
-        ):
-            result = await _resolve_sandbox(ctx)
-
-    assert result is sandbox
-    assert ctx.metadata["daytona_sandbox"] is sandbox
-
-
-async def test_resolve_sandbox_returns_none_without_sandbox_id():
-    """_resolve_sandbox returns None when neither sandbox nor sandbox_id is available."""
-    from tools.ci_toolkit.query_tools import _resolve_sandbox
-
-    ctx = _ctx({})
-    result = await _resolve_sandbox(ctx)
-    assert result is None
-
-
-async def test_resolve_sandbox_returns_none_on_attach_failure():
-    """_resolve_sandbox returns None when lazy attach fails."""
-    from tools.ci_toolkit.query_tools import _resolve_sandbox
-
-    ctx = _ctx({"sandbox_id": "sb-bad"})
-
-    with patch("tools.ci_toolkit.query_tools.get_daytona_sandbox", return_value=None):
-        with patch(
-            "sandbox.async_client.get_async_sandbox",
-            new_callable=AsyncMock,
-            side_effect=RuntimeError("connection refused"),
-        ):
-            result = await _resolve_sandbox(ctx)
-
-    assert result is None
-
-
-async def test_query_references_lazy_sandbox_remote_fallback():
-    """ci_query_references uses lazy sandbox attach for remote ripgrep fallback."""
-    svc = MagicMock()
-    svc.is_initialized = True
-    svc.workspace_root = "/testbed"
-    svc.find_references.return_value = []
-
-    sandbox = MagicMock()
-    sandbox.process.exec = AsyncMock(
-        return_value=MagicMock(
-            exit_code=0,
-            result="/testbed/src/engine.py:10:class Engine:\n/testbed/src/runner.py:5:from engine import Engine\n",
-        )
-    )
-
-    ctx = _ctx_with_svc(svc)
-    ctx.metadata["sandbox_id"] = "sb-123"
-    ctx.metadata["daytona_cwd"] = "/testbed"
-    # No daytona_sandbox in metadata — lazy attach should kick in
+    svc = _svc_with_index(symbols=[test_defn, prod_defn], refs=[ref])
 
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
-        with patch("tools.ci_toolkit.query_tools.get_daytona_sandbox", return_value=None):
-            with patch(
-                "sandbox.async_client.get_async_sandbox",
-                new_callable=AsyncMock,
-                return_value=sandbox,
-            ):
-                result = await ci_query_references.execute(
-                    ci_query_references.input_model(file_path="/testbed/src/engine.py", symbol="Engine"),
-                    ctx,
-                )
+        result = await ci_query_references.execute(
+            ci_query_references.input_model(symbol="Engine"),
+            _ctx_with_svc(svc),
+        )
 
-    assert not result.is_error
     data = json.loads(result.output)
-    assert data["total_references"] >= 1
-    assert any("Engine" in r["text"] for r in data["references"])
+    assert data["confidence"] == "full"
+    # LSP was called with prod definition first (sorted by priority)
+    call_args = svc.find_references.call_args_list[0]
+    assert call_args[0][0] == "src/engine.py"
+
+
+async def test_query_references_resolves_column_from_tree_cache():
+    from tools.ci_toolkit.query_tools import _resolve_symbol_column
+
+    svc = MagicMock()
+    entry = MagicMock()
+    entry.content = b"class Engine:\n    pass\n"
+    svc.tree_cache.get_entry.return_value = entry
+
+    col = _resolve_symbol_column(svc, "src/engine.py", 1, "Engine")
+    assert col == 6  # "class Engine:" -> Engine starts at col 6
 
 
 # ---------------------------------------------------------------------------
