@@ -103,6 +103,8 @@ class Executor:
 
     async def _check_deadlock(self) -> bool:
         """Return True if all remaining tasks are stuck (no ready, no running)."""
+        if getattr(self.team_run, "_dispatching", 0) > 0:
+            return False
         active = getattr(self.team_run, "_active_agent_runs", {})
         if active:
             return False
@@ -144,6 +146,13 @@ class Executor:
                 await self._handle_worker_exception(task, f"worker_exception: {exc}")
 
     async def _run_one(self, task: "Task") -> None:
+        self.team_run._dispatching = getattr(self.team_run, "_dispatching", 0) + 1
+        try:
+            await self._run_one_inner(task)
+        finally:
+            self.team_run._dispatching = max(0, getattr(self.team_run, "_dispatching", 1) - 1)
+
+    async def _run_one_inner(self, task: "Task") -> None:
         tc = self.team_run.task_center
         conductor = getattr(self.team_run, "conductor", None)
         agent_run_id = str(uuid.uuid4())
@@ -246,9 +255,7 @@ class Executor:
                 {t.name for t in post_run_tools}, work_result
             )
             if deterministic is not None:
-                logger.info(
-                    "[posthook] deterministic payload for task %s (%s)", task.id, task.agent_name,
-                )
+                logger.info("[posthook] deterministic payload for task %s (%s)", task.id, task.agent_name)
                 return deterministic
         handoff = ""
         if work_result:
@@ -262,11 +269,9 @@ class Executor:
         posthook_prompt = str(ctx.tool_metadata.get("posthook_prompt") or "").strip()
         if not posthook_prompt:
             posthook_prompt = (
-                "Your main work is complete. Submit your results by calling one of: "
-                f"{tool_summary}. If your prior output already contains structured "
-                "JSON matching a tool's schema (e.g. a plan with a 'tasks' array), "
-                "pass that exact payload as the tool arguments — never call the tool "
-                "with empty or placeholder input."
+                f"Your main work is complete. Submit results by calling one of: {tool_summary}. "
+                "If your prior output already contains structured JSON matching a tool's schema, "
+                "pass that exact payload as the tool arguments."
             )
 
         posthook_cwd = Path(
