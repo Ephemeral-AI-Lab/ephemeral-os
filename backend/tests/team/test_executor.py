@@ -124,175 +124,101 @@ def _make_executor(
 
 
 # ---------------------------------------------------------------------------
-# _run_post_run tests — posthook re-prompt via external trigger
+# _read_result tests — read structured result from tool_metadata
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.asyncio
-async def test_run_post_run_uses_external_trigger_agent(monkeypatch):
-    captured: dict[str, object] = {}
-
-    async def fake_run_external_trigger(**kwargs):
-        captured.update(kwargs)
-        return SimpleNamespace(
-            tool_name="post_note",
-            tool_input={"content": "done"},
-            validated=None,
-            turns_used=1,
-        )
-
-    monkeypatch.setattr("external_trigger.runner.run", fake_run_external_trigger)
-
+def test_read_result_success_summary():
+    """When task_summary_type='success', _read_result returns AgentResult."""
     executor, _ = _make_executor()
-    executor.team_run.api_client = object()
-    executor.team_run.conductor = SimpleNamespace(
-        _executor_snapshots={"task-1": [{"role": "assistant", "content": "frozen"}]},
-    )
     ctx = TeamAgentContext(
         tool_metadata={
-            "agent_name": "developer",
-            "role": "developer",
-            "posthook_prompt": "Submit your result.",
-            "work_result": "Developer summary",
+            "task_summary_type": "success",
+            "task_summary": "Fixed the auth bug in session.py",
         }
     )
-
-    result = await executor._run_post_run(
-        task=SimpleNamespace(id="task-1", agent_name="developer"),
-        defn=FakeDefn(),
-        ctx=ctx,
-    )
-
+    task = SimpleNamespace(id="task-1", agent_name="developer")
+    result = executor._read_result(task, ctx)
     assert isinstance(result, AgentResult)
-    assert result.summary == "done"
-    assert captured["agent_name"] == "posthook:developer:task-1"
-    assert captured["messages"] == [{"role": "assistant", "content": "frozen"}]
-    assert "Developer summary" in str(captured["prompt"])
-    assert [tool.name for tool in captured["tools"]] == ["post_note", "request_replan"]
-    assert captured["execute_tools"] is True
+    assert result.summary == "Fixed the auth bug in session.py"
 
 
-@pytest.mark.asyncio
-async def test_run_post_run_planner_submit_plan(monkeypatch):
-    captured: dict[str, object] = {}
-
-    async def fake_run_external_trigger(**kwargs):
-        captured.update(kwargs)
-        return SimpleNamespace(
-            tool_name="submit_plan",
-            tool_input={"tasks": [{"id": "t1", "task": "fix it", "agent": "developer"}]},
-            validated=None,
-            turns_used=1,
-        )
-
-    monkeypatch.setattr("external_trigger.runner.run", fake_run_external_trigger)
-
+def test_read_result_fail_triggers_replan():
+    """When task_summary_type='fail', _read_result returns ReplanRequest."""
     executor, _ = _make_executor()
-    executor.team_run.api_client = object()
-    executor.team_run.conductor = SimpleNamespace(
-        _executor_snapshots={"task-1": [{"role": "assistant", "content": "frozen"}]},
-    )
     ctx = TeamAgentContext(
         tool_metadata={
-            "agent_name": "team_planner",
-            "role": "planner",
-            "posthook_prompt": "Submit your plan.",
-            "work_result": "Legacy plan text without parseable JSON",
+            "task_summary_type": "fail",
+            "task_summary": "Auth spans 3 services, need separate tasks",
         }
     )
+    task = SimpleNamespace(id="task-1", agent_name="developer")
+    result = executor._read_result(task, ctx)
+    assert isinstance(result, ReplanRequest)
+    assert "Auth spans 3 services" in result.reason
 
-    result = await executor._run_post_run(
-        task=SimpleNamespace(id="task-1", agent_name="team_planner"),
-        defn=FakePlannerDefn(),
-        ctx=ctx,
+
+def test_read_result_planner_submit_plan():
+    """When resolved_plan is a Plan, _read_result returns AgentResult with plan."""
+    executor, _ = _make_executor()
+    plan = Plan.from_dict({"tasks": [{"id": "t1", "task": "fix it", "agent": "developer"}]})
+    ctx = TeamAgentContext(
+        tool_metadata={
+            "resolved_plan": plan,
+            "plan_is_replan": False,
+        }
     )
-
+    task = SimpleNamespace(id="task-1", agent_name="team_planner")
+    result = executor._read_result(task, ctx)
     assert isinstance(result, AgentResult)
     assert result.submitted_plan is not None
     assert len(result.submitted_plan.tasks) == 1
-    assert captured["agent_name"] == "posthook:team_planner:task-1"
-    assert captured["execute_tools"] is True
 
 
-@pytest.mark.asyncio
-async def test_run_post_run_prefers_resolved_plan_metadata(monkeypatch):
-    resolved_plan = Plan.from_dict(
-        {"tasks": [{"id": "t1", "task": "fix it", "agent": "validator"}]}
-    )
-
-    async def fake_run_external_trigger(**kwargs):
-        del kwargs
-        return SimpleNamespace(
-            tool_name="submit_plan",
-            tool_input={"tasks": [{"id": "", "task": "broken raw payload", "agent": ""}]},
-            tool_result=SimpleNamespace(metadata={"resolved_plan": resolved_plan}),
-            validated=None,
-            turns_used=2,
-        )
-
-    monkeypatch.setattr("external_trigger.runner.run", fake_run_external_trigger)
-
+def test_read_result_replanner_submit_replan():
+    """When resolved_plan is a ReplanPlan, _read_result returns AgentResult with replan."""
     executor, _ = _make_executor()
-    executor.team_run.api_client = object()
-    executor.team_run.conductor = SimpleNamespace(
-        _executor_snapshots={"task-1": [{"role": "assistant", "content": "frozen"}]},
-    )
+    replan = ReplanPlan.from_dict({
+        "add_tasks": [{"id": "t1", "task": "retry fix", "agent": "developer"}],
+        "cancel_ids": ["old-task-1"],
+    })
     ctx = TeamAgentContext(
         tool_metadata={
-            "agent_name": "team_planner",
-            "role": "planner",
-            "posthook_prompt": "Submit your plan.",
-            "work_result": "Legacy plan text without parseable JSON",
+            "resolved_plan": replan,
+            "plan_is_replan": True,
         }
     )
-
-    result = await executor._run_post_run(
-        task=SimpleNamespace(id="task-1", agent_name="team_planner"),
-        defn=FakePlannerDefn(),
-        ctx=ctx,
-    )
-
+    task = SimpleNamespace(id="task-1", agent_name="team_replanner")
+    result = executor._read_result(task, ctx)
     assert isinstance(result, AgentResult)
-    assert result.submitted_plan is not None
-    assert result.submitted_plan.tasks[0].agent == "validator"
+    assert result.submitted_replan is not None
+    assert len(result.submitted_replan.add_tasks) == 1
+    assert result.submitted_replan.cancel_ids == ["old-task-1"]
 
 
-@pytest.mark.asyncio
-async def test_run_post_run_no_api_client_returns_sentinel(monkeypatch):
+def test_read_result_no_submission_fallback():
+    """When no terminal tool was called, _read_result returns fallback AgentResult."""
     executor, _ = _make_executor()
-    executor.team_run.api_client = None
-    ctx = TeamAgentContext(tool_metadata={"role": "developer"})
-
-    result = await executor._run_post_run(
-        task=SimpleNamespace(id="task-1", agent_name="developer"),
-        defn=FakeDefn(),
-        ctx=ctx,
+    ctx = TeamAgentContext(
+        tool_metadata={
+            "work_result": "I was still working on something",
+        }
     )
-
+    task = SimpleNamespace(id="task-1", agent_name="developer")
+    result = executor._read_result(task, ctx)
     assert isinstance(result, AgentResult)
-    assert "no api_client" in result.summary
+    assert "completed (no submission)" in result.summary
+    assert "I was still working" in result.summary
 
 
-@pytest.mark.asyncio
-async def test_run_post_run_runner_failure_returns_sentinel(monkeypatch):
-    async def failing_trigger(**kwargs):
-        raise RuntimeError("LLM down")
-
-    monkeypatch.setattr("external_trigger.runner.run", failing_trigger)
-
+def test_read_result_empty_metadata():
+    """When metadata is completely empty, returns fallback."""
     executor, _ = _make_executor()
-    executor.team_run.api_client = object()
-    executor.team_run.conductor = SimpleNamespace(_executor_snapshots={})
-    ctx = TeamAgentContext(tool_metadata={"role": "developer"})
-
-    result = await executor._run_post_run(
-        task=SimpleNamespace(id="task-1", agent_name="developer"),
-        defn=FakeDefn(),
-        ctx=ctx,
-    )
-
+    ctx = TeamAgentContext(tool_metadata={})
+    task = SimpleNamespace(id="task-1", agent_name="developer")
+    result = executor._read_result(task, ctx)
     assert isinstance(result, AgentResult)
-    assert "posthook runner failed" in result.summary
+    assert "completed (no submission)" in result.summary
 
 
 # ---------------------------------------------------------------------------
@@ -648,85 +574,23 @@ def test_plan_health_prefix_retry_warning():
 
 
 # ---------------------------------------------------------------------------
-# Budget-exhausted forced replan tests
+# Budget-exhausted tests (now handled by runner retry loop)
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.asyncio
-async def test_run_post_run_budget_exhausted_forces_replan(monkeypatch):
-    """When budget_exhausted=True for a developer, posthook skips the LLM
-    and returns a ReplanRequest deterministically."""
-    trigger_called = False
-
-    async def fake_run_external_trigger(**kwargs):
-        nonlocal trigger_called
-        trigger_called = True
-        return SimpleNamespace(
-            tool_name="post_note",
-            tool_input={"content": "done"},
-            validated=None,
-            turns_used=1,
-        )
-
-    monkeypatch.setattr("external_trigger.runner.run", fake_run_external_trigger)
-
+def test_read_result_budget_exhausted_developer_gets_fail():
+    """When budget is exhausted and runner writes fail summary, _read_result
+    returns a ReplanRequest (runner writes task_summary_type='fail')."""
     executor, _ = _make_executor()
-    executor.team_run.api_client = object()
-    executor.team_run.conductor = SimpleNamespace(_executor_snapshots={})
+    # The runner retry loop now handles budget exhaustion by re-prompting
+    # the agent. If the agent still can't submit, runner writes a fail summary.
     ctx = TeamAgentContext(
         tool_metadata={
-            "agent_name": "developer",
-            "role": "developer",
-            "work_result": "I was still working on the fix",
-            "budget_exhausted": True,
+            "task_summary_type": "fail",
+            "task_summary": "Agent did not call a submission tool after 5 retries.",
         }
     )
-
-    result = await executor._run_post_run(
-        task=SimpleNamespace(id="task-1", agent_name="developer"),
-        defn=FakeDefn(),
-        ctx=ctx,
-    )
-
+    task = SimpleNamespace(id="task-1", agent_name="developer")
+    result = executor._read_result(task, ctx)
     assert isinstance(result, ReplanRequest)
-    assert "Budget exhausted" in result.reason
-    assert "I was still working" in result.reason
-    assert not trigger_called, "LLM posthook should be skipped for budget-exhausted tasks"
-
-
-@pytest.mark.asyncio
-async def test_run_post_run_budget_exhausted_does_not_force_replan_for_planner(monkeypatch):
-    """Planners should NOT be forced to replan on budget exhaustion —
-    they submit plans, not code."""
-
-    async def fake_run_external_trigger(**kwargs):
-        return SimpleNamespace(
-            tool_name="submit_plan",
-            tool_input={"tasks": [{"id": "t1", "task": "do it", "agent": "developer"}]},
-            validated=None,
-            turns_used=1,
-        )
-
-    monkeypatch.setattr("external_trigger.runner.run", fake_run_external_trigger)
-
-    executor, _ = _make_executor()
-    executor.team_run.api_client = object()
-    executor.team_run.conductor = SimpleNamespace(_executor_snapshots={})
-    ctx = TeamAgentContext(
-        tool_metadata={
-            "agent_name": "team_planner",
-            "role": "planner",
-            "work_result": "plan text",
-            "budget_exhausted": True,
-        }
-    )
-
-    result = await executor._run_post_run(
-        task=SimpleNamespace(id="task-1", agent_name="team_planner"),
-        defn=FakePlannerDefn(),
-        ctx=ctx,
-    )
-
-    # Planner should proceed normally, not forced replan
-    assert isinstance(result, AgentResult)
-    assert result.submitted_plan is not None
+    assert "did not call" in result.reason

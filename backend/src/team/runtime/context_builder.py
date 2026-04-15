@@ -21,6 +21,19 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+# Default terminal_tools mapping — used when TeamDefinition.terminal_tools is empty.
+# Which tools are terminal is a team-level policy: the team decides when an agent's
+# job is done. The query loop exits when any of these tools are called.
+DEFAULT_TERMINAL_TOOLS: dict[str, set[str]] = {
+    "planner": {"submit_plan"},
+    "replanner": {"submit_plan", "submit_task_summary"},
+    "developer": {"submit_task_summary"},
+    "reviewer": {"submit_task_summary"},
+    "resolver": {"submit_task_summary"},
+    "explorer": {"submit_task_summary"},
+    "scout": {"submit_task_summary"},
+}
+
 @dataclass
 class TeamAgentContext:
     """Canonical team-runtime context for work runners."""
@@ -46,7 +59,6 @@ def build_task_metadata(team_run: "TeamRun", task: Task) -> ExecutionMetadata:
         sandbox_id=getattr(team_run, "sandbox_id", "") or "",
     )
     meta["work_item_started_at"] = time.time()
-    meta["posthook_enabled"] = True
     meta["team_mode_enabled"] = True
     meta["retry_count"] = task.retry_count
     meta["max_retries"] = task.max_retries
@@ -183,31 +195,24 @@ async def build_query_context(
 
     meta = build_task_metadata(team_run, task)
     meta["role"] = getattr(defn, "role", "")
-    posthook_tools = getattr(defn, "posthook", None) or []
-    if posthook_tools:
-        meta["posthook_tool_names"] = list(posthook_tools)
-        if meta["role"] == "reviewer":
-            meta["posthook_prompt"] = (
-                "Your main work is complete. Submit results by calling one of: "
-                f"{', '.join(posthook_tools)}. "
-                "If your verdict is FAIL, you MUST call request_replan with "
-                "the failure reason and diagnostic evidence. "
-                "Only call post_note for a PASS verdict."
-            )
-        else:
-            meta["posthook_prompt"] = (
-                "Your main work is complete. Submit results by calling one of: "
-                f"{', '.join(posthook_tools)}. "
-                "If using post_note, include paths (files touched) and tags."
-            )
+
+    # Resolve terminal_tools for this role.
+    # Prefer TeamDefinition.terminal_tools if populated; fall back to defaults.
+    role = getattr(defn, "role", "") or ""
+    team_def = getattr(team_run, "team_definition", None)
+    td_map = getattr(team_def, "terminal_tools", None) or {}
+    terminal_set = td_map.get(role) if td_map else None
+    if not terminal_set:
+        terminal_set = DEFAULT_TERMINAL_TOOLS.get(role, set())
+    meta["terminal_tools"] = set(terminal_set)
     user_message = await build_initial_user_message(team_run, task)
     roster = getattr(team_run, "roster", None)
     if getattr(defn, "role", None) == "replanner" and meta.get("active_blockers"):
         blocker_lines = ["## Active Blockers\n",
                          "The following blockers are currently active for sibling tasks. "
                          "If an active blocker already covers the same root-cause paths, do not "
-                         "call `declare_blocker` again. Use `add_tasks(...)` instead, and depend "
-                         "on that blocker's `fix_task_id` so the retry runs after the shared fix.\n"]
+                         "declare another blocker. Use `submit_plan(add_tasks=[...])` instead, "
+                         "and depend on that blocker's `fix_task_id` so the retry runs after the shared fix.\n"]
         for b in meta["active_blockers"]:
             blocker_lines.append(
                 f"- **{b['id'][:8]}** ({b['status']}): {b['reason']}\n"

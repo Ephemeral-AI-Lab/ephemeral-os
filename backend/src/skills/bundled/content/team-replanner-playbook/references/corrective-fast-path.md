@@ -5,7 +5,7 @@ Use this reference only when the validator packet already names exact failing py
 ## Workflow
 
 1. Must confirm the owner surface is still live.
-2. May use `read_notes(paths=[...])` once to confirm a same-run shared brief on that exact owner surface before deeper archaeology.
+2. May use `read_task_note(paths=[...])` once to confirm a same-run shared brief on that exact owner surface before deeper archaeology.
 3. Must draft corrective JSON as soon as the failing cluster, owner surface, and retry target are clear.
 
 ## Rules

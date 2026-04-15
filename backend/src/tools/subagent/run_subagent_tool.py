@@ -422,107 +422,6 @@ def _snapshot_messages(messages: list[Any] | None) -> list[dict[str, Any]]:
     return out
 
 
-def _posthook_prompt(metadata: Any, tools: list[Any]) -> str:
-    prompt = str(metadata.get("posthook_prompt") or "").strip()
-    if prompt:
-        return prompt
-    tool_summary = ", ".join(f"{tool.name}: {tool.description}" for tool in tools)
-    if len(tools) == 1 and tools[0].name == "post_note":
-        return (
-            "Your main work is complete. Call `post_note` exactly once with "
-            "arguments like "
-            '`{"content":"<concise factual handoff>", "paths":["..."], "tags":["discovery"]}`. '
-            "`content` is required and must be non-empty. "
-            "The conversation history is frozen; do not continue the task itself."
-        )
-    role = str(metadata.get("role") or "").strip()
-    if role == "explorer":
-        return (
-            "Your exploration is complete. Submit a durable Task Center handoff "
-            f"by calling one of: {tool_summary}. If you call `post_note`, include "
-            "Scope, Files mapped, Entry points, Owner seam, Suggested subdivisions, "
-            "and Gaps. Use only evidence from the frozen conversation."
-        )
-    return (
-        "Your main work is complete. Submit your results by calling one of: "
-        f"{tool_summary}. The conversation history is frozen; do not continue "
-        "the task itself."
-    )
-
-
-async def _run_subagent_posthook(
-    *,
-    sub_def: Any,
-    parent_cfg: Any,
-    metadata: Any,
-    final_text: str,
-    api_snapshot: list[Any] | None,
-    cwd: Any,
-    task_id: str | None,
-) -> None:
-    if not getattr(sub_def, "posthook", None):
-        return
-    if metadata.get("task_center") is None:
-        return
-
-    from external_trigger.runner import run as run_trigger
-    from providers.provider import make_api_client
-    from tools.posthook.toolkit import PosthookTools
-
-    requested = {name for name in getattr(sub_def, "posthook", []) if isinstance(name, str) and name}
-    posthook_tools = [
-        tool for tool in PosthookTools.from_context(metadata).list_tools() if tool.name in requested
-    ]
-    if not posthook_tools:
-        return
-
-    handoff = ""
-    if final_text:
-        handoff = (
-            "\nUse the prior work result below as the canonical output from the main run. "
-            "If it already contains the information needed for the terminal tool call, "
-            "reuse it instead of inventing new findings.\n\n"
-            f"{final_text[:20_000]}"
-        )
-
-    external_client = getattr(parent_cfg, "external_api_client", None)
-    api_client = make_api_client(external_client)
-    own_client = api_client is not external_client
-    try:
-        result = await run_trigger(
-            agent_name=f"posthook:{sub_def.name}:{task_id or 'subagent'}",
-            messages=_snapshot_messages(api_snapshot),
-            system_prompt=(
-                "You are a task submission assistant. "
-                "The conversation history is frozen. Do not continue the task itself; "
-                "focus only on producing a valid terminal submission. "
-                "If a submission tool returns an error, revise the payload and retry."
-            ),
-            prompt=f"{_posthook_prompt(metadata, posthook_tools)}{handoff}",
-            tools=posthook_tools,
-            api_client=api_client,
-            max_tokens_per_turn=1000,
-            execution_context=ToolExecutionContext(cwd=cwd, metadata=metadata),
-            execute_tools=True,
-        )
-    except Exception:
-        logger.warning(
-            "run_subagent: posthook failed for %s (%s)",
-            sub_def.name,
-            task_id or "subagent",
-            exc_info=True,
-        )
-    else:
-        logger.info(
-            "run_subagent: posthook completed for %s (%s) via %s",
-            sub_def.name,
-            task_id or "subagent",
-            result.tool_name,
-        )
-    finally:
-        if own_client and hasattr(api_client, "aclose"):
-            await api_client.aclose()
-
 
 @tool(
     name="run_subagent",
@@ -736,9 +635,9 @@ async def run_subagent(
     final_text = _extract_final_text(agent.display_messages)
     # Tolerate test stubs that don't expose a query_context.
     api_snapshot = qc.api_messages_snapshot if qc is not None else None
-    posthook_meta = qc.tool_metadata if qc is not None and qc.tool_metadata is not None else subagent_ctx.metadata
+    run_meta = qc.tool_metadata if qc is not None and qc.tool_metadata is not None else subagent_ctx.metadata
     if final_text:
-        posthook_meta["work_result"] = final_text
+        run_meta["work_result"] = final_text
     # Test stubs may not expose ``agent_name``/``model``/``total_usage`` —
     # skip usage persistence in that case instead of crashing the tool.
     agent_name_for_usage = getattr(agent, "agent_name", None)
@@ -783,15 +682,6 @@ async def run_subagent(
         )
         return ToolResult(output=f"run_subagent: subagent crashed: {run_error}", is_error=True)
 
-    await _run_subagent_posthook(
-        sub_def=sub_def,
-        parent_cfg=parent_cfg,
-        metadata=posthook_meta,
-        final_text=final_text,
-        api_snapshot=api_snapshot,
-        cwd=context.cwd,
-        task_id=parent_task_id,
-    )
 
     envelope = _build_subagent_envelope(
         None,

@@ -24,7 +24,7 @@ Use `cancel_and_redraft(...)` when sibling tasks are stale and must be replaced.
 
 - The failure is a wrong-owner or wrong-decomposition problem rather than an isolated bug or transient runtime.
 - Adding corrective tasks without cancelling would create conflicting edits on the same files.
-- Must read sibling and descendant notes via `read_sibling_notes()` before deciding which nodes are stale.
+- Must read sibling and descendant notes via `read_task_note(scope="sibling", )` before deciding which nodes are stale.
 
 ## Rules
 

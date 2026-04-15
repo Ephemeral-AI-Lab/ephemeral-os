@@ -1,7 +1,7 @@
 """Task Center tools — notes + staleness.
 
 Tools exposed in the main loop:
-- read_notes               — read/search notes with optional keyword filter
+- read_task_note               — read/search notes with optional keyword filter
 - context_changed_since    — check if context is stale (other agents' edits)
 
 `post_note` is still defined in this module, but is exposed via the post-run and
@@ -17,6 +17,7 @@ import json
 import re
 import time
 import uuid
+from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -65,7 +66,7 @@ class PostNoteInput(BaseModel):
         description=(
             "File/dir paths this note relates to. Can be existing or planned paths. "
             "If omitted, defaults to the task's write_scope. Other agents can find "
-            "this note via read_notes(paths=[...])."
+            "this note via read_task_note(paths=[...])."
         ),
     )
     tags: list[str] | None = Field(
@@ -82,8 +83,8 @@ class PostNoteInput(BaseModel):
     )
 
 
-class PostNoteTool(BaseTool):
-    name = "post_note"
+class SubmitTaskNoteTool(BaseTool):
+    name = "submit_task_note"
     description = (
         "Post a note to the Task Center for other agents to read. "
         "Use for: blockers that siblings should know about, partial progress "
@@ -92,7 +93,7 @@ class PostNoteTool(BaseTool):
         "and immutable — post a new note to update, don't try to edit."
     )
     input_model = PostNoteInput
-    tool_types = frozenset({"external_trigger", "post_run"})
+    tool_types = frozenset({"normal", "external_trigger"})
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, PostNoteInput)
@@ -143,190 +144,12 @@ class PostNoteTool(BaseTool):
         return ToolResult(output=f"Note posted ({len(content)} chars).")
 
 
-# ---------------------------------------------------------------------------
-# ReadNotesTool — absorbs former search_context via optional keyword param
-# ---------------------------------------------------------------------------
+# Backward-compat alias — used by posthook/toolkit.py and tc_note.py during transition
+PostNoteTool = SubmitTaskNoteTool
 
 
-class ReadNotesInput(BaseModel):
-    paths: list[str] | None = Field(
-        default=None,
-        description=(
-            "Filter by path prefix — returns notes whose paths overlap "
-            "with these prefixes (e.g. 'src/auth/' matches 'src/auth/session.py'). "
-            "Omit to return all notes."
-        ),
-    )
-    tags: list[str] | None = Field(
-        default=None,
-        description=(
-            "Filter by tag (OR semantics). Valid tags: discovery, implementation, "
-            "bug_fix, blocker, proposal, verification, architecture, dependency, "
-            "warning, refactor. Omit to return all tags."
-        ),
-    )
-    keyword: str | None = Field(
-        default=None,
-        description=(
-            "Keyword filter (case-insensitive substring match on note content). "
-            "Use '|' to separate multiple keywords for OR matching, "
-            "e.g. 'session|token' matches notes containing either word."
-        ),
-    )
-    parent_note_id: str | None = Field(
-        default=None, description="Filter to notes that are replies to this note ID."
-    )
-    last_n: int | None = Field(default=None, description="Return only the N most recent matching notes.")
 
 
-class ReadNotesTool(BaseTool):
-    name = "read_notes"
-    description = (
-        "Read notes from the Task Center. ALWAYS include paths=[<your_scope_paths>] "
-        "to scope reads to relevant files — unfiltered reads waste context and miss nothing useful. "
-        "Also use tags= to find specific note types (e.g. 'blocker', 'discovery') "
-        "and keyword= for text search. "
-        "Call as your FIRST tool on every fresh developer or validator lane."
-    )
-    input_model = ReadNotesInput
-
-    async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
-        assert isinstance(arguments, ReadNotesInput)
-        from team.models import NoteTag
-
-        tc = context.metadata.get("task_center")
-        if tc is None:
-            return ToolResult(output="Error: Task Center not available", is_error=True)
-
-        # Validate tags
-        if arguments.tags:
-            valid_tags = {t.value for t in NoteTag}
-            invalid = [t for t in arguments.tags if t not in valid_tags]
-            if invalid:
-                return ToolResult(
-                    output=f"Invalid tag(s): {invalid}. Valid tags: {sorted(valid_tags)}",
-                    is_error=True,
-                )
-
-        # Validate paths — check if any notes match
-        if arguments.paths:
-            matched = await tc.notes.read(paths=arguments.paths)
-            if not matched:
-                known = tc.notes.known_paths()
-                return ToolResult(
-                    output=(
-                        f"No notes found for paths: {arguments.paths}. "
-                        f"Known note paths: {known}"
-                    ),
-                    is_error=True,
-                )
-
-        notes = await tc.notes.read_notes(
-            paths=arguments.paths,
-            tags=arguments.tags,
-            keyword=arguments.keyword,
-            last_n=arguments.last_n,
-            parent_note_id=arguments.parent_note_id,
-        )
-        if not notes:
-            return ToolResult(output="No notes found.")
-        lines: list[str] = []
-        for n in notes:
-            header = f"### {n.agent_name} ({n.task_id})"
-            if n.paths:
-                header += f" [paths: {', '.join(n.paths)}]"
-            if n.tags:
-                header += f" [tags: {', '.join(n.tags)}]"
-            lines.append(header)
-            lines.append(n.content)
-            lines.append("")
-        return ToolResult(output="\n".join(lines))
-
-
-# ---------------------------------------------------------------------------
-# ReadSiblingNotesTool
-# ---------------------------------------------------------------------------
-
-
-class ReadSiblingNotesInput(BaseModel):
-    paths: list[str] | None = Field(
-        default=None,
-        description=(
-            "Filter sibling notes by path prefix. "
-            "Omit to return all sibling notes."
-        ),
-    )
-    tags: list[str] | None = Field(
-        default=None,
-        description=(
-            "Optional tag filter (OR semantics). Valid tags: discovery, implementation, "
-            "bug_fix, blocker, proposal, verification, architecture, dependency, "
-            "warning, refactor. Omit to return all tags."
-        ),
-    )
-    keyword: str | None = Field(
-        default=None,
-        description=(
-            "Keyword filter (case-insensitive substring match on note content). "
-            "Use '|' to separate multiple keywords for OR matching, "
-            "e.g. 'session|token' matches notes containing either word."
-        ),
-    )
-    last_n: int | None = Field(default=None, description="Return only the N most recent matching notes.")
-
-
-class ReadSiblingNotesTool(BaseTool):
-    name = "read_sibling_notes"
-    description = (
-        "Read notes from sibling tasks and their descendants. Developers MUST call this "
-        "before any edit outside original scope_paths and after any verification failure "
-        "to check if siblings hit the same issue. Replanners MUST call this before choosing "
-        "an action. Include paths=[...] to scope to relevant files."
-    )
-    input_model = ReadSiblingNotesInput
-
-    async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
-        assert isinstance(arguments, ReadSiblingNotesInput)
-        from team.models import NoteTag
-
-        tc = context.metadata.get("task_center")
-        if tc is None:
-            return ToolResult(output="Error: Task Center not available", is_error=True)
-
-        task_id = str(context.metadata.get("work_item_id") or "")
-        if not task_id:
-            return ToolResult(output="Error: no task context available", is_error=True)
-
-        # Validate tags
-        if arguments.tags:
-            valid_tags = {t.value for t in NoteTag}
-            invalid = [t for t in arguments.tags if t not in valid_tags]
-            if invalid:
-                return ToolResult(
-                    output=f"Invalid tag(s): {invalid}. Valid tags: {sorted(valid_tags)}",
-                    is_error=True,
-                )
-
-        notes = await tc.notes.read_sibling_notes(
-            task_id=task_id,
-            paths=arguments.paths,
-            tags=arguments.tags,
-            keyword=arguments.keyword,
-            last_n=arguments.last_n,
-        )
-        if not notes:
-            return ToolResult(output="No sibling notes found.")
-        lines: list[str] = []
-        for n in notes:
-            header = f"### {n.agent_name} ({n.task_id})"
-            if n.paths:
-                header += f" [paths: {', '.join(n.paths)}]"
-            if n.tags:
-                header += f" [tags: {', '.join(n.tags)}]"
-            lines.append(header)
-            lines.append(n.content)
-            lines.append("")
-        return ToolResult(output="\n".join(lines))
 
 
 # ---------------------------------------------------------------------------
@@ -371,21 +194,259 @@ class ContextChangedSinceTool(BaseTool):
 
 
 # ---------------------------------------------------------------------------
+# ReadTaskNoteTool — unified read with scope parameter
+# ---------------------------------------------------------------------------
+
+
+class ReadTaskNoteInput(BaseModel):
+    scope: Literal["own", "sibling"] = Field(
+        default="own",
+        description="'own' reads notes from your own task. 'sibling' reads from sibling tasks and descendants.",
+    )
+    paths: list[str] | None = Field(
+        default=None,
+        description="Filter by path prefix — returns notes whose paths overlap with these prefixes.",
+    )
+    tags: list[str] | None = Field(
+        default=None,
+        description=(
+            "Filter by tag (OR semantics). Valid tags: discovery, implementation, "
+            "bug_fix, blocker, proposal, verification, architecture, dependency, "
+            "warning, refactor."
+        ),
+    )
+    keyword: str | None = Field(
+        default=None,
+        description="Keyword filter (case-insensitive substring match). Use '|' for OR matching.",
+    )
+    last_n: int | None = Field(default=None, description="Return only the N most recent matching notes.")
+
+
+class ReadTaskNoteTool(BaseTool):
+    name = "read_task_note"
+    description = (
+        "Read notes from the Task Center. Use scope='own' for your task's notes, "
+        "scope='sibling' for sibling tasks. ALWAYS include paths=[<your_scope_paths>] "
+        "to scope reads. Also use tags= and keyword= for filtering."
+    )
+    input_model = ReadTaskNoteInput
+
+    async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
+        assert isinstance(arguments, ReadTaskNoteInput)
+        from team.models import NoteTag
+
+        tc = context.metadata.get("task_center")
+        if tc is None:
+            return ToolResult(output="Error: Task Center not available", is_error=True)
+
+        if arguments.tags:
+            valid_tags = {t.value for t in NoteTag}
+            invalid = [t for t in arguments.tags if t not in valid_tags]
+            if invalid:
+                return ToolResult(
+                    output=f"Invalid tag(s): {invalid}. Valid tags: {sorted(valid_tags)}",
+                    is_error=True,
+                )
+
+        if arguments.scope == "sibling":
+            task_id = str(context.metadata.get("work_item_id") or "")
+            if not task_id:
+                return ToolResult(output="Error: no task context available", is_error=True)
+            notes = await tc.notes.read_sibling_notes(
+                task_id=task_id,
+                paths=arguments.paths,
+                tags=arguments.tags,
+                keyword=arguments.keyword,
+                last_n=arguments.last_n,
+            )
+        else:
+            if arguments.paths:
+                matched = await tc.notes.read(paths=arguments.paths)
+                if not matched:
+                    known = tc.notes.known_paths()
+                    return ToolResult(
+                        output=f"No notes found for paths: {arguments.paths}. Known note paths: {known}",
+                        is_error=True,
+                    )
+            notes = await tc.notes.read_notes(
+                paths=arguments.paths,
+                tags=arguments.tags,
+                keyword=arguments.keyword,
+                last_n=arguments.last_n,
+            )
+
+        if not notes:
+            return ToolResult(output="No notes found.")
+        lines: list[str] = []
+        for n in notes:
+            header = f"### {n.agent_name} ({n.task_id})"
+            if n.paths:
+                header += f" [paths: {', '.join(n.paths)}]"
+            if n.tags:
+                header += f" [tags: {', '.join(n.tags)}]"
+            lines.append(header)
+            lines.append(n.content)
+            lines.append("")
+        return ToolResult(output="\n".join(lines))
+
+
+# ---------------------------------------------------------------------------
+# ReadTaskDetailsTool — full detail view for specific tasks
+# ---------------------------------------------------------------------------
+
+
+class ReadTaskDetailsInput(BaseModel):
+    task_ids: list[str] = Field(
+        ...,
+        min_length=1,
+        description="Task IDs to look up. Get IDs from read_task_graph or from your deps.",
+    )
+
+
+class ReadTaskDetailsTool(BaseTool):
+    name = "read_task_details"
+    description = (
+        "Get full details for specific tasks by ID: spec, deps, status, "
+        "scope_paths, summary, and recent notes. Use read_task_graph first "
+        "to discover task IDs."
+    )
+    input_model = ReadTaskDetailsInput
+
+    async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
+        assert isinstance(arguments, ReadTaskDetailsInput)
+        tc = context.metadata.get("task_center")
+        if tc is None:
+            return ToolResult(output="Error: Task Center not available", is_error=True)
+
+        graph = getattr(tc, "graph", None)
+        if not isinstance(graph, dict):
+            return ToolResult(output="Error: task graph not available", is_error=True)
+
+        sections: list[str] = []
+        for tid in arguments.task_ids:
+            task = graph.get(tid)
+            if task is None:
+                sections.append(f"## {tid}\nNot found in task graph.")
+                continue
+
+            header = f"## {task.id} ({task.agent_name}) [{task.status.value}]"
+            lines = [header]
+
+            # Spec
+            lines.append(f"**Spec:** {task.task}")
+
+            # Deps
+            if task.deps:
+                lines.append(f"**Deps:** {', '.join(task.deps)}")
+
+            # Scope
+            if task.scope_paths:
+                lines.append(f"**Scope:** {', '.join(task.scope_paths)}")
+
+            # Failure reason
+            if task.failure_reason:
+                lines.append(f"**Failure:** {task.failure_reason}")
+
+            # Notes for this task
+            try:
+                notes = await tc.notes.read_notes(last_n=5)
+                task_notes = [n for n in notes if n.task_id == tid]
+                if task_notes:
+                    lines.append("**Notes:**")
+                    for n in task_notes[-3:]:
+                        tag_str = f" [{', '.join(n.tags)}]" if n.tags else ""
+                        lines.append(f"  - {n.agent_name}{tag_str}: {n.content[:200]}")
+            except Exception:
+                pass  # notes unavailable
+
+            sections.append("\n".join(lines))
+
+        return ToolResult(output="\n\n".join(sections))
+
+
+# ---------------------------------------------------------------------------
+# ReadTaskGraphTool — DAG structure overview
+# ---------------------------------------------------------------------------
+
+
+class ReadTaskGraphInput(BaseModel):
+    scope: Literal["sibling", "global"] = Field(
+        default="sibling",
+        description=(
+            "'sibling' shows tasks under the same parent (your peers). "
+            "'global' shows the full task tree."
+        ),
+    )
+
+
+class ReadTaskGraphTool(BaseTool):
+    name = "read_task_graph"
+    description = (
+        "View the task DAG structure: IDs, agents, status, and dependency edges. "
+        "Use scope='sibling' to see your peer tasks, scope='global' for the full tree. "
+        "Follow up with read_task_details(task_ids=[...]) for full info on specific tasks."
+    )
+    input_model = ReadTaskGraphInput
+
+    async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
+        assert isinstance(arguments, ReadTaskGraphInput)
+        tc = context.metadata.get("task_center")
+        if tc is None:
+            return ToolResult(output="Error: Task Center not available", is_error=True)
+
+        graph = getattr(tc, "graph", None)
+        if not isinstance(graph, dict):
+            return ToolResult(output="Error: task graph not available", is_error=True)
+
+        task_id = str(context.metadata.get("work_item_id") or "")
+
+        if arguments.scope == "sibling":
+            own_task = graph.get(task_id)
+            if own_task is None:
+                return ToolResult(output="Error: own task not found in graph", is_error=True)
+            parent_id = own_task.parent_id
+            tasks = [
+                t for t in graph.values()
+                if getattr(t, "parent_id", None) == parent_id
+            ]
+        else:
+            tasks = list(graph.values())
+
+        if not tasks:
+            return ToolResult(output="No tasks found.")
+
+        lines: list[str] = []
+        for t in tasks:
+            marker = " **(you)**" if t.id == task_id else ""
+            dep_str = f" deps=[{', '.join(t.deps)}]" if t.deps else ""
+            scope_str = f" scope=[{', '.join(t.scope_paths[:2])}]" if t.scope_paths else ""
+            failure = f" FAIL: {t.failure_reason[:80]}" if t.failure_reason else ""
+            lines.append(
+                f"- **{t.id}** {t.agent_name} [{t.status.value}]{marker}"
+                f"{dep_str}{scope_str}{failure}"
+            )
+
+        return ToolResult(output="\n".join(lines))
+
+
+# ---------------------------------------------------------------------------
 # Toolkit
 # ---------------------------------------------------------------------------
 
 _ALL_TOOLS = [
-    ReadNotesTool(),
-    ReadSiblingNotesTool(),
+    SubmitTaskNoteTool(),
+    ReadTaskNoteTool(),
+    ReadTaskDetailsTool(),
+    ReadTaskGraphTool(),
     ContextChangedSinceTool(),
 ]
 
 
 class TaskCenterToolkit(BaseToolkit):
-    """Task Center notes and scope change queries.
+    """Task Center tools: notes, task graph, task details, and scope changes.
 
     All tools are registered; role-based restrictions (e.g. blocking
-    ``post_note`` for planners) are handled via ``blocked_tools`` in
+    ``submit_task_note`` for planners) are handled via ``blocked_tools`` in
     agent definitions.
     """
 
@@ -393,6 +454,6 @@ class TaskCenterToolkit(BaseToolkit):
     def from_context(cls, ctx: object) -> TaskCenterToolkit:
         return cls(
             name="task_center",
-            description="Read notes and check scope changes.",
+            description="Task Center tools: notes, task graph, details, and scope changes.",
             tools=list(_ALL_TOOLS),
         )

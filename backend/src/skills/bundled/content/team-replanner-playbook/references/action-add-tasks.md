@@ -4,7 +4,7 @@ Use `add_tasks(...)` when the plan structure is sound but more work is needed. S
 
 ## When to choose
 
-- Must read sibling and descendant notes via `read_sibling_notes()` before choosing this action so you confirm the failure is truly isolated.
+- Must read sibling and descendant notes via `read_task_note(scope="sibling", )` before choosing this action so you confirm the failure is truly isolated.
 - Choose this for isolated failures, transient retries, partial progress that left follow-up work, or a newly discovered dependency task.
 
 ## Task shape

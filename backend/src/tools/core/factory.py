@@ -107,6 +107,11 @@ def _register_builtins() -> None:
 
     register_toolkit_class("context", TaskCenterToolkit)
     register_toolkit_class("task_center", TaskCenterToolkit)
+
+    # Submission toolkit — post-run phase tools
+    from tools.submission.toolkit import SubmissionToolkit
+
+    register_toolkit_class("submission", SubmissionToolkit)
     # NOTE: Posthook submission tools are NOT registered in the main
     # query loop. They are only used in the executor's post-run phase
     # via runner.run() (see team/runtime/executor.py).

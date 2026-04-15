@@ -19,7 +19,7 @@ Use this reference after decomposition examples and immediately before `plan-jso
 
 ## Repair moves
 
-- Rebuild a literal explorer ledger and benchmark-surface ledger from prompt-backed paths before final JSON, keep that benchmark ledger literal through submit retries, and refresh `read_notes(...)` if freshness moved.
+- Rebuild a literal explorer ledger and benchmark-surface ledger from prompt-backed paths before final JSON, keep that benchmark ledger literal through submit retries, and refresh `read_task_note(...)` if freshness moved.
 - restart the ending chain sequentially if a final-reference ordering guard fired.
 - Delete any scout-disproved exact leaf. Either broaden to the last confirmed parent boundary or drop the branch for this layer.
 - If the only new evidence is a structure listing that shows neighboring files, do not claim an exact repair. Restore the parent boundary as `team_planner` until live symbol/import/note evidence confirms the exact owner.

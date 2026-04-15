@@ -2,14 +2,11 @@
 
 Provides :class:`TeamAgentRunner`, the standard implementation of the
 ``QueryRunner`` callable expected by :class:`team.runtime.executor.Executor`.
-It spawns an :class:`EphemeralAgent`, wires ``tool_metadata`` into the agent's
-``QueryContext``, drives the event loop, observes tool completions for
-coordination (``TaskCenter.on_edit`` / ``on_posthook``), schedules ``tc_note``
-checkpoints, and extracts ``work_result`` for the posthook submission phase.
-
-Callers customise behaviour (telemetry, printer output, persistence) by
-supplying the ``on_spawned`` / ``on_event`` / ``on_complete`` /
-``on_checkpoint_event`` hooks rather than reimplementing the runner itself.
+It spawns an :class:`EphemeralAgent`, wires ``tool_metadata`` and
+``terminal_tools`` into the agent's ``QueryContext``, drives the event loop,
+observes tool completions for coordination (``TaskCenter.on_edit`` /
+``on_posthook``), schedules ``tc_note`` checkpoints, and implements the
+retry loop when the agent exits without calling a terminal tool.
 """
 
 from __future__ import annotations
@@ -21,6 +18,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from agents.run_tracker import AgentRunTracker
+from engine.core.query import QueryExitReason
 from engine.runtime.agent import spawn_agent
 from message.stream_events import ToolExecutionCompleted, ToolExecutionStarted
 from team.runtime.context_builder import TeamAgentContext
@@ -28,16 +26,16 @@ from team.runtime.context_builder import TeamAgentContext
 logger = logging.getLogger(__name__)
 
 # Tools whose completion should tick ``TaskCenter.on_posthook`` for coordination.
-POSTHOOK_TOOL_NAMES = frozenset({
-    "post_note",
+SUBMISSION_TOOL_NAMES = frozenset({
+    "submit_task_summary",
+    "submit_task_note",
     "submit_plan",
-    "request_replan",
-    "add_tasks",
-    "declare_blocker",
-    "cancel_and_redraft",
 })
 # Tools whose completion should record a scoped edit via ``TaskCenter.on_edit``.
 EDIT_TOOL_NAMES = frozenset({"daytona_edit_file", "daytona_write_file"})
+
+# Maximum retry attempts when the agent exits without calling a terminal tool.
+_MAX_RETRY_ATTEMPTS = 5
 
 
 @dataclass
@@ -73,10 +71,11 @@ class TeamAgentRunner:
     Responsibilities (always performed):
       * ``AgentRunTracker`` lifecycle
       * ``spawn_agent`` + tool_metadata wiring
+      * ``terminal_tools`` wiring from metadata to QueryContext
       * ``on_turn`` callback (conductor snapshot + ``task_center.tick``)
-      * Tool completion observation (``on_edit`` / ``on_posthook``)
+      * Tool completion observation (``on_edit`` / submission tools)
       * ``tc_note`` checkpoint scheduling (per agent's ``allowed_triggers``)
-      * ``work_result`` extraction into ``ctx.tool_metadata``
+      * Retry loop: re-prompts agent when it exits without a terminal tool
 
     Hooks (optional extension points):
       * ``on_spawned(state)`` — synchronous, after spawn, before ``agent.run``
@@ -136,7 +135,7 @@ class TeamAgentRunner:
             compacted_before = int(agent.query_context.session_state.compacted)
 
         # Merge spawn_agent's tool_metadata into ctx and redirect agent to ctx's metadata
-        # so team tools (submit_plan / post_note / …) write into the correct slot.
+        # so team tools (submit_plan / submit_task_summary / …) write into the correct slot.
         spawned_meta = agent.query_context.tool_metadata
         if getattr(spawned_meta, "session_config", None) is not None:
             ctx.tool_metadata.session_config = spawned_meta.session_config
@@ -146,6 +145,13 @@ class TeamAgentRunner:
         ctx.tool_metadata.agent_name = effective_defn.name
         agent.query_context.tool_metadata = ctx.tool_metadata
         agent.query_context.run_id = tracker.run_id or ""
+
+        # Wire terminal_tools from metadata (set by context_builder) to QueryContext
+        terminal_tools = ctx.tool_metadata.get("terminal_tools")
+        if isinstance(terminal_tools, (set, frozenset)):
+            agent.query_context.terminal_tools = set(terminal_tools)
+        elif isinstance(terminal_tools, list):
+            agent.query_context.terminal_tools = set(terminal_tools)
 
         team_run_id = str(ctx.tool_metadata.get("team_run_id") or "")
         work_item_id = str(ctx.tool_metadata.get("work_item_id") or "")
@@ -242,77 +248,98 @@ class TeamAgentRunner:
             self.on_spawned(state)
 
         try:
-            async for event in agent.run(prompt):
-                if isinstance(event, ToolExecutionStarted):
-                    state.pending_tool_inputs.setdefault(event.tool_name, []).append(
-                        event.tool_input
-                    )
-                elif (
-                    isinstance(event, ToolExecutionCompleted)
-                    and team_run_id
-                    and work_item_id
-                ):
-                    try:
-                        from team.runtime.registry import get as get_team_run
+            # Retry loop: re-prompt agent when it exits without a terminal tool.
+            for attempt in range(_MAX_RETRY_ATTEMPTS):
+                try:
+                    async for event in agent.run(prompt):
+                        if isinstance(event, ToolExecutionStarted):
+                            state.pending_tool_inputs.setdefault(event.tool_name, []).append(
+                                event.tool_input
+                            )
+                        elif (
+                            isinstance(event, ToolExecutionCompleted)
+                            and team_run_id
+                            and work_item_id
+                        ):
+                            try:
+                                from team.runtime.registry import get as get_team_run
 
-                        team_run = get_team_run(team_run_id)
-                        inputs = state.pending_tool_inputs.get(event.tool_name) or []
-                        tool_input = inputs.pop(0) if inputs else {}
-                        if team_run is not None and not event.is_error:
-                            if event.tool_name in EDIT_TOOL_NAMES:
-                                file_path = str(
-                                    tool_input.get("file_path")
-                                    or tool_input.get("path")
-                                    or ""
-                                ).strip()
-                                if file_path:
-                                    team_run.task_center.activity.on_edit(work_item_id, file_path)
-                            if event.tool_name in POSTHOOK_TOOL_NAMES:
-                                team_run.task_center.activity.on_posthook(work_item_id)
-                            _schedule_checkpoint()
-                    except Exception:
-                        logger.debug(
-                            "Failed to observe tool completion for %s",
-                            work_item_id,
-                            exc_info=True,
-                        )
-                    # Terminate agent immediately when request_replan is
-                    # accepted during the main run.  The replan intent is
-                    # stashed in tool_metadata so the executor can skip
-                    # the posthook and dispatch a ReplanRequest directly.
-                    if (
-                        event.tool_name == "request_replan"
-                        and not event.is_error
-                    ):
-                        inputs = state.pending_tool_inputs.get("request_replan") or []
-                        tool_input = inputs[-1] if inputs else {}
-                        ctx.tool_metadata["replan_requested_during_run"] = True
-                        ctx.tool_metadata["replan_reason"] = str(tool_input.get("reason", ""))
-                        ctx.tool_metadata["replan_suggestion"] = tool_input.get("suggestion")
-                        logger.info(
-                            "request_replan accepted during main run for %s; terminating agent",
-                            work_item_id,
-                        )
-                        break
-                if self.on_event is not None:
-                    self.on_event(event, state)
-        except Exception as exc:
-            state.error = str(exc)
-            logger.exception("team agent %s crashed", effective_defn.name)
-            raise
+                                team_run = get_team_run(team_run_id)
+                                inputs = state.pending_tool_inputs.get(event.tool_name) or []
+                                tool_input = inputs.pop(0) if inputs else {}
+                                if team_run is not None and not event.is_error:
+                                    if event.tool_name in EDIT_TOOL_NAMES:
+                                        file_path = str(
+                                            tool_input.get("file_path")
+                                            or tool_input.get("path")
+                                            or ""
+                                        ).strip()
+                                        if file_path:
+                                            team_run.task_center.activity.on_edit(work_item_id, file_path)
+                                    if event.tool_name in SUBMISSION_TOOL_NAMES:
+                                        team_run.task_center.activity.on_posthook(work_item_id)
+                                    _schedule_checkpoint()
+                            except Exception:
+                                logger.debug(
+                                    "Failed to observe tool completion for %s",
+                                    work_item_id,
+                                    exc_info=True,
+                                )
+                        if self.on_event is not None:
+                            self.on_event(event, state)
+                except asyncio.CancelledError:
+                    raise
+                except Exception as exc:
+                    state.error = str(exc)
+                    logger.exception("team agent %s crashed", effective_defn.name)
+                    raise
+
+                # Check exit reason
+                qc = agent.query_context
+                if qc.exit_reason == QueryExitReason.TOOL_STOP:
+                    break
+
+                # Build follow-up prompt for next attempt
+                if qc.exit_reason == QueryExitReason.TEXT_RESPONSE:
+                    prompt = (
+                        "You returned text without submitting. "
+                        "You must call one of your submission tools to complete your work. "
+                        "Call submit_task_summary with type='success' or type='fail'."
+                    )
+                elif qc.exit_reason == QueryExitReason.RESOURCE_LIMIT:
+                    qc.tool_call_limit = qc.tool_calls_used + 2
+                    prompt = (
+                        "Your budget/token limit was hit. Submit your work now. "
+                        "Call submit_task_summary with type='success' if work is done, "
+                        "or type='fail' if it is incomplete."
+                    )
+                else:
+                    # Unknown exit reason — retry with generic prompt
+                    prompt = "Please call a submission tool to complete your work."
+
+                # Reset exit_reason for next attempt
+                qc.exit_reason = None
+                logger.info(
+                    "Runner retry %d/%d for %s (exit_reason=%s)",
+                    attempt + 1, _MAX_RETRY_ATTEMPTS, work_item_id,
+                    qc.exit_reason,
+                )
+            else:
+                # Failed to submit after max attempts — write fail summary
+                logger.warning(
+                    "Agent %s did not submit after %d retries for %s",
+                    effective_defn.name, _MAX_RETRY_ATTEMPTS, work_item_id,
+                )
+                ctx.tool_metadata["task_summary"] = (
+                    f"Agent did not call a submission tool after {_MAX_RETRY_ATTEMPTS} retries."
+                )
+                ctx.tool_metadata["task_summary_type"] = "fail"
         finally:
             if checkpoint_task is not None:
                 await asyncio.gather(checkpoint_task, return_exceptions=True)
             state.final_text = extract_final_text(agent.display_messages)
             if state.final_text:
                 ctx.tool_metadata["work_result"] = state.final_text
-            # Detect budget exhaustion so the posthook can force a replan.
-            qc = agent.query_context
-            if (
-                getattr(qc, "tool_call_limit", None) is not None
-                and getattr(qc, "tool_calls_used", 0) >= qc.tool_call_limit
-            ):
-                ctx.tool_metadata["budget_exhausted"] = True
             if team_run_id and work_item_id:
                 try:
                     from team.runtime.registry import get as get_team_run

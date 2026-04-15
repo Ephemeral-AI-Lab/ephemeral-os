@@ -1,22 +1,23 @@
-"""Executor — pops ready Tasks and runs agents with deterministic result extraction."""
+"""Executor — pops ready Tasks, runs agents, dispatches on task state.
+
+Tools write structured data to ``ctx.tool_metadata`` during the main run.
+The executor reads that state after the runner returns and dispatches:
+complete, request_replan, or declare_blocker.
+"""
 
 from __future__ import annotations
 
 import asyncio
 import logging
-import re
-import sys
 import time
 import uuid
 from collections.abc import Awaitable
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable
 
 from team.models import AgentResult, BlockerDeclaration, Plan, ReplanPlan, ReplanRequest, TaskStatus
 from team.runtime.context_builder import TeamAgentContext
 from team.runtime.plan_health_monitor import PlanHealthMonitor
 from team.runtime.scope_change_notifier import ScopeChangeNotifier
-from tools.core.base import ToolExecutionContext
 
 if TYPE_CHECKING:
     from agents.types import AgentDefinition
@@ -34,61 +35,8 @@ def _record_to_task(rec: Any) -> "Task":
     return record_to_task(rec)
 
 
-
-def _extract_json_payload(text: str) -> dict[str, Any] | None:
-    """Extract the first dict-shaped JSON object from free text, preferring fences."""
-    import json, re
-
-    for block in re.findall(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", text):
-        try:
-            obj = json.loads(block)
-            if isinstance(obj, dict):
-                return obj
-        except Exception:
-            continue
-    start = text.find("{")
-    while start != -1:
-        depth = 0
-        for i in range(start, len(text)):
-            if text[i] == "{":
-                depth += 1
-            elif text[i] == "}":
-                depth -= 1
-                if depth == 0:
-                    try:
-                        obj = json.loads(text[start : i + 1])
-                        if isinstance(obj, dict):
-                            return obj
-                    except Exception:
-                        pass
-                    break
-        start = text.find("{", start + 1)
-    return None
-
-
-_REPLAN_SIGNAL_PATTERNS = re.compile(
-    r"(?i)(?:action\s+required:\s*request_replan|request_replan\s+with\s+\d+\s+cluster)",
-)
-
-
-def _text_signals_replan(text: str) -> bool:
-    """Return True when the agent's prose explicitly requests a replan."""
-    return bool(_REPLAN_SIGNAL_PATTERNS.search(text))
-
-
-def _extract_replan_reason(text: str) -> str:
-    """Pull a concise replan reason from the agent's work result."""
-    # Look for lines that follow "Action required:" or similar headers.
-    for line in text.splitlines():
-        stripped = line.strip()
-        if stripped.lower().startswith("action required:"):
-            return stripped
-    # Fallback: first 500 chars of text.
-    return text[:500]
-
-
 class Executor:
-    """Pops ready tasks, runs agent, deterministic result extraction."""
+    """Pops ready tasks, runs agent, reads task state, dispatches."""
 
     def __init__(
         self,
@@ -139,10 +87,8 @@ class Executor:
         has_running = any(s == "running" for s in statuses.values())
         has_replanning = any(s == "replanning" for s in statuses.values())
         if has_replanning and not has_running and not has_pending:
-            # Only non-terminal work left is REPLANNING with no live workers.
-            # Force-fail orphaned REPLANNING tasks so the run can terminate.
             await self.team_run.task_center.fail_orphaned_replanning()
-            return False  # tasks were resolved; let the executor re-poll
+            return False
         return has_pending and not has_running
 
     async def run_forever(self) -> None:
@@ -233,8 +179,36 @@ class Executor:
             logger.info("Task %s completed after pause; ignoring stale result", task.id)
             return
 
-        result = await self._run_post_run(task, defn, ctx)
+        # --- Read task state from tool_metadata and dispatch ---
+        result = self._read_result(task, ctx)
         await self._dispatch(task, result)
+
+    def _read_result(
+        self, task: "Task", ctx: TeamAgentContext,
+    ) -> AgentResult | ReplanRequest | BlockerDeclaration:
+        """Read structured result from tool_metadata written by submission tools."""
+        meta = ctx.tool_metadata
+        summary_type = meta.get("task_summary_type")
+        summary = str(meta.get("task_summary") or "")
+
+        if summary_type == "success":
+            return AgentResult(summary=summary)
+
+        if summary_type == "fail":
+            return ReplanRequest(reason=summary)
+
+        # submit_plan was called (planner/replanner)
+        resolved_plan = meta.get("resolved_plan")
+        if resolved_plan is not None:
+            is_replan = bool(meta.get("plan_is_replan"))
+            if is_replan and isinstance(resolved_plan, ReplanPlan):
+                return AgentResult(summary="", submitted_replan=resolved_plan)
+            elif isinstance(resolved_plan, Plan):
+                return AgentResult(summary="", submitted_plan=resolved_plan)
+
+        # Fallback: no terminal tool was called (runner exhausted retries)
+        work_result = str(meta.get("work_result") or "")[:500]
+        return AgentResult(summary=f"completed (no submission): {work_result}".strip())
 
     async def _inject_scope_warnings(self, task: "Task") -> None:
         await self.scope_notifier.inject_warning(task)
@@ -247,192 +221,6 @@ class Executor:
 
     async def _plan_health_prefix(self, task: "Task") -> str | None:
         return await self.plan_health.compute_prefix(task)
-
-    async def _run_post_run(
-        self,
-        task: "Task",
-        defn: "AgentDefinition",
-        ctx: TeamAgentContext,
-    ) -> AgentResult | ReplanRequest | BlockerDeclaration:
-        """Post-run phase: re-prompt agent with posthook tools only.
-
-        The agent is re-prompted with ONLY its posthook tools and must call
-        one of them. Loops up to 5 tool calls until a successful submission.
-        """
-        from external_trigger.runner import run as run_trigger
-        from tools.posthook.toolkit import PosthookTools
-
-        api_client = getattr(self.team_run, "api_client", None)
-        if api_client is None:
-            logger.warning("No api_client for post-run on task %s; returning empty result", task.id)
-            return AgentResult(summary="completed (no api_client for posthook)")
-
-        conductor = getattr(self.team_run, "conductor", None)
-        messages: list[dict] = []
-        if conductor is not None:
-            messages = conductor._executor_snapshots.get(task.id, [])
-
-        toolkit = PosthookTools.from_context(ctx)
-        post_run_tools = toolkit.list_tools()
-        if not post_run_tools:
-            logger.warning("No posthook tools for task %s; returning empty result", task.id)
-            return AgentResult(summary="completed (no posthook tools)")
-        tool_summary = ", ".join(f"{t.name}: {t.description}" for t in post_run_tools)
-        # Force replan when budget was exhausted (non-planner/replanner roles).
-        budget_exhausted = bool(ctx.tool_metadata.get("budget_exhausted"))
-        role = str(ctx.tool_metadata.get("role") or "")
-        if budget_exhausted and role not in ("planner", "replanner"):
-            work_result_preview = str(ctx.tool_metadata.get("work_result") or "")[:500]
-            reason = (
-                f"Budget exhausted (tool_call_limit reached) before task completion. "
-                f"Last output: {work_result_preview}"
-            )
-            logger.info(
-                "[posthook] budget-exhausted forced replan for task %s (%s)",
-                task.id, task.agent_name,
-            )
-            return ReplanRequest(reason=reason)
-
-        work_result = str(ctx.tool_metadata.get("work_result") or "").strip()
-        if work_result:
-            deterministic = self._deterministic_result(
-                {t.name for t in post_run_tools}, work_result
-            )
-            if deterministic is not None:
-                logger.info("[posthook] deterministic payload for task %s (%s)", task.id, task.agent_name)
-                return deterministic
-        handoff = ""
-        if work_result:
-            handoff = (
-                "\nUse the prior work result below as the canonical output from the main run. "
-                "If it already contains valid plan or replan JSON, submit that exact structure "
-                "via the appropriate tool instead of inventing a new one.\n\n"
-                f"{work_result[:20_000]}"
-            )
-
-        posthook_prompt = str(ctx.tool_metadata.get("posthook_prompt") or "").strip()
-        if not posthook_prompt:
-            posthook_prompt = (
-                f"Your main work is complete. Submit results by calling one of: {tool_summary}. "
-                "If your prior output already contains structured JSON matching a tool's schema, "
-                "pass that exact payload as the tool arguments."
-            )
-
-        posthook_cwd = Path(
-            str(
-                ctx.tool_metadata.get("daytona_cwd")
-                or ctx.tool_metadata.get("cwd")
-                or "."
-            )
-        )
-        execution_context = ToolExecutionContext(
-            cwd=posthook_cwd,
-            metadata=ctx.tool_metadata,
-        )
-
-        try:
-            result = await run_trigger(
-                agent_name=f"posthook:{task.agent_name}:{task.id}",
-                messages=messages,
-                system_prompt=(
-                    "You are a task submission assistant. "
-                    "The conversation history is frozen. Do not continue the task itself; "
-                    "focus only on producing a valid terminal submission. "
-                    "If a submission tool returns an error, revise the submission payload "
-                    "to satisfy that error and retry."
-                ),
-                prompt=f"{posthook_prompt}{handoff}",
-                tools=post_run_tools,
-                api_client=api_client,
-                max_tokens_per_turn=1000,
-                execution_context=execution_context,
-                execute_tools=True,
-            )
-        except Exception as exc:
-            msg = f"[posthook] FAILED for task {task.id} ({task.agent_name}): {exc}"
-            print(msg, file=sys.stdout, flush=True)
-            logger.warning(msg, exc_info=True)
-            return AgentResult(summary="completed (posthook runner failed)")
-
-        msg = f"[posthook] completed for task {task.id} ({task.agent_name}): tool={result.tool_name} turns={result.turns_used}"
-        print(msg, file=sys.stdout, flush=True)
-        logger.info(msg)
-
-        # Map RunResult → domain objects
-        # Prefer resolved objects stashed in tool_result.metadata by the
-        # posthook tools (roster-resolved, already validated) to avoid a
-        # lossy re-parse of raw LLM input that drops roster resolution
-        # and can fail task_center's second validation pass.
-        tool_input = result.tool_input
-        _tool_result = getattr(result, "tool_result", None)
-        _meta = getattr(_tool_result, "metadata", None) or {}
-        match result.tool_name:
-            case "post_note":
-                return AgentResult(summary=tool_input.get("content", ""))
-            case "submit_plan":
-                plan = _meta.get("resolved_plan")
-                if plan is None:
-                    plan = Plan.from_dict(tool_input)
-                return AgentResult(summary="", submitted_plan=plan)
-            case "add_tasks" | "cancel_and_redraft":
-                replan = _meta.get("resolved_replan")
-                if replan is None:
-                    replan = ReplanPlan.from_dict(tool_input)
-                return AgentResult(summary="", submitted_replan=replan)
-            case "request_replan":
-                return ReplanRequest(
-                    reason=tool_input.get("reason", ""),
-                    suggestion=tool_input.get("suggestion"),
-                )
-            case "declare_blocker":
-                return BlockerDeclaration(
-                    root_cause_paths=tool_input.get("root_cause_paths", []),
-                    reason=tool_input.get("reason", ""),
-                    suggestion=tool_input.get("suggestion"),
-                )
-            case _:
-                return AgentResult(summary=str(tool_input))
-
-    @staticmethod
-    def _deterministic_result(
-        tool_names: set[str], work_result: str,
-    ) -> "AgentResult | ReplanRequest | BlockerDeclaration | None":
-        """Build a terminal result directly from JSON embedded in ``work_result``.
-
-        Short-circuits the posthook LLM when the agent's final text already
-        contains a parseable submission payload.
-        """
-        payload = _extract_json_payload(work_result)
-        if payload is None:
-            return None
-        if "submit_plan" in tool_names and isinstance(payload.get("tasks"), list):
-            try:
-                return AgentResult(summary="", submitted_plan=Plan.from_dict(payload))
-            except Exception:
-                return None
-        if "add_tasks" in tool_names and "add_tasks" in payload:
-            try:
-                return AgentResult(summary="", submitted_replan=ReplanPlan.from_dict(payload))
-            except Exception:
-                return None
-        if (
-            "declare_blocker" in tool_names
-            and "root_cause_paths" in payload
-            and "reason" in payload
-        ):
-            return BlockerDeclaration(
-                root_cause_paths=list(payload.get("root_cause_paths") or []),
-                reason=str(payload.get("reason") or ""),
-                suggestion=payload.get("suggestion"),
-            )
-        # Detect request_replan intent from work_result text when no JSON
-        # payload matched above.  The agent may express replan intent in
-        # prose (e.g. "Action required: request_replan") without embedding
-        # a JSON object.  Fall through to the text-signal check below.
-        if "request_replan" in tool_names and _text_signals_replan(work_result):
-            reason = _extract_replan_reason(work_result)
-            return ReplanRequest(reason=reason)
-        return None
 
     async def _post_completion_note(self, task: "Task", summary: str) -> None:
         if not summary or summary.startswith("completed ("):
@@ -458,6 +246,7 @@ class Executor:
         tc = self.team_run.task_center
         conductor = getattr(self.team_run, "conductor", None)
         fix_blocker = conductor.blocker_for_fix_task(task.id) if conductor is not None else None
+
         if isinstance(result, ReplanRequest):
             if fix_blocker is not None and conductor is not None:
                 await tc.fail(task.id, f"blocker_fix_failed: {result.reason}")
@@ -482,6 +271,7 @@ class Executor:
             await self._checkpoint_after_transition(task, outcome="replan_request")
             await self._post_checkpoint_note(task, result)
             return
+
         if isinstance(result, BlockerDeclaration):
             if conductor is not None:
                 await conductor.create_blocker(
@@ -493,6 +283,7 @@ class Executor:
             await tc.complete_task(task.id, AgentResult(summary=f"Declared blocker: {result.reason}"))
             await self._checkpoint_after_transition(task, outcome="blocker_declared")
             return
+
         new_items = await tc.complete_task(task.id, result)
         if isinstance(result, AgentResult) and result.summary:
             await self._post_completion_note(task, result.summary)

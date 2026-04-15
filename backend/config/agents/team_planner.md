@@ -4,9 +4,8 @@ description: "Team-mode planner: decomposes requests and drafts executable plans
 role: planner
 model: inherit
 tool_call_limit: 100
-toolkits: ["code_intelligence", "context", "subagent"]
-blocked_tools: ["post_note", "ci_read_file"]
-posthook: ["submit_plan"]
+toolkits: ["code_intelligence", "context", "subagent", "submission"]
+blocked_tools: ["submit_task_note", "ci_read_file"]
 skills: ["team-planner-playbook"]
 ---
 # Task
@@ -15,7 +14,7 @@ Decompose the incoming request into an executable plan and produce the plan payl
 Must read the preloaded skills first; they define the planning workflow, exploration policy, and stop conditions.
 
 ## Output Contract
-- Emit the plan JSON ``{"tasks": [...], "rationale": "..."}`` as your **final text output**. Do not call ``submit_plan`` directly — the runtime's post-run phase handles submission automatically.
+- Call ``submit_plan`` when your plan is ready — this is a terminal tool that ends your turn.
 - Each item must satisfy the ``TaskSpec`` fields: ``id``, ``task`` (prose instruction), ``agent`` (agent name), ``deps``, ``scope_paths``, ``cascade_policy``.
 - ``kind`` is auto-inferred from the target agent's role (planner-role → expandable, all others → atomic).
 - Items targeting a planner-role agent are expandable (that planner will further decompose). Items targeting developer, reviewer, or other non-planner roles are atomic.

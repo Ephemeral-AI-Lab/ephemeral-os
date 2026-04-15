@@ -33,7 +33,7 @@ Use `ci_query_symbol(..., references=true)(symbol)` on symbols that appear as im
 - Let child planners own their own deeper validation instead of using parent validators as decoration.
 - Add validators only when they reduce uncertainty for concrete lanes.
 - Keep the plan between 2 items and `max_plan_size`.
-- Refresh with `read_notes(...)` and respect freshness signals before turning a formerly broad boundary into an exact-file leaf.
+- Refresh with `read_task_note(...)` and respect freshness signals before turning a formerly broad boundary into an exact-file leaf.
 - Never hide unresolved owner clusters behind validator-only coverage.
 - Never call a leftovers lane atomic unless one shared live owner explains every file and benchmark verify surface in it.
 - Do not create one atomic "misc fixes" lane just because those residual slices are individually small.

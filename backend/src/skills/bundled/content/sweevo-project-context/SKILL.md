@@ -22,9 +22,9 @@ Use this skill only for stable benchmark policy. Treat the prompt, payload, live
 ## Coordination redesign focus
 
 - Must treat `docs/architecture/plan-a-team-coordination-redesign.md` as the design intent for this benchmark.
-- Must keep shared context in the Task Center: scouts post durable notes directly, developers and validators rely on Task Center auto-notes plus terminal submissions. Use `read_notes(...)` for scout findings and dependency context, `read_sibling_notes(...)` for sibling activity and conflict checking.
-- Must use `read_notes(paths=[...])` to check for existing findings before launching duplicate scouts.
-- Must treat scope-change notifications and `context_changed_since()` as freshness signals. Refresh with `read_notes(...)` before committing, verifying, or replanning on a drifting surface.
+- Must keep shared context in the Task Center: scouts post durable notes directly, developers and validators rely on Task Center auto-notes plus terminal submissions. Use `read_task_note(...)` for scout findings and dependency context, `read_task_note(scope="sibling", ...)` for sibling activity and conflict checking.
+- Must use `read_task_note(paths=[...])` to check for existing findings before launching duplicate scouts.
+- Must treat scope-change notifications and `context_changed_since()` as freshness signals. Refresh with `read_task_note(...)` before committing, verifying, or replanning on a drifting surface.
 - Must keep `scope_paths` as soft coordination hints, not hard filesystem ownership bans.
 - Must treat any advisory outside-scope write as a tainted packet and hand it to replan instead of claiming success from that run.
 
@@ -32,7 +32,7 @@ Use this skill only for stable benchmark policy. Treat the prompt, payload, live
 
 - Must keep fresh roots live-first: one narrow production anchor, then at least one scout wave before root plan JSON.
 - Must split direct owner leaves early and leave unresolved or broad surfaces expandable. Never hide residual work behind placeholder lanes or one catch-all developer.
-- Must start developer and validator execution lanes with `read_notes(paths=[...])` before opening files or reproducing, even when the note set may be empty.
+- Must start developer and validator execution lanes with `read_task_note(paths=[...])` before opening files or reproducing, even when the note set may be empty.
 - Must start developer and validator runtime work from the exact failing command or exact named retry target.
 - Must prefer Task Center notes, exact runtime evidence, and CI symbol tools over raw file reads on ready owner lanes.
 - Must not spend a ready leaf's opening moves reading benchmark tests when scout notes and exact runtime already name the owned seam.

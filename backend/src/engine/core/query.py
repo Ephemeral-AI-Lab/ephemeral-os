@@ -6,7 +6,8 @@ import asyncio
 import logging
 import re
 from collections.abc import AsyncIterator, Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -50,6 +51,14 @@ logger = logging.getLogger(__name__)
 CANCEL_PATTERN = re.compile(r'\[CANCEL:(\S+)(?:\s+reason="([^"]*)")?\]')
 
 
+class QueryExitReason(str, Enum):
+    """Why the query loop exited."""
+
+    TEXT_RESPONSE = "text_response"      # no tool_uses in response
+    TOOL_STOP = "tool_stop"              # terminal tool called
+    RESOURCE_LIMIT = "resource_limit"    # budget exhausted or max_tokens
+
+
 @dataclass
 class QueryContext:
     api_client: SupportsStreamingMessages
@@ -69,6 +78,8 @@ class QueryContext:
     enable_background_tasks: bool = False
     on_turn: Callable[[list[ConversationMessage]], None] | None = None
     api_messages_snapshot: list[ConversationMessage] | None = None
+    terminal_tools: set[str] = field(default_factory=set)
+    exit_reason: QueryExitReason | None = None
 
 
 def _should_defer_stream_tool_dispatch(
@@ -411,6 +422,7 @@ async def _run_query_loop(
 
         if not final_message.tool_uses:
             if background_manager is None or not background_manager.has_pending():
+                context.exit_reason = QueryExitReason.TEXT_RESPONSE
                 return
 
             completed_task = await background_manager.wait_any(timeout=30)
@@ -548,6 +560,13 @@ async def _run_query_loop(
 
         display_messages.append(ConversationMessage(role="user", content=tool_results))
 
+        # Check for terminal tool — exit immediately after tool results collected
+        if context.terminal_tools:
+            for tu in final_message.tool_uses:
+                if tu.name in context.terminal_tools:
+                    context.exit_reason = QueryExitReason.TOOL_STOP
+                    return
+
         # Detect wait rejections so the next iteration suppresses the
         # engine_progress reminder that would otherwise contradict them.
         _WAIT_REJECTION_PREFIXES = ("[WAIT_TOO_EARLY]", "[WAIT_REQUIRES_PROGRESS_CHECK]")
@@ -560,6 +579,7 @@ async def _run_query_loop(
             context.tool_call_limit is not None
             and context.tool_calls_used >= context.tool_call_limit
         ):
+            context.exit_reason = QueryExitReason.RESOURCE_LIMIT
             if background_manager is not None:
                 await background_manager.cancel_all()
             yield (

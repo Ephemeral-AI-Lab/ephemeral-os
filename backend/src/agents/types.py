@@ -10,9 +10,8 @@ from pydantic import AliasChoices, BaseModel, Field, field_validator
 EFFORT_LEVELS: tuple[str, ...] = ("low", "medium", "high")
 
 #: Toolkit names that must not appear in the ``toolkits`` list.
-#: Posthook/submission tools are registered via the ``posthook`` field
-#: and managed by the query loop's posthook phase.
-_RESERVED_TOOLKIT_NAMES: frozenset[str] = frozenset({"posthook", "submission"})
+#: Toolkit names that must not appear in the ``toolkits`` list.
+_RESERVED_TOOLKIT_NAMES: frozenset[str] = frozenset()
 
 
 class AgentDefinition(BaseModel):
@@ -50,14 +49,6 @@ class AgentDefinition(BaseModel):
         validation_alias=AliasChoices("blocked_tools", "blockedTools"),
         description="Tool names to remove after toolkit assembly. Use for role-based restrictions.",
     )
-
-    # --- posthook ---
-    # Tool names the agent must call after its main submission (done /
-    # submit_plan). When non-empty the query loop enters a posthook phase
-    # with the tool registry restricted to these names and nudges the LLM
-    # until at least one is called.  The posthook_prompt metadata field
-    # provides the steering user message for this phase.
-    posthook: list[str] = Field(default_factory=list)
 
     # --- external triggers ---
     # Trigger types this agent is allowed to receive.  Currently supported:
@@ -123,7 +114,7 @@ class AgentDefinition(BaseModel):
 
     model_config = {"populate_by_name": True, "arbitrary_types_allowed": True}
 
-    @field_validator("skills", "toolkits", "permissions", "blocked_tools", "posthook", "allowed_triggers", mode="before")
+    @field_validator("skills", "toolkits", "permissions", "blocked_tools", "allowed_triggers", mode="before")
     @classmethod
     def _split_csv(cls, v: Any) -> Any:
         if isinstance(v, str):
@@ -137,7 +128,7 @@ class AgentDefinition(BaseModel):
         if bad:
             raise ValueError(
                 f"Toolkit(s) {bad} cannot be listed in 'toolkits'. "
-                f"Use the 'posthook' field instead."
+                f"These toolkit names are reserved."
             )
         return v
 

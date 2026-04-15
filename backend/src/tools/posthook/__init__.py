@@ -1,4 +1,4 @@
-"""Posthook tools — terminal submission actions for team-mode agents."""
+"""Posthook tools — DEPRECATED. Use tools.submission instead."""
 
 from __future__ import annotations
 

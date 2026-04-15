@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from external_trigger.runner import run
-from tools.context.toolkit import PostNoteTool, PostNoteInput
+from tools.context.toolkit import SubmitTaskNoteTool, PostNoteInput
 
 
 TC_NOTE_EDIT_PROMPT = (
@@ -64,7 +64,7 @@ async def run_tc_note(
         messages=messages,
         system_prompt=TC_NOTE_SYSTEM_PROMPT,
         prompt=prompt,
-        tools=[PostNoteTool()],
+        tools=[SubmitTaskNoteTool()],
         api_client=api_client,
         max_tokens_per_turn=max_tokens,
         model=model,
