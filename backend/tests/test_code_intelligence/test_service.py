@@ -154,6 +154,7 @@ def test_commit_prepared_write_rejects_overlapping_same_file_edits(tmp_path) -> 
     assert result_b.success is False
     assert result_b.conflict is True
     assert result_b.conflict_reason == "overlapping_range"
+    assert svc.arbiter.metrics.conflicts_detected == 1
     assert "'modified-B'" not in file_path.read_text(encoding="utf-8")
     svc.abort_prepared_write(prepared_b)
 
@@ -239,6 +240,7 @@ def test_commit_change_against_base_rejects_overlapping_changes(tmp_path) -> Non
     assert result.success is False
     assert result.conflict is True
     assert result.conflict_reason == "overlapping_range"
+    assert svc.arbiter.metrics.conflicts_detected == 1
 
 
 def test_commit_change_against_base_deletes_when_current_matches_base(tmp_path) -> None:

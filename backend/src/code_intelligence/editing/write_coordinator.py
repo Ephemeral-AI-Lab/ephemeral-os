@@ -56,6 +56,26 @@ def _record_timing(timings: dict[str, float], key: str, started_at: float) -> No
     timings[key] = round(time.perf_counter() - started_at, 6)
 
 
+def _conflict_result(
+    arbiter: Arbiter,
+    file_path: str,
+    message: str,
+    *,
+    conflict_reason: str,
+    snapshot_id: str = "",
+    timings: dict[str, float] | None = None,
+) -> EditResult:
+    arbiter.record_conflict(conflict_reason)
+    return _result(
+        file_path,
+        message,
+        conflict=True,
+        conflict_reason=conflict_reason,
+        snapshot_id=snapshot_id,
+        timings=timings,
+    )
+
+
 class WriteCoordinator:
     """Encapsulates the OCC write pipeline for one sandbox."""
 
@@ -108,6 +128,7 @@ class WriteCoordinator:
                 patch_result = self._attempt_patch(prepared, edit)
                 if not patch_result.success:
                     self._time_machine.discard_snapshot(request.file_path)
+                    self._arbiter.record_conflict("version_mismatch")
                     return EditResult(
                         success=False,
                         file_path=request.file_path,
@@ -174,11 +195,12 @@ class WriteCoordinator:
         current_hash = content_hash(current)
         if expected_hash and current_hash != expected_hash:
             timings["prepare_total"] = round(time.perf_counter() - read_started, 6)
-            return _result(
+            return _conflict_result(
+                self._arbiter,
                 file_path,
                 "Write precheck failed: file content changed since it was read. "
                 "Re-read the file and retry.",
-                conflict=True,
+                conflict_reason="version_mismatch",
                 timings=timings,
             )
         token = self._arbiter.issue_token(file_path, current_hash, agent_id)
@@ -207,10 +229,10 @@ class WriteCoordinator:
         if not self._arbiter.acquire_file_lock(prepared.file_path):
             _record_timing(timings, "lock_wait", lock_started)
             timings["commit_total"] = round(time.perf_counter() - commit_started, 6)
-            return _result(
+            return _conflict_result(
+                self._arbiter,
                 prepared.file_path,
                 "Could not acquire file lock (timeout)",
-                conflict=True,
                 conflict_reason="lock_timeout",
                 timings=timings,
             )
@@ -226,10 +248,10 @@ class WriteCoordinator:
             _record_timing(timings, "validate_token", validate_started)
             if not ok:
                 timings["commit_total"] = round(time.perf_counter() - commit_started, 6)
-                return _result(
+                return _conflict_result(
+                    self._arbiter,
                     prepared.file_path,
                     f"Write precheck failed: {reason}",
-                    conflict=True,
                     conflict_reason="stale_reservation",
                     timings=timings,
                 )
@@ -317,10 +339,10 @@ class WriteCoordinator:
         if not self._arbiter.acquire_file_lock(file_path):
             _record_timing(timings, "lock_wait", lock_started)
             timings["commit_total"] = round(time.perf_counter() - commit_started, 6)
-            return _result(
+            return _conflict_result(
+                self._arbiter,
                 file_path,
                 "Could not acquire file lock (timeout)",
-                conflict=True,
                 conflict_reason="lock_timeout",
                 timings=timings,
             )
@@ -356,11 +378,11 @@ class WriteCoordinator:
 
             if final_content is None:
                 timings["commit_total"] = round(time.perf_counter() - commit_started, 6)
-                return _result(
+                return _conflict_result(
+                    self._arbiter,
                     file_path,
                     "Write precheck failed: file content changed before delete. "
                     "Re-read the file and retry.",
-                    conflict=True,
                     conflict_reason="version_mismatch",
                     timings=timings,
                 )
@@ -512,21 +534,21 @@ class WriteCoordinator:
         current_content: str | None,
     ) -> tuple[str, EditResult | None]:
         if base_content is None or current_content is None:
-            return "", _result(
+            return "", _conflict_result(
+                self._arbiter,
                 file_path,
                 "Write precheck failed: file content changed before commit. "
                 "Re-read the file and retry.",
-                conflict=True,
                 conflict_reason="version_mismatch",
             )
 
         line_start, line_end, operation_type = detect_edit_window(base_content, final_content)
         if line_start is None:
-            return "", _result(
+            return "", _conflict_result(
+                self._arbiter,
                 file_path,
                 "Write precheck failed: file content changed before commit. "
                 "Re-read the file and retry.",
-                conflict=True,
                 conflict_reason="version_mismatch",
             )
 
@@ -540,11 +562,11 @@ class WriteCoordinator:
         )
         if merged is not None:
             return merged, None
-        return "", _result(
+        return "", _conflict_result(
+            self._arbiter,
             file_path,
             "Write precheck failed: file content changed in an overlapping "
             "or unsupported range. Re-read the file and retry.",
-            conflict=True,
             conflict_reason="overlapping_range",
         )
 
@@ -579,18 +601,18 @@ class WriteCoordinator:
             )
             if merged is not None:
                 return merged, current_hash, None
-            return "", current_hash, _result(
+            return "", current_hash, _conflict_result(
+                self._arbiter,
                 prepared.file_path,
                 "Write precheck failed: file content changed in an overlapping "
                 "or unsupported range. Re-read the file and retry.",
-                conflict=True,
                 conflict_reason="overlapping_range",
             )
 
-        return "", current_hash, _result(
+        return "", current_hash, _conflict_result(
+            self._arbiter,
             prepared.file_path,
             "Write precheck failed: file content changed before commit. "
             "Re-read the file and retry.",
-            conflict=True,
             conflict_reason="version_mismatch",
         )

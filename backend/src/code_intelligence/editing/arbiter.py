@@ -155,6 +155,11 @@ class Arbiter:
         with self._lock:
             self._active_tokens.pop(token_id, None)
 
+    def record_conflict(self, reason: str = "") -> None:
+        """Record one OCC conflict for telemetry/observability."""
+        with self._lock:
+            self._metrics.conflicts_detected += 1
+
     def publish_edit_intent(
         self,
         file_path: str,
