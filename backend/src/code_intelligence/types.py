@@ -130,6 +130,7 @@ class EditResult:
     conflict: bool = False
     conflict_reason: str = ""
     snapshot_id: str = ""
+    timings: dict[str, float] = field(default_factory=dict)
 
 
 @dataclass

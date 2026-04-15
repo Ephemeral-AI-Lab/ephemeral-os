@@ -88,17 +88,21 @@ def _build_write_file_result(
     file_path: str,
     bytes_written: int,
     warning: str | None,
+    timings: dict[str, Any] | None = None,
 ) -> ToolResult:
+    normalized_timings = timings if isinstance(timings, dict) else None
+    payload = {
+        "cwd": _get_cwd(context) or "",
+        "file_path": file_path,
+        "bytes_written": bytes_written,
+        "ci_sync": True,
+        "warnings": [warning] if warning else [],
+    }
+    if normalized_timings:
+        payload["timings"] = normalized_timings
     return ToolResult(
-        output=json.dumps(
-            {
-                "cwd": _get_cwd(context) or "",
-                "file_path": file_path,
-                "bytes_written": bytes_written,
-                "ci_sync": True,
-                "warnings": [warning] if warning else [],
-            }
-        )
+        output=json.dumps(payload),
+        metadata={"timings": dict(normalized_timings or {})},
     )
 
 
@@ -365,6 +369,7 @@ async def daytona_write_file(
         return _build_write_file_result(
             context=context, file_path=file_path,
             bytes_written=len(content_bytes), warning=contract_warning,
+            timings=getattr(result, "timings", None) if prepared is not None else None,
         )
 
     try:

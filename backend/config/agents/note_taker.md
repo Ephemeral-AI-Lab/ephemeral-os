@@ -4,6 +4,8 @@ description: "External-trigger note taker: summarizes frozen task context into a
 role: note_taker
 model: inherit
 tool_call_limit: 10
+toolkits: ["task_center"]
+blocked_tools: ["read_task_note", "read_task_details", "read_task_graph", "task_center_changed_since"]
 include_skills: false
 ---
 # Task

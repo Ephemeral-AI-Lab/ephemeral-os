@@ -53,6 +53,7 @@ def _edit_success_result(
     patch_warnings: list[str],
     occ: bool,
     expected_hash: str = "",
+    timings: dict[str, Any] | None = None,
 ) -> ToolResult:
     """Build a successful-edit ToolResult with consistent JSON output."""
     payload: dict[str, Any] = {
@@ -64,9 +65,11 @@ def _edit_success_result(
     }
     if occ and expected_hash:
         payload["expected_hash"] = expected_hash
+    if timings:
+        payload["timings"] = timings
     return ToolResult(
         output=json.dumps(payload),
-        metadata={"file_path": file_path, "occ": occ},
+        metadata={"file_path": file_path, "occ": occ, "timings": dict(timings or {})},
     )
 
 
@@ -157,6 +160,8 @@ async def daytona_edit_file(
         sandbox = await _require_sandbox(context)
     except Exception as exc:
         return ToolResult(output=str(exc), is_error=True)
+    tool_started = time.perf_counter()
+    tool_timings: dict[str, float] = {}
 
     file_path = _resolve_path(file_path, context)
     contract_error = _team_repo_write_error(context, file_path, tool_name="daytona_edit_file")
@@ -188,16 +193,18 @@ async def daytona_edit_file(
     refresh_prepared = getattr(svc, "refresh_prepared_write", None) if svc is not None else None
     refresh_supported = callable(refresh_prepared) and type(svc).__module__ != "unittest.mock"
     if svc is not None and hasattr(svc, "prepare_write"):
+        prepare_started = time.perf_counter()
         prepared, scope_packet, err = prepare_ci_write(
             context,
             file_path,
             allow_scope_drift=True,
         )
+        tool_timings["prepare_ci_write"] = round(time.perf_counter() - prepare_started, 6)
         if err is not None:
             return ToolResult(
                 output=err,
                 is_error=True,
-                metadata={"scope_packet": scope_packet, "conflict": True},
+                metadata={"scope_packet": scope_packet, "conflict": True, "tool_timings": tool_timings},
             )
         if prepared is None:
             return ToolResult(
@@ -229,13 +236,17 @@ async def daytona_edit_file(
                 )
 
     if prepared is not None and refresh_supported:
+        refresh_started = time.perf_counter()
         refreshed = refresh_prepared(prepared)
+        tool_timings["refresh_before_patch"] = round(time.perf_counter() - refresh_started, 6)
         if refreshed is not None:
             prepared = refreshed
             current = str(getattr(prepared, "current_content", "") or "")
             current_hash = str(getattr(prepared, "current_hash", "") or "")
 
+    patch_started = time.perf_counter()
     patch_result = patcher.apply_edits(current, normalized_edits)
+    tool_timings["patch_apply"] = round(time.perf_counter() - patch_started, 6)
     if not patch_result.success:
         abort_ci_write(context, prepared)
         return ToolResult(
@@ -250,7 +261,9 @@ async def daytona_edit_file(
     new_content = patch_result.content
 
     if prepared is not None and refresh_supported:
+        refresh_started = time.perf_counter()
         refreshed = refresh_prepared(prepared)
+        tool_timings["refresh_before_commit"] = round(time.perf_counter() - refresh_started, 6)
         refreshed_content = str(getattr(refreshed, "current_content", "") or "")
         refreshed_hash = str(getattr(refreshed, "current_hash", "") or "")
         if refreshed_hash != current_hash or refreshed_content != current:
@@ -301,6 +314,7 @@ async def daytona_edit_file(
     if prepared is not None:
         try:
             prepared, intent_id = prepare_ci_edit_intent(context, prepared, content=new_content)
+            finalize_started = time.perf_counter()
             result = finalize_ci_write(
                 context,
                 prepared,
@@ -308,6 +322,7 @@ async def daytona_edit_file(
                 edit_type="edit",
                 description=description,
             )
+            tool_timings["finalize_ci_write"] = round(time.perf_counter() - finalize_started, 6)
         finally:
             release_ci_edit_intent(context, intent_id)
             abort_ci_write(context, prepared)
@@ -315,6 +330,11 @@ async def daytona_edit_file(
             scope_warning = _scope_overlap_warning(context, file_path)
             if scope_warning:
                 warnings.append(scope_warning)
+            tool_timings["tool_total"] = round(time.perf_counter() - tool_started, 6)
+            timings = {
+                "tool": tool_timings,
+                "occ": getattr(result, "timings", {}),
+            }
             return _edit_success_result(
                 context=context,
                 file_path=file_path,
@@ -322,11 +342,18 @@ async def daytona_edit_file(
                 patch_warnings=list(patch_result.warnings),
                 occ=True,
                 expected_hash=current_hash,
+                timings=timings,
             )
         return ToolResult(
             output=str(getattr(result, "message", "") or "Edit failed"),
             is_error=True,
-            metadata={"conflict": bool(getattr(result, "conflict", False))},
+            metadata={
+                "conflict": bool(getattr(result, "conflict", False)),
+                "timings": {
+                    "tool": {**tool_timings, "tool_total": round(time.perf_counter() - tool_started, 6)},
+                    "occ": getattr(result, "timings", {}),
+                },
+            },
         )
     else:
         # Direct write (no CI)
@@ -338,12 +365,14 @@ async def daytona_edit_file(
             scope_warning = _scope_overlap_warning(context, file_path)
             if scope_warning:
                 warnings.append(scope_warning)
+            tool_timings["tool_total"] = round(time.perf_counter() - tool_started, 6)
             return _edit_success_result(
                 context=context,
                 file_path=file_path,
                 warnings=warnings,
                 patch_warnings=list(patch_result.warnings),
                 occ=False,
+                timings={"tool": tool_timings},
             )
         except Exception as exc:
             try:
@@ -355,12 +384,14 @@ async def daytona_edit_file(
                 scope_warning = _scope_overlap_warning(context, file_path)
                 if scope_warning:
                     warnings.append(scope_warning)
+                tool_timings["tool_total"] = round(time.perf_counter() - tool_started, 6)
                 return _edit_success_result(
                     context=context,
                     file_path=file_path,
                     warnings=warnings,
                     patch_warnings=list(patch_result.warnings),
                     occ=False,
+                    timings={"tool": tool_timings},
                 )
             except Exception as recovery_exc:
                 return ToolResult(

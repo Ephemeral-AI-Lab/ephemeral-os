@@ -154,6 +154,7 @@ class ActivityTracker:
                     result = await run_tc_note(
                         task_id=task_id,
                         agent_run_id=agent_run_id or task_id,
+                        team_run_id=self._team_run_id,
                         messages=snapshot or [],
                         prompt=prompt,
                         trigger=trigger,

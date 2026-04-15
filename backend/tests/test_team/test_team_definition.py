@@ -54,6 +54,7 @@ def test_create_and_get_by_name(store: TeamDefinitionStore) -> None:
             "developer": ["developer"],
             "reviewer": ["validator"],
         },
+        terminal_tools={"note_taker": {"submit_task_note"}},
         description="default team",
     )
     assert td.name == "default"
@@ -67,6 +68,7 @@ def test_create_and_get_by_name(store: TeamDefinitionStore) -> None:
     assert fetched.id == td.id
     assert fetched.entry_planner == "team_planner"
     assert fetched.roster["planner"] == ["team_planner"]
+    assert fetched.terminal_tools == {"note_taker": {"submit_task_note"}}
 
 
 def test_create_populates_current_schema_columns(store: TeamDefinitionStore) -> None:
@@ -183,6 +185,7 @@ def test_seed_builtin_populates_current_schema_columns(store: TeamDefinitionStor
                 "developer": ["developer"],
                 "reviewer": ["validator"],
             },
+            terminal_tools={"note_taker": {"submit_task_note"}},
         )
     )
 
@@ -197,6 +200,7 @@ def test_seed_builtin_populates_current_schema_columns(store: TeamDefinitionStor
 
     assert record.planner_agent == "team_planner"
     assert record.worker_agents == ["developer", "validator"]
+    assert record.terminal_tools == {"note_taker": ["submit_task_note"]}
 
 
 

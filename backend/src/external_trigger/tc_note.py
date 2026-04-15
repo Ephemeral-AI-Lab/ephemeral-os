@@ -48,20 +48,48 @@ class NoteSummary:
     paths: list[str] | None = None
 
 
-def _resolve_note_taker_prompt() -> tuple[str, str | None]:
-    defn = get_definition("note_taker")
+def _resolve_note_taker_definition(team_run_id: str | None = None) -> tuple[str, str | None, str]:
+    agent_name = "note_taker"
+    if team_run_id:
+        try:
+            from team.runtime.registry import get as get_team_run
+
+            team_run = get_team_run(team_run_id)
+        except Exception:
+            team_run = None
+        if team_run is not None:
+            roster = getattr(team_run, "roster", None)
+            if isinstance(roster, dict):
+                for role_name in ("task_center_note_taker", "note_taker"):
+                    candidates = roster.get(role_name)
+                    if isinstance(candidates, list):
+                        for candidate in candidates:
+                            name = str(candidate).strip()
+                            if name and get_definition(name) is not None:
+                                agent_name = name
+                                break
+                    if agent_name != "note_taker":
+                        break
+
+    defn = get_definition(agent_name)
     if defn is None:
-        return _DEFAULT_TC_NOTE_SYSTEM_PROMPT, None
+        return _DEFAULT_TC_NOTE_SYSTEM_PROMPT, None, agent_name
 
     prompt = (defn.system_prompt or "").strip() or _DEFAULT_TC_NOTE_SYSTEM_PROMPT
     model = str(defn.model).strip() if defn.model else ""
-    return prompt, (model if model and model != "inherit" else None)
+    return prompt, (model if model and model != "inherit" else None), agent_name
+
+
+def _resolve_note_taker_prompt(team_run_id: str | None = None) -> tuple[str, str | None]:
+    prompt, model, _agent_name = _resolve_note_taker_definition(team_run_id)
+    return prompt, model
 
 
 async def run_tc_note(
     *,
     task_id: str,
     agent_run_id: str,
+    team_run_id: str | None = None,
     messages: list[dict[str, Any]],
     prompt: str,
     trigger: str,
@@ -70,9 +98,9 @@ async def run_tc_note(
     api_client: Any,
 ) -> NoteSummary:
     """Spawn an ephemeral agent to generate a task-center progress note."""
-    system_prompt, default_model = _resolve_note_taker_prompt()
+    system_prompt, default_model, note_taker_name = _resolve_note_taker_definition(team_run_id)
     result = await run(
-        agent_name=f"note_taker:{task_id}",
+        agent_name=f"{note_taker_name}:{task_id}",
         messages=messages,
         system_prompt=system_prompt,
         prompt=prompt,

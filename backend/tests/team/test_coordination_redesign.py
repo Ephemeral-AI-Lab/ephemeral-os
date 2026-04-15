@@ -301,3 +301,36 @@ async def test_build_query_context_planner_terminal_tools_exclude_blocker():
     )
 
     assert ctx.tool_metadata["terminal_tools"] == {"submit_task_plan"}
+
+
+@pytest.mark.asyncio
+async def test_build_query_context_uses_team_terminal_tools_override_for_note_taker():
+    task = Task(
+        id="note-task",
+        team_run_id="run-1",
+        agent_name="note_taker",
+        status=TaskStatus.READY,
+        objective="summarize task progress",
+    )
+    task_center = _AsyncTaskCenterStub()
+    team_run = SimpleNamespace(
+        id="run-1",
+        sandbox_id="sbx-1",
+        project_context=SimpleNamespace(repo_root="/repo"),
+        coordination_metadata={},
+        task_center=task_center,
+        arbiter=None,
+        budgets=None,
+        budget_state=None,
+        root_task_id="planner-task",
+        roster={"task_center_note_taker": ["note_taker"]},
+        team_definition=SimpleNamespace(terminal_tools={"note_taker": {"submit_task_note"}}),
+    )
+
+    ctx = await build_query_context(
+        SimpleNamespace(role="note_taker"),
+        team_run,
+        task,
+    )
+
+    assert ctx.tool_metadata["terminal_tools"] == {"submit_task_note"}

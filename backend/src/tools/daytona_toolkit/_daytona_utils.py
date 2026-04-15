@@ -34,6 +34,7 @@ _VERIFY_PATH_RE = re.compile(r"(?<![A-Za-z0-9_./-])([A-Za-z0-9_./-]+\.py)(?![A-Z
 _USER_LOCAL_BIN_EXPORT = 'export PATH="$HOME/.local/bin:$PATH"'
 _PROJECT_VENV_BIN_EXPORT = 'if [ -d .venv/bin ]; then export PATH="$PWD/.venv/bin:$PATH"; fi'
 _PYTHON3_SHIM = 'if command -v python3 >/dev/null 2>&1; then python() { command python3 "$@"; }; fi'
+_TRAILING_TERM_NOISE_RE = re.compile(r"(?:\x1b\[[0-9;]*[A-Za-z]|TERM environment variable not set\.)+\s*$")
 
 
 # ---------------------------------------------------------------------------
@@ -146,14 +147,15 @@ def _extract_exit_code(
     fallback_exit_code: int | None,
 ) -> tuple[str, int]:
     """Strip the synthetic exit marker and return the resolved exit code."""
-    match = re.search(rf"\n?{re.escape(_EXIT_MARKER)}(-?\d+)\s*$", output, flags=re.S)
+    sanitized = _TRAILING_TERM_NOISE_RE.sub("", output or "").rstrip()
+    match = re.search(rf"\n?{re.escape(_EXIT_MARKER)}(-?\d+)\s*$", sanitized, flags=re.S)
     if match:
         resolved = int(match.group(1))
-        cleaned = output[: match.start()]
+        cleaned = sanitized[: match.start()]
         if cleaned.endswith("\n"):
             cleaned = cleaned[:-1]
         return cleaned, resolved
-    return output, 0 if fallback_exit_code is None else int(fallback_exit_code)
+    return sanitized, 0 if fallback_exit_code is None else int(fallback_exit_code)
 
 
 # ---------------------------------------------------------------------------
