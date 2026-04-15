@@ -302,13 +302,14 @@ class RequestReplanInput(BaseModel):
 class RequestReplanTool(BaseTool):
     name = "request_replan"
     description = (
-        "Request a replan of the current task scope. Use when the task itself is "
-        "mis-scoped — wrong files, scope too broad, missing dependencies, or the "
-        "decomposition needs restructuring. A replanner agent will create corrective "
+        "Request a replan of the current task scope. Use when verification "
+        "failed and the work needs rework, the task is mis-scoped (wrong "
+        "files, scope too broad, missing dependencies), or the decomposition "
+        "needs restructuring. A replanner agent will create corrective "
         "sibling tasks."
     )
     input_model = RequestReplanInput
-    tool_types = frozenset({"post_run"})
+    tool_types = frozenset({"post_run", "normal"})
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, RequestReplanInput)
@@ -316,7 +317,7 @@ class RequestReplanTool(BaseTool):
         if arguments.suggestion:
             note += f"\nSuggestion: {arguments.suggestion}"
         await _post_submission_note(context, content=note, tags=["warning"])
-        return ToolResult(output="Replan requested.")
+        return ToolResult(output="Replan requested. Agent will be terminated.")
 
 
 # ---------------------------------------------------------------------------

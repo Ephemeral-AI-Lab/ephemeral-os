@@ -186,11 +186,20 @@ async def build_query_context(
     posthook_tools = getattr(defn, "posthook", None) or []
     if posthook_tools:
         meta["posthook_tool_names"] = list(posthook_tools)
-        meta["posthook_prompt"] = (
-            "Your main work is complete. Submit results by calling one of: "
-            f"{', '.join(posthook_tools)}. "
-            "If using post_note, include paths (files touched) and tags."
-        )
+        if meta["role"] == "reviewer":
+            meta["posthook_prompt"] = (
+                "Your main work is complete. Submit results by calling one of: "
+                f"{', '.join(posthook_tools)}. "
+                "If your verdict is FAIL, you MUST call request_replan with "
+                "the failure reason and diagnostic evidence. "
+                "Only call post_note for a PASS verdict."
+            )
+        else:
+            meta["posthook_prompt"] = (
+                "Your main work is complete. Submit results by calling one of: "
+                f"{', '.join(posthook_tools)}. "
+                "If using post_note, include paths (files touched) and tags."
+            )
     user_message = await build_initial_user_message(team_run, task)
     roster = getattr(team_run, "roster", None)
     if getattr(defn, "role", None) == "replanner" and meta.get("active_blockers"):

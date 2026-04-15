@@ -276,6 +276,24 @@ class TeamAgentRunner:
                             work_item_id,
                             exc_info=True,
                         )
+                    # Terminate agent immediately when request_replan is
+                    # accepted during the main run.  The replan intent is
+                    # stashed in tool_metadata so the executor can skip
+                    # the posthook and dispatch a ReplanRequest directly.
+                    if (
+                        event.tool_name == "request_replan"
+                        and not event.is_error
+                    ):
+                        inputs = state.pending_tool_inputs.get("request_replan") or []
+                        tool_input = inputs[-1] if inputs else {}
+                        ctx.tool_metadata["replan_requested_during_run"] = True
+                        ctx.tool_metadata["replan_reason"] = str(tool_input.get("reason", ""))
+                        ctx.tool_metadata["replan_suggestion"] = tool_input.get("suggestion")
+                        logger.info(
+                            "request_replan accepted during main run for %s; terminating agent",
+                            work_item_id,
+                        )
+                        break
                 if self.on_event is not None:
                     self.on_event(event, state)
         except Exception as exc:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re
 import sys
 import time
 import uuid
@@ -63,6 +64,27 @@ def _extract_json_payload(text: str) -> dict[str, Any] | None:
                     break
         start = text.find("{", start + 1)
     return None
+
+
+_REPLAN_SIGNAL_PATTERNS = re.compile(
+    r"(?i)(?:action\s+required:\s*request_replan|request_replan\s+with\s+\d+\s+cluster)",
+)
+
+
+def _text_signals_replan(text: str) -> bool:
+    """Return True when the agent's prose explicitly requests a replan."""
+    return bool(_REPLAN_SIGNAL_PATTERNS.search(text))
+
+
+def _extract_replan_reason(text: str) -> str:
+    """Pull a concise replan reason from the agent's work result."""
+    # Look for lines that follow "Action required:" or similar headers.
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.lower().startswith("action required:"):
+            return stripped
+    # Fallback: first 500 chars of text.
+    return text[:500]
 
 
 class Executor:
@@ -403,6 +425,13 @@ class Executor:
                 reason=str(payload.get("reason") or ""),
                 suggestion=payload.get("suggestion"),
             )
+        # Detect request_replan intent from work_result text when no JSON
+        # payload matched above.  The agent may express replan intent in
+        # prose (e.g. "Action required: request_replan") without embedding
+        # a JSON object.  Fall through to the text-signal check below.
+        if "request_replan" in tool_names and _text_signals_replan(work_result):
+            reason = _extract_replan_reason(work_result)
+            return ReplanRequest(reason=reason)
         return None
 
     async def _post_completion_note(self, task: "Task", summary: str) -> None:
@@ -435,7 +464,21 @@ class Executor:
                 await conductor.on_fix_failed(fix_blocker.id, result.reason)
                 await self._checkpoint_after_transition(task, outcome="blocker_fix_failed")
                 return
-            await tc.request_replan(task.id, result)
+            try:
+                await tc.request_replan(task.id, result)
+            except Exception as exc:
+                # Replan budget exhausted — gracefully complete the task
+                # instead of failing+retrying in an infinite loop.
+                logger.warning(
+                    "request_replan for task %s failed (%s); completing task as-is",
+                    task.id, exc,
+                )
+                await tc.complete_task(
+                    task.id,
+                    AgentResult(summary=f"replan_budget_exhausted: {result.reason}"),
+                )
+                await self._checkpoint_after_transition(task, outcome="replan_budget_exhausted")
+                return
             await self._checkpoint_after_transition(task, outcome="replan_request")
             await self._post_checkpoint_note(task, result)
             return
