@@ -282,6 +282,21 @@ class ToolRegistry:
                 name: tool for name, tool in toolkit._tools.items() if name not in blocked
             }
 
+    def restrict_to_tools(self, tool_names: list[str]) -> None:
+        """Keep only the named tools and prune toolkit contents to match."""
+        allowed = set(tool_names)
+        self._tools = {k: v for k, v in self._tools.items() if k in allowed}
+        kept_toolkits: dict[str, BaseToolkit] = {}
+        for name, toolkit in self._toolkits.items():
+            toolkit._tools = {
+                tool_name: tool
+                for tool_name, tool in toolkit._tools.items()
+                if tool_name in allowed
+            }
+            if toolkit._tools:
+                kept_toolkits[name] = toolkit
+        self._toolkits = kept_toolkits
+
     def to_api_schema(self) -> list[dict[str, Any]]:
         """Return all tool schemas in API format.
 

@@ -2,15 +2,11 @@
 
 Use this reference only on child planning turns or prompts with `## Scoped Expansion`.
 
-## Workflow
+## Task/Goal
 
-1. Must reuse inherited notes and known owner boundaries before fresh exploration.
-2. Must reuse existing Task Center notes via `read_task_note(paths=[...])` before checking cross-run cache or opening a new scout; parent `bg_*` ids are not child-turn handles.
-3. Must call `read_task_note(...)` first when you need a live same-run freshness check on one inherited owner slice.
-4. After `read_task_note(...)`, must use at most one live owner confirmation step on the one unresolved owner when siblings are already mapped.
-5. Must emit direct lanes for already-mapped siblings instead of replanning the whole repository.
+- You are on a child planning turn and inherited notes or boundaries already exist.
 
-## Rules
+## Avoid
 
 - Must keep exact file paths until a live artifact confirms an exact node id.
 - Must recover real live filenames instead of guessed aliases.
@@ -22,7 +18,15 @@ Use this reference only on child planning turns or prompts with `## Scoped Expan
 - Never reopen a broad workspace scan if the parent already handed down the relevant slice boundary, and never probe parent background ids such as `bg_2`; reuse existing Task Center notes or refresh via `read_task_note(...)` first.
 - Never invent replacement nodes, replacement files, or broad substitute ownership from a stale test name.
 
-## Few-shot example
+## Workflow
+
+1. Must reuse inherited notes and known owner boundaries before fresh exploration.
+2. Must reuse existing Task Center notes via `read_task_note(paths=[...])` before checking cross-run cache or opening a new scout; parent `bg_*` ids are not child-turn handles.
+3. Must call `read_task_note(...)` first when you need a live same-run freshness check on one inherited owner slice.
+4. After `read_task_note(...)`, must use at most one live owner confirmation step on the one unresolved owner when siblings are already mapped.
+5. Must emit direct lanes for already-mapped siblings instead of replanning the whole repository.
+
+## Expected Outcome
 
 - Example: parent already narrowed the residual slice to `pkg/utils.py` plus `tests/test_utils.py`.
   Emit a direct `developer` lane and, if needed, one sibling `validator` lane for that exact slice.

@@ -27,7 +27,8 @@ from providers.provider import make_api_client
 from providers.types import UsageSnapshot
 from prompts import build_runtime_context_message, build_runtime_system_prompt
 from tools import create_default_tool_registry
-from tools.core.factory import create_toolkit, has_factory, ToolkitContext
+from tools.core.base import BaseToolkit
+from tools.core.factory import create_toolkit, has_factory, list_factories, ToolkitContext
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +85,7 @@ def finalize_tool_registry_and_prompt(
     system_prompt: str,
     *,
     can_spawn_subagents: bool = True,
+    role: str | None = None,
     blocked_tools: list[str] | None = None,
     terminal_tools: set[str] | list[str] | None = None,
 ) -> tuple[str, bool]:
@@ -118,6 +120,13 @@ def finalize_tool_registry_and_prompt(
     has_background_tools = bool(bg_tool_names) and can_spawn_subagents
     if has_background_tools:
         tool_registry.register_toolkit(make_background_toolkit(bg_tool_names))
+    submission_toolkit = tool_registry.get_toolkit("submission")
+    if submission_toolkit is not None:
+        from team.runtime.tool_policy import blocked_submission_tools_for_role
+
+        role_blocked_tools = blocked_submission_tools_for_role(role, submission_toolkit.tool_names())
+        if role_blocked_tools:
+            tool_registry.remove_tools(sorted(role_blocked_tools))
     if blocked_tools:
         tool_registry.remove_tools(blocked_tools)
 
@@ -237,6 +246,9 @@ def _build_agent_tool_registry(
         # it when agent_def.toolkits is non-empty.
         tool_registry.restrict_to_toolkits(agent_def.toolkits)
 
+    if agent_def and agent_def.allowed_tools:
+        _register_additional_allowed_tools(tool_registry, agent_def.allowed_tools, toolkit_ctx)
+
     # Submission tools are registered in the main query loop.
     # Team-mode terminal submissions are handled by the executor reading
     # ``tool_metadata`` after the query loop stops.
@@ -258,10 +270,43 @@ def _build_agent_tool_registry(
                 agent_name,
             )
 
-    if agent_def and agent_def.blocked_tools:
-        tool_registry.remove_tools(agent_def.blocked_tools)
-
     return tool_registry
+
+
+def _register_additional_allowed_tools(
+    tool_registry: ToolRegistry,
+    allowed_tools: list[str],
+    toolkit_ctx: ToolkitContext,
+) -> None:
+    """Add explicit tools from any available toolkit into the final tool surface."""
+    wanted = {str(name).strip() for name in allowed_tools if str(name).strip()}
+    if not wanted:
+        return
+
+    for tk_name in list_factories():
+        existing_toolkit = tool_registry.get_toolkit(tk_name)
+        try:
+            source_toolkit = existing_toolkit or create_toolkit(tk_name, toolkit_ctx)
+        except Exception:
+            logger.debug("Failed to inspect toolkit %r for allowed_tools", tk_name, exc_info=True)
+            continue
+
+        matching_tools = [tool for tool in source_toolkit.list_tools() if tool.name in wanted]
+        if not matching_tools:
+            continue
+
+        if existing_toolkit is None:
+            filtered_toolkit = BaseToolkit(
+                name=source_toolkit.name,
+                description=source_toolkit.description,
+                tools=matching_tools,
+                instructions=source_toolkit.instructions,
+            )
+            tool_registry.register_toolkit(filtered_toolkit)
+        else:
+            for tool in matching_tools:
+                existing_toolkit.register(tool)
+                tool_registry.register(tool)
 
 
 def _build_agent_system_prompt(
@@ -330,6 +375,7 @@ def spawn_agent(
         tool_registry,
         base_system_prompt,
         can_spawn_subagents=can_spawn,
+        role=(agent_def.role if agent_def else None),
         blocked_tools=(agent_def.blocked_tools if agent_def else None),
         terminal_tools=terminal_tools,
     )

@@ -8,9 +8,11 @@ roster:
     - developer
   reviewer:
     - validator
+  resolver:
+    - resolver
   replanner:
     - team_replanner
   explorer:
     - scout
 ---
-Default SWE-EVO benchmark team using the builtin planner/developer/validator/replanner/scout agents.
+Default SWE-EVO benchmark team using the builtin planner/developer/validator/resolver/replanner/scout agents.

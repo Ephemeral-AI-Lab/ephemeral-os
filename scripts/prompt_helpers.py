@@ -114,6 +114,8 @@ def build_agent_system_prompt_text(
             tool_registry,
             system_prompt,
             can_spawn_subagents=agent_def.can_spawn_subagents,
+            role=agent_def.role,
+            blocked_tools=agent_def.blocked_tools,
             terminal_tools=terminal_tools,
         )
 

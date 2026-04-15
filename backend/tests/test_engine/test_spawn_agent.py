@@ -58,8 +58,10 @@ def _stub_missing_modules():
 # ---------------------------------------------------------------------------
 
 from agents.types import AgentDefinition
+from engine.runtime.agent import _register_additional_allowed_tools, finalize_tool_registry_and_prompt
 from tools.core.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolResult, ToolRegistry
 from tools.core.factory import ToolkitContext, register_toolkit_factory, _factories
+from tools.submission.toolkit import SubmissionToolkit
 
 
 # ---------------------------------------------------------------------------
@@ -165,6 +167,20 @@ class TestRestrictToToolkits:
         registry.restrict_to_toolkits(["nonexistent"])
 
         assert len(registry.list_tools()) == 0
+
+    def test_restrict_to_tools_prunes_toolkits_too(self):
+        registry = ToolRegistry()
+        tk_a = _DummyToolkit(name="alpha")
+        tk_b = _DummyToolkit(name="beta", tools=[_DummyTool2()])
+        registry.register_toolkit(tk_a)
+        registry.register_toolkit(tk_b)
+
+        registry.restrict_to_tools(["dummy_tool_2"])
+
+        assert registry.get("dummy_tool") is None
+        assert registry.get("dummy_tool_2") is not None
+        assert registry.get_toolkit("alpha") is None
+        assert registry.get_toolkit("beta") is not None
 
 
 # ---------------------------------------------------------------------------
@@ -308,6 +324,85 @@ class TestToolkitFactoryInstantiation:
         assert registry.get("dummy_tool_2") is not None
         # discovery should be restricted away
         assert registry.get_toolkit("discovery") is None
+
+    @pytest.mark.usefixtures("_register_dummy_factory")
+    def test_allowed_tools_add_tools_from_other_toolkits(self):
+        register_toolkit_factory(
+            "second_toolkit",
+            lambda ctx: _DummyToolkit(name="second_toolkit", tools=[_DummyTool2()]),
+        )
+
+        agent_def = _make_agent_def(
+            toolkits=["dummy_toolkit"],
+            allowed_tools=["dummy_tool_2"],
+        )
+        registry = self._apply_toolkit_instantiation(agent_def)
+        _register_additional_allowed_tools(
+            registry,
+            agent_def.allowed_tools,
+            ToolkitContext(),
+        )
+
+        assert registry.get("dummy_tool") is not None
+        assert registry.get("dummy_tool_2") is not None
+        assert registry.get_toolkit("dummy_toolkit") is not None
+        assert registry.get_toolkit("second_toolkit") is not None
+
+    def test_role_policy_hides_non_summary_submission_tools_for_developer(self):
+        registry = ToolRegistry()
+        registry.register_toolkit(SubmissionToolkit.from_context(object()))
+
+        prompt, _ = finalize_tool_registry_and_prompt(
+            registry,
+            "Base prompt.",
+            role="developer",
+            terminal_tools={"submit_task_summary"},
+        )
+
+        assert registry.get("submit_task_summary") is not None
+        assert registry.get("draft_task_plan") is None
+        assert registry.get("submit_task_plan") is None
+        assert registry.get("declare_blocker") is None
+        assert "1. submit_task_summary - Submit task outcome." in prompt
+        assert "1. submit_task_plan - Submit a task plan." not in prompt
+        assert "1. draft_task_plan - Validate a draft task plan." not in prompt
+
+    def test_role_policy_keeps_plan_tools_for_planner(self):
+        registry = ToolRegistry()
+        registry.register_toolkit(SubmissionToolkit.from_context(object()))
+
+        prompt, _ = finalize_tool_registry_and_prompt(
+            registry,
+            "Base prompt.",
+            role="planner",
+            terminal_tools={"submit_task_plan"},
+        )
+
+        assert registry.get("draft_task_plan") is not None
+        assert registry.get("submit_task_plan") is not None
+        assert registry.get("submit_task_summary") is None
+        assert registry.get("declare_blocker") is None
+        assert "1. draft_task_plan - Validate a draft task plan." in prompt
+        assert "2. submit_task_plan - Submit a task plan." in prompt
+        assert "1. submit_task_summary - Submit task outcome." not in prompt
+
+    def test_blocked_tools_apply_after_role_policy(self):
+        registry = ToolRegistry()
+        registry.register_toolkit(SubmissionToolkit.from_context(object()))
+
+        prompt, _ = finalize_tool_registry_and_prompt(
+            registry,
+            "Base prompt.",
+            role="planner",
+            blocked_tools=["draft_task_plan"],
+            terminal_tools={"submit_task_plan"},
+        )
+
+        assert registry.get("submit_task_plan") is not None
+        assert registry.get("draft_task_plan") is None
+        assert registry.get("submit_task_summary") is None
+        assert "1. submit_task_plan - Submit a task plan." in prompt
+        assert "1. draft_task_plan - Validate a draft task plan." not in prompt
 
 
 # ---------------------------------------------------------------------------

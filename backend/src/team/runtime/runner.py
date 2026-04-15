@@ -43,6 +43,8 @@ def _retry_submission_prompt(
     exit_reason: QueryExitReason | None,
     terminal_tools: set[str],
 ) -> str:
+    if not terminal_tools:
+        return "Return your final concise result as plain text and stop."
     planner_like = "submit_task_plan" in terminal_tools
     blocker_allowed = "declare_blocker" in terminal_tools
     if planner_like:
@@ -342,10 +344,12 @@ class TeamAgentRunner:
                 qc = agent.query_context
                 if qc.exit_reason == QueryExitReason.TOOL_STOP:
                     break
+                terminal_tools = set(qc.terminal_tools or set())
+                if not terminal_tools:
+                    break
 
                 # Build follow-up prompt for next attempt
                 exit_reason = qc.exit_reason
-                terminal_tools = set(qc.terminal_tools or set())
                 if exit_reason == QueryExitReason.RESOURCE_LIMIT:
                     qc.tool_call_limit = qc.tool_calls_used + 2
                     prompt = _retry_submission_prompt(exit_reason, terminal_tools)

@@ -15,7 +15,6 @@ from tools.ci_toolkit.query_tools import (
     ci_status,
     ci_workspace_structure,
     ci_query_symbol,
-    ci_edit_hotspots,
 )
 
 
@@ -69,13 +68,39 @@ async def test_ci_status_no_service_returns_unavailable():
 async def test_ci_status_returns_service_status():
     svc = MagicMock()
     svc.status.return_value = {"ready": True, "files": 42}
+    svc.arbiter = None
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
         result = await ci_status.execute(ci_status.input_model(), _ctx_with_svc(svc))
     assert not result.is_error
     data = json.loads(result.output)
     assert data["ready"] is True
     assert data["files"] == 42
+    assert data["edit_hotspots"]["note"] == "Arbiter history not available"
     svc.status.assert_called_once()
+
+
+async def test_ci_status_returns_same_run_hotspots():
+    svc = MagicMock()
+    svc.status.return_value = {"ready": True}
+    svc.arbiter.initialized = True
+    svc.arbiter.hotspots.return_value = [
+        ("src/hot.py", 15),
+        ("src/warm.py", 7),
+    ]
+
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        result = await ci_status.execute(
+            ci_status.input_model(include_edit_hotspots=True, hotspot_limit=5),
+            _ctx_with_svc(svc),
+        )
+
+    assert not result.is_error
+    data = json.loads(result.output)
+    assert data["edit_hotspots"]["hotspots"] == [
+        {"file": "src/hot.py", "edit_count": 15},
+        {"file": "src/warm.py", "edit_count": 7},
+    ]
+    svc.arbiter.hotspots.assert_called_once_with(limit=5, team_run_id=None)
 
 
 async def test_workspace_structure_no_service():
@@ -899,76 +924,27 @@ async def test_query_references_resolves_column_from_tree_cache():
     assert col == 6  # "class Engine:" -> Engine starts at col 6
 
 
-# ---------------------------------------------------------------------------
-# ci_edit_hotspots
-# ---------------------------------------------------------------------------
-
-
-async def test_edit_hotspots_no_service():
-    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=None):
-        result = await ci_edit_hotspots.execute(ci_edit_hotspots.input_model(), _ctx())
-    data = json.loads(result.output)
-    assert data["status"] == "unavailable"
-
-
-async def test_edit_hotspots_no_arbiter():
+async def test_ci_status_cross_run_hotspots_use_service_arbiter_without_scope_paths():
     svc = MagicMock()
-    svc.arbiter = None
-
-    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
-        result = await ci_edit_hotspots.execute(ci_edit_hotspots.input_model(), _ctx_with_svc(svc))
-
-    assert "Arbiter history not available" in result.output
-
-
-async def test_edit_hotspots_no_results():
-    svc = MagicMock()
-    svc.arbiter.initialized = True
-    svc.arbiter.hotspots.return_value = []
-
-    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
-        result = await ci_edit_hotspots.execute(ci_edit_hotspots.input_model(), _ctx_with_svc(svc))
-
-    assert "No edit hotspots" in result.output
-
-
-async def test_edit_hotspots_returns_results():
-    svc = MagicMock()
-    svc.arbiter.initialized = True
-    svc.arbiter.hotspots.return_value = [
-        ("src/hot.py", 15),
-        ("src/warm.py", 7),
-    ]
-
-    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
-        result = await ci_edit_hotspots.execute(
-            ci_edit_hotspots.input_model(limit=5), _ctx_with_svc(svc)
-        )
-
-    assert not result.is_error
-    items = json.loads(result.output)
-    assert len(items) == 2
-    assert items[0]["file"] == "src/hot.py"
-    assert items[0]["edit_count"] == 15
-    svc.arbiter.hotspots.assert_called_once_with(limit=5, team_run_id=None)
-
-
-async def test_edit_hotspots_cross_run_uses_service_arbiter_without_scope_paths():
-    svc = MagicMock()
+    svc.status.return_value = {"ready": True}
     svc.arbiter.initialized = True
     svc.arbiter.contention_hotspots.return_value = [
         SimpleNamespace(file_path="src/hot.py", contributor_count=2, edit_count=4),
     ]
 
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
-        result = await ci_edit_hotspots.execute(
-            ci_edit_hotspots.input_model(limit=5, cross_run=True),
+        result = await ci_status.execute(
+            ci_status.input_model(
+                include_edit_hotspots=True,
+                hotspot_limit=5,
+                hotspot_cross_run=True,
+            ),
             _ctx_with_svc(svc),
         )
 
     assert not result.is_error
     data = json.loads(result.output)
-    assert data["hotspots"] == [
+    assert data["edit_hotspots"]["hotspots"] == [
         {"file": "src/hot.py", "runs_touched": 2, "total_edits": 4}
     ]
     svc.arbiter.contention_hotspots.assert_called_once_with(
@@ -978,17 +954,19 @@ async def test_edit_hotspots_cross_run_uses_service_arbiter_without_scope_paths(
     )
 
 
-async def test_edit_hotspots_cross_run_filters_by_team_run_id():
+async def test_ci_status_cross_run_hotspots_filter_by_team_run_id():
     svc = MagicMock()
+    svc.status.return_value = {"ready": True}
     svc.arbiter.initialized = True
     svc.arbiter.contention_hotspots.return_value = []
 
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
-        await ci_edit_hotspots.execute(
-            ci_edit_hotspots.input_model(
-                limit=3,
-                cross_run=True,
-                scope_paths=["src/"],
+        await ci_status.execute(
+            ci_status.input_model(
+                include_edit_hotspots=True,
+                hotspot_limit=3,
+                hotspot_cross_run=True,
+                hotspot_scope_paths=["src/"],
             ),
             _ctx({"ci_service": svc, "team_run_id": "team-1"}),
         )

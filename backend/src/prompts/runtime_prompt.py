@@ -228,7 +228,11 @@ def build_agent_capabilities_prompt(
         tk_sections.append("\n".join(lines))
     toolkit_section = ""
     if tk_sections:
-        toolkit_intro = "Use the following toolkits and tools that are available in this run."
+        toolkit_intro = (
+            "Use the following toolkits and tools that are available in this run.\n"
+            "Treat this as the effective allowed tool surface for this run. "
+            "Do not assume access to tools that are not listed here."
+        )
         toolkit_section = (
             "<Toolkit Instructions>\n\n"
             + toolkit_intro

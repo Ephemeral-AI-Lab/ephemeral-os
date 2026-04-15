@@ -368,8 +368,8 @@ def test_live_same_base_transactions_merge_non_overlapping_changes(live_repo_env
     ctx_a = live_repo_env.make_ctx(svc, agent_run_id=f"merge-a-{uuid.uuid4().hex[:8]}")
     ctx_b = live_repo_env.make_ctx(svc, agent_run_id=f"merge-b-{uuid.uuid4().hex[:8]}")
 
-    tx_a = _run(create_codeact_transaction(ctx_a, live_repo_env.async_sandbox, live_repo_env.repo_root))
-    tx_b = _run(create_codeact_transaction(ctx_b, live_repo_env.async_sandbox, live_repo_env.repo_root))
+    tx_a = _run(create_codeact_transaction(live_repo_env.async_sandbox, live_repo_env.repo_root))
+    tx_b = _run(create_codeact_transaction(live_repo_env.async_sandbox, live_repo_env.repo_root))
     try:
         scratch_a = f"{tx_a.scratch_root}/shared.py"
         scratch_b = f"{tx_b.scratch_root}/shared.py"
@@ -387,7 +387,6 @@ def test_live_same_base_transactions_merge_non_overlapping_changes(live_repo_env
         report_a = _run(
             commit_transaction_changes(
                 ctx_a,
-                live_repo_env.async_sandbox,
                 tx_a,
                 _run(collect_transaction_changes(live_repo_env.async_sandbox, tx_a)),
             )
@@ -395,7 +394,6 @@ def test_live_same_base_transactions_merge_non_overlapping_changes(live_repo_env
         report_b = _run(
             commit_transaction_changes(
                 ctx_b,
-                live_repo_env.async_sandbox,
                 tx_b,
                 _run(collect_transaction_changes(live_repo_env.async_sandbox, tx_b)),
             )
@@ -430,8 +428,8 @@ def test_live_same_base_transactions_conflict_on_overlap(live_repo_env: LiveRepo
     ctx_a = live_repo_env.make_ctx(svc, agent_run_id=f"conflict-a-{uuid.uuid4().hex[:8]}")
     ctx_b = live_repo_env.make_ctx(svc, agent_run_id=f"conflict-b-{uuid.uuid4().hex[:8]}")
 
-    tx_a = _run(create_codeact_transaction(ctx_a, live_repo_env.async_sandbox, live_repo_env.repo_root))
-    tx_b = _run(create_codeact_transaction(ctx_b, live_repo_env.async_sandbox, live_repo_env.repo_root))
+    tx_a = _run(create_codeact_transaction(live_repo_env.async_sandbox, live_repo_env.repo_root))
+    tx_b = _run(create_codeact_transaction(live_repo_env.async_sandbox, live_repo_env.repo_root))
     try:
         scratch_a = f"{tx_a.scratch_root}/shared.py"
         scratch_b = f"{tx_b.scratch_root}/shared.py"
@@ -448,7 +446,6 @@ def test_live_same_base_transactions_conflict_on_overlap(live_repo_env: LiveRepo
         report_a = _run(
             commit_transaction_changes(
                 ctx_a,
-                live_repo_env.async_sandbox,
                 tx_a,
                 _run(collect_transaction_changes(live_repo_env.async_sandbox, tx_a)),
             )
@@ -456,7 +453,6 @@ def test_live_same_base_transactions_conflict_on_overlap(live_repo_env: LiveRepo
         report_b = _run(
             commit_transaction_changes(
                 ctx_b,
-                live_repo_env.async_sandbox,
                 tx_b,
                 _run(collect_transaction_changes(live_repo_env.async_sandbox, tx_b)),
             )

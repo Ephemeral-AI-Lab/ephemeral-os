@@ -27,9 +27,10 @@ class AgentDefinitionRecord(Base):
     effort: Mapped[str | None] = mapped_column(String(16), nullable=True)
     tool_call_limit: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
-    # Toolkits, skills & blocked_tools (JSON arrays)
+    # Toolkits, skills & tool restrictions (JSON arrays)
     toolkits: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     skills: Mapped[list[str]] = mapped_column(JSON, default=list)
+    allowed_tools: Mapped[list[str]] = mapped_column(JSON, default=list)
     blocked_tools: Mapped[list[str]] = mapped_column(JSON, default=list)
 
     # External triggers (JSON array)

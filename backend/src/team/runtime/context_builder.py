@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 
 from message import ConversationMessage
 from team.models import Task
+from team.runtime.tool_policy import default_terminal_tools_for_role
 from tools.core.runtime import ExecutionMetadata
 
 if TYPE_CHECKING:
@@ -25,13 +26,8 @@ logger = logging.getLogger(__name__)
 # Which tools are terminal is a team-level policy: the team decides when an agent's
 # job is done. The query loop exits when any of these tools are called.
 DEFAULT_TERMINAL_TOOLS: dict[str, set[str]] = {
-    "planner": {"submit_task_plan"},
-    "replanner": {"submit_task_plan", "declare_blocker"},
-    "developer": {"submit_task_summary"},
-    "reviewer": {"submit_task_summary"},
-    "resolver": {"submit_task_summary"},
-    "explorer": {"submit_task_summary"},
-    "scout": {"submit_task_summary"},
+    role: default_terminal_tools_for_role(role)
+    for role in ("planner", "replanner", "developer", "reviewer", "resolver", "explorer", "scout")
 }
 
 @dataclass

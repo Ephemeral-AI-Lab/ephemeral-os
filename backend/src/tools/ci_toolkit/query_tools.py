@@ -385,16 +385,38 @@ async def _remote_query_symbols(
 
 @tool(
     name="ci_status",
-    description="Check code intelligence readiness: cache, index, LSP, and edit activity.",
+    description="Check code intelligence readiness: cache, index, LSP, and optional edit hotspot activity.",
     short_description="Check code intelligence status.",
     read_only=True,
 )
-async def ci_status(*, context: ToolExecutionContext) -> ToolResult:
-    """Check code intelligence service readiness."""
+async def ci_status(
+    include_edit_hotspots: bool = True,
+    hotspot_limit: int = 10,
+    hotspot_scope_paths: list[str] | None = None,
+    hotspot_cross_run: bool = False,
+    *,
+    context: ToolExecutionContext,
+) -> ToolResult:
+    """Check code intelligence service readiness.
+
+    Args:
+        include_edit_hotspots: Whether to include edit hotspot information.
+        hotspot_limit: Max hotspot results when included.
+        hotspot_scope_paths: Optional path-prefix filter for hotspots.
+        hotspot_cross_run: Query arbiter-backed cross-run contention history.
+    """
     svc, err = _svc_or_error(context)
     if err:
         return err
     status = svc.status()
+    if include_edit_hotspots:
+        status["edit_hotspots"] = _edit_hotspots_payload(
+            svc,
+            context,
+            limit=hotspot_limit,
+            scope_paths=hotspot_scope_paths,
+            cross_run=hotspot_cross_run,
+        )
     return ToolResult(output=json.dumps(status, indent=2, default=str))
 
 
@@ -832,33 +854,15 @@ async def ci_query_symbol(
 # -- Edit Hotspots ------------------------------------------------------------
 
 
-@tool(
-    name="ci_edit_hotspots",
-    description="Return files edited most frequently, optionally filtered by scope. Use cross_run for cross-run contention data.",
-    short_description="Show frequently edited files.",
-    read_only=True,
-)
-async def ci_edit_hotspots(
+def _edit_hotspots_payload(
+    svc: Any,
+    context: ToolExecutionContext,
+    *,
     limit: int = 10,
     scope_paths: list[str] | None = None,
     cross_run: bool = False,
-    *,
-    context: ToolExecutionContext,
-) -> ToolResult:
-    """Find frequently edited / conflict-prone files.
-
-    Args:
-        limit: Max results
-        scope_paths: Filter to files under these path prefixes
-        cross_run: Query arbiter-backed cross-run history for multi-agent contention
-
-    Returns:
-        hotspots (list): Hotspot entries with file, edit_count, and optionally runs_touched
-    """
-    svc, err = _svc_or_error(context)
-    if err:
-        return err
-
+) -> dict[str, Any]:
+    """Return same-run or cross-run edit hotspot metadata for ci_status."""
     # Cross-run path: use arbiter-backed history for contention data.
     if cross_run:
         arbiter = context.metadata.get("arbiter") or (svc.arbiter if svc.arbiter else None)
@@ -870,36 +874,23 @@ async def ci_edit_hotspots(
                 team_run_id=team_run_id,
             )
             if hotspots:
-                return ToolResult(
-                    output=json.dumps(
+                return {
+                    "hotspots": [
                         {
-                            "hotspots": [
-                                {
-                                    "file": h.file_path,
-                                    "runs_touched": h.contributor_count,
-                                    "total_edits": h.edit_count,
-                                }
-                                for h in hotspots
-                            ],
-                        },
-                        indent=2,
-                    )
-                )
-            return ToolResult(
-                output=json.dumps(
-                    {"hotspots": [], "note": "No cross-run contention history found."}
-                )
-            )
-        return ToolResult(
-            output=json.dumps(
-                {"hotspots": [], "note": "Arbiter history not available for cross-run queries."}
-            )
-        )
+                            "file": h.file_path,
+                            "runs_touched": h.contributor_count,
+                            "total_edits": h.edit_count,
+                        }
+                        for h in hotspots
+                    ],
+                }
+            return {"hotspots": [], "note": "No cross-run contention history found."}
+        return {"hotspots": [], "note": "Arbiter history not available for cross-run queries."}
 
     # Same-run path: use arbiter via CI service
     arbiter = context.metadata.get("arbiter") or (svc.arbiter if svc.arbiter else None)
     if arbiter is None or not getattr(arbiter, "initialized", False):
-        return ToolResult(output="Arbiter history not available")
+        return {"hotspots": [], "note": "Arbiter history not available"}
 
     # When scope filtering is needed, fetch a larger candidate set so that
     # post-filter doesn't return empty when matching entries exist beyond
@@ -910,7 +901,7 @@ async def ci_edit_hotspots(
         team_run_id=str(context.metadata.get("team_run_id") or "") or None,
     )
     if not hotspots:
-        return ToolResult(output="No edit hotspots recorded")
+        return {"hotspots": [], "note": "No edit hotspots recorded"}
 
     items = [{"file": fp, "edit_count": count} for fp, count in hotspots]
     if scope_paths:
@@ -919,4 +910,4 @@ async def ci_edit_hotspots(
             for item in items
             if any(item["file"].startswith(p.rstrip("/")) for p in scope_paths)
         ]
-    return ToolResult(output=json.dumps(items[:limit], indent=2))
+    return {"hotspots": items[:limit]}

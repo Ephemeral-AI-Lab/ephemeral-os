@@ -11,6 +11,7 @@ from tools.daytona_toolkit._daytona_utils import (
     _build_read_text_file_command,
     _build_write_text_file_command,
     _extract_exit_code,
+    _supports_exec_transport,
     _wrap_bash_command,
 )
 
@@ -65,7 +66,7 @@ class ContentManager:
 
     def _read_remote(self, file_path: str, *, allow_missing: bool) -> tuple[str, bool]:
         process = getattr(self._sandbox, "process", None)
-        if process is not None and hasattr(process, "exec"):
+        if _supports_exec_transport(self._sandbox):
             try:
                 response = run_sync(process.exec(_wrap_bash_command(_build_read_text_file_command(file_path))))
                 cleaned, exit_code = _extract_exit_code(
@@ -96,7 +97,7 @@ class ContentManager:
 
     def _write_remote(self, file_path: str, payload: bytes) -> None:
         process = getattr(self._sandbox, "process", None)
-        if process is not None and hasattr(process, "exec"):
+        if _supports_exec_transport(self._sandbox):
             try:
                 text = payload.decode("utf-8")
                 response = run_sync(
@@ -112,7 +113,7 @@ class ContentManager:
             except UnicodeDecodeError:
                 pass
         parent = str(Path(file_path).parent)
-        if parent and parent not in {".", "/"} and process is not None and hasattr(process, "exec"):
+        if parent and parent not in {".", "/"} and _supports_exec_transport(self._sandbox):
             run_sync(self._sandbox.process.exec(f"mkdir -p {shlex.quote(parent)}"))
         fs = self._sandbox.fs
         upload_fn = getattr(fs, "upload_file", None)
@@ -129,7 +130,7 @@ class ContentManager:
 
     def _delete_remote(self, file_path: str) -> None:
         process = getattr(self._sandbox, "process", None)
-        if process is None or not hasattr(process, "exec"):
+        if not _supports_exec_transport(self._sandbox):
             raise RuntimeError("Sandbox process has no exec method")
         response = run_sync(process.exec(_wrap_bash_command(f"rm -f {shlex.quote(file_path)}")))
         cleaned, exit_code = _extract_exit_code(

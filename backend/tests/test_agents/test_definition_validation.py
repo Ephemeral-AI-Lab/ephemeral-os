@@ -67,3 +67,40 @@ def test_allowed_triggers_from_list():
 def test_allowed_triggers_csv_split():
     defn = AgentDefinition(name="dev", description="dev", allowed_triggers="tc_note, future_trigger")
     assert defn.allowed_triggers == ["tc_note", "future_trigger"]
+
+
+def test_allowed_tools_csv_split():
+    defn = AgentDefinition(name="dev", description="dev", allowed_tools="ci_query_symbol, ci_diagnostics")
+    assert defn.allowed_tools == ["ci_query_symbol", "ci_diagnostics"]
+
+
+def test_builder_validation_allows_global_allowed_tools_without_toolkits():
+    validator = AgentDefinitionValidator(tool_registry=None)
+
+    result = validator.validate(  # type: ignore[arg-type]
+        SimpleNamespace(
+            name="custom_agent",
+            toolkits=None,
+            allowed_tools=["ci_query_symbol"],
+            effort=None,
+        )
+    )
+
+    assert result.valid is True
+    assert result.errors == []
+
+
+def test_builder_validation_rejects_unknown_allowed_tools():
+    validator = AgentDefinitionValidator(tool_registry=None)
+
+    result = validator.validate(  # type: ignore[arg-type]
+        SimpleNamespace(
+            name="custom_agent",
+            toolkits=["code_intelligence"],
+            allowed_tools=["does_not_exist"],
+            effort=None,
+        )
+    )
+
+    assert result.valid is False
+    assert "Unknown allowed tool: does_not_exist" in result.errors

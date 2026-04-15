@@ -2,15 +2,22 @@
 
 Use this reference immediately before final plan JSON when there are 4+ candidate siblings, one dominant owner plus residual single-file slices, or any temptation to create `misc_*` lanes.
 
-## Lane smells
+## Task/Goal
+
+- You are about to finalize a parent layer and the lane split feels flattened or leftover-heavy.
+
+## Avoid
 
 - An atomic lane that owns several unrelated exact files only because each slice is small is under-decomposed.
 - Local ids such as `misc`, `remaining`, `assorted`, or `small_fixes` are a stop signal unless explorers already proved one shared owner.
 - If a lane would verify several unrelated test files just to cover bundled leftovers, emit a residual child planner or split direct leaves instead.
 - If a parent plan ends as direct developers for every mapped slice plus one terminal validator, depth probably collapsed too early.
+
+## Workflow
+
 - If a slice is still only confirmed at a directory/package boundary because the opener was cold, keep it expandable instead of inventing an exact-file leaf.
 
-## Few-shot examples
+## Expected Outcome
 
 - Example: root explorers land `pkg/io/hdf.py`, `pkg/io/parquet/`, `pkg/groupby.py`, `pkg/io/json.py`, `pkg/utils.py`, `pkg/cli.py`, `pkg/config.py`, and `pkg/compat.py`.
   Emit `developer(hdf)` now, child planners for `parquet` and `groupby`, then either several direct developers or one residual child planner for the remaining single-file slices.

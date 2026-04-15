@@ -1,7 +1,11 @@
 # Root Plan Self-Check
 Use this reference after decomposition examples and immediately before `plan-json-contract` on a fresh root or any crowded parent layer.
 
-## Stop signs
+## Task/Goal
+
+- You are at the last planner checkpoint before submit and want a short sanity pass.
+
+## Avoid
 
 - Your recap dropped a launched exact-file explorer, still calls a nameable exact owner "needs more scouting", or flattened everything into direct developers plus one terminal validator.
 - Your draft contains a benchmark path or node that does not appear verbatim in the prompt, validator packet, or inherited benchmark-surface ledger.
@@ -16,7 +20,11 @@ Use this reference after decomposition examples and immediately before `plan-jso
 - You are still recounting tests or rewriting the same ownership summary even though the gate is already satisfied.
 - Two parallel developer lanes (no dep edge) share an exact file in their `scope_paths`, or scout notes show both slices import/modify the same file. This is a shared-file split — sequence them or create a dedicated task.
 
-## Repair moves
+## Workflow
+
+- If the layer already has at least one direct leaf plus one residual expandable lane, stop repairing and submit.
+
+## Expected Outcome
 
 - Rebuild a literal explorer ledger and benchmark-surface ledger from prompt-backed paths before final JSON, keep that benchmark ledger literal through submit retries, and refresh `read_task_note(...)` if freshness moved.
 - Restart the ending chain sequentially if a final-reference ordering guard fired.
@@ -27,4 +35,3 @@ Use this reference after decomposition examples and immediately before `plan-jso
 - Promote a broad single file to `team_planner` when families or verification surfaces inside it are still separable.
 - If a crowded layer flattened into all-developer execution, convert at least one broad, shared-risk, or still-multi-file branch back into `team_planner`.
 - Replace any atomic leftovers lane that owns unrelated exact files with either direct leaves, one residual child planner, or a return to explorer launching for any still-nameable exact owner.
-- If the layer already has at least one direct leaf plus one residual expandable lane, stop repairing and submit.

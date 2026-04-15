@@ -57,6 +57,8 @@ def test_agent_capabilities_prompt_uses_compact_toolkit_format():
 
     assert prompt.startswith("<Toolkit Instructions>")
     assert "Use the following toolkits and tools that are available in this run." in prompt
+    assert "Treat this as the effective allowed tool surface for this run." in prompt
+    assert "Do not assume access to tools that are not listed here." in prompt
     assert "</Toolkit Instructions>" in prompt
     assert "- demo: Demo toolkit for bounded inspection and repair work." in prompt
     assert "1. demo_tool - Inspect the current target." in prompt
@@ -188,6 +190,21 @@ def test_tool_registry_remove_tools_filters_toolkits_too():
 
     assert registry.get("demo_tool") is None
     assert toolkit.list_tools() == []
+
+
+def test_tool_registry_restrict_to_tools_filters_toolkits_too():
+    registry = ToolRegistry()
+    toolkit = BaseToolkit(
+        name="demo",
+        description="Demo toolkit",
+        tools=[_DemoTool()],
+    )
+    registry.register_toolkit(toolkit)
+
+    registry.restrict_to_tools(["missing_tool"])
+
+    assert registry.get("demo_tool") is None
+    assert registry.get_toolkit("demo") is None
 
 
 def test_runtime_context_message_contains_environment(monkeypatch):

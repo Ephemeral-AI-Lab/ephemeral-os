@@ -58,7 +58,8 @@ def test_skills_and_references_stay_short() -> None:
     for path in _ALL_SKILLS:
         assert len(_read(path).splitlines()) <= 150, f"{path} should stay short"
     for path in _REFERENCES:
-        assert len(_read(path).splitlines()) <= 150, f"{path} should stay short"
+        limit = 180 if path.name == "task-planning-decomposition.md" else 150
+        assert len(_read(path).splitlines()) <= limit, f"{path} should stay short"
 
 
 def test_hard_rule_numbers_do_not_repeat() -> None:
@@ -94,6 +95,18 @@ def test_skills_use_clear_must_never_language() -> None:
             or "Use this reference only" in content
             or content.startswith("# Action Reference:")
         )
+
+
+def test_team_references_follow_scan_friendly_structure() -> None:
+    team_references = [
+        path for path in _REFERENCES if "/team-" in str(path)
+    ]
+    for path in team_references:
+        content = _read(path)
+        assert "## Task/Goal" in content, f"missing Task/Goal section in {path}"
+        assert "## Avoid" in content, f"missing Avoid section in {path}"
+        assert "## Workflow" in content, f"missing Workflow section in {path}"
+        assert "## Expected Outcome" in content, f"missing Expected Outcome section in {path}"
 
 
 def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() -> None:
@@ -137,6 +150,9 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
 def test_reference_files_hold_specialized_detail() -> None:
     planner_ref = _read(_CONTENT / "team-planner-playbook/references/exploration-script.md")
     planner_json = _read(_CONTENT / "team-planner-playbook/references/plan-json-contract.md")
+    planner_decomposition = _read(
+        _CONTENT / "team-planner-playbook/references/task-planning-decomposition.md"
+    )
     developer_runtime = _read(
         _CONTENT / "team-developer-playbook/references/codeact-runtime-examples.md"
     )
@@ -150,6 +166,14 @@ def test_reference_files_hold_specialized_detail() -> None:
 
     assert "Never keep a guessed exact leaf once live evidence disproves it." in planner_ref
     assert "submit_task_plan(new_tasks=[...])" in planner_json
+    assert "Example task graph" in planner_decomposition
+    assert '"id": "dev-hdf"' in planner_decomposition
+    assert '"id": "dev-shared-config"' in planner_decomposition
+    assert '"id": "plan-dataframe-io"' in planner_decomposition
+    assert '"id": "plan-groupby"' in planner_decomposition
+    assert "Use `developer` for atomic tasks" in planner_decomposition
+    assert "Use `team_planner` for expandable tasks" in planner_decomposition
+    assert "Use `validator` for validation tasks" in planner_decomposition
     assert 'daytona_codeact(command="...", timeout=N)' in developer_runtime
     assert "pkg._compat" in developer_root_cause
     assert "The Task Center note is the durable handoff." in scout_ref

@@ -1,7 +1,22 @@
 # Plan JSON Contract
 Use this reference immediately before calling `submit_task_plan(...)`.
 
-## Shape rules
+## Task/Goal
+
+- You already have the owner ledger, deps, and task prose, and the next terminal action should be submit.
+
+## Avoid
+
+- Freeze a tiny benchmark-surface ledger from the exact prompt paths or ids plus any validator-backed downgrades.
+- On any submit retry, edit benchmark paths only by copying from that frozen ledger or exact validator packet text.
+- Keep only those exact nodes or broaden to that same prompt file path; never substitute a same-family sibling node.
+- If validation rejects a guessed benchmark node, keep only the validator-backed file path or remove that narrow node entirely.
+- If no exact prompt, parent, scout, or validator-backed benchmark surface exists for one narrow lane after repair, omit that uncertain node instead of guessing another sibling.
+- If a scout disproved an exact file, that file cannot appear in `scope_paths` or `objective`.
+- If a scout disproved a benchmark-import path, do not emit a task whose main job is to create a compat/re-export file at that missing path unless live production references also name it.
+- A structure-only listing or import intuition is not "live-confirmed" owner evidence. If a scout disproved an exact file or marked a directory tests-only, do not replace that branch with a sibling exact file; broaden to the last confirmed parent boundary and keep it on `team_planner`.
+
+## Workflow
 
 - For planner submissions, call `submit_task_plan(new_tasks=[...])`.
 - Each `new_tasks` item must follow the runtime shape: `id`, `name`, `objective`, `deps`, `scope_paths`.
@@ -19,18 +34,7 @@ Use this reference immediately before calling `submit_task_plan(...)`.
 - Validator tasks will be normalized to `cascade_policy="continue"` automatically; developer and `team_planner` tasks use the default strict dependency policy.
 - On crowded layers, keep at least one residual `team_planner` lane whenever unresolved work is still broad, shared-risk, or multi-file.
 
-## Failure-surface rules
-
-- Freeze a tiny benchmark-surface ledger from the exact prompt paths or ids plus any validator-backed downgrades.
-- On any submit retry, edit benchmark paths only by copying from that frozen ledger or exact validator packet text.
-- Keep only those exact nodes or broaden to that same prompt file path; never substitute a same-family sibling node.
-- If validation rejects a guessed benchmark node, keep only the validator-backed file path or remove that narrow node entirely.
-- If no exact prompt, parent, scout, or validator-backed benchmark surface exists for one narrow lane after repair, omit that uncertain node instead of guessing another sibling.
-- If a scout disproved an exact file, that file cannot appear in `scope_paths` or `objective`.
-- If a scout disproved a benchmark-import path, do not emit a task whose main job is to create a compat/re-export file at that missing path unless live production references also name it.
-- A structure-only listing or import intuition is not "live-confirmed" owner evidence. If a scout disproved an exact file or marked a directory tests-only, do not replace that branch with a sibling exact file; broaden to the last confirmed parent boundary and keep it on `team_planner`.
-
-## Example
+## Expected Outcome
 
 ```json
 {

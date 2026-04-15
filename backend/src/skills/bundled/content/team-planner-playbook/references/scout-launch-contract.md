@@ -1,19 +1,11 @@
 # Scout Launch Contract
 Use this reference immediately before the first scout wave or whenever scout launching stalls.
 
-## Launch workflow
+## Task/Goal
 
-1. Must call `run_subagent(agent_name="scout", input={"target_paths": [...]}, task_note="...")` exactly.
-2. Give each scout one unresolved owner slice, not a bundle of unrelated files.
-3. Queue the whole useful wave before any progress check, wait, or reaction to early output.
-4. Inspect fresh scouts with `check_background_progress(...)` before any `wait_for_background_task(...)`.
-5. After the wave, planners must `read_task_note(paths=[...])`.
-6. Reuse existing Task Center notes when the same scope already has coverage; same-turn overlap is a reuse signal, not a cue to relaunch the same explorer.
-7. If cold CI blocked exact-file confirmation, launch the nearest stable production boundary instead of synthesizing a guessed exact path.
-8. Record the exact returned `task_id` for every scout and use only those literal ids in progress checks or waits.
-9. After the wave, if `context_changed_since()` or a scope-change warning says the layer moved, refresh notes before shaping the DAG.
+- You are about to launch or recover the first useful scout wave.
 
-## Rules
+## Avoid
 
 - Never pass prompt mode to `scout`.
 - Do not jump to `check_background_progress(task_id="bg_3")` on an inferred id or before the useful wave is fully queued.
@@ -28,3 +20,19 @@ Use this reference immediately before the first scout wave or whenever scout lau
 - Never delay the first explorer wave behind extra sibling structure passes once the current anchor already exposed the needed owner files.
 - Never start loading decomposition references or progress checks while the first useful wave is only partially launched.
 - Never check background progress on an inferred id that was never returned by `run_subagent`.
+
+## Workflow
+
+1. Must call `run_subagent(agent_name="scout", input={"target_paths": [...]}, task_note="...")` exactly.
+2. Give each scout one unresolved owner slice, not a bundle of unrelated files.
+3. Queue the whole useful wave before any progress check, wait, or reaction to early output.
+4. Inspect fresh scouts with `check_background_progress(...)` before any `wait_for_background_task(...)`.
+5. After the wave, planners must `read_task_note(paths=[...])`.
+6. Reuse existing Task Center notes when the same scope already has coverage; same-turn overlap is a reuse signal, not a cue to relaunch the same explorer.
+7. If cold CI blocked exact-file confirmation, launch the nearest stable production boundary instead of synthesizing a guessed exact path.
+8. Record the exact returned `task_id` for every scout and use only those literal ids in progress checks or waits.
+9. After the wave, if `context_changed_since()` or a scope-change warning says the layer moved, refresh notes before shaping the DAG.
+
+## Expected Outcome
+
+- The full useful scout wave is queued once, tracked by literal task ids, and followed by note review before DAG shaping.

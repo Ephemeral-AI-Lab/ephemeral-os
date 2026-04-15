@@ -3,7 +3,6 @@
 from tools.core.base import BaseToolkit
 from tools.ci_toolkit.query_tools import (
     ci_status,
-    ci_edit_hotspots,
     ci_query_symbol,
     ci_workspace_structure,
 )
@@ -14,7 +13,6 @@ _ALL_TOOLS = [
     ci_workspace_structure,
     ci_query_symbol,
     ci_diagnostics,
-    ci_edit_hotspots,
 ]
 
 _INSTRUCTIONS = (
@@ -36,10 +34,8 @@ _INSTRUCTIONS = (
     "- Checking edit safety: `ci_query_symbol(name, references=true)` on the symbol you plan "
     "to change → see all downstream callers → `ci_diagnostics` after patching.\n\n"
     "## Other tools\n"
-    "- `ci_status` — check if the code intelligence service is available.\n"
+    "- `ci_status` — check if the code intelligence service is available and inspect edit hotspots when needed.\n"
     "- `ci_workspace_structure` — tree view of the project layout.\n"
-    "- `ci_edit_hotspots` — find contention-prone files before editing. "
-    "Use `cross_run=True` for cross-run multi-agent contention data.\n"
     "- Use sandbox file reads only after CI symbol queries narrowed the seam.\n\n"
     "## Anti-patterns\n"
     "- Do not grep for a symbol name when `ci_query_symbol` can find its definition directly.\n"

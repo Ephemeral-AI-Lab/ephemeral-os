@@ -57,6 +57,7 @@ role: developer
 model: inherit
 tool_call_limit: 100
 toolkits: ["sandbox_operations", "code_intelligence"]
+allowed_tools: ["daytona_codeact", "ci_query_symbol", "ci_diagnostics"]
 blocked_tools: []
 allowed_triggers: ["tc_note"]
 ---
@@ -68,7 +69,7 @@ Execute one bounded coding task...
 - `name`, `description` (required)
 - `system_prompt` (optional; overridden by body text)
 - `model`, `effort`, `tool_call_limit`
-- `toolkits`, `skills`, `blocked_tools`
+- `toolkits`, `skills`, `allowed_tools`, `blocked_tools`
 - `allowed_triggers`, `background`, `role`, `agent_type` (agent | subagent)
 - `source` (builtin | user | plugin), capability flags
 
@@ -83,6 +84,7 @@ POST /api/agents
   "model": "claude-opus",
   "system_prompt": "...",
   "toolkits": ["search", "note_taking"],
+  "allowed_tools": ["search_web", "read_note"],
   "blocked_tools": [],
   "effort": "high",
   "tool_call_limit": 50
@@ -177,6 +179,7 @@ Three distinct layers orchestrate the transition from disk/database to runtime e
 │  tool_call_limit     int            │
 │  toolkits            json           │
 │  skills              json           │
+│  allowed_tools       json           │
 │  blocked_tools       json           │
 │  allowed_triggers    json           │
 │  hooks               json           │
@@ -414,6 +417,7 @@ Sequence showing a team run from start through task dispatch to completion, inte
 | `effort` | Heuristic budget; low/medium/high | High = larger tool_call_limit |
 | `tool_call_limit` | Max tool calls before agent stops | 50, 100, unlimited (None) |
 | `toolkits` | Allowed tool groups (sandbox, code_intelligence, search) | ["sandbox_operations", "code_intelligence"] |
+| `allowed_tools` | Optional allowlist inside the assembled toolkits | ["daytona_codeact", "ci_query_symbol"] |
 | `blocked_tools` | Tool names to remove after assembly | [] |
 | `skills` | Skill playbooks to inject | ["team-developer-playbook"] |
 | `role` | Team dispatch label (planner, developer, reviewer) | "developer" |

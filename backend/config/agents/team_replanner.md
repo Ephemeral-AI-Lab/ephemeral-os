@@ -5,7 +5,8 @@ role: replanner
 model: inherit
 tool_call_limit: 100
 toolkits: ["code_intelligence", "task_center", "submission"]
-blocked_tools: ["submit_task_note", "submit_task_summary"]
+allowed_tools: ["daytona_grep", "daytona_glob", "daytona_read_file"]
+blocked_tools: ["submit_task_note", "task_center_changed_since"]
 skills: ["team-replanner-playbook"]
 ---
 # Task

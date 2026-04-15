@@ -44,6 +44,11 @@ class AgentDefinition(BaseModel):
     # --- skills & toolkits ---
     skills: list[str] = Field(default_factory=list)
     toolkits: list[str] = Field(default_factory=list)
+    allowed_tools: list[str] = Field(
+        default_factory=list,
+        validation_alias=AliasChoices("allowed_tools", "allowedTools"),
+        description="Optional extra tool names to add after toolkit assembly and before blocked_tools.",
+    )
     blocked_tools: list[str] = Field(
         default_factory=list,
         validation_alias=AliasChoices("blocked_tools", "blockedTools"),
@@ -114,7 +119,15 @@ class AgentDefinition(BaseModel):
 
     model_config = {"populate_by_name": True, "arbitrary_types_allowed": True}
 
-    @field_validator("skills", "toolkits", "permissions", "blocked_tools", "allowed_triggers", mode="before")
+    @field_validator(
+        "skills",
+        "toolkits",
+        "permissions",
+        "allowed_tools",
+        "blocked_tools",
+        "allowed_triggers",
+        mode="before",
+    )
     @classmethod
     def _split_csv(cls, v: Any) -> Any:
         if isinstance(v, str):
