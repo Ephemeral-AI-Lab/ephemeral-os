@@ -27,8 +27,12 @@ from tools.daytona_toolkit.tools import (
     _resolve_path,
     _team_repo_write_error,
     _team_repo_write_warning,
-    _upload_file_compat,
     record_coordination_warning,
+)
+from tools.daytona_toolkit._daytona_utils import (
+    _read_text_file_via_exec,
+    _upload_file_compat,
+    _write_text_file_via_exec,
 )
 from tools.core.decorator import tool
 
@@ -210,14 +214,12 @@ async def daytona_edit_file(
         current_hash = str(getattr(prepared, "current_hash", "") or "")
     else:
         try:
-            raw = await sandbox.fs.download_file(file_path)
-            current = raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
+            current, _ = await _read_text_file_via_exec(sandbox, file_path)
             current_hash = _content_hash(current)
         except Exception as exc:
             try:
                 sandbox = await _recover_sandbox(context, exc)
-                raw = await sandbox.fs.download_file(file_path)
-                current = raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
+                current, _ = await _read_text_file_via_exec(sandbox, file_path)
                 current_hash = _content_hash(current)
             except Exception as recovery_exc:
                 return ToolResult(
@@ -329,7 +331,10 @@ async def daytona_edit_file(
     else:
         # Direct write (no CI)
         try:
-            await _upload_file_compat(sandbox, new_content.encode("utf-8"), file_path)
+            try:
+                await _write_text_file_via_exec(sandbox, file_path, new_content)
+            except Exception:
+                await _upload_file_compat(sandbox, new_content.encode("utf-8"), file_path)
             scope_warning = _scope_overlap_warning(context, file_path)
             if scope_warning:
                 warnings.append(scope_warning)
@@ -343,7 +348,10 @@ async def daytona_edit_file(
         except Exception as exc:
             try:
                 sandbox = await _recover_sandbox(context, exc)
-                await _upload_file_compat(sandbox, new_content.encode("utf-8"), file_path)
+                try:
+                    await _write_text_file_via_exec(sandbox, file_path, new_content)
+                except Exception:
+                    await _upload_file_compat(sandbox, new_content.encode("utf-8"), file_path)
                 scope_warning = _scope_overlap_warning(context, file_path)
                 if scope_warning:
                     warnings.append(scope_warning)

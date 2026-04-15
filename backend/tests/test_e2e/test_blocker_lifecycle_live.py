@@ -33,7 +33,7 @@ from external_trigger.runner import run as run_trigger
 from team.models import Blocker, BlockerStatus, TaskDefinition, TaskStatus
 from team.runtime.conductor import Conductor
 from tests.test_e2e.conftest import create_eval_agent
-from tools.context.toolkit import PostNoteTool
+from tools.task_center.toolkit import PostNoteTool
 
 pytestmark = [pytest.mark.e2e, pytest.mark.live]
 

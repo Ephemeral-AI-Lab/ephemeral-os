@@ -85,6 +85,7 @@ def finalize_tool_registry_and_prompt(
     *,
     can_spawn_subagents: bool = True,
     blocked_tools: list[str] | None = None,
+    terminal_tools: set[str] | list[str] | None = None,
 ) -> tuple[str, bool]:
     """Register background toolkit and inject capability awareness into the system prompt.
 
@@ -101,6 +102,7 @@ def finalize_tool_registry_and_prompt(
         blocked_tools: Tool names that must be removed after all toolkits,
             including runtime-added toolkits such as background management,
             have been registered.
+        terminal_tools: Tools that terminate the run immediately when called.
 
     Returns:
         Tuple of (updated_system_prompt, has_background_tools).
@@ -123,6 +125,7 @@ def finalize_tool_registry_and_prompt(
         toolkits=tool_registry.list_toolkits(),
         has_background_tools=has_background_tools,
         bg_tool_names=bg_tool_names,
+        terminal_tools=terminal_tools,
     )
     if awareness:
         system_prompt = system_prompt + "\n\n" + awareness
@@ -290,6 +293,7 @@ def spawn_agent(
     latest_user_prompt: str | None = None,
     session_state: SessionState | None = None,
     sandbox_id: str | None = None,
+    terminal_tools: set[str] | list[str] | None = None,
 ) -> EphemeralAgent:
     """Spawn a fresh ephemeral agent with the given session history.
 
@@ -327,6 +331,7 @@ def spawn_agent(
         base_system_prompt,
         can_spawn_subagents=can_spawn,
         blocked_tools=(agent_def.blocked_tools if agent_def else None),
+        terminal_tools=terminal_tools,
     )
 
     tool_call_limit = agent_def.tool_call_limit if agent_def else None

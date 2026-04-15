@@ -23,18 +23,23 @@ _ALL_SKILLS = _PLAYBOOKS + [
 _ALL_SKILLS = [path for path in _ALL_SKILLS if path.exists()]
 _REFERENCES = [
     _CONTENT / "team-developer-playbook/references/codeact-runtime-examples.md",
+    _CONTENT / "team-developer-playbook/references/pre-completion-validation.md",
+    _CONTENT / "team-developer-playbook/references/root-cause-debugging.md",
     _CONTENT / "team-developer-playbook/references/widening-and-runtime.md",
     _CONTENT / "team-planner-playbook/references/exploration-script.md",
     _CONTENT / "team-planner-playbook/references/scout-launch-contract.md",
     _CONTENT / "team-planner-playbook/references/non-root-context-reuse.md",
-    _CONTENT / "team-planner-playbook/references/plan-json-contract.md",
     _CONTENT / "team-planner-playbook/references/task-planning-decomposition.md",
+    _CONTENT / "team-planner-playbook/references/root-plan-self-check.md",
+    _CONTENT / "team-planner-playbook/references/plan-json-contract.md",
+    _CONTENT / "team-planner-playbook/references/terminal-validation-contract.md",
     _CONTENT / "team-scout-playbook/references/completion-contract.md",
     _CONTENT / "team-validator-playbook/references/cross-surface-guardrails.md",
+    _CONTENT / "team-validator-playbook/references/runtime-verification-examples.md",
     _CONTENT / "team-replanner-playbook/references/corrective-fast-path.md",
     _CONTENT / "team-replanner-playbook/references/action-add-tasks.md",
-    _CONTENT / "team-replanner-playbook/references/action-declare-blocker.md",
     _CONTENT / "team-replanner-playbook/references/action-cancel-and-redraft.md",
+    _CONTENT / "team-replanner-playbook/references/action-declare-blocker.md",
     _CONTENT / "verification-replan/references/triage-format.md",
 ]
 _REFERENCES = [path for path in _REFERENCES if path.exists()]
@@ -65,7 +70,7 @@ def test_hard_rule_numbers_do_not_repeat() -> None:
 
 
 def test_skills_use_clear_must_never_language() -> None:
-    for path in _ALL_SKILLS + _REFERENCES:
+    for path in _ALL_SKILLS:
         content = _read(path)
         assert (
             "Must " in content
@@ -79,321 +84,76 @@ def test_skills_use_clear_must_never_language() -> None:
             or "Never use" in content
             or "Do not " in content
             or "do not " in content
+            or "Must not " in content
+        )
+
+    for path in _REFERENCES:
+        content = _read(path)
+        assert (
+            "Use this reference" in content
+            or "Use this reference only" in content
+            or content.startswith("# Action Reference:")
         )
 
 
-def test_planner_skill_has_explicit_conditional_reference_loading() -> None:
+def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() -> None:
     planner = _read(_CONTENT / "team-planner-playbook/SKILL.md")
-    decomposition = _read(
-        _CONTENT / "team-planner-playbook/references/task-planning-decomposition.md"
-    )
-    exploration = _read(_CONTENT / "team-planner-playbook/references/exploration-script.md")
-    non_root = _read(_CONTENT / "team-planner-playbook/references/non-root-context-reuse.md")
-    plan_json = _read(_CONTENT / "team-planner-playbook/references/plan-json-contract.md")
-    scout_launch = _read(_CONTENT / "team-planner-playbook/references/scout-launch-contract.md")
-    assert (
-        "Fresh benchmark root: must load `exploration-script` before the first non-reference planning tool call when `load_skill_reference` is available."
-        in planner
-    )
-    assert (
-        "Before the first scout wave: must load `scout-launch-contract` when `load_skill_reference` is available."
-        in planner
-    )
-    assert (
-        "Before loading `task-planning-decomposition` or `plan-json-contract`, must complete at least one scout wave"
-        in planner
-    )
-    assert (
-        "Never create a planner or scout lane whose main job is to locate, reread, or summarize a benchmark test file or pytest node."
-        in planner
-    )
-    assert "never synthesize an exact owner by stripping `test_`, `_test`" in planner.lower()
-    assert "A later `ci_workspace_structure(...)` listing only proves nearby files exist." in planner
-    assert "Never treat a structure-only sibling listing as exact-owner confirmation" in planner
-    assert "compat/re-export stub path copied from benchmark imports" in planner
-    assert "neighboring singular path does not authorize a new plural shim" in planner
-    assert (
-        "Child or `## Scoped Expansion` turn: must load `non-root-context-reuse` before fresh exploration when `load_skill_reference` is available."
-        in planner
-    )
-    assert "let that tool call finish, and only then load `plan-json-contract`" in planner.lower()
-    assert "never batch or parallelize it with `root-plan-self-check`" in planner
-    assert "The sequence is `anchor -> scout wave -> decomposition -> plan JSON`." in planner
-    assert "The first wave must target only live production boundaries" in planner
-    assert "Count crowded-layer width using non-planner, non-validator lanes only." in planner
-    assert "Must reuse inherited notes and known owner boundaries before fresh exploration." in non_root
-    assert "parent `bg_*` ids are not child-turn handles" in non_root
-    assert (
-        'Do not call `check_background_progress(task_id="bg_2")` inside the child turn' in non_root
-    )
-    assert "Must use `name` with an exact registered agent name" in plan_json
-    assert "Must use `id` for the lane label" in plan_json
-    assert "Must keep `deps` as a top-level item field." in plan_json
-    assert "Must emit each `id` only once." in plan_json
-    assert "Freeze a tiny benchmark-surface ledger" in plan_json
-    assert "On any submit retry" in plan_json
-    assert "keep only those exact nodes or broaden to that same prompt file path" in plan_json.lower()
-    assert "same-family sibling node" in plan_json
-    assert "If validation rejects a guessed benchmark node" in plan_json
-    assert "compat/re-export file at that missing path" in plan_json
-    assert 'A structure-only listing or import intuition is not "live-confirmed" owner evidence.' in plan_json
-    assert (
-        "Before loading this reference, confirm that the terminal validator depends on every terminal non-validator sibling."
-        in plan_json
-    )
-    assert "zero-expandable all-developer plans are invalid" in plan_json
-    assert (
-        "Count crowded-layer width using non-planner, non-validator tasks only"
-        in plan_json
-    )
-    assert "Never load this reference in parallel with `root-plan-self-check`" in plan_json
-    assert "Reload the ending chain sequentially if the self-check never finished" in plan_json
-    assert (
-        'Do not create one atomic "misc fixes" lane just because those residual slices are individually small.'
-        in decomposition
-    )
-    assert (
-        "Do not collapse those unrelated files into one atomic developer just to save root-plan slots."
-        in decomposition
-    )
-    assert (
-        "restart the ending chain sequentially if a final-reference ordering guard fired"
-        in _read(_CONTENT / "team-planner-playbook/references/root-plan-self-check.md")
-    )
-    assert "keep that benchmark ledger literal through submit retries" in _read(
-        _CONTENT / "team-planner-playbook/references/root-plan-self-check.md"
-    )
-    assert "7 developers + 1 validator" in _read(
-        _CONTENT / "team-planner-playbook/references/root-plan-self-check.md"
-    )
-    assert "You repaired a scout-disproved file or tests-only directory into a sibling exact file" in _read(
-        _CONTENT / "team-planner-playbook/references/root-plan-self-check.md"
-    )
-    assert "compat/re-export shim at a scout-disproved benchmark-import path" in _read(
-        _CONTENT / "team-planner-playbook/references/root-plan-self-check.md"
-    )
-    assert (
-        "Must emit a direct developer lane when the child turn already owns one exact production file"
-        in non_root
-    )
-    assert "Do not emit another `team_planner` child for the same single-file residual." in non_root
-    assert (
-        "Never map a benchmark cluster to a production file solely because the names look similar."
-        in exploration
-    )
-    assert "If a first-wave guessed exact path returns `File not found`, delete that leaf" in exploration
-    assert "Never derive `pkg/foo.py`, `pkg/foo_bar.py`, or a private compat module" in exploration
-    assert "the next planning action must be a scout wave, not final DAG synthesis" in exploration
-    assert (
-        'run_subagent(agent_name="scout", input={"target_paths":["pkg/io/parquet"]}' in exploration
-    )
-    assert "overwrite any earlier brainstorm alias in the first-wave ledger" in exploration
-    assert "delete any earlier `pkg/dataframe/utils_dataframe.py` brainstorm" in exploration
-    assert "Never use a later `ci_workspace_structure(...)` sibling listing as proof" in exploration
-    assert (
-        'Must call `run_subagent(agent_name="scout", input={"target_paths": [...]}, task_note="...")` exactly'
-        in scout_launch
-    )
-    assert "Never pass prompt mode to `scout`." in scout_launch
-    assert "Never launch explorers on `*/tests/test_*.py` or grouped benchmark test files" in scout_launch
-    assert "overwrite any stale guessed aliases in the first-wave ledger" in scout_launch
-    assert "delete any earlier `pkg/dataframe/utils_dataframe.py` brainstorm" in scout_launch
-    assert "before any progress check or reaction to early scout output" in scout_launch
-    assert 'Do not jump to `check_background_progress(task_id="bg_3")`' in scout_launch
-    assert "Never revive a disproved or unconfirmed owner by renaming benchmark files" in planner
-
-
-def test_replanner_skill_has_explicit_conditional_reference_loading() -> None:
-    replanner = _read(_CONTENT / "team-replanner-playbook/SKILL.md")
-    reference = _read(_CONTENT / "team-replanner-playbook/references/corrective-fast-path.md")
-    assert "must load `corrective-fast-path` before deeper analysis" in replanner.lower()
-    assert "when `load_skill_reference` is available" in replanner
-
-
-def test_sweevo_project_context_blocks_structure_only_owner_repairs() -> None:
-    sweevo = _read(_CONTENT / "sweevo-project-context/SKILL.md")
-    assert (
-        "Must treat a structure-only sighting of sibling files as boundary evidence, not exact-owner confirmation"
-        in sweevo
-    )
-
-
-def test_developer_and_validator_skills_explain_when_to_load_references() -> None:
     developer = _read(_CONTENT / "team-developer-playbook/SKILL.md")
-    developer_lower = developer.lower()
-    developer_codeact_ref = _read(
+    validator = _read(_CONTENT / "team-validator-playbook/SKILL.md")
+    replanner = _read(_CONTENT / "team-replanner-playbook/SKILL.md")
+    scout = _read(_CONTENT / "team-scout-playbook/SKILL.md")
+
+    assert "must load `exploration-script`" in planner.lower()
+    assert "must load `scout-launch-contract`" in planner.lower()
+    assert "must load `task-planning-decomposition`" in planner.lower()
+    assert "must load `plan-json-contract`" in planner.lower()
+    assert "never guess an exact owner" in planner.lower()
+    assert "never make non-submission tool calls after loading `plan-json-contract`" in planner.lower()
+    assert "compat/re-export" not in planner
+    assert "utils_dataframe.py" not in planner
+
+    assert "must load `root-cause-debugging`" in developer.lower()
+    assert "must load `widening-and-runtime`" in developer.lower()
+    assert "must load `codeact-runtime-examples`" in developer.lower()
+    assert "must load `pre-completion-validation`" in developer.lower()
+    assert "never rewrite benchmark tests" in developer.lower()
+    assert "uid 0 bypassing" not in developer.lower()
+    assert "pkg._compatibility" not in developer
+
+    assert "must load `cross-surface-guardrails`" in validator.lower()
+    assert "must load `runtime-verification-examples`" in validator.lower()
+    assert "must not paraphrase failure evidence" in validator.lower()
+
+    assert "must load `corrective-fast-path`" in replanner.lower()
+    assert "must load `action-declare-blocker`" in replanner.lower()
+    assert "must load `action-add-tasks`" in replanner.lower()
+    assert "must load `action-cancel-and-redraft`" in replanner.lower()
+
+    assert "must load `completion-contract`" in scout.lower()
+    assert "must stay read-only" in scout.lower()
+    assert "must keep missing targets missing" in scout.lower()
+
+
+def test_reference_files_hold_specialized_detail() -> None:
+    planner_ref = _read(_CONTENT / "team-planner-playbook/references/exploration-script.md")
+    planner_json = _read(_CONTENT / "team-planner-playbook/references/plan-json-contract.md")
+    developer_runtime = _read(
         _CONTENT / "team-developer-playbook/references/codeact-runtime-examples.md"
     )
-    developer_ref = _read(_CONTENT / "team-developer-playbook/references/widening-and-runtime.md")
-    root_cause = _read(_CONTENT / "team-developer-playbook/references/root-cause-debugging.md")
-    validator = _read(_CONTENT / "team-validator-playbook/SKILL.md")
-    validator_ref = _read(
-        _CONTENT / "team-validator-playbook/references/cross-surface-guardrails.md"
+    developer_root_cause = _read(
+        _CONTENT / "team-developer-playbook/references/root-cause-debugging.md"
     )
-    validator_runtime = _read(
+    scout_ref = _read(_CONTENT / "team-scout-playbook/references/completion-contract.md")
+    validator_ref = _read(
         _CONTENT / "team-validator-playbook/references/runtime-verification-examples.md"
     )
 
-    assert (
-        "Must load `widening-and-runtime` before the first widened write outside `scope_paths`."
-        in developer
-    )
-    assert (
-        "Must load `widening-and-runtime` before concluding a runtime-owned lane from non-runtime evidence."
-        in developer
-    )
-    assert (
-        "Must load `codeact-runtime-examples` before the first `daytona_codeact` verification or reproduction command on a benchmark lane."
-        in developer
-    )
-    assert "Must use `daytona_edit_file` or `daytona_write_file` for code changes" in developer
-    assert "`daytona_codeact` for bounded runtime work" in developer
-    assert (
-        "the next step after that first `read_task_note(...)` must be the exact `daytona_codeact` repro, not `daytona_read_file(...)` on a source file or benchmark test."
-        in developer
-    )
-    assert "Must not open benchmark test files with `daytona_read_file(...)` before the first exact repro" in developer
-    assert "use `daytona_read_file(...)` only for owned production files or saved output artifacts" in developer
-    assert (
-        'Prefer `daytona_codeact(command="...", timeout=N)` for repo commands'
-        in developer
-    )
-    assert "daytono_edit_file" in developer
-    assert "verification-surface warning" in developer
-    assert "taints that packet" in developer
-    assert "hand it to replan instead of doing more edits or verify loops" in developer
-    assert "advisory-mode writes on `tests/`" in developer_lower
-    assert "quiet internal implementation/export" in developer
-    assert "move startup imports like `pkg/base.py -> pkg._compatibility` first" in developer
-    assert (
-        "do not satisfy a deprecation test by moving private names behind `pkg.compatibility.__getattr__`"
-        in developer_lower
-    )
-    assert (
-        "that verify or one startup import-smoke must happen before any public-wrapper deprecation edit"
-        in developer
-    )
-    assert (
-        "do not rewrite the verify import or binding just because the public name looks nicer"
-        in developer.lower()
-    )
-    assert "not blanket permission to edit that test or the listed failure file" in developer
-    assert "pkg._compat` or `pkg._compatibility`" in developer
-    assert "verify file imports a missing private compat module or alias" in developer
-    assert "verify target list, not edit ownership" in developer
-    assert "retarget a verify import to a prettier path" in developer
-    assert "even if the packet lists it or the assertion looks inverted" in developer
-    assert "root or OS permission mismatches as failures or blockers" in developer
-    assert "UID 0 bypassing a test's permission setup" in developer
-    assert "If the assigned exact file is missing or disproved" in developer
-    assert "outside-write-scope warnings on a non-adjacent file" in developer
-    assert "advisory warning on a required adjacent import/export shim" in developer
-    assert "repeated outside-write-scope warnings across many files" in developer
-    assert "root-only skips, xfails, or verify-file rewrites" in developer
-    assert "generic `edit_file`, `write_file`, or `read_file`" in developer
-    assert "treat `Unknown tool` as your own Daytona tool-name error" in developer_codeact_ref
-    assert "verification-surface write allowed in advisory mode" in developer_ref
-    assert "raw Python `subprocess.run(...)`" in developer
-    assert (
-        'The preferred benchmark-lane repo-command form is direct `daytona_codeact(command="...", timeout=N)`'
-        in developer_codeact_ref
-    )
-    assert "Must not inspect benchmark test files with `daytona_read_file(...)` before the first exact `daytona_codeact(command=\"...\", timeout=N)` repro" in developer_codeact_ref
-    assert (
-        "Must not start pip-install loops or ad hoc environment mutation" in developer_codeact_ref
-    )
-    assert "Use this reference only when either condition is true:" in developer_ref
-    assert "root or OS permission semantics that invalidate a test setup" in developer_ref
-    assert "Do not skip, xfail, or rewrite the verify file" in developer_ref
-    assert "must not widen by filename similarity alone" in developer_ref.lower()
-    assert "Do not hop to `pkg/foo_bar.py`, `pkg/_foo.py`, or another lookalike path" in developer_ref
-    assert 'or a "wrong" test' in root_cause
-    assert "Deprecation hooks belong on explicit public access paths only" in root_cause
-    assert (
-        "switch startup callers like `pkg/base.py` to a quiet supported path such as `pkg._compat`"
-        in root_cause
-    )
-    assert (
-        "do not rewrite the test import or add a module-level deprecation hook on the public wrapper while startup still uses it"
-        in root_cause
-    )
-    assert "root-only skip, xfail, or verify-file rewrite" in root_cause
-    assert "owned loader or access gate" in root_cause
-    assert "verify target list as edit ownership" in root_cause
-    assert "The first failing boundary is the shared compat/export surface" in root_cause
-    assert (
-        "do not rewrite the verify import or binding just because the public name looks nicer"
-        in developer.lower()
-    )
-
-    assert (
-        "Must load `cross-surface-guardrails` when the touched change affects public serialization, schema shape, or docs-visible output."
-        in validator
-    )
-    assert 'Must run the exact commands from the payload first via `daytona_codeact(command="...", timeout=N)`.' in validator
-    assert "Use `daytona_codeact` for all runtime execution." in validator
-    assert 'Use `daytona_codeact(command="...", timeout=N)` for repo commands.' in validator
-    assert (
-        "the first exact-command verification must use `background=true`, then `check_background_progress(...)` before any wait."
-        in validator
-    )
-    assert (
-        "cancel that background task and use the partial output as the verdict evidence"
-        in validator
-    )
-    assert "Must not route a FAILURE verdict through completion" in validator
-    assert (
-        "cancel the task and use that partial output as the runtime evidence"
-        in validator_runtime
-    )
-    assert 'Must run the exact payload command through `daytona_codeact(command="...", timeout=N)`' in validator_runtime
-    assert (
-        "Use this reference only when the touched change affects public serialization, schema shape, or docs-visible output."
-        in validator_ref
-    )
-
-
-def test_verification_replan_explains_when_to_load_references() -> None:
-    replan = _read(_CONTENT / "verification-replan/SKILL.md")
-    replan_ref = _read(_CONTENT / "verification-replan/references/triage-format.md")
-
-    assert "Must load `triage-format` when you need to produce a manual FAIL summary" in replan
-    assert "Use this reference only when you need a manual FAIL summary" in replan_ref
-
-
-def test_scout_playbook_keeps_missing_targets_missing() -> None:
-    scout = _read(_CONTENT / "team-scout-playbook/SKILL.md")
-    scout_ref = _read(_CONTENT / "team-scout-playbook/references/completion-contract.md")
-    scout_launch = _read(_CONTENT / "team-planner-playbook/references/scout-launch-contract.md")
-    assert "keep that exact path missing" in scout
-    assert "Never inspect nearby replacements" in scout
-    assert 'Never suggest an "intended" or "correct" nearby path' in scout
-    assert "post an evidence-only note and stop" in scout
-    assert "only benchmark test files" in scout
-    assert "unless every target path is a benchmark test file" in scout
-    assert (
-        "Must load `completion-contract` before the first read when `target_paths` is a single file"
-        in scout
-    )
-    assert "Never claim code was created, fixed, patched, or refactored." in scout
-    assert "The note is the durable contract; downstream planners should rely on `read_task_note(...)`" in scout
-    assert "The note should usually cover `Scope`, `Files mapped`, `Entry points`, `Owner seam`, `Suggested subdivisions`, and `Gaps`." in scout
-    assert "Final assistant message should be one short prose sentence" in scout
-    assert "Never dump JSON artifacts" in scout
-    assert "Use CI symbol/reference/hover evidence before any file read" in scout
-    assert "one file-path bootstrap query is allowed only to list indexed definitions" in scout
-    assert "ci_read_file(path=...)` only after CI symbol/reference/hover evidence named the seam" in scout
-    assert "Do not start with `ci_read_file(...)` on a source file." in scout
-    assert "if the exact file query still yields no symbols, post that gap and stop" in scout
-    assert "If a bad assignment mixes a benchmark test file with a live production path" in scout
-    assert "Never use `ci_read_file` as your primary navigation tool" in scout
-    assert "Treat the handed scope itself as the deliverable." in scout_ref
-    assert "The Task Center note is the durable handoff. The final message is only a short prose acknowledgment." in scout_ref
-    assert "If the draft is only a JSON object or only `Mapped pkg/cli.py`, it is unfinished." in scout_ref
-    assert "Never subdivide a single file just because it is long" in scout_ref
-    assert "same-turn overlap is a reuse signal" in scout_launch
-    assert "not a cue to relaunch the same explorer" in scout_launch
-    assert "Never launch a scout with mixed benchmark-test and production `target_paths`" in scout_launch
+    assert "utils_dataframe.py" in planner_ref
+    assert "submit_task_plan(new_tasks=[...])" in planner_json
+    assert 'daytona_codeact(command="...", timeout=N)' in developer_runtime
+    assert "pkg._compat" in developer_root_cause
+    assert "The Task Center note is the durable handoff." in scout_ref
+    assert "check_background_progress" in validator_ref
 
 
 def test_sweevo_context_stays_shared_and_runtime_focused() -> None:
@@ -418,10 +178,9 @@ def test_sweevo_context_stays_shared_and_runtime_focused() -> None:
     )
     assert "Must not derive an exact production file from benchmark filename resemblance alone" in sweevo
     assert "Must use `read_task_note(paths=[...])` to check for existing findings before launching duplicate scouts." in sweevo
-    assert "Must treat scope-change notifications and `context_changed_since()` as freshness signals." in sweevo
+    assert "Must treat scope-change notifications and `task_center_changed_since()` as freshness signals." in sweevo
     assert "Must keep `scope_paths` as soft coordination hints" in sweevo
     assert "Must treat any advisory outside-scope write as a tainted packet" in sweevo
-
 
 
 def test_worker_playbooks_do_not_mention_submitters_or_action_routing() -> None:

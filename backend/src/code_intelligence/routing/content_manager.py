@@ -7,6 +7,12 @@ from pathlib import Path
 from typing import Any
 
 from code_intelligence._async_bridge import run_sync
+from tools.daytona_toolkit._daytona_utils import (
+    _build_read_text_file_command,
+    _build_write_text_file_command,
+    _extract_exit_code,
+    _wrap_bash_command,
+)
 
 
 class ContentManager:
@@ -58,6 +64,26 @@ class ContentManager:
         return path.read_text(encoding="utf-8"), True
 
     def _read_remote(self, file_path: str, *, allow_missing: bool) -> tuple[str, bool]:
+        process = getattr(self._sandbox, "process", None)
+        if process is not None and hasattr(process, "exec"):
+            try:
+                response = run_sync(process.exec(_wrap_bash_command(_build_read_text_file_command(file_path))))
+                cleaned, exit_code = _extract_exit_code(
+                    getattr(response, "result", "") or "",
+                    fallback_exit_code=getattr(response, "exit_code", None),
+                )
+                if exit_code in (0, None):
+                    import json
+
+                    payload = json.loads(cleaned or "{}")
+                    if not payload.get("exists"):
+                        if allow_missing:
+                            return "", False
+                        raise FileNotFoundError(file_path)
+                    return str(payload.get("content", "") or ""), True
+            except Exception as exc:
+                if allow_missing and self._is_missing_error(exc):
+                    return "", False
         try:
             raw = run_sync(self._sandbox.fs.download_file(file_path))
         except Exception as exc:
@@ -69,8 +95,23 @@ class ContentManager:
         return str(raw), True
 
     def _write_remote(self, file_path: str, payload: bytes) -> None:
-        parent = str(Path(file_path).parent)
         process = getattr(self._sandbox, "process", None)
+        if process is not None and hasattr(process, "exec"):
+            try:
+                text = payload.decode("utf-8")
+                response = run_sync(
+                    process.exec(_wrap_bash_command(_build_write_text_file_command(file_path, text)))
+                )
+                cleaned, exit_code = _extract_exit_code(
+                    getattr(response, "result", "") or "",
+                    fallback_exit_code=getattr(response, "exit_code", None),
+                )
+                if exit_code in (0, None):
+                    return
+                raise RuntimeError(cleaned or f"write failed for {file_path}")
+            except UnicodeDecodeError:
+                pass
+        parent = str(Path(file_path).parent)
         if parent and parent not in {".", "/"} and process is not None and hasattr(process, "exec"):
             run_sync(self._sandbox.process.exec(f"mkdir -p {shlex.quote(parent)}"))
         fs = self._sandbox.fs
@@ -90,7 +131,13 @@ class ContentManager:
         process = getattr(self._sandbox, "process", None)
         if process is None or not hasattr(process, "exec"):
             raise RuntimeError("Sandbox process has no exec method")
-        run_sync(process.exec(f"rm -f {shlex.quote(file_path)}"))
+        response = run_sync(process.exec(_wrap_bash_command(f"rm -f {shlex.quote(file_path)}")))
+        cleaned, exit_code = _extract_exit_code(
+            getattr(response, "result", "") or "",
+            fallback_exit_code=getattr(response, "exit_code", None),
+        )
+        if exit_code not in (0, None):
+            raise RuntimeError(cleaned or f"delete failed for {file_path}")
 
     @staticmethod
     def _is_missing_error(exc: Exception) -> bool:

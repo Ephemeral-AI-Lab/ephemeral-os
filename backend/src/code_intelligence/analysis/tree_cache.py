@@ -18,6 +18,8 @@ from __future__ import annotations
 import ast
 import hashlib
 import logging
+import json
+import shlex
 import threading
 import time
 from collections import OrderedDict
@@ -31,6 +33,7 @@ from code_intelligence.constants import (
     TREE_CACHE_MAX_FILE_SIZE,
     TREE_CACHE_MAX_FILES,
 )
+from tools.daytona_toolkit._daytona_utils import _extract_exit_code, _wrap_bash_command
 
 logger = logging.getLogger(__name__)
 
@@ -165,6 +168,37 @@ class TreeCache:
     def _stat_mtime(self, file_path: str) -> str | None:
         """Get file mtime via sandbox or local filesystem."""
         sandbox = self._sandbox
+        process = getattr(sandbox, "process", None) if sandbox else None
+        exec_fn = getattr(process, "exec", None) if process is not None else None
+        if callable(exec_fn) and not getattr(type(exec_fn), "__module__", "").startswith("unittest.mock"):
+            script = """
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+stat = path.stat()
+print(json.dumps({"mtime": stat.st_mtime, "size": stat.st_size}))
+"""
+            try:
+                response = run_sync(
+                    exec_fn(
+                        _wrap_bash_command(
+                            f"python3 -c {shlex.quote(script)} {shlex.quote(file_path)}"
+                        )
+                    )
+                )
+                stdout, exit_code = _extract_exit_code(
+                    getattr(response, "result", "") or "",
+                    fallback_exit_code=getattr(response, "exit_code", None),
+                )
+                if exit_code in (0, None):
+                    payload = json.loads(stdout or "{}")
+                    with self._counter_lock:
+                        self._stat_calls += 1
+                    return str(payload.get("mtime", "") or "")
+            except Exception:
+                return None
         fs = getattr(sandbox, "fs", None) if sandbox else None
         get_info = getattr(fs, "get_file_info", None)
 
@@ -186,6 +220,32 @@ class TreeCache:
     def _read_content(self, file_path: str) -> str | None:
         """Read file content via sandbox or local filesystem."""
         sandbox = self._sandbox
+        process = getattr(sandbox, "process", None) if sandbox else None
+        exec_fn = getattr(process, "exec", None) if process is not None else None
+        if callable(exec_fn) and not getattr(type(exec_fn), "__module__", "").startswith("unittest.mock"):
+            script = """
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+print(path.read_text(encoding="utf-8"))
+"""
+            try:
+                response = run_sync(
+                    exec_fn(
+                        _wrap_bash_command(
+                            f"python3 -c {shlex.quote(script)} {shlex.quote(file_path)}"
+                        )
+                    )
+                )
+                stdout, exit_code = _extract_exit_code(
+                    getattr(response, "result", "") or "",
+                    fallback_exit_code=getattr(response, "exit_code", None),
+                )
+                if exit_code in (0, None):
+                    return stdout
+            except Exception:
+                logger.debug("TreeCache: process.exec read failed for %s", file_path, exc_info=True)
         fs = getattr(sandbox, "fs", None) if sandbox else None
         download = getattr(fs, "download_file", None)
 

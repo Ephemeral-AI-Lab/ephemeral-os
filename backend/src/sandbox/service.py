@@ -9,6 +9,7 @@ Modeled after the synthetic-os sandbox_service for API compatibility.
 from __future__ import annotations
 
 import logging
+import shlex
 import threading
 from typing import Any
 
@@ -37,16 +38,26 @@ _GIT_BOOTSTRAP = r"""
 set -e
 if command -v git >/dev/null 2>&1; then exit 0; fi
 echo "[sandbox] Installing git..."
+as_root() {
+    if [ "$(id -u)" = "0" ]; then
+        "$@"
+    elif command -v sudo >/dev/null 2>&1; then
+        sudo -n "$@"
+    else
+        return 1
+    fi
+}
 if command -v apt-get >/dev/null 2>&1; then
-    apt-get update -qq && apt-get install -y -qq git
+    as_root mkdir -p /var/lib/apt/lists/partial
+    as_root apt-get update -qq && as_root apt-get install -y -qq git
 elif command -v apk >/dev/null 2>&1; then
-    apk add --no-cache git
+    as_root apk add --no-cache git
 elif command -v microdnf >/dev/null 2>&1; then
-    microdnf install -y git
+    as_root microdnf install -y git
 elif command -v dnf >/dev/null 2>&1; then
-    dnf install -y git
+    as_root dnf install -y git
 elif command -v yum >/dev/null 2>&1; then
-    yum install -y git
+    as_root yum install -y git
 else
     echo "[sandbox] No package manager found — git not installed" >&2
     exit 1
@@ -226,12 +237,12 @@ class SandboxProxy:
         """Install git in the sandbox if missing."""
         try:
             resp = self._raw.process.exec(
-                "command -v git >/dev/null 2>&1 && echo ok || echo missing",
+                'bash -lc "command -v git >/dev/null 2>&1 && echo ok || echo missing"',
                 timeout=10,
             )
             if "ok" in (resp.result or ""):
                 return
-            self._raw.process.exec(_GIT_BOOTSTRAP, timeout=120)
+            self._raw.process.exec(f"bash -lc {shlex.quote(_GIT_BOOTSTRAP)}", timeout=120)
         except Exception:
             logger.warning("Git bootstrap failed for sandbox %s", self.id)
 

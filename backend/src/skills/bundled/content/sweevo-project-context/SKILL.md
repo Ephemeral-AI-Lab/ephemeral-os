@@ -24,7 +24,7 @@ Use this skill only for stable benchmark policy. Treat the prompt, payload, live
 - Must treat `docs/architecture/plan-a-team-coordination-redesign.md` as the design intent for this benchmark.
 - Must keep shared context in the Task Center: scouts post durable notes directly, developers and validators rely on Task Center auto-notes plus terminal submissions. Use `read_task_note(...)` for scout findings and dependency context, `read_task_note(scope="sibling", ...)` for sibling activity and conflict checking.
 - Must use `read_task_note(paths=[...])` to check for existing findings before launching duplicate scouts.
-- Must treat scope-change notifications and `context_changed_since()` as freshness signals. Refresh with `read_task_note(...)` before committing, verifying, or replanning on a drifting surface.
+- Must treat scope-change notifications and `task_center_changed_since()` as freshness signals. Refresh with `read_task_note(...)` before committing, verifying, or replanning on a drifting surface.
 - Must keep `scope_paths` as soft coordination hints, not hard filesystem ownership bans.
 - Must treat any advisory outside-scope write as a tainted packet and hand it to replan instead of claiming success from that run.
 

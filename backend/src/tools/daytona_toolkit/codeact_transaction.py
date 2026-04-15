@@ -13,6 +13,7 @@ from tools.core.base import ToolExecutionContext
 from tools.core.ci_runtime import commit_ci_change_against_base, get_ci_service
 from tools.daytona_toolkit._daytona_utils import (
     _extract_exit_code,
+    _read_text_file_via_exec,
     _wrap_bash_command,
     _team_repo_write_error,
     _team_repo_write_warning,
@@ -327,16 +328,19 @@ GIT_INDEX_FILE="$tmp_index" git -C "$scratch_root" diff --cached --numstat --no-
                 continue
 
         if status != "deleted":
-            raw = await sandbox.fs.download_file(str(PurePosixPath(tx.scratch_root) / path))
-            final_content, decode_error = _decode_text(raw)
-            if decode_error is not None:
+            try:
+                final_content, _ = await _read_text_file_via_exec(
+                    sandbox,
+                    str(PurePosixPath(tx.scratch_root) / path),
+                )
+            except UnicodeDecodeError:
                 changes.append(
                     RepoChange(
                         path=path,
                         status="unsupported",
                         base_content=None,
                         final_content=None,
-                        message=f"{path}: {decode_error}",
+                        message=f"{path}: Binary or non-UTF-8 content is not supported",
                     )
                 )
                 continue

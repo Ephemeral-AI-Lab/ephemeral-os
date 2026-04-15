@@ -47,6 +47,8 @@ class ExecutionMetadata:
     agent_run_id: str | None = None
     agent_name: str = ""
     cwd: str = ""
+    repo_root: str = ""
+    exec_cwd: str = ""
 
     # Tool registry reference (used by tools that need to introspect the
     # broader tool surface, e.g. skills that can call sibling tools).
@@ -61,6 +63,8 @@ class ExecutionMetadata:
 
     # Daytona sandbox plumbing, injected by ``DaytonaToolkit.prepare_context``.
     daytona_sandbox: Any | None = None
+    # Deprecated compatibility alias for older callers. New code should use
+    # ``repo_root`` and ``exec_cwd`` instead.
     daytona_cwd: str | None = None
     ci_service: Any | None = None
     arbiter: Any | None = None
@@ -87,6 +91,8 @@ class ExecutionMetadata:
             "agent_run_id",
             "agent_name",
             "cwd",
+            "repo_root",
+            "exec_cwd",
             "tool_registry",
             "background_task_manager",
             "background_task_id",

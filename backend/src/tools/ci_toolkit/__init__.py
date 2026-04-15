@@ -7,7 +7,6 @@ from tools.ci_toolkit.query_tools import (
     ci_query_symbol,
     ci_workspace_structure,
 )
-from tools.ci_toolkit.file_tools import ci_read_file
 from tools.ci_toolkit.lsp_tools import ci_diagnostics
 
 _ALL_TOOLS = [
@@ -16,7 +15,6 @@ _ALL_TOOLS = [
     ci_query_symbol,
     ci_diagnostics,
     ci_edit_hotspots,
-    ci_read_file,
 ]
 
 _INSTRUCTIONS = (
@@ -42,7 +40,7 @@ _INSTRUCTIONS = (
     "- `ci_workspace_structure` — tree view of the project layout.\n"
     "- `ci_edit_hotspots` — find contention-prone files before editing. "
     "Use `cross_run=True` for cross-run multi-agent contention data.\n"
-    "- `ci_read_file` — confirm file contents after CI symbol queries narrowed the seam.\n\n"
+    "- Use sandbox file reads only after CI symbol queries narrowed the seam.\n\n"
     "## Anti-patterns\n"
     "- Do not grep for a symbol name when `ci_query_symbol` can find its definition directly.\n"
     "- Do not trace callers by grepping import statements when `ci_query_symbol(name, references=true)` "
@@ -53,24 +51,14 @@ _INSTRUCTIONS = (
 
 
 class CIToolkit(BaseToolkit):
-    """Read-only code intelligence toolkit.
-
-    Planner-family agents do not get ``ci_read_file`` because they should
-    anchor ownership through symbols, references, and scoped structure.
-    """
+    """Read-only code intelligence toolkit."""
 
     @classmethod
     def from_context(cls, ctx):  # type: ignore[override]
-        from agents.registry import has_role
-
-        agent_name = str(ctx.metadata.get("agent_name") or "")
-        tools = list(_ALL_TOOLS)
-        if has_role(agent_name, "planner") or has_role(agent_name, "replanner"):
-            tools = [tool for tool in tools if tool.name != "ci_read_file"]
         return cls(
             name="code_intelligence",
             description="Read-only code intelligence: symbols, LSP, structure, changes",
-            tools=tools,
+            tools=list(_ALL_TOOLS),
             instructions=_INSTRUCTIONS,
         )
 

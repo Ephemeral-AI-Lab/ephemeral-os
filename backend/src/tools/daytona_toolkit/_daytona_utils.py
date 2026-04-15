@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import base64
+import inspect
+import json
 import logging
 import re
 import shlex
@@ -184,16 +187,22 @@ async def _attach_sandbox_to_context(context: ToolExecutionContext) -> Any:
 
         sandbox = await get_async_sandbox(sandbox_id)
         context.metadata["daytona_sandbox"] = sandbox
-        cwd = context.metadata.get("daytona_cwd")
-        if not cwd:
+        repo_root = context.metadata.get("repo_root")
+        if not repo_root:
             project_dir = getattr(sandbox, "project_dir", None)
-            cwd = project_dir or await discover_workspace_async(sandbox)
-            if cwd:
-                context.metadata["daytona_cwd"] = cwd
+            repo_root = project_dir or await discover_workspace_async(sandbox)
+            if repo_root:
+                context.metadata["repo_root"] = repo_root
+        if not context.metadata.get("exec_cwd") and repo_root:
+            context.metadata["exec_cwd"] = repo_root
         if "ci_service" not in context.metadata and not context.metadata.get(
             "skip_code_intelligence"
         ):
-            ci_root = context.metadata.get("ci_workspace_root") or cwd or DEFAULT_SANDBOX_CI_ROOT
+            ci_root = (
+                context.metadata.get("ci_workspace_root")
+                or repo_root
+                or DEFAULT_SANDBOX_CI_ROOT
+            )
             inject_code_intelligence(context, sandbox_id, sandbox, ci_root)
         return sandbox
     except Exception as exc:
@@ -252,13 +261,25 @@ def _path_error(exc: Exception, path: str) -> str | None:
     return None
 
 
-def _get_cwd(context: ToolExecutionContext) -> str | None:
-    """Get working directory, preferring sandbox project dir.
+def _get_repo_root(context: ToolExecutionContext) -> str | None:
+    """Return the canonical sandbox repo root for file-oriented tools."""
+    return (
+        context.metadata.get("repo_root")
+        or context.metadata.get("daytona_cwd")
+    )
 
-    Returns None if no sandbox-specific cwd is set, letting the sandbox
-    use its default directory (typically /home/daytona).
-    """
-    return context.metadata.get("daytona_cwd")
+
+def _get_exec_cwd(context: ToolExecutionContext) -> str | None:
+    """Return the working directory for shell execution."""
+    return (
+        context.metadata.get("exec_cwd")
+        or _get_repo_root(context)
+    )
+
+
+def _get_cwd(context: ToolExecutionContext) -> str | None:
+    """Backward-compatible alias for callers that still expect sandbox cwd."""
+    return _get_repo_root(context)
 
 
 def _resolve_path(path: str, context: ToolExecutionContext) -> str:
@@ -269,9 +290,9 @@ def _resolve_path(path: str, context: ToolExecutionContext) -> str:
     """
     if path.startswith("/"):
         return path
-    cwd = _get_cwd(context)
-    if cwd:
-        return f"{cwd}/{path}"
+    repo_root = _get_repo_root(context)
+    if repo_root:
+        return f"{repo_root}/{path}"
     return path
 
 
@@ -396,7 +417,7 @@ def _team_repo_write_error(
     """Return a hard policy error for repo writes that coordinated agents must not perform."""
     if not is_coordinated_team_agent(context):
         return None
-    repo_root = str(_get_cwd(context) or "")
+    repo_root = str(_get_repo_root(context) or "")
     rel_path = _normalize_repo_relative_path(file_path, repo_root)
     if not rel_path:
         return None
@@ -417,7 +438,7 @@ def _team_repo_write_warning(
     """Return an advisory warning for risky-but-allowed coordinated repo writes."""
     if not is_coordinated_team_agent(context):
         return None
-    repo_root = str(_get_cwd(context) or "")
+    repo_root = str(_get_repo_root(context) or "")
     rel_path = _normalize_repo_relative_path(file_path, repo_root)
     if not rel_path:
         return None
@@ -463,3 +484,129 @@ async def _upload_file_compat(sandbox: Any, content: bytes, file_path: str) -> N
         if "decode" not in str(exc) and "bytes-like object" not in str(exc):
             raise
         await sandbox.fs.upload_file(file_path, content)
+
+
+def _supports_exec_transport(sandbox: Any) -> bool:
+    process = getattr(sandbox, "process", None)
+    exec_fn = getattr(process, "exec", None) if process is not None else None
+    if not callable(exec_fn):
+        return False
+    module_name = type(exec_fn).__module__
+    if module_name.startswith("unittest.mock"):
+        return False
+    return True
+
+
+async def _exec_command(sandbox: Any, command: str) -> Any:
+    process = getattr(sandbox, "process", None)
+    exec_fn = getattr(process, "exec", None) if process is not None else None
+    if not callable(exec_fn):
+        raise RuntimeError("Sandbox process has no exec method")
+    response = exec_fn(command)
+    if not inspect.isawaitable(response):
+        raise RuntimeError("Sandbox process.exec is not awaitable")
+    return await response
+
+
+def _build_read_text_file_command(file_path: str) -> str:
+    script = """
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+try:
+    content = path.read_text(encoding="utf-8")
+except FileNotFoundError:
+    print(json.dumps({"exists": False}))
+else:
+    print(json.dumps({"exists": True, "content": content}))
+"""
+    return (
+        f"python3 -c {shlex.quote(script)} {shlex.quote(file_path)}"
+    )
+
+
+def _build_write_text_file_command(file_path: str, content: str) -> str:
+    payload = base64.b64encode(content.encode("utf-8")).decode("ascii")
+    script = """
+import base64
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+path.parent.mkdir(parents=True, exist_ok=True)
+path.write_text(base64.b64decode(sys.argv[2]).decode("utf-8"), encoding="utf-8")
+"""
+    return (
+        f"python3 -c {shlex.quote(script)} "
+        f"{shlex.quote(file_path)} {shlex.quote(payload)}"
+    )
+
+
+async def _read_text_file_via_exec(
+    sandbox: Any,
+    file_path: str,
+    *,
+    allow_missing: bool = False,
+) -> tuple[str, bool]:
+    if _supports_exec_transport(sandbox):
+        try:
+            response = await _exec_command(
+                sandbox,
+                _wrap_bash_command(_build_read_text_file_command(file_path)),
+            )
+            stdout = getattr(response, "result", "") or ""
+            cleaned, exit_code = _extract_exit_code(
+                stdout,
+                fallback_exit_code=getattr(response, "exit_code", None),
+            )
+            if exit_code not in (0, None):
+                raise RuntimeError(cleaned or f"read failed for {file_path}")
+            payload = json.loads(cleaned or "{}")
+            if not payload.get("exists"):
+                if allow_missing:
+                    return "", False
+                raise FileNotFoundError(file_path)
+            return str(payload.get("content", "") or ""), True
+        except (FileNotFoundError, UnicodeDecodeError):
+            raise
+        except Exception:
+            logger.debug("process.exec text read failed for %s; falling back to fs", file_path, exc_info=True)
+    raw = await sandbox.fs.download_file(file_path)
+    if isinstance(raw, bytes):
+        return raw.decode("utf-8"), True
+    return str(raw), True
+
+
+async def _write_text_file_via_exec(sandbox: Any, file_path: str, content: str) -> None:
+    if _supports_exec_transport(sandbox):
+        try:
+            response = await _exec_command(
+                sandbox,
+                _wrap_bash_command(_build_write_text_file_command(file_path, content)),
+            )
+            stdout = getattr(response, "result", "") or ""
+            cleaned, exit_code = _extract_exit_code(
+                stdout,
+                fallback_exit_code=getattr(response, "exit_code", None),
+            )
+            if exit_code not in (0, None):
+                raise RuntimeError(cleaned or f"write failed for {file_path}")
+            return
+        except Exception:
+            logger.debug("process.exec text write failed for %s; falling back to fs", file_path, exc_info=True)
+    await _upload_file_compat(sandbox, content.encode("utf-8"), file_path)
+
+
+async def _delete_file_via_exec(sandbox: Any, file_path: str) -> None:
+    if not _supports_exec_transport(sandbox):
+        raise RuntimeError("Sandbox process has no exec method")
+    response = await _exec_command(sandbox, _wrap_bash_command(f"rm -f {shlex.quote(file_path)}"))
+    stdout = getattr(response, "result", "") or ""
+    cleaned, exit_code = _extract_exit_code(
+        stdout,
+        fallback_exit_code=getattr(response, "exit_code", None),
+    )
+    if exit_code not in (0, None):
+        raise RuntimeError(cleaned or f"delete failed for {file_path}")

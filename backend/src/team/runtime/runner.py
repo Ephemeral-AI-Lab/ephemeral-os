@@ -171,6 +171,7 @@ class TeamAgentRunner:
             agent_def=effective_defn,
             latest_user_prompt=prompt,
             sandbox_id=self.sandbox_id,
+            terminal_tools=ctx.tool_metadata.get("terminal_tools"),
         )
 
         compacted_before: int | None = None

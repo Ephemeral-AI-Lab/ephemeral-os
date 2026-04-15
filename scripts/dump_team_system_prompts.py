@@ -16,6 +16,7 @@ from prompt_helpers import (  # type: ignore[attr-defined]
     load_agent_definition,
     load_team_definition,
     register_builtins,
+    resolve_terminal_tools_for_role,
 )
 
 
@@ -82,6 +83,7 @@ def _render_report(
             settings=settings,
             sandbox_id=sandbox_id,
             include_capabilities=include_capabilities,
+            terminal_tools=resolve_terminal_tools_for_role(team_def, getattr(agent_def, "role", None)),
         )
         lines.extend([
             "",

@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import logging
 import posixpath
+import json
+import shlex
 from pathlib import Path
 from typing import Any
 
 from code_intelligence._async_bridge import run_sync
 from code_intelligence.constants import SKIP_DIRECTORIES, SUPPORTED_EXTENSIONS
+from tools.daytona_toolkit._daytona_utils import _extract_exit_code, _wrap_bash_command
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +50,10 @@ def read_file_content(file_path: str, sandbox: Any = None) -> str | None:
     except Exception:
         pass
 
+    content = _read_text_via_exec(sandbox, file_path)
+    if content is not None:
+        return content
+
     fs = getattr(sandbox, "fs", None) if sandbox is not None else None
     download = getattr(fs, "download_file", None)
     if not callable(download):
@@ -71,6 +78,10 @@ def batch_download(
     sandbox does not expose the batch API. Individual download failures are
     silently dropped.
     """
+    via_exec = _batch_read_text_via_exec(sandbox, files)
+    if via_exec is not None:
+        return via_exec
+
     fs = getattr(sandbox, "fs", None) if sandbox is not None else None
     download_files_fn = getattr(fs, "download_files", None)
     if not callable(download_files_fn) or not _is_real_sdk(fs):
@@ -168,3 +179,94 @@ def _is_real_sdk(fs: Any) -> bool:
     """Best-effort check that *fs* is the Daytona SDK, not a MagicMock."""
     mod = getattr(type(fs), "__module__", "") or ""
     return "daytona" in mod
+
+
+def _supports_exec_transport(sandbox: Any) -> bool:
+    process = getattr(sandbox, "process", None) if sandbox is not None else None
+    exec_fn = getattr(process, "exec", None) if process is not None else None
+    if not callable(exec_fn):
+        return False
+    return not getattr(type(exec_fn), "__module__", "").startswith("unittest.mock")
+
+
+def _read_text_via_exec(sandbox: Any, file_path: str) -> str | None:
+    if not _supports_exec_transport(sandbox):
+        return None
+    script = """
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+try:
+    print(path.read_text(encoding="utf-8"))
+except Exception as exc:
+    print(json.dumps({"error": str(exc)}))
+    raise
+"""
+    try:
+        response = run_sync(
+            sandbox.process.exec(
+                _wrap_bash_command(
+                    f"python3 -c {shlex.quote(script)} {shlex.quote(file_path)}"
+                )
+            )
+        )
+        stdout, exit_code = _extract_exit_code(
+            getattr(response, "result", "") or "",
+            fallback_exit_code=getattr(response, "exit_code", None),
+        )
+        if exit_code not in (0, None):
+            return None
+        return stdout
+    except Exception:
+        logger.debug("process.exec read failed for %s", file_path, exc_info=True)
+        return None
+
+
+def _batch_read_text_via_exec(
+    sandbox: Any,
+    files: list[str],
+) -> list[tuple[str, str]] | None:
+    if not files or not _supports_exec_transport(sandbox):
+        return None
+    script = """
+import json
+import pathlib
+import sys
+
+payload = []
+for raw_path in sys.argv[1:]:
+    path = pathlib.Path(raw_path)
+    try:
+        payload.append({"path": raw_path, "content": path.read_text(encoding="utf-8")})
+    except Exception:
+        continue
+print(json.dumps(payload))
+"""
+    args = " ".join(shlex.quote(path) for path in files)
+    try:
+        response = run_sync(
+            sandbox.process.exec(
+                _wrap_bash_command(f"python3 -c {shlex.quote(script)} {args}")
+            )
+        )
+        stdout, exit_code = _extract_exit_code(
+            getattr(response, "result", "") or "",
+            fallback_exit_code=getattr(response, "exit_code", None),
+        )
+        if exit_code not in (0, None):
+            return None
+        payload = json.loads(stdout or "[]")
+        out: list[tuple[str, str]] = []
+        for item in payload:
+            if not isinstance(item, dict):
+                continue
+            fp = item.get("path")
+            content = item.get("content")
+            if isinstance(fp, str) and isinstance(content, str):
+                out.append((fp, content))
+        return out
+    except Exception:
+        logger.debug("process.exec batch read failed", exc_info=True)
+        return None

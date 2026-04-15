@@ -18,6 +18,7 @@ from tools.core.decorator import tool
 from tools.daytona_toolkit._daytona_utils import (
     _extract_exit_code,
     _get_cwd,
+    _read_text_file_via_exec,
     _recover_sandbox,
     _require_sandbox,
     _upload_file_compat,
@@ -737,8 +738,8 @@ async def daytona_codeact(
             return ToolResult(output=f"Script output:\n{stdout[:4000]}")
 
         try:
-            raw = await sandbox.fs.download_file(manifest_path)
-            manifest = json.loads(raw.decode("utf-8") if isinstance(raw, bytes) else raw)
+            manifest_text, _ = await _read_text_file_via_exec(sandbox, manifest_path)
+            manifest = json.loads(manifest_text)
         except Exception:
             if result.get("status") == "error":
                 return ToolResult(

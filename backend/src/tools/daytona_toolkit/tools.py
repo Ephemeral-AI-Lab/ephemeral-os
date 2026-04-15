@@ -15,12 +15,14 @@ from tools.daytona_toolkit._daytona_utils import (
     _recover_sandbox,
     _path_error,
     _get_cwd,
+    _read_text_file_via_exec,
     _resolve_path,
     _normalize_repo_relative_path,
     _normalize_string_list,
     _team_repo_write_error,
     _team_repo_write_warning,
     _upload_file_compat,
+    _write_text_file_via_exec,
     is_coordinated_team_agent,
     record_coordination_warning,
 )
@@ -246,11 +248,12 @@ async def daytona_read_file(
     if contract_error is not None:
         return ToolResult(output=contract_error, is_error=True)
     try:
-        raw = await _run_with_recovery(
-            context,
-            lambda sandbox: sandbox.fs.download_file(file_path),
-        )
-        content = raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
+        sandbox = await _require_sandbox(context)
+        try:
+            content, _ = await _read_text_file_via_exec(sandbox, file_path)
+        except Exception as exc:
+            sandbox = await _recover_sandbox(context, exc)
+            content, _ = await _read_text_file_via_exec(sandbox, file_path)
         return _build_read_file_result(
             context=context,
             file_path=file_path,
@@ -277,8 +280,11 @@ async def _do_raw_write(
     content: str,
     content_bytes: bytes,
 ) -> None:
-    """Upload file and sync CI state (no prepared-write path)."""
-    await _upload_file_compat(sandbox, content_bytes, file_path)
+    """Write file via process.exec and sync CI state (no prepared-write path)."""
+    try:
+        await _write_text_file_via_exec(sandbox, file_path, content)
+    except Exception:
+        await _upload_file_compat(sandbox, content_bytes, file_path)
     sync_write_to_ci(context, file_path, content, edit_type="write", description="daytona_write_file")
 
 

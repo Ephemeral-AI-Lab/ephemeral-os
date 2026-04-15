@@ -27,19 +27,19 @@ def _budget_warning_steps(context: "QueryContext") -> str:
     if role == "planner":
         return (
             "1. Stop exploring and shaping new lanes immediately.\n"
-            "2. Call context_changed_since() if you have not already.\n"
+            "2. Call task_center_changed_since() if you have not already.\n"
             "3. Call submit_task_plan() with the strongest plan you can defend right now."
         )
     if role == "replanner":
         return (
             "1. Stop reopening ownership questions immediately.\n"
-            "2. Call context_changed_since() if you have not already.\n"
+            "2. Call task_center_changed_since() if you have not already.\n"
             "3. Call submit_task_plan() or declare_blocker() with the corrective action you can already justify."
         )
     if role == "reviewer":
         return (
             "1. Run one final exact verification command (daytona_codeact) only if you still need decisive evidence.\n"
-            "2. Call context_changed_since() if you have not already.\n"
+            "2. Call task_center_changed_since() if you have not already.\n"
             "3. Call submit_task_summary(type='success') for PASS, or submit_task_summary(type='fail') with exact evidence for FAILURE."
         )
     return (

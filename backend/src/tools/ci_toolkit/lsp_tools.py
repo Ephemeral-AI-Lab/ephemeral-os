@@ -12,8 +12,9 @@ from tools.core.decorator import tool
 def _ci_cwd(context: ToolExecutionContext) -> str | None:
     """Return the effective workspace root exposed to CI-backed tools."""
     return str(
-        context.metadata.get("daytona_cwd")
+        context.metadata.get("repo_root")
         or context.metadata.get("ci_workspace_root")
+        or context.metadata.get("daytona_cwd")
         or context.cwd
         or ""
     ).strip() or None

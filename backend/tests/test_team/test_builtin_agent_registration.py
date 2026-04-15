@@ -32,7 +32,7 @@ def test_builtin_team_agents_use_default_tool_call_limits() -> None:
         assert defn.tool_call_limit == 100
 
 
-def test_team_planner_code_intelligence_toolkit_omits_ci_read_file() -> None:
+def test_team_agents_share_same_code_intelligence_toolkit_surface() -> None:
     planner_ci = create_toolkit(
         "code_intelligence",
         ToolkitContext(metadata={"agent_name": TEAM_PLANNER}),
@@ -42,8 +42,7 @@ def test_team_planner_code_intelligence_toolkit_omits_ci_read_file() -> None:
         ToolkitContext(metadata={"agent_name": DEVELOPER}),
     )
 
-    assert "ci_read_file" not in planner_ci.tool_names()
-    assert "ci_read_file" in developer_ci.tool_names()
+    assert set(planner_ci.tool_names()) == set(developer_ci.tool_names())
 
 
 def test_toolkit_instructions_surface_scope_and_search_tools() -> None:
@@ -80,16 +79,16 @@ def test_team_worker_sandbox_toolkit_includes_codeact() -> None:
     assert "daytona_bash" not in validator_sandbox.tool_names()
 
 
-def test_context_toolkit_alias_survives_restriction() -> None:
-    context_toolkit = create_toolkit(
-        "context",
+def test_task_center_toolkit_survives_restriction() -> None:
+    task_center_toolkit = create_toolkit(
+        "task_center",
         ToolkitContext(metadata={"agent_name": TEAM_PLANNER}),
     )
     registry = ToolRegistry()
-    registry.register_toolkit(context_toolkit)
-    registry.restrict_to_toolkits(["context"])
+    registry.register_toolkit(task_center_toolkit)
+    registry.restrict_to_toolkits(["task_center"])
 
-    assert registry.get_toolkit("context") is not None
+    assert registry.get_toolkit("task_center") is not None
     assert registry.get("read_task_note") is not None
     # post_note moved to submission toolkit (terminal tools only)
-    assert registry.get("context_changed_since") is not None
+    assert registry.get("task_center_changed_since") is not None

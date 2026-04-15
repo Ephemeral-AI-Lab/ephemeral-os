@@ -14,6 +14,6 @@ Use `submit_task_plan(new_tasks=[...], remove_tasks=[...])` when sibling tasks a
 - Must confirm which siblings are actually stale before adding to `remove_tasks`.
 - `remove_tasks` only accepts sibling IDs (same parent level). DONE siblings are immutable and cannot be removed.
 - Replacement tasks in `new_tasks` must cover the work being cancelled.
-- Must call `context_changed_since()` before submitting if freshness moved.
+- Must call `task_center_changed_since()` before submitting if freshness moved.
 - Never cancel DONE siblings — they are immutable.
 - Do not cancel siblings without confirming they are actually stale.

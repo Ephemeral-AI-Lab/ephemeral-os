@@ -862,7 +862,7 @@ Explorer is a subagent spawned via `run_subagent()`, not a dispatched task. Its 
 
 | Toolkit | Planner | Developer | Reviewer | Replanner |
 |---------|:-------:|:---------:|:--------:|:---------:|
-| `code_intelligence` | read (blocked: ci_read_file) | full | full | read (blocked: ci_read_file) |
+| `code_intelligence` | read | full | full | read |
 | `sandbox_operations` | -- | full | full | -- |
 | `subagent` | spawn (explorer only) | -- | -- | -- |
 | `context` | read-only (blocked: post_note) | full | full | read-only (blocked: post_note) |
@@ -1383,7 +1383,7 @@ Explorer is a subagent (see Section 10.3) — its toolkits are defined in its ag
 
 | Toolkit | Planner | Developer | Reviewer | Replanner |
 |---------|:-------:|:---------:|:--------:|:---------:|
-| `code_intelligence` | read (blocked: ci_read_file) | full | full | read (blocked: ci_read_file) |
+| `code_intelligence` | read | full | full | read |
 | `sandbox_operations` | -- | full | full | -- |
 | `subagent` | spawn (explorer only) | -- | -- | -- |
 | `context` | read-only (blocked: post_note) | full | full | read-only (blocked: post_note) |

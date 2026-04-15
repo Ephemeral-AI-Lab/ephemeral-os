@@ -169,30 +169,42 @@ class DaytonaToolkit(BaseToolkit):
         inject_code_intelligence(context, self.sandbox_id, sandbox, workspace_root)
 
     def prepare_context(self, context: Any) -> None:
-        """Inject sandbox, cwd, and optional CI service into a ToolExecutionContext.
+        """Inject sandbox, repo root, and optional CI service into a ToolExecutionContext.
 
         Call this before executing any Daytona tool so it can access
         the sandbox via ``context.metadata['daytona_sandbox']`` and
-        the resolved cwd via ``context.metadata['daytona_cwd']``.
+        the resolved repo root via ``context.metadata['repo_root']``.
         """
         sandbox = self._get_sandbox()
         context.metadata["daytona_sandbox"] = sandbox
-        cwd = context.metadata.get("daytona_cwd") or self._resolve_cwd_sync(sandbox)
-        if cwd:
-            context.metadata["daytona_cwd"] = cwd
-        ci_root = context.metadata.get("ci_workspace_root") or cwd or DEFAULT_SANDBOX_CI_ROOT
+        repo_root = context.metadata.get("repo_root") or self._resolve_cwd_sync(sandbox)
+        if repo_root:
+            context.metadata["repo_root"] = repo_root
+        if not context.metadata.get("exec_cwd") and repo_root:
+            context.metadata["exec_cwd"] = repo_root
+        ci_root = (
+            context.metadata.get("ci_workspace_root")
+            or repo_root
+            or DEFAULT_SANDBOX_CI_ROOT
+        )
         self._inject_ci(context, sandbox, ci_root)
 
     async def prepare_context_async(self, context: Any) -> None:
-        """Inject async sandbox, cwd, and optional CI service into a ToolExecutionContext.
+        """Inject async sandbox, repo root, and optional CI service into a ToolExecutionContext.
 
         Use this for streaming tool execution where cancellation support is needed.
         The async sandbox supports asyncio.CancelledError propagation.
         """
         sandbox = await self._get_sandbox_async()
         context.metadata["daytona_sandbox"] = sandbox
-        cwd = context.metadata.get("daytona_cwd") or await self._resolve_cwd_async(sandbox)
-        if cwd:
-            context.metadata["daytona_cwd"] = cwd
-        ci_root = context.metadata.get("ci_workspace_root") or cwd or DEFAULT_SANDBOX_CI_ROOT
+        repo_root = context.metadata.get("repo_root") or await self._resolve_cwd_async(sandbox)
+        if repo_root:
+            context.metadata["repo_root"] = repo_root
+        if not context.metadata.get("exec_cwd") and repo_root:
+            context.metadata["exec_cwd"] = repo_root
+        ci_root = (
+            context.metadata.get("ci_workspace_root")
+            or repo_root
+            or DEFAULT_SANDBOX_CI_ROOT
+        )
         self._inject_ci(context, sandbox, ci_root)

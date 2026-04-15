@@ -25,6 +25,7 @@ from engine.runtime.agent import (  # type: ignore[attr-defined]
 from team.builtins import register_all as register_team_builtins  # type: ignore[attr-defined]
 from team.models import TeamDefinition  # type: ignore[attr-defined]
 from team.registry import get_team_definition, list_team_definitions  # type: ignore[attr-defined]
+from team.runtime.context_builder import DEFAULT_TERMINAL_TOOLS  # type: ignore[attr-defined]
 
 
 def register_builtins() -> None:
@@ -91,6 +92,7 @@ def build_agent_system_prompt_text(
     settings,
     sandbox_id: str = "",
     include_capabilities: bool = True,
+    terminal_tools: set[str] | list[str] | None = None,
 ) -> str:
     """Build the assembled system prompt exactly as spawn_agent would."""
     config = SimpleNamespace(cwd=cwd)
@@ -112,9 +114,22 @@ def build_agent_system_prompt_text(
             tool_registry,
             system_prompt,
             can_spawn_subagents=agent_def.can_spawn_subagents,
+            terminal_tools=terminal_tools,
         )
 
     return system_prompt
+
+
+def resolve_terminal_tools_for_role(team_def: TeamDefinition | None, role: str | None) -> set[str]:
+    """Resolve terminal tools for a team role using team overrides or defaults."""
+    role_name = str(role or "").strip()
+    if not role_name:
+        return set()
+    td_map = getattr(team_def, "terminal_tools", None) or {}
+    terminal_set = td_map.get(role_name) if td_map else None
+    if not terminal_set:
+        terminal_set = DEFAULT_TERMINAL_TOOLS.get(role_name, set())
+    return set(terminal_set)
 
 
 def load_team_definition(identifier: str, settings) -> TeamDefinition | None:

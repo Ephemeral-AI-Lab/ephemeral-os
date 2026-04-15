@@ -57,7 +57,7 @@ role: developer
 model: inherit
 tool_call_limit: 100
 toolkits: ["sandbox_operations", "code_intelligence"]
-blocked_tools: ["ci_read_file"]
+blocked_tools: []
 allowed_triggers: ["tc_note"]
 ---
 # System Prompt (body of the file)
@@ -414,7 +414,7 @@ Sequence showing a team run from start through task dispatch to completion, inte
 | `effort` | Heuristic budget; low/medium/high | High = larger tool_call_limit |
 | `tool_call_limit` | Max tool calls before agent stops | 50, 100, unlimited (None) |
 | `toolkits` | Allowed tool groups (sandbox, code_intelligence, search) | ["sandbox_operations", "code_intelligence"] |
-| `blocked_tools` | Tool names to remove after assembly | ["ci_read_file"] |
+| `blocked_tools` | Tool names to remove after assembly | [] |
 | `skills` | Skill playbooks to inject | ["team-developer-playbook"] |
 | `role` | Team dispatch label (planner, developer, reviewer) | "developer" |
 | `agent_type` | agent \| subagent (capability flag) | "agent" |

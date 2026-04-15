@@ -1,8 +1,8 @@
 """Task Center tools — notes + staleness.
 
 Tools exposed in the main loop:
-- read_task_note               — read/search notes with optional keyword filter
-- context_changed_since    — check if context is stale (other agents' edits)
+- read_task_note                — read/search notes with optional keyword filter
+- task_center_changed_since     — check if task-center state is stale
 
 Role-based restrictions are handled via ``blocked_tools`` in agent definitions
 rather than separate read/write toolkit variants.
@@ -19,7 +19,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from team._path_utils import normalize_scope_paths, scope_paths_overlap
-from tools.context.freshness import check_freshness
+from tools.task_center.freshness import check_freshness
 from tools.core.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolResult
 
 _BACKTICK_PATH_RE = re.compile(r"`([^`\n]+)`")
@@ -150,22 +150,25 @@ PostNoteTool = SubmitTaskNoteTool
 
 
 # ---------------------------------------------------------------------------
-# ContextChangedSinceTool
+# TaskCenterChangedSinceTool
 # ---------------------------------------------------------------------------
 
 
-class ContextChangedSinceInput(BaseModel):
+class TaskCenterChangedSinceInput(BaseModel):
     pass  # No arguments needed — uses task start time
 
 
-class ContextChangedSinceTool(BaseTool):
-    name = "context_changed_since"
-    description = "Check if your context has changed since task started. Call before committing multi-file changes."
-    short_description = "Check whether task context is stale."
-    input_model = ContextChangedSinceInput
+class TaskCenterChangedSinceTool(BaseTool):
+    name = "task_center_changed_since"
+    description = (
+        "Check if Task Center state has changed since task start. "
+        "Call before committing multi-file changes."
+    )
+    short_description = "Check whether Task Center state is stale."
+    input_model = TaskCenterChangedSinceInput
 
     async def execute(
-        self, arguments: ContextChangedSinceInput, context: ToolExecutionContext
+        self, arguments: TaskCenterChangedSinceInput, context: ToolExecutionContext
     ) -> ToolResult:
         context.metadata["checked_context_freshness"] = True
         report = await check_freshness(context)
@@ -183,7 +186,7 @@ class ContextChangedSinceTool(BaseTool):
                     "new_dep_notes": report.new_dep_notes,
                     "new_sibling_completions": report.new_sibling_completions,
                     "suggestion": "Re-read affected files and check Task Center "
-                    "for new context before committing."
+                    "for new state before committing."
                     if report.stale
                     else None,
                 }
@@ -460,12 +463,12 @@ _ALL_TOOLS = [
     ReadTaskNoteTool(),
     ReadTaskDetailsTool(),
     ReadTaskGraphTool(),
-    ContextChangedSinceTool(),
+    TaskCenterChangedSinceTool(),
 ]
 
 
 class TaskCenterToolkit(BaseToolkit):
-    """Task Center tools: notes, task graph, task details, and scope changes.
+    """Task Center tools: notes, task graph, task details, and freshness checks.
 
     All tools are registered; role-based restrictions (e.g. blocking
     ``submit_task_note`` for planners) are handled via ``blocked_tools`` in
@@ -476,6 +479,6 @@ class TaskCenterToolkit(BaseToolkit):
     def from_context(cls, ctx: object) -> TaskCenterToolkit:
         return cls(
             name="task_center",
-            description="Task Center tools: notes, task graph, details, and scope changes.",
+            description="Task Center tools: notes, task graph, details, and freshness checks.",
             tools=list(_ALL_TOOLS),
         )

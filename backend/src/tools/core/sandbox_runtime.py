@@ -14,8 +14,8 @@ def get_daytona_sandbox(context: ToolExecutionContext) -> Any | None:
 
 
 def get_daytona_cwd(context: ToolExecutionContext) -> str:
-    """Get the injected Daytona working directory, if available."""
-    return context.metadata.get("daytona_cwd") or ""
+    """Backward-compatible alias for the injected sandbox repo root."""
+    return context.metadata.get("repo_root") or context.metadata.get("daytona_cwd") or ""
 
 
 def require_declared_shell_outputs(context: ToolExecutionContext) -> bool:

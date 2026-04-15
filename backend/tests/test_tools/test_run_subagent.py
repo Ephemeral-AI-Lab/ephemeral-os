@@ -530,7 +530,7 @@ async def test_run_subagent_injects_read_free_exact_file_scout_contract(monkeypa
 
     assert result.is_error is False
     assert "stay read-free and finish from CI evidence" in captured["prompt"]
-    assert "exact-file and short fixed-file scouts do not use `ci_read_file(...)`" in captured["prompt"]
+    assert "exact-file and short fixed-file scouts stay read-free" in captured["prompt"]
 
 
 @pytest.mark.asyncio

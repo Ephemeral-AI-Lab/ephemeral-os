@@ -46,7 +46,7 @@ from team.models import (
 from team.runtime.conductor import Conductor
 from team.runtime.context_builder import build_initial_messages, build_initial_user_message
 from tests.test_e2e.conftest import create_eval_agent
-from tools.context.toolkit import PostNoteTool
+from tools.task_center.toolkit import PostNoteTool
 
 pytestmark = [pytest.mark.e2e, pytest.mark.live]
 

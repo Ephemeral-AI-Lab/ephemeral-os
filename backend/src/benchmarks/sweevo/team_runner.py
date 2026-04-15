@@ -350,7 +350,8 @@ def _make_context_builders(
         effective_sandbox = team_run.sandbox_id or sandbox_id
         ctx.tool_metadata.update({
             "sandbox_id": effective_sandbox,
-            "daytona_cwd": repo_dir,
+            "repo_root": repo_dir,
+            "exec_cwd": repo_dir,
             "ci_workspace_root": repo_dir,
             "team_mode_enabled": True,
             "require_declared_shell_outputs": True,

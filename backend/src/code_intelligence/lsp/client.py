@@ -20,6 +20,11 @@ from code_intelligence.constants import (
     LSP_CACHE_TTL,
     LSP_QUERY_TIMEOUT,
 )
+from tools.daytona_toolkit._daytona_utils import (
+    _build_write_text_file_command,
+    _extract_exit_code,
+    _wrap_bash_command,
+)
 from code_intelligence.types import (
     Diagnostic,
     DiagnosticSeverity,
@@ -387,9 +392,10 @@ class LspClient:
                 tag = hashlib.md5(script.encode(), usedforsecurity=False).hexdigest()[:8]
                 remote_path = f"/tmp/_lsp_query_{tag}.py"
                 try:
-                    self._sandbox.fs.upload_file(
-                        script.encode("utf-8"), remote_path,
-                    )
+                    run_sync(self._sandbox.process.exec(
+                        _wrap_bash_command(_build_write_text_file_command(remote_path, script)),
+                        timeout=5,
+                    ))
                 except Exception:
                     run_sync(self._sandbox.process.exec(
                         f"printf %s {shlex.quote(script)} > {shlex.quote(remote_path)}",
@@ -403,6 +409,12 @@ class LspClient:
                     )
                 )
                 result = response.result or ""
+                result, exit_code = _extract_exit_code(
+                    result,
+                    fallback_exit_code=getattr(response, "exit_code", None),
+                )
+                if exit_code not in (0, None):
+                    raise RuntimeError(result or f"python3 {remote_path} failed")
             else:
                 proc = subprocess.run(
                     [__import__("sys").executable, "-c", script],

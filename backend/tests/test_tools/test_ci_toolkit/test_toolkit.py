@@ -13,7 +13,6 @@ def test_ci_toolkit_registers_all_tools():
         "ci_query_symbol",
         "ci_diagnostics",
         "ci_edit_hotspots",
-        "ci_read_file",
     }
     assert expected == names
 
@@ -29,10 +28,9 @@ def test_ci_toolkit_blocked_tools_handled_by_registry():
     registry.register_toolkit(tk)
 
     # Simulate planner blocklist
-    registry.remove_tools(["ci_read_file", "ci_edit_hotspots"])
+    registry.remove_tools(["ci_edit_hotspots"])
     remaining = {t.name for t in registry.list_tools()}
 
-    assert "ci_read_file" not in remaining
     assert "ci_edit_hotspots" not in remaining
     assert "ci_query_symbol" in remaining
     assert "ci_diagnostics" in remaining

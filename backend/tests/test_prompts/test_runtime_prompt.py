@@ -56,6 +56,7 @@ def test_agent_capabilities_prompt_uses_compact_toolkit_format():
     )
 
     assert prompt.startswith("<Toolkit Instructions>")
+    assert "Use the following toolkits and tools that are available in this run." in prompt
     assert "</Toolkit Instructions>" in prompt
     assert "- demo: Demo toolkit for bounded inspection and repair work." in prompt
     assert "1. demo_tool - Inspect the current target." in prompt
@@ -83,6 +84,7 @@ def test_agent_capabilities_prompt_omits_tool_call_notes_and_background_tasks():
         [SubagentToolkit(), make_background_toolkit(["run_subagent"])],
         has_background_tools=True,
         bg_tool_names=["run_subagent"],
+        terminal_tools=["submit_task_plan"],
     )
 
     assert "Tool Call Notes" not in prompt
@@ -90,6 +92,11 @@ def test_agent_capabilities_prompt_omits_tool_call_notes_and_background_tasks():
     assert "Background-capable tools: `run_subagent`." in prompt
     assert "1. check_background_progress - Inspect background task status." in prompt
     assert "</Background Tasks>" in prompt
+    assert "<Termination Condition>" in prompt
+    assert "- `submit_task_plan`" in prompt
+    assert "WARNING: These are one-way exit tools." in prompt
+    assert "Your lifecycle ends at that moment" in prompt
+    assert "</Termination Condition>" in prompt
 
 
 def test_agent_capabilities_prompt_prefers_short_description_over_description():
@@ -133,6 +140,39 @@ def test_agent_capabilities_prompt_includes_available_skills_section():
     assert "- team-planner-playbook: Planning workflow for team planners." in prompt
     assert "- scout-playbook: Read-only exploration workflow for scouts." in prompt
     assert "</Available Skills>" in prompt
+
+
+def test_agent_capabilities_prompt_orders_sections_toolkits_skills_background():
+    skills_toolkit = BaseToolkit(
+        name="skills",
+        description="Lazy-loaded skill instructions and reference documents",
+        tools=[_LoadSkillTool(), _LoadSkillReferenceTool()],
+    )
+    skills_toolkit.available_skills = [
+        {"name": "team-planner-playbook", "description": "Planning workflow for team planners."},
+    ]
+
+    prompt = build_agent_capabilities_prompt(
+        [
+            BaseToolkit(
+                name="demo",
+                description="Demo toolkit for bounded inspection and repair work.",
+                tools=[_DemoTool()],
+            ),
+            skills_toolkit,
+            make_background_toolkit(["run_subagent"]),
+        ],
+        has_background_tools=True,
+        bg_tool_names=["run_subagent"],
+        terminal_tools=["submit_task_plan"],
+    )
+
+    toolkit_idx = prompt.index("<Toolkit Instructions>")
+    skills_idx = prompt.index("<Available Skills>")
+    background_idx = prompt.index("<Background Tasks>")
+    terminal_idx = prompt.index("<Termination Condition>")
+
+    assert toolkit_idx < skills_idx < background_idx < terminal_idx
 
 
 def test_tool_registry_remove_tools_filters_toolkits_too():

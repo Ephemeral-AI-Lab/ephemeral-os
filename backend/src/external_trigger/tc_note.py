@@ -7,7 +7,7 @@ from typing import Any
 
 from agents.registry import get_definition
 from external_trigger.runner import run
-from tools.context.toolkit import SubmitTaskNoteTool, PostNoteInput
+from tools.task_center.toolkit import SubmitTaskNoteTool, PostNoteInput
 
 
 TC_NOTE_EDIT_PROMPT = (

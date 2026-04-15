@@ -122,6 +122,7 @@ def build_agent_capabilities_prompt(
     toolkits: list[BaseToolkit],
     has_background_tools: bool = False,
     bg_tool_names: list[str] | None = None,
+    terminal_tools: set[str] | list[str] | None = None,
 ) -> str:
     """Build the full toolkit and capability awareness section.
 
@@ -129,6 +130,7 @@ def build_agent_capabilities_prompt(
         toolkits: Registered toolkits for behavioral guidance.
         has_background_tools: Whether background execution is available.
         bg_tool_names: Names of tools that support background execution.
+        terminal_tools: Tools that terminate the run immediately when called.
     """
     sections: list[str] = []
 
@@ -151,6 +153,7 @@ def build_agent_capabilities_prompt(
     available_skills: list[dict[str, str]] = []
     skill_tool_names: list[str] = []
     background_lines: list[str] = []
+    terminal_lines: list[str] = []
     for tk in toolkits:
         raw_skills = getattr(tk, "available_skills", None)
         tools = tk.list_tools()
@@ -223,6 +226,18 @@ def build_agent_capabilities_prompt(
             tool_summary = getattr(tool, "short_description", None) or tool.description
             lines.append(f"  {idx}. {tool.name} - {_compact_description(tool_summary)}")
         tk_sections.append("\n".join(lines))
+    toolkit_section = ""
+    if tk_sections:
+        toolkit_intro = "Use the following toolkits and tools that are available in this run."
+        toolkit_section = (
+            "<Toolkit Instructions>\n\n"
+            + toolkit_intro
+            + "\n\n"
+            + "\n\n".join(tk_sections)
+            + "\n\n</Toolkit Instructions>"
+        )
+
+    skills_section = ""
     if available_skills:
         deduped_skills: list[dict[str, str]] = []
         seen_skill_names: set[str] = set()
@@ -243,10 +258,38 @@ def build_agent_capabilities_prompt(
         if skill_lines:
             skill_lines.append("")
         skill_lines.extend(f"- {item['name']}: {item['description']}" for item in deduped_skills)
-        sections.append("<Available Skills>\n\n" + "\n".join(skill_lines) + "\n\n</Available Skills>")
+        skills_section = "<Available Skills>\n\n" + "\n".join(skill_lines) + "\n\n</Available Skills>"
+
+    background_section = ""
     if background_lines and has_background_tools:
-        sections.append("<Background Tasks>\n\n" + "\n".join(background_lines) + "\n\n</Background Tasks>")
-    if tk_sections:
-        sections.append("<Toolkit Instructions>\n\n" + "\n\n".join(tk_sections) + "\n\n</Toolkit Instructions>")
+        background_section = "<Background Tasks>\n\n" + "\n".join(background_lines) + "\n\n</Background Tasks>"
+
+    terminal_section = ""
+    terminal_names = sorted(
+        {
+            str(name).strip()
+            for name in (terminal_tools or [])
+            if str(name).strip()
+        }
+    )
+    if terminal_names:
+        terminal_lines = [
+            "WARNING: These are one-way exit tools.",
+            "If you call any of them, the run terminates immediately.",
+            "Your lifecycle ends at that moment: no more reasoning, no more tool calls, no recovery in the same run.",
+            "Do not call a termination tool until you are fully ready to end the run.",
+            "",
+        ]
+        terminal_lines.extend(f"- `{name}`" for name in terminal_names)
+        terminal_section = "<Termination Condition>\n\n" + "\n".join(terminal_lines) + "\n\n</Termination Condition>"
+
+    if toolkit_section:
+        sections.append(toolkit_section)
+    if skills_section:
+        sections.append(skills_section)
+    if background_section:
+        sections.append(background_section)
+    if terminal_section:
+        sections.append(terminal_section)
 
     return "\n\n".join(sections)

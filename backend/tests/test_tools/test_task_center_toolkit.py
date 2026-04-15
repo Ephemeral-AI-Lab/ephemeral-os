@@ -1,4 +1,4 @@
-"""Tests for tools.context.toolkit and freshness helpers."""
+"""Tests for tools.task_center.toolkit and freshness helpers."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from tools.context.toolkit import ContextChangedSinceTool
+from tools.task_center.toolkit import TaskCenterChangedSinceTool
 from tools.core.base import ToolExecutionContext
 
 
@@ -17,7 +17,7 @@ def _ctx(metadata=None) -> ToolExecutionContext:
 
 
 @pytest.mark.asyncio
-async def test_context_changed_since_marks_checked_and_excludes_own_run_changes():
+async def test_task_center_changed_since_marks_checked_and_excludes_own_run_changes():
     own_change = SimpleNamespace(
         file_path="src/auth/local.py",
         agent_run_id="run-1",
@@ -40,8 +40,8 @@ async def test_context_changed_since_marks_checked_and_excludes_own_run_changes(
         }
     )
 
-    result = await ContextChangedSinceTool().execute(
-        ContextChangedSinceTool.input_model(),
+    result = await TaskCenterChangedSinceTool().execute(
+        TaskCenterChangedSinceTool.input_model(),
         ctx,
     )
 
@@ -52,7 +52,7 @@ async def test_context_changed_since_marks_checked_and_excludes_own_run_changes(
 
 
 @pytest.mark.asyncio
-async def test_context_changed_since_ignores_unrelated_sibling_completion():
+async def test_task_center_changed_since_ignores_unrelated_sibling_completion():
     class _Dispatcher:
         async def done_sibling_ids(self, **_kwargs):
             return ["sib-1"]
@@ -70,8 +70,8 @@ async def test_context_changed_since_ignores_unrelated_sibling_completion():
         }
     )
 
-    result = await ContextChangedSinceTool().execute(
-        ContextChangedSinceTool.input_model(),
+    result = await TaskCenterChangedSinceTool().execute(
+        TaskCenterChangedSinceTool.input_model(),
         ctx,
     )
 
@@ -81,7 +81,7 @@ async def test_context_changed_since_ignores_unrelated_sibling_completion():
 
 
 @pytest.mark.asyncio
-async def test_context_changed_since_counts_overlapping_sibling_completion():
+async def test_task_center_changed_since_counts_overlapping_sibling_completion():
     class _FakeTaskCenter:
         def __init__(self):
             self.store = self  # production reads get_done_sibling_ids via tc.store
@@ -102,8 +102,8 @@ async def test_context_changed_since_counts_overlapping_sibling_completion():
         }
     )
 
-    result = await ContextChangedSinceTool().execute(
-        ContextChangedSinceTool.input_model(),
+    result = await TaskCenterChangedSinceTool().execute(
+        TaskCenterChangedSinceTool.input_model(),
         ctx,
     )
 

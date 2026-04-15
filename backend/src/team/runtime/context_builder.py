@@ -67,7 +67,8 @@ def build_task_metadata(team_run: "TeamRun", task: Task) -> ExecutionMetadata:
     meta["task_depth"] = task.depth
     repo_root = str(getattr(getattr(team_run, "project_context", None), "repo_root", "") or "")
     if repo_root:
-        meta["daytona_cwd"] = repo_root
+        meta["repo_root"] = repo_root
+        meta["exec_cwd"] = repo_root
         meta["ci_workspace_root"] = repo_root
     for key, value in getattr(team_run, "coordination_metadata", {}).items():
         meta[key] = value

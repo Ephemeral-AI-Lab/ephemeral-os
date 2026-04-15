@@ -60,7 +60,7 @@ async def _freshness_submission_gate(
     context: ToolExecutionContext, *, action: str
 ) -> ToolResult | None:
     """Reject terminal submissions when the task context has gone stale."""
-    from tools.context.freshness import check_freshness
+    from tools.task_center.freshness import check_freshness
 
     report = await check_freshness(context)
     if not report.stale:
@@ -74,7 +74,7 @@ async def _freshness_submission_gate(
     return ToolResult(
         output=(
             f"Error: `{action}` is blocked because your task context changed since the "
-            "last acknowledged baseline. Call `context_changed_since()` now, refresh with "
+            "last acknowledged baseline. Call `task_center_changed_since()` now, refresh with "
             "`read_task_note(...)` or targeted rereads if needed, then either retry the "
             f"submission or call `submit_task_summary(type='fail')`. "
             f"Scope changes by others: {report.scope_changes_by_others}, "

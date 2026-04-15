@@ -62,7 +62,7 @@ def record_tool_trace(
     if tool_name == "daytona_codeact":
         _increment_trace_counter(metadata, "_daytona_codeact_calls")
         return
-    if tool_name in {"ci_read_file", "daytona_read_file"}:
+    if tool_name == "daytona_read_file":
         _append_trace_values(
             metadata,
             "_read_paths_this_turn",

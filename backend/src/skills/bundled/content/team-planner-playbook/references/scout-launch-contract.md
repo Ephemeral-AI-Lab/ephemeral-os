@@ -12,7 +12,7 @@ Use this reference immediately before the first scout wave or whenever scout lau
 7. Reuse existing Task Center notes when the same scope already has coverage; same-turn overlap is a reuse signal, not a cue to relaunch the same explorer.
 8. If cold CI blocked exact-file confirmation, overwrite any stale guessed aliases in the first-wave ledger and launch the nearest stable production boundary instead of synthesizing a guessed exact path.
 9. Record the exact returned `task_id` for every scout and use only those literal ids in progress checks or waits.
-10. After the wave, if `context_changed_since()` or a scope-change warning says the layer moved, refresh notes before shaping the DAG.
+10. After the wave, if `task_center_changed_since()` or a scope-change warning says the layer moved, refresh notes before shaping the DAG.
 11. delete any earlier `pkg/dataframe/utils_dataframe.py` brainstorm once live evidence disproves it.
 
 ```json

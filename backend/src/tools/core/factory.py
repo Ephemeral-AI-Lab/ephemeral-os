@@ -102,9 +102,8 @@ def _register_builtins() -> None:
     register_toolkit_class("subagent", SubagentToolkit)
 
     # Plan A toolkits — Task Center (notes + scope awareness)
-    from tools.context import TaskCenterToolkit
+    from tools.task_center import TaskCenterToolkit
 
-    register_toolkit_class("context", TaskCenterToolkit)
     register_toolkit_class("task_center", TaskCenterToolkit)
 
     # Submission toolkit — post-run phase tools

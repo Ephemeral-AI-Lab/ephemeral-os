@@ -12,7 +12,7 @@ Use this reference only on fresh benchmark roots or any turn that still lacks cl
 6. If more than one owner slice is still unresolved after the first anchor, the next planning action must be a scout wave, not final DAG synthesis.
 7. On repeated work, if one canonical owner is already exact and same-run reuse is empty, call `read_task_note(paths=[...])` to check for existing findings before relaunching that scout.
 8. If a first-wave guessed exact path returns `File not found`, delete that leaf and wait for the scout note. Do not start a replacement ownership search mid-wave; keep the last confirmed parent boundary until note review.
-9. After the wave, `read_task_note(paths=[...])`; if `context_changed_since()` or a scope-change warning says the layer moved, refresh only stale slices.
+9. After the wave, `read_task_note(paths=[...])`; if `task_center_changed_since()` or a scope-change warning says the layer moved, refresh only stale slices.
 10. Stop exploring once the current layer can name ready work plus residual boundaries.
 
 ```json

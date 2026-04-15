@@ -501,7 +501,7 @@ async def run_subagent(
             "- Do not inspect already-named benchmark test files or guessed owner files unless they are inside `target_paths`.",
             "- Start source-code scouting with `ci_query_symbol(...)`.",
             "- If `ci_query_symbol(...)` already returned definitions for an exact file target, stay read-free and finish from CI evidence.",
-            "- On coordinated benchmark lanes, exact-file and short fixed-file scouts do not use `ci_read_file(...)`; if CI stays cold, report the gap instead.",
+            "- On coordinated benchmark lanes, exact-file and short fixed-file scouts stay read-free; if CI stays cold, report the gap instead.",
         ]
         strict_scope_block = "\n".join(strict_scope_lines)
         final_prompt = f"{strict_scope_block}\n\n{final_prompt}"

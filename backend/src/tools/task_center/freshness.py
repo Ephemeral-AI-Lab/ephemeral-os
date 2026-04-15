@@ -1,4 +1,4 @@
-"""Shared context-freshness check used by both context tools and submission pre-checks."""
+"""Shared task-center freshness check used by both toolkit tools and submission pre-checks."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from tools.core.base import ToolExecutionContext
 
 @dataclass
 class FreshnessReport:
-    """Result of a context freshness check."""
+    """Result of a task-center freshness check."""
 
     scope_changes_by_others: int = 0
     new_dep_notes: int = 0
@@ -26,7 +26,7 @@ class FreshnessReport:
 
 
 async def check_freshness(context: ToolExecutionContext) -> FreshnessReport:
-    """Check if an agent's context has gone stale since its task started.
+    """Check if an agent's task-center state has gone stale since its task started.
 
     Examines three signals:
     1. Scope changes by other agents (via arbiter history)
