@@ -513,6 +513,30 @@ class TaskStore:
         await self.refresh_graph()
         return cancelled
 
+    async def fail_orphaned_replanning(self) -> int:
+        """Force-fail all REPLANNING tasks whose replanner is terminal or missing."""
+        rid = self._team_run_id
+        async with self._sf() as db:
+            # Find tasks stuck in REPLANNING
+            rows = (
+                await db.execute(
+                    select(TaskRecord.id).where(
+                        TaskRecord.team_run_id == rid,
+                        TaskRecord.status == "replanning",
+                    )
+                )
+            ).scalars().all()
+            if not rows:
+                return 0
+            for task_id in rows:
+                await self._mark_terminal_sql(
+                    db, str(task_id), "failed", "orphaned_replanning_timeout"
+                )
+                await self._cascade_recursive_sql(db, str(task_id))
+            await db.commit()
+        await self.refresh_graph()
+        return len(rows)
+
     async def rewire_dependents(
         self, original_task_id: str, new_dep_ids: list[str]
     ) -> list[str]:

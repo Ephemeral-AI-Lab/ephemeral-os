@@ -448,7 +448,7 @@ def test_inject_scope_warnings_posts_note_for_external_scoped_changes():
     assert "src/auth/session.py" in tc.notes[0].content
     assert "src/auth/local.py" not in tc.notes[0].content
     assert "src/billing/invoice.py" not in tc.notes[0].content
-    assert "Call request_replan()" in tc.notes[0].content
+    assert "posthook will handle replanning" in tc.notes[0].content
 
 
 def test_inject_scope_warnings_skips_when_store_not_initialized():
@@ -645,3 +645,88 @@ def test_plan_health_prefix_retry_warning():
     assert prefix is not None
     assert "PLAN HEALTH WARNING" in prefix
     assert "5 retries" in prefix
+
+
+# ---------------------------------------------------------------------------
+# Budget-exhausted forced replan tests
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_run_post_run_budget_exhausted_forces_replan(monkeypatch):
+    """When budget_exhausted=True for a developer, posthook skips the LLM
+    and returns a ReplanRequest deterministically."""
+    trigger_called = False
+
+    async def fake_run_external_trigger(**kwargs):
+        nonlocal trigger_called
+        trigger_called = True
+        return SimpleNamespace(
+            tool_name="post_note",
+            tool_input={"content": "done"},
+            validated=None,
+            turns_used=1,
+        )
+
+    monkeypatch.setattr("external_trigger.runner.run", fake_run_external_trigger)
+
+    executor, _ = _make_executor()
+    executor.team_run.api_client = object()
+    executor.team_run.conductor = SimpleNamespace(_executor_snapshots={})
+    ctx = TeamAgentContext(
+        tool_metadata={
+            "agent_name": "developer",
+            "role": "developer",
+            "work_result": "I was still working on the fix",
+            "budget_exhausted": True,
+        }
+    )
+
+    result = await executor._run_post_run(
+        task=SimpleNamespace(id="task-1", agent_name="developer"),
+        defn=FakeDefn(),
+        ctx=ctx,
+    )
+
+    assert isinstance(result, ReplanRequest)
+    assert "Budget exhausted" in result.reason
+    assert "I was still working" in result.reason
+    assert not trigger_called, "LLM posthook should be skipped for budget-exhausted tasks"
+
+
+@pytest.mark.asyncio
+async def test_run_post_run_budget_exhausted_does_not_force_replan_for_planner(monkeypatch):
+    """Planners should NOT be forced to replan on budget exhaustion —
+    they submit plans, not code."""
+
+    async def fake_run_external_trigger(**kwargs):
+        return SimpleNamespace(
+            tool_name="submit_plan",
+            tool_input={"tasks": [{"id": "t1", "task": "do it", "agent": "developer"}]},
+            validated=None,
+            turns_used=1,
+        )
+
+    monkeypatch.setattr("external_trigger.runner.run", fake_run_external_trigger)
+
+    executor, _ = _make_executor()
+    executor.team_run.api_client = object()
+    executor.team_run.conductor = SimpleNamespace(_executor_snapshots={})
+    ctx = TeamAgentContext(
+        tool_metadata={
+            "agent_name": "team_planner",
+            "role": "planner",
+            "work_result": "plan text",
+            "budget_exhausted": True,
+        }
+    )
+
+    result = await executor._run_post_run(
+        task=SimpleNamespace(id="task-1", agent_name="team_planner"),
+        defn=FakePlannerDefn(),
+        ctx=ctx,
+    )
+
+    # Planner should proceed normally, not forced replan
+    assert isinstance(result, AgentResult)
+    assert result.submitted_plan is not None

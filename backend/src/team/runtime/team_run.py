@@ -206,6 +206,9 @@ class TeamRun:
         self.cancel_event.clear()
 
     async def _compute_final_status(self) -> None:
+        # Safety net: force-fail any tasks still stuck in REPLANNING before
+        # computing final status — prevents silent success on orphaned replans.
+        await self.task_center.fail_orphaned_replanning()
         statuses = set((await self.task_center.store.get_statuses()).values())
         if "failed" in statuses:
             self.status = TeamRunStatus.FAILED

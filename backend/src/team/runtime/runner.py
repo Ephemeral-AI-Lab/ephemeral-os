@@ -288,6 +288,13 @@ class TeamAgentRunner:
             state.final_text = extract_final_text(agent.display_messages)
             if state.final_text:
                 ctx.tool_metadata["work_result"] = state.final_text
+            # Detect budget exhaustion so the posthook can force a replan.
+            qc = agent.query_context
+            if (
+                getattr(qc, "tool_call_limit", None) is not None
+                and getattr(qc, "tool_calls_used", 0) >= qc.tool_call_limit
+            ):
+                ctx.tool_metadata["budget_exhausted"] = True
             if team_run_id and work_item_id:
                 try:
                     from team.runtime.registry import get as get_team_run

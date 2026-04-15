@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from team.activity_tracker import ActivityTracker
 from team.budget_manager import BudgetManager
 from team.checkpoint_manager import CheckpointManager
-from team.errors import CheckpointNotFound
+from team.errors import BudgetExceeded, CheckpointNotFound, InvalidPlan
 from team.models import (
     AgentResult,
     BudgetConfig,
@@ -344,14 +344,26 @@ class TaskCenter:
         target_root_id: str,
     ) -> dict[str, int]:
         before = self._transitions.snapshot()
-        outcome = await self._expander.apply_replan(
-            replan_task_id=replan_task_id,
-            add_tasks=add_tasks,
-            cancel_ids=cancel_ids,
-            target_depth=target_depth,
-            target_parent_id=target_parent_id,
-            target_root_id=target_root_id,
-        )
+        try:
+            outcome = await self._expander.apply_replan(
+                replan_task_id=replan_task_id,
+                add_tasks=add_tasks,
+                cancel_ids=cancel_ids,
+                target_depth=target_depth,
+                target_parent_id=target_parent_id,
+                target_root_id=target_root_id,
+            )
+        except (BudgetExceeded, InvalidPlan) as exc:
+            # Replan expansion failed — cascade-fail the original REPLANNING
+            # task so it doesn't stay stuck in a non-terminal state forever.
+            replanner_rec = await self._store.get_record(replan_task_id)
+            if replanner_rec and replanner_rec.fired_by_task_id:
+                await self._store.fail_with_cascade(
+                    replanner_rec.fired_by_task_id,
+                    f"replan_apply_failed: {exc}",
+                )
+            await self._transitions.refresh_and_emit(before)
+            raise
 
         # If this replanner was fired by a REPLANNING task, rewire dependents
         replanner_rec = await self._store.get_record(replan_task_id)
@@ -371,6 +383,14 @@ class TaskCenter:
 
         await self._transitions.refresh_and_emit(before)
         return outcome
+
+    async def fail_orphaned_replanning(self) -> int:
+        """Force-fail tasks stuck in REPLANNING with no live replanner."""
+        before = self._transitions.snapshot()
+        count = await self._store.fail_orphaned_replanning()
+        if count:
+            await self._transitions.refresh_and_emit(before)
+        return count
 
     async def cancel_all_pending(self) -> int:
         return await self._with_transitions(self._store.cancel_all_pending)

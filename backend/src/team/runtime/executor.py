@@ -115,6 +115,12 @@ class Executor:
             return False
         has_pending = any(s in ("pending", "ready") for s in statuses.values())
         has_running = any(s == "running" for s in statuses.values())
+        has_replanning = any(s == "replanning" for s in statuses.values())
+        if has_replanning and not has_running and not has_pending:
+            # Only non-terminal work left is REPLANNING with no live workers.
+            # Force-fail orphaned REPLANNING tasks so the run can terminate.
+            await self.team_run.task_center.fail_orphaned_replanning()
+            return False  # tasks were resolved; let the executor re-poll
         return has_pending and not has_running
 
     async def run_forever(self) -> None:
@@ -250,6 +256,21 @@ class Executor:
             logger.warning("No posthook tools for task %s; returning empty result", task.id)
             return AgentResult(summary="completed (no posthook tools)")
         tool_summary = ", ".join(f"{t.name}: {t.description}" for t in post_run_tools)
+        # Force replan when budget was exhausted (non-planner/replanner roles).
+        budget_exhausted = bool(ctx.tool_metadata.get("budget_exhausted"))
+        role = str(ctx.tool_metadata.get("role") or "")
+        if budget_exhausted and role not in ("planner", "replanner"):
+            work_result_preview = str(ctx.tool_metadata.get("work_result") or "")[:500]
+            reason = (
+                f"Budget exhausted (tool_call_limit reached) before task completion. "
+                f"Last output: {work_result_preview}"
+            )
+            logger.info(
+                "[posthook] budget-exhausted forced replan for task %s (%s)",
+                task.id, task.agent_name,
+            )
+            return ReplanRequest(reason=reason)
+
         work_result = str(ctx.tool_metadata.get("work_result") or "").strip()
         if work_result:
             deterministic = self._deterministic_result(
