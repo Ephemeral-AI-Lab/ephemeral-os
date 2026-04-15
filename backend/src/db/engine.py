@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import Engine, Index, create_engine, inspect, text
 from sqlalchemy.schema import CreateIndex
@@ -101,9 +101,9 @@ def _ensure_indexes(engine: Engine) -> None:
             conn.execute(CreateIndex(Index(index_name, col)).compile(dialect=engine.dialect))
 
 
-def _async_database_url(url: str) -> "URL":
+def _async_database_url(url: str) -> Any:
     """Convert a sync database URL to an async-compatible driver."""
-    from sqlalchemy.engine import URL, make_url
+    from sqlalchemy.engine import make_url
 
     parsed = make_url(url)
     if parsed.drivername in {"postgresql+psycopg", "postgresql+asyncpg"}:

@@ -595,25 +595,25 @@ def test_two_replanners_with_active_blocker_see_fix_task_id():
         assert "t_resolver_1" in ctx
 
 
-def test_context_for_includes_recent_scope_changes_from_file_change_store():
-    file_change_store = SimpleNamespace(
+def test_context_for_includes_recent_scope_changes_from_arbiter():
+    arbiter = SimpleNamespace(
         initialized=True,
-        changes_since=lambda since: [
+        changes_since=lambda since, team_run_id=None: [
             SimpleNamespace(
                 file_path="src/auth/session.py",
                 edit_type="edit",
-                agent_id="reviewer",
+                task_id="task-review-auth",
                 created_at=datetime(2026, 4, 12, 12, 1, tzinfo=timezone.utc),
             ),
             SimpleNamespace(
                 file_path="src/billing/invoice.py",
                 edit_type="edit",
-                agent_id="reviewer",
+                task_id="task-review-billing",
                 created_at=datetime(2026, 4, 12, 12, 1, tzinfo=timezone.utc),
             ),
         ],
     )
-    tc = _tc(file_change_store=file_change_store)
+    tc = _tc(arbiter=arbiter)
     task = _task("work-1", objective="do auth", scope_paths=["src/auth/"])
     task.created_at = datetime(2026, 4, 12, 12, 0, tzinfo=timezone.utc)
 
@@ -622,6 +622,28 @@ def test_context_for_includes_recent_scope_changes_from_file_change_store():
     assert "## Recent changes in your scope" in ctx
     assert "src/auth/session.py" in ctx
     assert "src/billing/invoice.py" not in ctx
+
+
+def test_recent_changes_section_falls_back_to_agent_run_id_label():
+    arbiter = SimpleNamespace(
+        initialized=True,
+        changes_since=lambda since, team_run_id=None: [
+            SimpleNamespace(
+                file_path="src/auth/session.py",
+                edit_type="edit",
+                task_id="",
+                agent_run_id="agent-run-auth",
+                created_at=datetime(2026, 4, 12, 12, 1, tzinfo=timezone.utc),
+            ),
+        ],
+    )
+    tc = _tc(arbiter=arbiter)
+    task = _task("work-1", objective="do auth", scope_paths=["src/auth/"])
+    task.created_at = datetime(2026, 4, 12, 12, 0, tzinfo=timezone.utc)
+
+    ctx = _run(tc.notes.context_for(task))
+
+    assert "agent-run-auth" in ctx
 
 
 # ---------------------------------------------------------------------------
@@ -725,3 +747,32 @@ def test_prepare_for_resume_uses_primed_snapshot():
     assert tc._resume_snapshot is None
     tc._checkpoints.prepare_for_resume.assert_awaited_once()
     tc.store.refresh_graph.assert_awaited_once()
+
+
+def test_rollback_to_restores_ready_queue_order_from_checkpoint():
+    tc = _tc()
+    task_one = _task("task-1")
+    task_two = _task("task-2")
+    tc.store.graph = {task_one.id: task_one, task_two.id: task_two}
+    tc.store.ready_queue_order = ["task-2", "task-1"]
+    tc.store.refresh_graph = AsyncMock(return_value=tc.graph)
+
+    checkpoint = _run(tc.checkpoint(label="before", project_context={"branch": {"name": "main"}}))
+
+    tc.store.ready_queue_order = ["task-1"]
+
+    async def _replace(tasks):
+        tc.store.graph = {task.id: task for task in tasks}
+
+    tc.store.replace_run_tasks = AsyncMock(side_effect=_replace)
+    restored_project_context: dict[str, object] = {}
+
+    _run(
+        tc.rollback_to(
+            checkpoint.id,
+            project_context_setter=lambda value: restored_project_context.update(value),
+        )
+    )
+
+    assert tc.store.ready_queue_order == ["task-2", "task-1"]
+    assert restored_project_context == {"branch": {"name": "main"}}

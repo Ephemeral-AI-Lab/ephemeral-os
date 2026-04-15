@@ -20,22 +20,22 @@ def _ctx(metadata=None) -> ToolExecutionContext:
 async def test_context_changed_since_marks_checked_and_excludes_own_run_changes():
     own_change = SimpleNamespace(
         file_path="src/auth/local.py",
-        agent_id="developer",
         agent_run_id="run-1",
+        task_id="task-own",
     )
     other_change = SimpleNamespace(
         file_path="src/auth/session.py",
-        agent_id="peer",
         agent_run_id="run-2",
+        task_id="task-peer",
     )
     ctx = _ctx(
         {
             "work_item_started_at": 1.0,
             "agent_run_id": "run-1",
             "write_scope": ["src/auth/"],
-            "file_change_store": SimpleNamespace(
+            "arbiter": SimpleNamespace(
                 initialized=True,
-                changes_since=lambda _since: [own_change, other_change],
+                changes_since=lambda _since, team_run_id=None: [own_change, other_change],
             ),
         }
     )

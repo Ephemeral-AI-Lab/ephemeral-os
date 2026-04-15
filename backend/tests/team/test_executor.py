@@ -57,7 +57,7 @@ class FakeTaskCenter:
 
 class FakeTeamRun:
     """Minimal team run stub for checkpoint note tests."""
-    def __init__(self, task_center=None, dispatch_queue=None, file_change_store=None,
+    def __init__(self, task_center=None, dispatch_queue=None, arbiter=None,
                  stats=None):
         self.id = "test-run-001"
         _default_stats = stats or {"done": 0, "failed": 0, "pending": 0,
@@ -68,7 +68,7 @@ class FakeTeamRun:
             tc.sibling_stats = self._make_sibling_stats(_default_stats)
         self.task_center = tc
         self.dispatch_queue = dispatch_queue
-        self.file_change_store = file_change_store
+        self.arbiter = arbiter
 
     @staticmethod
     def _make_sibling_stats(stats):
@@ -104,12 +104,12 @@ def _make_task(
 
 def _make_executor(
     stats: dict[str, int] | None = None,
-    file_change_store=None,
+    arbiter=None,
 ) -> tuple[Executor, FakeTaskCenter]:
     tc = FakeTaskCenter()
     team_run = FakeTeamRun(
         task_center=tc,
-        file_change_store=file_change_store,
+        arbiter=arbiter,
         stats=stats,
     )
     executor = Executor(
@@ -356,30 +356,30 @@ def test_inject_scope_warnings_posts_note_for_external_scoped_changes():
     external_change = SimpleNamespace(
         file_path="src/auth/session.py",
         edit_type="edit",
-        agent_id="other-agent",
         agent_run_id="other-run",
+        task_id="task-other",
         created_at=datetime(2026, 4, 12, 12, 1, tzinfo=timezone.utc),
     )
     own_change = SimpleNamespace(
         file_path="src/auth/local.py",
         edit_type="edit",
-        agent_id="developer",
         agent_run_id="agent-run-1",
+        task_id="task-1",
         created_at=datetime(2026, 4, 12, 12, 1, tzinfo=timezone.utc),
     )
     out_of_scope_change = SimpleNamespace(
         file_path="src/billing/invoice.py",
         edit_type="edit",
-        agent_id="other-agent",
         agent_run_id="other-run",
+        task_id="task-other",
         created_at=datetime(2026, 4, 12, 12, 1, tzinfo=timezone.utc),
     )
-    file_change_store = SimpleNamespace(
+    arbiter = SimpleNamespace(
         initialized=True,
-        changes_since=lambda since: [external_change, own_change, out_of_scope_change],
+        changes_since=lambda since, team_run_id=None: [external_change, own_change, out_of_scope_change],
     )
 
-    executor, tc = _make_executor(file_change_store=file_change_store)
+    executor, tc = _make_executor(arbiter=arbiter)
     task = _make_task(agent_run_id="agent-run-1")
     task.created_at = created_at
 
@@ -397,11 +397,11 @@ def test_inject_scope_warnings_posts_note_for_external_scoped_changes():
 def test_inject_scope_warnings_skips_when_store_not_initialized():
     import asyncio
 
-    file_change_store = SimpleNamespace(
+    arbiter = SimpleNamespace(
         initialized=False,
-        changes_since=lambda since: pytest.fail("changes_since should not be called"),
+        changes_since=lambda since, team_run_id=None: pytest.fail("changes_since should not be called"),
     )
-    executor, tc = _make_executor(file_change_store=file_change_store)
+    executor, tc = _make_executor(arbiter=arbiter)
     task = _make_task()
 
     asyncio.run(executor._inject_scope_warnings(task))

@@ -35,6 +35,17 @@ class ContentManager:
             return
         self._write_remote(file_path, content.encode("utf-8"))
 
+    def delete(self, file_path: str) -> None:
+        """Delete *file_path*, preferring the sandbox when one is bound."""
+        if self._sandbox is None:
+            path = Path(file_path)
+            try:
+                path.unlink()
+            except FileNotFoundError:
+                return
+            return
+        self._delete_remote(file_path)
+
     # -- Private --------------------------------------------------------------
 
     @staticmethod
@@ -59,7 +70,8 @@ class ContentManager:
 
     def _write_remote(self, file_path: str, payload: bytes) -> None:
         parent = str(Path(file_path).parent)
-        if parent and parent not in {".", "/"}:
+        process = getattr(self._sandbox, "process", None)
+        if parent and parent not in {".", "/"} and process is not None and hasattr(process, "exec"):
             run_sync(self._sandbox.process.exec(f"mkdir -p {shlex.quote(parent)}"))
         fs = self._sandbox.fs
         upload_fn = getattr(fs, "upload_file", None)
@@ -73,6 +85,12 @@ class ContentManager:
                 raise
             result = upload_fn(file_path, payload)
         run_sync(result)
+
+    def _delete_remote(self, file_path: str) -> None:
+        process = getattr(self._sandbox, "process", None)
+        if process is None or not hasattr(process, "exec"):
+            raise RuntimeError("Sandbox process has no exec method")
+        run_sync(process.exec(f"rm -f {shlex.quote(file_path)}"))
 
     @staticmethod
     def _is_missing_error(exc: Exception) -> bool:

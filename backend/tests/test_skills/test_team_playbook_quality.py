@@ -126,10 +126,7 @@ def test_planner_skill_has_explicit_conditional_reference_loading() -> None:
     assert (
         'Do not call `check_background_progress(task_id="bg_2")` inside the child turn' in non_root
     )
-    assert (
-        "Must use `agent` only for registered workers: `developer`, `validator`, or `team_planner`."
-        in plan_json
-    )
+    assert "Must use `name` with an exact registered agent name" in plan_json
     assert "Must use `id` for the lane label" in plan_json
     assert "Must keep `deps` as a top-level item field." in plan_json
     assert "Must emit each `id` only once." in plan_json
@@ -144,7 +141,7 @@ def test_planner_skill_has_explicit_conditional_reference_loading() -> None:
         "Before loading this reference, confirm that the terminal validator depends on every terminal non-validator sibling."
         in plan_json
     )
-    assert "Do not submit an expandable `developer`." in plan_json
+    assert "zero-expandable all-developer plans are invalid" in plan_json
     assert (
         "Count crowded-layer width using non-planner, non-validator tasks only"
         in plan_json
@@ -249,10 +246,8 @@ def test_developer_and_validator_skills_explain_when_to_load_references() -> Non
         "Must load `codeact-runtime-examples` before the first `daytona_codeact` verification or reproduction command on a benchmark lane."
         in developer
     )
-    assert (
-        "Must use `daytona_edit_file` or `daytona_write_file` for code changes, `daytona_codeact` for bounded runtime work"
-        in developer
-    )
+    assert "Must use `daytona_edit_file` or `daytona_write_file` for code changes" in developer
+    assert "`daytona_codeact` for bounded runtime work" in developer
     assert (
         "the next step after that first `read_task_note(...)` must be the exact `daytona_codeact` repro, not `daytona_read_file(...)` on a source file or benchmark test."
         in developer
@@ -260,7 +255,7 @@ def test_developer_and_validator_skills_explain_when_to_load_references() -> Non
     assert "Must not open benchmark test files with `daytona_read_file(...)` before the first exact repro" in developer
     assert "use `daytona_read_file(...)` only for owned production files or saved output artifacts" in developer
     assert (
-        'and the provided `shell("...")` helper for repo commands inside `daytona_codeact`'
+        'Prefer `daytona_codeact(command="...", timeout=N)` for repo commands'
         in developer
     )
     assert "daytono_edit_file" in developer
@@ -300,10 +295,10 @@ def test_developer_and_validator_skills_explain_when_to_load_references() -> Non
     assert "verification-surface write allowed in advisory mode" in developer_ref
     assert "raw Python `subprocess.run(...)`" in developer
     assert (
-        'The only benchmark-lane repo-command form inside `daytona_codeact` is direct `shell("...")`'
+        'The preferred benchmark-lane repo-command form is direct `daytona_codeact(command="...", timeout=N)`'
         in developer_codeact_ref
     )
-    assert "Must not inspect benchmark test files with `daytona_read_file(...)` before the first exact `shell(\"...\")` repro" in developer_codeact_ref
+    assert "Must not inspect benchmark test files with `daytona_read_file(...)` before the first exact `daytona_codeact(command=\"...\", timeout=N)` repro" in developer_codeact_ref
     assert (
         "Must not start pip-install loops or ad hoc environment mutation" in developer_codeact_ref
     )
@@ -335,8 +330,9 @@ def test_developer_and_validator_skills_explain_when_to_load_references() -> Non
         "Must load `cross-surface-guardrails` when the touched change affects public serialization, schema shape, or docs-visible output."
         in validator
     )
-    assert "Must run the exact commands from the payload first via `daytona_codeact`" in validator
+    assert 'Must run the exact commands from the payload first via `daytona_codeact(command="...", timeout=N)`.' in validator
     assert "Use `daytona_codeact` for all runtime execution." in validator
+    assert 'Use `daytona_codeact(command="...", timeout=N)` for repo commands.' in validator
     assert (
         "the first exact-command verification must use `background=true`, then `check_background_progress(...)` before any wait."
         in validator
@@ -350,6 +346,7 @@ def test_developer_and_validator_skills_explain_when_to_load_references() -> Non
         "cancel the task and use that partial output as the runtime evidence"
         in validator_runtime
     )
+    assert 'Must run the exact payload command through `daytona_codeact(command="...", timeout=N)`' in validator_runtime
     assert (
         "Use this reference only when the touched change affects public serialization, schema shape, or docs-visible output."
         in validator_ref
@@ -407,7 +404,7 @@ def test_sweevo_context_stays_shared_and_runtime_focused() -> None:
         in sweevo
     )
     assert "Must keep commands repo-root-relative." in sweevo
-    assert 'result = shell("...", timeout=N)' in sweevo
+    assert 'daytona_codeact(command="...", timeout=N)' in sweevo
     assert "Python process wrappers" in sweevo
     assert "append `2>&1`" in sweevo
     assert "Must keep roles separate" in sweevo

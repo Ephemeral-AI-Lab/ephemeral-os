@@ -320,22 +320,22 @@ def test_scope_overlap_warning_ignores_same_agent_run_id():
     own_change = SimpleNamespace(
         file_path="dask/config.py",
         edit_type="edit",
-        agent_id="developer",
         agent_run_id="run-1",
+        task_id="task-own",
         created_at=SimpleNamespace(timestamp=lambda: 0),
     )
     other_change = SimpleNamespace(
         file_path="dask/compatibility.py",
         edit_type="edit",
-        agent_id="peer",
         agent_run_id="run-2",
+        task_id="task-peer",
         created_at=SimpleNamespace(timestamp=lambda: 0),
     )
     ctx = _ctx(
         {
-            "file_change_store": SimpleNamespace(
+            "arbiter": SimpleNamespace(
                 initialized=True,
-                changes_since=lambda _since: [own_change, other_change],
+                changes_since=lambda _since, team_run_id=None: [own_change, other_change],
             ),
             "agent_run_id": "run-1",
             "write_scope": ["dask/"],

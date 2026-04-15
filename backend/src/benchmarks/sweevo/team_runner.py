@@ -339,9 +339,8 @@ def _make_context_builders(
         f"- Repo root inside the sandbox: {repo_dir}\n"
         "- `daytona_codeact`, `daytona_read_file`, `daytona_edit_file`, and related "
         "tools already execute relative to that repo root when you use relative "
-        "paths; inside `daytona_codeact`, repo commands must be direct "
-        "`result = shell(\"...\", timeout=N)` calls, never `subprocess` or "
-        "`2>&1`.\n"
+        "paths; prefer direct `daytona_codeact(command=\"...\", timeout=N)` "
+        "for repo commands, never `subprocess` or `2>&1`.\n"
         "- Do not prepend guessed roots such as `/workspace`, `/home/user`, or "
         "`/home/user/repos/...` unless the payload names a real child directory.\n\n"
     )
@@ -364,7 +363,9 @@ def _make_context_builders(
                 + (f"\n\n{ctx.user_message}" if ctx.user_message else "")
             )
         else:
-            ctx.user_message = sandbox_note + _task_base_prompt(wi.task) + "\n\n" + ctx.user_message
+            ctx.user_message = (
+                sandbox_note + _task_base_prompt(wi.objective) + "\n\n" + ctx.user_message
+            )
         try:
             get_code_intelligence(sandbox_id=effective_sandbox, workspace_root=repo_dir)
         except Exception:

@@ -1179,9 +1179,8 @@ class TestArbiterOCC:
 
     def _make_arbiter_with_store(self):
         from code_intelligence.editing.arbiter import Arbiter
-        from team.persistence.file_change_store import NullFileChangeStore
 
-        return Arbiter(workspace_root="/workspace", file_change_store=NullFileChangeStore())
+        return Arbiter(workspace_root="/workspace")
 
     # -- Token lifecycle --
 
@@ -1326,7 +1325,7 @@ class TestArbiterOCC:
         # At least one should win, at most one should lose (timeout)
         assert len(wins) >= 1
 
-    # -- Edit recording with NullFileChangeStore (formerly TestArbiterEditRecording) --
+    # -- Edit recording with the in-memory history ledger (formerly TestArbiterEditRecording) --
 
     def test_record_increments_generation(self):
         arbiter = self._make_arbiter_with_store()

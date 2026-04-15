@@ -29,7 +29,7 @@ async def check_freshness(context: ToolExecutionContext) -> FreshnessReport:
     """Check if an agent's context has gone stale since its task started.
 
     Examines three signals:
-    1. Scope changes by other agents (via file_change_store)
+    1. Scope changes by other agents (via arbiter history)
     2. New notes from dependency tasks (via Task Center)
     3. New sibling task completions (via dispatcher)
     """
@@ -47,14 +47,17 @@ async def check_freshness(context: ToolExecutionContext) -> FreshnessReport:
     new_dep_notes = 0
     new_sibling_completions = 0
 
-    file_change_store = context.metadata.get("file_change_store")
+    arbiter = context.metadata.get("arbiter")
     scope_paths = context.metadata.get("write_scope") or []
     if (
-        file_change_store is not None
-        and getattr(file_change_store, "initialized", False)
+        arbiter is not None
+        and getattr(arbiter, "initialized", False)
         and scope_paths
     ):
-        changes = file_change_store.changes_since(since)
+        changes = arbiter.changes_since(
+            since,
+            team_run_id=str(context.metadata.get("team_run_id") or "") or None,
+        )
         scope_changes = sum(
             1
             for e in changes

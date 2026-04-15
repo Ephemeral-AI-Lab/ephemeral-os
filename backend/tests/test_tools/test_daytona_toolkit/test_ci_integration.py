@@ -7,15 +7,19 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from tools.core.base import ToolExecutionContext
 from tools.core.ci_runtime import (
     abort_ci_write,
+    commit_ci_change_against_base,
     finalize_ci_write,
     get_ci_service,
     prepare_ci_write,
     prime_cache_after_write,
     record_edit_in_arbiter,
 )
+from tools.daytona_toolkit.ci_integration import destructive_shell_command_error
 
 
 def _ctx(metadata=None) -> ToolExecutionContext:
@@ -162,16 +166,17 @@ def test_finalize_ci_write_enriches_prepared_write_with_symbol_boundaries():
 def test_finalize_ci_write_mirrors_team_edit():
     svc = MagicMock()
     svc.commit_prepared_write.return_value = SimpleNamespace(success=True)
-    svc.arbiter = SimpleNamespace(file_change_store=object())
-    team_store = MagicMock()
-    team_store.initialized = True
-    team_run = SimpleNamespace(file_change_store=team_store)
+    svc.arbiter = MagicMock()
+    team_arbiter = MagicMock()
+    team_arbiter.initialized = True
+    team_run = SimpleNamespace(arbiter=team_arbiter)
     ctx = _ctx(
         {
             "ci_service": svc,
             "team_run_id": "team-1",
             "agent_run_id": "agent-run-1",
             "agent_name": "developer",
+            "work_item_id": "task-7",
         }
     )
     prepared = SimpleNamespace(
@@ -190,15 +195,63 @@ def test_finalize_ci_write_mirrors_team_edit():
         )
 
     assert result.success is True
-    team_store.record.assert_called_once_with(
-        team_run_id="team-1",
+    team_arbiter.record_edit.assert_called_once_with(
         file_path="/repo/file.py",
-        agent_id="developer",
+        team_run_id="team-1",
         agent_run_id="agent-run-1",
+        task_id="task-7",
         edit_type="write",
         old_hash="old-hash",
         new_hash=hashlib.sha256("after\n".encode("utf-8")).hexdigest()[:16],
         description="update file",
+    )
+
+
+def test_commit_ci_change_against_base_mirrors_team_edit():
+    svc = MagicMock()
+    svc.commit_change_against_base.return_value = SimpleNamespace(success=True)
+    svc.arbiter = MagicMock()
+    team_arbiter = MagicMock()
+    team_arbiter.initialized = True
+    team_run = SimpleNamespace(arbiter=team_arbiter)
+    ctx = _ctx(
+        {
+            "ci_service": svc,
+            "team_run_id": "team-1",
+            "agent_run_id": "agent-run-1",
+            "agent_name": "developer",
+            "work_item_id": "task-7",
+        }
+    )
+
+    with patch("tools.core.ci_runtime._get_team_run", return_value=team_run):
+        result = commit_ci_change_against_base(
+            ctx,
+            "/repo/file.py",
+            base_content="before\n",
+            final_content="after\n",
+            edit_type="codeact",
+            description="transaction commit",
+        )
+
+    assert result.success is True
+    svc.commit_change_against_base.assert_called_once_with(
+        "/repo/file.py",
+        base_content="before\n",
+        final_content="after\n",
+        agent_id="developer",
+        edit_type="codeact",
+        description="transaction commit",
+    )
+    team_arbiter.record_edit.assert_called_once_with(
+        file_path="/repo/file.py",
+        team_run_id="team-1",
+        agent_run_id="agent-run-1",
+        task_id="task-7",
+        edit_type="codeact",
+        old_hash=hashlib.sha256("before\n".encode("utf-8")).hexdigest()[:16],
+        new_hash=hashlib.sha256("after\n".encode("utf-8")).hexdigest()[:16],
+        description="transaction commit",
     )
 
 
@@ -246,7 +299,9 @@ def test_record_edit_calls_arbiter():
     )
     svc.arbiter.record_edit.assert_called_once_with(
         file_path="/file.py",
-        agent_id="a1",
+        team_run_id="",
+        agent_run_id="",
+        task_id="",
         edit_type="edit",
         old_hash="abc",
         new_hash="def",
@@ -260,7 +315,9 @@ def test_record_edit_default_args():
     record_edit_in_arbiter(ctx, "/file.py")
     svc.arbiter.record_edit.assert_called_once_with(
         file_path="/file.py",
-        agent_id="",
+        team_run_id="",
+        agent_run_id="",
+        task_id="",
         edit_type="edit",
         old_hash="",
         new_hash="",
@@ -268,18 +325,18 @@ def test_record_edit_default_args():
     )
 
 
-def test_record_edit_mirrors_team_store():
+def test_record_edit_mirrors_team_arbiter():
     svc = MagicMock()
-    svc.arbiter.file_change_store = object()
-    team_store = MagicMock()
-    team_store.initialized = True
-    team_run = SimpleNamespace(file_change_store=team_store)
+    team_arbiter = MagicMock()
+    team_arbiter.initialized = True
+    team_run = SimpleNamespace(arbiter=team_arbiter)
     ctx = _ctx(
         {
             "ci_service": svc,
             "team_run_id": "team-1",
             "agent_run_id": "agent-run-1",
             "agent_name": "developer",
+            "work_item_id": "task-7",
         }
     )
 
@@ -288,17 +345,49 @@ def test_record_edit_mirrors_team_store():
 
     svc.arbiter.record_edit.assert_called_once_with(
         file_path="/file.py",
-        agent_id="developer",
+        team_run_id="team-1",
+        agent_run_id="agent-run-1",
+        task_id="task-7",
         edit_type="edit",
         old_hash="",
         new_hash="",
         description="",
     )
-    team_store.record.assert_called_once_with(
-        team_run_id="team-1",
+    team_arbiter.record_edit.assert_called_once_with(
         file_path="/file.py",
-        agent_id="developer",
+        team_run_id="team-1",
         agent_run_id="agent-run-1",
+        task_id="task-7",
+        edit_type="edit",
+        old_hash="",
+        new_hash="",
+        description="",
+    )
+
+
+def test_record_edit_does_not_double_mirror_same_arbiter():
+    arbiter = MagicMock()
+    arbiter.initialized = True
+    svc = MagicMock()
+    svc.arbiter = arbiter
+    team_run = SimpleNamespace(arbiter=arbiter)
+    ctx = _ctx(
+        {
+            "ci_service": svc,
+            "team_run_id": "team-1",
+            "agent_run_id": "agent-run-1",
+            "work_item_id": "task-7",
+        }
+    )
+
+    with patch("tools.core.ci_runtime._get_team_run", return_value=team_run):
+        record_edit_in_arbiter(ctx, "/file.py")
+
+    arbiter.record_edit.assert_called_once_with(
+        file_path="/file.py",
+        team_run_id="team-1",
+        agent_run_id="agent-run-1",
+        task_id="task-7",
         edit_type="edit",
         old_hash="",
         new_hash="",
@@ -311,14 +400,6 @@ def test_record_edit_swallows_exceptions():
     svc.arbiter.record_edit.side_effect = RuntimeError("boom")
     ctx = _ctx({"ci_service": svc})
     record_edit_in_arbiter(ctx, "/file.py")  # must not raise
-
-
-# ---------------------------------------------------------------------------
-# destructive_shell_command_error
-# ---------------------------------------------------------------------------
-
-import pytest
-from tools.daytona_toolkit.ci_integration import destructive_shell_command_error
 
 
 @pytest.mark.parametrize(
@@ -356,17 +437,3 @@ def test_destructive_shell_command_error_blocks(command):
 def test_destructive_shell_command_error_allows_safe(command):
     err = destructive_shell_command_error(command)
     assert err is None, f"Should allow: {command}"
-
-
-def test_shell_mutation_declaration_error_blocks_destructive_unconditionally():
-    """Destructive commands are blocked even outside team coordination mode."""
-    from tools.daytona_toolkit.ci_integration import shell_mutation_declaration_error
-
-    ctx = _ctx()  # no team mode metadata
-    err = shell_mutation_declaration_error(
-        ctx,
-        command="rm -rf /testbed/dask",
-        declared_output_paths=["/testbed/dask"],
-    )
-    assert err is not None
-    assert "BLOCKED" in err

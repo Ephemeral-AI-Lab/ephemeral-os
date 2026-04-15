@@ -38,10 +38,11 @@ def _build_instructions(*, include_codeact: bool) -> str:
     codeact_line = ""
     if include_codeact:
         codeact_line = (
-            "- `daytona_codeact` — execute Python with atomic file I/O. "
-            "Use for tests, builds, verification, reproductions, or multi-step transformations "
-            "that need read/write/shell in one operation. Inside codeact, run repo commands via "
-            "`shell(\"pytest ...\", timeout=N)`; do not import `subprocess` and do not append `2>&1`.\n"
+            "- `daytona_codeact` — execute direct shell commands or Python in the repo workspace. "
+            "Use `daytona_codeact(command=\"pytest ...\", timeout=N)` for tests, builds, and "
+            "verification, and `daytona_codeact(code=\"...\")` for multi-step Python that needs "
+            "read/write/shell in one operation. Keep commands repo-root-relative; do not import "
+            "`subprocess` and do not append `2>&1`.\n"
         )
     return (
         "Interact with a remote Daytona sandbox for file operations, "

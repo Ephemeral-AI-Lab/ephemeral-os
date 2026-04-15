@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from hooks import HookEvent, HookExecutor
+from hooks import HookEvent
 from message.messages import ToolResultBlock
-from message.stream_events import ToolExecutionCompleted, ToolExecutionStarted
 from tools.core.base import ExecutionMetadata, ToolExecutionContext, run_tool_safely
 from tools.core.runtime import merge_runtime_metadata
 from tools.builtins.skills.toolkit import (
@@ -17,7 +15,6 @@ from tools.builtins.skills.toolkit import (
 
 if TYPE_CHECKING:
     from engine.core.query import QueryContext
-    from engine.runtime.tool_trace import record_tool_trace as _record_tool_trace_func
 
 
 def _build_required_guard_error(

@@ -11,6 +11,8 @@ import time
 import uuid
 from typing import TYPE_CHECKING
 
+from code_intelligence.editing.change_labels import change_actor_label
+
 if TYPE_CHECKING:
     from team.models import Task
     from team.runtime.team_run import TeamRun
@@ -27,11 +29,11 @@ class ScopeChangeNotifier:
     async def inject_warning(self, task: "Task") -> None:
         if not task.scope_paths:
             return
-        store = getattr(self.team_run, "file_change_store", None)
-        if store is None or not getattr(store, "initialized", False):
+        arbiter = getattr(self.team_run, "arbiter", None)
+        if arbiter is None or not getattr(arbiter, "initialized", False):
             return
         created_ts = task.created_at.timestamp() if task.created_at else 0.0
-        changes = store.changes_since(created_ts)
+        changes = arbiter.changes_since(created_ts, team_run_id=self.team_run.id)
         own_run = task.agent_run_id or ""
         external = [
             e
@@ -48,7 +50,7 @@ class ScopeChangeNotifier:
         ]
         for e in external:
             lines.append(
-                f"- {e.file_path} ({e.edit_type} by {e.agent_id}, "
+                f"- {e.file_path} ({e.edit_type} by {change_actor_label(e)}, "
                 f"{int(now - e.created_at.timestamp())}s ago)"
             )
         lines.append(

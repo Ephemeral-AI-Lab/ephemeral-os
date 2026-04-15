@@ -70,10 +70,7 @@ class TeamRun:
         self._num_executors: int = _default_num_executors()
         self.coordination_metadata: dict[str, Any] = {}
         self.roster: dict[str, list[str]] = {}
-        from team.persistence.file_change_store import NullFileChangeStore
-        self.file_change_store: Any = (
-            getattr(runtime_services, "file_change_store", None) or NullFileChangeStore()
-        )
+        self.arbiter: Any = getattr(runtime_services, "arbiter", None)
         self.api_client: Any = self._resolve_api_client()
         from team.persistence.blocker_store import BlockerStore
         from team.runtime.conductor import Conductor
@@ -118,7 +115,7 @@ class TeamRun:
     async def start(
         self, agent_name: str, payload: dict[str, Any], *,
         executor_factory: Callable[["TeamRun"], Executor],
-        num_executors: int | None = None, root_kind: str = "atomic",
+        num_executors: int | None = None,
     ) -> None:
         from team.models import Task, TaskStatus
         root = Task(
@@ -160,7 +157,6 @@ class TeamRun:
         await self.start(
             agent_name=team_def.entry_planner, payload=payload,
             executor_factory=executor_factory, num_executors=num_executors,
-            root_kind="expandable",
         )
 
     def _spawn_executors(self) -> None:

@@ -9,11 +9,9 @@ from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-if TYPE_CHECKING:
-    from compaction import SessionState
-
+from code_intelligence.editing.change_labels import change_actor_label
 from providers.types import (
     ApiCancelEvent,
     ApiMessageCompleteEvent,
@@ -36,14 +34,22 @@ from message.stream_events import (
     ToolExecutionStarted,
 )
 from engine.core.notifications import build_budget_warning
+from engine.core.tool_batch import validate_tool_batch
 from engine.core.streaming_executor import StreamingToolExecutor, defer_background_dispatch
+from engine.runtime.background_dispatch import launch_and_collect_bg_events
 from engine.runtime.background_tasks import BackgroundTaskManager
+from engine.runtime.background_tasks import (
+    append_and_emit_reminder,
+    build_background_reminder,
+    deliver_completed_background_task,
+)
 from tools.core.base import (
     ExecutionMetadata,
     ToolExecutionContext,
     ToolRegistry,
     decorate_schemas_for_background,
 )
+from tools.core.tool_execution import _consume_tool_budget_or_reject, execute_tool_call
 
 
 logger = logging.getLogger(__name__)
@@ -109,20 +115,6 @@ def _should_defer_stream_tool_dispatch(
 
     return _defer
 
-
-# ---------------------------------------------------------------------------
-# Extracted helpers — re-imported from their home modules
-# ---------------------------------------------------------------------------
-from engine.runtime.background_tasks import (
-    append_and_emit_reminder,
-    build_background_reminder,
-    deliver_completed_background_task,
-)
-from engine.runtime.background_dispatch import launch_and_collect_bg_events
-from engine.core.tool_batch import validate_tool_batch
-from tools.core.tool_execution import execute_tool_call
-from tools.core.tool_execution import _consume_tool_budget_or_reject
-
 # Backward-compatibility aliases for internal test imports
 _execute_tool_call = execute_tool_call
 _build_background_reminder = build_background_reminder
@@ -142,15 +134,15 @@ def _scope_change_auto_check(
     metadata: ExecutionMetadata,
     display_messages: list[ConversationMessage],
 ) -> str | None:
-    """Check file_change_store for scope changes by other agents.
+    """Check arbiter history for scope changes by other agents.
 
     Called at the top of each query loop turn. Returns notification text
     when changes are found (and the turn-gate allows), otherwise None.
     Replaces the old ScopeChangeBuffer push system with a pull from the
-    single file_change_store source of truth.
+    current arbiter history.
     """
-    file_change_store = metadata.get("file_change_store")
-    if file_change_store is None or not getattr(file_change_store, "initialized", False):
+    arbiter = metadata.get("arbiter")
+    if arbiter is None or not getattr(arbiter, "initialized", False):
         return None
 
     scope_paths = metadata.get("write_scope") or []
@@ -176,7 +168,10 @@ def _scope_change_auto_check(
         float(metadata.get("work_item_started_at") or 0),
     )
 
-    changes = file_change_store.changes_since(since)
+    changes = arbiter.changes_since(
+        since,
+        team_run_id=str(metadata.get("team_run_id") or "") or None,
+    )
     # Filter to scope and exclude self
     relevant = [
         c for c in changes
@@ -189,7 +184,7 @@ def _scope_change_auto_check(
 
     # Build notification text with per-file detail
     lines = [
-        f"- {c.file_path} ({c.edit_type} by {c.agent_id})"
+        f"- {c.file_path} ({c.edit_type} by {change_actor_label(c)})"
         for c in relevant
     ]
     text = (

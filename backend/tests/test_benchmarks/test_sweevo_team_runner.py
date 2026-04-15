@@ -22,6 +22,7 @@ from benchmarks.sweevo.team_runner import (
     _make_context_builders,
     _make_runner,
 )
+from engine.core.query import QueryExitReason
 from team.persistence.events import TeamRunEvent
 from message import ConversationMessage, TextBlock, ToolUseBlock
 from team.builtins import DEVELOPER, SCOUT, TEAM_PLANNER, TEAM_REPLANNER, VALIDATOR
@@ -120,14 +121,14 @@ async def test_query_ctx_seeds_repo_root_for_daytona_and_ci():
                 project_context=SimpleNamespace(repo_root="/testbed"),
             coordination_metadata={},
             user_request="Fix it",
-            file_change_store=None,
+            arbiter=None,
         ),
         Task(
             id="W1",
             team_run_id="T1",
             agent_name="developer",
             status=TaskStatus.PENDING,
-            task="Fix it",
+            objective="Fix it",
         ),
     )
 
@@ -137,7 +138,7 @@ async def test_query_ctx_seeds_repo_root_for_daytona_and_ci():
     assert ctx.tool_metadata["team_mode_enabled"] is True
     assert ctx.tool_metadata["role"] == "developer"
     assert "Repo root inside the sandbox: /testbed" in ctx.user_message
-    assert 'result = shell("...", timeout=N)' in ctx.user_message
+    assert 'daytona_codeact(command="...", timeout=N)' in ctx.user_message
     assert "never `subprocess` or `2>&1`" in ctx.user_message
     assert "Do not prepend guessed roots" in ctx.user_message
 
@@ -245,14 +246,14 @@ async def test_root_planner_runtime_prompt_hides_submit_task_plan_tool_name():
                 budget_state=None,
                 project_context=SimpleNamespace(repo_root="/testbed"),
             coordination_metadata={},
-            file_change_store=None,
+            arbiter=None,
         ),
         Task(
             id="W1",
             team_run_id="T1",
             agent_name="team_planner",
             status=TaskStatus.PENDING,
-            task="Root planning task",
+            objective="Root planning task",
             depth=0,
         ),
     )
@@ -547,6 +548,8 @@ def test_make_runner_uses_agent_definition_limits(monkeypatch):
                 run_id="",
                 tool_call_limit=_kwargs["agent_def"].tool_call_limit,
                 api_messages_snapshot=None,
+                exit_reason=QueryExitReason.TOOL_STOP,
+                terminal_tools=set(),
             ),
             display_messages=[],
             total_usage=None,
@@ -609,6 +612,8 @@ def test_make_runner_persists_full_compaction_delta(monkeypatch):
         tool_calls_used=0,
         session_state=state,
         api_messages_snapshot=["snapshot"],
+        exit_reason=QueryExitReason.TOOL_STOP,
+        terminal_tools=set(),
     )
     agent = SimpleNamespace(
         query_context=query_context,
@@ -683,6 +688,8 @@ def test_make_runner_persists_work_result_and_final_snapshot(monkeypatch):
         tool_calls_used=0,
         session_state=None,
         api_messages_snapshot=[],
+        exit_reason=QueryExitReason.TOOL_STOP,
+        terminal_tools=set(),
     )
     agent = SimpleNamespace(
         query_context=query_context,
@@ -792,6 +799,8 @@ def test_make_runner_logs_tc_note_external_hook(monkeypatch, tmp_path: Path):
         api_messages_snapshot=[],
         api_client=object(),
         on_turn=None,
+        exit_reason=QueryExitReason.TOOL_STOP,
+        terminal_tools=set(),
     )
 
     async def _fake_run(_prompt: str):
@@ -895,6 +904,8 @@ def test_make_runner_skips_tc_note_when_trigger_not_allowed(monkeypatch, tmp_pat
         api_messages_snapshot=[],
         api_client=object(),
         on_turn=None,
+        exit_reason=QueryExitReason.TOOL_STOP,
+        terminal_tools=set(),
     )
 
     async def _fake_run(_prompt: str):
@@ -976,7 +987,7 @@ def test_finalize_team_result_surfaces_retry_replan_and_checkpoint_metadata(monk
                         team_run_id="TR1",
                         agent_name="developer",
                         status=TaskStatus.DONE,
-                        task="task",
+                        objective="task",
                         retry_count=1,
                     ),
                     "B": Task(
@@ -984,7 +995,7 @@ def test_finalize_team_result_surfaces_retry_replan_and_checkpoint_metadata(monk
                         team_run_id="TR1",
                         agent_name="validator",
                         status=TaskStatus.DONE,
-                        task="task",
+                        objective="task",
                         retry_count=2,
                         depth=1,
                     ),
@@ -1032,7 +1043,7 @@ def test_emit_dispatcher_dag_logs_graph_lines():
         team_run_id="TR1",
         agent_name="team_planner",
         status=TaskStatus.DONE,
-        task="plan",
+        objective="plan",
         depth=0,
     )
     child = Task(
@@ -1040,7 +1051,7 @@ def test_emit_dispatcher_dag_logs_graph_lines():
         team_run_id="TR1",
         agent_name="developer",
         status=TaskStatus.READY,
-        task="child task",
+        objective="child task",
         deps=["root-1"],
         depth=1,
     )

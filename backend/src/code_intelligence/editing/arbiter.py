@@ -3,8 +3,8 @@
 Provides per-file write coordination to prevent conflicts when multiple
 agents edit the same file. Uses edit tokens with TTL for staleness detection.
 
-Edit history is persisted via FileChangeStore (PostgreSQL). The Arbiter
-no longer maintains an in-memory edit buffer.
+Queryable edit history is delegated to an internal EditHistoryLedger so
+callers can depend on Arbiter as the public coordination facade.
 
 Lock ordering (Group A):
     Arbiter locks < Cache locks < Counter locks
@@ -17,13 +17,14 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass
-from typing import Any
 from collections.abc import Callable
+from typing import Any
 
 from code_intelligence.constants import (
     ARBITER_LOCK_TIMEOUT,
     ARBITER_MAX_CONCURRENT_EDITS,
 )
+from code_intelligence.editing.edit_history_ledger import EditHistoryLedger
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +77,7 @@ class Arbiter:
     Thread-safe. Uses per-file locks to serialize edits to the same file
     while allowing concurrent edits to different files.
 
-    Edit history is delegated to FileChangeStore (PG). The Arbiter only
+    Edit history is delegated to EditHistoryLedger. The Arbiter only
     manages OCC primitives: tokens, intents, and file locks.
 
     Parameters
@@ -84,11 +85,9 @@ class Arbiter:
     workspace_root:
         Root directory for path validation.
     on_edit:
-        Optional callback ``(file_path, agent_id, generation)`` after successful edit.
-    file_change_store:
-        Durable store for edit history. When None, edits are not persisted.
-    team_run_id:
-        Team run ID for scoping edits in the store.
+        Optional callback ``(file_path, actor_label, generation)`` after successful edit.
+    edit_history:
+        Queryable edit-history ledger used by coordination readers.
     max_concurrent:
         Maximum concurrent file edits.
     """
@@ -97,15 +96,13 @@ class Arbiter:
         self,
         workspace_root: str = "",
         on_edit: Callable[[str, str, int], None] | None = None,
-        file_change_store: Any | None = None,
-        team_run_id: str = "",
+        edit_history: EditHistoryLedger | None = None,
         max_concurrent: int = ARBITER_MAX_CONCURRENT_EDITS,
     ) -> None:
         self._workspace_root = workspace_root
         self._on_edit = on_edit
         self._max_concurrent = max_concurrent
-        self.file_change_store: Any = file_change_store
-        self.team_run_id: str = team_run_id
+        self._edit_history = edit_history or EditHistoryLedger()
 
         self._lock = threading.Lock()
         self._file_locks: dict[str, threading.Lock] = {}
@@ -226,7 +223,12 @@ class Arbiter:
     def record_edit(
         self,
         file_path: str,
-        agent_id: str = "",
+        actor_label: str = "",
+        *,
+        team_run_id: str = "",
+        agent_run_id: str = "",
+        task_id: str = "",
+        agent_id: str | None = None,
         edit_type: str = "edit",
         old_hash: str = "",
         new_hash: str = "",
@@ -234,7 +236,7 @@ class Arbiter:
     ) -> int:
         """Record a successful edit. Returns the new generation.
 
-        Writes directly to FileChangeStore (PG) when available.
+        Writes directly to the internal edit-history ledger.
         """
         with self._lock:
             self._prune_expired_tokens_locked()
@@ -242,24 +244,24 @@ class Arbiter:
             gen = self._generation
             self._metrics.total_edits += 1
 
-        store = self.file_change_store
-        if store is not None and getattr(store, "initialized", False):
-            try:
-                store.record(
-                    team_run_id=self.team_run_id or "",
-                    file_path=file_path,
-                    agent_id=agent_id,
-                    edit_type=edit_type,
-                    old_hash=old_hash,
-                    new_hash=new_hash,
-                    description=description,
-                )
-            except Exception:
-                logger.debug("FileChangeStore.record failed for %s", file_path)
+        try:
+            self._edit_history.record(
+                team_run_id=team_run_id,
+                file_path=file_path,
+                agent_run_id=agent_run_id,
+                task_id=task_id,
+                edit_type=edit_type,
+                old_hash=old_hash,
+                new_hash=new_hash,
+                description=description,
+            )
+        except Exception:
+            logger.debug("EditHistoryLedger.record failed for %s", file_path)
 
         if self._on_edit:
             try:
-                self._on_edit(file_path, agent_id, gen)
+                actor = str(task_id or agent_run_id or agent_id or actor_label or "")
+                self._on_edit(file_path, actor, gen)
             except Exception:
                 logger.debug("on_edit callback failed for %s", file_path)
 
@@ -288,6 +290,81 @@ class Arbiter:
     def generation(self) -> int:
         with self._lock:
             return self._generation
+
+    @property
+    def initialized(self) -> bool:
+        return bool(getattr(self._edit_history, "initialized", False))
+
+    def changes_in_scope(
+        self,
+        team_run_id: str,
+        scope_prefixes: list[str],
+        since: float,
+    ) -> list[Any]:
+        return self._edit_history.changes_in_scope(team_run_id, scope_prefixes, since)
+
+    def external_changes_in_scope(
+        self,
+        team_run_id: str,
+        scope_prefixes: list[str],
+        since: float,
+        exclude_run_id: str | None = None,
+    ) -> list[Any]:
+        return self._edit_history.external_changes_in_scope(
+            team_run_id,
+            scope_prefixes,
+            since,
+            exclude_run_id=exclude_run_id,
+        )
+
+    def changes_since(
+        self,
+        since: float,
+        team_run_id: str | None = None,
+    ) -> list[Any]:
+        return self._edit_history.changes_since(since, team_run_id=team_run_id)
+
+    def recent_edits(
+        self,
+        seconds: float = 60.0,
+        team_run_id: str | None = None,
+    ) -> list[Any]:
+        return self._edit_history.recent_edits(seconds=seconds, team_run_id=team_run_id)
+
+    def hotspots(
+        self,
+        limit: int = 10,
+        team_run_id: str | None = None,
+    ) -> list[tuple[str, int]]:
+        return self._edit_history.hotspots(limit=limit, team_run_id=team_run_id)
+
+    def who_changed(
+        self,
+        file_path: str,
+        team_run_id: str | None = None,
+    ) -> list[Any]:
+        return self._edit_history.who_changed(file_path, team_run_id=team_run_id)
+
+    def changes_by_agent_run(
+        self,
+        team_run_id: str,
+        agent_run_id: str,
+    ) -> list[Any]:
+        return self._edit_history.changes_by_agent_run(team_run_id, agent_run_id)
+
+    def contention_hotspots(
+        self,
+        scope_prefixes: list[str] | None = None,
+        limit: int = 10,
+        days: int = 7,
+        team_run_id: str | None = None,
+    ) -> list[Any]:
+        return self._edit_history.contention_hotspots(
+            scope_prefixes,
+            limit=limit,
+            days=days,
+            team_run_id=team_run_id,
+        )
 
     def active_reservations(
         self,

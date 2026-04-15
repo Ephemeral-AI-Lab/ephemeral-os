@@ -70,12 +70,14 @@ class CheckpointManager:
         checkpoint_id: str,
         project_context_setter: Callable[[Any], None],
         replace_run_tasks_fn: Callable[[list[Task]], Any],
-        get_record_fn: Callable[[str], Any] | None = None,
+        ready_queue_order_setter: Callable[[list[str]], None] | None = None,
     ) -> TeamRunCheckpoint | None:
         cp = self._get_checkpoint(checkpoint_id)
         if cp is None:
             return None
         await replace_run_tasks_fn(list(cp.tasks.values()))
+        if ready_queue_order_setter is not None:
+            ready_queue_order_setter(list(cp.ready_queue_order))
         project_context_setter(copy.deepcopy(cp.project_context))
         return cp
 

@@ -67,13 +67,13 @@ class TestBuildRoleSection:
     def test_developer_scope_constraint(self) -> None:
         result = build_role_section("developer")
         assert "WorkItem payload" in result
-        assert 'result = shell("...", timeout=N)' in result
+        assert 'daytona_codeact(command="...", timeout=N)' in result
         assert "subprocess" in result
 
     def test_reviewer_may_fix_constraint(self) -> None:
         result = build_role_section("reviewer")
         assert "May apply targeted fixes" in result
-        assert 'result = shell("...", timeout=N)' in result
+        assert 'daytona_codeact(command="...", timeout=N)' in result
 
     def test_planner_no_code_constraint(self) -> None:
         result = build_role_section("planner")

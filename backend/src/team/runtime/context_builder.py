@@ -75,9 +75,9 @@ def build_task_metadata(team_run: "TeamRun", task: Task) -> ExecutionMetadata:
         meta["write_scope"] = task.scope_paths
 
     meta["task_center"] = team_run.task_center
-    file_change_store = getattr(team_run, "file_change_store", None)
-    if file_change_store is not None:
-        meta["file_change_store"] = file_change_store
+    arbiter = getattr(team_run, "arbiter", None)
+    if arbiter is not None:
+        meta["arbiter"] = arbiter
 
     budgets = getattr(team_run, "budgets", None)
     if budgets is not None:

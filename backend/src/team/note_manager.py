@@ -11,6 +11,7 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any, Awaitable, Callable
 
+from code_intelligence.editing.change_labels import change_actor_label
 from team._path_utils import ScopePath
 from team.models import Note, Task
 
@@ -40,14 +41,14 @@ class NoteManager:
         event_store_cb: Callable[[TeamRunEvent], None] | None = None,
         get_task_fn: Callable[[str], Any] | None = None,
         task_store: Any = None,
-        file_change_store: Any = None,
+        arbiter: Any = None,
     ) -> None:
         self._notes: list[Note] = []
         self._team_run_id = team_run_id
         self._event_store_cb = event_store_cb
         self._get_task_fn = get_task_fn
         self._task_store = task_store
-        self._file_change_store = file_change_store
+        self._arbiter = arbiter
         self._blocker_provider: Callable[[], Awaitable[list[Any]]] | None = None
 
     def set_blocker_provider(self, provider: Callable[[], Awaitable[list[Any]]] | None) -> None:
@@ -259,7 +260,7 @@ class NoteManager:
         task: Task,
         *,
         max_context_bytes: int = 200_000,
-        file_change_store: Any = None,
+        arbiter: Any = None,
         active_blockers: list[Any] | None = None,
     ) -> str:
         """Build context string for a task. No external callbacks needed.
@@ -269,8 +270,8 @@ class NoteManager:
         existing ASSESSING/FIXING blockers before deciding whether to call
         ``declare_blocker`` (dedup is skill-driven, not mechanical).
         """
-        if file_change_store is None:
-            file_change_store = self._file_change_store
+        if arbiter is None:
+            arbiter = self._arbiter
         if active_blockers is None and self._blocker_provider is not None:
             try:
                 active_blockers = await self._blocker_provider()
@@ -339,15 +340,15 @@ class NoteManager:
                     )
                     budget = 0
 
-        fcs = file_change_store
+        history = arbiter
         if (
-            fcs is not None
-            and getattr(fcs, "initialized", False)
+            history is not None
+            and getattr(history, "initialized", False)
             and budget > 0
             and task.scope_paths
         ):
             created_ts = task.created_at.timestamp() if task.created_at else 0.0
-            changes = fcs.changes_since(created_ts)
+            changes = history.changes_since(created_ts, team_run_id=self._team_run_id)
             scoped = [
                 e
                 for e in changes
@@ -356,7 +357,7 @@ class NoteManager:
             if scoped:
                 now = time.time()
                 lines = [
-                    f"- {e.file_path} ({e.edit_type} by {e.agent_id}, "
+                    f"- {e.file_path} ({e.edit_type} by {change_actor_label(e)}, "
                     f"{int(now - e.created_at.timestamp())}s ago)"
                     for e in scoped
                 ]

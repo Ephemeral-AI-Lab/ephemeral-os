@@ -10,10 +10,7 @@ Scenarios covered:
   1. codeact read() → write() commits through OCC when CI service present
   2. codeact write() with stale read hash → conflict detected
   3. codeact write() to file changed externally between read and commit → conflict
-  4. codeact shell() mutation triggers sync_shell_mutations
-  5. codeact declared_output_paths reserves files before shell
-  6. Two codeact invocations editing same file — second detects stale hash
-  7. codeact shell with undeclared outputs blocked in team coordination mode
+  4. Two codeact invocations editing same file — second detects stale hash
   8. Live sandbox: codeact read/write roundtrip through real OCC pipeline
   9. Live LLM: agent uses codeact to edit a file, OCC guards the write
 
@@ -191,10 +188,7 @@ def _make_ci_service(sandbox: Any, workspace: str = "/workspace") -> CodeIntelli
     svc._initialized = True
     svc._init_lock = threading.Lock()
 
-    from code_intelligence.editing.arbiter import Arbiter
-    from team.persistence.file_change_store import NullFileChangeStore
-
-    svc.arbiter = Arbiter(workspace_root=workspace, file_change_store=NullFileChangeStore())
+    svc.arbiter = Arbiter(workspace_root=workspace)
 
     from code_intelligence.editing.patcher import Patcher
     from code_intelligence.editing.time_machine import TimeMachine
@@ -220,7 +214,6 @@ def _ctx(
     ci_service: Any = None,
     *,
     agent_run_id: str = "test-agent",
-    require_declared_shell_outputs: bool = False,
 ) -> ToolExecutionContext:
     metadata: dict[str, Any] = {
         "daytona_sandbox": sandbox,
@@ -229,8 +222,6 @@ def _ctx(
     }
     if ci_service is not None:
         metadata["ci_service"] = ci_service
-    if require_declared_shell_outputs:
-        metadata["require_declared_shell_outputs"] = True
     return ToolExecutionContext(cwd=Path("/workspace"), metadata=metadata)
 
 
@@ -597,97 +588,7 @@ class TestCodeactSequentialOcc:
 
 
 # ===========================================================================
-# 6. Shell mutation with declared_output_paths
-# ===========================================================================
-
-
-class TestCodeactShellDeclaredOutputs:
-    """When codeact runs shell commands with declared_output_paths, files are
-    reserved before execution and released after."""
-
-    def test_declared_output_paths_reserves_through_occ(self):
-        """declared_output_paths triggers prepare_declared_shell_outputs before exec."""
-        original = "data = []\n"
-        manifest = {
-            "reads": [],
-            "writes": [],
-            "shells": [
-                {
-                    "command": "echo 'data = [1,2,3]' > /workspace/output.py",
-                    "stdout": "",
-                    "stderr": "",
-                    "exit_code": 0,
-                    "declared_output_paths": ["/workspace/output.py"],
-                }
-            ],
-            "status": "ok",
-            "error": "",
-        }
-        sandbox = _make_codeact_sandbox(
-            files={"/workspace/output.py": original},
-            manifest=manifest,
-        )
-        svc = _make_ci_service(sandbox)
-        ctx = _ctx(sandbox, svc)
-
-        result = _run(daytona_codeact.execute(
-            daytona_codeact.input_model(
-                code="shell(\"echo 'data = [1,2,3]' > /workspace/output.py\")",
-                declared_output_paths=["/workspace/output.py"],
-            ),
-            ctx,
-        ))
-
-        assert not result.is_error, f"Declared output failed: {result.output}"
-        data = json.loads(result.output)
-        assert data["shells_run"] == 1
-
-
-# ===========================================================================
-# 7. Team coordination mode — undeclared shell outputs blocked
-# ===========================================================================
-
-
-class TestCodeactTeamCoordinationBlock:
-    """In team coordination mode, shell commands that mutate the workspace
-    without declaring output paths are blocked inside the wrapper."""
-
-    def test_undeclared_mutating_shell_blocked(self):
-        """A mutating shell command without declared_output_paths → blocked."""
-        manifest = {
-            "reads": [],
-            "writes": [],
-            "shells": [
-                {
-                    "command": "echo 'x = 1' > /workspace/sneaky.py",
-                    "stdout": "",
-                    "stderr": (
-                        "Mutating shell calls must declare `declared_output_paths` in team "
-                        "coordination mode."
-                    ),
-                    "exit_code": -1,
-                    "declared_output_paths": [],
-                    "blocked": True,
-                }
-            ],
-            "status": "error",
-            "error": "RuntimeError: Mutating shell calls must declare `declared_output_paths`",
-        }
-        sandbox = _make_codeact_sandbox(files={}, manifest=manifest)
-        svc = _make_ci_service(sandbox)
-        ctx = _ctx(sandbox, svc, require_declared_shell_outputs=True)
-
-        result = _run(daytona_codeact.execute(
-            daytona_codeact.input_model(code="shell(\"echo 'x = 1' > /workspace/sneaky.py\")"),
-            ctx,
-        ))
-
-        # The wrapper reports error status because the shell was blocked
-        assert result.is_error
-
-
-# ===========================================================================
-# 8. codeact without CI service — falls back to raw upload
+# 6. codeact without CI service — falls back to raw upload
 # ===========================================================================
 
 

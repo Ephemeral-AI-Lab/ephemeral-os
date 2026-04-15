@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -228,9 +229,6 @@ async def test_workspace_structure_waits_for_building_index():
 
     fake_si = FakeSymbolIndex()
     fake_si.is_built = False  # Start as not built
-
-    # Simulate: ensure_built completes and flips is_built + populates symbols
-    original_ensure = fake_si.ensure_built
 
     def ensure_and_flip(wait=True, timeout=30.0):
         fake_si.is_built = True
@@ -920,13 +918,13 @@ async def test_edit_hotspots_no_arbiter():
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
         result = await ci_edit_hotspots.execute(ci_edit_hotspots.input_model(), _ctx_with_svc(svc))
 
-    assert "FileChangeStore not available" in result.output
+    assert "Arbiter history not available" in result.output
 
 
 async def test_edit_hotspots_no_results():
     svc = MagicMock()
-    svc.arbiter.file_change_store.initialized = True
-    svc.arbiter.file_change_store.hotspots.return_value = []
+    svc.arbiter.initialized = True
+    svc.arbiter.hotspots.return_value = []
 
     with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
         result = await ci_edit_hotspots.execute(ci_edit_hotspots.input_model(), _ctx_with_svc(svc))
@@ -936,8 +934,8 @@ async def test_edit_hotspots_no_results():
 
 async def test_edit_hotspots_returns_results():
     svc = MagicMock()
-    svc.arbiter.file_change_store.initialized = True
-    svc.arbiter.file_change_store.hotspots.return_value = [
+    svc.arbiter.initialized = True
+    svc.arbiter.hotspots.return_value = [
         ("src/hot.py", 15),
         ("src/warm.py", 7),
     ]
@@ -952,4 +950,51 @@ async def test_edit_hotspots_returns_results():
     assert len(items) == 2
     assert items[0]["file"] == "src/hot.py"
     assert items[0]["edit_count"] == 15
-    svc.arbiter.file_change_store.hotspots.assert_called_once_with(limit=5)
+    svc.arbiter.hotspots.assert_called_once_with(limit=5, team_run_id=None)
+
+
+async def test_edit_hotspots_cross_run_uses_service_arbiter_without_scope_paths():
+    svc = MagicMock()
+    svc.arbiter.initialized = True
+    svc.arbiter.contention_hotspots.return_value = [
+        SimpleNamespace(file_path="src/hot.py", contributor_count=2, edit_count=4),
+    ]
+
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        result = await ci_edit_hotspots.execute(
+            ci_edit_hotspots.input_model(limit=5, cross_run=True),
+            _ctx_with_svc(svc),
+        )
+
+    assert not result.is_error
+    data = json.loads(result.output)
+    assert data["hotspots"] == [
+        {"file": "src/hot.py", "runs_touched": 2, "total_edits": 4}
+    ]
+    svc.arbiter.contention_hotspots.assert_called_once_with(
+        scope_prefixes=None,
+        limit=5,
+        team_run_id=None,
+    )
+
+
+async def test_edit_hotspots_cross_run_filters_by_team_run_id():
+    svc = MagicMock()
+    svc.arbiter.initialized = True
+    svc.arbiter.contention_hotspots.return_value = []
+
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        await ci_edit_hotspots.execute(
+            ci_edit_hotspots.input_model(
+                limit=3,
+                cross_run=True,
+                scope_paths=["src/"],
+            ),
+            _ctx({"ci_service": svc, "team_run_id": "team-1"}),
+        )
+
+    svc.arbiter.contention_hotspots.assert_called_once_with(
+        scope_prefixes=["src/"],
+        limit=3,
+        team_run_id="team-1",
+    )

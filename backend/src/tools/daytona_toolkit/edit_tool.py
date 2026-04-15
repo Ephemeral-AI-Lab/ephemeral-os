@@ -8,6 +8,7 @@ import logging
 import time
 from typing import Any
 
+from code_intelligence.editing.change_labels import change_actor_label
 from code_intelligence.editing.patcher import Patcher, SearchReplaceEdit
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.ci_runtime import (
@@ -75,8 +76,8 @@ def _scope_overlap_warning(
     otherwise empty string. Call after a successful edit to alert the agent
     about potential concurrent changes in their scope.
     """
-    file_change_store = getattr(context, "metadata", {}).get("file_change_store")
-    if file_change_store is None or not getattr(file_change_store, "initialized", False):
+    arbiter = getattr(context, "metadata", {}).get("arbiter")
+    if arbiter is None or not getattr(arbiter, "initialized", False):
         return ""
 
     agent_run_id = getattr(context, "metadata", {}).get("agent_run_id", "")
@@ -88,7 +89,10 @@ def _scope_overlap_warning(
     if not task_started_at:
         return ""
 
-    changes = file_change_store.changes_since(task_started_at)
+    changes = arbiter.changes_since(
+        task_started_at,
+        team_run_id=str(getattr(context, "metadata", {}).get("team_run_id") or "") or None,
+    )
     now = time.time()
     overlap_lines: list[str] = []
     for e in changes:
@@ -97,7 +101,7 @@ def _scope_overlap_warning(
         if not any(e.file_path.startswith(p.rstrip("/")) for p in write_scope):
             continue
         overlap_lines.append(
-            f"  - {e.file_path} ({e.edit_type} by {e.agent_id}, {int(now - e.created_at.timestamp())}s ago)"
+            f"  - {e.file_path} ({e.edit_type} by {change_actor_label(e)}, {int(now - e.created_at.timestamp())}s ago)"
         )
 
     if not overlap_lines:

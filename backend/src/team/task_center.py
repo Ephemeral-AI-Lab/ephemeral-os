@@ -62,7 +62,7 @@ class TaskCenter:
         team_run_id: str,
         budgets: BudgetConfig,
         budget_state: BudgetState,
-        file_change_store: Any = None,
+        arbiter: Any = None,
         max_checkpoints: int = 10,
         event_store: TeamRunStore | None = None,
     ) -> None:
@@ -99,7 +99,7 @@ class TaskCenter:
             event_store_cb=self._emit,
             get_task_fn=lambda tid: self.get_task(tid),
             task_store=self._store,
-            file_change_store=file_change_store,
+            arbiter=arbiter,
         )
 
         def _on_note_posted(note: Note) -> None:
@@ -471,6 +471,7 @@ class TaskCenter:
             checkpoint_id=checkpoint_id,
             project_context_setter=project_context_setter,
             replace_run_tasks_fn=self._store.replace_run_tasks,
+            ready_queue_order_setter=lambda order: setattr(self._store, "ready_queue_order", order),
         )
         if cp is None:
             raise CheckpointNotFound(checkpoint_id)

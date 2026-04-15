@@ -161,7 +161,7 @@ class AgentDefinition(BaseModel):
             return v.lower() == "true"
         return bool(v) if v is not None else False
 
-    def model_post_init(self, __context: Any) -> None:
+    def model_post_init(self, _context: Any) -> None:
         # Keep ``agent_type`` strings in sync with capability flags so
         # existing callers that read ``agent_def.agent_type`` continue to
         # work without caring that the flags are now authoritative.

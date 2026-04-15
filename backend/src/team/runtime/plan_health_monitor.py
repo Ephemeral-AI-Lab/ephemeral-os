@@ -75,14 +75,14 @@ class PlanHealthMonitor:
         lines = [f"**Checkpoint: {task.id} ({task.agent_name}) → {task.status}**"]
         if task.failure_reason:
             lines.append(f"Failure: {task.failure_reason}")
-        fc_store = getattr(self.team_run, "file_change_store", None)
+        arbiter = getattr(self.team_run, "arbiter", None)
         if (
-            fc_store is not None
-            and getattr(fc_store, "initialized", False)
+            arbiter is not None
+            and getattr(arbiter, "initialized", False)
             and task.agent_run_id
         ):
             try:
-                changes = fc_store.changes_by_agent_run(
+                changes = arbiter.changes_by_agent_run(
                     self.team_run.id, task.agent_run_id
                 )
                 if changes:

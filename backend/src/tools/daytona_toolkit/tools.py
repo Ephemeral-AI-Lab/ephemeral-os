@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
-import re
 import shlex
 from typing import Any
 
@@ -13,12 +11,6 @@ from tools.core.decorator import tool
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.daytona_toolkit._daytona_utils import (
     _truncate,
-    _truncate_tail,
-    _wrap_bash_command,
-    _extract_exit_code,
-    _sandbox_context_error,
-    _is_recoverable_sandbox_error,
-    _attach_sandbox_to_context,
     _require_sandbox,
     _recover_sandbox,
     _path_error,
@@ -26,13 +18,9 @@ from tools.daytona_toolkit._daytona_utils import (
     _resolve_path,
     _normalize_repo_relative_path,
     _normalize_string_list,
-    _normalize_write_scope,
-    _path_under_write_scope,
     _team_repo_write_error,
     _team_repo_write_warning,
     _upload_file_compat,
-    _DEFAULT_TIMEOUT,
-    _OUTPUT_MAX_CHARS,
     is_coordinated_team_agent,
     record_coordination_warning,
 )

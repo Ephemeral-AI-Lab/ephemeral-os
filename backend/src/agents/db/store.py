@@ -27,8 +27,6 @@ class AgentDefinitionStore(DefinitionStoreBase[AgentDefinitionRecord]):
         Existing records (even inactive) are left untouched so user
         customisations are never overwritten by a restart.
         """
-        from dataclasses import asdict as _dc_asdict
-
         with self._sf() as db:
             existing = self._get_by_name_with_session(db, defn.name, active_only=False)
             if existing is not None:

@@ -5,8 +5,6 @@ from __future__ import annotations
 import logging
 from datetime import datetime, UTC
 
-from sqlalchemy.orm import Session, sessionmaker
-
 from db.models.agent_run import AgentRunRecord
 from db.stores.base import SyncStoreMixin
 

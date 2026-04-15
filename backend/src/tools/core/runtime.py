@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass, field, replace
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import Any, ClassVar
 
 MERGED_RUNTIME_METADATA_KEYS: tuple[str, ...] = (
     "scope_packet",
@@ -58,6 +58,7 @@ class ExecutionMetadata:
     daytona_sandbox: Any | None = None
     daytona_cwd: str | None = None
     ci_service: Any | None = None
+    arbiter: Any | None = None
 
     # Per-call tool id (set by the streaming executor so progress events
     # can be attributed back to their originating tool use).
@@ -88,6 +89,7 @@ class ExecutionMetadata:
             "daytona_sandbox",
             "daytona_cwd",
             "ci_service",
+            "arbiter",
             "tool_id",
             "team_run_id",
             "work_item_id",

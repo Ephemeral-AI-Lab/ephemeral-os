@@ -87,9 +87,7 @@ class CodeIntelligenceService:
             tree_cache=self.tree_cache,
         )
 
-        from team.persistence.file_change_store import FileChangeStore
-
-        self.arbiter = Arbiter(workspace_root=workspace_root, file_change_store=FileChangeStore())
+        self.arbiter = Arbiter(workspace_root=workspace_root)
         self.time_machine = TimeMachine()
         self.patcher = Patcher()
         self.lsp_client = LspClient(workspace_root=workspace_root, sandbox=sandbox)
@@ -221,6 +219,25 @@ class CodeIntelligenceService:
     def abort_prepared_write(self, prepared: PreparedWrite) -> None:
         self._write_coordinator.abort_prepared_write(prepared)
 
+    def commit_change_against_base(
+        self,
+        file_path: str,
+        *,
+        base_content: str | None,
+        final_content: str | None,
+        agent_id: str = "",
+        edit_type: str,
+        description: str = "",
+    ) -> EditResult:
+        return self._write_coordinator.commit_change_against_base(
+            file_path,
+            base_content=base_content,
+            final_content=final_content,
+            agent_id=agent_id,
+            edit_type=edit_type,
+            description=description,
+        )
+
     def undo_last_edit(self, file_path: str) -> EditResult:
         return self._write_coordinator.undo_last_edit(file_path)
 
@@ -257,6 +274,7 @@ class CodeIntelligenceService:
         self,
         scope_paths: list[str] | tuple[str, ...] | None,
         *,
+        team_run_id: str | None = None,
         briefing_versions: list[dict[str, Any]] | None = None,
         context_pressure: dict[str, Any] | None = None,
         shared_context: list[dict[str, Any]] | None = None,
@@ -265,19 +283,22 @@ class CodeIntelligenceService:
     ) -> dict[str, Any]:
         """Return the authoritative live coordination snapshot for *scope_paths*."""
         normalized = normalize_scope_paths(scope_paths)
-        store = self.arbiter.file_change_store
-        store_ready = store is not None and getattr(store, "initialized", False)
+        history_ready = getattr(self.arbiter, "initialized", False)
 
         recent_changes: list[dict[str, Any]] = []
-        if store_ready:
-            for entry in store.recent_edits(seconds=recent_seconds):
+        if history_ready:
+            for entry in self.arbiter.recent_edits(
+                seconds=recent_seconds,
+                team_run_id=team_run_id,
+            ):
                 fp = str(entry.file_path or "")
                 if _scope_excludes(fp, normalized):
                     continue
                 recent_changes.append(
                     {
                         "file_path": fp,
-                        "agent_id": str(entry.agent_id or ""),
+                        "agent_run_id": str(entry.agent_run_id or ""),
+                        "task_id": str(entry.task_id or ""),
                         "timestamp": entry.created_at.timestamp() if entry.created_at else 0.0,
                         "edit_type": str(entry.edit_type or ""),
                     }
@@ -285,8 +306,11 @@ class CodeIntelligenceService:
         recent_changes.sort(key=lambda item: (item["file_path"], item["timestamp"]))
 
         hotspots: list[dict[str, Any]] = []
-        if store_ready:
-            for fp, count in store.hotspots(limit=25):
+        if history_ready:
+            for fp, count in self.arbiter.hotspots(
+                limit=25,
+                team_run_id=team_run_id,
+            ):
                 fp_str = str(fp)
                 if _scope_excludes(fp_str, normalized):
                     continue

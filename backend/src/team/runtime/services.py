@@ -3,13 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from code_intelligence.editing.arbiter import Arbiter
 from team.context.project import ProjectContext
 from team.models import BudgetConfig, BudgetState
 from team.persistence.run_store import TeamRunStore, build_default_store
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
-    from team.persistence.file_change_store import FileChangeStore, NullFileChangeStore
     from team.runtime.dispatch_queue import DispatchQueue
     from team.task_center import TaskCenter
 
@@ -20,7 +20,7 @@ class TeamRuntimeServices:
     task_center: "TaskCenter"
     dispatch_queue: "DispatchQueue"
     event_store: TeamRunStore
-    file_change_store: "FileChangeStore | NullFileChangeStore | None" = None
+    arbiter: Arbiter | None = None
 
 
 def build_team_runtime_services(
@@ -56,16 +56,14 @@ def build_team_runtime_services(
                 "Set EPHEMERALOS_DATABASE_URL or pass session_factory explicitly."
             ) from exc
 
-    from team.persistence.file_change_store import FileChangeStore
-
-    file_change_store: Any = FileChangeStore()
+    arbiter: Any = Arbiter(workspace_root=repo_root or "")
 
     task_center = TaskCenter(
         session_factory=task_session_factory,
         team_run_id=team_run_id,
         budgets=budgets,
         budget_state=budget_state,
-        file_change_store=file_change_store,
+        arbiter=arbiter,
         event_store=store,
     )
     dispatch_queue = DispatchQueue(task_session_factory)
@@ -75,5 +73,5 @@ def build_team_runtime_services(
         task_center=task_center,
         dispatch_queue=dispatch_queue,
         event_store=store,
-        file_change_store=file_change_store,
+        arbiter=arbiter,
     )

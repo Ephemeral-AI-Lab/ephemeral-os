@@ -846,22 +846,24 @@ async def ci_edit_hotspots(
     Args:
         limit: Max results
         scope_paths: Filter to files under these path prefixes
-        cross_run: Query cross-run history (FileChangeStore/PG) for multi-agent contention
+        cross_run: Query arbiter-backed cross-run history for multi-agent contention
 
     Returns:
-        hotspots (list): Hotspot entries with file, edit_count, and optionally agents_touched
+        hotspots (list): Hotspot entries with file, edit_count, and optionally runs_touched
     """
     svc, err = _svc_or_error(context)
     if err:
         return err
 
-    # Cross-run path: use FileChangeStore for multi-agent contention data
+    # Cross-run path: use arbiter-backed history for contention data.
     if cross_run:
-        store = context.metadata.get("file_change_store")
-        if store is not None and getattr(store, "initialized", False):
-            hotspots = store.contention_hotspots(
-                scope_prefixes=scope_paths or [],
+        arbiter = context.metadata.get("arbiter") or (svc.arbiter if svc.arbiter else None)
+        team_run_id = str(context.metadata.get("team_run_id") or "") or None
+        if arbiter is not None and getattr(arbiter, "initialized", False):
+            hotspots = arbiter.contention_hotspots(
+                scope_prefixes=scope_paths or None,
                 limit=limit,
+                team_run_id=team_run_id,
             )
             if hotspots:
                 return ToolResult(
@@ -870,7 +872,7 @@ async def ci_edit_hotspots(
                             "hotspots": [
                                 {
                                     "file": h.file_path,
-                                    "agents_touched": h.agent_count,
+                                    "runs_touched": h.contributor_count,
                                     "total_edits": h.edit_count,
                                 }
                                 for h in hotspots
@@ -886,20 +888,23 @@ async def ci_edit_hotspots(
             )
         return ToolResult(
             output=json.dumps(
-                {"hotspots": [], "note": "FileChangeStore not available for cross-run queries."}
+                {"hotspots": [], "note": "Arbiter history not available for cross-run queries."}
             )
         )
 
     # Same-run path: use arbiter via CI service
-    store = getattr(svc.arbiter, "file_change_store", None) if svc.arbiter else None
-    if store is None or not getattr(store, "initialized", False):
-        return ToolResult(output="FileChangeStore not available")
+    arbiter = context.metadata.get("arbiter") or (svc.arbiter if svc.arbiter else None)
+    if arbiter is None or not getattr(arbiter, "initialized", False):
+        return ToolResult(output="Arbiter history not available")
 
     # When scope filtering is needed, fetch a larger candidate set so that
     # post-filter doesn't return empty when matching entries exist beyond
     # the initial limit.
     fetch_limit = limit * 5 if scope_paths else limit
-    hotspots = store.hotspots(limit=fetch_limit)
+    hotspots = arbiter.hotspots(
+        limit=fetch_limit,
+        team_run_id=str(context.metadata.get("team_run_id") or "") or None,
+    )
     if not hotspots:
         return ToolResult(output="No edit hotspots recorded")
 

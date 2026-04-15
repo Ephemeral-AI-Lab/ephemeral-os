@@ -109,11 +109,7 @@ def _make_ci_service(sandbox: Any, workspace: str = "/workspace") -> CodeIntelli
     svc._initialized = True
     svc._init_lock = threading.Lock()
 
-    # Real arbiter — no PG store needed for these tests
-    from code_intelligence.editing.arbiter import Arbiter
-    from team.persistence.file_change_store import NullFileChangeStore
-
-    svc.arbiter = Arbiter(workspace_root=workspace, file_change_store=NullFileChangeStore())
+    svc.arbiter = Arbiter(workspace_root=workspace)
 
     # Real patcher, time machine, symbol index (empty)
     from code_intelligence.editing.patcher import Patcher

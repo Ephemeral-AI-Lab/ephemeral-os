@@ -6,7 +6,6 @@ import logging
 from collections.abc import Iterable
 
 from sqlalchemy import func
-from sqlalchemy.orm import Session, sessionmaker
 
 from db.stores.base import SyncStoreMixin
 from token_tracker.models import TokenUsageRecord

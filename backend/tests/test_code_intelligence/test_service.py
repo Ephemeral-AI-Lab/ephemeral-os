@@ -158,6 +158,135 @@ def test_commit_prepared_write_rejects_overlapping_same_file_edits(tmp_path) -> 
     svc.abort_prepared_write(prepared_b)
 
 
+def test_commit_change_against_base_writes_when_current_matches_base(tmp_path) -> None:
+    file_path = tmp_path / "sample.py"
+    file_path.write_text("value = 1\n", encoding="utf-8")
+
+    svc = CodeIntelligenceService(
+        sandbox_id="sandbox-explicit-base",
+        workspace_root=str(tmp_path),
+    )
+
+    result = svc.commit_change_against_base(
+        str(file_path),
+        base_content="value = 1\n",
+        final_content="value = 2\n",
+        agent_id="agent-a",
+        edit_type="codeact",
+        description="bump value",
+    )
+
+    assert result.success is True
+    assert file_path.read_text(encoding="utf-8") == "value = 2\n"
+
+
+def test_commit_change_against_base_merges_disjoint_changes(tmp_path) -> None:
+    file_path = tmp_path / "multi.py"
+    original = (
+        "def region_a():\n"
+        "    return 'A'\n"
+        "\n"
+        "def region_b():\n"
+        "    return 'B'\n"
+    )
+    file_path.write_text(original, encoding="utf-8")
+
+    svc = CodeIntelligenceService(
+        sandbox_id="sandbox-explicit-base-merge",
+        workspace_root=str(tmp_path),
+    )
+
+    file_path.write_text(
+        original.replace("return 'B'", "return 'B-current'"),
+        encoding="utf-8",
+    )
+
+    result = svc.commit_change_against_base(
+        str(file_path),
+        base_content=original,
+        final_content=original.replace("return 'A'", "return 'A-next'"),
+        agent_id="agent-a",
+        edit_type="codeact",
+        description="merge disjoint changes",
+    )
+
+    assert result.success is True
+    final = file_path.read_text(encoding="utf-8")
+    assert "A-next" in final
+    assert "B-current" in final
+
+
+def test_commit_change_against_base_rejects_overlapping_changes(tmp_path) -> None:
+    file_path = tmp_path / "multi.py"
+    original = "value = 1\n"
+    file_path.write_text(original, encoding="utf-8")
+
+    svc = CodeIntelligenceService(
+        sandbox_id="sandbox-explicit-base-overlap",
+        workspace_root=str(tmp_path),
+    )
+
+    file_path.write_text("value = 99\n", encoding="utf-8")
+    result = svc.commit_change_against_base(
+        str(file_path),
+        base_content=original,
+        final_content="value = 2\n",
+        agent_id="agent-a",
+        edit_type="codeact",
+        description="overlap",
+    )
+
+    assert result.success is False
+    assert result.conflict is True
+    assert result.conflict_reason == "overlapping_range"
+
+
+def test_commit_change_against_base_deletes_when_current_matches_base(tmp_path) -> None:
+    file_path = tmp_path / "delete_me.py"
+    file_path.write_text("value = 1\n", encoding="utf-8")
+
+    svc = CodeIntelligenceService(
+        sandbox_id="sandbox-explicit-base-delete",
+        workspace_root=str(tmp_path),
+    )
+
+    result = svc.commit_change_against_base(
+        str(file_path),
+        base_content="value = 1\n",
+        final_content=None,
+        agent_id="agent-a",
+        edit_type="codeact",
+        description="delete file",
+    )
+
+    assert result.success is True
+    assert not file_path.exists()
+
+
+def test_commit_change_against_base_rejects_delete_after_concurrent_edit(tmp_path) -> None:
+    file_path = tmp_path / "delete_me.py"
+    file_path.write_text("value = 1\n", encoding="utf-8")
+
+    svc = CodeIntelligenceService(
+        sandbox_id="sandbox-explicit-base-delete-conflict",
+        workspace_root=str(tmp_path),
+    )
+
+    file_path.write_text("value = 2\n", encoding="utf-8")
+    result = svc.commit_change_against_base(
+        str(file_path),
+        base_content="value = 1\n",
+        final_content=None,
+        agent_id="agent-a",
+        edit_type="codeact",
+        description="delete file",
+    )
+
+    assert result.success is False
+    assert result.conflict is True
+    assert result.conflict_reason == "version_mismatch"
+
+
 def test_refresh_prepared_write_reissues_token_after_file_change(tmp_path) -> None:
     file_path = tmp_path / "sample.py"
     file_path.write_text("value = 1\n", encoding="utf-8")
@@ -203,6 +332,44 @@ def test_service_publishes_and_releases_edit_intents(tmp_path) -> None:
     svc.release_edit_intent(intent_id)
     packet = svc.scope_status([str(file_path)])
     assert packet["active_edit_intents"] == []
+
+
+def test_scope_status_filters_recent_history_by_team_run_id(tmp_path) -> None:
+    scoped_file = tmp_path / "scoped.py"
+    external_file = tmp_path / "external.py"
+
+    svc = CodeIntelligenceService(
+        sandbox_id="sandbox-scope-status",
+        workspace_root=str(tmp_path),
+    )
+
+    svc.arbiter.record_edit(
+        str(scoped_file),
+        team_run_id="team-a",
+        agent_run_id="run-a",
+        task_id="task-a",
+        edit_type="edit",
+    )
+    svc.arbiter.record_edit(
+        str(external_file),
+        team_run_id="team-b",
+        agent_run_id="run-b",
+        task_id="task-b",
+        edit_type="edit",
+    )
+
+    packet = svc.scope_status([str(tmp_path)], team_run_id="team-a")
+
+    assert packet["recent_changes"] == [
+        {
+            "file_path": str(scoped_file),
+            "agent_run_id": "run-a",
+            "task_id": "task-a",
+            "timestamp": packet["recent_changes"][0]["timestamp"],
+            "edit_type": "edit",
+        }
+    ]
+    assert packet["hotspots"] == [{"file_path": str(scoped_file), "edit_count": 1}]
 
 
 def test_get_code_intelligence_recreates_service_when_workspace_root_changes() -> None:

@@ -7,13 +7,10 @@ import logging
 import re
 import shlex
 import time
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from config.defaults import DEFAULT_SANDBOX_CI_ROOT, DEFAULT_TEAM_SAFE_AGENT_NAMES
-from tools.core.base import ToolExecutionContext, ToolResult
-
-if TYPE_CHECKING:
-    from tools.core.decorator import tool
+from tools.core.base import ToolExecutionContext
 
 logger = logging.getLogger(__name__)
 

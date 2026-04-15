@@ -467,7 +467,6 @@ async def run_subagent(
             artifact ref when the runtime stored one. ``kind`` is one of
             ``"brief" | "plan" | "summary" | "raw"``.
     """
-    from agents import get_definition
     from engine.runtime.agent import spawn_agent
 
     parent_cfg = context.metadata.session_config

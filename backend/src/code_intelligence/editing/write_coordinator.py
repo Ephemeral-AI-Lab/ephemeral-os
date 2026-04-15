@@ -228,7 +228,7 @@ class WriteCoordinator:
 
             gen = self._arbiter.record_edit(
                 file_path=prepared.file_path,
-                agent_id=prepared.agent_id,
+                actor_label=prepared.agent_id,
                 edit_type=edit_type,
                 old_hash=old_hash,
                 new_hash=content_hash(write_content),
@@ -245,6 +245,84 @@ class WriteCoordinator:
             )
         finally:
             self._arbiter.release_file_lock(prepared.file_path)
+
+    def commit_change_against_base(
+        self,
+        file_path: str,
+        *,
+        base_content: str | None,
+        final_content: str | None,
+        agent_id: str = "",
+        edit_type: str,
+        description: str = "",
+        write_message: str = "Wrote file",
+        delete_message: str = "Deleted file",
+    ) -> EditResult:
+        """Commit a file change against an explicit base snapshot."""
+        if final_content is None and base_content is None:
+            return _result(file_path, "Nothing to commit")
+
+        if not self._arbiter.acquire_file_lock(file_path):
+            return _result(
+                file_path,
+                "Could not acquire file lock (timeout)",
+                conflict=True,
+                conflict_reason="lock_timeout",
+            )
+
+        try:
+            try:
+                current_now, existed_now = self._content.read(file_path, allow_missing=True)
+            except Exception as exc:
+                return _result(file_path, f"Cannot read file before commit: {exc}")
+
+            current_content = current_now if existed_now else None
+            current_hash = content_hash(current_now) if existed_now else ""
+
+            if current_content == base_content:
+                return self._apply_change(
+                    file_path,
+                    current_now=current_now,
+                    existed_now=existed_now,
+                    resolved_content=final_content,
+                    agent_id=agent_id,
+                    edit_type=edit_type,
+                    description=description,
+                    success_message=delete_message if final_content is None else write_message,
+                    old_hash=current_hash,
+                )
+
+            if final_content is None:
+                return _result(
+                    file_path,
+                    "Write precheck failed: file content changed before delete. "
+                    "Re-read the file and retry.",
+                    conflict=True,
+                    conflict_reason="version_mismatch",
+                )
+
+            resolved_content, conflict = self._merge_change_against_base(
+                file_path=file_path,
+                base_content=base_content,
+                final_content=final_content,
+                current_content=current_content,
+            )
+            if conflict is not None:
+                return conflict
+
+            return self._apply_change(
+                file_path,
+                current_now=current_now,
+                existed_now=existed_now,
+                resolved_content=resolved_content,
+                agent_id=agent_id,
+                edit_type=edit_type,
+                description=description,
+                success_message=write_message,
+                old_hash=current_hash,
+            )
+        finally:
+            self._arbiter.release_file_lock(file_path)
 
     def refresh_prepared_write(self, prepared: PreparedWrite) -> PreparedWrite:
         """Refresh a prepared write snapshot, reissuing a token when the file changed."""
@@ -294,6 +372,92 @@ class WriteCoordinator:
 
     def _attempt_patch(self, prepared: PreparedWrite, edit: SearchReplaceEdit) -> Any:
         return self._patcher.apply_edits(prepared.current_content, [edit])
+
+    def _apply_change(
+        self,
+        file_path: str,
+        *,
+        current_now: str,
+        existed_now: bool,
+        resolved_content: str | None,
+        agent_id: str,
+        edit_type: str,
+        description: str,
+        success_message: str,
+        old_hash: str,
+    ) -> EditResult:
+        self._time_machine.save(file_path, current_now)
+        try:
+            if resolved_content is None:
+                self._content.delete(file_path)
+            else:
+                self._content.write(file_path, resolved_content)
+        except Exception as exc:
+            action = "Delete" if resolved_content is None else "Write"
+            return _result(file_path, f"{action} failed: {exc}")
+
+        new_hash = content_hash(resolved_content) if resolved_content is not None else ""
+        gen = self._arbiter.record_edit(
+            file_path=file_path,
+            actor_label=agent_id,
+            edit_type=edit_type,
+            old_hash=old_hash if existed_now else "",
+            new_hash=new_hash,
+            description=description,
+        )
+        self._symbol_index.refresh(file_path, resolved_content or "")
+        self._lsp_client.invalidate(file_path)
+        return _result(
+            file_path,
+            success_message,
+            success=True,
+            snapshot_id=str(gen),
+        )
+
+    def _merge_change_against_base(
+        self,
+        *,
+        file_path: str,
+        base_content: str | None,
+        final_content: str,
+        current_content: str | None,
+    ) -> tuple[str, EditResult | None]:
+        if base_content is None or current_content is None:
+            return "", _result(
+                file_path,
+                "Write precheck failed: file content changed before commit. "
+                "Re-read the file and retry.",
+                conflict=True,
+                conflict_reason="version_mismatch",
+            )
+
+        line_start, line_end, operation_type = detect_edit_window(base_content, final_content)
+        if line_start is None:
+            return "", _result(
+                file_path,
+                "Write precheck failed: file content changed before commit. "
+                "Re-read the file and retry.",
+                conflict=True,
+                conflict_reason="version_mismatch",
+            )
+
+        merged = merge_non_overlapping_edit(
+            original_content=base_content,
+            new_content=final_content,
+            current_content=current_content,
+            line_start=line_start,
+            line_end=line_end,
+            operation_type=operation_type,
+        )
+        if merged is not None:
+            return merged, None
+        return "", _result(
+            file_path,
+            "Write precheck failed: file content changed in an overlapping "
+            "or unsupported range. Re-read the file and retry.",
+            conflict=True,
+            conflict_reason="overlapping_range",
+        )
 
     def _resolve_pending_write(
         self,

@@ -6,8 +6,6 @@ import logging
 from datetime import datetime, UTC
 from typing import TYPE_CHECKING
 
-from sqlalchemy.orm import Session, sessionmaker
-
 from db.models.session import SessionRecord
 from db.stores.base import SyncStoreMixin
 from message import ConversationMessage

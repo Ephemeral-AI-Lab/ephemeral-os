@@ -9,7 +9,6 @@ import logging
 from typing import Any
 
 from code_intelligence.editing.merge import detect_edit_window
-from team._path_utils import normalize_scope_paths
 from tools.core.base import ToolExecutionContext
 
 logger = logging.getLogger(__name__)
@@ -206,18 +205,63 @@ def finalize_ci_write(
         _propagate_team_edit(
             context,
             file_path=str(getattr(prepared, "file_path", "") or ""),
-            agent_id=_resolved_agent_id(context),
             agent_run_id=str(context.metadata.get("agent_run_id") or ""),
+            task_id=str(context.metadata.get("work_item_id") or ""),
             edit_type=edit_type,
             old_hash=str(getattr(prepared, "current_hash", "") or ""),
             new_hash=_content_hash(content),
             description=description,
-            ci_store=getattr(getattr(svc, "arbiter", None), "file_change_store", None),
+            ci_arbiter=getattr(svc, "arbiter", None),
         )
     if bool(getattr(result, "conflict", False)):
         _note_team_memory_conflict(
             context,
             file_path=str(getattr(prepared, "file_path", "") or ""),
+            reason=str(
+                getattr(result, "conflict_reason", "")
+                or getattr(result, "message", "")
+                or "write conflict"
+            ),
+        )
+    return result
+
+
+def commit_ci_change_against_base(
+    context: ToolExecutionContext,
+    file_path: str,
+    *,
+    base_content: str | None,
+    final_content: str | None,
+    edit_type: str,
+    description: str,
+) -> Any:
+    """Commit a file change against an explicit base snapshot via the CI service."""
+    svc = get_ci_service(context)
+    assert svc is not None and hasattr(svc, "commit_change_against_base")
+    result = svc.commit_change_against_base(
+        file_path,
+        base_content=base_content,
+        final_content=final_content,
+        agent_id=_resolved_agent_id(context),
+        edit_type=edit_type,
+        description=description,
+    )
+    if bool(getattr(result, "success", False)):
+        _propagate_team_edit(
+            context,
+            file_path=file_path,
+            agent_run_id=str(context.metadata.get("agent_run_id") or ""),
+            task_id=str(context.metadata.get("work_item_id") or ""),
+            edit_type=edit_type,
+            old_hash=_content_hash(base_content or "") if base_content is not None else "",
+            new_hash=_content_hash(final_content) if final_content is not None else "",
+            description=description,
+            ci_arbiter=getattr(svc, "arbiter", None),
+        )
+    if bool(getattr(result, "conflict", False)):
+        _note_team_memory_conflict(
+            context,
+            file_path=file_path,
             reason=str(
                 getattr(result, "conflict_reason", "")
                 or getattr(result, "message", "")
@@ -268,28 +312,33 @@ def record_edit_in_arbiter(
     svc = get_ci_service(context)
     if svc is None:
         return
-    resolved_agent_id = _resolved_agent_id(context, preferred=agent_id)
     agent_run_id = str(context.metadata.get("agent_run_id") or "")
+    task_id = str(context.metadata.get("work_item_id") or "")
     try:
         arbiter = getattr(svc, "arbiter", None)
         if arbiter is not None:
             arbiter.record_edit(
-                file_path=file_path, agent_id=resolved_agent_id,
-                edit_type=edit_type, old_hash=old_hash,
-                new_hash=new_hash, description=description,
+                file_path=file_path,
+                team_run_id=str(context.metadata.get("team_run_id") or ""),
+                agent_run_id=agent_run_id,
+                task_id=task_id,
+                edit_type=edit_type,
+                old_hash=old_hash,
+                new_hash=new_hash,
+                description=description,
             )
     except Exception:
         logger.debug("CI arbiter sync failed for %s", file_path, exc_info=True)
     _propagate_team_edit(
         context,
         file_path=file_path,
-        agent_id=resolved_agent_id,
         agent_run_id=agent_run_id,
+        task_id=task_id,
         edit_type=edit_type,
         old_hash=old_hash,
         new_hash=new_hash,
         description=description,
-        ci_store=getattr(getattr(svc, "arbiter", None), "file_change_store", None),
+        ci_arbiter=getattr(svc, "arbiter", None),
     )
 
 
@@ -373,13 +422,13 @@ def _propagate_team_edit(
     context: ToolExecutionContext,
     *,
     file_path: str,
-    agent_id: str,
     agent_run_id: str,
+    task_id: str,
     edit_type: str,
     old_hash: str,
     new_hash: str,
     description: str,
-    ci_store: Any | None,
+    ci_arbiter: Any | None,
 ) -> None:
     """Mirror successful edits into the team-run coordination stream."""
     team_run_id = str(context.metadata.get("team_run_id") or "")
@@ -389,25 +438,25 @@ def _propagate_team_edit(
     if team_run is None:
         return
 
-    store = getattr(team_run, "file_change_store", None)
+    store = getattr(team_run, "arbiter", None)
     if (
         store is not None
         and getattr(store, "initialized", False)
-        and store is not ci_store
+        and store is not ci_arbiter
     ):
         try:
-            store.record(
-                team_run_id=team_run_id,
+            store.record_edit(
                 file_path=file_path,
-                agent_id=agent_id,
+                team_run_id=team_run_id,
                 agent_run_id=agent_run_id,
+                task_id=task_id,
                 edit_type=edit_type,
                 old_hash=old_hash,
                 new_hash=new_hash,
                 description=description,
             )
         except Exception:
-            logger.debug("team file_change_store mirror failed for %s", file_path, exc_info=True)
+            logger.debug("team arbiter mirror failed for %s", file_path, exc_info=True)
 
 
 
@@ -424,6 +473,7 @@ def _get_team_run(team_run_id: str) -> Any | None:
 
 __all__ = [
     "abort_ci_write",
+    "commit_ci_change_against_base",
     "finalize_ci_write",
     "get_ci_service",
     "prepare_ci_edit_intent",
