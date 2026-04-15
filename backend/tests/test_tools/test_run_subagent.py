@@ -466,57 +466,6 @@ async def test_run_subagent_registers_provider_and_returns_final_text(monkeypatc
     assert "[text]" in snapshot or "[tool]" in snapshot
 
 
-@pytest.mark.asyncio
-async def test_run_subagent_executes_configured_posthook_with_subagent_scope(monkeypatch):
-    scripted = [
-        ConversationMessage(role="user", content=[TextBlock(text="inspect target")]),
-        ConversationMessage(
-            role="assistant",
-            content=[TextBlock(text="Mapped pkg/config.py; fully mapped single-file config surface.")],
-        ),
-    ]
-    stub_agent = _StubAgent(scripted)
-    stub_agent.query_context = SimpleNamespace(
-        api_messages_snapshot=scripted,
-        tool_metadata=None,
-    )
-    monkeypatch.setattr(
-        "engine.runtime.agent.spawn_agent", lambda *a, **kw: stub_agent, raising=True
-    )
-
-    captured: dict[str, object] = {}
-
-    async def _fake_run(**kwargs):
-        captured.update(kwargs)
-        return SimpleNamespace(tool_name="post_note")
-
-    monkeypatch.setattr("external_trigger.runner.run", _fake_run, raising=True)
-
-    bg = _make_bg_manager("bg_posthook")
-    ctx = _make_ctx(
-        bg=bg,
-        task_id="bg_posthook",
-        extra_meta={"task_center": object(), "work_item_id": "planner-root"},
-    )
-
-    result = await run_subagent.execute(
-        run_subagent.input_model(
-            agent_name="scout",
-            input={"target_paths": ["pkg/config.py"]},
-        ),
-        ctx,
-    )
-
-    assert result.is_error is False
-    assert captured["agent_name"] == "posthook:scout:bg_posthook"
-    assert [tool.name for tool in captured["tools"]] == ["post_note"]
-    assert captured["execute_tools"] is True
-    assert "Call `post_note` exactly once" in str(captured["prompt"])
-    assert '"content"' in str(captured["prompt"])
-    exec_ctx = captured["execution_context"]
-    assert exec_ctx.metadata["write_scope"] == ["pkg/config.py"]
-    assert exec_ctx.metadata["work_item_id"] == "planner-root"
-    assert exec_ctx.metadata["agent_name"] == "scout"
 
 
 @pytest.mark.asyncio

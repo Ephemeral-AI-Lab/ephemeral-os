@@ -19,7 +19,7 @@ from team.models import (
     ReplanRequest,
     RetryRequest,
     Task,
-    TaskSpec,
+    TaskDefinition,
     TaskStatus,
 )
 from team.runtime.context_builder import TeamAgentContext
@@ -95,7 +95,7 @@ def _make_task(
         team_run_id="test-run-001",
         agent_name="developer",
         status=TaskStatus(status),
-        task="fix the bug",
+        objective="fix the bug",
         scope_paths=["src/auth/"],
         parent_id=parent_id,
         root_id="root-1",
@@ -158,7 +158,7 @@ def test_read_result_fail_triggers_replan():
     assert "Auth spans 3 services" in result.reason
 
 
-def test_read_result_planner_submit_plan():
+def test_read_result_planner_submit_task_plan():
     """When resolved_plan is a Plan, _read_result returns AgentResult with plan."""
     executor, _ = _make_executor()
     plan = Plan.from_dict({"tasks": [{"id": "t1", "task": "fix it", "agent": "developer"}]})
@@ -374,7 +374,7 @@ def test_inject_scope_warnings_posts_note_for_external_scoped_changes():
     assert "src/auth/session.py" in tc.notes[0].content
     assert "src/auth/local.py" not in tc.notes[0].content
     assert "src/billing/invoice.py" not in tc.notes[0].content
-    assert "posthook will handle replanning" in tc.notes[0].content
+    assert "system will handle replanning" in tc.notes[0].content
 
 
 def test_inject_scope_warnings_skips_when_store_not_initialized():
@@ -455,7 +455,8 @@ def test_run_forever_survives_transient_pop_ready_error():
             # Return a fake record that _record_to_task can handle
             return SimpleNamespace(
                 id="task-1", team_run_id=run_id, agent_name="dev",
-                status="running", task="t", deps=[], scope_paths=[],
+                status="running", objective="t", description="",
+                deps=[], scope_paths=[],
                 scope_ltree=[], cascade_policy="cancel", parent_id=None,
                 root_id="", depth=0, pending_dep_count=0,
                 retry_count=0, max_retries=2, agent_run_id=None,

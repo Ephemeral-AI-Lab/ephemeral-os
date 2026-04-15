@@ -14,7 +14,7 @@ def _task() -> Task:
         team_run_id="run-1",
         agent_name="developer",
         status=TaskStatus.PAUSED,
-        task="repair shared import",
+        objective="repair shared import",
         deps=["dep-1"],
         scope_paths=["pkg/_compat.py"],
         pending_dep_count=1,

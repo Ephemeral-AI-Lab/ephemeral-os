@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
-from team.models import Plan, TaskSpec
+from team.models import Plan, TaskDefinition
 from team.planning.validation import validate_plan
 
 
@@ -18,20 +18,22 @@ from team.planning.validation import validate_plan
 def _spec(
     id_: str,
     agent: str = "developer",
-    task: str = "do work",
+    objective: str = "do work",
     deps: list[str] | None = None,
     scope_paths: list[str] | None = None,
-) -> TaskSpec:
-    return TaskSpec(
+    description: str = "test task",
+) -> TaskDefinition:
+    return TaskDefinition(
         id=id_,
-        task=task,
+        objective=objective,
         agent=agent,
+        description=description,
         deps=deps or [],
         scope_paths=scope_paths or [],
     )
 
 
-def _plan(*specs: TaskSpec, rationale: str | None = None) -> Plan:
+def _plan(*specs: TaskDefinition, rationale: str | None = None) -> Plan:
     return Plan(tasks=list(specs), rationale=rationale)
 
 
@@ -122,7 +124,7 @@ def test_duplicate_task_ids_fail():
 
 
 def test_missing_agent_name_fails():
-    spec = TaskSpec(id="t1", task="do work", agent="")
+    spec = TaskDefinition(id="t1", objective="do work", agent="")
     plan = _plan(spec)
     with patch(_AGENT_EXISTS_PATH, return_value=True), \
          patch(_HAS_ROLE_PATH, return_value=False), \
@@ -288,9 +290,9 @@ def _mock_planner_agent():
 def test_validator_with_cancel_cascade_policy_fails():
     """Validators must use cascade_policy='continue' to ensure recovery cycle works."""
     dev = _spec("dev-1")
-    val = TaskSpec(
+    val = TaskDefinition(
         id="val-root",
-        task="validate",
+        objective="validate",
         agent="validator",
         deps=["dev-1"],
         cascade_policy="cancel",
@@ -318,9 +320,9 @@ def test_validator_with_cancel_cascade_policy_fails():
 def test_validator_with_continue_cascade_policy_passes():
     """Validators with cascade_policy='continue' should not trigger the check."""
     dev = _spec("dev-1")
-    val = TaskSpec(
+    val = TaskDefinition(
         id="val-root",
-        task="validate",
+        objective="validate",
         agent="validator",
         deps=["dev-1"],
         cascade_policy="continue",
@@ -369,9 +371,9 @@ def test_extra_validators_are_called():
 
 def test_crowded_plan_without_expandable_lane_fails():
     specs = [_spec(f"dev-{idx}") for idx in range(7)]
-    validator = TaskSpec(
+    validator = TaskDefinition(
         id="val-root",
-        task="validate",
+        objective="validate",
         agent="validator",
         deps=[spec.id for spec in specs],
         cascade_policy="continue",
@@ -396,16 +398,16 @@ def test_crowded_plan_without_expandable_lane_fails():
 
 def test_crowded_plan_with_expandable_lane_passes_expandability_check():
     specs = [_spec(f"dev-{idx}") for idx in range(6)]
-    planner = TaskSpec(
+    planner = TaskDefinition(
         id="plan-residual",
-        task="split the residual branch",
+        objective="split the residual branch",
         agent="team_planner",
         deps=[],
         scope_paths=["pkg/residual/"],
     )
-    validator = TaskSpec(
+    validator = TaskDefinition(
         id="val-root",
-        task="validate",
+        objective="validate",
         agent="validator",
         deps=[spec.id for spec in specs] + [planner.id],
         cascade_policy="continue",

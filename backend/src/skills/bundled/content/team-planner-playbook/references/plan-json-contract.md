@@ -9,11 +9,11 @@ Use this reference immediately before emitting final plan JSON.
 - No more tool calls, ownership recounts, or task-count debates are allowed after this reference loads.
 - Never load this reference in parallel with `root-plan-self-check`.
 - Must use `agent` only for registered workers: `developer`, `validator`, or `team_planner`.
-- Must use `id` for the lane label.
+- Must use `id` for the lane label — a short unique string used to wire `deps`.
 - Must keep `deps` as a top-level item field.
 - Must emit each `id` only once.
-- Keep each task on the runtime `TaskSpec` shape: `id`, `task`, `agent`, `deps`, `scope_paths`, `cascade_policy`.
-- The `task` field is the agent's sole briefing. Put exact owner, retry target, and recovery question there.
+- Keep each task on the runtime `TaskDefinition` shape: `id`, `description`, `objective`, `agent`, `deps`, `scope_paths`, `cascade_policy`.
+- The `description` field is a short ~10-word label. The `objective` field is the agent's sole briefing. Put exact owner, retry target, and recovery question there.
 - Use exact live-confirmed or explorer-confirmed paths in `scope_paths`; if the exact owner is still uncertain, keep the broader boundary and assign it to `team_planner`.
 - Keep at most one terminal validator in a submitted plan.
 - Before loading this reference, confirm that the terminal validator depends on every terminal non-validator sibling. Do not learn that from a submit error.
@@ -59,9 +59,9 @@ Use this reference immediately before emitting final plan JSON.
   ```json
   {
     "tasks": [
-      {"id": "dev-hdf", "agent": "developer", "deps": [], "scope_paths": ["pkg/io/hdf.py"], "cascade_policy": "cancel", "task": "Restore the shared HDF export in pkg/io/hdf.py. Reproduce and keep verification on pytest pkg/tests/test_hdf.py -x."},
-      {"id": "plan-parquet", "agent": "team_planner", "deps": [], "scope_paths": ["pkg/io/parquet/"], "cascade_policy": "cancel", "task": "Decompose parquet IO failures across engine backends."},
-      {"id": "val-root", "agent": "validator", "deps": ["dev-hdf", "plan-parquet"], "scope_paths": ["pkg/io/hdf.py", "pkg/io/parquet/"], "cascade_policy": "continue", "task": "Run the terminal verification gate for the root layer."}
+      {"id": "dev-hdf", "description": "Fix HDF export", "agent": "developer", "deps": [], "scope_paths": ["pkg/io/hdf.py"], "cascade_policy": "cancel", "objective": "Restore the shared HDF export in pkg/io/hdf.py. Reproduce and keep verification on pytest pkg/tests/test_hdf.py -x."},
+      {"id": "plan-parquet", "description": "Parquet IO decomposition", "agent": "team_planner", "deps": [], "scope_paths": ["pkg/io/parquet/"], "cascade_policy": "cancel", "objective": "Decompose parquet IO failures across engine backends."},
+      {"id": "val-root", "description": "Root verification gate", "agent": "validator", "deps": ["dev-hdf", "plan-parquet"], "scope_paths": ["pkg/io/hdf.py", "pkg/io/parquet/"], "cascade_policy": "continue", "objective": "Run the terminal verification gate for the root layer."}
     ],
     "rationale": "One direct leaf is ready, parquet stays expandable, and the terminal validator depends on every terminal non-validator sibling."
   }

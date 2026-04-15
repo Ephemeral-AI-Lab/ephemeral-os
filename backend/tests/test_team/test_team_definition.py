@@ -247,6 +247,9 @@ class _FakeTaskCenter:
     async def get_statuses(self) -> dict[str, str]:
         return {"task-1": "cancelled"}
 
+    async def fail_orphaned_replanning(self) -> None:
+        pass
+
 
 class _FakeDispatchQueue:
     async def pop_ready(self, run_id: str):
@@ -310,7 +313,7 @@ async def test_start_with_team_definition_spawns_root_with_planner(
         assert run.root_task_id is not None
         root = run.task_center.graph[run.root_task_id]
         assert root.agent_name == "my_planner"
-        assert root.task == "{'k': 'v'}"
+        assert root.objective == "{'k': 'v'}"
         assert getattr(root, "payload") == {"k": "v"}
     finally:
         await _cleanup_run(run)

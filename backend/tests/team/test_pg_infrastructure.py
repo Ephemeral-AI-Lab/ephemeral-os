@@ -87,11 +87,11 @@ class TestTaskRecord:
         assert pk_cols == {"id", "team_run_id"}
 
     def test_explicit_status(self):
-        r = TaskRecord(id="t1", team_run_id="r1", agent_name="dev", task="do stuff", status="pending")
+        r = TaskRecord(id="t1", team_run_id="r1", agent_name="dev", objective="do stuff", status="pending")
         assert r.status == "pending"
 
     def test_explicit_deps(self):
-        r = TaskRecord(id="t1", team_run_id="r1", agent_name="dev", task="x", deps=["a"])
+        r = TaskRecord(id="t1", team_run_id="r1", agent_name="dev", objective="x", deps=["a"])
         assert r.deps == ["a"]
 
 

@@ -555,8 +555,6 @@ async def run_subagent(
         subagent_ctx.metadata["write_scope"] = list(subagent_scope_paths)
     if getattr(sub_def, "role", None):
         subagent_ctx.metadata["role"] = sub_def.role
-    if getattr(sub_def, "posthook", None):
-        subagent_ctx.metadata["posthook_tool_names"] = list(sub_def.posthook)
 
     qc = getattr(agent, "query_context", None)
     if qc is not None:

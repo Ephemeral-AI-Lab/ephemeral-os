@@ -49,7 +49,7 @@ class ActivityTracker:
         c["edit_history"].append(file_path)
         c["turns"] = 0
 
-    def on_posthook(self, task_id: str) -> None:
+    def on_submission(self, task_id: str) -> None:
         self._get_counters(task_id)["turns"] = 0
 
     def tick(self, task_id: str) -> None:

@@ -13,7 +13,7 @@ from sqlalchemy import and_, case, delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import aliased
 
-from team.models import TERMINAL_STATUSES, Task, TaskSpec, TaskStatus, _utcnow
+from team.models import TERMINAL_STATUSES, Task, TaskDefinition, TaskStatus, _utcnow
 from team.persistence.ltree_utils import path_to_ltree
 from team.persistence.task_graph import TaskGraph
 from team.persistence.task_record import TaskRecord
@@ -26,7 +26,8 @@ def record_to_task(rec: TaskRecord) -> Task:
         team_run_id=rec.team_run_id,
         agent_name=rec.agent_name,
         status=TaskStatus(rec.status),
-        task=rec.task,
+        objective=rec.objective,
+        description=rec.description or "",
         deps=list(rec.deps) if rec.deps else [],
         scope_paths=list(rec.scope_paths) if rec.scope_paths else [],
         cascade_policy=rec.cascade_policy or "cancel",
@@ -361,7 +362,7 @@ class TaskStore:
     async def _insert_plan_sql(
         self,
         db: AsyncSession,
-        specs: list[TaskSpec],
+        specs: list[TaskDefinition],
         parent_id: str | None,
         parent_depth: int,
         parent_root_id: str | None,
@@ -378,7 +379,8 @@ class TaskStore:
                     team_run_id=self._team_run_id,
                     agent_name=spec.agent,
                     status=status,
-                    task=spec.task,
+                    objective=spec.objective,
+                    description=spec.description or "",
                     deps=list(spec.deps),
                     scope_paths=list(spec.scope_paths),
                     scope_ltree=[path_to_ltree(p) for p in spec.scope_paths],
@@ -431,7 +433,7 @@ class TaskStore:
 
     async def insert_plan(
         self,
-        specs: list[TaskSpec],
+        specs: list[TaskDefinition],
         parent_id: str | None = None,
         parent_depth: int = 0,
         parent_root_id: str | None = None,
@@ -875,7 +877,7 @@ class TaskStore:
         *,
         cancel_ids: list[str],
         cancel_reason: str,
-        specs: list[TaskSpec],
+        specs: list[TaskDefinition],
         parent_id: str | None,
         parent_depth: int,
         parent_root_id: str | None,
@@ -948,7 +950,7 @@ class TaskStore:
                         team_run_id=self._team_run_id,
                         agent_name=t.agent_name,
                         status=t.status.value,
-                        task=t.task,
+                        objective=t.objective,
                         deps=list(t.deps),
                         scope_paths=list(t.scope_paths),
                         scope_ltree=[path_to_ltree(p) for p in t.scope_paths],
@@ -1022,7 +1024,7 @@ class TaskStore:
                 id=replanner_id,
                 team_run_id=rid,
                 agent_name=replanner_agent,
-                task=task_text,
+                objective=task_text,
                 status="ready",
                 deps=[],
                 scope_paths=scope_paths,

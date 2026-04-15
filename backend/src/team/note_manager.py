@@ -311,12 +311,12 @@ class NoteManager:
                 s += (
                     f"\n\n**This is your LAST attempt.** If you cannot fix the "
                     f"issue with a different approach, stop and note the diagnostic clearly "
-                    f"— the posthook will trigger a replan so the replanner can restructure the work."
+                    f"— the system will trigger a replan so the replanner can restructure the work."
                 )
             sections.append(s)
             budget -= len(s.encode())
 
-        task_section = f"## Your task\n{task.task}"
+        task_section = f"## Your task\n{task.objective}"
         if task.scope_paths:
             task_section += f"\n\nScope: {', '.join(task.scope_paths)}"
         sections.append(task_section)

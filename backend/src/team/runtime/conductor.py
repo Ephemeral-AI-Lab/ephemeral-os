@@ -9,7 +9,7 @@ import time
 import uuid
 from typing import TYPE_CHECKING
 
-from team.models import Blocker, BlockerStatus, ReplanRequest, Task, TaskSpec, TaskStatus, TeamRunStatus
+from team.models import Blocker, BlockerStatus, ReplanRequest, Task, TaskDefinition, TaskStatus, TeamRunStatus
 
 if TYPE_CHECKING:
     from team.persistence.blocker_store import BlockerStore
@@ -249,7 +249,7 @@ class Conductor:
                 f"Root cause paths: {', '.join(blocker.root_cause_paths)}\n"
                 f"Problem: {blocker.reason}\n"
                 "Repair the shared surface directly. When fixed, use `post_note` with the exact fix summary. "
-                "If the blocker cannot be repaired within this scope, note the reason — the posthook will handle replanning."
+                "If the blocker cannot be repaired within this scope, note the reason — the system will handle replanning."
             ),
             deps=[],
             scope_paths=list(blocker.root_cause_paths),
@@ -263,9 +263,9 @@ class Conductor:
             else:
                 raise TypeError("fallback to insert_plan")
         except Exception:
-            spec = TaskSpec(
+            spec = TaskDefinition(
                 id=resolver_id,
-                task=task.task,
+                objective=task.objective,
                 agent=agent_name,
                 deps=[],
                 scope_paths=task.scope_paths,
@@ -301,9 +301,9 @@ class Conductor:
         replanners = find_by_role("replanner")
         replanner_agent = replanners[0].name if replanners else "replanner"
         replanner_id = str(uuid.uuid4())
-        spec = TaskSpec(
+        spec = TaskDefinition(
             id=replanner_id,
-            task=f"Replan after blocker resolved: {fix_summary}",
+            objective=f"Replan after blocker resolved: {fix_summary}",
             agent=replanner_agent,
             deps=[],
             scope_paths=list(blocker.root_cause_paths),

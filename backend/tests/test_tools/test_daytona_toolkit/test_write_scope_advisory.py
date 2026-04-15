@@ -3,8 +3,8 @@
 Write-scope was changed from hard-blocking to advisory: developers can write
 outside their assigned scope_paths with a warning instead of an error.
 Validators remain hard-blocked, and test-suite paths are always hard-blocked
-for coordinated agents. The coordination warning gate in posthook no longer
-blocks submission.
+for coordinated agents. The coordination warning gate no longer blocks
+submission.
 """
 
 from __future__ import annotations
@@ -21,7 +21,6 @@ from tools.daytona_toolkit._daytona_utils import (
     is_coordinated_team_agent,
     record_coordination_warning,
 )
-from tools.posthook.toolkit import _coordination_warnings
 
 
 def _ctx(metadata=None) -> ToolExecutionContext:
@@ -213,40 +212,6 @@ def test_write_warning_for_non_test_path():
     assert "advisory" in result
 
 
-# ---------------------------------------------------------------------------
-# _coordination_warnings: helper still collects correctly
-# ---------------------------------------------------------------------------
-
-
-def test_coordination_warnings_collects_messages():
-    """The warning collector still works — it feeds advisory context, not gates."""
-    ctx = _ctx({
-        "coordination_warnings": [
-            {"category": "write_scope", "message": "first"},
-            {"category": "write_scope", "message": "second"},
-        ],
-    })
-    warnings = _coordination_warnings(ctx)
-    assert len(warnings) == 2
-    assert "first" in warnings
-    assert "second" in warnings
-
-
-def test_coordination_warnings_deduplicates():
-    ctx = _ctx({
-        "coordination_warnings": [
-            {"category": "write_scope", "message": "same"},
-            {"category": "write_scope", "message": "same"},
-        ],
-    })
-    warnings = _coordination_warnings(ctx)
-    assert len(warnings) == 1
-
-
-def test_coordination_warnings_returns_empty_when_none():
-    ctx = _ctx({})
-    warnings = _coordination_warnings(ctx)
-    assert warnings == []
 
 
 # ---------------------------------------------------------------------------

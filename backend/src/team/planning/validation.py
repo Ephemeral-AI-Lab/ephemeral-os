@@ -7,12 +7,12 @@ from typing import Callable, Iterator
 from agents.registry import get_definition as _get_definition, has_role as _has_role
 
 from team.errors import InvalidPlan
-from team.models import Plan, TaskSpec
+from team.models import Plan, TaskDefinition
 
 Issue = dict[str, str]
 
 # Type alias for pluggable plan validators.
-PlanItemValidator = Callable[[list[TaskSpec]], list[Issue]]
+PlanItemValidator = Callable[[list[TaskDefinition]], list[Issue]]
 
 def _agent_exists(agent_name: str) -> bool:
     return _get_definition(agent_name) is not None
@@ -28,11 +28,11 @@ def _is_expandable(agent_name: str) -> bool:
     return defn is not None and defn.role == "planner"
 
 
-def _validator_count(items: list[TaskSpec]) -> int:
+def _validator_count(items: list[TaskDefinition]) -> int:
     return sum(1 for item in items if _is_validator(item.agent))
 
 
-def _concrete_execution_count(items: list[TaskSpec]) -> int:
+def _concrete_execution_count(items: list[TaskDefinition]) -> int:
     return sum(
         1
         for item in items
@@ -40,7 +40,7 @@ def _concrete_execution_count(items: list[TaskSpec]) -> int:
     )
 
 
-def _terminal_validator_count(items: list[TaskSpec]) -> int:
+def _terminal_validator_count(items: list[TaskDefinition]) -> int:
     downstream_ids = {dep for item in items for dep in item.deps if dep}
     return sum(
         1
@@ -50,7 +50,7 @@ def _terminal_validator_count(items: list[TaskSpec]) -> int:
 
 
 def _validator_policy_issues(
-    items: list[TaskSpec],
+    items: list[TaskDefinition],
     *,
     max_reviewers_per_plan: int | None = None,
     require_reviewer_for_plan_size: int | None = None,
@@ -122,7 +122,7 @@ def _validator_policy_issues(
     return issues
 
 
-def _terminal_non_validator_leaf_ids(items: list[TaskSpec]) -> set[str]:
+def _terminal_non_validator_leaf_ids(items: list[TaskDefinition]) -> set[str]:
     downstream_ids = {dep for item in items for dep in item.deps if dep}
     return {
         item.id
@@ -168,7 +168,7 @@ def _scope_overlaps(left: str, right: str) -> bool:
     )
 
 
-def _crowded_layer_expandability_issues(items: list[TaskSpec]) -> list[Issue]:
+def _crowded_layer_expandability_issues(items: list[TaskDefinition]) -> list[Issue]:
     issues: list[Issue] = []
     expandable_count = sum(1 for item in items if _is_expandable(item.agent))
     concrete_count = _concrete_execution_count(items)
@@ -187,7 +187,7 @@ def _crowded_layer_expandability_issues(items: list[TaskSpec]) -> list[Issue]:
 
 
 def _shared_scope_conflict_issues(
-    items: list[TaskSpec],
+    items: list[TaskDefinition],
     adj: dict[str, list[str]],
 ) -> list[Issue]:
     issues: list[Issue] = []
@@ -227,7 +227,7 @@ def _shared_scope_conflict_issues(
     return issues
 
 
-def _validator_dependency_issues(items: list[TaskSpec]) -> list[Issue]:
+def _validator_dependency_issues(items: list[TaskDefinition]) -> list[Issue]:
     issues: list[Issue] = []
     terminal_leaf_ids = _terminal_non_validator_leaf_ids(items)
     downstream_ids = {dep for item in items for dep in item.deps if dep}
@@ -335,10 +335,30 @@ def validate_plan(
                         "field": f"tasks[{idx}].agent",
                         "msg": (
                             f"submitted plans cannot include replanner agent '{item.agent}'; "
-                            "replanners are spawned reactively via request_replan, not planned"
+                            "replanners are spawned reactively via submit_task_summary(type='fail'), not planned"
                         ),
                     }
                 )
+
+        # description is required, max ~10 words
+        if not item.description:
+            issues.append(
+                {"field": f"tasks[{idx}].description", "msg": "description is required (short ~10-word label)"}
+            )
+        else:
+            word_count = len(item.description.split())
+            if word_count > 12:
+                issues.append(
+                    {
+                        "field": f"tasks[{idx}].description",
+                        "msg": f"description has {word_count} words; keep it under 10 words",
+                    }
+                )
+        # scope_paths is required
+        if not item.scope_paths:
+            issues.append(
+                {"field": f"tasks[{idx}].scope_paths", "msg": "scope_paths is required (at least one path)"}
+            )
 
     # Dep refs + cycle check.
     adj: dict[str, list[str]] = {

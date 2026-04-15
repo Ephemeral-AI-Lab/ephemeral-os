@@ -64,7 +64,7 @@ def _make_run_with_context(
         team_run_id=run.id,
         agent_name="validator",
         status=TaskStatus.DONE,
-        task="verify src/runtime/dispatcher.py",
+        objective="verify src/runtime/dispatcher.py",
         scope_paths=["src/runtime/dispatcher.py"],
     )
     return run, task

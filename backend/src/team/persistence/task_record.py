@@ -31,7 +31,8 @@ class TaskRecord(Base):
     status: Mapped[str] = mapped_column(
         String(16), nullable=False, default="pending"
     )
-    task: Mapped[str] = mapped_column(Text, nullable=False)
+    objective: Mapped[str] = mapped_column(Text, nullable=False)
+    description: Mapped[str] = mapped_column(Text, default="")
     deps: Mapped[list[str]] = mapped_column(
         ARRAY(Text), default=list
     )

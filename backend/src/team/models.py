@@ -1,7 +1,7 @@
 """Core team-mode dataclasses and enums.
 
 Simplified per Plan A: Task Center replaces briefings, Note replaces
-Briefing + DependencyArtifact, TaskSpec replaces the former WorkItemSpec.
+Briefing + DependencyArtifact, TaskDefinition replaces the former WorkItemSpec.
 """
 
 from __future__ import annotations
@@ -95,7 +95,7 @@ class Note:
 
 
 # ---------------------------------------------------------------------------
-# TaskSpec — what the planner submits
+# TaskDefinition — what the planner submits
 # ---------------------------------------------------------------------------
 
 
@@ -103,12 +103,13 @@ CascadePolicy = Literal["cancel", "retry_first", "continue"]
 
 
 @dataclass
-class TaskSpec:
+class TaskDefinition:
     """One item in a plan."""
 
     id: str
-    task: str
+    objective: str
     agent: str
+    description: str = ""
     deps: list[str] = field(default_factory=list)
     scope_paths: list[str] = field(default_factory=list)
     cascade_policy: CascadePolicy = "cancel"
@@ -125,7 +126,8 @@ class Task:
     team_run_id: str
     agent_name: str
     status: TaskStatus
-    task: str
+    objective: str
+    description: str = ""
     deps: list[str] = field(default_factory=list)
     scope_paths: list[str] = field(default_factory=list)
     cascade_policy: CascadePolicy = "cancel"
@@ -153,7 +155,7 @@ class Task:
 
 @dataclass
 class Plan:
-    tasks: list[TaskSpec] = field(default_factory=list)
+    tasks: list[TaskDefinition] = field(default_factory=list)
     rationale: str | None = None
 
     @classmethod
@@ -164,7 +166,7 @@ class Plan:
 
 @dataclass
 class ReplanPlan:
-    add_tasks: list[TaskSpec] = field(default_factory=list)
+    add_tasks: list[TaskDefinition] = field(default_factory=list)
     cancel_ids: list[str] = field(default_factory=list)
 
     @classmethod
@@ -183,12 +185,12 @@ def _taskspec_list_from_field(
     data: dict[str, Any],
     *,
     field_name: str,
-) -> list[TaskSpec]:
+) -> list[TaskDefinition]:
     raw_items = data.get(field_name) or []
     if not isinstance(raw_items, list):
         raise ValueError(f"'{field_name}' must be a list")
 
-    items: list[TaskSpec] = []
+    items: list[TaskDefinition] = []
     for index, item in enumerate(raw_items):
         if not isinstance(item, dict):
             raise ValueError(f"{field_name}[{index}] must be an object")
@@ -199,25 +201,26 @@ def _taskspec_list_from_field(
     return items
 
 
-def _taskspec_from_dict(it: dict[str, Any]) -> TaskSpec:
-    """Build a TaskSpec from a dict, raising ValueError on missing required fields."""
+def _taskspec_from_dict(it: dict[str, Any]) -> TaskDefinition:
+    """Build a TaskDefinition from a dict, raising ValueError on missing required fields."""
     task_id = str(it.get("id") or "")
-    task_text = str(it.get("task") or "")
+    objective = str(it.get("objective") or it.get("task") or "")
     agent = str(it.get("agent") or "")
     if not task_id:
-        raise ValueError("TaskSpec requires a non-empty 'id'")
-    if not task_text:
-        raise ValueError(f"TaskSpec '{task_id}' requires a non-empty 'task'")
+        raise ValueError("TaskDefinition requires a non-empty 'id'")
+    if not objective:
+        raise ValueError(f"TaskDefinition '{task_id}' requires a non-empty 'objective'")
     if not agent:
-        raise ValueError(f"TaskSpec '{task_id}' requires a non-empty 'agent'")
+        raise ValueError(f"TaskDefinition '{task_id}' requires a non-empty 'agent'")
     raw_policy = str(it.get("cascade_policy", "cancel"))
     cascade_policy: CascadePolicy = (
         raw_policy if raw_policy in _VALID_CASCADE_POLICIES else "cancel"
     )  # type: ignore[assignment]
-    return TaskSpec(
+    return TaskDefinition(
         id=task_id,
-        task=task_text,
+        objective=objective,
         agent=agent,
+        description=str(it.get("description") or ""),
         deps=list(it.get("deps") or []),
         scope_paths=list(it.get("scope_paths") or []),
         cascade_policy=cascade_policy,

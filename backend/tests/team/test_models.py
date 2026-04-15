@@ -15,7 +15,7 @@ from team.models import (
     RetryRequest,
     SubmittedSummary,
     Task,
-    TaskSpec,
+    TaskDefinition,
     TaskStatus,
     TERMINAL_STATUSES,
 )
@@ -61,28 +61,28 @@ def test_note_defaults():
 
 
 # ---------------------------------------------------------------------------
-# TaskSpec
+# TaskDefinition
 # ---------------------------------------------------------------------------
 
 
 def test_taskspec_creation_with_required_fields():
-    spec = TaskSpec(id="t1", task="do work", agent="developer")
+    spec = TaskDefinition(id="t1", objective="do work", agent="developer")
     assert spec.id == "t1"
-    assert spec.task == "do work"
+    assert spec.objective == "do work"
     assert spec.agent == "developer"
 
 
 def test_taskspec_defaults():
-    spec = TaskSpec(id="t1", task="do work", agent="developer")
+    spec = TaskDefinition(id="t1", objective="do work", agent="developer")
     assert spec.deps == []
     assert spec.scope_paths == []
     assert spec.cascade_policy == "cancel"
 
 
 def test_taskspec_with_all_fields():
-    spec = TaskSpec(
+    spec = TaskDefinition(
         id="t2",
-        task="verify",
+        objective="verify",
         agent="validator",
         deps=["t1"],
         scope_paths=["src/auth/"],
@@ -94,7 +94,7 @@ def test_taskspec_with_all_fields():
 
 
 def test_plan_from_dict_reports_invalid_task_index_for_missing_id():
-    with pytest.raises(ValueError, match=r"tasks\[1\]: TaskSpec requires a non-empty 'id'"):
+    with pytest.raises(ValueError, match=r"tasks\[1\]: TaskDefinition requires a non-empty 'id'"):
         Plan.from_dict(
             {
                 "tasks": [
@@ -128,13 +128,13 @@ def test_task_creation_with_required_fields():
         team_run_id="run-1",
         agent_name="developer",
         status=TaskStatus.PENDING,
-        task="implement feature",
+        objective="implement feature",
     )
     assert task.id == "x"
     assert task.team_run_id == "run-1"
     assert task.agent_name == "developer"
     assert task.status == TaskStatus.PENDING
-    assert task.task == "implement feature"
+    assert task.objective == "implement feature"
 
 
 def test_task_defaults():
@@ -143,7 +143,7 @@ def test_task_defaults():
         team_run_id="run-1",
         agent_name="developer",
         status=TaskStatus.PENDING,
-        task="do it",
+        objective="do it",
     )
     assert task.deps == []
     assert task.scope_paths == []
@@ -218,7 +218,7 @@ def test_plan_from_dict_round_trip():
 
     t1 = plan.tasks[0]
     assert t1.id == "t1"
-    assert t1.task == "implement login"
+    assert t1.objective == "implement login"
     assert t1.agent == "developer"
     assert t1.deps == []
     assert t1.scope_paths == ["src/auth/"]
@@ -268,7 +268,7 @@ def test_replan_plan_from_dict_round_trip():
     replan = ReplanPlan.from_dict(data)
     assert len(replan.add_tasks) == 1
     assert replan.add_tasks[0].id == "fix1"
-    assert replan.add_tasks[0].task == "fix the bug"
+    assert replan.add_tasks[0].objective == "fix the bug"
     assert replan.cancel_ids == ["old-task-1", "old-task-2"]
 
 

@@ -40,7 +40,7 @@ from team.models import (
     Blocker,
     BlockerStatus,
     Task,
-    TaskSpec,
+    TaskDefinition,
     TaskStatus,
 )
 from team.runtime.conductor import Conductor
@@ -81,7 +81,7 @@ class InMemoryTaskCenter:
     def __init__(self) -> None:
         self.tasks: dict[str, FakeTaskRecord] = {}
         self.graph: dict[str, Task] = {}
-        self.inserted_plans: list[list[TaskSpec]] = []
+        self.inserted_plans: list[list[TaskDefinition]] = []
         self._notes: list[Any] = []
         self.budgets = BudgetConfig()
         self.budget_state = BudgetState()
@@ -144,7 +144,7 @@ class InMemoryTaskCenter:
         return count
 
     async def insert_plan(
-        self, specs: list[TaskSpec], parent_id: str | None = None,
+        self, specs: list[TaskDefinition], parent_id: str | None = None,
         parent_depth: int = 0, parent_root_id: str | None = None,
     ) -> list[str]:
         self.inserted_plans.append(specs)

@@ -144,7 +144,7 @@ class SubmitTaskNoteTool(BaseTool):
         return ToolResult(output=f"Note posted ({len(content)} chars).")
 
 
-# Backward-compat alias — used by posthook/toolkit.py and tc_note.py during transition
+# Backward-compat alias — used by tc_note.py during transition
 PostNoteTool = SubmitTaskNoteTool
 
 
@@ -172,7 +172,7 @@ class ContextChangedSinceTool(BaseTool):
         context.metadata["checked_context_freshness"] = True
         report = await check_freshness(context)
         # Update the freshness baseline so subsequent checks (e.g. in
-        # post_note posthook) only report changes since THIS check,
+        # submit_task_note) only report changes since THIS check,
         # not since work_item_started_at.  Fixes the monotonic-count bug
         # where sibling completions accumulate across the entire run.
         import time as _time
@@ -202,6 +202,10 @@ class ReadTaskNoteInput(BaseModel):
     scope: Literal["own", "sibling"] = Field(
         default="own",
         description="'own' reads notes from your own task. 'sibling' reads from sibling tasks and descendants.",
+    )
+    task_ids: list[str] | None = Field(
+        default=None,
+        description="Filter by specific task IDs. Overrides scope — returns notes only from these tasks.",
     )
     paths: list[str] | None = Field(
         default=None,
@@ -248,7 +252,16 @@ class ReadTaskNoteTool(BaseTool):
                     is_error=True,
                 )
 
-        if arguments.scope == "sibling":
+        if arguments.task_ids:
+            # Direct task_id filter — bypasses scope logic
+            notes = await tc.notes.read(
+                authors=arguments.task_ids,
+                paths=arguments.paths,
+                tags=arguments.tags,
+                keyword=arguments.keyword,
+                last_n=arguments.last_n,
+            )
+        elif arguments.scope == "sibling":
             task_id = str(context.metadata.get("work_item_id") or "")
             if not task_id:
                 return ToolResult(output="Error: no task context available", is_error=True)
@@ -332,8 +345,12 @@ class ReadTaskDetailsTool(BaseTool):
             header = f"## {task.id} ({task.agent_name}) [{task.status.value}]"
             lines = [header]
 
+            # Title
+            if task.description:
+                lines.append(f"**Description:** {task.description}")
+
             # Spec
-            lines.append(f"**Spec:** {task.task}")
+            lines.append(f"**Objective:** {task.objective}")
 
             # Deps
             if task.deps:
@@ -370,20 +387,22 @@ class ReadTaskDetailsTool(BaseTool):
 
 
 class ReadTaskGraphInput(BaseModel):
-    scope: Literal["sibling", "global"] = Field(
-        default="sibling",
+    scope: Literal["parent", "global"] = Field(
+        default="parent",
         description=(
-            "'sibling' shows tasks under the same parent (your peers). "
+            "'parent' shows tasks under the same parent (your peers). "
             "'global' shows the full task tree."
         ),
     )
+    include_status: bool = Field(default=True, description="Include task status in output.")
+    include_deps: bool = Field(default=True, description="Include dependency edges in output.")
 
 
 class ReadTaskGraphTool(BaseTool):
     name = "read_task_graph"
     description = (
         "View the task DAG structure: IDs, agents, status, and dependency edges. "
-        "Use scope='sibling' to see your peer tasks, scope='global' for the full tree. "
+        "Use scope='parent' to see your peer tasks, scope='global' for the full tree. "
         "Follow up with read_task_details(task_ids=[...]) for full info on specific tasks."
     )
     input_model = ReadTaskGraphInput
@@ -400,7 +419,7 @@ class ReadTaskGraphTool(BaseTool):
 
         task_id = str(context.metadata.get("work_item_id") or "")
 
-        if arguments.scope == "sibling":
+        if arguments.scope == "parent":
             own_task = graph.get(task_id)
             if own_task is None:
                 return ToolResult(output="Error: own task not found in graph", is_error=True)
@@ -418,11 +437,13 @@ class ReadTaskGraphTool(BaseTool):
         lines: list[str] = []
         for t in tasks:
             marker = " **(you)**" if t.id == task_id else ""
-            dep_str = f" deps=[{', '.join(t.deps)}]" if t.deps else ""
+            title_str = f" \"{t.description}\"" if t.description else ""
+            status_str = f" [{t.status.value}]" if arguments.include_status else ""
+            dep_str = f" deps=[{', '.join(t.deps)}]" if arguments.include_deps and t.deps else ""
             scope_str = f" scope=[{', '.join(t.scope_paths[:2])}]" if t.scope_paths else ""
             failure = f" FAIL: {t.failure_reason[:80]}" if t.failure_reason else ""
             lines.append(
-                f"- **{t.id}** {t.agent_name} [{t.status.value}]{marker}"
+                f"- **{t.id}** {t.agent_name}{status_str}{title_str}{marker}"
                 f"{dep_str}{scope_str}{failure}"
             )
 

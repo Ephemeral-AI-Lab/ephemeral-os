@@ -9,7 +9,7 @@ from team.builtins import register_all as register_team_builtins
 from team.models import BudgetConfig, BudgetState, Task, TaskStatus
 from team.runtime.context_builder import build_task_metadata
 from tools.core.base import ToolExecutionContext
-from tools.posthook.toolkit import SubmitPlanTool
+from tools.submission.toolkit import SubmitTaskPlanTool
 
 
 if get_definition("developer") is None:
@@ -39,7 +39,7 @@ def test_build_task_metadata_enables_team_runtime_flags():
         team_run_id="run-1",
         agent_name="developer",
         status=TaskStatus.PENDING,
-        task="implement auth",
+        objective="implement auth",
         deps=["dep-1", "dep-2"],
         scope_paths=["src/auth"],
         depth=2,
@@ -60,7 +60,6 @@ def test_build_task_metadata_enables_team_runtime_flags():
 
     meta = build_task_metadata(team_run, task)
 
-    assert meta["posthook_enabled"] is True
     assert meta["team_mode_enabled"] is True
     assert meta["task_deps"] == ["dep-1", "dep-2"]
     assert meta["task_parent_id"] is None
@@ -81,7 +80,7 @@ def test_build_task_metadata_exposes_active_blocker_fix_task_ids():
         team_run_id="run-1",
         agent_name="team_replanner",
         status=TaskStatus.PENDING,
-        task="recover from shared failure",
+        objective="recover from shared failure",
     )
     team_run = SimpleNamespace(
         id="run-1",
@@ -145,28 +144,26 @@ async def test_submit_plan_resolves_roster_role_hints():
         },
     )
 
-    tool = SubmitPlanTool()
+    tool = SubmitTaskPlanTool()
     result = await tool.execute(
         tool.input_model(
-            tasks=[
-                {"id": "impl", "task": "Implement the API", "agent": "developer"},
+            new_tasks=[
+                {"id": "impl", "objective": "Implement the API", "name": "developer", "scope_paths": ["src/api.py"]},
                 {
                     "id": "review",
-                    "task": "Validate the API changes",
-                    "agent": "reviewer",
+                    "objective": "Validate the API changes",
+                    "name": "reviewer",
                     "deps": ["impl"],
-                    "cascade_policy": "continue",
+                    "scope_paths": ["src/api.py"],
                 },
             ],
-            rationale="Implementation then review.",
         ),
         ctx,
     )
 
-    assert result.is_error is False
+    assert result.is_error is False, result.output
     assert "Plan accepted (2 tasks)" in result.output
-    assert result.metadata is not None
-    resolved_plan = result.metadata.get("resolved_plan")
+    resolved_plan = ctx.metadata.get("resolved_plan")
     assert resolved_plan is not None
     assert resolved_plan.tasks[1].agent == "validator"
     assert len(task_center.posted) == 1
@@ -194,14 +191,15 @@ async def test_submit_plan_rejects_oversize_task_notes():
         },
     )
 
-    tool = SubmitPlanTool()
+    tool = SubmitTaskPlanTool()
     result = await tool.execute(
         tool.input_model(
-            tasks=[
+            new_tasks=[
                 {
                     "id": "oversize",
-                    "task": "This task description is intentionally too large.",
-                    "agent": "developer",
+                    "objective": "This task description is intentionally too large.",
+                    "name": "developer",
+                    "scope_paths": ["src/api.py"],
                 }
             ]
         ),

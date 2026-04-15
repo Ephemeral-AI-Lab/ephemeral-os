@@ -124,7 +124,7 @@ class TeamRun:
         root = Task(
             id=str(uuid.uuid4()), team_run_id=self.id, agent_name=agent_name,
             status=TaskStatus.PENDING,
-            task=payload.get("task", payload.get("user_request", str(payload))),
+            objective=payload.get("task", payload.get("user_request", str(payload))),
             scope_paths=list(payload.get("scope_paths", [])), depth=0,
         )
         root.payload = dict(payload)

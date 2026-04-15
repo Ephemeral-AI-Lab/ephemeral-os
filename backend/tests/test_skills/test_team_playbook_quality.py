@@ -11,7 +11,6 @@ _CONTENT = _BACKEND_ROOT / "src/skills/bundled/content"
 _PLAYBOOKS = [
     _CONTENT / "team-developer-playbook/SKILL.md",
     _CONTENT / "team-validator-playbook/SKILL.md",
-    _CONTENT / "team-posthook-decision-playbook/SKILL.md",
     _CONTENT / "team-planner-playbook/SKILL.md",
     _CONTENT / "team-replanner-playbook/SKILL.md",
     _CONTENT / "team-scout-playbook/SKILL.md",
@@ -31,7 +30,6 @@ _REFERENCES = [
     _CONTENT / "team-planner-playbook/references/plan-json-contract.md",
     _CONTENT / "team-planner-playbook/references/task-planning-decomposition.md",
     _CONTENT / "team-scout-playbook/references/completion-contract.md",
-    _CONTENT / "team-posthook-decision-playbook/references/decision-gates.md",
     _CONTENT / "team-validator-playbook/references/cross-surface-guardrails.md",
     _CONTENT / "team-replanner-playbook/references/corrective-fast-path.md",
     _CONTENT / "team-replanner-playbook/references/action-add-tasks.md",
@@ -256,7 +254,7 @@ def test_developer_and_validator_skills_explain_when_to_load_references() -> Non
         in developer
     )
     assert (
-        "the next step after that first `read_notes(...)` must be the exact `daytona_codeact` repro, not `daytona_read_file(...)` on a source file or benchmark test."
+        "the next step after that first `read_task_note(...)` must be the exact `daytona_codeact` repro, not `daytona_read_file(...)` on a source file or benchmark test."
         in developer
     )
     assert "Must not open benchmark test files with `daytona_read_file(...)` before the first exact repro" in developer
@@ -358,30 +356,9 @@ def test_developer_and_validator_skills_explain_when_to_load_references() -> Non
     )
 
 
-def test_posthook_and_verification_replan_explain_when_to_load_references() -> None:
-    if not (_CONTENT / "team-posthook-decision-playbook/SKILL.md").exists():
-        return
-    posthook = _read(_CONTENT / "team-posthook-decision-playbook/SKILL.md")
-    posthook_ref = _read(_CONTENT / "team-posthook-decision-playbook/references/decision-gates.md")
+def test_verification_replan_explains_when_to_load_references() -> None:
     replan = _read(_CONTENT / "verification-replan/SKILL.md")
     replan_ref = _read(_CONTENT / "verification-replan/references/triage-format.md")
-
-    assert "Must load `decision-gates` when the worker output is malformed" in posthook
-    assert "Use this reference only when the worker output is malformed" in posthook_ref
-    assert "verification-surface write warning" in posthook
-    assert "green rerun that only appeared after editing the verify surface" in posthook
-    assert '"the test is inverted"' in posthook
-    assert '"the import path in the test was wrong"' in posthook
-    assert '"`owned_failures` listed that test so editing it was allowed"' in posthook
-    assert "later green rerun from that warned packet" in posthook
-    assert "verification-surface write warning" in posthook_ref
-    assert "does not untaint a packet" in posthook_ref
-    assert "packet owned that test" in posthook_ref
-    assert "the assertion was inverted" in posthook_ref
-    assert "`owned_failures` made the test editable" in posthook_ref
-    assert "warning-filter parsing" in posthook_ref
-    assert "before any import-smoke or exact verify" in posthook_ref
-    assert "verify-surface import/binding rewrite" in posthook_ref
 
     assert "Must load `triage-format` when you need to produce a manual FAIL summary" in replan
     assert "Use this reference only when you need a manual FAIL summary" in replan_ref
@@ -402,7 +379,7 @@ def test_scout_playbook_keeps_missing_targets_missing() -> None:
         in scout
     )
     assert "Never claim code was created, fixed, patched, or refactored." in scout
-    assert "The note is the durable contract; downstream planners should rely on `read_notes(...)`" in scout
+    assert "The note is the durable contract; downstream planners should rely on `read_task_note(...)`" in scout
     assert "The note should usually cover `Scope`, `Files mapped`, `Entry points`, `Owner seam`, `Suggested subdivisions`, and `Gaps`." in scout
     assert "Final assistant message should be one short prose sentence" in scout
     assert "Never dump JSON artifacts" in scout
@@ -443,18 +420,11 @@ def test_sweevo_context_stays_shared_and_runtime_focused() -> None:
         in sweevo.lower()
     )
     assert "Must not derive an exact production file from benchmark filename resemblance alone" in sweevo
-    assert "Must use `read_notes(paths=[...])` to check for existing findings before launching duplicate scouts." in sweevo
+    assert "Must use `read_task_note(paths=[...])` to check for existing findings before launching duplicate scouts." in sweevo
     assert "Must treat scope-change notifications and `context_changed_since()` as freshness signals." in sweevo
     assert "Must keep `scope_paths` as soft coordination hints" in sweevo
     assert "Must treat any advisory outside-scope write as a tainted packet" in sweevo
 
-
-def test_posthook_decision_playbook_forbids_clarifying_questions() -> None:
-    if not (_CONTENT / "team-posthook-decision-playbook/SKILL.md").exists():
-        return
-    posthook = _read(_CONTENT / "team-posthook-decision-playbook/SKILL.md")
-    assert "Must not ask clarifying questions." in posthook
-    assert "Must choose `summary`, `retry`, or `replan`" in posthook
 
 
 def test_worker_playbooks_do_not_mention_submitters_or_action_routing() -> None:

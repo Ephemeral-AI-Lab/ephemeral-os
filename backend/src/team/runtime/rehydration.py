@@ -61,7 +61,8 @@ def task_from_dict(data: dict[str, Any]) -> Task:
     return Task(
         id=data["id"], team_run_id=data["team_run_id"],
         agent_name=data["agent_name"], status=TaskStatus(data["status"]),
-        task=data.get("task", ""), deps=list(data.get("deps") or []),
+        objective=data.get("objective") or data.get("task", ""),
+        deps=list(data.get("deps") or []),
         scope_paths=list(data.get("scope_paths") or []),
         cascade_policy=data.get("cascade_policy", "cancel"),
         parent_id=data.get("parent_id"), root_id=data.get("root_id") or "",

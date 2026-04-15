@@ -1,32 +1,19 @@
-# Action Reference: cancel_and_redraft
+# Action Reference: submit_task_plan (cancel and redraft)
 
-Use `cancel_and_redraft(...)` when sibling tasks are stale and must be replaced. Cancelling a sibling cancels the entire node and its subtree. Replacement tasks are planned at the current DAG level only.
+Use `submit_task_plan(new_tasks=[...], remove_tasks=[...])` when sibling tasks are stale and must be replaced. Cancelling a sibling cancels the entire node and its subtree. Replacement tasks are planned at the current DAG level only.
 
 ## When to choose
 
-- One or more siblings are working on the wrong files, wrong ordering, wrong approach, or overlapping ownership.
-- A completed task invalidated the premise of specific remaining siblings.
-- `add_tasks(...)` alone would leave stale work running or conflicting.
-
-## Cancellation semantics
-
-- Cancel atomic or expandable sibling nodes; both are valid.
-- Cancelled tasks can be running or pending.
-- Scope the cancellation to what is actually stale. Never cancel more than necessary.
-
-## Replacement task rules
-
-- Must plan replacements at the current DAG level only. Never decompose into subtrees yourself; assign `team_planner` when the replacement still needs expansion.
-- Must ensure replacement tasks do not depend on any cancelled task.
-- Must include failure context from the original plan so the replacement does not repeat the same mistake.
-
-## Signals
-
-- The failure is a wrong-owner or wrong-decomposition problem rather than an isolated bug or transient runtime.
-- Adding corrective tasks without cancelling would create conflicting edits on the same files.
-- Must read sibling and descendant notes via `read_task_note(scope="sibling", )` before deciding which nodes are stale.
+- Sibling tasks are working on invalidated assumptions or wrong files.
+- A shared dependency changed and existing work is no longer valid.
+- `submit_task_plan(new_tasks=[...])` alone would leave stale work running or conflicting.
+- Use `draft_task_plan(...)` first to preview and validate before committing.
 
 ## Rules
 
-- Must only cancel nodes that are genuinely stale. Never cancel a sibling that completed valid work.
+- Must confirm which siblings are actually stale before adding to `remove_tasks`.
+- `remove_tasks` only accepts sibling IDs (same parent level). DONE siblings are immutable and cannot be removed.
+- Replacement tasks in `new_tasks` must cover the work being cancelled.
 - Must call `context_changed_since()` before submitting if freshness moved.
+- Never cancel DONE siblings — they are immutable.
+- Do not cancel siblings without confirming they are actually stale.

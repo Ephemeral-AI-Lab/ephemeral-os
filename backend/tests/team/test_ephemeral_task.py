@@ -40,7 +40,7 @@ def _tc(**kwargs) -> TaskCenter:
 def _seed_task(tc: TaskCenter, task_id: str = "t1") -> Task:
     t = Task(
         id=task_id, team_run_id="run-1", agent_name="developer",
-        status=TaskStatus.RUNNING, task="fix parser",
+        status=TaskStatus.RUNNING, objective="fix parser",
     )
     tc.graph[task_id] = t
     return t

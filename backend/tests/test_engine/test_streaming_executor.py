@@ -411,21 +411,21 @@ class BgBashTool(BaseTool):
         return ToolResult(output=f"ran: {arguments.command}")
 
 
-class SubmitPlanInput(BaseModel):
+class SubmitTaskPlanInput(BaseModel):
     items: list[dict[str, object]] = Field(description="Plan items to submit")
 
 
-class SubmitPlanTool(BaseTool):
-    """A tool that simulates a posthook submit writing accepted metadata."""
+class SubmitTaskPlanTool(BaseTool):
+    """A tool that simulates a submission tool writing accepted metadata."""
 
-    name = "submit_plan"
+    name = "submit_task_plan"
     description = "Submit a plan."
-    input_model = SubmitPlanInput
+    input_model = SubmitTaskPlanInput
 
     async def execute(
-        self, arguments: SubmitPlanInput, context: ToolExecutionContext
+        self, arguments: SubmitTaskPlanInput, context: ToolExecutionContext
     ) -> ToolResult:
-        key = context.metadata.get("posthook_metadata_key", "submitted_plan")
+        key = context.metadata.get("submission_metadata_key", "submitted_plan")
         context.metadata[key] = {"items": arguments.items}
         return ToolResult(output="Plan accepted")
 
@@ -530,17 +530,17 @@ async def test_mixed_foreground_and_background_tools():
 
 @pytest.mark.asyncio
 async def test_submit_tool_propagates_submission_metadata_to_live_context():
-    """Streaming execution must preserve accepted posthook submissions."""
-    registry = _make_registry(SubmitPlanTool())
+    """Streaming execution must preserve accepted submissions."""
+    registry = _make_registry(SubmitTaskPlanTool())
     context = ToolExecutionContext(
         cwd="/tmp",
-        metadata={"posthook_metadata_key": "submitted_plan"},
+        metadata={"submission_metadata_key": "submitted_plan"},
     )
     executor = StreamingToolExecutor(registry, context)
 
     event = ApiToolUseDeltaEvent(
         id="tool_submit",
-        name="submit_plan",
+        name="submit_task_plan",
         input={"items": [{"agent_name": "developer"}]},
     )
 

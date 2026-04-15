@@ -25,8 +25,8 @@ logger = logging.getLogger(__name__)
 # Which tools are terminal is a team-level policy: the team decides when an agent's
 # job is done. The query loop exits when any of these tools are called.
 DEFAULT_TERMINAL_TOOLS: dict[str, set[str]] = {
-    "planner": {"submit_plan"},
-    "replanner": {"submit_plan", "submit_task_summary"},
+    "planner": {"submit_task_plan"},
+    "replanner": {"submit_task_plan", "declare_blocker"},
     "developer": {"submit_task_summary"},
     "reviewer": {"submit_task_summary"},
     "resolver": {"submit_task_summary"},
@@ -211,7 +211,7 @@ async def build_query_context(
         blocker_lines = ["## Active Blockers\n",
                          "The following blockers are currently active for sibling tasks. "
                          "If an active blocker already covers the same root-cause paths, do not "
-                         "declare another blocker. Use `submit_plan(add_tasks=[...])` instead, "
+                         "declare another blocker. Use `submit_task_plan(new_tasks=[...])` instead, "
                          "and depend on that blocker's `fix_task_id` so the retry runs after the shared fix.\n"]
         for b in meta["active_blockers"]:
             blocker_lines.append(

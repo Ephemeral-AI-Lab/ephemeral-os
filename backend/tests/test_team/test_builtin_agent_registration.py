@@ -90,6 +90,6 @@ def test_context_toolkit_alias_survives_restriction() -> None:
     registry.restrict_to_toolkits(["context"])
 
     assert registry.get_toolkit("context") is not None
-    assert registry.get("read_notes") is not None
-    # post_note moved to posthook toolkit (external_trigger/post-run only)
+    assert registry.get("read_task_note") is not None
+    # post_note moved to submission toolkit (terminal tools only)
     assert registry.get("context_changed_since") is not None

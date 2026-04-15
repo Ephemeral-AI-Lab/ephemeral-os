@@ -157,7 +157,7 @@ def task_to_dict(task: Any) -> dict[str, Any]:
     return {
         "id": task.id, "team_run_id": task.team_run_id,
         "agent_name": task.agent_name, "status": task.status.value,
-        "task": task.task, "deps": list(task.deps),
+        "objective": task.objective, "deps": list(task.deps),
         "scope_paths": list(task.scope_paths),
         "cascade_policy": task.cascade_policy, "parent_id": task.parent_id,
         "root_id": task.root_id, "depth": task.depth,

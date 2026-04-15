@@ -1,33 +1,21 @@
-# Action Reference: add_tasks
+# Action Reference: submit_task_plan (add corrective tasks)
 
-Use `add_tasks(...)` when the plan structure is sound but more work is needed. Siblings continue running.
+Use `submit_task_plan(new_tasks=[...])` when the plan structure is sound but more work is needed. Existing siblings continue running.
 
 ## When to choose
 
-- Must read sibling and descendant notes via `read_task_note(scope="sibling", )` before choosing this action so you confirm the failure is truly isolated.
-- Choose this for isolated failures, transient retries, partial progress that left follow-up work, or a newly discovered dependency task.
-
-## Task shape
-
-- Retry tasks must restate the original goal, append failure context, add any new `deps`, and adjust `scope_paths` when live evidence changed the owner surface.
-- Follow-up tasks should target the remaining gap, not redo the full task.
-- Corrective developer tasks must instruct the agent to start with systematic diagnosis: run `ci_diagnostics(file_path)` on every file in `scope_paths` and on the files named in the validator's error evidence, identify all errors, then fix them before running verification. Include the exact error snippet from the validator packet so the developer does not re-investigate from scratch.
-
-## Layered failure pattern
-
-When the failure is layered (visible errors mask deeper functional failures — see Workflow step 6 and Hard Rule 10), emit a two-phase corrective chain:
-
-1. **Phase 1 (corrective)**: Developer task fixing the visible errors (imports, bridges, init). Validator runs the **full original test target list**, not just the import-level subset. Set `cascade_policy: "continue"` so Phase 2 can proceed.
-2. **Phase 2 (carry-forward)**: Developer task with `deps` on Phase 1's validator. Restates the full original test targets and scope paths from the failed task. Briefing explains that imports are now fixed and the developer must address remaining functional failures. Validator runs the full original test target list again.
-
-This prevents the common failure mode where fixing imports is treated as "done" while functional behavior bugs (`TypeError`, missing `raise`, wrong return type) are silently dropped.
+- An isolated task failed and needs a corrective retry or follow-up.
+- A transient error needs one retry with the same or narrower scope.
+- Follow-up validation is needed after a fix lands.
+- Use `draft_task_plan(...)` first to preview and validate before committing.
 
 ## Rules
 
-- Must plan new tasks at the current DAG level only. Never decompose into subtrees; assign `team_planner` for work that still needs expansion.
-- Must pair each new developer task with a validator task (`cascade_policy: "continue"`).
-- Must include exact failing test ids and an error snippet from the validator packet in the new task briefing.
-- Must include failure context so the agent does not repeat the same approach.
-- Never bundle unrelated fixes into one task.
-- Never omit `scope_paths`.
-- When emitting a carry-forward task (Phase 2), must copy ALL test target ids from the original failed task's briefing — never narrow to only the errors the validator surfaced.
+- Must confirm owner paths live with CI before submitting.
+- Must read sibling notes before deciding corrective scope.
+- Each new task must have: `id`, `name` (agent), `objective`, `deps`, `scope_paths`.
+- Must call `context_changed_since()` before submitting if freshness moved.
+- For layered failures, emit a two-phase corrective plan (see Hard Rule 10 in main playbook).
+- Corrective developer tasks must instruct the developer to run `ci_diagnostics(file_path)` on affected files first.
+- Never submit corrective tasks without reading sibling notes first.
+- Do not add tasks that duplicate work already covered by existing siblings.

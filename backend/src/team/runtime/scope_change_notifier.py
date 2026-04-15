@@ -53,7 +53,7 @@ class ScopeChangeNotifier:
             )
         lines.append(
             "Review these changes before proceeding. "
-            "Stop and note the issue if your task is no longer valid — the posthook will handle replanning."
+            "Stop and note the issue if your task is no longer valid — the system will handle replanning."
         )
         from team.models import Note
 

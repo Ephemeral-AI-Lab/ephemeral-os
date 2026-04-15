@@ -32,7 +32,7 @@ from team.models import (
     NoteTag,
     ReplanRequest,
     Task,
-    TaskSpec,
+    TaskDefinition,
     TaskStatus,
     _utcnow,
 )
@@ -236,10 +236,11 @@ class TaskCenter:
         self._budget.require_capacity_for(1)
         await self._store.insert_plan(
             [
-                TaskSpec(
+                TaskDefinition(
                     id=t.id,
-                    task=t.task,
+                    objective=t.objective,
                     agent=t.agent_name,
+                    title=t.title or "",
                     deps=list(t.deps),
                     scope_paths=list(t.scope_paths),
                     cascade_policy=t.cascade_policy,
@@ -337,7 +338,7 @@ class TaskCenter:
     async def apply_replan(
         self,
         replan_task_id: str,
-        add_tasks: list[TaskSpec],
+        add_tasks: list[TaskDefinition],
         cancel_ids: list[str],
         target_depth: int,
         target_parent_id: str | None,

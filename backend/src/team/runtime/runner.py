@@ -5,7 +5,7 @@ Provides :class:`TeamAgentRunner`, the standard implementation of the
 It spawns an :class:`EphemeralAgent`, wires ``tool_metadata`` and
 ``terminal_tools`` into the agent's ``QueryContext``, drives the event loop,
 observes tool completions for coordination (``TaskCenter.on_edit`` /
-``on_posthook``), schedules ``tc_note`` checkpoints, and implements the
+``on_submission``), schedules ``tc_note`` checkpoints, and implements the
 retry loop when the agent exits without calling a terminal tool.
 """
 
@@ -25,11 +25,11 @@ from team.runtime.context_builder import TeamAgentContext
 
 logger = logging.getLogger(__name__)
 
-# Tools whose completion should tick ``TaskCenter.on_posthook`` for coordination.
+# Tools whose completion should tick ``ActivityTracker.on_submission`` for coordination.
 SUBMISSION_TOOL_NAMES = frozenset({
     "submit_task_summary",
     "submit_task_note",
-    "submit_plan",
+    "submit_task_plan",
 })
 # Tools whose completion should record a scoped edit via ``TaskCenter.on_edit``.
 EDIT_TOOL_NAMES = frozenset({"daytona_edit_file", "daytona_write_file"})
@@ -135,7 +135,7 @@ class TeamAgentRunner:
             compacted_before = int(agent.query_context.session_state.compacted)
 
         # Merge spawn_agent's tool_metadata into ctx and redirect agent to ctx's metadata
-        # so team tools (submit_plan / submit_task_summary / …) write into the correct slot.
+        # so team tools (submit_task_plan / submit_task_summary / …) write into the correct slot.
         spawned_meta = agent.query_context.tool_metadata
         if getattr(spawned_meta, "session_config", None) is not None:
             ctx.tool_metadata.session_config = spawned_meta.session_config
@@ -277,7 +277,7 @@ class TeamAgentRunner:
                                         if file_path:
                                             team_run.task_center.activity.on_edit(work_item_id, file_path)
                                     if event.tool_name in SUBMISSION_TOOL_NAMES:
-                                        team_run.task_center.activity.on_posthook(work_item_id)
+                                        team_run.task_center.activity.on_submission(work_item_id)
                                     _schedule_checkpoint()
                             except Exception:
                                 logger.debug(

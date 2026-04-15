@@ -2,7 +2,7 @@
 
 Tools write structured data to ``ctx.tool_metadata`` during the main run.
 The executor reads that state after the runner returns and dispatches:
-complete, request_replan, or declare_blocker.
+complete, submit_task_plan, submit_task_summary, or declare_blocker.
 """
 
 from __future__ import annotations
@@ -197,7 +197,7 @@ class Executor:
         if summary_type == "fail":
             return ReplanRequest(reason=summary)
 
-        # submit_plan was called (planner/replanner)
+        # submit_task_plan was called (planner/replanner)
         resolved_plan = meta.get("resolved_plan")
         if resolved_plan is not None:
             is_replan = bool(meta.get("plan_is_replan"))

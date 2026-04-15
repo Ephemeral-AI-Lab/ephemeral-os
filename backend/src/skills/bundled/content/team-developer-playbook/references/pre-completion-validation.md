@@ -24,4 +24,4 @@ A single unresolved `NameError` or broken import in a widely-imported file (e.g.
 
 - Do not skip this step even if your narrow verification command passed. A passing narrow test does not prove that your edits left no import or name errors in files outside the test's import chain.
 - Do not treat `ci_diagnostics` as a substitute for runtime verification. You still must run the assigned verification command. This is a pre-flight check, not the verdict.
-- If `ci_diagnostics` reports errors you cannot fix without widening scope, signal `request_replan` with the exact diagnostic output instead of leaving the errors in place.
+- If `ci_diagnostics` reports errors you cannot fix without widening scope, call `submit_task_summary(type='fail')` with the exact diagnostic output instead of leaving the errors in place.

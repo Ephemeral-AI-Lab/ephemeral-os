@@ -20,7 +20,7 @@ from typing import Any, Awaitable, Callable
 
 from team.budget_manager import BudgetManager
 from team.errors import BudgetExceeded, InvalidPlan
-from team.models import AgentResult, Task, TaskSpec, TaskStatus
+from team.models import AgentResult, Task, TaskDefinition, TaskStatus
 from team.persistence.events import TeamRunEvent, make_task_added, task_to_dict
 from team.persistence.task_record import TaskRecord
 from team.persistence.task_store import TaskStore
@@ -105,16 +105,17 @@ class PlanExpander:
         local_to_global: dict[str, str] = {
             spec.id: self.new_id() for spec in result.submitted_plan.tasks if spec.id
         }
-        specs: list[TaskSpec] = []
+        specs: list[TaskDefinition] = []
         new_items: list[Task] = []
         for spec in result.submitted_plan.tasks:
             nid = local_to_global.get(spec.id) or self.new_id()
             rdeps = [local_to_global[d] if d in local_to_global else d for d in spec.deps]
             specs.append(
-                TaskSpec(
+                TaskDefinition(
                     id=nid,
-                    task=spec.task,
+                    objective=spec.objective,
                     agent=spec.agent,
+                    description=spec.description or "",
                     deps=rdeps,
                     scope_paths=list(spec.scope_paths),
                     cascade_policy=spec.cascade_policy,
@@ -126,7 +127,8 @@ class PlanExpander:
                     team_run_id=self._team_run_id,
                     agent_name=spec.agent,
                     status=TaskStatus.READY if not rdeps else TaskStatus.PENDING,
-                    task=spec.task,
+                    objective=spec.objective,
+                    description=spec.description or "",
                     deps=rdeps,
                     scope_paths=list(spec.scope_paths),
                     cascade_policy=spec.cascade_policy,
@@ -157,7 +159,7 @@ class PlanExpander:
     async def apply_replan(
         self,
         replan_task_id: str,
-        add_tasks: list[TaskSpec],
+        add_tasks: list[TaskDefinition],
         cancel_ids: list[str],
         target_depth: int,
         target_parent_id: str | None,
@@ -187,7 +189,7 @@ class PlanExpander:
 
         adj = await self._store.get_adjacency()
         clean_adj = {k: v for k, v in adj.items() if k not in set(cancel_ids)}
-        specs: list[TaskSpec] = []
+        specs: list[TaskDefinition] = []
         for spec in add_tasks:
             nid = local_to_new.get(spec.id, self.new_id()) if spec.id else self.new_id()
             rdeps: list[str] = []
@@ -202,10 +204,11 @@ class PlanExpander:
                     )
             clean_adj[nid] = rdeps
             specs.append(
-                TaskSpec(
+                TaskDefinition(
                     id=nid,
-                    task=spec.task,
+                    objective=spec.objective,
                     agent=spec.agent,
+                    description=spec.description or "",
                     deps=rdeps,
                     scope_paths=list(spec.scope_paths),
                     cascade_policy=spec.cascade_policy,

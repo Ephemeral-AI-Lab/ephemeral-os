@@ -30,7 +30,7 @@ import pytest
 from engine.testing.eval_agent import EvalAgent
 from external_trigger.pause_assessment import PauseVerdict, assess_pause
 from external_trigger.runner import run as run_trigger
-from team.models import Blocker, BlockerStatus, TaskSpec, TaskStatus
+from team.models import Blocker, BlockerStatus, TaskDefinition, TaskStatus
 from team.runtime.conductor import Conductor
 from tests.test_e2e.conftest import create_eval_agent
 from tools.context.toolkit import PostNoteTool
@@ -64,7 +64,7 @@ class FakeTaskRecord:
 class FakeTaskCenter:
     def __init__(self) -> None:
         self.tasks: dict[str, FakeTaskRecord] = {}
-        self.inserted_plans: list[list[TaskSpec]] = []
+        self.inserted_plans: list[list[TaskDefinition]] = []
         self._notes: list[Any] = []
 
     def add_task(self, rec: FakeTaskRecord) -> None:
@@ -104,7 +104,7 @@ class FakeTaskCenter:
         return count
 
     async def insert_plan(
-        self, specs: list[TaskSpec], parent_id: str | None = None,
+        self, specs: list[TaskDefinition], parent_id: str | None = None,
         parent_depth: int = 0, parent_root_id: str | None = None,
     ) -> list[str]:
         self.inserted_plans.append(specs)

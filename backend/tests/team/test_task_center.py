@@ -84,7 +84,7 @@ def _note(
 
 def _task(
     id_: str,
-    task: str = "do work",
+    objective: str = "do work",
     deps: list[str] | None = None,
     scope_paths: list[str] | None = None,
     parent_id: str | None = None,
@@ -94,7 +94,7 @@ def _task(
         team_run_id="run-1",
         agent_name="developer",
         status=TaskStatus.PENDING,
-        task=task,
+        objective=objective,
         deps=deps or [],
         scope_paths=scope_paths or [],
         parent_id=parent_id,
@@ -329,7 +329,7 @@ def test_read_combined_paths_and_last_n():
 
 def test_context_for_always_includes_task_section():
     tc = _tc()
-    task = _task("work-1", task="implement login flow")
+    task = _task("work-1", objective="implement login flow")
     ctx = _run(tc.notes.context_for(task))
     assert "## Your task" in ctx
     assert "implement login flow" in ctx
@@ -337,7 +337,7 @@ def test_context_for_always_includes_task_section():
 
 def test_context_for_includes_scope_paths_when_present():
     tc = _tc()
-    task = _task("work-1", task="do auth", scope_paths=["src/auth/"])
+    task = _task("work-1", objective="do auth", scope_paths=["src/auth/"])
     ctx = _run(tc.notes.context_for(task))
     assert "Scope:" in ctx
     assert "src/auth/" in ctx
@@ -345,7 +345,7 @@ def test_context_for_includes_scope_paths_when_present():
 
 def test_context_for_no_scope_paths_omits_scope_line():
     tc = _tc()
-    task = _task("work-1", task="general work")
+    task = _task("work-1", objective="general work")
     ctx = _run(tc.notes.context_for(task))
     assert "Scope:" not in ctx
 
@@ -353,7 +353,7 @@ def test_context_for_no_scope_paths_omits_scope_line():
 def test_context_for_includes_dep_notes_when_deps_exist():
     tc = _tc()
     _run(tc.notes.post(_note("n1", "dep-task", "dependency output", agent_name="developer")))
-    task = _task("work-1", task="build on dep", deps=["dep-task"])
+    task = _task("work-1", objective="build on dep", deps=["dep-task"])
     ctx = _run(tc.notes.context_for(task))
     assert "Context from dependencies" in ctx
     assert "dependency output" in ctx
@@ -362,7 +362,7 @@ def test_context_for_includes_dep_notes_when_deps_exist():
 def test_context_for_dep_notes_absent_when_no_deps():
     tc = _tc()
     _run(tc.notes.post(_note("n1", "unrelated", "some output")))
-    task = _task("work-1", task="standalone work")
+    task = _task("work-1", objective="standalone work")
     ctx = _run(tc.notes.context_for(task))
     assert "Context from dependencies" not in ctx
 
@@ -370,10 +370,10 @@ def test_context_for_dep_notes_absent_when_no_deps():
 def test_context_for_includes_parent_notes_when_parent_id_matches():
     tc = _tc()
     _run(tc.notes.post(_note("n1", "parent-task", "parent reasoning", agent_name="team_planner")))
-    task = _task("work-1", task="child task", parent_id="parent-task")
+    task = _task("work-1", objective="child task", parent_id="parent-task")
 
     # Mock get_task so _parent_chain_ids doesn't hit DB
-    parent = _task("parent-task", task="parent")
+    parent = _task("parent-task", objective="parent")
 
     async def _mock_get_task(task_id):
         return parent if task_id == "parent-task" else None
@@ -389,11 +389,11 @@ def test_context_for_walks_parent_chain_via_internal_get_task():
     tc = _tc()
     _run(tc.notes.post(_note("n1", "root-task", "root rationale", agent_name="team_planner")))
     _run(tc.notes.post(_note("n2", "parent-task", "parent reasoning", agent_name="team_planner")))
-    task = _task("work-1", task="child task", parent_id="parent-task")
+    task = _task("work-1", objective="child task", parent_id="parent-task")
 
     # Mock get_task to simulate parent chain without DB
-    parent = _task("parent-task", task="parent", parent_id="root-task")
-    root = _task("root-task", task="root")
+    parent = _task("parent-task", objective="parent", parent_id="root-task")
+    root = _task("root-task", objective="root")
 
     async def _mock_get_task(task_id):
         if task_id == "parent-task":
@@ -433,9 +433,9 @@ def test_context_for_dedupes_parent_notes_by_task_id():
             )
         )
     )
-    task = _task("work-1", task="child task", parent_id="parent-task")
+    task = _task("work-1", objective="child task", parent_id="parent-task")
 
-    parent = _task("parent-task", task="parent")
+    parent = _task("parent-task", objective="parent")
 
     async def _mock_get_task(task_id):
         return parent if task_id == "parent-task" else None
@@ -450,7 +450,7 @@ def test_context_for_dedupes_parent_notes_by_task_id():
 def test_context_for_no_parent_notes_when_parent_id_is_none():
     tc = _tc()
     _run(tc.notes.post(_note("n1", "some-task", "context")))
-    task = _task("work-1", task="root level task")
+    task = _task("work-1", objective="root level task")
     ctx = _run(tc.notes.context_for(task))
     assert "Parent context" not in ctx
 
@@ -462,7 +462,7 @@ def test_check_falls_back_when_checkpoint_note_generation_raises(monkeypatch):
         team_run_id="run-1",
         agent_name="developer",
         status=TaskStatus.RUNNING,
-        task="fix parser",
+        objective="fix parser",
     )
     for _ in range(15):
         tc.activity.tick("t1")
@@ -489,7 +489,7 @@ def test_context_for_respects_max_context_bytes():
     tc = _tc()
     big_content = "x" * 100_000
     _run(tc.notes.post(_note("n1", "dep-task", big_content, agent_name="developer")))
-    task = _task("work-1", task="build on dep", deps=["dep-task"])
+    task = _task("work-1", objective="build on dep", deps=["dep-task"])
 
     ctx = _run(tc.notes.context_for(task, max_context_bytes=500))
     assert "## Your task" in ctx
@@ -500,7 +500,7 @@ def test_context_for_task_section_never_trimmed():
     tc = _tc()
     big_content = "z" * 200_000
     _run(tc.notes.post(_note("n1", "dep-task", big_content)))
-    task = _task("work-1", task="important task description", deps=["dep-task"])
+    task = _task("work-1", objective="important task description", deps=["dep-task"])
     ctx = _run(tc.notes.context_for(task, max_context_bytes=100))
     assert "important task description" in ctx
 
@@ -520,7 +520,7 @@ def test_context_for_includes_active_blockers_section_when_provider_set():
         ]
 
     tc.notes.set_blocker_provider(_provider)
-    task = _task("work-1", task="replan failed work")
+    task = _task("work-1", objective="replan failed work")
     ctx = _run(tc.notes.context_for(task))
 
     assert "## Active Blockers (in-progress)" in ctx
@@ -538,7 +538,7 @@ def test_context_for_omits_active_blockers_section_when_none():
         return []
 
     tc.notes.set_blocker_provider(_provider)
-    task = _task("work-1", task="nothing is broken")
+    task = _task("work-1", objective="nothing is broken")
     ctx = _run(tc.notes.context_for(task))
 
     assert "## Active Blockers" not in ctx
@@ -546,7 +546,7 @@ def test_context_for_omits_active_blockers_section_when_none():
 
 def test_context_for_omits_active_blockers_section_when_no_provider():
     tc = _tc()
-    task = _task("work-1", task="no provider registered")
+    task = _task("work-1", objective="no provider registered")
     ctx = _run(tc.notes.context_for(task))
     assert "## Active Blockers" not in ctx
 
@@ -558,7 +558,7 @@ def test_context_for_survives_blocker_provider_exception():
         raise RuntimeError("db unreachable")
 
     tc.notes.set_blocker_provider(_bad_provider)
-    task = _task("work-1", task="provider should not crash context_for")
+    task = _task("work-1", objective="provider should not crash context_for")
     ctx = _run(tc.notes.context_for(task))
     assert "## Your task" in ctx
     assert "## Active Blockers" not in ctx
@@ -584,8 +584,8 @@ def test_two_replanners_with_active_blocker_see_fix_task_id():
 
     tc.notes.set_blocker_provider(_provider)
 
-    replanner_a = _task("replan-a", task="recover from failure in task A")
-    replanner_b = _task("replan-b", task="recover from failure in task B")
+    replanner_a = _task("replan-a", objective="recover from failure in task A")
+    replanner_b = _task("replan-b", objective="recover from failure in task B")
 
     ctx_a = _run(tc.notes.context_for(replanner_a))
     ctx_b = _run(tc.notes.context_for(replanner_b))
@@ -616,7 +616,7 @@ def test_context_for_includes_recent_scope_changes_from_file_change_store():
         ],
     )
     tc = _tc(file_change_store=file_change_store)
-    task = _task("work-1", task="do auth", scope_paths=["src/auth/"])
+    task = _task("work-1", objective="do auth", scope_paths=["src/auth/"])
     task.created_at = datetime(2026, 4, 12, 12, 0, tzinfo=timezone.utc)
 
     ctx = _run(tc.notes.context_for(task))
