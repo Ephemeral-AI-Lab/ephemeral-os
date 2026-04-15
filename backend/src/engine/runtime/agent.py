@@ -84,6 +84,7 @@ def finalize_tool_registry_and_prompt(
     system_prompt: str,
     *,
     can_spawn_subagents: bool = True,
+    blocked_tools: list[str] | None = None,
 ) -> tuple[str, bool]:
     """Register background toolkit and inject capability awareness into the system prompt.
 
@@ -97,6 +98,9 @@ def finalize_tool_registry_and_prompt(
             themselves) have the background management toolkit
             (check_background_progress / wait_for_background_task / cancel)
             withheld regardless of registry contents.
+        blocked_tools: Tool names that must be removed after all toolkits,
+            including runtime-added toolkits such as background management,
+            have been registered.
 
     Returns:
         Tuple of (updated_system_prompt, has_background_tools).
@@ -112,6 +116,8 @@ def finalize_tool_registry_and_prompt(
     has_background_tools = bool(bg_tool_names) and can_spawn_subagents
     if has_background_tools:
         tool_registry.register_toolkit(make_background_toolkit(bg_tool_names))
+    if blocked_tools:
+        tool_registry.remove_tools(blocked_tools)
 
     awareness = build_agent_capabilities_prompt(
         toolkits=tool_registry.list_toolkits(),
@@ -228,10 +234,6 @@ def _build_agent_tool_registry(
         # it when agent_def.toolkits is non-empty.
         tool_registry.restrict_to_toolkits(agent_def.toolkits)
 
-    # Remove blocked tools (role-based restrictions from agent definition).
-    if agent_def and agent_def.blocked_tools:
-        tool_registry.remove_tools(agent_def.blocked_tools)
-
     # Submission tools are registered in the main query loop.
     # Team-mode terminal submissions are handled by the executor reading
     # ``tool_metadata`` after the query loop stops.
@@ -252,6 +254,9 @@ def _build_agent_tool_registry(
                 len(skills_toolkit.list_tools()),
                 agent_name,
             )
+
+    if agent_def and agent_def.blocked_tools:
+        tool_registry.remove_tools(agent_def.blocked_tools)
 
     return tool_registry
 
@@ -318,7 +323,10 @@ def spawn_agent(
 
     can_spawn = agent_def.can_spawn_subagents if agent_def else True
     system_prompt, has_background_tools = finalize_tool_registry_and_prompt(
-        tool_registry, base_system_prompt, can_spawn_subagents=can_spawn
+        tool_registry,
+        base_system_prompt,
+        can_spawn_subagents=can_spawn,
+        blocked_tools=(agent_def.blocked_tools if agent_def else None),
     )
 
     tool_call_limit = agent_def.tool_call_limit if agent_def else None

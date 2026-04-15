@@ -19,7 +19,7 @@ def make_background_toolkit(bg_tool_names: list[str]) -> BaseToolkit:
         bg_tool_names: Names of tools that support background execution.
     """
     tools_list = ", ".join(f"`{n}`" for n in bg_tool_names)
-    return BaseToolkit(
+    toolkit = BaseToolkit(
         name="background",
         description="Background task management — launch, monitor, and cancel long-running tools.",
         tools=[CheckBackgroundProgressTool(), CancelBackgroundTaskTool(), WaitForBackgroundTaskTool()],
@@ -33,3 +33,5 @@ def make_background_toolkit(bg_tool_names: list[str]) -> BaseToolkit:
             "- `check_background_progress` and `wait_for_background_task` accept `task_id=\"all\"`; `cancel_background_task` does not."
         ),
     )
+    toolkit.background_capable_tools = list(bg_tool_names)
+    return toolkit

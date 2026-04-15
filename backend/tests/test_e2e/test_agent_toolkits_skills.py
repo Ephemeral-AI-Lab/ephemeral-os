@@ -358,14 +358,30 @@ class TestChatSkillAwareness:
         assert "You are a specialized coding assistant." in system_prompt
         assert "<Toolkit Instructions>" in system_prompt
 
-    def test_default_agent_has_skills_toolkit_awareness(self, app_client):
+    def test_default_agent_omits_available_skills_section(self, app_client):
         client, mock_client = app_client
-        # No agent_name — uses default (no explicit toolkits, but skills toolkit is always registered)
         system_prompt = self._chat_and_get_system_prompt(client, mock_client)
 
-        # Skills toolkit is always registered, so toolkit instructions section appears
-        assert "<Toolkit Instructions>" in system_prompt
-        assert "skills" in system_prompt.lower()
+        assert "<Available Skills>" not in system_prompt
+
+    def test_agent_with_declared_skills_has_available_skills_section(self, app_client):
+        client, mock_client = app_client
+        client.post(
+            "/api/agents/",
+            json={
+                "name": "skills-agent",
+                "description": "Has explicit skills",
+                "model": "minimax",
+                "skills": ["team-planner-playbook"],
+            },
+        )
+
+        system_prompt = self._chat_and_get_system_prompt(
+            client, mock_client, agent_name="skills-agent"
+        )
+
+        assert "<Available Skills>" in system_prompt
+        assert "team-planner-playbook" in system_prompt
 
     def test_agent_without_skills_no_skills_section(self, app_client):
         client, mock_client = app_client
@@ -383,7 +399,7 @@ class TestChatSkillAwareness:
             client, mock_client, agent_name="no-skills-agent-2"
         )
 
-        assert "# Available Skills" not in system_prompt
+        assert "<Available Skills>" not in system_prompt
 
 
 # ---------------------------------------------------------------------------

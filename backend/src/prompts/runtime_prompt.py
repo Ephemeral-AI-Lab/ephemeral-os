@@ -130,7 +130,6 @@ def build_agent_capabilities_prompt(
         has_background_tools: Whether background execution is available.
         bg_tool_names: Names of tools that support background execution.
     """
-    del has_background_tools, bg_tool_names
     sections: list[str] = []
 
     def _compact_description(text: str | None, *, max_words: int = 20) -> str:
@@ -150,8 +149,60 @@ def build_agent_capabilities_prompt(
 
     tk_sections: list[str] = []
     available_skills: list[dict[str, str]] = []
+    skill_tool_names: list[str] = []
+    background_lines: list[str] = []
     for tk in toolkits:
         raw_skills = getattr(tk, "available_skills", None)
+        tools = tk.list_tools()
+
+        if tk.name == "skills":
+            if not tools:
+                continue
+            skill_tool_names = [tool.name for tool in tools]
+            if isinstance(raw_skills, list):
+                for item in raw_skills:
+                    if not isinstance(item, dict):
+                        continue
+                    name = str(item.get("name") or "").strip()
+                    if not name:
+                        continue
+                    available_skills.append(
+                        {
+                            "name": name,
+                            "description": _compact_description(str(item.get("description") or "")),
+                        }
+                    )
+            continue
+
+        if tk.name == "background":
+            if not tools:
+                continue
+            background_capable_tools = getattr(tk, "background_capable_tools", None)
+            capable = []
+            if isinstance(background_capable_tools, list):
+                capable = [str(name).strip() for name in background_capable_tools if str(name).strip()]
+            elif bg_tool_names:
+                capable = [str(name).strip() for name in bg_tool_names if str(name).strip()]
+            background_lines = [
+                "Use background execution for long-running work when you can keep making foreground progress.",
+            ]
+            if capable:
+                background_lines.append(
+                    "Background-capable tools: " + ", ".join(f"`{name}`" for name in capable) + "."
+                )
+            background_lines.append(
+                "Check progress before waiting. Wait only when you are blocked on the result."
+            )
+            background_lines.append(
+                "Cancel stale or low-value work promptly."
+            )
+            for idx, tool in enumerate(tools, start=1):
+                tool_summary = getattr(tool, "short_description", None) or tool.description
+                background_lines.append(
+                    f"{idx}. {tool.name} - {_compact_description(tool_summary)}"
+                )
+            continue
+
         if isinstance(raw_skills, list):
             for item in raw_skills:
                 if not isinstance(item, dict):
@@ -165,8 +216,7 @@ def build_agent_capabilities_prompt(
                         "description": _compact_description(str(item.get("description") or "")),
                     }
                 )
-        tools = tk.list_tools()
-        if not tools and not (tk.description or "").strip():
+        if not tools:
             continue
         lines = [f"- {tk.name}: {_compact_description(tk.description)}"]
         for idx, tool in enumerate(tools, start=1):
@@ -181,8 +231,21 @@ def build_agent_capabilities_prompt(
                 continue
             seen_skill_names.add(item["name"])
             deduped_skills.append(item)
-        skill_lines = [f"- {item['name']}: {item['description']}" for item in deduped_skills]
+        skill_lines: list[str] = []
+        if "load_skill" in skill_tool_names:
+            skill_lines.append(
+                "Use `load_skill(skill_name)` when the task matches one of these skills."
+            )
+        if "load_skill_reference" in skill_tool_names:
+            skill_lines.append(
+                "Use `load_skill_reference(skill_name, reference_name)` for supplementary guidance, examples, and rubrics."
+            )
+        if skill_lines:
+            skill_lines.append("")
+        skill_lines.extend(f"- {item['name']}: {item['description']}" for item in deduped_skills)
         sections.append("<Available Skills>\n\n" + "\n".join(skill_lines) + "\n\n</Available Skills>")
+    if background_lines and has_background_tools:
+        sections.append("<Background Tasks>\n\n" + "\n".join(background_lines) + "\n\n</Background Tasks>")
     if tk_sections:
         sections.append("<Toolkit Instructions>\n\n" + "\n\n".join(tk_sections) + "\n\n</Toolkit Instructions>")
 

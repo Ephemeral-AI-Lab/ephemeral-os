@@ -277,6 +277,10 @@ class ToolRegistry:
         """Remove specific tools by name (blocklist). Toolkits are kept."""
         blocked = set(tool_names)
         self._tools = {k: v for k, v in self._tools.items() if k not in blocked}
+        for toolkit in self._toolkits.values():
+            toolkit._tools = {
+                name: tool for name, tool in toolkit._tools.items() if name not in blocked
+            }
 
     def to_api_schema(self) -> list[dict[str, Any]]:
         """Return all tool schemas in API format.

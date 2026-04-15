@@ -12,7 +12,7 @@ from prompts.runtime_prompt import (
     build_runtime_context_message,
     build_runtime_system_prompt,
 )
-from tools.core.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolResult
+from tools.core.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolRegistry, ToolResult
 from tools.builtins.background import make_background_toolkit
 from tools.subagent import SubagentToolkit
 
@@ -33,6 +33,14 @@ class _DemoTool(BaseTool):
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         del arguments, context
         return ToolResult(output="ok")
+
+
+class _LoadSkillTool(_DemoTool):
+    name = "load_skill"
+
+
+class _LoadSkillReferenceTool(_DemoTool):
+    name = "load_skill_reference"
 
 
 def test_agent_capabilities_prompt_uses_compact_toolkit_format():
@@ -72,13 +80,16 @@ def test_background_toolkit_says_wait_only_after_foreground_work():
 
 def test_agent_capabilities_prompt_omits_tool_call_notes_and_background_tasks():
     prompt = build_agent_capabilities_prompt(
-        [SubagentToolkit()],
+        [SubagentToolkit(), make_background_toolkit(["run_subagent"])],
         has_background_tools=True,
         bg_tool_names=["run_subagent"],
     )
 
     assert "Tool Call Notes" not in prompt
-    assert "Background Tasks" not in prompt
+    assert "<Background Tasks>" in prompt
+    assert "Background-capable tools: `run_subagent`." in prompt
+    assert "1. check_background_progress - Inspect background task status." in prompt
+    assert "</Background Tasks>" in prompt
 
 
 def test_agent_capabilities_prompt_prefers_short_description_over_description():
@@ -102,6 +113,41 @@ def test_agent_capabilities_prompt_prefers_short_description_over_description():
 
     assert "1. long_tool - Use the concise summary instead." in prompt
     assert "display width" not in prompt
+
+
+def test_agent_capabilities_prompt_includes_available_skills_section():
+    toolkit = BaseToolkit(
+        name="skills",
+        description="Lazy-loaded skill instructions and reference documents",
+        tools=[_LoadSkillTool(), _LoadSkillReferenceTool()],
+    )
+    toolkit.available_skills = [
+        {"name": "team-planner-playbook", "description": "Planning workflow for team planners."},
+        {"name": "scout-playbook", "description": "Read-only exploration workflow for scouts."},
+    ]
+
+    prompt = build_agent_capabilities_prompt([toolkit])
+
+    assert "<Available Skills>" in prompt
+    assert "Use `load_skill(skill_name)` when the task matches one of these skills." in prompt
+    assert "- team-planner-playbook: Planning workflow for team planners." in prompt
+    assert "- scout-playbook: Read-only exploration workflow for scouts." in prompt
+    assert "</Available Skills>" in prompt
+
+
+def test_tool_registry_remove_tools_filters_toolkits_too():
+    registry = ToolRegistry()
+    toolkit = BaseToolkit(
+        name="demo",
+        description="Demo toolkit",
+        tools=[_DemoTool()],
+    )
+    registry.register_toolkit(toolkit)
+
+    registry.remove_tools(["demo_tool"])
+
+    assert registry.get("demo_tool") is None
+    assert toolkit.list_tools() == []
 
 
 def test_runtime_context_message_contains_environment(monkeypatch):

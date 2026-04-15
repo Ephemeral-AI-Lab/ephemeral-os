@@ -314,11 +314,12 @@ def make_skills_toolkit(
         tools=[load_skill, load_skill_reference],
         instructions=instructions,
     )
-    toolkit.available_skills = [
-        {
-            "name": str(info["name"]),
-            "description": str(info["description"] or ""),
-        }
-        for info in sorted(available.values(), key=lambda item: str(item["name"]))
-    ]
+    if allowed_slugs is not None:
+        toolkit.available_skills = [
+            {
+                "name": str(info["name"]),
+                "description": str(info["description"] or ""),
+            }
+            for info in sorted(available.values(), key=lambda item: str(item["name"]))
+        ]
     return toolkit
