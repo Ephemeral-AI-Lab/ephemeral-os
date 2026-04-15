@@ -474,7 +474,7 @@ def test_run_forever_survives_transient_pop_ready_error():
                 id="task-1", team_run_id=run_id, agent_name="dev",
                 status="running", objective="t", description="",
                 deps=[], scope_paths=[],
-                scope_ltree=[], cascade_policy="cancel", parent_id=None,
+                scope_ltree=[], parent_id=None,
                 root_id="", depth=0, pending_dep_count=0,
                 retry_count=0, max_retries=2, agent_run_id=None,
                 created_at=None, started_at=None, finished_at=None,

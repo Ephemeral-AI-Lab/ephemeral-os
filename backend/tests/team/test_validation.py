@@ -266,11 +266,6 @@ def test_dep_in_known_external_deps_passes():
 # ---------------------------------------------------------------------------
 
 
-# ---------------------------------------------------------------------------
-# Validator cascade_policy enforcement
-# ---------------------------------------------------------------------------
-
-
 def _mock_validator_agent():
     """Return a namespace that looks like a validator AgentDefinition."""
     class _Defn:
@@ -286,16 +281,14 @@ def _mock_planner_agent():
         agent_type = "agent"
     return _Defn()
 
-
-def test_validator_with_cancel_cascade_policy_fails():
-    """Validators must use cascade_policy='continue' to ensure recovery cycle works."""
+def test_validator_plan_passes_without_policy_field():
+    """Validators no longer need a separate failure-policy field in the plan."""
     dev = _spec("dev-1")
     val = TaskDefinition(
         id="val-root",
         objective="validate",
         agent="validator",
         deps=["dev-1"],
-        cascade_policy="cancel",
     )
     plan = _plan(dev, val)
 
@@ -314,37 +307,7 @@ def test_validator_with_cancel_cascade_policy_fails():
          patch(_HAS_ROLE_PATH, side_effect=side_effect_role), \
          patch(_GET_DEFN_PATH, side_effect=side_effect_defn):
         issues = validate_plan(plan)
-    assert any("cascade_policy" in i["msg"] and "continue" in i["msg"] for i in issues)
-
-
-def test_validator_with_continue_cascade_policy_passes():
-    """Validators with cascade_policy='continue' should not trigger the check."""
-    dev = _spec("dev-1")
-    val = TaskDefinition(
-        id="val-root",
-        objective="validate",
-        agent="validator",
-        deps=["dev-1"],
-        cascade_policy="continue",
-    )
-    plan = _plan(dev, val)
-
-    def side_effect_exists(name):
-        return True
-
-    def side_effect_role(name, role):
-        return name == "validator" and role == "reviewer"
-
-    def side_effect_defn(name):
-        if name == "validator":
-            return _mock_validator_agent()
-        return _mock_agent()
-
-    with patch(_AGENT_EXISTS_PATH, side_effect=side_effect_exists), \
-         patch(_HAS_ROLE_PATH, side_effect=side_effect_role), \
-         patch(_GET_DEFN_PATH, side_effect=side_effect_defn):
-        issues = validate_plan(plan)
-    assert not any("cascade_policy" in i["msg"] for i in issues)
+    assert not any("validator task" in i["msg"] and "continue" in i["msg"] for i in issues)
 
 
 # ---------------------------------------------------------------------------
@@ -376,7 +339,6 @@ def test_crowded_plan_without_expandable_lane_fails():
         objective="validate",
         agent="validator",
         deps=[spec.id for spec in specs],
-        cascade_policy="continue",
     )
     plan = _plan(*specs, validator)
 
@@ -410,7 +372,6 @@ def test_crowded_plan_with_expandable_lane_passes_expandability_check():
         objective="validate",
         agent="validator",
         deps=[spec.id for spec in specs] + [planner.id],
-        cascade_policy="continue",
     )
     plan = _plan(*specs, planner, validator)
 

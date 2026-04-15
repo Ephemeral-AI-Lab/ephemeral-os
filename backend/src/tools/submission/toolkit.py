@@ -534,9 +534,6 @@ class SubmitTaskPlanTool(BaseTool):
             # Auto-derive description from objective (first ~10 words)
             words = spec.objective.split()
             description = " ".join(words[:10]) + ("..." if len(words) > 10 else "")
-            # Auto-set cascade_policy for validators (must be 'continue')
-            agent_def = get_definition(resolved_agent)
-            cascade = "continue" if agent_def and agent_def.role == "reviewer" else "cancel"
             resolved_tasks.append(
                 {
                     "id": spec.id,
@@ -545,7 +542,6 @@ class SubmitTaskPlanTool(BaseTool):
                     "description": description,
                     "deps": list(spec.deps),
                     "scope_paths": list(spec.scope_paths),
-                    "cascade_policy": cascade,
                 }
             )
 

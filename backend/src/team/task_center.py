@@ -248,7 +248,6 @@ class TaskCenter:
                     description=t.description or "",
                     deps=list(t.deps),
                     scope_paths=list(t.scope_paths),
-                    cascade_policy=t.cascade_policy,
                 )
             ],
             parent_id=t.parent_id,

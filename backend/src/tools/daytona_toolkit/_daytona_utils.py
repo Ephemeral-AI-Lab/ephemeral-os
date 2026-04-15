@@ -553,28 +553,23 @@ async def _read_text_file_via_exec(
     allow_missing: bool = False,
 ) -> tuple[str, bool]:
     if _supports_exec_transport(sandbox):
-        try:
-            response = await _exec_command(
-                sandbox,
-                _wrap_bash_command(_build_read_text_file_command(file_path)),
-            )
-            stdout = getattr(response, "result", "") or ""
-            cleaned, exit_code = _extract_exit_code(
-                stdout,
-                fallback_exit_code=getattr(response, "exit_code", None),
-            )
-            if exit_code not in (0, None):
-                raise RuntimeError(cleaned or f"read failed for {file_path}")
-            payload = json.loads(cleaned or "{}")
-            if not payload.get("exists"):
-                if allow_missing:
-                    return "", False
-                raise FileNotFoundError(file_path)
-            return str(payload.get("content", "") or ""), True
-        except (FileNotFoundError, UnicodeDecodeError):
-            raise
-        except Exception:
-            logger.debug("process.exec text read failed for %s; falling back to fs", file_path, exc_info=True)
+        response = await _exec_command(
+            sandbox,
+            _wrap_bash_command(_build_read_text_file_command(file_path)),
+        )
+        stdout = getattr(response, "result", "") or ""
+        cleaned, exit_code = _extract_exit_code(
+            stdout,
+            fallback_exit_code=getattr(response, "exit_code", None),
+        )
+        if exit_code not in (0, None):
+            raise RuntimeError(cleaned or f"read failed for {file_path}")
+        payload = json.loads(cleaned or "{}")
+        if not payload.get("exists"):
+            if allow_missing:
+                return "", False
+            raise FileNotFoundError(file_path)
+        return str(payload.get("content", "") or ""), True
     raw = await sandbox.fs.download_file(file_path)
     if isinstance(raw, bytes):
         return raw.decode("utf-8"), True
@@ -583,21 +578,18 @@ async def _read_text_file_via_exec(
 
 async def _write_text_file_via_exec(sandbox: Any, file_path: str, content: str) -> None:
     if _supports_exec_transport(sandbox):
-        try:
-            response = await _exec_command(
-                sandbox,
-                _wrap_bash_command(_build_write_text_file_command(file_path, content)),
-            )
-            stdout = getattr(response, "result", "") or ""
-            cleaned, exit_code = _extract_exit_code(
-                stdout,
-                fallback_exit_code=getattr(response, "exit_code", None),
-            )
-            if exit_code not in (0, None):
-                raise RuntimeError(cleaned or f"write failed for {file_path}")
-            return
-        except Exception:
-            logger.debug("process.exec text write failed for %s; falling back to fs", file_path, exc_info=True)
+        response = await _exec_command(
+            sandbox,
+            _wrap_bash_command(_build_write_text_file_command(file_path, content)),
+        )
+        stdout = getattr(response, "result", "") or ""
+        cleaned, exit_code = _extract_exit_code(
+            stdout,
+            fallback_exit_code=getattr(response, "exit_code", None),
+        )
+        if exit_code not in (0, None):
+            raise RuntimeError(cleaned or f"write failed for {file_path}")
+        return
     await _upload_file_compat(sandbox, content.encode("utf-8"), file_path)
 
 

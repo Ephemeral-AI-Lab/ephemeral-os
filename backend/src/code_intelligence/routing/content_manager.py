@@ -85,15 +85,20 @@ class ContentManager:
             except Exception as exc:
                 if allow_missing and self._is_missing_error(exc):
                     return "", False
-        try:
-            raw = run_sync(self._sandbox.fs.download_file(file_path))
-        except Exception as exc:
-            if allow_missing and self._is_missing_error(exc):
-                return "", False
-            raise
-        if isinstance(raw, bytes):
-            return raw.decode("utf-8"), True
-        return str(raw), True
+                raise
+        fs = getattr(self._sandbox, "fs", None)
+        download_fn = getattr(fs, "download_file", None)
+        if callable(download_fn):
+            try:
+                raw = run_sync(download_fn(file_path))
+            except Exception as exc:
+                if allow_missing and self._is_missing_error(exc):
+                    return "", False
+                raise
+            if isinstance(raw, bytes):
+                return raw.decode("utf-8"), True
+            return str(raw), True
+        raise RuntimeError("Sandbox process.exec text read is unavailable")
 
     def _write_remote(self, file_path: str, payload: bytes) -> None:
         process = getattr(self._sandbox, "process", None)
@@ -111,22 +116,20 @@ class ContentManager:
                     return
                 raise RuntimeError(cleaned or f"write failed for {file_path}")
             except UnicodeDecodeError:
-                pass
-        parent = str(Path(file_path).parent)
-        if parent and parent not in {".", "/"} and _supports_exec_transport(self._sandbox):
-            run_sync(self._sandbox.process.exec(f"mkdir -p {shlex.quote(parent)}"))
-        fs = self._sandbox.fs
+                raise RuntimeError("Binary payload requires sandbox fs fallback")
+            raise
+        fs = getattr(self._sandbox, "fs", None)
         upload_fn = getattr(fs, "upload_file", None)
-        if not callable(upload_fn):
-            raise RuntimeError("Sandbox fs has no upload_file method")
-        # Prefer canonical (payload, path) order; fallback to (path, payload).
-        try:
-            result = upload_fn(payload, file_path)
-        except (AttributeError, TypeError) as exc:
-            if "decode" not in str(exc) and "bytes-like object" not in str(exc):
-                raise
-            result = upload_fn(file_path, payload)
-        run_sync(result)
+        if callable(upload_fn):
+            try:
+                result = upload_fn(payload, file_path)
+            except (AttributeError, TypeError) as exc:
+                if "decode" not in str(exc) and "bytes-like object" not in str(exc):
+                    raise
+                result = upload_fn(file_path, payload)
+            run_sync(result)
+            return
+        raise RuntimeError("Sandbox process.exec text write is unavailable")
 
     def _delete_remote(self, file_path: str) -> None:
         process = getattr(self._sandbox, "process", None)

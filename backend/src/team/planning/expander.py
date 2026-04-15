@@ -113,7 +113,6 @@ class PlanExpander:
                     description=spec.description or "",
                     deps=rdeps,
                     scope_paths=list(spec.scope_paths),
-                    cascade_policy=spec.cascade_policy,
                 )
             )
             new_items.append(
@@ -126,7 +125,6 @@ class PlanExpander:
                     description=spec.description or "",
                     deps=rdeps,
                     scope_paths=list(spec.scope_paths),
-                    cascade_policy=spec.cascade_policy,
                     parent_id=task_id,
                     root_id=rec.root_id or task_id,
                     depth=new_depth,
@@ -204,7 +202,6 @@ class PlanExpander:
                     description=spec.description or "",
                     deps=rdeps,
                     scope_paths=list(spec.scope_paths),
-                    cascade_policy=spec.cascade_policy,
                 )
             )
 

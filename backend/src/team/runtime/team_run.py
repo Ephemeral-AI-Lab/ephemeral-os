@@ -119,15 +119,15 @@ class TeamRun:
         num_executors: int | None = None,
     ) -> None:
         from team.models import Task, TaskStatus
-        if "task" in payload and not payload.get("objective"):
-            raise ValueError("Root payload uses legacy 'task'; use 'objective'")
+        objective = str(payload.get("objective") or payload.get("user_request") or "").strip()
+        if not objective:
+            raise ValueError("Root payload requires a non-empty 'objective'")
         root = Task(
             id=str(uuid.uuid4()), team_run_id=self.id, agent_name=agent_name,
             status=TaskStatus.PENDING,
-            objective=str(payload.get("objective") or payload.get("user_request") or payload),
+            objective=objective,
             scope_paths=list(payload.get("scope_paths", [])), depth=0,
         )
-        root.payload = dict(payload)
         root.root_id = root.id
         self.root_task_id = root.id
         self.event_store.append(make_team_run_created(

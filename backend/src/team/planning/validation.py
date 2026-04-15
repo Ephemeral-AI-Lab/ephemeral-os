@@ -82,21 +82,6 @@ def _validator_policy_issues(
                 ),
             }
         )
-    # Validators must use cascade_policy="continue" so they run even when
-    # upstream deps fail — otherwise the recovery/replan cycle is dead.
-    for idx, item in enumerate(items):
-        if _is_validator(item.agent) and item.cascade_policy != "continue":
-            issues.append(
-                {
-                    "field": f"tasks[{idx}].cascade_policy",
-                    "msg": (
-                        f"validator task '{item.id}' has cascade_policy='{item.cascade_policy}'; "
-                        "validators must use cascade_policy='continue' so they run even when "
-                        "upstream deps fail (required for the replan recovery cycle)"
-                    ),
-                }
-            )
-
     if validator_count == 0:
         return issues
     terminal_count = _terminal_validator_count(items)

@@ -336,7 +336,7 @@ async def test_start_with_team_definition_rejects_legacy_task_payload(
         roster={"planner": ["my_planner"]},
     )
     run = TeamRun(session_id="s", user_request="do stuff", services=_fake_services())
-    with pytest.raises(ValueError, match="Root payload uses legacy 'task'; use 'objective'"):
+    with pytest.raises(ValueError, match="Root payload requires a non-empty 'objective'"):
         await run.start_with_team_definition(
             team_def,
             payload={"task": "legacy prompt"},

@@ -7,12 +7,14 @@ All raw SQL lives here; TaskCenter delegates to this class.
 from __future__ import annotations
 
 import uuid
+from collections import defaultdict, deque
 from datetime import datetime, timezone
 
 from sqlalchemy import and_, case, delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import aliased
 
+from agents.registry import has_role as _has_role
 from team.models import TERMINAL_STATUSES, Task, TaskDefinition, TaskStatus, _utcnow
 from team.persistence.ltree_utils import path_to_ltree
 from team.persistence.task_graph import TaskGraph
@@ -30,7 +32,6 @@ def record_to_task(rec: TaskRecord) -> Task:
         description=rec.description or "",
         deps=list(rec.deps) if rec.deps else [],
         scope_paths=list(rec.scope_paths) if rec.scope_paths else [],
-        cascade_policy=rec.cascade_policy or "cancel",
         parent_id=rec.parent_id,
         root_id=rec.root_id or "",
         depth=rec.depth or 0,
@@ -46,6 +47,10 @@ def record_to_task(rec: TaskRecord) -> Task:
         pause_checkpoint=getattr(rec, "pause_checkpoint", None),
         pause_verdict=getattr(rec, "pause_verdict", None),
     )
+
+
+def _allows_failed_dependencies(agent_name: str) -> bool:
+    return _has_role(agent_name, "reviewer")
 
 
 class TaskStore:
@@ -445,35 +450,54 @@ class TaskStore:
 
     async def _cascade_recursive_sql(self, db: AsyncSession, root_task_id: str) -> list[str]:
         rid = self._team_run_id
-        dep_chain = (
-            select(TaskRecord.id)
-            .where(TaskRecord.team_run_id == rid, TaskRecord.id == root_task_id)
-            .cte("dep_chain", recursive=True)
-        )
-        descendant = aliased(TaskRecord, name="descendant")
-        dep_chain = dep_chain.union_all(
-            select(descendant.id)
-            .join(
-                dep_chain,
-                or_(
-                    and_(
-                        descendant.deps.any(dep_chain.c.id),
-                        descendant.cascade_policy != "continue",
-                    ),
-                    descendant.parent_id == dep_chain.c.id,
-                ),
+        active_rows = list(
+            (
+                await db.execute(
+                    select(TaskRecord).where(
+                        TaskRecord.team_run_id == rid,
+                        TaskRecord.status.in_(("pending", "ready", "expanded")),
+                    )
+                )
             )
-            .where(
-                descendant.team_run_id == rid,
-                descendant.status.in_(("pending", "ready", "expanded")),
-            )
+            .scalars()
+            .all()
         )
-        cascade_ids = select(dep_chain.c.id).where(dep_chain.c.id != root_task_id).distinct()
+        if not active_rows:
+            return []
+
+        records_by_id = {row.id: row for row in active_rows}
+        children_by_parent: dict[str, list[str]] = defaultdict(list)
+        dependents_by_dep: dict[str, list[str]] = defaultdict(list)
+        for row in active_rows:
+            if row.parent_id:
+                children_by_parent[row.parent_id].append(row.id)
+            for dep_id in row.deps or []:
+                dependents_by_dep[dep_id].append(row.id)
+
+        cancelled: set[str] = set()
+        queue: deque[str] = deque([root_task_id])
+        while queue:
+            current = queue.popleft()
+            for child_id in children_by_parent.get(current, []):
+                if child_id not in cancelled:
+                    cancelled.add(child_id)
+                    queue.append(child_id)
+            for dep_id in dependents_by_dep.get(current, []):
+                record = records_by_id.get(dep_id)
+                if record is None or _allows_failed_dependencies(record.agent_name):
+                    continue
+                if dep_id not in cancelled:
+                    cancelled.add(dep_id)
+                    queue.append(dep_id)
+
+        if not cancelled:
+            return []
+
         stmt = (
             update(TaskRecord)
             .where(
                 TaskRecord.team_run_id == rid,
-                TaskRecord.id.in_(cascade_ids),
+                TaskRecord.id.in_(cancelled),
             )
             .values(
                 status="cancelled",
@@ -638,54 +662,36 @@ class TaskStore:
                 await db.commit()
                 return warnings
             is_infra = reason.startswith(("worker_exception:", "runner_exception:"))
-            if rec.retry_count < rec.max_retries:
-                should_retry = is_infra
-                if not should_retry:
-                    should_retry = (
-                        await db.execute(
-                            select(
-                                select(TaskRecord.id)
-                                .where(
-                                    TaskRecord.team_run_id == rid,
-                                    TaskRecord.deps.any(task_id),
-                                    TaskRecord.cascade_policy == "retry_first",
-                                    TaskRecord.status.notin_(("done", "failed", "cancelled")),
-                                )
-                                .exists()
-                            )
-                        )
-                    ).scalar()
-                if should_retry:
-                    await db.execute(
-                        update(TaskRecord)
-                        .where(
-                            TaskRecord.id == task_id,
-                            TaskRecord.team_run_id == rid,
-                        )
-                        .values(
-                            status="ready",
-                            retry_count=TaskRecord.retry_count + 1,
-                            agent_run_id=None,
-                            started_at=None,
-                            finished_at=None,
-                            failure_reason=None,
-                        )
+            if is_infra and rec.retry_count < rec.max_retries:
+                await db.execute(
+                    update(TaskRecord)
+                    .where(
+                        TaskRecord.id == task_id,
+                        TaskRecord.team_run_id == rid,
                     )
-                    await db.commit()
-                    self._tg.set_ready_status(task_id)
-                    return warnings
+                    .values(
+                        status="ready",
+                        retry_count=TaskRecord.retry_count + 1,
+                        agent_run_id=None,
+                        started_at=None,
+                        finished_at=None,
+                        failure_reason=None,
+                    )
+                )
+                await db.commit()
+                self._tg.set_ready_status(task_id)
+                return warnings
             await db.execute(
                 update(TaskRecord)
                 .where(TaskRecord.id == task_id, TaskRecord.team_run_id == rid)
                 .values(status="failed", finished_at=func.now(), failure_reason=reason)
             )
-            cont = (
+            dependents = list(
                 (
                     await db.execute(
-                        select(TaskRecord.id).where(
+                        select(TaskRecord).where(
                             TaskRecord.team_run_id == rid,
                             TaskRecord.deps.any(task_id),
-                            TaskRecord.cascade_policy == "continue",
                             TaskRecord.status.notin_(("done", "failed", "cancelled")),
                         )
                     )
@@ -693,16 +699,22 @@ class TaskStore:
                 .scalars()
                 .all()
             )
-            for dep_id in cont:
+            for dep in dependents:
+                if not _allows_failed_dependencies(dep.agent_name):
+                    continue
+                if dep.status == "pending" and dep.pending_dep_count > 0:
+                    dep.pending_dep_count -= 1
+                    if dep.pending_dep_count == 0:
+                        dep.status = "ready"
                 warnings.append(
                     (
-                        dep_id,
+                        dep.id,
                         f"Warning: dependency {task_id} failed: {reason}. Proceed with caution.",
                     )
                 )
             await db.commit()
-        self._tg.mark_failed(task_id, reason)
         await self.cascade_cancel_recursive(task_id)
+        await self.refresh_graph()
         return warnings
 
     async def retry_task(self, task_id: str, max_retries: int) -> bool:
@@ -947,7 +959,6 @@ class TaskStore:
                         deps=list(t.deps),
                         scope_paths=list(t.scope_paths),
                         scope_ltree=[path_to_ltree(p) for p in t.scope_paths],
-                        cascade_policy=t.cascade_policy,
                         parent_id=t.parent_id,
                         root_id=t.root_id or "",
                         depth=t.depth,

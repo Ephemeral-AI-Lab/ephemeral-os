@@ -13,7 +13,6 @@ CREATE TABLE IF NOT EXISTS tasks (
     deps            TEXT[] DEFAULT '{}',
     scope_paths     TEXT[] DEFAULT '{}',
     scope_ltree     TEXT[] DEFAULT '{}',
-    cascade_policy  TEXT DEFAULT 'cancel',
     parent_id       TEXT,
     root_id         TEXT DEFAULT '',
     depth           INT DEFAULT 0,

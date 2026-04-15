@@ -80,41 +80,13 @@ class ScopePath:
         return any(ScopePath.overlaps(np, qp) for np in note_paths for qp in normalized)
 
 
-# ---------------------------------------------------------------------------
-# Legacy function exports (for backwards compatibility)
-# ---------------------------------------------------------------------------
-
-
 def normalize_scope_paths(paths: list[str] | tuple[str, ...] | None) -> list[str]:
-    """Normalize scope paths. Use ScopePath.normalize() for new code."""
+    """Normalize scope paths."""
     return ScopePath.normalize(paths)
 
 
 def scope_paths_overlap(path_a: str, path_b: str) -> bool:
-    """Check if two paths overlap. Use ScopePath.overlaps() for new code."""
-    return ScopePath.overlaps(path_a, path_b)
-
-
-def scopes_overlap(path_a: str, path_b: str) -> bool:
-    """Alias for scope_paths_overlap."""
-    return ScopePath.overlaps(path_a, path_b)
-
-
-def normalize_path_list(raw: Any) -> list[str]:
-    """Normalize a list of paths to a cleaned string list."""
-    out: list[str] = []
-    for item in raw if isinstance(raw, list) else [raw] if isinstance(raw, str) else []:
-        if isinstance(item, str):
-            cleaned = item.strip()
-            if cleaned:
-                out.append(cleaned)
-    return out
-
-
-def paths_overlap(path_a: str | None, path_b: str | None) -> bool:
-    """Check if two paths overlap (one is a prefix of the other)."""
-    if not path_a or not path_b:
-        return False
+    """Check if two paths overlap."""
     return ScopePath.overlaps(path_a, path_b)
 
 

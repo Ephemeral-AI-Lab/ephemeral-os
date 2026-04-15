@@ -31,6 +31,7 @@ from tools.daytona_toolkit.tools import (
 )
 from tools.daytona_toolkit._daytona_utils import (
     _read_text_file_via_exec,
+    _supports_exec_transport,
     _upload_file_compat,
     _write_text_file_via_exec,
 )
@@ -361,6 +362,8 @@ async def daytona_edit_file(
             try:
                 await _write_text_file_via_exec(sandbox, file_path, new_content)
             except Exception:
+                if _supports_exec_transport(sandbox):
+                    raise
                 await _upload_file_compat(sandbox, new_content.encode("utf-8"), file_path)
             scope_warning = _scope_overlap_warning(context, file_path)
             if scope_warning:
@@ -380,6 +383,8 @@ async def daytona_edit_file(
                 try:
                     await _write_text_file_via_exec(sandbox, file_path, new_content)
                 except Exception:
+                    if _supports_exec_transport(sandbox):
+                        raise
                     await _upload_file_compat(sandbox, new_content.encode("utf-8"), file_path)
                 scope_warning = _scope_overlap_warning(context, file_path)
                 if scope_warning:

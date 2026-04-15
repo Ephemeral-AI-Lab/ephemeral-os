@@ -31,7 +31,7 @@ Use this reference immediately before calling `submit_task_plan(...)`.
 - Use exact live-confirmed or explorer-confirmed paths in `scope_paths`; if the exact owner is still uncertain, keep the broader boundary and assign it to `team_planner`.
 - Keep at most one terminal validator in a submitted plan.
 - Before loading this reference, confirm that the terminal validator depends on every terminal non-validator sibling. Do not learn that from a submit error.
-- Validator tasks will be normalized to `cascade_policy="continue"` automatically; developer and `team_planner` tasks use the default strict dependency policy.
+- Reviewer tasks are allowed to proceed after upstream failure; developer and `team_planner` tasks still use strict dependency handling.
 - On crowded layers, keep at least one residual `team_planner` lane whenever unresolved work is still broad, shared-risk, or multi-file.
 
 ## Expected Outcome

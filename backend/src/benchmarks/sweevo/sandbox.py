@@ -10,7 +10,7 @@ from typing import Any
 from uuid import uuid4
 
 from sandbox.async_client import get_async_sandbox
-from tools.daytona_toolkit.tools import _upload_file_compat
+from tools.daytona_toolkit._daytona_utils import _build_write_text_file_command, _wrap_bash_command
 
 from benchmarks.sweevo.dataset import (
     default_sweevo_snapshot_name,
@@ -199,27 +199,42 @@ async def _get_sandbox(sandbox_id: str) -> Any:
     raise last_exc
 
 
-async def _upload_file_compat(sandbox: Any, content: bytes, path: str) -> None:
-    """Upload using the SDK's content-first signature with a stale-mock fallback."""
-    try:
-        await sandbox.fs.upload_file(content, path)
-    except (AttributeError, TypeError) as exc:
-        if "decode" not in str(exc) and "bytes-like object" not in str(exc):
-            raise
-        await sandbox.fs.upload_file(path, content)
-
-
 async def _upload_file_with_fallback(
     sandbox_id: str,
     path: str,
     content: bytes,
 ) -> None:
-    """Upload a file to the sandbox, falling back to chunked base64 exec on failure."""
+    """Upload a text file to the sandbox via exec, falling back to chunked exec."""
     try:
         sandbox = await _get_sandbox(sandbox_id)
         await _upload_file_compat(sandbox, content, path)
+    except UnicodeDecodeError:
+        await _write_file_via_chunked_base64_exec(sandbox_id, path, content)
     except Exception:
         await _write_file_via_chunked_base64_exec(sandbox_id, path, content)
+
+
+async def _upload_file_compat(
+    sandbox: Any,
+    content: bytes,
+    path: str,
+) -> None:
+    """Upload a text file via exec when available, otherwise use sandbox.fs."""
+    process = getattr(sandbox, "process", None)
+    if callable(getattr(process, "exec", None)):
+        text = content.decode("utf-8")
+        response = await process.exec(
+            _wrap_bash_command(_build_write_text_file_command(path, text)),
+            timeout=60,
+        )
+        if getattr(response, "exit_code", 0) not in (0, None):
+            raise RuntimeError(getattr(response, "result", "") or f"write failed for {path}")
+        return
+    fs = getattr(sandbox, "fs", None)
+    upload_fn = getattr(fs, "upload_file", None)
+    if not callable(upload_fn):
+        raise RuntimeError("Sandbox text upload transport is unavailable")
+    await upload_fn(content, path)
 
 
 def _dispose_code_intelligence_quietly(sandbox_id: str, context: str) -> None:

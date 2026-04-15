@@ -220,10 +220,9 @@ Three distinct layers orchestrate the transition from disk/database to runtime e
 │  task                string         │      │  worker_agents    json           │
 │  deps                json           │      │  roster           json           │
 │  scope_paths         json           │      │  created_at       timestamp      │
-│  cascade_policy      string         │      │  updated_at       timestamp      │
-│  parent_id       FK  string         │      └────────────────┬─────────────────┘
-│  root_id             string         │                       │ starts (1 to 0..*)
-│  depth               int            │                       ▼
+│  parent_id       FK  string         │      │  updated_at       timestamp      │
+│  root_id             string         │      └────────────────┬─────────────────┘
+│  depth               int            │                       │ starts (1 to 0..*)
 │  retry_count         int            │      ┌──────────────────────────────────┐
 │  max_retries         int            │      │           TEAM_RUNS              │
 │  agent_run_id    FK  string         │      │──────────────────────────────────│

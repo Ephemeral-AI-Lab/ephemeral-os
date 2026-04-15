@@ -21,7 +21,9 @@ from tools.daytona_toolkit._daytona_utils import (
     _read_text_file_via_exec,
     _recover_sandbox,
     _require_sandbox,
+    _supports_exec_transport,
     _upload_file_compat,
+    _write_text_file_via_exec,
     _wrap_bash_command,
     is_coordinated_team_agent,
 )
@@ -519,11 +521,16 @@ async def _execute_python_wrapper(
     script_path = f"/tmp/codeact-wrapper-{run_id}.py"
     exec_command = _build_exec_command(script_path, cwd=cwd)
     try:
-        await _upload_file_compat(sandbox, wrapper.encode("utf-8"), script_path)
+        await _write_text_file_via_exec(sandbox, script_path, wrapper)
     except Exception as exc:
         try:
             sandbox = await _recover_sandbox(context, exc)
-            await _upload_file_compat(sandbox, wrapper.encode("utf-8"), script_path)
+            try:
+                await _write_text_file_via_exec(sandbox, script_path, wrapper)
+            except Exception:
+                if _supports_exec_transport(sandbox):
+                    raise
+                await _upload_file_compat(sandbox, wrapper.encode("utf-8"), script_path)
         except Exception as recovery_exc:
             return None, sandbox, ToolResult(
                 output=f"Failed to upload script: {recovery_exc}",

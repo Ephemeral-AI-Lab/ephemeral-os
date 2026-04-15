@@ -9,7 +9,7 @@ Use this reference when shaping the terminal validator task in a plan.
 ## Avoid
 
 - The terminal validator must depend on every terminal non-validator sibling (already enforced by plan-json-contract).
-- The terminal validator's `cascade_policy` must be `"continue"` so it runs even when some deps fail.
+- The terminal validator must still run even when some deps fail.
 - The task prose must not limit verification to only the scoped tests — it must run the full suite to catch cross-scope regressions like broken imports in shared files.
 - The task prose must instruct the validator to run `ci_diagnostics` as a pre-flight check before the full suite.
 

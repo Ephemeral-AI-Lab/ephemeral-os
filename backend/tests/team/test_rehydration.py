@@ -42,8 +42,8 @@ def test_task_serialization_round_trip_preserves_blocker_pause_fields():
     assert restored.pause_verdict == "Shared import break requires pause."
 
 
-def test_task_from_dict_rejects_legacy_task_field():
-    with pytest.raises(ValueError, match="Task payload uses legacy 'task'; use 'objective'"):
+def test_task_from_dict_requires_objective():
+    with pytest.raises(ValueError, match="Task payload requires a non-empty 'objective'"):
         task_from_dict(
             {
                 "id": "task-1",

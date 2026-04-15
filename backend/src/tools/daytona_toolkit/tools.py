@@ -19,6 +19,7 @@ from tools.daytona_toolkit._daytona_utils import (
     _resolve_path,
     _normalize_repo_relative_path,
     _normalize_string_list,
+    _supports_exec_transport,
     _team_repo_write_error,
     _team_repo_write_warning,
     _upload_file_compat,
@@ -288,6 +289,8 @@ async def _do_raw_write(
     try:
         await _write_text_file_via_exec(sandbox, file_path, content)
     except Exception:
+        if _supports_exec_transport(sandbox):
+            raise
         await _upload_file_compat(sandbox, content_bytes, file_path)
     sync_write_to_ci(context, file_path, content, edit_type="write", description="daytona_write_file")
 

@@ -33,7 +33,11 @@ from code_intelligence.constants import (
     TREE_CACHE_MAX_FILE_SIZE,
     TREE_CACHE_MAX_FILES,
 )
-from tools.daytona_toolkit._daytona_utils import _extract_exit_code, _wrap_bash_command
+from tools.daytona_toolkit._daytona_utils import (
+    _extract_exit_code,
+    _supports_exec_transport,
+    _wrap_bash_command,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -69,9 +73,9 @@ class CacheEntry:
 class TreeCache:
     """Thread-safe AST cache with LRU eviction and sandbox awareness.
 
-    When a sandbox is provided, uses ``sandbox.fs.get_file_info`` for mtime
-    checks and ``sandbox.fs.download_file`` for content retrieval — matching
-    the synthetic-os two-tier validation approach.
+    When a sandbox is provided, prefers ``process.exec`` for text stat/read
+    operations and falls back to ``sandbox.fs`` only for mock sandboxes that
+    do not expose exec transport.
     """
 
     def __init__(
@@ -170,7 +174,7 @@ class TreeCache:
         sandbox = self._sandbox
         process = getattr(sandbox, "process", None) if sandbox else None
         exec_fn = getattr(process, "exec", None) if process is not None else None
-        if callable(exec_fn) and not getattr(type(exec_fn), "__module__", "").startswith("unittest.mock"):
+        if sandbox and _supports_exec_transport(sandbox):
             script = """
 import json
 import pathlib
@@ -222,7 +226,7 @@ print(json.dumps({"mtime": stat.st_mtime, "size": stat.st_size}))
         sandbox = self._sandbox
         process = getattr(sandbox, "process", None) if sandbox else None
         exec_fn = getattr(process, "exec", None) if process is not None else None
-        if callable(exec_fn) and not getattr(type(exec_fn), "__module__", "").startswith("unittest.mock"):
+        if sandbox and _supports_exec_transport(sandbox):
             script = """
 import pathlib
 import sys
@@ -246,6 +250,7 @@ print(path.read_text(encoding="utf-8"))
                     return stdout
             except Exception:
                 logger.debug("TreeCache: process.exec read failed for %s", file_path, exc_info=True)
+                return None
         fs = getattr(sandbox, "fs", None) if sandbox else None
         download = getattr(fs, "download_file", None)
 

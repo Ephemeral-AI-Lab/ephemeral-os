@@ -6,7 +6,7 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Literal
+from typing import Any
 
 from config.defaults import (
     DEFAULT_MAX_DEPTH,
@@ -113,9 +113,6 @@ class Note:
 # ---------------------------------------------------------------------------
 
 
-CascadePolicy = Literal["cancel", "retry_first", "continue"]
-
-
 @dataclass
 class TaskDefinition:
     """One item in a plan."""
@@ -126,7 +123,6 @@ class TaskDefinition:
     description: str = ""
     deps: list[str] = field(default_factory=list)
     scope_paths: list[str] = field(default_factory=list)
-    cascade_policy: CascadePolicy = "cancel"
 
 
 # ---------------------------------------------------------------------------
@@ -144,7 +140,6 @@ class Task:
     description: str = ""
     deps: list[str] = field(default_factory=list)
     scope_paths: list[str] = field(default_factory=list)
-    cascade_policy: CascadePolicy = "cancel"
     parent_id: str | None = None
     root_id: str = ""
     depth: int = 0
@@ -192,9 +187,6 @@ class ReplanPlan:
         )
 
 
-_VALID_CASCADE_POLICIES: frozenset[str] = frozenset({"cancel", "retry_first", "continue"})
-
-
 def _taskspec_list_from_field(
     data: dict[str, Any],
     *,
@@ -223,17 +215,9 @@ def _taskspec_from_dict(it: dict[str, Any]) -> TaskDefinition:
     if not task_id:
         raise ValueError("TaskDefinition requires a non-empty 'id'")
     if not objective:
-        if "task" in it:
-            raise ValueError(
-                f"TaskDefinition '{task_id}' uses legacy 'task'; use 'objective'"
-            )
         raise ValueError(f"TaskDefinition '{task_id}' requires a non-empty 'objective'")
     if not agent:
         raise ValueError(f"TaskDefinition '{task_id}' requires a non-empty 'agent'")
-    raw_policy = str(it.get("cascade_policy", "cancel"))
-    cascade_policy: CascadePolicy = (
-        raw_policy if raw_policy in _VALID_CASCADE_POLICIES else "cancel"
-    )  # type: ignore[assignment]
     return TaskDefinition(
         id=task_id,
         objective=objective,
@@ -241,7 +225,6 @@ def _taskspec_from_dict(it: dict[str, Any]) -> TaskDefinition:
         description=str(it.get("description") or ""),
         deps=list(it.get("deps") or []),
         scope_paths=list(it.get("scope_paths") or []),
-        cascade_policy=cascade_policy,
     )
 
 

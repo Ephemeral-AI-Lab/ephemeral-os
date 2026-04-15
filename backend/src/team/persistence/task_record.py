@@ -40,9 +40,6 @@ class TaskRecord(Base):
         ARRAY(Text), default=list
     )
     scope_ltree: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)
-    cascade_policy: Mapped[str] = mapped_column(
-        String(16), default="cancel"
-    )
     parent_id: Mapped[str | None] = mapped_column(Text, nullable=True)
     root_id: Mapped[str] = mapped_column(Text, default="")
     depth: Mapped[int] = mapped_column(Integer, default=0)

@@ -76,7 +76,6 @@ def test_taskspec_defaults():
     spec = TaskDefinition(id="t1", objective="do work", agent="developer")
     assert spec.deps == []
     assert spec.scope_paths == []
-    assert spec.cascade_policy == "cancel"
 
 
 def test_taskspec_with_all_fields():
@@ -86,11 +85,9 @@ def test_taskspec_with_all_fields():
         agent="validator",
         deps=["t1"],
         scope_paths=["src/auth/"],
-        cascade_policy="propagate",
     )
     assert spec.deps == ["t1"]
     assert spec.scope_paths == ["src/auth/"]
-    assert spec.cascade_policy == "propagate"
 
 
 def test_plan_from_dict_reports_invalid_task_index_for_missing_id():
@@ -117,10 +114,10 @@ def test_replan_from_dict_reports_non_object_index():
         )
 
 
-def test_plan_from_dict_rejects_legacy_task_field():
+def test_plan_from_dict_requires_objective():
     with pytest.raises(
         ValueError,
-        match=r"tasks\[0\]: TaskDefinition 't1' uses legacy 'task'; use 'objective'",
+        match=r"tasks\[0\]: TaskDefinition 't1' requires a non-empty 'objective'",
     ):
         Plan.from_dict(
             {
@@ -161,7 +158,6 @@ def test_task_defaults():
     )
     assert task.deps == []
     assert task.scope_paths == []
-    assert task.cascade_policy == "cancel"
     assert task.parent_id is None
     assert task.root_id == ""
     assert task.depth == 0
@@ -225,7 +221,6 @@ def test_plan_from_dict_round_trip():
                 "agent": "developer",
                 "deps": [],
                 "scope_paths": ["src/auth/"],
-                "cascade_policy": "cancel",
             },
             {
                 "id": "t2",
@@ -247,12 +242,10 @@ def test_plan_from_dict_round_trip():
     assert t1.agent == "developer"
     assert t1.deps == []
     assert t1.scope_paths == ["src/auth/"]
-    assert t1.cascade_policy == "cancel"
 
     t2 = plan.tasks[1]
     assert t2.id == "t2"
     assert t2.deps == ["t1"]
-    assert t2.cascade_policy == "cancel"  # default when omitted
 
 
 def test_plan_from_dict_empty_tasks():
@@ -303,10 +296,10 @@ def test_replan_plan_from_dict_empty():
     assert replan.cancel_ids == []
 
 
-def test_replan_plan_from_dict_cascade_policy_default():
+def test_replan_plan_from_dict_defaults():
     data = {"add_tasks": [{"id": "x", "objective": "t", "agent": "developer"}]}
     replan = ReplanPlan.from_dict(data)
-    assert replan.add_tasks[0].cascade_policy == "cancel"
+    assert replan.add_tasks[0].deps == []
 
 
 # ---------------------------------------------------------------------------

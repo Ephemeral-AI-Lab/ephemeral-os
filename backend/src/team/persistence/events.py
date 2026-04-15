@@ -159,7 +159,7 @@ def task_to_dict(task: Any) -> dict[str, Any]:
         "agent_name": task.agent_name, "status": task.status.value,
         "objective": task.objective, "deps": list(task.deps),
         "scope_paths": list(task.scope_paths),
-        "cascade_policy": task.cascade_policy, "parent_id": task.parent_id,
+        "parent_id": task.parent_id,
         "root_id": task.root_id, "depth": task.depth,
         "pending_dep_count": task.pending_dep_count,
         "retry_count": task.retry_count, "max_retries": task.max_retries,

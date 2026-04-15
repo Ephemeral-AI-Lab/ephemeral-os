@@ -671,7 +671,7 @@ def test_make_runner_persists_work_result_and_final_snapshot(monkeypatch):
 
     final_text = (
         '{"tasks":[{"id":"dev-1","objective":"Fix auth","agent":"developer","deps":[],'
-        '"scope_paths":["src/auth"],"cascade_policy":"cancel"}],"rationale":"split by owner"}'
+        '"scope_paths":["src/auth"]}],"rationale":"split by owner"}'
     )
 
     async def _fake_run(_prompt: str):
