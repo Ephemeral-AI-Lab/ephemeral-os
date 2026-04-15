@@ -148,7 +148,7 @@ def test_reference_files_hold_specialized_detail() -> None:
         _CONTENT / "team-validator-playbook/references/runtime-verification-examples.md"
     )
 
-    assert "utils_dataframe.py" in planner_ref
+    assert "Never keep a guessed exact leaf once live evidence disproves it." in planner_ref
     assert "submit_task_plan(new_tasks=[...])" in planner_json
     assert 'daytona_codeact(command="...", timeout=N)' in developer_runtime
     assert "pkg._compat" in developer_root_cause

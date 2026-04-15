@@ -14,7 +14,7 @@ Use `submit_task_plan(new_tasks=[...])` when the plan structure is sound but mor
 - Must confirm owner paths live with CI before submitting.
 - Must read sibling notes before deciding corrective scope.
 - Each new task must have: `id`, `name` (agent), `objective`, `deps`, `scope_paths`.
-- Must call `task_center_changed_since()` before submitting if freshness moved.
+- Must call `context_changed_since()` before submitting if freshness moved.
 - For layered failures, emit a two-phase corrective plan (see Hard Rule 10 in main playbook).
 - Corrective developer tasks must instruct the developer to run `ci_diagnostics(file_path)` on affected files first.
 - Never submit corrective tasks without reading sibling notes first.
