@@ -79,8 +79,8 @@ EphemeralOS team coordination separates work execution, failure recovery, and bl
       │                   │                    │         └───────────┬───────────┘
       │                   │                    │                     │
       │                   │                    │         ┌───────────┴───────────┐
-      │                   │                    │         │ _run_post_run()       │
-      │                   │                    │         │ (posthook phase)      │
+      │                   │                    │         │ Terminal submission   │
+      │                   │                    │         │ via main loop tool   │
       │                   │                    │         └───────────┬───────────┘
       │                   │                    │                     │
       │                   │◀────────────────────────────────────────│
@@ -463,6 +463,6 @@ When a PAUSED task transitions back to READY, the Executor resumes from the save
 - Resumed agent picks up where it left off with full prior context.
 
 **Guaranteed Submission**
-- Every task exits via the post-run phase (`_run_post_run`), which always completes.
-- Tools: `SubmitPlanTool`, `RequestReplanTool`, `DeclareBlockerTool`, `PauseVerdictTool`.
-- PosthookTools manage the posthook phase exclusively.
+- Every task exits via terminal submission tools in the main loop, which always complete.
+- Terminal tools: `submit_task_plan`, `submit_task_summary`, `declare_blocker`.
+- The executor reads structured metadata from tool results and dispatches to TaskCenter.

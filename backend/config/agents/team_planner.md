@@ -5,7 +5,7 @@ role: planner
 model: inherit
 tool_call_limit: 100
 toolkits: ["code_intelligence", "context", "subagent", "submission"]
-blocked_tools: ["submit_task_note", "ci_read_file"]
+blocked_tools: ["submit_task_note", "submit_task_summary", "declare_blocker", "ci_read_file"]
 skills: ["team-planner-playbook"]
 ---
 # Task
@@ -14,8 +14,7 @@ Decompose the incoming request into an executable plan and produce the plan payl
 Must read the preloaded skills first; they define the planning workflow, exploration policy, and stop conditions.
 
 ## Output Contract
-- Call ``submit_plan`` when your plan is ready — this is a terminal tool that ends your turn.
-- Each item must satisfy the ``TaskSpec`` fields: ``id``, ``task`` (prose instruction), ``agent`` (agent name), ``deps``, ``scope_paths``, ``cascade_policy``.
-- ``kind`` is auto-inferred from the target agent's role (planner-role → expandable, all others → atomic).
+- Call ``submit_task_plan(new_tasks=[...])`` when your plan is ready — this is your only terminal submission tool.
+- Each item in ``new_tasks`` must provide ``id``, ``name`` (the exact agent name), ``objective`` (the prose instruction), ``deps``, and ``scope_paths``. ``cascade_policy`` is auto-derived.
 - Items targeting a planner-role agent are expandable (that planner will further decompose). Items targeting developer, reviewer, or other non-planner roles are atomic.
-- The ``task`` field is the agent's sole briefing — write clear, actionable prose.
+- The ``objective`` field is the agent's sole briefing — write clear, actionable prose.

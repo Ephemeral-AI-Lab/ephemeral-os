@@ -28,6 +28,7 @@ class BlockerStore:
                 existing.status = blocker.status.value
                 existing.reason = blocker.reason
                 existing.root_cause_paths = blocker.root_cause_paths
+                existing.suggestion = blocker.suggestion
                 existing.fix_task_id = blocker.fix_task_id
                 existing.declared_by = blocker.declared_by
                 existing.fix_summary = blocker.fix_summary
@@ -41,6 +42,7 @@ class BlockerStore:
                     reason=blocker.reason,
                     root_cause_paths=blocker.root_cause_paths,
                     initiating_task_id=blocker.initiating_task_id,
+                    suggestion=blocker.suggestion,
                     fix_task_id=blocker.fix_task_id,
                     declared_by=blocker.declared_by,
                     fix_summary=blocker.fix_summary,
@@ -73,6 +75,7 @@ class BlockerStore:
             reason=rec.reason,
             root_cause_paths=list(rec.root_cause_paths) if rec.root_cause_paths else [],
             initiating_task_id=rec.initiating_task_id,
+            suggestion=rec.suggestion,
             fix_task_id=rec.fix_task_id,
             declared_by=rec.declared_by,
             fix_summary=rec.fix_summary,

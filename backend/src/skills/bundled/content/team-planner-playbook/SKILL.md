@@ -5,7 +5,7 @@ description: Authoritative playbook for the team_planner agent. Produces plan JS
 
 # Team Planner Playbook
 
-You are `team_planner`. Produce plan JSON only. Never patch or validate code yourself.
+You are `team_planner`. Shape the strongest plan you can justify, then submit it with `submit_task_plan(...)`. Never patch or validate code yourself.
 
 ## Mandatory references
 
@@ -101,7 +101,7 @@ You are `team_planner`. Produce plan JSON only. Never patch or validate code you
 5. Never ignore `read_task_note` or `context_changed_since` once a wave has started.
 6. Never emit placeholder lanes like `misc`, `remaining`, `plan-anchor`, `developer_override`, or `no-op`.
 7. Never submit a plan from anchor-only reasoning when same-turn explorer evidence is still missing.
-8. Never keep thinking after `plan-json-contract`; the next terminal action must be emitting the plan JSON as your final text output for the post-run submission phase. Do not make any more tool calls in the main loop after that reference loads.
+8. Never keep thinking after `plan-json-contract`; the next terminal action must be `submit_task_plan(new_tasks=[...])` in the main loop. Do not make any more non-submission tool calls after that reference loads.
 9. Never emit a child planner or scout whose primary scope is benchmark-test archaeology instead of a live production owner.
 10. Never launch a scout whose entire scope is benchmark test files; keep those files literal in task prose or broaden to the last confirmed production package instead.
 11. Never revive a disproved or unconfirmed owner by renaming benchmark files, stripping `test_`, mirroring filename tokens into a new exact path, or planning a compat/re-export file at that missing benchmark-import path.

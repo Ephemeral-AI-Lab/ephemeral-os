@@ -5,7 +5,7 @@ role: resolver
 model: inherit
 tool_call_limit: 100
 toolkits: ["sandbox_operations", "code_intelligence", "context", "submission"]
-blocked_tools: ["ci_read_file", "submit_plan"]
+blocked_tools: ["ci_read_file", "draft_task_plan", "submit_task_plan", "declare_blocker"]
 allowed_triggers: ["tc_note"]
 skills: ["team-developer-playbook"]
 ---

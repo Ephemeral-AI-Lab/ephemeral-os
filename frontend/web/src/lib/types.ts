@@ -227,7 +227,6 @@ export type PipelineStepConfig = {
   enabled?: boolean
   timeout?: number | null
   tool_call_limit?: number | null
-  posthook_agent?: string | null
   output_schema?: Record<string, unknown> | null
   input_deps?: PipelineInputDep[]
   checkpoint?: boolean
@@ -254,7 +253,6 @@ export type PipelineStepRecord = {
   error?: string | null
   metrics?: Record<string, unknown>
   work_session_id?: string | null
-  posthook_session_id?: string | null
   attempt?: number
 }
 

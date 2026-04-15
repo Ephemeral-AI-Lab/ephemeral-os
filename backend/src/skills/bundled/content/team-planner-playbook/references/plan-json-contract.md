@@ -1,25 +1,23 @@
 # Plan JSON Contract
-Use this reference immediately before emitting final plan JSON.
+Use this reference immediately before calling `submit_task_plan(...)`.
 
 ## Shape rules
 
-- Emit `{"tasks": [...], "rationale": "..."}` as the tool-call payload shape.
+- For planner submissions, call `submit_task_plan(new_tasks=[...])`.
+- Each `new_tasks` item must follow the runtime shape: `id`, `name`, `objective`, `deps`, `scope_paths`.
 - Finish the benchmark-surface ledger, deps, and task prose before loading this reference.
-- After this reference loads, the very next action must be emitting the plan JSON as your final text output for the post-run submission phase. Do not make any more tool calls in the main loop after this reference loads.
-- No more tool calls, ownership recounts, or task-count debates are allowed after this reference loads.
+- After this reference loads, the very next action must be calling `submit_task_plan(new_tasks=[...])`. Do not make any more non-submission tool calls in the main loop after this reference loads.
+- No more ownership recounts or task-count debates are allowed after this reference loads.
 - Never load this reference in parallel with `root-plan-self-check`.
-- Must use `agent` only for registered workers: `developer`, `validator`, or `team_planner`.
+- Must use `name` with an exact registered agent name such as `developer`, `validator`, or `team_planner`.
 - Must use `id` for the lane label — a short unique string used to wire `deps`.
 - Must keep `deps` as a top-level item field.
 - Must emit each `id` only once.
-- Keep each task on the runtime `TaskDefinition` shape: `id`, `description`, `objective`, `agent`, `deps`, `scope_paths`, `cascade_policy`.
-- The `description` field is a short ~10-word label. The `objective` field is the agent's sole briefing. Put exact owner, retry target, and recovery question there.
+- The `objective` field is the agent's sole briefing. Put exact owner, retry target, and recovery question there.
 - Use exact live-confirmed or explorer-confirmed paths in `scope_paths`; if the exact owner is still uncertain, keep the broader boundary and assign it to `team_planner`.
 - Keep at most one terminal validator in a submitted plan.
 - Before loading this reference, confirm that the terminal validator depends on every terminal non-validator sibling. Do not learn that from a submit error.
-- **Validator cascade_policy must be `"continue"`**, not `"cancel"`. The validator must run even when some developer deps fail — it reports which fixes worked and triggers replanning for failures. Using `"cancel"` kills the validator and prevents the recovery cycle.
-- Developer and team_planner tasks should use `"cancel"` (default) for strict dependency chains.
-- Do not submit an expandable `developer`.
+- Validator tasks will be normalized to `cascade_policy="continue"` automatically; developer and `team_planner` tasks use the default strict dependency policy.
 - Count crowded-layer width using non-planner, non-validator tasks only: `6 developers + 1 validator` is fine, but `7 developers + 1 validator` still needs a residual `team_planner`.
 - On crowded layers, zero-expandable all-developer plans are invalid when any residual branch is still multi-file, shared-risk, or otherwise broad enough for child decomposition.
 - Reload the ending chain sequentially if the self-check never finished.
@@ -46,7 +44,7 @@ Use this reference immediately before emitting final plan JSON.
   {
     "good_after_load": [
       "load_skill_reference(plan-json-contract)",
-      "emit plan JSON as final text (no tool call)"
+      "call submit_task_plan(new_tasks=[...])"
     ],
     "bad_after_load": [
       "load_skill_reference(plan-json-contract)",
@@ -58,11 +56,10 @@ Use this reference immediately before emitting final plan JSON.
 - Example:
   ```json
   {
-    "tasks": [
-      {"id": "dev-hdf", "description": "Fix HDF export", "agent": "developer", "deps": [], "scope_paths": ["pkg/io/hdf.py"], "cascade_policy": "cancel", "objective": "Restore the shared HDF export in pkg/io/hdf.py. Reproduce and keep verification on pytest pkg/tests/test_hdf.py -x."},
-      {"id": "plan-parquet", "description": "Parquet IO decomposition", "agent": "team_planner", "deps": [], "scope_paths": ["pkg/io/parquet/"], "cascade_policy": "cancel", "objective": "Decompose parquet IO failures across engine backends."},
-      {"id": "val-root", "description": "Root verification gate", "agent": "validator", "deps": ["dev-hdf", "plan-parquet"], "scope_paths": ["pkg/io/hdf.py", "pkg/io/parquet/"], "cascade_policy": "continue", "objective": "Run the terminal verification gate for the root layer."}
-    ],
-    "rationale": "One direct leaf is ready, parquet stays expandable, and the terminal validator depends on every terminal non-validator sibling."
+    "new_tasks": [
+      {"id": "dev-hdf", "name": "developer", "deps": [], "scope_paths": ["pkg/io/hdf.py"], "objective": "Restore the shared HDF export in pkg/io/hdf.py. Reproduce and keep verification on pytest pkg/tests/test_hdf.py -x."},
+      {"id": "plan-parquet", "name": "team_planner", "deps": [], "scope_paths": ["pkg/io/parquet/"], "objective": "Decompose parquet IO failures across engine backends."},
+      {"id": "val-root", "name": "validator", "deps": ["dev-hdf", "plan-parquet"], "scope_paths": ["pkg/io/hdf.py", "pkg/io/parquet/"], "objective": "Run the terminal verification gate for the root layer."}
+    ]
   }
   ```

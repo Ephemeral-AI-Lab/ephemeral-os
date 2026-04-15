@@ -12,7 +12,7 @@ from tools.context.toolkit import SubmitTaskNoteTool, PostNoteInput
 TC_NOTE_EDIT_PROMPT = (
     "Write a progress note for the Task Center about this agent's edits.\n"
     "Focus on: what files were edited and why.\n"
-    "Call post_note with:\n"
+    "Call submit_task_note with:\n"
     "- content: name specific files, errors, and changes (under 300 words)\n"
     "- paths: list every file/dir path edited or investigated\n"
     "- tags: one or more of implementation, bug_fix, refactor, blocker, warning "
@@ -20,7 +20,7 @@ TC_NOTE_EDIT_PROMPT = (
 )
 
 TC_NOTE_TURN_PROMPT = (
-    "Call post_note now. The 'content' field is REQUIRED.\n"
+    "Call submit_task_note now. The 'content' field is REQUIRED.\n"
     "- content: what this agent accomplished and current status "
     "(working/stuck/done). Name specific files and errors. Under 300 words.\n"
     "- paths: list every file/dir path relevant to the work\n"

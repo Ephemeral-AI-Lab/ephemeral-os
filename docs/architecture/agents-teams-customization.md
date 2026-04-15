@@ -58,7 +58,6 @@ model: inherit
 tool_call_limit: 100
 toolkits: ["sandbox_operations", "code_intelligence"]
 blocked_tools: ["ci_read_file"]
-posthook: ["post_note", "request_replan"]
 allowed_triggers: ["tc_note"]
 ---
 # System Prompt (body of the file)
@@ -69,7 +68,7 @@ Execute one bounded coding task...
 - `name`, `description` (required)
 - `system_prompt` (optional; overridden by body text)
 - `model`, `effort`, `tool_call_limit`
-- `toolkits`, `skills`, `posthook`, `blocked_tools`
+- `toolkits`, `skills`, `blocked_tools`
 - `allowed_triggers`, `background`, `role`, `agent_type` (agent | subagent)
 - `source` (builtin | user | plugin), capability flags
 
@@ -179,7 +178,6 @@ Three distinct layers orchestrate the transition from disk/database to runtime e
 │  toolkits            json           │
 │  skills              json           │
 │  blocked_tools       json           │
-│  posthook            json           │
 │  allowed_triggers    json           │
 │  hooks               json           │
 │  background          boolean        │
@@ -418,7 +416,6 @@ Sequence showing a team run from start through task dispatch to completion, inte
 | `toolkits` | Allowed tool groups (sandbox, code_intelligence, search) | ["sandbox_operations", "code_intelligence"] |
 | `blocked_tools` | Tool names to remove after assembly | ["ci_read_file"] |
 | `skills` | Skill playbooks to inject | ["team-developer-playbook"] |
-| `posthook` | Tools agent must call after submission | ["post_note"] |
 | `role` | Team dispatch label (planner, developer, reviewer) | "developer" |
 | `agent_type` | agent \| subagent (capability flag) | "agent" |
 | `can_spawn_subagents` | Whether agent can spawn background work | true (default) |

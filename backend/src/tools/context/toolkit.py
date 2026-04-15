@@ -4,9 +4,6 @@ Tools exposed in the main loop:
 - read_task_note               — read/search notes with optional keyword filter
 - context_changed_since    — check if context is stale (other agents' edits)
 
-`post_note` is still defined in this module, but is exposed via the post-run and
-external-trigger phases rather than the main-loop context toolkit.
-
 Role-based restrictions are handled via ``blocked_tools`` in agent definitions
 rather than separate read/write toolkit variants.
 """
@@ -93,7 +90,6 @@ class SubmitTaskNoteTool(BaseTool):
         "and immutable — post a new note to update, don't try to edit."
     )
     input_model = PostNoteInput
-    tool_types = frozenset({"normal", "external_trigger"})
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, PostNoteInput)

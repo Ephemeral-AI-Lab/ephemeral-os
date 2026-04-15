@@ -8,8 +8,6 @@ from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
-import pytest
-
 from team.models import BudgetConfig, BudgetState, Note, Task, TaskStatus
 from team.task_center import TaskCenter
 
@@ -675,3 +673,55 @@ def test_restore_empty_list_clears_notes():
 # ---------------------------------------------------------------------------
 # TaskCenter initialization
 # ---------------------------------------------------------------------------
+
+
+def test_ready_queue_order_returns_copy():
+    tc = _tc()
+    tc.store.ready_queue_order = ["task-1"]
+
+    observed = tc.ready_queue_order
+    observed.append("task-2")
+
+    assert tc.ready_queue_order == ["task-1"]
+
+
+def test_prime_resume_state_copies_inputs():
+    tc = _tc()
+    snapshot = [_task("task-1"), _task("task-2")]
+    ready_queue_order = ["task-2", "task-1"]
+
+    tc.prime_resume_state(snapshot=snapshot, ready_queue_order=ready_queue_order)
+    snapshot.append(_task("task-3"))
+    ready_queue_order.append("task-3")
+
+    assert tc.ready_queue_order == ["task-2", "task-1"]
+    assert [task.id for task in tc._resume_snapshot or []] == ["task-1", "task-2"]
+
+
+def test_prepare_for_resume_uses_primed_snapshot():
+    tc = _tc()
+    snapshot = [_task("task-1"), _task("task-2")]
+    tc.prime_resume_state(snapshot=snapshot, ready_queue_order=["task-1"])
+    snapshot.append(_task("task-3"))
+
+    captured: dict[str, object] = {}
+
+    async def _capture_prepare_for_resume(
+        *,
+        resume_snapshot,
+        recover_running_fn,
+        replace_run_tasks_fn,
+    ) -> None:
+        captured["resume_snapshot"] = resume_snapshot
+        captured["recover_running_fn"] = recover_running_fn
+        captured["replace_run_tasks_fn"] = replace_run_tasks_fn
+
+    tc._checkpoints.prepare_for_resume = AsyncMock(side_effect=_capture_prepare_for_resume)
+    tc.store.refresh_graph = AsyncMock(return_value=tc.graph)
+
+    _run(tc.prepare_for_resume())
+
+    assert [task.id for task in captured["resume_snapshot"]] == ["task-1", "task-2"]
+    assert tc._resume_snapshot is None
+    tc._checkpoints.prepare_for_resume.assert_awaited_once()
+    tc.store.refresh_graph.assert_awaited_once()

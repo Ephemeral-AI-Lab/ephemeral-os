@@ -30,12 +30,55 @@ SUBMISSION_TOOL_NAMES = frozenset({
     "submit_task_summary",
     "submit_task_note",
     "submit_task_plan",
+    "declare_blocker",
 })
 # Tools whose completion should record a scoped edit via ``TaskCenter.on_edit``.
 EDIT_TOOL_NAMES = frozenset({"daytona_edit_file", "daytona_write_file"})
 
 # Maximum retry attempts when the agent exits without calling a terminal tool.
 _MAX_RETRY_ATTEMPTS = 5
+
+
+def _retry_submission_prompt(
+    exit_reason: QueryExitReason | None,
+    terminal_tools: set[str],
+) -> str:
+    planner_like = "submit_task_plan" in terminal_tools
+    blocker_allowed = "declare_blocker" in terminal_tools
+    if planner_like:
+        if exit_reason == QueryExitReason.RESOURCE_LIMIT:
+            if blocker_allowed:
+                return (
+                    "Your budget/token limit was hit. Submit now. "
+                    "Call submit_task_plan with the strongest corrective plan you can justify, "
+                    "or declare_blocker if the failure is a shared blocker."
+                )
+            return (
+                "Your budget/token limit was hit. Submit now. "
+                "Call submit_task_plan with the strongest plan you can justify."
+            )
+        if blocker_allowed:
+            return (
+                "You returned without a terminal submission. "
+                "Call submit_task_plan to commit the plan you shaped, "
+                "or declare_blocker if this is a shared blocker."
+            )
+        return (
+            "You returned without a terminal submission. "
+            "Call submit_task_plan to commit the plan you shaped."
+        )
+
+    if exit_reason == QueryExitReason.RESOURCE_LIMIT:
+        return (
+            "Your budget/token limit was hit. Submit your work now. "
+            "Call submit_task_summary with type='success' if work is done, "
+            "or type='fail' if it is incomplete."
+        )
+    return (
+        "You returned text without submitting. "
+        "You must call submit_task_summary with type='success' or type='fail' "
+        "to complete your work."
+    )
 
 
 @dataclass
@@ -300,29 +343,22 @@ class TeamAgentRunner:
                     break
 
                 # Build follow-up prompt for next attempt
-                if qc.exit_reason == QueryExitReason.TEXT_RESPONSE:
-                    prompt = (
-                        "You returned text without submitting. "
-                        "You must call one of your submission tools to complete your work. "
-                        "Call submit_task_summary with type='success' or type='fail'."
-                    )
-                elif qc.exit_reason == QueryExitReason.RESOURCE_LIMIT:
+                exit_reason = qc.exit_reason
+                terminal_tools = set(qc.terminal_tools or set())
+                if exit_reason == QueryExitReason.RESOURCE_LIMIT:
                     qc.tool_call_limit = qc.tool_calls_used + 2
-                    prompt = (
-                        "Your budget/token limit was hit. Submit your work now. "
-                        "Call submit_task_summary with type='success' if work is done, "
-                        "or type='fail' if it is incomplete."
-                    )
+                    prompt = _retry_submission_prompt(exit_reason, terminal_tools)
+                elif exit_reason in (QueryExitReason.TEXT_RESPONSE, None):
+                    prompt = _retry_submission_prompt(exit_reason, terminal_tools)
                 else:
-                    # Unknown exit reason — retry with generic prompt
-                    prompt = "Please call a submission tool to complete your work."
+                    prompt = "Please call a terminal submission tool to complete your work."
 
                 # Reset exit_reason for next attempt
                 qc.exit_reason = None
                 logger.info(
                     "Runner retry %d/%d for %s (exit_reason=%s)",
                     attempt + 1, _MAX_RETRY_ATTEMPTS, work_item_id,
-                    qc.exit_reason,
+                    exit_reason,
                 )
             else:
                 # Failed to submit after max attempts — write fail summary

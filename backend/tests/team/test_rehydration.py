@@ -71,3 +71,21 @@ def test_apply_replayed_event_updates_blocker_pause_fields():
     assert graph[task.id].blocker_id == "blocker-1"
     assert graph[task.id].pause_checkpoint == '[{"role":"assistant","content":"paused"}]'
     assert graph[task.id].pause_verdict == "Shared import break requires pause."
+
+
+def test_apply_replayed_event_keeps_existing_status_when_event_status_is_unknown():
+    task = _task()
+    graph = {task.id: task}
+    event = SimpleNamespace(kind="task_status", data={"task_id": task.id, "status": "mystery"})
+
+    root_id, budget, final_status = apply_replayed_event(
+        event=event,
+        graph=graph,
+        services=SimpleNamespace(),
+        root_id=None,
+    )
+
+    assert root_id is None
+    assert budget is None
+    assert final_status is None
+    assert graph[task.id].status == TaskStatus.PAUSED

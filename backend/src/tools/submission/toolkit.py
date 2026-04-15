@@ -110,6 +110,12 @@ async def _known_external_dep_ids(context: ToolExecutionContext) -> set[str] | N
     return {str(item) for item in await store.get_task_ids()}
 
 
+_EXISTING_TASKS_UNSUPPORTED = (
+    "existing_tasks rewiring is not supported yet; use remove_tasks + new_tasks "
+    "to replace stale siblings instead."
+)
+
+
 def _note_budget_issues(
     tasks: list[dict[str, Any]],
     *,
@@ -161,7 +167,6 @@ class SubmitTaskSummaryTool(BaseTool):
         "This is your terminal action — the agent loop ends after this call."
     )
     input_model = SubmitTaskSummaryInput
-    tool_types = frozenset({"normal"})
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, SubmitTaskSummaryInput)
@@ -208,7 +213,10 @@ class NewTaskSpec(BaseModel):
 class DraftTaskPlanInput(BaseModel):
     existing_tasks: list[ExistingTaskRef] = Field(
         default_factory=list,
-        description="Existing tasks to keep/rewire deps",
+        description=(
+            "Reserved for future sibling dependency rewrites. "
+            "The current runtime rejects non-empty values."
+        ),
     )
     new_tasks: list[NewTaskSpec] = Field(
         default_factory=list,
@@ -224,7 +232,10 @@ class SubmitTaskPlanInput(BaseModel):
     """Same schema as DraftTaskPlanInput."""
     existing_tasks: list[ExistingTaskRef] = Field(
         default_factory=list,
-        description="Existing tasks to keep/rewire deps",
+        description=(
+            "Reserved for future sibling dependency rewrites. "
+            "The current runtime rejects non-empty values."
+        ),
     )
     new_tasks: list[NewTaskSpec] = Field(
         default_factory=list,
@@ -261,6 +272,9 @@ def _validate_plan_input(
 ) -> list[str]:
     """Validate the plan input. Returns list of error strings."""
     errors: list[str] = []
+    if arguments.existing_tasks:
+        return [_EXISTING_TASKS_UNSUPPORTED]
+
     graph = _get_graph(context)
     role = str(context.metadata.get("role") or "")
     task_id = str(context.metadata.get("work_item_id") or "")
@@ -278,12 +292,7 @@ def _validate_plan_input(
     # Sibling IDs for scope checking
     sibling_ids = _get_sibling_ids(graph, parent_id) if graph is not None else set()
 
-    # 1. Validate existing_tasks IDs exist in graph
-    for ref in arguments.existing_tasks:
-        if ref.id not in graph_ids:
-            errors.append(f"existing task '{ref.id}' not found in graph")
-
-    # 2. Validate new_tasks IDs don't collide with existing
+    # 1. Validate new_tasks IDs don't collide with existing
     new_ids: set[str] = set()
     for spec in arguments.new_tasks:
         if spec.id in graph_ids:
@@ -292,7 +301,7 @@ def _validate_plan_input(
             errors.append(f"duplicate new task id '{spec.id}'")
         new_ids.add(spec.id)
 
-    # 3. Validate new task specs
+    # 2. Validate new task specs
     roster = _roster_from_context(context)
     for spec in arguments.new_tasks:
         # Resolve agent name
@@ -304,7 +313,7 @@ def _validate_plan_input(
         if not spec.objective:
             errors.append(f"task '{spec.id}': empty objective")
 
-    # 4. Validate remove_tasks exist
+    # 3. Validate remove_tasks exist
     from team.models import TERMINAL_STATUSES
     for rid in arguments.remove_tasks:
         if rid not in graph_ids:
@@ -316,25 +325,15 @@ def _validate_plan_input(
                 if status is not None and status in TERMINAL_STATUSES:
                     errors.append(f"remove target '{rid}' is {status.value}; cannot cancel terminal tasks")
 
-    # 5. Validate deps reference valid IDs
+    # 4. Validate deps reference valid IDs
     all_valid_ids = graph_ids | new_ids
-    for ref in arguments.existing_tasks:
-        for dep in ref.deps:
-            if dep not in all_valid_ids:
-                errors.append(f"existing task '{ref.id}': unknown dep '{dep}'")
     for spec in arguments.new_tasks:
         for dep in spec.deps:
             if dep not in all_valid_ids:
                 errors.append(f"new task '{spec.id}': unknown dep '{dep}'")
 
-    # 6. Replanner scope check — all tasks/removals within parent's subtree
+    # 5. Replanner scope check — all removals within the current sibling layer
     if role == "replanner" and parent_id is not None:
-        for ref in arguments.existing_tasks:
-            if ref.id not in sibling_ids and ref.id != task_id:
-                errors.append(
-                    f"scope violation: existing task '{ref.id}' is not a sibling "
-                    f"(parent_id={parent_id})"
-                )
         for rid in arguments.remove_tasks:
             if rid not in sibling_ids:
                 errors.append(
@@ -397,7 +396,6 @@ class DraftTaskPlanTool(BaseTool):
         "then call submit_task_plan to commit."
     )
     input_model = DraftTaskPlanInput
-    tool_types = frozenset({"normal"})
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, DraftTaskPlanInput)
@@ -444,8 +442,6 @@ class DraftTaskPlanTool(BaseTool):
             diff_lines.append(f"Remove: {len(arguments.remove_tasks)} task(s)")
         if arguments.new_tasks:
             diff_lines.append(f"Add: {len(arguments.new_tasks)} task(s)")
-        if arguments.existing_tasks:
-            diff_lines.append(f"Rewire deps: {len(arguments.existing_tasks)} task(s)")
         ascii_diff = "\n".join(diff_lines)
 
         # Warnings for destructive actions
@@ -485,17 +481,16 @@ class SubmitTaskPlanTool(BaseTool):
     name = "submit_task_plan"
     description = (
         "Submit a plan. Planners: provide new_tasks with the full decomposition. "
-        "Replanners: provide new_tasks for corrective tasks, existing_tasks to "
-        "keep/rewire deps, and remove_tasks for task IDs to cancel. "
+        "Replanners: provide new_tasks for corrective tasks and remove_tasks "
+        "for task IDs to cancel. existing_tasks rewires are not supported yet. "
         "Each task's 'objective' field is the agent's sole briefing — write "
         "clear, actionable prose."
     )
     input_model = SubmitTaskPlanInput
-    tool_types = frozenset({"normal"})
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, SubmitTaskPlanInput)
-        from team.models import Plan, ReplanPlan, TaskDefinition
+        from team.models import Plan, ReplanPlan
 
         # 1. Re-validate (same checks as draft_task_plan)
         errors = _validate_plan_input(arguments, context)
@@ -654,13 +649,17 @@ class DeclareBlockerTool(BaseTool):
         "spawn one resolver, and resume work after the fix lands."
     )
     input_model = DeclareBlockerInput
-    tool_types = frozenset({"normal"})
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, DeclareBlockerInput)
         freshness_gate = await _freshness_submission_gate(context, action="declare_blocker()")
         if freshness_gate is not None:
             return freshness_gate
+        context.metadata["blocker_declaration"] = {
+            "root_cause_paths": list(arguments.root_cause_paths),
+            "reason": arguments.reason,
+            "suggestion": arguments.suggestion,
+        }
         note = f"Declared blocker on {', '.join(arguments.root_cause_paths)}: {arguments.reason}"
         if arguments.suggestion:
             note += f"\nSuggestion: {arguments.suggestion}"

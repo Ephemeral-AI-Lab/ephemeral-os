@@ -13,13 +13,10 @@ import pytest
 from team.models import (
     AgentResult,
     BlockerDeclaration,
-    Note,
     Plan,
     ReplanPlan,
     ReplanRequest,
-    RetryRequest,
     Task,
-    TaskDefinition,
     TaskStatus,
 )
 from team.runtime.context_builder import TeamAgentContext
@@ -196,6 +193,26 @@ def test_read_result_replanner_submit_replan():
     assert result.submitted_replan.cancel_ids == ["old-task-1"]
 
 
+def test_read_result_blocker_declaration():
+    """When blocker metadata exists, _read_result returns BlockerDeclaration."""
+    executor, _ = _make_executor()
+    ctx = TeamAgentContext(
+        tool_metadata={
+            "blocker_declaration": {
+                "root_cause_paths": ["pkg/shared.py"],
+                "reason": "shared import surface is broken",
+                "suggestion": "repair exports first",
+            },
+        }
+    )
+    task = SimpleNamespace(id="task-1", agent_name="team_replanner")
+    result = executor._read_result(task, ctx)
+    assert isinstance(result, BlockerDeclaration)
+    assert result.root_cause_paths == ["pkg/shared.py"]
+    assert result.reason == "shared import surface is broken"
+    assert result.suggestion == "repair exports first"
+
+
 def test_read_result_no_submission_fallback():
     """When no terminal tool was called, _read_result returns fallback AgentResult."""
     executor, _ = _make_executor()
@@ -253,7 +270,7 @@ def test_checkpoint_note_includes_failure_reason():
                                          "running": 0, "cancelled": 0,
                                          "retry_total": 0})
     task = _make_task(status="failed", failure_reason="sandbox timeout")
-    action = asyncio.run(executor._post_checkpoint_note(task, None))
+    asyncio.run(executor._post_checkpoint_note(task, None))
 
     assert len(tc.notes) == 1
     assert "sandbox timeout" in tc.notes[0].content
@@ -515,6 +532,7 @@ def test_dispatch_blocker_declaration_creates_blocker_and_completes_task():
         reason="shared auth helper is broken",
         root_cause_paths=["src/auth/session.py"],
         initiating_task_id=task.id,
+        suggestion="repair helper before resuming sibling work",
         declared_by=task.id,
     )
     tc.complete_task.assert_awaited_once()

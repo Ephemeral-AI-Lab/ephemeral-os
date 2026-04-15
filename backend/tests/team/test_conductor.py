@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock
 
 from team.models import Blocker, BlockerStatus, TeamRunStatus
 from team.runtime.conductor import Conductor
+from team.task_center import TaskCenter
 
 
 class _FakeBlockerStore:
@@ -66,14 +67,46 @@ def test_create_blocker_merges_overlapping_paths_into_existing_blocker():
         reason="same shared auth surface still broken",
         root_cause_paths=["pkg/auth/session.py"],
         initiating_task_id="task-2",
+        suggestion="repair the shared auth import surface first",
         declared_by="task-2",
     ))
 
     assert blocker is existing
     assert blocker.root_cause_paths == ["pkg/auth", "pkg/auth/session.py"]
+    assert blocker.suggestion == "repair the shared auth import surface first"
     conductor._assess_running.assert_awaited_once_with(existing)
     conductor._spawn_resolver.assert_not_awaited()
     assert blocker_store.saved[-1].root_cause_paths == ["pkg/auth", "pkg/auth/session.py"]
+    assert blocker_store.saved[-1].suggestion == "repair the shared auth import surface first"
+
+
+def test_create_blocker_spawns_resolver_with_modern_submission_contract():
+    blocker_store = _FakeBlockerStore()
+    task_center = object.__new__(TaskCenter)
+    task_center.add_task = AsyncMock()
+    team_run = SimpleNamespace(id="run-1", task_center=task_center)
+    conductor = Conductor(team_run, blocker_store=blocker_store)
+    conductor._assess_running = AsyncMock()
+
+    blocker = asyncio.run(conductor.create_blocker(
+        reason="shared import crash",
+        root_cause_paths=["pkg/_compat.py"],
+        initiating_task_id="task-1",
+        suggestion="restore the load_defaults alias before touching callers",
+        declared_by="task-1",
+    ))
+
+    task_center.add_task.assert_awaited_once()
+    resolver_task = task_center.add_task.await_args.args[0]
+    assert resolver_task.objective.startswith("Resolve the shared blocker once for all affected tasks.")
+    assert "Suggested fix direction: restore the load_defaults alias before touching callers" in resolver_task.objective
+    assert "`submit_task_summary(type='success')`" in resolver_task.objective
+    assert "`submit_task_summary(type='fail')`" in resolver_task.objective
+    assert "`post_note`" not in resolver_task.objective
+    assert blocker.fix_task_id == resolver_task.id
+    assert blocker.suggestion == "restore the load_defaults alias before touching callers"
+    assert blocker_store.saved[-1].fix_task_id == resolver_task.id
+    assert blocker_store.saved[-1].suggestion == "restore the load_defaults alias before touching callers"
 
 
 def test_on_fix_complete_resumes_tasks_and_clears_active_blocker():

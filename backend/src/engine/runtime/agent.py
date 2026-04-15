@@ -233,9 +233,9 @@ def _build_agent_tool_registry(
     if agent_def and agent_def.blocked_tools:
         tool_registry.remove_tools(agent_def.blocked_tools)
 
-    # Posthook tools are NOT registered in the main query loop.
-    # Submissions happen exclusively in the post-run phase via
-    # runner.run() (see executor._run_post_run).
+    # Submission tools are registered in the main query loop.
+    # Team-mode terminal submissions are handled by the executor reading
+    # ``tool_metadata`` after the query loop stops.
 
     # Skills toolkit — opt-out via ``include_skills=False``.
     include_skills = agent_def.include_skills if agent_def else True

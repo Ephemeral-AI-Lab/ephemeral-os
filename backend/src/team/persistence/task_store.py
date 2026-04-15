@@ -25,7 +25,7 @@ def record_to_task(rec: TaskRecord) -> Task:
         id=rec.id,
         team_run_id=rec.team_run_id,
         agent_name=rec.agent_name,
-        status=TaskStatus(rec.status),
+        status=TaskStatus.of(rec.status),
         objective=rec.objective,
         description=rec.description or "",
         deps=list(rec.deps) if rec.deps else [],
@@ -73,12 +73,12 @@ class TaskStore:
         self._tg.tasks = value
 
     @property
-    def _ready_order(self) -> list[str]:
-        return self._tg.ready_order
+    def ready_queue_order(self) -> list[str]:
+        return list(self._tg.ready_order)
 
-    @_ready_order.setter
-    def _ready_order(self, value: list[str]) -> None:
-        self._tg.ready_order = value
+    @ready_queue_order.setter
+    def ready_queue_order(self, value: list[str]) -> None:
+        self._tg.ready_order = list(value)
 
     def get_task(self, task_id: str) -> Task | None:
         """Fast in-memory lookup — no DB call."""
@@ -127,9 +127,7 @@ class TaskStore:
 
     async def get_task_ids(self) -> set[str]:
         async with self._sf() as db:
-            stmt = select(TaskRecord.id).where(
-                TaskRecord.team_run_id == self._team_run_id
-            )
+            stmt = select(TaskRecord.id).where(TaskRecord.team_run_id == self._team_run_id)
             return {str(tid) for tid in (await db.execute(stmt)).scalars().all()}
 
     async def get_done_sibling_ids(
@@ -152,8 +150,7 @@ class TaskStore:
             )
             if since is not None:
                 stmt = stmt.where(
-                    TaskRecord.finished_at
-                    >= datetime.fromtimestamp(since, tz=timezone.utc)
+                    TaskRecord.finished_at >= datetime.fromtimestamp(since, tz=timezone.utc)
                 )
             return [str(tid) for tid in (await db.execute(stmt)).scalars().all()]
 
@@ -446,9 +443,7 @@ class TaskStore:
         self._tg.insert_tasks(record_to_task(rec) for rec in result_records)
         return result_records
 
-    async def _cascade_recursive_sql(
-        self, db: AsyncSession, root_task_id: str
-    ) -> list[str]:
+    async def _cascade_recursive_sql(self, db: AsyncSession, root_task_id: str) -> list[str]:
         rid = self._team_run_id
         dep_chain = (
             select(TaskRecord.id)
@@ -473,11 +468,7 @@ class TaskStore:
                 descendant.status.in_(("pending", "ready", "expanded")),
             )
         )
-        cascade_ids = (
-            select(dep_chain.c.id)
-            .where(dep_chain.c.id != root_task_id)
-            .distinct()
-        )
+        cascade_ids = select(dep_chain.c.id).where(dep_chain.c.id != root_task_id).distinct()
         stmt = (
             update(TaskRecord)
             .where(
@@ -521,13 +512,17 @@ class TaskStore:
         async with self._sf() as db:
             # Find tasks stuck in REPLANNING
             rows = (
-                await db.execute(
-                    select(TaskRecord.id).where(
-                        TaskRecord.team_run_id == rid,
-                        TaskRecord.status == "replanning",
+                (
+                    await db.execute(
+                        select(TaskRecord.id).where(
+                            TaskRecord.team_run_id == rid,
+                            TaskRecord.status == "replanning",
+                        )
                     )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
             if not rows:
                 return 0
             for task_id in rows:
@@ -539,9 +534,7 @@ class TaskStore:
         await self.refresh_graph()
         return len(rows)
 
-    async def rewire_dependents(
-        self, original_task_id: str, new_dep_ids: list[str]
-    ) -> list[str]:
+    async def rewire_dependents(self, original_task_id: str, new_dep_ids: list[str]) -> list[str]:
         """Replace *original_task_id* in every dependent's deps with *new_dep_ids*.
 
         After rewiring, marks the original task FAILED (terminal) — safe because
@@ -554,22 +547,24 @@ class TaskStore:
         async with self._sf() as db:
             # 1. Find all non-terminal tasks that depend on the original
             rows = (
-                await db.execute(
-                    select(TaskRecord)
-                    .where(
-                        TaskRecord.team_run_id == rid,
-                        TaskRecord.deps.any(original_task_id),
-                        TaskRecord.status.notin_(
-                            [s.value for s in TERMINAL_STATUSES]
-                        ),
+                (
+                    await db.execute(
+                        select(TaskRecord).where(
+                            TaskRecord.team_run_id == rid,
+                            TaskRecord.deps.any(original_task_id),
+                            TaskRecord.status.notin_([s.value for s in TERMINAL_STATUSES]),
+                        )
                     )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
 
             if not rows:
                 # No dependents — just mark original failed
-                await self._mark_terminal_sql(db, original_task_id, "failed",
-                                              "replan_completed_no_dependents")
+                await self._mark_terminal_sql(
+                    db, original_task_id, "failed", "replan_completed_no_dependents"
+                )
                 await db.commit()
                 await self.refresh_graph()
                 return []
@@ -584,15 +579,18 @@ class TaskStore:
             done_ids: set[str] = set()
             if all_dep_ids:
                 done_rows = (
-                    await db.execute(
-                        select(TaskRecord.id)
-                        .where(
-                            TaskRecord.team_run_id == rid,
-                            TaskRecord.id.in_(all_dep_ids),
-                            TaskRecord.status == "done",
+                    (
+                        await db.execute(
+                            select(TaskRecord.id).where(
+                                TaskRecord.team_run_id == rid,
+                                TaskRecord.id.in_(all_dep_ids),
+                                TaskRecord.status == "done",
+                            )
                         )
                     )
-                ).scalars().all()
+                    .scalars()
+                    .all()
+                )
                 done_ids = set(done_rows)
 
             # 3. Rewire each dependent
@@ -614,8 +612,9 @@ class TaskStore:
                 rewired.append(dep_rec.id)
 
             # 4. Mark original as FAILED (nothing depends on it now)
-            await self._mark_terminal_sql(db, original_task_id, "failed",
-                                          "replan_completed_deps_rewired")
+            await self._mark_terminal_sql(
+                db, original_task_id, "failed", "replan_completed_deps_rewired"
+            )
             await db.commit()
 
         await self.refresh_graph()
@@ -650,9 +649,7 @@ class TaskStore:
                                     TaskRecord.team_run_id == rid,
                                     TaskRecord.deps.any(task_id),
                                     TaskRecord.cascade_policy == "retry_first",
-                                    TaskRecord.status.notin_(
-                                        ("done", "failed", "cancelled")
-                                    ),
+                                    TaskRecord.status.notin_(("done", "failed", "cancelled")),
                                 )
                                 .exists()
                             )
@@ -683,15 +680,19 @@ class TaskStore:
                 .values(status="failed", finished_at=func.now(), failure_reason=reason)
             )
             cont = (
-                await db.execute(
-                    select(TaskRecord.id).where(
-                        TaskRecord.team_run_id == rid,
-                        TaskRecord.deps.any(task_id),
-                        TaskRecord.cascade_policy == "continue",
-                        TaskRecord.status.notin_(("done", "failed", "cancelled")),
+                (
+                    await db.execute(
+                        select(TaskRecord.id).where(
+                            TaskRecord.team_run_id == rid,
+                            TaskRecord.deps.any(task_id),
+                            TaskRecord.cascade_policy == "continue",
+                            TaskRecord.status.notin_(("done", "failed", "cancelled")),
+                        )
                     )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
             for dep_id in cont:
                 warnings.append(
                     (
@@ -772,9 +773,7 @@ class TaskStore:
                     TaskRecord.team_run_id == self._team_run_id,
                     TaskRecord.status == "running",
                 )
-                .values(
-                    status="cancelled", finished_at=func.now(), failure_reason=reason
-                )
+                .values(status="cancelled", finished_at=func.now(), failure_reason=reason)
             )
             await db.commit()
             return result.rowcount
@@ -846,9 +845,7 @@ class TaskStore:
             await db.commit()
             return result.rowcount
 
-    async def _cancel_by_ids_sql(
-        self, db: AsyncSession, task_ids: list[str], reason: str
-    ) -> int:
+    async def _cancel_by_ids_sql(self, db: AsyncSession, task_ids: list[str], reason: str) -> int:
         if not task_ids:
             return 0
         result = await db.execute(
@@ -858,9 +855,7 @@ class TaskStore:
                 TaskRecord.id.in_(task_ids),
                 TaskRecord.status.in_(("pending", "ready", "expanded")),
             )
-            .values(
-                status="cancelled", finished_at=func.now(), failure_reason=reason
-            )
+            .values(status="cancelled", finished_at=func.now(), failure_reason=reason)
         )
         return result.rowcount or 0
 
@@ -940,9 +935,7 @@ class TaskStore:
     async def replace_run_tasks(self, tasks: list[Task]) -> None:
         done_ids = {t.id for t in tasks if t.status == TaskStatus.DONE}
         async with self._sf() as db:
-            await db.execute(
-                delete(TaskRecord).where(TaskRecord.team_run_id == self._team_run_id)
-            )
+            await db.execute(delete(TaskRecord).where(TaskRecord.team_run_id == self._team_run_id))
             db.add_all(
                 [
                     TaskRecord(

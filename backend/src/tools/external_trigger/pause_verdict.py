@@ -1,4 +1,4 @@
-"""PauseVerdictTool — blocker impact assessment tool for external_trigger phase."""
+"""PauseVerdictTool — blocker impact assessment tool for external-trigger runs."""
 
 from __future__ import annotations
 
@@ -28,7 +28,6 @@ class PauseVerdictTool(BaseTool):
     name = "pause_verdict"
     description = "Submit your assessment of whether this task is affected by the blocker."
     input_model = PauseVerdictInput
-    tool_types = frozenset({"external_trigger"})
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         """No-op — the external_trigger runner captures the tool call.

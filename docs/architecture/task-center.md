@@ -38,7 +38,6 @@ DispatchQueue is a thin extraction (~60 lines): atomic task claiming via `pop_re
 │  + request_replan(task_id, request) → Task                   │
 │  + apply_replan(replan_id, add_tasks, cancel_ids)            │
 │  + on_edit(task_id, file_path)                               │
-│  + on_posthook(task_id)                                      │
 │  + tick(task_id)                                             │
 │  + should_checkpoint(task_id) → str|None                     │
 │  + check(task_id, snapshot, api_client, model) → bool        │
@@ -274,91 +273,38 @@ The blocker protocol detects when a systemic failure affects multiple siblings a
 
 ---
 
-## Active Mode Auto-Note Generation
+## Checkpoint Notes — Post-Transition Auto-Notes
 
-Active mode spawns external-trigger agents to post notes on behalf of silent agents, ensuring blockers are surfaced early.
+After key task transitions (completion, blocker declaration, replan), the executor automatically posts a checkpoint note summarizing the outcome and plan health.
 
 ```
-    Executor           TaskCenter         ExtTrig         AutoAgent      TaskCenter.post()
-       │                   │                 │                │                 │
-       │ on_edit(task_id,  │                 │                │                 │
-       │   file_path)      │                 │                │                 │
-       │──────────────────►│                 │                │                 │
-       │                   │ Increment       │                │                 │
-       │                   │ edits_since_note│                │                 │
-       │                   │                 │                │                 │
-       │ on_posthook(      │                 │                │                 │
-       │   task_id)        │                 │                │                 │
-       │──────────────────►│                 │                │                 │
-       │                   │ Reset turns_    │                │                 │
-       │                   │ since_posthook  │                │                 │
-       │                   │ to 0            │                │                 │
-       │                   │                 │                │                 │
-       │  ┌──────────────────────────────┐  │                │                 │
-       │  │ Every turn:                  │  │                │                 │
-       │  │ tick(task_id)                │  │                │                 │
-       │  │ ──────────────────────────►  │  │                │                 │
-       │  │ Increment turns_since_posthk │  │                │                 │
-       │  └──────────────────────────────┘  │                │                 │
-       │                   │                 │                │                 │
-       │ check(task_id,    │                 │                │                 │
-       │   snapshot,       │                 │                │                 │
-       │   api_client,     │                 │                │                 │
-       │   model)          │                 │                │                 │
-       │──────────────────►│                 │                │                 │
-       │                   │                 │                │                 │
-       │        ┌──────────┴───────────┐     │                │                 │
-       │        │ edits_since_note >= 5│     │                │                 │
-       │        │ EDIT threshold       │     │                │                 │
-       │        │ crossed?             │     │                │                 │
-       │        │                      │     │                │                 │
-       │        │ OR                   │     │                │                 │
-       │        │ turns_since_posthook │     │                │                 │
-       │        │ >= 10?               │     │                │                 │
-       │        │ TURN threshold       │     │                │                 │
-       │        │ crossed?             │     │                │                 │
-       │        └──────────┬───────────┘     │                │                 │
-       │                   │                 │                │                 │
-       │     ┌─────────────┴──────────────┐  │                │                 │
-       │     │ Neither threshold crossed  │  │                │                 │
-       │     │ return False ──────────────┼──┼────────────────┼─────────────────┼──► Executor
-       │     └────────────────────────────┘  │                │                 │
-       │                   │                 │                │                 │
-       │                   │ run_checkpoint_ │                │                 │
-       │                   │ note(prompt=    │                │                 │
-       │                   │ EDIT/TURN_      │                │                 │
-       │                   │ CHECKPOINT_     │                │                 │
-       │                   │ PROMPT)         │                │                 │
-       │                   │────────────────►│                │                 │
-       │                   │                 │ Create         │                 │
-       │                   │                 │ ephemeral      │                 │
-       │                   │                 │ agent w/       │                 │
-       │                   │                 │ snapshot +     │                 │
-       │                   │                 │ PostNoteTool   │                 │
-       │                   │                 │───────────────►│                 │
-       │                   │                 │                │ tool_choice=    │
-       │                   │                 │                │ "any", retry    │
-       │                   │                 │                │ until success   │
-       │                   │                 │                │                 │
-       │                   │                 │                │ post_note(      │
-       │                   │                 │                │   content)      │
-       │                   │                 │                │────────────────►│
-       │                   │                 │                │                 │ Post note under
-       │                   │                 │                │                 │ original task,
-       │                   │                 │                │                 │ agent_name =
-       │                   │                 │                │                 │ "name (auto)"
-       │                   │                 │                │                 │
-       │                   │ on_note_posted(note)             │                 │
-       │                   │◄─────────────────────────────────────────────────│
-       │                   │ Reset both      │                │                 │
-       │                   │ counters to 0   │                │                 │
-       │                   │ (ignore system  │                │                 │
-       │                   │ notes)          │                │                 │
-       │                   │                 │                │                 │
-       │◄──────────────────│ return True     │                │                 │
-       │                   │                 │                │                 │
-       │  Note: Turn prompt explicitly asks: "Is the agent blocked             │
-       │  by code another task broke?" — surfaces blockers early.              │
+    Executor                              TaskCenter           ExternalTrigger     AutoAgent
+       │                                       │                      │               │
+       │ _post_checkpoint_note(task, result)   │                      │               │
+       │──────────────────────────────────────►│                      │               │
+       │                                       │ PostCheckpointNote(  │               │
+       │                                       │   task_id, result)  │               │
+       │                                       │────────────────────►│               │
+       │                                       │                      │ Create        │
+       │                                       │                      │ ephemeral     │
+       │                                       │                      │ agent w/      │
+       │                                       │                      │ snapshot +    │
+       │                                       │                      │ PostNoteTool  │
+       │                                       │                      │──────────────►│
+       │                                       │                      │               │ tool_choice=
+       │                                       │                      │               │ "any", retry
+       │                                       │                      │               │ until success
+       │                                       │                      │               │
+       │                                       │                      │               │ post_note(
+       │                                       │                      │               │   content)
+       │                                       │                      │               │─────────────►│
+       │                                       │                      │               │               │ Post note
+       │                                       │                      │               │               │ under task,
+       │                                       │                      │               │               │ agent_name=
+       │                                       │                      │               │               │ "checkpoint"
+       │                                       │                      │               │               │
+       │                                       │ on_note_posted(note)│               │               │
+       │◄─────────────────────────────────────│◄────────────────────│──────────────│──────────────│
 ```
 
 ---
@@ -459,7 +405,6 @@ TaskCenter handles everything else: `mark_running()`, status transitions, plan i
 
 **Active Mode:**
 - `on_edit(task_id, file_path)` — Track edit activity
-- `on_posthook(task_id)` — Reset turn counter
 - `tick(task_id)` — Increment turn counter
 - `should_checkpoint(task_id)` — Check thresholds, return "edit" or "turn" or None
 - `check(task_id, snapshot, api_client, model)` — Spawn external-trigger agent if thresholds crossed

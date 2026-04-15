@@ -180,6 +180,17 @@ def test_terminal_statuses_contains_expected_values():
     assert TaskStatus.CANCELLED in TERMINAL_STATUSES
 
 
+def test_task_status_of_accepts_enum_and_string_inputs():
+    assert TaskStatus.of(TaskStatus.READY) is TaskStatus.READY
+    assert TaskStatus.of("ready") is TaskStatus.READY
+
+
+def test_task_status_of_falls_back_to_default_for_unknown_values():
+    assert TaskStatus.of("mystery") is TaskStatus.PENDING
+    assert TaskStatus.of("mystery", default=TaskStatus.RUNNING) is TaskStatus.RUNNING
+    assert TaskStatus.of(None, default=TaskStatus.FAILED) is TaskStatus.FAILED
+
+
 def test_terminal_statuses_does_not_contain_non_terminal():
     assert TaskStatus.PENDING not in TERMINAL_STATUSES
     assert TaskStatus.READY not in TERMINAL_STATUSES

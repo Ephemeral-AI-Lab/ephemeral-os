@@ -50,12 +50,12 @@ def _fake_services() -> TeamRuntimeServices:
     )
 
 
-def _make_run_with_context(
-    monkeypatch, store: TeamMemoryStore
-) -> tuple[TeamRun, Task]:
+def _make_run_with_context(monkeypatch, store: TeamMemoryStore) -> tuple[TeamRun, Task]:
     """Return a (run, task) pair wired to *store* via monkeypatch."""
     monkeypatch.setattr("team.memory.runtime.get_default_store", lambda: store)
-    run = TeamRun(session_id="S1", user_request="hello", repo_root="/repo", services=_fake_services())
+    run = TeamRun(
+        session_id="S1", user_request="hello", repo_root="/repo", services=_fake_services()
+    )
     run.project_context = ProjectContext(
         goal="g", user_request="u", project_key="P1", repo_root="/repo"
     )
@@ -79,7 +79,7 @@ def test_team_memory_store_roundtrip_and_query(monkeypatch) -> None:
         repo_root="/repo",
         kind="architecture_decision",
         scope={"paths": ["src/runtime"]},
-        content={"decision": "publish from worker, not posthook"},
+        content={"decision": "publish from worker directly"},
         source={"team_run_id": "T1", "agent": "planner"},
     )
 
@@ -90,7 +90,7 @@ def test_team_memory_store_roundtrip_and_query(monkeypatch) -> None:
         scope_paths=["src/runtime"],
     )
     assert len(results) == 1
-    assert results[0].content["decision"] == "publish from worker, not posthook"
+    assert results[0].content["decision"] == "publish from worker directly"
 
 
 def test_team_run_persists_validator_outcome(monkeypatch) -> None:

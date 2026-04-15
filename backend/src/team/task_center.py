@@ -68,7 +68,6 @@ class TaskCenter:
     ) -> None:
         self._team_run_id = team_run_id
         self._store = TaskStore(session_factory, team_run_id)
-        self._file_change_store = file_change_store
         self._events: TeamRunStore = event_store or NullTeamRunStore()
         self._resume_snapshot: list[Task] | None = None
 
@@ -161,12 +160,18 @@ class TaskCenter:
         return self._store.graph
 
     @property
-    def _ready_order(self) -> list[str]:
-        return self._store._ready_order
+    def ready_queue_order(self) -> list[str]:
+        return self._store.ready_queue_order
 
-    @_ready_order.setter
-    def _ready_order(self, value: list[str]) -> None:
-        self._store._ready_order = value
+    def prime_resume_state(
+        self,
+        *,
+        snapshot: list[Task],
+        ready_queue_order: list[str],
+    ) -> None:
+        """Seed resume-only state rebuilt from an event log replay."""
+        self._resume_snapshot = list(snapshot)
+        self._store.ready_queue_order = ready_queue_order
 
     async def get_task(self, task_id: str) -> Task | None:
         return self._store.get_task(task_id)
@@ -240,7 +245,7 @@ class TaskCenter:
                     id=t.id,
                     objective=t.objective,
                     agent=t.agent_name,
-                    title=t.title or "",
+                    description=t.description or "",
                     deps=list(t.deps),
                     scope_paths=list(t.scope_paths),
                     cascade_policy=t.cascade_policy,
@@ -294,7 +299,7 @@ class TaskCenter:
         await self._store.refresh_graph()
         return new_items
 
-    async def fail(self, task_id: str, reason: str) -> None:
+    async def fail_task(self, task_id: str, reason: str) -> None:
         # If a replanner fails, also fail the original task it was fired for
         rec = await self._store.get_record(task_id)
         if rec and rec.fired_by_task_id:
@@ -308,7 +313,13 @@ class TaskCenter:
         for dep_id, msg in warnings:
             try:
                 await self._notes.post(
-                    Note(id=self._new_id(), task_id=dep_id, agent_name="system", content=msg, tags=[NoteTag.WARNING.value])
+                    Note(
+                        id=self._new_id(),
+                        task_id=dep_id,
+                        agent_name="system",
+                        content=msg,
+                        tags=[NoteTag.WARNING.value],
+                    )
                 )
             except Exception:
                 logger.debug("Failed to post warning note for %s", dep_id, exc_info=True)
@@ -443,7 +454,7 @@ class TaskCenter:
             label=label,
             project_context=project_context,
             tasks=self.graph,
-            ready_queue_order=self._ready_order,
+            ready_queue_order=self.ready_queue_order,
             budget_state=self.budget_state,
             emit_checkpoint_cb=lambda run_id, cp_id, seq, lbl: self._emit(
                 make_checkpoint_taken(run_id, checkpoint_id=cp_id, sequence=seq, label=lbl)

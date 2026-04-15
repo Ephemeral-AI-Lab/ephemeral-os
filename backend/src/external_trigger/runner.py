@@ -1,4 +1,4 @@
-"""Shared LLM loop for external_trigger and post_run tool phases.
+"""Shared LLM loop for external-trigger tool phases.
 
 Uses an exact single-tool choice when only one tool is available, otherwise
 falls back to ``tool_choice={"type": "any"}``. Retries up to ``max_turns``
@@ -31,7 +31,7 @@ def _emit(msg: str) -> None:
 
 @dataclass
 class RunResult:
-    """Result of a successful external_trigger/post_run tool call."""
+    """Result of a successful external-trigger tool call."""
 
     tool_name: str
     tool_input: dict[str, Any]
@@ -44,7 +44,6 @@ class RunResult:
 async def _stream_to_response(api_client: Any, request: ApiMessageRequest) -> Any:
     """Consume stream_message and collect tool_use events + final message."""
     tool_uses: list[dict[str, Any]] = []
-    text_parts: list[str] = []
     final_message: Any = None
 
     async for event in api_client.stream_message(request):

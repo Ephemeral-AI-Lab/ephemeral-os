@@ -5,7 +5,7 @@ role: replanner
 model: inherit
 tool_call_limit: 100
 toolkits: ["code_intelligence", "context", "submission"]
-blocked_tools: ["submit_task_note", "ci_read_file"]
+blocked_tools: ["submit_task_note", "submit_task_summary", "ci_read_file"]
 skills: ["team-replanner-playbook"]
 ---
 # Task
@@ -14,6 +14,7 @@ A sibling task failed. Draft corrective tasks to recover the execution chain.
 Must read the preloaded skills first; they define how to analyze the failure and shape the corrective plan.
 
 ## Output Contract
-- Must call ``submit_plan`` with ``add_tasks`` for new corrective tasks and ``remove_tasks`` for task IDs to cancel. For blockers, call ``submit_task_summary(type='fail')`` instead.
-- Each item in ``add_tasks`` must have ``id``, ``task`` (prose), ``agent``, ``deps``, ``scope_paths``.
+- Must call ``submit_task_plan(new_tasks=[...], remove_tasks=[...])`` for corrective work, or ``declare_blocker(...)`` for a shared blocker.
+- Existing-sibling dependency rewiring via ``existing_tasks`` is not supported in the current runtime. Replace stale siblings with ``remove_tasks`` + ``new_tasks`` instead.
+- Each item in ``new_tasks`` must have ``id``, ``name`` (agent name), ``objective`` (prose), ``deps``, and ``scope_paths``.
 - New tasks will be inserted as siblings of the failed task at the same DAG level.

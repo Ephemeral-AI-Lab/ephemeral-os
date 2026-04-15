@@ -16,8 +16,9 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import Any, Awaitable, Callable
+from typing import Awaitable, Callable
 
+from agents.registry import has_role
 from team.budget_manager import BudgetManager
 from team.errors import BudgetExceeded, InvalidPlan
 from team.models import AgentResult, Task, TaskDefinition, TaskStatus
@@ -65,14 +66,10 @@ class PlanExpander:
         terminated. When the agent submitted no plan and no plan was
         required, returns ``([], True)``.
         """
-        from agents.registry import has_role as _has_role
-
         task_id = rec.id
 
-        if _has_role(rec.agent_name, "planner") and result.submitted_plan is None:
-            await self._cascade_fail(
-                task_id, "InvalidPlan: expandable task did not submit a plan"
-            )
+        if has_role(rec.agent_name, "planner") and result.submitted_plan is None:
+            await self._cascade_fail(task_id, "InvalidPlan: expandable task did not submit a plan")
             return [], False
 
         if result.submitted_plan is None:
@@ -97,9 +94,7 @@ class PlanExpander:
             known_external_deps=set(adj.keys()),
         )
         if issues:
-            await self._cascade_fail(
-                task_id, "InvalidPlan: " + "; ".join(i["msg"] for i in issues)
-            )
+            await self._cascade_fail(task_id, "InvalidPlan: " + "; ".join(i["msg"] for i in issues))
             return [], False
 
         local_to_global: dict[str, str] = {
@@ -199,9 +194,7 @@ class PlanExpander:
                 elif d in adj:
                     rdeps.append(d)
                 else:
-                    raise InvalidPlan(
-                        f"replan dep '{d}' is not a local alias or existing task id"
-                    )
+                    raise InvalidPlan(f"replan dep '{d}' is not a local alias or existing task id")
             clean_adj[nid] = rdeps
             specs.append(
                 TaskDefinition(
@@ -235,8 +228,10 @@ class PlanExpander:
             graph = self._graph_getter()
             for item in inserted:
                 if item.id in graph:
-                    self._emit(
-                        make_task_added(self._team_run_id, task_to_dict(graph[item.id]))
-                    )
+                    self._emit(make_task_added(self._team_run_id, task_to_dict(graph[item.id])))
 
-        return {"added": len(specs), "cancelled": len(cancel_ids), "inserted_ids": [r.id for r in inserted]}
+        return {
+            "added": len(specs),
+            "cancelled": len(cancel_ids),
+            "inserted_ids": [r.id for r in inserted],
+        }

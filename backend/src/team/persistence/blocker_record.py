@@ -20,6 +20,7 @@ class BlockerRecord(Base):
     reason: Mapped[str] = mapped_column(Text, nullable=False)
     root_cause_paths: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)
     initiating_task_id: Mapped[str] = mapped_column(Text, nullable=False)
+    suggestion: Mapped[str | None] = mapped_column(Text, nullable=True)
     fix_task_id: Mapped[str | None] = mapped_column(Text, nullable=True)
     declared_by: Mapped[str | None] = mapped_column(Text, nullable=True)
     fix_summary: Mapped[str | None] = mapped_column(Text, nullable=True)

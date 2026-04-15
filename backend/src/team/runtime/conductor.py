@@ -9,9 +9,19 @@ import time
 import uuid
 from typing import TYPE_CHECKING
 
-from team.models import Blocker, BlockerStatus, ReplanRequest, Task, TaskDefinition, TaskStatus, TeamRunStatus
+from team._path_utils import ScopePath
+from team.models import (
+    Blocker,
+    BlockerStatus,
+    ReplanRequest,
+    Task,
+    TaskDefinition,
+    TaskStatus,
+    TeamRunStatus,
+)
 
 if TYPE_CHECKING:
+    from external_trigger.pause_assessment import PauseVerdict
     from team.persistence.blocker_store import BlockerStore
     from team.runtime.team_run import TeamRun
 
@@ -61,11 +71,13 @@ class Conductor:
         emitter = getattr(self._team_run, "coordination_metadata", {}).get("external_hook_emitter")
         if callable(emitter):
             try:
-                emitter({
-                    "event": "external_hook",
-                    "team_run_id": self._team_run.id,
-                    **payload,
-                })
+                emitter(
+                    {
+                        "event": "external_hook",
+                        "team_run_id": self._team_run.id,
+                        **payload,
+                    }
+                )
             except Exception:
                 logger.debug("Failed to emit external hook payload", exc_info=True)
 
@@ -86,7 +98,6 @@ class Conductor:
                 return blocker
         return None
 
-
     # ------------------------------------------------------------------
     # Blocker lifecycle
     # ------------------------------------------------------------------
@@ -96,13 +107,16 @@ class Conductor:
         reason: str,
         root_cause_paths: list[str],
         initiating_task_id: str,
+        suggestion: str | None = None,
         declared_by: str | None = None,
     ) -> Blocker:
         # Check for existing blocker with overlapping root_cause_paths — merge if found
         for existing in self._active_blockers.values():
-            if self._paths_overlap(existing.root_cause_paths, root_cause_paths):
+            if ScopePath.any_overlap(existing.root_cause_paths, root_cause_paths):
                 merged_paths = list(dict.fromkeys(existing.root_cause_paths + root_cause_paths))
                 existing.root_cause_paths = merged_paths
+                if suggestion:
+                    existing.suggestion = suggestion
                 logger.info("Merged blocker %s with new paths %s", existing.id, root_cause_paths)
                 await self._persist(existing)
                 # Re-assess: new paths may bring new siblings into scope
@@ -116,6 +130,7 @@ class Conductor:
             reason=reason,
             root_cause_paths=root_cause_paths,
             initiating_task_id=initiating_task_id,
+            suggestion=suggestion,
             declared_by=declared_by,
         )
         self._active_blockers[blocker.id] = blocker
@@ -137,22 +152,24 @@ class Conductor:
         running = [r for r in candidates if r.status == TaskStatus.RUNNING.value]
 
         # Skip tasks already paused by this or another blocker
-        running = [r for r in running if not getattr(r, 'blocker_id', None)]
+        running = [r for r in running if not getattr(r, "blocker_id", None)]
 
         api_client = getattr(self._team_run, "api_client", None)
 
-        async def _assess_one(rec: object) -> "PauseVerdict | None":
+        async def _assess_one(rec: object) -> PauseVerdict | None:
             from external_trigger.pause_assessment import PauseVerdict, assess_pause
 
             task_id: str = rec.id  # type: ignore[attr-defined]
             agent_name = str(getattr(rec, "agent_name", "") or "")
-            self._emit_external_hook({
-                "hook": "pause_assess",
-                "work_item_id": task_id,
-                "agent": agent_name,
-                "blocker_id": blocker.id,
-                "status": "started",
-            })
+            self._emit_external_hook(
+                {
+                    "hook": "pause_assess",
+                    "work_item_id": task_id,
+                    "agent": agent_name,
+                    "blocker_id": blocker.id,
+                    "status": "started",
+                }
+            )
             agent_run_id = getattr(rec, "agent_run_id", None) or task_id
             messages = self._executor_snapshots.get(task_id, [])
             if api_client is None:
@@ -163,14 +180,16 @@ class Conductor:
                     reason="no api_client available for assessment",
                     conversation=messages,
                 )
-                self._emit_external_hook({
-                    "hook": "pause_assess",
-                    "work_item_id": task_id,
-                    "agent": agent_name,
-                    "blocker_id": blocker.id,
-                    "status": "completed",
-                    "answer": verdict.answer,
-                })
+                self._emit_external_hook(
+                    {
+                        "hook": "pause_assess",
+                        "work_item_id": task_id,
+                        "agent": agent_name,
+                        "blocker_id": blocker.id,
+                        "status": "completed",
+                        "answer": verdict.answer,
+                    }
+                )
                 return verdict
             try:
                 verdict = await assess_pause(
@@ -184,23 +203,27 @@ class Conductor:
                 )
             except Exception as exc:
                 logger.warning("PauseAssessmentTask failed for %s: %s — skipping", task_id, exc)
-                self._emit_external_hook({
+                self._emit_external_hook(
+                    {
+                        "hook": "pause_assess",
+                        "work_item_id": task_id,
+                        "agent": agent_name,
+                        "blocker_id": blocker.id,
+                        "status": "failed",
+                        "error": str(exc),
+                    }
+                )
+                return None  # error → skip, don't pause
+            self._emit_external_hook(
+                {
                     "hook": "pause_assess",
                     "work_item_id": task_id,
                     "agent": agent_name,
                     "blocker_id": blocker.id,
-                    "status": "failed",
-                    "error": str(exc),
-                })
-                return None  # error → skip, don't pause
-            self._emit_external_hook({
-                "hook": "pause_assess",
-                "work_item_id": task_id,
-                "agent": agent_name,
-                "blocker_id": blocker.id,
-                "status": "completed",
-                "answer": verdict.answer,
-            })
+                    "status": "completed",
+                    "answer": verdict.answer,
+                }
+            )
             return verdict
 
         verdicts = await asyncio.gather(*[_assess_one(r) for r in running])
@@ -214,8 +237,55 @@ class Conductor:
             else:
                 logger.debug("Task %s not affected by blocker %s", verdict.task_id, blocker.id)
 
-    async def _pause_task(self, task_id: str, blocker_id: str, verdict: "PauseVerdict") -> None:
-        from external_trigger.pause_assessment import PauseVerdict  # noqa: F811 — type narrowing
+    @staticmethod
+    def _resolver_objective(blocker: Blocker) -> str:
+        lines = [
+            "Resolve the shared blocker once for all affected tasks.",
+            f"Root cause paths: {', '.join(blocker.root_cause_paths)}",
+            f"Problem: {blocker.reason}",
+        ]
+        if blocker.suggestion:
+            lines.append(f"Suggested fix direction: {blocker.suggestion}")
+        lines.append(
+            "Repair the shared surface directly. When fixed, call "
+            "`submit_task_summary(type='success')` with the exact fix summary."
+        )
+        lines.append(
+            "If the blocker cannot be repaired within this scope, call "
+            "`submit_task_summary(type='fail')` with the reason so the system can replan."
+        )
+        return "\n".join(lines)
+
+    def _build_resolver_task(
+        self,
+        *,
+        blocker: Blocker,
+        resolver_id: str,
+        agent_name: str,
+    ) -> tuple[TaskDefinition, Task]:
+        objective = self._resolver_objective(blocker)
+        scope_paths = list(blocker.root_cause_paths)
+        return (
+            TaskDefinition(
+                id=resolver_id,
+                objective=objective,
+                agent=agent_name,
+                deps=[],
+                scope_paths=scope_paths,
+            ),
+            Task(
+                id=resolver_id,
+                team_run_id=self._team_run.id,
+                agent_name=agent_name,
+                status=TaskStatus.READY,
+                objective=objective,
+                description="Resolve shared blocker",
+                deps=[],
+                scope_paths=scope_paths,
+            ),
+        )
+
+    async def _pause_task(self, task_id: str, blocker_id: str, verdict: PauseVerdict) -> None:
         tc = self._team_run.task_center
         checkpoint = json.dumps(verdict.conversation)
         reason = verdict.reason or f"Paused by blocker {blocker_id}"
@@ -231,6 +301,7 @@ class Conductor:
 
     async def _spawn_resolver(self, blocker: Blocker) -> None:
         from agents.registry import find_by_role
+
         resolvers = find_by_role("resolver")
         if resolvers:
             agent_name = resolvers[0].name
@@ -239,37 +310,17 @@ class Conductor:
             agent_name = developers[0].name if developers else "developer"
 
         resolver_id = str(uuid.uuid4())
-        task = Task(
-            id=resolver_id,
-            team_run_id=self._team_run.id,
+        spec, task = self._build_resolver_task(
+            blocker=blocker,
+            resolver_id=resolver_id,
             agent_name=agent_name,
-            status=TaskStatus.READY,
-            task=(
-                "Resolve the shared blocker once for all affected tasks.\n"
-                f"Root cause paths: {', '.join(blocker.root_cause_paths)}\n"
-                f"Problem: {blocker.reason}\n"
-                "Repair the shared surface directly. When fixed, use `post_note` with the exact fix summary. "
-                "If the blocker cannot be repaired within this scope, note the reason — the system will handle replanning."
-            ),
-            deps=[],
-            scope_paths=list(blocker.root_cause_paths),
         )
         tc = self._team_run.task_center
-        try:
-            from team.task_center import TaskCenter
+        from team.task_center import TaskCenter
 
-            if isinstance(tc, TaskCenter):
-                await tc.add_task(task)
-            else:
-                raise TypeError("fallback to insert_plan")
-        except Exception:
-            spec = TaskDefinition(
-                id=resolver_id,
-                objective=task.objective,
-                agent=agent_name,
-                deps=[],
-                scope_paths=task.scope_paths,
-            )
+        if isinstance(tc, TaskCenter):
+            await tc.add_task(task)
+        else:
             await tc.store.insert_plan([spec])
         blocker.fix_task_id = resolver_id
         logger.info("Spawned resolver task %s for blocker %s", resolver_id, blocker.id)
@@ -365,16 +416,3 @@ class Conductor:
 
     async def _cancel_paused(self, blocker: Blocker) -> int:
         return await self._team_run.task_center.cancel_paused_tasks(blocker.id)
-
-    # ------------------------------------------------------------------
-    # Path helpers
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _paths_overlap(paths_a: list[str], paths_b: list[str]) -> bool:
-        """True if any path in paths_a is a prefix of or prefixed by any path in paths_b."""
-        for a in paths_a:
-            for b in paths_b:
-                if a == b or a.startswith(b.rstrip("/") + "/") or b.startswith(a.rstrip("/") + "/"):
-                    return True
-        return False

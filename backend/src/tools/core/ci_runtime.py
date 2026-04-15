@@ -334,38 +334,6 @@ def sync_deleted_file(
             logger.debug("CI delete invalidation failed for %s", file_path, exc_info=True)
 
 
-def prepare_declared_shell_outputs(
-    context: ToolExecutionContext,
-    *,
-    declared_output_paths: list[str] | None,
-) -> tuple[list[Any], dict[str, Any], str | None]:
-    """Reserve declared shell outputs before running a mutating command."""
-    paths = normalize_scope_paths(declared_output_paths or [])
-    if not paths:
-        return [], {}, None
-    prepared_items: list[Any] = []
-    for path in paths:
-        prepared, _, prep_err = prepare_ci_write(
-            context,
-            path,
-            allow_scope_drift=True,
-        )
-        if prep_err is not None:
-            for item in prepared_items:
-                abort_ci_write(context, item)
-            return [], {}, prep_err
-        if prepared is not None:
-            prepared_items.append(prepared)
-    return prepared_items, {}, None
-
-
-def release_declared_shell_outputs(
-    context: ToolExecutionContext, prepared_items: list[Any]
-) -> None:
-    """Release any declared shell reservations."""
-    for item in prepared_items:
-        abort_ci_write(context, item)
-
 
 def _note_team_memory_conflict(
     context: ToolExecutionContext,
@@ -460,11 +428,9 @@ __all__ = [
     "get_ci_service",
     "prepare_ci_edit_intent",
     "prepare_ci_write",
-    "prepare_declared_shell_outputs",
     "prime_cache_after_write",
     "record_edit_in_arbiter",
     "release_ci_edit_intent",
-    "release_declared_shell_outputs",
     "sync_deleted_file",
     "sync_write_to_ci",
 ]

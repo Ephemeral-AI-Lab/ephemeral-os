@@ -322,7 +322,7 @@ Current runtime inventory:
 | `context_read` / `context_write` | 3 / 4 | Task Center notes plus scope and staleness checks |
 | `memory` | 3 | Exploration cache reuse and edit-history conflict prediction |
 | `subagent` | 1 | `run_subagent` for bounded scout/delegation work |
-| `submission` | 5 total variants | `done`, `request_retry`, `request_replan`, `submit_plan`, `submit_replan` depending on agent role |
+| `submission` | 4 tools | `draft_task_plan`, `submit_task_plan`, `declare_blocker`, `submit_task_summary` |
 | Runtime `skills` | 2 | `load_skill`, `load_skill_reference` |
 | Runtime `background` | 3 | `check_background_progress`, `wait_for_background_task`, `cancel_background_task` |
 
@@ -343,7 +343,6 @@ Bundled packaged skills:
 - team-validator-playbook
 - team-scout-playbook
 - team-replanner-playbook
-- team-posthook-decision-playbook
 - verification-replan
 - task-decompose
 - changelog-decompose

@@ -60,7 +60,8 @@ def task_from_dict(data: dict[str, Any]) -> Task:
         return datetime.fromisoformat(iso) if iso else None
     return Task(
         id=data["id"], team_run_id=data["team_run_id"],
-        agent_name=data["agent_name"], status=TaskStatus(data["status"]),
+        agent_name=data["agent_name"],
+        status=TaskStatus.of(data.get("status") or TaskStatus.PENDING.value),
         objective=data.get("objective") or data.get("task", ""),
         deps=list(data.get("deps") or []),
         scope_paths=list(data.get("scope_paths") or []),
@@ -95,7 +96,7 @@ def apply_replayed_event(
     elif event.kind == "task_status":
         t = graph.get(event.data.get("task_id"))
         if t is not None:
-            t.status = TaskStatus(event.data["status"])
+            t.status = TaskStatus.of(event.data.get("status") or t.status, default=t.status)
             for key in ("started_at", "finished_at"):
                 if key in event.data:
                     iso = event.data.get(key)

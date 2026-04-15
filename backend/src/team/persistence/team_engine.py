@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from sqlalchemy import inspect as sqla_inspect, text
+from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
 from db.base import Base

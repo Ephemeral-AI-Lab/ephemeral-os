@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import logging
 import time
-import uuid
 from typing import TYPE_CHECKING, Any, Awaitable, Callable
 
+from team._path_utils import ScopePath
 from team.models import Note, Task
 
 if TYPE_CHECKING:
@@ -50,29 +50,13 @@ class NoteManager:
         self._file_change_store = file_change_store
         self._blocker_provider: Callable[[], Awaitable[list[Any]]] | None = None
 
-    def set_blocker_provider(
-        self, provider: Callable[[], Awaitable[list[Any]]] | None
-    ) -> None:
+    def set_blocker_provider(self, provider: Callable[[], Awaitable[list[Any]]] | None) -> None:
         """Register an async callable that returns current active blockers.
 
         When set, ``context_for`` will fetch active blockers automatically
         (caller may also pass ``active_blockers`` explicitly to override).
         """
         self._blocker_provider = provider
-
-    @staticmethod
-    def _matches_paths(note_paths: list[str], query_paths: list[str]) -> bool:
-        if not note_paths:
-            return True
-        normalized = [s.rstrip("/") for s in query_paths if s]
-        return any(NoteManager._path_overlaps(np, qp) for np in note_paths for qp in normalized)
-
-    @staticmethod
-    def _path_overlaps(note_path: str, query_path: str) -> bool:
-        n, q = note_path.rstrip("/"), query_path.rstrip("/")
-        if not n or not q:
-            return False
-        return n == q or n.startswith(q + "/") or q.startswith(n + "/")
 
     @staticmethod
     def _render_notes(header: str, notes: list[Note]) -> str:
@@ -187,17 +171,14 @@ class NoteManager:
             s = set(authors)
             results = [n for n in results if n.task_id in s]
         if paths:
-            results = [n for n in results if self._matches_paths(n.paths, paths)]
+            results = [n for n in results if ScopePath.matches_scopes(n.paths, paths)]
         if tags:
             tag_set = set(tags)
             results = [n for n in results if tag_set & set(n.tags)]
         if keyword:
             keywords = [k.strip().lower() for k in keyword.split("|") if k.strip()]
             if keywords:
-                results = [
-                    n for n in results
-                    if any(kw in n.content.lower() for kw in keywords)
-                ]
+                results = [n for n in results if any(kw in n.content.lower() for kw in keywords)]
         if since is not None:
             results = [n for n in results if n.timestamp >= since]
         if last_n is not None and last_n > 0:
@@ -281,8 +262,6 @@ class NoteManager:
         file_change_store: Any = None,
         active_blockers: list[Any] | None = None,
     ) -> str:
-        if file_change_store is None:
-            file_change_store = self._file_change_store
         """Build context string for a task. No external callbacks needed.
 
         ``active_blockers`` — optional list of in-progress Blocker records. When
@@ -290,6 +269,8 @@ class NoteManager:
         existing ASSESSING/FIXING blockers before deciding whether to call
         ``declare_blocker`` (dedup is skill-driven, not mechanical).
         """
+        if file_change_store is None:
+            file_change_store = self._file_change_store
         if active_blockers is None and self._blocker_provider is not None:
             try:
                 active_blockers = await self._blocker_provider()
@@ -309,9 +290,9 @@ class NoteManager:
             )
             if task.retry_count >= task.max_retries:
                 s += (
-                    f"\n\n**This is your LAST attempt.** If you cannot fix the "
-                    f"issue with a different approach, stop and note the diagnostic clearly "
-                    f"— the system will trigger a replan so the replanner can restructure the work."
+                    "\n\n**This is your LAST attempt.** If you cannot fix the "
+                    "issue with a different approach, stop and note the diagnostic clearly "
+                    "— the system will trigger a replan so the replanner can restructure the work."
                 )
             sections.append(s)
             budget -= len(s.encode())

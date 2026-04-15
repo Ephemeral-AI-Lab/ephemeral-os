@@ -1,7 +1,7 @@
-"""External trigger module — shared runner for external_trigger and post_run phases.
+"""External trigger module.
 
-Both external-trigger calls (pause assessment, checkpoint notes) and post-run
-calls (submission) use the same ``runner.run()`` loop.
+The shared ``runner.run()`` loop is used by external-trigger callers such as
+pause assessment and task-center checkpoint notes.
 """
 
 from external_trigger.runner import RunResult, run

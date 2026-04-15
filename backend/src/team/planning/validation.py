@@ -6,13 +6,14 @@ from typing import Callable, Iterator
 
 from agents.registry import get_definition as _get_definition, has_role as _has_role
 
-from team.errors import InvalidPlan
+from team._path_utils import ScopePath
 from team.models import Plan, TaskDefinition
 
 Issue = dict[str, str]
 
 # Type alias for pluggable plan validators.
 PlanItemValidator = Callable[[list[TaskDefinition]], list[Issue]]
+
 
 def _agent_exists(agent_name: str) -> bool:
     return _get_definition(agent_name) is not None
@@ -156,18 +157,6 @@ def _sequenced_pair(adj: dict[str, list[str]], left: str, right: str) -> bool:
     return False
 
 
-def _scope_overlaps(left: str, right: str) -> bool:
-    lval = left.rstrip("/")
-    rval = right.rstrip("/")
-    if not lval or not rval:
-        return False
-    return (
-        lval == rval
-        or lval.startswith(rval + "/")
-        or rval.startswith(lval + "/")
-    )
-
-
 def _crowded_layer_expandability_issues(items: list[TaskDefinition]) -> list[Issue]:
     issues: list[Issue] = []
     expandable_count = sum(1 for item in items if _is_expandable(item.agent))
@@ -208,7 +197,7 @@ def _shared_scope_conflict_issues(
                 (l_scope, r_scope)
                 for l_scope in left.scope_paths
                 for r_scope in right.scope_paths
-                if _scope_overlaps(l_scope, r_scope)
+                if ScopePath.overlaps(l_scope, r_scope)
             ]
             if not overlaps:
                 continue

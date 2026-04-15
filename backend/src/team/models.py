@@ -1,8 +1,4 @@
-"""Core team-mode dataclasses and enums.
-
-Simplified per Plan A: Task Center replaces briefings, Note replaces
-Briefing + DependencyArtifact, TaskDefinition replaces the former WorkItemSpec.
-"""
+"""Core team-mode dataclasses and enums."""
 
 from __future__ import annotations
 
@@ -42,6 +38,24 @@ class TaskStatus(str, Enum):
     DONE = "done"
     FAILED = "failed"
     CANCELLED = "cancelled"
+
+    @classmethod
+    def of(
+        cls, value: object, default: "TaskStatus | None" = None
+    ) -> "TaskStatus":
+        """Convert a raw value to a ``TaskStatus`` enum when possible.
+
+        If value is already a TaskStatus, return it as-is.
+        If value doesn't match any known status, return ``default``.
+        """
+        if default is None:
+            default = cls.PENDING
+        if isinstance(value, cls):
+            return value
+        try:
+            return cls(value)
+        except (TypeError, ValueError):
+            return default
 
 
 class TeamRunStatus(str, Enum):
@@ -336,6 +350,7 @@ class Blocker:
     reason: str
     root_cause_paths: list[str]
     initiating_task_id: str
+    suggestion: str | None = None
     fix_task_id: str | None = None
     declared_by: str | None = None
     fix_summary: str | None = None

@@ -40,13 +40,7 @@ from tools.core.ci_runtime import (
     abort_ci_write,
     finalize_ci_write,
     prepare_ci_write,
-    prepare_declared_shell_outputs,
-    release_declared_shell_outputs,
     sync_write_to_ci,
-)
-from tools.daytona_toolkit.ci_integration import (
-    shell_mutation_declaration_error,
-    sync_shell_mutations,
 )
 
 logger = logging.getLogger(__name__)
@@ -332,6 +326,7 @@ async def daytona_write_file(
         )
     prepared = None
     content_bytes = content.encode("utf-8")
+    strict_occ = is_coordinated_team_agent(context)
 
     async def _ensure_parent(active_sandbox: Any) -> None:
         parent = "/".join(file_path.split("/")[:-1])
@@ -340,7 +335,6 @@ async def daytona_write_file(
 
     async def _attempt(active_sandbox: Any) -> ToolResult:
         nonlocal prepared
-        await _ensure_parent(active_sandbox)
         prepared, scope_packet, err = prepare_ci_write(
             context, file_path, allow_scope_drift=True,
         )
@@ -361,6 +355,16 @@ async def daytona_write_file(
                     metadata={"conflict": bool(getattr(result, "conflict", False))},
                 )
         else:
+            if strict_occ:
+                return ToolResult(
+                    output=(
+                        f"daytona_write_file: OCC is unavailable for coordinated write of {file_path}. "
+                        "Direct write fallback is disabled in coordinated mode."
+                    ),
+                    is_error=True,
+                    metadata={"conflict": True, "occ_required": True},
+                )
+            await _ensure_parent(active_sandbox)
             await _do_raw_write(active_sandbox, context, file_path, content, content_bytes)
         return _build_write_file_result(
             context=context, file_path=file_path,
@@ -373,12 +377,7 @@ async def daytona_write_file(
     except Exception as exc:
         try:
             sandbox = await _recover_sandbox(context, exc)
-            await _ensure_parent(sandbox)
-            await _do_raw_write(sandbox, context, file_path, content, content_bytes)
-            return _build_write_file_result(
-                context=context, file_path=file_path,
-                bytes_written=len(content_bytes), warning=contract_warning,
-            )
+            return await _attempt(sandbox)
         except Exception as recovery_exc:
             parent = "/".join(file_path.split("/")[:-1])
             return ToolResult(

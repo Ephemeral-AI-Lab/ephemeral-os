@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS blockers (
     reason              TEXT NOT NULL,
     root_cause_paths    TEXT[] DEFAULT '{}',
     initiating_task_id  TEXT NOT NULL,
+    suggestion          TEXT,
     fix_task_id         TEXT,
     declared_by         TEXT,
     fix_summary         TEXT,

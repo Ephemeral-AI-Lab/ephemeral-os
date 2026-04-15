@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shlex
 from pathlib import Path
 from typing import Any
 
@@ -28,7 +29,9 @@ class ContentManager:
     def write(self, file_path: str, content: str) -> None:
         """Write *content* to *file_path*, preferring the sandbox when bound."""
         if self._sandbox is None:
-            Path(file_path).write_text(content, encoding="utf-8")
+            path = Path(file_path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(content, encoding="utf-8")
             return
         self._write_remote(file_path, content.encode("utf-8"))
 
@@ -55,6 +58,9 @@ class ContentManager:
         return str(raw), True
 
     def _write_remote(self, file_path: str, payload: bytes) -> None:
+        parent = str(Path(file_path).parent)
+        if parent and parent not in {".", "/"}:
+            run_sync(self._sandbox.process.exec(f"mkdir -p {shlex.quote(parent)}"))
         fs = self._sandbox.fs
         upload_fn = getattr(fs, "upload_file", None)
         if not callable(upload_fn):

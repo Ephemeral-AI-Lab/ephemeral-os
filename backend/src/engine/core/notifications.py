@@ -28,7 +28,7 @@ def _budget_warning_steps(context: "QueryContext") -> str:
         return (
             "1. Stop exploring and shaping new lanes immediately.\n"
             "2. Call context_changed_since() if you have not already.\n"
-            "3. Finalize the strongest plan JSON you can defend right now in your final message so the post-run submission phase can take over."
+            "3. Call submit_task_plan() with the strongest plan you can defend right now."
         )
     if role == "replanner":
         return (
@@ -40,13 +40,13 @@ def _budget_warning_steps(context: "QueryContext") -> str:
         return (
             "1. Run one final exact verification command (daytona_codeact) only if you still need decisive evidence.\n"
             "2. Call context_changed_since() if you have not already.\n"
-            "3. Wrap up — state your verdict clearly (PASS or FAILURE with evidence) in your final message."
+            "3. Call submit_task_summary(type='success') for PASS, or submit_task_summary(type='fail') with exact evidence for FAILURE."
         )
     return (
         "1. Run one final verification command (daytona_codeact) on your most critical test.\n"
         "2. Run ci_diagnostics(file_path) on every file you edited.\n"
         "3. If your verification still fails, call submit_task_summary(type='fail') with the exact failure evidence — do not claim completion for work that did not pass verification.\n"
-        "4. If verification passed, summarize what you accomplished and what remains in your final message."
+        "4. If verification passed, call submit_task_summary(type='success') with a concise completion summary."
     )
 
 

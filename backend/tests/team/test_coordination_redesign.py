@@ -7,9 +7,9 @@ import pytest
 from agents.registry import get_definition
 from team.builtins import register_all as register_team_builtins
 from team.models import BudgetConfig, BudgetState, Task, TaskStatus
-from team.runtime.context_builder import build_task_metadata
+from team.runtime.context_builder import build_query_context, build_task_metadata
 from tools.core.base import ToolExecutionContext
-from tools.submission.toolkit import SubmitTaskPlanTool
+from tools.submission.toolkit import DeclareBlockerTool, SubmitTaskPlanTool
 
 
 if get_definition("developer") is None:
@@ -20,9 +20,13 @@ class _AsyncTaskCenterStub:
     def __init__(self) -> None:
         self.posted: list = []
         self.notes = self  # production code calls tc.notes.post(note)
+        self.graph: dict[str, Task] = {}
 
     async def post(self, note) -> None:
         self.posted.append(note)
+
+    async def context_for(self, task: Task) -> str:
+        return f"## Task\n{task.objective}"
 
 
 class _AsyncDispatcherStub:
@@ -210,3 +214,91 @@ async def test_submit_plan_rejects_oversize_task_notes():
     assert "max_note_bytes" in result.output
     assert ctx.metadata.get("submitted_output") is None
     assert task_center.posted == []
+
+
+@pytest.mark.asyncio
+async def test_submit_plan_rejects_existing_task_rewires():
+    task_center = _AsyncTaskCenterStub()
+    ctx = ToolExecutionContext(
+        cwd="/tmp",
+        metadata={
+            "task_center": task_center,
+            "work_item_id": "replanner-task",
+            "agent_name": "team_replanner",
+            "role": "replanner",
+        },
+    )
+
+    tool = SubmitTaskPlanTool()
+    result = await tool.execute(
+        tool.input_model(
+            existing_tasks=[{"id": "task-a", "deps": ["task-b"]}],
+        ),
+        ctx,
+    )
+
+    assert result.is_error is True
+    assert "existing_tasks rewiring is not supported yet" in result.output
+    assert ctx.metadata.get("resolved_plan") is None
+
+
+@pytest.mark.asyncio
+async def test_declare_blocker_writes_structured_metadata():
+    ctx = ToolExecutionContext(
+        cwd="/tmp",
+        metadata={
+            "work_item_id": "planner-task",
+            "agent_name": "team_planner",
+            "role": "planner",
+        },
+    )
+
+    tool = DeclareBlockerTool()
+    result = await tool.execute(
+        tool.input_model(
+            root_cause_paths=["pkg/shared.py"],
+            reason="shared dependency is broken",
+            suggestion="repair exports first",
+        ),
+        ctx,
+    )
+
+    assert result.is_error is False
+    assert ctx.metadata["blocker_declaration"] == {
+        "root_cause_paths": ["pkg/shared.py"],
+        "reason": "shared dependency is broken",
+        "suggestion": "repair exports first",
+    }
+
+
+@pytest.mark.asyncio
+async def test_build_query_context_planner_terminal_tools_exclude_blocker():
+    task = Task(
+        id="planner-task",
+        team_run_id="run-1",
+        agent_name="team_planner",
+        status=TaskStatus.READY,
+        objective="plan work",
+    )
+    task_center = _AsyncTaskCenterStub()
+    team_run = SimpleNamespace(
+        id="run-1",
+        sandbox_id="sbx-1",
+        project_context=SimpleNamespace(repo_root="/repo"),
+        coordination_metadata={},
+        task_center=task_center,
+        file_change_store=None,
+        budgets=None,
+        budget_state=None,
+        root_task_id="planner-task",
+        roster={"planner": ["team_planner"]},
+        team_definition=None,
+    )
+
+    ctx = await build_query_context(
+        SimpleNamespace(role="planner"),
+        team_run,
+        task,
+    )
+
+    assert ctx.tool_metadata["terminal_tools"] == {"submit_task_plan"}

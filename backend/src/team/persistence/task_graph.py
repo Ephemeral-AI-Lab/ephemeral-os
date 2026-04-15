@@ -68,7 +68,7 @@ class TaskGraph:
     def mark_terminal(self, task_id: str, status: str, reason: str) -> None:
         task = self.tasks.get(task_id)
         if task is not None:
-            task.status = TaskStatus(status)
+            task.status = TaskStatus.of(status, default=TaskStatus.FAILED)
             task.failure_reason = reason
         self.remove_ready(task_id)
 

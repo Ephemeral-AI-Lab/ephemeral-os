@@ -71,8 +71,7 @@ def create_toolkit(name: str, ctx: ToolkitContext) -> BaseToolkit:
             toolkit.name = name
         return toolkit
     raise KeyError(
-        f"Toolkit '{name}' not registered. "
-        f"Classes: {list(_classes)} Factories: {list(_factories)}"
+        f"Toolkit '{name}' not registered. Classes: {list(_classes)} Factories: {list(_factories)}"
     )
 
 
@@ -112,9 +111,10 @@ def _register_builtins() -> None:
     from tools.submission.toolkit import SubmissionToolkit
 
     register_toolkit_class("submission", SubmissionToolkit)
-    # NOTE: Posthook submission tools are NOT registered in the main
-    # query loop. They are only used in the executor's post-run phase
-    # via runner.run() (see team/runtime/executor.py).
+    # NOTE: Submission tools (submit_task_plan, submit_task_summary,
+    # declare_blocker) are registered here. During the main query loop,
+    # they are gated via terminal_tools metadata. The executor's post-run
+    # phase uses terminal_tools to determine when to stop the loop.
 
 
 _register_builtins()

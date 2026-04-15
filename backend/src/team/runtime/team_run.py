@@ -336,8 +336,10 @@ class TeamRun:
             run.budget_state.replans_used = last_budget[2]
         else:
             run.budget_state.tasks_used = len(graph)
-        tc._ready_order = restore_ready_queue(graph=graph)
-        tc._resume_snapshot = list(graph.values())
+        tc.prime_resume_state(
+            snapshot=list(graph.values()),
+            ready_queue_order=restore_ready_queue(graph=graph),
+        )
         run.root_task_id = root_id
         if final_status:
             try:

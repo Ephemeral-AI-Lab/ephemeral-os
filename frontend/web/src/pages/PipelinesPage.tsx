@@ -311,9 +311,6 @@ export default function PipelinesPage() {
                     <span className="text-xs text-zinc-600">{i + 1}</span>
                     <span className="text-sm text-zinc-200">{step.name}</span>
                     <span className="text-xs text-zinc-500">({step.agent})</span>
-                    {step.posthook_agent && (
-                      <span className="text-xs text-zinc-600">+ {step.posthook_agent}</span>
-                    )}
                     {step.input_deps && step.input_deps.length > 0 && (
                       <span className="text-[10px] text-zinc-600">
                         deps: {step.input_deps.map((d) => d.step).join(', ')}
