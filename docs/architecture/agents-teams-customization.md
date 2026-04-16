@@ -2,7 +2,7 @@
 
 ## Overview
 
-EphemeralOS agents are customizable runtime units defined through Markdown files or API endpoints. Teams orchestrate multiple agents in coordinated workflows with persistent task queues and blocker mechanics. This document describes the customization surface, loading pipeline, persistence model, and team run lifecycle.
+EphemeralOS agents are customizable runtime units defined through Markdown files or API endpoints. Teams orchestrate multiple agents in coordinated workflows with persistent task queues, task notes, and replanning. This document describes the customization surface, loading pipeline, persistence model, and team run lifecycle.
 
 ---
 
@@ -259,9 +259,7 @@ Three distinct layers orchestrate the transition from disk/database to runtime e
 
 - **`team_runs`** (durable): Team execution instances. Tracks `team_definition_id`, `session_id`, `status` (pending | running | succeeded | failed), replan count.
 
-- **`tasks`** (partitioned by `team_run_id`): Task queue for a single team run. Fields: `status` (pending | ready | running | expanded | paused | replanning | done | failed | cancelled), `agent_name` (assigned worker), `deps` (task IDs), `parent_id` (parent task for expansion), `depth`, `retry_count`, `agent_run_id` (link to agent execution), `fired_by_task_id` (for replanner tasks, points to original task).
-
-- **`blockers`** (durable): Active/resolved blockers during team runs. `initiating_task_id` is the task that declared the blocker; `fix_task_id` is the task spawned to resolve it.
+- **`tasks`** (partitioned by `team_run_id`): Task queue for a single team run. Fields: `status` (pending | ready | running | expanded | replanning | done | failed | cancelled), `agent_name` (assigned worker), `deps` (task IDs), `parent_id` (parent task for expansion), `depth`, `retry_count`, `agent_run_id` (link to agent execution), `fired_by_task_id` (for replanner tasks, points to original task).
 
 - **`agent_runs`** (durable): Every individual agent invocation (ephemeral or team). Links task to agent execution via `parent_task_id`.
 
@@ -271,7 +269,7 @@ Three distinct layers orchestrate the transition from disk/database to runtime e
 |-------|-----------|---------|
 | **Agent Definition** | In-memory registry (`_DEFINITIONS` dict) | Database table `agent_definitions` |
 | **Team Definition** | In-memory registry | Database table `team_definitions` |
-| **Run Execution** | Conductor state, task graph snapshot | `team_runs`, `tasks`, `blockers`, `agent_runs` rows |
+| **Run Execution** | Task graph snapshot | `team_runs`, `tasks`, `agent_runs` rows |
 | **Briefing/Notes** | Task Center in-memory cache | Note records in `team_runs` (persisted asynchronously) |
 
 ---
@@ -326,11 +324,11 @@ REST Client         Router                                            agent_defi
 
 ## 5. Team Run Lifecycle Wiring
 
-Sequence showing a team run from start through task dispatch to completion, integrating loader, registry, conductor, and persistence:
+Sequence showing a team run from start through task dispatch to completion, integrating loader, registry, and persistence:
 
 ```
-  User      /api/teams/runs   TeamLoader       Conductor      TaskStore        Runner        PostgreSQL
-             Start Run       +AgentRegistry   Blocker Mgr    Persistence    Dispatch Loop
+  User      /api/teams/runs   TeamLoader       TaskStore        Runner        PostgreSQL
+             Start Run       +AgentRegistry   Persistence    Dispatch Loop
     │              │               │               │               │               │               │
     │─POST /teams/─▶               │               │               │               │               │
     │  runs         │               │               │               │               │               │
@@ -349,7 +347,7 @@ Sequence showing a team run from start through task dispatch to completion, inte
     │              │               │               │               │  graph        │               │
     │              │───────────────────────────────restore()───────│               │               │
     │              │               │               │  Load active  │               │               │
-    │              │               │               │  blockers     │               │               │
+    │              │               │               │  task graph   │               │               │
     │              │───────────────────────────────────────────────────────────────start_run()     │
     │              │               │               │               │               │               │
     │              │               │               │               │               │─spawn_ephemeral│
@@ -372,10 +370,6 @@ Sequence showing a team run from start through task dispatch to completion, inte
     │              │               │               │     │  ──register_snapshot(task_id, msgs)─▶  │
     │              │               │               │     │  ──UPDATE tasks SET status='done'─────▶│
     │              │               │               │     │                                     │  │
-    │              │               │               │     │  [if blocker raised]                │  │
-    │              │               │               │     │  ──INSERT INTO blockers────────────────▶│
-    │              │               │               │     │  ──resolve_blocker() / spawn fix    │  │
-    │              │               │               │     │                                     │  │
     │              │               │               │     │  [if replan triggered]              │  │
     │              │               │               │     │  ──spawn_ephemeral_agent(replanner) │  │
     │              │               │               │     │  ──update_plan_tasks(add, cancel)──▶│  │
@@ -390,7 +384,6 @@ Sequence showing a team run from start through task dispatch to completion, inte
 
   NOTE: Registry lookup is O(1) after lazy load.
   NOTE: In-memory task graph syncs from DB on each iteration.
-  NOTE: Blocker state persists across crashes.
   NOTE: All state writes go through persistence layer.
 ```
 
@@ -399,7 +392,6 @@ Sequence showing a team run from start through task dispatch to completion, inte
 - **Loader** resolves team roster by looking up each agent in `AgentRegistry`.
 - **AgentRegistry** is lazily populated from disk (Markdown) and DB on first access.
 - **TaskStore** maintains in-memory task graph synced from DB via `refresh_graph()`.
-- **Conductor** persists active blockers; can restore on restart.
 - **Runner** dispatches tasks via `spawn_ephemeral_agent()`, updating DB after each step.
 - **AgentRunTracker** creates/finishes agent run records for every agent execution.
 
@@ -441,7 +433,6 @@ roster:
   planner: [team_planner]
   developer: [developer]
   reviewer: [validator, scout]
-  resolver: [resolver]
 ---
 This team coordinates...
 ```
@@ -450,7 +441,7 @@ This team coordinates...
 
 - `name`: Team identifier
 - `entry_planner`: Agent name that receives the initial goal
-- `roster`: Mapping of role → list of agent names. Replanner/resolver can be dynamically selected by role.
+- `roster`: Mapping of role → list of agent names. Replanners can be dynamically selected by role.
 
 ---
 
@@ -474,7 +465,6 @@ This team coordinates...
 - **`TeamRegistry`** (`registry.py`): In-memory lookup.
 - **`Task`** / **`TaskSpec`** (`models.py`): Execution units and plan items.
 - **`TaskStore`** (`persistence/task_store.py`): SQL persistence for task queue.
-- **`Conductor`** (`runtime/conductor.py`): Blocker assessment and resolution.
 - **`TeamRun`** (`runtime/team_run.py`): Orchestrates a single team execution.
 
 ---
@@ -489,7 +479,6 @@ backend/config/agents/
   ├── validator.md
   ├── team_planner.md
   ├── team_replanner.md
-  ├── resolver.md
   └── scout.md
 
 backend/config/teams/
@@ -505,4 +494,4 @@ User-created agents are:
 
 ## Summary
 
-**Customization** flows through Markdown frontmatter (builtin) and REST API (user-created) into a unified database. **Loading** parses disk files and DB records into `AgentDefinition` objects, which populate the in-memory `AgentRegistry`. **Runtime** lookups are O(1) after lazy initialization. **Teams** compose agents by role and use a persistent task queue backed by PostgreSQL. **Persistence** separates ephemeral state (in-memory graphs) from durable state (DB tables), enabling crash recovery via `Conductor.restore()` and `TaskStore.refresh_graph()`.
+**Customization** flows through Markdown frontmatter (builtin) and REST API (user-created) into a unified database. **Loading** parses disk files and DB records into `AgentDefinition` objects, which populate the in-memory `AgentRegistry`. **Runtime** lookups are O(1) after lazy initialization. **Teams** compose agents by role and use a persistent task queue backed by PostgreSQL. **Persistence** separates ephemeral state (in-memory graphs) from durable state (DB tables), enabling crash recovery via `TaskStore.refresh_graph()`.

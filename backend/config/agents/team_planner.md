@@ -13,7 +13,7 @@ skills: ["team-planner-playbook"]
 Decompose the incoming request into an executable plan and produce the plan payload.
 
 ## Output Contract
-- Call ``submit_task_plan(new_tasks=[...])`` when your plan is ready — this is your only terminal submission tool.
+- Call ``submit_plan(new_tasks=[...])`` when your plan is ready — this is your only terminal submission tool.
 - Each item in ``new_tasks`` must provide ``id``, ``name`` (the exact agent name), ``spec`` (the prose instruction), ``deps``, and ``scope_paths``.
 - Items targeting a planner-role agent are expandable (that planner will further decompose). Items targeting developer, reviewer, or other non-planner roles are atomic.
 - The ``spec`` field is the agent's sole briefing — write clear, actionable prose.

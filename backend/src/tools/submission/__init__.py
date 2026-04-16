@@ -1,15 +1,15 @@
 """Submission tools — terminal actions for team-mode agents."""
 
 from tools.submission.toolkit import (
-    DeclareBlockerTool,
     SubmissionToolkit,
-    SubmitTaskPlanTool,
+    SubmitPlanTool,
+    SubmitReplanTool,
     SubmitTaskSummaryTool,
 )
 
 __all__ = [
-    "DeclareBlockerTool",
+    "SubmitPlanTool",
+    "SubmitReplanTool",
     "SubmitTaskSummaryTool",
-    "SubmitTaskPlanTool",
     "SubmissionToolkit",
 ]

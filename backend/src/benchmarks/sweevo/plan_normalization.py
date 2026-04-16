@@ -1,8 +1,8 @@
 """Benchmark-specific plan payload normalization for SWE-EVO runs.
 
-Extracted from ``SubmitTaskPlanTool`` so the generic submit_task_plan tool stays
+Extracted from the planner submission tool so the generic submit_plan tool stays
 benchmark-agnostic. These functions are called from
-``SubmitTaskPlanTool._build_payload`` only when benchmark context is detected.
+the submission payload builder only when benchmark context is detected.
 """
 
 from __future__ import annotations

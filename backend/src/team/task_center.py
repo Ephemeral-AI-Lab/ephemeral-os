@@ -228,13 +228,6 @@ class TaskCenter:
             await self._transitions.refresh_and_emit(before)
         return result
 
-    def _paused_for_blocker(self, blocker_id: str) -> set[str]:
-        return {
-            tid
-            for tid, t in self.graph.items()
-            if t.blocker_id == blocker_id and t.status == TaskStatus.PAUSED
-        }
-
     # ---- task lifecycle --------------------------------------------------
 
     async def add_task(self, t: Task) -> None:
@@ -408,29 +401,6 @@ class TaskCenter:
 
     async def cancel_all_running(self, reason: str) -> int:
         return await self._with_transitions(lambda: self._store.cancel_all_running(reason))
-
-    async def cancel_paused_tasks(self, blocker_id: str) -> int:
-        return await self._with_transitions(
-            lambda: self._store.cancel_paused_tasks(blocker_id),
-            filter_ids=self._paused_for_blocker(blocker_id),
-        )
-
-    async def resume_paused_tasks(self, blocker_id: str) -> int:
-        return await self._with_transitions(
-            lambda: self._store.resume_paused_tasks(blocker_id),
-            filter_ids=self._paused_for_blocker(blocker_id),
-        )
-
-    async def pause_running_task(
-        self, task_id: str, blocker_id: str, checkpoint: str, verdict: str
-    ) -> bool:
-        paused = await self._store.pause_running_task(task_id, blocker_id, checkpoint, verdict)
-        if not paused:
-            return False
-        task = self.graph.get(task_id)
-        if task is not None:
-            self._transitions.emit_full_status(task)
-        return True
 
     async def mark_running(self, task_id: str, agent_run_id: str) -> Task:
         rec = await self._store.mark_running_sql(task_id, agent_run_id)

@@ -1,14 +1,14 @@
-# Action Reference: submit_task_plan (add corrective tasks)
+# Action Reference: submit_replan (add corrective tasks)
 
-Use `submit_task_plan(new_tasks=[...])` when the plan structure is sound but more work is needed. Existing siblings continue running.
+Use `submit_replan(new_tasks=[...], cancel_ids=[])` when the plan structure is sound but more work is needed. Existing siblings continue running.
 
 ## Task/Goal
 
 - An isolated task failed and needs a corrective retry or follow-up.
 - A transient error needs one retry with the same or narrower scope.
 - Follow-up validation is needed after a fix lands.
-- Include `expected_graph={"task_id": ["dep_id", ...]}` when sibling dependency
-  shape matters so `submit_task_plan(...)` can reject a mismatched projection
+- Include `expected_projection` when parent-bounded dependency shape or cascade
+  impact matters so `submit_replan(...)` can reject a mismatched projection
   before committing.
 
 ## Avoid
@@ -20,7 +20,7 @@ Use `submit_task_plan(new_tasks=[...])` when the plan structure is sound but mor
 
 - Must confirm owner paths live with CI before submitting.
 - Must read sibling notes before deciding corrective scope.
-- Each new task must have: `id`, `name` (agent), `spec`, `deps`, `scope_paths`.
+- Each new task must have: `id`, `parent_id`, `name` (agent), `spec`, `deps`, `scope_paths`.
 - Each `spec` must use these sections in order: `Goal`, `Environment`, `Scope`, `Context`, `Acceptance Criteria`.
 - Must call `context_changed_since()` before submitting if freshness moved.
 - For layered failures, emit a two-phase corrective plan (see Hard Rule 10 in main playbook).

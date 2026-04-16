@@ -78,9 +78,6 @@ def task_from_dict(data: dict[str, Any]) -> Task:
         failure_reason=data.get("failure_reason"),
         retry_count=int(data.get("retry_count") or 0),
         max_retries=int(data.get("max_retries") or 2),
-        blocker_id=data.get("blocker_id"),
-        pause_checkpoint=data.get("pause_checkpoint"),
-        pause_verdict=data.get("pause_verdict"),
     )
 
 
@@ -111,12 +108,6 @@ def apply_replayed_event(
                 t.retry_count = int(event.data.get("retry_count") or 0)
             if "max_retries" in event.data:
                 t.max_retries = int(event.data.get("max_retries") or t.max_retries)
-            if "blocker_id" in event.data:
-                t.blocker_id = event.data.get("blocker_id")
-            if "pause_checkpoint" in event.data:
-                t.pause_checkpoint = event.data.get("pause_checkpoint")
-            if "pause_verdict" in event.data:
-                t.pause_verdict = event.data.get("pause_verdict")
     elif event.kind == "budget_update":
         last_budget = (
             int(event.data.get("tasks_used") or 0),

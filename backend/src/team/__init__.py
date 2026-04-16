@@ -2,7 +2,7 @@
 
 A minimal wrapper on top of ``engine.core.query.run_query`` that adds a DAG
 of ``Task`` nodes, dependency-aware scheduling, and planner agents that
-extend the DAG via ``submit_task_plan``. Non-team mode (direct ``run_query``) is
+extend the DAG via ``submit_plan``. Non-team mode (direct ``run_query``) is
 untouched — deleting ``backend/src/team/`` leaves the single-agent flow
 fully functional.
 """

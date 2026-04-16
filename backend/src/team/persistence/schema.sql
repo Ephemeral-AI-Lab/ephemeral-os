@@ -24,34 +24,9 @@ CREATE TABLE IF NOT EXISTS tasks (
     started_at      TIMESTAMPTZ,
     finished_at     TIMESTAMPTZ,
     failure_reason  TEXT,
-    blocker_id      TEXT,
     fired_by_task_id TEXT,
-    pause_checkpoint TEXT,
-    pause_verdict   TEXT,
     PRIMARY KEY (id, team_run_id)
 ) PARTITION BY LIST (team_run_id);
 
 -- Indexes are created per-partition by partitions.py:
 --   tasks: (status, pending_dep_count, depth, created_at), (parent_id, status)
-
--- Blocker records — durable state for the Conductor.
-CREATE TABLE IF NOT EXISTS blockers (
-    id                  TEXT NOT NULL,
-    team_run_id         TEXT NOT NULL,
-    status              TEXT NOT NULL DEFAULT 'assessing',
-    reason              TEXT NOT NULL,
-    root_cause_paths    TEXT[] DEFAULT '{}',
-    initiating_task_id  TEXT NOT NULL,
-    suggestion          TEXT,
-    fix_task_id         TEXT,
-    declared_by         TEXT,
-    fix_summary         TEXT,
-    pending_assessments INT DEFAULT 0,
-    created_at          DOUBLE PRECISION NOT NULL,
-    resolved_at         DOUBLE PRECISION,
-    PRIMARY KEY (id, team_run_id)
-);
-
-CREATE INDEX IF NOT EXISTS idx_blockers_active
-    ON blockers (team_run_id, status)
-    WHERE status NOT IN ('resolved', 'failed');

@@ -9,7 +9,7 @@ Use this template for non-root `team_planner` tasks created by a parent planner.
 2. Analyze the subtask objective, expected outcome, and remaining uncertainty.
 3. Explore only enough to justify concrete child task ownership and scope boundaries.
 4. Draft the child plan and verify dependencies, scope paths, and structured specs.
-5. Submit the final child plan with `submit_task_plan(new_tasks=[...])`.
+5. Submit the final child plan with `submit_plan(new_tasks=[...])`.
 
 ## Assigned planner task
 

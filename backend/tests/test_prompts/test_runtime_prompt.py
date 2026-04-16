@@ -86,7 +86,7 @@ def test_agent_capabilities_prompt_omits_tool_call_notes_and_background_tasks():
         [SubagentToolkit(), make_background_toolkit(["run_subagent"])],
         has_background_tools=True,
         bg_tool_names=["run_subagent"],
-        terminal_tools=["submit_task_plan"],
+        terminal_tools=["submit_plan"],
     )
 
     assert "Tool Call Notes" not in prompt
@@ -95,7 +95,7 @@ def test_agent_capabilities_prompt_omits_tool_call_notes_and_background_tasks():
     assert "1. check_background_progress - Inspect background task status." in prompt
     assert "</Background Tasks>" in prompt
     assert "<Termination Condition>" in prompt
-    assert "- `submit_task_plan`" in prompt
+    assert "- `submit_plan`" in prompt
     assert "WARNING: These are one-way exit tools." in prompt
     assert "Your lifecycle ends at that moment" in prompt
     assert "</Termination Condition>" in prompt
@@ -166,7 +166,7 @@ def test_agent_capabilities_prompt_orders_sections_toolkits_skills_background():
         ],
         has_background_tools=True,
         bg_tool_names=["run_subagent"],
-        terminal_tools=["submit_task_plan"],
+        terminal_tools=["submit_plan"],
     )
 
     toolkit_idx = prompt.index("<Toolkit Instructions>")

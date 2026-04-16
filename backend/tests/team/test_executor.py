@@ -12,7 +12,6 @@ import pytest
 
 from team.models import (
     AgentResult,
-    BlockerDeclaration,
     Plan,
     ReplanPlan,
     ReplanRequest,
@@ -155,7 +154,7 @@ def test_read_result_fail_triggers_replan():
     assert "Auth spans 3 services" in result.reason
 
 
-def test_read_result_planner_submit_task_plan():
+def test_read_result_planner_submit_plan():
     """When resolved_plan is a Plan, _read_result returns AgentResult with plan."""
     executor, _ = _make_executor()
     plan = Plan.from_dict({"tasks": [{"id": "t1", "objective": "fix it", "agent": "developer"}]})
@@ -191,26 +190,6 @@ def test_read_result_replanner_submit_replan():
     assert result.submitted_replan is not None
     assert len(result.submitted_replan.add_tasks) == 1
     assert result.submitted_replan.cancel_ids == ["old-task-1"]
-
-
-def test_read_result_blocker_declaration():
-    """When blocker metadata exists, _read_result returns BlockerDeclaration."""
-    executor, _ = _make_executor()
-    ctx = TeamAgentContext(
-        tool_metadata={
-            "blocker_declaration": {
-                "root_cause_paths": ["pkg/shared.py"],
-                "reason": "shared import surface is broken",
-                "suggestion": "repair exports first",
-            },
-        }
-    )
-    task = SimpleNamespace(id="task-1", agent_name="team_replanner")
-    result = executor._read_result(task, ctx)
-    assert isinstance(result, BlockerDeclaration)
-    assert result.root_cause_paths == ["pkg/shared.py"]
-    assert result.reason == "shared import surface is broken"
-    assert result.suggestion == "repair exports first"
 
 
 def test_read_result_no_submission_fallback():
@@ -502,43 +481,6 @@ def test_run_forever_survives_transient_pop_ready_error():
 
     assert fake_queue.calls >= 2
     executor._run_one.assert_awaited_once()
-
-
-def test_dispatch_blocker_declaration_creates_blocker_and_completes_task():
-    import asyncio
-
-    task = _make_task(status="running")
-    tc = FakeTaskCenter()
-    tc.complete_task = AsyncMock(return_value=[])
-    team_run = FakeTeamRun(task_center=tc)
-    team_run.conductor = SimpleNamespace(
-        blocker_for_fix_task=lambda task_id: None,
-        create_blocker=AsyncMock(),
-    )
-    executor = Executor(
-        team_run=team_run,
-        runner=AsyncMock(),
-        agent_lookup=lambda name: FakeDefn(),
-    )
-    declaration = BlockerDeclaration(
-        root_cause_paths=["src/auth/session.py"],
-        reason="shared auth helper is broken",
-        suggestion="repair helper before resuming sibling work",
-    )
-
-    asyncio.run(executor._dispatch(task, declaration))
-
-    team_run.conductor.create_blocker.assert_awaited_once_with(
-        reason="shared auth helper is broken",
-        root_cause_paths=["src/auth/session.py"],
-        initiating_task_id=task.id,
-        suggestion="repair helper before resuming sibling work",
-        declared_by=task.id,
-    )
-    tc.complete_task.assert_awaited_once()
-    completed_result = tc.complete_task.await_args.args[1]
-    assert isinstance(completed_result, AgentResult)
-    assert completed_result.summary == "Declared blocker: shared auth helper is broken"
 
 
 # ---------------------------------------------------------------------------

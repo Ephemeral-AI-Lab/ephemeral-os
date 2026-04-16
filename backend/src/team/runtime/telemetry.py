@@ -118,9 +118,6 @@ def format_external_hook_line(payload: dict[str, Any]) -> str:
     task_id = str(payload.get("work_item_id") or "")[:8]
     if task_id:
         parts.append(f"task={task_id}")
-    blocker_id = str(payload.get("blocker_id") or "")[:8]
-    if blocker_id:
-        parts.append(f"blocker={blocker_id}")
     trigger = str(payload.get("trigger") or "")
     if trigger:
         parts.append(f"trigger={trigger}")

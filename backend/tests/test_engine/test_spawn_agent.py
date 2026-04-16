@@ -369,10 +369,10 @@ class TestToolkitFactoryInstantiation:
 
         assert registry.get("submit_task_summary") is not None
         assert registry.get("draft_task_plan") is None
-        assert registry.get("submit_task_plan") is None
-        assert registry.get("declare_blocker") is None
+        assert registry.get("submit_plan") is None
+        assert registry.get("submit_replan") is None
         assert "1. submit_task_summary - Submit task outcome." in prompt
-        assert "1. submit_task_plan - Submit a task plan." not in prompt
+        assert "1. submit_plan - Submit a child plan." not in prompt
         assert "1. draft_task_plan - Validate a draft task plan." not in prompt
 
     def test_role_policy_keeps_plan_tools_for_planner(self):
@@ -383,14 +383,14 @@ class TestToolkitFactoryInstantiation:
             registry,
             "Base prompt.",
             role="planner",
-            terminal_tools={"submit_task_plan"},
+            terminal_tools={"submit_plan"},
         )
 
-        assert registry.get("submit_task_plan") is not None
+        assert registry.get("submit_plan") is not None
         assert registry.get("submit_task_summary") is None
-        assert registry.get("declare_blocker") is None
+        assert registry.get("submit_replan") is None
         assert registry.get("draft_task_plan") is None
-        assert "1. submit_task_plan - Submit a task plan." in prompt
+        assert "1. submit_plan - Submit a child plan." in prompt
         assert "draft_task_plan" not in prompt
         assert "1. submit_task_summary - Submit task outcome." not in prompt
 
@@ -403,13 +403,13 @@ class TestToolkitFactoryInstantiation:
             "Base prompt.",
             role="planner",
             blocked_tools=["draft_task_plan"],
-            terminal_tools={"submit_task_plan"},
+            terminal_tools={"submit_plan"},
         )
 
-        assert registry.get("submit_task_plan") is not None
+        assert registry.get("submit_plan") is not None
         assert registry.get("draft_task_plan") is None
         assert registry.get("submit_task_summary") is None
-        assert "1. submit_task_plan - Submit a task plan." in prompt
+        assert "1. submit_plan - Submit a child plan." in prompt
         assert "1. draft_task_plan - Validate a draft task plan." not in prompt
 
 

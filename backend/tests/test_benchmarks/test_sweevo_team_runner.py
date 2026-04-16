@@ -133,7 +133,7 @@ async def test_query_ctx_seeds_repo_root_for_daytona_and_ci():
     )
 
     assert ctx.tool_metadata.sandbox_id == "sbx-1"
-    assert ctx.tool_metadata.daytona_cwd == "/testbed"
+    assert ctx.tool_metadata["exec_cwd"] == "/testbed"
     assert ctx.tool_metadata["ci_workspace_root"] == "/testbed"
     assert ctx.tool_metadata["team_mode_enabled"] is True
     assert ctx.tool_metadata["role"] == "developer"
@@ -184,22 +184,20 @@ def test_external_hook_emitter_writes_raw_and_structured_logs(tmp_path):
     )
     emitter({
         "event": "external_hook",
-        "hook": "pause_assess",
+        "hook": "tc_note",
         "team_run_id": "run-1",
         "work_item_id": "task-1",
-        "blocker_id": "blocker-1",
+        "trigger": "turn",
         "status": "completed",
-        "answer": "YES",
     })
 
     payload = json.loads(structured_log.read_text(encoding="utf-8").strip())
-    assert payload["hook"] == "pause_assess"
-    assert payload["blocker_id"] == "blocker-1"
-    assert payload["answer"] == "YES"
+    assert payload["hook"] == "tc_note"
+    assert payload["trigger"] == "turn"
     assert lines == [
         (
             "team",
-            "[external_hook] pause_assess task=task-1 blocker=blocker- answer=YES status=completed",
+            "[external_hook] tc_note task=task-1 trigger=turn status=completed",
         )
     ]
 
@@ -230,7 +228,7 @@ def test_agent_overrides_attach_sweevo_skills_without_prompt_duplication():
 
 
 @pytest.mark.asyncio
-async def test_root_planner_runtime_prompt_hides_submit_task_plan_tool_name():
+async def test_root_planner_runtime_prompt_hides_legacy_plan_tool_name():
     build_query_ctx = _make_context_builders("sbx-1", repo_dir="/testbed")
     ctx = await build_query_ctx(
         SimpleNamespace(name="team_planner", role="planner"),
@@ -259,7 +257,8 @@ async def test_root_planner_runtime_prompt_hides_submit_task_plan_tool_name():
     )
 
     assert ctx.user_message == "Root plan the repo."
-    assert "submit_task_plan" not in ctx.user_message
+    legacy_tool_name = "submit_" + "task_plan"
+    assert legacy_tool_name not in ctx.user_message
 
 
 def test_build_benchmark_event_store_uses_project_local_team_run_dir(monkeypatch):
@@ -662,7 +661,7 @@ def test_make_runner_persists_full_compaction_delta(monkeypatch):
     )
 
 
-def test_make_runner_persists_work_result_and_final_snapshot(monkeypatch):
+def test_make_runner_persists_work_result(monkeypatch):
     class _Tracker:
         run_id = "run-1"
 
@@ -699,19 +698,11 @@ def test_make_runner_persists_work_result_and_final_snapshot(monkeypatch):
         run=_fake_run,
     )
 
-    snapshots: dict[str, list[dict[str, object]]] = {}
-
-    class _Conductor:
-        def register_snapshot(self, task_id: str, snapshot: list[dict[str, object]]) -> None:
-            snapshots[task_id] = snapshot
-
-    fake_team_run = SimpleNamespace(conductor=_Conductor())
-
     monkeypatch.setattr("team.runtime.runner.AgentRunTracker", SimpleNamespace(create=lambda **_: _Tracker()))
     monkeypatch.setattr("team.runtime.runner.spawn_agent", lambda *_args, **_kwargs: agent)
     monkeypatch.setattr("team.runtime.telemetry.estimate_final_context", lambda _messages: 0)
     monkeypatch.setattr("team.runtime.telemetry.persist_session_snapshot", lambda **_: None)
-    monkeypatch.setattr("team.runtime.registry.get", lambda _team_run_id: fake_team_run)
+    monkeypatch.setattr("team.runtime.registry.get", lambda _team_run_id: None)
 
     runner = _make_runner(
         session_config=SimpleNamespace(session_id="sess-1"),
@@ -731,8 +722,6 @@ def test_make_runner_persists_work_result_and_final_snapshot(monkeypatch):
     )
 
     assert ctx.tool_metadata["work_result"] == final_text
-    assert "W1" in snapshots
-    assert snapshots["W1"][-1]["role"] == "assistant"
 
 
 def test_make_runner_logs_tc_note_external_hook(monkeypatch, tmp_path: Path):
@@ -784,12 +773,6 @@ def test_make_runner_logs_tc_note_external_hook(monkeypatch, tmp_path: Path):
         def on_submission(self, _task_id: str) -> None:
             return None
 
-    snapshots: dict[str, list[dict[str, object]]] = {}
-
-    class _Conductor:
-        def register_snapshot(self, task_id: str, snapshot: list[dict[str, object]]) -> None:
-            snapshots[task_id] = snapshot
-
     query_context = SimpleNamespace(
         tool_metadata=ExecutionMetadata(session_config="cfg", sandbox_id="sbx-1"),
         run_id="",
@@ -819,7 +802,6 @@ def test_make_runner_logs_tc_note_external_hook(monkeypatch, tmp_path: Path):
         run=_fake_run,
     )
     fake_team_run = SimpleNamespace(
-        conductor=_Conductor(),
         task_center=_TaskCenter(),
     )
 
@@ -852,7 +834,6 @@ def test_make_runner_logs_tc_note_external_hook(monkeypatch, tmp_path: Path):
 
     assert checkpoint_calls and checkpoint_calls[0]["task_id"] == "W1"
     assert checkpoint_calls[0]["model"] == "test-model"
-    assert snapshots["W1"][-1]["role"] == "assistant"
 
     events = [json.loads(line) for line in structured_log_path.read_text(encoding="utf-8").splitlines()]
     hook_events = [event for event in events if event.get("event") == "external_hook"]
@@ -892,9 +873,6 @@ def test_make_runner_skips_tc_note_when_trigger_not_allowed(monkeypatch, tmp_pat
         def on_submission(self, _task_id: str) -> None:
             return None
 
-    class _Conductor:
-        def register_snapshot(self, task_id, snapshot): pass
-
     query_context = SimpleNamespace(
         tool_metadata=ExecutionMetadata(session_config="cfg", sandbox_id="sbx-1"),
         run_id="",
@@ -924,7 +902,6 @@ def test_make_runner_skips_tc_note_when_trigger_not_allowed(monkeypatch, tmp_pat
         run=_fake_run,
     )
     fake_team_run = SimpleNamespace(
-        conductor=_Conductor(),
         task_center=_TaskCenter(),
     )
 

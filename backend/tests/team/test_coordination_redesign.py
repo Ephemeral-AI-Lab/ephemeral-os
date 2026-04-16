@@ -9,7 +9,7 @@ from team.builtins import register_all as register_team_builtins
 from team.models import BudgetConfig, BudgetState, Task, TaskStatus
 from team.runtime.context_builder import build_query_context, build_task_metadata
 from tools.core.base import ToolExecutionContext
-from tools.submission.toolkit import DeclareBlockerTool, SubmitTaskPlanTool
+from tools.submission.toolkit import SubmitPlanTool, SubmitReplanTool
 
 
 if get_definition("developer") is None:
@@ -21,7 +21,7 @@ def _spec(
     *,
     environment: str = "Use the current repository workspace and configured team runtime.",
     scope: str = "Stay within the listed scope_paths.",
-    context: str = "This task was created by submit_task_plan.",
+    context: str = "This task was created by submit_plan.",
     acceptance: str = "Submit the appropriate terminal summary when complete.",
 ) -> str:
     return (
@@ -94,54 +94,6 @@ def test_build_task_metadata_enables_team_runtime_flags():
     assert meta["replans_used"] == 1
 
 
-def test_build_task_metadata_exposes_active_blocker_fix_task_ids():
-    task = Task(
-        id="task-1",
-        team_run_id="run-1",
-        agent_name="team_replanner",
-        status=TaskStatus.PENDING,
-        objective="recover from shared failure",
-    )
-    team_run = SimpleNamespace(
-        id="run-1",
-        sandbox_id="sbx-1",
-        project_context=SimpleNamespace(repo_root="/repo"),
-        coordination_metadata={},
-        task_center=object(),
-        arbiter=None,
-        budgets=None,
-        budget_state=None,
-        root_task_id="root-1",
-        roster={"replanner": ["team_replanner"]},
-        conductor=SimpleNamespace(
-            has_active_blocker=lambda: True,
-            active_blockers=lambda: [
-                SimpleNamespace(
-                    id="blk-1",
-                    reason="shared import broken",
-                    root_cause_paths=["pkg/shared.py"],
-                    status=SimpleNamespace(value="fixing"),
-                    initiating_task_id="dev-1",
-                    fix_task_id="resolver-1",
-                )
-            ],
-        ),
-    )
-
-    meta = build_task_metadata(team_run, task)
-
-    assert meta["active_blockers"] == [
-        {
-            "id": "blk-1",
-            "reason": "shared import broken",
-            "root_cause_paths": ["pkg/shared.py"],
-            "status": "fixing",
-            "initiating_task_id": "dev-1",
-            "fix_task_id": "resolver-1",
-        }
-    ]
-
-
 @pytest.mark.asyncio
 async def test_submit_plan_resolves_roster_role_hints():
     task_center = _AsyncTaskCenterStub()
@@ -164,7 +116,7 @@ async def test_submit_plan_resolves_roster_role_hints():
         },
     )
 
-    tool = SubmitTaskPlanTool()
+    tool = SubmitPlanTool()
     result = await tool.execute(
         tool.input_model(
             new_tasks=[
@@ -216,7 +168,7 @@ async def test_submit_plan_rejects_oversize_task_notes():
         },
     )
 
-    tool = SubmitTaskPlanTool()
+    tool = SubmitPlanTool()
     result = await tool.execute(
         tool.input_model(
             new_tasks=[
@@ -254,7 +206,7 @@ async def test_submit_plan_rejects_malformed_spec_sections():
         },
     )
 
-    tool = SubmitTaskPlanTool()
+    tool = SubmitPlanTool()
     result = await tool.execute(
         tool.input_model(
             new_tasks=[
@@ -275,33 +227,7 @@ async def test_submit_plan_rejects_malformed_spec_sections():
 
 
 @pytest.mark.asyncio
-async def test_submit_plan_rejects_existing_task_rewires():
-    task_center = _AsyncTaskCenterStub()
-    ctx = ToolExecutionContext(
-        cwd="/tmp",
-        metadata={
-            "task_center": task_center,
-            "work_item_id": "replanner-task",
-            "agent_name": "team_replanner",
-            "role": "replanner",
-        },
-    )
-
-    tool = SubmitTaskPlanTool()
-    result = await tool.execute(
-        tool.input_model(
-            existing_tasks=[{"id": "task-a", "deps": ["task-b"]}],
-        ),
-        ctx,
-    )
-
-    assert result.is_error is True
-    assert "existing_tasks rewiring is not supported yet" in result.output
-    assert ctx.metadata.get("resolved_plan") is None
-
-
-@pytest.mark.asyncio
-async def test_submit_replan_accepts_matching_expected_graph():
+async def test_submit_replan_accepts_parent_projection_and_child_insert():
     task_center = _AsyncTaskCenterStub()
     task_center.graph = {
         "replanner-task": Task(
@@ -324,9 +250,9 @@ async def test_submit_replan_accepts_matching_expected_graph():
             id="survivor",
             team_run_id="run-1",
             agent_name="validator",
-            status=TaskStatus.PENDING,
+            status=TaskStatus.EXPANDED,
             objective="validate",
-            deps=["repair"],
+            deps=[],
             parent_id="parent",
         ),
     }
@@ -340,21 +266,28 @@ async def test_submit_replan_accepts_matching_expected_graph():
         },
     )
 
-    tool = SubmitTaskPlanTool()
+    tool = SubmitReplanTool()
     result = await tool.execute(
         tool.input_model(
-            remove_tasks=["stale"],
+            cancel_ids=["stale"],
             new_tasks=[
                 {
                     "id": "repair",
+                    "parent_id": "survivor",
                     "spec": _spec("Repair the stale implementation path."),
                     "name": "developer",
                     "scope_paths": ["src/api.py"],
                 },
             ],
-            expected_graph={
-                "repair": [],
-                "survivor": ["repair"],
+            expected_projection={
+                "root_parent_id": "parent",
+                "tasks": {
+                    "repair": {"parent_id": "survivor", "deps": []},
+                    "survivor": {"parent_id": "parent", "deps": []},
+                },
+                "cancelled": {
+                    "stale": {"cascade": []},
+                },
             },
         ),
         ctx,
@@ -365,7 +298,7 @@ async def test_submit_replan_accepts_matching_expected_graph():
 
 
 @pytest.mark.asyncio
-async def test_submit_replan_rejects_mismatched_expected_graph():
+async def test_submit_replan_rejects_mismatched_expected_projection():
     task_center = _AsyncTaskCenterStub()
     task_center.graph = {
         "replanner-task": Task(
@@ -396,61 +329,37 @@ async def test_submit_replan_rejects_mismatched_expected_graph():
         },
     )
 
-    tool = SubmitTaskPlanTool()
+    tool = SubmitReplanTool()
     result = await tool.execute(
         tool.input_model(
             new_tasks=[
                 {
                     "id": "repair",
+                    "parent_id": "parent",
                     "spec": _spec("Repair the stale implementation path."),
                     "name": "developer",
                     "scope_paths": ["src/api.py"],
                 },
             ],
-            expected_graph={
-                "repair": [],
-                "survivor": [],
+            expected_projection={
+                "root_parent_id": "parent",
+                "tasks": {
+                    "repair": {"parent_id": "parent", "deps": []},
+                    "survivor": {"parent_id": "parent", "deps": []},
+                },
+                "cancelled": {},
             },
         ),
         ctx,
     )
 
     assert result.is_error is True
-    assert "expected_graph deps mismatch for 'survivor'" in result.output
+    assert "expected_projection deps mismatch for 'survivor'" in result.output
     assert ctx.metadata.get("resolved_plan") is None
 
 
 @pytest.mark.asyncio
-async def test_declare_blocker_writes_structured_metadata():
-    ctx = ToolExecutionContext(
-        cwd="/tmp",
-        metadata={
-            "work_item_id": "planner-task",
-            "agent_name": "team_planner",
-            "role": "planner",
-        },
-    )
-
-    tool = DeclareBlockerTool()
-    result = await tool.execute(
-        tool.input_model(
-            root_cause_paths=["pkg/shared.py"],
-            reason="shared dependency is broken",
-            suggestion="repair exports first",
-        ),
-        ctx,
-    )
-
-    assert result.is_error is False
-    assert ctx.metadata["blocker_declaration"] == {
-        "root_cause_paths": ["pkg/shared.py"],
-        "reason": "shared dependency is broken",
-        "suggestion": "repair exports first",
-    }
-
-
-@pytest.mark.asyncio
-async def test_build_query_context_planner_terminal_tools_exclude_blocker():
+async def test_build_query_context_planner_terminal_tools():
     task = Task(
         id="planner-task",
         team_run_id="run-1",
@@ -479,7 +388,7 @@ async def test_build_query_context_planner_terminal_tools_exclude_blocker():
         task,
     )
 
-    assert ctx.tool_metadata["terminal_tools"] == {"submit_task_plan"}
+    assert ctx.tool_metadata["terminal_tools"] == {"submit_plan"}
 
 
 @pytest.mark.asyncio

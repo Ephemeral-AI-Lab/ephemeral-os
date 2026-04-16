@@ -10,7 +10,6 @@ from pydantic import BaseModel, Field
 
 from message import ConversationMessage, TextBlock, ToolUseBlock
 from engine.core.query import QueryContext, _execute_tool_call, run_query
-from engine.runtime.background_tasks import BackgroundTaskManager
 from message.stream_events import (
     AssistantTurnComplete,
     ToolExecutionCompleted,
@@ -99,20 +98,20 @@ class LoadSkillReferenceTool(BaseTool):
         return ToolResult(output="loaded")
 
 
-class SubmitTaskPlanInput(BaseModel):
+class SubmitPlanInput(BaseModel):
     new_tasks: list[dict[str, object]] = Field(default_factory=list)
 
 
-class SubmitTaskPlanTool(BaseTool):
-    name = "submit_task_plan"
+class SubmitPlanTool(BaseTool):
+    name = "submit_plan"
     description = "Dummy submit plan tool."
-    input_model = SubmitTaskPlanInput
+    input_model = SubmitPlanInput
 
     def __init__(self) -> None:
         self.calls = 0
 
     async def execute(
-        self, arguments: SubmitTaskPlanInput, context: ToolExecutionContext
+        self, arguments: SubmitPlanInput, context: ToolExecutionContext
     ) -> ToolResult:
         del arguments, context
         self.calls += 1
@@ -232,7 +231,7 @@ async def test_execute_tool_call_rejects_wrong_tool_when_terminal_guard_active(t
     client = FakeApiClient([_text_reply()])
     metadata = ExecutionMetadata()
     metadata["_required_next_tool"] = {
-        "tool_name": "submit_task_plan",
+        "tool_name": "submit_plan",
         "reason": "plan-json-contract is active.",
         "reset_hint": "Reload the ending chain if needed.",
     }
@@ -246,7 +245,7 @@ async def test_execute_tool_call_rejects_wrong_tool_when_terminal_guard_active(t
     )
 
     assert result.is_error is True
-    assert "submit_task_plan" in result.content
+    assert "submit_plan" in result.content
     assert context.tool_metadata is not None
     assert context.tool_metadata.get("_required_next_tool") is not None
 
@@ -459,7 +458,7 @@ async def test_parallel_tool_calls(tmp_path: Path):
 
 @pytest.mark.asyncio
 async def test_parallel_batch_rejects_sibling_tool_when_terminal_guard_is_active(tmp_path: Path):
-    submit_plan = SubmitTaskPlanTool()
+    submit_plan = SubmitPlanTool()
     echo = EchoTool()
     registry = _make_registry(submit_plan, echo)
     client = FakeApiClient(
@@ -467,7 +466,7 @@ async def test_parallel_batch_rejects_sibling_tool_when_terminal_guard_is_active
             _tool_reply(
                 ToolUseBlock(
                     id="tc1",
-                    name="submit_task_plan",
+                    name="submit_plan",
                     input={"new_tasks": []},
                 ),
                 ToolUseBlock(id="tc2", name="echo", input={"message": "extra"}),
@@ -477,7 +476,7 @@ async def test_parallel_batch_rejects_sibling_tool_when_terminal_guard_is_active
     )
     metadata = ExecutionMetadata()
     metadata["_required_next_tool"] = {
-        "tool_name": "submit_task_plan",
+        "tool_name": "submit_plan",
         "reason": "plan-json-contract is active.",
         "reset_hint": "Reload the ending chain if needed.",
     }
@@ -492,7 +491,7 @@ async def test_parallel_batch_rejects_sibling_tool_when_terminal_guard_is_active
     assert len(tool_completes) == 2
     assert all(event.is_error for event in tool_completes)
     assert all(
-        "Submit only `submit_task_plan(...)` in the next tool batch." in event.output
+        "Submit only `submit_plan(...)` in the next tool batch." in event.output
         for event in tool_completes
     )
     assert submit_plan.calls == 0
@@ -536,7 +535,7 @@ async def test_streaming_pending_terminal_guard_rejects_wrong_tool_without_start
     )
     metadata = ExecutionMetadata()
     metadata["_required_next_tool"] = {
-        "tool_name": "submit_task_plan",
+        "tool_name": "submit_plan",
         "reason": "plan-json-contract is active.",
         "reset_hint": "Reload the ending chain if needed.",
     }
@@ -550,7 +549,7 @@ async def test_streaming_pending_terminal_guard_rejects_wrong_tool_without_start
     assert tool_starts == []
     assert len(tool_completes) == 1
     assert tool_completes[0].is_error is True
-    assert "Submit only `submit_task_plan(...)` in the next tool batch." in tool_completes[0].output
+    assert "Submit only `submit_plan(...)` in the next tool batch." in tool_completes[0].output
 
 
 @pytest.mark.asyncio

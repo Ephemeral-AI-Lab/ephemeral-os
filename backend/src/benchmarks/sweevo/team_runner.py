@@ -328,9 +328,8 @@ def _make_context_builders(
     with a sandbox-note prompt prefix, benchmark coordination flags, and a
     code-intelligence warm-up for the SWE-EVO sandbox.
 
-    Agent role, terminal tools prompt, roster, and active-blocker injection are all
-    supplied by the default builder — the sweevo team definition (loaded from
-    the DB) carries everything else.
+    Agent role, terminal tools prompt, and roster are supplied by the default
+    builder; the sweevo team definition loaded from the DB carries everything else.
     """
     from team.runtime.context_builder import build_query_context as _default_ctx
 

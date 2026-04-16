@@ -28,7 +28,6 @@ MERGED_RUNTIME_METADATA_KEYS: tuple[str, ...] = (
     "task_summary_type",
     "resolved_plan",
     "plan_is_replan",
-    "blocker_declaration",
 )
 
 

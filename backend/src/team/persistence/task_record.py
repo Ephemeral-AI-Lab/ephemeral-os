@@ -57,10 +57,7 @@ class TaskRecord(Base):
         DateTime(timezone=True), nullable=True
     )
     failure_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
-    blocker_id: Mapped[str | None] = mapped_column(Text, nullable=True)
     fired_by_task_id: Mapped[str | None] = mapped_column(Text, nullable=True)
-    pause_checkpoint: Mapped[str | None] = mapped_column(Text, nullable=True)
-    pause_verdict: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     def __repr__(self) -> str:
         return (

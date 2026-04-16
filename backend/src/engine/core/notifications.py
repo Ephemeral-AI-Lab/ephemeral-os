@@ -28,13 +28,13 @@ def _budget_warning_steps(context: "QueryContext") -> str:
         return (
             "1. Stop exploring and shaping new lanes immediately.\n"
             "2. Call task_center_changed_since() if you have not already.\n"
-            "3. Call submit_task_plan() with the strongest plan you can defend right now."
+            "3. Call submit_plan() with the strongest plan you can defend right now."
         )
     if role == "replanner":
         return (
             "1. Stop reopening ownership questions immediately.\n"
             "2. Call task_center_changed_since() if you have not already.\n"
-            "3. Call submit_task_plan() or declare_blocker() with the corrective action you can already justify."
+            "3. Call submit_replan() with the corrective action you can already justify."
         )
     if role == "reviewer":
         return (

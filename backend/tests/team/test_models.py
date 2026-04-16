@@ -279,6 +279,7 @@ def test_replan_plan_from_dict_round_trip():
                 "agent": "developer",
                 "deps": [],
                 "scope_paths": ["src/"],
+                "parent_id": "parent-task",
             }
         ],
         "cancel_ids": ["old-task-1", "old-task-2"],
@@ -287,6 +288,7 @@ def test_replan_plan_from_dict_round_trip():
     assert len(replan.add_tasks) == 1
     assert replan.add_tasks[0].id == "fix1"
     assert replan.add_tasks[0].objective == "fix the bug"
+    assert replan.add_tasks[0].parent_id == "parent-task"
     assert replan.cancel_ids == ["old-task-1", "old-task-2"]
 
 

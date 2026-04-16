@@ -158,10 +158,73 @@ class PlanExpander:
         target_parent_id: str | None,
         target_root_id: str,
     ) -> dict[str, int]:
+        if replan_task_id in cancel_ids:
+            raise InvalidPlan("replanner cannot cancel itself")
+
+        graph = self._graph_getter()
+        active_tasks = {
+            task_id: task
+            for task_id, task in graph.items()
+            if task.status
+            not in {TaskStatus.CANCELLED, TaskStatus.DONE, TaskStatus.FAILED}
+        }
+
+        def _cascade_ids_for_cancel_root(cancel_root_id: str) -> set[str]:
+            children_by_parent: dict[str, list[str]] = {}
+            dependents_by_dep: dict[str, list[str]] = {}
+            for task_id, task in active_tasks.items():
+                if task.parent_id:
+                    children_by_parent.setdefault(task.parent_id, []).append(task_id)
+                for dep_id in task.deps or []:
+                    dependents_by_dep.setdefault(dep_id, []).append(task_id)
+
+            cascaded: set[str] = set()
+            queue = [cancel_root_id]
+            while queue:
+                current = queue.pop(0)
+                for child_id in children_by_parent.get(current, []):
+                    if child_id not in cascaded:
+                        cascaded.add(child_id)
+                        queue.append(child_id)
+                for dependent_id in dependents_by_dep.get(current, []):
+                    dependent = active_tasks.get(dependent_id)
+                    if dependent is None or has_role(dependent.agent_name, "reviewer"):
+                        continue
+                    if dependent_id not in cascaded:
+                        cascaded.add(dependent_id)
+                        queue.append(dependent_id)
+            cascaded.discard(cancel_root_id)
+            return cascaded
+
+        cancelled = set(cancel_ids)
+        for cancel_id in cancel_ids:
+            cancelled.update(_cascade_ids_for_cancel_root(cancel_id))
+
+        def _is_inside_parent_projection(task_id: str) -> bool:
+            task = graph.get(task_id)
+            while task is not None:
+                if task.parent_id == target_parent_id:
+                    return True
+                if task.parent_id is None:
+                    return target_parent_id is None
+                task = graph.get(task.parent_id)
+            return False
+
+        allowed_parent_ids: set[str | None] = {target_parent_id}
+        for task in graph.values():
+            if task.id == replan_task_id or task.id in cancelled:
+                continue
+            if task.status in {TaskStatus.CANCELLED, TaskStatus.DONE, TaskStatus.FAILED}:
+                continue
+            if _is_inside_parent_projection(task.id):
+                allowed_parent_ids.add(task.id)
+
         for cid in cancel_ids:
             rec = await self._store.get_record(cid)
             if rec is None:
                 raise InvalidPlan(f"cancel target {cid} not found")
+            if cid == replan_task_id:
+                raise InvalidPlan("replanner cannot cancel itself")
             if rec.parent_id != target_parent_id:
                 raise InvalidPlan(
                     f"cancel target '{cid}' is a child of '{rec.parent_id}', not a sibling at your level. "
@@ -175,13 +238,23 @@ class PlanExpander:
 
         local_to_new: dict[str, str] = {}
         for spec in add_tasks:
+            if spec.parent_id not in allowed_parent_ids:
+                raise InvalidPlan(
+                    f"new task '{spec.id}' parent_id={spec.parent_id!r} is outside "
+                    f"the allowed parent projection rooted at {target_parent_id!r}"
+                )
+            if spec.parent_id in cancelled:
+                raise InvalidPlan(
+                    f"new task '{spec.id}' cannot be inserted under cancelled parent "
+                    f"'{spec.parent_id}'"
+                )
             if spec.id:
                 if spec.id in local_to_new:
                     raise InvalidPlan(f"duplicate id '{spec.id}'")
                 local_to_new[spec.id] = self.new_id()
 
         adj = await self._store.get_adjacency()
-        clean_adj = {k: v for k, v in adj.items() if k not in set(cancel_ids)}
+        clean_adj = {k: v for k, v in adj.items() if k not in cancelled}
         specs: list[TaskDefinition] = []
         for spec in add_tasks:
             nid = local_to_new.get(spec.id, self.new_id()) if spec.id else self.new_id()
@@ -189,7 +262,7 @@ class PlanExpander:
             for d in spec.deps:
                 if d in local_to_new:
                     rdeps.append(local_to_new[d])
-                elif d in adj:
+                elif d in adj and d not in cancelled and d != replan_task_id:
                     rdeps.append(d)
                 else:
                     raise InvalidPlan(f"replan dep '{d}' is not a local alias or existing task id")
@@ -202,6 +275,7 @@ class PlanExpander:
                     description=spec.description or "",
                     deps=rdeps,
                     scope_paths=list(spec.scope_paths),
+                    parent_id=spec.parent_id,
                 )
             )
 
@@ -215,9 +289,6 @@ class PlanExpander:
             cancel_ids=cancel_ids,
             cancel_reason=f"cancelled_by_replan_{replan_task_id}",
             specs=specs,
-            parent_id=target_parent_id,
-            parent_depth=max(0, target_depth - 1),
-            parent_root_id=target_root_id or None,
         )
 
         if specs:

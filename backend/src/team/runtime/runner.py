@@ -29,8 +29,8 @@ logger = logging.getLogger(__name__)
 SUBMISSION_TOOL_NAMES = frozenset({
     "submit_task_summary",
     "submit_task_note",
-    "submit_task_plan",
-    "declare_blocker",
+    "submit_plan",
+    "submit_replan",
 })
 # Tools whose completion should record a scoped edit via ``TaskCenter.on_edit``.
 EDIT_TOOL_NAMES = frozenset({"daytona_edit_file", "daytona_write_file"})
@@ -45,29 +45,17 @@ def _retry_submission_prompt(
 ) -> str:
     if not terminal_tools:
         return "Return your final concise result as plain text and stop."
-    planner_like = "submit_task_plan" in terminal_tools
-    blocker_allowed = "declare_blocker" in terminal_tools
+    planner_like = "submit_plan" in terminal_tools or "submit_replan" in terminal_tools
     if planner_like:
+        plan_tool = "submit_replan" if "submit_replan" in terminal_tools else "submit_plan"
         if exit_reason == QueryExitReason.RESOURCE_LIMIT:
-            if blocker_allowed:
-                return (
-                    "Your budget/token limit was hit. Submit now. "
-                    "Call submit_task_plan with the strongest corrective plan you can justify, "
-                    "or declare_blocker if the failure is a shared blocker."
-                )
             return (
                 "Your budget/token limit was hit. Submit now. "
-                "Call submit_task_plan with the strongest plan you can justify."
-            )
-        if blocker_allowed:
-            return (
-                "You returned without a terminal submission. "
-                "Call submit_task_plan to commit the plan you shaped, "
-                "or declare_blocker if this is a shared blocker."
+                f"Call {plan_tool} with the strongest plan you can justify."
             )
         return (
             "You returned without a terminal submission. "
-            "Call submit_task_plan to commit the plan you shaped."
+            f"Call {plan_tool} to commit the plan you shaped."
         )
 
     if exit_reason == QueryExitReason.RESOURCE_LIMIT:
@@ -117,7 +105,7 @@ class TeamAgentRunner:
       * ``AgentRunTracker`` lifecycle
       * ``spawn_agent`` + tool_metadata wiring
       * ``terminal_tools`` wiring from metadata to QueryContext
-      * ``on_turn`` callback (conductor snapshot + ``task_center.tick``)
+      * ``on_turn`` callback (``task_center.tick``)
       * Tool completion observation (``on_edit`` / submission tools)
       * ``tc_note`` checkpoint scheduling (per agent's ``allowed_triggers``)
       * Retry loop: re-prompts agent when it exits without a terminal tool
@@ -181,7 +169,8 @@ class TeamAgentRunner:
             compacted_before = int(agent.query_context.session_state.compacted)
 
         # Merge spawn_agent's tool_metadata into ctx and redirect agent to ctx's metadata
-        # so team tools (submit_task_plan / submit_task_summary / …) write into the correct slot.
+        # so team tools (submit_plan / submit_replan / submit_task_summary / …)
+        # write into the correct slot.
         spawned_meta = agent.query_context.tool_metadata
         if getattr(spawned_meta, "session_config", None) is not None:
             ctx.tool_metadata.session_config = spawned_meta.session_config
@@ -229,7 +218,6 @@ class TeamAgentRunner:
                 if team_run is None:
                     return
                 frozen = snapshot if snapshot is not None else _snapshot()
-                team_run.conductor.register_snapshot(work_item_id, frozen)
                 trigger = team_run.task_center.activity.should_take_note(work_item_id)
                 if trigger is None:
                     return
@@ -282,7 +270,6 @@ class TeamAgentRunner:
                 if team_run is None:
                     return
                 snap = [m.model_dump(mode="json") for m in display_messages]
-                team_run.conductor.register_snapshot(work_item_id, snap)
                 team_run.task_center.activity.tick(work_item_id)
                 _schedule_checkpoint(snap)
             except Exception:
@@ -381,19 +368,6 @@ class TeamAgentRunner:
             state.final_text = extract_final_text(agent.display_messages)
             if state.final_text:
                 ctx.tool_metadata["work_result"] = state.final_text
-            if team_run_id and work_item_id:
-                try:
-                    from team.runtime.registry import get as get_team_run
-
-                    team_run = get_team_run(team_run_id)
-                    if team_run is not None:
-                        team_run.conductor.register_snapshot(work_item_id, _snapshot())
-                except Exception:
-                    logger.debug(
-                        "Failed to persist final agent snapshot for %s",
-                        work_item_id,
-                        exc_info=True,
-                    )
             if self.on_complete is not None:
                 await self.on_complete(state)
 

@@ -27,9 +27,6 @@ def task_status_payload(task: Task) -> dict[str, Any]:
         "failure_reason": task.failure_reason,
         "retry_count": task.retry_count,
         "max_retries": task.max_retries,
-        "blocker_id": task.blocker_id,
-        "pause_checkpoint": task.pause_checkpoint,
-        "pause_verdict": task.pause_verdict,
     }
 
 
@@ -44,9 +41,6 @@ def task_state_signature(task: Task | None) -> tuple[Any, ...] | None:
         task.failure_reason,
         task.retry_count,
         task.max_retries,
-        task.blocker_id,
-        task.pause_checkpoint,
-        task.pause_verdict,
     )
 
 

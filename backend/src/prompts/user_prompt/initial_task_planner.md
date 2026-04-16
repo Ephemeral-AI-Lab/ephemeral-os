@@ -9,7 +9,7 @@ Use this template for the root `team_planner` task that receives the original us
 2. Analyze the task objective, expected outcome, and likely owner surfaces.
 3. Explore only enough to justify concrete task ownership and scope boundaries.
 4. Draft the plan and verify dependencies, scope paths, and structured specs.
-5. Submit the final plan with `submit_task_plan(new_tasks=[...])`.
+5. Submit the final plan with `submit_plan(new_tasks=[...])`.
 
 ## User request
 

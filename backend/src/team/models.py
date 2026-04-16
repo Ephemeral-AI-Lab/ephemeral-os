@@ -33,7 +33,6 @@ class TaskStatus(str, Enum):
     READY = "ready"
     RUNNING = "running"
     EXPANDED = "expanded"  # planner submitted children, waiting for them to finish
-    PAUSED = "paused"
     REPLANNING = "replanning"
     DONE = "done"
     FAILED = "failed"
@@ -123,6 +122,7 @@ class TaskDefinition:
     description: str = ""
     deps: list[str] = field(default_factory=list)
     scope_paths: list[str] = field(default_factory=list)
+    parent_id: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -151,10 +151,7 @@ class Task:
     started_at: datetime | None = None
     finished_at: datetime | None = None
     failure_reason: str | None = None
-    blocker_id: str | None = None
     fired_by_task_id: str | None = None
-    pause_checkpoint: str | None = None
-    pause_verdict: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -212,6 +209,7 @@ def _taskspec_from_dict(it: dict[str, Any]) -> TaskDefinition:
     task_id = str(it.get("id") or "")
     objective = str(it.get("objective") or "")
     agent = str(it.get("agent") or "")
+    parent_id = it.get("parent_id")
     if not task_id:
         raise ValueError("TaskDefinition requires a non-empty 'id'")
     if not objective:
@@ -225,6 +223,7 @@ def _taskspec_from_dict(it: dict[str, Any]) -> TaskDefinition:
         description=str(it.get("description") or ""),
         deps=list(it.get("deps") or []),
         scope_paths=list(it.get("scope_paths") or []),
+        parent_id=str(parent_id) if parent_id is not None else None,
     )
 
 
@@ -251,14 +250,6 @@ class ReplanRequest:
     reason: str
     suggestion: str | None = None
     submission_kind: str = field(default="replan", init=False, repr=False)
-
-
-@dataclass
-class BlockerDeclaration:
-    root_cause_paths: list[str]
-    reason: str
-    suggestion: str | None = None
-    submission_kind: str = field(default="blocker", init=False, repr=False)
 
 
 # ---------------------------------------------------------------------------
@@ -315,32 +306,3 @@ class TeamDefinition:
     entry_planner: str
     roster: dict[str, list[str]] = field(default_factory=dict)
     terminal_tools: dict[str, set[str]] = field(default_factory=dict)
-
-
-# ---------------------------------------------------------------------------
-# Blocker protocol
-# ---------------------------------------------------------------------------
-
-
-class BlockerStatus(str, Enum):
-    ASSESSING = "assessing"
-    FIXING = "fixing"
-    RESOLVED = "resolved"
-    FAILED = "failed"
-
-
-@dataclass
-class Blocker:
-    id: str
-    team_run_id: str
-    status: BlockerStatus
-    reason: str
-    root_cause_paths: list[str]
-    initiating_task_id: str
-    suggestion: str | None = None
-    fix_task_id: str | None = None
-    declared_by: str | None = None
-    fix_summary: str | None = None
-    pending_assessments: int = 0
-    created_at: float = field(default_factory=time.time)
-    resolved_at: float | None = None

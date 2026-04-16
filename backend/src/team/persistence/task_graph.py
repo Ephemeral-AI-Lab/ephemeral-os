@@ -105,21 +105,6 @@ class TaskGraph:
             task.status = TaskStatus.READY
         self.add_ready(task_id)
 
-    def pause(
-        self,
-        task_id: str,
-        blocker_id: str,
-        checkpoint: str,
-        verdict: str,
-    ) -> None:
-        task = self.tasks.get(task_id)
-        if task is None:
-            return
-        task.status = TaskStatus.PAUSED
-        task.blocker_id = blocker_id
-        task.pause_checkpoint = checkpoint
-        task.pause_verdict = verdict
-
     # ---- insertion --------------------------------------------------------
 
     def insert_tasks(self, tasks: Iterable[Task]) -> None:

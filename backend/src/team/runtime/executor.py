@@ -2,7 +2,7 @@
 
 Tools write structured data to ``ctx.tool_metadata`` during the main run.
 The executor reads that state after the runner returns and dispatches:
-complete, submit_task_plan, submit_task_summary, or declare_blocker.
+complete, submit_plan, submit_replan, or submit_task_summary.
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ import uuid
 from collections.abc import Awaitable
 from typing import TYPE_CHECKING, Any, Callable
 
-from team.models import AgentResult, BlockerDeclaration, Plan, ReplanPlan, ReplanRequest, TaskStatus
+from team.models import AgentResult, Plan, ReplanPlan, ReplanRequest
 from team.runtime.context_builder import TeamAgentContext
 from team.runtime.plan_health_monitor import PlanHealthMonitor
 from team.runtime.scope_change_notifier import ScopeChangeNotifier
@@ -66,12 +66,6 @@ class Executor:
 
     async def _handle_worker_exception(self, task: "Task", reason: str) -> None:
         await self.team_run.task_center.fail_task(task.id, reason)
-        conductor = getattr(self.team_run, "conductor", None)
-        if conductor is None:
-            return
-        blocker = conductor.blocker_for_fix_task(task.id)
-        if blocker is not None:
-            await conductor.on_fix_failed(blocker.id, reason)
 
     _DEADLOCK_IDLE_THRESHOLD = 100  # ~5s of idle polls (100 * 50ms)
 
@@ -137,15 +131,6 @@ class Executor:
         agent_run_id = str(uuid.uuid4())
         task = await tc.mark_running(task.id, agent_run_id)
 
-        async def _current_task_state() -> Task | None:
-            get_task = getattr(tc, "get_task", None)
-            if callable(get_task):
-                return await get_task(task.id)
-            graph = getattr(tc, "graph", None)
-            if isinstance(graph, dict):
-                return graph.get(task.id, task)
-            return task
-
         defn = self.agent_lookup(task.agent_name)
         if defn is None:
             await tc.fail_task(task.id, f"unknown_agent: {task.agent_name}")
@@ -165,10 +150,6 @@ class Executor:
         try:
             await runner_task
         except asyncio.CancelledError:
-            current = await _current_task_state()
-            if current is not None and current.status == TaskStatus.PAUSED:
-                logger.info("Task %s paused during execution; dropping in-flight runner", task.id)
-                return
             raise
         except Exception as exc:
             await self._handle_worker_exception(task, f"runner_exception: {exc}")
@@ -178,11 +159,6 @@ class Executor:
             if callable(unregister_agent_run):
                 unregister_agent_run(task.id, runner_task)
 
-        current = await _current_task_state()
-        if current is not None and current.status == TaskStatus.PAUSED:
-            logger.info("Task %s completed after pause; ignoring stale result", task.id)
-            return
-
         # --- Read task state from tool_metadata and dispatch ---
         result = self._read_result(task, ctx)
         await self._dispatch(task, result)
@@ -191,7 +167,7 @@ class Executor:
         self,
         task: "Task",
         ctx: TeamAgentContext,
-    ) -> AgentResult | ReplanRequest | BlockerDeclaration:
+    ) -> AgentResult | ReplanRequest:
         """Read structured result from tool_metadata written by submission tools."""
         meta = ctx.tool_metadata
         summary_type = meta.get("task_summary_type")
@@ -203,7 +179,7 @@ class Executor:
         if summary_type == "fail":
             return ReplanRequest(reason=summary)
 
-        # submit_task_plan was called (planner/replanner)
+        # submit_plan or submit_replan was called.
         resolved_plan = meta.get("resolved_plan")
         if resolved_plan is not None:
             is_replan = bool(meta.get("plan_is_replan"))
@@ -211,20 +187,6 @@ class Executor:
                 return AgentResult(summary="", submitted_replan=resolved_plan)
             elif isinstance(resolved_plan, Plan):
                 return AgentResult(summary="", submitted_plan=resolved_plan)
-
-        blocker_payload = meta.get("blocker_declaration")
-        if isinstance(blocker_payload, dict):
-            reason = str(blocker_payload.get("reason") or "").strip()
-            root_cause_paths = blocker_payload.get("root_cause_paths") or []
-            if reason and isinstance(root_cause_paths, list):
-                suggestion = str(blocker_payload.get("suggestion") or "").strip() or None
-                paths = [str(path).strip() for path in root_cause_paths if str(path).strip()]
-                if paths:
-                    return BlockerDeclaration(
-                        root_cause_paths=paths,
-                        reason=reason,
-                        suggestion=suggestion,
-                    )
 
         # Fallback: no terminal tool was called (runner exhausted retries)
         work_result = str(meta.get("work_result") or "")[:500]
@@ -270,15 +232,8 @@ class Executor:
 
     async def _dispatch(self, task: "Task", result: Any) -> None:
         tc = self.team_run.task_center
-        conductor = getattr(self.team_run, "conductor", None)
-        fix_blocker = conductor.blocker_for_fix_task(task.id) if conductor is not None else None
 
         if isinstance(result, ReplanRequest):
-            if fix_blocker is not None and conductor is not None:
-                await tc.fail_task(task.id, f"blocker_fix_failed: {result.reason}")
-                await conductor.on_fix_failed(fix_blocker.id, result.reason)
-                await self._checkpoint_after_transition(task, outcome="blocker_fix_failed")
-                return
             try:
                 await tc.request_replan(task.id, result)
             except Exception as exc:
@@ -299,31 +254,9 @@ class Executor:
             await self._post_checkpoint_note(task, result)
             return
 
-        if isinstance(result, BlockerDeclaration):
-            if conductor is not None:
-                await conductor.create_blocker(
-                    reason=result.reason,
-                    root_cause_paths=result.root_cause_paths,
-                    initiating_task_id=task.id,
-                    suggestion=result.suggestion,
-                    declared_by=task.id,
-                )
-            await tc.complete_task(
-                task.id, AgentResult(summary=f"Declared blocker: {result.reason}")
-            )
-            await self._checkpoint_after_transition(task, outcome="blocker_declared")
-            return
-
         new_items = await tc.complete_task(task.id, result)
         if isinstance(result, AgentResult) and result.summary:
             await self._post_completion_note(task, result.summary)
-        if fix_blocker is not None and conductor is not None:
-            await conductor.on_fix_complete(
-                fix_blocker.id,
-                result.summary
-                if isinstance(result, AgentResult) and result.summary
-                else f"Fix task {task.id} completed.",
-            )
         if self.after_dispatch is not None:
             cb = self.after_dispatch(task, result, new_items)
             if isinstance(cb, Awaitable):

@@ -110,8 +110,8 @@ def _register_builtins() -> None:
     from tools.submission.toolkit import SubmissionToolkit
 
     register_toolkit_class("submission", SubmissionToolkit)
-    # NOTE: Submission tools (submit_task_plan, submit_task_summary,
-    # declare_blocker) are registered here. During the main query loop,
+    # NOTE: Submission tools (submit_plan, submit_replan, submit_task_summary)
+    # are registered here. During the main query loop,
     # they are gated via terminal_tools metadata. The executor's post-run
     # phase uses terminal_tools to determine when to stop the loop.
 

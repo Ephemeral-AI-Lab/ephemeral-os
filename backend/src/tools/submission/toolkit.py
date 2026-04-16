@@ -4,8 +4,8 @@ Tools write structured data to ``context.metadata``; the executor reads
 it after the runner returns.
 
 Tool surface:
-  - submit_task_plan     (terminal)     — commit plan to task model
-  - declare_blocker      (terminal)     — escalate to conductor
+  - submit_plan          (terminal)     — commit child plan to task model
+  - submit_replan        (terminal)     — commit corrective replan to task model
   - submit_task_summary  (terminal)     — submit success/fail outcome
 """
 
@@ -19,7 +19,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from agents.registry import get_definition
+from agents.registry import get_definition, has_role
 from team.planning.validation import validate_plan
 from tools.core.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolResult
 
@@ -128,10 +128,6 @@ async def _known_external_dep_ids(context: ToolExecutionContext) -> set[str] | N
     return {str(item) for item in await store.get_task_ids()}
 
 
-_EXISTING_TASKS_UNSUPPORTED = (
-    "existing_tasks rewiring is not supported yet; use remove_tasks + new_tasks "
-    "to replace stale siblings instead."
-)
 _SPEC_SECTIONS = ("Goal", "Environment", "Scope", "Context", "Acceptance Criteria")
 _SPEC_SECTION_RE = re.compile(
     r"(?im)^\s*(?:\d+[.)]\s*)?"
@@ -234,13 +230,6 @@ class SubmitTaskSummaryTool(BaseTool):
 # ---------------------------------------------------------------------------
 
 
-class ExistingTaskRef(BaseModel):
-    """Reference to a task already in the graph. Only deps can be rewired."""
-
-    id: str = Field(..., description="Must match an existing task ID")
-    deps: list[str] = Field(default_factory=list, description="Updated dependency list")
-
-
 class NewTaskSpec(BaseModel):
     """Full spec for a task the agent is creating."""
 
@@ -263,32 +252,86 @@ class NewTaskSpec(BaseModel):
     )
 
 
-class SubmitTaskPlanInput(BaseModel):
-    """Plan submission payload."""
+class ReplanTaskSpec(NewTaskSpec):
+    """Full spec for a task added by a replanner."""
 
-    existing_tasks: list[ExistingTaskRef] = Field(
-        default_factory=list,
+    parent_id: str | None = Field(
+        ...,
         description=(
-            "Reserved for future sibling dependency rewrites. "
-            "The current runtime rejects non-empty values."
+            "Existing parent task ID where this task should be inserted. Use null only "
+            "when inserting at the root parent layer."
         ),
     )
+
+
+class SubmitPlanInput(BaseModel):
+    """Planner submission payload."""
+
     new_tasks: list[NewTaskSpec] = Field(
         default_factory=list,
-        description="New tasks to create",
+        description="New child tasks to create",
     )
-    remove_tasks: list[str] = Field(
+    output: str | None = Field(
+        default=None,
+        description="Optional concise rationale or plan summary.",
+    )
+
+
+class ProjectedTask(BaseModel):
+    parent_id: str | None = Field(
+        default=None,
+        description="Expected parent ID after the replan.",
+    )
+    deps: list[str] = Field(
         default_factory=list,
-        description="Task IDs to cancel (siblings + descendants)",
+        description="Expected direct dependency IDs after the replan.",
     )
-    expected_graph: dict[str, list[str]] | None = Field(
+
+
+class CancelProjection(BaseModel):
+    cascade: list[str] = Field(
+        default_factory=list,
+        description="Expected descendant/dependent task IDs cancelled because of this root.",
+    )
+
+
+class ParentProjection(BaseModel):
+    root_parent_id: str | None = Field(
+        default=None,
+        description="The parent boundary this replan is allowed to modify.",
+    )
+    tasks: dict[str, ProjectedTask] = Field(
+        default_factory=dict,
+        description="Expected surviving tasks under the parent projection.",
+    )
+    cancelled: dict[str, CancelProjection] = Field(
+        default_factory=dict,
+        description="Expected cancellation roots and cascaded IDs.",
+    )
+
+
+class SubmitReplanInput(BaseModel):
+    """Corrective replan submission payload."""
+
+    new_tasks: list[ReplanTaskSpec] = Field(
+        default_factory=list,
+        description="New corrective tasks to create",
+    )
+    cancel_ids: list[str] = Field(
+        default_factory=list,
+        description="Task IDs to cancel (parent-level roots, with cascade)",
+    )
+    expected_projection: ParentProjection | None = Field(
         default=None,
         description=(
-            "Optional validation-only adjacency map expected after applying remove_tasks "
-            "and new_tasks. Keys are surviving sibling IDs plus new task IDs; values are "
-            "each task's expected dependency IDs. This is checked against the runtime "
-            "projection and does not mutate existing task dependencies."
+            "Optional validation-only post-state projection under root_parent_id. "
+            "It is checked against cancel_ids and new_tasks, and does not mutate "
+            "existing dependencies by itself."
         ),
+    )
+    output: str | None = Field(
+        default=None,
+        description="Optional concise rationale or replan summary.",
     )
 
 
@@ -303,127 +346,125 @@ def _get_graph(context: ToolExecutionContext) -> dict[str, Any] | None:
     return graph if isinstance(graph, dict) else None
 
 
-def _get_sibling_ids(graph: dict[str, Any], parent_id: str | None) -> set[str]:
-    """Return IDs of tasks sharing the same parent."""
-    return {t.id for t in graph.values() if getattr(t, "parent_id", None) == parent_id}
-
-
-def _get_siblings(graph: dict[str, Any], parent_id: str | None) -> list[Any]:
-    """Return tasks sharing the same parent."""
-    return [t for t in graph.values() if getattr(t, "parent_id", None) == parent_id]
-
-
-def _normalized_deps_by_task_id(adjacency: dict[str, list[str]]) -> dict[str, list[str]]:
-    return {task_id: sorted(str(dep) for dep in deps) for task_id, deps in sorted(adjacency.items())}
-
-
-def _project_expected_graph(
-    arguments: SubmitTaskPlanInput,
-    *,
-    siblings: list[Any],
-    current_task_id: str,
-    include_existing_siblings: bool,
-) -> dict[str, list[str]]:
-    remove_ids = set(arguments.remove_tasks)
-    projected: dict[str, list[str]] = {}
-    if include_existing_siblings:
-        for task in siblings:
-            task_id = str(getattr(task, "id", ""))
-            if not task_id or task_id == current_task_id or task_id in remove_ids:
-                continue
-            projected[task_id] = [str(dep) for dep in getattr(task, "deps", [])]
-    for spec in arguments.new_tasks:
-        projected[spec.id] = list(spec.deps)
-    return projected
-
-
-def _expected_graph_errors(
-    arguments: SubmitTaskPlanInput,
-    *,
+def _parent_id_for_current_task(
     graph: dict[str, Any] | None,
-    parent_id: str | None,
-    role: str,
+    task_id: str,
+) -> str | None:
+    if graph is None:
+        return None
+    own_task = graph.get(task_id)
+    return getattr(own_task, "parent_id", None) if own_task is not None else None
+
+
+def _is_under_parent_projection(
+    graph: dict[str, Any],
+    *,
+    task_id: str,
+    root_parent_id: str | None,
+) -> bool:
+    task = graph.get(task_id)
+    while task is not None:
+        parent_id = getattr(task, "parent_id", None)
+        if parent_id == root_parent_id:
+            return True
+        if parent_id is None:
+            return root_parent_id is None
+        task = graph.get(parent_id)
+    return False
+
+
+def _active_tasks_by_id(graph: dict[str, Any]) -> dict[str, Any]:
+    from team.models import TERMINAL_STATUSES
+
+    return {
+        task_id: task
+        for task_id, task in graph.items()
+        if getattr(task, "status", None) not in TERMINAL_STATUSES
+    }
+
+
+def _cascade_ids_for_cancel_root(
+    graph: dict[str, Any],
+    cancel_root_id: str,
+) -> set[str]:
+    active = _active_tasks_by_id(graph)
+    children_by_parent: dict[str, list[str]] = {}
+    dependents_by_dep: dict[str, list[str]] = {}
+    for task_id, task in active.items():
+        parent_id = getattr(task, "parent_id", None)
+        if parent_id:
+            children_by_parent.setdefault(str(parent_id), []).append(task_id)
+        for dep_id in getattr(task, "deps", []) or []:
+            dependents_by_dep.setdefault(str(dep_id), []).append(task_id)
+
+    cascaded: set[str] = set()
+    queue = [cancel_root_id]
+    while queue:
+        current = queue.pop(0)
+        for child_id in children_by_parent.get(current, []):
+            if child_id not in cascaded:
+                cascaded.add(child_id)
+                queue.append(child_id)
+        for dependent_id in dependents_by_dep.get(current, []):
+            dependent = active.get(dependent_id)
+            if dependent is None or has_role(getattr(dependent, "agent_name", ""), "reviewer"):
+                continue
+            if dependent_id not in cascaded:
+                cascaded.add(dependent_id)
+                queue.append(dependent_id)
+    cascaded.discard(cancel_root_id)
+    return cascaded
+
+
+def _projection_after_replan(
+    arguments: SubmitReplanInput,
+    *,
+    graph: dict[str, Any],
+    root_parent_id: str | None,
     current_task_id: str,
-) -> list[str]:
-    if arguments.expected_graph is None:
-        return []
-    if graph is None and role == "replanner":
-        return ["expected_graph cannot be validated because the current task graph is unavailable"]
+) -> tuple[dict[str, ProjectedTask], dict[str, CancelProjection]]:
+    cancelled: dict[str, CancelProjection] = {}
+    cancelled_ids: set[str] = set(arguments.cancel_ids)
+    for cancel_id in arguments.cancel_ids:
+        cascade = _cascade_ids_for_cancel_root(graph, cancel_id)
+        cancelled[cancel_id] = CancelProjection(cascade=sorted(cascade))
+        cancelled_ids.update(cascade)
 
-    siblings = _get_siblings(graph, parent_id) if graph is not None else []
-    projected = _normalized_deps_by_task_id(
-        _project_expected_graph(
-            arguments,
-            siblings=siblings,
-            current_task_id=current_task_id,
-            include_existing_siblings=role == "replanner",
+    tasks: dict[str, ProjectedTask] = {}
+    for task_id, task in graph.items():
+        if task_id == current_task_id or task_id in cancelled_ids:
+            continue
+        if not _is_under_parent_projection(
+            graph,
+            task_id=task_id,
+            root_parent_id=root_parent_id,
+        ):
+            continue
+        tasks[task_id] = ProjectedTask(
+            parent_id=getattr(task, "parent_id", None),
+            deps=[str(dep) for dep in getattr(task, "deps", []) or []],
         )
-    )
-    expected = _normalized_deps_by_task_id(arguments.expected_graph)
-
-    errors: list[str] = []
-    projected_ids = set(projected)
-    expected_ids = set(expected)
-    missing = sorted(projected_ids - expected_ids)
-    extra = sorted(expected_ids - projected_ids)
-    if missing:
-        errors.append("expected_graph missing projected task(s): " + ", ".join(missing))
-    if extra:
-        errors.append("expected_graph includes non-projected task(s): " + ", ".join(extra))
-
-    for task_id in sorted(projected_ids & expected_ids):
-        if projected[task_id] != expected[task_id]:
-            errors.append(
-                f"expected_graph deps mismatch for '{task_id}': "
-                f"expected {expected[task_id]}, projected {projected[task_id]}"
-            )
-    return errors
-
-
-def _validate_plan_input(
-    arguments: SubmitTaskPlanInput,
-    context: ToolExecutionContext,
-) -> list[str]:
-    """Validate the plan input. Returns list of error strings."""
-    errors: list[str] = []
-    if arguments.existing_tasks:
-        return [_EXISTING_TASKS_UNSUPPORTED]
-
-    graph = _get_graph(context)
-    role = str(context.metadata.get("role") or "")
-    task_id = str(context.metadata.get("work_item_id") or "")
-
-    # Determine parent_id for scope
-    parent_id: str | None = None
-    if graph is not None:
-        own_task = graph.get(task_id)
-        if own_task is not None:
-            parent_id = getattr(own_task, "parent_id", None)
-
-    # Collect known graph IDs
-    graph_ids: set[str] = set(graph.keys()) if graph is not None else set()
-
-    # Sibling IDs for scope checking
-    sibling_ids = _get_sibling_ids(graph, parent_id) if graph is not None else set()
-
-    # 0. Reject existing_tasks rewiring — not supported yet
-    if arguments.existing_tasks:
-        errors.append(_EXISTING_TASKS_UNSUPPORTED)
-        return errors  # Full rejection — do not proceed with any other validation
-
-    # 1. Validate new_tasks IDs don't collide with existing
-    new_ids: set[str] = set()
     for spec in arguments.new_tasks:
+        tasks[spec.id] = ProjectedTask(parent_id=spec.parent_id, deps=list(spec.deps))
+    return tasks, cancelled
+
+
+def _validate_task_specs(
+    specs: list[NewTaskSpec],
+    *,
+    graph_ids: set[str],
+    valid_dep_ids: set[str],
+    roster: dict[str, list[str]],
+) -> list[str]:
+    errors: list[str] = []
+    new_ids: set[str] = set()
+    for spec in specs:
         if spec.id in graph_ids:
             errors.append(f"new task '{spec.id}' collides with existing task")
         if spec.id in new_ids:
             errors.append(f"duplicate new task id '{spec.id}'")
         new_ids.add(spec.id)
 
-    # 2. Validate new task specs
-    roster = _roster_from_context(context)
-    for spec in arguments.new_tasks:
-        # Resolve agent name
         resolved = _resolve_agent_name(spec.name, roster)
         if not resolved:
             errors.append(f"task '{spec.id}': empty agent name")
@@ -433,245 +474,356 @@ def _validate_plan_input(
             errors.append(f"task '{spec.id}': empty spec")
         for error in _spec_format_errors(spec.spec):
             errors.append(f"task '{spec.id}': {error}")
+        for dep in spec.deps:
+            if dep not in valid_dep_ids:
+                errors.append(f"new task '{spec.id}': unknown dep '{dep}'")
+    return errors
 
-    # 3. Validate remove_tasks exist
+
+def _validate_submit_plan_input(
+    arguments: SubmitPlanInput,
+    context: ToolExecutionContext,
+) -> list[str]:
+    graph = _get_graph(context)
+    graph_ids = set(graph.keys()) if graph is not None else set()
+    new_ids = {spec.id for spec in arguments.new_tasks}
+    return _validate_task_specs(
+        arguments.new_tasks,
+        graph_ids=graph_ids,
+        valid_dep_ids=graph_ids | new_ids,
+        roster=_roster_from_context(context),
+    )
+
+
+def _validate_expected_projection(
+    arguments: SubmitReplanInput,
+    *,
+    graph: dict[str, Any],
+    root_parent_id: str | None,
+    current_task_id: str,
+) -> list[str]:
+    if arguments.expected_projection is None:
+        return []
+    expected = arguments.expected_projection
+    if expected.root_parent_id != root_parent_id:
+        return [
+            "expected_projection root_parent_id mismatch: "
+            f"expected {expected.root_parent_id!r}, runtime {root_parent_id!r}"
+        ]
+
+    projected_tasks, projected_cancelled = _projection_after_replan(
+        arguments,
+        graph=graph,
+        root_parent_id=root_parent_id,
+        current_task_id=current_task_id,
+    )
+    errors: list[str] = []
+    projected_ids = set(projected_tasks)
+    expected_ids = set(expected.tasks)
+    missing = sorted(projected_ids - expected_ids)
+    extra = sorted(expected_ids - projected_ids)
+    if missing:
+        errors.append("expected_projection missing projected task(s): " + ", ".join(missing))
+    if extra:
+        errors.append("expected_projection includes non-projected task(s): " + ", ".join(extra))
+    for task_id in sorted(projected_ids & expected_ids):
+        projected = projected_tasks[task_id]
+        exp = expected.tasks[task_id]
+        if projected.parent_id != exp.parent_id:
+            errors.append(
+                f"expected_projection parent mismatch for '{task_id}': "
+                f"expected {exp.parent_id!r}, projected {projected.parent_id!r}"
+            )
+        if sorted(projected.deps) != sorted(exp.deps):
+            errors.append(
+                f"expected_projection deps mismatch for '{task_id}': "
+                f"expected {sorted(exp.deps)}, projected {sorted(projected.deps)}"
+            )
+
+    projected_cancel_roots = set(projected_cancelled)
+    expected_cancel_roots = set(expected.cancelled)
+    missing_cancel = sorted(projected_cancel_roots - expected_cancel_roots)
+    extra_cancel = sorted(expected_cancel_roots - projected_cancel_roots)
+    if missing_cancel:
+        errors.append(
+            "expected_projection missing cancellation root(s): "
+            + ", ".join(missing_cancel)
+        )
+    if extra_cancel:
+        errors.append(
+            "expected_projection includes non-projected cancellation root(s): "
+            + ", ".join(extra_cancel)
+        )
+    for task_id in sorted(projected_cancel_roots & expected_cancel_roots):
+        projected = sorted(projected_cancelled[task_id].cascade)
+        exp = sorted(expected.cancelled[task_id].cascade)
+        if projected != exp:
+            errors.append(
+                f"expected_projection cascade mismatch for '{task_id}': "
+                f"expected {exp}, projected {projected}"
+            )
+    return errors
+
+
+def _validate_submit_replan_input(
+    arguments: SubmitReplanInput,
+    context: ToolExecutionContext,
+) -> list[str]:
     from team.models import TERMINAL_STATUSES
 
-    for rid in arguments.remove_tasks:
-        if rid not in graph_ids:
-            errors.append(f"remove target '{rid}' not found in graph")
-        elif graph is not None:
-            target = graph.get(rid)
-            if target is not None:
-                status = getattr(target, "status", None)
-                if status is not None and status in TERMINAL_STATUSES:
-                    errors.append(
-                        f"remove target '{rid}' is {status.value}; cannot cancel terminal tasks"
-                    )
+    errors: list[str] = []
+    graph = _get_graph(context)
+    if graph is None:
+        return ["submit_replan requires the current task graph for validation"]
 
-    # 4. Validate deps reference valid IDs
-    all_valid_ids = graph_ids | new_ids
+    current_task_id = str(context.metadata.get("work_item_id") or "")
+    root_parent_id = _parent_id_for_current_task(graph, current_task_id)
+    graph_ids = set(graph.keys())
+    new_ids = {spec.id for spec in arguments.new_tasks}
+    cancelled_ids = set(arguments.cancel_ids)
+    all_cancelled_ids = set(cancelled_ids)
+
+    if current_task_id in cancelled_ids:
+        errors.append("replanner cannot cancel itself")
+
+    for cancel_id in arguments.cancel_ids:
+        target = graph.get(cancel_id)
+        if target is None:
+            errors.append(f"cancel target '{cancel_id}' not found in graph")
+            continue
+        if cancel_id == current_task_id:
+            continue
+        if getattr(target, "parent_id", None) != root_parent_id:
+            errors.append(
+                f"cancel target '{cancel_id}' is not a direct child of parent "
+                f"{root_parent_id!r}"
+            )
+        status = getattr(target, "status", None)
+        if status is not None and status in TERMINAL_STATUSES:
+            errors.append(f"cancel target '{cancel_id}' is {status.value}; cannot cancel")
+        all_cancelled_ids.update(_cascade_ids_for_cancel_root(graph, cancel_id))
+
+    allowed_parent_ids: set[str | None] = {root_parent_id}
+    for task_id, task in graph.items():
+        if task_id == current_task_id or task_id in all_cancelled_ids:
+            continue
+        status = getattr(task, "status", None)
+        if status is not None and status in TERMINAL_STATUSES:
+            continue
+        if _is_under_parent_projection(
+            graph,
+            task_id=task_id,
+            root_parent_id=root_parent_id,
+        ):
+            allowed_parent_ids.add(task_id)
+
     for spec in arguments.new_tasks:
-        for dep in spec.deps:
-            if dep not in all_valid_ids:
-                errors.append(f"new task '{spec.id}': unknown dep '{dep}'")
+        if spec.parent_id not in allowed_parent_ids:
+            errors.append(
+                f"new task '{spec.id}': parent_id {spec.parent_id!r} is outside "
+                f"the parent projection rooted at {root_parent_id!r}"
+            )
+        if spec.parent_id in all_cancelled_ids:
+            errors.append(f"new task '{spec.id}': parent_id '{spec.parent_id}' is cancelled")
 
-    # 5. Replanner scope check — all removals within the current sibling layer
-    if role == "replanner" and parent_id is not None:
-        for rid in arguments.remove_tasks:
-            if rid not in sibling_ids:
-                errors.append(
-                    f"scope violation: remove target '{rid}' is not a sibling "
-                    f"(parent_id={parent_id})"
-                )
-
+    valid_dep_ids = (graph_ids - all_cancelled_ids - {current_task_id}) | new_ids
     errors.extend(
-        _expected_graph_errors(
+        _validate_task_specs(
+            arguments.new_tasks,
+            graph_ids=graph_ids,
+            valid_dep_ids=valid_dep_ids,
+            roster=_roster_from_context(context),
+        )
+    )
+    errors.extend(
+        _validate_expected_projection(
             arguments,
             graph=graph,
-            parent_id=parent_id,
-            role=role,
-            current_task_id=task_id,
+            root_parent_id=root_parent_id,
+            current_task_id=current_task_id,
         )
     )
     return errors
 
 
+def _resolved_task_payloads(
+    specs: list[NewTaskSpec],
+    *,
+    roster: dict[str, list[str]],
+) -> list[dict[str, Any]]:
+    resolved_tasks: list[dict[str, Any]] = []
+    for spec in specs:
+        resolved_agent = _resolve_agent_name(spec.name, roster)
+        words = spec.spec.split()
+        description = " ".join(words[:10]) + ("..." if len(words) > 10 else "")
+        payload: dict[str, Any] = {
+            "id": spec.id,
+            "objective": spec.spec,
+            "agent": resolved_agent,
+            "description": description,
+            "deps": list(spec.deps),
+            "scope_paths": list(spec.scope_paths),
+        }
+        if isinstance(spec, ReplanTaskSpec):
+            payload["parent_id"] = spec.parent_id
+        resolved_tasks.append(payload)
+    return resolved_tasks
+
+
 # ---------------------------------------------------------------------------
-# SubmitTaskPlanTool — commit tool (terminal)
+# SubmitPlanTool — commit child plan (terminal)
 # ---------------------------------------------------------------------------
 
 
-class SubmitTaskPlanTool(BaseTool):
-    name = "submit_task_plan"
+class SubmitPlanTool(BaseTool):
+    name = "submit_plan"
     description = (
-        "Submit a plan. Planners: provide new_tasks with the full decomposition. "
-        "Replanners: provide new_tasks for corrective tasks and remove_tasks "
-        "for task IDs to cancel. existing_tasks rewires are not supported yet. "
-        "Each task's 'spec' field is the agent's sole briefing. It must use "
-        "sections in order: Goal, Environment, Scope, Context, Acceptance Criteria."
+        "Submit a child plan. Provide new_tasks with id, name, spec, deps, and "
+        "scope_paths. Each spec must use sections in order: Goal, Environment, "
+        "Scope, Context, Acceptance Criteria."
     )
-    short_description = "Submit a task plan."
-    input_model = SubmitTaskPlanInput
+    short_description = "Submit a child plan."
+    input_model = SubmitPlanInput
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
-        assert isinstance(arguments, SubmitTaskPlanInput)
-        from team.models import Plan, ReplanPlan
+        assert isinstance(arguments, SubmitPlanInput)
+        from team.models import Plan
 
-        # 1. Validate the proposed plan before committing metadata.
-        errors = _validate_plan_input(arguments, context)
+        errors = _validate_submit_plan_input(arguments, context)
         if errors:
             return ToolResult(
                 output="Validation failed:\n" + "\n".join(f"- {e}" for e in errors),
                 is_error=True,
             )
 
-        roster = _roster_from_context(context)
-        role = str(context.metadata.get("role") or "")
-        is_replanner = role == "replanner"
+        resolved_tasks = _resolved_task_payloads(
+            arguments.new_tasks,
+            roster=_roster_from_context(context),
+        )
+        try:
+            plan = Plan.from_dict({"tasks": resolved_tasks, "rationale": arguments.output})
+        except (TypeError, ValueError) as exc:
+            return ToolResult(output=f"Error: invalid plan payload: {exc}", is_error=True)
 
-        # 2. Convert NewTaskSpec list to TaskDefinition dicts for validation
-        resolved_tasks: list[dict[str, Any]] = []
-        for spec in arguments.new_tasks:
-            resolved_agent = _resolve_agent_name(spec.name, roster)
-            # Auto-derive description from spec (first ~10 words)
-            words = spec.spec.split()
-            description = " ".join(words[:10]) + ("..." if len(words) > 10 else "")
-            resolved_tasks.append(
+        allow_empty = bool(context.metadata.get("allow_empty_plan"))
+        max_plan_size = int(context.metadata.get("max_plan_size", 50) or 50)
+        known_ext_deps = await _known_external_dep_ids(context)
+        issues = validate_plan(
+            plan,
+            max_plan_size=max_plan_size,
+            allow_empty=allow_empty,
+            known_external_deps=known_ext_deps,
+        )
+
+        max_tasks = int(context.metadata.get("max_tasks", 0) or 0)
+        tasks_used = int(context.metadata.get("tasks_used", 0) or 0)
+        if max_tasks and tasks_used + len(plan.tasks) > max_tasks:
+            issues.append(
                 {
-                    "id": spec.id,
-                    "objective": spec.spec,
-                    "agent": resolved_agent,
-                    "description": description,
-                    "deps": list(spec.deps),
-                    "scope_paths": list(spec.scope_paths),
+                    "field": "tasks",
+                    "msg": (
+                        f"plan would exceed max_tasks={max_tasks} "
+                        f"(used={tasks_used}, adding={len(plan.tasks)})"
+                    ),
+                }
+            )
+        max_depth = int(context.metadata.get("max_depth", 0) or 0)
+        task_depth = int(context.metadata.get("task_depth", 0) or 0)
+        if max_depth and plan.tasks and (task_depth + 1) > max_depth:
+            issues.append(
+                {
+                    "field": "tasks",
+                    "msg": (
+                        f"plan would exceed max_depth={max_depth} "
+                        f"from current depth={task_depth}"
+                    ),
                 }
             )
 
-        if is_replanner:
-            # Replanner path: build ReplanPlan
-            try:
-                replan = ReplanPlan.from_dict(
-                    {
-                        "add_tasks": resolved_tasks,
-                        "cancel_ids": arguments.remove_tasks,
-                    }
-                )
-            except (TypeError, ValueError) as exc:
-                return ToolResult(output=f"Error: invalid replan payload: {exc}", is_error=True)
+        note_budget_issues = _note_budget_issues(
+            resolved_tasks,
+            max_note_bytes=int(context.metadata.get("max_note_bytes", 0) or 0),
+        )
+        issues.extend({"field": "tasks", "msg": msg} for msg in note_budget_issues)
 
-            freshness_gate = await _freshness_submission_gate(
-                context, action="submit_task_plan(replan)"
-            )
-            if freshness_gate is not None:
-                return freshness_gate
+        if issues:
+            message = "; ".join(str(issue.get("msg") or "invalid plan") for issue in issues)
+            return ToolResult(output=f"Error: {message}", is_error=True)
 
-            note_content = (
-                f"Replanner submitted plan: {len(replan.add_tasks)} new task(s), "
-                f"{len(replan.cancel_ids)} cancelled."
-            )
-            await _post_submission_note(context, content=note_content, tags=["refactor"])
-
-            # Write to metadata for executor
-            context.metadata["resolved_plan"] = replan
-            context.metadata["plan_is_replan"] = True
-            return ToolResult(
-                output=(
-                    f"Replan accepted ({len(replan.add_tasks)} new tasks, "
-                    f"{len(replan.cancel_ids)} cancelled)."
-                ),
-            )
-        else:
-            # Planner path: build Plan
-            try:
-                plan = Plan.from_dict({"tasks": resolved_tasks, "rationale": None})
-            except (TypeError, ValueError) as exc:
-                return ToolResult(output=f"Error: invalid plan payload: {exc}", is_error=True)
-
-            allow_empty = bool(context.metadata.get("allow_empty_plan"))
-            max_plan_size = int(context.metadata.get("max_plan_size", 50) or 50)
-            known_ext_deps = await _known_external_dep_ids(context)
-            issues = validate_plan(
-                plan,
-                max_plan_size=max_plan_size,
-                allow_empty=allow_empty,
-                known_external_deps=known_ext_deps,
-            )
-
-            max_tasks = int(context.metadata.get("max_tasks", 0) or 0)
-            tasks_used = int(context.metadata.get("tasks_used", 0) or 0)
-            if max_tasks and tasks_used + len(plan.tasks) > max_tasks:
-                issues.append(
-                    {
-                        "field": "tasks",
-                        "msg": (
-                            f"plan would exceed max_tasks={max_tasks} "
-                            f"(used={tasks_used}, adding={len(plan.tasks)})"
-                        ),
-                    }
-                )
-            max_depth = int(context.metadata.get("max_depth", 0) or 0)
-            task_depth = int(context.metadata.get("task_depth", 0) or 0)
-            if max_depth and plan.tasks and (task_depth + 1) > max_depth:
-                issues.append(
-                    {
-                        "field": "tasks",
-                        "msg": (
-                            f"plan would exceed max_depth={max_depth} "
-                            f"from current depth={task_depth}"
-                        ),
-                    }
-                )
-
-            note_budget_issues = _note_budget_issues(
-                resolved_tasks,
-                max_note_bytes=int(context.metadata.get("max_note_bytes", 0) or 0),
-            )
-            issues.extend({"field": "tasks", "msg": msg} for msg in note_budget_issues)
-
-            if issues:
-                message = "; ".join(str(issue.get("msg") or "invalid plan") for issue in issues)
-                return ToolResult(output=f"Error: {message}", is_error=True)
-
-            freshness_gate = await _freshness_submission_gate(context, action="submit_task_plan()")
-            if freshness_gate is not None:
-                return freshness_gate
-
-            summary = f"Submitted plan with {len(plan.tasks)} task(s)."
-            await _post_submission_note(context, content=summary, tags=["architecture"])
-
-            # Write to metadata for executor
-            context.metadata["resolved_plan"] = plan
-            context.metadata["plan_is_replan"] = False
-            return ToolResult(output=f"Plan accepted ({len(plan.tasks)} tasks).")
-
-
-# ---------------------------------------------------------------------------
-# DeclareBlockerTool — terminal for planners/replanners
-# ---------------------------------------------------------------------------
-
-
-class DeclareBlockerInput(BaseModel):
-    root_cause_paths: list[str] = Field(
-        ...,
-        description="Broken shared files that must be fixed before sibling work can continue.",
-        min_length=1,
-    )
-    reason: str = Field(
-        ...,
-        description="Why this is a shared blocker rather than an isolated task failure.",
-        min_length=1,
-    )
-    suggestion: str | None = Field(
-        default=None,
-        description="Optional hint for the resolver about the expected fix direction.",
-    )
-
-
-class DeclareBlockerTool(BaseTool):
-    name = "declare_blocker"
-    description = (
-        "Declare a shared blocker so the conductor can pause affected running siblings, "
-        "spawn one resolver, and resume work after the fix lands."
-    )
-    short_description = "Report a shared blocker."
-    input_model = DeclareBlockerInput
-
-    async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
-        assert isinstance(arguments, DeclareBlockerInput)
-        freshness_gate = await _freshness_submission_gate(context, action="declare_blocker()")
+        freshness_gate = await _freshness_submission_gate(context, action="submit_plan()")
         if freshness_gate is not None:
             return freshness_gate
-        context.metadata["blocker_declaration"] = {
-            "root_cause_paths": list(arguments.root_cause_paths),
-            "reason": arguments.reason,
-            "suggestion": arguments.suggestion,
-        }
-        note = f"Declared blocker on {', '.join(arguments.root_cause_paths)}: {arguments.reason}"
-        if arguments.suggestion:
-            note += f"\nSuggestion: {arguments.suggestion}"
-        await _post_submission_note(context, content=note, tags=["blocker"])
-        return ToolResult(output="Blocker declared.")
+
+        summary = f"Submitted plan with {len(plan.tasks)} task(s)."
+        if arguments.output:
+            summary += f"\n\n{arguments.output}"
+        await _post_submission_note(context, content=summary, tags=["architecture"])
+
+        context.metadata["resolved_plan"] = plan
+        context.metadata["plan_is_replan"] = False
+        return ToolResult(output=f"Plan accepted ({len(plan.tasks)} tasks).")
+
+
+# ---------------------------------------------------------------------------
+# SubmitReplanTool — commit corrective replan (terminal)
+# ---------------------------------------------------------------------------
+
+
+class SubmitReplanTool(BaseTool):
+    name = "submit_replan"
+    description = (
+        "Submit a corrective replan. Provide cancel_ids for parent-level tasks "
+        "to cancel with cascade, and new_tasks with id, parent_id, name, spec, "
+        "deps, and scope_paths. expected_projection is validation-only."
+    )
+    short_description = "Submit a corrective replan."
+    input_model = SubmitReplanInput
+
+    async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
+        assert isinstance(arguments, SubmitReplanInput)
+        from team.models import ReplanPlan
+
+        errors = _validate_submit_replan_input(arguments, context)
+        if errors:
+            return ToolResult(
+                output="Validation failed:\n" + "\n".join(f"- {e}" for e in errors),
+                is_error=True,
+            )
+
+        resolved_tasks = _resolved_task_payloads(
+            arguments.new_tasks,
+            roster=_roster_from_context(context),
+        )
+        try:
+            replan = ReplanPlan.from_dict(
+                {
+                    "add_tasks": resolved_tasks,
+                    "cancel_ids": arguments.cancel_ids,
+                }
+            )
+        except (TypeError, ValueError) as exc:
+            return ToolResult(output=f"Error: invalid replan payload: {exc}", is_error=True)
+
+        freshness_gate = await _freshness_submission_gate(context, action="submit_replan()")
+        if freshness_gate is not None:
+            return freshness_gate
+
+        note_content = (
+            f"Replanner submitted replan: {len(replan.add_tasks)} new task(s), "
+            f"{len(replan.cancel_ids)} cancelled."
+        )
+        if arguments.output:
+            note_content += f"\n\n{arguments.output}"
+        await _post_submission_note(context, content=note_content, tags=["refactor"])
+
+        context.metadata["resolved_plan"] = replan
+        context.metadata["plan_is_replan"] = True
+        return ToolResult(
+            output=(
+                f"Replan accepted ({len(replan.add_tasks)} new tasks, "
+                f"{len(replan.cancel_ids)} cancelled)."
+            ),
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -693,11 +845,11 @@ class SubmissionToolkit(BaseToolkit):
             name="submission",
             description=(
                 "Terminal submission tools "
-                "(submit_task_summary, submit_task_plan, declare_blocker)."
+                "(submit_task_summary, submit_plan, submit_replan)."
             ),
             tools=[
                 SubmitTaskSummaryTool(),
-                SubmitTaskPlanTool(),
-                DeclareBlockerTool(),
+                SubmitPlanTool(),
+                SubmitReplanTool(),
             ],
         )

@@ -1,5 +1,3 @@
-"""External trigger tools — used by conductor, task_center, and other external callers."""
+"""External trigger tools."""
 
-from tools.external_trigger.pause_verdict import PauseVerdictTool
-
-__all__ = ["PauseVerdictTool"]
+__all__: list[str] = []

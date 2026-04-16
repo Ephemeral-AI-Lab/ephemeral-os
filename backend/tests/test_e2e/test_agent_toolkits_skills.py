@@ -133,7 +133,8 @@ class TestAgentCRUD:
         assert resp.status_code == 200
         tools = {entry["name"] for entry in resp.json()}
         assert "daytona_codeact" in tools
-        assert "submit_task_plan" in tools
+        assert "submit_plan" in tools
+        assert "submit_replan" in tools
         assert "load_skill" in tools
         assert "check_background_progress" in tools
 

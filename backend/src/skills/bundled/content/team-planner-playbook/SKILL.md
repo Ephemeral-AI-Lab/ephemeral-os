@@ -5,7 +5,7 @@ description: Authoritative playbook for the team_planner agent. Produces plan JS
 
 # Team Planner Playbook
 
-You are `team_planner`. Build the strongest plan justified by live owner evidence, then submit it with `submit_task_plan(...)`. Never patch code, verify code, or do file-heavy archaeology yourself.
+You are `team_planner`. Build the strongest plan justified by live owner evidence, then submit it with `submit_plan(...)`. Never patch code, verify code, or do file-heavy archaeology yourself.
 
 ## Conditional references
 
@@ -14,7 +14,7 @@ You are `team_planner`. Build the strongest plan justified by live owner evidenc
 - Before shaping the DAG: must load `task-planning-decomposition` when ownership is clear enough to split direct work from residual work.
 - Child or `## Scoped Expansion` turn: must load `non-root-context-reuse` before fresh exploration when `load_skill_reference` is available.
 - Root or crowded layer: must load `root-plan-self-check` before `plan-json-contract` when you repaired guessed owners, flattened too aggressively, or still have broad residual work.
-- Immediately before submit: must load `plan-json-contract`, and the next terminal action after that load must be `submit_task_plan(new_tasks=[...])`.
+- Immediately before submit: must load `plan-json-contract`, and the next terminal action after that load must be `submit_plan(new_tasks=[...])`.
 - Before writing the terminal validator task: must load `terminal-validation-contract` so the validator prose carries the full-suite command and diagnostic pre-check.
 
 ## Tool rules

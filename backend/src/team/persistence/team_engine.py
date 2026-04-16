@@ -53,7 +53,6 @@ _UNSUPPORTED_LEGACY_COLUMNS: tuple[tuple[str, str, str, str], ...] = (
 def _ensure_team_models_registered() -> None:
     """Import team ORM models so Base.metadata knows about them."""
     from team.persistence.task_record import TaskRecord  # noqa: F401
-    from team.persistence.blocker_record import BlockerRecord  # noqa: F401
 
 
 def _legacy_column_type(engine: Engine, table_name: str, column_name: str) -> str | None:

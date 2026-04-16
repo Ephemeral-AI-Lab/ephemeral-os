@@ -168,7 +168,4 @@ def task_to_dict(task: Any) -> dict[str, Any]:
         "started_at": task.started_at.isoformat() if task.started_at else None,
         "finished_at": task.finished_at.isoformat() if task.finished_at else None,
         "failure_reason": task.failure_reason,
-        "blocker_id": task.blocker_id,
-        "pause_checkpoint": task.pause_checkpoint,
-        "pause_verdict": task.pause_verdict,
     }

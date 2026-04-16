@@ -10,7 +10,7 @@ import uuid
 from collections import defaultdict, deque
 from datetime import datetime, timezone
 
-from sqlalchemy import and_, case, delete, func, or_, select, update
+from sqlalchemy import case, delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import aliased
 
@@ -42,10 +42,7 @@ def record_to_task(rec: TaskRecord) -> Task:
         started_at=rec.started_at,
         finished_at=rec.finished_at,
         failure_reason=rec.failure_reason,
-        blocker_id=getattr(rec, "blocker_id", None),
         fired_by_task_id=getattr(rec, "fired_by_task_id", None),
-        pause_checkpoint=getattr(rec, "pause_checkpoint", None),
-        pause_verdict=getattr(rec, "pause_verdict", None),
     )
 
 
@@ -790,73 +787,6 @@ class TaskStore:
             await db.commit()
             return result.rowcount
 
-    async def pause_running_task(
-        self,
-        task_id: str,
-        blocker_id: str,
-        checkpoint: str,
-        verdict: str,
-    ) -> bool:
-        async with self._sf() as db:
-            result = await db.execute(
-                update(TaskRecord)
-                .where(
-                    TaskRecord.id == task_id,
-                    TaskRecord.team_run_id == self._team_run_id,
-                    TaskRecord.status == "running",
-                )
-                .values(
-                    status="paused",
-                    blocker_id=blocker_id,
-                    pause_checkpoint=checkpoint,
-                    pause_verdict=verdict,
-                )
-            )
-            await db.commit()
-            if result.rowcount > 0:
-                self._tg.pause(task_id, blocker_id, checkpoint, verdict)
-            return result.rowcount > 0
-
-    async def resume_paused_tasks(self, blocker_id: str) -> int:
-        async with self._sf() as db:
-            result = await db.execute(
-                update(TaskRecord)
-                .where(
-                    TaskRecord.team_run_id == self._team_run_id,
-                    TaskRecord.blocker_id == blocker_id,
-                    TaskRecord.status == "paused",
-                )
-                .values(
-                    status="ready",
-                    blocker_id=None,
-                    agent_run_id=None,
-                    started_at=None,
-                    finished_at=None,
-                    failure_reason=None,
-                )
-            )
-            await db.commit()
-            return result.rowcount
-
-    async def cancel_paused_tasks(self, blocker_id: str) -> int:
-        async with self._sf() as db:
-            result = await db.execute(
-                update(TaskRecord)
-                .where(
-                    TaskRecord.team_run_id == self._team_run_id,
-                    TaskRecord.blocker_id == blocker_id,
-                    TaskRecord.status == "paused",
-                )
-                .values(
-                    status="cancelled",
-                    finished_at=func.now(),
-                    failure_reason="blocker_failed",
-                    blocker_id=None,
-                )
-            )
-            await db.commit()
-            return result.rowcount
-
     async def _cancel_by_ids_sql(self, db: AsyncSession, task_ids: list[str], reason: str) -> int:
         if not task_ids:
             return 0
@@ -885,9 +815,6 @@ class TaskStore:
         cancel_ids: list[str],
         cancel_reason: str,
         specs: list[TaskDefinition],
-        parent_id: str | None,
-        parent_depth: int,
-        parent_root_id: str | None,
     ) -> tuple[int, list[TaskRecord]]:
         """Cancel sibling ids + cascade their descendants + insert new plan,
         all in a single transaction. If any step fails, the entire replan
@@ -897,9 +824,35 @@ class TaskStore:
             cancelled_count = await self._cancel_by_ids_sql(db, cancel_ids, cancel_reason)
             for cid in cancel_ids:
                 await self._cascade_recursive_sql(db, cid)
-            inserted = await self._insert_plan_sql(
-                db, specs, parent_id, parent_depth, parent_root_id
-            )
+            inserted: list[TaskRecord] = []
+            specs_by_parent: dict[str | None, list[TaskDefinition]] = defaultdict(list)
+            for spec in specs:
+                specs_by_parent[spec.parent_id].append(spec)
+            for parent_id, grouped_specs in specs_by_parent.items():
+                parent_depth = 0
+                parent_root_id: str | None = None
+                if parent_id is not None:
+                    parent_rec = (
+                        await db.execute(
+                            select(TaskRecord).where(
+                                TaskRecord.team_run_id == self._team_run_id,
+                                TaskRecord.id == parent_id,
+                            )
+                        )
+                    ).scalar_one_or_none()
+                    if parent_rec is None:
+                        raise ValueError(f"replan parent '{parent_id}' not found")
+                    parent_depth = parent_rec.depth or 0
+                    parent_root_id = parent_rec.root_id or parent_rec.id
+                inserted.extend(
+                    await self._insert_plan_sql(
+                        db,
+                        grouped_specs,
+                        parent_id,
+                        parent_depth,
+                        parent_root_id,
+                    )
+                )
             await db.commit()
         await self.refresh_graph()
         return cancelled_count, inserted
@@ -970,9 +923,6 @@ class TaskStore:
                         started_at=t.started_at,
                         finished_at=t.finished_at,
                         failure_reason=t.failure_reason,
-                        blocker_id=t.blocker_id,
-                        pause_checkpoint=t.pause_checkpoint,
-                        pause_verdict=t.pause_verdict,
                     )
                     for t in tasks
                 ]

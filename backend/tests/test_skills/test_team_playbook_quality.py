@@ -39,7 +39,6 @@ _REFERENCES = [
     _CONTENT / "team-replanner-playbook/references/corrective-fast-path.md",
     _CONTENT / "team-replanner-playbook/references/action-add-tasks.md",
     _CONTENT / "team-replanner-playbook/references/action-cancel-and-redraft.md",
-    _CONTENT / "team-replanner-playbook/references/action-declare-blocker.md",
     _CONTENT / "verification-replan/references/triage-format.md",
 ]
 _REFERENCES = [path for path in _REFERENCES if path.exists()]
@@ -138,7 +137,6 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "must not paraphrase failure evidence" in validator.lower()
 
     assert "must load `corrective-fast-path`" in replanner.lower()
-    assert "must load `action-declare-blocker`" in replanner.lower()
     assert "must load `action-add-tasks`" in replanner.lower()
     assert "must load `action-cancel-and-redraft`" in replanner.lower()
 
@@ -165,7 +163,7 @@ def test_reference_files_hold_specialized_detail() -> None:
     )
 
     assert "Never keep a guessed exact leaf once live evidence disproves it." in planner_ref
-    assert "submit_task_plan(new_tasks=[...])" in planner_json
+    assert "submit_plan(new_tasks=[...])" in planner_json
     assert "Example task graph" in planner_decomposition
     assert '"id": "dev-hdf"' in planner_decomposition
     assert '"id": "dev-shared-config"' in planner_decomposition
@@ -192,7 +190,7 @@ def test_sweevo_context_stays_shared_and_runtime_focused() -> None:
     assert "Python process wrappers" in sweevo
     assert "append `2>&1`" in sweevo
     assert "Must keep roles separate" in sweevo
-    assert "Must treat `docs/architecture/plan-a-team-coordination-redesign.md` as the design intent" in sweevo
+    assert "Must treat `docs/architecture/team-coordination.md` as the design intent" in sweevo
     assert "Must keep shared context in the Task Center" in sweevo
     assert "Must prefer Task Center notes, exact runtime evidence, and CI symbol tools over raw file reads on ready owner lanes." in sweevo
     assert "Must not spend a ready leaf's opening moves reading benchmark tests" in sweevo

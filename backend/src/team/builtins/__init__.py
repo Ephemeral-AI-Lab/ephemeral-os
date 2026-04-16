@@ -30,7 +30,6 @@ TEAM_PLANNER = "team_planner"
 DEVELOPER = "developer"
 VALIDATOR = "validator"
 SCOUT = "scout"
-RESOLVER = "resolver"
 TEAM_REPLANNER = "team_replanner"
 NOTE_TAKER = "note_taker"
 
@@ -41,7 +40,7 @@ _TEAMS_BUILTIN_DIR = _CONFIG_ROOT / "teams"
 # Expected number of builtin agents.  If a seed file fails to parse,
 # ``load_agents_dir`` silently skips it — this constant lets us detect
 # that early rather than discovering a missing agent at dispatch time.
-_EXPECTED_BUILTIN_COUNT = 7
+_EXPECTED_BUILTIN_COUNT = 6
 _EXPECTED_BUILTIN_TEAM_COUNT = 1
 
 

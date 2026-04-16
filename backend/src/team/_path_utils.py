@@ -14,8 +14,8 @@ from typing import Any
 class ScopePath:
     """Utility class for path normalization and overlap detection.
 
-    Provides consistent behavior across NoteManager, Conductor, and other
-    team components that need to check whether file/directory scopes overlap.
+    Provides consistent behavior across team components that need to check
+    whether file/directory scopes overlap.
     """
 
     @staticmethod

@@ -15,22 +15,18 @@ class RoleToolPolicy:
 
 _ROLE_TOOL_POLICIES: dict[str, RoleToolPolicy] = {
     "planner": RoleToolPolicy(
-        allowed_submission_tools=frozenset({"submit_task_plan"}),
-        terminal_tools=frozenset({"submit_task_plan"}),
+        allowed_submission_tools=frozenset({"submit_plan"}),
+        terminal_tools=frozenset({"submit_plan"}),
     ),
     "replanner": RoleToolPolicy(
-        allowed_submission_tools=frozenset({"submit_task_plan", "declare_blocker"}),
-        terminal_tools=frozenset({"submit_task_plan", "declare_blocker"}),
+        allowed_submission_tools=frozenset({"submit_replan"}),
+        terminal_tools=frozenset({"submit_replan"}),
     ),
     "developer": RoleToolPolicy(
         allowed_submission_tools=frozenset({"submit_task_summary"}),
         terminal_tools=frozenset({"submit_task_summary"}),
     ),
     "reviewer": RoleToolPolicy(
-        allowed_submission_tools=frozenset({"submit_task_summary"}),
-        terminal_tools=frozenset({"submit_task_summary"}),
-    ),
-    "resolver": RoleToolPolicy(
         allowed_submission_tools=frozenset({"submit_task_summary"}),
         terminal_tools=frozenset({"submit_task_summary"}),
     ),

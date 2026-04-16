@@ -5,8 +5,6 @@ Assembles a TeamAgentContext for a Task using TaskCenter.context_for().
 
 from __future__ import annotations
 
-import json
-import logging
 import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
@@ -20,14 +18,12 @@ if TYPE_CHECKING:
     from agents.types import AgentDefinition
     from team.runtime.team_run import TeamRun
 
-logger = logging.getLogger(__name__)
-
 # Default terminal_tools mapping — used when TeamDefinition.terminal_tools is empty.
 # Which tools are terminal is a team-level policy: the team decides when an agent's
 # job is done. The query loop exits when any of these tools are called.
 DEFAULT_TERMINAL_TOOLS: dict[str, set[str]] = {
     role: default_terminal_tools_for_role(role)
-    for role in ("planner", "replanner", "developer", "reviewer", "resolver", "explorer", "scout")
+    for role in ("planner", "replanner", "developer", "reviewer", "explorer", "scout")
 }
 
 @dataclass
@@ -92,22 +88,6 @@ def build_task_metadata(team_run: "TeamRun", task: Task) -> ExecutionMetadata:
 
     _populate_plan_submission_context(meta, team_run, task)
 
-    # Inject active blocker info so replanners can decide whether to
-    # merge into an existing blocker or create a new one.
-    conductor = getattr(team_run, "conductor", None)
-    if conductor is not None and conductor.has_active_blocker():
-        meta["active_blockers"] = [
-            {
-                "id": b.id,
-                "reason": b.reason,
-                "root_cause_paths": b.root_cause_paths,
-                "status": b.status.value,
-                "initiating_task_id": b.initiating_task_id,
-                "fix_task_id": b.fix_task_id,
-            }
-            for b in conductor.active_blockers()
-        ]
-
     return meta
 
 
@@ -146,39 +126,12 @@ def _populate_plan_submission_context(
 
 
 def build_initial_messages(task: Task) -> list[ConversationMessage]:
-    checkpoint = getattr(task, "pause_checkpoint", None)
-    if not checkpoint:
-        return []
-    try:
-        payload = json.loads(checkpoint)
-    except Exception:
-        logger.debug("Invalid pause_checkpoint for task %s", task.id, exc_info=True)
-        return []
-    if not isinstance(payload, list):
-        return []
-    messages: list[ConversationMessage] = []
-    for raw in payload:
-        if not isinstance(raw, dict):
-            continue
-        try:
-            messages.append(ConversationMessage.model_validate(raw))
-        except Exception:
-            logger.debug("Invalid resume message for task %s", task.id, exc_info=True)
-            return []
-    return messages
+    return []
 
 
 async def build_initial_user_message(team_run: "TeamRun", task: Task, prefix: str | None = None) -> str:
     """Build context string for a task via TaskCenter."""
     context = await team_run.task_center.notes.context_for(task)
-    # Priority 0: resume message for formerly-paused tasks
-    if getattr(task, 'pause_checkpoint', None) and getattr(task, 'pause_verdict', None):
-        resume_msg = (
-            "## RESUME AFTER BLOCKER FIX\n"
-            f"Your task was paused because: {task.pause_verdict}\n"
-            "The root cause has been fixed. Continue your work from where you left off."
-        )
-        context = f"{resume_msg}\n\n{context}" if context else resume_msg
     if prefix:
         return f"{prefix}\n\n{context}" if context else prefix
     return context
@@ -204,21 +157,6 @@ async def build_query_context(
     meta["terminal_tools"] = set(terminal_set)
     user_message = await build_initial_user_message(team_run, task)
     roster = getattr(team_run, "roster", None)
-    if getattr(defn, "role", None) == "replanner" and meta.get("active_blockers"):
-        blocker_lines = ["## Active Blockers\n",
-                         "The following blockers are currently active for sibling tasks. "
-                         "If an active blocker already covers the same root-cause paths, do not "
-                         "declare another blocker. Use `submit_task_plan(new_tasks=[...])` instead, "
-                         "and depend on that blocker's `fix_task_id` so the retry runs after the shared fix.\n"]
-        for b in meta["active_blockers"]:
-            blocker_lines.append(
-                f"- **{b['id'][:8]}** ({b['status']}): {b['reason']}\n"
-                f"  Root cause: {', '.join(b['root_cause_paths'])}\n"
-                f"  Fix task: {b.get('fix_task_id') or 'pending assignment'}"
-            )
-        blocker_lines.append("")
-        user_message = "\n".join(blocker_lines) + "\n" + user_message
-
     if roster and getattr(defn, "role", None) in ("planner", "replanner"):
         lines = ["## Available Agents\n"]
         for role, agent_names in roster.items():

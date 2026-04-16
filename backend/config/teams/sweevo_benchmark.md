@@ -8,8 +8,6 @@ roster:
     - developer
   reviewer:
     - validator
-  resolver:
-    - resolver
   task_center_note_taker:
     - note_taker
   replanner:
@@ -20,4 +18,4 @@ terminal_tools:
   note_taker:
     - submit_task_note
 ---
-Default SWE-EVO benchmark team using the builtin planner/developer/validator/resolver/note_taker/replanner/scout agents.
+Default SWE-EVO benchmark team using the builtin planner/developer/validator/note_taker/replanner/scout agents.

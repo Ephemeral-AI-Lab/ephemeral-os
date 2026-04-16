@@ -72,27 +72,6 @@ class TeamRun:
         self.roster: dict[str, list[str]] = {}
         self.team_definition: Any | None = None
         self.arbiter: Any = getattr(runtime_services, "arbiter", None)
-        self.api_client: Any = self._resolve_api_client()
-        from team.persistence.blocker_store import BlockerStore
-        from team.runtime.conductor import Conductor
-        sf = getattr(getattr(self.task_center, "store", None), "_sf", None)
-        blocker_store = BlockerStore(sf, self.id) if sf is not None else None
-        self.conductor: Conductor = Conductor(self, blocker_store=blocker_store)
-        if blocker_store is not None:
-            self.task_center.notes.set_blocker_provider(blocker_store.load_active)
-
-    @staticmethod
-    def _resolve_api_client() -> Any:
-        """Build an API client from the DB-registered active model, or None."""
-        try:
-            from providers.provider import make_api_client
-            return make_api_client()
-        except Exception:
-            import logging
-            logging.getLogger(__name__).debug(
-                "Could not resolve api_client from model store", exc_info=True,
-            )
-            return None
 
     # ---- live agent run registry ----------------------------------------
 
@@ -222,20 +201,6 @@ class TeamRun:
         self.cancel_event.set()
         await self.task_center.cancel_all_pending()
 
-    async def fail_due_to_blocker(self, reason: str) -> None:
-        """Abort the run after an unrecoverable shared blocker failure."""
-        if self.status == TeamRunStatus.FAILED and self.cancel_event.is_set():
-            return
-        self.status = TeamRunStatus.FAILED
-        self.event_store.append(make_team_run_status(self.id, self.status.value, reason=reason))
-        self.cancel_event.set()
-        for task_id, runner_task in list(self._active_agent_runs.items()):
-            if runner_task.done():
-                continue
-            runner_task.cancel()
-        await self.task_center.cancel_all_running(reason)
-        await self.task_center.cancel_all_pending()
-
     def note_conflict_event(self, *, file_path: str, reason: str,
                             work_item_id: str = "", agent_name: str = "") -> bool:
         return persist_memory_record(
@@ -282,7 +247,6 @@ class TeamRun:
         if await self._is_all_terminal():
             return
         await self.task_center.prepare_for_resume()
-        await self.conductor.restore()
         self.cancel_event.clear()
         self._executor_factory = executor_factory
         if num_executors is not None:

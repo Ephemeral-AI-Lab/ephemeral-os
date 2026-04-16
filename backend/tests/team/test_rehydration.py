@@ -15,7 +15,7 @@ def _task() -> Task:
         id="task-1",
         team_run_id="run-1",
         agent_name="developer",
-        status=TaskStatus.PAUSED,
+        status=TaskStatus.RUNNING,
         objective="repair shared import",
         deps=["dep-1"],
         scope_paths=["pkg/_compat.py"],
@@ -24,22 +24,18 @@ def _task() -> Task:
         max_retries=4,
         agent_run_id="agent-run-1",
         created_at=datetime(2026, 4, 14, tzinfo=timezone.utc),
-        blocker_id="blocker-1",
-        pause_checkpoint='[{"role":"assistant","content":"paused"}]',
-        pause_verdict="Shared import break requires pause.",
     )
 
 
-def test_task_serialization_round_trip_preserves_blocker_pause_fields():
+def test_task_serialization_round_trip_preserves_retry_fields():
     original = _task()
 
     payload = task_to_dict(original)
     restored = task_from_dict(payload)
 
     assert restored.pending_dep_count == 1
-    assert restored.blocker_id == "blocker-1"
-    assert restored.pause_checkpoint == '[{"role":"assistant","content":"paused"}]'
-    assert restored.pause_verdict == "Shared import break requires pause."
+    assert restored.retry_count == 2
+    assert restored.max_retries == 4
 
 
 def test_task_from_dict_requires_objective():
@@ -55,21 +51,16 @@ def test_task_from_dict_requires_objective():
         )
 
 
-def test_apply_replayed_event_updates_blocker_pause_fields():
+def test_apply_replayed_event_updates_retry_fields():
     task = _task()
-    task.status = TaskStatus.RUNNING
-    task.blocker_id = None
-    task.pause_checkpoint = None
-    task.pause_verdict = None
     graph = {task.id: task}
 
     event = make_task_status(
         "run-1",
         task.id,
-        TaskStatus.PAUSED.value,
-        blocker_id="blocker-1",
-        pause_checkpoint='[{"role":"assistant","content":"paused"}]',
-        pause_verdict="Shared import break requires pause.",
+        TaskStatus.FAILED.value,
+        retry_count=3,
+        max_retries=5,
     )
 
     root_id, budget, final_status = apply_replayed_event(
@@ -82,10 +73,9 @@ def test_apply_replayed_event_updates_blocker_pause_fields():
     assert root_id is None
     assert budget is None
     assert final_status is None
-    assert graph[task.id].status == TaskStatus.PAUSED
-    assert graph[task.id].blocker_id == "blocker-1"
-    assert graph[task.id].pause_checkpoint == '[{"role":"assistant","content":"paused"}]'
-    assert graph[task.id].pause_verdict == "Shared import break requires pause."
+    assert graph[task.id].status == TaskStatus.FAILED
+    assert graph[task.id].retry_count == 3
+    assert graph[task.id].max_retries == 5
 
 
 def test_apply_replayed_event_keeps_existing_status_when_event_status_is_unknown():
@@ -103,4 +93,4 @@ def test_apply_replayed_event_keeps_existing_status_when_event_status_is_unknown
     assert root_id is None
     assert budget is None
     assert final_status is None
-    assert graph[task.id].status == TaskStatus.PAUSED
+    assert graph[task.id].status == TaskStatus.RUNNING

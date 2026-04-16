@@ -411,19 +411,19 @@ class BgBashTool(BaseTool):
         return ToolResult(output=f"ran: {arguments.command}")
 
 
-class SubmitTaskPlanInput(BaseModel):
+class SubmitPlanInput(BaseModel):
     items: list[dict[str, object]] = Field(description="Plan items to submit")
 
 
-class SubmitTaskPlanTool(BaseTool):
+class SubmitPlanTool(BaseTool):
     """A tool that simulates a submission tool writing accepted metadata."""
 
-    name = "submit_task_plan"
+    name = "submit_plan"
     description = "Submit a plan."
-    input_model = SubmitTaskPlanInput
+    input_model = SubmitPlanInput
 
     async def execute(
-        self, arguments: SubmitTaskPlanInput, context: ToolExecutionContext
+        self, arguments: SubmitPlanInput, context: ToolExecutionContext
     ) -> ToolResult:
         key = context.metadata.get("submission_metadata_key", "submitted_plan")
         context.metadata[key] = {"items": arguments.items}
@@ -469,28 +469,6 @@ class SubmitResolvedPlanTool(BaseTool):
         )
         context.metadata["plan_is_replan"] = False
         return ToolResult(output="Plan accepted")
-
-
-class DeclareBlockerInput(BaseModel):
-    root_cause_paths: list[str] = Field(description="Root cause paths")
-    reason: str = Field(description="Blocker reason")
-
-
-class DeclareBlockerTool(BaseTool):
-    """A tool that simulates blocker declaration metadata."""
-
-    name = "declare_blocker"
-    description = "Declare a blocker."
-    input_model = DeclareBlockerInput
-
-    async def execute(
-        self, arguments: DeclareBlockerInput, context: ToolExecutionContext
-    ) -> ToolResult:
-        context.metadata["blocker_declaration"] = {
-            "root_cause_paths": arguments.root_cause_paths,
-            "reason": arguments.reason,
-        }
-        return ToolResult(output="Blocker declared")
 
 
 @pytest.mark.asyncio
@@ -594,7 +572,7 @@ async def test_mixed_foreground_and_background_tools():
 @pytest.mark.asyncio
 async def test_submit_tool_propagates_submission_metadata_to_live_context():
     """Streaming execution must preserve accepted submissions."""
-    registry = _make_registry(SubmitTaskPlanTool())
+    registry = _make_registry(SubmitPlanTool())
     context = ToolExecutionContext(
         cwd="/tmp",
         metadata={"submission_metadata_key": "submitted_plan"},
@@ -603,7 +581,7 @@ async def test_submit_tool_propagates_submission_metadata_to_live_context():
 
     event = ApiToolUseDeltaEvent(
         id="tool_submit",
-        name="submit_task_plan",
+        name="submit_plan",
         input={"items": [{"agent_name": "developer"}]},
     )
 
@@ -660,25 +638,3 @@ async def test_resolved_plan_metadata_propagates_to_live_context():
     assert resolved_plan.tasks[0].objective == "Fix the discriminator pipeline"
     assert context.metadata["plan_is_replan"] is False
 
-
-@pytest.mark.asyncio
-async def test_blocker_declaration_metadata_propagates_to_live_context():
-    registry = _make_registry(DeclareBlockerTool())
-    context = _make_context()
-    executor = StreamingToolExecutor(registry, context)
-
-    event = ApiToolUseDeltaEvent(
-        id="tool_blocker",
-        name="declare_blocker",
-        input={"root_cause_paths": ["pkg/shared.py"], "reason": "Shared import surface is broken"},
-    )
-
-    executor.add_tool(event, _make_assistant_msg())
-
-    await asyncio.sleep(0.1)
-    await executor.get_remaining()
-
-    assert context.metadata["blocker_declaration"] == {
-        "root_cause_paths": ["pkg/shared.py"],
-        "reason": "Shared import surface is broken",
-    }

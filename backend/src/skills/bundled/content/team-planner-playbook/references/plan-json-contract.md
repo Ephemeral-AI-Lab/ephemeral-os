@@ -1,5 +1,5 @@
 # Plan JSON Contract
-Use this reference immediately before calling `submit_task_plan(...)`.
+Use this reference immediately before calling `submit_plan(...)`.
 
 ## Task/Goal
 
@@ -18,13 +18,10 @@ Use this reference immediately before calling `submit_task_plan(...)`.
 
 ## Workflow
 
-- For planner submissions, call `submit_task_plan(new_tasks=[...])`.
+- For planner submissions, call `submit_plan(new_tasks=[...])`.
 - Each `new_tasks` item must follow the runtime shape: `id`, `name`, `spec`, `deps`, `scope_paths`.
-- `expected_graph={"task_id": ["dep_id", ...]}` is validation-only. Use it only
-  when you need to assert the projected dependency graph; it cannot rewrite
-  existing task dependencies.
 - Finish the benchmark-surface ledger, deps, and task prose before loading this reference.
-- After this reference loads, the very next action must be calling `submit_task_plan(new_tasks=[...])`. Do not make any more non-submission tool calls in the main loop after this reference loads.
+- After this reference loads, the very next action must be calling `submit_plan(new_tasks=[...])`. Do not make any more non-submission tool calls in the main loop after this reference loads.
 - Never load this reference in parallel with `root-plan-self-check`.
 - Must use `name` with an exact registered agent name such as `developer`, `validator`, or `team_planner`.
 - Must use `id` for the lane label — a short unique string used to wire `deps`.

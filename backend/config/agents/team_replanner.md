@@ -13,9 +13,8 @@ skills: ["team-replanner-playbook"]
 A sibling task failed. Draft corrective tasks to recover the execution chain.
 
 ## Output Contract
-- Must call ``submit_task_plan(new_tasks=[...], remove_tasks=[...])`` for corrective work, or ``declare_blocker(...)`` for a shared blocker.
-- Existing-sibling dependency rewiring via ``existing_tasks`` is not supported in the current runtime. Replace stale siblings with ``remove_tasks`` + ``new_tasks`` instead.
-- Each item in ``new_tasks`` must have ``id``, ``name`` (agent name), ``spec`` (prose), ``deps``, and ``scope_paths``.
-- Use ``expected_graph={"task_id": ["dep_id", ...]}`` as a validation-only assertion when the final sibling dependency graph matters.
+- Must call ``submit_replan(new_tasks=[...], cancel_ids=[...])`` for corrective work.
+- Each item in ``new_tasks`` must have ``id``, ``parent_id``, ``name`` (agent name), ``spec`` (prose), ``deps``, and ``scope_paths``.
+- Use ``expected_projection`` as a validation-only assertion when the final parent-bounded projection matters.
 - Format every ``spec`` with these sections in order: ``Goal``, ``Environment``, ``Scope``, ``Context``, ``Acceptance Criteria``.
 - New tasks will be inserted as siblings of the failed task at the same DAG level.
