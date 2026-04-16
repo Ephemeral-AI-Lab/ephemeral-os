@@ -16,6 +16,23 @@ if get_definition("developer") is None:
     register_team_builtins()
 
 
+def _spec(
+    goal: str = "Complete the assigned task.",
+    *,
+    environment: str = "Use the current repository workspace and configured team runtime.",
+    scope: str = "Stay within the listed scope_paths.",
+    context: str = "This task was created by submit_task_plan.",
+    acceptance: str = "Submit the appropriate terminal summary when complete.",
+) -> str:
+    return (
+        f"1. Goal: {goal}\n"
+        f"2. Environment: {environment}\n"
+        f"3. Scope: {scope}\n"
+        f"4. Context: {context}\n"
+        f"5. Acceptance Criteria: {acceptance}"
+    )
+
+
 class _AsyncTaskCenterStub:
     def __init__(self) -> None:
         self.posted: list = []
@@ -151,10 +168,15 @@ async def test_submit_plan_resolves_roster_role_hints():
     result = await tool.execute(
         tool.input_model(
             new_tasks=[
-                {"id": "impl", "objective": "Implement the API", "name": "developer", "scope_paths": ["src/api.py"]},
+                {
+                    "id": "impl",
+                    "spec": _spec("Implement the API."),
+                    "name": "developer",
+                    "scope_paths": ["src/api.py"],
+                },
                 {
                     "id": "review",
-                    "objective": "Validate the API changes",
+                    "spec": _spec("Validate the API changes."),
                     "name": "reviewer",
                     "deps": ["impl"],
                     "scope_paths": ["src/api.py"],
@@ -200,7 +222,10 @@ async def test_submit_plan_rejects_oversize_task_notes():
             new_tasks=[
                 {
                     "id": "oversize",
-                    "objective": "This task description is intentionally too large.",
+                    "spec": _spec(
+                        "This task description is intentionally too large.",
+                        environment="This environment text is also intentionally long.",
+                    ),
                     "name": "developer",
                     "scope_paths": ["src/api.py"],
                 }
@@ -213,6 +238,40 @@ async def test_submit_plan_rejects_oversize_task_notes():
     assert "max_note_bytes" in result.output
     assert ctx.metadata.get("submitted_output") is None
     assert task_center.posted == []
+
+
+@pytest.mark.asyncio
+async def test_submit_plan_rejects_malformed_spec_sections():
+    task_center = _AsyncTaskCenterStub()
+    ctx = ToolExecutionContext(
+        cwd="/tmp",
+        metadata={
+            "task_center": task_center,
+            "work_item_id": "planner-task",
+            "agent_name": "team_planner",
+            "allow_empty_plan": False,
+            "max_plan_size": 8,
+        },
+    )
+
+    tool = SubmitTaskPlanTool()
+    result = await tool.execute(
+        tool.input_model(
+            new_tasks=[
+                {
+                    "id": "bad-spec",
+                    "spec": "Goal: Implement the API.\nScope: src/api.py",
+                    "name": "developer",
+                    "scope_paths": ["src/api.py"],
+                }
+            ]
+        ),
+        ctx,
+    )
+
+    assert result.is_error is True
+    assert "missing spec section(s): Environment, Context, Acceptance Criteria" in result.output
+    assert ctx.metadata.get("resolved_plan") is None
 
 
 @pytest.mark.asyncio
@@ -238,6 +297,126 @@ async def test_submit_plan_rejects_existing_task_rewires():
 
     assert result.is_error is True
     assert "existing_tasks rewiring is not supported yet" in result.output
+    assert ctx.metadata.get("resolved_plan") is None
+
+
+@pytest.mark.asyncio
+async def test_submit_replan_accepts_matching_expected_graph():
+    task_center = _AsyncTaskCenterStub()
+    task_center.graph = {
+        "replanner-task": Task(
+            id="replanner-task",
+            team_run_id="run-1",
+            agent_name="team_replanner",
+            status=TaskStatus.READY,
+            objective="recover",
+            parent_id="parent",
+        ),
+        "stale": Task(
+            id="stale",
+            team_run_id="run-1",
+            agent_name="developer",
+            status=TaskStatus.READY,
+            objective="stale work",
+            parent_id="parent",
+        ),
+        "survivor": Task(
+            id="survivor",
+            team_run_id="run-1",
+            agent_name="validator",
+            status=TaskStatus.PENDING,
+            objective="validate",
+            deps=["repair"],
+            parent_id="parent",
+        ),
+    }
+    ctx = ToolExecutionContext(
+        cwd="/tmp",
+        metadata={
+            "task_center": task_center,
+            "work_item_id": "replanner-task",
+            "agent_name": "team_replanner",
+            "role": "replanner",
+        },
+    )
+
+    tool = SubmitTaskPlanTool()
+    result = await tool.execute(
+        tool.input_model(
+            remove_tasks=["stale"],
+            new_tasks=[
+                {
+                    "id": "repair",
+                    "spec": _spec("Repair the stale implementation path."),
+                    "name": "developer",
+                    "scope_paths": ["src/api.py"],
+                },
+            ],
+            expected_graph={
+                "repair": [],
+                "survivor": ["repair"],
+            },
+        ),
+        ctx,
+    )
+
+    assert result.is_error is False, result.output
+    assert "Replan accepted (1 new tasks, 1 cancelled)" in result.output
+
+
+@pytest.mark.asyncio
+async def test_submit_replan_rejects_mismatched_expected_graph():
+    task_center = _AsyncTaskCenterStub()
+    task_center.graph = {
+        "replanner-task": Task(
+            id="replanner-task",
+            team_run_id="run-1",
+            agent_name="team_replanner",
+            status=TaskStatus.READY,
+            objective="recover",
+            parent_id="parent",
+        ),
+        "survivor": Task(
+            id="survivor",
+            team_run_id="run-1",
+            agent_name="validator",
+            status=TaskStatus.PENDING,
+            objective="validate",
+            deps=["repair"],
+            parent_id="parent",
+        ),
+    }
+    ctx = ToolExecutionContext(
+        cwd="/tmp",
+        metadata={
+            "task_center": task_center,
+            "work_item_id": "replanner-task",
+            "agent_name": "team_replanner",
+            "role": "replanner",
+        },
+    )
+
+    tool = SubmitTaskPlanTool()
+    result = await tool.execute(
+        tool.input_model(
+            new_tasks=[
+                {
+                    "id": "repair",
+                    "spec": _spec("Repair the stale implementation path."),
+                    "name": "developer",
+                    "scope_paths": ["src/api.py"],
+                },
+            ],
+            expected_graph={
+                "repair": [],
+                "survivor": [],
+            },
+        ),
+        ctx,
+    )
+
+    assert result.is_error is True
+    assert "expected_graph deps mismatch for 'survivor'" in result.output
     assert ctx.metadata.get("resolved_plan") is None
 
 

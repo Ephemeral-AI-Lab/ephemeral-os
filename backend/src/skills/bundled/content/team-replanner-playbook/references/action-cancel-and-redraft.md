@@ -7,7 +7,9 @@ Use `submit_task_plan(new_tasks=[...], remove_tasks=[...])` when sibling tasks a
 - Sibling tasks are working on invalidated assumptions or wrong files.
 - A shared dependency changed and existing work is no longer valid.
 - `submit_task_plan(new_tasks=[...])` alone would leave stale work running or conflicting.
-- Use `draft_task_plan(...)` first to preview and validate before committing.
+- Include `expected_graph={"task_id": ["dep_id", ...]}` when sibling dependency
+  shape matters so `submit_task_plan(...)` can reject a mismatched projection
+  before committing.
 
 ## Avoid
 

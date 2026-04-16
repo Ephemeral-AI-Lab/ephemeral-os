@@ -16,7 +16,7 @@ Use this reference when shaping the terminal validator task in a plan.
 ## Workflow
 
 - The terminal validator must run the **entire relevant test suite**, not just the scoped tests from individual developer lanes. Its task prose must specify the broad verification command that covers all fail-to-pass and pass-to-pass targets.
-- The terminal validator's `objective` field must include:
+- The terminal validator's `spec` field must include:
 
 1. **Full suite command**: the broad pytest or test command covering all targets from the original benchmark or user request.
 2. **Scoped re-check list**: the specific failing test ids from developer lanes, so the validator can attribute regressions to specific changes.

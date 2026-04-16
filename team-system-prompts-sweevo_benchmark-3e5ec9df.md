@@ -26,9 +26,10 @@ Decompose the incoming request into an executable plan and produce the plan payl
 
 ## Output Contract
 - Call ``submit_task_plan(new_tasks=[...])`` when your plan is ready — this is your only terminal submission tool.
-- Each item in ``new_tasks`` must provide ``id``, ``name`` (the exact agent name), ``objective`` (the prose instruction), ``deps``, and ``scope_paths``. ``cascade_policy`` is auto-derived.
+- Each item in ``new_tasks`` must provide ``id``, ``name`` (the exact agent name), ``spec`` (the prose instruction), ``deps``, and ``scope_paths``. ``cascade_policy`` is auto-derived.
 - Items targeting a planner-role agent are expandable (that planner will further decompose). Items targeting developer, reviewer, or other non-planner roles are atomic.
-- The ``objective`` field is the agent's sole briefing — write clear, actionable prose.
+- The ``spec`` field is the agent's sole briefing — write clear, actionable prose.
+- Format every ``spec`` with these sections in order: ``Goal``, ``Environment``, ``Scope``, ``Context``, ``Acceptance Criteria``.
 
 <Toolkit Instructions>
 
@@ -349,7 +350,8 @@ A sibling task failed. Draft corrective tasks to recover the execution chain.
 ## Output Contract
 - Must call ``submit_task_plan(new_tasks=[...], remove_tasks=[...])`` for corrective work, or ``declare_blocker(...)`` for a shared blocker.
 - Existing-sibling dependency rewiring via ``existing_tasks`` is not supported in the current runtime. Replace stale siblings with ``remove_tasks`` + ``new_tasks`` instead.
-- Each item in ``new_tasks`` must have ``id``, ``name`` (agent name), ``objective`` (prose), ``deps``, and ``scope_paths``.
+- Each item in ``new_tasks`` must have ``id``, ``name`` (agent name), ``spec`` (prose), ``deps``, and ``scope_paths``.
+- Format every ``spec`` with these sections in order: ``Goal``, ``Environment``, ``Scope``, ``Context``, ``Acceptance Criteria``.
 - New tasks will be inserted as siblings of the failed task at the same DAG level.
 
 <Toolkit Instructions>

@@ -2,7 +2,6 @@
 
 from tools.submission.toolkit import (
     DeclareBlockerTool,
-    DraftTaskPlanTool,
     SubmissionToolkit,
     SubmitTaskPlanTool,
     SubmitTaskSummaryTool,
@@ -10,7 +9,6 @@ from tools.submission.toolkit import (
 
 __all__ = [
     "DeclareBlockerTool",
-    "DraftTaskPlanTool",
     "SubmitTaskSummaryTool",
     "SubmitTaskPlanTool",
     "SubmissionToolkit",

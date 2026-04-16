@@ -56,7 +56,7 @@ Each new task carries the full task-definition payload the runtime needs:
 class NewTaskSpec(BaseModel):
     id: str
     name: str          # exact agent name or roster role hint
-    objective: str     # agent's sole briefing
+    spec: str          # structured briefing with Goal, Environment, Scope, Context, Acceptance Criteria
     deps: list[str] = []
     scope_paths: list[str] = []
 ```

@@ -4,7 +4,6 @@ Tools write structured data to ``context.metadata``; the executor reads
 it after the runner returns.
 
 Tool surface:
-  - draft_task_plan      (non-terminal) — validate proposed plan, render ASCII diff
   - submit_task_plan     (terminal)     — commit plan to task model
   - declare_blocker      (terminal)     — escalate to conductor
   - submit_task_summary  (terminal)     — submit success/fail outcome
@@ -13,6 +12,7 @@ Tool surface:
 from __future__ import annotations
 
 import logging
+import re
 import time
 import uuid
 from typing import Any, Literal
@@ -132,6 +132,35 @@ _EXISTING_TASKS_UNSUPPORTED = (
     "existing_tasks rewiring is not supported yet; use remove_tasks + new_tasks "
     "to replace stale siblings instead."
 )
+_SPEC_SECTIONS = ("Goal", "Environment", "Scope", "Context", "Acceptance Criteria")
+_SPEC_SECTION_RE = re.compile(
+    r"(?im)^\s*(?:\d+[.)]\s*)?"
+    r"(Goal|Environment|Scope|Context|Acceptance Criteria)\s*:\s*\S"
+)
+
+
+def _spec_format_errors(spec_text: str) -> list[str]:
+    matches = list(_SPEC_SECTION_RE.finditer(spec_text))
+    found = [match.group(1) for match in matches]
+    missing = [section for section in _SPEC_SECTIONS if section not in found]
+    errors: list[str] = []
+    if missing:
+        errors.append("missing spec section(s): " + ", ".join(missing))
+
+    positions = {match.group(1): match.start() for match in matches}
+    previous = -1
+    for section in _SPEC_SECTIONS:
+        current = positions.get(section)
+        if current is None:
+            continue
+        if current <= previous:
+            errors.append(
+                "spec sections must appear in order: "
+                + " -> ".join(_SPEC_SECTIONS)
+            )
+            break
+        previous = current
+    return errors
 
 
 def _note_budget_issues(
@@ -220,9 +249,12 @@ class NewTaskSpec(BaseModel):
         ...,
         description="Agent name or role hint (e.g. 'developer', 'validator')",
     )
-    objective: str = Field(
+    spec: str = Field(
         ...,
-        description="Prose instruction — the agent's sole briefing",
+        description=(
+            "Structured task spec — the agent's sole briefing. Must include sections "
+            "in order: Goal, Environment, Scope, Context, Acceptance Criteria."
+        ),
     )
     deps: list[str] = Field(default_factory=list, description="Task IDs this depends on")
     scope_paths: list[str] = Field(
@@ -231,26 +263,8 @@ class NewTaskSpec(BaseModel):
     )
 
 
-class DraftTaskPlanInput(BaseModel):
-    existing_tasks: list[ExistingTaskRef] = Field(
-        default_factory=list,
-        description=(
-            "Reserved for future sibling dependency rewrites. "
-            "The current runtime rejects non-empty values."
-        ),
-    )
-    new_tasks: list[NewTaskSpec] = Field(
-        default_factory=list,
-        description="New tasks to create",
-    )
-    remove_tasks: list[str] = Field(
-        default_factory=list,
-        description="Task IDs to cancel (siblings + descendants)",
-    )
-
-
 class SubmitTaskPlanInput(BaseModel):
-    """Same schema as DraftTaskPlanInput."""
+    """Plan submission payload."""
 
     existing_tasks: list[ExistingTaskRef] = Field(
         default_factory=list,
@@ -266,6 +280,15 @@ class SubmitTaskPlanInput(BaseModel):
     remove_tasks: list[str] = Field(
         default_factory=list,
         description="Task IDs to cancel (siblings + descendants)",
+    )
+    expected_graph: dict[str, list[str]] | None = Field(
+        default=None,
+        description=(
+            "Optional validation-only adjacency map expected after applying remove_tasks "
+            "and new_tasks. Keys are surviving sibling IDs plus new task IDs; values are "
+            "each task's expected dependency IDs. This is checked against the runtime "
+            "projection and does not mutate existing task dependencies."
+        ),
     )
 
 
@@ -285,8 +308,80 @@ def _get_sibling_ids(graph: dict[str, Any], parent_id: str | None) -> set[str]:
     return {t.id for t in graph.values() if getattr(t, "parent_id", None) == parent_id}
 
 
+def _get_siblings(graph: dict[str, Any], parent_id: str | None) -> list[Any]:
+    """Return tasks sharing the same parent."""
+    return [t for t in graph.values() if getattr(t, "parent_id", None) == parent_id]
+
+
+def _normalized_deps_by_task_id(adjacency: dict[str, list[str]]) -> dict[str, list[str]]:
+    return {task_id: sorted(str(dep) for dep in deps) for task_id, deps in sorted(adjacency.items())}
+
+
+def _project_expected_graph(
+    arguments: SubmitTaskPlanInput,
+    *,
+    siblings: list[Any],
+    current_task_id: str,
+    include_existing_siblings: bool,
+) -> dict[str, list[str]]:
+    remove_ids = set(arguments.remove_tasks)
+    projected: dict[str, list[str]] = {}
+    if include_existing_siblings:
+        for task in siblings:
+            task_id = str(getattr(task, "id", ""))
+            if not task_id or task_id == current_task_id or task_id in remove_ids:
+                continue
+            projected[task_id] = [str(dep) for dep in getattr(task, "deps", [])]
+    for spec in arguments.new_tasks:
+        projected[spec.id] = list(spec.deps)
+    return projected
+
+
+def _expected_graph_errors(
+    arguments: SubmitTaskPlanInput,
+    *,
+    graph: dict[str, Any] | None,
+    parent_id: str | None,
+    role: str,
+    current_task_id: str,
+) -> list[str]:
+    if arguments.expected_graph is None:
+        return []
+    if graph is None and role == "replanner":
+        return ["expected_graph cannot be validated because the current task graph is unavailable"]
+
+    siblings = _get_siblings(graph, parent_id) if graph is not None else []
+    projected = _normalized_deps_by_task_id(
+        _project_expected_graph(
+            arguments,
+            siblings=siblings,
+            current_task_id=current_task_id,
+            include_existing_siblings=role == "replanner",
+        )
+    )
+    expected = _normalized_deps_by_task_id(arguments.expected_graph)
+
+    errors: list[str] = []
+    projected_ids = set(projected)
+    expected_ids = set(expected)
+    missing = sorted(projected_ids - expected_ids)
+    extra = sorted(expected_ids - projected_ids)
+    if missing:
+        errors.append("expected_graph missing projected task(s): " + ", ".join(missing))
+    if extra:
+        errors.append("expected_graph includes non-projected task(s): " + ", ".join(extra))
+
+    for task_id in sorted(projected_ids & expected_ids):
+        if projected[task_id] != expected[task_id]:
+            errors.append(
+                f"expected_graph deps mismatch for '{task_id}': "
+                f"expected {expected[task_id]}, projected {projected[task_id]}"
+            )
+    return errors
+
+
 def _validate_plan_input(
-    arguments: DraftTaskPlanInput | SubmitTaskPlanInput,
+    arguments: SubmitTaskPlanInput,
     context: ToolExecutionContext,
 ) -> list[str]:
     """Validate the plan input. Returns list of error strings."""
@@ -334,8 +429,10 @@ def _validate_plan_input(
             errors.append(f"task '{spec.id}': empty agent name")
         elif get_definition(resolved) is None:
             errors.append(f"task '{spec.id}': unknown agent '{resolved}'")
-        if not spec.objective:
-            errors.append(f"task '{spec.id}': empty objective")
+        if not spec.spec:
+            errors.append(f"task '{spec.id}': empty spec")
+        for error in _spec_format_errors(spec.spec):
+            errors.append(f"task '{spec.id}': {error}")
 
     # 3. Validate remove_tasks exist
     from team.models import TERMINAL_STATUSES
@@ -368,130 +465,16 @@ def _validate_plan_input(
                     f"(parent_id={parent_id})"
                 )
 
-    return errors
-
-
-def _render_task_line(task: Any, *, is_new: bool = False, is_removed: bool = False) -> str:
-    """Render a single task as an ASCII line."""
-    status = getattr(task, "status", None)
-    status_str = f"[{status.value}]" if status is not None else "[new]"
-    agent = getattr(task, "agent_name", None) or getattr(task, "name", "?")
-    tid = getattr(task, "id", "?")
-    deps = getattr(task, "deps", [])
-    dep_str = f" deps=[{', '.join(deps)}]" if deps else ""
-
-    prefix = "  "
-    if is_new:
-        prefix = "+ "
-    elif is_removed:
-        prefix = "- "
-
-    return f"{prefix}{tid} {agent} {status_str}{dep_str}"
-
-
-def _render_ascii_graph(
-    title: str,
-    siblings: list[Any],
-    *,
-    new_specs: list[NewTaskSpec] | None = None,
-    remove_ids: set[str] | None = None,
-) -> str:
-    """Render an ASCII representation of the task graph."""
-    lines = [f"=== {title} ==="]
-    remove_ids = remove_ids or set()
-    for t in siblings:
-        tid = getattr(t, "id", "")
-        is_removed = tid in remove_ids
-        lines.append(_render_task_line(t, is_removed=is_removed))
-    if new_specs:
-        for spec in new_specs:
-            dep_str = f" deps=[{', '.join(spec.deps)}]" if spec.deps else ""
-            lines.append(f"+ {spec.id} {spec.name} [new]{dep_str}")
-    return "\n".join(lines)
-
-
-# ---------------------------------------------------------------------------
-# DraftTaskPlanTool — preview tool (non-terminal)
-# ---------------------------------------------------------------------------
-
-
-class DraftTaskPlanTool(BaseTool):
-    name = "draft_task_plan"
-    description = (
-        "Validate proposed plan and render ASCII before/after graph. "
-        "Does NOT write to the task model. Call this first to preview, "
-        "then call submit_task_plan to commit."
-    )
-    short_description = "Validate a draft task plan."
-    input_model = DraftTaskPlanInput
-
-    async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
-        assert isinstance(arguments, DraftTaskPlanInput)
-
-        # Validate
-        errors = _validate_plan_input(arguments, context)
-        if errors:
-            return ToolResult(
-                output="Validation failed:\n" + "\n".join(f"- {e}" for e in errors),
-                is_error=True,
-            )
-
-        # Fetch current siblings for graph rendering
-        graph = _get_graph(context)
-        task_id = str(context.metadata.get("work_item_id") or "")
-        parent_id: str | None = None
-        siblings: list[Any] = []
-
-        if graph is not None:
-            own_task = graph.get(task_id)
-            if own_task is not None:
-                parent_id = getattr(own_task, "parent_id", None)
-            siblings = [t for t in graph.values() if getattr(t, "parent_id", None) == parent_id]
-
-        remove_ids = set(arguments.remove_tasks)
-
-        # Render BEFORE graph
-        ascii_before = _render_ascii_graph("BEFORE", siblings)
-
-        # Render AFTER graph (filter removed, add new)
-        after_siblings = [t for t in siblings if getattr(t, "id", "") not in remove_ids]
-        ascii_after = _render_ascii_graph(
-            "AFTER",
-            after_siblings,
-            new_specs=arguments.new_tasks,
+    errors.extend(
+        _expected_graph_errors(
+            arguments,
+            graph=graph,
+            parent_id=parent_id,
+            role=role,
+            current_task_id=task_id,
         )
-
-        # Diff summary
-        diff_lines = ["=== DIFF ==="]
-        if arguments.remove_tasks:
-            diff_lines.append(f"Remove: {len(arguments.remove_tasks)} task(s)")
-        if arguments.new_tasks:
-            diff_lines.append(f"Add: {len(arguments.new_tasks)} task(s)")
-        ascii_diff = "\n".join(diff_lines)
-
-        # Warnings for destructive actions
-        warnings: list[str] = []
-        if graph is not None:
-            for rid in arguments.remove_tasks:
-                target = graph.get(rid)
-                if target is None:
-                    continue
-                status = getattr(target, "status", None)
-                if status is not None and status.value == "running":
-                    warnings.append(f"Warning: {rid} is RUNNING — will be terminated")
-                # Check for descendants
-                children = [t for t in graph.values() if getattr(t, "parent_id", None) == rid]
-                if children:
-                    warnings.append(
-                        f"Warning: {rid} has {len(children)} descendants — will cascade cancel"
-                    )
-
-        output = f"{ascii_before}\n\n{ascii_after}\n\n{ascii_diff}"
-        if warnings:
-            output += "\n\n" + "\n".join(warnings)
-        output += "\n\nPlan looks valid. Call submit_task_plan to commit."
-
-        return ToolResult(output=output)
+    )
+    return errors
 
 
 # ---------------------------------------------------------------------------
@@ -505,8 +488,8 @@ class SubmitTaskPlanTool(BaseTool):
         "Submit a plan. Planners: provide new_tasks with the full decomposition. "
         "Replanners: provide new_tasks for corrective tasks and remove_tasks "
         "for task IDs to cancel. existing_tasks rewires are not supported yet. "
-        "Each task's 'objective' field is the agent's sole briefing — write "
-        "clear, actionable prose."
+        "Each task's 'spec' field is the agent's sole briefing. It must use "
+        "sections in order: Goal, Environment, Scope, Context, Acceptance Criteria."
     )
     short_description = "Submit a task plan."
     input_model = SubmitTaskPlanInput
@@ -515,7 +498,7 @@ class SubmitTaskPlanTool(BaseTool):
         assert isinstance(arguments, SubmitTaskPlanInput)
         from team.models import Plan, ReplanPlan
 
-        # 1. Re-validate (same checks as draft_task_plan)
+        # 1. Validate the proposed plan before committing metadata.
         errors = _validate_plan_input(arguments, context)
         if errors:
             return ToolResult(
@@ -531,13 +514,13 @@ class SubmitTaskPlanTool(BaseTool):
         resolved_tasks: list[dict[str, Any]] = []
         for spec in arguments.new_tasks:
             resolved_agent = _resolve_agent_name(spec.name, roster)
-            # Auto-derive description from objective (first ~10 words)
-            words = spec.objective.split()
+            # Auto-derive description from spec (first ~10 words)
+            words = spec.spec.split()
             description = " ".join(words[:10]) + ("..." if len(words) > 10 else "")
             resolved_tasks.append(
                 {
                     "id": spec.id,
-                    "objective": spec.objective,
+                    "objective": spec.spec,
                     "agent": resolved_agent,
                     "description": description,
                     "deps": list(spec.deps),
@@ -710,11 +693,10 @@ class SubmissionToolkit(BaseToolkit):
             name="submission",
             description=(
                 "Terminal submission tools "
-                "(submit_task_summary, submit_task_plan, draft_task_plan, declare_blocker)."
+                "(submit_task_summary, submit_task_plan, declare_blocker)."
             ),
             tools=[
                 SubmitTaskSummaryTool(),
-                DraftTaskPlanTool(),
                 SubmitTaskPlanTool(),
                 DeclareBlockerTool(),
             ],

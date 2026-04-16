@@ -11,9 +11,8 @@ from __future__ import annotations
 
 import sys
 import types
-from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -57,11 +56,20 @@ def _stub_missing_modules():
 # Now safe to import project modules
 # ---------------------------------------------------------------------------
 
-from agents.types import AgentDefinition
-from engine.runtime.agent import _register_additional_allowed_tools, finalize_tool_registry_and_prompt
-from tools.core.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolResult, ToolRegistry
-from tools.core.factory import ToolkitContext, register_toolkit_factory, _factories
-from tools.submission.toolkit import SubmissionToolkit
+from agents.types import AgentDefinition  # noqa: E402
+from engine.runtime.agent import (  # noqa: E402
+    _register_additional_allowed_tools,
+    finalize_tool_registry_and_prompt,
+)
+from tools.core.base import (  # noqa: E402
+    BaseTool,
+    BaseToolkit,
+    ToolExecutionContext,
+    ToolRegistry,
+    ToolResult,
+)
+from tools.core.factory import ToolkitContext, _factories, register_toolkit_factory  # noqa: E402
+from tools.submission.toolkit import SubmissionToolkit  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -378,12 +386,12 @@ class TestToolkitFactoryInstantiation:
             terminal_tools={"submit_task_plan"},
         )
 
-        assert registry.get("draft_task_plan") is not None
         assert registry.get("submit_task_plan") is not None
         assert registry.get("submit_task_summary") is None
         assert registry.get("declare_blocker") is None
-        assert "1. draft_task_plan - Validate a draft task plan." in prompt
-        assert "2. submit_task_plan - Submit a task plan." in prompt
+        assert registry.get("draft_task_plan") is None
+        assert "1. submit_task_plan - Submit a task plan." in prompt
+        assert "draft_task_plan" not in prompt
         assert "1. submit_task_summary - Submit task outcome." not in prompt
 
     def test_blocked_tools_apply_after_role_policy(self):
