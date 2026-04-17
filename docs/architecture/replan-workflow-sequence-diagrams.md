@@ -5,7 +5,6 @@ The current `submit_replan` payload is:
 
 - `new_tasks`
 - `cancel_ids`
-- `output`
 
 `team_replanner` is a normal expandable task. When original task `A` fails, `A`
 moves to `REQUEST_REPLAN`, replanner task `R` is created, and pending task
@@ -32,8 +31,9 @@ non-detached child is `DONE`.
   `all_children_detached`, and itself enters the detached set of *its* parent
   — propagates up naturally.
 
-This means cancel-cascades and replanner budget failures no longer wedge
-ancestor chains: detached children simply fall out of the counting set.
+This means cancel-cascades no longer wedge ancestor chains: detached children
+simply fall out of the counting set. (Replan-budget exhaustion is a separate
+case — it terminates the whole team run via `fail_fast`; see §1a.)
 
 Promotion fires on `DONE`, `FAILED`, and `CANCELLED` child transitions, plus
 a sweep after `apply_replan` to catch bulk cascade cancels.
@@ -51,7 +51,13 @@ sequenceDiagram
     participant R as Replanner Task R
 
     W->>Ex: submit_task_summary(type="fail", reason)
+    Note over W,Ex: Tool only writes task_summary + type="fail"<br/>into tool_metadata. Executor._read_result<br/>promotes that into a ReplanRequest.
     Ex->>TC: request_replan(A, reason)
+    TC->>TC: require_replan_capacity()
+    alt replan budget exhausted
+        TC-->>Ex: BudgetExceeded
+        Ex->>Run: fail_fast(replan_budget_exhausted)
+    end
     TC->>TS: request_replan(A, reason, team_replanner)
 
     TS->>TS: mark A as REQUEST_REPLAN
@@ -84,11 +90,12 @@ the team run immediately.
 
 `TaskCenter.request_replan` calls `require_replan_capacity()` before creating
 `R`. If the budget is exhausted, `BudgetExceeded` propagates to the executor,
-which **fails `A`** with reason `replan_budget_exhausted: {exc}`. `A` moves
-into the detached set of its parent, so promotion proceeds naturally: the
-parent either promotes past `A` on its other children's DONE, or itself goes
-FAILED if `A` was the last non-detached child. The team run is not terminated
-— failure propagates through the detach/promotion chain instead.
+which treats it as terminal for the whole team run: the executor calls
+`team_run.fail_fast("replan_budget_exhausted: {exc}")` (same mechanism as a
+graph invariant violation). The replan budget is a run-level guarantee, not a
+per-branch one — once it's gone, no further recovery is possible anywhere in
+the tree, so localizing the failure to `A` would just defer the inevitable
+while letting unrelated work keep burning resources.
 
 ## 2. Replanner Submits No Direct Children
 
@@ -103,12 +110,12 @@ sequenceDiagram
     participant D as Downstream Tasks
     participant A as Original Task A
 
-    R->>Tool: submit_replan(new_tasks=[], cancel_ids=[...], output)
-    Tool->>Tool: validate cancel_ids and new_tasks
+    R->>Tool: submit_replan(new_tasks=[], cancel_ids=[...])
+    Tool->>Tool: validate cancel_ids (direct siblings of R only)
     Tool-->>Ex: AgentResult(submitted_replan)
 
     Ex->>TC: complete_task(R, submitted_replan)
-    TC->>PE: apply_replan(R, new_tasks, cancel_ids)
+    TC->>PE: apply_replan(R, add_tasks, cancel_ids)
     PE->>TS: apply_replan_atomic(cancel_ids, specs=[])
 
     TS->>TS: cancel requested non-terminal tasks with cascade
@@ -133,8 +140,8 @@ sequenceDiagram
     participant D as Downstream Tasks
     participant A as Original Task A
 
-    R->>TC: complete_task(R, submitted_replan with child tasks)
-    TC->>PE: apply_replan(R, new_tasks)
+    R->>TC: complete_task(R, submitted_replan with new_tasks)
+    TC->>PE: apply_replan(R, add_tasks)
     PE->>TS: apply_replan_atomic(specs include parent_id=R)
 
     TS->>TS: insert child tasks under R
@@ -170,7 +177,7 @@ the failure propagates upward via the detach/promotion chain rather than
 wedging state. Recovery at a higher level still requires an ancestor
 replanner.
 
-## 4. Replanner Adds Sibling Or Subtree Tasks Only
+## 4. Replanner Adds Child Tasks Only
 
 ```mermaid
 sequenceDiagram
@@ -178,44 +185,44 @@ sequenceDiagram
     participant TC as TaskCenter
     participant PE as PlanExpander
     participant TS as TaskStore
-    participant S as Sibling Layer Or Subtree
+    participant C as Children Of R
     participant D as Downstream Tasks
     participant A as Original Task A
 
-    R->>TC: complete_task(R, submitted_replan)
-    TC->>PE: apply_replan(R, new_tasks)
+    R->>TC: complete_task(R, submitted_replan with new_tasks)
+    TC->>PE: apply_replan(R, add_tasks)
 
-    PE->>PE: validate parent_id is in allowed parent projection
-    PE->>PE: count direct children where parent_id == R
-    PE->>TS: apply_replan_atomic(specs under R.parent or sibling subtree)
+    PE->>PE: enforce each spec.parent_id == R.id
+    PE->>PE: validate plan policy, depth, and budget
+    PE->>TS: apply_replan_atomic(specs under R.id)
 
-    TS->>S: insert sibling or subtree tasks
+    TS->>C: insert child tasks
     TS-->>PE: inserted tasks
-    PE-->>TC: replanner_child_count=0
+    PE-->>TC: replanner_child_count > 0
 
-    TC->>TS: mark R DONE
-    TS->>D: downstream unlocks if all deps are DONE
-    TC->>TS: finalize_replanned_origin(R)
-    TS->>A: mark A FAILED without cascade
+    TC->>TS: mark R EXPANDED
+    Note over D,A: Downstream remains blocked on R until child repairs finish.
 ```
 
-Sibling-layer or sibling-subtree additions do not make `R` `EXPANDED`. Only
-direct children of `R` do.
+All replan-added tasks are direct children of `R`. This keeps the original
+rewire invariant simple: downstream tasks wait on `R`, and `R` waits on the
+repair work it owns.
 
-### Allowed parent projection
+### Authoring Boundary
 
-A replanner may specify `parent_id` in `new_tasks` only within the following
-projection (validated by both the `submit_replan` tool and `PlanExpander`):
+A replanner never specifies `parent_id` in `new_tasks`; the tool/runtime stamp
+each new task with `parent_id=R`. The only graph mutation outside `R`'s child
+set is cancellation:
 
-- `R` itself (creates direct children — triggers EXPANDED; see §3).
-- `R.parent` (`target_parent_id` — the parent of the original failed task
-  `A`). Produces siblings of `A`/`R`.
-- Any non-terminal descendant of `target_parent_id` (allows inserting into an
-  existing sibling subtree).
+- `cancel_ids` may target direct siblings of `R`.
+- Cancelling a sibling cascades to active descendants and dependents.
+- Replacement work belongs in `new_tasks` under `R`, so downstream work remains
+  blocked until recovery completes.
+- New tasks cannot depend on downstream tasks already blocked on `R`, because
+  that would create a scheduler cycle through the recovery gate.
 
-Parents outside this projection — arbitrary ancestors above `R.parent`, other
-branches of the tree, or terminal tasks — are rejected. This bounds the blast
-radius of a single replan to the subtree rooted at `R.parent`.
+This bounds the blast radius of a single replan while preserving the guarantee
+that `R` is the recovery gate.
 
 ## 5. Replanner Cancels A Running Task
 
@@ -228,11 +235,11 @@ sequenceDiagram
     participant X as Running Task X
 
     R->>PE: submit_replan(cancel_ids=[X])
-    PE->>PE: validate X is non-terminal and in allowed projection
+    PE->>PE: validate X is a non-terminal direct sibling
     PE->>PE: compute cascaded descendants and dependency dependents
 
     alt X or a cascaded task is RUNNING
-        PE->>Run: cancel_agent_run(task_id)
+        PE->>Run: cancel_running_task(task_id)
         Run-->>PE: cancellation requested
     end
 
@@ -263,20 +270,24 @@ sequenceDiagram
     else invalid at runtime layer
         Tool-->>TC: submitted_replan
         TC->>PE: apply_replan(...)
-        PE-->>TC: InvalidPlan or BudgetExceeded
+        PE-->>TC: InvalidPlan
         TC->>A: fail original REQUEST_REPLAN task with replan_apply_failed
         TC-->>R: error propagated
+    else task budget exhausted at runtime layer
+        PE-->>Ex: BudgetExceeded
+        Ex->>Run: fail_fast(tasks_budget_exhausted)
     end
 ```
 
 Tool-layer validation is recoverable inside the replanner turn. Runtime apply
 failure fails the original request_replan task so it cannot remain stuck.
+Task-budget exhaustion is handled like other run-level budget exhaustion: the
+executor terminates the team run via `fail_fast`.
 
-Note that on the runtime-layer branch, `R` itself is **not** marked FAILED —
-only `A` is failed via `fail_with_cascade` with reason
-`replan_apply_failed: {exc}`. `R` keeps its current state (RUNNING or
-EXPANDED) and the exception propagates back to the agent, which may resubmit.
-The executor is responsible for terminating `R` if the error is unrecoverable.
+Note that `TaskCenter.apply_replan` only marks `A` failed on the InvalidPlan
+runtime branch. The exception still propagates to the executor; if the executor
+treats it as an unrecoverable worker error, `R` is failed through the normal
+replanner failure path.
 
 ### Idempotency
 

@@ -89,6 +89,18 @@ class TaskStore:
         """Fast in-memory lookup — no DB call."""
         return self._tg.tasks.get(task_id)
 
+    def children_of(self, parent_id: str) -> list[Task]:
+        """All in-memory children of ``parent_id``."""
+        return self._tg.children_of(parent_id)
+
+    def detached_children(self, parent_id: str) -> list[Task]:
+        """Children of ``parent_id`` whose status is failed or cancelled."""
+        return self._tg.detached_children(parent_id)
+
+    def live_children(self, parent_id: str) -> list[Task]:
+        """Children of ``parent_id`` that are not detached."""
+        return self._tg.live_children(parent_id)
+
     async def refresh_graph(self) -> dict[str, Task]:
         """Sync in-memory graph from DB. Returns the graph."""
         records = await self.get_all_tasks()

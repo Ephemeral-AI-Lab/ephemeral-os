@@ -66,78 +66,40 @@ class Executor:
     async def _handle_worker_exception(self, task: "Task", reason: str) -> None:
         await self.team_run.task_center.fail_task(task.id, reason)
 
-    _DEADLOCK_IDLE_THRESHOLD = 100  # ~5s of idle polls (100 * 50ms)
-
-    async def _check_deadlock(self) -> bool:
-        """Return True if all remaining tasks are stuck (no ready, no running)."""
-        if getattr(self.team_run, "_dispatching", 0) > 0:
-            return False
-        active = getattr(self.team_run, "_active_agent_runs", {})
-        if active:
-            return False
-        try:
-            statuses = await self.team_run.task_center._store.get_statuses()
-        except Exception:
-            return False
-        has_pending = any(s in ("pending", "ready") for s in statuses.values())
-        has_running = any(s == "running" for s in statuses.values())
-        has_replanning = any(s == "request_replan" for s in statuses.values())
-        if has_replanning and not has_running and not has_pending:
-            await self.team_run.task_center.fail_orphaned_replanning()
-            return False
-        return has_pending and not has_running
-
     async def run_forever(self) -> None:
         tc = self.team_run.task_center
         dq = self.team_run.dispatch_queue
         pop_ready = dq.pop_ready
-        idle_polls = 0
         while not self.team_run.cancel_event.is_set():
             try:
                 rec = await pop_ready(self.team_run.id)
             except GraphInvariantViolation as exc:
-                await self._fail_team_run_for_invariant(exc)
+                await self.team_run.fail_fast(f"graph_invariant_violation: {exc}")
                 break
             except Exception as exc:
                 logger.exception("DispatchQueue pop_ready failed: %s", exc)
                 await asyncio.sleep(0.2)
                 continue
             if rec is None:
-                idle_polls += 1
-                if idle_polls >= self._DEADLOCK_IDLE_THRESHOLD and await self._check_deadlock():
-                    logger.error(
-                        "Deadlock detected: pending tasks remain but none are ready or running"
-                    )
-                    self.team_run.cancel_event.set()
-                    break
                 await asyncio.sleep(0.05)
                 continue
-            idle_polls = 0
             task = _record_to_task(rec)
             tc.graph[task.id] = task
             try:
                 await self._run_one(task)
             except GraphInvariantViolation as exc:
-                await self._fail_team_run_for_invariant(exc)
+                await self.team_run.fail_fast(f"graph_invariant_violation: {exc}")
+                break
+            except BudgetExceeded as exc:
+                await self.team_run.fail_fast(f"tasks_budget_exhausted: {exc}")
                 break
             except Exception as exc:
                 logger.exception("Worker error on %s: %s", task.id, exc)
                 try:
                     await self._handle_worker_exception(task, f"worker_exception: {exc}")
                 except GraphInvariantViolation as invariant:
-                    await self._fail_team_run_for_invariant(invariant)
+                    await self.team_run.fail_fast(f"graph_invariant_violation: {invariant}")
                     break
-
-    async def _fail_team_run_for_invariant(self, exc: GraphInvariantViolation) -> None:
-        await self._fail_team_run(f"graph_invariant_violation: {exc}")
-
-    async def _fail_team_run(self, reason: str) -> None:
-        logger.critical(reason)
-        fail_fast = getattr(self.team_run, "fail_fast", None)
-        if callable(fail_fast):
-            await fail_fast(reason)
-        else:
-            self.team_run.cancel_event.set()
 
     async def _run_one(self, task: "Task") -> None:
         self.team_run._dispatching = getattr(self.team_run, "_dispatching", 0) + 1
@@ -160,9 +122,7 @@ class Executor:
         ctx = await self._build_context(defn, task)
 
         runner_task: asyncio.Task[object] = asyncio.create_task(self.runner(defn, ctx))
-        register_agent_run = getattr(self.team_run, "register_agent_run", None)
-        if callable(register_agent_run):
-            register_agent_run(task.id, runner_task)
+        self.team_run.register_agent_run(task.id, runner_task)
         try:
             await runner_task
         except asyncio.CancelledError:
@@ -173,9 +133,7 @@ class Executor:
             await self._handle_worker_exception(task, f"runner_exception: {exc}")
             return
         finally:
-            unregister_agent_run = getattr(self.team_run, "unregister_agent_run", None)
-            if callable(unregister_agent_run):
-                unregister_agent_run(task.id, runner_task)
+            self.team_run.unregister_agent_run(task.id, runner_task)
 
         # --- Read task state from tool_metadata and dispatch ---
         result = self._read_result(task, ctx)
@@ -252,10 +210,9 @@ class Executor:
             try:
                 await tc.request_replan(task.id, result)
             except BudgetExceeded as exc:
-                # No replan budget left — fail the task. It joins the detached
-                # set, so parents can still promote past it.
-                await tc.fail_task(task.id, f"replan_budget_exhausted: {exc}")
-                await self._checkpoint_after_transition(task, outcome="replan_budget_exhausted")
+                # Replan budget is a team-run-level guarantee. Exhaustion is
+                # terminal for the whole run, not a localized failure.
+                await self.team_run.fail_fast(f"replan_budget_exhausted: {exc}")
                 return
             await self._checkpoint_after_transition(task, outcome="replan_request")
             return

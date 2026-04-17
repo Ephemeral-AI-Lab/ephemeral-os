@@ -8,9 +8,9 @@ Use this template for `team_replanner` tasks that recover from a failed sibling 
 1. Please read the assigned replanning task and failure context.
 2. Analyze what failed and which sibling work is affected.
 3. Explore only enough to justify the smallest corrective plan.
-4. Draft corrective tasks with exact parent placement, dependencies, scope paths, and structured specs. You may place tasks under this replanner, at this replanner's sibling layer, or inside a surviving sibling subtree.
+4. Draft corrective child tasks with dependencies, scope paths, and structured specs. All new tasks are owned by this replanner; there is no free-form `parent_id`, and new tasks must not depend on downstream work that is already blocked on this replanner.
 5. Verify the corrective plan is valid, non-overlapping, and grounded in failure evidence.
-6. Submit the final corrective plan with `submit_replan(new_tasks=[...], cancel_ids=[...])`. Use `cancel_ids` for any not-completed task in your allowed parent projection that is stale, not only direct siblings.
+6. Submit the final corrective plan with `submit_replan(new_tasks=[...], cancel_ids=[...])`. `cancel_ids` may only target your **direct siblings**; cascade handles their subtrees. Put replacement work in `new_tasks` so downstream work remains blocked on this replanner until recovery completes.
 
 ## Assigned replanning task
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
+from pydantic import ValidationError
 
 from agents.registry import get_definition
 from team.builtins import register_all as register_team_builtins
@@ -124,7 +125,7 @@ async def test_replace_run_tasks_rejects_post_ready_snapshot_statuses_with_pendi
 
 
 @pytest.mark.asyncio
-async def test_submit_replan_allows_child_sibling_and_sibling_subtree_insertions():
+async def test_submit_replan_inserts_new_tasks_as_replanner_children():
     task_center = SimpleNamespace(
         posted=[],
         notes=None,
@@ -135,7 +136,6 @@ async def test_submit_replan_allows_child_sibling_and_sibling_subtree_insertions
                 status=TaskStatus.RUNNING,
             ),
             "sibling": _task("sibling", status=TaskStatus.EXPANDED),
-            "sibling-child": _task("sibling-child", parent_id="sibling"),
         },
     )
 
@@ -157,25 +157,16 @@ async def test_submit_replan_allows_child_sibling_and_sibling_subtree_insertions
         SubmitReplanTool.input_model(
             new_tasks=[
                 {
-                    "id": "child",
-                    "parent_id": "replanner",
+                    "id": "repair",
                     "name": "developer",
                     "spec": _spec("Repair under the replanner."),
-                    "scope_paths": ["src/a.py"],
-                },
-                {
-                    "id": "sibling-new",
-                    "parent_id": "parent",
-                    "name": "developer",
-                    "spec": _spec("Repair beside the replanner."),
                     "scope_paths": ["src/b.py"],
                 },
                 {
-                    "id": "subtree-new",
-                    "parent_id": "sibling",
+                    "id": "child",
                     "name": "developer",
-                    "spec": _spec("Repair inside a surviving sibling subtree."),
-                    "scope_paths": ["src/c.py"],
+                    "spec": _spec("Repair under the replanner."),
+                    "scope_paths": ["src/a.py"],
                 },
             ],
         ),
@@ -186,16 +177,15 @@ async def test_submit_replan_allows_child_sibling_and_sibling_subtree_insertions
     replan = ctx.metadata["resolved_plan"]
     assert [task.parent_id for task in replan.add_tasks] == [
         "replanner",
-        "parent",
-        "sibling",
+        "replanner",
     ]
 
 
 @pytest.mark.asyncio
-async def test_submit_replan_allows_non_sibling_cancel_inside_projection():
+async def test_submit_replan_rejects_cancel_of_non_direct_sibling():
     task_center = SimpleNamespace(
         posted=[],
-        notes=None,
+        notes=SimpleNamespace(post=lambda note: None),
         graph={
             "replanner": _task(
                 "replanner",
@@ -206,11 +196,6 @@ async def test_submit_replan_allows_non_sibling_cancel_inside_projection():
             "nested": _task("nested", parent_id="sibling", status=TaskStatus.READY),
         },
     )
-
-    async def _post(note):
-        task_center.posted.append(note)
-
-    task_center.notes = SimpleNamespace(post=_post)
     ctx = ToolExecutionContext(
         cwd="/tmp",
         metadata={
@@ -226,12 +211,12 @@ async def test_submit_replan_allows_non_sibling_cancel_inside_projection():
         ctx,
     )
 
-    assert result.is_error is False, result.output
-    assert ctx.metadata["resolved_plan"].cancel_ids == ["nested"]
+    assert result.is_error is True
+    assert "not a direct sibling" in result.output
 
 
 @pytest.mark.asyncio
-async def test_submit_replan_rejects_cancel_outside_projection():
+async def test_submit_replan_rejects_cancel_outside_siblings():
     task_center = SimpleNamespace(
         posted=[],
         notes=SimpleNamespace(post=lambda note: None),
@@ -260,7 +245,7 @@ async def test_submit_replan_rejects_cancel_outside_projection():
     )
 
     assert result.is_error is True
-    assert "outside the parent projection" in result.output
+    assert "not a direct sibling" in result.output
 
 
 @pytest.mark.asyncio
@@ -300,8 +285,28 @@ async def test_submit_replan_rejects_self_original_and_terminal_cancel_ids():
     assert "cancel target 'done' is done; cannot cancel" in result.output
 
 
+def test_submit_replan_rejects_unknown_fields():
+    # Sibling buckets are no longer accepted; pydantic should
+    # reject it via ConfigDict(extra="forbid").
+    with pytest.raises(ValidationError):
+        SubmitReplanTool.input_model(new_sibling_tasks=[])
+    with pytest.raises(ValidationError):
+        SubmitReplanTool.input_model(new_children_tasks=[])
+    with pytest.raises(ValidationError):
+        SubmitReplanTool.input_model(
+            new_tasks=[
+                {
+                    "id": "legacy-parent",
+                    "name": "developer",
+                    "spec": _spec("Legacy parent placement should be rejected."),
+                    "parent_id": "parent",
+                }
+            ]
+        )
+
+
 @pytest.mark.asyncio
-async def test_submit_replan_rejects_new_task_under_original_replanning_task():
+async def test_submit_replan_rejects_dep_on_rewired_downstream_task():
     task_center = SimpleNamespace(
         posted=[],
         notes=SimpleNamespace(post=lambda note: None),
@@ -312,6 +317,11 @@ async def test_submit_replan_rejects_new_task_under_original_replanning_task():
                 agent_name="team_replanner",
                 status=TaskStatus.RUNNING,
                 fired_by_task_id="failed",
+            ),
+            "downstream": _task(
+                "downstream",
+                status=TaskStatus.PENDING,
+                deps=["replanner"],
             ),
         },
     )
@@ -329,19 +339,19 @@ async def test_submit_replan_rejects_new_task_under_original_replanning_task():
         SubmitReplanTool.input_model(
             new_tasks=[
                 {
-                    "id": "bad-child",
-                    "parent_id": "failed",
+                    "id": "repair",
                     "name": "developer",
-                    "spec": _spec("Invalid repair under the original failed task."),
+                    "spec": _spec("Invalidly wait for downstream work blocked on R."),
+                    "deps": ["downstream"],
                     "scope_paths": ["src/a.py"],
-                },
-            ],
+                }
+            ]
         ),
         ctx,
     )
 
     assert result.is_error is True
-    assert "parent_id 'failed' is outside" in result.output
+    assert "unknown dep 'downstream'" in result.output
 
 
 class _FakeExpander:
@@ -510,17 +520,8 @@ class _ExpanderStore:
         self.graph = graph
         self.calls: list[str] = []
 
-    async def get_record(self, task_id: str):
-        task = self.graph.get(task_id)
-        if task is None:
-            return None
-        return SimpleNamespace(id=task.id, status=task.status.value, parent_id=task.parent_id)
-
     async def get_adjacency(self):
         return {task_id: list(task.deps) for task_id, task in self.graph.items()}
-
-    async def get_statuses(self):
-        return {task_id: task.status.value for task_id, task in self.graph.items()}
 
     async def apply_replan_atomic(self, **kwargs):
         self.calls.append("apply_replan_atomic")
@@ -530,12 +531,16 @@ class _ExpanderStore:
 class _Budget:
     def __init__(self) -> None:
         self.charged = 0
+        self.budgets = BudgetConfig()
 
     def has_capacity_for(self, count: int) -> bool:
         return True
 
     def charge_tasks(self, count: int) -> None:
         self.charged += count
+
+    def within_depth_limit(self, new_depth: int) -> bool:
+        return new_depth <= self.budgets.max_depth
 
 
 @pytest.mark.asyncio
@@ -556,14 +561,13 @@ async def test_replan_cancels_active_runner_before_marking_running_task_cancelle
         graph_getter=lambda: graph,
         emit_cb=lambda event: None,
         fail_cb=lambda task_id, reason: None,
-        cancel_active_task_cb=lambda task_id: store.calls.append(f"cancel:{task_id}") is None,
+        cancel_running_task_cb=lambda task_id: store.calls.append(f"cancel:{task_id}"),
     )
 
     await expander.apply_replan(
         replan_task_id="replanner",
         add_tasks=[],
         cancel_ids=["running-target"],
-        target_parent_id="parent",
     )
 
     assert store.calls == ["cancel:running-target", "apply_replan_atomic"]
@@ -593,14 +597,13 @@ async def test_replan_cancel_cascade_includes_reviewer_dependents():
         graph_getter=lambda: graph,
         emit_cb=lambda event: None,
         fail_cb=lambda task_id, reason: None,
-        cancel_active_task_cb=lambda task_id: store.calls.append(f"cancel:{task_id}") is None,
+        cancel_running_task_cb=lambda task_id: store.calls.append(f"cancel:{task_id}"),
     )
 
     await expander.apply_replan(
         replan_task_id="replanner",
         add_tasks=[],
         cancel_ids=["running-target"],
-        target_parent_id="parent",
     )
 
     assert store.calls == [
@@ -635,7 +638,6 @@ async def test_replan_expander_rejects_original_task_cancellation():
             replan_task_id="replanner",
             add_tasks=[],
             cancel_ids=["failed"],
-            target_parent_id="parent",
         )
 
 
@@ -659,7 +661,7 @@ async def test_replan_expander_rejects_insertion_under_original_task():
         fail_cb=lambda task_id, reason: None,
     )
 
-    with pytest.raises(InvalidPlan, match="outside the allowed parent projection"):
+    with pytest.raises(InvalidPlan, match="must be direct children of the replanner"):
         await expander.apply_replan(
             replan_task_id="replanner",
             add_tasks=[
@@ -671,7 +673,86 @@ async def test_replan_expander_rejects_insertion_under_original_task():
                 )
             ],
             cancel_ids=[],
-            target_parent_id="parent",
+        )
+
+
+@pytest.mark.asyncio
+async def test_replan_expander_applies_plan_policy_to_added_tasks():
+    graph = {
+        "failed": _task("failed", status=TaskStatus.REQUEST_REPLAN),
+        "replanner": _task(
+            "replanner",
+            agent_name="team_replanner",
+            status=TaskStatus.RUNNING,
+            fired_by_task_id="failed",
+        ),
+    }
+    expander = PlanExpander(
+        team_run_id="run-1",
+        store=_ExpanderStore(graph),
+        budget=_Budget(),
+        graph_getter=lambda: graph,
+        emit_cb=lambda event: None,
+        fail_cb=lambda task_id, reason: None,
+    )
+
+    with pytest.raises(InvalidPlan, match="submitted plans cannot include replanner agent"):
+        await expander.apply_replan(
+            replan_task_id="replanner",
+            add_tasks=[
+                TaskDefinition(
+                    id="bad-replanner",
+                    objective=_spec("Invalid replanner target."),
+                    agent="team_replanner",
+                    description="invalid replanner target",
+                    scope_paths=["src/a.py"],
+                    parent_id="replanner",
+                )
+            ],
+            cancel_ids=[],
+        )
+
+
+@pytest.mark.asyncio
+async def test_replan_expander_rejects_dep_on_rewired_downstream_task():
+    graph = {
+        "failed": _task("failed", status=TaskStatus.REQUEST_REPLAN),
+        "replanner": _task(
+            "replanner",
+            agent_name="team_replanner",
+            status=TaskStatus.RUNNING,
+            fired_by_task_id="failed",
+        ),
+        "downstream": _task(
+            "downstream",
+            status=TaskStatus.PENDING,
+            deps=["replanner"],
+        ),
+    }
+    expander = PlanExpander(
+        team_run_id="run-1",
+        store=_ExpanderStore(graph),
+        budget=_Budget(),
+        graph_getter=lambda: graph,
+        emit_cb=lambda event: None,
+        fail_cb=lambda task_id, reason: None,
+    )
+
+    with pytest.raises(InvalidPlan, match="unknown dep reference 'downstream'"):
+        await expander.apply_replan(
+            replan_task_id="replanner",
+            add_tasks=[
+                TaskDefinition(
+                    id="repair",
+                    objective=_spec("Invalidly wait for downstream work blocked on R."),
+                    agent="developer",
+                    description="invalid downstream dependency",
+                    deps=["downstream"],
+                    scope_paths=["src/a.py"],
+                    parent_id="replanner",
+                )
+            ],
+            cancel_ids=[],
         )
 
 

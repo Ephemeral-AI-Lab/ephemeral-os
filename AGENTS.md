@@ -129,10 +129,12 @@ Replanning specifics:
   pending dependents are rewired from the original task to the replanner.
 - A dependent of the failed task with any non-pending status during this rewrite
   is a graph invariant violation.
-- `submit_replan` may add corrective tasks under the replanner, at the sibling
-  layer, or inside surviving sibling subtrees by explicit `parent_id`.
-- `cancel_ids` may cancel stale not-completed tasks in the replanner's allowed
-  parent projection, including cascaded descendants/dependents.
+- `submit_replan` may add corrective tasks only as direct children of the
+  replanner. The tool/runtime stamps `parent_id` to the replanner task.
+- `cancel_ids` may cancel stale not-completed direct siblings of the replanner,
+  including cascaded descendants/dependents.
+- Replan-created task deps may target local new tasks or schedulable existing
+  tasks that do not already depend on the replanner or original failed task.
 - A replanner with no direct child tasks after `submit_replan` becomes `done`
   immediately; one with direct child tasks becomes `expanded` until its direct
   children succeed.
@@ -167,4 +169,3 @@ Primary docs for this area:
   are runnable in every environment.
 - For team runtime changes, prioritize tests in `backend/tests/team/`,
   `backend/tests/test_engine/`, and relevant architecture docs.
-

@@ -8,26 +8,26 @@ Extracted from TaskCenter. Owns:
 
 Validation failures during plan expansion fail the parent (a still-RUNNING
 leaf) via ``fail_cb`` and return ``ok=False``; they do not raise. Replan
-validation failures (apply_replan) raise InvalidPlan/BudgetExceeded so the
-caller can surface them to the requester.
+validation failures (apply_replan) raise InvalidPlan so the caller can
+surface them to the requester. BudgetExceeded (max_tasks) is a team-run
+level guarantee — it always raises and is handled by the executor via
+``fail_fast``, never locally.
 """
 
 from __future__ import annotations
 
-import logging
 import uuid
 from typing import Awaitable, Callable
 
 from agents.registry import has_role
 from team.budget_manager import BudgetManager
 from team.errors import BudgetExceeded, InvalidPlan
-from team.models import AgentResult, Task, TaskDefinition, TaskStatus
+from team.models import AgentResult, Plan, Task, TaskDefinition, TaskStatus
 from team.persistence.events import TeamRunEvent, make_task_added, task_to_dict
 from team.persistence.task_record import TaskRecord
 from team.persistence.task_store import TaskStore
+from team.planning.replan_validation import validate_replan_rules
 from team.planning.validation import _has_cycle, validate_plan
-
-logger = logging.getLogger(__name__)
 
 
 class PlanExpander:
@@ -42,7 +42,7 @@ class PlanExpander:
         graph_getter: Callable[[], dict[str, Task]],
         emit_cb: Callable[[TeamRunEvent], None],
         fail_cb: Callable[[str, str], Awaitable[None]],
-        cancel_active_task_cb: Callable[[str], bool] | None = None,
+        cancel_running_task_cb: Callable[[str], None] | None = None,
     ) -> None:
         self._team_run_id = team_run_id
         self._store = store
@@ -50,7 +50,7 @@ class PlanExpander:
         self._graph_getter = graph_getter
         self._emit = emit_cb
         self._fail = fail_cb
-        self._cancel_active_task = cancel_active_task_cb
+        self._cancel_running_task = cancel_running_task_cb
 
     @staticmethod
     def new_id() -> str:
@@ -134,8 +134,9 @@ class PlanExpander:
             )
 
         if not self._budget.has_capacity_for(len(new_items)):
-            await self._fail(task_id, "BudgetExceeded: max_tasks")
-            return [], False
+            raise BudgetExceeded(
+                f"max_tasks={self._budget.budgets.max_tasks} would be exceeded by plan"
+            )
 
         inserted = await self._store.insert_plan(
             specs,
@@ -156,105 +157,53 @@ class PlanExpander:
         replan_task_id: str,
         add_tasks: list[TaskDefinition],
         cancel_ids: list[str],
-        target_parent_id: str | None,
-    ) -> dict[str, int]:
-        if replan_task_id in cancel_ids:
-            raise InvalidPlan("replanner cannot cancel itself")
-
+    ) -> dict[str, int | list[str]]:
         graph = self._graph_getter()
         replanner = graph.get(replan_task_id)
-        origin_task_id = replanner.fired_by_task_id if replanner is not None else None
-        active_tasks = {
-            task_id: task
-            for task_id, task in graph.items()
-            if task.status not in {TaskStatus.CANCELLED, TaskStatus.DONE, TaskStatus.FAILED}
-        }
-
-        def _cascade_ids_for_cancel_root(cancel_root_id: str) -> set[str]:
-            children_by_parent: dict[str, list[str]] = {}
-            dependents_by_dep: dict[str, list[str]] = {}
-            for task_id, task in active_tasks.items():
-                if task.parent_id:
-                    children_by_parent.setdefault(task.parent_id, []).append(task_id)
-                for dep_id in task.deps or []:
-                    dependents_by_dep.setdefault(dep_id, []).append(task_id)
-
-            cascaded: set[str] = set()
-            queue = [cancel_root_id]
-            while queue:
-                current = queue.pop(0)
-                for child_id in children_by_parent.get(current, []):
-                    if child_id not in cascaded:
-                        cascaded.add(child_id)
-                        queue.append(child_id)
-                for dependent_id in dependents_by_dep.get(current, []):
-                    dependent = active_tasks.get(dependent_id)
-                    if dependent is None:
-                        continue
-                    if dependent_id not in cascaded:
-                        cascaded.add(dependent_id)
-                        queue.append(dependent_id)
-            cascaded.discard(cancel_root_id)
-            return cascaded
-
-        cancelled = set(cancel_ids)
-        for cancel_id in cancel_ids:
-            cancelled.update(_cascade_ids_for_cancel_root(cancel_id))
-
-        def _is_inside_parent_projection(task_id: str) -> bool:
-            task = graph.get(task_id)
-            while task is not None:
-                if task.parent_id == target_parent_id:
-                    return True
-                if task.parent_id is None:
-                    return target_parent_id is None
-                task = graph.get(task.parent_id)
-            return False
-
-        allowed_parent_ids: set[str | None] = {target_parent_id, replan_task_id}
-        for task in graph.values():
-            if task.id in cancelled:
-                continue
-            if task.id == origin_task_id:
-                continue
-            if task.status in {TaskStatus.CANCELLED, TaskStatus.DONE, TaskStatus.FAILED}:
-                continue
-            if _is_inside_parent_projection(task.id):
-                allowed_parent_ids.add(task.id)
-
-        for cid in cancel_ids:
-            rec = await self._store.get_record(cid)
-            if rec is None:
-                raise InvalidPlan(f"cancel target {cid} not found")
-            if cid == replan_task_id:
-                raise InvalidPlan("replanner cannot cancel itself")
-            if cid == origin_task_id:
-                raise InvalidPlan("replanner cannot cancel the original replanning task")
-            if not _is_inside_parent_projection(cid):
-                raise InvalidPlan(
-                    f"cancel target '{cid}' is outside the allowed parent projection "
-                    f"rooted at {target_parent_id!r}"
+        misplaced = [
+            spec
+            for spec in add_tasks
+            if spec.parent_id != replan_task_id
+        ]
+        if misplaced:
+            raise InvalidPlan(
+                "replan add_tasks must be direct children of the replanner "
+                f"(parent_id={replan_task_id!r}); found "
+                + ", ".join(
+                    f"'{s.id}' parent_id={s.parent_id!r}" for s in misplaced
                 )
-            if rec.status in {
-                status.value
-                for status in (TaskStatus.DONE, TaskStatus.FAILED, TaskStatus.CANCELLED)
-            }:
+            )
+
+        result = validate_replan_rules(
+            graph=graph,
+            replan_task_id=replan_task_id,
+            cancel_ids=cancel_ids,
+        )
+        if result.errors:
+            raise InvalidPlan("; ".join(result.errors))
+
+        cancelled = result.all_cancelled_ids
+        allowed_existing_dep_ids = result.allowed_existing_dep_ids
+
+        if add_tasks:
+            new_depth = (getattr(replanner, "depth", 0) or 0) + 1
+            if not self._budget.within_depth_limit(new_depth):
                 raise InvalidPlan(
-                    f"cancel target {cid} is {rec.status}; cannot cancel terminal tasks"
+                    f"replan would exceed max_depth={self._budget.budgets.max_depth} "
+                    f"from current depth={getattr(replanner, 'depth', 0) or 0}"
                 )
+
+        plan_issues = validate_plan(
+            Plan(tasks=add_tasks),
+            max_plan_size=self._budget.budgets.max_plan_size,
+            allow_empty=True,
+            known_external_deps=allowed_existing_dep_ids,
+        )
+        if plan_issues:
+            raise InvalidPlan("; ".join(issue["msg"] for issue in plan_issues))
 
         local_to_new: dict[str, str] = {}
         for spec in add_tasks:
-            if spec.parent_id not in allowed_parent_ids:
-                raise InvalidPlan(
-                    f"new task '{spec.id}' parent_id={spec.parent_id!r} is outside "
-                    f"the allowed parent projection rooted at {target_parent_id!r}"
-                )
-            if spec.parent_id in cancelled:
-                raise InvalidPlan(
-                    f"new task '{spec.id}' cannot be inserted under cancelled parent "
-                    f"'{spec.parent_id}'"
-                )
             if spec.id:
                 if spec.id in local_to_new:
                     raise InvalidPlan(f"duplicate id '{spec.id}'")
@@ -262,11 +211,6 @@ class PlanExpander:
 
         adj = await self._store.get_adjacency()
         clean_adj = {k: v for k, v in adj.items() if k not in cancelled}
-        # New replan tasks may only depend on live tasks in a schedulable state.
-        # {done, ready, pending} — not request_replan (transitioning), running
-        # or expanded (transient), and never failed/cancelled.
-        statuses = await self._store.get_statuses()
-        allowed_dep_statuses = {"done", "ready", "pending"}
         specs: list[TaskDefinition] = []
         for spec in add_tasks:
             nid = local_to_new.get(spec.id, self.new_id()) if spec.id else self.new_id()
@@ -274,16 +218,12 @@ class PlanExpander:
             for d in spec.deps:
                 if d in local_to_new:
                     rdeps.append(local_to_new[d])
-                elif d in adj and d not in cancelled and d != replan_task_id:
-                    dep_status = statuses.get(d)
-                    if dep_status not in allowed_dep_statuses:
-                        raise InvalidPlan(
-                            f"replan dep '{d}' has status {dep_status!r}; "
-                            f"deps must be in {sorted(allowed_dep_statuses)}"
-                        )
+                elif d in allowed_existing_dep_ids:
                     rdeps.append(d)
                 else:
-                    raise InvalidPlan(f"replan dep '{d}' is not a local alias or existing task id")
+                    raise InvalidPlan(
+                        f"replan dep '{d}' is not a local alias or a schedulable existing task"
+                    )
             clean_adj[nid] = rdeps
             specs.append(
                 TaskDefinition(
@@ -303,11 +243,11 @@ class PlanExpander:
         if not self._budget.has_capacity_for(len(specs)):
             raise BudgetExceeded("max_tasks would be exceeded by replan")
 
-        if self._cancel_active_task is not None:
+        if self._cancel_running_task is not None:
             for cancelled_id in sorted(cancelled):
                 task = graph.get(cancelled_id)
                 if task is not None and task.status == TaskStatus.RUNNING:
-                    self._cancel_active_task(cancelled_id)
+                    self._cancel_running_task(cancelled_id)
 
         _, inserted = await self._store.apply_replan_atomic(
             cancel_ids=cancel_ids,

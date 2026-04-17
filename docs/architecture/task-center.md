@@ -41,9 +41,10 @@ The replanner submits `submit_replan(new_tasks=[...], cancel_ids=[...])`.
 
 After the replan:
 
-- New tasks are inserted at each submitted task's explicit `parent_id`; this may be the replanner itself, the replanner's parent, or a surviving task inside that parent projection.
-- Cancelled not-completed tasks are marked `cancelled`, including cascaded descendants and dependents.
-- The replanner is marked `done` immediately when it has no direct child tasks, or `expanded` when it created direct child tasks.
+- `new_tasks` are inserted as direct children of the replanner. The replanner never sets `parent_id` per task.
+- `cancel_ids` may target only direct siblings of the replanner. Cancelled tasks are marked `cancelled`, including cascaded descendants and dependents.
+- New replan tasks may depend on local new-task IDs or schedulable existing tasks (`done`, `ready`, `pending`) that do not already depend on the replanner or the original failed task.
+- The replanner is marked `done` immediately when it has no new child tasks, or `expanded` when it created direct child tasks.
 - Expanded replanners are marked `done` only after all direct children finish successfully.
 - The original failed task is marked `failed` without cascading after the replanner succeeds, because pending dependents have already been rewired to the replanner.
 

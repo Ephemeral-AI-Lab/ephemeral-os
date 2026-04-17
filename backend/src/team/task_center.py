@@ -17,14 +17,14 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import Any, Awaitable, Callable
+from typing import Any, Awaitable, Callable, cast
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from team.activity_tracker import ActivityTracker
 from team.budget_manager import BudgetManager
 from team.checkpoint_manager import CheckpointManager
-from team.errors import BudgetExceeded, CheckpointNotFound, InvalidPlan
+from team.errors import CheckpointNotFound, InvalidPlan
 from team.models import (
     AgentResult,
     BudgetConfig,
@@ -93,9 +93,9 @@ class TaskCenter:
             graph_getter=lambda: self._store.graph,
             emit_cb=self._emit,
             fail_cb=self._fail_leaf,
-            cancel_active_task_cb=lambda task_id: self._cancel_active_task(task_id),
+            cancel_running_task_cb=self._cancel_running_task,
         )
-        self._cancel_active_task_cb: Callable[[str], bool] | None = None
+        self._cancel_running_task_cb: Callable[[str], None] | None = None
         self._activity: ActivityTracker
         self._notes: NoteManager
 
@@ -205,13 +205,12 @@ class TaskCenter:
     def _new_id() -> str:
         return str(uuid.uuid4())
 
-    def set_cancel_agent_run_callback(self, callback: Callable[[str], bool] | None) -> None:
-        self._cancel_active_task_cb = callback
+    def set_cancel_running_task_callback(self, callback: Callable[[str], None] | None) -> None:
+        self._cancel_running_task_cb = callback
 
-    def _cancel_active_task(self, task_id: str) -> bool:
-        if self._cancel_active_task_cb is None:
-            return False
-        return bool(self._cancel_active_task_cb(task_id))
+    def _cancel_running_task(self, task_id: str) -> None:
+        if self._cancel_running_task_cb is not None:
+            self._cancel_running_task_cb(task_id)
 
     async def _emit_replanned_origin_if_finalized(self, replanner_task_id: str) -> None:
         origin_id = await self._store.finalize_replanned_origin(replanner_task_id)
@@ -289,9 +288,11 @@ class TaskCenter:
                 replan_task_id=task_id,
                 add_tasks=result.submitted_replan.add_tasks,
                 cancel_ids=result.submitted_replan.cancel_ids,
-                target_parent_id=rec.parent_id,
             )
-            if int(outcome.get("replanner_child_count") or 0) > 0:
+            replanner_child_count = outcome.get("replanner_child_count", 0)
+            if not isinstance(replanner_child_count, int):
+                replanner_child_count = 0
+            if replanner_child_count > 0:
                 await self._store.mark_expanded(task_id)
                 self._transitions.emit_status(
                     task_id,
@@ -384,17 +385,15 @@ class TaskCenter:
         replan_task_id: str,
         add_tasks: list[TaskDefinition],
         cancel_ids: list[str],
-        target_parent_id: str | None,
-    ) -> dict[str, int]:
+    ) -> dict[str, int | list[str]]:
         before = self._transitions.snapshot()
         try:
             outcome = await self._expander.apply_replan(
                 replan_task_id=replan_task_id,
                 add_tasks=add_tasks,
                 cancel_ids=cancel_ids,
-                target_parent_id=target_parent_id,
             )
-        except (BudgetExceeded, InvalidPlan) as exc:
+        except InvalidPlan as exc:
             # Replan expansion failed — fail the origin (REQUEST_REPLAN leaf)
             # so it doesn't stay stuck in a non-terminal state forever.
             replanner_rec = await self._store.get_record(replan_task_id)
@@ -415,7 +414,7 @@ class TaskCenter:
                 if promoted_task.fired_by_task_id:
                     await self._emit_replanned_origin_if_finalized(promoted_id)
         await self._transitions.refresh_and_emit(before)
-        return outcome
+        return cast(dict[str, int | list[str]], outcome)
 
     async def fail_orphaned_replanning(self) -> int:
         """Force-fail tasks stuck in REQUEST_REPLAN with no live replanner."""

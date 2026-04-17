@@ -149,6 +149,17 @@ class Task:
     failure_reason: str | None = None
     fired_by_task_id: str | None = None
 
+    @property
+    def detached(self) -> bool:
+        """True when this task no longer contributes to its parent's success.
+
+        A task is detached once it has terminated without producing a `done`
+        outcome — i.e. `failed` or `cancelled`. Parents treat detached children
+        as resolved-but-skipped when deciding promotion (see
+        ``fetch_expanded_parent_candidate``).
+        """
+        return self.status in (TaskStatus.FAILED, TaskStatus.CANCELLED)
+
 
 # ---------------------------------------------------------------------------
 # Plan types

@@ -230,6 +230,8 @@ class SubmitTaskSummaryTool(BaseTool):
 class NewTaskSpec(BaseModel):
     """Full spec for a task the agent is creating."""
 
+    model_config = ConfigDict(extra="forbid")
+
     id: str = Field(..., description="Unique ID for the new task")
     name: str = Field(
         ...,
@@ -249,20 +251,10 @@ class NewTaskSpec(BaseModel):
     )
 
 
-class ReplanTaskSpec(NewTaskSpec):
-    """Full spec for a task added by a replanner."""
-
-    parent_id: str | None = Field(
-        ...,
-        description=(
-            "Existing parent task ID where this task should be inserted. Use null only "
-            "when inserting at the root parent layer."
-        ),
-    )
-
-
 class SubmitPlanInput(BaseModel):
     """Planner submission payload."""
+
+    model_config = ConfigDict(extra="forbid")
 
     new_tasks: list[NewTaskSpec] = Field(
         default_factory=list,
@@ -275,17 +267,29 @@ class SubmitPlanInput(BaseModel):
 
 
 class SubmitReplanInput(BaseModel):
-    """Corrective replan submission payload."""
+    """Corrective replan submission payload.
+
+    The replanner is the recovery gate for downstream tasks rewired from the
+    failed worker. All newly authored corrective tasks are direct children of
+    the replanner, so the replanner only reaches DONE after its repairs finish.
+    It may cancel stale direct siblings; cascade handles their subtrees and
+    dependents.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
-    new_tasks: list[ReplanTaskSpec] = Field(
+    new_tasks: list[NewTaskSpec] = Field(
         default_factory=list,
-        description="New corrective tasks to create",
+        description=(
+            "New corrective tasks to create as direct children of the replanner."
+        ),
     )
     cancel_ids: list[str] = Field(
         default_factory=list,
-        description="Task IDs to cancel (not-completed roots, with cascade)",
+        description=(
+            "Direct siblings of the replanner to cancel (cascade "
+            "propagates to their subtrees and dependents)."
+        ),
     )
 
 
@@ -298,76 +302,6 @@ def _get_graph(context: ToolExecutionContext) -> dict[str, Any] | None:
     tc = context.metadata.get("task_center")
     graph = getattr(tc, "graph", None) if tc is not None else None
     return graph if isinstance(graph, dict) else None
-
-
-def _parent_id_for_current_task(
-    graph: dict[str, Any] | None,
-    task_id: str,
-) -> str | None:
-    if graph is None:
-        return None
-    own_task = graph.get(task_id)
-    return getattr(own_task, "parent_id", None) if own_task is not None else None
-
-
-def _is_under_parent_projection(
-    graph: dict[str, Any],
-    *,
-    task_id: str,
-    root_parent_id: str | None,
-) -> bool:
-    task = graph.get(task_id)
-    while task is not None:
-        parent_id = getattr(task, "parent_id", None)
-        if parent_id == root_parent_id:
-            return True
-        if parent_id is None:
-            return root_parent_id is None
-        task = graph.get(parent_id)
-    return False
-
-
-def _active_tasks_by_id(graph: dict[str, Any]) -> dict[str, Any]:
-    from team.models import TERMINAL_STATUSES
-
-    return {
-        task_id: task
-        for task_id, task in graph.items()
-        if getattr(task, "status", None) not in TERMINAL_STATUSES
-    }
-
-
-def _cascade_ids_for_cancel_root(
-    graph: dict[str, Any],
-    cancel_root_id: str,
-) -> set[str]:
-    active = _active_tasks_by_id(graph)
-    children_by_parent: dict[str, list[str]] = {}
-    dependents_by_dep: dict[str, list[str]] = {}
-    for task_id, task in active.items():
-        parent_id = getattr(task, "parent_id", None)
-        if parent_id:
-            children_by_parent.setdefault(str(parent_id), []).append(task_id)
-        for dep_id in getattr(task, "deps", []) or []:
-            dependents_by_dep.setdefault(str(dep_id), []).append(task_id)
-
-    cascaded: set[str] = set()
-    queue = [cancel_root_id]
-    while queue:
-        current = queue.pop(0)
-        for child_id in children_by_parent.get(current, []):
-            if child_id not in cascaded:
-                cascaded.add(child_id)
-                queue.append(child_id)
-        for dependent_id in dependents_by_dep.get(current, []):
-            dependent = active.get(dependent_id)
-            if dependent is None:
-                continue
-            if dependent_id not in cascaded:
-                cascaded.add(dependent_id)
-                queue.append(dependent_id)
-    cascaded.discard(cancel_root_id)
-    return cascaded
 
 
 def _validate_task_specs(
@@ -420,97 +354,82 @@ def _validate_submit_replan_input(
     arguments: SubmitReplanInput,
     context: ToolExecutionContext,
 ) -> list[str]:
-    from team.models import TERMINAL_STATUSES
+    from team.models import Plan
+    from team.planning.replan_validation import validate_replan_rules
 
-    errors: list[str] = []
     graph = _get_graph(context)
-    if graph is None:
-        return ["submit_replan requires the current task graph for validation"]
-
     current_task_id = str(context.metadata.get("work_item_id") or "")
-    current_task = graph.get(current_task_id)
-    origin_task_id = getattr(current_task, "fired_by_task_id", None)
-    root_parent_id = _parent_id_for_current_task(graph, current_task_id)
-    graph_ids = set(graph.keys())
+
+    result = validate_replan_rules(
+        graph=graph,
+        replan_task_id=current_task_id,
+        cancel_ids=arguments.cancel_ids,
+    )
+    errors = list(result.errors)
+    if graph is None:
+        return errors
+
     new_ids = {spec.id for spec in arguments.new_tasks}
-    cancelled_ids = set(arguments.cancel_ids)
-    all_cancelled_ids = set(cancelled_ids)
-
-    if current_task_id in cancelled_ids:
-        errors.append("replanner cannot cancel itself")
-    if origin_task_id and origin_task_id in cancelled_ids:
-        errors.append("replanner cannot cancel the original replanning task")
-
-    for cancel_id in arguments.cancel_ids:
-        target = graph.get(cancel_id)
-        if target is None:
-            errors.append(f"cancel target '{cancel_id}' not found in graph")
-            continue
-        if cancel_id == current_task_id:
-            continue
-        if not _is_under_parent_projection(
-            graph,
-            task_id=cancel_id,
-            root_parent_id=root_parent_id,
-        ):
-            errors.append(
-                f"cancel target '{cancel_id}' is outside the parent projection "
-                f"rooted at {root_parent_id!r}"
-            )
-        status = getattr(target, "status", None)
-        if status is not None and status in TERMINAL_STATUSES:
-            errors.append(f"cancel target '{cancel_id}' is {status.value}; cannot cancel")
-        all_cancelled_ids.update(_cascade_ids_for_cancel_root(graph, cancel_id))
-
-    allowed_parent_ids: set[str | None] = {root_parent_id, current_task_id}
-    for task_id, task in graph.items():
-        if task_id in all_cancelled_ids:
-            continue
-        if task_id == origin_task_id:
-            continue
-        status = getattr(task, "status", None)
-        if status is not None and status in TERMINAL_STATUSES:
-            continue
-        if _is_under_parent_projection(
-            graph,
-            task_id=task_id,
-            root_parent_id=root_parent_id,
-        ):
-            allowed_parent_ids.add(task_id)
-
-    for spec in arguments.new_tasks:
-        if spec.parent_id not in allowed_parent_ids:
-            errors.append(
-                f"new task '{spec.id}': parent_id {spec.parent_id!r} is outside "
-                f"the parent projection rooted at {root_parent_id!r}"
-            )
-        if spec.parent_id in all_cancelled_ids:
-            errors.append(f"new task '{spec.id}': parent_id '{spec.parent_id}' is cancelled")
-
-    excluded_dep_ids = {current_task_id}
-    if origin_task_id:
-        excluded_dep_ids.add(origin_task_id)
-    # Existing-task deps must be in {done, ready, pending} — deps on
-    # request_replan/running/expanded tasks risk chaining on transitioning
-    # state, and failed/cancelled deps are unsatisfiable.
-    allowed_dep_statuses = {"done", "ready", "pending"}
-    schedulable_dep_ids = {
-        task_id
-        for task_id, task in graph.items()
-        if getattr(task, "status", None) is not None
-        and getattr(task.status, "value", task.status) in allowed_dep_statuses
-    }
-    valid_dep_ids = (
-        (graph_ids - all_cancelled_ids - excluded_dep_ids) & schedulable_dep_ids
-    ) | new_ids
+    valid_dep_ids = result.allowed_existing_dep_ids | new_ids
     errors.extend(
         _validate_task_specs(
             arguments.new_tasks,
-            graph_ids=graph_ids,
+            graph_ids=set(graph.keys()),
             valid_dep_ids=valid_dep_ids,
             roster=_roster_from_context(context),
         )
     )
+    if errors:
+        return errors
+
+    resolved_tasks = _resolved_task_payloads(
+        arguments.new_tasks,
+        roster=_roster_from_context(context),
+        parent_id=current_task_id,
+        include_parent_id=True,
+    )
+    try:
+        plan = Plan.from_dict({"tasks": resolved_tasks})
+    except (TypeError, ValueError) as exc:
+        return [f"invalid replan payload: {exc}"]
+
+    max_plan_size = int(context.metadata.get("max_plan_size", 50) or 50)
+    issues = validate_plan(
+        plan,
+        max_plan_size=max_plan_size,
+        allow_empty=True,
+        known_external_deps=result.allowed_existing_dep_ids,
+    )
+
+    max_tasks = int(context.metadata.get("max_tasks", 0) or 0)
+    tasks_used = int(context.metadata.get("tasks_used", 0) or 0)
+    if max_tasks and tasks_used + len(plan.tasks) > max_tasks:
+        issues.append(
+            {
+                "field": "tasks",
+                "msg": (
+                    f"replan would exceed max_tasks={max_tasks} "
+                    f"(used={tasks_used}, adding={len(plan.tasks)})"
+                ),
+            }
+        )
+    max_depth = int(context.metadata.get("max_depth", 0) or 0)
+    task_depth = int(context.metadata.get("task_depth", 0) or 0)
+    if max_depth and plan.tasks and (task_depth + 1) > max_depth:
+        issues.append(
+            {
+                "field": "tasks",
+                "msg": (
+                    f"replan would exceed max_depth={max_depth} from current depth={task_depth}"
+                ),
+            }
+        )
+    note_budget_issues = _note_budget_issues(
+        resolved_tasks,
+        max_note_bytes=int(context.metadata.get("max_note_bytes", 0) or 0),
+    )
+    issues.extend({"field": "tasks", "msg": msg} for msg in note_budget_issues)
+    errors.extend(str(issue.get("msg") or "invalid replan") for issue in issues)
     return errors
 
 
@@ -518,6 +437,8 @@ def _resolved_task_payloads(
     specs: list[NewTaskSpec],
     *,
     roster: dict[str, list[str]],
+    parent_id: str | None = None,
+    include_parent_id: bool = False,
 ) -> list[dict[str, Any]]:
     resolved_tasks: list[dict[str, Any]] = []
     for spec in specs:
@@ -532,8 +453,8 @@ def _resolved_task_payloads(
             "deps": list(spec.deps),
             "scope_paths": list(spec.scope_paths),
         }
-        if isinstance(spec, ReplanTaskSpec):
-            payload["parent_id"] = spec.parent_id
+        if include_parent_id:
+            payload["parent_id"] = parent_id
         resolved_tasks.append(payload)
     return resolved_tasks
 
@@ -639,9 +560,9 @@ class SubmitPlanTool(BaseTool):
 class SubmitReplanTool(BaseTool):
     name = "submit_replan"
     description = (
-        "Submit a corrective replan. Provide cancel_ids for not-completed tasks "
-        "in the allowed parent projection to cancel with cascade, and new_tasks "
-        "with id, parent_id, name, spec, deps, and scope_paths."
+        "Submit a corrective replan. Provide new_tasks for repair work owned by "
+        "the replanner, and cancel_ids for stale direct siblings whose subtrees "
+        "should be cancelled by cascade."
     )
     short_description = "Submit a corrective replan."
     input_model = SubmitReplanInput
@@ -657,9 +578,13 @@ class SubmitReplanTool(BaseTool):
                 is_error=True,
             )
 
+        current_task_id = str(context.metadata.get("work_item_id") or "")
+        roster = _roster_from_context(context)
         resolved_tasks = _resolved_task_payloads(
             arguments.new_tasks,
-            roster=_roster_from_context(context),
+            roster=roster,
+            parent_id=current_task_id,
+            include_parent_id=True,
         )
         try:
             replan = ReplanPlan.from_dict(

@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from team.models import BudgetConfig, BudgetState, Note, Task, TaskStatus
+from team.models import BudgetConfig, BudgetState, Task, TaskStatus
 from team.task_center import TaskCenter
 
 

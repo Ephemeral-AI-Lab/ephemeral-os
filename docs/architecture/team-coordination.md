@@ -43,7 +43,7 @@ recovery, and checkpoint restore, scheduler-owned work states (`ready`,
 `running`, `expanded`, `replanning`, and `done`) are valid only when all
 dependencies are `done`; failed or cancelled dependencies are not satisfied.
 
-The replanner can add corrective tasks with explicit `parent_id` placement under itself, at its sibling layer, or inside surviving sibling subtrees. It can cancel stale not-completed tasks in its allowed parent projection with cascade handling. If the replanner has no direct child tasks after `submit_replan`, it becomes `DONE` immediately. If it creates direct child tasks, it becomes `EXPANDED` and later becomes `DONE` only after all direct children succeed.
+The replanner is the recovery gate for downstream work. Corrective work goes into `new_tasks`, and every new task is inserted as a direct child of the replanner. `cancel_ids` may target only the replanner's direct siblings, and their subtrees cancel by cascade. New replan tasks may depend on local new tasks or schedulable existing tasks that do not already depend on the replanner/original failure pair. If the replanner has no new child tasks after `submit_replan`, it becomes `DONE` immediately; otherwise it becomes `EXPANDED` and reaches `DONE` only after all direct children succeed.
 
 ## Status Model
 

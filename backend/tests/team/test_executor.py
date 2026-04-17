@@ -62,6 +62,15 @@ class FakeTeamRun:
         self.task_center = tc
         self.dispatch_queue = dispatch_queue
         self.arbiter = arbiter
+        self._active_agent_runs = {}
+
+    def register_agent_run(self, task_id: str, runner_task) -> None:
+        self._active_agent_runs[task_id] = runner_task
+
+    def unregister_agent_run(self, task_id: str, runner_task) -> None:
+        current = self._active_agent_runs.get(task_id)
+        if current is runner_task:
+            self._active_agent_runs.pop(task_id, None)
 
     async def checkpoint(self, label: str = "") -> None:
         pass

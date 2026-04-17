@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import uuid
 from dataclasses import asdict
@@ -29,6 +30,9 @@ def _default_num_executors() -> int:
         return max(1, int(raw))
     except ValueError:
         return 2
+
+
+logger = logging.getLogger(__name__)
 
 
 class TeamRun:
@@ -64,9 +68,7 @@ class TeamRun:
         )
         self._active_agent_runs: dict[str, asyncio.Task[object]] = {}
         self.task_center = runtime_services.task_center
-        set_cancel_cb = getattr(self.task_center, "set_cancel_agent_run_callback", None)
-        if callable(set_cancel_cb):
-            set_cancel_cb(self.cancel_agent_run)
+        self.task_center.set_cancel_running_task_callback(self.cancel_running_task)
         self.dispatch_queue = runtime_services.dispatch_queue
         self.budgets = self.task_center.budgets
         self.budget_state = self.task_center.budget_state
@@ -94,12 +96,11 @@ class TeamRun:
         if current is runner_task:
             self._active_agent_runs.pop(task_id, None)
 
-    def cancel_agent_run(self, task_id: str) -> bool:
+    def cancel_running_task(self, task_id: str) -> None:
         runner_task = self._active_agent_runs.get(task_id)
         if runner_task is None or runner_task.done():
-            return False
+            return
         runner_task.cancel()
-        return True
 
     # ---- lifecycle -------------------------------------------------------
 
@@ -222,10 +223,18 @@ class TeamRun:
         # Safety net: force-fail any tasks still stuck in REQUEST_REPLAN before
         # computing final status — prevents silent success on orphaned replans.
         await self.task_center.fail_orphaned_replanning()
-        statuses = set((await self.task_center.store.get_statuses()).values())
-        if "failed" in statuses:
+
+        # Run status reflects the root task outcome. Leaf failures are absorbed
+        # by replan/detach semantics; they only propagate to the run when the
+        # failure cascade reaches the root (all_children_detached).
+        root_status: str | None = None
+        if self.root_task_id:
+            rec = await self.task_center.store.get_record(self.root_task_id)
+            if rec is not None:
+                root_status = rec.status
+        if root_status == "failed":
             self.status = TeamRunStatus.FAILED
-        elif "cancelled" in statuses:
+        elif root_status == "cancelled":
             self.status = TeamRunStatus.CANCELLED
         else:
             self.status = TeamRunStatus.SUCCEEDED
@@ -233,6 +242,7 @@ class TeamRun:
 
     async def fail_fast(self, reason: str) -> None:
         """Stop execution and mark the whole team run failed immediately."""
+        logger.critical(reason)
         if self._fatal_failure_reason is None:
             self._fatal_failure_reason = reason
             self.status = TeamRunStatus.FAILED
