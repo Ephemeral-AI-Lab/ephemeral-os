@@ -38,6 +38,10 @@ from code_intelligence.routing.overlay_exec import (
     OverlayMountError,
     OverlayRunResult,
 )
+from code_intelligence.routing.overlay_merger import (
+    Merger,
+    OverwriteMerger,
+)
 from code_intelligence.routing.upperdir_walker import (
     ChangeKind,
     UpperdirChange,
@@ -80,6 +84,7 @@ class OverlayAuditor:
         lsp_client: Any,
         lowerdir_provider: Callable[[str], Awaitable[str]],
         config: OverlayAuditorConfig | None = None,
+        merger: Merger | None = None,
     ) -> None:
         self._workspace_root = workspace_root
         self._arbiter = arbiter
@@ -92,6 +97,7 @@ class OverlayAuditor:
             exec_process=exec_process,
             tmpfs_size=self._config.tmpfs_size,
         )
+        self._merger: Merger = merger or OverwriteMerger()
 
     async def execute(
         self,
@@ -133,6 +139,8 @@ class OverlayAuditor:
             changed_paths = await self._apply_and_record(
                 run,
                 changes=changes,
+                sandbox=sandbox,
+                lowerdir=lowerdir,
                 description=description or self._config.audit_description_prefix,
                 agent_id=agent_id,
                 team_run_id=team_run_id,
@@ -154,6 +162,8 @@ class OverlayAuditor:
         run: OverlayRunResult,
         *,
         changes: list[UpperdirChange],
+        sandbox: Any,
+        lowerdir: str,
         description: str,
         agent_id: str,
         team_run_id: str,
@@ -165,7 +175,12 @@ class OverlayAuditor:
         for change in changes:
             file_path = f"{self._workspace_root.rstrip('/')}/{change.path}"
             try:
-                applied_path = self._apply_change(change, file_path)
+                applied_path, conflict_suffix = await self._apply_change(
+                    change,
+                    file_path,
+                    sandbox=sandbox,
+                    lowerdir=lowerdir,
+                )
             except Exception:
                 logger.exception(
                     "overlay_auditor: failed to apply %s on %s",
@@ -184,41 +199,63 @@ class OverlayAuditor:
                 task_id=task_id,
                 old_hash=old_hash,
                 new_hash=new_hash,
-                description=f"{description}:{change.kind.value}",
+                description=f"{description}:{change.kind.value}{conflict_suffix}",
             )
             self._invalidate_caches(change, file_path)
             applied.append(file_path)
         return applied
 
-    def _apply_change(
+    async def _apply_change(
         self,
         change: UpperdirChange,
         file_path: str,
-    ) -> str | None:
+        *,
+        sandbox: Any,
+        lowerdir: str,
+    ) -> tuple[str | None, str]:
+        """Apply one change. Returns ``(applied_path, conflict_suffix)``.
+
+        ``conflict_suffix`` is ``":conflicts=N"`` when a 3-way merge
+        left unresolved hunks, otherwise empty. It is appended to the
+        arbiter ``description`` so ledger readers can see which writes
+        required human reconciliation.
+        """
         if change.kind is ChangeKind.MODIFY and change.content is not None:
             text = change.content.decode("utf-8", errors="replace")
-            self._content.write(file_path, text)
-            return file_path
+            merge_result = await self._merger.merge(
+                sandbox=sandbox,
+                path=file_path,
+                lowerdir=lowerdir,
+                repo_root=self._workspace_root,
+                upperdir_content=text,
+            )
+            self._content.write(file_path, merge_result.merged_content)
+            suffix = (
+                f":conflicts={merge_result.conflicts}"
+                if merge_result.conflicts > 0
+                else ""
+            )
+            return file_path, suffix
         if change.kind is ChangeKind.DELETE:
             try:
                 self._content.delete(file_path)
             except FileNotFoundError:
                 pass
-            return file_path
+            return file_path, ""
         if change.kind is ChangeKind.SYMLINK:
             logger.info(
                 "overlay_auditor: symlink %s -> %s not yet applied (v1 limit)",
                 file_path,
                 change.symlink_target,
             )
-            return None
+            return None, ""
         if change.kind is ChangeKind.OPAQUE_DIR:
             logger.info(
                 "overlay_auditor: opaque dir %s not yet applied (v1 limit)",
                 file_path,
             )
-            return None
-        return None
+            return None, ""
+        return None, ""
 
     def _hashes_for(
         self,

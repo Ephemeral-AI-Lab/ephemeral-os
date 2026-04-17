@@ -43,6 +43,7 @@ from code_intelligence.routing.overlay_auditor import (
     OverlayAuditorConfig,
 )
 from code_intelligence.routing.overlay_exec import OverlayMountError
+from code_intelligence.routing.overlay_merger import GitMergeFileMerger
 from code_intelligence.routing.overlay_probe import OverlayCapabilityCache
 from code_intelligence.routing.process_auditor import ProcessAuditor
 from code_intelligence.routing.query_router import IntelligenceQueryRouter
@@ -334,6 +335,7 @@ class CodeIntelligenceService:
             lsp_client=self.lsp_client,
             lowerdir_provider=_provider,
             config=OverlayAuditorConfig(),
+            merger=GitMergeFileMerger(exec_process=self._exec_sandbox_process),
         )
         with self._overlay_init_lock:
             if self._overlay_auditor is None:
