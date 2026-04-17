@@ -92,7 +92,6 @@ def _tx() -> CodeActTransaction:
         repo_root="/repo",
         scratch_root="/scratch",
         base_tree="deadbeef",
-        patch_path="/tmp/codeact.patch",
     )
 
 

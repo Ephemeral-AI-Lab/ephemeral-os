@@ -27,6 +27,7 @@ from team.persistence.events import TeamRunEvent
 from message import ConversationMessage, TextBlock, ToolUseBlock
 from team.builtins import DEVELOPER, SCOUT, TEAM_PLANNER, TEAM_REPLANNER, VALIDATOR
 from team.models import Task, TaskStatus, TeamRunStatus
+from team.task_context_builder import UserPromptContextParts
 from tools.core.runtime import ExecutionMetadata
 
 
@@ -107,12 +108,17 @@ def _patch_resume_sweevo_common(monkeypatch, *, checkpoint_records=None, checkpo
 @pytest.mark.asyncio
 async def test_query_ctx_seeds_repo_root_for_daytona_and_ci():
     build_query_ctx = _make_context_builders("sbx-1", repo_dir="/testbed")
+    template_context_for = AsyncMock(return_value=UserPromptContextParts(task_spec="Fix it"))
     ctx = await build_query_ctx(
         SimpleNamespace(name="developer", role="developer"),
             SimpleNamespace(
                 id="TR1",
                 sandbox_id="sbx-1",
                 task_center=SimpleNamespace(
+                    context=SimpleNamespace(
+                        context_for=AsyncMock(return_value=""),
+                        template_context_for=template_context_for,
+                    ),
                     notes=SimpleNamespace(context_for=AsyncMock(return_value="")),
                     graph={},
                 ),
@@ -137,10 +143,11 @@ async def test_query_ctx_seeds_repo_root_for_daytona_and_ci():
     assert ctx.tool_metadata["ci_workspace_root"] == "/testbed"
     assert ctx.tool_metadata["team_mode_enabled"] is True
     assert ctx.tool_metadata["role"] == "developer"
-    assert "Repo root inside the sandbox: /testbed" in ctx.user_message
-    assert 'daytona_codeact(command="...", timeout=N)' in ctx.user_message
-    assert "never `subprocess` or `2>&1`" in ctx.user_message
-    assert "Do not prepend guessed roots" in ctx.user_message
+    assert ctx.user_message.startswith("Please read the following sections")
+    assert "- submit_task_summary:" in ctx.user_message
+    assert "Fix it" in ctx.user_message
+    assert "Repo root inside the sandbox: /testbed" not in ctx.user_message
+    assert "Do not prepend guessed roots" not in ctx.user_message
 
 
 
@@ -230,13 +237,21 @@ def test_agent_overrides_attach_sweevo_skills_without_prompt_duplication():
 @pytest.mark.asyncio
 async def test_root_planner_runtime_prompt_hides_legacy_plan_tool_name():
     build_query_ctx = _make_context_builders("sbx-1", repo_dir="/testbed")
+    template_context_for = AsyncMock(
+        return_value=UserPromptContextParts(task_spec="Root planning task")
+    )
     ctx = await build_query_ctx(
         SimpleNamespace(name="team_planner", role="planner"),
             SimpleNamespace(
                 id="TR1",
                 sandbox_id="sbx-1",
                 user_request="Root plan the repo.",
+                root_task_id="W1",
                 task_center=SimpleNamespace(
+                    context=SimpleNamespace(
+                        context_for=AsyncMock(return_value=""),
+                        template_context_for=template_context_for,
+                    ),
                     notes=SimpleNamespace(context_for=AsyncMock(return_value="")),
                     graph={},
                 ),
@@ -256,7 +271,10 @@ async def test_root_planner_runtime_prompt_hides_legacy_plan_tool_name():
         ),
     )
 
-    assert ctx.user_message == "Root plan the repo."
+    assert ctx.user_message.startswith("Please read the following sections")
+    assert "- submit_plan:" in ctx.user_message
+    assert "## Available Agents" not in ctx.user_message
+    assert ctx.user_message.count("Root plan the repo.") == 1
     legacy_tool_name = "submit_" + "task_plan"
     assert legacy_tool_name not in ctx.user_message
 

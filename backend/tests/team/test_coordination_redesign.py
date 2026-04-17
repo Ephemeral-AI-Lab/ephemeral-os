@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from types import SimpleNamespace
 
 import pytest
@@ -141,7 +142,11 @@ async def test_submit_plan_resolves_roster_role_hints():
     )
 
     assert result.is_error is False, result.output
-    assert "Plan accepted (2 tasks)" in result.output
+    payload = json.loads(result.output)
+    assert payload["task_id"] == "planner-task"
+    assert payload["agent_name"] == "team_planner"
+    assert len(payload["new_tasks"]) == 2
+    assert payload["new_tasks"][1]["agent"] == "validator"
     resolved_plan = ctx.metadata.get("resolved_plan")
     assert resolved_plan is not None
     assert resolved_plan.tasks[1].agent == "validator"
@@ -292,7 +297,11 @@ async def test_submit_replan_accepts_child_repair_and_cancelled_sibling():
     )
 
     assert result.is_error is False, result.output
-    assert "Replan accepted (2 new tasks, 1 cancelled)" in result.output
+    payload = json.loads(result.output)
+    assert payload["task_id"] == "replanner-task"
+    assert payload["agent_name"] == "team_replanner"
+    assert len(payload["new_tasks"]) == 2
+    assert payload["cancel_ids"] == ["stale"]
     replan = ctx.metadata["resolved_plan"]
     assert [task.parent_id for task in replan.add_tasks] == [
         "replanner-task",

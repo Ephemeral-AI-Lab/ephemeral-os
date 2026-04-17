@@ -8,6 +8,8 @@ import pytest
 from message import ConversationMessage, TextBlock, ThinkingBlock, ToolUseBlock
 from tests.test_e2e.conftest import parse_sse_events, events_of_type
 
+pytestmark = pytest.mark.e2e
+
 
 # ---------------------------------------------------------------------------
 # Simple text chat
@@ -223,7 +225,7 @@ class TestRequestCapture:
 
         assert mock.last_request is not None
         assert mock.last_request.system_prompt is not None
-        assert len(mock.last_request.system_prompt) > 0
+        assert isinstance(mock.last_request.system_prompt, str)
 
     def test_tools_passed_to_api(self, app_client):
         """Default agent has no toolkits, but skills tools are always registered."""

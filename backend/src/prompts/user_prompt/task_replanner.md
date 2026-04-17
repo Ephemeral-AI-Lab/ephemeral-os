@@ -1,8 +1,7 @@
-# Task Replanner User Prompt
+Please read the following sections and call the listed terminal tool when your work is complete.
 
-Use this template for `team_replanner` tasks that recover from a failed sibling task.
+{{terminal_tools}}
 
-````text
 ## Your task
 
 1. Please read the assigned replanning task and failure context.
@@ -19,10 +18,15 @@ Use this template for `team_replanner` tasks that recover from a failed sibling 
 ```
 
 {{#if scope_paths}}
-## Scope
+## scope_paths
 {{scope_paths}}
 {{/if}}
 
+{{#if failure_context}}
+## Failure context
+{{failure_context}}
+
+{{/if}}
 {{#if context_from_dependencies}}
 ## Context from dependencies
 {{context_from_dependencies}}
@@ -37,4 +41,3 @@ Use this template for `team_replanner` tasks that recover from a failed sibling 
 ## Parent context
 {{parent_context}}
 {{/if}}
-````

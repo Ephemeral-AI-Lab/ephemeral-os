@@ -7,33 +7,24 @@ from typing import Any
 
 from agents.registry import get_definition
 from external_trigger.runner import run
+from external_trigger.snapshot_history import format_snapshot_history
+from prompts.user_prompt_templates import load_note_taker_prompt
 from tools.task_center.toolkit import SubmitTaskNoteTool, PostNoteInput
 
 
-TC_NOTE_EDIT_PROMPT = (
-    "Write a progress note for the Task Center about this agent's edits.\n"
-    "Focus on: what files were edited and why.\n"
-    "Call submit_task_note with:\n"
-    "- content: name specific files, errors, and changes (under 300 words)\n"
-    "- paths: list every file/dir path edited or investigated\n"
-    "- tags: one or more of implementation, bug_fix, refactor, blocker, warning "
-    "(use 'blocker' if stuck)"
-)
-
-TC_NOTE_TURN_PROMPT = (
-    "Call submit_task_note now. The 'content' field is REQUIRED.\n"
-    "- content: what this agent accomplished and current status "
-    "(working/stuck/done). Name specific files and errors. Under 300 words.\n"
-    "- paths: list every file/dir path relevant to the work\n"
-    "- tags: one or more of implementation, bug_fix, blocker, warning, discovery "
-    "(use 'blocker' if stuck or blocked by another task)"
-)
+TC_NOTE_EDIT_PROMPT = load_note_taker_prompt("edit")
+TC_NOTE_TURN_PROMPT = load_note_taker_prompt("turn")
 
 _DEFAULT_TC_NOTE_SYSTEM_PROMPT = (
     "You are a progress reporter. Read the agent's conversation and "
     "produce a concise progress note. Report facts only — do not "
     "instruct the agent or suggest next steps."
 )
+
+
+def build_tc_note_user_prompt(prompt: str, messages: list[dict[str, Any]]) -> str:
+    """Append structured snapshot history to a tc_note trigger prompt."""
+    return f"{prompt.strip()}\n\n{format_snapshot_history(messages)}".strip()
 
 
 @dataclass
@@ -99,11 +90,12 @@ async def run_tc_note(
 ) -> NoteSummary:
     """Spawn an ephemeral agent to generate a task-center progress note."""
     system_prompt, default_model, note_taker_name = _resolve_note_taker_definition(team_run_id)
+    user_prompt = build_tc_note_user_prompt(prompt, messages)
     result = await run(
         agent_name=f"{note_taker_name}:{task_id}",
-        messages=messages,
+        messages=[],
         system_prompt=system_prompt,
-        prompt=prompt,
+        prompt=user_prompt,
         tools=[SubmitTaskNoteTool()],
         api_client=api_client,
         max_tokens_per_turn=max_tokens,

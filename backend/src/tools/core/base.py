@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import json
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal, Sequence
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, Field, RootModel, ValidationError
 
 from tools.core.runtime import ExecutionMetadata
 
@@ -16,11 +17,13 @@ __all__ = [
     "BaseTool",
     "BaseToolkit",
     "ExecutionMetadata",
+    "TextToolOutput",
     "ToolExecutionContext",
     "ToolRegistry",
     "ToolResult",
     "decorate_schemas_for_background",
     "run_tool_safely",
+    "validate_tool_output",
 ]
 
 
@@ -56,69 +59,10 @@ class ToolResult:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
-_TYPE_MAP = {
-    "str": "string",
-    "string": "string",
-    "int": "integer",
-    "integer": "integer",
-    "float": "number",
-    "number": "number",
-    "bool": "boolean",
-    "boolean": "boolean",
-    "list": "array",
-    "array": "array",
-    "dict": "object",
-    "object": "object",
-}
+class TextToolOutput(RootModel[str]):
+    """Successful output for tools whose true output is plain text."""
 
-
-def _parse_returns_schema(docstring: str | None) -> dict[str, Any] | None:
-    """Parse a ``Returns:`` section from a docstring into JSON Schema.
-
-    Supports two formats::
-
-        Returns:
-            field_name (type): Description of the field
-            field_name: Description (defaults to type "string")
-    """
-    import re
-
-    if not docstring:
-        return None
-
-    match = re.search(r"Returns:\s*\n((?:\s+.*\n?)*)", docstring)
-    if not match:
-        return None
-
-    block = match.group(1)
-    properties: dict[str, Any] = {}
-    required: list[str] = []
-
-    for line in block.splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        # field_name (type): description
-        m = re.match(r"(\w+)\s*\((\w+)\)\s*:\s*(.*)", line)
-        if m:
-            name, typ, desc = m.group(1), m.group(2), m.group(3).strip()
-            properties[name] = {
-                "type": _TYPE_MAP.get(typ.lower(), "string"),
-                "description": desc,
-            }
-            required.append(name)
-            continue
-        # field_name: description
-        m = re.match(r"(\w+)\s*:\s*(.*)", line)
-        if m:
-            name, desc = m.group(1), m.group(2).strip()
-            properties[name] = {"type": "string", "description": desc}
-            required.append(name)
-
-    if not properties:
-        return None
-
-    return {"type": "object", "properties": properties, "required": required}
+    root: str = Field(..., description="Plain text returned by the tool.")
 
 
 class BaseTool(ABC):
@@ -128,6 +72,7 @@ class BaseTool(ABC):
     description: str
     short_description: str | None = None
     input_model: type[BaseModel]
+    output_model: type[BaseModel] = TextToolOutput
     # Background dispatch policy:
     #   "forbidden" — tool cannot run in background (default)
     #   "optional"  — LLM may opt in by passing background=true
@@ -156,14 +101,9 @@ class BaseTool(ABC):
         del arguments, context
         return None
 
-    def output_schema(self) -> dict[str, Any] | None:
-        """Return the output JSON Schema, parsed from the class docstring.
-
-        If the subclass docstring has a ``Returns:`` section, it is
-        automatically converted to a JSON Schema.  Returns ``None``
-        if no output schema is documented.
-        """
-        return _parse_returns_schema(self.__class__.__doc__)
+    def output_schema(self) -> dict[str, Any]:
+        """Return the output JSON Schema for successful tool output."""
+        return self.output_model.model_json_schema()
 
     def to_api_schema(self) -> dict[str, Any]:
         """Return the tool schema expected by the Anthropic Messages API."""
@@ -172,9 +112,7 @@ class BaseTool(ABC):
             "description": self.description,
             "input_schema": self.input_model.model_json_schema(),
         }
-        out = self.output_schema()
-        if out is not None:
-            schema["output_schema"] = out
+        schema["output_schema"] = self.output_schema()
         return schema
 
 
@@ -340,12 +278,60 @@ async def run_tool_safely(
         )
 
     try:
-        return await tool.execute(parsed_input, context)
+        result = await tool.execute(parsed_input, context)
     except Exception as exc:
         return ToolResult(
             output=f"Tool execution failed: {exc}",
             is_error=True,
         )
+    return validate_tool_output(tool, result)
+
+
+def _format_validation_errors(exc: ValidationError) -> str:
+    return "; ".join(
+        f"{'.'.join(str(p) for p in e['loc'])}: {e['msg']}" for e in exc.errors()
+    )
+
+
+def validate_tool_output(tool: "BaseTool", result: ToolResult) -> ToolResult:
+    """Validate successful tool output against the tool's declared output model."""
+    if result.is_error:
+        return result
+
+    model = tool.output_model
+    try:
+        if issubclass(model, RootModel):
+            model.model_validate(result.output)
+        else:
+            try:
+                payload = json.loads(result.output)
+            except json.JSONDecodeError as exc:
+                return ToolResult(
+                    output=(
+                        f"Invalid output from {tool.name}: expected JSON matching "
+                        f"{model.__name__}, got non-JSON output ({exc.msg})."
+                    ),
+                    is_error=True,
+                    metadata={
+                        **result.metadata,
+                        "output_validation_error": exc.msg,
+                    },
+                )
+            model.model_validate(payload)
+    except ValidationError as exc:
+        errors = _format_validation_errors(exc)
+        return ToolResult(
+            output=(
+                f"Invalid output from {tool.name}: output did not match "
+                f"{model.__name__}: {errors}."
+            ),
+            is_error=True,
+            metadata={
+                **result.metadata,
+                "output_validation_error": errors,
+            },
+        )
+    return result
 
 
 def decorate_schemas_for_background(

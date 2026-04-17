@@ -281,7 +281,7 @@ async def test_submit_replan_rejects_self_original_and_terminal_cancel_ids():
 
     assert result.is_error is True
     assert "replanner cannot cancel itself" in result.output
-    assert "replanner cannot cancel the original replanning task" in result.output
+    assert "replanner cannot cancel the original request_replan task" in result.output
     assert "cancel target 'done' is done; cannot cancel" in result.output
 
 
@@ -633,7 +633,7 @@ async def test_replan_expander_rejects_original_task_cancellation():
         fail_cb=lambda task_id, reason: None,
     )
 
-    with pytest.raises(InvalidPlan, match="original replanning task"):
+    with pytest.raises(InvalidPlan, match="original request_replan task"):
         await expander.apply_replan(
             replan_task_id="replanner",
             add_tasks=[],

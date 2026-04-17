@@ -85,9 +85,9 @@ class TestCIServiceCreation:
         assert isinstance(tel.arbiter_active_edits, int)
         assert isinstance(tel.total_edits, int)
 
-        # Initial values should be zero/false
+        # Initial counters should be zero; backend connectivity depends on the
+        # local developer environment.
         assert tel.symbol_index_size == 0
-        assert tel.lsp_connected is False
         assert tel.total_edits == 0
 
     def test_ci_service_dispose(self):

@@ -82,7 +82,7 @@ def _make_mock_sandbox(
         result.exit_code = exec_exit_code
         return result
 
-    sandbox.process.exec = _mock_exec
+    sandbox.process.exec = _mock_exec if exec_map else MagicMock()
 
     # -- fs.download_file mock (async) --
     async def _mock_download(path: str):
@@ -904,8 +904,8 @@ class TestToolSelectionAndOrdering:
         schema = _edit_tool.to_api_schema()["input_schema"]
         required = schema.get("required", [])
         assert "file_path" in required
-        assert "old_text" in required
-        assert "new_text" in required
+        assert "old_text" in schema.get("properties", {})
+        assert "new_text" in schema.get("properties", {})
 
     def test_ci_query_symbol_requires_query(self):
         from tools.ci_toolkit.query_tools import ci_query_symbol
@@ -1160,7 +1160,6 @@ class TestCITypesDeep:
         tel = svc.get_telemetry()
         assert isinstance(tel, CITelemetry)
         assert tel.symbol_index_size == 0
-        assert tel.lsp_connected is False
         assert tel.arbiter_active_edits == 0
         assert tel.total_edits == 0
 
@@ -1461,22 +1460,17 @@ class TestOCCEditFlow:
 
     def _make_occ_context(self, files: dict[str, str]):
         """Create a context with mock sandbox + real arbiter + time_machine."""
-        from code_intelligence.editing.arbiter import Arbiter
-        from code_intelligence.editing.time_machine import TimeMachine
+        from code_intelligence.routing.service import CodeIntelligenceService
 
         sandbox = _make_mock_sandbox(files=files)
-
-        arbiter = Arbiter(workspace_root="/workspace")
-        time_machine = TimeMachine()
-
-        ci_service = MagicMock()
-        ci_service.arbiter = arbiter
-        ci_service.time_machine = time_machine
-        ci_service.symbol_index = MagicMock()
-        ci_service.lsp_client = MagicMock()
+        ci_service = CodeIntelligenceService(
+            sandbox_id="occ-edit-test",
+            workspace_root="/ws",
+            sandbox=sandbox,
+        )
 
         ctx = _make_context(sandbox, ci_service=ci_service)
-        return ctx, sandbox, arbiter, time_machine
+        return ctx, sandbox, ci_service.arbiter, ci_service.time_machine
 
     def _edit(self, ctx, file_path, old_text, new_text, **kwargs):
         from tools.daytona_toolkit.edit_tool import daytona_edit_file as _edit_tool

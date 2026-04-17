@@ -20,7 +20,13 @@ from pydantic import BaseModel, Field
 
 from team._path_utils import normalize_scope_paths, scope_paths_overlap
 from tools.task_center.freshness import check_freshness
-from tools.core.base import BaseTool, BaseToolkit, ToolExecutionContext, ToolResult
+from tools.core.base import (
+    BaseTool,
+    BaseToolkit,
+    TextToolOutput,
+    ToolExecutionContext,
+    ToolResult,
+)
 
 _BACKTICK_PATH_RE = re.compile(r"`([^`\n]+)`")
 
@@ -80,6 +86,20 @@ class PostNoteInput(BaseModel):
     )
 
 
+class TaskNoteOutput(BaseModel):
+    note_id: str = Field(..., description="Created Task Center note id.")
+    task_id: str = Field(..., description="Runtime-stamped task id that owns the note.")
+    agent_name: str = Field(..., description="Runtime-stamped agent name that posted the note.")
+    content: str = Field(..., description="Stored note content.")
+    timestamp: float = Field(..., description="Unix timestamp when the note was posted.")
+    paths: list[str] = Field(default_factory=list, description="Scope paths attached to the note.")
+    tags: list[str] = Field(default_factory=list, description="Tags attached to the note.")
+    parent_note_id: str | None = Field(
+        default=None,
+        description="Parent note id when the note is part of a thread.",
+    )
+
+
 class SubmitTaskNoteTool(BaseTool):
     name = "submit_task_note"
     description = (
@@ -91,6 +111,7 @@ class SubmitTaskNoteTool(BaseTool):
     )
     short_description = "Post a Task Center note."
     input_model = PostNoteInput
+    output_model = TaskNoteOutput
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, PostNoteInput)
@@ -138,7 +159,17 @@ class SubmitTaskNoteTool(BaseTool):
             parent_note_id=arguments.parent_note_id,
         )
         await tc.notes.post(note)
-        return ToolResult(output=f"Note posted ({len(content)} chars).")
+        payload = TaskNoteOutput(
+            note_id=note.id,
+            task_id=note.task_id,
+            agent_name=note.agent_name,
+            content=note.content,
+            timestamp=note.timestamp,
+            paths=note.paths,
+            tags=note.tags,
+            parent_note_id=note.parent_note_id,
+        )
+        return ToolResult(output=payload.model_dump_json())
 
 
 # Backward-compat alias — used by tc_note.py during transition
@@ -158,6 +189,26 @@ class TaskCenterChangedSinceInput(BaseModel):
     pass  # No arguments needed — uses task start time
 
 
+class TaskCenterChangedSinceOutput(BaseModel):
+    stale: bool = Field(..., description="Whether relevant Task Center state changed.")
+    scope_changes_by_others: list[dict[str, object]] = Field(
+        default_factory=list,
+        description="Changes made by other agents in overlapping scope.",
+    )
+    new_dep_notes: list[dict[str, object]] = Field(
+        default_factory=list,
+        description="New notes from dependency tasks since the freshness baseline.",
+    )
+    new_sibling_completions: list[dict[str, object]] = Field(
+        default_factory=list,
+        description="Sibling task completions since the freshness baseline.",
+    )
+    suggestion: str | None = Field(
+        default=None,
+        description="Suggested next action when the task context is stale.",
+    )
+
+
 class TaskCenterChangedSinceTool(BaseTool):
     name = "task_center_changed_since"
     description = (
@@ -166,6 +217,7 @@ class TaskCenterChangedSinceTool(BaseTool):
     )
     short_description = "Check whether Task Center state is stale."
     input_model = TaskCenterChangedSinceInput
+    output_model = TaskCenterChangedSinceOutput
 
     async def execute(
         self, arguments: TaskCenterChangedSinceInput, context: ToolExecutionContext
@@ -236,6 +288,7 @@ class ReadTaskNoteTool(BaseTool):
     )
     short_description = "Read Task Center notes."
     input_model = ReadTaskNoteInput
+    output_model = TextToolOutput
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, ReadTaskNoteInput)
@@ -327,6 +380,7 @@ class ReadTaskDetailsTool(BaseTool):
     )
     short_description = "Read task details by ID."
     input_model = ReadTaskDetailsInput
+    output_model = TextToolOutput
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, ReadTaskDetailsInput)
@@ -410,6 +464,7 @@ class ReadTaskGraphTool(BaseTool):
     )
     short_description = "Read the task graph."
     input_model = ReadTaskGraphInput
+    output_model = TextToolOutput
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, ReadTaskGraphInput)

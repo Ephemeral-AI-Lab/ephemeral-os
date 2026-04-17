@@ -480,12 +480,17 @@ def _team_repo_write_warning(
 
 async def _upload_file_compat(sandbox: Any, content: bytes, file_path: str) -> None:
     """Upload using the SDK signature, with fallback for stale path-first mocks."""
+    async def _call_upload(*args: Any) -> None:
+        response = sandbox.fs.upload_file(*args)
+        if inspect.isawaitable(response):
+            await response
+
     try:
-        await sandbox.fs.upload_file(content, file_path)
+        await _call_upload(content, file_path)
     except (AttributeError, TypeError) as exc:
         if "decode" not in str(exc) and "bytes-like object" not in str(exc):
             raise
-        await sandbox.fs.upload_file(file_path, content)
+        await _call_upload(file_path, content)
 
 
 def _supports_exec_transport(sandbox: Any) -> bool:

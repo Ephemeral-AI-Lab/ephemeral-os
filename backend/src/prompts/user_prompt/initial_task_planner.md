@@ -1,8 +1,7 @@
-# Initial Task Planner User Prompt
+Please read the following sections and call the listed terminal tool when your work is complete.
 
-Use this template for the root `team_planner` task that receives the original user request.
+{{terminal_tools}}
 
-````text
 ## Your task
 
 1. Please read the user request and benchmark targets.
@@ -18,7 +17,7 @@ Use this template for the root `team_planner` task that receives the original us
 ```
 
 {{#if scope_paths}}
-## Scope
+## scope_paths
 {{scope_paths}}
 {{/if}}
 
@@ -34,4 +33,3 @@ Use this template for the root `team_planner` task that receives the original us
 ## Parent context
 {{parent_context}}
 {{/if}}
-````

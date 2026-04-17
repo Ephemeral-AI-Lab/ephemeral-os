@@ -5,7 +5,6 @@ from __future__ import annotations
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from db.base import Base
 from team.context.project import ProjectContext
 from team.memory.model import TeamMemoryRecordModel  # noqa: F401
 from team.memory.runtime import persist_memory_record
@@ -34,6 +33,10 @@ class _FakeTaskCenter:
         self.graph = {}
         self._notes = []
         self._events = NullTeamRunStore()
+        self._cancel_running_task_callback = None
+
+    def set_cancel_running_task_callback(self, callback) -> None:
+        self._cancel_running_task_callback = callback
 
 
 class _FakeDispatchQueue:

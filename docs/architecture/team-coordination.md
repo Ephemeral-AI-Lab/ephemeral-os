@@ -29,19 +29,21 @@ sequenceDiagram
     participant Replanner
 
     Worker->>TaskCenter: submit_task_summary(type="fail")
-    TaskCenter->>TaskCenter: mark original REPLANNING
+    TaskCenter->>TaskCenter: mark original REQUEST_REPLAN
     TaskCenter->>TaskCenter: rewire pending dependents from original to replanner
     TaskCenter->>Replanner: spawn replanner with failure context
     Replanner->>TaskCenter: submit_replan(new_tasks=[...], cancel_ids=[...])
     TaskCenter->>TaskCenter: apply replan and complete or expand replanner
 ```
 
-When a task enters `REPLANNING`, pending dependent tasks are rewired from the failed task to the replanner task, so they remain gated until the replanner is `DONE`. Any dependent of the failed task with a non-pending status is a graph invariant violation, because a task that still depends on an unfinished or failed dependency cannot already be ready, running, expanded, replanning, or terminal. The executor reaches this path by calling `TaskCenter.request_replan`; TaskCenter owns the lifecycle mutation and persistence transaction.
+When a task enters `request_replan`, pending dependent tasks are rewired from the failed task to the replanner task, so they remain gated until the replanner is `DONE`. Any dependent of the failed task with a non-pending status is a graph invariant violation, because a task that still depends on an unfinished or failed dependency cannot already be ready, running, expanded, `request_replan`, or terminal. The executor reaches this path by calling `TaskCenter.request_replan`; TaskCenter owns the lifecycle mutation and persistence transaction.
 
 Graph invariant violations fail the team run immediately. Across dispatch,
 recovery, and checkpoint restore, scheduler-owned work states (`ready`,
-`running`, `expanded`, `replanning`, and `done`) are valid only when all
+`running`, `expanded`, `request_replan`, and `done`) are valid only when all
 dependencies are `done`; failed or cancelled dependencies are not satisfied.
+For the broader run-failure taxonomy, see
+[`team-failure-conditions.md`](team-failure-conditions.md).
 
 The replanner is the recovery gate for downstream work. Corrective work goes into `new_tasks`, and every new task is inserted as a direct child of the replanner. `cancel_ids` may target only the replanner's direct siblings, and their subtrees cancel by cascade. New replan tasks may depend on local new tasks or schedulable existing tasks that do not already depend on the replanner/original failure pair. If the replanner has no new child tasks after `submit_replan`, it becomes `DONE` immediately; otherwise it becomes `EXPANDED` and reaches `DONE` only after all direct children succeed.
 
@@ -53,7 +55,7 @@ Task statuses are:
 - `ready`
 - `running`
 - `expanded`
-- `replanning`
+- `request_replan`
 - `done`
 - `failed`
 - `cancelled`

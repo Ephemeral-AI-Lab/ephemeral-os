@@ -130,7 +130,7 @@ def validate_replan_rules(
     if replan_task_id in cancel_id_set:
         result.errors.append("replanner cannot cancel itself")
     if origin_task_id and origin_task_id in cancel_id_set:
-        result.errors.append("replanner cannot cancel the original replanning task")
+        result.errors.append("replanner cannot cancel the original request_replan task")
 
     all_cancelled = set(cancel_id_set)
     for cid in cancel_id_list:

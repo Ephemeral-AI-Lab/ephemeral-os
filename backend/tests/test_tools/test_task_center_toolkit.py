@@ -8,12 +8,55 @@ from types import SimpleNamespace
 
 import pytest
 
-from tools.task_center.toolkit import TaskCenterChangedSinceTool
+from tools.task_center.toolkit import SubmitTaskNoteTool, TaskCenterChangedSinceTool
 from tools.core.base import ToolExecutionContext
 
 
 def _ctx(metadata=None) -> ToolExecutionContext:
     return ToolExecutionContext(cwd=Path("/tmp"), metadata=metadata or {})
+
+
+@pytest.mark.asyncio
+async def test_submit_task_note_returns_structured_note_output():
+    class _Notes:
+        def __init__(self) -> None:
+            self.posted = []
+
+        async def post(self, note) -> None:
+            self.posted.append(note)
+
+    notes = _Notes()
+    ctx = _ctx(
+        {
+            "task_center": SimpleNamespace(notes=notes),
+            "work_item_id": "task-1",
+            "agent_name": "scout",
+            "write_scope": ["src/auth.py"],
+        }
+    )
+
+    tool = SubmitTaskNoteTool()
+    result = await tool.execute(
+        tool.input_model(content="Mapped auth surface.", tags=["discovery"]),
+        ctx,
+    )
+
+    assert result.is_error is False
+    payload = json.loads(result.output)
+    assert payload["note_id"]
+    assert payload["task_id"] == "task-1"
+    assert payload["agent_name"] == "scout"
+    assert payload["content"] == "Mapped auth surface."
+    assert payload["paths"] == ["src/auth.py"]
+    assert payload["tags"] == ["discovery"]
+    assert notes.posted[0].id == payload["note_id"]
+
+
+def test_submit_task_note_schema_is_pydantic_native():
+    schema = SubmitTaskNoteTool().to_api_schema()
+
+    assert schema["input_schema"]["properties"]["content"]["description"]
+    assert schema["output_schema"]["properties"]["task_id"]["description"]
 
 
 @pytest.mark.asyncio

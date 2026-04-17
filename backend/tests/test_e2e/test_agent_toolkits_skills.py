@@ -9,9 +9,9 @@ Tests the full flow:
 
 from __future__ import annotations
 
-import json
-
 import pytest
+
+pytestmark = pytest.mark.e2e
 
 
 # ---------------------------------------------------------------------------
@@ -40,9 +40,13 @@ class TestInfrastructure:
         assert "model" in data["state"]
         assert data["toolkits"] is not None
         toolkits = {entry["name"]: entry["tools"] for entry in data["toolkits"]}
-        # Submission tools are no longer a factory-registered toolkit —
-        # they are registered individually as terminal tools.
-        assert "submission" not in toolkits
+        assert set(toolkits["submission"]) == {
+            "submit_task_summary",
+            "submit_plan",
+            "submit_replan",
+        }
+        assert "submit_task_plan" not in toolkits["submission"]
+        assert "declare_blocker" not in toolkits["submission"]
         assert "skills" in toolkits
         assert "background" in toolkits
 
@@ -355,8 +359,7 @@ class TestChatSkillAwareness:
             client, mock_client, agent_name="custom-prompt-agent"
         )
 
-        assert system_prompt.startswith("You are a test assistant.")
-        assert "You are a specialized coding assistant." in system_prompt
+        assert system_prompt.startswith("You are a specialized coding assistant.")
         assert "<Toolkit Instructions>" in system_prompt
 
     def test_default_agent_omits_available_skills_section(self, app_client):

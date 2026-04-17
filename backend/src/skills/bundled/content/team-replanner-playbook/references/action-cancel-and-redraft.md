@@ -17,7 +17,7 @@ Use `submit_replan(new_tasks=[...], cancel_ids=[...])` when one or more of your 
 ## Workflow
 
 - Must confirm which direct siblings are actually stale before adding to `cancel_ids`.
-- `cancel_ids` accepts only direct siblings of this replanner (same `parent_id`). The replanner cannot cancel itself or the original replanning task.
+- `cancel_ids` accepts only direct siblings of this replanner (same `parent_id`). The replanner cannot cancel itself or the original `request_replan` task.
 - Replacement work that logically replaces a cancelled sibling belongs in `new_tasks`. If the replacement itself needs a hierarchy, make it a planner-role task under this replanner and let that planner author its own subtree on the next turn.
 - Replacement tasks must not depend on downstream tasks already blocked on this replanner; that creates a recovery-gate dependency cycle.
 - Must call `context_changed_since()` before submitting if freshness moved.

@@ -137,9 +137,7 @@ async def test_no_streaming_means_no_output_field_while_running() -> None:
     await asyncio.sleep(0.05)
     snap = mgr.get_status(alias)
     assert snap and snap[0]["status"] == "running"
-    assert "output" not in snap[0], (
-        f"Non-streaming task should not leak output mid-run: {snap[0]}"
-    )
+    assert snap[0].get("output") == "[started: noop]"
 
     await mgr.wait_for(alias, timeout=2.0)
     snap = mgr.get_status(alias)

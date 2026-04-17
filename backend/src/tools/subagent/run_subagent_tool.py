@@ -30,6 +30,8 @@ from dataclasses import asdict, dataclass, is_dataclass
 from typing import Any
 from uuid import uuid4
 
+from pydantic import BaseModel, Field
+
 from agents.run_tracker import AgentRunTracker
 from message.messages import (
     ConversationMessage,
@@ -109,6 +111,58 @@ def _scout_owner_buckets(paths: list[str]) -> list[str]:
 _TEST_FILE_RE = re.compile(
     r"(^|/)tests?/|(^|/)test_[^/]+\.py$|_test\.py$|(^|/)conftest\.py$",
 )
+
+
+class RunSubagentInput(BaseModel):
+    agent_name: str = Field(
+        ...,
+        description=(
+            "Name of a registered dispatchable subagent. In team mode this is "
+            "normally `scout`."
+        ),
+    )
+    prompt: str | None = Field(
+        default=None,
+        description="Free-form subagent task prompt. Mutually exclusive with input.",
+    )
+    input: dict[str, Any] | None = Field(
+        default=None,
+        description=(
+            "Structured subagent payload. For scout, use "
+            "{\"target_paths\": [...]}. Mutually exclusive with prompt."
+        ),
+    )
+
+
+class RunSubagentOutput(BaseModel):
+    kind: str = Field(
+        ...,
+        description="Envelope kind: brief, plan, summary, or raw.",
+    )
+    run_id: str | None = Field(
+        default=None,
+        description="Persisted subagent run id when available.",
+    )
+    summary: str = Field(
+        default="",
+        description="Runtime-derived compact envelope text.",
+    )
+    artifact_ref: str | None = Field(
+        default=None,
+        description="Reference to a durable artifact when one was stored.",
+    )
+    payload: dict[str, Any] = Field(
+        default_factory=dict,
+        description="JSON-safe subagent output payload.",
+    )
+    completion_mode: str | None = Field(
+        default=None,
+        description="Optional completion mode such as early_stopped.",
+    )
+    cancel_reason: str | None = Field(
+        default=None,
+        description="Cancellation reason when the subagent was stopped early.",
+    )
 
 
 def _all_paths_are_test_files(paths: list[str]) -> bool:
@@ -438,6 +492,8 @@ def _snapshot_messages(messages: list[Any] | None) -> list[dict[str, Any]]:
         "still admits parallel fan-out."
     ),
     short_description="Spawn a subagent in the background.",
+    input_model=RunSubagentInput,
+    output_model=RunSubagentOutput,
     background="always",
     task_type="subagent",
 )
@@ -448,26 +504,7 @@ async def run_subagent(
     *,
     context: ToolExecutionContext,
 ) -> ToolResult:
-    """Spawn a named subagent and rejoin via the background-task lifecycle.
-
-    Args:
-        agent_name: Required. Name of a registered ``AgentDefinition``
-            whose ``agent_type == "subagent"``. Use ``"scout"`` for
-            read-only path exploration, ``"subagent"`` for the generic
-            worker, or any user-registered subagent definition. Team-mode
-            planners must not pass execution agents like ``developer`` or
-            ``validator``; those belong in submitted WorkItems.
-        prompt: Free-form task description. Mutually exclusive with ``input``.
-        input: Structured payload (e.g. ``{"target_paths": [...]}`` for a
-            scout). Mutually exclusive with ``prompt``.
-
-    Returns:
-        output (str): JSON-encoded envelope ``{summary, run_id,
-            artifact_ref, kind, payload}`` where ``run_id`` is the
-            subagent audit run id and ``artifact_ref`` is a real team
-            artifact ref when the runtime stored one. ``kind`` is one of
-            ``"brief" | "plan" | "summary" | "raw"``.
-    """
+    """Spawn a named subagent and rejoin via the background-task lifecycle."""
     from engine.runtime.agent import spawn_agent
 
     parent_cfg = context.metadata.session_config

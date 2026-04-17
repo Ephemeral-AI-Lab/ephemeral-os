@@ -1,3 +1,4 @@
+# ruff: noqa: E402
 """E2E tests for Arbiter parallel file edits.
 
 Exercises the OCC arbiter's ability to coordinate concurrent edits to the
@@ -26,7 +27,6 @@ import hashlib
 import json
 import os
 import threading
-import time
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
@@ -38,7 +38,6 @@ _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 load_dotenv(_PROJECT_ROOT / ".env")
 
 from code_intelligence.editing.arbiter import Arbiter
-from code_intelligence.editing.merge import detect_edit_window, merge_non_overlapping_edit
 from code_intelligence.routing.service import CodeIntelligenceService
 from code_intelligence.types import PreparedWrite
 from tools.core.base import ToolExecutionContext
@@ -658,7 +657,7 @@ class TestForcedMergePath:
         )
 
         loser = "b" if a_ok else "a"
-        assert results[loser].conflict, f"Loser should have conflict=True"
+        assert results[loser].conflict, "Loser should have conflict=True"
 
         # Final file has exactly one value
         final = sandbox._file_store["/workspace/dup.py"]
@@ -1045,6 +1044,7 @@ class TestConcurrentEditToolSearchReplace:
 
 
 @pytest.mark.skipif(not HAS_DAYTONA, reason="Daytona credentials not configured")
+@pytest.mark.live
 class TestLiveSandboxParallelEdits:
     """Run parallel edit tests against a real Daytona sandbox."""
 

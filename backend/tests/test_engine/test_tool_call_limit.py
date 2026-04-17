@@ -99,16 +99,16 @@ def test_budget_warning_guides_planner_to_finalize_plan_handoff():
     ctx = _ctx(100, 75)
     ctx.tool_metadata["role"] = "planner"
     _, event = build_budget_warning(ctx)
-    assert "plan json" in event.text.lower()
-    assert "post-run submission phase" in event.text.lower()
+    assert "submit_plan()" in event.text
+    assert "strongest plan you can defend" in event.text
 
 
 def test_budget_warning_guides_validator_to_wrap_up():
     ctx = _ctx(100, 75)
     ctx.tool_metadata["role"] = "reviewer"
     _, event = build_budget_warning(ctx)
-    assert "verdict" in event.text.lower()
-    assert "Wrap up" in event.text
+    assert "submit_task_summary(type='success')" in event.text
+    assert "submit_task_summary(type='fail')" in event.text
 
 
 def test_budget_warning_emits_once_per_remaining_count():

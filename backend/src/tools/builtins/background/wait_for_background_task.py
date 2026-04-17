@@ -7,7 +7,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from tools.core.base import BaseTool, ToolExecutionContext, ToolResult
+from tools.core.base import BaseTool, TextToolOutput, ToolExecutionContext, ToolResult
 
 from ._common import (
     TASK_ID_FIELD,
@@ -104,6 +104,7 @@ class WaitForBackgroundTaskTool(BaseTool):
     )
     short_description: str = "Wait for background tasks."
     input_model: type[BaseModel] = WaitForBackgroundTaskInput
+    output_model: type[BaseModel] = TextToolOutput
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         manager = context.metadata.get("background_task_manager")

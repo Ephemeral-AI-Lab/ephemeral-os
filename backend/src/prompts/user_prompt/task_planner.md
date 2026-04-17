@@ -1,8 +1,7 @@
-# Task Planner User Prompt
+Please read the following sections and call the listed terminal tool when your work is complete.
 
-Use this template for non-root `team_planner` tasks created by a parent planner.
+{{terminal_tools}}
 
-````text
 ## Your task
 
 1. Please read the assigned planner task and inherited context.
@@ -18,7 +17,7 @@ Use this template for non-root `team_planner` tasks created by a parent planner.
 ```
 
 {{#if scope_paths}}
-## Scope
+## scope_paths
 {{scope_paths}}
 {{/if}}
 
@@ -36,4 +35,3 @@ Use this template for non-root `team_planner` tasks created by a parent planner.
 ## Parent context
 {{parent_context}}
 {{/if}}
-````

@@ -60,6 +60,7 @@ class RestrictedRunSubagentTool(BaseTool):
         self.description = run_subagent.description
         self.short_description = run_subagent.short_description
         self.input_model = _build_restricted_input_model(allowed_agent_names)
+        self.output_model = run_subagent.output_model
         self.background = run_subagent.background
         self.task_type = run_subagent.task_type
 
@@ -71,9 +72,6 @@ class RestrictedRunSubagentTool(BaseTool):
 
     def is_read_only(self, arguments) -> bool:  # type: ignore[override]
         return self._delegate.is_read_only(arguments)
-
-    def output_schema(self):  # type: ignore[override]
-        return self._delegate.output_schema()
 
 
 class SubagentToolkit(BaseToolkit):

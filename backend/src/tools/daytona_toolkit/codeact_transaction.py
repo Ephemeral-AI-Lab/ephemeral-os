@@ -52,7 +52,6 @@ class CodeActTransaction:
     repo_root: str
     scratch_root: str
     base_tree: str
-    patch_path: str
 
 
 async def _sandbox_exec(
@@ -145,20 +144,12 @@ async def create_codeact_transaction(
     repo_root: str,
 ) -> CodeActTransaction:
     scratch_root = ""
-    patch_path = ""
     try:
         scratch_root = (
             await _sandbox_exec_checked(
                 sandbox,
                 "mktemp -d /tmp/codeact-tx-XXXXXX",
                 error_prefix="Failed to create scratch worktree directory",
-            )
-        ).strip()
-        patch_path = (
-            await _sandbox_exec_checked(
-                sandbox,
-                "mktemp /tmp/codeact-tx-patch-XXXXXX",
-                error_prefix="Failed to create scratch patch file",
             )
         ).strip()
 
@@ -176,22 +167,47 @@ async def create_codeact_transaction(
 set -e
 repo_root={shlex.quote(repo_root)}
 scratch_root={shlex.quote(scratch_root)}
-patch_path={shlex.quote(patch_path)}
-git_index_path=$(git -C "$repo_root" rev-parse --path-format=absolute --git-path index)
-seed_index=$(mktemp -u)
 base_index=$(mktemp -u)
 cleanup() {{
-  rm -f "$seed_index" "$base_index"
+  rm -f "$base_index"
 }}
 trap cleanup EXIT
-if [ -f "$git_index_path" ]; then
-  cp "$git_index_path" "$seed_index"
-fi
-GIT_INDEX_FILE="$seed_index" git -C "$repo_root" add -A -- .
-GIT_INDEX_FILE="$seed_index" git -C "$repo_root" diff --cached --binary HEAD > "$patch_path"
-if [ -s "$patch_path" ]; then
-  git -C "$scratch_root" apply --binary "$patch_path"
-fi
+python3 - "$repo_root" "$scratch_root" <<'PY'
+import os
+import shutil
+import subprocess
+import sys
+
+repo_root, scratch_root = sys.argv[1], sys.argv[2]
+
+def git_paths(root, *args):
+    raw = subprocess.check_output(["git", "-C", root, *args])
+    return [part.decode("utf-8") for part in raw.split(b"\\0") if part]
+
+def remove_path(path):
+    if os.path.isdir(path) and not os.path.islink(path):
+        shutil.rmtree(path)
+    elif os.path.lexists(path):
+        os.remove(path)
+
+for rel_path in git_paths(scratch_root, "ls-files", "-z"):
+    source = os.path.join(repo_root, rel_path)
+    target = os.path.join(scratch_root, rel_path)
+    if not os.path.exists(source) and not os.path.islink(source):
+        remove_path(target)
+
+for rel_path in git_paths(repo_root, "ls-files", "-z", "-c", "-o", "--exclude-standard"):
+    source = os.path.join(repo_root, rel_path)
+    target = os.path.join(scratch_root, rel_path)
+    if os.path.isdir(source) and not os.path.islink(source):
+        continue
+    os.makedirs(os.path.dirname(target) or scratch_root, exist_ok=True)
+    remove_path(target)
+    if os.path.islink(source):
+        os.symlink(os.readlink(source), target)
+    else:
+        shutil.copy2(source, target)
+PY
 GIT_INDEX_FILE="$base_index" git -C "$scratch_root" add -A -- .
 GIT_INDEX_FILE="$base_index" git -C "$scratch_root" write-tree
 """
@@ -207,7 +223,6 @@ GIT_INDEX_FILE="$base_index" git -C "$scratch_root" write-tree
             repo_root=repo_root,
             scratch_root=scratch_root,
             base_tree=base_tree,
-            patch_path=patch_path,
         )
     except Exception as exc:
         if scratch_root:
@@ -217,7 +232,6 @@ GIT_INDEX_FILE="$base_index" git -C "$scratch_root" write-tree
                     repo_root=repo_root,
                     scratch_root=scratch_root,
                     base_tree="",
-                    patch_path=patch_path,
                 ),
             )
             logger.warning(
@@ -454,8 +468,6 @@ async def cleanup_codeact_transaction(
                 f"rm -rf {shlex.quote(tx.scratch_root)}"
             )
         )
-    if tx.patch_path:
-        commands.append(f"rm -f {shlex.quote(tx.patch_path)}")
     if not commands:
         return
     exit_code, stdout = await _sandbox_exec(sandbox, "\n".join(commands), timeout=120)

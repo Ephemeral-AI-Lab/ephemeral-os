@@ -22,6 +22,7 @@ from pathlib import Path
 import pytest
 
 from engine.runtime.background_tasks import BackgroundTaskManager
+from agents import AgentDefinition, get_definition, register_definition, unregister_definition
 from message.messages import (
     ConversationMessage,
     TextBlock,
@@ -48,6 +49,10 @@ class _StubAgent:
         self._display_messages: list[ConversationMessage] = []
         self._steps = steps
         self._delay = delay
+
+    @property
+    def display_messages(self) -> list[ConversationMessage]:
+        return self._display_messages
 
     async def run(self, prompt: str):
         for msg in self._steps:
@@ -90,6 +95,17 @@ async def test_subagent_peek_returns_live_snapshot(monkeypatch) -> None:
     must update as the inner agent makes progress."""
     bg = BackgroundTaskManager()
     stub = _StubAgent(_scripted_messages(), delay=0.08)
+    registered_scout = False
+    if get_definition("scout") is None:
+        register_definition(
+            AgentDefinition(
+                name="scout",
+                description="test scout",
+                agent_type="subagent",
+                include_skills=False,
+            )
+        )
+        registered_scout = True
 
     def _fake_spawn_agent(*args, **kwargs):
         return stub
@@ -114,52 +130,56 @@ async def test_subagent_peek_returns_live_snapshot(monkeypatch) -> None:
             },
         )
         return await run_subagent.execute(
-            run_subagent.input_model(prompt="task"), ctx
+            run_subagent.input_model(agent_name="scout", prompt="task"), ctx
         )
 
-    bg.launch(
-        task_id=alias,
-        tool_name="run_subagent",
-        tool_input={"prompt": "task"},
-        coro=_subagent_coro(),
-        task_note="test peek",
-    )
-
-    # Give the subagent time to register its provider and emit at least one
-    # message into _messages.
-    await asyncio.sleep(0.12)
-
-    progress_tool = CheckBackgroundProgressTool()
-    snapshots: list[str] = []
-    for _ in range(3):
-        ctx = ToolExecutionContext(
-            cwd=Path("/tmp"),
-            metadata={"background_task_manager": bg},
+    try:
+        bg.launch(
+            task_id=alias,
+            tool_name="run_subagent",
+            tool_input={"agent_name": "scout", "prompt": "task"},
+            coro=_subagent_coro(),
+            task_note="test peek",
         )
-        out = await progress_tool.execute(
-            CheckBackgroundProgressInput(task_id=alias), ctx
-        )
-        snapshots.append(out.output)
-        await asyncio.sleep(0.1)
 
-    # Wait for the subagent to finish so the test doesn't leak the task.
-    await bg.wait_for(alias, timeout=5.0)
+        # Give the subagent time to register its provider and emit at least one
+        # message into _messages.
+        await asyncio.sleep(0.12)
 
-    # At least one snapshot taken mid-run must show structured message blocks.
-    assert any("[text]" in s or "[tool]" in s for s in snapshots), snapshots
+        progress_tool = CheckBackgroundProgressTool()
+        snapshots: list[str] = []
+        for _ in range(3):
+            ctx = ToolExecutionContext(
+                cwd=Path("/tmp"),
+                metadata={"background_task_manager": bg},
+            )
+            out = await progress_tool.execute(
+                CheckBackgroundProgressInput(task_id=alias), ctx
+            )
+            snapshots.append(out.output)
+            await asyncio.sleep(0.1)
 
-    # The provider must surface MORE content as the subagent progresses.
-    # i.e. the last in-flight snapshot should be at least as informative as
-    # the first.
-    in_flight = [s for s in snapshots if "DONE" not in s]
-    assert in_flight, "expected at least one mid-flight snapshot"
+        # Wait for the subagent to finish so the test doesn't leak the task.
+        await bg.wait_for(alias, timeout=5.0)
 
-    # After completion, get_status must return the FINAL result (not the
-    # progress provider output).
-    final_status = bg.get_status(alias)
-    assert final_status, final_status
-    assert "DONE" in final_status[0]["output"]
-    assert "completed task" in final_status[0]["output"]
+        # At least one snapshot taken mid-run must show structured message blocks.
+        assert any("[text]" in s or "[tool]" in s for s in snapshots), snapshots
+
+        # The provider must surface MORE content as the subagent progresses.
+        # i.e. the last in-flight snapshot should be at least as informative as
+        # the first.
+        in_flight = [s for s in snapshots if "DONE" not in s]
+        assert in_flight, "expected at least one mid-flight snapshot"
+
+        # After completion, get_status must return the FINAL result (not the
+        # progress provider output).
+        final_status = bg.get_status(alias)
+        assert final_status, final_status
+        assert "DONE" in final_status[0]["output"]
+        assert "completed task" in final_status[0]["output"]
+    finally:
+        if registered_scout:
+            unregister_definition("scout")
 
 
 @pytest.mark.asyncio

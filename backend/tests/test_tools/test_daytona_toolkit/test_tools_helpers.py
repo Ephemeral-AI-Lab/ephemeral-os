@@ -3,15 +3,14 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock
-
-import pytest
 
 from tools.core.base import ToolExecutionContext
-from tools.daytona_toolkit._daytona_utils import _format_shell_stdout
-from tools.daytona_toolkit.tools import (
+from tools.daytona_toolkit._daytona_utils import (
+    _format_shell_stdout,
     _truncate,
     _truncate_tail,
+)
+from tools.daytona_toolkit.tools import (
     _path_error,
     _get_cwd,
     _resolve_path,

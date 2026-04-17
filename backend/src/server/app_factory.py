@@ -4,6 +4,8 @@ Thin app factory that assembles routers and manages the session lifecycle.
 Route implementations live in ``server.routers.*``.
 """
 
+# ruff: noqa: E402
+
 from __future__ import annotations
 
 import asyncio

@@ -6,7 +6,6 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from db.base import Base
 from token_tracker import TokenTracker, TokenUsageRecord, UsageStore
 
 
@@ -14,7 +13,7 @@ from token_tracker import TokenTracker, TokenUsageRecord, UsageStore
 def session_factory():
     db_path = "sqlite:///:memory:"
     engine = create_engine(db_path, echo=False)
-    Base.metadata.create_all(engine)
+    TokenUsageRecord.__table__.create(engine, checkfirst=True)
     sf = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
     return sf
 

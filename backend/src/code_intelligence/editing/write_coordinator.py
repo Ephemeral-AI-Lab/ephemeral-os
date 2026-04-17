@@ -418,7 +418,6 @@ class WriteCoordinator:
 
     def refresh_prepared_write(self, prepared: PreparedWrite) -> PreparedWrite:
         """Refresh a prepared write snapshot, reissuing a token when the file changed."""
-        refresh_started = time.perf_counter()
         try:
             current, existed = self._content.read(prepared.file_path, allow_missing=True)
         except Exception:

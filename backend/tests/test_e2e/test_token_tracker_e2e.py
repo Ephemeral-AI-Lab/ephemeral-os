@@ -4,8 +4,12 @@ from __future__ import annotations
 
 from uuid import uuid4
 
+import pytest
+
 from message.messages import ConversationMessage, TextBlock, ToolUseBlock
 from tests.test_e2e.conftest import parse_sse_events
+
+pytestmark = pytest.mark.e2e
 
 
 class TestUsageAPIEndpoints:

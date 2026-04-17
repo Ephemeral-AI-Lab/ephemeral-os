@@ -199,6 +199,13 @@ class SubmitTaskSummaryInput(BaseModel):
     )
 
 
+class SubmitTaskSummaryOutput(BaseModel):
+    task_id: str = Field(..., description="Runtime-stamped task id.")
+    agent_name: str = Field(..., description="Runtime-stamped submitting agent name.")
+    type: Literal["success", "fail"] = Field(..., description="Submitted outcome type.")
+    content: str = Field(..., description="Submitted task outcome content.")
+
+
 class SubmitTaskSummaryTool(BaseTool):
     name = "submit_task_summary"
     description = (
@@ -208,6 +215,7 @@ class SubmitTaskSummaryTool(BaseTool):
     )
     short_description = "Submit task outcome."
     input_model = SubmitTaskSummaryInput
+    output_model = SubmitTaskSummaryOutput
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, SubmitTaskSummaryInput)
@@ -219,7 +227,13 @@ class SubmitTaskSummaryTool(BaseTool):
         # Audit trail note
         tag = "implementation" if arguments.type == "success" else "warning"
         await _post_submission_note(context, content=arguments.content, tags=[tag])
-        return ToolResult(output="Summary submitted.")
+        payload = SubmitTaskSummaryOutput(
+            task_id=str(context.metadata.get("work_item_id") or ""),
+            agent_name=str(context.metadata.get("agent_name") or ""),
+            type=arguments.type,
+            content=arguments.content,
+        )
+        return ToolResult(output=payload.model_dump_json())
 
 
 # ---------------------------------------------------------------------------
@@ -251,6 +265,19 @@ class NewTaskSpec(BaseModel):
     )
 
 
+class ResolvedTaskOutput(BaseModel):
+    id: str = Field(..., description="Task id submitted by the planner.")
+    objective: str = Field(..., description="Full structured task objective.")
+    agent: str = Field(..., description="Resolved exact agent name.")
+    description: str = Field(..., description="Runtime-generated short task description.")
+    deps: list[str] = Field(default_factory=list, description="Task ids this task depends on.")
+    scope_paths: list[str] = Field(default_factory=list, description="Scope paths for this task.")
+    parent_id: str | None = Field(
+        default=None,
+        description="Parent task id when stamped by a replan submission.",
+    )
+
+
 class SubmitPlanInput(BaseModel):
     """Planner submission payload."""
 
@@ -263,6 +290,19 @@ class SubmitPlanInput(BaseModel):
     output: str | None = Field(
         default=None,
         description="Optional concise rationale or plan summary.",
+    )
+
+
+class SubmitPlanOutput(BaseModel):
+    task_id: str = Field(..., description="Runtime-stamped planner task id.")
+    agent_name: str = Field(..., description="Runtime-stamped planner agent name.")
+    new_tasks: list[ResolvedTaskOutput] = Field(
+        default_factory=list,
+        description="Accepted child tasks with resolved exact agent names.",
+    )
+    output: str | None = Field(
+        default=None,
+        description="Planner-provided optional rationale from the submit_plan input.",
     )
 
 
@@ -290,6 +330,19 @@ class SubmitReplanInput(BaseModel):
             "Direct siblings of the replanner to cancel (cascade "
             "propagates to their subtrees and dependents)."
         ),
+    )
+
+
+class SubmitReplanOutput(BaseModel):
+    task_id: str = Field(..., description="Runtime-stamped replanner task id.")
+    agent_name: str = Field(..., description="Runtime-stamped replanner agent name.")
+    new_tasks: list[ResolvedTaskOutput] = Field(
+        default_factory=list,
+        description="Accepted corrective child tasks with resolved exact agent names.",
+    )
+    cancel_ids: list[str] = Field(
+        default_factory=list,
+        description="Accepted sibling task ids to cancel by cascade.",
     )
 
 
@@ -473,6 +526,7 @@ class SubmitPlanTool(BaseTool):
     )
     short_description = "Submit a child plan."
     input_model = SubmitPlanInput
+    output_model = SubmitPlanOutput
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, SubmitPlanInput)
@@ -549,7 +603,13 @@ class SubmitPlanTool(BaseTool):
 
         context.metadata["resolved_plan"] = plan
         context.metadata["plan_is_replan"] = False
-        return ToolResult(output=f"Plan accepted ({len(plan.tasks)} tasks).")
+        payload = SubmitPlanOutput(
+            task_id=str(context.metadata.get("work_item_id") or ""),
+            agent_name=str(context.metadata.get("agent_name") or ""),
+            new_tasks=[ResolvedTaskOutput.model_validate(item) for item in resolved_tasks],
+            output=arguments.output,
+        )
+        return ToolResult(output=payload.model_dump_json())
 
 
 # ---------------------------------------------------------------------------
@@ -566,6 +626,7 @@ class SubmitReplanTool(BaseTool):
     )
     short_description = "Submit a corrective replan."
     input_model = SubmitReplanInput
+    output_model = SubmitReplanOutput
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         assert isinstance(arguments, SubmitReplanInput)
@@ -608,12 +669,13 @@ class SubmitReplanTool(BaseTool):
 
         context.metadata["resolved_plan"] = replan
         context.metadata["plan_is_replan"] = True
-        return ToolResult(
-            output=(
-                f"Replan accepted ({len(replan.add_tasks)} new tasks, "
-                f"{len(replan.cancel_ids)} cancelled)."
-            ),
+        payload = SubmitReplanOutput(
+            task_id=current_task_id,
+            agent_name=str(context.metadata.get("agent_name") or ""),
+            new_tasks=[ResolvedTaskOutput.model_validate(item) for item in resolved_tasks],
+            cancel_ids=list(arguments.cancel_ids),
         )
+        return ToolResult(output=payload.model_dump_json())
 
 
 # ---------------------------------------------------------------------------

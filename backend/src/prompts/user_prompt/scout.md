@@ -1,0 +1,38 @@
+Please read the following sections and complete with the listed terminal action when your work is complete.
+
+{{terminal_tools}}
+
+## Your task
+
+1. Please read the assigned exploration task and inherited context.
+2. Analyze the exact paths, symbols, or owner surfaces you were asked to inspect.
+3. Stay read-only. Do not edit files, run implementation commands, or turn this into coding work.
+4. Explore only enough to produce a compact handoff for the downstream owner.
+5. Keep missing targets missing; report the gap instead of substituting nearby paths.
+6. Finish with a concise factual brief that names mapped files, entry points, owner seams, subdivisions, and gaps.
+
+## Assigned exploration task
+
+```markdown
+{{task_spec}}
+```
+
+{{#if scope_paths}}
+## scope_paths
+{{scope_paths}}
+{{/if}}
+
+{{#if context_from_dependencies}}
+## Context from dependencies
+{{context_from_dependencies}}
+
+{{/if}}
+{{#if recent_scope_changes}}
+## Recent changes in your scope
+{{recent_scope_changes}}
+
+{{/if}}
+{{#if parent_context}}
+## Parent context
+{{parent_context}}
+{{/if}}

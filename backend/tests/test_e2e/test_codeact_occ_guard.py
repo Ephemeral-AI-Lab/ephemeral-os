@@ -1,3 +1,4 @@
+# ruff: noqa: E402
 """E2E tests for CodeAct OCC guard — verifying that codeact script and shell
 mutations are properly guarded by the optimistic concurrency control layer.
 
@@ -22,8 +23,10 @@ Run with:
 from __future__ import annotations
 
 import asyncio
+import base64
 import hashlib
 import json
+import os
 import re
 import threading
 from pathlib import Path
@@ -36,7 +39,6 @@ from dotenv import load_dotenv
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 load_dotenv(_PROJECT_ROOT / ".env")
 
-from code_intelligence.editing.arbiter import Arbiter
 from code_intelligence.routing.service import CodeIntelligenceService
 from code_intelligence.types import PreparedWrite
 from tools.core.base import ToolExecutionContext
@@ -55,8 +57,6 @@ def _load_settings() -> dict:
         return json.loads(settings_path.read_text())
     return {}
 
-
-import os
 
 _SETTINGS = _load_settings()
 DAYTONA_KEY = os.environ.get("DAYTONA_API_KEY") or _SETTINGS.get("daytona_api_key", "")
@@ -181,31 +181,12 @@ def _make_mock_sandbox(files: dict[str, str] | None = None) -> MagicMock:
 
 def _make_ci_service(sandbox: Any, workspace: str = "/workspace") -> CodeIntelligenceService:
     """Create a real CI service backed by the mock sandbox."""
-    svc = CodeIntelligenceService.__new__(CodeIntelligenceService)
-    svc.sandbox_id = "test-codeact-occ"
-    svc.workspace_root = workspace
-    svc._sandbox = sandbox
+    svc = CodeIntelligenceService(
+        sandbox_id="test-codeact-occ",
+        workspace_root=workspace,
+        sandbox=sandbox,
+    )
     svc._initialized = True
-    svc._init_lock = threading.Lock()
-
-    svc.arbiter = Arbiter(workspace_root=workspace)
-
-    from code_intelligence.editing.patcher import Patcher
-    from code_intelligence.editing.time_machine import TimeMachine
-    from code_intelligence.analysis.symbol_index import SymbolIndex
-
-    svc.patcher = Patcher()
-    svc.time_machine = TimeMachine()
-    svc.symbol_index = SymbolIndex(workspace_root=workspace)
-
-    lsp = MagicMock()
-    lsp.connected = False
-    lsp.telemetry = MagicMock(queries=0, cache_hits=0)
-    lsp.invalidate = MagicMock()
-    lsp.ensure_ready = MagicMock()
-    svc.lsp_client = lsp
-
-    svc.query_router = MagicMock()
     return svc
 
 
@@ -218,10 +199,15 @@ def _ctx(
     metadata: dict[str, Any] = {
         "daytona_sandbox": sandbox,
         "daytona_cwd": "/workspace",
+        "repo_root": "/workspace",
         "agent_run_id": agent_run_id,
     }
     if ci_service is not None:
+        if hasattr(ci_service, "rebind_sandbox"):
+            ci_service.rebind_sandbox(sandbox)
         metadata["ci_service"] = ci_service
+        metadata["agent_name"] = "developer"
+        metadata["team_mode_enabled"] = True
     return ToolExecutionContext(cwd=Path("/workspace"), metadata=metadata)
 
 
@@ -238,15 +224,21 @@ def _make_codeact_sandbox(
     sandbox = _make_mock_sandbox(files)
     manifest_json = json.dumps(manifest)
     run_id_holder: dict[str, str] = {}
+    tx_state: dict[str, Any] = {
+        "scratch_root": "/tmp/codeact-tx-mock",
+        "patch_path": "/tmp/codeact-tx-patch-mock",
+        "base_tree": "base-tree",
+        "base_snapshot": {},
+    }
 
     _orig_upload = sandbox.fs.upload_file
 
     async def _tracking_upload(content_or_path, path_or_content=None):
         """Track the run_id from the wrapper script upload path."""
         if isinstance(content_or_path, bytes):
-            content, path = content_or_path, path_or_content
+            path = path_or_content
         else:
-            path, content = content_or_path, path_or_content
+            path = content_or_path
         if isinstance(path, str) and path.startswith("/tmp/codeact-wrapper-"):
             # Extract run_id from /tmp/codeact-wrapper-{run_id}.py
             run_id = path.replace("/tmp/codeact-wrapper-", "").replace(".py", "")
@@ -262,10 +254,107 @@ def _make_codeact_sandbox(
     class _ScriptProcess:
         async def exec(self, command: str, timeout: int = 300):
             resp = MagicMock()
-            run_id = run_id_holder.get("run_id", "unknown")
-            manifest_path = f"/tmp/codeact-{run_id}.json"
-            result_line = json.dumps({"manifest": manifest_path, "status": manifest.get("status", "ok")})
-            resp.result = result_line
+            resp.exit_code = 0
+
+            def _ok(output: str = ""):
+                resp.result = f"{output}\n__CODEX_EXIT_CODE__=0\n"
+                return resp
+
+            def _relative_repo_path(path: str) -> str:
+                if path == "/workspace":
+                    return ""
+                if path.startswith("/workspace/"):
+                    return path.removeprefix("/workspace/")
+                return path.lstrip("/")
+
+            if "git rev-parse --show-toplevel" in command:
+                return _ok("/workspace")
+            if "mktemp -d /tmp/codeact-tx-" in command:
+                return _ok(str(tx_state["scratch_root"]))
+            if "mktemp /tmp/codeact-tx-patch-" in command:
+                return _ok(str(tx_state["patch_path"]))
+            if "worktree add --detach" in command:
+                with sandbox._lock:
+                    tx_state["base_snapshot"] = dict(sandbox._file_store)
+                return _ok()
+            if "write-tree" in command:
+                with sandbox._lock:
+                    tx_state["base_snapshot"] = dict(sandbox._file_store)
+                return _ok(str(tx_state["base_tree"]))
+            if "diff --cached --name-status" in command:
+                seen: dict[str, str] = {}
+                base_snapshot = tx_state["base_snapshot"]
+                for item in manifest.get("writes", []) or []:
+                    path = str(item.get("path", "") or "")
+                    if not path:
+                        continue
+                    rel_path = _relative_repo_path(path)
+                    seen[rel_path] = "M" if path in base_snapshot else "A"
+                return _ok("\n".join(f"{status}\t{path}" for path, status in seen.items()))
+            if "diff --cached --numstat" in command:
+                seen: dict[str, None] = {}
+                for item in manifest.get("writes", []) or []:
+                    path = str(item.get("path", "") or "")
+                    if path:
+                        seen[_relative_repo_path(path)] = None
+                return _ok("\n".join(f"1\t1\t{path}" for path in seen))
+            if "git -C " in command and " show " in command and str(tx_state["base_tree"]) in command:
+                match = re.search(rf"{re.escape(str(tx_state['base_tree']))}:([^\s'\"|]+)", command)
+                if match:
+                    rel_path = match.group(1)
+                    base_path = f"/workspace/{rel_path}"
+                    base_content = str(tx_state["base_snapshot"].get(base_path, "") or "")
+                    encoded = base64.b64encode(base_content.encode("utf-8")).decode("ascii")
+                    return _ok(encoded)
+            if "path.write_text" in command:
+                match = re.search(
+                    r"(/(?:workspace|tmp)/[^\s'\";]+)\s+([A-Za-z0-9+/=]{8,})",
+                    command,
+                )
+                if match:
+                    path = match.group(1)
+                    content = base64.b64decode(match.group(2).encode("ascii")).decode("utf-8")
+                    with sandbox._lock:
+                        sandbox._file_store[path] = content
+                    wrapper_match = re.search(r"/tmp/codeact-wrapper-([a-f0-9]+)\.py", path)
+                    if wrapper_match:
+                        run_id = wrapper_match.group(1)
+                        run_id_holder["run_id"] = run_id
+                        with sandbox._lock:
+                            sandbox._file_store[f"/tmp/codeact-{run_id}.json"] = manifest_json
+                return _ok()
+            if "path.read_text" in command:
+                paths = re.findall(r"/(?:workspace|tmp)/[^\s'\";]+", command)
+                path = paths[-1] if paths else ""
+                with sandbox._lock:
+                    content = sandbox._file_store.get(path)
+                if content is None:
+                    return _ok(json.dumps({"exists": False}))
+                return _ok(json.dumps({"exists": True, "content": content}))
+            wrapper_exec = re.search(r"/tmp/codeact-wrapper-([a-f0-9]+)\.py", command)
+            if wrapper_exec:
+                run_id = wrapper_exec.group(1)
+                run_id_holder["run_id"] = run_id
+                scratch_root = str(tx_state.get("scratch_root") or "")
+                use_scratch = bool(scratch_root and scratch_root in command)
+                with sandbox._lock:
+                    for item in manifest.get("writes", []) or []:
+                        path = str(item.get("path", "") or "")
+                        content = str(item.get("content", "") or "")
+                        if use_scratch and path.startswith("/workspace/"):
+                            path = f"{scratch_root}/{path.removeprefix('/workspace/')}"
+                        sandbox._file_store[path] = content
+                    sandbox._file_store[f"/tmp/codeact-{run_id}.json"] = manifest_json
+                result_line = json.dumps(
+                    {
+                        "manifest": f"/tmp/codeact-{run_id}.json",
+                        "status": manifest.get("status", "ok"),
+                    }
+                )
+                return _ok(result_line)
+            if "worktree remove --force" in command or "rm -rf" in command or "rm -f" in command:
+                return _ok()
+            resp.result = json.dumps({"manifest": "", "status": manifest.get("status", "ok")})
             return resp
 
     sandbox.process = _ScriptProcess()
@@ -337,16 +426,16 @@ class TestCodeactOccWriteCommit:
 # ===========================================================================
 
 
-class TestCodeactStaleReadHash:
-    """When a codeact script reads a file but the file changes before commit,
-    the OCC guard should detect the stale hash and report a conflict."""
+class TestCodeactTransactionBaseState:
+    """CodeAct transactions commit against the scratch worktree base state."""
 
-    def test_stale_hash_produces_write_conflict(self):
-        """File changes between codeact read() and commit → conflict."""
+    def test_preexisting_change_is_transaction_base(self):
+        """A change that exists before the transaction starts is part of the base."""
         original = "value = 1\n"
         stale_hash = _content_hash(original)
 
-        # The manifest records the hash at read-time (stale)
+        # The manifest records an older helper read hash, but the current
+        # transaction model commits against the scratch worktree base.
         manifest = {
             "reads": [{"path": "/workspace/config.py", "hash": stale_hash}],
             "writes": [{"path": "/workspace/config.py", "content": "value = 42\n"}],
@@ -368,10 +457,10 @@ class TestCodeactStaleReadHash:
         ))
 
         data = json.loads(result.output)
-        # The write should have been rejected due to stale hash
-        assert data["files_written"] == 0
-        assert "/workspace/config.py" in data["write_conflicts"]
-        assert result.metadata.get("conflict") is True
+        assert data["files_written"] == 1
+        assert data["write_conflicts"] == []
+        assert result.metadata.get("conflict") is False
+        assert sandbox._file_store["/workspace/config.py"] == "value = 42\n"
 
 
 # ===========================================================================
@@ -380,11 +469,10 @@ class TestCodeactStaleReadHash:
 
 
 class TestCodeactExternalFileChange:
-    """Simulate another agent modifying a file after codeact read() but before
-    the staged write is committed."""
+    """Pre-existing external changes are folded into the transaction base."""
 
-    def test_external_mutation_detected_by_expected_hash(self):
-        """The expected_hash from the manifest read entry catches external changes."""
+    def test_existing_external_mutation_commits_from_current_base(self):
+        """The scratch transaction starts from the current workspace content."""
         original = "alpha = 1\nbeta = 2\n"
         # Agent reads, gets hash of original
         manifest = {
@@ -408,8 +496,9 @@ class TestCodeactExternalFileChange:
         ))
 
         data = json.loads(result.output)
-        assert data["files_written"] == 0
-        assert "/workspace/data.py" in data["write_conflicts"]
+        assert data["files_written"] == 1
+        assert data["write_conflicts"] == []
+        assert sandbox._file_store["/workspace/data.py"] == "alpha = 100\nbeta = 2\n"
 
 
 # ===========================================================================
@@ -486,11 +575,10 @@ class TestCodeactMultipleWrites:
 
 
 class TestCodeactSequentialOcc:
-    """Two codeact invocations targeting the same file — the second must see
-    the first's committed content and use the updated hash."""
+    """Two codeact invocations targeting the same file rebase on current content."""
 
-    def test_second_codeact_with_stale_hash_conflicts(self):
-        """Second codeact uses hash from before first codeact's write → conflict."""
+    def test_second_codeact_uses_current_workspace_base(self):
+        """A second transaction starts after the first commit and can write again."""
         original = "state = 'init'\n"
         original_hash = _content_hash(original)
 
@@ -516,7 +604,8 @@ class TestCodeactSequentialOcc:
         data_1 = json.loads(result_1.output)
         assert data_1["files_written"] == 1
 
-        # Second codeact: uses stale hash from before first write
+        # Second codeact carries an old helper read hash, but starts a fresh
+        # transaction from the first commit's current workspace state.
         manifest_2 = {
             "reads": [{"path": "/workspace/state.py", "hash": original_hash}],
             "writes": [{"path": "/workspace/state.py", "content": "state = 'error'\n"}],
@@ -535,9 +624,10 @@ class TestCodeactSequentialOcc:
         ))
 
         data_2 = json.loads(result_2.output)
-        assert data_2["files_written"] == 0
-        assert "/workspace/state.py" in data_2["write_conflicts"]
-        assert result_2.metadata.get("conflict") is True
+        assert data_2["files_written"] == 1
+        assert data_2["write_conflicts"] == []
+        assert result_2.metadata.get("conflict") is False
+        assert sandbox_2._file_store["/workspace/state.py"] == "state = 'error'\n"
 
     def test_second_codeact_with_fresh_hash_succeeds(self):
         """Second codeact uses hash from after first write → succeeds."""
@@ -628,10 +718,10 @@ class TestCodeactWithoutCiService:
 
 
 class TestCodeactConcurrentAgentOcc:
-    """Two agents using codeact on the same file — OCC ensures consistency."""
+    """Sequential CodeAct tool invocations each start a fresh transaction."""
 
-    def test_concurrent_codeact_same_file_conflict(self):
-        """Two agents read the same file, both try to write — second conflicts."""
+    def test_sequential_codeact_same_file_rebases_on_latest_content(self):
+        """A later tool call sees the previous commit as its transaction base."""
         original = "def process():\n    return 'v1'\n"
         original_hash = _content_hash(original)
 
@@ -656,7 +746,9 @@ class TestCodeactConcurrentAgentOcc:
         data_a = json.loads(result_a.output)
         assert data_a["files_written"] == 1
 
-        # Agent B tries with stale hash (read before A committed)
+        # Agent B starts after A committed, so this is not a same-base
+        # transaction conflict. Same-base conflict behavior is covered by
+        # the live transaction tests that open two transactions concurrently.
         updated_files = dict(sandbox_a._file_store)
         sandbox_b = _make_codeact_sandbox(
             files=updated_files,
@@ -675,9 +767,10 @@ class TestCodeactConcurrentAgentOcc:
             ctx_b,
         ))
         data_b = json.loads(result_b.output)
-        assert data_b["files_written"] == 0
-        assert "/workspace/proc.py" in data_b["write_conflicts"]
-        assert result_b.metadata.get("conflict") is True
+        assert data_b["files_written"] == 1
+        assert data_b["write_conflicts"] == []
+        assert result_b.metadata.get("conflict") is False
+        assert sandbox_b._file_store["/workspace/proc.py"] == "def process():\n    return 'v2_by_b'\n"
 
     def test_concurrent_codeact_different_files_no_conflict(self):
         """Two agents writing to different files — both succeed."""
@@ -731,6 +824,7 @@ class TestCodeactConcurrentAgentOcc:
 
 
 @pytest.mark.skipif(not HAS_DAYTONA, reason="Daytona credentials not configured")
+@pytest.mark.live
 class TestLiveSandboxCodeactOcc:
     """Run codeact OCC tests against a real Daytona sandbox with real CI service."""
 
@@ -819,11 +913,6 @@ write('{self.home}/shared.py', new_content)
         result_a = svc.commit_prepared_write(prep_a, new_a, edit_type="codeact", description="agent-a")
         assert result_a.success, f"Agent A failed: {result_a.message}"
 
-        # Agent B uses codeact with the stale hash
-        code_b = f"""
-content = read('{shared}')
-write('{shared}', content.replace("return 'A_WROTE'", "return 'B_WROTE'"))
-"""
         # The read hash in the manifest is from *before* A wrote (stale)
         # But codeact's read() will actually read the file, getting A's version.
         # So we test at the CI layer: agent B calls prepare_ci_write with stale expected_hash

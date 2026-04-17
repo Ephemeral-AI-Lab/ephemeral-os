@@ -52,6 +52,7 @@ dev = [
 [project.scripts]
 build-system-prompt = "prompt_cli:build_system_prompt_main"
 dump-team-system-prompts = "prompt_cli:dump_team_system_prompts_main"
+dump-team-user-prompts = "prompt_cli:dump_team_user_prompts_main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["backend/src"]

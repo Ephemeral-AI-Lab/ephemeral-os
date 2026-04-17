@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from tools.core.base import BaseTool, ToolExecutionContext, ToolResult
+from tools.core.base import BaseTool, TextToolOutput, ToolExecutionContext, ToolResult
 
 from ._common import (
     TASK_ID_FIELD,
@@ -39,6 +39,7 @@ class CheckBackgroundProgressTool(BaseTool):
     )
     short_description: str = "Inspect background task status."
     input_model: type[BaseModel] = CheckBackgroundProgressInput
+    output_model: type[BaseModel] = TextToolOutput
 
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         manager = context.metadata.get("background_task_manager")

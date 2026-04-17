@@ -29,6 +29,10 @@ def _ctx_with_svc(svc) -> ToolExecutionContext:
     return _ctx({"ci_service": svc})
 
 
+def _paths(result) -> list[str]:
+    return json.loads(result.output)["paths"]
+
+
 # ---------------------------------------------------------------------------
 # _svc_or_error helper
 # ---------------------------------------------------------------------------
@@ -117,7 +121,9 @@ async def test_workspace_structure_no_symbol_index():
         result = await ci_workspace_structure.execute(
             ci_workspace_structure.input_model(), _ctx_with_svc(svc)
         )
-    assert "not available" in result.output
+    data = json.loads(result.output)
+    assert data["status"] == "unavailable"
+    assert "not available" in data["message"]
 
 
 async def test_workspace_structure_with_symbol_index():
@@ -147,10 +153,10 @@ async def test_workspace_structure_with_symbol_index():
             )
 
     assert not result.is_error
-    assert "src/a.py" in result.output
-    assert "src/b.py" in result.output
+    assert "src/a.py" in _paths(result)
+    assert "src/b.py" in _paths(result)
     # Sorted order
-    lines = result.output.strip().splitlines()
+    lines = _paths(result)
     assert lines == sorted(lines)
 
 
@@ -178,9 +184,10 @@ async def test_workspace_structure_filters_by_path():
                 ci_workspace_structure.input_model(path="src/foo"), _ctx_with_svc(svc)
             )
 
-    assert "src/foo/a.py" in result.output
-    assert "src/bar/b.py" not in result.output
-    assert "tests/c.py" not in result.output
+    paths = _paths(result)
+    assert "src/foo/a.py" in paths
+    assert "src/bar/b.py" not in paths
+    assert "tests/c.py" not in paths
 
 
 async def test_workspace_structure_normalizes_absolute_index_paths():
@@ -206,7 +213,7 @@ async def test_workspace_structure_normalizes_absolute_index_paths():
                 _ctx_with_svc(svc),
             )
 
-    assert result.output.strip() == "src/foo/a.py"
+    assert _paths(result) == ["src/foo/a.py"]
 
 
 async def test_workspace_structure_honors_max_depth_for_warm_index():
@@ -232,8 +239,9 @@ async def test_workspace_structure_honors_max_depth_for_warm_index():
                 _ctx_with_svc(svc),
             )
 
-    assert "src/top.py" in result.output
-    assert "src/pkg/nested.py" not in result.output
+    paths = _paths(result)
+    assert "src/top.py" in paths
+    assert "src/pkg/nested.py" not in paths
 
 
 async def test_workspace_structure_waits_for_building_index():
@@ -271,8 +279,8 @@ async def test_workspace_structure_waits_for_building_index():
             )
 
     assert not result.is_error
-    assert "src/a.py" in result.output
-    assert "src/b.py" in result.output
+    assert "src/a.py" in _paths(result)
+    assert "src/b.py" in _paths(result)
 
 
 async def test_workspace_structure_non_symbol_index_returns_empty():
@@ -293,7 +301,7 @@ async def test_workspace_structure_non_symbol_index_returns_empty():
                 ci_workspace_structure.input_model(), _ctx_with_svc(svc)
             )
 
-    assert "No files indexed" in result.output
+    assert "No files indexed" in json.loads(result.output)["message"]
 
 
 async def test_workspace_structure_local_fallback_for_cold_index(tmp_path):
@@ -315,7 +323,7 @@ async def test_workspace_structure_local_fallback_for_cold_index(tmp_path):
         )
 
     assert not result.is_error
-    assert result.output.strip() == "src/top.py"
+    assert _paths(result) == ["src/top.py"]
 
 
 async def test_workspace_structure_remote_fallback_for_cold_index():
@@ -342,7 +350,7 @@ async def test_workspace_structure_remote_fallback_for_cold_index():
         )
 
     assert not result.is_error
-    assert result.output.strip().splitlines() == ["dask/cli.py", "dask/config.py"]
+    assert _paths(result) == ["dask/cli.py", "dask/config.py"]
 
 
 # ---------------------------------------------------------------------------

@@ -66,64 +66,48 @@ def test_resolve_path_no_workspace_root_keeps_relative() -> None:
     assert lsp._resolve_path("dask/core.py") == "dask/core.py"
 
 
-def test_sandbox_exec_uploads_script_and_uses_cd() -> None:
-    """Verify _run_python_script uploads to a temp file and cds when workspace_root is set."""
+def test_sandbox_exec_writes_script_and_runs_temp_file() -> None:
+    """Verify _run_python_script writes to a temp file before sandbox execution."""
     captured_cmds: list[str] = []
-    uploaded: dict[str, bytes] = {}
-
-    class _SandboxFs:
-        def upload_file(self, content: bytes, path: str):
-            uploaded[path] = content
 
     class _SandboxProcess:
         def exec(self, command: str, timeout: int = 0):
             captured_cmds.append(command)
             return SimpleNamespace(exit_code=0, result="[]")
 
-    sandbox = SimpleNamespace(process=_SandboxProcess(), fs=_SandboxFs())
+    sandbox = SimpleNamespace(process=_SandboxProcess())
     lsp = LspClient(workspace_root="/testbed", sandbox=sandbox)
 
     lsp._run_python_script("print('hello')")
 
-    # Script should be uploaded to /tmp
-    assert len(uploaded) == 1
-    path = list(uploaded.keys())[0]
-    assert path.startswith("/tmp/_lsp_query_")
-    assert uploaded[path] == b"print('hello')"
-
-    # Exec command should run the file (no cd — paths are already absolute)
-    assert len(captured_cmds) == 1
-    assert captured_cmds[0].startswith("python3 /tmp/_lsp_query_")
+    assert len(captured_cmds) == 2
+    assert "/tmp/_lsp_query_" in captured_cmds[0]
+    assert captured_cmds[1].startswith("python3 /tmp/_lsp_query_")
 
 
 def test_sandbox_exec_no_cd_without_workspace_root() -> None:
     """Without workspace_root, no cd prefix is added."""
     captured_cmds: list[str] = []
 
-    class _SandboxFs:
-        def upload_file(self, content: bytes, path: str):
-            pass
-
     class _SandboxProcess:
         def exec(self, command: str, timeout: int = 0):
             captured_cmds.append(command)
             return SimpleNamespace(exit_code=0, result="[]")
 
-    sandbox = SimpleNamespace(process=_SandboxProcess(), fs=_SandboxFs())
+    sandbox = SimpleNamespace(process=_SandboxProcess())
     lsp = LspClient(workspace_root="", sandbox=sandbox)
 
     lsp._run_python_script("print('hello')")
 
-    assert len(captured_cmds) == 1
-    assert captured_cmds[0].startswith("python3 /tmp/_lsp_query_")
-    assert "cd " not in captured_cmds[0]
+    assert len(captured_cmds) == 2
+    assert captured_cmds[1].startswith("python3 /tmp/_lsp_query_")
+    assert "cd " not in captured_cmds[1]
 
 
 def test_python_hover_uses_resolved_path(monkeypatch) -> None:
     """Verify hover resolves relative path before injecting into Jedi script."""
     captured_scripts: list[str] = []
     lsp = LspClient(workspace_root="/testbed")
-    original_run = lsp._run_python_script
 
     def _capture(script: str) -> str:
         captured_scripts.append(script)

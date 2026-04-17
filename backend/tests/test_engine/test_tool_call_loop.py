@@ -29,7 +29,9 @@ from tools.core.base import (
     ToolExecutionContext,
     ToolRegistry,
     ToolResult,
+    run_tool_safely,
 )
+from tools.core.decorator import tool
 
 
 # ---------------------------------------------------------------------------
@@ -41,16 +43,15 @@ class EchoInput(BaseModel):
     message: str = Field(description="Message to echo")
 
 
+class EchoOutput(BaseModel):
+    echoed: str = Field(description="The echoed message")
+
+
 class EchoTool(BaseTool):
-    """Echo the input message back.
-
-    Returns:
-        echoed (str): The echoed message
-    """
-
     name = "echo"
     description = "Echo a message."
     input_model = EchoInput
+    output_model = EchoOutput
 
     async def execute(self, arguments: EchoInput, context: ToolExecutionContext) -> ToolResult:
         return ToolResult(output=json.dumps({"echoed": arguments.message}))
@@ -61,16 +62,15 @@ class AddInput(BaseModel):
     b: int = Field(description="Second number")
 
 
+class AddOutput(BaseModel):
+    result: int = Field(description="The sum")
+
+
 class AddTool(BaseTool):
-    """Add two numbers.
-
-    Returns:
-        result (int): The sum
-    """
-
     name = "add"
     description = "Add two numbers."
     input_model = AddInput
+    output_model = AddOutput
 
     async def execute(self, arguments: AddInput, context: ToolExecutionContext) -> ToolResult:
         return ToolResult(output=json.dumps({"result": arguments.a + arguments.b}))
@@ -98,6 +98,29 @@ class LoadSkillReferenceTool(BaseTool):
         return ToolResult(output="loaded")
 
 
+class ExplicitDecoratorInput(BaseModel):
+    value: str = Field(description="Explicit input value")
+
+
+class ExplicitDecoratorOutput(BaseModel):
+    value: str = Field(description="Explicit output value")
+
+
+@tool(
+    name="explicit_decorator_tool",
+    description="Tool with explicit Pydantic schemas.",
+    input_model=ExplicitDecoratorInput,
+    output_model=ExplicitDecoratorOutput,
+)
+async def explicit_decorator_tool(
+    value: str,
+    *,
+    context: ToolExecutionContext,
+) -> ToolResult:
+    del context
+    return ToolResult(output=json.dumps({"value": value}))
+
+
 class SubmitPlanInput(BaseModel):
     new_tasks: list[dict[str, object]] = Field(default_factory=list)
 
@@ -118,11 +141,11 @@ class SubmitPlanTool(BaseTool):
         return ToolResult(output="submitted")
 
 
-class NoDocTool(BaseTool):
-    """A tool with no Returns section."""
+class PlainTextTool(BaseTool):
+    """A tool that relies on the default plain-text output schema."""
 
-    name = "no_doc"
-    description = "No output schema."
+    name = "plain_text"
+    description = "Plain text output."
     input_model = EchoInput
 
     async def execute(self, arguments: EchoInput, context: ToolExecutionContext) -> ToolResult:
@@ -138,6 +161,16 @@ class FailingTool(BaseTool):
 
     async def execute(self, arguments: EchoInput, context: ToolExecutionContext) -> ToolResult:
         return ToolResult(output="something went wrong", is_error=True)
+
+
+class InvalidJsonOutputTool(BaseTool):
+    name = "invalid_json_output"
+    description = "Returns non-JSON despite declaring a structured output."
+    input_model = EchoInput
+    output_model = EchoOutput
+
+    async def execute(self, arguments: EchoInput, context: ToolExecutionContext) -> ToolResult:
+        return ToolResult(output="plain text")
 
 
 def _make_toolkit(*tools: BaseTool) -> BaseToolkit:
@@ -304,12 +337,12 @@ class TestToolRegistration:
 
 
 # ---------------------------------------------------------------------------
-# Tests: output schema from docstrings
+# Tests: output schema from Pydantic models
 # ---------------------------------------------------------------------------
 
 
 class TestOutputSchema:
-    def test_output_schema_from_docstring(self):
+    def test_output_schema_from_output_model(self):
         tool = EchoTool()
         schema = tool.output_schema()
         assert schema is not None
@@ -324,9 +357,13 @@ class TestOutputSchema:
         assert "result" in schema["properties"]
         assert schema["properties"]["result"]["type"] == "integer"
 
-    def test_no_output_schema_without_returns(self):
-        tool = NoDocTool()
-        assert tool.output_schema() is None
+    def test_default_output_schema_is_plain_text(self):
+        tool = PlainTextTool()
+        schema = tool.output_schema()
+        assert schema["type"] == "string"
+        assert schema["description"] == (
+            "Successful output for tools whose true output is plain text."
+        )
 
     def test_api_schema_includes_output(self):
         tool = EchoTool()
@@ -334,16 +371,48 @@ class TestOutputSchema:
         assert "output_schema" in api
         assert api["output_schema"]["properties"]["echoed"]["type"] == "string"
 
-    def test_api_schema_omits_output_when_none(self):
-        tool = NoDocTool()
+    def test_api_schema_includes_default_text_output(self):
+        tool = PlainTextTool()
         api = tool.to_api_schema()
-        assert "output_schema" not in api
+        assert api["output_schema"]["type"] == "string"
+
+    def test_decorator_uses_explicit_pydantic_models(self):
+        api = explicit_decorator_tool.to_api_schema()
+        assert api["input_schema"]["properties"]["value"]["description"] == (
+            "Explicit input value"
+        )
+        assert api["output_schema"]["properties"]["value"]["description"] == (
+            "Explicit output value"
+        )
 
     def test_api_schema_includes_input(self):
         tool = EchoTool()
         api = tool.to_api_schema()
         assert "input_schema" in api
         assert "message" in api["input_schema"]["properties"]
+
+    @pytest.mark.asyncio
+    async def test_run_tool_safely_validates_structured_success_output(self):
+        result = await run_tool_safely(
+            InvalidJsonOutputTool(),
+            {"message": "hello"},
+            ToolExecutionContext(cwd=Path("/tmp")),
+        )
+
+        assert result.is_error is True
+        assert "Invalid output from invalid_json_output" in result.output
+        assert "expected JSON matching EchoOutput" in result.output
+
+    @pytest.mark.asyncio
+    async def test_run_tool_safely_accepts_default_text_output(self):
+        result = await run_tool_safely(
+            PlainTextTool(),
+            {"message": "hello"},
+            ToolExecutionContext(cwd=Path("/tmp")),
+        )
+
+        assert result.is_error is False
+        assert result.output == "plain text"
 
 
 # ---------------------------------------------------------------------------
@@ -625,9 +694,9 @@ class TestDaytonaToolSchemas:
         from tools.daytona_toolkit.toolkit import DaytonaToolkit
 
         tk = DaytonaToolkit(sandbox_id="test")
-        for tool in tk.list_tools():
-            schema = tool.to_api_schema()
+        for daytona_tool in tk.list_tools():
+            schema = daytona_tool.to_api_schema()
             assert "output_schema" in schema, (
-                f"{tool.name} missing output_schema — add Returns: to docstring"
+                f"{daytona_tool.name} missing output_schema — add output_model"
             )
             assert "properties" in schema["output_schema"]

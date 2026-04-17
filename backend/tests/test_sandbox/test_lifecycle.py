@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-import pytest
+import asyncio
+
 from unittest.mock import MagicMock
 
 
@@ -42,12 +43,12 @@ class TestShutdownCachedClient:
 
         mock_client = MagicMock()
         mock_client.close = MagicMock(return_value=fake_close())
-        async_client_mod._cached_client = mock_client
-        async_client_mod._cached_client_key = ("key", "url", "target")
-        async_client_mod._cached_loop_id = 42
+        loop = asyncio.new_event_loop()
+        async_client_mod._cached_clients[loop] = (("key", "url", "target"), mock_client)
 
-        mod.shutdown_cached_client()
+        try:
+            mod.shutdown_cached_client()
+        finally:
+            loop.close()
 
-        assert async_client_mod._cached_client is None
-        assert async_client_mod._cached_client_key is None
-        assert async_client_mod._cached_loop_id is None
+        assert len(async_client_mod._cached_clients) == 0

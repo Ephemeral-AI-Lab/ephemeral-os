@@ -153,9 +153,6 @@ async def test_get_sandbox_async_caches_per_loop():
         return fake_sb
 
     with patch("sandbox.async_client.get_async_sandbox", new=fake_get_async, create=True):
-        # Patch the import inside the method
-        import sys
-
         mock_module = MagicMock()
         mock_module.get_async_sandbox = fake_get_async
         with patch.dict("sys.modules", {"sandbox.async_client": mock_module}):
@@ -180,8 +177,6 @@ async def test_get_sandbox_async_invalidates_on_new_loop():
 
     mock_module = MagicMock()
     mock_module.get_async_sandbox = fake_get_async
-    import sys
-
     with patch.dict("sys.modules", {"sandbox.async_client": mock_module}):
         result = await tk._get_sandbox_async()
         assert result is new_sb
@@ -205,7 +200,8 @@ def test_prepare_context_injects_sandbox_and_cwd():
         tk.prepare_context(ctx)
 
     assert ctx.metadata["daytona_sandbox"] is fake_sb
-    assert ctx.metadata["daytona_cwd"] == "/workspace"
+    assert ctx.metadata["repo_root"] == "/workspace"
+    assert ctx.metadata["exec_cwd"] == "/workspace"
 
 
 def test_prepare_context_no_cwd_skips_metadata_key():
@@ -221,13 +217,14 @@ def test_prepare_context_no_cwd_skips_metadata_key():
         tk.prepare_context(ctx)
 
     assert ctx.metadata["daytona_sandbox"] is fake_sb
-    assert "daytona_cwd" not in ctx.metadata
+    assert "repo_root" not in ctx.metadata
+    assert "exec_cwd" not in ctx.metadata
 
 
 def test_prepare_context_respects_preseeded_workspace_root_override():
     tk = DaytonaToolkit(sandbox_id="sb-test")
     fake_sb = MagicMock()
-    ctx = _ctx({"daytona_cwd": "/testbed", "ci_workspace_root": "/testbed"})
+    ctx = _ctx({"repo_root": "/testbed", "ci_workspace_root": "/testbed"})
 
     with (
         patch.object(tk, "_get_sandbox", return_value=fake_sb),
@@ -241,7 +238,8 @@ def test_prepare_context_respects_preseeded_workspace_root_override():
     resolve_mock.assert_not_called()
     inject_mock.assert_called_once_with(ctx, fake_sb, "/testbed")
     assert ctx.metadata["daytona_sandbox"] is fake_sb
-    assert ctx.metadata["daytona_cwd"] == "/testbed"
+    assert ctx.metadata["repo_root"] == "/testbed"
+    assert ctx.metadata["exec_cwd"] == "/testbed"
 
 
 # ---------------------------------------------------------------------------
@@ -270,7 +268,8 @@ async def test_prepare_context_async_injects_sandbox_and_cwd():
         await tk.prepare_context_async(ctx)
 
     assert ctx.metadata["daytona_sandbox"] is fake_sb
-    assert ctx.metadata["daytona_cwd"] == "/async/workspace"
+    assert ctx.metadata["repo_root"] == "/async/workspace"
+    assert ctx.metadata["exec_cwd"] == "/async/workspace"
 
 
 async def test_prepare_context_async_no_cwd():
@@ -286,13 +285,14 @@ async def test_prepare_context_async_no_cwd():
         await tk.prepare_context_async(ctx)
 
     assert ctx.metadata["daytona_sandbox"] is fake_sb
-    assert "daytona_cwd" not in ctx.metadata
+    assert "repo_root" not in ctx.metadata
+    assert "exec_cwd" not in ctx.metadata
 
 
 async def test_prepare_context_async_respects_preseeded_workspace_root_override():
     tk = DaytonaToolkit(sandbox_id="sb-test")
     fake_sb = MagicMock()
-    ctx = _ctx({"daytona_cwd": "/testbed", "ci_workspace_root": "/testbed"})
+    ctx = _ctx({"repo_root": "/testbed", "ci_workspace_root": "/testbed"})
 
     with (
         patch.object(tk, "_get_sandbox_async", new=AsyncMock(return_value=fake_sb)),
@@ -306,7 +306,8 @@ async def test_prepare_context_async_respects_preseeded_workspace_root_override(
     resolve_mock.assert_not_called()
     inject_mock.assert_called_once_with(ctx, fake_sb, "/testbed")
     assert ctx.metadata["daytona_sandbox"] is fake_sb
-    assert ctx.metadata["daytona_cwd"] == "/testbed"
+    assert ctx.metadata["repo_root"] == "/testbed"
+    assert ctx.metadata["exec_cwd"] == "/testbed"
 
 
 # ---------------------------------------------------------------------------
@@ -318,8 +319,6 @@ def test_resolve_cwd_sync_calls_discover_workspace():
     fake_sb = MagicMock()
     mock_module = MagicMock()
     mock_module.discover_workspace.return_value = "/found/workspace"
-    import sys
-
     with patch.dict("sys.modules", {"sandbox.workspace": mock_module}):
         result = DaytonaToolkit._resolve_cwd_sync(fake_sb)
         assert result == "/found/workspace"
@@ -330,8 +329,6 @@ async def test_resolve_cwd_async_calls_discover_workspace_async():
     fake_sb = MagicMock()
     mock_module = MagicMock()
     mock_module.discover_workspace_async = AsyncMock(return_value="/async/found")
-    import sys
-
     with patch.dict("sys.modules", {"sandbox.workspace": mock_module}):
         result = await DaytonaToolkit._resolve_cwd_async(fake_sb)
         assert result == "/async/found"
@@ -364,8 +361,6 @@ def test_inject_ci_calls_inject_code_intelligence():
     fake_sb = MagicMock()
     ctx = _ctx()
     mock_module = MagicMock()
-    import sys
-
     with patch.dict("sys.modules", {"sandbox.workspace": mock_module}):
         tk._inject_ci(ctx, fake_sb, "/workspace")
     mock_module.inject_code_intelligence.assert_called_once_with(
@@ -378,8 +373,6 @@ def test_inject_ci_skipped_when_skip_code_intelligence_flag_set():
     fake_sb = MagicMock()
     ctx = _ctx({"skip_code_intelligence": True})
     mock_module = MagicMock()
-    import sys
-
     with patch.dict("sys.modules", {"sandbox.workspace": mock_module}):
         tk._inject_ci(ctx, fake_sb, "/workspace")
     mock_module.inject_code_intelligence.assert_not_called()

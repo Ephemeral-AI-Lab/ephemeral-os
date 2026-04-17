@@ -12,6 +12,7 @@ from tools.daytona_toolkit._daytona_utils import (
     _build_write_text_file_command,
     _extract_exit_code,
     _supports_exec_transport,
+    _upload_file_compat,
     _wrap_bash_command,
 )
 
@@ -121,13 +122,7 @@ class ContentManager:
         fs = getattr(self._sandbox, "fs", None)
         upload_fn = getattr(fs, "upload_file", None)
         if callable(upload_fn):
-            try:
-                result = upload_fn(payload, file_path)
-            except (AttributeError, TypeError) as exc:
-                if "decode" not in str(exc) and "bytes-like object" not in str(exc):
-                    raise
-                result = upload_fn(file_path, payload)
-            run_sync(result)
+            run_sync(_upload_file_compat(self._sandbox, payload, file_path))
             return
         raise RuntimeError("Sandbox process.exec text write is unavailable")
 

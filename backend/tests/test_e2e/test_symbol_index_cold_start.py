@@ -233,7 +233,8 @@ class TestSymbolIndexColdStart:
             loop.close()
 
         assert not result.is_error
-        symbols = json.loads(result.output)
+        payload = json.loads(result.output)
+        symbols = payload.get("definitions", payload) if isinstance(payload, dict) else payload
         assert isinstance(symbols, list)
         names = [s["name"] for s in symbols]
         assert "App" in names
@@ -282,7 +283,8 @@ class TestSymbolIndexColdStart:
                 )
             )
             assert not sym_result.is_error
-            symbols = json.loads(sym_result.output)
+            payload = json.loads(sym_result.output)
+            symbols = payload.get("definitions", payload) if isinstance(payload, dict) else payload
             names = [s["name"] for s in symbols]
             assert "User" in names, f"Expected 'User' in {names}"
 
@@ -294,7 +296,8 @@ class TestSymbolIndexColdStart:
                 )
             )
             assert not fn_result.is_error
-            fn_symbols = json.loads(fn_result.output)
+            payload = json.loads(fn_result.output)
+            fn_symbols = payload.get("definitions", payload) if isinstance(payload, dict) else payload
             fn_names = [s["name"] for s in fn_symbols]
             assert "main" in fn_names, f"Expected 'main' in {fn_names}"
         finally:

@@ -342,9 +342,9 @@ def spawn_agent(
 ) -> EphemeralAgent:
     """Spawn a fresh ephemeral agent with the given session history.
 
-    If *agent_def* is provided, its fields override the session defaults:
+    If *agent_def* is provided, its fields customize the session defaults:
     - ``model`` overrides the session model
-    - ``system_prompt`` replaces the default system prompt
+    - ``system_prompt`` is appended after the session system prompt
     - ``toolkits`` restricts available toolkits
     - ``tool_call_limit`` caps tool dispatches for the ephemeral run
     """

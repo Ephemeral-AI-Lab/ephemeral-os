@@ -24,14 +24,34 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from pydantic import BaseModel, Field
+
 from config.defaults import SKILL_REFERENCE_TRACE_LIMIT
-from tools.core.base import BaseToolkit, ToolExecutionContext, ToolResult
+from tools.core.base import BaseToolkit, TextToolOutput, ToolExecutionContext, ToolResult
 from tools.core.decorator import tool
 from skills.core.registry import SkillRegistry
 
 _LOADED_SKILL_REFERENCES_KEY = "_loaded_skill_references_by_skill_this_turn"
 _REQUIRED_NEXT_TOOL_KEY = "_required_next_tool"
 _REFERENCE_TERMINAL_ACTIONS: dict[tuple[str, str], dict[str, str]] = {}
+
+
+class LoadSkillInput(BaseModel):
+    skill_name: str = Field(
+        ...,
+        description="Name of the skill to load.",
+    )
+
+
+class LoadSkillReferenceInput(BaseModel):
+    skill_name: str = Field(
+        ...,
+        description="Name of the skill that owns the reference.",
+    )
+    reference_name: str = Field(
+        ...,
+        description="Name of the reference document to load.",
+    )
 
 
 def get_reference_terminal_action(
@@ -179,6 +199,8 @@ def make_skills_toolkit(
         name="load_skill",
         description="Load the full instructions for a skill. Call this when a task matches a skill's description.",
         short_description="Load a skill's instructions.",
+        input_model=LoadSkillInput,
+        output_model=TextToolOutput,
         read_only=True,
     )
     async def load_skill(
@@ -186,11 +208,7 @@ def make_skills_toolkit(
         *,
         context: ToolExecutionContext,
     ) -> ToolResult:
-        """Load full skill instructions by name.
-
-        Args:
-            skill_name: Name of the skill to load
-        """
+        """Load full skill instructions by name."""
         if skill_name not in available:
             return ToolResult(
                 output=json.dumps(
@@ -226,6 +244,8 @@ def make_skills_toolkit(
         name="load_skill_reference",
         description="Load a reference document from a skill. References provide supplementary guidance, schemas, rubrics, or examples.",
         short_description="Load a skill reference.",
+        input_model=LoadSkillReferenceInput,
+        output_model=TextToolOutput,
         read_only=True,
     )
     async def load_skill_reference(
@@ -234,12 +254,7 @@ def make_skills_toolkit(
         *,
         context: ToolExecutionContext,
     ) -> ToolResult:
-        """Load a specific reference document from a skill.
-
-        Args:
-            skill_name: Name of the skill that owns the reference
-            reference_name: Name of the reference document to load
-        """
+        """Load a specific reference document from a skill."""
         if skill_name not in available:
             return ToolResult(
                 output=json.dumps(

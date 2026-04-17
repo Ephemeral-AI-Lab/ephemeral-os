@@ -10,6 +10,8 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+from pydantic import BaseModel, Field
+
 from code_intelligence.constants import SKIP_DIRECTORIES, SUPPORTED_EXTENSIONS
 from code_intelligence.query_helpers import (
     _build_fallback_specs,
@@ -25,6 +27,146 @@ from tools.core.decorator import tool
 logger = logging.getLogger(__name__)
 _SYMBOL_FALLBACK_LIMIT = 100
 _STRUCTURE_FALLBACK_LIMIT = 500
+
+
+class CiStatusInput(BaseModel):
+    include_edit_hotspots: bool = Field(
+        default=True,
+        description="Whether to include edit hotspot information.",
+    )
+    hotspot_limit: int = Field(
+        default=10,
+        ge=1,
+        description="Maximum edit hotspot results when included.",
+    )
+    hotspot_scope_paths: list[str] | None = Field(
+        default=None,
+        description="Optional path-prefix filter for edit hotspots.",
+    )
+    hotspot_cross_run: bool = Field(
+        default=False,
+        description="Query arbiter-backed cross-run contention history.",
+    )
+
+
+class CiStatusOutput(BaseModel):
+    status: str | None = Field(
+        default=None,
+        description="Status string for unavailable code intelligence responses.",
+    )
+    reason: str | None = Field(
+        default=None,
+        description="Reason code intelligence is unavailable.",
+    )
+    sandbox_id: str | None = Field(default=None, description="Sandbox id.")
+    initialized: bool | None = Field(
+        default=None,
+        description="Whether code intelligence is initialized.",
+    )
+    workspace_root: str | None = Field(default=None, description="Indexed workspace root.")
+    symbol_index: dict[str, Any] | None = Field(
+        default=None,
+        description="Symbol index status payload.",
+    )
+    arbiter: dict[str, Any] | None = Field(
+        default=None,
+        description="Edit arbiter status payload.",
+    )
+    edit_buffer: dict[str, Any] | None = Field(
+        default=None,
+        description="Edit buffer status payload.",
+    )
+    lsp: dict[str, Any] | None = Field(default=None, description="LSP status payload.")
+    edit_hotspots: dict[str, Any] | None = Field(
+        default=None,
+        description="Optional edit hotspot payload.",
+    )
+
+
+class CiWorkspaceStructureInput(BaseModel):
+    path: str = Field(
+        default="",
+        description="Subdirectory to list; empty means workspace root.",
+    )
+    max_depth: int = Field(
+        default=3,
+        ge=0,
+        description="Maximum directory depth to include.",
+    )
+
+
+class CiWorkspaceStructureOutput(BaseModel):
+    status: str | None = Field(
+        default=None,
+        description="Status for unavailable or empty workspace-structure responses.",
+    )
+    reason: str | None = Field(
+        default=None,
+        description="Reason workspace structure is unavailable.",
+    )
+    source: str | None = Field(
+        default=None,
+        description="Source used for the path list: index, local, remote, or none.",
+    )
+    path: str = Field(default="", description="Requested path prefix.")
+    max_depth: int | None = Field(default=None, description="Requested maximum depth.")
+    paths: list[str] = Field(default_factory=list, description="Workspace paths.")
+    rendered: str = Field(default="", description="Human-readable newline-delimited paths.")
+    truncated: bool = Field(default=False, description="Whether the rendered path list was truncated.")
+    message: str | None = Field(default=None, description="Human-readable status message.")
+
+
+class CiQuerySymbolInput(BaseModel):
+    query: str = Field(
+        ...,
+        description="Symbol name, partial symbol name, or exact file path to search.",
+    )
+    kind: str = Field(
+        default="",
+        description="Optional symbol kind filter, such as function, class, method, or variable.",
+    )
+    references: bool = Field(
+        default=False,
+        description="Whether to trace callers and import sites for matching definitions.",
+    )
+
+
+class CiSymbolDefinitionOutput(BaseModel):
+    name: str = Field(..., description="Symbol name.")
+    kind: str = Field(..., description="Symbol kind.")
+    file: str = Field(..., description="File containing the symbol.")
+    line: int | None = Field(default=None, description="One-based symbol line number.")
+    signature: str | None = Field(default=None, description="Symbol signature.")
+
+
+class CiSymbolReferenceOutput(BaseModel):
+    file: str = Field(..., description="Reference file path.")
+    line: int | None = Field(default=None, description="One-based reference line number.")
+    text: str = Field(default="", description="Reference line text.")
+
+
+class CiQuerySymbolOutput(BaseModel):
+    status: str | None = Field(
+        default=None,
+        description="Status for unavailable symbol-query responses.",
+    )
+    reason: str | None = Field(default=None, description="Reason symbol query is unavailable.")
+    file: str | None = Field(default=None, description="File path for file-bootstrap queries.")
+    definitions: list[CiSymbolDefinitionOutput] = Field(
+        default_factory=list,
+        description="Matching symbol definitions.",
+    )
+    references: list[CiSymbolReferenceOutput] = Field(
+        default_factory=list,
+        description="Reference sites when requested.",
+    )
+    total_references: int | None = Field(
+        default=None,
+        description="Total references collected.",
+    )
+    confidence: str | None = Field(default=None, description="Confidence level for references.")
+    hint: str | None = Field(default=None, description="Follow-up guidance.")
+    message: str | None = Field(default=None, description="Human-readable status message.")
 
 
 def _normalize_workspace_path(path: str, *, workspace_root: str = "") -> str:
@@ -108,6 +250,31 @@ def _render_workspace_paths(paths: list[str]) -> str:
     if len(paths) > _STRUCTURE_FALLBACK_LIMIT:
         output += "\n... (truncated at 500 files)"
     return output
+
+
+def _workspace_structure_result(
+    *,
+    path: str,
+    max_depth: int,
+    source: str,
+    paths: list[str] | None = None,
+    status: str | None = None,
+    reason: str | None = None,
+    message: str | None = None,
+) -> ToolResult:
+    resolved_paths = list(paths or [])
+    payload = CiWorkspaceStructureOutput(
+        status=status,
+        reason=reason,
+        source=source,
+        path=path,
+        max_depth=max_depth,
+        paths=resolved_paths[:_STRUCTURE_FALLBACK_LIMIT],
+        rendered=_render_workspace_paths(resolved_paths) if resolved_paths else "",
+        truncated=len(resolved_paths) > _STRUCTURE_FALLBACK_LIMIT,
+        message=message,
+    )
+    return ToolResult(output=payload.model_dump_json())
 
 
 def _maybe_warm_service(context: ToolExecutionContext, svc: Any, *, label: str) -> None:
@@ -387,6 +554,8 @@ async def _remote_query_symbols(
     name="ci_status",
     description="Check code intelligence readiness: cache, index, LSP, and optional edit hotspot activity.",
     short_description="Check code intelligence status.",
+    input_model=CiStatusInput,
+    output_model=CiStatusOutput,
     read_only=True,
 )
 async def ci_status(
@@ -397,14 +566,7 @@ async def ci_status(
     *,
     context: ToolExecutionContext,
 ) -> ToolResult:
-    """Check code intelligence service readiness.
-
-    Args:
-        include_edit_hotspots: Whether to include edit hotspot information.
-        hotspot_limit: Max hotspot results when included.
-        hotspot_scope_paths: Optional path-prefix filter for hotspots.
-        hotspot_cross_run: Query arbiter-backed cross-run contention history.
-    """
+    """Check code intelligence service readiness."""
     svc, err = _svc_or_error(context)
     if err:
         return err
@@ -427,6 +589,8 @@ async def ci_status(
     name="ci_workspace_structure",
     description="List files and directories in the workspace, sorted by path.",
     short_description="List workspace files and directories.",
+    input_model=CiWorkspaceStructureInput,
+    output_model=CiWorkspaceStructureOutput,
     read_only=True,
 )
 async def ci_workspace_structure(
@@ -435,21 +599,20 @@ async def ci_workspace_structure(
     *,
     context: ToolExecutionContext,
 ) -> ToolResult:
-    """List workspace file structure.
-
-    Args:
-        path: Subdirectory to list (empty = workspace root)
-        max_depth: Maximum directory depth
-
-    Returns:
-        output (str): File listing
-    """
+    """List workspace file structure."""
     svc, err = _svc_or_error(context)
     if err:
         return err
     si = svc.symbol_index
     if si is None:
-        return ToolResult(output="Symbol index not available")
+        return _workspace_structure_result(
+            path=path,
+            max_depth=max_depth,
+            source="none",
+            status="unavailable",
+            reason="Symbol index not available",
+            message="Symbol index not available",
+        )
     workspace_root = str(getattr(svc, "workspace_root", "") or "")
 
     # If the symbol index is still building (e.g. kicked off by
@@ -479,7 +642,12 @@ async def ci_workspace_structure(
     )
 
     if paths:
-        return ToolResult(output=_render_workspace_paths(paths))
+        return _workspace_structure_result(
+            path=path,
+            max_depth=max_depth,
+            source="index",
+            paths=paths,
+        )
 
     local_paths = _local_workspace_structure(
         workspace_root=workspace_root,
@@ -487,7 +655,12 @@ async def ci_workspace_structure(
         max_depth=max_depth,
     )
     if local_paths:
-        return ToolResult(output=_render_workspace_paths(local_paths))
+        return _workspace_structure_result(
+            path=path,
+            max_depth=max_depth,
+            source="local",
+            paths=local_paths,
+        )
 
     remote_paths = await _remote_workspace_structure(
         context,
@@ -496,10 +669,22 @@ async def ci_workspace_structure(
         max_depth=max_depth,
     )
     if remote_paths:
-        return ToolResult(output=_render_workspace_paths(remote_paths))
+        return _workspace_structure_result(
+            path=path,
+            max_depth=max_depth,
+            source="remote",
+            paths=remote_paths,
+        )
 
-    return ToolResult(
-        output="No files indexed yet. Use `daytona_glob` for file discovery when the symbol index is cold."
+    return _workspace_structure_result(
+        path=path,
+        max_depth=max_depth,
+        source="none",
+        status="empty",
+        message=(
+            "No files indexed yet. Use `daytona_glob` for file discovery when "
+            "the symbol index is cold."
+        ),
     )
 
 
@@ -651,6 +836,8 @@ def _file_query_symbols(
         "and daytona_grep — it is cheaper, faster, and returns structured data."
     ),
     short_description="Find symbol definitions and references.",
+    input_model=CiQuerySymbolInput,
+    output_model=CiQuerySymbolOutput,
     read_only=True,
 )
 async def ci_query_symbol(
@@ -660,17 +847,7 @@ async def ci_query_symbol(
     *,
     context: ToolExecutionContext,
 ) -> ToolResult:
-    """Search for symbol definitions and optionally trace references.
-
-    Args:
-        query: Symbol name or partial name to search for
-        kind: Filter by kind: function, class, method, variable
-        references: If true, also trace all callers/import sites via LSP
-
-    Returns:
-        definitions (list): Matching symbol entries with name, kind, file, line, signature.
-        references (list, optional): Usage sites when references=true.
-    """
+    """Search for symbol definitions and optionally trace references."""
     query = _normalize_symbol_query(query)
     svc, err = _svc_or_error(context)
     if err:
@@ -775,7 +952,14 @@ async def ci_query_symbol(
                 output["references"] = []
                 output["confidence"] = "unavailable"
             return ToolResult(output=json.dumps(output, indent=2))
-        return ToolResult(output=f"No symbols matching '{query}'")
+        payload = CiQuerySymbolOutput(
+            definitions=[],
+            references=[],
+            total_references=0 if references else None,
+            confidence="none",
+            message=f"No symbols matching '{query}'",
+        )
+        return ToolResult(output=payload.model_dump_json())
 
     definitions = []
     for s in results[:100]:

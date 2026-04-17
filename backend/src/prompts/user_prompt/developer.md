@@ -1,8 +1,7 @@
-# Developer User Prompt
+Please read the following sections and call the listed terminal tool when your work is complete.
 
-Use this template for `developer` tasks.
+{{terminal_tools}}
 
-````text
 ## Your task
 
 1. Please read the assigned coding task and inherited context.
@@ -19,7 +18,7 @@ Use this template for `developer` tasks.
 ```
 
 {{#if scope_paths}}
-## Scope
+## scope_paths
 {{scope_paths}}
 {{/if}}
 
@@ -37,4 +36,3 @@ Use this template for `developer` tasks.
 ## Parent context
 {{parent_context}}
 {{/if}}
-````

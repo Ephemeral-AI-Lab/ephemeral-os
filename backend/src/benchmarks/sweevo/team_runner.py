@@ -179,22 +179,6 @@ def _build_root_prompt(instance: SWEEvoInstance, repo_dir: str) -> str:
     )
 
 
-def _task_base_prompt(task_text: Any) -> str:
-    if isinstance(task_text, dict) and task_text:
-        rendered = json.dumps(task_text, indent=2, default=str)
-        primary: list[str] = []
-        for key in ("objective", "prompt", "description", "instructions"):
-            value = task_text.get(key)
-            if isinstance(value, str) and value.strip():
-                primary.append(value.strip())
-        if primary:
-            return "\n\n".join(primary) + "\n\nTask context:\n" + rendered
-        return "Task context:\n" + rendered
-    if isinstance(task_text, str):
-        return task_text
-    return f"Task: {task_text!r}"
-
-
 def _enforce_validation_evidence(state: AgentRunState) -> None:
     """BenchmarkTelemetry success hook — validator must run daytona_codeact."""
     if state.defn.name != VALIDATOR:
@@ -321,24 +305,14 @@ def _make_context_builders(
     repo_dir: str = _REPO_DIR,
 ):
     """Wrap the default :func:`team.runtime.context_builder.build_query_context`
-    with a sandbox-note prompt prefix, benchmark coordination flags, and a
-    code-intelligence warm-up for the SWE-EVO sandbox.
+    with benchmark coordination flags and a code-intelligence warm-up for the
+    SWE-EVO sandbox.
 
-    Agent role, terminal tools prompt, and roster are supplied by the default
-    builder; the sweevo team definition loaded from the DB carries everything else.
+    Agent role, terminal tools, and user prompt templates are supplied by the
+    default builder; the sweevo team definition loaded from the DB carries
+    everything else.
     """
     from team.runtime.context_builder import build_query_context as _default_ctx
-
-    sandbox_note = (
-        "## Sandbox Working Directory\n"
-        f"- Repo root inside the sandbox: {repo_dir}\n"
-        "- `daytona_codeact`, `daytona_read_file`, `daytona_edit_file`, and related "
-        "tools already execute relative to that repo root when you use relative "
-        "paths; prefer direct `daytona_codeact(command=\"...\", timeout=N)` "
-        "for repo commands, never `subprocess` or `2>&1`.\n"
-        "- Do not prepend guessed roots such as `/workspace`, `/home/user`, or "
-        "`/home/user/repos/...` unless the payload names a real child directory.\n\n"
-    )
 
     async def build_query_ctx(defn, team_run, wi):
         ctx = await _default_ctx(defn, team_run, wi)
@@ -352,16 +326,6 @@ def _make_context_builders(
             "require_declared_shell_outputs": True,
             "verification_surface_write_enforcement": "warn",
         })
-        if wi.depth == 0 and wi.agent_name == TEAM_PLANNER:
-            # Root planner receives the benchmark root prompt verbatim.
-            ctx.user_message = (
-                team_run.user_request
-                + (f"\n\n{ctx.user_message}" if ctx.user_message else "")
-            )
-        else:
-            ctx.user_message = (
-                sandbox_note + _task_base_prompt(wi.objective) + "\n\n" + ctx.user_message
-            )
         try:
             get_code_intelligence(sandbox_id=effective_sandbox, workspace_root=repo_dir)
         except Exception:

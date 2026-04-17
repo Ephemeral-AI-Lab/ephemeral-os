@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -18,9 +20,11 @@ class TestGetAsyncSandbox:
 
         import sandbox.async_client as mod
 
-        mod._cached_client = mock_client
-        mod._cached_client_key = ("async-key", "https://async-url", "")
-        mod._cached_loop_id = id(pytest.importorskip("asyncio").get_running_loop())
+        loop = asyncio.get_running_loop()
+        monkeypatch.setattr(mod, "_load_credentials", lambda: ("async-key", "https://async-url", ""))
+        with mod._client_lock:
+            mod._cached_clients.clear()
+            mod._cached_clients[loop] = (("async-key", "https://async-url", ""), mock_client)
 
         result = await mod.get_async_sandbox("sb-async-123")
 
@@ -37,9 +41,11 @@ class TestGetAsyncSandbox:
 
         import sandbox.async_client as mod
 
-        mod._cached_client = mock_client
-        mod._cached_client_key = ("async-key", "https://async-url", "")
-        mod._cached_loop_id = id(pytest.importorskip("asyncio").get_running_loop())
+        loop = asyncio.get_running_loop()
+        monkeypatch.setattr(mod, "_load_credentials", lambda: ("async-key", "https://async-url", ""))
+        with mod._client_lock:
+            mod._cached_clients.clear()
+            mod._cached_clients[loop] = (("async-key", "https://async-url", ""), mock_client)
 
         with pytest.raises(ValueError, match="not found"):
             await mod.get_async_sandbox("sb-nonexistent")
@@ -55,9 +61,11 @@ class TestGetAsyncSandbox:
 
         import sandbox.async_client as mod
 
-        mod._cached_client = mock_client
-        mod._cached_client_key = ("async-key", "https://async-url", "")
-        mod._cached_loop_id = id(pytest.importorskip("asyncio").get_running_loop())
+        loop = asyncio.get_running_loop()
+        monkeypatch.setattr(mod, "_load_credentials", lambda: ("async-key", "https://async-url", ""))
+        with mod._client_lock:
+            mod._cached_clients.clear()
+            mod._cached_clients[loop] = (("async-key", "https://async-url", ""), mock_client)
 
         with patch("sandbox.service.SandboxService.ensure_sandbox_running") as ensure_mock:
             result = await mod.get_async_sandbox("sb-recoverable")

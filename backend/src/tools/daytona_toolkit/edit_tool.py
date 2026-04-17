@@ -8,6 +8,8 @@ import logging
 import time
 from typing import Any
 
+from pydantic import BaseModel, Field
+
 from code_intelligence.editing.change_labels import change_actor_label
 from code_intelligence.editing.patcher import Patcher, SearchReplaceEdit
 from tools.core.base import ToolExecutionContext, ToolResult
@@ -40,6 +42,53 @@ from tools.core.decorator import tool
 logger = logging.getLogger(__name__)
 
 _OUTPUT_MAX_CHARS = 8000
+
+
+class DaytonaEditFileInput(BaseModel):
+    file_path: str = Field(..., description="Path to the file to edit.")
+    old_text: str = Field(
+        default="",
+        description="Exact text to find in single-edit mode. Pair only with new_text.",
+    )
+    new_text: str = Field(
+        default="",
+        description="Replacement text for single-edit mode. Do not send with edits.",
+    )
+    edits: list[dict[str, Any]] | None = Field(
+        default=None,
+        description=(
+            "Optional batch of edit objects. Supported shape: "
+            "{\"strategy\":\"search_replace\",\"search\":\"...\",\"replace\":\"...\"}."
+        ),
+    )
+    description: str = Field(
+        default="",
+        description="Optional human-readable description of the edit.",
+    )
+    dry_run: bool = Field(
+        default=False,
+        description="Preview the edit and return a unified diff without applying changes.",
+    )
+
+
+class DaytonaEditFileOutput(BaseModel):
+    cwd: str = Field(..., description="Current sandbox working directory.")
+    file_path: str = Field(..., description="Resolved file path that was edited.")
+    status: str = Field(..., description="Edit result such as edited or dry_run.")
+    occ: bool = Field(..., description="Whether optimistic concurrency control was used.")
+    warnings: list[str] = Field(default_factory=list, description="Non-fatal edit warnings.")
+    expected_hash: str | None = Field(
+        default=None,
+        description="Expected pre-edit content hash when OCC was used.",
+    )
+    timings: dict[str, Any] | None = Field(
+        default=None,
+        description="Optional edit timing metadata.",
+    )
+    diff: str | None = Field(
+        default=None,
+        description="Unified diff preview for dry-run edits.",
+    )
 
 
 def _content_hash(content: str) -> str:
@@ -130,6 +179,8 @@ def _scope_overlap_warning(
         "for batched replacements. Never send `new_text` together with `edits`."
     ),
     short_description="Apply atomic file edits.",
+    input_model=DaytonaEditFileInput,
+    output_model=DaytonaEditFileOutput,
 )
 async def daytona_edit_file(
     file_path: str,
@@ -141,22 +192,7 @@ async def daytona_edit_file(
     *,
     context: ToolExecutionContext,
 ) -> ToolResult:
-    """Edit a file in the Daytona sandbox atomically.
-
-    Args:
-        file_path: Path to the file to edit
-        old_text: Text to find and replace in single-edit mode. Pair only with ``new_text``.
-        new_text: Replacement text for single-edit mode. Do not send when using ``edits``.
-        edits: Optional batch edit list. Each edit must use strategy ``search_replace``:
-            ``{"strategy": "search_replace", "search": "...", "replace": "..."}``
-        description: Optional description of the edit
-        dry_run: Preview the edit without applying
-
-    Returns:
-        file_path (str): Path to the edited file
-        status (str): Edit result — edited, dry_run, or error
-        diff (str): Unified diff preview (dry_run only)
-    """
+    """Edit a file in the Daytona sandbox atomically."""
     try:
         sandbox = await _require_sandbox(context)
     except Exception as exc:

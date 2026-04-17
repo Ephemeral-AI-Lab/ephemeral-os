@@ -123,6 +123,33 @@ class DaytonaCodeActInput(BaseModel):
         return schema
 
 
+class DaytonaCodeActShellOutput(BaseModel):
+    command: str = Field(..., description="Shell command that was run.")
+    exit_code: int | str = Field(..., description="Command exit code.")
+    stdout: str = Field(..., description="Captured stdout.")
+    stderr: str = Field(..., description="Captured stderr.")
+
+
+class DaytonaCodeActOutput(BaseModel):
+    cwd: str = Field(..., description="Current sandbox working directory.")
+    status: str = Field(..., description="Execution status: ok or error.")
+    files_written: int = Field(..., description="Number of files committed or written.")
+    shells_run: int = Field(..., description="Number of shell commands executed.")
+    shell_summaries: list[str] = Field(
+        default_factory=list,
+        description="Compact summaries of the first shell commands.",
+    )
+    shell_outputs: list[DaytonaCodeActShellOutput] = Field(
+        default_factory=list,
+        description="Captured output for the first shell commands.",
+    )
+    script_stdout: str = Field(..., description="Python wrapper stdout before the manifest line.")
+    write_errors: list[str] = Field(default_factory=list, description="Write errors.")
+    write_conflicts: list[str] = Field(default_factory=list, description="Write conflicts.")
+    warnings: list[str] = Field(default_factory=list, description="Non-fatal warnings.")
+    error: str = Field(default="", description="Error detail when status is error.")
+
+
 def _destructive_git_command_error(command: str) -> str | None:
     if _DESTRUCTIVE_GIT_PATTERN.search(command or ""):
         return (
@@ -606,6 +633,8 @@ async def _commit_transaction(
         "Python with read()/write()/shell() helpers."
     ),
     short_description="Run shell commands or Python in the sandbox.",
+    input_model=DaytonaCodeActInput,
+    output_model=DaytonaCodeActOutput,
     background="optional",
 )
 async def daytona_codeact(
@@ -616,22 +645,7 @@ async def daytona_codeact(
     *,
     context: ToolExecutionContext,
 ) -> ToolResult:
-    """Execute shell commands or Python code in the Daytona sandbox.
-
-    Args:
-        mode: Optional execution mode. When omitted, `code` implies Python mode and
-            `command` implies shell mode.
-        code: Python code to execute. Has access to read(path), write(path, content),
-            and shell(command, timeout=900).
-        command: Shell command to execute directly.
-        timeout: Timeout in seconds for shell mode execution.
-
-    Returns:
-        status (str): Execution status — ok or error
-        files_written (int): Number of files committed or written
-        shells_run (int): Number of shell commands executed
-        error (str): Error message if failed
-    """
+    """Execute shell commands or Python code in the Daytona sandbox."""
     resolved_mode, mode_error = _resolve_mode(mode=mode, code=code, command=command)
     if mode_error is not None:
         return ToolResult(output=mode_error, is_error=True)
@@ -730,9 +744,15 @@ async def daytona_codeact(
             result_line = stdout_lines[-1] if stdout_lines else "{}"
             result = json.loads(result_line)
         except (json.JSONDecodeError, IndexError):
-            return ToolResult(
-                output=f"Script output:\n{stdout[:4000]}",
-                metadata={"status": "unknown"},
+            return _build_tool_output(
+                context=context,
+                status="unknown",
+                files_written=0,
+                shells=[],
+                script_stdout=stdout[:4000],
+                write_errors=[],
+                write_conflicts=[],
+                warnings=["CodeAct result line was not valid JSON."],
             )
 
         manifest_path = str(result.get("manifest", "") or "")
@@ -742,7 +762,16 @@ async def daytona_codeact(
                     output=f"CodeAct execution error:\n{stdout[:4000]}",
                     is_error=True,
                 )
-            return ToolResult(output=f"Script output:\n{stdout[:4000]}")
+            return _build_tool_output(
+                context=context,
+                status="unknown",
+                files_written=0,
+                shells=[],
+                script_stdout=stdout[:4000],
+                write_errors=[],
+                write_conflicts=[],
+                warnings=["CodeAct wrapper did not return a manifest path."],
+            )
 
         try:
             manifest_text, _ = await _read_text_file_via_exec(sandbox, manifest_path)
@@ -753,7 +782,16 @@ async def daytona_codeact(
                     output=_format_codeact_error(stdout=stdout),
                     is_error=True,
                 )
-            return ToolResult(output=f"Script completed but manifest unreadable:\n{stdout[:4000]}")
+            return _build_tool_output(
+                context=context,
+                status="unknown",
+                files_written=0,
+                shells=[],
+                script_stdout=stdout[:4000],
+                write_errors=[],
+                write_conflicts=[],
+                warnings=["CodeAct completed but its manifest could not be read."],
+            )
 
         shells = list(manifest.get("shells", []) or [])
         if result.get("status") == "error":
@@ -794,6 +832,3 @@ async def daytona_codeact(
     finally:
         if tx is not None:
             await cleanup_codeact_transaction(sandbox, tx)
-
-
-daytona_codeact.input_model = DaytonaCodeActInput

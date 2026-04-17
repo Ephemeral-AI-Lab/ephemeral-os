@@ -13,11 +13,7 @@ from tools.builtins.background.wait_for_background_task import WaitForBackground
 
 
 def make_background_toolkit(bg_tool_names: list[str]) -> BaseToolkit:
-    """Create the background task management toolkit.
-
-    Args:
-        bg_tool_names: Names of tools that support background execution.
-    """
+    """Create the background task management toolkit."""
     tools_list = ", ".join(f"`{n}`" for n in bg_tool_names)
     toolkit = BaseToolkit(
         name="background",

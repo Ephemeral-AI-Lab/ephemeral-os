@@ -7,6 +7,8 @@ import logging
 import shlex
 from typing import Any
 
+from pydantic import BaseModel, Field
+
 from tools.core.decorator import tool
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.daytona_toolkit._daytona_utils import (
@@ -35,6 +37,88 @@ from tools.core.ci_runtime import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+class DaytonaReadFileInput(BaseModel):
+    file_path: str = Field(..., description="Path to the file in the sandbox.")
+    start_line: int = Field(
+        default=1,
+        ge=1,
+        description="First line to read, using one-based numbering.",
+    )
+    end_line: int | None = Field(
+        default=None,
+        ge=1,
+        description="Last line to read, using one-based inclusive numbering.",
+    )
+
+
+class DaytonaReadFileOutput(BaseModel):
+    cwd: str = Field(..., description="Current sandbox working directory.")
+    file_path: str = Field(..., description="Resolved file path that was read.")
+    total_lines: int = Field(..., description="Total number of lines in the file.")
+    start_line: int = Field(..., description="First line returned.")
+    end_line: int = Field(..., description="Last line returned.")
+    content: str = Field(..., description="Selected file content with line numbers.")
+
+
+class DaytonaWriteFileInput(BaseModel):
+    file_path: str = Field(..., description="Path to create or overwrite in the sandbox.")
+    content: str = Field(..., description="UTF-8 text content to write.")
+
+
+class DaytonaWriteFileOutput(BaseModel):
+    cwd: str = Field(..., description="Current sandbox working directory.")
+    file_path: str = Field(..., description="Resolved file path that was written.")
+    bytes_written: int = Field(..., description="Number of UTF-8 bytes written.")
+    ci_sync: bool = Field(..., description="Whether the write was synchronized to code intelligence.")
+    warnings: list[str] = Field(default_factory=list, description="Non-fatal write warnings.")
+    timings: dict[str, Any] | None = Field(
+        default=None,
+        description="Optional write timing metadata.",
+    )
+
+
+class DaytonaGrepInput(BaseModel):
+    pattern: str = Field(..., description="Text pattern to search for in file contents.")
+    path: str = Field(
+        default=".",
+        description="File or directory path to search.",
+    )
+
+
+class DaytonaMatchOutput(BaseModel):
+    file: str = Field(..., description="Matched file path.")
+    line: int | None = Field(default=None, description="Matched one-based line number.")
+    content: str = Field(..., description="Matched line content.")
+
+
+class DaytonaGrepOutput(BaseModel):
+    cwd: str = Field(..., description="Current sandbox working directory.")
+    pattern: str = Field(..., description="Pattern that was searched.")
+    path: str = Field(..., description="Search root path.")
+    matches: list[DaytonaMatchOutput] = Field(
+        default_factory=list,
+        description="Matching file lines.",
+    )
+    total_matches: int = Field(..., description="Total number of matches found.")
+
+
+class DaytonaGlobInput(BaseModel):
+    pattern: str = Field(..., description="Glob pattern to match file names.")
+    path: str = Field(
+        default=".",
+        description="Directory path to search from.",
+    )
+
+
+class DaytonaGlobOutput(BaseModel):
+    cwd: str = Field(..., description="Current sandbox working directory.")
+    pattern: str = Field(..., description="Glob pattern used.")
+    path: str = Field(..., description="Search root path.")
+    files: list[str] = Field(default_factory=list, description="Matching file paths.")
+    total_files: int = Field(..., description="Total number of matching files.")
+
 
 async def _run_with_recovery(
     context: ToolExecutionContext,
@@ -225,6 +309,8 @@ print("\\n".join(matches))
         "to open benchmark test files."
     ),
     short_description="Read a file from the sandbox.",
+    input_model=DaytonaReadFileInput,
+    output_model=DaytonaReadFileOutput,
     read_only=True,
 )
 async def daytona_read_file(
@@ -234,20 +320,7 @@ async def daytona_read_file(
     *,
     context: ToolExecutionContext,
 ) -> ToolResult:
-    """Read a file from the Daytona sandbox.
-
-    Args:
-        file_path: Path to the file in the sandbox
-        start_line: First line to read (1-based)
-        end_line: Last line to read (1-based, inclusive)
-
-    Returns:
-        file_path (str): Path to the file
-        total_lines (int): Total number of lines in the file
-        start_line (int): First line returned (1-based)
-        end_line (int): Last line returned (1-based)
-        content (str): File content with line numbers
-    """
+    """Read a file from the Daytona sandbox."""
     file_path = _resolve_path(file_path, context)
     contract_error = _benchmark_read_guard(context, file_path)
     if contract_error is not None:
@@ -299,6 +372,8 @@ async def _do_raw_write(
     name="daytona_write_file",
     description="Create a new file or overwrite an existing file with the given content.",
     short_description="Create or overwrite a file.",
+    input_model=DaytonaWriteFileInput,
+    output_model=DaytonaWriteFileOutput,
 )
 async def daytona_write_file(
     file_path: str,
@@ -306,16 +381,7 @@ async def daytona_write_file(
     *,
     context: ToolExecutionContext,
 ) -> ToolResult:
-    """Write/create a file in the Daytona sandbox.
-
-    Args:
-        file_path: Path to write in the sandbox
-        content: File content to write
-
-    Returns:
-        file_path (str): Path that was written
-        bytes_written (int): Number of bytes written
-    """
+    """Write/create a file in the Daytona sandbox."""
     file_path = _resolve_path(file_path, context)
     contract_error = _team_repo_write_error(context, file_path, tool_name="daytona_write_file")
     if contract_error is not None:
@@ -401,6 +467,8 @@ async def daytona_write_file(
     name="daytona_grep",
     description="Search file contents for a text pattern and return matching lines.",
     short_description="Search file contents by pattern.",
+    input_model=DaytonaGrepInput,
+    output_model=DaytonaGrepOutput,
     read_only=True,
 )
 async def daytona_grep(
@@ -409,18 +477,7 @@ async def daytona_grep(
     *,
     context: ToolExecutionContext,
 ) -> ToolResult:
-    """Search file contents in the Daytona sandbox.
-
-    Args:
-        pattern: Text pattern to search for in file contents
-        path: File or directory to search
-
-    Returns:
-        pattern (str): Pattern that was searched
-        path (str): Search root path
-        matches (list): Matching results with file, line, content
-        total_matches (int): Total matches found
-    """
+    """Search file contents in the Daytona sandbox."""
     cwd = _get_cwd(context) or ""
     path = _resolve_path(path, context) if path != "." else (cwd or ".")
     try:
@@ -445,6 +502,8 @@ async def daytona_grep(
     name="daytona_glob",
     description="Find files by name using a glob pattern (e.g. '*.py', 'test_*').",
     short_description="Find files by glob.",
+    input_model=DaytonaGlobInput,
+    output_model=DaytonaGlobOutput,
     read_only=True,
 )
 async def daytona_glob(
@@ -453,18 +512,7 @@ async def daytona_glob(
     *,
     context: ToolExecutionContext,
 ) -> ToolResult:
-    """Find files by glob pattern in the Daytona sandbox.
-
-    Args:
-        pattern: Glob pattern to match file names (e.g. '*.py', 'test_*')
-        path: Root directory to search from
-
-    Returns:
-        pattern (str): Glob pattern used
-        path (str): Search root path
-        files (list): Matching file paths
-        total_files (int): Total files found
-    """
+    """Find files by glob pattern in the Daytona sandbox."""
     cwd = _get_cwd(context) or ""
     path = _resolve_path(path, context) if path != "." else (cwd or ".")
     try:

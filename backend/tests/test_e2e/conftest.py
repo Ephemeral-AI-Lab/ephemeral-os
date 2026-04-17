@@ -11,6 +11,7 @@ import types
 from pathlib import Path
 from typing import Any, AsyncIterator
 from unittest.mock import MagicMock
+from uuid import uuid4
 
 import pytest
 from dotenv import load_dotenv
@@ -61,6 +62,8 @@ _try_import_or_stub(
 
 # Now safe to import project code
 from sqlalchemy import create_engine
+from sqlalchemy import text
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import sessionmaker
 
 from db.base import Base
@@ -110,6 +113,7 @@ def create_eval_agent(
     Uses the active model from the DB registry (which has the correct
     client class, auth, and base_url already configured).
     """
+    _reset_runtime_store_singletons()
     return EvalAgent.create(
         system_prompt=system_prompt,
         sandbox_id=sandbox_id,
@@ -166,6 +170,25 @@ def _extract_new_messages(display_messages, prompt: str) -> list[dict[str, Any]]
 
 def _usage_store_ready(store: Any) -> bool:
     return getattr(store, "_session_factory", None) is not None
+
+
+def _reset_runtime_store_singletons() -> None:
+    """Detach server store singletons from per-test DB schemas."""
+    try:
+        from server import app_factory as _af
+
+        for store in (
+            _af.session_store,
+            _af.agent_run_store,
+            _af.usage_store,
+            _af.model_store,
+            _af.agent_definition_store,
+            _af.skill_definition_store,
+        ):
+            if hasattr(store, "_session_factory"):
+                store._session_factory = None
+    except Exception:
+        pass
 
 
 def _persist_eval_agent_artifacts(agent: EvalAgent, prompt: str, result: Any | None = None) -> None:
@@ -554,6 +577,52 @@ HAS_BOTH = HAS_MINIMAX and HAS_DAYTONA
 HAS_ANTHROPIC_AND_DAYTONA = HAS_MINIMAX and HAS_DAYTONA
 
 
+def _postgres_test_database_url() -> str:
+    raw_url = os.environ.get("EPHEMERALOS_TEST_DATABASE_URL") or os.environ.get(
+        "EPHEMERALOS_DATABASE_URL"
+    )
+    if not raw_url:
+        pytest.skip(
+            "PostgreSQL e2e tests require EPHEMERALOS_TEST_DATABASE_URL "
+            "or EPHEMERALOS_DATABASE_URL."
+        )
+    url = make_url(raw_url)
+    if url.get_backend_name() != "postgresql":
+        pytest.skip("E2E database URL must use PostgreSQL.")
+    if url.drivername in {"postgresql", "postgresql+psycopg2"}:
+        url = url.set(drivername="postgresql+psycopg")
+    return url.render_as_string(hide_password=False)
+
+
+def _database_url_from_session_factory(factory) -> str:
+    bind = factory.kw.get("bind")
+    if bind is None:
+        return _postgres_test_database_url()
+    return bind.url.render_as_string(hide_password=False)
+
+
+def _patch_server_database(monkeypatch, session_factory) -> None:
+    def _ensure_runtime_stores_ready(*args, **kwargs):
+        from server import app_factory as _af
+
+        for store in (
+            _af.session_store,
+            _af.agent_run_store,
+            _af.usage_store,
+            _af.model_store,
+            _af.agent_definition_store,
+            _af.skill_definition_store,
+        ):
+            store.initialize(session_factory)
+        return session_factory
+
+    monkeypatch.setattr("db.engine.initialize_db", lambda *a, **kw: session_factory)
+    monkeypatch.setattr("db.engine.get_session_factory", lambda: session_factory)
+    monkeypatch.setattr("server.app_factory.initialize_db", lambda *a, **kw: session_factory)
+    monkeypatch.setattr("server.app_factory.get_session_factory", lambda: session_factory)
+    monkeypatch.setattr("server.app_factory.ensure_runtime_stores_ready", _ensure_runtime_stores_ready)
+
+
 def make_live_client(
     db_session_factory,
     tmp_path,
@@ -584,7 +653,7 @@ def make_live_client(
     if DAYTONA_TARGET:
         monkeypatch.setenv("DAYTONA_TARGET", DAYTONA_TARGET)
 
-    monkeypatch.setattr("db.engine.initialize_db", lambda *a, **kw: db_session_factory)
+    _patch_server_database(monkeypatch, db_session_factory)
     monkeypatch.setattr("hooks.make_hook_executor", lambda *a, **kw: None)
 
     def _patched_load_settings(*a, **kw):
@@ -594,7 +663,7 @@ def make_live_client(
             daytona_api_key=DAYTONA_KEY,
             daytona_api_url=DAYTONA_URL,
             daytona_target=DAYTONA_TARGET,
-            database=_DS(url=f"sqlite:///{tmp_path / 'test.db'}"),
+            database=_DS(url=_database_url_from_session_factory(db_session_factory)),
         )
 
     monkeypatch.setattr("config.load_settings", _patched_load_settings)
@@ -765,16 +834,31 @@ class MockApiClient:
 
 @pytest.fixture()
 def db_session_factory(tmp_path):
-    """Create a file-based SQLite DB with all tables."""
-    db_path = tmp_path / "test.db"
-    engine = create_engine(f"sqlite:///{db_path}", echo=False)
+    """Create an isolated PostgreSQL schema with all tables."""
+    base_url = _postgres_test_database_url()
+    schema_name = f"ephemeralos_test_{uuid4().hex}"
+    admin_engine = create_engine(base_url, echo=False)
+    with admin_engine.begin() as conn:
+        conn.execute(text(f'CREATE SCHEMA "{schema_name}"'))
+
+    engine = create_engine(
+        base_url,
+        echo=False,
+        connect_args={"options": f"-csearch_path={schema_name}"},
+    )
 
     import db.models  # noqa: F401
     import agents.db.model  # noqa: F401
 
     Base.metadata.create_all(engine)
     sf = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
-    return sf
+    try:
+        yield sf
+    finally:
+        engine.dispose()
+        with admin_engine.begin() as conn:
+            conn.execute(text(f'DROP SCHEMA IF EXISTS "{schema_name}" CASCADE'))
+        admin_engine.dispose()
 
 
 @pytest.fixture()
@@ -821,7 +905,7 @@ def app_client(db_session_factory, mock_api_client, tmp_path, monkeypatch):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.delenv("EPHEMERALOS_DATABASE_URL", raising=False)
 
-    monkeypatch.setattr("db.engine.initialize_db", lambda *a, **kw: db_session_factory)
+    _patch_server_database(monkeypatch, db_session_factory)
     monkeypatch.setattr("providers.provider.make_api_client", lambda *a, **kw: mock_api_client)
     monkeypatch.setattr("hooks.make_hook_executor", lambda *a, **kw: None)
     monkeypatch.setattr(
@@ -833,7 +917,7 @@ def app_client(db_session_factory, mock_api_client, tmp_path, monkeypatch):
         from config.settings import Settings, DatabaseSettings
 
         return Settings(
-            database=DatabaseSettings(url=f"sqlite:///{tmp_path / 'test.db'}"),
+            database=DatabaseSettings(url=_database_url_from_session_factory(db_session_factory)),
         )
 
     monkeypatch.setattr("config.load_settings", _patched_load_settings)

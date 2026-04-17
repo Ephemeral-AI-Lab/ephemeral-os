@@ -231,6 +231,10 @@ class _FakeTaskCenter:
         self._events = NullTeamRunStore()
         self._notes = []
         self.store = self  # production reads all_terminal/get_statuses via tc.store
+        self._cancel_running_task_callback = None
+
+    def set_cancel_running_task_callback(self, callback) -> None:
+        self._cancel_running_task_callback = callback
 
     async def add_task(self, task) -> None:
         self.budget_state.tasks_used += 1
@@ -246,6 +250,9 @@ class _FakeTaskCenter:
 
     async def all_terminal(self) -> bool:
         return True
+
+    async def get_record(self, task_id: str):
+        return self.graph.get(task_id)
 
     async def get_statuses(self) -> dict[str, str]:
         return {"task-1": "cancelled"}
@@ -309,7 +316,7 @@ async def test_start_with_team_definition_spawns_root_with_planner(
     try:
         await run.start_with_team_definition(
             team_def,
-            payload={"k": "v"},
+            payload={"objective": "Plan the requested work", "scope_paths": ["src/app.py"]},
             executor_factory=_noop_executor_factory,
         )
         assert run.status == TeamRunStatus.RUNNING
@@ -317,8 +324,8 @@ async def test_start_with_team_definition_spawns_root_with_planner(
         assert run.root_task_id is not None
         root = run.task_center.graph[run.root_task_id]
         assert root.agent_name == "my_planner"
-        assert root.objective == "{'k': 'v'}"
-        assert getattr(root, "payload") == {"k": "v"}
+        assert root.objective == "Plan the requested work"
+        assert root.scope_paths == ["src/app.py"]
     finally:
         await _cleanup_run(run)
 
