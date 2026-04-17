@@ -614,6 +614,7 @@ class CodeIntelligenceService:
 
     def _lsp_telemetry_fields(self) -> dict[str, Any]:
         tel = self.lsp_client.telemetry
+        worker_status = self.lsp_client.worker_status()
         return {
             "connected": self.lsp_client.connected,
             "queries": tel.queries,
@@ -626,7 +627,14 @@ class CodeIntelligenceService:
             "worker_successes": tel.worker_successes,
             "worker_fallbacks": tel.worker_fallbacks,
             "worker_errors": tel.worker_errors,
-            "worker_active": self.lsp_client.worker_active,
+            "worker_active": worker_status.get("active", False),
+            "worker_enabled": worker_status.get("enabled", False),
+            "worker_transport": worker_status.get("transport"),
+            "worker_pid": worker_status.get("pid"),
+            "worker_pid_path": worker_status.get("pid_path"),
+            "worker_socket_path": worker_status.get("socket_path"),
+            "worker_log_path": worker_status.get("log_path"),
+            "worker_stdio_fallback": worker_status.get("stdio_fallback", False),
         }
 
     def _rename_preview_cache_stats(self) -> dict[str, int]:

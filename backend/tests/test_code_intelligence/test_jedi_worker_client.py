@@ -173,6 +173,8 @@ def test_sandbox_worker_logs_pid_path_on_startup(tmp_path, monkeypatch, caplog):
     assert "echo PID=" in commands[0]
     assert "jedi worker started pid=4242" in caplog.text
     assert f"path={cli._pid_path}" in caplog.text
+    assert cli.worker_status()["pid"] == 4242
+    assert cli.worker_status()["pid_path"] == cli._pid_path
 
 
 def test_sandbox_worker_client_runs_daemon_over_socket(tmp_path):

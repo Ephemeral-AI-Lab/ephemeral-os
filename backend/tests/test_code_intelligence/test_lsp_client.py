@@ -158,6 +158,13 @@ def test_worker_telemetry_tracks_success_and_fallback(monkeypatch) -> None:
         def shutdown(self):
             pass
 
+        def worker_status(self):
+            return {
+                "transport": "sandbox_socket",
+                "pid": 4242,
+                "pid_path": "/tmp/eos_jedi/pid",
+            }
+
     class _UnavailableWorker:
         def request(self, op, args=None):
             raise WorkerUnavailable("dead")
@@ -177,6 +184,35 @@ def test_worker_telemetry_tracks_success_and_fallback(monkeypatch) -> None:
     assert used is False
     assert result is None
     assert lsp.telemetry.worker_fallbacks == 1
+
+
+def test_worker_status_exposes_pid_without_starting_worker(monkeypatch) -> None:
+    monkeypatch.setenv(ENV_FLAG, "1")
+
+    class _Worker:
+        def request(self, op, args=None):
+            return None
+
+        def shutdown(self):
+            pass
+
+        def worker_status(self):
+            return {
+                "transport": "sandbox_socket",
+                "pid": 4242,
+                "pid_path": "/tmp/eos_jedi/pid",
+            }
+
+    lsp = LspClient(workspace_root="/workspace")
+
+    assert lsp.worker_status()["active"] is False
+
+    lsp._worker = _Worker()  # type: ignore[assignment]
+    status = lsp.worker_status()
+
+    assert status["active"] is True
+    assert status["pid"] == 4242
+    assert status["pid_path"] == "/tmp/eos_jedi/pid"
 
 
 def test_resolve_path_prepends_workspace_root() -> None:

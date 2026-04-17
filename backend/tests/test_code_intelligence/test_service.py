@@ -12,6 +12,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from code_intelligence.analysis.symbol_index import SymbolIndex
+from code_intelligence.lsp._jedi_worker_client import ENV_FLAG
 from code_intelligence.routing.service import (
     CodeIntelligenceService,
     dispose_all_code_intelligence,
@@ -464,6 +465,43 @@ def test_is_initialized_tracks_background_build_completion() -> None:
     assert svc.symbol_index.is_built is True
     assert svc.is_initialized is True
     assert svc.status()["initialized"] is True
+
+
+def test_status_exposes_jedi_worker_pid_metadata(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv(ENV_FLAG, "1")
+
+    class _Worker:
+        def request(self, op, args=None):
+            return None
+
+        def shutdown(self):
+            pass
+
+        def worker_status(self):
+            return {
+                "transport": "sandbox_socket",
+                "pid": 4242,
+                "pid_path": "/tmp/eos_jedi/pid",
+                "socket_path": "/tmp/eos_jedi/sock",
+                "log_path": "/tmp/eos_jedi/worker.log",
+                "stdio_fallback": False,
+            }
+
+    svc = CodeIntelligenceService(
+        sandbox_id="sandbox-worker-status",
+        workspace_root=str(tmp_path),
+    )
+    svc.lsp_client._py_available = True
+    svc.lsp_client._worker = _Worker()  # type: ignore[assignment]
+
+    lsp_status = svc.status()["lsp"]
+
+    assert lsp_status["worker_active"] is True
+    assert lsp_status["worker_enabled"] is True
+    assert lsp_status["worker_transport"] == "sandbox_socket"
+    assert lsp_status["worker_pid"] == 4242
+    assert lsp_status["worker_pid_path"] == "/tmp/eos_jedi/pid"
+    assert lsp_status["worker_socket_path"] == "/tmp/eos_jedi/sock"
 
 
 @pytest.mark.asyncio

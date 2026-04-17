@@ -265,6 +265,22 @@ class LspClient:
         with self._worker_lock:
             return self._worker is not None
 
+    def worker_status(self) -> dict[str, Any]:
+        """Return worker metadata without creating a worker."""
+        with self._worker_lock:
+            worker = self._worker
+        status: dict[str, Any] = {
+            "enabled": jedi_worker_enabled(),
+            "active": worker is not None,
+        }
+        if worker is None:
+            return status
+        try:
+            status.update(worker.worker_status())
+        except Exception:  # pragma: no cover - defensive observability path
+            logger.debug("failed to read jedi worker status", exc_info=True)
+        return status
+
     # -- Language-specific queries --------------------------------------------
 
     def _query_definitions(

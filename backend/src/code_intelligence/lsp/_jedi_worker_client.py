@@ -93,6 +93,9 @@ class BaseJediWorkerClient:
     def shutdown(self) -> None:
         raise NotImplementedError
 
+    def worker_status(self) -> dict[str, Any]:
+        return {"transport": "unknown", "pid": None}
+
 
 class JediWorkerClient(BaseJediWorkerClient):
     """Owns one long-lived worker process.
@@ -195,6 +198,13 @@ class JediWorkerClient(BaseJediWorkerClient):
         except Exception:
             self._kill(proc)
 
+    def worker_status(self) -> dict[str, Any]:
+        proc = self._proc
+        return {
+            "transport": "local_stdio",
+            "pid": proc.pid if proc is not None and proc.poll() is None else None,
+        }
+
     # -- Request plumbing -----------------------------------------------------
 
     @staticmethod
@@ -292,6 +302,7 @@ class SandboxJediWorkerClient(BaseJediWorkerClient):
         self._socket_path = f"{self._socket_dir}/sock"
         self._pid_path = f"{self._remote_dir}/pid"
         self._log_path = f"{self._remote_dir}/worker.log"
+        self._pid: int | None = None
 
         self._lock = threading.Lock()
         self._seq = 0
@@ -383,6 +394,7 @@ exit 0
                     "sandbox jedi worker socket unavailable; using stdio fallback: %s",
                     detail,
                 )
+                self._pid = None
                 self._stdio_fallback = True
                 self._started = True
                 return
@@ -392,6 +404,7 @@ exit 0
             self._started = False
             raise WorkerUnavailable(f"worker bad ping response: {response}")
         pid = _parse_startup_pid(startup)
+        self._pid = pid
         logger.info("jedi worker started pid=%s path=%s", pid, self._pid_path)
         self._started = True
 
@@ -505,6 +518,18 @@ exit 0
                 )
             except Exception:
                 pass
+
+    def worker_status(self) -> dict[str, Any]:
+        return {
+            "transport": "sandbox_stdio" if self._stdio_fallback else "sandbox_socket",
+            "pid": self._pid,
+            "pid_path": self._pid_path,
+            "socket_path": None if self._stdio_fallback else self._socket_path,
+            "log_path": self._log_path,
+            "remote_dir": self._remote_dir,
+            "started": self._started,
+            "stdio_fallback": self._stdio_fallback,
+        }
 
 
 def _socket_bind_unavailable(detail: str) -> bool:
