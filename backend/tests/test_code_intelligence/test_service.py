@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import asyncio
 import concurrent.futures
+import shlex
 import threading
 import time
 from types import SimpleNamespace
@@ -91,6 +93,57 @@ def test_scope_status_filters_recent_history_by_team_run_id(tmp_path) -> None:
         }
     ]
     assert packet["hotspots"] == [{"file_path": str(scoped_file), "edit_count": 1}]
+
+
+@pytest.mark.asyncio
+async def test_exec_process_operation_audits_workspace_mutation(tmp_path) -> None:
+    class LocalProcess:
+        async def exec(self, command: str, timeout: int | None = None):
+            proc = await asyncio.create_subprocess_shell(
+                command,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT,
+            )
+            try:
+                stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=timeout)
+            except TimeoutError:
+                proc.kill()
+                raise
+            return SimpleNamespace(
+                result=stdout.decode("utf-8"),
+                exit_code=proc.returncode,
+            )
+
+    sandbox = SimpleNamespace(process=LocalProcess())
+    svc = CodeIntelligenceService(
+        sandbox_id="sandbox-process-audit",
+        workspace_root=str(tmp_path),
+        sandbox=sandbox,
+    )
+    svc.symbol_index.refresh = MagicMock()  # type: ignore[method-assign]
+    svc.lsp_client.invalidate = MagicMock()  # type: ignore[method-assign]
+    file_path = tmp_path / "codeact_file.py"
+
+    await svc.exec_process_operation(
+        sandbox,
+        f"printf 'value = 1\\n' > {shlex.quote(str(file_path))}",
+        edit_type="codeact",
+        description="daytona_codeact python",
+        team_run_id="team-1",
+        agent_run_id="agent-1",
+        task_id="task-1",
+    )
+
+    edits = svc.arbiter.recent_edits(seconds=60)
+    assert len(edits) == 1
+    assert edits[0].file_path == str(file_path)
+    assert edits[0].edit_type == "codeact"
+    assert edits[0].team_run_id == "team-1"
+    assert edits[0].agent_run_id == "agent-1"
+    assert edits[0].task_id == "task-1"
+    assert edits[0].new_hash
+    svc.symbol_index.refresh.assert_called_once_with(str(file_path), "value = 1\n")
+    svc.lsp_client.invalidate.assert_called_once_with(str(file_path))
 
 
 def test_get_code_intelligence_recreates_service_when_workspace_root_changes() -> None:

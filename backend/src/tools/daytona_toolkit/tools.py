@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import logging
 import shlex
@@ -30,14 +31,54 @@ from tools.daytona_toolkit._daytona_utils import (
     record_coordination_warning,
 )
 from tools.core.ci_runtime import (
-    CiOperationChange,
-    commit_ci_operation,
+    exec_ci_process_operation,
     get_ci_service,
     occ_required_result,
 )
 
 logger = logging.getLogger(__name__)
 _GREP_MATCH_CAP = CODE_INTELLIGENCE_TUNING.grep_match_cap
+_WRITE_FILE_TIMEOUT = 120
+_WRITE_FILE_SCRIPT = r"""
+import base64
+import json
+import os
+import pathlib
+import sys
+import tempfile
+
+
+payload = json.loads(base64.b64decode(sys.argv[1]).decode("utf-8"))
+file_path = str(payload["file_path"])
+content = str(payload.get("content", ""))
+path = pathlib.Path(file_path)
+
+try:
+    parent = path.parent
+    parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=str(parent))
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(content)
+        os.replace(tmp, path)
+    finally:
+        try:
+            os.unlink(tmp)
+        except FileNotFoundError:
+            pass
+    print(
+        json.dumps(
+            {
+                "ok": True,
+                "file_path": file_path,
+                "bytes_written": len(content.encode("utf-8")),
+            }
+        )
+    )
+except Exception as exc:
+    print(json.dumps({"ok": False, "error": str(exc), "file_path": file_path}))
+    raise SystemExit(1)
+"""
 
 
 def _metadata_int(metadata: Any, key: str, default: int = 0) -> int:
@@ -197,6 +238,18 @@ def _build_write_file_result(
     return ToolResult(
         output=json.dumps(payload),
         metadata={"timings": dict(normalized_timings or {})},
+    )
+
+
+def _write_file_command(*, file_path: str, content: str) -> str:
+    payload = base64.b64encode(
+        json.dumps(
+            {"file_path": file_path, "content": content},
+            ensure_ascii=False,
+        ).encode("utf-8")
+    ).decode("ascii")
+    return _wrap_bash_command(
+        f"python3 -c {shlex.quote(_WRITE_FILE_SCRIPT)} {shlex.quote(payload)}"
     )
 
 
@@ -448,55 +501,41 @@ async def daytona_write_file(
             category="write_scope",
             message=contract_warning,
         )
-    svc = get_ci_service(context)
-    if svc is None or not hasattr(svc, "commit_operation_against_base"):
+    if get_ci_service(context) is None:
         return occ_required_result("daytona_write_file", file_path)
 
     content_bytes = content.encode("utf-8")
 
     async def _attempt(active_sandbox: Any) -> ToolResult:
-        base_content: str | None
-        try:
-            current, existed = await _read_text_file_via_exec(
-                active_sandbox, file_path, allow_missing=True,
-            )
-        except Exception as exc:
-            return ToolResult(
-                output=_path_error(exc, file_path) or f"Cannot read file: {exc}",
-                is_error=True,
-            )
-        base_content = current if existed else None
-
-        result = commit_ci_operation(
+        response = await exec_ci_process_operation(
             context,
-            [
-                CiOperationChange(
-                    file_path=file_path,
-                    base_content=base_content,
-                    final_content=content,
-                    base_existed=existed,
-                )
-            ],
-            edit_type="write",
+            active_sandbox,
+            _write_file_command(file_path=file_path, content=content),
+            timeout=_WRITE_FILE_TIMEOUT,
             description="daytona_write_file",
+            edit_type="write",
         )
-        if not result.success:
-            message = (
-                result.conflict_reason
-                or (result.files[0].message if result.files else "")
-                or "Write failed"
-            )
+        cleaned, exit_code = _extract_exit_code(
+            getattr(response, "result", "") or "",
+            fallback_exit_code=getattr(response, "exit_code", None),
+        )
+        try:
+            payload = json.loads(cleaned or "{}")
+        except json.JSONDecodeError:
             return ToolResult(
-                output=str(message),
+                output=cleaned or "Write command returned invalid JSON.",
                 is_error=True,
-                metadata={"conflict": bool(result.conflict_file)},
+            )
+        if exit_code not in (0, None) or not bool(payload.get("ok", False)):
+            return ToolResult(
+                output=str(payload.get("error") or cleaned or "Write failed"),
+                is_error=True,
             )
         return _build_write_file_result(
             context=context,
             file_path=file_path,
             bytes_written=len(content_bytes),
             warning=contract_warning,
-            timings=dict(result.timings),
         )
 
     try:

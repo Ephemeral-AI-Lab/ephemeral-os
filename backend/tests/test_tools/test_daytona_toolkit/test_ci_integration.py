@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -14,6 +14,7 @@ from tools.core.base import ToolExecutionContext
 from tools.core.ci_runtime import (
     CiOperationChange,
     commit_ci_operation,
+    exec_ci_process_operation,
     get_ci_service,
 )
 from tools.daytona_toolkit.ci_integration import destructive_shell_command_error
@@ -123,7 +124,7 @@ def test_commit_ci_operation_mirrors_team_edit():
                 )
             ],
             edit_type="codeact",
-            description="transaction commit",
+            description="operation commit",
         )
 
     assert result.success is True
@@ -135,7 +136,7 @@ def test_commit_ci_operation_mirrors_team_edit():
         edit_type="codeact",
         old_hash=hashlib.sha256(b"before\n").hexdigest()[:16],
         new_hash=hashlib.sha256(b"after\n").hexdigest()[:16],
-        description="transaction commit",
+        description="operation commit",
     )
 
 
@@ -155,6 +156,44 @@ def test_commit_ci_operation_raises_without_service():
             edit_type="write",
             description="test",
         )
+
+
+@pytest.mark.asyncio
+async def test_exec_ci_process_operation_delegates_audited_process_call():
+    sandbox = MagicMock()
+    svc = MagicMock()
+    svc.exec_process_operation = AsyncMock(return_value=SimpleNamespace(result="ok", exit_code=0))
+    ctx = _ctx(
+        {
+            "ci_service": svc,
+            "agent_name": "developer",
+            "team_run_id": "team-1",
+            "agent_run_id": "agent-1",
+            "work_item_id": "task-1",
+        }
+    )
+
+    result = await exec_ci_process_operation(
+        ctx,
+        sandbox,
+        "echo ok",
+        timeout=12,
+        description="daytona_codeact shell",
+        edit_type="codeact",
+    )
+
+    assert result.result == "ok"
+    svc.exec_process_operation.assert_awaited_once_with(
+        sandbox,
+        "echo ok",
+        timeout=12,
+        description="daytona_codeact shell",
+        edit_type="codeact",
+        agent_id="developer",
+        team_run_id="team-1",
+        agent_run_id="agent-1",
+        task_id="task-1",
+    )
 
 
 # ---------------------------------------------------------------------------

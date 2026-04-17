@@ -6,7 +6,8 @@ import asyncio
 import hashlib
 import json
 from pathlib import Path
-from unittest.mock import MagicMock
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from code_intelligence.types import (
     EditResult,
@@ -142,6 +143,56 @@ def test_rename_commits_atomically_via_operation_primitive():
     svc.commit_operation_against_base.assert_called_once()
     kwargs = svc.commit_operation_against_base.call_args.kwargs
     assert kwargs["edit_type"] == "rename"
+
+
+def test_sandbox_rename_commits_via_single_process_operation():
+    changes = [
+        _change("/ws/a.py", base="old_a", final="new_a"),
+        _change("/ws/b.py", base="old_b", final="new_b"),
+    ]
+    plan = _plan(changes)
+    svc = _make_svc(plan=plan)
+    svc.arbiter.record_edit.side_effect = [1, 2]
+    response = SimpleNamespace(
+        result=json.dumps(
+            {
+                "status": "committed",
+                "files": [
+                    {
+                        "file_path": "/ws/a.py",
+                        "old_hash": _hash("old_a"),
+                        "new_hash": _hash("new_a"),
+                    },
+                    {
+                        "file_path": "/ws/b.py",
+                        "old_hash": _hash("old_b"),
+                        "new_hash": _hash("new_b"),
+                    },
+                ],
+            }
+        ),
+        exit_code=0,
+    )
+    ctx = _ctx({"ci_service": svc, "daytona_sandbox": object()})
+
+    with patch(
+        "tools.ci_toolkit.rename_tool.exec_ci_process_operation",
+        new=AsyncMock(return_value=response),
+    ) as exec_op:
+        result = _run(
+            {"symbol": "foo", "new_name": "bar"},
+            ctx,
+        )
+
+    assert not result.is_error, result.output
+    data = json.loads(result.output)
+    assert data["status"] == "renamed"
+    svc.commit_operation_against_base.assert_not_called()
+    exec_op.assert_awaited_once()
+    command = exec_op.await_args.args[2]
+    assert "bash" in command
+    assert "python3 -c" in command
+    assert svc.arbiter.record_edit.call_count == 2
 
 
 # -- Dry run uses plan base, not re-read -----------------------------------

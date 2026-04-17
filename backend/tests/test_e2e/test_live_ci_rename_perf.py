@@ -972,10 +972,10 @@ def _run_occ_capture_checks(
             )
         payload = {
             "label": "occ.capture_write_edit_rename_codeact",
-            "occ_path": "prepared_write_for_write_and_edit; batch_occ_for_rename; codeact_transaction_commit",
+            "occ_path": "operation_occ_for_write_edit_rename; codeact_process_exec_audit",
             "write_occ_validated": "validate_token" in write_data.get("timings", {}),
             "edit_occ_validated": "validate_token" in edit_data.get("timings", {}).get("occ", {}),
-            "codeact_transactional": counts.get("codeact", 0) >= 1,
+            "codeact_audited": counts.get("codeact", 0) >= 1,
             "counts": dict(sorted(counts.items())),
             "paths_by_type": {key: sorted(value) for key, value in paths_by_type.items()},
             "arbiter_generation": occ_svc.arbiter.generation,
@@ -987,7 +987,7 @@ def _run_occ_capture_checks(
         assert {"write", "edit", "rename", "codeact"}.issubset(counts)
         assert payload["write_occ_validated"] is True
         assert payload["edit_occ_validated"] is True
-        assert payload["codeact_transactional"] is True
+        assert payload["codeact_audited"] is True
         assert occ_svc.arbiter.metrics.total_edits >= 4
         assert occ_svc.arbiter.metrics.tokens_issued >= 2
     finally:

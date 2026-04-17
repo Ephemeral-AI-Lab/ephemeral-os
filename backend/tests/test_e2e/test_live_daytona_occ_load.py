@@ -7,7 +7,7 @@ service so OCC behavior is exercised under mixed contention:
 2. 40 concurrent ``daytona_edit_file`` calls:
    - 25 disjoint same-file edits across a small set of files.
    - 15 overlapping same-line edits across 3 files.
-3. 10 concurrent coordinated ``daytona_codeact`` shell transactions on unique files.
+3. 10 concurrent coordinated ``daytona_codeact`` shell commands on unique files.
 
 The test verifies:
 - successful writes are persisted,
@@ -213,39 +213,12 @@ async def _invoke_tool(tool: Any, kwargs: dict[str, Any], ctx: ToolExecutionCont
 
 def _install_codeact_phase_probe(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[float]]:
     stats: dict[str, list[float]] = {
-        "open_transaction_s": [],
-        "commit_transaction_s": [],
-        "cleanup_transaction_s": [],
         "shell_exec_s": [],
         "python_wrapper_s": [],
     }
 
-    original_open = codeact_tool_module._open_transaction
-    original_commit = codeact_tool_module._commit_transaction
-    original_cleanup = codeact_tool_module.cleanup_codeact_transaction
     original_shell = codeact_tool_module._run_shell_with_recovery
     original_python = codeact_tool_module._execute_python_wrapper
-
-    async def _timed_open(*args, **kwargs):
-        started = time.perf_counter()
-        try:
-            return await original_open(*args, **kwargs)
-        finally:
-            stats["open_transaction_s"].append(round(time.perf_counter() - started, 6))
-
-    async def _timed_commit(*args, **kwargs):
-        started = time.perf_counter()
-        try:
-            return await original_commit(*args, **kwargs)
-        finally:
-            stats["commit_transaction_s"].append(round(time.perf_counter() - started, 6))
-
-    async def _timed_cleanup(*args, **kwargs):
-        started = time.perf_counter()
-        try:
-            return await original_cleanup(*args, **kwargs)
-        finally:
-            stats["cleanup_transaction_s"].append(round(time.perf_counter() - started, 6))
 
     async def _timed_shell(*args, **kwargs):
         started = time.perf_counter()
@@ -261,9 +234,6 @@ def _install_codeact_phase_probe(monkeypatch: pytest.MonkeyPatch) -> dict[str, l
         finally:
             stats["python_wrapper_s"].append(round(time.perf_counter() - started, 6))
 
-    monkeypatch.setattr(codeact_tool_module, "_open_transaction", _timed_open)
-    monkeypatch.setattr(codeact_tool_module, "_commit_transaction", _timed_commit)
-    monkeypatch.setattr(codeact_tool_module, "cleanup_codeact_transaction", _timed_cleanup)
     monkeypatch.setattr(codeact_tool_module, "_run_shell_with_recovery", _timed_shell)
     monkeypatch.setattr(codeact_tool_module, "_execute_python_wrapper", _timed_python)
     return stats
@@ -334,7 +304,7 @@ def test_live_occ_load_100_mixed_operations(live_load_env: LiveLoadEnv):
             '"""Overlap target."""\n\nSHARED = 0\n',
         )
 
-    # Seed CodeAct unique targets: 10 independent transactional writes.
+    # Seed CodeAct unique targets: 10 independent command writes.
     for idx in range(10):
         live_load_env.write_text(f"tx/unique_{idx}.txt", "base\n")
 
@@ -402,7 +372,7 @@ def test_live_occ_load_100_mixed_operations(live_load_env: LiveLoadEnv):
                 }
             )
 
-    # 10 coordinated CodeAct shell transactions on unique files.
+    # 10 coordinated CodeAct shell commands on unique files.
     for idx in range(10):
         rel_path = f"tx/unique_{idx}.txt"
         operations.append(
@@ -449,7 +419,6 @@ def test_live_occ_load_100_mixed_operations(live_load_env: LiveLoadEnv):
         for item in overlap_results
     )
     codeact_successes = sum(not item["is_error"] for item in codeact_results)
-    codeact_conflicts = sum(bool(item["metadata"].get("conflict")) for item in codeact_results)
 
     arbiter_status = svc.status()["arbiter"]
     scope_status = svc.scope_status([live_load_env.repo_root])
@@ -464,7 +433,6 @@ def test_live_occ_load_100_mixed_operations(live_load_env: LiveLoadEnv):
                 "overlap_successes": overlap_successes,
                 "overlap_conflicts": overlap_conflicts,
                 "codeact_successes": codeact_successes,
-                "codeact_conflicts": codeact_conflicts,
                 "arbiter": arbiter_status,
                 "hotspots": hotspots[:5],
             },
@@ -476,9 +444,8 @@ def test_live_occ_load_100_mixed_operations(live_load_env: LiveLoadEnv):
     # Writes should all succeed because they target unique files.
     assert write_successes == 50
 
-    # CodeAct targets unique files too; these should all commit cleanly.
+    # CodeAct targets unique files too; these should all run and audit cleanly.
     assert codeact_successes == 10
-    assert codeact_conflicts == 0
 
     # Disjoint edits should mostly land. Allow a small amount of live contention noise.
     assert disjoint_successes >= 22

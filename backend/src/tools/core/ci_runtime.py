@@ -1,9 +1,9 @@
 """Shared code-intelligence runtime helpers used across toolkits.
 
-All tool-level writes funnel through a single OCC verification entry
-point: :func:`commit_ci_operation`. Tools build one
-:class:`CiOperationChange` per file they mean to mutate, and the
-helper forwards the set to :meth:`CodeIntelligenceService.commit_operation_against_base`.
+Explicit file mutation tools use :func:`commit_ci_operation` to commit one
+logical operation against captured file bases. Process-backed tools use
+:func:`exec_ci_process_operation` so the CI service can audit the command as
+one operation around the underlying ``process.exec`` call.
 """
 
 from __future__ import annotations
@@ -108,13 +108,11 @@ def commit_ci_operation(
     description: str,
     agent_id: str = "",
 ) -> OperationResult:
-    """Unified OCC verification entry point for every tool-level write.
+    """Unified OCC verification entry point for explicit file operations.
 
-    Each public tool call — `daytona_edit_file`, `daytona_write_file`,
-    `daytona_codeact`, `ci_rename_symbol` — is a single OCC operation. The caller
-    produces one :class:`CiOperationChange` per file it means to mutate
-    (single-file tools pass a one-element list); the set commits atomically
-    against the supplied base snapshots via
+    The caller produces one :class:`CiOperationChange` per file it means to
+    mutate (single-file tools pass a one-element list); the set commits
+    atomically against the supplied base snapshots via
     :meth:`CodeIntelligenceService.commit_operation_against_base`.
     """
     svc = get_ci_service(context)
@@ -148,23 +146,34 @@ async def exec_ci_process_operation(
     *,
     timeout: int | None = None,
     description: str,
+    edit_type: str = "process",
 ) -> Any:
     """Run one process command through the OCC-aware execution entry point.
 
-    CodeAct does not classify repo changes itself. It delegates command
-    execution here so lower layers can audit the full process operation.
+    CodeAct delegates command execution here; lower layers run the command
+    and audit the complete process operation.
     """
     svc = get_ci_service(context)
     if svc is None:
         raise RuntimeError("Code intelligence/OCC is unavailable")
 
-    audited_exec = getattr(svc, "exec_process_operation", None)
+    audited_exec_descriptor = inspect.getattr_static(svc, "exec_process_operation", None)
+    audited_exec = (
+        getattr(svc, "exec_process_operation", None)
+        if audited_exec_descriptor is not None
+        else None
+    )
     if callable(audited_exec):
         response = audited_exec(
             sandbox,
             command,
             timeout=timeout,
             description=description,
+            edit_type=edit_type,
+            agent_id=_resolved_agent_id(context),
+            team_run_id=str(context.metadata.get("team_run_id") or ""),
+            agent_run_id=str(context.metadata.get("agent_run_id") or ""),
+            task_id=str(context.metadata.get("work_item_id") or ""),
         )
     else:
         process = getattr(sandbox, "process", None)
@@ -219,6 +228,7 @@ def finalize_ci_operation_result(
     edit_type: str,
     description: str,
     ci_arbiter: Any | None,
+    hashes_by_path: dict[str, tuple[str, str]] | None = None,
 ) -> None:
     if bool(getattr(result, "success", False)):
         _, agent_run_id, task_id = _team_edit_ids(context)
@@ -232,18 +242,27 @@ def finalize_ci_operation_result(
         for change in changes:
             if change.file_path not in successful_files:
                 continue
+            old_hash, new_hash = (
+                hashes_by_path.get(change.file_path, ("", ""))
+                if hashes_by_path is not None
+                else ("", "")
+            )
+            if not old_hash:
+                old_hash = _content_hash(change.base_content) if change.base_existed else ""
+            if not new_hash:
+                new_hash = (
+                    _content_hash(change.final_content)
+                    if change.final_content is not None
+                    else ""
+                )
             _propagate_team_edit(
                 context,
                 file_path=change.file_path,
                 agent_run_id=agent_run_id,
                 task_id=task_id,
                 edit_type=edit_type,
-                old_hash=_content_hash(change.base_content) if change.base_existed else "",
-                new_hash=(
-                    _content_hash(change.final_content)
-                    if change.final_content is not None
-                    else ""
-                ),
+                old_hash=old_hash,
+                new_hash=new_hash,
                 description=description,
                 ci_arbiter=ci_arbiter,
             )

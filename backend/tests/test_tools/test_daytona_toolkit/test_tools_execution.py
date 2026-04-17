@@ -8,7 +8,6 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from code_intelligence.types import EditResult, OperationResult
 from tools.core.base import ToolExecutionContext
 from tools.daytona_toolkit.tools import (
     daytona_read_file,
@@ -26,7 +25,7 @@ def _ctx(metadata=None) -> ToolExecutionContext:
 
 def _sb(*, exec_result=None, download=None, list_result=None, find_result=None):
     sb = MagicMock()
-    sb.process.exec = AsyncMock(return_value=exec_result or MagicMock(result="", exit_code=0))
+    sb.process.exec = AsyncMock(return_value=exec_result or _write_exec_result())
     sb.fs.download_file = AsyncMock(return_value=download if download is not None else b"")
     sb.fs.upload_file = AsyncMock()
     sb.fs.list_files = AsyncMock(return_value=list_result or [])
@@ -34,24 +33,24 @@ def _sb(*, exec_result=None, download=None, list_result=None, find_result=None):
     return sb
 
 
-def _ci_service_for_write(*, file_path: str = "/ws/new.txt"):
-    svc = MagicMock()
-    svc.commit_operation_against_base.return_value = OperationResult(
-        success=True,
-        status="committed",
-        files=(EditResult(success=True, file_path=file_path, message="ok"),),
+def _write_exec_result(*, base_existed: bool = False):
+    return MagicMock(
+        result=json.dumps(
+            {
+                "ok": True,
+                "base_existed": base_existed,
+                "old_hash": "",
+                "new_hash": "newhash",
+            }
+        ),
+        exit_code=0,
     )
-    return svc
 
 
-def _ci_service_mock(*, file_path: str = "/ws/new.txt", success: bool = True):
-    from code_intelligence.types import EditResult, OperationResult
+def _ci_service_mock(*, file_path: str = "/ws/new.txt"):
     svc = MagicMock()
-    svc.commit_operation_against_base.return_value = OperationResult(
-        success=success,
-        status="committed" if success else "failed",
-        files=(EditResult(success=success, file_path=file_path, message="ok"),),
-    )
+    svc.file_path = file_path
+    svc.arbiter.record_edit.return_value = 1
     return svc
 
 
@@ -198,7 +197,7 @@ async def test_read_file_allows_production_reads_after_repro():
 
 async def test_write_file_requires_ci_service():
     sb = _sb()
-    sb.process.exec = AsyncMock(return_value=MagicMock(result="", exit_code=0))
+    sb.process.exec = AsyncMock(return_value=_write_exec_result())
     ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/ws"})
     result = await daytona_write_file.execute(
         daytona_write_file.input_model(file_path="/ws/new.txt", content="hello"), ctx
@@ -212,7 +211,7 @@ async def test_write_file_requires_ci_service():
 
 async def test_write_file_syncs_ci_state():
     sb = _sb()
-    sb.process.exec = AsyncMock(return_value=MagicMock(result="", exit_code=0))
+    sb.process.exec = AsyncMock(return_value=_write_exec_result())
     svc = _ci_service_mock(file_path="/ws/new.txt")
     ctx = _ctx({
         "daytona_sandbox": sb,
@@ -225,28 +224,27 @@ async def test_write_file_syncs_ci_state():
     )
 
     assert not result.is_error
-    svc.commit_operation_against_base.assert_called_once()
+    svc.arbiter.record_edit.assert_called_once()
     assert json.loads(result.output)["ci_sync"] is True
 
 
 async def test_write_file_resolves_relative_path():
     sb = _sb()
-    sb.process.exec = AsyncMock(return_value=MagicMock(result="", exit_code=0))
+    sb.process.exec = AsyncMock(return_value=_write_exec_result())
     svc = _ci_service_mock(file_path="/workspace/subdir/file.txt")
     ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/workspace", "ci_service": svc})
     result = await daytona_write_file.execute(
         daytona_write_file.input_model(file_path="subdir/file.txt", content="data"), ctx
     )
     assert not result.is_error
-    svc.commit_operation_against_base.assert_called_once()
-    change = svc.commit_operation_against_base.call_args.args[0][0]
-    assert change.file_path == "/workspace/subdir/file.txt"
+    svc.arbiter.record_edit.assert_called_once()
+    assert svc.arbiter.record_edit.call_args.kwargs["file_path"] == "/workspace/subdir/file.txt"
 
 
 async def test_write_file_warns_write_outside_write_scope():
     """Write-scope is advisory — out-of-scope writes succeed with a warning."""
     sb = _sb()
-    sb.process.exec = AsyncMock(return_value=MagicMock(result="", exit_code=0))
+    sb.process.exec = AsyncMock(return_value=_write_exec_result())
     svc = _ci_service_mock(file_path="/testbed/dask/_compatibility.py")
     ctx = _ctx(
         {
@@ -274,7 +272,7 @@ async def test_write_file_warns_write_outside_write_scope():
 
 async def test_write_file_allows_write_inside_write_scope():
     sb = _sb()
-    sb.process.exec = AsyncMock(return_value=MagicMock(result="", exit_code=0))
+    sb.process.exec = AsyncMock(return_value=_write_exec_result())
     svc = _ci_service_mock(file_path="/testbed/dask/config.py")
     ctx = _ctx(
         {
@@ -295,7 +293,7 @@ async def test_write_file_allows_write_inside_write_scope():
     )
 
     assert not result.is_error
-    svc.commit_operation_against_base.assert_called_once()
+    svc.arbiter.record_edit.assert_called_once()
 
 
 async def test_write_file_rejects_test_suite_write():
@@ -328,7 +326,7 @@ async def test_write_file_rejects_test_suite_write():
 async def test_write_file_warns_non_verify_surface_write_in_warn_mode():
     """Write-scope is advisory — non-verify-surface writes also succeed with a warning."""
     sb = _sb()
-    sb.process.exec = AsyncMock(return_value=MagicMock(result="", exit_code=0))
+    sb.process.exec = AsyncMock(return_value=_write_exec_result())
     svc = _ci_service_mock(file_path="/testbed/dask/_compatibility.py")
     ctx = _ctx(
         {
@@ -382,7 +380,7 @@ async def test_write_file_allows_repo_write_from_validator():
 
 async def test_write_file_no_raw_write_after_ci_unavailable():
     sb = _sb()
-    sb.process.exec = AsyncMock(return_value=MagicMock(result="", exit_code=0))
+    sb.process.exec = AsyncMock(return_value=_write_exec_result())
     sb.fs.upload_file = AsyncMock(side_effect=RuntimeError("disk full"))
     ctx = _ctx(
         {

@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
+import base64
+import difflib
+import hashlib
 import json
+import re
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 from tools.core.base import ToolExecutionContext
+from tools.daytona_toolkit import edit_tool as edit_tool_module
 from tools.daytona_toolkit.edit_tool import (
     _content_hash,
     _scope_overlap_warning,
@@ -28,6 +33,63 @@ def _make_sandbox(*, download_content: str = "original content"):
     sb = MagicMock()
     sb.fs.download_file = AsyncMock(return_value=download_content.encode("utf-8"))
     sb.fs.upload_file = AsyncMock()
+
+    async def exec_side_effect(command: str, timeout=None):
+        payload_match = re.search(r"DAYTONA_EDIT_PAYLOAD=([^ ]+)", command)
+        file_match = re.search(r"DAYTONA_EDIT_FILE=([^ ]+)", command)
+        if payload_match is None or file_match is None:
+            return MagicMock(result="", exit_code=0)
+        file_path = file_match.group(1).strip("'")
+        try:
+            raw = await sb.fs.download_file(file_path)
+            current = raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
+        except FileNotFoundError:
+            return MagicMock(
+                result=json.dumps(
+                    {"ok": False, "error": f"Path does not exist: {file_path}"}
+                ),
+                exit_code=1,
+            )
+        except Exception as exc:
+            return MagicMock(
+                result=json.dumps({"ok": False, "error": f"Cannot read file: {exc}"}),
+                exit_code=1,
+            )
+
+        edits = json.loads(base64.b64decode(payload_match.group(1)).decode("utf-8"))
+        result = current
+        errors: list[str] = []
+        for index, edit in enumerate(edits, start=1):
+            old_text = str(edit.get("old_text", ""))
+            new_text = str(edit.get("new_text", ""))
+            if old_text not in result:
+                errors.append(f"Edit {index}: search text not found")
+                continue
+            result = result.replace(old_text, new_text, 1)
+
+        if errors:
+            return MagicMock(result=json.dumps({"ok": False, "errors": errors}), exit_code=2)
+
+        payload = {
+            "ok": True,
+            "content": current,
+            "final_content": result,
+            "expected_hash": hashlib.sha256(current.encode("utf-8")).hexdigest()[:16],
+            "warnings": [],
+        }
+        if "DAYTONA_EDIT_DRY_RUN=1" in command:
+            payload["diff"] = "".join(
+                difflib.unified_diff(
+                    current.splitlines(keepends=True),
+                    result.splitlines(keepends=True),
+                    fromfile=f"a/{file_path}",
+                    tofile=f"b/{file_path}",
+                    lineterm="",
+                )
+            )
+        return MagicMock(result=json.dumps(payload), exit_code=0)
+
+    sb.process.exec = AsyncMock(side_effect=exec_side_effect)
     return sb
 
 
@@ -464,6 +526,49 @@ async def test_edit_multi_replace_occ_success():
     )
     assert not result.is_error
     assert svc.commit_operation_against_base.call_args.args[0][0].final_content == "ALPHA\nbeta\nGAMMA\n"
+
+
+async def test_edit_batch_runs_through_exec_ci_process_operation(monkeypatch):
+    sb = _make_sandbox(download_content="alpha\nbeta\ngamma\n")
+    svc = _ci_service_for_content("alpha\nbeta\ngamma\n")
+    ctx = _ctx({"daytona_sandbox": sb, "ci_service": svc})
+    calls: list[tuple[str, str]] = []
+
+    async def fake_exec_ci_process_operation(
+        context,
+        sandbox,
+        command,
+        *,
+        timeout=None,
+        description,
+        edit_type="process",
+        audit=True,
+    ):
+        del edit_type, audit
+        calls.append((command, description))
+        return await sandbox.process.exec(command, timeout=timeout)
+
+    monkeypatch.setattr(
+        edit_tool_module,
+        "exec_ci_process_operation",
+        fake_exec_ci_process_operation,
+    )
+
+    result = await daytona_edit_file.execute(
+        daytona_edit_file.input_model(
+            file_path="/file.py",
+            edits=[
+                {"strategy": "search_replace", "search": "alpha", "replace": "ALPHA"},
+                {"strategy": "search_replace", "search": "gamma", "replace": "GAMMA"},
+            ],
+        ),
+        ctx,
+    )
+
+    assert not result.is_error
+    assert calls
+    assert "DAYTONA_EDIT_PAYLOAD" in calls[0][0]
+    assert calls[0][1] == "daytona_edit_file"
 
 
 async def test_edit_rejects_mixed_legacy_and_batch_inputs():

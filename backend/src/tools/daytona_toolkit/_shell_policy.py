@@ -45,7 +45,7 @@ def _normalize_team_shell_command(
                 normalized = match.group("rest").lstrip()
                 warnings.append(
                     "Removed leading `cd <repo-root>` so the command stays inside "
-                    "the CodeAct transaction workspace."
+                    "the CodeAct repo workspace."
                 )
 
     for pattern, label in _STDERR_CAPTURE_PATTERNS:

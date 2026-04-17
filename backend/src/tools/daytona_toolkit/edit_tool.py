@@ -2,20 +2,20 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import logging
+import base64
+import shlex
 import time
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 from code_intelligence.editing.change_labels import change_actor_label
-from code_intelligence.editing.patcher import Patcher, SearchReplaceEdit
+from code_intelligence.editing.patcher import SearchReplaceEdit
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.ci_runtime import (
-    CiOperationChange,
-    commit_ci_operation,
+    exec_ci_process_operation,
     get_ci_service,
     occ_required_result,
 )
@@ -30,13 +30,92 @@ from tools.daytona_toolkit.tools import (
     record_coordination_warning,
 )
 from tools.daytona_toolkit._daytona_utils import (
-    _read_text_file_via_exec,
+    _extract_exit_code,
+    _wrap_bash_command,
 )
 from tools.core.decorator import tool
 
 logger = logging.getLogger(__name__)
 
-_OUTPUT_MAX_CHARS = 8000
+_EDIT_EXEC_TIMEOUT = 120
+
+_EDIT_APPLY_SCRIPT = r"""
+import base64
+import json
+import os
+import pathlib
+import sys
+import tempfile
+
+MAX_EDITS_PER_BATCH = 100
+
+def emit(payload, code=0):
+    print(json.dumps(payload))
+    raise SystemExit(code)
+
+file_path = os.environ["DAYTONA_EDIT_FILE"]
+edits = json.loads(base64.b64decode(os.environ["DAYTONA_EDIT_PAYLOAD"]).decode("utf-8"))
+dry_run = os.environ.get("DAYTONA_EDIT_DRY_RUN") == "1"
+path = pathlib.Path(file_path)
+
+try:
+    current = path.read_text(encoding="utf-8")
+except FileNotFoundError:
+    emit({"ok": False, "error": f"Path does not exist: {file_path}"}, 1)
+except Exception as exc:
+    emit({"ok": False, "error": f"Cannot read file: {exc}"}, 1)
+
+if len(edits) > MAX_EDITS_PER_BATCH:
+    emit(
+        {
+            "ok": False,
+            "errors": [f"Too many edits ({len(edits)} > {MAX_EDITS_PER_BATCH})"],
+        },
+        2,
+    )
+
+result = current
+applied = 0
+errors = []
+warnings = []
+for index, edit in enumerate(edits, start=1):
+    old_text = str(edit.get("old_text", ""))
+    new_text = str(edit.get("new_text", ""))
+    if old_text not in result:
+        errors.append(f"Edit {index}: search text not found")
+        continue
+    result = result.replace(old_text, new_text, 1)
+    applied += 1
+
+if errors or applied == 0:
+    emit({"ok": False, "errors": errors or ["Edit failed"]}, 2)
+
+payload = {
+    "ok": True,
+    "file_path": file_path,
+    "applied_edits": applied,
+    "warnings": warnings,
+}
+if dry_run:
+    payload["status"] = "dry_run"
+    payload["would_edit"] = True
+    emit(payload)
+
+parent = path.parent
+parent.mkdir(parents=True, exist_ok=True)
+fd, tmp = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=str(parent))
+try:
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        handle.write(result)
+    os.replace(tmp, path)
+finally:
+    try:
+        os.unlink(tmp)
+    except FileNotFoundError:
+        pass
+payload["status"] = "edited"
+emit(payload)
+"""
 
 
 class DaytonaEditFileInput(BaseModel):
@@ -60,34 +139,97 @@ class DaytonaEditFileInput(BaseModel):
         default="",
         description="Optional human-readable description of the edit.",
     )
-    dry_run: bool = Field(
-        default=False,
-        description="Preview the edit and return a unified diff without applying changes.",
-    )
+    dry_run: bool = Field(default=False, description="Validate replacements without writing.")
 
 
 class DaytonaEditFileOutput(BaseModel):
     cwd: str = Field(..., description="Current sandbox working directory.")
     file_path: str = Field(..., description="Resolved file path that was edited.")
     status: str = Field(..., description="Edit result such as edited or dry_run.")
-    occ: bool = Field(..., description="Whether optimistic concurrency control was used.")
     warnings: list[str] = Field(default_factory=list, description="Non-fatal edit warnings.")
-    expected_hash: str | None = Field(
-        default=None,
-        description="Expected pre-edit content hash when OCC was used.",
-    )
     timings: dict[str, Any] | None = Field(
         default=None,
         description="Optional edit timing metadata.",
     )
-    diff: str | None = Field(
-        default=None,
-        description="Unified diff preview for dry-run edits.",
+    applied_edits: int = Field(
+        default=0,
+        description="Number of replacements applied or validated.",
     )
 
 
-def _content_hash(content: str) -> str:
-    return hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
+def _build_edit_exec_command(
+    *,
+    file_path: str,
+    edits: list[SearchReplaceEdit],
+    dry_run: bool,
+) -> str:
+    payload = base64.b64encode(
+        json.dumps(
+            [
+                {"old_text": edit.old_text, "new_text": edit.new_text}
+                for edit in edits
+            ],
+            ensure_ascii=False,
+        ).encode("utf-8")
+    ).decode("ascii")
+    command = (
+        f"DAYTONA_EDIT_FILE={shlex.quote(file_path)} "
+        f"DAYTONA_EDIT_PAYLOAD={shlex.quote(payload)} "
+        f"DAYTONA_EDIT_DRY_RUN={'1' if dry_run else '0'} "
+        f"python3 -c {shlex.quote(_EDIT_APPLY_SCRIPT)}"
+    )
+    return _wrap_bash_command(command)
+
+
+async def _run_edit_exec_command(
+    *,
+    context: ToolExecutionContext,
+    sandbox: Any,
+    command: str,
+) -> tuple[dict[str, Any] | None, Any, ToolResult | None]:
+    async def _run(active_sandbox: Any) -> Any:
+        return await exec_ci_process_operation(
+            context,
+            active_sandbox,
+            command,
+            timeout=_EDIT_EXEC_TIMEOUT,
+            description="daytona_edit_file",
+            edit_type="edit",
+        )
+
+    try:
+        response = await _run(sandbox)
+    except Exception as exc:
+        try:
+            sandbox = await _recover_sandbox(context, exc)
+            response = await _run(sandbox)
+        except Exception as recovery_exc:
+            return None, sandbox, ToolResult(
+                output=_path_error(recovery_exc, "") or f"Cannot execute edit: {recovery_exc}",
+                is_error=True,
+            )
+
+    stdout = getattr(response, "result", "") or ""
+    cleaned, exit_code = _extract_exit_code(
+        stdout,
+        fallback_exit_code=getattr(response, "exit_code", None),
+    )
+    try:
+        payload = json.loads(cleaned or "{}")
+    except json.JSONDecodeError:
+        return None, sandbox, ToolResult(
+            output=cleaned or "Edit command returned invalid JSON.",
+            is_error=True,
+        )
+    if exit_code not in (0, None) or not bool(payload.get("ok", False)):
+        errors = payload.get("errors")
+        message = (
+            "; ".join(str(item) for item in errors)
+            if isinstance(errors, list)
+            else str(payload.get("error") or cleaned or "Edit failed")
+        )
+        return payload, sandbox, ToolResult(output=message, is_error=True)
+    return payload, sandbox, None
 
 
 def _edit_success_result(
@@ -96,25 +238,22 @@ def _edit_success_result(
     file_path: str,
     warnings: list[str],
     patch_warnings: list[str],
-    occ: bool,
-    expected_hash: str = "",
     timings: dict[str, Any] | None = None,
+    applied_edits: int = 0,
 ) -> ToolResult:
     """Build a successful-edit ToolResult with consistent JSON output."""
     payload: dict[str, Any] = {
         "cwd": _get_cwd(context) or "",
         "file_path": file_path,
         "status": "edited",
-        "occ": occ,
         "warnings": warnings + patch_warnings,
+        "applied_edits": applied_edits,
     }
-    if occ and expected_hash:
-        payload["expected_hash"] = expected_hash
     if timings:
         payload["timings"] = timings
     return ToolResult(
         output=json.dumps(payload),
-        metadata={"file_path": file_path, "occ": occ, "timings": dict(timings or {})},
+        metadata={"file_path": file_path, "timings": dict(timings or {})},
     )
 
 
@@ -209,7 +348,6 @@ async def daytona_edit_file(
             message=contract_warning,
         )
 
-    patcher = Patcher()
     normalized_edits, edit_error, legacy_not_found = _normalize_edits(
         old_text=old_text,
         new_text=new_text,
@@ -218,117 +356,59 @@ async def daytona_edit_file(
     if edit_error is not None:
         return ToolResult(output=edit_error, is_error=True)
 
-    svc = get_ci_service(context)
-    ci_supported = svc is not None and hasattr(svc, "commit_operation_against_base")
-    if not ci_supported and not dry_run:
+    if get_ci_service(context) is None:
         return occ_required_result("daytona_edit_file", file_path)
 
-    read_started = time.perf_counter()
-    try:
-        current, _ = await _read_text_file_via_exec(sandbox, file_path)
-    except Exception as exc:
-        try:
-            sandbox = await _recover_sandbox(context, exc)
-            current, _ = await _read_text_file_via_exec(sandbox, file_path)
-        except Exception as recovery_exc:
+    exec_started = time.perf_counter()
+    exec_payload, sandbox, exec_error = await _run_edit_exec_command(
+        context=context,
+        sandbox=sandbox,
+        command=_build_edit_exec_command(
+            file_path=file_path,
+            edits=normalized_edits,
+            dry_run=dry_run,
+        ),
+    )
+    tool_timings["exec_apply"] = round(time.perf_counter() - exec_started, 6)
+    if exec_error is not None:
+        if (
+            legacy_not_found
+            and exec_payload is not None
+            and exec_payload.get("errors") == ["Edit 1: search text not found"]
+        ):
             return ToolResult(
-                output=_path_error(recovery_exc, file_path)
-                or f"Cannot read file: {recovery_exc}",
+                output=f"Search text not found in {file_path}",
                 is_error=True,
             )
-    tool_timings["read"] = round(time.perf_counter() - read_started, 6)
-    current_hash = _content_hash(current)
+        return exec_error
+    assert exec_payload is not None
 
-    patch_started = time.perf_counter()
-    patch_result = patcher.apply_edits(current, normalized_edits)
-    tool_timings["patch_apply"] = round(time.perf_counter() - patch_started, 6)
-    if not patch_result.success:
-        return ToolResult(
-            output=(
-                f"Search text not found in {file_path}"
-                if legacy_not_found and patch_result.errors == ["Edit 1: search text not found"]
-                else "; ".join(patch_result.errors) or f"Edit failed for {file_path}"
-            ),
-            is_error=True,
-        )
-
-    new_content = patch_result.content
+    patch_warnings = [str(item) for item in (exec_payload.get("warnings") or [])]
+    applied_edits = int(exec_payload.get("applied_edits") or 0)
 
     if dry_run:
-        import difflib
-
-        diff = difflib.unified_diff(
-            current.splitlines(keepends=True),
-            new_content.splitlines(keepends=True),
-            fromfile=f"a/{file_path}",
-            tofile=f"b/{file_path}",
-            lineterm="",
-        )
-        diff_text = "".join(diff)
-        if len(diff_text) > _OUTPUT_MAX_CHARS:
-            diff_text = diff_text[:_OUTPUT_MAX_CHARS] + "\n... (truncated)"
         output = json.dumps(
             {
                 "cwd": _get_cwd(context) or "",
                 "file_path": file_path,
                 "status": "dry_run",
-                "occ": False,
-                "diff": diff_text,
-                "warnings": warnings + list(patch_result.warnings),
+                "warnings": warnings + patch_warnings,
+                "applied_edits": applied_edits,
             }
         )
         return ToolResult(output=output, metadata={"dry_run": True})
 
-    commit_started = time.perf_counter()
-    result = commit_ci_operation(
-        context,
-        [
-            CiOperationChange(
-                file_path=file_path,
-                base_content=current,
-                final_content=new_content,
-                base_existed=True,
-            )
-        ],
-        edit_type="edit",
-        description=description,
-    )
-    tool_timings["commit"] = round(time.perf_counter() - commit_started, 6)
-
-    if result.success:
-        scope_warning = _scope_overlap_warning(context, file_path)
-        if scope_warning:
-            warnings.append(scope_warning)
-        tool_timings["tool_total"] = round(time.perf_counter() - tool_started, 6)
-        timings = {
-            "tool": tool_timings,
-            "occ": dict(result.timings),
-        }
-        return _edit_success_result(
-            context=context,
-            file_path=file_path,
-            warnings=warnings,
-            patch_warnings=list(patch_result.warnings),
-            occ=True,
-            expected_hash=current_hash,
-            timings=timings,
-        )
-    message = (
-        result.conflict_reason
-        or (result.files[0].message if result.files else "")
-        or "Edit failed"
-    )
+    scope_warning = _scope_overlap_warning(context, file_path)
+    if scope_warning:
+        warnings.append(scope_warning)
     tool_timings["tool_total"] = round(time.perf_counter() - tool_started, 6)
-    return ToolResult(
-        output=str(message),
-        is_error=True,
-        metadata={
-            "conflict": bool(result.conflict_file),
-            "timings": {
-                "tool": tool_timings,
-                "occ": dict(result.timings),
-            },
-        },
+    return _edit_success_result(
+        context=context,
+        file_path=file_path,
+        warnings=warnings,
+        patch_warnings=patch_warnings,
+        timings={"tool": tool_timings},
+        applied_edits=applied_edits,
     )
 
 

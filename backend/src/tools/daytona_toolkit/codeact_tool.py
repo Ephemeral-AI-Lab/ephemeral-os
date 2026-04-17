@@ -138,7 +138,7 @@ class DaytonaCodeActShellOutput(BaseModel):
 class DaytonaCodeActOutput(BaseModel):
     cwd: str = Field(..., description="Current sandbox working directory.")
     status: str = Field(..., description="Execution status: ok or error.")
-    files_written: int = Field(..., description="Number of files committed or written.")
+    files_written: int = Field(..., description="Number of Python helper write calls observed.")
     shells_run: int = Field(..., description="Number of shell commands executed.")
     shell_summaries: list[str] = Field(
         default_factory=list,
@@ -149,8 +149,6 @@ class DaytonaCodeActOutput(BaseModel):
         description="Captured output for the first shell commands.",
     )
     script_stdout: str = Field(..., description="Python wrapper stdout before the manifest line.")
-    write_errors: list[str] = Field(default_factory=list, description="Write errors.")
-    write_conflicts: list[str] = Field(default_factory=list, description="Write conflicts.")
     warnings: list[str] = Field(default_factory=list, description="Non-fatal warnings.")
     error: str = Field(default="", description="Error detail when status is error.")
 
@@ -427,6 +425,7 @@ async def _exec_shell_command(
         _wrap_bash_command(wrapped_command),
         timeout=timeout,
         description="daytona_codeact shell",
+        edit_type="codeact",
     )
     stdout = getattr(response, "result", "") or ""
     fallback_exit_code = getattr(response, "exit_code", None)
@@ -484,8 +483,6 @@ def _build_tool_output(
     files_written: int,
     shells: list[dict[str, object]],
     script_stdout: str,
-    write_errors: list[str],
-    write_conflicts: list[str],
     warnings: list[str],
     error: str = "",
 ) -> ToolResult:
@@ -504,12 +501,7 @@ def _build_tool_output(
             }
         )
 
-    # Coerce status to "error" when any write failure occurred. Callers can
-    # pass "ok" eagerly; this keeps the emitted status/is_error/metadata
-    # consistent regardless of caller discipline.
-    if status == "ok" and (write_errors or write_conflicts):
-        status = "error"
-    is_error = status == "error" or bool(write_errors) or bool(write_conflicts)
+    is_error = status == "error"
 
     return ToolResult(
         output=json.dumps(
@@ -521,8 +513,6 @@ def _build_tool_output(
                 "shell_summaries": shell_summaries,
                 "shell_outputs": shell_outputs,
                 "script_stdout": script_stdout,
-                "write_errors": write_errors,
-                "write_conflicts": write_conflicts,
                 "warnings": warnings,
                 "error": error[:500] if error else "",
             }
@@ -532,7 +522,6 @@ def _build_tool_output(
             "status": status,
             "files_written": files_written,
             "shells_run": len(shells),
-            "conflict": bool(write_conflicts),
         },
     )
 
@@ -584,12 +573,26 @@ async def _execute_python_wrapper(
             )
 
     try:
-        response = await sandbox.process.exec(exec_command, timeout=_CODEACT_DEFAULT_TIMEOUT)
+        response = await exec_ci_process_operation(
+            context,
+            sandbox,
+            exec_command,
+            timeout=_CODEACT_DEFAULT_TIMEOUT,
+            description="daytona_codeact python",
+            edit_type="codeact",
+        )
         return getattr(response, "result", "") or "", sandbox, None
     except Exception as exc:
         try:
             sandbox = await _recover_sandbox(context, exc)
-            response = await sandbox.process.exec(exec_command, timeout=_CODEACT_DEFAULT_TIMEOUT)
+            response = await exec_ci_process_operation(
+                context,
+                sandbox,
+                exec_command,
+                timeout=_CODEACT_DEFAULT_TIMEOUT,
+                description="daytona_codeact python",
+                edit_type="codeact",
+            )
             return getattr(response, "result", "") or "", sandbox, None
         except Exception as recovery_exc:
             return None, sandbox, ToolResult(
@@ -612,41 +615,6 @@ def _ci_required_result() -> ToolResult:
 def _shell_result_error_detail(shell_result: dict[str, object]) -> str:
     return str(shell_result.get("stderr", "") or shell_result.get("stdout", "") or "")
 
-
-async def _open_transaction(
-    context: ToolExecutionContext,
-    sandbox: object,
-) -> tuple[object | None, object, ToolResult | None]:
-    repo_root, sandbox, root_error = await _resolve_repo_root(context, sandbox)
-    if root_error is not None:
-        return None, sandbox, root_error
-    assert repo_root is not None
-    try:
-        return await create_codeact_transaction(sandbox, repo_root), sandbox, None
-    except Exception as exc:
-        return None, sandbox, ToolResult(
-            output=f"Failed to create codeact transaction: {exc}",
-            is_error=True,
-        )
-
-
-async def _commit_transaction(
-    context: ToolExecutionContext,
-    sandbox: object,
-    tx: object | None,
-) -> tuple[int, list[str], list[str], list[str]]:
-    if tx is None:
-        return 0, [], [], []
-    changes = await collect_transaction_changes(sandbox, tx)
-    report = await commit_transaction_changes(context, tx, changes)
-    return (
-        len(report.committed),
-        [result.message or result.path for result in report.errors],
-        [str(tx.repo_root + "/" + result.path) for result in report.conflicts],
-        list(report.warnings),
-    )
-
-
 @tool(
     name="daytona_codeact",
     description=(
@@ -654,8 +622,8 @@ async def _commit_transaction(
         "Use `command` for tests, builds, and verification; use `code` for multi-step "
         "Python with read()/write()/shell() helpers. stdout and stderr are already "
         "captured; do not append shell capture plumbing such as `2>&1` or `2>/dev/null`. "
-        "Coordinated team commands already run from the repo root transaction checkout, "
-        "so do not prefix them with `cd /testbed &&` or another repo-root cd."
+        "Coordinated team commands already run from the repo root, so do not "
+        "prefix them with `cd /testbed &&` or another repo-root cd."
     ),
     short_description="Run shell commands or Python in the sandbox.",
     input_model=DaytonaCodeActInput,
@@ -719,8 +687,6 @@ async def daytona_codeact(
             files_written=0,
             shells=[shell_result],
             script_stdout="",
-            write_errors=[],
-            write_conflicts=[],
             warnings=list(normalization_warnings),
             error=_shell_result_error_detail(shell_result) if exit_code != 0 else "",
         )
@@ -750,8 +716,6 @@ async def daytona_codeact(
             files_written=0,
             shells=[],
             script_stdout=stdout[:4000],
-            write_errors=[],
-            write_conflicts=[],
             warnings=["CodeAct result line was not valid JSON."],
         )
 
@@ -768,8 +732,6 @@ async def daytona_codeact(
             files_written=0,
             shells=[],
             script_stdout=stdout[:4000],
-            write_errors=[],
-            write_conflicts=[],
             warnings=["CodeAct wrapper did not return a manifest path."],
         )
 
@@ -788,8 +750,6 @@ async def daytona_codeact(
             files_written=0,
             shells=[],
             script_stdout=stdout[:4000],
-            write_errors=[],
-            write_conflicts=[],
             warnings=["CodeAct completed but its manifest could not be read."],
         )
 
@@ -813,8 +773,6 @@ async def daytona_codeact(
         files_written=len(writes),
         shells=shells,
         script_stdout=script_stdout,
-        write_errors=[],
-        write_conflicts=[],
         warnings=warnings,
         error=str(manifest.get("error", "") or ""),
     )

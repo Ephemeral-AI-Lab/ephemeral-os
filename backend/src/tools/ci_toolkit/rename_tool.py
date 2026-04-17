@@ -5,31 +5,24 @@ Exposes one tool:
 * ``ci_rename_symbol(symbol, new_name, kind=?, file_hint=?)`` — resolves the
   symbol name via :class:`SymbolIndex`, returns ``status="ambiguous"`` with
   candidates when a name matches multiple places, and otherwise delegates to
-  the operation OCC commit.
-
-Both route through the shared OCC commit entry point: the whole rename lands
-or none of it does — never leaves a half-renamed tree.
+  a single audited process command.
 """
 
 from __future__ import annotations
 
 import base64
-import difflib
-import hashlib
 import json
 import logging
 import re
 import shlex
 from typing import Any
 
-from code_intelligence.types import EditResult, OperationChange, OperationResult, SymbolKind
+from code_intelligence.types import SymbolKind
 from pydantic import BaseModel, Field
 
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.ci_runtime import (
-    commit_ci_operation,
     exec_ci_process_operation,
-    finalize_ci_operation_result,
     get_ci_service,
 )
 from tools.core.decorator import tool
@@ -45,13 +38,11 @@ from tools.daytona_toolkit._daytona_utils import (
 
 logger = logging.getLogger(__name__)
 
-_DIFF_MAX_CHARS = 8000
 _IDENTIFIER_RE = r"^[A-Za-z_][A-Za-z0-9_]*$"
 _CANDIDATE_LIMIT = 10
 _PROCESS_RENAME_TIMEOUT = 180
 _PROCESS_RENAME_SCRIPT = r"""
 import base64
-import hashlib
 import json
 import os
 import pathlib
@@ -59,46 +50,17 @@ import sys
 import tempfile
 
 
-def content_hash(content: str) -> str:
-    return hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
-
-
-def fail(status: str, file_path: str, reason: str, exit_code: int = 2) -> None:
-    print(json.dumps({"status": status, "conflict_file": file_path, "conflict_reason": reason}))
-    raise SystemExit(exit_code)
-
-
 payload = json.loads(base64.b64decode(sys.argv[1]).decode("utf-8"))
-changes = payload.get("changes", [])
-resolved = []
+changes = payload.get("files", [])
 temps = []
 try:
     for change in changes:
         file_path = str(change["file_path"])
         path = pathlib.Path(file_path)
-        base_hash = str(change.get("base_hash") or "")
-        base_existed = bool(change.get("base_existed", True))
         final_content = change.get("final_content")
-
-        existed_now = path.exists()
-        if base_existed and not existed_now:
-            fail("aborted_version", file_path, "file was deleted since rename plan was built")
-        if not base_existed and existed_now:
-            fail("aborted_version", file_path, "file already exists; base said it did not")
-
-        current = path.read_text(encoding="utf-8") if existed_now else ""
-        current_hash = content_hash(current) if existed_now else ""
-        if current_hash != base_hash:
-            fail("aborted_version", file_path, "file content changed before rename commit")
-
-        resolved.append((path, file_path, final_content, current_hash, existed_now))
-
-    results = []
-    for path, file_path, final_content, current_hash, existed_now in resolved:
         if final_content is None:
             if path.exists():
                 path.unlink()
-            new_hash = ""
         else:
             parent = path.parent
             parent.mkdir(parents=True, exist_ok=True)
@@ -108,18 +70,9 @@ try:
                 handle.write(str(final_content))
             os.replace(tmp, path)
             temps.remove(tmp)
-            new_hash = content_hash(str(final_content))
-        results.append(
-            {
-                "file_path": file_path,
-                "old_hash": current_hash if existed_now else "",
-                "new_hash": new_hash,
-            }
-        )
-except SystemExit:
-    raise
+    results = [{"file_path": str(change["file_path"]), "status": "renamed"} for change in changes]
 except Exception as exc:
-    print(json.dumps({"status": "failed", "conflict_file": "", "conflict_reason": str(exc)}))
+    print(json.dumps({"ok": False, "status": "failed", "error": str(exc)}))
     raise SystemExit(1)
 finally:
     for tmp in list(temps):
@@ -128,7 +81,7 @@ finally:
         except FileNotFoundError:
             pass
 
-print(json.dumps({"status": "committed", "files": results}))
+print(json.dumps({"ok": True, "status": "renamed", "files": results}))
 """
 
 
@@ -138,7 +91,6 @@ print(json.dumps({"status": "committed", "files": results}))
 class FileRenameSummary(BaseModel):
     file_path: str = Field(..., description="Absolute path of the changed file.")
     status: str = Field(..., description="`renamed`, `dry_run`, or `failed`.")
-    diff: str | None = Field(default=None, description="Unified diff for dry-run.")
     message: str | None = Field(default=None, description="Failure reason when status=failed.")
 
 
@@ -156,8 +108,7 @@ class CiRenameSymbolOutput(BaseModel):
         ...,
         description=(
             "`renamed`, `dry_run`, `no_changes`, `ambiguous` (multiple "
-            "matches — nothing written), `no_match`, `aborted` (OCC/merge "
-            "conflict — nothing written), or `failed`."
+            "matches — nothing written), `no_match`, or `failed`."
         ),
     )
     new_name: str = Field(..., description="Requested new identifier.")
@@ -346,6 +297,8 @@ async def _commit_rename_via_process(
             command,
             timeout=_PROCESS_RENAME_TIMEOUT,
             description=description,
+            edit_type="rename",
+            audit=False,
         )
     except Exception as exc:
         return OperationResult(
