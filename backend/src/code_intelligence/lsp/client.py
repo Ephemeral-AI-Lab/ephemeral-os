@@ -27,10 +27,10 @@ from code_intelligence.constants import (
     LSP_QUERY_TIMEOUT,
 )
 from code_intelligence.lsp._jedi_worker_client import (
+    BaseJediWorkerClient,
     JediWorkerClient,
+    SandboxJediWorkerClient,
     WorkerUnavailable,
-)
-from code_intelligence.lsp._jedi_worker_client import (
     is_enabled as jedi_worker_enabled,
 )
 from code_intelligence.types import (
@@ -69,6 +69,9 @@ class LspTelemetry:
     errors: int = 0
     successes: int = 0
     cache_hits: int = 0
+    worker_successes: int = 0
+    worker_fallbacks: int = 0
+    worker_errors: int = 0
 
 
 class LspClient:
@@ -88,15 +91,17 @@ class LspClient:
 
         self._cache_lock = threading.Lock()
         self._counter_lock = threading.Lock()
+        self._line_cache_lock = threading.Lock()
 
         self._cache: OrderedDict[str, _CacheEntry] = OrderedDict()
+        self._line_cache: OrderedDict[tuple[str, int], str | None] = OrderedDict()
         self._telemetry = LspTelemetry()
         self._py_available: bool | None = None
         self._ts_available: bool | None = None
 
-        # Persistent Jedi worker (local-mode only, env-gated). Built
-        # lazily on first successful use; torn down on client close.
-        self._worker: JediWorkerClient | None = None
+        # Persistent Jedi worker (local stdio or sandbox socket, env-gated).
+        # Built lazily on first successful use; torn down on client close.
+        self._worker: BaseJediWorkerClient | None = None
         self._worker_lock = threading.Lock()
 
     # -- Public query methods -------------------------------------------------
@@ -166,6 +171,11 @@ class LspClient:
             to_remove = [k for k in self._cache if file_path in k]
             for k in to_remove:
                 del self._cache[k]
+        resolved_path = self._resolve_path(file_path)
+        with self._line_cache_lock:
+            stale = [key for key in self._line_cache if key[0] == resolved_path]
+            for key in stale:
+                del self._line_cache[key]
         client = self._get_worker()
         if client is None:
             return
@@ -214,6 +224,9 @@ class LspClient:
                 errors=self._telemetry.errors,
                 successes=self._telemetry.successes,
                 cache_hits=self._telemetry.cache_hits,
+                worker_successes=self._telemetry.worker_successes,
+                worker_fallbacks=self._telemetry.worker_fallbacks,
+                worker_errors=self._telemetry.worker_errors,
             )
 
     @property
@@ -302,8 +315,22 @@ class LspClient:
 
     def _read_line(self, file_path: str, line: int) -> str | None:
         """Read a single line from a local or sandbox file (1-indexed)."""
+        abs_path = self._resolve_path(file_path)
+        key = (abs_path, int(line))
+        with self._line_cache_lock:
+            if key in self._line_cache:
+                self._line_cache.move_to_end(key)
+                return self._line_cache[key]
+            value = self._read_line_uncached(abs_path, int(line))
+            self._line_cache[key] = value
+            self._line_cache.move_to_end(key)
+            while len(self._line_cache) > self._cache_max:
+                self._line_cache.popitem(last=False)
+            return value
+
+    def _read_line_uncached(self, abs_path: str, line: int) -> str | None:
+        """Read a single resolved line without consulting the local cache."""
         try:
-            abs_path = self._resolve_path(file_path)
             if self._sandbox:
                 resp = run_sync(
                     self._sandbox.process.exec(
@@ -324,19 +351,22 @@ class LspClient:
 
     # -- Persistent worker dispatch ------------------------------------------
     #
-    # Local-mode only: the worker amortises Jedi's import cost across
-    # every Python query in this LspClient's lifetime. Sandbox-mode
-    # continues to use the subprocess-per-call path until we verify
-    # that the Daytona SDK supports persistent stdio (plan line 158).
+    # The worker amortises Jedi's import/project cost across Python
+    # queries. Local mode uses stdio; sandbox mode runs a socket daemon
+    # inside the sandbox and reaches it through small process.exec RPCs.
 
-    def _get_worker(self) -> JediWorkerClient | None:
-        if self._sandbox is not None:
-            return None
+    def _get_worker(self) -> BaseJediWorkerClient | None:
         if not jedi_worker_enabled():
             return None
         with self._worker_lock:
             if self._worker is None:
-                self._worker = JediWorkerClient(self._workspace_root)
+                if self._sandbox is None:
+                    self._worker = JediWorkerClient(self._workspace_root)
+                else:
+                    self._worker = SandboxJediWorkerClient(
+                        self._workspace_root,
+                        sandbox=self._sandbox,
+                    )
             return self._worker
 
     def _try_worker(self, op: str, args: dict[str, Any]) -> tuple[bool, Any]:
@@ -352,10 +382,14 @@ class LspClient:
         if client is None:
             return False, None
         try:
-            return True, client.request(op, args)
+            result = client.request(op, args)
+            self._record_worker_success()
+            return True, result
         except WorkerUnavailable:
+            self._record_worker_fallback()
             return False, None
         except Exception:  # pragma: no cover - defensive
+            self._record_worker_error()
             logger.debug("jedi worker op %s failed", op, exc_info=True)
             return True, None
 
@@ -732,6 +766,18 @@ class LspClient:
     def _record_error(self) -> None:
         with self._counter_lock:
             self._telemetry.errors += 1
+
+    def _record_worker_success(self) -> None:
+        with self._counter_lock:
+            self._telemetry.worker_successes += 1
+
+    def _record_worker_fallback(self) -> None:
+        with self._counter_lock:
+            self._telemetry.worker_fallbacks += 1
+
+    def _record_worker_error(self) -> None:
+        with self._counter_lock:
+            self._telemetry.worker_errors += 1
 
     def _detect_language(self, file_path: str) -> str:
         ext = Path(file_path).suffix.lower()

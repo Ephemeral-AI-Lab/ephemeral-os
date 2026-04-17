@@ -12,11 +12,13 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import concurrent.futures
 import json
 import os
 import re
 import shlex
 import statistics
+import threading
 import time
 import uuid
 from dataclasses import asdict, dataclass
@@ -28,6 +30,7 @@ import pytest
 from dotenv import load_dotenv
 
 from code_intelligence.routing.service import CodeIntelligenceService
+from code_intelligence.lsp._jedi_worker_client import ENV_FLAG as JEDI_WORKER_ENV_FLAG
 from tools.ci_toolkit.rename_tool import ci_rename, ci_rename_symbol
 from tools.core.base import ToolExecutionContext
 from tools.daytona_toolkit._daytona_utils import _extract_exit_code, _wrap_bash_command
@@ -72,9 +75,11 @@ class TraceLog:
 
     def __init__(self) -> None:
         self.events: list[TraceEvent] = []
+        self._lock = threading.Lock()
 
     def mark(self) -> int:
-        return len(self.events)
+        with self._lock:
+            return len(self.events)
 
     def record(
         self,
@@ -86,20 +91,22 @@ class TraceLog:
         error: BaseException | None = None,
     ) -> None:
         stdout = _clean_stdout(getattr(result, "result", "") or "") if result is not None else ""
-        self.events.append(
-            TraceEvent(
-                seq=len(self.events) + 1,
-                op=op,
-                duration_ms=round((time.perf_counter() - started_at) * 1000, 3),
-                exit_code=getattr(result, "exit_code", None) if result is not None else None,
-                stdout_chars=len(stdout),
-                command=_compact(str(command)),
-                error=f"{type(error).__name__}: {error}" if error is not None else "",
+        with self._lock:
+            self.events.append(
+                TraceEvent(
+                    seq=len(self.events) + 1,
+                    op=op,
+                    duration_ms=round((time.perf_counter() - started_at) * 1000, 3),
+                    exit_code=getattr(result, "exit_code", None) if result is not None else None,
+                    stdout_chars=len(stdout),
+                    command=_compact(str(command)),
+                    error=f"{type(error).__name__}: {error}" if error is not None else "",
+                )
             )
-        )
 
     def summary_since(self, start: int) -> dict[str, Any]:
-        events = self.events[start:]
+        with self._lock:
+            events = list(self.events[start:])
         durations = [event.duration_ms for event in events]
         slowest = sorted(events, key=lambda event: event.duration_ms, reverse=True)[:5]
         return {
@@ -110,22 +117,28 @@ class TraceLog:
             "slowest_exec": [asdict(event) for event in slowest],
         }
 
+    def durations(self) -> list[float]:
+        with self._lock:
+            return [event.duration_ms for event in self.events]
+
     def print_all(self) -> None:
-        for event in self.events:
+        with self._lock:
+            events = list(self.events)
+        for event in events:
             print("[ci-lsp-live-exec] " + json.dumps(asdict(event), sort_keys=True), flush=True)
 
     def print_summary(self) -> None:
-        durations = [event.duration_ms for event in self.events]
+        with self._lock:
+            events = list(self.events)
+        durations = [event.duration_ms for event in events]
         payload = {
-            "total_exec_count": len(self.events),
+            "total_exec_count": len(events),
             "total_exec_ms": round(sum(durations), 3),
             "median_exec_ms": round(statistics.median(durations), 3) if durations else 0.0,
             "p95_exec_ms": _percentile(durations, 95),
             "slowest_exec": [
                 asdict(event)
-                for event in sorted(
-                    self.events, key=lambda event: event.duration_ms, reverse=True
-                )[:10]
+                for event in sorted(events, key=lambda event: event.duration_ms, reverse=True)[:10]
             ],
         }
         print("[ci-lsp-live-summary] " + json.dumps(payload, sort_keys=True), flush=True)
@@ -324,8 +337,76 @@ def live_rename_env() -> LiveRenameEnv:
         delete_test_sandbox(sandbox_id)
 
 
-def test_live_ci_lsp_jedi_tool_traces_and_perf(live_rename_env: LiveRenameEnv) -> None:
+def _write_perf_project(env: LiveRenameEnv, root_dir: str) -> tuple[str, str, str]:
+    pkg = f"{root_dir}/pkg"
+    core_path = f"{pkg}/core.py"
+    uses_path = f"{pkg}/uses.py"
+    more_path = f"{pkg}/more.py"
+    env.write_file(f"{pkg}/__init__.py", "")
+    env.write_file(
+        core_path,
+        "\n".join(
+            [
+                "def alpha(value):",
+                '    """Primary function used for LSP definition/reference probes."""',
+                "    return value + 1",
+                "",
+                "def beta(value):",
+                "    return alpha(value) * 2",
+                "",
+                "def delta(value):",
+                "    return beta(value) + 5",
+                "",
+                "class Runner:",
+                "    def run(self, value):",
+                "        return delta(value)",
+                "",
+            ]
+        ),
+    )
+    env.write_file(
+        uses_path,
+        "\n".join(
+            [
+                "from pkg.core import alpha, beta, delta, Runner",
+                "",
+                "def call_alpha():",
+                "    return alpha(1)",
+                "",
+                "def call_beta():",
+                "    return beta(2)",
+                "",
+                "def call_delta():",
+                "    return delta(3)",
+                "",
+                "def call_runner():",
+                "    return Runner().run(4)",
+                "",
+            ]
+        ),
+    )
+    env.write_file(
+        more_path,
+        "\n".join(
+            [
+                "from pkg.core import alpha, beta, delta",
+                "",
+                "def combine():",
+                "    return alpha(10) + beta(20) + delta(30)",
+                "",
+            ]
+        ),
+    )
+    return core_path, uses_path, more_path
+
+
+def test_live_ci_lsp_jedi_tool_traces_and_perf(
+    live_rename_env: LiveRenameEnv,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Trace direct LSP calls and rename tool calls inside a real Daytona sandbox."""
+    monkeypatch.setenv(JEDI_WORKER_ENV_FLAG, "0")
+    all_stats: list[dict[str, Any]] = []
     env = live_rename_env
     pkg = f"{env.root_dir}/pkg"
     core_path = f"{pkg}/core.py"
@@ -413,6 +494,7 @@ def test_live_ci_lsp_jedi_tool_traces_and_perf(live_rename_env: LiveRenameEnv) -
                 svc.ensure_initialized(wait=True)
                 and svc.lsp_client.ensure_ready(install_missing=True)["python"]
             ),
+            stats=all_stats,
         )
         assert init_ok is True
         assert svc.symbol_index.ensure_built(wait=True, timeout=60.0) is True
@@ -422,6 +504,7 @@ def test_live_ci_lsp_jedi_tool_traces_and_perf(live_rename_env: LiveRenameEnv) -
             env.trace,
             svc,
             lambda: svc.lsp_client.goto_definition(uses_path, 4, 11),
+            stats=all_stats,
         )
         assert any(item.file_path == core_path and item.name == "alpha" for item in definitions)
 
@@ -430,6 +513,7 @@ def test_live_ci_lsp_jedi_tool_traces_and_perf(live_rename_env: LiveRenameEnv) -
             env.trace,
             svc,
             lambda: svc.lsp_client.find_references(core_path, 1, 0),
+            stats=all_stats,
         )
         assert len(refs) >= 3
 
@@ -439,6 +523,7 @@ def test_live_ci_lsp_jedi_tool_traces_and_perf(live_rename_env: LiveRenameEnv) -
             env.trace,
             svc,
             lambda: svc.lsp_client.find_references(core_path, 1, 0),
+            stats=all_stats,
         )
         assert len(refs_cached) == len(refs)
         assert svc.lsp_client.telemetry.cache_hits > cache_before
@@ -448,6 +533,7 @@ def test_live_ci_lsp_jedi_tool_traces_and_perf(live_rename_env: LiveRenameEnv) -
             env.trace,
             svc,
             lambda: svc.lsp_client.hover(core_path, 1, 0),
+            stats=all_stats,
         )
         assert hover is not None
         assert "Primary function" in hover.content
@@ -468,6 +554,7 @@ def test_live_ci_lsp_jedi_tool_traces_and_perf(live_rename_env: LiveRenameEnv) -
                     ctx,
                 )
             ),
+            stats=all_stats,
         )
         assert not dry_symbol.is_error, dry_symbol.output
         dry_symbol_data = json.loads(dry_symbol.output)
@@ -489,6 +576,7 @@ def test_live_ci_lsp_jedi_tool_traces_and_perf(live_rename_env: LiveRenameEnv) -
                     ctx,
                 )
             ),
+            stats=all_stats,
         )
         assert not commit_symbol.is_error, commit_symbol.output
         commit_symbol_data = json.loads(commit_symbol.output)
@@ -505,6 +593,7 @@ def test_live_ci_lsp_jedi_tool_traces_and_perf(live_rename_env: LiveRenameEnv) -
                     ctx,
                 )
             ),
+            stats=all_stats,
         )
         assert not dry_facade.is_error, dry_facade.output
         dry_facade_data = json.loads(dry_facade.output)
@@ -521,6 +610,7 @@ def test_live_ci_lsp_jedi_tool_traces_and_perf(live_rename_env: LiveRenameEnv) -
                     ctx,
                 )
             ),
+            stats=all_stats,
         )
         assert not commit_facade.is_error, commit_facade.output
         commit_facade_data = json.loads(commit_facade.output)
@@ -558,6 +648,108 @@ def test_live_ci_lsp_jedi_tool_traces_and_perf(live_rename_env: LiveRenameEnv) -
             ),
             flush=True,
         )
+
+        svc.dispose()
+
+        monkeypatch.setenv(JEDI_WORKER_ENV_FLAG, "1")
+        worker_root = f"{env.root_dir}/worker_compare"
+        worker_core, worker_uses, _worker_more = _write_perf_project(env, worker_root)
+        worker_svc = CodeIntelligenceService(
+            sandbox_id=f"{env.sandbox_id}-worker",
+            workspace_root=worker_root,
+            sandbox=env.traced_sandbox,
+        )
+        worker_ctx = ToolExecutionContext(
+            cwd=Path(worker_root),
+            metadata={
+                "daytona_sandbox": env.async_sandbox,
+                "daytona_cwd": worker_root,
+                "repo_root": worker_root,
+                "ci_service": worker_svc,
+                "agent_run_id": f"ci-lsp-worker-{uuid.uuid4().hex[:8]}",
+            },
+        )
+        try:
+            worker_init_ok = _measure(
+                "worker.service.ensure_initialized",
+                env.trace,
+                worker_svc,
+                lambda: (
+                    worker_svc.ensure_initialized(wait=True)
+                    and worker_svc.lsp_client.ensure_ready(install_missing=True)["python"]
+                ),
+                stats=all_stats,
+            )
+            assert worker_init_ok is True
+
+            worker_defs = _measure(
+                "worker.lsp.goto_definition(alpha usage)",
+                env.trace,
+                worker_svc,
+                lambda: worker_svc.lsp_client.goto_definition(worker_uses, 4, 11),
+                stats=all_stats,
+            )
+            assert any(
+                item.file_path == worker_core and item.name == "alpha"
+                for item in worker_defs
+            )
+
+            worker_refs = _measure(
+                "worker.lsp.find_references(alpha cold)",
+                env.trace,
+                worker_svc,
+                lambda: worker_svc.lsp_client.find_references(worker_core, 1, 0),
+                stats=all_stats,
+            )
+            assert len(worker_refs) >= 3
+
+            worker_hover = _measure(
+                "worker.lsp.hover(alpha)",
+                env.trace,
+                worker_svc,
+                lambda: worker_svc.lsp_client.hover(worker_core, 1, 0),
+                stats=all_stats,
+            )
+            assert worker_hover is not None
+            assert "Primary function" in worker_hover.content
+
+            worker_dry = _measure(
+                "worker.tool.ci_rename_symbol(beta dry_run)",
+                env.trace,
+                worker_svc,
+                lambda: asyncio.run(
+                    ci_rename_symbol.execute(
+                        ci_rename_symbol.input_model(
+                            file_path=worker_core,
+                            line=5,
+                            character=0,
+                            new_name="beta_v2",
+                            dry_run=True,
+                        ),
+                        worker_ctx,
+                    )
+                ),
+                stats=all_stats,
+            )
+            assert not worker_dry.is_error, worker_dry.output
+            assert json.loads(worker_dry.output)["status"] == "dry_run"
+            worker_tel = worker_svc.lsp_client.telemetry
+            assert worker_tel.worker_successes >= 4
+            assert worker_tel.worker_fallbacks == 0
+
+            _print_mode_comparison(all_stats)
+            _run_concurrent_ci_load(
+                env=env,
+                svc=worker_svc,
+                ctx=worker_ctx,
+                core_path=worker_core,
+                uses_path=worker_uses,
+                stats=all_stats,
+            )
+        finally:
+            worker_svc.dispose()
+
+        _apply_optional_thresholds(all_stats, env.trace)
     finally:
         env.trace.print_all()
         env.trace.print_summary()
@@ -569,6 +761,8 @@ def _measure(
     trace: TraceLog,
     svc: CodeIntelligenceService,
     func: Callable[[], _T],
+    *,
+    stats: list[dict[str, Any]] | None = None,
 ) -> _T:
     event_start = trace.mark()
     telemetry_before = svc.lsp_client.telemetry
@@ -593,11 +787,197 @@ def _measure(
             "lsp_successes_delta": telemetry_after.successes - telemetry_before.successes,
             "lsp_errors_delta": telemetry_after.errors - telemetry_before.errors,
             "lsp_cache_hits_delta": telemetry_after.cache_hits - telemetry_before.cache_hits,
+            "worker_successes_delta": (
+                telemetry_after.worker_successes - telemetry_before.worker_successes
+            ),
+            "worker_fallbacks_delta": (
+                telemetry_after.worker_fallbacks - telemetry_before.worker_fallbacks
+            ),
+            "worker_errors_delta": telemetry_after.worker_errors - telemetry_before.worker_errors,
             "symbol_index_generation_delta": svc.symbol_index.generation - index_before,
             "arbiter_generation_delta": svc.arbiter.generation - arbiter_before,
             **trace.summary_since(event_start),
         }
+        if stats is not None:
+            stats.append(dict(payload))
         print("[ci-lsp-live-trace] " + json.dumps(payload, sort_keys=True), flush=True)
+
+
+def _run_concurrent_ci_load(
+    *,
+    env: LiveRenameEnv,
+    svc: CodeIntelligenceService,
+    ctx: ToolExecutionContext,
+    core_path: str,
+    uses_path: str,
+    stats: list[dict[str, Any]],
+) -> None:
+    """Run 20 concurrent mixed code-intelligence operations against one service."""
+    trace_start = env.trace.mark()
+    telemetry_before = svc.lsp_client.telemetry
+    index_before = svc.symbol_index.generation
+    arbiter_before = svc.arbiter.generation
+    started_at = time.perf_counter()
+
+    def _one(index: int) -> dict[str, Any]:
+        op_started = time.perf_counter()
+        op = index % 5
+        try:
+            if op == 0:
+                result = svc.lsp_client.goto_definition(uses_path, 4, 11)
+                assert result
+                name = "goto_definition"
+                detail = len(result)
+            elif op == 1:
+                result = svc.lsp_client.find_references(core_path, 1, 0)
+                assert len(result) >= 3
+                name = "find_references"
+                detail = len(result)
+            elif op == 2:
+                result = svc.lsp_client.hover(core_path, 1, 0)
+                assert result is not None
+                name = "hover"
+                detail = len(result.content)
+            elif op == 3:
+                result = asyncio.run(
+                    ci_rename_symbol.execute(
+                        ci_rename_symbol.input_model(
+                            file_path=core_path,
+                            line=5,
+                            character=0,
+                            new_name=f"beta_load_{index}",
+                            dry_run=True,
+                        ),
+                        ctx,
+                    )
+                )
+                assert not result.is_error, result.output
+                name = "ci_rename_symbol_dry_run"
+                detail = len(json.loads(result.output)["files"])
+            else:
+                result = asyncio.run(
+                    ci_rename.execute(
+                        ci_rename.input_model(
+                            symbol="delta",
+                            new_name=f"delta_load_{index}",
+                            dry_run=True,
+                        ),
+                        ctx,
+                    )
+                )
+                assert not result.is_error, result.output
+                name = "ci_rename_dry_run"
+                detail = len(json.loads(result.output)["files"])
+            return {
+                "index": index,
+                "op": name,
+                "ok": True,
+                "detail": detail,
+                "duration_ms": round((time.perf_counter() - op_started) * 1000, 3),
+            }
+        except Exception as exc:
+            return {
+                "index": index,
+                "op": str(op),
+                "ok": False,
+                "error": f"{type(exc).__name__}: {exc}",
+                "duration_ms": round((time.perf_counter() - op_started) * 1000, 3),
+            }
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+        results = list(executor.map(_one, range(20)))
+
+    telemetry_after = svc.lsp_client.telemetry
+    failures = [item for item in results if not item["ok"]]
+    payload = {
+        "label": "worker.concurrent_mixed_ci_load_20",
+        "duration_ms": round((time.perf_counter() - started_at) * 1000, 3),
+        "command_count": len(results),
+        "failure_count": len(failures),
+        "results": results,
+        "lsp_queries_delta": telemetry_after.queries - telemetry_before.queries,
+        "lsp_successes_delta": telemetry_after.successes - telemetry_before.successes,
+        "lsp_errors_delta": telemetry_after.errors - telemetry_before.errors,
+        "lsp_cache_hits_delta": telemetry_after.cache_hits - telemetry_before.cache_hits,
+        "worker_successes_delta": (
+            telemetry_after.worker_successes - telemetry_before.worker_successes
+        ),
+        "worker_fallbacks_delta": (
+            telemetry_after.worker_fallbacks - telemetry_before.worker_fallbacks
+        ),
+        "worker_errors_delta": telemetry_after.worker_errors - telemetry_before.worker_errors,
+        "symbol_index_generation_delta": svc.symbol_index.generation - index_before,
+        "arbiter_generation_delta": svc.arbiter.generation - arbiter_before,
+        **env.trace.summary_since(trace_start),
+    }
+    stats.append(dict(payload))
+    print("[ci-lsp-live-load] " + json.dumps(payload, sort_keys=True), flush=True)
+    assert not failures, json.dumps(failures, sort_keys=True)
+    assert payload["worker_fallbacks_delta"] == 0
+    assert payload["worker_errors_delta"] == 0
+    assert payload["worker_successes_delta"] >= 8
+
+
+def _print_mode_comparison(stats: list[dict[str, Any]]) -> None:
+    by_label = {str(item["label"]): item for item in stats}
+    pairs = [
+        ("lsp.goto_definition(alpha usage)", "worker.lsp.goto_definition(alpha usage)"),
+        ("lsp.find_references(alpha cold)", "worker.lsp.find_references(alpha cold)"),
+        ("lsp.hover(alpha)", "worker.lsp.hover(alpha)"),
+        ("tool.ci_rename_symbol(beta dry_run)", "worker.tool.ci_rename_symbol(beta dry_run)"),
+    ]
+    rows = []
+    for base_label, worker_label in pairs:
+        base = by_label.get(base_label)
+        worker = by_label.get(worker_label)
+        if not base or not worker:
+            continue
+        base_ms = float(base["duration_ms"])
+        worker_ms = float(worker["duration_ms"])
+        rows.append(
+            {
+                "baseline": base_label,
+                "worker": worker_label,
+                "baseline_ms": base_ms,
+                "worker_ms": worker_ms,
+                "delta_ms": round(worker_ms - base_ms, 3),
+                "baseline_exec_count": base["exec_count"],
+                "worker_exec_count": worker["exec_count"],
+            }
+        )
+    print("[ci-lsp-live-mode-comparison] " + json.dumps(rows, sort_keys=True), flush=True)
+
+
+def _apply_optional_thresholds(stats: list[dict[str, Any]], trace: TraceLog) -> None:
+    summary = trace.summary_since(0)
+    checks = {
+        "CI_LSP_LIVE_MAX_OP_MS": max((float(item["duration_ms"]) for item in stats), default=0.0),
+        "CI_LSP_LIVE_MAX_TOTAL_EXEC_MS": float(summary["exec_total_ms"]),
+        "CI_LSP_LIVE_MAX_EXEC_COUNT": float(summary["exec_count"]),
+        "CI_LSP_LIVE_MAX_P95_EXEC_MS": _percentile(trace.durations(), 95),
+        "CI_LSP_LIVE_MAX_LOAD_MS": max(
+            (
+                float(item["duration_ms"])
+                for item in stats
+                if item.get("label") == "worker.concurrent_mixed_ci_load_20"
+            ),
+            default=0.0,
+        ),
+    }
+    for env_name, observed in checks.items():
+        raw_limit = os.environ.get(env_name)
+        if raw_limit is None or not raw_limit.strip():
+            continue
+        limit = float(raw_limit)
+        print(
+            "[ci-lsp-live-threshold] "
+            + json.dumps(
+                {"name": env_name, "observed": observed, "limit": limit},
+                sort_keys=True,
+            ),
+            flush=True,
+        )
+        assert observed <= limit, f"{env_name}: observed {observed} > limit {limit}"
 
 
 def _percentile(values: list[float], pct: int) -> float:

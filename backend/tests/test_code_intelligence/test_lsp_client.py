@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+from code_intelligence.lsp._jedi_worker_client import ENV_FLAG, WorkerUnavailable
 from code_intelligence.lsp.client import LspClient
 from code_intelligence.types import SymbolKind
 
@@ -65,6 +66,59 @@ def test_reset_backend_availability_clears_cached_readiness() -> None:
 
     assert lsp._py_available is None
     assert lsp._ts_available is None
+
+
+def test_sandbox_read_line_caches_until_invalidate(monkeypatch) -> None:
+    monkeypatch.delenv(ENV_FLAG, raising=False)
+    calls: list[str] = []
+
+    class _SandboxProcess:
+        def exec(self, command: str, timeout: int = 0):
+            calls.append(command)
+            return SimpleNamespace(exit_code=0, result="def alpha(value):\n")
+
+    sandbox = SimpleNamespace(process=_SandboxProcess())
+    lsp = LspClient(workspace_root="/workspace", sandbox=sandbox)
+
+    assert lsp._read_line("/workspace/pkg/core.py", 1) == "def alpha(value):\n"
+    assert lsp._read_line("/workspace/pkg/core.py", 1) == "def alpha(value):\n"
+    assert len(calls) == 1
+
+    lsp.invalidate("/workspace/pkg/core.py")
+
+    assert lsp._read_line("/workspace/pkg/core.py", 1) == "def alpha(value):\n"
+    assert len(calls) == 2
+
+
+def test_worker_telemetry_tracks_success_and_fallback(monkeypatch) -> None:
+    monkeypatch.setenv(ENV_FLAG, "1")
+
+    class _OkWorker:
+        def request(self, op, args=None):
+            return {"op": op, "args": args}
+
+        def shutdown(self):
+            pass
+
+    class _UnavailableWorker:
+        def request(self, op, args=None):
+            raise WorkerUnavailable("dead")
+
+        def shutdown(self):
+            pass
+
+    lsp = LspClient(workspace_root="/workspace")
+    lsp._worker = _OkWorker()  # type: ignore[assignment]
+    used, result = lsp._try_worker("ping", {"x": 1})
+    assert used is True
+    assert result == {"op": "ping", "args": {"x": 1}}
+    assert lsp.telemetry.worker_successes == 1
+
+    lsp._worker = _UnavailableWorker()  # type: ignore[assignment]
+    used, result = lsp._try_worker("ping", {})
+    assert used is False
+    assert result is None
+    assert lsp.telemetry.worker_fallbacks == 1
 
 
 def test_resolve_path_prepends_workspace_root() -> None:

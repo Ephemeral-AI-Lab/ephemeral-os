@@ -433,6 +433,9 @@ class CodeIntelligenceService:
             "connected": self.lsp_client.connected,
             "queries": tel.queries,
             "cache_hits": tel.cache_hits,
+            "worker_successes": tel.worker_successes,
+            "worker_fallbacks": tel.worker_fallbacks,
+            "worker_errors": tel.worker_errors,
         }
 
     # -- Cleanup --------------------------------------------------------------

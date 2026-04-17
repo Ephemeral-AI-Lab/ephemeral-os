@@ -1,9 +1,9 @@
 """Persistent Jedi worker process.
 
 Runs as a long-lived subprocess alongside the :class:`LspClient` and
-amortises Jedi's cold-import cost across every ``_python_*`` call in the
-sandbox. Communicates with the parent over stdio using newline-delimited
-JSON — one request per line, one response per line.
+amortises Jedi's cold-import cost across every ``_python_*`` call. It can
+communicate with the parent over stdio or, when launched inside a sandbox,
+over a Unix-domain socket.
 
 Protocol
 --------
@@ -19,22 +19,21 @@ Response::
 Supported ops: ``ping``, ``definitions``, ``references``, ``rename``,
 ``hover``, ``invalidate``, ``shutdown``.
 
-Scope (per plan Phase 3, minimal delivery)
-------------------------------------------
+Scope
+-----
 
-* Local-mode only — the caller owns spawning and lifecycle. Running the
-  worker inside a Daytona sandbox over persistent stdio is gated on
-  sandbox-SDK capability (plan line 158) and is left as follow-up.
-* Single in-flight request at a time (Jedi's ``Project`` cache is not
+* Single in-flight request per client (Jedi's ``Project`` cache is not
   safe across concurrent ``Script`` calls rooted at the same project).
-* No shadow mode, no generation-keyed cache, no N-request restart
-  ceiling yet — those belong to a second P3 increment once this
-  path has shadow-traffic coverage.
+* No shadow mode, no generation-keyed cache, no N-request restart ceiling
+  yet — those belong to a second increment once this path has broader
+  shadow-traffic coverage.
 """
 
 from __future__ import annotations
 
 import json
+import os
+import socket
 import sys
 import traceback
 from typing import Any
@@ -154,14 +153,7 @@ _DISPATCH = {
 }
 
 
-def _respond(req_id: str, *, ok: bool, result: Any = None, error: str | None = None) -> None:
-    payload = json.dumps({"id": req_id, "ok": ok, "result": result, "error": error})
-    sys.stdout.write(payload + "\n")
-    sys.stdout.flush()
-
-
-def main(argv: list[str]) -> int:
-    workspace_root = argv[1] if len(argv) > 1 else ""
+def _load_backend(workspace_root: str):
     jedi_mod, import_err = _safe_import_jedi()
     project = None
     if jedi_mod is not None and workspace_root:
@@ -170,7 +162,52 @@ def main(argv: list[str]) -> int:
         except Exception as exc:
             jedi_mod = None
             import_err = str(exc)
+    return jedi_mod, project, import_err
 
+
+def _response(req_id: str, *, ok: bool, result: Any = None, error: str | None = None) -> dict[str, Any]:
+    return {"id": req_id, "ok": ok, "result": result, "error": error}
+
+
+def _handle_request(
+    req: dict[str, Any],
+    *,
+    jedi_mod: Any,
+    project: Any,
+    import_err: str | None,
+) -> tuple[dict[str, Any], bool]:
+    req_id = str(req.get("id", ""))
+    op = str(req.get("op", ""))
+    args = req.get("args") or {}
+    if op == "shutdown":
+        return _response(req_id, ok=True, result={"bye": True}), True
+    if jedi_mod is None and op != "ping":
+        return _response(req_id, ok=False, error=f"jedi_unavailable: {import_err}"), False
+    handler = _DISPATCH.get(op)
+    if handler is None:
+        return _response(req_id, ok=False, error=f"unknown_op: {op}"), False
+    try:
+        result = handler(jedi_mod, project, args)
+        return _response(req_id, ok=True, result=result), False
+    except Exception as exc:
+        return (
+            _response(
+                req_id,
+                ok=False,
+                error=f"{type(exc).__name__}: {exc}",
+                result={"trace": traceback.format_exc(limit=5)},
+            ),
+            False,
+        )
+
+
+def _write_response(writer: Any, payload: dict[str, Any]) -> None:
+    writer.write(json.dumps(payload) + "\n")
+    writer.flush()
+
+
+def _serve_stdio(workspace_root: str) -> int:
+    jedi_mod, project, import_err = _load_backend(workspace_root)
     for raw in sys.stdin:
         line = raw.strip()
         if not line:
@@ -178,32 +215,71 @@ def main(argv: list[str]) -> int:
         try:
             req = json.loads(line)
         except Exception as exc:
-            _respond("", ok=False, error=f"json_decode: {exc}")
+            _write_response(sys.stdout, _response("", ok=False, error=f"json_decode: {exc}"))
             continue
-        req_id = str(req.get("id", ""))
-        op = str(req.get("op", ""))
-        args = req.get("args") or {}
-        if op == "shutdown":
-            _respond(req_id, ok=True, result={"bye": True})
+        response, should_stop = _handle_request(
+            req,
+            jedi_mod=jedi_mod,
+            project=project,
+            import_err=import_err,
+        )
+        _write_response(sys.stdout, response)
+        if should_stop:
             break
-        if jedi_mod is None and op != "ping":
-            _respond(req_id, ok=False, error=f"jedi_unavailable: {import_err}")
-            continue
-        handler = _DISPATCH.get(op)
-        if handler is None:
-            _respond(req_id, ok=False, error=f"unknown_op: {op}")
-            continue
-        try:
-            result = handler(jedi_mod, project, args)
-            _respond(req_id, ok=True, result=result)
-        except Exception as exc:
-            _respond(
-                req_id,
-                ok=False,
-                error=f"{type(exc).__name__}: {exc}",
-                result={"trace": traceback.format_exc(limit=5)},
-            )
     return 0
+
+
+def _serve_socket(socket_path: str, workspace_root: str) -> int:
+    """Serve one newline-delimited JSON request per Unix socket connection."""
+    os.makedirs(os.path.dirname(socket_path) or ".", exist_ok=True)
+    try:
+        os.unlink(socket_path)
+    except FileNotFoundError:
+        pass
+
+    server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    try:
+        server.bind(socket_path)
+        os.chmod(socket_path, 0o600)
+        server.listen(20)
+        jedi_mod, project, import_err = _load_backend(workspace_root)
+        while True:
+            conn, _ = server.accept()
+            should_stop = False
+            with conn:
+                reader = conn.makefile("r", encoding="utf-8")
+                writer = conn.makefile("w", encoding="utf-8")
+                raw = reader.readline()
+                try:
+                    req = json.loads(raw.strip() or "{}")
+                except Exception as exc:
+                    response = _response("", ok=False, error=f"json_decode: {exc}")
+                else:
+                    response, should_stop = _handle_request(
+                        req,
+                        jedi_mod=jedi_mod,
+                        project=project,
+                        import_err=import_err,
+                    )
+                _write_response(writer, response)
+            if should_stop:
+                break
+    finally:
+        try:
+            server.close()
+        finally:
+            try:
+                os.unlink(socket_path)
+            except FileNotFoundError:
+                pass
+    return 0
+
+
+def main(argv: list[str]) -> int:
+    if len(argv) >= 4 and argv[1] == "--socket":
+        return _serve_socket(argv[2], argv[3])
+    workspace_root = argv[1] if len(argv) > 1 else ""
+    return _serve_stdio(workspace_root)
 
 
 if __name__ == "__main__":  # pragma: no cover - executed as subprocess

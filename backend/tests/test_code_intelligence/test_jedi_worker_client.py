@@ -13,14 +13,17 @@ covered by the live e2e suite. What we verify here:
 
 from __future__ import annotations
 
+import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 from textwrap import dedent
 
 import pytest
 from code_intelligence.lsp._jedi_worker_client import (
     ENV_FLAG,
     JediWorkerClient,
+    SandboxJediWorkerClient,
     WorkerUnavailable,
     is_enabled,
 )
@@ -136,4 +139,61 @@ def test_logical_error_does_not_tear_down_process(tmp_path):
     with pytest.raises(RuntimeError, match="bad_args"):
         cli.request("ping")
     assert cli._proc is proc_before
+    cli.shutdown()
+
+
+def test_sandbox_worker_client_runs_daemon_over_socket(tmp_path):
+    root = tmp_path / "project"
+    pkg = root / "pkg"
+    pkg.mkdir(parents=True)
+    (pkg / "__init__.py").write_text("", encoding="utf-8")
+    (pkg / "core.py").write_text("def alpha(value):\n    return value + 1\n", encoding="utf-8")
+    (pkg / "uses.py").write_text(
+        "from pkg.core import alpha\n\n"
+        "def call_alpha():\n"
+        "    return alpha(1)\n",
+        encoding="utf-8",
+    )
+
+    class LocalProcess:
+        def __init__(self) -> None:
+            self.commands: list[str] = []
+
+        def exec(self, command: str, timeout: int = 0):
+            self.commands.append(command)
+            proc = subprocess.run(
+                command,
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=timeout or 30,
+            )
+            return SimpleNamespace(
+                result=(proc.stdout or "") + (proc.stderr or ""),
+                exit_code=proc.returncode,
+            )
+
+    sandbox = SimpleNamespace(process=LocalProcess())
+    cli = SandboxJediWorkerClient(
+        workspace_root=str(root),
+        sandbox=sandbox,
+        remote_dir=str(tmp_path / "remote-worker"),
+        request_timeout=5.0,
+    )
+
+    defs = cli.request(
+        "definitions",
+        {"path": str(pkg / "uses.py"), "line": 4, "column": 11},
+    )
+    assert defs
+    assert defs[0]["module_path"] == str(pkg / "core.py")
+    assert defs[0]["name"] == "alpha"
+
+    command_count = len(sandbox.process.commands)
+    refs = cli.request(
+        "references",
+        {"path": str(pkg / "core.py"), "line": 1, "column": 4},
+    )
+    assert len(refs) >= 2
+    assert len(sandbox.process.commands) == command_count + 1
     cli.shutdown()
