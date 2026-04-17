@@ -98,6 +98,11 @@ as the shared injection boundary. The helper owns the runtime metadata contract:
 - `ci_workspace_root`: optional override for CI indexing root
 - `ci_service`: the per-sandbox `CodeIntelligenceService`
 
+The injected `ci_service` is also the OCC boundary. It owns the per-sandbox
+`Arbiter` and `WriteCoordinator`; write-capable Daytona tools should require
+`ci_service` and commit through CI write primitives instead of accepting or
+injecting a separate OCC dependency.
+
 Callers may discover `repo_root` differently: sync toolkit prepare uses
 `discover_workspace(...)`, async toolkit prepare uses
 `discover_workspace_async(...)`, and lazy tool attach may resolve the sandbox on

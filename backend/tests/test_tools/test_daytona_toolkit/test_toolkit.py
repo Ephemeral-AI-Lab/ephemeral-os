@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from tools.core.base import ToolExecutionContext
+from tools.core.base import ToolExecutionContext, ToolRegistry
 from tools.core.factory import ToolkitContext
 from tools.daytona_toolkit.toolkit import DaytonaToolkit
 
@@ -20,6 +20,14 @@ from tools.daytona_toolkit.toolkit import DaytonaToolkit
 
 def _ctx(metadata=None) -> ToolExecutionContext:
     return ToolExecutionContext(cwd=Path("/tmp"), metadata=metadata or {})
+
+
+def _sandbox_with_noop_io():
+    sandbox = MagicMock()
+    sandbox.fs.download_file = AsyncMock(return_value=b"old")
+    sandbox.fs.upload_file = AsyncMock()
+    sandbox.process.exec = AsyncMock(return_value=MagicMock(result="", exit_code=0))
+    return sandbox
 
 
 # ---------------------------------------------------------------------------
@@ -62,6 +70,37 @@ def test_toolkit_registers_expected_tools():
     }
     assert names == expected
     assert not any(name.startswith("daytona_lsp_") for name in names)
+
+
+async def test_registered_write_capable_tools_require_ci_service():
+    registry = ToolRegistry()
+    registry.register_toolkit(DaytonaToolkit())
+    tools_by_name = {tool.name: tool for tool in registry.list_tools()}
+    write_inputs = {
+        "daytona_write_file": {"file_path": "/repo/new.txt", "content": "hello"},
+        "daytona_edit_file": {
+            "file_path": "/repo/app.py",
+            "old_text": "old",
+            "new_text": "new",
+        },
+        "daytona_codeact": {"command": "echo hi"},
+    }
+
+    assert set(write_inputs).issubset(tools_by_name)
+    assert set(tools_by_name) - set(write_inputs) == {
+        "daytona_read_file",
+        "daytona_grep",
+        "daytona_glob",
+    }
+
+    for tool_name, tool_input in write_inputs.items():
+        ctx = _ctx({"daytona_sandbox": _sandbox_with_noop_io(), "daytona_cwd": "/repo"})
+        tool = tools_by_name[tool_name]
+        result = await tool.execute(tool.input_model(**tool_input), ctx)
+
+        assert result.is_error, tool_name
+        assert "Code intelligence/OCC is unavailable" in result.output
+        assert result.metadata.get("occ_required") is True, tool_name
 
 
 def test_toolkit_from_context_includes_codeact():

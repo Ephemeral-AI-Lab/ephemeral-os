@@ -185,6 +185,31 @@ async def test_commit_transaction_changes_applies_repo_diff_via_ci(tmp_path: Pat
     assert not (repo / "delete_me.py").exists()
 
 
+async def test_commit_transaction_changes_requires_ci_service(tmp_path: Path):
+    repo = _make_repo(tmp_path)
+    sandbox = _LocalSandbox()
+    ctx = ToolExecutionContext(
+        cwd=repo,
+        metadata={"daytona_cwd": str(repo)},
+    )
+    tx = await create_codeact_transaction(sandbox, str(repo))
+    try:
+        scratch = Path(tx.scratch_root)
+        (scratch / "app.py").write_text("value = 4\n", encoding="utf-8")
+        changes = await collect_transaction_changes(sandbox, tx)
+        report = await commit_transaction_changes(ctx, tx, changes)
+    finally:
+        from tools.daytona_toolkit.codeact_transaction import cleanup_codeact_transaction
+
+        await cleanup_codeact_transaction(sandbox, tx)
+
+    assert not report.committed
+    assert len(report.errors) == 1
+    assert report.errors[0].path == str(repo)
+    assert "requires CI service" in report.errors[0].message
+    assert (repo / "app.py").read_text(encoding="utf-8") == "value = 1\n"
+
+
 async def test_coordinated_python_mode_captures_native_file_api_writes(tmp_path: Path):
     repo = _make_repo(tmp_path)
     sandbox = _LocalSandbox()
