@@ -1,20 +1,8 @@
-"""Toolkit factory registry — context-aware toolkit instantiation.
-
-Two registration paths are supported:
-
-1. **Preferred**: register a toolkit *class*. ``create_toolkit`` calls
-   ``cls.from_context(ctx)``, which each toolkit can override to read
-   what it needs from ``ctx.metadata``. Construction logic lives with
-   the toolkit, not in this module.
-
-2. **Legacy / tests**: register a *callable* that takes a ToolkitContext
-   and returns a toolkit. Kept for tests and ad-hoc registration.
-"""
+"""Toolkit registry for context-aware toolkit instantiation."""
 
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -25,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ToolkitContext:
-    """Runtime context passed to toolkit factories during agent construction.
+    """Runtime context passed to toolkits during agent construction.
 
     Only ``metadata`` is meaningful. Toolkits that need agent name, cwd, or
     similar should read them from ``metadata``.
@@ -34,16 +22,7 @@ class ToolkitContext:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
-ToolkitFactoryFn = Callable[[ToolkitContext], BaseToolkit]
-
-_factories: dict[str, ToolkitFactoryFn] = {}
 _classes: dict[str, type[BaseToolkit]] = {}
-
-
-def register_toolkit_factory(name: str, factory: ToolkitFactoryFn) -> None:
-    """Register a factory callable for a named toolkit (legacy/test path)."""
-    _factories[name] = factory
-    logger.debug("Registered toolkit factory: %s", name)
 
 
 def register_toolkit_class(name: str, cls: type[BaseToolkit]) -> None:
@@ -55,7 +34,6 @@ def register_toolkit_class(name: str, cls: type[BaseToolkit]) -> None:
 def create_toolkit(name: str, ctx: ToolkitContext) -> BaseToolkit:
     """Create a toolkit instance by name.
 
-    Class registrations win over callable registrations when both exist.
     Raises KeyError if no registration exists for *name*.
     """
     cls = _classes.get(name)
@@ -64,25 +42,17 @@ def create_toolkit(name: str, ctx: ToolkitContext) -> BaseToolkit:
         if toolkit.name != name:
             toolkit.name = name
         return toolkit
-    factory = _factories.get(name)
-    if factory is not None:
-        toolkit = factory(ctx)
-        if toolkit.name != name:
-            toolkit.name = name
-        return toolkit
-    raise KeyError(
-        f"Toolkit '{name}' not registered. Classes: {list(_classes)} Factories: {list(_factories)}"
-    )
+    raise KeyError(f"Toolkit '{name}' not registered. Toolkits: {list(_classes)}")
 
 
-def has_factory(name: str) -> bool:
-    """Return True if a class or callable factory is registered for *name*."""
-    return name in _classes or name in _factories
+def has_toolkit(name: str) -> bool:
+    """Return True if a toolkit class is registered for *name*."""
+    return name in _classes
 
 
-def list_factories() -> list[str]:
-    """List all registered toolkit names (class + callable)."""
-    return list({*_classes.keys(), *_factories.keys()})
+def list_toolkits() -> list[str]:
+    """List all registered toolkit names."""
+    return list(_classes.keys())
 
 
 # ---------------------------------------------------------------------------

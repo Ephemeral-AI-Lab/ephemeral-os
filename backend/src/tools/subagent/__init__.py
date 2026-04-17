@@ -70,9 +70,6 @@ class RestrictedRunSubagentTool(BaseTool):
     def background_preflight(self, arguments, context: ToolExecutionContext) -> ToolResult | None:  # type: ignore[override]
         return self._delegate.background_preflight(arguments, context)
 
-    def is_read_only(self, arguments) -> bool:  # type: ignore[override]
-        return self._delegate.is_read_only(arguments)
-
 
 class SubagentToolkit(BaseToolkit):
     """Spawn focused worker subagents that run as background tasks."""

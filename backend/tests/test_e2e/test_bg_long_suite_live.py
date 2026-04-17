@@ -26,6 +26,7 @@ import pytest
 
 from engine.testing.eval_agent import EvalAgent
 from tests.test_e2e.conftest import create_eval_agent, create_test_sandbox, delete_test_sandbox
+from tests.test_e2e.daytona_exec_io import write_text_via_exec
 from tests.test_e2e.helpers import log_result
 
 pytestmark = [pytest.mark.e2e, pytest.mark.live]
@@ -229,12 +230,8 @@ class TestLongSuiteEarlyCancel:
         svc = get_sandbox_service()
         sb = svc.get_sandbox_object(sandbox["id"])
         sb.process.exec("mkdir -p /home/daytona/long_suite")
-        sb.fs.upload_file(
-            LONG_SUITE_SCRIPT.encode(), "/home/daytona/long_suite/run_suite.py"
-        )
-        sb.fs.upload_file(
-            LONG_SUITE_INITIAL_CONFIG.encode(), "/home/daytona/long_suite/config.json"
-        )
+        write_text_via_exec(sb, "/home/daytona/long_suite/run_suite.py", LONG_SUITE_SCRIPT)
+        write_text_via_exec(sb, "/home/daytona/long_suite/config.json", LONG_SUITE_INITIAL_CONFIG)
         sb.process.exec("chmod +x /home/daytona/long_suite/run_suite.py")
 
     @pytest.mark.asyncio

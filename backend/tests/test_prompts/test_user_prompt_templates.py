@@ -251,6 +251,6 @@ async def test_build_query_context_uses_scout_markdown_template() -> None:
     assert ctx.user_message.startswith("Please read the following sections")
     assert "- final_response:" in ctx.user_message
     assert "## Assigned exploration task" in ctx.user_message
-    assert "Stay read-only" in ctx.user_message
+    assert "Do not edit files" in ctx.user_message
     assert "Map retry module ownership." in ctx.user_message
     assert "## scope_paths\n- backend/src/retry.py" in ctx.user_message

@@ -28,7 +28,7 @@ from providers.types import UsageSnapshot
 from prompts import build_runtime_context_message, build_runtime_system_prompt
 from tools import create_default_tool_registry
 from tools.core.base import BaseToolkit
-from tools.core.factory import create_toolkit, has_factory, list_factories, ToolkitContext
+from tools.core.factory import create_toolkit, has_toolkit, list_toolkits, ToolkitContext
 
 logger = logging.getLogger(__name__)
 
@@ -208,7 +208,7 @@ def _build_agent_tool_registry(
         for tk_name in agent_def.toolkits:
             if tool_registry.get_toolkit(tk_name) is not None:
                 continue  # already registered
-            if has_factory(tk_name):
+            if has_toolkit(tk_name):
                 try:
                     tk = create_toolkit(tk_name, toolkit_ctx)
                     tool_registry.register_toolkit(tk)
@@ -222,7 +222,7 @@ def _build_agent_tool_registry(
                     )
             else:
                 logger.warning(
-                    "No factory for toolkit %r requested by agent %r", tk_name, agent_name
+                    "No toolkit class for %r requested by agent %r", tk_name, agent_name
                 )
 
     # Register Daytona sandbox tools when a sandbox is selected (if not
@@ -283,7 +283,7 @@ def _register_additional_allowed_tools(
     if not wanted:
         return
 
-    for tk_name in list_factories():
+    for tk_name in list_toolkits():
         existing_toolkit = tool_registry.get_toolkit(tk_name)
         try:
             source_toolkit = existing_toolkit or create_toolkit(tk_name, toolkit_ctx)

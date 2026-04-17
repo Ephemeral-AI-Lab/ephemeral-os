@@ -29,6 +29,7 @@ import pytest
 from dotenv import load_dotenv
 
 from code_intelligence.routing.service import CodeIntelligenceService
+from tests.test_e2e.daytona_exec_io import read_text_via_exec, write_text_via_exec
 from tools.core.base import ToolExecutionContext
 from tools.daytona_toolkit._daytona_utils import _extract_exit_code, _wrap_bash_command
 from tools.daytona_toolkit.codeact_tool import daytona_codeact
@@ -137,11 +138,10 @@ class LiveRepoEnv:
         return stdout
 
     def read_file(self, rel_path: str) -> str:
-        raw = self.raw_sandbox.fs.download_file(f"{self.repo_root}/{rel_path}")
-        return _decode_text(raw)
+        return read_text_via_exec(self.raw_sandbox, f"{self.repo_root}/{rel_path}")
 
     def write_file(self, rel_path: str, content: str) -> None:
-        self.raw_sandbox.fs.upload_file(content.encode("utf-8"), f"{self.repo_root}/{rel_path}")
+        write_text_via_exec(self.raw_sandbox, f"{self.repo_root}/{rel_path}", content)
 
     def exists(self, rel_path: str) -> bool:
         exit_code, _ = self.exec(f"test -e {shlex.quote(f'{self.repo_root}/{rel_path}')}", timeout=30)
@@ -167,20 +167,14 @@ class LiveRepoEnv:
             )
         )
         for rel_path, content in committed.items():
-            self.raw_sandbox.fs.upload_file(
-                content.encode("utf-8"),
-                f"{self.repo_root}/{rel_path}",
-            )
+            write_text_via_exec(self.raw_sandbox, f"{self.repo_root}/{rel_path}", content)
         self.exec_checked(
             f"git -C {shlex.quote(self.repo_root)} add -A && "
             f"git -C {shlex.quote(self.repo_root)} commit -m init",
             timeout=120,
         )
         for rel_path, content in (dirty or {}).items():
-            self.raw_sandbox.fs.upload_file(
-                content.encode("utf-8"),
-                f"{self.repo_root}/{rel_path}",
-            )
+            write_text_via_exec(self.raw_sandbox, f"{self.repo_root}/{rel_path}", content)
 
     def make_ci_service(self) -> CodeIntelligenceService:
         return CodeIntelligenceService(
@@ -373,15 +367,17 @@ def test_live_same_base_transactions_merge_non_overlapping_changes(live_repo_env
     try:
         scratch_a = f"{tx_a.scratch_root}/shared.py"
         scratch_b = f"{tx_b.scratch_root}/shared.py"
-        original_a = _decode_text(live_repo_env.raw_sandbox.fs.download_file(scratch_a))
-        original_b = _decode_text(live_repo_env.raw_sandbox.fs.download_file(scratch_b))
-        live_repo_env.raw_sandbox.fs.upload_file(
-            original_a.replace("return 'alpha'", "return 'ALPHA_MERGED'").encode("utf-8"),
+        original_a = read_text_via_exec(live_repo_env.raw_sandbox, scratch_a)
+        original_b = read_text_via_exec(live_repo_env.raw_sandbox, scratch_b)
+        write_text_via_exec(
+            live_repo_env.raw_sandbox,
             scratch_a,
+            original_a.replace("return 'alpha'", "return 'ALPHA_MERGED'"),
         )
-        live_repo_env.raw_sandbox.fs.upload_file(
-            original_b.replace("return 'gamma'", "return 'GAMMA_MERGED'").encode("utf-8"),
+        write_text_via_exec(
+            live_repo_env.raw_sandbox,
             scratch_b,
+            original_b.replace("return 'gamma'", "return 'GAMMA_MERGED'"),
         )
 
         report_a = _run(
@@ -433,14 +429,16 @@ def test_live_same_base_transactions_conflict_on_overlap(live_repo_env: LiveRepo
     try:
         scratch_a = f"{tx_a.scratch_root}/shared.py"
         scratch_b = f"{tx_b.scratch_root}/shared.py"
-        original = _decode_text(live_repo_env.raw_sandbox.fs.download_file(scratch_a))
-        live_repo_env.raw_sandbox.fs.upload_file(
-            original.replace("return 'beta'", "return 'beta from A'").encode("utf-8"),
+        original = read_text_via_exec(live_repo_env.raw_sandbox, scratch_a)
+        write_text_via_exec(
+            live_repo_env.raw_sandbox,
             scratch_a,
+            original.replace("return 'beta'", "return 'beta from A'"),
         )
-        live_repo_env.raw_sandbox.fs.upload_file(
-            original.replace("return 'beta'", "return 'beta from B'").encode("utf-8"),
+        write_text_via_exec(
+            live_repo_env.raw_sandbox,
             scratch_b,
+            original.replace("return 'beta'", "return 'beta from B'"),
         )
 
         report_a = _run(

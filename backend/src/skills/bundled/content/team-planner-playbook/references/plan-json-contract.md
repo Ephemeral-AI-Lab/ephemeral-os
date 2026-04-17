@@ -51,7 +51,7 @@ Use this reference immediately before calling `submit_plan(...)`.
 
 ```md
 1. Goal: Decompose the parquet IO owner surface into executable child tasks that can run without overlapping writes.
-2. Environment: Work in the current repository checkout with read-only planning tools. Use Task Center notes first, then targeted symbol/file reads only where ownership is still unclear. Do not patch code or run implementation tests yourself.
+2. Environment: Work in the current repository checkout with planning and inspection tools. Use Task Center notes first, then targeted symbol/file reads only where ownership is still unclear. Do not patch code or run implementation tests yourself.
 3. Scope: Plan within `pkg/io/parquet/`, `pkg/tests/io/test_parquet.py`, and live-confirmed helpers imported by that package. Keep benchmark-only paths in prose, not `scope_paths`, unless they are also production owners.
 4. Context: The parent planner confirmed three failing targets: `test_parquet_nullable_string_roundtrip`, `test_parquet_index_metadata_merge`, and `test_parquet_engine_fallback_error`. Scout notes show `pkg/io/parquet/core.py` owns schema normalization, while `pkg/io/parquet/engine.py` owns engine selection. The surface is too broad for one developer because schema fixes and engine fallback can be separated, but both may need a terminal validator.
 5. Plan Rule: Submit separate developer lanes for schema normalization and engine fallback if ownership remains distinct. Sequence any shared-file work if both lanes touch the same file. Include one terminal validator depending on all terminal non-validator lanes.

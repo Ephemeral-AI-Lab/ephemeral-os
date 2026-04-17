@@ -108,6 +108,19 @@ class LspClient:
             lambda: self._query_references(file_path, line, character, language),
         )
 
+    def rename_symbol(
+        self, file_path: str, line: int, character: int, new_name: str,
+    ) -> dict[str, str]:
+        """Return {absolute_path: new_content} for every file affected by the rename.
+
+        Empty dict means the symbol could not be resolved or produced no changes.
+        Renames are computed but never written — callers coordinate the writes.
+        """
+        language = self._detect_language(file_path)
+        if language != "python":
+            return {}
+        return self._python_rename(file_path, line, character, new_name)
+
     def hover(
         self, file_path: str, line: int, character: int,
     ) -> HoverResult | None:
@@ -326,6 +339,37 @@ class LspClient:
             for item in raw
             if isinstance(item, dict)
         ]
+
+    def _python_rename(
+        self, file_path: str, line: int, character: int, new_name: str,
+    ) -> dict[str, str]:
+        character = self._resolve_column(file_path, line, character)
+        path_literal = json.dumps(self._resolve_path(file_path))
+        new_name_literal = json.dumps(str(new_name))
+        script = (
+            "import jedi, json\n"
+            f"s = jedi.Script(path={path_literal})\n"
+            "out = {}\n"
+            "try:\n"
+            f"    r = s.rename(line={line}, column={character}, new_name={new_name_literal})\n"
+            "    for p, cf in r.get_changed_files().items():\n"
+            "        try:\n"
+            "            out[str(p)] = cf.get_new_code()\n"
+            "        except Exception:\n"
+            "            continue\n"
+            "except Exception as exc:\n"
+            "    print(json.dumps({'__error__': str(exc)}))\n"
+            "else:\n"
+            "    print(json.dumps(out))\n"
+        )
+        output = self._run_python_script(script)
+        raw = self._decode_json(output)
+        if not isinstance(raw, dict):
+            return {}
+        if "__error__" in raw:
+            logger.debug("jedi rename failed: %s", raw.get("__error__"))
+            return {}
+        return {str(k): str(v) for k, v in raw.items() if isinstance(v, str)}
 
     def _python_hover(
         self, file_path: str, line: int, character: int,

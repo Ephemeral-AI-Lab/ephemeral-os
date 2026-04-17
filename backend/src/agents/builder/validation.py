@@ -35,9 +35,9 @@ class AgentDefinitionValidator:
             known: set[str] = set()
             if self._tool_registry:
                 known = {tk.name for tk in self._tool_registry.list_toolkits()}
-            from tools.core.factory import has_factory
+            from tools.core.factory import has_toolkit
             for tk in toolkits:
-                if tk not in known and not has_factory(tk):
+                if tk not in known and not has_toolkit(tk):
                     errors.append(f"Unknown toolkit: {tk}")
 
         allowed_tools = getattr(defn, "allowed_tools", None)
@@ -55,11 +55,11 @@ class AgentDefinitionValidator:
         return AgentValidationResult(valid=len(errors) == 0, errors=errors, warnings=warnings)
 
     def _resolve_tool_names(self, toolkit_names: list[str]) -> set[str]:
-        from tools.core.factory import ToolkitContext, create_toolkit, has_factory
+        from tools.core.factory import ToolkitContext, create_toolkit, has_toolkit
 
         names: set[str] = set()
         for tk_name in toolkit_names:
-            if not has_factory(tk_name):
+            if not has_toolkit(tk_name):
                 continue
             try:
                 toolkit = create_toolkit(
@@ -79,8 +79,8 @@ class AgentDefinitionValidator:
         return names
 
     def _resolve_all_tool_names(self, toolkit_names: list[str]) -> set[str]:
-        from tools.core.factory import list_factories
+        from tools.core.factory import list_toolkits
 
         names = self._resolve_tool_names(toolkit_names)
-        names.update(self._resolve_tool_names(list_factories()))
+        names.update(self._resolve_tool_names(list_toolkits()))
         return names

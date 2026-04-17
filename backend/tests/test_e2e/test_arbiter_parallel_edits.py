@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import asyncio
 import concurrent.futures
+import contextlib
 import hashlib
 import json
 import os
@@ -40,6 +41,7 @@ load_dotenv(_PROJECT_ROOT / ".env")
 from code_intelligence.editing.arbiter import Arbiter
 from code_intelligence.routing.service import CodeIntelligenceService
 from code_intelligence.types import PreparedWrite
+from tests.test_e2e.daytona_exec_io import read_text_via_exec, write_text_via_exec
 from tools.core.base import ToolExecutionContext
 from tools.daytona_toolkit.edit_tool import daytona_edit_file
 
@@ -61,6 +63,14 @@ _SETTINGS = _load_settings()
 DAYTONA_KEY = os.environ.get("DAYTONA_API_KEY") or _SETTINGS.get("daytona_api_key", "")
 DAYTONA_URL = os.environ.get("DAYTONA_API_URL") or _SETTINGS.get("daytona_api_url", "")
 HAS_DAYTONA = bool(DAYTONA_KEY and DAYTONA_URL)
+
+
+def _skip_if_daytona_upload_denied(exc: Exception) -> None:
+    """Skip live tests when Daytona credentials can create but not upload."""
+    if getattr(exc, "status_code", None) == 403 or "403" in str(exc):
+        pytest.skip(
+            "Daytona sandbox file upload denied (403); check Daytona workspace/file permissions."
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -1069,13 +1079,20 @@ class TestLiveSandboxParallelEdits:
             "def function_b():\n    return 'b'\n\n"
             "def function_c():\n    return 'c'\n"
         )
-        self.raw_sandbox.fs.upload_file(test_content.encode("utf-8"), f"{self.home}/shared.py")
-        self.raw_sandbox.fs.upload_file(b"file_x = 1\n", f"{self.home}/x.py")
-        self.raw_sandbox.fs.upload_file(b"file_y = 2\n", f"{self.home}/y.py")
+        try:
+            write_text_via_exec(self.raw_sandbox, f"{self.home}/shared.py", test_content)
+            write_text_via_exec(self.raw_sandbox, f"{self.home}/x.py", "file_x = 1\n")
+            write_text_via_exec(self.raw_sandbox, f"{self.home}/y.py", "file_y = 2\n")
+        except Exception as exc:
+            with contextlib.suppress(Exception):
+                delete_test_sandbox(self.sandbox_id)
+            _skip_if_daytona_upload_denied(exc)
+            raise
 
-        yield
-
-        delete_test_sandbox(self.sandbox_id)
+        try:
+            yield
+        finally:
+            delete_test_sandbox(self.sandbox_id)
 
     def _make_live_ci_service(self) -> CodeIntelligenceService:
         """Create a CI service backed by the real sandbox."""
@@ -1115,8 +1132,7 @@ class TestLiveSandboxParallelEdits:
         assert result_b.success, f"Non-overlapping merge on live sandbox failed: {result_b.message}"
 
         # Verify by reading back
-        final_raw = self.raw_sandbox.fs.download_file(shared)
-        final = final_raw.decode("utf-8") if isinstance(final_raw, bytes) else str(final_raw)
+        final = read_text_via_exec(self.raw_sandbox, shared)
         assert "A_MODIFIED" in final, "Agent A's change lost on live sandbox"
         assert "C_MODIFIED" in final, "Agent B's change lost on live sandbox"
 
@@ -1211,8 +1227,7 @@ class TestLiveSandboxParallelEdits:
         )
 
         # Verify both edits present in final file
-        final_raw = self.raw_sandbox.fs.download_file(shared)
-        final = final_raw.decode("utf-8") if isinstance(final_raw, bytes) else str(final_raw)
+        final = read_text_via_exec(self.raw_sandbox, shared)
         assert "A_MERGED" in final, f"Agent A's change lost after merge. File:\n{final}"
         assert "C_MERGED" in final, f"Agent B's change lost after merge. File:\n{final}"
         assert "return 'b'" in final, f"function_b should be untouched. File:\n{final}"
@@ -1244,8 +1259,7 @@ class TestLiveSandboxParallelEdits:
         assert result_b.conflict
 
         # Only agent A's value should be in the file
-        final_raw = self.raw_sandbox.fs.download_file(shared)
-        final = final_raw.decode("utf-8") if isinstance(final_raw, bytes) else str(final_raw)
+        final = read_text_via_exec(self.raw_sandbox, shared)
         assert "B_BY_A" in final
         assert "B_BY_B" not in final
 
@@ -1291,8 +1305,10 @@ class TestLiveLLMParallelEdits:
         home_resp = self.raw_sandbox.process.exec("pwd", timeout=10)
         self.home = (home_resp.result or "").strip() or "/home/daytona"
 
-        yield
-        delete_test_sandbox(self.sandbox_id)
+        try:
+            yield
+        finally:
+            delete_test_sandbox(self.sandbox_id)
 
     def _skip_if_no_credentials(self):
         from engine.testing.eval_agent import EvalAgent
@@ -1301,11 +1317,18 @@ class TestLiveLLMParallelEdits:
             pytest.skip("LLM + Daytona credentials required")
 
     def _read_file(self, rel_path: str) -> str:
-        content = self.raw_sandbox.fs.download_file(f"{self.home}/{rel_path}")
-        return content.decode("utf-8") if isinstance(content, bytes) else str(content)
+        return read_text_via_exec(self.raw_sandbox, f"{self.home}/{rel_path}")
 
     def _write_file(self, rel_path: str, content: str) -> None:
-        self.raw_sandbox.fs.upload_file(content.encode("utf-8"), f"{self.home}/{rel_path}")
+        try:
+            write_text_via_exec(
+                self.raw_sandbox,
+                f"{self.home}/{rel_path}",
+                content,
+            )
+        except Exception as exc:
+            _skip_if_daytona_upload_denied(exc)
+            raise
 
     @staticmethod
     def _daytona_edit_completions(result: Any, *, is_error: bool | None = None) -> list[Any]:

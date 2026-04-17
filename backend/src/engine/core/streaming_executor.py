@@ -37,7 +37,6 @@ class TrackedTool:
     input: dict[str, Any]
     assistant_message: ConversationMessage
     status: str = "queued"
-    is_concurrency_safe: bool = True
     task: asyncio.Task | None = None
     progress_lines: list[str] = field(default_factory=list)
     result: ToolResult | None = None
@@ -74,7 +73,6 @@ class StreamingToolExecutor:
 
     Features:
     - Tools start executing as soon as tool_use blocks arrive (mid-stream)
-    - Concurrency-safe tools run in parallel
     - Progress events stream back for long-running operations
     - LLM can abort tools via cancel() signal
     - Tools the caller flags via ``should_defer`` (e.g. background
@@ -126,34 +124,17 @@ class StreamingToolExecutor:
             )
             return None
 
-        # Determine concurrency safety. If the LLM sent invalid input, defer
-        # the ValidationError to _execute_tool (which returns it as a tool
-        # error to the LLM) instead of crashing the query loop here.
-        is_concurrency_safe = False
-        if tool_def:
-            try:
-                is_concurrency_safe = tool_def.is_read_only(
-                    tool_def.input_model.model_validate(event.input)
-                )
-            except Exception as exc:
-                logger.warning(
-                    "STREAM: Invalid tool input for %s, deferring error: %s",
-                    event.name,
-                    exc,
-                )
         tracked = TrackedTool(
             id=event.id,
             name=event.name,
             input=event.input,
             assistant_message=assistant_message,
-            is_concurrency_safe=is_concurrency_safe,
         )
         self._tools[event.id] = tracked
         logger.debug(
-            "STREAM: Received tool_use event: tool_id=%s tool_name=%s concurrency_safe=%s input=%s",
+            "STREAM: Received tool_use event: tool_id=%s tool_name=%s input=%s",
             event.id,
             event.name,
-            tracked.is_concurrency_safe,
             event.input,
         )
         if event.input is not None:

@@ -457,6 +457,90 @@ def test_context_for_dedupes_parent_notes_by_task_id():
     assert "stale parent note" not in ctx
 
 
+def test_context_for_prefers_scope_relevant_parent_note_over_checkpoint():
+    tc = _tc()
+    _run(
+        tc.notes.post(
+            _note(
+                "n1",
+                "parent-task",
+                "scout found the diff command owner seam",
+                agent_name="scout",
+                paths=["dvc/command/diff.py", "dvc/command/metrics.py"],
+            )
+        )
+    )
+    _run(
+        tc.notes.post(
+            _note(
+                "n2",
+                "parent-task",
+                "**Checkpoint: parent-task (team_planner) → TaskStatus.RUNNING**",
+                agent_name="checkpoint",
+            )
+        )
+    )
+    task = _task(
+        "work-1",
+        objective="child task",
+        parent_id="parent-task",
+        scope_paths=["dvc/command/diff.py"],
+    )
+
+    parent = _task("parent-task", objective="parent")
+
+    async def _mock_get_task(task_id):
+        return parent if task_id == "parent-task" else None
+
+    tc.get_task = _mock_get_task
+
+    ctx = _run(tc.context.context_for(task))
+    assert "scout found the diff command owner seam" in ctx
+    assert "TaskStatus.RUNNING" not in ctx
+
+
+def test_template_context_for_prefers_scope_relevant_parent_note_over_checkpoint():
+    tc = _tc()
+    _run(
+        tc.notes.post(
+            _note(
+                "n1",
+                "parent-task",
+                "scout found the diff command owner seam",
+                agent_name="scout",
+                paths=["dvc/command/diff.py"],
+            )
+        )
+    )
+    _run(
+        tc.notes.post(
+            _note(
+                "n2",
+                "parent-task",
+                "**Checkpoint: parent-task (team_planner) → TaskStatus.RUNNING**",
+                agent_name="checkpoint",
+            )
+        )
+    )
+    task = _task(
+        "work-1",
+        objective="child task",
+        parent_id="parent-task",
+        scope_paths=["dvc/command/diff.py"],
+    )
+
+    parent = _task("parent-task", objective="parent")
+
+    async def _mock_get_task(task_id):
+        return parent if task_id == "parent-task" else None
+
+    tc.get_task = _mock_get_task
+
+    parts = _run(tc.context.template_context_for(task))
+    assert "scout found the diff command owner seam" in parts.parent_context
+    assert "TaskStatus.RUNNING" not in parts.parent_context
+
+
 def test_context_for_no_parent_notes_when_parent_id_is_none():
     tc = _tc()
     _run(tc.notes.post(_note("n1", "some-task", "context")))

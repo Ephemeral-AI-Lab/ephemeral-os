@@ -695,9 +695,7 @@ class SubmissionToolkit(BaseToolkit):
     def from_context(cls, ctx: object) -> SubmissionToolkit:
         return cls(
             name="submission",
-            description=(
-                "Terminal submission tools (submit_task_summary, submit_plan, submit_replan)."
-            ),
+            description="Terminal submission tools for team-mode agents.",
             tools=[
                 SubmitTaskSummaryTool(),
                 SubmitPlanTool(),

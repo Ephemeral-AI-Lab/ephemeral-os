@@ -33,9 +33,11 @@ def test_format_snapshot_history_structures_snapshot() -> None:
             {
                 "role": "assistant",
                 "content": [
+                    {"type": "thinking", "text": "Need to patch the parser."},
                     {"type": "text", "text": "I edited parser.py."},
                     {
                         "type": "tool_use",
+                        "id": "toolu_1",
                         "name": "daytona_edit_file",
                         "input": {"path": "parser.py"},
                     },
@@ -56,11 +58,134 @@ def test_format_snapshot_history_structures_snapshot() -> None:
     )
 
     assert rendered.startswith("## Snapshot History")
-    assert "### Message 1: user" in rendered
-    assert "```text\nFix parser.py\n```" in rendered
-    assert "#### Tool call: daytona_edit_file" in rendered
-    assert '"path": "parser.py"' in rendered
-    assert "#### Tool result: toolu_1 (ok)" in rendered
+    assert "<snapshot>" in rendered
+    assert "<turn" not in rendered
+    assert "<user>\n    Fix parser.py\n  </user>" in rendered
+    assert "<assistant>" in rendered
+    assert "Need to patch the parser." not in rendered
+    assert "<text>\n      I edited parser.py.\n    </text>" in rendered
+    assert '<tool_call number="1" name="daytona_edit_file">' in rendered
+    assert "toolu_1" not in rendered
+    assert '<input_json>\n        {"path":"parser.py"}\n      </input_json>' in rendered
+    assert '<output status="ok">\n        ok\n      </output>' in rendered
+    assert "</tool_call>" in rendered
+
+
+def test_format_snapshot_history_can_include_thinking_when_requested() -> None:
+    rendered = format_snapshot_history(
+        [
+            {"role": "user", "content": "Fix parser.py"},
+            {
+                "role": "assistant",
+                "content": [
+                    {"type": "thinking", "text": "Need to patch the parser."},
+                    {"type": "text", "text": "I edited parser.py."},
+                ],
+            },
+        ],
+        include_thinking=True,
+    )
+
+    assert "<thinking>\n      Need to patch the parser.\n    </thinking>" in rendered
+
+
+def test_format_snapshot_history_keeps_full_user_assistant_pairs() -> None:
+    rendered = format_snapshot_history(
+        [
+            {"role": "user", "content": "Earlier request."},
+            {"role": "assistant", "content": "Earlier response."},
+            {"role": "user", "content": "Summarize progress."},
+            {"role": "assistant", "content": f"start {'x' * 200} end"},
+        ]
+    )
+
+    assert "Earlier request." in rendered
+    assert "Earlier response." in rendered
+    assert "start" in rendered
+    assert "end" in rendered
+    assert "x" * 200 in rendered
+
+
+def test_format_snapshot_history_escapes_tag_like_content() -> None:
+    rendered = format_snapshot_history(
+        [
+            {"role": "user", "content": "Handle <xml>"},
+            {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "id": "toolu_1",
+                        "name": 'bad"tool',
+                        "input": {"value": "</input_json>"},
+                    }
+                ],
+            },
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": "toolu_1",
+                        "content": "</output>",
+                    }
+                ],
+            },
+        ]
+    )
+
+    assert "Handle &lt;xml&gt;" in rendered
+    assert '<tool_call number="1" name="bad&quot;tool">' in rendered
+    assert "toolu_1" not in rendered
+    assert "&lt;/input_json&gt;" in rendered
+    assert "&lt;/output&gt;" in rendered
+
+
+def test_format_snapshot_history_numbers_tool_calls_without_ids() -> None:
+    rendered = format_snapshot_history(
+        [
+            {"role": "user", "content": "Verify both files"},
+            {
+                "role": "assistant",
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "id": "first_internal_id",
+                        "name": "daytona_read_file",
+                        "input": {"file_path": "a.py"},
+                    },
+                    {
+                        "type": "tool_use",
+                        "id": "second_internal_id",
+                        "name": "ci_diagnostics",
+                        "input": {"file_path": "b.py"},
+                    },
+                ],
+            },
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": "first_internal_id",
+                        "content": "read ok",
+                    },
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": "second_internal_id",
+                        "content": "clean",
+                    },
+                ],
+            },
+        ]
+    )
+
+    assert '<tool_call number="1" name="daytona_read_file">' in rendered
+    assert '<tool_call number="2" name="ci_diagnostics">' in rendered
+    assert "first_internal_id" not in rendered
+    assert "second_internal_id" not in rendered
+    assert "read ok" in rendered
+    assert "clean" in rendered
 
 
 def test_build_tc_note_user_prompt_appends_snapshot_history() -> None:
@@ -71,7 +196,8 @@ def test_build_tc_note_user_prompt_appends_snapshot_history() -> None:
 
     assert prompt.startswith("Call submit_task_note now.")
     assert "## Snapshot History" in prompt
-    assert "### Message 1: assistant" in prompt
+    assert "<turn" not in prompt
+    assert "<assistant>" in prompt
     assert "Still working" in prompt
 
 

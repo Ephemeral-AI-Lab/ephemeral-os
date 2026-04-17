@@ -52,6 +52,15 @@ After the replan:
 
 Notes are scoped by task and path. `NoteManager` owns note state, posting, reads, and scope filtering. `TaskContextBuilder` owns agent-facing context injection: the assigned task, dependency notes, parent context, replanner failure packets, and recent overlapping scope changes.
 
+When multiple notes exist for the same upstream task, prompt context prefers the
+most useful note over the merely latest note. For dependency context,
+`TaskContextBuilder` keeps one preferred note per dependency task, avoiding
+low-information checkpoint/status notes when richer worker, scout, planner, or
+reviewer notes exist. For parent context, it first prefers notes whose paths
+match the child task's `scope_paths`, then applies the same preferred-note
+selection. Checkpoint notes remain a fallback when they are the only available
+parent or dependency context.
+
 ## Checkpoints
 
 TaskCenter checkpoints capture the task graph, ready queue order, note state, project context, and budget state. Rollback restores all of those runtime surfaces together so task context and Task Center note reads match the restored task graph.

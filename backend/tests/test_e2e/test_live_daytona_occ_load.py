@@ -35,9 +35,9 @@ import pytest
 from dotenv import load_dotenv
 
 from code_intelligence.routing.service import CodeIntelligenceService
+from tests.test_e2e.daytona_exec_io import read_text_via_exec, write_text_via_exec
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.daytona_toolkit._daytona_utils import (
-    _build_write_text_file_command,
     _extract_exit_code,
     _wrap_bash_command,
 )
@@ -136,17 +136,10 @@ class LiveLoadEnv:
             pytest.skip(f"Sandbox image missing required command: {name}")
 
     def write_text(self, rel_path: str, content: str) -> None:
-        abs_path = f"{self.repo_root}/{rel_path}"
-        response = self.raw_sandbox.process.exec(
-            _wrap_bash_command(_build_write_text_file_command(abs_path, content)),
-            timeout=60,
-        )
-        if getattr(response, "exit_code", 0) not in (0, None):
-            raise AssertionError(f"Failed to seed file: {abs_path}")
+        write_text_via_exec(self.raw_sandbox, f"{self.repo_root}/{rel_path}", content, timeout=60)
 
     def read_text(self, rel_path: str) -> str:
-        raw = self.raw_sandbox.fs.download_file(f"{self.repo_root}/{rel_path}")
-        return raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
+        return read_text_via_exec(self.raw_sandbox, f"{self.repo_root}/{rel_path}", timeout=60)
 
     def make_ci_service(self) -> CodeIntelligenceService:
         return CodeIntelligenceService(

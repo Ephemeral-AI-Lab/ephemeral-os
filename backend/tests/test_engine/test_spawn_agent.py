@@ -1,10 +1,10 @@
 """Tests for spawn_agent toolkit instantiation and skill/toolkit awareness.
 
 These tests verify that:
-1. Toolkits listed in agent_def.toolkits are instantiated via the factory
+1. Toolkits listed in agent_def.toolkits are instantiated via the toolkit registry
 2. restrict_to_toolkits is applied correctly after instantiation
 3. Skills and toolkit awareness sections are injected into the system prompt
-4. Factory context propagates agent metadata correctly
+4. Toolkit context propagates agent metadata correctly
 """
 
 from __future__ import annotations
@@ -68,7 +68,7 @@ from tools.core.base import (  # noqa: E402
     ToolRegistry,
     ToolResult,
 )
-from tools.core.factory import ToolkitContext, _factories, register_toolkit_factory  # noqa: E402
+from tools.core.factory import ToolkitContext, _classes, register_toolkit_class  # noqa: E402
 from tools.submission.toolkit import SubmissionToolkit  # noqa: E402
 
 
@@ -106,6 +106,41 @@ class _DummyToolkit(BaseToolkit):
         )
 
 
+class _SecondToolkit(_DummyToolkit):
+    def __init__(self) -> None:
+        super().__init__(name="second_toolkit", tools=[_DummyTool2()])
+
+
+class _BrokenToolkit(BaseToolkit):
+    @classmethod
+    def from_context(cls, ctx: Any) -> BaseToolkit:
+        raise RuntimeError("toolkit broke")
+
+
+class _CountedToolkit(_DummyToolkit):
+    calls = 0
+
+    def __init__(self) -> None:
+        super().__init__(name="counted_toolkit")
+
+    @classmethod
+    def from_context(cls, ctx: Any) -> BaseToolkit:
+        cls.calls += 1
+        return cls()
+
+
+class _CapturingToolkit(_DummyToolkit):
+    captured_contexts: list[ToolkitContext] = []
+
+    def __init__(self) -> None:
+        super().__init__(name="capturing_toolkit")
+
+    @classmethod
+    def from_context(cls, ctx: ToolkitContext) -> BaseToolkit:
+        cls.captured_contexts.append(ctx)
+        return cls()
+
+
 def _make_agent_def(**overrides: Any) -> AgentDefinition:
     """Create a minimal AgentDefinition with sensible defaults."""
     defaults = {
@@ -123,18 +158,20 @@ def _make_agent_def(**overrides: Any) -> AgentDefinition:
 
 
 @pytest.fixture(autouse=True)
-def _isolate_factories():
-    """Snapshot and restore the global factory registry around each test."""
-    original = dict(_factories)
+def _isolate_toolkit_classes():
+    """Snapshot and restore the global toolkit registry around each test."""
+    original = dict(_classes)
     yield
-    _factories.clear()
-    _factories.update(original)
+    _classes.clear()
+    _classes.update(original)
+    _CountedToolkit.calls = 0
+    _CapturingToolkit.captured_contexts.clear()
 
 
 @pytest.fixture()
-def _register_dummy_factory():
-    """Register a 'dummy_toolkit' factory for tests."""
-    register_toolkit_factory("dummy_toolkit", lambda ctx: _DummyToolkit())
+def _register_dummy_toolkit():
+    """Register a 'dummy_toolkit' class for tests."""
+    register_toolkit_class("dummy_toolkit", _DummyToolkit)
 
 
 # ---------------------------------------------------------------------------
@@ -192,11 +229,11 @@ class TestRestrictToToolkits:
 
 
 # ---------------------------------------------------------------------------
-# Tests — Toolkit factory instantiation logic
+# Tests — Toolkit class instantiation logic
 # ---------------------------------------------------------------------------
 
 
-class TestToolkitFactoryInstantiation:
+class TestToolkitInstantiation:
     """Test the toolkit instantiation logic extracted from spawn_agent."""
 
     def _apply_toolkit_instantiation(
@@ -206,7 +243,7 @@ class TestToolkitFactoryInstantiation:
     ) -> ToolRegistry:
         """Replicate the toolkit instantiation logic from spawn_agent."""
         from tools import create_default_tool_registry
-        from tools.core.factory import create_toolkit, has_factory
+        from tools.core.factory import create_toolkit, has_toolkit
 
         tool_registry = create_default_tool_registry()
         agent_name = agent_def.name if agent_def else "default"
@@ -223,7 +260,7 @@ class TestToolkitFactoryInstantiation:
             for tk_name in agent_def.toolkits:
                 if tool_registry.get_toolkit(tk_name) is not None:
                     continue
-                if has_factory(tk_name):
+                if has_toolkit(tk_name):
                     try:
                         tk = create_toolkit(tk_name, toolkit_ctx)
                         tool_registry.register_toolkit(tk)
@@ -236,15 +273,15 @@ class TestToolkitFactoryInstantiation:
 
         return tool_registry
 
-    @pytest.mark.usefixtures("_register_dummy_factory")
-    def test_toolkit_created_via_factory(self):
+    @pytest.mark.usefixtures("_register_dummy_toolkit")
+    def test_toolkit_created_via_class(self):
         agent_def = _make_agent_def(toolkits=["dummy_toolkit"])
         registry = self._apply_toolkit_instantiation(agent_def)
 
         assert registry.get_toolkit("dummy_toolkit") is not None
         assert registry.get("dummy_tool") is not None
 
-    @pytest.mark.usefixtures("_register_dummy_factory")
+    @pytest.mark.usefixtures("_register_dummy_toolkit")
     def test_restrict_removes_non_requested_toolkits(self):
         agent_def = _make_agent_def(toolkits=["dummy_toolkit"])
         registry = self._apply_toolkit_instantiation(agent_def)
@@ -275,11 +312,8 @@ class TestToolkitFactoryInstantiation:
         # Everything restricted away since nonexistent was never registered
         assert len(registry.list_toolkits()) == 0
 
-    def test_factory_error_does_not_crash(self):
-        def _broken_factory(ctx: ToolkitContext) -> BaseToolkit:
-            raise RuntimeError("factory broke")
-
-        register_toolkit_factory("broken_toolkit", _broken_factory)
+    def test_toolkit_instantiation_error_does_not_crash(self):
+        register_toolkit_class("broken_toolkit", _BrokenToolkit)
         agent_def = _make_agent_def(toolkits=["broken_toolkit"])
 
         # Should not raise
@@ -287,21 +321,14 @@ class TestToolkitFactoryInstantiation:
         assert registry.get_toolkit("broken_toolkit") is None
 
     def test_already_registered_toolkit_not_duplicated(self):
-        """If a toolkit is already in the registry, the factory should not be called again."""
-        call_count = 0
-
-        def _counting_factory(ctx: ToolkitContext) -> BaseToolkit:
-            nonlocal call_count
-            call_count += 1
-            return _DummyToolkit(name="counted_toolkit")
-
-        register_toolkit_factory("counted_toolkit", _counting_factory)
+        """If a toolkit is already in the registry, from_context should not be called again."""
+        register_toolkit_class("counted_toolkit", _CountedToolkit)
 
         from tools import create_default_tool_registry
-        from tools.core.factory import create_toolkit as _ct, has_factory as _hf
+        from tools.core.factory import create_toolkit as _ct, has_toolkit as _ht
 
         registry = create_default_tool_registry()
-        # Pre-register so the factory shouldn't be called
+        # Pre-register so from_context shouldn't be called
         registry.register_toolkit(_DummyToolkit(name="counted_toolkit"))
 
         agent_def = _make_agent_def(toolkits=["counted_toolkit"])
@@ -310,18 +337,15 @@ class TestToolkitFactoryInstantiation:
         for tk_name in agent_def.toolkits:
             if registry.get_toolkit(tk_name) is not None:
                 continue
-            if _hf(tk_name):
+            if _ht(tk_name):
                 tk = _ct(tk_name, ToolkitContext())
                 registry.register_toolkit(tk)
 
-        assert call_count == 0
+        assert _CountedToolkit.calls == 0
 
-    @pytest.mark.usefixtures("_register_dummy_factory")
+    @pytest.mark.usefixtures("_register_dummy_toolkit")
     def test_multiple_toolkits(self):
-        register_toolkit_factory(
-            "second_toolkit",
-            lambda ctx: _DummyToolkit(name="second_toolkit", tools=[_DummyTool2()]),
-        )
+        register_toolkit_class("second_toolkit", _SecondToolkit)
 
         agent_def = _make_agent_def(toolkits=["dummy_toolkit", "second_toolkit"])
         registry = self._apply_toolkit_instantiation(agent_def)
@@ -333,12 +357,9 @@ class TestToolkitFactoryInstantiation:
         # discovery should be restricted away
         assert registry.get_toolkit("discovery") is None
 
-    @pytest.mark.usefixtures("_register_dummy_factory")
+    @pytest.mark.usefixtures("_register_dummy_toolkit")
     def test_allowed_tools_add_tools_from_other_toolkits(self):
-        register_toolkit_factory(
-            "second_toolkit",
-            lambda ctx: _DummyToolkit(name="second_toolkit", tools=[_DummyTool2()]),
-        )
+        register_toolkit_class("second_toolkit", _SecondToolkit)
 
         agent_def = _make_agent_def(
             toolkits=["dummy_toolkit"],
@@ -414,25 +435,19 @@ class TestToolkitFactoryInstantiation:
 
 
 # ---------------------------------------------------------------------------
-# Tests — Factory context propagation
+# Tests — Toolkit context propagation
 # ---------------------------------------------------------------------------
 
 
-class TestFactoryContext:
-    """The ToolkitContext passed to factories should carry agent metadata."""
+class TestToolkitContext:
+    """The ToolkitContext passed to toolkit classes should carry agent metadata."""
 
-    def test_factory_receives_agent_name_and_sandbox_id(self):
-        captured_ctx: list[ToolkitContext] = []
-
-        def _capturing_factory(ctx: ToolkitContext) -> BaseToolkit:
-            captured_ctx.append(ctx)
-            return _DummyToolkit(name="capturing_toolkit")
-
-        register_toolkit_factory("capturing_toolkit", _capturing_factory)
+    def test_toolkit_receives_agent_name_and_sandbox_id(self):
+        register_toolkit_class("capturing_toolkit", _CapturingToolkit)
         agent_def = _make_agent_def(name="my-agent", toolkits=["capturing_toolkit"])
 
         from tools import create_default_tool_registry
-        from tools.core.factory import create_toolkit, has_factory
+        from tools.core.factory import create_toolkit, has_toolkit
 
         registry = create_default_tool_registry()
         ctx = ToolkitContext(
@@ -444,14 +459,15 @@ class TestFactoryContext:
         )
 
         for tk_name in agent_def.toolkits:
-            if registry.get_toolkit(tk_name) is None and has_factory(tk_name):
+            if registry.get_toolkit(tk_name) is None and has_toolkit(tk_name):
                 tk = create_toolkit(tk_name, ctx)
                 registry.register_toolkit(tk)
 
-        assert len(captured_ctx) == 1
-        assert captured_ctx[0].metadata["agent_name"] == "my-agent"
-        assert captured_ctx[0].metadata["cwd"] == "/tmp/test"
-        assert captured_ctx[0].metadata["sandbox_id"] == "sb-123"
+        assert len(_CapturingToolkit.captured_contexts) == 1
+        captured_ctx = _CapturingToolkit.captured_contexts[0]
+        assert captured_ctx.metadata["agent_name"] == "my-agent"
+        assert captured_ctx.metadata["cwd"] == "/tmp/test"
+        assert captured_ctx.metadata["sandbox_id"] == "sb-123"
 
 
 # ---------------------------------------------------------------------------
@@ -611,15 +627,15 @@ class TestSystemPromptAwareness:
 
 
 # ---------------------------------------------------------------------------
-# Tests — to_api_schema includes factory-created tools
+# Tests — to_api_schema includes registered toolkit tools
 # ---------------------------------------------------------------------------
 
 
 class TestApiSchemaOutput:
-    """Verify that factory-created toolkits produce correct API schemas."""
+    """Verify that registered toolkits produce correct API schemas."""
 
-    @pytest.mark.usefixtures("_register_dummy_factory")
-    def test_factory_toolkit_tools_appear_in_schema(self):
+    @pytest.mark.usefixtures("_register_dummy_toolkit")
+    def test_registered_toolkit_tools_appear_in_schema(self):
         from tools import create_default_tool_registry
         from tools.core.factory import create_toolkit
 
@@ -635,7 +651,7 @@ class TestApiSchemaOutput:
         # discovery tools should be gone after restriction
         assert all(t["name"] != "skill" for t in schema)
 
-    @pytest.mark.usefixtures("_register_dummy_factory")
+    @pytest.mark.usefixtures("_register_dummy_toolkit")
     def test_schema_has_correct_shape(self):
         from tools.core.factory import create_toolkit
 

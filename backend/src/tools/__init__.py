@@ -11,7 +11,7 @@ from tools.core import (
 
 
 def create_default_tool_registry() -> ToolRegistry:
-    """Return an empty tool registry. Toolkits are added via the factory."""
+    """Return an empty tool registry. Toolkits are registered during agent setup."""
     return ToolRegistry()
 
 

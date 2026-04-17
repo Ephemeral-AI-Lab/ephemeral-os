@@ -46,7 +46,6 @@ def tool(
     *,
     input_model: type[BaseModel],
     output_model: type[BaseModel],
-    read_only: bool = False,
     stop_after_tool_call: bool = False,
     background: Literal["forbidden", "optional", "always"] = "forbidden",
     task_type: str = "agent",
@@ -83,9 +82,6 @@ def tool(
                     return await func(**kwargs)
                 else:
                     return func(**kwargs)
-
-            def is_read_only(self, arguments: BaseModel) -> bool:
-                return read_only
 
             def background_preflight(
                 self,

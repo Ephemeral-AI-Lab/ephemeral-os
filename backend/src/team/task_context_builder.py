@@ -62,11 +62,40 @@ class TaskContextBuilder:
         return "\n".join(lines)
 
     @staticmethod
-    def _latest_notes_per_task(notes: list[Note]) -> list[Note]:
-        latest: dict[str, Note] = {}
+    def _is_low_information_context_note(note: Note) -> bool:
+        agent_name = note.agent_name.strip().lower()
+        content = " ".join(note.content.split()).strip().lower()
+        return agent_name == "checkpoint" or content.startswith("**checkpoint:") or content.startswith("checkpoint:")
+
+    @staticmethod
+    def _preferred_notes_per_task(notes: list[Note]) -> list[Note]:
+        preferred: dict[str, Note] = {}
         for note in notes:
-            latest[note.task_id] = note
-        return list(latest.values())
+            current = preferred.get(note.task_id)
+            if current is None:
+                preferred[note.task_id] = note
+                continue
+            if TaskContextBuilder._is_low_information_context_note(current) and not TaskContextBuilder._is_low_information_context_note(note):
+                preferred[note.task_id] = note
+                continue
+            if TaskContextBuilder._is_low_information_context_note(current) == TaskContextBuilder._is_low_information_context_note(note):
+                preferred[note.task_id] = note
+        return list(preferred.values())
+
+    @staticmethod
+    def _scope_relevant_notes(notes: list[Note], scope_paths: list[str]) -> list[Note]:
+        if not scope_paths:
+            return []
+        return [
+            note
+            for note in notes
+            if note.paths and ScopePath.matches_scopes(note.paths, scope_paths)
+        ]
+
+    @staticmethod
+    def _parent_context_notes(notes: list[Note], scope_paths: list[str]) -> list[Note]:
+        scoped = TaskContextBuilder._scope_relevant_notes(notes, scope_paths)
+        return TaskContextBuilder._preferred_notes_per_task(scoped or notes)
 
     @staticmethod
     def _truncate_section(header: str, notes: list[Note], budget: int) -> str:
@@ -199,7 +228,7 @@ class TaskContextBuilder:
         original_deps = list(original.deps) if original is not None else []
         if original_deps:
             dep_notes = await self._notes.read(authors=original_deps)
-            dep_notes = self._latest_notes_per_task(dep_notes)
+            dep_notes = self._preferred_notes_per_task(dep_notes)
             if dep_notes:
                 lines.extend(["", "### Original dependency notes"])
                 for note in dep_notes:
@@ -254,7 +283,7 @@ class TaskContextBuilder:
         if task.deps and budget > 0:
             dep_notes = await self._notes.read(authors=task.deps)
             if dep_notes:
-                deduped = self._latest_notes_per_task(dep_notes)
+                deduped = self._preferred_notes_per_task(dep_notes)
                 sec = self._render_notes("Context from dependencies", deduped)
                 b = len(sec.encode())
                 if b <= budget:
@@ -297,7 +326,7 @@ class TaskContextBuilder:
             parent_ids = await self._parent_chain_ids(task)
             parent_notes = await self._notes.read(authors=parent_ids)
             if parent_notes:
-                deduped = self._latest_notes_per_task(parent_notes)
+                deduped = self._parent_context_notes(parent_notes, task.scope_paths)
                 sec = self._render_notes("Parent context", deduped)
                 b = len(sec.encode())
                 if b <= budget:
@@ -337,7 +366,7 @@ class TaskContextBuilder:
         if task.deps and budget > 0:
             dep_notes = await self._notes.read(authors=task.deps)
             if dep_notes:
-                deduped = self._latest_notes_per_task(dep_notes)
+                deduped = self._preferred_notes_per_task(dep_notes)
                 sec = self._render_notes_body(deduped)
                 if len(sec.encode()) <= budget:
                     context_from_dependencies = sec
@@ -378,7 +407,7 @@ class TaskContextBuilder:
             parent_ids = await self._parent_chain_ids(task)
             parent_notes = await self._notes.read(authors=parent_ids)
             if parent_notes:
-                deduped = self._latest_notes_per_task(parent_notes)
+                deduped = self._parent_context_notes(parent_notes, task.scope_paths)
                 sec = self._render_notes_body(deduped)
                 if len(sec.encode()) <= budget:
                     parent_context = sec

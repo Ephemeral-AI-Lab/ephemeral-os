@@ -311,7 +311,6 @@ print("\\n".join(matches))
     short_description="Read a file from the sandbox.",
     input_model=DaytonaReadFileInput,
     output_model=DaytonaReadFileOutput,
-    read_only=True,
 )
 async def daytona_read_file(
     file_path: str,
@@ -469,7 +468,6 @@ async def daytona_write_file(
     short_description="Search file contents by pattern.",
     input_model=DaytonaGrepInput,
     output_model=DaytonaGrepOutput,
-    read_only=True,
 )
 async def daytona_grep(
     pattern: str,
@@ -504,7 +502,6 @@ async def daytona_grep(
     short_description="Find files by glob.",
     input_model=DaytonaGlobInput,
     output_model=DaytonaGlobOutput,
-    read_only=True,
 )
 async def daytona_glob(
     pattern: str,

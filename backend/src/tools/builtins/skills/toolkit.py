@@ -201,7 +201,6 @@ def make_skills_toolkit(
         short_description="Load a skill's instructions.",
         input_model=LoadSkillInput,
         output_model=TextToolOutput,
-        read_only=True,
     )
     async def load_skill(
         skill_name: str,
@@ -246,7 +245,6 @@ def make_skills_toolkit(
         short_description="Load a skill reference.",
         input_model=LoadSkillReferenceInput,
         output_model=TextToolOutput,
-        read_only=True,
     )
     async def load_skill_reference(
         skill_name: str,

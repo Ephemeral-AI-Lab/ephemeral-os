@@ -21,6 +21,7 @@ import pytest
 from engine.testing.eval_agent import EvalAgent
 from tests.test_e2e.bg_prompts import BG_SUPERNOVA
 from tests.test_e2e.conftest import create_eval_agent, create_test_sandbox, delete_test_sandbox
+from tests.test_e2e.daytona_exec_io import write_text_via_exec
 from tests.test_e2e.helpers import log_result
 
 logger = logging.getLogger(__name__)
@@ -419,8 +420,8 @@ class TestSupernovaCascadingBugs(_SupernovaBase):
         svc = get_sandbox_service()
         sb = svc.get_sandbox_object(sandbox["id"])
         sb.process.exec("mkdir -p /home/daytona/project")
-        sb.fs.upload_file(CALC_MODULE.encode(), "/home/daytona/project/calc.py")
-        sb.fs.upload_file(CALC_TESTS.encode(), "/home/daytona/project/test_calc.py")
+        write_text_via_exec(sb, "/home/daytona/project/calc.py", CALC_MODULE)
+        write_text_via_exec(sb, "/home/daytona/project/test_calc.py", CALC_TESTS)
         sb.process.exec("chmod +x /home/daytona/project/test_calc.py")
 
     @pytest.mark.asyncio
@@ -466,11 +467,11 @@ class TestSupernovaPipelineDebug(_SupernovaBase):
         svc = get_sandbox_service()
         sb = svc.get_sandbox_object(sandbox["id"])
         sb.process.exec("mkdir -p /home/daytona/webapp")
-        sb.fs.upload_file(WEBAPP_APP.encode(), "/home/daytona/webapp/app.py")
-        sb.fs.upload_file(WEBAPP_ROUTES.encode(), "/home/daytona/webapp/routes.py")
-        sb.fs.upload_file(WEBAPP_MODELS.encode(), "/home/daytona/webapp/models.py")
-        sb.fs.upload_file(WEBAPP_TESTS.encode(), "/home/daytona/webapp/test_webapp.py")
-        sb.fs.upload_file(PIPELINE_SCRIPT.encode(), "/home/daytona/webapp/pipeline.sh")
+        write_text_via_exec(sb, "/home/daytona/webapp/app.py", WEBAPP_APP)
+        write_text_via_exec(sb, "/home/daytona/webapp/routes.py", WEBAPP_ROUTES)
+        write_text_via_exec(sb, "/home/daytona/webapp/models.py", WEBAPP_MODELS)
+        write_text_via_exec(sb, "/home/daytona/webapp/test_webapp.py", WEBAPP_TESTS)
+        write_text_via_exec(sb, "/home/daytona/webapp/pipeline.sh", PIPELINE_SCRIPT)
         sb.process.exec("chmod +x /home/daytona/webapp/pipeline.sh /home/daytona/webapp/test_webapp.py")
 
     @pytest.mark.asyncio
@@ -511,8 +512,8 @@ class TestSupernovaConfigTuning(_SupernovaBase):
         svc = get_sandbox_service()
         sb = svc.get_sandbox_object(sandbox["id"])
         sb.process.exec("mkdir -p /home/daytona/flaky")
-        sb.fs.upload_file(FLAKY_TEST_SCRIPT.encode(), "/home/daytona/flaky/run_tests.py")
-        sb.fs.upload_file(FLAKY_INITIAL_CONFIG.encode(), "/home/daytona/flaky/config.json")
+        write_text_via_exec(sb, "/home/daytona/flaky/run_tests.py", FLAKY_TEST_SCRIPT)
+        write_text_via_exec(sb, "/home/daytona/flaky/config.json", FLAKY_INITIAL_CONFIG)
         sb.process.exec("chmod +x /home/daytona/flaky/run_tests.py")
 
     @pytest.mark.asyncio

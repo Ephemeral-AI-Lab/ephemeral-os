@@ -87,11 +87,6 @@ class BaseTool(ABC):
     async def execute(self, arguments: BaseModel, context: ToolExecutionContext) -> ToolResult:
         """Execute the tool."""
 
-    def is_read_only(self, arguments: BaseModel) -> bool:
-        """Return whether the invocation is read-only."""
-        del arguments
-        return False
-
     def background_preflight(
         self,
         arguments: BaseModel,

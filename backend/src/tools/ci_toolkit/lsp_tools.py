@@ -53,7 +53,6 @@ class CiDiagnosticsOutput(BaseModel):
     short_description="Check a file for diagnostics.",
     input_model=CiDiagnosticsInput,
     output_model=CiDiagnosticsOutput,
-    read_only=True,
 )
 async def ci_diagnostics(
     file_path: str,

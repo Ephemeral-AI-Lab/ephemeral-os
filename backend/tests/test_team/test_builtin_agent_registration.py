@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+from pathlib import Path
+from types import SimpleNamespace
+
 from agents.registry import get_definition
+from engine.runtime.agent import _build_agent_tool_registry, finalize_tool_registry_and_prompt
 from team.builtins import (
     DEVELOPER,
     SCOUT,
@@ -77,6 +81,59 @@ def test_team_worker_sandbox_toolkit_includes_codeact() -> None:
     # daytona_bash has been removed — all agents use daytona_codeact
     assert "daytona_bash" not in developer_sandbox.tool_names()
     assert "daytona_bash" not in validator_sandbox.tool_names()
+
+
+def _final_tool_names(name: str, tmp_path: Path) -> set[str]:
+    defn = get_definition(name)
+    assert defn is not None
+    registry = _build_agent_tool_registry(
+        SimpleNamespace(cwd=str(tmp_path)),
+        defn,
+        "sb-test",
+        defn.name,
+    )
+    finalize_tool_registry_and_prompt(
+        registry,
+        defn.system_prompt or "",
+        can_spawn_subagents=defn.can_spawn_subagents,
+        role=defn.role,
+        blocked_tools=defn.blocked_tools,
+        terminal_tools=set(),
+    )
+    return {tool.name for tool in registry.list_tools()}
+
+
+def test_planner_and_replanner_do_not_expose_sandbox_tools(tmp_path: Path) -> None:
+    for name in (TEAM_PLANNER, TEAM_REPLANNER):
+        tool_names = _final_tool_names(name, tmp_path)
+        for tool_name in (
+            "daytona_grep",
+            "daytona_glob",
+            "daytona_read_file",
+            "daytona_write_file",
+            "daytona_edit_file",
+            "daytona_codeact",
+        ):
+            assert tool_name not in tool_names
+
+
+def test_scout_tool_surface_matches_note_handoff_contract(tmp_path: Path) -> None:
+    tool_names = _final_tool_names(SCOUT, tmp_path)
+
+    assert "submit_task_note" in tool_names
+    assert "task_center_changed_since" not in tool_names
+    for name in (
+        "daytona_grep",
+        "daytona_glob",
+        "daytona_read_file",
+        "daytona_write_file",
+        "daytona_edit_file",
+        "daytona_codeact",
+        "submit_task_summary",
+        "submit_plan",
+        "submit_replan",
+    ):
+        assert name not in tool_names
 
 
 def test_task_center_toolkit_survives_restriction() -> None:

@@ -535,19 +535,6 @@ class TestDaytonaToolkitIntegration:
             assert "input_schema" in schema
             assert schema["name"] == tool.name
 
-    def test_toolkit_read_only_tools(self):
-        """Read-only tools should report is_read_only correctly."""
-        toolkit = self._toolkit()
-        read_only_tools = {
-            "daytona_read_file",
-            "daytona_grep",
-            "daytona_glob",
-        }
-        for tool in toolkit.list_tools():
-            dummy_input = tool.input_model.model_construct()
-            if tool.name in read_only_tools:
-                assert tool.is_read_only(dummy_input), f"{tool.name} should be read-only"
-
     def test_toolkit_registry_integration(self):
         """Toolkit should integrate with ToolRegistry correctly."""
         from tools.core.base import ToolRegistry

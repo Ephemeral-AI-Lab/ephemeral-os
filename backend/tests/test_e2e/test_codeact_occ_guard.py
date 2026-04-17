@@ -41,6 +41,7 @@ load_dotenv(_PROJECT_ROOT / ".env")
 
 from code_intelligence.routing.service import CodeIntelligenceService
 from code_intelligence.types import PreparedWrite
+from tests.test_e2e.daytona_exec_io import read_text_via_exec, write_text_via_exec
 from tools.core.base import ToolExecutionContext
 from tools.daytona_toolkit.codeact_tool import daytona_codeact
 
@@ -844,9 +845,10 @@ class TestLiveSandboxCodeactOcc:
         self.async_sandbox = _AsyncSandboxWrapper(self.raw_sandbox)
 
         # Seed test files
-        self.raw_sandbox.fs.upload_file(
-            b"# Header\ndef greet():\n    return 'hello'\n\ndef farewell():\n    return 'bye'\n",
+        write_text_via_exec(
+            self.raw_sandbox,
             f"{self.home}/shared.py",
+            "# Header\ndef greet():\n    return 'hello'\n\ndef farewell():\n    return 'bye'\n",
         )
 
         yield
@@ -892,8 +894,7 @@ write('{self.home}/shared.py', new_content)
         assert data["write_conflicts"] == []
 
         # Verify on disk
-        raw = self.raw_sandbox.fs.download_file(f"{self.home}/shared.py")
-        final = raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
+        final = read_text_via_exec(self.raw_sandbox, f"{self.home}/shared.py")
         assert "HELLO_OCC" in final
 
     def test_live_codeact_stale_hash_conflict(self):
@@ -902,8 +903,7 @@ write('{self.home}/shared.py', new_content)
         shared = f"{self.home}/shared.py"
 
         # Read current content and its hash
-        raw = self.raw_sandbox.fs.download_file(shared)
-        original = raw.decode("utf-8") if isinstance(raw, bytes) else str(raw)
+        original = read_text_via_exec(self.raw_sandbox, shared)
         original_hash = _content_hash(original)
 
         # Agent A modifies the file through OCC
@@ -981,9 +981,10 @@ class TestLiveLLMCodeactOcc:
         home = (home_resp.result or "").strip() or "/home/daytona"
 
         # Seed file
-        raw.fs.upload_file(
-            b"config = {'debug': False, 'version': '1.0'}\n",
+        write_text_via_exec(
+            raw,
             f"{home}/config.py",
+            "config = {'debug': False, 'version': '1.0'}\n",
         )
 
         agent = create_eval_agent(sandbox_id=self.sandbox_id)
@@ -1002,8 +1003,7 @@ class TestLiveLLMCodeactOcc:
         )
 
         # Verify the write landed
-        final_raw = raw.fs.download_file(f"{home}/config.py")
-        final = final_raw.decode("utf-8") if isinstance(final_raw, bytes) else str(final_raw)
+        final = read_text_via_exec(raw, f"{home}/config.py")
         assert "'debug': True" in final or '"debug": True' in final or "debug" in final
 
     def test_llm_codeact_shell_write_roundtrip(self):
@@ -1028,6 +1028,5 @@ class TestLiveLLMCodeactOcc:
 
         assert result.has_tool("daytona_codeact"), f"Expected codeact call, got: {result.tool_names}"
 
-        final_raw = raw.fs.download_file(f"{home}/computed.txt")
-        final = final_raw.decode("utf-8") if isinstance(final_raw, bytes) else str(final_raw)
+        final = read_text_via_exec(raw, f"{home}/computed.txt")
         assert "4" in final

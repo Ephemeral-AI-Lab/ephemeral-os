@@ -137,7 +137,6 @@ def test_tracked_tool_defaults():
         assistant_message=_make_assistant_msg(),
     )
     assert tracked.status == "queued"
-    assert tracked.is_concurrency_safe is True
     assert tracked.task is None
     assert tracked.progress_lines == []
     assert tracked.result is None
@@ -637,4 +636,3 @@ async def test_resolved_plan_metadata_propagates_to_live_context():
     assert isinstance(resolved_plan, Plan)
     assert resolved_plan.tasks[0].objective == "Fix the discriminator pipeline"
     assert context.metadata["plan_is_replan"] is False
-

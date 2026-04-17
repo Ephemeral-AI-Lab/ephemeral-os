@@ -284,7 +284,7 @@ def _structured_example_objective(*, agent_name: str, roles: list[str]) -> str:
             "- Include failing command output when validation fails."
         )
     elif "explorer" in roles:
-        action = "Inspect the assigned paths and produce a compact read-only brief."
+        action = "Inspect the assigned paths and produce a compact evidence brief without editing files."
         acceptance = (
             "- Do not edit files.\n"
             "- Name the files and functions that matter.\n"
@@ -457,6 +457,14 @@ def _sort_tasks_for_prompt_report(tasks: dict[str, Task]) -> list[Task]:
     return sorted(tasks.values(), key=lambda task: (task.depth, task.created_at, task.id))
 
 
+def _normalize_task_event_payload(data: dict[str, object]) -> dict[str, object]:
+    """Accept legacy TeamRun event logs that stored task text under ``task``."""
+    payload = dict(data)
+    if not payload.get("objective") and payload.get("task"):
+        payload["objective"] = payload["task"]
+    return payload
+
+
 def _replay_team_run_events(
     *,
     team_run_id: str,
@@ -471,7 +479,10 @@ def _replay_team_run_events(
     status = ""
     for event in events:
         if event.kind == "task_added":
-            task = task_from_dict(event.data["task"])
+            task_data = event.data["task"]
+            if not isinstance(task_data, dict):
+                raise ValueError(f"task_added event {event.seq} contains invalid task payload")
+            task = task_from_dict(_normalize_task_event_payload(task_data))
             tasks[task.id] = task
             continue
         if event.kind == "task_status":

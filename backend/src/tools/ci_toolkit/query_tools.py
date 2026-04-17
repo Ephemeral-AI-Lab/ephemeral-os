@@ -1,4 +1,4 @@
-"""Query-oriented CI tools — read-only code intelligence queries."""
+"""Query-oriented CI tools for code intelligence queries."""
 
 from __future__ import annotations
 
@@ -556,7 +556,6 @@ async def _remote_query_symbols(
     short_description="Check code intelligence status.",
     input_model=CiStatusInput,
     output_model=CiStatusOutput,
-    read_only=True,
 )
 async def ci_status(
     include_edit_hotspots: bool = True,
@@ -591,7 +590,6 @@ async def ci_status(
     short_description="List workspace files and directories.",
     input_model=CiWorkspaceStructureInput,
     output_model=CiWorkspaceStructureOutput,
-    read_only=True,
 )
 async def ci_workspace_structure(
     path: str = "",
@@ -838,7 +836,6 @@ def _file_query_symbols(
     short_description="Find symbol definitions and references.",
     input_model=CiQuerySymbolInput,
     output_model=CiQuerySymbolOutput,
-    read_only=True,
 )
 async def ci_query_symbol(
     query: str,

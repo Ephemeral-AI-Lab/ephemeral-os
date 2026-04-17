@@ -39,6 +39,11 @@ class FakePlannerDefn:
     name = "team_planner"
 
 
+class FakeValidatorDefn:
+    role = "reviewer"
+    name = "validator"
+
+
 class _NotesProxy(list):
     """List that also exposes ``.post()`` so production code (``tc.notes.post(...)``)
     appends here while tests can still treat ``tc.notes`` as a plain list."""
@@ -147,6 +152,70 @@ def test_read_result_fail_triggers_replan():
     result = executor._read_result(task, ctx)
     assert isinstance(result, ReplanRequest)
     assert "Auth spans 3 services" in result.reason
+
+
+@pytest.mark.asyncio
+async def test_validator_fail_summary_dispatches_replan_request():
+    """A validator's fail terminal summary requests replanning at runtime."""
+    task = Task(
+        id="validator-task",
+        team_run_id="test-run-001",
+        agent_name="validator",
+        status=TaskStatus.READY,
+        objective="Validate the implementation.",
+        scope_paths=["src/auth/session.py"],
+        parent_id="parent-1",
+        root_id="root-1",
+    )
+
+    class _TaskCenter(FakeTaskCenter):
+        def __init__(self):
+            super().__init__()
+            self.graph = {task.id: task}
+            self.replan_requests: list[tuple[str, ReplanRequest]] = []
+
+        async def mark_running(self, task_id: str, agent_run_id: str) -> Task:
+            assert task_id == task.id
+            task.status = TaskStatus.RUNNING
+            task.agent_run_id = agent_run_id
+            return task
+
+        async def request_replan(self, task_id: str, request: ReplanRequest) -> None:
+            self.replan_requests.append((task_id, request))
+            task.status = TaskStatus.REQUEST_REPLAN
+            task.failure_reason = request.reason
+
+        async def complete_task(self, task_id: str, result: AgentResult):
+            pytest.fail(f"validator failure should not complete task {task_id}: {result}")
+
+    tc = _TaskCenter()
+    ctx = TeamAgentContext(user_message="validate", tool_metadata={})
+
+    async def _build_context(_defn, _team_run, _task) -> TeamAgentContext:
+        return ctx
+
+    async def _runner(_defn, run_ctx: TeamAgentContext) -> None:
+        run_ctx.tool_metadata["task_summary_type"] = "fail"
+        run_ctx.tool_metadata["task_summary"] = (
+            "FAIL: pytest tests/test_auth.py::test_session still red. "
+            "Owner spans auth/session.py and auth/cache.py; needs replanning."
+        )
+
+    executor = Executor(
+        team_run=FakeTeamRun(task_center=tc),
+        runner=_runner,
+        agent_lookup=lambda name: FakeValidatorDefn() if name == "validator" else None,
+        build_query_context=_build_context,
+    )
+
+    await executor._run_one_inner(task)
+
+    assert len(tc.replan_requests) == 1
+    task_id, request = tc.replan_requests[0]
+    assert task_id == task.id
+    assert "needs replanning" in request.reason
+    assert task.status == TaskStatus.REQUEST_REPLAN
+    assert task.failure_reason == request.reason
 
 
 def test_read_result_planner_submit_plan():

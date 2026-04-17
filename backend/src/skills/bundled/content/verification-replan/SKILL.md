@@ -28,7 +28,7 @@ Use this skill only after verification fails. Triage failures for replan. Never 
 
 ## Hard rules
 
-1. Stay read-only.
+1. Inspect and report evidence without editing files.
 2. Stay specific.
 3. Group by root cause.
 4. Preserve regression context.

@@ -173,6 +173,12 @@ class CodeIntelligenceService:
     def query_symbols(self, query: str) -> list[SymbolInfo]:
         return self.symbol_index.find(query)
 
+    def rename_symbol(
+        self, file_path: str, line: int, character: int, new_name: str,
+    ) -> dict[str, str]:
+        """Return {absolute_path: new_content} for every file the rename touches."""
+        return self.lsp_client.rename_symbol(file_path, line, character, new_name)
+
     # -- Edit API (delegated) -------------------------------------------------
 
     def apply_edit(self, request: EditRequest) -> EditResult:

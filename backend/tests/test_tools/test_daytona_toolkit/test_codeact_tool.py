@@ -203,7 +203,7 @@ async def test_shell_mode_reports_nonzero_exit_as_error():
     assert data["shells_run"] == 1
 
 
-async def test_coordinated_read_only_shell_uses_transaction_without_writes(monkeypatch):
+async def test_coordinated_shell_without_changes_uses_transaction(monkeypatch):
     sb = _make_sandbox(exec_stdout=_shell_exec_output("ok", 0))
     ctx = _ctx(
         {

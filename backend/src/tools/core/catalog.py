@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from tools.core.base import BaseToolkit, ToolRegistry
-from tools.core.factory import ToolkitContext, create_toolkit, list_factories
+from tools.core.factory import ToolkitContext, create_toolkit, list_toolkits
 
 
 @dataclass(frozen=True)
@@ -25,15 +25,15 @@ class ToolkitCatalogEntry:
     tools: list[str]
 
 
-def _snapshot_contexts(factory_name: str) -> list[ToolkitContext]:
+def _snapshot_contexts(toolkit_name: str) -> list[ToolkitContext]:
     return [ToolkitContext()]
 
 
-def _iter_factory_toolkits() -> list[BaseToolkit]:
+def _iter_registered_toolkits() -> list[BaseToolkit]:
     toolkits: list[BaseToolkit] = []
-    for factory_name in list_factories():
-        for ctx in _snapshot_contexts(factory_name):
-            toolkits.append(create_toolkit(factory_name, ctx))
+    for toolkit_name in list_toolkits():
+        for ctx in _snapshot_contexts(toolkit_name):
+            toolkits.append(create_toolkit(toolkit_name, ctx))
     return toolkits
 
 
@@ -41,7 +41,7 @@ def _background_tool_names() -> list[str]:
     return sorted(
         {
             tool.name
-            for toolkit in _iter_factory_toolkits()
+            for toolkit in _iter_registered_toolkits()
             for tool in toolkit.list_tools()
             if getattr(tool, "background", "forbidden") != "forbidden"
         }
@@ -70,7 +70,7 @@ def collect_toolkit_catalog(
 
     for toolkit in (tool_registry.list_toolkits() if tool_registry is not None else []):
         _merge(toolkit)
-    for toolkit in _iter_factory_toolkits():
+    for toolkit in _iter_registered_toolkits():
         _merge(toolkit)
 
     if include_runtime_toolkits:
@@ -106,7 +106,7 @@ def collect_tool_catalog(
     for toolkit in (tool_registry.list_toolkits() if tool_registry is not None else []):
         for tool in toolkit.list_tools():
             _merge_tool(tool.name, tool.description)
-    for toolkit in _iter_factory_toolkits():
+    for toolkit in _iter_registered_toolkits():
         for tool in toolkit.list_tools():
             _merge_tool(tool.name, tool.description)
 

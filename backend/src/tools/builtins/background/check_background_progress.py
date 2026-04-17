@@ -81,6 +81,3 @@ class CheckBackgroundProgressTool(BaseTool):
                 status,
             ),
         )
-
-    def is_read_only(self, arguments: BaseModel) -> bool:
-        return True

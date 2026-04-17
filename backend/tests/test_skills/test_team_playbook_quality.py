@@ -135,13 +135,16 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "must load `cross-surface-guardrails`" in validator.lower()
     assert "must load `runtime-verification-examples`" in validator.lower()
     assert "must not paraphrase failure evidence" in validator.lower()
+    assert "small local corrective patch" in validator.lower()
+    assert 'submit_task_summary(type="fail", summary=...)' in validator
+    assert "repeated repair attempts" in validator.lower()
 
     assert "must load `corrective-fast-path`" in replanner.lower()
     assert "must load `action-add-tasks`" in replanner.lower()
     assert "must load `action-cancel-and-redraft`" in replanner.lower()
 
     assert "must load `completion-contract`" in scout.lower()
-    assert "must stay read-only" in scout.lower()
+    assert "must not edit files" in scout.lower()
     assert "must keep missing targets missing" in scout.lower()
 
 

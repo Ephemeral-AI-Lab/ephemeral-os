@@ -269,6 +269,3 @@ class WaitForBackgroundTaskTool(BaseTool):
             )
 
         return ToolResult(output=output, is_error=False, metadata=metadata)
-
-    def is_read_only(self, arguments: BaseModel) -> bool:
-        return True

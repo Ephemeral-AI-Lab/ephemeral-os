@@ -1,6 +1,6 @@
 ---
 name: sweevo-project-context
-description: Stable SWE-EVO benchmark rules shared by planner, developer, validator, and replanner agents.
+description: Stable SWE-EVO benchmark rules shared by planner, scout, developer, validator, and replanner agents.
 ---
 
 # SWE-EVO Project Context
