@@ -331,10 +331,20 @@ class WriteCoordinator:
         agent_id: str = "",
         edit_type: str,
         description: str = "",
+        plan_captured_at: float | None = None,
+        plan_target_paths: frozenset[str] | None = None,
     ) -> MultiEditResult:
         """Atomically commit a batch of file changes against per-file bases.
 
         Semantics:
+          * **Foreign-edit gate** — if ``plan_captured_at`` and
+            ``plan_target_paths`` are given, abort the batch when any
+            Python edit recorded since ``plan_captured_at`` touched a file
+            *outside* the plan's target set. Such an edit may have added
+            a new reference to the renamed symbol in a file Jedi never
+            saw, so the plan is potentially incomplete. Edits to files
+            inside the target set are validated by per-file hashes
+            below, so they do not trip this gate.
           * **Sorted-path locking** — acquire all per-file locks in sorted
             path order; release in reverse on exit.
           * **Merge tolerance** — if a file's current hash equals its
@@ -359,6 +369,24 @@ class WriteCoordinator:
                 conflict_reason="",
                 timings={"total": 0.0},
             )
+
+        if plan_captured_at is not None and plan_target_paths is not None:
+            foreign = self._foreign_python_edits_since(
+                plan_captured_at, plan_target_paths,
+            )
+            if foreign:
+                self._arbiter.record_conflict("generation_mismatch")
+                timings["total"] = round(time.perf_counter() - started, 6)
+                return self._batch_abort(
+                    changes,
+                    status="aborted_generation",
+                    conflict_file=None,
+                    conflict_reason=(
+                        "foreign Python edit landed during rename planning; "
+                        f"re-plan the rename. Affected: {sorted(foreign)[:5]}"
+                    ),
+                    timings=timings,
+                )
 
         sorted_changes = sorted(changes, key=lambda c: c.file_path)
 
@@ -534,6 +562,30 @@ class WriteCoordinator:
                 "concurrent edit overlaps the rename window",
             )
         return merged, None
+
+    def _foreign_python_edits_since(
+        self,
+        since: float,
+        target_paths: frozenset[str],
+    ) -> list[str]:
+        """Return Python file paths edited since *since* that are NOT in *target_paths*.
+
+        The batch committer uses this to detect new references to the
+        renamed symbol that may have been added by concurrent agents
+        outside the rename's planned target set. Edits inside
+        ``target_paths`` are validated by per-file base hashes and are
+        intentionally excluded here.
+        """
+        records = self._arbiter.changes_since(since)
+        foreign: list[str] = []
+        for record in records:
+            path = getattr(record, "file_path", "") or ""
+            if not path.endswith(".py"):
+                continue
+            if path in target_paths:
+                continue
+            foreign.append(path)
+        return foreign
 
     @staticmethod
     def _batch_abort(

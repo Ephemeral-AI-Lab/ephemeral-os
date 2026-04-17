@@ -215,7 +215,11 @@ async def _recover_sandbox(context: ToolExecutionContext, exc: Exception) -> Any
     """Restart/rebind the sandbox once after container-loss style failures."""
     if not _is_recoverable_sandbox_error(exc):
         raise exc
-    attempts = int(context.metadata.get(_SANDBOX_RECOVERY_KEY) or 0)
+    attempts_value = context.metadata.get(_SANDBOX_RECOVERY_KEY, 0)
+    try:
+        attempts = int(attempts_value)
+    except (TypeError, ValueError):
+        attempts = 0
     if attempts >= 1:
         raise exc
     sandbox_id = str(context.metadata.get("sandbox_id") or "").strip()
@@ -498,12 +502,12 @@ def _supports_exec_transport(sandbox: Any) -> bool:
     return True
 
 
-async def _exec_command(sandbox: Any, command: str) -> Any:
+async def _exec_command(sandbox: Any, command: str, *, timeout: int | None = None) -> Any:
     process = getattr(sandbox, "process", None)
     exec_fn = getattr(process, "exec", None) if process is not None else None
     if not callable(exec_fn):
         raise RuntimeError("Sandbox process has no exec method")
-    response = exec_fn(command)
+    response = exec_fn(command, timeout=timeout) if timeout is not None else exec_fn(command)
     if not inspect.isawaitable(response):
         raise RuntimeError("Sandbox process.exec is not awaitable")
     return await response
@@ -575,11 +579,18 @@ async def _read_text_file_via_exec(
     return str(raw), True
 
 
-async def _write_text_file_via_exec(sandbox: Any, file_path: str, content: str) -> None:
+async def _write_text_file_via_exec(
+    sandbox: Any,
+    file_path: str,
+    content: str,
+    *,
+    timeout: int | None = None,
+) -> None:
     if _supports_exec_transport(sandbox):
         response = await _exec_command(
             sandbox,
             _wrap_bash_command(_build_write_text_file_command(file_path, content)),
+            timeout=timeout,
         )
         stdout = getattr(response, "result", "") or ""
         cleaned, exit_code = _extract_exit_code(

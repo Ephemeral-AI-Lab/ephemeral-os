@@ -115,6 +115,16 @@ def _roster_from_context(context: ToolExecutionContext) -> dict[str, list[str]]:
     }
 
 
+def _metadata_int(context: ToolExecutionContext, key: str, default: int = 0) -> int:
+    value = context.metadata.get(key)
+    if value is None or value == "":
+        return default
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
 async def _known_external_dep_ids(context: ToolExecutionContext) -> set[str] | None:
     known = context.metadata.get("known_external_dep_ids")
     if isinstance(known, set):
@@ -450,7 +460,7 @@ def _validate_submit_replan_input(
     except (TypeError, ValueError) as exc:
         return [f"invalid replan payload: {exc}"]
 
-    max_plan_size = int(context.metadata.get("max_plan_size", 50) or 50)
+    max_plan_size = _metadata_int(context, "max_plan_size", 50)
     issues = validate_plan(
         plan,
         max_plan_size=max_plan_size,
@@ -458,8 +468,8 @@ def _validate_submit_replan_input(
         known_external_deps=result.allowed_existing_dep_ids,
     )
 
-    max_tasks = int(context.metadata.get("max_tasks", 0) or 0)
-    tasks_used = int(context.metadata.get("tasks_used", 0) or 0)
+    max_tasks = _metadata_int(context, "max_tasks")
+    tasks_used = _metadata_int(context, "tasks_used")
     if max_tasks and tasks_used + len(plan.tasks) > max_tasks:
         issues.append(
             {
@@ -470,8 +480,8 @@ def _validate_submit_replan_input(
                 ),
             }
         )
-    max_depth = int(context.metadata.get("max_depth", 0) or 0)
-    task_depth = int(context.metadata.get("task_depth", 0) or 0)
+    max_depth = _metadata_int(context, "max_depth")
+    task_depth = _metadata_int(context, "task_depth")
     if max_depth and plan.tasks and (task_depth + 1) > max_depth:
         issues.append(
             {
@@ -483,7 +493,7 @@ def _validate_submit_replan_input(
         )
     note_budget_issues = _note_budget_issues(
         resolved_tasks,
-        max_note_bytes=int(context.metadata.get("max_note_bytes", 0) or 0),
+        max_note_bytes=_metadata_int(context, "max_note_bytes"),
     )
     issues.extend({"field": "tasks", "msg": msg} for msg in note_budget_issues)
     errors.extend(str(issue.get("msg") or "invalid replan") for issue in issues)
@@ -555,7 +565,7 @@ class SubmitPlanTool(BaseTool):
             return ToolResult(output=f"Error: invalid plan payload: {exc}", is_error=True)
 
         allow_empty = bool(context.metadata.get("allow_empty_plan"))
-        max_plan_size = int(context.metadata.get("max_plan_size", 50) or 50)
+        max_plan_size = _metadata_int(context, "max_plan_size", 50)
         known_ext_deps = await _known_external_dep_ids(context)
         issues = validate_plan(
             plan,
@@ -564,8 +574,8 @@ class SubmitPlanTool(BaseTool):
             known_external_deps=known_ext_deps,
         )
 
-        max_tasks = int(context.metadata.get("max_tasks", 0) or 0)
-        tasks_used = int(context.metadata.get("tasks_used", 0) or 0)
+        max_tasks = _metadata_int(context, "max_tasks")
+        tasks_used = _metadata_int(context, "tasks_used")
         if max_tasks and tasks_used + len(plan.tasks) > max_tasks:
             issues.append(
                 {
@@ -576,8 +586,8 @@ class SubmitPlanTool(BaseTool):
                     ),
                 }
             )
-        max_depth = int(context.metadata.get("max_depth", 0) or 0)
-        task_depth = int(context.metadata.get("task_depth", 0) or 0)
+        max_depth = _metadata_int(context, "max_depth")
+        task_depth = _metadata_int(context, "task_depth")
         if max_depth and plan.tasks and (task_depth + 1) > max_depth:
             issues.append(
                 {
@@ -590,7 +600,7 @@ class SubmitPlanTool(BaseTool):
 
         note_budget_issues = _note_budget_issues(
             resolved_tasks,
-            max_note_bytes=int(context.metadata.get("max_note_bytes", 0) or 0),
+            max_note_bytes=_metadata_int(context, "max_note_bytes"),
         )
         issues.extend({"field": "tasks", "msg": msg} for msg in note_budget_issues)
 

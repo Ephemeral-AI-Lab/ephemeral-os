@@ -43,7 +43,7 @@ from engine.runtime.background_tasks import (
     build_background_reminder,
     deliver_completed_background_task,
 )
-from prompts.message_recorder import append_prompt_report_event
+from prompts.prompt_report_recorder import PromptReportRecorder
 from tools.core.base import (
     ExecutionMetadata,
     ToolExecutionContext,
@@ -88,6 +88,7 @@ class QueryContext:
     api_messages_snapshot: list[ConversationMessage] | None = None
     terminal_tools: set[str] = field(default_factory=set)
     exit_reason: QueryExitReason | None = None
+    prompt_report_recorder: PromptReportRecorder | None = None
 
 
 def _should_defer_stream_tool_dispatch(
@@ -239,36 +240,25 @@ def _scope_change_auto_check(
 # ---------------------------------------------------------------------------
 
 
-def _next_prompt_report_seq(context: QueryContext) -> int:
+def _prompt_report_recorder(context: QueryContext) -> PromptReportRecorder:
+    if context.prompt_report_recorder is not None:
+        return context.prompt_report_recorder
     metadata = context.tool_metadata
-    if metadata is None:
-        return 0
-    current = int(metadata.get("_prompt_report_seq", 0) or 0) + 1
-    metadata["_prompt_report_seq"] = current
-    return current
-
-
-def _record_prompt_report_event(
-    context: QueryContext,
-    event: dict[str, Any],
-) -> None:
-    metadata = context.tool_metadata
-    if metadata is None:
-        return
-    path = metadata.get("prompt_report_messages_path")
-    if not path:
-        return
-    append_prompt_report_event(
-        path,
-        {
-            "team_run_id": metadata.get("team_run_id"),
-            "work_item_id": metadata.get("work_item_id"),
-            "agent_run_id": metadata.get("agent_run_id"),
-            "agent": context.agent_name or metadata.get("agent_name"),
-            "model": context.model,
-            **event,
-        },
+    context.prompt_report_recorder = PromptReportRecorder(
+        metadata.get("prompt_report_messages_path") if metadata is not None else None,
+        base_event=(
+            {
+                "team_run_id": metadata.get("team_run_id"),
+                "work_item_id": metadata.get("work_item_id"),
+                "agent_run_id": metadata.get("agent_run_id"),
+                "agent": context.agent_name or metadata.get("agent_name"),
+                "model": context.model,
+            }
+            if metadata is not None
+            else {"agent": context.agent_name, "model": context.model}
+        ),
     )
+    return context.prompt_report_recorder
 
 
 async def _run_query_loop(
@@ -396,7 +386,8 @@ async def _run_query_loop(
             ),
             *api_messages,
         ]
-        prompt_report_seq = _next_prompt_report_seq(context)
+        prompt_report = _prompt_report_recorder(context)
+        prompt_report_seq = prompt_report.next_seq()
         tool_schemas = context.tool_registry.to_api_schema()
         if context.enable_background_tasks:
             tool_schemas = decorate_schemas_for_background(
@@ -405,8 +396,7 @@ async def _run_query_loop(
                 terminal_tools=context.terminal_tools,
             )
 
-        _record_prompt_report_event(
-            context,
+        prompt_report.record(
             {
                 "event": "llm_request",
                 "seq": prompt_report_seq,
@@ -414,7 +404,7 @@ async def _run_query_loop(
                 "user_context_message": context_message,
                 "messages": [m.model_dump(mode="json") for m in provider_messages],
                 "tools": tool_schemas,
-            },
+            }
         )
 
         async for event in context.api_client.stream_message(
@@ -480,14 +470,13 @@ async def _run_query_loop(
             yield progress, None
 
         display_messages.append(final_message)
-        _record_prompt_report_event(
-            context,
+        prompt_report.record(
             {
                 "event": "assistant",
                 "seq": prompt_report_seq,
                 "message": final_message.model_dump(mode="json"),
                 "usage": usage.model_dump(mode="json"),
-            },
+            }
         )
         yield AssistantTurnComplete(message=final_message, usage=usage), usage
 
@@ -631,13 +620,12 @@ async def _run_query_loop(
 
         tool_result_message = ConversationMessage(role="user", content=tool_results)
         display_messages.append(tool_result_message)
-        _record_prompt_report_event(
-            context,
+        prompt_report.record(
             {
                 "event": "tool_result",
                 "seq": prompt_report_seq,
                 "message": tool_result_message.model_dump(mode="json"),
-            },
+            }
         )
 
         # Check for terminal tool — exit immediately after tool results collected

@@ -44,6 +44,7 @@ from code_intelligence.routing.registry import (
     get_code_intelligence,
     get_code_intelligence_if_exists,
 )
+from code_intelligence.tuning import CODE_INTELLIGENCE_TUNING
 from code_intelligence.types import (
     CITelemetry,
     Diagnostic,
@@ -69,10 +70,8 @@ __all__ = [
 ]
 
 logger = logging.getLogger(__name__)
-_DEFAULT_SCOPE_RECENT_SECONDS = 300.0
 _IDENTIFIER_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 _DEF_CLASS_NAME_RE = re.compile(r"^\s*(?:async\s+)?(?:def|class)\s+([A-Za-z_][A-Za-z0-9_]*)")
-_RENAME_PREVIEW_CACHE_MAX = 32
 
 
 @dataclass(frozen=True)
@@ -82,6 +81,7 @@ class _RenamePreviewSnapshot:
     refs: tuple[ReferenceInfo, ...]
     base_by_path: dict[str, tuple[str, bool]]
     old_name: str
+    plan_captured_at: float
 
 
 @dataclass
@@ -133,13 +133,14 @@ class CodeIntelligenceService:
         )
         self._rename_preview_cache_lock = threading.Lock()
         self._rename_preview_cache: OrderedDict[
-            tuple[str, int, int, int, int],
+            tuple[str, int, int, int, int, int],
             _RenamePreviewSnapshot,
         ] = OrderedDict()
         self._rename_preview_inflight: dict[
-            tuple[str, int, int, int, int],
+            tuple[str, int, int, int, int, int],
             _InflightRenamePreview,
         ] = {}
+        self._rename_preview_fast_fallbacks = 0
 
     # -- Initialization -------------------------------------------------------
 
@@ -215,11 +216,15 @@ class CodeIntelligenceService:
     ) -> SemanticRenamePlan:
         """Build a :class:`SemanticRenamePlan` for an OCC batch commit.
 
-        For each affected file, the file's current content is captured as
-        the per-file OCC base. The batch commit compares per-file hashes at
-        commit time, so concurrent edits to unrelated files do not block
-        this rename.
+        ``plan_captured_at`` is stamped *before* invoking Jedi so the batch
+        committer can detect foreign Python edits (to files outside this
+        plan's target set) that landed during planning. Per-file hash
+        checks at commit time cover the plan's own target files; this
+        timestamp plus the target set cover the gap where a concurrent
+        agent adds a new reference to the renamed symbol in an unrelated
+        file Jedi never saw.
         """
+        plan_captured_at = time.time()
         final_by_path = self.lsp_client.rename_symbol(
             file_path, int(line), int(character), new_name,
         )
@@ -248,6 +253,7 @@ class CodeIntelligenceService:
         return SemanticRenamePlan(
             new_name=new_name,
             origin=(file_path, int(line), int(character)),
+            plan_captured_at=plan_captured_at,
             changes=tuple(changes),
         )
 
@@ -271,10 +277,17 @@ class CodeIntelligenceService:
                 new_name,
             )
         except Exception:
-            logger.debug("fast rename preview failed for %s:%s", file_path, line, exc_info=True)
+            logger.warning(
+                "fast rename preview failed for %s:%s",
+                file_path,
+                line,
+                exc_info=True,
+            )
             plan = None
         if plan is not None:
             return plan
+        with self._rename_preview_cache_lock:
+            self._rename_preview_fast_fallbacks += 1
         return self.rename_symbol_plan(file_path, int(line), int(character), new_name)
 
     def _preview_rename_symbol_plan_fast(
@@ -291,6 +304,7 @@ class CodeIntelligenceService:
             return SemanticRenamePlan(
                 new_name=new_name,
                 origin=(file_path, int(line), int(character)),
+                plan_captured_at=snapshot.plan_captured_at,
                 changes=(),
             )
         final_by_path = _apply_reference_replacements(
@@ -317,6 +331,7 @@ class CodeIntelligenceService:
         return SemanticRenamePlan(
             new_name=new_name,
             origin=(file_path, int(line), int(character)),
+            plan_captured_at=snapshot.plan_captured_at,
             changes=tuple(changes),
         )
 
@@ -332,6 +347,7 @@ class CodeIntelligenceService:
             int(character),
             self.arbiter.generation,
             self.symbol_index.generation,
+            id(getattr(self.lsp_client, "_sandbox", None)),
         )
         while True:
             with self._rename_preview_cache_lock:
@@ -356,7 +372,10 @@ class CodeIntelligenceService:
             with self._rename_preview_cache_lock:
                 self._rename_preview_cache[key] = snapshot
                 self._rename_preview_cache.move_to_end(key)
-                while len(self._rename_preview_cache) > _RENAME_PREVIEW_CACHE_MAX:
+                while (
+                    len(self._rename_preview_cache)
+                    > CODE_INTELLIGENCE_TUNING.rename_preview_cache_max
+                ):
                     self._rename_preview_cache.popitem(last=False)
             return snapshot
         finally:
@@ -370,6 +389,7 @@ class CodeIntelligenceService:
         line: int,
         character: int,
     ) -> _RenamePreviewSnapshot | None:
+        plan_captured_at = time.time()
         refs = tuple(self.lsp_client.find_references(file_path, line, character))
         if not refs:
             return None
@@ -385,6 +405,7 @@ class CodeIntelligenceService:
             refs=refs,
             base_by_path=base_by_path,
             old_name=old_name,
+            plan_captured_at=plan_captured_at,
         )
 
     # -- Edit API (delegated) -------------------------------------------------
@@ -459,12 +480,16 @@ class CodeIntelligenceService:
         agent_id: str = "",
         edit_type: str,
         description: str = "",
+        plan_captured_at: float | None = None,
+        plan_target_paths: frozenset[str] | None = None,
     ) -> MultiEditResult:
         return self._write_coordinator.commit_many_against_base(
             changes,
             agent_id=agent_id,
             edit_type=edit_type,
             description=description,
+            plan_captured_at=plan_captured_at,
+            plan_target_paths=plan_target_paths,
         )
 
     def undo_last_edit(self, file_path: str) -> EditResult:
@@ -508,7 +533,7 @@ class CodeIntelligenceService:
         context_pressure: dict[str, Any] | None = None,
         shared_context: list[dict[str, Any]] | None = None,
         baseline_packet: dict[str, Any] | None = None,
-        recent_seconds: float = _DEFAULT_SCOPE_RECENT_SECONDS,
+        recent_seconds: float = CODE_INTELLIGENCE_TUNING.scope_recent_seconds,
     ) -> dict[str, Any]:
         """Return the authoritative live coordination snapshot for *scope_paths*."""
         normalized = normalize_scope_paths(scope_paths)
@@ -580,6 +605,7 @@ class CodeIntelligenceService:
             },
             "tree_cache": self.tree_cache.stats,
             "rename_preview_cache": self._rename_preview_cache_stats(),
+            "rename_preview_fast_fallbacks": self._rename_preview_fast_fallbacks,
             "lsp": lsp,
         }
 
@@ -616,8 +642,8 @@ class CodeIntelligenceService:
     def _rename_preview_cache_stats(self) -> dict[str, int]:
         with self._rename_preview_cache_lock:
             return {
-                "size": len(self._rename_preview_cache),
-                "inflight": len(self._rename_preview_inflight),
+                "entries": len(self._rename_preview_cache),
+                "inflight_entries": len(self._rename_preview_inflight),
             }
 
     def _clear_rename_preview_cache(self) -> None:

@@ -147,6 +147,20 @@ async def run(
         {"role": "user", "content": prompt},
     ]
 
+    def _emit_report(event: dict[str, Any], *, request_model: str | None = None) -> None:
+        append_prompt_report_event(
+            prompt_report_messages_path,
+            {
+                "team_run_id": team_run_id,
+                "work_item_id": work_item_id,
+                "agent_run_id": agent_run_id,
+                "agent": agent_name,
+                "model": request_model or model or "claude-sonnet-4-20250514",
+                "external_trigger": True,
+                **event,
+            },
+        )
+
     turn = 0
     while turn < max_turns:
         turn += 1
@@ -159,21 +173,15 @@ async def run(
             tool_choice=tool_choice,
             raw_messages=conversation,
         )
-        append_prompt_report_event(
-            prompt_report_messages_path,
+        _emit_report(
             {
                 "event": "llm_request",
                 "seq": turn,
-                "team_run_id": team_run_id,
-                "work_item_id": work_item_id,
-                "agent_run_id": agent_run_id,
-                "agent": agent_name,
-                "model": request.model,
                 "system_prompt": system_prompt,
                 "messages": conversation,
                 "tools": api_tools,
-                "external_trigger": True,
             },
+            request_model=request.model,
         )
 
         try:
@@ -220,19 +228,13 @@ async def run(
         })
         assistant_message = {"role": "assistant", "content": assistant_content}
         conversation.append(assistant_message)
-        append_prompt_report_event(
-            prompt_report_messages_path,
+        _emit_report(
             {
                 "event": "assistant",
                 "seq": turn,
-                "team_run_id": team_run_id,
-                "work_item_id": work_item_id,
-                "agent_run_id": agent_run_id,
-                "agent": agent_name,
-                "model": request.model,
                 "message": assistant_message,
-                "external_trigger": True,
             },
+            request_model=request.model,
         )
 
         # Check tool is in our set
@@ -248,19 +250,13 @@ async def run(
                              "is_error": True}],
             }
             conversation.append(tool_result_message)
-            append_prompt_report_event(
-                prompt_report_messages_path,
+            _emit_report(
                 {
                     "event": "tool_result",
                     "seq": turn,
-                    "team_run_id": team_run_id,
-                    "work_item_id": work_item_id,
-                    "agent_run_id": agent_run_id,
-                    "agent": agent_name,
-                    "model": request.model,
                     "message": tool_result_message,
-                    "external_trigger": True,
                 },
+                request_model=request.model,
             )
             continue
 
@@ -283,19 +279,13 @@ async def run(
                              "is_error": True}],
             }
             conversation.append(tool_result_message)
-            append_prompt_report_event(
-                prompt_report_messages_path,
+            _emit_report(
                 {
                     "event": "tool_result",
                     "seq": turn,
-                    "team_run_id": team_run_id,
-                    "work_item_id": work_item_id,
-                    "agent_run_id": agent_run_id,
-                    "agent": agent_name,
-                    "model": request.model,
                     "message": tool_result_message,
-                    "external_trigger": True,
                 },
+                request_model=request.model,
             )
             continue
 
@@ -323,19 +313,13 @@ async def run(
                 }],
             }
             conversation.append(tool_result_message)
-            append_prompt_report_event(
-                prompt_report_messages_path,
+            _emit_report(
                 {
                     "event": "tool_result",
                     "seq": turn,
-                    "team_run_id": team_run_id,
-                    "work_item_id": work_item_id,
-                    "agent_run_id": agent_run_id,
-                    "agent": agent_name,
-                    "model": request.model,
                     "message": tool_result_message,
-                    "external_trigger": True,
                 },
+                request_model=request.model,
             )
             if tool_result.is_error:
                 _emit(f"{agent_name} (run={run_id}) turn {turn}: tool {tool_name} returned error: {tool_result.output}")

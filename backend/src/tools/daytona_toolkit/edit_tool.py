@@ -15,9 +15,9 @@ from code_intelligence.editing.patcher import Patcher, SearchReplaceEdit
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.ci_runtime import (
     abort_ci_write,
-    ci_required_result,
     finalize_ci_write,
     get_ci_service,
+    occ_required_result,
     prepare_ci_edit_intent,
     prepare_ci_write,
     release_ci_edit_intent,
@@ -40,13 +40,6 @@ from tools.core.decorator import tool
 logger = logging.getLogger(__name__)
 
 _OUTPUT_MAX_CHARS = 8000
-
-
-def _occ_required_error(tool_name: str, file_path: str) -> ToolResult:
-    return ci_required_result(
-        tool_name,
-        f"Edit of {file_path} is disabled. Direct sandbox write fallback is disabled.",
-    )
 
 
 class DaytonaEditFileInput(BaseModel):
@@ -236,7 +229,7 @@ async def daytona_edit_file(
     refresh_supported = callable(refresh_prepared) and type(svc).__module__ != "unittest.mock"
     ci_write_supported = svc is not None and hasattr(svc, "prepare_write")
     if not ci_write_supported and not dry_run:
-        return _occ_required_error("daytona_edit_file", file_path)
+        return occ_required_result("daytona_edit_file", file_path)
 
     if ci_write_supported:
         prepare_started = time.perf_counter()
@@ -253,14 +246,7 @@ async def daytona_edit_file(
                 metadata={"scope_packet": scope_packet, "conflict": True, "tool_timings": tool_timings},
             )
         if prepared is None:
-            return ToolResult(
-                output=(
-                    f"daytona_edit_file: Code intelligence/OCC did not prepare edit of "
-                    f"{file_path}. Direct sandbox write fallback is disabled."
-                ),
-                is_error=True,
-                metadata={"occ_required": True},
-            )
+            return occ_required_result("daytona_edit_file", file_path)
         if not bool(getattr(prepared, "existed", True)):
             abort_ci_write(context, prepared)
             return ToolResult(
@@ -407,7 +393,7 @@ async def daytona_edit_file(
                 },
             },
         )
-    return _occ_required_error("daytona_edit_file", file_path)
+    return occ_required_result("daytona_edit_file", file_path)
 
 
 def _normalize_edits(

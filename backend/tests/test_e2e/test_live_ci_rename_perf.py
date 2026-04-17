@@ -1096,7 +1096,7 @@ def _run_concurrent_ci_load(
         "lsp_result_cache_hits_delta": telemetry_after.cache_hits - telemetry_before.cache_hits,
         "tree_cache_size": status["tree_cache"]["size"],
         "tree_cache_hits_total": status["tree_cache"]["hits"],
-        "rename_preview_cache_size": status["rename_preview_cache"]["size"],
+        "rename_preview_cache_size": status["rename_preview_cache"]["entries"],
     }
     payload = {
         "label": "worker.concurrent_mixed_ci_load_20",

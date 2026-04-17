@@ -12,6 +12,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 from pydantic.json_schema import GenerateJsonSchema
 
+from code_intelligence.tuning import CODE_INTELLIGENCE_TUNING
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.ci_runtime import ci_required_result, get_ci_service
 from tools.core.decorator import tool
@@ -34,19 +35,17 @@ from tools.daytona_toolkit.codeact_transaction import (
     commit_transaction_changes,
     create_codeact_transaction,
 )
+from tools.daytona_toolkit._shell_policy import (
+    _normalize_team_shell_command,
+    shell_policy_source,
+)
 
 _DESTRUCTIVE_GIT_PATTERN = re.compile(
     r"git\s+(stash|reset\s+--hard|checkout\s+--\s|checkout\s+\.\s*$|clean\s+-[fd])",
     flags=re.IGNORECASE,
 )
-_LEADING_CD_PATTERN = re.compile(
-    r"^\s*cd\s+(?P<path>\"[^\"]+\"|'[^']+'|[^\s;&|]+)\s*(?P<sep>&&|;)\s*(?P<rest>.*)$",
-    flags=re.S,
-)
-_STDERR_CAPTURE_PATTERNS = (
-    (re.compile(r"\s+2>\s*&1\b"), "`2>&1`"),
-    (re.compile(r"\s+2>\s*/dev/null\b"), "`2>/dev/null`"),
-)
+_CODEACT_DEFAULT_TIMEOUT = CODE_INTELLIGENCE_TUNING.codeact_default_timeout
+_CODEACT_WRITE_TIMEOUT = CODE_INTELLIGENCE_TUNING.codeact_write_timeout
 
 
 class DaytonaCodeActInput(BaseModel):
@@ -80,7 +79,7 @@ class DaytonaCodeActInput(BaseModel):
         ),
     )
     timeout: int = Field(
-        default=900,
+        default=_CODEACT_DEFAULT_TIMEOUT,
         description="Timeout in seconds for shell mode execution.",
     )
 
@@ -168,57 +167,6 @@ def _destructive_git_command_error(command: str) -> str | None:
     return None
 
 
-def _strip_shell_quotes(value: str) -> str:
-    stripped = value.strip()
-    if len(stripped) >= 2 and stripped[0] == stripped[-1] and stripped[0] in {"'", '"'}:
-        return stripped[1:-1]
-    return stripped
-
-
-def _normalize_team_shell_command(
-    command: str,
-    *,
-    repo_root: str | None,
-) -> tuple[str, list[str]]:
-    """Remove shell fragments that undermine CodeAct's structured execution.
-
-    Coordinated team commands run from a transaction scratch checkout. A leading
-    ``cd <repo_root>`` jumps back to the live checkout and bypasses OCC, so it is
-    redundant at best and unsafe at worst. stderr capture redirects are also
-    redundant because the tool captures stdout/stderr itself.
-    """
-    normalized = command or ""
-    warnings: list[str] = []
-
-    if repo_root:
-        match = _LEADING_CD_PATTERN.match(normalized)
-        if match:
-            cd_path = _strip_shell_quotes(match.group("path"))
-            try:
-                same_root = shlex.quote(cd_path) == shlex.quote(repo_root) or (
-                    cd_path.rstrip("/") == repo_root.rstrip("/")
-                )
-            except Exception:
-                same_root = cd_path.rstrip("/") == repo_root.rstrip("/")
-            if same_root:
-                normalized = match.group("rest").lstrip()
-                warnings.append(
-                    "Removed leading `cd <repo-root>` so the command stays inside "
-                    "the CodeAct transaction workspace."
-                )
-
-    for pattern, label in _STDERR_CAPTURE_PATTERNS:
-        updated = pattern.sub("", normalized)
-        if updated != normalized:
-            normalized = updated
-            warnings.append(
-                f"Removed redundant shell capture plumbing {label}; "
-                "stdout/stderr are already captured separately."
-            )
-
-    return normalized.strip(), warnings
-
-
 def _format_codeact_error(
     *,
     stdout: str,
@@ -236,8 +184,14 @@ def _format_codeact_error(
     return "\n".join(lines)
 
 
+def _python_literal_or_none(value: str | None) -> str:
+    if not value or str(value).strip().lower() == "none":
+        return "None"
+    return json.dumps(value)
+
+
 _WRAPPER_TEMPLATE = r'''
-import base64, hashlib, importlib, json, os, re, subprocess, traceback
+import base64, hashlib, importlib, json, os, re, shlex, subprocess, traceback
 
 _RUN_ID = "{run_id}"
 _MANIFEST = {{"reads": [], "writes": [], "shells": [], "status": "ok", "error": ""}}
@@ -263,14 +217,7 @@ _DESTRUCTIVE_SHELL_PATTERN = re.compile(
     r")",
     flags=re.IGNORECASE,
 )
-_LEADING_CD_PATTERN = re.compile(
-    r"^\s*cd\s+(?P<path>\"[^\"]+\"|'[^']+'|[^\s;&|]+)\s*(?P<sep>&&|;)\s*(?P<rest>.*)$",
-    flags=re.S,
-)
-_STDERR_CAPTURE_PATTERNS = (
-    (re.compile(r"\s+2>\s*&1\b"), "`2>&1`"),
-    (re.compile(r"\s+2>\s*/dev/null\b"), "`2>/dev/null`"),
-)
+{shell_policy_source}
 
 def _normalize_path(path):
     if os.path.isabs(path):
@@ -307,37 +254,13 @@ def _block_shell_command(command, message):
     )
     raise RuntimeError(message)
 
-def _strip_shell_quotes(value):
-    stripped = value.strip()
-    if len(stripped) >= 2 and stripped[0] == stripped[-1] and stripped[0] in {{"'", '"'}}:
-        return stripped[1:-1]
-    return stripped
-
-def _normalize_team_shell_command(command):
-    normalized = command or ""
-    if _CODEACT_REPO_ROOT:
-        match = _LEADING_CD_PATTERN.match(normalized)
-        if match:
-            cd_path = _strip_shell_quotes(match.group("path"))
-            if cd_path.rstrip("/") == str(_CODEACT_REPO_ROOT).rstrip("/"):
-                normalized = match.group("rest").lstrip()
-                _MANIFEST.setdefault("warnings", []).append(
-                    "Removed leading `cd <repo-root>` so the command stays inside "
-                    "the CodeAct transaction workspace."
-                )
-    for pattern, label in _STDERR_CAPTURE_PATTERNS:
-        updated = pattern.sub("", normalized)
-        if updated != normalized:
-            normalized = updated
-            _MANIFEST.setdefault("warnings", []).append(
-                f"Removed redundant shell capture plumbing {{label}}; "
-                "stdout/stderr are already captured separately."
-            )
-    return normalized.strip()
-
-def shell(command, timeout=900):
+def shell(command, timeout={codeact_default_timeout}):
     if _ENFORCE_TEAM_SHELL_POLICY:
-        command = _normalize_team_shell_command(command)
+        command, policy_warnings = _normalize_team_shell_command(
+            command,
+            repo_root=_CODEACT_REPO_ROOT,
+        )
+        _MANIFEST.setdefault("warnings", []).extend(policy_warnings)
     if _DESTRUCTIVE_GIT_PATTERN.search(command or ""):
         _block_shell_command(
             command,
@@ -451,9 +374,11 @@ def _build_wrapper(
     return _WRAPPER_TEMPLATE.format(
         run_id=run_id,
         code_b64=code_b64,
-        codeact_cwd=json.dumps(cwd) if cwd else "None",
-        codeact_repo_root=json.dumps(repo_root) if repo_root else "None",
+        codeact_cwd=_python_literal_or_none(cwd),
+        codeact_repo_root=_python_literal_or_none(repo_root),
         enforce_team_shell_policy="True" if enforce_team_shell_policy else "False",
+        shell_policy_source=shell_policy_source(),
+        codeact_default_timeout=_CODEACT_DEFAULT_TIMEOUT,
     )
 
 
@@ -640,12 +565,22 @@ async def _execute_python_wrapper(
     script_path = f"/tmp/codeact-wrapper-{run_id}.py"
     exec_command = _build_exec_command(script_path, cwd=cwd)
     try:
-        await _write_text_file_via_exec(sandbox, script_path, wrapper)
+        await _write_text_file_via_exec(
+            sandbox,
+            script_path,
+            wrapper,
+            timeout=_CODEACT_WRITE_TIMEOUT,
+        )
     except Exception as exc:
         try:
             sandbox = await _recover_sandbox(context, exc)
             try:
-                await _write_text_file_via_exec(sandbox, script_path, wrapper)
+                await _write_text_file_via_exec(
+                    sandbox,
+                    script_path,
+                    wrapper,
+                    timeout=_CODEACT_WRITE_TIMEOUT,
+                )
             except Exception:
                 if _supports_exec_transport(sandbox):
                     raise
@@ -657,12 +592,12 @@ async def _execute_python_wrapper(
             )
 
     try:
-        response = await sandbox.process.exec(exec_command, timeout=900)
+        response = await sandbox.process.exec(exec_command, timeout=_CODEACT_DEFAULT_TIMEOUT)
         return getattr(response, "result", "") or "", sandbox, None
     except Exception as exc:
         try:
             sandbox = await _recover_sandbox(context, exc)
-            response = await sandbox.process.exec(exec_command, timeout=900)
+            response = await sandbox.process.exec(exec_command, timeout=_CODEACT_DEFAULT_TIMEOUT)
             return getattr(response, "result", "") or "", sandbox, None
         except Exception as recovery_exc:
             return None, sandbox, ToolResult(
@@ -739,7 +674,7 @@ async def daytona_codeact(
     mode: Literal["python", "shell"] | None = None,
     code: str | None = None,
     command: str | None = None,
-    timeout: int = 900,
+    timeout: int = _CODEACT_DEFAULT_TIMEOUT,
     *,
     context: ToolExecutionContext,
 ) -> ToolResult:

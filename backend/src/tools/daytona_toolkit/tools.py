@@ -5,11 +5,11 @@ from __future__ import annotations
 import json
 import logging
 import shlex
-from types import SimpleNamespace
 from typing import Any
 
 from pydantic import BaseModel, Field
 
+from code_intelligence.tuning import CODE_INTELLIGENCE_TUNING
 from tools.core.decorator import tool
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.daytona_toolkit._daytona_utils import (
@@ -31,12 +31,20 @@ from tools.daytona_toolkit._daytona_utils import (
 )
 from tools.core.ci_runtime import (
     abort_ci_write,
-    ci_required_result,
     finalize_ci_write,
+    occ_required_result,
     prepare_ci_write,
 )
 
 logger = logging.getLogger(__name__)
+_GREP_MATCH_CAP = CODE_INTELLIGENCE_TUNING.grep_match_cap
+
+
+def _metadata_int(metadata: Any, key: str, default: int = 0) -> int:
+    try:
+        return int(metadata.get(key, default))
+    except (TypeError, ValueError):
+        return default
 
 
 class DaytonaReadFileInput(BaseModel):
@@ -102,6 +110,7 @@ class DaytonaGrepOutput(BaseModel):
         description="Matching file lines.",
     )
     total_matches: int = Field(..., description="Total number of matches found.")
+    truncated: bool = Field(..., description="Whether returned matches were capped.")
 
 
 class DaytonaGlobInput(BaseModel):
@@ -159,17 +168,11 @@ def _build_read_file_result(
     )
 
 
-def _build_match_result(match: Any) -> dict[str, Any]:
-    if isinstance(match, dict):
-        return {
-            "file": str(match.get("file") or ""),
-            "line": match.get("line"),
-            "content": str(match.get("content") or "").rstrip(),
-        }
+def _build_match_result(match: dict[str, Any]) -> dict[str, Any]:
     return {
-        "file": getattr(match, "file", None) or "",
-        "line": getattr(match, "line", None),
-        "content": (getattr(match, "content", None) or "").rstrip(),
+        "file": str(match.get("file") or ""),
+        "line": match.get("line"),
+        "content": str(match.get("content") or "").rstrip(),
     }
 
 
@@ -202,16 +205,20 @@ def _build_find_result(
     cwd: str,
     pattern: str,
     path: str,
-    matches: list[Any],
+    matches: list[dict[str, Any]],
+    total_matches: int | None = None,
+    truncated: bool = False,
 ) -> ToolResult:
+    total = len(matches) if total_matches is None else int(total_matches)
     return ToolResult(
         output=json.dumps(
             {
                 "cwd": cwd,
                 "pattern": pattern,
                 "path": path,
-                "matches": [_build_match_result(match) for match in matches[:500]],
-                "total_matches": len(matches),
+                "matches": [_build_match_result(match) for match in matches[:_GREP_MATCH_CAP]],
+                "total_matches": total,
+                "truncated": bool(truncated or total > _GREP_MATCH_CAP),
             }
         )
     )
@@ -254,7 +261,7 @@ def _benchmark_read_guard(context: ToolExecutionContext, file_path: str) -> str 
             "`daytona_read_file(...)` on coordinated lanes. Use the named pytest "
             "ids, scout notes, and runtime traceback instead."
         )
-    if int(context.metadata.get("_daytona_codeact_calls") or 0) <= 0:
+    if _metadata_int(context.metadata, "_daytona_codeact_calls") <= 0:
         return (
             "Benchmark read guard: on coordinated benchmark lanes, run the exact "
             "repro first via `daytona_codeact` and direct `shell(\"pytest ...\", "
@@ -276,6 +283,7 @@ import sys
 
 root = sys.argv[1]
 patterns = json.loads(sys.argv[2])
+cap = int(sys.argv[3])
 matches = []
 
 for dirpath, _, filenames in os.walk(root):
@@ -287,14 +295,17 @@ for dirpath, _, filenames in os.walk(root):
             for pattern in patterns
         ):
             matches.append(full_path)
-            if len(matches) >= 500:
+            if len(matches) >= cap:
                 break
-    if len(matches) >= 500:
+    if len(matches) >= cap:
         break
 
 print("\\n".join(matches))
 """
-    return f"python3 -c {shlex.quote(script)} {shlex.quote(root)} {shlex.quote(payload)}"
+    return (
+        f"python3 -c {shlex.quote(script)} "
+        f"{shlex.quote(root)} {shlex.quote(payload)} {int(_GREP_MATCH_CAP)}"
+    )
 
 
 def _build_grep_command(*, root: str, pattern: str) -> str:
@@ -306,6 +317,7 @@ import sys
 
 pattern = sys.argv[1]
 root = pathlib.Path(sys.argv[2])
+cap = int(sys.argv[3])
 
 try:
     regex = re.compile(pattern)
@@ -326,7 +338,7 @@ for path in paths:
             for line_no, line in enumerate(handle, start=1):
                 if regex.search(line):
                     total += 1
-                    if len(matches) < 500:
+                    if len(matches) < cap:
                         matches.append({
                             "file": str(path),
                             "line": line_no,
@@ -335,11 +347,16 @@ for path in paths:
     except OSError:
         continue
 
-print(json.dumps({"ok": True, "matches": matches, "total_matches": total}))
+print(json.dumps({
+    "ok": True,
+    "matches": matches,
+    "total_matches": total,
+    "truncated": total > len(matches),
+}))
 """
     return (
         f"python3 -c {shlex.quote(script)} "
-        f"{shlex.quote(pattern)} {shlex.quote(root)}"
+        f"{shlex.quote(pattern)} {shlex.quote(root)} {int(_GREP_MATCH_CAP)}"
     )
 
 
@@ -456,10 +473,7 @@ async def daytona_write_file(
                     metadata={"conflict": bool(getattr(result, "conflict", False))},
                 )
         else:
-            return ci_required_result(
-                "daytona_write_file",
-                f"Write of {file_path} is disabled. Direct sandbox write fallback is disabled.",
-            )
+            return occ_required_result("daytona_write_file", file_path)
         return _build_write_file_result(
             context=context, file_path=file_path,
             bytes_written=len(content_bytes), warning=contract_warning,
@@ -526,15 +540,18 @@ async def daytona_grep(
             )
         raw_matches = payload.get("matches") or []
         matches = [
-            SimpleNamespace(
-                file=str(item.get("file") or ""),
-                line=item.get("line"),
-                content=str(item.get("content") or ""),
-            )
+            item
             for item in raw_matches
             if isinstance(item, dict)
         ]
-        return _build_find_result(cwd=cwd, pattern=pattern, path=path, matches=matches)
+        return _build_find_result(
+            cwd=cwd,
+            pattern=pattern,
+            path=path,
+            matches=matches,
+            total_matches=payload.get("total_matches"),
+            truncated=bool(payload.get("truncated", False)),
+        )
     except Exception as exc:
         return ToolResult(
             output=_path_error(exc, path) or str(exc),
@@ -577,7 +594,9 @@ async def daytona_glob(
                 output=getattr(resp, "result", "") or f"Glob search failed in {path}",
                 is_error=True,
             )
-        file_list = [f for f in (resp.result or "").splitlines() if f.strip()][:500]
+        file_list = [
+            f for f in (resp.result or "").splitlines() if f.strip()
+        ][: int(_GREP_MATCH_CAP)]
         return _build_glob_result(cwd=cwd, pattern=pattern, path=path, files=file_list)
     except Exception as exc:
         return ToolResult(

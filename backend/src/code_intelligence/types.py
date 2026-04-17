@@ -150,10 +150,18 @@ class SemanticFileChange:
 
 @dataclass(frozen=True)
 class SemanticRenamePlan:
-    """Output of a rename plan: what the semantic tool saw and produced."""
+    """Output of a rename plan: what the semantic tool saw and produced.
+
+    ``plan_captured_at`` is the wall-clock timestamp (``time.time()``)
+    when the semantic tool's snapshot was taken. The batch committer uses
+    it to detect *foreign* Python edits that landed between plan and
+    commit — i.e., edits to Python files outside the plan's target set
+    that could have introduced new references to the renamed symbol.
+    """
 
     new_name: str
     origin: tuple[str, int, int]
+    plan_captured_at: float
     changes: tuple[SemanticFileChange, ...]
 
 
@@ -162,6 +170,7 @@ MultiEditStatus = Literal[
     "aborted_version",
     "aborted_overlap",
     "aborted_lock",
+    "aborted_generation",
     "failed",
 ]
 

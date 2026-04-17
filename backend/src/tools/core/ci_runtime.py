@@ -36,6 +36,27 @@ def ci_required_result(tool_name: str, detail: str) -> ToolResult:
     )
 
 
+def occ_required_result(
+    tool_name: str,
+    file_path: str,
+    *,
+    conflict: bool = False,
+) -> ToolResult:
+    """Build a consistent OCC-required file-write error."""
+    metadata = {"occ_required": True}
+    if conflict:
+        metadata["conflict"] = True
+    operation = "Write" if "write" in tool_name else "Edit"
+    return ToolResult(
+        output=(
+            f"{tool_name}: Code intelligence/OCC is unavailable. "
+            f"{operation} of {file_path} is disabled. Direct sandbox write fallback is disabled."
+        ),
+        is_error=True,
+        metadata=metadata,
+    )
+
+
 def _team_edit_ids(context: ToolExecutionContext) -> tuple[str, str, str]:
     return (
         str(context.metadata.get("team_run_id") or ""),
@@ -510,6 +531,7 @@ __all__ = [
     "ci_required_result",
     "finalize_ci_write",
     "get_ci_service",
+    "occ_required_result",
     "prepare_ci_edit_intent",
     "prepare_ci_write",
     "prime_cache_after_write",

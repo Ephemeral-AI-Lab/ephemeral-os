@@ -57,7 +57,7 @@ class ContentManager:
         if _supports_exec_transport(self._sandbox):
             try:
                 return self._read_remote_batch(unique_paths, allow_missing=allow_missing)
-            except Exception:
+            except (FileNotFoundError, RuntimeError, json.JSONDecodeError, OSError):
                 if not allow_missing:
                     raise
         return {

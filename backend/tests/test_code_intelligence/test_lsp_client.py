@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import base64
 import concurrent.futures
+import re
 import threading
 import time
 from types import SimpleNamespace
@@ -14,6 +16,15 @@ from code_intelligence.lsp._jedi_worker_client import (
 )
 from code_intelligence.lsp.client import LspClient
 from code_intelligence.types import SymbolKind
+
+
+def _decode_sandbox_python_payload(command: str) -> str:
+    match = re.search(
+        r"echo (?P<payload>[A-Za-z0-9+/=]+) \| base64 -d \| python3 -",
+        command,
+    )
+    assert match is not None, command
+    return base64.b64decode(match.group("payload")).decode("utf-8")
 
 
 def test_python_definitions_maps_known_symbol_kind(monkeypatch) -> None:
@@ -210,7 +221,7 @@ def test_resolve_path_no_workspace_root_keeps_relative() -> None:
     assert lsp._resolve_path("dask/core.py") == "dask/core.py"
 
 
-def test_sandbox_exec_runs_script_with_heredoc() -> None:
+def test_sandbox_exec_runs_script_with_base64_pipe() -> None:
     """Verify _run_python_script preserves newlines without a temp file write."""
     captured_cmds: list[str] = []
 
@@ -225,9 +236,8 @@ def test_sandbox_exec_runs_script_with_heredoc() -> None:
     lsp._run_python_script("print('hello')")
 
     assert len(captured_cmds) == 1
-    assert "python3 - <<" in captured_cmds[0]
-    assert "__EOS_LSP_SCRIPT__" in captured_cmds[0]
-    assert "print(" in captured_cmds[0]
+    assert "base64 -d | python3 -" in captured_cmds[0]
+    assert _decode_sandbox_python_payload(captured_cmds[0]) == "print('hello')"
     assert lsp.telemetry.script_runs == 1
     assert lsp.telemetry.script_successes == 1
 
@@ -247,8 +257,8 @@ def test_sandbox_exec_no_cd_without_workspace_root() -> None:
     lsp._run_python_script("print('hello')")
 
     assert len(captured_cmds) == 1
-    assert "python3 - <<" in captured_cmds[0]
-    assert "__EOS_LSP_SCRIPT__" in captured_cmds[0]
+    assert "base64 -d | python3 -" in captured_cmds[0]
+    assert _decode_sandbox_python_payload(captured_cmds[0]) == "print('hello')"
     assert "cd " not in captured_cmds[0]
 
 

@@ -568,11 +568,15 @@ def test_concurrent_overlap_edits_detect_conflicts(
 
                 return _run
 
+            # Overlap combos must include only tools that carry an *intent*
+            # (old_text / base-content) the OCC layer can validate against the
+            # current file. `daytona_write_file` is unconditional overwrite —
+            # last-writer-wins by contract, not an OCC bug — so it is
+            # intentionally excluded from this racing matrix.
             combos = [
                 (_edit_variant, _edit_variant),
-                (_edit_variant, _write_variant),
                 (_edit_variant, _codeact_variant),
-                (_write_variant, _codeact_variant),
+                (_codeact_variant, _codeact_variant),
             ]
             left_builder, right_builder = combos[pair_index % len(combos)]
             workers = [
@@ -658,7 +662,7 @@ def test_jedi_worker_reuse_under_load(
     monkeypatch.setenv(JEDI_WORKER_RENAME_ENV_FLAG, "1")
     env = live_edits_env
     root = f"{env.root_dir}/worker_{uuid.uuid4().hex[:6]}"
-    core_path, uses_path, more_path = _write_perf_project(env, root)
+    core_path, uses_path, _more_path = _write_perf_project(env, root)
     _init_git(env, root)
     svc, ctx = _build_service(env, root, "worker")
     telemetry_before = svc.lsp_client.telemetry
@@ -666,14 +670,18 @@ def test_jedi_worker_reuse_under_load(
     trace_mark = env.trace.mark()
 
     try:
-        files = [core_path, uses_path, more_path]
+        # Pin each read-only LSP op to a position known to land on a Python
+        # symbol in the perf project (see `_write_perf_project`):
+        #   core.py (1, 0) → `def alpha(value):` — used for find_references / hover
+        #   uses.py (4, 11) → `alpha(1)` reference — used for goto_definition
+        # uses.py/more.py line 1 col 0 is the `from` keyword and has no
+        # references; probing those would be a test bug, not an LSP issue.
 
         def _worker(index: int) -> dict[str, Any]:
             started = time.perf_counter()
             op_index = index % 4
             if op_index == 0:
-                target = files[index % len(files)]
-                refs = svc.lsp_client.find_references(target, 1, 0)
+                refs = svc.lsp_client.find_references(core_path, 1, 0)
                 ok = len(refs) >= 1
                 op = "find_references"
             elif op_index == 1:

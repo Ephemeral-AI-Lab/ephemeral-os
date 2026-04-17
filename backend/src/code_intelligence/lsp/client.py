@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import logging
-import os
 import re
 import shlex
 import subprocess
@@ -27,6 +27,7 @@ from code_intelligence.constants import (
     LSP_CACHE_TTL,
     LSP_QUERY_TIMEOUT,
 )
+from code_intelligence.tuning import CodeIntelligenceTuning
 from code_intelligence.lsp._jedi_worker_client import (
     BaseJediWorkerClient,
     JediWorkerClient,
@@ -45,8 +46,6 @@ from code_intelligence.types import (
 )
 
 logger = logging.getLogger(__name__)
-_SANDBOX_PYTHON_CONCURRENCY_ENV = "CI_LSP_SANDBOX_PYTHON_CONCURRENCY"
-
 _LANGUAGE_BY_EXTENSION = {
     ".py": "python",
     ".js": "javascript",
@@ -54,14 +53,6 @@ _LANGUAGE_BY_EXTENSION = {
     ".ts": "typescript",
     ".tsx": "typescript",
 }
-
-
-def _sandbox_python_concurrency() -> int:
-    raw = os.environ.get(_SANDBOX_PYTHON_CONCURRENCY_ENV, "8").strip()
-    try:
-        return max(1, int(raw))
-    except ValueError:
-        return 8
 
 
 @dataclass
@@ -115,7 +106,10 @@ class LspClient:
         self._cache_lock = threading.Lock()
         self._counter_lock = threading.Lock()
         self._line_cache_lock = threading.Lock()
-        self._sandbox_python_exec_sem = threading.Semaphore(_sandbox_python_concurrency())
+        tuning = CodeIntelligenceTuning()
+        self._sandbox_python_exec_sem = threading.Semaphore(
+            tuning.sandbox_python_concurrency
+        )
 
         self._cache: OrderedDict[str, _CacheEntry] = OrderedDict()
         self._inflight: dict[str, _InflightQuery] = {}
@@ -269,7 +263,7 @@ class LspClient:
     def connected(self) -> bool:
         """Whether at least one language backend is available."""
         status = self.ensure_ready(languages=("python",))
-        return bool(status.get("python") or self._ts_available)
+        return bool(status.get("python")) or bool(self._ts_available)
 
     @property
     def worker_active(self) -> bool:
@@ -649,16 +643,14 @@ class LspClient:
     def _run_python_script(self, script: str) -> str:
         """Run a Python script locally or in the sandbox.
 
-        For sandbox execution, a quoted heredoc keeps this to one
-        ``process.exec`` while preserving the script's real newlines.
+        For sandbox execution, base64 transport avoids marker-collision and
+        shell-quoting edge cases while keeping the query to one ``process.exec``.
         """
         self._record_script_run()
         try:
             if self._sandbox:
-                marker = "__EOS_LSP_SCRIPT__"
-                while f"\n{marker}\n" in script:
-                    marker += "_"
-                cmd = f"python3 - <<'{marker}'\n{script}\n{marker}"
+                payload = base64.b64encode(script.encode("utf-8")).decode("ascii")
+                cmd = f"echo {shlex.quote(payload)} | base64 -d | python3 -"
                 with self._sandbox_python_exec_sem:
                     response = run_sync(
                         self._sandbox.process.exec(
