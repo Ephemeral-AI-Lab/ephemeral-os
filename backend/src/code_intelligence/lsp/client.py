@@ -27,7 +27,6 @@ from code_intelligence.constants import (
     LSP_CACHE_TTL,
     LSP_QUERY_TIMEOUT,
 )
-from code_intelligence.tuning import CodeIntelligenceTuning
 from code_intelligence.lsp._jedi_worker_client import (
     BaseJediWorkerClient,
     JediWorkerClient,
@@ -106,10 +105,6 @@ class LspClient:
         self._cache_lock = threading.Lock()
         self._counter_lock = threading.Lock()
         self._line_cache_lock = threading.Lock()
-        tuning = CodeIntelligenceTuning()
-        self._sandbox_python_exec_sem = threading.Semaphore(
-            tuning.sandbox_python_concurrency
-        )
 
         self._cache: OrderedDict[str, _CacheEntry] = OrderedDict()
         self._inflight: dict[str, _InflightQuery] = {}
@@ -651,13 +646,12 @@ class LspClient:
             if self._sandbox:
                 payload = base64.b64encode(script.encode("utf-8")).decode("ascii")
                 cmd = f"echo {shlex.quote(payload)} | base64 -d | python3 -"
-                with self._sandbox_python_exec_sem:
-                    response = run_sync(
-                        self._sandbox.process.exec(
-                            _wrap_bash_command(cmd),
-                            timeout=int(LSP_QUERY_TIMEOUT),
-                        )
+                response = run_sync(
+                    self._sandbox.process.exec(
+                        _wrap_bash_command(cmd),
+                        timeout=int(LSP_QUERY_TIMEOUT),
                     )
+                )
                 result = response.result or ""
                 result, exit_code = _extract_exit_code(
                     result,
