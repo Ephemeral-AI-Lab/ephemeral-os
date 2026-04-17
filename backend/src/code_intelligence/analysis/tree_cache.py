@@ -17,26 +17,27 @@ from __future__ import annotations
 
 import ast
 import hashlib
-import logging
 import json
+import logging
 import shlex
 import threading
 import time
 from collections import OrderedDict
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
-from collections.abc import Callable
+
+from tools.daytona_toolkit._daytona_utils import (
+    _extract_exit_code,
+    _supports_exec_transport,
+    _wrap_bash_command,
+)
 
 from code_intelligence._async_bridge import run_sync
 from code_intelligence.constants import (
     TREE_CACHE_MAX_FILE_SIZE,
     TREE_CACHE_MAX_FILES,
-)
-from tools.daytona_toolkit._daytona_utils import (
-    _extract_exit_code,
-    _supports_exec_transport,
-    _wrap_bash_command,
 )
 
 logger = logging.getLogger(__name__)

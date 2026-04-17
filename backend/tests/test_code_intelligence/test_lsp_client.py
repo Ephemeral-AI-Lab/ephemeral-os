@@ -40,6 +40,22 @@ def test_python_definitions_preserves_unknown_types(monkeypatch) -> None:
     assert results[0].kind is SymbolKind.UNKNOWN
 
 
+def test_python_definitions_follows_imports_in_subprocess_path(monkeypatch) -> None:
+    captured_scripts: list[str] = []
+    lsp = LspClient(workspace_root="/workspace")
+
+    def _capture(script: str) -> str:
+        captured_scripts.append(script)
+        return "[]"
+
+    monkeypatch.setattr(lsp, "_run_python_script", _capture)
+
+    lsp._python_definitions("/workspace/pkg/uses.py", 4, 11)
+
+    assert captured_scripts
+    assert "follow_imports=True" in captured_scripts[0]
+
+
 def test_reset_backend_availability_clears_cached_readiness() -> None:
     lsp = LspClient(workspace_root="/workspace")
     lsp._py_available = False

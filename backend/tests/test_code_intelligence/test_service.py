@@ -8,7 +8,6 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
-
 from code_intelligence.analysis.symbol_index import SymbolIndex
 from code_intelligence.routing.service import (
     CodeIntelligenceService,

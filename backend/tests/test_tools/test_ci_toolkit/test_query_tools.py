@@ -8,15 +8,13 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
-from tools.core.base import ToolExecutionContext
 from tools.ci_toolkit.query_tools import (
     _svc_or_error,
+    ci_query_symbol,
     ci_status,
     ci_workspace_structure,
-    ci_query_symbol,
 )
-
+from tools.core.base import ToolExecutionContext
 
 pytestmark = pytest.mark.asyncio  # applies to all async def tests
 

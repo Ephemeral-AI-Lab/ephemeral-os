@@ -6,7 +6,6 @@ import shlex
 from pathlib import Path
 from typing import Any
 
-from code_intelligence._async_bridge import run_sync
 from tools.daytona_toolkit._daytona_utils import (
     _build_read_text_file_command,
     _build_write_text_file_command,
@@ -15,6 +14,8 @@ from tools.daytona_toolkit._daytona_utils import (
     _upload_file_compat,
     _wrap_bash_command,
 )
+
+from code_intelligence._async_bridge import run_sync
 
 
 class ContentManager:

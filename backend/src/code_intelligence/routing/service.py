@@ -16,15 +16,17 @@ from __future__ import annotations
 import logging
 import threading
 import time
+from collections.abc import Sequence
 from typing import Any
 
 from team._path_utils import normalize_scope_paths, scope_paths_overlap
+
 from code_intelligence.analysis.symbol_index import SymbolIndex
 from code_intelligence.analysis.tree_cache import TreeCache
 from code_intelligence.editing.arbiter import Arbiter
 from code_intelligence.editing.patcher import Patcher
 from code_intelligence.editing.time_machine import TimeMachine
-from code_intelligence.editing.write_coordinator import WriteCoordinator
+from code_intelligence.editing.write_coordinator import WriteCoordinator, content_hash
 from code_intelligence.lsp.client import LspClient
 from code_intelligence.routing.backend_protocol import (
     LspBackendAdapter,
@@ -45,8 +47,11 @@ from code_intelligence.types import (
     EditRequest,
     EditResult,
     HoverResult,
+    MultiEditResult,
     PreparedWrite,
     ReferenceInfo,
+    SemanticFileChange,
+    SemanticRenamePlan,
     SymbolInfo,
     WriteRequest,
 )
@@ -173,11 +178,45 @@ class CodeIntelligenceService:
     def query_symbols(self, query: str) -> list[SymbolInfo]:
         return self.symbol_index.find(query)
 
-    def rename_symbol(
+    def rename_symbol_plan(
         self, file_path: str, line: int, character: int, new_name: str,
-    ) -> dict[str, str]:
-        """Return {absolute_path: new_content} for every file the rename touches."""
-        return self.lsp_client.rename_symbol(file_path, line, character, new_name)
+    ) -> SemanticRenamePlan:
+        """Build a :class:`SemanticRenamePlan` for an OCC batch commit.
+
+        Snapshots :attr:`arbiter.generation` *before* invoking Jedi so the
+        batch commit can detect foreign edits that landed during planning.
+        For each affected file, the file's current content is captured as
+        the per-file OCC base; the generation gate covers the race window
+        between Jedi's read and this capture.
+        """
+        gen_before = self.arbiter.generation
+        final_by_path = self.lsp_client.rename_symbol(
+            file_path, int(line), int(character), new_name,
+        )
+        changes: list[SemanticFileChange] = []
+        for path, final_content in final_by_path.items():
+            try:
+                base_content, existed = self._content.read(path, allow_missing=True)
+            except Exception:  # pragma: no cover - defensive I/O
+                base_content, existed = "", False
+            # Missing files are skipped: Jedi would not have produced a
+            # rewrite against a file it could not see.
+            if not existed and not base_content:
+                continue
+            changes.append(
+                SemanticFileChange(
+                    file_path=path,
+                    base_content=base_content,
+                    base_hash=content_hash(base_content),
+                    final_content=final_content,
+                ),
+            )
+        return SemanticRenamePlan(
+            new_name=new_name,
+            origin=(file_path, int(line), int(character)),
+            arbiter_generation=gen_before,
+            changes=tuple(changes),
+        )
 
     # -- Edit API (delegated) -------------------------------------------------
 
@@ -242,6 +281,23 @@ class CodeIntelligenceService:
             agent_id=agent_id,
             edit_type=edit_type,
             description=description,
+        )
+
+    def commit_many_against_base(
+        self,
+        changes: Sequence[SemanticFileChange],
+        *,
+        agent_id: str = "",
+        edit_type: str,
+        description: str = "",
+        expected_arbiter_generation: int | None = None,
+    ) -> MultiEditResult:
+        return self._write_coordinator.commit_many_against_base(
+            changes,
+            agent_id=agent_id,
+            edit_type=edit_type,
+            description=description,
+            expected_arbiter_generation=expected_arbiter_generation,
         )
 
     def undo_last_edit(self, file_path: str) -> EditResult:
@@ -385,6 +441,10 @@ class CodeIntelligenceService:
         """Cleanup all resources."""
         self.arbiter.cleanup_locks()
         self.time_machine.clear()
+        try:
+            self.lsp_client.close()
+        except Exception:  # pragma: no cover - defensive
+            logger.debug("lsp_client.close() failed during dispose", exc_info=True)
         logger.info("CodeIntelligenceService disposed for sandbox %s", self.sandbox_id)
 
 

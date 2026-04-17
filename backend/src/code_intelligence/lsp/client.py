@@ -14,16 +14,24 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from tools.daytona_toolkit._daytona_utils import (
+    _build_write_text_file_command,
+    _extract_exit_code,
+    _wrap_bash_command,
+)
+
 from code_intelligence._async_bridge import run_sync
 from code_intelligence.constants import (
     LSP_CACHE_MAX_ENTRIES,
     LSP_CACHE_TTL,
     LSP_QUERY_TIMEOUT,
 )
-from tools.daytona_toolkit._daytona_utils import (
-    _build_write_text_file_command,
-    _extract_exit_code,
-    _wrap_bash_command,
+from code_intelligence.lsp._jedi_worker_client import (
+    JediWorkerClient,
+    WorkerUnavailable,
+)
+from code_intelligence.lsp._jedi_worker_client import (
+    is_enabled as jedi_worker_enabled,
 )
 from code_intelligence.types import (
     Diagnostic,
@@ -86,6 +94,11 @@ class LspClient:
         self._py_available: bool | None = None
         self._ts_available: bool | None = None
 
+        # Persistent Jedi worker (local-mode only, env-gated). Built
+        # lazily on first successful use; torn down on client close.
+        self._worker: JediWorkerClient | None = None
+        self._worker_lock = threading.Lock()
+
     # -- Public query methods -------------------------------------------------
 
     def goto_definition(
@@ -141,11 +154,35 @@ class LspClient:
         )
 
     def invalidate(self, file_path: str) -> None:
-        """Invalidate all cached results for a file."""
+        """Invalidate all cached results for a file.
+
+        Also forwards the invalidation to the persistent Jedi worker
+        (when enabled) so Jedi's internal module cache drops this path.
+        Worker failures are swallowed — a stale worker cache is a
+        performance concern, not a correctness concern; the next query
+        will miss the cache and re-resolve.
+        """
         with self._cache_lock:
             to_remove = [k for k in self._cache if file_path in k]
             for k in to_remove:
                 del self._cache[k]
+        client = self._get_worker()
+        if client is None:
+            return
+        try:
+            client.request("invalidate", {"path": self._resolve_path(file_path)})
+        except WorkerUnavailable:
+            pass
+        except Exception:  # pragma: no cover - defensive
+            logger.debug("worker invalidate failed for %s", file_path, exc_info=True)
+
+    def close(self) -> None:
+        """Shut down the persistent Jedi worker, if one is running."""
+        with self._worker_lock:
+            worker = self._worker
+            self._worker = None
+        if worker is not None:
+            worker.shutdown()
 
     def ensure_ready(self, *, install_missing: bool = False) -> dict[str, bool]:
         """Check which language backends are available.
@@ -285,15 +322,72 @@ class LspClient:
         except Exception:
             return None
 
+    # -- Persistent worker dispatch ------------------------------------------
+    #
+    # Local-mode only: the worker amortises Jedi's import cost across
+    # every Python query in this LspClient's lifetime. Sandbox-mode
+    # continues to use the subprocess-per-call path until we verify
+    # that the Daytona SDK supports persistent stdio (plan line 158).
+
+    def _get_worker(self) -> JediWorkerClient | None:
+        if self._sandbox is not None:
+            return None
+        if not jedi_worker_enabled():
+            return None
+        with self._worker_lock:
+            if self._worker is None:
+                self._worker = JediWorkerClient(self._workspace_root)
+            return self._worker
+
+    def _try_worker(self, op: str, args: dict[str, Any]) -> tuple[bool, Any]:
+        """Attempt a worker request. Returns ``(ok, result_or_None)``.
+
+        On ``WorkerUnavailable`` the caller must fall back to the
+        subprocess-per-call path. Logical worker errors (``ok=False``
+        response) surface as ``(True, None)`` — the worker is healthy
+        but the query failed, matching the subprocess path's behaviour
+        of returning an empty result for bad positions.
+        """
+        client = self._get_worker()
+        if client is None:
+            return False, None
+        try:
+            return True, client.request(op, args)
+        except WorkerUnavailable:
+            return False, None
+        except Exception:  # pragma: no cover - defensive
+            logger.debug("jedi worker op %s failed", op, exc_info=True)
+            return True, None
+
     def _python_definitions(
         self, file_path: str, line: int, character: int,
     ) -> list[SymbolInfo]:
         character = self._resolve_column(file_path, line, character)
-        path_literal = json.dumps(self._resolve_path(file_path))
+        resolved_path = self._resolve_path(file_path)
+
+        used, result = self._try_worker(
+            "definitions",
+            {"path": resolved_path, "line": int(line), "column": int(character)},
+        )
+        if used:
+            items = result if isinstance(result, list) else []
+            return [
+                SymbolInfo(
+                    name=str(item.get("name", "")),
+                    kind=_coerce_symbol_kind(item.get("type")),
+                    file_path=str(item.get("module_path", "")),
+                    line=int(item.get("line", 0) or 0),
+                    character=int(item.get("column", 0) or 0),
+                )
+                for item in items
+                if isinstance(item, dict) and item.get("name")
+            ]
+
+        path_literal = json.dumps(resolved_path)
         script = (
             f"import jedi, json\n"
             f"s = jedi.Script(path={path_literal})\n"
-            f"defs = s.goto(line={line}, column={character})\n"
+            f"defs = s.goto(line={line}, column={character}, follow_imports=True)\n"
             f"print(json.dumps([{{'name': d.name, 'path': str(d.module_path or ''), "
             f"'line': d.line or 0, 'col': d.column or 0, "
             f"'type': d.type}} for d in defs]))"
@@ -318,7 +412,25 @@ class LspClient:
         self, file_path: str, line: int, character: int,
     ) -> list[ReferenceInfo]:
         character = self._resolve_column(file_path, line, character)
-        path_literal = json.dumps(self._resolve_path(file_path))
+        resolved_path = self._resolve_path(file_path)
+
+        used, result = self._try_worker(
+            "references",
+            {"path": resolved_path, "line": int(line), "column": int(character)},
+        )
+        if used:
+            items = result if isinstance(result, list) else []
+            return [
+                ReferenceInfo(
+                    file_path=str(item.get("module_path", "")),
+                    line=int(item.get("line", 0) or 0),
+                    character=int(item.get("column", 0) or 0),
+                )
+                for item in items
+                if isinstance(item, dict)
+            ]
+
+        path_literal = json.dumps(resolved_path)
         script = (
             f"import jedi, json\n"
             f"s = jedi.Script(path={path_literal})\n"
@@ -344,7 +456,23 @@ class LspClient:
         self, file_path: str, line: int, character: int, new_name: str,
     ) -> dict[str, str]:
         character = self._resolve_column(file_path, line, character)
-        path_literal = json.dumps(self._resolve_path(file_path))
+        resolved_path = self._resolve_path(file_path)
+
+        used, result = self._try_worker(
+            "rename",
+            {
+                "path": resolved_path,
+                "line": int(line),
+                "column": int(character),
+                "new_name": str(new_name),
+            },
+        )
+        if used:
+            if isinstance(result, dict):
+                return {str(k): str(v) for k, v in result.items() if isinstance(v, str)}
+            return {}
+
+        path_literal = json.dumps(resolved_path)
         new_name_literal = json.dumps(str(new_name))
         script = (
             "import jedi, json\n"
@@ -375,7 +503,21 @@ class LspClient:
         self, file_path: str, line: int, character: int,
     ) -> HoverResult | None:
         character = self._resolve_column(file_path, line, character)
-        path_literal = json.dumps(self._resolve_path(file_path))
+        resolved_path = self._resolve_path(file_path)
+
+        used, result = self._try_worker(
+            "hover",
+            {"path": resolved_path, "line": int(line), "column": int(character)},
+        )
+        if used:
+            if not isinstance(result, dict):
+                return None
+            return HoverResult(
+                content=str(result.get("docstring", "")),
+                language="python",
+            )
+
+        path_literal = json.dumps(resolved_path)
         script = (
             f"import jedi, json\n"
             f"s = jedi.Script(path={path_literal})\n"

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import Any, Literal
 
 
 class SymbolKind(str, Enum):
@@ -130,6 +130,53 @@ class EditResult:
     conflict: bool = False
     conflict_reason: str = ""
     snapshot_id: str = ""
+    timings: dict[str, float] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class SemanticFileChange:
+    """One file's slot in a semantic (e.g. cross-file rename) change set.
+
+    ``base_content`` is the content the semantic tool (Jedi) inspected at
+    plan time; ``base_hash`` is its :func:`content_hash`. ``final_content``
+    is the tool's proposed post-transform content.
+    """
+
+    file_path: str
+    base_content: str
+    base_hash: str
+    final_content: str
+
+
+@dataclass(frozen=True)
+class SemanticRenamePlan:
+    """Output of a rename plan: what the semantic tool saw and produced."""
+
+    new_name: str
+    origin: tuple[str, int, int]
+    arbiter_generation: int
+    changes: tuple[SemanticFileChange, ...]
+
+
+MultiEditStatus = Literal[
+    "committed",
+    "aborted_version",
+    "aborted_overlap",
+    "aborted_lock",
+    "aborted_generation",
+    "failed",
+]
+
+
+@dataclass(frozen=True)
+class MultiEditResult:
+    """Outcome of a batch commit against explicit bases."""
+
+    success: bool
+    status: MultiEditStatus
+    files: tuple["EditResult", ...] = ()
+    conflict_file: str | None = None
+    conflict_reason: str = ""
     timings: dict[str, float] = field(default_factory=dict)
 
 

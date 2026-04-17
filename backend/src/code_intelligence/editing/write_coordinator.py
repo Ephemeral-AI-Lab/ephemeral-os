@@ -8,7 +8,9 @@ collaborators it mutates — no knowledge of the global service registry.
 from __future__ import annotations
 
 import hashlib
+import logging
 import time
+from collections.abc import Sequence
 from typing import Any
 
 from code_intelligence.editing.arbiter import Arbiter
@@ -22,9 +24,13 @@ from code_intelligence.routing.content_manager import ContentManager
 from code_intelligence.types import (
     EditRequest,
     EditResult,
+    MultiEditResult,
     PreparedWrite,
+    SemanticFileChange,
     WriteRequest,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def content_hash(content: str) -> str:
@@ -283,6 +289,7 @@ class WriteCoordinator:
                 self._content.write(prepared.file_path, write_content)
             except Exception as exc:
                 _record_timing(timings, "content_write", write_started)
+                self._rollback_after_write_failure(prepared.file_path, current_now)
                 timings["commit_total"] = round(time.perf_counter() - commit_started, 6)
                 return _result(prepared.file_path, f"Write failed: {exc}", timings=timings)
             _record_timing(timings, "content_write", write_started)
@@ -316,6 +323,268 @@ class WriteCoordinator:
             )
         finally:
             self._arbiter.release_file_lock(prepared.file_path)
+
+    def commit_many_against_base(
+        self,
+        changes: Sequence[SemanticFileChange],
+        *,
+        agent_id: str = "",
+        edit_type: str,
+        description: str = "",
+        expected_arbiter_generation: int | None = None,
+    ) -> MultiEditResult:
+        """Atomically commit a batch of file changes against per-file bases.
+
+        Semantics:
+          * **Generation gate** — if ``expected_arbiter_generation`` is given
+            and the arbiter has since advanced, abort the batch untouched.
+          * **Sorted-path locking** — acquire all per-file locks in sorted
+            path order; release in reverse on exit.
+          * **Merge tolerance** — if a file's current hash equals its
+            ``base_hash`` the batch takes ``final_content`` verbatim; otherwise
+            it tries a non-overlapping merge (same policy as single-file
+            OCC). Any unmergeable mismatch aborts the *whole* batch — no
+            partial rename is ever left on disk.
+          * **Two-pass commit** — resolved contents are staged in memory
+            first, then written + recorded + refreshed. A write failure
+            during the commit pass triggers best-effort TimeMachine
+            rollback of earlier files and returns ``status="failed"``.
+        """
+        started = time.perf_counter()
+        timings: dict[str, float] = {}
+
+        if not changes:
+            return MultiEditResult(
+                success=True,
+                status="committed",
+                files=(),
+                conflict_file=None,
+                conflict_reason="",
+                timings={"total": 0.0},
+            )
+
+        # 1. Generation precheck — catches edits landed anywhere in the
+        #    sandbox between plan time and commit time that Jedi could not
+        #    have seen.
+        if expected_arbiter_generation is not None:
+            current_gen = self._arbiter.generation
+            if current_gen != expected_arbiter_generation:
+                self._arbiter.record_conflict("generation_mismatch")
+                timings["total"] = round(time.perf_counter() - started, 6)
+                return self._batch_abort(
+                    changes,
+                    status="aborted_generation",
+                    conflict_file=None,
+                    conflict_reason=(
+                        f"arbiter generation advanced "
+                        f"{expected_arbiter_generation} → {current_gen}; "
+                        "re-plan the rename."
+                    ),
+                    timings=timings,
+                )
+
+        sorted_changes = sorted(changes, key=lambda c: c.file_path)
+
+        # 2. Acquire locks in sorted order; release prefix on timeout.
+        held: list[str] = []
+        lock_started = time.perf_counter()
+        for change in sorted_changes:
+            if not self._arbiter.acquire_file_lock(change.file_path):
+                for prev in reversed(held):
+                    self._arbiter.release_file_lock(prev)
+                self._arbiter.record_conflict("lock_timeout")
+                timings["lock_wait"] = round(time.perf_counter() - lock_started, 6)
+                timings["total"] = round(time.perf_counter() - started, 6)
+                return self._batch_abort(
+                    changes,
+                    status="aborted_lock",
+                    conflict_file=change.file_path,
+                    conflict_reason="could not acquire file lock (timeout)",
+                    timings=timings,
+                )
+            held.append(change.file_path)
+        timings["lock_wait"] = round(time.perf_counter() - lock_started, 6)
+
+        try:
+            # 3. Resolve every file against its plan-time base, staging in
+            #    memory. Any unmergeable file aborts the batch before we
+            #    touch disk.
+            resolve_started = time.perf_counter()
+            resolved: list[tuple[SemanticFileChange, str, str, str, bool]] = []
+            for change in sorted_changes:
+                try:
+                    current_now, existed_now = self._content.read(
+                        change.file_path, allow_missing=True,
+                    )
+                except Exception as exc:  # pragma: no cover - defensive I/O
+                    timings["resolve"] = round(time.perf_counter() - resolve_started, 6)
+                    timings["total"] = round(time.perf_counter() - started, 6)
+                    return self._batch_abort(
+                        changes,
+                        status="failed",
+                        conflict_file=change.file_path,
+                        conflict_reason=f"read failed: {exc}",
+                        timings=timings,
+                    )
+
+                current_hash = content_hash(current_now) if existed_now else ""
+                if existed_now and current_hash == change.base_hash:
+                    resolved_content = change.final_content
+                else:
+                    resolved_content, conflict = self._resolve_semantic_change(
+                        change, current_now, existed_now,
+                    )
+                    if conflict is not None:
+                        status, reason = conflict
+                        self._arbiter.record_conflict(status)
+                        timings["resolve"] = round(time.perf_counter() - resolve_started, 6)
+                        timings["total"] = round(time.perf_counter() - started, 6)
+                        return self._batch_abort(
+                            changes,
+                            status=status,
+                            conflict_file=change.file_path,
+                            conflict_reason=reason,
+                            timings=timings,
+                        )
+                resolved.append(
+                    (change, current_now, resolved_content, current_hash, existed_now),
+                )
+            timings["resolve"] = round(time.perf_counter() - resolve_started, 6)
+
+            # 4. Commit pass. A mid-batch I/O failure triggers best-effort
+            #    rollback of already-written files via TimeMachine.
+            apply_started = time.perf_counter()
+            commit_results: list[EditResult] = []
+            committed_paths: list[str] = []
+            for change, current_now, resolved_content, current_hash, existed_now in resolved:
+                per_timings: dict[str, float] = {}
+                per_started = time.perf_counter()
+                self._time_machine.save(change.file_path, current_now)
+                try:
+                    self._content.write(change.file_path, resolved_content)
+                except Exception as exc:
+                    for fp in reversed(committed_paths):
+                        snap = self._time_machine.rollback(fp)
+                        if snap is None:
+                            continue
+                        try:
+                            self._content.write(fp, snap.content)
+                        except Exception:  # pragma: no cover - best effort
+                            logger.exception("rollback failed for %s", fp)
+                    timings["apply"] = round(time.perf_counter() - apply_started, 6)
+                    timings["total"] = round(time.perf_counter() - started, 6)
+                    return MultiEditResult(
+                        success=False,
+                        status="failed",
+                        files=tuple(
+                            _result(c.file_path, f"batch failed on {change.file_path}: {exc}")
+                            for c in sorted_changes
+                        ),
+                        conflict_file=change.file_path,
+                        conflict_reason=f"write failed: {exc}",
+                        timings=timings,
+                    )
+                committed_paths.append(change.file_path)
+                gen = self._arbiter.record_edit(
+                    file_path=change.file_path,
+                    actor_label=agent_id,
+                    edit_type=edit_type,
+                    old_hash=current_hash if existed_now else "",
+                    new_hash=content_hash(resolved_content),
+                    description=description,
+                )
+                self._symbol_index.refresh(change.file_path, resolved_content)
+                self._lsp_client.invalidate(change.file_path)
+                per_timings["total"] = round(time.perf_counter() - per_started, 6)
+                commit_results.append(
+                    _result(
+                        change.file_path,
+                        "Wrote file",
+                        success=True,
+                        snapshot_id=str(gen),
+                        timings=per_timings,
+                    ),
+                )
+            timings["apply"] = round(time.perf_counter() - apply_started, 6)
+            timings["total"] = round(time.perf_counter() - started, 6)
+            return MultiEditResult(
+                success=True,
+                status="committed",
+                files=tuple(commit_results),
+                conflict_file=None,
+                conflict_reason="",
+                timings=timings,
+            )
+        finally:
+            for fp in reversed(held):
+                self._arbiter.release_file_lock(fp)
+
+    def _resolve_semantic_change(
+        self,
+        change: SemanticFileChange,
+        current_now: str,
+        existed_now: bool,
+    ) -> tuple[str, tuple[str, str] | None]:
+        """Resolve one file's final content against a possibly-changed base.
+
+        Returns ``(resolved_content, None)`` on success or
+        ``("", (status, reason))`` describing the abort class.
+        """
+        if not existed_now:
+            return "", (
+                "aborted_version",
+                "file was deleted since rename plan was built",
+            )
+        line_start, line_end, op = detect_edit_window(
+            change.base_content, change.final_content,
+        )
+        if line_start is None:
+            return "", (
+                "aborted_version",
+                "base content changed and rewrite is whole-file / un-windowable",
+            )
+        merged = merge_non_overlapping_edit(
+            original_content=change.base_content,
+            new_content=change.final_content,
+            current_content=current_now,
+            line_start=line_start,
+            line_end=line_end,
+            operation_type=op,
+        )
+        if merged is None:
+            return "", (
+                "aborted_overlap",
+                "concurrent edit overlaps the rename window",
+            )
+        return merged, None
+
+    @staticmethod
+    def _batch_abort(
+        changes: Sequence[SemanticFileChange],
+        *,
+        status: str,
+        conflict_file: str | None,
+        conflict_reason: str,
+        timings: dict[str, float],
+    ) -> MultiEditResult:
+        is_conflict = status.startswith("aborted")
+        files = tuple(
+            _result(
+                c.file_path,
+                conflict_reason,
+                conflict=is_conflict,
+                conflict_reason=status if is_conflict else "",
+            )
+            for c in changes
+        )
+        return MultiEditResult(
+            success=False,
+            status=status,  # type: ignore[arg-type]
+            files=files,
+            conflict_file=conflict_file,
+            conflict_reason=conflict_reason,
+            timings=dict(timings),
+        )
 
     def commit_change_against_base(
         self,
@@ -447,6 +716,26 @@ class WriteCoordinator:
         if ok:
             self._arbiter.release_token(prepared.token_id)
 
+    def _rollback_after_write_failure(self, file_path: str, pre_write_content: str) -> None:
+        """Restore *file_path* to its pre-write state after a failed write.
+
+        Why: a failed ``content.write`` may leave the file partially written or
+        in an unknown state; the batch path already auto-rolls-back on the same
+        class of failure, so single writes follow suit for parity.
+        """
+        snapshot = self._time_machine.rollback(file_path)
+        restore_content = snapshot.content if snapshot is not None else pre_write_content
+        try:
+            self._content.write(file_path, restore_content)
+        except Exception:
+            logger.exception("rollback failed for %s", file_path)
+            return
+        try:
+            self._symbol_index.refresh(file_path, restore_content)
+            self._lsp_client.invalidate(file_path)
+        except Exception:  # pragma: no cover - best effort
+            logger.exception("post-rollback index refresh failed for %s", file_path)
+
     def undo_last_edit(self, file_path: str) -> EditResult:
         """Undo the last edit to *file_path* via TimeMachine."""
         snapshot = self._time_machine.rollback(file_path)
@@ -494,6 +783,7 @@ class WriteCoordinator:
         except Exception as exc:
             _record_timing(timings, "content_write", write_started)
             action = "Delete" if resolved_content is None else "Write"
+            self._rollback_after_write_failure(file_path, current_now)
             timings["commit_total"] = round(time.perf_counter() - commit_started, 6)
             return _result(file_path, f"{action} failed: {exc}", timings=timings)
         _record_timing(timings, "content_write", write_started)

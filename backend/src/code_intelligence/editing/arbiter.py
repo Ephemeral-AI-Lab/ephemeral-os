@@ -16,8 +16,8 @@ import logging
 import threading
 import time
 import uuid
-from dataclasses import dataclass
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Any
 
 from code_intelligence.constants import (

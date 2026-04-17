@@ -9,10 +9,9 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
-
 from code_intelligence.lsp.client import LspClient
-from tools.core.base import ToolExecutionContext
 from tools.ci_toolkit.lsp_tools import ci_diagnostics
+from tools.core.base import ToolExecutionContext
 
 
 def _ctx(metadata=None) -> ToolExecutionContext:
