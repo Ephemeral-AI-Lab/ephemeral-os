@@ -325,9 +325,6 @@ def _perform_rename(
         agent_id=agent_id,
         edit_type="rename",
         description=f"rename to {new_name}",
-        plan_captured_at=plan.plan_captured_at,
-        plan_target_paths=frozenset(c.file_path for c in changes),
-        old_symbol_name=plan.old_symbol_name,
     )
 
     if result.success:

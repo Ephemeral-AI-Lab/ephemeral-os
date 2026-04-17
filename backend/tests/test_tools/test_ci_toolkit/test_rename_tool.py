@@ -41,7 +41,6 @@ def _plan(changes) -> SemanticRenamePlan:
     return SemanticRenamePlan(
         new_name="bar",
         origin=("/ws/a.py", 1, 0),
-        plan_captured_at=0.0,
         changes=tuple(changes),
     )
 
@@ -54,7 +53,7 @@ def _make_svc(
     svc = MagicMock()
     if plan is None:
         svc.rename_symbol_plan.return_value = SemanticRenamePlan(
-            new_name="bar", origin=("", 0, 0), plan_captured_at=0.0, changes=(),
+            new_name="bar", origin=("", 0, 0), changes=(),
         )
     else:
         svc.rename_symbol_plan.return_value = plan
@@ -226,7 +225,7 @@ def _make_facade_svc(
         svc.rename_symbol_plan.return_value = plan
     else:
         svc.rename_symbol_plan.return_value = SemanticRenamePlan(
-            new_name="bar", origin=("", 0, 0), plan_captured_at=0.0, changes=(),
+            new_name="bar", origin=("", 0, 0), changes=(),
         )
     svc.preview_rename_symbol_plan.return_value = svc.rename_symbol_plan.return_value
     svc.commit_many_against_base.return_value = commit_result or MultiEditResult(

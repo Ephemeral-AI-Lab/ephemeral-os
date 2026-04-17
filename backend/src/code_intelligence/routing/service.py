@@ -81,7 +81,6 @@ class _RenamePreviewSnapshot:
     refs: tuple[ReferenceInfo, ...]
     base_by_path: dict[str, tuple[str, bool]]
     old_name: str
-    plan_captured_at: float
 
 
 @dataclass
@@ -216,15 +215,11 @@ class CodeIntelligenceService:
     ) -> SemanticRenamePlan:
         """Build a :class:`SemanticRenamePlan` for an OCC batch commit.
 
-        ``plan_captured_at`` is stamped *before* invoking Jedi so the batch
-        committer can detect foreign Python edits (to files outside this
-        plan's target set) that landed during planning. Per-file hash
-        checks at commit time cover the plan's own target files; this
-        timestamp plus the target set cover the gap where a concurrent
-        agent adds a new reference to the renamed symbol in an unrelated
-        file Jedi never saw.
+        For each affected file, the file's current content is captured as
+        the per-file OCC base. The batch commit validates each target
+        file's base hash at commit time; concurrent edits to *unrelated*
+        files do not affect this rename.
         """
-        plan_captured_at = time.time()
         final_by_path = self.lsp_client.rename_symbol(
             file_path, int(line), int(character), new_name,
         )
@@ -250,15 +245,9 @@ class CodeIntelligenceService:
                     final_content=final_content,
                 ),
             )
-        origin_content, _ = base_by_path.get(file_path, ("", False))
-        old_symbol_name = _identifier_at_position(
-            origin_content, int(line), int(character),
-        )
         return SemanticRenamePlan(
             new_name=new_name,
             origin=(file_path, int(line), int(character)),
-            plan_captured_at=plan_captured_at,
-            old_symbol_name=old_symbol_name,
             changes=tuple(changes),
         )
 
@@ -309,8 +298,6 @@ class CodeIntelligenceService:
             return SemanticRenamePlan(
                 new_name=new_name,
                 origin=(file_path, int(line), int(character)),
-                plan_captured_at=snapshot.plan_captured_at,
-                old_symbol_name=snapshot.old_name,
                 changes=(),
             )
         final_by_path = _apply_reference_replacements(
@@ -337,8 +324,6 @@ class CodeIntelligenceService:
         return SemanticRenamePlan(
             new_name=new_name,
             origin=(file_path, int(line), int(character)),
-            plan_captured_at=snapshot.plan_captured_at,
-            old_symbol_name=snapshot.old_name,
             changes=tuple(changes),
         )
 
@@ -396,7 +381,6 @@ class CodeIntelligenceService:
         line: int,
         character: int,
     ) -> _RenamePreviewSnapshot | None:
-        plan_captured_at = time.time()
         refs = tuple(self.lsp_client.find_references(file_path, line, character))
         if not refs:
             return None
@@ -412,7 +396,6 @@ class CodeIntelligenceService:
             refs=refs,
             base_by_path=base_by_path,
             old_name=old_name,
-            plan_captured_at=plan_captured_at,
         )
 
     # -- Edit API (delegated) -------------------------------------------------
@@ -487,18 +470,12 @@ class CodeIntelligenceService:
         agent_id: str = "",
         edit_type: str,
         description: str = "",
-        plan_captured_at: float | None = None,
-        plan_target_paths: frozenset[str] | None = None,
-        old_symbol_name: str | None = None,
     ) -> MultiEditResult:
         return self._write_coordinator.commit_many_against_base(
             changes,
             agent_id=agent_id,
             edit_type=edit_type,
             description=description,
-            plan_captured_at=plan_captured_at,
-            plan_target_paths=plan_target_paths,
-            old_symbol_name=old_symbol_name,
         )
 
     def undo_last_edit(self, file_path: str) -> EditResult:

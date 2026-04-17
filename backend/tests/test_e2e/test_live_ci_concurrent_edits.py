@@ -434,7 +434,10 @@ def test_concurrent_nonoverlap_edits_across_tools(
             "trace_summary": env.trace.summary_since(trace_mark),
         }
         _print_block("ci-lsp-concurrent-nonoverlap", payload)
-        assert payload["tree_cache_size"] >= 1
+        # Tree cache (in-process) stays empty under worker mode — Jedi state
+        # lives in the persistent sandbox daemon. Fallback / errors must stay
+        # at zero so every LSP call was served by the worker without falling
+        # back to subprocess-per-call.
         assert payload["lsp_worker_fallbacks_delta"] == 0
         assert payload["lsp_worker_errors_delta"] == 0
     finally:

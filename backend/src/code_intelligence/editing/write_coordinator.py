@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import hashlib
 import logging
-import re
 import time
 from collections.abc import Sequence
 from typing import Any
@@ -32,7 +31,6 @@ from code_intelligence.types import (
 )
 
 logger = logging.getLogger(__name__)
-_IDENTIFIER_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 
 
 def content_hash(content: str) -> str:
@@ -62,12 +60,6 @@ def _result(
 
 def _record_timing(timings: dict[str, float], key: str, started_at: float) -> None:
     timings[key] = round(time.perf_counter() - started_at, 6)
-
-
-def _contains_identifier(content: str, symbol_name: str) -> bool:
-    if not symbol_name:
-        return False
-    return any(match.group(0) == symbol_name for match in _IDENTIFIER_RE.finditer(content))
 
 
 def _conflict_result(
@@ -339,28 +331,19 @@ class WriteCoordinator:
         agent_id: str = "",
         edit_type: str,
         description: str = "",
-        plan_captured_at: float | None = None,
-        plan_target_paths: frozenset[str] | None = None,
-        old_symbol_name: str | None = None,
     ) -> MultiEditResult:
         """Atomically commit a batch of file changes against per-file bases.
 
         Semantics:
-          * **Foreign-edit gate** — if ``plan_captured_at`` and
-            ``plan_target_paths`` are given, abort the batch when any
-            Python edit recorded since ``plan_captured_at`` touched a file
-            *outside* the plan's target set. Such an edit may have added
-            a new reference to the renamed symbol in a file Jedi never
-            saw, so the plan is potentially incomplete. Edits to files
-            inside the target set are validated by per-file hashes
-            below, so they do not trip this gate.
           * **Sorted-path locking** — acquire all per-file locks in sorted
             path order; release in reverse on exit.
           * **Merge tolerance** — if a file's current hash equals its
             ``base_hash`` the batch takes ``final_content`` verbatim; otherwise
             it tries a non-overlapping merge (same policy as single-file
             OCC). Any unmergeable mismatch aborts the *whole* batch — no
-            partial rename is ever left on disk.
+            partial rename is ever left on disk. Concurrent edits to
+            *unrelated* files do not affect this rename — only the
+            rename's planned target files are validated.
           * **Two-pass commit** — resolved contents are staged in memory
             first, then written + recorded + refreshed. A write failure
             during the commit pass triggers best-effort TimeMachine
@@ -378,26 +361,6 @@ class WriteCoordinator:
                 conflict_reason="",
                 timings={"total": 0.0},
             )
-
-        if plan_captured_at is not None and plan_target_paths is not None:
-            foreign = self._foreign_python_edits_since(
-                plan_captured_at,
-                plan_target_paths,
-                old_symbol_name=old_symbol_name,
-            )
-            if foreign:
-                self._arbiter.record_conflict("generation_mismatch")
-                timings["total"] = round(time.perf_counter() - started, 6)
-                return self._batch_abort(
-                    changes,
-                    status="aborted_generation",
-                    conflict_file=None,
-                    conflict_reason=(
-                        "foreign Python edit landed during rename planning; "
-                        f"re-plan the rename. Affected: {sorted(foreign)[:5]}"
-                    ),
-                    timings=timings,
-                )
 
         sorted_changes = sorted(changes, key=lambda c: c.file_path)
 
@@ -573,46 +536,6 @@ class WriteCoordinator:
                 "concurrent edit overlaps the rename window",
             )
         return merged, None
-
-    def _foreign_python_edits_since(
-        self,
-        since: float,
-        target_paths: frozenset[str],
-        *,
-        old_symbol_name: str | None = None,
-    ) -> list[str]:
-        """Return Python file paths edited since *since* that are NOT in *target_paths*.
-
-        The batch committer uses this to detect new references to the
-        renamed symbol that may have been added by concurrent agents
-        outside the rename's planned target set. Edits inside
-        ``target_paths`` are validated by per-file base hashes and are
-        intentionally excluded here.
-        """
-        records = self._arbiter.changes_since(since)
-        foreign: list[str] = []
-        for record in records:
-            path = getattr(record, "file_path", "") or ""
-            if not path.endswith(".py"):
-                continue
-            if path in target_paths:
-                continue
-            if old_symbol_name and not self._foreign_file_contains_identifier(
-                path, old_symbol_name,
-            ):
-                continue
-            foreign.append(path)
-        return foreign
-
-    def _foreign_file_contains_identifier(self, file_path: str, symbol_name: str) -> bool:
-        try:
-            content, existed = self._content.read(file_path, allow_missing=True)
-        except Exception:
-            logger.debug("foreign rename gate read failed for %s", file_path, exc_info=True)
-            return True
-        if not existed:
-            return False
-        return _contains_identifier(content, symbol_name)
 
     @staticmethod
     def _batch_abort(

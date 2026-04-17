@@ -150,23 +150,11 @@ class SemanticFileChange:
 
 @dataclass(frozen=True)
 class SemanticRenamePlan:
-    """Output of a rename plan: what the semantic tool saw and produced.
-
-    ``plan_captured_at`` is the wall-clock timestamp (``time.time()``)
-    when the semantic tool's snapshot was taken. The batch committer
-    pairs it with ``old_symbol_name`` and ``plan_target_paths`` (derived
-    from ``changes``) to run a precise foreign-edit gate: abort only if a
-    Python file *outside* the plan's target set was edited since
-    ``plan_captured_at`` AND its current content contains
-    ``old_symbol_name`` as an identifier (which means the concurrent
-    edit could have introduced a new reference Jedi never saw).
-    """
+    """Output of a rename plan: what the semantic tool saw and produced."""
 
     new_name: str
     origin: tuple[str, int, int]
-    plan_captured_at: float
     changes: tuple[SemanticFileChange, ...]
-    old_symbol_name: str = ""
 
 
 MultiEditStatus = Literal[
@@ -174,7 +162,6 @@ MultiEditStatus = Literal[
     "aborted_version",
     "aborted_overlap",
     "aborted_lock",
-    "aborted_generation",
     "failed",
 ]
 
