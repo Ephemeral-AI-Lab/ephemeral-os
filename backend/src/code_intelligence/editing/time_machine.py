@@ -6,7 +6,6 @@ of snapshots (default max 5 per file, 50 MB global).
 
 from __future__ import annotations
 
-import hashlib
 import logging
 import threading
 import time
@@ -14,14 +13,12 @@ import uuid
 from collections import OrderedDict
 from dataclasses import dataclass
 
+from code_intelligence.hashing import content_hash as _content_hash
+
 logger = logging.getLogger(__name__)
 
 _MAX_SNAPSHOTS_PER_FILE = 5
 _MAX_GLOBAL_BYTES = 50 * 1024 * 1024  # 50 MB
-
-
-def _content_hash(content: str) -> str:
-    return hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
 
 
 @dataclass(frozen=True)
