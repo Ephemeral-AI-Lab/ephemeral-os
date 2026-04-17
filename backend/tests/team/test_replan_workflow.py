@@ -555,7 +555,7 @@ async def test_replan_cancels_active_runner_before_marking_running_task_cancelle
         budget=_Budget(),
         graph_getter=lambda: graph,
         emit_cb=lambda event: None,
-        cascade_fail_cb=lambda task_id, reason: None,
+        fail_cb=lambda task_id, reason: None,
         cancel_active_task_cb=lambda task_id: store.calls.append(f"cancel:{task_id}") is None,
     )
 
@@ -592,7 +592,7 @@ async def test_replan_cancel_cascade_includes_reviewer_dependents():
         budget=_Budget(),
         graph_getter=lambda: graph,
         emit_cb=lambda event: None,
-        cascade_fail_cb=lambda task_id, reason: None,
+        fail_cb=lambda task_id, reason: None,
         cancel_active_task_cb=lambda task_id: store.calls.append(f"cancel:{task_id}") is None,
     )
 
@@ -627,7 +627,7 @@ async def test_replan_expander_rejects_original_task_cancellation():
         budget=_Budget(),
         graph_getter=lambda: graph,
         emit_cb=lambda event: None,
-        cascade_fail_cb=lambda task_id, reason: None,
+        fail_cb=lambda task_id, reason: None,
     )
 
     with pytest.raises(InvalidPlan, match="original replanning task"):
@@ -656,7 +656,7 @@ async def test_replan_expander_rejects_insertion_under_original_task():
         budget=_Budget(),
         graph_getter=lambda: graph,
         emit_cb=lambda event: None,
-        cascade_fail_cb=lambda task_id, reason: None,
+        fail_cb=lambda task_id, reason: None,
     )
 
     with pytest.raises(InvalidPlan, match="outside the allowed parent projection"):

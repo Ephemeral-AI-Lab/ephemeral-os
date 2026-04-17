@@ -92,7 +92,7 @@ class TaskCenter:
             budget=self._budget,
             graph_getter=lambda: self._store.graph,
             emit_cb=self._emit,
-            cascade_fail_cb=self._fail_leaf,
+            fail_cb=self._fail_leaf,
             cancel_active_task_cb=lambda task_id: self._cancel_active_task(task_id),
         )
         self._cancel_active_task_cb: Callable[[str], bool] | None = None
@@ -418,7 +418,7 @@ class TaskCenter:
         return outcome
 
     async def fail_orphaned_replanning(self) -> int:
-        """Force-fail tasks stuck in REPLANNING with no live replanner."""
+        """Force-fail tasks stuck in REQUEST_REPLAN with no live replanner."""
         before = self._transitions.snapshot()
         count = await self._store.fail_orphaned_replanning()
         if count:

@@ -263,7 +263,7 @@ class TaskStore:
     async def finalize_replanned_origin(
         self, replanner_task_id: str
     ) -> str | None:
-        """Mark the original REPLANNING task terminal after its replanner succeeds."""
+        """Mark the original REQUEST_REPLAN task terminal after its replanner succeeds."""
         async with self._sf() as db:
             origin_id = await q.fetch_replan_origin(
                 db, self._team_run_id, replanner_task_id

@@ -6,8 +6,8 @@ Extracted from TaskCenter. Owns:
 - Inserting expanded children into the task graph
 - Applying replans (cancel allowed graph-region tasks + add new tasks)
 
-Validation failures during plan expansion cascade-cancel the parent via
-``cascade_fail_cb`` and return ``ok=False``; they do not raise. Replan
+Validation failures during plan expansion fail the parent (a still-RUNNING
+leaf) via ``fail_cb`` and return ``ok=False``; they do not raise. Replan
 validation failures (apply_replan) raise InvalidPlan/BudgetExceeded so the
 caller can surface them to the requester.
 """
@@ -41,7 +41,7 @@ class PlanExpander:
         budget: BudgetManager,
         graph_getter: Callable[[], dict[str, Task]],
         emit_cb: Callable[[TeamRunEvent], None],
-        cascade_fail_cb: Callable[[str, str], Awaitable[None]],
+        fail_cb: Callable[[str, str], Awaitable[None]],
         cancel_active_task_cb: Callable[[str], bool] | None = None,
     ) -> None:
         self._team_run_id = team_run_id
@@ -49,7 +49,7 @@ class PlanExpander:
         self._budget = budget
         self._graph_getter = graph_getter
         self._emit = emit_cb
-        self._cascade_fail = cascade_fail_cb
+        self._fail = fail_cb
         self._cancel_active_task = cancel_active_task_cb
 
     @staticmethod
@@ -71,7 +71,7 @@ class PlanExpander:
         task_id = rec.id
 
         if has_role(rec.agent_name, "planner") and result.submitted_plan is None:
-            await self._cascade_fail(task_id, "InvalidPlan: expandable task did not submit a plan")
+            await self._fail(task_id, "InvalidPlan: expandable task did not submit a plan")
             return [], False
 
         if result.submitted_plan is None:
@@ -79,7 +79,7 @@ class PlanExpander:
 
         new_depth = (rec.depth or 0) + 1
         if not self._budget.within_depth_limit(new_depth):
-            await self._cascade_fail(
+            await self._fail(
                 task_id,
                 f"InvalidPlan: plan would exceed max_depth={self._budget.budgets.max_depth} "
                 f"(current depth={rec.depth or 0}). Planners at the depth limit must "
@@ -96,7 +96,7 @@ class PlanExpander:
             known_external_deps=set(adj.keys()),
         )
         if issues:
-            await self._cascade_fail(task_id, "InvalidPlan: " + "; ".join(i["msg"] for i in issues))
+            await self._fail(task_id, "InvalidPlan: " + "; ".join(i["msg"] for i in issues))
             return [], False
 
         local_to_global: dict[str, str] = {
@@ -134,7 +134,7 @@ class PlanExpander:
             )
 
         if not self._budget.has_capacity_for(len(new_items)):
-            await self._cascade_fail(task_id, "BudgetExceeded: max_tasks")
+            await self._fail(task_id, "BudgetExceeded: max_tasks")
             return [], False
 
         inserted = await self._store.insert_plan(

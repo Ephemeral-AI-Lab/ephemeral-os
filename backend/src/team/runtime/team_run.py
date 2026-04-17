@@ -219,7 +219,7 @@ class TeamRun:
             self.status = TeamRunStatus.FAILED
             return
 
-        # Safety net: force-fail any tasks still stuck in REPLANNING before
+        # Safety net: force-fail any tasks still stuck in REQUEST_REPLAN before
         # computing final status — prevents silent success on orphaned replans.
         await self.task_center.fail_orphaned_replanning()
         statuses = set((await self.task_center.store.get_statuses()).values())
