@@ -269,7 +269,9 @@ class SandboxJediWorkerClient(BaseJediWorkerClient):
     Daytona's public ``process.exec`` API is request/response oriented,
     so the daemon listens on a Unix-domain socket. Each logical LSP
     request executes a tiny Python socket client in the sandbox, while
-    Jedi itself remains hot in the daemon process.
+    Jedi itself remains hot in the daemon process. If the sandbox kernel
+    forbids Unix sockets, the client falls back to one stdio worker
+    invocation per request.
     """
 
     def __init__(
@@ -301,6 +303,7 @@ class SandboxJediWorkerClient(BaseJediWorkerClient):
         self._seq = 0
         self._installed = False
         self._started = False
+        self._stdio_fallback = False
         self._crashes_in_window: list[float] = []
         self._dead_until: float = 0.0
 
@@ -379,6 +382,14 @@ exit 0
         startup = self._exec(cmd, timeout=15)
         if "READY=1" not in startup.splitlines():
             detail = startup.strip() or "worker socket was not created"
+            if _socket_bind_unavailable(detail):
+                logger.warning(
+                    "sandbox jedi worker socket unavailable; using stdio fallback: %s",
+                    detail,
+                )
+                self._stdio_fallback = True
+                self._started = True
+                return
             raise WorkerUnavailable(detail)
         response = self._rpc_raw({"id": "ping", "op": "ping", "args": {}}, timeout=5)
         if not isinstance(response, dict) or not response.get("ok"):
@@ -404,6 +415,8 @@ exit 0
             )
 
     def _rpc_raw(self, req: dict[str, Any], *, timeout: float | None = None) -> dict[str, Any]:
+        if self._stdio_fallback:
+            return self._rpc_stdio(req, timeout=timeout)
         payload = json.dumps(req, separators=(",", ":"))
         output = self._exec(
             (
@@ -417,6 +430,29 @@ exit 0
             return json.loads(output.strip())
         except Exception as exc:
             raise WorkerUnavailable(f"worker emitted non-JSON: {output!r}") from exc
+
+    def _rpc_stdio(self, req: dict[str, Any], *, timeout: float | None = None) -> dict[str, Any]:
+        self._ensure_installed()
+        payload = json.dumps(req, separators=(",", ":"))
+        output = self._exec(
+            (
+                f"printf '%s\\n' {shlex.quote(payload)} | "
+                f"python3 {shlex.quote(self._remote_worker)} "
+                f"{shlex.quote(self._workspace_root)}"
+            ),
+            timeout=(timeout or self._request_timeout) + 2,
+        )
+        for line in output.splitlines():
+            raw = line.strip()
+            if not raw.startswith("{"):
+                continue
+            try:
+                parsed = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(parsed, dict):
+                return parsed
+        raise WorkerUnavailable(f"worker emitted non-JSON: {output!r}")
 
     def request(self, op: str, args: dict[str, Any] | None = None) -> Any:
         if not is_enabled():
@@ -450,8 +486,12 @@ exit 0
     def shutdown(self) -> None:
         with self._lock:
             started = self._started
+            stdio_fallback = self._stdio_fallback
             self._started = False
+            self._stdio_fallback = False
         if not started:
+            return
+        if stdio_fallback:
             return
         try:
             self._rpc_raw({"id": "bye", "op": "shutdown", "args": {}}, timeout=2)
@@ -467,3 +507,12 @@ exit 0
                 )
             except Exception:
                 pass
+
+
+def _socket_bind_unavailable(detail: str) -> bool:
+    lowered = detail.lower()
+    return (
+        "permissionerror" in lowered
+        or "operation not permitted" in lowered
+        or "address family not supported" in lowered
+    )

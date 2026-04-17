@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import re
 import time
 from collections.abc import Sequence
 from typing import Any
@@ -31,6 +32,7 @@ from code_intelligence.types import (
 )
 
 logger = logging.getLogger(__name__)
+_IDENTIFIER_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 
 
 def content_hash(content: str) -> str:
@@ -60,6 +62,12 @@ def _result(
 
 def _record_timing(timings: dict[str, float], key: str, started_at: float) -> None:
     timings[key] = round(time.perf_counter() - started_at, 6)
+
+
+def _contains_identifier(content: str, symbol_name: str) -> bool:
+    if not symbol_name:
+        return False
+    return any(match.group(0) == symbol_name for match in _IDENTIFIER_RE.finditer(content))
 
 
 def _conflict_result(
@@ -333,6 +341,7 @@ class WriteCoordinator:
         description: str = "",
         plan_captured_at: float | None = None,
         plan_target_paths: frozenset[str] | None = None,
+        old_symbol_name: str | None = None,
     ) -> MultiEditResult:
         """Atomically commit a batch of file changes against per-file bases.
 
@@ -372,7 +381,9 @@ class WriteCoordinator:
 
         if plan_captured_at is not None and plan_target_paths is not None:
             foreign = self._foreign_python_edits_since(
-                plan_captured_at, plan_target_paths,
+                plan_captured_at,
+                plan_target_paths,
+                old_symbol_name=old_symbol_name,
             )
             if foreign:
                 self._arbiter.record_conflict("generation_mismatch")
@@ -567,6 +578,8 @@ class WriteCoordinator:
         self,
         since: float,
         target_paths: frozenset[str],
+        *,
+        old_symbol_name: str | None = None,
     ) -> list[str]:
         """Return Python file paths edited since *since* that are NOT in *target_paths*.
 
@@ -584,8 +597,22 @@ class WriteCoordinator:
                 continue
             if path in target_paths:
                 continue
+            if old_symbol_name and not self._foreign_file_contains_identifier(
+                path, old_symbol_name,
+            ):
+                continue
             foreign.append(path)
         return foreign
+
+    def _foreign_file_contains_identifier(self, file_path: str, symbol_name: str) -> bool:
+        try:
+            content, existed = self._content.read(file_path, allow_missing=True)
+        except Exception:
+            logger.debug("foreign rename gate read failed for %s", file_path, exc_info=True)
+            return True
+        if not existed:
+            return False
+        return _contains_identifier(content, symbol_name)
 
     @staticmethod
     def _batch_abort(
