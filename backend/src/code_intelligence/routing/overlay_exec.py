@@ -103,7 +103,10 @@ def _build_inner_script(
         f"cd {quoted_repo}\n"
         f"bash -c {quoted_cmd} > {quoted_run}/exec.out 2>&1\n"
         f"echo $? > {quoted_run}/exit\n"
-        f"tar --numeric-owner -cf {quoted_run}/audit.tar -C {quoted_run}/ns/upper . "
+        # --xattrs preserves opaque-dir markers (user.overlay.opaque=y).
+        # --acls omitted (not used by overlayfs in userxattr mode).
+        f"tar --numeric-owner --xattrs --xattrs-include='user.overlay.*' "
+        f"-cf {quoted_run}/audit.tar -C {quoted_run}/ns/upper . "
         f"2>> {quoted_run}/mount_err\n"
         f"echo $? > {quoted_run}/tar_rc\n"
         f"umount {quoted_run}/ns/merged 2>/dev/null\n"
