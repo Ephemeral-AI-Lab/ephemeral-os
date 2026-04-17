@@ -463,6 +463,21 @@ class CodeIntelligenceService:
             description=description,
         )
 
+    def commit_batch_against_base(
+        self,
+        changes: Sequence[SemanticFileChange],
+        *,
+        agent_id: str = "",
+        edit_type: str,
+        description: str = "",
+    ) -> MultiEditResult:
+        return self._write_coordinator.commit_batch_against_base(
+            changes,
+            agent_id=agent_id,
+            edit_type=edit_type,
+            description=description,
+        )
+
     def commit_many_against_base(
         self,
         changes: Sequence[SemanticFileChange],

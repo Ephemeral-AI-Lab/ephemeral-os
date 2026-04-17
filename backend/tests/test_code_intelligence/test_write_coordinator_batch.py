@@ -10,7 +10,7 @@ from code_intelligence.routing.service import (
     CodeIntelligenceService,
     dispose_all_code_intelligence,
 )
-from code_intelligence.types import SemanticFileChange
+from code_intelligence.types import BatchChange, SemanticFileChange
 
 
 @pytest.fixture(autouse=True)
@@ -163,3 +163,193 @@ def test_empty_changes_returns_committed_no_op(tmp_path) -> None:
     assert result.success is True
     assert result.status == "committed"
     assert result.files == ()
+
+
+# ---------------------------------------------------------------------------
+# New tests for delete / create / mixed semantics (commit_batch_against_base)
+# ---------------------------------------------------------------------------
+
+
+def _delete_change(path: str, base: str) -> BatchChange:
+    """Build a delete BatchChange (final_content=None)."""
+    return BatchChange(
+        file_path=path,
+        base_content=base,
+        base_hash=content_hash(base),
+        final_content=None,
+    )
+
+
+def _create_change(path: str, content: str) -> BatchChange:
+    """Build a create BatchChange (base_existed=False)."""
+    return BatchChange(
+        file_path=path,
+        base_content="",
+        base_hash=content_hash(""),
+        final_content=content,
+        base_existed=False,
+    )
+
+
+def test_delete_only_batch_removes_file(tmp_path) -> None:
+    a = tmp_path / "del.py"
+    a.write_text("x = 1\n", encoding="utf-8")
+    svc = _svc(tmp_path)
+
+    result = svc.commit_batch_against_base(
+        [_delete_change(str(a), "x = 1\n")],
+        edit_type="delete",
+    )
+    assert result.success is True
+    assert result.status == "committed"
+    assert not a.exists()
+
+
+def test_create_only_batch_writes_new_file(tmp_path) -> None:
+    a = tmp_path / "new.py"
+    assert not a.exists()
+    svc = _svc(tmp_path)
+
+    result = svc.commit_batch_against_base(
+        [_create_change(str(a), "x = 42\n")],
+        edit_type="create",
+    )
+    assert result.success is True
+    assert result.status == "committed"
+    assert a.read_text(encoding="utf-8") == "x = 42\n"
+
+
+def test_create_conflicts_when_file_already_exists(tmp_path) -> None:
+    a = tmp_path / "existing.py"
+    a.write_text("old content\n", encoding="utf-8")
+    svc = _svc(tmp_path)
+
+    result = svc.commit_batch_against_base(
+        [_create_change(str(a), "new content\n")],
+        edit_type="create",
+    )
+    assert result.success is False
+    assert result.status == "aborted_version"
+    assert "already exists" in result.conflict_reason
+    # Original file untouched
+    assert a.read_text(encoding="utf-8") == "old content\n"
+
+
+def test_delete_conflicts_on_base_mismatch_no_merge(tmp_path) -> None:
+    a = tmp_path / "changed.py"
+    a.write_text("x = 1\n", encoding="utf-8")
+    svc = _svc(tmp_path)
+
+    # Drift: file changed after snapshot
+    a.write_text("x = 999\n", encoding="utf-8")
+
+    result = svc.commit_batch_against_base(
+        [_delete_change(str(a), "x = 1\n")],  # base_hash doesn't match current
+        edit_type="delete",
+    )
+    assert result.success is False
+    assert result.status == "aborted_version"
+    assert "changed before delete" in result.conflict_reason
+    # File must still exist
+    assert a.exists()
+
+
+def test_mixed_modify_create_delete_batch(tmp_path) -> None:
+    mod_file = tmp_path / "mod.py"
+    del_file = tmp_path / "del.py"
+    new_file = tmp_path / "new.py"
+
+    mod_file.write_text("x = 1\n", encoding="utf-8")
+    del_file.write_text("y = 2\n", encoding="utf-8")
+    assert not new_file.exists()
+
+    svc = _svc(tmp_path)
+    result = svc.commit_batch_against_base(
+        [
+            _change(str(mod_file), "x = 1\n", "x = 10\n"),
+            _delete_change(str(del_file), "y = 2\n"),
+            _create_change(str(new_file), "z = 3\n"),
+        ],
+        edit_type="batch",
+    )
+    assert result.success is True
+    assert result.status == "committed"
+    assert mod_file.read_text(encoding="utf-8") == "x = 10\n"
+    assert not del_file.exists()
+    assert new_file.read_text(encoding="utf-8") == "z = 3\n"
+
+
+def test_base_mismatch_non_overlapping_merges(tmp_path) -> None:
+    """Modify with non-overlapping concurrent edit merges successfully."""
+    a = tmp_path / "merge.py"
+    base = "def foo():\n    return 1\n\nZ = 0\n"
+    a.write_text(base, encoding="utf-8")
+    svc = _svc(tmp_path)
+
+    final = "def bar():\n    return 1\n\nZ = 0\n"
+    # Concurrent drift at bottom — non-overlapping
+    a.write_text(base + "NEW = 1\n", encoding="utf-8")
+
+    result = svc.commit_batch_against_base(
+        [_change(str(a), base, final)],
+        edit_type="rename",
+    )
+    assert result.success is True, result.conflict_reason
+    text = a.read_text(encoding="utf-8")
+    assert "def bar()" in text
+    assert "NEW = 1" in text
+
+
+def test_base_mismatch_overlap_aborts_overlap(tmp_path) -> None:
+    """Modify with overlapping concurrent edit returns aborted_overlap."""
+    a = tmp_path / "overlap.py"
+    base = "def foo():\n    return 1\n"
+    a.write_text(base, encoding="utf-8")
+    svc = _svc(tmp_path)
+
+    final = "def bar():\n    return 1\n"
+    # Concurrent drift: same first line got edited (overlapping)
+    a.write_text("def foo_drift():\n    return 1\n", encoding="utf-8")
+
+    result = svc.commit_batch_against_base(
+        [_change(str(a), base, final)],
+        edit_type="rename",
+    )
+    assert result.success is False
+    assert result.status == "aborted_overlap"
+    # Concurrent edit preserved
+    assert "foo_drift" in a.read_text(encoding="utf-8")
+
+
+def test_mid_batch_write_failure_rolls_back_prior_files(tmp_path) -> None:
+    """A write failure on the second file rolls back the first file."""
+    a = tmp_path / "first.py"
+    b = tmp_path / "second.py"
+    a.write_text("a = 1\n", encoding="utf-8")
+    b.write_text("b = 2\n", encoding="utf-8")
+
+    svc = _svc(tmp_path)
+
+    call_count = 0
+    original_write = svc._write_coordinator._content.write
+
+    def _failing_write(path: str, content: str) -> None:
+        nonlocal call_count
+        call_count += 1
+        if call_count == 2:
+            raise OSError("simulated write failure")
+        original_write(path, content)
+
+    svc._write_coordinator._content.write = _failing_write  # type: ignore[assignment]
+
+    result = svc.commit_batch_against_base(
+        [
+            _change(str(a), "a = 1\n", "a = 10\n"),
+            _change(str(b), "b = 2\n", "b = 20\n"),
+        ],
+        edit_type="rename",
+    )
+    assert result.success is False
+    assert result.status == "failed"
+    # First file should be rolled back to its original content
+    assert a.read_text(encoding="utf-8") == "a = 1\n"

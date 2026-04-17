@@ -22,6 +22,7 @@ from code_intelligence.editing.patcher import Patcher, SearchReplaceEdit
 from code_intelligence.editing.time_machine import TimeMachine
 from code_intelligence.routing.content_manager import ContentManager
 from code_intelligence.types import (
+    BatchChange,
     EditRequest,
     EditResult,
     MultiEditResult,
@@ -324,9 +325,9 @@ class WriteCoordinator:
         finally:
             self._arbiter.release_file_lock(prepared.file_path)
 
-    def commit_many_against_base(
+    def commit_batch_against_base(
         self,
-        changes: Sequence[SemanticFileChange],
+        changes: Sequence[BatchChange],
         *,
         agent_id: str = "",
         edit_type: str,
@@ -337,13 +338,15 @@ class WriteCoordinator:
         Semantics:
           * **Sorted-path locking** — acquire all per-file locks in sorted
             path order; release in reverse on exit.
-          * **Merge tolerance** — if a file's current hash equals its
+          * **Delete branch** — ``final_content is None`` means delete. Requires
+            ``current_hash == base_hash`` exactly; any mismatch aborts.
+          * **Create branch** — ``base_existed=False`` with ``base_content==""``.
+            Aborts if the file already exists on disk.
+          * **Modify branch** — if a file's current hash equals its
             ``base_hash`` the batch takes ``final_content`` verbatim; otherwise
-            it tries a non-overlapping merge (same policy as single-file
-            OCC). Any unmergeable mismatch aborts the *whole* batch — no
-            partial rename is ever left on disk. Concurrent edits to
-            *unrelated* files do not affect this rename — only the
-            rename's planned target files are validated.
+            it tries a non-overlapping merge (same policy as single-file OCC).
+            Any unmergeable mismatch aborts the *whole* batch — no partial
+            rename is ever left on disk.
           * **Two-pass commit** — resolved contents are staged in memory
             first, then written + recorded + refreshed. A write failure
             during the commit pass triggers best-effort TimeMachine
@@ -389,7 +392,8 @@ class WriteCoordinator:
             #    memory. Any unmergeable file aborts the batch before we
             #    touch disk.
             resolve_started = time.perf_counter()
-            resolved: list[tuple[SemanticFileChange, str, str, str, bool]] = []
+            # (change, current_now, resolved_content_or_None, current_hash, existed_now)
+            resolved: list[tuple[BatchChange, str, str | None, str, bool]] = []
             for change in sorted_changes:
                 try:
                     current_now, existed_now = self._content.read(
@@ -407,8 +411,42 @@ class WriteCoordinator:
                     )
 
                 current_hash = content_hash(current_now) if existed_now else ""
+
+                # --- Delete branch ---
+                if change.final_content is None:
+                    if not existed_now or current_hash != change.base_hash:
+                        self._arbiter.record_conflict("aborted_version")
+                        timings["resolve"] = round(time.perf_counter() - resolve_started, 6)
+                        timings["total"] = round(time.perf_counter() - started, 6)
+                        return self._batch_abort(
+                            changes,
+                            status="aborted_version",
+                            conflict_file=change.file_path,
+                            conflict_reason="file content changed before delete",
+                            timings=timings,
+                        )
+                    resolved.append((change, current_now, None, current_hash, existed_now))
+                    continue
+
+                # --- Create branch ---
+                if not change.base_existed:
+                    if existed_now:
+                        self._arbiter.record_conflict("aborted_version")
+                        timings["resolve"] = round(time.perf_counter() - resolve_started, 6)
+                        timings["total"] = round(time.perf_counter() - started, 6)
+                        return self._batch_abort(
+                            changes,
+                            status="aborted_version",
+                            conflict_file=change.file_path,
+                            conflict_reason="file already exists; base said it did not",
+                            timings=timings,
+                        )
+                    resolved.append((change, current_now, change.final_content, "", False))
+                    continue
+
+                # --- Modify branch ---
                 if existed_now and current_hash == change.base_hash:
-                    resolved_content = change.final_content
+                    resolved_content: str = change.final_content
                 else:
                     resolved_content, conflict = self._resolve_semantic_change(
                         change, current_now, existed_now,
@@ -440,7 +478,10 @@ class WriteCoordinator:
                 per_started = time.perf_counter()
                 self._time_machine.save(change.file_path, current_now)
                 try:
-                    self._content.write(change.file_path, resolved_content)
+                    if resolved_content is None:
+                        self._content.delete(change.file_path)
+                    else:
+                        self._content.write(change.file_path, resolved_content)
                 except Exception as exc:
                     for fp in reversed(committed_paths):
                         snap = self._time_machine.rollback(fp)
@@ -464,15 +505,16 @@ class WriteCoordinator:
                         timings=timings,
                     )
                 committed_paths.append(change.file_path)
+                new_hash = content_hash(resolved_content) if resolved_content is not None else ""
                 gen = self._arbiter.record_edit(
                     file_path=change.file_path,
                     actor_label=agent_id,
                     edit_type=edit_type,
                     old_hash=current_hash if existed_now else "",
-                    new_hash=content_hash(resolved_content),
+                    new_hash=new_hash,
                     description=description,
                 )
-                self._symbol_index.refresh(change.file_path, resolved_content)
+                self._symbol_index.refresh(change.file_path, resolved_content or "")
                 self._lsp_client.invalidate(change.file_path)
                 per_timings["total"] = round(time.perf_counter() - per_started, 6)
                 commit_results.append(
@@ -498,9 +540,52 @@ class WriteCoordinator:
             for fp in reversed(held):
                 self._arbiter.release_file_lock(fp)
 
+    def commit_many_against_base(
+        self,
+        changes: Sequence[SemanticFileChange],
+        *,
+        agent_id: str = "",
+        edit_type: str,
+        description: str = "",
+    ) -> MultiEditResult:
+        """Shim: delegates to :meth:`commit_batch_against_base`."""
+        return self.commit_batch_against_base(changes, agent_id=agent_id, edit_type=edit_type, description=description)
+
+    @staticmethod
+    def _merge_against_base(
+        base_content: str | None,
+        final_content: str,
+        current_content: str | None,
+    ) -> tuple[str | None, str]:
+        """Attempt a non-overlapping merge of *final_content* onto *current_content*.
+
+        Returns ``(merged, reason_kind)`` where *reason_kind* is one of:
+
+        * ``""``            — success; *merged* is the resulting content.
+        * ``"missing"``     — base or current is ``None``; cannot merge.
+        * ``"unwindowable"``— ``detect_edit_window`` returned no window.
+        * ``"overlap"``     — ``merge_non_overlapping_edit`` returned ``None``.
+        """
+        if base_content is None or current_content is None:
+            return None, "missing"
+        line_start, line_end, op = detect_edit_window(base_content, final_content)
+        if line_start is None:
+            return None, "unwindowable"
+        merged = merge_non_overlapping_edit(
+            original_content=base_content,
+            new_content=final_content,
+            current_content=current_content,
+            line_start=line_start,
+            line_end=line_end,
+            operation_type=op,
+        )
+        if merged is None:
+            return None, "overlap"
+        return merged, ""
+
     def _resolve_semantic_change(
         self,
-        change: SemanticFileChange,
+        change: BatchChange,
         current_now: str,
         existed_now: bool,
     ) -> tuple[str, tuple[str, str] | None]:
@@ -514,28 +599,23 @@ class WriteCoordinator:
                 "aborted_version",
                 "file was deleted since rename plan was built",
             )
-        line_start, line_end, op = detect_edit_window(
-            change.base_content, change.final_content,
+        assert change.final_content is not None  # modify branch only
+        merged, reason_kind = self._merge_against_base(
+            change.base_content, change.final_content, current_now,
         )
-        if line_start is None:
-            return "", (
-                "aborted_version",
-                "base content changed and rewrite is whole-file / un-windowable",
-            )
-        merged = merge_non_overlapping_edit(
-            original_content=change.base_content,
-            new_content=change.final_content,
-            current_content=current_now,
-            line_start=line_start,
-            line_end=line_end,
-            operation_type=op,
-        )
-        if merged is None:
+        if reason_kind == "":
+            assert merged is not None
+            return merged, None
+        if reason_kind == "overlap":
             return "", (
                 "aborted_overlap",
                 "concurrent edit overlaps the rename window",
             )
-        return merged, None
+        # "missing" or "unwindowable"
+        return "", (
+            "aborted_version",
+            "base content changed and rewrite is whole-file / un-windowable",
+        )
 
     @staticmethod
     def _batch_abort(
@@ -801,41 +881,25 @@ class WriteCoordinator:
         final_content: str,
         current_content: str | None,
     ) -> tuple[str, EditResult | None]:
-        if base_content is None or current_content is None:
-            return "", _conflict_result(
-                self._arbiter,
-                file_path,
-                "Write precheck failed: file content changed before commit. "
-                "Re-read the file and retry.",
-                conflict_reason="version_mismatch",
-            )
-
-        line_start, line_end, operation_type = detect_edit_window(base_content, final_content)
-        if line_start is None:
-            return "", _conflict_result(
-                self._arbiter,
-                file_path,
-                "Write precheck failed: file content changed before commit. "
-                "Re-read the file and retry.",
-                conflict_reason="version_mismatch",
-            )
-
-        merged = merge_non_overlapping_edit(
-            original_content=base_content,
-            new_content=final_content,
-            current_content=current_content,
-            line_start=line_start,
-            line_end=line_end,
-            operation_type=operation_type,
-        )
-        if merged is not None:
+        merged, reason_kind = self._merge_against_base(base_content, final_content, current_content)
+        if reason_kind == "":
+            assert merged is not None
             return merged, None
+        if reason_kind == "overlap":
+            return "", _conflict_result(
+                self._arbiter,
+                file_path,
+                "Write precheck failed: file content changed in an overlapping "
+                "or unsupported range. Re-read the file and retry.",
+                conflict_reason="overlapping_range",
+            )
+        # "missing" or "unwindowable"
         return "", _conflict_result(
             self._arbiter,
             file_path,
-            "Write precheck failed: file content changed in an overlapping "
-            "or unsupported range. Re-read the file and retry.",
-            conflict_reason="overlapping_range",
+            "Write precheck failed: file content changed before commit. "
+            "Re-read the file and retry.",
+            conflict_reason="version_mismatch",
         )
 
     def _resolve_pending_write(

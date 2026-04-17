@@ -134,18 +134,24 @@ class EditResult:
 
 
 @dataclass(frozen=True)
-class SemanticFileChange:
-    """One file's slot in a semantic (e.g. cross-file rename) change set.
+class BatchChange:
+    """One file's slot in a batch change set.
 
-    ``base_content`` is the content the semantic tool (Jedi) inspected at
-    plan time; ``base_hash`` is its :func:`content_hash`. ``final_content``
-    is the tool's proposed post-transform content.
+    ``base_content`` is the content the semantic tool inspected at plan time;
+    ``base_hash`` is its :func:`content_hash`. ``final_content`` is the
+    tool's proposed post-transform content, or ``None`` to delete the file.
+    ``base_existed`` is ``False`` when the plan expects to create a new file.
     """
 
     file_path: str
     base_content: str
     base_hash: str
-    final_content: str
+    final_content: str | None
+    base_existed: bool = True
+
+
+# Backwards-compatible alias so existing imports/instantiations keep working.
+SemanticFileChange = BatchChange
 
 
 @dataclass(frozen=True)
