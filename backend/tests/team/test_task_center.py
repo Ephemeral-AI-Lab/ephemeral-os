@@ -164,6 +164,18 @@ def test_post_logs_auto_note(caplog):
     assert "[task_center] auto-note task=task-1" in caplog.text
 
 
+def test_post_resets_activity_counters_for_manual_progress_note():
+    tc = _tc()
+    for i in range(5):
+        tc.activity.on_edit("task-1", f"file-{i}.py")
+
+    assert tc.activity.should_take_note("task-1") == "edit"
+
+    _run(tc.notes.post(_note("n1", "task-1", "manual progress note")))
+
+    assert tc.activity.should_take_note("task-1") is None
+
+
 # ---------------------------------------------------------------------------
 # Filtering: authors
 # ---------------------------------------------------------------------------
@@ -328,7 +340,7 @@ def test_read_combined_paths_and_last_n():
 def test_context_for_always_includes_task_section():
     tc = _tc()
     task = _task("work-1", objective="implement login flow")
-    ctx = _run(tc.notes.context_for(task))
+    ctx = _run(tc.context.context_for(task))
     assert "## Your task" in ctx
     assert "implement login flow" in ctx
 
@@ -336,7 +348,7 @@ def test_context_for_always_includes_task_section():
 def test_context_for_includes_scope_paths_when_present():
     tc = _tc()
     task = _task("work-1", objective="do auth", scope_paths=["src/auth/"])
-    ctx = _run(tc.notes.context_for(task))
+    ctx = _run(tc.context.context_for(task))
     assert "Scope:" in ctx
     assert "src/auth/" in ctx
 
@@ -344,7 +356,7 @@ def test_context_for_includes_scope_paths_when_present():
 def test_context_for_no_scope_paths_omits_scope_line():
     tc = _tc()
     task = _task("work-1", objective="general work")
-    ctx = _run(tc.notes.context_for(task))
+    ctx = _run(tc.context.context_for(task))
     assert "Scope:" not in ctx
 
 
@@ -352,7 +364,7 @@ def test_context_for_includes_dep_notes_when_deps_exist():
     tc = _tc()
     _run(tc.notes.post(_note("n1", "dep-task", "dependency output", agent_name="developer")))
     task = _task("work-1", objective="build on dep", deps=["dep-task"])
-    ctx = _run(tc.notes.context_for(task))
+    ctx = _run(tc.context.context_for(task))
     assert "Context from dependencies" in ctx
     assert "dependency output" in ctx
 
@@ -361,7 +373,7 @@ def test_context_for_dep_notes_absent_when_no_deps():
     tc = _tc()
     _run(tc.notes.post(_note("n1", "unrelated", "some output")))
     task = _task("work-1", objective="standalone work")
-    ctx = _run(tc.notes.context_for(task))
+    ctx = _run(tc.context.context_for(task))
     assert "Context from dependencies" not in ctx
 
 
@@ -378,7 +390,7 @@ def test_context_for_includes_parent_notes_when_parent_id_matches():
 
     tc.get_task = _mock_get_task
 
-    ctx = _run(tc.notes.context_for(task))
+    ctx = _run(tc.context.context_for(task))
     assert "Parent context" in ctx
     assert "parent reasoning" in ctx
 
@@ -402,7 +414,7 @@ def test_context_for_walks_parent_chain_via_internal_get_task():
 
     tc.get_task = _mock_get_task
 
-    ctx = _run(tc.notes.context_for(task))
+    ctx = _run(tc.context.context_for(task))
     assert "root rationale" in ctx
     assert "parent reasoning" in ctx
 
@@ -440,7 +452,7 @@ def test_context_for_dedupes_parent_notes_by_task_id():
 
     tc.get_task = _mock_get_task
 
-    ctx = _run(tc.notes.context_for(task))
+    ctx = _run(tc.context.context_for(task))
     assert "fresh parent note" in ctx
     assert "stale parent note" not in ctx
 
@@ -449,7 +461,7 @@ def test_context_for_no_parent_notes_when_parent_id_is_none():
     tc = _tc()
     _run(tc.notes.post(_note("n1", "some-task", "context")))
     task = _task("work-1", objective="root level task")
-    ctx = _run(tc.notes.context_for(task))
+    ctx = _run(tc.context.context_for(task))
     assert "Parent context" not in ctx
 
 
@@ -489,7 +501,7 @@ def test_context_for_respects_max_context_bytes():
     _run(tc.notes.post(_note("n1", "dep-task", big_content, agent_name="developer")))
     task = _task("work-1", objective="build on dep", deps=["dep-task"])
 
-    ctx = _run(tc.notes.context_for(task, max_context_bytes=500))
+    ctx = _run(tc.context.context_for(task, max_context_bytes=500))
     assert "## Your task" in ctx
     assert len(ctx.encode()) < 100_000
 
@@ -499,7 +511,7 @@ def test_context_for_task_section_never_trimmed():
     big_content = "z" * 200_000
     _run(tc.notes.post(_note("n1", "dep-task", big_content)))
     task = _task("work-1", objective="important task description", deps=["dep-task"])
-    ctx = _run(tc.notes.context_for(task, max_context_bytes=100))
+    ctx = _run(tc.context.context_for(task, max_context_bytes=100))
     assert "important task description" in ctx
 
 
@@ -525,11 +537,39 @@ def test_context_for_includes_recent_scope_changes_from_arbiter():
     task = _task("work-1", objective="do auth", scope_paths=["src/auth/"])
     task.created_at = datetime(2026, 4, 12, 12, 0, tzinfo=timezone.utc)
 
-    ctx = _run(tc.notes.context_for(task))
+    ctx = _run(tc.context.context_for(task))
 
     assert "## Recent changes in your scope" in ctx
     assert "src/auth/session.py" in ctx
     assert "src/billing/invoice.py" not in ctx
+
+
+def test_context_for_recent_scope_changes_respects_path_boundaries():
+    arbiter = SimpleNamespace(
+        initialized=True,
+        changes_since=lambda since, team_run_id=None: [
+            SimpleNamespace(
+                file_path="src/auth/session.py",
+                edit_type="edit",
+                task_id="task-review-auth",
+                created_at=datetime(2026, 4, 12, 12, 1, tzinfo=timezone.utc),
+            ),
+            SimpleNamespace(
+                file_path="src/authz.py",
+                edit_type="edit",
+                task_id="task-review-authz",
+                created_at=datetime(2026, 4, 12, 12, 1, tzinfo=timezone.utc),
+            ),
+        ],
+    )
+    tc = _tc(arbiter=arbiter)
+    task = _task("work-1", objective="do auth", scope_paths=["src/auth"])
+    task.created_at = datetime(2026, 4, 12, 12, 0, tzinfo=timezone.utc)
+
+    ctx = _run(tc.context.context_for(task))
+
+    assert "src/auth/session.py" in ctx
+    assert "src/authz.py" not in ctx
 
 
 def test_recent_changes_section_falls_back_to_agent_run_id_label():
@@ -549,7 +589,7 @@ def test_recent_changes_section_falls_back_to_agent_run_id_label():
     task = _task("work-1", objective="do auth", scope_paths=["src/auth/"])
     task.created_at = datetime(2026, 4, 12, 12, 0, tzinfo=timezone.utc)
 
-    ctx = _run(tc.notes.context_for(task))
+    ctx = _run(tc.context.context_for(task))
 
     assert "agent-run-auth" in ctx
 
@@ -684,3 +724,26 @@ def test_rollback_to_restores_ready_queue_order_from_checkpoint():
 
     assert tc.store.ready_queue_order == ["task-2", "task-1"]
     assert restored_project_context == {"branch": {"name": "main"}}
+
+
+def test_rollback_to_restores_notes_from_checkpoint():
+    tc = _tc()
+    task_one = _task("task-1")
+    tc.store.graph = {task_one.id: task_one}
+    tc.store.ready_queue_order = ["task-1"]
+    tc.store.refresh_graph = AsyncMock(return_value=tc.graph)
+    _run(tc.notes.post(_note("n1", "task-1", "before checkpoint")))
+
+    checkpoint = _run(tc.checkpoint(label="before", project_context={}))
+
+    _run(tc.notes.post(_note("n2", "task-1", "after checkpoint")))
+    assert [note.id for note in _run(tc.notes.read())] == ["n1", "n2"]
+
+    async def _replace(tasks):
+        tc.store.graph = {task.id: task for task in tasks}
+
+    tc.store.replace_run_tasks = AsyncMock(side_effect=_replace)
+
+    _run(tc.rollback_to(checkpoint.id, project_context_setter=lambda value: None))
+
+    assert [note.id for note in _run(tc.notes.read())] == ["n1"]

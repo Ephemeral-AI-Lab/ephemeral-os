@@ -1,6 +1,6 @@
 """Production context builder for the team Executor.
 
-Assembles a TeamAgentContext for a Task using TaskCenter.context_for().
+Assembles a TeamAgentContext for a Task using TaskCenter's context builder.
 """
 
 from __future__ import annotations
@@ -52,8 +52,6 @@ def build_task_metadata(team_run: "TeamRun", task: Task) -> ExecutionMetadata:
     )
     meta["work_item_started_at"] = time.time()
     meta["team_mode_enabled"] = True
-    meta["retry_count"] = task.retry_count
-    meta["max_retries"] = task.max_retries
     meta["task_deps"] = list(task.deps)
     meta["task_parent_id"] = task.parent_id
     meta["task_depth"] = task.depth
@@ -131,7 +129,7 @@ def build_initial_messages(task: Task) -> list[ConversationMessage]:
 
 async def build_initial_user_message(team_run: "TeamRun", task: Task, prefix: str | None = None) -> str:
     """Build context string for a task via TaskCenter."""
-    context = await team_run.task_center.notes.context_for(task)
+    context = str(await team_run.task_center.context.context_for(task))
     if prefix:
         return f"{prefix}\n\n{context}" if context else prefix
     return context

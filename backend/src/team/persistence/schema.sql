@@ -16,9 +16,6 @@ CREATE TABLE IF NOT EXISTS tasks (
     parent_id       TEXT,
     root_id         TEXT DEFAULT '',
     depth           INT DEFAULT 0,
-    pending_dep_count INT DEFAULT 0,
-    retry_count     INT DEFAULT 0,
-    max_retries     INT DEFAULT 2,
     agent_run_id    TEXT,
     created_at      TIMESTAMPTZ DEFAULT NOW(),
     started_at      TIMESTAMPTZ,
@@ -29,4 +26,4 @@ CREATE TABLE IF NOT EXISTS tasks (
 ) PARTITION BY LIST (team_run_id);
 
 -- Indexes are created per-partition by partitions.py:
---   tasks: (status, pending_dep_count, depth, created_at), (parent_id, status)
+--   tasks: (status, depth, created_at), (parent_id, status)

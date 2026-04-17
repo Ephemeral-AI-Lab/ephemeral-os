@@ -73,32 +73,6 @@ def _spec(text: str = "Do the work.") -> str:
     )
 
 
-def test_request_replan_dependency_rewrite_requires_pending_dependents():
-    for status in ("ready", "running", "expanded", "replanning", "done", "failed", "cancelled"):
-        with pytest.raises(GraphInvariantViolation, match="must be pending"):
-            TaskStore._pending_dependency_rewrite_updates(
-                [SimpleNamespace(id=f"{status}-dependent", status=status, deps=["failed"])],
-                old_dep_id="failed",
-                new_dep_ids=["replanner"],
-            )
-
-
-def test_request_replan_dependency_rewrite_updates_pending_dependents():
-    updates = TaskStore._pending_dependency_rewrite_updates(
-        [
-            SimpleNamespace(id="pending-dependent", status="pending", deps=["dep-1", "failed"]),
-            SimpleNamespace(id="duplicate-dependent", status="pending", deps=["failed", "dep-2"]),
-        ],
-        old_dep_id="failed",
-        new_dep_ids=["replanner"],
-    )
-
-    assert updates == {
-        "pending-dependent": ["dep-1", "replanner"],
-        "duplicate-dependent": ["dep-2", "replanner"],
-    }
-
-
 @pytest.mark.asyncio
 async def test_replace_run_tasks_rejects_ready_snapshot_with_failed_dependency():
     store = TaskStore(_FakeSessionFactory(), "run-1")
@@ -133,7 +107,7 @@ async def test_replace_run_tasks_rejects_running_snapshot_with_pending_dependenc
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     "status",
-    [TaskStatus.EXPANDED, TaskStatus.REPLANNING, TaskStatus.DONE],
+    [TaskStatus.EXPANDED, TaskStatus.REQUEST_REPLAN, TaskStatus.DONE],
 )
 async def test_replace_run_tasks_rejects_post_ready_snapshot_statuses_with_pending_dependency(
     status: TaskStatus,
@@ -295,7 +269,7 @@ async def test_submit_replan_rejects_self_original_and_terminal_cancel_ids():
         posted=[],
         notes=SimpleNamespace(post=lambda note: None),
         graph={
-            "failed": _task("failed", status=TaskStatus.REPLANNING),
+            "failed": _task("failed", status=TaskStatus.REQUEST_REPLAN),
             "replanner": _task(
                 "replanner",
                 agent_name="team_replanner",
@@ -332,7 +306,7 @@ async def test_submit_replan_rejects_new_task_under_original_replanning_task():
         posted=[],
         notes=SimpleNamespace(post=lambda note: None),
         graph={
-            "failed": _task("failed", status=TaskStatus.REPLANNING),
+            "failed": _task("failed", status=TaskStatus.REQUEST_REPLAN),
             "replanner": _task(
                 "replanner",
                 agent_name="team_replanner",
@@ -407,8 +381,11 @@ class _FakeStore:
         promoted = []
         for task in self.graph.values():
             if task.status == TaskStatus.PENDING and task_id in task.deps:
-                task.pending_dep_count = max(0, task.pending_dep_count - 1)
-                if task.pending_dep_count == 0:
+                if all(
+                    self.graph.get(dep_id) is not None
+                    and self.graph[dep_id].status == TaskStatus.DONE
+                    for dep_id in task.deps
+                ):
                     task.status = TaskStatus.READY
                     promoted.append(task.id)
         return promoted
@@ -422,6 +399,9 @@ class _FakeStore:
         for task_id in promoted:
             self.graph[task_id].status = TaskStatus.DONE
         return promoted
+
+    async def sweep_expanded_promotions(self):
+        return []
 
     async def finalize_replanned_origin(self, replanner_task_id: str):
         replanner = self.graph[replanner_task_id]
@@ -453,7 +433,7 @@ def _task_center_with_store(store: _FakeStore, expander: _FakeExpander) -> TaskC
 @pytest.mark.asyncio
 async def test_replanner_done_immediately_when_replan_has_no_children():
     graph = {
-        "failed": _task("failed", status=TaskStatus.REPLANNING),
+        "failed": _task("failed", status=TaskStatus.REQUEST_REPLAN),
         "replanner": _task(
             "replanner",
             agent_name="team_replanner",
@@ -462,7 +442,6 @@ async def test_replanner_done_immediately_when_replan_has_no_children():
         ),
         "downstream": _task("downstream", deps=["replanner"]),
     }
-    graph["downstream"].pending_dep_count = 1
     store = _FakeStore(graph)
     tc = _task_center_with_store(
         store,
@@ -480,7 +459,7 @@ async def test_replanner_done_immediately_when_replan_has_no_children():
 @pytest.mark.asyncio
 async def test_replanner_expanded_when_replan_creates_direct_children():
     graph = {
-        "failed": _task("failed", status=TaskStatus.REPLANNING),
+        "failed": _task("failed", status=TaskStatus.REQUEST_REPLAN),
         "replanner": _task(
             "replanner",
             agent_name="team_replanner",
@@ -499,14 +478,14 @@ async def test_replanner_expanded_when_replan_creates_direct_children():
     await tc.complete_task("replanner", AgentResult(summary="", submitted_replan=ReplanPlan()))
 
     assert graph["replanner"].status == TaskStatus.EXPANDED
-    assert graph["failed"].status == TaskStatus.REPLANNING
+    assert graph["failed"].status == TaskStatus.REQUEST_REPLAN
     assert store.marked_done == []
 
 
 @pytest.mark.asyncio
 async def test_expanded_replanner_finalizes_origin_after_successful_child_completion():
     graph = {
-        "failed": _task("failed", status=TaskStatus.REPLANNING),
+        "failed": _task("failed", status=TaskStatus.REQUEST_REPLAN),
         "replanner": _task(
             "replanner",
             agent_name="team_replanner",
@@ -539,6 +518,9 @@ class _ExpanderStore:
 
     async def get_adjacency(self):
         return {task_id: list(task.deps) for task_id, task in self.graph.items()}
+
+    async def get_statuses(self):
+        return {task_id: task.status.value for task_id, task in self.graph.items()}
 
     async def apply_replan_atomic(self, **kwargs):
         self.calls.append("apply_replan_atomic")
@@ -631,7 +613,7 @@ async def test_replan_cancel_cascade_includes_reviewer_dependents():
 @pytest.mark.asyncio
 async def test_replan_expander_rejects_original_task_cancellation():
     graph = {
-        "failed": _task("failed", status=TaskStatus.REPLANNING),
+        "failed": _task("failed", status=TaskStatus.REQUEST_REPLAN),
         "replanner": _task(
             "replanner",
             agent_name="team_replanner",
@@ -660,7 +642,7 @@ async def test_replan_expander_rejects_original_task_cancellation():
 @pytest.mark.asyncio
 async def test_replan_expander_rejects_insertion_under_original_task():
     graph = {
-        "failed": _task("failed", status=TaskStatus.REPLANNING),
+        "failed": _task("failed", status=TaskStatus.REQUEST_REPLAN),
         "replanner": _task(
             "replanner",
             agent_name="team_replanner",
@@ -709,7 +691,7 @@ async def test_replanner_context_includes_failure_packet_and_rewired_dependents(
                 id="failed",
                 team_run_id="run-1",
                 agent_name="developer",
-                status=TaskStatus.REPLANNING,
+                status=TaskStatus.REQUEST_REPLAN,
                 objective="1. Goal: Fix the parser.",
                 description="Original detailed task description.",
                 deps=["dep"],
@@ -763,7 +745,7 @@ async def test_replanner_context_includes_failure_packet_and_rewired_dependents(
         )
     )
 
-    context = await tc.notes.context_for(tc.graph["replanner"])
+    context = await tc.context.context_for(tc.graph["replanner"])
 
     assert "## Replan failure packet" in context
     assert "Original task: failed" in context

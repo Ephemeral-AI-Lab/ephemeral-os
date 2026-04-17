@@ -19,23 +19,20 @@ def _task() -> Task:
         objective="repair shared import",
         deps=["dep-1"],
         scope_paths=["pkg/_compat.py"],
-        pending_dep_count=1,
-        retry_count=2,
-        max_retries=4,
         agent_run_id="agent-run-1",
         created_at=datetime(2026, 4, 14, tzinfo=timezone.utc),
     )
 
 
-def test_task_serialization_round_trip_preserves_retry_fields():
+def test_task_serialization_round_trip_preserves_task_fields():
     original = _task()
 
     payload = task_to_dict(original)
     restored = task_from_dict(payload)
 
-    assert restored.pending_dep_count == 1
-    assert restored.retry_count == 2
-    assert restored.max_retries == 4
+    assert restored.deps == ["dep-1"]
+    assert restored.scope_paths == ["pkg/_compat.py"]
+    assert restored.agent_run_id == "agent-run-1"
 
 
 def test_task_from_dict_requires_objective():
@@ -51,7 +48,7 @@ def test_task_from_dict_requires_objective():
         )
 
 
-def test_apply_replayed_event_updates_retry_fields():
+def test_apply_replayed_event_updates_status_fields():
     task = _task()
     graph = {task.id: task}
 
@@ -59,8 +56,7 @@ def test_apply_replayed_event_updates_retry_fields():
         "run-1",
         task.id,
         TaskStatus.FAILED.value,
-        retry_count=3,
-        max_retries=5,
+        failure_reason="failed once",
     )
 
     root_id, budget, final_status = apply_replayed_event(
@@ -74,8 +70,7 @@ def test_apply_replayed_event_updates_retry_fields():
     assert budget is None
     assert final_status is None
     assert graph[task.id].status == TaskStatus.FAILED
-    assert graph[task.id].retry_count == 3
-    assert graph[task.id].max_retries == 5
+    assert graph[task.id].failure_reason == "failed once"
 
 
 def test_apply_replayed_event_keeps_existing_status_when_event_status_is_unknown():

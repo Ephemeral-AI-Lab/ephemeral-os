@@ -280,10 +280,6 @@ async def _capture_post_run_repo_checkpoint(
         work_item_id = ctx.tool_metadata.get("work_item_id")
         label = f"{agent_name}:{work_item_id or tracker_run_id or 'run'}"
         checkpoint_id = await team_run.checkpoint(label=label)
-        retries = sum(
-            int(getattr(wi, "retry_count", 0) or 0)
-            for wi in team_run.task_center.graph.values()
-        )
         replans = int(getattr(team_run.budget_state, "replans_used", 0) or 0)
         try:
             repo_patch = await capture_sweevo_repo_patch(
@@ -296,7 +292,7 @@ async def _capture_post_run_repo_checkpoint(
             logger.debug("Failed repo patch for checkpoint %s", checkpoint_id, exc_info=True)
         record = {
             "id": checkpoint_id, "label": label, "parent_run": team_run.id,
-            "retry_count_total": retries, "replans_used": replans,
+            "replans_used": replans,
         }
         if team_metrics is not None:
             team_metrics.setdefault("checkpoint_ids", []).append(checkpoint_id)
@@ -311,7 +307,7 @@ async def _capture_post_run_repo_checkpoint(
             printer.raw_line(
                 agent_name,
                 f"[checkpoint] id={checkpoint_id} label={label} "
-                f"parent_run={team_run.id} retries={retries} replans={replans}",
+                f"parent_run={team_run.id} replans={replans}",
             )
         return checkpoint_id
     except Exception:
@@ -610,7 +606,6 @@ async def resume_sweevo_team(
     team_metrics["structured_log_path"] = structured_log_path
     _emit_team_runtime_banner(printer, budgets=budgets)
 
-    retries = sum(int(getattr(wi, "retry_count", 0) or 0) for wi in tr.task_center.graph.values())
     replans = int(getattr(getattr(tr, "budget_state", None), "replans_used", 0) or 0)
     resume_tag = resume_id or "<latest-state>"
     if printer is not None:
@@ -622,7 +617,7 @@ async def resume_sweevo_team(
             f"[resume] team_run_id={team_run_id} sandbox_id={tr.sandbox_id} "
             f"durable_checkpoints={len(available_ids)} checkpoint={resume_tag} "
             f"resumed_from={team_run_id} resumed_from_checkpoint={resume_tag} "
-            f"retries={retries} replans={replans}{f' label={label}' if label else ''}",
+            f"replans={replans}{f' label={label}' if label else ''}",
         )
         printer.raw_line(
             "team",
@@ -635,7 +630,7 @@ async def resume_sweevo_team(
         "sandbox_id": tr.sandbox_id, "instance_id": instance.instance_id,
         "checkpoint_id": resume_id,
         "durable_checkpoint_count": len(available_ids),
-        "retry_count_total": retries, "replans_used": replans,
+        "replans_used": replans,
     })
 
     await tr.resume(

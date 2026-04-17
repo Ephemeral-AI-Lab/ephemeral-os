@@ -27,7 +27,7 @@ Use this reference immediately before calling `submit_plan(...)`.
 - Must use `id` for the lane label — a short unique string used to wire `deps`.
 - Must keep `deps` as a top-level item field.
 - Must emit each `id` only once.
-- The `spec` field is the agent's sole briefing. Put exact owner, retry target, and recovery question there.
+- The `spec` field is the agent's sole briefing. Put exact owner, failure target, and recovery question there.
 - Format every `spec` with these sections in order: `Goal`, `Environment`, `Scope`, `Context`, `Acceptance Criteria`.
 - Use exact live-confirmed or explorer-confirmed paths in `scope_paths`; if the exact owner is still uncertain, keep the broader boundary and assign it to `team_planner`.
 - Keep at most one terminal validator in a submitted plan.

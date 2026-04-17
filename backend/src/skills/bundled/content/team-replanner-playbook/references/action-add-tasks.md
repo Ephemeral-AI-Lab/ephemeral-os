@@ -4,8 +4,8 @@ Use `submit_replan(new_tasks=[...], cancel_ids=[])` when the plan structure is s
 
 ## Task/Goal
 
-- An isolated task failed and needs a corrective retry or follow-up.
-- A transient error needs one retry with the same or narrower scope.
+- An isolated task failed and needs corrective follow-up.
+- A transient error needs a new corrective task with the same or narrower scope.
 - Follow-up validation is needed after a fix lands.
 
 ## Avoid
@@ -19,6 +19,7 @@ Use `submit_replan(new_tasks=[...], cancel_ids=[])` when the plan structure is s
 - Must read sibling notes before deciding corrective scope.
 - Each new task must have: `id`, `parent_id`, `name` (agent), `spec`, `deps`, `scope_paths`.
 - `parent_id` may be the current replanner task, the replanner's parent, or a surviving task inside that parent projection.
+- `deps` on existing tasks must target tasks whose status is `done`, `ready`, or `pending`. Do NOT depend on tasks in `request_replan`, `running`, `expanded`, `failed`, or `cancelled` — these are either transitioning, transient, or detached and the scheduler will never promote a dependent past them.
 - Each `spec` must use these sections in order: `Goal`, `Environment`, `Scope`, `Context`, `Acceptance Criteria`.
 - Must call `context_changed_since()` before submitting if freshness moved.
 - For layered failures, emit a two-phase corrective plan (see Hard Rule 10 in main playbook).

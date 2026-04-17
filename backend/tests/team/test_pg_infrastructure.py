@@ -97,7 +97,6 @@ class TestTaskRecord:
         r = TaskRecord(id="t1", team_run_id="r1", agent_name="dev", objective="x", deps=["a"])
         assert r.deps == ["a"]
 
-
 # ---------------------------------------------------------------------------
 # TaskCenter — structure check (no DB)
 # ---------------------------------------------------------------------------

@@ -217,13 +217,6 @@ class TeamRun:
     async def _compute_final_status(self) -> None:
         if self._fatal_failure_reason:
             self.status = TeamRunStatus.FAILED
-            self.event_store.append(
-                make_team_run_status(
-                    self.id,
-                    self.status.value,
-                    reason=self._fatal_failure_reason,
-                )
-            )
             return
 
         # Safety net: force-fail any tasks still stuck in REPLANNING before

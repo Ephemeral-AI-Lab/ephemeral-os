@@ -38,8 +38,7 @@ sequenceDiagram
 
 When a task enters `REPLANNING`, pending dependent tasks are rewired from the failed task to the replanner task, so they remain gated until the replanner is `DONE`. Any dependent of the failed task with a non-pending status is a graph invariant violation, because a task that still depends on an unfinished or failed dependency cannot already be ready, running, expanded, replanning, or terminal. The executor reaches this path by calling `TaskCenter.request_replan`; TaskCenter owns the lifecycle mutation and persistence transaction.
 
-Graph invariant violations fail the team run immediately. They are not treated
-as ordinary worker errors and are not retried. Across dispatch, retries,
+Graph invariant violations fail the team run immediately. Across dispatch,
 recovery, and checkpoint restore, scheduler-owned work states (`ready`,
 `running`, `expanded`, `replanning`, and `done`) are valid only when all
 dependencies are `done`; failed or cancelled dependencies are not satisfied.

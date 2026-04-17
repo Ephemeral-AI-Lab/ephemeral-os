@@ -7,7 +7,8 @@ the runtime:
 - ``BudgetManager``   — task/replan capacity + budget_update events
 - ``PlanExpander``    — submitted-plan validation, expansion, replan apply
 - ``TransitionTracker`` — diff/emit task state-change events
-- ``NoteManager``     — note posting, scope filtering, context building
+- ``NoteManager``     — note posting, scope filtering
+- ``TaskContextBuilder`` — agent prompt context assembly
 - ``ActivityTracker`` — edit/turn counters, auto note triggers
 - ``CheckpointManager`` — snapshot ring buffer + rollback
 """
@@ -47,6 +48,7 @@ from team.persistence.task_store import TaskStore
 from team.planning.expander import PlanExpander
 from team.runtime.checkpoint import TeamRunCheckpoint
 from team.runtime.transitions import TransitionTracker
+from team.task_context_builder import TaskContextBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -66,11 +68,7 @@ class TaskCenter:
         event_store: TeamRunStore | None = None,
     ) -> None:
         self._team_run_id = team_run_id
-        self._store = TaskStore(
-            session_factory,
-            team_run_id,
-            max_retries_per_item=budgets.max_retries_per_item,
-        )
+        self._store = TaskStore(session_factory, team_run_id)
         self._events: TeamRunStore = event_store or NullTeamRunStore()
         self._resume_snapshot: list[Task] | None = None
 
@@ -104,6 +102,12 @@ class TaskCenter:
             event_store_cb=self._emit,
             get_task_fn=lambda tid: self.get_task(tid),
             task_store=self._store,
+        )
+        self._context = TaskContextBuilder(
+            team_run_id=team_run_id,
+            notes=self._notes,
+            get_task_fn=lambda tid: self.get_task(tid),
+            task_store=self._store,
             arbiter=arbiter,
         )
 
@@ -131,6 +135,10 @@ class TaskCenter:
     @property
     def notes(self) -> NoteManager:
         return self._notes
+
+    @property
+    def context(self) -> TaskContextBuilder:
+        return self._context
 
     @property
     def activity(self) -> ActivityTracker:
@@ -228,26 +236,6 @@ class TaskCenter:
                 await self._emit_replanned_origin_if_finalized(promoted_id)
 
     async def _mark_failed_and_cascade(self, task_id: str, reason: str) -> None:
-        if reason.startswith("InvalidPlan:"):
-            rec = await self._store.get_record(task_id)
-            if rec is not None and rec.retry_count < rec.max_retries:
-                await self._notes.post(
-                    Note(
-                        id=self._new_id(),
-                        task_id=task_id,
-                        agent_name="system",
-                        content=(
-                            f"Plan validation failed: {reason}\n"
-                            f"Retry #{rec.retry_count + 1}: emit a corrected plan that avoids "
-                            "the reported issues (lane count, scope_path overlaps, cycles)."
-                        ),
-                        tags=[NoteTag.BLOCKER.value],
-                    )
-                )
-                before = self._transitions.snapshot({task_id})
-                await self._store.retry_task(task_id, rec.max_retries)
-                await self._transitions.refresh_and_emit(before)
-                return
         before = self._transitions.snapshot()
         await self._store.fail_with_cascade(task_id, reason)
         await self._transitions.refresh_and_emit(before)
@@ -332,12 +320,19 @@ class TaskCenter:
         rec = await self._store.get_record(task_id)
         if rec and rec.fired_by_task_id:
             origin = await self._store.get_record(rec.fired_by_task_id)
-            if origin and origin.status == "replanning":
+            if origin and origin.status == "request_replan":
                 await self._store.fail_with_cascade(
                     rec.fired_by_task_id, f"replanner_failed: {reason}"
                 )
         before = self._transitions.snapshot()
         warnings = await self._store.fail_task(task_id, reason)
+        # FAILED children are now detached; parent may become promotable.
+        for promoted_id in await self._store.maybe_promote_expanded_parent(task_id):
+            promoted_task = self.graph.get(promoted_id)
+            if promoted_task is not None:
+                self._transitions.emit_full_status(promoted_task)
+                if promoted_task.fired_by_task_id:
+                    await self._emit_replanned_origin_if_finalized(promoted_id)
         for dep_id, msg in warnings:
             try:
                 await self._notes.post(
@@ -404,6 +399,14 @@ class TaskCenter:
             await self._transitions.refresh_and_emit(before)
             raise
 
+        # Cancellations during replan may have detached every remaining child
+        # of an EXPANDED parent — sweep to resolve promotions.
+        for promoted_id in await self._store.sweep_expanded_promotions():
+            promoted_task = self.graph.get(promoted_id)
+            if promoted_task is not None:
+                self._transitions.emit_full_status(promoted_task)
+                if promoted_task.fired_by_task_id:
+                    await self._emit_replanned_origin_if_finalized(promoted_id)
         await self._transitions.refresh_and_emit(before)
         return outcome
 

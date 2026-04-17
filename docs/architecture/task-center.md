@@ -1,12 +1,12 @@
 # Task Center
 
-TaskCenter owns the team task graph, notes, status transitions, budget counters, and replan application. It is the coordination layer between planners, workers, replanners, and the dispatch queue.
+TaskCenter owns the team task graph, notes, status transitions, budget counters, task context assembly, and replan application. It is the coordination layer between planners, workers, replanners, and the dispatch queue.
 
 ## Responsibilities
 
 - Insert validated plans into the task DAG.
 - Track task status and dependency readiness.
-- Build task context from dependency notes, sibling notes, parent context, retry state, and recent scope changes.
+- Build injected task context through `TaskContextBuilder` from dependency notes, parent context, replanner failure packets, and recent scope changes.
 - Mark work complete or failed.
 - Spawn replanner tasks when a worker submits failure.
 - Apply replanner output by inserting new tasks, cancelling stale tasks, and completing or expanding the replanner.
@@ -29,9 +29,8 @@ dependent with any other status is a task graph invariant violation: downstream
 work that depends on the failed task should not be `ready`, `running`,
 `expanded`, `replanning`, or terminal.
 
-`GraphInvariantViolation` is fatal to the team run. The executor does not route
-it through the normal worker-error retry path; it immediately fails the team run
-so the corrupted task graph cannot continue dispatching.
+`GraphInvariantViolation` is fatal to the team run. The executor immediately
+fails the team run so the corrupted task graph cannot continue dispatching.
 
 Dependency readiness is strict: a task can leave `pending` for scheduler-owned
 work states (`ready`, `running`, `expanded`, `replanning`, or `done`) only when
@@ -50,4 +49,4 @@ After the replan:
 
 ## Notes
 
-Notes are scoped by task and path. Task context includes the assigned task, dependency notes, sibling notes, parent context, retry notes, and recent overlapping scope changes.
+Notes are scoped by task and path. `NoteManager` owns note state, posting, reads, and scope filtering. `TaskContextBuilder` owns agent-facing context injection: the assigned task, dependency notes, parent context, replanner failure packets, and recent overlapping scope changes.

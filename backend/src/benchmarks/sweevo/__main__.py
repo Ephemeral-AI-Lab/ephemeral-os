@@ -434,7 +434,6 @@ async def _cmd_run(args: argparse.Namespace) -> int:
                 "agent_runs": team.get("agent_runs"),
                 "checkpoint_ids": team.get("checkpoint_ids"),
                 "latest_checkpoint_id": team.get("latest_checkpoint_id"),
-                "retry_count_total": team.get("retry_count_total"),
                 "replans_used": team.get("replans_used"),
                 "usage": team.get("usage"),
                 "usage_by_model": team.get("usage_by_model"),

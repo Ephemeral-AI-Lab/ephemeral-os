@@ -11,7 +11,7 @@ Use this reference only when the validator packet already names exact failing py
 - Must keep owner paths exact and keep the failing command visible when the validator failed before target collection.
 - The validator must still run after corrective developer failure.
 - May carry one exact missing import-path file when the parent package already exists live.
-- If the validator packet already names the live benchmark file and only the current verify command is wrong, correct the retry target and stop.
+- If the validator packet already names the live benchmark file and only the current verify command is wrong, correct the failure target and stop.
 - Never reopen benchmark test bodies, decorators, parametrization markers, or shared plumbing to re-derive semantics.
 - Never merge distinct corrective clusters into one item.
 
@@ -19,7 +19,7 @@ Use this reference only when the validator packet already names exact failing py
 
 1. Must confirm the owner surface is still live.
 2. May use `read_task_note(paths=[...])` once to confirm a same-run shared brief on that exact owner surface before deeper archaeology.
-3. Must draft corrective JSON as soon as the failing cluster, owner surface, and retry target are clear.
+3. Must draft corrective JSON as soon as the failing cluster, owner surface, and failure target are clear.
 
 ## Expected Outcome
 

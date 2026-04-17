@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from sqlalchemy import text
+from sqlalchemy import bindparam, column, func, select, table
 from sqlalchemy.engine import Engine
 
 from db.base import Base
@@ -49,6 +49,16 @@ _UNSUPPORTED_LEGACY_COLUMNS: tuple[tuple[str, str, str, str], ...] = (
     ),
 )
 
+_PG_ATTRIBUTE = table(
+    "pg_attribute",
+    column("attrelid"),
+    column("attname"),
+    column("attnum"),
+    column("attisdropped"),
+    column("atttypid"),
+    column("atttypmod"),
+)
+
 
 def _ensure_team_models_registered() -> None:
     """Import team ORM models so Base.metadata knows about them."""
@@ -57,18 +67,16 @@ def _ensure_team_models_registered() -> None:
 
 def _legacy_column_type(engine: Engine, table_name: str, column_name: str) -> str | None:
     """Check the current column type via pg_catalog.format_type (PostgreSQL)."""
+    stmt = select(
+        func.pg_catalog.format_type(_PG_ATTRIBUTE.c.atttypid, _PG_ATTRIBUTE.c.atttypmod)
+    ).where(
+        _PG_ATTRIBUTE.c.attrelid == func.to_regclass(bindparam("table_name")),
+        _PG_ATTRIBUTE.c.attname == bindparam("column_name"),
+        _PG_ATTRIBUTE.c.attnum > 0,
+        _PG_ATTRIBUTE.c.attisdropped.is_(False),
+    )
     with engine.begin() as conn:
-        return conn.execute(
-            text(
-                "SELECT pg_catalog.format_type(a.atttypid, a.atttypmod) "
-                "FROM pg_attribute a "
-                "WHERE a.attrelid = to_regclass(:table_name) "
-                "AND a.attname = :column_name "
-                "AND a.attnum > 0 "
-                "AND NOT a.attisdropped"
-            ),
-            {"table_name": table_name, "column_name": column_name},
-        ).scalar()
+        return conn.execute(stmt, {"table_name": table_name, "column_name": column_name}).scalar()
 
 
 def _reject_unsupported_legacy_columns(engine: Engine) -> None:

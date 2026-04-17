@@ -428,7 +428,6 @@ def finalize_team_run(
     latest_id = checkpoint_ids[-1] if checkpoint_ids else None
     latest_label = records[-1].get("label") if records else None
     max_depth = max((wi.depth for wi in tr.task_center.graph.values()), default=0)
-    retries = sum(int(getattr(wi, "retry_count", 0) or 0) for wi in tr.task_center.graph.values())
     replans = int(getattr(tr.budget_state, "replans_used", 0) or 0)
     usage_summary = None
     usage_by_model: list[dict[str, Any]] = []
@@ -453,7 +452,7 @@ def finalize_team_run(
             "team",
             f"[team_stats] tasks={task_count} max_depth={max_depth} "
             f"agent_runs={team_metrics['agent_runs']} "
-            f"checkpoints={len(checkpoint_ids)} retries={retries} replans={replans}",
+            f"checkpoints={len(checkpoint_ids)} replans={replans}",
         )
 
     common = {
@@ -466,7 +465,6 @@ def finalize_team_run(
         "agent_counts": dict(team_metrics["agent_counts"]),
         "checkpoint_ids": checkpoint_ids,
         "latest_checkpoint_id": latest_id,
-        "retry_count_total": retries,
         "replans_used": replans,
         "usage": usage_summary,
         "usage_by_model": usage_by_model,

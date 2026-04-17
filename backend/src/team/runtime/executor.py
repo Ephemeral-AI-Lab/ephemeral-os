@@ -17,7 +17,6 @@ from typing import TYPE_CHECKING, Any, Callable
 from team.errors import BudgetExceeded, GraphInvariantViolation
 from team.models import AgentResult, Plan, ReplanPlan, ReplanRequest
 from team.runtime.context_builder import TeamAgentContext
-from team.runtime.plan_health_monitor import PlanHealthMonitor
 from team.runtime.scope_change_notifier import ScopeChangeNotifier
 
 if TYPE_CHECKING:
@@ -53,7 +52,6 @@ class Executor:
         self.agent_lookup = agent_lookup
         self.build_query_context = build_query_context
         self.after_dispatch = after_dispatch
-        self.plan_health = PlanHealthMonitor(team_run)
         self.scope_notifier = ScopeChangeNotifier(team_run)
 
     async def _checkpoint_after_transition(self, task: "Task", *, outcome: str) -> None:
@@ -83,7 +81,7 @@ class Executor:
             return False
         has_pending = any(s in ("pending", "ready") for s in statuses.values())
         has_running = any(s == "running" for s in statuses.values())
-        has_replanning = any(s == "replanning" for s in statuses.values())
+        has_replanning = any(s == "request_replan" for s in statuses.values())
         if has_replanning and not has_running and not has_pending:
             await self.team_run.task_center.fail_orphaned_replanning()
             return False
@@ -131,7 +129,9 @@ class Executor:
                     break
 
     async def _fail_team_run_for_invariant(self, exc: GraphInvariantViolation) -> None:
-        reason = f"graph_invariant_violation: {exc}"
+        await self._fail_team_run(f"graph_invariant_violation: {exc}")
+
+    async def _fail_team_run(self, reason: str) -> None:
         logger.critical(reason)
         fail_fast = getattr(self.team_run, "fail_fast", None)
         if callable(fail_fast):
@@ -158,10 +158,6 @@ class Executor:
 
         await self._inject_scope_warnings(task)
         ctx = await self._build_context(defn, task)
-
-        health_prefix = await self._plan_health_prefix(task)
-        if health_prefix:
-            ctx.user_message = health_prefix + "\n\n" + ctx.user_message
 
         runner_task: asyncio.Task[object] = asyncio.create_task(self.runner(defn, ctx))
         register_agent_run = getattr(self.team_run, "register_agent_run", None)
@@ -210,9 +206,12 @@ class Executor:
             elif isinstance(resolved_plan, Plan):
                 return AgentResult(summary="", submitted_plan=resolved_plan)
 
-        # Fallback: no terminal tool was called (runner exhausted retries)
+        # Fallback: no terminal tool was called.
         work_result = str(meta.get("work_result") or "")[:500]
-        return AgentResult(summary=f"completed (no submission): {work_result}".strip())
+        reason = "Agent did not call a terminal submission tool."
+        if work_result:
+            reason = f"{reason} Last output: {work_result}"
+        return ReplanRequest(reason=reason)
 
     async def _inject_scope_warnings(self, task: "Task") -> None:
         await self.scope_notifier.inject_warning(task)
@@ -223,9 +222,6 @@ class Executor:
         from team.runtime.context_builder import build_query_context
 
         return await build_query_context(defn, self.team_run, task)
-
-    async def _plan_health_prefix(self, task: "Task") -> str | None:
-        return await self.plan_health.compute_prefix(task)
 
     async def _post_completion_note(self, task: "Task", summary: str) -> None:
         if not summary or summary.startswith("completed ("):
@@ -249,9 +245,6 @@ class Executor:
         except Exception:
             logger.debug("completion note: post failed for %s", task.id, exc_info=True)
 
-    async def _post_checkpoint_note(self, task: "Task", result: Any) -> str | None:
-        return await self.plan_health.post_checkpoint_note(task, result)
-
     async def _dispatch(self, task: "Task", result: Any) -> None:
         tc = self.team_run.task_center
 
@@ -259,21 +252,12 @@ class Executor:
             try:
                 await tc.request_replan(task.id, result)
             except BudgetExceeded as exc:
-                # Replan budget exhausted — gracefully complete the task
-                # instead of failing+retrying in an infinite loop.
-                logger.warning(
-                    "request_replan for task %s failed (%s); completing task as-is",
-                    task.id,
-                    exc,
-                )
-                await tc.complete_task(
-                    task.id,
-                    AgentResult(summary=f"replan_budget_exhausted: {result.reason}"),
-                )
+                # No replan budget left — fail the task. It joins the detached
+                # set, so parents can still promote past it.
+                await tc.fail_task(task.id, f"replan_budget_exhausted: {exc}")
                 await self._checkpoint_after_transition(task, outcome="replan_budget_exhausted")
                 return
             await self._checkpoint_after_transition(task, outcome="replan_request")
-            await self._post_checkpoint_note(task, result)
             return
 
         new_items = await tc.complete_task(task.id, result)
@@ -284,4 +268,3 @@ class Executor:
             if isinstance(cb, Awaitable):
                 await cb
         await self._checkpoint_after_transition(task, outcome="complete")
-        await self._post_checkpoint_note(task, result)

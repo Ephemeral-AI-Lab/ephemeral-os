@@ -217,38 +217,27 @@ Three distinct layers orchestrate the transition from disk/database to runtime e
 │  team_run_id     FK  string         │      │  name         UK  string         │
 │  agent_name      FK  string         │      │  description      string         │
 │  status              string         │      │  planner_agent FK string         │
-│  task                string         │      │  worker_agents    json           │
-│  deps                json           │      │  roster           json           │
-│  scope_paths         json           │      │  created_at       timestamp      │
-│  parent_id       FK  string         │      │  updated_at       timestamp      │
+│  objective           string         │      │  worker_agents    json           │
+│  description         string         │      │  roster           json           │
+│  deps                json           │      │  created_at       timestamp      │
+│  scope_paths         json           │      │  updated_at       timestamp      │
+│  parent_id       FK  string         │      │                                  │
 │  root_id             string         │      └────────────────┬─────────────────┘
 │  depth               int            │                       │ starts (1 to 0..*)
-│  retry_count         int            │      ┌──────────────────────────────────┐
-│  max_retries         int            │      │           TEAM_RUNS              │
-│  agent_run_id    FK  string         │      │──────────────────────────────────│
-│  created_at          timestamp      │◀─────│  id           PK  string         │
-│  started_at          timestamp      │      │  team_def_id  FK  string         │
-│  finished_at         timestamp      │      │  session_id   FK  string         │
-└─────────┬───────────────────────────┘      │  status           string         │
-          │ parent-child (self FK)           │  replan_count     int            │
-          └──────────┐                       │  created_at       timestamp      │
-                     ▼ (Tasks.parent_id)     │  finished_at      timestamp      │
+│  agent_run_id    FK  string         │      ┌──────────────────────────────────┐
+│  created_at          timestamp      │      │           TEAM_RUNS              │
+│  started_at          timestamp      │      │──────────────────────────────────│
+│  finished_at         timestamp      │◀─────│  id           PK  string         │
+└─────────┬───────────────────────────┘      │  team_def_id  FK  string         │
+          │ parent-child (self FK)           │  session_id   FK  string         │
+          └──────────┐                       │  status           string         │
+                     ▼ (Tasks.parent_id)     │  replan_count     int            │
+                                            │  created_at       timestamp      │
+                                            │  finished_at      timestamp      │
               ┌────────────┐                 └──────────────────────────────────┘
-              │  (TASKS)   │                            │ tracks (1 to 0..*)
-              │  sub-tasks │                            ▼
-              └────────────┘          ┌──────────────────────────────────┐
-                                      │            BLOCKERS              │
-                                      │──────────────────────────────────│
-                                      │  id                PK  string    │
-                                      │  team_run_id       FK  string    │
-                                      │  status                string    │
-                                      │  reason                string    │
-                                      │  root_cause_paths      json      │
-                                      │  initiating_task_id FK  string   │
-                                      │  fix_task_id        FK  string   │
-                                      │  created_at            double    │
-                                      │  resolved_at           double    │
-                                      └──────────────────────────────────┘
+              │  (TASKS)   │
+              │  sub-tasks │
+              └────────────┘
 ```
 
 **Key tables:**
@@ -259,7 +248,7 @@ Three distinct layers orchestrate the transition from disk/database to runtime e
 
 - **`team_runs`** (durable): Team execution instances. Tracks `team_definition_id`, `session_id`, `status` (pending | running | succeeded | failed), replan count.
 
-- **`tasks`** (partitioned by `team_run_id`): Task queue for a single team run. Fields: `status` (pending | ready | running | expanded | replanning | done | failed | cancelled), `agent_name` (assigned worker), `deps` (task IDs), `parent_id` (parent task for expansion), `depth`, `retry_count`, `agent_run_id` (link to agent execution), `fired_by_task_id` (for replanner tasks, points to original task).
+- **`tasks`** (partitioned by `team_run_id`): Task queue for a single team run. Fields: `status` (pending | ready | running | expanded | replanning | done | failed | cancelled), `agent_name` (assigned worker), `deps` (task IDs), `parent_id` (parent task for expansion), `depth`, `agent_run_id` (link to agent execution), `fired_by_task_id` (for replanner tasks, points to original task).
 
 - **`agent_runs`** (durable): Every individual agent invocation (ephemeral or team). Links task to agent execution via `parent_task_id`.
 

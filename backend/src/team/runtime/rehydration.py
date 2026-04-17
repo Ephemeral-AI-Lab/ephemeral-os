@@ -4,7 +4,6 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from team.models import (
-    DEFAULT_MAX_RETRIES_PER_ITEM,
     BudgetConfig,
     BudgetState,
     Task,
@@ -82,19 +81,12 @@ def task_from_dict(data: dict[str, Any]) -> Task:
         parent_id=data.get("parent_id"),
         root_id=data.get("root_id") or "",
         depth=int(data.get("depth") or 0),
-        pending_dep_count=int(data.get("pending_dep_count") or 0),
         agent_run_id=data.get("agent_run_id"),
         created_at=_parse_dt(data.get("created_at")) or datetime.now(),
         started_at=_parse_dt(data.get("started_at")),
         finished_at=_parse_dt(data.get("finished_at")),
         failure_reason=data.get("failure_reason"),
         fired_by_task_id=data.get("fired_by_task_id"),
-        retry_count=int(data.get("retry_count") or 0),
-        max_retries=(
-            int(data["max_retries"])
-            if data.get("max_retries") is not None
-            else DEFAULT_MAX_RETRIES_PER_ITEM
-        ),
     )
 
 
@@ -126,10 +118,6 @@ def apply_replayed_event(
                 t.failure_reason = event.data["failure_reason"]
             if "fired_by_task_id" in event.data:
                 t.fired_by_task_id = event.data["fired_by_task_id"]
-            if "retry_count" in event.data:
-                t.retry_count = int(event.data.get("retry_count") or 0)
-            if "max_retries" in event.data:
-                t.max_retries = int(event.data.get("max_retries") or t.max_retries)
     elif event.kind == "budget_update":
         last_budget = (
             int(event.data.get("tasks_used") or 0),

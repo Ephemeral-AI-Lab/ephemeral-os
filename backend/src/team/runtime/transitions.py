@@ -25,8 +25,6 @@ def task_status_payload(task: Task) -> dict[str, Any]:
         "started_at": iso(task.started_at),
         "finished_at": iso(task.finished_at),
         "failure_reason": task.failure_reason,
-        "retry_count": task.retry_count,
-        "max_retries": task.max_retries,
     }
 
 
@@ -39,8 +37,6 @@ def task_state_signature(task: Task | None) -> tuple[Any, ...] | None:
         iso(task.started_at),
         iso(task.finished_at),
         task.failure_reason,
-        task.retry_count,
-        task.max_retries,
     )
 
 

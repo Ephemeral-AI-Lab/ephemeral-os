@@ -262,6 +262,11 @@ class PlanExpander:
 
         adj = await self._store.get_adjacency()
         clean_adj = {k: v for k, v in adj.items() if k not in cancelled}
+        # New replan tasks may only depend on live tasks in a schedulable state.
+        # {done, ready, pending} — not request_replan (transitioning), running
+        # or expanded (transient), and never failed/cancelled.
+        statuses = await self._store.get_statuses()
+        allowed_dep_statuses = {"done", "ready", "pending"}
         specs: list[TaskDefinition] = []
         for spec in add_tasks:
             nid = local_to_new.get(spec.id, self.new_id()) if spec.id else self.new_id()
@@ -270,6 +275,12 @@ class PlanExpander:
                 if d in local_to_new:
                     rdeps.append(local_to_new[d])
                 elif d in adj and d not in cancelled and d != replan_task_id:
+                    dep_status = statuses.get(d)
+                    if dep_status not in allowed_dep_statuses:
+                        raise InvalidPlan(
+                            f"replan dep '{d}' has status {dep_status!r}; "
+                            f"deps must be in {sorted(allowed_dep_statuses)}"
+                        )
                     rdeps.append(d)
                 else:
                     raise InvalidPlan(f"replan dep '{d}' is not a local alias or existing task id")

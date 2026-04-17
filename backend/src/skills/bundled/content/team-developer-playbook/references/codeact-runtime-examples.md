@@ -17,7 +17,7 @@ Use this reference before the first `daytona_codeact` verification or reproducti
 - If you truly need multi-step Python mode, keep repo commands inside `shell("...")` and still avoid `subprocess`.
 - Must keep repo commands repo-root-relative and treat `Unknown tool` as your own Daytona tool-name error before retrying with the exact tool name.
 - Must judge pass/fail from `shell(...)["exit_code"]`, not wrapper metadata.
-- If a probe returns manifest `status: error`, traceback text, or no trustworthy exit code, simplify the next retry instead of broadening.
+- If a probe returns manifest `status: error`, traceback text, or no trustworthy exit code, simplify the next probe instead of broadening.
 - If pytest says a named node is missing, exits `4`, or collects `0` items, report that exact control failure or hand the file surface back to replanning.
 
 ## Expected Outcome

@@ -490,7 +490,19 @@ def _validate_submit_replan_input(
     excluded_dep_ids = {current_task_id}
     if origin_task_id:
         excluded_dep_ids.add(origin_task_id)
-    valid_dep_ids = (graph_ids - all_cancelled_ids - excluded_dep_ids) | new_ids
+    # Existing-task deps must be in {done, ready, pending} — deps on
+    # request_replan/running/expanded tasks risk chaining on transitioning
+    # state, and failed/cancelled deps are unsatisfiable.
+    allowed_dep_statuses = {"done", "ready", "pending"}
+    schedulable_dep_ids = {
+        task_id
+        for task_id, task in graph.items()
+        if getattr(task, "status", None) is not None
+        and getattr(task.status, "value", task.status) in allowed_dep_statuses
+    }
+    valid_dep_ids = (
+        (graph_ids - all_cancelled_ids - excluded_dep_ids) & schedulable_dep_ids
+    ) | new_ids
     errors.extend(
         _validate_task_specs(
             arguments.new_tasks,

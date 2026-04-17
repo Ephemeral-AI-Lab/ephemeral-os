@@ -965,7 +965,6 @@ def test_finalize_team_result_surfaces_retry_replan_and_checkpoint_metadata(monk
                         agent_name="developer",
                         status=TaskStatus.DONE,
                         objective="task",
-                        retry_count=1,
                     ),
                     "B": Task(
                         id="B",
@@ -973,7 +972,6 @@ def test_finalize_team_result_surfaces_retry_replan_and_checkpoint_metadata(monk
                         agent_name="validator",
                         status=TaskStatus.DONE,
                         objective="task",
-                        retry_count=2,
                         depth=1,
                     ),
                 },
@@ -1001,13 +999,12 @@ def test_finalize_team_result_surfaces_retry_replan_and_checkpoint_metadata(monk
         resumed_from_checkpoint="cp-1",
     )
 
-    assert result["retry_count_total"] == 3
     assert result["replans_used"] == 2
     assert result["checkpoints"][-1]["label"] == "durable:complete:developer:A"
     assert result["latest_checkpoint_id"] == "cp-2"
     assert result["latest_checkpoint_label"] == "durable:complete:developer:A"
     assert any(
-        body == "[team_stats] tasks=2 max_depth=1 agent_runs=4 checkpoints=2 retries=3 replans=2"
+        body == "[team_stats] tasks=2 max_depth=1 agent_runs=4 checkpoints=2 replans=2"
         for _, body in printed
     )
 

@@ -51,30 +51,17 @@ class FakeTaskCenter:
     """Captures posted notes for assertion."""
     def __init__(self):
         self.notes = _NotesProxy()
-        self.store = self  # production reads sibling_stats via tc.store
         self.activity = self  # production routes activity calls via tc.activity
 
 
 class FakeTeamRun:
-    """Minimal team run stub for checkpoint note tests."""
-    def __init__(self, task_center=None, dispatch_queue=None, arbiter=None,
-                 stats=None):
+    """Minimal team run stub for executor tests."""
+    def __init__(self, task_center=None, dispatch_queue=None, arbiter=None):
         self.id = "test-run-001"
-        _default_stats = stats or {"done": 0, "failed": 0, "pending": 0,
-                                   "ready": 0, "running": 0, "cancelled": 0,
-                                   "retry_total": 0}
         tc = task_center or FakeTaskCenter()
-        if not hasattr(tc, "sibling_stats"):
-            tc.sibling_stats = self._make_sibling_stats(_default_stats)
         self.task_center = tc
         self.dispatch_queue = dispatch_queue
         self.arbiter = arbiter
-
-    @staticmethod
-    def _make_sibling_stats(stats):
-        async def sibling_stats(parent_id):
-            return dict(stats)
-        return sibling_stats
 
     async def checkpoint(self, label: str = "") -> None:
         pass
@@ -103,14 +90,12 @@ def _make_task(
 
 
 def _make_executor(
-    stats: dict[str, int] | None = None,
     arbiter=None,
 ) -> tuple[Executor, FakeTaskCenter]:
     tc = FakeTaskCenter()
     team_run = FakeTeamRun(
         task_center=tc,
         arbiter=arbiter,
-        stats=stats,
     )
     executor = Executor(
         team_run=team_run,
@@ -176,7 +161,7 @@ def test_read_result_replanner_submit_replan():
     """When resolved_plan is a ReplanPlan, _read_result returns AgentResult with replan."""
     executor, _ = _make_executor()
     replan = ReplanPlan.from_dict({
-        "add_tasks": [{"id": "t1", "objective": "retry fix", "agent": "developer"}],
+        "add_tasks": [{"id": "t1", "objective": "repair fix", "agent": "developer"}],
         "cancel_ids": ["old-task-1"],
     })
     ctx = TeamAgentContext(
@@ -193,8 +178,8 @@ def test_read_result_replanner_submit_replan():
     assert result.submitted_replan.cancel_ids == ["old-task-1"]
 
 
-def test_read_result_no_submission_fallback():
-    """When no terminal tool was called, _read_result returns fallback AgentResult."""
+def test_read_result_no_submission_fails():
+    """When no terminal tool was called, _read_result returns a ReplanRequest."""
     executor, _ = _make_executor()
     ctx = TeamAgentContext(
         tool_metadata={
@@ -203,130 +188,19 @@ def test_read_result_no_submission_fallback():
     )
     task = SimpleNamespace(id="task-1", agent_name="developer")
     result = executor._read_result(task, ctx)
-    assert isinstance(result, AgentResult)
-    assert "completed (no submission)" in result.summary
-    assert "I was still working" in result.summary
+    assert isinstance(result, ReplanRequest)
+    assert "terminal submission tool" in result.reason
+    assert "I was still working" in result.reason
 
 
 def test_read_result_empty_metadata():
-    """When metadata is completely empty, returns fallback."""
+    """When metadata is completely empty, returns a ReplanRequest."""
     executor, _ = _make_executor()
     ctx = TeamAgentContext(tool_metadata={})
     task = SimpleNamespace(id="task-1", agent_name="developer")
     result = executor._read_result(task, ctx)
-    assert isinstance(result, AgentResult)
-    assert "completed (no submission)" in result.summary
-
-
-# ---------------------------------------------------------------------------
-# _post_checkpoint_note tests
-# ---------------------------------------------------------------------------
-
-
-def test_checkpoint_note_posted_on_completion():
-    """A checkpoint note is posted after every task dispatch."""
-    import asyncio
-    executor, tc = _make_executor(stats={"done": 1, "failed": 0,
-                                         "pending": 0, "ready": 0,
-                                         "running": 0, "cancelled": 0,
-                                         "retry_total": 0})
-    task = _make_task()
-    result = AgentResult(summary="all good")
-    action = asyncio.run(executor._post_checkpoint_note(task, result))
-
-    assert action is None
-    assert len(tc.notes) == 1
-    assert "Checkpoint: task-1" in tc.notes[0].content
-    assert tc.notes[0].agent_name == "checkpoint"
-    # Note is attributed to parent_id so it flows through parent chain
-    # reads, not dep reads (avoids shadowing the task's done() summary).
-    assert tc.notes[0].task_id == "parent-1"
-
-
-def test_checkpoint_note_includes_failure_reason():
-    import asyncio
-    executor, tc = _make_executor(stats={"done": 0, "failed": 1,
-                                         "pending": 0, "ready": 0,
-                                         "running": 0, "cancelled": 0,
-                                         "retry_total": 0})
-    task = _make_task(status="failed", failure_reason="sandbox timeout")
-    asyncio.run(executor._post_checkpoint_note(task, None))
-
-    assert len(tc.notes) == 1
-    assert "sandbox timeout" in tc.notes[0].content
-
-
-def test_checkpoint_note_critical_when_high_failure_rate():
-    """When >40% of 3+ started siblings failed, action is 'replan'."""
-    import asyncio
-    executor, tc = _make_executor(stats={"done": 1, "failed": 2,
-                                         "pending": 0, "ready": 0,
-                                         "running": 0, "cancelled": 0,
-                                         "retry_total": 0})
-    task = _make_task(status="failed")
-    action = asyncio.run(executor._post_checkpoint_note(task, None))
-
-    assert action == "replan"
-    assert "PLAN HEALTH CRITICAL" in tc.notes[0].content
-    assert "2/3" in tc.notes[0].content
-
-
-def test_checkpoint_note_no_critical_below_threshold():
-    """1 failure out of 3 (33%) should NOT trigger replan."""
-    import asyncio
-    executor, tc = _make_executor(stats={"done": 2, "failed": 1,
-                                         "pending": 0, "ready": 0,
-                                         "running": 0, "cancelled": 0,
-                                         "retry_total": 0})
-    task = _make_task(status="failed")
-    action = asyncio.run(executor._post_checkpoint_note(task, None))
-
-    assert action is None
-    assert "PLAN HEALTH CRITICAL" not in tc.notes[0].content
-
-
-def test_checkpoint_note_no_critical_when_few_started():
-    """Even 100% failure rate with <3 started should NOT trigger."""
-    import asyncio
-    executor, tc = _make_executor(stats={"done": 0, "failed": 2,
-                                         "pending": 3, "ready": 0,
-                                         "running": 0, "cancelled": 0,
-                                         "retry_total": 0})
-    task = _make_task(status="failed")
-    action = asyncio.run(executor._post_checkpoint_note(task, None))
-
-    assert action is None
-
-
-def test_checkpoint_note_retry_warning():
-    """3+ retries across siblings triggers a warning."""
-    import asyncio
-    executor, tc = _make_executor(stats={"done": 2, "failed": 0,
-                                         "pending": 1, "ready": 0,
-                                         "running": 0, "cancelled": 0,
-                                         "retry_total": 4})
-    task = _make_task()
-    action = asyncio.run(executor._post_checkpoint_note(task, None))
-
-    assert action is None  # warning, not replan
-    assert "PLAN HEALTH WARNING" in tc.notes[0].content
-    assert "4 retries" in tc.notes[0].content
-
-
-def test_checkpoint_note_survives_sibling_stats_error():
-    """If sibling_stats raises, checkpoint note is skipped gracefully."""
-    import asyncio
-    tc = FakeTaskCenter()
-    tc.sibling_stats = AsyncMock(side_effect=RuntimeError("db down"))
-    team_run = FakeTeamRun(task_center=tc)
-    executor = Executor(team_run=team_run, runner=AsyncMock(),
-                        agent_lookup=lambda n: FakeDefn())
-
-    task = _make_task()
-    action = asyncio.run(executor._post_checkpoint_note(task, None))
-
-    assert action is None
-    assert len(tc.notes) == 0  # no note posted, no crash
+    assert isinstance(result, ReplanRequest)
+    assert "terminal submission tool" in result.reason
 
 
 def test_inject_scope_warnings_posts_note_for_external_scoped_changes():
@@ -419,8 +293,8 @@ def test_run_one_does_not_set_up_scope_buffer():
     tc.graph = {}
     tc.mark_running = AsyncMock(return_value=task)
     tc.fail = AsyncMock()
+    tc.request_replan = AsyncMock()
     tc.complete_task = AsyncMock(return_value=[])
-    tc.sibling_stats = AsyncMock(return_value={"done": 0, "failed": 0, "retry_total": 0})
     team_run = FakeTeamRun(task_center=tc)
 
     async def runner(_defn, ctx):
@@ -435,6 +309,7 @@ def test_run_one_does_not_set_up_scope_buffer():
 
     asyncio.run(executor._run_one(task))
     tc.fail.assert_not_called()
+    tc.request_replan.assert_awaited_once()
 
 
 def test_run_forever_survives_transient_pop_ready_error():
@@ -455,8 +330,8 @@ def test_run_forever_survives_transient_pop_ready_error():
                 status="running", objective="t", description="",
                 deps=[], scope_paths=[],
                 scope_ltree=[], parent_id=None,
-                root_id="", depth=0, pending_dep_count=0,
-                retry_count=0, max_retries=2, agent_run_id=None,
+                root_id="", depth=0,
+                agent_run_id=None,
                 created_at=None, started_at=None, finished_at=None,
                 failure_reason=None,
             )
@@ -464,7 +339,6 @@ def test_run_forever_survives_transient_pop_ready_error():
     fake_queue = FakeQueue()
     tc = FakeTaskCenter()
     tc.graph = {}
-    tc.sibling_stats = AsyncMock(return_value={})
     team_run = FakeTeamRun(task_center=tc, dispatch_queue=fake_queue)
     team_run.cancel_event = asyncio.Event()
     executor = Executor(
@@ -530,9 +404,6 @@ def test_run_forever_fails_team_run_on_worker_graph_invariant_violation():
                 parent_id=None,
                 root_id="",
                 depth=0,
-                pending_dep_count=0,
-                retry_count=0,
-                max_retries=2,
                 agent_run_id=None,
                 created_at=None,
                 started_at=None,
@@ -586,9 +457,6 @@ def test_run_forever_fails_team_run_when_runner_raises_graph_invariant_violation
                 parent_id=None,
                 root_id="",
                 depth=0,
-                pending_dep_count=0,
-                retry_count=0,
-                max_retries=2,
                 agent_run_id=None,
                 created_at=None,
                 started_at=None,
@@ -641,9 +509,6 @@ def test_run_forever_fails_team_run_when_worker_error_cleanup_hits_graph_invaria
                 parent_id=None,
                 root_id="",
                 depth=0,
-                pending_dep_count=0,
-                retry_count=0,
-                max_retries=2,
                 agent_run_id=None,
                 created_at=None,
                 started_at=None,
@@ -654,7 +519,7 @@ def test_run_forever_fails_team_run_when_worker_error_cleanup_hits_graph_invaria
     tc = FakeTaskCenter()
     tc.graph = {}
     tc.fail_task = AsyncMock(
-        side_effect=GraphInvariantViolation("retry would run before deps done")
+        side_effect=GraphInvariantViolation("failure cleanup saw unsatisfied deps")
     )
     team_run = FakeTeamRun(task_center=tc, dispatch_queue=FakeQueue())
     team_run.cancel_event = asyncio.Event()
@@ -670,75 +535,21 @@ def test_run_forever_fails_team_run_when_worker_error_cleanup_hits_graph_invaria
 
     tc.fail_task.assert_awaited_once()
     team_run.fail_fast.assert_awaited_once()
-    assert "retry would run before deps done" in team_run.fail_fast.await_args.args[0]
+    assert "failure cleanup saw unsatisfied deps" in team_run.fail_fast.await_args.args[0]
 
 
 # ---------------------------------------------------------------------------
-# _plan_health_prefix tests
+# Missing-submission tests
 # ---------------------------------------------------------------------------
 
 
-def test_plan_health_prefix_returns_none_when_healthy():
-    import asyncio
-    executor, _ = _make_executor(stats={"done": 3, "failed": 0,
-                                        "pending": 0, "ready": 0,
-                                        "running": 0, "cancelled": 0,
-                                        "retry_total": 0})
-    task = _make_task()
-    prefix = asyncio.run(executor._plan_health_prefix(task))
-    assert prefix is None
-
-
-def test_plan_health_prefix_critical_on_high_failure():
-    import asyncio
-    executor, _ = _make_executor(stats={"done": 1, "failed": 2,
-                                        "pending": 0, "ready": 0,
-                                        "running": 0, "cancelled": 0,
-                                        "retry_total": 0})
-    task = _make_task()
-    prefix = asyncio.run(executor._plan_health_prefix(task))
-    assert prefix is not None
-    assert "PLAN HEALTH CRITICAL" in prefix
-    assert "2/3" in prefix
-
-
-def test_plan_health_prefix_none_when_no_parent():
-    """Root tasks have no siblings — skip health check."""
-    import asyncio
+def test_read_result_missing_submission_gets_fail():
+    """When no terminal submission is present, _read_result returns a ReplanRequest."""
     executor, _ = _make_executor()
-    task = _make_task(parent_id=None)
-    prefix = asyncio.run(executor._plan_health_prefix(task))
-    assert prefix is None
-
-
-def test_plan_health_prefix_retry_warning():
-    import asyncio
-    executor, _ = _make_executor(stats={"done": 2, "failed": 0,
-                                        "pending": 0, "ready": 0,
-                                        "running": 0, "cancelled": 0,
-                                        "retry_total": 5})
-    task = _make_task()
-    prefix = asyncio.run(executor._plan_health_prefix(task))
-    assert prefix is not None
-    assert "PLAN HEALTH WARNING" in prefix
-    assert "5 retries" in prefix
-
-
-# ---------------------------------------------------------------------------
-# Budget-exhausted tests (now handled by runner retry loop)
-# ---------------------------------------------------------------------------
-
-
-def test_read_result_budget_exhausted_developer_gets_fail():
-    """When budget is exhausted and runner writes fail summary, _read_result
-    returns a ReplanRequest (runner writes task_summary_type='fail')."""
-    executor, _ = _make_executor()
-    # The runner retry loop now handles budget exhaustion by re-prompting
-    # the agent. If the agent still can't submit, runner writes a fail summary.
     ctx = TeamAgentContext(
         tool_metadata={
             "task_summary_type": "fail",
-            "task_summary": "Agent did not call a submission tool after 5 retries.",
+            "task_summary": "Agent did not call a terminal submission tool.",
         }
     )
     task = SimpleNamespace(id="task-1", agent_name="developer")

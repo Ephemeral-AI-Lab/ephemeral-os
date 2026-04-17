@@ -13,7 +13,6 @@ from config.defaults import (
     DEFAULT_MAX_NOTE_BYTES,
     DEFAULT_MAX_PLAN_SIZE,
     DEFAULT_MAX_REPLANS_PER_RUN,
-    DEFAULT_MAX_RETRIES_PER_ITEM,
     DEFAULT_MAX_TASKS,
     DEFAULT_MAX_TOTAL_NOTE_BYTES,
 )
@@ -33,7 +32,7 @@ class TaskStatus(str, Enum):
     READY = "ready"
     RUNNING = "running"
     EXPANDED = "expanded"  # planner submitted children, waiting for them to finish
-    REPLANNING = "replanning"
+    REQUEST_REPLAN = "request_replan"
     DONE = "done"
     FAILED = "failed"
     CANCELLED = "cancelled"
@@ -143,9 +142,6 @@ class Task:
     parent_id: str | None = None
     root_id: str = ""
     depth: int = 0
-    pending_dep_count: int = 0
-    retry_count: int = 0
-    max_retries: int = DEFAULT_MAX_RETRIES_PER_ITEM
     agent_run_id: str | None = None
     created_at: datetime = field(default_factory=_utcnow)
     started_at: datetime | None = None
@@ -240,12 +236,6 @@ class SubmittedSummary:
 
 
 @dataclass
-class RetryRequest:
-    reason: str
-    submission_kind: str = field(default="retry", init=False, repr=False)
-
-
-@dataclass
 class ReplanRequest:
     reason: str
     suggestion: str | None = None
@@ -274,7 +264,6 @@ class BudgetConfig:
     max_tasks: int = DEFAULT_MAX_TASKS
     max_depth: int = DEFAULT_MAX_DEPTH
     max_plan_size: int = DEFAULT_MAX_PLAN_SIZE
-    max_retries_per_item: int = DEFAULT_MAX_RETRIES_PER_ITEM
     max_replans_per_run: int = DEFAULT_MAX_REPLANS_PER_RUN
     max_note_bytes: int = DEFAULT_MAX_NOTE_BYTES
     max_total_note_bytes: int = DEFAULT_MAX_TOTAL_NOTE_BYTES

@@ -24,7 +24,7 @@ You are `developer`. Execute one bounded coding task, keep the scope tight, and 
 ## Workflow
 
 1. Read the task, absorb notes, and keep `scope_paths` as the default edit surface.
-2. Reproduce the exact failing command or retry target first when one is supplied.
+2. Reproduce the exact failing command or failure target first when one is supplied.
 3. Before the first source edit, hold one clear packet: `observed_failure`, `first_boundary`, and `hypothesis`.
 4. Make the smallest production edit that answers that packet.
 5. Verify after every source edit with at least one narrow command.

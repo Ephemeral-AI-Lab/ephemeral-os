@@ -5,8 +5,7 @@ Provides :class:`TeamAgentRunner`, the standard implementation of the
 It spawns an :class:`EphemeralAgent`, wires ``tool_metadata`` and
 ``terminal_tools`` into the agent's ``QueryContext``, drives the event loop,
 observes tool completions for coordination (``TaskCenter.on_edit`` /
-``on_submission``), schedules ``tc_note`` checkpoints, and implements the
-retry loop when the agent exits without calling a terminal tool.
+``on_submission``), and schedules ``tc_note`` checkpoints.
 """
 
 from __future__ import annotations
@@ -34,42 +33,6 @@ SUBMISSION_TOOL_NAMES = frozenset({
 })
 # Tools whose completion should record a scoped edit via ``TaskCenter.on_edit``.
 EDIT_TOOL_NAMES = frozenset({"daytona_edit_file", "daytona_write_file"})
-
-# Maximum retry attempts when the agent exits without calling a terminal tool.
-_MAX_RETRY_ATTEMPTS = 5
-
-
-def _retry_submission_prompt(
-    exit_reason: QueryExitReason | None,
-    terminal_tools: set[str],
-) -> str:
-    if not terminal_tools:
-        return "Return your final concise result as plain text and stop."
-    planner_like = "submit_plan" in terminal_tools or "submit_replan" in terminal_tools
-    if planner_like:
-        plan_tool = "submit_replan" if "submit_replan" in terminal_tools else "submit_plan"
-        if exit_reason == QueryExitReason.RESOURCE_LIMIT:
-            return (
-                "Your budget/token limit was hit. Submit now. "
-                f"Call {plan_tool} with the strongest plan you can justify."
-            )
-        return (
-            "You returned without a terminal submission. "
-            f"Call {plan_tool} to commit the plan you shaped."
-        )
-
-    if exit_reason == QueryExitReason.RESOURCE_LIMIT:
-        return (
-            "Your budget/token limit was hit. Submit your work now. "
-            "Call submit_task_summary with type='success' if work is done, "
-            "or type='fail' if it is incomplete."
-        )
-    return (
-        "You returned text without submitting. "
-        "You must call submit_task_summary with type='success' or type='fail' "
-        "to complete your work."
-    )
-
 
 @dataclass
 class AgentRunState:
@@ -108,7 +71,6 @@ class TeamAgentRunner:
       * ``on_turn`` callback (``task_center.tick``)
       * Tool completion observation (``on_edit`` / submission tools)
       * ``tc_note`` checkpoint scheduling (per agent's ``allowed_triggers``)
-      * Retry loop: re-prompts agent when it exits without a terminal tool
 
     Hooks (optional extension points):
       * ``on_spawned(state)`` — synchronous, after spawn, before ``agent.run``
@@ -281,85 +243,60 @@ class TeamAgentRunner:
             self.on_spawned(state)
 
         try:
-            # Retry loop: re-prompt agent when it exits without a terminal tool.
-            for attempt in range(_MAX_RETRY_ATTEMPTS):
-                try:
-                    async for event in agent.run(prompt):
-                        if isinstance(event, ToolExecutionStarted):
-                            state.pending_tool_inputs.setdefault(event.tool_name, []).append(
-                                event.tool_input
+            try:
+                async for event in agent.run(prompt):
+                    if isinstance(event, ToolExecutionStarted):
+                        state.pending_tool_inputs.setdefault(event.tool_name, []).append(
+                            event.tool_input
+                        )
+                    elif (
+                        isinstance(event, ToolExecutionCompleted)
+                        and team_run_id
+                        and work_item_id
+                    ):
+                        try:
+                            from team.runtime.registry import get as get_team_run
+
+                            team_run = get_team_run(team_run_id)
+                            inputs = state.pending_tool_inputs.get(event.tool_name) or []
+                            tool_input = inputs.pop(0) if inputs else {}
+                            if team_run is not None and not event.is_error:
+                                if event.tool_name in EDIT_TOOL_NAMES:
+                                    file_path = str(
+                                        tool_input.get("file_path")
+                                        or tool_input.get("path")
+                                        or ""
+                                    ).strip()
+                                    if file_path:
+                                        team_run.task_center.activity.on_edit(work_item_id, file_path)
+                                if event.tool_name in SUBMISSION_TOOL_NAMES:
+                                    team_run.task_center.activity.on_submission(work_item_id)
+                                _schedule_checkpoint()
+                        except Exception:
+                            logger.debug(
+                                "Failed to observe tool completion for %s",
+                                work_item_id,
+                                exc_info=True,
                             )
-                        elif (
-                            isinstance(event, ToolExecutionCompleted)
-                            and team_run_id
-                            and work_item_id
-                        ):
-                            try:
-                                from team.runtime.registry import get as get_team_run
+                    if self.on_event is not None:
+                        self.on_event(event, state)
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                state.error = str(exc)
+                logger.exception("team agent %s crashed", effective_defn.name)
+                raise
 
-                                team_run = get_team_run(team_run_id)
-                                inputs = state.pending_tool_inputs.get(event.tool_name) or []
-                                tool_input = inputs.pop(0) if inputs else {}
-                                if team_run is not None and not event.is_error:
-                                    if event.tool_name in EDIT_TOOL_NAMES:
-                                        file_path = str(
-                                            tool_input.get("file_path")
-                                            or tool_input.get("path")
-                                            or ""
-                                        ).strip()
-                                        if file_path:
-                                            team_run.task_center.activity.on_edit(work_item_id, file_path)
-                                    if event.tool_name in SUBMISSION_TOOL_NAMES:
-                                        team_run.task_center.activity.on_submission(work_item_id)
-                                    _schedule_checkpoint()
-                            except Exception:
-                                logger.debug(
-                                    "Failed to observe tool completion for %s",
-                                    work_item_id,
-                                    exc_info=True,
-                                )
-                        if self.on_event is not None:
-                            self.on_event(event, state)
-                except asyncio.CancelledError:
-                    raise
-                except Exception as exc:
-                    state.error = str(exc)
-                    logger.exception("team agent %s crashed", effective_defn.name)
-                    raise
-
-                # Check exit reason
-                qc = agent.query_context
-                if qc.exit_reason == QueryExitReason.TOOL_STOP:
-                    break
-                terminal_tools = set(qc.terminal_tools or set())
-                if not terminal_tools:
-                    break
-
-                # Build follow-up prompt for next attempt
-                exit_reason = qc.exit_reason
-                if exit_reason == QueryExitReason.RESOURCE_LIMIT:
-                    qc.tool_call_limit = qc.tool_calls_used + 2
-                    prompt = _retry_submission_prompt(exit_reason, terminal_tools)
-                elif exit_reason in (QueryExitReason.TEXT_RESPONSE, None):
-                    prompt = _retry_submission_prompt(exit_reason, terminal_tools)
-                else:
-                    prompt = "Please call a terminal submission tool to complete your work."
-
-                # Reset exit_reason for next attempt
-                qc.exit_reason = None
-                logger.info(
-                    "Runner retry %d/%d for %s (exit_reason=%s)",
-                    attempt + 1, _MAX_RETRY_ATTEMPTS, work_item_id,
-                    exit_reason,
-                )
-            else:
-                # Failed to submit after max attempts — write fail summary
+            qc = agent.query_context
+            terminal_tools = set(qc.terminal_tools or set())
+            if terminal_tools and qc.exit_reason != QueryExitReason.TOOL_STOP:
                 logger.warning(
-                    "Agent %s did not submit after %d retries for %s",
-                    effective_defn.name, _MAX_RETRY_ATTEMPTS, work_item_id,
+                    "Agent %s did not submit for %s",
+                    effective_defn.name,
+                    work_item_id,
                 )
                 ctx.tool_metadata["task_summary"] = (
-                    f"Agent did not call a submission tool after {_MAX_RETRY_ATTEMPTS} retries."
+                    "Agent did not call a terminal submission tool."
                 )
                 ctx.tool_metadata["task_summary_type"] = "fail"
         finally:

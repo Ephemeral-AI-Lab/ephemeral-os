@@ -82,8 +82,7 @@ class TaskGraph:
     def mark_failed(self, task_id: str, reason: str | None = None) -> None:
         """Mark task FAILED and drop from ready_order.
 
-        ``reason`` may be omitted when the caller only wants to update status
-        (e.g. retry_task's terminal failure after DB commit).
+        ``reason`` may be omitted when the caller only wants to update status.
         """
         task = self.tasks.get(task_id)
         if task is not None:

@@ -1,11 +1,11 @@
 ---
 name: verification-replan
-description: Failure-triage contract for verifier agents that need to request retry or replan.
+description: Failure-triage contract for verifier agents that need to request replan.
 ---
 
 # Verification Replan
 
-Use this skill only after verification fails. Triage failures for retry or replan. Never create fix tasks yourself.
+Use this skill only after verification fails. Triage failures for replan. Never create fix tasks yourself.
 
 ## Conditional references
 

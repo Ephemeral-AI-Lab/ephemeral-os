@@ -9,10 +9,10 @@ from team.persistence import team_engine
 
 class _FakeConn:
     def __init__(self) -> None:
-        self.statements: list[str] = []
+        self.statements: list[object] = []
 
     def execute(self, statement) -> None:
-        self.statements.append(str(statement))
+        self.statements.append(statement)
 
 
 class _FakeBegin:
@@ -97,3 +97,4 @@ def test_reject_unsupported_legacy_columns_skips_missing_column(monkeypatch):
     team_engine._reject_unsupported_legacy_columns(engine)
 
     assert engine.conn.statements == []
+

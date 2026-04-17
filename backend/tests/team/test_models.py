@@ -12,7 +12,6 @@ from team.models import (
     Plan,
     ReplanPlan,
     ReplanRequest,
-    RetryRequest,
     SubmittedSummary,
     Task,
     TaskDefinition,
@@ -23,7 +22,6 @@ from config.defaults import (
     DEFAULT_MAX_TASKS,
     DEFAULT_MAX_DEPTH,
     DEFAULT_MAX_PLAN_SIZE,
-    DEFAULT_MAX_RETRIES_PER_ITEM,
     DEFAULT_MAX_REPLANS_PER_RUN,
     DEFAULT_MAX_NOTE_BYTES,
     DEFAULT_MAX_TOTAL_NOTE_BYTES,
@@ -161,8 +159,6 @@ def test_task_defaults():
     assert task.parent_id is None
     assert task.root_id == ""
     assert task.depth == 0
-    assert task.retry_count == 0
-    assert task.max_retries == 2
     assert task.agent_run_id is None
     assert task.started_at is None
     assert task.finished_at is None
@@ -314,7 +310,6 @@ def test_budget_config_defaults():
     assert bc.max_tasks == DEFAULT_MAX_TASKS
     assert bc.max_depth == DEFAULT_MAX_DEPTH
     assert bc.max_plan_size == DEFAULT_MAX_PLAN_SIZE
-    assert bc.max_retries_per_item == DEFAULT_MAX_RETRIES_PER_ITEM
     assert bc.max_replans_per_run == DEFAULT_MAX_REPLANS_PER_RUN
     assert bc.max_note_bytes == DEFAULT_MAX_NOTE_BYTES
     assert bc.max_total_note_bytes == DEFAULT_MAX_TOTAL_NOTE_BYTES
@@ -353,12 +348,6 @@ def test_submitted_summary_creation():
     s = SubmittedSummary(summary="all tests passed")
     assert s.summary == "all tests passed"
     assert s.submission_kind == "summary"
-
-
-def test_retry_request_creation():
-    r = RetryRequest(reason="flaky test")
-    assert r.reason == "flaky test"
-    assert r.submission_kind == "retry"
 
 
 def test_replan_request_creation_with_suggestion():

@@ -30,7 +30,6 @@ class DispatchQueue:
                 .where(
                     TaskRecord.team_run_id == run_id,
                     TaskRecord.status == "ready",
-                    TaskRecord.pending_dep_count == 0,
                 )
                 .order_by(TaskRecord.depth, TaskRecord.created_at)
                 .limit(1)
