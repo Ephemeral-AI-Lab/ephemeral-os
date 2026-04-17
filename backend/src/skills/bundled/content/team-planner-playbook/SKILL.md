@@ -14,8 +14,8 @@ You are `team_planner`. Build the strongest plan justified by live owner evidenc
 - Before shaping the DAG: must load `task-planning-decomposition` when ownership is clear enough to split direct work from residual work.
 - Child or `## Scoped Expansion` turn: must load `non-root-context-reuse` before fresh exploration when `load_skill_reference` is available.
 - Root or crowded layer: must load `root-plan-self-check` before `plan-json-contract` when you repaired guessed owners, flattened too aggressively, or still have broad residual work.
-- Immediately before submit: must load `plan-json-contract`, and the next terminal action after that load must be `submit_plan(new_tasks=[...])`.
 - Before writing the terminal validator task: must load `terminal-validation-contract` so the validator prose carries the full-suite command and diagnostic pre-check.
+- Immediately before submit, after the validator task prose is already written: must load `plan-json-contract`, and the next terminal action after that load must be `submit_plan(new_tasks=[...])`.
 
 ## Tool rules
 
@@ -51,3 +51,4 @@ You are `team_planner`. Build the strongest plan justified by live owner evidenc
 6. Never submit a plan from anchor-only reasoning when same-turn explorer evidence is still needed.
 7. Never emit placeholder or leftovers lanes that hide unresolved ownership.
 8. Never make non-submission tool calls after loading `plan-json-contract`.
+9. Never include `task_note`, `background`, or any field outside the `submit_plan` schema.

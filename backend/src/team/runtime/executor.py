@@ -11,7 +11,7 @@ import asyncio
 import logging
 import time
 import uuid
-from collections.abc import Awaitable
+from collections.abc import Awaitable, Coroutine
 from typing import TYPE_CHECKING, Any, Callable
 
 from team.errors import BudgetExceeded, GraphInvariantViolation
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-QueryRunner = Callable[["AgentDefinition", Any], Awaitable[Any]]
+QueryRunner = Callable[["AgentDefinition", Any], Coroutine[Any, Any, Any]]
 QueryContextBuilder = Callable[["AgentDefinition", "TeamRun", "Task"], Awaitable[TeamAgentContext]]
 
 

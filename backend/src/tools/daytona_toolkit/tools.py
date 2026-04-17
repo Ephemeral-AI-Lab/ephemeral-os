@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import shlex
+from types import SimpleNamespace
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -17,15 +18,14 @@ from tools.daytona_toolkit._daytona_utils import (
     _recover_sandbox,
     _path_error,
     _get_cwd,
+    _extract_exit_code,
     _read_text_file_via_exec,
     _resolve_path,
     _normalize_repo_relative_path,
     _normalize_string_list,
-    _supports_exec_transport,
     _team_repo_write_error,
     _team_repo_write_warning,
-    _upload_file_compat,
-    _write_text_file_via_exec,
+    _wrap_bash_command,
     is_coordinated_team_agent,
     record_coordination_warning,
 )
@@ -33,7 +33,6 @@ from tools.core.ci_runtime import (
     abort_ci_write,
     finalize_ci_write,
     prepare_ci_write,
-    sync_write_to_ci,
 )
 
 logger = logging.getLogger(__name__)
@@ -160,6 +159,12 @@ def _build_read_file_result(
 
 
 def _build_match_result(match: Any) -> dict[str, Any]:
+    if isinstance(match, dict):
+        return {
+            "file": str(match.get("file") or ""),
+            "line": match.get("line"),
+            "content": str(match.get("content") or "").rstrip(),
+        }
     return {
         "file": getattr(match, "file", None) or "",
         "line": getattr(match, "line", None),
@@ -290,6 +295,53 @@ print("\\n".join(matches))
 """
     return f"python3 -c {shlex.quote(script)} {shlex.quote(root)} {shlex.quote(payload)}"
 
+
+def _build_grep_command(*, root: str, pattern: str) -> str:
+    script = r"""
+import json
+import pathlib
+import re
+import sys
+
+pattern = sys.argv[1]
+root = pathlib.Path(sys.argv[2])
+
+try:
+    regex = re.compile(pattern)
+except re.error as exc:
+    print(json.dumps({"ok": False, "error": f"Invalid regex: {exc}"}))
+    sys.exit(2)
+
+if not root.exists():
+    print(json.dumps({"ok": False, "error": f"Path does not exist: {root}"}))
+    sys.exit(1)
+
+paths = [root] if root.is_file() else [p for p in root.rglob("*") if p.is_file()]
+matches = []
+total = 0
+for path in paths:
+    try:
+        with path.open("r", encoding="utf-8", errors="ignore") as handle:
+            for line_no, line in enumerate(handle, start=1):
+                if regex.search(line):
+                    total += 1
+                    if len(matches) < 500:
+                        matches.append({
+                            "file": str(path),
+                            "line": line_no,
+                            "content": line.rstrip("\n"),
+                        })
+    except OSError:
+        continue
+
+print(json.dumps({"ok": True, "matches": matches, "total_matches": total}))
+"""
+    return (
+        f"python3 -c {shlex.quote(script)} "
+        f"{shlex.quote(pattern)} {shlex.quote(root)}"
+    )
+
+
 # ---------------------------------------------------------------------------
 # Shell execution
 # ---------------------------------------------------------------------------
@@ -350,26 +402,12 @@ async def daytona_read_file(
 # ---------------------------------------------------------------------------
 
 
-async def _do_raw_write(
-    sandbox: Any,
-    context: ToolExecutionContext,
-    file_path: str,
-    content: str,
-    content_bytes: bytes,
-) -> None:
-    """Write file via process.exec and sync CI state (no prepared-write path)."""
-    try:
-        await _write_text_file_via_exec(sandbox, file_path, content)
-    except Exception:
-        if _supports_exec_transport(sandbox):
-            raise
-        await _upload_file_compat(sandbox, content_bytes, file_path)
-    sync_write_to_ci(context, file_path, content, edit_type="write", description="daytona_write_file")
-
-
 @tool(
     name="daytona_write_file",
-    description="Create a new file or overwrite an existing file with the given content.",
+    description=(
+        "Create a new file or overwrite an existing file with the given content. "
+        "Use the exact tool name `daytona_write_file`; there is no `write_file` tool."
+    ),
     short_description="Create or overwrite a file.",
     input_model=DaytonaWriteFileInput,
     output_model=DaytonaWriteFileOutput,
@@ -394,14 +432,8 @@ async def daytona_write_file(
         )
     prepared = None
     content_bytes = content.encode("utf-8")
-    strict_occ = is_coordinated_team_agent(context)
 
-    async def _ensure_parent(active_sandbox: Any) -> None:
-        parent = "/".join(file_path.split("/")[:-1])
-        if parent:
-            await active_sandbox.process.exec(f"mkdir -p {shlex.quote(parent)}")
-
-    async def _attempt(active_sandbox: Any) -> ToolResult:
+    async def _attempt(_active_sandbox: Any) -> ToolResult:
         nonlocal prepared
         prepared, scope_packet, err = prepare_ci_write(
             context, file_path, allow_scope_drift=True,
@@ -423,17 +455,14 @@ async def daytona_write_file(
                     metadata={"conflict": bool(getattr(result, "conflict", False))},
                 )
         else:
-            if strict_occ:
-                return ToolResult(
-                    output=(
-                        f"daytona_write_file: OCC is unavailable for coordinated write of {file_path}. "
-                        "Direct write fallback is disabled in coordinated mode."
-                    ),
-                    is_error=True,
-                    metadata={"conflict": True, "occ_required": True},
-                )
-            await _ensure_parent(active_sandbox)
-            await _do_raw_write(active_sandbox, context, file_path, content, content_bytes)
+            return ToolResult(
+                output=(
+                    f"daytona_write_file: Code intelligence/OCC is unavailable for write of "
+                    f"{file_path}. Direct sandbox write fallback is disabled."
+                ),
+                is_error=True,
+                metadata={"occ_required": True},
+            )
         return _build_write_file_result(
             context=context, file_path=file_path,
             bytes_written=len(content_bytes), warning=contract_warning,
@@ -479,11 +508,36 @@ async def daytona_grep(
     cwd = _get_cwd(context) or ""
     path = _resolve_path(path, context) if path != "." else (cwd or ".")
     try:
-        matches = await _run_with_recovery(
+        command = _wrap_bash_command(_build_grep_command(root=path, pattern=pattern))
+        response = await _run_with_recovery(
             context,
-            lambda sandbox: sandbox.fs.find_files(path, pattern),
+            lambda sandbox: sandbox.process.exec(
+                command,
+                timeout=60,
+            ),
         )
-        return _build_find_result(cwd=cwd, pattern=pattern, path=path, matches=matches or [])
+        stdout = getattr(response, "result", "") or ""
+        cleaned, exit_code = _extract_exit_code(
+            stdout,
+            fallback_exit_code=getattr(response, "exit_code", None),
+        )
+        payload = json.loads(cleaned or "{}")
+        if exit_code not in (0, None) or not bool(payload.get("ok", False)):
+            return ToolResult(
+                output=str(payload.get("error") or cleaned or f"Search failed in {path}"),
+                is_error=True,
+            )
+        raw_matches = payload.get("matches") or []
+        matches = [
+            SimpleNamespace(
+                file=str(item.get("file") or ""),
+                line=item.get("line"),
+                content=str(item.get("content") or ""),
+            )
+            for item in raw_matches
+            if isinstance(item, dict)
+        ]
+        return _build_find_result(cwd=cwd, pattern=pattern, path=path, matches=matches)
     except Exception as exc:
         return ToolResult(
             output=_path_error(exc, path) or str(exc),

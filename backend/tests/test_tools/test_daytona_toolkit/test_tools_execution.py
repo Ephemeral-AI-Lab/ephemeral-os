@@ -178,17 +178,18 @@ async def test_read_file_allows_production_reads_after_repro():
 # daytona_write_file
 # ---------------------------------------------------------------------------
 
-async def test_write_file_success():
+async def test_write_file_requires_ci_service():
     sb = _sb()
     sb.process.exec = AsyncMock(return_value=MagicMock(result="", exit_code=0))
     ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/ws"})
     result = await daytona_write_file.execute(
         daytona_write_file.input_model(file_path="/ws/new.txt", content="hello"), ctx
     )
-    assert not result.is_error
-    data = json.loads(result.output)
-    assert data["bytes_written"] == len(b"hello")
-    assert data["file_path"] == "/ws/new.txt"
+    assert result.is_error
+    assert "Code intelligence/OCC is unavailable" in result.output
+    assert result.metadata["occ_required"] is True
+    sb.fs.upload_file.assert_not_called()
+    sb.process.exec.assert_not_called()
 
 
 async def test_write_file_syncs_ci_state():
@@ -217,12 +218,21 @@ async def test_write_file_syncs_ci_state():
 async def test_write_file_resolves_relative_path():
     sb = _sb()
     sb.process.exec = AsyncMock(return_value=MagicMock(result="", exit_code=0))
-    ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/workspace"})
-    await daytona_write_file.execute(
+    svc = MagicMock()
+    svc.prepare_write.return_value = SimpleNamespace(
+        file_path="/workspace/subdir/file.txt",
+        current_content="",
+        current_hash="",
+        token_id="tok-1",
+    )
+    svc.commit_prepared_write.return_value = SimpleNamespace(success=True)
+    ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/workspace", "ci_service": svc})
+    result = await daytona_write_file.execute(
         daytona_write_file.input_model(file_path="subdir/file.txt", content="data"), ctx
     )
-    call_args = sb.fs.upload_file.call_args[0]
-    assert call_args[1] == "/workspace/subdir/file.txt"
+    assert not result.is_error
+    svc.prepare_write.assert_called_once()
+    assert svc.prepare_write.call_args.args[0] == "/workspace/subdir/file.txt"
 
 
 async def test_write_file_warns_write_outside_write_scope():
@@ -383,7 +393,7 @@ async def test_write_file_allows_repo_write_from_validator():
     assert not result.is_error
 
 
-async def test_write_file_exception_returns_error():
+async def test_write_file_no_raw_write_after_ci_unavailable():
     sb = _sb()
     sb.process.exec = AsyncMock(return_value=MagicMock(result="", exit_code=0))
     sb.fs.upload_file = AsyncMock(side_effect=RuntimeError("disk full"))
@@ -392,7 +402,8 @@ async def test_write_file_exception_returns_error():
         daytona_write_file.input_model(file_path="/x.txt", content="data"), ctx
     )
     assert result.is_error
-    assert "disk full" in result.output
+    assert "Code intelligence/OCC is unavailable" in result.output
+    sb.fs.upload_file.assert_not_called()
 
 
 async def test_write_file_refreshes_stale_scope_coherence():
@@ -433,7 +444,7 @@ async def test_write_file_refreshes_stale_scope_coherence():
 # ---------------------------------------------------------------------------
 
 async def test_grep_no_matches():
-    sb = _sb(find_result=[])
+    sb = _sb(exec_result=MagicMock(result=json.dumps({"ok": True, "matches": []}), exit_code=0))
     ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/ws"})
     result = await daytona_grep.execute(daytona_grep.input_model(pattern="needle"), ctx)
     assert not result.is_error
@@ -443,9 +454,20 @@ async def test_grep_no_matches():
 
 
 async def test_grep_with_matches():
-    m1 = MagicMock(file="/ws/a.py", line=10, content="  needle here  ")
-    m2 = MagicMock(file="/ws/b.py", line=20, content="another needle")
-    sb = _sb(find_result=[m1, m2])
+    sb = _sb(
+        exec_result=MagicMock(
+            result=json.dumps(
+                {
+                    "ok": True,
+                    "matches": [
+                        {"file": "/ws/a.py", "line": 10, "content": "  needle here  "},
+                        {"file": "/ws/b.py", "line": 20, "content": "another needle"},
+                    ],
+                }
+            ),
+            exit_code=0,
+        )
+    )
     ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/ws"})
     result = await daytona_grep.execute(daytona_grep.input_model(pattern="needle"), ctx)
     data = json.loads(result.output)
@@ -459,7 +481,7 @@ async def test_grep_with_matches():
 
 async def test_grep_exception_returns_error():
     sb = _sb()
-    sb.fs.find_files = AsyncMock(side_effect=RuntimeError("search error"))
+    sb.process.exec = AsyncMock(side_effect=RuntimeError("search error"))
     ctx = _ctx({"daytona_sandbox": sb})
     result = await daytona_grep.execute(
         daytona_grep.input_model(pattern="x", path="/somewhere"), ctx
@@ -469,8 +491,12 @@ async def test_grep_exception_returns_error():
 
 
 async def test_grep_path_not_found():
-    sb = _sb()
-    sb.fs.find_files = AsyncMock(side_effect=FileNotFoundError("missing"))
+    sb = _sb(
+        exec_result=MagicMock(
+            result=json.dumps({"ok": False, "error": "Path does not exist: /missing/dir"}),
+            exit_code=1,
+        )
+    )
     ctx = _ctx({"daytona_sandbox": sb})
     result = await daytona_grep.execute(
         daytona_grep.input_model(pattern="x", path="/missing/dir"), ctx
@@ -480,10 +506,11 @@ async def test_grep_path_not_found():
 
 
 async def test_grep_dot_path_uses_cwd():
-    sb = _sb(find_result=[])
+    sb = _sb(exec_result=MagicMock(result=json.dumps({"ok": True, "matches": []}), exit_code=0))
     ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/workspace"})
     await daytona_grep.execute(daytona_grep.input_model(pattern="x"), ctx)
-    sb.fs.find_files.assert_called_once_with("/workspace", "x")
+    executed = sb.process.exec.call_args.args[0]
+    assert "/workspace" in executed
 
 
 # ---------------------------------------------------------------------------

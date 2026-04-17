@@ -105,19 +105,23 @@ def apply_replayed_event(
         if t.depth == 0 and root_id is None:
             root_id = t.id
     elif event.kind == "task_status":
-        t = graph.get(event.data.get("task_id"))
-        if t is not None:
-            t.status = TaskStatus.of(event.data.get("status") or t.status, default=t.status)
+        task_id = event.data.get("task_id")
+        existing = graph.get(str(task_id)) if task_id is not None else None
+        if existing is not None:
+            existing.status = TaskStatus.of(
+                event.data.get("status") or existing.status,
+                default=existing.status,
+            )
             for key in ("started_at", "finished_at"):
                 if key in event.data:
                     iso = event.data.get(key)
-                    setattr(t, key, datetime.fromisoformat(iso) if iso else None)
+                    setattr(existing, key, datetime.fromisoformat(iso) if iso else None)
             if "agent_run_id" in event.data:
-                t.agent_run_id = event.data["agent_run_id"]
+                existing.agent_run_id = event.data["agent_run_id"]
             if "failure_reason" in event.data:
-                t.failure_reason = event.data["failure_reason"]
+                existing.failure_reason = event.data["failure_reason"]
             if "fired_by_task_id" in event.data:
-                t.fired_by_task_id = event.data["fired_by_task_id"]
+                existing.fired_by_task_id = event.data["fired_by_task_id"]
     elif event.kind == "budget_update":
         last_budget = (
             int(event.data.get("tasks_used") or 0),

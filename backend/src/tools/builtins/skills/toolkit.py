@@ -50,7 +50,10 @@ class LoadSkillReferenceInput(BaseModel):
     )
     reference_name: str = Field(
         ...,
-        description="Name of the reference document to load.",
+        description=(
+            "Exact reference document name to load. Do not use 'default'; call "
+            "load_skill(skill_name) for the main skill instructions."
+        ),
     )
 
 
@@ -241,7 +244,11 @@ def make_skills_toolkit(
 
     @tool(
         name="load_skill_reference",
-        description="Load a reference document from a skill. References provide supplementary guidance, schemas, rubrics, or examples.",
+        description=(
+            "Load a named reference document from a skill. Use only exact "
+            "reference names listed in the skill catalog or in load_skill output; "
+            "there is no default reference."
+        ),
         short_description="Load a skill reference.",
         input_model=LoadSkillReferenceInput,
         output_model=TextToolOutput,
@@ -332,6 +339,7 @@ def make_skills_toolkit(
             {
                 "name": str(info["name"]),
                 "description": str(info["description"] or ""),
+                "references": [str(ref) for ref in info.get("references", [])],
             }
             for info in sorted(available.values(), key=lambda item: str(item["name"]))
         ]

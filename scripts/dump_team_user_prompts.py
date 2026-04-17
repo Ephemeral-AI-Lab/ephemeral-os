@@ -9,11 +9,15 @@ from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parent.parent
 _BACKEND_SRC = _ROOT / "backend" / "src"
-if str(_BACKEND_SRC) not in sys.path:
-    sys.path.insert(0, str(_BACKEND_SRC))
 
-from prompts.prompt_cli import dump_team_user_prompts_main
+
+def main() -> int:
+    if str(_BACKEND_SRC) not in sys.path:
+        sys.path.insert(0, str(_BACKEND_SRC))
+    from prompts.prompt_cli import dump_team_user_prompts_main
+
+    return dump_team_user_prompts_main()
 
 
 if __name__ == "__main__":
-    raise SystemExit(dump_team_user_prompts_main())
+    raise SystemExit(main())

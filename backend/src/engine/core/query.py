@@ -397,6 +397,14 @@ async def _run_query_loop(
             *api_messages,
         ]
         prompt_report_seq = _next_prompt_report_seq(context)
+        tool_schemas = context.tool_registry.to_api_schema()
+        if context.enable_background_tasks:
+            tool_schemas = decorate_schemas_for_background(
+                context.tool_registry,
+                tool_schemas,
+                terminal_tools=context.terminal_tools,
+            )
+
         _record_prompt_report_event(
             context,
             {
@@ -405,7 +413,7 @@ async def _run_query_loop(
                 "system_prompt": context.system_prompt,
                 "user_context_message": context_message,
                 "messages": [m.model_dump(mode="json") for m in provider_messages],
-                "tools": context.tool_registry.to_api_schema(),
+                "tools": tool_schemas,
             },
         )
 
@@ -415,12 +423,7 @@ async def _run_query_loop(
                 messages=provider_messages,
                 system_prompt=context.system_prompt,
                 max_tokens=context.max_tokens,
-                tools=decorate_schemas_for_background(
-                    context.tool_registry,
-                    context.tool_registry.to_api_schema(),
-                )
-                if context.enable_background_tasks
-                else context.tool_registry.to_api_schema(),
+                tools=tool_schemas,
             )
         ):
             if isinstance(event, ApiThinkingDeltaEvent):

@@ -6,7 +6,7 @@ import json
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Literal, Sequence
+from typing import Any, Iterable, Literal, Sequence
 
 from pydantic import BaseModel, Field, RootModel, ValidationError
 
@@ -28,6 +28,7 @@ __all__ = [
 
 
 BackgroundMode = Literal["forbidden", "optional", "always"]
+_RUNTIME_CONTROL_FIELDS = frozenset({"background", "task_note"})
 
 
 @dataclass
@@ -253,8 +254,9 @@ async def run_tool_safely(
     tool invocation sites. ``asyncio.CancelledError`` is intentionally
     not caught — callers decide how to handle cancellation.
     """
+    clean_input = _strip_runtime_control_fields(tool, raw_input)
     try:
-        parsed_input = tool.input_model.model_validate(raw_input)
+        parsed_input = tool.input_model.model_validate(clean_input)
     except ValidationError as exc:
         errors = "; ".join(
             f"{'.'.join(str(p) for p in e['loc'])}: {e['msg']}" for e in exc.errors()
@@ -329,29 +331,53 @@ def validate_tool_output(tool: "BaseTool", result: ToolResult) -> ToolResult:
     return result
 
 
+def _strip_runtime_control_fields(tool: "BaseTool", raw_input: dict[str, Any]) -> dict[str, Any]:
+    """Remove engine-level schema decorations before tool-local validation."""
+
+    model_fields = set(tool.input_model.model_fields)
+    return {
+        key: value
+        for key, value in raw_input.items()
+        if key not in _RUNTIME_CONTROL_FIELDS or key in model_fields
+    }
+
+
 def decorate_schemas_for_background(
-    registry: ToolRegistry, schemas: list[dict[str, Any]]
+    registry: ToolRegistry,
+    schemas: list[dict[str, Any]],
+    *,
+    terminal_tools: Iterable[str] = (),
 ) -> list[dict[str, Any]]:
     """Inject ``task_note`` (required) and ``background`` (optional) fields.
 
     Mutates each schema in-place and returns the list. ``task_note`` is
-    added to every tool so the LLM must explain what and why on each call.
-    ``background`` is added only to tools whose ``background`` policy is
-    ``"optional"`` (LLM may choose). Tools marked ``"always"`` are dispatched
-    in the background unconditionally and need no LLM-facing flag.
+    added to non-terminal tools so the LLM must explain what and why on
+    each call. Terminal tools are one-way submissions and must expose only
+    their true payload schema. ``background`` is added only to non-terminal
+    tools whose ``background`` policy is ``"optional"`` (LLM may choose).
+    Tools marked ``"always"`` are dispatched in the background
+    unconditionally and need no LLM-facing flag.
     """
+    terminal_tool_names = set(terminal_tools)
     for schema in schemas:
-        tool = registry.get(schema["name"])
+        tool_name = str(schema["name"])
+        tool = registry.get(tool_name)
         inp = schema.setdefault("input_schema", {})
         props = inp.setdefault("properties", {})
-        props["task_note"] = {
-            "type": "string",
-            "description": "Brief note: what and why",
-        }
-        req = inp.setdefault("required", [])
-        if "task_note" not in req:
-            req.append("task_note")
-        if tool is not None and getattr(tool, "background", "forbidden") == "optional":
+        is_terminal = tool_name in terminal_tool_names
+        if not is_terminal:
+            props["task_note"] = {
+                "type": "string",
+                "description": "Brief note: what and why",
+            }
+            req = inp.setdefault("required", [])
+            if "task_note" not in req:
+                req.append("task_note")
+        if (
+            not is_terminal
+            and tool is not None
+            and getattr(tool, "background", "forbidden") == "optional"
+        ):
             props["background"] = {
                 "type": "boolean",
                 "description": (

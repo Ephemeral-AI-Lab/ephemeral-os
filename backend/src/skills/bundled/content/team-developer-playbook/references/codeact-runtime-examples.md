@@ -14,8 +14,11 @@ Use this reference before the first `daytona_codeact` verification or reproducti
 ## Workflow
 
 - The preferred benchmark-lane repo-command form is direct `daytona_codeact(command="...", timeout=N)`.
+- Must not append shell capture plumbing such as `2>&1`, `2>/dev/null`, or `1>/tmp/out`; `daytona_codeact` already captures stdout and stderr.
 - If you truly need multi-step Python mode, keep repo commands inside `shell("...")` and still avoid `subprocess`.
-- Must keep repo commands repo-root-relative and treat `Unknown tool` as your own Daytona tool-name error before retrying with the exact tool name.
+- Must keep repo commands repo-root-relative; do not prefix commands with `cd /testbed &&`, `cd /workspace &&`, or another repo-root `cd`.
+- Must not call unprefixed tools like `write_file`, `edit_file`, `read_file`, `bash`, or `grep`; the valid tools are the exact names in the tool list, such as `daytona_write_file`.
+- If `Unknown tool` appears, treat it as your own Daytona tool-name defect and retry once with the exact tool name before continuing.
 - Must judge pass/fail from `shell(...)["exit_code"]`, not wrapper metadata.
 - If a probe returns manifest `status: error`, traceback text, or no trustworthy exit code, simplify the next probe instead of broadening.
 - If pytest says a named node is missing, exits `4`, or collects `0` items, report that exact control failure or hand the file surface back to replanning.

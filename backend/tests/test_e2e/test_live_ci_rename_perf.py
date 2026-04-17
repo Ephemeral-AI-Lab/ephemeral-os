@@ -21,6 +21,7 @@ import statistics
 import threading
 import time
 import uuid
+from collections import Counter
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from types import SimpleNamespace
@@ -37,6 +38,9 @@ from code_intelligence.lsp._jedi_worker_client import (
 from tools.ci_toolkit.rename_tool import ci_rename, ci_rename_symbol
 from tools.core.base import ToolExecutionContext
 from tools.daytona_toolkit._daytona_utils import _extract_exit_code, _wrap_bash_command
+from tools.daytona_toolkit.codeact_tool import daytona_codeact
+from tools.daytona_toolkit.edit_tool import daytona_edit_file
+from tools.daytona_toolkit.tools import daytona_write_file
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 load_dotenv(_PROJECT_ROOT / ".env")
@@ -412,66 +416,7 @@ def test_live_ci_lsp_jedi_tool_traces_and_perf(
     monkeypatch.setenv(JEDI_WORKER_RENAME_ENV_FLAG, "0")
     all_stats: list[dict[str, Any]] = []
     env = live_rename_env
-    pkg = f"{env.root_dir}/pkg"
-    core_path = f"{pkg}/core.py"
-    uses_path = f"{pkg}/uses.py"
-    more_path = f"{pkg}/more.py"
-
-    env.write_file(f"{pkg}/__init__.py", "")
-    env.write_file(
-        core_path,
-        "\n".join(
-            [
-                "def alpha(value):",
-                '    """Primary function used for LSP definition/reference probes."""',
-                "    return value + 1",
-                "",
-                "def beta(value):",
-                "    return alpha(value) * 2",
-                "",
-                "def delta(value):",
-                "    return beta(value) + 5",
-                "",
-                "class Runner:",
-                "    def run(self, value):",
-                "        return delta(value)",
-                "",
-            ]
-        ),
-    )
-    env.write_file(
-        uses_path,
-        "\n".join(
-            [
-                "from pkg.core import alpha, beta, delta, Runner",
-                "",
-                "def call_alpha():",
-                "    return alpha(1)",
-                "",
-                "def call_beta():",
-                "    return beta(2)",
-                "",
-                "def call_delta():",
-                "    return delta(3)",
-                "",
-                "def call_runner():",
-                "    return Runner().run(4)",
-                "",
-            ]
-        ),
-    )
-    env.write_file(
-        more_path,
-        "\n".join(
-            [
-                "from pkg.core import alpha, beta, delta",
-                "",
-                "def combine():",
-                "    return alpha(10) + beta(20) + delta(30)",
-                "",
-            ]
-        ),
-    )
+    core_path, uses_path, more_path = _write_perf_project(env, env.root_dir)
 
     svc = CodeIntelligenceService(
         sandbox_id=env.sandbox_id,
@@ -496,12 +441,16 @@ def test_live_ci_lsp_jedi_tool_traces_and_perf(
             svc,
             lambda: (
                 svc.ensure_initialized(wait=True)
-                and svc.lsp_client.ensure_ready(install_missing=True)["python"]
+                and svc.lsp_client.ensure_ready(
+                    install_missing=True,
+                    languages=("python",),
+                )["python"]
             ),
             stats=all_stats,
         )
         assert init_ok is True
         assert svc.symbol_index.ensure_built(wait=True, timeout=60.0) is True
+        _print_service_health("baseline.after_init", svc, env)
 
         definitions = _measure(
             "lsp.goto_definition(alpha usage)",
@@ -643,10 +592,12 @@ def test_live_ci_lsp_jedi_tool_traces_and_perf(
                     "sandbox_id": env.sandbox_id,
                     "workspace_root": env.root_dir,
                     "symbol_index": final_status["symbol_index"],
+                    "tree_cache": final_status["tree_cache"],
+                    "rename_preview_cache": final_status["rename_preview_cache"],
                     "arbiter": final_status["arbiter"],
                     "lsp": final_status["lsp"],
                     "jedi_worker_env": os.environ.get("CI_JEDI_WORKER_ENABLED", ""),
-                    "jedi_worker_used": getattr(svc.lsp_client, "_worker", None) is not None,
+                    "jedi_worker_used": svc.lsp_client.worker_active,
                 },
                 sort_keys=True,
             ),
@@ -680,11 +631,15 @@ def test_live_ci_lsp_jedi_tool_traces_and_perf(
                 worker_svc,
                 lambda: (
                     worker_svc.ensure_initialized(wait=True)
-                    and worker_svc.lsp_client.ensure_ready(install_missing=True)["python"]
+                    and worker_svc.lsp_client.ensure_ready(
+                        install_missing=True,
+                        languages=("python",),
+                    )["python"]
                 ),
                 stats=all_stats,
             )
             assert worker_init_ok is True
+            _print_service_health("worker.after_init", worker_svc, env)
 
             worker_defs = _measure(
                 "worker.lsp.goto_definition(alpha usage)",
@@ -740,6 +695,10 @@ def test_live_ci_lsp_jedi_tool_traces_and_perf(
             worker_tel = worker_svc.lsp_client.telemetry
             assert worker_tel.worker_successes >= 3
             assert worker_tel.worker_fallbacks == 0
+            assert worker_tel.worker_errors == 0
+            assert worker_svc.lsp_client.worker_active is True
+
+            _exercise_tree_cache(worker_svc, worker_core, env.read_file(worker_core))
 
             _print_mode_comparison(all_stats)
             _run_concurrent_ci_load(
@@ -750,6 +709,7 @@ def test_live_ci_lsp_jedi_tool_traces_and_perf(
                 uses_path=worker_uses,
                 stats=all_stats,
             )
+            _run_occ_capture_checks(env=env, stats=all_stats)
         finally:
             worker_svc.dispose()
 
@@ -770,6 +730,7 @@ def _measure(
 ) -> _T:
     event_start = trace.mark()
     telemetry_before = svc.lsp_client.telemetry
+    tree_before = svc.tree_cache.stats
     index_before = svc.symbol_index.generation
     arbiter_before = svc.arbiter.generation
     started_at = time.perf_counter()
@@ -791,6 +752,13 @@ def _measure(
             "lsp_successes_delta": telemetry_after.successes - telemetry_before.successes,
             "lsp_errors_delta": telemetry_after.errors - telemetry_before.errors,
             "lsp_cache_hits_delta": telemetry_after.cache_hits - telemetry_before.cache_hits,
+            "jedi_script_runs_delta": telemetry_after.script_runs - telemetry_before.script_runs,
+            "jedi_script_successes_delta": (
+                telemetry_after.script_successes - telemetry_before.script_successes
+            ),
+            "jedi_script_errors_delta": (
+                telemetry_after.script_errors - telemetry_before.script_errors
+            ),
             "worker_successes_delta": (
                 telemetry_after.worker_successes - telemetry_before.worker_successes
             ),
@@ -798,6 +766,12 @@ def _measure(
                 telemetry_after.worker_fallbacks - telemetry_before.worker_fallbacks
             ),
             "worker_errors_delta": telemetry_after.worker_errors - telemetry_before.worker_errors,
+            "tree_cache_hits_delta": svc.tree_cache.stats["hits"] - tree_before["hits"],
+            "tree_cache_misses_delta": svc.tree_cache.stats["misses"] - tree_before["misses"],
+            "tree_cache_stat_calls_delta": (
+                svc.tree_cache.stats["stat_calls"] - tree_before["stat_calls"]
+            ),
+            "rename_preview_cache": svc.status()["rename_preview_cache"],
             "symbol_index_generation_delta": svc.symbol_index.generation - index_before,
             "arbiter_generation_delta": svc.arbiter.generation - arbiter_before,
             **trace.summary_since(event_start),
@@ -805,6 +779,230 @@ def _measure(
         if stats is not None:
             stats.append(dict(payload))
         print("[ci-lsp-live-trace] " + json.dumps(payload, sort_keys=True), flush=True)
+
+
+def _service_health_payload(
+    svc: CodeIntelligenceService,
+    env: LiveRenameEnv,
+) -> dict[str, Any]:
+    status = svc.status()
+    return {
+        "sandbox_id": env.sandbox_id,
+        "workspace_root": svc.workspace_root,
+        "symbol_index": status["symbol_index"],
+        "tree_cache": status["tree_cache"],
+        "rename_preview_cache": status["rename_preview_cache"],
+        "arbiter": status["arbiter"],
+        "lsp": status["lsp"],
+    }
+
+
+def _print_service_health(
+    label: str,
+    svc: CodeIntelligenceService,
+    env: LiveRenameEnv,
+) -> None:
+    payload = {"label": label, **_service_health_payload(svc, env)}
+    print("[ci-lsp-live-health] " + json.dumps(payload, sort_keys=True), flush=True)
+
+
+def _exercise_tree_cache(
+    svc: CodeIntelligenceService,
+    file_path: str,
+    content: str,
+) -> None:
+    before = svc.tree_cache.stats
+    first = svc.tree_cache.get_tree(file_path, content=content)
+    second = svc.tree_cache.get_tree(file_path, content=content)
+    after = svc.tree_cache.stats
+    payload = {
+        "label": "worker.tree_cache_direct_reuse",
+        "file_path": file_path,
+        "before": before,
+        "after": after,
+        "hits_delta": after["hits"] - before["hits"],
+        "misses_delta": after["misses"] - before["misses"],
+        "size_delta": after["size"] - before["size"],
+    }
+    print("[ci-lsp-live-cache] " + json.dumps(payload, sort_keys=True), flush=True)
+    assert first is not None
+    assert second is not None
+    assert after["hits"] - before["hits"] >= 1
+
+
+def _run_occ_capture_checks(
+    *,
+    env: LiveRenameEnv,
+    stats: list[dict[str, Any]],
+) -> None:
+    """Verify public write/edit/rename/codeact tools all land in the OCC ledger."""
+    occ_root = f"{env.root_dir}/occ_capture_{uuid.uuid4().hex[:8]}"
+    occ_core, _occ_uses, _occ_more = _write_perf_project(env, occ_root)
+    env.exec_checked(
+        " && ".join(
+            [
+                f"git -C {shlex.quote(occ_root)} init -q",
+                f"git -C {shlex.quote(occ_root)} config user.email live-ci@example.invalid",
+                f"git -C {shlex.quote(occ_root)} config user.name live-ci",
+                f"git -C {shlex.quote(occ_root)} add .",
+                f"git -C {shlex.quote(occ_root)} commit -q -m init",
+            ]
+        ),
+        timeout=180,
+    )
+
+    occ_svc = CodeIntelligenceService(
+        sandbox_id=f"{env.sandbox_id}-occ",
+        workspace_root=occ_root,
+        sandbox=env.traced_sandbox,
+    )
+    occ_ctx = ToolExecutionContext(
+        cwd=Path(occ_root),
+        metadata={
+            "daytona_sandbox": env.async_sandbox,
+            "daytona_cwd": occ_root,
+            "repo_root": occ_root,
+            "ci_service": occ_svc,
+            "arbiter": occ_svc.arbiter,
+            "agent_run_id": f"ci-lsp-occ-agent-{uuid.uuid4().hex[:8]}",
+            "agent_name": "developer",
+            "team_mode_enabled": True,
+            "team_run_id": f"ci-lsp-occ-team-{uuid.uuid4().hex[:8]}",
+            "work_item_id": "occ-live-capture",
+            "work_item_started_at": time.time(),
+        },
+    )
+
+    try:
+        init_ok = _measure(
+            "occ.service.ensure_initialized",
+            env.trace,
+            occ_svc,
+            lambda: (
+                occ_svc.ensure_initialized(wait=True)
+                and occ_svc.lsp_client.ensure_ready(
+                    install_missing=True,
+                    languages=("python",),
+                )["python"]
+            ),
+            stats=stats,
+        )
+        assert init_ok is True
+
+        write_path = f"{occ_root}/pkg/written.py"
+        write_result = _measure(
+            "occ.daytona_write_file",
+            env.trace,
+            occ_svc,
+            lambda: asyncio.run(
+                daytona_write_file.execute(
+                    daytona_write_file.input_model(
+                        file_path=write_path,
+                        content="value = 1\n",
+                    ),
+                    occ_ctx,
+                )
+            ),
+            stats=stats,
+        )
+        assert not write_result.is_error, write_result.output
+        write_data = json.loads(write_result.output)
+        assert write_data["ci_sync"] is True
+        assert "validate_token" in write_data.get("timings", {})
+
+        edit_result = _measure(
+            "occ.daytona_edit_file",
+            env.trace,
+            occ_svc,
+            lambda: asyncio.run(
+                daytona_edit_file.execute(
+                    daytona_edit_file.input_model(
+                        file_path=write_path,
+                        old_text="value = 1",
+                        new_text="value = 2",
+                        description="live occ edit capture",
+                    ),
+                    occ_ctx,
+                )
+            ),
+            stats=stats,
+        )
+        assert not edit_result.is_error, edit_result.output
+        edit_data = json.loads(edit_result.output)
+        assert edit_data["status"] == "edited"
+        assert edit_data["occ"] is True
+        assert "validate_token" in edit_data.get("timings", {}).get("occ", {})
+
+        rename_result = _measure(
+            "occ.ci_rename_symbol(alpha commit)",
+            env.trace,
+            occ_svc,
+            lambda: asyncio.run(
+                ci_rename_symbol.execute(
+                    ci_rename_symbol.input_model(
+                        file_path=occ_core,
+                        line=1,
+                        character=0,
+                        new_name="alpha_occ",
+                    ),
+                    occ_ctx,
+                )
+            ),
+            stats=stats,
+        )
+        assert not rename_result.is_error, rename_result.output
+        assert json.loads(rename_result.output)["status"] == "renamed"
+
+        codeact_result = _measure(
+            "occ.daytona_codeact_python_write",
+            env.trace,
+            occ_svc,
+            lambda: asyncio.run(
+                daytona_codeact.execute(
+                    daytona_codeact.input_model(
+                        mode="python",
+                        code='write("pkg/codeact_file.py", "codeact_value = 4\\n")',
+                        timeout=180,
+                    ),
+                    occ_ctx,
+                )
+            ),
+            stats=stats,
+        )
+        assert not codeact_result.is_error, codeact_result.output
+        codeact_data = json.loads(codeact_result.output)
+        assert codeact_data["status"] == "ok"
+        assert codeact_data["files_written"] >= 1
+
+        edits = occ_svc.arbiter.recent_edits(seconds=300)
+        counts = Counter(str(getattr(item, "edit_type", "") or "") for item in edits)
+        paths_by_type: dict[str, list[str]] = {}
+        for item in edits:
+            paths_by_type.setdefault(str(getattr(item, "edit_type", "") or ""), []).append(
+                str(getattr(item, "file_path", "") or "")
+            )
+        payload = {
+            "label": "occ.capture_write_edit_rename_codeact",
+            "occ_path": "prepared_write_for_write_and_edit; batch_occ_for_rename; codeact_transaction_commit",
+            "write_occ_validated": "validate_token" in write_data.get("timings", {}),
+            "edit_occ_validated": "validate_token" in edit_data.get("timings", {}).get("occ", {}),
+            "codeact_transactional": counts.get("codeact", 0) >= 1,
+            "counts": dict(sorted(counts.items())),
+            "paths_by_type": {key: sorted(value) for key, value in paths_by_type.items()},
+            "arbiter_generation": occ_svc.arbiter.generation,
+            "total_edits": occ_svc.arbiter.metrics.total_edits,
+            "tokens_issued": occ_svc.arbiter.metrics.tokens_issued,
+            "health": _service_health_payload(occ_svc, env),
+        }
+        print("[ci-lsp-live-occ] " + json.dumps(payload, sort_keys=True), flush=True)
+        assert {"write", "edit", "rename", "codeact"}.issubset(counts)
+        assert payload["write_occ_validated"] is True
+        assert payload["edit_occ_validated"] is True
+        assert payload["codeact_transactional"] is True
+        assert occ_svc.arbiter.metrics.total_edits >= 4
+        assert occ_svc.arbiter.metrics.tokens_issued >= 2
+    finally:
+        occ_svc.dispose()
 
 
 def _run_concurrent_ci_load(
@@ -819,6 +1017,7 @@ def _run_concurrent_ci_load(
     """Run 20 concurrent mixed code-intelligence operations against one service."""
     trace_start = env.trace.mark()
     telemetry_before = svc.lsp_client.telemetry
+    tree_before = svc.tree_cache.stats
     index_before = svc.symbol_index.generation
     arbiter_before = svc.arbiter.generation
     started_at = time.perf_counter()
@@ -893,8 +1092,18 @@ def _run_concurrent_ci_load(
 
     telemetry_after = svc.lsp_client.telemetry
     failures = [item for item in results if not item["ok"]]
+    status = _service_health_payload(svc, env)
+    cache_loaded = {
+        "lsp_result_cache_hits_delta": telemetry_after.cache_hits - telemetry_before.cache_hits,
+        "tree_cache_size": status["tree_cache"]["size"],
+        "tree_cache_hits_total": status["tree_cache"]["hits"],
+        "rename_preview_cache_size": status["rename_preview_cache"]["size"],
+    }
     payload = {
         "label": "worker.concurrent_mixed_ci_load_20",
+        "intent": "read_only_lsp_queries_plus_rename_dry_runs_no_occ_commits",
+        "occ_expected": False,
+        "cache_loaded": cache_loaded,
         "duration_ms": round((time.perf_counter() - started_at) * 1000, 3),
         "command_count": len(results),
         "failure_count": len(failures),
@@ -903,6 +1112,13 @@ def _run_concurrent_ci_load(
         "lsp_successes_delta": telemetry_after.successes - telemetry_before.successes,
         "lsp_errors_delta": telemetry_after.errors - telemetry_before.errors,
         "lsp_cache_hits_delta": telemetry_after.cache_hits - telemetry_before.cache_hits,
+        "jedi_script_runs_delta": telemetry_after.script_runs - telemetry_before.script_runs,
+        "jedi_script_successes_delta": (
+            telemetry_after.script_successes - telemetry_before.script_successes
+        ),
+        "jedi_script_errors_delta": (
+            telemetry_after.script_errors - telemetry_before.script_errors
+        ),
         "worker_successes_delta": (
             telemetry_after.worker_successes - telemetry_before.worker_successes
         ),
@@ -910,6 +1126,12 @@ def _run_concurrent_ci_load(
             telemetry_after.worker_fallbacks - telemetry_before.worker_fallbacks
         ),
         "worker_errors_delta": telemetry_after.worker_errors - telemetry_before.worker_errors,
+        "tree_cache_hits_delta": svc.tree_cache.stats["hits"] - tree_before["hits"],
+        "tree_cache_misses_delta": svc.tree_cache.stats["misses"] - tree_before["misses"],
+        "tree_cache_stat_calls_delta": (
+            svc.tree_cache.stats["stat_calls"] - tree_before["stat_calls"]
+        ),
+        "status": status,
         "symbol_index_generation_delta": svc.symbol_index.generation - index_before,
         "arbiter_generation_delta": svc.arbiter.generation - arbiter_before,
         **env.trace.summary_since(trace_start),
@@ -919,6 +1141,13 @@ def _run_concurrent_ci_load(
     assert not failures, json.dumps(failures, sort_keys=True)
     assert payload["worker_fallbacks_delta"] == 0
     assert payload["worker_errors_delta"] == 0
+    assert payload["lsp_cache_hits_delta"] >= 8
+    assert payload["status"]["lsp"]["connected"] is True
+    assert payload["status"]["lsp"]["worker_active"] is True
+    assert payload["arbiter_generation_delta"] == 0
+    assert cache_loaded["tree_cache_size"] >= 1
+    assert cache_loaded["tree_cache_hits_total"] >= 1
+    assert cache_loaded["rename_preview_cache_size"] >= 2
 
 
 def _print_mode_comparison(stats: list[dict[str, Any]]) -> None:

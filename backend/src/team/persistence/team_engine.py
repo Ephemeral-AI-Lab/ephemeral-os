@@ -134,6 +134,7 @@ def create_team_engine(
 
             initialize_db(load_settings().database)
 
+    sync_engine = get_engine()
     if sync_engine is None:
         raise RuntimeError("Team runtime requires a configured database.")
 

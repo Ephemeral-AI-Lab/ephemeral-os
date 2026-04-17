@@ -423,14 +423,18 @@ def _prepare_benchmark_session(
     )
 
     session_config = build_session_config()
-    session_config.cwd = repo_dir
+    # ``SessionConfig.cwd`` is a host-local EphemeralOS workspace path used for
+    # prompt-side project metadata, skill discovery, and local config files.
+    # The SWE-EVO checkout lives inside the remote Daytona sandbox at
+    # ``repo_dir`` and is routed to tools via task metadata instead.
+    session_config.cwd = str(_PROJECT_ROOT)
     if session_id:
         session_config.session_id = session_id
     session_factory = ensure_runtime_stores_ready()
     try:
         session_store.upsert(
             session_id=session_config.session_id,
-            cwd=repo_dir,
+            cwd=str(_PROJECT_ROOT),
             model=str(get_active_model_kwargs().get("model") or ""),
             message_count=0,
         )

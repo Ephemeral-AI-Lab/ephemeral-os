@@ -49,7 +49,7 @@ def _load_builtin_definitions() -> list[AgentDefinition]:
     defs = load_agents_dir(_BUILTINS_DIR)
     # Override source to "builtin" — load_agents_dir defaults to "user".
     for d in defs:
-        d.source = "builtin"  # type: ignore[misc]
+        d.source = "builtin"
     if len(defs) != _EXPECTED_BUILTIN_COUNT:
         logger.error(
             "Expected %d builtin agents but loaded %d from %s — "

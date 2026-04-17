@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -16,10 +15,9 @@ from providers.types import (
     ApiTextDeltaEvent,
     ApiThinkingDeltaEvent,
     ApiToolUseDeltaEvent,
-    UsageSnapshot,
 )
 from providers.errors import AuthenticationFailure, RateLimitFailure
-from message import ConversationMessage, TextBlock
+from message import ConversationMessage
 
 
 # ---------------------------------------------------------------------------

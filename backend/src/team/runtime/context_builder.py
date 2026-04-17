@@ -8,7 +8,7 @@ from __future__ import annotations
 import time
 from functools import lru_cache
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Iterable, cast
+from typing import TYPE_CHECKING, Iterable
 
 from message import ConversationMessage
 from prompts.user_prompt_templates import render_user_prompt_template
@@ -234,7 +234,7 @@ async def _render_template_user_message(
         "benchmark_targets": _format_benchmark_targets(team_run),
         "terminal_tools": _format_terminal_tools(terminal_tools),
     }
-    return cast(str, render_user_prompt_template(template_name, variables))
+    return render_user_prompt_template(template_name, variables)
 
 
 async def build_initial_user_message(

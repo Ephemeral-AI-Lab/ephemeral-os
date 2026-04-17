@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, UTC
 from uuid import uuid4
 
-from agents.types import AgentDefinition
+from agents.types import AgentDefinition, AgentSource, AgentType
 from agents.db.model import AgentDefinitionRecord
 from agents.db.store import AgentDefinitionStore
 from agents.builder.validation import AgentDefinitionValidator
@@ -15,6 +15,21 @@ from agents.api.schemas import (
     AgentDefinitionUpdate,
     AgentValidationResult,
 )
+
+
+def _agent_type(value: str | None) -> AgentType:
+    if value == "subagent":
+        return "subagent"
+    return "agent"
+
+
+def _agent_source(value: str | None) -> AgentSource:
+    if value == "builtin":
+        return "builtin"
+    if value == "plugin":
+        return "plugin"
+    return "user"
+
 
 class AgentBuilderService:
     """Converts DB records to/from runtime AgentDefinition with validation."""
@@ -41,9 +56,9 @@ class AgentBuilderService:
             background=record.background,
             initial_prompt=record.initial_prompt,
             role=record.role,
-            agent_type=record.agent_type or "agent",
+            agent_type=_agent_type(record.agent_type),
             supported_kinds=record.supported_kinds or ["atomic", "expandable"],
-            source=record.source or "user",
+            source=_agent_source(record.source),
             can_spawn_subagents=record.can_spawn_subagents,
             require_fresh_client=record.require_fresh_client,
             include_skills=record.include_skills,

@@ -13,6 +13,9 @@ EFFORT_LEVELS: tuple[str, ...] = ("low", "medium", "high")
 #: Toolkit names that must not appear in the ``toolkits`` list.
 _RESERVED_TOOLKIT_NAMES: frozenset[str] = frozenset()
 
+AgentSource = Literal["builtin", "user", "plugin"]
+AgentType = Literal["agent", "subagent"]
+
 
 class AgentDefinition(BaseModel):
     """Full agent definition with all configuration fields."""
@@ -85,12 +88,12 @@ class AgentDefinition(BaseModel):
 
     # --- Python-specific ---
     permissions: list[str] = Field(default_factory=list)
-    source: Literal["builtin", "user", "plugin"] = "builtin"
+    source: AgentSource = "builtin"
 
     # --- agent type: regular agent or subagent (worker) ---
     # Descriptive label kept for logging / UI. Engine behaviour is driven
     # by the explicit capability flags below, not by this string.
-    agent_type: Literal["agent", "subagent"] = "agent"
+    agent_type: AgentType = "agent"
 
     # --- team-mode work item kinds this agent is allowed to serve ---
     # Values: "atomic", "expandable". Defaults to both so existing

@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 import pytest
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from message import ConversationMessage, TextBlock, ToolUseBlock
 from engine.core.query import QueryContext, _execute_tool_call, run_query
@@ -29,6 +29,7 @@ from tools.core.base import (
     ToolExecutionContext,
     ToolRegistry,
     ToolResult,
+    decorate_schemas_for_background,
     run_tool_safely,
 )
 from tools.core.decorator import tool
@@ -47,6 +48,12 @@ class EchoOutput(BaseModel):
     echoed: str = Field(description="The echoed message")
 
 
+class StrictEchoInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    message: str = Field(description="Message to echo")
+
+
 class EchoTool(BaseTool):
     name = "echo"
     description = "Echo a message."
@@ -54,6 +61,16 @@ class EchoTool(BaseTool):
     output_model = EchoOutput
 
     async def execute(self, arguments: EchoInput, context: ToolExecutionContext) -> ToolResult:
+        return ToolResult(output=json.dumps({"echoed": arguments.message}))
+
+
+class StrictEchoTool(BaseTool):
+    name = "strict_echo"
+    description = "Echo a message with strict input validation."
+    input_model = StrictEchoInput
+    output_model = EchoOutput
+
+    async def execute(self, arguments: StrictEchoInput, context: ToolExecutionContext) -> ToolResult:
         return ToolResult(output=json.dumps({"echoed": arguments.message}))
 
 
@@ -304,6 +321,48 @@ async def test_execute_tool_call_clears_terminal_guard_on_expected_tool(tmp_path
     assert result.is_error is False
     assert context.tool_metadata is not None
     assert context.tool_metadata.get("_required_next_tool") is None
+
+
+@pytest.mark.asyncio
+async def test_execute_tool_call_strips_runtime_control_fields_for_foreground_tools(
+    tmp_path: Path,
+):
+    registry = _make_registry(StrictEchoTool())
+    client = FakeApiClient([_text_reply()])
+    context = _make_context(client, registry, tmp_path)
+
+    result = await _execute_tool_call(
+        context,
+        "strict_echo",
+        "tool-1",
+        {
+            "message": "hi",
+            "task_note": "model-facing background note",
+            "background": False,
+        },
+    )
+
+    assert result.is_error is False
+    assert json.loads(result.content) == {"echoed": "hi"}
+
+
+def test_background_schema_decorator_skips_terminal_tools():
+    registry = _make_registry(EchoTool(), SubmitPlanTool())
+    schemas = decorate_schemas_for_background(
+        registry,
+        registry.to_api_schema(),
+        terminal_tools={"submit_plan"},
+    )
+
+    by_name = {schema["name"]: schema for schema in schemas}
+    echo_schema = by_name["echo"]["input_schema"]
+    submit_schema = by_name["submit_plan"]["input_schema"]
+
+    assert "task_note" in echo_schema["properties"]
+    assert "task_note" in echo_schema["required"]
+    assert "task_note" not in submit_schema["properties"]
+    assert "task_note" not in submit_schema.get("required", [])
+    assert "background" not in submit_schema["properties"]
 
 
 # ---------------------------------------------------------------------------

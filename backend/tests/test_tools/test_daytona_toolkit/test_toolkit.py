@@ -102,7 +102,7 @@ def test_toolkit_instructions_prioritize_ci_before_raw_file_reads():
     assert "Use CI/navigation tools first" in tk.instructions
     assert "after CI/search narrowed the target" in tk.instructions
     assert "Use exactly one mode" in tk.instructions
-    assert "do not append `2>&1`" in tk.instructions
+    assert "do not append stdout/stderr capture plumbing" in tk.instructions
 
 
 # ---------------------------------------------------------------------------

@@ -13,6 +13,7 @@ from tools.daytona_toolkit import codeact_tool as codeact_tool_module
 from tools.daytona_toolkit.codeact_tool import (
     _build_exec_command,
     _build_wrapper,
+    _normalize_team_shell_command,
     daytona_codeact,
 )
 from tools.daytona_toolkit.codeact_transaction import (
@@ -27,6 +28,10 @@ pytestmark = pytest.mark.asyncio
 
 def _ctx(metadata=None) -> ToolExecutionContext:
     return ToolExecutionContext(cwd=Path("/tmp"), metadata=metadata or {})
+
+
+def _ci_service():
+    return object()
 
 
 def _make_manifest(
@@ -201,6 +206,7 @@ async def test_build_wrapper_uses_write_through_and_guarded_imports():
         "write('file.txt', 'ok')",
         run_id="abcd1234",
         cwd="/repo",
+        repo_root="/repo",
         enforce_team_shell_policy=True,
     )
     assert 'with open(resolved, "w", encoding="utf-8")' in wrapper
@@ -215,7 +221,18 @@ async def test_build_exec_command_runs_wrapper_from_repo_cwd():
     assert 'cd "/repo" && python3 /tmp/codeact-wrapper-abcd1234.py' in command
 
 
-async def test_shell_mode_runs_command_directly():
+async def test_normalize_team_shell_command_strips_repo_cd_and_capture_plumbing():
+    command, warnings = _normalize_team_shell_command(
+        "cd /testbed && pytest dask/tests/test_cli.py -q 2>&1 | head -100",
+        repo_root="/testbed",
+    )
+
+    assert command == "pytest dask/tests/test_cli.py -q | head -100"
+    assert any("cd <repo-root>" in warning for warning in warnings)
+    assert any("2>&1" in warning for warning in warnings)
+
+
+async def test_shell_mode_requires_ci_service():
     sb = _make_sandbox(exec_stdout=_shell_exec_output("LIVE_BASH_OK", 0))
     ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/repo"})
 
@@ -224,16 +241,36 @@ async def test_shell_mode_runs_command_directly():
         ctx,
     )
 
+    assert result.is_error
+    assert "Code intelligence/OCC is unavailable" in result.output
+    assert result.metadata["occ_required"] is True
+
+
+async def test_shell_mode_with_ci_uses_transaction_outside_team(monkeypatch):
+    sb = _make_sandbox(exec_stdout=_shell_exec_output("LIVE_BASH_OK", 0))
+    ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/repo", "ci_service": _ci_service()})
+    collect_changes, commit_changes, cleanup = _patch_coordinated_transaction(monkeypatch, sb)
+    collect_changes.return_value = []
+    commit_changes.return_value = CommitReport()
+
+    result = await daytona_codeact.execute(
+        daytona_codeact.input_model(command="echo LIVE_BASH_OK", timeout=25),
+        ctx,
+    )
+
     data = _assert_ok(result)
     assert data["status"] == "ok"
-    assert data["shells_run"] == 1
     assert data["files_written"] == 0
     assert "LIVE_BASH_OK" in data["shell_outputs"][0]["stdout"]
+    collect_changes.assert_awaited_once()
+    commit_changes.assert_awaited_once()
+    cleanup.assert_awaited_once()
 
 
-async def test_shell_mode_reports_nonzero_exit_as_error():
+async def test_shell_mode_reports_nonzero_exit_as_error(monkeypatch):
     sb = _make_sandbox(exec_stdout=_shell_exec_output("cat: missing", 1))
-    ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/repo"})
+    ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/repo", "ci_service": _ci_service()})
+    collect_changes, commit_changes, cleanup = _patch_coordinated_transaction(monkeypatch, sb)
 
     result = await daytona_codeact.execute(
         daytona_codeact.input_model(command="cat /missing"),
@@ -244,6 +281,9 @@ async def test_shell_mode_reports_nonzero_exit_as_error():
     data = json.loads(result.output)
     assert data["status"] == "error"
     assert data["shells_run"] == 1
+    collect_changes.assert_not_awaited()
+    commit_changes.assert_not_awaited()
+    cleanup.assert_awaited_once()
 
 
 async def test_coordinated_shell_without_changes_uses_transaction(monkeypatch):
@@ -254,6 +294,7 @@ async def test_coordinated_shell_without_changes_uses_transaction(monkeypatch):
             "daytona_cwd": "/repo",
             "agent_name": "developer",
             "team_mode_enabled": True,
+            "ci_service": _ci_service(),
         }
     )
     tx = _tx()
@@ -293,6 +334,7 @@ async def test_coordinated_mutating_shell_uses_transaction(monkeypatch):
             "daytona_cwd": "/repo",
             "agent_name": "developer",
             "team_mode_enabled": True,
+            "ci_service": _ci_service(),
         }
     )
     tx = _tx()
@@ -352,6 +394,7 @@ async def test_coordinated_shell_skips_commit_on_command_failure(monkeypatch):
             "daytona_cwd": "/repo",
             "agent_name": "developer",
             "team_mode_enabled": True,
+            "ci_service": _ci_service(),
         }
     )
     tx = _tx()
@@ -385,11 +428,14 @@ async def test_coordinated_shell_skips_commit_on_command_failure(monkeypatch):
     cleanup.assert_awaited_once()
 
 
-async def test_python_mode_preserves_script_stdout_before_manifest_line():
+async def test_python_mode_preserves_script_stdout_before_manifest_line(monkeypatch):
     manifest = _make_manifest()
     exec_stdout = 'hello from codeact\n{"manifest": "/tmp/codeact-xxx.json", "status": "ok"}'
     sb = _make_sandbox(exec_stdout=exec_stdout, manifest=manifest)
-    ctx = _ctx({"daytona_sandbox": sb})
+    ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/repo", "ci_service": _ci_service()})
+    collect_changes, commit_changes, cleanup = _patch_coordinated_transaction(monkeypatch, sb)
+    collect_changes.return_value = []
+    commit_changes.return_value = CommitReport()
 
     result = await daytona_codeact.execute(
         daytona_codeact.input_model(code="print('hello from codeact')"),
@@ -398,9 +444,10 @@ async def test_python_mode_preserves_script_stdout_before_manifest_line():
 
     data = _assert_ok(result)
     assert data["script_stdout"] == "hello from codeact"
+    cleanup.assert_awaited_once()
 
 
-async def test_python_mode_counts_coalesced_write_through_paths():
+async def test_python_mode_counts_transaction_committed_files(monkeypatch):
     manifest = _make_manifest(
         writes=[
             {"path": "/repo/a.py", "content": "a = 1\n"},
@@ -409,7 +456,18 @@ async def test_python_mode_counts_coalesced_write_through_paths():
         ]
     )
     sb = _make_sandbox(manifest=manifest)
-    ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/repo"})
+    ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/repo", "ci_service": _ci_service()})
+    collect_changes, commit_changes, cleanup = _patch_coordinated_transaction(monkeypatch, sb)
+    collect_changes.return_value = [
+        RepoChange(path="a.py", status="modified", base_content="a = 1\n", final_content="a = 2\n"),
+        RepoChange(path="b.py", status="created", base_content=None, final_content="b = 1\n"),
+    ]
+    commit_changes.return_value = CommitReport(
+        committed=[
+            FileCommitResult(path="a.py", status="ok"),
+            FileCommitResult(path="b.py", status="ok"),
+        ]
+    )
 
     result = await daytona_codeact.execute(
         daytona_codeact.input_model(code="write('a.py', 'a = 2\\n')"),
@@ -419,16 +477,18 @@ async def test_python_mode_counts_coalesced_write_through_paths():
     data = _assert_ok(result)
     assert data["files_written"] == 2
     assert sb.fs.upload_file.call_count == 1
+    cleanup.assert_awaited_once()
 
 
-async def test_python_mode_error_uses_updated_guidance():
+async def test_python_mode_error_uses_updated_guidance(monkeypatch):
     error_result = json.dumps({"manifest": "/tmp/xxx.json", "status": "error"})
     manifest = _make_manifest(
         status="error",
         error="ImportError: import 'subprocess' is blocked in codeact.",
     )
     sb = _make_sandbox(exec_stdout=error_result, manifest=manifest)
-    ctx = _ctx({"daytona_sandbox": sb})
+    ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/repo", "ci_service": _ci_service()})
+    collect_changes, commit_changes, cleanup = _patch_coordinated_transaction(monkeypatch, sb)
 
     result = await daytona_codeact.execute(
         daytona_codeact.input_model(code="raise RuntimeError('boom')"),
@@ -438,6 +498,9 @@ async def test_python_mode_error_uses_updated_guidance():
     assert result.is_error
     assert "ImportError" in result.output
     assert "daytona_codeact(command=" in result.output
+    collect_changes.assert_not_awaited()
+    commit_changes.assert_not_awaited()
+    cleanup.assert_awaited_once()
 
 
 def _patch_coordinated_transaction(monkeypatch, sb):
@@ -476,12 +539,6 @@ def _patch_coordinated_transaction(monkeypatch, sb):
             "os.system",
             True,
         ),
-        (
-            "shell('pytest -q 2>&1')",
-            "RuntimeError: CodeAct policy error: do not append `2>&1`; stdout/stderr are already captured.",
-            "2>&1",
-            False,
-        ),
     ],
 )
 async def test_coordinated_python_mode_enforces_runtime_shell_policy(
@@ -502,6 +559,7 @@ async def test_coordinated_python_mode_enforces_runtime_shell_policy(
             "daytona_cwd": "/repo",
             "agent_name": "developer",
             "team_mode_enabled": True,
+            "ci_service": _ci_service(),
         }
     )
     collect_changes, commit_changes, cleanup = _patch_coordinated_transaction(monkeypatch, sb)
@@ -521,24 +579,31 @@ async def test_coordinated_python_mode_enforces_runtime_shell_policy(
     sb.fs.upload_file.assert_awaited_once()
 
 
-async def test_shell_mode_blocks_stderr_merge_for_team_agents():
-    sb = _make_sandbox()
+async def test_shell_mode_normalizes_stderr_merge_for_team_agents(monkeypatch):
+    sb = _make_sandbox(exec_stdout=_shell_exec_output("ok", 0))
     ctx = _ctx(
         {
             "daytona_sandbox": sb,
+            "daytona_cwd": "/testbed",
             "agent_name": "developer",
             "team_mode_enabled": True,
+            "ci_service": _ci_service(),
         }
     )
+    collect_changes, commit_changes, cleanup = _patch_coordinated_transaction(monkeypatch, sb)
+    collect_changes.return_value = []
+    commit_changes.return_value = CommitReport()
 
     result = await daytona_codeact.execute(
-        daytona_codeact.input_model(command="pytest tests/unit/test_x.py -q 2>&1"),
+        daytona_codeact.input_model(command="cd /testbed && pytest tests/unit/test_x.py -q 2>&1"),
         ctx,
     )
 
-    assert result.is_error
-    assert "2>&1" in result.output
-    sb.process.exec.assert_not_called()
+    data = _assert_ok(result)
+    assert data["shell_outputs"][0]["command"] == "pytest tests/unit/test_x.py -q"
+    assert any("2>&1" in warning for warning in data["warnings"])
+    assert any("cd <repo-root>" in warning for warning in data["warnings"])
+    cleanup.assert_awaited_once()
 
 
 async def test_coordinated_python_mode_uses_transaction_and_surfaces_report(monkeypatch):
@@ -554,6 +619,7 @@ async def test_coordinated_python_mode_uses_transaction_and_surfaces_report(monk
             "daytona_cwd": "/repo",
             "agent_name": "developer",
             "team_mode_enabled": True,
+            "ci_service": _ci_service(),
         }
     )
     tx = _tx()
@@ -619,6 +685,7 @@ async def test_coordinated_python_mode_does_not_commit_on_wrapper_error(monkeypa
             "daytona_cwd": "/repo",
             "agent_name": "developer",
             "team_mode_enabled": True,
+            "ci_service": _ci_service(),
         }
     )
     tx = _tx()

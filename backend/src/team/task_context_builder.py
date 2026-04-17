@@ -4,13 +4,17 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from code_intelligence.editing.change_labels import change_actor_label
 from team._path_utils import ScopePath
 from team.models import Note, Task
 from team.note_manager import NoteManager
+
+if TYPE_CHECKING:
+    from team.persistence.task_store import TaskStore
 
 logger = logging.getLogger("team.task_center")
 
@@ -35,8 +39,8 @@ class TaskContextBuilder:
         *,
         team_run_id: str,
         notes: NoteManager,
-        get_task_fn: Callable[[str], Any] | None = None,
-        task_store: Any = None,
+        get_task_fn: Callable[[str], Awaitable[Task | None]] | None = None,
+        task_store: "TaskStore | None" = None,
         arbiter: Any = None,
     ) -> None:
         self._team_run_id = team_run_id
@@ -157,7 +161,7 @@ class TaskContextBuilder:
             return []
         parent_ids: list[str] = []
         seen: set[str] = set()
-        current_id = task.parent_id
+        current_id: str | None = task.parent_id
         while current_id and current_id not in seen:
             parent_ids.append(current_id)
             seen.add(current_id)

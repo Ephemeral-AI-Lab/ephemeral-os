@@ -4,18 +4,19 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 import shlex
 import subprocess
 import threading
 import time
 from collections import OrderedDict
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from tools.daytona_toolkit._daytona_utils import (
-    _build_write_text_file_command,
     _extract_exit_code,
     _wrap_bash_command,
 )
@@ -44,6 +45,7 @@ from code_intelligence.types import (
 )
 
 logger = logging.getLogger(__name__)
+_SANDBOX_PYTHON_CONCURRENCY_ENV = "CI_LSP_SANDBOX_PYTHON_CONCURRENCY"
 
 _LANGUAGE_BY_EXTENSION = {
     ".py": "python",
@@ -52,6 +54,14 @@ _LANGUAGE_BY_EXTENSION = {
     ".ts": "typescript",
     ".tsx": "typescript",
 }
+
+
+def _sandbox_python_concurrency() -> int:
+    raw = os.environ.get(_SANDBOX_PYTHON_CONCURRENCY_ENV, "8").strip()
+    try:
+        return max(1, int(raw))
+    except ValueError:
+        return 8
 
 
 @dataclass
@@ -63,6 +73,15 @@ class _CacheEntry:
 
 
 @dataclass
+class _InflightQuery:
+    """One in-progress cached query shared by concurrent callers."""
+
+    event: threading.Event
+    result: Any = None
+    error: BaseException | None = None
+
+
+@dataclass
 class LspTelemetry:
     """LSP client telemetry."""
 
@@ -70,6 +89,9 @@ class LspTelemetry:
     errors: int = 0
     successes: int = 0
     cache_hits: int = 0
+    script_runs: int = 0
+    script_successes: int = 0
+    script_errors: int = 0
     worker_successes: int = 0
     worker_fallbacks: int = 0
     worker_errors: int = 0
@@ -93,8 +115,10 @@ class LspClient:
         self._cache_lock = threading.Lock()
         self._counter_lock = threading.Lock()
         self._line_cache_lock = threading.Lock()
+        self._sandbox_python_exec_sem = threading.Semaphore(_sandbox_python_concurrency())
 
         self._cache: OrderedDict[str, _CacheEntry] = OrderedDict()
+        self._inflight: dict[str, _InflightQuery] = {}
         self._line_cache: OrderedDict[tuple[str, int], str | None] = OrderedDict()
         self._telemetry = LspTelemetry()
         self._py_available: bool | None = None
@@ -177,7 +201,7 @@ class LspClient:
             stale = [key for key in self._line_cache if key[0] == resolved_path]
             for key in stale:
                 del self._line_cache[key]
-        client = self._get_worker()
+        client = self._existing_worker()
         if client is None:
             return
         try:
@@ -195,20 +219,28 @@ class LspClient:
         if worker is not None:
             worker.shutdown()
 
-    def ensure_ready(self, *, install_missing: bool = False) -> dict[str, bool]:
+    def ensure_ready(
+        self,
+        *,
+        install_missing: bool = False,
+        languages: Sequence[str] | None = None,
+    ) -> dict[str, bool]:
         """Check which language backends are available.
 
         When attached to a sandbox, optionally install bounded missing
-        dependencies so CI can recover from a cold image.
+        dependencies so CI can recover from a cold image. ``languages``
+        scopes the probe so Python-only CI flows do not pay for unrelated
+        TypeScript process startup.
         """
-        if self._py_available is None:
+        targets = _readiness_targets(languages)
+        if "python" in targets and self._py_available is None:
             self._py_available = self._check_python_backend()
-        if self._ts_available is None:
+        if "typescript" in targets and self._ts_available is None:
             self._ts_available = self._check_typescript_backend()
         if install_missing and self._sandbox:
-            if not self._py_available:
+            if "python" in targets and not self._py_available:
                 self._py_available = self._install_python_backend()
-            if not self._ts_available:
+            if "typescript" in targets and not self._ts_available:
                 self._ts_available = self._install_typescript_backend()
         return {"python": self._py_available or False, "typescript": self._ts_available or False}
 
@@ -225,6 +257,9 @@ class LspClient:
                 errors=self._telemetry.errors,
                 successes=self._telemetry.successes,
                 cache_hits=self._telemetry.cache_hits,
+                script_runs=self._telemetry.script_runs,
+                script_successes=self._telemetry.script_successes,
+                script_errors=self._telemetry.script_errors,
                 worker_successes=self._telemetry.worker_successes,
                 worker_fallbacks=self._telemetry.worker_fallbacks,
                 worker_errors=self._telemetry.worker_errors,
@@ -233,8 +268,14 @@ class LspClient:
     @property
     def connected(self) -> bool:
         """Whether at least one language backend is available."""
-        status = self.ensure_ready()
-        return any(status.values())
+        status = self.ensure_ready(languages=("python",))
+        return bool(status.get("python") or self._ts_available)
+
+    @property
+    def worker_active(self) -> bool:
+        """Whether a persistent Jedi worker has been created for this client."""
+        with self._worker_lock:
+            return self._worker is not None
 
     # -- Language-specific queries --------------------------------------------
 
@@ -368,6 +409,11 @@ class LspClient:
                         self._workspace_root,
                         sandbox=self._sandbox,
                     )
+            return self._worker
+
+    def _existing_worker(self) -> BaseJediWorkerClient | None:
+        """Return the current worker without creating one."""
+        with self._worker_lock:
             return self._worker
 
     def _try_worker(self, op: str, args: dict[str, Any]) -> tuple[bool, Any]:
@@ -603,40 +649,30 @@ class LspClient:
     def _run_python_script(self, script: str) -> str:
         """Run a Python script locally or in the sandbox.
 
-        For sandbox execution, the script is written to a temp file first
-        because ``python3 -c {script!r}`` breaks multi-line scripts: repr
-        escapes newlines to literal ``\\n`` which the shell passes as-is,
-        causing Python to see a single line with literal backslash-n.
+        For sandbox execution, a quoted heredoc keeps this to one
+        ``process.exec`` while preserving the script's real newlines.
         """
+        self._record_script_run()
         try:
             if self._sandbox:
-                import hashlib
-                tag = hashlib.md5(script.encode(), usedforsecurity=False).hexdigest()[:8]
-                remote_path = f"/tmp/_lsp_query_{tag}.py"
-                try:
-                    run_sync(self._sandbox.process.exec(
-                        _wrap_bash_command(_build_write_text_file_command(remote_path, script)),
-                        timeout=5,
-                    ))
-                except Exception:
-                    run_sync(self._sandbox.process.exec(
-                        f"printf %s {shlex.quote(script)} > {shlex.quote(remote_path)}",
-                        timeout=5,
-                    ))
-                cmd = f"python3 {shlex.quote(remote_path)}"
-                response = run_sync(
-                    self._sandbox.process.exec(
-                        cmd,
-                        timeout=int(LSP_QUERY_TIMEOUT),
+                marker = "__EOS_LSP_SCRIPT__"
+                while f"\n{marker}\n" in script:
+                    marker += "_"
+                cmd = f"python3 - <<'{marker}'\n{script}\n{marker}"
+                with self._sandbox_python_exec_sem:
+                    response = run_sync(
+                        self._sandbox.process.exec(
+                            _wrap_bash_command(cmd),
+                            timeout=int(LSP_QUERY_TIMEOUT),
+                        )
                     )
-                )
                 result = response.result or ""
                 result, exit_code = _extract_exit_code(
                     result,
                     fallback_exit_code=getattr(response, "exit_code", None),
                 )
                 if exit_code not in (0, None):
-                    raise RuntimeError(result or f"python3 {remote_path} failed")
+                    raise RuntimeError(result or "sandbox python LSP query failed")
             else:
                 proc = subprocess.run(
                     [__import__("sys").executable, "-c", script],
@@ -647,9 +683,11 @@ class LspClient:
                 )
                 result = proc.stdout
             self._record_success()
+            self._record_script_success()
             return result.strip()
         except Exception as e:
             self._record_error()
+            self._record_script_error()
             logger.debug("LSP Python query failed: %s", e)
             return ""
 
@@ -727,11 +765,43 @@ class LspClient:
         if cached is not None:
             return cached
 
-        result = loader()
-        should_cache = True if cache_when is None else cache_when(result)
-        if should_cache:
-            self._put_cached(key, result)
-        return result
+        with self._cache_lock:
+            inflight = self._inflight.get(key)
+            if inflight is None:
+                inflight = _InflightQuery(event=threading.Event())
+                self._inflight[key] = inflight
+                owner = True
+            else:
+                owner = False
+
+        if not owner:
+            inflight.event.wait()
+            if inflight.error is not None:
+                raise inflight.error
+            return inflight.result
+
+        try:
+            result = loader()
+            should_cache = True if cache_when is None else cache_when(result)
+            with self._cache_lock:
+                if should_cache:
+                    self._cache[key] = _CacheEntry(
+                        result=result,
+                        expires_at=time.time() + self._cache_ttl,
+                    )
+                    self._cache.move_to_end(key)
+                    while len(self._cache) > self._cache_max:
+                        self._cache.popitem(last=False)
+                inflight.result = result
+            return result
+        except BaseException as exc:
+            with self._cache_lock:
+                inflight.error = exc
+            raise
+        finally:
+            with self._cache_lock:
+                self._inflight.pop(key, None)
+                inflight.event.set()
 
     def _get_cached(self, key: str) -> Any:
         with self._cache_lock:
@@ -744,16 +814,6 @@ class LspClient:
             if entry:
                 del self._cache[key]
         return None
-
-    def _put_cached(self, key: str, result: Any) -> None:
-        with self._cache_lock:
-            self._cache[key] = _CacheEntry(
-                result=result,
-                expires_at=time.time() + self._cache_ttl,
-            )
-            self._cache.move_to_end(key)
-            while len(self._cache) > self._cache_max:
-                self._cache.popitem(last=False)
 
     # -- Telemetry ------------------------------------------------------------
 
@@ -768,6 +828,18 @@ class LspClient:
     def _record_error(self) -> None:
         with self._counter_lock:
             self._telemetry.errors += 1
+
+    def _record_script_run(self) -> None:
+        with self._counter_lock:
+            self._telemetry.script_runs += 1
+
+    def _record_script_success(self) -> None:
+        with self._counter_lock:
+            self._telemetry.script_successes += 1
+
+    def _record_script_error(self) -> None:
+        with self._counter_lock:
+            self._telemetry.script_errors += 1
 
     def _record_worker_success(self) -> None:
         with self._counter_lock:
@@ -793,6 +865,12 @@ class LspClient:
             return json.loads(payload)
         except json.JSONDecodeError:
             return None
+
+
+def _readiness_targets(languages: Sequence[str] | None) -> set[str]:
+    if languages is None:
+        return {"python", "typescript"}
+    return {str(language).strip().lower() for language in languages if str(language).strip()}
 
 
 def _coerce_symbol_kind(raw_kind: Any) -> SymbolKind:

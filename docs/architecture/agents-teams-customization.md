@@ -259,7 +259,7 @@ Three distinct layers orchestrate the transition from disk/database to runtime e
 | **Agent Definition** | In-memory registry (`_DEFINITIONS` dict) | Database table `agent_definitions` |
 | **Team Definition** | In-memory registry | Database table `team_definitions` |
 | **Run Execution** | Task graph snapshot | `team_runs`, `tasks`, `agent_runs` rows |
-| **Briefing/Notes** | Task Center in-memory cache | Note records in `team_runs` (persisted asynchronously) |
+| **Task Notes** | Task Center in-memory cache | Note records in `team_runs` (persisted asynchronously) |
 
 ---
 

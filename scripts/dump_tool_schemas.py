@@ -19,6 +19,7 @@ if str(_BACKEND_SRC) not in sys.path:
 if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
+from tools.core.base import decorate_schemas_for_background
 from tools.core.schema_summary import collect_schema_toolkits, format_tool_schema_summary
 from engine.runtime.agent import _build_agent_tool_registry, finalize_tool_registry_and_prompt
 from prompt_helpers import (
@@ -41,6 +42,40 @@ def _member_roles(roster: dict[str, list[str]], entry_planner: str) -> dict[str,
     if entry_planner and entry_planner not in members:
         members[entry_planner] = ["planner"]
     return members
+
+
+def _format_effective_provider_schema_controls(
+    registry,
+    *,
+    terminal_tools: set[str],
+    has_background_tools: bool,
+) -> str:
+    schemas = registry.to_api_schema()
+    if has_background_tools:
+        schemas = decorate_schemas_for_background(
+            registry,
+            schemas,
+            terminal_tools=terminal_tools,
+        )
+    lines = ["  effective_provider_schema_controls:"]
+    for schema in schemas:
+        name = str(schema.get("name") or "")
+        input_schema = schema.get("input_schema") or {}
+        properties = input_schema.get("properties") or {}
+        required = input_schema.get("required") or []
+        control_fields = [
+            field for field in ("task_note", "background") if field in properties
+        ]
+        if name in terminal_tools or control_fields:
+            lines.append(
+                "    - "
+                f"{name}: fields={', '.join(properties) or '(none)'}; "
+                f"required={', '.join(required) or '(none)'}; "
+                f"control_fields={', '.join(control_fields) or '(none)'}"
+            )
+    if len(lines) == 1:
+        lines.append("    (none)")
+    return "\n".join(lines)
 
 
 def _role_visibility_summary(
@@ -78,7 +113,7 @@ def _role_visibility_summary(
         terminal_tools = resolve_terminal_tools_for_role(team_def, getattr(agent_def, "role", None))
         config = SimpleNamespace(cwd=str(cwd))
         registry = _build_agent_tool_registry(config, agent_def, sandbox_id, agent_def.name)
-        finalize_tool_registry_and_prompt(
+        _, has_background_tools = finalize_tool_registry_and_prompt(
             registry,
             "",
             can_spawn_subagents=agent_def.can_spawn_subagents,
@@ -86,6 +121,7 @@ def _role_visibility_summary(
             blocked_tools=agent_def.blocked_tools,
             terminal_tools=terminal_tools,
         )
+        terminal_tool_names = set(terminal_tools)
         tool_names = sorted(tool.name for tool in registry.list_tools())
         for tool_name in exposure:
             if tool_name in tool_names:
@@ -97,6 +133,11 @@ def _role_visibility_summary(
                 f"  agent_role: {agent_def.role or ''}",
                 f"  terminal_tools: {', '.join(sorted(terminal_tools)) or '(none)'}",
                 f"  visible_tools: {', '.join(tool_names) or '(none)'}",
+                _format_effective_provider_schema_controls(
+                    registry,
+                    terminal_tools=terminal_tool_names,
+                    has_background_tools=has_background_tools,
+                ),
                 format_tool_schema_summary(
                     registry.list_toolkits(),
                     include_descriptions=include_descriptions,

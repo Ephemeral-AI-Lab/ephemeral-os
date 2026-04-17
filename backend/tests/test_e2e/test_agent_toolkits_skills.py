@@ -386,6 +386,7 @@ class TestChatSkillAwareness:
 
         assert "<Available Skills>" in system_prompt
         assert "team-planner-playbook" in system_prompt
+        assert "plan-json-contract" in system_prompt
 
     def test_agent_without_skills_no_skills_section(self, app_client):
         client, mock_client = app_client

@@ -19,6 +19,7 @@ Use this reference immediately before calling `submit_plan(...)`.
 ## Workflow
 
 - For planner submissions, call `submit_plan(new_tasks=[...])`.
+- The only top-level keys are `new_tasks` and optional string `output`. Do not include `task_note`, `background`, `parent_id`, `rationale`, or `output: null`.
 - Each `new_tasks` item must follow the runtime shape: `id`, `name`, `spec`, `deps`, `scope_paths`.
 - Finish the benchmark-surface ledger, deps, and task prose before loading this reference.
 - After this reference loads, the very next action must be calling `submit_plan(new_tasks=[...])`. Do not make any more non-submission tool calls in the main loop after this reference loads.
@@ -28,7 +29,7 @@ Use this reference immediately before calling `submit_plan(...)`.
 - Must keep `deps` as a top-level item field.
 - Must emit each `id` only once.
 - The `spec` field is the agent's sole briefing. Put exact owner, failure target, and recovery question there.
-- Format every `spec` with these sections in order: `Goal`, `Environment`, `Scope`, `Context`, `Acceptance Criteria`.
+- Format every `spec` with numbered colon labels in this exact order: `1. Goal:`, `2. Environment:`, `3. Scope:`, `4. Context:`, `5. Acceptance Criteria:`. Do not use Markdown headings like `## Goal`.
 - Use exact live-confirmed or explorer-confirmed paths in `scope_paths`; if the exact owner is still uncertain, keep the broader boundary and assign it to `team_planner`.
 - Keep at most one terminal validator in a submitted plan.
 - Before loading this reference, confirm that the terminal validator depends on every terminal non-validator sibling. Do not learn that from a submit error.
@@ -76,6 +77,7 @@ Use this reference immediately before calling `submit_plan(...)`.
     {"id": "dev-hdf", "name": "developer", "deps": [], "scope_paths": ["pkg/io/hdf.py"], "spec": "1. Goal: Restore the shared HDF export in pkg/io/hdf.py and keep verification on the named failing target.\n2. Environment: Use the current repository workspace and team runtime.\n3. Scope: Work in pkg/io/hdf.py and only broaden if live references prove it necessary.\n4. Context: Root planning identified HDF as a direct owner surface.\n5. Acceptance Criteria: Submit a success summary with changed files and verification evidence."},
     {"id": "plan-parquet", "name": "team_planner", "deps": [], "scope_paths": ["pkg/io/parquet/"], "spec": "1. Goal: Decompose the remaining parquet owner surface.\n2. Environment: Use the current repository workspace and team runtime.\n3. Scope: Inspect pkg/io/parquet/ and keep child tasks inside confirmed parquet owners.\n4. Context: Root planning found parquet too broad for one atomic developer lane.\n5. Acceptance Criteria: Submit a valid child plan with concrete deps and scope_paths."},
     {"id": "val-root", "name": "validator", "deps": ["dev-hdf", "plan-parquet"], "scope_paths": ["pkg/io/hdf.py", "pkg/io/parquet/"], "spec": "1. Goal: Run the terminal verification gate for this layer.\n2. Environment: Use the current repository workspace and available CI/test tools.\n3. Scope: Validate HDF and parquet changes covered by upstream tasks.\n4. Context: This validator depends on all terminal non-validator siblings.\n5. Acceptance Criteria: Submit a validation summary with commands run, results, and any remaining failures."}
-  ]
+  ],
+  "output": "Root plan covers the confirmed HDF and parquet owner surfaces plus a terminal validator."
 }
 ```

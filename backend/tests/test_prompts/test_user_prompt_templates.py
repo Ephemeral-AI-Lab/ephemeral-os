@@ -53,6 +53,8 @@ def test_render_user_prompt_template_uses_markdown_file_conditionals() -> None:
     assert "Goal\nImplement retry handling." in rendered
     assert "## scope_paths\n- backend/src/retry.py" in rendered
     assert "## Context from dependencies" not in rendered
+    assert "stdout and stderr are already captured separately" in rendered
+    assert "cd /testbed" in rendered
 
 
 def test_note_taker_prompts_load_from_markdown_file() -> None:
@@ -63,6 +65,9 @@ def test_note_taker_prompts_load_from_markdown_file() -> None:
     assert "Call submit_task_note now" in turn_prompt
     assert edit_prompt.startswith("Please read the frozen conversation snapshot")
     assert "- submit_task_note: Post a Task Center note." in edit_prompt
+    assert "The snapshot is read-only evidence" in edit_prompt
+    assert "Never run diagnostics, tests, sandbox commands, edits" in edit_prompt
+    assert "The snapshot is read-only evidence" in turn_prompt
     assert "post_note" not in edit_prompt
     assert "post_note" not in turn_prompt
 
@@ -215,6 +220,7 @@ async def test_build_query_context_uses_replanner_template_with_failure_context(
     assert "Original task: failed-1" in ctx.user_message
     assert "Failed reason: unit test still fails" in ctx.user_message
     assert "submit_replan(new_tasks=[...], cancel_ids=[...])" in ctx.user_message
+    assert "No two parallel concrete tasks may share a `scope_paths` file" in ctx.user_message
 
 
 @pytest.mark.asyncio

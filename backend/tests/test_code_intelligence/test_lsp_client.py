@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import concurrent.futures
+import threading
+import time
 from types import SimpleNamespace
 
 from code_intelligence.lsp._jedi_worker_client import (
@@ -72,6 +75,27 @@ def test_reset_backend_availability_clears_cached_readiness() -> None:
     assert lsp._ts_available is None
 
 
+def test_cached_query_singleflights_concurrent_misses() -> None:
+    lsp = LspClient(workspace_root="/workspace")
+    calls = 0
+    calls_lock = threading.Lock()
+
+    def loader() -> str:
+        nonlocal calls
+        with calls_lock:
+            calls += 1
+        time.sleep(0.05)
+        return "resolved"
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+        results = list(
+            executor.map(lambda _: lsp._run_cached_query("same-key", loader), range(8))
+        )
+
+    assert results == ["resolved"] * 8
+    assert calls == 1
+
+
 def test_sandbox_read_line_caches_until_invalidate(monkeypatch) -> None:
     monkeypatch.delenv(ENV_FLAG, raising=False)
     calls: list[str] = []
@@ -92,6 +116,26 @@ def test_sandbox_read_line_caches_until_invalidate(monkeypatch) -> None:
 
     assert lsp._read_line("/workspace/pkg/core.py", 1) == "def alpha(value):\n"
     assert len(calls) == 2
+
+
+def test_invalidate_does_not_start_worker(monkeypatch) -> None:
+    monkeypatch.setenv(ENV_FLAG, "1")
+    calls: list[str] = []
+
+    class _SandboxProcess:
+        def exec(self, command: str, timeout: int = 0):
+            calls.append(command)
+            return SimpleNamespace(exit_code=0, result="")
+
+    lsp = LspClient(
+        workspace_root="/workspace",
+        sandbox=SimpleNamespace(process=_SandboxProcess()),
+    )
+
+    lsp.invalidate("/workspace/pkg/core.py")
+
+    assert calls == []
+    assert lsp.worker_active is False
 
 
 def test_worker_telemetry_tracks_success_and_fallback(monkeypatch) -> None:
@@ -166,8 +210,8 @@ def test_resolve_path_no_workspace_root_keeps_relative() -> None:
     assert lsp._resolve_path("dask/core.py") == "dask/core.py"
 
 
-def test_sandbox_exec_writes_script_and_runs_temp_file() -> None:
-    """Verify _run_python_script writes to a temp file before sandbox execution."""
+def test_sandbox_exec_runs_script_with_heredoc() -> None:
+    """Verify _run_python_script preserves newlines without a temp file write."""
     captured_cmds: list[str] = []
 
     class _SandboxProcess:
@@ -180,9 +224,12 @@ def test_sandbox_exec_writes_script_and_runs_temp_file() -> None:
 
     lsp._run_python_script("print('hello')")
 
-    assert len(captured_cmds) == 2
-    assert "/tmp/_lsp_query_" in captured_cmds[0]
-    assert captured_cmds[1].startswith("python3 /tmp/_lsp_query_")
+    assert len(captured_cmds) == 1
+    assert "python3 - <<" in captured_cmds[0]
+    assert "__EOS_LSP_SCRIPT__" in captured_cmds[0]
+    assert "print(" in captured_cmds[0]
+    assert lsp.telemetry.script_runs == 1
+    assert lsp.telemetry.script_successes == 1
 
 
 def test_sandbox_exec_no_cd_without_workspace_root() -> None:
@@ -199,9 +246,48 @@ def test_sandbox_exec_no_cd_without_workspace_root() -> None:
 
     lsp._run_python_script("print('hello')")
 
-    assert len(captured_cmds) == 2
-    assert captured_cmds[1].startswith("python3 /tmp/_lsp_query_")
-    assert "cd " not in captured_cmds[1]
+    assert len(captured_cmds) == 1
+    assert "python3 - <<" in captured_cmds[0]
+    assert "__EOS_LSP_SCRIPT__" in captured_cmds[0]
+    assert "cd " not in captured_cmds[0]
+
+
+def test_ensure_ready_can_probe_only_python_backend() -> None:
+    class _SandboxProcess:
+        def __init__(self) -> None:
+            self.calls: list[str] = []
+
+        def exec(self, command: str, timeout: int = 0):
+            self.calls.append(command)
+            if command == "python3 -c 'import jedi'":
+                return SimpleNamespace(exit_code=0, result="")
+            raise AssertionError(f"unexpected command: {command}")
+
+    process = _SandboxProcess()
+    lsp = LspClient(workspace_root="/workspace", sandbox=SimpleNamespace(process=process))
+
+    readiness = lsp.ensure_ready(languages=("python",))
+
+    assert readiness == {"python": True, "typescript": False}
+    assert process.calls == ["python3 -c 'import jedi'"]
+
+
+def test_connected_does_not_probe_typescript_backend() -> None:
+    class _SandboxProcess:
+        def __init__(self) -> None:
+            self.calls: list[str] = []
+
+        def exec(self, command: str, timeout: int = 0):
+            self.calls.append(command)
+            if command == "python3 -c 'import jedi'":
+                return SimpleNamespace(exit_code=0, result="")
+            raise AssertionError(f"unexpected command: {command}")
+
+    process = _SandboxProcess()
+    lsp = LspClient(workspace_root="/workspace", sandbox=SimpleNamespace(process=process))
+
+    assert lsp.connected is True
+    assert process.calls == ["python3 -c 'import jedi'"]
 
 
 def test_python_hover_uses_resolved_path(monkeypatch) -> None:

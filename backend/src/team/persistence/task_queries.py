@@ -9,10 +9,11 @@ from __future__ import annotations
 
 from collections import defaultdict, deque
 from datetime import datetime, timezone
+from typing import Any, cast as type_cast
 
 from sqlalchemy import Text, cast, delete, func, select, update
 from sqlalchemy.dialects.postgresql import ARRAY
-from sqlalchemy.engine import Row
+from sqlalchemy.engine import CursorResult, Row
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
@@ -22,6 +23,10 @@ from team.persistence.ltree_utils import path_to_ltree
 from team.persistence.task_record import TaskRecord
 
 # ---- reads --------------------------------------------------------------
+
+
+def _rowcount(result: object) -> int:
+    return int(type_cast(CursorResult[Any], result).rowcount or 0)
 
 
 async def fetch_record(
@@ -166,7 +171,7 @@ async def fetch_pending_dependents_for_update(
         .where(
             TaskRecord.team_run_id == team_run_id,
             TaskRecord.status == "pending",
-            TaskRecord.deps.any(dep_id),
+            TaskRecord.deps.contains([dep_id]),
         )
         .with_for_update()
     )
@@ -218,7 +223,7 @@ async def assert_deps_satisfied(
 
 async def fetch_expanded_parent_candidate(
     db: AsyncSession, team_run_id: str, current_id: str
-) -> Row | None:
+) -> Row[Any] | None:
     """Return (id, all_detached) for the parent of ``current_id`` if that parent
     is ``expanded`` and every non-detached child is ``done``. Otherwise None.
     """
@@ -276,7 +281,7 @@ async def fetch_replan_origin(
 
 async def fetch_replan_source(
     db: AsyncSession, team_run_id: str, task_id: str
-) -> Row | None:
+) -> Row[Any] | None:
     stmt = select(
         TaskRecord.id,
         TaskRecord.parent_id,
@@ -429,7 +434,7 @@ async def replace_dependency(
         await db.execute(
             select(TaskRecord.id, TaskRecord.status).where(
                 TaskRecord.team_run_id == team_run_id,
-                TaskRecord.deps.any(old_dep_id),
+                TaskRecord.deps.contains([old_dep_id]),
                 TaskRecord.status != "pending",
             )
         )
@@ -448,7 +453,7 @@ async def replace_dependency(
         update(TaskRecord)
         .where(
             TaskRecord.team_run_id == team_run_id,
-            TaskRecord.deps.any(old_dep_id),
+            TaskRecord.deps.contains([old_dep_id]),
         )
         .values(
             deps=updated_deps,
@@ -584,7 +589,7 @@ async def cancel_statuses(
         )
         .values(status="cancelled", finished_at=func.now(), failure_reason=reason)
     )
-    return result.rowcount or 0
+    return _rowcount(result)
 
 
 async def cancel_by_ids(
@@ -604,7 +609,7 @@ async def cancel_by_ids(
         )
         .values(status="cancelled", finished_at=func.now(), failure_reason=reason)
     )
-    return result.rowcount or 0
+    return _rowcount(result)
 
 
 async def mark_running(
@@ -713,7 +718,7 @@ async def finalize_replanned_origin(
             failure_reason=f"replanned_by:{replanner_task_id}",
         )
     )
-    return result.rowcount or 0
+    return _rowcount(result)
 
 
 async def insert_replanner_record(

@@ -2,15 +2,12 @@
 
 Write-scope was changed from hard-blocking to advisory: developers can write
 outside their assigned scope_paths with a warning instead of an error.
-Validators remain hard-blocked, and test-suite paths are always hard-blocked
-for coordinated agents. The coordination warning gate no longer blocks
-submission.
+Test-suite paths are always hard-blocked for coordinated agents.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
-from types import SimpleNamespace
 
 from tools.core.base import ToolExecutionContext
 from tools.daytona_toolkit._daytona_utils import (
@@ -18,7 +15,6 @@ from tools.daytona_toolkit._daytona_utils import (
     _path_under_write_scope,
     _team_repo_write_error,
     _team_repo_write_warning,
-    is_coordinated_team_agent,
     record_coordination_warning,
 )
 
@@ -127,6 +123,25 @@ def test_write_error_returns_none_for_absolute_path_outside_repo():
     assert result is None
 
 
+def test_write_error_returns_none_for_benchmark_outside_scope():
+    """Benchmark metadata must not make write_scope a hard block."""
+    ctx = _ctx({
+        "agent_name": "developer",
+        "team_mode_enabled": True,
+        "daytona_cwd": "/testbed",
+        "write_scope": ["dask/dataframe/io/hdf.py"],
+        "benchmark_test_ids": ["dask/dataframe/io/tests/test_hdf.py::test_to_hdf"],
+    })
+
+    result = _team_repo_write_error(
+        ctx,
+        "/testbed/dask/_compatibility.py",
+        tool_name="daytona_write_file",
+    )
+
+    assert result is None
+
+
 # ---------------------------------------------------------------------------
 # _team_repo_write_warning: advisory for all out-of-scope writes
 # ---------------------------------------------------------------------------
@@ -144,6 +159,8 @@ def test_write_warning_emitted_for_developer_outside_scope():
     assert result is not None
     assert "advisory" in result
     assert "outside write_scope" in result
+    assert "adjacent shim" not in result
+    assert "submit_task_summary(type='fail')" in result
 
 
 def test_write_warning_none_for_in_scope_write():

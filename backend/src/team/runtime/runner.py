@@ -134,9 +134,9 @@ class TeamAgentRunner:
         # so team tools (submit_plan / submit_replan / submit_task_summary / …)
         # write into the correct slot.
         spawned_meta = agent.query_context.tool_metadata
-        if getattr(spawned_meta, "session_config", None) is not None:
+        if spawned_meta is not None and getattr(spawned_meta, "session_config", None) is not None:
             ctx.tool_metadata.session_config = spawned_meta.session_config
-        sb = getattr(spawned_meta, "sandbox_id", None) or ""
+        sb = getattr(spawned_meta, "sandbox_id", None) if spawned_meta is not None else ""
         if sb:
             ctx.tool_metadata["sandbox_id"] = sb
         ctx.tool_metadata.agent_name = effective_defn.name

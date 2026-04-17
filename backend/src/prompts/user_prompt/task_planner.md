@@ -8,7 +8,7 @@ Please read the following sections and call the listed terminal tool when your w
 2. Analyze the subtask objective, expected outcome, and remaining uncertainty.
 3. Explore only enough to justify concrete child task ownership and scope boundaries.
 4. Draft the child plan and verify dependencies, scope paths, and structured specs.
-5. Submit the final child plan with `submit_plan(new_tasks=[...])`.
+5. Submit the final child plan with `submit_plan(new_tasks=[...])`. Do not include `task_note`, `background`, or any other top-level fields besides `new_tasks` and optional `output`.
 
 ## Assigned planner task
 

@@ -1511,8 +1511,8 @@ class TestOCCEditFlow:
 
         arbiter.release_file_lock("/ws/app.py")
 
-    def test_occ_edit_without_ci_falls_back_to_direct(self):
-        """Without CI service, edit should use direct write (no OCC)."""
+    def test_occ_edit_without_ci_returns_error(self):
+        """Without CI service, edits must fail instead of raw-writing."""
         from tools.daytona_toolkit.edit_tool import daytona_edit_file as _edit_tool
 
         sandbox = _make_mock_sandbox(files={"/ws/app.py": "old"})
@@ -1524,9 +1524,10 @@ class TestOCCEditFlow:
                 ctx,
             )
         )
-        _assert_success(result)
-        assert '"occ": false' in result.output
-        assert sandbox._file_store["/ws/app.py"] == "new"
+        assert result.is_error
+        assert result.metadata["occ_required"] is True
+        assert "Code intelligence/OCC is unavailable" in result.output
+        assert sandbox._file_store["/ws/app.py"] == "old"
 
     def test_sequential_occ_edits_both_succeed(self):
         """Two sequential edits to the same file should both succeed."""

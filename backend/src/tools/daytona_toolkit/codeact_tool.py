@@ -7,13 +7,13 @@ import json
 import re
 import shlex
 import uuid
-from collections import OrderedDict
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 from pydantic.json_schema import GenerateJsonSchema
 
 from tools.core.base import ToolExecutionContext, ToolResult
+from tools.core.ci_runtime import get_ci_service
 from tools.core.decorator import tool
 from tools.daytona_toolkit._daytona_utils import (
     _extract_exit_code,
@@ -38,6 +38,14 @@ from tools.daytona_toolkit.codeact_transaction import (
 _DESTRUCTIVE_GIT_PATTERN = re.compile(
     r"git\s+(stash|reset\s+--hard|checkout\s+--\s|checkout\s+\.\s*$|clean\s+-[fd])",
     flags=re.IGNORECASE,
+)
+_LEADING_CD_PATTERN = re.compile(
+    r"^\s*cd\s+(?P<path>\"[^\"]+\"|'[^']+'|[^\s;&|]+)\s*(?P<sep>&&|;)\s*(?P<rest>.*)$",
+    flags=re.S,
+)
+_STDERR_CAPTURE_PATTERNS = (
+    (re.compile(r"\s+2>\s*&1\b"), "`2>&1`"),
+    (re.compile(r"\s+2>\s*/dev/null\b"), "`2>/dev/null`"),
 )
 
 
@@ -160,6 +168,57 @@ def _destructive_git_command_error(command: str) -> str | None:
     return None
 
 
+def _strip_shell_quotes(value: str) -> str:
+    stripped = value.strip()
+    if len(stripped) >= 2 and stripped[0] == stripped[-1] and stripped[0] in {"'", '"'}:
+        return stripped[1:-1]
+    return stripped
+
+
+def _normalize_team_shell_command(
+    command: str,
+    *,
+    repo_root: str | None,
+) -> tuple[str, list[str]]:
+    """Remove shell fragments that undermine CodeAct's structured execution.
+
+    Coordinated team commands run from a transaction scratch checkout. A leading
+    ``cd <repo_root>`` jumps back to the live checkout and bypasses OCC, so it is
+    redundant at best and unsafe at worst. stderr capture redirects are also
+    redundant because the tool captures stdout/stderr itself.
+    """
+    normalized = command or ""
+    warnings: list[str] = []
+
+    if repo_root:
+        match = _LEADING_CD_PATTERN.match(normalized)
+        if match:
+            cd_path = _strip_shell_quotes(match.group("path"))
+            try:
+                same_root = shlex.quote(cd_path) == shlex.quote(repo_root) or (
+                    cd_path.rstrip("/") == repo_root.rstrip("/")
+                )
+            except Exception:
+                same_root = cd_path.rstrip("/") == repo_root.rstrip("/")
+            if same_root:
+                normalized = match.group("rest").lstrip()
+                warnings.append(
+                    "Removed leading `cd <repo-root>` so the command stays inside "
+                    "the CodeAct transaction workspace."
+                )
+
+    for pattern, label in _STDERR_CAPTURE_PATTERNS:
+        updated = pattern.sub("", normalized)
+        if updated != normalized:
+            normalized = updated
+            warnings.append(
+                f"Removed redundant shell capture plumbing {label}; "
+                "stdout/stderr are already captured separately."
+            )
+
+    return normalized.strip(), warnings
+
+
 def _format_codeact_error(
     *,
     stdout: str,
@@ -183,6 +242,7 @@ import base64, hashlib, importlib, json, os, re, subprocess, traceback
 _RUN_ID = "{run_id}"
 _MANIFEST = {{"reads": [], "writes": [], "shells": [], "status": "ok", "error": ""}}
 _CODEACT_CWD = {codeact_cwd}
+_CODEACT_REPO_ROOT = {codeact_repo_root}
 _ENFORCE_TEAM_SHELL_POLICY = {enforce_team_shell_policy}
 _USER_LOCAL_BIN_EXPORT = 'export PATH="$HOME/.local/bin:$PATH"'
 _PROJECT_VENV_BIN_EXPORT = 'if [ -d .venv/bin ]; then export PATH="$PWD/.venv/bin:$PATH"; fi'
@@ -202,6 +262,14 @@ _DESTRUCTIVE_SHELL_PATTERN = re.compile(
     r"|mkfs\b|dd\s+.*of=/"
     r")",
     flags=re.IGNORECASE,
+)
+_LEADING_CD_PATTERN = re.compile(
+    r"^\s*cd\s+(?P<path>\"[^\"]+\"|'[^']+'|[^\s;&|]+)\s*(?P<sep>&&|;)\s*(?P<rest>.*)$",
+    flags=re.S,
+)
+_STDERR_CAPTURE_PATTERNS = (
+    (re.compile(r"\s+2>\s*&1\b"), "`2>&1`"),
+    (re.compile(r"\s+2>\s*/dev/null\b"), "`2>/dev/null`"),
 )
 
 def _normalize_path(path):
@@ -239,12 +307,37 @@ def _block_shell_command(command, message):
     )
     raise RuntimeError(message)
 
+def _strip_shell_quotes(value):
+    stripped = value.strip()
+    if len(stripped) >= 2 and stripped[0] == stripped[-1] and stripped[0] in {{"'", '"'}}:
+        return stripped[1:-1]
+    return stripped
+
+def _normalize_team_shell_command(command):
+    normalized = command or ""
+    if _CODEACT_REPO_ROOT:
+        match = _LEADING_CD_PATTERN.match(normalized)
+        if match:
+            cd_path = _strip_shell_quotes(match.group("path"))
+            if cd_path.rstrip("/") == str(_CODEACT_REPO_ROOT).rstrip("/"):
+                normalized = match.group("rest").lstrip()
+                _MANIFEST.setdefault("warnings", []).append(
+                    "Removed leading `cd <repo-root>` so the command stays inside "
+                    "the CodeAct transaction workspace."
+                )
+    for pattern, label in _STDERR_CAPTURE_PATTERNS:
+        updated = pattern.sub("", normalized)
+        if updated != normalized:
+            normalized = updated
+            _MANIFEST.setdefault("warnings", []).append(
+                f"Removed redundant shell capture plumbing {{label}}; "
+                "stdout/stderr are already captured separately."
+            )
+    return normalized.strip()
+
 def shell(command, timeout=900):
-    if _ENFORCE_TEAM_SHELL_POLICY and "2>&1" in (command or ""):
-        _block_shell_command(
-            command,
-            "CodeAct policy error: do not append `2>&1`; stdout/stderr are already captured.",
-        )
+    if _ENFORCE_TEAM_SHELL_POLICY:
+        command = _normalize_team_shell_command(command)
     if _DESTRUCTIVE_GIT_PATTERN.search(command or ""):
         _block_shell_command(
             command,
@@ -352,12 +445,14 @@ def _build_wrapper(
     enforce_team_shell_policy: bool,
     run_id: str,
     cwd: str | None,
+    repo_root: str | None,
 ) -> str:
     code_b64 = base64.b64encode(code.encode("utf-8")).decode("ascii")
     return _WRAPPER_TEMPLATE.format(
         run_id=run_id,
         code_b64=code_b64,
         codeact_cwd=json.dumps(cwd) if cwd else "None",
+        codeact_repo_root=json.dumps(repo_root) if repo_root else "None",
         enforce_team_shell_policy="True" if enforce_team_shell_policy else "False",
     )
 
@@ -367,18 +462,6 @@ def _build_exec_command(script_path: str, *, cwd: str | None) -> str:
     if cwd:
         command = f"cd {json.dumps(cwd)} && {command}"
     return _wrap_bash_command(command)
-
-
-def _coalesce_manifest_writes(writes: list[dict[str, object]]) -> list[str]:
-    final_writes: OrderedDict[str, None] = OrderedDict()
-    for item in writes:
-        path = str(item.get("path", "") or "")
-        if not path:
-            continue
-        if path in final_writes:
-            del final_writes[path]
-        final_writes[path] = None
-    return list(final_writes.keys())
 
 
 def _resolve_mode(
@@ -543,6 +626,7 @@ async def _execute_python_wrapper(
     *,
     code: str,
     cwd: str | None,
+    repo_root: str | None,
     enforce_team_shell_policy: bool,
 ) -> tuple[str | None, object, ToolResult | None]:
     run_id = uuid.uuid4().hex[:8]
@@ -550,6 +634,7 @@ async def _execute_python_wrapper(
         code,
         run_id=run_id,
         cwd=cwd,
+        repo_root=repo_root,
         enforce_team_shell_policy=enforce_team_shell_policy,
     )
     script_path = f"/tmp/codeact-wrapper-{run_id}.py"
@@ -590,6 +675,17 @@ def _shell_error_result(message: str) -> ToolResult:
     return ToolResult(output=message, is_error=True)
 
 
+def _ci_required_result() -> ToolResult:
+    return ToolResult(
+        output=(
+            "daytona_codeact: Code intelligence/OCC is unavailable. "
+            "Command execution and Python CodeAct are disabled without CI service."
+        ),
+        is_error=True,
+        metadata={"occ_required": True},
+    )
+
+
 def _shell_result_error_detail(shell_result: dict[str, object]) -> str:
     return str(shell_result.get("stderr", "") or shell_result.get("stdout", "") or "")
 
@@ -597,11 +693,7 @@ def _shell_result_error_detail(shell_result: dict[str, object]) -> str:
 async def _open_transaction(
     context: ToolExecutionContext,
     sandbox: object,
-    *,
-    enabled: bool,
 ) -> tuple[object | None, object, ToolResult | None]:
-    if not enabled:
-        return None, sandbox, None
     repo_root, sandbox, root_error = await _resolve_repo_root(context, sandbox)
     if root_error is not None:
         return None, sandbox, root_error
@@ -637,7 +729,10 @@ async def _commit_transaction(
     description=(
         "Execute either Python code or a direct shell command in the Daytona sandbox. "
         "Use `command` for tests, builds, and verification; use `code` for multi-step "
-        "Python with read()/write()/shell() helpers."
+        "Python with read()/write()/shell() helpers. stdout and stderr are already "
+        "captured; do not append shell capture plumbing such as `2>&1` or `2>/dev/null`. "
+        "Coordinated team commands already run from the repo root transaction checkout, "
+        "so do not prefix them with `cd /testbed &&` or another repo-root cd."
     ),
     short_description="Run shell commands or Python in the sandbox.",
     input_model=DaytonaCodeActInput,
@@ -659,30 +754,34 @@ async def daytona_codeact(
 
     assert resolved_mode is not None
 
+    repo_cwd = _get_cwd(context)
+
     if resolved_mode == "shell":
         direct_command = command or ""
+        normalization_warnings: list[str] = []
+        if is_coordinated_team_agent(context):
+            direct_command, normalization_warnings = _normalize_team_shell_command(
+                direct_command,
+                repo_root=repo_cwd,
+            )
         destructive_error = _destructive_git_command_error(direct_command)
         if destructive_error is None:
             destructive_error = destructive_shell_command_error(direct_command)
         if destructive_error is not None:
             return _shell_error_result(destructive_error)
-        if is_coordinated_team_agent(context) and "2>&1" in direct_command:
-            return _shell_error_result(
-                "CodeAct policy error: do not append `2>&1`; stdout/stderr are already captured."
-            )
 
     try:
         sandbox = await _require_sandbox(context)
     except Exception as exc:
         return ToolResult(output=str(exc), is_error=True)
 
-    repo_cwd = _get_cwd(context)
+    if get_ci_service(context) is None:
+        return _ci_required_result()
 
     if resolved_mode == "shell":
         tx, sandbox, tx_error = await _open_transaction(
             context,
             sandbox,
-            enabled=is_coordinated_team_agent(context),
         )
         if tx_error is not None:
             return tx_error
@@ -690,7 +789,7 @@ async def daytona_codeact(
             shell_result, sandbox, tool_error = await _run_shell_with_recovery(
                 context,
                 sandbox,
-                command=command or "",
+                command=direct_command,
                 cwd=tx.scratch_root if tx is not None else repo_cwd,
                 timeout=timeout,
             )
@@ -701,14 +800,15 @@ async def daytona_codeact(
             files_written = 0
             write_errors: list[str] = []
             write_conflicts: list[str] = []
-            warnings: list[str] = []
+            warnings: list[str] = list(normalization_warnings)
             if exit_code == 0:
                 (
                     files_written,
                     write_errors,
                     write_conflicts,
-                    warnings,
+                    commit_warnings,
                 ) = await _commit_transaction(context, sandbox, tx)
+                warnings.extend(commit_warnings)
             return _build_tool_output(
                 context=context,
                 status="ok" if exit_code == 0 and not write_errors else "error",
@@ -727,7 +827,6 @@ async def daytona_codeact(
     tx, sandbox, tx_error = await _open_transaction(
         context,
         sandbox,
-        enabled=is_coordinated_team_agent(context),
     )
     if tx_error is not None:
         return tx_error
@@ -738,6 +837,7 @@ async def daytona_codeact(
             sandbox,
             code=code or "",
             cwd=tx.scratch_root if tx is not None else repo_cwd,
+            repo_root=repo_cwd,
             enforce_team_shell_policy=is_coordinated_team_agent(context),
         )
         if tool_error is not None:
@@ -812,18 +912,19 @@ async def daytona_codeact(
                 },
             )
 
-        files_written = len(_coalesce_manifest_writes(list(manifest.get("writes", []) or [])))
+        files_written = 0
         write_errors: list[str] = []
         write_conflicts: list[str] = []
-        warnings: list[str] = []
+        warnings: list[str] = [str(w) for w in (manifest.get("warnings", []) or [])]
 
         if tx is not None:
             (
                 files_written,
                 write_errors,
                 write_conflicts,
-                warnings,
+                commit_warnings,
             ) = await _commit_transaction(context, sandbox, tx)
+            warnings.extend(commit_warnings)
 
         return _build_tool_output(
             context=context,

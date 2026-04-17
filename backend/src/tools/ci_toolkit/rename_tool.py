@@ -242,7 +242,11 @@ def _perform_rename(
 ) -> ToolResult:
     """Shared body: build a SemanticRenamePlan and dispatch the batch commit."""
     try:
-        plan = svc.rename_symbol_plan(resolved_path, int(line), int(character), new_name)
+        planner = svc.rename_symbol_plan
+        preview_planner = getattr(svc, "preview_rename_symbol_plan", None)
+        if dry_run and callable(preview_planner):
+            planner = preview_planner
+        plan = planner(resolved_path, int(line), int(character), new_name)
     except Exception as exc:  # pragma: no cover - defensive
         logger.debug("rename_symbol_plan raised for %s", resolved_path, exc_info=True)
         return ToolResult(output=f"LSP rename failed: {exc}", is_error=True)

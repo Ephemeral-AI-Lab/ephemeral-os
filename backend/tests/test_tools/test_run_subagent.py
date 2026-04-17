@@ -3,15 +3,11 @@
 from __future__ import annotations
 
 import asyncio
-import json
 from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
 
 from agents import get_definition as get_agent_definition
-from agents.registry import register_definition, unregister_definition
-from agents.types import AgentDefinition
 from engine.runtime.background_tasks import BackgroundTaskManager
 from message.messages import (
     ConversationMessage,
@@ -339,7 +335,7 @@ async def test_run_subagent_rejects_non_subagent_targets_with_plan_guidance(
 
     assert result.is_error is True
     assert "is not a subagent" in result.output
-    assert "emit `developer` / `validator` WorkItems" in result.output
+    assert "emit `developer` / `validator` tasks" in result.output
 
 
 def test_validate_run_subagent_rejects_multi_bucket_scout_bundle():

@@ -11,7 +11,7 @@ Use this skill only for stable benchmark policy. Treat the prompt, payload, live
 
 - Must treat the live sandbox checkout as the source of truth. Must treat named `FAIL_TO_PASS`, `PASS_TO_PASS`, and grading commands as authoritative.
 - Must report a missing named test or node as `benchmark_surface_mismatch`. Must not label a missing transitive import, helper, or adjacent production module as `benchmark_surface_mismatch`.
-- Must keep commands repo-root-relative. Prefer direct `daytona_codeact(command="...", timeout=N)` for repo commands; use `daytona_codeact(code="...")` only for multi-step runtime that truly needs Python helpers. Never prepend guessed `cd /workspace`, `cd /home/user`, use Python process wrappers, or append `2>&1`.
+- Must keep commands repo-root-relative. Prefer direct `daytona_codeact(command="...", timeout=N)` for repo commands; use `daytona_codeact(code="...")` only for multi-step runtime that truly needs Python helpers. Never prepend guessed `cd /testbed`, `cd /workspace`, `cd /home/user`, use Python process wrappers, or append stdout/stderr capture plumbing such as `2>&1` or `2>/dev/null`.
 - Must fix repository code, not the ambient environment. Never rely on ad hoc package installs as the benchmark fix.
 - Must keep roles separate, preserve exact file paths and exact pytest node ids when they are known, and trust live file state over cached briefs or old reasoning.
 - Must treat benchmark test files as failure evidence first, not default implementation ownership, but must not create planner/scout ownership tasks whose scope is benchmark-test archaeology unless the prompt explicitly makes tests the owner surface.

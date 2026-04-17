@@ -33,15 +33,23 @@ from tools.daytona_toolkit.tools import (
 )
 from tools.daytona_toolkit._daytona_utils import (
     _read_text_file_via_exec,
-    _supports_exec_transport,
-    _upload_file_compat,
-    _write_text_file_via_exec,
 )
 from tools.core.decorator import tool
 
 logger = logging.getLogger(__name__)
 
 _OUTPUT_MAX_CHARS = 8000
+
+
+def _occ_required_error(tool_name: str, file_path: str) -> ToolResult:
+    return ToolResult(
+        output=(
+            f"{tool_name}: Code intelligence/OCC is unavailable for edit of {file_path}. "
+            "Direct sandbox write fallback is disabled."
+        ),
+        is_error=True,
+        metadata={"occ_required": True},
+    )
 
 
 class DaytonaEditFileInput(BaseModel):
@@ -229,7 +237,11 @@ async def daytona_edit_file(
     svc = get_ci_service(context)
     refresh_prepared = getattr(svc, "refresh_prepared_write", None) if svc is not None else None
     refresh_supported = callable(refresh_prepared) and type(svc).__module__ != "unittest.mock"
-    if svc is not None and hasattr(svc, "prepare_write"):
+    ci_write_supported = svc is not None and hasattr(svc, "prepare_write")
+    if not ci_write_supported and not dry_run:
+        return _occ_required_error("daytona_edit_file", file_path)
+
+    if ci_write_supported:
         prepare_started = time.perf_counter()
         prepared, scope_packet, err = prepare_ci_write(
             context,
@@ -245,8 +257,12 @@ async def daytona_edit_file(
             )
         if prepared is None:
             return ToolResult(
-                output=f"CI service unavailable for coordinated edit of {file_path}",
+                output=(
+                    f"daytona_edit_file: Code intelligence/OCC did not prepare edit of "
+                    f"{file_path}. Direct sandbox write fallback is disabled."
+                ),
                 is_error=True,
+                metadata={"occ_required": True},
             )
         if not bool(getattr(prepared, "existed", True)):
             abort_ci_write(context, prepared)
@@ -392,53 +408,7 @@ async def daytona_edit_file(
                 },
             },
         )
-    else:
-        # Direct write (no CI)
-        try:
-            try:
-                await _write_text_file_via_exec(sandbox, file_path, new_content)
-            except Exception:
-                if _supports_exec_transport(sandbox):
-                    raise
-                await _upload_file_compat(sandbox, new_content.encode("utf-8"), file_path)
-            scope_warning = _scope_overlap_warning(context, file_path)
-            if scope_warning:
-                warnings.append(scope_warning)
-            tool_timings["tool_total"] = round(time.perf_counter() - tool_started, 6)
-            return _edit_success_result(
-                context=context,
-                file_path=file_path,
-                warnings=warnings,
-                patch_warnings=list(patch_result.warnings),
-                occ=False,
-                timings={"tool": tool_timings},
-            )
-        except Exception as exc:
-            try:
-                sandbox = await _recover_sandbox(context, exc)
-                try:
-                    await _write_text_file_via_exec(sandbox, file_path, new_content)
-                except Exception:
-                    if _supports_exec_transport(sandbox):
-                        raise
-                    await _upload_file_compat(sandbox, new_content.encode("utf-8"), file_path)
-                scope_warning = _scope_overlap_warning(context, file_path)
-                if scope_warning:
-                    warnings.append(scope_warning)
-                tool_timings["tool_total"] = round(time.perf_counter() - tool_started, 6)
-                return _edit_success_result(
-                    context=context,
-                    file_path=file_path,
-                    warnings=warnings,
-                    patch_warnings=list(patch_result.warnings),
-                    occ=False,
-                    timings={"tool": tool_timings},
-                )
-            except Exception as recovery_exc:
-                return ToolResult(
-                    output=_path_error(recovery_exc, file_path) or f"Write failed: {recovery_exc}",
-                    is_error=True,
-                )
+    return _occ_required_error("daytona_edit_file", file_path)
 
 
 def _normalize_edits(

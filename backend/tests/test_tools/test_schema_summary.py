@@ -94,6 +94,22 @@ def test_schema_summary_can_include_toolkit_instructions(tmp_path):
     assert "    Code intelligence for grounding same-run work." in summary
 
 
+def test_daytona_summary_rejects_unprefixed_write_file_alias(tmp_path):
+    toolkits = collect_schema_toolkits(cwd=tmp_path)
+
+    summary = format_tool_schema_summary(
+        toolkits,
+        include_descriptions=True,
+        include_instructions=True,
+    )
+
+    assert "Toolkit: sandbox_operations" in summary
+    assert "there is no `write_file` tool" in summary
+    assert "do not call `write_file`" in summary
+    assert "stdout/stderr capture plumbing" in summary
+    assert "2>/dev/null" in summary
+
+
 def test_schema_summary_formats_literals_defaults_and_root_models():
     summary = format_tool_schema_summary(
         [

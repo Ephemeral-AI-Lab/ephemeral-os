@@ -5,7 +5,6 @@ from message.stream_events import (
     AssistantTextDelta,
     AssistantTurnComplete,
     SystemNotification,
-    ToolExecutionCompleted,
 )
 from providers.types import UsageSnapshot
 import logging

@@ -23,7 +23,8 @@ class TestLoadCredentials:
         monkeypatch.delenv("DAYTONA_API_URL", raising=False)
         monkeypatch.delenv("DAYTONA_TARGET", raising=False)
 
-        import sys, types
+        import sys
+        import types
 
         class FakeSettingsObj:
             def __init__(self):
@@ -50,7 +51,8 @@ class TestLoadCredentials:
         monkeypatch.setenv("DAYTONA_API_KEY", "env-key")
         monkeypatch.setenv("DAYTONA_API_URL", "https://env-url")
 
-        import sys, types
+        import sys
+        import types
 
         fake_settings = types.ModuleType("config.settings")
         fake_settings.FakeSettings = type(
@@ -76,7 +78,8 @@ class TestLoadCredentials:
         monkeypatch.delenv("DAYTONA_API_URL", raising=False)
         monkeypatch.delenv("DAYTONA_TARGET", raising=False)
 
-        import sys, types
+        import sys
+        import types
 
         fake_settings = types.ModuleType("config.settings")
         fake_settings.FakeSettings = type(
@@ -104,7 +107,8 @@ class TestBuildConfig:
         monkeypatch.delenv("DAYTONA_API_KEY", raising=False)
         monkeypatch.delenv("DAYTONA_API_URL", raising=False)
 
-        import sys, types
+        import sys
+        import types
 
         fake_settings = types.ModuleType("config.settings")
         fake_settings.FakeSettings = type(
@@ -129,7 +133,8 @@ class TestBuildConfig:
         monkeypatch.setenv("DAYTONA_API_KEY", "test-key")
         monkeypatch.setenv("DAYTONA_API_URL", "https://test-url")
 
-        import sys, types
+        import sys
+        import types
 
         fake_settings = types.ModuleType("config.settings")
         fake_settings.FakeSettings = type(

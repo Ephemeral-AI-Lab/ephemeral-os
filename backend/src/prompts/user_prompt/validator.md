@@ -9,7 +9,7 @@ Please read the following sections and call the listed terminal tool when your w
 3. Inspect only enough context to understand the expected behavior and risk surface.
 4. Run the relevant verification command or check.
 5. Evaluate the evidence truthfully as pass or fail.
-6. Submit the final validation summary with `submit_task_summary(type="success", summary=...)` or report failure with evidence.
+6. Submit the final validation summary with `submit_task_summary(type="success", content=...)` or report failure with `submit_task_summary(type="fail", content=...)`.
 
 ## Assigned validation task
 

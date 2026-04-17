@@ -214,6 +214,23 @@ class TaskStore:
             current = pid
         return promoted_all
 
+    async def sweep_expanded_promotions(self) -> list[str]:
+        """Resolve EXPANDED parents after bulk graph changes detach children."""
+        promoted_all: list[str] = []
+        seen: set[str] = set()
+        candidate_child_ids = [
+            task.id
+            for task in self._tg.tasks.values()
+            if task.parent_id is not None and task.status in TERMINAL_STATUSES
+        ]
+        for child_id in candidate_child_ids:
+            for promoted_id in await self.maybe_promote_expanded_parent(child_id):
+                if promoted_id in seen:
+                    continue
+                seen.add(promoted_id)
+                promoted_all.append(promoted_id)
+        return promoted_all
+
     async def mark_terminal(self, task_id: str, status: str, reason: str) -> None:
         async with self._sf() as db:
             await q.set_status_terminal(

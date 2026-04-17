@@ -390,6 +390,7 @@ async def commit_transaction_changes(
         )
         return report
 
+    commit_queue: list[tuple[RepoChange, str]] = []
     for change in changes:
         if change.status == "unsupported":
             report.errors.append(
@@ -424,6 +425,12 @@ async def commit_transaction_changes(
                 category="write_scope",
                 message=contract_warning,
             )
+        commit_queue.append((change, file_path))
+
+    if report.errors:
+        return report
+
+    for change, file_path in commit_queue:
         try:
             result = commit_ci_change_against_base(
                 context,

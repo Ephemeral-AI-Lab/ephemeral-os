@@ -679,15 +679,15 @@ class TestCodeactSequentialOcc:
 
 
 # ===========================================================================
-# 6. codeact without CI service — falls back to raw upload
+# 6. codeact without CI service — hard error
 # ===========================================================================
 
 
 class TestCodeactWithoutCiService:
-    """When no CI service is in context, writes fall back to raw upload."""
+    """When no CI service is in context, CodeAct does not execute."""
 
-    def test_fallback_to_raw_upload(self):
-        """Without CI service, codeact still writes files via direct upload."""
+    def test_without_ci_service_errors_before_raw_write(self):
+        """Without CI service, codeact must not raw-write files."""
         original = "old = True\n"
         manifest = {
             "reads": [{"path": "/workspace/simple.py", "hash": _content_hash(original)}],
@@ -707,10 +707,10 @@ class TestCodeactWithoutCiService:
             ctx,
         ))
 
-        assert not result.is_error
-        data = json.loads(result.output)
-        assert data["files_written"] == 1
-        assert sandbox._file_store["/workspace/simple.py"] == "new = True\n"
+        assert result.is_error
+        assert result.metadata["occ_required"] is True
+        assert "Code intelligence/OCC is unavailable" in result.output
+        assert sandbox._file_store["/workspace/simple.py"] == original
 
 
 # ===========================================================================

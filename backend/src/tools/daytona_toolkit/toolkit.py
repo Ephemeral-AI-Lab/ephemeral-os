@@ -42,7 +42,7 @@ def _build_instructions(*, include_codeact: bool) -> str:
             "Use `daytona_codeact(command=\"pytest ...\", timeout=N)` for tests, builds, and "
             "verification, and `daytona_codeact(code=\"...\")` for multi-step Python that needs "
             "read/write/shell in one operation. Keep commands repo-root-relative; do not import "
-            "`subprocess` and do not append `2>&1`.\n"
+            "`subprocess` and do not append stdout/stderr capture plumbing such as `2>&1` or `2>/dev/null`.\n"
         )
     return (
         "Interact with a remote Daytona sandbox for file operations, "
@@ -58,7 +58,8 @@ def _build_instructions(*, include_codeact: bool) -> str:
         "`old_text` + `new_text` for a single replacement, or "
         "`edits=[{\"strategy\":\"search_replace\",\"search\":\"...\",\"replace\":\"...\"}]` for batched replacements. "
         "Never send `new_text` together with `edits`.\n"
-        "- `daytona_write_file` — create or overwrite a file. Use for new files.\n"
+        "- `daytona_write_file` — create or overwrite a file. Use for new files. "
+        "The tool is named exactly `daytona_write_file`; do not call `write_file`, `Write`, or any unprefixed file tool.\n"
         f"{codeact_line}\n"
         "**Execute**\n"
         "- Use `daytona_codeact` for all runtime execution (tests, builds, verification).\n"

@@ -255,7 +255,10 @@ class NewTaskSpec(BaseModel):
         ...,
         description=(
             "Structured task spec — the agent's sole briefing. Must include sections "
-            "in order: Goal, Environment, Scope, Context, Acceptance Criteria."
+            "in order using numbered colon labels, e.g. '1. Goal: ...', "
+            "'2. Environment: ...', '3. Scope: ...', '4. Context: ...', "
+            "'5. Acceptance Criteria: ...'. Markdown headings like '## Goal' "
+            "are not accepted."
         ),
     )
     deps: list[str] = Field(default_factory=list, description="Task IDs this depends on")
@@ -328,7 +331,8 @@ class SubmitReplanInput(BaseModel):
         default_factory=list,
         description=(
             "Direct siblings of the replanner to cancel (cascade "
-            "propagates to their subtrees and dependents)."
+            "propagates to their subtrees and dependents). Never include "
+            "the original failed request_replan task."
         ),
     )
 
@@ -521,8 +525,10 @@ class SubmitPlanTool(BaseTool):
     name = "submit_plan"
     description = (
         "Submit a child plan. Provide new_tasks with id, name, spec, deps, and "
-        "scope_paths. Each spec must use sections in order: Goal, Environment, "
-        "Scope, Context, Acceptance Criteria."
+        "scope_paths. Optional output may hold a concise rationale. Do not include "
+        "task_note, background, parent_id, or other fields. Each spec must use "
+        "numbered colon labels in order: 1. Goal, 2. Environment, 3. Scope, "
+        "4. Context, 5. Acceptance Criteria."
     )
     short_description = "Submit a child plan."
     input_model = SubmitPlanInput
@@ -622,7 +628,11 @@ class SubmitReplanTool(BaseTool):
     description = (
         "Submit a corrective replan. Provide new_tasks for repair work owned by "
         "the replanner, and cancel_ids for stale direct siblings whose subtrees "
-        "should be cancelled by cascade."
+        "should be cancelled by cascade. Never cancel the original failed "
+        "request_replan task. Do not include task_note, output, background, "
+        "parent_id, or other fields. Each new task spec must use "
+        "numbered colon labels in order: 1. Goal, 2. Environment, 3. Scope, "
+        "4. Context, 5. Acceptance Criteria."
     )
     short_description = "Submit a corrective replan."
     input_model = SubmitReplanInput

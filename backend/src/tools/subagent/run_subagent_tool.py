@@ -214,7 +214,7 @@ def _validate_run_subagent_request(
                 "This is terminal evidence for planners: do not retry or wait "
                 "on this background task. If you need coding, validation, or "
                 "runtime test evidence, emit `developer` / `validator` "
-                "WorkItems in the Plan instead of calling `run_subagent`."
+                "tasks in the plan instead of calling `run_subagent`."
             ),
             is_error=True,
         )
@@ -224,7 +224,7 @@ def _validate_run_subagent_request(
                 f"run_subagent: agent '{agent_name}' is an internal subagent and "
                 "may not be dispatched via `run_subagent`. Use a dispatchable "
                 "worker subagent such as `scout`, or emit `developer` / "
-                "`validator` WorkItems in the Plan."
+                "`validator` tasks in the plan."
             ),
             is_error=True,
         )

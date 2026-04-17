@@ -81,6 +81,7 @@ class TeamRun:
         self._executor_tasks: list[asyncio.Task[None]] = []
         self._executor_factory: Callable[["TeamRun"], Executor] | None = None
         self._num_executors: int = _default_num_executors()
+        self._dispatching = 0
         self.coordination_metadata: dict[str, Any] = {}
         self.roster: dict[str, list[str]] = {}
         self.team_definition: Any | None = None

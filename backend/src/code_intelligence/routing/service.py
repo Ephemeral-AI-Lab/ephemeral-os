@@ -14,9 +14,12 @@ compatibility with callers that import them from ``routing.service``.
 from __future__ import annotations
 
 import logging
+import re
 import threading
 import time
+from collections import OrderedDict
 from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import Any
 
 from team._path_utils import normalize_scope_paths, scope_paths_overlap
@@ -67,6 +70,26 @@ __all__ = [
 
 logger = logging.getLogger(__name__)
 _DEFAULT_SCOPE_RECENT_SECONDS = 300.0
+_IDENTIFIER_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+_DEF_CLASS_NAME_RE = re.compile(r"^\s*(?:async\s+)?(?:def|class)\s+([A-Za-z_][A-Za-z0-9_]*)")
+_RENAME_PREVIEW_CACHE_MAX = 32
+
+
+@dataclass(frozen=True)
+class _RenamePreviewSnapshot:
+    """Reusable base data for dry-run rename previews."""
+
+    refs: tuple[ReferenceInfo, ...]
+    base_by_path: dict[str, tuple[str, bool]]
+    old_name: str
+    arbiter_generation: int
+
+
+@dataclass
+class _InflightRenamePreview:
+    """One in-progress dry-run preview snapshot shared by callers."""
+
+    event: threading.Event
 
 
 class CodeIntelligenceService:
@@ -109,6 +132,15 @@ class CodeIntelligenceService:
             lsp_client=self.lsp_client,
             content=self._content,
         )
+        self._rename_preview_cache_lock = threading.Lock()
+        self._rename_preview_cache: OrderedDict[
+            tuple[str, int, int, int, int],
+            _RenamePreviewSnapshot,
+        ] = OrderedDict()
+        self._rename_preview_inflight: dict[
+            tuple[str, int, int, int, int],
+            _InflightRenamePreview,
+        ] = {}
 
     # -- Initialization -------------------------------------------------------
 
@@ -119,14 +151,14 @@ class CodeIntelligenceService:
                 return True
 
         ready = self.symbol_index.ensure_built(wait=wait)
-        lsp_ready = self.lsp_client.ensure_ready()
+        lsp_ready = self.lsp_client.ensure_ready(languages=("python",))
         if (
             self._sandbox is not None
-            and (not lsp_ready.get("python") or not lsp_ready.get("typescript"))
+            and not lsp_ready.get("python")
             and not self._lsp_bootstrap_attempted
         ):
             self._lsp_bootstrap_attempted = True
-            self.lsp_client.ensure_ready(install_missing=True)
+            self.lsp_client.ensure_ready(install_missing=True, languages=("python",))
 
         with self._init_lock:
             self._initialized = ready or self.symbol_index.is_built
@@ -155,6 +187,7 @@ class CodeIntelligenceService:
         self.lsp_client._sandbox = sandbox
         if old_sandbox is not sandbox:
             self.lsp_client.reset_backend_availability()
+            self._clear_rename_preview_cache()
         self._content.bind_sandbox(sandbox)
 
     # -- Query API ------------------------------------------------------------
@@ -220,6 +253,146 @@ class CodeIntelligenceService:
             origin=(file_path, int(line), int(character)),
             arbiter_generation=gen_before,
             changes=tuple(changes),
+        )
+
+    def preview_rename_symbol_plan(
+        self, file_path: str, line: int, character: int, new_name: str,
+    ) -> SemanticRenamePlan:
+        """Build a dry-run rename plan without invoking Jedi refactoring.
+
+        Dry-run callers only need before/after file contents for a diff. A
+        full Jedi ``rename`` computes a write-ready refactor plan and is much
+        more expensive under concurrent sandbox load. For previews, use LSP
+        references and apply verified identifier replacements against a single
+        batched snapshot. If any reference cannot be verified locally, fall
+        back to the full semantic plan for correctness.
+        """
+        try:
+            plan = self._preview_rename_symbol_plan_fast(
+                file_path,
+                int(line),
+                int(character),
+                new_name,
+            )
+        except Exception:
+            logger.debug("fast rename preview failed for %s:%s", file_path, line, exc_info=True)
+            plan = None
+        if plan is not None:
+            return plan
+        return self.rename_symbol_plan(file_path, int(line), int(character), new_name)
+
+    def _preview_rename_symbol_plan_fast(
+        self,
+        file_path: str,
+        line: int,
+        character: int,
+        new_name: str,
+    ) -> SemanticRenamePlan | None:
+        snapshot = self._rename_preview_snapshot(file_path, line, character)
+        if snapshot is None:
+            return None
+        if snapshot.old_name == new_name:
+            return SemanticRenamePlan(
+                new_name=new_name,
+                origin=(file_path, int(line), int(character)),
+                arbiter_generation=snapshot.arbiter_generation,
+                changes=(),
+            )
+        final_by_path = _apply_reference_replacements(
+            refs=snapshot.refs,
+            base_by_path=snapshot.base_by_path,
+            old_name=snapshot.old_name,
+            new_name=new_name,
+        )
+        if final_by_path is None:
+            return None
+        changes = []
+        for path, final_content in final_by_path.items():
+            base_content, existed = snapshot.base_by_path.get(path, ("", False))
+            if not existed:
+                continue
+            changes.append(
+                SemanticFileChange(
+                    file_path=path,
+                    base_content=base_content,
+                    base_hash=content_hash(base_content),
+                    final_content=final_content,
+                ),
+            )
+        return SemanticRenamePlan(
+            new_name=new_name,
+            origin=(file_path, int(line), int(character)),
+            arbiter_generation=snapshot.arbiter_generation,
+            changes=tuple(changes),
+        )
+
+    def _rename_preview_snapshot(
+        self,
+        file_path: str,
+        line: int,
+        character: int,
+    ) -> _RenamePreviewSnapshot | None:
+        key = (
+            file_path,
+            int(line),
+            int(character),
+            self.arbiter.generation,
+            self.symbol_index.generation,
+        )
+        while True:
+            with self._rename_preview_cache_lock:
+                cached = self._rename_preview_cache.get(key)
+                if cached is not None:
+                    self._rename_preview_cache.move_to_end(key)
+                    return cached
+                inflight = self._rename_preview_inflight.get(key)
+                if inflight is None:
+                    inflight = _InflightRenamePreview(event=threading.Event())
+                    self._rename_preview_inflight[key] = inflight
+                    owner = True
+                    break
+                owner = False
+            if not owner:
+                inflight.event.wait()
+
+        try:
+            snapshot = self._build_rename_preview_snapshot(file_path, line, character)
+            if snapshot is None:
+                return None
+            with self._rename_preview_cache_lock:
+                self._rename_preview_cache[key] = snapshot
+                self._rename_preview_cache.move_to_end(key)
+                while len(self._rename_preview_cache) > _RENAME_PREVIEW_CACHE_MAX:
+                    self._rename_preview_cache.popitem(last=False)
+            return snapshot
+        finally:
+            with self._rename_preview_cache_lock:
+                self._rename_preview_inflight.pop(key, None)
+                inflight.event.set()
+
+    def _build_rename_preview_snapshot(
+        self,
+        file_path: str,
+        line: int,
+        character: int,
+    ) -> _RenamePreviewSnapshot | None:
+        gen_before = self.arbiter.generation
+        refs = tuple(self.lsp_client.find_references(file_path, line, character))
+        if not refs:
+            return None
+        paths = [file_path, *(ref.file_path for ref in refs if ref.file_path)]
+        base_by_path = self._content.read_many(paths, allow_missing=True)
+        origin_content, origin_exists = base_by_path.get(file_path, ("", False))
+        if not origin_exists:
+            return None
+        old_name = _identifier_at_position(origin_content, line, character)
+        if not old_name:
+            return None
+        return _RenamePreviewSnapshot(
+            refs=refs,
+            base_by_path=base_by_path,
+            old_name=old_name,
+            arbiter_generation=gen_before,
         )
 
     # -- Edit API (delegated) -------------------------------------------------
@@ -415,6 +588,8 @@ class CodeIntelligenceService:
                 "entries": self.arbiter.metrics.total_edits,
                 "generation": self.arbiter.generation,
             },
+            "tree_cache": self.tree_cache.stats,
+            "rename_preview_cache": self._rename_preview_cache_stats(),
             "lsp": lsp,
         }
 
@@ -436,11 +611,29 @@ class CodeIntelligenceService:
         return {
             "connected": self.lsp_client.connected,
             "queries": tel.queries,
+            "successes": tel.successes,
+            "errors": tel.errors,
             "cache_hits": tel.cache_hits,
+            "script_runs": tel.script_runs,
+            "script_successes": tel.script_successes,
+            "script_errors": tel.script_errors,
             "worker_successes": tel.worker_successes,
             "worker_fallbacks": tel.worker_fallbacks,
             "worker_errors": tel.worker_errors,
+            "worker_active": self.lsp_client.worker_active,
         }
+
+    def _rename_preview_cache_stats(self) -> dict[str, int]:
+        with self._rename_preview_cache_lock:
+            return {
+                "size": len(self._rename_preview_cache),
+                "inflight": len(self._rename_preview_inflight),
+            }
+
+    def _clear_rename_preview_cache(self) -> None:
+        with self._rename_preview_cache_lock:
+            self._rename_preview_cache.clear()
+            self._rename_preview_inflight.clear()
 
     # -- Cleanup --------------------------------------------------------------
 
@@ -460,3 +653,90 @@ def _scope_excludes(file_path: str, normalized_scope: list[str]) -> bool:
     if not normalized_scope:
         return False
     return not any(scope_paths_overlap(file_path, scope) for scope in normalized_scope)
+
+
+def _identifier_at_position(content: str, line: int, character: int) -> str:
+    """Return the identifier at or immediately after a 1-indexed position."""
+    lines = content.splitlines()
+    if line < 1 or line > len(lines):
+        return ""
+    text = lines[line - 1]
+    match = _DEF_CLASS_NAME_RE.match(text)
+    if match and character <= match.end(1):
+        return match.group(1)
+    bounds = _identifier_bounds_near(text, character)
+    if bounds is None:
+        return ""
+    start, end = bounds
+    return text[start:end]
+
+
+def _identifier_bounds_near(text: str, character: int) -> tuple[int, int] | None:
+    if not text:
+        return None
+    pos = max(0, min(int(character), len(text)))
+    if pos < len(text) and _is_identifier_char(text[pos]):
+        start = pos
+        end = pos
+    elif pos > 0 and _is_identifier_char(text[pos - 1]):
+        start = pos - 1
+        end = pos - 1
+    else:
+        match = _IDENTIFIER_RE.search(text, pos)
+        if match is None:
+            return None
+        return match.start(), match.end()
+    while start > 0 and _is_identifier_char(text[start - 1]):
+        start -= 1
+    while end < len(text) and _is_identifier_char(text[end]):
+        end += 1
+    return start, end
+
+
+def _apply_reference_replacements(
+    *,
+    refs: Sequence[ReferenceInfo],
+    base_by_path: dict[str, tuple[str, bool]],
+    old_name: str,
+    new_name: str,
+) -> dict[str, str] | None:
+    """Apply verified identifier-span replacements for LSP references.
+
+    Returns ``None`` when any reference does not point exactly at the
+    expected identifier. Callers can then fall back to Jedi's full rename.
+    """
+    grouped: dict[str, set[tuple[int, int]]] = {}
+    for ref in refs:
+        if not ref.file_path:
+            continue
+        grouped.setdefault(ref.file_path, set()).add((int(ref.line), int(ref.character)))
+
+    final_by_path: dict[str, str] = {}
+    for path, positions in grouped.items():
+        base_content, existed = base_by_path.get(path, ("", False))
+        if not existed:
+            return None
+        lines = base_content.splitlines(keepends=True)
+        changed = False
+        for line, column in sorted(positions, reverse=True):
+            if line < 1 or line > len(lines) or column < 0:
+                return None
+            text = lines[line - 1]
+            end = column + len(old_name)
+            if text[column:end] != old_name:
+                return None
+            if column > 0 and _is_identifier_char(text[column - 1]):
+                return None
+            if end < len(text) and _is_identifier_char(text[end]):
+                return None
+            lines[line - 1] = text[:column] + new_name + text[end:]
+            changed = True
+        if changed:
+            final_content = "".join(lines)
+            if final_content != base_content:
+                final_by_path[path] = final_content
+    return final_by_path
+
+
+def _is_identifier_char(char: str) -> bool:
+    return char == "_" or char.isalnum()

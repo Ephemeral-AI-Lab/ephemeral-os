@@ -58,6 +58,7 @@ def _make_svc(
         )
     else:
         svc.rename_symbol_plan.return_value = plan
+    svc.preview_rename_symbol_plan.return_value = svc.rename_symbol_plan.return_value
     svc.commit_many_against_base.return_value = commit_result or MultiEditResult(
         success=True,
         status="committed",
@@ -154,6 +155,8 @@ def test_dry_run_diffs_against_plan_base_not_reread():
     diff = data["files"][0]["diff"]
     assert "-def foo()" in diff
     assert "+def bar()" in diff
+    svc.preview_rename_symbol_plan.assert_called_once()
+    svc.rename_symbol_plan.assert_not_called()
     # Dry run must NEVER invoke the commit primitive.
     svc.commit_many_against_base.assert_not_called()
 
@@ -226,6 +229,7 @@ def _make_facade_svc(
         svc.rename_symbol_plan.return_value = SemanticRenamePlan(
             new_name="bar", origin=("", 0, 0), arbiter_generation=0, changes=(),
         )
+    svc.preview_rename_symbol_plan.return_value = svc.rename_symbol_plan.return_value
     svc.commit_many_against_base.return_value = commit_result or MultiEditResult(
         success=True,
         status="committed",

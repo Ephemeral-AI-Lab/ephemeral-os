@@ -131,16 +131,27 @@ def test_agent_capabilities_prompt_includes_available_skills_section():
         tools=[_LoadSkillTool(), _LoadSkillReferenceTool()],
     )
     toolkit.available_skills = [
-        {"name": "team-planner-playbook", "description": "Planning workflow for team planners."},
-        {"name": "scout-playbook", "description": "Read-only exploration workflow for scouts."},
+        {
+            "name": "team-planner-playbook",
+            "description": "Planning workflow for team planners.",
+            "references": ["plan-json-contract", "terminal-validation-contract"],
+        },
+        {
+            "name": "scout-playbook",
+            "description": "Read-only exploration workflow for scouts.",
+            "references": [],
+        },
     ]
 
     prompt = build_agent_capabilities_prompt([toolkit])
 
     assert "<Available Skills>" in prompt
     assert "Use `load_skill(skill_name)` when the task matches one of these skills." in prompt
+    assert "there is no `default` reference" in prompt
     assert "- team-planner-playbook: Planning workflow for team planners." in prompt
+    assert "References: `plan-json-contract`, `terminal-validation-contract`." in prompt
     assert "- scout-playbook: Read-only exploration workflow for scouts." in prompt
+    assert "No references; use `load_skill(...)` only." in prompt
     assert "</Available Skills>" in prompt
 
 

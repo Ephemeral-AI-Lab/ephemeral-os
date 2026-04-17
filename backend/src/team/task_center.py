@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import Any, Awaitable, Callable, cast
+from typing import Any, Awaitable, Callable, TypeVar
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -50,6 +50,7 @@ from team.runtime.transitions import TransitionTracker
 from team.task_context_builder import TaskContextBuilder
 
 logger = logging.getLogger(__name__)
+_T = TypeVar("_T")
 
 
 class TaskCenter:
@@ -237,10 +238,10 @@ class TaskCenter:
 
     async def _with_transitions(
         self,
-        op: Callable[[], Awaitable[Any]],
+        op: Callable[[], Awaitable[_T]],
         *,
         filter_ids: set[str] | None = None,
-    ) -> Any:
+    ) -> _T:
         """Snapshot → run op → refresh+emit transitions when op reports change."""
         before = self._transitions.snapshot(filter_ids)
         result = await op()
@@ -400,7 +401,7 @@ class TaskCenter:
                 if promoted_task.fired_by_task_id:
                     await self._emit_replanned_origin_if_finalized(promoted_id)
         await self._transitions.refresh_and_emit(before)
-        return cast(dict[str, int | list[str]], outcome)
+        return outcome
 
     async def fail_orphaned_replanning(self) -> int:
         """Force-fail tasks stuck in REQUEST_REPLAN with no live replanner."""

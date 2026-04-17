@@ -98,3 +98,33 @@ def test_reject_unsupported_legacy_columns_skips_missing_column(monkeypatch):
 
     assert engine.conn.statements == []
 
+
+def test_create_team_engine_refreshes_sync_engine_after_initialize(monkeypatch):
+    initialized = False
+    sync_engine = _FakeEngine(dialect_name="sqlite")
+    async_engine = object()
+    async_factory = object()
+    ensured: list[object] = []
+
+    def _initialize(_settings):
+        nonlocal initialized
+        initialized = True
+
+    monkeypatch.setattr(team_engine, "get_session_factory", lambda: None)
+    monkeypatch.setattr(team_engine, "initialize_db", _initialize)
+    monkeypatch.setattr(
+        team_engine,
+        "get_engine",
+        lambda: sync_engine if initialized else None,
+    )
+    monkeypatch.setattr(team_engine, "get_async_engine", lambda: async_engine)
+    monkeypatch.setattr(team_engine, "get_async_session_factory", lambda: async_factory)
+    monkeypatch.setattr(team_engine, "_ensure_team_schema", lambda engine: ensured.append(engine))
+
+    result_engine, result_factory = team_engine.create_team_engine(
+        SimpleNamespace(database=object())
+    )
+
+    assert result_engine is async_engine
+    assert result_factory is async_factory
+    assert ensured == [sync_engine]

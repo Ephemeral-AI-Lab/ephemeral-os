@@ -150,7 +150,7 @@ def build_agent_capabilities_prompt(
         return " ".join(words[:max_words]).rstrip(" ,;:") + "..."
 
     tk_sections: list[str] = []
-    available_skills: list[dict[str, str]] = []
+    available_skills: list[dict[str, object]] = []
     skill_tool_names: list[str] = []
     background_lines: list[str] = []
     terminal_lines: list[str] = []
@@ -169,10 +169,17 @@ def build_agent_capabilities_prompt(
                     name = str(item.get("name") or "").strip()
                     if not name:
                         continue
+                    refs = item.get("references")
+                    references = (
+                        [str(ref).strip() for ref in refs if str(ref).strip()]
+                        if isinstance(refs, list)
+                        else []
+                    )
                     available_skills.append(
                         {
                             "name": name,
                             "description": _compact_description(str(item.get("description") or "")),
+                            "references": references,
                         }
                     )
             continue
@@ -213,10 +220,17 @@ def build_agent_capabilities_prompt(
                 name = str(item.get("name") or "").strip()
                 if not name:
                     continue
+                refs = item.get("references")
+                references = (
+                    [str(ref).strip() for ref in refs if str(ref).strip()]
+                    if isinstance(refs, list)
+                    else []
+                )
                 available_skills.append(
                     {
                         "name": name,
                         "description": _compact_description(str(item.get("description") or "")),
+                        "references": references,
                     }
                 )
         if not tools:
@@ -259,9 +273,23 @@ def build_agent_capabilities_prompt(
             skill_lines.append(
                 "Use `load_skill_reference(skill_name, reference_name)` for supplementary guidance, examples, and rubrics."
             )
+            skill_lines.append(
+                "Load the skill itself with `load_skill(...)` for the main playbook. "
+                "Only call `load_skill_reference(...)` with one of the listed reference names; "
+                "there is no `default` reference."
+            )
         if skill_lines:
             skill_lines.append("")
-        skill_lines.extend(f"- {item['name']}: {item['description']}" for item in deduped_skills)
+        for item in deduped_skills:
+            references = item.get("references")
+            ref_names = [str(ref) for ref in references] if isinstance(references, list) else []
+            if ref_names:
+                ref_text = " References: " + ", ".join(f"`{ref}`" for ref in ref_names) + "."
+            elif "load_skill_reference" in skill_tool_names:
+                ref_text = " No references; use `load_skill(...)` only."
+            else:
+                ref_text = ""
+            skill_lines.append(f"- {item['name']}: {item['description']}{ref_text}")
         skills_section = "<Available Skills>\n\n" + "\n".join(skill_lines) + "\n\n</Available Skills>"
 
     background_section = ""

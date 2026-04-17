@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import concurrent.futures
 import threading
 import time
 from types import SimpleNamespace
@@ -15,7 +16,7 @@ from code_intelligence.routing.service import (
     get_code_intelligence,
     get_code_intelligence_if_exists,
 )
-from code_intelligence.types import EditRequest
+from code_intelligence.types import EditRequest, ReferenceInfo
 from server.routers.code_intelligence import initialize
 
 
@@ -410,7 +411,7 @@ def test_ensure_initialized_bootstraps_missing_lsp_once(tmp_path) -> None:
 
     calls: list[bool] = []
 
-    def fake_ensure_ready(*, install_missing: bool = False):
+    def fake_ensure_ready(*, install_missing: bool = False, languages=None):
         calls.append(install_missing)
         if install_missing:
             return {"python": True, "typescript": True}
@@ -423,6 +424,99 @@ def test_ensure_initialized_bootstraps_missing_lsp_once(tmp_path) -> None:
 
     assert calls[:2] == [False, True]
     assert calls.count(True) == 1
+
+
+def test_preview_rename_symbol_plan_uses_reference_replacements(tmp_path) -> None:
+    core = tmp_path / "core.py"
+    use = tmp_path / "use.py"
+    core.write_text("def beta(value):\n    return value\n", encoding="utf-8")
+    use.write_text("from core import beta\nresult = beta(1)\n", encoding="utf-8")
+    svc = CodeIntelligenceService(
+        sandbox_id="sandbox-preview-rename",
+        workspace_root=str(tmp_path),
+    )
+    svc.lsp_client.find_references = MagicMock(  # type: ignore[method-assign]
+        return_value=[
+            ReferenceInfo(file_path=str(core), line=1, character=4),
+            ReferenceInfo(file_path=str(use), line=1, character=17),
+            ReferenceInfo(file_path=str(use), line=2, character=9),
+        ]
+    )
+    svc.lsp_client.rename_symbol = MagicMock(return_value={})  # type: ignore[method-assign]
+
+    plan = svc.preview_rename_symbol_plan(str(core), 1, 0, "gamma")
+
+    assert len(plan.changes) == 2
+    final_by_path = {change.file_path: change.final_content for change in plan.changes}
+    assert final_by_path[str(core)] == "def gamma(value):\n    return value\n"
+    assert final_by_path[str(use)] == "from core import gamma\nresult = gamma(1)\n"
+    svc.lsp_client.rename_symbol.assert_not_called()
+
+
+def test_preview_rename_symbol_plan_falls_back_when_reference_span_is_unverified(
+    tmp_path,
+) -> None:
+    core = tmp_path / "core.py"
+    core.write_text("def beta(value):\n    return value\n", encoding="utf-8")
+    svc = CodeIntelligenceService(
+        sandbox_id="sandbox-preview-rename-fallback",
+        workspace_root=str(tmp_path),
+    )
+    svc.lsp_client.find_references = MagicMock(  # type: ignore[method-assign]
+        return_value=[ReferenceInfo(file_path=str(core), line=1, character=0)]
+    )
+    svc.lsp_client.rename_symbol = MagicMock(  # type: ignore[method-assign]
+        return_value={str(core): "def gamma(value):\n    return value\n"}
+    )
+
+    plan = svc.preview_rename_symbol_plan(str(core), 1, 0, "gamma")
+
+    assert len(plan.changes) == 1
+    assert plan.changes[0].final_content == "def gamma(value):\n    return value\n"
+    svc.lsp_client.rename_symbol.assert_called_once_with(str(core), 1, 0, "gamma")
+
+
+def test_preview_rename_symbol_plan_singleflights_snapshot_reads(tmp_path) -> None:
+    core = tmp_path / "core.py"
+    use = tmp_path / "use.py"
+    core.write_text("def beta(value):\n    return value\n", encoding="utf-8")
+    use.write_text("from core import beta\nresult = beta(1)\n", encoding="utf-8")
+    svc = CodeIntelligenceService(
+        sandbox_id="sandbox-preview-rename-singleflight",
+        workspace_root=str(tmp_path),
+    )
+    svc.lsp_client.find_references = MagicMock(  # type: ignore[method-assign]
+        return_value=[
+            ReferenceInfo(file_path=str(core), line=1, character=4),
+            ReferenceInfo(file_path=str(use), line=1, character=17),
+            ReferenceInfo(file_path=str(use), line=2, character=9),
+        ]
+    )
+    original_read_many = svc._content.read_many
+
+    def slow_read_many(paths, *, allow_missing: bool = False):
+        time.sleep(0.05)
+        return original_read_many(paths, allow_missing=allow_missing)
+
+    svc._content.read_many = MagicMock(side_effect=slow_read_many)  # type: ignore[method-assign]
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        plans = list(
+            executor.map(
+                lambda idx: svc.preview_rename_symbol_plan(
+                    str(core),
+                    1,
+                    0,
+                    f"gamma_{idx}",
+                ),
+                range(4),
+            )
+        )
+
+    assert [plan.new_name for plan in plans] == ["gamma_0", "gamma_1", "gamma_2", "gamma_3"]
+    assert all(len(plan.changes) == 2 for plan in plans)
+    assert svc.lsp_client.find_references.call_count == 1
+    assert svc._content.read_many.call_count == 1
 
 
 def test_is_initialized_tracks_background_build_completion() -> None:

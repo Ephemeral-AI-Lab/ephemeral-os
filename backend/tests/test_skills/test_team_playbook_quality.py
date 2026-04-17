@@ -136,7 +136,7 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "must load `runtime-verification-examples`" in validator.lower()
     assert "must not paraphrase failure evidence" in validator.lower()
     assert "small local corrective patch" in validator.lower()
-    assert 'submit_task_summary(type="fail", summary=...)' in validator
+    assert 'submit_task_summary(type="fail", content=...)' in validator
     assert "repeated repair attempts" in validator.lower()
 
     assert "must load `corrective-fast-path`" in replanner.lower()
@@ -157,6 +157,7 @@ def test_reference_files_hold_specialized_detail() -> None:
     developer_runtime = _read(
         _CONTENT / "team-developer-playbook/references/codeact-runtime-examples.md"
     )
+    developer_playbook = _read(_CONTENT / "team-developer-playbook/SKILL.md")
     developer_root_cause = _read(
         _CONTENT / "team-developer-playbook/references/root-cause-debugging.md"
     )
@@ -167,6 +168,9 @@ def test_reference_files_hold_specialized_detail() -> None:
 
     assert "Never keep a guessed exact leaf once live evidence disproves it." in planner_ref
     assert "submit_plan(new_tasks=[...])" in planner_json
+    assert "Do not include `task_note`" in planner_json
+    assert "`1. Goal:`" in planner_json
+    assert "Do not use Markdown headings" in planner_json
     assert "Example task graph" in planner_decomposition
     assert '"id": "dev-hdf"' in planner_decomposition
     assert '"id": "dev-shared-config"' in planner_decomposition
@@ -176,9 +180,36 @@ def test_reference_files_hold_specialized_detail() -> None:
     assert "Use `team_planner` for expandable tasks" in planner_decomposition
     assert "Use `validator` for validation tasks" in planner_decomposition
     assert 'daytona_codeact(command="...", timeout=N)' in developer_runtime
+    assert "Must not append shell capture plumbing" in developer_runtime
+    assert "cd /testbed" in developer_playbook
+    assert "cd /testbed" in developer_runtime
     assert "pkg._compat" in developer_root_cause
     assert "The Task Center note is the durable handoff." in scout_ref
     assert "check_background_progress" in validator_ref
+
+
+def test_replanner_references_spell_valid_submit_replan_payload_shape() -> None:
+    replanner = _read(_CONTENT / "team-replanner-playbook/SKILL.md")
+    add_tasks = _read(_CONTENT / "team-replanner-playbook/references/action-add-tasks.md")
+    cancel_redraft = _read(
+        _CONTENT / "team-replanner-playbook/references/action-cancel-and-redraft.md"
+    )
+    corrective_fast_path = _read(
+        _CONTENT / "team-replanner-playbook/references/corrective-fast-path.md"
+    )
+
+    assert "pairwise-check `new_tasks`" in replanner
+    assert "Parallel concrete tasks must not share any `scope_paths` file" in add_tasks
+    assert "parallel tasks that share an owner file" in corrective_fast_path
+
+    for content in (add_tasks, cancel_redraft):
+        assert "`1. Goal:`" in content
+        assert "`2. Environment:`" in content
+        assert "`3. Scope:`" in content
+        assert "`4. Context:`" in content
+        assert "`5. Acceptance Criteria:`" in content
+        assert "Do not use Markdown headings" in content
+        assert "Do not include `task_note`" in content
 
 
 def test_sweevo_context_stays_shared_and_runtime_focused() -> None:
@@ -191,7 +222,9 @@ def test_sweevo_context_stays_shared_and_runtime_focused() -> None:
     assert "Must keep commands repo-root-relative." in sweevo
     assert 'daytona_codeact(command="...", timeout=N)' in sweevo
     assert "Python process wrappers" in sweevo
-    assert "append `2>&1`" in sweevo
+    assert "cd /testbed" in sweevo
+    assert "stdout/stderr capture plumbing" in sweevo
+    assert "`2>/dev/null`" in sweevo
     assert "Must keep roles separate" in sweevo
     assert "Must treat `docs/architecture/team-coordination.md` as the design intent" in sweevo
     assert "Must keep shared context in the Task Center" in sweevo

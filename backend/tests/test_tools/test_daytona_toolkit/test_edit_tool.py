@@ -31,6 +31,20 @@ def _make_sandbox(*, download_content: str = "original content"):
     return sb
 
 
+def _ci_service_for_content(content: str, *, file_path: str = "/file.py"):
+    svc = MagicMock()
+    svc.prepare_write.return_value = SimpleNamespace(
+        file_path=file_path,
+        current_content=content,
+        current_hash=_content_hash(content),
+        token_id="tok-1",
+        existed=True,
+    )
+    svc.commit_prepared_write.return_value = SimpleNamespace(success=True, message="ok")
+    svc.abort_prepared_write = MagicMock()
+    return svc
+
+
 # ---------------------------------------------------------------------------
 # _content_hash
 # ---------------------------------------------------------------------------
@@ -74,7 +88,7 @@ async def test_edit_file_read_failure():
     ctx = _ctx({"daytona_sandbox": sb})
     result = await daytona_edit_file.execute(
         daytona_edit_file.input_model(
-            file_path="/missing.py", old_text="old", new_text="new"
+            file_path="/missing.py", old_text="old", new_text="new", dry_run=True
         ),
         ctx,
     )
@@ -88,7 +102,7 @@ async def test_edit_file_read_generic_exception():
     ctx = _ctx({"daytona_sandbox": sb})
     result = await daytona_edit_file.execute(
         daytona_edit_file.input_model(
-            file_path="/file.py", old_text="old", new_text="new"
+            file_path="/file.py", old_text="old", new_text="new", dry_run=True
         ),
         ctx,
     )
@@ -102,7 +116,7 @@ async def test_edit_file_read_generic_exception():
 
 async def test_edit_old_text_not_found():
     sb = _make_sandbox(download_content="hello world")
-    ctx = _ctx({"daytona_sandbox": sb})
+    ctx = _ctx({"daytona_sandbox": sb, "ci_service": _ci_service_for_content("hello world")})
     result = await daytona_edit_file.execute(
         daytona_edit_file.input_model(
             file_path="/file.py", old_text="MISSING", new_text="new"
@@ -178,10 +192,10 @@ async def test_edit_dry_run_truncates_large_diff():
 
 
 # ---------------------------------------------------------------------------
-# Direct write (no CI service)
+# OCC-required writes
 # ---------------------------------------------------------------------------
 
-async def test_edit_direct_write_success():
+async def test_edit_requires_ci_service_for_write():
     sb = _make_sandbox(download_content="hello world\nfoo bar\n")
     ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/ws"})
     result = await daytona_edit_file.execute(
@@ -192,14 +206,10 @@ async def test_edit_direct_write_success():
         ),
         ctx,
     )
-    assert not result.is_error
-    data = json.loads(result.output)
-    assert data["status"] == "edited"
-    assert data["occ"] is False
-    sb.fs.upload_file.assert_called_once()
-    # Check the written content
-    written_bytes = sb.fs.upload_file.call_args[0][0]
-    assert b"goodbye world" in written_bytes
+    assert result.is_error
+    assert "Code intelligence/OCC is unavailable" in result.output
+    assert result.metadata["occ_required"] is True
+    sb.fs.upload_file.assert_not_called()
 
 
 async def test_edit_warns_write_outside_write_scope():
@@ -212,6 +222,10 @@ async def test_edit_warns_write_outside_write_scope():
             "agent_name": "developer",
             "team_mode_enabled": True,
             "write_scope": ["dask/config.py"],
+            "ci_service": _ci_service_for_content(
+                "original",
+                file_path="/testbed/dask/_compatibility.py",
+            ),
         }
     )
 
@@ -239,6 +253,10 @@ async def test_edit_allows_write_inside_write_scope():
             "agent_name": "developer",
             "team_mode_enabled": True,
             "write_scope": ["dask/config.py"],
+            "ci_service": _ci_service_for_content(
+                "original",
+                file_path="/testbed/dask/config.py",
+            ),
         }
     )
 
@@ -254,7 +272,7 @@ async def test_edit_allows_write_inside_write_scope():
     assert not result.is_error
     data = json.loads(result.output)
     assert data["status"] == "edited"
-    sb.fs.upload_file.assert_called_once()
+    ctx.metadata["ci_service"].commit_prepared_write.assert_called_once()
 
 
 async def test_edit_rejects_test_suite_write():
@@ -298,6 +316,10 @@ async def test_edit_warns_non_verify_surface_write_in_warn_mode():
             "verification_surface_write_enforcement": "warn",
             "owned_failures": ["dask/tests/test_cli.py"],
             "verify": ["pytest dask/tests/test_cli.py -q"],
+            "ci_service": _ci_service_for_content(
+                "original",
+                file_path="/testbed/dask/_compatibility.py",
+            ),
         }
     )
 
@@ -357,6 +379,10 @@ async def test_edit_allows_repo_write_from_validator():
             "daytona_cwd": "/testbed",
             "agent_name": "validator",
             "team_mode_enabled": True,
+            "ci_service": _ci_service_for_content(
+                "original",
+                file_path="/testbed/dask/config.py",
+            ),
         }
     )
 
@@ -372,7 +398,7 @@ async def test_edit_allows_repo_write_from_validator():
     assert not result.is_error
 
 
-async def test_edit_direct_write_exception():
+async def test_edit_no_raw_write_after_ci_unavailable():
     sb = _make_sandbox(download_content="content here")
     sb.fs.upload_file = AsyncMock(side_effect=RuntimeError("write fail"))
     ctx = _ctx({"daytona_sandbox": sb})
@@ -385,21 +411,22 @@ async def test_edit_direct_write_exception():
         ctx,
     )
     assert result.is_error
-    assert "write fail" in result.output
+    assert "Code intelligence/OCC is unavailable" in result.output
+    sb.fs.upload_file.assert_not_called()
 
 
 async def test_edit_replaces_only_first_occurrence():
     sb = _make_sandbox(download_content="x x x")
-    ctx = _ctx({"daytona_sandbox": sb})
+    svc = _ci_service_for_content("x x x")
+    ctx = _ctx({"daytona_sandbox": sb, "ci_service": svc})
     await daytona_edit_file.execute(
         daytona_edit_file.input_model(
             file_path="/file.py", old_text="x", new_text="y"
         ),
         ctx,
     )
-    written_bytes = sb.fs.upload_file.call_args[0][0]
     # Only first x replaced → "y x x"
-    assert written_bytes == b"y x x"
+    assert svc.commit_prepared_write.call_args.args[1] == "y x x"
 
 
 async def test_edit_line_range_rejected():
@@ -423,9 +450,10 @@ async def test_edit_line_range_rejected():
     assert "unknown strategy" in result.output
 
 
-async def test_edit_batch_direct_write_success():
+async def test_edit_batch_occ_success():
     sb = _make_sandbox(download_content="alpha\nbeta\ngamma\n")
-    ctx = _ctx({"daytona_sandbox": sb})
+    svc = _ci_service_for_content("alpha\nbeta\ngamma\n")
+    ctx = _ctx({"daytona_sandbox": sb, "ci_service": svc})
     result = await daytona_edit_file.execute(
         daytona_edit_file.input_model(
             file_path="/file.py",
@@ -437,8 +465,7 @@ async def test_edit_batch_direct_write_success():
         ctx,
     )
     assert not result.is_error
-    written_bytes = sb.fs.upload_file.call_args[0][0]
-    assert written_bytes == b"ALPHA\nbeta\nGAMMA\n"
+    assert svc.commit_prepared_write.call_args.args[1] == "ALPHA\nbeta\nGAMMA\n"
 
 
 async def test_edit_rejects_mixed_legacy_and_batch_inputs():
@@ -598,8 +625,8 @@ async def test_edit_occ_lock_conflict():
     assert result.metadata.get("conflict") is True
 
 
-async def test_edit_occ_no_arbiter_falls_back_to_direct():
-    """CI service present but no arbiter → direct write path."""
+async def test_edit_occ_no_prepare_write_returns_error():
+    """A CI stub without prepare_write must not fall back to direct writes."""
     sb = _make_sandbox(download_content="content here")
     svc = SimpleNamespace(arbiter=None)
     ctx = _ctx({"daytona_sandbox": sb, "ci_service": svc})
@@ -610,18 +637,20 @@ async def test_edit_occ_no_arbiter_falls_back_to_direct():
         ),
         ctx,
     )
-    assert not result.is_error
-    data = json.loads(result.output)
-    assert data["occ"] is False
+    assert result.is_error
+    assert result.metadata["occ_required"] is True
+    sb.fs.upload_file.assert_not_called()
 
 
 async def test_edit_resolves_relative_path():
     sb = _make_sandbox(download_content="stuff")
-    ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/workspace"})
+    svc = _ci_service_for_content("stuff", file_path="/workspace/relative.py")
+    ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/workspace", "ci_service": svc})
     await daytona_edit_file.execute(
         daytona_edit_file.input_model(
             file_path="relative.py", old_text="stuff", new_text="other"
         ),
         ctx,
     )
-    sb.fs.download_file.assert_called_once_with("/workspace/relative.py")
+    svc.prepare_write.assert_called_once()
+    assert svc.prepare_write.call_args.args[0] == "/workspace/relative.py"

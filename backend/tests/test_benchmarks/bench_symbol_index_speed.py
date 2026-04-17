@@ -108,7 +108,6 @@ async def main() -> None:
         logger.info("=" * 60)
 
         # 4a: Refresh with content provided (in-memory, no HTTP)
-        old_size = ci_svc.symbol_index.size
         new_content = (
             "class NewModel:\n    name: str\n    value: int\n\n"
             "def new_function(x: int) -> str:\n    return str(x)\n"

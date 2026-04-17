@@ -8,13 +8,15 @@ store callback.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Callable
+from collections.abc import Awaitable, Callable
+from typing import TYPE_CHECKING
 
 from team._path_utils import ScopePath
 from team.models import Note, Task
 
 if TYPE_CHECKING:
     from team.persistence.events import TeamRunEvent
+    from team.persistence.task_store import TaskStore
 
 logger = logging.getLogger("team.task_center")
 
@@ -38,8 +40,8 @@ class NoteManager:
         team_run_id: str,
         event_store_cb: Callable[[TeamRunEvent], None] | None = None,
         note_posted_cb: Callable[[Note], None] | None = None,
-        get_task_fn: Callable[[str], Any] | None = None,
-        task_store: Any = None,
+        get_task_fn: Callable[[str], Awaitable[Task | None]] | None = None,
+        task_store: "TaskStore | None" = None,
     ) -> None:
         self._notes: list[Note] = []
         self._team_run_id = team_run_id
