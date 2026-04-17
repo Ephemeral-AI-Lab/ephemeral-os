@@ -102,6 +102,49 @@ async def test_codeact_no_sandbox_returns_error():
     assert "No Daytona sandbox" in result.output
 
 
+async def test_build_tool_output_treats_conflict_only_as_error():
+    """A conflict-only commit must surface is_error=True and status='error'.
+
+    Regression guard: previously a CodeAct transaction with OCC conflicts
+    but no write_errors returned is_error=False, allowing agents to treat
+    a failed write as successful progress.
+    """
+    result = codeact_tool_module._build_tool_output(
+        context=_ctx(),
+        status="ok",
+        files_written=0,
+        shells=[],
+        script_stdout="",
+        write_errors=[],
+        write_conflicts=["src/foo.py: conflict with concurrent writer"],
+        warnings=[],
+    )
+    assert result.is_error is True
+    payload = json.loads(result.output)
+    assert payload["status"] == "error"
+    assert payload["write_conflicts"]
+    assert result.metadata["status"] == "error"
+    assert result.metadata["conflict"] is True
+
+
+async def test_build_tool_output_ok_when_no_failures():
+    """Sanity check: a clean commit stays status='ok', is_error=False."""
+    result = codeact_tool_module._build_tool_output(
+        context=_ctx(),
+        status="ok",
+        files_written=1,
+        shells=[],
+        script_stdout="",
+        write_errors=[],
+        write_conflicts=[],
+        warnings=[],
+    )
+    assert result.is_error is False
+    payload = json.loads(result.output)
+    assert payload["status"] == "ok"
+    assert result.metadata["conflict"] is False
+
+
 async def test_codeact_requires_code_or_command():
     sb = _make_sandbox()
     ctx = _ctx({"daytona_sandbox": sb})

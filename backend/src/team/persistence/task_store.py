@@ -462,6 +462,16 @@ class TaskStore:
                 raise GraphInvariantViolation(
                     f"request_replan: task {task_id} is terminal ({rec.status}); cannot replan"
                 )
+            # fired_by_task_id always points to the root original, not an
+            # intermediate replanner, so recovery chains stay one-hop deep.
+            root_origin = getattr(rec, "fired_by_task_id", None) or task_id
+            # Idempotent per origin: if a live replanner already exists for this
+            # failed origin, reuse it instead of spawning a parallel recovery branch.
+            existing = await q.find_live_replanner_for_origin(
+                db, self._team_run_id, root_origin
+            )
+            if existing is not None:
+                return existing
             replanner_id = str(uuid.uuid4())
             if rec.status != "request_replan":
                 await q.set_status_request_replan(
@@ -471,9 +481,6 @@ class TaskStore:
             if suggestion:
                 task_text += f"\nSuggestion: {suggestion}"
             scope_paths = list(rec.scope_paths) if rec.scope_paths else []
-            # fired_by_task_id always points to the root original, not
-            # an intermediate replanner, so chains stay one-hop deep.
-            root_origin = getattr(rec, "fired_by_task_id", None) or task_id
             replanner = TaskRecord(
                 id=replanner_id,
                 team_run_id=self._team_run_id,

@@ -243,17 +243,21 @@ class PlanExpander:
         if not self._budget.has_capacity_for(len(specs)):
             raise BudgetExceeded("max_tasks would be exceeded by replan")
 
-        if self._cancel_running_task is not None:
-            for cancelled_id in sorted(cancelled):
-                task = graph.get(cancelled_id)
-                if task is not None and task.status == TaskStatus.RUNNING:
-                    self._cancel_running_task(cancelled_id)
-
+        # Commit the graph mutation FIRST. If apply_replan_atomic raises,
+        # no live runner cancellation has happened yet — state stays consistent
+        # (graph still says task is RUNNING, runner is still alive). Cancelling
+        # before commit risks killing runners while the DB rolls back.
         _, inserted = await self._store.apply_replan_atomic(
             cancel_ids=cancel_ids,
             cancel_reason=f"cancelled_by_replan_{replan_task_id}",
             specs=specs,
         )
+
+        if self._cancel_running_task is not None:
+            for cancelled_id in sorted(cancelled):
+                task = graph.get(cancelled_id)
+                if task is not None and task.status == TaskStatus.RUNNING:
+                    self._cancel_running_task(cancelled_id)
 
         if specs:
             self._budget.charge_tasks(len(specs))

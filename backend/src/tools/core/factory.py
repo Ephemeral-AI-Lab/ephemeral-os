@@ -76,14 +76,14 @@ def _register_builtins() -> None:
 
     register_toolkit_class("task_center", TaskCenterToolkit)
 
-    # Submission toolkit — post-run phase tools
+    # Submission toolkit — in-loop terminal tools
     from tools.submission.toolkit import SubmissionToolkit
 
     register_toolkit_class("submission", SubmissionToolkit)
     # NOTE: Submission tools (submit_plan, submit_replan, submit_task_summary)
-    # are registered here. During the main query loop,
-    # they are gated via terminal_tools metadata. The executor's post-run
-    # phase uses terminal_tools to determine when to stop the loop.
+    # are ordinary tools called inside the main query loop. They are declared
+    # in QueryContext.terminal_tools so that a successful call ends the run.
+    # The legacy post-run submission phase has been removed.
 
 
 _register_builtins()

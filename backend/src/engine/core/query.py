@@ -109,6 +109,12 @@ def _should_defer_stream_tool_dispatch(
         if guarded_batch_seen:
             return True
         tool_name = str(getattr(tool_def, "name", "") or "")
+        # Terminal tools must not execute mid-stream alongside siblings;
+        # defer so validate_tool_batch can enforce exclusivity after the
+        # full tool_uses list is known.
+        if tool_name and tool_name in context.terminal_tools:
+            guarded_batch_seen = True
+            return True
         if get_reference_terminal_action(tool_name, tool_input):
             guarded_batch_seen = True
             return True

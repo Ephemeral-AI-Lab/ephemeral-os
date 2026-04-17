@@ -504,6 +504,13 @@ def _build_tool_output(
             }
         )
 
+    # Coerce status to "error" when any write failure occurred. Callers can
+    # pass "ok" eagerly; this keeps the emitted status/is_error/metadata
+    # consistent regardless of caller discipline.
+    if status == "ok" and (write_errors or write_conflicts):
+        status = "error"
+    is_error = status == "error" or bool(write_errors) or bool(write_conflicts)
+
     return ToolResult(
         output=json.dumps(
             {
@@ -520,7 +527,7 @@ def _build_tool_output(
                 "error": error[:500] if error else "",
             }
         ),
-        is_error=(status == "error" or bool(write_errors)),
+        is_error=is_error,
         metadata={
             "status": status,
             "files_written": files_written,

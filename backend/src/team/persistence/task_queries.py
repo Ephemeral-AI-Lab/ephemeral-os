@@ -290,6 +290,24 @@ async def fetch_replan_source(
     return (await db.execute(stmt)).first()
 
 
+async def find_live_replanner_for_origin(
+    db: AsyncSession, team_run_id: str, origin_task_id: str
+) -> TaskRecord | None:
+    """Return a non-terminal replanner whose fired_by_task_id matches the origin.
+
+    Used by request_replan to stay idempotent — if a live recovery replanner
+    already exists for the failed origin, callers reuse it instead of inserting
+    a duplicate branch.
+    """
+    terminal = {s.value for s in TERMINAL_STATUSES}
+    stmt = select(TaskRecord).where(
+        TaskRecord.team_run_id == team_run_id,
+        TaskRecord.fired_by_task_id == origin_task_id,
+        TaskRecord.status.notin_(terminal),
+    )
+    return (await db.execute(stmt)).scalar_one_or_none()
+
+
 async def fetch_task_status(
     db: AsyncSession, team_run_id: str, task_id: str
 ) -> str | None:

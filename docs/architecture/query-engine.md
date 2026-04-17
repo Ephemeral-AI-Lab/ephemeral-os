@@ -301,7 +301,7 @@ The query loop exits when: (1) the LLM sends no tool calls and no background tas
 
 ## Integration Points: Hooks, External Triggers, and Snapshots
 
-The query loop integrates with external systems via `QueryContext` fields: `hook_executor` for post-run submissions, `on_turn` callbacks for live progress, and `api_messages_snapshot` for compaction state inspection.
+The query loop integrates with external systems via `QueryContext` fields: `hook_executor` for per-tool `PRE_TOOL_USE` / `POST_TOOL_USE` hooks (invoked inside `tool_execution.run_tool_with_metadata`), `on_turn` callbacks for live progress, and `api_messages_snapshot` for compaction state inspection. Terminal submission (e.g. `submit_task_summary`) is now a regular in-loop tool governed by `QueryContext.terminal_tools`; the legacy post-run submission phase has been removed.
 
 ```
                         ┌─────────────────────────────┐

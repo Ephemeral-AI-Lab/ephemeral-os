@@ -544,7 +544,7 @@ class _Budget:
 
 
 @pytest.mark.asyncio
-async def test_replan_cancels_active_runner_before_marking_running_task_cancelled():
+async def test_replan_cancels_active_runner_after_apply_replan_atomic_commits():
     graph = {
         "replanner": _task(
             "replanner",
@@ -570,7 +570,10 @@ async def test_replan_cancels_active_runner_before_marking_running_task_cancelle
         cancel_ids=["running-target"],
     )
 
-    assert store.calls == ["cancel:running-target", "apply_replan_atomic"]
+    # DB transaction commits BEFORE runtime cancellation so a rollback
+    # cannot leave the graph saying the task is RUNNING while its runner
+    # has already been killed.
+    assert store.calls == ["apply_replan_atomic", "cancel:running-target"]
 
 
 @pytest.mark.asyncio
@@ -607,10 +610,190 @@ async def test_replan_cancel_cascade_includes_reviewer_dependents():
     )
 
     assert store.calls == [
+        "apply_replan_atomic",
         "cancel:reviewer-dependent",
         "cancel:running-target",
-        "apply_replan_atomic",
     ]
+
+
+@pytest.mark.asyncio
+async def test_request_replan_is_idempotent_when_live_replanner_exists(monkeypatch):
+    """A duplicate request_replan for the same origin must not spawn a
+    second replanner — it returns the live one already in flight."""
+    from team.persistence import task_store as task_store_module
+
+    store = TaskStore(_FakeSessionFactory(), "run-1")
+
+    source_row = SimpleNamespace(
+        id="failed-task",
+        parent_id="parent",
+        root_id="root",
+        depth=1,
+        agent_name="developer",
+        scope_paths=[],
+        status="running",
+        fired_by_task_id=None,
+    )
+    existing_replanner = SimpleNamespace(
+        id="existing-replanner",
+        team_run_id="run-1",
+        agent_name="team_replanner",
+        status="ready",
+        fired_by_task_id="failed-task",
+    )
+    inserts: list[object] = []
+
+    async def _fake_fetch(db, team_run_id, task_id):
+        return source_row
+
+    async def _fake_find(db, team_run_id, origin_task_id):
+        return existing_replanner
+
+    async def _fake_insert(db, record):
+        inserts.append(record)
+
+    async def _fake_replace(**kwargs):
+        raise AssertionError("replace_dependency must not run when reusing replanner")
+
+    async def _fake_set_status(db, team_run_id, task_id, reason):
+        raise AssertionError("set_status_request_replan must not run when reusing replanner")
+
+    monkeypatch.setattr(task_store_module.q, "fetch_replan_source", _fake_fetch)
+    monkeypatch.setattr(
+        task_store_module.q, "find_live_replanner_for_origin", _fake_find
+    )
+    monkeypatch.setattr(task_store_module.q, "insert_replanner_record", _fake_insert)
+    monkeypatch.setattr(task_store_module.q, "replace_dependency", _fake_replace)
+    monkeypatch.setattr(
+        task_store_module.q, "set_status_request_replan", _fake_set_status
+    )
+
+    returned = await store.request_replan(
+        task_id="failed-task",
+        reason="boom",
+        suggestion=None,
+        replanner_agent="team_replanner",
+    )
+
+    assert returned is existing_replanner
+    assert inserts == []
+
+
+@pytest.mark.asyncio
+async def test_request_replan_inserts_new_replanner_when_none_exists(monkeypatch):
+    """Sanity check: when no live replanner exists, request_replan inserts a new one."""
+    from team.persistence import task_store as task_store_module
+
+    class _FakeDb:
+        async def commit(self) -> None:
+            return None
+
+    class _CommittableSessionFactory:
+        def __call__(self):
+            class _Ctx:
+                async def __aenter__(self_inner):
+                    return _FakeDb()
+
+                async def __aexit__(self_inner, *args):
+                    return False
+
+            return _Ctx()
+
+    store = TaskStore(_CommittableSessionFactory(), "run-1")
+
+    source_row = SimpleNamespace(
+        id="failed-task",
+        parent_id="parent",
+        root_id="root",
+        depth=1,
+        agent_name="developer",
+        scope_paths=[],
+        status="running",
+        fired_by_task_id=None,
+    )
+    inserts: list[object] = []
+    replaces: list[dict] = []
+
+    async def _fake_fetch(db, team_run_id, task_id):
+        return source_row
+
+    async def _fake_find(db, team_run_id, origin_task_id):
+        return None
+
+    async def _fake_insert(db, record):
+        inserts.append(record)
+
+    async def _fake_replace(db, team_run_id, *, old_dep_id, new_dep_ids):
+        replaces.append({"old": old_dep_id, "new": list(new_dep_ids)})
+
+    async def _fake_set_status(db, team_run_id, task_id, reason):
+        pass
+
+    async def _fake_refresh(self):
+        return None
+
+    monkeypatch.setattr(task_store_module.q, "fetch_replan_source", _fake_fetch)
+    monkeypatch.setattr(
+        task_store_module.q, "find_live_replanner_for_origin", _fake_find
+    )
+    monkeypatch.setattr(task_store_module.q, "insert_replanner_record", _fake_insert)
+    monkeypatch.setattr(task_store_module.q, "replace_dependency", _fake_replace)
+    monkeypatch.setattr(
+        task_store_module.q, "set_status_request_replan", _fake_set_status
+    )
+    monkeypatch.setattr(TaskStore, "refresh_graph", _fake_refresh)
+
+    replanner = await store.request_replan(
+        task_id="failed-task",
+        reason="boom",
+        suggestion=None,
+        replanner_agent="team_replanner",
+    )
+
+    assert len(inserts) == 1
+    assert replanner.fired_by_task_id == "failed-task"
+    assert replaces == [
+        {"old": "failed-task", "new": [replanner.id]}
+    ]
+
+
+@pytest.mark.asyncio
+async def test_replan_does_not_cancel_runner_when_apply_replan_atomic_raises():
+    """If apply_replan_atomic fails, no live runner cancellation happens,
+    so graph state and runner state stay consistent under rollback."""
+
+    class _RaisingStore(_ExpanderStore):
+        async def apply_replan_atomic(self, **kwargs):
+            self.calls.append("apply_replan_atomic")
+            raise RuntimeError("db commit failed")
+
+    graph = {
+        "replanner": _task(
+            "replanner",
+            agent_name="team_replanner",
+            status=TaskStatus.RUNNING,
+        ),
+        "running-target": _task("running-target", status=TaskStatus.RUNNING),
+    }
+    store = _RaisingStore(graph)
+    expander = PlanExpander(
+        team_run_id="run-1",
+        store=store,
+        budget=_Budget(),
+        graph_getter=lambda: graph,
+        emit_cb=lambda event: None,
+        fail_cb=lambda task_id, reason: None,
+        cancel_running_task_cb=lambda task_id: store.calls.append(f"cancel:{task_id}"),
+    )
+
+    with pytest.raises(RuntimeError, match="db commit failed"):
+        await expander.apply_replan(
+            replan_task_id="replanner",
+            add_tasks=[],
+            cancel_ids=["running-target"],
+        )
+
+    assert store.calls == ["apply_replan_atomic"]
 
 
 @pytest.mark.asyncio

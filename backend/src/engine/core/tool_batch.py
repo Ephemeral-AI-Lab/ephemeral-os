@@ -30,6 +30,23 @@ def validate_tool_batch(
     if not tool_calls:
         return None
 
+    # Terminal-tool exclusivity: if any tool in this batch is a declared
+    # terminal tool, it must be the ONLY tool. Mixing a terminal tool with
+    # siblings would let siblings mutate state after the agent has already
+    # submitted its terminal result.
+    if context.terminal_tools and len(tool_calls) > 1:
+        terminal_in_batch = [tc for tc in tool_calls if tc.name in context.terminal_tools]
+        if terminal_in_batch:
+            terminal_names = ", ".join(f"`{tc.name}`" for tc in terminal_in_batch)
+            called = ", ".join(f"`{tc.name}`" for tc in tool_calls)
+            message = (
+                f"Terminal tool {terminal_names} must be called alone. "
+                f"This response batched it with other tools: {called}. "
+                f"No tool in this batch executed. "
+                f"Resubmit with only the terminal tool in its own final batch."
+            )
+            return reject_tool_batch(tool_calls, message=message)
+
     pending = get_required_next_tool(context.tool_metadata)
     if pending is not None:
         if len(tool_calls) != 1 or tool_calls[0].name != pending["tool_name"]:
