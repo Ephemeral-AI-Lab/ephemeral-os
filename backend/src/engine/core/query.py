@@ -449,7 +449,11 @@ async def _run_query_loop(
                 continue
 
             if isinstance(event, ApiToolUseDeltaEvent):
-                budget_rejection = _consume_tool_budget_or_reject(context, event.id)
+                budget_rejection = _consume_tool_budget_or_reject(
+                    context,
+                    event.name,
+                    event.id,
+                )
                 if budget_rejection is not None:
                     streamed_rejections.append(budget_rejection)
                     yield (

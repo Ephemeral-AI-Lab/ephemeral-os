@@ -708,6 +708,42 @@ async def test_successful_terminal_tool_call_stops_query_loop(tmp_path: Path):
 
 
 @pytest.mark.asyncio
+async def test_exhausted_budget_still_allows_successful_terminal_tool_call(tmp_path: Path):
+    submit_plan = SubmitPlanTool()
+    registry = _make_registry(submit_plan)
+    client = FakeApiClient(
+        [
+            _tool_reply(
+                ToolUseBlock(
+                    id="tc1",
+                    name="submit_plan",
+                    input={"new_tasks": []},
+                )
+            ),
+            _text_reply("This should not be reached."),
+        ]
+    )
+    context = _make_context(
+        client,
+        registry,
+        tmp_path,
+        terminal_tools={"submit_plan"},
+        tool_call_limit=1,
+        tool_calls_used=1,
+    )
+
+    events = await _collect_events(context, "submit the plan")
+
+    tool_completes = [e for e in events if isinstance(e, ToolExecutionCompleted)]
+
+    assert submit_plan.calls == 1
+    assert len(tool_completes) == 1
+    assert tool_completes[0].is_error is False
+    assert context.tool_calls_used == 1
+    assert context.exit_reason == QueryExitReason.TOOL_STOP
+
+
+@pytest.mark.asyncio
 async def test_streaming_pending_terminal_guard_rejects_wrong_tool_without_starting_it(
     tmp_path: Path,
 ):

@@ -8,7 +8,11 @@ from types import SimpleNamespace
 
 import pytest
 
-from tools.task_center.toolkit import SubmitTaskNoteTool, TaskCenterChangedSinceTool
+from tools.task_center.toolkit import (
+    ReadTaskNoteTool,
+    SubmitTaskNoteTool,
+    TaskCenterChangedSinceTool,
+)
 from tools.core.base import ToolExecutionContext
 
 
@@ -57,6 +61,30 @@ def test_submit_task_note_schema_is_pydantic_native():
 
     assert schema["input_schema"]["properties"]["content"]["description"]
     assert schema["output_schema"]["properties"]["task_id"]["description"]
+
+
+@pytest.mark.asyncio
+async def test_read_task_note_empty_path_read_is_successful_freshness_check():
+    class _Notes:
+        async def read(self, **_kwargs):
+            return []
+
+        async def read_notes(self, **_kwargs):
+            return []
+
+        def known_paths(self):
+            return ["src/other.py"]
+
+    ctx = _ctx({"task_center": SimpleNamespace(notes=_Notes())})
+
+    result = await ReadTaskNoteTool().execute(
+        ReadTaskNoteTool.input_model(paths=["src/auth.py"]),
+        ctx,
+    )
+
+    assert result.is_error is False
+    assert "No notes found for paths" in result.output
+    assert "src/other.py" in result.output
 
 
 @pytest.mark.asyncio

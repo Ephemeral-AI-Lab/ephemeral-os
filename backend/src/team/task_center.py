@@ -219,6 +219,13 @@ class TaskCenter:
         origin = self.graph.get(origin_id)
         if origin is not None:
             self._transitions.emit_full_status(origin)
+        for promoted_id in await self._store.maybe_promote_expanded_parent(origin_id):
+            promoted_task = self.graph.get(promoted_id)
+            if promoted_task is None:
+                continue
+            self._transitions.emit_full_status(promoted_task)
+            if promoted_task.fired_by_task_id:
+                await self._emit_replanned_origin_if_finalized(promoted_id)
 
     async def _mark_done_emit_promotions(self, task_id: str) -> None:
         promoted_ready = await self._store.mark_done(task_id)

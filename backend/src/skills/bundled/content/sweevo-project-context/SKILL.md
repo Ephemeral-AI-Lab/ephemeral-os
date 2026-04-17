@@ -12,6 +12,7 @@ Use this skill only for stable benchmark policy. Treat the prompt, payload, live
 - Must treat the live sandbox checkout as the source of truth. Must treat named `FAIL_TO_PASS`, `PASS_TO_PASS`, and grading commands as authoritative.
 - Must report a missing named test or node as `benchmark_surface_mismatch`. Must not label a missing transitive import, helper, or adjacent production module as `benchmark_surface_mismatch`.
 - Must keep commands repo-root-relative. Prefer direct `daytona_codeact(command="...", timeout=N)` for repo commands; use `daytona_codeact(code="...")` only for multi-step runtime that truly needs Python helpers. Never prepend guessed `cd /testbed`, `cd /workspace`, `cd /home/user`, use Python process wrappers, or append stdout/stderr capture plumbing such as `2>&1` or `2>/dev/null`.
+- Must treat `daytona_codeact` as runtime-only on team lanes. Never use it for file edits through `sed -i`, `tee`, output redirects, shell mutation commands, or inline Python writes; use `daytona_edit_file`, `daytona_write_file`, or `daytona_rename_symbol`.
 - Must fix repository code, not the ambient environment. Never rely on ad hoc package installs as the benchmark fix.
 - Must keep roles separate, preserve exact file paths and exact pytest node ids when they are known, and trust live file state over cached briefs or old reasoning.
 - Must treat benchmark test files as failure evidence first, not default implementation ownership, but must not create planner/scout ownership tasks whose scope is benchmark-test archaeology unless the prompt explicitly makes tests the owner surface.
@@ -23,7 +24,7 @@ Use this skill only for stable benchmark policy. Treat the prompt, payload, live
 
 - Must treat `docs/architecture/team-coordination.md` as the design intent for this benchmark.
 - Must keep shared context in the Task Center: scouts post durable notes directly, developers and validators rely on Task Center auto-notes plus terminal submissions. Use `read_task_note(...)` for scout findings and dependency context, `read_task_note(scope="sibling", ...)` for sibling activity and conflict checking.
-- Must use `read_task_note(paths=[...])` to check for existing findings before launching duplicate scouts.
+- Must use `read_task_note(paths=[...])` before opening source files, before launching duplicate scouts, and after every surprising verification failure; an empty note read is useful evidence, not a blocker.
 - Must treat scope-change notifications and `task_center_changed_since()` as freshness signals. Refresh with `read_task_note(...)` before committing, verifying, or replanning on a drifting surface.
 - Must keep `scope_paths` as soft coordination hints, not hard filesystem ownership bans.
 - Must treat any advisory outside-scope write as a tainted packet and hand it to replan instead of claiming success from that run.
@@ -34,7 +35,7 @@ Use this skill only for stable benchmark policy. Treat the prompt, payload, live
 - Must split direct owner leaves early and leave unresolved or broad surfaces expandable. Never hide residual work behind placeholder lanes or one catch-all developer.
 - Must start developer and validator execution lanes with `read_task_note(paths=[...])` before opening files or reproducing, even when the note set may be empty.
 - Must start developer and validator runtime work from the exact failing command or exact named failure target.
-- Must prefer Task Center notes, exact runtime evidence, and CI symbol tools over raw file reads on ready owner lanes.
+- Must prefer Task Center notes, exact runtime evidence, and CI symbol tools over raw file reads on ready owner lanes. Use `daytona_read_file(...)` only after notes plus CI identify a narrow line range or a CI result needs local confirmation.
 - Must not spend a ready leaf's opening moves reading benchmark tests when scout notes and exact runtime already name the owned seam.
 - Must report exact failing ids and exact snippets. Never explain failures away.
 - Must prefer recovery quality over perfect first-pass planning: validator evidence plus one live owner confirmation is enough to replan.

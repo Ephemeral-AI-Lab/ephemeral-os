@@ -22,7 +22,11 @@ from engine.core.query import QueryContext, _execute_tool_call
 from tools.core.runtime import ExecutionMetadata
 
 
-def _ctx(limit: int | None, used: int = 0) -> QueryContext:
+def _ctx(
+    limit: int | None,
+    used: int = 0,
+    terminal_tools: set[str] | None = None,
+) -> QueryContext:
     """Build a minimal QueryContext that only the budget paths inspect."""
     from unittest.mock import MagicMock
 
@@ -35,6 +39,7 @@ def _ctx(limit: int | None, used: int = 0) -> QueryContext:
         max_tokens=1,
         tool_call_limit=limit,
         tool_calls_used=used,
+        terminal_tools=terminal_tools or set(),
         tool_metadata=ExecutionMetadata(),
     )
 
@@ -146,6 +151,18 @@ async def test_execute_tool_call_increments_counter_on_unknown_tool():
     assert result.is_error
     assert "Unknown tool" in result.content
     assert ctx.tool_calls_used == 1
+
+
+@pytest.mark.asyncio
+async def test_execute_tool_call_allows_terminal_tool_when_budget_exhausted():
+    ctx = _ctx(limit=2, used=2, terminal_tools={"submit_plan"})
+    ctx.tool_registry.get = lambda _name: None  # type: ignore[method-assign]
+    result = await _execute_tool_call(ctx, "submit_plan", "id1", {})
+
+    assert result.is_error
+    assert "Unknown tool" in result.content
+    assert "tool_call_limit exceeded" not in result.content
+    assert ctx.tool_calls_used == 2
 
 
 @pytest.mark.asyncio

@@ -138,7 +138,7 @@ async def test_exec_process_operation_audits_workspace_mutation(tmp_path) -> Non
     svc.lsp_client.invalidate = MagicMock()  # type: ignore[method-assign]
     file_path = tmp_path / "codeact_file.py"
 
-    await svc.exec_process_operation(
+    response = await svc.exec_process_operation(
         sandbox,
         f"printf 'value = 1\\n' > {shlex.quote(str(file_path))}",
         description="daytona_codeact python",
@@ -154,6 +154,8 @@ async def test_exec_process_operation_audits_workspace_mutation(tmp_path) -> Non
     assert edits[0].agent_run_id == "agent-1"
     assert edits[0].task_id == "task-1"
     assert edits[0].new_hash
+    assert response.changed_paths == [str(file_path)]
+    assert response.files_written == 1
     svc.symbol_index.refresh.assert_called_once_with(str(file_path), "value = 1\n")
     svc.lsp_client.invalidate.assert_called_once_with(str(file_path))
 

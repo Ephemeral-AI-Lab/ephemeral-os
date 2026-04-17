@@ -2,14 +2,14 @@
   "models": [
     {
       "key": "minimax",
-      "label": "MiniMax M2.7 Highspeed",
+      "label": "MiniMax M2.7",
       "factory": {
-        "class_path": "openai",
+        "class_path": "providers.clients.anthropic_native.AnthropicClient",
         "kwargs": {
-          "model": "MiniMax-M2.7-highspeed",
+          "model": "MiniMax-M2.7",
           "api_key": "env:MINIMAX_API_KEY",
           "base_url": "env:MINIMAX_BASE_URL",
-          "api_format": "openai"
+          "api_format": "anthropic"
         }
       }
     }

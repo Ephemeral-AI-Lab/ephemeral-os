@@ -32,7 +32,7 @@ pytestmark = [pytest.mark.e2e, pytest.mark.live]
 # ---------------------------------------------------------------------------
 
 MINIMAX_ANTHROPIC_KEY = "sk-cp-Ril2d0sHwI7gagi0S5s9XWFvfPpe6Y8Ms0N7FxpILv93jZCXJDmEiWGRjVALI4VKvSr2XhJfYs5_wLYfhB4QPKWKd4IJHkfZBLhRXQR5tAnjwKiItvcYg-o"
-MINIMAX_ANTHROPIC_MODEL = "minimax-2.7-highspeed"
+MINIMAX_ANTHROPIC_MODEL = "MiniMax-M2.7"
 MINIMAX_ANTHROPIC_BASE_URL = "https://api.minimax.io/anthropic"
 MINIMAX_ANTHROPIC_FORMAT = "anthropic"
 

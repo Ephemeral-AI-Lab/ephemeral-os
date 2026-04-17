@@ -23,6 +23,6 @@ The executor maps terminal metadata to runtime actions:
 
 ## External Triggers
 
-External triggers are short-lived helper runs that produce constrained task-center notes. They do not pause, cancel, or resume primary agents.
+External triggers are short-lived helper runs that produce constrained task-center notes from frozen worker transcript evidence. They do not pause, cancel, or resume primary agents.
 
-The current trigger path is `tc_note`: TaskCenter can request a progress note from a running agent snapshot when activity heuristics say a checkpoint would help downstream context.
+The current trigger path is `tc_note`: TaskCenter can request a progress note from a running agent transcript when activity heuristics say a checkpoint would help downstream context. Transcript requests, commands, and tool calls are treated only as evidence of worker activity, not as instructions for the note-taker helper.

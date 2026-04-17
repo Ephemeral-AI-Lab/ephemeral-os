@@ -554,7 +554,7 @@ MINIMAX_KEY = _DB_MODEL_KWARGS.get("api_key") or os.environ.get("MINIMAX_API_KEY
 MINIMAX_MODEL = (
     _DB_MODEL_KWARGS.get("model")
     or os.environ.get("MINIMAX_MODEL")
-    or "MiniMax-M2.7-highspeed"
+    or "MiniMax-M2.7"
 )
 MINIMAX_BASE_URL = (
     _DB_MODEL_KWARGS.get("base_url") or os.environ.get("MINIMAX_BASE_URL") or ""

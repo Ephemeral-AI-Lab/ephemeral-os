@@ -15,6 +15,7 @@ Use this reference before the first `daytona_codeact` verification or reproducti
 
 - The preferred benchmark-lane repo-command form is direct `daytona_codeact(command="...", timeout=N)`.
 - Must not append shell capture plumbing such as `2>&1`, `2>/dev/null`, or `1>/tmp/out`; `daytona_codeact` already captures stdout and stderr.
+- Must not edit files through CodeAct. Avoid `sed -i`, `tee file`, output redirects, `touch`/`cp`/`mv`/`rm`, and inline Python writes; use `daytona_edit_file`, `daytona_write_file`, or `daytona_rename_symbol`.
 - If you truly need multi-step Python mode, keep repo commands inside `shell("...")` and still avoid `subprocess`.
 - Must keep repo commands repo-root-relative; do not prefix commands with `cd /testbed &&`, `cd /workspace &&`, or another repo-root `cd`.
 - Must not call unprefixed tools like `write_file`, `edit_file`, `read_file`, `bash`, or `grep`; the valid tools are the exact names in the tool list, such as `daytona_write_file` and `daytona_rename_symbol`.

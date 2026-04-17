@@ -26,6 +26,8 @@ from tools.daytona_toolkit._daytona_utils import (
     _read_text_file_via_exec,
     _recover_sandbox,
     _require_sandbox,
+    _team_repo_write_error,
+    _team_repo_write_warning,
     _supports_exec_transport,
     _upload_file_compat,
     _write_text_file_via_exec,
@@ -41,6 +43,77 @@ from tools.daytona_toolkit._shell_policy import (
 _DESTRUCTIVE_GIT_PATTERN = re.compile(
     r"git\s+(stash|reset\s+--hard|checkout\s+--\s|checkout\s+\.\s*$|clean\s+-[fd])",
     flags=re.IGNORECASE,
+)
+_CODEACT_FILE_EDIT_POLICY_MESSAGE = (
+    "BLOCKED: daytona_codeact is for runtime commands, tests, and inspection in "
+    "coordinated team lanes. File edits must use daytona_edit_file, "
+    "daytona_write_file, or daytona_rename_symbol so write-scope and invalid-edit "
+    "guardrails run before mutation."
+)
+_SHELL_FILE_EDIT_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (
+        re.compile(
+            r"(?:^|[;&|]\s*)(?:sudo\s+)?(?:g?sed|sed)\b(?:(?![;&|]).)*\s-[A-Za-z]*i(?:\b|[=.])",
+            flags=re.IGNORECASE | re.DOTALL,
+        ),
+        "in-place sed",
+    ),
+    (
+        re.compile(
+            r"(?:^|[;&|]\s*)perl\b(?:(?![;&|]).)*\s-\S*i\S*",
+            flags=re.IGNORECASE | re.DOTALL,
+        ),
+        "in-place perl",
+    ),
+    (
+        re.compile(
+            r"(?:^|[;&|]\s*)tee\b(?:\s+-[A-Za-z]+)*\s+(?!/dev/null(?:\s|$))\S+",
+            flags=re.IGNORECASE,
+        ),
+        "tee file write",
+    ),
+    (
+        re.compile(
+            r"(?:^|[;&|]\s*)(?:touch|truncate|cp|mv|install|rm|rmdir)\b",
+            flags=re.IGNORECASE,
+        ),
+        "filesystem mutation command",
+    ),
+    (
+        re.compile(
+            r"(?:^|[;&|]\s*)python(?:3(?:\.\d+)?)?\b.*"
+            r"(?:write_text|write_bytes|"
+            r"\bopen\s*\([^)]*,\s*['\"][^'\"]*[wax+]|"
+            r"\bshutil\.|\bos\.(?:remove|unlink|rename|replace)|"
+            r"\bPath\s*\([^)]*\)\.(?:touch|unlink|rename|replace|mkdir))",
+            flags=re.IGNORECASE | re.DOTALL,
+        ),
+        "inline Python file mutation",
+    ),
+)
+_SHELL_OUTPUT_REDIRECTION_PATTERN = re.compile(
+    r"(?<![<>&])(?:\b\d*)?(?:>>?|&>)\s*(?!&\d\b)(?!/dev/null(?:\s|$))\S+",
+    flags=re.IGNORECASE,
+)
+_PYTHON_FILE_EDIT_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"(?<![.\w])write\s*\(", flags=re.IGNORECASE), "CodeAct write() helper"),
+    (re.compile(r"\bwrite_text\s*\(", flags=re.IGNORECASE), "Path.write_text"),
+    (re.compile(r"\bwrite_bytes\s*\(", flags=re.IGNORECASE), "Path.write_bytes"),
+    (
+        re.compile(
+            r"\bopen\s*\([^)]*,\s*['\"][^'\"]*[wax+]",
+            flags=re.IGNORECASE | re.DOTALL,
+        ),
+        "write-mode open()",
+    ),
+    (
+        re.compile(
+            r"\b(?:os|Path\s*\([^)]*\))\.(?:remove|unlink|rename|replace|touch|mkdir|rmdir)\b",
+            flags=re.IGNORECASE | re.DOTALL,
+        ),
+        "Python filesystem mutation",
+    ),
+    (re.compile(r"\bshutil\.", flags=re.IGNORECASE), "shutil file mutation"),
 )
 _CODEACT_DEFAULT_TIMEOUT = CODE_INTELLIGENCE_TUNING.codeact_default_timeout
 _CODEACT_WRITE_TIMEOUT = CODE_INTELLIGENCE_TUNING.codeact_write_timeout
@@ -138,7 +211,10 @@ class DaytonaCodeActShellOutput(BaseModel):
 class DaytonaCodeActOutput(BaseModel):
     cwd: str = Field(..., description="Current sandbox working directory.")
     status: str = Field(..., description="Execution status: ok or error.")
-    files_written: int = Field(..., description="Number of Python helper write calls observed.")
+    files_written: int = Field(
+        ...,
+        description="Number of helper or audited process file writes observed.",
+    )
     shells_run: int = Field(..., description="Number of shell commands executed.")
     shell_summaries: list[str] = Field(
         default_factory=list,
@@ -177,7 +253,73 @@ def _format_codeact_error(
             "Use `daytona_codeact(command=\"...\")` or `shell(\"...\")` inside Python mode; "
             "do not import `subprocess` or call `os.system()`."
         )
+    if "daytona_codeact is for runtime commands" in detail:
+        lines.append(
+            "Use `daytona_edit_file`, `daytona_write_file`, or "
+            "`daytona_rename_symbol` for file changes."
+        )
     return "\n".join(lines)
+
+
+def _has_team_task_context(context: ToolExecutionContext) -> bool:
+    return bool(
+        context.metadata.get("task_center")
+        or context.metadata.get("team_run_id")
+        or context.metadata.get("work_item_id")
+        or context.metadata.get("benchmark_test_ids")
+        or context.metadata.get("benchmark_test_files")
+    )
+
+
+def _enforce_codeact_file_edit_policy(context: ToolExecutionContext) -> bool:
+    return is_coordinated_team_agent(context) and _has_team_task_context(context)
+
+
+def _file_edit_policy_error(kind: str) -> str:
+    return f"{_CODEACT_FILE_EDIT_POLICY_MESSAGE} Detected {kind}."
+
+
+def _mask_shell_quoted_text(command: str) -> str:
+    """Mask shell-quoted text while keeping quote delimiters and rough token shape."""
+    out: list[str] = []
+    quote: str | None = None
+    escaped = False
+    for char in command:
+        if escaped:
+            out.append("x" if quote else char)
+            escaped = False
+            continue
+        if char == "\\":
+            out.append("x" if quote else char)
+            escaped = True
+            continue
+        if quote:
+            if char == quote:
+                quote = None
+                out.append(char)
+            else:
+                out.append("x" if not char.isspace() else char)
+            continue
+        if char in {"'", '"'}:
+            quote = char
+        out.append(char)
+    return "".join(out)
+
+
+def _shell_file_edit_policy_error(command: str) -> str | None:
+    if _SHELL_OUTPUT_REDIRECTION_PATTERN.search(_mask_shell_quoted_text(command or "")):
+        return _file_edit_policy_error("shell output redirection")
+    for pattern, kind in _SHELL_FILE_EDIT_PATTERNS:
+        if pattern.search(command or ""):
+            return _file_edit_policy_error(kind)
+    return None
+
+
+def _python_file_edit_policy_error(code: str) -> str | None:
+    for pattern, kind in _PYTHON_FILE_EDIT_PATTERNS:
+        if pattern.search(code or ""):
+            return _file_edit_policy_error(kind)
+    return None
 
 
 def _python_literal_or_none(value: str | None) -> str:
@@ -187,13 +329,15 @@ def _python_literal_or_none(value: str | None) -> str:
 
 
 _WRAPPER_TEMPLATE = r'''
-import base64, hashlib, importlib, json, os, re, shlex, subprocess, traceback
+import base64, hashlib, importlib, json, os, pathlib, re, shlex, subprocess, traceback
 
 _RUN_ID = "{run_id}"
 _MANIFEST = {{"reads": [], "writes": [], "shells": [], "status": "ok", "error": ""}}
 _CODEACT_CWD = {codeact_cwd}
 _CODEACT_REPO_ROOT = {codeact_repo_root}
 _ENFORCE_TEAM_SHELL_POLICY = {enforce_team_shell_policy}
+_DISABLE_CODEACT_FILE_EDITS = {disable_codeact_file_edits}
+_CODEACT_FILE_EDIT_POLICY_MESSAGE = {codeact_file_edit_policy_message}
 _USER_LOCAL_BIN_EXPORT = 'export PATH="$HOME/.local/bin:$PATH"'
 _PROJECT_VENV_BIN_EXPORT = 'if [ -d .venv/bin ]; then export PATH="$PWD/.venv/bin:$PATH"; fi'
 _PYTHON3_SHIM = 'if command -v python3 >/dev/null 2>&1; then python() {{ command python3 "$@"; }}; fi'
@@ -213,7 +357,85 @@ _DESTRUCTIVE_SHELL_PATTERN = re.compile(
     r")",
     flags=re.IGNORECASE,
 )
+_CODEACT_SHELL_FILE_EDIT_PATTERNS = (
+    (
+        re.compile(
+            r"(?:^|[;&|]\s*)(?:sudo\s+)?(?:g?sed|sed)\b(?:(?![;&|]).)*\s-[A-Za-z]*i(?:\b|[=.])",
+            flags=re.IGNORECASE | re.DOTALL,
+        ),
+        "in-place sed",
+    ),
+    (
+        re.compile(
+            r"(?:^|[;&|]\s*)perl\b(?:(?![;&|]).)*\s-\S*i\S*",
+            flags=re.IGNORECASE | re.DOTALL,
+        ),
+        "in-place perl",
+    ),
+    (
+        re.compile(
+            r"(?:^|[;&|]\s*)tee\b(?:\s+-[A-Za-z]+)*\s+(?!/dev/null(?:\s|$))\S+",
+            flags=re.IGNORECASE,
+        ),
+        "tee file write",
+    ),
+    (
+        re.compile(
+            r"(?:^|[;&|]\s*)(?:touch|truncate|cp|mv|install|rm|rmdir)\b",
+            flags=re.IGNORECASE,
+        ),
+        "filesystem mutation command",
+    ),
+    (
+        re.compile(
+            r"(?:^|[;&|]\s*)python(?:3(?:\.\d+)?)?\b.*"
+            r"(?:write_text|write_bytes|"
+            r"\bopen\s*\([^)]*,\s*['\"][^'\"]*[wax+]|"
+            r"\bshutil\.|\bos\.(?:remove|unlink|rename|replace)|"
+            r"\bPath\s*\([^)]*\)\.(?:touch|unlink|rename|replace|mkdir))",
+            flags=re.IGNORECASE | re.DOTALL,
+        ),
+        "inline Python file mutation",
+    ),
+)
+_CODEACT_SHELL_OUTPUT_REDIRECTION_PATTERN = re.compile(
+    r"(?<![<>&])(?:\b\d*)?(?:>>?|&>)\s*(?!&\d\b)(?!/dev/null(?:\s|$))\S+",
+    flags=re.IGNORECASE,
+)
 {shell_policy_source}
+
+def _mask_shell_quoted_text(command):
+    out = []
+    quote = None
+    escaped = False
+    for char in command:
+        if escaped:
+            out.append("x" if quote else char)
+            escaped = False
+            continue
+        if char == "\\":
+            out.append("x" if quote else char)
+            escaped = True
+            continue
+        if quote:
+            if char == quote:
+                quote = None
+                out.append(char)
+            else:
+                out.append("x" if not char.isspace() else char)
+            continue
+        if char in {{"'", '"'}}:
+            quote = char
+        out.append(char)
+    return "".join(out)
+
+def _codeact_shell_file_edit_error(command):
+    if _CODEACT_SHELL_OUTPUT_REDIRECTION_PATTERN.search(_mask_shell_quoted_text(command or "")):
+        return "shell output redirection"
+    for pattern, kind in _CODEACT_SHELL_FILE_EDIT_PATTERNS:
+        if pattern.search(command or ""):
+            return kind
+    return None
 
 def _normalize_path(path):
     if os.path.isabs(path):
@@ -229,6 +451,8 @@ def read(path):
     return content
 
 def write(path, content):
+    if _DISABLE_CODEACT_FILE_EDITS:
+        raise RuntimeError(_CODEACT_FILE_EDIT_POLICY_MESSAGE)
     resolved = _normalize_path(path)
     parent = os.path.dirname(resolved)
     if parent:
@@ -270,6 +494,13 @@ def shell(command, timeout={codeact_default_timeout}):
             "BLOCKED: destructive shell command that targets workspace or system "
             "directories is forbidden. Use targeted file operations instead.",
         )
+    if _DISABLE_CODEACT_FILE_EDITS:
+        edit_kind = _codeact_shell_file_edit_error(command)
+        if edit_kind:
+            _block_shell_command(
+                command,
+                f"{{_CODEACT_FILE_EDIT_POLICY_MESSAGE}} Detected {{edit_kind}}.",
+            )
     try:
         wrapped = f"{{_USER_LOCAL_BIN_EXPORT}} && {{_PROJECT_VENV_BIN_EXPORT}} && {{_PYTHON3_SHIM}} && {{command}}"
         proc = subprocess.run(
@@ -304,18 +535,30 @@ def shell(command, timeout={codeact_default_timeout}):
 
 import builtins as _builtins_mod
 _real_import = _builtins_mod.__import__
+_real_open = _builtins_mod.open
+
+def _is_write_mode(mode):
+    text = str(mode or "r")
+    return any(flag in text for flag in ("w", "a", "x", "+"))
+
+def _guarded_open(file, mode="r", *args, **kwargs):
+    if _DISABLE_CODEACT_FILE_EDITS and _is_write_mode(mode):
+        raise RuntimeError(_CODEACT_FILE_EDIT_POLICY_MESSAGE)
+    return _real_open(file, mode, *args, **kwargs)
 
 def _guarded_import(name, *args, **kwargs):
     top = name.split(".")[0]
     if top in _BLOCKED_MODULES:
         raise ImportError(
             f"import {{name!r}} is blocked in codeact. "
-            "Use daytona_codeact shell mode for commands and read()/write() for file I/O."
+            "Use daytona_codeact shell mode for commands and read() for file reads; "
+            "use Daytona edit/write tools for file changes."
         )
     return _real_import(name, *args, **kwargs)
 
 _sandbox_builtins = dict(vars(_builtins_mod))
 _sandbox_builtins["__import__"] = _guarded_import
+_sandbox_builtins["open"] = _guarded_open
 
 _real_import_module = importlib.import_module
 
@@ -324,11 +567,44 @@ def _guarded_import_module(name, package=None):
     if top in _BLOCKED_MODULES:
         raise ImportError(
             f"import {{name!r}} is blocked in codeact. "
-            "Use daytona_codeact shell mode for commands and read()/write() for file I/O."
+            "Use daytona_codeact shell mode for commands and read() for file reads; "
+            "use Daytona edit/write tools for file changes."
         )
     return _real_import_module(name, package)
 
 importlib.import_module = _guarded_import_module
+
+def _blocked_file_edit_call(*args, **kwargs):
+    raise RuntimeError(_CODEACT_FILE_EDIT_POLICY_MESSAGE)
+
+if _DISABLE_CODEACT_FILE_EDITS:
+    for _name in (
+        "remove",
+        "unlink",
+        "rename",
+        "replace",
+        "mkdir",
+        "makedirs",
+        "rmdir",
+        "removedirs",
+        "chmod",
+        "chown",
+        "truncate",
+    ):
+        if hasattr(os, _name):
+            setattr(os, _name, _blocked_file_edit_call)
+    for _name in (
+        "write_text",
+        "write_bytes",
+        "touch",
+        "unlink",
+        "rename",
+        "replace",
+        "mkdir",
+        "chmod",
+    ):
+        if hasattr(pathlib.Path, _name):
+            setattr(pathlib.Path, _name, _blocked_file_edit_call)
 
 if _ENFORCE_TEAM_SHELL_POLICY:
     def _blocked_os_process(*args, **kwargs):
@@ -362,6 +638,7 @@ def _build_wrapper(
     code: str,
     *,
     enforce_team_shell_policy: bool,
+    disable_codeact_file_edits: bool,
     run_id: str,
     cwd: str | None,
     repo_root: str | None,
@@ -373,6 +650,8 @@ def _build_wrapper(
         codeact_cwd=_python_literal_or_none(cwd),
         codeact_repo_root=_python_literal_or_none(repo_root),
         enforce_team_shell_policy="True" if enforce_team_shell_policy else "False",
+        disable_codeact_file_edits="True" if disable_codeact_file_edits else "False",
+        codeact_file_edit_policy_message=json.dumps(_CODEACT_FILE_EDIT_POLICY_MESSAGE),
         shell_policy_source=shell_policy_source(),
         codeact_default_timeout=_CODEACT_DEFAULT_TIMEOUT,
     )
@@ -428,12 +707,16 @@ async def _exec_shell_command(
     )
     stdout = getattr(response, "result", "") or ""
     fallback_exit_code = getattr(response, "exit_code", None)
-    cleaned_stdout, exit_code = _extract_exit_code(stdout, fallback_exit_code=fallback_exit_code)
+    cleaned_stdout, exit_code = _extract_exit_code(
+        stdout,
+        fallback_exit_code=fallback_exit_code,
+    )
     return {
         "command": command,
         "stdout": cleaned_stdout,
         "stderr": cleaned_stdout if exit_code != 0 else "",
         "exit_code": exit_code,
+        "changed_paths": _changed_paths_from_response(response),
     }
 
 
@@ -533,7 +816,8 @@ async def _execute_python_wrapper(
     cwd: str | None,
     repo_root: str | None,
     enforce_team_shell_policy: bool,
-) -> tuple[str | None, object, ToolResult | None]:
+    disable_codeact_file_edits: bool,
+) -> tuple[str | None, object, ToolResult | None, list[str]]:
     run_id = uuid.uuid4().hex[:8]
     wrapper = _build_wrapper(
         code,
@@ -541,6 +825,7 @@ async def _execute_python_wrapper(
         cwd=cwd,
         repo_root=repo_root,
         enforce_team_shell_policy=enforce_team_shell_policy,
+        disable_codeact_file_edits=disable_codeact_file_edits,
     )
     script_path = f"/tmp/codeact-wrapper-{run_id}.py"
     exec_command = _build_exec_command(script_path, cwd=cwd)
@@ -566,9 +851,14 @@ async def _execute_python_wrapper(
                     raise
                 await _upload_file_compat(sandbox, wrapper.encode("utf-8"), script_path)
         except Exception as recovery_exc:
-            return None, sandbox, ToolResult(
-                output=f"Failed to upload script: {recovery_exc}",
-                is_error=True,
+            return (
+                None,
+                sandbox,
+                ToolResult(
+                    output=f"Failed to upload script: {recovery_exc}",
+                    is_error=True,
+                ),
+                [],
             )
 
     try:
@@ -579,7 +869,12 @@ async def _execute_python_wrapper(
             timeout=_CODEACT_DEFAULT_TIMEOUT,
             description="daytona_codeact python",
         )
-        return getattr(response, "result", "") or "", sandbox, None
+        return (
+            getattr(response, "result", "") or "",
+            sandbox,
+            None,
+            _changed_paths_from_response(response),
+        )
     except Exception as exc:
         try:
             sandbox = await _recover_sandbox(context, exc)
@@ -590,11 +885,21 @@ async def _execute_python_wrapper(
                 timeout=_CODEACT_DEFAULT_TIMEOUT,
                 description="daytona_codeact python",
             )
-            return getattr(response, "result", "") or "", sandbox, None
+            return (
+                getattr(response, "result", "") or "",
+                sandbox,
+                None,
+                _changed_paths_from_response(response),
+            )
         except Exception as recovery_exc:
-            return None, sandbox, ToolResult(
-                output=f"Execution failed: {recovery_exc}",
-                is_error=True,
+            return (
+                None,
+                sandbox,
+                ToolResult(
+                    output=f"Execution failed: {recovery_exc}",
+                    is_error=True,
+                ),
+                [],
             )
 
 
@@ -612,12 +917,70 @@ def _ci_required_result() -> ToolResult:
 def _shell_result_error_detail(shell_result: dict[str, object]) -> str:
     return str(shell_result.get("stderr", "") or shell_result.get("stdout", "") or "")
 
+
+def _changed_paths_from_response(response: object) -> list[str]:
+    raw = getattr(response, "changed_paths", None)
+    if not isinstance(raw, list):
+        return []
+    return sorted({str(path) for path in raw if str(path or "").strip()})
+
+
+def _changed_paths_from_shell(shell_result: dict[str, object]) -> list[str]:
+    raw = shell_result.get("changed_paths")
+    if not isinstance(raw, list):
+        return []
+    return sorted({str(path) for path in raw if str(path or "").strip()})
+
+
+def _audited_write_policy(
+    context: ToolExecutionContext,
+    changed_paths: list[str],
+) -> tuple[list[str], str]:
+    warnings: list[str] = []
+    errors: list[str] = []
+    for path in changed_paths:
+        error = _team_repo_write_error(
+            context,
+            path,
+            tool_name="daytona_codeact",
+        )
+        if error is not None:
+            errors.append(error)
+            continue
+        warning = _team_repo_write_warning(
+            context,
+            path,
+            tool_name="daytona_codeact",
+        )
+        if warning is not None:
+            warnings.append(warning)
+    return warnings, "\n".join(errors)
+
+
+def _files_written_count(
+    manifest_writes: list[object],
+    changed_paths: list[str],
+) -> int:
+    if not manifest_writes:
+        return len(changed_paths)
+
+    manifest_paths = {
+        str(item.get("path") or "")
+        for item in manifest_writes
+        if isinstance(item, dict) and str(item.get("path") or "").strip()
+    }
+    audited_only = [path for path in changed_paths if path not in manifest_paths]
+    return len(manifest_writes) + len(audited_only)
+
+
 @tool(
     name="daytona_codeact",
     description=(
         "Execute either Python code or a direct shell command in the Daytona sandbox. "
         "Use `command` for tests, builds, and verification; use `code` for multi-step "
-        "Python with read()/write()/shell() helpers. stdout and stderr are already "
+        "Python with read()/shell() helpers. Do not use CodeAct for file edits; "
+        "use daytona_edit_file, daytona_write_file, or daytona_rename_symbol instead. "
+        "stdout and stderr are already "
         "captured; do not append shell capture plumbing such as `2>&1` or `2>/dev/null`. "
         "Coordinated team commands already run from the repo root, so do not "
         "prefix them with `cd /testbed &&` or another repo-root cd."
@@ -643,6 +1006,7 @@ async def daytona_codeact(
     assert resolved_mode is not None
 
     repo_cwd = _get_cwd(context)
+    disable_codeact_file_edits = _enforce_codeact_file_edit_policy(context)
 
     if resolved_mode == "shell":
         direct_command = command or ""
@@ -657,6 +1021,14 @@ async def daytona_codeact(
             destructive_error = destructive_shell_command_error(direct_command)
         if destructive_error is not None:
             return _shell_error_result(destructive_error)
+        if disable_codeact_file_edits:
+            file_edit_error = _shell_file_edit_policy_error(direct_command)
+            if file_edit_error is not None:
+                return _shell_error_result(file_edit_error)
+    elif disable_codeact_file_edits:
+        file_edit_error = _python_file_edit_policy_error(code or "")
+        if file_edit_error is not None:
+            return ToolResult(output=file_edit_error, is_error=True)
 
     try:
         sandbox = await _require_sandbox(context)
@@ -678,23 +1050,29 @@ async def daytona_codeact(
             return tool_error
         assert shell_result is not None
         exit_code = int(shell_result.get("exit_code", 1))
+        changed_paths = _changed_paths_from_shell(shell_result)
+        policy_warnings, policy_error = _audited_write_policy(context, changed_paths)
         return _build_tool_output(
             context=context,
-            status="ok" if exit_code == 0 else "error",
-            files_written=0,
+            status="ok" if exit_code == 0 and not policy_error else "error",
+            files_written=len(changed_paths),
             shells=[shell_result],
             script_stdout="",
-            warnings=list(normalization_warnings),
-            error=_shell_result_error_detail(shell_result) if exit_code != 0 else "",
+            warnings=list(normalization_warnings) + policy_warnings,
+            error=(
+                policy_error
+                or (_shell_result_error_detail(shell_result) if exit_code != 0 else "")
+            ),
         )
 
-    stdout, sandbox, tool_error = await _execute_python_wrapper(
+    stdout, sandbox, tool_error, changed_paths = await _execute_python_wrapper(
         context,
         sandbox,
         code=code or "",
         cwd=repo_cwd,
         repo_root=repo_cwd,
         enforce_team_shell_policy=is_coordinated_team_agent(context),
+        disable_codeact_file_edits=disable_codeact_file_edits,
     )
     if tool_error is not None:
         return tool_error
@@ -764,12 +1142,13 @@ async def daytona_codeact(
 
     warnings = [str(w) for w in (manifest.get("warnings", []) or [])]
     writes = list(manifest.get("writes", []) or [])
+    policy_warnings, policy_error = _audited_write_policy(context, changed_paths)
     return _build_tool_output(
         context=context,
-        status="ok",
-        files_written=len(writes),
+        status="error" if policy_error else "ok",
+        files_written=_files_written_count(writes, changed_paths),
         shells=shells,
         script_stdout=script_stdout,
-        warnings=warnings,
-        error=str(manifest.get("error", "") or ""),
+        warnings=warnings + policy_warnings,
+        error=policy_error or str(manifest.get("error", "") or ""),
     )

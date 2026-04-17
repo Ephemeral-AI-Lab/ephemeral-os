@@ -49,11 +49,14 @@ def _build_budget_exceeded_error(
 
 def _consume_tool_budget_or_reject(
     context: QueryContext,
+    tool_name: str,
     tool_use_id: str,
 ) -> ToolResultBlock | None:
     if context.tool_call_limit is None:
         return None
     if context.tool_calls_used >= context.tool_call_limit:
+        if tool_name in context.terminal_tools:
+            return None
         return _build_budget_exceeded_error(tool_use_id, context.tool_call_limit)
     context.tool_calls_used += 1
     return None
@@ -72,7 +75,7 @@ async def execute_tool_call(
     if pending is not None and tool_name == pending["tool_name"]:
         clear_required_next_tool(context.tool_metadata)
 
-    budget_rejection = _consume_tool_budget_or_reject(context, tool_use_id)
+    budget_rejection = _consume_tool_budget_or_reject(context, tool_name, tool_use_id)
     if budget_rejection is not None:
         return budget_rejection
 

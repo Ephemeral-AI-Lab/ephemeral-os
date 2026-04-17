@@ -360,7 +360,7 @@ class ProcessAuditor:
         )
         raw = str(getattr(combined_response, "result", "") or "")
         parsed = _parse_process_audit_combined_output(raw, run_id=run_id)
-        self._record_audit(
+        changed_paths = self._record_audit(
             before=parsed.before,
             after=parsed.after,
             description=description,
@@ -372,6 +372,8 @@ class ProcessAuditor:
         return SimpleNamespace(
             result=parsed.exec_stdout,
             exit_code=parsed.exec_exit_code,
+            changed_paths=changed_paths,
+            files_written=len(changed_paths),
         )
 
     def _record_audit(
@@ -384,8 +386,9 @@ class ProcessAuditor:
         team_run_id: str,
         agent_run_id: str,
         task_id: str,
-    ) -> None:
+    ) -> list[str]:
         changed_paths = sorted(set(before) | set(after))
+        recorded_paths: list[str] = []
         for file_path in changed_paths:
             old = before.get(file_path, {})
             new = after.get(file_path, {})
@@ -398,6 +401,7 @@ class ProcessAuditor:
                 new_hash = str(old.get("head_hash") or "")
             if old_exists == new_exists and old_hash == new_hash:
                 continue
+            recorded_paths.append(file_path)
             self._arbiter.record_edit(
                 file_path=file_path,
                 actor_label=agent_id or agent_run_id,
@@ -419,6 +423,7 @@ class ProcessAuditor:
                 self._lsp_client.invalidate(file_path)
             except Exception:
                 logger.debug("lsp invalidate failed after process op for %s", file_path, exc_info=True)
+        return recorded_paths
 
 
 __all__ = ["ProcessAuditor"]

@@ -22,6 +22,7 @@ from benchmarks.sweevo.team_runner import (
     _make_context_builders,
     _make_runner,
 )
+from agents.types import AgentDefinition
 from engine.core.query import QueryExitReason
 from team.persistence.events import TeamRunEvent
 from message import ConversationMessage, TextBlock, ToolUseBlock
@@ -739,6 +740,103 @@ def test_make_runner_persists_work_result(monkeypatch):
     )
 
     assert ctx.tool_metadata["work_result"] == final_text
+
+
+def test_make_runner_writes_agent_run_log_artifact(monkeypatch, tmp_path: Path):
+    class _Tracker:
+        run_id = "run-1"
+
+        def finish(self, **_: object) -> None:
+            return None
+
+    async def _fake_run(prompt: str):
+        assert prompt == "Fix it"
+        agent.display_messages = [
+            ConversationMessage(
+                role="assistant",
+                content=[TextBlock(text="Implemented the requested fix.")],
+            )
+        ]
+        if False:
+            yield None
+
+    query_context = SimpleNamespace(
+        tool_metadata=ExecutionMetadata(session_config="cfg", sandbox_id="sbx-1"),
+        run_id="",
+        tool_call_limit=10,
+        tool_calls_used=3,
+        session_state=None,
+        api_messages_snapshot=[
+            ConversationMessage(
+                role="user",
+                content=[TextBlock(text="Compacted API prompt")],
+            )
+        ],
+        exit_reason=QueryExitReason.TOOL_STOP,
+        terminal_tools=set(),
+        system_prompt="Runtime system prompt",
+    )
+    agent = SimpleNamespace(
+        query_context=query_context,
+        display_messages=[],
+        total_usage=SimpleNamespace(input_tokens=101, output_tokens=22),
+        model="test-model",
+        run=_fake_run,
+    )
+
+    monkeypatch.setattr("team.runtime.runner.AgentRunTracker", SimpleNamespace(create=lambda **_: _Tracker()))
+    monkeypatch.setattr("team.runtime.runner.spawn_agent", lambda *_args, **_kwargs: agent)
+    monkeypatch.setattr("team.runtime.telemetry.estimate_final_context", lambda _messages: 456)
+    monkeypatch.setattr("team.runtime.telemetry.persist_session_snapshot", lambda **_: None)
+    monkeypatch.setattr("team.runtime.registry.get", lambda _team_run_id: None)
+
+    runner = _make_runner(
+        session_config=SimpleNamespace(session_id="sess-1"),
+        sandbox_id="sbx-1",
+        printer=None,
+        team_metrics={"agent_run_log_dir": str(tmp_path)},
+    )
+    ctx = sweevo_team_runner.TeamAgentContext(
+        user_message="Fix it",
+        tool_metadata=ExecutionMetadata(team_run_id="TR1", work_item_id="W1"),
+    )
+
+    asyncio.run(
+        runner(
+            AgentDefinition(
+                name="developer",
+                description="Developer",
+                system_prompt="Definition prompt",
+                model="test-model",
+                role="developer",
+                skills=["sweevo-project-context"],
+                tool_call_limit=10,
+            ),
+            ctx,
+        )
+    )
+
+    files = list(tmp_path.glob("*.json"))
+    assert len(files) == 1
+    payload = json.loads(files[0].read_text(encoding="utf-8"))
+    assert payload["team_run_id"] == "TR1"
+    assert payload["work_item_id"] == "W1"
+    assert payload["agent_run_id"] == "run-1"
+    assert payload["agent_definition"]["name"] == "developer"
+    assert payload["system_prompt"] == "Runtime system prompt"
+    assert payload["user_prompt"] == "Fix it"
+    assert payload["assistant_response"] == "Implemented the requested fix."
+    assert payload["usage"] == {
+        "prompt_tokens": 101,
+        "completion_tokens": 22,
+        "total_tokens": 123,
+    }
+    assert payload["token_trackers"]["tool_calls_used"] == 3
+    assert payload["token_trackers"]["final_context_tokens"] == 456
+    assert payload["display_messages"][-1]["role"] == "assistant"
+    assert payload["display_messages"][-1]["content"][0]["text"] == "Implemented the requested fix."
+    assert payload["api_messages"][-1]["role"] == "user"
+    assert payload["api_messages"][-1]["content"][0]["text"] == "Compacted API prompt"
 
 
 def test_make_runner_logs_tc_note_external_hook(monkeypatch, tmp_path: Path):

@@ -128,20 +128,26 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "must load `widening-and-runtime`" in developer.lower()
     assert "must load `codeact-runtime-examples`" in developer.lower()
     assert "must load `pre-completion-validation`" in developer.lower()
+    assert "before any `daytona_read_file(...)`" in developer
+    assert "Empty note reads are successful freshness checks." in developer
     assert "never rewrite benchmark tests" in developer.lower()
+    assert "must not use `daytona_codeact` for file edits" in developer.lower()
     assert "uid 0 bypassing" not in developer.lower()
     assert "pkg._compatibility" not in developer
 
     assert "must load `cross-surface-guardrails`" in validator.lower()
     assert "must load `runtime-verification-examples`" in validator.lower()
+    assert "before any `daytona_read_file(...)`" in validator
     assert "must not paraphrase failure evidence" in validator.lower()
     assert "small local corrective patch" in validator.lower()
+    assert "must not use `daytona_codeact` for corrective edits" in validator.lower()
     assert 'submit_task_summary(type="fail", content=...)' in validator
     assert "repeated repair attempts" in validator.lower()
 
     assert "must load `corrective-fast-path`" in replanner.lower()
     assert "must load `action-add-tasks`" in replanner.lower()
     assert "must load `action-cancel-and-redraft`" in replanner.lower()
+    assert 'read_task_note(paths=[...], scope="sibling")' in replanner
 
     assert "must load `completion-contract`" in scout.lower()
     assert "must not edit files" in scout.lower()
@@ -181,6 +187,7 @@ def test_reference_files_hold_specialized_detail() -> None:
     assert "Use `validator` for validation tasks" in planner_decomposition
     assert 'daytona_codeact(command="...", timeout=N)' in developer_runtime
     assert "Must not append shell capture plumbing" in developer_runtime
+    assert "Must not edit files through CodeAct" in developer_runtime
     assert "cd /testbed" in developer_playbook
     assert "cd /testbed" in developer_runtime
     assert "pkg._compat" in developer_root_cause
@@ -221,6 +228,7 @@ def test_sweevo_context_stays_shared_and_runtime_focused() -> None:
     )
     assert "Must keep commands repo-root-relative." in sweevo
     assert 'daytona_codeact(command="...", timeout=N)' in sweevo
+    assert "Must treat `daytona_codeact` as runtime-only" in sweevo
     assert "Python process wrappers" in sweevo
     assert "cd /testbed" in sweevo
     assert "stdout/stderr capture plumbing" in sweevo
@@ -235,10 +243,11 @@ def test_sweevo_context_stays_shared_and_runtime_focused() -> None:
         in sweevo.lower()
     )
     assert "Must not derive an exact production file from benchmark filename resemblance alone" in sweevo
-    assert "Must use `read_task_note(paths=[...])` to check for existing findings before launching duplicate scouts." in sweevo
+    assert "Must use `read_task_note(paths=[...])` before opening source files" in sweevo
     assert "Must treat scope-change notifications and `task_center_changed_since()` as freshness signals." in sweevo
     assert "Must keep `scope_paths` as soft coordination hints" in sweevo
     assert "Must treat any advisory outside-scope write as a tainted packet" in sweevo
+    assert "Use `daytona_read_file(...)` only after notes plus CI identify a narrow line range" in sweevo
 
 
 def test_worker_playbooks_do_not_mention_submitters_or_action_routing() -> None:

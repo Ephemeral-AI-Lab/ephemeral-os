@@ -56,17 +56,35 @@ def record_tool_trace(
 ) -> None:
     if metadata is None:
         return
+    if tool_name == "read_task_note":
+        _increment_trace_counter(metadata, "_read_task_note_calls")
+        _append_trace_values(
+            metadata,
+            "_note_read_paths_this_turn",
+            _normalize_trace_paths(tool_input.get("paths")),
+        )
+        return
     if tool_name == "ci_query_symbol":
+        _increment_trace_counter(metadata, "_ci_context_calls")
         _increment_trace_counter(metadata, "_ci_query_symbol_calls")
+        return
+    if tool_name == "ci_workspace_structure":
+        _increment_trace_counter(metadata, "_ci_context_calls")
+        _increment_trace_counter(metadata, "_ci_workspace_structure_calls")
+        return
+    if tool_name == "ci_diagnostics":
+        _increment_trace_counter(metadata, "_ci_context_calls")
+        _increment_trace_counter(metadata, "_ci_diagnostics_calls")
         return
     if tool_name == "daytona_codeact":
         _increment_trace_counter(metadata, "_daytona_codeact_calls")
         return
     if tool_name == "daytona_read_file":
+        _increment_trace_counter(metadata, "_daytona_read_file_calls")
         _append_trace_values(
             metadata,
             "_read_paths_this_turn",
-            _normalize_trace_paths(tool_input.get("path")),
+            _normalize_trace_paths(tool_input.get("file_path")),
         )
         return
     if tool_name != "run_subagent" or tool_input.get("agent_name") != "scout":

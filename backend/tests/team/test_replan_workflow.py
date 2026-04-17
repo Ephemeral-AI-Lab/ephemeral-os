@@ -585,6 +585,38 @@ async def test_expanded_replanner_finalizes_origin_after_successful_child_comple
     assert graph["failed"].status == TaskStatus.FAILED
 
 
+@pytest.mark.asyncio
+async def test_finalized_replan_origin_can_promote_ancestor_parent():
+    graph = {
+        "parent": _task("parent", status=TaskStatus.EXPANDED, parent_id=None),
+        "failed": _task(
+            "failed",
+            status=TaskStatus.REQUEST_REPLAN,
+            parent_id="parent",
+        ),
+        "sibling": _task("sibling", status=TaskStatus.DONE, parent_id="parent"),
+        "replanner": _task(
+            "replanner",
+            agent_name="team_replanner",
+            status=TaskStatus.EXPANDED,
+            parent_id="parent",
+            fired_by_task_id="failed",
+        ),
+        "child": _task("child", status=TaskStatus.RUNNING, parent_id="replanner"),
+    }
+    store = _FakeStore(graph)
+    store.expanded_promotions["child"] = ["replanner"]
+    store.expanded_promotions["failed"] = ["parent"]
+    tc = _task_center_with_store(store, _FakeExpander({"added": 0, "cancelled": 0}))
+
+    await tc.complete_task("child", AgentResult(summary="done"))
+
+    assert graph["child"].status == TaskStatus.DONE
+    assert graph["replanner"].status == TaskStatus.DONE
+    assert graph["failed"].status == TaskStatus.FAILED
+    assert graph["parent"].status == TaskStatus.DONE
+
+
 class _ExpanderStore:
     def __init__(self, graph: dict[str, Task]) -> None:
         self.graph = graph

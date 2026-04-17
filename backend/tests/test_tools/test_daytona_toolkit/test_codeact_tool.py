@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -183,11 +184,29 @@ async def test_build_wrapper_uses_write_through_and_guarded_imports():
         cwd="/repo",
         repo_root="/repo",
         enforce_team_shell_policy=True,
+        disable_codeact_file_edits=False,
     )
     assert 'with open(resolved, "w", encoding="utf-8")' in wrapper
     assert "_guarded_import" in wrapper
     assert "_BLOCKED_MODULES" in wrapper
     assert "_ENFORCE_TEAM_SHELL_POLICY = True" in wrapper
+    assert "_DISABLE_CODEACT_FILE_EDITS = False" in wrapper
+
+
+async def test_build_wrapper_can_disable_python_file_edits():
+    wrapper = _build_wrapper(
+        "write('file.txt', 'ok')",
+        run_id="abcd1234",
+        cwd="/repo",
+        repo_root="/repo",
+        enforce_team_shell_policy=True,
+        disable_codeact_file_edits=True,
+    )
+    assert "_DISABLE_CODEACT_FILE_EDITS = True" in wrapper
+    assert "raise RuntimeError(_CODEACT_FILE_EDIT_POLICY_MESSAGE)" in wrapper
+    assert '_sandbox_builtins["open"] = _guarded_open' in wrapper
+    assert "_codeact_shell_file_edit_error" in wrapper
+    assert "_CODEACT_SHELL_FILE_EDIT_PATTERNS" in wrapper
 
 
 async def test_build_exec_command_runs_wrapper_from_repo_cwd():
@@ -269,6 +288,170 @@ async def test_shell_mode_reports_nonzero_exit_as_error():
     data = json.loads(result.output)
     assert data["status"] == "error"
     assert data["shells_run"] == 1
+
+
+async def test_shell_mode_blocks_audited_test_suite_write_for_team_agents():
+    sb = _make_sandbox()
+    svc = MagicMock()
+    svc.exec_process_operation = AsyncMock(
+        return_value=SimpleNamespace(
+            result=_shell_exec_output("patched", 0),
+            exit_code=0,
+            changed_paths=["/testbed/dask/tests/test_cli.py"],
+            files_written=1,
+        )
+    )
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "daytona_cwd": "/testbed",
+            "agent_name": "developer",
+            "write_scope": ["dask/cli.py"],
+            "ci_service": svc,
+        }
+    )
+
+    result = await daytona_codeact.execute(
+        daytona_codeact.input_model(command="sed -i s/old/new/ dask/tests/test_cli.py"),
+        ctx,
+    )
+
+    assert result.is_error
+    data = json.loads(result.output)
+    assert data["status"] == "error"
+    assert data["files_written"] == 1
+    assert "test suite" in data["error"]
+
+
+@pytest.mark.parametrize(
+    ("command", "expected_fragment"),
+    [
+        ("sed -i s/old/new/ dask/core.py", "in-place sed"),
+        (
+            "python -c \"from pathlib import Path; Path('dask/core.py').write_text('x')\"",
+            "inline Python file mutation",
+        ),
+        ("printf x > dask/core.py", "shell output redirection"),
+        ("printf x | tee dask/core.py", "tee file write"),
+    ],
+)
+async def test_team_shell_mode_blocks_file_edit_side_channels_before_exec(
+    command,
+    expected_fragment,
+):
+    sb = _make_sandbox(exec_stdout=_shell_exec_output("patched", 0))
+    svc = _ci_service()
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "daytona_cwd": "/testbed",
+            "agent_name": "developer",
+            "team_run_id": "run-1",
+            "work_item_id": "task-1",
+            "ci_service": svc,
+        }
+    )
+
+    result = await daytona_codeact.execute(
+        daytona_codeact.input_model(command=command),
+        ctx,
+    )
+
+    assert result.is_error
+    assert "BLOCKED: daytona_codeact is for runtime commands" in result.output
+    assert expected_fragment in result.output
+    assert "daytona_edit_file" in result.output
+    svc.exec_process_operation.assert_not_awaited()
+    sb.process.exec.assert_not_awaited()
+
+
+async def test_team_shell_mode_still_allows_runtime_commands():
+    sb = _make_sandbox(exec_stdout=_shell_exec_output("ok", 0))
+    svc = _ci_service()
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "daytona_cwd": "/testbed",
+            "agent_name": "developer",
+            "team_run_id": "run-1",
+            "work_item_id": "task-1",
+            "ci_service": svc,
+        }
+    )
+
+    result = await daytona_codeact.execute(
+        daytona_codeact.input_model(command='python -c "print(1 > 0)"'),
+        ctx,
+    )
+
+    data = _assert_ok(result)
+    assert data["shell_outputs"][0]["stdout"] == "ok"
+    svc.exec_process_operation.assert_awaited_once()
+
+
+async def test_shell_mode_warns_for_audited_outside_scope_write():
+    sb = _make_sandbox()
+    svc = MagicMock()
+    svc.exec_process_operation = AsyncMock(
+        return_value=SimpleNamespace(
+            result=_shell_exec_output("patched", 0),
+            exit_code=0,
+            changed_paths=["/testbed/dask/_compatibility.py"],
+            files_written=1,
+        )
+    )
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "daytona_cwd": "/testbed",
+            "agent_name": "developer",
+            "write_scope": ["dask/config.py"],
+            "ci_service": svc,
+        }
+    )
+
+    result = await daytona_codeact.execute(
+        daytona_codeact.input_model(command="python - <<'PY'\nprint('patched')\nPY"),
+        ctx,
+    )
+
+    data = _assert_ok(result)
+    assert data["files_written"] == 1
+    assert any("outside write_scope" in warning for warning in data["warnings"])
+
+
+@pytest.mark.parametrize(
+    ("code", "expected_fragment"),
+    [
+        ("write('dask/core.py', 'x')", "CodeAct write() helper"),
+        ("open('dask/core.py', 'w').write('x')", "write-mode open()"),
+        ("from pathlib import Path\nPath('dask/core.py').write_text('x')", "Path.write_text"),
+    ],
+)
+async def test_team_python_mode_blocks_file_edits_before_upload(code, expected_fragment):
+    sb = _make_sandbox()
+    svc = _ci_service()
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "daytona_cwd": "/testbed",
+            "agent_name": "developer",
+            "team_run_id": "run-1",
+            "work_item_id": "task-1",
+            "ci_service": svc,
+        }
+    )
+
+    result = await daytona_codeact.execute(
+        daytona_codeact.input_model(code=code),
+        ctx,
+    )
+
+    assert result.is_error
+    assert "BLOCKED: daytona_codeact is for runtime commands" in result.output
+    assert expected_fragment in result.output
+    sb.fs.upload_file.assert_not_called()
+    svc.exec_process_operation.assert_not_awaited()
 
 
 async def test_python_mode_preserves_script_stdout_before_manifest_line():

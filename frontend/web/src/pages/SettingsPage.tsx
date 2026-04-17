@@ -78,7 +78,7 @@ function RegisterModelForm({ onRegistered }: { onRegistered: () => void }) {
   const [open, setOpen] = useState(false)
   const [key, setKey] = useState('')
   const [label, setLabel] = useState('')
-  const [classPath, setClassPath] = useState('openai-compatible')
+  const [classPath, setClassPath] = useState('providers.clients.anthropic_native.AnthropicClient')
   const [modelId, setModelId] = useState('')
   const [apiKey, setApiKey] = useState('')
   const [baseUrl, setBaseUrl] = useState('')
@@ -92,7 +92,7 @@ function RegisterModelForm({ onRegistered }: { onRegistered: () => void }) {
       return
     }
     setError('')
-    const kwargs: Record<string, unknown> = { model: modelId }
+    const kwargs: Record<string, unknown> = { model: modelId, api_format: 'anthropic' }
     if (apiKey) kwargs.api_key = apiKey
     if (baseUrl) kwargs.base_url = baseUrl
 
@@ -155,7 +155,7 @@ function RegisterModelForm({ onRegistered }: { onRegistered: () => void }) {
             className="w-full rounded border border-zinc-700 bg-zinc-800 px-2.5 py-1.5 text-sm text-zinc-100 focus:border-zinc-500 focus:outline-none"
             disabled
           >
-            <option value="openai-compatible">OpenAI Compatible</option>
+            <option value="providers.clients.anthropic_native.AnthropicClient">Anthropic Compatible</option>
           </select>
         </div>
         <div>
@@ -186,7 +186,7 @@ function RegisterModelForm({ onRegistered }: { onRegistered: () => void }) {
           type="text"
           value={baseUrl}
           onChange={(e) => setBaseUrl(e.target.value)}
-          placeholder="https://api.example.com/v1"
+          placeholder="https://api.minimax.io/anthropic"
           className="w-full rounded border border-zinc-700 bg-zinc-800 px-2.5 py-1.5 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-zinc-500 focus:outline-none"
         />
       </div>

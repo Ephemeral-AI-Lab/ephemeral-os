@@ -1,4 +1,4 @@
-"""Formatting helpers for frozen conversation snapshots."""
+"""Formatting helpers for frozen worker transcript evidence."""
 
 from __future__ import annotations
 
@@ -260,28 +260,32 @@ def format_snapshot_history(
     *,
     include_thinking: bool = False,
 ) -> str:
-    """Render frozen conversation history as user/assistant pairs."""
-    lines = ["## Snapshot History", "", "<snapshot>"]
+    """Render frozen worker conversation history as evidence."""
+    lines = [
+        "## Frozen Worker Transcript Evidence",
+        "",
+        '<worker_transcript evidence_only="true">',
+    ]
     turns = _build_turns(messages, include_thinking=include_thinking)
     if not turns:
         lines.append("  (none)")
-        lines.append("</snapshot>")
+        lines.append("</worker_transcript>")
         return "\n".join(lines)
 
     for turn in turns:
-        lines.append("  <user>")
+        lines.append("  <worker_user_message>")
         _append_escaped_block(lines, turn.user_message.strip(), indent="    ")
-        lines.append("  </user>")
+        lines.append("  </worker_user_message>")
         lines.append("")
-        lines.append("  <assistant>")
+        lines.append("  <worker_assistant_activity>")
         response_parts = _pair_tool_results(turn.response_parts)
         if response_parts:
             for part in response_parts:
                 _append_response_part(lines, part)
         else:
             lines.append("    (none)")
-        lines.append("  </assistant>")
+        lines.append("  </worker_assistant_activity>")
 
-    lines.append("</snapshot>")
+    lines.append("</worker_transcript>")
 
     return "\n".join(lines).rstrip()

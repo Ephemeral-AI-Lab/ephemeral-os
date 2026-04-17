@@ -31,6 +31,7 @@ from typing import Any
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
+from pydantic.json_schema import GenerateJsonSchema
 
 from agents.run_tracker import AgentRunTracker
 from message.messages import (
@@ -114,6 +115,14 @@ _TEST_FILE_RE = re.compile(
 
 
 class RunSubagentInput(BaseModel):
+    """Runtime input model for run_subagent.
+
+    Runtime parsing remains permissive so existing internal callers can omit
+    one side of the prompt/input pair and let validation return a tool error.
+    The published JSON schema is stricter because models tend to emit explicit
+    JSON nulls for optional fields, which violates the tool's XOR contract.
+    """
+
     agent_name: str = Field(
         ...,
         description=(
@@ -132,6 +141,50 @@ class RunSubagentInput(BaseModel):
             "{\"target_paths\": [...]}. Mutually exclusive with prompt."
         ),
     )
+
+    @classmethod
+    def model_json_schema(
+        cls,
+        by_alias: bool = True,
+        ref_template: str = "#/$defs/{model}",
+        schema_generator: type[GenerateJsonSchema] = GenerateJsonSchema,
+        mode: str = "validation",
+    ) -> dict[str, Any]:
+        schema = super().model_json_schema(
+            by_alias=by_alias,
+            ref_template=ref_template,
+            schema_generator=schema_generator,
+            mode=mode,
+        )
+        props = schema.get("properties", {})
+
+        def _strip_null_variant(name: str, expected_type: str) -> None:
+            prop = props.get(name)
+            if not isinstance(prop, dict):
+                return
+            cleaned: dict[str, Any] | None = None
+            for variant in prop.get("anyOf", []):
+                if isinstance(variant, dict) and variant.get("type") == expected_type:
+                    cleaned = dict(variant)
+                    break
+            if cleaned is None:
+                return
+            if "title" in prop:
+                cleaned["title"] = prop["title"]
+            if "description" in prop:
+                cleaned["description"] = prop["description"]
+            cleaned.pop("default", None)
+            if expected_type == "string":
+                cleaned["minLength"] = max(int(cleaned.get("minLength", 1) or 1), 1)
+            props[name] = cleaned
+
+        _strip_null_variant("prompt", "string")
+        _strip_null_variant("input", "object")
+        schema["oneOf"] = [
+            {"required": ["prompt"]},
+            {"required": ["input"]},
+        ]
+        return schema
 
 
 class RunSubagentOutput(BaseModel):

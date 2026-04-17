@@ -196,6 +196,51 @@ async def test_read_file_blocks_benchmark_test_files_after_repro():
     sb.fs.download_file.assert_not_called()
 
 
+async def test_read_file_blocks_team_lane_until_notes_and_ci_context():
+    sb = _sb(download=b"should not read")
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "daytona_cwd": "/testbed",
+            "agent_name": "developer",
+            "team_run_id": "team-1",
+            "work_item_id": "task-1",
+        }
+    )
+
+    result = await daytona_read_file.execute(
+        daytona_read_file.input_model(file_path="dvc/command/update.py"),
+        ctx,
+    )
+
+    assert result.is_error
+    assert "read_task_note(paths=[...])" in result.output
+    assert "ci_workspace_structure" in result.output
+    sb.fs.download_file.assert_not_called()
+
+
+async def test_read_file_allows_team_lane_after_notes_and_ci_context():
+    sb = _sb(download=b"ok")
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "daytona_cwd": "/testbed",
+            "agent_name": "developer",
+            "team_run_id": "team-1",
+            "work_item_id": "task-1",
+            "_read_task_note_calls": 1,
+            "_ci_context_calls": 1,
+        }
+    )
+
+    result = await daytona_read_file.execute(
+        daytona_read_file.input_model(file_path="dvc/command/update.py"),
+        ctx,
+    )
+
+    assert not result.is_error
+
+
 async def test_read_file_allows_production_reads_after_repro():
     sb = _sb(download=b"ok")
     ctx = _ctx(

@@ -1,10 +1,10 @@
 # Ephemeral Agents
 
-An ephemeral agent is a short-lived helper run that produces one constrained artifact from a frozen conversation snapshot. It does not mutate the task graph directly.
+An ephemeral agent is a short-lived helper run that produces one constrained artifact from frozen worker transcript evidence. It does not mutate the task graph directly.
 
 ## Current Use
 
-TaskCenter uses ephemeral agents for `tc_note` checkpointing. When a running task has enough activity without a recent note, TaskCenter can ask a helper to summarize progress from the latest snapshot.
+TaskCenter uses ephemeral agents for `tc_note` checkpointing. When a running task has enough activity without a recent note, TaskCenter can ask a helper to summarize progress from the latest frozen worker transcript.
 
 ## Properties
 

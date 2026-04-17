@@ -306,20 +306,38 @@ def _benchmark_read_guard(context: ToolExecutionContext, file_path: str) -> str 
         context.metadata.get("benchmark_test_files"),
         repo_root,
     )
-    if not benchmark_files and not context.metadata.get("benchmark_test_ids"):
-        return None
+    has_benchmark_targets = bool(benchmark_files or context.metadata.get("benchmark_test_ids"))
     rel_path = _normalize_repo_relative_path(file_path, repo_root) or ""
-    if rel_path and rel_path in benchmark_files:
+    if has_benchmark_targets and rel_path and rel_path in benchmark_files:
         return (
             "Benchmark read guard: do not open benchmark test files with "
             "`daytona_read_file(...)` on coordinated lanes. Use the named pytest "
             "ids, scout notes, and runtime traceback instead."
         )
-    if _metadata_int(context.metadata, "_daytona_codeact_calls") <= 0:
+    required_steps: list[str] = []
+    has_team_task_context = bool(
+        context.metadata.get("task_center")
+        or context.metadata.get("team_run_id")
+        or context.metadata.get("work_item_id")
+    )
+    if not has_benchmark_targets and not has_team_task_context:
+        return None
+    if has_team_task_context and _metadata_int(context.metadata, "_read_task_note_calls") <= 0:
+        required_steps.append("call `read_task_note(paths=[...])` for the owned scope")
+    if has_team_task_context and _metadata_int(context.metadata, "_ci_context_calls") <= 0:
+        required_steps.append(
+            "use `ci_workspace_structure(...)`, `ci_query_symbol(...)`, or "
+            "`ci_diagnostics(...)` to locate the boundary"
+        )
+    if has_benchmark_targets and _metadata_int(context.metadata, "_daytona_codeact_calls") <= 0:
+        required_steps.append(
+            "run the exact repro first via `daytona_codeact(command=\"pytest ...\", timeout=N)`"
+        )
+    if required_steps:
         return (
-            "Benchmark read guard: on coordinated benchmark lanes, run the exact "
-            "repro first via `daytona_codeact` and direct `shell(\"pytest ...\", "
-            "timeout=N)` before using `daytona_read_file(...)`."
+            "Coordination read guard: before `daytona_read_file(...)`, "
+            + "; ".join(required_steps)
+            + "."
         )
     return None
 
@@ -428,9 +446,11 @@ print(json.dumps({
 @tool(
     name="daytona_read_file",
     description=(
-        "Read file contents, optionally specifying a line range. On coordinated "
-        "benchmark lanes, run the exact runtime repro first and do not use this "
-        "to open benchmark test files."
+        "Fallback file-content read with optional line range. On coordinated "
+        "team lanes, use `read_task_note(paths=[...])` and CI tools "
+        "(`ci_workspace_structure`, `ci_query_symbol`, or `ci_diagnostics`) "
+        "before this tool; on benchmark lanes, run the exact runtime repro first "
+        "and do not use this to open benchmark test files."
     ),
     short_description="Read a file from the sandbox.",
     input_model=DaytonaReadFileInput,

@@ -5,11 +5,12 @@ Please read the following sections and complete with the listed terminal action 
 ## Your task
 
 1. Please read the assigned exploration task and inherited context.
-2. Analyze the exact paths, symbols, or owner surfaces you were asked to inspect.
-3. Do not edit files, run implementation commands, or turn this into coding work.
-4. Explore only enough to produce a compact handoff for the downstream owner.
-5. Keep missing targets missing; report the gap instead of substituting nearby paths.
-6. Finish with a concise factual brief that names mapped files, entry points, owner seams, subdivisions, and gaps.
+2. Read current Task Center notes with `read_task_note(paths=[...])`, then use CI tools before any raw source read.
+3. Analyze the exact paths, symbols, or owner surfaces you were asked to inspect.
+4. Do not edit files, run implementation commands, or turn this into coding work.
+5. Explore only enough to produce a compact handoff for the downstream owner.
+6. Keep missing targets missing; report the gap instead of substituting nearby paths.
+7. Finish with a concise factual brief that names mapped files, entry points, owner seams, subdivisions, and gaps.
 
 ## Assigned exploration task
 

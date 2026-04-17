@@ -15,9 +15,10 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from collections import Counter
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field, is_dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -27,6 +28,7 @@ from message.stream_events import ToolExecutionCompleted
 from team.runtime.runner import AgentRunState
 
 logger = logging.getLogger(__name__)
+_SAFE_AGENT_LOG_NAME_RE = re.compile(r"[^A-Za-z0-9_.-]+")
 
 
 def utc_iso_now() -> str:
@@ -139,7 +141,154 @@ def default_team_metrics() -> dict[str, Any]:
         "checkpoint_ids": [],
         "checkpoints": [],
         "structured_log_path": None,
+        "agent_run_log_dir": None,
+        "agent_run_log_paths": [],
     }
+
+
+def _safe_agent_log_part(value: object, fallback: str = "run") -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return fallback
+    return _SAFE_AGENT_LOG_NAME_RE.sub("_", raw).strip("._") or fallback
+
+
+def _jsonable_model(value: Any) -> Any:
+    model_dump = getattr(value, "model_dump", None)
+    if callable(model_dump):
+        try:
+            return model_dump(mode="json", by_alias=True)
+        except TypeError:
+            return model_dump()
+    if is_dataclass(value) and not isinstance(value, type):
+        return asdict(value)
+    return value
+
+
+def _serialize_agent_definition(defn: Any) -> dict[str, Any]:
+    dumped = _jsonable_model(defn)
+    if isinstance(dumped, dict):
+        return {str(k): v for k, v in dumped.items()}
+    attrs = getattr(defn, "__dict__", None)
+    if isinstance(attrs, dict):
+        return {
+            str(k): v
+            for k, v in attrs.items()
+            if not str(k).startswith("_") and not callable(v)
+        }
+    return {"repr": repr(defn)}
+
+
+def _terminal_submission_payload(metadata: Any) -> dict[str, Any]:
+    if metadata is None:
+        return {}
+    payload: dict[str, Any] = {}
+    for key in ("task_summary_type", "task_summary", "plan_is_replan"):
+        value = metadata.get(key)
+        if value is not None:
+            payload[key] = value
+    resolved_plan = metadata.get("resolved_plan")
+    if resolved_plan is not None:
+        payload["resolved_plan"] = _jsonable_model(resolved_plan)
+    return payload
+
+
+def _serialize_message_list(messages: Any) -> list[Any]:
+    if not messages:
+        return []
+    serialized: list[Any] = []
+    for message in messages:
+        serialized.append(_jsonable_model(message))
+    return serialized
+
+
+def write_agent_run_log(
+    team_metrics: dict[str, Any] | None,
+    state: AgentRunState,
+    *,
+    status: str,
+    stats: dict[str, Any],
+    prompt_tokens: int,
+    completion_tokens: int,
+    tool_names: list[str],
+    bg_tool_names: list[str],
+) -> str | None:
+    """Persist a human-inspectable JSON artifact for one completed agent run."""
+    if not team_metrics:
+        return None
+    dir_value = team_metrics.get("agent_run_log_dir")
+    if not dir_value:
+        return None
+
+    try:
+        log_dir = Path(str(dir_value))
+        log_dir.mkdir(parents=True, exist_ok=True)
+        ctx = state.ctx
+        qc = getattr(state.agent, "query_context", None)
+        agent_name = str(getattr(state.defn, "name", "") or "agent")
+        agent_run_id = str(
+            state.tracker.run_id
+            or ctx.tool_metadata.get("agent_run_id")
+            or "unpersisted"
+        )
+        work_item_id = str(
+            ctx.tool_metadata.get("work_item_id") or state.work_item_id or "work-item"
+        )
+        path = log_dir / (
+            f"{_safe_agent_log_part(work_item_id)}_"
+            f"{_safe_agent_log_part(agent_name, 'agent')}_"
+            f"{_safe_agent_log_part(agent_run_id)}.json"
+        )
+        prompt_usage = {
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": prompt_tokens + completion_tokens,
+        }
+        payload = {
+            "schema_version": 1,
+            "team_run_id": ctx.tool_metadata.get("team_run_id"),
+            "work_item_id": ctx.tool_metadata.get("work_item_id"),
+            "agent_run_id": agent_run_id,
+            "agent": agent_name,
+            "role": getattr(state.defn, "role", None),
+            "status": status,
+            "model": getattr(state.agent, "model", None),
+            "started_at": ctx.tool_metadata.get("work_item_started_at"),
+            "completed_at": utc_iso_now(),
+            "agent_definition": _serialize_agent_definition(state.defn),
+            "system_prompt": getattr(qc, "system_prompt", None),
+            "user_prompt": ctx.user_message,
+            "assistant_response": state.final_text,
+            "terminal_submission": _terminal_submission_payload(ctx.tool_metadata),
+            "usage": prompt_usage,
+            "token_trackers": {
+                **prompt_usage,
+                **stats,
+            },
+            "tools": {
+                "tool_names": tool_names,
+                "tool_counts": dict(Counter(tool_names)),
+                "background_tool_names": bg_tool_names,
+                "background_tool_counts": dict(Counter(bg_tool_names)),
+            },
+            "display_messages": _serialize_message_list(
+                getattr(state.agent, "display_messages", None)
+            ),
+            "api_messages": _serialize_message_list(
+                getattr(qc, "api_messages_snapshot", None)
+            ),
+        }
+        path.write_text(
+            json.dumps(payload, indent=2, ensure_ascii=False, default=str) + "\n",
+            encoding="utf-8",
+        )
+        paths = team_metrics.setdefault("agent_run_log_paths", [])
+        if isinstance(paths, list):
+            paths.append(str(path))
+        return str(path)
+    except Exception:
+        logger.warning("Failed to write agent run log artifact", exc_info=True)
+        return None
 
 
 def make_external_hook_emitter(
@@ -332,6 +481,17 @@ class BenchmarkTelemetry:
                 usage=agent.total_usage,
             )
 
+        agent_run_log_path = write_agent_run_log(
+            self.team_metrics,
+            state,
+            status=status,
+            stats=stats,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            tool_names=tool_names,
+            bg_tool_names=bg_tool_names,
+        )
+
         if self.printer is not None:
             line = (
                 f"[usage] prompt={prompt_tokens} "
@@ -349,6 +509,11 @@ class BenchmarkTelemetry:
                 delta = f"+{new_compactions}" if new_compactions > 0 else str(new_compactions)
                 line += f" compactions={delta}(total={compacted_total})"
             self.printer.raw_line(state.defn.name, line)
+            if agent_run_log_path:
+                self.printer.raw_line(
+                    state.defn.name,
+                    f"[agent_run_log] path={agent_run_log_path}",
+                )
 
         append_event(
             self.team_metrics,
@@ -366,6 +531,7 @@ class BenchmarkTelemetry:
                 "tool_counts": dict(Counter(tool_names)),
                 "background_tool_names": bg_tool_names,
                 "background_tool_counts": dict(Counter(bg_tool_names)),
+                "agent_run_log_path": agent_run_log_path,
                 **stats,
                 **self.extra_event_fields,
             },
@@ -470,6 +636,8 @@ def finalize_team_run(
         "usage_by_model": usage_by_model,
         "resumed_from": resumed_from,
         "resumed_from_checkpoint": resumed_from_checkpoint,
+        "agent_run_log_dir": team_metrics.get("agent_run_log_dir"),
+        "agent_run_log_paths": list(team_metrics.get("agent_run_log_paths") or []),
     }
     append_event(
         team_metrics,

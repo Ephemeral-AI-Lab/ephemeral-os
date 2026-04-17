@@ -437,6 +437,7 @@ async def _cmd_run(args: argparse.Namespace) -> int:
                 "replans_used": team.get("replans_used"),
                 "usage": team.get("usage"),
                 "usage_by_model": team.get("usage_by_model"),
+                "agent_run_log_dir": team.get("agent_run_log_dir"),
             },
         },
     )
@@ -481,6 +482,11 @@ async def _cmd_run(args: argparse.Namespace) -> int:
             if team.get("latest_checkpoint_id"):
                 print(
                     f"  checkpoint: latest={team.get('latest_checkpoint_id')}",
+                    flush=True,
+                )
+            if team.get("agent_run_log_dir"):
+                print(
+                    f"  agent_run_logs: {team.get('agent_run_log_dir')}",
                     flush=True,
                 )
             if team.get("resumed_from") or team.get("resumed_from_checkpoint"):

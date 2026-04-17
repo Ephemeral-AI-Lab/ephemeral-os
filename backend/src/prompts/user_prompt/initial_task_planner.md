@@ -5,9 +5,10 @@ Please read the following sections and call the listed terminal tool when your w
 ## Your task
 
 1. Please read the user request and benchmark targets.
-2. Analyze the task objective, expected outcome, and likely owner surfaces.
-3. Explore only enough to justify concrete task ownership and scope boundaries.
-4. Draft the plan and verify dependencies, short descriptions, scope paths, and structured specs.
+2. Reuse current Task Center notes with `read_task_note(paths=[...])` before launching scouts or probing likely owners, then use CI tools to refine ownership.
+3. Analyze the task objective, expected outcome, and likely owner surfaces.
+4. Explore only enough to justify concrete task ownership and scope boundaries.
+5. Draft the plan and verify dependencies, short descriptions, scope paths, and structured specs.
 
 ## User request
 

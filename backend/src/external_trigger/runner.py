@@ -109,7 +109,7 @@ async def run(
     agent_name:
         Identity for logging/observability (e.g. "checkpoint:task_123").
     messages:
-        Frozen conversation snapshot (read-only context for the LLM).
+        Frozen worker transcript evidence (read-only context for the LLM).
     system_prompt:
         System prompt for the LLM session.
     prompt:

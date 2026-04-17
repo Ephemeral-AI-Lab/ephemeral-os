@@ -325,8 +325,10 @@ class ReadTaskNoteTool(BaseTool):
                 if not matched:
                     known = tc.notes.known_paths()
                     return ToolResult(
-                        output=f"No notes found for paths: {arguments.paths}. Known note paths: {known}",
-                        is_error=True,
+                        output=(
+                            f"No notes found for paths: {arguments.paths}. "
+                            f"Known note paths: {known}"
+                        ),
                     )
             notes = await tc.notes.read_notes(
                 paths=arguments.paths,

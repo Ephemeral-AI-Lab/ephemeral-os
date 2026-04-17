@@ -69,4 +69,6 @@ Terminal statuses are `done`, `failed`, and `cancelled`.
 - Planner and replanner `new_tasks` items carry `description` as a required short, planner-authored label; full instructions belong in `spec`.
 - Ready tasks dispatch as soon as dependencies are satisfied.
 - Scope freshness checks protect terminal submissions from stale context.
+- Developer and validator lanes read Task Center notes and use CI ownership/diagnostic tools before falling back to raw sandbox file reads.
+- `daytona_codeact` is runtime-only on coordinated lanes. File edits go through `daytona_edit_file`, `daytona_write_file`, or `daytona_rename_symbol`; shell/Python edit side channels such as `sed -i`, `tee`, output redirects, and inline Python writes are rejected before sandbox execution.
 - Every team task exits through a terminal submission tool: `submit_plan`, `submit_replan`, or `submit_task_summary`.

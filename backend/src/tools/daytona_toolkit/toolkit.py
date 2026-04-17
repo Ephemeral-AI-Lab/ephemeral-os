@@ -41,8 +41,10 @@ def _build_instructions(*, include_codeact: bool) -> str:
             "- `daytona_codeact` — execute direct shell commands or Python in the repo workspace. "
             "Use `daytona_codeact(command=\"pytest ...\", timeout=N)` for tests, builds, and "
             "verification, and `daytona_codeact(code=\"...\")` for multi-step Python that needs "
-            "read/write/shell in one operation. Keep commands repo-root-relative; do not import "
-            "`subprocess` and do not append stdout/stderr capture plumbing such as `2>&1` or `2>/dev/null`.\n"
+            "read/shell in one operation. Do not use CodeAct for file edits: no `sed -i`, "
+            "output redirects, `tee`, or inline Python writes. Use `daytona_edit_file`, "
+            "`daytona_write_file`, or `daytona_rename_symbol` instead. Keep commands repo-root-relative; "
+            "do not import `subprocess` and do not append stdout/stderr capture plumbing such as `2>&1` or `2>/dev/null`.\n"
         )
     return (
         "Interact with a remote Daytona sandbox for file operations, "
@@ -67,6 +69,7 @@ def _build_instructions(*, include_codeact: bool) -> str:
         f"{codeact_line}\n"
         "**Execute**\n"
         "- Use `daytona_codeact` for all runtime execution (tests, builds, verification).\n"
+        "- Do not use `daytona_codeact` to edit files; coordinated lanes block shell and Python edit side channels before execution.\n"
         "- When an injected sandbox cwd/repo root is configured, shell and file tools already run relative to that root. Prefer relative repo paths."
     )
 

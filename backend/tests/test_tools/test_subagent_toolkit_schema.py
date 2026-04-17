@@ -40,6 +40,24 @@ class _StubConfig:
     session_id = "session_abc"
 
 
+def _assert_run_subagent_payload_schema_matches_runtime_xor(
+    schema: dict[str, object],
+) -> None:
+    props = schema["properties"]  # type: ignore[index]
+    assert schema["oneOf"] == [{"required": ["prompt"]}, {"required": ["input"]}]
+
+    prompt_schema = props["prompt"]  # type: ignore[index]
+    assert prompt_schema["type"] == "string"
+    assert prompt_schema["minLength"] == 1
+    assert "anyOf" not in prompt_schema
+    assert "default" not in prompt_schema
+
+    input_schema = props["input"]  # type: ignore[index]
+    assert input_schema["type"] == "object"
+    assert "anyOf" not in input_schema
+    assert "default" not in input_schema
+
+
 @pytest.mark.asyncio
 async def test_run_subagent_rejects_internal_subagent_targets():
     ctx = ToolExecutionContext(
@@ -57,6 +75,12 @@ async def test_run_subagent_rejects_internal_subagent_targets():
     assert result.is_error is True
 
 
+def test_run_subagent_api_schema_requires_one_of_prompt_or_input():
+    schema = run_subagent.to_api_schema()["input_schema"]
+
+    _assert_run_subagent_payload_schema_matches_runtime_xor(schema)
+
+
 def test_subagent_toolkit_schema_limits_planner_to_scout():
     toolkit = SubagentToolkit.from_context(
         SimpleNamespace(metadata={"agent_name": "team_planner"})
@@ -66,6 +90,7 @@ def test_subagent_toolkit_schema_limits_planner_to_scout():
     enum = schema["properties"]["agent_name"]["enum"]
 
     assert enum == ["scout"]
+    _assert_run_subagent_payload_schema_matches_runtime_xor(schema)
 
 
 def test_subagent_toolkit_schema_limits_replanner_to_scout():
