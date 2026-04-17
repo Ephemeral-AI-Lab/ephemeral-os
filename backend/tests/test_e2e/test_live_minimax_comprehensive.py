@@ -708,7 +708,7 @@ class TestCodeIntelligenceSystem:
         assert tel.symbol_index_size == 0
         assert tel.lsp_connected is False
         assert tel.lsp_query_count == 0
-        assert tel.arbiter_active_edits == 0
+        assert tel.arbiter_active_locks == 0
         assert tel.total_edits == 0
 
     def test_ci_service_dispose_safe(self):

@@ -3,7 +3,7 @@
 This module wires together the analysis, editing, and routing
 components. Heavy concerns live in their own modules:
 
-* OCC write pipeline   → :mod:`code_intelligence.editing.write_coordinator`
+* Semantic write helper → :mod:`code_intelligence.editing.write_coordinator`
 * File IO              → :mod:`code_intelligence.routing.content_manager`
 * Registry lifecycle   → :mod:`code_intelligence.routing.registry`
 
@@ -171,6 +171,75 @@ for rel in sorted(paths):
 print(json.dumps({"ok": True, "files": files}))
 """
 
+_PROCESS_AUDIT_PATH_SNAPSHOT_SCRIPT = r"""
+import hashlib
+import json
+import pathlib
+import subprocess
+import sys
+
+root = pathlib.Path(sys.argv[1]).resolve()
+raw_paths = json.loads(sys.argv[2])
+
+
+def _hash_bytes(payload):
+    return hashlib.sha256(payload).hexdigest()[:16]
+
+
+def _head_hash(rel_path):
+    proc = subprocess.run(
+        ["git", "-C", str(root), "show", f"HEAD:{rel_path}"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.DEVNULL,
+    )
+    if proc.returncode != 0:
+        return ""
+    return _hash_bytes(proc.stdout)
+
+
+def _inside_root(path):
+    try:
+        path.relative_to(root)
+    except ValueError:
+        return False
+    return True
+
+
+git_probe = subprocess.run(
+    ["git", "-C", str(root), "rev-parse", "--is-inside-work-tree"],
+    stdout=subprocess.PIPE,
+    stderr=subprocess.DEVNULL,
+    text=True,
+)
+git_ok = git_probe.returncode == 0 and git_probe.stdout.strip() == "true"
+files = {}
+
+for item in raw_paths:
+    if not isinstance(item, str) or not item.strip():
+        continue
+    candidate = pathlib.Path(item)
+    path = candidate if candidate.is_absolute() else root / candidate
+    path = path.resolve()
+    if not _inside_root(path):
+        continue
+    rel = str(path.relative_to(root))
+    exists = path.exists() and path.is_file()
+    digest = ""
+    if exists:
+        try:
+            digest = _hash_bytes(path.read_bytes())
+        except OSError:
+            digest = ""
+    files[str(path)] = {
+        "rel": rel,
+        "exists": exists,
+        "hash": digest,
+        "head_hash": _head_hash(rel) if git_ok else "",
+    }
+
+print(json.dumps({"ok": True, "files": files}))
+"""
+
 
 @dataclass(frozen=True)
 class _RenamePreviewSnapshot:
@@ -301,15 +370,16 @@ class CodeIntelligenceService:
         team_run_id: str = "",
         agent_run_id: str = "",
         task_id: str = "",
+        audit_paths: Sequence[str] | None = None,
     ) -> Any:
         """Execute one sandbox process command and audit workspace mutations.
 
-        This is the process-backed OCC entry point for tools such as CodeAct:
+        This is the process-audit entry point for tools such as CodeAct:
         callers execute exactly one shell command, while the service records the
         changed workspace files as one logical operation in the arbiter ledger.
         """
         self.rebind_sandbox(sandbox)
-        before = await self._snapshot_process_workspace(sandbox)
+        before = await self._snapshot_process_workspace(sandbox, audit_paths=audit_paths)
         response: Any = None
         caught: BaseException | None = None
         try:
@@ -321,7 +391,7 @@ class CodeIntelligenceService:
         except BaseException as exc:  # pragma: no cover - re-raised after audit
             caught = exc
         finally:
-            after = await self._snapshot_process_workspace(sandbox)
+            after = await self._snapshot_process_workspace(sandbox, audit_paths=audit_paths)
             self._record_process_operation_audit(
                 before=before,
                 after=after,
@@ -352,15 +422,32 @@ class CodeIntelligenceService:
             return await response
         return response
 
-    async def _snapshot_process_workspace(self, sandbox: Any) -> dict[str, dict[str, Any]]:
+    async def _snapshot_process_workspace(
+        self,
+        sandbox: Any,
+        *,
+        audit_paths: Sequence[str] | None = None,
+    ) -> dict[str, dict[str, Any]]:
         process = getattr(sandbox, "process", None)
         exec_fn = getattr(process, "exec", None) if process is not None else None
         if not callable(exec_fn):
             return {}
-        command = (
-            f"python3 -c {shlex.quote(_PROCESS_AUDIT_SNAPSHOT_SCRIPT)} "
-            f"{shlex.quote(self.workspace_root)}"
+        normalized_paths = tuple(
+            str(path).strip()
+            for path in (audit_paths or ())
+            if str(path).strip()
         )
+        if normalized_paths:
+            command = (
+                f"python3 -c {shlex.quote(_PROCESS_AUDIT_PATH_SNAPSHOT_SCRIPT)} "
+                f"{shlex.quote(self.workspace_root)} "
+                f"{shlex.quote(json.dumps(normalized_paths))}"
+            )
+        else:
+            command = (
+                f"python3 -c {shlex.quote(_PROCESS_AUDIT_SNAPSHOT_SCRIPT)} "
+                f"{shlex.quote(self.workspace_root)}"
+            )
         try:
             response = await self._exec_sandbox_process(
                 sandbox,
@@ -453,12 +540,10 @@ class CodeIntelligenceService:
     def rename_symbol_plan(
         self, file_path: str, line: int, character: int, new_name: str,
     ) -> SemanticRenamePlan:
-        """Build a :class:`SemanticRenamePlan` for an OCC operation commit.
+        """Build a :class:`SemanticRenamePlan` for a semantic rename operation.
 
-        For each affected file, the file's current content is captured as
-        the per-file OCC base. The operation commit validates each target
-        file's base hash at commit time; concurrent edits to *unrelated*
-        files do not affect this rename.
+        For each affected file, capture current content so callers can render
+        a dry-run preview or build one process-backed rename command.
         """
         final_by_path = self.lsp_client.rename_symbol(
             file_path, int(line), int(character), new_name,
@@ -641,7 +726,7 @@ class CodeIntelligenceService:
     # -- Edit API (delegated) -------------------------------------------------
 
     def apply_edit(self, request: EditRequest) -> EditResult:
-        """Apply a single search/replace edit through the unified OCC path."""
+        """Apply a single search/replace edit through the service helper path."""
         current, existed = self._content.read(request.file_path, allow_missing=True)
         if not existed:
             return EditResult(
@@ -754,7 +839,6 @@ class CodeIntelligenceService:
             "arbiter_generation": self.arbiter.generation,
             "symbol_index_generation": self.symbol_index.generation,
             "recent_changes": recent_changes[:25],
-            "active_reservations": [dict(item) for item in self.arbiter.active_reservations(normalized)][:25],
             "hotspots": hotspots,
             "generated_at": time.time(),
         }
@@ -794,7 +878,7 @@ class CodeIntelligenceService:
             lsp_connected=lsp["connected"],
             lsp_query_count=lsp["queries"],
             lsp_cache_hits=lsp["cache_hits"],
-            arbiter_active_edits=self.arbiter.active_edit_count,
+            arbiter_active_locks=self.arbiter.active_lock_count,
             total_edits=self.arbiter.metrics.total_edits,
         )
 

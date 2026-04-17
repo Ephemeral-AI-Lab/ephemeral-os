@@ -71,6 +71,7 @@ async def test_exec_ci_process_operation_delegates_audited_process_call():
         team_run_id="team-1",
         agent_run_id="agent-1",
         task_id="task-1",
+        audit_paths=None,
     )
 
 

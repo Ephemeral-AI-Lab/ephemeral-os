@@ -8,6 +8,7 @@ Mutation-capable tools route process execution through
 from __future__ import annotations
 
 import inspect
+from collections.abc import Sequence
 from typing import Any
 
 from tools.core.base import ToolExecutionContext, ToolResult
@@ -19,32 +20,32 @@ def get_ci_service(context: ToolExecutionContext) -> Any | None:
 
 
 def ci_required_result(tool_name: str, detail: str) -> ToolResult:
-    """Build a consistent error for tools that require CI/OCC."""
+    """Build a consistent error for tools that require code intelligence."""
     suffix = str(detail or "").strip()
     return ToolResult(
         output=(
-            f"{tool_name}: Code intelligence/OCC is unavailable."
+            f"{tool_name}: Code intelligence service is unavailable."
             f"{' ' + suffix if suffix else ''}"
         ),
         is_error=True,
-        metadata={"occ_required": True},
+        metadata={"ci_required": True},
     )
 
 
-def occ_required_result(
+def ci_write_required_result(
     tool_name: str,
     file_path: str,
     *,
     conflict: bool = False,
 ) -> ToolResult:
-    """Build a consistent OCC-required file-write error."""
-    metadata = {"occ_required": True}
+    """Build a consistent CI-required file-write error."""
+    metadata = {"ci_required": True}
     if conflict:
         metadata["conflict"] = True
     operation = "Write" if "write" in tool_name else "Edit"
     return ToolResult(
         output=(
-            f"{tool_name}: Code intelligence/OCC is unavailable. "
+            f"{tool_name}: Code intelligence service is unavailable. "
             f"{operation} of {file_path} is disabled. Direct sandbox write fallback is disabled."
         ),
         is_error=True,
@@ -60,15 +61,16 @@ async def exec_ci_process_operation(
     timeout: int | None = None,
     description: str,
     edit_type: str = "process",
+    audit_paths: Sequence[str] | None = None,
 ) -> Any:
-    """Run one process command through the OCC-aware execution entry point.
+    """Run one process command through the audited CI execution entry point.
 
     CodeAct delegates command execution here; lower layers run the command
     and audit the complete process operation.
     """
     svc = get_ci_service(context)
     if svc is None:
-        raise RuntimeError("Code intelligence/OCC is unavailable")
+        raise RuntimeError("Code intelligence service is unavailable")
 
     audited_exec_descriptor = inspect.getattr_static(svc, "exec_process_operation", None)
     audited_exec = (
@@ -87,6 +89,7 @@ async def exec_ci_process_operation(
             team_run_id=str(context.metadata.get("team_run_id") or ""),
             agent_run_id=str(context.metadata.get("agent_run_id") or ""),
             task_id=str(context.metadata.get("work_item_id") or ""),
+            audit_paths=audit_paths,
         )
     else:
         process = getattr(sandbox, "process", None)
@@ -111,7 +114,7 @@ def _resolved_agent_id(context: ToolExecutionContext, *, preferred: str = "") ->
 
 __all__ = [
     "ci_required_result",
+    "ci_write_required_result",
     "exec_ci_process_operation",
     "get_ci_service",
-    "occ_required_result",
 ]

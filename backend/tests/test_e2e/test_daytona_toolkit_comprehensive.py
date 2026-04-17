@@ -1,13 +1,13 @@
 # ruff: noqa
-"""Comprehensive sandbox and CI tool tests — OCC, LSP, CI, conflict resolution.
+"""Comprehensive sandbox and CI tool tests — audited edits, LSP, CI, conflict resolution.
 
 Covers sandbox and CI concerns:
-  OCC Editing:         daytona_edit_file with Arbiter lock/token/conflict
+  Audited Editing:     daytona_edit_file with Arbiter ledger/lock/conflict
   CI toolkit:  ci_query_symbol, ci_query_symbol, ci_query_symbol, ci_diagnostics
   CodeAct:             daytona_codeact multi-step execution
   Tool Selection:      ordering, schema validation, completeness
   Code Intelligence:   CI service, LSP client, registry, types
-  Conflict Resolution: Arbiter, TimeMachine, Ledger, OCC edit flow
+  Conflict Resolution: Arbiter, TimeMachine, Ledger, audited edit flow
   Live Sandbox:        real Daytona execution
 
 Run with: pytest tests/test_e2e/test_daytona_toolkit_comprehensive.py -v
@@ -16,8 +16,12 @@ Run with: pytest tests/test_e2e/test_daytona_toolkit_comprehensive.py -v
 from __future__ import annotations
 
 import asyncio
+import base64
+import hashlib
 import json
 import os
+import re
+import shlex
 import time
 from pathlib import Path
 from typing import Any
@@ -70,6 +74,7 @@ def _make_mock_sandbox(
 
     # -- process.exec mock (async — tools use `await sandbox.process.exec(...)`) --
     async def _mock_exec(command: str, *, cwd: str = "/workspace", timeout: int = 120):
+        del cwd, timeout
         result = MagicMock()
         # Check for matching commands
         for pattern, output in exec_map.items():
@@ -77,12 +82,37 @@ def _make_mock_sandbox(
                 result.result = output
                 result.exit_code = exec_exit_code
                 return result
-        # Default: echo-style
+
+        if "DAYTONA_EDIT_PAYLOAD=" in command:
+            result.result, result.exit_code = _mock_edit_exec(command, file_store)
+            return result
+
+        write_payload = _decode_write_payload(command)
+        if write_payload is not None:
+            file_path = str(write_payload["file_path"])
+            content = str(write_payload.get("content", ""))
+            file_store[file_path] = content
+            result.result = json.dumps(
+                {
+                    "ok": True,
+                    "file_path": file_path,
+                    "bytes_written": len(content.encode("utf-8")),
+                }
+            )
+            result.exit_code = 0
+            return result
+
+        if "_head_hash" in command or "os.walk(root)" in command:
+            result.result = _mock_snapshot_payload(file_store)
+            result.exit_code = 0
+            return result
+
+        # Default: echo-style for codeact and miscellaneous shell tests.
         result.result = f"mock output for: {command}"
         result.exit_code = exec_exit_code
         return result
 
-    sandbox.process.exec = _mock_exec if exec_map else MagicMock()
+    sandbox.process.exec = _mock_exec
 
     # -- fs.download_file mock (async) --
     async def _mock_download(path: str):
@@ -126,6 +156,79 @@ def _make_mock_sandbox(
     # Store reference for assertions
     sandbox._file_store = file_store
     return sandbox
+
+
+def _mock_snapshot_payload(file_store: dict[str, str]) -> str:
+    files = {}
+    for file_path, content in file_store.items():
+        normalized = str(file_path)
+        digest = hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
+        files[normalized] = {
+            "rel": normalized.lstrip("/"),
+            "exists": True,
+            "hash": digest,
+            "head_hash": "",
+        }
+    return json.dumps({"ok": True, "files": files})
+
+
+def _mock_edit_exec(command: str, file_store: dict[str, str]) -> tuple[str, int]:
+    payload_match = re.search(r"DAYTONA_EDIT_PAYLOAD=([^ ]+)", command)
+    file_match = re.search(r"DAYTONA_EDIT_FILE=([^ ]+)", command)
+    if payload_match is None or file_match is None:
+        return json.dumps({"ok": False, "error": "Invalid edit command"}), 1
+
+    file_path = shlex.split(file_match.group(1))[0]
+    if file_path not in file_store:
+        return json.dumps({"ok": False, "error": f"Path does not exist: {file_path}"}), 1
+
+    edits = json.loads(base64.b64decode(payload_match.group(1)).decode("utf-8"))
+    current = file_store[file_path]
+    next_content = current
+    errors = []
+    for index, edit in enumerate(edits, start=1):
+        old_text = str(edit.get("old_text", ""))
+        new_text = str(edit.get("new_text", ""))
+        if old_text not in next_content:
+            errors.append(f"Edit {index}: search text not found")
+            continue
+        next_content = next_content.replace(old_text, new_text, 1)
+
+    if errors:
+        return json.dumps({"ok": False, "file_path": file_path, "errors": errors}), 1
+
+    dry_run = "DAYTONA_EDIT_DRY_RUN=1" in command
+    if not dry_run:
+        file_store[file_path] = next_content
+
+    return (
+        json.dumps(
+            {
+                "ok": True,
+                "file_path": file_path,
+                "status": "dry_run" if dry_run else "edited",
+                "applied_edits": len(edits),
+                "warnings": [],
+            }
+        ),
+        0,
+    )
+
+
+def _decode_write_payload(command: str) -> dict[str, Any] | None:
+    try:
+        script = shlex.split(command)[-1]
+        tokens = shlex.split(script)
+    except Exception:
+        return None
+    for token in reversed(tokens):
+        try:
+            payload = json.loads(base64.b64decode(token).decode("utf-8"))
+        except Exception:
+            continue
+        if isinstance(payload, dict) and "file_path" in payload and "content" in payload:
+            return payload
+    return None
 
 
 def _make_context(
@@ -193,16 +296,16 @@ def _assert_success(result) -> None:
 
 
 # NOTE: Core I/O tool tests (bash, read_file, write_file, grep, glob)
-# removed — focus is on Daytona-specific concerns: OCC, LSP, CI,
+# removed — focus is on Daytona-specific concerns: audited edits, LSP, CI,
 # conflict resolution, tool selection/ordering.
 
 # ===========================================================================
-# 7. DaytonaEditTool — OCC-coordinated editing
+# 7. DaytonaEditTool — audited editing
 # ===========================================================================
 
 
 class TestDaytonaEditTool:
-    """Test daytona_edit_file: search-and-replace with OCC."""
+    """Test daytona_edit_file: audited search-and-replace."""
 
     def _tool(self):
         from tools.daytona_toolkit.edit_tool import daytona_edit_file
@@ -229,7 +332,7 @@ class TestDaytonaEditTool:
 
     def test_edit_dry_run(self):
         sandbox = _make_mock_sandbox(files={"/workspace/app.py": "old_value = 1"})
-        ctx = _make_context(sandbox)
+        ctx = _make_context(sandbox, ci_service=_make_ci_service_for_sandbox(sandbox))
         tool = self._tool()
         result = _run(
             tool.execute(
@@ -351,9 +454,14 @@ class TestDaytonaEditTool:
         assert "return 42" in sandbox._file_store["/workspace/f.py"]
         assert "def bar():\n    pass" in sandbox._file_store["/workspace/f.py"]
 
-    def test_edit_upload_failure(self):
-        sandbox = _make_mock_sandbox(files={"/workspace/f.py": "content"})
-        sandbox.fs.upload_file = MagicMock(side_effect=OSError("write failed"))
+    def test_edit_process_failure(self):
+        sandbox = _make_mock_sandbox(
+            files={"/workspace/f.py": "content"},
+            exec_results={
+                "DAYTONA_EDIT_PAYLOAD": json.dumps({"ok": False, "error": "write failed"})
+            },
+            exec_exit_code=1,
+        )
         ctx = _make_context(sandbox, ci_service=_make_ci_service_for_sandbox(sandbox))
         tool = self._tool()
         result = _run(
@@ -367,6 +475,7 @@ class TestDaytonaEditTool:
             )
         )
         assert result.is_error
+        assert "write failed" in result.output
 
 
 # ===========================================================================
@@ -444,8 +553,8 @@ class TestDaytonaCodeActTool:
         tool = self._tool()
         result = _run(tool.execute(tool.input_model(code="print('hi')"), ctx))
         assert result.is_error
-        assert result.metadata["occ_required"] is True
-        assert "Code intelligence/OCC is unavailable" in result.output
+        assert result.metadata["ci_required"] is True
+        assert "Code intelligence service is unavailable" in result.output
 
     def test_codeact_execution_failure(self):
         sandbox = _make_mock_sandbox()
@@ -462,8 +571,8 @@ class TestDaytonaCodeActTool:
         tool = self._tool()
         result = _run(tool.execute(tool.input_model(code="print('hello')"), ctx))
         assert result.is_error
-        assert result.metadata["occ_required"] is True
-        assert "Code intelligence/OCC is unavailable" in result.output
+        assert result.metadata["ci_required"] is True
+        assert "Code intelligence service is unavailable" in result.output
 
     def test_codeact_error_status_in_manifest(self):
         """When script reports error status, result should be is_error."""
@@ -591,44 +700,21 @@ class TestCIIntegrationHelpers:
         ctx = ToolExecutionContext(cwd=Path("/ws"), metadata={"ci_service": svc})
         assert get_ci_service(ctx) is svc
 
-    def test_prime_cache_no_ci(self):
-        """prime_cache_after_write should not raise without CI service."""
-        from tools.core.ci_runtime import prime_cache_after_write
+    def test_ci_required_result_marks_ci_requirement(self):
+        from tools.core.ci_runtime import ci_required_result
 
-        ctx = ToolExecutionContext(cwd=Path("/ws"), metadata={})
-        prime_cache_after_write(ctx, "/test.py", "content")  # should not raise
+        result = ci_required_result("tool", "detail")
+        assert result.is_error
+        assert result.metadata["ci_required"] is True
+        assert "Code intelligence service is unavailable" in result.output
 
-    def test_prime_cache_with_ci(self):
-        from tools.core.ci_runtime import prime_cache_after_write
+    def test_ci_write_required_result_marks_disabled_write(self):
+        from tools.core.ci_runtime import ci_write_required_result
 
-        svc = MagicMock()
-        ctx = ToolExecutionContext(cwd=Path("/ws"), metadata={"ci_service": svc})
-        prime_cache_after_write(ctx, "/test.py", "content")
-        svc.symbol_index.refresh.assert_called_once_with("/test.py", "content")
-        svc.lsp_client.invalidate.assert_called_once_with("/test.py")
-
-    def test_record_edit_no_ci(self):
-        from tools.core.ci_runtime import record_edit_in_arbiter
-
-        ctx = ToolExecutionContext(cwd=Path("/ws"), metadata={})
-        record_edit_in_arbiter(ctx, "/test.py")  # should not raise
-
-    def test_record_edit_with_ci(self):
-        from tools.core.ci_runtime import record_edit_in_arbiter
-
-        svc = MagicMock()
-        ctx = ToolExecutionContext(cwd=Path("/ws"), metadata={"ci_service": svc})
-        record_edit_in_arbiter(ctx, "/test.py", edit_type="edit", old_hash="aaa", new_hash="bbb")
-        svc.arbiter.record_edit.assert_called_once()
-
-    def test_prime_cache_exception_swallowed(self):
-        """CI exceptions should be swallowed gracefully."""
-        from tools.core.ci_runtime import prime_cache_after_write
-
-        svc = MagicMock()
-        svc.symbol_index.refresh.side_effect = RuntimeError("boom")
-        ctx = ToolExecutionContext(cwd=Path("/ws"), metadata={"ci_service": svc})
-        prime_cache_after_write(ctx, "/test.py", "content")  # should not raise
+        result = ci_write_required_result("daytona_edit_file", "/test.py")
+        assert result.is_error
+        assert result.metadata["ci_required"] is True
+        assert "Direct sandbox write fallback is disabled" in result.output
 
 
 # ===========================================================================
@@ -652,7 +738,7 @@ class TestDaytonaToolkitLive:
             labels={"purpose": "toolkit-e2e"},
         )
         # Get async sandbox — tools use `await sandbox.process.exec(...)` etc.
-        from tools.daytona_toolkit.async_client import get_async_sandbox
+        from sandbox.async_client import get_async_sandbox
 
         async_sb = _run(get_async_sandbox(sb["id"]))
         yield {"info": sb, "raw": async_sb}
@@ -662,11 +748,20 @@ class TestDaytonaToolkitLive:
             pass
 
     def _ctx(self, live_sandbox) -> ToolExecutionContext:
+        from code_intelligence.routing.service import CodeIntelligenceService
+
+        sandbox = live_sandbox["raw"]
+        cwd = "/home/daytona"
         return ToolExecutionContext(
             cwd=Path("/workspace"),
             metadata={
-                "daytona_sandbox": live_sandbox["raw"],
-                "daytona_cwd": "/home/daytona",
+                "daytona_sandbox": sandbox,
+                "daytona_cwd": cwd,
+                "ci_service": CodeIntelligenceService(
+                    sandbox_id=str(live_sandbox["info"]["id"]),
+                    workspace_root=cwd,
+                    sandbox=sandbox,
+                ),
             },
         )
 
@@ -1155,17 +1250,17 @@ class TestCITypesDeep:
         tel = svc.get_telemetry()
         assert isinstance(tel, CITelemetry)
         assert tel.symbol_index_size == 0
-        assert tel.arbiter_active_edits == 0
+        assert tel.arbiter_active_locks == 0
         assert tel.total_edits == 0
 
 
 # ===========================================================================
-# Conflict resolution: Arbiter, TimeMachine, Ledger, OCC edit flow
+# Conflict resolution: Arbiter, TimeMachine, Ledger, audited edit flow
 # ===========================================================================
 
 
-class TestArbiterOCC:
-    """Arbiter — per-file edit tokens, locks, and conflict tracking."""
+class TestArbiterAuditLedger:
+    """Arbiter — per-file locks, edit ledger, and conflict tracking."""
 
     def _make_arbiter(self, **kwargs):
         from code_intelligence.editing.arbiter import Arbiter
@@ -1176,32 +1271,6 @@ class TestArbiterOCC:
         from code_intelligence.editing.arbiter import Arbiter
 
         return Arbiter(workspace_root="/workspace")
-
-    # -- Token lifecycle --
-
-    def test_issue_token_returns_valid_token(self):
-        from code_intelligence.editing.arbiter import EditToken
-
-        arb = self._make_arbiter()
-        token = arb.issue_token("/ws/app.py", "abc123", agent_id="agent-1")
-        assert isinstance(token, EditToken)
-        assert token.file_path == "/ws/app.py"
-        assert token.content_hash == "abc123"
-        assert token.agent_id == "agent-1"
-        assert len(token.token_id) == 12
-
-    def test_issue_token_increments_metrics(self):
-        arb = self._make_arbiter()
-        arb.issue_token("/a.py", "h1")
-        arb.issue_token("/b.py", "h2")
-        assert arb.metrics.tokens_issued == 2
-
-    def test_issue_token_tracks_active_count(self):
-        arb = self._make_arbiter()
-        arb.issue_token("/a.py", "h1")
-        assert arb.active_edit_count == 1
-        arb.issue_token("/b.py", "h2")
-        assert arb.active_edit_count == 2
 
     # -- File locking --
 
@@ -1272,16 +1341,12 @@ class TestArbiterOCC:
 
     def test_status_returns_all_fields(self):
         arb = self._make_arbiter()
-        arb.issue_token("/a.py", "h1")
         arb.record_edit("/a.py")
         status = arb.status()
         assert "total_edits" in status
         assert "conflicts_detected" in status
-        assert "tokens_issued" in status
-        assert "active_tokens" in status
         assert "active_locks" in status
         assert status["total_edits"] == 1
-        assert status["tokens_issued"] == 1
 
     def test_cleanup_locks_removes_unheld(self):
         arb = self._make_arbiter()
@@ -1450,16 +1515,16 @@ class TestTimeMachine:
         assert len(snap.content_hash) == 16  # SHA256 prefix
 
 
-class TestOCCEditFlow:
-    """End-to-end OCC edit flow via DaytonaEditTool with arbiter + time_machine."""
+class TestAuditedEditFlow:
+    """End-to-end audited edit flow via DaytonaEditTool with arbiter + time_machine."""
 
-    def _make_occ_context(self, files: dict[str, str]):
+    def _make_audit_context(self, files: dict[str, str]):
         """Create a context with mock sandbox + real arbiter + time_machine."""
         from code_intelligence.routing.service import CodeIntelligenceService
 
         sandbox = _make_mock_sandbox(files=files)
         ci_service = CodeIntelligenceService(
-            sandbox_id="occ-edit-test",
+            sandbox_id="audit-edit-test",
             workspace_root="/ws",
             sandbox=sandbox,
         )
@@ -1482,8 +1547,8 @@ class TestOCCEditFlow:
             )
         )
 
-    def test_occ_edit_acquires_and_releases_lock(self):
-        ctx, sandbox, arbiter, _ = self._make_occ_context({"/ws/app.py": "x = 1"})
+    def test_audited_edit_acquires_and_releases_lock(self):
+        ctx, sandbox, arbiter, _ = self._make_audit_context({"/ws/app.py": "x = 1"})
         result = self._edit(ctx, "/ws/app.py", "x = 1", "x = 2")
         _assert_success(result)
         assert "edited" in result.output
@@ -1492,34 +1557,31 @@ class TestOCCEditFlow:
         assert arbiter.acquire_file_lock("/ws/app.py") is True
         arbiter.release_file_lock("/ws/app.py")
 
-    def test_occ_edit_saves_snapshot_for_undo(self):
-        ctx, _, _, time_machine = self._make_occ_context({"/ws/app.py": "original"})
+    def test_audited_edit_does_not_create_time_machine_snapshot(self):
+        ctx, _, _, time_machine = self._make_audit_context({"/ws/app.py": "original"})
         self._edit(ctx, "/ws/app.py", "original", "modified")
 
         snap = time_machine.rollback("/ws/app.py")
-        assert snap is not None
-        assert snap.content == "original"  # snapshot saved before edit
+        assert snap is None
 
-    def test_occ_edit_records_in_arbiter(self):
-        ctx, _, arbiter, _ = self._make_occ_context({"/ws/app.py": "content"})
+    def test_audited_edit_records_in_arbiter(self):
+        ctx, _, arbiter, _ = self._make_audit_context({"/ws/app.py": "content"})
         self._edit(ctx, "/ws/app.py", "content", "new")
         assert arbiter.metrics.total_edits >= 1
 
-    def test_occ_conflict_when_lock_held(self):
-        """Edit should fail with conflict when another agent holds the lock."""
-        ctx, _, arbiter, _ = self._make_occ_context({"/ws/app.py": "content"})
+    def test_audited_edit_is_not_blocked_by_legacy_lock(self):
+        """Process-audited edits do not use the legacy semantic write lock."""
+        ctx, _, arbiter, _ = self._make_audit_context({"/ws/app.py": "content"})
 
-        # Simulate another agent holding the lock
         arbiter.acquire_file_lock("/ws/app.py")
 
         result = self._edit(ctx, "/ws/app.py", "content", "new")
-        assert result.is_error
-        assert "conflict" in result.output.lower() or "lock" in result.output.lower()
-        assert result.metadata.get("conflict") is True
+        _assert_success(result)
+        assert arbiter.metrics.total_edits == 1
 
         arbiter.release_file_lock("/ws/app.py")
 
-    def test_occ_edit_without_ci_returns_error(self):
+    def test_audited_edit_without_ci_returns_error(self):
         """Coordinated edits must fail instead of raw-writing without CI."""
         from tools.daytona_toolkit.edit_tool import daytona_edit_file as _edit_tool
 
@@ -1534,13 +1596,13 @@ class TestOCCEditFlow:
             )
         )
         assert result.is_error
-        assert result.metadata["occ_required"] is True
-        assert "Code intelligence/OCC is unavailable" in result.output
+        assert result.metadata["ci_required"] is True
+        assert "Code intelligence service is unavailable" in result.output
         assert sandbox._file_store["/ws/app.py"] == "old"
 
-    def test_sequential_occ_edits_both_succeed(self):
+    def test_sequential_audited_edits_both_succeed(self):
         """Two sequential edits to the same file should both succeed."""
-        ctx, sandbox, arbiter, _ = self._make_occ_context({"/ws/app.py": "a = 1\nb = 2"})
+        ctx, sandbox, arbiter, _ = self._make_audit_context({"/ws/app.py": "a = 1\nb = 2"})
 
         r1 = self._edit(ctx, "/ws/app.py", "a = 1", "a = 10")
         _assert_success(r1)
@@ -1553,7 +1615,7 @@ class TestOCCEditFlow:
 
     def test_dry_run_does_not_acquire_lock(self):
         """Dry run should preview without touching arbiter or time_machine."""
-        ctx, sandbox, arbiter, time_machine = self._make_occ_context({"/ws/app.py": "content"})
+        ctx, sandbox, arbiter, time_machine = self._make_audit_context({"/ws/app.py": "content"})
 
         result = self._edit(ctx, "/ws/app.py", "content", "new", dry_run=True)
         _assert_success(result)

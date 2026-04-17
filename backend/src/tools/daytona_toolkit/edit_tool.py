@@ -15,9 +15,9 @@ from code_intelligence.editing.change_labels import change_actor_label
 from code_intelligence.editing.patcher import SearchReplaceEdit
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.ci_runtime import (
+    ci_write_required_result,
     exec_ci_process_operation,
     get_ci_service,
-    occ_required_result,
 )
 from tools.daytona_toolkit.tools import (
     _get_cwd,
@@ -185,6 +185,7 @@ async def _run_edit_exec_command(
     *,
     context: ToolExecutionContext,
     sandbox: Any,
+    file_path: str,
     command: str,
 ) -> tuple[dict[str, Any] | None, Any, ToolResult | None]:
     async def _run(active_sandbox: Any) -> Any:
@@ -195,6 +196,7 @@ async def _run_edit_exec_command(
             timeout=_EDIT_EXEC_TIMEOUT,
             description="daytona_edit_file",
             edit_type="edit",
+            audit_paths=[file_path],
         )
 
     try:
@@ -357,12 +359,13 @@ async def daytona_edit_file(
         return ToolResult(output=edit_error, is_error=True)
 
     if get_ci_service(context) is None:
-        return occ_required_result("daytona_edit_file", file_path)
+        return ci_write_required_result("daytona_edit_file", file_path)
 
     exec_started = time.perf_counter()
     exec_payload, sandbox, exec_error = await _run_edit_exec_command(
         context=context,
         sandbox=sandbox,
+        file_path=file_path,
         command=_build_edit_exec_command(
             file_path=file_path,
             edits=normalized_edits,

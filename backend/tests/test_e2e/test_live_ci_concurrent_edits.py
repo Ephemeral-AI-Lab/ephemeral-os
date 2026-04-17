@@ -1,19 +1,17 @@
-"""Live Daytona concurrent edit tests for CI/OCC edge cases.
+"""Live Daytona concurrent edit tests for CI process-audit edge cases.
 
-Complements ``test_live_ci_rename_perf.py`` by stressing the OCC arbiter
-and Jedi worker under true racing conditions. Fills gaps not covered by
-``test_arbiter_parallel_edits.py`` / ``test_live_daytona_tool_occ_calls.py``
-(both of which race edit-tool against edit-tool only):
+Complements ``test_live_ci_rename_perf.py`` and
+``test_live_daytona_tool_occ_calls.py`` by stressing the audit arbiter and
+Jedi worker under true racing conditions:
 
 * Non-overlapping concurrent edits across all 4 public write paths
   (``daytona_write_file``, ``daytona_edit_file``, ``ci_rename_symbol``,
   ``daytona_codeact``) on disjoint files — every write must land and
-  OCC must record zero conflicts.
+  the process audit must record all edit types.
 * Overlapping concurrent edits pairing *different* tool types
-  (edit×edit, edit×write, edit×codeact, write×codeact) — exactly one
-  writer per racing pair wins; the loser surfaces ``is_error=True`` with
-  ``metadata["conflict"]`` set, and ``arbiter.metrics.conflicts_detected``
-  grows by at least the number of racing pairs.
+  (edit×edit, edit×codeact, codeact×codeact) — final files must remain
+  coherent, even though unconditional process writes are last-writer-wins
+  rather than reservation conflicts.
 * Jedi worker script reuse — under ``CI_JEDI_WORKER_ENABLED=1`` every
   LSP call hits the persistent worker (``worker_successes`` increments,
   ``script_runs`` stays at zero since the subprocess fallback never
@@ -195,6 +193,23 @@ def _summarize_ops(op_results: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _parallelism_summary(
+    op_results: list[dict[str, Any]],
+    *,
+    wall_duration_ms: float,
+) -> dict[str, Any]:
+    summed_ms = round(sum(float(item["duration_ms"]) for item in op_results), 3)
+    ratio = round(summed_ms / wall_duration_ms, 3) if wall_duration_ms > 0 else 0.0
+    return {
+        "wall_duration_ms": wall_duration_ms,
+        "summed_operation_ms": summed_ms,
+        "parallelism_ratio": ratio,
+        "interpretation": (
+            "parallel" if ratio >= 3.0 else "possibly_serialized"
+        ),
+    }
+
+
 def _barrier_run(
     workers: list[Callable[[], dict[str, Any]]],
 ) -> list[dict[str, Any]]:
@@ -218,21 +233,38 @@ def test_concurrent_nonoverlap_edits_across_tools(
     live_edits_env: LiveRenameEnv,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """All 4 write paths run concurrently on disjoint targets — zero conflicts."""
+    """All 4 write paths run concurrently on disjoint targets and audit cleanly."""
     monkeypatch.setenv(JEDI_WORKER_ENV_FLAG, "1")
     env = live_edits_env
     root = f"{env.root_dir}/nonoverlap_{uuid.uuid4().hex[:6]}"
     _write_perf_project(env, root)
+    generated_dir = f"{root}/pkg/generated"
+    env.exec_checked(f"mkdir -p {shlex.quote(generated_dir)}")
+
+    for index in range(NONOVERLAP_SLOTS):
+        if index % 4 == 1:
+            env.write_file(f"{generated_dir}/edited_{index}.py", f"seed_{index} = 0\n")
+        elif index % 4 == 2:
+            env.write_file(
+                f"{generated_dir}/rename_{index}.py",
+                "\n".join(
+                    [
+                        f"def sym_{index}(x):",
+                        f"    return x + {index}",
+                        "",
+                        f"def caller_{index}(x):",
+                        f"    return sym_{index}(x)",
+                        "",
+                    ]
+                ),
+            )
+
     _init_git(env, root)
     svc, ctx = _build_service(env, root, "nonoverlap")
     arbiter_before = svc.arbiter.metrics.conflicts_detected
-    tokens_before = svc.arbiter.metrics.tokens_issued
     trace_mark = env.trace.mark()
 
     try:
-        generated_dir = f"{root}/pkg/generated"
-        env.exec_checked(f"mkdir -p {shlex.quote(generated_dir)}")
-
         def _write_worker(index: int) -> Callable[[], dict[str, Any]]:
             target = f"{generated_dir}/written_{index}.py"
 
@@ -262,7 +294,6 @@ def test_concurrent_nonoverlap_edits_across_tools(
 
         def _edit_worker(index: int) -> Callable[[], dict[str, Any]]:
             target = f"{generated_dir}/edited_{index}.py"
-            env.write_file(target, f"seed_{index} = 0\n")
 
             def _run() -> dict[str, Any]:
                 started = time.perf_counter()
@@ -291,21 +322,6 @@ def test_concurrent_nonoverlap_edits_across_tools(
             return _run
 
         def _rename_worker(index: int) -> Callable[[], dict[str, Any]]:
-            target = f"{generated_dir}/rename_{index}.py"
-            env.write_file(
-                target,
-                "\n".join(
-                    [
-                        f"def sym_{index}(x):",
-                        f"    return x + {index}",
-                        "",
-                        f"def caller_{index}(x):",
-                        f"    return sym_{index}(x)",
-                        "",
-                    ]
-                ),
-            )
-
             def _run() -> dict[str, Any]:
                 started = time.perf_counter()
                 result = asyncio.run(
@@ -394,7 +410,6 @@ def test_concurrent_nonoverlap_edits_across_tools(
         conflicts_delta = (
             svc.arbiter.metrics.conflicts_detected - arbiter_before
         )
-        tokens_delta = svc.arbiter.metrics.tokens_issued - tokens_before
         assert conflicts_delta == 0, (
             f"Unexpected conflicts: {conflicts_delta} (counts={dict(counts)})"
         )
@@ -404,8 +419,11 @@ def test_concurrent_nonoverlap_edits_across_tools(
             "concurrency": len(workers),
             "duration_ms": duration_ms,
             "ops": _summarize_ops(results),
+            "parallelism": _parallelism_summary(
+                results,
+                wall_duration_ms=duration_ms,
+            ),
             "arbiter_conflicts_delta": conflicts_delta,
-            "arbiter_tokens_delta": tokens_delta,
             "arbiter_total_edits": svc.arbiter.metrics.total_edits,
             "lsp_worker_successes_delta": (
                 telemetry_after.worker_successes
@@ -442,15 +460,15 @@ def test_concurrent_nonoverlap_edits_across_tools(
 
 
 # ---------------------------------------------------------------------------
-# Test B: overlapping concurrent edits detect conflicts
+# Test B: overlapping concurrent edits preserve file integrity
 # ---------------------------------------------------------------------------
 
 
-def test_concurrent_overlap_edits_detect_conflicts(
+def test_concurrent_overlap_edits_preserve_process_integrity(
     live_edits_env: LiveRenameEnv,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Racing pairs on the same region — exactly one winner per pair."""
+    """Racing process writes on one region leave one coherent final value."""
     monkeypatch.setenv(JEDI_WORKER_ENV_FLAG, "1")
     env = live_edits_env
     root = f"{env.root_dir}/overlap_{uuid.uuid4().hex[:6]}"
@@ -539,39 +557,11 @@ def test_concurrent_overlap_edits_detect_conflicts(
 
                 return _run
 
-            def _write_variant(
-                pair: int, attempt: int, seed: str, path: str
-            ) -> Callable[[], dict[str, Any]]:
-                def _run() -> dict[str, Any]:
-                    started = time.perf_counter()
-                    result = asyncio.run(
-                        daytona_write_file.execute(
-                            daytona_write_file.input_model(
-                                file_path=path,
-                                content=f"{seed} = {pair}{attempt}\n",
-                            ),
-                            ctx,
-                        )
-                    )
-                    return {
-                        "pair": pair,
-                        "attempt": attempt,
-                        "op": "write",
-                        "is_error": result.is_error,
-                        "metadata": dict(result.metadata or {}),
-                        "duration_ms": round(
-                            (time.perf_counter() - started) * 1000, 3
-                        ),
-                        "output": result.output,
-                    }
-
-                return _run
-
-            # Overlap combos must include only tools that carry an *intent*
-            # (old_text / base-content) the OCC layer can validate against the
-            # current file. `daytona_write_file` is unconditional overwrite —
-            # last-writer-wins by contract, not an OCC bug — so it is
-            # intentionally excluded from this racing matrix.
+            # The unified process operation path audits mutations after the
+            # command finishes. It does not pre-reserve a file-level edit token,
+            # so unconditional process writes are last-writer-wins. This matrix
+            # verifies final file coherence and audit accounting, not legacy
+            # prepare/commit conflict rejection.
             combos = [
                 (_edit_variant, _edit_variant),
                 (_edit_variant, _codeact_variant),
@@ -592,31 +582,40 @@ def test_concurrent_overlap_edits_detect_conflicts(
                 }
             )
 
-        winners_per_pair: list[int] = []
-        losers_per_pair: list[int] = []
-        conflict_reasons: Counter[str] = Counter()
+        successes_per_pair: list[int] = []
+        errors_per_pair: list[int] = []
+        error_reasons: Counter[str] = Counter()
         for pair in pair_results:
             wins = [item for item in pair["outcomes"] if not item["is_error"]]
             losses = [item for item in pair["outcomes"] if item["is_error"]]
-            winners_per_pair.append(len(wins))
-            losers_per_pair.append(len(losses))
+            successes_per_pair.append(len(wins))
+            errors_per_pair.append(len(losses))
             for loss in losses:
                 reason = str(loss["metadata"].get("conflict_reason", "")) or (
-                    "conflict"
-                    if loss["metadata"].get("conflict")
-                    else "unknown"
+                    "conflict" if loss["metadata"].get("conflict") else str(loss["output"])
                 )
-                conflict_reasons[reason] += 1
+                error_reasons[reason[:120]] += 1
 
         conflicts_delta = (
             svc.arbiter.metrics.conflicts_detected - arbiter_before
         )
+        final_values_by_pair: dict[int, list[str]] = {}
+        for pair_index in range(OVERLAP_PAIRS):
+            target = f"{root}/pkg/shared_{pair_index}.py"
+            text = env.read_file(target)
+            marker = f"shared_marker_{pair_index}"
+            final_values_by_pair[pair_index] = re.findall(
+                rf"{re.escape(marker)} = (\d+)",
+                text,
+            )
+
         payload = {
-            "label": "B.overlap_racing_pairs",
+            "label": "B.overlap_process_write_integrity",
             "pairs": OVERLAP_PAIRS,
-            "winners_histogram": dict(Counter(winners_per_pair)),
-            "losers_histogram": dict(Counter(losers_per_pair)),
-            "conflict_reasons": dict(conflict_reasons),
+            "successes_histogram": dict(Counter(successes_per_pair)),
+            "errors_histogram": dict(Counter(errors_per_pair)),
+            "error_reasons": dict(error_reasons),
+            "final_values_by_pair": final_values_by_pair,
             "arbiter_conflicts_delta": conflicts_delta,
             "arbiter_total_edits": svc.arbiter.metrics.total_edits,
             "pair_results": pair_results,
@@ -624,25 +623,13 @@ def test_concurrent_overlap_edits_detect_conflicts(
         }
         _print_block("ci-lsp-concurrent-overlap", payload)
 
-        assert all(count == 1 for count in winners_per_pair), (
-            f"Unexpected winner histogram: {payload['winners_histogram']}"
+        assert all(count >= 1 for count in successes_per_pair), (
+            f"Every racing pair should leave at least one successful write: {payload}"
         )
-        assert all(count == 1 for count in losers_per_pair), (
-            f"Unexpected loser histogram: {payload['losers_histogram']}"
+        assert all(len(values) == 1 for values in final_values_by_pair.values()), (
+            f"Torn or missing final state: {final_values_by_pair}"
         )
-        assert conflicts_delta >= OVERLAP_PAIRS, (
-            f"conflicts_detected grew by {conflicts_delta}, "
-            f"expected >= {OVERLAP_PAIRS}"
-        )
-
-        for pair_index in range(OVERLAP_PAIRS):
-            target = f"{root}/pkg/shared_{pair_index}.py"
-            text = env.read_file(target)
-            marker = f"shared_marker_{pair_index}"
-            matches = re.findall(rf"{re.escape(marker)} = (\d+)", text)
-            assert len(matches) == 1, (
-                f"Torn state for pair {pair_index}: {text!r}"
-            )
+        assert svc.arbiter.metrics.total_edits >= OVERLAP_PAIRS
     finally:
         svc.dispose()
 

@@ -274,7 +274,7 @@ class NewTaskSpec(BaseModel):
     deps: list[str] = Field(default_factory=list, description="Task IDs this depends on")
     scope_paths: list[str] = Field(
         default_factory=list,
-        description="File/dir hints for OCC and note scoping",
+        description="File/dir hints for coordination and note scoping",
     )
 
 

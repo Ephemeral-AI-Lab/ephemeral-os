@@ -27,7 +27,7 @@ The Code Intelligence subsystem orchestrates multi-backend semantic and structur
 │               ▼        ▼             ┌─────▼──────┐                         │
 │  ┌──────────────┐  ┌────────────┐    │  TreeCache │    ┌──────────────────┐  │
 │  │LspBackend-   │  │SymbolIndex-│    │ (tree-     │    │   Arbiter        │  │
-│  │Adapter       │  │Backend-    │    │  sitter)   │    │  (OCC edits)     │  │
+│  │Adapter       │  │Backend-    │    │  sitter)   │    │ (edit ledger)    │  │
 │  │(priority:100)│  │Adapter     │    └────────────┘    └──────────────────┘  │
 │  └──────┬───────┘  │(priority:  │                                            │
 │         │          │  50)       │                      ┌──────────────────┐  │
@@ -78,10 +78,8 @@ Singleton per sandbox. Orchestrates all code intelligence operations: symbol que
 - `hover(file_path, line, character)` → `HoverResult | None`
 - `diagnostics(file_path)` → `list[Diagnostic]`
 - `query_symbols(query)` → `list[SymbolInfo]` (symbol index only)
-- `apply_edit(request)` → `EditResult` (OCC-coordinated)
-- `apply_write(request)` → `EditResult`
-- `prepare_write(file_path)` → `PreparedWrite | EditResult`
-- `commit_prepared_write(prepared, content)` → `EditResult`
+- `apply_edit(request)` → `EditResult` (service-level edit helper)
+- `exec_process_operation(sandbox, command, ...)` → process result with audited workspace mutations
 
 **Initialization:**
 - Symbol index builds asynchronously at first `ensure_initialized()` call
@@ -98,10 +96,11 @@ as the shared injection boundary. The helper owns the runtime metadata contract:
 - `ci_workspace_root`: optional override for CI indexing root
 - `ci_service`: the per-sandbox `CodeIntelligenceService`
 
-The injected `ci_service` is also the OCC boundary. It owns the per-sandbox
-`Arbiter` and `WriteCoordinator`; write-capable Daytona tools should require
-`ci_service` and commit through CI write primitives instead of accepting or
-injecting a separate OCC dependency.
+The injected `ci_service` is also the process-audit boundary. It owns the
+per-sandbox `Arbiter` ledger; write-capable Daytona tools should require
+`ci_service`, build one bash/process command for the tool call, and execute it
+through `exec_ci_process_operation(...)`. Tools should not carry separate
+concurrency state, base hashes, transactions, or diffs.
 
 Callers may discover `repo_root` differently: sync toolkit prepare uses
 `discover_workspace(...)`, async toolkit prepare uses
@@ -174,20 +173,19 @@ For each query (find_definitions, find_references, hover, diagnostics):
 - **LspBackendAdapter:** priority 100 (semantic queries preferred)
 - **SymbolIndexBackendAdapter:** priority 50 (structural fallback)
 
-### Edit Coordination (Arbiter)
+### Process Operation Audit (Arbiter)
 
-Optimistic concurrency control (OCC) for file edits via write reservation tokens.
+Write-capable Daytona tools use one audited process operation per tool call.
 
 **Workflow:**
-1. `prepare_write()` → captures file snapshot, issues token, returns `PreparedWrite`
-2. Agent modifies content
-3. `commit_prepared_write()` → validates token, re-reads file, merges if non-overlapping
-4. On success: records edit in arbiter ledger, invalidates LSP/symbol index caches
-5. On conflict: returns conflict reason (version_mismatch, overlapping_range, stale_reservation)
+1. Tool converts its input into one bash/process command.
+2. Tool calls `exec_ci_process_operation(...)`.
+3. `CodeIntelligenceService.exec_process_operation(...)` snapshots the workspace before and after the command.
+4. Changed files are recorded in the Arbiter edit ledger with the tool edit type (`write`, `edit`, `rename`, or `codeact`).
+5. The service invalidates LSP state and refreshes the symbol index for changed files when possible.
 
-**Key Classes:**
-- `PreparedWrite` → reservation snapshot (file_path, token_id, current_content, current_hash)
-- `EditResult` → commit outcome (success, conflict, message, snapshot_id)
+This makes CodeAct and the other Daytona write tools unaware of repository diffs
+or transactions while keeping a single audit path for coordination observability.
 
 ### File Content Management (ContentManager)
 
@@ -324,119 +322,55 @@ Attempts to merge concurrent edits when file changes between prepare and commit.
 └────────────────────────────────────────────────────────┘
 ```
 
-## Edit Coordination Workflow
+## Process Audit Workflow
 
 ```
 ┌─────────────────────────────────────┐
-│  Agent requests edit                │
-│  apply_edit EditRequest             │
+│  Daytona write tool receives input  │
 └──────────────────┬──────────────────┘
                    │
                    ▼
 ┌─────────────────────────────────────┐
-│  _prepared_write_guard              │
-│  prepare_write(file_path)           │
+│  Build one bash/process command     │
+│  for the whole tool call            │
 └──────────────────┬──────────────────┘
                    │
                    ▼
 ┌─────────────────────────────────────┐
-│  Read current content               │
-│  Compute hash                       │
+│  exec_ci_process_operation(...)     │
 └──────────────────┬──────────────────┘
                    │
                    ▼
-            ┌──────┴───────┐
-            │ Hash matches  │
-            │  expected?    │
-            └──────┬───────┘
-           no │         │ yes
-              ▼         ▼
-          [conflict]  ┌─────────────────────┐
-                      │ Arbiter.issue_token  │
-                      │ return PreparedWrite │
-                      └──────────┬──────────┘
-                                 │
-                                 ▼
-                      ┌──────────────────────┐
-                      │ Try patch on         │
-                      │ prepared.current_    │
-                      │ content              │
-                      └──────────┬───────────┘
-                                 │
-                          ┌──────┴───────┐
-                          │   Patch      │
-                          │  success?    │
-                          └──────┬───────┘
-                         no │        │ yes
-                            ▼        ▼
-                        [conflict] ┌──────────────────────┐
-                                   │ Refresh prepared via  │
-                                   │ arbiter state         │
-                                   └──────────┬───────────┘
-                                              │
-                                       ┌──────┴──────┐
-                                       │ Hash still   │
-                                       │  matches?    │
-                                       └──────┬───────┘
-                                      no │        │ yes
-                                         │        ▼
-                                         │   ┌──────────────────────┐
-                                         │   │ commit_prepared_write │
-                                         │   │ with new_content      │
-                                         │   └──────────┬───────────┘
-                                         │              │
-                                         └──────────────┤ (retry patch)
-                                                        ▼
-                                             ┌──────────────────────┐
-                                             │  Acquire file lock   │
-                                             └──────────┬───────────┘
-                                                        │
-                                                        ▼
-                                             ┌──────────────────────┐
-                                             │  Validate token      │
-                                             └──────────┬───────────┘
-                                                        │
-                                                 ┌──────┴──────┐
-                                                 │   Token     │
-                                                 │   valid?    │
-                                                 └──────┬───────┘
-                                                no │        │ yes
-                                                   ▼        ▼
-                                               [conflict] ┌──────────────────┐
-                                                          │ Re-read current  │
-                                                          │ file             │
-                                                          └──────┬───────────┘
-                                                                 │
-                                                          ┌──────┴──────┐
-                                                          │   Hashes    │
-                                                          │   match?    │
-                                                          └──────┬───────┘
-                                                    no (merge) │      │ yes
-                                                               │      ▼
-                                                               │  ┌───────────────┐
-                                                               │  │ Write content │
-                                                               │  │ to disk       │
-                                                               │  └──────┬────────┘
-                                                               │         │
-                                                               │         ▼
-                                                               │  ┌───────────────┐
-                                                               │  │Arbiter.record │
-                                                               │  │_edit          │
-                                                               │  └──────┬────────┘
-                                                               │         │
-                                                               │         ▼
-                                                               │  ┌───────────────────────┐
-                                                               │  │ symbol_index.refresh  │
-                                                               │  │ lsp_client.invalidate │
-                                                               │  └──────┬────────────────┘
-                                                               │         │
-                                                               │         ▼
-                                                               │  ┌───────────────────────┐
-                                                               │  │  Return EditResult    │
-                                                               │  │  success=true         │
-                                                               │  └───────────────────────┘
-                                                               │
-                                                  commit_prepared_write (retry)
+┌─────────────────────────────────────┐
+│  Snapshot workspace before command  │
+└──────────────────┬──────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────┐
+│  sandbox.process.exec(command)      │
+└──────────────────┬──────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────┐
+│  Snapshot workspace after command   │
+└──────────────────┬──────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────┐
+│  Diff snapshot file hashes          │
+│  and record changed paths           │
+└──────────────────┬──────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────┐
+│  Arbiter.record_edit(edit_type)     │
+└──────────────────┬──────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────┐
+│  Refresh symbol index and           │
+│  invalidate LSP for changed files   │
+└─────────────────────────────────────┘
 ```
 
 ## LSP Server Lifecycle
@@ -532,15 +466,6 @@ Attempts to merge concurrent edits when file changes between prepare and commit.
 - `severity: DiagnosticSeverity` – error, warning, information, hint
 - `message: str`, `source: str`, `code: str`
 
-**PreparedWrite** – edit reservation snapshot
-- `file_path: str`
-- `token_id: str` – arbiter reservation token
-- `current_content: str` – file content at prepare time
-- `current_hash: str` – 16-char SHA256 digest
-- `agent_id: str` – editing agent identifier
-- `existed: bool` – whether file existed at prepare time
-- `line_start`, `line_end`, `operation_type` – optional edit window hints
-
 **EditResult** – edit operation outcome
 - `success: bool`
 - `file_path: str`
@@ -627,7 +552,7 @@ Runtime metrics aggregated from service components:
 - `lsp_connected: bool` – at least one language backend ready
 - `lsp_query_count: int` – total LSP queries
 - `lsp_cache_hits: int` – cache hits in LspClient
-- `arbiter_active_edits: int` – concurrent edit reservations
+- `arbiter_active_locks: int` – currently held Arbiter file locks
 - `total_edits: int` – edits recorded in arbiter ledger
 
 Accessible via `service.status()` → dict or `service.get_telemetry()` → CITelemetry.

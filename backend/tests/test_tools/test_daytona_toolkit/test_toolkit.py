@@ -99,8 +99,8 @@ async def test_registered_write_capable_tools_require_ci_service():
         result = await tool.execute(tool.input_model(**tool_input), ctx)
 
         assert result.is_error, tool_name
-        assert "Code intelligence/OCC is unavailable" in result.output
-        assert result.metadata.get("occ_required") is True, tool_name
+        assert "Code intelligence service is unavailable" in result.output
+        assert result.metadata.get("ci_required") is True, tool_name
 
 
 def test_toolkit_from_context_includes_codeact():

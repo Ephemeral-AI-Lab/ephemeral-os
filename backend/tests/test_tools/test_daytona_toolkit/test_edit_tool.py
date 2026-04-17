@@ -235,8 +235,8 @@ async def test_edit_requires_ci_service_for_write():
         ctx,
     )
     assert result.is_error
-    assert "Code intelligence/OCC is unavailable" in result.output
-    assert result.metadata["occ_required"] is True
+    assert "Code intelligence service is unavailable" in result.output
+    assert result.metadata["ci_required"] is True
     sb.fs.upload_file.assert_not_called()
 
 
@@ -439,8 +439,8 @@ async def test_edit_no_raw_write_after_ci_unavailable():
         ctx,
     )
     assert result.is_error
-    assert "Code intelligence/OCC is unavailable" in result.output
-    assert result.metadata["occ_required"] is True
+    assert "Code intelligence service is unavailable" in result.output
+    assert result.metadata["ci_required"] is True
     sb.fs.upload_file.assert_not_called()
 
 
@@ -511,8 +511,9 @@ async def test_edit_batch_runs_through_exec_ci_process_operation(monkeypatch):
         timeout=None,
         description,
         edit_type="process",
+        audit_paths=None,
     ):
-        del edit_type
+        del edit_type, audit_paths
         calls.append((command, description))
         return await sandbox.process.exec(command, timeout=timeout)
 

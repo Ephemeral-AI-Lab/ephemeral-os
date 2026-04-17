@@ -31,9 +31,9 @@ from tools.daytona_toolkit._daytona_utils import (
     record_coordination_warning,
 )
 from tools.core.ci_runtime import (
+    ci_write_required_result,
     exec_ci_process_operation,
     get_ci_service,
-    occ_required_result,
 )
 
 logger = logging.getLogger(__name__)
@@ -502,7 +502,7 @@ async def daytona_write_file(
             message=contract_warning,
         )
     if get_ci_service(context) is None:
-        return occ_required_result("daytona_write_file", file_path)
+        return ci_write_required_result("daytona_write_file", file_path)
 
     content_bytes = content.encode("utf-8")
 
@@ -514,6 +514,7 @@ async def daytona_write_file(
             timeout=_WRITE_FILE_TIMEOUT,
             description="daytona_write_file",
             edit_type="write",
+            audit_paths=[file_path],
         )
         cleaned, exit_code = _extract_exit_code(
             getattr(response, "result", "") or "",

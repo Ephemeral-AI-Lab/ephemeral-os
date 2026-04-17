@@ -191,7 +191,7 @@ async def query_diagnostics(
 
 @router.post("/{sandbox_id}/edit")
 async def apply_edit(sandbox_id: str, request: EditRequest) -> dict:
-    """Apply an OCC-coordinated edit."""
+    """Apply a code-intelligence service edit."""
     service = _get_service_if_exists(sandbox_id)
     from code_intelligence.types import EditRequest as CIEditRequest
 
@@ -240,7 +240,7 @@ async def telemetry(sandbox_id: str) -> dict:
         "indexed_files": tel.indexed_files,
         "lsp_connected": tel.lsp_connected,
         "lsp_query_count": tel.lsp_query_count,
-        "arbiter_active_edits": tel.arbiter_active_edits,
+        "arbiter_active_locks": tel.arbiter_active_locks,
         "total_edits": tel.total_edits,
     }
 

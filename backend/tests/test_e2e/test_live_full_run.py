@@ -418,7 +418,7 @@ def test_phase5_code_intelligence_metrics(sandbox_id):
     print(f"    lsp_connected: {tel.lsp_connected}")
     print(f"    lsp_query_count: {tel.lsp_query_count}")
     print(f"    lsp_cache_hits: {tel.lsp_cache_hits}")
-    print(f"    arbiter_active_edits: {tel.arbiter_active_edits}")
+    print(f"    arbiter_active_locks: {tel.arbiter_active_locks}")
     print(f"    arbiter_edit_count: {tel.arbiter_edit_count}")
 
     # Type assertions
@@ -428,7 +428,7 @@ def test_phase5_code_intelligence_metrics(sandbox_id):
         "indexed_files",
         "lsp_query_count",
         "lsp_cache_hits",
-        "arbiter_active_edits",
+        "arbiter_active_locks",
         "arbiter_edit_count",
     ]:
         val = getattr(tel, field_name)

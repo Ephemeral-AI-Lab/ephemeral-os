@@ -213,8 +213,8 @@ async def test_write_file_requires_ci_service():
         daytona_write_file.input_model(file_path="/ws/new.txt", content="hello"), ctx
     )
     assert result.is_error
-    assert "Code intelligence/OCC is unavailable" in result.output
-    assert result.metadata["occ_required"] is True
+    assert "Code intelligence service is unavailable" in result.output
+    assert result.metadata["ci_required"] is True
     sb.fs.upload_file.assert_not_called()
     sb.process.exec.assert_not_called()
 
@@ -402,8 +402,8 @@ async def test_write_file_no_raw_write_after_ci_unavailable():
         daytona_write_file.input_model(file_path="/x.txt", content="data"), ctx
     )
     assert result.is_error
-    assert "Code intelligence/OCC is unavailable" in result.output
-    assert result.metadata["occ_required"] is True
+    assert "Code intelligence service is unavailable" in result.output
+    assert result.metadata["ci_required"] is True
     sb.fs.upload_file.assert_not_called()
 
 

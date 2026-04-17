@@ -154,6 +154,7 @@ def test_rename_runs_via_single_process_operation():
     svc.exec_process_operation.assert_awaited_once()
     kwargs = svc.exec_process_operation.await_args.kwargs
     assert kwargs["edit_type"] == "rename"
+    assert kwargs["audit_paths"] == ["/ws/a.py", "/ws/b.py"]
 
 
 def test_sandbox_rename_uses_one_wrapped_command():

@@ -339,6 +339,7 @@ async def _perform_rename(
             timeout=_PROCESS_RENAME_TIMEOUT,
             edit_type="rename",
             description=description,
+            audit_paths=[change.file_path for change in operation_changes],
         )
     except Exception as exc:
         return ToolResult(

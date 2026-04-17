@@ -82,7 +82,7 @@ class TestCIServiceCreation:
         assert isinstance(tel.lsp_connected, bool)
         assert isinstance(tel.lsp_query_count, int)
         assert isinstance(tel.lsp_cache_hits, int)
-        assert isinstance(tel.arbiter_active_edits, int)
+        assert isinstance(tel.arbiter_active_locks, int)
         assert isinstance(tel.total_edits, int)
 
         # Initial counters should be zero; backend connectivity depends on the

@@ -81,43 +81,13 @@ class Diagnostic:
 
 @dataclass(frozen=True)
 class EditRequest:
-    """A request to edit a file via OCC."""
+    """A request to edit a file through the service edit helper."""
 
     file_path: str
     old_text: str
     new_text: str
     agent_id: str = ""
     description: str = ""
-    expected_hash: str = ""
-    token_id: str = ""
-
-
-@dataclass(frozen=True)
-class WriteRequest:
-    """A request to write or overwrite a file via OCC."""
-
-    file_path: str
-    content: str
-    agent_id: str = ""
-    description: str = ""
-    edit_type: str = "write"
-    expected_hash: str = ""
-    token_id: str = ""
-
-
-@dataclass(frozen=True)
-class PreparedWrite:
-    """A prepared write reservation with the current file snapshot."""
-
-    file_path: str
-    token_id: str
-    current_content: str
-    current_hash: str
-    agent_id: str = ""
-    existed: bool = True
-    line_start: int | None = None
-    line_end: int | None = None
-    operation_type: str = ""
 
 
 @dataclass(frozen=True)
@@ -135,7 +105,7 @@ class EditResult:
 
 @dataclass(frozen=True)
 class OperationChange:
-    """One file's slot in a tool-level OCC operation.
+    """One file's slot in a service-level semantic operation.
 
     ``base_content`` is the content the semantic tool inspected at plan time;
     ``base_hash`` is its :func:`content_hash`. ``final_content`` is the
@@ -173,7 +143,7 @@ OperationStatus = Literal[
 
 @dataclass(frozen=True)
 class OperationResult:
-    """Outcome of one tool-level OCC operation against explicit bases."""
+    """Outcome of one service-level semantic operation against explicit bases."""
 
     success: bool
     status: OperationStatus
@@ -193,6 +163,6 @@ class CITelemetry:
     lsp_connected: bool = False
     lsp_query_count: int = 0
     lsp_cache_hits: int = 0
-    arbiter_active_edits: int = 0
+    arbiter_active_locks: int = 0
     total_edits: int = 0
     extra: dict[str, Any] = field(default_factory=dict)

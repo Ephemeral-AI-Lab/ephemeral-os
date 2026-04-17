@@ -200,8 +200,8 @@ async def test_shell_mode_requires_ci_service():
     )
 
     assert result.is_error
-    assert "Code intelligence/OCC is unavailable" in result.output
-    assert result.metadata["occ_required"] is True
+    assert "Code intelligence service is unavailable" in result.output
+    assert result.metadata["ci_required"] is True
 
 
 async def test_coordinated_shell_requires_ci_service():
@@ -220,11 +220,11 @@ async def test_coordinated_shell_requires_ci_service():
     )
 
     assert result.is_error
-    assert "Code intelligence/OCC is unavailable" in result.output
-    assert result.metadata["occ_required"] is True
+    assert "Code intelligence service is unavailable" in result.output
+    assert result.metadata["ci_required"] is True
 
 
-async def test_shell_mode_with_ci_runs_single_occ_process_op():
+async def test_shell_mode_with_ci_runs_single_audited_process_op():
     sb = _make_sandbox(exec_stdout=_shell_exec_output("LIVE_BASH_OK", 0))
     ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/repo", "ci_service": _ci_service()})
 

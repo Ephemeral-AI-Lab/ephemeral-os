@@ -413,7 +413,7 @@ class TestCodeIntelligenceOnProject:
             "indexed_files",
             "lsp_query_count",
             "lsp_cache_hits",
-            "arbiter_active_edits",
+            "arbiter_active_locks",
             "total_edits",
         ]:
             val = getattr(tel, field)

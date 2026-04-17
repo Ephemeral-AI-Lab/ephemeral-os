@@ -157,7 +157,7 @@ def _destructive_git_command_error(command: str) -> str | None:
     if _DESTRUCTIVE_GIT_PATTERN.search(command or ""):
         return (
             "BLOCKED: destructive git commands (stash, reset --hard, checkout --, clean) "
-            "are forbidden. They destroy other agents' work and bypass OCC. "
+            "are forbidden. They destroy other agents' work and bypass process audit. "
             "Use targeted edit tools instead."
         )
     return None
@@ -261,7 +261,7 @@ def shell(command, timeout={codeact_default_timeout}):
         _block_shell_command(
             command,
             "BLOCKED: destructive git commands (stash, reset --hard, checkout --, clean) "
-            "are forbidden. They destroy other agents' work and bypass OCC. "
+            "are forbidden. They destroy other agents' work and bypass process audit. "
             "Use targeted edit tools instead.",
         )
     if _DESTRUCTIVE_SHELL_PATTERN.search(command or ""):

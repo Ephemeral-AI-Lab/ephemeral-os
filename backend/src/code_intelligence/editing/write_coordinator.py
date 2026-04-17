@@ -1,8 +1,9 @@
-"""OCC-coordinated write pipeline: prepare, commit, refresh, abort.
+"""Legacy semantic write pipeline: resolve, commit, refresh, abort.
 
-The coordinator owns the read-hash-reserve-write dance for a single
-:class:`CodeIntelligenceService` sandbox. It depends only on the
-collaborators it mutates — no knowledge of the global service registry.
+The coordinator owns service-level semantic writes for a single
+:class:`CodeIntelligenceService` sandbox. Daytona write tools no longer call
+this module directly; they execute one process command through the unified
+process-audit entry point.
 """
 
 from __future__ import annotations
@@ -80,7 +81,7 @@ def _conflict_result(
 
 
 class WriteCoordinator:
-    """Encapsulates the OCC write pipeline for one sandbox."""
+    """Encapsulates the legacy semantic write pipeline for one sandbox."""
 
     def __init__(
         self,
@@ -99,7 +100,7 @@ class WriteCoordinator:
         self._lsp_client = lsp_client
         self._content = content
 
-    # -- OCC primitives -------------------------------------------------------
+    # -- Semantic operation primitives ---------------------------------------
 
     def commit_operation_against_base(
         self,
@@ -120,7 +121,7 @@ class WriteCoordinator:
             Aborts if the file already exists on disk.
           * **Modify branch** — if a file's current hash equals its
             ``base_hash`` the operation takes ``final_content`` verbatim; otherwise
-            it tries a non-overlapping merge (same policy as single-file OCC).
+            it tries a non-overlapping merge (same policy as a single-file merge).
             Any unmergeable mismatch aborts the *whole* operation — no partial
             rename is ever left on disk.
           * **Two-pass commit** — resolved contents are staged in memory
