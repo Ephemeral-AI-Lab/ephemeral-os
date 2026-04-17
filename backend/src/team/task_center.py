@@ -354,16 +354,17 @@ class TaskCenter:
         if not replanners:
             raise RuntimeError("no agent with role='replanner' is registered")
         before = self._transitions.snapshot()
-        rec = await self._store.request_replan(
+        rec, is_new = await self._store.request_replan(
             task_id,
             reason=request.reason,
             suggestion=request.suggestion,
             replanner_agent=replanners[0].name,
         )
-        self._budget.bump_replan_counters()
         task = self.graph[rec.id]
-        self._emit(make_task_added(self._team_run_id, task_to_dict(task)))
-        self._budget.emit_update()
+        if is_new:
+            self._budget.bump_replan_counters()
+            self._emit(make_task_added(self._team_run_id, task_to_dict(task)))
+            self._budget.emit_update()
         await self._transitions.refresh_and_emit(before)
         return task
 

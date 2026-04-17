@@ -15,6 +15,11 @@ from team.task_context_builder import TaskContextBuilder
 
 
 _PROMPT_DIR = Path(__file__).resolve().parents[2] / "src" / "prompts" / "user_prompt"
+_SPEC_FORMAT_INSTRUCTION = (
+    "For each new task `spec`, use exactly this section order with colon labels: "
+    "`1. Goal:`, `2. Environment:`, `3. Scope:`, `4. Context:`, "
+    "`5. Acceptance Criteria:`"
+)
 
 
 def test_user_prompt_markdown_files_start_at_runtime_template() -> None:
@@ -168,7 +173,56 @@ async def test_build_query_context_uses_root_planner_markdown_template() -> None
     assert "Fix retry handling." in ctx.user_message
     assert "## Benchmark targets" in ctx.user_message
     assert "tests/test_retry.py::test_retry" in ctx.user_message
+    assert _SPEC_FORMAT_INSTRUCTION in ctx.user_message
     assert "Submit the final plan with `submit_plan(new_tasks=[...])`" in ctx.user_message
+
+
+@pytest.mark.asyncio
+async def test_build_query_context_uses_child_planner_structured_spec_contract() -> None:
+    register_all()
+    root = Task(
+        id="root",
+        team_run_id="run-1",
+        agent_name="team_planner",
+        status=TaskStatus.EXPANDED,
+        objective="Root task.",
+        root_id="root",
+        depth=0,
+    )
+    child_planner = Task(
+        id="planner-1",
+        team_run_id="run-1",
+        agent_name="team_planner",
+        status=TaskStatus.READY,
+        objective="Decompose retry handling.",
+        parent_id="root",
+        root_id="root",
+        depth=1,
+    )
+    tasks = {"root": root, "planner-1": child_planner}
+    team_run = SimpleNamespace(
+        id="run-1",
+        user_request="Fix retry handling.",
+        root_task_id="root",
+        task_center=await _make_task_center("run-1", tasks),
+        roster={"planner": ["team_planner"], "developer": ["developer"]},
+        team_definition=None,
+        project_context=SimpleNamespace(repo_root="/repo"),
+        coordination_metadata={},
+        budgets=None,
+        budget_state=None,
+        sandbox_id="",
+        arbiter=None,
+    )
+
+    ctx = await build_query_context(get_definition("team_planner"), team_run, child_planner)
+
+    assert ctx.user_message.startswith("Please read the following sections")
+    assert "- submit_plan:" in ctx.user_message
+    assert "## Assigned planner task" in ctx.user_message
+    assert "Decompose retry handling." in ctx.user_message
+    assert _SPEC_FORMAT_INSTRUCTION in ctx.user_message
+    assert "Submit the final child plan with `submit_plan(new_tasks=[...])`" in ctx.user_message
 
 
 @pytest.mark.asyncio

@@ -23,6 +23,7 @@ from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.ci_runtime import get_ci_service
 from tools.core.sandbox_runtime import get_daytona_sandbox, resolve_daytona_path
 from tools.core.decorator import tool
+from tools.daytona_toolkit._daytona_utils import _exec_command
 
 logger = logging.getLogger(__name__)
 _SYMBOL_FALLBACK_LIMIT = 100
@@ -334,7 +335,7 @@ async def _exec_remote(
     if sandbox is None:
         return None, ""
     try:
-        response = await sandbox.process.exec(command, timeout=timeout)
+        response = await _exec_command(sandbox, command, timeout=timeout)
     except Exception:
         logger.debug("%s failed", log_label, exc_info=True)
         return None, ""

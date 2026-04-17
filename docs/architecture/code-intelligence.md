@@ -96,11 +96,14 @@ as the shared injection boundary. The helper owns the runtime metadata contract:
 - `ci_workspace_root`: optional override for CI indexing root
 - `ci_service`: the per-sandbox `CodeIntelligenceService`
 
-The injected `ci_service` is also the process-audit boundary. It owns the
-per-sandbox `Arbiter` ledger; write-capable Daytona tools should require
-`ci_service`, build one bash/process command for the tool call, and execute it
-through `exec_ci_process_operation(...)`. Tools should not carry separate
-concurrency state, base hashes, transactions, or diffs.
+`exec_ci_process_operation(...)` is the process execution boundary. It owns the
+actor/task context for the tool call and delegates execution to the injected
+`ci_service`. The service delegates snapshot/diff/ledger work to its
+`ProcessAuditor`, which records mutations in the per-sandbox `Arbiter` ledger.
+Write-capable Daytona tools should require `ci_service`, build one bash/process
+command for the tool call, and execute it through `exec_ci_process_operation(...)`.
+Tools should not carry separate concurrency state, base hashes, transactions,
+diffs, edit labels, or audit path hints.
 
 Callers may discover `repo_root` differently: sync toolkit prepare uses
 `discover_workspace(...)`, async toolkit prepare uses
@@ -173,16 +176,18 @@ For each query (find_definitions, find_references, hover, diagnostics):
 - **LspBackendAdapter:** priority 100 (semantic queries preferred)
 - **SymbolIndexBackendAdapter:** priority 50 (structural fallback)
 
-### Process Operation Audit (Arbiter)
+### Process Auditor
 
 Write-capable Daytona tools use one audited process operation per tool call.
 
 **Workflow:**
 1. Tool converts its input into one bash/process command.
 2. Tool calls `exec_ci_process_operation(...)`.
-3. `CodeIntelligenceService.exec_process_operation(...)` snapshots the workspace before and after the command.
-4. Changed files are recorded in the Arbiter edit ledger with the tool edit type (`write`, `edit`, `rename`, or `codeact`).
-5. The service invalidates LSP state and refreshes the symbol index for changed files when possible.
+3. `exec_ci_process_operation(...)` builds the process execution context from tool context.
+4. `CodeIntelligenceService.exec_process_operation(...)` delegates execution to `ProcessAuditor`.
+5. `ProcessAuditor` snapshots the workspace before and after the command.
+6. Changed files are recorded in the Arbiter edit ledger without tool-supplied edit labels or path hints.
+7. The auditor invalidates LSP state and refreshes the symbol index for changed files when possible.
 
 This makes CodeAct and the other Daytona write tools unaware of repository diffs
 or transactions while keeping a single audit path for coordination observability.
@@ -363,7 +368,7 @@ Attempts to merge concurrent edits when file changes between prepare and commit.
                    │
                    ▼
 ┌─────────────────────────────────────┐
-│  Arbiter.record_edit(edit_type)     │
+│  Arbiter.record_edit(...)           │
 └──────────────────┬──────────────────┘
                    │
                    ▼

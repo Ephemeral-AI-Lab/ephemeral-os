@@ -353,6 +353,7 @@ if [ -f {shlex.quote(self._pid_path)} ] \
    && kill -0 "$(cat {shlex.quote(self._pid_path)})" 2>/dev/null \
    && [ -S {shlex.quote(self._socket_path)} ]; then
     echo READY=1
+    echo PID="$(cat {shlex.quote(self._pid_path)} 2>/dev/null || true)"
     exit 0
 fi
 rm -f {shlex.quote(self._socket_path)}
@@ -361,6 +362,7 @@ echo "$!" > {shlex.quote(self._pid_path)}
 for _i in $(seq 1 50); do
     if [ -S {shlex.quote(self._socket_path)} ]; then
         echo READY=1
+        echo PID="$(cat {shlex.quote(self._pid_path)} 2>/dev/null || true)"
         exit 0
     fi
     if ! kill -0 "$(cat {shlex.quote(self._pid_path)})" 2>/dev/null; then
@@ -389,6 +391,8 @@ exit 0
         if not isinstance(response, dict) or not response.get("ok"):
             self._started = False
             raise WorkerUnavailable(f"worker bad ping response: {response}")
+        pid = _parse_startup_pid(startup)
+        logger.info("jedi worker started pid=%s path=%s", pid, self._pid_path)
         self._started = True
 
     def _ensure_started(self) -> None:
@@ -510,3 +514,12 @@ def _socket_bind_unavailable(detail: str) -> bool:
         or "operation not permitted" in lowered
         or "address family not supported" in lowered
     )
+
+
+def _parse_startup_pid(startup: str) -> int | None:
+    for line in startup.splitlines():
+        key, sep, value = line.partition("=")
+        if key == "PID" and sep:
+            value = value.strip()
+            return int(value) if value.isdigit() else None
+    return None

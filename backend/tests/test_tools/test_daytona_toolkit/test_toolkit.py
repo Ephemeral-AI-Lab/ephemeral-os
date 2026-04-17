@@ -67,6 +67,7 @@ def test_toolkit_registers_expected_tools():
         "daytona_grep",
         "daytona_glob",
         "daytona_edit_file",
+        "daytona_rename_symbol",
     }
     assert names == expected
     assert not any(name.startswith("daytona_lsp_") for name in names)
@@ -84,6 +85,7 @@ async def test_registered_write_capable_tools_require_ci_service():
             "new_text": "new",
         },
         "daytona_codeact": {"command": "echo hi"},
+        "daytona_rename_symbol": {"symbol": "foo", "new_name": "bar"},
     }
 
     assert set(write_inputs).issubset(tools_by_name)
@@ -114,6 +116,7 @@ def test_toolkit_from_context_includes_codeact():
     assert "daytona_codeact" in developer_tk.tool_names()
     assert "daytona_codeact" in validator_tk.tool_names()
     assert "daytona_edit_file" in developer_tk.tool_names()
+    assert "daytona_rename_symbol" in developer_tk.tool_names()
     assert "daytona_list_files" not in developer_tk.tool_names()
     assert "daytona_list_files" not in validator_tk.tool_names()
 
@@ -133,7 +136,7 @@ def test_toolkit_get_missing_tool():
 def test_toolkit_list_tools_length():
     tk = DaytonaToolkit()
     tools = tk.list_tools()
-    assert len(tools) == 6
+    assert len(tools) == 7
 
 
 def test_toolkit_instructions_prioritize_ci_before_raw_file_reads():
@@ -142,6 +145,7 @@ def test_toolkit_instructions_prioritize_ci_before_raw_file_reads():
     assert "after CI/search narrowed the target" in tk.instructions
     assert "Use exactly one mode" in tk.instructions
     assert "do not append stdout/stderr capture plumbing" in tk.instructions
+    assert "daytona_rename_symbol" in tk.instructions
 
 
 # ---------------------------------------------------------------------------

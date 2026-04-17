@@ -34,7 +34,7 @@ from code_intelligence.routing.service import CodeIntelligenceService
 from code_intelligence.lsp._jedi_worker_client import (
     ENV_FLAG as JEDI_WORKER_ENV_FLAG,
 )
-from tools.ci_toolkit.rename_tool import ci_rename_symbol
+from tools.daytona_toolkit.rename_tool import daytona_rename_symbol
 from tools.core.base import ToolExecutionContext
 from tools.daytona_toolkit._daytona_utils import _extract_exit_code, _wrap_bash_command
 from tools.daytona_toolkit.codeact_tool import daytona_codeact
@@ -243,10 +243,10 @@ class _AsyncFs:
         self._real = real_fs
 
     async def upload_file(self, *args: Any, **kwargs: Any) -> Any:
-        return self._real.upload_file(*args, **kwargs)
+        return await asyncio.to_thread(self._real.upload_file, *args, **kwargs)
 
     async def download_file(self, *args: Any, **kwargs: Any) -> Any:
-        return self._real.download_file(*args, **kwargs)
+        return await asyncio.to_thread(self._real.download_file, *args, **kwargs)
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._real, name)
@@ -257,7 +257,7 @@ class _AsyncProcess:
         self._real = real_process
 
     async def exec(self, *args: Any, **kwargs: Any) -> Any:
-        response = self._real.exec(*args, **kwargs)
+        response = await asyncio.to_thread(self._real.exec, *args, **kwargs)
         stdout = _clean_stdout(getattr(response, "result", "") or "")
         return SimpleNamespace(result=stdout, exit_code=getattr(response, "exit_code", None))
 
@@ -490,12 +490,12 @@ def test_live_ci_lsp_jedi_tool_traces_and_perf(
         assert "Primary function" in hover.content
 
         dry_symbol = _measure(
-            "tool.ci_rename_symbol(beta dry_run)",
+            "tool.daytona_rename_symbol(beta dry_run)",
             env.trace,
             svc,
             lambda: asyncio.run(
-                ci_rename_symbol.execute(
-                    ci_rename_symbol.input_model(
+                daytona_rename_symbol.execute(
+                    daytona_rename_symbol.input_model(
                         symbol="beta",
                         new_name="beta_v2",
                         dry_run=True,
@@ -511,12 +511,12 @@ def test_live_ci_lsp_jedi_tool_traces_and_perf(
         assert len(dry_symbol_data["files"]) >= 3
 
         commit_symbol = _measure(
-            "tool.ci_rename_symbol(beta commit)",
+            "tool.daytona_rename_symbol(beta commit)",
             env.trace,
             svc,
             lambda: asyncio.run(
-                ci_rename_symbol.execute(
-                    ci_rename_symbol.input_model(
+                daytona_rename_symbol.execute(
+                    daytona_rename_symbol.input_model(
                         symbol="beta",
                         new_name="beta_v2",
                     ),
@@ -531,12 +531,12 @@ def test_live_ci_lsp_jedi_tool_traces_and_perf(
         assert len(commit_symbol_data["files"]) >= 3
 
         dry_facade = _measure(
-            "tool.ci_rename_symbol(delta dry_run)",
+            "tool.daytona_rename_symbol(delta dry_run)",
             env.trace,
             svc,
             lambda: asyncio.run(
-                ci_rename_symbol.execute(
-                    ci_rename_symbol.input_model(symbol="delta", new_name="delta_v2", dry_run=True),
+                daytona_rename_symbol.execute(
+                    daytona_rename_symbol.input_model(symbol="delta", new_name="delta_v2", dry_run=True),
                     ctx,
                 )
             ),
@@ -548,12 +548,12 @@ def test_live_ci_lsp_jedi_tool_traces_and_perf(
         assert len(dry_facade_data["files"]) >= 3
 
         commit_facade = _measure(
-            "tool.ci_rename_symbol(delta commit)",
+            "tool.daytona_rename_symbol(delta commit)",
             env.trace,
             svc,
             lambda: asyncio.run(
-                ci_rename_symbol.execute(
-                    ci_rename_symbol.input_model(symbol="delta", new_name="delta_v2"),
+                daytona_rename_symbol.execute(
+                    daytona_rename_symbol.input_model(symbol="delta", new_name="delta_v2"),
                     ctx,
                 )
             ),
@@ -667,12 +667,12 @@ def test_live_ci_lsp_jedi_tool_traces_and_perf(
             assert "Primary function" in worker_hover.content
 
             worker_dry = _measure(
-                "worker.tool.ci_rename_symbol(beta dry_run)",
+                "worker.tool.daytona_rename_symbol(beta dry_run)",
                 env.trace,
                 worker_svc,
                 lambda: asyncio.run(
-                    ci_rename_symbol.execute(
-                        ci_rename_symbol.input_model(
+                    daytona_rename_symbol.execute(
+                        daytona_rename_symbol.input_model(
                             symbol="beta",
                             new_name="beta_v2",
                             dry_run=True,
@@ -922,12 +922,12 @@ def _run_occ_capture_checks(
         assert edit_data["status"] == "edited"
 
         rename_result = _measure(
-            "occ.ci_rename_symbol(alpha commit)",
+            "occ.daytona_rename_symbol(alpha commit)",
             env.trace,
             occ_svc,
             lambda: asyncio.run(
-                ci_rename_symbol.execute(
-                    ci_rename_symbol.input_model(
+                daytona_rename_symbol.execute(
+                    daytona_rename_symbol.input_model(
                         symbol="alpha",
                         new_name="alpha_occ",
                     ),
@@ -1029,8 +1029,8 @@ def _run_concurrent_ci_load(
                 detail = len(result.content)
             elif op == 3:
                 result = asyncio.run(
-                    ci_rename_symbol.execute(
-                        ci_rename_symbol.input_model(
+                    daytona_rename_symbol.execute(
+                        daytona_rename_symbol.input_model(
                             symbol="beta",
                             new_name=f"beta_load_{index}",
                             dry_run=True,
@@ -1039,12 +1039,12 @@ def _run_concurrent_ci_load(
                     )
                 )
                 assert not result.is_error, result.output
-                name = "ci_rename_symbol_dry_run"
+                name = "daytona_rename_symbol_dry_run"
                 detail = len(json.loads(result.output)["files"])
             else:
                 result = asyncio.run(
-                    ci_rename_symbol.execute(
-                        ci_rename_symbol.input_model(
+                    daytona_rename_symbol.execute(
+                        daytona_rename_symbol.input_model(
                             symbol="delta",
                             new_name=f"delta_load_{index}",
                             dry_run=True,
@@ -1053,7 +1053,7 @@ def _run_concurrent_ci_load(
                     )
                 )
                 assert not result.is_error, result.output
-                name = "ci_rename_symbol_delta_dry_run"
+                name = "daytona_rename_symbol_delta_dry_run"
                 detail = len(json.loads(result.output)["files"])
             return {
                 "index": index,
@@ -1140,7 +1140,7 @@ def _print_mode_comparison(stats: list[dict[str, Any]]) -> None:
         ("lsp.goto_definition(alpha usage)", "worker.lsp.goto_definition(alpha usage)"),
         ("lsp.find_references(alpha cold)", "worker.lsp.find_references(alpha cold)"),
         ("lsp.hover(alpha)", "worker.lsp.hover(alpha)"),
-        ("tool.ci_rename_symbol(beta dry_run)", "worker.tool.ci_rename_symbol(beta dry_run)"),
+        ("tool.daytona_rename_symbol(beta dry_run)", "worker.tool.daytona_rename_symbol(beta dry_run)"),
     ]
     rows = []
     for base_label, worker_label in pairs:

@@ -14,6 +14,7 @@ from team.models import (
     BudgetState,
     Note,
     ReplanPlan,
+    ReplanRequest,
     Task,
     TaskDefinition,
     TaskStatus,
@@ -440,6 +441,71 @@ def _task_center_with_store(store: _FakeStore, expander: _FakeExpander) -> TaskC
     return tc
 
 
+class _RecordingEventStore:
+    def __init__(self) -> None:
+        self.events = []
+
+    def append(self, event) -> None:
+        self.events.append(event)
+
+    def load_run(self, team_run_id: str):
+        return list(self.events)
+
+    def list_runs(self):
+        return ["run-1"] if self.events else []
+
+
+class _ReusingReplanStore(_FakeStore):
+    def __init__(self, graph: dict[str, Task]) -> None:
+        super().__init__(graph)
+        self.request_replan_calls = 0
+
+    async def request_replan(
+        self,
+        task_id: str,
+        reason: str,
+        suggestion: str | None,
+        replanner_agent: str,
+    ):
+        del reason, suggestion
+        self.request_replan_calls += 1
+        if self.request_replan_calls == 1:
+            origin = self.graph[task_id]
+            origin.status = TaskStatus.REQUEST_REPLAN
+            self.graph["replanner"] = _task(
+                "replanner",
+                agent_name=replanner_agent,
+                status=TaskStatus.READY,
+                parent_id=origin.parent_id,
+                fired_by_task_id=task_id,
+            )
+            return self.graph["replanner"], True
+        return self.graph["replanner"], False
+
+
+@pytest.mark.asyncio
+async def test_request_replan_double_call_emits_task_added_once():
+    graph = {"failed": _task("failed", status=TaskStatus.RUNNING)}
+    store = _ReusingReplanStore(graph)
+    event_store = _RecordingEventStore()
+    tc = _task_center_with_store(
+        store,
+        _FakeExpander({"added": 0, "cancelled": 0, "inserted_ids": [], "replanner_child_count": 0}),
+    )
+    tc._events = event_store
+
+    request = ReplanRequest(reason="boom", suggestion=None)
+    first = await tc.request_replan("failed", request)
+    second = await tc.request_replan("failed", request)
+
+    assert first.id == "replanner"
+    assert second.id == "replanner"
+    task_added_events = [event for event in event_store.events if event.kind == "task_added"]
+    assert len(task_added_events) == 1
+    assert task_added_events[0].data["task"]["id"] == "replanner"
+    assert [event.kind for event in event_store.events].count("budget_update") == 1
+
+
 @pytest.mark.asyncio
 async def test_replanner_done_immediately_when_replan_has_no_children():
     graph = {
@@ -668,13 +734,14 @@ async def test_request_replan_is_idempotent_when_live_replanner_exists(monkeypat
         task_store_module.q, "set_status_request_replan", _fake_set_status
     )
 
-    returned = await store.request_replan(
+    returned, is_new = await store.request_replan(
         task_id="failed-task",
         reason="boom",
         suggestion=None,
         replanner_agent="team_replanner",
     )
 
+    assert is_new is False
     assert returned is existing_replanner
     assert inserts == []
 
@@ -743,13 +810,14 @@ async def test_request_replan_inserts_new_replanner_when_none_exists(monkeypatch
     )
     monkeypatch.setattr(TaskStore, "refresh_graph", _fake_refresh)
 
-    replanner = await store.request_replan(
+    replanner, is_new = await store.request_replan(
         task_id="failed-task",
         reason="boom",
         suggestion=None,
         replanner_agent="team_replanner",
     )
 
+    assert is_new is True
     assert len(inserts) == 1
     assert replanner.fired_by_task_id == "failed-task"
     assert replaces == [

@@ -1,10 +1,11 @@
-"""Tests for the ci_rename_symbol tool."""
+"""Tests for the daytona_rename_symbol tool."""
 
 from __future__ import annotations
 
 import asyncio
 import hashlib
 import json
+import keyword
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -15,7 +16,7 @@ from code_intelligence.types import (
     SymbolInfo,
     SymbolKind,
 )
-from tools.ci_toolkit.rename_tool import ci_rename_symbol
+from tools.daytona_toolkit.rename_tool import daytona_rename_symbol
 from tools.core.base import ToolExecutionContext
 
 
@@ -93,7 +94,7 @@ def _make_svc(*, plan: SemanticRenamePlan | None):
 
 def _run(tool_input, ctx):
     return asyncio.run(
-        ci_rename_symbol.execute(ci_rename_symbol.input_model(**tool_input), ctx),
+        daytona_rename_symbol.execute(daytona_rename_symbol.input_model(**tool_input), ctx),
     )
 
 
@@ -106,7 +107,8 @@ def test_no_service_returns_error():
         _ctx(),
     )
     assert result.is_error
-    assert "LSP rename not available" in result.output
+    assert "Code intelligence service is unavailable" in result.output
+    assert result.metadata["ci_required"] is True
 
 
 def test_invalid_new_name_rejected():
@@ -118,6 +120,38 @@ def test_invalid_new_name_rejected():
     assert result.is_error
     assert "Invalid identifier" in result.output
     svc.rename_symbol_plan.assert_not_called()
+
+
+def test_keyword_new_names_rejected_before_resolution():
+    assert {"class", "for", "async", "None", "True", "False"}.issubset(keyword.kwlist)
+
+    for new_name in keyword.kwlist:
+        svc = _make_svc(plan=None)
+        result = _run(
+            {"symbol": "foo", "new_name": new_name},
+            _ctx({"ci_service": svc}),
+        )
+        assert result.is_error, new_name
+        assert "Cannot rename to Python keyword" in result.output
+        svc.symbol_index.find.assert_not_called()
+        svc.rename_symbol_plan.assert_not_called()
+
+
+def test_soft_keyword_new_names_remain_valid_identifiers():
+    soft_keywords = [item for item in getattr(keyword, "softkwlist", []) if item != "_"]
+    assert {"case", "match"}.issubset(soft_keywords)
+
+    for new_name in soft_keywords:
+        svc = _make_svc(plan=None)
+        result = _run(
+            {"symbol": "foo", "new_name": new_name},
+            _ctx({"ci_service": svc}),
+        )
+        assert not result.is_error, new_name
+        data = json.loads(result.output)
+        assert data["status"] == "no_changes"
+        svc.symbol_index.find.assert_called_once()
+        svc.rename_symbol_plan.assert_called_once()
 
 
 def test_no_changes_returns_status_no_changes():
@@ -153,8 +187,8 @@ def test_rename_runs_via_single_process_operation():
     assert {f["file_path"] for f in data["files"]} == {"/ws/a.py", "/ws/b.py"}
     svc.exec_process_operation.assert_awaited_once()
     kwargs = svc.exec_process_operation.await_args.kwargs
-    assert kwargs["edit_type"] == "rename"
-    assert kwargs["audit_paths"] == ["/ws/a.py", "/ws/b.py"]
+    assert "edit_type" not in kwargs
+    assert "audit_paths" not in kwargs
 
 
 def test_sandbox_rename_uses_one_wrapped_command():
@@ -180,7 +214,7 @@ def test_sandbox_rename_uses_one_wrapped_command():
     ctx = _ctx({"ci_service": svc, "daytona_sandbox": object()})
 
     with patch(
-        "tools.ci_toolkit.rename_tool.exec_ci_process_operation",
+        "tools.daytona_toolkit.rename_tool.exec_ci_process_operation",
         new=AsyncMock(return_value=response),
     ) as exec_op:
         result = _run(
@@ -275,7 +309,7 @@ def _make_facade_svc(
 
 def _run_facade(tool_input, ctx):
     return asyncio.run(
-        ci_rename_symbol.execute(ci_rename_symbol.input_model(**tool_input), ctx),
+        daytona_rename_symbol.execute(daytona_rename_symbol.input_model(**tool_input), ctx),
     )
 
 

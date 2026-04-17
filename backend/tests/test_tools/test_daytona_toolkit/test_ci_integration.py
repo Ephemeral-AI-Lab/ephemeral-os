@@ -37,7 +37,7 @@ def test_get_ci_service_returns_value():
 
 
 @pytest.mark.asyncio
-async def test_exec_ci_process_operation_delegates_audited_process_call():
+async def test_exec_ci_process_operation_encapsulates_execution_context():
     sandbox = MagicMock()
     svc = MagicMock()
     svc.exec_process_operation = AsyncMock(return_value=SimpleNamespace(result="ok", exit_code=0))
@@ -57,7 +57,6 @@ async def test_exec_ci_process_operation_delegates_audited_process_call():
         "echo ok",
         timeout=12,
         description="daytona_codeact shell",
-        edit_type="codeact",
     )
 
     assert result.result == "ok"
@@ -66,13 +65,31 @@ async def test_exec_ci_process_operation_delegates_audited_process_call():
         "echo ok",
         timeout=12,
         description="daytona_codeact shell",
-        edit_type="codeact",
         agent_id="developer",
         team_run_id="team-1",
         agent_run_id="agent-1",
         task_id="task-1",
-        audit_paths=None,
     )
+
+
+@pytest.mark.asyncio
+async def test_exec_ci_process_operation_rejects_sync_service_entrypoint():
+    sandbox = MagicMock()
+    svc = MagicMock()
+    svc.exec_process_operation = MagicMock(
+        side_effect=AssertionError("sync exec_process_operation must not be called")
+    )
+    ctx = _ctx({"ci_service": svc})
+
+    with pytest.raises(RuntimeError, match="exec_process_operation must be async"):
+        await exec_ci_process_operation(
+            ctx,
+            sandbox,
+            "echo ok",
+            description="daytona_codeact shell",
+        )
+
+    svc.exec_process_operation.assert_not_called()
 
 
 # ---------------------------------------------------------------------------

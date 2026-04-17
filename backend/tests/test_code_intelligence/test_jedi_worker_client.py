@@ -13,6 +13,7 @@ covered by the live e2e suite. What we verify here:
 
 from __future__ import annotations
 
+import logging
 import subprocess
 import sys
 from pathlib import Path
@@ -140,6 +141,38 @@ def test_logical_error_does_not_tear_down_process(tmp_path):
         cli.request("ping")
     assert cli._proc is proc_before
     cli.shutdown()
+
+
+def test_sandbox_worker_logs_pid_path_on_startup(tmp_path, monkeypatch, caplog):
+    sandbox = SimpleNamespace(process=SimpleNamespace())
+    cli = SandboxJediWorkerClient(
+        workspace_root=str(tmp_path),
+        sandbox=sandbox,
+        remote_dir=str(tmp_path / "remote-worker"),
+        request_timeout=5.0,
+    )
+    commands: list[str] = []
+
+    def fake_exec(command: str, *, timeout: float | None = None) -> str:
+        commands.append(command)
+        return "READY=1\nPID=4242"
+
+    monkeypatch.setattr(cli, "_ensure_installed", lambda: None)
+    monkeypatch.setattr(cli, "_exec", fake_exec)
+    monkeypatch.setattr(
+        cli,
+        "_rpc_raw",
+        lambda req, *, timeout=None: {"id": req["id"], "ok": True, "result": {"pong": True}},
+    )
+
+    with caplog.at_level(logging.INFO, logger="code_intelligence.lsp._jedi_worker_client"):
+        cli._spawn()
+
+    assert cli._started is True
+    assert commands
+    assert "echo PID=" in commands[0]
+    assert "jedi worker started pid=4242" in caplog.text
+    assert f"path={cli._pid_path}" in caplog.text
 
 
 def test_sandbox_worker_client_runs_daemon_over_socket(tmp_path):

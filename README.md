@@ -317,14 +317,14 @@ flowchart LR
 
 ## ✨ Features
 
-### 🔧 Tools (36 Built-In)
+### 🔧 Tools (30 Built-In)
 
 Current runtime inventory:
 
 | Surface | Count | Description |
 |--------|------:|-------------|
-| `sandbox_operations` | 11 | Remote sandbox file I/O, atomic edits, LSP queries, and `daytona_codeact` execution |
-| `code_intelligence` | 7 | Workspace structure, symbol lookup, references, hotspots, recent changes, cached file reads |
+| `sandbox_operations` | 7 | Remote sandbox file I/O, atomic edits, semantic rename, and `daytona_codeact` execution |
+| `code_intelligence` | 4 | Workspace structure, symbol lookup, references, and diagnostics |
 | `context_read` / `context_write` | 3 / 4 | Task Center notes plus scope and staleness checks |
 | `memory` | 3 | Exploration cache reuse and edit-history conflict prediction |
 | `subagent` | 1 | `run_subagent` for bounded scout/delegation work |

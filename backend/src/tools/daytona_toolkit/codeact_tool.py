@@ -425,7 +425,6 @@ async def _exec_shell_command(
         _wrap_bash_command(wrapped_command),
         timeout=timeout,
         description="daytona_codeact shell",
-        edit_type="codeact",
     )
     stdout = getattr(response, "result", "") or ""
     fallback_exit_code = getattr(response, "exit_code", None)
@@ -579,7 +578,6 @@ async def _execute_python_wrapper(
             exec_command,
             timeout=_CODEACT_DEFAULT_TIMEOUT,
             description="daytona_codeact python",
-            edit_type="codeact",
         )
         return getattr(response, "result", "") or "", sandbox, None
     except Exception as exc:
@@ -591,7 +589,6 @@ async def _execute_python_wrapper(
                 exec_command,
                 timeout=_CODEACT_DEFAULT_TIMEOUT,
                 description="daytona_codeact python",
-                edit_type="codeact",
             )
             return getattr(response, "result", "") or "", sandbox, None
         except Exception as recovery_exc:

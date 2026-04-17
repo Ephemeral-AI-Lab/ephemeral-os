@@ -8,10 +8,19 @@ Mutation-capable tools route process execution through
 from __future__ import annotations
 
 import inspect
-from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import Any
 
 from tools.core.base import ToolExecutionContext, ToolResult
+
+
+@dataclass(frozen=True)
+class _ProcessExecutionContext:
+    description: str
+    agent_id: str
+    team_run_id: str
+    agent_run_id: str
+    task_id: str
 
 
 def get_ci_service(context: ToolExecutionContext) -> Any | None:
@@ -60,46 +69,71 @@ async def exec_ci_process_operation(
     *,
     timeout: int | None = None,
     description: str,
-    edit_type: str = "process",
-    audit_paths: Sequence[str] | None = None,
 ) -> Any:
-    """Run one process command through the audited CI execution entry point.
+    """Run one process command through the audited CI execution boundary.
 
-    CodeAct delegates command execution here; lower layers run the command
-    and audit the complete process operation.
+    Daytona tools describe the logical operation here. This helper owns the
+    process execution context, then delegates execution to the CI service.
     """
     svc = get_ci_service(context)
     if svc is None:
         raise RuntimeError("Code intelligence service is unavailable")
 
+    process_context = _build_process_execution_context(
+        context,
+        description=description,
+    )
+    return await _execute_ci_process_operation(
+        svc,
+        sandbox,
+        command,
+        timeout=timeout,
+        process_context=process_context,
+    )
+
+
+def _build_process_execution_context(
+    context: ToolExecutionContext,
+    *,
+    description: str,
+) -> _ProcessExecutionContext:
+    return _ProcessExecutionContext(
+        description=description,
+        agent_id=_resolved_agent_id(context),
+        team_run_id=str(context.metadata.get("team_run_id") or ""),
+        agent_run_id=str(context.metadata.get("agent_run_id") or ""),
+        task_id=str(context.metadata.get("work_item_id") or ""),
+    )
+
+
+async def _execute_ci_process_operation(
+    svc: Any,
+    sandbox: Any,
+    command: str,
+    *,
+    timeout: int | None,
+    process_context: _ProcessExecutionContext,
+) -> Any:
     audited_exec_descriptor = inspect.getattr_static(svc, "exec_process_operation", None)
     audited_exec = (
         getattr(svc, "exec_process_operation", None)
         if audited_exec_descriptor is not None
         else None
     )
-    if callable(audited_exec):
-        response = audited_exec(
-            sandbox,
-            command,
-            timeout=timeout,
-            description=description,
-            edit_type=edit_type,
-            agent_id=_resolved_agent_id(context),
-            team_run_id=str(context.metadata.get("team_run_id") or ""),
-            agent_run_id=str(context.metadata.get("agent_run_id") or ""),
-            task_id=str(context.metadata.get("work_item_id") or ""),
-            audit_paths=audit_paths,
-        )
-    else:
-        process = getattr(sandbox, "process", None)
-        exec_fn = getattr(process, "exec", None) if process is not None else None
-        if not callable(exec_fn):
-            raise RuntimeError("Sandbox process.exec is unavailable")
-        response = exec_fn(command, timeout=timeout) if timeout is not None else exec_fn(command)
-    if inspect.isawaitable(response):
-        return await response
-    return response
+    if not callable(audited_exec):
+        raise RuntimeError("Code intelligence service exec_process_operation is unavailable")
+    if not inspect.iscoroutinefunction(audited_exec):
+        raise RuntimeError("Code intelligence service exec_process_operation must be async")
+    return await audited_exec(
+        sandbox,
+        command,
+        timeout=timeout,
+        description=process_context.description,
+        agent_id=process_context.agent_id,
+        team_run_id=process_context.team_run_id,
+        agent_run_id=process_context.agent_run_id,
+        task_id=process_context.task_id,
+    )
 
 
 def _resolved_agent_id(context: ToolExecutionContext, *, preferred: str = "") -> str:

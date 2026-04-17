@@ -51,7 +51,23 @@ def _write_exec_result(*, base_existed: bool = False):
 def _ci_service_mock(*, file_path: str = "/ws/new.txt"):
     del file_path
     svc = MagicMock()
+    svc.exec_process_operation = AsyncMock(side_effect=_exec_process_operation)
     return svc
+
+
+async def _exec_process_operation(
+    sandbox,
+    command,
+    *,
+    timeout=None,
+    description="",
+    agent_id="",
+    team_run_id="",
+    agent_run_id="",
+    task_id="",
+):
+    del description, agent_id, team_run_id, agent_run_id, task_id
+    return await sandbox.process.exec(command, timeout=timeout)
 
 
 def _write_payload_from_command(command: str) -> dict[str, str]:

@@ -5,7 +5,7 @@ Complements ``test_live_ci_rename_perf.py`` and
 Jedi worker under true racing conditions:
 
 * Non-overlapping concurrent edits across all 4 public write paths
-  (``daytona_write_file``, ``daytona_edit_file``, ``ci_rename_symbol``,
+  (``daytona_write_file``, ``daytona_edit_file``, ``daytona_rename_symbol``,
   ``daytona_codeact``) on disjoint files — every write must land and
   the process audit must record all edit types.
 * Overlapping concurrent edits pairing *different* tool types
@@ -49,7 +49,7 @@ from code_intelligence.lsp._jedi_worker_client import (
     ENV_FLAG as JEDI_WORKER_ENV_FLAG,
 )
 from code_intelligence.routing.service import CodeIntelligenceService
-from tools.ci_toolkit.rename_tool import ci_rename_symbol
+from tools.daytona_toolkit.rename_tool import daytona_rename_symbol
 from tools.core.base import ToolExecutionContext
 from tools.daytona_toolkit.codeact_tool import daytona_codeact
 from tools.daytona_toolkit.edit_tool import daytona_edit_file
@@ -325,8 +325,8 @@ def test_concurrent_nonoverlap_edits_across_tools(
             def _run() -> dict[str, Any]:
                 started = time.perf_counter()
                 result = asyncio.run(
-                    ci_rename_symbol.execute(
-                        ci_rename_symbol.input_model(
+                    daytona_rename_symbol.execute(
+                        daytona_rename_symbol.input_model(
                             symbol=f"sym_{index}",
                             file_hint=f"rename_{index}.py",
                             new_name=f"sym_{index}_renamed",
@@ -679,8 +679,8 @@ def test_jedi_worker_reuse_under_load(
                 op = "hover"
             else:
                 result = asyncio.run(
-                    ci_rename_symbol.execute(
-                        ci_rename_symbol.input_model(
+                    daytona_rename_symbol.execute(
+                        daytona_rename_symbol.input_model(
                             symbol="beta",
                             new_name=f"beta_worker_{index}",
                             dry_run=True,

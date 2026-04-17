@@ -95,26 +95,39 @@ def test_scope_status_filters_recent_history_by_team_run_id(tmp_path) -> None:
     assert packet["hotspots"] == [{"file_path": str(scoped_file), "edit_count": 1}]
 
 
+class _LocalProcess:
+    """Local fake for sandbox.process. Routes via bash -c because the new
+
+    combined-exec wrapper uses bash-isms (``trap``, ``mktemp -d``, parameter
+    substitution) that ``/bin/sh`` on macOS does not implement.
+    """
+
+    def __init__(self) -> None:
+        self.commands: list[str] = []
+
+    async def exec(self, command: str, timeout: int | None = None):
+        self.commands.append(command)
+        proc = await asyncio.create_subprocess_exec(
+            "bash",
+            "-c",
+            command,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+        )
+        try:
+            stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=timeout)
+        except TimeoutError:
+            proc.kill()
+            raise
+        return SimpleNamespace(
+            result=stdout.decode("utf-8"),
+            exit_code=proc.returncode,
+        )
+
+
 @pytest.mark.asyncio
 async def test_exec_process_operation_audits_workspace_mutation(tmp_path) -> None:
-    class LocalProcess:
-        async def exec(self, command: str, timeout: int | None = None):
-            proc = await asyncio.create_subprocess_shell(
-                command,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.STDOUT,
-            )
-            try:
-                stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=timeout)
-            except TimeoutError:
-                proc.kill()
-                raise
-            return SimpleNamespace(
-                result=stdout.decode("utf-8"),
-                exit_code=proc.returncode,
-            )
-
-    sandbox = SimpleNamespace(process=LocalProcess())
+    sandbox = SimpleNamespace(process=_LocalProcess())
     svc = CodeIntelligenceService(
         sandbox_id="sandbox-process-audit",
         workspace_root=str(tmp_path),
@@ -127,7 +140,6 @@ async def test_exec_process_operation_audits_workspace_mutation(tmp_path) -> Non
     await svc.exec_process_operation(
         sandbox,
         f"printf 'value = 1\\n' > {shlex.quote(str(file_path))}",
-        edit_type="codeact",
         description="daytona_codeact python",
         team_run_id="team-1",
         agent_run_id="agent-1",
@@ -137,13 +149,142 @@ async def test_exec_process_operation_audits_workspace_mutation(tmp_path) -> Non
     edits = svc.arbiter.recent_edits(seconds=60)
     assert len(edits) == 1
     assert edits[0].file_path == str(file_path)
-    assert edits[0].edit_type == "codeact"
     assert edits[0].team_run_id == "team-1"
     assert edits[0].agent_run_id == "agent-1"
     assert edits[0].task_id == "task-1"
     assert edits[0].new_hash
     svc.symbol_index.refresh.assert_called_once_with(str(file_path), "value = 1\n")
     svc.lsp_client.invalidate.assert_called_once_with(str(file_path))
+
+
+@pytest.mark.asyncio
+async def test_exec_process_operation_issues_single_remote_exec(tmp_path) -> None:
+    process = _LocalProcess()
+    sandbox = SimpleNamespace(process=process)
+    svc = CodeIntelligenceService(
+        sandbox_id="sandbox-process-single-exec",
+        workspace_root=str(tmp_path),
+        sandbox=sandbox,
+    )
+    file_path = tmp_path / "payload.txt"
+
+    await svc.exec_process_operation(
+        sandbox,
+        f"printf 'hi\\n' > {shlex.quote(str(file_path))}",
+        description="single-exec check",
+    )
+
+    assert len(process.commands) == 1
+
+
+@pytest.mark.asyncio
+async def test_exec_process_operation_audits_when_exec_command_fails(tmp_path) -> None:
+    process = _LocalProcess()
+    sandbox = SimpleNamespace(process=process)
+    svc = CodeIntelligenceService(
+        sandbox_id="sandbox-process-exec-fails",
+        workspace_root=str(tmp_path),
+        sandbox=sandbox,
+    )
+    file_path = tmp_path / "partial.txt"
+
+    response = await svc.exec_process_operation(
+        sandbox,
+        f"printf 'partial\\n' > {shlex.quote(str(file_path))}; exit 2",
+        description="failure-then-audit",
+    )
+
+    assert response.exit_code == 2
+    edits = svc.arbiter.recent_edits(seconds=60)
+    assert any(edit.file_path == str(file_path) for edit in edits)
+
+
+@pytest.mark.asyncio
+async def test_exec_process_operation_propagates_when_remote_exec_raises(tmp_path) -> None:
+    class BrokenProcess:
+        async def exec(self, command: str, timeout: int | None = None):
+            del command, timeout
+            raise RuntimeError("no such container")
+
+    sandbox = SimpleNamespace(process=BrokenProcess())
+    svc = CodeIntelligenceService(
+        sandbox_id="sandbox-process-propagate",
+        workspace_root=str(tmp_path),
+        sandbox=sandbox,
+    )
+
+    with pytest.raises(RuntimeError, match="no such container"):
+        await svc.exec_process_operation(
+            sandbox,
+            "echo hi",
+            description="remote-dead",
+        )
+
+    assert svc.arbiter.recent_edits(seconds=60) == []
+
+
+@pytest.mark.asyncio
+async def test_exec_process_operation_survives_adversarial_exec_stdout(tmp_path) -> None:
+    process = _LocalProcess()
+    sandbox = SimpleNamespace(process=process)
+    svc = CodeIntelligenceService(
+        sandbox_id="sandbox-process-adversarial",
+        workspace_root=str(tmp_path),
+        sandbox=sandbox,
+    )
+
+    response = await svc.exec_process_operation(
+        sandbox,
+        "printf '__CIAUDIT_deadbeef_EXEC_CLOSE__hello\\n'",
+        description="adversarial-stdout",
+    )
+
+    assert "__CIAUDIT_deadbeef_EXEC_CLOSE__hello" in response.result
+
+
+@pytest.mark.asyncio
+async def test_exec_process_operation_handles_git_less_workspace(tmp_path) -> None:
+    # No .git directory exists under tmp_path, so the snapshot script falls
+    # back to the rglob-based path enumeration.
+    assert not (tmp_path / ".git").exists()
+    process = _LocalProcess()
+    sandbox = SimpleNamespace(process=process)
+    svc = CodeIntelligenceService(
+        sandbox_id="sandbox-process-no-git",
+        workspace_root=str(tmp_path),
+        sandbox=sandbox,
+    )
+    file_path = tmp_path / "fresh.py"
+
+    await svc.exec_process_operation(
+        sandbox,
+        f"printf 'x = 1\\n' > {shlex.quote(str(file_path))}",
+        description="no-git-workspace",
+    )
+
+    edits = svc.arbiter.recent_edits(seconds=60)
+    assert any(edit.file_path == str(file_path) for edit in edits)
+
+
+@pytest.mark.asyncio
+async def test_exec_process_operation_rejects_sync_process_exec(tmp_path) -> None:
+    class SyncProcess:
+        def exec(self, command: str, timeout: int | None = None):
+            raise AssertionError("sync process.exec must not be called")
+
+    sandbox = SimpleNamespace(process=SyncProcess())
+    svc = CodeIntelligenceService(
+        sandbox_id="sandbox-sync-process",
+        workspace_root=str(tmp_path),
+        sandbox=sandbox,
+    )
+
+    with pytest.raises(RuntimeError, match="process.exec must be async"):
+        await svc.exec_process_operation(
+            sandbox,
+            "echo should-not-run",
+            description="sync rejection",
+        )
 
 
 def test_get_code_intelligence_recreates_service_when_workspace_root_changes() -> None:

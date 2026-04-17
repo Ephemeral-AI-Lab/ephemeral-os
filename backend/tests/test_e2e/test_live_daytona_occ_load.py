@@ -73,10 +73,10 @@ class _AsyncFs:
         self._real = real_fs
 
     async def upload_file(self, *args, **kwargs):
-        return self._real.upload_file(*args, **kwargs)
+        return await asyncio.to_thread(self._real.upload_file, *args, **kwargs)
 
     async def download_file(self, *args, **kwargs):
-        return self._real.download_file(*args, **kwargs)
+        return await asyncio.to_thread(self._real.download_file, *args, **kwargs)
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._real, name)

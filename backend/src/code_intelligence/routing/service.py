@@ -14,10 +14,8 @@ compatibility with callers that import them from ``routing.service``.
 from __future__ import annotations
 
 import inspect
-import json
 import logging
 import re
-import shlex
 import threading
 import time
 from collections import OrderedDict
@@ -39,6 +37,7 @@ from code_intelligence.routing.backend_protocol import (
     SymbolIndexBackendAdapter,
 )
 from code_intelligence.routing.content_manager import ContentManager
+from code_intelligence.routing.process_auditor import ProcessAuditor
 from code_intelligence.routing.query_router import IntelligenceQueryRouter
 from code_intelligence.routing.registry import (
     dispose_all_code_intelligence,
@@ -74,171 +73,6 @@ __all__ = [
 logger = logging.getLogger(__name__)
 _IDENTIFIER_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 _DEF_CLASS_NAME_RE = re.compile(r"^\s*(?:async\s+)?(?:def|class)\s+([A-Za-z_][A-Za-z0-9_]*)")
-_PROCESS_AUDIT_SNAPSHOT_SCRIPT = r"""
-import hashlib
-import json
-import pathlib
-import subprocess
-import sys
-
-root = pathlib.Path(sys.argv[1]).resolve()
-
-
-def _split_z(raw):
-    return [item for item in raw.split("\0") if item]
-
-
-def _run_git(args):
-    proc = subprocess.run(
-        ["git", "-C", str(root), *args],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
-        text=True,
-    )
-    if proc.returncode != 0:
-        return []
-    return _split_z(proc.stdout)
-
-
-def _hash_bytes(payload):
-    return hashlib.sha256(payload).hexdigest()[:16]
-
-
-def _head_hash(rel_path):
-    proc = subprocess.run(
-        ["git", "-C", str(root), "show", f"HEAD:{rel_path}"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
-    )
-    if proc.returncode != 0:
-        return ""
-    return _hash_bytes(proc.stdout)
-
-
-def _inside_root(path):
-    try:
-        path.relative_to(root)
-    except ValueError:
-        return False
-    return True
-
-
-git_probe = subprocess.run(
-    ["git", "-C", str(root), "rev-parse", "--is-inside-work-tree"],
-    stdout=subprocess.PIPE,
-    stderr=subprocess.DEVNULL,
-    text=True,
-)
-git_ok = git_probe.returncode == 0 and git_probe.stdout.strip() == "true"
-paths = set()
-
-if git_ok:
-    for args in (
-        ["diff", "--name-only", "-z"],
-        ["diff", "--cached", "--name-only", "-z"],
-        ["ls-files", "--others", "--exclude-standard", "-z"],
-        ["ls-files", "--deleted", "-z"],
-    ):
-        paths.update(_run_git(args))
-else:
-    for candidate in root.rglob("*"):
-        if ".git" in candidate.parts:
-            continue
-        if candidate.is_file():
-            paths.add(str(candidate.relative_to(root)))
-
-files = {}
-for rel in sorted(paths):
-    if not rel:
-        continue
-    path = (root / rel).resolve()
-    if not _inside_root(path):
-        continue
-    exists = path.exists() and path.is_file()
-    digest = ""
-    if exists:
-        try:
-            digest = _hash_bytes(path.read_bytes())
-        except OSError:
-            digest = ""
-    files[str(path)] = {
-        "rel": rel,
-        "exists": exists,
-        "hash": digest,
-        "head_hash": _head_hash(rel) if git_ok else "",
-    }
-
-print(json.dumps({"ok": True, "files": files}))
-"""
-
-_PROCESS_AUDIT_PATH_SNAPSHOT_SCRIPT = r"""
-import hashlib
-import json
-import pathlib
-import subprocess
-import sys
-
-root = pathlib.Path(sys.argv[1]).resolve()
-raw_paths = json.loads(sys.argv[2])
-
-
-def _hash_bytes(payload):
-    return hashlib.sha256(payload).hexdigest()[:16]
-
-
-def _head_hash(rel_path):
-    proc = subprocess.run(
-        ["git", "-C", str(root), "show", f"HEAD:{rel_path}"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.DEVNULL,
-    )
-    if proc.returncode != 0:
-        return ""
-    return _hash_bytes(proc.stdout)
-
-
-def _inside_root(path):
-    try:
-        path.relative_to(root)
-    except ValueError:
-        return False
-    return True
-
-
-git_probe = subprocess.run(
-    ["git", "-C", str(root), "rev-parse", "--is-inside-work-tree"],
-    stdout=subprocess.PIPE,
-    stderr=subprocess.DEVNULL,
-    text=True,
-)
-git_ok = git_probe.returncode == 0 and git_probe.stdout.strip() == "true"
-files = {}
-
-for item in raw_paths:
-    if not isinstance(item, str) or not item.strip():
-        continue
-    candidate = pathlib.Path(item)
-    path = candidate if candidate.is_absolute() else root / candidate
-    path = path.resolve()
-    if not _inside_root(path):
-        continue
-    rel = str(path.relative_to(root))
-    exists = path.exists() and path.is_file()
-    digest = ""
-    if exists:
-        try:
-            digest = _hash_bytes(path.read_bytes())
-        except OSError:
-            digest = ""
-    files[str(path)] = {
-        "rel": rel,
-        "exists": exists,
-        "hash": digest,
-        "head_hash": _head_hash(rel) if git_ok else "",
-    }
-
-print(json.dumps({"ok": True, "files": files}))
-"""
 
 
 @dataclass(frozen=True)
@@ -289,6 +123,14 @@ class CodeIntelligenceService:
         self.query_router.register(SymbolIndexBackendAdapter(self.symbol_index))
 
         self._content = ContentManager(workspace_root, sandbox=sandbox)
+        self._process_auditor = ProcessAuditor(
+            workspace_root=workspace_root,
+            exec_process=self._exec_sandbox_process,
+            arbiter=self.arbiter,
+            content=self._content,
+            symbol_index=self.symbol_index,
+            lsp_client=self.lsp_client,
+        )
         self._write_coordinator = WriteCoordinator(
             arbiter=self.arbiter,
             time_machine=self.time_machine,
@@ -365,46 +207,28 @@ class CodeIntelligenceService:
         *,
         timeout: int | None = None,
         description: str = "",
-        edit_type: str = "process",
         agent_id: str = "",
         team_run_id: str = "",
         agent_run_id: str = "",
         task_id: str = "",
-        audit_paths: Sequence[str] | None = None,
     ) -> Any:
         """Execute one sandbox process command and audit workspace mutations.
 
-        This is the process-audit entry point for tools such as CodeAct:
-        callers execute exactly one shell command, while the service records the
-        changed workspace files as one logical operation in the arbiter ledger.
+        Callers execute exactly one shell command. The service snapshots the
+        workspace around that command and records changed files as one logical
+        operation in the arbiter ledger.
         """
         self.rebind_sandbox(sandbox)
-        before = await self._snapshot_process_workspace(sandbox, audit_paths=audit_paths)
-        response: Any = None
-        caught: BaseException | None = None
-        try:
-            response = await self._exec_sandbox_process(
-                sandbox,
-                command,
-                timeout=timeout,
-            )
-        except BaseException as exc:  # pragma: no cover - re-raised after audit
-            caught = exc
-        finally:
-            after = await self._snapshot_process_workspace(sandbox, audit_paths=audit_paths)
-            self._record_process_operation_audit(
-                before=before,
-                after=after,
-                edit_type=edit_type,
-                description=description,
-                agent_id=agent_id,
-                team_run_id=team_run_id,
-                agent_run_id=agent_run_id,
-                task_id=task_id,
-            )
-        if caught is not None:
-            raise caught
-        return response
+        return await self._process_auditor.execute(
+            sandbox,
+            command,
+            timeout=timeout,
+            description=description,
+            agent_id=agent_id,
+            team_run_id=team_run_id,
+            agent_run_id=agent_run_id,
+            task_id=task_id,
+        )
 
     async def _exec_sandbox_process(
         self,
@@ -417,104 +241,9 @@ class CodeIntelligenceService:
         exec_fn = getattr(process, "exec", None) if process is not None else None
         if not callable(exec_fn):
             raise RuntimeError("Sandbox process.exec is unavailable")
-        response = exec_fn(command, timeout=timeout) if timeout is not None else exec_fn(command)
-        if inspect.isawaitable(response):
-            return await response
-        return response
-
-    async def _snapshot_process_workspace(
-        self,
-        sandbox: Any,
-        *,
-        audit_paths: Sequence[str] | None = None,
-    ) -> dict[str, dict[str, Any]]:
-        process = getattr(sandbox, "process", None)
-        exec_fn = getattr(process, "exec", None) if process is not None else None
-        if not callable(exec_fn):
-            return {}
-        normalized_paths = tuple(
-            str(path).strip()
-            for path in (audit_paths or ())
-            if str(path).strip()
-        )
-        if normalized_paths:
-            command = (
-                f"python3 -c {shlex.quote(_PROCESS_AUDIT_PATH_SNAPSHOT_SCRIPT)} "
-                f"{shlex.quote(self.workspace_root)} "
-                f"{shlex.quote(json.dumps(normalized_paths))}"
-            )
-        else:
-            command = (
-                f"python3 -c {shlex.quote(_PROCESS_AUDIT_SNAPSHOT_SCRIPT)} "
-                f"{shlex.quote(self.workspace_root)}"
-            )
-        try:
-            response = await self._exec_sandbox_process(
-                sandbox,
-                command,
-                timeout=30,
-            )
-            raw = str(getattr(response, "result", "") or "")
-            payload = json.loads(_strip_process_exit_marker(raw) or "{}")
-            files = payload.get("files") if isinstance(payload, dict) else None
-            if not isinstance(files, dict):
-                return {}
-            return {
-                str(path): dict(item)
-                for path, item in files.items()
-                if isinstance(item, dict)
-            }
-        except Exception:
-            logger.debug("process operation snapshot failed", exc_info=True)
-            return {}
-
-    def _record_process_operation_audit(
-        self,
-        *,
-        before: dict[str, dict[str, Any]],
-        after: dict[str, dict[str, Any]],
-        edit_type: str,
-        description: str,
-        agent_id: str,
-        team_run_id: str,
-        agent_run_id: str,
-        task_id: str,
-    ) -> None:
-        changed_paths = sorted(set(before) | set(after))
-        for file_path in changed_paths:
-            old = before.get(file_path, {})
-            new = after.get(file_path, {})
-            old_exists = bool(old.get("exists", False))
-            new_exists = bool(new.get("exists", False))
-            old_hash = str(old.get("hash") or old.get("head_hash") or new.get("head_hash") or "")
-            new_hash = str(new.get("hash") or "")
-            if not new and old.get("head_hash"):
-                new_exists = True
-                new_hash = str(old.get("head_hash") or "")
-            if old_exists == new_exists and old_hash == new_hash:
-                continue
-            self.arbiter.record_edit(
-                file_path=file_path,
-                actor_label=agent_id or agent_run_id,
-                team_run_id=team_run_id,
-                agent_run_id=agent_run_id,
-                task_id=task_id,
-                edit_type=edit_type,
-                old_hash=old_hash if old_exists or old_hash else "",
-                new_hash=new_hash if new_exists else "",
-                description=description,
-            )
-            if new_exists:
-                try:
-                    content, existed = self._content.read(file_path, allow_missing=True)
-                    if existed:
-                        self.symbol_index.refresh(file_path, content)
-                except Exception:
-                    logger.debug("symbol refresh failed after process op for %s", file_path, exc_info=True)
-            try:
-                self.lsp_client.invalidate(file_path)
-            except Exception:
-                logger.debug("lsp invalidate failed after process op for %s", file_path, exc_info=True)
+        if not inspect.iscoroutinefunction(exec_fn):
+            raise RuntimeError("Sandbox process.exec must be async")
+        return await exec_fn(command, timeout=timeout) if timeout is not None else await exec_fn(command)
 
     # -- Query API ------------------------------------------------------------
 
@@ -922,10 +651,6 @@ class CodeIntelligenceService:
         except Exception:  # pragma: no cover - defensive
             logger.debug("lsp_client.close() failed during dispose", exc_info=True)
         logger.info("CodeIntelligenceService disposed for sandbox %s", self.sandbox_id)
-
-
-def _strip_process_exit_marker(output: str) -> str:
-    return re.sub(r"\n?__CODEX_EXIT_CODE__=-?\d+\s*$", "", output, flags=re.S).strip()
 
 
 def _scope_excludes(file_path: str, normalized_scope: list[str]) -> bool:

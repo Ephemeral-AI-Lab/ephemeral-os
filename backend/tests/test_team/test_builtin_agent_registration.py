@@ -78,6 +78,7 @@ def test_team_worker_sandbox_toolkit_includes_codeact() -> None:
     assert "daytona_codeact" in developer_sandbox.tool_names()
     assert "daytona_codeact" in validator_sandbox.tool_names()
     assert "daytona_edit_file" in developer_sandbox.tool_names()
+    assert "daytona_rename_symbol" in developer_sandbox.tool_names()
     # daytona_bash has been removed — all agents use daytona_codeact
     assert "daytona_bash" not in developer_sandbox.tool_names()
     assert "daytona_bash" not in validator_sandbox.tool_names()
@@ -112,6 +113,7 @@ def test_planner_and_replanner_do_not_expose_sandbox_tools(tmp_path: Path) -> No
             "daytona_read_file",
             "daytona_write_file",
             "daytona_edit_file",
+            "daytona_rename_symbol",
             "daytona_codeact",
         ):
             assert tool_name not in tool_names
@@ -128,6 +130,7 @@ def test_scout_tool_surface_matches_note_handoff_contract(tmp_path: Path) -> Non
         "daytona_read_file",
         "daytona_write_file",
         "daytona_edit_file",
+        "daytona_rename_symbol",
         "daytona_codeact",
         "submit_task_summary",
         "submit_plan",

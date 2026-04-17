@@ -92,7 +92,24 @@ def _make_sandbox(*, download_content: str = "original content"):
 
 def _ci_service_for_content(content: str, *, file_path: str = "/file.py"):
     del content, file_path
-    return SimpleNamespace()
+    return SimpleNamespace(
+        exec_process_operation=AsyncMock(side_effect=_exec_process_operation)
+    )
+
+
+async def _exec_process_operation(
+    sandbox,
+    command,
+    *,
+    timeout=None,
+    description="",
+    agent_id="",
+    team_run_id="",
+    agent_run_id="",
+    task_id="",
+):
+    del description, agent_id, team_run_id, agent_run_id, task_id
+    return await sandbox.process.exec(command, timeout=timeout)
 
 
 # ---------------------------------------------------------------------------
@@ -510,10 +527,7 @@ async def test_edit_batch_runs_through_exec_ci_process_operation(monkeypatch):
         *,
         timeout=None,
         description,
-        edit_type="process",
-        audit_paths=None,
     ):
-        del edit_type, audit_paths
         calls.append((command, description))
         return await sandbox.process.exec(command, timeout=timeout)
 

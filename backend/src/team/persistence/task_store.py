@@ -468,7 +468,7 @@ class TaskStore:
         reason: str,
         suggestion: str | None,
         replanner_agent: str,
-    ) -> TaskRecord:
+    ) -> tuple[TaskRecord, bool]:
         async with self._sf() as db:
             rec = await q.fetch_replan_source(db, self._team_run_id, task_id)
             if rec is None:
@@ -486,7 +486,7 @@ class TaskStore:
                 db, self._team_run_id, root_origin
             )
             if existing is not None:
-                return existing
+                return existing, False
             replanner_id = str(uuid.uuid4())
             if rec.status != "request_replan":
                 await q.set_status_request_replan(
@@ -519,4 +519,4 @@ class TaskStore:
             )
             await db.commit()
         await self.refresh_graph()
-        return replanner
+        return replanner, True

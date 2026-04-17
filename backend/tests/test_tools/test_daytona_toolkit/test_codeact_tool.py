@@ -25,7 +25,24 @@ def _ctx(metadata=None) -> ToolExecutionContext:
 
 
 def _ci_service():
-    return object()
+    svc = MagicMock()
+    svc.exec_process_operation = AsyncMock(side_effect=_exec_process_operation)
+    return svc
+
+
+async def _exec_process_operation(
+    sandbox,
+    command,
+    *,
+    timeout=None,
+    description="",
+    agent_id="",
+    team_run_id="",
+    agent_run_id="",
+    task_id="",
+):
+    del description, agent_id, team_run_id, agent_run_id, task_id
+    return await sandbox.process.exec(command, timeout=timeout)
 
 
 def _make_manifest(

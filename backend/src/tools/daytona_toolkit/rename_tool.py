@@ -1,8 +1,8 @@
-"""Cross-file symbol rename tools backed by the code intelligence LSP.
+"""Daytona-backed cross-file symbol rename tools.
 
 Exposes one tool:
 
-* ``ci_rename_symbol(symbol, new_name, kind=?, file_hint=?)`` — resolves the
+* ``daytona_rename_symbol(symbol, new_name, kind=?, file_hint=?)`` — resolves the
   symbol name via :class:`SymbolIndex`, returns ``status="ambiguous"`` with
   candidates when a name matches multiple places, and otherwise delegates to
   a single audited process command.
@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import base64
 import json
+import keyword
 import logging
 import re
 import shlex
@@ -22,6 +23,7 @@ from pydantic import BaseModel, Field
 
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.ci_runtime import (
+    ci_required_result,
     exec_ci_process_operation,
     get_ci_service,
 )
@@ -103,7 +105,7 @@ class CandidateSymbol(BaseModel):
     signature: str = ""
 
 
-class CiRenameSymbolOutput(BaseModel):
+class DaytonaRenameSymbolsOutput(BaseModel):
     status: str = Field(
         ...,
         description=(
@@ -127,7 +129,7 @@ class CiRenameSymbolOutput(BaseModel):
     message: str | None = Field(default=None, description="Top-level status message.")
 
 
-class CiRenameSymbolInput(BaseModel):
+class DaytonaRenameSymbolsInput(BaseModel):
     symbol: str = Field(
         ...,
         min_length=1,
@@ -164,7 +166,7 @@ class CiRenameSymbolInput(BaseModel):
 def _validate_new_name(new_name: str) -> str | None:
     if not re.match(_IDENTIFIER_RE, new_name):
         return f"Invalid identifier: {new_name!r}. Must match {_IDENTIFIER_RE}."
-    if new_name in {"None", "True", "False"}:
+    if keyword.iskeyword(new_name):
         return f"Cannot rename to Python keyword: {new_name!r}."
     return None
 
@@ -289,11 +291,11 @@ async def _perform_rename(
     soft_warnings: list[str] = list(extra_warnings or [])
     for change in changes:
         path = change.file_path
-        err = _team_repo_write_error(context, path, tool_name="ci_rename_symbol")
+        err = _team_repo_write_error(context, path, tool_name="daytona_rename_symbol")
         if err is not None:
             hard_errors.append(err)
             continue
-        warn = _team_repo_write_warning(context, path, tool_name="ci_rename_symbol")
+        warn = _team_repo_write_warning(context, path, tool_name="daytona_rename_symbol")
         if warn is not None:
             soft_warnings.append(warn)
             record_coordination_warning(
@@ -337,9 +339,7 @@ async def _perform_rename(
             sandbox,
             _rename_process_command(operation_changes),
             timeout=_PROCESS_RENAME_TIMEOUT,
-            edit_type="rename",
             description=description,
-            audit_paths=[change.file_path for change in operation_changes],
         )
     except Exception as exc:
         return ToolResult(
@@ -411,24 +411,25 @@ async def _perform_rename(
     )
 
 
-# -- Tool: ci_rename_symbol -------------------------------------------------
+# -- Tool: daytona_rename_symbol -------------------------------------------
 
 
 @tool(
-    name="ci_rename_symbol",
+    name="daytona_rename_symbol",
     description=(
-        "Rename a Python symbol by name across every file where it is referenced, "
-        "using LSP semantics. Resolves `symbol` via the workspace symbol index, "
+        "Rename a Python symbol by name across every file where it is referenced "
+        "inside the Daytona sandbox, using LSP semantics. Resolves `symbol` via "
+        "the workspace symbol index, "
         "supports dotted names (`Foo.bar` narrows to the `bar` method on class "
         "`Foo`), and returns `status=\"ambiguous\"` with candidates when the "
         "name is not unique. Executes the resulting rewrite as one audited "
         "process operation. Python-only for now."
     ),
     short_description="Rename a symbol by name across every referencing file.",
-    input_model=CiRenameSymbolInput,
-    output_model=CiRenameSymbolOutput,
+    input_model=DaytonaRenameSymbolsInput,
+    output_model=DaytonaRenameSymbolsOutput,
 )
-async def ci_rename_symbol(
+async def daytona_rename_symbol(
     symbol: str,
     new_name: str,
     kind: SymbolKind | None = None,
@@ -437,9 +438,14 @@ async def ci_rename_symbol(
     *,
     context: ToolExecutionContext,
 ) -> ToolResult:
-    """Resolve *symbol* then apply an LSP-driven atomic rename."""
+    """Resolve *symbol* then run one audited process operation for the rename."""
     svc = get_ci_service(context)
-    if svc is None or not hasattr(svc, "rename_symbol_plan"):
+    if svc is None:
+        return ci_required_result(
+            "daytona_rename_symbol",
+            "LSP rename is disabled without CI service.",
+        )
+    if not hasattr(svc, "rename_symbol_plan"):
         return ToolResult(output="LSP rename not available", is_error=True)
     invalid = _validate_new_name(new_name)
     if invalid is not None:

@@ -63,10 +63,10 @@ class _AsyncFs:
         self._real = real_fs
 
     async def upload_file(self, *args, **kwargs):
-        return self._real.upload_file(*args, **kwargs)
+        return await asyncio.to_thread(self._real.upload_file, *args, **kwargs)
 
     async def download_file(self, *args, **kwargs):
-        return self._real.download_file(*args, **kwargs)
+        return await asyncio.to_thread(self._real.download_file, *args, **kwargs)
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._real, name)
@@ -77,7 +77,7 @@ class _AsyncProcess:
         self._real = real_process
 
     async def exec(self, *args, **kwargs):
-        response = self._real.exec(*args, **kwargs)
+        response = await asyncio.to_thread(self._real.exec, *args, **kwargs)
         stdout = _TERM_NOISE.sub("", getattr(response, "result", "") or "")
         return SimpleNamespace(result=stdout, exit_code=getattr(response, "exit_code", None))
 

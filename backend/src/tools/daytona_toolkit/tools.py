@@ -20,6 +20,7 @@ from tools.daytona_toolkit._daytona_utils import (
     _path_error,
     _get_cwd,
     _extract_exit_code,
+    _exec_command,
     _read_text_file_via_exec,
     _resolve_path,
     _normalize_repo_relative_path,
@@ -513,8 +514,6 @@ async def daytona_write_file(
             _write_file_command(file_path=file_path, content=content),
             timeout=_WRITE_FILE_TIMEOUT,
             description="daytona_write_file",
-            edit_type="write",
-            audit_paths=[file_path],
         )
         cleaned, exit_code = _extract_exit_code(
             getattr(response, "result", "") or "",
@@ -579,7 +578,8 @@ async def daytona_grep(
         command = _wrap_bash_command(_build_grep_command(root=path, pattern=pattern))
         response = await _run_with_recovery(
             context,
-            lambda sandbox: sandbox.process.exec(
+            lambda sandbox: _exec_command(
+                sandbox,
                 command,
                 timeout=60,
             ),
@@ -641,7 +641,8 @@ async def daytona_glob(
         command = _build_glob_command(root=path, pattern=pattern)
         resp = await _run_with_recovery(
             context,
-            lambda sandbox: sandbox.process.exec(
+            lambda sandbox: _exec_command(
+                sandbox,
                 command,
                 timeout=30,
             ),

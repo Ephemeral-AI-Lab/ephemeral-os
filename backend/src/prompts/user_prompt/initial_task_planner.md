@@ -8,7 +8,8 @@ Please read the following sections and call the listed terminal tool when your w
 2. Analyze the task objective, expected outcome, and likely owner surfaces.
 3. Explore only enough to justify concrete task ownership and scope boundaries.
 4. Draft the plan and verify dependencies, scope paths, and structured specs.
-5. Submit the final plan with `submit_plan(new_tasks=[...])`. Do not include `task_note`, `background`, or any other top-level fields besides `new_tasks` and optional `output`.
+5. For each new task `spec`, use exactly this section order with colon labels: `1. Goal:`, `2. Environment:`, `3. Scope:`, `4. Context:`, `5. Acceptance Criteria:`. Do not use Markdown headings such as `## Goal`.
+6. Submit the final plan with `submit_plan(new_tasks=[...])`. Do not include `task_note`, `background`, or any other top-level fields besides `new_tasks` and optional `output`.
 
 ## User request
 

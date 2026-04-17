@@ -15,6 +15,7 @@ from tools.daytona_toolkit.tools import (
 )
 from tools.daytona_toolkit.edit_tool import daytona_edit_file
 from tools.daytona_toolkit.codeact_tool import daytona_codeact
+from tools.daytona_toolkit.rename_tool import daytona_rename_symbol
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +27,7 @@ def _build_tools(*, include_codeact: bool) -> list[Any]:
         daytona_read_file,
         daytona_write_file,
         daytona_edit_file,
+        daytona_rename_symbol,
     ]
     if include_codeact:
         tools.append(daytona_codeact)
@@ -58,6 +60,10 @@ def _build_instructions(*, include_codeact: bool) -> str:
         "Never send `new_text` together with `edits`.\n"
         "- `daytona_write_file` — create or overwrite a file. Use for new files. "
         "The tool is named exactly `daytona_write_file`; do not call `write_file`, `Write`, or any unprefixed file tool.\n"
+        "- `daytona_rename_symbol` — rename a Python function, class, method, or import binding "
+        "across definitions, call sites, and imports as one audited process operation. "
+        "Use this instead of chained `daytona_edit_file` calls for multi-file renames; "
+        "try `dry_run=true` first when the blast radius is unclear.\n"
         f"{codeact_line}\n"
         "**Execute**\n"
         "- Use `daytona_codeact` for all runtime execution (tests, builds, verification).\n"

@@ -507,10 +507,9 @@ async def _exec_command(sandbox: Any, command: str, *, timeout: int | None = Non
     exec_fn = getattr(process, "exec", None) if process is not None else None
     if not callable(exec_fn):
         raise RuntimeError("Sandbox process has no exec method")
-    response = exec_fn(command, timeout=timeout) if timeout is not None else exec_fn(command)
-    if not inspect.isawaitable(response):
-        raise RuntimeError("Sandbox process.exec is not awaitable")
-    return await response
+    if not inspect.iscoroutinefunction(exec_fn):
+        raise RuntimeError("Sandbox process.exec must be async")
+    return await exec_fn(command, timeout=timeout) if timeout is not None else await exec_fn(command)
 
 
 def _build_read_text_file_command(file_path: str) -> str:

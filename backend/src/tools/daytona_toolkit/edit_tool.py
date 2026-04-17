@@ -195,8 +195,6 @@ async def _run_edit_exec_command(
             command,
             timeout=_EDIT_EXEC_TIMEOUT,
             description="daytona_edit_file",
-            edit_type="edit",
-            audit_paths=[file_path],
         )
 
     try:
