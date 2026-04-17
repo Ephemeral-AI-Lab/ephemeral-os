@@ -9,7 +9,7 @@ import pytest
 from pydantic import BaseModel, ConfigDict, Field
 
 from message import ConversationMessage, TextBlock, ToolUseBlock
-from engine.core.query import QueryContext, _execute_tool_call, run_query
+from engine.core.query import QueryContext, QueryExitReason, _execute_tool_call, run_query
 from message.stream_events import (
     AssistantTurnComplete,
     ToolExecutionCompleted,
@@ -156,6 +156,18 @@ class SubmitPlanTool(BaseTool):
         del arguments, context
         self.calls += 1
         return ToolResult(output="submitted")
+
+
+class RejectingSubmitPlanTool(BaseTool):
+    name = "submit_plan"
+    description = "Dummy submit plan tool that rejects the payload."
+    input_model = SubmitPlanInput
+
+    async def execute(
+        self, arguments: SubmitPlanInput, context: ToolExecutionContext
+    ) -> ToolResult:
+        del arguments, context
+        return ToolResult(output="validation failed", is_error=True)
 
 
 class PlainTextTool(BaseTool):
@@ -623,6 +635,76 @@ async def test_parallel_batch_rejects_sibling_tool_when_terminal_guard_is_active
         for event in tool_completes
     )
     assert submit_plan.calls == 0
+
+
+@pytest.mark.asyncio
+async def test_failed_terminal_tool_call_does_not_stop_query_loop(tmp_path: Path):
+    registry = _make_registry(RejectingSubmitPlanTool())
+    client = FakeApiClient(
+        [
+            _tool_reply(
+                ToolUseBlock(
+                    id="tc1",
+                    name="submit_plan",
+                    input={"new_tasks": []},
+                )
+            ),
+            _text_reply("I will repair the payload."),
+        ]
+    )
+    context = _make_context(
+        client,
+        registry,
+        tmp_path,
+        terminal_tools={"submit_plan"},
+    )
+
+    events = await _collect_events(context, "submit the plan")
+
+    tool_completes = [e for e in events if isinstance(e, ToolExecutionCompleted)]
+    turns = [e for e in events if isinstance(e, AssistantTurnComplete)]
+
+    assert len(tool_completes) == 1
+    assert tool_completes[0].tool_name == "submit_plan"
+    assert tool_completes[0].is_error is True
+    assert len(turns) == 2
+    assert turns[-1].message.text == "I will repair the payload."
+    assert context.exit_reason == QueryExitReason.TEXT_RESPONSE
+
+
+@pytest.mark.asyncio
+async def test_successful_terminal_tool_call_stops_query_loop(tmp_path: Path):
+    submit_plan = SubmitPlanTool()
+    registry = _make_registry(submit_plan)
+    client = FakeApiClient(
+        [
+            _tool_reply(
+                ToolUseBlock(
+                    id="tc1",
+                    name="submit_plan",
+                    input={"new_tasks": []},
+                )
+            ),
+            _text_reply("This should not be reached."),
+        ]
+    )
+    context = _make_context(
+        client,
+        registry,
+        tmp_path,
+        terminal_tools={"submit_plan"},
+    )
+
+    events = await _collect_events(context, "submit the plan")
+
+    tool_completes = [e for e in events if isinstance(e, ToolExecutionCompleted)]
+    turns = [e for e in events if isinstance(e, AssistantTurnComplete)]
+
+    assert submit_plan.calls == 1
+    assert len(tool_completes) == 1
+    assert tool_completes[0].is_error is False
+    assert len(turns) == 1
+    assert context.exit_reason == QueryExitReason.TOOL_STOP
 
 
 @pytest.mark.asyncio

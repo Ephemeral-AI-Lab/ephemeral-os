@@ -62,7 +62,7 @@ class QueryExitReason(str, Enum):
     """Why the query loop exited."""
 
     TEXT_RESPONSE = "text_response"      # no tool_uses in response
-    TOOL_STOP = "tool_stop"              # terminal tool called
+    TOOL_STOP = "tool_stop"              # terminal tool succeeded
     RESOURCE_LIMIT = "resource_limit"    # budget exhausted or max_tokens
 
 
@@ -259,6 +259,27 @@ def _prompt_report_recorder(context: QueryContext) -> PromptReportRecorder:
         ),
     )
     return context.prompt_report_recorder
+
+
+def _successful_terminal_tool_called(
+    terminal_tools: set[str],
+    tool_uses: list[Any],
+    tool_results: list[ToolResultBlock],
+) -> bool:
+    if not terminal_tools:
+        return False
+    results_by_id = {
+        result.tool_use_id: result
+        for result in tool_results
+        if result.tool_use_id
+    }
+    for tool_use in tool_uses:
+        if tool_use.name not in terminal_tools:
+            continue
+        result = results_by_id.get(tool_use.id)
+        if result is not None and not result.is_error:
+            return True
+    return False
 
 
 async def _run_query_loop(
@@ -628,12 +649,15 @@ async def _run_query_loop(
             }
         )
 
-        # Check for terminal tool — exit immediately after tool results collected
-        if context.terminal_tools:
-            for tu in final_message.tool_uses:
-                if tu.name in context.terminal_tools:
-                    context.exit_reason = QueryExitReason.TOOL_STOP
-                    return
+        # Check for a successful terminal tool. A rejected terminal submission
+        # is feedback for the next model turn, not a completed terminal result.
+        if _successful_terminal_tool_called(
+            context.terminal_tools,
+            final_message.tool_uses,
+            tool_results,
+        ):
+            context.exit_reason = QueryExitReason.TOOL_STOP
+            return
 
         # Detect wait rejections so the next iteration suppresses the
         # engine_progress reminder that would otherwise contradict them.

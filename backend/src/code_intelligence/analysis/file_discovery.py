@@ -16,7 +16,7 @@ from code_intelligence.constants import SKIP_DIRECTORIES, SUPPORTED_EXTENSIONS
 
 logger = logging.getLogger(__name__)
 
-_REMOTE_GLOB = "*.{py,js,ts,jsx,tsx,java,go,rs,rb,php,c,cpp,h,hpp,cs,swift,kt,scala,sh}"
+_REMOTE_GLOB = "*"
 
 
 def collect_local_files(root: Path, max_files: int) -> list[Path]:
@@ -121,8 +121,9 @@ def _collect_via_search(fs: Any, root: str, max_files: int) -> list[str] | None:
     try:
         result = run_sync(search_fn(root, _REMOTE_GLOB))
         raw_files = getattr(result, "files", None) or []
-    except Exception:
-        logger.debug("search_files failed, falling back to list_files", exc_info=True)
+    except Exception as exc:
+        reason = str(exc).splitlines()[0] if str(exc) else type(exc).__name__
+        logger.debug("search_files failed, falling back to list_files: %s", reason)
         return None
 
     files: list[str] = []
