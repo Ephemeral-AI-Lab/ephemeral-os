@@ -51,7 +51,7 @@ from code_intelligence.types import (
     EditRequest,
     EditResult,
     HoverResult,
-    MultiEditResult,
+    OperationResult,
     OperationChange,
     ReferenceInfo,
     SemanticFileChange,
@@ -447,7 +447,7 @@ class CodeIntelligenceService:
         agent_id: str = "",
         edit_type: str,
         description: str = "",
-    ) -> MultiEditResult:
+    ) -> OperationResult:
         return self._write_coordinator.commit_operation_against_base(
             changes,
             agent_id=agent_id,

@@ -1,7 +1,7 @@
 """Shared code-intelligence runtime helpers used across toolkits.
 
 All tool-level writes funnel through a single OCC verification entry
-point: :func:`commit_ci_changes_against_base`. Tools build one
+point: :func:`commit_ci_operation`. Tools build one
 :class:`CiOperationChange` per file they mean to mutate, and the
 helper forwards the set to :meth:`CodeIntelligenceService.commit_operation_against_base`.
 """
@@ -10,11 +10,12 @@ from __future__ import annotations
 
 import dataclasses
 import hashlib
+import inspect
 import logging
 from collections.abc import Sequence
 from typing import Any
 
-from code_intelligence.types import MultiEditResult, OperationChange
+from code_intelligence.types import OperationResult, OperationChange
 from tools.core.base import ToolExecutionContext, ToolResult
 
 logger = logging.getLogger(__name__)
@@ -99,18 +100,18 @@ def _coerce_ci_operation_change(change: CiOperationChange | OperationChange) -> 
     )
 
 
-def commit_ci_changes_against_base(
+def commit_ci_operation(
     context: ToolExecutionContext,
     changes: Sequence[CiOperationChange | OperationChange],
     *,
     edit_type: str,
     description: str,
     agent_id: str = "",
-) -> MultiEditResult:
+) -> OperationResult:
     """Unified OCC verification entry point for every tool-level write.
 
     Each public tool call — `daytona_edit_file`, `daytona_write_file`,
-    `daytona_codeact`, `ci_rename_symbol` — is a single OCC op. The caller
+    `daytona_codeact`, `ci_rename_symbol` — is a single OCC operation. The caller
     produces one :class:`CiOperationChange` per file it means to mutate
     (single-file tools pass a one-element list); the set commits atomically
     against the supplied base snapshots via
@@ -129,7 +130,7 @@ def commit_ci_changes_against_base(
         edit_type=edit_type,
         description=description,
     )
-    _finalize_ci_operation_result(
+    finalize_ci_operation_result(
         context,
         result=result,
         changes=operation_changes,
@@ -138,6 +139,42 @@ def commit_ci_changes_against_base(
         ci_arbiter=getattr(svc, "arbiter", None),
     )
     return result
+
+
+async def exec_ci_process_operation(
+    context: ToolExecutionContext,
+    sandbox: Any,
+    command: str,
+    *,
+    timeout: int | None = None,
+    description: str,
+) -> Any:
+    """Run one process command through the OCC-aware execution entry point.
+
+    CodeAct does not classify repo changes itself. It delegates command
+    execution here so lower layers can audit the full process operation.
+    """
+    svc = get_ci_service(context)
+    if svc is None:
+        raise RuntimeError("Code intelligence/OCC is unavailable")
+
+    audited_exec = getattr(svc, "exec_process_operation", None)
+    if callable(audited_exec):
+        response = audited_exec(
+            sandbox,
+            command,
+            timeout=timeout,
+            description=description,
+        )
+    else:
+        process = getattr(sandbox, "process", None)
+        exec_fn = getattr(process, "exec", None) if process is not None else None
+        if not callable(exec_fn):
+            raise RuntimeError("Sandbox process.exec is unavailable")
+        response = exec_fn(command, timeout=timeout) if timeout is not None else exec_fn(command)
+    if inspect.isawaitable(response):
+        return await response
+    return response
 
 
 def _note_team_memory_conflict(
@@ -174,7 +211,7 @@ def _resolved_agent_id(context: ToolExecutionContext, *, preferred: str = "") ->
     return str(context.metadata.get("agent_run_id") or "").strip()
 
 
-def _finalize_ci_operation_result(
+def finalize_ci_operation_result(
     context: ToolExecutionContext,
     *,
     result: Any,
@@ -281,7 +318,9 @@ def _get_team_run(team_run_id: str) -> Any | None:
 __all__ = [
     "CiOperationChange",
     "ci_required_result",
-    "commit_ci_changes_against_base",
+    "commit_ci_operation",
+    "exec_ci_process_operation",
+    "finalize_ci_operation_result",
     "get_ci_service",
     "occ_required_result",
 ]

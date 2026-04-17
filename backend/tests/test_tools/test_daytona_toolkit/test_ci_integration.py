@@ -9,11 +9,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from code_intelligence.types import EditResult, MultiEditResult
+from code_intelligence.types import EditResult, OperationResult
 from tools.core.base import ToolExecutionContext
 from tools.core.ci_runtime import (
     CiOperationChange,
-    commit_ci_changes_against_base,
+    commit_ci_operation,
     get_ci_service,
 )
 from tools.daytona_toolkit.ci_integration import destructive_shell_command_error
@@ -40,13 +40,13 @@ def test_get_ci_service_returns_value():
 
 
 # ---------------------------------------------------------------------------
-# commit_ci_changes_against_base — unified OCC entry point
+# commit_ci_operation — unified OCC entry point
 # ---------------------------------------------------------------------------
 
 
-def test_commit_ci_changes_against_base_forwards_to_service():
+def test_commit_ci_operation_forwards_to_service():
     svc = MagicMock()
-    svc.commit_batch_against_base.return_value = MultiEditResult(
+    svc.commit_operation_against_base.return_value = OperationResult(
         success=True,
         status="committed",
         files=(
@@ -56,7 +56,7 @@ def test_commit_ci_changes_against_base_forwards_to_service():
     )
     ctx = _ctx({"ci_service": svc, "agent_name": "developer"})
 
-    result = commit_ci_changes_against_base(
+    result = commit_ci_operation(
         ctx,
         [
             CiOperationChange(
@@ -77,22 +77,22 @@ def test_commit_ci_changes_against_base_forwards_to_service():
     )
 
     assert result.success is True
-    svc.commit_batch_against_base.assert_called_once()
-    changes = svc.commit_batch_against_base.call_args.args[0]
+    svc.commit_operation_against_base.assert_called_once()
+    changes = svc.commit_operation_against_base.call_args.args[0]
     assert [change.file_path for change in changes] == ["/repo/a.py", "/repo/b.py"]
     assert changes[0].base_hash == hashlib.sha256(b"a = 1\n").hexdigest()[:16]
     assert changes[1].base_content == ""
     assert changes[1].base_existed is False
-    assert svc.commit_batch_against_base.call_args.kwargs == {
+    assert svc.commit_operation_against_base.call_args.kwargs == {
         "agent_id": "developer",
         "edit_type": "codeact",
         "description": "one codeact op",
     }
 
 
-def test_commit_ci_changes_against_base_mirrors_team_edit():
+def test_commit_ci_operation_mirrors_team_edit():
     svc = MagicMock()
-    svc.commit_batch_against_base.return_value = MultiEditResult(
+    svc.commit_operation_against_base.return_value = OperationResult(
         success=True,
         status="committed",
         files=(EditResult(success=True, file_path="/repo/file.py"),),
@@ -112,7 +112,7 @@ def test_commit_ci_changes_against_base_mirrors_team_edit():
     )
 
     with patch("tools.core.ci_runtime._get_team_run", return_value=team_run):
-        result = commit_ci_changes_against_base(
+        result = commit_ci_operation(
             ctx,
             [
                 CiOperationChange(
@@ -139,10 +139,10 @@ def test_commit_ci_changes_against_base_mirrors_team_edit():
     )
 
 
-def test_commit_ci_changes_against_base_raises_without_service():
+def test_commit_ci_operation_raises_without_service():
     ctx = _ctx()
     with pytest.raises(RuntimeError):
-        commit_ci_changes_against_base(
+        commit_ci_operation(
             ctx,
             [
                 CiOperationChange(

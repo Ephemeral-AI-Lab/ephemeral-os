@@ -15,7 +15,7 @@ from code_intelligence.editing.patcher import Patcher, SearchReplaceEdit
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.ci_runtime import (
     CiOperationChange,
-    commit_ci_changes_against_base,
+    commit_ci_operation,
     get_ci_service,
     occ_required_result,
 )
@@ -280,7 +280,7 @@ async def daytona_edit_file(
         return ToolResult(output=output, metadata={"dry_run": True})
 
     commit_started = time.perf_counter()
-    result = commit_ci_changes_against_base(
+    result = commit_ci_operation(
         context,
         [
             CiOperationChange(

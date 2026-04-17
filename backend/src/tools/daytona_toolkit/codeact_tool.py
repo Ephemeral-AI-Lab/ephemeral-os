@@ -14,7 +14,11 @@ from pydantic.json_schema import GenerateJsonSchema
 
 from code_intelligence.tuning import CODE_INTELLIGENCE_TUNING
 from tools.core.base import ToolExecutionContext, ToolResult
-from tools.core.ci_runtime import ci_required_result, get_ci_service
+from tools.core.ci_runtime import (
+    ci_required_result,
+    exec_ci_process_operation,
+    get_ci_service,
+)
 from tools.core.decorator import tool
 from tools.daytona_toolkit._daytona_utils import (
     _extract_exit_code,
@@ -29,12 +33,6 @@ from tools.daytona_toolkit._daytona_utils import (
     is_coordinated_team_agent,
 )
 from tools.daytona_toolkit.ci_integration import destructive_shell_command_error
-from tools.daytona_toolkit.codeact_transaction import (
-    cleanup_codeact_transaction,
-    collect_transaction_changes,
-    commit_transaction_changes,
-    create_codeact_transaction,
-)
 from tools.daytona_toolkit._shell_policy import (
     _normalize_team_shell_command,
     shell_policy_source,
@@ -415,6 +413,7 @@ def _resolve_mode(
 
 
 async def _exec_shell_command(
+    context: ToolExecutionContext,
     sandbox: object,
     *,
     command: str,
@@ -422,7 +421,13 @@ async def _exec_shell_command(
     timeout: int,
 ) -> dict[str, object]:
     wrapped_command = command if not cwd else f"cd {shlex.quote(cwd)} && {command}"
-    response = await sandbox.process.exec(_wrap_bash_command(wrapped_command), timeout=timeout)
+    response = await exec_ci_process_operation(
+        context,
+        sandbox,
+        _wrap_bash_command(wrapped_command),
+        timeout=timeout,
+        description="daytona_codeact shell",
+    )
     stdout = getattr(response, "result", "") or ""
     fallback_exit_code = getattr(response, "exit_code", None)
     cleaned_stdout, exit_code = _extract_exit_code(stdout, fallback_exit_code=fallback_exit_code)
@@ -443,46 +448,33 @@ async def _run_shell_with_recovery(
     timeout: int,
 ) -> tuple[dict[str, object] | None, object, ToolResult | None]:
     try:
-        return await _exec_shell_command(sandbox, command=command, cwd=cwd, timeout=timeout), sandbox, None
+        return (
+            await _exec_shell_command(
+                context,
+                sandbox,
+                command=command,
+                cwd=cwd,
+                timeout=timeout,
+            ),
+            sandbox,
+            None,
+        )
     except Exception as exc:
         try:
             sandbox = await _recover_sandbox(context, exc)
-            return await _exec_shell_command(sandbox, command=command, cwd=cwd, timeout=timeout), sandbox, None
+            return (
+                await _exec_shell_command(
+                    context,
+                    sandbox,
+                    command=command,
+                    cwd=cwd,
+                    timeout=timeout,
+                ),
+                sandbox,
+                None,
+            )
         except Exception as recovery_exc:
             return None, sandbox, ToolResult(output=f"Execution failed: {recovery_exc}", is_error=True)
-
-
-async def _resolve_repo_root(
-    context: ToolExecutionContext,
-    sandbox: object,
-) -> tuple[str | None, object, ToolResult | None]:
-    repo_cwd = _get_cwd(context)
-    if not repo_cwd:
-        return None, sandbox, ToolResult(
-            output=(
-                "daytona_codeact: coordinated transactional execution requires an injected repo cwd."
-            ),
-            is_error=True,
-        )
-    shell_result, sandbox, tool_error = await _run_shell_with_recovery(
-        context,
-        sandbox,
-        command="git rev-parse --show-toplevel",
-        cwd=repo_cwd,
-        timeout=60,
-    )
-    if tool_error is not None:
-        return None, sandbox, tool_error
-    assert shell_result is not None
-    repo_root = str(shell_result.get("stdout", "") or "").strip()
-    if int(shell_result.get("exit_code", 1)) != 0 or not repo_root:
-        return None, sandbox, ToolResult(
-            output=(
-                "daytona_codeact: coordinated transactional execution requires a git workspace root."
-            ),
-            is_error=True,
-        )
-    return repo_root, sandbox, None
 
 
 def _build_tool_output(
@@ -710,164 +702,119 @@ async def daytona_codeact(
         return _ci_required_result()
 
     if resolved_mode == "shell":
-        tx, sandbox, tx_error = await _open_transaction(
+        shell_result, sandbox, tool_error = await _run_shell_with_recovery(
             context,
             sandbox,
-        )
-        if tx_error is not None:
-            return tx_error
-        try:
-            shell_result, sandbox, tool_error = await _run_shell_with_recovery(
-                context,
-                sandbox,
-                command=direct_command,
-                cwd=tx.scratch_root if tx is not None else repo_cwd,
-                timeout=timeout,
-            )
-            if tool_error is not None:
-                return tool_error
-            assert shell_result is not None
-            exit_code = int(shell_result.get("exit_code", 1))
-            files_written = 0
-            write_errors: list[str] = []
-            write_conflicts: list[str] = []
-            warnings: list[str] = list(normalization_warnings)
-            if exit_code == 0:
-                (
-                    files_written,
-                    write_errors,
-                    write_conflicts,
-                    commit_warnings,
-                ) = await _commit_transaction(context, sandbox, tx)
-                warnings.extend(commit_warnings)
-            return _build_tool_output(
-                context=context,
-                status="ok" if exit_code == 0 and not write_errors else "error",
-                files_written=files_written,
-                shells=[shell_result],
-                script_stdout="",
-                write_errors=write_errors,
-                write_conflicts=write_conflicts,
-                warnings=warnings,
-                error=_shell_result_error_detail(shell_result) if exit_code != 0 else "",
-            )
-        finally:
-            if tx is not None:
-                await cleanup_codeact_transaction(sandbox, tx)
-
-    tx, sandbox, tx_error = await _open_transaction(
-        context,
-        sandbox,
-    )
-    if tx_error is not None:
-        return tx_error
-
-    try:
-        stdout, sandbox, tool_error = await _execute_python_wrapper(
-            context,
-            sandbox,
-            code=code or "",
-            cwd=tx.scratch_root if tx is not None else repo_cwd,
-            repo_root=repo_cwd,
-            enforce_team_shell_policy=is_coordinated_team_agent(context),
+            command=direct_command,
+            cwd=repo_cwd,
+            timeout=timeout,
         )
         if tool_error is not None:
             return tool_error
-        assert stdout is not None
-
-        stdout, _ = _extract_exit_code(stdout, fallback_exit_code=0)
-        stdout_lines = stdout.splitlines()
-        script_stdout = "\n".join(stdout_lines[:-1]).strip() if stdout_lines else ""
-        try:
-            result_line = stdout_lines[-1] if stdout_lines else "{}"
-            result = json.loads(result_line)
-        except (json.JSONDecodeError, IndexError):
-            return _build_tool_output(
-                context=context,
-                status="unknown",
-                files_written=0,
-                shells=[],
-                script_stdout=stdout[:4000],
-                write_errors=[],
-                write_conflicts=[],
-                warnings=["CodeAct result line was not valid JSON."],
-            )
-
-        manifest_path = str(result.get("manifest", "") or "")
-        if not manifest_path:
-            if result.get("status") == "error":
-                return ToolResult(
-                    output=f"CodeAct execution error:\n{stdout[:4000]}",
-                    is_error=True,
-                )
-            return _build_tool_output(
-                context=context,
-                status="unknown",
-                files_written=0,
-                shells=[],
-                script_stdout=stdout[:4000],
-                write_errors=[],
-                write_conflicts=[],
-                warnings=["CodeAct wrapper did not return a manifest path."],
-            )
-
-        try:
-            manifest_text, _ = await _read_text_file_via_exec(sandbox, manifest_path)
-            manifest = json.loads(manifest_text)
-        except Exception:
-            if result.get("status") == "error":
-                return ToolResult(
-                    output=_format_codeact_error(stdout=stdout),
-                    is_error=True,
-                )
-            return _build_tool_output(
-                context=context,
-                status="unknown",
-                files_written=0,
-                shells=[],
-                script_stdout=stdout[:4000],
-                write_errors=[],
-                write_conflicts=[],
-                warnings=["CodeAct completed but its manifest could not be read."],
-            )
-
-        shells = list(manifest.get("shells", []) or [])
-        if result.get("status") == "error":
-            manifest_error = str(manifest.get("error", "") or "")
-            return ToolResult(
-                output=_format_codeact_error(stdout=stdout, manifest_error=manifest_error),
-                is_error=True,
-                metadata={
-                    "status": manifest.get("status", "error"),
-                    "shells_run": len(shells),
-                },
-            )
-
-        files_written = 0
-        write_errors: list[str] = []
-        write_conflicts: list[str] = []
-        warnings: list[str] = [str(w) for w in (manifest.get("warnings", []) or [])]
-
-        if tx is not None:
-            (
-                files_written,
-                write_errors,
-                write_conflicts,
-                commit_warnings,
-            ) = await _commit_transaction(context, sandbox, tx)
-            warnings.extend(commit_warnings)
-
+        assert shell_result is not None
+        exit_code = int(shell_result.get("exit_code", 1))
         return _build_tool_output(
             context=context,
-            status="ok" if not write_errors else "error",
-            files_written=files_written,
-            shells=shells,
-            script_stdout=script_stdout,
-            write_errors=write_errors,
-            write_conflicts=write_conflicts,
-            warnings=warnings,
-            error=str(manifest.get("error", "") or ""),
+            status="ok" if exit_code == 0 else "error",
+            files_written=0,
+            shells=[shell_result],
+            script_stdout="",
+            write_errors=[],
+            write_conflicts=[],
+            warnings=list(normalization_warnings),
+            error=_shell_result_error_detail(shell_result) if exit_code != 0 else "",
         )
-    finally:
-        if tx is not None:
-            await cleanup_codeact_transaction(sandbox, tx)
+
+    stdout, sandbox, tool_error = await _execute_python_wrapper(
+        context,
+        sandbox,
+        code=code or "",
+        cwd=repo_cwd,
+        repo_root=repo_cwd,
+        enforce_team_shell_policy=is_coordinated_team_agent(context),
+    )
+    if tool_error is not None:
+        return tool_error
+    assert stdout is not None
+
+    stdout, _ = _extract_exit_code(stdout, fallback_exit_code=0)
+    stdout_lines = stdout.splitlines()
+    script_stdout = "\n".join(stdout_lines[:-1]).strip() if stdout_lines else ""
+    try:
+        result_line = stdout_lines[-1] if stdout_lines else "{}"
+        result = json.loads(result_line)
+    except (json.JSONDecodeError, IndexError):
+        return _build_tool_output(
+            context=context,
+            status="unknown",
+            files_written=0,
+            shells=[],
+            script_stdout=stdout[:4000],
+            write_errors=[],
+            write_conflicts=[],
+            warnings=["CodeAct result line was not valid JSON."],
+        )
+
+    manifest_path = str(result.get("manifest", "") or "")
+    if not manifest_path:
+        if result.get("status") == "error":
+            return ToolResult(
+                output=f"CodeAct execution error:\n{stdout[:4000]}",
+                is_error=True,
+            )
+        return _build_tool_output(
+            context=context,
+            status="unknown",
+            files_written=0,
+            shells=[],
+            script_stdout=stdout[:4000],
+            write_errors=[],
+            write_conflicts=[],
+            warnings=["CodeAct wrapper did not return a manifest path."],
+        )
+
+    try:
+        manifest_text, _ = await _read_text_file_via_exec(sandbox, manifest_path)
+        manifest = json.loads(manifest_text)
+    except Exception:
+        if result.get("status") == "error":
+            return ToolResult(
+                output=_format_codeact_error(stdout=stdout),
+                is_error=True,
+            )
+        return _build_tool_output(
+            context=context,
+            status="unknown",
+            files_written=0,
+            shells=[],
+            script_stdout=stdout[:4000],
+            write_errors=[],
+            write_conflicts=[],
+            warnings=["CodeAct completed but its manifest could not be read."],
+        )
+
+    shells = list(manifest.get("shells", []) or [])
+    if result.get("status") == "error":
+        manifest_error = str(manifest.get("error", "") or "")
+        return ToolResult(
+            output=_format_codeact_error(stdout=stdout, manifest_error=manifest_error),
+            is_error=True,
+            metadata={
+                "status": manifest.get("status", "error"),
+                "shells_run": len(shells),
+            },
+        )
+
+    warnings = [str(w) for w in (manifest.get("warnings", []) or [])]
+    writes = list(manifest.get("writes", []) or [])
+    return _build_tool_output(
+        context=context,
+        status="ok",
+        files_written=len(writes),
+        shells=shells,
+        script_stdout=script_stdout,
+        write_errors=[],
+        write_conflicts=[],
+        warnings=warnings,
+        error=str(manifest.get("error", "") or ""),
+    )

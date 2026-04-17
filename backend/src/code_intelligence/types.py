@@ -150,8 +150,6 @@ class OperationChange:
     base_existed: bool = True
 
 
-# Backwards-compatible aliases so existing imports/instantiations keep working.
-BatchChange = OperationChange
 SemanticFileChange = OperationChange
 
 
@@ -164,7 +162,7 @@ class SemanticRenamePlan:
     changes: tuple[SemanticFileChange, ...]
 
 
-MultiEditStatus = Literal[
+OperationStatus = Literal[
     "committed",
     "aborted_version",
     "aborted_overlap",
@@ -174,11 +172,11 @@ MultiEditStatus = Literal[
 
 
 @dataclass(frozen=True)
-class MultiEditResult:
-    """Outcome of an atomic multi-file OCC operation against explicit bases."""
+class OperationResult:
+    """Outcome of one tool-level OCC operation against explicit bases."""
 
     success: bool
-    status: MultiEditStatus
+    status: OperationStatus
     files: tuple["EditResult", ...] = ()
     conflict_file: str | None = None
     conflict_reason: str = ""

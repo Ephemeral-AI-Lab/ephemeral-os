@@ -7,14 +7,13 @@ from tools.ci_toolkit.query_tools import (
     ci_workspace_structure,
 )
 from tools.ci_toolkit.lsp_tools import ci_diagnostics
-from tools.ci_toolkit.rename_tool import ci_rename, ci_rename_symbol
+from tools.ci_toolkit.rename_tool import ci_rename_symbol
 
 _ALL_TOOLS = [
     ci_status,
     ci_workspace_structure,
     ci_query_symbol,
     ci_diagnostics,
-    ci_rename,
     ci_rename_symbol,
 ]
 
@@ -28,12 +27,11 @@ _INSTRUCTIONS = (
     "continue with real symbol names.\n"
     "2. `ci_query_symbol(name, references=true)` — also trace all callers and import sites. "
     "Use this to follow import chains and find who depends on a symbol before editing it.\n"
-    "3. `ci_rename(symbol, new_name)` — semantic cross-file rename by name. "
+    "3. `ci_rename_symbol(symbol, new_name)` — semantic cross-file rename by name. "
     "Resolves coordinates from the symbol index; returns `status=\"ambiguous\"` "
     "with candidates if the name is not unique (narrow with `kind` or `file_hint`). "
     "Atomic: commits all touched files or none. Prefer over chained `daytona_edit_file` "
-    "calls; won't hit unrelated string/comment matches. Use `ci_rename_symbol(file, "
-    "line, new_name)` when you already have coordinates. Always try `dry_run=true` first.\n"
+    "calls; won't hit unrelated string/comment matches. Always try `dry_run=true` first.\n"
     "4. `ci_diagnostics(file)` — check for errors after edits, before running full test suites.\n"
     "Only fall back to `daytona_grep`/`daytona_read_file` when CI tools return no results "
     "(cold index) or when you need content not captured by symbol queries.\n\n"

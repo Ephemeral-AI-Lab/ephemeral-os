@@ -32,16 +32,13 @@ def _make_sandbox(*, download_content: str = "original content"):
 
 
 def _ci_service_for_content(content: str, *, file_path: str = "/file.py"):
+    from code_intelligence.types import EditResult, OperationResult
     svc = MagicMock()
-    svc.prepare_write.return_value = SimpleNamespace(
-        file_path=file_path,
-        current_content=content,
-        current_hash=_content_hash(content),
-        token_id="tok-1",
-        existed=True,
+    svc.commit_operation_against_base.return_value = OperationResult(
+        success=True,
+        status="committed",
+        files=(EditResult(success=True, file_path=file_path, message="ok"),),
     )
-    svc.commit_prepared_write.return_value = SimpleNamespace(success=True, message="ok")
-    svc.abort_prepared_write = MagicMock()
     return svc
 
 
@@ -270,7 +267,7 @@ async def test_edit_allows_write_inside_write_scope():
     assert not result.is_error
     data = json.loads(result.output)
     assert data["status"] == "edited"
-    ctx.metadata["ci_service"].commit_prepared_write.assert_called_once()
+    ctx.metadata["ci_service"].commit_operation_against_base.assert_called_once()
 
 
 async def test_edit_rejects_test_suite_write():
@@ -427,7 +424,7 @@ async def test_edit_replaces_only_first_occurrence():
         ctx,
     )
     # Only first x replaced → "y x x"
-    assert svc.commit_prepared_write.call_args.args[1] == "y x x"
+    assert svc.commit_operation_against_base.call_args.args[0][0].final_content == "y x x"
 
 
 async def test_edit_line_range_rejected():
@@ -451,7 +448,7 @@ async def test_edit_line_range_rejected():
     assert "unknown strategy" in result.output
 
 
-async def test_edit_batch_occ_success():
+async def test_edit_multi_replace_occ_success():
     sb = _make_sandbox(download_content="alpha\nbeta\ngamma\n")
     svc = _ci_service_for_content("alpha\nbeta\ngamma\n")
     ctx = _ctx({"daytona_sandbox": sb, "ci_service": svc})
@@ -466,7 +463,7 @@ async def test_edit_batch_occ_success():
         ctx,
     )
     assert not result.is_error
-    assert svc.commit_prepared_write.call_args.args[1] == "ALPHA\nbeta\nGAMMA\n"
+    assert svc.commit_operation_against_base.call_args.args[0][0].final_content == "ALPHA\nbeta\nGAMMA\n"
 
 
 async def test_edit_rejects_mixed_legacy_and_batch_inputs():
@@ -491,16 +488,7 @@ async def test_edit_rejects_mixed_legacy_and_batch_inputs():
 
 async def test_edit_occ_path_success():
     sb = _make_sandbox(download_content="old content\n")
-    svc = MagicMock()
-    svc.prepare_write.return_value = SimpleNamespace(
-        file_path="/file.py",
-        current_content="old content\n",
-        current_hash=_content_hash("old content\n"),
-        token_id="tok-1",
-        existed=True,
-    )
-    svc.commit_prepared_write.return_value = SimpleNamespace(success=True, message="ok")
-    svc.abort_prepared_write = MagicMock()
+    svc = _ci_service_for_content("old content\n")
     ctx = _ctx({"daytona_sandbox": sb, "ci_service": svc})
 
     result = await daytona_edit_file.execute(
@@ -514,119 +502,10 @@ async def test_edit_occ_path_success():
     assert not result.is_error
     data = json.loads(result.output)
     assert data["occ"] is True
-    svc.prepare_write.assert_called_once()
-    svc.commit_prepared_write.assert_called_once()
-    svc.abort_prepared_write.assert_called_once()
+    svc.commit_operation_against_base.assert_called_once()
 
 
-async def test_edit_occ_refreshes_and_repatches_latest_content():
-    sb = _make_sandbox(download_content="old content\n")
-    initial = SimpleNamespace(
-        file_path="/file.py",
-        current_content="alpha\nold\nomega\n",
-        current_hash=_content_hash("alpha\nold\nomega\n"),
-        token_id="tok-1",
-        existed=True,
-    )
-    refreshed = SimpleNamespace(
-        file_path="/file.py",
-        current_content="prefix\nalpha\nold\nomega\n",
-        current_hash=_content_hash("prefix\nalpha\nold\nomega\n"),
-        token_id="tok-2",
-        existed=True,
-    )
-    commit = MagicMock(return_value=SimpleNamespace(success=True, message="ok"))
-    svc = SimpleNamespace(
-        prepare_write=MagicMock(return_value=initial),
-        refresh_prepared_write=MagicMock(side_effect=[refreshed, refreshed]),
-        commit_prepared_write=commit,
-        abort_prepared_write=MagicMock(),
-    )
-    ctx = _ctx(
-        {
-            "daytona_sandbox": sb,
-            "ci_service": svc,
-            "scope_packet": {"scope_paths": ["/file.py"], "coherence_token": "stale-token"},
-            "coherence_token": "stale-token",
-        }
-    )
-
-    result = await daytona_edit_file.execute(
-        daytona_edit_file.input_model(
-            file_path="/file.py",
-            old_text="old",
-            new_text="new",
-        ),
-        ctx,
-    )
-
-    assert not result.is_error
-    commit.assert_called_once()
-    assert commit.call_args.args[1] == "prefix\nalpha\nnew\nomega\n"
-
-
-async def test_edit_occ_publishes_and_releases_symbol_intent():
-    sb = _make_sandbox(download_content="def foo():\n    return 1\n")
-    initial = SimpleNamespace(
-        file_path="/file.py",
-        current_content="def foo():\n    return 1\n",
-        current_hash=_content_hash("def foo():\n    return 1\n"),
-        token_id="tok-1",
-        existed=True,
-    )
-    publish = MagicMock(return_value="intent-1")
-    release = MagicMock()
-    svc = SimpleNamespace(
-        prepare_write=MagicMock(return_value=initial),
-        commit_prepared_write=MagicMock(return_value=SimpleNamespace(success=True, message="ok")),
-        abort_prepared_write=MagicMock(),
-        publish_edit_intent=publish,
-        heartbeat_edit_intent=MagicMock(),
-        release_edit_intent=release,
-        symbol_index=SimpleNamespace(
-            symbol_boundaries_for_file=MagicMock(return_value=[("foo", 1, 2)])
-        ),
-    )
-    ctx = _ctx({"daytona_sandbox": sb, "ci_service": svc})
-
-    result = await daytona_edit_file.execute(
-        daytona_edit_file.input_model(
-            file_path="/file.py",
-            old_text="return 1",
-            new_text="return 2",
-        ),
-        ctx,
-    )
-
-    assert not result.is_error
-    publish.assert_called_once()
-    assert publish.call_args.kwargs["symbols"] == ["foo"]
-    assert publish.call_args.kwargs["scope"] == "symbol"
-    release.assert_called_once_with("intent-1")
-
-
-async def test_edit_occ_lock_conflict():
-    sb = _make_sandbox(download_content="content")
-    svc = MagicMock()
-    svc.prepare_write.return_value = SimpleNamespace(
-        success=False,
-        message="Could not acquire edit lock for /file.py (conflict)",
-        conflict=True,
-    )
-    ctx = _ctx({"daytona_sandbox": sb, "ci_service": svc})
-
-    result = await daytona_edit_file.execute(
-        daytona_edit_file.input_model(
-            file_path="/file.py", old_text="content", new_text="new"
-        ),
-        ctx,
-    )
-    assert result.is_error
-    assert "conflict" in result.output
-    assert result.metadata.get("conflict") is True
-
-
-async def test_edit_occ_no_prepare_write_returns_error():
+async def test_edit_occ_no_operation_commit_returns_error():
     """A coordinated team edit must not fall back when OCC is unavailable."""
     sb = _make_sandbox(download_content="content here")
     svc = SimpleNamespace(arbiter=None)
@@ -659,5 +538,8 @@ async def test_edit_resolves_relative_path():
         ),
         ctx,
     )
-    svc.prepare_write.assert_called_once()
-    assert svc.prepare_write.call_args.args[0] == "/workspace/relative.py"
+    svc.commit_operation_against_base.assert_called_once()
+    assert (
+        svc.commit_operation_against_base.call_args.args[0][0].file_path
+        == "/workspace/relative.py"
+    )

@@ -311,9 +311,8 @@ def test_concurrent_nonoverlap_edits_across_tools(
                 result = asyncio.run(
                     ci_rename_symbol.execute(
                         ci_rename_symbol.input_model(
-                            file_path=target,
-                            line=1,
-                            character=4,
+                            symbol=f"sym_{index}",
+                            file_hint=f"rename_{index}.py",
                             new_name=f"sym_{index}_renamed",
                         ),
                         ctx,
@@ -695,9 +694,7 @@ def test_jedi_worker_reuse_under_load(
                 result = asyncio.run(
                     ci_rename_symbol.execute(
                         ci_rename_symbol.input_model(
-                            file_path=core_path,
-                            line=5,
-                            character=0,
+                            symbol="beta",
                             new_name=f"beta_worker_{index}",
                             dry_run=True,
                         ),

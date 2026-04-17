@@ -1,4 +1,4 @@
-"""Unit tests for WriteCoordinator.commit_many_against_base (atomic batch)."""
+"""Unit tests for WriteCoordinator.commit_operation_against_base (atomic operation)."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from code_intelligence.routing.service import (
     CodeIntelligenceService,
     dispose_all_code_intelligence,
 )
-from code_intelligence.types import BatchChange, SemanticFileChange
+from code_intelligence.types import OperationChange, SemanticFileChange
 
 
 @pytest.fixture(autouse=True)
@@ -22,7 +22,7 @@ def _clear_registry() -> None:
 
 def _svc(tmp_path) -> CodeIntelligenceService:
     return CodeIntelligenceService(
-        sandbox_id=f"sandbox-batch-{tmp_path.name}",
+        sandbox_id=f"sandbox-operation-{tmp_path.name}",
         workspace_root=str(tmp_path),
     )
 
@@ -36,14 +36,14 @@ def _change(path: str, base: str, final: str) -> SemanticFileChange:
     )
 
 
-def test_commits_full_batch_on_clean_bases(tmp_path) -> None:
+def test_commits_full_operation_on_clean_bases(tmp_path) -> None:
     a = tmp_path / "a.py"
     b = tmp_path / "b.py"
     a.write_text("x = 1\n", encoding="utf-8")
     b.write_text("y = 2\n", encoding="utf-8")
 
     svc = _svc(tmp_path)
-    result = svc.commit_many_against_base(
+    result = svc.commit_operation_against_base(
         [
             _change(str(a), "x = 1\n", "x = 11\n"),
             _change(str(b), "y = 2\n", "y = 22\n"),
@@ -67,7 +67,7 @@ def test_aborts_on_overlapping_concurrent_edit(tmp_path) -> None:
     # Concurrent drift: the same first line got edited.
     a.write_text("def foo_drift():\n    return 1\n", encoding="utf-8")
 
-    result = svc.commit_many_against_base(
+    result = svc.commit_operation_against_base(
         [_change(str(a), base, final)],
         edit_type="rename",
     )
@@ -88,7 +88,7 @@ def test_merges_non_overlapping_concurrent_edit(tmp_path) -> None:
     final = "def bar():\n    return 1\n\nZ = 0\n"
     a.write_text(base + "NEW = 1\n", encoding="utf-8")
 
-    result = svc.commit_many_against_base(
+    result = svc.commit_operation_against_base(
         [_change(str(a), base, final)],
         edit_type="rename",
     )
@@ -110,7 +110,7 @@ def test_lsp_invalidate_and_symbol_index_refresh_per_committed_path(tmp_path) ->
     svc._write_coordinator._lsp_client = svc.lsp_client
     svc._write_coordinator._symbol_index = svc.symbol_index
 
-    result = svc.commit_many_against_base(
+    result = svc.commit_operation_against_base(
         [
             _change(str(a), "x=1\n", "x=10\n"),
             _change(str(b), "y=2\n", "y=20\n"),
@@ -145,7 +145,7 @@ def test_locks_acquired_in_sorted_order(tmp_path) -> None:
 
     svc.arbiter.acquire_file_lock = _spy  # type: ignore[assignment]
 
-    result = svc.commit_many_against_base(
+    result = svc.commit_operation_against_base(
         [
             _change(str(a), "x=1\n", "x=2\n"),
             _change(str(b), "x=1\n", "x=3\n"),
@@ -159,20 +159,20 @@ def test_locks_acquired_in_sorted_order(tmp_path) -> None:
 
 def test_empty_changes_returns_committed_no_op(tmp_path) -> None:
     svc = _svc(tmp_path)
-    result = svc.commit_many_against_base([], edit_type="rename")
+    result = svc.commit_operation_against_base([], edit_type="rename")
     assert result.success is True
     assert result.status == "committed"
     assert result.files == ()
 
 
 # ---------------------------------------------------------------------------
-# New tests for delete / create / mixed semantics (commit_batch_against_base)
+# New tests for delete / create / mixed semantics (commit_operation_against_base)
 # ---------------------------------------------------------------------------
 
 
-def _delete_change(path: str, base: str) -> BatchChange:
-    """Build a delete BatchChange (final_content=None)."""
-    return BatchChange(
+def _delete_change(path: str, base: str) -> OperationChange:
+    """Build a delete OperationChange (final_content=None)."""
+    return OperationChange(
         file_path=path,
         base_content=base,
         base_hash=content_hash(base),
@@ -180,9 +180,9 @@ def _delete_change(path: str, base: str) -> BatchChange:
     )
 
 
-def _create_change(path: str, content: str) -> BatchChange:
-    """Build a create BatchChange (base_existed=False)."""
-    return BatchChange(
+def _create_change(path: str, content: str) -> OperationChange:
+    """Build a create OperationChange (base_existed=False)."""
+    return OperationChange(
         file_path=path,
         base_content="",
         base_hash=content_hash(""),
@@ -191,12 +191,12 @@ def _create_change(path: str, content: str) -> BatchChange:
     )
 
 
-def test_delete_only_batch_removes_file(tmp_path) -> None:
+def test_delete_only_operation_removes_file(tmp_path) -> None:
     a = tmp_path / "del.py"
     a.write_text("x = 1\n", encoding="utf-8")
     svc = _svc(tmp_path)
 
-    result = svc.commit_batch_against_base(
+    result = svc.commit_operation_against_base(
         [_delete_change(str(a), "x = 1\n")],
         edit_type="delete",
     )
@@ -205,12 +205,12 @@ def test_delete_only_batch_removes_file(tmp_path) -> None:
     assert not a.exists()
 
 
-def test_create_only_batch_writes_new_file(tmp_path) -> None:
+def test_create_only_operation_writes_new_file(tmp_path) -> None:
     a = tmp_path / "new.py"
     assert not a.exists()
     svc = _svc(tmp_path)
 
-    result = svc.commit_batch_against_base(
+    result = svc.commit_operation_against_base(
         [_create_change(str(a), "x = 42\n")],
         edit_type="create",
     )
@@ -224,7 +224,7 @@ def test_create_conflicts_when_file_already_exists(tmp_path) -> None:
     a.write_text("old content\n", encoding="utf-8")
     svc = _svc(tmp_path)
 
-    result = svc.commit_batch_against_base(
+    result = svc.commit_operation_against_base(
         [_create_change(str(a), "new content\n")],
         edit_type="create",
     )
@@ -243,7 +243,7 @@ def test_delete_conflicts_on_base_mismatch_no_merge(tmp_path) -> None:
     # Drift: file changed after snapshot
     a.write_text("x = 999\n", encoding="utf-8")
 
-    result = svc.commit_batch_against_base(
+    result = svc.commit_operation_against_base(
         [_delete_change(str(a), "x = 1\n")],  # base_hash doesn't match current
         edit_type="delete",
     )
@@ -254,7 +254,7 @@ def test_delete_conflicts_on_base_mismatch_no_merge(tmp_path) -> None:
     assert a.exists()
 
 
-def test_mixed_modify_create_delete_batch(tmp_path) -> None:
+def test_mixed_modify_create_delete_operation(tmp_path) -> None:
     mod_file = tmp_path / "mod.py"
     del_file = tmp_path / "del.py"
     new_file = tmp_path / "new.py"
@@ -264,13 +264,13 @@ def test_mixed_modify_create_delete_batch(tmp_path) -> None:
     assert not new_file.exists()
 
     svc = _svc(tmp_path)
-    result = svc.commit_batch_against_base(
+    result = svc.commit_operation_against_base(
         [
             _change(str(mod_file), "x = 1\n", "x = 10\n"),
             _delete_change(str(del_file), "y = 2\n"),
             _create_change(str(new_file), "z = 3\n"),
         ],
-        edit_type="batch",
+        edit_type="operation",
     )
     assert result.success is True
     assert result.status == "committed"
@@ -290,7 +290,7 @@ def test_base_mismatch_non_overlapping_merges(tmp_path) -> None:
     # Concurrent drift at bottom — non-overlapping
     a.write_text(base + "NEW = 1\n", encoding="utf-8")
 
-    result = svc.commit_batch_against_base(
+    result = svc.commit_operation_against_base(
         [_change(str(a), base, final)],
         edit_type="rename",
     )
@@ -311,7 +311,7 @@ def test_base_mismatch_overlap_aborts_overlap(tmp_path) -> None:
     # Concurrent drift: same first line got edited (overlapping)
     a.write_text("def foo_drift():\n    return 1\n", encoding="utf-8")
 
-    result = svc.commit_batch_against_base(
+    result = svc.commit_operation_against_base(
         [_change(str(a), base, final)],
         edit_type="rename",
     )
@@ -321,7 +321,7 @@ def test_base_mismatch_overlap_aborts_overlap(tmp_path) -> None:
     assert "foo_drift" in a.read_text(encoding="utf-8")
 
 
-def test_mid_batch_write_failure_rolls_back_prior_files(tmp_path) -> None:
+def test_mid_operation_write_failure_rolls_back_prior_files(tmp_path) -> None:
     """A write failure on the second file rolls back the first file."""
     a = tmp_path / "first.py"
     b = tmp_path / "second.py"
@@ -342,7 +342,7 @@ def test_mid_batch_write_failure_rolls_back_prior_files(tmp_path) -> None:
 
     svc._write_coordinator._content.write = _failing_write  # type: ignore[assignment]
 
-    result = svc.commit_batch_against_base(
+    result = svc.commit_operation_against_base(
         [
             _change(str(a), "a = 1\n", "a = 10\n"),
             _change(str(b), "b = 2\n", "b = 20\n"),

@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from code_intelligence.types import EditResult, OperationResult
 from tools.core.base import ToolExecutionContext
 from tools.daytona_toolkit.tools import (
     daytona_read_file,
@@ -32,6 +32,27 @@ def _sb(*, exec_result=None, download=None, list_result=None, find_result=None):
     sb.fs.list_files = AsyncMock(return_value=list_result or [])
     sb.fs.find_files = AsyncMock(return_value=find_result or [])
     return sb
+
+
+def _ci_service_for_write(*, file_path: str = "/ws/new.txt"):
+    svc = MagicMock()
+    svc.commit_operation_against_base.return_value = OperationResult(
+        success=True,
+        status="committed",
+        files=(EditResult(success=True, file_path=file_path, message="ok"),),
+    )
+    return svc
+
+
+def _ci_service_mock(*, file_path: str = "/ws/new.txt", success: bool = True):
+    from code_intelligence.types import EditResult, OperationResult
+    svc = MagicMock()
+    svc.commit_operation_against_base.return_value = OperationResult(
+        success=success,
+        status="committed" if success else "failed",
+        files=(EditResult(success=success, file_path=file_path, message="ok"),),
+    )
+    return svc
 
 
 # ---------------------------------------------------------------------------
@@ -192,9 +213,7 @@ async def test_write_file_requires_ci_service():
 async def test_write_file_syncs_ci_state():
     sb = _sb()
     sb.process.exec = AsyncMock(return_value=MagicMock(result="", exit_code=0))
-    svc = MagicMock()
-    svc.prepare_write.return_value = MagicMock()
-    svc.commit_prepared_write.return_value = MagicMock(success=True, message="ok")
+    svc = _ci_service_mock(file_path="/ws/new.txt")
     ctx = _ctx({
         "daytona_sandbox": sb,
         "daytona_cwd": "/ws",
@@ -206,41 +225,29 @@ async def test_write_file_syncs_ci_state():
     )
 
     assert not result.is_error
-    svc.prepare_write.assert_called_once()
-    svc.commit_prepared_write.assert_called_once()
-    svc.abort_prepared_write.assert_called_once()
+    svc.commit_operation_against_base.assert_called_once()
     assert json.loads(result.output)["ci_sync"] is True
 
 
 async def test_write_file_resolves_relative_path():
     sb = _sb()
     sb.process.exec = AsyncMock(return_value=MagicMock(result="", exit_code=0))
-    svc = MagicMock()
-    svc.prepare_write.return_value = SimpleNamespace(
-        file_path="/workspace/subdir/file.txt",
-        current_content="",
-        current_hash="",
-        token_id="tok-1",
-    )
-    svc.commit_prepared_write.return_value = SimpleNamespace(success=True)
+    svc = _ci_service_mock(file_path="/workspace/subdir/file.txt")
     ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/workspace", "ci_service": svc})
     result = await daytona_write_file.execute(
         daytona_write_file.input_model(file_path="subdir/file.txt", content="data"), ctx
     )
     assert not result.is_error
-    svc.prepare_write.assert_called_once()
-    assert svc.prepare_write.call_args.args[0] == "/workspace/subdir/file.txt"
+    svc.commit_operation_against_base.assert_called_once()
+    change = svc.commit_operation_against_base.call_args.args[0][0]
+    assert change.file_path == "/workspace/subdir/file.txt"
 
 
 async def test_write_file_warns_write_outside_write_scope():
     """Write-scope is advisory — out-of-scope writes succeed with a warning."""
     sb = _sb()
     sb.process.exec = AsyncMock(return_value=MagicMock(result="", exit_code=0))
-    svc = MagicMock()
-    svc.prepare_write.return_value = SimpleNamespace(
-        file_path="/testbed/dask/_compatibility.py", token_id="tok-1",
-    )
-    svc.commit_prepared_write.return_value = SimpleNamespace(success=True)
+    svc = _ci_service_mock(file_path="/testbed/dask/_compatibility.py")
     ctx = _ctx(
         {
             "daytona_sandbox": sb,
@@ -268,11 +275,7 @@ async def test_write_file_warns_write_outside_write_scope():
 async def test_write_file_allows_write_inside_write_scope():
     sb = _sb()
     sb.process.exec = AsyncMock(return_value=MagicMock(result="", exit_code=0))
-    svc = MagicMock()
-    svc.prepare_write.return_value = SimpleNamespace(
-        file_path="/testbed/dask/config.py", token_id="tok-1",
-    )
-    svc.commit_prepared_write.return_value = SimpleNamespace(success=True)
+    svc = _ci_service_mock(file_path="/testbed/dask/config.py")
     ctx = _ctx(
         {
             "daytona_sandbox": sb,
@@ -292,7 +295,7 @@ async def test_write_file_allows_write_inside_write_scope():
     )
 
     assert not result.is_error
-    svc.commit_prepared_write.assert_called_once()
+    svc.commit_operation_against_base.assert_called_once()
 
 
 async def test_write_file_rejects_test_suite_write():
@@ -326,11 +329,7 @@ async def test_write_file_warns_non_verify_surface_write_in_warn_mode():
     """Write-scope is advisory — non-verify-surface writes also succeed with a warning."""
     sb = _sb()
     sb.process.exec = AsyncMock(return_value=MagicMock(result="", exit_code=0))
-    svc = MagicMock()
-    svc.prepare_write.return_value = SimpleNamespace(
-        file_path="/testbed/dask/_compatibility.py", token_id="tok-1",
-    )
-    svc.commit_prepared_write.return_value = SimpleNamespace(success=True)
+    svc = _ci_service_mock(file_path="/testbed/dask/_compatibility.py")
     ctx = _ctx(
         {
             "daytona_sandbox": sb,
@@ -360,11 +359,7 @@ async def test_write_file_warns_non_verify_surface_write_in_warn_mode():
 
 async def test_write_file_allows_repo_write_from_validator():
     sb = _sb()
-    svc = MagicMock()
-    svc.prepare_write.return_value = SimpleNamespace(
-        file_path="/testbed/dask/config.py", token_id="tok-1",
-    )
-    svc.commit_prepared_write.return_value = SimpleNamespace(success=True)
+    svc = _ci_service_mock(file_path="/testbed/dask/config.py")
     ctx = _ctx(
         {
             "daytona_sandbox": sb,
@@ -402,39 +397,6 @@ async def test_write_file_no_raw_write_after_ci_unavailable():
     assert "Code intelligence/OCC is unavailable" in result.output
     assert result.metadata["occ_required"] is True
     sb.fs.upload_file.assert_not_called()
-
-
-async def test_write_file_refreshes_stale_scope_coherence():
-    sb = _sb()
-    sb.process.exec = AsyncMock(return_value=MagicMock(result="", exit_code=0))
-    svc = MagicMock()
-    svc.prepare_write.return_value = MagicMock()
-    svc.commit_prepared_write.return_value = MagicMock(success=True, message="ok")
-    svc.arbiter.generation = 1
-    svc.arbiter.initialized = True
-    svc.arbiter.recent_edits.return_value = []
-    svc.arbiter.active_reservations.return_value = []
-    svc.arbiter.hotspots.return_value = []
-    svc.symbol_index.generation = 1
-    ctx = _ctx({
-        "daytona_sandbox": sb,
-        "daytona_cwd": "/ws",
-        "ci_service": svc,
-        "scope_packet": {
-            "scope_paths": ["/ws/new.txt"],
-            "coherence_token": "stale-token",
-        },
-        "coherence_token": "stale-token",
-    })
-
-    result = await daytona_write_file.execute(
-        daytona_write_file.input_model(file_path="/ws/new.txt", content="hello"), ctx
-    )
-
-    assert not result.is_error
-    assert json.loads(result.output)["file_path"] == "/ws/new.txt"
-    svc.prepare_write.assert_called_once()
-    svc.commit_prepared_write.assert_called_once()
 
 
 # ---------------------------------------------------------------------------

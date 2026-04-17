@@ -13,7 +13,7 @@ from typing import Any
 from tools.core.base import ToolExecutionContext
 from tools.core.ci_runtime import (
     CiOperationChange,
-    commit_ci_changes_against_base,
+    commit_ci_operation,
     get_ci_service,
 )
 from tools.daytona_toolkit._daytona_utils import (
@@ -473,7 +473,7 @@ async def commit_transaction_changes(
 
     rel_path_by_file_path = {file_path: change.path for change, file_path in commit_queue}
     try:
-        result = commit_ci_changes_against_base(
+        result = commit_ci_operation(
             context,
             [
                 CiOperationChange(

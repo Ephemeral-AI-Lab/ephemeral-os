@@ -34,7 +34,7 @@ from code_intelligence.routing.service import CodeIntelligenceService
 from code_intelligence.lsp._jedi_worker_client import (
     ENV_FLAG as JEDI_WORKER_ENV_FLAG,
 )
-from tools.ci_toolkit.rename_tool import ci_rename, ci_rename_symbol
+from tools.ci_toolkit.rename_tool import ci_rename_symbol
 from tools.core.base import ToolExecutionContext
 from tools.daytona_toolkit._daytona_utils import _extract_exit_code, _wrap_bash_command
 from tools.daytona_toolkit.codeact_tool import daytona_codeact
@@ -496,9 +496,7 @@ def test_live_ci_lsp_jedi_tool_traces_and_perf(
             lambda: asyncio.run(
                 ci_rename_symbol.execute(
                     ci_rename_symbol.input_model(
-                        file_path=core_path,
-                        line=5,
-                        character=0,
+                        symbol="beta",
                         new_name="beta_v2",
                         dry_run=True,
                     ),
@@ -519,9 +517,7 @@ def test_live_ci_lsp_jedi_tool_traces_and_perf(
             lambda: asyncio.run(
                 ci_rename_symbol.execute(
                     ci_rename_symbol.input_model(
-                        file_path=core_path,
-                        line=5,
-                        character=0,
+                        symbol="beta",
                         new_name="beta_v2",
                     ),
                     ctx,
@@ -535,12 +531,12 @@ def test_live_ci_lsp_jedi_tool_traces_and_perf(
         assert len(commit_symbol_data["files"]) >= 3
 
         dry_facade = _measure(
-            "tool.ci_rename(delta dry_run)",
+            "tool.ci_rename_symbol(delta dry_run)",
             env.trace,
             svc,
             lambda: asyncio.run(
-                ci_rename.execute(
-                    ci_rename.input_model(symbol="delta", new_name="delta_v2", dry_run=True),
+                ci_rename_symbol.execute(
+                    ci_rename_symbol.input_model(symbol="delta", new_name="delta_v2", dry_run=True),
                     ctx,
                 )
             ),
@@ -552,12 +548,12 @@ def test_live_ci_lsp_jedi_tool_traces_and_perf(
         assert len(dry_facade_data["files"]) >= 3
 
         commit_facade = _measure(
-            "tool.ci_rename(delta commit)",
+            "tool.ci_rename_symbol(delta commit)",
             env.trace,
             svc,
             lambda: asyncio.run(
-                ci_rename.execute(
-                    ci_rename.input_model(symbol="delta", new_name="delta_v2"),
+                ci_rename_symbol.execute(
+                    ci_rename_symbol.input_model(symbol="delta", new_name="delta_v2"),
                     ctx,
                 )
             ),
@@ -677,9 +673,7 @@ def test_live_ci_lsp_jedi_tool_traces_and_perf(
                 lambda: asyncio.run(
                     ci_rename_symbol.execute(
                         ci_rename_symbol.input_model(
-                            file_path=worker_core,
-                            line=5,
-                            character=0,
+                            symbol="beta",
                             new_name="beta_v2",
                             dry_run=True,
                         ),
@@ -937,9 +931,7 @@ def _run_occ_capture_checks(
             lambda: asyncio.run(
                 ci_rename_symbol.execute(
                     ci_rename_symbol.input_model(
-                        file_path=occ_core,
-                        line=1,
-                        character=0,
+                        symbol="alpha",
                         new_name="alpha_occ",
                     ),
                     occ_ctx,
@@ -1042,9 +1034,7 @@ def _run_concurrent_ci_load(
                 result = asyncio.run(
                     ci_rename_symbol.execute(
                         ci_rename_symbol.input_model(
-                            file_path=core_path,
-                            line=5,
-                            character=0,
+                            symbol="beta",
                             new_name=f"beta_load_{index}",
                             dry_run=True,
                         ),
@@ -1056,8 +1046,8 @@ def _run_concurrent_ci_load(
                 detail = len(json.loads(result.output)["files"])
             else:
                 result = asyncio.run(
-                    ci_rename.execute(
-                        ci_rename.input_model(
+                    ci_rename_symbol.execute(
+                        ci_rename_symbol.input_model(
                             symbol="delta",
                             new_name=f"delta_load_{index}",
                             dry_run=True,
@@ -1066,7 +1056,7 @@ def _run_concurrent_ci_load(
                     )
                 )
                 assert not result.is_error, result.output
-                name = "ci_rename_dry_run"
+                name = "ci_rename_symbol_delta_dry_run"
                 detail = len(json.loads(result.output)["files"])
             return {
                 "index": index,

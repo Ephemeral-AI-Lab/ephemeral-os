@@ -31,7 +31,7 @@ from tools.daytona_toolkit._daytona_utils import (
 )
 from tools.core.ci_runtime import (
     CiOperationChange,
-    commit_ci_changes_against_base,
+    commit_ci_operation,
     get_ci_service,
     occ_required_result,
 )
@@ -467,7 +467,7 @@ async def daytona_write_file(
             )
         base_content = current if existed else None
 
-        result = commit_ci_changes_against_base(
+        result = commit_ci_operation(
             context,
             [
                 CiOperationChange(

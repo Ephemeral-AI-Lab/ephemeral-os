@@ -1,4 +1,4 @@
-"""Tests for the ci_rename_symbol tool (atomic batch rename)."""
+"""Tests for the ci_rename_symbol tool (atomic operation rename)."""
 
 from __future__ import annotations
 
@@ -10,13 +10,13 @@ from unittest.mock import MagicMock
 
 from code_intelligence.types import (
     EditResult,
-    MultiEditResult,
+    OperationResult,
     SemanticFileChange,
     SemanticRenamePlan,
     SymbolInfo,
     SymbolKind,
 )
-from tools.ci_toolkit.rename_tool import ci_rename, ci_rename_symbol
+from tools.ci_toolkit.rename_tool import ci_rename_symbol
 from tools.core.base import ToolExecutionContext
 
 
@@ -48,9 +48,19 @@ def _plan(changes) -> SemanticRenamePlan:
 def _make_svc(
     *,
     plan: SemanticRenamePlan | None,
-    commit_result: MultiEditResult | None = None,
+    commit_result: OperationResult | None = None,
 ):
     svc = MagicMock()
+    svc.symbol_index.ensure_built.return_value = True
+    svc.symbol_index.find.return_value = [
+        SymbolInfo(
+            name="foo",
+            kind=SymbolKind.FUNCTION,
+            file_path="/ws/a.py",
+            line=3,
+            character=4,
+        )
+    ]
     if plan is None:
         svc.rename_symbol_plan.return_value = SemanticRenamePlan(
             new_name="bar", origin=("", 0, 0), changes=(),
@@ -58,7 +68,7 @@ def _make_svc(
     else:
         svc.rename_symbol_plan.return_value = plan
     svc.preview_rename_symbol_plan.return_value = svc.rename_symbol_plan.return_value
-    svc.commit_many_against_base.return_value = commit_result or MultiEditResult(
+    svc.commit_operation_against_base.return_value = commit_result or OperationResult(
         success=True,
         status="committed",
         files=tuple(
@@ -80,7 +90,7 @@ def _run(tool_input, ctx):
 
 def test_no_service_returns_error():
     result = _run(
-        {"file_path": "/ws/a.py", "line": 1, "new_name": "bar"},
+        {"symbol": "foo", "new_name": "bar"},
         _ctx(),
     )
     assert result.is_error
@@ -90,7 +100,7 @@ def test_no_service_returns_error():
 def test_invalid_new_name_rejected():
     svc = _make_svc(plan=None)
     result = _run(
-        {"file_path": "/ws/a.py", "line": 1, "new_name": "1bad"},
+        {"symbol": "foo", "new_name": "1bad"},
         _ctx({"ci_service": svc}),
     )
     assert result.is_error
@@ -101,20 +111,20 @@ def test_invalid_new_name_rejected():
 def test_no_changes_returns_status_no_changes():
     svc = _make_svc(plan=_plan([]))
     result = _run(
-        {"file_path": "/ws/a.py", "line": 1, "new_name": "bar"},
+        {"symbol": "foo", "new_name": "bar"},
         _ctx({"ci_service": svc}),
     )
     assert not result.is_error
     data = json.loads(result.output)
     assert data["status"] == "no_changes"
     assert data["files"] == []
-    svc.commit_many_against_base.assert_not_called()
+    svc.commit_operation_against_base.assert_not_called()
 
 
 # -- Happy path -------------------------------------------------------------
 
 
-def test_rename_commits_atomically_via_batch_primitive():
+def test_rename_commits_atomically_via_operation_primitive():
     changes = [
         _change("/ws/a.py", base="old_a", final="new_a"),
         _change("/ws/b.py", base="old_b", final="new_b"),
@@ -122,15 +132,15 @@ def test_rename_commits_atomically_via_batch_primitive():
     plan = _plan(changes)
     svc = _make_svc(plan=plan)
     result = _run(
-        {"file_path": "/ws/a.py", "line": 3, "character": 4, "new_name": "bar"},
+        {"symbol": "foo", "new_name": "bar"},
         _ctx({"ci_service": svc}),
     )
     assert not result.is_error, result.output
     data = json.loads(result.output)
     assert data["status"] == "renamed"
     assert {f["file_path"] for f in data["files"]} == {"/ws/a.py", "/ws/b.py"}
-    svc.commit_many_against_base.assert_called_once()
-    kwargs = svc.commit_many_against_base.call_args.kwargs
+    svc.commit_operation_against_base.assert_called_once()
+    kwargs = svc.commit_operation_against_base.call_args.kwargs
     assert kwargs["edit_type"] == "rename"
 
 
@@ -143,7 +153,7 @@ def test_dry_run_diffs_against_plan_base_not_reread():
     changes = [_change("/ws/a.py", base="def foo():\n    pass\n", final="def bar():\n    pass\n")]
     svc = _make_svc(plan=_plan(changes))
     result = _run(
-        {"file_path": "/ws/a.py", "line": 1, "new_name": "bar", "dry_run": True},
+        {"symbol": "foo", "new_name": "bar", "dry_run": True},
         _ctx({"ci_service": svc}),
     )
     assert not result.is_error
@@ -156,20 +166,20 @@ def test_dry_run_diffs_against_plan_base_not_reread():
     svc.preview_rename_symbol_plan.assert_called_once()
     svc.rename_symbol_plan.assert_not_called()
     # Dry run must NEVER invoke the commit primitive.
-    svc.commit_many_against_base.assert_not_called()
+    svc.commit_operation_against_base.assert_not_called()
 
 
 # -- Abort semantics (the bug we are fixing) -------------------------------
 
 
-def test_batch_abort_surfaces_as_aborted_status_with_no_partial_success():
+def test_operation_abort_surfaces_as_aborted_status_with_no_partial_success():
     changes = [
         _change("/ws/a.py", base="old_a", final="new_a"),
         _change("/ws/b.py", base="old_b", final="new_b"),
         _change("/ws/c.py", base="old_c", final="new_c"),
     ]
     plan = _plan(changes)
-    abort = MultiEditResult(
+    abort = OperationResult(
         success=False,
         status="aborted_overlap",
         files=tuple(
@@ -187,7 +197,7 @@ def test_batch_abort_surfaces_as_aborted_status_with_no_partial_success():
     )
     svc = _make_svc(plan=plan, commit_result=abort)
     result = _run(
-        {"file_path": "/ws/a.py", "line": 1, "new_name": "bar"},
+        {"symbol": "foo", "new_name": "bar"},
         _ctx({"ci_service": svc}),
     )
     assert result.is_error
@@ -197,11 +207,11 @@ def test_batch_abort_surfaces_as_aborted_status_with_no_partial_success():
     assert all(f["status"] == "failed" for f in data["files"])
     assert "overlap" in data["message"].lower()
     assert result.metadata["conflict_file"] == "/ws/b.py"
-    assert result.metadata["batch_status"] == "aborted_overlap"
+    assert result.metadata["operation_status"] == "aborted_overlap"
     assert result.metadata["success_count"] == 0
 
 
-# -- P2: name-based facade (ci_rename) -------------------------------------
+# -- Name-based resolution --------------------------------------------------
 
 
 def _sym(name, *, kind=SymbolKind.FUNCTION, file_path="/ws/a.py", line=3,
@@ -216,7 +226,7 @@ def _make_facade_svc(
     *,
     matches,
     plan: SemanticRenamePlan | None = None,
-    commit_result: MultiEditResult | None = None,
+    commit_result: OperationResult | None = None,
 ):
     svc = MagicMock()
     svc.symbol_index.ensure_built.return_value = True
@@ -228,7 +238,7 @@ def _make_facade_svc(
             new_name="bar", origin=("", 0, 0), changes=(),
         )
     svc.preview_rename_symbol_plan.return_value = svc.rename_symbol_plan.return_value
-    svc.commit_many_against_base.return_value = commit_result or MultiEditResult(
+    svc.commit_operation_against_base.return_value = commit_result or OperationResult(
         success=True,
         status="committed",
         files=tuple(
@@ -241,7 +251,7 @@ def _make_facade_svc(
 
 def _run_facade(tool_input, ctx):
     return asyncio.run(
-        ci_rename.execute(ci_rename.input_model(**tool_input), ctx),
+        ci_rename_symbol.execute(ci_rename_symbol.input_model(**tool_input), ctx),
     )
 
 
@@ -342,7 +352,7 @@ def test_facade_disambiguates_by_kind():
     svc = _make_facade_svc(matches=[matches[1]])
     changes = [_change("/ws/b.py", base="old", final="new")]
     svc.rename_symbol_plan.return_value = _plan(changes)
-    svc.commit_many_against_base.return_value = MultiEditResult(
+    svc.commit_operation_against_base.return_value = OperationResult(
         success=True,
         status="committed",
         files=(EditResult(success=True, file_path="/ws/b.py"),),

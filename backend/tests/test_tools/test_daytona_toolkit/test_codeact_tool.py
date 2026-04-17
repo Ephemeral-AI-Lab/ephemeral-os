@@ -16,7 +16,7 @@ from tools.daytona_toolkit.codeact_tool import (
     _normalize_team_shell_command,
     daytona_codeact,
 )
-from tools.daytona_toolkit.codeact_transaction import (
+from tools.daytona_toolkit.codeact_tool import (
     CodeActTransaction,
     CommitReport,
     FileCommitResult,

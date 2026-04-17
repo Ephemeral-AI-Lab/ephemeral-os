@@ -33,7 +33,7 @@ from tests.test_e2e.daytona_exec_io import read_text_via_exec, write_text_via_ex
 from tools.core.base import ToolExecutionContext
 from tools.daytona_toolkit._daytona_utils import _extract_exit_code, _wrap_bash_command
 from tools.daytona_toolkit.codeact_tool import daytona_codeact
-from tools.daytona_toolkit.codeact_transaction import (
+from tools.daytona_toolkit.codeact_tool import (
     cleanup_codeact_transaction,
     collect_transaction_changes,
     commit_transaction_changes,

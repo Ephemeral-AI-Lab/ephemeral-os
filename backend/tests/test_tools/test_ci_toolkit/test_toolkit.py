@@ -12,7 +12,6 @@ def test_ci_toolkit_registers_all_tools():
         "ci_workspace_structure",
         "ci_query_symbol",
         "ci_diagnostics",
-        "ci_rename",
         "ci_rename_symbol",
     }
     assert expected == names

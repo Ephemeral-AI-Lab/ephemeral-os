@@ -125,7 +125,7 @@ Background daemon thread indexes Python files via AST, non-Python files via tree
 2. For remote sandboxes: batch-downloads files via `sandbox.fs.download_files()` (fast) or individual fallback
 3. Extracts symbols in parallel batches (SYMBOL_INDEX_BATCH_SIZE = 50)
 4. Stores in thread-safe `_symbols: dict[str, _FileSymbols]`
-5. Generation counter incremented on each batch commit
+5. Generation counter incremented on each operation commit
 
 **Symbol Extraction:**
 - **Python:** AST parser → walk recursively for functions, classes, assignments

@@ -10,11 +10,11 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from code_intelligence.types import EditResult, MultiEditResult
+from code_intelligence.types import EditResult, OperationResult
 from code_intelligence.routing.service import CodeIntelligenceService
 from tools.core.base import ToolExecutionContext
 from tools.daytona_toolkit.codeact_tool import daytona_codeact
-from tools.daytona_toolkit.codeact_transaction import (
+from tools.daytona_toolkit.codeact_tool import (
     CodeActTransaction,
     RepoChange,
     collect_transaction_changes,
@@ -103,7 +103,7 @@ async def test_create_codeact_transaction_seeds_dirty_workspace(tmp_path: Path):
         assert (Path(tx.scratch_root) / "new_file.py").read_text(encoding="utf-8") == "created = True\n"
         assert tx.base_tree
     finally:
-        from tools.daytona_toolkit.codeact_transaction import cleanup_codeact_transaction
+        from tools.daytona_toolkit.codeact_tool import cleanup_codeact_transaction
 
         await cleanup_codeact_transaction(sandbox, tx)
 
@@ -125,7 +125,7 @@ async def test_collect_transaction_changes_detects_create_modify_delete(tmp_path
 
         changes = await collect_transaction_changes(sandbox, tx)
     finally:
-        from tools.daytona_toolkit.codeact_transaction import cleanup_codeact_transaction
+        from tools.daytona_toolkit.codeact_tool import cleanup_codeact_transaction
 
         await cleanup_codeact_transaction(sandbox, tx)
 
@@ -150,7 +150,7 @@ async def test_collect_transaction_changes_marks_binary_files_unsupported(tmp_pa
         (Path(tx.scratch_root) / "blob.bin").write_bytes(b"\xff\x00\x01")
         changes = await collect_transaction_changes(sandbox, tx)
     finally:
-        from tools.daytona_toolkit.codeact_transaction import cleanup_codeact_transaction
+        from tools.daytona_toolkit.codeact_tool import cleanup_codeact_transaction
 
         await cleanup_codeact_transaction(sandbox, tx)
 
@@ -180,7 +180,7 @@ async def test_commit_transaction_changes_applies_repo_diff_via_ci(tmp_path: Pat
         changes = await collect_transaction_changes(sandbox, tx)
         report = await commit_transaction_changes(ctx, tx, changes)
     finally:
-        from tools.daytona_toolkit.codeact_transaction import cleanup_codeact_transaction
+        from tools.daytona_toolkit.codeact_tool import cleanup_codeact_transaction
 
         await cleanup_codeact_transaction(sandbox, tx)
 
@@ -189,10 +189,10 @@ async def test_commit_transaction_changes_applies_repo_diff_via_ci(tmp_path: Pat
     assert not (repo / "delete_me.py").exists()
 
 
-async def test_commit_transaction_changes_uses_one_batch_occ_operation(tmp_path: Path):
+async def test_commit_transaction_changes_uses_one_occ_operation(tmp_path: Path):
     repo = _make_repo(tmp_path)
     svc = MagicMock()
-    svc.commit_many_against_base.return_value = MultiEditResult(
+    svc.commit_operation_against_base.return_value = OperationResult(
         success=True,
         status="committed",
         files=(
@@ -230,14 +230,14 @@ async def test_commit_transaction_changes_uses_one_batch_occ_operation(tmp_path:
     )
 
     assert len(report.committed) == 2
-    svc.commit_many_against_base.assert_called_once()
-    batch = svc.commit_many_against_base.call_args.args[0]
-    assert [change.file_path for change in batch] == [
+    svc.commit_operation_against_base.assert_called_once()
+    operation = svc.commit_operation_against_base.call_args.args[0]
+    assert [change.file_path for change in operation] == [
         str(repo / "app.py"),
         str(repo / "created.py"),
     ]
-    assert [change.base_existed for change in batch] == [True, False]
-    assert svc.commit_many_against_base.call_args.kwargs["edit_type"] == "codeact"
+    assert [change.base_existed for change in operation] == [True, False]
+    assert svc.commit_operation_against_base.call_args.kwargs["edit_type"] == "codeact"
 
 
 async def test_commit_transaction_changes_requires_ci_service(tmp_path: Path):
@@ -254,7 +254,7 @@ async def test_commit_transaction_changes_requires_ci_service(tmp_path: Path):
         changes = await collect_transaction_changes(sandbox, tx)
         report = await commit_transaction_changes(ctx, tx, changes)
     finally:
-        from tools.daytona_toolkit.codeact_transaction import cleanup_codeact_transaction
+        from tools.daytona_toolkit.codeact_tool import cleanup_codeact_transaction
 
         await cleanup_codeact_transaction(sandbox, tx)
 
