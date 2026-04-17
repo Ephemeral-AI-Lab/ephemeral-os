@@ -30,10 +30,10 @@ from tools.daytona_toolkit._daytona_utils import (
     record_coordination_warning,
 )
 from tools.core.ci_runtime import (
-    abort_ci_write,
-    finalize_ci_write,
+    CiOperationChange,
+    commit_ci_changes_against_base,
+    get_ci_service,
     occ_required_result,
-    prepare_ci_write,
 )
 
 logger = logging.getLogger(__name__)
@@ -448,36 +448,55 @@ async def daytona_write_file(
             category="write_scope",
             message=contract_warning,
         )
-    prepared = None
+    svc = get_ci_service(context)
+    if svc is None or not hasattr(svc, "commit_operation_against_base"):
+        return occ_required_result("daytona_write_file", file_path)
+
     content_bytes = content.encode("utf-8")
 
-    async def _attempt(_active_sandbox: Any) -> ToolResult:
-        nonlocal prepared
-        prepared, scope_packet, err = prepare_ci_write(
-            context, file_path, allow_scope_drift=True,
-        )
-        if err is not None:
+    async def _attempt(active_sandbox: Any) -> ToolResult:
+        base_content: str | None
+        try:
+            current, existed = await _read_text_file_via_exec(
+                active_sandbox, file_path, allow_missing=True,
+            )
+        except Exception as exc:
             return ToolResult(
-                output=err, is_error=True,
-                metadata={"scope_packet": scope_packet, "conflict": True},
+                output=_path_error(exc, file_path) or f"Cannot read file: {exc}",
+                is_error=True,
             )
-        if prepared is not None:
-            result = finalize_ci_write(
-                context, prepared, content=content,
-                edit_type="write", description="daytona_write_file",
-            )
-            if not getattr(result, "success", False):
-                return ToolResult(
-                    output=str(getattr(result, "message", "") or "Write failed"),
-                    is_error=True,
-                    metadata={"conflict": bool(getattr(result, "conflict", False))},
+        base_content = current if existed else None
+
+        result = commit_ci_changes_against_base(
+            context,
+            [
+                CiOperationChange(
+                    file_path=file_path,
+                    base_content=base_content,
+                    final_content=content,
+                    base_existed=existed,
                 )
-        else:
-            return occ_required_result("daytona_write_file", file_path)
+            ],
+            edit_type="write",
+            description="daytona_write_file",
+        )
+        if not result.success:
+            message = (
+                result.conflict_reason
+                or (result.files[0].message if result.files else "")
+                or "Write failed"
+            )
+            return ToolResult(
+                output=str(message),
+                is_error=True,
+                metadata={"conflict": bool(result.conflict_file)},
+            )
         return _build_write_file_result(
-            context=context, file_path=file_path,
-            bytes_written=len(content_bytes), warning=contract_warning,
-            timings=getattr(result, "timings", None) if prepared is not None else None,
+            context=context,
+            file_path=file_path,
+            bytes_written=len(content_bytes),
+            warning=contract_warning,
+            timings=dict(result.timings),
         )
 
     try:
@@ -493,8 +512,6 @@ async def daytona_write_file(
                 output=_path_error(recovery_exc, parent) or str(recovery_exc),
                 is_error=True,
             )
-    finally:
-        abort_ci_write(context, prepared)
 
 
 # ---------------------------------------------------------------------------

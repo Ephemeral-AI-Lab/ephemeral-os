@@ -134,8 +134,8 @@ class EditResult:
 
 
 @dataclass(frozen=True)
-class BatchChange:
-    """One file's slot in a batch change set.
+class OperationChange:
+    """One file's slot in a tool-level OCC operation.
 
     ``base_content`` is the content the semantic tool inspected at plan time;
     ``base_hash`` is its :func:`content_hash`. ``final_content`` is the
@@ -150,8 +150,9 @@ class BatchChange:
     base_existed: bool = True
 
 
-# Backwards-compatible alias so existing imports/instantiations keep working.
-SemanticFileChange = BatchChange
+# Backwards-compatible aliases so existing imports/instantiations keep working.
+BatchChange = OperationChange
+SemanticFileChange = OperationChange
 
 
 @dataclass(frozen=True)
@@ -174,7 +175,7 @@ MultiEditStatus = Literal[
 
 @dataclass(frozen=True)
 class MultiEditResult:
-    """Outcome of a batch commit against explicit bases."""
+    """Outcome of an atomic multi-file OCC operation against explicit bases."""
 
     success: bool
     status: MultiEditStatus

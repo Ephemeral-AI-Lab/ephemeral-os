@@ -6,13 +6,17 @@ import json
 import subprocess
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import MagicMock
 
 import pytest
 
+from code_intelligence.types import EditResult, MultiEditResult
 from code_intelligence.routing.service import CodeIntelligenceService
 from tools.core.base import ToolExecutionContext
 from tools.daytona_toolkit.codeact_tool import daytona_codeact
 from tools.daytona_toolkit.codeact_transaction import (
+    CodeActTransaction,
+    RepoChange,
     collect_transaction_changes,
     commit_transaction_changes,
     create_codeact_transaction,
@@ -183,6 +187,57 @@ async def test_commit_transaction_changes_applies_repo_diff_via_ci(tmp_path: Pat
     assert len(report.committed) == 2
     assert (repo / "app.py").read_text(encoding="utf-8") == "value = 4\n"
     assert not (repo / "delete_me.py").exists()
+
+
+async def test_commit_transaction_changes_uses_one_batch_occ_operation(tmp_path: Path):
+    repo = _make_repo(tmp_path)
+    svc = MagicMock()
+    svc.commit_many_against_base.return_value = MultiEditResult(
+        success=True,
+        status="committed",
+        files=(
+            EditResult(success=True, file_path=str(repo / "app.py"), message="ok"),
+            EditResult(success=True, file_path=str(repo / "created.py"), message="ok"),
+        ),
+    )
+    ctx = ToolExecutionContext(
+        cwd=repo,
+        metadata={
+            "daytona_cwd": str(repo),
+            "ci_service": svc,
+            "agent_name": "developer",
+        },
+    )
+    tx = CodeActTransaction(repo_root=str(repo), scratch_root="/tmp/unused", base_tree="base")
+
+    report = await commit_transaction_changes(
+        ctx,
+        tx,
+        [
+            RepoChange(
+                path="app.py",
+                status="modified",
+                base_content="value = 1\n",
+                final_content="value = 2\n",
+            ),
+            RepoChange(
+                path="created.py",
+                status="created",
+                base_content=None,
+                final_content="created = True\n",
+            ),
+        ],
+    )
+
+    assert len(report.committed) == 2
+    svc.commit_many_against_base.assert_called_once()
+    batch = svc.commit_many_against_base.call_args.args[0]
+    assert [change.file_path for change in batch] == [
+        str(repo / "app.py"),
+        str(repo / "created.py"),
+    ]
+    assert [change.base_existed for change in batch] == [True, False]
+    assert svc.commit_many_against_base.call_args.kwargs["edit_type"] == "codeact"
 
 
 async def test_commit_transaction_changes_requires_ci_service(tmp_path: Path):

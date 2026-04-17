@@ -52,12 +52,11 @@ from code_intelligence.types import (
     EditResult,
     HoverResult,
     MultiEditResult,
-    PreparedWrite,
+    OperationChange,
     ReferenceInfo,
     SemanticFileChange,
     SemanticRenamePlan,
     SymbolInfo,
-    WriteRequest,
 )
 
 __all__ = [
@@ -213,10 +212,10 @@ class CodeIntelligenceService:
     def rename_symbol_plan(
         self, file_path: str, line: int, character: int, new_name: str,
     ) -> SemanticRenamePlan:
-        """Build a :class:`SemanticRenamePlan` for an OCC batch commit.
+        """Build a :class:`SemanticRenamePlan` for an OCC operation commit.
 
         For each affected file, the file's current content is captured as
-        the per-file OCC base. The batch commit validates each target
+        the per-file OCC base. The operation commit validates each target
         file's base hash at commit time; concurrent edits to *unrelated*
         files do not affect this rename.
         """
@@ -401,92 +400,55 @@ class CodeIntelligenceService:
     # -- Edit API (delegated) -------------------------------------------------
 
     def apply_edit(self, request: EditRequest) -> EditResult:
-        return self._write_coordinator.apply_edit(request)
-
-    def apply_write(self, request: WriteRequest) -> EditResult:
-        return self._write_coordinator.apply_write(request)
-
-    def prepare_write(
-        self,
-        file_path: str,
-        *,
-        agent_id: str = "",
-        expected_hash: str = "",
-        allow_missing: bool = False,
-    ) -> PreparedWrite | EditResult:
-        return self._write_coordinator.prepare_write(
-            file_path,
-            agent_id=agent_id,
-            expected_hash=expected_hash,
-            allow_missing=allow_missing,
+        """Apply a single search/replace edit through the unified OCC path."""
+        current, existed = self._content.read(request.file_path, allow_missing=True)
+        if not existed:
+            return EditResult(
+                success=False,
+                file_path=request.file_path,
+                message=f"Path does not exist: {request.file_path}",
+            )
+        if request.old_text not in current:
+            return EditResult(
+                success=False,
+                file_path=request.file_path,
+                message="Search text not found",
+            )
+        new_content = current.replace(request.old_text, request.new_text, 1)
+        operation = self._write_coordinator.commit_operation_against_base(
+            [
+                SemanticFileChange(
+                    file_path=request.file_path,
+                    base_content=current,
+                    base_hash=content_hash(current),
+                    final_content=new_content,
+                    base_existed=True,
+                )
+            ],
+            agent_id=request.agent_id,
+            edit_type="edit",
+            description=request.description,
+        )
+        if operation.files:
+            return operation.files[0]
+        return EditResult(
+            success=operation.success,
+            file_path=request.file_path,
+            message=operation.conflict_reason,
+            conflict=bool(operation.conflict_file),
+            conflict_reason=operation.status if operation.conflict_file else "",
+            timings=dict(operation.timings),
         )
 
-    def commit_prepared_write(
+    def commit_operation_against_base(
         self,
-        prepared: PreparedWrite,
-        new_content: str,
-        *,
-        edit_type: str,
-        description: str = "",
-        message: str = "Wrote file",
-    ) -> EditResult:
-        return self._write_coordinator.commit_prepared_write(
-            prepared,
-            new_content,
-            edit_type=edit_type,
-            description=description,
-            message=message,
-        )
-
-    def refresh_prepared_write(self, prepared: PreparedWrite) -> PreparedWrite:
-        return self._write_coordinator.refresh_prepared_write(prepared)
-
-    def abort_prepared_write(self, prepared: PreparedWrite) -> None:
-        self._write_coordinator.abort_prepared_write(prepared)
-
-    def commit_change_against_base(
-        self,
-        file_path: str,
-        *,
-        base_content: str | None,
-        final_content: str | None,
-        agent_id: str = "",
-        edit_type: str,
-        description: str = "",
-    ) -> EditResult:
-        return self._write_coordinator.commit_change_against_base(
-            file_path,
-            base_content=base_content,
-            final_content=final_content,
-            agent_id=agent_id,
-            edit_type=edit_type,
-            description=description,
-        )
-
-    def commit_batch_against_base(
-        self,
-        changes: Sequence[SemanticFileChange],
+        changes: Sequence[OperationChange],
         *,
         agent_id: str = "",
         edit_type: str,
         description: str = "",
     ) -> MultiEditResult:
-        return self._write_coordinator.commit_batch_against_base(
-            changes,
-            agent_id=agent_id,
-            edit_type=edit_type,
-            description=description,
-        )
-
-    def commit_many_against_base(
-        self,
-        changes: Sequence[SemanticFileChange],
-        *,
-        agent_id: str = "",
-        edit_type: str,
-        description: str = "",
-    ) -> MultiEditResult:
-        return self._write_coordinator.commit_many_against_base(
+        return self._write_coordinator.commit_operation_against_base(
             changes,
             agent_id=agent_id,
             edit_type=edit_type,
@@ -495,33 +457,6 @@ class CodeIntelligenceService:
 
     def undo_last_edit(self, file_path: str) -> EditResult:
         return self._write_coordinator.undo_last_edit(file_path)
-
-    # -- Edit intents ---------------------------------------------------------
-
-    def publish_edit_intent(
-        self,
-        *,
-        filepath: str,
-        agent_id: str = "",
-        coordination_plan_id: str | None = None,
-        task_id: str | None = None,
-        symbols: list[str] | tuple[str, ...] | None = None,
-        scope: str = "file",
-    ) -> str:
-        return self.arbiter.publish_edit_intent(
-            filepath,
-            agent_id,
-            coordination_plan_id=coordination_plan_id,
-            task_id=task_id,
-            symbols=symbols,
-            scope=scope,
-        )
-
-    def heartbeat_edit_intent(self, intent_id: str) -> bool:
-        return self.arbiter.heartbeat_edit_intent(intent_id)
-
-    def release_edit_intent(self, intent_id: str) -> None:
-        self.arbiter.release_edit_intent(intent_id)
 
     # -- Scope status --------------------------------------------------------
 
@@ -579,7 +514,6 @@ class CodeIntelligenceService:
             "symbol_index_generation": self.symbol_index.generation,
             "recent_changes": recent_changes[:25],
             "active_reservations": [dict(item) for item in self.arbiter.active_reservations(normalized)][:25],
-            "active_edit_intents": [dict(item) for item in self.arbiter.active_edit_intents(normalized)][:25],
             "hotspots": hotspots,
             "generated_at": time.time(),
         }

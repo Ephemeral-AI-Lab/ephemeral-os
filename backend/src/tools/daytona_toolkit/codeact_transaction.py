@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import logging
 import shlex
@@ -10,7 +11,11 @@ from pathlib import PurePosixPath
 from typing import Any
 
 from tools.core.base import ToolExecutionContext
-from tools.core.ci_runtime import commit_ci_change_against_base, get_ci_service
+from tools.core.ci_runtime import (
+    CiOperationChange,
+    commit_ci_changes_against_base,
+    get_ci_service,
+)
 from tools.daytona_toolkit._daytona_utils import (
     _extract_exit_code,
     _read_text_file_via_exec,
@@ -271,24 +276,29 @@ trap cleanup EXIT
 GIT_INDEX_FILE="$tmp_index" git -C "$scratch_root" add -A -- .
 GIT_INDEX_FILE="$tmp_index" git -C "$scratch_root" diff --cached --numstat --no-renames "$base_tree"
 """
-    name_status_output = await _sandbox_exec_checked(
-        sandbox,
-        diff_script,
-        timeout=180,
-        error_prefix="Failed to collect scratch diff",
-    )
-    if not name_status_output.strip():
-        return []
-    binary_paths = _parse_binary_paths(
-        await _sandbox_exec_checked(
+    # Fire both diff queries concurrently — each uses its own tmp index,
+    # so they do not race on any shared lock inside the scratch worktree.
+    name_status_output, numstat_output = await asyncio.gather(
+        _sandbox_exec_checked(
+            sandbox,
+            diff_script,
+            timeout=180,
+            error_prefix="Failed to collect scratch diff",
+        ),
+        _sandbox_exec_checked(
             sandbox,
             numstat_script,
             timeout=180,
             error_prefix="Failed to collect scratch numstat",
-        )
+        ),
     )
+    if not name_status_output.strip():
+        return []
+    binary_paths = _parse_binary_paths(numstat_output)
 
-    changes: list[RepoChange] = []
+    # Classify entries up front; stash early-unsupported rows for later reassembly.
+    entries: list[tuple[str, str]] = []
+    unsupported: dict[str, RepoChange] = {}
     for raw_status, path in _parse_name_status(name_status_output):
         status = {
             "M": "modified",
@@ -296,77 +306,108 @@ GIT_INDEX_FILE="$tmp_index" git -C "$scratch_root" diff --cached --numstat --no-
             "D": "deleted",
         }.get(raw_status, "unsupported")
         if status == "unsupported":
-            changes.append(
-                RepoChange(
-                    path=path,
-                    status="unsupported",
-                    base_content=None,
-                    final_content=None,
-                    message=f"Unsupported git diff status: {raw_status}",
-                )
+            unsupported[path] = RepoChange(
+                path=path,
+                status="unsupported",
+                base_content=None,
+                final_content=None,
+                message=f"Unsupported git diff status: {raw_status}",
             )
+            entries.append((path, "skip"))
             continue
-
         if path in binary_paths:
+            unsupported[path] = RepoChange(
+                path=path,
+                status="unsupported",
+                base_content=None,
+                final_content=None,
+                message=f"{path}: binary repo changes are not supported",
+            )
+            entries.append((path, "skip"))
+            continue
+        entries.append((path, status))
+
+    # Pipeline every read across all changed files: one outer gather fires the
+    # base-read batch and final-read batch simultaneously.
+    base_paths = [p for p, s in entries if s in ("modified", "deleted")]
+    final_paths = [p for p, s in entries if s in ("modified", "created")]
+    base_results, final_results = await asyncio.gather(
+        asyncio.gather(
+            *(
+                _read_git_object_text(
+                    sandbox,
+                    scratch_root=tx.scratch_root,
+                    treeish=tx.base_tree,
+                    path=p,
+                )
+                for p in base_paths
+            ),
+            return_exceptions=True,
+        ),
+        asyncio.gather(
+            *(
+                _read_text_file_via_exec(
+                    sandbox,
+                    str(PurePosixPath(tx.scratch_root) / p),
+                )
+                for p in final_paths
+            ),
+            return_exceptions=True,
+        ),
+    )
+    base_by_path = dict(zip(base_paths, base_results))
+    final_by_path = dict(zip(final_paths, final_results))
+
+    changes: list[RepoChange] = []
+    for path, status in entries:
+        if status == "skip":
+            changes.append(unsupported[path])
+            continue
+
+        base_content: str | None = None
+        final_content: str | None = None
+        error: str | None = None
+
+        if status in ("modified", "deleted"):
+            base_result = base_by_path[path]
+            if isinstance(base_result, BaseException):
+                error = str(base_result)
+            else:
+                content, err = base_result
+                if err is not None:
+                    error = err
+                else:
+                    base_content = content
+
+        if error is None and status in ("modified", "created"):
+            final_result = final_by_path[path]
+            if isinstance(final_result, UnicodeDecodeError):
+                error = f"{path}: Binary or non-UTF-8 content is not supported"
+            elif isinstance(final_result, BaseException):
+                error = str(final_result)
+            else:
+                content, _ = final_result
+                final_content = content
+
+        if error is not None:
             changes.append(
                 RepoChange(
                     path=path,
                     status="unsupported",
                     base_content=None,
                     final_content=None,
-                    message=f"{path}: binary repo changes are not supported",
+                    message=error,
                 )
             )
-            continue
-
-        base_content = None
-        final_content = None
-
-        if status != "created":
-            base_content, base_error = await _read_git_object_text(
-                sandbox,
-                scratch_root=tx.scratch_root,
-                treeish=tx.base_tree,
-                path=path,
+        else:
+            changes.append(
+                RepoChange(
+                    path=path,
+                    status=status,
+                    base_content=base_content,
+                    final_content=final_content,
+                )
             )
-            if base_error is not None:
-                changes.append(
-                    RepoChange(
-                        path=path,
-                        status="unsupported",
-                        base_content=None,
-                        final_content=None,
-                        message=base_error,
-                    )
-                )
-                continue
-
-        if status != "deleted":
-            try:
-                final_content, _ = await _read_text_file_via_exec(
-                    sandbox,
-                    str(PurePosixPath(tx.scratch_root) / path),
-                )
-            except UnicodeDecodeError:
-                changes.append(
-                    RepoChange(
-                        path=path,
-                        status="unsupported",
-                        base_content=None,
-                        final_content=None,
-                        message=f"{path}: Binary or non-UTF-8 content is not supported",
-                    )
-                )
-                continue
-
-        changes.append(
-            RepoChange(
-                path=path,
-                status=status,
-                base_content=base_content,
-                final_content=final_content,
-            )
-        )
 
     return changes
 
@@ -430,34 +471,44 @@ async def commit_transaction_changes(
     if report.errors:
         return report
 
-    for change, file_path in commit_queue:
-        try:
-            result = commit_ci_change_against_base(
-                context,
-                file_path,
-                base_content=change.base_content,
-                final_content=change.final_content,
-                edit_type="codeact",
-                description="daytona_codeact transaction",
-            )
-        except Exception as exc:
+    rel_path_by_file_path = {file_path: change.path for change, file_path in commit_queue}
+    try:
+        result = commit_ci_changes_against_base(
+            context,
+            [
+                CiOperationChange(
+                    file_path=file_path,
+                    base_content=change.base_content,
+                    final_content=change.final_content,
+                    base_existed=change.status != "created",
+                )
+                for change, file_path in commit_queue
+            ],
+            edit_type="codeact",
+            description="daytona_codeact transaction",
+        )
+    except Exception as exc:
+        for change, _ in commit_queue:
             report.errors.append(
                 FileCommitResult(path=change.path, status="error", message=str(exc))
             )
-            continue
+        return report
 
-        message = str(getattr(result, "message", "") or "")
-        if bool(getattr(result, "success", False)):
+    for file_result in result.files:
+        file_path = str(getattr(file_result, "file_path", "") or "")
+        rel_path = rel_path_by_file_path.get(file_path, file_path)
+        message = str(getattr(file_result, "message", "") or result.conflict_reason or "")
+        if bool(getattr(file_result, "success", False)):
             report.committed.append(
-                FileCommitResult(path=change.path, status="ok", message=message)
+                FileCommitResult(path=rel_path, status="ok", message=message)
             )
             continue
-        if bool(getattr(result, "conflict", False)):
+        if bool(getattr(file_result, "conflict", False)) or result.status.startswith("aborted"):
             report.conflicts.append(
-                FileCommitResult(path=change.path, status="conflict", message=message)
+                FileCommitResult(path=rel_path, status="conflict", message=message)
             )
             continue
-        report.errors.append(FileCommitResult(path=change.path, status="error", message=message))
+        report.errors.append(FileCommitResult(path=rel_path, status="error", message=message))
 
     return report
 

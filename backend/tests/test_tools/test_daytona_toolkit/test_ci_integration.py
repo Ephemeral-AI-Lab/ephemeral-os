@@ -9,15 +9,12 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from code_intelligence.types import EditResult, MultiEditResult
 from tools.core.base import ToolExecutionContext
 from tools.core.ci_runtime import (
-    abort_ci_write,
-    commit_ci_change_against_base,
-    finalize_ci_write,
+    CiOperationChange,
+    commit_ci_changes_against_base,
     get_ci_service,
-    prepare_ci_write,
-    prime_cache_after_write,
-    record_edit_in_arbiter,
 )
 from tools.daytona_toolkit.ci_integration import destructive_shell_command_error
 
@@ -43,173 +40,63 @@ def test_get_ci_service_returns_value():
 
 
 # ---------------------------------------------------------------------------
-# prime_cache_after_write
+# commit_ci_changes_against_base — unified OCC entry point
 # ---------------------------------------------------------------------------
 
 
-def test_prime_cache_no_service_is_noop():
-    ctx = _ctx()
-    prime_cache_after_write(ctx, "/some/file.py", "content")  # should not raise
-
-
-def test_prime_cache_calls_service_methods():
+def test_commit_ci_changes_against_base_forwards_to_service():
     svc = MagicMock()
-    ctx = _ctx({"ci_service": svc})
-    prime_cache_after_write(ctx, "/file.py", "hello")
-    svc.symbol_index.refresh.assert_called_once_with("/file.py", "hello")
-    svc.lsp_client.invalidate.assert_called_once_with("/file.py")
-
-
-def test_prime_cache_swallows_exceptions():
-    svc = MagicMock()
-    svc.symbol_index.refresh.side_effect = RuntimeError("boom")
-    ctx = _ctx({"ci_service": svc})
-    prime_cache_after_write(ctx, "/file.py", "hello")  # must not raise
-
-
-# ---------------------------------------------------------------------------
-# prepare_ci_write
-# ---------------------------------------------------------------------------
-
-
-def test_prepare_ci_write_returns_none_without_service():
-    ctx = _ctx()
-    result, packet, err = prepare_ci_write(ctx, "/repo/file.py")
-    assert result is None
-    assert err is None
-
-
-def test_prepare_ci_write_calls_service():
-    svc = MagicMock()
-    prepared = SimpleNamespace(file_path="/repo/file.py", token_id="tok-1")
-    svc.prepare_write.return_value = prepared
-    ctx = _ctx({"ci_service": svc, "agent_run_id": "worker-1"})
-
-    result, packet, err = prepare_ci_write(ctx, "/repo/file.py")
-
-    assert err is None
-    assert result is prepared
-    svc.prepare_write.assert_called_once_with(
-        "/repo/file.py",
-        agent_id="worker-1",
-        expected_hash="",
-        allow_missing=True,
+    svc.commit_batch_against_base.return_value = MultiEditResult(
+        success=True,
+        status="committed",
+        files=(
+            EditResult(success=True, file_path="/repo/a.py"),
+            EditResult(success=True, file_path="/repo/b.py"),
+        ),
     )
+    ctx = _ctx({"ci_service": svc, "agent_name": "developer"})
 
-
-def test_prepare_ci_write_reports_failure():
-    svc = MagicMock()
-    svc.prepare_write.return_value = SimpleNamespace(
-        file_path="/repo/file.py", success=False, message="locked"
-    )
-    ctx = _ctx({"ci_service": svc, "agent_run_id": "worker-1"})
-
-    result, packet, err = prepare_ci_write(ctx, "/repo/file.py")
-
-    assert result is None
-    assert err == "locked"
-
-
-# ---------------------------------------------------------------------------
-# finalize_ci_write
-# ---------------------------------------------------------------------------
-
-
-def test_finalize_ci_write_commits():
-    svc = MagicMock()
-    svc.commit_prepared_write.return_value = SimpleNamespace(success=True)
-    ctx = _ctx({"ci_service": svc})
-    prepared = SimpleNamespace(file_path="/repo/file.py")
-
-    result = finalize_ci_write(
-        ctx, prepared, content="hello", edit_type="write", description="desc",
-    )
-
-    assert result.success is True
-
-
-def test_finalize_ci_write_enriches_prepared_write_with_symbol_boundaries():
-    captured: dict[str, object] = {}
-
-    def commit(prepared, content, *, edit_type, description):
-        captured["prepared"] = prepared
-        captured["content"] = content
-        captured["edit_type"] = edit_type
-        captured["description"] = description
-        return SimpleNamespace(success=True)
-
-    svc = MagicMock()
-    svc.commit_prepared_write.side_effect = commit
-    svc.symbol_index.symbol_boundaries_for_file.return_value = [("foo", 3, 4)]
-    ctx = _ctx({"ci_service": svc})
-    prepared = SimpleNamespace(
-        file_path="/repo/file.py",
-        current_content="header\n\ndef foo():\n    return 1\n",
-        current_hash="hash-1",
-    )
-
-    result = finalize_ci_write(
+    result = commit_ci_changes_against_base(
         ctx,
-        prepared,
-        content="header\n\ndef foo():\n    return 2\n",
-        edit_type="edit",
-        description="change foo",
+        [
+            CiOperationChange(
+                file_path="/repo/a.py",
+                base_content="a = 1\n",
+                final_content="a = 2\n",
+                base_existed=True,
+            ),
+            CiOperationChange(
+                file_path="/repo/b.py",
+                base_content=None,
+                final_content="b = 1\n",
+                base_existed=False,
+            ),
+        ],
+        edit_type="codeact",
+        description="one codeact op",
     )
-
-    enriched = captured["prepared"]
-    assert result.success is True
-    assert getattr(enriched, "line_start", None) == 3
-    assert getattr(enriched, "line_end", None) == 5
-    assert getattr(enriched, "operation_type", None) == "replace"
-
-
-def test_finalize_ci_write_mirrors_team_edit():
-    svc = MagicMock()
-    svc.commit_prepared_write.return_value = SimpleNamespace(success=True)
-    svc.arbiter = MagicMock()
-    team_arbiter = MagicMock()
-    team_arbiter.initialized = True
-    team_run = SimpleNamespace(arbiter=team_arbiter)
-    ctx = _ctx(
-        {
-            "ci_service": svc,
-            "team_run_id": "team-1",
-            "agent_run_id": "agent-run-1",
-            "agent_name": "developer",
-            "work_item_id": "task-7",
-        }
-    )
-    prepared = SimpleNamespace(
-        file_path="/repo/file.py",
-        current_content="before\n",
-        current_hash="old-hash",
-    )
-
-    with patch("tools.core.ci_runtime._get_team_run", return_value=team_run):
-        result = finalize_ci_write(
-            ctx,
-            prepared,
-            content="after\n",
-            edit_type="write",
-            description="update file",
-        )
 
     assert result.success is True
-    team_arbiter.record_edit.assert_called_once_with(
-        file_path="/repo/file.py",
-        team_run_id="team-1",
-        agent_run_id="agent-run-1",
-        task_id="task-7",
-        edit_type="write",
-        old_hash="old-hash",
-        new_hash=hashlib.sha256("after\n".encode("utf-8")).hexdigest()[:16],
-        description="update file",
-    )
+    svc.commit_batch_against_base.assert_called_once()
+    changes = svc.commit_batch_against_base.call_args.args[0]
+    assert [change.file_path for change in changes] == ["/repo/a.py", "/repo/b.py"]
+    assert changes[0].base_hash == hashlib.sha256(b"a = 1\n").hexdigest()[:16]
+    assert changes[1].base_content == ""
+    assert changes[1].base_existed is False
+    assert svc.commit_batch_against_base.call_args.kwargs == {
+        "agent_id": "developer",
+        "edit_type": "codeact",
+        "description": "one codeact op",
+    }
 
 
-def test_commit_ci_change_against_base_mirrors_team_edit():
+def test_commit_ci_changes_against_base_mirrors_team_edit():
     svc = MagicMock()
-    svc.commit_change_against_base.return_value = SimpleNamespace(success=True)
+    svc.commit_batch_against_base.return_value = MultiEditResult(
+        success=True,
+        status="committed",
+        files=(EditResult(success=True, file_path="/repo/file.py"),),
+    )
     svc.arbiter = MagicMock()
     team_arbiter = MagicMock()
     team_arbiter.initialized = True
@@ -225,181 +112,54 @@ def test_commit_ci_change_against_base_mirrors_team_edit():
     )
 
     with patch("tools.core.ci_runtime._get_team_run", return_value=team_run):
-        result = commit_ci_change_against_base(
+        result = commit_ci_changes_against_base(
             ctx,
-            "/repo/file.py",
-            base_content="before\n",
-            final_content="after\n",
+            [
+                CiOperationChange(
+                    file_path="/repo/file.py",
+                    base_content="before\n",
+                    final_content="after\n",
+                    base_existed=True,
+                )
+            ],
             edit_type="codeact",
             description="transaction commit",
         )
 
     assert result.success is True
-    svc.commit_change_against_base.assert_called_once_with(
-        "/repo/file.py",
-        base_content="before\n",
-        final_content="after\n",
-        agent_id="developer",
-        edit_type="codeact",
-        description="transaction commit",
-    )
     team_arbiter.record_edit.assert_called_once_with(
         file_path="/repo/file.py",
         team_run_id="team-1",
         agent_run_id="agent-run-1",
         task_id="task-7",
         edit_type="codeact",
-        old_hash=hashlib.sha256("before\n".encode("utf-8")).hexdigest()[:16],
-        new_hash=hashlib.sha256("after\n".encode("utf-8")).hexdigest()[:16],
+        old_hash=hashlib.sha256(b"before\n").hexdigest()[:16],
+        new_hash=hashlib.sha256(b"after\n").hexdigest()[:16],
         description="transaction commit",
     )
 
 
-# ---------------------------------------------------------------------------
-# abort_ci_write
-# ---------------------------------------------------------------------------
-
-
-def test_abort_ci_write_calls_service():
-    svc = MagicMock()
-    ctx = _ctx({"ci_service": svc})
-    prepared = SimpleNamespace(file_path="/repo/file.py", token_id="tok-1")
-
-    abort_ci_write(ctx, prepared)
-
-    svc.abort_prepared_write.assert_called_once_with(prepared)
-
-
-def test_abort_ci_write_noop_when_none():
+def test_commit_ci_changes_against_base_raises_without_service():
     ctx = _ctx()
-    abort_ci_write(ctx, None)  # should not raise
+    with pytest.raises(RuntimeError):
+        commit_ci_changes_against_base(
+            ctx,
+            [
+                CiOperationChange(
+                    file_path="/repo/file.py",
+                    base_content="",
+                    final_content="hi\n",
+                    base_existed=False,
+                )
+            ],
+            edit_type="write",
+            description="test",
+        )
 
 
 # ---------------------------------------------------------------------------
-# record_edit_in_arbiter
+# destructive_shell_command_error — shell policy regression tests
 # ---------------------------------------------------------------------------
-
-
-def test_record_edit_no_service_is_noop():
-    ctx = _ctx()
-    record_edit_in_arbiter(ctx, "/file.py")  # should not raise
-
-
-def test_record_edit_calls_arbiter():
-    svc = MagicMock()
-    ctx = _ctx({"ci_service": svc})
-    record_edit_in_arbiter(
-        ctx,
-        "/file.py",
-        agent_id="a1",
-        edit_type="edit",
-        old_hash="abc",
-        new_hash="def",
-        description="fix",
-    )
-    svc.arbiter.record_edit.assert_called_once_with(
-        file_path="/file.py",
-        team_run_id="",
-        agent_run_id="",
-        task_id="",
-        edit_type="edit",
-        old_hash="abc",
-        new_hash="def",
-        description="fix",
-    )
-
-
-def test_record_edit_default_args():
-    svc = MagicMock()
-    ctx = _ctx({"ci_service": svc})
-    record_edit_in_arbiter(ctx, "/file.py")
-    svc.arbiter.record_edit.assert_called_once_with(
-        file_path="/file.py",
-        team_run_id="",
-        agent_run_id="",
-        task_id="",
-        edit_type="edit",
-        old_hash="",
-        new_hash="",
-        description="",
-    )
-
-
-def test_record_edit_mirrors_team_arbiter():
-    svc = MagicMock()
-    team_arbiter = MagicMock()
-    team_arbiter.initialized = True
-    team_run = SimpleNamespace(arbiter=team_arbiter)
-    ctx = _ctx(
-        {
-            "ci_service": svc,
-            "team_run_id": "team-1",
-            "agent_run_id": "agent-run-1",
-            "agent_name": "developer",
-            "work_item_id": "task-7",
-        }
-    )
-
-    with patch("tools.core.ci_runtime._get_team_run", return_value=team_run):
-        record_edit_in_arbiter(ctx, "/file.py")
-
-    svc.arbiter.record_edit.assert_called_once_with(
-        file_path="/file.py",
-        team_run_id="team-1",
-        agent_run_id="agent-run-1",
-        task_id="task-7",
-        edit_type="edit",
-        old_hash="",
-        new_hash="",
-        description="",
-    )
-    team_arbiter.record_edit.assert_called_once_with(
-        file_path="/file.py",
-        team_run_id="team-1",
-        agent_run_id="agent-run-1",
-        task_id="task-7",
-        edit_type="edit",
-        old_hash="",
-        new_hash="",
-        description="",
-    )
-
-
-def test_record_edit_does_not_double_mirror_same_arbiter():
-    arbiter = MagicMock()
-    arbiter.initialized = True
-    svc = MagicMock()
-    svc.arbiter = arbiter
-    team_run = SimpleNamespace(arbiter=arbiter)
-    ctx = _ctx(
-        {
-            "ci_service": svc,
-            "team_run_id": "team-1",
-            "agent_run_id": "agent-run-1",
-            "work_item_id": "task-7",
-        }
-    )
-
-    with patch("tools.core.ci_runtime._get_team_run", return_value=team_run):
-        record_edit_in_arbiter(ctx, "/file.py")
-
-    arbiter.record_edit.assert_called_once_with(
-        file_path="/file.py",
-        team_run_id="team-1",
-        agent_run_id="agent-run-1",
-        task_id="task-7",
-        edit_type="edit",
-        old_hash="",
-        new_hash="",
-        description="",
-    )
-
-
-def test_record_edit_swallows_exceptions():
-    svc = MagicMock()
-    svc.arbiter.record_edit.side_effect = RuntimeError("boom")
-    ctx = _ctx({"ci_service": svc})
-    record_edit_in_arbiter(ctx, "/file.py")  # must not raise
 
 
 @pytest.mark.parametrize(

@@ -22,13 +22,10 @@ from code_intelligence.editing.patcher import Patcher, SearchReplaceEdit
 from code_intelligence.editing.time_machine import TimeMachine
 from code_intelligence.routing.content_manager import ContentManager
 from code_intelligence.types import (
-    BatchChange,
-    EditRequest,
     EditResult,
     MultiEditResult,
-    PreparedWrite,
+    OperationChange,
     SemanticFileChange,
-    WriteRequest,
 )
 
 logger = logging.getLogger(__name__)
@@ -325,15 +322,15 @@ class WriteCoordinator:
         finally:
             self._arbiter.release_file_lock(prepared.file_path)
 
-    def commit_batch_against_base(
+    def commit_operation_against_base(
         self,
-        changes: Sequence[BatchChange],
+        changes: Sequence[OperationChange],
         *,
         agent_id: str = "",
         edit_type: str,
         description: str = "",
     ) -> MultiEditResult:
-        """Atomically commit a batch of file changes against per-file bases.
+        """Atomically commit one tool operation against per-file bases.
 
         Semantics:
           * **Sorted-path locking** — acquire all per-file locks in sorted
@@ -343,9 +340,9 @@ class WriteCoordinator:
           * **Create branch** — ``base_existed=False`` with ``base_content==""``.
             Aborts if the file already exists on disk.
           * **Modify branch** — if a file's current hash equals its
-            ``base_hash`` the batch takes ``final_content`` verbatim; otherwise
+            ``base_hash`` the operation takes ``final_content`` verbatim; otherwise
             it tries a non-overlapping merge (same policy as single-file OCC).
-            Any unmergeable mismatch aborts the *whole* batch — no partial
+            Any unmergeable mismatch aborts the *whole* operation — no partial
             rename is ever left on disk.
           * **Two-pass commit** — resolved contents are staged in memory
             first, then written + recorded + refreshed. A write failure
@@ -377,7 +374,7 @@ class WriteCoordinator:
                 self._arbiter.record_conflict("lock_timeout")
                 timings["lock_wait"] = round(time.perf_counter() - lock_started, 6)
                 timings["total"] = round(time.perf_counter() - started, 6)
-                return self._batch_abort(
+                return self._operation_abort(
                     changes,
                     status="aborted_lock",
                     conflict_file=change.file_path,
@@ -389,11 +386,11 @@ class WriteCoordinator:
 
         try:
             # 3. Resolve every file against its plan-time base, staging in
-            #    memory. Any unmergeable file aborts the batch before we
+            #    memory. Any unmergeable file aborts the operation before we
             #    touch disk.
             resolve_started = time.perf_counter()
             # (change, current_now, resolved_content_or_None, current_hash, existed_now)
-            resolved: list[tuple[BatchChange, str, str | None, str, bool]] = []
+            resolved: list[tuple[OperationChange, str, str | None, str, bool]] = []
             for change in sorted_changes:
                 try:
                     current_now, existed_now = self._content.read(
@@ -402,7 +399,7 @@ class WriteCoordinator:
                 except Exception as exc:  # pragma: no cover - defensive I/O
                     timings["resolve"] = round(time.perf_counter() - resolve_started, 6)
                     timings["total"] = round(time.perf_counter() - started, 6)
-                    return self._batch_abort(
+                    return self._operation_abort(
                         changes,
                         status="failed",
                         conflict_file=change.file_path,
@@ -418,7 +415,7 @@ class WriteCoordinator:
                         self._arbiter.record_conflict("aborted_version")
                         timings["resolve"] = round(time.perf_counter() - resolve_started, 6)
                         timings["total"] = round(time.perf_counter() - started, 6)
-                        return self._batch_abort(
+                        return self._operation_abort(
                             changes,
                             status="aborted_version",
                             conflict_file=change.file_path,
@@ -434,7 +431,7 @@ class WriteCoordinator:
                         self._arbiter.record_conflict("aborted_version")
                         timings["resolve"] = round(time.perf_counter() - resolve_started, 6)
                         timings["total"] = round(time.perf_counter() - started, 6)
-                        return self._batch_abort(
+                        return self._operation_abort(
                             changes,
                             status="aborted_version",
                             conflict_file=change.file_path,
@@ -456,7 +453,7 @@ class WriteCoordinator:
                         self._arbiter.record_conflict(status)
                         timings["resolve"] = round(time.perf_counter() - resolve_started, 6)
                         timings["total"] = round(time.perf_counter() - started, 6)
-                        return self._batch_abort(
+                        return self._operation_abort(
                             changes,
                             status=status,
                             conflict_file=change.file_path,
@@ -468,7 +465,7 @@ class WriteCoordinator:
                 )
             timings["resolve"] = round(time.perf_counter() - resolve_started, 6)
 
-            # 4. Commit pass. A mid-batch I/O failure triggers best-effort
+            # 4. Commit pass. A mid-operation I/O failure triggers best-effort
             #    rollback of already-written files via TimeMachine.
             apply_started = time.perf_counter()
             commit_results: list[EditResult] = []
@@ -497,7 +494,7 @@ class WriteCoordinator:
                         success=False,
                         status="failed",
                         files=tuple(
-                            _result(c.file_path, f"batch failed on {change.file_path}: {exc}")
+                            _result(c.file_path, f"operation failed on {change.file_path}: {exc}")
                             for c in sorted_changes
                         ),
                         conflict_file=change.file_path,
@@ -548,8 +545,13 @@ class WriteCoordinator:
         edit_type: str,
         description: str = "",
     ) -> MultiEditResult:
-        """Shim: delegates to :meth:`commit_batch_against_base`."""
-        return self.commit_batch_against_base(changes, agent_id=agent_id, edit_type=edit_type, description=description)
+        """Compatibility shim: delegates to the tool-operation commit path."""
+        return self.commit_operation_against_base(
+            changes,
+            agent_id=agent_id,
+            edit_type=edit_type,
+            description=description,
+        )
 
     @staticmethod
     def _merge_against_base(
@@ -585,7 +587,7 @@ class WriteCoordinator:
 
     def _resolve_semantic_change(
         self,
-        change: BatchChange,
+        change: OperationChange,
         current_now: str,
         existed_now: bool,
     ) -> tuple[str, tuple[str, str] | None]:
@@ -618,7 +620,7 @@ class WriteCoordinator:
         )
 
     @staticmethod
-    def _batch_abort(
+    def _operation_abort(
         changes: Sequence[SemanticFileChange],
         *,
         status: str,

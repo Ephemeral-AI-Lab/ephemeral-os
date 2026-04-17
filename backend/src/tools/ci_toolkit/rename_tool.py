@@ -10,8 +10,8 @@ Exposes two tools:
   ``status="ambiguous"`` with candidates when a name matches multiple
   places, and otherwise delegates to the same batch OCC commit.
 
-Both route through ``commit_many_against_base``: the whole rename lands or
-none of it does — never leaves a half-renamed tree.
+Both route through the shared OCC commit entry point: the whole rename lands
+or none of it does — never leaves a half-renamed tree.
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ from code_intelligence.types import SymbolKind
 from pydantic import BaseModel, Field
 
 from tools.core.base import ToolExecutionContext, ToolResult
-from tools.core.ci_runtime import get_ci_service
+from tools.core.ci_runtime import commit_ci_changes_against_base, get_ci_service
 from tools.core.decorator import tool
 from tools.core.sandbox_runtime import resolve_daytona_path
 from tools.daytona_toolkit._daytona_utils import (
@@ -320,7 +320,8 @@ def _perform_rename(
         or context.metadata.get("agent_id")
         or "",
     )
-    result = svc.commit_many_against_base(
+    result = commit_ci_changes_against_base(
+        context,
         changes,
         agent_id=agent_id,
         edit_type="rename",
