@@ -19,14 +19,15 @@ Task statuses are `pending`, `ready`, `running`, `expanded`, `replanning`, `done
 
 ## Replanning
 
-When a task fails, TaskCenter marks the original task `replanning` and creates a replanner task. The replanner submits `submit_replan(new_tasks=[...], cancel_ids=[...])`.
+When a task fails, TaskCenter marks the original task `replanning`, creates a replanner task, and rewires every non-terminal dependent from the failed task to the replanner. The replanner submits `submit_replan(new_tasks=[...], cancel_ids=[...])`.
 
 After the replan:
 
-- New tasks are inserted at each submitted task's explicit `parent_id`.
-- Cancelled sibling tasks are marked `cancelled`.
-- Dependents of the original failed task are rewired to the inserted replacement tasks.
-- If the replan cannot produce replacement work, the original task fails and cascade handling applies.
+- New tasks are inserted at each submitted task's explicit `parent_id`; this may be the replanner itself, the replanner's parent, or a surviving task inside that parent projection.
+- Cancelled not-completed tasks are marked `cancelled`, including cascaded descendants and dependents.
+- The replanner is marked `done` immediately when it has no direct child tasks, or `expanded` when it created direct child tasks.
+- Expanded replanners are marked `done` only after all direct children finish successfully.
+- The original failed task is marked `failed` without cascading after the replanner succeeds, because dependents have already been rewired to the replanner.
 
 ## Notes
 

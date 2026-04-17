@@ -10,15 +10,18 @@ from __future__ import annotations
 import asyncio
 import re
 
+from team.models import BudgetConfig, BudgetState
+from team.persistence.ltree_utils import _escape_char, path_to_ltree
+from team.persistence.task_record import TaskRecord
+from team.runtime.dispatch_queue import DispatchQueue
+from team.task_center import TaskCenter
+
 # ---------------------------------------------------------------------------
 # ltree_utils
 # ---------------------------------------------------------------------------
 
-from team.persistence.ltree_utils import path_to_ltree, _escape_char
-
 
 class TestPathToLtree:
-
     def test_simple_directory(self):
         assert path_to_ltree("src/auth/") == "src.auth"
 
@@ -53,29 +56,27 @@ class TestPathToLtree:
     def test_labels_are_ltree_safe(self):
         """All labels must match [a-zA-Z0-9_]+."""
         result = path_to_ltree("src/some.weird-file@v2.py")
-        for label in result.split('.'):
-            assert re.match(r'^[a-zA-Z0-9_]+$', label), f"Unsafe label: {label}"
+        for label in result.split("."):
+            assert re.match(r"^[a-zA-Z0-9_]+$", label), f"Unsafe label: {label}"
 
 
 class TestEscapeChar:
     def test_dot(self):
-        assert _escape_char('.') == 'D'
+        assert _escape_char(".") == "D"
 
     def test_hyphen(self):
-        assert _escape_char('-') == 'H'
+        assert _escape_char("-") == "H"
 
     def test_at_sign(self):
-        assert _escape_char('@') == 'X40'
+        assert _escape_char("@") == "X40"
 
     def test_space(self):
-        assert _escape_char(' ') == 'X20'
+        assert _escape_char(" ") == "X20"
 
 
 # ---------------------------------------------------------------------------
 # ORM models — structure checks
 # ---------------------------------------------------------------------------
-
-from team.persistence.task_record import TaskRecord
 
 
 class TestTaskRecord:
@@ -87,7 +88,9 @@ class TestTaskRecord:
         assert pk_cols == {"id", "team_run_id"}
 
     def test_explicit_status(self):
-        r = TaskRecord(id="t1", team_run_id="r1", agent_name="dev", objective="do stuff", status="pending")
+        r = TaskRecord(
+            id="t1", team_run_id="r1", agent_name="dev", objective="do stuff", status="pending"
+        )
         assert r.status == "pending"
 
     def test_explicit_deps(self):
@@ -99,36 +102,40 @@ class TestTaskRecord:
 # TaskCenter — structure check (no DB)
 # ---------------------------------------------------------------------------
 
-from team.task_center import TaskCenter
-
 
 class TestTaskCenterStructure:
     def test_has_required_methods(self):
         """Verify the unified TaskCenter API has all required methods."""
-        assert callable(getattr(TaskCenter, 'mark_running', None))
-        assert callable(getattr(TaskCenter, 'get_task', None))
-        assert callable(getattr(TaskCenter, 'fail', None))
-        assert callable(getattr(TaskCenter, 'cancel_all_pending', None))
-        assert callable(getattr(TaskCenter, 'cancel_all_running', None))
-        assert callable(getattr(TaskCenter, 'request_replan', None))
+        assert callable(getattr(TaskCenter, "mark_running", None))
+        assert callable(getattr(TaskCenter, "get_task", None))
+        assert callable(getattr(TaskCenter, "fail", None))
+        assert callable(getattr(TaskCenter, "cancel_all_pending", None))
+        assert callable(getattr(TaskCenter, "cancel_all_running", None))
+        assert callable(getattr(TaskCenter, "request_replan", None))
         # Orchestration
-        assert callable(getattr(TaskCenter, 'complete_task', None))
-        assert callable(getattr(TaskCenter, 'apply_replan', None))
+        assert callable(getattr(TaskCenter, "complete_task", None))
+        assert callable(getattr(TaskCenter, "apply_replan", None))
         # Manager accessors (notes/store/activity exposed as properties)
-        assert isinstance(getattr(TaskCenter, 'notes', None), property)
-        assert isinstance(getattr(TaskCenter, 'store', None), property)
-        assert isinstance(getattr(TaskCenter, 'activity', None), property)
-
-
-from team.runtime.dispatch_queue import DispatchQueue
+        assert isinstance(getattr(TaskCenter, "notes", None), property)
+        assert isinstance(getattr(TaskCenter, "store", None), property)
+        assert isinstance(getattr(TaskCenter, "activity", None), property)
 
 
 class TestDispatchQueueStructure:
     def test_has_pop_ready(self):
-        assert callable(getattr(DispatchQueue, 'pop_ready', None))
+        assert callable(getattr(DispatchQueue, "pop_ready", None))
 
 
 class _FakeCascadeResult:
+    def __init__(self, rows=None) -> None:
+        self._rows = rows or []
+
+    def scalars(self):
+        return self
+
+    def all(self):
+        return self._rows
+
     def fetchall(self):
         return []
 
@@ -164,10 +171,8 @@ class _FakeSessionFactory:
         return _Ctx()
 
 
-def test_cascade_cancel_recursive_seeds_root_then_walks_dependents():
+def test_cascade_cancel_recursive_loads_non_terminal_task_graph():
     session = _FakeCascadeSession()
-    from team.task_center import TaskCenter
-    from team.models import BudgetConfig, BudgetState
     tc = TaskCenter(
         session_factory=_FakeSessionFactory(session),
         team_run_id="run-1",
@@ -178,10 +183,5 @@ def test_cascade_cancel_recursive_seeds_root_then_walks_dependents():
     asyncio.run(tc.store.cascade_cancel_recursive("task-1"))
 
     sql = session.statements[0]
-    assert "WITH RECURSIVE dep_chain" in sql
-    assert "UNION ALL" in sql
-    assert "= ANY (descendant.deps)" in sql
-    assert "descendant.parent_id = dep_chain.id" in sql
-    assert "UPDATE tasks" in sql
-    assert "dep_chain.id !=" in sql
-    assert "RETURNING tasks.id" in sql
+    assert "SELECT tasks.id" in sql
+    assert "tasks.status NOT IN" in sql

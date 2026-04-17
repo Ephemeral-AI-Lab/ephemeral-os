@@ -7,9 +7,6 @@ Use `submit_replan(new_tasks=[...], cancel_ids=[])` when the plan structure is s
 - An isolated task failed and needs a corrective retry or follow-up.
 - A transient error needs one retry with the same or narrower scope.
 - Follow-up validation is needed after a fix lands.
-- Include `expected_projection` when parent-bounded dependency shape or cascade
-  impact matters so `submit_replan(...)` can reject a mismatched projection
-  before committing.
 
 ## Avoid
 
@@ -21,6 +18,7 @@ Use `submit_replan(new_tasks=[...], cancel_ids=[])` when the plan structure is s
 - Must confirm owner paths live with CI before submitting.
 - Must read sibling notes before deciding corrective scope.
 - Each new task must have: `id`, `parent_id`, `name` (agent), `spec`, `deps`, `scope_paths`.
+- `parent_id` may be the current replanner task, the replanner's parent, or a surviving task inside that parent projection.
 - Each `spec` must use these sections in order: `Goal`, `Environment`, `Scope`, `Context`, `Acceptance Criteria`.
 - Must call `context_changed_since()` before submitting if freshness moved.
 - For layered failures, emit a two-phase corrective plan (see Hard Rule 10 in main playbook).

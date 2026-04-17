@@ -28,17 +28,23 @@ def build_resumed_run(
     meta = created_event.data
     budgets = budget_config_from_event(meta)
     services = build_team_runtime_services(
-        team_run_id=team_run_id, budgets=budgets, budget_state=BudgetState(),
-        user_request=meta.get("user_request") or "", goal=meta.get("goal"),
-        repo_root=meta.get("repo_root") or None, event_store=store,
+        team_run_id=team_run_id,
+        budgets=budgets,
+        budget_state=BudgetState(),
+        user_request=meta.get("user_request") or "",
+        goal=meta.get("goal"),
+        repo_root=meta.get("repo_root") or None,
+        event_store=store,
     )
     run = team_run_cls(
         session_id=meta.get("session_id") or "",
         user_request=meta.get("user_request") or "",
-        budgets=budgets, goal=meta.get("goal"),
+        budgets=budgets,
+        goal=meta.get("goal"),
         sandbox_id=meta.get("sandbox_id") or None,
         repo_root=meta.get("repo_root") or None,
-        team_run_id=team_run_id, services=services,
+        team_run_id=team_run_id,
+        services=services,
     )
     roster_data = meta.get("roster")
     if isinstance(roster_data, dict):
@@ -48,7 +54,9 @@ def build_resumed_run(
 
 def budget_config_from_event(meta: dict[str, Any]) -> BudgetConfig:
     valid_keys = set(BudgetConfig.__dataclass_fields__.keys())
-    return BudgetConfig(**{k: v for k, v in dict(meta.get("budgets") or {}).items() if k in valid_keys})
+    return BudgetConfig(
+        **{k: v for k, v in dict(meta.get("budgets") or {}).items() if k in valid_keys}
+    )
 
 
 def restore_ready_queue(*, graph: dict[str, Task]) -> list[str]:
@@ -58,17 +66,20 @@ def restore_ready_queue(*, graph: dict[str, Task]) -> list[str]:
 def task_from_dict(data: dict[str, Any]) -> Task:
     def _parse_dt(iso: str | None) -> datetime | None:
         return datetime.fromisoformat(iso) if iso else None
+
     objective = str(data.get("objective") or "")
     if not objective:
         raise ValueError("Task payload requires a non-empty 'objective'")
     return Task(
-        id=data["id"], team_run_id=data["team_run_id"],
+        id=data["id"],
+        team_run_id=data["team_run_id"],
         agent_name=data["agent_name"],
         status=TaskStatus.of(data.get("status") or TaskStatus.PENDING.value),
         objective=objective,
         deps=list(data.get("deps") or []),
         scope_paths=list(data.get("scope_paths") or []),
-        parent_id=data.get("parent_id"), root_id=data.get("root_id") or "",
+        parent_id=data.get("parent_id"),
+        root_id=data.get("root_id") or "",
         depth=int(data.get("depth") or 0),
         pending_dep_count=int(data.get("pending_dep_count") or 0),
         agent_run_id=data.get("agent_run_id"),
@@ -76,14 +87,18 @@ def task_from_dict(data: dict[str, Any]) -> Task:
         started_at=_parse_dt(data.get("started_at")),
         finished_at=_parse_dt(data.get("finished_at")),
         failure_reason=data.get("failure_reason"),
+        fired_by_task_id=data.get("fired_by_task_id"),
         retry_count=int(data.get("retry_count") or 0),
         max_retries=int(data.get("max_retries") or 2),
     )
 
 
 def apply_replayed_event(
-    *, event: "TeamRunEvent", graph: dict[str, Task],
-    services: TeamRuntimeServices, root_id: str | None,
+    *,
+    event: "TeamRunEvent",
+    graph: dict[str, Task],
+    services: TeamRuntimeServices,
+    root_id: str | None,
 ) -> tuple[str | None, tuple[int, int, int] | None, str | None]:
     last_budget: tuple[int, int, int] | None = None
     final_status: str | None = None
@@ -104,6 +119,8 @@ def apply_replayed_event(
                 t.agent_run_id = event.data["agent_run_id"]
             if "failure_reason" in event.data:
                 t.failure_reason = event.data["failure_reason"]
+            if "fired_by_task_id" in event.data:
+                t.fired_by_task_id = event.data["fired_by_task_id"]
             if "retry_count" in event.data:
                 t.retry_count = int(event.data.get("retry_count") or 0)
             if "max_retries" in event.data:

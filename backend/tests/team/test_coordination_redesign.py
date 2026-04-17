@@ -3,6 +3,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
+from pydantic import ValidationError
 
 from agents.registry import get_definition
 from team.builtins import register_all as register_team_builtins
@@ -279,16 +280,6 @@ async def test_submit_replan_accepts_parent_projection_and_child_insert():
                     "scope_paths": ["src/api.py"],
                 },
             ],
-            expected_projection={
-                "root_parent_id": "parent",
-                "tasks": {
-                    "repair": {"parent_id": "survivor", "deps": []},
-                    "survivor": {"parent_id": "parent", "deps": []},
-                },
-                "cancelled": {
-                    "stale": {"cascade": []},
-                },
-            },
         ),
         ctx,
     )
@@ -297,65 +288,14 @@ async def test_submit_replan_accepts_parent_projection_and_child_insert():
     assert "Replan accepted (1 new tasks, 1 cancelled)" in result.output
 
 
-@pytest.mark.asyncio
-async def test_submit_replan_rejects_mismatched_expected_projection():
-    task_center = _AsyncTaskCenterStub()
-    task_center.graph = {
-        "replanner-task": Task(
-            id="replanner-task",
-            team_run_id="run-1",
-            agent_name="team_replanner",
-            status=TaskStatus.READY,
-            objective="recover",
-            parent_id="parent",
-        ),
-        "survivor": Task(
-            id="survivor",
-            team_run_id="run-1",
-            agent_name="validator",
-            status=TaskStatus.PENDING,
-            objective="validate",
-            deps=["repair"],
-            parent_id="parent",
-        ),
-    }
-    ctx = ToolExecutionContext(
-        cwd="/tmp",
-        metadata={
-            "task_center": task_center,
-            "work_item_id": "replanner-task",
-            "agent_name": "team_replanner",
-            "role": "replanner",
-        },
-    )
+def test_submit_replan_rejects_removed_expected_projection_argument():
+    with pytest.raises(ValidationError):
+        SubmitReplanTool.input_model(expected_projection={"root_parent_id": "parent"})
 
-    tool = SubmitReplanTool()
-    result = await tool.execute(
-        tool.input_model(
-            new_tasks=[
-                {
-                    "id": "repair",
-                    "parent_id": "parent",
-                    "spec": _spec("Repair the stale implementation path."),
-                    "name": "developer",
-                    "scope_paths": ["src/api.py"],
-                },
-            ],
-            expected_projection={
-                "root_parent_id": "parent",
-                "tasks": {
-                    "repair": {"parent_id": "parent", "deps": []},
-                    "survivor": {"parent_id": "parent", "deps": []},
-                },
-                "cancelled": {},
-            },
-        ),
-        ctx,
-    )
 
-    assert result.is_error is True
-    assert "expected_projection deps mismatch for 'survivor'" in result.output
-    assert ctx.metadata.get("resolved_plan") is None
+def test_submit_replan_rejects_removed_output_argument():
+    with pytest.raises(ValidationError):
+        SubmitReplanTool.input_model(output="replan rationale")
 
 
 @pytest.mark.asyncio

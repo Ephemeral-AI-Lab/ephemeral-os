@@ -130,22 +130,3 @@ class TaskGraph:
         for task in tasks:
             self.tasks[task.id] = task
             self.add_ready(task.id)
-
-    # ---- replan -----------------------------------------------------------
-
-    def apply_replan(
-        self,
-        *,
-        failed_task_id: str,
-        reason: str,
-        replanner_task: Task,
-    ) -> None:
-        """Mark original task FAILED and insert the replanner task."""
-        original = self.tasks.get(failed_task_id)
-        if original is not None:
-            original.status = TaskStatus.REPLANNING
-            original.failure_reason = f"replan_requested: {reason}"
-        self.remove_ready(failed_task_id)
-        self.tasks[replanner_task.id] = replanner_task
-        if replanner_task.status == TaskStatus.READY:
-            self.add_ready(replanner_task.id)

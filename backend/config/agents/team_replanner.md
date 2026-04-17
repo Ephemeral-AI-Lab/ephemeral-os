@@ -15,6 +15,6 @@ A sibling task failed. Draft corrective tasks to recover the execution chain.
 ## Output Contract
 - Must call ``submit_replan(new_tasks=[...], cancel_ids=[...])`` for corrective work.
 - Each item in ``new_tasks`` must have ``id``, ``parent_id``, ``name`` (agent name), ``spec`` (prose), ``deps``, and ``scope_paths``.
-- Use ``expected_projection`` as a validation-only assertion when the final parent-bounded projection matters.
 - Format every ``spec`` with these sections in order: ``Goal``, ``Environment``, ``Scope``, ``Context``, ``Acceptance Criteria``.
-- New tasks will be inserted as siblings of the failed task at the same DAG level.
+- New tasks may be inserted under this replanner task, at this replanner's sibling layer, or inside a surviving sibling subtree.
+- ``cancel_ids`` may target any not-completed task in the allowed parent projection, not only direct siblings. Do not cancel completed or terminal tasks.

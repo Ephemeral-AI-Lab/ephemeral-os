@@ -54,13 +54,22 @@ class TeamRunEvent:
 
 
 def make_team_run_created(
-    team_run_id: str, *, session_id: str, user_request: str,
-    goal: str | None, repo_root: str | None, sandbox_id: str | None = None,
-    budgets: dict[str, Any], roster: dict[str, list[str]] | None = None,
+    team_run_id: str,
+    *,
+    session_id: str,
+    user_request: str,
+    goal: str | None,
+    repo_root: str | None,
+    sandbox_id: str | None = None,
+    budgets: dict[str, Any],
+    roster: dict[str, list[str]] | None = None,
 ) -> TeamRunEvent:
     data: dict[str, Any] = {
-        "session_id": session_id, "user_request": user_request,
-        "goal": goal, "repo_root": repo_root, "sandbox_id": sandbox_id,
+        "session_id": session_id,
+        "user_request": user_request,
+        "goal": goal,
+        "repo_root": repo_root,
+        "sandbox_id": sandbox_id,
         "budgets": budgets,
     }
     if roster:
@@ -79,7 +88,10 @@ def make_task_added(team_run_id: str, task: dict[str, Any]) -> TeamRunEvent:
 
 
 def make_task_status(
-    team_run_id: str, task_id: str, status: str, **fields: Any,
+    team_run_id: str,
+    task_id: str,
+    status: str,
+    **fields: Any,
 ) -> TeamRunEvent:
     payload: dict[str, Any] = {"task_id": task_id, "status": status}
     payload.update(fields)
@@ -111,38 +123,64 @@ def make_note_posted(
 
 
 def make_budget_update(
-    team_run_id: str, *, tasks_used: int, note_bytes_used: int, replans_used: int = 0,
+    team_run_id: str,
+    *,
+    tasks_used: int,
+    note_bytes_used: int,
+    replans_used: int = 0,
 ) -> TeamRunEvent:
     return TeamRunEvent(
-        team_run_id=team_run_id, kind="budget_update",
-        data={"tasks_used": tasks_used, "note_bytes_used": note_bytes_used, "replans_used": replans_used},
+        team_run_id=team_run_id,
+        kind="budget_update",
+        data={
+            "tasks_used": tasks_used,
+            "note_bytes_used": note_bytes_used,
+            "replans_used": replans_used,
+        },
     )
 
 
 def make_checkpoint_taken(
-    team_run_id: str, *, checkpoint_id: str, sequence: int, label: str | None,
+    team_run_id: str,
+    *,
+    checkpoint_id: str,
+    sequence: int,
+    label: str | None,
 ) -> TeamRunEvent:
     return TeamRunEvent(
-        team_run_id=team_run_id, kind="checkpoint_taken",
+        team_run_id=team_run_id,
+        kind="checkpoint_taken",
         data={"checkpoint_id": checkpoint_id, "sequence": sequence, "label": label},
     )
 
 
 def make_checkpoint_repo_state(
-    team_run_id: str, *, checkpoint_id: str, repo_patch: str,
+    team_run_id: str,
+    *,
+    checkpoint_id: str,
+    repo_patch: str,
 ) -> TeamRunEvent:
     return TeamRunEvent(
-        team_run_id=team_run_id, kind="checkpoint_repo_state",
-        data={"checkpoint_id": checkpoint_id, "repo_patch": repo_patch,
-              "repo_patch_bytes": len(repo_patch.encode("utf-8"))},
+        team_run_id=team_run_id,
+        kind="checkpoint_repo_state",
+        data={
+            "checkpoint_id": checkpoint_id,
+            "repo_patch": repo_patch,
+            "repo_patch_bytes": len(repo_patch.encode("utf-8")),
+        },
     )
 
 
 def make_file_changed(
-    team_run_id: str, *, task_id: str | None, path: str, op: str,
+    team_run_id: str,
+    *,
+    task_id: str | None,
+    path: str,
+    op: str,
 ) -> TeamRunEvent:
     return TeamRunEvent(
-        team_run_id=team_run_id, kind="file_changed",
+        team_run_id=team_run_id,
+        kind="file_changed",
         data={"task_id": task_id, "path": path, "op": op},
     )
 
@@ -153,19 +191,26 @@ def make_file_changed(
 def task_to_dict(task: Any) -> dict[str, Any]:
     """Serialise a ``Task`` dataclass to a JSON-safe dict."""
     from team.models import Task
+
     assert isinstance(task, Task)
     return {
-        "id": task.id, "team_run_id": task.team_run_id,
-        "agent_name": task.agent_name, "status": task.status.value,
-        "objective": task.objective, "deps": list(task.deps),
+        "id": task.id,
+        "team_run_id": task.team_run_id,
+        "agent_name": task.agent_name,
+        "status": task.status.value,
+        "objective": task.objective,
+        "deps": list(task.deps),
         "scope_paths": list(task.scope_paths),
         "parent_id": task.parent_id,
-        "root_id": task.root_id, "depth": task.depth,
+        "root_id": task.root_id,
+        "depth": task.depth,
         "pending_dep_count": task.pending_dep_count,
-        "retry_count": task.retry_count, "max_retries": task.max_retries,
+        "retry_count": task.retry_count,
+        "max_retries": task.max_retries,
         "agent_run_id": task.agent_run_id,
         "created_at": task.created_at.isoformat() if task.created_at else None,
         "started_at": task.started_at.isoformat() if task.started_at else None,
         "finished_at": task.finished_at.isoformat() if task.finished_at else None,
         "failure_reason": task.failure_reason,
+        "fired_by_task_id": task.fired_by_task_id,
     }

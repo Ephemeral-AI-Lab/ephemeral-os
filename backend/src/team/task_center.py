@@ -33,7 +33,6 @@ from team.models import (
     ReplanRequest,
     Task,
     TaskDefinition,
-    TaskStatus,
     _utcnow,
 )
 from team.note_manager import NoteManager
@@ -92,7 +91,9 @@ class TaskCenter:
             graph_getter=lambda: self._store.graph,
             emit_cb=self._emit,
             cascade_fail_cb=self._mark_failed_and_cascade,
+            cancel_active_task_cb=lambda task_id: self._cancel_active_task(task_id),
         )
+        self._cancel_active_task_cb: Callable[[str], bool] | None = None
 
         self._notes = NoteManager(
             team_run_id=team_run_id,
@@ -190,6 +191,38 @@ class TaskCenter:
     def _new_id() -> str:
         return str(uuid.uuid4())
 
+    def set_cancel_agent_run_callback(self, callback: Callable[[str], bool] | None) -> None:
+        self._cancel_active_task_cb = callback
+
+    def _cancel_active_task(self, task_id: str) -> bool:
+        if self._cancel_active_task_cb is None:
+            return False
+        return bool(self._cancel_active_task_cb(task_id))
+
+    async def _emit_replanned_origin_if_finalized(self, replanner_task_id: str) -> None:
+        origin_id = await self._store.finalize_replanned_origin(replanner_task_id)
+        if origin_id is None:
+            return
+        origin = self.graph.get(origin_id)
+        if origin is not None:
+            self._transitions.emit_full_status(origin)
+
+    async def _mark_done_emit_promotions(self, task_id: str) -> None:
+        promoted_ready = await self._store.mark_done(task_id)
+        self._transitions.emit_status(task_id, "done", finished_at=_utcnow().isoformat())
+        for dep_id in promoted_ready:
+            dep_task = self.graph.get(dep_id)
+            if dep_task is None:
+                continue
+            self._transitions.emit_full_status(dep_task)
+        for promoted_id in await self._store.maybe_promote_expanded_parent(task_id):
+            promoted_task = self.graph.get(promoted_id)
+            if promoted_task is None:
+                continue
+            self._transitions.emit_full_status(promoted_task)
+            if promoted_task.fired_by_task_id:
+                await self._emit_replanned_origin_if_finalized(promoted_id)
+
     async def _mark_failed_and_cascade(self, task_id: str, reason: str) -> None:
         if reason.startswith("InvalidPlan:"):
             rec = await self._store.get_record(task_id)
@@ -262,32 +295,31 @@ class TaskCenter:
         if not ok:
             return []
 
+        if result.submitted_replan is not None:
+            outcome = await self.apply_replan(
+                replan_task_id=task_id,
+                add_tasks=result.submitted_replan.add_tasks,
+                cancel_ids=result.submitted_replan.cancel_ids,
+                target_parent_id=rec.parent_id,
+            )
+            if int(outcome.get("replanner_child_count") or 0) > 0:
+                await self._store.mark_expanded(task_id)
+                self._transitions.emit_status(
+                    task_id,
+                    "expanded",
+                    finished_at=_utcnow().isoformat(),
+                )
+            else:
+                await self._mark_done_emit_promotions(task_id)
+                await self._emit_replanned_origin_if_finalized(task_id)
+            await self._store.refresh_graph()
+            return new_items
+
         if result.submitted_plan is not None:
             await self._store.mark_expanded(task_id)
             self._transitions.emit_status(task_id, "expanded", finished_at=_utcnow().isoformat())
         else:
-            promoted_ready = await self._store.mark_done(task_id)
-            self._transitions.emit_status(task_id, "done", finished_at=_utcnow().isoformat())
-            for dep_id in promoted_ready:
-                dep_task = self.graph.get(dep_id)
-                if dep_task is None:
-                    continue
-                self._transitions.emit_full_status(dep_task)
-            for promoted_id in await self._store.maybe_promote_expanded_parent(task_id):
-                promoted_task = self.graph.get(promoted_id)
-                if promoted_task is None:
-                    continue
-                self._transitions.emit_full_status(promoted_task)
-
-        if result.submitted_replan is not None:
-            await self.apply_replan(
-                replan_task_id=task_id,
-                add_tasks=result.submitted_replan.add_tasks,
-                cancel_ids=result.submitted_replan.cancel_ids,
-                target_depth=rec.depth or 0,
-                target_parent_id=rec.parent_id,
-                target_root_id=rec.root_id or "",
-            )
+            await self._mark_done_emit_promotions(task_id)
         await self._store.refresh_graph()
         return new_items
 
@@ -317,6 +349,9 @@ class TaskCenter:
                 logger.debug("Failed to post warning note for %s", dep_id, exc_info=True)
         await self._transitions.refresh_and_emit(before)
 
+    async def fail(self, task_id: str, reason: str) -> None:
+        await self.fail_task(task_id, reason)
+
     async def request_replan(self, task_id: str, request: ReplanRequest) -> Task:
         self._budget.require_replan_capacity()
         from agents.registry import find_by_role
@@ -324,7 +359,7 @@ class TaskCenter:
         replanners = find_by_role("replanner")
         if not replanners:
             raise RuntimeError("no agent with role='replanner' is registered")
-        before = self._transitions.snapshot({task_id})
+        before = self._transitions.snapshot()
         rec = await self._store.request_replan(
             task_id,
             reason=request.reason,
@@ -343,9 +378,7 @@ class TaskCenter:
         replan_task_id: str,
         add_tasks: list[TaskDefinition],
         cancel_ids: list[str],
-        target_depth: int,
         target_parent_id: str | None,
-        target_root_id: str,
     ) -> dict[str, int]:
         before = self._transitions.snapshot()
         try:
@@ -353,9 +386,7 @@ class TaskCenter:
                 replan_task_id=replan_task_id,
                 add_tasks=add_tasks,
                 cancel_ids=cancel_ids,
-                target_depth=target_depth,
                 target_parent_id=target_parent_id,
-                target_root_id=target_root_id,
             )
         except (BudgetExceeded, InvalidPlan) as exc:
             # Replan expansion failed — cascade-fail the original REPLANNING
@@ -368,22 +399,6 @@ class TaskCenter:
                 )
             await self._transitions.refresh_and_emit(before)
             raise
-
-        # If this replanner was fired by a REPLANNING task, rewire dependents
-        replanner_rec = await self._store.get_record(replan_task_id)
-        if replanner_rec and replanner_rec.fired_by_task_id:
-            original_rec = await self._store.get_record(replanner_rec.fired_by_task_id)
-            if original_rec and original_rec.status == "replanning":
-                new_task_ids = outcome.get("inserted_ids", [])
-                if new_task_ids:
-                    await self._store.rewire_dependents(
-                        replanner_rec.fired_by_task_id, new_task_ids
-                    )
-                else:
-                    await self._store.fail_with_cascade(
-                        replanner_rec.fired_by_task_id,
-                        "replan_produced_no_tasks",
-                    )
 
         await self._transitions.refresh_and_emit(before)
         return outcome

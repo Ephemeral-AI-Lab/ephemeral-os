@@ -227,6 +227,87 @@ class NoteManager:
             last_n=last_n,
         )
 
+    async def _tasks_depending_on(self, dep_id: str) -> list[Task]:
+        graph = getattr(self._task_store, "graph", None)
+        if isinstance(graph, dict) and graph:
+            return [
+                task
+                for task in graph.values()
+                if dep_id in [str(item) for item in (task.deps or [])]
+            ]
+        if self._task_store is None or not hasattr(self._task_store, "get_all_tasks"):
+            return []
+        try:
+            from team.persistence.task_store import record_to_task
+
+            records = await self._task_store.get_all_tasks()
+            return [
+                record_to_task(record)
+                for record in records
+                if dep_id in [str(item) for item in (record.deps or [])]
+            ]
+        except Exception:
+            logger.debug("Failed to read dependent tasks for %s", dep_id, exc_info=True)
+            return []
+
+    async def _replanner_failure_context(self, task: Task) -> str | None:
+        original_id = task.fired_by_task_id
+        if not original_id:
+            return None
+
+        original = await self.get_task(original_id)
+        lines = ["## Replan failure packet", f"Original task: {original_id}"]
+        if original is not None:
+            lines.extend(
+                [
+                    f"Original agent: {original.agent_name}",
+                    f"Original status: {original.status.value}",
+                    f"Failed reason: {original.failure_reason or 'unknown'}",
+                    "",
+                    "### Original task spec",
+                    original.objective,
+                ]
+            )
+            if original.description:
+                lines.extend(["", "### Original description", original.description])
+            lines.append("")
+            lines.append(
+                "Original scope paths: "
+                + (", ".join(original.scope_paths) if original.scope_paths else "(none)")
+            )
+            lines.append(
+                "Original deps: " + (", ".join(original.deps) if original.deps else "(none)")
+            )
+        else:
+            lines.append("Failed reason: unknown")
+
+        failed_notes = await self.read(authors=[original_id])
+        if failed_notes:
+            lines.extend(["", "### Failed task notes"])
+            for note in failed_notes[-3:]:
+                lines.append(f"- {note.agent_name}: {note.content}")
+
+        original_deps = list(original.deps) if original is not None else []
+        if original_deps:
+            dep_notes = await self.read(authors=original_deps)
+            dep_notes = self._latest_notes_per_task(dep_notes)
+            if dep_notes:
+                lines.extend(["", "### Original dependency notes"])
+                for note in dep_notes:
+                    lines.append(f"- {note.task_id} / {note.agent_name}: {note.content}")
+
+        dependents = await self._tasks_depending_on(task.id)
+        dependents = [item for item in dependents if item.id != task.id]
+        if dependents:
+            lines.extend(["", "### Downstream dependents rewired to this replanner"])
+            for dependent in sorted(dependents, key=lambda item: item.id):
+                deps = ", ".join(dependent.deps) if dependent.deps else "(none)"
+                lines.append(f"- {dependent.id} ({dependent.status.value}); deps: {deps}")
+        else:
+            lines.extend(["", "### Downstream dependents rewired to this replanner", "(none)"])
+
+        return "\n".join(lines)
+
     def known_paths(self) -> list[str]:
         """Return sorted unique paths across all notes (for validation errors)."""
         return sorted({p for n in self._notes for p in n.paths})
@@ -266,6 +347,20 @@ class NoteManager:
             task_section += f"\n\nScope: {', '.join(task.scope_paths)}"
         sections.append(task_section)
         budget -= len(task_section.encode())
+
+        if task.fired_by_task_id and budget > 0:
+            sec = await self._replanner_failure_context(task)
+            if sec:
+                b = len(sec.encode())
+                if b <= budget:
+                    sections.append(sec)
+                    budget -= b
+                else:
+                    safe = max(0, budget - len("\n...[truncated]".encode()))
+                    sections.append(
+                        sec.encode()[:safe].decode("utf-8", errors="ignore") + "\n...[truncated]"
+                    )
+                    budget = 0
 
         if task.retry_count and task.retry_count > 0 and budget > 0:
             self_notes = await self.read(authors=[task.id])

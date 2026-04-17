@@ -53,19 +53,29 @@ class TeamRun:
         self.budget_state = BudgetState()
         self.status = TeamRunStatus.PENDING
         runtime_services = services or build_team_runtime_services(
-            team_run_id=self.id, budgets=self.budgets, budget_state=self.budget_state,
-            user_request=user_request, goal=goal, repo_root=repo_root, event_store=event_store,
+            team_run_id=self.id,
+            budgets=self.budgets,
+            budget_state=self.budget_state,
+            user_request=user_request,
+            goal=goal,
+            repo_root=repo_root,
+            event_store=event_store,
         )
+        self._active_agent_runs: dict[str, asyncio.Task[object]] = {}
         self.task_center = runtime_services.task_center
+        set_cancel_cb = getattr(self.task_center, "set_cancel_agent_run_callback", None)
+        if callable(set_cancel_cb):
+            set_cancel_cb(self.cancel_agent_run)
         self.dispatch_queue = runtime_services.dispatch_queue
         self.budgets = self.task_center.budgets
         self.budget_state = self.task_center.budget_state
         self.project_context = runtime_services.project_context
-        self.event_store: TeamRunStore = getattr(runtime_services, "event_store", NullTeamRunStore())
+        self.event_store: TeamRunStore = getattr(
+            runtime_services, "event_store", NullTeamRunStore()
+        )
         self.cancel_event = asyncio.Event()
         self.root_task_id: str | None = None
         self._executor_tasks: list[asyncio.Task[None]] = []
-        self._active_agent_runs: dict[str, asyncio.Task[object]] = {}
         self._executor_factory: Callable[["TeamRun"], Executor] | None = None
         self._num_executors: int = _default_num_executors()
         self.coordination_metadata: dict[str, Any] = {}
@@ -93,28 +103,41 @@ class TeamRun:
     # ---- lifecycle -------------------------------------------------------
 
     async def start(
-        self, agent_name: str, payload: dict[str, Any], *,
+        self,
+        agent_name: str,
+        payload: dict[str, Any],
+        *,
         executor_factory: Callable[["TeamRun"], Executor],
         num_executors: int | None = None,
     ) -> None:
         from team.models import Task, TaskStatus
+
         objective = str(payload.get("objective") or payload.get("user_request") or "").strip()
         if not objective:
             raise ValueError("Root payload requires a non-empty 'objective'")
         root = Task(
-            id=str(uuid.uuid4()), team_run_id=self.id, agent_name=agent_name,
+            id=str(uuid.uuid4()),
+            team_run_id=self.id,
+            agent_name=agent_name,
             status=TaskStatus.PENDING,
             objective=objective,
-            scope_paths=list(payload.get("scope_paths", [])), depth=0,
+            scope_paths=list(payload.get("scope_paths", [])),
+            depth=0,
         )
         root.root_id = root.id
         self.root_task_id = root.id
-        self.event_store.append(make_team_run_created(
-            self.id, session_id=self.session_id, user_request=self.user_request,
-            goal=None, repo_root=self.project_context.repo_root,
-            sandbox_id=self.sandbox_id, budgets=asdict(self.budgets),
-            roster=dict(self.roster) if self.roster else None,
-        ))
+        self.event_store.append(
+            make_team_run_created(
+                self.id,
+                session_id=self.session_id,
+                user_request=self.user_request,
+                goal=None,
+                repo_root=self.project_context.repo_root,
+                sandbox_id=self.sandbox_id,
+                budgets=asdict(self.budgets),
+                roster=dict(self.roster) if self.roster else None,
+            )
+        )
         await self.task_center.add_task(root)
         self.status = TeamRunStatus.RUNNING
         self.event_store.append(make_team_run_status(self.id, self.status.value))
@@ -125,11 +148,15 @@ class TeamRun:
         self._spawn_executors()
 
     async def start_with_team_definition(
-        self, team_def: Any, payload: dict[str, Any], *,
+        self,
+        team_def: Any,
+        payload: dict[str, Any],
+        *,
         executor_factory: Callable[["TeamRun"], Executor],
         num_executors: int | None = None,
     ) -> None:
         from agents.registry import get_definition
+
         if get_definition(team_def.entry_planner) is None:
             raise ValueError(
                 f"team_definition '{team_def.name}' entry_planner "
@@ -138,8 +165,10 @@ class TeamRun:
         self.team_definition = team_def
         self.roster = dict(team_def.roster)
         await self.start(
-            agent_name=team_def.entry_planner, payload=payload,
-            executor_factory=executor_factory, num_executors=num_executors,
+            agent_name=team_def.entry_planner,
+            payload=payload,
+            executor_factory=executor_factory,
+            num_executors=num_executors,
         )
 
     def _spawn_executors(self) -> None:
@@ -201,11 +230,13 @@ class TeamRun:
         self.cancel_event.set()
         await self.task_center.cancel_all_pending()
 
-    def note_conflict_event(self, *, file_path: str, reason: str,
-                            work_item_id: str = "", agent_name: str = "") -> bool:
+    def note_conflict_event(
+        self, *, file_path: str, reason: str, work_item_id: str = "", agent_name: str = ""
+    ) -> bool:
         return persist_memory_record(
             project_key=self.project_context.project_key,
-            repo_root=self.project_context.repo_root, kind="conflict_event",
+            repo_root=self.project_context.repo_root,
+            kind="conflict_event",
             scope={"paths": [file_path] if file_path else []},
             content={"file_path": file_path, "reason": reason},
             source={"team_run_id": self.id, "work_item_id": work_item_id, "agent": agent_name},
@@ -215,7 +246,8 @@ class TeamRun:
     def note_validator_outcome(self, *, task: Task, summary: str) -> bool:
         return persist_memory_record(
             project_key=self.project_context.project_key,
-            repo_root=self.project_context.repo_root, kind="validation_outcome",
+            repo_root=self.project_context.repo_root,
+            kind="validation_outcome",
             scope={"paths": list(task.scope_paths)},
             content={"task_id": task.id, "summary": summary},
             source={"team_run_id": self.id, "work_item_id": task.id, "agent": task.agent_name},
@@ -240,8 +272,11 @@ class TeamRun:
             self._spawn_executors()
 
     async def resume(
-        self, *, executor_factory: Callable[["TeamRun"], Executor],
-        num_executors: int | None = None, resumed_from: str | None = None,
+        self,
+        *,
+        executor_factory: Callable[["TeamRun"], Executor],
+        num_executors: int | None = None,
+        resumed_from: str | None = None,
         resumed_from_checkpoint: str | None = None,
     ) -> None:
         if await self._is_all_terminal():
@@ -252,35 +287,47 @@ class TeamRun:
         if num_executors is not None:
             self._num_executors = max(1, int(num_executors))
         self.status = TeamRunStatus.RUNNING
-        self.event_store.append(make_team_run_status(
-            self.id, self.status.value,
-            resumed_from=resumed_from, resumed_from_checkpoint=resumed_from_checkpoint,
-        ))
+        self.event_store.append(
+            make_team_run_status(
+                self.id,
+                self.status.value,
+                resumed_from=resumed_from,
+                resumed_from_checkpoint=resumed_from_checkpoint,
+            )
+        )
         _register_team_run(self)
         self._spawn_executors()
 
     # ---- crash recovery --------------------------------------------------
 
     @classmethod
-    def resume_from(cls, store: TeamRunStore, team_run_id: str, *,
-                    checkpoint_id: str | None = None) -> "TeamRun":
+    def resume_from(
+        cls, store: TeamRunStore, team_run_id: str, *, checkpoint_id: str | None = None
+    ) -> "TeamRun":
         events = store.load_run(team_run_id)
         if not events:
             raise ValueError(f"no events for team_run_id={team_run_id!r}")
         if checkpoint_id is not None:
             cp_event = next(
-                (ev for ev in events
-                 if ev.kind == "checkpoint_taken" and str(ev.data.get("checkpoint_id") or "") == checkpoint_id),
+                (
+                    ev
+                    for ev in events
+                    if ev.kind == "checkpoint_taken"
+                    and str(ev.data.get("checkpoint_id") or "") == checkpoint_id
+                ),
                 None,
             )
             if cp_event is None:
-                raise ValueError(f"checkpoint_id={checkpoint_id!r} not found for team_run_id={team_run_id!r}")
+                raise ValueError(
+                    f"checkpoint_id={checkpoint_id!r} not found for team_run_id={team_run_id!r}"
+                )
             events = [ev for ev in events if ev.seq <= cp_event.seq]
         created = next((e for e in events if e.kind == "team_run_created"), None)
         if created is None:
             raise ValueError(f"event log for {team_run_id!r} missing team_run_created header")
-        services, run = build_resumed_run(team_run_cls=cls, store=store,
-                                          team_run_id=team_run_id, created_event=created)
+        services, run = build_resumed_run(
+            team_run_cls=cls, store=store, team_run_id=team_run_id, created_event=created
+        )
         tc = services.task_center
         graph = tc.graph
         last_budget: tuple[int, int, int] | None = None
@@ -288,7 +335,10 @@ class TeamRun:
         root_id: str | None = None
         for ev in events:
             root_id, replayed_budget, replayed_status = apply_replayed_event(
-                event=ev, graph=graph, services=services, root_id=root_id,
+                event=ev,
+                graph=graph,
+                services=services,
+                root_id=root_id,
             )
             if replayed_budget is not None:
                 last_budget = replayed_budget

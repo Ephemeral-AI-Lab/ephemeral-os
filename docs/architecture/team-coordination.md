@@ -30,12 +30,13 @@ sequenceDiagram
 
     Worker->>TaskCenter: submit_task_summary(type="fail")
     TaskCenter->>TaskCenter: mark original REPLANNING
+    TaskCenter->>TaskCenter: rewire non-terminal dependents from original to replanner
     TaskCenter->>Replanner: spawn replanner with failure context
     Replanner->>TaskCenter: submit_replan(new_tasks=[...], cancel_ids=[...])
-    TaskCenter->>TaskCenter: apply replan and rewire dependents
+    TaskCenter->>TaskCenter: apply replan and complete or expand replanner
 ```
 
-When a task enters `REPLANNING`, dependent work stays pending. The replanner can add corrective tasks with explicit `parent_id` placement, cancel stale siblings with cascade handling, and provide an `expected_projection` assertion when parent-bounded graph shape matters. If the replanner produces replacement tasks, dependents are rewired from the original failed task to the new task ids. If the replanner fails or produces no replacement work, the original task fails with cascade handling.
+When a task enters `REPLANNING`, non-terminal dependent tasks are rewired from the failed task to the replanner task, so they remain gated until the replanner is `DONE`. The replanner can add corrective tasks with explicit `parent_id` placement under itself, at its sibling layer, or inside surviving sibling subtrees. It can cancel stale not-completed tasks in its allowed parent projection with cascade handling. If the replanner has no direct child tasks after `submit_replan`, it becomes `DONE` immediately. If it creates direct child tasks, it becomes `EXPANDED` and later becomes `DONE` only after all direct children succeed.
 
 ## Status Model
 

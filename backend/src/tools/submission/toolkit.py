@@ -17,7 +17,7 @@ import time
 import uuid
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from agents.registry import get_definition, has_role
 from team.planning.validation import validate_plan
@@ -150,10 +150,7 @@ def _spec_format_errors(spec_text: str) -> list[str]:
         if current is None:
             continue
         if current <= previous:
-            errors.append(
-                "spec sections must appear in order: "
-                + " -> ".join(_SPEC_SECTIONS)
-            )
+            errors.append("spec sections must appear in order: " + " -> ".join(_SPEC_SECTIONS))
             break
         previous = current
     return errors
@@ -277,41 +274,10 @@ class SubmitPlanInput(BaseModel):
     )
 
 
-class ProjectedTask(BaseModel):
-    parent_id: str | None = Field(
-        default=None,
-        description="Expected parent ID after the replan.",
-    )
-    deps: list[str] = Field(
-        default_factory=list,
-        description="Expected direct dependency IDs after the replan.",
-    )
-
-
-class CancelProjection(BaseModel):
-    cascade: list[str] = Field(
-        default_factory=list,
-        description="Expected descendant/dependent task IDs cancelled because of this root.",
-    )
-
-
-class ParentProjection(BaseModel):
-    root_parent_id: str | None = Field(
-        default=None,
-        description="The parent boundary this replan is allowed to modify.",
-    )
-    tasks: dict[str, ProjectedTask] = Field(
-        default_factory=dict,
-        description="Expected surviving tasks under the parent projection.",
-    )
-    cancelled: dict[str, CancelProjection] = Field(
-        default_factory=dict,
-        description="Expected cancellation roots and cascaded IDs.",
-    )
-
-
 class SubmitReplanInput(BaseModel):
     """Corrective replan submission payload."""
+
+    model_config = ConfigDict(extra="forbid")
 
     new_tasks: list[ReplanTaskSpec] = Field(
         default_factory=list,
@@ -319,19 +285,7 @@ class SubmitReplanInput(BaseModel):
     )
     cancel_ids: list[str] = Field(
         default_factory=list,
-        description="Task IDs to cancel (parent-level roots, with cascade)",
-    )
-    expected_projection: ParentProjection | None = Field(
-        default=None,
-        description=(
-            "Optional validation-only post-state projection under root_parent_id. "
-            "It is checked against cancel_ids and new_tasks, and does not mutate "
-            "existing dependencies by itself."
-        ),
-    )
-    output: str | None = Field(
-        default=None,
-        description="Optional concise rationale or replan summary.",
+        description="Task IDs to cancel (not-completed roots, with cascade)",
     )
 
 
@@ -416,39 +370,6 @@ def _cascade_ids_for_cancel_root(
     return cascaded
 
 
-def _projection_after_replan(
-    arguments: SubmitReplanInput,
-    *,
-    graph: dict[str, Any],
-    root_parent_id: str | None,
-    current_task_id: str,
-) -> tuple[dict[str, ProjectedTask], dict[str, CancelProjection]]:
-    cancelled: dict[str, CancelProjection] = {}
-    cancelled_ids: set[str] = set(arguments.cancel_ids)
-    for cancel_id in arguments.cancel_ids:
-        cascade = _cascade_ids_for_cancel_root(graph, cancel_id)
-        cancelled[cancel_id] = CancelProjection(cascade=sorted(cascade))
-        cancelled_ids.update(cascade)
-
-    tasks: dict[str, ProjectedTask] = {}
-    for task_id, task in graph.items():
-        if task_id == current_task_id or task_id in cancelled_ids:
-            continue
-        if not _is_under_parent_projection(
-            graph,
-            task_id=task_id,
-            root_parent_id=root_parent_id,
-        ):
-            continue
-        tasks[task_id] = ProjectedTask(
-            parent_id=getattr(task, "parent_id", None),
-            deps=[str(dep) for dep in getattr(task, "deps", []) or []],
-        )
-    for spec in arguments.new_tasks:
-        tasks[spec.id] = ProjectedTask(parent_id=spec.parent_id, deps=list(spec.deps))
-    return tasks, cancelled
-
-
 def _validate_task_specs(
     specs: list[NewTaskSpec],
     *,
@@ -495,76 +416,6 @@ def _validate_submit_plan_input(
     )
 
 
-def _validate_expected_projection(
-    arguments: SubmitReplanInput,
-    *,
-    graph: dict[str, Any],
-    root_parent_id: str | None,
-    current_task_id: str,
-) -> list[str]:
-    if arguments.expected_projection is None:
-        return []
-    expected = arguments.expected_projection
-    if expected.root_parent_id != root_parent_id:
-        return [
-            "expected_projection root_parent_id mismatch: "
-            f"expected {expected.root_parent_id!r}, runtime {root_parent_id!r}"
-        ]
-
-    projected_tasks, projected_cancelled = _projection_after_replan(
-        arguments,
-        graph=graph,
-        root_parent_id=root_parent_id,
-        current_task_id=current_task_id,
-    )
-    errors: list[str] = []
-    projected_ids = set(projected_tasks)
-    expected_ids = set(expected.tasks)
-    missing = sorted(projected_ids - expected_ids)
-    extra = sorted(expected_ids - projected_ids)
-    if missing:
-        errors.append("expected_projection missing projected task(s): " + ", ".join(missing))
-    if extra:
-        errors.append("expected_projection includes non-projected task(s): " + ", ".join(extra))
-    for task_id in sorted(projected_ids & expected_ids):
-        projected = projected_tasks[task_id]
-        exp = expected.tasks[task_id]
-        if projected.parent_id != exp.parent_id:
-            errors.append(
-                f"expected_projection parent mismatch for '{task_id}': "
-                f"expected {exp.parent_id!r}, projected {projected.parent_id!r}"
-            )
-        if sorted(projected.deps) != sorted(exp.deps):
-            errors.append(
-                f"expected_projection deps mismatch for '{task_id}': "
-                f"expected {sorted(exp.deps)}, projected {sorted(projected.deps)}"
-            )
-
-    projected_cancel_roots = set(projected_cancelled)
-    expected_cancel_roots = set(expected.cancelled)
-    missing_cancel = sorted(projected_cancel_roots - expected_cancel_roots)
-    extra_cancel = sorted(expected_cancel_roots - projected_cancel_roots)
-    if missing_cancel:
-        errors.append(
-            "expected_projection missing cancellation root(s): "
-            + ", ".join(missing_cancel)
-        )
-    if extra_cancel:
-        errors.append(
-            "expected_projection includes non-projected cancellation root(s): "
-            + ", ".join(extra_cancel)
-        )
-    for task_id in sorted(projected_cancel_roots & expected_cancel_roots):
-        projected = sorted(projected_cancelled[task_id].cascade)
-        exp = sorted(expected.cancelled[task_id].cascade)
-        if projected != exp:
-            errors.append(
-                f"expected_projection cascade mismatch for '{task_id}': "
-                f"expected {exp}, projected {projected}"
-            )
-    return errors
-
-
 def _validate_submit_replan_input(
     arguments: SubmitReplanInput,
     context: ToolExecutionContext,
@@ -577,6 +428,8 @@ def _validate_submit_replan_input(
         return ["submit_replan requires the current task graph for validation"]
 
     current_task_id = str(context.metadata.get("work_item_id") or "")
+    current_task = graph.get(current_task_id)
+    origin_task_id = getattr(current_task, "fired_by_task_id", None)
     root_parent_id = _parent_id_for_current_task(graph, current_task_id)
     graph_ids = set(graph.keys())
     new_ids = {spec.id for spec in arguments.new_tasks}
@@ -585,6 +438,8 @@ def _validate_submit_replan_input(
 
     if current_task_id in cancelled_ids:
         errors.append("replanner cannot cancel itself")
+    if origin_task_id and origin_task_id in cancelled_ids:
+        errors.append("replanner cannot cancel the original replanning task")
 
     for cancel_id in arguments.cancel_ids:
         target = graph.get(cancel_id)
@@ -593,19 +448,25 @@ def _validate_submit_replan_input(
             continue
         if cancel_id == current_task_id:
             continue
-        if getattr(target, "parent_id", None) != root_parent_id:
+        if not _is_under_parent_projection(
+            graph,
+            task_id=cancel_id,
+            root_parent_id=root_parent_id,
+        ):
             errors.append(
-                f"cancel target '{cancel_id}' is not a direct child of parent "
-                f"{root_parent_id!r}"
+                f"cancel target '{cancel_id}' is outside the parent projection "
+                f"rooted at {root_parent_id!r}"
             )
         status = getattr(target, "status", None)
         if status is not None and status in TERMINAL_STATUSES:
             errors.append(f"cancel target '{cancel_id}' is {status.value}; cannot cancel")
         all_cancelled_ids.update(_cascade_ids_for_cancel_root(graph, cancel_id))
 
-    allowed_parent_ids: set[str | None] = {root_parent_id}
+    allowed_parent_ids: set[str | None] = {root_parent_id, current_task_id}
     for task_id, task in graph.items():
-        if task_id == current_task_id or task_id in all_cancelled_ids:
+        if task_id in all_cancelled_ids:
+            continue
+        if task_id == origin_task_id:
             continue
         status = getattr(task, "status", None)
         if status is not None and status in TERMINAL_STATUSES:
@@ -626,21 +487,16 @@ def _validate_submit_replan_input(
         if spec.parent_id in all_cancelled_ids:
             errors.append(f"new task '{spec.id}': parent_id '{spec.parent_id}' is cancelled")
 
-    valid_dep_ids = (graph_ids - all_cancelled_ids - {current_task_id}) | new_ids
+    excluded_dep_ids = {current_task_id}
+    if origin_task_id:
+        excluded_dep_ids.add(origin_task_id)
+    valid_dep_ids = (graph_ids - all_cancelled_ids - excluded_dep_ids) | new_ids
     errors.extend(
         _validate_task_specs(
             arguments.new_tasks,
             graph_ids=graph_ids,
             valid_dep_ids=valid_dep_ids,
             roster=_roster_from_context(context),
-        )
-    )
-    errors.extend(
-        _validate_expected_projection(
-            arguments,
-            graph=graph,
-            root_parent_id=root_parent_id,
-            current_task_id=current_task_id,
         )
     )
     return errors
@@ -734,8 +590,7 @@ class SubmitPlanTool(BaseTool):
                 {
                     "field": "tasks",
                     "msg": (
-                        f"plan would exceed max_depth={max_depth} "
-                        f"from current depth={task_depth}"
+                        f"plan would exceed max_depth={max_depth} from current depth={task_depth}"
                     ),
                 }
             )
@@ -772,9 +627,9 @@ class SubmitPlanTool(BaseTool):
 class SubmitReplanTool(BaseTool):
     name = "submit_replan"
     description = (
-        "Submit a corrective replan. Provide cancel_ids for parent-level tasks "
-        "to cancel with cascade, and new_tasks with id, parent_id, name, spec, "
-        "deps, and scope_paths. expected_projection is validation-only."
+        "Submit a corrective replan. Provide cancel_ids for not-completed tasks "
+        "in the allowed parent projection to cancel with cascade, and new_tasks "
+        "with id, parent_id, name, spec, deps, and scope_paths."
     )
     short_description = "Submit a corrective replan."
     input_model = SubmitReplanInput
@@ -812,8 +667,6 @@ class SubmitReplanTool(BaseTool):
             f"Replanner submitted replan: {len(replan.add_tasks)} new task(s), "
             f"{len(replan.cancel_ids)} cancelled."
         )
-        if arguments.output:
-            note_content += f"\n\n{arguments.output}"
         await _post_submission_note(context, content=note_content, tags=["refactor"])
 
         context.metadata["resolved_plan"] = replan
@@ -844,8 +697,7 @@ class SubmissionToolkit(BaseToolkit):
         return cls(
             name="submission",
             description=(
-                "Terminal submission tools "
-                "(submit_task_summary, submit_plan, submit_replan)."
+                "Terminal submission tools (submit_task_summary, submit_plan, submit_replan)."
             ),
             tools=[
                 SubmitTaskSummaryTool(),
