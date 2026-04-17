@@ -82,7 +82,6 @@ class _RenamePreviewSnapshot:
     refs: tuple[ReferenceInfo, ...]
     base_by_path: dict[str, tuple[str, bool]]
     old_name: str
-    arbiter_generation: int
 
 
 @dataclass
@@ -216,13 +215,11 @@ class CodeIntelligenceService:
     ) -> SemanticRenamePlan:
         """Build a :class:`SemanticRenamePlan` for an OCC batch commit.
 
-        Snapshots :attr:`arbiter.generation` *before* invoking Jedi so the
-        batch commit can detect foreign edits that landed during planning.
         For each affected file, the file's current content is captured as
-        the per-file OCC base; the generation gate covers the race window
-        between Jedi's read and this capture.
+        the per-file OCC base. The batch commit compares per-file hashes at
+        commit time, so concurrent edits to unrelated files do not block
+        this rename.
         """
-        gen_before = self.arbiter.generation
         final_by_path = self.lsp_client.rename_symbol(
             file_path, int(line), int(character), new_name,
         )
@@ -251,7 +248,6 @@ class CodeIntelligenceService:
         return SemanticRenamePlan(
             new_name=new_name,
             origin=(file_path, int(line), int(character)),
-            arbiter_generation=gen_before,
             changes=tuple(changes),
         )
 
@@ -295,7 +291,6 @@ class CodeIntelligenceService:
             return SemanticRenamePlan(
                 new_name=new_name,
                 origin=(file_path, int(line), int(character)),
-                arbiter_generation=snapshot.arbiter_generation,
                 changes=(),
             )
         final_by_path = _apply_reference_replacements(
@@ -322,7 +317,6 @@ class CodeIntelligenceService:
         return SemanticRenamePlan(
             new_name=new_name,
             origin=(file_path, int(line), int(character)),
-            arbiter_generation=snapshot.arbiter_generation,
             changes=tuple(changes),
         )
 
@@ -376,7 +370,6 @@ class CodeIntelligenceService:
         line: int,
         character: int,
     ) -> _RenamePreviewSnapshot | None:
-        gen_before = self.arbiter.generation
         refs = tuple(self.lsp_client.find_references(file_path, line, character))
         if not refs:
             return None
@@ -392,7 +385,6 @@ class CodeIntelligenceService:
             refs=refs,
             base_by_path=base_by_path,
             old_name=old_name,
-            arbiter_generation=gen_before,
         )
 
     # -- Edit API (delegated) -------------------------------------------------
@@ -467,14 +459,12 @@ class CodeIntelligenceService:
         agent_id: str = "",
         edit_type: str,
         description: str = "",
-        expected_arbiter_generation: int | None = None,
     ) -> MultiEditResult:
         return self._write_coordinator.commit_many_against_base(
             changes,
             agent_id=agent_id,
             edit_type=edit_type,
             description=description,
-            expected_arbiter_generation=expected_arbiter_generation,
         )
 
     def undo_last_edit(self, file_path: str) -> EditResult:

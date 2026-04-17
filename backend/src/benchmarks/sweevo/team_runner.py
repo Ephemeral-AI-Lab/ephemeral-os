@@ -329,7 +329,6 @@ def _make_context_builders(
             "repo_root": repo_dir,
             "exec_cwd": repo_dir,
             "ci_workspace_root": repo_dir,
-            "team_mode_enabled": True,
             "require_declared_shell_outputs": True,
             "verification_surface_write_enforcement": "warn",
         })
@@ -482,7 +481,6 @@ async def run_sweevo_team(
     )
     prompt_messages_path = _prompt_report_messages_path(tr.id)
     tr.coordination_metadata = {
-        "team_mode_enabled": True,
         "require_declared_shell_outputs": True,
         "verification_surface_write_enforcement": "warn",
         "prompt_report_messages_path": str(prompt_messages_path),

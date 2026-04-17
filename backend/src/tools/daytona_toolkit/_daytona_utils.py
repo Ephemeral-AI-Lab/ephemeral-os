@@ -12,7 +12,7 @@ import shlex
 import time
 from typing import Any
 
-from config.defaults import DEFAULT_SANDBOX_CI_ROOT, DEFAULT_TEAM_SAFE_AGENT_NAMES
+from config.defaults import DEFAULT_TEAM_SAFE_AGENT_NAMES
 from tools.core.base import ToolExecutionContext
 
 logger = logging.getLogger(__name__)
@@ -43,11 +43,9 @@ _TRAILING_TERM_NOISE_RE = re.compile(r"(?:\x1b\[[0-9;]*[A-Za-z]|TERM environment
 
 
 def is_coordinated_team_agent(context: ToolExecutionContext) -> bool:
-    """True when the current agent is in the team-safe set AND team mode is active."""
+    """True when the current agent should use team coordination safeguards."""
     agent_name = str(context.metadata.get("agent_name") or "").strip()
-    if agent_name not in DEFAULT_TEAM_SAFE_AGENT_NAMES:
-        return False
-    return bool(context.metadata.get("team_mode_enabled"))
+    return agent_name in DEFAULT_TEAM_SAFE_AGENT_NAMES
 
 
 def record_coordination_warning(
@@ -185,27 +183,22 @@ async def _attach_sandbox_to_context(context: ToolExecutionContext) -> Any:
         raise RuntimeError(_sandbox_context_error())
     try:
         from sandbox.async_client import get_async_sandbox
-        from sandbox.workspace import discover_workspace_async, inject_code_intelligence
+        from sandbox.workspace import (
+            discover_workspace_async,
+            ensure_code_intelligence_runtime,
+        )
 
         sandbox = await get_async_sandbox(sandbox_id)
-        context.metadata["daytona_sandbox"] = sandbox
         repo_root = context.metadata.get("repo_root")
         if not repo_root:
             project_dir = getattr(sandbox, "project_dir", None)
             repo_root = project_dir or await discover_workspace_async(sandbox)
-            if repo_root:
-                context.metadata["repo_root"] = repo_root
-        if not context.metadata.get("exec_cwd") and repo_root:
-            context.metadata["exec_cwd"] = repo_root
-        if "ci_service" not in context.metadata and not context.metadata.get(
-            "skip_code_intelligence"
-        ):
-            ci_root = (
-                context.metadata.get("ci_workspace_root")
-                or repo_root
-                or DEFAULT_SANDBOX_CI_ROOT
-            )
-            inject_code_intelligence(context, sandbox_id, sandbox, ci_root)
+        ensure_code_intelligence_runtime(
+            context,
+            sandbox_id=sandbox_id,
+            sandbox=sandbox,
+            workspace_root=repo_root,
+        )
         return sandbox
     except Exception as exc:
         raise RuntimeError(_sandbox_context_error(str(exc))) from exc

@@ -32,7 +32,6 @@ def test_write_error_returns_none_for_developer_outside_scope():
     """Core change: developer outside write_scope is no longer blocked."""
     ctx = _ctx({
         "agent_name": "developer",
-        "team_mode_enabled": True,
         "daytona_cwd": "/testbed",
         "write_scope": ["dask/config.py"],
     })
@@ -44,7 +43,6 @@ def test_write_error_returns_none_for_developer_inside_scope():
     """In-scope writes remain allowed (no change)."""
     ctx = _ctx({
         "agent_name": "developer",
-        "team_mode_enabled": True,
         "daytona_cwd": "/testbed",
         "write_scope": ["dask/"],
     })
@@ -56,7 +54,6 @@ def test_write_error_returns_none_when_no_write_scope():
     """No write_scope set means unconstrained — no error."""
     ctx = _ctx({
         "agent_name": "developer",
-        "team_mode_enabled": True,
         "daytona_cwd": "/testbed",
     })
     result = _team_repo_write_error(ctx, "/testbed/anything.py", tool_name="edit")
@@ -67,7 +64,6 @@ def test_write_error_allows_validator_inside_scope():
     """Validators may write repo files for targeted fixes."""
     ctx = _ctx({
         "agent_name": "validator",
-        "team_mode_enabled": True,
         "daytona_cwd": "/testbed",
         "write_scope": ["dask/"],
     })
@@ -79,29 +75,27 @@ def test_write_error_allows_validator_without_scope():
     """Validators may write repo files even when no write_scope is set."""
     ctx = _ctx({
         "agent_name": "validator",
-        "team_mode_enabled": True,
         "daytona_cwd": "/testbed",
     })
     result = _team_repo_write_error(ctx, "/testbed/dask/config.py", tool_name="edit")
     assert result is None
 
 
-def test_write_error_returns_none_for_non_team_mode():
-    """Non-team-mode agents are never constrained."""
+def test_write_error_blocks_test_suite_without_team_mode_flag():
+    """Developer coordination safeguards no longer require a separate mode flag."""
     ctx = _ctx({
         "agent_name": "developer",
-        "team_mode_enabled": False,
         "daytona_cwd": "/testbed",
         "write_scope": ["dask/config.py"],
     })
     result = _team_repo_write_error(ctx, "/testbed/dask/tests/test_config.py", tool_name="edit")
-    assert result is None
+    assert result is not None
+    assert "test suite" in result
 
 
 def test_write_error_blocks_test_suite_path():
     ctx = _ctx({
         "agent_name": "developer",
-        "team_mode_enabled": True,
         "daytona_cwd": "/testbed",
         "write_scope": ["dask/cli.py"],
     })
@@ -115,7 +109,6 @@ def test_write_error_returns_none_for_absolute_path_outside_repo():
     """Paths that don't normalize to a repo-relative path are not blocked."""
     ctx = _ctx({
         "agent_name": "developer",
-        "team_mode_enabled": True,
         "daytona_cwd": "/testbed",
         "write_scope": ["dask/"],
     })
@@ -127,7 +120,6 @@ def test_write_error_returns_none_for_benchmark_outside_scope():
     """Benchmark metadata must not make write_scope a hard block."""
     ctx = _ctx({
         "agent_name": "developer",
-        "team_mode_enabled": True,
         "daytona_cwd": "/testbed",
         "write_scope": ["dask/dataframe/io/hdf.py"],
         "benchmark_test_ids": ["dask/dataframe/io/tests/test_hdf.py::test_to_hdf"],
@@ -151,7 +143,6 @@ def test_write_warning_emitted_for_developer_outside_scope():
     """Out-of-scope writes now always produce an advisory warning."""
     ctx = _ctx({
         "agent_name": "developer",
-        "team_mode_enabled": True,
         "daytona_cwd": "/testbed",
         "write_scope": ["dask/config.py"],
     })
@@ -167,7 +158,6 @@ def test_write_warning_none_for_in_scope_write():
     """No warning for writes within scope."""
     ctx = _ctx({
         "agent_name": "developer",
-        "team_mode_enabled": True,
         "daytona_cwd": "/testbed",
         "write_scope": ["dask/"],
     })
@@ -179,30 +169,28 @@ def test_write_warning_none_when_no_scope_set():
     """No warning when write_scope is not set (unconstrained)."""
     ctx = _ctx({
         "agent_name": "developer",
-        "team_mode_enabled": True,
         "daytona_cwd": "/testbed",
     })
     result = _team_repo_write_warning(ctx, "/testbed/anything.py", tool_name="edit")
     assert result is None
 
 
-def test_write_warning_none_for_non_team_mode():
-    """Non-team-mode agents get no warnings."""
+def test_write_warning_emitted_without_team_mode_flag():
+    """Developer coordination safeguards no longer require a separate mode flag."""
     ctx = _ctx({
         "agent_name": "developer",
-        "team_mode_enabled": False,
         "daytona_cwd": "/testbed",
         "write_scope": ["dask/config.py"],
     })
     result = _team_repo_write_warning(ctx, "/testbed/other.py", tool_name="edit")
-    assert result is None
+    assert result is not None
+    assert "outside write_scope" in result
 
 
 def test_write_warning_includes_tool_name_and_path():
     """Warning message includes the tool name and target path for debugging."""
     ctx = _ctx({
         "agent_name": "developer",
-        "team_mode_enabled": True,
         "daytona_cwd": "/testbed",
         "write_scope": ["src/auth/"],
     })
@@ -217,7 +205,6 @@ def test_write_warning_for_non_test_path():
     """Advisory warnings apply to non-test out-of-scope paths."""
     ctx = _ctx({
         "agent_name": "developer",
-        "team_mode_enabled": True,
         "daytona_cwd": "/testbed",
         "write_scope": ["dask/compatibility.py"],
         "verification_surface_write_enforcement": "warn",

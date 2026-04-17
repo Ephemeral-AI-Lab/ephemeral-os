@@ -20,8 +20,8 @@ _DESTRUCTIVE_SHELL_PATTERN = re.compile(
 def destructive_shell_command_error(command: str) -> str | None:
     """Return an error if the command is an unconditionally blocked destructive operation.
 
-    This is checked *before* coordination-mode gates — destructive commands
-    are always blocked regardless of team mode or declared_output_paths.
+    This is checked before narrower coordination safeguards; destructive
+    commands are always blocked regardless of declared output paths.
     """
     if _DESTRUCTIVE_SHELL_PATTERN.search(command or ""):
         return (

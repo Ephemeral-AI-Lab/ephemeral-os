@@ -208,7 +208,6 @@ def _ctx(
             ci_service.rebind_sandbox(sandbox)
         metadata["ci_service"] = ci_service
         metadata["agent_name"] = "developer"
-        metadata["team_mode_enabled"] = True
     return ToolExecutionContext(cwd=Path("/workspace"), metadata=metadata)
 
 
@@ -679,15 +678,15 @@ class TestCodeactSequentialOcc:
 
 
 # ===========================================================================
-# 6. codeact without CI service — hard error
+# 6. coordinated codeact without CI service — hard error
 # ===========================================================================
 
 
 class TestCodeactWithoutCiService:
-    """When no CI service is in context, CodeAct does not execute."""
+    """When coordinated team context has no CI service, CodeAct does not execute."""
 
     def test_without_ci_service_errors_before_raw_write(self):
-        """Without CI service, codeact must not raw-write files."""
+        """Coordinated CodeAct must not raw-write files without CI service."""
         original = "old = True\n"
         manifest = {
             "reads": [{"path": "/workspace/simple.py", "hash": _content_hash(original)}],
@@ -701,6 +700,7 @@ class TestCodeactWithoutCiService:
             manifest=manifest,
         )
         ctx = _ctx(sandbox, ci_service=None)  # No CI service
+        ctx.metadata["agent_name"] = "developer"
 
         result = _run(daytona_codeact.execute(
             daytona_codeact.input_model(code="..."),

@@ -87,6 +87,24 @@ Singleton per sandbox. Orchestrates all code intelligence operations: symbol que
 - Symbol index builds asynchronously at first `ensure_initialized()` call
 - LSP backends (Python/TypeScript) probed on demand; installed if missing
 
+### Runtime Injection Contract
+
+Daytona-backed tools use `sandbox.workspace.ensure_code_intelligence_runtime(...)`
+as the shared injection boundary. The helper owns the runtime metadata contract:
+
+- `daytona_sandbox`: the active Daytona sandbox handle
+- `repo_root`: canonical repository root inside the sandbox
+- `exec_cwd`: shell execution cwd, defaulting to `repo_root`
+- `ci_workspace_root`: optional override for CI indexing root
+- `ci_service`: the per-sandbox `CodeIntelligenceService`
+
+Callers may discover `repo_root` differently: sync toolkit prepare uses
+`discover_workspace(...)`, async toolkit prepare uses
+`discover_workspace_async(...)`, and lazy tool attach may resolve the sandbox on
+first use. After discovery, all callers delegate metadata seeding and CI service
+attachment to the shared helper. `daytona_cwd` remains a deprecated compatibility
+alias for older tool contexts; new code should read `repo_root` and `exec_cwd`.
+
 ### Symbol Indexing (SymbolIndex)
 
 Background daemon thread indexes Python files via AST, non-Python files via tree-sitter or regex fallback.

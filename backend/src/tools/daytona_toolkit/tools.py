@@ -31,6 +31,7 @@ from tools.daytona_toolkit._daytona_utils import (
 )
 from tools.core.ci_runtime import (
     abort_ci_write,
+    ci_required_result,
     finalize_ci_write,
     prepare_ci_write,
 )
@@ -455,13 +456,9 @@ async def daytona_write_file(
                     metadata={"conflict": bool(getattr(result, "conflict", False))},
                 )
         else:
-            return ToolResult(
-                output=(
-                    f"daytona_write_file: Code intelligence/OCC is unavailable for write of "
-                    f"{file_path}. Direct sandbox write fallback is disabled."
-                ),
-                is_error=True,
-                metadata={"occ_required": True},
+            return ci_required_result(
+                "daytona_write_file",
+                f"Write of {file_path} is disabled. Direct sandbox write fallback is disabled.",
             )
         return _build_write_file_result(
             context=context, file_path=file_path,

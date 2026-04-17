@@ -141,7 +141,6 @@ async def test_query_ctx_seeds_repo_root_for_daytona_and_ci():
     assert ctx.tool_metadata.sandbox_id == "sbx-1"
     assert ctx.tool_metadata["exec_cwd"] == "/testbed"
     assert ctx.tool_metadata["ci_workspace_root"] == "/testbed"
-    assert ctx.tool_metadata["team_mode_enabled"] is True
     assert ctx.tool_metadata["role"] == "developer"
     assert ctx.user_message.startswith("Please read the following sections")
     assert "- submit_task_summary:" in ctx.user_message

@@ -141,6 +141,16 @@ def _make_context(
     return ToolExecutionContext(cwd=Path(cwd), metadata=metadata)
 
 
+def _make_ci_service_for_sandbox(sandbox: Any, *, workspace: str = "/workspace"):
+    from code_intelligence.routing.service import CodeIntelligenceService
+
+    return CodeIntelligenceService(
+        sandbox_id="daytona-toolkit-comprehensive",
+        workspace_root=workspace,
+        sandbox=sandbox,
+    )
+
+
 def _make_lsp_sandbox(responses: dict[str, str] | None = None) -> MagicMock:
     """Create a mock sandbox with synchronous process.exec responses for LSP."""
     sandbox = MagicMock()
@@ -201,7 +211,7 @@ class TestDaytonaEditTool:
 
     def test_edit_basic_replace(self):
         sandbox = _make_mock_sandbox(files={"/workspace/app.py": "def foo():\n    return 1"})
-        ctx = _make_context(sandbox)
+        ctx = _make_context(sandbox, ci_service=_make_ci_service_for_sandbox(sandbox))
         tool = self._tool()
         result = _run(
             tool.execute(
@@ -239,7 +249,7 @@ class TestDaytonaEditTool:
 
     def test_edit_first_occurrence_only(self):
         sandbox = _make_mock_sandbox(files={"/workspace/f.py": "aaa\naaa\naaa"})
-        ctx = _make_context(sandbox)
+        ctx = _make_context(sandbox, ci_service=_make_ci_service_for_sandbox(sandbox))
         tool = self._tool()
         result = _run(
             tool.execute(
@@ -258,7 +268,7 @@ class TestDaytonaEditTool:
 
     def test_edit_text_not_found(self):
         sandbox = _make_mock_sandbox(files={"/workspace/f.py": "hello"})
-        ctx = _make_context(sandbox)
+        ctx = _make_context(sandbox, ci_service=_make_ci_service_for_sandbox(sandbox))
         tool = self._tool()
         result = _run(
             tool.execute(
@@ -275,7 +285,7 @@ class TestDaytonaEditTool:
 
     def test_edit_file_not_found(self):
         sandbox = _make_mock_sandbox()
-        ctx = _make_context(sandbox)
+        ctx = _make_context(sandbox, ci_service=_make_ci_service_for_sandbox(sandbox))
         tool = self._tool()
         result = _run(
             tool.execute(
@@ -306,7 +316,7 @@ class TestDaytonaEditTool:
 
     def test_edit_with_description(self):
         sandbox = _make_mock_sandbox(files={"/workspace/f.py": "x = 1"})
-        ctx = _make_context(sandbox)
+        ctx = _make_context(sandbox, ci_service=_make_ci_service_for_sandbox(sandbox))
         tool = self._tool()
         result = _run(
             tool.execute(
@@ -325,7 +335,7 @@ class TestDaytonaEditTool:
         sandbox = _make_mock_sandbox(
             files={"/workspace/f.py": "def foo():\n    pass\n\ndef bar():\n    pass"}
         )
-        ctx = _make_context(sandbox)
+        ctx = _make_context(sandbox, ci_service=_make_ci_service_for_sandbox(sandbox))
         tool = self._tool()
         result = _run(
             tool.execute(
@@ -344,7 +354,7 @@ class TestDaytonaEditTool:
     def test_edit_upload_failure(self):
         sandbox = _make_mock_sandbox(files={"/workspace/f.py": "content"})
         sandbox.fs.upload_file = MagicMock(side_effect=OSError("write failed"))
-        ctx = _make_context(sandbox)
+        ctx = _make_context(sandbox, ci_service=_make_ci_service_for_sandbox(sandbox))
         tool = self._tool()
         result = _run(
             tool.execute(
@@ -434,7 +444,8 @@ class TestDaytonaCodeActTool:
         tool = self._tool()
         result = _run(tool.execute(tool.input_model(code="print('hi')"), ctx))
         assert result.is_error
-        assert "upload" in result.output.lower() or "space" in result.output.lower()
+        assert result.metadata["occ_required"] is True
+        assert "Code intelligence/OCC is unavailable" in result.output
 
     def test_codeact_execution_failure(self):
         sandbox = _make_mock_sandbox()
@@ -445,17 +456,14 @@ class TestDaytonaCodeActTool:
         assert result.is_error
 
     def test_codeact_bad_json_output(self):
-        """When script output is not valid JSON, should still return output."""
+        """Without CI service, CodeAct does not reach wrapper JSON parsing."""
         sandbox = _make_mock_sandbox(exec_results={"python3": "not json at all"})
         ctx = _make_context(sandbox)
         tool = self._tool()
         result = _run(tool.execute(tool.input_model(code="print('hello')"), ctx))
-        # Should not crash — returns script output
-        assert (
-            "not json" in result.output
-            or "hello" in result.output
-            or "Script output" in result.output
-        )
+        assert result.is_error
+        assert result.metadata["occ_required"] is True
+        assert "Code intelligence/OCC is unavailable" in result.output
 
     def test_codeact_error_status_in_manifest(self):
         """When script reports error status, result should be is_error."""
@@ -953,7 +961,7 @@ class TestLspQueryRouting:
         import time as _time
 
         lsp = LspClient(workspace_root="/ws", cache_ttl=0.1)
-        lsp._put_cached("key1", ["result"])
+        lsp._run_cached_query("key1", lambda: ["result"])
         assert lsp._get_cached("key1") == ["result"]
 
         _time.sleep(0.15)
@@ -964,10 +972,10 @@ class TestLspQueryRouting:
         from code_intelligence.lsp.client import LspClient
 
         lsp = LspClient(workspace_root="/ws", cache_max=3)
-        lsp._put_cached("a", 1)
-        lsp._put_cached("b", 2)
-        lsp._put_cached("c", 3)
-        lsp._put_cached("d", 4)  # should evict "a"
+        lsp._run_cached_query("a", lambda: 1)
+        lsp._run_cached_query("b", lambda: 2)
+        lsp._run_cached_query("c", lambda: 3)
+        lsp._run_cached_query("d", lambda: 4)  # should evict "a"
 
         assert lsp._get_cached("a") is None
         assert lsp._get_cached("b") == 2
@@ -987,7 +995,7 @@ class TestLspQueryRouting:
         from code_intelligence.lsp.client import LspClient
 
         lsp = LspClient(workspace_root="/ws")
-        lsp._put_cached("def:/test.py:1:0", [])
+        lsp._run_cached_query("def:/test.py:1:0", lambda: [])
 
         lsp.goto_definition("/test.py", 1, 0)  # cache hit
         assert lsp.telemetry.cache_hits == 1
@@ -996,9 +1004,9 @@ class TestLspQueryRouting:
         from code_intelligence.lsp.client import LspClient
 
         lsp = LspClient(workspace_root="/ws")
-        lsp._put_cached("def:/ws/a.py:1:0", ["def_a"])
-        lsp._put_cached("ref:/ws/a.py:5:0", ["ref_a"])
-        lsp._put_cached("def:/ws/b.py:1:0", ["def_b"])
+        lsp._run_cached_query("def:/ws/a.py:1:0", lambda: ["def_a"])
+        lsp._run_cached_query("ref:/ws/a.py:5:0", lambda: ["ref_a"])
+        lsp._run_cached_query("def:/ws/b.py:1:0", lambda: ["def_b"])
 
         lsp.invalidate("/ws/a.py")
 
@@ -1512,11 +1520,12 @@ class TestOCCEditFlow:
         arbiter.release_file_lock("/ws/app.py")
 
     def test_occ_edit_without_ci_returns_error(self):
-        """Without CI service, edits must fail instead of raw-writing."""
+        """Coordinated edits must fail instead of raw-writing without CI."""
         from tools.daytona_toolkit.edit_tool import daytona_edit_file as _edit_tool
 
         sandbox = _make_mock_sandbox(files={"/ws/app.py": "old"})
         ctx = _make_context(sandbox)  # no ci_service
+        ctx.metadata["agent_name"] = "developer"
 
         result = _run(
             _edit_tool.execute(

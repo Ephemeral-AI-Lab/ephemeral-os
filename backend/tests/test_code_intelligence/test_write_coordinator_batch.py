@@ -57,30 +57,6 @@ def test_commits_full_batch_on_clean_bases(tmp_path) -> None:
     assert b.read_text(encoding="utf-8") == "y = 22\n"
 
 
-def test_aborts_on_arbiter_generation_change(tmp_path) -> None:
-    a = tmp_path / "a.py"
-    a.write_text("x = 1\n", encoding="utf-8")
-    svc = _svc(tmp_path)
-
-    plan_gen = svc.arbiter.generation
-    # Simulate an unrelated edit landing between plan and commit.
-    svc.arbiter.record_edit(
-        file_path=str(tmp_path / "other.py"),
-        edit_type="write",
-        old_hash="",
-        new_hash="deadbeef",
-    )
-
-    result = svc.commit_many_against_base(
-        [_change(str(a), "x = 1\n", "x = 99\n")],
-        edit_type="rename",
-        expected_arbiter_generation=plan_gen,
-    )
-    assert result.success is False
-    assert result.status == "aborted_generation"
-    assert a.read_text(encoding="utf-8") == "x = 1\n"
-
-
 def test_aborts_on_overlapping_concurrent_edit(tmp_path) -> None:
     a = tmp_path / "a.py"
     a.write_text("def foo():\n    return 1\n", encoding="utf-8")

@@ -15,6 +15,7 @@ from code_intelligence.editing.patcher import Patcher, SearchReplaceEdit
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.ci_runtime import (
     abort_ci_write,
+    ci_required_result,
     finalize_ci_write,
     get_ci_service,
     prepare_ci_edit_intent,
@@ -42,13 +43,9 @@ _OUTPUT_MAX_CHARS = 8000
 
 
 def _occ_required_error(tool_name: str, file_path: str) -> ToolResult:
-    return ToolResult(
-        output=(
-            f"{tool_name}: Code intelligence/OCC is unavailable for edit of {file_path}. "
-            "Direct sandbox write fallback is disabled."
-        ),
-        is_error=True,
-        metadata={"occ_required": True},
+    return ci_required_result(
+        tool_name,
+        f"Edit of {file_path} is disabled. Direct sandbox write fallback is disabled.",
     )
 
 
@@ -270,9 +267,11 @@ async def daytona_edit_file(
                 output=f"Path does not exist: {file_path}",
                 is_error=True,
             )
-        current = str(getattr(prepared, "current_content", "") or "")
-        current_hash = str(getattr(prepared, "current_hash", "") or "")
-    else:
+        if prepared is not None:
+            current = str(getattr(prepared, "current_content", "") or "")
+            current_hash = str(getattr(prepared, "current_hash", "") or "")
+
+    if prepared is None:
         try:
             current, _ = await _read_text_file_via_exec(sandbox, file_path)
             current_hash = _content_hash(current)

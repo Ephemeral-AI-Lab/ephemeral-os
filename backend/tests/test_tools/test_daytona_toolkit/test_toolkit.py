@@ -195,7 +195,7 @@ def test_prepare_context_injects_sandbox_and_cwd():
     with (
         patch.object(tk, "_get_sandbox", return_value=fake_sb),
         patch.object(DaytonaToolkit, "_resolve_cwd_sync", return_value="/workspace"),
-        patch.object(tk, "_inject_ci"),
+        patch("sandbox.workspace.inject_code_intelligence"),
     ):
         tk.prepare_context(ctx)
 
@@ -212,7 +212,7 @@ def test_prepare_context_no_cwd_skips_metadata_key():
     with (
         patch.object(tk, "_get_sandbox", return_value=fake_sb),
         patch.object(DaytonaToolkit, "_resolve_cwd_sync", return_value=None),
-        patch.object(tk, "_inject_ci"),
+        patch("sandbox.workspace.inject_code_intelligence"),
     ):
         tk.prepare_context(ctx)
 
@@ -231,12 +231,12 @@ def test_prepare_context_respects_preseeded_workspace_root_override():
         patch.object(
             DaytonaToolkit, "_resolve_cwd_sync", return_value="/workspace"
         ) as resolve_mock,
-        patch.object(tk, "_inject_ci") as inject_mock,
+        patch("sandbox.workspace.inject_code_intelligence") as inject_mock,
     ):
         tk.prepare_context(ctx)
 
     resolve_mock.assert_not_called()
-    inject_mock.assert_called_once_with(ctx, fake_sb, "/testbed")
+    inject_mock.assert_called_once_with(ctx, "sb-test", fake_sb, "/testbed")
     assert ctx.metadata["daytona_sandbox"] is fake_sb
     assert ctx.metadata["repo_root"] == "/testbed"
     assert ctx.metadata["exec_cwd"] == "/testbed"
@@ -263,7 +263,7 @@ async def test_prepare_context_async_injects_sandbox_and_cwd():
         patch.object(
             DaytonaToolkit, "_resolve_cwd_async", new=AsyncMock(return_value="/async/workspace")
         ),
-        patch.object(tk, "_inject_ci"),
+        patch("sandbox.workspace.inject_code_intelligence"),
     ):
         await tk.prepare_context_async(ctx)
 
@@ -280,7 +280,7 @@ async def test_prepare_context_async_no_cwd():
     with (
         patch.object(tk, "_get_sandbox_async", new=AsyncMock(return_value=fake_sb)),
         patch.object(DaytonaToolkit, "_resolve_cwd_async", new=AsyncMock(return_value=None)),
-        patch.object(tk, "_inject_ci"),
+        patch("sandbox.workspace.inject_code_intelligence"),
     ):
         await tk.prepare_context_async(ctx)
 
@@ -299,12 +299,12 @@ async def test_prepare_context_async_respects_preseeded_workspace_root_override(
         patch.object(
             DaytonaToolkit, "_resolve_cwd_async", new=AsyncMock(return_value="/workspace")
         ) as resolve_mock,
-        patch.object(tk, "_inject_ci") as inject_mock,
+        patch("sandbox.workspace.inject_code_intelligence") as inject_mock,
     ):
         await tk.prepare_context_async(ctx)
 
     resolve_mock.assert_not_called()
-    inject_mock.assert_called_once_with(ctx, fake_sb, "/testbed")
+    inject_mock.assert_called_once_with(ctx, "sb-test", fake_sb, "/testbed")
     assert ctx.metadata["daytona_sandbox"] is fake_sb
     assert ctx.metadata["repo_root"] == "/testbed"
     assert ctx.metadata["exec_cwd"] == "/testbed"
@@ -349,30 +349,3 @@ def test_toolkit_has_instructions():
     tk = DaytonaToolkit()
     assert tk.instructions
     assert "daytona_codeact" in tk.instructions
-
-
-# ---------------------------------------------------------------------------
-# _inject_ci
-# ---------------------------------------------------------------------------
-
-
-def test_inject_ci_calls_inject_code_intelligence():
-    tk = DaytonaToolkit(sandbox_id="sb-ci")
-    fake_sb = MagicMock()
-    ctx = _ctx()
-    mock_module = MagicMock()
-    with patch.dict("sys.modules", {"sandbox.workspace": mock_module}):
-        tk._inject_ci(ctx, fake_sb, "/workspace")
-    mock_module.inject_code_intelligence.assert_called_once_with(
-        ctx, "sb-ci", fake_sb, "/workspace"
-    )
-
-
-def test_inject_ci_skipped_when_skip_code_intelligence_flag_set():
-    tk = DaytonaToolkit(sandbox_id="sb-ci")
-    fake_sb = MagicMock()
-    ctx = _ctx({"skip_code_intelligence": True})
-    mock_module = MagicMock()
-    with patch.dict("sys.modules", {"sandbox.workspace": mock_module}):
-        tk._inject_ci(ctx, fake_sb, "/workspace")
-    mock_module.inject_code_intelligence.assert_not_called()

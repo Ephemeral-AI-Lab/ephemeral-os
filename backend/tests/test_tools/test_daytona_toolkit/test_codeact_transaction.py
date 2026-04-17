@@ -198,7 +198,6 @@ async def test_coordinated_python_mode_captures_native_file_api_writes(tmp_path:
                 workspace_root=str(repo),
             ),
             "agent_name": "developer",
-            "team_mode_enabled": True,
         },
     )
 

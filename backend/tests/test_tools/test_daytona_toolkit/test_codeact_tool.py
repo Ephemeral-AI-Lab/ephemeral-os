@@ -246,7 +246,27 @@ async def test_shell_mode_requires_ci_service():
     assert result.metadata["occ_required"] is True
 
 
-async def test_shell_mode_with_ci_uses_transaction_outside_team(monkeypatch):
+async def test_coordinated_shell_requires_ci_service():
+    sb = _make_sandbox(exec_stdout=_shell_exec_output("LIVE_BASH_OK", 0))
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "daytona_cwd": "/repo",
+            "agent_name": "developer",
+        }
+    )
+
+    result = await daytona_codeact.execute(
+        daytona_codeact.input_model(command="echo LIVE_BASH_OK", timeout=25),
+        ctx,
+    )
+
+    assert result.is_error
+    assert "Code intelligence/OCC is unavailable" in result.output
+    assert result.metadata["occ_required"] is True
+
+
+async def test_shell_mode_with_ci_uses_transaction_without_agent_name(monkeypatch):
     sb = _make_sandbox(exec_stdout=_shell_exec_output("LIVE_BASH_OK", 0))
     ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/repo", "ci_service": _ci_service()})
     collect_changes, commit_changes, cleanup = _patch_coordinated_transaction(monkeypatch, sb)
@@ -293,7 +313,6 @@ async def test_coordinated_shell_without_changes_uses_transaction(monkeypatch):
             "daytona_sandbox": sb,
             "daytona_cwd": "/repo",
             "agent_name": "developer",
-            "team_mode_enabled": True,
             "ci_service": _ci_service(),
         }
     )
@@ -333,7 +352,6 @@ async def test_coordinated_mutating_shell_uses_transaction(monkeypatch):
             "daytona_sandbox": sb,
             "daytona_cwd": "/repo",
             "agent_name": "developer",
-            "team_mode_enabled": True,
             "ci_service": _ci_service(),
         }
     )
@@ -393,7 +411,6 @@ async def test_coordinated_shell_skips_commit_on_command_failure(monkeypatch):
             "daytona_sandbox": sb,
             "daytona_cwd": "/repo",
             "agent_name": "developer",
-            "team_mode_enabled": True,
             "ci_service": _ci_service(),
         }
     )
@@ -558,7 +575,6 @@ async def test_coordinated_python_mode_enforces_runtime_shell_policy(
             "daytona_sandbox": sb,
             "daytona_cwd": "/repo",
             "agent_name": "developer",
-            "team_mode_enabled": True,
             "ci_service": _ci_service(),
         }
     )
@@ -586,7 +602,6 @@ async def test_shell_mode_normalizes_stderr_merge_for_team_agents(monkeypatch):
             "daytona_sandbox": sb,
             "daytona_cwd": "/testbed",
             "agent_name": "developer",
-            "team_mode_enabled": True,
             "ci_service": _ci_service(),
         }
     )
@@ -618,7 +633,6 @@ async def test_coordinated_python_mode_uses_transaction_and_surfaces_report(monk
             "daytona_sandbox": sb,
             "daytona_cwd": "/repo",
             "agent_name": "developer",
-            "team_mode_enabled": True,
             "ci_service": _ci_service(),
         }
     )
@@ -684,7 +698,6 @@ async def test_coordinated_python_mode_does_not_commit_on_wrapper_error(monkeypa
             "daytona_sandbox": sb,
             "daytona_cwd": "/repo",
             "agent_name": "developer",
-            "team_mode_enabled": True,
             "ci_service": _ci_service(),
         }
     )

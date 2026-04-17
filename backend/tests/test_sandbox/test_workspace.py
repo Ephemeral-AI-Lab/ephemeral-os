@@ -149,6 +149,103 @@ class TestInjectCodeIntelligence:
 
         assert "ci_service" not in mock_context.metadata
 
+    def test_reinjects_when_ci_service_key_is_none(self, monkeypatch):
+        from sandbox.workspace import inject_code_intelligence
+
+        mock_context = MagicMock()
+        mock_context.metadata = {"ci_service": None}
+        mock_sandbox = MagicMock()
+        mock_svc = MagicMock()
+
+        def fake_get_ci(sandbox_id, workspace_root, sandbox):
+            return mock_svc
+
+        import sys
+        import types
+
+        fake_ci_module = types.ModuleType("code_intelligence.routing.service")
+        fake_ci_module.get_code_intelligence = fake_get_ci
+        monkeypatch.setitem(sys.modules, "code_intelligence.routing.service", fake_ci_module)
+
+        inject_code_intelligence(mock_context, "sb-123", mock_sandbox, "/workspace")
+
+        assert mock_context.metadata["ci_service"] == mock_svc
+
+
+class TestCodeIntelligenceRuntime:
+    def test_sets_runtime_metadata_and_injects_ci(self, monkeypatch):
+        import sandbox.workspace as workspace_module
+
+        mock_context = MagicMock()
+        mock_context.metadata = {}
+        mock_sandbox = MagicMock()
+        calls = []
+
+        def fake_inject(context, sandbox_id, sandbox, workspace_root):
+            calls.append((context, sandbox_id, sandbox, workspace_root))
+
+        monkeypatch.setattr(workspace_module, "inject_code_intelligence", fake_inject)
+
+        workspace_module.ensure_code_intelligence_runtime(
+            mock_context,
+            sandbox_id="sb-123",
+            sandbox=mock_sandbox,
+            workspace_root="/workspace",
+        )
+
+        assert mock_context.metadata["daytona_sandbox"] is mock_sandbox
+        assert mock_context.metadata["repo_root"] == "/workspace"
+        assert mock_context.metadata["exec_cwd"] == "/workspace"
+        assert calls == [(mock_context, "sb-123", mock_sandbox, "/workspace")]
+
+    def test_respects_existing_repo_and_ci_workspace_overrides(self, monkeypatch):
+        import sandbox.workspace as workspace_module
+
+        mock_context = MagicMock()
+        mock_context.metadata = {
+            "repo_root": "/testbed",
+            "ci_workspace_root": "/ci-root",
+        }
+        mock_sandbox = MagicMock()
+        calls = []
+
+        def fake_inject(context, sandbox_id, sandbox, workspace_root):
+            calls.append((context, sandbox_id, sandbox, workspace_root))
+
+        monkeypatch.setattr(workspace_module, "inject_code_intelligence", fake_inject)
+
+        workspace_module.ensure_code_intelligence_runtime(
+            mock_context,
+            sandbox_id="sb-123",
+            sandbox=mock_sandbox,
+            workspace_root="/workspace",
+        )
+
+        assert mock_context.metadata["repo_root"] == "/testbed"
+        assert mock_context.metadata["exec_cwd"] == "/testbed"
+        assert calls == [(mock_context, "sb-123", mock_sandbox, "/ci-root")]
+
+    def test_skip_code_intelligence_only_skips_ci_attachment(self, monkeypatch):
+        import sandbox.workspace as workspace_module
+
+        mock_context = MagicMock()
+        mock_context.metadata = {"skip_code_intelligence": True}
+        mock_sandbox = MagicMock()
+        inject_mock = MagicMock()
+        monkeypatch.setattr(workspace_module, "inject_code_intelligence", inject_mock)
+
+        workspace_module.ensure_code_intelligence_runtime(
+            mock_context,
+            sandbox_id="sb-123",
+            sandbox=mock_sandbox,
+            workspace_root="/workspace",
+        )
+
+        assert mock_context.metadata["daytona_sandbox"] is mock_sandbox
+        assert mock_context.metadata["repo_root"] == "/workspace"
+        assert mock_context.metadata["exec_cwd"] == "/workspace"
+        inject_mock.assert_not_called()
+
     def test_uses_sync_handle_for_async_remote_sandbox_prewarm(self, monkeypatch):
         from sandbox.workspace import inject_code_intelligence
 

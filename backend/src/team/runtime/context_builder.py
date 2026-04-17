@@ -53,7 +53,6 @@ def build_task_metadata(team_run: "TeamRun", task: Task) -> ExecutionMetadata:
         sandbox_id=getattr(team_run, "sandbox_id", "") or "",
     )
     meta["work_item_started_at"] = time.time()
-    meta["team_mode_enabled"] = True
     meta["task_deps"] = list(task.deps)
     meta["task_parent_id"] = task.parent_id
     meta["task_depth"] = task.depth

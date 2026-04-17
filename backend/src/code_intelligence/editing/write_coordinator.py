@@ -331,13 +331,10 @@ class WriteCoordinator:
         agent_id: str = "",
         edit_type: str,
         description: str = "",
-        expected_arbiter_generation: int | None = None,
     ) -> MultiEditResult:
         """Atomically commit a batch of file changes against per-file bases.
 
         Semantics:
-          * **Generation gate** — if ``expected_arbiter_generation`` is given
-            and the arbiter has since advanced, abort the batch untouched.
           * **Sorted-path locking** — acquire all per-file locks in sorted
             path order; release in reverse on exit.
           * **Merge tolerance** — if a file's current hash equals its
@@ -362,26 +359,6 @@ class WriteCoordinator:
                 conflict_reason="",
                 timings={"total": 0.0},
             )
-
-        # 1. Generation precheck — catches edits landed anywhere in the
-        #    sandbox between plan time and commit time that Jedi could not
-        #    have seen.
-        if expected_arbiter_generation is not None:
-            current_gen = self._arbiter.generation
-            if current_gen != expected_arbiter_generation:
-                self._arbiter.record_conflict("generation_mismatch")
-                timings["total"] = round(time.perf_counter() - started, 6)
-                return self._batch_abort(
-                    changes,
-                    status="aborted_generation",
-                    conflict_file=None,
-                    conflict_reason=(
-                        f"arbiter generation advanced "
-                        f"{expected_arbiter_generation} → {current_gen}; "
-                        "re-plan the rename."
-                    ),
-                    timings=timings,
-                )
 
         sorted_changes = sorted(changes, key=lambda c: c.file_path)
 

@@ -6,6 +6,8 @@ import inspect
 import logging
 from typing import Any
 
+from config.defaults import DEFAULT_SANDBOX_CI_ROOT
+
 logger = logging.getLogger(__name__)
 
 
@@ -103,7 +105,7 @@ def inject_code_intelligence(
     sandbox: Any,
     workspace_root: str,
 ) -> None:
-    if sandbox_id and "ci_service" not in context.metadata:
+    if sandbox_id and context.metadata.get("ci_service") is None:
         try:
             from code_intelligence.routing.service import get_code_intelligence
 
@@ -148,3 +150,43 @@ def inject_code_intelligence(
             context.metadata["ci_service"] = svc
         except Exception:
             logger.debug("CI service not available for sandbox %s", sandbox_id)
+
+
+def ensure_code_intelligence_runtime(
+    context: Any,
+    *,
+    sandbox_id: str | None,
+    sandbox: Any,
+    workspace_root: str | None,
+    default_ci_root: str = DEFAULT_SANDBOX_CI_ROOT,
+) -> None:
+    """Inject Daytona runtime metadata and attach code intelligence if available.
+
+    This is the shared boundary for Daytona-backed tools. Callers may discover
+    ``workspace_root`` differently (sync toolkit prepare, async toolkit prepare,
+    lazy attach), but this helper owns the metadata contract and CI attachment.
+    """
+    metadata = context.metadata
+    if sandbox is not None:
+        metadata["daytona_sandbox"] = sandbox
+
+    repo_root = str(metadata.get("repo_root") or "").strip()
+    if not repo_root:
+        candidate = str(workspace_root or "").strip()
+        if not candidate and sandbox is not None:
+            candidate = _sandbox_project_root(sandbox) or ""
+        if candidate:
+            repo_root = candidate
+            metadata["repo_root"] = repo_root
+
+    if not metadata.get("exec_cwd") and repo_root:
+        metadata["exec_cwd"] = repo_root
+
+    ci_root = (
+        str(metadata.get("ci_workspace_root") or "").strip()
+        or repo_root
+        or str(workspace_root or "").strip()
+        or default_ci_root
+    )
+    if not metadata.get("skip_code_intelligence"):
+        inject_code_intelligence(context, sandbox_id, sandbox, ci_root)

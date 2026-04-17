@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 from pydantic.json_schema import GenerateJsonSchema
 
 from tools.core.base import ToolExecutionContext, ToolResult
-from tools.core.ci_runtime import get_ci_service
+from tools.core.ci_runtime import ci_required_result, get_ci_service
 from tools.core.decorator import tool
 from tools.daytona_toolkit._daytona_utils import (
     _extract_exit_code,
@@ -676,13 +676,9 @@ def _shell_error_result(message: str) -> ToolResult:
 
 
 def _ci_required_result() -> ToolResult:
-    return ToolResult(
-        output=(
-            "daytona_codeact: Code intelligence/OCC is unavailable. "
-            "Command execution and Python CodeAct are disabled without CI service."
-        ),
-        is_error=True,
-        metadata={"occ_required": True},
+    return ci_required_result(
+        "daytona_codeact",
+        "Command execution and Python CodeAct are disabled without CI service.",
     )
 
 

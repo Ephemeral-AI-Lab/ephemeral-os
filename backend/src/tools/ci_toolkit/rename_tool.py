@@ -325,7 +325,6 @@ def _perform_rename(
         agent_id=agent_id,
         edit_type="rename",
         description=f"rename to {new_name}",
-        expected_arbiter_generation=plan.arbiter_generation,
     )
 
     if result.success:

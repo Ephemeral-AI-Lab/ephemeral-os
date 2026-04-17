@@ -37,11 +37,10 @@ def _change(path: str, *, base: str, final: str) -> SemanticFileChange:
     )
 
 
-def _plan(changes, *, arbiter_generation=7) -> SemanticRenamePlan:
+def _plan(changes) -> SemanticRenamePlan:
     return SemanticRenamePlan(
         new_name="bar",
         origin=("/ws/a.py", 1, 0),
-        arbiter_generation=arbiter_generation,
         changes=tuple(changes),
     )
 
@@ -54,7 +53,7 @@ def _make_svc(
     svc = MagicMock()
     if plan is None:
         svc.rename_symbol_plan.return_value = SemanticRenamePlan(
-            new_name="bar", origin=("", 0, 0), arbiter_generation=0, changes=(),
+            new_name="bar", origin=("", 0, 0), changes=(),
         )
     else:
         svc.rename_symbol_plan.return_value = plan
@@ -120,7 +119,7 @@ def test_rename_commits_atomically_via_batch_primitive():
         _change("/ws/a.py", base="old_a", final="new_a"),
         _change("/ws/b.py", base="old_b", final="new_b"),
     ]
-    plan = _plan(changes, arbiter_generation=42)
+    plan = _plan(changes)
     svc = _make_svc(plan=plan)
     result = _run(
         {"file_path": "/ws/a.py", "line": 3, "character": 4, "new_name": "bar"},
@@ -132,7 +131,6 @@ def test_rename_commits_atomically_via_batch_primitive():
     assert {f["file_path"] for f in data["files"]} == {"/ws/a.py", "/ws/b.py"}
     svc.commit_many_against_base.assert_called_once()
     kwargs = svc.commit_many_against_base.call_args.kwargs
-    assert kwargs["expected_arbiter_generation"] == 42
     assert kwargs["edit_type"] == "rename"
 
 
@@ -227,7 +225,7 @@ def _make_facade_svc(
         svc.rename_symbol_plan.return_value = plan
     else:
         svc.rename_symbol_plan.return_value = SemanticRenamePlan(
-            new_name="bar", origin=("", 0, 0), arbiter_generation=0, changes=(),
+            new_name="bar", origin=("", 0, 0), changes=(),
         )
     svc.preview_rename_symbol_plan.return_value = svc.rename_symbol_plan.return_value
     svc.commit_many_against_base.return_value = commit_result or MultiEditResult(
@@ -250,7 +248,7 @@ def _run_facade(tool_input, ctx):
 def test_facade_resolves_unique_symbol_and_delegates():
     match = _sym("foo", line=10, character=4, file_path="/ws/a.py")
     changes = [_change("/ws/a.py", base="def foo():\n    pass\n", final="def bar():\n    pass\n")]
-    plan = _plan(changes, arbiter_generation=3)
+    plan = _plan(changes)
     svc = _make_facade_svc(matches=[match], plan=plan)
     result = _run_facade(
         {"symbol": "foo", "new_name": "bar"},
@@ -269,7 +267,7 @@ def test_facade_resolves_unique_symbol_and_delegates():
 def test_facade_uses_name_column_for_indexed_python_declarations():
     match = _sym("foo", line=10, character=0, file_path="/ws/a.py", signature="def foo()")
     changes = [_change("/ws/a.py", base="def foo():\n    pass\n", final="def bar():\n    pass\n")]
-    plan = _plan(changes, arbiter_generation=3)
+    plan = _plan(changes)
     svc = _make_facade_svc(matches=[match], plan=plan)
 
     result = _run_facade(
@@ -381,35 +379,3 @@ def test_facade_invalid_new_name_rejected_before_resolution():
     assert result.is_error
     assert "Invalid identifier" in result.output
     svc.symbol_index.find.assert_not_called()
-
-
-# -- original generation-gate test -----------------------------------------
-
-
-def test_generation_gate_abort_surfaces_as_aborted():
-    change = _change("/ws/a.py", base="old", final="new")
-    plan = _plan([change], arbiter_generation=5)
-    abort = MultiEditResult(
-        success=False,
-        status="aborted_generation",
-        files=(
-            EditResult(
-                success=False,
-                file_path="/ws/a.py",
-                message="generation advanced",
-                conflict=True,
-                conflict_reason="aborted_generation",
-            ),
-        ),
-        conflict_file=None,
-        conflict_reason="arbiter generation advanced 5 → 6; re-plan the rename.",
-    )
-    svc = _make_svc(plan=plan, commit_result=abort)
-    result = _run(
-        {"file_path": "/ws/a.py", "line": 1, "new_name": "bar"},
-        _ctx({"ci_service": svc}),
-    )
-    assert result.is_error
-    data = json.loads(result.output)
-    assert data["status"] == "aborted"
-    assert "generation" in data["message"].lower()

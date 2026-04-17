@@ -220,7 +220,6 @@ async def test_edit_warns_write_outside_write_scope():
             "daytona_sandbox": sb,
             "daytona_cwd": "/testbed",
             "agent_name": "developer",
-            "team_mode_enabled": True,
             "write_scope": ["dask/config.py"],
             "ci_service": _ci_service_for_content(
                 "original",
@@ -251,7 +250,6 @@ async def test_edit_allows_write_inside_write_scope():
             "daytona_sandbox": sb,
             "daytona_cwd": "/testbed",
             "agent_name": "developer",
-            "team_mode_enabled": True,
             "write_scope": ["dask/config.py"],
             "ci_service": _ci_service_for_content(
                 "original",
@@ -282,7 +280,6 @@ async def test_edit_rejects_test_suite_write():
             "daytona_sandbox": sb,
             "daytona_cwd": "/testbed",
             "agent_name": "developer",
-            "team_mode_enabled": True,
             "write_scope": ["dask/cli.py"],
             "owned_failures": ["dask/tests/test_cli.py"],
             "verify": ["pytest dask/tests/test_cli.py -q"],
@@ -311,7 +308,6 @@ async def test_edit_warns_non_verify_surface_write_in_warn_mode():
             "daytona_sandbox": sb,
             "daytona_cwd": "/testbed",
             "agent_name": "developer",
-            "team_mode_enabled": True,
             "write_scope": ["dask/compatibility.py"],
             "verification_surface_write_enforcement": "warn",
             "owned_failures": ["dask/tests/test_cli.py"],
@@ -378,7 +374,6 @@ async def test_edit_allows_repo_write_from_validator():
             "daytona_sandbox": sb,
             "daytona_cwd": "/testbed",
             "agent_name": "validator",
-            "team_mode_enabled": True,
             "ci_service": _ci_service_for_content(
                 "original",
                 file_path="/testbed/dask/config.py",
@@ -401,7 +396,12 @@ async def test_edit_allows_repo_write_from_validator():
 async def test_edit_no_raw_write_after_ci_unavailable():
     sb = _make_sandbox(download_content="content here")
     sb.fs.upload_file = AsyncMock(side_effect=RuntimeError("write fail"))
-    ctx = _ctx({"daytona_sandbox": sb})
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "agent_name": "developer",
+        }
+    )
     result = await daytona_edit_file.execute(
         daytona_edit_file.input_model(
             file_path="/file.py",
@@ -412,6 +412,7 @@ async def test_edit_no_raw_write_after_ci_unavailable():
     )
     assert result.is_error
     assert "Code intelligence/OCC is unavailable" in result.output
+    assert result.metadata["occ_required"] is True
     sb.fs.upload_file.assert_not_called()
 
 
@@ -626,10 +627,16 @@ async def test_edit_occ_lock_conflict():
 
 
 async def test_edit_occ_no_prepare_write_returns_error():
-    """A CI stub without prepare_write must not fall back to direct writes."""
+    """A coordinated team edit must not fall back when OCC is unavailable."""
     sb = _make_sandbox(download_content="content here")
     svc = SimpleNamespace(arbiter=None)
-    ctx = _ctx({"daytona_sandbox": sb, "ci_service": svc})
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "ci_service": svc,
+            "agent_name": "developer",
+        }
+    )
 
     result = await daytona_edit_file.execute(
         daytona_edit_file.input_model(

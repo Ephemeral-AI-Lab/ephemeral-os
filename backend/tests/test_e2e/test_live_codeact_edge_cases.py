@@ -88,7 +88,6 @@ async def test_pip_install_allowed_with_team_metadata(agent):
     """Even with team metadata injected, pip install is allowed (codeact is team-agnostic)."""
     meta = agent._query_context.tool_metadata
     meta.agent_name = "developer"
-    meta["team_mode_enabled"] = True
     try:
         result = await agent.invoke(
             "Use daytona_codeact with this Python code:\n"
@@ -107,7 +106,6 @@ async def test_pip_install_allowed_with_team_metadata(agent):
                 )
     finally:
         meta.agent_name = ""
-        meta.extras.pop("team_mode_enabled", None)
 
 
 # ===========================================================================
@@ -161,7 +159,6 @@ async def test_codeact_allows_subprocess_with_team_metadata(agent):
     """CodeAct does not block subprocess calls even with team metadata."""
     meta = agent._query_context.tool_metadata
     meta.agent_name = "developer"
-    meta["team_mode_enabled"] = True
     try:
         result = await agent.invoke(
             "Use daytona_codeact with this exact Python code:\n"
@@ -184,14 +181,12 @@ async def test_codeact_allows_subprocess_with_team_metadata(agent):
         )
     finally:
         meta.agent_name = ""
-        meta.extras.pop("team_mode_enabled", None)
 
 
 async def test_codeact_allows_writes_with_validator_metadata(agent):
     """CodeAct does not block writes even with validator team metadata."""
     meta = agent._query_context.tool_metadata
     meta.agent_name = "validator"
-    meta["team_mode_enabled"] = True
     try:
         marker = f"VALIDATOR_{uuid.uuid4().hex[:8]}"
         result = await agent.invoke(
@@ -213,7 +208,6 @@ async def test_codeact_allows_writes_with_validator_metadata(agent):
         )
     finally:
         meta.agent_name = ""
-        meta.extras.pop("team_mode_enabled", None)
 
 
 # ===========================================================================

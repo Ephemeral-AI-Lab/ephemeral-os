@@ -165,7 +165,6 @@ class LiveLoadEnv:
         }
         if coordinated:
             metadata["agent_name"] = "developer"
-            metadata["team_mode_enabled"] = True
         return ToolExecutionContext(cwd=Path(self.repo_root), metadata=metadata)
 
     def init_repo(self) -> None:

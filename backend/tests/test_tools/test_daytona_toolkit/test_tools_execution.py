@@ -112,7 +112,6 @@ async def test_read_file_blocks_benchmark_lane_before_first_repro():
             "daytona_sandbox": sb,
             "daytona_cwd": "/testbed",
             "agent_name": "developer",
-            "team_mode_enabled": True,
             "benchmark_test_ids": ["tests/unit/command/test_update.py::test_update"],
             "benchmark_test_files": ["tests/unit/command/test_update.py"],
         }
@@ -135,7 +134,6 @@ async def test_read_file_blocks_benchmark_test_files_after_repro():
             "daytona_sandbox": sb,
             "daytona_cwd": "/testbed",
             "agent_name": "developer",
-            "team_mode_enabled": True,
             "benchmark_test_ids": ["tests/unit/command/test_update.py::test_update"],
             "benchmark_test_files": ["tests/unit/command/test_update.py"],
             "_daytona_codeact_calls": 1,
@@ -159,7 +157,6 @@ async def test_read_file_allows_production_reads_after_repro():
             "daytona_sandbox": sb,
             "daytona_cwd": "/testbed",
             "agent_name": "developer",
-            "team_mode_enabled": True,
             "benchmark_test_ids": ["tests/unit/command/test_update.py::test_update"],
             "benchmark_test_files": ["tests/unit/command/test_update.py"],
             "_daytona_codeact_calls": 1,
@@ -249,7 +246,6 @@ async def test_write_file_warns_write_outside_write_scope():
             "daytona_sandbox": sb,
             "daytona_cwd": "/testbed",
             "agent_name": "developer",
-            "team_mode_enabled": True,
             "write_scope": ["dask/config.py"],
             "ci_service": svc,
         }
@@ -282,7 +278,6 @@ async def test_write_file_allows_write_inside_write_scope():
             "daytona_sandbox": sb,
             "daytona_cwd": "/testbed",
             "agent_name": "developer",
-            "team_mode_enabled": True,
             "write_scope": ["dask/"],
             "ci_service": svc,
         }
@@ -307,7 +302,6 @@ async def test_write_file_rejects_test_suite_write():
             "daytona_sandbox": sb,
             "daytona_cwd": "/testbed",
             "agent_name": "developer",
-            "team_mode_enabled": True,
             "write_scope": ["dask/cli.py"],
             "owned_failures": ["dask/tests/test_cli.py"],
             "verify": ["pytest dask/tests/test_cli.py -q"],
@@ -342,7 +336,6 @@ async def test_write_file_warns_non_verify_surface_write_in_warn_mode():
             "daytona_sandbox": sb,
             "daytona_cwd": "/testbed",
             "agent_name": "developer",
-            "team_mode_enabled": True,
             "write_scope": ["dask/compatibility.py"],
             "verification_surface_write_enforcement": "warn",
             "owned_failures": ["dask/tests/test_cli.py"],
@@ -377,7 +370,6 @@ async def test_write_file_allows_repo_write_from_validator():
             "daytona_sandbox": sb,
             "daytona_cwd": "/testbed",
             "agent_name": "validator",
-            "team_mode_enabled": True,
             "ci_service": svc,
         }
     )
@@ -397,12 +389,18 @@ async def test_write_file_no_raw_write_after_ci_unavailable():
     sb = _sb()
     sb.process.exec = AsyncMock(return_value=MagicMock(result="", exit_code=0))
     sb.fs.upload_file = AsyncMock(side_effect=RuntimeError("disk full"))
-    ctx = _ctx({"daytona_sandbox": sb})
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "agent_name": "developer",
+        }
+    )
     result = await daytona_write_file.execute(
         daytona_write_file.input_model(file_path="/x.txt", content="data"), ctx
     )
     assert result.is_error
     assert "Code intelligence/OCC is unavailable" in result.output
+    assert result.metadata["occ_required"] is True
     sb.fs.upload_file.assert_not_called()
 
 

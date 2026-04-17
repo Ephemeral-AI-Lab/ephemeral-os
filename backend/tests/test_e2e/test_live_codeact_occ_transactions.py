@@ -195,7 +195,6 @@ class LiveRepoEnv:
             "daytona_cwd": self.repo_root,
             "ci_service": ci_service,
             "agent_name": "developer",
-            "team_mode_enabled": True,
             "agent_run_id": agent_run_id,
         }
         if extra_metadata:

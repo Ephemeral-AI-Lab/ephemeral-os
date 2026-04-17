@@ -83,7 +83,6 @@ def test_build_task_metadata_enables_team_runtime_flags():
 
     meta = build_task_metadata(team_run, task)
 
-    assert meta["team_mode_enabled"] is True
     assert meta["task_deps"] == ["dep-1", "dep-2"]
     assert meta["task_parent_id"] is None
     assert meta["task_depth"] == 2

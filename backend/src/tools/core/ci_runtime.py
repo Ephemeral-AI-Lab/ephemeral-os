@@ -9,7 +9,7 @@ import logging
 from typing import Any
 
 from code_intelligence.editing.merge import detect_edit_window
-from tools.core.base import ToolExecutionContext
+from tools.core.base import ToolExecutionContext, ToolResult
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +21,19 @@ def _content_hash(content: str) -> str:
 def get_ci_service(context: ToolExecutionContext) -> Any | None:
     """Get the CodeIntelligenceService from context, or None if unavailable."""
     return context.metadata.get("ci_service")
+
+
+def ci_required_result(tool_name: str, detail: str) -> ToolResult:
+    """Build a consistent error for tools that require CI/OCC."""
+    suffix = str(detail or "").strip()
+    return ToolResult(
+        output=(
+            f"{tool_name}: Code intelligence/OCC is unavailable."
+            f"{' ' + suffix if suffix else ''}"
+        ),
+        is_error=True,
+        metadata={"occ_required": True},
+    )
 
 
 def _team_edit_ids(context: ToolExecutionContext) -> tuple[str, str, str]:
@@ -494,6 +507,7 @@ def _get_team_run(team_run_id: str) -> Any | None:
 __all__ = [
     "abort_ci_write",
     "commit_ci_change_against_base",
+    "ci_required_result",
     "finalize_ci_write",
     "get_ci_service",
     "prepare_ci_edit_intent",

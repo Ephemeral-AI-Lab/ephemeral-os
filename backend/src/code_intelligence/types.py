@@ -154,7 +154,6 @@ class SemanticRenamePlan:
 
     new_name: str
     origin: tuple[str, int, int]
-    arbiter_generation: int
     changes: tuple[SemanticFileChange, ...]
 
 
@@ -163,7 +162,6 @@ MultiEditStatus = Literal[
     "aborted_version",
     "aborted_overlap",
     "aborted_lock",
-    "aborted_generation",
     "failed",
 ]
 

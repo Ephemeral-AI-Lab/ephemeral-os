@@ -16,8 +16,6 @@ from tools.daytona_toolkit.tools import (
 from tools.daytona_toolkit.edit_tool import daytona_edit_file
 from tools.daytona_toolkit.codeact_tool import daytona_codeact
 
-from config.defaults import DEFAULT_SANDBOX_CI_ROOT
-
 logger = logging.getLogger(__name__)
 
 
@@ -157,18 +155,6 @@ class DaytonaToolkit(BaseToolkit):
 
         return await discover_workspace_async(sandbox)
 
-    def _inject_ci(self, context: Any, sandbox: Any, workspace_root: str) -> None:
-        """Inject code intelligence service into context metadata.
-
-        Skipped when context.metadata["skip_code_intelligence"] is True.
-        This allows non-team mode to skip CI service overhead.
-        """
-        if context.metadata.get("skip_code_intelligence"):
-            return
-        from sandbox.workspace import inject_code_intelligence
-
-        inject_code_intelligence(context, self.sandbox_id, sandbox, workspace_root)
-
     def prepare_context(self, context: Any) -> None:
         """Inject sandbox, repo root, and optional CI service into a ToolExecutionContext.
 
@@ -177,18 +163,15 @@ class DaytonaToolkit(BaseToolkit):
         the resolved repo root via ``context.metadata['repo_root']``.
         """
         sandbox = self._get_sandbox()
-        context.metadata["daytona_sandbox"] = sandbox
         repo_root = context.metadata.get("repo_root") or self._resolve_cwd_sync(sandbox)
-        if repo_root:
-            context.metadata["repo_root"] = repo_root
-        if not context.metadata.get("exec_cwd") and repo_root:
-            context.metadata["exec_cwd"] = repo_root
-        ci_root = (
-            context.metadata.get("ci_workspace_root")
-            or repo_root
-            or DEFAULT_SANDBOX_CI_ROOT
+        from sandbox.workspace import ensure_code_intelligence_runtime
+
+        ensure_code_intelligence_runtime(
+            context,
+            sandbox_id=self.sandbox_id,
+            sandbox=sandbox,
+            workspace_root=repo_root,
         )
-        self._inject_ci(context, sandbox, ci_root)
 
     async def prepare_context_async(self, context: Any) -> None:
         """Inject async sandbox, repo root, and optional CI service into a ToolExecutionContext.
@@ -197,15 +180,12 @@ class DaytonaToolkit(BaseToolkit):
         The async sandbox supports asyncio.CancelledError propagation.
         """
         sandbox = await self._get_sandbox_async()
-        context.metadata["daytona_sandbox"] = sandbox
         repo_root = context.metadata.get("repo_root") or await self._resolve_cwd_async(sandbox)
-        if repo_root:
-            context.metadata["repo_root"] = repo_root
-        if not context.metadata.get("exec_cwd") and repo_root:
-            context.metadata["exec_cwd"] = repo_root
-        ci_root = (
-            context.metadata.get("ci_workspace_root")
-            or repo_root
-            or DEFAULT_SANDBOX_CI_ROOT
+        from sandbox.workspace import ensure_code_intelligence_runtime
+
+        ensure_code_intelligence_runtime(
+            context,
+            sandbox_id=self.sandbox_id,
+            sandbox=sandbox,
+            workspace_root=repo_root,
         )
-        self._inject_ci(context, sandbox, ci_root)

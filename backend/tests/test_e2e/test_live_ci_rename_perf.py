@@ -866,7 +866,6 @@ def _run_occ_capture_checks(
             "arbiter": occ_svc.arbiter,
             "agent_run_id": f"ci-lsp-occ-agent-{uuid.uuid4().hex[:8]}",
             "agent_name": "developer",
-            "team_mode_enabled": True,
             "team_run_id": f"ci-lsp-occ-team-{uuid.uuid4().hex[:8]}",
             "work_item_id": "occ-live-capture",
             "work_item_started_at": time.time(),
