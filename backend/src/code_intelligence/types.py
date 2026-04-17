@@ -108,7 +108,8 @@ class OperationChange:
     """One file's slot in a service-level semantic operation.
 
     ``base_content`` is the content the semantic tool inspected at plan time;
-    ``base_hash`` is its :func:`content_hash`. ``final_content`` is the
+    ``base_hash`` is its :func:`code_intelligence.hashing.content_hash`.
+    ``final_content`` is the
     tool's proposed post-transform content, or ``None`` to delete the file.
     ``base_existed`` is ``False`` when the plan expects to create a new file.
     """

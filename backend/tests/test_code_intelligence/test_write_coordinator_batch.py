@@ -5,7 +5,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock
 
 import pytest
-from code_intelligence.editing.write_coordinator import content_hash
+from code_intelligence.hashing import content_hash
 from code_intelligence.routing.service import (
     CodeIntelligenceService,
     dispose_all_code_intelligence,

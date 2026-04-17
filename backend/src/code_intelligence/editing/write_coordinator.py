@@ -8,12 +8,12 @@ process-audit entry point.
 
 from __future__ import annotations
 
-import hashlib
 import logging
 import time
 from collections.abc import Sequence
 from typing import Any
 
+from code_intelligence.hashing import content_hash
 from code_intelligence.editing.arbiter import Arbiter
 from code_intelligence.editing.merge import (
     detect_edit_window,
@@ -29,10 +29,6 @@ from code_intelligence.types import (
 )
 
 logger = logging.getLogger(__name__)
-
-
-def content_hash(content: str) -> str:
-    return hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
 
 
 def _result(

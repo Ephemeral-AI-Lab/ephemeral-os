@@ -30,7 +30,8 @@ from code_intelligence.analysis.tree_cache import TreeCache
 from code_intelligence.editing.arbiter import Arbiter
 from code_intelligence.editing.patcher import Patcher
 from code_intelligence.editing.time_machine import TimeMachine
-from code_intelligence.editing.write_coordinator import WriteCoordinator, content_hash
+from code_intelligence.editing.write_coordinator import WriteCoordinator
+from code_intelligence.hashing import content_hash
 from code_intelligence.lsp.client import LspClient
 from code_intelligence.routing.backend_protocol import (
     LspBackendAdapter,
