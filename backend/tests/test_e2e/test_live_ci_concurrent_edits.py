@@ -49,7 +49,6 @@ from dotenv import load_dotenv
 
 from code_intelligence.lsp._jedi_worker_client import (
     ENV_FLAG as JEDI_WORKER_ENV_FLAG,
-    RENAME_ENV_FLAG as JEDI_WORKER_RENAME_ENV_FLAG,
 )
 from code_intelligence.routing.service import CodeIntelligenceService
 from tools.ci_toolkit.rename_tool import ci_rename_symbol
@@ -221,7 +220,6 @@ def test_concurrent_nonoverlap_edits_across_tools(
 ) -> None:
     """All 4 write paths run concurrently on disjoint targets — zero conflicts."""
     monkeypatch.setenv(JEDI_WORKER_ENV_FLAG, "1")
-    monkeypatch.setenv(JEDI_WORKER_RENAME_ENV_FLAG, "1")
     env = live_edits_env
     root = f"{env.root_dir}/nonoverlap_{uuid.uuid4().hex[:6]}"
     _write_perf_project(env, root)
@@ -455,7 +453,6 @@ def test_concurrent_overlap_edits_detect_conflicts(
 ) -> None:
     """Racing pairs on the same region — exactly one winner per pair."""
     monkeypatch.setenv(JEDI_WORKER_ENV_FLAG, "1")
-    monkeypatch.setenv(JEDI_WORKER_RENAME_ENV_FLAG, "1")
     env = live_edits_env
     root = f"{env.root_dir}/overlap_{uuid.uuid4().hex[:6]}"
     env.exec_checked(f"mkdir -p {shlex.quote(root)}/pkg")
@@ -662,7 +659,6 @@ def test_jedi_worker_reuse_under_load(
 ) -> None:
     """Under ``CI_JEDI_WORKER_ENABLED=1`` every LSP call hits the worker."""
     monkeypatch.setenv(JEDI_WORKER_ENV_FLAG, "1")
-    monkeypatch.setenv(JEDI_WORKER_RENAME_ENV_FLAG, "1")
     env = live_edits_env
     root = f"{env.root_dir}/worker_{uuid.uuid4().hex[:6]}"
     core_path, uses_path, _more_path = _write_perf_project(env, root)

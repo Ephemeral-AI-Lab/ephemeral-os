@@ -33,7 +33,6 @@ from dotenv import load_dotenv
 from code_intelligence.routing.service import CodeIntelligenceService
 from code_intelligence.lsp._jedi_worker_client import (
     ENV_FLAG as JEDI_WORKER_ENV_FLAG,
-    RENAME_ENV_FLAG as JEDI_WORKER_RENAME_ENV_FLAG,
 )
 from tools.ci_toolkit.rename_tool import ci_rename, ci_rename_symbol
 from tools.core.base import ToolExecutionContext
@@ -413,7 +412,6 @@ def test_live_ci_lsp_jedi_tool_traces_and_perf(
 ) -> None:
     """Trace direct LSP calls and rename tool calls inside a real Daytona sandbox."""
     monkeypatch.setenv(JEDI_WORKER_ENV_FLAG, "0")
-    monkeypatch.setenv(JEDI_WORKER_RENAME_ENV_FLAG, "0")
     all_stats: list[dict[str, Any]] = []
     env = live_rename_env
     core_path, uses_path, more_path = _write_perf_project(env, env.root_dir)
