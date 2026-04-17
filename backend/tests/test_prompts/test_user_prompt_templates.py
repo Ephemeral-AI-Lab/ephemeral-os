@@ -15,11 +15,10 @@ from team.task_context_builder import TaskContextBuilder
 
 
 _PROMPT_DIR = Path(__file__).resolve().parents[2] / "src" / "prompts" / "user_prompt"
-_SPEC_FORMAT_INSTRUCTION = (
-    "For each new task `spec`, use exactly this section order with colon labels: "
-    "`1. Goal:`, `2. Environment:`, `3. Scope:`, `4. Context:`, "
-    "`5. Acceptance Criteria:`"
+_SUBMIT_PLAN_SCHEMA_SNIPPET = (
+    "Provide new_tasks with id, description, name, spec, deps, and scope_paths"
 )
+_SUBMIT_PLAN_SPEC_SNIPPET = "Each spec must use numbered colon labels in order"
 
 
 def test_user_prompt_markdown_files_start_at_runtime_template() -> None:
@@ -58,8 +57,9 @@ def test_render_user_prompt_template_uses_markdown_file_conditionals() -> None:
     assert "Goal\nImplement retry handling." in rendered
     assert "## scope_paths\n- backend/src/retry.py" in rendered
     assert "## Context from dependencies" not in rendered
-    assert "stdout and stderr are already captured separately" in rendered
-    assert "cd /testbed" in rendered
+    assert "Tool-name contract" not in rendered
+    assert "stdout and stderr are already captured separately" not in rendered
+    assert "cd /testbed" not in rendered
 
 
 def test_note_taker_prompts_load_from_markdown_file() -> None:
@@ -173,8 +173,9 @@ async def test_build_query_context_uses_root_planner_markdown_template() -> None
     assert "Fix retry handling." in ctx.user_message
     assert "## Benchmark targets" in ctx.user_message
     assert "tests/test_retry.py::test_retry" in ctx.user_message
-    assert _SPEC_FORMAT_INSTRUCTION in ctx.user_message
-    assert "Submit the final plan with `submit_plan(new_tasks=[...])`" in ctx.user_message
+    assert _SUBMIT_PLAN_SCHEMA_SNIPPET in ctx.user_message
+    assert _SUBMIT_PLAN_SPEC_SNIPPET in ctx.user_message
+    assert "Submit the final plan with `submit_plan(new_tasks=[...])`" not in ctx.user_message
 
 
 @pytest.mark.asyncio
@@ -221,8 +222,9 @@ async def test_build_query_context_uses_child_planner_structured_spec_contract()
     assert "- submit_plan:" in ctx.user_message
     assert "## Assigned planner task" in ctx.user_message
     assert "Decompose retry handling." in ctx.user_message
-    assert _SPEC_FORMAT_INSTRUCTION in ctx.user_message
-    assert "Submit the final child plan with `submit_plan(new_tasks=[...])`" in ctx.user_message
+    assert _SUBMIT_PLAN_SCHEMA_SNIPPET in ctx.user_message
+    assert _SUBMIT_PLAN_SPEC_SNIPPET in ctx.user_message
+    assert "Submit the final child plan with `submit_plan(new_tasks=[...])`" not in ctx.user_message
 
 
 @pytest.mark.asyncio

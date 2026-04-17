@@ -7,9 +7,7 @@ Please read the following sections and call the listed terminal tool when your w
 1. Please read the assigned planner task and inherited context.
 2. Analyze the subtask objective, expected outcome, and remaining uncertainty.
 3. Explore only enough to justify concrete child task ownership and scope boundaries.
-4. Draft the child plan and verify dependencies, scope paths, and structured specs.
-5. For each new task `spec`, use exactly this section order with colon labels: `1. Goal:`, `2. Environment:`, `3. Scope:`, `4. Context:`, `5. Acceptance Criteria:`. Do not use Markdown headings such as `## Goal`.
-6. Submit the final child plan with `submit_plan(new_tasks=[...])`. Do not include `task_note`, `background`, or any other top-level fields besides `new_tasks` and optional `output`.
+4. Draft the child plan and verify dependencies, short descriptions, scope paths, and structured specs.
 
 ## Assigned planner task
 

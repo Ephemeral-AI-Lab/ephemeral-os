@@ -314,7 +314,7 @@ def validate_plan(
                     }
                 )
 
-        # description is required, max ~10 words
+        # Planner-authored short label, max ~10 words.
         if not item.description:
             issues.append(
                 {"field": f"tasks[{idx}].description", "msg": "description is required (short ~10-word label)"}

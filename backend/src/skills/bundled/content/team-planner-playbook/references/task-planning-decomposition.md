@@ -52,21 +52,21 @@ Use `ci_query_symbol(symbol, references=true)` on symbols that appear as imports
 {
   "new_tasks": [
     {
-      "id": "dev-hdf",
+      "id": "dev-hdf", "description": "Fix HDF owner surface",
       "name": "developer",
       "deps": [],
       "scope_paths": ["pkg/io/hdf.py"],
       "spec": "1. Goal: Fix the exact HDF owner surface and keep verification on the named failing target.\n2. Environment: Use the current repository workspace and team runtime.\n3. Scope: Stay within the listed scope_paths unless live evidence requires a narrower or broader confirmed owner.\n4. Context: This task is part of the submitted team plan.\n5. Acceptance Criteria: Submit the required terminal outcome with concrete evidence."
     },
     {
-      "id": "plan-parquet",
+      "id": "plan-parquet", "description": "Decompose parquet owner surface",
       "name": "team_planner",
       "deps": [],
       "scope_paths": ["pkg/io/parquet/"],
       "spec": "1. Goal: Decompose the unresolved parquet owner surface into direct work.\n2. Environment: Use the current repository workspace and team runtime.\n3. Scope: Stay within the listed scope_paths unless live evidence requires a narrower or broader confirmed owner.\n4. Context: This task is part of the submitted team plan.\n5. Acceptance Criteria: Submit the required terminal outcome with concrete evidence."
     },
     {
-      "id": "val-root",
+      "id": "val-root", "description": "Validate HDF and parquet",
       "name": "validator",
       "deps": ["dev-hdf", "plan-parquet"],
       "scope_paths": ["pkg/io/hdf.py", "pkg/io/parquet/"],
@@ -82,28 +82,28 @@ Use `ci_query_symbol(symbol, references=true)` on symbols that appear as imports
 {
   "new_tasks": [
     {
-      "id": "dev-shared-config",
+      "id": "dev-shared-config", "description": "Repair shared config",
       "name": "developer",
       "deps": [],
       "scope_paths": ["pkg/config.py"],
       "spec": "1. Goal: Repair the shared config surface used by both downstream slices.\n2. Environment: Use the current repository workspace and team runtime.\n3. Scope: Stay within the listed scope_paths unless live evidence requires a narrower or broader confirmed owner.\n4. Context: This task is part of the submitted team plan.\n5. Acceptance Criteria: Submit the required terminal outcome with concrete evidence."
     },
     {
-      "id": "dev-reader",
+      "id": "dev-reader", "description": "Fix reader logic",
       "name": "developer",
       "deps": ["dev-shared-config"],
       "scope_paths": ["pkg/reader.py"],
       "spec": "1. Goal: Fix the reader-specific logic after the shared config repair lands.\n2. Environment: Use the current repository workspace and team runtime.\n3. Scope: Stay within the listed scope_paths unless live evidence requires a narrower or broader confirmed owner.\n4. Context: This task is part of the submitted team plan.\n5. Acceptance Criteria: Submit the required terminal outcome with concrete evidence."
     },
     {
-      "id": "dev-writer",
+      "id": "dev-writer", "description": "Fix writer logic",
       "name": "developer",
       "deps": ["dev-shared-config"],
       "scope_paths": ["pkg/writer.py"],
       "spec": "1. Goal: Fix the writer-specific logic after the shared config repair lands.\n2. Environment: Use the current repository workspace and team runtime.\n3. Scope: Stay within the listed scope_paths unless live evidence requires a narrower or broader confirmed owner.\n4. Context: This task is part of the submitted team plan.\n5. Acceptance Criteria: Submit the required terminal outcome with concrete evidence."
     },
     {
-      "id": "val-root",
+      "id": "val-root", "description": "Validate sequenced shared-file plan",
       "name": "validator",
       "deps": ["dev-reader", "dev-writer"],
       "scope_paths": ["pkg/config.py", "pkg/reader.py", "pkg/writer.py"],
@@ -119,21 +119,21 @@ Use `ci_query_symbol(symbol, references=true)` on symbols that appear as imports
 {
   "new_tasks": [
     {
-      "id": "plan-dataframe-io",
+      "id": "plan-dataframe-io", "description": "Decompose dataframe IO",
       "name": "team_planner",
       "deps": [],
       "scope_paths": ["pkg/dataframe/io/"],
       "spec": "1. Goal: Decompose the still-broad dataframe IO owner surface after a cold-CI opening.\n2. Environment: Use the current repository workspace and team runtime.\n3. Scope: Stay within the listed scope_paths unless live evidence requires a narrower or broader confirmed owner.\n4. Context: This task is part of the submitted team plan.\n5. Acceptance Criteria: Submit the required terminal outcome with concrete evidence."
     },
     {
-      "id": "dev-config",
+      "id": "dev-config", "description": "Fix config owner surface",
       "name": "developer",
       "deps": [],
       "scope_paths": ["pkg/config.py"],
       "spec": "1. Goal: Fix the exact config owner surface already confirmed by live evidence.\n2. Environment: Use the current repository workspace and team runtime.\n3. Scope: Stay within the listed scope_paths unless live evidence requires a narrower or broader confirmed owner.\n4. Context: This task is part of the submitted team plan.\n5. Acceptance Criteria: Submit the required terminal outcome with concrete evidence."
     },
     {
-      "id": "val-root",
+      "id": "val-root", "description": "Validate broad-boundary plan",
       "name": "validator",
       "deps": ["plan-dataframe-io", "dev-config"],
       "scope_paths": ["pkg/dataframe/io/", "pkg/config.py"],
@@ -149,21 +149,21 @@ Use `ci_query_symbol(symbol, references=true)` on symbols that appear as imports
 {
   "new_tasks": [
     {
-      "id": "plan-groupby",
+      "id": "plan-groupby", "description": "Split groupby regions",
       "name": "team_planner",
       "deps": [],
       "scope_paths": ["pkg/groupby.py"],
       "spec": "1. Goal: Split the broad groupby file into region-level work items with distinct verification families.\n2. Environment: Use the current repository workspace and team runtime.\n3. Scope: Stay within the listed scope_paths unless live evidence requires a narrower or broader confirmed owner.\n4. Context: This task is part of the submitted team plan.\n5. Acceptance Criteria: Submit the required terminal outcome with concrete evidence."
     },
     {
-      "id": "dev-hdf",
+      "id": "dev-hdf", "description": "Fix HDF owner surface",
       "name": "developer",
       "deps": [],
       "scope_paths": ["pkg/io/hdf.py"],
       "spec": "1. Goal: Fix the exact HDF owner surface already ready for direct execution.\n2. Environment: Use the current repository workspace and team runtime.\n3. Scope: Stay within the listed scope_paths unless live evidence requires a narrower or broader confirmed owner.\n4. Context: This task is part of the submitted team plan.\n5. Acceptance Criteria: Submit the required terminal outcome with concrete evidence."
     },
     {
-      "id": "val-root",
+      "id": "val-root", "description": "Validate mixed expandable plan",
       "name": "validator",
       "deps": ["plan-groupby", "dev-hdf"],
       "scope_paths": ["pkg/groupby.py", "pkg/io/hdf.py"],

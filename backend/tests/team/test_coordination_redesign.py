@@ -124,12 +124,14 @@ async def test_submit_plan_resolves_roster_role_hints():
             new_tasks=[
                 {
                     "id": "impl",
+                    "description": "Implement API",
                     "spec": _spec("Implement the API."),
                     "name": "developer",
                     "scope_paths": ["src/api.py"],
                 },
                 {
                     "id": "review",
+                    "description": "Validate API changes",
                     "spec": _spec("Validate the API changes."),
                     "name": "reviewer",
                     "deps": ["impl"],
@@ -146,11 +148,61 @@ async def test_submit_plan_resolves_roster_role_hints():
     assert payload["agent_name"] == "team_planner"
     assert len(payload["new_tasks"]) == 2
     assert payload["new_tasks"][1]["agent"] == "validator"
+    assert payload["new_tasks"][0]["description"] == "Implement API"
     resolved_plan = ctx.metadata.get("resolved_plan")
     assert resolved_plan is not None
+    assert resolved_plan.tasks[0].description == "Implement API"
     assert resolved_plan.tasks[1].agent == "validator"
     assert len(task_center.posted) == 1
     assert "Submitted plan with 2 task(s)." in task_center.posted[0].content
+
+
+def test_submit_plan_requires_planner_authored_description():
+    with pytest.raises(ValidationError):
+        SubmitPlanTool.input_model(
+            new_tasks=[
+                {
+                    "id": "missing-description",
+                    "spec": _spec("Implement the API."),
+                    "name": "developer",
+                    "scope_paths": ["src/api.py"],
+                }
+            ]
+        )
+
+
+@pytest.mark.asyncio
+async def test_submit_plan_rejects_overlong_description_without_truncating():
+    ctx = ToolExecutionContext(
+        cwd="/tmp",
+        metadata={
+            "task_center": _AsyncTaskCenterStub(),
+            "work_item_id": "planner-task",
+            "agent_name": "team_planner",
+            "allow_empty_plan": False,
+            "max_plan_size": 8,
+        },
+    )
+
+    result = await SubmitPlanTool().execute(
+        SubmitPlanTool.input_model(
+            new_tasks=[
+                {
+                    "id": "long-description",
+                    "description": (
+                        "one two three four five six seven eight nine ten eleven twelve thirteen"
+                    ),
+                    "spec": _spec("Implement the API."),
+                    "name": "developer",
+                    "scope_paths": ["src/api.py"],
+                }
+            ]
+        ),
+        ctx,
+    )
+
+    assert result.is_error is True
+    assert "description has 13 words" in result.output
 
 
 @pytest.mark.asyncio
@@ -180,6 +232,7 @@ async def test_submit_plan_rejects_oversize_task_notes():
             new_tasks=[
                 {
                     "id": "oversize",
+                    "description": "Oversize API note",
                     "spec": _spec(
                         "This task description is intentionally too large.",
                         environment="This environment text is also intentionally long.",
@@ -218,6 +271,7 @@ async def test_submit_plan_rejects_malformed_spec_sections():
             new_tasks=[
                 {
                     "id": "bad-spec",
+                    "description": "Malformed API spec",
                     "spec": "Goal: Implement the API.\nScope: src/api.py",
                     "name": "developer",
                     "scope_paths": ["src/api.py"],
@@ -279,12 +333,14 @@ async def test_submit_replan_accepts_child_repair_and_cancelled_sibling():
             new_tasks=[
                 {
                     "id": "repair",
+                    "description": "Repair implementation",
                     "spec": _spec("Repair the stale implementation path."),
                     "name": "developer",
                     "scope_paths": ["src/api.py"],
                 },
                 {
                     "id": "followup",
+                    "description": "Follow up repair",
                     "spec": _spec("Follow-up owned by the replanner."),
                     "name": "developer",
                     "deps": ["repair"],
@@ -320,6 +376,7 @@ def test_submit_replan_rejects_removed_sibling_arguments():
             new_tasks=[
                 {
                     "id": "legacy-parent",
+                    "description": "Legacy parent placement",
                     "spec": _spec("Legacy parent placement is rejected."),
                     "name": "developer",
                     "parent_id": "parent",
@@ -334,6 +391,7 @@ def test_submit_plan_rejects_legacy_parent_id_on_new_tasks():
             new_tasks=[
                 {
                     "id": "legacy-parent",
+                    "description": "Legacy parent placement",
                     "spec": _spec("Planner parent placement is rejected."),
                     "name": "developer",
                     "parent_id": "parent",
@@ -371,6 +429,7 @@ async def test_submit_replan_rejects_replanner_agent_targets():
             new_tasks=[
                 {
                     "id": "bad-replanner",
+                    "description": "Spawn replanner",
                     "spec": _spec("Try to spawn another replanner."),
                     "name": "team_replanner",
                     "scope_paths": ["src/api.py"],
@@ -413,6 +472,7 @@ async def test_submit_replan_rejects_subagent_targets():
             new_tasks=[
                 {
                     "id": "bad-subagent",
+                    "description": "Target subagent",
                     "spec": _spec("Try to target a subagent directly."),
                     "name": "scout",
                     "scope_paths": ["src/api.py"],
@@ -457,6 +517,7 @@ async def test_submit_replan_rejects_depth_overflow():
             new_tasks=[
                 {
                     "id": "too-deep",
+                    "description": "Repair below limit",
                     "spec": _spec("Repair below the depth limit."),
                     "name": "developer",
                     "scope_paths": ["src/api.py"],
@@ -499,12 +560,14 @@ async def test_submit_replan_rejects_plan_size_overflow():
             new_tasks=[
                 {
                     "id": "repair-a",
+                    "description": "Repair first path",
                     "spec": _spec("Repair one path."),
                     "name": "developer",
                     "scope_paths": ["src/a.py"],
                 },
                 {
                     "id": "repair-b",
+                    "description": "Repair second path",
                     "spec": _spec("Repair another path."),
                     "name": "developer",
                     "scope_paths": ["src/b.py"],
@@ -548,6 +611,7 @@ async def test_submit_replan_rejects_task_budget_overflow():
             new_tasks=[
                 {
                     "id": "repair",
+                    "description": "Repair over budget",
                     "spec": _spec("Repair over the task budget."),
                     "name": "developer",
                     "scope_paths": ["src/api.py"],

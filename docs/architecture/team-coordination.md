@@ -66,6 +66,7 @@ Terminal statuses are `done`, `failed`, and `cancelled`.
 
 - Worker agents do not change the graph directly; they submit success or failure summaries.
 - Replanners are the only agents that mutate the recovery graph through `submit_replan`.
+- Planner and replanner `new_tasks` items carry `description` as a required short, planner-authored label; full instructions belong in `spec`.
 - Ready tasks dispatch as soon as dependencies are satisfied.
 - Scope freshness checks protect terminal submissions from stale context.
 - Every team task exits through a terminal submission tool: `submit_plan`, `submit_replan`, or `submit_task_summary`.

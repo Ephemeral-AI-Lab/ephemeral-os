@@ -17,7 +17,8 @@ Use `submit_replan(new_tasks=[...], cancel_ids=[])` when the plan structure is s
 
 - Must confirm owner paths live with CI before submitting.
 - Must read sibling notes before deciding corrective scope.
-- Each new task must have: `id`, `name` (agent), `spec`, `deps`, `scope_paths`. Do not set `parent_id`; every new task is inserted as a direct child of this replanner.
+- Each new task must have: `id`, `description`, `name` (agent), `spec`, `deps`, `scope_paths`. Do not set `parent_id`; every new task is inserted as a direct child of this replanner.
+- Keep each `description` as a planner-authored short label under about 10 words; put full instructions in `spec`.
 - Put all corrective work in `new_tasks`.
 - Do not include the original failed `request_replan` task in `cancel_ids`; this action normally uses `cancel_ids=[]`.
 - Parallel concrete tasks must not share any `scope_paths` file. If two corrective clusters touch the same file, either add a `deps` edge from the later task to the earlier task, or submit one focused repair task for that shared owner file.
@@ -38,6 +39,7 @@ Use `submit_replan(new_tasks=[...], cancel_ids=[])` when the plan structure is s
   "new_tasks": [
     {
       "id": "retry-config",
+      "description": "Retry config repair",
       "name": "developer",
       "deps": [],
       "scope_paths": ["pkg/config.py"],

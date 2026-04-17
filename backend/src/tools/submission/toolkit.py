@@ -17,7 +17,7 @@ import time
 import uuid
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from agents.registry import get_definition
 from team.planning.validation import validate_plan
@@ -257,6 +257,14 @@ class NewTaskSpec(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     id: str = Field(..., description="Unique ID for the new task")
+    description: str = Field(
+        ...,
+        min_length=1,
+        description=(
+            "Planner-authored short task label, kept under about 10 words. "
+            "This is persisted as the task description; put full instructions in spec."
+        ),
+    )
     name: str = Field(
         ...,
         description="Agent name or role hint (e.g. 'developer', 'validator')",
@@ -277,12 +285,20 @@ class NewTaskSpec(BaseModel):
         description="File/dir hints for coordination and note scoping",
     )
 
+    @field_validator("description")
+    @classmethod
+    def _description_must_not_be_blank(cls, value: str) -> str:
+        description = value.strip()
+        if not description:
+            raise ValueError("description is required")
+        return description
+
 
 class ResolvedTaskOutput(BaseModel):
     id: str = Field(..., description="Task id submitted by the planner.")
     objective: str = Field(..., description="Full structured task objective.")
     agent: str = Field(..., description="Resolved exact agent name.")
-    description: str = Field(..., description="Runtime-generated short task description.")
+    description: str = Field(..., description="Planner-authored short task description.")
     deps: list[str] = Field(default_factory=list, description="Task ids this task depends on.")
     scope_paths: list[str] = Field(default_factory=list, description="Scope paths for this task.")
     parent_id: str | None = Field(
@@ -510,13 +526,11 @@ def _resolved_task_payloads(
     resolved_tasks: list[dict[str, Any]] = []
     for spec in specs:
         resolved_agent = _resolve_agent_name(spec.name, roster)
-        words = spec.spec.split()
-        description = " ".join(words[:10]) + ("..." if len(words) > 10 else "")
         payload: dict[str, Any] = {
             "id": spec.id,
             "objective": spec.spec,
             "agent": resolved_agent,
-            "description": description,
+            "description": spec.description,
             "deps": list(spec.deps),
             "scope_paths": list(spec.scope_paths),
         }
@@ -534,7 +548,7 @@ def _resolved_task_payloads(
 class SubmitPlanTool(BaseTool):
     name = "submit_plan"
     description = (
-        "Submit a child plan. Provide new_tasks with id, name, spec, deps, and "
+        "Submit a child plan. Provide new_tasks with id, description, name, spec, deps, and "
         "scope_paths. Optional output may hold a concise rationale. Do not include "
         "task_note, background, parent_id, or other fields. Each spec must use "
         "numbered colon labels in order: 1. Goal, 2. Environment, 3. Scope, "
@@ -640,7 +654,8 @@ class SubmitReplanTool(BaseTool):
         "the replanner, and cancel_ids for stale direct siblings whose subtrees "
         "should be cancelled by cascade. Never cancel the original failed "
         "request_replan task. Do not include task_note, output, background, "
-        "parent_id, or other fields. Each new task spec must use "
+        "parent_id, or other fields. Each new task must include a short "
+        "planner-authored description. Each new task spec must use "
         "numbered colon labels in order: 1. Goal, 2. Environment, 3. Scope, "
         "4. Context, 5. Acceptance Criteria."
     )

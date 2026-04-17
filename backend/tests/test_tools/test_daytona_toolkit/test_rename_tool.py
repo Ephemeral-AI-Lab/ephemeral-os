@@ -177,6 +177,9 @@ def test_rename_runs_via_single_process_operation():
     ]
     plan = _plan(changes)
     svc = _make_svc(plan=plan)
+    svc.commit_operation_against_base.side_effect = AssertionError(
+        "daytona_rename_symbol must use process audit, not WriteCoordinator",
+    )
     result = _run(
         {"symbol": "foo", "new_name": "bar"},
         _ctx({"ci_service": svc}),
@@ -189,6 +192,7 @@ def test_rename_runs_via_single_process_operation():
     kwargs = svc.exec_process_operation.await_args.kwargs
     assert "edit_type" not in kwargs
     assert "audit_paths" not in kwargs
+    svc.commit_operation_against_base.assert_not_called()
 
 
 def test_sandbox_rename_uses_one_wrapped_command():

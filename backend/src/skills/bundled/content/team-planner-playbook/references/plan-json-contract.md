@@ -20,12 +20,13 @@ Use this reference immediately before calling `submit_plan(...)`.
 
 - For planner submissions, call `submit_plan(new_tasks=[...])`.
 - The only top-level keys are `new_tasks` and optional string `output`. Do not include `task_note`, `background`, `parent_id`, `rationale`, or `output: null`.
-- Each `new_tasks` item must follow the runtime shape: `id`, `name`, `spec`, `deps`, `scope_paths`.
+- Each `new_tasks` item must follow the runtime shape: `id`, `description`, `name`, `spec`, `deps`, `scope_paths`.
 - Finish the benchmark-surface ledger, deps, and task prose before loading this reference.
 - After this reference loads, the very next action must be calling `submit_plan(new_tasks=[...])`. Do not make any more non-submission tool calls in the main loop after this reference loads.
 - Never load this reference in parallel with `root-plan-self-check`.
 - Must use `name` with an exact registered agent name such as `developer`, `validator`, or `team_planner`.
 - Must use `id` for the lane label — a short unique string used to wire `deps`.
+- Must use `description` for a planner-authored short label under about 10 words; do not duplicate the full `spec`.
 - Must keep `deps` as a top-level item field.
 - Must emit each `id` only once.
 - The `spec` field is the agent's sole briefing. Put exact owner, failure target, and recovery question there.
@@ -74,9 +75,9 @@ Use this reference immediately before calling `submit_plan(...)`.
 ```json
 {
   "new_tasks": [
-    {"id": "dev-hdf", "name": "developer", "deps": [], "scope_paths": ["pkg/io/hdf.py"], "spec": "1. Goal: Restore the shared HDF export in pkg/io/hdf.py and keep verification on the named failing target.\n2. Environment: Use the current repository workspace and team runtime.\n3. Scope: Work in pkg/io/hdf.py and only broaden if live references prove it necessary.\n4. Context: Root planning identified HDF as a direct owner surface.\n5. Acceptance Criteria: Submit a success summary with changed files and verification evidence."},
-    {"id": "plan-parquet", "name": "team_planner", "deps": [], "scope_paths": ["pkg/io/parquet/"], "spec": "1. Goal: Decompose the remaining parquet owner surface.\n2. Environment: Use the current repository workspace and team runtime.\n3. Scope: Inspect pkg/io/parquet/ and keep child tasks inside confirmed parquet owners.\n4. Context: Root planning found parquet too broad for one atomic developer lane.\n5. Acceptance Criteria: Submit a valid child plan with concrete deps and scope_paths."},
-    {"id": "val-root", "name": "validator", "deps": ["dev-hdf", "plan-parquet"], "scope_paths": ["pkg/io/hdf.py", "pkg/io/parquet/"], "spec": "1. Goal: Run the terminal verification gate for this layer.\n2. Environment: Use the current repository workspace and available CI/test tools.\n3. Scope: Validate HDF and parquet changes covered by upstream tasks.\n4. Context: This validator depends on all terminal non-validator siblings.\n5. Acceptance Criteria: Submit a validation summary with commands run, results, and any remaining failures."}
+    {"id": "dev-hdf", "description": "Restore HDF export", "name": "developer", "deps": [], "scope_paths": ["pkg/io/hdf.py"], "spec": "1. Goal: Restore the shared HDF export in pkg/io/hdf.py and keep verification on the named failing target.\n2. Environment: Use the current repository workspace and team runtime.\n3. Scope: Work in pkg/io/hdf.py and only broaden if live references prove it necessary.\n4. Context: Root planning identified HDF as a direct owner surface.\n5. Acceptance Criteria: Submit a success summary with changed files and verification evidence."},
+    {"id": "plan-parquet", "description": "Decompose parquet surface", "name": "team_planner", "deps": [], "scope_paths": ["pkg/io/parquet/"], "spec": "1. Goal: Decompose the remaining parquet owner surface.\n2. Environment: Use the current repository workspace and team runtime.\n3. Scope: Inspect pkg/io/parquet/ and keep child tasks inside confirmed parquet owners.\n4. Context: Root planning found parquet too broad for one atomic developer lane.\n5. Acceptance Criteria: Submit a valid child plan with concrete deps and scope_paths."},
+    {"id": "val-root", "description": "Validate HDF and parquet", "name": "validator", "deps": ["dev-hdf", "plan-parquet"], "scope_paths": ["pkg/io/hdf.py", "pkg/io/parquet/"], "spec": "1. Goal: Run the terminal verification gate for this layer.\n2. Environment: Use the current repository workspace and available CI/test tools.\n3. Scope: Validate HDF and parquet changes covered by upstream tasks.\n4. Context: This validator depends on all terminal non-validator siblings.\n5. Acceptance Criteria: Submit a validation summary with commands run, results, and any remaining failures."}
   ],
   "output": "Root plan covers the confirmed HDF and parquet owner surfaces plus a terminal validator."
 }

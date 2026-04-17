@@ -10,6 +10,7 @@ Team-mode agents finish by calling a terminal submission tool. The query loop st
 - Note takers: `submit_task_note`
 
 `submit_plan` and `submit_replan` write `resolved_plan` and `plan_is_replan`. `submit_task_summary` writes `task_summary` and `task_summary_type`.
+For `submit_plan` and `submit_replan`, every `new_tasks` item includes a required short `description` label authored by the planner or replanner; the full task briefing stays in `spec`.
 
 ## Executor Dispatch
 
