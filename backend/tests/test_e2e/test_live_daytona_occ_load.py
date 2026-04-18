@@ -26,6 +26,7 @@ import json
 import os
 import re
 import shlex
+import threading
 import time
 import uuid
 from dataclasses import dataclass
@@ -253,8 +254,16 @@ async def _run_mixed_operations(
     *,
     concurrency: int,
     timeout_s: int,
+    log_ops: bool = False,
+    log_label: str = "occ-load-op",
 ) -> list[dict[str, Any]]:
-    async def _invoke(operation: dict[str, Any], semaphore: asyncio.Semaphore) -> dict[str, Any]:
+    run_started = time.perf_counter()
+
+    async def _invoke(
+        sequence: int,
+        operation: dict[str, Any],
+        semaphore: asyncio.Semaphore,
+    ) -> dict[str, Any]:
         agent_run_id = f"{operation['name']}-{uuid.uuid4().hex[:8]}"
         ctx = live_load_env.make_ctx(
             svc,
@@ -263,14 +272,84 @@ async def _run_mixed_operations(
         )
         tool = _tool_for_operation_kind(str(operation["kind"]))
         queued_at = time.perf_counter()
+        identity = _operation_identity(live_load_env, svc, agent_run_id)
+        if log_ops:
+            _log_occ_event(
+                log_label,
+                {
+                    "event": "queued",
+                    "sequence": sequence,
+                    "kind": operation["kind"],
+                    "name": operation["name"],
+                    "path": operation["path"],
+                    "concurrency": concurrency,
+                    **identity,
+                    "arbiter": _arbiter_snapshot(svc),
+                },
+            )
         async with semaphore:
             started = time.perf_counter()
-            result = await _invoke_tool(tool, operation["kwargs"], ctx)
+            before = _arbiter_snapshot(svc)
+            if log_ops:
+                _log_occ_event(
+                    log_label,
+                    {
+                        "event": "start",
+                        "sequence": sequence,
+                        "kind": operation["kind"],
+                        "name": operation["name"],
+                        "path": operation["path"],
+                        "queued_s": round(started - queued_at, 6),
+                        "start_offset_s": round(started - run_started, 6),
+                        **identity,
+                        "arbiter_before": before,
+                    },
+                )
+            try:
+                result = await _invoke_tool(tool, operation["kwargs"], ctx)
+            except Exception as exc:  # pragma: no cover - live diagnostic path
+                elapsed_s = round(time.perf_counter() - started, 6)
+                failure = {
+                    "kind": operation["kind"],
+                    "name": operation["name"],
+                    "path": operation["path"],
+                    "group": operation.get("group"),
+                    "winner_value": operation.get("winner_value"),
+                    "is_error": True,
+                    "exception_type": type(exc).__name__,
+                    "exception": str(exc),
+                    "metadata": {},
+                    "payload": {},
+                    "raw_output": str(exc)[-1200:],
+                    "elapsed_s": elapsed_s,
+                    "wait_s": round(started - queued_at, 6),
+                    "sequence": sequence,
+                    **identity,
+                    "arbiter_before": before,
+                    "arbiter_after": _arbiter_snapshot(svc),
+                }
+                if log_ops:
+                    _log_occ_event(
+                        log_label,
+                        {
+                            "event": "exception",
+                            "sequence": sequence,
+                            "kind": operation["kind"],
+                            "name": operation["name"],
+                            "elapsed_s": elapsed_s,
+                            **identity,
+                            "exception_type": type(exc).__name__,
+                            "exception": str(exc)[-1200:],
+                            "arbiter_after": failure["arbiter_after"],
+                        },
+                    )
+                return failure
         elapsed_s = round(time.perf_counter() - started, 6)
         wait_s = round(started - queued_at, 6)
         output = (result.output or "").lstrip()
         payload = _json_output(result) if output.startswith("{") else {}
-        return {
+        after = _arbiter_snapshot(svc)
+        item = {
             "kind": operation["kind"],
             "name": operation["name"],
             "path": operation["path"],
@@ -282,13 +361,72 @@ async def _run_mixed_operations(
             "raw_output": (result.output or "")[:1200],
             "elapsed_s": elapsed_s,
             "wait_s": wait_s,
+            "sequence": sequence,
+            **identity,
+            "arbiter_before": before,
+            "arbiter_after": after,
         }
+        if log_ops:
+            _log_occ_event(
+                log_label,
+                {
+                    "event": "finish",
+                    "sequence": sequence,
+                    "kind": operation["kind"],
+                    "name": operation["name"],
+                    "is_error": result.is_error,
+                    "elapsed_s": elapsed_s,
+                    "wait_s": wait_s,
+                    **identity,
+                    "metadata": item["metadata"],
+                    "payload": payload,
+                    "arbiter_after": after,
+                    "raw_output_tail": (result.output or "")[-600:],
+                },
+            )
+        return item
 
     semaphore = asyncio.Semaphore(concurrency)
     return await asyncio.wait_for(
-        asyncio.gather(*[_invoke(operation, semaphore) for operation in operations]),
+        asyncio.gather(
+            *[
+                _invoke(sequence, operation, semaphore)
+                for sequence, operation in enumerate(operations)
+            ]
+        ),
         timeout=timeout_s,
     )
+
+
+def _operation_identity(
+    live_load_env: LiveLoadEnv,
+    svc: CodeIntelligenceService,
+    agent_run_id: str,
+) -> dict[str, Any]:
+    return {
+        "agent_run_id": agent_run_id,
+        "pid": os.getpid(),
+        "thread_id": threading.get_ident(),
+        "sandbox_id": live_load_env.sandbox_id,
+        "repo_root": live_load_env.repo_root,
+        "svc_id": hex(id(svc)),
+        "arbiter_id": hex(id(svc.arbiter)),
+    }
+
+
+def _arbiter_snapshot(svc: CodeIntelligenceService) -> dict[str, Any]:
+    status = svc.status()["arbiter"]
+    return {
+        "generation": svc.arbiter.generation,
+        "total_edits": status["total_edits"],
+        "conflicts_detected": status["conflicts_detected"],
+        "active_locks": status["active_locks"],
+        "active_lock_count": svc.arbiter.active_lock_count,
+    }
+
+
+def _log_occ_event(label: str, payload: dict[str, Any]) -> None:
+    print(f"\n[{label}] {json.dumps(payload, sort_keys=True, default=str)}", flush=True)
 
 
 def _tool_for_operation_kind(kind: str) -> Any:
@@ -346,8 +484,21 @@ def test_live_occ_load_72_all_mutators_high_concurrency_profile(
     write conflicts. It exercises write, edit, rename, move, delete, and
     coordinated CodeAct against one shared ``CodeIntelligenceService``.
     """
+    log_label = "occ-load-72-all-mutators-high-concurrency"
+    _log_occ_event(
+        log_label,
+        {
+            "event": "setup",
+            "phase": "init_repo",
+            "pid": os.getpid(),
+            "sandbox_id": live_load_env.sandbox_id,
+            "repo_root": live_load_env.repo_root,
+        },
+    )
     live_load_env.init_repo()
 
+    seed_started = time.perf_counter()
+    _log_occ_event(log_label, {"event": "setup", "phase": "seed_start"})
     for idx in range(12):
         live_load_env.write_text(
             f"edits/all_{idx}.py",
@@ -370,15 +521,54 @@ def test_live_occ_load_72_all_mutators_high_concurrency_profile(
         live_load_env.write_text(f"moves/src_{idx}.txt", f"move source {idx}\n")
         live_load_env.write_text(f"deletes/delete_{idx}.txt", f"delete target {idx}\n")
         live_load_env.write_text(f"codeact/high_{idx}.txt", f"codeact base {idx}\n")
+    _log_occ_event(
+        log_label,
+        {
+            "event": "setup",
+            "phase": "seed_finish",
+            "elapsed_s": round(time.perf_counter() - seed_started, 6),
+        },
+    )
 
+    commit_started = time.perf_counter()
+    _log_occ_event(log_label, {"event": "setup", "phase": "git_commit_start"})
     live_load_env.exec_checked(f"git -C {shlex.quote(live_load_env.repo_root)} add -A")
     live_load_env.exec_checked(
         f"git -C {shlex.quote(live_load_env.repo_root)} commit -m seed-all-mutators-load",
         timeout=180,
     )
+    _log_occ_event(
+        log_label,
+        {
+            "event": "setup",
+            "phase": "git_commit_finish",
+            "elapsed_s": round(time.perf_counter() - commit_started, 6),
+        },
+    )
 
     svc = live_load_env.make_ci_service()
+    init_started = time.perf_counter()
+    _log_occ_event(
+        log_label,
+        {
+            "event": "setup",
+            "phase": "ensure_initialized_start",
+            "svc_id": hex(id(svc)),
+            "arbiter_id": hex(id(svc.arbiter)),
+        },
+    )
     svc.ensure_initialized(wait=True)
+    _log_occ_event(
+        log_label,
+        {
+            "event": "setup",
+            "phase": "ensure_initialized_finish",
+            "elapsed_s": round(time.perf_counter() - init_started, 6),
+            "svc_id": hex(id(svc)),
+            "arbiter_id": hex(id(svc.arbiter)),
+            "arbiter": _arbiter_snapshot(svc),
+        },
+    )
 
     operations: list[dict[str, Any]] = []
     for idx in range(12):
@@ -459,6 +649,8 @@ def test_live_occ_load_72_all_mutators_high_concurrency_profile(
             operations,
             concurrency=30,
             timeout_s=360,
+            log_ops=True,
+            log_label=log_label,
         )
     )
     wall_elapsed_s = time.perf_counter() - started
@@ -497,15 +689,50 @@ def test_live_occ_load_72_all_mutators_high_concurrency_profile(
         ),
         "arbiter": svc.status()["arbiter"],
         "held_locks": svc.arbiter.active_lock_count,
+        "process_identity": {
+            "expected": {
+                "pid": os.getpid(),
+                "svc_id": hex(id(svc)),
+                "arbiter_id": hex(id(svc.arbiter)),
+                "sandbox_id": live_load_env.sandbox_id,
+            },
+            "observed_count": len(
+                {
+                    (
+                        item["pid"],
+                        item["svc_id"],
+                        item["arbiter_id"],
+                        item["sandbox_id"],
+                    )
+                    for item in results
+                }
+            ),
+        },
         "failures": failures[:5],
     }
-    print("\n[occ-load-72-all-mutators-high-concurrency]")
-    print(json.dumps(summary, indent=2, sort_keys=True))
+    print("\n[occ-load-72-all-mutators-high-concurrency]", flush=True)
+    print(json.dumps(summary, indent=2, sort_keys=True), flush=True)
 
     assert not failures, json.dumps(failures, indent=2, sort_keys=True)
     assert summary["timing"]["parallelism_ratio"] >= 4.0, summary["timing"]
     assert svc.arbiter.active_lock_count == 0
     assert svc.status()["arbiter"]["conflicts_detected"] == 0
+    assert {
+        (
+            item["pid"],
+            item["svc_id"],
+            item["arbiter_id"],
+            item["sandbox_id"],
+        )
+        for item in results
+    } == {
+        (
+            os.getpid(),
+            hex(id(svc)),
+            hex(id(svc.arbiter)),
+            live_load_env.sandbox_id,
+        )
+    }
 
     for idx in range(12):
         assert live_load_env.read_text(f"writes/all_{idx}.txt") == f"write all {idx}\n"

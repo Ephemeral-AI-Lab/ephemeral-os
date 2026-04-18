@@ -414,6 +414,106 @@ The existing `tools.core.guards` package should either be moved into this new
 package or left as a compatibility shim while imports migrate. The migration
 should not create a second independent registry.
 
+## Policy Hook Module Layout
+
+Policy hooks should live with the toolkit that owns the policy. They are hook
+modules, not tools. The generic framework belongs in `tools.core.hooks`; Daytona
+write-scope and CodeAct policy belongs in `tools.daytona_toolkit.hooks`.
+
+Recommended Daytona layout:
+
+```text
+backend/src/tools/daytona_toolkit/hooks/
+  __init__.py
+
+  prehook/
+    __init__.py
+    write_scope_hard_block.py
+    write_scope_advisory.py
+    write_scope_deny.py
+    move_src_hard_block.py
+    move_src_scope_deny.py
+    move_dst_scope_advisory.py
+    codeact_shell_normalization.py
+    codeact_destructive_git.py
+    codeact_destructive_shell.py
+    codeact_file_edit_policy.py
+
+  posthook/
+    __init__.py
+    codeact_audited_write_policy.py
+```
+
+The `prehook` and `posthook` package initializers may import and register every
+module in their package. Registration must be idempotent so repeated imports or
+test reloads do not duplicate entries in the process-global registry.
+
+Each hook module should expose a registration function and keep its policy
+implementation local. The package initializer should be the central place that
+invokes those registration functions.
+
+Example module shape:
+
+```python
+from tools.core.hooks import PreHookOutcome, ToolHookRegistry, default_registry
+
+
+PRIORITY = 10
+TOOL_GLOB = "daytona_write_file"
+NAME = "daytona_write_file:write_scope_hard_block"
+
+
+async def hook(tool_name, args, context) -> PreHookOutcome:
+    ...
+
+
+def register(registry: ToolHookRegistry | None = None) -> None:
+    reg = registry or default_registry()
+    reg.register(TOOL_GLOB, "pre", PRIORITY, hook, name=NAME)
+```
+
+The actual registry implementation should prevent duplicate `(tool_glob,
+phase, priority, name)` entries, or the package initializer should guard
+registration explicitly. Registry-level idempotence is preferred because it
+protects all hook packages consistently.
+
+The old `tools.daytona_toolkit.guards` module should be removed after migration,
+or retained only as a temporary compatibility shim that imports the new hook
+modules. It must not define a second registration path.
+
+## Daytona Pre-Hook Inventory
+
+The initial Daytona pre-hook set should be split into one module per policy:
+
+| Module | Phase | Tools | Purpose |
+| --- | --- | --- | --- |
+| `write_scope_hard_block.py` | pre | `daytona_write_file`, `daytona_edit_file`, `daytona_delete_file` | Blocks unauthorized test-file edits in coordinated team lanes. |
+| `write_scope_advisory.py` | pre | `daytona_write_file`, `daytona_edit_file` | Emits outside-scope write advisories without blocking. |
+| `write_scope_deny.py` | pre | `daytona_delete_file` | Blocks delete operations outside write scope. |
+| `move_src_hard_block.py` | pre | `daytona_move_file` | Applies test-file hard-block policy to the move source. |
+| `move_src_scope_deny.py` | pre | `daytona_move_file` | Blocks move operations whose source is outside write scope. |
+| `move_dst_scope_advisory.py` | pre | `daytona_move_file` | Emits advisory for destination outside write scope when policy allows the move. |
+| `codeact_shell_normalization.py` | pre | `daytona_codeact` | Mutates shell commands for coordinated team agents before later CodeAct hooks run. |
+| `codeact_destructive_git.py` | pre | `daytona_codeact` | Blocks destructive git commands. |
+| `codeact_destructive_shell.py` | pre | `daytona_codeact` | Blocks destructive shell commands against workspace roots and dangerous devices. |
+| `codeact_file_edit_policy.py` | pre | `daytona_codeact` | Blocks shell and Python file-edit side channels when CodeAct edit policy is active. |
+
+The move hooks are intentionally split by source and destination behavior. The
+destination advisory has different semantics from source denial because a move
+from an already-owned source can be a rename-like operation that extends scope
+on success.
+
+## Daytona Post-Hook Inventory
+
+Post-hooks should live in `tools.daytona_toolkit.hooks.posthook`.
+
+| Module | Phase | Tools | Purpose |
+| --- | --- | --- | --- |
+| `codeact_audited_write_policy.py` | post | `daytona_codeact` | Inspects changed paths and can replace the API-facing result when audited write policy fails. |
+
+This policy is post-hook-only because it depends on the tool result and changed
+paths. It must not be forced into the pre-hook package.
+
 ## Outcome Types
 
 Pre-hooks use one flat outcome shape. The hook author can allow, mutate
@@ -826,6 +926,20 @@ backend/src/tools/core/hooks/outcomes.py
 backend/src/tools/core/hooks/registry.py
 backend/src/tools/core/hooks/pipeline.py
 backend/src/tools/core/hooks/execution.py
+backend/src/tools/daytona_toolkit/hooks/__init__.py
+backend/src/tools/daytona_toolkit/hooks/prehook/__init__.py
+backend/src/tools/daytona_toolkit/hooks/prehook/write_scope_hard_block.py
+backend/src/tools/daytona_toolkit/hooks/prehook/write_scope_advisory.py
+backend/src/tools/daytona_toolkit/hooks/prehook/write_scope_deny.py
+backend/src/tools/daytona_toolkit/hooks/prehook/move_src_hard_block.py
+backend/src/tools/daytona_toolkit/hooks/prehook/move_src_scope_deny.py
+backend/src/tools/daytona_toolkit/hooks/prehook/move_dst_scope_advisory.py
+backend/src/tools/daytona_toolkit/hooks/prehook/codeact_shell_normalization.py
+backend/src/tools/daytona_toolkit/hooks/prehook/codeact_destructive_git.py
+backend/src/tools/daytona_toolkit/hooks/prehook/codeact_destructive_shell.py
+backend/src/tools/daytona_toolkit/hooks/prehook/codeact_file_edit_policy.py
+backend/src/tools/daytona_toolkit/hooks/posthook/__init__.py
+backend/src/tools/daytona_toolkit/hooks/posthook/codeact_audited_write_policy.py
 backend/tests/test_tools/test_hooks/__init__.py
 backend/tests/test_tools/test_hooks/test_pipeline.py
 backend/tests/test_tools/test_hooks/test_execution.py
@@ -900,7 +1014,9 @@ backend/src/tools/daytona_toolkit/toolkit.py
 ```
 
 These should register platform hooks through `tools.core.hooks`, preserving the
-current Daytona write-scope and CodeAct behavior.
+current Daytona write-scope and CodeAct behavior. The current monolithic
+`guards.py` file should be replaced by the per-hook module layout under
+`tools.daytona_toolkit.hooks`.
 
 Documentation files to update:
 
@@ -1088,6 +1204,9 @@ Deliverables:
 - Move Daytona write-scope and CodeAct guard registrations to
   `tools.core.hooks`.
 - Rename `GuardOutcome` concepts in the registrations to hook outcome concepts.
+- Split the current monolithic Daytona guard module into one file per hook under
+  `tools.daytona_toolkit.hooks.prehook` and `tools.daytona_toolkit.hooks.posthook`.
+- Add idempotent package-level registration for Daytona hooks.
 - Preserve existing policy messages and golden outputs.
 - Keep compatibility imports only as long as needed.
 
@@ -1096,6 +1215,7 @@ Exit criteria:
 - Existing Daytona write-scope behavior is unchanged.
 - CodeAct shell normalization still mutates arguments before destructive
   command guards run.
+- Re-importing Daytona hook packages does not duplicate registry entries.
 - Existing coordination-warning side effects remain correct where they are still
   part of product behavior.
 
