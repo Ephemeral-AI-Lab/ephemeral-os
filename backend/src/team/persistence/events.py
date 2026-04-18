@@ -18,6 +18,7 @@ EventKind = Literal[
     "task_status",
     "note_posted",
     "budget_update",
+    "replace_dependency",
     "checkpoint_taken",
     "checkpoint_repo_state",
     "file_changed",
@@ -85,6 +86,24 @@ def make_team_run_status(team_run_id: str, status: str, **fields: Any) -> TeamRu
 
 def make_task_added(team_run_id: str, task: dict[str, Any]) -> TeamRunEvent:
     return TeamRunEvent(team_run_id=team_run_id, kind="task_added", data={"task": task})
+
+
+def make_replace_dependency(
+    team_run_id: str,
+    *,
+    old_dep_id: str,
+    new_dep_ids: list[str],
+    task_ids: list[str],
+) -> TeamRunEvent:
+    return TeamRunEvent(
+        team_run_id=team_run_id,
+        kind="replace_dependency",
+        data={
+            "old_dep_id": old_dep_id,
+            "new_dep_ids": list(new_dep_ids),
+            "task_ids": list(task_ids),
+        },
+    )
 
 
 def make_task_status(

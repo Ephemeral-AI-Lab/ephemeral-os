@@ -22,6 +22,7 @@ from tools.core.ci_runtime import (
 from tools.core.decorator import tool
 from tools.daytona_toolkit._daytona_utils import (
     _extract_exit_code,
+    _format_shell_stdout,
     _get_cwd,
     _read_text_file_via_exec,
     _recover_sandbox,
@@ -47,8 +48,10 @@ _DESTRUCTIVE_GIT_PATTERN = re.compile(
 _CODEACT_FILE_EDIT_POLICY_MESSAGE = (
     "BLOCKED: daytona_codeact is for runtime commands, tests, and inspection in "
     "coordinated team lanes. File edits must use daytona_edit_file, "
-    "daytona_write_file, or daytona_rename_symbol so write-scope and invalid-edit "
-    "guardrails run before mutation."
+    "daytona_write_file, daytona_rename_symbol, daytona_delete_file, or "
+    "daytona_move_file so write-scope, OCC, and invalid-edit guardrails run "
+    "before mutation. Use daytona_delete_file for removals and "
+    "daytona_move_file for path moves."
 )
 _SHELL_FILE_EDIT_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
     (
@@ -255,8 +258,9 @@ def _format_codeact_error(
         )
     if "daytona_codeact is for runtime commands" in detail:
         lines.append(
-            "Use `daytona_edit_file`, `daytona_write_file`, or "
-            "`daytona_rename_symbol` for file changes."
+            "Use `daytona_edit_file`, `daytona_write_file`, "
+            "`daytona_rename_symbol`, `daytona_delete_file`, or "
+            "`daytona_move_file` for file changes."
         )
     return "\n".join(lines)
 
@@ -727,10 +731,11 @@ async def _exec_shell_command(
         stdout,
         fallback_exit_code=fallback_exit_code,
     )
+    formatted_stdout = _format_shell_stdout(cleaned_stdout, exit_code=exit_code)
     return {
         "command": command,
-        "stdout": cleaned_stdout,
-        "stderr": cleaned_stdout if exit_code != 0 else "",
+        "stdout": formatted_stdout,
+        "stderr": formatted_stdout if exit_code != 0 else "",
         "exit_code": exit_code,
         "changed_paths": _changed_paths_from_response(response),
         "ambient_changed_paths": _ambient_changed_paths_from_response(response),
@@ -793,13 +798,25 @@ def _build_tool_output(
     for shell_result in shells[:3]:
         command = str(shell_result.get("command", "") or "")
         exit_code = shell_result.get("exit_code", "?")
+        try:
+            exit_code_int = int(exit_code)
+        except (TypeError, ValueError):
+            exit_code_int = 1
+        stdout = _format_shell_stdout(
+            str(shell_result.get("stdout", "") or ""),
+            exit_code=exit_code_int,
+        )
+        stderr = _format_shell_stdout(
+            str(shell_result.get("stderr", "") or ""),
+            exit_code=exit_code_int,
+        )
         shell_summaries.append(f"$ {command[:80]} -> exit {exit_code}")
         shell_outputs.append(
             {
                 "command": command,
                 "exit_code": exit_code,
-                "stdout": str(shell_result.get("stdout", "") or ""),
-                "stderr": str(shell_result.get("stderr", "") or ""),
+                "stdout": stdout,
+                "stderr": stderr,
             }
         )
 
@@ -814,7 +831,7 @@ def _build_tool_output(
                 "shells_run": len(shells),
                 "shell_summaries": shell_summaries,
                 "shell_outputs": shell_outputs,
-                "script_stdout": script_stdout,
+                "script_stdout": _format_shell_stdout(script_stdout, exit_code=0),
                 "warnings": warnings,
                 "error": error[:500] if error else "",
             }
@@ -1024,7 +1041,8 @@ def _files_written_count(
         "Execute either Python code or a direct shell command in the Daytona sandbox. "
         "Use `command` for tests, builds, and verification; use `code` for multi-step "
         "Python with read()/shell() helpers. Do not use CodeAct for file edits; "
-        "use daytona_edit_file, daytona_write_file, or daytona_rename_symbol instead. "
+        "use daytona_edit_file, daytona_write_file, daytona_rename_symbol, "
+        "daytona_delete_file, or daytona_move_file instead. "
         "stdout and stderr are already "
         "captured; do not append shell capture plumbing such as `2>&1` or `2>/dev/null`. "
         "Coordinated team commands already run from the repo root, so do not "

@@ -854,7 +854,7 @@ async def test_check_progress_unknown_id_is_error() -> None:
     assert "ghost" in result.output
 
 
-async def test_wait_tool_rejects_immediate_join_on_fresh_subagent() -> None:
+async def test_wait_tool_allows_immediate_join_on_fresh_subagent() -> None:
     mgr = BackgroundTaskManager()
     _launch_subagent(mgr, task_id="bg_1")
 
@@ -864,14 +864,14 @@ async def test_wait_tool_rejects_immediate_join_on_fresh_subagent() -> None:
     assert check_result.is_error is False
 
     tool = WaitForBackgroundTaskTool()
-    result = await tool.execute(WaitForBackgroundTaskInput(task_id="bg_1", timeout=5), ctx)
-    assert result.is_error is True
-    assert "WAIT_TOO_EARLY" in result.output
+    result = await tool.execute(WaitForBackgroundTaskInput(task_id="bg_1", timeout=1), ctx)
+    assert result.is_error is False
+    assert "TIMED_OUT" in result.output
 
     await mgr.cancel("bg_1")
 
 
-async def test_wait_tool_rejects_wait_all_for_only_fresh_subagents() -> None:
+async def test_wait_tool_allows_wait_all_for_only_fresh_subagents() -> None:
     mgr = BackgroundTaskManager()
     _launch_subagent(mgr, task_id="bg_1")
     _launch_subagent(mgr, task_id="bg_2")
@@ -882,22 +882,22 @@ async def test_wait_tool_rejects_wait_all_for_only_fresh_subagents() -> None:
     assert check_result.is_error is False
 
     tool = WaitForBackgroundTaskTool()
-    result = await tool.execute(WaitForBackgroundTaskInput(task_id="all", timeout=5), ctx)
-    assert result.is_error is True
-    assert "WAIT_TOO_EARLY" in result.output
+    result = await tool.execute(WaitForBackgroundTaskInput(task_id="all", timeout=1), ctx)
+    assert result.is_error is False
+    assert "TIMED_OUT" in result.output
 
     await mgr.cancel_all()
 
 
-async def test_wait_tool_requires_progress_check_before_joining_subagent() -> None:
+async def test_wait_tool_allows_subagent_join_without_progress_check() -> None:
     mgr = BackgroundTaskManager()
     _launch_subagent(mgr, task_id="bg_1")
 
     ctx = _make_ctx(mgr)
     tool = WaitForBackgroundTaskTool()
-    result = await tool.execute(WaitForBackgroundTaskInput(task_id="bg_1", timeout=5), ctx)
-    assert result.is_error is True
-    assert "WAIT_REQUIRES_PROGRESS_CHECK" in result.output
+    result = await tool.execute(WaitForBackgroundTaskInput(task_id="bg_1", timeout=1), ctx)
+    assert result.is_error is False
+    assert "TIMED_OUT" in result.output
 
     await mgr.cancel("bg_1")
 
@@ -932,6 +932,5 @@ async def test_wait_tool_allows_immediate_join_for_non_subagent_task() -> None:
     args = WaitForBackgroundTaskInput(task_id="bg_1", timeout=1)
     result = await tool.execute(args, _make_ctx(mgr))
     assert result.is_error is False
-    assert "WAIT_TOO_EARLY" not in result.output
 
     await mgr.cancel("bg_1")

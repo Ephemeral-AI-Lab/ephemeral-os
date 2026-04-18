@@ -83,9 +83,17 @@ def _client(tmp_path: Path) -> JediWorkerClient:
 def test_env_flag_respected(monkeypatch, tmp_path):
     monkeypatch.delenv(ENV_FLAG, raising=False)
     assert is_enabled() is False
+    assert is_enabled(default=True) is True
     cli = _client(tmp_path)
     with pytest.raises(WorkerUnavailable):
         cli.request("ping")
+
+
+def test_env_flag_overrides_default(monkeypatch):
+    monkeypatch.setenv(ENV_FLAG, "0")
+    assert is_enabled(default=True) is False
+    monkeypatch.setenv(ENV_FLAG, "1")
+    assert is_enabled(default=False) is True
 
 
 def test_spawn_lazy_and_reuse(tmp_path):

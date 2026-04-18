@@ -291,14 +291,6 @@ async def _run_query_loop(
         background_manager = BackgroundTaskManager()
         context.tool_metadata.background_task_manager = background_manager
 
-    # When a wait_for_background_task call is rejected (WAIT_TOO_EARLY /
-    # WAIT_REQUIRES_PROGRESS_CHECK), the tool result already tells the
-    # planner to back off. Emitting an engine_progress reminder on the
-    # very next turn would contradict that rejection and mislead the
-    # planner into thinking meaningful progress arrived. This flag
-    # suppresses exactly one reminder cycle after such a rejection.
-    suppress_bg_reminder: bool = False
-
     while True:
         streamed_rejections: list[ToolResultBlock] = []
         budget_warning = build_budget_warning(context)
@@ -312,11 +304,10 @@ async def _run_query_loop(
                 event = deliver_completed_background_task(completed_task, display_messages)
                 yield event, None
 
-            if background_manager.has_pending() and not suppress_bg_reminder:
+            if background_manager.has_pending():
                 reminder_event = append_and_emit_reminder(background_manager, display_messages)
                 if reminder_event is not None:
                     yield reminder_event, None
-            suppress_bg_reminder = False
 
         if context.tool_metadata is not None:
             scope_notification = _scope_change_auto_check(context.tool_metadata, display_messages)
@@ -652,14 +643,6 @@ async def _run_query_loop(
         ):
             context.exit_reason = QueryExitReason.TOOL_STOP
             return
-
-        # Detect wait rejections so the next iteration suppresses the
-        # engine_progress reminder that would otherwise contradict them.
-        _WAIT_REJECTION_PREFIXES = ("[WAIT_TOO_EARLY]", "[WAIT_REQUIRES_PROGRESS_CHECK]")
-        suppress_bg_reminder = any(
-            tr.is_error and tr.content.startswith(_WAIT_REJECTION_PREFIXES)
-            for tr in tool_results
-        )
 
         if (
             context.tool_call_limit is not None

@@ -1,19 +1,17 @@
 """Daytona-backed file delete and move tools.
 
-These tools validate requested paths under the repo root, generate one shell
-command for the requested file/folder operation, and submit it through
-``exec_ci_process_operation`` so the process auditor records changed files.
+These tools validate requested paths under the repo root and submit the
+operation through the code-intelligence OCC commit path. Delete and move use
+strict base hashes: base drift aborts with ``aborted_version`` and there is no
+merge fallback.
 
 CodeAct's shell policy blocks ``rm`` / ``mv`` precisely so that deletions and
-moves flow through these audited tools instead of the unaudited shell path.
+moves flow through these OCC-gated tools instead of the unaudited shell path.
 """
 
 from __future__ import annotations
 
 import json
-import logging
-import posixpath
-import shlex
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -21,29 +19,18 @@ from pydantic import BaseModel, Field
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.ci_runtime import (
     ci_write_required_result,
-    exec_ci_process_operation,
     get_ci_service,
 )
 from tools.core.decorator import tool
 from tools.daytona_toolkit._daytona_utils import (
     _extend_write_scope,
-    _extract_exit_code,
     _get_repo_root,
-    _require_sandbox,
     _resolve_path,
     _team_repo_write_error,
     _team_repo_write_warning,
-    _wrap_bash_command,
     _write_scope_covers,
     record_coordination_warning,
 )
-
-logger = logging.getLogger(__name__)
-
-_SHELL_TIMEOUT_SECONDS = 120
-_EXIT_NOT_FOUND = 66
-_EXIT_RECURSIVE_REQUIRED = 73
-_EXIT_DST_EXISTS = 74
 
 
 # ---------------------------------------------------------------------------
@@ -91,17 +78,17 @@ def _normalized_path(path: str) -> str:
     return path.rstrip("/") or path
 
 
-def _shell_guard_error(
+def _repo_guard_error(
     context: ToolExecutionContext,
     file_path: str,
     *,
     tool_name: str,
 ) -> str | None:
-    """Reject shell mutations outside a concrete repo root."""
+    """Reject mutations outside a concrete repo root."""
     repo_root = _normalized_path(str(_get_repo_root(context) or ""))
     if not repo_root or repo_root == "/":
         return (
-            f"{tool_name}: shell operation requires a non-root "
+            f"{tool_name}: operation requires a non-root "
             "repo_root/daytona_cwd in context."
         )
 
@@ -110,116 +97,41 @@ def _shell_guard_error(
         return f"{tool_name}: refusing to operate on repo root: {repo_root}"
     if not path.startswith(repo_root + "/"):
         return (
-            f"{tool_name}: refusing shell operation outside repo root "
+            f"{tool_name}: refusing operation outside repo root "
             f"{repo_root}: {file_path}"
         )
     return None
 
 
-def _changed_paths_from_response(response: Any, fallback: list[str]) -> list[str]:
-    raw = getattr(response, "changed_paths", None)
-    if isinstance(raw, list):
-        changed = [str(item) for item in raw if str(item or "").strip()]
-        if changed:
-            return changed
+def _operation_paths(result: Any, fallback: list[str]) -> list[str]:
+    files = getattr(result, "files", None)
+    if isinstance(files, (list, tuple)):
+        paths = [
+            str(getattr(item, "file_path", "") or "")
+            for item in files
+            if str(getattr(item, "file_path", "") or "").strip()
+        ]
+        if paths:
+            return paths
     return fallback
 
 
-async def _run_audited_shell_command(
-    context: ToolExecutionContext,
-    sandbox: Any,
-    command: str,
-    *,
-    description: str,
-) -> tuple[str, int, Any]:
-    """Submit one generated bash command through the CI process auditor."""
-    response = await exec_ci_process_operation(
-        context,
-        sandbox,
-        _wrap_bash_command(command),
-        timeout=_SHELL_TIMEOUT_SECONDS,
-        description=description,
-    )
-    stdout = getattr(response, "result", "") or ""
-    cleaned, exit_code = _extract_exit_code(
-        stdout,
-        fallback_exit_code=getattr(response, "exit_code", None),
-    )
-    return cleaned, exit_code, response
+def _agent_id(context: ToolExecutionContext) -> str:
+    for key in ("agent_run_id", "agent_name"):
+        value = str(context.metadata.get(key) or "").strip()
+        if value:
+            return value
+    return ""
 
 
-def _shell_delete_command(file_path: str, *, recursive: bool) -> str:
-    path = shlex.quote(file_path)
-    missing = shlex.quote(f"Path does not exist: {file_path}")
-    if recursive:
-        return (
-            f"if [ ! -e {path} ]; then printf '%s\\n' {missing}; "
-            f"exit {_EXIT_NOT_FOUND}; fi; rm -rf -- {path}"
-        )
-    recursive_required = shlex.quote(
-        f"Path is a directory; pass recursive=true to delete recursively: {file_path}"
-    )
-    return (
-        f"if [ ! -e {path} ]; then printf '%s\\n' {missing}; "
-        f"exit {_EXIT_NOT_FOUND}; fi; "
-        f"if [ -d {path} ]; then printf '%s\\n' {recursive_required}; "
-        f"exit {_EXIT_RECURSIVE_REQUIRED}; fi; rm -f -- {path}"
-    )
-
-
-def _shell_move_command(
-    src_path: str,
-    dst_path: str,
-    *,
-    recursive: bool,
-    overwrite: bool,
-) -> str:
-    src = shlex.quote(src_path)
-    dst = shlex.quote(dst_path)
-    dst_parent = shlex.quote(posixpath.dirname(dst_path) or ".")
-    missing = shlex.quote(f"Path does not exist: {src_path}")
-    recursive_required = shlex.quote(
-        f"Path is a directory; pass recursive=true to move recursively: {src_path}"
-    )
-    dst_exists = shlex.quote(
-        f"Destination exists: {dst_path} (pass overwrite=True to replace)"
-    )
-
-    parts = [
-        (
-            f"if [ ! -e {src} ]; then printf '%s\\n' {missing}; "
-            f"exit {_EXIT_NOT_FOUND}; fi"
-        ),
-    ]
-    if not recursive:
-        parts.append(
-            f"if [ -d {src} ]; then printf '%s\\n' {recursive_required}; "
-            f"exit {_EXIT_RECURSIVE_REQUIRED}; fi"
-        )
-    if overwrite:
-        remove = "rm -rf" if recursive else "rm -f"
-        parts.append(f"if [ -e {dst} ]; then {remove} -- {dst} || exit $?; fi")
-    else:
-        parts.append(
-            f"if [ -e {dst} ]; then printf '%s\\n' {dst_exists}; "
-            f"exit {_EXIT_DST_EXISTS}; fi"
-        )
-    parts.append(f"mkdir -p -- {dst_parent} && mv -T -- {src} {dst}")
-    return "; ".join(parts)
-
-
-def _shell_failure_status(
-    exit_code: int,
-    *,
-    move: bool,
-) -> tuple[str, str]:
-    if exit_code == _EXIT_NOT_FOUND:
+def _failure_status(result: Any, *, move: bool) -> tuple[str, str]:
+    status = str(getattr(result, "status", "") or "failed")
+    conflict_reason = str(getattr(result, "conflict_reason", "") or "")
+    if conflict_reason == "not_found":
         return "not_found", "not_found"
-    if move and exit_code == _EXIT_DST_EXISTS:
+    if move and conflict_reason == "dst_exists":
         return "dst_exists", "dst_exists"
-    if exit_code == _EXIT_RECURSIVE_REQUIRED:
-        return "failed", "recursive_required"
-    return "failed", f"exit_code_{exit_code}"
+    return status, conflict_reason or status
 
 
 # ---------------------------------------------------------------------------
@@ -231,13 +143,14 @@ class DaytonaDeleteFileInput(BaseModel):
     file_path: str = Field(
         ...,
         min_length=1,
-        description="Path to the file or folder to delete. Must exist at call time.",
+        description="Path to the file to delete. Must exist at call time.",
     )
     recursive: bool = Field(
         default=False,
         description=(
-            "Set True only when deleting a folder tree. Recursive deletes are "
-            "submitted as one audited bash command after repo-root safety checks."
+            "Compatibility flag from the former shell-backed tool. Directory "
+            "tree deletes are not performed by CodeAct rm/mv; this OCC file "
+            "tool rejects recursive=True until directory-tree OCC support exists."
         ),
     )
     description: str = Field(
@@ -250,12 +163,12 @@ class DaytonaDeleteFileOutput(BaseModel):
     status: str = Field(
         ...,
         description=(
-            "`deleted`, `not_found`, or `failed`."
+            "`deleted`, `not_found`, `aborted_version`, `aborted_lock`, or `failed`."
         ),
     )
     paths: list[str] = Field(
         default_factory=list,
-        description="Paths affected, as reported by the process auditor.",
+        description="Paths affected by the OCC commit.",
     )
     warnings: list[str] = Field(
         default_factory=list,
@@ -274,13 +187,13 @@ class DaytonaDeleteFileOutput(BaseModel):
 @tool(
     name="daytona_delete_file",
     description=(
-        "Delete a file or folder by validating the target under the repo root, "
-        "generating one bash command, and submitting it through the audited "
-        "CI process operation boundary. Pass recursive=True only for folder "
-        "trees; without it, directories are rejected. Use this instead of "
-        "attempting `rm` in CodeAct; the shell policy blocks `rm` for that reason."
+        "Delete a file by validating the target under the repo root and routing "
+        "the operation through the OCC-gated code-intelligence commit path. "
+        "Base-hash drift aborts with `aborted_version` and no merge fallback. "
+        "Use this instead of attempting `rm` in CodeAct; CodeAct `rm` is "
+        "blocked intentionally so deletes stay coordinated."
     ),
-    short_description="Delete a file, or a folder tree with recursive=True.",
+    short_description="Delete a file through the OCC commit path.",
     input_model=DaytonaDeleteFileInput,
     output_model=DaytonaDeleteFileOutput,
 )
@@ -291,7 +204,7 @@ async def daytona_delete_file(
     *,
     context: ToolExecutionContext,
 ) -> ToolResult:
-    """Delete a file or folder in the Daytona sandbox through audited exec."""
+    """Delete a file through the code-intelligence OCC commit path."""
     file_path = _normalized_path(_resolve_path(file_path, context))
     hard_error, soft_warning = _scope_checks(
         context, file_path, tool_name="daytona_delete_file",
@@ -310,13 +223,7 @@ async def daytona_delete_file(
     if svc is None:
         return ci_write_required_result("daytona_delete_file", file_path)
 
-    try:
-        sandbox = await _require_sandbox(context)
-    except Exception as exc:
-        return ToolResult(output=str(exc), is_error=True)
-    svc.rebind_sandbox(sandbox)
-
-    guard_error = _shell_guard_error(
+    guard_error = _repo_guard_error(
         context, file_path, tool_name="daytona_delete_file",
     )
     if guard_error is not None:
@@ -330,30 +237,33 @@ async def daytona_delete_file(
             is_error=True,
         )
 
-    command = _shell_delete_command(file_path, recursive=recursive)
-    try:
-        stdout, exit_code, response = await _run_audited_shell_command(
-            context,
-            sandbox,
-            command,
-            description=description
-            or ("delete recursively " if recursive else "delete ")
-            + file_path,
-        )
-    except Exception as exc:
-        logger.debug("delete_file raised for %s", file_path, exc_info=True)
+    if recursive:
         return ToolResult(
             output=_operation_payload(
                 status="failed",
                 paths=[file_path],
                 warnings=warnings,
-                message=f"Delete failed: {exc}",
+                conflict_reason="recursive_unsupported",
+                message=(
+                    "Recursive directory deletes are not supported by the "
+                    "OCC file delete path."
+                ),
             ),
             is_error=True,
         )
 
-    if exit_code == 0:
-        paths = _changed_paths_from_response(response, [file_path])
+    sandbox = context.metadata.get("daytona_sandbox")
+    rebind = getattr(svc, "rebind_sandbox", None)
+    if sandbox is not None and callable(rebind):
+        rebind(sandbox)
+
+    result = svc.delete_file(
+        file_path,
+        agent_id=_agent_id(context),
+        description=description or f"delete {file_path}",
+    )
+    if getattr(result, "success", False):
+        paths = _operation_paths(result, [file_path])
         return ToolResult(
             output=_operation_payload(
                 status="deleted",
@@ -363,20 +273,18 @@ async def daytona_delete_file(
             metadata={"file_count": len(paths), "success_count": len(paths)},
         )
 
-    payload_status, conflict_reason = _shell_failure_status(
-        exit_code,
-        move=False,
-    )
+    payload_status, conflict_reason = _failure_status(result, move=False)
+    paths = _operation_paths(result, [file_path])
     return ToolResult(
         output=_operation_payload(
             status=payload_status,
-            paths=[file_path],
+            paths=paths,
             warnings=warnings,
             conflict_reason=conflict_reason,
-            message=stdout or conflict_reason,
+            message=str(getattr(result, "conflict_reason", "") or conflict_reason),
         ),
         is_error=True,
-        metadata={"file_count": 1, "success_count": 0},
+        metadata={"file_count": len(paths), "success_count": 0},
     )
 
 
@@ -389,7 +297,7 @@ class DaytonaMoveFileInput(BaseModel):
     src_path: str = Field(
         ...,
         min_length=1,
-        description="Source file or folder path. Must exist at call time.",
+        description="Source file path. Must exist at call time.",
     )
     dst_path: str = Field(
         ...,
@@ -399,15 +307,16 @@ class DaytonaMoveFileInput(BaseModel):
     overwrite: bool = Field(
         default=False,
         description=(
-            "When True, replace an existing destination before moving. For "
-            "recursive moves this can remove an existing destination tree."
+            "When True, replace an existing destination through a strict-base "
+            "OCC overwrite. Destination drift aborts with aborted_version."
         ),
     )
     recursive: bool = Field(
         default=False,
         description=(
-            "Set True when moving a folder tree. Recursive moves are submitted "
-            "as one audited bash command after repo-root safety checks."
+            "Compatibility flag from the former shell-backed tool. Directory "
+            "tree moves are not performed by CodeAct rm/mv; this OCC file "
+            "tool rejects recursive=True until directory-tree OCC support exists."
         ),
     )
     description: str = Field(
@@ -420,14 +329,15 @@ class DaytonaMoveFileOutput(BaseModel):
     status: str = Field(
         ...,
         description=(
-            "`moved`, `dst_exists`, `not_found`, or `failed`."
+            "`moved`, `dst_exists`, `not_found`, `aborted_version`, "
+            "`aborted_overlap`, `aborted_lock`, or `failed`."
         ),
     )
     src_path: str = Field(..., description="Resolved source path.")
     dst_path: str = Field(..., description="Resolved destination path.")
     paths: list[str] = Field(
         default_factory=list,
-        description="Paths affected, as reported by the process auditor.",
+        description="Paths affected by the OCC commit.",
     )
     warnings: list[str] = Field(
         default_factory=list,
@@ -446,15 +356,14 @@ class DaytonaMoveFileOutput(BaseModel):
 @tool(
     name="daytona_move_file",
     description=(
-        "Move a file or folder by validating source/destination under the "
-        "repo root, generating one bash command, and submitting it through "
-        "the audited CI process operation boundary. Pass recursive=True only "
-        "for folder trees; without it, source directories are rejected. By "
-        "default the destination must not exist; pass overwrite=True only "
-        "when replacing an existing destination is intended. Use this instead "
-        "of attempting `mv` in CodeAct; the shell policy blocks `mv` for that reason."
+        "Move a file by validating source/destination under the repo root and "
+        "routing the operation through the OCC-gated code-intelligence commit "
+        "path. Base-hash drift on src or dst aborts with `aborted_version` and "
+        "no merge fallback; overwrite=True uses strict-base on the destination. "
+        "Use this instead of attempting `mv` in CodeAct; CodeAct `mv` is "
+        "blocked intentionally so moves stay coordinated."
     ),
-    short_description="Move a file, or a folder tree with recursive=True.",
+    short_description="Move a file through the OCC commit path.",
     input_model=DaytonaMoveFileInput,
     output_model=DaytonaMoveFileOutput,
 )
@@ -467,7 +376,7 @@ async def daytona_move_file(
     *,
     context: ToolExecutionContext,
 ) -> ToolResult:
-    """Move a file or folder in the Daytona sandbox through audited exec."""
+    """Move a file through the code-intelligence OCC commit path."""
     src_resolved = _normalized_path(_resolve_path(src_path, context))
     dst_resolved = _normalized_path(_resolve_path(dst_path, context))
 
@@ -496,15 +405,9 @@ async def daytona_move_file(
     if svc is None:
         return ci_write_required_result("daytona_move_file", src_resolved)
 
-    try:
-        sandbox = await _require_sandbox(context)
-    except Exception as exc:
-        return ToolResult(output=str(exc), is_error=True)
-    svc.rebind_sandbox(sandbox)
-
     guard_errors = [
-        _shell_guard_error(context, src_resolved, tool_name="daytona_move_file"),
-        _shell_guard_error(context, dst_resolved, tool_name="daytona_move_file"),
+        _repo_guard_error(context, src_resolved, tool_name="daytona_move_file"),
+        _repo_guard_error(context, dst_resolved, tool_name="daytona_move_file"),
     ]
     guard_error = next((err for err in guard_errors if err is not None), None)
     if guard_error is None and dst_resolved == src_resolved:
@@ -532,38 +435,36 @@ async def daytona_move_file(
             is_error=True,
         )
 
-    command = _shell_move_command(
-        src_resolved,
-        dst_resolved,
-        recursive=recursive,
-        overwrite=overwrite,
-    )
-    try:
-        stdout, exit_code, response = await _run_audited_shell_command(
-            context,
-            sandbox,
-            command,
-            description=description
-            or ("move recursively " if recursive else "move ")
-            + f"{src_resolved} -> {dst_resolved}",
-        )
-    except Exception as exc:
-        logger.debug(
-            "move_file raised for %s -> %s", src_resolved, dst_resolved, exc_info=True,
-        )
+    if recursive:
         return ToolResult(
             output=_move_payload(
                 status="failed",
                 src=src_resolved,
                 dst=dst_resolved,
                 warnings=warnings,
-                message=f"Move failed: {exc}",
+                conflict_reason="recursive_unsupported",
+                message=(
+                    "Recursive directory moves are not supported by the OCC "
+                    "file move path."
+                ),
             ),
             is_error=True,
         )
 
-    if exit_code == 0:
-        paths = _changed_paths_from_response(response, [src_resolved, dst_resolved])
+    sandbox = context.metadata.get("daytona_sandbox")
+    rebind = getattr(svc, "rebind_sandbox", None)
+    if sandbox is not None and callable(rebind):
+        rebind(sandbox)
+
+    result = svc.move_file(
+        src_resolved,
+        dst_resolved,
+        overwrite=overwrite,
+        agent_id=_agent_id(context),
+        description=description or f"move {src_resolved} -> {dst_resolved}",
+    )
+    if getattr(result, "success", False):
+        paths = [src_resolved, dst_resolved]
         if src_in_scope:
             _extend_write_scope(context, dst_resolved)
         return ToolResult(
@@ -577,22 +478,20 @@ async def daytona_move_file(
             metadata={"file_count": len(paths), "success_count": len(paths)},
         )
 
-    payload_status, conflict_reason = _shell_failure_status(
-        exit_code,
-        move=True,
-    )
+    payload_status, conflict_reason = _failure_status(result, move=True)
+    paths = _operation_paths(result, [src_resolved, dst_resolved])
     return ToolResult(
         output=_move_payload(
             status=payload_status,
             src=src_resolved,
             dst=dst_resolved,
-            paths=[],
+            paths=paths,
             warnings=warnings,
             conflict_reason=conflict_reason,
-            message=stdout or conflict_reason,
+            message=str(getattr(result, "conflict_reason", "") or conflict_reason),
         ),
         is_error=True,
-        metadata={"file_count": 2, "success_count": 0},
+        metadata={"file_count": len(paths), "success_count": 0},
     )
 
 def _move_payload(

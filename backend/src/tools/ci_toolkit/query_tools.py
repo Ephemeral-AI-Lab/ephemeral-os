@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import inspect
 import json
 import logging
 import os
@@ -800,21 +799,11 @@ def _resolve_symbol_column(svc: Any, file_path: str, line: int, symbol_name: str
     return idx if idx >= 0 else 0
 
 
-def _sandbox_uses_async_exec(sandbox: Any) -> bool:
-    process = getattr(sandbox, "process", None)
-    exec_fn = getattr(process, "exec", None) if process is not None else None
-    return bool(exec_fn) and inspect.iscoroutinefunction(exec_fn)
-
-
 def _ensure_reference_lsp_ready(svc: Any) -> tuple[bool | None, str | None]:
     """Best-effort readiness gate before reference tracing."""
     lsp = getattr(svc, "lsp_client", None)
     if lsp is None:
         return False, "lsp_client_missing"
-
-    sandbox = getattr(lsp, "_sandbox", None)
-    if sandbox is not None and _sandbox_uses_async_exec(sandbox):
-        return False, "async_sandbox_lsp_unavailable"
 
     ensure_ready = getattr(lsp, "ensure_ready", None)
     if not callable(ensure_ready):

@@ -206,6 +206,7 @@ class CodeIntelligenceService:
         old_sandbox = getattr(self.lsp_client, "_sandbox", None)
         self.lsp_client._sandbox = sandbox
         if old_sandbox is not sandbox:
+            self.lsp_client._worker_enabled_default = True
             self.lsp_client.reset_backend_availability()
             self._clear_rename_preview_cache()
         self._content.bind_sandbox(sandbox)

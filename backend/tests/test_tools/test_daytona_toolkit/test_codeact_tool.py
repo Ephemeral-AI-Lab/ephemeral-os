@@ -341,6 +341,8 @@ async def test_shell_mode_allows_audited_test_suite_write_with_warning():
         ),
         ("printf x > dask/core.py", "shell output redirection"),
         ("printf x | tee dask/core.py", "tee file write"),
+        ("rm dask/core.py", "filesystem mutation command"),
+        ("mv dask/core.py dask/new_core.py", "filesystem mutation command"),
     ],
 )
 async def test_team_shell_mode_blocks_file_edit_side_channels_before_exec(
@@ -369,8 +371,36 @@ async def test_team_shell_mode_blocks_file_edit_side_channels_before_exec(
     assert "BLOCKED: daytona_codeact is for runtime commands" in result.output
     assert expected_fragment in result.output
     assert "daytona_edit_file" in result.output
+    assert "daytona_delete_file" in result.output
+    assert "daytona_move_file" in result.output
     svc.exec_process_operation.assert_not_awaited()
     sb.process.exec.assert_not_awaited()
+
+
+async def test_shell_mode_truncates_large_stdout_before_tool_result():
+    large = "\n".join(f"line-{i:05d}" for i in range(2000))
+    sb = _make_sandbox(exec_stdout=_shell_exec_output(large, 1))
+    svc = _ci_service()
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "daytona_cwd": "/testbed",
+            "ci_service": svc,
+        }
+    )
+
+    result = await daytona_codeact.execute(
+        daytona_codeact.input_model(command="pytest --continue-on-collection-errors"),
+        ctx,
+    )
+
+    data = json.loads(result.output)
+    stdout = data["shell_outputs"][0]["stdout"]
+    stderr = data["shell_outputs"][0]["stderr"]
+    assert len(stdout) < len(large)
+    assert "truncated" in stdout
+    assert "line-01999" in stdout
+    assert stderr == stdout
 
 
 @pytest.mark.parametrize(

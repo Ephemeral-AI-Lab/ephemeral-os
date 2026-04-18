@@ -39,6 +39,7 @@ from team.note_manager import NoteManager
 from team.persistence.events import (
     TeamRunEvent,
     make_checkpoint_taken,
+    make_replace_dependency,
     make_task_added,
     task_to_dict,
 )
@@ -359,6 +360,7 @@ class TaskCenter:
         if not replanners:
             raise RuntimeError("no agent with role='replanner' is registered")
         before = self._transitions.snapshot()
+        deps_before = {tid: list(task.deps) for tid, task in self.graph.items()}
         rec, is_new = await self._store.request_replan(
             task_id,
             reason=request.reason,
@@ -367,10 +369,26 @@ class TaskCenter:
         )
         task = self.graph[rec.id]
         if is_new:
+            await self._transitions.refresh_and_emit(before)
             self._budget.bump_replan_counters()
             self._emit(make_task_added(self._team_run_id, task_to_dict(task)))
+            rewired_task_ids = [
+                tid
+                for tid, old_deps in deps_before.items()
+                if task_id in old_deps
+                and rec.id in getattr(self.graph.get(tid), "deps", [])
+            ]
+            self._emit(
+                make_replace_dependency(
+                    self._team_run_id,
+                    old_dep_id=task_id,
+                    new_dep_ids=[rec.id],
+                    task_ids=rewired_task_ids,
+                )
+            )
             self._budget.emit_update()
-        await self._transitions.refresh_and_emit(before)
+        else:
+            await self._transitions.refresh_and_emit(before)
         return task
 
     async def apply_replan(

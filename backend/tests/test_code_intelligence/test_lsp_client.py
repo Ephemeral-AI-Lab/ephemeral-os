@@ -178,6 +178,7 @@ def test_worker_telemetry_tracks_success_and_fallback(monkeypatch) -> None:
     assert used is True
     assert result == {"op": "ping", "args": {"x": 1}}
     assert lsp.telemetry.worker_successes == 1
+    assert lsp.telemetry.successes == 1
 
     lsp._worker = _UnavailableWorker()  # type: ignore[assignment]
     used, result = lsp._try_worker("ping", {})
@@ -213,6 +214,55 @@ def test_worker_status_exposes_pid_without_starting_worker(monkeypatch) -> None:
     assert status["active"] is True
     assert status["pid"] == 4242
     assert status["pid_path"] == "/tmp/eos_jedi/pid"
+
+
+def test_sandbox_worker_enabled_by_default_when_env_unset(monkeypatch) -> None:
+    monkeypatch.delenv(ENV_FLAG, raising=False)
+
+    class _Worker:
+        def __init__(self, workspace_root, *, sandbox, enabled_default=True, **kwargs):
+            self.enabled_default = enabled_default
+
+        def request(self, op, args=None):
+            return [{"name": "demo", "type": "function", "module_path": "/workspace/demo.py", "line": 1, "column": 4}]
+
+        def shutdown(self):
+            pass
+
+        def worker_status(self):
+            return {"transport": "sandbox_socket", "pid": 4242}
+
+    monkeypatch.setattr("code_intelligence.lsp.client.SandboxJediWorkerClient", _Worker)
+    sandbox = SimpleNamespace(process=SimpleNamespace(exec=lambda *args, **kwargs: None))
+    lsp = LspClient(workspace_root="/workspace", sandbox=sandbox)
+
+    used, result = lsp._try_worker(
+        "definitions",
+        {"path": "/workspace/demo.py", "line": 1, "column": 4},
+    )
+
+    assert used is True
+    assert isinstance(result, list)
+    assert lsp.worker_status()["enabled"] is True
+    assert lsp.worker_status()["pid"] == 4242
+    assert lsp.telemetry.successes == 1
+    assert lsp.telemetry.worker_successes == 1
+
+
+def test_sandbox_worker_env_kill_switch_overrides_default(monkeypatch) -> None:
+    monkeypatch.setenv(ENV_FLAG, "0")
+    sandbox = SimpleNamespace(process=SimpleNamespace(exec=lambda *args, **kwargs: None))
+    lsp = LspClient(workspace_root="/workspace", sandbox=sandbox)
+
+    used, result = lsp._try_worker(
+        "definitions",
+        {"path": "/workspace/demo.py", "line": 1, "column": 4},
+    )
+
+    assert used is False
+    assert result is None
+    assert lsp.worker_status()["enabled"] is False
+    assert lsp.worker_active is False
 
 
 def test_resolve_path_prepends_workspace_root() -> None:

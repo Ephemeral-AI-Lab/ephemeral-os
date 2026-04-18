@@ -111,6 +111,7 @@ class LspClient:
         self._telemetry = LspTelemetry()
         self._py_available: bool | None = None
         self._ts_available: bool | None = None
+        self._worker_enabled_default = sandbox is not None
 
         # Persistent Jedi worker (local stdio or sandbox socket, env-gated).
         # Built lazily on first successful use; torn down on client close.
@@ -270,7 +271,7 @@ class LspClient:
         with self._worker_lock:
             worker = self._worker
         status: dict[str, Any] = {
-            "enabled": jedi_worker_enabled(),
+            "enabled": self._worker_enabled(),
             "active": worker is not None,
         }
         if worker is None:
@@ -402,16 +403,20 @@ class LspClient:
     # inside the sandbox and reaches it through small process.exec RPCs.
 
     def _get_worker(self) -> BaseJediWorkerClient | None:
-        if not jedi_worker_enabled():
+        if not self._worker_enabled():
             return None
         with self._worker_lock:
             if self._worker is None:
                 if self._sandbox is None:
-                    self._worker = JediWorkerClient(self._workspace_root)
+                    self._worker = JediWorkerClient(
+                        self._workspace_root,
+                        enabled_default=self._worker_enabled_default,
+                    )
                 else:
                     self._worker = SandboxJediWorkerClient(
                         self._workspace_root,
                         sandbox=self._sandbox,
+                        enabled_default=self._worker_enabled_default,
                     )
             return self._worker
 
@@ -419,6 +424,9 @@ class LspClient:
         """Return the current worker without creating one."""
         with self._worker_lock:
             return self._worker
+
+    def _worker_enabled(self) -> bool:
+        return jedi_worker_enabled(default=self._worker_enabled_default)
 
     def _try_worker(self, op: str, args: dict[str, Any]) -> tuple[bool, Any]:
         """Attempt a worker request. Returns ``(ok, result_or_None)``.
@@ -843,6 +851,7 @@ class LspClient:
 
     def _record_worker_success(self) -> None:
         with self._counter_lock:
+            self._telemetry.successes += 1
             self._telemetry.worker_successes += 1
 
     def _record_worker_fallback(self) -> None:
@@ -851,6 +860,7 @@ class LspClient:
 
     def _record_worker_error(self) -> None:
         with self._counter_lock:
+            self._telemetry.errors += 1
             self._telemetry.worker_errors += 1
 
     def _detect_language(self, file_path: str) -> str:

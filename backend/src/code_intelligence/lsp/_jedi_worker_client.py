@@ -75,9 +75,12 @@ print(data.strip())
 """.lstrip()
 
 
-def is_enabled() -> bool:
-    """Check the env-var kill-switch (default off)."""
-    return os.environ.get(ENV_FLAG, "0").strip().lower() in {"1", "true", "yes", "on"}
+def is_enabled(*, default: bool = False) -> bool:
+    """Check the env-var kill-switch, falling back to *default* when unset."""
+    value = os.environ.get(ENV_FLAG)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 class WorkerUnavailable(RuntimeError):
@@ -111,11 +114,13 @@ class JediWorkerClient(BaseJediWorkerClient):
         worker_script: str | None = None,
         python_executable: str | None = None,
         request_timeout: float = 10.0,
+        enabled_default: bool = False,
     ) -> None:
         self._workspace_root = str(workspace_root or "")
         self._worker_script = worker_script or WORKER_SCRIPT
         self._python = python_executable or sys.executable or "python3"
         self._request_timeout = float(request_timeout)
+        self._enabled_default = enabled_default
 
         self._proc: subprocess.Popen[str] | None = None
         self._lock = threading.Lock()
@@ -232,7 +237,7 @@ class JediWorkerClient(BaseJediWorkerClient):
         the backoff and raise so the caller falls back to the subprocess
         path.
         """
-        if not is_enabled():
+        if not is_enabled(default=self._enabled_default):
             raise WorkerUnavailable("worker disabled (CI_JEDI_WORKER_ENABLED != 1)")
         payload = {"args": args or {}}
         with self._lock:
@@ -286,11 +291,13 @@ class SandboxJediWorkerClient(BaseJediWorkerClient):
         worker_script: str | None = None,
         request_timeout: float = 10.0,
         remote_dir: str | None = None,
+        enabled_default: bool = True,
     ) -> None:
         self._workspace_root = str(workspace_root or "")
         self._sandbox = sandbox
         self._worker_script = worker_script or WORKER_SCRIPT
         self._request_timeout = float(request_timeout)
+        self._enabled_default = enabled_default
         digest = uuid.uuid4().hex[:10]
         self._remote_dir = remote_dir or f"/tmp/eos_jedi_{digest}"
         socket_dir = self._remote_dir
@@ -466,7 +473,7 @@ exit 0
         raise WorkerUnavailable(f"worker emitted non-JSON: {output!r}")
 
     def request(self, op: str, args: dict[str, Any] | None = None) -> Any:
-        if not is_enabled():
+        if not is_enabled(default=self._enabled_default):
             raise WorkerUnavailable("worker disabled (CI_JEDI_WORKER_ENABLED != 1)")
         payload = {"args": args or {}}
         with self._lock:
