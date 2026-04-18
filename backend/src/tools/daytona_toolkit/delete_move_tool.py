@@ -26,6 +26,7 @@ from tools.core.ci_runtime import (
 )
 from tools.core.decorator import tool
 from tools.daytona_toolkit._daytona_utils import (
+    _extend_write_scope,
     _extract_exit_code,
     _get_repo_root,
     _require_sandbox,
@@ -33,6 +34,7 @@ from tools.daytona_toolkit._daytona_utils import (
     _team_repo_write_error,
     _team_repo_write_warning,
     _wrap_bash_command,
+    _write_scope_covers,
     record_coordination_warning,
 )
 
@@ -469,8 +471,16 @@ async def daytona_move_file(
     src_resolved = _normalized_path(_resolve_path(src_path, context))
     dst_resolved = _normalized_path(_resolve_path(dst_path, context))
 
+    # A rename whose src is already in scope is a naming op, not a widening op:
+    # the agent owns src, and owning "src at path X" logically owns "src at path Y"
+    # after the move. We record that src was in scope so the dst pre-check is
+    # suppressed and, on success, write_scope is extended to cover dst (so
+    # subsequent edits on dst don't fire outside-scope warnings).
+    src_in_scope = _write_scope_covers(context, src_resolved)
+
     warnings: list[str] = []
-    for path in (src_resolved, dst_resolved):
+    paths_to_check = (src_resolved,) if src_in_scope else (src_resolved, dst_resolved)
+    for path in paths_to_check:
         hard_error, soft_warning = _scope_checks(
             context, path, tool_name="daytona_move_file",
         )
@@ -554,6 +564,8 @@ async def daytona_move_file(
 
     if exit_code == 0:
         paths = _changed_paths_from_response(response, [src_resolved, dst_resolved])
+        if src_in_scope:
+            _extend_write_scope(context, dst_resolved)
         return ToolResult(
             output=_move_payload(
                 status="moved",

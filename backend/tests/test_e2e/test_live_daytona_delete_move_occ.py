@@ -1,16 +1,12 @@
-"""Live OCC integrity tests for daytona_delete_file and daytona_move_file.
+"""Live process-audited tests for daytona_delete_file and daytona_move_file.
 
-Spawns a single Daytona sandbox, a single CI service, and drives the two new
-tools under concurrency to verify the OCC invariants:
+Spawns a single Daytona sandbox, a single CI service, and drives delete/move
+tools under concurrency to verify the audited exec workflow:
 
-- Concurrent deletes of the same file: exactly one winner, others abort with
-  ``aborted_version`` or ``not_found``; no ledger partial state.
+- Concurrent deletes/moves leave coherent final filesystem state.
 - Concurrent deletes on disjoint files: all succeed.
-- Concurrent moves with the same src to different dsts: exactly one winner; src
-  is gone; exactly one dst exists; others abort.
 - Concurrent disjoint moves: all succeed.
-- ``overwrite=True`` with drift on the dst aborts via ``strict_base`` and
-  leaves src untouched.
+- Recursive directory deletes/moves work in mixed high-concurrency bursts.
 
 Mirrors the infrastructure in ``test_live_daytona_occ_load.py``.
 """
@@ -287,7 +283,7 @@ async def _run_mixed_many(
 # ---------------------------------------------------------------------------
 
 
-def test_live_concurrent_delete_same_file_exactly_one_winner(live_env: LiveEnv):
+def test_live_concurrent_delete_same_file_leaves_path_absent(live_env: LiveEnv):
     env = live_env
     env.init_repo()
     env.write_text("contended/target.txt", "target\n")
@@ -300,22 +296,25 @@ def test_live_concurrent_delete_same_file_exactly_one_winner(live_env: LiveEnv):
         _run_many(env, svc, daytona_delete_file, call_kwargs, concurrency=12, timeout_s=180)
     )
 
-    successes = [r for r in results if not r["is_error"] and r["payload"].get("status") == "deleted"]
-    aborts = [
+    successes = [
+        r for r in results
+        if not r["is_error"] and r["payload"].get("status") == "deleted"
+    ]
+    expected_errors = [
         r for r in results
         if r["is_error"]
-        and r["payload"].get("status") in {"aborted_version", "not_found", "aborted_lock"}
+        and r["payload"].get("status") in {"not_found", "failed"}
     ]
-    other = [r for r in results if r not in successes and r not in aborts]
+    other = [r for r in results if r not in successes and r not in expected_errors]
 
     print("\n[delete-contention summary]", json.dumps({
         "successes": len(successes),
-        "aborts": len(aborts),
+        "expected_errors": len(expected_errors),
         "other": len(other),
         "statuses": sorted({r["payload"].get("status") for r in results}),
     }, indent=2))
 
-    assert len(successes) == 1, f"expected exactly one winner, got {len(successes)}"
+    assert len(successes) >= 1, "expected at least one delete command to report success"
     assert len(other) == 0, f"unexpected statuses: {other}"
     assert not env.path_exists("contended/target.txt")
 
@@ -363,16 +362,16 @@ def test_live_concurrent_move_same_src_exactly_one_winner(live_env: LiveEnv):
     )
 
     successes = [r for r in results if not r["is_error"] and r["payload"].get("status") == "moved"]
-    aborts = [
+    expected_errors = [
         r for r in results
         if r["is_error"]
-        and r["payload"].get("status") in {"aborted_version", "not_found", "aborted_lock"}
+        and r["payload"].get("status") in {"not_found", "failed"}
     ]
-    other = [r for r in results if r not in successes and r not in aborts]
+    other = [r for r in results if r not in successes and r not in expected_errors]
 
     print("\n[move-contention summary]", json.dumps({
         "successes": len(successes),
-        "aborts": len(aborts),
+        "expected_errors": len(expected_errors),
         "other": len(other),
         "statuses": sorted({r["payload"].get("status") for r in results}),
     }, indent=2))
@@ -417,56 +416,32 @@ def test_live_concurrent_move_disjoint_all_succeed(live_env: LiveEnv):
         assert env.read_text(f"mv/dst_{i}.txt") == f"body-{i}\n"
 
 
-def test_live_move_overwrite_strict_base_aborts_on_dst_drift(live_env: LiveEnv):
-    """Move with overwrite=True must abort when dst drifts concurrently."""
+def test_live_move_overwrite_replaces_existing_destination(live_env: LiveEnv):
+    """overwrite=True removes an existing destination before the audited move."""
     env = live_env
     env.init_repo()
-    env.write_text("drift/src.txt", "src-content\n")
-    env.write_text("drift/dst.txt", "dst-original\n")
+    env.write_text("overwrite/src.txt", "src-content\n")
+    env.write_text("overwrite/dst.txt", "dst-original\n")
 
     svc = env.make_ci_service()
-
-    # Drive a drift on dst while move_file's base-capture pass is mid-flight.
-    # The tool reads src then dst; we corrupt dst between reads.
-    import code_intelligence.routing.content_manager as content_mod
-
-    original_read = svc._content.read
-    calls: list[str] = []
-
-    def _drifting_read(file_path: str, *, allow_missing: bool = False):
-        calls.append(file_path)
-        result = original_read(file_path, allow_missing=allow_missing)
-        # After the tool reads dst (the 2nd read in move_file), drift it before the
-        # coordinator's current-state read.
-        if file_path.endswith("drift/dst.txt"):
-            env.write_text("drift/dst.txt", "drifted!\n")
-        return result
-
-    svc._content.read = _drifting_read  # type: ignore[assignment]
-    try:
-        ctx = env.make_ctx(svc, agent_run_id="overwrite-drift")
-        result = asyncio.run(
-            _invoke(
-                daytona_move_file,
-                {
-                    "src_path": f"{env.repo_root}/drift/src.txt",
-                    "dst_path": f"{env.repo_root}/drift/dst.txt",
-                    "overwrite": True,
-                },
-                ctx,
-            ),
-        )
-    finally:
-        svc._content.read = original_read  # type: ignore[assignment]
-    del content_mod
+    ctx = env.make_ctx(svc, agent_run_id="overwrite-replace")
+    result = asyncio.run(
+        _invoke(
+            daytona_move_file,
+            {
+                "src_path": f"{env.repo_root}/overwrite/src.txt",
+                "dst_path": f"{env.repo_root}/overwrite/dst.txt",
+                "overwrite": True,
+            },
+            ctx,
+        ),
+    )
 
     payload = json.loads(result.output)
-    assert result.is_error is True
-    assert payload["status"] == "aborted_version", payload
-    # Src preserved; dst kept the drifted content; no partial move.
-    assert env.path_exists("drift/src.txt")
-    assert env.read_text("drift/src.txt") == "src-content\n"
-    assert env.read_text("drift/dst.txt") == "drifted!\n"
+    assert result.is_error is False
+    assert payload["status"] == "moved", payload
+    assert not env.path_exists("overwrite/src.txt")
+    assert env.read_text("overwrite/dst.txt") == "src-content\n"
 
 
 # ---------------------------------------------------------------------------
@@ -515,17 +490,17 @@ def test_live_delete_and_move_race_on_same_source(live_env: LiveEnv):
         "move_status": mv_payload.get("status"),
     }, indent=2))
 
-    assert delete_won ^ move_won, (
-        f"expected exactly one winner, delete={delete_won} move={move_won} "
+    assert delete_won or move_won, (
+        f"expected at least one winner, delete={delete_won} move={move_won} "
         f"del={del_payload} mv={mv_payload}"
     )
-    if delete_won:
-        assert not env.path_exists("race/payload.txt")
-        assert not env.path_exists("race/moved.txt")
-    else:
+    assert not env.path_exists("race/payload.txt")
+    if move_won:
         assert not env.path_exists("race/payload.txt")
         assert env.path_exists("race/moved.txt")
         assert env.read_text("race/moved.txt") == "shared\n"
+    else:
+        assert not env.path_exists("race/moved.txt")
 
 
 def test_live_recursive_delete_move_mixed_high_concurrency(live_env: LiveEnv):

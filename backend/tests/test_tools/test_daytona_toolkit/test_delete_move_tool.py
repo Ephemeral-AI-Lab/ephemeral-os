@@ -254,6 +254,77 @@ def test_move_file_records_write_scope_warning_for_out_of_scope_src() -> None:
     assert any(w.get("category") == "outside_write_scope" for w in warnings)
 
 
+def test_move_file_in_scope_src_extends_write_scope_to_dst() -> None:
+    """Moving an in-scope src to an out-of-scope dst extends write_scope silently.
+
+    Rationale: a rename is a naming op. If the agent owns src, the agent owns
+    the file under its new name, and subsequent edits on dst must not fire
+    outside-scope warnings.
+    """
+    svc = _shell_svc(changed_paths=["/ws/a.py", "/ws/b.py"])
+    ctx = _ctx(
+        {
+            "ci_service": svc,
+            "agent_name": "developer",
+            "repo_root": "/ws",
+            "write_scope": ["a.py"],
+        }
+    )
+    result = _run(
+        daytona_move_file,
+        {"src_path": "/ws/a.py", "dst_path": "/ws/b.py"},
+        ctx,
+    )
+    assert result.is_error is False
+    warnings = ctx.metadata.get("coordination_warnings") or []
+    assert not any(w.get("category") == "outside_write_scope" for w in warnings)
+    assert "b.py" in (ctx.metadata.get("write_scope") or [])
+    assert "a.py" in (ctx.metadata.get("write_scope") or [])
+
+
+def test_move_file_in_scope_src_extension_does_not_mutate_input_list() -> None:
+    """Extension replaces the write_scope list rather than mutating in place."""
+    svc = _shell_svc(changed_paths=["/ws/a.py", "/ws/b.py"])
+    original_scope = ["a.py"]
+    ctx = _ctx(
+        {
+            "ci_service": svc,
+            "agent_name": "developer",
+            "repo_root": "/ws",
+            "write_scope": original_scope,
+        }
+    )
+    _run(
+        daytona_move_file,
+        {"src_path": "/ws/a.py", "dst_path": "/ws/b.py"},
+        ctx,
+    )
+    # The caller's original list (aliased from task.scope_paths) must be untouched.
+    assert original_scope == ["a.py"]
+    assert ctx.metadata["write_scope"] is not original_scope
+
+
+def test_move_file_out_of_scope_src_does_not_extend_scope() -> None:
+    """When src is out-of-scope, dst still fires a warning and scope is unchanged."""
+    svc = _shell_svc(changed_paths=["/ws/other/a.py", "/ws/other/b.py"])
+    ctx = _ctx(
+        {
+            "ci_service": svc,
+            "agent_name": "developer",
+            "repo_root": "/ws",
+            "write_scope": ["allowed/"],
+        }
+    )
+    _run(
+        daytona_move_file,
+        {"src_path": "/ws/other/a.py", "dst_path": "/ws/other/b.py"},
+        ctx,
+    )
+    assert ctx.metadata["write_scope"] == ["allowed/"]
+    warnings = ctx.metadata.get("coordination_warnings") or []
+    assert any(w.get("category") == "outside_write_scope" for w in warnings)
+
+
 def test_move_file_recursive_routes_one_shell_command_through_ci() -> None:
     svc = _shell_svc(changed_paths=["/ws/renamed/a.py", "/ws/renamed/b.py"])
     ctx = _ctx({"ci_service": svc, "repo_root": "/ws"})

@@ -395,6 +395,46 @@ def _path_under_write_scope(rel_path: str, write_scope: list[str]) -> bool:
     return False
 
 
+def _write_scope_covers(context: ToolExecutionContext, file_path: str) -> bool:
+    """Return True when *file_path* is covered by the active write_scope.
+
+    Also returns True when no scope is configured — callers can use this to
+    decide whether a source path is "in scope" for a rename-and-extend flow.
+    """
+    repo_root = str(_get_repo_root(context) or "")
+    rel = _normalize_repo_relative_path(file_path, repo_root)
+    if not rel:
+        return True
+    scope = _normalize_write_scope(context.metadata.get("write_scope"), repo_root)
+    if not scope:
+        return True
+    return _path_under_write_scope(rel, scope)
+
+
+def _extend_write_scope(
+    context: ToolExecutionContext, file_path: str,
+) -> str | None:
+    """Append *file_path* (repo-relative) to ``write_scope`` if not already covered.
+
+    Returns the appended entry, or ``None`` when no extension happened (no
+    write_scope configured, path already covered, or path can't be normalized).
+    The list is replaced rather than mutated in place, since it may be aliased
+    from ``task.scope_paths`` and we don't want to taint the task object.
+    """
+    repo_root = str(_get_repo_root(context) or "")
+    rel = _normalize_repo_relative_path(file_path, repo_root)
+    if not rel:
+        return None
+    raw = context.metadata.get("write_scope")
+    if not isinstance(raw, list) or not raw:
+        return None
+    existing = _normalize_write_scope(raw, repo_root)
+    if _path_under_write_scope(rel, existing):
+        return None
+    context.metadata["write_scope"] = list(raw) + [rel]
+    return rel
+
+
 def _team_repo_write_error(
     context: ToolExecutionContext,
     file_path: str,
