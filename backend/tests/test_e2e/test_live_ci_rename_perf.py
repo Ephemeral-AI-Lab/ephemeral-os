@@ -969,7 +969,7 @@ def _run_occ_capture_checks(
             )
         payload = {
             "label": "occ.capture_write_edit_rename_codeact",
-            "audit_path": "exec_ci_process_operation_for_write_edit_rename_codeact",
+            "audit_path": "ci_audited_mutation_path",
             "write_audited": counts.get("write", 0) >= 1,
             "edit_audited": counts.get("edit", 0) >= 1,
             "rename_audited": counts.get("rename", 0) >= 1,

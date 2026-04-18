@@ -12,8 +12,8 @@ tarball is the input to :class:`UpperdirWalker`.
 
 The remote exec always returns exit 0; the user command's real exit code
 is emitted inside sentinel-framed output so transport failures are
-distinguishable from user-command failures (same design rule as
-``ProcessAuditor``).
+distinguishable from user-command failures (sentinel framing matches the
+pattern used by the OCC-gated :class:`OverlayAuditor`).
 
 Capability requirement: ``unshare -Urm`` must work and overlay with
 ``userxattr`` option and tmpfs-backed upperdir must mount successfully.
@@ -237,8 +237,8 @@ class OverlayExec:
     exec_process:
         Awaitable that runs one command on the sandbox and returns an
         object exposing ``.result`` (stdout) and optionally
-        ``.exit_code``. Same contract as
-        :attr:`ProcessAuditor._exec_process`.
+        ``.exit_code``. Same contract used by
+        :class:`OverlayAuditor`.
     tmpfs_size:
         Upperdir tmpfs size cap (e.g. ``"2g"``). Writes exceeding this
         get ENOSPC inside the user command rather than risking container

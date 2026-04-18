@@ -17,12 +17,38 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from agents.run_tracker import AgentRunTracker
+from code_intelligence._async_bridge import configure_default_executor
 from engine.core.query import QueryExitReason
 from engine.runtime.agent import spawn_agent
 from message.stream_events import ToolExecutionCompleted, ToolExecutionStarted
 from team.runtime.context_builder import TeamAgentContext
 
 logger = logging.getLogger(__name__)
+
+_DEFAULT_EXECUTOR_READY = False
+"""One-shot latch so we don't re-create the executor per agent run."""
+
+
+def _ensure_default_executor_raised() -> None:
+    """Raise the running loop's default ThreadPoolExecutor once per process.
+
+    Bulk sandbox-bound svc ops (delete/move/write/edit/rename/codeact)
+    fan out via ``asyncio.to_thread``; Python's default executor is
+    ``min(32, cpu+4)`` which becomes the bottleneck under team-parallel
+    load. The loop-aware ``run_sync`` bridge (see
+    :mod:`code_intelligence._async_bridge`) requires enough worker
+    threads that ``to_thread`` dispatches don't queue behind unrelated
+    sandbox reads.
+    """
+    global _DEFAULT_EXECUTOR_READY
+    if _DEFAULT_EXECUTOR_READY:
+        return
+    try:
+        configure_default_executor()
+    except RuntimeError:
+        # No running loop yet — pytest collection can hit this path.
+        return
+    _DEFAULT_EXECUTOR_READY = True
 
 # Tools whose completion should tick ``ActivityTracker.on_submission`` for coordination.
 SUBMISSION_TOOL_NAMES = frozenset({
@@ -105,6 +131,7 @@ class TeamAgentRunner:
         return defn.model_copy(update=overrides) if overrides else defn
 
     async def __call__(self, defn: Any, ctx: TeamAgentContext) -> dict[str, Any]:
+        _ensure_default_executor_raised()
         effective_defn = self._effective_defn(defn)
         prompt = ctx.user_message or ""
 

@@ -548,6 +548,70 @@ def _team_repo_write_warning(
     )
 
 
+def _team_repo_scope_deny_errors(
+    context: ToolExecutionContext,
+    paths: list[str] | tuple[str, ...],
+    *,
+    tool_name: str,
+) -> list[tuple[str, str]]:
+    """Return ``(path, message)`` for each path outside ``write_scope``.
+
+    Shared policy helper for tools whose outside-scope writes are hard
+    denies (``daytona_delete_file``, ``daytona_move_file`` src,
+    ``daytona_rename_symbol``). Returns an empty list when the call is
+    not in a coordinated team lane or no ``write_scope`` is configured.
+
+    Test-file edits are handled separately by ``_team_repo_write_error``
+    (higher-priority block); this helper skips paths that would already
+    be caught there to avoid duplicate messaging.
+    """
+    if not is_coordinated_team_agent(context):
+        return []
+    repo_root = str(_get_repo_root(context) or "")
+    write_scope = _normalize_write_scope(context.metadata.get("write_scope"), repo_root)
+    if not write_scope:
+        return []
+    offenders: list[tuple[str, str]] = []
+    for path in paths:
+        rel_path = _normalize_repo_relative_path(path, repo_root)
+        if not rel_path:
+            continue
+        if _is_test_file_path(rel_path) and not _test_file_edits_allowed(context):
+            continue
+        if _path_under_write_scope(rel_path, write_scope):
+            continue
+        offenders.append(
+            (
+                path,
+                f"{tool_name}: {rel_path} is outside write_scope {write_scope}",
+            )
+        )
+    return offenders
+
+
+def _scope_deny_message(
+    offenders: list[tuple[str, str]],
+    *,
+    tool_name: str,
+    role: str | None = None,
+) -> str:
+    """Format a write-scope Deny message listing only offending paths.
+
+    ``role`` qualifies which side of a multi-path tool tripped the check
+    (e.g. ``"src_path"`` for ``daytona_move_file``, ``"folder members"``
+    for folder-mode post-enumeration). Omit for single-path tools.
+    """
+    header = f"{tool_name} blocked by write-scope policy"
+    if role:
+        header += f" on {role}"
+    lines = "\n  - ".join(f"{path}: {msg}" for path, msg in offenders)
+    return (
+        f"{header}:\n  - {lines}\n"
+        "Stop now: your next tool call must be "
+        "submit_task_summary(type='fail')."
+    )
+
+
 # ---------------------------------------------------------------------------
 # Upload helper
 # ---------------------------------------------------------------------------

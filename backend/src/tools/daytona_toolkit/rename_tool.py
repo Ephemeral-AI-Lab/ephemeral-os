@@ -1,97 +1,47 @@
-"""Daytona-backed cross-file symbol rename tools.
+"""Daytona-backed cross-file symbol rename tool.
 
-Exposes one tool:
-
-* ``daytona_rename_symbol(symbol, new_name, kind=?, file_hint=?)`` — resolves the
-  symbol name via :class:`SymbolIndex`, returns ``status="ambiguous"`` with
-  candidates when a name matches multiple places, and otherwise delegates to
-  a single audited process command.
+``daytona_rename_symbol(symbol, new_name, kind=?, file_hint=?)`` resolves
+a symbol via the workspace :class:`SymbolIndex`, returns
+``status="ambiguous"`` with candidates when a name matches multiple
+places, and otherwise runs the rename through the OCC-gated
+code-intelligence commit path (``svc.rename_symbol``). No shell, no
+dry-run, no audit-only side path.
 """
 
 from __future__ import annotations
 
-import base64
+import asyncio
 import json
 import keyword
 import logging
 import re
-import shlex
 from typing import Any
 
-from code_intelligence.types import SymbolKind
 from pydantic import BaseModel, Field
 
+from code_intelligence._async_bridge import use_sandbox_io_loop
+from code_intelligence.types import SymbolKind
 from tools.core.base import ToolExecutionContext, ToolResult
-from tools.core.ci_runtime import (
-    ci_required_result,
-    exec_ci_process_operation,
-    get_ci_service,
-)
+from tools.core.ci_attribution import rebind_ci_service, resolved_agent_id
+from tools.core.ci_runtime import ci_required_result, get_ci_service
 from tools.core.decorator import tool
+from tools.core.op_result_to_tool_result import operation_result_to_tool_result
 from tools.core.sandbox_runtime import resolve_daytona_path
 from tools.daytona_toolkit._daytona_utils import (
-    _extract_exit_code,
-    _require_sandbox,
+    _scope_deny_message,
+    _team_repo_scope_deny_errors,
     _team_repo_write_error,
-    _team_repo_write_warning,
-    _wrap_bash_command,
 )
 
 logger = logging.getLogger(__name__)
 
 _IDENTIFIER_RE = r"^[A-Za-z_][A-Za-z0-9_]*$"
 _CANDIDATE_LIMIT = 10
-_PROCESS_RENAME_TIMEOUT = 180
-_PROCESS_RENAME_SCRIPT = r"""
-import base64
-import json
-import os
-import pathlib
-import sys
-import tempfile
-
-
-payload = json.loads(base64.b64decode(sys.argv[1]).decode("utf-8"))
-changes = payload.get("files", [])
-temps = []
-try:
-    for change in changes:
-        file_path = str(change["file_path"])
-        path = pathlib.Path(file_path)
-        final_content = change.get("final_content")
-        if final_content is None:
-            if path.exists():
-                path.unlink()
-        else:
-            parent = path.parent
-            parent.mkdir(parents=True, exist_ok=True)
-            fd, tmp = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=str(parent))
-            temps.append(tmp)
-            with os.fdopen(fd, "w", encoding="utf-8") as handle:
-                handle.write(str(final_content))
-            os.replace(tmp, path)
-            temps.remove(tmp)
-    results = [{"file_path": str(change["file_path"]), "status": "renamed"} for change in changes]
-except Exception as exc:
-    print(json.dumps({"ok": False, "status": "failed", "error": str(exc)}))
-    raise SystemExit(1)
-finally:
-    for tmp in list(temps):
-        try:
-            os.unlink(tmp)
-        except FileNotFoundError:
-            pass
-
-print(json.dumps({"ok": True, "status": "renamed", "files": results}))
-"""
-
-
-# -- Shared schemas ---------------------------------------------------------
 
 
 class FileRenameSummary(BaseModel):
     file_path: str = Field(..., description="Absolute path of the changed file.")
-    status: str = Field(..., description="`renamed`, `dry_run`, or `failed`.")
+    status: str = Field(..., description="`renamed` or `failed`.")
     message: str | None = Field(default=None, description="Failure reason when status=failed.")
 
 
@@ -108,8 +58,9 @@ class DaytonaRenameSymbolsOutput(BaseModel):
     status: str = Field(
         ...,
         description=(
-            "`renamed`, `dry_run`, `no_changes`, `ambiguous` (multiple "
-            "matches — nothing written), `no_match`, or `failed`."
+            "`renamed`, `no_changes`, `ambiguous` (multiple matches — nothing "
+            "written), `no_match`, `aborted_version`, `aborted_overlap`, "
+            "`aborted_lock`, or `failed`."
         ),
     )
     new_name: str = Field(..., description="Requested new identifier.")
@@ -152,10 +103,6 @@ class DaytonaRenameSymbolsInput(BaseModel):
             "Optional substring match against the absolute file path "
             "(e.g. `backend/src/foo/`) to narrow candidates."
         ),
-    )
-    dry_run: bool = Field(
-        default=False,
-        description="Resolve and validate the rename plan without writing anything.",
     )
 
 
@@ -230,22 +177,6 @@ def _resolve_symbol(
     return matches
 
 
-def _rename_process_command(changes: tuple[Any, ...]) -> str:
-    payload = {
-        "files": [
-            {
-                "file_path": change.file_path,
-                "final_content": change.final_content,
-            }
-            for change in changes
-        ],
-    }
-    encoded = base64.b64encode(json.dumps(payload).encode("utf-8")).decode("ascii")
-    return _wrap_bash_command(
-        f"python3 -c {shlex.quote(_PROCESS_RENAME_SCRIPT)} {shlex.quote(encoded)}"
-    )
-
-
 async def _perform_rename(
     *,
     svc: Any,
@@ -254,21 +185,22 @@ async def _perform_rename(
     line: int,
     character: int,
     new_name: str,
-    dry_run: bool,
     extra_warnings: list[str] | None = None,
 ) -> ToolResult:
-    """Shared body: build a SemanticRenamePlan and run one audited process command."""
+    """Run a rename through the OCC-gated service primitive.
+
+    Resolves the plan through :meth:`rename_symbol_plan` first so we can
+    apply write-scope policy per affected file before any commit, then
+    submits the whole rename as one OCC batch.
+    """
     try:
-        planner = svc.rename_symbol_plan
-        preview_planner = getattr(svc, "preview_rename_symbol_plan", None)
-        if dry_run and callable(preview_planner):
-            planner = preview_planner
-        plan = planner(resolved_path, int(line), int(character), new_name)
+        plan = svc.rename_symbol_plan(resolved_path, int(line), int(character), new_name)
     except Exception as exc:  # pragma: no cover - defensive
         logger.debug("rename_symbol_plan raised for %s", resolved_path, exc_info=True)
         return ToolResult(output=f"LSP rename failed: {exc}", is_error=True)
 
     changes = getattr(plan, "changes", ()) or ()
+    warnings = list(extra_warnings or [])
     if not changes:
         return ToolResult(
             output=json.dumps(
@@ -276,7 +208,7 @@ async def _perform_rename(
                     "status": "no_changes",
                     "new_name": new_name,
                     "files": [],
-                    "warnings": list(extra_warnings or []),
+                    "warnings": warnings,
                     "message": (
                         f"No rename changes produced for {resolved_path}:{line}. "
                         "Confirm the position points to a valid symbol and that "
@@ -286,128 +218,66 @@ async def _perform_rename(
             ),
         )
 
-    hard_errors: list[str] = []
-    soft_warnings: list[str] = list(extra_warnings or [])
+    # Scope policy is inline because plan paths surface only after
+    # rename_symbol_plan. Test-file block and outside-scope deny are
+    # independent checks — test files may land inside write_scope and
+    # must still fail that precedence-ordered check.
+    test_file_errors: list[str] = []
     for change in changes:
-        path = change.file_path
-        err = _team_repo_write_error(context, path, tool_name="daytona_rename_symbol")
+        err = _team_repo_write_error(
+            context, change.file_path, tool_name="daytona_rename_symbol",
+        )
         if err is not None:
-            hard_errors.append(err)
-            continue
-        warn = _team_repo_write_warning(context, path, tool_name="daytona_rename_symbol")
-        if warn is not None:
-            soft_warnings.append(warn)
-    if hard_errors:
+            test_file_errors.append(err)
+    if test_file_errors:
         return ToolResult(
             output=(
                 "Rename blocked by write-scope policy:\n  - "
-                + "\n  - ".join(hard_errors)
+                + "\n  - ".join(test_file_errors)
             ),
             is_error=True,
         )
 
-    if dry_run:
-        file_summaries = [
-            {
-                "file_path": change.file_path,
-                "status": "dry_run",
-            }
-            for change in changes
-        ]
-        return ToolResult(
-            output=json.dumps(
-                {
-                    "status": "dry_run",
-                    "new_name": new_name,
-                    "files": file_summaries,
-                    "warnings": soft_warnings,
-                }
-            ),
-            metadata={"dry_run": True, "file_count": len(file_summaries)},
-        )
-
-    operation_changes = tuple(changes)
-    description = f"rename to {new_name}"
-    try:
-        sandbox = await _require_sandbox(context)
-        response = await exec_ci_process_operation(
-            context,
-            sandbox,
-            _rename_process_command(operation_changes),
-            timeout=_PROCESS_RENAME_TIMEOUT,
-            description=description,
-        )
-    except Exception as exc:
-        return ToolResult(
-            output=json.dumps(
-                {
-                    "status": "failed",
-                    "new_name": new_name,
-                    "files": [
-                        {"file_path": change.file_path, "status": "failed", "message": str(exc)}
-                        for change in operation_changes
-                    ],
-                    "warnings": soft_warnings,
-                    "message": f"Rename failed during process execution: {exc}",
-                }
-            ),
-            is_error=True,
-        )
-
-    raw = str(getattr(response, "result", "") or "")
-    cleaned, exit_code = _extract_exit_code(
-        raw,
-        fallback_exit_code=getattr(response, "exit_code", None),
+    scope_offenders = _team_repo_scope_deny_errors(
+        context,
+        [change.file_path for change in changes],
+        tool_name="daytona_rename_symbol",
     )
-    try:
-        payload = json.loads(cleaned or "{}")
-    except json.JSONDecodeError:
-        payload = {"ok": False, "status": "failed", "error": cleaned or "rename process failed"}
-
-    if exit_code not in (0, None) or not bool(payload.get("ok", False)):
-        message = str(payload.get("error") or cleaned or "rename process failed")
+    if scope_offenders:
         return ToolResult(
-            output=json.dumps(
-                {
-                    "status": "failed",
-                    "new_name": new_name,
-                    "files": [
-                        {"file_path": change.file_path, "status": "failed", "message": message}
-                        for change in operation_changes
-                    ],
-                    "warnings": soft_warnings,
-                    "message": message,
-                }
+            output=_scope_deny_message(
+                scope_offenders, tool_name="daytona_rename_symbol",
             ),
             is_error=True,
-            metadata={"file_count": len(operation_changes), "success_count": 0},
         )
 
-    files = [
-        {"file_path": str(item.get("file_path") or ""), "status": "renamed"}
-        for item in (payload.get("files") or [])
-        if isinstance(item, dict) and item.get("file_path")
-    ]
-    if not files:
-        files = [{"file_path": change.file_path, "status": "renamed"} for change in operation_changes]
-    return ToolResult(
-        output=json.dumps(
-            {
-                "status": "renamed",
-                "new_name": new_name,
-                "files": files,
-                "warnings": soft_warnings,
-                "message": None,
-            }
-        ),
-        metadata={
-            "file_count": len(files),
-            "success_count": len(files),
+    rebind_ci_service(context, svc)
+    with use_sandbox_io_loop():
+        result = await asyncio.to_thread(
+            svc.rename_symbol,
+            resolved_path,
+            int(line),
+            int(character),
+            new_name,
+            agent_id=resolved_agent_id(context),
+            description=f"rename to {new_name}",
+        )
+
+    primary_paths = [change.file_path for change in changes]
+    return operation_result_to_tool_result(
+        result,
+        tool_name="daytona_rename_symbol",
+        success_status="renamed",
+        primary_paths=primary_paths,
+        warnings=warnings,
+        success_extra={
+            "new_name": new_name,
+            "files": [
+                {"file_path": path, "status": "renamed"}
+                for path in primary_paths
+            ],
         },
     )
-
-
-# -- Tool: daytona_rename_symbol -------------------------------------------
 
 
 @tool(
@@ -415,11 +285,10 @@ async def _perform_rename(
     description=(
         "Rename a Python symbol by name across every file where it is referenced "
         "inside the Daytona sandbox, using LSP semantics. Resolves `symbol` via "
-        "the workspace symbol index, "
-        "supports dotted names (`Foo.bar` narrows to the `bar` method on class "
-        "`Foo`), and returns `status=\"ambiguous\"` with candidates when the "
-        "name is not unique. Executes the resulting rewrite as one audited "
-        "process operation. Python-only for now."
+        "the workspace symbol index, supports dotted names (`Foo.bar` narrows to "
+        "the `bar` method on class `Foo`), and returns `status=\"ambiguous\"` "
+        "with candidates when the name is not unique. Commits the rewrite as one "
+        "OCC batch. Python-only for now."
     ),
     short_description="Rename a symbol by name across every referencing file.",
     input_model=DaytonaRenameSymbolsInput,
@@ -430,11 +299,10 @@ async def daytona_rename_symbol(
     new_name: str,
     kind: SymbolKind | None = None,
     file_hint: str | None = None,
-    dry_run: bool = False,
     *,
     context: ToolExecutionContext,
 ) -> ToolResult:
-    """Resolve *symbol* then run one audited process operation for the rename."""
+    """Resolve *symbol* then run the rename through the OCC commit path."""
     svc = get_ci_service(context)
     if svc is None:
         return ci_required_result(
@@ -447,9 +315,7 @@ async def daytona_rename_symbol(
     if invalid is not None:
         return ToolResult(output=invalid, is_error=True)
 
-    matches = _resolve_symbol(
-        svc, symbol=symbol, kind=kind, file_hint=file_hint,
-    )
+    matches = _resolve_symbol(svc, symbol=symbol, kind=kind, file_hint=file_hint)
 
     if not matches:
         msg = (
@@ -504,5 +370,4 @@ async def daytona_rename_symbol(
         line=pivot_line,
         character=pivot_char,
         new_name=new_name,
-        dry_run=dry_run,
     )

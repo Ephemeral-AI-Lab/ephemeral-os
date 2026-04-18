@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import base64
 import json
-import shlex
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
@@ -49,36 +47,22 @@ def _write_exec_result(*, base_existed: bool = False):
 
 
 def _ci_service_mock(*, file_path: str = "/ws/new.txt"):
-    del file_path
+    from code_intelligence.types import EditResult, OperationResult
+
     svc = MagicMock()
-    svc.exec_process_operation = AsyncMock(side_effect=_exec_process_operation)
+    svc.write_file = MagicMock(
+        return_value=OperationResult(
+            success=True,
+            status="committed",
+            files=(
+                EditResult(success=True, file_path=file_path, message="Wrote file"),
+            ),
+            conflict_file=None,
+            conflict_reason="",
+            timings={},
+        )
+    )
     return svc
-
-
-async def _exec_process_operation(
-    sandbox,
-    command,
-    *,
-    timeout=None,
-    description="",
-    agent_id="",
-    team_run_id="",
-    agent_run_id="",
-    task_id="",
-    attribute_changes=True,
-):
-    del description, agent_id, team_run_id, agent_run_id, task_id, attribute_changes
-    return await sandbox.process.exec(command, timeout=timeout)
-
-
-def _write_payload_from_command(command: str) -> dict[str, str]:
-    script = shlex.split(command)[-1]
-    for token in reversed(shlex.split(script)):
-        try:
-            return json.loads(base64.b64decode(token).decode("utf-8"))
-        except Exception:
-            continue
-    raise AssertionError("write payload not found in process command")
 
 
 # ---------------------------------------------------------------------------
@@ -279,7 +263,6 @@ async def test_write_file_requires_ci_service():
 
 async def test_write_file_syncs_ci_state():
     sb = _sb()
-    sb.process.exec = AsyncMock(return_value=_write_exec_result())
     svc = _ci_service_mock(file_path="/ws/new.txt")
     ctx = _ctx({
         "daytona_sandbox": sb,
@@ -292,21 +275,20 @@ async def test_write_file_syncs_ci_state():
     )
 
     assert not result.is_error
-    sb.process.exec.assert_called_once()
+    svc.write_file.assert_called_once()
     assert json.loads(result.output)["ci_sync"] is True
 
 
 async def test_write_file_resolves_relative_path():
     sb = _sb()
-    sb.process.exec = AsyncMock(return_value=_write_exec_result())
     svc = _ci_service_mock(file_path="/workspace/subdir/file.txt")
     ctx = _ctx({"daytona_sandbox": sb, "daytona_cwd": "/workspace", "ci_service": svc})
     result = await daytona_write_file.execute(
         daytona_write_file.input_model(file_path="subdir/file.txt", content="data"), ctx
     )
     assert not result.is_error
-    payload = _write_payload_from_command(sb.process.exec.call_args.args[0])
-    assert payload["file_path"] == "/workspace/subdir/file.txt"
+    specs = svc.write_file.call_args.args[0]
+    assert specs[0].file_path == "/workspace/subdir/file.txt"
 
 
 async def test_write_file_warns_write_outside_write_scope():
@@ -338,7 +320,6 @@ async def test_write_file_warns_write_outside_write_scope():
 
 async def test_write_file_allows_write_inside_write_scope():
     sb = _sb()
-    sb.process.exec = AsyncMock(return_value=_write_exec_result())
     svc = _ci_service_mock(file_path="/testbed/dask/config.py")
     ctx = _ctx(
         {
@@ -357,7 +338,7 @@ async def test_write_file_allows_write_inside_write_scope():
     )
 
     assert not result.is_error
-    sb.process.exec.assert_called_once()
+    svc.write_file.assert_called_once()
 
 
 async def test_write_file_blocks_test_file_with_policy_message():

@@ -88,10 +88,10 @@ async def test_registered_write_capable_tools_require_ci_service():
         },
         "daytona_codeact": {"command": "echo hi"},
         "daytona_rename_symbol": {"symbol": "foo", "new_name": "bar"},
-        "daytona_delete_file": {"file_path": "/repo/app.py"},
+        "daytona_delete_file": {"path": "/repo/app.py"},
         "daytona_move_file": {
             "src_path": "/repo/src.py",
-            "dst_path": "/repo/dst.py",
+            "target_path": "/repo/dst.py",
         },
     }
 

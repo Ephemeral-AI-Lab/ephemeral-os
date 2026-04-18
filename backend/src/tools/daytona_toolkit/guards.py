@@ -1,14 +1,20 @@
-"""Tool guards for the Daytona toolkit.
+"""Pre-phase tool guards for the Daytona mutation toolkit.
 
-Registers pre-phase guards that centralize the write-scope policy for the
-simple single-path tools (``daytona_write_file``, ``daytona_edit_file``,
-``daytona_delete_file``). Registration runs at import time from
-``toolkit.py`` so the guards are active whenever the toolkit is loaded.
+Policy matrix (registered in ``_SCOPE_PATH_ARG`` below):
 
-Tools with multi-path or post-success scope semantics
-(``daytona_move_file``, ``daytona_rename_symbol``, ``daytona_codeact``)
-keep their inline scope checks — see
-``.ephemeralos/prompt-reports/tool-guards-plan.md`` for the rationale.
+    tool                    test-file   outside-scope
+    daytona_write_file      Deny        Advisory
+    daytona_edit_file       Deny        Advisory
+    daytona_delete_file     Deny        Deny
+    daytona_move_file (src) Deny        Deny
+    daytona_move_file (dst) —           Advisory (skip if src in scope)
+
+``daytona_rename_symbol`` keeps its scope loop inline because plan paths
+surface only after ``svc.rename_symbol_plan``; it reuses the same
+``_team_repo_scope_deny_errors`` helper.
+
+For ``is_folder=True`` the guard gates on the folder path string only;
+member-level checks run in the tool body after enumeration.
 """
 
 from __future__ import annotations
@@ -28,25 +34,47 @@ from tools.core.guards import (
 from tools.daytona_toolkit._daytona_utils import (
     _get_cwd,
     _resolve_path,
+    _scope_deny_message,
+    _team_repo_scope_deny_errors,
     _team_repo_write_error,
     _team_repo_write_warning,
+    _write_scope_covers,
     is_coordinated_team_agent,
 )
 from tools.daytona_toolkit._shell_policy import _normalize_team_shell_command
 from tools.daytona_toolkit.ci_integration import destructive_shell_command_error
 
-_WRITE_SCOPE_TOOLS: tuple[str, ...] = (
-    "daytona_write_file",
-    "daytona_edit_file",
-    "daytona_delete_file",
-)
+# Per-tool primary-path arg: the field on ``args`` that the single-path
+# write-scope guards check. Schemas drifted after initial registration
+# (``DaytonaDeleteFileInput`` uses ``path``, ``DaytonaMoveFileInput`` uses
+# ``src_path``), so explicit registration is safer than duck-typing.
+# ``None`` → the tool isn't registered for these guards.
+_SCOPE_PATH_ARG: dict[str, str] = {
+    "daytona_write_file": "file_path",
+    "daytona_edit_file": "file_path",
+    "daytona_delete_file": "path",
+    "daytona_move_file": "src_path",
+}
 
 
-def _target_path(args: BaseModel) -> str | None:
-    path = getattr(args, "file_path", None)
-    if isinstance(path, str) and path:
-        return path
-    return None
+def _str_arg(args: BaseModel, name: str) -> str | None:
+    value = getattr(args, name, None)
+    return value if isinstance(value, str) and value else None
+
+
+def _scope_path(tool_name: str, args: BaseModel) -> str | None:
+    field = _SCOPE_PATH_ARG.get(tool_name)
+    return _str_arg(args, field) if field else None
+
+
+def _scope_role(tool_name: str) -> str | None:
+    """The ``role`` label used in Deny messages for multi-path tools.
+
+    Single-path tools get ``None`` — the Deny message is unqualified.
+    Move qualifies with ``src_path`` so the agent sees which side of the
+    move tripped the policy.
+    """
+    return "src_path" if tool_name == "daytona_move_file" else None
 
 
 async def write_scope_hard_block_guard(
@@ -60,14 +88,13 @@ async def write_scope_hard_block_guard(
     error when the coordinated-team developer lane targets a test file
     without explicit authorization, otherwise ``None``.
     """
-    path = _target_path(args)
+    path = _scope_path(tool_name, args)
     if path is None:
         return Allow()
-    resolved = _resolve_path(path, context)
-    err = _team_repo_write_error(context, resolved, tool_name=tool_name)
-    if err is not None:
-        return Deny(message=err)
-    return Allow()
+    err = _team_repo_write_error(
+        context, _resolve_path(path, context), tool_name=tool_name,
+    )
+    return Deny(message=err) if err is not None else Allow()
 
 
 async def write_scope_advisory_guard(
@@ -81,34 +108,90 @@ async def write_scope_advisory_guard(
     coordination warning via :func:`record_coordination_warning` and returns
     the advisory string, escalating after 3+ outside-scope warnings.
     """
-    path = _target_path(args)
+    path = _scope_path(tool_name, args)
     if path is None:
         return Allow()
-    resolved = _resolve_path(path, context)
-    warn = _team_repo_write_warning(context, resolved, tool_name=tool_name)
+    warn = _team_repo_write_warning(
+        context, _resolve_path(path, context), tool_name=tool_name,
+    )
+    if warn is None:
+        return Allow()
+    return Advisory(warnings=(warn,), category="outside_write_scope")
+
+
+async def write_scope_deny_guard(
+    tool_name: str,
+    args: BaseModel,
+    context: ToolExecutionContext,
+) -> GuardOutcome:
+    """Deny writes to paths outside ``write_scope`` in coordinated lanes.
+
+    For ``is_folder=True`` the guard only gates on the folder path string;
+    the tool body enumerates descendants and calls
+    :func:`_team_repo_scope_deny_errors` directly on the member list.
+    """
+    path = _scope_path(tool_name, args)
+    if path is None:
+        return Allow()
+    offenders = _team_repo_scope_deny_errors(
+        context, [_resolve_path(path, context)], tool_name=tool_name,
+    )
+    if not offenders:
+        return Allow()
+    return Deny(
+        message=_scope_deny_message(
+            offenders, tool_name=tool_name, role=_scope_role(tool_name),
+        ),
+    )
+
+
+async def move_dst_scope_advisory_guard(
+    tool_name: str,
+    args: BaseModel,
+    context: ToolExecutionContext,
+) -> GuardOutcome:
+    """Advisory on outside-scope dst; suppressed when src is in-scope.
+
+    A move whose src is already owned is a naming op, not a widening op;
+    ``_extend_write_scope`` in the tool body widens the scope to cover
+    dst on success.
+    """
+    dst = _str_arg(args, "target_path")
+    if dst is None:
+        return Allow()
+    src = _str_arg(args, "src_path")
+    if src is not None and _write_scope_covers(context, _resolve_path(src, context)):
+        return Allow()
+    warn = _team_repo_write_warning(
+        context, _resolve_path(dst, context), tool_name=tool_name,
+    )
     if warn is None:
         return Allow()
     return Advisory(warnings=(warn,), category="outside_write_scope")
 
 
 def register_write_scope_guards(registry: ToolGuardRegistry | None = None) -> None:
-    """Register the write-scope guards against the simple single-path tools."""
+    """Register write-scope guards for every tool in ``_SCOPE_PATH_ARG``."""
     reg = registry or default_registry()
-    for tool_name in _WRITE_SCOPE_TOOLS:
+    for tool_name in _SCOPE_PATH_ARG:
         reg.register(
-            tool_name,
-            "pre",
-            10,
-            write_scope_hard_block_guard,
+            tool_name, "pre", 10, write_scope_hard_block_guard,
             name=f"{tool_name}:write_scope_hard_block",
         )
-        reg.register(
-            tool_name,
-            "pre",
-            20,
-            write_scope_advisory_guard,
-            name=f"{tool_name}:write_scope_advisory",
-        )
+        if tool_name in {"daytona_delete_file", "daytona_move_file"}:
+            reg.register(
+                tool_name, "pre", 15, write_scope_deny_guard,
+                name=f"{tool_name}:write_scope_deny",
+            )
+        else:
+            reg.register(
+                tool_name, "pre", 20, write_scope_advisory_guard,
+                name=f"{tool_name}:write_scope_advisory",
+            )
+    reg.register(
+        "daytona_move_file", "pre", 20, move_dst_scope_advisory_guard,
+        name="daytona_move_file:dst_scope_advisory",
+    )
 
 
 # ---------------------------------------------------------------------------

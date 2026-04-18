@@ -2,7 +2,7 @@
 
 Records audited edit operations and exposes coordination metadata for
 code-intelligence consumers. Daytona mutation tools record process-level
-changes through ``CodeIntelligenceService.exec_process_operation``.
+changes through ``CodeIntelligenceService.cmd`` (OCC-gated overlay audit).
 
 Queryable edit history is delegated to an internal EditHistoryLedger so
 callers can depend on Arbiter as the public coordination facade.

@@ -6,7 +6,6 @@ import io
 import tarfile
 from pathlib import Path
 
-import pytest
 
 from code_intelligence.routing.upperdir_walker import (
     ChangeKind,

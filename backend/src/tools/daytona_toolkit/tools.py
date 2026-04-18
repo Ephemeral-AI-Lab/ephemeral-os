@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import base64
+import asyncio
 import json
 import logging
 import shlex
@@ -10,70 +10,29 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from code_intelligence._async_bridge import use_sandbox_io_loop
 from code_intelligence.tuning import CODE_INTELLIGENCE_TUNING
-from tools.core.decorator import tool
+from code_intelligence.types import WriteSpec
 from tools.core.base import ToolExecutionContext, ToolResult
+from tools.core.ci_attribution import rebind_ci_service, resolved_agent_id
+from tools.core.ci_runtime import ci_write_required_result, get_ci_service
+from tools.core.decorator import tool
+from tools.core.op_result_to_tool_result import operation_result_to_tool_result
 from tools.daytona_toolkit._daytona_utils import (
-    _truncate,
-    _require_sandbox,
-    _recover_sandbox,
-    _path_error,
-    _get_cwd,
-    _extract_exit_code,
     _exec_command,
+    _extract_exit_code,
+    _get_cwd,
+    _path_error,
     _read_text_file_via_exec,
+    _recover_sandbox,
+    _require_sandbox,
     _resolve_path,
+    _truncate,
     _wrap_bash_command,
-)
-from tools.core.ci_runtime import (
-    ci_write_required_result,
-    exec_ci_process_operation,
-    get_ci_service,
 )
 
 logger = logging.getLogger(__name__)
 _GREP_MATCH_CAP = CODE_INTELLIGENCE_TUNING.grep_match_cap
-_WRITE_FILE_TIMEOUT = 120
-_WRITE_FILE_SCRIPT = r"""
-import base64
-import json
-import os
-import pathlib
-import sys
-import tempfile
-
-
-payload = json.loads(base64.b64decode(sys.argv[1]).decode("utf-8"))
-file_path = str(payload["file_path"])
-content = str(payload.get("content", ""))
-path = pathlib.Path(file_path)
-
-try:
-    parent = path.parent
-    parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp = tempfile.mkstemp(prefix=f".{path.name}.", suffix=".tmp", dir=str(parent))
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            handle.write(content)
-        os.replace(tmp, path)
-    finally:
-        try:
-            os.unlink(tmp)
-        except FileNotFoundError:
-            pass
-    print(
-        json.dumps(
-            {
-                "ok": True,
-                "file_path": file_path,
-                "bytes_written": len(content.encode("utf-8")),
-            }
-        )
-    )
-except Exception as exc:
-    print(json.dumps({"ok": False, "error": str(exc), "file_path": file_path}))
-    raise SystemExit(1)
-"""
 
 class DaytonaReadFileInput(BaseModel):
     file_path: str = Field(..., description="Path to the file in the sandbox.")
@@ -202,42 +161,6 @@ def _build_match_result(match: dict[str, Any]) -> dict[str, Any]:
         "line": match.get("line"),
         "content": str(match.get("content") or "").rstrip(),
     }
-
-
-def _build_write_file_result(
-    *,
-    context: ToolExecutionContext,
-    file_path: str,
-    bytes_written: int,
-    warning: str | None,
-    timings: dict[str, Any] | None = None,
-) -> ToolResult:
-    normalized_timings = timings if isinstance(timings, dict) else None
-    payload = {
-        "cwd": _get_cwd(context) or "",
-        "file_path": file_path,
-        "bytes_written": bytes_written,
-        "ci_sync": True,
-        "warnings": [warning] if warning else [],
-    }
-    if normalized_timings:
-        payload["timings"] = normalized_timings
-    return ToolResult(
-        output=json.dumps(payload),
-        metadata={"timings": dict(normalized_timings or {})},
-    )
-
-
-def _write_file_command(*, file_path: str, content: str) -> str:
-    payload = base64.b64encode(
-        json.dumps(
-            {"file_path": file_path, "content": content},
-            ensure_ascii=False,
-        ).encode("utf-8")
-    ).decode("ascii")
-    return _wrap_bash_command(
-        f"python3 -c {shlex.quote(_WRITE_FILE_SCRIPT)} {shlex.quote(payload)}"
-    )
 
 
 def _build_find_result(
@@ -570,61 +493,36 @@ async def daytona_write_file(
     *,
     context: ToolExecutionContext,
 ) -> ToolResult:
-    """Write/create a file in the Daytona sandbox."""
+    """Write/create a file through ``svc.write_file`` (OCC-gated)."""
     file_path = _resolve_path(file_path, context)
-    # Write-scope policy runs as a pre-phase tool guard; any emitted
-    # advisory is surfaced via ``guard_pre_warnings`` in the context.
-    guard_warnings = list(context.metadata.get("guard_pre_warnings") or [])
-    contract_warning = guard_warnings[0] if guard_warnings else None
-    if get_ci_service(context) is None:
+    warnings: list[str] = list(context.metadata.get("guard_pre_warnings") or [])
+
+    svc = get_ci_service(context)
+    if svc is None:
         return ci_write_required_result("daytona_write_file", file_path)
 
-    content_bytes = content.encode("utf-8")
-
-    async def _attempt(active_sandbox: Any) -> ToolResult:
-        response = await exec_ci_process_operation(
-            context,
-            active_sandbox,
-            _write_file_command(file_path=file_path, content=content),
-            timeout=_WRITE_FILE_TIMEOUT,
-            description="daytona_write_file",
-        )
-        cleaned, exit_code = _extract_exit_code(
-            getattr(response, "result", "") or "",
-            fallback_exit_code=getattr(response, "exit_code", None),
-        )
-        try:
-            payload = json.loads(cleaned or "{}")
-        except json.JSONDecodeError:
-            return ToolResult(
-                output=cleaned or "Write command returned invalid JSON.",
-                is_error=True,
-            )
-        if exit_code not in (0, None) or not bool(payload.get("ok", False)):
-            return ToolResult(
-                output=str(payload.get("error") or cleaned or "Write failed"),
-                is_error=True,
-            )
-        return _build_write_file_result(
-            context=context,
-            file_path=file_path,
-            bytes_written=len(content_bytes),
-            warning=contract_warning,
+    rebind_ci_service(context, svc)
+    with use_sandbox_io_loop():
+        result = await asyncio.to_thread(
+            svc.write_file,
+            [WriteSpec(file_path=file_path, content=content, overwrite=True)],
+            agent_id=resolved_agent_id(context),
+            description=f"write {file_path}",
         )
 
-    try:
-        sandbox = await _require_sandbox(context)
-        return await _attempt(sandbox)
-    except Exception as exc:
-        try:
-            sandbox = await _recover_sandbox(context, exc)
-            return await _attempt(sandbox)
-        except Exception as recovery_exc:
-            parent = "/".join(file_path.split("/")[:-1])
-            return ToolResult(
-                output=_path_error(recovery_exc, parent) or str(recovery_exc),
-                is_error=True,
-            )
+    return operation_result_to_tool_result(
+        result,
+        tool_name="daytona_write_file",
+        success_status="written",
+        primary_paths=[file_path],
+        warnings=warnings,
+        success_extra={
+            "cwd": _get_cwd(context) or "",
+            "file_path": file_path,
+            "bytes_written": len(content.encode("utf-8")),
+            "ci_sync": True,
+        },
+    )
 
 
 # ---------------------------------------------------------------------------

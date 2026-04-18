@@ -33,7 +33,6 @@ import threading
 import time
 import uuid
 from collections import Counter
-from pathlib import Path
 from typing import Any, Callable
 
 import pytest

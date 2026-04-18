@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Literal
@@ -127,6 +128,44 @@ class OperationChange:
 
 
 SemanticFileChange = OperationChange
+
+
+@dataclass(frozen=True)
+class WriteSpec:
+    """One file slot inside a :meth:`svc.write_file` batch.
+
+    ``overwrite`` controls the create/modify contract: ``True`` (default)
+    overwrites an existing file via a strict-base rewrite; ``False`` requires
+    the path to be absent at commit time and aborts with ``aborted_version``
+    if something already exists there.
+    """
+
+    file_path: str
+    content: str
+    overwrite: bool = True
+
+
+@dataclass(frozen=True)
+class EditSpec:
+    """One file slot inside a :meth:`svc.edit_file` batch.
+
+    Carries a list of :class:`SearchReplaceEdit` (or :class:`LineRangeEdit`,
+    in future) applied in order against the file's plan-time base. The
+    service assembles one :class:`OperationChange` per spec and submits the
+    whole list as a single OCC batch.
+    """
+
+    file_path: str
+    edits: Sequence[Any]  # Sequence[SearchReplaceEdit | LineRangeEdit]
+
+
+@dataclass(frozen=True)
+class MoveSpec:
+    """One file slot inside a :meth:`svc.move_file` batch."""
+
+    src_path: str
+    dst_path: str
+    overwrite: bool = False
 
 
 @dataclass(frozen=True)

@@ -26,12 +26,13 @@ def _ctx(metadata=None) -> ToolExecutionContext:
 
 
 def _ci_service():
+    """Fixture service exposing :meth:`svc.cmd` for the codeact tool."""
     svc = MagicMock()
-    svc.exec_process_operation = AsyncMock(side_effect=_exec_process_operation)
+    svc.cmd = AsyncMock(side_effect=_svc_cmd_passthrough)
     return svc
 
 
-async def _exec_process_operation(
+async def _svc_cmd_passthrough(
     sandbox,
     command,
     *,
@@ -43,6 +44,12 @@ async def _exec_process_operation(
     task_id="",
     attribute_changes=True,
 ):
+    """Dispatch through the sandbox's process.exec so existing fakes still work.
+
+    Production :meth:`svc.cmd` adds OCC audit, but tests only need the
+    exec-through behavior; the audit layer is covered by
+    ``test_overlay_auditor.py``.
+    """
     del description, agent_id, team_run_id, agent_run_id, task_id, attribute_changes
     return await sandbox.process.exec(command, timeout=timeout)
 
@@ -301,7 +308,7 @@ async def test_shell_mode_reports_nonzero_exit_as_error():
 async def test_shell_mode_blocks_audited_test_suite_write_with_policy_message():
     sb = _make_sandbox()
     svc = MagicMock()
-    svc.exec_process_operation = AsyncMock(
+    svc.cmd = AsyncMock(
         return_value=SimpleNamespace(
             result=_shell_exec_output("patched", 0),
             exit_code=0,
@@ -379,7 +386,7 @@ async def test_team_shell_mode_blocks_file_edit_side_channels_before_exec(
     assert "daytona_edit_file" in result.output
     assert "daytona_delete_file" in result.output
     assert "daytona_move_file" in result.output
-    svc.exec_process_operation.assert_not_awaited()
+    svc.cmd.assert_not_awaited()
     sb.process.exec.assert_not_awaited()
 
 
@@ -441,7 +448,7 @@ async def test_team_shell_mode_allows_file_read_side_channels(command):
 
     data = _assert_ok(result)
     assert data["shell_outputs"][0]["stdout"] == "contents"
-    svc.exec_process_operation.assert_awaited_once()
+    svc.cmd.assert_awaited_once()
     sb.process.exec.assert_awaited_once()
 
 
@@ -475,7 +482,7 @@ async def test_team_python_mode_allows_file_read_side_channels(code):
 
     _assert_ok(result)
     sb.fs.upload_file.assert_awaited_once()
-    svc.exec_process_operation.assert_awaited_once()
+    svc.cmd.assert_awaited_once()
 
 
 async def test_team_shell_mode_still_allows_runtime_commands():
@@ -499,7 +506,7 @@ async def test_team_shell_mode_still_allows_runtime_commands():
 
     data = _assert_ok(result)
     assert data["shell_outputs"][0]["stdout"] == "ok"
-    svc.exec_process_operation.assert_awaited_once()
+    svc.cmd.assert_awaited_once()
 
 
 async def test_team_shell_mode_still_allows_pytest_file_arguments():
@@ -525,13 +532,13 @@ async def test_team_shell_mode_still_allows_pytest_file_arguments():
 
     data = _assert_ok(result)
     assert data["shell_outputs"][0]["stdout"] == "1 passed"
-    svc.exec_process_operation.assert_awaited_once()
+    svc.cmd.assert_awaited_once()
 
 
 async def test_team_shell_mode_treats_audited_changes_as_ambient():
     sb = _make_sandbox()
 
-    async def exec_process_operation(
+    async def _svc_cmd_with_ambient_changes(
         sandbox,
         command,
         *,
@@ -554,7 +561,7 @@ async def test_team_shell_mode_treats_audited_changes_as_ambient():
         )
 
     svc = MagicMock()
-    svc.exec_process_operation = AsyncMock(side_effect=exec_process_operation)
+    svc.cmd = AsyncMock(side_effect=_svc_cmd_with_ambient_changes)
     ctx = _ctx(
         {
             "daytona_sandbox": sb,
@@ -582,7 +589,7 @@ async def test_team_shell_mode_treats_audited_changes_as_ambient():
 async def test_shell_mode_warns_for_audited_outside_scope_write():
     sb = _make_sandbox()
     svc = MagicMock()
-    svc.exec_process_operation = AsyncMock(
+    svc.cmd = AsyncMock(
         return_value=SimpleNamespace(
             result=_shell_exec_output("patched", 0),
             exit_code=0,
@@ -643,7 +650,7 @@ async def test_team_python_mode_blocks_file_edits_before_upload(code, expected_f
     assert "BLOCKED: daytona_codeact is for runtime commands" in result.output
     assert expected_fragment in result.output
     sb.fs.upload_file.assert_not_called()
-    svc.exec_process_operation.assert_not_awaited()
+    svc.cmd.assert_not_awaited()
 
 
 async def test_python_mode_preserves_script_stdout_before_manifest_line():

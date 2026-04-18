@@ -1,450 +1,309 @@
-"""Tests for the daytona_rename_symbol tool."""
+"""Tests for tools.daytona_toolkit.rename_tool.
+
+The tool resolves the symbol through :class:`SymbolIndex`, then delegates
+the rewrite to ``svc.rename_symbol``. These tests mock the service and
+cover: identifier validation, ambiguity, empty-plan handling, OCC
+commit success / abort translation, and write-scope gating.
+"""
 
 from __future__ import annotations
 
 import asyncio
-import hashlib
 import json
-import keyword
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
+from code_intelligence.hashing import content_hash
 from code_intelligence.types import (
+    EditResult,
+    OperationResult,
     SemanticFileChange,
     SemanticRenamePlan,
     SymbolInfo,
     SymbolKind,
 )
+from tools.core.base import ToolExecutionContext, run_tool_safely
 from tools.daytona_toolkit.rename_tool import daytona_rename_symbol
-from tools.core.base import ToolExecutionContext
 
 
 def _ctx(metadata=None) -> ToolExecutionContext:
-    metadata = dict(metadata or {})
-    if "ci_service" in metadata and "daytona_sandbox" not in metadata:
-        metadata["daytona_sandbox"] = SimpleNamespace()
     return ToolExecutionContext(cwd=Path("/tmp"), metadata=metadata or {})
 
 
-def _hash(content: str) -> str:
-    return hashlib.sha256(content.encode("utf-8")).hexdigest()[:16]
-
-
-def _change(path: str, *, base: str, final: str) -> SemanticFileChange:
-    return SemanticFileChange(
-        file_path=path,
-        base_content=base,
-        base_hash=_hash(base),
-        final_content=final,
-    )
-
-
-def _plan(changes) -> SemanticRenamePlan:
-    return SemanticRenamePlan(
-        new_name="bar",
-        origin=("/ws/a.py", 1, 0),
-        changes=tuple(changes),
-    )
-
-
-def _rename_response(plan: SemanticRenamePlan | None, *, ok: bool = True, error: str = ""):
-    if not ok:
-        return SimpleNamespace(
-            result=json.dumps({"ok": False, "status": "failed", "error": error}),
-            exit_code=1,
-        )
-    return SimpleNamespace(
-        result=json.dumps(
-            {
-                "ok": True,
-                "status": "renamed",
-                "files": [
-                    {"file_path": c.file_path, "status": "renamed"}
-                    for c in (plan.changes if plan else ())
-                ],
-            }
-        ),
-        exit_code=0,
-    )
-
-
-def _make_svc(*, plan: SemanticRenamePlan | None):
-    svc = MagicMock()
-    svc.symbol_index.ensure_built.return_value = True
-    svc.symbol_index.find.return_value = [
-        SymbolInfo(
-            name="foo",
-            kind=SymbolKind.FUNCTION,
-            file_path="/ws/a.py",
-            line=3,
-            character=4,
-        )
-    ]
-    if plan is None:
-        svc.rename_symbol_plan.return_value = SemanticRenamePlan(
-            new_name="bar", origin=("", 0, 0), changes=(),
-        )
-    else:
-        svc.rename_symbol_plan.return_value = plan
-    svc.preview_rename_symbol_plan.return_value = svc.rename_symbol_plan.return_value
-    svc.exec_process_operation = AsyncMock(return_value=_rename_response(plan))
-    return svc
-
-
-def _run(tool_input, ctx):
-    return asyncio.run(
-        daytona_rename_symbol.execute(daytona_rename_symbol.input_model(**tool_input), ctx),
-    )
-
-
-# -- Validation & short-circuits --------------------------------------------
-
-
-def test_no_service_returns_error():
-    result = _run(
-        {"symbol": "foo", "new_name": "bar"},
-        _ctx(),
-    )
-    assert result.is_error
-    assert "Code intelligence service is unavailable" in result.output
-    assert result.metadata["ci_required"] is True
-
-
-def test_invalid_new_name_rejected():
-    svc = _make_svc(plan=None)
-    result = _run(
-        {"symbol": "foo", "new_name": "1bad"},
-        _ctx({"ci_service": svc}),
-    )
-    assert result.is_error
-    assert "Invalid identifier" in result.output
-    svc.rename_symbol_plan.assert_not_called()
-
-
-def test_keyword_new_names_rejected_before_resolution():
-    assert {"class", "for", "async", "None", "True", "False"}.issubset(keyword.kwlist)
-
-    for new_name in keyword.kwlist:
-        svc = _make_svc(plan=None)
-        result = _run(
-            {"symbol": "foo", "new_name": new_name},
-            _ctx({"ci_service": svc}),
-        )
-        assert result.is_error, new_name
-        assert "Cannot rename to Python keyword" in result.output
-        svc.symbol_index.find.assert_not_called()
-        svc.rename_symbol_plan.assert_not_called()
-
-
-def test_soft_keyword_new_names_remain_valid_identifiers():
-    soft_keywords = [item for item in getattr(keyword, "softkwlist", []) if item != "_"]
-    assert {"case", "match"}.issubset(soft_keywords)
-
-    for new_name in soft_keywords:
-        svc = _make_svc(plan=None)
-        result = _run(
-            {"symbol": "foo", "new_name": new_name},
-            _ctx({"ci_service": svc}),
-        )
-        assert not result.is_error, new_name
-        data = json.loads(result.output)
-        assert data["status"] == "no_changes"
-        svc.symbol_index.find.assert_called_once()
-        svc.rename_symbol_plan.assert_called_once()
-
-
-def test_no_changes_returns_status_no_changes():
-    svc = _make_svc(plan=_plan([]))
-    result = _run(
-        {"symbol": "foo", "new_name": "bar"},
-        _ctx({"ci_service": svc}),
-    )
-    assert not result.is_error
-    data = json.loads(result.output)
-    assert data["status"] == "no_changes"
-    assert data["files"] == []
-    svc.exec_process_operation.assert_not_called()
-
-
-# -- Happy path -------------------------------------------------------------
-
-
-def test_rename_runs_via_single_process_operation():
-    changes = [
-        _change("/ws/a.py", base="old_a", final="new_a"),
-        _change("/ws/b.py", base="old_b", final="new_b"),
-    ]
-    plan = _plan(changes)
-    svc = _make_svc(plan=plan)
-    svc.commit_operation_against_base.side_effect = AssertionError(
-        "daytona_rename_symbol must use process audit, not WriteCoordinator",
-    )
-    result = _run(
-        {"symbol": "foo", "new_name": "bar"},
-        _ctx({"ci_service": svc}),
-    )
-    assert not result.is_error, result.output
-    data = json.loads(result.output)
-    assert data["status"] == "renamed"
-    assert {f["file_path"] for f in data["files"]} == {"/ws/a.py", "/ws/b.py"}
-    svc.exec_process_operation.assert_awaited_once()
-    kwargs = svc.exec_process_operation.await_args.kwargs
-    assert "edit_type" not in kwargs
-    assert "audit_paths" not in kwargs
-    svc.commit_operation_against_base.assert_not_called()
-
-
-def test_sandbox_rename_uses_one_wrapped_command():
-    changes = [
-        _change("/ws/a.py", base="old_a", final="new_a"),
-        _change("/ws/b.py", base="old_b", final="new_b"),
-    ]
-    plan = _plan(changes)
-    svc = _make_svc(plan=plan)
-    response = SimpleNamespace(
-        result=json.dumps(
-            {
-                "ok": True,
-                "status": "renamed",
-                "files": [
-                    {"file_path": "/ws/a.py", "status": "renamed"},
-                    {"file_path": "/ws/b.py", "status": "renamed"},
-                ],
-            }
-        ),
-        exit_code=0,
-    )
-    ctx = _ctx({"ci_service": svc, "daytona_sandbox": object()})
-
-    with patch(
-        "tools.daytona_toolkit.rename_tool.exec_ci_process_operation",
-        new=AsyncMock(return_value=response),
-    ) as exec_op:
-        result = _run(
-            {"symbol": "foo", "new_name": "bar"},
-            ctx,
-        )
-
-    assert not result.is_error, result.output
-    data = json.loads(result.output)
-    assert data["status"] == "renamed"
-    exec_op.assert_awaited_once()
-    command = exec_op.await_args.args[2]
-    assert "bash" in command
-    assert "python3 -c" in command
-
-
-# -- Dry run uses plan without writing -------------------------------------
-
-
-def test_dry_run_reports_files_without_diff_or_process_exec():
-    changes = [_change("/ws/a.py", base="def foo():\n    pass\n", final="def bar():\n    pass\n")]
-    svc = _make_svc(plan=_plan(changes))
-    result = _run(
-        {"symbol": "foo", "new_name": "bar", "dry_run": True},
-        _ctx({"ci_service": svc}),
-    )
-    assert not result.is_error
-    data = json.loads(result.output)
-    assert data["status"] == "dry_run"
-    assert len(data["files"]) == 1
-    assert "diff" not in data["files"][0]
-    svc.preview_rename_symbol_plan.assert_called_once()
-    svc.rename_symbol_plan.assert_not_called()
-    svc.exec_process_operation.assert_not_called()
-
-
-# -- Process failure -------------------------------------------------------
-
-
-def test_process_failure_surfaces_failed_status():
-    changes = [
-        _change("/ws/a.py", base="old_a", final="new_a"),
-        _change("/ws/b.py", base="old_b", final="new_b"),
-        _change("/ws/c.py", base="old_c", final="new_c"),
-    ]
-    plan = _plan(changes)
-    svc = _make_svc(plan=plan)
-    svc.exec_process_operation = AsyncMock(
-        return_value=_rename_response(plan, ok=False, error="rename process failed")
-    )
-    result = _run(
-        {"symbol": "foo", "new_name": "bar"},
-        _ctx({"ci_service": svc}),
-    )
-    assert result.is_error
-    data = json.loads(result.output)
-    assert data["status"] == "failed"
-    assert all(f["status"] == "failed" for f in data["files"])
-    assert "rename process failed" in data["message"]
-    assert result.metadata["success_count"] == 0
-
-
-# -- Name-based resolution --------------------------------------------------
-
-
-def _sym(name, *, kind=SymbolKind.FUNCTION, file_path="/ws/a.py", line=3,
-         container="", character=4, signature=""):
-    return SymbolInfo(
-        name=name, kind=kind, file_path=file_path, line=line,
-        character=character, container=container, signature=signature,
-    )
-
-
-def _make_facade_svc(
+def _sym(
+    name: str,
+    file_path: str,
     *,
-    matches,
-    plan: SemanticRenamePlan | None = None,
-):
-    svc = MagicMock()
-    svc.symbol_index.ensure_built.return_value = True
-    svc.symbol_index.find.return_value = list(matches)
-    if plan is not None:
-        svc.rename_symbol_plan.return_value = plan
-    else:
-        svc.rename_symbol_plan.return_value = SemanticRenamePlan(
-            new_name="bar", origin=("", 0, 0), changes=(),
+    kind: SymbolKind = SymbolKind.FUNCTION,
+    line: int = 10,
+    character: int = 4,
+    container: str = "",
+    signature: str = "def foo()",
+) -> SymbolInfo:
+    return SymbolInfo(
+        name=name,
+        kind=kind,
+        file_path=file_path,
+        line=line,
+        character=character,
+        signature=signature,
+        container=container,
+    )
+
+
+def _plan(*paths: str, new_name: str = "bar") -> SemanticRenamePlan:
+    changes = tuple(
+        SemanticFileChange(
+            file_path=path,
+            base_content="def foo(): pass\n",
+            base_hash=content_hash("def foo(): pass\n"),
+            final_content=f"def {new_name}(): pass\n",
         )
-    svc.preview_rename_symbol_plan.return_value = svc.rename_symbol_plan.return_value
-    svc.exec_process_operation = AsyncMock(return_value=_rename_response(plan))
+        for path in paths
+    )
+    origin = (paths[0] if paths else "/ws/a.py", 1, 4)
+    return SemanticRenamePlan(new_name=new_name, origin=origin, changes=changes)
+
+
+def _success_op(paths: list[str]) -> OperationResult:
+    return OperationResult(
+        success=True,
+        status="committed",
+        files=tuple(
+            EditResult(success=True, file_path=path, message="Wrote file")
+            for path in paths
+        ),
+        conflict_file=None,
+        conflict_reason="",
+        timings={},
+    )
+
+
+def _failed_op(paths: list[str], *, status: str, reason: str) -> OperationResult:
+    return OperationResult(
+        success=False,
+        status=status,  # type: ignore[arg-type]
+        files=tuple(
+            EditResult(success=False, file_path=path, message=reason)
+            for path in paths
+        ),
+        conflict_file=paths[0] if paths else None,
+        conflict_reason=reason,
+        timings={},
+    )
+
+
+def _make_svc(
+    *,
+    matches: list[SymbolInfo] | None = None,
+    plan: SemanticRenamePlan | None = None,
+    rename_result: OperationResult | None = None,
+) -> SimpleNamespace:
+    symbol_index = SimpleNamespace(
+        ensure_built=MagicMock(),
+        find=MagicMock(return_value=list(matches or [])),
+    )
+    svc = SimpleNamespace(
+        symbol_index=symbol_index,
+        rename_symbol_plan=MagicMock(return_value=plan or _plan("/ws/a.py")),
+        rename_symbol=MagicMock(return_value=rename_result or _success_op(["/ws/a.py"])),
+    )
     return svc
 
 
-def _run_facade(tool_input, ctx):
-    return asyncio.run(
-        daytona_rename_symbol.execute(daytona_rename_symbol.input_model(**tool_input), ctx),
-    )
+def _run(args: dict, ctx: ToolExecutionContext):
+    return asyncio.run(run_tool_safely(daytona_rename_symbol, args, context=ctx))
 
 
-def test_facade_resolves_unique_symbol_and_delegates():
-    match = _sym("foo", line=10, character=4, file_path="/ws/a.py")
-    changes = [_change("/ws/a.py", base="def foo():\n    pass\n", final="def bar():\n    pass\n")]
-    plan = _plan(changes)
-    svc = _make_facade_svc(matches=[match], plan=plan)
-    result = _run_facade(
-        {"symbol": "foo", "new_name": "bar"},
-        _ctx({"ci_service": svc}),
-    )
-    assert not result.is_error, result.output
-    data = json.loads(result.output)
-    assert data["status"] == "renamed"
-    svc.rename_symbol_plan.assert_called_once()
-    # The facade must pivot on the resolved symbol's location.
-    call = svc.rename_symbol_plan.call_args
-    assert call.args[1] == 10  # line
-    assert call.args[2] == 4   # character
+# ---------------------------------------------------------------------------
+# Input validation
+# ---------------------------------------------------------------------------
 
 
-def test_facade_uses_name_column_for_indexed_python_declarations():
-    match = _sym("foo", line=10, character=0, file_path="/ws/a.py", signature="def foo()")
-    changes = [_change("/ws/a.py", base="def foo():\n    pass\n", final="def bar():\n    pass\n")]
-    plan = _plan(changes)
-    svc = _make_facade_svc(matches=[match], plan=plan)
+def test_missing_ci_service_returns_ci_required_error() -> None:
+    ctx = _ctx({"ci_service": None})
 
-    result = _run_facade(
-        {"symbol": "foo", "new_name": "bar"},
-        _ctx({"ci_service": svc}),
-    )
+    result = _run({"symbol": "foo", "new_name": "bar"}, ctx)
 
-    assert not result.is_error, result.output
-    call = svc.rename_symbol_plan.call_args
-    assert call.args[1] == 10
-    assert call.args[2] == 4
-
-
-def test_facade_returns_ambiguous_for_multiple_matches():
-    matches = [
-        _sym("Client", kind=SymbolKind.CLASS, file_path="/ws/a.py"),
-        _sym("Client", kind=SymbolKind.CLASS, file_path="/ws/b.py"),
-    ]
-    svc = _make_facade_svc(matches=matches)
-    result = _run_facade(
-        {"symbol": "Client", "new_name": "Session"},
-        _ctx({"ci_service": svc}),
-    )
     assert result.is_error
-    data = json.loads(result.output)
-    assert data["status"] == "ambiguous"
-    assert len(data["candidates"]) == 2
-    assert {c["file_path"] for c in data["candidates"]} == {"/ws/a.py", "/ws/b.py"}
-    svc.rename_symbol_plan.assert_not_called()
+    assert result.metadata.get("ci_required") is True
 
 
-def test_facade_disambiguates_by_dotted_parent():
-    matches = [
-        _sym("bar", container="", file_path="/ws/a.py"),  # module-level
-        _sym("bar", container="Foo", file_path="/ws/b.py"),  # method
-    ]
-    changes = [_change("/ws/b.py", base="old", final="new")]
-    plan = _plan(changes)
-    svc = _make_facade_svc(matches=matches, plan=plan)
-    result = _run_facade(
-        {"symbol": "Foo.bar", "new_name": "baz"},
-        _ctx({"ci_service": svc}),
-    )
-    assert not result.is_error, result.output
-    data = json.loads(result.output)
-    assert data["status"] == "renamed"
+def test_invalid_identifier_is_rejected() -> None:
+    svc = _make_svc(matches=[_sym("foo", "/ws/a.py")])
+    ctx = _ctx({"ci_service": svc})
 
+    result = _run({"symbol": "foo", "new_name": "1bad"}, ctx)
 
-def test_facade_disambiguates_by_file_hint():
-    matches = [
-        _sym("handle", file_path="/ws/frontend/x.py"),
-        _sym("handle", file_path="/ws/backend/x.py"),
-    ]
-    changes = [_change("/ws/backend/x.py", base="old", final="new")]
-    plan = _plan(changes)
-    svc = _make_facade_svc(matches=matches, plan=plan)
-    result = _run_facade(
-        {"symbol": "handle", "new_name": "process", "file_hint": "backend/"},
-        _ctx({"ci_service": svc}),
-    )
-    assert not result.is_error, result.output
-    data = json.loads(result.output)
-    assert data["status"] == "renamed"
-
-
-def test_facade_disambiguates_by_kind():
-    matches = [
-        _sym("thing", kind=SymbolKind.FUNCTION, file_path="/ws/a.py"),
-        _sym("thing", kind=SymbolKind.CLASS, file_path="/ws/b.py"),
-    ]
-    # ensure only class match survives — symbol_index.find with kind filter does that
-    svc = _make_facade_svc(matches=[matches[1]])
-    changes = [_change("/ws/b.py", base="old", final="new")]
-    plan = _plan(changes)
-    svc.rename_symbol_plan.return_value = plan
-    svc.exec_process_operation = AsyncMock(return_value=_rename_response(plan))
-    result = _run_facade(
-        {"symbol": "thing", "new_name": "thang", "kind": "class"},
-        _ctx({"ci_service": svc}),
-    )
-    assert not result.is_error, result.output
-    # Ensure the kind filter was forwarded.
-    call = svc.symbol_index.find.call_args
-    assert call.kwargs.get("kind") == SymbolKind.CLASS
-
-
-def test_facade_no_match_returns_helpful_error():
-    svc = _make_facade_svc(matches=[])
-    result = _run_facade(
-        {"symbol": "typo_name", "new_name": "fixed"},
-        _ctx({"ci_service": svc}),
-    )
-    assert result.is_error
-    data = json.loads(result.output)
-    assert data["status"] == "no_match"
-    assert "ci_query_symbol" in data["message"]
-    svc.rename_symbol_plan.assert_not_called()
-
-
-def test_facade_invalid_new_name_rejected_before_resolution():
-    svc = _make_facade_svc(matches=[])
-    result = _run_facade(
-        {"symbol": "foo", "new_name": "1bad"},
-        _ctx({"ci_service": svc}),
-    )
     assert result.is_error
     assert "Invalid identifier" in result.output
-    svc.symbol_index.find.assert_not_called()
+
+
+def test_python_keyword_is_rejected() -> None:
+    svc = _make_svc(matches=[_sym("foo", "/ws/a.py")])
+    ctx = _ctx({"ci_service": svc})
+
+    result = _run({"symbol": "foo", "new_name": "class"}, ctx)
+
+    assert result.is_error
+    assert "Python keyword" in result.output
+
+
+# ---------------------------------------------------------------------------
+# Symbol resolution
+# ---------------------------------------------------------------------------
+
+
+def test_no_match_returns_helpful_message() -> None:
+    svc = _make_svc(matches=[])
+    ctx = _ctx({"ci_service": svc})
+
+    result = _run({"symbol": "ghost", "new_name": "phantom"}, ctx)
+
+    assert result.is_error
+    payload = json.loads(result.output)
+    assert payload["status"] == "no_match"
+    assert "ci_query_symbol" in payload["message"]
+    svc.rename_symbol.assert_not_called()
+
+
+def test_ambiguous_matches_return_candidates_without_renaming() -> None:
+    svc = _make_svc(
+        matches=[_sym("foo", "/ws/a.py"), _sym("foo", "/ws/b.py")],
+    )
+    ctx = _ctx({"ci_service": svc})
+
+    result = _run({"symbol": "foo", "new_name": "bar"}, ctx)
+
+    assert result.is_error
+    payload = json.loads(result.output)
+    assert payload["status"] == "ambiguous"
+    assert len(payload["candidates"]) == 2
+    svc.rename_symbol.assert_not_called()
+
+
+def test_dotted_name_filters_by_container() -> None:
+    svc = _make_svc(
+        matches=[
+            _sym("bar", "/ws/a.py", container="Foo"),
+            _sym("bar", "/ws/b.py", container="Other"),
+        ],
+    )
+    ctx = _ctx({"ci_service": svc})
+
+    result = _run({"symbol": "Foo.bar", "new_name": "baz"}, ctx)
+
+    assert not result.is_error
+    payload = json.loads(result.output)
+    assert payload["status"] == "renamed"
+
+
+# ---------------------------------------------------------------------------
+# OCC path
+# ---------------------------------------------------------------------------
+
+
+def test_single_match_delegates_to_svc_rename_symbol() -> None:
+    svc = _make_svc(
+        matches=[_sym("foo", "/ws/a.py")],
+        plan=_plan("/ws/a.py", "/ws/b.py"),
+        rename_result=_success_op(["/ws/a.py", "/ws/b.py"]),
+    )
+    ctx = _ctx({"ci_service": svc, "agent_run_id": "run-1"})
+
+    result = _run({"symbol": "foo", "new_name": "bar"}, ctx)
+
+    assert not result.is_error
+    payload = json.loads(result.output)
+    assert payload["status"] == "renamed"
+    assert {f["file_path"] for f in payload["files"]} == {"/ws/a.py", "/ws/b.py"}
+    svc.rename_symbol.assert_called_once()
+    assert svc.rename_symbol.call_args.kwargs["agent_id"] == "run-1"
+
+
+def test_empty_plan_returns_no_changes_without_calling_rename() -> None:
+    svc = _make_svc(
+        matches=[_sym("foo", "/ws/a.py")],
+        plan=SemanticRenamePlan(new_name="bar", origin=("/ws/a.py", 1, 0), changes=()),
+    )
+    ctx = _ctx({"ci_service": svc})
+
+    result = _run({"symbol": "foo", "new_name": "bar"}, ctx)
+
+    payload = json.loads(result.output)
+    assert payload["status"] == "no_changes"
+    svc.rename_symbol.assert_not_called()
+
+
+def test_aborted_version_is_surfaced() -> None:
+    svc = _make_svc(
+        matches=[_sym("foo", "/ws/a.py")],
+        plan=_plan("/ws/a.py"),
+        rename_result=_failed_op(
+            ["/ws/a.py"], status="aborted_version", reason="file changed",
+        ),
+    )
+    ctx = _ctx({"ci_service": svc})
+
+    result = _run({"symbol": "foo", "new_name": "bar"}, ctx)
+
+    assert result.is_error
+    payload = json.loads(result.output)
+    assert payload["status"] == "aborted_version"
+    assert payload["conflict_reason"] == "file changed"
+
+
+# ---------------------------------------------------------------------------
+# Write-scope policy
+# ---------------------------------------------------------------------------
+
+
+def test_write_scope_hard_error_blocks_rename_before_commit(monkeypatch) -> None:
+    """Test-file block remains inline and surfaces distinct 'write-scope policy' message."""
+    svc = _make_svc(
+        matches=[_sym("foo", "/ws/a.py")],
+        plan=_plan("/ws/a.py", "/ws/b.py"),
+    )
+    ctx = _ctx({"ci_service": svc})
+
+    def _fake_error(_ctx, path, tool_name):
+        return None if path == "/ws/a.py" else "blocked by policy"
+
+    monkeypatch.setattr(
+        "tools.daytona_toolkit.rename_tool._team_repo_write_error",
+        _fake_error,
+    )
+    monkeypatch.setattr(
+        "tools.daytona_toolkit.rename_tool._team_repo_scope_deny_errors",
+        lambda _ctx, _paths, tool_name: [],
+    )
+
+    result = _run({"symbol": "foo", "new_name": "bar"}, ctx)
+
+    assert result.is_error
+    assert "Rename blocked by write-scope policy" in result.output
+    svc.rename_symbol.assert_not_called()
+
+
+def test_rename_outside_scope_denies_with_offender_only_listing(monkeypatch) -> None:
+    """Outside-scope rename paths are denied; message lists only offenders."""
+    svc = _make_svc(
+        matches=[_sym("foo", "/ws/a.py")],
+        plan=_plan("/ws/allowed/a.py", "/ws/other/b.py", "/ws/allowed/c.py"),
+    )
+    ctx = _ctx({
+        "ci_service": svc,
+        "agent_name": "developer",
+        "daytona_cwd": "/ws",
+        "write_scope": ["allowed/"],
+    })
+
+    result = _run({"symbol": "foo", "new_name": "bar"}, ctx)
+
+    assert result.is_error
+    assert "daytona_rename_symbol blocked by write-scope policy" in result.output
+    assert "/ws/other/b.py" in result.output
+    assert "/ws/allowed/a.py" not in result.output
+    assert "/ws/allowed/c.py" not in result.output
+    svc.rename_symbol.assert_not_called()

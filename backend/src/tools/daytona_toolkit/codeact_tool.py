@@ -14,11 +14,8 @@ from pydantic.json_schema import GenerateJsonSchema
 
 from code_intelligence.tuning import CODE_INTELLIGENCE_TUNING
 from tools.core.base import ToolExecutionContext, ToolResult
-from tools.core.ci_runtime import (
-    ci_required_result,
-    exec_ci_process_operation,
-    get_ci_service,
-)
+from tools.core.ci_attribution import agent_attribution_from_context
+from tools.core.ci_runtime import ci_required_result, get_ci_service
 from tools.core.decorator import tool
 from tools.daytona_toolkit._daytona_utils import (
     _extract_exit_code,
@@ -716,13 +713,21 @@ async def _exec_shell_command(
     timeout: int,
     attribute_changes: bool,
 ) -> dict[str, object]:
+    svc = get_ci_service(context)
+    if svc is None:
+        raise RuntimeError("Code intelligence service is unavailable")
+
+    attribution = agent_attribution_from_context(context)
     wrapped_command = command if not cwd else f"cd {shlex.quote(cwd)} && {command}"
-    response = await exec_ci_process_operation(
-        context,
+    response = await svc.cmd(
         sandbox,
         _wrap_bash_command(wrapped_command),
         timeout=timeout,
         description="daytona_codeact shell",
+        agent_id=attribution.agent_id,
+        team_run_id=attribution.team_run_id,
+        agent_run_id=attribution.agent_run_id,
+        task_id=attribution.task_id,
         attribute_changes=attribute_changes,
     )
     stdout = getattr(response, "result", "") or ""
@@ -898,36 +903,37 @@ async def _execute_python_wrapper(
                 [],
             )
 
-    try:
-        response = await exec_ci_process_operation(
-            context,
+    svc = get_ci_service(context)
+    if svc is None:
+        return (
+            None,
             sandbox,
+            ci_required_result(
+                "daytona_codeact",
+                "Python CodeAct requires svc.cmd (code intelligence service unavailable).",
+            ),
+            [],
+        )
+    attribution = agent_attribution_from_context(context)
+
+    async def _svc_cmd(active_sandbox: object) -> object:
+        return await svc.cmd(
+            active_sandbox,
             exec_command,
             timeout=_CODEACT_DEFAULT_TIMEOUT,
             description="daytona_codeact python",
+            agent_id=attribution.agent_id,
+            team_run_id=attribution.team_run_id,
+            agent_run_id=attribution.agent_run_id,
+            task_id=attribution.task_id,
         )
-        return (
-            getattr(response, "result", "") or "",
-            sandbox,
-            None,
-            _changed_paths_from_response(response),
-        )
+
+    try:
+        response = await _svc_cmd(sandbox)
     except Exception as exc:
         try:
             sandbox = await _recover_sandbox(context, exc)
-            response = await exec_ci_process_operation(
-                context,
-                sandbox,
-                exec_command,
-                timeout=_CODEACT_DEFAULT_TIMEOUT,
-                description="daytona_codeact python",
-            )
-            return (
-                getattr(response, "result", "") or "",
-                sandbox,
-                None,
-                _changed_paths_from_response(response),
-            )
+            response = await _svc_cmd(sandbox)
         except Exception as recovery_exc:
             return (
                 None,
@@ -938,6 +944,12 @@ async def _execute_python_wrapper(
                 ),
                 [],
             )
+    return (
+        getattr(response, "result", "") or "",
+        sandbox,
+        None,
+        _changed_paths_from_response(response),
+    )
 
 
 def _ci_required_result() -> ToolResult:

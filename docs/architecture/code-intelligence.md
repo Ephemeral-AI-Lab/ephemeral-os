@@ -96,14 +96,17 @@ as the shared injection boundary. The helper owns the runtime metadata contract:
 - `ci_workspace_root`: optional override for CI indexing root
 - `ci_service`: the per-sandbox `CodeIntelligenceService`
 
-`exec_ci_process_operation(...)` is the process execution boundary. It owns the
-actor/task context for the tool call and delegates execution to the injected
-`ci_service`. The service delegates snapshot/diff/ledger work to its
-`ProcessAuditor`, which records mutations in the per-sandbox `Arbiter` ledger.
-Write-capable Daytona tools should require `ci_service`, build one bash/process
-command for the tool call, and execute it through `exec_ci_process_operation(...)`.
-Tools should not carry separate concurrency state, base hashes, transactions,
-diffs, edit labels, or audit path hints.
+`CodeIntelligenceService` exposes typed, OCC-gated mutation APIs that every
+write-capable Daytona tool now calls directly. Edits / writes / renames flow
+through `svc.write_file(specs)`, `svc.edit_file(specs)`, `svc.rename_symbol(...)`,
+`svc.delete_file(paths)`, and `svc.move_file(specs)` — each call is one
+`commit_operation_against_base` batch, so a single tool invocation is one OCC
+boundary. Shell-style commands (codeact, tests, builds) use `svc.cmd(sandbox,
+command, ...)`, which runs the command inside a per-run overlayfs namespace and
+commits the upperdir diff through the same coordinator with `strict_base=True`.
+Both paths share the per-sandbox `Arbiter` ledger. Tools require `ci_service`
+and pass typed specs; they do not carry concurrency state, base hashes,
+transactions, diffs, edit labels, or audit path hints.
 
 Callers may discover `repo_root` differently: sync toolkit prepare uses
 `discover_workspace(...)`, async toolkit prepare uses
@@ -176,21 +179,28 @@ For each query (find_definitions, find_references, hover, diagnostics):
 - **LspBackendAdapter:** priority 100 (semantic queries preferred)
 - **SymbolIndexBackendAdapter:** priority 50 (structural fallback)
 
-### Process Auditor
+### Audited Command Execution (`svc.cmd` + OverlayAuditor)
 
-Write-capable Daytona tools use one audited process operation per tool call.
+Shell-style commands run through `CodeIntelligenceService.cmd(...)`:
 
-**Workflow:**
-1. Tool converts its input into one bash/process command.
-2. Tool calls `exec_ci_process_operation(...)`.
-3. `exec_ci_process_operation(...)` builds the process execution context from tool context.
-4. `CodeIntelligenceService.exec_process_operation(...)` delegates execution to `ProcessAuditor`.
-5. `ProcessAuditor` snapshots the workspace before and after the command.
-6. Changed files are recorded in the Arbiter edit ledger without tool-supplied edit labels or path hints.
-7. The auditor invalidates LSP state and refreshes the symbol index for changed files when possible.
+1. `svc.cmd(...)` probes the sandbox for overlayfs + CoW-capable filesystem. If
+   either is missing, it raises `OverlayCapabilityMissingError` (fail-closed;
+   there is no fallback to an unaudited process path).
+2. The `OverlayAuditor` mounts a per-run overlay whose outer lowerdir is a CoW
+   snapshot of the live workspace (tracked + untracked + dirty files), runs the
+   user command inside the overlay, and packages the upperdir as a tar.
+3. The auditor walks the upperdir, builds one `OperationChange(strict_base=True)`
+   per MODIFY / DELETE entry, and submits the whole set as a single
+   `commit_operation_against_base` batch.
+4. `SYMLINK` and `OPAQUE_DIR` entries raise `OverlayUnsupportedChangeError`
+   (D3a) — the whole run aborts and disk is unchanged.
+5. On success the coordinator records per-path ledger entries, invalidates LSP
+   caches, and refreshes the symbol index. On `aborted_version`, the overlay is
+   discarded and the caller sees the abort class without any partial writes.
 
-This makes CodeAct and the other Daytona write tools unaware of repository diffs
-or transactions while keeping a single audit path for coordination observability.
+CodeAct, the test/build runners, and other shell-executing tools all go through
+this one path. Repository diffs, transactions, and audit path hints no longer
+live in the tool layer.
 
 ### File Content Management (ContentManager)
 
@@ -327,55 +337,41 @@ Attempts to merge concurrent edits when file changes between prepare and commit.
 └────────────────────────────────────────────────────────┘
 ```
 
-## Process Audit Workflow
+## Audited Mutation Workflow (single OCC boundary)
 
 ```
 ┌─────────────────────────────────────┐
-│  Daytona write tool receives input  │
+│  Daytona mutation tool receives input│
+└──────────────────┬──────────────────┘
+                   │
+                   ▼
+┌─────────────────────────────────────┐    Typed batch APIs:
+│  svc.{write,edit,delete,move}_file  │    one call = one batch
+│  svc.rename_symbol(...)             │
+│  svc.cmd(sandbox, command, ...)     │    Shell-style:
+└──────────────────┬──────────────────┘    overlay upperdir -> batch
+                   │
+                   ▼
+┌─────────────────────────────────────┐
+│  Resolve OperationChange per slot   │
+│  (base_hash, strict_base=True)      │
 └──────────────────┬──────────────────┘
                    │
                    ▼
 ┌─────────────────────────────────────┐
-│  Build one bash/process command     │
-│  for the whole tool call            │
+│  commit_operation_against_base([…]) │
+│  sorted locks, two-pass apply       │
 └──────────────────┬──────────────────┘
                    │
-                   ▼
-┌─────────────────────────────────────┐
-│  exec_ci_process_operation(...)     │
-└──────────────────┬──────────────────┘
-                   │
-                   ▼
-┌─────────────────────────────────────┐
-│  Snapshot workspace before command  │
-└──────────────────┬──────────────────┘
-                   │
-                   ▼
-┌─────────────────────────────────────┐
-│  sandbox.process.exec(command)      │
-└──────────────────┬──────────────────┘
-                   │
-                   ▼
-┌─────────────────────────────────────┐
-│  Snapshot workspace after command   │
-└──────────────────┬──────────────────┘
-                   │
-                   ▼
-┌─────────────────────────────────────┐
-│  Diff snapshot file hashes          │
-│  and record changed paths           │
-└──────────────────┬──────────────────┘
-                   │
-                   ▼
-┌─────────────────────────────────────┐
-│  Arbiter.record_edit(...)           │
-└──────────────────┬──────────────────┘
-                   │
-                   ▼
-┌─────────────────────────────────────┐
-│  Refresh symbol index and           │
-│  invalidate LSP for changed files   │
-└─────────────────────────────────────┘
+         ┌─────────┴─────────┐
+         ▼                   ▼
+  ┌────────────┐      ┌──────────────┐
+  │ committed  │      │ aborted_*    │
+  │ → write +  │      │ → no writes, │
+  │   record + │      │   clear abort│
+  │   refresh  │      │   class to   │
+  │   LSP      │      │   caller     │
+  └────────────┘      └──────────────┘
 ```
 
 ## LSP Server Lifecycle

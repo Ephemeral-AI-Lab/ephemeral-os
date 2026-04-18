@@ -13,8 +13,11 @@ compatibility with callers that import them from ``routing.service``.
 
 from __future__ import annotations
 
+import asyncio
+import errno
 import inspect
 import logging
+import os
 import re
 import threading
 import time
@@ -42,10 +45,7 @@ from code_intelligence.routing.overlay_auditor import (
     OverlayAuditor,
     OverlayAuditorConfig,
 )
-from code_intelligence.routing.overlay_exec import OverlayMountError
-from code_intelligence.routing.overlay_merger import GitMergeFileMerger
 from code_intelligence.routing.overlay_probe import OverlayCapabilityCache
-from code_intelligence.routing.process_auditor import ProcessAuditor
 from code_intelligence.routing.query_router import IntelligenceQueryRouter
 from code_intelligence.routing.registry import (
     dispose_all_code_intelligence,
@@ -60,23 +60,38 @@ from code_intelligence.types import (
     Diagnostic,
     EditRequest,
     EditResult,
+    EditSpec,
     HoverResult,
-    OperationResult,
+    MoveSpec,
     OperationChange,
+    OperationResult,
     ReferenceInfo,
     SemanticFileChange,
     SemanticRenamePlan,
     SymbolInfo,
+    WriteSpec,
 )
 
 __all__ = [
     "CodeIntelligenceService",
+    "OverlayCapabilityMissingError",
     "dispose_all_code_intelligence",
     "dispose_code_intelligence",
     "get_all_services_status",
     "get_code_intelligence",
     "get_code_intelligence_if_exists",
 ]
+
+
+class OverlayCapabilityMissingError(RuntimeError):
+    """Raised when :meth:`svc.cmd` cannot honor its OCC contract.
+
+    Either the sandbox lacks overlay / tmpfs / userxattr support, or the
+    outer lowerdir filesystem doesn't offer CoW (reflink/clonefile). In
+    both cases ``svc.cmd`` fails closed rather than degrade to the
+    pre-OCC ``ProcessAuditor`` path — re-introducing unaudited mutation
+    would re-open the bug the OCC migration closes.
+    """
 
 logger = logging.getLogger(__name__)
 _IDENTIFIER_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
@@ -131,18 +146,10 @@ class CodeIntelligenceService:
         self.query_router.register(SymbolIndexBackendAdapter(self.symbol_index))
 
         self._content = ContentManager(workspace_root, sandbox=sandbox)
-        self._process_auditor = ProcessAuditor(
-            workspace_root=workspace_root,
-            exec_process=self._exec_sandbox_process,
-            arbiter=self.arbiter,
-            content=self._content,
-            symbol_index=self.symbol_index,
-            lsp_client=self.lsp_client,
-        )
         self._overlay_capability = OverlayCapabilityCache()
         self._overlay_auditor: OverlayAuditor | None = None
         self._overlay_lowerdir: str | None = None
-        self._overlay_init_lock = threading.Lock()
+        self._overlay_init_lock = asyncio.Lock()
         self._write_coordinator = WriteCoordinator(
             arbiter=self.arbiter,
             time_machine=self.time_machine,
@@ -211,9 +218,9 @@ class CodeIntelligenceService:
             self._clear_rename_preview_cache()
         self._content.bind_sandbox(sandbox)
 
-    # -- Process operation audit ---------------------------------------------
+    # -- Audited shell command execution (OCC-gated) -------------------------
 
-    async def exec_process_operation(
+    async def cmd(
         self,
         sandbox: Any,
         command: str,
@@ -226,14 +233,25 @@ class CodeIntelligenceService:
         task_id: str = "",
         attribute_changes: bool = True,
     ) -> Any:
-        """Execute one sandbox process command and audit workspace mutations.
+        """Run one shell command through the OCC-gated overlay audit path.
 
-        Callers execute exactly one shell command. The service snapshots the
-        workspace around that command and records changed files as one logical
-        operation in the arbiter ledger.
+        Fail-closed: if the sandbox lacks the overlay pipeline or its
+        lowerdir filesystem does not support CoW snapshots, raise
+        :class:`OverlayCapabilityMissingError`. There is no fallback to
+        the pre-OCC ``ProcessAuditor`` — a single OCC boundary is the
+        whole point of the migration.
         """
         self.rebind_sandbox(sandbox)
-        return await self._process_auditor.execute(
+        probe = await self._overlay_capability.probe(
+            self.sandbox_id, sandbox, self._exec_sandbox_process,
+        )
+        if not probe.supported:
+            raise OverlayCapabilityMissingError(
+                f"svc.cmd requires overlay OCC; sandbox {self.sandbox_id}: "
+                f"{probe.reason}"
+            )
+        auditor = await self._ensure_overlay_auditor(sandbox)
+        return await auditor.execute(
             sandbox,
             command,
             timeout=timeout,
@@ -245,128 +263,127 @@ class CodeIntelligenceService:
             attribute_changes=attribute_changes,
         )
 
-    async def exec_process_operation_overlay(
-        self,
-        sandbox: Any,
-        command: str,
-        *,
-        timeout: int | None = None,
-        description: str = "",
-        agent_id: str = "",
-        team_run_id: str = "",
-        agent_run_id: str = "",
-        task_id: str = "",
-        attribute_changes: bool = True,
-    ) -> Any:
-        """Audited exec using per-run overlayfs isolation.
-
-        Opt-in peer of :meth:`exec_process_operation`. Probes the
-        sandbox for overlay capability on first call; if unavailable or
-        the overlay mount fails at runtime, transparently falls back to
-        :class:`ProcessAuditor` with a log warning.
-
-        Same return contract as :meth:`exec_process_operation`.
-        """
-        self.rebind_sandbox(sandbox)
-        probe = await self._overlay_capability.probe(
-            self.sandbox_id,
-            sandbox,
-            self._exec_sandbox_process,
-        )
-        if not probe.supported:
-            logger.info(
-                "overlay unavailable on sandbox %s (%s); using ProcessAuditor",
-                self.sandbox_id,
-                probe.reason,
-            )
-            return await self._process_auditor.execute(
-                sandbox,
-                command,
-                timeout=timeout,
-                description=description,
-                agent_id=agent_id,
-                team_run_id=team_run_id,
-                agent_run_id=agent_run_id,
-                task_id=task_id,
-                attribute_changes=attribute_changes,
-            )
-
-        auditor = await self._ensure_overlay_auditor(sandbox)
-        try:
-            return await auditor.execute(
-                sandbox,
-                command,
-                timeout=timeout,
-                description=description,
-                agent_id=agent_id,
-                team_run_id=team_run_id,
-                agent_run_id=agent_run_id,
-                task_id=task_id,
-                attribute_changes=attribute_changes,
-            )
-        except OverlayMountError as exc:
-            logger.warning(
-                "overlay mount failed mid-run on %s (%s); falling back "
-                "to ProcessAuditor for this call",
-                self.sandbox_id,
-                exc,
-            )
-            return await self._process_auditor.execute(
-                sandbox,
-                command,
-                timeout=timeout,
-                description=description,
-                agent_id=agent_id,
-                team_run_id=team_run_id,
-                agent_run_id=agent_run_id,
-                task_id=task_id,
-                attribute_changes=attribute_changes,
-            )
-
     async def _ensure_overlay_auditor(self, sandbox: Any) -> OverlayAuditor:
-        with self._overlay_init_lock:
+        if self._overlay_auditor is not None:
+            return self._overlay_auditor
+
+        async with self._overlay_init_lock:
             if self._overlay_auditor is not None:
                 return self._overlay_auditor
 
-        lowerdir = await self._ensure_overlay_lowerdir(sandbox)
+            lowerdir = await self._ensure_overlay_lowerdir(sandbox)
 
-        async def _provider(_repo_root: str) -> str:
-            return lowerdir
+            async def _provider(_repo_root: str) -> str:
+                return lowerdir
 
-        auditor = OverlayAuditor(
-            workspace_root=self.workspace_root,
-            exec_process=self._exec_sandbox_process,
-            arbiter=self.arbiter,
-            content=self._content,
-            symbol_index=self.symbol_index,
-            lsp_client=self.lsp_client,
-            lowerdir_provider=_provider,
-            config=OverlayAuditorConfig(),
-            merger=GitMergeFileMerger(exec_process=self._exec_sandbox_process),
-        )
-        with self._overlay_init_lock:
-            if self._overlay_auditor is None:
-                self._overlay_auditor = auditor
+            self._overlay_auditor = OverlayAuditor(
+                workspace_root=self.workspace_root,
+                exec_process=self._exec_sandbox_process,
+                write_coordinator=self._write_coordinator,
+                lowerdir_provider=_provider,
+                lowerdir_refresh=self._refresh_overlay_lowerdir,
+                config=OverlayAuditorConfig(),
+            )
             return self._overlay_auditor
 
     async def _ensure_overlay_lowerdir(self, sandbox: Any) -> str:
+        """Materialize a CoW snapshot of the live workspace as the outer lowerdir.
+
+        Per P0.7 / P0.9, the outer lowerdir must reflect the current
+        workspace state (tracked + untracked + dirty) so strict-base
+        drift detection compares against what peers actually see, not
+        against HEAD. Kernel-aware probe:
+
+        * Linux → ``cp -a --reflink=always`` (btrfs/XFS/bcachefs). A
+          non-CoW filesystem like ext4 fails the copy; we fail closed.
+          ``--reflink=auto`` would silently degrade to a byte copy and
+          defeat drift detection (P0.9 finding).
+        * Darwin → plain ``cp -a`` (APFS invokes ``clonefile(2)``
+          implicitly; there is no ``--reflink`` flag in BSD ``cp``).
+
+        Callers hold ``_overlay_init_lock`` while this runs.
+        """
         if self._overlay_lowerdir is not None:
             return self._overlay_lowerdir
 
         import shlex
 
         lowerdir = f"/tmp/overlay-lower-{self.sandbox_id}"
-        # Create a detached scratch worktree of HEAD as the shared,
-        # immutable base for every overlay run on this sandbox. Skip
-        # the create if the directory already exists (idempotent).
         probe_cmd = (
-            f"[ -d {shlex.quote(lowerdir)} ] && echo exists || "
-            f"git -C {shlex.quote(self.workspace_root)} worktree add --detach "
-            f"{shlex.quote(lowerdir)} HEAD"
+            "set -eu; "
+            f"if [ -d {shlex.quote(lowerdir)} ]; then echo exists; exit 0; fi; "
+            f"src={shlex.quote(self.workspace_root)}; dst={shlex.quote(lowerdir)}; "
+            "mkdir -p \"$dst\"; "
+            'case "$(uname -s)" in '
+            "Linux) "
+            'if cp -a --reflink=always "$src/." "$dst/" 2>/dev/null; then '
+            "echo cow-reflink; "
+            "else echo cow-unavailable; exit 2; fi"
+            ";; "
+            "Darwin) "
+            'if cp -a "$src/." "$dst/" 2>/dev/null; then echo cow-clonefile; '
+            "else echo cow-unavailable; exit 2; fi"
+            ";; "
+            "*) echo cow-unavailable; exit 2;; "
+            "esac"
         )
-        await self._exec_sandbox_process(sandbox, probe_cmd, timeout=60)
+        response = await self._exec_sandbox_process(sandbox, probe_cmd, timeout=120)
+        stdout = str(getattr(response, "result", "") or "").strip()
+        if "cow-unavailable" in stdout or stdout.endswith("cow-unavailable"):
+            raise OverlayCapabilityMissingError(
+                f"svc.cmd lowerdir snapshot on {lowerdir} lacks CoW support; "
+                "hardlink/byte-copy snapshots alias peer writes into base_hash "
+                "(P0.9). Mount a reflink-capable filesystem or switch sandbox."
+            )
         self._overlay_lowerdir = lowerdir
         return lowerdir
+
+    def _refresh_overlay_lowerdir(
+        self,
+        committed_changes: Sequence[OperationChange],
+    ) -> None:
+        """Mirror a successful coordinator commit back into the lowerdir snapshot.
+
+        The lowerdir must track ``ContentManager`` head so the next
+        ``svc.cmd`` computes ``base_hash`` against current workspace
+        state, not a stale snapshot. Runs after
+        :meth:`WriteCoordinator.commit_operation_against_base` returns a
+        committed status; best-effort — a refresh failure is logged but
+        does not unwind the commit (the next overlay run will re-probe).
+        """
+        lowerdir = self._overlay_lowerdir
+        if not lowerdir:
+            return
+        workspace = self.workspace_root.rstrip("/") + "/"
+        for change in committed_changes:
+            rel = change.file_path
+            if rel.startswith(workspace):
+                rel = rel[len(workspace):]
+            elif rel.startswith("/"):
+                # Absolute path outside workspace: skip — out of snapshot scope.
+                continue
+            target = os.path.join(lowerdir, rel)
+            try:
+                if change.final_content is None:
+                    try:
+                        os.remove(target)
+                    except FileNotFoundError:
+                        pass
+                    except OSError as exc:
+                        if exc.errno != errno.ENOENT:
+                            logger.debug(
+                                "overlay lowerdir refresh: remove %s failed: %s",
+                                target, exc,
+                            )
+                else:
+                    os.makedirs(os.path.dirname(target), exist_ok=True)
+                    with open(target, "w", encoding="utf-8") as fh:
+                        fh.write(change.final_content)
+            except OSError:
+                logger.debug(
+                    "overlay lowerdir refresh: write %s failed",
+                    target, exc_info=True,
+                )
 
     async def _exec_sandbox_process(
         self,
@@ -648,49 +665,123 @@ class CodeIntelligenceService:
             description=description,
         )
 
-    # -- Delete / Move APIs (OCC-gated) --------------------------------------
+    # -- Typed mutation APIs (OCC-gated, batch-capable) ----------------------
 
-    def delete_file(
+    def write_file(
         self,
-        file_path: str,
+        specs: Sequence[WriteSpec] | WriteSpec,
         *,
         agent_id: str = "",
         description: str = "",
     ) -> OperationResult:
-        """Delete *file_path* through the OCC-gated commit path.
+        """Write one or more files through a single OCC-gated batch commit.
 
-        Reads the current content through :class:`ContentManager`, captures a
-        ``base_hash`` from that read, and submits a single
-        ``OperationChange(final_content=None)``. The coordinator's delete
-        branch requires ``current_hash == base_hash`` exactly and aborts
-        with ``aborted_version`` on any drift — there is no merge fallback
-        for deletes.
+        ``WriteSpec(overwrite=True)`` replaces an existing file via a
+        strict-base rewrite; ``overwrite=False`` requires the path to be
+        absent at commit time. All specs in the batch land atomically or
+        none land — any slot's ``aborted_version`` aborts the whole batch.
         """
-        current, existed = self._content.read(file_path, allow_missing=True)
-        if not existed:
+        normalized = [specs] if isinstance(specs, WriteSpec) else list(specs)
+        changes = [self._write_spec_to_change(spec) for spec in normalized]
+        return self._write_coordinator.commit_operation_against_base(
+            changes,
+            agent_id=agent_id,
+            edit_type="write_file",
+            description=description,
+        )
+
+    def edit_file(
+        self,
+        specs: Sequence[EditSpec] | EditSpec,
+        *,
+        agent_id: str = "",
+        description: str = "",
+    ) -> OperationResult:
+        """Apply search/replace (or line-range) edits to one or more files.
+
+        Each :class:`EditSpec` is resolved against a plan-time base read
+        from :class:`ContentManager`; edits are applied host-side via
+        :class:`Patcher`. Any spec whose edits cannot be applied is
+        surfaced as a failure in the returned :class:`OperationResult`
+        without touching disk.
+        """
+        normalized = [specs] if isinstance(specs, EditSpec) else list(specs)
+        changes, early_failure = self._edit_specs_to_changes(normalized)
+        if early_failure is not None:
+            return early_failure
+        return self._write_coordinator.commit_operation_against_base(
+            changes,
+            agent_id=agent_id,
+            edit_type="edit_file",
+            description=description,
+        )
+
+    def rename_symbol(
+        self,
+        file_path: str,
+        line: int,
+        character: int,
+        new_name: str,
+        *,
+        agent_id: str = "",
+        description: str = "",
+    ) -> OperationResult:
+        """Run LSP-backed symbol rename and commit every affected file atomically.
+
+        Reuses :meth:`rename_symbol_plan` for the LSP planning pass, then
+        submits the resulting :class:`SemanticFileChange` list as one
+        OCC batch. An empty plan returns a ``committed`` result with no
+        files — callers can distinguish "no references" from a semantic
+        rename failure by inspecting ``result.files``.
+        """
+        plan = self.rename_symbol_plan(file_path, line, character, new_name)
+        if not plan.changes:
             return OperationResult(
-                success=False,
-                status="failed",
-                files=(
-                    EditResult(
-                        success=False,
-                        file_path=file_path,
-                        message=f"Path does not exist: {file_path}",
-                    ),
-                ),
+                success=True,
+                status="committed",
+                files=(),
                 conflict_file=None,
-                conflict_reason="not_found",
+                conflict_reason="",
                 timings={},
             )
-        change = OperationChange(
-            file_path=file_path,
-            base_content=current,
-            base_hash=content_hash(current),
-            final_content=None,
-            base_existed=True,
-        )
         return self._write_coordinator.commit_operation_against_base(
-            [change],
+            list(plan.changes),
+            agent_id=agent_id,
+            edit_type="rename_symbol",
+            description=description or f"rename to {new_name}",
+        )
+
+    def delete_file(
+        self,
+        paths: Sequence[str],
+        *,
+        agent_id: str = "",
+        description: str = "",
+    ) -> OperationResult:
+        """Delete one or more files through the OCC-gated commit path.
+
+        Reads each current content through :class:`ContentManager`, builds
+        one ``OperationChange(final_content=None)`` per path, and submits
+        the whole list as one batch. The coordinator's delete branch
+        requires ``current_hash == base_hash`` exactly — any drift aborts
+        with ``aborted_version`` (no merge fallback for deletes).
+        """
+        changes: list[OperationChange] = []
+        for path in paths:
+            current, existed = self._content.read(path, allow_missing=True)
+            if not existed:
+                return _not_found_result(path)
+            changes.append(
+                OperationChange(
+                    file_path=path,
+                    base_content=current,
+                    base_hash=content_hash(current),
+                    final_content=None,
+                    base_existed=True,
+                )
+            )
+        return self._write_coordinator.commit_operation_against_base(
+            changes,
             agent_id=agent_id,
             edit_type="delete_file",
             description=description,
@@ -698,104 +789,114 @@ class CodeIntelligenceService:
 
     def move_file(
         self,
-        src_path: str,
-        dst_path: str,
+        specs: Sequence[MoveSpec] | MoveSpec,
         *,
-        overwrite: bool = False,
         agent_id: str = "",
         description: str = "",
     ) -> OperationResult:
-        """Atomically move *src_path* → *dst_path* through the OCC-gated path.
+        """Atomically move one or more files through the OCC-gated path.
 
-        Submits two :class:`OperationChange` entries — delete-src and
-        create-dst (or overwrite-dst when ``overwrite=True``) — in one
-        ``commit_operation_against_base`` call so sorted-path locks, the
-        two-pass resolve-then-apply, and TimeMachine rollback make the
-        move atomic: either both slots commit or neither touches disk.
-        When ``overwrite=True``, the dst change is marked ``strict_base``
-        so the merge fallback is skipped and any dst drift aborts with
-        ``aborted_version``.
+        Each :class:`MoveSpec` expands to a delete-src + create-dst pair
+        of :class:`OperationChange` entries; the whole list is submitted
+        as one batch so sorted-path locks, two-pass resolve-then-apply,
+        and TimeMachine rollback make the moves atomic across every
+        spec in the batch.
         """
-        if src_path == dst_path:
-            return OperationResult(
-                success=False,
-                status="failed",
-                files=(
-                    EditResult(
-                        success=False,
-                        file_path=src_path,
-                        message="src_path and dst_path are identical",
-                    ),
-                ),
-                conflict_file=None,
-                conflict_reason="identical_paths",
-                timings={},
+        normalized = [specs] if isinstance(specs, MoveSpec) else list(specs)
+        changes: list[OperationChange] = []
+        for spec in normalized:
+            if spec.src_path == spec.dst_path:
+                return _identical_paths_result(spec.src_path)
+            src_content, src_existed = self._content.read(
+                spec.src_path, allow_missing=True,
             )
-        src_content, src_existed = self._content.read(src_path, allow_missing=True)
-        if not src_existed:
-            return OperationResult(
-                success=False,
-                status="failed",
-                files=(
-                    EditResult(
-                        success=False,
-                        file_path=src_path,
-                        message=f"Path does not exist: {src_path}",
-                    ),
-                ),
-                conflict_file=None,
-                conflict_reason="not_found",
-                timings={},
+            if not src_existed:
+                return _not_found_result(spec.src_path)
+            dst_content, dst_existed = self._content.read(
+                spec.dst_path, allow_missing=True,
             )
-        dst_content, dst_existed = self._content.read(dst_path, allow_missing=True)
-        if dst_existed and not overwrite:
-            return OperationResult(
-                success=False,
-                status="failed",
-                files=(
-                    EditResult(
-                        success=False,
-                        file_path=dst_path,
-                        message=(
-                            f"Destination exists: {dst_path} "
-                            "(pass overwrite=True to replace)"
-                        ),
-                    ),
-                ),
-                conflict_file=dst_path,
-                conflict_reason="dst_exists",
-                timings={},
+            if dst_existed and not spec.overwrite:
+                return _dst_exists_result(spec.dst_path)
+            changes.append(
+                OperationChange(
+                    file_path=spec.src_path,
+                    base_content=src_content,
+                    base_hash=content_hash(src_content),
+                    final_content=None,
+                    base_existed=True,
+                )
             )
-        delete_src = OperationChange(
-            file_path=src_path,
-            base_content=src_content,
-            base_hash=content_hash(src_content),
-            final_content=None,
-            base_existed=True,
-        )
-        if dst_existed:
-            create_dst = OperationChange(
-                file_path=dst_path,
-                base_content=dst_content,
-                base_hash=content_hash(dst_content),
-                final_content=src_content,
-                base_existed=True,
-                strict_base=True,
-            )
-        else:
-            create_dst = OperationChange(
-                file_path=dst_path,
-                base_content="",
-                base_hash="",
-                final_content=src_content,
-                base_existed=False,
-            )
+            if dst_existed:
+                changes.append(
+                    OperationChange(
+                        file_path=spec.dst_path,
+                        base_content=dst_content,
+                        base_hash=content_hash(dst_content),
+                        final_content=src_content,
+                        base_existed=True,
+                        strict_base=True,
+                    )
+                )
+            else:
+                changes.append(
+                    OperationChange(
+                        file_path=spec.dst_path,
+                        base_content="",
+                        base_hash="",
+                        final_content=src_content,
+                        base_existed=False,
+                    )
+                )
         return self._write_coordinator.commit_operation_against_base(
-            [delete_src, create_dst],
+            changes,
             agent_id=agent_id,
             edit_type="move_file",
             description=description,
         )
+
+    # -- Spec -> OperationChange adapters ------------------------------------
+
+    def _write_spec_to_change(self, spec: WriteSpec) -> OperationChange:
+        current, existed = self._content.read(spec.file_path, allow_missing=True)
+        if spec.overwrite:
+            return OperationChange(
+                file_path=spec.file_path,
+                base_content=current,
+                base_hash=content_hash(current) if existed else "",
+                final_content=spec.content,
+                base_existed=existed,
+                strict_base=True,
+            )
+        return OperationChange(
+            file_path=spec.file_path,
+            base_content="",
+            base_hash="",
+            final_content=spec.content,
+            base_existed=False,
+        )
+
+    def _edit_specs_to_changes(
+        self,
+        specs: Sequence[EditSpec],
+    ) -> tuple[list[OperationChange], OperationResult | None]:
+        changes: list[OperationChange] = []
+        for spec in specs:
+            current, existed = self._content.read(spec.file_path, allow_missing=True)
+            if not existed:
+                return [], _not_found_result(spec.file_path)
+            patch = self.patcher.apply_edits(current, list(spec.edits))
+            if not patch.success:
+                return [], _patch_failed_result(spec.file_path, patch.errors)
+            changes.append(
+                OperationChange(
+                    file_path=spec.file_path,
+                    base_content=current,
+                    base_hash=content_hash(current),
+                    final_content=patch.content,
+                    base_existed=True,
+                )
+            )
+        return changes, None
 
     def undo_last_edit(self, file_path: str) -> EditResult:
         return self._write_coordinator.undo_last_edit(file_path)
@@ -953,6 +1054,78 @@ def _scope_excludes(file_path: str, normalized_scope: list[str]) -> bool:
     if not normalized_scope:
         return False
     return not any(scope_paths_overlap(file_path, scope) for scope in normalized_scope)
+
+
+def _not_found_result(file_path: str) -> OperationResult:
+    return OperationResult(
+        success=False,
+        status="failed",
+        files=(
+            EditResult(
+                success=False,
+                file_path=file_path,
+                message=f"Path does not exist: {file_path}",
+            ),
+        ),
+        conflict_file=None,
+        conflict_reason="not_found",
+        timings={},
+    )
+
+
+def _identical_paths_result(file_path: str) -> OperationResult:
+    return OperationResult(
+        success=False,
+        status="failed",
+        files=(
+            EditResult(
+                success=False,
+                file_path=file_path,
+                message="src_path and dst_path are identical",
+            ),
+        ),
+        conflict_file=None,
+        conflict_reason="identical_paths",
+        timings={},
+    )
+
+
+def _dst_exists_result(dst_path: str) -> OperationResult:
+    return OperationResult(
+        success=False,
+        status="failed",
+        files=(
+            EditResult(
+                success=False,
+                file_path=dst_path,
+                message=(
+                    f"Destination exists: {dst_path} "
+                    "(pass overwrite=True to replace)"
+                ),
+            ),
+        ),
+        conflict_file=dst_path,
+        conflict_reason="dst_exists",
+        timings={},
+    )
+
+
+def _patch_failed_result(file_path: str, errors: list[str]) -> OperationResult:
+    detail = "; ".join(errors) if errors else "edit apply failed"
+    return OperationResult(
+        success=False,
+        status="failed",
+        files=(
+            EditResult(
+                success=False,
+                file_path=file_path,
+                message=detail,
+            ),
+        ),
+        conflict_file=file_path,
+        conflict_reason="patch_failed",
+        timings={},
+    )
 
 
 def _identifier_at_position(content: str, line: int, character: int) -> str:

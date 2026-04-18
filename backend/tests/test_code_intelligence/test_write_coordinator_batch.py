@@ -10,7 +10,7 @@ from code_intelligence.routing.service import (
     CodeIntelligenceService,
     dispose_all_code_intelligence,
 )
-from code_intelligence.types import OperationChange, SemanticFileChange
+from code_intelligence.types import MoveSpec, OperationChange, SemanticFileChange
 
 
 @pytest.fixture(autouse=True)
@@ -422,7 +422,7 @@ def test_delete_file_removes_existing_file(tmp_path) -> None:
     a.write_text("x = 1\n", encoding="utf-8")
     svc = _svc(tmp_path)
 
-    result = svc.delete_file(str(a))
+    result = svc.delete_file([str(a)])
     assert result.success is True
     assert result.status == "committed"
     assert not a.exists()
@@ -430,7 +430,7 @@ def test_delete_file_removes_existing_file(tmp_path) -> None:
 
 def test_delete_file_reports_not_found(tmp_path) -> None:
     svc = _svc(tmp_path)
-    result = svc.delete_file(str(tmp_path / "missing.py"))
+    result = svc.delete_file([str(tmp_path / "missing.py")])
     assert result.success is False
     assert result.status == "failed"
     assert result.conflict_reason == "not_found"
@@ -442,7 +442,7 @@ def test_move_file_creates_new_destination(tmp_path) -> None:
     src.write_text("payload\n", encoding="utf-8")
     svc = _svc(tmp_path)
 
-    result = svc.move_file(str(src), str(dst))
+    result = svc.move_file([MoveSpec(src_path=str(src), dst_path=str(dst))])
     assert result.success is True
     assert result.status == "committed"
     assert not src.exists()
@@ -456,7 +456,7 @@ def test_move_file_rejects_existing_dst_without_overwrite(tmp_path) -> None:
     dst.write_text("two\n", encoding="utf-8")
     svc = _svc(tmp_path)
 
-    result = svc.move_file(str(src), str(dst))
+    result = svc.move_file([MoveSpec(src_path=str(src), dst_path=str(dst))])
     assert result.success is False
     assert result.conflict_reason == "dst_exists"
     # No partial move
@@ -471,7 +471,9 @@ def test_move_file_overwrites_when_allowed(tmp_path) -> None:
     dst.write_text("two\n", encoding="utf-8")
     svc = _svc(tmp_path)
 
-    result = svc.move_file(str(src), str(dst), overwrite=True)
+    result = svc.move_file(
+        [MoveSpec(src_path=str(src), dst_path=str(dst), overwrite=True)],
+    )
     assert result.success is True
     assert not src.exists()
     assert dst.read_text(encoding="utf-8") == "one\n"
@@ -504,7 +506,9 @@ def test_move_file_overwrite_aborts_on_dst_drift(tmp_path) -> None:
 
     svc._content.read = _drift_read  # type: ignore[assignment]
     try:
-        result = svc.move_file(str(src), str(dst), overwrite=True)
+        result = svc.move_file(
+            [MoveSpec(src_path=str(src), dst_path=str(dst), overwrite=True)],
+        )
     finally:
         svc._content.read = original_read  # type: ignore[assignment]
 
@@ -520,7 +524,7 @@ def test_move_file_identical_paths_rejected(tmp_path) -> None:
     svc = _svc(tmp_path)
     a = tmp_path / "same.py"
     a.write_text("x\n", encoding="utf-8")
-    result = svc.move_file(str(a), str(a))
+    result = svc.move_file([MoveSpec(src_path=str(a), dst_path=str(a))])
     assert result.success is False
     assert result.conflict_reason == "identical_paths"
 
@@ -528,8 +532,12 @@ def test_move_file_identical_paths_rejected(tmp_path) -> None:
 def test_move_file_missing_src_reports_not_found(tmp_path) -> None:
     svc = _svc(tmp_path)
     result = svc.move_file(
-        str(tmp_path / "missing.py"),
-        str(tmp_path / "dst.py"),
+        [
+            MoveSpec(
+                src_path=str(tmp_path / "missing.py"),
+                dst_path=str(tmp_path / "dst.py"),
+            ),
+        ],
     )
     assert result.success is False
     assert result.conflict_reason == "not_found"

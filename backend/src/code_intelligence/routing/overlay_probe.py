@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import logging
 import shlex
-import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
