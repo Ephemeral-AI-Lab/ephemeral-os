@@ -58,6 +58,8 @@ def test_render_user_prompt_template_uses_markdown_file_conditionals() -> None:
     assert "## scope_paths\n- backend/src/retry.py" in rendered
     assert "Benchmark and verification test files in this list are read/verify-only" in rendered
     assert "patch the production owner or submit a failure for replanning" in rendered
+    assert "If live evidence identifies a missing module, compatibility shim" in rendered
+    assert 'submit_task_summary(type="fail", content=...)' in rendered
     assert "## Context from dependencies" not in rendered
     assert "Tool-name contract" not in rendered
     assert "stdout and stderr are already captured separately" not in rendered
@@ -167,6 +169,7 @@ async def test_build_query_context_uses_developer_markdown_template() -> None:
     assert "Goal\nImplement retry handling." in ctx.user_message
     assert "## scope_paths\n- backend/src/retry.py" in ctx.user_message
     assert "Benchmark and verification test files in this list are read/verify-only" in ctx.user_message
+    assert "missing module, compatibility shim, re-export, import bridge" in ctx.user_message
 
 
 @pytest.mark.asyncio
@@ -206,7 +209,7 @@ async def test_build_query_context_uses_root_planner_markdown_template() -> None
     assert "## Benchmark targets" in ctx.user_message
     assert "tests/test_retry.py::test_retry" in ctx.user_message
     assert "Keep benchmark or verification test targets in task prose" in ctx.user_message
-    assert "not developer or child-planner `scope_paths`" in ctx.user_message
+    assert "not developer, validator, or child-planner `scope_paths`" in ctx.user_message
     assert "Before `run_subagent`, scrub scout `target_paths`" in ctx.user_message
     assert "keep benchmark tests and missing test-derived paths in task prose" in ctx.user_message
     assert "After `run_subagent` scouts, read their notes with default scope" in ctx.user_message
@@ -261,7 +264,7 @@ async def test_build_query_context_uses_child_planner_structured_spec_contract()
     assert "## Assigned planner task" in ctx.user_message
     assert "Decompose retry handling." in ctx.user_message
     assert "Keep benchmark or verification test targets in task prose" in ctx.user_message
-    assert "not developer or child-planner `scope_paths`" in ctx.user_message
+    assert "not developer, validator, or child-planner `scope_paths`" in ctx.user_message
     assert "Before `run_subagent`, scrub scout `target_paths`" in ctx.user_message
     assert "keep benchmark tests and missing test-derived paths in task prose" in ctx.user_message
     assert "After `run_subagent` scouts, read their notes with default scope" in ctx.user_message

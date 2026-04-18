@@ -18,6 +18,7 @@ Your next assistant message must be exactly one `submit_task_note(...)` tool cal
 Do not write visible analysis, recaps, bullet lists, or "let me..." text.
 Your assistant message must contain no text block, only the tool call.
 Do not write the note in assistant text; the note text belongs in the tool's `content` field.
+If the transcript is long, ambiguous, or incomplete, write the best compact uncertainty note in `content`; do not spend a turn analyzing and do not make a second note.
 Call submit_task_note with JSON input:
 - content: name specific files, errors, and changes (under 300 words)
 - paths: list every file/dir path edited or investigated
@@ -48,6 +49,7 @@ Do not write visible analysis, recaps, bullet lists, or "let me..." text.
 Your assistant message must contain no text block, only the tool call.
 Do not write the note in assistant text; the note text belongs in the tool's `content` field.
 The 'content' field is REQUIRED.
+If the transcript is long, ambiguous, or incomplete, write the best compact uncertainty note in `content`; do not spend a turn analyzing and do not make a second note.
 - content: what this agent accomplished and current status (working/stuck/done). Name specific files and errors. Under 300 words.
 - paths: list every file/dir path relevant to the work
 - tags: one or more of implementation, bug_fix, blocker, warning, discovery (use 'blocker' if stuck or blocked by another task)

@@ -14,6 +14,12 @@ from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import Any
 
+from tools.daytona_toolkit._daytona_utils import (
+    _build_read_text_file_command,
+    _extract_exit_code,
+    _wrap_bash_command,
+)
+
 logger = logging.getLogger(__name__)
 
 _PROCESS_AUDIT_SNAPSHOT_SCRIPT = r"""
@@ -363,7 +369,8 @@ class ProcessAuditor:
         parsed = _parse_process_audit_combined_output(raw, run_id=run_id)
         ambient_changed_paths: list[str] = []
         if attribute_changes:
-            changed_paths = self._record_audit(
+            changed_paths = await self._record_audit(
+                sandbox=sandbox,
                 before=parsed.before,
                 after=parsed.after,
                 description=description,
@@ -409,9 +416,10 @@ class ProcessAuditor:
             recorded_paths.append(file_path)
         return recorded_paths
 
-    def _record_audit(
+    async def _record_audit(
         self,
         *,
+        sandbox: Any,
         before: dict[str, dict[str, Any]],
         after: dict[str, dict[str, Any]],
         description: str,
@@ -443,7 +451,10 @@ class ProcessAuditor:
             )
             if new_exists:
                 try:
-                    content, existed = self._content.read(file_path, allow_missing=True)
+                    content, existed = await self._read_content_for_refresh(
+                        sandbox,
+                        file_path,
+                    )
                     if existed:
                         self._symbol_index.refresh(file_path, content)
                 except Exception:
@@ -453,6 +464,32 @@ class ProcessAuditor:
             except Exception:
                 logger.debug("lsp invalidate failed after process op for %s", file_path, exc_info=True)
         return recorded_paths
+
+    async def _read_content_for_refresh(
+        self,
+        sandbox: Any,
+        file_path: str,
+    ) -> tuple[str, bool]:
+        """Read a changed file without crossing event loops for async sandboxes."""
+        if sandbox is None:
+            return self._content.read(file_path, allow_missing=True)
+
+        response = await self._exec_process(
+            sandbox,
+            _wrap_bash_command(_build_read_text_file_command(file_path)),
+            timeout=10,
+        )
+        cleaned, exit_code = _extract_exit_code(
+            getattr(response, "result", "") or "",
+            fallback_exit_code=getattr(response, "exit_code", None),
+        )
+        if exit_code not in (0, None):
+            raise RuntimeError(cleaned or f"read failed for {file_path}")
+
+        payload = json.loads(cleaned or "{}")
+        if not isinstance(payload, dict) or not payload.get("exists"):
+            return "", False
+        return str(payload.get("content", "") or ""), True
 
 
 __all__ = ["ProcessAuditor"]

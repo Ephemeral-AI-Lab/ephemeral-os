@@ -14,6 +14,7 @@ STOP READING AFTER THE CHECKLIST AND CALL THE TOOL. After this reference loads, 
 - Do not list task ids in text.
 - Do not say "the plan is ready", "let me submit", or "let me call submit_plan now".
 - Do not make another tool call except `submit_plan(...)`.
+- Do not use a failed `submit_plan(...)` result as your schema checker. Run the checklist below before the single terminal call.
 - Do not include `task_note`, `background`, `parent_id`, `rationale`, or `output: null`.
 
 ## Workflow
@@ -29,9 +30,10 @@ Tool input checklist:
 - `deps` is a top-level task field and every `id` is unique.
 - For a `validator` task, `deps` must be non-empty and contain every same-layer non-validator sibling id in this `submit_plan` payload, including `developer` lanes and child `team_planner` lanes. Mentioning dependencies inside `spec` does not set task deps.
 - `spec` is the briefing and uses numbered colon labels in this exact order: `1. Goal:`, `2. Environment:`, `3. Scope:`, `4. Context:`, `5. Acceptance Criteria:`. Do not use Markdown headings.
-- `scope_paths` uses live-confirmed production owner paths, or a broader production boundary on `team_planner` when exact ownership is still uncertain. Keep verification-only test targets in `spec` context or acceptance criteria unless the task explicitly owns a test-only bug.
+- `scope_paths` uses live-confirmed production owner paths, or a broader production boundary on `team_planner` when exact ownership is still uncertain. This applies to validators too: keep verification-only test targets in `spec` context or acceptance criteria unless the task explicitly owns a test-only bug. If only test paths are concrete, broaden to the nearest live production boundary or omit them from `scope_paths`.
 - At most one terminal validator is present. Never submit it with `deps: []` when the plan has non-validator siblings.
 - If the plan includes child planners like `plan-parquet` or `plan-groupby`, the terminal validator's `deps` must include those ids as well as direct developer ids.
+- If the payload has 3 or more concrete non-planner tasks, include one terminal validator in the same call.
 
 ## Expected Outcome
 

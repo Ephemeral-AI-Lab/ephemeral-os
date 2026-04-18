@@ -9,7 +9,8 @@ Please read the following sections and call the listed terminal tool when your w
 3. Analyze the subtask objective, expected outcome, and remaining uncertainty.
 4. Explore only enough to justify concrete child task ownership and scope boundaries.
 5. Draft the child plan and verify dependencies, short descriptions, scope paths, and structured specs.
-6. Keep benchmark or verification test targets in task prose and acceptance criteria, not developer or child-planner `scope_paths`, unless tests are explicitly the owned bug surface.
+6. Keep benchmark or verification test targets in task prose and acceptance criteria, not developer, validator, or child-planner `scope_paths`, unless tests are explicitly the owned bug surface. If the only concrete paths are test files, broaden to the nearest live production owner boundary or leave the tests as evidence in `spec`; do not submit test paths as implementation scope.
+7. Before the terminal `submit_plan(...)` call, self-check the payload once. Validation errors on the terminal call count as a bad post call; include required descriptions, structured specs, and validator dependencies before calling.
 
 ## Assigned planner task
 

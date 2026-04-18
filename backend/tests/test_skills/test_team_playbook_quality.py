@@ -129,9 +129,9 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "live production owner files/directories only" in planner
     assert "never submit a `validator` task with `deps: []`" in planner.lower()
     assert "never omit same-layer `team_planner` siblings from validator `deps`" in planner.lower()
-    assert "do not put those paths in `scope_paths` for developer or child-planner lanes" in planner
+    assert "do not put those paths in `scope_paths` for developer, validator, or child-planner lanes" in planner
     assert "scope_paths` to production owner paths" in planner
-    assert "never put verification-only benchmark tests in developer or child-planner `scope_paths`" in planner.lower()
+    assert "never put verification-only benchmark tests in developer, validator, or child-planner `scope_paths`" in planner.lower()
     assert "never pass `*/tests/*`, `test_*.py`, or unconfirmed test-derived paths in scout `target_paths`" in planner.lower()
     assert "never guess an exact owner" in planner.lower()
     assert "never make non-submission tool calls after loading `plan-json-contract`" in planner.lower()
@@ -150,7 +150,11 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "must not use `daytona_codeact` for file-content reads" in developer.lower()
     assert "writes to test files as off-policy" in developer.lower()
     assert "test files in `scope_paths` as read/verify-only" in developer.lower()
+    assert "must not create a new file outside `scope_paths`" in developer.lower()
+    assert "compatibility shim, re-export module, or import bridge" in developer
+    assert "submit_task_summary(type=\"fail\", content=...)" in developer
     assert "never treat test paths in `scope_paths` as edit permission" in developer.lower()
+    assert "never create an outside-scope compatibility shim" in developer.lower()
     assert "uid 0 bypassing" not in developer.lower()
     assert "pkg._compatibility" not in developer
 
@@ -193,6 +197,9 @@ def test_reference_files_hold_specialized_detail() -> None:
     developer_root_cause = _read(
         _CONTENT / "team-developer-playbook/references/root-cause-debugging.md"
     )
+    developer_widening = _read(
+        _CONTENT / "team-developer-playbook/references/widening-and-runtime.md"
+    )
     scout_ref = _read(_CONTENT / "team-scout-playbook/references/completion-contract.md")
     validator_ref = _read(
         _CONTENT / "team-validator-playbook/references/runtime-verification-examples.md"
@@ -232,6 +239,8 @@ def test_reference_files_hold_specialized_detail() -> None:
     assert "cd /testbed" in developer_playbook
     assert "cd /testbed" in developer_runtime
     assert "pkg._compat" in developer_root_cause
+    assert "missing module, compatibility shim, re-export module, or import bridge" in developer_widening
+    assert "a missing outside-scope owner becomes replan evidence" in developer_widening
     assert "The Task Center note is the durable handoff." in scout_ref
     assert "Make exactly one `submit_task_note(...)` call" in scout_ref
     assert "assistant text with no `submit_task_note(...)` call" in scout_ref

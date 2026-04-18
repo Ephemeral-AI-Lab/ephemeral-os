@@ -12,7 +12,9 @@ Use this skill only for stable benchmark policy. Treat the prompt, payload, live
 - Must treat the live sandbox checkout as the source of truth. Must treat named `FAIL_TO_PASS`, `PASS_TO_PASS`, and grading commands as authoritative.
 - Must report a missing named test or node as `benchmark_surface_mismatch`. Must not label a missing transitive import, helper, or adjacent production module as `benchmark_surface_mismatch`.
 - Must keep commands repo-root-relative. Prefer direct `daytona_codeact(command="...", timeout=N)` for repo commands; use `daytona_codeact(code="...")` only for multi-step runtime that truly needs Python helpers. Never prepend guessed `cd /testbed`, `cd /workspace`, `cd /home/user`, use Python process wrappers, or append stdout/stderr capture plumbing such as `2>&1` or `2>/dev/null`.
-- Must treat `daytona_codeact` as runtime-only on team lanes. Never use it for file mutations through `sed -i`, `tee`, output redirects, shell mutation commands, `rm`, `mv`, or inline Python writes; use `daytona_edit_file`, `daytona_write_file`, `daytona_rename_symbol`, `daytona_delete_file`, or `daytona_move_file`. Deletes/moves must go through the delete/move tools so their generated bash command is audited; set `recursive=true` only for folder trees.
+- Must keep Daytona and CI file paths repo-relative or rooted at `/testbed` in the sandbox. Never pass host workspace paths such as `/Users/...` to sandbox tools, and never use CodeAct to search host directories.
+- Must treat `daytona_codeact` as runtime-only on team lanes. Never use it for file mutations through `sed -i`, `tee`, output redirects, shell mutation commands, `rm`, `mv`, inline Python writes, or explicit cleanup such as `unlink`, `os.remove`, `os.unlink`, `Path.unlink`, `shutil.rmtree`, `shutil.move`, `os.rename`, `git rm`, or `git mv`; use `daytona_edit_file`, `daytona_write_file`, `daytona_rename_symbol`, `daytona_delete_file`, or `daytona_move_file` for repo files. Deletes/moves must go through the OCC-gated delete/move tools; recursive directory operations are unsupported until directory-tree OCC support exists.
+- If `daytona_delete_file` or `daytona_move_file` fails, report the tool error through the lane's terminal submission instead of falling back to CodeAct cleanup or git path commands.
 - Must not use `daytona_codeact` for source inspection. Avoid `cat`, `sed -n`, `grep`/`rg`, `head`/`tail`/`nl`, Python file reads, and source introspection; use notes and CI first, then `daytona_read_file` or `daytona_grep`.
 - Must fix repository code, not the ambient environment. Never rely on ad hoc package installs as the benchmark fix.
 - Must keep roles separate, preserve exact file paths and exact pytest node ids when they are known, and trust live file state over cached briefs or old reasoning.
@@ -31,6 +33,7 @@ Use this skill only for stable benchmark policy. Treat the prompt, payload, live
 - These workflow rules are prompt/playbook obligations, not runtime guardrails. Do not wait for a tool error to enforce them; self-correct or submit failure evidence when a lane has gone off policy.
 - Must keep `scope_paths` as soft coordination hints, not hard filesystem ownership bans.
 - Must treat any advisory outside-scope write as a tainted packet and hand it to replan instead of claiming success from that run.
+- Must stop at the first outside-scope write warning in a developer lane and submit failure evidence; continuing to edit or verify after that warning spreads contamination across lanes.
 
 ## Planning and execution emphasis
 

@@ -299,6 +299,7 @@ class TaskCenter:
                 cancel_ids=result.submitted_replan.cancel_ids,
             )
             if outcome.replanner_child_count > 0:
+                await self._emit_replanned_origin_if_finalized(task_id)
                 await self._store.mark_expanded(task_id)
                 self._transitions.emit_status(
                     task_id,

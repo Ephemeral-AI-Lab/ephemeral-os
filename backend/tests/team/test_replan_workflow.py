@@ -569,7 +569,7 @@ async def test_replanner_expanded_when_replan_creates_direct_children():
     await tc.complete_task("replanner", AgentResult(summary="", submitted_replan=ReplanPlan()))
 
     assert graph["replanner"].status == TaskStatus.EXPANDED
-    assert graph["failed"].status == TaskStatus.REQUEST_REPLAN
+    assert graph["failed"].status == TaskStatus.FAILED
     assert store.marked_done == []
 
 

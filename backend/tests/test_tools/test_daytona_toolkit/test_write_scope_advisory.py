@@ -18,6 +18,8 @@ from tools.daytona_toolkit._daytona_utils import (
     _team_repo_write_warning,
     record_coordination_warning,
 )
+from tools.daytona_toolkit.edit_tool import daytona_edit_file
+from tools.daytona_toolkit.tools import daytona_write_file
 
 
 def _ctx(metadata=None) -> ToolExecutionContext:
@@ -144,12 +146,65 @@ def test_write_warning_emitted_for_developer_outside_scope():
         "daytona_cwd": "/testbed",
         "write_scope": ["dask/config.py"],
     })
-    result = _team_repo_write_warning(ctx, "/testbed/dask/tests/test_config.py", tool_name="edit")
+    result = _team_repo_write_warning(
+        ctx,
+        "/testbed/dask/tests/test_config.py",
+        tool_name="edit",
+    )
     assert result is not None
     assert "advisory" in result
     assert "outside write_scope" in result
     assert "adjacent shim" not in result
     assert "submit_task_summary(type='fail')" in result
+    assert "compatibility shim" in result
+    assert "Do not claim this lane complete or keep verifying" in result
+
+
+def test_write_warning_repeated_scope_mismatch_redirects_without_blocking():
+    ctx = _ctx({
+        "agent_name": "developer",
+        "daytona_cwd": "/testbed",
+        "write_scope": ["dask/dataframe/io/hdf.py"],
+    })
+
+    _team_repo_write_warning(
+        ctx,
+        "/testbed/dask/_compatibility.py",
+        tool_name="daytona_write_file",
+    )
+    _team_repo_write_warning(
+        ctx,
+        "/testbed/dask/compatibility.py",
+        tool_name="daytona_edit_file",
+    )
+    result = _team_repo_write_warning(
+        ctx,
+        "/testbed/dask/base.py",
+        tool_name="daytona_edit_file",
+    )
+
+    assert result is not None
+    assert "3+ outside-scope warnings" in result
+    assert "Stop editing and do not run more verification" in result
+    assert _team_repo_write_error(
+        ctx,
+        "/testbed/dask/base.py",
+        tool_name="daytona_edit_file",
+    ) is None
+
+
+def test_write_and_edit_schema_redirects_outside_scope_shims_without_runtime_gate():
+    write_schema = daytona_write_file.to_api_schema()
+    edit_schema = daytona_edit_file.to_api_schema()
+
+    for schema in (write_schema, edit_schema):
+        description = schema["description"]
+        assert "outside-scope owner" in description
+        assert (
+            "missing module, compatibility shim, re-export, or import bridge" in description
+        )
+        assert "submit `submit_task_summary(type='fail')`" in description
+        assert "workflow guidance, not a runtime hard gate" in description
 
 
 def test_write_warning_none_for_in_scope_write():
@@ -192,7 +247,11 @@ def test_write_warning_includes_tool_name_and_path():
         "daytona_cwd": "/testbed",
         "write_scope": ["src/auth/"],
     })
-    result = _team_repo_write_warning(ctx, "/testbed/src/utils/helpers.py", tool_name="daytona_edit_file")
+    result = _team_repo_write_warning(
+        ctx,
+        "/testbed/src/utils/helpers.py",
+        tool_name="daytona_edit_file",
+    )
     assert result is not None
     assert "daytona_edit_file" in result
     assert "src/utils/helpers.py" in result
@@ -209,7 +268,11 @@ def test_write_warning_for_non_test_path():
         "owned_failures": ["dask/tests/test_cli.py"],
     })
     # _compatibility.py is NOT in the verification surface
-    result = _team_repo_write_warning(ctx, "/testbed/dask/_compatibility.py", tool_name="edit")
+    result = _team_repo_write_warning(
+        ctx,
+        "/testbed/dask/_compatibility.py",
+        tool_name="edit",
+    )
     assert result is not None
     assert "advisory" in result
 

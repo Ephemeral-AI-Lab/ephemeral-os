@@ -15,6 +15,7 @@ Use this reference when shaping the terminal validator task in a plan.
 - The terminal validator must still run even when some deps fail.
 - The task prose must not limit verification to only the scoped tests — it must run the full suite to catch cross-scope regressions like broken imports in shared files.
 - The task prose must instruct the validator to run `ci_diagnostics` as a pre-flight check before the full suite.
+- The validator's `scope_paths` should list production owner files or directories to diagnose before the suite. Verification-only test paths belong in `spec` as focused re-check targets, not in validator `scope_paths`, unless tests are explicitly the owned bug surface.
 
 ## Workflow
 

@@ -126,6 +126,19 @@ class _LocalProcess:
         )
 
 
+class _LoopBoundProcess(_LocalProcess):
+    """Fake async Daytona process that must be awaited on its original loop."""
+
+    def __init__(self, loop: asyncio.AbstractEventLoop) -> None:
+        super().__init__()
+        self.loop = loop
+
+    async def exec(self, command: str, timeout: int | None = None):
+        if asyncio.get_running_loop() is not self.loop:
+            raise RuntimeError("process.exec awaited on the wrong event loop")
+        return await super().exec(command, timeout=timeout)
+
+
 @pytest.mark.asyncio
 async def test_exec_process_operation_audits_workspace_mutation(tmp_path) -> None:
     sandbox = SimpleNamespace(process=_LocalProcess())
@@ -157,6 +170,30 @@ async def test_exec_process_operation_audits_workspace_mutation(tmp_path) -> Non
     assert response.changed_paths == [str(file_path)]
     assert response.files_written == 1
     svc.symbol_index.refresh.assert_called_once_with(str(file_path), "value = 1\n")
+    svc.lsp_client.invalidate.assert_called_once_with(str(file_path))
+
+
+@pytest.mark.asyncio
+async def test_exec_process_operation_refresh_reads_on_existing_event_loop(tmp_path) -> None:
+    process = _LoopBoundProcess(asyncio.get_running_loop())
+    sandbox = SimpleNamespace(process=process)
+    svc = CodeIntelligenceService(
+        sandbox_id="sandbox-process-loop-bound",
+        workspace_root=str(tmp_path),
+        sandbox=sandbox,
+    )
+    svc.symbol_index.refresh = MagicMock()  # type: ignore[method-assign]
+    svc.lsp_client.invalidate = MagicMock()  # type: ignore[method-assign]
+    file_path = tmp_path / "loop_bound.py"
+
+    await svc.exec_process_operation(
+        sandbox,
+        f"printf 'value = 7\\n' > {shlex.quote(str(file_path))}",
+        description="daytona_codeact python",
+    )
+
+    assert len(process.commands) == 2
+    svc.symbol_index.refresh.assert_called_once_with(str(file_path), "value = 7\n")
     svc.lsp_client.invalidate.assert_called_once_with(str(file_path))
 
 

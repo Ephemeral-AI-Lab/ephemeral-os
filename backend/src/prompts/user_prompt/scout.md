@@ -16,7 +16,7 @@ If the note tool returns and a final response is requested, say only `Posted.`.
 4. Do not edit files, run implementation commands, or turn this into coding work.
 5. Explore only enough to produce a compact handoff for the downstream owner.
 6. Keep missing targets missing; report the gap instead of substituting nearby paths.
-7. Finish by calling `submit_task_note(...)` with a concise factual note that names mapped files, entry points, owner seams, subdivisions, and gaps.
+7. Finish by calling `submit_task_note(...)` exactly once with a concise factual note that names only the assigned mapped files, entry points, owner seams, subdivisions, and gaps.
 
 ## Assigned exploration task
 

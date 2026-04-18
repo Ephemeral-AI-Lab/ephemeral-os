@@ -9,7 +9,7 @@ Please read the following sections and call the listed terminal tool when your w
 3. Analyze the task objective, expected outcome, and likely owner surfaces.
 4. Explore only enough to justify concrete task ownership and scope boundaries.
 5. Draft the plan and verify dependencies, short descriptions, scope paths, and structured specs.
-6. Keep benchmark or verification test targets in task prose and acceptance criteria, not developer or child-planner `scope_paths`, unless tests are explicitly the owned bug surface.
+6. Keep benchmark or verification test targets in task prose and acceptance criteria, not developer, validator, or child-planner `scope_paths`, unless tests are explicitly the owned bug surface. If the only concrete paths are test files, broaden to the nearest live production owner boundary or leave the tests as evidence in `spec`; do not submit test paths as implementation scope.
 
 ## User request
 

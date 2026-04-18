@@ -541,6 +541,8 @@ async def test_grep_dot_path_uses_cwd():
     await daytona_grep.execute(daytona_grep.input_model(pattern="x"), ctx)
     executed = sb.process.exec.call_args.args[0]
     assert "/workspace" in executed
+    assert "grep" in executed
+    assert "root.rglob" not in executed
 
 
 # ---------------------------------------------------------------------------
@@ -586,6 +588,8 @@ async def test_glob_strips_double_star_prefix():
     call_cmd = sb.process.exec.call_args[0][0]
     assert "**/*.py" in call_cmd
     assert "python3 -c" in call_cmd
+    assert "find" in call_cmd
+    assert "os.walk" not in call_cmd
 
 
 async def test_glob_quotes_root_path_and_pattern_payload():

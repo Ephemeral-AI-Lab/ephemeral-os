@@ -51,7 +51,9 @@ _CODEACT_FILE_EDIT_POLICY_MESSAGE = (
     "daytona_write_file, daytona_rename_symbol, daytona_delete_file, or "
     "daytona_move_file so write-scope, OCC, and invalid-edit guardrails run "
     "before mutation. Use daytona_delete_file for removals and "
-    "daytona_move_file for path moves."
+    "daytona_move_file for path moves. Do not retry cleanup with rm, mv, "
+    "unlink, os.remove, Path.unlink, shutil.rmtree, shutil.move, git rm, or "
+    "git mv inside CodeAct."
 )
 _SHELL_FILE_EDIT_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
     (
@@ -77,7 +79,8 @@ _SHELL_FILE_EDIT_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
     ),
     (
         re.compile(
-            r"(?:^|[;&|]\s*)(?:touch|truncate|cp|mv|install|rm|rmdir)\b",
+            r"(?:^|[;&|]\s*)(?:touch|truncate|cp|mv|install|rm|rmdir)\b"
+            r"|(?:^|[;&|]\s*)git\s+(?:rm|mv)\b",
             flags=re.IGNORECASE,
         ),
         "filesystem mutation command",
@@ -385,7 +388,8 @@ _CODEACT_SHELL_FILE_EDIT_PATTERNS = (
     ),
     (
         re.compile(
-            r"(?:^|[;&|]\s*)(?:touch|truncate|cp|mv|install|rm|rmdir)\b",
+            r"(?:^|[;&|]\s*)(?:touch|truncate|cp|mv|install|rm|rmdir)\b"
+            r"|(?:^|[;&|]\s*)git\s+(?:rm|mv)\b",
             flags=re.IGNORECASE,
         ),
         "filesystem mutation command",
@@ -1043,6 +1047,10 @@ def _files_written_count(
         "Python with read()/shell() helpers. Do not use CodeAct for file edits; "
         "use daytona_edit_file, daytona_write_file, daytona_rename_symbol, "
         "daytona_delete_file, or daytona_move_file instead. "
+        "Never include shell or Python cleanup/mutation tokens such as `rm`, `mv`, "
+        "`unlink`, `os.remove`, `Path.unlink`, `shutil.rmtree`, `shutil.move`, "
+        "`os.rename`, `git rm`, or `git mv`; repo deletions and path moves must use "
+        "daytona_delete_file/daytona_move_file. "
         "stdout and stderr are already "
         "captured; do not append shell capture plumbing such as `2>&1` or `2>/dev/null`. "
         "Coordinated team commands already run from the repo root, so do not "

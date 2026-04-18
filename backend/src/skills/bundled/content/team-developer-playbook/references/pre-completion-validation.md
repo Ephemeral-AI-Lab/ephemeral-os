@@ -11,6 +11,7 @@ Use this reference before signaling completion when you have made source edits.
 - Do not skip this step even if your narrow verification command passed. A passing narrow test does not prove that your edits left no import or name errors in files outside the test's import chain.
 - Do not treat `ci_diagnostics` as a substitute for runtime verification. You still must run the assigned verification command. This is a pre-flight check, not the verdict.
 - If `ci_diagnostics` reports errors you cannot fix without widening scope, call `submit_task_summary(type='fail')` with the exact diagnostic output instead of leaving the errors in place.
+- Do not take another exploratory or cleanup turn when the remaining budget cannot cover diagnostics, verification, and the terminal summary. The terminal summary itself consumes a tool call; reserve it. Submit `submit_task_summary(type='fail')` with the current evidence instead.
 
 ## Workflow
 
@@ -22,7 +23,8 @@ Use this reference before signaling completion when you have made source edits.
    - Fix the error immediately with `daytona_edit_file`.
    - Re-run `ci_diagnostics(file_path)` on the fixed file.
    - Repeat until the file is clean.
-4. Only after all edited files pass diagnostics, proceed to your final verification command.
+4. Only after all edited files pass diagnostics, proceed to your final verification command if you can still reserve one tool call for the terminal summary.
+5. After final verification, immediately call exactly one `submit_task_summary(...)`. Use `type="success"` only for green evidence; otherwise use `type="fail"` with the red command, diagnostic, blocker, or incomplete-verification evidence.
 
 ## Expected Outcome
 

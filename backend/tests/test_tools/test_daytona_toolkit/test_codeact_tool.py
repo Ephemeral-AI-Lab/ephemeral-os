@@ -343,6 +343,8 @@ async def test_shell_mode_allows_audited_test_suite_write_with_warning():
         ("printf x | tee dask/core.py", "tee file write"),
         ("rm dask/core.py", "filesystem mutation command"),
         ("mv dask/core.py dask/new_core.py", "filesystem mutation command"),
+        ("git rm dask/core.py", "filesystem mutation command"),
+        ("git mv dask/core.py dask/new_core.py", "filesystem mutation command"),
     ],
 )
 async def test_team_shell_mode_blocks_file_edit_side_channels_before_exec(

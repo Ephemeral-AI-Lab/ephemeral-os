@@ -310,7 +310,11 @@ def _scope_overlap_warning(
         "Edit a file atomically. Use exactly one mode: "
         "(1) `old_text` + `new_text` for a single replacement or "
         "(2) `edits=[{\"strategy\":\"search_replace\",\"search\":\"...\",\"replace\":\"...\"}]` "
-        "for batched replacements. Never send `new_text` together with `edits`."
+        "for batched replacements. Never send `new_text` together with `edits`. "
+        "In coordinated team lanes, if live evidence says the target is an outside-scope "
+        "owner, missing module, compatibility shim, re-export, or import bridge, do not "
+        "call this tool; submit `submit_task_summary(type='fail')` so replanning can widen "
+        "or resequence the task. This is workflow guidance, not a runtime hard gate."
     ),
     short_description="Apply atomic file edits.",
     input_model=DaytonaEditFileInput,

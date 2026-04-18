@@ -11,6 +11,7 @@ moves flow through these OCC-gated tools instead of the unaudited shell path.
 
 from __future__ import annotations
 
+import asyncio
 import json
 from typing import Any
 
@@ -257,7 +258,8 @@ async def daytona_delete_file(
     if sandbox is not None and callable(rebind):
         rebind(sandbox)
 
-    result = svc.delete_file(
+    result = await asyncio.to_thread(
+        svc.delete_file,
         file_path,
         agent_id=_agent_id(context),
         description=description or f"delete {file_path}",
@@ -456,7 +458,8 @@ async def daytona_move_file(
     if sandbox is not None and callable(rebind):
         rebind(sandbox)
 
-    result = svc.move_file(
+    result = await asyncio.to_thread(
+        svc.move_file,
         src_resolved,
         dst_resolved,
         overwrite=overwrite,
