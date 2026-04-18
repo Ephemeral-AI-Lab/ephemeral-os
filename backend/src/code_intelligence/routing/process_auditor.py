@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+import inspect
 import json
 import logging
 import re
@@ -471,7 +472,12 @@ class ProcessAuditor:
         file_path: str,
     ) -> tuple[str, bool]:
         """Read a changed file without crossing event loops for async sandboxes."""
-        if sandbox is None:
+        if sandbox is None or not self._uses_native_content_read():
+            return self._content.read(file_path, allow_missing=True)
+
+        process = getattr(sandbox, "process", None)
+        exec_fn = getattr(process, "exec", None) if process is not None else None
+        if not inspect.iscoroutinefunction(exec_fn):
             return self._content.read(file_path, allow_missing=True)
 
         response = await self._exec_process(
@@ -490,6 +496,14 @@ class ProcessAuditor:
         if not isinstance(payload, dict) or not payload.get("exists"):
             return "", False
         return str(payload.get("content", "") or ""), True
+
+    def _uses_native_content_read(self) -> bool:
+        read = getattr(self._content, "read", None)
+        func = getattr(read, "__func__", None)
+        return (
+            getattr(func, "__module__", "") == "code_intelligence.routing.content_manager"
+            and getattr(func, "__qualname__", "") == "ContentManager.read"
+        )
 
 
 __all__ = ["ProcessAuditor"]

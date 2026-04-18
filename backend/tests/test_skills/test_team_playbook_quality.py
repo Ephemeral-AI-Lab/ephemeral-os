@@ -129,12 +129,17 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "live production owner files/directories only" in planner
     assert "never submit a `validator` task with `deps: []`" in planner.lower()
     assert "never omit same-layer `team_planner` siblings from validator `deps`" in planner.lower()
+    assert "must pairwise-check concrete non-planner tasks before `submit_plan(...)`" in planner.lower()
+    assert "never use a failed `submit_plan(...)` result to learn that parallel concrete tasks overlap" in planner.lower()
     assert "do not put those paths in `scope_paths` for developer, validator, or child-planner lanes" in planner
     assert "scope_paths` to production owner paths" in planner
     assert "never put verification-only benchmark tests in developer, validator, or child-planner `scope_paths`" in planner.lower()
     assert "never pass `*/tests/*`, `test_*.py`, or unconfirmed test-derived paths in scout `target_paths`" in planner.lower()
     assert "never guess an exact owner" in planner.lower()
     assert "never make non-submission tool calls after loading `plan-json-contract`" in planner.lower()
+    assert "missing modules, compatibility shims, re-export modules, and import bridges named only by tests" in planner
+    assert "new-file owner needs non-test production evidence" in planner
+    assert "standard re-export pattern" in planner
     assert "split unrelated scout targets" in planner.lower()
     assert "compat/re-export" not in planner
     assert "utils_dataframe.py" not in planner
@@ -151,7 +156,14 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "writes to test files as off-policy" in developer.lower()
     assert "test files in `scope_paths` as read/verify-only" in developer.lower()
     assert "must not create a new file outside `scope_paths`" in developer.lower()
+    assert "must not create a new file from test-import evidence alone" in developer.lower()
+    assert "scope_paths` names an absent module" in developer
     assert "compatibility shim, re-export module, or import bridge" in developer
+    assert "missing module named by tests or collection is a stop signal" in developer
+    assert "needed to make tests collect" in developer.lower()
+    assert "similar in-scope file" in developer.lower()
+    assert "attempt itself is a failed lane" in developer.lower()
+    assert "do not read, inspect, edit, run tests, or verify after the warning" in developer.lower()
     assert "submit_task_summary(type=\"fail\", content=...)" in developer
     assert "never treat test paths in `scope_paths` as edit permission" in developer.lower()
     assert "never create an outside-scope compatibility shim" in developer.lower()
@@ -174,6 +186,9 @@ def test_team_playbooks_load_references_for_detail_and_keep_top_level_generic() 
     assert "must load `action-cancel-and-redraft`" in replanner.lower()
     assert 'read_task_note(paths=[...], scope="sibling")' in replanner
     assert "final-action ordering" in replanner.lower()
+    assert "missing modules, compatibility shims, re-export modules, and import bridges named only by tests" in replanner
+    assert "non-test production evidence proves the absent file" in replanner
+    assert "similar in-scope filename is not an exception" in replanner
 
     assert "must load `completion-contract`" in scout.lower()
     assert "must not edit files" in scout.lower()
@@ -214,7 +229,9 @@ def test_reference_files_hold_specialized_detail() -> None:
     assert "Do not use Markdown headings" in planner_json
     assert "Mentioning dependencies inside `spec` does not set task deps" in planner_json
     assert "verification-only test targets in `spec` context or acceptance criteria" in planner_json
+    assert "Missing modules, compatibility shims, re-export modules, and import bridges named only by tests" in planner_json
     assert "child planners like `plan-parquet` or `plan-groupby`" in planner_json
+    assert "Pairwise overlap check" in planner_json
     assert "Never submit it with `deps: []`" in planner_json
     assert "Example task graph" in planner_decomposition
     assert '"id": "dev-hdf"' in planner_decomposition
@@ -240,6 +257,11 @@ def test_reference_files_hold_specialized_detail() -> None:
     assert "cd /testbed" in developer_runtime
     assert "pkg._compat" in developer_root_cause
     assert "missing module, compatibility shim, re-export module, or import bridge" in developer_widening
+    assert "not permission to create it" in developer_widening
+    assert "scope_paths` itself names an absent module" in developer_widening
+    assert "needed to make tests collect" in developer_widening.lower()
+    assert "do not attempt an out-of-scope edit or write" in developer_widening.lower()
+    assert "do not read, inspect, continue verifying" in developer_widening.lower()
     assert "a missing outside-scope owner becomes replan evidence" in developer_widening
     assert "The Task Center note is the durable handoff." in scout_ref
     assert "Make exactly one `submit_task_note(...)` call" in scout_ref
@@ -261,6 +283,11 @@ def test_replanner_references_spell_valid_submit_replan_payload_shape() -> None:
     assert "pairwise-check `new_tasks`" in replanner
     assert "Parallel concrete tasks must not share any `scope_paths` file" in add_tasks
     assert "parallel tasks that share an owner file" in corrective_fast_path
+    assert "new-file task for a missing module" in add_tasks
+    assert "Self-check `cancel_ids=[]`" in add_tasks
+    assert "replacement creates a test-derived missing path" in cancel_redraft
+    assert "standard re-export pattern" in add_tasks
+    assert "similar in-scope filename is not an exception" in cancel_redraft
 
     for content in (add_tasks, cancel_redraft):
         assert "`1. Goal:`" in content
@@ -303,6 +330,9 @@ def test_sweevo_context_stays_shared_and_runtime_focused() -> None:
     assert "Must keep `scope_paths` as soft coordination hints" in sweevo
     assert "Must treat test-file writes as off-policy" in sweevo
     assert "Must treat any advisory outside-scope write as a tainted packet" in sweevo
+    assert "The exact missing import path from tests does not grant permission" in sweevo
+    assert "scope_paths` alone is not enough for an absent test-derived path" in sweevo
+    assert "standard re-export pattern" in sweevo
     assert "Use `daytona_read_file(...)` only after notes plus CI identify a narrow line range" in sweevo
 
 

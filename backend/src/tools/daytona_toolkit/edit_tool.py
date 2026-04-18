@@ -311,10 +311,15 @@ def _scope_overlap_warning(
         "(1) `old_text` + `new_text` for a single replacement or "
         "(2) `edits=[{\"strategy\":\"search_replace\",\"search\":\"...\",\"replace\":\"...\"}]` "
         "for batched replacements. Never send `new_text` together with `edits`. "
+        "Before calling, compare `file_path` to your `scope_paths`; if it is outside "
+        "scope, do not attempt the edit to see whether the tool allows it, because the "
+        "attempt itself is a failed lane. "
         "In coordinated team lanes, if live evidence says the target is an outside-scope "
         "owner, missing module, compatibility shim, re-export, or import bridge, do not "
         "call this tool; submit `submit_task_summary(type='fail')` so replanning can widen "
-        "or resequence the task. This is workflow guidance, not a runtime hard gate."
+        "or resequence the task. Test imports, collection errors, and target counts naming "
+        "the path are not exceptions, and `scope_paths` alone is not enough to create an "
+        "absent test-derived module path. This is workflow guidance, not a runtime hard gate."
     ),
     short_description="Apply atomic file edits.",
     input_model=DaytonaEditFileInput,
@@ -358,6 +363,8 @@ async def daytona_edit_file(
         edits=edits,
     )
     if edit_error is not None:
+        if warnings:
+            return ToolResult(output=f"{edit_error}\n\n" + "\n".join(warnings), is_error=True)
         return ToolResult(output=edit_error, is_error=True)
 
     if get_ci_service(context) is None:

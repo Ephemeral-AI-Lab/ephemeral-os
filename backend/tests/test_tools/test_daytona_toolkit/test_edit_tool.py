@@ -289,6 +289,32 @@ async def test_edit_warns_write_outside_write_scope():
     assert any("outside write_scope" in w for w in data["warnings"])
 
 
+async def test_edit_invalid_input_includes_outside_scope_warning():
+    sb = _make_sandbox(download_content="original")
+    ctx = _ctx(
+        {
+            "daytona_sandbox": sb,
+            "daytona_cwd": "/testbed",
+            "agent_name": "developer",
+            "write_scope": ["dask/config.py"],
+        }
+    )
+
+    result = await daytona_edit_file.execute(
+        daytona_edit_file.input_model(
+            file_path="/testbed/dask/_compatibility.py",
+            new_text="from dask.compatibility import *\n",
+        ),
+        ctx,
+    )
+
+    assert result.is_error
+    assert "Provide `old_text`" in result.output
+    assert "outside write_scope" in result.output
+    assert "submit_task_summary(type='fail')" in result.output
+    assert sb._content_state["content"] == "original"
+
+
 async def test_edit_allows_write_inside_write_scope():
     sb = _make_sandbox(download_content="original")
     ctx = _ctx(

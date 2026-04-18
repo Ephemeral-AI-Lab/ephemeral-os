@@ -484,13 +484,14 @@ def _team_repo_write_warning(
         return (
             f"{tool_name}: write to {rel_path} is outside write_scope {write_scope} (advisory). "
             "You have 3+ outside-scope warnings — your assigned scope likely does not match what this task requires. "
-            "Stop editing and do not run more verification — call submit_task_summary(type='fail') to signal that your task scope is wrong and needs replanning."
+            "Stop now: your next tool call must be submit_task_summary(type='fail'). Do not read, edit, inspect, run tests, or verify from this state."
         )
     return (
         f"{tool_name}: write to {rel_path} is outside write_scope {write_scope} (advisory). "
-        "Do not claim this lane complete or keep verifying from an outside-scope write. "
-        "If live evidence proves this path is the real owner, a missing module, a compatibility shim, a re-export, or an import bridge, stop editing and call "
-        "submit_task_summary(type='fail') so replanning can widen or resequence the task."
+        "Stop now: your next tool call must be submit_task_summary(type='fail'). "
+        "Do not read, edit, inspect, run tests, or verify from an outside-scope write. "
+        "If this path is the real owner, a missing module, a compatibility shim, a re-export, or an import bridge, replanning must widen or resequence the task. "
+        "A test import, collection error, target count, or need to make tests collect is not an exception."
     )
 
 

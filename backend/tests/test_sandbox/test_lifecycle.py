@@ -33,6 +33,28 @@ class TestCloseClient:
         close_client(client)
 
 
+class TestAsyncCloseClient:
+    def test_awaits_close_method(self):
+        from sandbox.lifecycle import async_close_client
+
+        closed = False
+
+        class Client:
+            async def close(self):
+                nonlocal closed
+                closed = True
+
+        asyncio.run(async_close_client(Client()))
+
+        assert closed is True
+
+    def test_handles_missing_close_method(self):
+        from sandbox.lifecycle import async_close_client
+
+        client = MagicMock(spec=[])
+        asyncio.run(async_close_client(client))
+
+
 class TestShutdownCachedClient:
     def test_clears_async_client_cached_state(self):
         import sandbox.async_client as async_client_mod
@@ -51,4 +73,27 @@ class TestShutdownCachedClient:
         finally:
             loop.close()
 
+        assert len(async_client_mod._cached_clients) == 0
+
+    def test_async_shutdown_closes_active_loop_client(self):
+        import sandbox.async_client as async_client_mod
+        import sandbox.lifecycle as mod
+
+        closed = False
+
+        class Client:
+            async def close(self):
+                nonlocal closed
+                closed = True
+
+        async def run() -> None:
+            loop = asyncio.get_running_loop()
+            with async_client_mod._client_lock:
+                async_client_mod._cached_clients.clear()
+                async_client_mod._cached_clients[loop] = (("key", "url", "target"), Client())
+            await mod.shutdown_cached_client_async()
+
+        asyncio.run(run())
+
+        assert closed is True
         assert len(async_client_mod._cached_clients) == 0

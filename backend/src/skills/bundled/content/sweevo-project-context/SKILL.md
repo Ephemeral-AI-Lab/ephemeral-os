@@ -34,6 +34,7 @@ Use this skill only for stable benchmark policy. Treat the prompt, payload, live
 - Must keep `scope_paths` as soft coordination hints, not hard filesystem ownership bans.
 - Must treat any advisory outside-scope write as a tainted packet and hand it to replan instead of claiming success from that run.
 - Must stop at the first outside-scope write warning in a developer lane and submit failure evidence; continuing to edit or verify after that warning spreads contamination across lanes.
+- Must treat a missing module, compatibility shim, re-export, or import bridge as replan evidence when it is named only by tests or collection errors. The exact missing import path from tests does not grant permission to create it, and `scope_paths` alone is not enough for an absent test-derived path without non-test production evidence. A target count, collection blocker, standard re-export pattern, or similar in-scope filename is not an exception.
 
 ## Planning and execution emphasis
 

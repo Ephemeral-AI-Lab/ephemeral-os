@@ -10,7 +10,9 @@ Please read the following sections and call the listed terminal tool when your w
 4. Explore only enough to justify concrete child task ownership and scope boundaries.
 5. Draft the child plan and verify dependencies, short descriptions, scope paths, and structured specs.
 6. Keep benchmark or verification test targets in task prose and acceptance criteria, not developer, validator, or child-planner `scope_paths`, unless tests are explicitly the owned bug surface. If the only concrete paths are test files, broaden to the nearest live production owner boundary or leave the tests as evidence in `spec`; do not submit test paths as implementation scope.
-7. Before the terminal `submit_plan(...)` call, self-check the payload once. Validation errors on the terminal call count as a bad post call; include required descriptions, structured specs, and validator dependencies before calling.
+7. Do not promote a missing module, compatibility shim, re-export module, or import bridge named only by tests or collection errors into `scope_paths`. A new-file owner needs non-test production evidence that the absent file is the intended repository surface; otherwise keep the missing path as evidence and plan around the nearest live production owner. A target count, collection blocker, standard re-export pattern, or similar in-scope filename is not an exception.
+8. Before the terminal `submit_plan(...)` call, self-check the payload once. Validation errors on the terminal call count as a bad post call; include required descriptions, structured specs, validator dependencies, and same-file dependency ordering before calling.
+9. Pairwise-check every concrete non-planner task in `new_tasks`: if two parallel tasks share any exact `scope_paths` file and neither depends on the other, merge them, sequence them with `deps`, or replace the shared surface with one child `team_planner`. Do this before the single terminal call; never discover it from a failed `submit_plan(...)`.
 
 ## Assigned planner task
 

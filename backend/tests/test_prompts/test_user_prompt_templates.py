@@ -59,6 +59,12 @@ def test_render_user_prompt_template_uses_markdown_file_conditionals() -> None:
     assert "Benchmark and verification test files in this list are read/verify-only" in rendered
     assert "patch the production owner or submit a failure for replanning" in rendered
     assert "If live evidence identifies a missing module, compatibility shim" in rendered
+    assert "do not create it from test evidence alone" in rendered
+    assert "Needed to make tests collect" in rendered
+    assert "standard re-export pattern" in rendered
+    assert "scope_paths` names a new file that is absent" in rendered
+    assert "confirm non-test production evidence" in rendered
+    assert "the out-of-scope attempt itself is a failed lane" in rendered
     assert 'submit_task_summary(type="fail", content=...)' in rendered
     assert "## Context from dependencies" not in rendered
     assert "Tool-name contract" not in rendered
@@ -170,6 +176,11 @@ async def test_build_query_context_uses_developer_markdown_template() -> None:
     assert "## scope_paths\n- backend/src/retry.py" in ctx.user_message
     assert "Benchmark and verification test files in this list are read/verify-only" in ctx.user_message
     assert "missing module, compatibility shim, re-export, import bridge" in ctx.user_message
+    assert "stop signal, never permission to create a same-named path" in ctx.user_message
+    assert "Your next tool call must be `submit_task_summary" in ctx.user_message
+    assert "standard re-export pattern" in ctx.user_message
+    assert "scope_paths` names a new file that is absent" in ctx.user_message
+    assert "Do not attempt an out-of-scope edit or write" in ctx.user_message
 
 
 @pytest.mark.asyncio
@@ -212,6 +223,11 @@ async def test_build_query_context_uses_root_planner_markdown_template() -> None
     assert "not developer, validator, or child-planner `scope_paths`" in ctx.user_message
     assert "Before `run_subagent`, scrub scout `target_paths`" in ctx.user_message
     assert "keep benchmark tests and missing test-derived paths in task prose" in ctx.user_message
+    assert "Do not promote a missing module, compatibility shim" in ctx.user_message
+    assert "A new-file owner needs non-test production evidence" in ctx.user_message
+    assert "standard re-export pattern" in ctx.user_message
+    assert "Pairwise-check every concrete non-planner task in `new_tasks`" in ctx.user_message
+    assert "similar in-scope filename is not an exception" in ctx.user_message
     assert "After `run_subagent` scouts, read their notes with default scope" in ctx.user_message
     assert 'do not set `scope="sibling"` for those same-task scout notes' in ctx.user_message
     assert _SUBMIT_PLAN_SCHEMA_SNIPPET in ctx.user_message
@@ -267,6 +283,7 @@ async def test_build_query_context_uses_child_planner_structured_spec_contract()
     assert "not developer, validator, or child-planner `scope_paths`" in ctx.user_message
     assert "Before `run_subagent`, scrub scout `target_paths`" in ctx.user_message
     assert "keep benchmark tests and missing test-derived paths in task prose" in ctx.user_message
+    assert "Pairwise-check every concrete non-planner task in `new_tasks`" in ctx.user_message
     assert "After `run_subagent` scouts, read their notes with default scope" in ctx.user_message
     assert 'do not set `scope="sibling"` for those same-task scout notes' in ctx.user_message
     assert _SUBMIT_PLAN_SCHEMA_SNIPPET in ctx.user_message

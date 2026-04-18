@@ -12,11 +12,13 @@ Use `submit_replan(new_tasks=[...], cancel_ids=[])` when the plan structure is s
 
 - Never submit corrective tasks without reading sibling notes first.
 - Do not add tasks that duplicate work already covered by existing siblings.
+- Do not add a new-file task for a missing module, shim, re-export module, or import bridge whose only evidence is a test import or collection error. A target count, collection blocker, standard re-export pattern, or similar in-scope filename is not an exception.
 
 ## Workflow
 
 - Must confirm owner paths live with CI before submitting.
 - Must read sibling notes before deciding corrective scope.
+- If a failure names a missing import path, first target an existing live production owner or broader live boundary. Only create a new-file corrective task when non-test production evidence proves the absent file is the intended repository surface.
 - Each new task must have: `id`, `description`, `name` (agent), `spec`, `deps`, `scope_paths`. Do not set `parent_id`; every new task is inserted as a direct child of this replanner.
 - Keep each `description` as a planner-authored short label under about 10 words; put full instructions in `spec`.
 - Put all corrective work in `new_tasks`.
@@ -28,6 +30,7 @@ Use `submit_replan(new_tasks=[...], cancel_ids=[])` when the plan structure is s
 - Each `spec` must use numbered colon labels in this exact order: `1. Goal:`, `2. Environment:`, `3. Scope:`, `4. Context:`, `5. Acceptance Criteria:`. Do not use Markdown headings such as `## Goal`.
 - Do not include `task_note`, `output`, `background`, `parent_id`, or any top-level field besides `new_tasks` and `cancel_ids`.
 - Self-check the final payload before the single terminal call; do not use a failed `submit_replan(...)` attempt as a validation pass.
+- Self-check `cancel_ids=[]` for this action and verify that no task creates a test-derived missing path without non-test production evidence.
 - Must call `context_changed_since()` before submitting if freshness moved.
 - For layered failures, emit a two-phase corrective plan (see Hard Rule 10 in main playbook).
 - Corrective developer tasks must instruct the developer to run `ci_diagnostics(file_path)` on affected files first.

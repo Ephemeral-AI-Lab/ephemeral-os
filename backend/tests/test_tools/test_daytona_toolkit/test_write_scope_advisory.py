@@ -157,7 +157,9 @@ def test_write_warning_emitted_for_developer_outside_scope():
     assert "adjacent shim" not in result
     assert "submit_task_summary(type='fail')" in result
     assert "compatibility shim" in result
-    assert "Do not claim this lane complete or keep verifying" in result
+    assert "your next tool call must be submit_task_summary(type='fail')" in result
+    assert "Do not read, edit, inspect, run tests, or verify" in result
+    assert "need to make tests collect is not an exception" in result
 
 
 def test_write_warning_repeated_scope_mismatch_redirects_without_blocking():
@@ -185,7 +187,8 @@ def test_write_warning_repeated_scope_mismatch_redirects_without_blocking():
 
     assert result is not None
     assert "3+ outside-scope warnings" in result
-    assert "Stop editing and do not run more verification" in result
+    assert "your next tool call must be submit_task_summary(type='fail')" in result
+    assert "Do not read, edit, inspect, run tests, or verify" in result
     assert _team_repo_write_error(
         ctx,
         "/testbed/dask/base.py",
@@ -203,6 +206,10 @@ def test_write_and_edit_schema_redirects_outside_scope_shims_without_runtime_gat
         assert (
             "missing module, compatibility shim, re-export, or import bridge" in description
         )
+        assert "do not attempt the" in description
+        assert "attempt itself is a failed lane" in description
+        assert "Test imports, collection errors, and target counts" in description
+        assert "absent test-derived module path" in description
         assert "submit `submit_task_summary(type='fail')`" in description
         assert "workflow guidance, not a runtime hard gate" in description
 
