@@ -91,9 +91,19 @@ def _build_inner_script(
         f"mkdir -p {quoted_run}/ns || exit 90\n"
         f"mount -t tmpfs -o size={quoted_size} tmpfs {quoted_run}/ns 2> {quoted_run}/mount_err\n"
         f"[ $? -eq 0 ] || {{ cat {quoted_run}/mount_err; exit 91; }}\n"
-        f"mkdir -p {quoted_run}/ns/upper {quoted_run}/ns/work {quoted_run}/ns/merged\n"
+        f"mkdir -p {quoted_run}/ns/upper {quoted_run}/ns/work "
+        f"{quoted_run}/ns/merged {quoted_run}/ns/lower\n"
+        # Userxattr overlay rejects a lowerdir that lives on a
+        # different filesystem than the upperdir when we're in an
+        # unprivileged user namespace. Mount --bind of an arbitrary
+        # sub-directory into the tmpfs isn't allowed either (mount
+        # rejects non-mountpoint sources inside userns).
+        # Workaround: snapshot lowerdir into the tmpfs via cp -a.
+        # The snapshot is tmpfs-scoped and dies with the namespace.
+        f"cp -a {quoted_lower}/. {quoted_run}/ns/lower/ 2>> {quoted_run}/mount_err\n"
+        f"[ $? -eq 0 ] || {{ cat {quoted_run}/mount_err; exit 94; }}\n"
         f"mount -t overlay overlay "
-        f"-o lowerdir={quoted_lower},upperdir={quoted_run}/ns/upper,"
+        f"-o lowerdir={quoted_run}/ns/lower,upperdir={quoted_run}/ns/upper,"
         f"workdir={quoted_run}/ns/work,userxattr "
         f"{quoted_run}/ns/merged 2>> {quoted_run}/mount_err\n"
         f"[ $? -eq 0 ] || {{ cat {quoted_run}/mount_err; exit 92; }}\n"
@@ -164,10 +174,13 @@ def _build_overlay_bash(
     outer = (
         "set -u\n"
         f"mkdir -p {quoted_run} || exit 80\n"
-        f"INNER_SCRIPT={quoted_run}/inner.sh\n"
-        f"printf '%s' {shlex.quote(inner_b64)} | base64 -d > \"$INNER_SCRIPT\"\n"
-        f"chmod +x \"$INNER_SCRIPT\"\n"
-        f"unshare -Urm bash \"$INNER_SCRIPT\"\n"
+        # Decode the inner script into memory once and hand it to
+        # `bash -c` inside the ns via stdin, so the unshare, the
+        # mount namespace creation, and the script execution all
+        # happen in one uninterrupted process tree without any
+        # filesystem lookup from the child.
+        f"printf '%s' {shlex.quote(inner_b64)} | base64 -d | "
+        f"unshare -Urm bash -s\n"
         f"OUTER_RC=$?\n"
         # EXEC: user command stdout+stderr, base64 for safety.
         f"printf '%s\\n' {shlex.quote(exec_open)}\n"

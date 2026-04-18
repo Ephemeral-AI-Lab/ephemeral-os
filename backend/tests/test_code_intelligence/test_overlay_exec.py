@@ -35,7 +35,7 @@ def test_inner_script_contains_required_mounts() -> None:
     assert "userxattr" in inner
     assert "mount --bind" in inner
     assert "tar --numeric-owner" in inner
-    assert "lowerdir=/snapshot/repo" in inner
+    assert "cp -a /snapshot/repo/." in inner
     assert "--bind /tmp/overlay-abc/ns/merged /testbed" in inner
 
 

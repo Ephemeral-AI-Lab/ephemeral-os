@@ -108,7 +108,11 @@ def overlay_capable(live_overlay_env: LiveRenameEnv) -> None:
     env = live_overlay_env
 
     async def _exec(sandbox: Any, command: str, *, timeout: Any) -> Any:
-        return await sandbox.process.exec(command, timeout=timeout)
+        if timeout is not None:
+            return await asyncio.to_thread(
+                sandbox.process.exec, command, timeout=timeout
+            )
+        return await asyncio.to_thread(sandbox.process.exec, command)
 
     result = asyncio.run(
         probe_overlay_capability(env.async_sandbox, _exec)
@@ -164,7 +168,9 @@ def _build_auditor(
             pass
 
     async def _exec(sandbox: Any, command: str, *, timeout: Any = None) -> Any:
-        return await sandbox.process.exec(command, timeout=timeout)
+        if timeout is not None:
+            return await sandbox.process.exec(command, timeout=timeout)
+        return await sandbox.process.exec(command)
 
     async def _lowerdir_provider(_repo_root: str) -> str:
         return lowerdir
@@ -239,9 +245,12 @@ def _summarize_ops(op_results: list[dict[str, Any]]) -> dict[str, Any]:
 
 @pytest.mark.xfail(
     reason=(
-        "Overlay mount fails in the live auditor path with "
-        "'special device overlay does not exist' despite the isolated "
-        "probe succeeding on the same sandbox. Integration debug in progress."
+        "Live overlay integration: cp -a snapshot into tmpfs fixes the "
+        "'lowerdir on different fs' mount rejection, but the probe wired "
+        "through _AsyncSandboxWrapper still reports unsupported — debugging "
+        "the async-probe plumbing is ongoing. Unit coverage (48 tests) stays "
+        "green; OverlayExec + cp-a tmpfs snapshot work in the standalone "
+        "scripts/debug_overlay_exec.py harness."
     ),
     strict=False,
 )
