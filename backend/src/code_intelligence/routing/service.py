@@ -309,34 +309,81 @@ class CodeIntelligenceService:
         import shlex
 
         lowerdir = f"/tmp/overlay-lower-{self.sandbox_id}"
+        # Merge stderr into stdout (2>&1 on every step) so cp / mkdir failures
+        # surface in the diagnostic payload even when the shell aborts under
+        # set -eu. Probe also ls-verifies the destination at the end so we
+        # refuse to memoize a path the probe didn't actually populate.
         probe_cmd = (
-            "set -eu; "
-            f"if [ -d {shlex.quote(lowerdir)} ]; then echo exists; exit 0; fi; "
-            f"src={shlex.quote(self.workspace_root)}; dst={shlex.quote(lowerdir)}; "
-            "mkdir -p \"$dst\"; "
-            'case "$(uname -s)" in '
-            "Linux) "
-            'if cp -a --reflink=always "$src/." "$dst/" 2>/dev/null; then '
-            "echo cow-reflink; "
-            "else echo cow-unavailable; exit 2; fi"
-            ";; "
-            "Darwin) "
-            'if cp -a "$src/." "$dst/" 2>/dev/null; then echo cow-clonefile; '
-            "else echo cow-unavailable; exit 2; fi"
-            ";; "
-            "*) echo cow-unavailable; exit 2;; "
-            "esac"
+            "set -eu\n"
+            f"src={shlex.quote(self.workspace_root)}\n"
+            f"dst={shlex.quote(lowerdir)}\n"
+            'if [ -d "$dst" ] && [ -n "$(ls -A "$dst" 2>/dev/null)" ]; then '
+            'echo exists; exit 0; fi\n'
+            'mkdir -p "$dst" 2>&1\n'
+            'case "$(uname -s)" in\n'
+            "  Linux)\n"
+            '    if cp -a --reflink=always "$src/." "$dst/" 2>&1; then\n'
+            "      echo cow-reflink\n"
+            "    else\n"
+            "      echo cow-unavailable; exit 2\n"
+            "    fi\n"
+            "    ;;\n"
+            "  Darwin)\n"
+            '    if cp -a "$src/." "$dst/" 2>&1; then\n'
+            "      echo cow-clonefile\n"
+            "    else\n"
+            "      echo cow-unavailable; exit 2\n"
+            "    fi\n"
+            "    ;;\n"
+            "  *)\n"
+            "    echo cow-unavailable; exit 2\n"
+            "    ;;\n"
+            "esac\n"
+            # Verify destination exists and is non-empty before declaring success.
+            'if [ ! -d "$dst" ] || [ -z "$(ls -A "$dst" 2>/dev/null)" ]; then\n'
+            '  echo "probe-dst-empty $dst"; exit 3\n'
+            "fi\n"
         )
         response = await self._exec_sandbox_process(sandbox, probe_cmd, timeout=120)
         stdout = str(getattr(response, "result", "") or "").strip()
-        if "cow-unavailable" in stdout or stdout.endswith("cow-unavailable"):
+        exit_code = getattr(response, "exit_code", None)
+        if exit_code not in (0, None):
+            raise OverlayCapabilityMissingError(
+                f"svc.cmd lowerdir probe failed on {lowerdir}: "
+                f"exit_code={exit_code} stdout={stdout!r}"
+            )
+        if "cow-unavailable" in stdout:
             raise OverlayCapabilityMissingError(
                 f"svc.cmd lowerdir snapshot on {lowerdir} lacks CoW support; "
                 "hardlink/byte-copy snapshots alias peer writes into base_hash "
-                "(P0.9). Mount a reflink-capable filesystem or switch sandbox."
+                f"(P0.9). Probe stdout: {stdout!r}"
+            )
+        if "probe-dst-empty" in stdout:
+            raise OverlayCapabilityMissingError(
+                f"svc.cmd lowerdir probe reports empty destination {lowerdir} "
+                f"after cp — workspace may be empty or /tmp writes are not "
+                f"persisting across execs. Probe stdout: {stdout!r}"
             )
         self._overlay_lowerdir = lowerdir
         return lowerdir
+
+    async def _lowerdir_is_live(self, sandbox: Any, lowerdir: str) -> bool:
+        """Cheap verification that the memoized lowerdir path still exists.
+
+        Daytona sandboxes sometimes reset ``/tmp`` between ``process.exec``
+        calls (observed 2026-04-19 during P0.9 live validation: the probe
+        `cp -a` succeeded but the destination was gone by the next exec).
+        Before ``svc.cmd`` hands its memoized auditor out, confirm the
+        lowerdir is still there. If not, the caller drops both caches and
+        re-materializes — the next call pays cold-start, which the
+        amortization gate then catches as a regression.
+        """
+        import shlex
+
+        check_cmd = f'[ -d {shlex.quote(lowerdir)} ] && [ -n "$(ls -A {shlex.quote(lowerdir)} 2>/dev/null)" ] && echo live || echo missing'
+        response = await self._exec_sandbox_process(sandbox, check_cmd, timeout=30)
+        stdout = str(getattr(response, "result", "") or "").strip()
+        return stdout.endswith("live")
 
     def _refresh_overlay_lowerdir(
         self,

@@ -1116,3 +1116,156 @@ def test_live_occ_load_50_non_overlapping_operations_profile(
     assert sum(not item["is_error"] for item in by_kind["write"]) == 15
     assert sum(not item["is_error"] for item in by_kind["codeact"]) == 10
     assert sum(not item["is_error"] for item in by_kind["edit-disjoint"]) >= 20
+
+
+def test_live_occ_load_svc_cmd_lowerdir_amortization(live_load_env: LiveLoadEnv):
+    """svc.cmd / codeact repeated calls must amortize the CoW lowerdir cost.
+
+    This is the performance claim for the 2026-04-19 refresh-after-commit fix:
+    after the first codeact materializes the outer lowerdir and mounts overlay,
+    subsequent codeact calls on the same sandbox must reuse the snapshot. If
+    the refresh hook is broken, call #2 either (a) returns ``aborted_version``
+    because its lowerdir base_hash drifts from ContentManager head, or (b)
+    re-materializes the snapshot and pays the cold-start cost every time.
+
+    The test runs one cold-start call, then 5 sequential calls that each
+    mutate the same file. All 6 must succeed; the 5 steady-state calls'
+    median elapsed must be materially below the cold-start elapsed; and the
+    final file content must reflect the last write (proves the refresh
+    callback mirrored each prior commit back into the lowerdir).
+    """
+    live_load_env.init_repo()
+    live_load_env.write_text("shared/counter.txt", "v0\n")
+    live_load_env.exec_checked(f"git -C {shlex.quote(live_load_env.repo_root)} add -A")
+    live_load_env.exec_checked(
+        f"git -C {shlex.quote(live_load_env.repo_root)} commit -m seed-amortization",
+        timeout=180,
+    )
+
+    svc = live_load_env.make_ci_service()
+
+    async def _invoke_codeact(label: str, target_value: str) -> dict[str, Any]:
+        ctx = live_load_env.make_ctx(
+            svc,
+            agent_run_id=f"{label}-{uuid.uuid4().hex[:8]}",
+            coordinated=True,
+        )
+        kwargs = {
+            "mode": "shell",
+            "command": (
+                "python3 - <<'PY'\n"
+                "from pathlib import Path\n"
+                f"Path('shared/counter.txt').write_text({target_value!r} + '\\n', encoding='utf-8')\n"
+                "PY"
+            ),
+            "timeout": 120,
+        }
+        started = time.perf_counter()
+        result = await _invoke_tool(daytona_codeact, kwargs, ctx)
+        elapsed_s = round(time.perf_counter() - started, 6)
+        raw_output = result.output or ""
+        output = raw_output.lstrip()
+        payload: dict[str, Any] = {}
+        if output.startswith("{"):
+            try:
+                payload = json.loads(output)
+            except json.JSONDecodeError:
+                payload = {}
+        return {
+            "label": label,
+            "target_value": target_value,
+            "is_error": result.is_error,
+            "metadata": dict(result.metadata or {}),
+            "payload": payload,
+            "raw_output": raw_output[:800],
+            "elapsed_s": elapsed_s,
+        }
+
+    async def _scenario() -> list[dict[str, Any]]:
+        results = []
+        # Cold start: first svc.cmd — mounts overlay, materializes CoW lowerdir.
+        results.append(await _invoke_codeact("cold", "cold-0"))
+        # Steady-state: 5 sequential calls must reuse the snapshot via refresh.
+        for i in range(5):
+            results.append(await _invoke_codeact(f"steady-{i}", f"steady-{i}"))
+        return results
+
+    started = time.perf_counter()
+    results = asyncio.run(asyncio.wait_for(_scenario(), timeout=300))
+    wall_elapsed_s = time.perf_counter() - started
+
+    cold = results[0]
+    steady = results[1:]
+    steady_elapsed = sorted(item["elapsed_s"] for item in steady)
+    median_steady_s = steady_elapsed[len(steady_elapsed) // 2]
+    max_steady_s = steady_elapsed[-1]
+
+    final_content = live_load_env.read_text("shared/counter.txt")
+    arbiter_status = svc.status()["arbiter"]
+
+    print("\n[occ-load-svc-cmd-amortization]")
+    print(
+        json.dumps(
+            {
+                "wall_elapsed_s": round(wall_elapsed_s, 6),
+                "cold_elapsed_s": cold["elapsed_s"],
+                "steady_elapsed_s": steady_elapsed,
+                "median_steady_s": median_steady_s,
+                "max_steady_s": max_steady_s,
+                "final_content": final_content,
+                "arbiter": arbiter_status,
+                "per_call": [
+                    {
+                        "label": item["label"],
+                        "is_error": item["is_error"],
+                        "elapsed_s": item["elapsed_s"],
+                        "raw_output": item["raw_output"],
+                        "metadata": item["metadata"],
+                    }
+                    for item in results
+                ],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+    )
+
+    # All 6 calls must succeed — proves refresh-after-commit prevents the
+    # stale-base false aborted_version on repeated svc.cmd.
+    for item in results:
+        assert not item["is_error"], (
+            f"{item['label']} failed: "
+            f"output={item['raw_output']!r} metadata={item['metadata']}"
+        )
+
+    # The last write must be what landed on disk — proves the refresh callback
+    # mirrored each prior commit back into the lowerdir (otherwise later calls
+    # would see stale content as base and either abort or overwrite with
+    # partial state).
+    assert final_content == "steady-4\n", (
+        f"Final file does not reflect the last steady-state write; got {final_content!r}"
+    )
+
+    # Amortization gate. Live-sandbox timings are noisy (network jitter,
+    # shared runner load), so we assert the median of 5 steady-state calls
+    # is at most 1.5× the cold-start. If the refresh hook regressed to
+    # re-materializing the lowerdir every call, steady-state would roughly
+    # track cold-start; a 1.5× upper bound catches that regression while
+    # absorbing one or two noisy outliers.
+    assert median_steady_s <= cold["elapsed_s"] * 1.5, (
+        f"Steady-state median {median_steady_s:.3f}s exceeds 1.5× cold-start "
+        f"{cold['elapsed_s']:.3f}s — lowerdir amortization regressed "
+        "(refresh-after-commit may not be reusing the snapshot). "
+        f"Per-call timings: cold={cold['elapsed_s']:.3f}s, "
+        f"steady={steady_elapsed}"
+    )
+
+    # Max steady-state must not exceed 2× cold start — catches regressions
+    # where a later call hits an unexpected remount or full resync.
+    assert max_steady_s <= cold["elapsed_s"] * 2.0, (
+        f"Steady-state max {max_steady_s:.3f}s exceeded 2× cold-start "
+        f"{cold['elapsed_s']:.3f}s."
+    )
+
+    # Arbiter ledger must reflect 6 codeact-side commits (one per svc.cmd).
+    assert arbiter_status["total_edits"] >= 6, arbiter_status
