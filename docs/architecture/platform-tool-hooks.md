@@ -4,7 +4,7 @@ Platform tool hooks are the in-process interception system for tool execution.
 They replace the legacy user-configurable subprocess hook bus and are owned by
 the runtime, not by user configuration.
 
-This design note defines the desired execution contract before migration. It is
+This design note defines the current execution contract after migration. It is
 intentionally limited to control flow, user/API visibility, and concurrency
 semantics.
 
@@ -385,9 +385,9 @@ Lower-level validation and normalization helpers may remain reusable. The
 important boundary is that user-visible hook notifications are emitted from the
 active execution stream, not staged in metadata for later draining.
 
-## Proposed Module Shape
+## Current Module Shape
 
-The platform hook implementation should live under `tools.core`, not under the
+The platform hook implementation lives under `tools.core`, not under the
 legacy top-level `hooks` package. This avoids retaining the old user-configured
 hook concept while making the relationship to tool execution explicit.
 
@@ -407,12 +407,8 @@ Responsibilities:
 - `registry.py`: process-global registry keyed by tool glob, phase, and
   priority.
 - `pipeline.py`: sequential pre-hook and post-hook chain runners.
-- `execution.py`: hook-aware tool-call execution primitive that emits stream
-  events and returns one final `ToolResultBlock`.
-
-The existing `tools.core.guards` package should either be moved into this new
-package or left as a compatibility shim while imports migrate. The migration
-should not create a second independent registry.
+- `execution.py`: hook-aware tool execution primitive that emits stream events
+  and returns one final `ToolResult`.
 
 ## Policy Hook Module Layout
 
@@ -420,14 +416,16 @@ Policy hooks should live with the toolkit that owns the policy. They are hook
 modules, not tools. The generic framework belongs in `tools.core.hooks`; Daytona
 write-scope and CodeAct policy belongs in `tools.daytona_toolkit.hooks`.
 
-Recommended Daytona layout:
+Current Daytona layout:
 
 ```text
 backend/src/tools/daytona_toolkit/hooks/
   __init__.py
+  _common.py
 
   prehook/
     __init__.py
+    _codeact_common.py
     write_scope_hard_block.py
     write_scope_advisory.py
     write_scope_deny.py
@@ -477,9 +475,8 @@ phase, priority, name)` entries, or the package initializer should guard
 registration explicitly. Registry-level idempotence is preferred because it
 protects all hook packages consistently.
 
-The old `tools.daytona_toolkit.guards` module should be removed after migration,
-or retained only as a temporary compatibility shim that imports the new hook
-modules. It must not define a second registration path.
+The old `tools.daytona_toolkit.guards` module has been removed. Daytona policy
+registration now flows only through `tools.daytona_toolkit.hooks`.
 
 ## Daytona Pre-Hook Inventory
 
@@ -895,10 +892,10 @@ from post-hook failure.
 
 ## Migration Notes
 
-The existing `tools.core.guards` package already has much of the pre-hook
-behavior: priority ordering, argument mutation, advisory outcomes, and denial
-short-circuiting. The migration should promote or rename that system rather than
-create a second parallel hook registry.
+The old `tools.core.guards` package was removed rather than retained as a
+compatibility layer. Its useful behavior was promoted into `tools.core.hooks`:
+priority ordering, argument mutation, advisory outcomes, and denial
+short-circuiting.
 
 The migration should remove the legacy `hooks` package behavior only after the
 new streaming execution primitive is wired through foreground execution,
@@ -918,7 +915,7 @@ The migration should update tests around:
 
 ## Files Added
 
-Proposed new files:
+New files:
 
 ```text
 backend/src/tools/core/hooks/__init__.py
@@ -927,7 +924,9 @@ backend/src/tools/core/hooks/registry.py
 backend/src/tools/core/hooks/pipeline.py
 backend/src/tools/core/hooks/execution.py
 backend/src/tools/daytona_toolkit/hooks/__init__.py
+backend/src/tools/daytona_toolkit/hooks/_common.py
 backend/src/tools/daytona_toolkit/hooks/prehook/__init__.py
+backend/src/tools/daytona_toolkit/hooks/prehook/_codeact_common.py
 backend/src/tools/daytona_toolkit/hooks/prehook/write_scope_hard_block.py
 backend/src/tools/daytona_toolkit/hooks/prehook/write_scope_advisory.py
 backend/src/tools/daytona_toolkit/hooks/prehook/write_scope_deny.py
@@ -943,26 +942,12 @@ backend/src/tools/daytona_toolkit/hooks/posthook/codeact_audited_write_policy.py
 backend/tests/test_tools/test_hooks/__init__.py
 backend/tests/test_tools/test_hooks/test_pipeline.py
 backend/tests/test_tools/test_hooks/test_execution.py
-backend/tests/test_tools/test_hooks/test_notifications.py
-backend/tests/test_engine/test_tool_hook_concurrency.py
+backend/tests/test_tools/test_daytona_toolkit/conftest.py
 ```
-
-Optional compatibility files if a staged rename is safer:
-
-```text
-backend/src/tools/core/guards/__init__.py
-backend/src/tools/core/guards/types.py
-backend/src/tools/core/guards/registry.py
-backend/src/tools/core/guards/pipeline.py
-```
-
-The optional compatibility files should re-export from `tools.core.hooks` only
-for the migration window. They should not contain a separate registry.
 
 ## Files Removed
 
-Legacy subprocess hook files to remove once the new execution primitive is
-wired through all production paths:
+Legacy subprocess hook files removed:
 
 ```text
 backend/src/hooks/schemas.py
@@ -974,14 +959,27 @@ backend/src/hooks/_factory.py
 backend/src/hooks/__init__.py
 ```
 
-Legacy tests and docs should be removed or rewritten if they assert
-user-configurable subprocess hook behavior. Query-engine docs should stop
-describing `hook_executor` as an integration point.
+Legacy guard files and tests removed:
+
+```text
+backend/src/tools/core/guards/__init__.py
+backend/src/tools/core/guards/types.py
+backend/src/tools/core/guards/registry.py
+backend/src/tools/core/guards/pipeline.py
+backend/src/tools/daytona_toolkit/guards.py
+backend/tests/test_tools/test_guards/__init__.py
+backend/tests/test_tools/test_guards/test_pipeline.py
+backend/tests/test_tools/test_guards/test_registry.py
+backend/tests/test_tools/test_guards/test_run_tool_safely_integration.py
+backend/tests/test_tools/test_guards/test_telemetry.py
+```
+
+Query-engine docs now describe platform hooks instead of `hook_executor`.
 
 ## Files Retargeted
 
-Runtime files that should stop using `hook_executor` and instead call the new
-hook-aware execution primitive:
+Runtime files retargeted from `hook_executor` or direct tool execution to the
+new hook-aware execution primitive:
 
 ```text
 backend/src/tools/core/tool_execution.py
@@ -991,21 +989,19 @@ backend/src/engine/core/streaming_executor.py
 backend/src/engine/runtime/background_dispatch.py
 backend/src/external_trigger/runner.py
 backend/src/engine/runtime/agent.py
-backend/src/engine/core/notifications.py
 ```
 
 Configuration files to retarget:
 
 ```text
 backend/src/config/settings.py
-pyproject.toml
 ```
 
-`settings.py` should drop the `hooks` field and the import of legacy hook
-schemas. `pyproject.toml` should drop `httpx` only if no other first-party
-runtime code still needs it after legacy hook removal.
+`settings.py` dropped the `hooks` field and the import of legacy hook schemas.
+`pyproject.toml` still keeps `httpx` because other runtime/provider paths depend
+on it directly or transitively.
 
-Existing hook registrations to move or rename:
+Existing hook registrations moved:
 
 ```text
 backend/src/tools/daytona_toolkit/guards.py
@@ -1013,21 +1009,19 @@ backend/src/tools/daytona_toolkit/__init__.py
 backend/src/tools/daytona_toolkit/toolkit.py
 ```
 
-These should register platform hooks through `tools.core.hooks`, preserving the
-current Daytona write-scope and CodeAct behavior. The current monolithic
-`guards.py` file should be replaced by the per-hook module layout under
+These now register platform hooks through `tools.core.hooks`, preserving the
+current Daytona write-scope and CodeAct behavior. The monolithic `guards.py`
+file was replaced by the per-hook module layout under
 `tools.daytona_toolkit.hooks`.
 
 Documentation files to update:
 
 ```text
 docs/architecture/query-engine.md
-docs/query-engine-agent-loop.html
-README.md
+docs/query-engine-diagram.html
 ```
 
-Generated HTML docs may be regenerated instead of manually edited if the repo
-has a generation path.
+The architecture design note itself is `docs/architecture/platform-tool-hooks.md`.
 
 ## Migration Plan
 
