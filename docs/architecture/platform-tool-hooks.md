@@ -1023,7 +1023,7 @@ docs/query-engine-diagram.html
 
 The architecture design note itself is `docs/architecture/platform-tool-hooks.md`.
 
-## Migration Plan
+## Implemented Migration Plan
 
 ### Phase 0: Confirm Behavior and Freeze Scope
 
@@ -1044,11 +1044,10 @@ Exit criteria:
 
 Deliverables:
 
-- Add `tools.core.hooks` package.
-- Move or copy outcome types from `tools.core.guards` into `tools.core.hooks`.
-- Add `PreHookOutcome`, `PostHookOutcome`, and pipeline result types.
-- Add registry and pipeline tests.
-- Keep `tools.core.guards` as a temporary compatibility layer if needed.
+- Added `tools.core.hooks` package.
+- Added `PreHookOutcome`, `PostHookOutcome`, and pipeline result types.
+- Added registry and pipeline tests.
+- Removed the old `tools.core.guards` package after migration.
 
 Exit criteria:
 
@@ -1063,7 +1062,7 @@ Suggested tests:
 
 ```text
 backend/tests/test_tools/test_hooks/test_pipeline.py
-backend/tests/test_tools/test_hooks/test_notifications.py
+backend/tests/test_tools/test_hooks/test_execution.py
 ```
 
 ### Phase 2: Extract Validated Tool Execution Helpers
@@ -1085,7 +1084,7 @@ Exit criteria:
 Suggested tests:
 
 ```text
-backend/tests/test_tools/test_guards/test_run_tool_safely_integration.py
+backend/tests/test_tools/test_hooks/test_execution.py
 backend/tests/test_engine/test_tool_call_loop.py
 ```
 
@@ -1191,24 +1190,23 @@ backend/tests/test_engine/test_background_e2e.py
 backend/tests/test_external_trigger/test_runner.py
 ```
 
-### Phase 7: Migrate Existing Guard Registrations
+### Phase 7: Migrate Existing Policy Registrations
 
 Deliverables:
 
-- Move Daytona write-scope and CodeAct guard registrations to
+- Move Daytona write-scope and CodeAct policy registrations to
   `tools.core.hooks`.
-- Rename `GuardOutcome` concepts in the registrations to hook outcome concepts.
 - Split the current monolithic Daytona guard module into one file per hook under
   `tools.daytona_toolkit.hooks.prehook` and `tools.daytona_toolkit.hooks.posthook`.
 - Add idempotent package-level registration for Daytona hooks.
 - Preserve existing policy messages and golden outputs.
-- Keep compatibility imports only as long as needed.
+- Remove the old Daytona guard module.
 
 Exit criteria:
 
 - Existing Daytona write-scope behavior is unchanged.
 - CodeAct shell normalization still mutates arguments before destructive
-  command guards run.
+  command policy hooks run.
 - Re-importing Daytona hook packages does not duplicate registry entries.
 - Existing coordination-warning side effects remain correct where they are still
   part of product behavior.

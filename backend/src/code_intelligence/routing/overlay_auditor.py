@@ -24,6 +24,7 @@ received from the legacy process auditor.
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import inspect
 import json
@@ -39,6 +40,7 @@ from typing import Any
 
 from tools.daytona_toolkit._daytona_utils import _extract_exit_code, _wrap_bash_command
 
+from code_intelligence._async_bridge import use_sandbox_io_loop
 from code_intelligence.hashing import content_hash
 from code_intelligence.routing.overlay_exec import (
     OverlayExec,
@@ -152,7 +154,9 @@ class OverlayAuditor:
 
         local_tar = await self._download_remote_tar(sandbox, run.audit_tar_path)
         try:
-            changes = list(iter_upperdir_changes(local_tar))
+            changes = await asyncio.to_thread(
+                lambda: list(iter_upperdir_changes(local_tar)),
+            )
             if not attribute_changes:
                 return _audit_result(
                     run,
@@ -195,12 +199,14 @@ class OverlayAuditor:
         if not operation_changes:
             return _audit_result(run, committed=[], ambient=[])
 
-        result: OperationResult = self._write_coordinator.commit_operation_against_base(
-            operation_changes,
-            agent_id=agent_id,
-            edit_type="svc_cmd_overlay",
-            description=description,
-        )
+        with use_sandbox_io_loop():
+            result: OperationResult = await asyncio.to_thread(
+                self._write_coordinator.commit_operation_against_base,
+                operation_changes,
+                agent_id=agent_id,
+                edit_type="svc_cmd_overlay",
+                description=description,
+            )
         if not result.success:
             logger.warning(
                 "svc.cmd overlay commit aborted: status=%s reason=%s file=%s",

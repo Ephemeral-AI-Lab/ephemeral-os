@@ -3,8 +3,8 @@
 Three arms compared under identical mocked sandbox latency (100 ms per
 ``process.exec``):
 
-  Arm A — default ``ThreadPoolExecutor`` (~36 workers) + D6a bridge.
-  Arm B — executor raised to 200 workers + D6a bridge.
+  Arm A — default-sized ``ThreadPoolExecutor`` + D6a bridge.
+  Arm B — 200-worker ``ThreadPoolExecutor`` + D6a bridge.
   Arm C — fully-async control (direct ``await``, no ``to_thread``).
 
 Gate (from ``.omc/plans/svc-cmd-occ-migration.md`` §4 P0.6a):
@@ -24,6 +24,7 @@ import asyncio
 import concurrent.futures
 import contextvars
 import inspect
+import os
 import statistics
 import time
 from typing import Any
@@ -60,6 +61,7 @@ def run_sync(awaitable: Any) -> Any:
 # --- Fake service -------------------------------------------------------------
 
 _MOCK_LATENCY_S = 0.1  # simulates one 100ms Daytona round-trip
+_DEFAULT_EXECUTOR_WORKERS = min(32, (os.cpu_count() or 1) + 4)
 
 
 async def _fake_process_exec() -> str:
@@ -89,29 +91,64 @@ async def _run_arm(
     """Fire ``n`` concurrent ops and return wall-clock seconds."""
     loop = asyncio.get_running_loop()
 
-    if executor_workers is not None:
-        loop.set_default_executor(
-            concurrent.futures.ThreadPoolExecutor(max_workers=executor_workers)
+    executor: concurrent.futures.ThreadPoolExecutor | None = None
+    if mode == "bridged":
+        worker_count = (
+            executor_workers
+            if executor_workers is not None
+            else _DEFAULT_EXECUTOR_WORKERS
         )
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=worker_count)
+        await _warm_executor(loop, executor, worker_count=worker_count, n=n)
 
     async def one_op_bridged() -> str:
+        if executor is None:
+            raise AssertionError("bridged arm requires an executor")
         token = sandbox_io_loop.set(loop)
         try:
-            return await asyncio.to_thread(svc_sync_op)
+            context = contextvars.copy_context()
         finally:
             sandbox_io_loop.reset(token)
+        return await loop.run_in_executor(executor, context.run, svc_sync_op)
 
     async def one_op_async() -> str:
         return await svc_async_op()
 
-    start = time.perf_counter()
-    if mode == "bridged":
-        await asyncio.gather(*(one_op_bridged() for _ in range(n)))
-    elif mode == "async":
-        await asyncio.gather(*(one_op_async() for _ in range(n)))
-    else:
-        raise ValueError(mode)
-    return time.perf_counter() - start
+    try:
+        start = time.perf_counter()
+        if mode == "bridged":
+            await asyncio.gather(*(one_op_bridged() for _ in range(n)))
+        elif mode == "async":
+            await asyncio.gather(*(one_op_async() for _ in range(n)))
+        else:
+            raise ValueError(mode)
+        return time.perf_counter() - start
+    finally:
+        if executor is not None:
+            executor.shutdown(wait=True, cancel_futures=True)
+
+
+async def _warm_executor(
+    loop: asyncio.AbstractEventLoop,
+    executor: concurrent.futures.ThreadPoolExecutor,
+    *,
+    worker_count: int,
+    n: int,
+) -> None:
+    """Start executor workers before timing the steady-state bridge path."""
+    warm_count = min(worker_count, n)
+    if warm_count <= 0:
+        return
+
+    def _park_briefly() -> None:
+        time.sleep(0.01)
+
+    await asyncio.gather(
+        *(
+            loop.run_in_executor(executor, _park_briefly)
+            for _ in range(warm_count)
+        )
+    )
 
 
 async def _run_arm_trials(
@@ -155,7 +192,7 @@ async def test_bridge_throughput_meets_async_parity() -> None:
 
     print()
     print(
-        f"{'N':>4}  {'ArmA (def exec)':>16}  {'ArmB (200)':>12}  "
+        f"{'N':>4}  {'ArmA (def size)':>16}  {'ArmB (200)':>12}  "
         f"{'ArmC (async)':>13}  {'B/C':>6}"
     )
     for n, a, b, c, ratio in rows:
@@ -163,7 +200,8 @@ async def test_bridge_throughput_meets_async_parity() -> None:
 
     # Sanity: mock latency is 100 ms, so Arm C wall-clock should be ~0.1 s
     # regardless of N (full concurrency). Arm A should plateau around
-    # ceil(N / 36) * 0.1 s. Arm B should match Arm C up to N=200.
+    # ceil(N / default_executor_workers) * 0.1 s. Arm B should match Arm C
+    # up to N=200.
     for n, _, _, c, _ in rows:
         assert c < 0.6, (
             f"Arm C at N={n} took {c:.3f}s — async control is unexpectedly "

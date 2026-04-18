@@ -23,6 +23,7 @@ import os
 import subprocess
 import tarfile
 import tempfile
+import time
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock
@@ -187,6 +188,78 @@ def test_modify_upperdir_commits_one_occ_batch(tmp_path) -> None:
         assert kwargs["agent_id"] == "alice"
     finally:
         # Auditor's cleanup_tar may have already unlinked the local tar.
+        try:
+            os.unlink(tar)
+        except FileNotFoundError:
+            pass
+
+
+def test_occ_commit_does_not_block_event_loop(tmp_path) -> None:
+    repo_root = tmp_path / "repo"
+    lowerdir = tmp_path / "lower"
+    repo_root.mkdir()
+    lowerdir.mkdir()
+    (lowerdir / "foo.py").write_bytes(b"old\n")
+
+    tar = _build_tar(modify={"foo.py": b"new\n"})
+
+    class _SlowCoordinator:
+        def commit_operation_against_base(self, *args: Any, **kwargs: Any) -> OperationResult:
+            del args, kwargs
+            time.sleep(0.2)
+            return OperationResult(
+                success=True,
+                status="committed",
+                files=(
+                    EditResult(
+                        success=True,
+                        file_path=f"{repo_root}/foo.py",
+                        message="ok",
+                    ),
+                ),
+                conflict_file=None,
+                conflict_reason="",
+                timings={},
+            )
+
+    async def _exercise() -> int:
+        async def _lowerdir_provider(_repo_root: str) -> str:
+            return str(lowerdir)
+
+        async def _noop_exec(_sandbox, _command, **_kwargs):
+            return SimpleNamespace(result="", exit_code=0)
+
+        auditor = OverlayAuditor(
+            workspace_root=str(repo_root),
+            exec_process=_noop_exec,
+            write_coordinator=_SlowCoordinator(),
+            lowerdir_provider=_lowerdir_provider,
+            config=OverlayAuditorConfig(),
+        )
+        auditor._overlay = _StubOverlayExec(_make_run(tar))  # type: ignore[attr-defined]
+
+        async def _download(_sandbox, remote_path):
+            return remote_path
+
+        auditor._download_remote_tar = _download  # type: ignore[method-assign]
+
+        ticks = 0
+
+        async def _ticker() -> None:
+            nonlocal ticks
+            deadline = time.perf_counter() + 0.18
+            while time.perf_counter() < deadline:
+                await asyncio.sleep(0.02)
+                ticks += 1
+
+        ticker_task = asyncio.create_task(_ticker())
+        await auditor.execute(SimpleNamespace(), "python x.py", agent_id="alice")
+        await ticker_task
+        return ticks
+
+    try:
+        assert _run(_exercise()) >= 3
+    finally:
         try:
             os.unlink(tar)
         except FileNotFoundError:

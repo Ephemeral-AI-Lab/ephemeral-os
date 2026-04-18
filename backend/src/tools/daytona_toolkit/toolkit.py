@@ -88,7 +88,7 @@ def _build_instructions(*, include_codeact: bool) -> str:
         "OCC-gated code-intelligence commit path. Folder moves enumerate every descendant file, remap the "
         "src prefix to the target prefix, and submit the whole batch atomically. Base-hash drift on any "
         "member returns `aborted_version` with no merge fallback. Overwrite semantics are enforced by the "
-        "tool-guard prehook. Use this instead of `mv` in CodeAct.\n"
+        "platform pre-hook. Use this instead of `mv` in CodeAct.\n"
         f"{codeact_line}\n"
         "**Execute**\n"
         "- Use `daytona_codeact` for all runtime execution (tests, builds, verification).\n"

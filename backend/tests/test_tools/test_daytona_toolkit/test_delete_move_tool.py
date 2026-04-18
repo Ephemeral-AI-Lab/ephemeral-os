@@ -252,7 +252,7 @@ def test_move_file_dst_exists_surfaces_as_error() -> None:
 
 
 def test_move_file_denies_out_of_scope_src() -> None:
-    """Out-of-scope src_path is a hard Deny (guard-pipeline policy)."""
+    """Out-of-scope src_path is a hard Deny (platform hook policy)."""
     svc = _svc(
         move_result=_operation_result(
             success=True,
@@ -561,7 +561,7 @@ def test_move_folder_empty_short_circuits_to_moved() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Write-scope policy via guard pipeline (Q3/Q4 behavior)
+# Write-scope policy via platform hooks (Q3/Q4 behavior)
 # ---------------------------------------------------------------------------
 
 

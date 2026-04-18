@@ -5,7 +5,7 @@ operation through the code-intelligence OCC commit path. ``is_folder=True``
 enumerates every descendant file client-side and submits the whole set as a
 single OCC batch (delete) or a remapped :class:`MoveSpec` batch (move); the
 service-level OCC gate applies to each member file. Overwrite semantics are
-enforced by the tool-guard prehook, not by this tool.
+enforced by the platform pre-hook, not by this tool.
 
 CodeAct's shell policy blocks ``rm`` / ``mv`` precisely so that deletions
 and moves flow through these OCC-gated tools instead of the unaudited
@@ -436,7 +436,7 @@ class DaytonaMoveFileOutput(BaseModel):
         "enumerate every descendant file, remap the src prefix to the "
         "target prefix, and submit the whole batch atomically. Base-hash "
         "drift on any member aborts with `aborted_version`. Overwrite "
-        "semantics are enforced by the tool-guard prehook. Use this "
+        "semantics are enforced by the platform pre-hook. Use this "
         "instead of `mv` in CodeAct; CodeAct `mv` is blocked."
     ),
     short_description="Move a file or folder through the OCC commit path.",

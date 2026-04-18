@@ -417,11 +417,11 @@ def test_live_concurrent_move_disjoint_all_succeed(live_env: LiveEnv):
 
 
 @pytest.mark.skip(
-    reason="overwrite semantics migrated to the tool-guard prehook; "
-    "re-enable once the prehook implementation lands."
+    reason="overwrite semantics are enforced before the tool body; "
+    "live coverage for that pre-hook path is deferred."
 )
 def test_live_move_overwrite_replaces_existing_destination(live_env: LiveEnv):
-    """overwrite semantics are enforced by the tool-guard prehook (pending)."""
+    """Overwrite semantics are enforced by the platform pre-hook."""
 
 
 # ---------------------------------------------------------------------------
