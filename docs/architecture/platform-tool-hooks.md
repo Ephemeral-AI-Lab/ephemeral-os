@@ -1,0 +1,1166 @@
+# Platform Tool Hooks
+
+Platform tool hooks are the in-process interception system for tool execution.
+They replace the legacy user-configurable subprocess hook bus and are owned by
+the runtime, not by user configuration.
+
+This design note defines the desired execution contract before migration. It is
+intentionally limited to control flow, user/API visibility, and concurrency
+semantics.
+
+## Goals
+
+- Run tool pre-hooks and post-hooks as first-class phases in the tool execution
+  timeline.
+- Preserve exactly one API-facing tool result for every model tool use.
+- Show advisory hook messages to users immediately without sending those
+  advisory messages to the model API.
+- Keep foreground tool calls concurrent across a model turn.
+- Preserve strict hook ordering within each individual tool call.
+- Allow pre-hooks to transform parsed tool arguments before later pre-hooks and
+  the tool body see them.
+- Abort tool execution immediately when a pre-hook fails or denies the call.
+- Let post-hooks inspect the final tool result and optionally replace it with a
+  failed tool result.
+
+## Non-Goals
+
+- Do not keep user-configurable command, HTTP, prompt, or agent subprocess hooks.
+- Do not send advisory notifications to the model as system reminders.
+- Do not serialize all foreground tool calls just because one or more tool calls
+  have hooks.
+- Do not use a notification drain as the main hook delivery mechanism.
+- Do not batch advisory messages into one aggregate notification.
+- Do not require a complex advisory object when the tool name plus message is
+  enough.
+
+## Legacy Hook Removal
+
+The old hook bus accepted user configuration that could run shell commands,
+HTTP calls, model prompts, or agent-like validation. The migration removes that
+feature. Hooking becomes a platform-owned interception mechanism registered in
+code.
+
+The legacy event enum is no longer the right dispatch shape. Platform tool hooks
+dispatch by tool name, phase, and priority. The only meaningful phases are
+pre-tool and post-tool, and they are not lifecycle events exposed to user config.
+
+Removing the old bus means deleting the schema types for command, HTTP, prompt,
+and agent hooks; removing the executor paths for those hook types; removing
+settings-based hook loading; removing the settings field that stores configured
+hooks; and removing runtime wiring for `hook_executor`.
+
+## Hook Phases
+
+Each tool call has three ordered phases:
+
+1. Pre-hook phase.
+2. Tool execution phase.
+3. Post-hook phase.
+
+The pre-hook and post-hook phases are blocking for that individual tool call.
+The tool execution phase may stream normal tool events while the tool is
+running. Other tool calls in the same model turn may run concurrently and may
+interleave their events.
+
+## End-To-End Workflow
+
+The platform hook runner owns one tool call from parsed model request through
+the final API-facing tool result. The workflow below is the normative ordering
+for one tool use.
+
+| Step | Runtime action | User-visible event | API-visible effect |
+| --- | --- | --- | --- |
+| 1 | Receive model tool use and find the tool definition. | None. | None. |
+| 2 | Validate raw tool input with the tool input model. | None unless validation is surfaced by normal tool-result rendering. | Invalid input returns one failed tool result. |
+| 3 | Run matching pre-hooks in priority order. | Each advisory emits immediately as its own `SystemNotification`. | No API effect unless a pre-hook fails or denies. |
+| 4 | Apply any pre-hook argument mutation before the next pre-hook and before tool execution. | Optional advisory may explain the mutation. | The API does not see advisory text. |
+| 5 | Stop on pre-hook failure or denial. | Optional normal tool-completion event may show the failure result. | One failed tool result is returned; the tool body and post-hooks are skipped. |
+| 6 | Run the tool with final transformed arguments. | Normal started, progress, and completion events may stream. | The eventual tool result is held until post-hooks finish. |
+| 7 | If no post-hooks match, finalize the tool result. | Tool completion is emitted. | The tool result is returned. |
+| 8 | If post-hooks match, run them in priority order. | Each advisory emits immediately as its own `SystemNotification`. | No API effect unless a post-hook fails or denies. |
+| 9 | Stop on post-hook failure or denial. | Optional normal tool-completion event may show the failure result. | One failed tool result replaces the original API-facing result. |
+| 10 | Finalize the selected result. | Tool completion is emitted if it has not already been emitted by the runner. | Exactly one tool result is returned for the model tool use. |
+
+Diagram: one tool call lifecycle.
+
+| Phase | Ordered path |
+| --- | --- |
+| Input | model tool use -> tool lookup -> input validation |
+| Pre-hook | pre-hook 1 -> optional advisory notification -> optional arg mutation -> pre-hook 2 -> optional advisory notification -> continue until done or denied |
+| Tool | final args -> tool starts -> optional progress -> tool returns result |
+| Post-hook | post-hook 1 -> optional advisory notification -> post-hook 2 -> continue until done or denied |
+| Result | selected final result -> one API tool result |
+
+## Pre-Hook Phase
+
+Pre-hooks run sequentially in priority order for one tool call.
+
+The pre-hook pipeline starts with the parsed tool arguments. Each hook receives
+the current arguments. If a hook returns transformed arguments, the transformed
+arguments become the current arguments for the next hook. The final transformed
+arguments are passed to the tool body.
+
+If a pre-hook returns an advisory, the runtime emits one user-visible
+`SystemNotification` immediately for each advisory. The notification text must
+include the tool name and the advisory message. Advisory notifications are not
+sent to the model API and are not appended to conversation history as
+`SystemReminderBlock` messages.
+
+If a pre-hook fails or denies the call, the pre-hook chain stops immediately.
+Remaining pre-hooks do not run. The tool body does not run. The runtime returns
+a failed tool result to the model API for that tool use. The failed tool result
+is the only pre-hook message that reaches the API.
+
+Pre-hook advisories do not stop the pipeline. They also are not accumulated for
+later emission.
+
+## Pre-Hook Workflow
+
+Pre-hook execution is a strict chain. The chain is local to one tool call and is
+independent from other concurrently running tool calls.
+
+| Current hook outcome | Runtime action | Next step |
+| --- | --- | --- |
+| No effect | Keep current arguments. | Run the next pre-hook. |
+| Argument mutation | Replace current arguments with the transformed arguments. | Run the next pre-hook with transformed arguments. |
+| One advisory | Emit one `SystemNotification` that names the tool and message. | Run the next pre-hook. |
+| Multiple advisories | Emit one separate `SystemNotification` per advisory, in the order returned by the hook. | Run the next pre-hook. |
+| Denial | Stop the pre-hook chain. | Return a failed tool result; skip tool execution and post-hooks. |
+| Hook exception | Stop the pre-hook chain. | Return a failed tool result; skip tool execution and post-hooks. |
+
+Diagram: pre-hook argument flow.
+
+| Link | Input args | Hook result | Output args |
+| --- | --- | --- | --- |
+| Start | Parsed tool args | None. | Parsed tool args. |
+| Pre-hook A | Parsed tool args | Mutates args and emits advisory. | Args from pre-hook A. |
+| Pre-hook B | Args from pre-hook A | No effect. | Args from pre-hook A. |
+| Pre-hook C | Args from pre-hook A | Mutates args again. | Args from pre-hook C. |
+| Tool body | Args from pre-hook C | Tool executes. | Tool result. |
+
+Diagram: pre-hook denial flow.
+
+| Link | Runtime state |
+| --- | --- |
+| Parsed input | Validated successfully. |
+| Pre-hook A | Advisory emitted to user only; chain continues. |
+| Pre-hook B | Denial returned. |
+| Stop point | Pre-hook C does not run. |
+| Tool body | Does not run. |
+| Post-hooks | Do not run. |
+| API result | Failed tool result with pre-hook denial message. |
+
+## Tool Execution Phase
+
+Tool execution starts only after the pre-hook phase finishes without error.
+
+The tool receives the final transformed arguments from the pre-hook pipeline.
+Normal tool execution events remain streamable. Long-running tools may emit
+progress while they run. The runtime still produces one eventual tool result for
+the model API.
+
+If no post-hooks match the tool, the tool result is final as soon as the tool
+execution phase completes.
+
+## Tool Execution Workflow
+
+The tool execution phase is the only phase that may emit normal tool progress.
+Pre-hooks and post-hooks are blocking phases around it.
+
+| Tool execution event | Runtime action | User-visible event | API-visible effect |
+| --- | --- | --- | --- |
+| Tool starts | Runtime starts the tool with final transformed args. | `ToolExecutionStarted`. | None yet. |
+| Tool emits progress | Runtime forwards progress from the tool or background manager. | `ToolExecutionProgress`. | None yet. |
+| Tool returns success | Runtime validates and holds the result. | Completion may be delayed until post-hooks finish. | Result is not final until post-hooks finish. |
+| Tool returns failure | Runtime holds the failed result. | Completion may be delayed until post-hooks finish. | Result is not final until post-hooks finish. |
+| Tool raises unexpected exception | Runtime converts it to failed tool result. | Completion may be delayed until post-hooks finish. | Failed result is not final until post-hooks finish. |
+
+If there are no post-hooks for the tool, the held tool result is immediately
+selected as the final result.
+
+## Post-Hook Phase
+
+Post-hooks run sequentially after the tool body has produced a result. They run
+only when the tool body actually executed. A pre-hook denial skips post-hooks.
+
+Post-hooks receive the tool name, the final arguments used by the tool, the
+execution context, and the tool result. Post-hook advisories are emitted
+immediately as user-only `SystemNotification` events. Each notification includes
+the tool name and advisory message. These notifications are not sent to the API
+and are not accumulated.
+
+If a post-hook fails or denies the result, the post-hook chain stops
+immediately. The runtime returns a failed tool result to the model API. The
+failed post-hook result replaces the original API-facing tool result, but the
+runtime may preserve original result details in metadata or telemetry for audit.
+
+If post-hooks all complete without failure, the original tool result remains the
+API-facing result.
+
+## Post-Hook Workflow
+
+Post-hooks are validators and observers for a completed tool execution. They do
+not mutate tool arguments. They may emit user-only advisories. They may replace
+the API-facing result with a failed result if policy requires.
+
+| Current hook outcome | Runtime action | Next step |
+| --- | --- | --- |
+| No effect | Keep the held tool result unchanged. | Run the next post-hook. |
+| One advisory | Emit one `SystemNotification` that names the tool and message. | Run the next post-hook. |
+| Multiple advisories | Emit one separate `SystemNotification` per advisory, in the order returned by the hook. | Run the next post-hook. |
+| Denial | Stop the post-hook chain. | Replace the held result with a failed post-hook result. |
+| Hook exception | Stop the post-hook chain. | Replace the held result with a failed post-hook result. |
+
+Diagram: post-hook success flow.
+
+| Link | Runtime state |
+| --- | --- |
+| Tool body | Tool returned success or failure. |
+| Post-hook A | Advisory emitted to user only; chain continues. |
+| Post-hook B | No effect; chain continues. |
+| End of chain | Original tool result remains selected. |
+| API result | Original tool result is returned to the model. |
+
+Diagram: post-hook denial flow.
+
+| Link | Runtime state |
+| --- | --- |
+| Tool body | Tool returned success or failure. |
+| Post-hook A | Advisory emitted to user only; chain continues. |
+| Post-hook B | Denial returned. |
+| Stop point | Post-hook C does not run. |
+| Result selection | Original tool result is replaced for API purposes. |
+| API result | Failed post-hook result is returned to the model. |
+
+## Advisory Visibility
+
+Advisories are for users and operators, not for the model.
+
+The runtime emits advisories as `SystemNotification` stream events only. It does
+not append advisory messages to `display_messages`. It does not wrap advisories
+in `SystemReminderBlock`. It does not include advisory text in the API request
+history unless a separate product decision changes that behavior.
+
+The advisory text format should be explicit and compact:
+
+- Pre-hook advisory: phase label, tool name, message.
+- Post-hook advisory: phase label, tool name, message.
+
+The tool name plus advisory message is sufficient. Advisory categories may still
+be carried in event metadata or notification category fields for UI filtering,
+but the message itself must stand alone.
+
+## Notification Workflow
+
+Advisory notification delivery is synchronous with the hook that produced it.
+The runtime does not stage advisory messages in metadata for later draining.
+
+| Advisory source | Runtime delivery | Conversation history | API request history |
+| --- | --- | --- | --- |
+| Pre-hook advisory | Immediate `SystemNotification`. | Not appended. | Not included. |
+| Post-hook advisory | Immediate `SystemNotification`. | Not appended. | Not included. |
+| Pre-hook denial | Normal failed tool result. | Appended through normal tool-result flow. | Included as the required tool result. |
+| Post-hook denial | Normal failed tool result. | Appended through normal tool-result flow. | Included as the required tool result. |
+
+Diagram: advisory path.
+
+| Producer | User stream | Model API |
+| --- | --- | --- |
+| Pre-hook returns advisory for `daytona_codeact`. | Emits `SystemNotification` naming `daytona_codeact`. | No message is added. |
+| Pre-hook later allows execution. | Tool starts normally. | Still no advisory message is added. |
+| Tool result is finalized. | Tool completion is shown normally. | One tool result is sent. |
+
+## Error Visibility
+
+Hook failures and denials are API-visible because the model must receive a
+result for each tool use it requested.
+
+A pre-hook denial returns a failed tool result that states the tool was blocked
+before execution and includes the hook error message. A post-hook denial returns
+a failed tool result that states post-hook validation failed and includes the
+hook error message.
+
+Hook failure messages should include the tool name and enough local context to
+make the next model turn actionable. They should not include a batch of prior
+advisories, because advisories are already emitted to users separately.
+
+## Error Workflow
+
+Errors are the only hook outputs that cross into the API-facing tool result.
+
+| Error source | Tool body runs? | Post-hooks run? | API-facing result |
+| --- | --- | --- | --- |
+| Input validation failure | No. | No. | Invalid-input failed tool result. |
+| Pre-hook denial | No. | No. | Pre-hook blocked failed tool result. |
+| Pre-hook exception | No. | No. | Pre-hook failed tool result. |
+| Tool failure | Yes. | Yes, if matching post-hooks exist. | Tool failed result unless post-hook replaces it. |
+| Post-hook denial | Yes. | Stops at denying post-hook. | Post-hook blocked failed tool result. |
+| Post-hook exception | Yes. | Stops at failing post-hook. | Post-hook failed tool result. |
+
+## Concurrency Model
+
+Foreground tool calls remain concurrent across a model turn.
+
+The runtime does not switch to sequential foreground execution when hooks are
+present. Instead, each tool call owns its own ordered execution stream. Within a
+single tool call, pre-hooks, tool execution, and post-hooks are ordered. Across
+different tool calls, events may interleave.
+
+This means users may see advisory and progress events from different tools
+interleaved. That is acceptable as long as every hook advisory and hook error
+names the tool.
+
+The query loop should multiplex per-tool execution streams and continue to
+collect exactly one final tool result per tool use. Final tool results are then
+fed back to the model in the normal tool-result collection step.
+
+## Concurrent Multi-Tool Workflow
+
+When the model requests multiple foreground tools in one turn, the runtime starts
+one execution stream per tool call. Each stream preserves local ordering. The
+query loop multiplexes events from all active streams.
+
+Diagram: concurrent tool-call streams.
+
+| Time | Tool A stream | Tool B stream | Query loop output |
+| --- | --- | --- | --- |
+| 1 | Pre-hook A1 emits advisory. | Waiting or running independently. | System notification naming Tool A. |
+| 2 | Pre-hook A2 mutates args. | Pre-hook B1 emits advisory. | System notification naming Tool B. |
+| 3 | Tool A starts. | Tool B starts. | Tool started events may appear in either completion order. |
+| 4 | Tool A emits progress. | Tool B completes tool body. | Progress for Tool A; then Tool B moves to post-hooks. |
+| 5 | Tool A continues running. | Post-hook B1 emits advisory. | System notification naming Tool B. |
+| 6 | Tool A completes. | Tool B final result selected. | Completion events for both tools as their streams finish. |
+| 7 | All streams finished. | All streams finished. | Query loop appends exactly one result per tool use. |
+
+The query loop must not infer advisory ownership from ordering. Every advisory
+message must name the originating tool.
+
+## Background Tool Workflow
+
+Background tools still need the same hook semantics. The launch path may return
+a foreground acknowledgement to the model while the actual background task runs
+later, but the hooked execution of the background task remains a normal tool
+execution stream owned by that background task.
+
+| Stage | Runtime action | Hook behavior |
+| --- | --- | --- |
+| Background request arrives | Runtime validates whether the tool supports background execution. | Platform hooks have not run yet unless the request itself is represented as a normal tool execution. |
+| Background task is launched | The model receives a launch acknowledgement. | Launch acknowledgement remains the API-facing result for the original model tool use. |
+| Background task executes | The background worker runs the actual tool body. | Pre-hooks run before the background tool body; post-hooks run after it. |
+| Background advisories | User stream receives notifications tied to the background task's tool name. | Advisory notifications are not added to API history. |
+| Background completion | Runtime delivers the background result through existing background completion flow. | Post-hook denial may replace the background task result. |
+
+The migration must make this boundary explicit so hooks do not accidentally run
+only for foreground tools.
+
+## External Trigger Workflow
+
+External triggers execute tools outside the main model streaming loop but still
+use production tool execution semantics. They must run platform hooks through
+the same execution primitive used by foreground and background tools.
+
+| Stage | Runtime action | Hook behavior |
+| --- | --- | --- |
+| Trigger builds constrained tool request. | Runtime validates tool input. | Invalid input returns trigger-local failed result. |
+| Trigger executes the tool. | Runtime invokes the shared hook-aware execution primitive. | Pre-hooks, tool execution, and post-hooks run in normal order. |
+| Advisory produced. | Runtime emits or records trigger-visible notification according to trigger capabilities. | Advisory is not added to model API history. |
+| Hook denial produced. | Runtime returns failed tool result to the trigger path. | Denial is visible as the tool result. |
+
+External triggers must not call tool bodies directly if the tool is covered by
+platform hook policy.
+
+## Runtime Boundary
+
+The existing plain `run_tool_safely()` shape is not sufficient as the top-level
+orchestration boundary because it returns only `ToolResult` and cannot directly
+emit ordered stream events.
+
+The migration should introduce a tool-call execution primitive that can emit
+stream events while still returning one final `ToolResultBlock`. That primitive
+owns pre-hook execution, tool execution, post-hook execution, and final
+API-facing result selection.
+
+Lower-level validation and normalization helpers may remain reusable. The
+important boundary is that user-visible hook notifications are emitted from the
+active execution stream, not staged in metadata for later draining.
+
+## Proposed Module Shape
+
+The platform hook implementation should live under `tools.core`, not under the
+legacy top-level `hooks` package. This avoids retaining the old user-configured
+hook concept while making the relationship to tool execution explicit.
+
+```text
+backend/src/tools/core/hooks/
+  __init__.py
+  outcomes.py
+  registry.py
+  pipeline.py
+  execution.py
+```
+
+Responsibilities:
+
+- `outcomes.py`: pre-hook and post-hook outcome dataclasses and callable
+  protocols.
+- `registry.py`: process-global registry keyed by tool glob, phase, and
+  priority.
+- `pipeline.py`: sequential pre-hook and post-hook chain runners.
+- `execution.py`: hook-aware tool-call execution primitive that emits stream
+  events and returns one final `ToolResultBlock`.
+
+The existing `tools.core.guards` package should either be moved into this new
+package or left as a compatibility shim while imports migrate. The migration
+should not create a second independent registry.
+
+## Outcome Types
+
+Pre-hooks use one flat outcome shape. The hook author can allow, mutate
+arguments, deny, or emit advisories from the same return type. The runtime
+enforces invalid combinations.
+
+```python
+from dataclasses import dataclass, field
+from pydantic import BaseModel
+
+
+@dataclass(frozen=True)
+class PreHookOutcome:
+    tool_input: BaseModel | None = None
+    has_error: bool = False
+    error_message: str | None = None
+    advisories: tuple[str, ...] = field(default_factory=tuple)
+
+    def __post_init__(self) -> None:
+        if self.has_error and not self.error_message:
+            raise ValueError("error_message is required when has_error=True")
+        if self.has_error and self.tool_input is not None:
+            raise ValueError("error outcomes cannot also mutate tool_input")
+        if self.has_error and self.advisories:
+            raise ValueError("error outcomes cannot also emit advisories")
+```
+
+Post-hooks cannot mutate arguments. They can emit advisories or deny the final
+result.
+
+```python
+from dataclasses import dataclass, field
+
+
+@dataclass(frozen=True)
+class PostHookOutcome:
+    has_error: bool = False
+    error_message: str | None = None
+    advisories: tuple[str, ...] = field(default_factory=tuple)
+
+    def __post_init__(self) -> None:
+        if self.has_error and not self.error_message:
+            raise ValueError("error_message is required when has_error=True")
+        if self.has_error and self.advisories:
+            raise ValueError("error outcomes cannot also emit advisories")
+```
+
+The pre-hook pipeline result does not carry advisories. Advisories are emitted
+immediately and are not accumulated.
+
+```python
+from dataclasses import dataclass
+from pydantic import BaseModel
+
+
+@dataclass(frozen=True)
+class PreHookPipelineResult:
+    tool_input: BaseModel
+    has_error: bool = False
+    error_message: str | None = None
+```
+
+## Hook Callable Contracts
+
+Hook callables may be async or sync. The pipeline awaits awaitable results.
+
+```python
+from collections.abc import Awaitable, Callable
+from typing import Protocol
+from pydantic import BaseModel
+
+from tools.core.base import ToolExecutionContext, ToolResult
+
+
+class PreToolHook(Protocol):
+    def __call__(
+        self,
+        tool_name: str,
+        args: BaseModel,
+        context: ToolExecutionContext,
+    ) -> PreHookOutcome | Awaitable[PreHookOutcome]: ...
+
+
+class PostToolHook(Protocol):
+    def __call__(
+        self,
+        tool_name: str,
+        args: BaseModel,
+        context: ToolExecutionContext,
+        result: ToolResult,
+    ) -> PostHookOutcome | Awaitable[PostHookOutcome]: ...
+```
+
+## Registry API
+
+The registry keeps deterministic priority ordering and glob matching by tool
+name.
+
+```python
+from dataclasses import dataclass
+from typing import Literal
+
+Phase = Literal["pre", "post"]
+
+
+@dataclass(frozen=True)
+class HookEntry:
+    tool_glob: str
+    phase: Phase
+    priority: int
+    target: PreToolHook | PostToolHook
+    name: str
+
+
+class ToolHookRegistry:
+    def register(
+        self,
+        tool_glob: str,
+        phase: Phase,
+        priority: int,
+        target: PreToolHook | PostToolHook,
+        *,
+        name: str | None = None,
+    ) -> None: ...
+
+    def matching(self, tool_name: str, phase: Phase) -> list[HookEntry]: ...
+```
+
+## Pipeline API
+
+The pipeline receives an `emit` callback so advisory notifications are emitted
+in order at the point where each hook produces them. The callback is part of the
+active execution stream, not a metadata drain.
+
+```python
+from collections.abc import Awaitable, Callable
+
+from message.stream_events import StreamEvent, SystemNotification
+
+EmitStreamEvent = Callable[[StreamEvent], Awaitable[None]]
+
+
+async def run_pre_hooks(
+    tool_name: str,
+    args: BaseModel,
+    context: ToolExecutionContext,
+    *,
+    emit: EmitStreamEvent,
+    registry: ToolHookRegistry | None = None,
+) -> PreHookPipelineResult:
+    current_args = args
+    reg = registry or default_registry()
+
+    for entry in reg.matching(tool_name, "pre"):
+        try:
+            outcome = await invoke_pre_hook(entry, tool_name, current_args, context)
+        except Exception as exc:
+            return PreHookPipelineResult(
+                tool_input=current_args,
+                has_error=True,
+                error_message=f"{entry.name}: {exc}",
+            )
+
+        if outcome.has_error:
+            return PreHookPipelineResult(
+                tool_input=current_args,
+                has_error=True,
+                error_message=outcome.error_message,
+            )
+
+        for advisory in outcome.advisories:
+            await emit(
+                SystemNotification(
+                    text=f"[pre-hook advisory] {tool_name}: {advisory}",
+                    category="pre_hook_advisory",
+                )
+            )
+
+        if outcome.tool_input is not None:
+            current_args = outcome.tool_input
+
+    return PreHookPipelineResult(tool_input=current_args)
+```
+
+Post-hooks mirror the same immediate advisory behavior and stop on denial or
+exception.
+
+```python
+async def run_post_hooks(
+    tool_name: str,
+    args: BaseModel,
+    context: ToolExecutionContext,
+    result: ToolResult,
+    *,
+    emit: EmitStreamEvent,
+    registry: ToolHookRegistry | None = None,
+) -> PostHookOutcome:
+    reg = registry or default_registry()
+
+    for entry in reg.matching(tool_name, "post"):
+        try:
+            outcome = await invoke_post_hook(entry, tool_name, args, context, result)
+        except Exception as exc:
+            return PostHookOutcome(
+                has_error=True,
+                error_message=f"{entry.name}: {exc}",
+            )
+
+        if outcome.has_error:
+            return outcome
+
+        for advisory in outcome.advisories:
+            await emit(
+                SystemNotification(
+                    text=f"[post-hook advisory] {tool_name}: {advisory}",
+                    category="post_hook_advisory",
+                )
+            )
+
+    return PostHookOutcome()
+```
+
+## Streaming Tool-Call Primitive
+
+The hook-aware tool-call primitive emits stream events and returns exactly one
+`ToolResultBlock`. This becomes the orchestration boundary for foreground,
+streaming, background, and external-trigger paths.
+
+```python
+async def execute_tool_call_streaming(
+    *,
+    context: QueryContext,
+    tool_name: str,
+    tool_use_id: str,
+    raw_input: dict[str, object],
+    extra_metadata: ExecutionMetadata | dict[str, Any] | None = None,
+    emit: EmitStreamEvent,
+) -> ToolResultBlock:
+    tool = context.tool_registry.get(tool_name)
+    if tool is None:
+        return ToolResultBlock(
+            tool_use_id=tool_use_id,
+            content=f"Unknown tool: {tool_name}",
+            is_error=True,
+        )
+
+    metadata = context.tool_metadata.copy() if context.tool_metadata else ExecutionMetadata()
+    metadata.tool_registry = context.tool_registry
+    metadata.tool_id = tool_use_id
+    if extra_metadata:
+        metadata.update(extra_metadata)
+
+    tool_context = ToolExecutionContext(cwd=context.cwd, metadata=metadata)
+    parsed = validate_tool_input(tool, raw_input)
+    if parsed.is_error:
+        return parsed.to_tool_result_block(tool_use_id)
+
+    pre = await run_pre_hooks(tool_name, parsed.args, tool_context, emit=emit)
+    if pre.has_error:
+        return ToolResultBlock(
+            tool_use_id=tool_use_id,
+            content=f"pre-hook blocked {tool_name}: {pre.error_message}",
+            is_error=True,
+            metadata={"blocked_by": "pre_hook"},
+        )
+
+    effective_args = pre.tool_input
+    await emit(ToolExecutionStarted(tool_name=tool_name, tool_input=effective_args.model_dump()))
+
+    tool_result = await execute_validated_tool(tool, effective_args, tool_context)
+    validated = validate_tool_output(tool, tool_result)
+
+    post = await run_post_hooks(
+        tool_name,
+        effective_args,
+        tool_context,
+        validated,
+        emit=emit,
+    )
+    if post.has_error:
+        final = ToolResult(
+            output=f"post-hook failed {tool_name}: {post.error_message}",
+            is_error=True,
+            metadata={
+                **validated.metadata,
+                "blocked_by": "post_hook",
+                "original_tool_is_error": validated.is_error,
+            },
+        )
+    else:
+        final = validated
+
+    merge_runtime_metadata(
+        original=context.tool_metadata,
+        updated=metadata,
+        result_metadata=final.metadata,
+    )
+
+    await emit(
+        ToolExecutionCompleted(
+            tool_name=tool_name,
+            output=final.output,
+            is_error=final.is_error,
+            tool_id=tool_use_id,
+            metadata=dict(final.metadata or {}),
+        )
+    )
+    return ToolResultBlock(
+        tool_use_id=tool_use_id,
+        content=final.output,
+        is_error=final.is_error,
+        metadata=final.metadata,
+    )
+```
+
+The sketch names helper functions that should be extracted from the current
+`run_tool_safely()` path. The exact helper names can change during
+implementation.
+
+## Concurrent Multiplexing Sketch
+
+The query loop should keep foreground tool calls concurrent. Each tool call gets
+an event-emitting task. Events flow through a shared queue and are yielded as
+they arrive.
+
+```python
+async def execute_foreground_tools_concurrently(
+    context: QueryContext,
+    tool_calls: list[ToolUseBlock],
+) -> AsyncIterator[StreamEvent | ToolResultBlock]:
+    queue: asyncio.Queue[StreamEvent | tuple[str, ToolResultBlock]] = asyncio.Queue()
+
+    async def emit(event: StreamEvent) -> None:
+        await queue.put(event)
+
+    async def run_one(tool_call: ToolUseBlock) -> None:
+        result = await execute_tool_call_streaming(
+            context=context,
+            tool_name=tool_call.name,
+            tool_use_id=tool_call.id,
+            raw_input=tool_call.input,
+            emit=emit,
+        )
+        await queue.put(("result", result))
+
+    tasks = [asyncio.create_task(run_one(tc)) for tc in tool_calls]
+    remaining = len(tasks)
+
+    while remaining:
+        item = await queue.get()
+        if isinstance(item, tuple) and item[0] == "result":
+            remaining -= 1
+            yield item[1]
+        else:
+            yield item
+
+    await asyncio.gather(*tasks)
+```
+
+This sketch is intentionally not the final query-loop implementation. It shows
+the required shape: per-tool local ordering, global interleaving, immediate
+advisory events, and exactly one final result per tool use.
+
+## Result Selection Rules
+
+For each tool use, the runtime returns exactly one API-facing result:
+
+- Invalid tool input returns a failed tool result before hooks run.
+- Pre-hook denial returns a failed tool result and skips the tool body.
+- Tool success with no post-hook denial returns the successful tool result.
+- Tool failure with no post-hook denial returns the tool failure result.
+- Post-hook denial after tool success returns a failed post-hook result.
+- Post-hook denial after tool failure returns a failed post-hook result unless a
+  later policy decides to preserve the original tool failure as primary.
+
+Post-hook result replacement is a policy mechanism. It must be explicit and
+observable in metadata or telemetry so operators can distinguish tool failure
+from post-hook failure.
+
+## Migration Notes
+
+The existing `tools.core.guards` package already has much of the pre-hook
+behavior: priority ordering, argument mutation, advisory outcomes, and denial
+short-circuiting. The migration should promote or rename that system rather than
+create a second parallel hook registry.
+
+The migration should remove the legacy `hooks` package behavior only after the
+new streaming execution primitive is wired through foreground execution,
+streaming execution, background execution, and external triggers.
+
+The migration should update tests around:
+
+- Sequential pre-hook argument transformation.
+- Pre-hook denial short-circuiting.
+- Immediate user-only advisory notifications.
+- No advisory insertion into API history.
+- Post-hook execution after successful tool execution.
+- Post-hook execution after failed tool execution.
+- Post-hook denial replacing the API-facing result.
+- Concurrent foreground tool calls with interleaved hook notifications.
+- Exactly one final tool result per model tool use.
+
+## Files Added
+
+Proposed new files:
+
+```text
+backend/src/tools/core/hooks/__init__.py
+backend/src/tools/core/hooks/outcomes.py
+backend/src/tools/core/hooks/registry.py
+backend/src/tools/core/hooks/pipeline.py
+backend/src/tools/core/hooks/execution.py
+backend/tests/test_tools/test_hooks/__init__.py
+backend/tests/test_tools/test_hooks/test_pipeline.py
+backend/tests/test_tools/test_hooks/test_execution.py
+backend/tests/test_tools/test_hooks/test_notifications.py
+backend/tests/test_engine/test_tool_hook_concurrency.py
+```
+
+Optional compatibility files if a staged rename is safer:
+
+```text
+backend/src/tools/core/guards/__init__.py
+backend/src/tools/core/guards/types.py
+backend/src/tools/core/guards/registry.py
+backend/src/tools/core/guards/pipeline.py
+```
+
+The optional compatibility files should re-export from `tools.core.hooks` only
+for the migration window. They should not contain a separate registry.
+
+## Files Removed
+
+Legacy subprocess hook files to remove once the new execution primitive is
+wired through all production paths:
+
+```text
+backend/src/hooks/schemas.py
+backend/src/hooks/executor.py
+backend/src/hooks/events.py
+backend/src/hooks/loader.py
+backend/src/hooks/types.py
+backend/src/hooks/_factory.py
+backend/src/hooks/__init__.py
+```
+
+Legacy tests and docs should be removed or rewritten if they assert
+user-configurable subprocess hook behavior. Query-engine docs should stop
+describing `hook_executor` as an integration point.
+
+## Files Retargeted
+
+Runtime files that should stop using `hook_executor` and instead call the new
+hook-aware execution primitive:
+
+```text
+backend/src/tools/core/tool_execution.py
+backend/src/tools/core/base.py
+backend/src/engine/core/query.py
+backend/src/engine/core/streaming_executor.py
+backend/src/engine/runtime/background_dispatch.py
+backend/src/external_trigger/runner.py
+backend/src/engine/runtime/agent.py
+backend/src/engine/core/notifications.py
+```
+
+Configuration files to retarget:
+
+```text
+backend/src/config/settings.py
+pyproject.toml
+```
+
+`settings.py` should drop the `hooks` field and the import of legacy hook
+schemas. `pyproject.toml` should drop `httpx` only if no other first-party
+runtime code still needs it after legacy hook removal.
+
+Existing hook registrations to move or rename:
+
+```text
+backend/src/tools/daytona_toolkit/guards.py
+backend/src/tools/daytona_toolkit/__init__.py
+backend/src/tools/daytona_toolkit/toolkit.py
+```
+
+These should register platform hooks through `tools.core.hooks`, preserving the
+current Daytona write-scope and CodeAct behavior.
+
+Documentation files to update:
+
+```text
+docs/architecture/query-engine.md
+docs/query-engine-agent-loop.html
+README.md
+```
+
+Generated HTML docs may be regenerated instead of manually edited if the repo
+has a generation path.
+
+## Migration Plan
+
+### Phase 0: Confirm Behavior and Freeze Scope
+
+Deliverables:
+
+- Confirm this design is the source of truth for platform tool hooks.
+- Confirm legacy user-configurable subprocess hooks are removed, not migrated.
+- Confirm advisories are user-only `SystemNotification` events.
+- Confirm foreground tool calls remain concurrent.
+- Confirm post-hook denial result-selection policy.
+
+Exit criteria:
+
+- `docs/architecture/platform-tool-hooks.md` reflects the accepted policy.
+- Open decisions that block implementation are resolved or explicitly deferred.
+
+### Phase 1: Introduce Platform Hook Package
+
+Deliverables:
+
+- Add `tools.core.hooks` package.
+- Move or copy outcome types from `tools.core.guards` into `tools.core.hooks`.
+- Add `PreHookOutcome`, `PostHookOutcome`, and pipeline result types.
+- Add registry and pipeline tests.
+- Keep `tools.core.guards` as a temporary compatibility layer if needed.
+
+Exit criteria:
+
+- Empty registry is a no-op.
+- Pre-hook mutation is threaded through later pre-hooks.
+- Pre-hook denial short-circuits.
+- Pre-hook advisories emit immediately through the provided `emit` callback.
+- Post-hook advisories emit immediately through the provided `emit` callback.
+- Post-hook denial stops the post-hook chain.
+
+Suggested tests:
+
+```text
+backend/tests/test_tools/test_hooks/test_pipeline.py
+backend/tests/test_tools/test_hooks/test_notifications.py
+```
+
+### Phase 2: Extract Validated Tool Execution Helpers
+
+Deliverables:
+
+- Split validation, direct execution, exception normalization, and output
+  validation helpers out of `run_tool_safely()`.
+- Keep `run_tool_safely()` temporarily as a non-streaming wrapper for tests and
+  legacy call sites.
+- Ensure helper behavior matches current input and output validation messages.
+
+Exit criteria:
+
+- Existing tool validation tests remain green.
+- `run_tool_safely()` behavior is unchanged for callers that still use it.
+- New helpers can execute a tool that already has parsed arguments.
+
+Suggested tests:
+
+```text
+backend/tests/test_tools/test_guards/test_run_tool_safely_integration.py
+backend/tests/test_engine/test_tool_call_loop.py
+```
+
+### Phase 3: Add Hook-Aware Streaming Execution Primitive
+
+Deliverables:
+
+- Add `execute_tool_call_streaming()`.
+- Wire pre-hooks, tool execution, post-hooks, result selection, runtime metadata
+  merge, and final `ToolResultBlock` creation into that primitive.
+- Emit hook advisories directly through the active stream callback.
+- Emit tool completion after post-hooks select the final result.
+
+Exit criteria:
+
+- One final `ToolResultBlock` is returned for every tool use.
+- Pre-hook advisory is yielded before the tool starts.
+- Post-hook advisory is yielded after the tool result exists and before final
+  completion.
+- Pre-hook denial returns one failed result and skips tool execution.
+- Post-hook denial returns one failed result and records that post-hook policy
+  replaced the original result.
+
+Suggested tests:
+
+```text
+backend/tests/test_tools/test_hooks/test_execution.py
+backend/tests/test_engine/test_tool_hook_concurrency.py
+```
+
+### Phase 4: Wire Foreground Query Execution
+
+Deliverables:
+
+- Replace foreground `execute_tool_call()` use in the query loop with the new
+  stream-aware primitive.
+- Preserve concurrent execution for multiple foreground tool calls.
+- Multiplex per-tool events through the query loop.
+- Preserve batch validation and budget-limit behavior.
+
+Exit criteria:
+
+- Single foreground tool calls produce the same final tool result as before.
+- Multiple foreground tool calls still run concurrently.
+- Interleaved hook advisories are yielded with tool names.
+- Tool-result collection still appends exactly one result per tool use.
+
+Suggested tests:
+
+```text
+backend/tests/test_engine/test_tool_call_loop.py
+backend/tests/test_engine/test_streaming_executor.py
+backend/tests/test_engine/test_tool_hook_concurrency.py
+```
+
+### Phase 5: Wire Streaming Executor Path
+
+Deliverables:
+
+- Retarget `StreamingToolExecutor` so mid-stream tool execution uses the same
+  hook-aware primitive or the same lower-level execution components.
+- Ensure progress and cancellation semantics remain correct.
+- Ensure hook advisories emitted by mid-stream tools reach subscribers without
+  entering API history.
+
+Exit criteria:
+
+- Mid-stream tool execution still starts promptly when allowed.
+- Cancellation behavior remains unchanged.
+- Hook advisories can interleave with normal tool progress.
+- Hook denial produces the required failed tool result.
+
+Suggested tests:
+
+```text
+backend/tests/test_engine/test_streaming_executor.py
+backend/tests/test_engine/test_tool_hook_concurrency.py
+```
+
+### Phase 6: Wire Background and External Trigger Paths
+
+Deliverables:
+
+- Ensure background task execution uses the hook-aware primitive for the actual
+  background tool body.
+- Preserve background launch acknowledgement semantics.
+- Retarget external trigger tool execution to the shared hook-aware primitive.
+- Define how external-trigger advisory notifications are exposed when no live
+  stream subscriber exists.
+
+Exit criteria:
+
+- Background tool advisories are user-visible when a stream exists.
+- Background post-hook denial can replace the background task result.
+- External triggers do not call tool bodies directly for hooked tools.
+- External trigger hook denial returns a failed trigger-local tool result.
+
+Suggested tests:
+
+```text
+backend/tests/test_engine/test_background_tasks.py
+backend/tests/test_engine/test_background_e2e.py
+backend/tests/test_external_trigger/test_runner.py
+```
+
+### Phase 7: Migrate Existing Guard Registrations
+
+Deliverables:
+
+- Move Daytona write-scope and CodeAct guard registrations to
+  `tools.core.hooks`.
+- Rename `GuardOutcome` concepts in the registrations to hook outcome concepts.
+- Preserve existing policy messages and golden outputs.
+- Keep compatibility imports only as long as needed.
+
+Exit criteria:
+
+- Existing Daytona write-scope behavior is unchanged.
+- CodeAct shell normalization still mutates arguments before destructive
+  command guards run.
+- Existing coordination-warning side effects remain correct where they are still
+  part of product behavior.
+
+Suggested tests:
+
+```text
+backend/tests/test_tools/test_daytona_toolkit/test_edit_tool.py
+backend/tests/test_tools/test_daytona_toolkit/test_tools_execution.py
+backend/tests/test_tools/test_daytona_toolkit/test_delete_move_tool.py
+backend/tests/test_tools/test_daytona_toolkit/test_codeact_tool.py
+backend/tests/test_tools/test_daytona_toolkit/test_write_scope_advisory.py
+```
+
+### Phase 8: Remove Legacy Hook Bus
+
+Deliverables:
+
+- Delete top-level legacy `hooks` package behavior.
+- Remove `Settings.hooks`.
+- Remove `make_hook_executor()` wiring from runtime agent setup.
+- Remove `QueryContext.hook_executor`.
+- Remove legacy docs and tests.
+- Remove `httpx` dependency only if no remaining first-party runtime code needs
+  it.
+
+Exit criteria:
+
+- No imports of top-level `hooks` remain in backend runtime code.
+- Settings load still tolerates old config files if needed, or the breaking
+  change is documented.
+- Query-engine docs describe platform hooks, not `hook_executor`.
+
+Suggested checks:
+
+```text
+rg -n "hook_executor|HookEvent|load_hook_registry|make_hook_executor|hooks\\.schemas|hooks\\.executor" backend/src backend/tests docs
+uv run pytest backend/tests/test_tools/test_hooks backend/tests/test_engine/test_tool_call_loop.py -q
+```
+
+### Phase 9: Final Verification
+
+Deliverables:
+
+- Run targeted hook, engine, Daytona, background, and external-trigger tests.
+- Run broader backend tests if the change touches shared execution semantics.
+- Update architecture docs and README references.
+
+Suggested commands:
+
+```text
+uv run pytest backend/tests/test_tools/test_hooks -q
+uv run pytest backend/tests/test_engine/test_tool_call_loop.py backend/tests/test_engine/test_streaming_executor.py -q
+uv run pytest backend/tests/test_engine/test_background_tasks.py backend/tests/test_external_trigger/test_runner.py -q
+uv run pytest backend/tests/test_tools/test_daytona_toolkit -q
+uv run ruff check backend/src backend/tests
+uv run mypy --config-file backend/mypy.ini backend/src/team backend/src/agents
+```
+
+## Open Decisions
+
+- Whether post-hook denial after an already failed tool should always override
+  the original failure, or whether some post-hooks should only annotate the
+  original failure.
+- Whether advisory notification categories should be standardized by phase,
+  policy area, or both.
+- Whether hook failures caused by unexpected exceptions should expose raw
+  exception text to the model or use a sanitized message while preserving raw
+  details in telemetry.

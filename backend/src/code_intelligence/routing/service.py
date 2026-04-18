@@ -14,8 +14,10 @@ compatibility with callers that import them from ``routing.service``.
 from __future__ import annotations
 
 import asyncio
+import base64
 import errno
 import inspect
+import json
 import logging
 import os
 import re
@@ -27,6 +29,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from team._path_utils import normalize_scope_paths, scope_paths_overlap
+from tools.daytona_toolkit._daytona_utils import _extract_exit_code, _wrap_bash_command
 
 from code_intelligence.analysis.symbol_index import SymbolIndex
 from code_intelligence.analysis.tree_cache import TreeCache
@@ -87,10 +90,10 @@ class OverlayCapabilityMissingError(RuntimeError):
     """Raised when :meth:`svc.cmd` cannot honor its OCC contract.
 
     Either the sandbox lacks overlay / tmpfs / userxattr support, or the
-    outer lowerdir filesystem doesn't offer CoW (reflink/clonefile). In
-    both cases ``svc.cmd`` fails closed rather than degrade to the
-    pre-OCC ``ProcessAuditor`` path — re-introducing unaudited mutation
-    would re-open the bug the OCC migration closes.
+    outer lowerdir snapshot cannot be materialized. In both cases
+    ``svc.cmd`` fails closed rather than degrade to the pre-OCC
+    ``ProcessAuditor`` path — re-introducing unaudited mutation would
+    re-open the bug the OCC migration closes.
     """
 
 logger = logging.getLogger(__name__)
@@ -236,7 +239,7 @@ class CodeIntelligenceService:
         """Run one shell command through the OCC-gated overlay audit path.
 
         Fail-closed: if the sandbox lacks the overlay pipeline or its
-        lowerdir filesystem does not support CoW snapshots, raise
+        lowerdir snapshot cannot be materialized, raise
         :class:`OverlayCapabilityMissingError`. There is no fallback to
         the pre-OCC ``ProcessAuditor`` — a single OCC boundary is the
         whole point of the migration.
@@ -264,12 +267,14 @@ class CodeIntelligenceService:
         )
 
     async def _ensure_overlay_auditor(self, sandbox: Any) -> OverlayAuditor:
-        if self._overlay_auditor is not None:
-            return self._overlay_auditor
+        cached = await self._live_overlay_auditor_or_none(sandbox)
+        if cached is not None:
+            return cached
 
         async with self._overlay_init_lock:
-            if self._overlay_auditor is not None:
-                return self._overlay_auditor
+            cached = await self._live_overlay_auditor_or_none(sandbox)
+            if cached is not None:
+                return cached
 
             lowerdir = await self._ensure_overlay_lowerdir(sandbox)
 
@@ -286,8 +291,22 @@ class CodeIntelligenceService:
             )
             return self._overlay_auditor
 
+    async def _live_overlay_auditor_or_none(self, sandbox: Any) -> OverlayAuditor | None:
+        auditor = self._overlay_auditor
+        if auditor is None:
+            return None
+        lowerdir = self._overlay_lowerdir
+        if not lowerdir:
+            self._overlay_auditor = None
+            return None
+        if await self._lowerdir_is_live(sandbox, lowerdir):
+            return auditor
+        self._overlay_auditor = None
+        self._overlay_lowerdir = None
+        return None
+
     async def _ensure_overlay_lowerdir(self, sandbox: Any) -> str:
-        """Materialize a CoW snapshot of the live workspace as the outer lowerdir.
+        """Materialize a snapshot of the live workspace as the outer lowerdir.
 
         Per P0.7 / P0.9, the outer lowerdir must reflect the current
         workspace state (tracked + untracked + dirty) so strict-base
@@ -295,9 +314,9 @@ class CodeIntelligenceService:
         against HEAD. Kernel-aware probe:
 
         * Linux → ``cp -a --reflink=always`` (btrfs/XFS/bcachefs). A
-          non-CoW filesystem like ext4 fails the copy; we fail closed.
-          ``--reflink=auto`` would silently degrade to a byte copy and
-          defeat drift detection (P0.9 finding).
+          non-CoW filesystem like ext4 falls back to plain ``cp -a``.
+          Byte copies are slower but still independent; hardlinks are
+          the unsafe form because later writes can alias into the base.
         * Darwin → plain ``cp -a`` (APFS invokes ``clonefile(2)``
           implicitly; there is no ``--reflink`` flag in BSD ``cp``).
 
@@ -309,6 +328,7 @@ class CodeIntelligenceService:
         import shlex
 
         lowerdir = f"/tmp/overlay-lower-{self.sandbox_id}"
+        ready = f"{lowerdir}.ready"
         # Merge stderr into stdout (2>&1 on every step) so cp / mkdir failures
         # surface in the diagnostic payload even when the shell aborts under
         # set -eu. Probe also ls-verifies the destination at the end so we
@@ -317,52 +337,76 @@ class CodeIntelligenceService:
             "set -eu\n"
             f"src={shlex.quote(self.workspace_root)}\n"
             f"dst={shlex.quote(lowerdir)}\n"
-            'if [ -d "$dst" ] && [ -n "$(ls -A "$dst" 2>/dev/null)" ]; then '
+            f"ready={shlex.quote(ready)}\n"
+            'if [ -d "$dst" ] && [ -f "$ready" ] && [ -n "$(ls -A "$dst" 2>/dev/null)" ]; then '
             'echo exists; exit 0; fi\n'
+            'rm -rf "$dst" "$ready" 2>&1\n'
             'mkdir -p "$dst" 2>&1\n'
             'case "$(uname -s)" in\n'
             "  Linux)\n"
-            '    if cp -a --reflink=always "$src/." "$dst/" 2>&1; then\n'
+            '    err="$(mktemp /tmp/overlay-lower-reflink-XXXXXX.err)"\n'
+            '    if cp -a --reflink=always "$src/." "$dst/" 2>"$err"; then\n'
             "      echo cow-reflink\n"
             "    else\n"
-            "      echo cow-unavailable; exit 2\n"
+            '      reflink_err="$(cat "$err" 2>/dev/null || true)"\n'
+            '      rm -rf "$dst" 2>&1\n'
+            '      mkdir -p "$dst" 2>&1\n'
+            '      if cp -a "$src/." "$dst/" 2>&1; then\n'
+            "        echo byte-copy\n"
+            "      else\n"
+            "        echo snapshot-unavailable\n"
+            '        printf "%s\\n" "$reflink_err"\n'
+            "        exit 2\n"
+            "      fi\n"
             "    fi\n"
+            '    rm -f "$err" 2>/dev/null || true\n'
             "    ;;\n"
             "  Darwin)\n"
             '    if cp -a "$src/." "$dst/" 2>&1; then\n'
             "      echo cow-clonefile\n"
             "    else\n"
-            "      echo cow-unavailable; exit 2\n"
+            "      echo snapshot-unavailable; exit 2\n"
             "    fi\n"
             "    ;;\n"
             "  *)\n"
-            "    echo cow-unavailable; exit 2\n"
+            '    if cp -a "$src/." "$dst/" 2>&1; then\n'
+            "      echo byte-copy\n"
+            "    else\n"
+            "      echo snapshot-unavailable; exit 2\n"
+            "    fi\n"
             "    ;;\n"
             "esac\n"
             # Verify destination exists and is non-empty before declaring success.
             'if [ ! -d "$dst" ] || [ -z "$(ls -A "$dst" 2>/dev/null)" ]; then\n'
             '  echo "probe-dst-empty $dst"; exit 3\n'
             "fi\n"
+            ': > "$ready"\n'
         )
-        response = await self._exec_sandbox_process(sandbox, probe_cmd, timeout=120)
-        stdout = str(getattr(response, "result", "") or "").strip()
-        exit_code = getattr(response, "exit_code", None)
-        if exit_code not in (0, None):
+        response = await self._exec_sandbox_process(
+            sandbox,
+            _wrap_bash_command(f"bash -c {shlex.quote(probe_cmd)}"),
+            timeout=120,
+        )
+        stdout, exit_code = _extract_exit_code(
+            str(getattr(response, "result", "") or ""),
+            fallback_exit_code=getattr(response, "exit_code", None),
+        )
+        stdout = stdout.strip()
+        if "snapshot-unavailable" in stdout:
             raise OverlayCapabilityMissingError(
-                f"svc.cmd lowerdir probe failed on {lowerdir}: "
-                f"exit_code={exit_code} stdout={stdout!r}"
-            )
-        if "cow-unavailable" in stdout:
-            raise OverlayCapabilityMissingError(
-                f"svc.cmd lowerdir snapshot on {lowerdir} lacks CoW support; "
-                "hardlink/byte-copy snapshots alias peer writes into base_hash "
-                f"(P0.9). Probe stdout: {stdout!r}"
+                f"svc.cmd lowerdir snapshot failed on {lowerdir}; "
+                f"Probe stdout: {stdout!r}"
             )
         if "probe-dst-empty" in stdout:
             raise OverlayCapabilityMissingError(
                 f"svc.cmd lowerdir probe reports empty destination {lowerdir} "
                 f"after cp — workspace may be empty or /tmp writes are not "
                 f"persisting across execs. Probe stdout: {stdout!r}"
+            )
+        if exit_code != 0:
+            raise OverlayCapabilityMissingError(
+                f"svc.cmd lowerdir probe failed on {lowerdir}: "
+                f"exit_code={exit_code} stdout={stdout!r}"
             )
         self._overlay_lowerdir = lowerdir
         return lowerdir
@@ -380,12 +424,25 @@ class CodeIntelligenceService:
         """
         import shlex
 
-        check_cmd = f'[ -d {shlex.quote(lowerdir)} ] && [ -n "$(ls -A {shlex.quote(lowerdir)} 2>/dev/null)" ] && echo live || echo missing'
-        response = await self._exec_sandbox_process(sandbox, check_cmd, timeout=30)
-        stdout = str(getattr(response, "result", "") or "").strip()
-        return stdout.endswith("live")
+        ready = f"{lowerdir}.ready"
+        check_cmd = (
+            f'[ -d {shlex.quote(lowerdir)} ] '
+            f'&& [ -f {shlex.quote(ready)} ] '
+            f'&& [ -n "$(ls -A {shlex.quote(lowerdir)} 2>/dev/null)" ] '
+            "&& echo live || echo missing"
+        )
+        response = await self._exec_sandbox_process(
+            sandbox,
+            _wrap_bash_command(check_cmd),
+            timeout=30,
+        )
+        stdout, exit_code = _extract_exit_code(
+            str(getattr(response, "result", "") or ""),
+            fallback_exit_code=getattr(response, "exit_code", None),
+        )
+        return exit_code == 0 and stdout.strip().endswith("live")
 
-    def _refresh_overlay_lowerdir(
+    async def _refresh_overlay_lowerdir(
         self,
         committed_changes: Sequence[OperationChange],
     ) -> None:
@@ -402,6 +459,7 @@ class CodeIntelligenceService:
         if not lowerdir:
             return
         workspace = self.workspace_root.rstrip("/") + "/"
+        items: list[dict[str, str | None]] = []
         for change in committed_changes:
             rel = change.file_path
             if rel.startswith(workspace):
@@ -409,9 +467,27 @@ class CodeIntelligenceService:
             elif rel.startswith("/"):
                 # Absolute path outside workspace: skip — out of snapshot scope.
                 continue
+            items.append({"rel": rel, "final_content": change.final_content})
+        if not items:
+            return
+
+        sandbox = self._sandbox
+        if sandbox is None:
+            self._refresh_local_overlay_lowerdir(lowerdir, items)
+            return
+        await self._refresh_remote_overlay_lowerdir(sandbox, lowerdir, items)
+
+    @staticmethod
+    def _refresh_local_overlay_lowerdir(
+        lowerdir: str,
+        items: Sequence[dict[str, str | None]],
+    ) -> None:
+        for item in items:
+            rel = item["rel"]
             target = os.path.join(lowerdir, rel)
             try:
-                if change.final_content is None:
+                final_content = item["final_content"]
+                if final_content is None:
                     try:
                         os.remove(target)
                     except FileNotFoundError:
@@ -425,12 +501,67 @@ class CodeIntelligenceService:
                 else:
                     os.makedirs(os.path.dirname(target), exist_ok=True)
                     with open(target, "w", encoding="utf-8") as fh:
-                        fh.write(change.final_content)
+                        fh.write(final_content)
             except OSError:
                 logger.debug(
                     "overlay lowerdir refresh: write %s failed",
                     target, exc_info=True,
                 )
+
+    async def _refresh_remote_overlay_lowerdir(
+        self,
+        sandbox: Any,
+        lowerdir: str,
+        items: Sequence[dict[str, str | None]],
+    ) -> None:
+        payload = base64.b64encode(
+            json.dumps(list(items), separators=(",", ":")).encode("utf-8")
+        ).decode("ascii")
+        import shlex
+
+        script = """
+import base64
+import json
+import os
+import shutil
+import sys
+
+root = os.path.abspath(sys.argv[1])
+items = json.loads(base64.b64decode(sys.argv[2]).decode("utf-8"))
+for item in items:
+    rel = str(item["rel"]).replace("\\\\", "/")
+    target = os.path.abspath(os.path.join(root, rel))
+    if target != root and not target.startswith(root + os.sep):
+        raise RuntimeError(f"lowerdir refresh path escaped snapshot: {rel}")
+    final_content = item.get("final_content")
+    if final_content is None:
+        try:
+            if os.path.isdir(target) and not os.path.islink(target):
+                shutil.rmtree(target)
+            else:
+                os.remove(target)
+        except FileNotFoundError:
+            pass
+    else:
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        with open(target, "w", encoding="utf-8") as handle:
+            handle.write(str(final_content))
+print("refreshed")
+"""
+        command = _wrap_bash_command(
+            f"python3 -c {shlex.quote(script)} "
+            f"{shlex.quote(lowerdir)} {shlex.quote(payload)}"
+        )
+        response = await self._exec_sandbox_process(sandbox, command, timeout=60)
+        stdout, exit_code = _extract_exit_code(
+            str(getattr(response, "result", "") or ""),
+            fallback_exit_code=getattr(response, "exit_code", None),
+        )
+        if exit_code != 0:
+            raise RuntimeError(
+                f"overlay lowerdir refresh failed for {lowerdir}: "
+                f"exit_code={exit_code} stdout={stdout.strip()!r}"
+            )
 
     async def _exec_sandbox_process(
         self,

@@ -7,7 +7,9 @@ service so audited process behavior is exercised under mixed contention:
 2. Concurrent ``daytona_edit_file`` calls:
    - disjoint same-file edits across a small set of files.
    - overlapping same-line edits across a few files.
-3. Concurrent coordinated ``daytona_codeact`` shell commands on unique files.
+3. Concurrent ``daytona_rename_symbol`` calls on unique symbols.
+4. Concurrent ``daytona_move_file`` and ``daytona_delete_file`` calls.
+5. Concurrent coordinated ``daytona_codeact`` shell commands on unique files.
 
 The test verifies:
 - successful writes are persisted,
@@ -43,7 +45,12 @@ from tools.daytona_toolkit._daytona_utils import (
 )
 import tools.daytona_toolkit.codeact_tool as codeact_tool_module
 from tools.daytona_toolkit.codeact_tool import daytona_codeact
+from tools.daytona_toolkit.delete_move_tool import (
+    daytona_delete_file,
+    daytona_move_file,
+)
 from tools.daytona_toolkit.edit_tool import daytona_edit_file
+from tools.daytona_toolkit.rename_tool import daytona_rename_symbol
 from tools.daytona_toolkit.tools import daytona_write_file
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
@@ -254,13 +261,7 @@ async def _run_mixed_operations(
             agent_run_id=agent_run_id,
             coordinated=bool(operation.get("coordinated", False)),
         )
-        tool = (
-            daytona_write_file
-            if operation["kind"] == "write"
-            else daytona_codeact
-            if operation["kind"] == "codeact"
-            else daytona_edit_file
-        )
+        tool = _tool_for_operation_kind(str(operation["kind"]))
         queued_at = time.perf_counter()
         async with semaphore:
             started = time.perf_counter()
@@ -278,6 +279,7 @@ async def _run_mixed_operations(
             "is_error": result.is_error,
             "metadata": dict(result.metadata or {}),
             "payload": payload,
+            "raw_output": (result.output or "")[:1200],
             "elapsed_s": elapsed_s,
             "wait_s": wait_s,
         }
@@ -287,6 +289,22 @@ async def _run_mixed_operations(
         asyncio.gather(*[_invoke(operation, semaphore) for operation in operations]),
         timeout=timeout_s,
     )
+
+
+def _tool_for_operation_kind(kind: str) -> Any:
+    if kind == "write":
+        return daytona_write_file
+    if kind == "codeact":
+        return daytona_codeact
+    if kind in {"edit-disjoint", "edit-overlap", "edit"}:
+        return daytona_edit_file
+    if kind == "rename":
+        return daytona_rename_symbol
+    if kind == "move":
+        return daytona_move_file
+    if kind == "delete":
+        return daytona_delete_file
+    raise AssertionError(f"Unsupported operation kind: {kind}")
 
 
 def _operation_timing_summary(
@@ -302,6 +320,217 @@ def _operation_timing_summary(
         "parallelism_ratio": ratio,
         "max_wait_s": round(max((float(item["wait_s"]) for item in results), default=0.0), 6),
     }
+
+
+def _elapsed_profile(items: list[dict[str, Any]]) -> dict[str, float]:
+    values = sorted(float(item["elapsed_s"]) for item in items)
+    if not values:
+        return {"avg": 0.0, "p50": 0.0, "p95": 0.0, "max": 0.0}
+    p50_index = len(values) // 2
+    p95_index = min(len(values) - 1, int(round((len(values) - 1) * 0.95)))
+    return {
+        "avg": round(sum(values) / len(values), 6),
+        "p50": round(values[p50_index], 6),
+        "p95": round(values[p95_index], 6),
+        "max": round(values[-1], 6),
+    }
+
+
+def test_live_occ_load_72_all_mutators_high_concurrency_profile(
+    live_load_env: LiveLoadEnv,
+):
+    """High-concurrency mixed OCC load across every Daytona mutator.
+
+    This intentionally uses disjoint files/symbols so failures point to
+    transport, snapshot, locking, or routing regressions rather than expected
+    write conflicts. It exercises write, edit, rename, move, delete, and
+    coordinated CodeAct against one shared ``CodeIntelligenceService``.
+    """
+    live_load_env.init_repo()
+
+    for idx in range(12):
+        live_load_env.write_text(
+            f"edits/all_{idx}.py",
+            (
+                f'"""Edit fixture {idx}."""\n\n'
+                f"VALUE_{idx} = {idx}\n"
+                f"MARKER_{idx} = 'before'\n"
+            ),
+        )
+        live_load_env.write_text(
+            f"rename/module_{idx}.py",
+            (
+                f'"""Rename fixture {idx}."""\n\n'
+                f"def rename_target_{idx}(value):\n"
+                f"    return value + {idx}\n\n"
+                f"def caller_{idx}(value):\n"
+                f"    return rename_target_{idx}(value)\n"
+            ),
+        )
+        live_load_env.write_text(f"moves/src_{idx}.txt", f"move source {idx}\n")
+        live_load_env.write_text(f"deletes/delete_{idx}.txt", f"delete target {idx}\n")
+        live_load_env.write_text(f"codeact/high_{idx}.txt", f"codeact base {idx}\n")
+
+    live_load_env.exec_checked(f"git -C {shlex.quote(live_load_env.repo_root)} add -A")
+    live_load_env.exec_checked(
+        f"git -C {shlex.quote(live_load_env.repo_root)} commit -m seed-all-mutators-load",
+        timeout=180,
+    )
+
+    svc = live_load_env.make_ci_service()
+    svc.ensure_initialized(wait=True)
+
+    operations: list[dict[str, Any]] = []
+    for idx in range(12):
+        operations.extend(
+            [
+                {
+                    "kind": "write",
+                    "name": f"write-{idx}",
+                    "path": f"{live_load_env.repo_root}/writes/all_{idx}.txt",
+                    "kwargs": {
+                        "file_path": f"{live_load_env.repo_root}/writes/all_{idx}.txt",
+                        "content": f"write all {idx}\n",
+                    },
+                },
+                {
+                    "kind": "edit-disjoint",
+                    "name": f"edit-{idx}",
+                    "path": f"{live_load_env.repo_root}/edits/all_{idx}.py",
+                    "kwargs": {
+                        "file_path": f"{live_load_env.repo_root}/edits/all_{idx}.py",
+                        "old_text": f"MARKER_{idx} = 'before'",
+                        "new_text": f"MARKER_{idx} = 'after-{idx}'",
+                    },
+                },
+                {
+                    "kind": "rename",
+                    "name": f"rename-{idx}",
+                    "path": f"{live_load_env.repo_root}/rename/module_{idx}.py",
+                    "kwargs": {
+                        "symbol": f"rename_target_{idx}",
+                        "new_name": f"renamed_target_{idx}",
+                        "file_hint": f"rename/module_{idx}.py",
+                    },
+                },
+                {
+                    "kind": "move",
+                    "name": f"move-{idx}",
+                    "path": f"{live_load_env.repo_root}/moves/src_{idx}.txt",
+                    "kwargs": {
+                        "src_path": f"{live_load_env.repo_root}/moves/src_{idx}.txt",
+                        "target_path": f"{live_load_env.repo_root}/moves/dst_{idx}.txt",
+                    },
+                },
+                {
+                    "kind": "delete",
+                    "name": f"delete-{idx}",
+                    "path": f"{live_load_env.repo_root}/deletes/delete_{idx}.txt",
+                    "kwargs": {
+                        "path": f"{live_load_env.repo_root}/deletes/delete_{idx}.txt",
+                    },
+                },
+                {
+                    "kind": "codeact",
+                    "name": f"codeact-{idx}",
+                    "path": f"{live_load_env.repo_root}/codeact/high_{idx}.txt",
+                    "kwargs": {
+                        "mode": "shell",
+                        "command": (
+                            "python3 - <<'PY'\n"
+                            "from pathlib import Path\n"
+                            f"Path('codeact/high_{idx}.txt').write_text('codeact high {idx}\\n', encoding='utf-8')\n"
+                            "PY"
+                        ),
+                        "timeout": 180,
+                    },
+                    "coordinated": True,
+                },
+            ]
+        )
+
+    assert len(operations) == 72
+
+    started = time.perf_counter()
+    results = asyncio.run(
+        _run_mixed_operations(
+            live_load_env,
+            svc,
+            operations,
+            concurrency=30,
+            timeout_s=360,
+        )
+    )
+    wall_elapsed_s = time.perf_counter() - started
+
+    by_kind: dict[str, list[dict[str, Any]]] = {}
+    for item in results:
+        by_kind.setdefault(item["kind"], []).append(item)
+
+    failures = [
+        {
+            "kind": item["kind"],
+            "name": item["name"],
+            "metadata": item["metadata"],
+            "payload": item["payload"],
+            "raw_output": item["raw_output"],
+        }
+        for item in results
+        if item["is_error"]
+    ]
+    summary = {
+        "operation_counts": {
+            kind: len(items)
+            for kind, items in sorted(by_kind.items())
+        },
+        "success_counts": {
+            kind: sum(not item["is_error"] for item in items)
+            for kind, items in sorted(by_kind.items())
+        },
+        "elapsed_profile_s": {
+            kind: _elapsed_profile(items)
+            for kind, items in sorted(by_kind.items())
+        },
+        "timing": _operation_timing_summary(
+            results,
+            wall_elapsed_s=wall_elapsed_s,
+        ),
+        "arbiter": svc.status()["arbiter"],
+        "held_locks": svc.arbiter.active_lock_count,
+        "failures": failures[:5],
+    }
+    print("\n[occ-load-72-all-mutators-high-concurrency]")
+    print(json.dumps(summary, indent=2, sort_keys=True))
+
+    assert not failures, json.dumps(failures, indent=2, sort_keys=True)
+    assert summary["timing"]["parallelism_ratio"] >= 4.0, summary["timing"]
+    assert svc.arbiter.active_lock_count == 0
+    assert svc.status()["arbiter"]["conflicts_detected"] == 0
+
+    for idx in range(12):
+        assert live_load_env.read_text(f"writes/all_{idx}.txt") == f"write all {idx}\n"
+
+        edited = live_load_env.read_text(f"edits/all_{idx}.py")
+        assert f"MARKER_{idx} = 'after-{idx}'" in edited
+
+        renamed = live_load_env.read_text(f"rename/module_{idx}.py")
+        assert f"def renamed_target_{idx}(value):" in renamed
+        assert f"return renamed_target_{idx}(value)" in renamed
+        assert f"rename_target_{idx}" not in renamed
+
+        assert live_load_env.read_text(f"moves/dst_{idx}.txt") == f"move source {idx}\n"
+        live_load_env.exec_checked(
+            f"test ! -e {shlex.quote(f'{live_load_env.repo_root}/moves/src_{idx}.txt')}",
+            timeout=30,
+        )
+        live_load_env.exec_checked(
+            f"test ! -e {shlex.quote(f'{live_load_env.repo_root}/deletes/delete_{idx}.txt')}",
+            timeout=30,
+        )
+
+        assert live_load_env.read_text(f"codeact/high_{idx}.txt") == f"codeact high {idx}\n"
+
+    assert svc.status()["arbiter"]["total_edits"] >= len(operations)
 
 
 def test_live_occ_load_50_mixed_operations(live_load_env: LiveLoadEnv):

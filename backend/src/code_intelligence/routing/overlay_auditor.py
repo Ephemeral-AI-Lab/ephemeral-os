@@ -25,14 +25,19 @@ received from the legacy process auditor.
 from __future__ import annotations
 
 import base64
+import inspect
+import json
 import logging
 import os
+import posixpath
 import shlex
 import tempfile
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import Any
+
+from tools.daytona_toolkit._daytona_utils import _extract_exit_code, _wrap_bash_command
 
 from code_intelligence.hashing import content_hash
 from code_intelligence.routing.overlay_exec import (
@@ -68,17 +73,17 @@ class OverlayAuditorConfig:
     ``lowerdir_provider`` is an async callable ``(repo_root) -> lowerdir
     path`` that returns a path whose content hashes equal the
     :class:`ContentManager` head at the moment of overlay mount. Phase
-    3's outer-lowerdir provider populates this by CoW-snapshotting the
-    workspace (tracked + untracked + dirty files) so drift detection
-    catches peer writes that never reached git. The auditor itself does
-    not manage lowerdir lifecycle.
+    3's outer-lowerdir provider populates this with an independent
+    workspace snapshot (tracked + untracked + dirty files) so drift
+    detection catches peer writes that never reached git. The auditor
+    itself does not manage lowerdir lifecycle.
     """
 
     tmpfs_size: str = "2g"
     audit_description_prefix: str = "overlay_codeact"
 
 
-LowerdirRefresh = Callable[[list[OperationChange]], None]
+LowerdirRefresh = Callable[[list[OperationChange]], object]
 
 
 class OverlayAuditor:
@@ -154,7 +159,8 @@ class OverlayAuditor:
                     committed=[],
                     ambient=[self._repo_path(change.path) for change in changes],
                 )
-            return self._commit_changes(
+            return await self._commit_changes(
+                sandbox,
                 run,
                 changes=changes,
                 lowerdir=lowerdir,
@@ -167,8 +173,9 @@ class OverlayAuditor:
 
     # -- OCC commit path ------------------------------------------------------
 
-    def _commit_changes(
+    async def _commit_changes(
         self,
+        sandbox: Any,
         run: OverlayRunResult,
         *,
         changes: list[UpperdirChange],
@@ -176,10 +183,15 @@ class OverlayAuditor:
         description: str,
         agent_id: str,
     ) -> Any:
-        operation_changes = [
-            self._upperdir_change_to_operation(change, lowerdir=lowerdir)
-            for change in changes
-        ]
+        operation_changes = []
+        for change in changes:
+            operation_changes.append(
+                await self._upperdir_change_to_operation(
+                    sandbox,
+                    change,
+                    lowerdir=lowerdir,
+                )
+            )
         if not operation_changes:
             return _audit_result(run, committed=[], ambient=[])
 
@@ -206,7 +218,9 @@ class OverlayAuditor:
             )
         if self._lowerdir_refresh is not None:
             try:
-                self._lowerdir_refresh(operation_changes)
+                refresh_result = self._lowerdir_refresh(operation_changes)
+                if inspect.isawaitable(refresh_result):
+                    await refresh_result
             except Exception:  # pragma: no cover - best effort
                 logger.debug(
                     "overlay lowerdir refresh raised; next run will re-probe",
@@ -215,8 +229,9 @@ class OverlayAuditor:
         committed = [op.file_path for op in operation_changes]
         return _audit_result(run, committed=committed, ambient=[])
 
-    def _upperdir_change_to_operation(
+    async def _upperdir_change_to_operation(
         self,
+        sandbox: Any,
         change: UpperdirChange,
         *,
         lowerdir: str,
@@ -229,7 +244,11 @@ class OverlayAuditor:
             )
 
         file_path = self._repo_path(change.path)
-        base_content, base_existed = self._read_lowerdir_entry(lowerdir, change.path)
+        base_content, base_existed = await self._read_lowerdir_entry(
+            sandbox,
+            lowerdir,
+            change.path,
+        )
         base_hash = content_hash(base_content) if base_existed else ""
 
         if change.kind is ChangeKind.DELETE:
@@ -268,14 +287,25 @@ class OverlayAuditor:
     def _repo_path(self, relative: str) -> str:
         return f"{self._workspace_root.rstrip('/')}/{relative}"
 
-    @staticmethod
-    def _read_lowerdir_entry(lowerdir: str, rel_path: str) -> tuple[str, bool]:
+    async def _read_lowerdir_entry(
+        self,
+        sandbox: Any,
+        lowerdir: str,
+        rel_path: str,
+    ) -> tuple[str, bool]:
         """Read the lowerdir's view of *rel_path* as UTF-8, returning ``(content, existed)``.
 
-        Lowerdir snapshots are created via CoW copy (see Phase 3 probe);
-        missing files return ``("", False)`` so new-file creates surface
-        as ``base_existed=False`` to the coordinator.
+        Lowerdir snapshots live inside Daytona for live runs. Unit tests
+        still pass plain local paths, so local reads remain the fallback
+        when no sandbox process is present.
         """
+        process = getattr(sandbox, "process", None)
+        if callable(getattr(process, "exec", None)):
+            return await self._read_remote_lowerdir_entry(sandbox, lowerdir, rel_path)
+        return self._read_local_lowerdir_entry(lowerdir, rel_path)
+
+    @staticmethod
+    def _read_local_lowerdir_entry(lowerdir: str, rel_path: str) -> tuple[str, bool]:
         candidate = os.path.join(lowerdir, rel_path)
         try:
             with open(candidate, "rb") as handle:
@@ -294,6 +324,60 @@ class OverlayAuditor:
             # OverlayUnsupportedChangeError up the call stack.
             return raw.decode("utf-8", errors="replace"), True
 
+    async def _read_remote_lowerdir_entry(
+        self,
+        sandbox: Any,
+        lowerdir: str,
+        rel_path: str,
+    ) -> tuple[str, bool]:
+        candidate = posixpath.join(lowerdir.rstrip("/"), rel_path)
+        script = """
+import base64
+import json
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+try:
+    if not path.exists() or path.is_dir():
+        payload = {"exists": False, "content_b64": ""}
+    else:
+        payload = {
+            "exists": True,
+            "content_b64": base64.b64encode(path.read_bytes()).decode("ascii"),
+        }
+except OSError as exc:
+    payload = {"exists": False, "content_b64": "", "error": str(exc)}
+print(json.dumps(payload, separators=(",", ":")))
+"""
+        command = _wrap_bash_command(
+            f"python3 -c {shlex.quote(script)} {shlex.quote(candidate)}"
+        )
+        response = await self._exec_process(sandbox, command, timeout=60)
+        stdout, exit_code = _extract_exit_code(
+            str(getattr(response, "result", "") or ""),
+            fallback_exit_code=getattr(response, "exit_code", None),
+        )
+        if exit_code != 0:
+            raise OverlayExecError(
+                f"lowerdir read failed for {candidate}: "
+                f"exit_code={exit_code} stdout={stdout.strip()!r}"
+            )
+        try:
+            payload = json.loads(stdout or "{}")
+        except json.JSONDecodeError as exc:
+            raise OverlayExecError(
+                f"lowerdir read returned invalid JSON for {candidate}: {stdout!r}"
+            ) from exc
+        if not isinstance(payload, dict) or not payload.get("exists"):
+            return "", False
+        encoded = str(payload.get("content_b64", "") or "")
+        raw = base64.b64decode(encoded)
+        try:
+            return raw.decode("utf-8"), True
+        except UnicodeDecodeError:
+            return raw.decode("utf-8", errors="replace"), True
+
     # -- Remote scratch I/O ---------------------------------------------------
 
     async def _download_remote_tar(
@@ -304,10 +388,26 @@ class OverlayAuditor:
         """Fetch ``remote_path`` from the sandbox to a local temp file."""
         cmd = (
             f"if [ -f {shlex.quote(remote_path)} ]; then "
-            f"base64 < {shlex.quote(remote_path)} | tr -d '\\n'; fi"
+            f"base64 < {shlex.quote(remote_path)} | tr -d '\\n'; "
+            "else echo __OVERLAY_AUDIT_TAR_MISSING__; exit 2; fi"
         )
-        response = await self._exec_process(sandbox, cmd, timeout=60)
-        raw = str(getattr(response, "result", "") or "").strip()
+        response = await self._exec_process(
+            sandbox,
+            _wrap_bash_command(cmd),
+            timeout=60,
+        )
+        raw, exit_code = _extract_exit_code(
+            str(getattr(response, "result", "") or ""),
+            fallback_exit_code=getattr(response, "exit_code", None),
+        )
+        raw = raw.strip()
+        if exit_code != 0 or raw == "__OVERLAY_AUDIT_TAR_MISSING__":
+            raise OverlayExecError(
+                f"audit tar download failed for {remote_path}: "
+                f"exit_code={exit_code} stdout={raw!r}"
+            )
+        if not raw:
+            raise OverlayExecError(f"audit tar download returned empty payload for {remote_path}")
         data = base64.b64decode(raw) if raw else b""
         fd, local_path = tempfile.mkstemp(prefix="overlay-audit-", suffix=".tar")
         try:
@@ -325,7 +425,7 @@ class OverlayAuditor:
         try:
             await self._exec_process(
                 sandbox,
-                f"rm -rf {shlex.quote(run_dir)}",
+                _wrap_bash_command(f"rm -rf {shlex.quote(run_dir)}"),
                 timeout=30,
             )
         except Exception:

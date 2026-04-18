@@ -183,12 +183,16 @@ For each query (find_definitions, find_references, hover, diagnostics):
 
 Shell-style commands run through `CodeIntelligenceService.cmd(...)`:
 
-1. `svc.cmd(...)` probes the sandbox for overlayfs + CoW-capable filesystem. If
-   either is missing, it raises `OverlayCapabilityMissingError` (fail-closed;
-   there is no fallback to an unaudited process path).
-2. The `OverlayAuditor` mounts a per-run overlay whose outer lowerdir is a CoW
-   snapshot of the live workspace (tracked + untracked + dirty files), runs the
-   user command inside the overlay, and packages the upperdir as a tar.
+1. `svc.cmd(...)` probes the sandbox for overlayfs and lowerdir snapshot
+   materialization. If either is missing, it raises
+   `OverlayCapabilityMissingError` (fail-closed; there is no fallback to an
+   unaudited process path). Reflink/clonefile snapshots are preferred, but a
+   plain byte copy is still a correct independent snapshot; hardlink snapshots
+   are not allowed because later writes can alias into the OCC base.
+2. The `OverlayAuditor` mounts a per-run overlay whose outer lowerdir is an
+   independent snapshot of the live workspace (tracked + untracked + dirty
+   files), runs the user command inside the overlay, and packages the upperdir
+   as a tar.
 3. The auditor walks the upperdir, builds one `OperationChange(strict_base=True)`
    per MODIFY / DELETE entry, and submits the whole set as a single
    `commit_operation_against_base` batch.

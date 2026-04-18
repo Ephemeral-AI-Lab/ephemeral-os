@@ -20,6 +20,7 @@ from __future__ import annotations
 import asyncio
 import io
 import os
+import subprocess
 import tarfile
 import tempfile
 from types import SimpleNamespace
@@ -244,6 +245,57 @@ def test_create_new_file_flags_base_existed_false(tmp_path) -> None:
         assert changes[0].final_content == "fresh\n"
     finally:
         # Auditor's cleanup_tar may have already unlinked the local tar.
+        try:
+            os.unlink(tar)
+        except FileNotFoundError:
+            pass
+
+
+def test_remote_lowerdir_read_uses_exec_transport(tmp_path) -> None:
+    """Live lowerdirs are remote; base content must be read via sandbox exec."""
+    repo_root = tmp_path / "repo"
+    lowerdir = tmp_path / "lower"
+    repo_root.mkdir()
+    lowerdir.mkdir()
+    (lowerdir / "foo.py").write_bytes(b"old-remote\n")
+
+    tar = _build_tar(modify={"foo.py": b"new\n"})
+
+    class _Process:
+        async def exec(self, command: str, timeout: int | None = None):
+            del timeout
+            completed = await asyncio.to_thread(
+                subprocess.run,
+                command,
+                shell=True,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            return SimpleNamespace(
+                result=completed.stdout + completed.stderr,
+                exit_code=completed.returncode,
+            )
+
+    async def _exec(_sandbox, command, **_kwargs):
+        return await _Process().exec(command)
+
+    try:
+        run = _make_run(tar)
+        auditor, coord = _build_auditor(
+            lowerdir=str(lowerdir), repo_root=str(repo_root), run_result=run,
+        )
+        auditor._exec_process = _exec  # type: ignore[method-assign]
+        auditor._overlay = _StubOverlayExec(run)  # type: ignore[attr-defined]
+
+        _run(auditor.execute(SimpleNamespace(process=_Process()), "touch"))
+
+        changes = coord.commit_operation_against_base.call_args.args[0]
+        assert len(changes) == 1
+        assert changes[0].base_existed is True
+        assert changes[0].base_content == "old-remote\n"
+        assert changes[0].base_hash == content_hash("old-remote\n")
+    finally:
         try:
             os.unlink(tar)
         except FileNotFoundError:
