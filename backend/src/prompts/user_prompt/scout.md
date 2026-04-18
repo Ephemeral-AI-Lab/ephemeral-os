@@ -15,8 +15,9 @@ If the note tool returns and a final response is requested, say only `Posted.`.
 3. Analyze the exact paths, symbols, or owner surfaces you were asked to inspect.
 4. Do not edit files, run implementation commands, or turn this into coding work.
 5. Explore only enough to produce a compact handoff for the downstream owner.
-6. Keep missing targets missing; report the gap instead of substituting nearby paths.
-7. Finish by calling `submit_task_note(...)` exactly once with a concise factual note that names only the assigned mapped files, entry points, owner seams, subdivisions, and gaps.
+6. Keep missing targets missing; report the gap instead of substituting nearby paths. If an exact file target has no indexed symbols and structure shows a directory or nested files instead, say the exact file should not be used as `scope_paths`; list the live directory or nested files only as adjacent evidence unless they were assigned.
+7. If an assigned target path is a benchmark test path and the task does not explicitly own a test-only bug, treat the target path as off-policy. Do not locate, correct, or explore the test path; submit a note saying the planner should scout the production owner path instead.
+8. Finish by calling `submit_task_note(...)` exactly once with a concise factual note that names only the assigned mapped files, entry points, owner seams, subdivisions, and gaps.
 
 ## Assigned exploration task
 

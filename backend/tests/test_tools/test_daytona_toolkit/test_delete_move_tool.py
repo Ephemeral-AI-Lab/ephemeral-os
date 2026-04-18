@@ -7,7 +7,7 @@ import json
 import threading
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from code_intelligence.types import EditResult, OperationResult
 from tools.core.base import ToolExecutionContext
@@ -102,6 +102,30 @@ def test_delete_file_rebinds_real_sandbox_before_occ_call() -> None:
 
     assert result.is_error is False
     svc.rebind_sandbox.assert_called_once_with(sandbox)
+
+
+def test_delete_file_rebinds_async_sandbox_to_sync_occ_handle() -> None:
+    async def _async_exec(_command: str) -> object:
+        raise AssertionError("async sandbox exec should not be used by sync OCC")
+
+    svc = _svc(delete_result=_operation_result(success=True, paths=["/ws/gone.py"]))
+    async_sandbox = SimpleNamespace(process=SimpleNamespace(exec=_async_exec))
+    sync_sandbox = SimpleNamespace(process=SimpleNamespace(exec=MagicMock()))
+    ctx = _ctx(
+        {
+            "ci_service": svc,
+            "repo_root": "/ws",
+            "sandbox_id": "sb-123",
+            "daytona_sandbox": async_sandbox,
+        }
+    )
+
+    with patch("sandbox.service.SandboxService") as service_cls:
+        service_cls.return_value.get_sandbox_object.return_value = sync_sandbox
+        result = _run(daytona_delete_file, {"file_path": "/ws/gone.py"}, ctx)
+
+    assert result.is_error is False
+    svc.rebind_sandbox.assert_called_once_with(sync_sandbox)
 
 
 def test_delete_file_occ_call_runs_off_active_event_loop_thread() -> None:
@@ -293,6 +317,34 @@ def test_move_file_occ_call_runs_off_active_event_loop_thread() -> None:
         description="move /ws/src.py -> /ws/dst.py",
     )
     svc.exec_process_operation.assert_not_called()
+
+
+def test_move_file_rebinds_async_sandbox_to_sync_occ_handle() -> None:
+    async def _async_exec(_command: str) -> object:
+        raise AssertionError("async sandbox exec should not be used by sync OCC")
+
+    svc = _svc(move_result=_operation_result(success=True, paths=["/ws/src.py", "/ws/dst.py"]))
+    async_sandbox = SimpleNamespace(process=SimpleNamespace(exec=_async_exec))
+    sync_sandbox = SimpleNamespace(process=SimpleNamespace(exec=MagicMock()))
+    ctx = _ctx(
+        {
+            "ci_service": svc,
+            "repo_root": "/ws",
+            "sandbox_id": "sb-123",
+            "daytona_sandbox": async_sandbox,
+        }
+    )
+
+    with patch("sandbox.service.SandboxService") as service_cls:
+        service_cls.return_value.get_sandbox_object.return_value = sync_sandbox
+        result = _run(
+            daytona_move_file,
+            {"src_path": "/ws/src.py", "dst_path": "/ws/dst.py"},
+            ctx,
+        )
+
+    assert result.is_error is False
+    svc.rebind_sandbox.assert_called_once_with(sync_sandbox)
 
 
 def test_move_file_dst_exists_without_overwrite() -> None:

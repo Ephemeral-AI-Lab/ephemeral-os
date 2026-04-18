@@ -12,7 +12,9 @@ moves flow through these OCC-gated tools instead of the unaudited shell path.
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
+import logging
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -32,6 +34,8 @@ from tools.daytona_toolkit._daytona_utils import (
     _write_scope_covers,
     record_coordination_warning,
 )
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -123,6 +127,66 @@ def _agent_id(context: ToolExecutionContext) -> str:
         if value:
             return value
     return ""
+
+
+def _sandbox_uses_async_exec(sandbox: Any) -> bool:
+    process = getattr(sandbox, "process", None)
+    exec_fn = getattr(process, "exec", None) if process is not None else None
+    return bool(exec_fn) and inspect.iscoroutinefunction(exec_fn)
+
+
+def _ci_sandbox_for_sync_occ(
+    context: ToolExecutionContext,
+    sandbox: Any,
+) -> Any | None:
+    """Return a sync sandbox handle for CI OCC calls when possible.
+
+    Team tools usually execute against the async Daytona sandbox so normal
+    CodeAct/file operations can be awaited. The CI write service is sync,
+    though, and its ContentManager drives ``process.exec`` through a sync
+    bridge. Rebinding it to the loop-owned async sandbox makes Daytona SDK
+    futures cross event loops during delete/move reads.
+    """
+    if sandbox is None or not _sandbox_uses_async_exec(sandbox):
+        return sandbox
+
+    sandbox_id = str(context.metadata.get("sandbox_id") or "").strip()
+    if not sandbox_id:
+        return None
+
+    try:
+        from sandbox.service import SandboxService
+
+        sync_sandbox = SandboxService().get_sandbox_object(sandbox_id)
+    except Exception:
+        logger.debug(
+            "Could not resolve sync Daytona sandbox handle for OCC file op on %s",
+            sandbox_id,
+            exc_info=True,
+        )
+        return None
+
+    if _sandbox_uses_async_exec(sync_sandbox):
+        logger.debug(
+            "Resolved Daytona sandbox handle for %s is still async; "
+            "skipping OCC service rebind",
+            sandbox_id,
+        )
+        return None
+    return sync_sandbox
+
+
+def _rebind_service_for_occ(
+    context: ToolExecutionContext,
+    svc: Any,
+) -> None:
+    sandbox = context.metadata.get("daytona_sandbox")
+    rebind = getattr(svc, "rebind_sandbox", None)
+    if sandbox is None or not callable(rebind):
+        return
+    ci_sandbox = _ci_sandbox_for_sync_occ(context, sandbox)
+    if ci_sandbox is not None:
+        rebind(ci_sandbox)
 
 
 def _failure_status(result: Any, *, move: bool) -> tuple[str, str]:
@@ -253,10 +317,7 @@ async def daytona_delete_file(
             is_error=True,
         )
 
-    sandbox = context.metadata.get("daytona_sandbox")
-    rebind = getattr(svc, "rebind_sandbox", None)
-    if sandbox is not None and callable(rebind):
-        rebind(sandbox)
+    _rebind_service_for_occ(context, svc)
 
     result = await asyncio.to_thread(
         svc.delete_file,
@@ -453,10 +514,7 @@ async def daytona_move_file(
             is_error=True,
         )
 
-    sandbox = context.metadata.get("daytona_sandbox")
-    rebind = getattr(svc, "rebind_sandbox", None)
-    if sandbox is not None and callable(rebind):
-        rebind(sandbox)
+    _rebind_service_for_occ(context, svc)
 
     result = await asyncio.to_thread(
         svc.move_file,

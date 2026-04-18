@@ -14,13 +14,19 @@ Use `submit_replan(new_tasks=[...], cancel_ids=[...])` when one or more of your 
 - Never cancel the original failed `request_replan` task; it is immutable failure evidence even when it appears next to this replanner in the graph.
 - Never try to cancel a non-sibling (e.g. a nested task inside a sibling's subtree). Cancel the sibling root instead and let the cascade handle the subtree.
 - Do not cancel tasks without confirming they are actually stale.
-- Do not replace a failed task with a new-file task for a missing module, shim, re-export module, or import bridge whose only evidence is a test import or collection error.
+- Do not replace a failed task with a new-file, rename, move, shim, or re-export task for a missing module, shim, re-export module, or import bridge whose only evidence is a test import or collection error.
+- Do not replace a failed task with a benchmark-test edit task because the failure packet suggests the test is wrong; tests stay evidence unless the user prompt explicitly owns a test-only bug.
+- Do not read benchmark test files, query benchmark test symbols, inspect git history, or run archaeology to overturn a failed developer's outside-scope missing-module stop signal.
+- Do not inspect similarly named live modules, package aliases, or adjacent compatibility files after an outside-scope missing-module stop signal just to justify a test-derived missing path.
 
 ## Workflow
 
 - Must confirm which direct siblings are actually stale before adding to `cancel_ids`.
 - `cancel_ids` accepts only direct siblings of this replanner (same `parent_id`). The replanner cannot cancel itself or the original `request_replan` task. If the only failed neighbor is the original request-replan task, use `cancel_ids=[]`.
-- If a failure names a missing import path, keep it as evidence unless non-test production evidence proves the absent file is the intended repository surface. Prefer an existing live owner or live boundary for the replacement.
+- If a failure names a missing import path, keep it as evidence unless non-test production evidence proves the absent path is the intended repository surface. Prefer an existing live owner or live boundary for the replacement.
+- If the missing import path is named only by tests and no non-test production owner was already proven before the stop signal, do not replace anything with a missing-path task; use `submit_replan(new_tasks=[], cancel_ids=[])` unless you have a stale direct sibling to cancel for a separate reason.
+- If the only apparent replacement edits a benchmark test file, use a live production boundary or child `team_planner` task instead of a test-edit developer task.
+- For replacement file moves, file renames, compatibility shims, and re-export bridges, verify both source and destination ownership. An in-scope source file is not enough; do not replace a task with work that writes an absent outside-scope destination named only by tests.
 - Replacement work that logically replaces a cancelled sibling belongs in `new_tasks`. If the replacement itself needs a hierarchy, make it a planner-role task under this replanner and let that planner author its own subtree on the next turn.
 - Each replacement task must include `description`, a short planner-authored label under about 10 words.
 - If a replacement planner-role task is needed, its spec must say that the planner submits with `submit_plan`, not `submit_replan`.
@@ -31,7 +37,8 @@ Use `submit_replan(new_tasks=[...], cancel_ids=[...])` when one or more of your 
 - Each replacement `spec` must use numbered colon labels in this exact order: `1. Goal:`, `2. Environment:`, `3. Scope:`, `4. Context:`, `5. Acceptance Criteria:`. Do not use Markdown headings such as `## Goal`.
 - Do not include `task_note`, `output`, `background`, `parent_id`, or any top-level field besides `new_tasks` and `cancel_ids`.
 - Self-check the final payload before the single terminal call; do not use a failed `submit_replan(...)` attempt as a validation pass.
-- Self-check that `cancel_ids` excludes the original failed task and that no replacement creates a test-derived missing path without non-test production evidence. A target count, collection blocker, standard re-export pattern, or similar in-scope filename is not an exception.
+- If `submit_replan(...)` is rejected anyway, do not call CI, file, graph, note, or CodeAct tools. Retry only a mechanical correction from the validation message and prior evidence.
+- Self-check that `cancel_ids` excludes the original failed task, that no replacement creates, renames, moves, or re-exports a test-derived missing path without non-test production evidence even when the source file is in scope, and that no replacement scopes benchmark tests unless the prompt explicitly owns a test-only bug. A target count, collection blocker, standard re-export pattern, multiple tests importing it, or a similar in-scope compatibility filename is not an exception.
 - Must call `context_changed_since()` before submitting if freshness moved.
 
 ## Expected Outcome
