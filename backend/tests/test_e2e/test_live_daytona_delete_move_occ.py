@@ -252,6 +252,36 @@ async def _run_many(
     )
 
 
+async def _run_mixed_many(
+    env: LiveEnv,
+    svc: CodeIntelligenceService,
+    calls: list[tuple[str, Any, dict[str, Any]]],
+    *,
+    concurrency: int,
+    timeout_s: int,
+) -> list[dict[str, Any]]:
+    semaphore = asyncio.Semaphore(concurrency)
+
+    async def _one(idx: int, label: str, tool: Any, kwargs: dict[str, Any]) -> dict[str, Any]:
+        ctx = env.make_ctx(svc, agent_run_id=f"mixed-{idx}-{uuid.uuid4().hex[:8]}")
+        async with semaphore:
+            result = await _invoke(tool, kwargs, ctx)
+        output = (result.output or "").lstrip()
+        payload = _json_output(result) if output.startswith("{") else {}
+        return {
+            "label": label,
+            "kwargs": kwargs,
+            "is_error": result.is_error,
+            "payload": payload,
+            "metadata": dict(result.metadata or {}),
+        }
+
+    return await asyncio.wait_for(
+        asyncio.gather(*[_one(i, label, tool, kwargs) for i, (label, tool, kwargs) in enumerate(calls)]),
+        timeout=timeout_s,
+    )
+
+
 # ---------------------------------------------------------------------------
 # daytona_delete_file
 # ---------------------------------------------------------------------------
@@ -496,3 +526,137 @@ def test_live_delete_and_move_race_on_same_source(live_env: LiveEnv):
         assert not env.path_exists("race/payload.txt")
         assert env.path_exists("race/moved.txt")
         assert env.read_text("race/moved.txt") == "shared\n"
+
+
+def test_live_recursive_delete_move_mixed_high_concurrency(live_env: LiveEnv):
+    """Mixed recursive delete/move and file operations share one high-concurrency burst."""
+    env = live_env
+    env.init_repo()
+
+    dir_moves = 14
+    dir_deletes = 14
+    file_moves = 8
+    file_deletes = 8
+    total = dir_moves + dir_deletes + file_moves + file_deletes
+    concurrency = 32
+
+    setup = f"""
+python3 - <<'PY'
+import pathlib
+root = pathlib.Path({env.repo_root!r})
+for i in range({dir_moves}):
+    base = root / "mixed" / "move_src" / f"tree_{{i}}"
+    (base / "nested").mkdir(parents=True, exist_ok=True)
+    (base / "a.txt").write_text(f"move-a-{{i}}\\n", encoding="utf-8")
+    (base / "nested" / "b.txt").write_text(f"move-b-{{i}}\\n", encoding="utf-8")
+for i in range({dir_deletes}):
+    base = root / "mixed" / "delete_src" / f"tree_{{i}}"
+    (base / "nested").mkdir(parents=True, exist_ok=True)
+    (base / "gone.txt").write_text(f"delete-a-{{i}}\\n", encoding="utf-8")
+    (base / "nested" / "gone_b.txt").write_text(f"delete-b-{{i}}\\n", encoding="utf-8")
+for i in range({file_moves}):
+    path = root / "mixed" / "file_move_src" / f"file_{{i}}.txt"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(f"file-move-{{i}}\\n", encoding="utf-8")
+for i in range({file_deletes}):
+    path = root / "mixed" / "file_delete_src" / f"file_{{i}}.txt"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(f"file-delete-{{i}}\\n", encoding="utf-8")
+PY
+"""
+    env.exec_checked(setup, timeout=120)
+
+    svc = env.make_ci_service()
+    calls: list[tuple[str, Any, dict[str, Any]]] = []
+    for i in range(dir_moves):
+        calls.append(
+            (
+                "dir_move",
+                daytona_move_file,
+                {
+                    "src_path": f"{env.repo_root}/mixed/move_src/tree_{i}",
+                    "dst_path": f"{env.repo_root}/mixed/move_dst/tree_{i}",
+                    "recursive": True,
+                },
+            )
+        )
+    for i in range(dir_deletes):
+        calls.append(
+            (
+                "dir_delete",
+                daytona_delete_file,
+                {
+                    "file_path": f"{env.repo_root}/mixed/delete_src/tree_{i}",
+                    "recursive": True,
+                },
+            )
+        )
+    for i in range(file_moves):
+        calls.append(
+            (
+                "file_move",
+                daytona_move_file,
+                {
+                    "src_path": f"{env.repo_root}/mixed/file_move_src/file_{i}.txt",
+                    "dst_path": f"{env.repo_root}/mixed/file_move_dst/file_{i}.txt",
+                },
+            )
+        )
+    for i in range(file_deletes):
+        calls.append(
+            (
+                "file_delete",
+                daytona_delete_file,
+                {"file_path": f"{env.repo_root}/mixed/file_delete_src/file_{i}.txt"},
+            )
+        )
+
+    results = asyncio.run(
+        _run_mixed_many(
+            env,
+            svc,
+            calls,
+            concurrency=concurrency,
+            timeout_s=600,
+        )
+    )
+
+    summary: dict[str, dict[str, int]] = {}
+    for item in results:
+        label = str(item["label"])
+        status = str(item["payload"].get("status"))
+        summary.setdefault(label, {})
+        summary[label][status] = summary[label].get(status, 0) + 1
+    print(
+        "\n[recursive-mixed-high-concurrency]",
+        json.dumps(
+            {
+                "total": total,
+                "concurrency": concurrency,
+                "summary": summary,
+            },
+            indent=2,
+            sort_keys=True,
+        ),
+    )
+
+    failures = [
+        item for item in results
+        if item["is_error"]
+        or item["payload"].get("status")
+        not in {"deleted", "moved"}
+    ]
+    assert not failures, json.dumps(failures[:5], indent=2, default=str)
+
+    for i in range(dir_moves):
+        assert not env.path_exists(f"mixed/move_src/tree_{i}")
+        assert env.path_exists(f"mixed/move_dst/tree_{i}/a.txt")
+        assert env.read_text(f"mixed/move_dst/tree_{i}/a.txt") == f"move-a-{i}\n"
+        assert env.read_text(f"mixed/move_dst/tree_{i}/nested/b.txt") == f"move-b-{i}\n"
+    for i in range(dir_deletes):
+        assert not env.path_exists(f"mixed/delete_src/tree_{i}")
+    for i in range(file_moves):
+        assert not env.path_exists(f"mixed/file_move_src/file_{i}.txt")
+        assert env.read_text(f"mixed/file_move_dst/file_{i}.txt") == f"file-move-{i}\n"
+    for i in range(file_deletes):
+        assert not env.path_exists(f"mixed/file_delete_src/file_{i}.txt")

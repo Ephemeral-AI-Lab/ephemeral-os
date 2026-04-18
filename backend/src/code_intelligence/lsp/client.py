@@ -722,7 +722,7 @@ class LspClient:
         if not self._sandbox:
             return False
         return self._run_sandbox_install(
-            "pip install --quiet --no-cache-dir jedi",
+            "python3 -m pip install --quiet --no-cache-dir jedi",
         )
 
     def _install_typescript_backend(self) -> bool:

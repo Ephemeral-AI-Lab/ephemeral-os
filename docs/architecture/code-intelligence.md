@@ -430,7 +430,8 @@ Attempts to merge concurrent edits when file changes between prepare and commit.
 ┌──────────────────┐  ┌──────────────────────┐
 │install_python_   │  │install_typescript_   │
 │backend           │  │backend               │
-│pip install jedi  │  │npm install typescript│
+│python3 -m pip    │  │npm install typescript│
+│install jedi      │  │                    │
 └────────┬─────────┘  └──────────┬───────────┘
          │                       │
          └──────────┬────────────┘
@@ -512,7 +513,9 @@ Returns (JSON):
       ...
     ],
     "total_references": 25,  # only if references=true
-    "confidence": "full|unavailable"  # "full" if LSP succeeded, else "unavailable"
+    "confidence": "full|unavailable",  # "full" if LSP succeeded, else "unavailable"
+    "reference_status": "lsp|definition_fallback",
+    "lsp_reason": "python_backend_unavailable|no_lsp_references|..."  # fallback only
   }
 ```
 
@@ -520,8 +523,12 @@ Returns (JSON):
 1. Try `SymbolIndex.find(query)` first (fast, no position needed)
 2. If empty, fall back to `ripgrep` regex search (local) or remote sandbox search
 3. If `references=true`:
+   - Ensure the Python LSP backend is ready, installing missing sandbox Jedi
+     dependencies through `python3 -m pip` when possible
    - Try LSP `find_references()` on top 5 definitions (sorted by production priority)
-   - If LSP unavailable, return definitions only with `confidence: unavailable`
+   - If LSP unavailable or empty, return definitions only with
+     `confidence: unavailable`, `reference_status: definition_fallback`, and an
+     `lsp_reason`
 
 **Common Patterns:**
 - Find where a symbol is defined: `ci_query_symbol("MyClass", references=false)`

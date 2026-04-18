@@ -338,7 +338,7 @@ def test_ensure_ready_installs_missing_sandbox_deps() -> None:
                 return SimpleNamespace(exit_code=1, result="")
             if command == "npx tsc --version":
                 return SimpleNamespace(exit_code=1, result="")
-            if command == "pip install --quiet --no-cache-dir jedi":
+            if command == "python3 -m pip install --quiet --no-cache-dir jedi":
                 return SimpleNamespace(exit_code=0, result="")
             if "node -e \"require('typescript')\"" in command:
                 return SimpleNamespace(exit_code=0, result="missing\n")
@@ -356,3 +356,4 @@ def test_ensure_ready_installs_missing_sandbox_deps() -> None:
     readiness = lsp.ensure_ready(install_missing=True)
 
     assert readiness == {"python": True, "typescript": True}
+    assert "python3 -m pip install --quiet --no-cache-dir jedi" in sandbox.process.calls

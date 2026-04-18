@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 import json
 import logging
 import os
@@ -166,6 +167,14 @@ class CiQuerySymbolOutput(BaseModel):
         description="Total references collected.",
     )
     confidence: str | None = Field(default=None, description="Confidence level for references.")
+    reference_status: str | None = Field(
+        default=None,
+        description="Reference source/status such as lsp or definition_fallback.",
+    )
+    lsp_reason: str | None = Field(
+        default=None,
+        description="Reason LSP references were unavailable when using a fallback.",
+    )
     hint: str | None = Field(default=None, description="Follow-up guidance.")
     message: str | None = Field(default=None, description="Human-readable status message.")
 
@@ -791,6 +800,39 @@ def _resolve_symbol_column(svc: Any, file_path: str, line: int, symbol_name: str
     return idx if idx >= 0 else 0
 
 
+def _sandbox_uses_async_exec(sandbox: Any) -> bool:
+    process = getattr(sandbox, "process", None)
+    exec_fn = getattr(process, "exec", None) if process is not None else None
+    return bool(exec_fn) and inspect.iscoroutinefunction(exec_fn)
+
+
+def _ensure_reference_lsp_ready(svc: Any) -> tuple[bool | None, str | None]:
+    """Best-effort readiness gate before reference tracing."""
+    lsp = getattr(svc, "lsp_client", None)
+    if lsp is None:
+        return False, "lsp_client_missing"
+
+    sandbox = getattr(lsp, "_sandbox", None)
+    if sandbox is not None and _sandbox_uses_async_exec(sandbox):
+        return False, "async_sandbox_lsp_unavailable"
+
+    ensure_ready = getattr(lsp, "ensure_ready", None)
+    if not callable(ensure_ready):
+        return None, None
+
+    try:
+        readiness = ensure_ready(install_missing=True, languages=("python",))
+    except Exception as exc:
+        logger.debug("LSP readiness probe failed", exc_info=True)
+        return False, f"python_backend_probe_failed: {exc}"
+
+    if isinstance(readiness, dict):
+        if not readiness.get("python"):
+            return False, "python_backend_unavailable"
+        return True, None
+    return None, None
+
+
 def _file_query_symbols(
     svc: Any,
     *,
@@ -983,34 +1025,40 @@ async def ci_query_symbol(
 
     ref_list: list[dict[str, Any]] = []
     used_lsp = False
-    for defn in sorted_defs:
-        try:
-            col = _resolve_symbol_column(
-                svc, defn.file_path, defn.line, defn.name,
-            )
-            lsp_refs = svc.find_references(
-                defn.file_path, defn.name, defn.line, col,
-            )
-            if lsp_refs:
-                used_lsp = True
-                for ref in lsp_refs:
-                    ref_list.append(
-                        {
-                            "file": ref.file_path,
-                            "line": ref.line,
-                            "text": getattr(ref, "text", ""),
-                        }
-                    )
-                    if len(ref_list) >= _MAX_REFERENCES:
-                        break
-        except Exception:
-            logger.debug("LSP find_references failed for %s", query, exc_info=True)
-        if used_lsp and ref_list:
-            break
-        if len(ref_list) >= _MAX_REFERENCES:
-            break
+    lsp_ready, lsp_reason = _ensure_reference_lsp_ready(svc)
+    if lsp_ready is not False:
+        for defn in sorted_defs:
+            try:
+                col = _resolve_symbol_column(
+                    svc, defn.file_path, defn.line, defn.name,
+                )
+                lsp_refs = svc.find_references(
+                    defn.file_path, defn.name, defn.line, col,
+                )
+                if lsp_refs:
+                    used_lsp = True
+                    for ref in lsp_refs:
+                        ref_list.append(
+                            {
+                                "file": ref.file_path,
+                                "line": ref.line,
+                                "text": getattr(ref, "text", ""),
+                            }
+                        )
+                        if len(ref_list) >= _MAX_REFERENCES:
+                            break
+            except Exception as exc:
+                if lsp_reason is None:
+                    lsp_reason = f"find_references_error: {exc}"
+                logger.debug("LSP find_references failed for %s", query, exc_info=True)
+            if used_lsp and ref_list:
+                break
+            if len(ref_list) >= _MAX_REFERENCES:
+                break
 
     if not used_lsp:
+        if lsp_reason is None:
+            lsp_reason = "no_lsp_references"
         for defn in sorted_defs:
             ref_list.append(
                 {
@@ -1020,17 +1068,16 @@ async def ci_query_symbol(
                 }
             )
 
-    return ToolResult(
-        output=json.dumps(
-            {
-                "definitions": definitions,
-                "references": ref_list[:_MAX_REFERENCES],
-                "total_references": len(ref_list),
-                "confidence": "full" if used_lsp else "unavailable",
-            },
-            indent=2,
-        )
-    )
+    payload = {
+        "definitions": definitions,
+        "references": ref_list[:_MAX_REFERENCES],
+        "total_references": len(ref_list),
+        "confidence": "full" if used_lsp else "unavailable",
+        "reference_status": "lsp" if used_lsp else "definition_fallback",
+    }
+    if not used_lsp and lsp_reason:
+        payload["lsp_reason"] = lsp_reason
+    return ToolResult(output=json.dumps(payload, indent=2))
 
 
 # -- Edit Hotspots ------------------------------------------------------------

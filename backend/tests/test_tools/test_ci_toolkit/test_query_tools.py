@@ -813,6 +813,7 @@ def _svc_with_index(symbols=None, refs=None, *, initialized=True, is_built=True)
     svc.tree_cache = None
     svc.lsp_client = MagicMock()
     svc.lsp_client._read_line = MagicMock(return_value=None)
+    svc.lsp_client.ensure_ready.return_value = {"python": True, "typescript": False}
     return svc
 
 
@@ -855,11 +856,59 @@ async def test_query_references_lsp_returns_results():
     assert not result.is_error
     data = json.loads(result.output)
     assert data["confidence"] == "full"
+    assert data["reference_status"] == "lsp"
     assert data["total_references"] == 2
     assert "definitions" in data
     files = [r["file"] for r in data["references"]]
     assert "src/runner.py" in files
     assert "src/main.py" in files
+
+
+async def test_query_references_bootstraps_python_lsp_for_remote_refs():
+    defn = _make_symbol_info("Engine", "/testbed/src/engine.py", 10, "class")
+    ref = MagicMock(file_path="/testbed/src/main.py", line=20, text="engine = Engine(config)")
+
+    svc = _svc_with_index(symbols=[defn], refs=[ref], initialized=False, is_built=True)
+    svc.query_symbols.return_value = [defn]
+
+    sandbox = MagicMock()
+    ctx = _ctx_with_svc(svc)
+    ctx.metadata["daytona_sandbox"] = sandbox
+
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        result = await ci_query_symbol.execute(
+            ci_query_symbol.input_model(query="Engine", references=True),
+            ctx,
+        )
+
+    data = json.loads(result.output)
+    assert data["confidence"] == "full"
+    assert data["reference_status"] == "lsp"
+    svc.lsp_client.ensure_ready.assert_called_once_with(
+        install_missing=True,
+        languages=("python",),
+    )
+    svc.find_references.assert_called_once()
+
+
+async def test_query_references_reports_python_lsp_unavailable():
+    defn = _make_symbol_info("Engine", "/testbed/src/engine.py", 10, "class")
+
+    svc = _svc_with_index(symbols=[defn], refs=[])
+    svc.query_symbols.return_value = [defn]
+    svc.lsp_client.ensure_ready.return_value = {"python": False, "typescript": False}
+
+    with patch("tools.ci_toolkit.query_tools.get_ci_service", return_value=svc):
+        result = await ci_query_symbol.execute(
+            ci_query_symbol.input_model(query="Engine", references=True),
+            _ctx_with_svc(svc),
+        )
+
+    data = json.loads(result.output)
+    assert data["confidence"] == "unavailable"
+    assert data["reference_status"] == "definition_fallback"
+    assert data["lsp_reason"] == "python_backend_unavailable"
+    svc.find_references.assert_not_called()
 
 
 async def test_query_references_lsp_fails_falls_back_to_definitions():
@@ -876,6 +925,8 @@ async def test_query_references_lsp_fails_falls_back_to_definitions():
 
     data = json.loads(result.output)
     assert data["confidence"] == "unavailable"
+    assert data["reference_status"] == "definition_fallback"
+    assert data["lsp_reason"] == "find_references_error: LSP timeout"
     assert data["total_references"] == 1
     assert "definition:" in data["references"][0]["text"]
 
@@ -893,6 +944,8 @@ async def test_query_references_lsp_empty_falls_back_to_definitions():
 
     data = json.loads(result.output)
     assert data["confidence"] == "unavailable"
+    assert data["reference_status"] == "definition_fallback"
+    assert data["lsp_reason"] == "no_lsp_references"
     assert data["total_references"] == 1
     assert data["references"][0]["file"] == "src/engine.py"
 
