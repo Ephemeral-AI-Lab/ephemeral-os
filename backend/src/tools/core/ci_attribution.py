@@ -32,7 +32,7 @@ def rebind_ci_service(context: ToolExecutionContext, svc: Any) -> None:
 
     No-op when the context has no sandbox or *svc* cannot be rebound.
     """
-    sandbox = context.metadata.get("daytona_sandbox")
+    sandbox = context.metadata.get("ci_sandbox") or context.metadata.get("daytona_sandbox")
     rebind = getattr(svc, "rebind_sandbox", None)
     if sandbox is None or not callable(rebind):
         return

@@ -194,7 +194,14 @@ async def _perform_rename(
     submits the whole rename as one OCC batch.
     """
     try:
-        plan = svc.rename_symbol_plan(resolved_path, int(line), int(character), new_name)
+        with use_sandbox_io_loop():
+            plan = await asyncio.to_thread(
+                svc.rename_symbol_plan,
+                resolved_path,
+                int(line),
+                int(character),
+                new_name,
+            )
     except Exception as exc:  # pragma: no cover - defensive
         logger.debug("rename_symbol_plan raised for %s", resolved_path, exc_info=True)
         return ToolResult(output=f"LSP rename failed: {exc}", is_error=True)

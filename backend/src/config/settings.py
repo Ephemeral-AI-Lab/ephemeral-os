@@ -2,7 +2,7 @@
 
 Model/LLM configuration lives exclusively in the ``model_registrations``
 DB table — see :mod:`config.model_config`. This module owns only the
-non-model settings (system prompt, hooks, database, daytona, UI).
+non-model settings (system prompt, database, daytona, UI).
 """
 
 from __future__ import annotations
@@ -14,8 +14,6 @@ from typing import Any
 
 from dotenv import dotenv_values
 from pydantic import BaseModel, Field
-
-from hooks.schemas import HookDefinition
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 _DOTENV_PATH = _PROJECT_ROOT / ".env"
@@ -36,7 +34,6 @@ class Settings(BaseModel):
 
     # Behavior
     system_prompt: str | None = None
-    hooks: dict[str, list[HookDefinition]] = Field(default_factory=dict)
 
     # Database
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)

@@ -209,7 +209,7 @@ async def daytona_edit_file(
     tool_timings: dict[str, float] = {}
 
     file_path = _resolve_path(file_path, context)
-    warnings: list[str] = list(context.metadata.get("guard_pre_warnings") or [])
+    warnings: list[str] = []
 
     normalized_edits, edit_error, legacy_single_edit = _normalize_edits(
         old_text=old_text,

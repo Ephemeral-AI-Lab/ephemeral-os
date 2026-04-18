@@ -12,6 +12,7 @@ from message import ConversationMessage
 from message.stream_events import (
     ToolExecutionCancelled,
     ToolExecutionCompleted,
+    ToolExecutionStarted,
 )
 from engine.core.streaming_executor import (
     StreamingToolExecutor,
@@ -507,9 +508,12 @@ async def test_add_tool_runs_foreground_when_background_false():
 
     started = executor.add_tool(event, _make_assistant_msg())
 
-    assert started is not None, "Foreground tool should produce a started event"
+    assert started is None
     assert "tool_fg" in executor._tools
     assert len(executor.deferred_dispatch_ids) == 0
+    await asyncio.sleep(0)
+    events = executor.get_events()
+    assert any(isinstance(ev, ToolExecutionStarted) for ev in events)
 
 
 @pytest.mark.asyncio
@@ -527,9 +531,12 @@ async def test_add_tool_runs_non_bg_tool_with_background_flag():
 
     started = executor.add_tool(event, _make_assistant_msg())
 
-    assert started is not None, "Non-bg-capable tool should still execute"
+    assert started is None
     assert "tool_01" in executor._tools
     assert len(executor.deferred_dispatch_ids) == 0
+    await asyncio.sleep(0)
+    events = executor.get_events()
+    assert any(isinstance(ev, ToolExecutionStarted) for ev in events)
 
 
 @pytest.mark.asyncio
@@ -556,13 +563,15 @@ async def test_mixed_foreground_and_background_tools():
     fg_started = executor.add_tool(fg_event, _make_assistant_msg())
 
     assert bg_started is None, "Background tool should be skipped"
-    assert fg_started is not None, "Foreground tool should start"
+    assert fg_started is None
 
     assert len(executor._tools) == 1
     assert "tool_fg" in executor._tools
     assert "tool_bg" in executor.deferred_dispatch_ids
 
     await asyncio.sleep(0.1)
+    events = executor.get_events()
+    assert any(isinstance(ev, ToolExecutionStarted) for ev in events)
     results = await executor.get_remaining()
     assert len(results) == 1
     assert results[0].tool_name == "fast"

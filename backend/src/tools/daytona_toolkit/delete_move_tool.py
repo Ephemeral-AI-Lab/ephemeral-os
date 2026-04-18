@@ -262,7 +262,7 @@ async def daytona_delete_file(
 ) -> ToolResult:
     """Delete a file or folder through the code-intelligence OCC commit path."""
     resolved = _normalized_path(_resolve_path(path, context))
-    warnings: list[str] = list(context.metadata.get("guard_pre_warnings") or [])
+    warnings: list[str] = []
 
     svc = get_ci_service(context)
     if svc is None:
@@ -457,7 +457,7 @@ async def daytona_move_file(
     # src_in_scope controls post-success write_scope widening: a move
     # whose src was owned stays owned at dst (see _extend_write_scope below).
     src_in_scope = _write_scope_covers(context, src_resolved)
-    warnings: list[str] = list(context.metadata.get("guard_pre_warnings") or [])
+    warnings: list[str] = []
 
     svc = get_ci_service(context)
     if svc is None:

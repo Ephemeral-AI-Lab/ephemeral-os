@@ -8,7 +8,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from message.stream_events import StreamEvent, SystemNotification
 from tools.core.base import ToolExecutionContext, run_tool_safely
+from tools.core.hooks.execution import execute_tool_with_hooks
 from tools.daytona_toolkit.tools import (
     daytona_read_file,
     daytona_write_file,
@@ -63,6 +65,26 @@ def _ci_service_mock(*, file_path: str = "/ws/new.txt"):
         )
     )
     return svc
+
+
+async def _capture_emit(events: list[StreamEvent], event: StreamEvent) -> None:
+    events.append(event)
+
+
+async def _run_with_events(tool, payload, ctx):
+    events: list[StreamEvent] = []
+    result = await execute_tool_with_hooks(
+        tool,
+        payload,
+        ctx,
+        emit=lambda event: _capture_emit(events, event),
+        emit_started=False,
+    )
+    return result, events
+
+
+def _notification_texts(events: list[StreamEvent]) -> list[str]:
+    return [event.text for event in events if isinstance(event, SystemNotification)]
 
 
 # ---------------------------------------------------------------------------
@@ -291,8 +313,8 @@ async def test_write_file_resolves_relative_path():
     assert specs[0].file_path == "/workspace/subdir/file.txt"
 
 
-async def test_write_file_warns_write_outside_write_scope():
-    """Write-scope is advisory — out-of-scope writes succeed with a warning."""
+async def test_write_file_emits_advisory_for_outside_write_scope():
+    """Write-scope advisories stream as notifications, not tool output."""
     sb = _sb()
     sb.process.exec = AsyncMock(return_value=_write_exec_result())
     svc = _ci_service_mock(file_path="/testbed/dask/_compatibility.py")
@@ -306,7 +328,7 @@ async def test_write_file_warns_write_outside_write_scope():
         }
     )
 
-    result = await run_tool_safely(
+    result, events = await _run_with_events(
         daytona_write_file,
         {"file_path": "/testbed/dask/_compatibility.py", "content": "patched"},
         ctx,
@@ -314,8 +336,8 @@ async def test_write_file_warns_write_outside_write_scope():
 
     assert not result.is_error
     data = json.loads(result.output)
-    assert data["warnings"]
-    assert any("outside write_scope" in w for w in data["warnings"])
+    assert data["warnings"] == []
+    assert any("outside write_scope" in text for text in _notification_texts(events))
 
 
 async def test_write_file_allows_write_inside_write_scope():
@@ -370,8 +392,8 @@ async def test_write_file_blocks_test_file_with_policy_message():
     sb.process.exec.assert_not_awaited()
 
 
-async def test_write_file_warns_non_verify_surface_write_in_warn_mode():
-    """Write-scope is advisory — non-verify-surface writes also succeed with a warning."""
+async def test_write_file_emits_advisory_for_non_verify_surface_write_in_warn_mode():
+    """Non-verify-surface advisories stream as notifications, not tool output."""
     sb = _sb()
     sb.process.exec = AsyncMock(return_value=_write_exec_result())
     svc = _ci_service_mock(file_path="/testbed/dask/_compatibility.py")
@@ -388,7 +410,7 @@ async def test_write_file_warns_non_verify_surface_write_in_warn_mode():
         }
     )
 
-    result = await run_tool_safely(
+    result, events = await _run_with_events(
         daytona_write_file,
         {"file_path": "/testbed/dask/_compatibility.py", "content": "patched"},
         ctx,
@@ -396,8 +418,8 @@ async def test_write_file_warns_non_verify_surface_write_in_warn_mode():
 
     assert not result.is_error
     data = json.loads(result.output)
-    assert data["warnings"]
-    assert any("outside write_scope" in w for w in data["warnings"])
+    assert data["warnings"] == []
+    assert any("outside write_scope" in text for text in _notification_texts(events))
 
 
 async def test_write_file_allows_repo_write_from_validator():

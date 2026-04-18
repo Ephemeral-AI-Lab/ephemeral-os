@@ -9,7 +9,9 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from message.stream_events import StreamEvent, SystemNotification
 from tools.core.base import ToolExecutionContext, run_tool_safely
+from tools.core.hooks.execution import execute_tool_with_hooks
 from tools.daytona_toolkit import codeact_tool as codeact_tool_module
 from tools.daytona_toolkit._shell_policy import _normalize_team_shell_command
 from tools.daytona_toolkit.codeact_tool import (
@@ -106,6 +108,26 @@ def _make_sandbox(
 def _assert_ok(result) -> dict:
     assert not result.is_error, result.output
     return json.loads(result.output)
+
+
+async def _capture_emit(events: list[StreamEvent], event: StreamEvent) -> None:
+    events.append(event)
+
+
+async def _run_with_events(tool, payload, ctx):
+    events: list[StreamEvent] = []
+    result = await execute_tool_with_hooks(
+        tool,
+        payload,
+        ctx,
+        emit=lambda event: _capture_emit(events, event),
+        emit_started=False,
+    )
+    return result, events
+
+
+def _notification_texts(events: list[StreamEvent]) -> list[str]:
+    return [event.text for event in events if isinstance(event, SystemNotification)]
 
 
 def _shell_exec_output(stdout: str, exit_code: int = 0) -> str:
@@ -333,12 +355,11 @@ async def test_shell_mode_blocks_audited_test_suite_write_with_policy_message():
     )
 
     assert result.is_error
-    data = json.loads(result.output)
-    assert data["status"] == "error"
-    assert data["files_written"] == 1
-    assert "BLOCKED_TEST_FILE_EDIT" in data["error"]
-    assert "dask/tests/test_cli.py" in data["error"]
-    assert "read/verify-only" in data["error"]
+    assert result.output.startswith("post-hook failed daytona_codeact: BLOCKED_TEST_FILE_EDIT")
+    assert "dask/tests/test_cli.py" in result.output
+    assert "read/verify-only" in result.output
+    assert result.metadata["blocked_by"] == "post_hook"
+    assert result.metadata["original_tool_is_error"] is False
 
 
 @pytest.mark.parametrize(
@@ -586,7 +607,7 @@ async def test_team_shell_mode_treats_audited_changes_as_ambient():
     assert not any("outside write_scope" in warning for warning in data["warnings"])
 
 
-async def test_shell_mode_warns_for_audited_outside_scope_write():
+async def test_shell_mode_emits_post_advisory_for_audited_outside_scope_write():
     sb = _make_sandbox()
     svc = MagicMock()
     svc.cmd = AsyncMock(
@@ -607,7 +628,7 @@ async def test_shell_mode_warns_for_audited_outside_scope_write():
         }
     )
 
-    result = await run_tool_safely(
+    result, events = await _run_with_events(
         daytona_codeact,
         {"command": "python - <<'PY'\nprint('patched')\nPY"},
         ctx,
@@ -615,7 +636,8 @@ async def test_shell_mode_warns_for_audited_outside_scope_write():
 
     data = _assert_ok(result)
     assert data["files_written"] == 1
-    assert any("outside write_scope" in warning for warning in data["warnings"])
+    assert data["warnings"] == []
+    assert any("outside write_scope" in text for text in _notification_texts(events))
 
 
 @pytest.mark.parametrize(
@@ -772,7 +794,7 @@ async def test_shell_mode_normalizes_stderr_merge_for_team_agents():
         }
     )
 
-    result = await run_tool_safely(
+    result, events = await _run_with_events(
         daytona_codeact,
         {"command": "cd /testbed && pytest tests/unit/test_x.py -q 2>&1"},
         ctx,
@@ -780,5 +802,7 @@ async def test_shell_mode_normalizes_stderr_merge_for_team_agents():
 
     data = _assert_ok(result)
     assert data["shell_outputs"][0]["command"] == "pytest tests/unit/test_x.py -q"
-    assert any("2>&1" in warning for warning in data["warnings"])
-    assert any("cd <repo-root>" in warning for warning in data["warnings"])
+    assert data["warnings"] == []
+    texts = _notification_texts(events)
+    assert any("2>&1" in text for text in texts)
+    assert any("cd <repo-root>" in text for text in texts)

@@ -14,6 +14,7 @@ from message.messages import ToolResultBlock, ToolUseBlock
 from message.stream_events import (
     BackgroundTaskStarted,
     StreamEvent,
+    SystemNotification,
     ToolExecutionCompleted,
 )
 from providers.types import UsageSnapshot
@@ -154,7 +155,11 @@ def launch_background_tool(
             clean_input,
             bg_overrides,
         )
-        return ToolResult(output=block.content, is_error=block.is_error)
+        return ToolResult(
+            output=block.content,
+            is_error=block.is_error,
+            metadata=dict(block.metadata or {}),
+        )
 
     bg_event = background_manager.launch(
         bg_alias,
@@ -196,13 +201,26 @@ def launch_and_collect_bg_events(
         tool_input: dict[str, object],
         extra_metadata: ExecutionMetadata | dict[str, Any] | None = None,
     ) -> ToolResultBlock:
-        from tools.core.tool_execution import execute_tool_call
+        from tools.core.tool_execution import execute_tool_call_streaming
 
-        return await execute_tool_call(
+        async def emit(event: StreamEvent) -> None:
+            if not isinstance(event, SystemNotification):
+                return
+            callback = None
+            if isinstance(extra_metadata, ExecutionMetadata):
+                callback = extra_metadata.on_progress_line
+            elif isinstance(extra_metadata, dict):
+                raw = extra_metadata.get("on_progress_line")
+                callback = raw if callable(raw) else None
+            if callback is not None:
+                callback(event.text)
+
+        return await execute_tool_call_streaming(
             context,
             tool_name,
             tool_use_id,
             tool_input,
+            emit=emit,
             extra_metadata=extra_metadata,
         )
 

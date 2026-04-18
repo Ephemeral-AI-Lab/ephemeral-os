@@ -17,9 +17,11 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from message.stream_events import StreamEvent, SystemNotification
 from prompts.message_recorder import append_prompt_report_event
 from providers.types import ApiMessageRequest, ApiToolUseDeltaEvent, ApiMessageCompleteEvent
-from tools.core.base import BaseTool, ToolExecutionContext, ToolResult, run_tool_safely
+from tools.core.base import BaseTool, ToolExecutionContext, ToolResult
+from tools.core.hooks.execution import execute_tool_with_hooks
 
 logger = logging.getLogger(__name__)
 
@@ -293,11 +295,23 @@ async def run(
         if execute_tools:
             if execution_context is None:
                 raise RuntimeError("external_trigger runner: execute_tools=True requires execution_context")
-            # Route through run_tool_safely so the tool-guard pipeline and
-            # output-validation run uniformly with the streaming executor.
+            # Route through the platform hook-aware execution helper so
+            # output-validation and policies match the query engine.
             # The pre-validation above still runs for the execute_tools=False
             # path and to surface the "Required fields" hint on bad input.
-            tool_result = await run_tool_safely(tool, tool_input, execution_context)
+            async def emit(event: StreamEvent) -> None:
+                if isinstance(event, SystemNotification):
+                    _emit(
+                        f"{agent_name} (run={run_id}) turn {turn}: {event.text}"
+                    )
+
+            tool_result = await execute_tool_with_hooks(
+                tool,
+                tool_input,
+                execution_context,
+                emit=emit,
+                emit_started=False,
+            )
             tool_result_message = {
                 "role": "user",
                 "content": [{

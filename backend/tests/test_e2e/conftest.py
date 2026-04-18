@@ -654,7 +654,6 @@ def make_live_client(
         monkeypatch.setenv("DAYTONA_TARGET", DAYTONA_TARGET)
 
     _patch_server_database(monkeypatch, db_session_factory)
-    monkeypatch.setattr("hooks.make_hook_executor", lambda *a, **kw: None)
 
     def _patched_load_settings(*a, **kw):
         from config.settings import Settings as _S, DatabaseSettings as _DS
@@ -907,7 +906,6 @@ def app_client(db_session_factory, mock_api_client, tmp_path, monkeypatch):
 
     _patch_server_database(monkeypatch, db_session_factory)
     monkeypatch.setattr("providers.provider.make_api_client", lambda *a, **kw: mock_api_client)
-    monkeypatch.setattr("hooks.make_hook_executor", lambda *a, **kw: None)
     monkeypatch.setattr(
         "prompts.build_runtime_system_prompt",
         lambda *a, **kw: "You are a test assistant.",

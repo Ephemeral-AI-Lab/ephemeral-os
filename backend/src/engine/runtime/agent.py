@@ -1,7 +1,7 @@
 """Ephemeral agent — short-lived runtime for one user request.
 
-Each agent has an identity, its own API client, tool registry, hook
-executor, and query engine.  In a relay model, different agents can
+Each agent has an identity, its own API client, tool registry, and query engine.
+In a relay model, different agents can
 serve successive turns within the same session.
 """
 
@@ -22,7 +22,6 @@ from agents.types import AgentDefinition
 from config import Settings
 from message.messages import ConversationMessage
 from message.stream_events import StreamEvent
-from hooks import make_hook_executor
 from providers.provider import make_api_client
 from providers.types import UsageSnapshot
 from prompts import build_runtime_context_message, build_runtime_system_prompt
@@ -364,8 +363,6 @@ def spawn_agent(
         config, agent_def, sandbox_id, agent_name
     )
 
-    hook_executor = make_hook_executor(settings, config.cwd, api_client)
-
     base_system_prompt = _build_agent_system_prompt(
         config, agent_def, settings, latest_user_prompt
     )
@@ -397,7 +394,6 @@ def spawn_agent(
         system_prompt=system_prompt,
         max_tokens=max_tokens,
         tool_call_limit=tool_call_limit,
-        hook_executor=hook_executor,
         tool_metadata=initial_tool_metadata,
         session_state=session_state,
         enable_background_tasks=has_background_tools,

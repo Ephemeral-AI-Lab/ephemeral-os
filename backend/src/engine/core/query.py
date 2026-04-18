@@ -22,7 +22,7 @@ from providers.types import (
     SupportsStreamingMessages,
     UsageSnapshot,
 )
-from message.messages import ConversationMessage, SystemReminderBlock, ToolResultBlock
+from message.messages import ConversationMessage, SystemReminderBlock, ToolResultBlock, ToolUseBlock
 from message.stream_events import (
     AssistantTextDelta,
     AssistantTurnComplete,
@@ -31,7 +31,6 @@ from message.stream_events import (
     ThinkingDelta,
     ToolExecutionCancelled,
     ToolExecutionCompleted,
-    ToolExecutionStarted,
 )
 from engine.core.notifications import build_budget_warning
 from engine.core.tool_batch import validate_tool_batch
@@ -50,7 +49,10 @@ from tools.core.base import (
     ToolRegistry,
     decorate_schemas_for_background,
 )
-from tools.core.tool_execution import _consume_tool_budget_or_reject, execute_tool_call
+from tools.core.tool_execution import (
+    _consume_tool_budget_or_reject,
+    execute_tool_call_streaming,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -79,7 +81,6 @@ class QueryContext:
     tool_call_limit: int | None = None
     tool_calls_used: int = 0
     last_budget_warning_remaining: int | None = None
-    hook_executor: Any = None
     tool_metadata: ExecutionMetadata | None = None
     session_state: Any = None
     enable_background_tasks: bool = False
@@ -115,7 +116,10 @@ def _should_defer_stream_tool_dispatch(
     return _defer
 
 # Backward-compatibility aliases for internal test imports
-_execute_tool_call = execute_tool_call
+async def _execute_tool_call(*args: Any, **kwargs: Any) -> ToolResultBlock:
+    from tools.core.tool_execution import execute_tool_call
+
+    return await execute_tool_call(*args, **kwargs)
 _build_background_reminder = build_background_reminder
 
 
@@ -364,6 +368,7 @@ async def _run_query_loop(
         final_message: ConversationMessage | None = None
         usage = UsageSnapshot()
         pending_cancel: dict[str, str] = {}
+        streamed_tool_use_ids: set[str] = set()
 
         api_messages = await compact_for_api(
             display_messages,
@@ -430,6 +435,7 @@ async def _run_query_loop(
                 continue
 
             if isinstance(event, ApiToolUseDeltaEvent):
+                streamed_tool_use_ids.add(event.id)
                 budget_rejection = _consume_tool_budget_or_reject(
                     context,
                     event.name,
@@ -448,9 +454,9 @@ async def _run_query_loop(
                     )
                     continue
                 assistant_msg = final_message or ConversationMessage(role="assistant", content=[])
-                started = executor.add_tool(event, assistant_msg)
-                if started:
-                    yield started, None
+                executor.add_tool(event, assistant_msg)
+                for emitted in executor.get_events():
+                    yield emitted, None
                 for progress in executor.get_progress():
                     yield progress, None
                 continue
@@ -474,6 +480,8 @@ async def _run_query_loop(
 
         for progress in executor.get_progress():
             yield progress, None
+        for emitted in executor.get_events():
+            yield emitted, None
 
         display_messages.append(final_message)
         prompt_report.record(
@@ -505,7 +513,10 @@ async def _run_query_loop(
             yield started, None
 
         tool_results: list[ToolResultBlock] = list(streamed_rejections)
-        for completed in await executor.get_remaining():
+        remaining_events = await executor.get_remaining()
+        for emitted in executor.get_events():
+            yield emitted, None
+        for completed in remaining_events:
             if isinstance(completed, ToolExecutionCompleted):
                 tool_results.append(
                     ToolResultBlock(
@@ -580,9 +591,22 @@ async def _run_query_loop(
 
                 if len(foreground_calls) == 1:
                     tc = foreground_calls[0]
-                    yield ToolExecutionStarted(tool_name=tc.name, tool_input=tc.input), None
-                    result = await execute_tool_call(context, tc.name, tc.id, tc.input)
+                    emitted_events: list[StreamEvent] = []
+
+                    async def emit(event: StreamEvent) -> None:
+                        emitted_events.append(event)
+
+                    result = await execute_tool_call_streaming(
+                        context,
+                        tc.name,
+                        tc.id,
+                        tc.input,
+                        emit=emit,
+                        consume_budget=tc.id not in streamed_tool_use_ids,
+                    )
                     tool_results.append(result)
+                    for emitted in emitted_events:
+                        yield emitted, None
                     yield (
                         ToolExecutionCompleted(
                             tool_name=tc.name,
@@ -593,30 +617,56 @@ async def _run_query_loop(
                         None,
                     )
                 elif foreground_calls:
-                    started_events = [
-                        ToolExecutionStarted(tool_name=tc.name, tool_input=tc.input)
-                        for tc in foreground_calls
-                    ]
-                    for ev in started_events:
-                        yield ev, None
-
-                    results = await asyncio.gather(
-                        *[
-                            execute_tool_call(context, tc.name, tc.id, tc.input)
-                            for tc in foreground_calls
-                        ]
+                    queue: asyncio.Queue[StreamEvent | tuple[ToolUseBlock, ToolResultBlock]] = (
+                        asyncio.Queue()
                     )
-                    tool_results.extend(results)
-                    for tc, result in zip(foreground_calls, results, strict=True):
-                        yield (
-                            ToolExecutionCompleted(
-                                tool_name=tc.name,
-                                output=result.content,
-                                is_error=result.is_error,
-                                metadata=dict(result.metadata or {}),
-                            ),
-                            None,
-                        )
+
+                    async def run_foreground(tc: ToolUseBlock) -> None:
+                        async def emit(event: StreamEvent) -> None:
+                            await queue.put(event)
+
+                        try:
+                            result = await execute_tool_call_streaming(
+                                context,
+                                tc.name,
+                                tc.id,
+                                tc.input,
+                                emit=emit,
+                                consume_budget=tc.id not in streamed_tool_use_ids,
+                            )
+                        except Exception as exc:
+                            logger.exception(
+                                "Foreground tool dispatch failed: tool_id=%s tool_name=%s",
+                                tc.id,
+                                tc.name,
+                            )
+                            result = ToolResultBlock(
+                                tool_use_id=tc.id,
+                                content=f"Tool execution failed: {exc}",
+                                is_error=True,
+                            )
+                        await queue.put((tc, result))
+
+                    tasks = [asyncio.create_task(run_foreground(tc)) for tc in foreground_calls]
+                    remaining = len(tasks)
+                    while remaining:
+                        item = await queue.get()
+                        if isinstance(item, tuple):
+                            tc, result = item
+                            tool_results.append(result)
+                            remaining -= 1
+                            yield (
+                                ToolExecutionCompleted(
+                                    tool_name=tc.name,
+                                    output=result.content,
+                                    is_error=result.is_error,
+                                    metadata=dict(result.metadata or {}),
+                                ),
+                                None,
+                            )
+                        else:
+                            yield item, None
+                    await asyncio.gather(*tasks)
 
         assigned_ids: set[str] = {tr.tool_use_id for tr in tool_results if tr.tool_use_id}
         unassigned_ids = [tu.id for tu in final_message.tool_uses if tu.id not in assigned_ids]

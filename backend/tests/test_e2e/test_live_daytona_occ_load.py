@@ -37,6 +37,7 @@ from typing import Any
 import pytest
 from dotenv import load_dotenv
 
+from code_intelligence._async_bridge import configure_default_executor
 from code_intelligence.routing.service import CodeIntelligenceService
 from tests.test_e2e.daytona_exec_io import read_text_via_exec, write_text_via_exec
 from tools.core.base import ToolExecutionContext, ToolResult
@@ -165,6 +166,7 @@ class LiveLoadEnv:
     ) -> ToolExecutionContext:
         metadata: dict[str, Any] = {
             "daytona_sandbox": self.async_sandbox,
+            "ci_sandbox": self.raw_sandbox,
             "daytona_cwd": self.repo_root,
             "repo_root": self.repo_root,
             "exec_cwd": self.repo_root,
@@ -258,6 +260,10 @@ async def _run_mixed_operations(
     log_label: str = "occ-load-op",
 ) -> list[dict[str, Any]]:
     run_started = time.perf_counter()
+    configure_default_executor(
+        asyncio.get_running_loop(),
+        max_workers=max(200, concurrency * 8),
+    )
 
     async def _invoke(
         sequence: int,

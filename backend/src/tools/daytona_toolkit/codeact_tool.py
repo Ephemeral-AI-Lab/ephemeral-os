@@ -797,6 +797,7 @@ def _build_tool_output(
     script_stdout: str,
     warnings: list[str],
     error: str = "",
+    changed_paths: list[str] | None = None,
 ) -> ToolResult:
     shell_summaries: list[str] = []
     shell_outputs: list[dict[str, object]] = []
@@ -846,6 +847,7 @@ def _build_tool_output(
             "status": status,
             "files_written": files_written,
             "shells_run": len(shells),
+            "changed_paths": list(changed_paths or []),
         },
     )
 
@@ -1084,14 +1086,11 @@ async def daytona_codeact(
     disable_codeact_file_edits = _enforce_codeact_file_edit_policy(context)
 
     # Pre-flight policy (shell normalization, destructive-git/shell blocks,
-    # file-edit side-channel blocks) is enforced by pre-phase tool guards —
-    # see tools.daytona_toolkit.guards. The in-sandbox wrapper applies the
+    # file-edit side-channel blocks) is enforced by pre-phase platform hooks.
+    # The in-sandbox wrapper applies the
     # same checks in a second line of defense inside the sandbox process.
     if resolved_mode == "shell":
         direct_command = command or ""
-        normalization_warnings: list[str] = list(
-            context.metadata.get("guard_pre_warnings") or []
-        )
 
     try:
         sandbox = await _require_sandbox(context)
@@ -1116,21 +1115,18 @@ async def daytona_codeact(
         exit_code = int(shell_result.get("exit_code", 1))
         changed_paths = _changed_paths_from_shell(shell_result)
         ambient_changed_paths = _ambient_changed_paths_from_shell(shell_result)
-        policy_warnings, policy_error = _audited_write_policy(context, changed_paths)
         ambient_warnings = (
             [_ambient_change_warning(ambient_changed_paths)] if ambient_changed_paths else []
         )
         return _build_tool_output(
             context=context,
-            status="ok" if exit_code == 0 and not policy_error else "error",
+            status="ok" if exit_code == 0 else "error",
             files_written=len(changed_paths),
             shells=[shell_result],
             script_stdout="",
-            warnings=list(normalization_warnings) + policy_warnings + ambient_warnings,
-            error=(
-                policy_error
-                or (_shell_result_error_detail(shell_result) if exit_code != 0 else "")
-            ),
+            warnings=ambient_warnings,
+            error=_shell_result_error_detail(shell_result) if exit_code != 0 else "",
+            changed_paths=changed_paths,
         )
 
     stdout, sandbox, tool_error, changed_paths = await _execute_python_wrapper(
@@ -1160,6 +1156,7 @@ async def daytona_codeact(
             shells=[],
             script_stdout=stdout[:4000],
             warnings=["CodeAct result line was not valid JSON."],
+            changed_paths=changed_paths,
         )
 
     manifest_path = str(result.get("manifest", "") or "")
@@ -1176,6 +1173,7 @@ async def daytona_codeact(
             shells=[],
             script_stdout=stdout[:4000],
             warnings=["CodeAct wrapper did not return a manifest path."],
+            changed_paths=changed_paths,
         )
 
     try:
@@ -1194,6 +1192,7 @@ async def daytona_codeact(
             shells=[],
             script_stdout=stdout[:4000],
             warnings=["CodeAct completed but its manifest could not be read."],
+            changed_paths=changed_paths,
         )
 
     shells = list(manifest.get("shells", []) or [])
@@ -1205,18 +1204,19 @@ async def daytona_codeact(
             metadata={
                 "status": manifest.get("status", "error"),
                 "shells_run": len(shells),
+                "changed_paths": changed_paths,
             },
         )
 
     warnings = [str(w) for w in (manifest.get("warnings", []) or [])]
     writes = list(manifest.get("writes", []) or [])
-    policy_warnings, policy_error = _audited_write_policy(context, changed_paths)
     return _build_tool_output(
         context=context,
-        status="error" if policy_error else "ok",
+        status="ok",
         files_written=_files_written_count(writes, changed_paths),
         shells=shells,
         script_stdout=script_stdout,
-        warnings=warnings + policy_warnings,
-        error=policy_error or str(manifest.get("error", "") or ""),
+        warnings=warnings,
+        error=str(manifest.get("error", "") or ""),
+        changed_paths=changed_paths,
     )

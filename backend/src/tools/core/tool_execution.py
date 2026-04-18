@@ -4,13 +4,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from hooks import HookEvent
 from message.messages import ToolResultBlock
-from tools.core.base import ExecutionMetadata, ToolExecutionContext, run_tool_safely
+from message.stream_events import StreamEvent
+from tools.core.base import ExecutionMetadata, ToolExecutionContext
+from tools.core.hooks.execution import execute_tool_with_hooks
 from tools.core.runtime import merge_runtime_metadata
 
 if TYPE_CHECKING:
     from engine.core.query import QueryContext
+    from tools.core.hooks import EmitStreamEvent
 
 
 def _build_budget_exceeded_error(
@@ -51,25 +53,36 @@ async def execute_tool_call(
     tool_input: dict[str, object],
     extra_metadata: ExecutionMetadata | dict[str, Any] | None = None,
 ) -> ToolResultBlock:
-    budget_rejection = _consume_tool_budget_or_reject(context, tool_name, tool_use_id)
-    if budget_rejection is not None:
-        return budget_rejection
+    async def _noop_emit(event: StreamEvent) -> None:
+        del event
 
-    if context.hook_executor is not None:
-        pre_hooks = await context.hook_executor.execute(
-            HookEvent.PRE_TOOL_USE,
-            {
-                "tool_name": tool_name,
-                "tool_input": tool_input,
-                "event": HookEvent.PRE_TOOL_USE.value,
-            },
-        )
-        if pre_hooks.blocked:
-            return ToolResultBlock(
-                tool_use_id=tool_use_id,
-                content=pre_hooks.reason or f"pre_tool_use hook blocked {tool_name}",
-                is_error=True,
-            )
+    return await execute_tool_call_streaming(
+        context,
+        tool_name,
+        tool_use_id,
+        tool_input,
+        extra_metadata=extra_metadata,
+        emit=_noop_emit,
+        emit_started=False,
+    )
+
+
+async def execute_tool_call_streaming(
+    context: QueryContext,
+    tool_name: str,
+    tool_use_id: str,
+    tool_input: dict[str, object],
+    *,
+    emit: "EmitStreamEvent",
+    extra_metadata: ExecutionMetadata | dict[str, Any] | None = None,
+    consume_budget: bool = True,
+    emit_started: bool = True,
+) -> ToolResultBlock:
+    """Execute one tool call through the platform hook pipeline."""
+    if consume_budget:
+        budget_rejection = _consume_tool_budget_or_reject(context, tool_name, tool_use_id)
+        if budget_rejection is not None:
+            return budget_rejection
 
     tool = context.tool_registry.get(tool_name)
     if tool is None:
@@ -87,10 +100,12 @@ async def execute_tool_call(
     if extra_metadata:
         metadata.update(extra_metadata)
 
-    result = await run_tool_safely(
+    result = await execute_tool_with_hooks(
         tool,
         tool_input,
         ToolExecutionContext(cwd=context.cwd, metadata=metadata),
+        emit=emit,
+        emit_started=emit_started,
     )
     merge_runtime_metadata(
         original=context.tool_metadata, updated=metadata, result_metadata=result.metadata
@@ -111,15 +126,4 @@ async def execute_tool_call(
         is_error=result.is_error,
         metadata=result.metadata,
     )
-    if context.hook_executor is not None:
-        await context.hook_executor.execute(
-            HookEvent.POST_TOOL_USE,
-            {
-                "tool_name": tool_name,
-                "tool_input": tool_input,
-                "tool_output": tool_result.content,
-                "tool_is_error": tool_result.is_error,
-                "event": HookEvent.POST_TOOL_USE.value,
-            },
-        )
     return tool_result

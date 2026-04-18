@@ -18,10 +18,13 @@ __all__ = [
     "BaseToolkit",
     "ExecutionMetadata",
     "TextToolOutput",
+    "ToolInputParseResult",
     "ToolExecutionContext",
     "ToolRegistry",
     "ToolResult",
     "decorate_schemas_for_background",
+    "execute_tool_body",
+    "parse_tool_input",
     "run_tool_safely",
     "validate_tool_output",
 ]
@@ -64,6 +67,26 @@ class TextToolOutput(RootModel[str]):
     """Successful output for tools whose true output is plain text."""
 
     root: str = Field(..., description="Plain text returned by the tool.")
+
+
+@dataclass(frozen=True)
+class ToolInputParseResult:
+    """Result of validating raw tool input."""
+
+    args: BaseModel | None = None
+    error: ToolResult | None = None
+
+    @property
+    def is_error(self) -> bool:
+        return self.error is not None
+
+    @classmethod
+    def success(cls, args: BaseModel) -> ToolInputParseResult:
+        return cls(args=args)
+
+    @classmethod
+    def failure(cls, result: ToolResult) -> ToolInputParseResult:
+        return cls(error=result)
 
 
 class BaseTool(ABC):
@@ -254,13 +277,30 @@ async def run_tool_safely(
     tool invocation sites. ``asyncio.CancelledError`` is intentionally
     not caught — callers decide how to handle cancellation.
 
-    Registered tool guards (see :mod:`tools.core.guards`) run after pydantic
-    input validation and again after successful output validation. An empty
-    registry makes this path a no-op.
+    Platform hooks run after pydantic input validation and after tool output.
+    A hook registry with no matches makes this path a no-op. This function is
+    intentionally non-streaming; production query paths should prefer the
+    hook-aware execution primitive in :mod:`tools.core.tool_execution`.
     """
-    from tools.core.guards import run_post as _run_post_guards
-    from tools.core.guards import run_pre as _run_pre_guards
+    from tools.core.hooks.execution import execute_tool_with_hooks
 
+    async def _noop_emit(event: object) -> None:
+        del event
+
+    return await execute_tool_with_hooks(
+        tool,
+        raw_input,
+        context,
+        emit=_noop_emit,
+        emit_started=False,
+    )
+
+
+def parse_tool_input(
+    tool: "BaseTool",
+    raw_input: dict[str, Any],
+) -> ToolInputParseResult:
+    """Validate raw tool input against the tool's pydantic model."""
     clean_input = _strip_runtime_control_fields(tool, raw_input)
     try:
         parsed_input = tool.input_model.model_validate(clean_input)
@@ -268,64 +308,38 @@ async def run_tool_safely(
         errors = "; ".join(
             f"{'.'.join(str(p) for p in e['loc'])}: {e['msg']}" for e in exc.errors()
         )
-        return ToolResult(
-            output=(
-                f"Invalid input for {tool.name}: {errors}. "
-                "Please retry the tool call with valid arguments."
-            ),
-            is_error=True,
+        return ToolInputParseResult.failure(
+            ToolResult(
+                output=(
+                    f"Invalid input for {tool.name}: {errors}. "
+                    "Please retry the tool call with valid arguments."
+                ),
+                is_error=True,
+            )
         )
     except Exception as exc:
-        return ToolResult(
-            output=f"Invalid input for {tool.name}: {exc}",
-            is_error=True,
+        return ToolInputParseResult.failure(
+            ToolResult(
+                output=f"Invalid input for {tool.name}: {exc}",
+                is_error=True,
+            )
         )
+    return ToolInputParseResult.success(parsed_input)
 
-    pre = await _run_pre_guards(tool.name, parsed_input, context)
-    if pre.deny is not None:
-        return ToolResult(
-            output=pre.deny.message,
-            is_error=pre.deny.is_error,
-            metadata=_guard_warnings_metadata({}, pre.warnings),
-        )
-    parsed_input = pre.args
-    # Bridge pre-phase warnings into the tool's execution context so tool
-    # bodies that fold warnings into their output payload (e.g.
-    # ``daytona_edit_file``'s ``warnings`` field) can read them.
-    context.metadata["guard_pre_warnings"] = list(pre.warnings)
 
+async def execute_tool_body(
+    tool: "BaseTool",
+    parsed_input: BaseModel,
+    context: "ToolExecutionContext",
+) -> ToolResult:
+    """Execute a tool with already validated input and normalize exceptions."""
     try:
-        result = await tool.execute(parsed_input, context)
+        return await tool.execute(parsed_input, context)
     except Exception as exc:
         return ToolResult(
             output=f"Tool execution failed: {exc}",
             is_error=True,
-            metadata=_guard_warnings_metadata({}, pre.warnings),
         )
-    validated = validate_tool_output(tool, result)
-    post = await _run_post_guards(tool.name, parsed_input, context, validated)
-    all_warnings = [*pre.warnings, *post.warnings]
-    if all_warnings:
-        return ToolResult(
-            output=validated.output,
-            is_error=validated.is_error,
-            metadata=_guard_warnings_metadata(validated.metadata, all_warnings),
-        )
-    return validated
-
-
-def _guard_warnings_metadata(
-    base: dict[str, Any],
-    warnings: list[str],
-) -> dict[str, Any]:
-    """Fold guard-pipeline warnings into a tool-result metadata dict."""
-    if not warnings:
-        return dict(base)
-    merged = dict(base)
-    existing = list(merged.get("guard_warnings", []))
-    existing.extend(warnings)
-    merged["guard_warnings"] = existing
-    return merged
 
 
 def _format_validation_errors(exc: ValidationError) -> str:

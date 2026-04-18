@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 from message.messages import ConversationMessage
 from message.stream_events import (
+    StreamEvent,
     ToolExecutionCancelled,
     ToolExecutionCompleted,
     ToolExecutionProgress,
@@ -20,8 +21,8 @@ from tools.core.base import (
     ToolExecutionContext,
     ToolRegistry,
     ToolResult,
-    run_tool_safely,
 )
+from tools.core.hooks.execution import execute_tool_with_hooks
 from tools.core.runtime import merge_runtime_metadata
 
 if TYPE_CHECKING:
@@ -96,6 +97,7 @@ class StreamingToolExecutor:
         self._tools: dict[str, TrackedTool] = {}
         self._aborted: set[str] = set()
         self._deferred: set[str] = set()
+        self._events: list[StreamEvent] = []
 
     @property
     def deferred_dispatch_ids(self) -> set[str]:
@@ -104,12 +106,12 @@ class StreamingToolExecutor:
 
     def add_tool(
         self, event: ApiToolUseDeltaEvent, assistant_message: ConversationMessage
-    ) -> ToolExecutionStarted | None:
+    ) -> None:
         """Add a tool to execute as it arrives mid-stream.
 
-        Returns the ``ToolExecutionStarted`` event if the tool was
-        started synchronously; ``None`` if the caller asked us to defer
-        it or input is still streaming.
+        Hook-aware execution emits ``ToolExecutionStarted`` after pre-hooks
+        complete, so callers should read started/advisory events through
+        :meth:`get_events`.
         """
         tool_def = self._tool_registry.get(event.name)
 
@@ -122,7 +124,7 @@ class StreamingToolExecutor:
                 event.id,
                 event.name,
             )
-            return None
+            return
 
         tracked = TrackedTool(
             id=event.id,
@@ -140,8 +142,13 @@ class StreamingToolExecutor:
         if event.input is not None:
             self._start_tool(tracked)
             logger.debug("STREAM: Tool started: tool_id=%s tool_name=%s", event.id, event.name)
-            return ToolExecutionStarted(tool_name=event.name, tool_input=event.input)
-        return None
+        return
+
+    def get_events(self) -> list[StreamEvent]:
+        """Return and clear hook/tool lifecycle events emitted by running tools."""
+        events = list(self._events)
+        self._events.clear()
+        return events
 
     def cancel(self, tool_id: str, reason: str) -> None:
         """Cancel a running tool."""
@@ -241,7 +248,12 @@ class StreamingToolExecutor:
                 metadata=self._context.metadata.with_overrides(tool_id=tool.id),
             )
 
-            tool.result = await run_tool_safely(tool_def, tool.input, context_with_id)
+            tool.result = await execute_tool_with_hooks(
+                tool_def,
+                tool.input,
+                context_with_id,
+                emit=self._emit_event,
+            )
             merge_runtime_metadata(
                 original=self._context.metadata,
                 updated=context_with_id.metadata,
@@ -263,11 +275,7 @@ class StreamingToolExecutor:
 
     def get_started_events(self) -> list[ToolExecutionStarted]:
         """Get ToolExecutionStarted events for all queued tools."""
-        return [
-            ToolExecutionStarted(tool_name=t.name, tool_input=t.input)
-            for t in self._tools.values()
-            if t.status == "queued"
-        ]
+        return []
 
     def cancel_all(self) -> None:
         """Cancel all running tasks to prevent orphaned execution."""
@@ -276,3 +284,6 @@ class StreamingToolExecutor:
                 tool.task.cancel()
                 tool.cancelled = True
                 tool.cancel_reason = "Superseded by fallback execution"
+
+    async def _emit_event(self, event: StreamEvent) -> None:
+        self._events.append(event)
