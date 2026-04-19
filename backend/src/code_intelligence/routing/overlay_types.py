@@ -43,11 +43,13 @@ class OverlayPolicyReject(OverlayError):
         paths: tuple[str, ...] = (),
         *,
         snapshot_timings: dict[str, float] | None = None,
+        run_timings: dict[str, float] | None = None,
     ) -> None:
         super().__init__(reason if not paths else f"{reason}: {','.join(paths)}")
         self.reason = reason
         self.paths = paths
         self.snapshot_timings = dict(snapshot_timings or {})
+        self.run_timings = dict(run_timings or {})
 
 
 @dataclass(frozen=True)
@@ -110,6 +112,7 @@ class OverlayDiff:
     whiteouts_gitignore_refused: int
     dotgit_rejects: int
     snapshot_timings: dict[str, float] = field(default_factory=dict)
+    run_timings: dict[str, float] = field(default_factory=dict)
     warnings: tuple[str, ...] = ()
 
 

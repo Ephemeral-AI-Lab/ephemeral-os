@@ -22,10 +22,12 @@ The test verifies:
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
 import os
 import re
 import shlex
+import sys
 import threading
 import time
 import uuid
@@ -43,6 +45,7 @@ from code_intelligence.analysis import symbol_index as symbol_index_module
 from code_intelligence.editing import write_coordinator as write_coordinator_module
 from code_intelligence.lsp import client as lsp_client_module
 from code_intelligence.routing import content_manager as content_manager_module
+from code_intelligence.routing import rename_planner as rename_planner_module
 from code_intelligence.routing.service import CodeIntelligenceService
 from tests.test_e2e.daytona_exec_io import read_text_via_exec, write_text_via_exec
 from tools.core.base import ToolExecutionContext, ToolResult
@@ -66,6 +69,15 @@ from tools.daytona_toolkit.tools import daytona_write_file
 
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 load_dotenv(_PROJECT_ROOT / ".env")
+
+_LIVE_LOAD_OVERLAY_MAX_CONCURRENT = 50
+
+
+def _set_live_load_overlay_concurrency(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(
+        "EOS_OVERLAY_MAX_CONCURRENT",
+        str(_LIVE_LOAD_OVERLAY_MAX_CONCURRENT),
+    )
 
 
 def _load_settings() -> dict[str, Any]:
@@ -266,14 +278,20 @@ def _install_overlay_phase_probe(
         "overlay_audit_total_s": [],
         "overlay_snapshot_s": [],
         "overlay_run_command_s": [],
+        "overlay_read_stdout_s": [],
         "overlay_read_diff_s": [],
+        "overlay_cleanup_run_dir_s": [],
+        "overlay_ensure_script_uploaded_s": [],
         "overlay_assemble_commit_s": [],
         "overlay_commit_s": [],
     }
 
     orig_execute = overlay_auditor_module.OverlayAuditor.execute
     orig_run = overlay_auditor_module.OverlayAuditor._run_overlay
+    orig_read_stdout = overlay_auditor_module.OverlayAuditor._read_stdout
     orig_collect = overlay_auditor_module.OverlayAuditor._read_diff
+    orig_cleanup = overlay_auditor_module.OverlayAuditor._cleanup_run_dir
+    orig_ensure_upload = overlay_auditor_module.OverlayAuditor._ensure_script_uploaded
     orig_commit_diff = overlay_auditor_module.OverlayAuditor._commit_and_assemble
     orig_diff_commit = overlay_committer_module.OverlayCommandCommitter.commit
 
@@ -295,6 +313,33 @@ def _install_overlay_phase_probe(
                 round(time.perf_counter() - started, 6)
             )
 
+    async def _timed_read_stdout(self, *args, **kwargs):
+        started = time.perf_counter()
+        try:
+            return await orig_read_stdout(self, *args, **kwargs)
+        finally:
+            stats["overlay_read_stdout_s"].append(
+                round(time.perf_counter() - started, 6)
+            )
+
+    async def _timed_cleanup(self, *args, **kwargs):
+        started = time.perf_counter()
+        try:
+            return await orig_cleanup(self, *args, **kwargs)
+        finally:
+            stats["overlay_cleanup_run_dir_s"].append(
+                round(time.perf_counter() - started, 6)
+            )
+
+    async def _timed_ensure_upload(self, *args, **kwargs):
+        started = time.perf_counter()
+        try:
+            return await orig_ensure_upload(self, *args, **kwargs)
+        finally:
+            stats["overlay_ensure_script_uploaded_s"].append(
+                round(time.perf_counter() - started, 6)
+            )
+
     async def _timed_collect(self, *args, **kwargs):
         started = time.perf_counter()
         try:
@@ -309,6 +354,12 @@ def _install_overlay_phase_probe(
                 total = timings.get("total")
                 if isinstance(total, (int, float)):
                     stats["overlay_snapshot_s"].append(round(float(total), 6))
+            run_timings = getattr(diff, "run_timings", {}) or {}
+            for key, value in run_timings.items():
+                if isinstance(value, (int, float)):
+                    stats.setdefault(f"overlay_inner_{key}_s", []).append(
+                        round(float(value), 6)
+                    )
             return diff
         finally:
             stats["overlay_read_diff_s"].append(
@@ -343,8 +394,23 @@ def _install_overlay_phase_probe(
     )
     monkeypatch.setattr(
         overlay_auditor_module.OverlayAuditor,
+        "_read_stdout",
+        _timed_read_stdout,
+    )
+    monkeypatch.setattr(
+        overlay_auditor_module.OverlayAuditor,
         "_read_diff",
         _timed_collect,
+    )
+    monkeypatch.setattr(
+        overlay_auditor_module.OverlayAuditor,
+        "_cleanup_run_dir",
+        _timed_cleanup,
+    )
+    monkeypatch.setattr(
+        overlay_auditor_module.OverlayAuditor,
+        "_ensure_script_uploaded",
+        _timed_ensure_upload,
     )
     monkeypatch.setattr(
         overlay_auditor_module.OverlayAuditor,
@@ -363,11 +429,15 @@ def _install_lsp_phase_probe(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[
     """Probe LSP phases that can serialize otherwise disjoint writes."""
     stats: dict[str, list[float]] = {
         "lsp_invalidate_s": [],
+        "lsp_find_references_many_s": [],
         "lsp_rename_symbol_s": [],
+        "lsp_rename_symbols_s": [],
     }
 
     orig_invalidate = lsp_client_module.LspClient.invalidate
+    orig_find_references_many = lsp_client_module.LspClient.find_references_many
     orig_rename_symbol = lsp_client_module.LspClient.rename_symbol
+    orig_rename_symbols = lsp_client_module.LspClient.rename_symbols
 
     def _timed_invalidate(self, *args, **kwargs):
         started = time.perf_counter()
@@ -376,6 +446,15 @@ def _install_lsp_phase_probe(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[
         finally:
             stats["lsp_invalidate_s"].append(round(time.perf_counter() - started, 6))
 
+    def _timed_find_references_many(self, *args, **kwargs):
+        started = time.perf_counter()
+        try:
+            return orig_find_references_many(self, *args, **kwargs)
+        finally:
+            stats["lsp_find_references_many_s"].append(
+                round(time.perf_counter() - started, 6)
+            )
+
     def _timed_rename_symbol(self, *args, **kwargs):
         started = time.perf_counter()
         try:
@@ -383,8 +462,144 @@ def _install_lsp_phase_probe(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[
         finally:
             stats["lsp_rename_symbol_s"].append(round(time.perf_counter() - started, 6))
 
+    def _timed_rename_symbols(self, *args, **kwargs):
+        started = time.perf_counter()
+        try:
+            return orig_rename_symbols(self, *args, **kwargs)
+        finally:
+            stats["lsp_rename_symbols_s"].append(round(time.perf_counter() - started, 6))
+
     monkeypatch.setattr(lsp_client_module.LspClient, "invalidate", _timed_invalidate)
+    monkeypatch.setattr(
+        lsp_client_module.LspClient,
+        "find_references_many",
+        _timed_find_references_many,
+    )
     monkeypatch.setattr(lsp_client_module.LspClient, "rename_symbol", _timed_rename_symbol)
+    monkeypatch.setattr(lsp_client_module.LspClient, "rename_symbols", _timed_rename_symbols)
+    return stats
+
+
+def _install_rename_phase_probe(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[float]]:
+    """Probe semantic rename planner branches and batch sizes.
+
+    The high-concurrency load test often reports identical elapsed times for
+    all rename calls because they are intentionally batched. These counters
+    make the batch internals visible: which planner branch hit, whether the
+    full LSP rename fallback ran, and how many changes the batch produced.
+    """
+    stats: dict[str, list[float]] = {
+        "rename_plan_single_s": [],
+        "rename_plan_many_s": [],
+        "rename_plan_many_request_count": [],
+        "rename_plan_many_result_count": [],
+        "rename_plan_many_change_count": [],
+        "rename_preview_fast_s": [],
+        "rename_preview_fast_hit": [],
+        "rename_preview_fast_miss": [],
+        "rename_same_file_fast_s": [],
+        "rename_same_file_fast_hit": [],
+        "rename_same_file_fast_miss": [],
+        "rename_refs_fast_s": [],
+        "rename_refs_fast_hit": [],
+        "rename_refs_fast_miss": [],
+    }
+
+    orig_plan_single = rename_planner_module.RenamePlanner.rename_symbol_plan
+    orig_plan_many = rename_planner_module.RenamePlanner.rename_symbol_plans_many
+    orig_preview_fast = (
+        rename_planner_module.RenamePlanner._preview_rename_symbol_plan_fast
+    )
+    orig_same_file_fast = (
+        rename_planner_module.RenamePlanner._rename_symbol_plans_many_same_file_fast
+    )
+    orig_refs_fast = rename_planner_module.RenamePlanner._rename_symbol_plans_many_fast
+
+    def _record_branch_result(prefix: str, result) -> None:
+        stats[f"{prefix}_hit" if result is not None else f"{prefix}_miss"].append(1.0)
+
+    def _timed_plan_single(self, *args, **kwargs):
+        started = time.perf_counter()
+        try:
+            return orig_plan_single(self, *args, **kwargs)
+        finally:
+            stats["rename_plan_single_s"].append(
+                round(time.perf_counter() - started, 6)
+            )
+
+    def _timed_plan_many(self, requests, *args, **kwargs):
+        stats["rename_plan_many_request_count"].append(float(len(requests or ())))
+        started = time.perf_counter()
+        try:
+            result = orig_plan_many(self, requests, *args, **kwargs)
+        finally:
+            stats["rename_plan_many_s"].append(
+                round(time.perf_counter() - started, 6)
+            )
+        stats["rename_plan_many_result_count"].append(float(len(result or ())))
+        stats["rename_plan_many_change_count"].append(
+            float(sum(len(getattr(plan, "changes", ()) or ()) for plan in result or ()))
+        )
+        return result
+
+    def _timed_preview_fast(self, *args, **kwargs):
+        started = time.perf_counter()
+        try:
+            result = orig_preview_fast(self, *args, **kwargs)
+        finally:
+            stats["rename_preview_fast_s"].append(
+                round(time.perf_counter() - started, 6)
+            )
+        _record_branch_result("rename_preview_fast", result)
+        return result
+
+    def _timed_same_file_fast(self, *args, **kwargs):
+        started = time.perf_counter()
+        try:
+            result = orig_same_file_fast(self, *args, **kwargs)
+        finally:
+            stats["rename_same_file_fast_s"].append(
+                round(time.perf_counter() - started, 6)
+            )
+        _record_branch_result("rename_same_file_fast", result)
+        return result
+
+    def _timed_refs_fast(self, *args, **kwargs):
+        started = time.perf_counter()
+        try:
+            result = orig_refs_fast(self, *args, **kwargs)
+        finally:
+            stats["rename_refs_fast_s"].append(
+                round(time.perf_counter() - started, 6)
+            )
+        _record_branch_result("rename_refs_fast", result)
+        return result
+
+    monkeypatch.setattr(
+        rename_planner_module.RenamePlanner,
+        "rename_symbol_plan",
+        _timed_plan_single,
+    )
+    monkeypatch.setattr(
+        rename_planner_module.RenamePlanner,
+        "rename_symbol_plans_many",
+        _timed_plan_many,
+    )
+    monkeypatch.setattr(
+        rename_planner_module.RenamePlanner,
+        "_preview_rename_symbol_plan_fast",
+        _timed_preview_fast,
+    )
+    monkeypatch.setattr(
+        rename_planner_module.RenamePlanner,
+        "_rename_symbol_plans_many_same_file_fast",
+        _timed_same_file_fast,
+    )
+    monkeypatch.setattr(
+        rename_planner_module.RenamePlanner,
+        "_rename_symbol_plans_many_fast",
+        _timed_refs_fast,
+    )
     return stats
 
 
@@ -468,6 +683,11 @@ def _install_content_phase_probe(monkeypatch: pytest.MonkeyPatch) -> dict[str, l
     stats: dict[str, list[float]] = {
         "content_read_s": [],
         "content_read_many_s": [],
+        "content_read_many_rename_s": [],
+        "content_read_many_mutation_s": [],
+        "content_read_many_commit_s": [],
+        "content_read_many_other_s": [],
+        "content_read_many_path_count": [],
         "content_write_s": [],
         "content_delete_s": [],
         "content_read_in_flight_on_entry": [],
@@ -496,6 +716,19 @@ def _install_content_phase_probe(monkeypatch: pytest.MonkeyPatch) -> dict[str, l
         with gauge_lock:
             in_flight[kind] -= 1
 
+    def _read_many_label() -> str:
+        frame = sys._getframe(2)
+        while frame is not None:
+            filename = frame.f_code.co_filename.replace("\\", "/")
+            if filename.endswith("/rename_planner.py"):
+                return "rename"
+            if filename.endswith("/mutation_service.py"):
+                return "mutation"
+            if filename.endswith("/write_coordinator.py"):
+                return "commit"
+            frame = frame.f_back
+        return "other"
+
     def _timed_read(self, *args, **kwargs):
         _sample_on_entry("read")
         started = time.perf_counter()
@@ -507,11 +740,19 @@ def _install_content_phase_probe(monkeypatch: pytest.MonkeyPatch) -> dict[str, l
 
     def _timed_read_many(self, *args, **kwargs):
         _sample_on_entry("read")
+        label = _read_many_label()
+        if args:
+            try:
+                stats["content_read_many_path_count"].append(float(len(args[0] or ())))
+            except TypeError:
+                pass
         started = time.perf_counter()
         try:
             return orig_read_many(self, *args, **kwargs)
         finally:
-            stats["content_read_many_s"].append(round(time.perf_counter() - started, 6))
+            elapsed = round(time.perf_counter() - started, 6)
+            stats["content_read_many_s"].append(elapsed)
+            stats[f"content_read_many_{label}_s"].append(elapsed)
             _exit("read")
 
     def _timed_write(self, *args, **kwargs):
@@ -553,6 +794,16 @@ def _install_commit_phase_probe(monkeypatch: pytest.MonkeyPatch) -> dict[str, li
     """
     stats: dict[str, list[float]] = {
         "commit_wall_s": [],
+        "commit_many_wall_s": [],
+        "commit_many_operation_count": [],
+        "commit_many_change_count": [],
+        "commit_many_rename_operation_count": [],
+        "commit_many_lock_wait_s": [],
+        "commit_many_resolve_s": [],
+        "commit_many_resolve_read_s": [],
+        "commit_many_apply_s": [],
+        "commit_many_apply_record_s": [],
+        "commit_many_reported_total_s": [],
         "commit_lock_wait_s": [],
         "commit_resolve_s": [],
         "commit_resolve_read_s": [],
@@ -570,7 +821,30 @@ def _install_commit_phase_probe(monkeypatch: pytest.MonkeyPatch) -> dict[str, li
     in_flight = {"current": 0}
 
     orig_commit = write_coordinator_module.WriteCoordinator.commit_operation_against_base
+    orig_commit_many = (
+        write_coordinator_module.WriteCoordinator.commit_many_operations_against_base
+    )
     orig_refresh = symbol_index_module.SymbolIndex.refresh
+
+    def _record_timing_fields(
+        timings: dict[str, Any],
+        *,
+        prefix: str,
+        include_apply_record: bool = False,
+    ) -> None:
+        fields = [
+            ("lock_wait", f"{prefix}_lock_wait_s"),
+            ("resolve", f"{prefix}_resolve_s"),
+            ("resolve_read", f"{prefix}_resolve_read_s"),
+            ("apply", f"{prefix}_apply_s"),
+            ("total", f"{prefix}_reported_total_s"),
+        ]
+        if include_apply_record:
+            fields.append(("apply_record", f"{prefix}_apply_record_s"))
+        for source_key, target_key in fields:
+            value = timings.get(source_key)
+            if isinstance(value, (int, float)):
+                stats[target_key].append(round(float(value), 6))
 
     def _timed_commit(self, *args, **kwargs):
         with gauge_lock:
@@ -584,22 +858,41 @@ def _install_commit_phase_probe(monkeypatch: pytest.MonkeyPatch) -> dict[str, li
                 in_flight["current"] -= 1
         stats["commit_wall_s"].append(round(time.perf_counter() - started, 6))
         timings = getattr(result, "timings", {}) or {}
+        _record_timing_fields(timings, prefix="commit")
         for source_key, target_key in (
-            ("lock_wait", "commit_lock_wait_s"),
-            ("resolve", "commit_resolve_s"),
-            ("resolve_read", "commit_resolve_read_s"),
-            ("apply", "commit_apply_s"),
             ("apply_snapshot", "commit_apply_snapshot_s"),
             ("apply_write", "commit_apply_write_s"),
             ("apply_record", "commit_apply_record_s"),
             ("apply_refresh", "commit_apply_refresh_s"),
             ("apply_invalidate", "commit_apply_invalidate_s"),
-            ("total", "commit_reported_total_s"),
         ):
             value = timings.get(source_key)
             if isinstance(value, (int, float)):
                 stats[target_key].append(round(float(value), 6))
         return result
+
+    def _timed_commit_many(self, operations, *args, **kwargs):
+        ops = list(operations or ())
+        stats["commit_many_operation_count"].append(float(len(ops)))
+        stats["commit_many_change_count"].append(
+            float(sum(len(getattr(op, "changes", ()) or ()) for op in ops))
+        )
+        stats["commit_many_rename_operation_count"].append(
+            float(sum(getattr(op, "edit_type", "") == "rename_symbol" for op in ops))
+        )
+        started = time.perf_counter()
+        results = orig_commit_many(self, operations, *args, **kwargs)
+        stats["commit_many_wall_s"].append(round(time.perf_counter() - started, 6))
+        for result in results or ():
+            timings = getattr(result, "timings", {}) or {}
+            if timings:
+                _record_timing_fields(
+                    timings,
+                    prefix="commit_many",
+                    include_apply_record=True,
+                )
+                break
+        return results
 
     def _timed_refresh(self, *args, **kwargs):
         started = time.perf_counter()
@@ -612,6 +905,11 @@ def _install_commit_phase_probe(monkeypatch: pytest.MonkeyPatch) -> dict[str, li
         write_coordinator_module.WriteCoordinator,
         "commit_operation_against_base",
         _timed_commit,
+    )
+    monkeypatch.setattr(
+        write_coordinator_module.WriteCoordinator,
+        "commit_many_operations_against_base",
+        _timed_commit_many,
     )
     monkeypatch.setattr(symbol_index_module.SymbolIndex, "refresh", _timed_refresh)
     return stats
@@ -976,6 +1274,7 @@ def test_live_occ_load_72_all_mutators_high_concurrency_profile(
     codeact_stats = _install_codeact_phase_probe(monkeypatch)
     overlay_stats = _install_overlay_phase_probe(monkeypatch)
     lsp_stats = _install_lsp_phase_probe(monkeypatch)
+    rename_stats = _install_rename_phase_probe(monkeypatch)
     content_stats = _install_content_phase_probe(monkeypatch)
     commit_stats = _install_commit_phase_probe(monkeypatch)
     svc_cmd_stats = _install_svc_cmd_phase_probe(monkeypatch)
@@ -1175,6 +1474,7 @@ def test_live_occ_load_72_all_mutators_high_concurrency_profile(
         "codeact_phase_s": _phase_summary(codeact_stats),
         "overlay_phase_s": _phase_summary(overlay_stats),
         "lsp_phase_s": _phase_summary(lsp_stats),
+        "rename_phase_s": _phase_summary(rename_stats),
         "content_phase_s": _phase_summary(content_stats),
         "commit_phase_s": _phase_summary(commit_stats),
         "svc_cmd_phase_s": _phase_summary(svc_cmd_stats),
@@ -1250,6 +1550,335 @@ def test_live_occ_load_72_all_mutators_high_concurrency_profile(
         assert live_load_env.read_text(f"codeact/high_{idx}.txt") == f"codeact high {idx}\n"
 
     assert svc.status()["arbiter"]["total_edits"] >= len(operations)
+
+
+@pytest.mark.parametrize("op_count", [10, 20, 30, 40, 50])
+def test_live_occ_load_codeact_only_high_concurrency_profile(
+    live_load_env: LiveLoadEnv,
+    monkeypatch: pytest.MonkeyPatch,
+    op_count: int,
+):
+    """High-concurrency CodeAct-only load against unique tracked files."""
+    _set_live_load_overlay_concurrency(monkeypatch)
+    log_label = f"occ-load-{op_count}-codeact-only-high-concurrency"
+    _log_occ_event(
+        log_label,
+        {
+            "event": "setup",
+            "phase": "init_repo",
+            "pid": os.getpid(),
+            "sandbox_id": live_load_env.sandbox_id,
+            "repo_root": live_load_env.repo_root,
+            "overlay_max_concurrent": _LIVE_LOAD_OVERLAY_MAX_CONCURRENT,
+        },
+    )
+    live_load_env.init_repo()
+    codeact_stats = _install_codeact_phase_probe(monkeypatch)
+    overlay_stats = _install_overlay_phase_probe(monkeypatch)
+    content_stats = _install_content_phase_probe(monkeypatch)
+    commit_stats = _install_commit_phase_probe(monkeypatch)
+    svc_cmd_stats = _install_svc_cmd_phase_probe(monkeypatch)
+    executor_depth_stats: dict[str, list[float]] = {}
+
+    for idx in range(op_count):
+        live_load_env.write_text(f"codeact/only_{idx}.txt", f"base {idx}\n")
+
+    live_load_env.exec_checked(f"git -C {shlex.quote(live_load_env.repo_root)} add -A")
+    live_load_env.exec_checked(
+        f"git -C {shlex.quote(live_load_env.repo_root)} commit -m seed-codeact-only-load",
+        timeout=180,
+    )
+
+    svc = live_load_env.make_ci_service()
+    svc.ensure_initialized(wait=True)
+
+    operations = [
+        {
+            "kind": "codeact",
+            "name": f"codeact-{idx}",
+            "path": f"{live_load_env.repo_root}/codeact/only_{idx}.txt",
+            "kwargs": {
+                "mode": "shell",
+                "command": (
+                    "python3 - <<'PY'\n"
+                    "from pathlib import Path\n"
+                    f"Path('codeact/only_{idx}.txt').write_text('codeact only {idx}\\n', encoding='utf-8')\n"
+                    "PY"
+                ),
+                "timeout": 180,
+            },
+            "coordinated": True,
+        }
+        for idx in range(op_count)
+    ]
+
+    async def _warmup_then_run():
+        await svc.warmup_overlay(live_load_env.async_sandbox)
+        return await _run_mixed_operations(
+            live_load_env,
+            svc,
+            operations,
+            concurrency=op_count,
+            timeout_s=360,
+            log_ops=True,
+            log_label=log_label,
+            executor_depth_stats=executor_depth_stats,
+        )
+
+    started = time.perf_counter()
+    results = asyncio.run(_warmup_then_run())
+    wall_elapsed_s = time.perf_counter() - started
+
+    failures = [
+        {
+            "kind": item["kind"],
+            "name": item["name"],
+            "metadata": item["metadata"],
+            "payload": item["payload"],
+            "raw_output": item["raw_output"],
+        }
+        for item in results
+        if item["is_error"]
+    ]
+    summary = {
+        "operation_counts": {"codeact": len(results)},
+        "success_counts": {
+            "codeact": sum(not item["is_error"] for item in results),
+        },
+        "elapsed_profile_s": {"codeact": _elapsed_profile(results)},
+        "timing": _operation_timing_summary(
+            results,
+            wall_elapsed_s=wall_elapsed_s,
+        ),
+        "codeact_phase_s": _phase_summary(codeact_stats),
+        "overlay_phase_s": _phase_summary(overlay_stats),
+        "content_phase_s": _phase_summary(content_stats),
+        "commit_phase_s": _phase_summary(commit_stats),
+        "svc_cmd_phase_s": _phase_summary(svc_cmd_stats),
+        "executor_depth": _phase_summary(executor_depth_stats),
+        "overlay_max_concurrent": _LIVE_LOAD_OVERLAY_MAX_CONCURRENT,
+        "arbiter": svc.status()["arbiter"],
+        "held_locks": svc.arbiter.active_lock_count,
+        "process_identity": {
+            "expected": {
+                "pid": os.getpid(),
+                "svc_id": hex(id(svc)),
+                "arbiter_id": hex(id(svc.arbiter)),
+                "sandbox_id": live_load_env.sandbox_id,
+            },
+            "observed_count": len(
+                {
+                    (
+                        item["pid"],
+                        item["svc_id"],
+                        item["arbiter_id"],
+                        item["sandbox_id"],
+                    )
+                    for item in results
+                }
+            ),
+        },
+        "failures": failures[:5],
+    }
+    print(f"\n[{log_label} timings]", flush=True)
+    print(json.dumps(summary, indent=2, sort_keys=True), flush=True)
+
+    assert not failures, json.dumps(failures, indent=2, sort_keys=True)
+    assert summary["success_counts"]["codeact"] == op_count
+    assert summary["timing"]["parallelism_ratio"] >= 4.0, summary["timing"]
+    assert svc.arbiter.active_lock_count == 0
+    assert svc.status()["arbiter"]["conflicts_detected"] == 0
+    assert {
+        (
+            item["pid"],
+            item["svc_id"],
+            item["arbiter_id"],
+            item["sandbox_id"],
+        )
+        for item in results
+    } == {
+        (
+            os.getpid(),
+            hex(id(svc)),
+            hex(id(svc.arbiter)),
+            live_load_env.sandbox_id,
+        )
+    }
+
+    for idx in range(op_count):
+        assert live_load_env.read_text(f"codeact/only_{idx}.txt") == (
+            f"codeact only {idx}\n"
+        )
+
+    assert svc.status()["arbiter"]["total_edits"] >= op_count
+
+
+@pytest.mark.parametrize("op_count", [20, 50])
+def test_live_occ_load_codeact_gitignore_only_high_concurrency_profile(
+    live_load_env: LiveLoadEnv,
+    monkeypatch: pytest.MonkeyPatch,
+    op_count: int,
+):
+    """High-concurrency CodeAct-only load against ignored files."""
+    _set_live_load_overlay_concurrency(monkeypatch)
+    log_label = f"occ-load-{op_count}-codeact-gitignore-only-high-concurrency"
+    _log_occ_event(
+        log_label,
+        {
+            "event": "setup",
+            "phase": "init_repo",
+            "pid": os.getpid(),
+            "sandbox_id": live_load_env.sandbox_id,
+            "repo_root": live_load_env.repo_root,
+            "overlay_max_concurrent": _LIVE_LOAD_OVERLAY_MAX_CONCURRENT,
+        },
+    )
+    live_load_env.init_repo()
+    codeact_stats = _install_codeact_phase_probe(monkeypatch)
+    overlay_stats = _install_overlay_phase_probe(monkeypatch)
+    content_stats = _install_content_phase_probe(monkeypatch)
+    commit_stats = _install_commit_phase_probe(monkeypatch)
+    svc_cmd_stats = _install_svc_cmd_phase_probe(monkeypatch)
+    executor_depth_stats: dict[str, list[float]] = {}
+
+    live_load_env.write_text(".gitignore", "runtime/\n")
+    live_load_env.write_text("README.md", "seed\n")
+    live_load_env.exec_checked(f"git -C {shlex.quote(live_load_env.repo_root)} add -A")
+    live_load_env.exec_checked(
+        f"git -C {shlex.quote(live_load_env.repo_root)} commit -m seed-codeact-ignored-load",
+        timeout=180,
+    )
+
+    svc = live_load_env.make_ci_service()
+    svc.ensure_initialized(wait=True)
+
+    operations = [
+        {
+            "kind": "codeact",
+            "name": f"codeact-ignored-{idx}",
+            "path": f"{live_load_env.repo_root}/runtime/only_{idx}.txt",
+            "kwargs": {
+                "mode": "shell",
+                "command": (
+                    "python3 - <<'PY'\n"
+                    "from pathlib import Path\n"
+                    "Path('runtime').mkdir(exist_ok=True)\n"
+                    f"Path('runtime/only_{idx}.txt').write_text('ignored codeact {idx}\\n', encoding='utf-8')\n"
+                    "PY"
+                ),
+                "timeout": 180,
+            },
+            "coordinated": True,
+        }
+        for idx in range(op_count)
+    ]
+
+    started = time.perf_counter()
+    results = asyncio.run(
+        _run_mixed_operations(
+            live_load_env,
+            svc,
+            operations,
+            concurrency=op_count,
+            timeout_s=360,
+            log_ops=True,
+            log_label=log_label,
+            executor_depth_stats=executor_depth_stats,
+        )
+    )
+    wall_elapsed_s = time.perf_counter() - started
+
+    failures = [
+        {
+            "kind": item["kind"],
+            "name": item["name"],
+            "metadata": item["metadata"],
+            "payload": item["payload"],
+            "raw_output": item["raw_output"],
+        }
+        for item in results
+        if item["is_error"]
+    ]
+    git_status_short = live_load_env.exec_checked(
+        f"git -C {shlex.quote(live_load_env.repo_root)} status --short --untracked-files=all",
+        timeout=30,
+    )
+    ignored_status = live_load_env.exec_checked(
+        f"git -C {shlex.quote(live_load_env.repo_root)} status --short --ignored",
+        timeout=30,
+    )
+    summary = {
+        "operation_counts": {"codeact": len(results)},
+        "success_counts": {
+            "codeact": sum(not item["is_error"] for item in results),
+        },
+        "elapsed_profile_s": {"codeact": _elapsed_profile(results)},
+        "timing": _operation_timing_summary(
+            results,
+            wall_elapsed_s=wall_elapsed_s,
+        ),
+        "codeact_phase_s": _phase_summary(codeact_stats),
+        "overlay_phase_s": _phase_summary(overlay_stats),
+        "content_phase_s": _phase_summary(content_stats),
+        "commit_phase_s": _phase_summary(commit_stats),
+        "svc_cmd_phase_s": _phase_summary(svc_cmd_stats),
+        "executor_depth": _phase_summary(executor_depth_stats),
+        "overlay_max_concurrent": _LIVE_LOAD_OVERLAY_MAX_CONCURRENT,
+        "arbiter": svc.status()["arbiter"],
+        "held_locks": svc.arbiter.active_lock_count,
+        "process_identity": {
+            "expected": {
+                "pid": os.getpid(),
+                "svc_id": hex(id(svc)),
+                "arbiter_id": hex(id(svc.arbiter)),
+                "sandbox_id": live_load_env.sandbox_id,
+            },
+            "observed_count": len(
+                {
+                    (
+                        item["pid"],
+                        item["svc_id"],
+                        item["arbiter_id"],
+                        item["sandbox_id"],
+                    )
+                    for item in results
+                }
+            ),
+        },
+        "git_status_short": git_status_short,
+        "ignored_status": ignored_status.splitlines()[:5],
+        "failures": failures[:5],
+    }
+    print(f"\n[{log_label} timings]", flush=True)
+    print(json.dumps(summary, indent=2, sort_keys=True), flush=True)
+
+    assert not failures, json.dumps(failures, indent=2, sort_keys=True)
+    assert summary["success_counts"]["codeact"] == op_count
+    assert svc.arbiter.active_lock_count == 0
+    assert svc.status()["arbiter"]["conflicts_detected"] == 0
+    assert {
+        (
+            item["pid"],
+            item["svc_id"],
+            item["arbiter_id"],
+            item["sandbox_id"],
+        )
+        for item in results
+    } == {
+        (
+            os.getpid(),
+            hex(id(svc)),
+            hex(id(svc.arbiter)),
+            live_load_env.sandbox_id,
+        )
+    }
+    assert git_status_short.strip() == ""
+    assert any(line.startswith("!! runtime/") for line in ignored_status.splitlines())
+
+    for idx in range(op_count):
+        assert live_load_env.read_text(f"runtime/only_{idx}.txt") == (
+            f"ignored codeact {idx}\n"
+        )
 
 
 def test_live_occ_load_50_mixed_operations(
@@ -1491,6 +2120,7 @@ def test_live_occ_load_20_non_overlapping_operations_profile(
     live_load_env: LiveLoadEnv,
     monkeypatch: pytest.MonkeyPatch,
 ):
+    _set_live_load_overlay_concurrency(monkeypatch)
     log_label = "occ-load-20-nonoverlap"
     _log_occ_event(
         log_label,
@@ -1808,6 +2438,7 @@ def test_live_occ_load_20_non_overlapping_operations_profile(
         "content_phase_s": _phase_summary(content_stats),
         "commit_phase_s": _phase_summary(commit_stats),
         "arbiter": svc.status()["arbiter"],
+        "overlay_max_concurrent": _LIVE_LOAD_OVERLAY_MAX_CONCURRENT,
     }
     print(f"\n[{log_label} timings]")
     print(json.dumps(summary, indent=2, sort_keys=True))
@@ -1823,6 +2454,7 @@ def test_live_occ_load_30_non_overlapping_operations_profile(
     live_load_env: LiveLoadEnv,
     monkeypatch: pytest.MonkeyPatch,
 ):
+    _set_live_load_overlay_concurrency(monkeypatch)
     log_label = "occ-load-30-nonoverlap"
     _log_occ_event(
         log_label,
@@ -1961,6 +2593,7 @@ def test_live_occ_load_30_non_overlapping_operations_profile(
         "content_phase_s": _phase_summary(content_stats),
         "commit_phase_s": _phase_summary(commit_stats),
         "arbiter": svc.status()["arbiter"],
+        "overlay_max_concurrent": _LIVE_LOAD_OVERLAY_MAX_CONCURRENT,
     }
     print(f"\n[{log_label} timings]")
     print(json.dumps(summary, indent=2, sort_keys=True))
@@ -1975,6 +2608,7 @@ def test_live_occ_load_50_non_overlapping_operations_profile(
     live_load_env: LiveLoadEnv,
     monkeypatch: pytest.MonkeyPatch,
 ):
+    _set_live_load_overlay_concurrency(monkeypatch)
     log_label = "occ-load-50-nonoverlap"
     _log_occ_event(
         log_label,
@@ -2113,6 +2747,7 @@ def test_live_occ_load_50_non_overlapping_operations_profile(
         "content_phase_s": _phase_summary(content_stats),
         "commit_phase_s": _phase_summary(commit_stats),
         "arbiter": svc.status()["arbiter"],
+        "overlay_max_concurrent": _LIVE_LOAD_OVERLAY_MAX_CONCURRENT,
     }
     print(f"\n[{log_label} timings]")
     print(json.dumps(summary, indent=2, sort_keys=True))
@@ -2845,6 +3480,207 @@ finally:
     assert arm_sync_wall_s < N * SLEEP_S + 10
 
 
+def test_live_daytona_overlay_script_upload_transport_comparison(
+    live_load_env: LiveLoadEnv,
+) -> None:
+    """Compare current process.exec upload with Daytona fs.upload_file."""
+    payload = (
+        _PROJECT_ROOT / "backend/src/code_intelligence/routing/overlay_run.py"
+    ).read_bytes()
+    payload_sha = __import__("hashlib").sha256(payload).hexdigest()
+    encoded = base64.b64encode(payload).decode("ascii")
+    base_dir = f"{live_load_env.home}/eos-upload-bench"
+    sequential_n = 5
+    concurrent_n = 20
+
+    def _profile(values: list[float]) -> dict[str, float]:
+        ordered = sorted(values)
+        return {
+            "count": float(len(ordered)),
+            "min": round(ordered[0], 6),
+            "p50": round(ordered[len(ordered) // 2], 6),
+            "p90": round(ordered[int(len(ordered) * 0.9)], 6),
+            "max": round(ordered[-1], 6),
+            "avg": round(sum(ordered) / len(ordered), 6),
+            "sum": round(sum(ordered), 6),
+        }
+
+    def _exec_upload_command(target: str) -> str:
+        script = (
+            "import base64,sys,pathlib; "
+            "pathlib.Path(sys.argv[1]).write_bytes(base64.b64decode(sys.argv[2]))"
+        )
+        return (
+            f"mkdir -p {shlex.quote(base_dir)} && "
+            f"python3 -c {shlex.quote(script)} "
+            f"{shlex.quote(target)} {shlex.quote(encoded)}"
+        )
+
+    async def _exec_upload(target: str) -> dict[str, Any]:
+        started = time.perf_counter()
+        response = await live_load_env.async_sandbox.process.exec(
+            _wrap_bash_command(_exec_upload_command(target)),
+            timeout=60,
+        )
+        elapsed = round(time.perf_counter() - started, 6)
+        stdout, exit_code = _extract_exit_code(
+            str(getattr(response, "result", "") or ""),
+            fallback_exit_code=getattr(response, "exit_code", None),
+        )
+        return {
+            "target": target,
+            "elapsed_s": elapsed,
+            "exit_code": exit_code,
+            "stdout_tail": stdout[-200:],
+        }
+
+    async def _fs_upload(target: str) -> dict[str, Any]:
+        started = time.perf_counter()
+        try:
+            await live_load_env.async_sandbox.fs.upload_file(payload, target)
+            return {
+                "target": target,
+                "elapsed_s": round(time.perf_counter() - started, 6),
+                "exit_code": 0,
+                "stdout_tail": "",
+            }
+        except Exception as exc:
+            return {
+                "target": target,
+                "elapsed_s": round(time.perf_counter() - started, 6),
+                "exit_code": -1,
+                "stdout_tail": repr(exc)[-200:],
+            }
+
+    async def _async_fs_upload(async_real: Any, target: str) -> dict[str, Any]:
+        started = time.perf_counter()
+        try:
+            await async_real.fs.upload_file(payload, target)
+            return {
+                "target": target,
+                "elapsed_s": round(time.perf_counter() - started, 6),
+                "exit_code": 0,
+                "stdout_tail": "",
+            }
+        except Exception as exc:
+            return {
+                "target": target,
+                "elapsed_s": round(time.perf_counter() - started, 6),
+                "exit_code": -1,
+                "stdout_tail": repr(exc)[-200:],
+            }
+
+    async def _verify(targets: list[str]) -> None:
+        quoted = " ".join(shlex.quote(target) for target in targets)
+        cmd = f"sha256sum {quoted}"
+        response = await live_load_env.async_sandbox.process.exec(
+            _wrap_bash_command(cmd),
+            timeout=30,
+        )
+        stdout, exit_code = _extract_exit_code(
+            str(getattr(response, "result", "") or ""),
+            fallback_exit_code=getattr(response, "exit_code", None),
+        )
+        assert exit_code == 0, stdout
+        for line in stdout.splitlines():
+            if not line.strip():
+                continue
+            observed = line.split()[0]
+            assert observed == payload_sha, line
+
+    async def _run_arm(
+        label: str,
+        upload,
+        *,
+        count: int,
+        concurrent: bool,
+    ) -> dict[str, Any]:
+        targets = [
+            f"{base_dir}/{label}_{idx}_{uuid.uuid4().hex}.py"
+            for idx in range(count)
+        ]
+        started = time.perf_counter()
+        if concurrent:
+            results = await asyncio.gather(*(upload(target) for target in targets))
+        else:
+            results = []
+            for target in targets:
+                results.append(await upload(target))
+        wall_s = round(time.perf_counter() - started, 6)
+        successful_targets = [
+            str(item["target"]) for item in results if int(item["exit_code"]) == 0
+        ]
+        if successful_targets:
+            await _verify(successful_targets)
+        elapsed = [float(item["elapsed_s"]) for item in results]
+        return {
+            "count": count,
+            "wall_s": wall_s,
+            "per_call_s": _profile(elapsed),
+            "failed": [item for item in results if item["exit_code"] != 0],
+        }
+
+    async def _run() -> dict[str, Any]:
+        from sandbox.async_client import get_async_sandbox
+
+        async_real = await get_async_sandbox(live_load_env.sandbox_id)
+        await live_load_env.async_sandbox.process.exec(
+            _wrap_bash_command(f"rm -rf {shlex.quote(base_dir)} && mkdir -p {shlex.quote(base_dir)}"),
+            timeout=30,
+        )
+        # Warm both transports so one-time connection setup is not dominant.
+        await _exec_upload(f"{base_dir}/warm_exec.py")
+        await _fs_upload(f"{base_dir}/warm_fs.py")
+        await _async_fs_upload(async_real, f"{base_dir}/warm_async_fs.py")
+        return {
+            "payload_bytes": len(payload),
+            "payload_base64_chars": len(encoded),
+            "process_exec_sequential": await _run_arm(
+                "exec_seq",
+                _exec_upload,
+                count=sequential_n,
+                concurrent=False,
+            ),
+            "fs_upload_file_sequential": await _run_arm(
+                "fs_seq",
+                _fs_upload,
+                count=sequential_n,
+                concurrent=False,
+            ),
+            "process_exec_concurrent": await _run_arm(
+                "exec_concurrent",
+                _exec_upload,
+                count=concurrent_n,
+                concurrent=True,
+            ),
+            "fs_upload_file_concurrent": await _run_arm(
+                "fs_concurrent",
+                _fs_upload,
+                count=concurrent_n,
+                concurrent=True,
+            ),
+            "async_fs_upload_file_sequential": await _run_arm(
+                "async_fs_seq",
+                lambda target: _async_fs_upload(async_real, target),
+                count=sequential_n,
+                concurrent=False,
+            ),
+            "async_fs_upload_file_concurrent": await _run_arm(
+                "async_fs_concurrent",
+                lambda target: _async_fs_upload(async_real, target),
+                count=concurrent_n,
+                concurrent=True,
+            ),
+        }
+
+    summary = asyncio.run(_run())
+    print("\n[overlay-script-upload-transport-comparison]")
+    print(json.dumps(summary, indent=2, sort_keys=True))
+
+    assert summary["process_exec_sequential"]["failed"] == []
+    assert summary["process_exec_concurrent"]["failed"] == []
+
+
 # ---------------------------------------------------------------------------
 # Scenario A: contention correctness (OCC must gate, no lost updates)
 # ---------------------------------------------------------------------------
@@ -3242,6 +4078,7 @@ def _extract_codeact_conflict(item: dict[str, Any]) -> str:
 
 def test_live_occ_contention_codeact_overlay_gates_concurrent_appends(
     live_load_env: LiveLoadEnv,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """N concurrent codeact appends to the same file.
 
@@ -3250,17 +4087,86 @@ def test_live_occ_contention_codeact_overlay_gates_concurrent_appends(
     """
     log_label = "occ-contention-codeact-overlay"
     env = live_load_env
+    _log_occ_event(
+        log_label,
+        {
+            "event": "setup",
+            "phase": "init_repo_start",
+            "pid": os.getpid(),
+            "sandbox_id": env.sandbox_id,
+            "repo_root": env.repo_root,
+        },
+    )
+    init_repo_started = time.perf_counter()
     env.init_repo()
+    _log_occ_event(
+        log_label,
+        {
+            "event": "setup",
+            "phase": "init_repo_finish",
+            "elapsed_s": round(time.perf_counter() - init_repo_started, 6),
+        },
+    )
+
+    codeact_stats = _install_codeact_phase_probe(monkeypatch)
+    overlay_stats = _install_overlay_phase_probe(monkeypatch)
+    commit_stats = _install_commit_phase_probe(monkeypatch)
+    svc_cmd_stats = _install_svc_cmd_phase_probe(monkeypatch)
+    executor_depth_stats: dict[str, list[float]] = {}
+
     target_rel = "contend/codeact_target.txt"
     target_abs = f"{env.repo_root}/{target_rel}"
+    seed_started = time.perf_counter()
+    _log_occ_event(log_label, {"event": "setup", "phase": "seed_start"})
     env.write_text(target_rel, "seed\n")
+    _log_occ_event(
+        log_label,
+        {
+            "event": "setup",
+            "phase": "seed_finish",
+            "elapsed_s": round(time.perf_counter() - seed_started, 6),
+        },
+    )
+
+    commit_started = time.perf_counter()
+    _log_occ_event(log_label, {"event": "setup", "phase": "git_commit_start"})
     env.exec_checked(f"git -C {shlex.quote(env.repo_root)} add -A")
     env.exec_checked(
         f"git -C {shlex.quote(env.repo_root)} commit -m seed-codeact-contend",
         timeout=60,
     )
+    _log_occ_event(
+        log_label,
+        {
+            "event": "setup",
+            "phase": "git_commit_finish",
+            "elapsed_s": round(time.perf_counter() - commit_started, 6),
+        },
+    )
+
     svc = env.make_ci_service()
+    svc_init_started = time.perf_counter()
+    _log_occ_event(
+        log_label,
+        {
+            "event": "setup",
+            "phase": "ensure_initialized_start",
+            "svc_id": hex(id(svc)),
+            "arbiter_id": hex(id(svc.arbiter)),
+        },
+    )
     svc.ensure_initialized(wait=True)
+    _log_occ_event(
+        log_label,
+        {
+            "event": "setup",
+            "phase": "ensure_initialized_finish",
+            "elapsed_s": round(time.perf_counter() - svc_init_started, 6),
+            "svc_id": hex(id(svc)),
+            "arbiter_id": hex(id(svc.arbiter)),
+            "arbiter": _arbiter_snapshot(svc),
+        },
+    )
 
     n = 12
     ops: list[dict[str, Any]] = []
@@ -3287,7 +4193,9 @@ def test_live_occ_contention_codeact_overlay_gates_concurrent_appends(
         _run_mixed_operations(
             env, svc, ops,
             concurrency=n, timeout_s=600,
+            log_ops=True,
             log_label=log_label,
+            executor_depth_stats=executor_depth_stats,
         )
     )
     wall_s = time.perf_counter() - started
@@ -3348,6 +4256,15 @@ def test_live_occ_contention_codeact_overlay_gates_concurrent_appends(
         "wall_s": round(wall_s, 3),
         "winners_on_disk": len(on_disk),
         "tool_ok_count": len(tool_ok),
+        "timing": _operation_timing_summary(
+            results,
+            wall_elapsed_s=wall_s,
+        ),
+        "codeact_phase_s": _phase_summary(codeact_stats),
+        "overlay_phase_s": _phase_summary(overlay_stats),
+        "commit_phase_s": _phase_summary(commit_stats),
+        "svc_cmd_phase_s": _phase_summary(svc_cmd_stats),
+        "executor_depth": _phase_summary(executor_depth_stats),
         "arbiter": _arbiter_snapshot(svc),
     }
     print(f"\n[{log_label}] {json.dumps(summary, sort_keys=True)}", flush=True)

@@ -57,6 +57,7 @@ def _meta_line(**overrides) -> str:
         "dotgit_rejects": 0,
         "direct_merged_bytes": 0,
         "snapshot_timings": {},
+        "run_timings": {},
         "warnings": [],
     }
     base.update(overrides)
@@ -76,6 +77,7 @@ def test_parse_ndjson_returns_policy_reject() -> None:
                 "reason": "overlay_rejected_dotgit_writes",
                 "paths": [".git/config"],
                 "snapshot_timings": {"total": 0.4},
+                "run_timings": {"classify": 0.2},
             }
         }
     )
@@ -84,6 +86,7 @@ def test_parse_ndjson_returns_policy_reject() -> None:
     assert result.reason == "overlay_rejected_dotgit_writes"
     assert result.paths == (".git/config",)
     assert result.snapshot_timings == {"total": 0.4}
+    assert result.run_timings == {"classify": 0.2}
 
 
 def test_parse_ndjson_meta_and_one_gitinclude_entry() -> None:

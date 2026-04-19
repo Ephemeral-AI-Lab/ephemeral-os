@@ -52,7 +52,10 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-from tools.daytona_toolkit._daytona_utils import _extract_exit_code, _wrap_bash_command
+from tools.daytona_toolkit._daytona_utils import (
+    _extract_exit_code,
+    _wrap_bash_command_fast as _wrap_bash_command,
+)
 
 from code_intelligence.routing.overlay_command_committer import OverlayCommandCommitter
 from code_intelligence.routing.overlay_config import (
@@ -452,18 +455,12 @@ def parse_diff_ndjson(raw: str) -> OverlayDiff | OverlayPolicyReject:
         if not isinstance(reject_meta, dict):
             raise OverlayRunError(f"_reject block must be a dict, got {reject_meta!r}")
         raw_snapshot_timings = reject_meta.get("snapshot_timings") or {}
+        raw_run_timings = reject_meta.get("run_timings") or {}
         return OverlayPolicyReject(
             reason=str(reject_meta.get("reason") or ""),
             paths=tuple(str(p) for p in reject_meta.get("paths") or ()),
-            snapshot_timings=(
-                {
-                    str(key): round(float(value), 6)
-                    for key, value in raw_snapshot_timings.items()
-                    if isinstance(value, (int, float))
-                }
-                if isinstance(raw_snapshot_timings, dict)
-                else {}
-            ),
+            snapshot_timings=_parse_timing_dict(raw_snapshot_timings),
+            run_timings=_parse_timing_dict(raw_run_timings),
         )
 
     if not (isinstance(first, dict) and "_meta" in first):
@@ -502,6 +499,7 @@ def parse_diff_ndjson(raw: str) -> OverlayDiff | OverlayPolicyReject:
 
     gitignore_paths = tuple(str(p) for p in meta.get("gitignore_paths") or ())
     raw_snapshot_timings = meta.get("snapshot_timings") or {}
+    raw_run_timings = meta.get("run_timings") or {}
     return OverlayDiff(
         snap=str(meta.get("snap") or ""),
         exit_code=int(meta.get("exit_code") or 0),
@@ -516,17 +514,20 @@ def parse_diff_ndjson(raw: str) -> OverlayDiff | OverlayPolicyReject:
             meta.get("whiteouts_gitignore_refused") or 0
         ),
         dotgit_rejects=int(meta.get("dotgit_rejects") or 0),
-        snapshot_timings=(
-            {
-                str(key): round(float(value), 6)
-                for key, value in raw_snapshot_timings.items()
-                if isinstance(value, (int, float))
-            }
-            if isinstance(raw_snapshot_timings, dict)
-            else {}
-        ),
+        snapshot_timings=_parse_timing_dict(raw_snapshot_timings),
+        run_timings=_parse_timing_dict(raw_run_timings),
         warnings=tuple(str(w) for w in meta.get("warnings") or ()),
     )
+
+
+def _parse_timing_dict(raw: Any) -> dict[str, float]:
+    if not isinstance(raw, dict):
+        return {}
+    return {
+        str(key): round(float(value), 6)
+        for key, value in raw.items()
+        if isinstance(value, (int, float))
+    }
 
 
 # ---------------------------------------------------------------------------

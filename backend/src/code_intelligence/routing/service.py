@@ -156,6 +156,10 @@ class CodeIntelligenceService:
     async def cmd(self, sandbox: Any, command: str, **kwargs: Any) -> Any:
         return await self._command_executor.cmd(sandbox, command, **kwargs)
 
+    async def warmup_overlay(self, sandbox: Any) -> None:
+        """Pre-upload the overlay runner script to avoid first-burst stall."""
+        await self._command_executor.warmup(sandbox)
+
     def find_definitions(self, file_path: str, symbol: str, line: int = 0, character: int = 0):
         return self.query_router.find_definitions(file_path, symbol, line, character)
 

@@ -501,6 +501,7 @@ def test_write_diff_ndjson_meta_and_entries(tmp_path: Path) -> None:
         upper_bytes=99,
         upper_files=3,
         snapshot_timings={"total": 0.123, "git_add": 0.045},
+        run_timings={"total": 0.5, "classify": 0.2},
     )
 
     lines = Path(path).read_text(encoding="utf-8").splitlines()
@@ -510,6 +511,7 @@ def test_write_diff_ndjson_meta_and_entries(tmp_path: Path) -> None:
     assert meta["_meta"]["gitignore_changes"] == 1
     assert meta["_meta"]["gitignore_paths"] == [".venv/cfg"]
     assert meta["_meta"]["snapshot_timings"] == {"total": 0.123, "git_add": 0.045}
+    assert meta["_meta"]["run_timings"] == {"total": 0.5, "classify": 0.2}
     entry = json.loads(lines[1])
     assert entry["path"] == "a.py"
     assert entry["kind"] == "modify"
@@ -525,6 +527,7 @@ def test_write_reject_ndjson_emits_reject_block(tmp_path: Path) -> None:
         snap="snapX",
         reject=reject,
         snapshot_timings={"total": 0.1},
+        run_timings={"total": 0.2},
     )
     payload = json.loads(Path(path).read_text(encoding="utf-8"))
     assert payload == {
@@ -533,6 +536,7 @@ def test_write_reject_ndjson_emits_reject_block(tmp_path: Path) -> None:
             "reason": REJECT_DOTGIT,
             "paths": [".git/config"],
             "snapshot_timings": {"total": 0.1},
+            "run_timings": {"total": 0.2},
         }
     }
 
@@ -851,6 +855,7 @@ def test_ndjson_round_trip_preserves_gitinclude_and_gitignore(tmp_path: Path) ->
         upper_bytes=999,
         upper_files=5,
         snapshot_timings={"total": 0.2, "commit_tree": 0.03},
+        run_timings={"total": 0.4, "user_command": 0.1},
     )
     raw = Path(path).read_text(encoding="utf-8")
     parsed = parse_diff_ndjson(raw)
@@ -864,6 +869,7 @@ def test_ndjson_round_trip_preserves_gitinclude_and_gitignore(tmp_path: Path) ->
     assert parsed.whiteouts_gitinclude == 1
     assert parsed.gitignore_paths == (".venv/cfg", "node_modules/pkg/index.js")
     assert parsed.snapshot_timings == {"total": 0.2, "commit_tree": 0.03}
+    assert parsed.run_timings == {"total": 0.4, "user_command": 0.1}
 
     kinds = [c.kind for c in parsed.gitinclude_changes]
     assert kinds == ["modify", "delete", "create"]
@@ -888,6 +894,7 @@ def test_ndjson_round_trip_preserves_reject_block(tmp_path: Path) -> None:
         snap="abc",
         reject=reject,
         snapshot_timings={"total": 0.3},
+        run_timings={"total": 0.7},
     )
     raw = Path(path).read_text(encoding="utf-8")
     parsed = parse_diff_ndjson(raw)
@@ -897,6 +904,7 @@ def test_ndjson_round_trip_preserves_reject_block(tmp_path: Path) -> None:
     assert parsed.reason == "overlay_rejected_dotgit_writes"  # type: ignore[union-attr]
     assert parsed.paths == (".git/config", ".git/objects/a")  # type: ignore[union-attr]
     assert parsed.snapshot_timings == {"total": 0.3}  # type: ignore[union-attr]
+    assert parsed.run_timings == {"total": 0.7}  # type: ignore[union-attr]
 
 
 # ---------------------------------------------------------------------------

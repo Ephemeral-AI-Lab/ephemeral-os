@@ -55,7 +55,7 @@ first-writer-wins via OCC." Routing decisions are made entirely from
 | Mixed gitinclude + gitignore writes | **ACCEPT; non-atomic across routes by design.** Gitinclude writes go through strict OCC and may abort (first-writer-wins). Gitignore writes direct-merge independently per file (per-file last-writer-wins) and are not rolled back if the OCC pass aborts. | CodeAct is a live shell runner. Real commands inevitably touch source/config (gitinclude) plus runtime state (`.venv/`, `node_modules/`, caches, build outputs — gitignore). Rejecting mixed writes would make normal install/test/build workflows brittle. The contract is explicit metadata/warnings, not transactional rollback. |
 | Tmpfs upper full (`ENOSPC`) | Surface as `git_conflict_reason = "overlay_upper_full"` and fail the run. Tmpfs size set via `EOS_OVERLAY_UPPER_SIZE_MB` (default 512). | Fail-fast beats silent truncation of writes. |
 | Multi-shell-per-CodeAct | **One overlay per `svc.cmd`.** N `shell()` calls inside the wrapper share the same merged view; classifier sees cumulative upperdir after wrapper exits. | Matches how `_WRAPPER_TEMPLATE` already works — `shell()` invocations happen inside a single wrapper process. |
-| Concurrency | **Per-sandbox `asyncio.Semaphore(N)`** (`EOS_OVERLAY_MAX_CONCURRENT`, default 10). No pool, no slot state machine. | Pool existed only to amortize `git clone --shared`. Per-op unshare has nothing to amortize. |
+| Concurrency | **Per-sandbox `asyncio.Semaphore(N)`** (`EOS_OVERLAY_MAX_CONCURRENT`, default 20). No pool, no slot state machine. | Pool existed only to amortize `git clone --shared`. Per-op unshare has nothing to amortize. |
 | Read isolation / live lower mutation | **No full read isolation; live changes are accepted.** Concurrent ops share live as lower; peer writes to live (via OCC commits or gitignore direct-merges) can mutate another op's active lower while its overlay is mounted. Per kernel docs this lower mutation is "undefined behavior" but explicitly "will not result in a crash or deadlock." | CodeAct is a live-workspace execution tool, not a snapshot-isolated runner. Practical surface is **weak read consistency inside the running command**: live peer changes may be visible, stale, partially visible through directory caches, or missed by a command that already read inputs. `SNAP` is only the gitinclude-write OCC base; it is not a read snapshot contract. Callers that require stable inputs must serialize above CodeAct or rerun. |
 | Env-var | `EOS_OVERLAY_MAX_CONCURRENT`, `EOS_OVERLAY_UPPER_SIZE_MB`. | Picked one naming scheme (`EOS_OVERLAY_*`). `CI_CODEACT_*` retired. |
 
@@ -536,8 +536,8 @@ friction. "High concurrency" claims are workload-bounded, not universal.
   rather than implicit.
 
 **Hard limits:**
-- `EOS_OVERLAY_MAX_CONCURRENT` (default 10) caps per-sandbox parallelism.
-  Memory ceiling: `N × EOS_OVERLAY_UPPER_SIZE_MB` = `10 × 512 MB = 5 GB`
+- `EOS_OVERLAY_MAX_CONCURRENT` (default 20) caps per-sandbox parallelism.
+  Memory ceiling: `N × EOS_OVERLAY_UPPER_SIZE_MB` = `20 × 512 MB = 10 GB`
   tmpfs per sandbox.
 - Linux mount-table churn: ~5 mounts created and torn down per op.
   At 100-load that is ~500 mounts/sec churned per sandbox. Kernel
@@ -612,7 +612,7 @@ Threshold alarm when `overlay.upper_bytes` exceeds 80% of
 | 8 | LOW | Namespace signal / uid semantics shift breaks `pytest`, `npm` | Downgraded. §9 probe F confirmed `unshare -Urm` does **not** create a new PID ns (inside-pid inode == host-pid inode), so `ps`, `/proc` walking, and PID-based tools behave identically to the host. Mount ns changes as expected; uid remapping is the standard rootless pattern already exercised by probes A and B. Residual risk is edge-case tools that walk `/proc/mounts` (risk 9); Phase 1 E2E catches those. |
 | 9 | LOW | `.git/**` writes in upperdir because the user command ran `git commit` | REJECT is intentional. CodeAct is not a git client. Agents that want to commit use a different tool. |
 | 10 | LOW | Mount leakage on crash | Per-op ns owns every mount; kernel releases on exit. No persistent state, no stale-mount sweep needed. |
-| 11 | LOW | Tmpfs OOM across parallel sandboxes | Bounded by `semaphore × upper_size_mb`. Default 10 × 512 MB = 5 GB RAM ceiling per sandbox. Documented. |
+| 11 | LOW | Tmpfs OOM across parallel sandboxes | Bounded by `semaphore × upper_size_mb`. Default 20 × 512 MB = 10 GB RAM ceiling per sandbox. Documented. |
 | 12 | LOW | Concurrent ops mutate each other's overlay lower (kernel docs: "undefined behavior") | **Accepted weak read semantics** — see §0 row "Read isolation / live lower mutation." CodeAct commands run against a live lowerdir, so peer writes may be visible, stale, partially visible, or missed. `SNAP` only protects gitinclude write commit, not command reads. If a future workload needs defined-behavior reads, serialize above CodeAct or swap to a per-op hardlink-clone lower (`cp -al $WORKSPACE_ROOT $RUN_DIR/lower`). |
 | 13 | LOW | Mixed gitinclude + gitignore writes are non-atomic | **Accepted by contract.** The script direct-merges gitignore writes into live inside the ns, then emits gitinclude changes to NDJSON for orchestrator-side OCC. If OCC aborts, gitignore writes remain live while gitinclude writes are skipped. Coupled work like `pip install foo && echo foo >> requirements.txt` can update `.venv/` while `requirements.txt` aborts. Surface this via separated path metadata, `mixed_partial_apply=true`, a tool warning, and `overlay.mixed_partial_apply_ops`. |
 

@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import subprocess
+import sys
+import types
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -28,6 +30,21 @@ class _RecordingProcess:
         )
 
 
+class _FakeDaytonaFs:
+    __module__ = "daytona_sdk._sync.filesystem"
+
+    def __init__(self, files: dict[str, bytes]) -> None:
+        self.files = files
+        self.requests: list[str] = []
+
+    def download_files(self, requests):
+        self.requests.extend(request.source for request in requests)
+        return [
+            SimpleNamespace(source=request.source, result=self.files.get(request.source))
+            for request in requests
+        ]
+
+
 def test_read_many_reads_local_files(tmp_path: Path) -> None:
     a = tmp_path / "a.py"
     missing = tmp_path / "missing.py"
@@ -39,6 +56,35 @@ def test_read_many_reads_local_files(tmp_path: Path) -> None:
 
     assert result[str(a)] == ("A = 1\n", True)
     assert result[str(missing)] == ("", False)
+
+
+def test_read_many_prefers_real_daytona_batch_download(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    class FileDownloadRequest:
+        def __init__(self, source: str) -> None:
+            self.source = source
+
+    common = types.ModuleType("daytona_sdk.common")
+    filesystem = types.ModuleType("daytona_sdk.common.filesystem")
+    filesystem.FileDownloadRequest = FileDownloadRequest
+    monkeypatch.setitem(sys.modules, "daytona_sdk.common", common)
+    monkeypatch.setitem(sys.modules, "daytona_sdk.common.filesystem", filesystem)
+
+    a = str(tmp_path / "a.py")
+    b = str(tmp_path / "b.py")
+    process = _RecordingProcess()
+    fs = _FakeDaytonaFs({a: b"A = 1\n", b: b"B = 2\n"})
+    sandbox = SimpleNamespace(fs=fs, process=process)
+    content = ContentManager(str(tmp_path), sandbox=sandbox)
+
+    result = content.read_many([a, b, a], allow_missing=False)
+
+    assert result[a] == ("A = 1\n", True)
+    assert result[b] == ("B = 2\n", True)
+    assert fs.requests == [a, b]
+    assert process.commands == []
 
 
 def test_read_many_batches_remote_exec(tmp_path: Path) -> None:
@@ -70,5 +116,4 @@ def test_read_many_allows_missing_remote_files(tmp_path: Path) -> None:
 
     assert result[str(a)] == ("A = 1\n", True)
     assert result[str(missing)] == ("", False)
-
 

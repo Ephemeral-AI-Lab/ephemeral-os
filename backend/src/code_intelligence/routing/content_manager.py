@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 from dataclasses import dataclass
 import json
+import logging
 import shlex
 from pathlib import Path
 from typing import Any
@@ -19,8 +20,16 @@ from tools.daytona_toolkit._daytona_utils import (
 
 from code_intelligence._async_bridge import run_sync
 
+logger = logging.getLogger(__name__)
+
 FileReadResult = tuple[str, bool]
 FileReadResults = dict[str, FileReadResult]
+
+
+def _is_real_daytona_fs(fs: Any) -> bool:
+    """Best-effort check that *fs* is Daytona SDK, not a local test double."""
+    mod = getattr(type(fs), "__module__", "") or ""
+    return "daytona" in mod
 
 
 @dataclass(frozen=True)
@@ -85,6 +94,9 @@ class ContentManager:
                 path: self.read(path, allow_missing=allow_missing)
                 for path in unique_paths
             }
+        via_fs = self._read_fs_batch(unique_paths, allow_missing=allow_missing)
+        if via_fs is not None:
+            return via_fs
         return self._read_remote_batch(unique_paths, allow_missing=allow_missing)
 
     def list_folder_files(self, folder: str) -> list[str]:
@@ -203,6 +215,52 @@ class ContentManager:
         if isinstance(payload, bytes):
             return payload.decode("utf-8"), True
         return str(payload), True
+
+    def _read_fs_batch(
+        self,
+        file_paths: list[str],
+        *,
+        allow_missing: bool,
+    ) -> FileReadResults | None:
+        fs = getattr(self._sandbox, "fs", None)
+        download_files_fn = getattr(fs, "download_files", None) if fs is not None else None
+        if not callable(download_files_fn) or not _is_real_daytona_fs(fs):
+            return None
+        try:
+            from daytona_sdk.common.filesystem import FileDownloadRequest
+        except ImportError:
+            return None
+
+        try:
+            requests = [FileDownloadRequest(source=path) for path in file_paths]
+            responses = run_sync(download_files_fn(requests))
+        except Exception:
+            logger.debug("Batch download_files failed", exc_info=True)
+            return None
+
+        payload_by_path: dict[str, Any] = {}
+        for response in responses or ():
+            source = getattr(response, "source", None)
+            if isinstance(source, str):
+                payload_by_path[source] = response
+
+        results: FileReadResults = {}
+        for path in file_paths:
+            response = payload_by_path.get(path)
+            if response is None or getattr(response, "error", None):
+                if allow_missing:
+                    results[path] = ("", False)
+                    continue
+                raise FileNotFoundError(path)
+            payload = getattr(response, "result", None)
+            if payload is None:
+                if allow_missing:
+                    results[path] = ("", False)
+                    continue
+                raise FileNotFoundError(path)
+            content = payload.decode("utf-8") if isinstance(payload, bytes) else str(payload)
+            results[path] = (content, True)
+        return results
 
     def _read_remote(self, file_path: str, *, allow_missing: bool) -> FileReadResult:
         process = self._sandbox.process
