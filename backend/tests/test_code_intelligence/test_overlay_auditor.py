@@ -450,6 +450,48 @@ async def test_auditor_returns_user_command_stdout_from_overlay_run_dir(
 
 
 @pytest.mark.asyncio
+async def test_auditor_reports_noop_for_gitignored_only_changes(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    _init_fixture_repo(repo)
+    (repo / ".gitignore").write_text(".venv/\n", encoding="utf-8")
+    (repo / "app.py").write_text("old\n", encoding="utf-8")
+    _commit_all(repo)
+
+    (repo / ".venv").mkdir()
+    (repo / ".venv" / "cfg").write_text("home=/usr\n", encoding="utf-8")
+    sandbox = _ScriptedSandbox(
+        repo_root=repo,
+        diff_contents=_meta_line(
+            exit_code=0,
+            gitignored_changes=1,
+            gitignored_paths=[".venv/cfg"],
+            direct_merged_bytes=10,
+        ),
+        user_exit=0,
+    )
+    svc = CodeIntelligenceService(
+        sandbox_id=f"overlay-gitignored-only-{tmp_path.name}",
+        workspace_root=str(repo),
+    )
+    auditor = OverlayAuditor(
+        sandbox_id=f"overlay-gitignored-only-{tmp_path.name}",
+        workspace_root=str(repo),
+        exec_process=_noop_exec,
+        write_coordinator=svc._write_coordinator,
+        max_concurrent=2,
+    )
+
+    result = await auditor.execute(sandbox, "python -m venv .venv", timeout=60)
+
+    assert result.git_commit_status == "noop"
+    assert result.changed_paths == []
+    assert result.gitignored_direct_merged_paths == [str(repo / ".venv" / "cfg")]
+
+
+@pytest.mark.asyncio
 async def test_auditor_surfaces_mixed_partial_apply_on_occ_abort(
     tmp_path: Path,
 ) -> None:

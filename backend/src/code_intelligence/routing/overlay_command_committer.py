@@ -1,9 +1,12 @@
-"""Adapt overlay NDJSON tracked changes to the OCC write coordinator.
+"""Adapt overlay NDJSON not-gitignored changes to the OCC write coordinator.
 
 See ``docs/architecture/overlay-sandbox-plan.md`` §4.1. The committer is
 deliberately decoupled from the auditor / sandbox transport: given a
-sequence of :class:`OverlayChange` items, it builds strict-base
-``OperationChange`` values and delegates to ``WriteCoordinator``.
+sequence of :class:`OverlayChange` items (every upperdir entry that
+``git check-ignore`` did *not* flag — first-writer-wins under
+concurrency), it builds strict-base ``OperationChange`` values and
+delegates to ``WriteCoordinator``. Gitignored writes were already
+direct-merged inside the namespace and do not pass through here.
 """
 
 from __future__ import annotations
@@ -21,12 +24,15 @@ logger = logging.getLogger(__name__)
 
 
 class OverlayCommandCommitter:
-    """Commit the tracked-route slice of one overlay op through OCC.
+    """Commit the not-gitignored slice of one overlay op through OCC.
 
-    The strict-base contract (``strict_base=True``) matches the plan's
-    invariant that ``base_content`` always comes from
-    ``git show $SNAP:path`` — peer edits between SNAP and commit abort
-    the op with ``aborted_version``, never produce a silent merge.
+    Every change that ``git check-ignore`` did *not* flag is committed
+    here; index membership is irrelevant to routing. The strict-base
+    contract (``strict_base=True``) matches the plan's invariant that
+    ``base_content`` always comes from ``git show $SNAP:path`` — peer
+    edits between SNAP and commit abort the op with ``aborted_version``,
+    never produce a silent merge. Concurrent writers to the same path
+    therefore resolve as first-writer-wins.
     """
 
     def __init__(self, write_coordinator: Any, *, workspace_root: str) -> None:

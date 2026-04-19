@@ -49,21 +49,27 @@ class OverlayLease:
 
     The overlay model (see plan §0, "Mount model") has no pool — each
     ``svc.cmd`` builds a fresh unshare namespace with fresh mounts and
-    tears it all down on exit. The lease is just the bookkeeping handle
-    (semaphore slot, unique run-id, per-op run directory on the
-    container filesystem for NDJSON transport).
+    tears it all down on exit. The lease is just the per-op run
+    directory on the container filesystem (outside the overlay so it
+    survives ns exit) that holds ``diff.ndjson``.
     """
 
-    run_id: str
-    run_dir: str  # container-fs directory (not under overlay) for diff.ndjson
+    run_dir: str
 
 
 @dataclass(frozen=True)
 class OverlayChange:
-    """One tracked-route change emitted by ``overlay_run.py``.
+    """One not-gitignored change emitted by ``overlay_run.py`` for OCC.
+
+    Routing is keyed by ``git check-ignore`` against the live workspace,
+    not by git index membership: brand-new untracked-but-not-gitignored
+    files appear here too. Concurrent writers to the same path are
+    resolved by strict-base OCC → first-writer-wins.
 
     Gitignored changes are direct-merged inside the namespace and do not
-    appear here — they are summarized in :class:`OverlayDiff.gitignored_paths`.
+    appear here — they are summarized in
+    :class:`OverlayDiff.gitignored_paths` (per-file last-writer-wins, not
+    per-tree atomic).
     """
 
     path: str

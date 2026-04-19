@@ -50,10 +50,9 @@ from tools.daytona_toolkit._daytona_utils import (
     _extract_exit_code,
     _wrap_bash_command,
 )
-from code_intelligence.routing import git_diff_committer as git_diff_committer_module
 from code_intelligence.routing import command_executor as command_executor_module
-from code_intelligence.routing import git_workspace_auditor as git_workspace_auditor_module
-from code_intelligence.routing import git_workspace_pool as git_workspace_pool_module
+from code_intelligence.routing import overlay_auditor as overlay_auditor_module
+from code_intelligence.routing import overlay_command_committer as overlay_committer_module
 from code_intelligence.routing import service as ci_service_module
 import tools.daytona_toolkit.codeact_tool as codeact_tool_module
 from tools.daytona_toolkit.codeact_tool import daytona_codeact
@@ -259,112 +258,108 @@ def _install_codeact_phase_probe(monkeypatch: pytest.MonkeyPatch) -> dict[str, l
     return stats
 
 
-def _install_git_workspace_phase_probe(
+def _install_overlay_phase_probe(
     monkeypatch: pytest.MonkeyPatch,
 ) -> dict[str, list[float]]:
-    """Probe Git workspace audit lifecycle for per-phase timings."""
+    """Probe overlay audit lifecycle for per-phase timings."""
     stats: dict[str, list[float]] = {
-        "git_audit_total_s": [],
-        "git_pool_lease_s": [],
-        "git_prepare_baseline_s": [],
-        "git_run_command_s": [],
-        "git_collect_diff_s": [],
-        "git_commit_diff_s": [],
-        "git_diff_commit_s": [],
-        "git_pool_release_s": [],
+        "overlay_audit_total_s": [],
+        "overlay_snapshot_s": [],
+        "overlay_run_command_s": [],
+        "overlay_read_diff_s": [],
+        "overlay_assemble_commit_s": [],
+        "overlay_commit_s": [],
     }
 
-    orig_execute = git_workspace_auditor_module.GitWorkspaceAuditor.execute
-    orig_lease = git_workspace_pool_module.GitWorkspacePool.lease
-    orig_prepare = git_workspace_pool_module.GitWorkspacePool.prepare_baseline
-    orig_release = git_workspace_pool_module.GitWorkspacePool.release
-    orig_run = git_workspace_auditor_module.GitWorkspaceAuditor._run_command
-    orig_collect = git_workspace_auditor_module.GitWorkspaceAuditor._collect_diff
-    orig_commit_diff = git_workspace_auditor_module.GitWorkspaceAuditor._commit_diff
-    orig_diff_commit = git_diff_committer_module.GitDiffCommitter.commit
+    orig_execute = overlay_auditor_module.OverlayAuditor.execute
+    orig_snapshot = overlay_auditor_module.build_live_snapshot
+    orig_run = overlay_auditor_module.OverlayAuditor._run_overlay
+    orig_collect = overlay_auditor_module.OverlayAuditor._read_diff
+    orig_commit_diff = overlay_auditor_module.OverlayAuditor._commit_and_assemble
+    orig_diff_commit = overlay_committer_module.OverlayCommandCommitter.commit
 
     async def _timed_execute(self, *args, **kwargs):
         started = time.perf_counter()
         try:
             return await orig_execute(self, *args, **kwargs)
         finally:
-            stats["git_audit_total_s"].append(
+            stats["overlay_audit_total_s"].append(
                 round(time.perf_counter() - started, 6)
             )
 
-    async def _timed_lease(self, *args, **kwargs):
+    async def _timed_snapshot(*args, **kwargs):
         started = time.perf_counter()
         try:
-            return await orig_lease(self, *args, **kwargs)
+            return await orig_snapshot(*args, **kwargs)
         finally:
-            stats["git_pool_lease_s"].append(round(time.perf_counter() - started, 6))
-
-    async def _timed_prepare(self, *args, **kwargs):
-        started = time.perf_counter()
-        try:
-            return await orig_prepare(self, *args, **kwargs)
-        finally:
-            stats["git_prepare_baseline_s"].append(round(time.perf_counter() - started, 6))
-
-    async def _timed_release(self, *args, **kwargs):
-        started = time.perf_counter()
-        try:
-            return await orig_release(self, *args, **kwargs)
-        finally:
-            stats["git_pool_release_s"].append(round(time.perf_counter() - started, 6))
+            stats["overlay_snapshot_s"].append(
+                round(time.perf_counter() - started, 6)
+            )
 
     async def _timed_run(self, *args, **kwargs):
         started = time.perf_counter()
         try:
             return await orig_run(self, *args, **kwargs)
         finally:
-            stats["git_run_command_s"].append(round(time.perf_counter() - started, 6))
+            stats["overlay_run_command_s"].append(
+                round(time.perf_counter() - started, 6)
+            )
 
     async def _timed_collect(self, *args, **kwargs):
         started = time.perf_counter()
         try:
             return await orig_collect(self, *args, **kwargs)
         finally:
-            stats["git_collect_diff_s"].append(round(time.perf_counter() - started, 6))
+            stats["overlay_read_diff_s"].append(
+                round(time.perf_counter() - started, 6)
+            )
 
     async def _timed_commit_diff(self, *args, **kwargs):
         started = time.perf_counter()
         try:
             return await orig_commit_diff(self, *args, **kwargs)
         finally:
-            stats["git_commit_diff_s"].append(round(time.perf_counter() - started, 6))
+            stats["overlay_assemble_commit_s"].append(
+                round(time.perf_counter() - started, 6)
+            )
 
     async def _timed_diff_commit(self, *args, **kwargs):
         started = time.perf_counter()
         try:
             return await orig_diff_commit(self, *args, **kwargs)
         finally:
-            stats["git_diff_commit_s"].append(round(time.perf_counter() - started, 6))
+            stats["overlay_commit_s"].append(round(time.perf_counter() - started, 6))
 
-    monkeypatch.setattr(git_workspace_auditor_module.GitWorkspaceAuditor, "execute", _timed_execute)
-    monkeypatch.setattr(git_workspace_pool_module.GitWorkspacePool, "lease", _timed_lease)
     monkeypatch.setattr(
-        git_workspace_pool_module.GitWorkspacePool,
-        "prepare_baseline",
-        _timed_prepare,
+        overlay_auditor_module.OverlayAuditor,
+        "execute",
+        _timed_execute,
     )
-    monkeypatch.setattr(git_workspace_pool_module.GitWorkspacePool, "release", _timed_release)
     monkeypatch.setattr(
-        git_workspace_auditor_module.GitWorkspaceAuditor,
-        "_run_command",
+        overlay_auditor_module,
+        "build_live_snapshot",
+        _timed_snapshot,
+    )
+    monkeypatch.setattr(
+        overlay_auditor_module.OverlayAuditor,
+        "_run_overlay",
         _timed_run,
     )
     monkeypatch.setattr(
-        git_workspace_auditor_module.GitWorkspaceAuditor,
-        "_collect_diff",
+        overlay_auditor_module.OverlayAuditor,
+        "_read_diff",
         _timed_collect,
     )
     monkeypatch.setattr(
-        git_workspace_auditor_module.GitWorkspaceAuditor,
-        "_commit_diff",
+        overlay_auditor_module.OverlayAuditor,
+        "_commit_and_assemble",
         _timed_commit_diff,
     )
-    monkeypatch.setattr(git_diff_committer_module.GitDiffCommitter, "commit", _timed_diff_commit)
+    monkeypatch.setattr(
+        overlay_committer_module.OverlayCommandCommitter,
+        "commit",
+        _timed_diff_commit,
+    )
     return stats
 
 
@@ -400,7 +395,7 @@ def _install_lsp_phase_probe(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[
 def _install_svc_cmd_phase_probe(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[float]]:
     """Probe the sub-phases of ``CodeIntelligenceService.cmd`` for codeact.
 
-    This probe measures service-level cost around the Git workspace auditor
+    This probe measures service-level cost around the overlay auditor
     and samples an in-flight gauge on entry to tell single-call cost from
     queued-behind-a-lock time.
     """
@@ -416,7 +411,7 @@ def _install_svc_cmd_phase_probe(monkeypatch: pytest.MonkeyPatch) -> dict[str, l
 
     orig_cmd = ci_service_module.CodeIntelligenceService.cmd
     orig_rebind = ci_service_module.CodeIntelligenceService.rebind_sandbox
-    orig_ensure_auditor = command_executor_module.AuditedCommandExecutor._ensure_git_workspace_auditor
+    orig_ensure_auditor = command_executor_module.AuditedCommandExecutor._ensure_overlay_auditor
 
     async def _timed_cmd(self, sandbox, command, *args, **kwargs):
         with gauge_lock:
@@ -459,7 +454,7 @@ def _install_svc_cmd_phase_probe(monkeypatch: pytest.MonkeyPatch) -> dict[str, l
     )
     monkeypatch.setattr(
         command_executor_module.AuditedCommandExecutor,
-        "_ensure_git_workspace_auditor",
+        "_ensure_overlay_auditor",
         _timed_ensure_auditor,
     )
     return stats
@@ -983,7 +978,7 @@ def test_live_occ_load_72_all_mutators_high_concurrency_profile(
     )
     live_load_env.init_repo()
     codeact_stats = _install_codeact_phase_probe(monkeypatch)
-    git_workspace_stats = _install_git_workspace_phase_probe(monkeypatch)
+    overlay_stats = _install_overlay_phase_probe(monkeypatch)
     lsp_stats = _install_lsp_phase_probe(monkeypatch)
     content_stats = _install_content_phase_probe(monkeypatch)
     commit_stats = _install_commit_phase_probe(monkeypatch)
@@ -1182,7 +1177,7 @@ def test_live_occ_load_72_all_mutators_high_concurrency_profile(
             wall_elapsed_s=wall_elapsed_s,
         ),
         "codeact_phase_s": _phase_summary(codeact_stats),
-        "git_workspace_phase_s": _phase_summary(git_workspace_stats),
+        "overlay_phase_s": _phase_summary(overlay_stats),
         "lsp_phase_s": _phase_summary(lsp_stats),
         "content_phase_s": _phase_summary(content_stats),
         "commit_phase_s": _phase_summary(commit_stats),
@@ -1277,7 +1272,7 @@ def test_live_occ_load_50_mixed_operations(
     )
     live_load_env.init_repo()
     codeact_stats = _install_codeact_phase_probe(monkeypatch)
-    git_workspace_stats = _install_git_workspace_phase_probe(monkeypatch)
+    overlay_stats = _install_overlay_phase_probe(monkeypatch)
     lsp_stats = _install_lsp_phase_probe(monkeypatch)
     content_stats = _install_content_phase_probe(monkeypatch)
     commit_stats = _install_commit_phase_probe(monkeypatch)
@@ -1454,7 +1449,7 @@ def test_live_occ_load_50_mixed_operations(
                     wall_elapsed_s=wall_elapsed_s,
                 ),
                 "codeact_phase_s": _phase_summary(codeact_stats),
-                "git_workspace_phase_s": _phase_summary(git_workspace_stats),
+                "overlay_phase_s": _phase_summary(overlay_stats),
                 "lsp_phase_s": _phase_summary(lsp_stats),
                 "content_phase_s": _phase_summary(content_stats),
                 "commit_phase_s": _phase_summary(commit_stats),
@@ -1507,7 +1502,7 @@ def test_live_occ_load_20_non_overlapping_operations_profile(
     )
     live_load_env.init_repo()
     codeact_stats = _install_codeact_phase_probe(monkeypatch)
-    git_workspace_stats = _install_git_workspace_phase_probe(monkeypatch)
+    overlay_stats = _install_overlay_phase_probe(monkeypatch)
     lsp_stats = _install_lsp_phase_probe(monkeypatch)
     content_stats = _install_content_phase_probe(monkeypatch)
     commit_stats = _install_commit_phase_probe(monkeypatch)
@@ -1812,7 +1807,7 @@ def test_live_occ_load_20_non_overlapping_operations_profile(
             if item["payload"].get("timings")
         ],
         "codeact_phase_s": _phase_summary(codeact_stats),
-        "git_workspace_phase_s": _phase_summary(git_workspace_stats),
+        "overlay_phase_s": _phase_summary(overlay_stats),
         "lsp_phase_s": _phase_summary(lsp_stats),
         "content_phase_s": _phase_summary(content_stats),
         "commit_phase_s": _phase_summary(commit_stats),
@@ -1839,7 +1834,7 @@ def test_live_occ_load_30_non_overlapping_operations_profile(
     )
     live_load_env.init_repo()
     codeact_stats = _install_codeact_phase_probe(monkeypatch)
-    git_workspace_stats = _install_git_workspace_phase_probe(monkeypatch)
+    overlay_stats = _install_overlay_phase_probe(monkeypatch)
     lsp_stats = _install_lsp_phase_probe(monkeypatch)
     content_stats = _install_content_phase_probe(monkeypatch)
     commit_stats = _install_commit_phase_probe(monkeypatch)
@@ -1965,7 +1960,7 @@ def test_live_occ_load_30_non_overlapping_operations_profile(
             if item["payload"].get("timings")
         ],
         "codeact_phase_s": _phase_summary(codeact_stats),
-        "git_workspace_phase_s": _phase_summary(git_workspace_stats),
+        "overlay_phase_s": _phase_summary(overlay_stats),
         "lsp_phase_s": _phase_summary(lsp_stats),
         "content_phase_s": _phase_summary(content_stats),
         "commit_phase_s": _phase_summary(commit_stats),
@@ -1991,7 +1986,7 @@ def test_live_occ_load_50_non_overlapping_operations_profile(
     )
     live_load_env.init_repo()
     codeact_stats = _install_codeact_phase_probe(monkeypatch)
-    git_workspace_stats = _install_git_workspace_phase_probe(monkeypatch)
+    overlay_stats = _install_overlay_phase_probe(monkeypatch)
 
     for group in range(5):
         live_load_env.write_text(
@@ -2114,7 +2109,7 @@ def test_live_occ_load_50_non_overlapping_operations_profile(
             if item["payload"].get("timings")
         ],
         "codeact_phase_s": _phase_summary(codeact_stats),
-        "git_workspace_phase_s": _phase_summary(git_workspace_stats),
+        "overlay_phase_s": _phase_summary(overlay_stats),
         "arbiter": svc.status()["arbiter"],
     }
     print(f"\n[{log_label} timings]")
@@ -2126,15 +2121,15 @@ def test_live_occ_load_50_non_overlapping_operations_profile(
     assert sum(not item["is_error"] for item in by_kind["edit-disjoint"]) >= 20
 
 
-def test_live_occ_load_svc_cmd_git_workspace_amortization(
+def test_live_occ_load_svc_cmd_overlay_amortization(
     live_load_env: LiveLoadEnv,
     monkeypatch: pytest.MonkeyPatch,
 ):
-    """svc.cmd / codeact repeated calls must amortize Git workspace setup.
+    """svc.cmd / codeact repeated calls must keep overlay setup bounded.
 
-    This is the performance claim for the Git workspace pool: after the first
-    CodeAct prewarms reusable slots, subsequent calls on the same sandbox must
-    reuse the pool and only prepare a per-call synthetic baseline.
+    This is the performance claim for the overlay auditor: repeated calls on
+    the same sandbox should avoid expensive one-time setup and keep per-call
+    snapshot, overlay execution, diff parsing, and OCC commit costs visible.
 
     The test runs one cold-start call, then 5 sequential calls that each
     mutate the same file. All 6 must succeed; the 5 steady-state calls'
@@ -2148,7 +2143,7 @@ def test_live_occ_load_svc_cmd_git_workspace_amortization(
     )
     live_load_env.init_repo()
     codeact_stats = _install_codeact_phase_probe(monkeypatch)
-    git_workspace_stats = _install_git_workspace_phase_probe(monkeypatch)
+    overlay_stats = _install_overlay_phase_probe(monkeypatch)
     live_load_env.write_text("shared/counter.txt", "v0\n")
     live_load_env.exec_checked(f"git -C {shlex.quote(live_load_env.repo_root)} add -A")
     live_load_env.exec_checked(
@@ -2189,9 +2184,9 @@ def test_live_occ_load_svc_cmd_git_workspace_amortization(
                 "is_error": result.is_error,
                 "elapsed_s": elapsed_s,
                 "metadata": dict(result.metadata or {}),
-                "git_workspace_phase_snapshot_s": {
+                "overlay_phase_snapshot_s": {
                     phase: round(values[-1], 6)
-                    for phase, values in git_workspace_stats.items()
+                    for phase, values in overlay_stats.items()
                     if values
                 },
                 "codeact_phase_snapshot_s": {
@@ -2221,9 +2216,9 @@ def test_live_occ_load_svc_cmd_git_workspace_amortization(
 
     async def _scenario() -> list[dict[str, Any]]:
         results = []
-        # Cold start: first svc.cmd prewarms the Git workspace pool.
+        # Cold start: first svc.cmd pays overlay setup cost.
         results.append(await _invoke_codeact("cold", "cold-0"))
-        # Steady-state: 5 sequential calls must reuse the pool.
+        # Steady-state: 5 sequential calls exercise the bounded overlay path.
         for i in range(5):
             results.append(await _invoke_codeact(f"steady-{i}", f"steady-{i}"))
         return results
@@ -2261,7 +2256,7 @@ def test_live_occ_load_svc_cmd_git_workspace_amortization(
                 "final_content": final_content,
                 "arbiter": arbiter_status,
                 "codeact_phase_s": _phase_summary(codeact_stats),
-                "git_workspace_phase_s": _phase_summary(git_workspace_stats),
+                "overlay_phase_s": _phase_summary(overlay_stats),
                 "per_call": [
                     {
                         "label": item["label"],
@@ -2296,7 +2291,7 @@ def test_live_occ_load_svc_cmd_git_workspace_amortization(
     # every slot each call, steady-state would roughly track cold-start.
     assert median_steady_s <= cold["elapsed_s"] * 1.5, (
         f"Steady-state median {median_steady_s:.3f}s exceeds 1.5x cold-start "
-        f"{cold['elapsed_s']:.3f}s; Git workspace amortization regressed. "
+        f"{cold['elapsed_s']:.3f}s; overlay amortization regressed. "
         f"Per-call timings: cold={cold['elapsed_s']:.3f}s, "
         f"steady={steady_elapsed}"
     )
@@ -2339,7 +2334,7 @@ def test_live_occ_load_sequential_per_op_baseline(
     )
     live_load_env.init_repo()
     codeact_stats = _install_codeact_phase_probe(monkeypatch)
-    git_workspace_stats = _install_git_workspace_phase_probe(monkeypatch)
+    overlay_stats = _install_overlay_phase_probe(monkeypatch)
     lsp_stats = _install_lsp_phase_probe(monkeypatch)
     content_stats = _install_content_phase_probe(monkeypatch)
     commit_stats = _install_commit_phase_probe(monkeypatch)
@@ -2499,7 +2494,7 @@ def test_live_occ_load_sequential_per_op_baseline(
             for kind, times in sorted(timings_by_kind.items())
         },
         "codeact_phase_s": _phase_summary(codeact_stats),
-        "git_workspace_phase_s": _phase_summary(git_workspace_stats),
+        "overlay_phase_s": _phase_summary(overlay_stats),
         "lsp_phase_s": _phase_summary(lsp_stats),
         "content_phase_s": _phase_summary(content_stats),
         "commit_phase_s": _phase_summary(commit_stats),
@@ -3154,7 +3149,7 @@ def test_live_occ_parallelism_gating_sweep(
 
 
 # ---------------------------------------------------------------------------
-# Scenario C: CodeAct Git workspace contention
+# Scenario C: CodeAct overlay contention
 # ---------------------------------------------------------------------------
 
 def _extract_codeact_conflict(item: dict[str, Any]) -> str:
@@ -3172,15 +3167,15 @@ def _extract_codeact_conflict(item: dict[str, Any]) -> str:
     return ""
 
 
-def test_live_occ_contention_codeact_git_workspace_gates_concurrent_appends(
+def test_live_occ_contention_codeact_overlay_gates_concurrent_appends(
     live_load_env: LiveLoadEnv,
 ) -> None:
     """N concurrent codeact appends to the same file.
 
-    Ground truth is disk state, not tool self-report. Git workspace commits
+    Ground truth is disk state, not tool self-report. Overlay tracked commits
     should reject stale same-file writes through strict-base OCC.
     """
-    log_label = "occ-contention-codeact-git-workspace"
+    log_label = "occ-contention-codeact-overlay"
     env = live_load_env
     env.init_repo()
     target_rel = "contend/codeact_target.txt"
@@ -3270,7 +3265,7 @@ def test_live_occ_contention_codeact_git_workspace_gates_concurrent_appends(
             "payload_keys": sorted((item.get("payload") or {}).keys()),
         })
     assert not silent_drops, {
-        "silent_git_workspace_drops": silent_drops[:5],
+        "silent_overlay_drops": silent_drops[:5],
         "count": len(silent_drops),
         "residue_bound": residue_bound,
     }

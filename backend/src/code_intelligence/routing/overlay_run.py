@@ -14,13 +14,22 @@ order:
 3. Upperdir classifier — walks upper, gates on ``.git/*`` writes,
    detects whiteouts (privileged ``S_IFCHR`` + rootless
    ``user.overlay.whiteout`` xattr) and opaque dirs (both xattr
-   namespaces), batches ``git check-ignore`` to split tracked vs
-   gitignored routes.
+   namespaces), batches ``git check-ignore`` to split the
+   **not-gitignored route** (→ OCC) from the **gitignored route**
+   (→ direct-merge). The route key is ``git check-ignore`` only; git
+   index membership is not consulted, so brand-new files that are not
+   matched by any ``.gitignore`` rule go through the not-gitignored /
+   OCC route and inherit first-writer-wins semantics. The historical
+   variable name "tracked" in this module is an alias for
+   "not-gitignored," not a claim about git index state.
 4. Direct-merge gitignored writes into the live workspace via the
    ``/ns/lower`` bind, using per-op unique tempfile + ``os.rename`` for
-   atomic last-writer-wins behavior.
-5. Emit tracked changes as NDJSON at ``$RUN_DIR/diff.ndjson`` for the
-   orchestrator's OCC pass.
+   per-file atomic last-writer-wins behavior. **Atomicity is per file,
+   not per tree.** Concurrent multi-file installs of different versions
+   to the same gitignored prefix can interleave; no sandbox-side
+   coordination is provided (plan §5.1).
+5. Emit not-gitignored changes as NDJSON at ``$RUN_DIR/diff.ndjson``
+   for the orchestrator's OCC pass.
 
 The classifier (:class:`Classifier`) is pure and dependency-injected:
 xattr reads, ``git show <snap>:<path>`` lookups, and ``git check-ignore``
@@ -38,7 +47,6 @@ from __future__ import annotations
 
 import argparse
 import base64
-import errno
 import json
 import os
 import shutil
@@ -130,7 +138,12 @@ class UpperEntry:
 
 @dataclass(frozen=True)
 class TrackedChange:
-    """One tracked-route change to emit to NDJSON."""
+    """One not-gitignored change to emit to NDJSON for OCC.
+
+    The name "TrackedChange" is historical; the route is keyed on
+    ``git check-ignore``, not git-index membership, so this also covers
+    brand-new untracked-but-not-gitignored files.
+    """
 
     path: str
     kind: str  # "create" | "modify" | "delete"
@@ -156,7 +169,13 @@ class PolicyRejectOutcome:
 
 
 class Classifier:
-    """Classify one upperdir walk into tracked / gitignored / rejects.
+    """Classify one upperdir walk into not-gitignored / gitignored / rejects.
+
+    Routing is decided by ``git check-ignore`` against the live workspace.
+    Files flagged by check-ignore go to the gitignored route (direct-merge,
+    per-file last-writer-wins). Everything else goes to the not-gitignored
+    route (OCC, first-writer-wins) — including new files that are not in
+    the git index but also not matched by any ``.gitignore`` rule.
 
     Callables keep the implementation decoupled from live syscalls so it
     can be exercised on darwin:
@@ -541,7 +560,16 @@ def direct_merge_factory(
 
     Uses ``tempfile.mkstemp`` in the target's parent so the final
     ``os.rename`` is atomic; concurrent writers to the same gitignored
-    path produce clean last-writer-wins semantics on the final rename.
+    path produce per-file last-writer-wins semantics on the final
+    rename.
+
+    **Atomicity guarantee is per file, not per tree.** Each upperdir
+    entry gets its own rename race. Concurrent multi-file installs of
+    different versions to the same gitignored prefix can interleave at
+    the file level — file ``A`` from op1, file ``B`` from op2. No
+    sandbox-side coordination prevents this; callers that need
+    coherent dep-tree swap must serialize at the agent layer (plan
+    §3.4 / §5.1).
     """
 
     def _merge(rel: str, upper_path: str, upper_st: os.stat_result) -> int:
@@ -727,13 +755,6 @@ def run_user_command(
     return proc.stdout, proc.returncode
 
 
-def detect_upper_full(proc_error: OSError | None) -> bool:
-    """Return True when *proc_error* indicates a full tmpfs upperdir."""
-    if proc_error is None:
-        return False
-    return getattr(proc_error, "errno", None) == errno.ENOSPC
-
-
 # ---------------------------------------------------------------------------
 # CLI entry point. Invoked by the orchestrator as
 # ``unshare -Urm python3 /path/to/overlay_run.py --workspace-root <...>``.
@@ -830,7 +851,6 @@ __all__ = [
     "TrackedChange",
     "UpperEntry",
     "check_ignore_factory",
-    "detect_upper_full",
     "direct_merge_factory",
     "git_show_base_factory",
     "is_opaque_dir",

@@ -1,11 +1,10 @@
 # Overlay CodeAct Sandbox — Canonical Plan
 
-Status: proposed
+Status: implemented
 Replaces: `docs/architecture/overlay-codeact-plan.md`,
           `docs/architecture/overlay-sandbox-implementation-plan.md`,
-          `docs/architecture/git-worktree-codeact-migration.md`
-Companion to: `docs/architecture/git-workspace-codeact.md` (to be retitled
-after this plan lands)
+          `docs/architecture/git-worktree-codeact-migration.md`,
+          `docs/architecture/git-workspace-codeact.md`
 
 ---
 
@@ -13,6 +12,33 @@ after this plan lands)
 
 These close the open questions from the prior two overlay docs. No flag, no
 soak, one-shot cutover.
+
+### Routing terminology
+
+There are exactly two routes, keyed by `git check-ignore` against the live
+workspace:
+
+* **Not-gitignored route** — every upperdir path that `git check-ignore` does
+  not flag. Goes through strict-base OCC against `git show $SNAP:path`.
+  Concurrent writers to the same path → **first-writer-wins**; later writers
+  abort with `aborted_version`. This route covers files currently in the git
+  index *and* brand-new files that are not matched by any `.gitignore` rule
+  (agent-created scratch files, fresh source modules, generated outputs not
+  added to ignore patterns). Throughout this document, "tracked route" /
+  "tracked changes" / "tracked path" are aliases for this route — the name
+  is historical and refers to the OCC pipeline, not git index membership.
+* **Gitignored route** — every upperdir path that `git check-ignore` flags.
+  Direct-merged into the live workspace via per-file
+  `tempfile.mkstemp + os.rename`. Concurrent writers to the same path →
+  **per-file last-writer-wins**. See §5.1 for the per-file vs per-tree
+  caveat.
+
+If the requested user-facing semantics are "all files not in the git index
+are last-writer-wins," the implementation does not provide that. It provides
+"all gitignored files are per-file last-writer-wins; everything else,
+including new untracked-but-not-gitignored files, is first-writer-wins via
+OCC." Routing decisions are made entirely from `.gitignore` membership, not
+from index state.
 
 | Decision | Choice | Why |
 |---|---|---|
@@ -27,7 +53,7 @@ soak, one-shot cutover.
 | Symlinks / opaque-dir markers on tracked paths | **REJECT.** | Matches current V1 OCC policy. Defer until OCC represents them. |
 | Non-UTF-8 content on tracked paths | **REJECT.** | Matches current OCC policy. |
 | Non-UTF-8 content on gitignored paths | **Direct-merge as bytes.** | Binary deps (`.whl`, `.so`, `.pyc`) must pass through. |
-| Mixed tracked + gitignored writes | **ACCEPT; non-atomic across routes by design.** Tracked writes go through strict OCC and may abort. Gitignored writes direct-merge independently and are not rolled back if tracked OCC aborts. | CodeAct is a live shell runner. Real commands inevitably touch tracked source/config plus gitignored runtime state (`.venv/`, `node_modules/`, caches, build outputs). Rejecting mixed writes would make normal install/test/build workflows brittle. The contract is explicit metadata/warnings, not transactional rollback. |
+| Mixed not-gitignored + gitignored writes | **ACCEPT; non-atomic across routes by design.** Not-gitignored writes go through strict OCC and may abort (first-writer-wins). Gitignored writes direct-merge independently per file (per-file last-writer-wins) and are not rolled back if the OCC pass aborts. | CodeAct is a live shell runner. Real commands inevitably touch source/config (not gitignored) plus runtime state (`.venv/`, `node_modules/`, caches, build outputs — gitignored). Rejecting mixed writes would make normal install/test/build workflows brittle. The contract is explicit metadata/warnings, not transactional rollback. |
 | Tmpfs upper full (`ENOSPC`) | Surface as `git_conflict_reason = "overlay_upper_full"` and fail the run. Tmpfs size set via `EOS_OVERLAY_UPPER_SIZE_MB` (default 512). | Fail-fast beats silent truncation of writes. |
 | Multi-shell-per-CodeAct | **One overlay per `svc.cmd`.** N `shell()` calls inside the wrapper share the same merged view; classifier sees cumulative upperdir after wrapper exits. | Matches how `_WRAPPER_TEMPLATE` already works — `shell()` invocations happen inside a single wrapper process. |
 | Concurrency | **Per-sandbox `asyncio.Semaphore(N)`** (`EOS_OVERLAY_MAX_CONCURRENT`, default 10). No pool, no slot state machine. | Pool existed only to amortize `git clone --shared`. Per-op unshare has nothing to amortize. |
@@ -379,17 +405,17 @@ compatibility shim.
 docs/architecture/overlay-codeact-plan.md             → delete
 docs/architecture/overlay-sandbox-implementation-plan.md → delete
 docs/architecture/git-worktree-codeact-migration.md   → delete
+docs/architecture/git-workspace-codeact.md            → delete
 ```
 
-Rename `docs/architecture/git-workspace-codeact.md` → `codeact-sandbox.md`
-and rewrite §"Slot Implementation" / §"Workspace Pool" / §"Baseline" to
-describe the overlay model.
+`docs/architecture/code-intelligence.md` now describes the active overlay
+`svc.cmd` path.
 
 ### 4.5 Auditor output shape (preserved downstream contract)
 
 `OverlayAuditor.execute(...)` returns a `SimpleNamespace` with the same
 fields the git-workspace auditor emitted:
-`result`, `exit_code`, `stdout`, `changed_paths`, `ambient_changed_paths`,
+`result`, `exit_code`, `changed_paths`, `ambient_changed_paths`,
 `git_commit_status`, `git_conflict_reason`, `git_conflict_file`.
 
 That keeps `codeact_tool.py`'s `FileChangeResult` assembly untouched.
@@ -440,8 +466,13 @@ Op1: t0 SNAP1 (base A) | t2 upper writes A' | t3.5 peer lands A → C
 `git show $SNAP:path`, frozen in git's object store at snapshot time. OCC's
 live-vs-base hash compare catches every peer write between SNAP and commit.
 
-**Direct-merge (gitignored) paths skip OCC by design.** Last-writer-wins is
-accepted; this is how concurrent `pip install` works on any host.
+**Direct-merge (gitignored) paths skip OCC by design.** Per-file
+last-writer-wins is accepted; this is how concurrent `pip install` works on
+any host. **It is per-file, not per-tree.** See §5.1 — concurrent installs
+of *different versions* into the same gitignored prefix can interleave at
+the file level and produce a Frankenstein tree (file `A` from op1, file `B`
+from op2). The atomic-rename guarantee is freedom from torn writes within a
+single file, not coherent package-level swap.
 
 **Mixed tracked + gitignored writes are non-atomic by design.** A command like
 `pip install foo && echo foo >> requirements.txt` may leave `.venv/` updated
@@ -473,13 +504,37 @@ friction. "High concurrency" claims are workload-bounded, not universal.
   unlock" commit landed this hot path.
 
 **Bounded by design — correct but throughput-limited:**
-- Concurrent edits to the **same** tracked file: produces N−1 OCC
-  aborts. Correct. Agents retry against the new base.
-- Concurrent installs to the **same** gitignored prefix (e.g., 10
-  parallel `pip install requests`): last-writer-wins on direct-merge.
-  Final state is one op's writes (typically same content if same
-  package version). Per-op unique tmp filenames (§3.4) are required to
-  avoid torn writes during the race.
+- Concurrent edits to the **same** not-gitignored file: produces N−1 OCC
+  aborts. First-writer-wins. Agents retry against the new base. Applies
+  equally to files already in the git index and to brand-new untracked-but-
+  not-gitignored files.
+- Concurrent installs of the **same version** to the same gitignored
+  prefix (e.g., 10 parallel `pip install requests==2.31.0`): per-file
+  last-writer-wins on direct-merge. Final state is content-equivalent
+  to one op's writes since every file's bytes are identical. Per-op
+  unique tmp filenames (§3.4) prevent torn writes during the rename
+  race.
+
+**Hazardous by design — silent inconsistency possible:**
+- Concurrent installs of **different versions** to the same gitignored
+  prefix (e.g., `pip install requests==2.30.0` and `pip install
+  requests==2.31.0` in parallel): per-file last-writer-wins runs
+  independently per upperdir entry, so the final tree can interleave —
+  `__init__.py` from version 2.30, `models.py` from 2.31, etc. This
+  matches the documented contract ("per-file last-writer-wins, not
+  per-tree") but is the worst failure mode in this system: silent,
+  non-deterministic, only reproducible under load, and capable of
+  producing an importable-but-broken tree. The orchestrator cannot
+  detect this from the NDJSON alone — both ops' direct-merges are
+  successful by their own measure.
+
+  The plan does not introduce sandbox-side coordination to prevent
+  this. Callers that install dependencies concurrently into the same
+  gitignored prefix must serialize at the agent layer (e.g., one
+  install-tool call at a time per prefix) or accept the risk. The
+  bench in §8 PR 2 should include a "concurrent different-version
+  install to the same prefix" check so the failure mode is visible
+  rather than implicit.
 
 **Hard limits:**
 - `EOS_OVERLAY_MAX_CONCURRENT` (default 10) caps per-sandbox parallelism.
@@ -553,7 +608,7 @@ Threshold alarm when `overlay.upper_bytes` exceeds 80% of
 | 3 | HIGH | Shape drift in `FileChangeResult` / downstream tools | Golden-output test comparing `codeact_tool` shape before/after the cutover for a fixed set of fixture commands. |
 | 4 | HIGH | SNAP GC mid-op | Rely on `gc.pruneExpire=2.weeks` default; CodeAct ops complete in seconds. Do not invoke `git gc` from inside a CodeAct command against live — enforced by `.git/**` reject policy. |
 | 5 | MED | `git check-ignore` stdin size on huge dep installs | Chunk at 1 MiB stdin. Monitored via `overlay.gitignored_changes` count; page on outliers. |
-| 6 | MED | Concurrent `pip install`s race on gitignored path | Accepted (last-writer-wins). Documented in §3.4. If observed badness, add a sandbox-local async lock keyed on top-level gitignored dir — deferred. |
+| 6 | MED | Concurrent dep installs race on the same gitignored prefix | Accepted (per-file last-writer-wins). Documented in §3.4 and §5.1. Same-version concurrent installs are content-equivalent. **Different-version concurrent installs can interleave at the file level into a Frankenstein tree — silent, non-deterministic.** No sandbox-side coordination is introduced; callers that need coherent dep trees must serialize at the agent layer, or limit one install-style command per prefix per `svc.cmd`. |
 | 7 | MED | Whiteout-refuse too strict for real workflows | Observable via `overlay.whiteouts_gitignored_refused`. If agents hit it frequently, add an explicit `rebuild-env` tool rather than relaxing the policy. |
 | 8 | LOW | Namespace signal / uid semantics shift breaks `pytest`, `npm` | Downgraded. §9 probe F confirmed `unshare -Urm` does **not** create a new PID ns (inside-pid inode == host-pid inode), so `ps`, `/proc` walking, and PID-based tools behave identically to the host. Mount ns changes as expected; uid remapping is the standard rootless pattern already exercised by probes A and B. Residual risk is edge-case tools that walk `/proc/mounts` (risk 9); Phase 1 E2E catches those. |
 | 9 | LOW | `.git/**` writes in upperdir because the user command ran `git commit` | REJECT is intentional. CodeAct is not a git client. Agents that want to commit use a different tool. |
@@ -606,28 +661,24 @@ TDD: RED → GREEN → optional refactor, per project discipline.
   - 100-op load bench: wall, p95, throughput. Acceptance: ≤ git-workspace
     at every scale point. Record results in §9.
 - Swap `AuditedCommandExecutor` to `OverlayAuditor`. `GitWorkspace*`
-  modules remain on disk but are no longer imported. CI confirms
-  nothing imports them.
+  modules are deleted. CI confirms nothing imports them.
 
 ### PR 3 — Delete git-workspace modules + tests
 
-- Delete the five routing modules listed in §4.3.
-- Delete the three test files listed in §4.3.
+- Deleted the five routing modules listed in §4.3.
+- Deleted the retired tests listed in §4.3.
 - `ripgrep` for any surviving identifier referenced in §4.3 or
   `WorkspaceDiff`, `GitWorkspace*`, `snapshot_path`, `live_head`,
   `prepare_baseline`, `_PREWARM_SCRIPT`, `_CREATE_SLOT_SCRIPT`,
   `copy_baseline_snapshot`, `git_workspace_pool_size_per_sandbox`.
   Zero hits outside archived/deleted docs.
-- Rename `service.py :: _git_workspace_pool` getter away / remove.
+- Removed `service.py :: _git_workspace_pool`.
 
 ### PR 4 — Doc consolidation
 
-- Delete the three retired docs listed in §4.4.
-- Rename `git-workspace-codeact.md` → `codeact-sandbox.md` and rewrite
-  the overlay-affected sections.
-- Delete `docs/architecture/overlay-codeact-plan.md` and
-  `docs/architecture/overlay-sandbox-implementation-plan.md` (this doc
-  replaces both).
+- Deleted the retired docs listed in §4.4.
+- Updated `docs/architecture/code-intelligence.md` to remove git-workspace
+  references and describe the overlay model.
 
 Each PR reverts cleanly on its own. No intermediate state ships a
 broken backend.
@@ -691,9 +742,20 @@ Acceptance:
 - Does not provide snapshot read isolation for CodeAct commands. `SNAP` is an
   OCC write base only; commands run against a live lowerdir and may observe
   concurrent workspace activity.
-- Does not make mixed tracked + gitignored writes transactional. Gitignored
-  runtime effects can persist even when tracked OCC writes abort; this is
-  surfaced rather than rolled back.
+- Does not make mixed not-gitignored + gitignored writes transactional.
+  Gitignored runtime effects can persist even when not-gitignored OCC writes
+  abort; this is surfaced rather than rolled back.
+- Does not key routing on git index membership. The route key is
+  `git check-ignore`. Brand-new files that are not in any `.gitignore` rule
+  go through the OCC route and inherit first-writer-wins, even though they
+  are not "tracked" in the git-index sense. If a stricter "anything not in
+  the index = last-writer-wins" policy is required, that is a different
+  routing decision and is out of scope here.
+- Does not provide per-tree atomicity on the gitignored route. Each upperdir
+  file is renamed independently; concurrent multi-file installs of different
+  versions to the same prefix can interleave. No sandbox-side locks or
+  per-prefix coordination are introduced; serialization, if required, is the
+  caller's responsibility.
 - Does not change LSP / symbol-index refresh. `ambient_changed_paths`
   flows through the same hook as before.
 - Does not touch the Daytona base image. If the probe regresses,

@@ -9,10 +9,18 @@ Coordinates one ``svc.cmd`` op per plan §1:
 4. Read ``$RUN_DIR/diff.ndjson`` from the sandbox.
 5. If the script emitted a ``_reject`` meta line → surface via
    ``git_commit_status`` + ``git_conflict_reason`` on the result.
-6. Otherwise parse the NDJSON, run tracked OCC via
-   :class:`OverlayCommandCommitter`, and assemble the downstream
+6. Otherwise parse the NDJSON, run OCC over the **not-gitignored**
+   changes via :class:`OverlayCommandCommitter` (first-writer-wins;
+   gitignored writes were already direct-merged inside the namespace
+   with per-file last-writer-wins), and assemble the downstream
    ``SimpleNamespace`` result.
 7. Cleanup ``$RUN_DIR``; release semaphore.
+
+Routing terminology: the plan keys the route on ``git check-ignore``,
+not git index membership. Field names that say "tracked" — both on the
+NDJSON wire and on the result ``SimpleNamespace`` — are aliases for
+"not-gitignored" and include brand-new files that are not matched by
+any ``.gitignore`` rule. Index membership is never consulted.
 
 Downstream callers (``codeact_tool``, ``_commit.submit_codeact_cmd``) read
 through a fixed ``SimpleNamespace`` shape:
@@ -23,6 +31,10 @@ through a fixed ``SimpleNamespace`` shape:
 Plus the additive overlay metadata from §4.5 (``tracked_changed_paths``,
 ``gitignored_direct_merged_paths``, ``gitignored_direct_merged_count``,
 ``mixed_tracked_gitignored``, ``mixed_partial_apply``, ``warnings``).
+``git_commit_status`` values include ``"committed"`` (OCC succeeded),
+``"noop"`` (no not-gitignored changes), ``"aborted_version"`` (OCC
+strict-base mismatch — first-writer-wins lost the race), and
+``"rejected"`` (policy reject from the sandbox-side script).
 """
 
 from __future__ import annotations
@@ -88,12 +100,6 @@ class OverlayAuditor:
         )
         self._script_upload_lock = asyncio.Lock()
         self._script_uploaded = False
-
-    @property
-    def max_concurrent(self) -> int:
-        # ``asyncio.Semaphore`` does not expose its cap; we track it
-        # separately for telemetry and tests.
-        return self._semaphore._value + len(self._semaphore._waiters or ())  # type: ignore[attr-defined]
 
     async def execute(
         self,
@@ -180,9 +186,10 @@ class OverlayAuditor:
     # -- internals -----------------------------------------------------------
 
     def _new_lease(self) -> OverlayLease:
-        run_id = f"run-{uuid.uuid4().hex}"
-        run_dir = posixpath.join(_RUN_DIR_PREFIX, self._sandbox_id, run_id)
-        return OverlayLease(run_id=run_id, run_dir=run_dir)
+        run_dir = posixpath.join(
+            _RUN_DIR_PREFIX, self._sandbox_id, f"run-{uuid.uuid4().hex}"
+        )
+        return OverlayLease(run_dir=run_dir)
 
     async def _ensure_script_uploaded(self, sandbox: Any) -> None:
         if self._script_uploaded:
@@ -346,7 +353,7 @@ class OverlayAuditor:
                 mixed_tracked_gitignored=mixed,
                 mixed_partial_apply=False,
                 ambient=[],
-                git_commit_status="committed",
+                git_commit_status="noop",
                 git_conflict_reason=None,
                 git_conflict_file=None,
                 warnings=list(diff.warnings),

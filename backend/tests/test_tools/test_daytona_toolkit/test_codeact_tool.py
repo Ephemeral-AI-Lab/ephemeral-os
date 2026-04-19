@@ -53,7 +53,7 @@ async def _svc_cmd_passthrough(
 
     Production :meth:`svc.cmd` adds OCC audit, but tests only need the
     exec-through behavior; the audit layer is covered by
-    ``test_git_workspace_auditor.py``.
+    ``test_overlay_auditor.py``.
     """
     del description, agent_id, team_run_id, agent_run_id, task_id, stdin, attribute_changes
     response = await sandbox.process.exec(command, timeout=timeout)
