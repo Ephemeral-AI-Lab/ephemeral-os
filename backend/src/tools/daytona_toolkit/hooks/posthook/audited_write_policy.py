@@ -1,4 +1,4 @@
-"""Post-hook audited write policy for CodeAct changed paths."""
+"""Post-hook audited write policy: blocks / advises on committed paths."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from tools.core.base import ToolExecutionContext, ToolResult
 from tools.core.hooks import PostHookOutcome, ToolHookRegistry, default_registry
+from tools.daytona_toolkit._audit import audited_write_outcome
 
 
 async def hook(
@@ -22,9 +23,9 @@ async def hook(
     if not changed_paths:
         return PostHookOutcome()
 
-    from tools.daytona_toolkit.codeact_tool import _audited_write_policy
-
-    warnings, error = _audited_write_policy(context, changed_paths)
+    warnings, error = audited_write_outcome(
+        context, changed_paths, tool_name=tool_name,
+    )
     if error:
         return PostHookOutcome(has_error=True, error_message=error)
     return PostHookOutcome(advisories=tuple(warnings))

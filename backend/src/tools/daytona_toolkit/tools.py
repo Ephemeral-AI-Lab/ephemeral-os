@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import shlex
@@ -10,14 +9,13 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from code_intelligence._async_bridge import use_sandbox_io_loop
 from code_intelligence.tuning import CODE_INTELLIGENCE_TUNING
 from code_intelligence.types import WriteSpec
 from tools.core.base import ToolExecutionContext, ToolResult
-from tools.core.ci_attribution import rebind_ci_service, resolved_agent_id
 from tools.core.ci_runtime import ci_write_required_result, get_ci_service
 from tools.core.decorator import tool
 from tools.core.op_result_to_tool_result import operation_result_to_tool_result
+from tools.daytona_toolkit._commit import submit_commit
 from tools.daytona_toolkit._daytona_utils import (
     _exec_command,
     _extract_exit_code,
@@ -497,21 +495,19 @@ async def daytona_write_file(
     file_path = _resolve_path(file_path, context)
     warnings: list[str] = []
 
-    svc = get_ci_service(context)
-    if svc is None:
+    if get_ci_service(context) is None:
         return ci_write_required_result("daytona_write_file", file_path)
 
-    rebind_ci_service(context, svc)
-    with use_sandbox_io_loop():
-        result = await asyncio.to_thread(
-            svc.write_file,
-            [WriteSpec(file_path=file_path, content=content, overwrite=True)],
-            agent_id=resolved_agent_id(context),
-            description=f"write {file_path}",
-        )
+    change = await submit_commit(
+        context,
+        op="write",
+        specs=[WriteSpec(file_path=file_path, content=content, overwrite=True)],
+        fallback_paths=[file_path],
+        description=f"write {file_path}",
+    )
 
     return operation_result_to_tool_result(
-        result,
+        change.raw,
         tool_name="daytona_write_file",
         success_status="written",
         primary_paths=[file_path],
@@ -521,6 +517,11 @@ async def daytona_write_file(
             "file_path": file_path,
             "bytes_written": len(content.encode("utf-8")),
             "ci_sync": True,
+        },
+        metadata_extra={
+            "changed_paths": list(change.changed_paths),
+            "ambient_changed_paths": list(change.ambient_changed_paths),
+            "conflict_reason": change.conflict_reason,
         },
     )
 

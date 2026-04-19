@@ -8,22 +8,20 @@ strict-base branch.
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import time
 from typing import Any
 
 from pydantic import BaseModel, Field
 
-from code_intelligence._async_bridge import use_sandbox_io_loop
 from code_intelligence.editing.change_labels import change_actor_label
 from code_intelligence.editing.patcher import SearchReplaceEdit
 from code_intelligence.types import EditSpec
 from tools.core.base import ToolExecutionContext, ToolResult
-from tools.core.ci_attribution import rebind_ci_service, resolved_agent_id
 from tools.core.ci_runtime import ci_write_required_result, get_ci_service
 from tools.core.decorator import tool
 from tools.core.op_result_to_tool_result import operation_result_to_tool_result
+from tools.daytona_toolkit._commit import submit_commit
 from tools.daytona_toolkit.tools import (
     _get_cwd,
     _resolve_path,
@@ -222,27 +220,32 @@ async def daytona_edit_file(
         )
         return ToolResult(output=body, is_error=True)
 
-    svc = get_ci_service(context)
-    if svc is None:
+    if get_ci_service(context) is None:
         return ci_write_required_result("daytona_edit_file", file_path)
 
     commit_started = time.perf_counter()
-    rebind_ci_service(context, svc)
-    with use_sandbox_io_loop():
-        result = await asyncio.to_thread(
-            svc.edit_file,
-            [EditSpec(file_path=file_path, edits=normalized_edits)],
-            agent_id=resolved_agent_id(context),
-            description=description or f"edit {file_path}",
-        )
+    change = await submit_commit(
+        context,
+        op="edit",
+        specs=[EditSpec(file_path=file_path, edits=normalized_edits)],
+        fallback_paths=[file_path],
+        description=description or f"edit {file_path}",
+    )
     tool_timings["commit"] = round(time.perf_counter() - commit_started, 6)
 
-    if not result.success:
+    metadata_extra = {
+        "changed_paths": list(change.changed_paths),
+        "ambient_changed_paths": list(change.ambient_changed_paths),
+        "conflict_reason": change.conflict_reason,
+    }
+
+    if not change.success:
         return _edit_failure_result(
-            result,
+            change.raw,
             file_path=file_path,
             warnings=warnings,
             legacy_single_edit=legacy_single_edit,
+            metadata_extra=metadata_extra,
         )
 
     overlap_warning = _scope_overlap_warning(context, file_path)
@@ -251,7 +254,7 @@ async def daytona_edit_file(
 
     tool_timings["tool_total"] = round(time.perf_counter() - tool_started, 6)
     return operation_result_to_tool_result(
-        result,
+        change.raw,
         tool_name="daytona_edit_file",
         success_status="edited",
         primary_paths=[file_path],
@@ -262,6 +265,7 @@ async def daytona_edit_file(
             "applied_edits": len(normalized_edits),
             "timings": {"tool": tool_timings},
         },
+        metadata_extra=metadata_extra,
     )
 
 
@@ -271,6 +275,7 @@ def _edit_failure_result(
     file_path: str,
     warnings: list[str],
     legacy_single_edit: bool,
+    metadata_extra: dict[str, Any] | None = None,
 ) -> ToolResult:
     """Translate a failed :class:`OperationResult` into a tool-facing error.
 
@@ -285,6 +290,7 @@ def _edit_failure_result(
         return ToolResult(
             output=f"Search text not found in {file_path}",
             is_error=True,
+            metadata=dict(metadata_extra or {}),
         )
     return operation_result_to_tool_result(
         result,
@@ -292,4 +298,5 @@ def _edit_failure_result(
         success_status="edited",
         primary_paths=[file_path],
         warnings=warnings,
+        metadata_extra=metadata_extra,
     )

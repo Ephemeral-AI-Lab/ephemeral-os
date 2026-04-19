@@ -14,9 +14,9 @@ from pydantic.json_schema import GenerateJsonSchema
 
 from code_intelligence.tuning import CODE_INTELLIGENCE_TUNING
 from tools.core.base import ToolExecutionContext, ToolResult
-from tools.core.ci_attribution import agent_attribution_from_context
 from tools.core.ci_runtime import ci_required_result, get_ci_service
 from tools.core.decorator import tool
+from tools.daytona_toolkit._commit import FileChangeResult, submit_codeact_cmd
 from tools.daytona_toolkit._daytona_utils import (
     _extract_exit_code,
     _format_shell_stdout,
@@ -24,8 +24,6 @@ from tools.daytona_toolkit._daytona_utils import (
     _read_text_file_via_exec,
     _recover_sandbox,
     _require_sandbox,
-    _team_repo_write_error,
-    _team_repo_write_warning,
     _supports_exec_transport,
     _upload_file_compat,
     _write_text_file_via_exec,
@@ -713,23 +711,19 @@ async def _exec_shell_command(
     timeout: int,
     attribute_changes: bool,
 ) -> dict[str, object]:
-    svc = get_ci_service(context)
-    if svc is None:
+    if get_ci_service(context) is None:
         raise RuntimeError("Code intelligence service is unavailable")
 
-    attribution = agent_attribution_from_context(context)
     wrapped_command = command if not cwd else f"cd {shlex.quote(cwd)} && {command}"
-    response = await svc.cmd(
-        sandbox,
-        _wrap_bash_command(wrapped_command),
-        timeout=timeout,
+    change = await submit_codeact_cmd(
+        context,
+        command=_wrap_bash_command(wrapped_command),
         description="daytona_codeact shell",
-        agent_id=attribution.agent_id,
-        team_run_id=attribution.team_run_id,
-        agent_run_id=attribution.agent_run_id,
-        task_id=attribution.task_id,
+        timeout=timeout,
+        sandbox=sandbox,
         attribute_changes=attribute_changes,
     )
+    response = change.raw
     stdout = getattr(response, "result", "") or ""
     fallback_exit_code = getattr(response, "exit_code", None)
     cleaned_stdout, exit_code = _extract_exit_code(
@@ -742,8 +736,8 @@ async def _exec_shell_command(
         "stdout": formatted_stdout,
         "stderr": formatted_stdout if exit_code != 0 else "",
         "exit_code": exit_code,
-        "changed_paths": _changed_paths_from_response(response),
-        "ambient_changed_paths": _ambient_changed_paths_from_response(response),
+        "changed_paths": list(change.changed_paths),
+        "ambient_changed_paths": list(change.ambient_changed_paths),
     }
 
 
@@ -798,6 +792,7 @@ def _build_tool_output(
     warnings: list[str],
     error: str = "",
     changed_paths: list[str] | None = None,
+    ambient_changed_paths: list[str] | None = None,
 ) -> ToolResult:
     shell_summaries: list[str] = []
     shell_outputs: list[dict[str, object]] = []
@@ -848,6 +843,7 @@ def _build_tool_output(
             "files_written": files_written,
             "shells_run": len(shells),
             "changed_paths": list(changed_paths or []),
+            "ambient_changed_paths": list(ambient_changed_paths or []),
         },
     )
 
@@ -905,8 +901,7 @@ async def _execute_python_wrapper(
                 [],
             )
 
-    svc = get_ci_service(context)
-    if svc is None:
+    if get_ci_service(context) is None:
         return (
             None,
             sandbox,
@@ -916,26 +911,22 @@ async def _execute_python_wrapper(
             ),
             [],
         )
-    attribution = agent_attribution_from_context(context)
 
-    async def _svc_cmd(active_sandbox: object) -> object:
-        return await svc.cmd(
-            active_sandbox,
-            exec_command,
-            timeout=_CODEACT_DEFAULT_TIMEOUT,
+    async def _submit(active_sandbox: object) -> FileChangeResult[Any]:
+        return await submit_codeact_cmd(
+            context,
+            command=exec_command,
             description="daytona_codeact python",
-            agent_id=attribution.agent_id,
-            team_run_id=attribution.team_run_id,
-            agent_run_id=attribution.agent_run_id,
-            task_id=attribution.task_id,
+            timeout=_CODEACT_DEFAULT_TIMEOUT,
+            sandbox=active_sandbox,
         )
 
     try:
-        response = await _svc_cmd(sandbox)
+        change = await _submit(sandbox)
     except Exception as exc:
         try:
             sandbox = await _recover_sandbox(context, exc)
-            response = await _svc_cmd(sandbox)
+            change = await _submit(sandbox)
         except Exception as recovery_exc:
             return (
                 None,
@@ -947,10 +938,10 @@ async def _execute_python_wrapper(
                 [],
             )
     return (
-        getattr(response, "result", "") or "",
+        getattr(change.raw, "result", "") or "",
         sandbox,
         None,
-        _changed_paths_from_response(response),
+        list(change.changed_paths),
     )
 
 
@@ -965,20 +956,6 @@ def _shell_result_error_detail(shell_result: dict[str, object]) -> str:
     return str(shell_result.get("stderr", "") or shell_result.get("stdout", "") or "")
 
 
-def _changed_paths_from_response(response: object) -> list[str]:
-    raw = getattr(response, "changed_paths", None)
-    if not isinstance(raw, list):
-        return []
-    return sorted({str(path) for path in raw if str(path or "").strip()})
-
-
-def _ambient_changed_paths_from_response(response: object) -> list[str]:
-    raw = getattr(response, "ambient_changed_paths", None)
-    if not isinstance(raw, list):
-        return []
-    return sorted({str(path) for path in raw if str(path or "").strip()})
-
-
 def _changed_paths_from_shell(shell_result: dict[str, object]) -> list[str]:
     raw = shell_result.get("changed_paths")
     if not isinstance(raw, list):
@@ -991,42 +968,6 @@ def _ambient_changed_paths_from_shell(shell_result: dict[str, object]) -> list[s
     if not isinstance(raw, list):
         return []
     return sorted({str(path) for path in raw if str(path or "").strip()})
-
-
-def _ambient_change_warning(paths: list[str]) -> str:
-    rendered = ", ".join(paths[:5])
-    if len(paths) > 5:
-        rendered += f", ... ({len(paths)} total)"
-    return (
-        "Workspace changed during this shell command, but coordinated CodeAct "
-        "shell commands are runtime-only; treating changed paths as ambient "
-        f"concurrent edits: {rendered}"
-    )
-
-
-def _audited_write_policy(
-    context: ToolExecutionContext,
-    changed_paths: list[str],
-) -> tuple[list[str], str]:
-    warnings: list[str] = []
-    errors: list[str] = []
-    for path in changed_paths:
-        error = _team_repo_write_error(
-            context,
-            path,
-            tool_name="daytona_codeact",
-        )
-        if error is not None:
-            errors.append(error)
-            continue
-        warning = _team_repo_write_warning(
-            context,
-            path,
-            tool_name="daytona_codeact",
-        )
-        if warning is not None:
-            warnings.append(warning)
-    return warnings, "\n".join(errors)
 
 
 def _files_written_count(
@@ -1115,18 +1056,16 @@ async def daytona_codeact(
         exit_code = int(shell_result.get("exit_code", 1))
         changed_paths = _changed_paths_from_shell(shell_result)
         ambient_changed_paths = _ambient_changed_paths_from_shell(shell_result)
-        ambient_warnings = (
-            [_ambient_change_warning(ambient_changed_paths)] if ambient_changed_paths else []
-        )
         return _build_tool_output(
             context=context,
             status="ok" if exit_code == 0 else "error",
             files_written=len(changed_paths),
             shells=[shell_result],
             script_stdout="",
-            warnings=ambient_warnings,
+            warnings=[],
             error=_shell_result_error_detail(shell_result) if exit_code != 0 else "",
             changed_paths=changed_paths,
+            ambient_changed_paths=ambient_changed_paths,
         )
 
     stdout, sandbox, tool_error, changed_paths = await _execute_python_wrapper(

@@ -14,7 +14,6 @@ shell path.
 
 from __future__ import annotations
 
-import asyncio
 import json
 import shlex
 from pathlib import Path
@@ -22,15 +21,14 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from code_intelligence._async_bridge import use_sandbox_io_loop
 from code_intelligence.types import MoveSpec
 from tools.core.base import ToolExecutionContext, ToolResult
-from tools.core.ci_attribution import rebind_ci_service, resolved_agent_id
 from tools.core.ci_runtime import (
     ci_write_required_result,
     get_ci_service,
 )
 from tools.core.decorator import tool
+from tools.daytona_toolkit._commit import submit_commit
 from tools.daytona_toolkit._daytona_utils import (
     _exec_command,
     _extend_write_scope,
@@ -127,19 +125,6 @@ def _repo_guard_error(
             f"{repo_root}: {file_path}"
         )
     return None
-
-
-def _operation_paths(result: Any, fallback: list[str]) -> list[str]:
-    files = getattr(result, "files", None)
-    if isinstance(files, (list, tuple)):
-        paths = [
-            str(getattr(item, "file_path", "") or "")
-            for item in files
-            if str(getattr(item, "file_path", "") or "").strip()
-        ]
-        if paths:
-            return paths
-    return fallback
 
 
 def _failure_status(result: Any, *, move: bool) -> tuple[str, str]:
@@ -339,37 +324,48 @@ async def daytona_delete_file(
     else:
         paths_to_commit = [resolved]
 
-    rebind_ci_service(context, svc)
-    with use_sandbox_io_loop():
-        result = await asyncio.to_thread(
-            svc.delete_file,
-            paths_to_commit,
-            agent_id=resolved_agent_id(context),
-            description=f"delete {resolved}",
-        )
-    if getattr(result, "success", False):
-        paths = _operation_paths(result, paths_to_commit)
+    change = await submit_commit(
+        context,
+        op="delete",
+        specs=paths_to_commit,
+        fallback_paths=paths_to_commit,
+        description=f"delete {resolved}",
+    )
+    paths = list(change.changed_paths)
+    common_metadata = {
+        "changed_paths": paths,
+        "ambient_changed_paths": list(change.ambient_changed_paths),
+        "conflict_reason": change.conflict_reason,
+    }
+    if change.success:
         return ToolResult(
             output=_operation_payload(
                 status="deleted",
                 paths=paths,
                 warnings=warnings,
             ),
-            metadata={"file_count": len(paths), "success_count": len(paths)},
+            metadata={
+                "file_count": len(paths),
+                "success_count": len(paths),
+                **common_metadata,
+            },
         )
 
-    payload_status, conflict_reason = _failure_status(result, move=False)
-    paths = _operation_paths(result, paths_to_commit)
+    payload_status, conflict_reason = _failure_status(change.raw, move=False)
     return ToolResult(
         output=_operation_payload(
             status=payload_status,
             paths=paths,
             warnings=warnings,
             conflict_reason=conflict_reason,
-            message=str(getattr(result, "conflict_reason", "") or conflict_reason),
+            message=str(change.conflict_reason or conflict_reason),
         ),
         is_error=True,
-        metadata={"file_count": len(paths), "success_count": 0},
+        metadata={
+            "file_count": len(paths),
+            "success_count": 0,
+            **common_metadata,
+        },
     )
 
 
@@ -568,17 +564,23 @@ async def daytona_move_file(
         ]
     fallback_paths = [s.src_path for s in specs] + [s.dst_path for s in specs]
 
-    rebind_ci_service(context, svc)
-    with use_sandbox_io_loop():
-        result = await asyncio.to_thread(
-            svc.move_file,
-            specs,
-            agent_id=resolved_agent_id(context),
-            description=f"move {src_resolved} -> {dst_resolved}",
-        )
+    change = await submit_commit(
+        context,
+        op="move",
+        specs=specs,
+        fallback_paths=fallback_paths,
+        description=f"move {src_resolved} -> {dst_resolved}",
+    )
+    paths = list(change.changed_paths)
+    common_metadata = {
+        "changed_paths": paths,
+        "ambient_changed_paths": list(change.ambient_changed_paths),
+        "conflict_reason": change.conflict_reason,
+        "src_in_scope": src_in_scope,
+        "dst_resolved": dst_resolved,
+    }
 
-    if getattr(result, "success", False):
-        paths = _operation_paths(result, fallback_paths)
+    if change.success:
         if src_in_scope:
             _extend_write_scope(context, dst_resolved)
         return ToolResult(
@@ -589,11 +591,14 @@ async def daytona_move_file(
                 paths=paths,
                 warnings=warnings,
             ),
-            metadata={"file_count": len(paths), "success_count": len(paths)},
+            metadata={
+                "file_count": len(paths),
+                "success_count": len(paths),
+                **common_metadata,
+            },
         )
 
-    payload_status, conflict_reason = _failure_status(result, move=True)
-    paths = _operation_paths(result, fallback_paths)
+    payload_status, conflict_reason = _failure_status(change.raw, move=True)
     return ToolResult(
         output=_move_payload(
             status=payload_status,
@@ -602,8 +607,12 @@ async def daytona_move_file(
             paths=paths,
             warnings=warnings,
             conflict_reason=conflict_reason,
-            message=str(getattr(result, "conflict_reason", "") or conflict_reason),
+            message=str(change.conflict_reason or conflict_reason),
         ),
         is_error=True,
-        metadata={"file_count": len(paths), "success_count": 0},
+        metadata={
+            "file_count": len(paths),
+            "success_count": 0,
+            **common_metadata,
+        },
     )

@@ -595,7 +595,7 @@ async def test_team_shell_mode_treats_audited_changes_as_ambient():
         }
     )
 
-    result = await run_tool_safely(
+    result, events = await _run_with_events(
         daytona_codeact,
         {"command": "python -c 'print(\"ujson ok\")'"},
         ctx,
@@ -603,8 +603,13 @@ async def test_team_shell_mode_treats_audited_changes_as_ambient():
 
     data = _assert_ok(result)
     assert data["files_written"] == 0
-    assert any("ambient concurrent edits" in warning for warning in data["warnings"])
-    assert not any("outside write_scope" in warning for warning in data["warnings"])
+    assert result.metadata.get("ambient_changed_paths") == ["/testbed/dask/_compatibility.py"]
+    # Ambient paths surface through a user-only post-hook advisory; the tool
+    # output JSON no longer embeds the warning text directly.
+    assert any("ambient concurrent edits" in text for text in _notification_texts(events))
+    # ``audited_write_policy`` only fires on ``changed_paths``, and ambient-only
+    # responses leave that empty — so the absence of an "outside write_scope"
+    # advisory is expected and not a negative-signal regression.
 
 
 async def test_shell_mode_emits_post_advisory_for_audited_outside_scope_write():

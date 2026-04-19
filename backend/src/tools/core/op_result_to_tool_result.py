@@ -26,6 +26,7 @@ def operation_result_to_tool_result(
     primary_paths: list[str],
     warnings: list[str] | None = None,
     success_extra: dict[str, Any] | None = None,
+    metadata_extra: dict[str, Any] | None = None,
 ) -> ToolResult:
     """Map an :class:`OperationResult` into a tool-facing :class:`ToolResult`.
 
@@ -36,9 +37,15 @@ def operation_result_to_tool_result(
     On failure, the payload carries ``status`` equal to the coordinator's
     abort class (``"aborted_version"``, ``"aborted_overlap"``, ...) or
     ``"failed"``; ``message`` pulls from ``conflict_reason`` when present.
+
+    ``metadata_extra`` is merged into ``ToolResult.metadata`` on both branches
+    so callers that funnel through :mod:`tools.daytona_toolkit._commit` can
+    inject the uniform ``changed_paths`` / ``ambient_changed_paths`` /
+    ``conflict_reason`` keys that post-hooks consume.
     """
     paths = _paths_from_result(result, primary_paths)
     warnings_list = list(warnings or [])
+    extra = dict(metadata_extra or {})
     if result.success:
         payload: dict[str, Any] = {
             "tool": tool_name,
@@ -48,15 +55,14 @@ def operation_result_to_tool_result(
         }
         if success_extra:
             payload.update(success_extra)
-        return ToolResult(
-            output=json.dumps(payload),
-            metadata={
-                "tool": tool_name,
-                "file_count": len(paths),
-                "success_count": len(paths),
-                "status": success_status,
-            },
-        )
+        metadata: dict[str, Any] = {
+            "tool": tool_name,
+            "file_count": len(paths),
+            "success_count": len(paths),
+            "status": success_status,
+        }
+        metadata.update(extra)
+        return ToolResult(output=json.dumps(payload), metadata=metadata)
 
     payload = {
         "tool": tool_name,
@@ -67,16 +73,14 @@ def operation_result_to_tool_result(
         "conflict_reason": result.conflict_reason or "",
         "message": _failure_message(result),
     }
-    return ToolResult(
-        output=json.dumps(payload),
-        is_error=True,
-        metadata={
-            "tool": tool_name,
-            "file_count": len(paths),
-            "success_count": 0,
-            "status": result.status or "failed",
-        },
-    )
+    metadata = {
+        "tool": tool_name,
+        "file_count": len(paths),
+        "success_count": 0,
+        "status": result.status or "failed",
+    }
+    metadata.update(extra)
+    return ToolResult(output=json.dumps(payload), is_error=True, metadata=metadata)
 
 
 def _paths_from_result(
