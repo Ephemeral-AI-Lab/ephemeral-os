@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import shlex
 from pathlib import Path
@@ -84,6 +85,26 @@ class ContentManager:
                 return
             return
         self._delete_remote(file_path)
+
+    def apply_many(self, changes: list[tuple[str, str | None]]) -> None:
+        """Apply many writes/deletes through one sandbox round trip when possible."""
+        if not changes:
+            return
+        if self._sandbox is None:
+            for file_path, content in changes:
+                if content is None:
+                    self.delete(file_path)
+                else:
+                    self.write(file_path, content)
+            return
+        if _supports_exec_transport(self._sandbox):
+            self._apply_remote_batch(changes)
+            return
+        for file_path, content in changes:
+            if content is None:
+                self.delete(file_path)
+            else:
+                self.write(file_path, content)
 
     # -- Private --------------------------------------------------------------
 
@@ -212,6 +233,47 @@ print(json.dumps(files))
         )
         if exit_code not in (0, None):
             raise RuntimeError(cleaned or f"delete failed for {file_path}")
+
+    def _apply_remote_batch(self, changes: list[tuple[str, str | None]]) -> None:
+        process = getattr(self._sandbox, "process", None)
+        payload = [
+            {
+                "path": path,
+                "content_b64": (
+                    None
+                    if content is None
+                    else base64.b64encode(content.encode("utf-8")).decode("ascii")
+                ),
+            }
+            for path, content in changes
+        ]
+        encoded = base64.b64encode(json.dumps(payload).encode("utf-8")).decode("ascii")
+        script = f"""
+import base64
+import json
+import pathlib
+
+ops = json.loads(base64.b64decode({encoded!r}).decode("utf-8"))
+for item in ops:
+    path = pathlib.Path(item["path"])
+    content_b64 = item.get("content_b64")
+    if content_b64 is None:
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            pass
+        continue
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(base64.b64decode(content_b64))
+"""
+        command = f"python3 -c {shlex.quote(script)}"
+        response = run_sync(process.exec(_wrap_bash_command(command)))
+        cleaned, exit_code = _extract_exit_code(
+            getattr(response, "result", "") or "",
+            fallback_exit_code=getattr(response, "exit_code", None),
+        )
+        if exit_code not in (0, None):
+            raise RuntimeError(cleaned or "batch apply failed")
 
     @staticmethod
     def _is_missing_error(exc: Exception) -> bool:

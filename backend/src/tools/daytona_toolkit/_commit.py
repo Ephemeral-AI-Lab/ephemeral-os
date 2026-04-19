@@ -21,6 +21,8 @@ before entering the façade — see ``ci_write_required_result`` in
 
 from __future__ import annotations
 
+import asyncio
+import os
 from dataclasses import dataclass
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, Generic, Literal, Sequence, TypeVar
@@ -40,6 +42,8 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 
 CommitOp = Literal["write", "edit", "delete", "move"]
+_BATCH_WINDOW_SECONDS = float(os.environ.get("CI_COMMIT_BATCH_WINDOW_MS", "5")) / 1000.0
+_BATCHERS: dict[tuple[int, int], "_CommitBatcher"] = {}
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -62,6 +66,117 @@ class FileChangeResult(Generic[T]):
     conflict_reason: str | None = None
 
 
+@dataclass
+class _CommitBatchEntry:
+    context: "ToolExecutionContext"
+    op: CommitOp
+    specs: Sequence[Any]
+    fallback_paths: Sequence[str]
+    description: str
+    future: asyncio.Future[Any]
+
+
+class _CommitBatcher:
+    def __init__(self, svc: Any) -> None:
+        self._svc = svc
+        self._lock = asyncio.Lock()
+        self._entries: list[_CommitBatchEntry] = []
+        self._scheduled = False
+
+    async def submit(
+        self,
+        context: "ToolExecutionContext",
+        *,
+        op: CommitOp,
+        specs: Sequence[Any],
+        fallback_paths: Sequence[str],
+        description: str,
+    ) -> Any:
+        loop = asyncio.get_running_loop()
+        future: asyncio.Future[Any] = loop.create_future()
+        entry = _CommitBatchEntry(
+            context=context,
+            op=op,
+            specs=tuple(specs),
+            fallback_paths=tuple(fallback_paths),
+            description=description,
+            future=future,
+        )
+        async with self._lock:
+            self._entries.append(entry)
+            if not self._scheduled:
+                self._scheduled = True
+                loop.create_task(self._flush_soon())
+        return await future
+
+    async def _flush_soon(self) -> None:
+        await asyncio.sleep(_BATCH_WINDOW_SECONDS)
+        async with self._lock:
+            entries = self._entries
+            self._entries = []
+            self._scheduled = False
+        if not entries:
+            return
+        if len(entries) == 1:
+            entry = entries[0]
+            try:
+                result = await _run_direct_commit(
+                    entry.context,
+                    self._svc,
+                    op=entry.op,
+                    specs=entry.specs,
+                    description=entry.description,
+                )
+            except Exception as exc:
+                entry.future.set_exception(exc)
+            else:
+                entry.future.set_result(result)
+            return
+
+        commit_many = getattr(self._svc, "commit_specs_many", None)
+        if not callable(commit_many):
+            await self._flush_direct(entries)
+            return
+
+        for entry in entries:
+            rebind_ci_service(entry.context, self._svc)
+        requests = [
+            {
+                "op": entry.op,
+                "specs": tuple(entry.specs),
+                "agent_id": resolved_agent_id(entry.context),
+                "description": entry.description,
+            }
+            for entry in entries
+        ]
+        try:
+            with use_sandbox_io_loop():
+                results = await run_sync_in_executor(commit_many, requests)
+        except Exception:
+            await self._flush_direct(entries)
+            return
+        if len(results) != len(entries):
+            await self._flush_direct(entries)
+            return
+        for entry, result in zip(entries, results, strict=True):
+            entry.future.set_result(result)
+
+    async def _flush_direct(self, entries: Sequence[_CommitBatchEntry]) -> None:
+        for entry in entries:
+            try:
+                result = await _run_direct_commit(
+                    entry.context,
+                    self._svc,
+                    op=entry.op,
+                    specs=entry.specs,
+                    description=entry.description,
+                )
+            except Exception as exc:
+                entry.future.set_exception(exc)
+            else:
+                entry.future.set_result(result)
+
+
 def _dedup_sorted(raw: Any) -> tuple[str, ...]:
     """Normalize a path list from ``svc.cmd``: str, strip empties, sort, dedup."""
     if not isinstance(raw, list):
@@ -80,6 +195,35 @@ def _operation_paths(result: Any, fallback: Sequence[str]) -> tuple[str, ...]:
         if paths:
             return paths
     return tuple(fallback)
+
+
+async def _run_direct_commit(
+    context: "ToolExecutionContext",
+    svc: Any,
+    *,
+    op: CommitOp,
+    specs: Sequence[Any],
+    description: str,
+) -> Any:
+    method = getattr(svc, f"{op}_file")
+    rebind_ci_service(context, svc)
+    with use_sandbox_io_loop():
+        return await run_sync_in_executor(
+            method,
+            list(specs),
+            agent_id=resolved_agent_id(context),
+            description=description,
+        )
+
+
+def _batcher_for(svc: Any) -> _CommitBatcher:
+    loop = asyncio.get_running_loop()
+    key = (id(svc), id(loop))
+    batcher = _BATCHERS.get(key)
+    if batcher is None:
+        batcher = _CommitBatcher(svc)
+        _BATCHERS[key] = batcher
+    return batcher
 
 
 async def submit_commit(
@@ -105,16 +249,13 @@ async def submit_commit(
             "caller must short-circuit with ci_write_required_result first",
         )
 
-    method = getattr(svc, f"{op}_file")
-
-    rebind_ci_service(context, svc)
-    with use_sandbox_io_loop():
-        result = await run_sync_in_executor(
-            method,
-            list(specs),
-            agent_id=resolved_agent_id(context),
-            description=description,
-        )
+    result = await _batcher_for(svc).submit(
+        context,
+        op=op,
+        specs=specs,
+        fallback_paths=fallback_paths,
+        description=description,
+    )
 
     paths = _operation_paths(result, fallback_paths)
     conflict = str(getattr(result, "conflict_reason", "") or "")

@@ -111,10 +111,17 @@ class LspClient:
         self._telemetry = LspTelemetry()
         self._py_available: bool | None = None
         self._ts_available: bool | None = None
-        self._worker_enabled_default = sandbox is not None
+        # The persistent Jedi worker is disabled by default. The worker
+        # holds one global `threading.Lock` across every stdin/stdout
+        # round-trip to its single subprocess (see
+        # `_jedi_worker_client.JediWorkerClient.request`), which serializes
+        # all concurrent callers. Under 72-way OCC load that lock dominated
+        # commit_apply time (invalidate alone took ~2.76s p50 per commit,
+        # 92% of the apply pass). Opt-in via `CI_JEDI_WORKER_ENABLED=1`;
+        # otherwise all Python queries take the subprocess-per-call jedi
+        # script fallback which is slower per query but fully parallel.
+        self._worker_enabled_default = False
 
-        # Persistent Jedi worker (local stdio or sandbox socket, env-gated).
-        # Built lazily on first successful use; torn down on client close.
         self._worker: BaseJediWorkerClient | None = None
         self._worker_lock = threading.Lock()
 
@@ -153,6 +160,36 @@ class LspClient:
             return {}
         return self._python_rename(file_path, line, character, new_name)
 
+    def rename_symbols(
+        self,
+        requests: Sequence[tuple[str, int, int, str]],
+    ) -> list[dict[str, str]]:
+        """Batch Python renames into one backend process when the worker is disabled."""
+        normalized: list[tuple[str, int, int, str]] = []
+        for file_path, line, character, new_name in requests:
+            if self._detect_language(file_path) != "python":
+                normalized.append((file_path, line, character, new_name))
+                continue
+            normalized.append(
+                (
+                    self._resolve_path(file_path),
+                    int(line),
+                    int(self._resolve_column(file_path, int(line), int(character))),
+                    str(new_name),
+                )
+            )
+        if not normalized:
+            return []
+        if len(normalized) == 1:
+            file_path, line, character, new_name = normalized[0]
+            return [self.rename_symbol(file_path, line, character, new_name)]
+        if self._worker_enabled():
+            return [
+                self.rename_symbol(file_path, line, character, new_name)
+                for file_path, line, character, new_name in normalized
+            ]
+        return self._python_rename_many(normalized)
+
     def hover(
         self, file_path: str, line: int, character: int,
     ) -> HoverResult | None:
@@ -190,6 +227,8 @@ class LspClient:
             stale = [key for key in self._line_cache if key[0] == resolved_path]
             for key in stale:
                 del self._line_cache[key]
+        if self._detect_language(resolved_path) != "python":
+            return
         client = self._existing_worker()
         if client is None:
             return
@@ -591,6 +630,59 @@ class LspClient:
             logger.debug("jedi rename failed: %s", raw.get("__error__"))
             return {}
         return {str(k): str(v) for k, v in raw.items() if isinstance(v, str)}
+
+    def _python_rename_many(
+        self,
+        requests: Sequence[tuple[str, int, int, str]],
+    ) -> list[dict[str, str]]:
+        payload = [
+            {
+                "path": path,
+                "line": int(line),
+                "column": int(character),
+                "new_name": str(new_name),
+            }
+            for path, line, character, new_name in requests
+        ]
+        payload_literal = json.dumps(payload)
+        script = (
+            "import jedi, json\n"
+            f"requests = json.loads({payload_literal!r})\n"
+            "results = []\n"
+            "for req in requests:\n"
+            "    out = {}\n"
+            "    try:\n"
+            "        s = jedi.Script(path=req['path'])\n"
+            "        r = s.rename(\n"
+            "            line=int(req['line']),\n"
+            "            column=int(req['column']),\n"
+            "            new_name=str(req['new_name']),\n"
+            "        )\n"
+            "        for p, cf in r.get_changed_files().items():\n"
+            "            try:\n"
+            "                out[str(p)] = cf.get_new_code()\n"
+            "            except Exception:\n"
+            "                continue\n"
+            "    except Exception as exc:\n"
+            "        out = {'__error__': str(exc)}\n"
+            "    results.append(out)\n"
+            "print(json.dumps(results))\n"
+        )
+        output = self._run_python_script(script)
+        raw = self._decode_json(output)
+        if not isinstance(raw, list):
+            return [{} for _ in requests]
+        results: list[dict[str, str]] = []
+        for item in raw[: len(requests)]:
+            if not isinstance(item, dict) or "__error__" in item:
+                if isinstance(item, dict) and "__error__" in item:
+                    logger.debug("jedi batch rename failed: %s", item.get("__error__"))
+                results.append({})
+                continue
+            results.append({str(k): str(v) for k, v in item.items() if isinstance(v, str)})
+        while len(results) < len(requests):
+            results.append({})
+        return results
 
     def _python_hover(
         self, file_path: str, line: int, character: int,

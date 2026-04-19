@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import Any
 
 from code_intelligence.hashing import content_hash
@@ -29,6 +30,16 @@ from code_intelligence.types import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class CommitOperation:
+    """One attributed semantic operation inside a batched commit."""
+
+    changes: tuple[OperationChange, ...]
+    agent_id: str = ""
+    edit_type: str = "edit"
+    description: str = ""
 
 
 def _result(
@@ -167,15 +178,19 @@ class WriteCoordinator:
             #    memory. Any unmergeable file aborts the operation before we
             #    touch disk.
             resolve_started = time.perf_counter()
+            resolve_read_s = 0.0
             # (change, current_now, resolved_content_or_None, current_hash, existed_now)
             resolved: list[tuple[OperationChange, str, str | None, str, bool]] = []
             for change in sorted_changes:
+                read_started = time.perf_counter()
                 try:
                     current_now, existed_now = self._content.read(
                         change.file_path, allow_missing=True,
                     )
                 except Exception as exc:  # pragma: no cover - defensive I/O
+                    resolve_read_s += time.perf_counter() - read_started
                     timings["resolve"] = round(time.perf_counter() - resolve_started, 6)
+                    timings["resolve_read"] = round(resolve_read_s, 6)
                     timings["total"] = round(time.perf_counter() - started, 6)
                     return self._operation_abort(
                         changes,
@@ -184,6 +199,7 @@ class WriteCoordinator:
                         conflict_reason=f"read failed: {exc}",
                         timings=timings,
                     )
+                resolve_read_s += time.perf_counter() - read_started
 
                 current_hash = content_hash(current_now) if existed_now else ""
 
@@ -256,22 +272,32 @@ class WriteCoordinator:
                     (change, current_now, resolved_content, current_hash, existed_now),
                 )
             timings["resolve"] = round(time.perf_counter() - resolve_started, 6)
+            timings["resolve_read"] = round(resolve_read_s, 6)
 
             # 4. Commit pass. A mid-operation I/O failure triggers best-effort
             #    rollback of already-written files via TimeMachine.
             apply_started = time.perf_counter()
+            apply_snapshot_s = 0.0
+            apply_write_s = 0.0
+            apply_record_s = 0.0
+            apply_refresh_s = 0.0
+            apply_invalidate_s = 0.0
             commit_results: list[EditResult] = []
             committed_paths: list[str] = []
             for change, current_now, resolved_content, current_hash, existed_now in resolved:
                 per_timings: dict[str, float] = {}
                 per_started = time.perf_counter()
+                snapshot_started = time.perf_counter()
                 self._time_machine.save(change.file_path, current_now)
+                apply_snapshot_s += time.perf_counter() - snapshot_started
+                write_started = time.perf_counter()
                 try:
                     if resolved_content is None:
                         self._content.delete(change.file_path)
                     else:
                         self._content.write(change.file_path, resolved_content)
                 except Exception as exc:
+                    apply_write_s += time.perf_counter() - write_started
                     for fp in reversed(committed_paths):
                         snap = self._time_machine.rollback(fp)
                         if snap is None:
@@ -281,6 +307,11 @@ class WriteCoordinator:
                         except Exception:  # pragma: no cover - best effort
                             logger.exception("rollback failed for %s", fp)
                     timings["apply"] = round(time.perf_counter() - apply_started, 6)
+                    timings["apply_snapshot"] = round(apply_snapshot_s, 6)
+                    timings["apply_write"] = round(apply_write_s, 6)
+                    timings["apply_record"] = round(apply_record_s, 6)
+                    timings["apply_refresh"] = round(apply_refresh_s, 6)
+                    timings["apply_invalidate"] = round(apply_invalidate_s, 6)
                     timings["total"] = round(time.perf_counter() - started, 6)
                     return OperationResult(
                         success=False,
@@ -293,8 +324,10 @@ class WriteCoordinator:
                         conflict_reason=f"write failed: {exc}",
                         timings=timings,
                     )
+                apply_write_s += time.perf_counter() - write_started
                 committed_paths.append(change.file_path)
                 new_hash = content_hash(resolved_content) if resolved_content is not None else ""
+                record_started = time.perf_counter()
                 gen = self._arbiter.record_edit(
                     file_path=change.file_path,
                     actor_label=agent_id,
@@ -303,8 +336,13 @@ class WriteCoordinator:
                     new_hash=new_hash,
                     description=description,
                 )
+                apply_record_s += time.perf_counter() - record_started
+                refresh_started = time.perf_counter()
                 self._symbol_index.refresh(change.file_path, resolved_content or "")
+                apply_refresh_s += time.perf_counter() - refresh_started
+                invalidate_started = time.perf_counter()
                 self._lsp_client.invalidate(change.file_path)
+                apply_invalidate_s += time.perf_counter() - invalidate_started
                 per_timings["total"] = round(time.perf_counter() - per_started, 6)
                 commit_results.append(
                     _result(
@@ -316,6 +354,11 @@ class WriteCoordinator:
                     ),
                 )
             timings["apply"] = round(time.perf_counter() - apply_started, 6)
+            timings["apply_snapshot"] = round(apply_snapshot_s, 6)
+            timings["apply_write"] = round(apply_write_s, 6)
+            timings["apply_record"] = round(apply_record_s, 6)
+            timings["apply_refresh"] = round(apply_refresh_s, 6)
+            timings["apply_invalidate"] = round(apply_invalidate_s, 6)
             timings["total"] = round(time.perf_counter() - started, 6)
             return OperationResult(
                 success=True,
@@ -325,6 +368,250 @@ class WriteCoordinator:
                 conflict_reason="",
                 timings=timings,
             )
+        finally:
+            for fp in reversed(held):
+                self._arbiter.release_file_lock(fp)
+
+    def commit_many_operations_against_base(
+        self,
+        operations: Sequence[CommitOperation],
+    ) -> list[OperationResult]:
+        """Commit multiple disjoint operations with batched sandbox I/O."""
+        ops = list(operations)
+        if not ops:
+            return []
+        if len(ops) == 1:
+            op = ops[0]
+            return [
+                self.commit_operation_against_base(
+                    op.changes,
+                    agent_id=op.agent_id,
+                    edit_type=op.edit_type,
+                    description=op.description,
+                )
+            ]
+
+        path_to_owner: dict[str, int] = {}
+        for idx, op in enumerate(ops):
+            for change in op.changes:
+                owner = path_to_owner.setdefault(change.file_path, idx)
+                if owner != idx:
+                    return [
+                        self.commit_operation_against_base(
+                            op.changes,
+                            agent_id=op.agent_id,
+                            edit_type=op.edit_type,
+                            description=op.description,
+                        )
+                        for op in ops
+                    ]
+
+        all_paths = sorted(path_to_owner)
+        held: list[str] = []
+        started = time.perf_counter()
+        timings: dict[str, float] = {}
+        lock_started = time.perf_counter()
+        for file_path in all_paths:
+            if not self._arbiter.acquire_file_lock(file_path):
+                for prev in reversed(held):
+                    self._arbiter.release_file_lock(prev)
+                self._arbiter.record_conflict("lock_timeout")
+                timings["lock_wait"] = round(time.perf_counter() - lock_started, 6)
+                timings["total"] = round(time.perf_counter() - started, 6)
+                return [
+                    self._operation_abort(
+                        op.changes,
+                        status="aborted_lock",
+                        conflict_file=(
+                            file_path
+                            if any(c.file_path == file_path for c in op.changes)
+                            else None
+                        ),
+                        conflict_reason="could not acquire file lock (timeout)",
+                        timings=timings,
+                    )
+                    for op in ops
+                ]
+            held.append(file_path)
+        timings["lock_wait"] = round(time.perf_counter() - lock_started, 6)
+
+        try:
+            read_started = time.perf_counter()
+            current_by_path = self._content.read_many(all_paths, allow_missing=True)
+            timings["resolve_read"] = round(time.perf_counter() - read_started, 6)
+
+            resolved_by_op: list[
+                list[tuple[OperationChange, str, str | None, str, bool]] | None
+            ] = []
+            results: list[OperationResult | None] = [None] * len(ops)
+            resolve_started = time.perf_counter()
+            for idx, op in enumerate(ops):
+                resolved: list[tuple[OperationChange, str, str | None, str, bool]] = []
+                aborted = False
+                for change in op.changes:
+                    current_now, existed_now = current_by_path.get(
+                        change.file_path, ("", False),
+                    )
+                    current_hash = content_hash(current_now) if existed_now else ""
+                    if change.final_content is None:
+                        if not existed_now or current_hash != change.base_hash:
+                            self._arbiter.record_conflict("aborted_version")
+                            results[idx] = self._operation_abort(
+                                op.changes,
+                                status="aborted_version",
+                                conflict_file=change.file_path,
+                                conflict_reason="file content changed before delete",
+                                timings=timings,
+                            )
+                            aborted = True
+                            break
+                        resolved.append((change, current_now, None, current_hash, existed_now))
+                        continue
+                    if not change.base_existed:
+                        if existed_now:
+                            self._arbiter.record_conflict("aborted_version")
+                            results[idx] = self._operation_abort(
+                                op.changes,
+                                status="aborted_version",
+                                conflict_file=change.file_path,
+                                conflict_reason="file already exists; base said it did not",
+                                timings=timings,
+                            )
+                            aborted = True
+                            break
+                        resolved.append((change, current_now, change.final_content, "", False))
+                        continue
+                    if existed_now and current_hash == change.base_hash:
+                        resolved_content: str = change.final_content
+                    elif change.strict_base:
+                        self._arbiter.record_conflict("aborted_version")
+                        results[idx] = self._operation_abort(
+                            op.changes,
+                            status="aborted_version",
+                            conflict_file=change.file_path,
+                            conflict_reason=(
+                                "file content changed since base was captured "
+                                "(strict_base=True)"
+                            ),
+                            timings=timings,
+                        )
+                        aborted = True
+                        break
+                    else:
+                        resolved_content, conflict = self._resolve_semantic_change(
+                            change, current_now, existed_now,
+                        )
+                        if conflict is not None:
+                            status, reason = conflict
+                            self._arbiter.record_conflict(status)
+                            results[idx] = self._operation_abort(
+                                op.changes,
+                                status=status,
+                                conflict_file=change.file_path,
+                                conflict_reason=reason,
+                                timings=timings,
+                            )
+                            aborted = True
+                            break
+                    resolved.append(
+                        (change, current_now, resolved_content, current_hash, existed_now),
+                    )
+                resolved_by_op.append(None if aborted else resolved)
+            timings["resolve"] = round(time.perf_counter() - resolve_started, 6)
+
+            apply_items: list[tuple[str, str | None]] = []
+            rollback_items: list[tuple[str, str | None]] = []
+            for resolved in resolved_by_op:
+                if resolved is None:
+                    continue
+                for change, current_now, resolved_content, _, existed_now in resolved:
+                    self._time_machine.save(change.file_path, current_now)
+                    apply_items.append((change.file_path, resolved_content))
+                    rollback_items.append(
+                        (change.file_path, current_now if existed_now else None),
+                    )
+
+            apply_started = time.perf_counter()
+            try:
+                self._content.apply_many(apply_items)
+            except Exception as exc:
+                try:
+                    self._content.apply_many(list(reversed(rollback_items)))
+                except Exception:  # pragma: no cover - best effort rollback
+                    logger.exception("batch rollback failed")
+                timings["apply"] = round(time.perf_counter() - apply_started, 6)
+                timings["total"] = round(time.perf_counter() - started, 6)
+                for idx, op in enumerate(ops):
+                    if results[idx] is None:
+                        results[idx] = OperationResult(
+                            success=False,
+                            status="failed",
+                            files=tuple(
+                                _result(c.file_path, f"batch operation failed: {exc}")
+                                for c in op.changes
+                            ),
+                            conflict_file=None,
+                            conflict_reason=f"write failed: {exc}",
+                            timings=dict(timings),
+                        )
+                return [r for r in results if r is not None]
+            timings["apply"] = round(time.perf_counter() - apply_started, 6)
+
+            record_started = time.perf_counter()
+            for idx, op in enumerate(ops):
+                if results[idx] is not None:
+                    continue
+                resolved = resolved_by_op[idx]
+                if resolved is None:
+                    continue
+                commit_results: list[EditResult] = []
+                for change, current_now, resolved_content, current_hash, existed_now in resolved:
+                    new_hash = (
+                        content_hash(resolved_content)
+                        if resolved_content is not None
+                        else ""
+                    )
+                    gen = self._arbiter.record_edit(
+                        file_path=change.file_path,
+                        actor_label=op.agent_id,
+                        edit_type=op.edit_type,
+                        old_hash=current_hash if existed_now else "",
+                        new_hash=new_hash,
+                        description=op.description,
+                    )
+                    self._symbol_index.refresh(change.file_path, resolved_content or "")
+                    self._lsp_client.invalidate(change.file_path)
+                    commit_results.append(
+                        _result(
+                            change.file_path,
+                            "Wrote file",
+                            success=True,
+                            snapshot_id=str(gen),
+                        ),
+                    )
+                results[idx] = OperationResult(
+                    success=True,
+                    status="committed",
+                    files=tuple(commit_results),
+                    conflict_file=None,
+                    conflict_reason="",
+                    timings=dict(timings),
+                )
+            timings["apply_record"] = round(time.perf_counter() - record_started, 6)
+            timings["total"] = round(time.perf_counter() - started, 6)
+            for idx, result in enumerate(results):
+                if result is not None:
+                    result.timings.update(timings)
+                elif not ops[idx].changes:
+                    results[idx] = OperationResult(
+                        success=True,
+                        status="committed",
+                        files=(),
+                        conflict_file=None,
+                        conflict_reason="",
+                        timings=dict(timings),
+                    )
+            return [r for r in results if r is not None]
         finally:
             for fp in reversed(held):
                 self._arbiter.release_file_lock(fp)

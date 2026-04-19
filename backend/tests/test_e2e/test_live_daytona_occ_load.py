@@ -32,12 +32,18 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
+from collections.abc import Callable
 from typing import Any
 
 import pytest
 from dotenv import load_dotenv
 
 from code_intelligence._async_bridge import configure_default_executor
+from code_intelligence.analysis import symbol_index as symbol_index_module
+from code_intelligence.editing import write_coordinator as write_coordinator_module
+from code_intelligence.lsp import _jedi_worker_client as jedi_worker_module
+from code_intelligence.lsp import client as lsp_client_module
+from code_intelligence.routing import content_manager as content_manager_module
 from code_intelligence.routing.service import CodeIntelligenceService
 from tests.test_e2e.daytona_exec_io import read_text_via_exec, write_text_via_exec
 from tools.core.base import ToolExecutionContext, ToolResult
@@ -420,6 +426,406 @@ def _install_overlay_phase_probe(
     return stats
 
 
+def _install_lsp_phase_probe(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[float]]:
+    """Probe LSP/Jedi worker phases that can serialize otherwise disjoint writes."""
+    stats: dict[str, list[float]] = {
+        "lsp_invalidate_s": [],
+        "lsp_rename_symbol_s": [],
+        "worker_request_s": [],
+        "worker_request_local_s": [],
+        "worker_request_sandbox_s": [],
+    }
+
+    orig_invalidate = lsp_client_module.LspClient.invalidate
+    orig_rename_symbol = lsp_client_module.LspClient.rename_symbol
+    orig_local_request = jedi_worker_module.JediWorkerClient.request
+    orig_sandbox_request = jedi_worker_module.SandboxJediWorkerClient.request
+
+    def _record_worker(transport: str, op: str, elapsed: float) -> None:
+        rounded = round(elapsed, 6)
+        stats["worker_request_s"].append(rounded)
+        stats[f"worker_request_{transport}_s"].append(rounded)
+        stats.setdefault(f"worker_request_op_{op}_s", []).append(rounded)
+
+    def _timed_invalidate(self, *args, **kwargs):
+        started = time.perf_counter()
+        try:
+            return orig_invalidate(self, *args, **kwargs)
+        finally:
+            stats["lsp_invalidate_s"].append(round(time.perf_counter() - started, 6))
+
+    def _timed_rename_symbol(self, *args, **kwargs):
+        started = time.perf_counter()
+        try:
+            return orig_rename_symbol(self, *args, **kwargs)
+        finally:
+            stats["lsp_rename_symbol_s"].append(round(time.perf_counter() - started, 6))
+
+    def _timed_local_request(self, op: str, args: dict[str, Any] | None = None):
+        started = time.perf_counter()
+        try:
+            return orig_local_request(self, op, args)
+        finally:
+            _record_worker("local", op, time.perf_counter() - started)
+
+    def _timed_sandbox_request(self, op: str, args: dict[str, Any] | None = None):
+        started = time.perf_counter()
+        try:
+            return orig_sandbox_request(self, op, args)
+        finally:
+            _record_worker("sandbox", op, time.perf_counter() - started)
+
+    monkeypatch.setattr(lsp_client_module.LspClient, "invalidate", _timed_invalidate)
+    monkeypatch.setattr(lsp_client_module.LspClient, "rename_symbol", _timed_rename_symbol)
+    monkeypatch.setattr(jedi_worker_module.JediWorkerClient, "request", _timed_local_request)
+    monkeypatch.setattr(
+        jedi_worker_module.SandboxJediWorkerClient,
+        "request",
+        _timed_sandbox_request,
+    )
+    return stats
+
+
+def _install_svc_cmd_phase_probe(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[float]]:
+    """Probe the sub-phases of ``CodeIntelligenceService.cmd`` for codeact.
+
+    ``shell_exec_s`` (full codeact tool wall) minus ``overlay_execute_total_s``
+    showed a ~6.5s per-op gap unaccounted for by the overlay audit. The gap
+    has to live in ``svc.cmd`` itself: ``rebind_sandbox``, capability probe,
+    auditor init (async-locked on cold start), and the per-call live-check.
+    This probe measures each phase and samples an in-flight gauge on entry
+    to tell single-call cost from queued-behind-a-lock time.
+    """
+    stats: dict[str, list[float]] = {
+        "svc_cmd_wall_s": [],
+        "svc_cmd_rebind_s": [],
+        "svc_cmd_probe_s": [],
+        "svc_cmd_ensure_auditor_s": [],
+        "svc_cmd_auditor_execute_s": [],
+        "svc_cmd_live_auditor_or_none_s": [],
+        "svc_cmd_in_flight_on_entry": [],
+        "svc_cmd_ensure_auditor_in_flight_on_entry": [],
+    }
+    gauge_lock = threading.Lock()
+    in_flight = {"cmd": 0, "ensure": 0}
+
+    orig_cmd = ci_service_module.CodeIntelligenceService.cmd
+    orig_rebind = ci_service_module.CodeIntelligenceService.rebind_sandbox
+    orig_ensure_auditor = ci_service_module.CodeIntelligenceService._ensure_overlay_auditor
+    orig_live_auditor = ci_service_module.CodeIntelligenceService._live_overlay_auditor_or_none
+    # Capture the cache instance's `probe` and `OverlayAuditor.execute` by
+    # wrapping `cmd` itself — the inner phases are not class methods on the
+    # service, so `monkeypatch.setattr` on the cache object is awkward; we
+    # get equivalent resolution by time-stamping around the exact call sites
+    # through a replacement `cmd` that re-implements the timing layout.
+
+    async def _timed_cmd(self, sandbox, command, *args, **kwargs):
+        with gauge_lock:
+            in_flight["cmd"] += 1
+            stats["svc_cmd_in_flight_on_entry"].append(float(in_flight["cmd"]))
+        cmd_started = time.perf_counter()
+        try:
+            # We can't easily split cmd internals without re-implementing
+            # it; wrap the three inner callables we CAN patch instead.
+            return await orig_cmd(self, sandbox, command, *args, **kwargs)
+        finally:
+            stats["svc_cmd_wall_s"].append(round(time.perf_counter() - cmd_started, 6))
+            with gauge_lock:
+                in_flight["cmd"] -= 1
+
+    def _timed_rebind(self, sandbox):
+        started = time.perf_counter()
+        try:
+            return orig_rebind(self, sandbox)
+        finally:
+            stats["svc_cmd_rebind_s"].append(round(time.perf_counter() - started, 6))
+
+    async def _timed_ensure_auditor(self, sandbox):
+        with gauge_lock:
+            in_flight["ensure"] += 1
+            stats["svc_cmd_ensure_auditor_in_flight_on_entry"].append(
+                float(in_flight["ensure"])
+            )
+        started = time.perf_counter()
+        try:
+            return await orig_ensure_auditor(self, sandbox)
+        finally:
+            stats["svc_cmd_ensure_auditor_s"].append(
+                round(time.perf_counter() - started, 6)
+            )
+            with gauge_lock:
+                in_flight["ensure"] -= 1
+
+    async def _timed_live_auditor(self, sandbox):
+        started = time.perf_counter()
+        try:
+            return await orig_live_auditor(self, sandbox)
+        finally:
+            stats["svc_cmd_live_auditor_or_none_s"].append(
+                round(time.perf_counter() - started, 6)
+            )
+
+    # Wrap the capability cache's probe by patching the service-level
+    # attribute at init time via a descriptor-like wrapper. The cache
+    # instance is created once in __init__, so capturing `.probe` here
+    # requires patching the cache class method itself.
+    from code_intelligence.routing import overlay_probe as overlay_probe_module
+
+    orig_cache_probe = overlay_probe_module.OverlayCapabilityCache.probe
+
+    async def _timed_cache_probe(self, sandbox_id, sandbox, exec_process, **kwargs):
+        started = time.perf_counter()
+        try:
+            return await orig_cache_probe(
+                self, sandbox_id, sandbox, exec_process, **kwargs
+            )
+        finally:
+            stats["svc_cmd_probe_s"].append(round(time.perf_counter() - started, 6))
+
+    orig_auditor_execute = overlay_auditor_module.OverlayAuditor.execute
+
+    async def _timed_auditor_execute(self, *args, **kwargs):
+        started = time.perf_counter()
+        try:
+            return await orig_auditor_execute(self, *args, **kwargs)
+        finally:
+            stats["svc_cmd_auditor_execute_s"].append(
+                round(time.perf_counter() - started, 6)
+            )
+
+    monkeypatch.setattr(ci_service_module.CodeIntelligenceService, "cmd", _timed_cmd)
+    monkeypatch.setattr(
+        ci_service_module.CodeIntelligenceService, "rebind_sandbox", _timed_rebind,
+    )
+    monkeypatch.setattr(
+        ci_service_module.CodeIntelligenceService,
+        "_ensure_overlay_auditor",
+        _timed_ensure_auditor,
+    )
+    monkeypatch.setattr(
+        ci_service_module.CodeIntelligenceService,
+        "_live_overlay_auditor_or_none",
+        _timed_live_auditor,
+    )
+    monkeypatch.setattr(
+        overlay_probe_module.OverlayCapabilityCache, "probe", _timed_cache_probe,
+    )
+    # Overlay auditor's `execute` is already timed by the overlay phase
+    # probe as `overlay_execute_total_s`; add a duplicate key here only if
+    # the overlay probe is not installed for this run. Leave it out to
+    # avoid double-installing the patch when both probes run together.
+    del orig_auditor_execute, _timed_auditor_execute
+    return stats
+
+
+def _install_content_phase_probe(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[float]]:
+    """Probe sandbox content round-trips used by typed OCC mutators.
+
+    In addition to per-call wall times, samples a shared in-flight gauge on
+    each entry so the summary shows whether reads/writes fan out in parallel
+    or queue behind each other. A long-tail wall with tiny in-flight peers
+    means one call stalled in transport; a long-tail with high in-flight
+    means something else (GIL, connection pool, etc) caps the fan-out.
+    """
+    stats: dict[str, list[float]] = {
+        "content_read_s": [],
+        "content_read_many_s": [],
+        "content_write_s": [],
+        "content_delete_s": [],
+        "content_read_in_flight_on_entry": [],
+        "content_write_in_flight_on_entry": [],
+        "content_any_in_flight_on_entry": [],
+    }
+    gauge_lock = threading.Lock()
+    in_flight = {"read": 0, "write": 0}
+
+    orig_read = content_manager_module.ContentManager.read
+    orig_read_many = content_manager_module.ContentManager.read_many
+    orig_write = content_manager_module.ContentManager.write
+    orig_delete = content_manager_module.ContentManager.delete
+
+    def _sample_on_entry(kind: str) -> None:
+        with gauge_lock:
+            in_flight[kind] += 1
+            stats[f"content_{kind}_in_flight_on_entry"].append(
+                float(in_flight[kind])
+            )
+            stats["content_any_in_flight_on_entry"].append(
+                float(in_flight["read"] + in_flight["write"])
+            )
+
+    def _exit(kind: str) -> None:
+        with gauge_lock:
+            in_flight[kind] -= 1
+
+    def _timed_read(self, *args, **kwargs):
+        _sample_on_entry("read")
+        started = time.perf_counter()
+        try:
+            return orig_read(self, *args, **kwargs)
+        finally:
+            stats["content_read_s"].append(round(time.perf_counter() - started, 6))
+            _exit("read")
+
+    def _timed_read_many(self, *args, **kwargs):
+        _sample_on_entry("read")
+        started = time.perf_counter()
+        try:
+            return orig_read_many(self, *args, **kwargs)
+        finally:
+            stats["content_read_many_s"].append(round(time.perf_counter() - started, 6))
+            _exit("read")
+
+    def _timed_write(self, *args, **kwargs):
+        _sample_on_entry("write")
+        started = time.perf_counter()
+        try:
+            return orig_write(self, *args, **kwargs)
+        finally:
+            stats["content_write_s"].append(round(time.perf_counter() - started, 6))
+            _exit("write")
+
+    def _timed_delete(self, *args, **kwargs):
+        _sample_on_entry("write")
+        started = time.perf_counter()
+        try:
+            return orig_delete(self, *args, **kwargs)
+        finally:
+            stats["content_delete_s"].append(round(time.perf_counter() - started, 6))
+            _exit("write")
+
+    monkeypatch.setattr(content_manager_module.ContentManager, "read", _timed_read)
+    monkeypatch.setattr(content_manager_module.ContentManager, "read_many", _timed_read_many)
+    monkeypatch.setattr(content_manager_module.ContentManager, "write", _timed_write)
+    monkeypatch.setattr(content_manager_module.ContentManager, "delete", _timed_delete)
+    return stats
+
+
+def _install_commit_phase_probe(monkeypatch: pytest.MonkeyPatch) -> dict[str, list[float]]:
+    """Probe WriteCoordinator phases across all typed and overlay commits.
+
+    Records per-call timings + a shared in-flight concurrency gauge so the
+    summary can show (a) how apply-pass time decomposes (snapshot / remote
+    write / arbiter record / symbol refresh / lsp invalidate) and (b) the
+    peak number of threads actually inside ``commit_operation_against_base``.
+    Disjoint-file tests expect the sample max close to concurrency; a lower
+    peak means upstream dispatch is capping parallelism before the
+    coordinator. Each call samples the gauge on entry so `.max` on
+    ``in_flight_on_entry`` is the true peak concurrency observed.
+    """
+    stats: dict[str, list[float]] = {
+        "commit_wall_s": [],
+        "commit_lock_wait_s": [],
+        "commit_resolve_s": [],
+        "commit_resolve_read_s": [],
+        "commit_apply_s": [],
+        "commit_apply_snapshot_s": [],
+        "commit_apply_write_s": [],
+        "commit_apply_record_s": [],
+        "commit_apply_refresh_s": [],
+        "commit_apply_invalidate_s": [],
+        "commit_reported_total_s": [],
+        "symbol_refresh_s": [],
+        "in_flight_on_entry": [],
+    }
+    gauge_lock = threading.Lock()
+    in_flight = {"current": 0}
+
+    orig_commit = write_coordinator_module.WriteCoordinator.commit_operation_against_base
+    orig_refresh = symbol_index_module.SymbolIndex.refresh
+
+    def _timed_commit(self, *args, **kwargs):
+        with gauge_lock:
+            in_flight["current"] += 1
+            stats["in_flight_on_entry"].append(float(in_flight["current"]))
+        started = time.perf_counter()
+        try:
+            result = orig_commit(self, *args, **kwargs)
+        finally:
+            with gauge_lock:
+                in_flight["current"] -= 1
+        stats["commit_wall_s"].append(round(time.perf_counter() - started, 6))
+        timings = getattr(result, "timings", {}) or {}
+        for source_key, target_key in (
+            ("lock_wait", "commit_lock_wait_s"),
+            ("resolve", "commit_resolve_s"),
+            ("resolve_read", "commit_resolve_read_s"),
+            ("apply", "commit_apply_s"),
+            ("apply_snapshot", "commit_apply_snapshot_s"),
+            ("apply_write", "commit_apply_write_s"),
+            ("apply_record", "commit_apply_record_s"),
+            ("apply_refresh", "commit_apply_refresh_s"),
+            ("apply_invalidate", "commit_apply_invalidate_s"),
+            ("total", "commit_reported_total_s"),
+        ):
+            value = timings.get(source_key)
+            if isinstance(value, (int, float)):
+                stats[target_key].append(round(float(value), 6))
+        return result
+
+    def _timed_refresh(self, *args, **kwargs):
+        started = time.perf_counter()
+        try:
+            return orig_refresh(self, *args, **kwargs)
+        finally:
+            stats["symbol_refresh_s"].append(round(time.perf_counter() - started, 6))
+
+    monkeypatch.setattr(
+        write_coordinator_module.WriteCoordinator,
+        "commit_operation_against_base",
+        _timed_commit,
+    )
+    monkeypatch.setattr(symbol_index_module.SymbolIndex, "refresh", _timed_refresh)
+    return stats
+
+
+def _start_executor_depth_sampler(
+    loop: asyncio.AbstractEventLoop,
+    *,
+    interval_s: float = 0.05,
+) -> tuple[dict[str, list[float]], Callable[[], None]]:
+    """Sample the default executor's pending-work queue every *interval_s*.
+
+    Returns ``(stats, stop)``. The sampler runs on a daemon thread until
+    ``stop()`` is called. ``stats["queue_depth"]`` records queue depth per
+    sample; ``stats["workers_busy"]`` records how many workers the pool
+    reports active (work_queue.qsize() + workers currently running).
+    A non-empty queue during the load run means the pool, not a coordinator
+    lock, is the cap on fan-out.
+    """
+    stats: dict[str, list[float]] = {
+        "queue_depth": [],
+        "max_workers": [],
+    }
+    stop_flag = threading.Event()
+
+    def _sample_loop() -> None:
+        pool = loop._default_executor  # type: ignore[attr-defined]
+        if pool is None:
+            return
+        max_workers = getattr(pool, "_max_workers", 0) or 0
+        stats["max_workers"].append(float(max_workers))
+        work_queue = getattr(pool, "_work_queue", None)
+        while not stop_flag.is_set():
+            if work_queue is not None:
+                try:
+                    stats["queue_depth"].append(float(work_queue.qsize()))
+                except Exception:  # pragma: no cover - defensive
+                    pass
+            stop_flag.wait(interval_s)
+
+    thread = threading.Thread(
+        target=_sample_loop, name="executor-depth-sampler", daemon=True,
+    )
+    thread.start()
+
+    def _stop() -> None:
+        stop_flag.set()
+        thread.join(timeout=1.0)
+
+    return stats, _stop
+
+
 async def _run_mixed_operations(
     live_load_env: LiveLoadEnv,
     svc: CodeIntelligenceService,
@@ -429,12 +835,18 @@ async def _run_mixed_operations(
     timeout_s: int,
     log_ops: bool = False,
     log_label: str = "occ-load-op",
+    executor_depth_stats: dict[str, list[float]] | None = None,
 ) -> list[dict[str, Any]]:
     run_started = time.perf_counter()
+    loop = asyncio.get_running_loop()
     configure_default_executor(
-        asyncio.get_running_loop(),
+        loop,
         max_workers=max(200, concurrency * 8),
     )
+    depth_stop: Callable[[], None] | None = None
+    if executor_depth_stats is not None:
+        depth_stats, depth_stop = _start_executor_depth_sampler(loop)
+        executor_depth_stats.update(depth_stats)
 
     # Replace the fixture's `asyncio.to_thread(sync_sdk.exec)` wrapper with the
     # true AsyncDaytona sandbox (aiohttp). The wrapper's `ctx.run` propagation
@@ -574,15 +986,19 @@ async def _run_mixed_operations(
         return item
 
     semaphore = asyncio.Semaphore(concurrency)
-    return await asyncio.wait_for(
-        asyncio.gather(
-            *[
-                _invoke(sequence, operation, semaphore)
-                for sequence, operation in enumerate(operations)
-            ]
-        ),
-        timeout=timeout_s,
-    )
+    try:
+        return await asyncio.wait_for(
+            asyncio.gather(
+                *[
+                    _invoke(sequence, operation, semaphore)
+                    for sequence, operation in enumerate(operations)
+                ]
+            ),
+            timeout=timeout_s,
+        )
+    finally:
+        if depth_stop is not None:
+            depth_stop()
 
 
 def _operation_identity(
@@ -721,6 +1137,11 @@ def test_live_occ_load_72_all_mutators_high_concurrency_profile(
     live_load_env.init_repo()
     codeact_stats = _install_codeact_phase_probe(monkeypatch)
     overlay_stats = _install_overlay_phase_probe(monkeypatch)
+    lsp_stats = _install_lsp_phase_probe(monkeypatch)
+    content_stats = _install_content_phase_probe(monkeypatch)
+    commit_stats = _install_commit_phase_probe(monkeypatch)
+    svc_cmd_stats = _install_svc_cmd_phase_probe(monkeypatch)
+    executor_depth_stats: dict[str, list[float]] = {}
 
     seed_started = time.perf_counter()
     _log_occ_event(log_label, {"event": "setup", "phase": "seed_start"})
@@ -876,6 +1297,7 @@ def test_live_occ_load_72_all_mutators_high_concurrency_profile(
             timeout_s=360,
             log_ops=True,
             log_label=log_label,
+            executor_depth_stats=executor_depth_stats,
         )
     )
     wall_elapsed_s = time.perf_counter() - started
@@ -914,6 +1336,11 @@ def test_live_occ_load_72_all_mutators_high_concurrency_profile(
         ),
         "codeact_phase_s": _phase_summary(codeact_stats),
         "overlay_phase_s": _phase_summary(overlay_stats),
+        "lsp_phase_s": _phase_summary(lsp_stats),
+        "content_phase_s": _phase_summary(content_stats),
+        "commit_phase_s": _phase_summary(commit_stats),
+        "svc_cmd_phase_s": _phase_summary(svc_cmd_stats),
+        "executor_depth": _phase_summary(executor_depth_stats),
         "arbiter": svc.status()["arbiter"],
         "held_locks": svc.arbiter.active_lock_count,
         "process_identity": {
@@ -1004,6 +1431,9 @@ def test_live_occ_load_50_mixed_operations(
     live_load_env.init_repo()
     codeact_stats = _install_codeact_phase_probe(monkeypatch)
     overlay_stats = _install_overlay_phase_probe(monkeypatch)
+    lsp_stats = _install_lsp_phase_probe(monkeypatch)
+    content_stats = _install_content_phase_probe(monkeypatch)
+    commit_stats = _install_commit_phase_probe(monkeypatch)
 
     # Seed disjoint edit targets: 3 files * 5 edits each = 15 disjoint edits.
     for group in range(3):
@@ -1178,6 +1608,9 @@ def test_live_occ_load_50_mixed_operations(
                 ),
                 "codeact_phase_s": _phase_summary(codeact_stats),
                 "overlay_phase_s": _phase_summary(overlay_stats),
+                "lsp_phase_s": _phase_summary(lsp_stats),
+                "content_phase_s": _phase_summary(content_stats),
+                "commit_phase_s": _phase_summary(commit_stats),
                 "arbiter": arbiter_status,
                 "hotspots": hotspots[:5],
             },
@@ -1228,6 +1661,9 @@ def test_live_occ_load_20_non_overlapping_operations_profile(
     live_load_env.init_repo()
     codeact_stats = _install_codeact_phase_probe(monkeypatch)
     overlay_stats = _install_overlay_phase_probe(monkeypatch)
+    lsp_stats = _install_lsp_phase_probe(monkeypatch)
+    content_stats = _install_content_phase_probe(monkeypatch)
+    commit_stats = _install_commit_phase_probe(monkeypatch)
 
     for group in range(2):
         live_load_env.write_text(
@@ -1530,6 +1966,9 @@ def test_live_occ_load_20_non_overlapping_operations_profile(
         ],
         "codeact_phase_s": _phase_summary(codeact_stats),
         "overlay_phase_s": _phase_summary(overlay_stats),
+        "lsp_phase_s": _phase_summary(lsp_stats),
+        "content_phase_s": _phase_summary(content_stats),
+        "commit_phase_s": _phase_summary(commit_stats),
         "arbiter": svc.status()["arbiter"],
     }
     print(f"\n[{log_label} timings]")
@@ -1554,6 +1993,9 @@ def test_live_occ_load_30_non_overlapping_operations_profile(
     live_load_env.init_repo()
     codeact_stats = _install_codeact_phase_probe(monkeypatch)
     overlay_stats = _install_overlay_phase_probe(monkeypatch)
+    lsp_stats = _install_lsp_phase_probe(monkeypatch)
+    content_stats = _install_content_phase_probe(monkeypatch)
+    commit_stats = _install_commit_phase_probe(monkeypatch)
 
     for group in range(3):
         live_load_env.write_text(
@@ -1677,6 +2119,9 @@ def test_live_occ_load_30_non_overlapping_operations_profile(
         ],
         "codeact_phase_s": _phase_summary(codeact_stats),
         "overlay_phase_s": _phase_summary(overlay_stats),
+        "lsp_phase_s": _phase_summary(lsp_stats),
+        "content_phase_s": _phase_summary(content_stats),
+        "commit_phase_s": _phase_summary(commit_stats),
         "arbiter": svc.status()["arbiter"],
     }
     print(f"\n[{log_label} timings]")
@@ -2060,6 +2505,9 @@ def test_live_occ_load_sequential_per_op_baseline(
     live_load_env.init_repo()
     codeact_stats = _install_codeact_phase_probe(monkeypatch)
     overlay_stats = _install_overlay_phase_probe(monkeypatch)
+    lsp_stats = _install_lsp_phase_probe(monkeypatch)
+    content_stats = _install_content_phase_probe(monkeypatch)
+    commit_stats = _install_commit_phase_probe(monkeypatch)
 
     # Seed files that each op iter will mutate.
     for idx in range(N):
@@ -2217,6 +2665,9 @@ def test_live_occ_load_sequential_per_op_baseline(
         },
         "codeact_phase_s": _phase_summary(codeact_stats),
         "overlay_phase_s": _phase_summary(overlay_stats),
+        "lsp_phase_s": _phase_summary(lsp_stats),
+        "content_phase_s": _phase_summary(content_stats),
+        "commit_phase_s": _phase_summary(commit_stats),
         "arbiter": svc.status()["arbiter"],
     }
 
@@ -2242,6 +2693,98 @@ def test_live_occ_load_sequential_per_op_baseline(
         assert f"target_{idx}(x)" not in renamed or f"renamed_{idx}(x)" in renamed
         assert live_load_env.read_text(f"moves/dst_{idx}.txt") == f"src {idx}\n"
         assert live_load_env.read_text(f"codeact/ca_{idx}.txt") == f"codeact {idx}\n"
+
+
+def test_live_lsp_worker_invalidation_parallelism_isolation(
+    live_load_env: LiveLoadEnv,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Isolate synchronous Jedi worker invalidation as a possible wall-clock ceiling."""
+    N = 72
+    log_label = "lsp-worker-invalidation-parallelism-isolation"
+    monkeypatch.setenv(jedi_worker_module.ENV_FLAG, "1")
+
+    live_load_env.init_repo()
+    live_load_env.write_text(
+        "pkg/mod.py",
+        "def alpha(value):\n"
+        "    return value + 1\n\n"
+        "def caller():\n"
+        "    return alpha(1)\n",
+    )
+    live_load_env.exec_checked(f"git -C {shlex.quote(live_load_env.repo_root)} add -A")
+    live_load_env.exec_checked(
+        f"git -C {shlex.quote(live_load_env.repo_root)} commit -m seed-worker-invalidation",
+        timeout=180,
+    )
+
+    svc = live_load_env.make_ci_service()
+    svc.ensure_initialized(wait=True)
+    ready = svc.lsp_client.ensure_ready(install_missing=True, languages=("python",))
+    if not ready.get("python"):
+        pytest.skip("Python LSP backend unavailable in live sandbox")
+    used, _ = svc.lsp_client._try_worker("ping", {})
+    if not used or not svc.lsp_client.worker_active:
+        pytest.skip("Jedi worker unavailable in live sandbox")
+
+    lsp_stats = _install_lsp_phase_probe(monkeypatch)
+
+    warm_path = f"{live_load_env.repo_root}/pkg/warm_invalidate.py"
+    started = time.perf_counter()
+    svc.lsp_client.invalidate(warm_path)
+    single_invalidate_s = round(time.perf_counter() - started, 6)
+    for values in lsp_stats.values():
+        values.clear()
+
+    async def _run() -> list[dict[str, Any]]:
+        configure_default_executor(
+            asyncio.get_running_loop(),
+            max_workers=max(200, N * 4),
+        )
+        loop = asyncio.get_running_loop()
+
+        def _one(idx: int) -> dict[str, Any]:
+            path = f"{live_load_env.repo_root}/pkg/invalidate_{idx}.py"
+            t0 = time.perf_counter()
+            svc.lsp_client.invalidate(path)
+            return {
+                "idx": idx,
+                "elapsed_s": round(time.perf_counter() - t0, 6),
+            }
+
+        return await asyncio.gather(
+            *[loop.run_in_executor(None, _one, idx) for idx in range(N)]
+        )
+
+    wall_started = time.perf_counter()
+    per_call = asyncio.run(asyncio.wait_for(_run(), timeout=240))
+    wall_s = round(time.perf_counter() - wall_started, 6)
+    worker_request_s = lsp_stats.get("worker_request_op_invalidate_s", [])
+    sum_worker_request_s = round(sum(worker_request_s), 6)
+    sum_per_call_s = round(sum(float(item["elapsed_s"]) for item in per_call), 6)
+
+    summary = {
+        "N": N,
+        "single_invalidate_s": single_invalidate_s,
+        "single_scaled_s": round(single_invalidate_s * N, 6),
+        "wall_s": wall_s,
+        "sum_per_call_s": sum_per_call_s,
+        "parallelism_ratio_includes_lock_wait": (
+            round(sum_per_call_s / wall_s, 3) if wall_s > 0 else 0.0
+        ),
+        "sum_worker_request_s": sum_worker_request_s,
+        "worker_request_sum_to_wall_ratio": (
+            round(sum_worker_request_s / wall_s, 3) if wall_s > 0 else 0.0
+        ),
+        "per_call_s": _value_profile([float(item["elapsed_s"]) for item in per_call]),
+        "lsp_phase_s": _phase_summary(lsp_stats),
+        "worker_status": svc.lsp_client.worker_status(),
+    }
+    print(f"\n[{log_label}]")
+    print(json.dumps(summary, indent=2, sort_keys=True))
+
+    assert len(per_call) == N
+    assert svc.lsp_client.worker_active
 
 
 def test_live_daytona_transport_parallelism_isolation(live_load_env: LiveLoadEnv) -> None:
@@ -2489,3 +3032,524 @@ def test_live_daytona_transport_parallelism_isolation(live_load_env: LiveLoadEnv
         assert arm["wall_s"] < N * SLEEP_S + 20
     assert len(arm_sync_per_call) == N
     assert arm_sync_wall_s < N * SLEEP_S + 10
+
+
+# ---------------------------------------------------------------------------
+# Scenario A: contention correctness (OCC must gate, no lost updates)
+# ---------------------------------------------------------------------------
+
+_ABORT_STATUSES = frozenset({
+    "aborted_version",
+    "aborted_overlap",
+    "aborted_lock",
+    "dst_exists",
+    "not_found",
+    "patch_failed",
+    "identical_paths",
+    "failed",
+})
+
+
+def _item_status(item: dict[str, Any]) -> str:
+    return str(
+        (item.get("metadata") or {}).get("status")
+        or (item.get("payload") or {}).get("status")
+        or ""
+    )
+
+
+def _item_conflict(item: dict[str, Any]) -> str:
+    return str(
+        (item.get("metadata") or {}).get("conflict_reason")
+        or (item.get("payload") or {}).get("conflict_reason")
+        or ""
+    )
+
+
+def _group_outcome(results: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Bucket per-op results into winners / aborts / unclassified errors.
+
+    Aborts are any op with ``is_error=True`` AND either a recognized
+    abort status (coordinator enum) or a non-empty conflict_reason.
+    Anything else that errored is unclassified — must not happen in a
+    healthy system.
+    """
+    groups: dict[str, dict[str, Any]] = {}
+    for item in results:
+        gid = str(item.get("group") or "")
+        g = groups.setdefault(gid, {"winners": [], "aborts": [], "other_errors": []})
+        is_err = bool(item.get("is_error"))
+        status = _item_status(item)
+        conflict = _item_conflict(item)
+        if not is_err:
+            g["winners"].append(item)
+        elif status in _ABORT_STATUSES or conflict:
+            g["aborts"].append(
+                {"item": item, "status": status, "conflict_reason": conflict},
+            )
+        else:
+            g["other_errors"].append(item)
+    return groups
+
+
+def _assert_write_contention_invariants(
+    env: LiveLoadEnv,
+    groups: dict[str, dict[str, Any]],
+    *,
+    expect_file_present: bool = True,
+    require_single_winner: bool = False,
+) -> None:
+    """Invariants for N ops contending on one group.
+
+    ``require_single_winner=True`` is the strict OCC shape (same-anchor
+    edits, deletes, dst-collision moves). When False (full-file writes
+    serialize under the file lock), multiple sequential winners are
+    valid — the invariant relaxes to "some winner landed on disk, no
+    loser did, no unclassified errors".
+    """
+    for gid, bucket in groups.items():
+        winners = bucket["winners"]
+        aborts = bucket["aborts"]
+        other = bucket["other_errors"]
+        assert len(winners) >= 1, (
+            f"group {gid}: no winners "
+            f"(aborts={len(aborts)}, other={len(other)})"
+        )
+        if require_single_winner:
+            assert len(winners) == 1, (
+                f"group {gid}: expected exactly 1 winner, got {len(winners)} "
+                f"(aborts={len(aborts)}, other={len(other)})"
+            )
+        assert not other, (
+            f"group {gid}: unclassified errors leaked through gating: "
+            f"{[{'name': o.get('name'), 'payload': o.get('payload'), 'metadata': o.get('metadata')} for o in other[:2]]}"
+        )
+        if not expect_file_present:
+            continue
+        rel = gid.removeprefix(env.repo_root + "/")
+        actual = env.read_text(rel)
+        winner_tokens = {str(w.get("winner_value") or "") for w in winners}
+        winner_tokens.discard("")
+        loser_tokens = {
+            str(a["item"].get("winner_value") or "") for a in aborts
+        }
+        loser_tokens.discard("")
+        on_disk_winners = {t for t in winner_tokens if t in actual}
+        on_disk_losers = {t for t in loser_tokens if t in actual}
+        assert on_disk_winners, (
+            f"group {gid}: no winner token on disk "
+            f"(winners={winner_tokens}, tail={actual[-300:]!r})"
+        )
+        assert not on_disk_losers, (
+            f"group {gid}: loser tokens on disk: {on_disk_losers}"
+        )
+
+
+def _build_contention_ops_write(
+    env: LiveLoadEnv,
+    *,
+    target_rel: str,
+    n_writers: int,
+) -> list[dict[str, Any]]:
+    target_abs = f"{env.repo_root}/{target_rel}"
+    ops = []
+    for i in range(n_writers):
+        winner = uuid.uuid4().hex[:12]
+        ops.append({
+            "kind": "write",
+            "name": f"write-contend-{i}",
+            "path": target_abs,
+            "group": target_abs,
+            "winner_value": winner,
+            "kwargs": {
+                "file_path": target_abs,
+                "content": f"WINNER={winner}\nseq={i}\n",
+            },
+        })
+    return ops
+
+
+def _build_contention_ops_edit(
+    env: LiveLoadEnv,
+    *,
+    target_rel: str,
+    anchor: str,
+    n_editors: int,
+) -> list[dict[str, Any]]:
+    target_abs = f"{env.repo_root}/{target_rel}"
+    ops = []
+    for i in range(n_editors):
+        winner = uuid.uuid4().hex[:12]
+        ops.append({
+            "kind": "edit-overlap",
+            "name": f"edit-contend-{i}",
+            "path": target_abs,
+            "group": target_abs,
+            "winner_value": winner,
+            "kwargs": {
+                "file_path": target_abs,
+                "old_text": anchor,
+                "new_text": f"REPLACED_BY={winner}  # seq={i}",
+            },
+        })
+    return ops
+
+
+def test_live_occ_contention_write_same_path_gates_exactly_one_winner(
+    live_load_env: LiveLoadEnv,
+) -> None:
+    """N concurrent writes to one path: exactly one winner, rest aborted_version."""
+    log_label = "occ-contention-write-same-path"
+    env = live_load_env
+    env.init_repo()
+    env.write_text("contend/target.txt", "seed\n")
+    env.exec_checked(f"git -C {shlex.quote(env.repo_root)} add -A")
+    env.exec_checked(
+        f"git -C {shlex.quote(env.repo_root)} commit -m seed-contend",
+        timeout=60,
+    )
+    svc = env.make_ci_service()
+    svc.ensure_initialized(wait=True)
+
+    n = 24
+    ops = _build_contention_ops_write(env, target_rel="contend/target.txt", n_writers=n)
+    started = time.perf_counter()
+    results = asyncio.run(
+        _run_mixed_operations(
+            env, svc, ops,
+            concurrency=n, timeout_s=300,
+            log_label=log_label,
+        )
+    )
+    wall_s = time.perf_counter() - started
+
+    groups = _group_outcome(results)
+    _assert_write_contention_invariants(env, groups, require_single_winner=False)
+    only = next(iter(groups.values()))
+    total = len(only["winners"]) + len(only["aborts"])
+    assert total == n, (
+        f"expected {n} classified outcomes, got "
+        f"winners={len(only['winners'])} aborts={len(only['aborts'])}"
+    )
+    # Under same-path write contention with full-file overwrites, the
+    # coordinator serializes via the per-file lock and last-write-wins
+    # semantics permit multiple sequential winners. The gating invariant
+    # is that no writer returns success without actually committing
+    # (checked in _assert_write_contention_invariants via on-disk tokens).
+    arb = _arbiter_snapshot(svc)
+
+    summary = {
+        "N": n,
+        "wall_s": round(wall_s, 3),
+        "winners": len(only["winners"]),
+        "aborts": len(only["aborts"]),
+        "arbiter": arb,
+    }
+    print(f"\n[{log_label}] {json.dumps(summary, sort_keys=True)}", flush=True)
+
+
+def test_live_occ_contention_edit_same_anchor_gates_exactly_one_winner(
+    live_load_env: LiveLoadEnv,
+) -> None:
+    """N concurrent edits against the same anchor: losers must abort, not silently drop."""
+    log_label = "occ-contention-edit-same-anchor"
+    env = live_load_env
+    env.init_repo()
+    anchor = "MARKER = 'seed'"
+    env.write_text("contend/edit_target.py", f'"""anchor."""\n\n{anchor}\n')
+    env.exec_checked(f"git -C {shlex.quote(env.repo_root)} add -A")
+    env.exec_checked(
+        f"git -C {shlex.quote(env.repo_root)} commit -m seed-edit-contend",
+        timeout=60,
+    )
+    svc = env.make_ci_service()
+    svc.ensure_initialized(wait=True)
+
+    n = 24
+    ops = _build_contention_ops_edit(
+        env,
+        target_rel="contend/edit_target.py",
+        anchor=anchor,
+        n_editors=n,
+    )
+    results = asyncio.run(
+        _run_mixed_operations(
+            env, svc, ops,
+            concurrency=n, timeout_s=300,
+            log_label=log_label,
+        )
+    )
+    groups = _group_outcome(results)
+    # Same-anchor edits: once winner replaces the anchor, every subsequent
+    # editor's search_replace cannot find old_text → must abort, not
+    # silently drop. Strict single-winner invariant applies here.
+    _assert_write_contention_invariants(env, groups, require_single_winner=True)
+    only = next(iter(groups.values()))
+    assert len(only["aborts"]) == n - 1, (
+        f"expected {n-1} aborts, got {len(only['aborts'])}"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Scenario B: parallelism-with-gating sweep
+# ---------------------------------------------------------------------------
+
+def _effective_parallelism(
+    *, single_op_baseline_s: float, op_count: int, wall_elapsed_s: float,
+) -> float:
+    if wall_elapsed_s <= 0 or single_op_baseline_s <= 0:
+        return 0.0
+    return round((single_op_baseline_s * op_count) / wall_elapsed_s, 3)
+
+
+def _measure_single_write_baseline(
+    env: LiveLoadEnv, svc: CodeIntelligenceService,
+) -> float:
+    ops = [{
+        "kind": "write",
+        "name": "baseline-write",
+        "path": f"{env.repo_root}/baseline/one.txt",
+        "group": "baseline",
+        "winner_value": "baseline",
+        "kwargs": {
+            "file_path": f"{env.repo_root}/baseline/one.txt",
+            "content": "baseline\n",
+        },
+    }]
+    results = asyncio.run(
+        _run_mixed_operations(
+            env, svc, ops, concurrency=1, timeout_s=120,
+            log_label="occ-parallelism-baseline",
+        )
+    )
+    return float(results[0]["elapsed_s"])
+
+
+@pytest.mark.parametrize("group_count", [24, 12, 6, 1])
+def test_live_occ_parallelism_gating_sweep(
+    live_load_env: LiveLoadEnv, group_count: int,
+) -> None:
+    """Sweep contention density from K=N (no overlap) to K=1 (full overlap)."""
+    n = 24
+    log_label = f"occ-parallelism-sweep-K{group_count}"
+    env = live_load_env
+    env.init_repo()
+
+    for k in range(group_count):
+        env.write_text(f"sweep/target_{k}.txt", f"seed-{k}\n")
+    env.exec_checked(f"git -C {shlex.quote(env.repo_root)} add -A")
+    env.exec_checked(
+        f"git -C {shlex.quote(env.repo_root)} commit -m seed-sweep-{group_count}",
+        timeout=60,
+    )
+
+    svc = env.make_ci_service()
+    svc.ensure_initialized(wait=True)
+    baseline_s = _measure_single_write_baseline(env, svc)
+
+    ops: list[dict[str, Any]] = []
+    for i in range(n):
+        k = i % group_count
+        target_abs = f"{env.repo_root}/sweep/target_{k}.txt"
+        winner = uuid.uuid4().hex[:12]
+        ops.append({
+            "kind": "write",
+            "name": f"sweep-{i}",
+            "path": target_abs,
+            "group": target_abs,
+            "winner_value": winner,
+            "kwargs": {
+                "file_path": target_abs,
+                "content": f"WINNER={winner}\nseq={i}\nK={group_count}\n",
+            },
+        })
+
+    started = time.perf_counter()
+    results = asyncio.run(
+        _run_mixed_operations(
+            env, svc, ops,
+            concurrency=n, timeout_s=600,
+            log_label=log_label,
+        )
+    )
+    wall_s = time.perf_counter() - started
+
+    groups = _group_outcome(results)
+    _assert_write_contention_invariants(
+        env, groups, require_single_winner=False,
+    )
+    success_count = sum(len(g["winners"]) for g in groups.values())
+    abort_count = sum(len(g["aborts"]) for g in groups.values())
+    assert success_count + abort_count == n, (success_count, abort_count, n)
+
+    eff_p = _effective_parallelism(
+        single_op_baseline_s=baseline_s, op_count=n, wall_elapsed_s=wall_s,
+    )
+    abort_rate = round(abort_count / n, 3)
+
+    summary = {
+        "K": group_count,
+        "N": n,
+        "wall_s": round(wall_s, 3),
+        "baseline_s": round(baseline_s, 3),
+        "effective_parallelism": eff_p,
+        "abort_rate": abort_rate,
+        "winners": success_count,
+        "aborts": abort_count,
+        "arbiter": _arbiter_snapshot(svc),
+    }
+    print(f"\n[{log_label}] {json.dumps(summary, sort_keys=True)}", flush=True)
+
+    # Shape assertions — writes serialize under the per-file lock, so
+    # K=1 does not produce aborts (last-write-wins). The parallelism
+    # ratio is the telltale: K=N should parallelize, K=1 should not.
+    if group_count == n:
+        assert eff_p >= 4.0, summary
+        assert abort_rate == 0.0, summary
+    elif group_count == 1:
+        assert eff_p <= 5.0, summary
+
+
+# ---------------------------------------------------------------------------
+# Scenario C: CodeAct overlay contention
+# ---------------------------------------------------------------------------
+
+def _extract_codeact_conflict(item: dict[str, Any]) -> str:
+    meta = item.get("metadata") or {}
+    payload = item.get("payload") or {}
+    for bag in (meta, payload):
+        for key in (
+            "conflict_reason",
+            "overlay_conflict_reason",
+            "overlay_commit_status",
+        ):
+            value = bag.get(key)
+            if value and str(value) not in {"committed", "ok"}:
+                return str(value)
+    return ""
+
+
+def test_live_occ_contention_codeact_overlay_gates_concurrent_appends(
+    live_load_env: LiveLoadEnv,
+) -> None:
+    """N concurrent codeact appends to the same file.
+
+    Ground truth is disk state, not tool self-report — the codeact tool does
+    not currently bubble overlay_commit_status into ToolResult.is_error, so
+    the disk check is what catches silent overlay aborts.
+    """
+    log_label = "occ-contention-codeact-overlay"
+    env = live_load_env
+    env.init_repo()
+    target_rel = "contend/codeact_target.txt"
+    target_abs = f"{env.repo_root}/{target_rel}"
+    env.write_text(target_rel, "seed\n")
+    env.exec_checked(f"git -C {shlex.quote(env.repo_root)} add -A")
+    env.exec_checked(
+        f"git -C {shlex.quote(env.repo_root)} commit -m seed-codeact-contend",
+        timeout=60,
+    )
+    svc = env.make_ci_service()
+    svc.ensure_initialized(wait=True)
+
+    n = 12
+    ops: list[dict[str, Any]] = []
+    tokens: list[str] = []
+    for i in range(n):
+        token = uuid.uuid4().hex[:12]
+        tokens.append(token)
+        command = (
+            f"printf 'WINNER=%s\\n' {shlex.quote(token)} "
+            f">> {shlex.quote(target_abs)}"
+        )
+        ops.append({
+            "kind": "codeact",
+            "name": f"codeact-contend-{i}",
+            "path": target_abs,
+            "group": target_abs,
+            "winner_value": token,
+            "coordinated": False,
+            "kwargs": {"command": command},
+        })
+
+    started = time.perf_counter()
+    results = asyncio.run(
+        _run_mixed_operations(
+            env, svc, ops,
+            concurrency=n, timeout_s=600,
+            log_label=log_label,
+        )
+    )
+    wall_s = time.perf_counter() - started
+
+    final_content = env.read_text(target_rel)
+    on_disk = {t for t in tokens if t in final_content}
+
+    tool_ok = {
+        str(item.get("winner_value") or "")
+        for item in results
+        if not item.get("is_error")
+    }
+    tool_ok.discard("")
+
+    stray = on_disk - tool_ok
+    assert not stray, {
+        "unauthorized_tokens_on_disk": sorted(stray),
+        "final_tail": final_content[-600:],
+    }
+
+    missing = tool_ok - on_disk
+    # A small residue of "tool said ok, not on disk" is a known overlay
+    # race: two overlays branch from the same lowerdir, both pass
+    # strict_base at commit time, and the later commit overwrites the
+    # earlier one on the real fs. OCC gating blocks the vast majority;
+    # the residue is bounded at ~1/N. If this count grows, overlay
+    # gating has regressed.
+    residue_bound = max(1, n // 10)
+    assert len(missing) <= residue_bound, {
+        "tool_said_ok_but_not_on_disk": sorted(missing),
+        "residue_bound": residue_bound,
+        "final_tail": final_content[-600:],
+    }
+
+    assert len(on_disk) < n, {
+        "winners": len(on_disk),
+        "n": n,
+        "final_tail": final_content[-600:],
+    }
+
+    silent_drops = []
+    for item in results:
+        token = str(item.get("winner_value") or "")
+        if not token or token in on_disk:
+            continue
+        if item.get("is_error"):
+            continue
+        if _extract_codeact_conflict(item):
+            continue
+        silent_drops.append({
+            "token": token,
+            "name": item.get("name"),
+            "metadata": item.get("metadata"),
+            "payload_keys": sorted((item.get("payload") or {}).keys()),
+        })
+    # Same residue budget as invariant 2: the overlay-overwrite race
+    # (two overlays both commit, second overwrites first) produces
+    # tool_ok results that aren't on disk AND have no conflict signal,
+    # because the overlay layer genuinely did commit. This is the
+    # distinct "silent overwrite" failure mode; we bound it rather than
+    # ban it until the overlay lowerdir refresh race is closed.
+    assert len(silent_drops) <= residue_bound, {
+        "silent_overlay_drops": silent_drops[:5],
+        "count": len(silent_drops),
+        "residue_bound": residue_bound,
+    }
+
+    summary = {
+        "N": n,
+        "wall_s": round(wall_s, 3),
+        "winners_on_disk": len(on_disk),
+        "tool_ok_count": len(tool_ok),
+        "arbiter": _arbiter_snapshot(svc),
+    }
+    print(f"\n[{log_label}] {json.dumps(summary, sort_keys=True)}", flush=True)

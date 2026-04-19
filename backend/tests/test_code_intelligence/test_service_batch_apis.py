@@ -14,6 +14,7 @@ import pytest
 from code_intelligence.editing.patcher import SearchReplaceEdit
 from code_intelligence.routing.service import (
     CodeIntelligenceService,
+    CommitSpecRequest,
     dispose_all_code_intelligence,
 )
 from code_intelligence.types import EditSpec, MoveSpec, WriteSpec
@@ -373,3 +374,85 @@ def test_rename_symbol_submits_plan_changes_as_one_batch(tmp_path, monkeypatch) 
     assert result.status == "committed"
     assert a.read_text(encoding="utf-8") == "use bar()\n"
     assert b.read_text(encoding="utf-8") == "def bar(): pass\n"
+
+
+def test_commit_rename_plan_does_not_recompute_jedi_plan(tmp_path, monkeypatch) -> None:
+    svc = _svc(tmp_path)
+    from code_intelligence.hashing import content_hash
+    from code_intelligence.types import SemanticFileChange, SemanticRenamePlan
+
+    target = tmp_path / "rename.py"
+    target.write_text("def old(): pass\n", encoding="utf-8")
+    plan = SemanticRenamePlan(
+        new_name="new",
+        origin=(str(target), 1, 4),
+        changes=(
+            SemanticFileChange(
+                file_path=str(target),
+                base_content="def old(): pass\n",
+                base_hash=content_hash("def old(): pass\n"),
+                final_content="def new(): pass\n",
+            ),
+        ),
+    )
+    monkeypatch.setattr(
+        svc,
+        "rename_symbol_plan",
+        lambda *a, **k: pytest.fail("rename plan should not be recomputed"),
+    )
+
+    result = svc.commit_rename_plan(plan)
+
+    assert result.success
+    assert target.read_text(encoding="utf-8") == "def new(): pass\n"
+
+
+def test_commit_specs_many_batches_mixed_disjoint_ops(tmp_path) -> None:
+    edit_target = tmp_path / "edit.py"
+    delete_target = tmp_path / "delete.py"
+    move_src = tmp_path / "move_src.py"
+    move_dst = tmp_path / "move_dst.py"
+    write_target = tmp_path / "write.py"
+    edit_target.write_text("flag = False\n", encoding="utf-8")
+    delete_target.write_text("remove me\n", encoding="utf-8")
+    move_src.write_text("move me\n", encoding="utf-8")
+    svc = _svc(tmp_path)
+
+    results = svc.commit_specs_many(
+        [
+            CommitSpecRequest(
+                op="write",
+                specs=[
+                    WriteSpec(file_path=str(write_target), content="created\n"),
+                ],
+                agent_id="writer",
+            ),
+            CommitSpecRequest(
+                op="edit",
+                specs=[
+                    EditSpec(
+                        file_path=str(edit_target),
+                        edits=[SearchReplaceEdit(old_text="False", new_text="True")],
+                    ),
+                ],
+                agent_id="editor",
+            ),
+            CommitSpecRequest(
+                op="delete",
+                specs=[str(delete_target)],
+                agent_id="deleter",
+            ),
+            CommitSpecRequest(
+                op="move",
+                specs=[MoveSpec(src_path=str(move_src), dst_path=str(move_dst))],
+                agent_id="mover",
+            ),
+        ]
+    )
+
+    assert [result.success for result in results] == [True, True, True, True]
+    assert write_target.read_text(encoding="utf-8") == "created\n"
+    assert edit_target.read_text(encoding="utf-8") == "flag = True\n"
+    assert not delete_target.exists()
+    assert not move_src.exists()
+    assert move_dst.read_text(encoding="utf-8") == "move me\n"

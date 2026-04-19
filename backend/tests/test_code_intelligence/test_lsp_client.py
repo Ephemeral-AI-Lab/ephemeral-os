@@ -155,6 +155,55 @@ def test_invalidate_does_not_start_worker(monkeypatch) -> None:
     assert lsp.worker_active is False
 
 
+def test_invalidate_skips_worker_for_non_python_paths(monkeypatch) -> None:
+    monkeypatch.setenv(ENV_FLAG, "1")
+
+    class _Worker:
+        def __init__(self) -> None:
+            self.requests: list[tuple[str, dict[str, str] | None]] = []
+
+        def request(self, op, args=None):
+            self.requests.append((op, args))
+            return {"ok": True}
+
+        def shutdown(self):
+            pass
+
+    worker = _Worker()
+    lsp = LspClient(workspace_root="/workspace")
+    lsp._worker = worker  # type: ignore[assignment]
+
+    lsp.invalidate("/workspace/notes/readme.txt")
+
+    assert worker.requests == []
+    assert lsp.worker_active is True
+
+
+def test_invalidate_keeps_worker_invalidation_for_python_paths(monkeypatch) -> None:
+    monkeypatch.setenv(ENV_FLAG, "1")
+
+    class _Worker:
+        def __init__(self) -> None:
+            self.requests: list[tuple[str, dict[str, str] | None]] = []
+
+        def request(self, op, args=None):
+            self.requests.append((op, args))
+            return {"ok": True}
+
+        def shutdown(self):
+            pass
+
+    worker = _Worker()
+    lsp = LspClient(workspace_root="/workspace")
+    lsp._worker = worker  # type: ignore[assignment]
+
+    lsp.invalidate("/workspace/pkg/core.py")
+
+    assert worker.requests == [
+        ("invalidate", {"path": "/workspace/pkg/core.py"}),
+    ]
+
+
 def test_worker_telemetry_tracks_success_and_fallback(monkeypatch) -> None:
     monkeypatch.setenv(ENV_FLAG, "1")
 
@@ -223,23 +272,16 @@ def test_worker_status_exposes_pid_without_starting_worker(monkeypatch) -> None:
     assert status["pid_path"] == "/tmp/eos_jedi/pid"
 
 
-def test_sandbox_worker_enabled_by_default_when_env_unset(monkeypatch) -> None:
+def test_sandbox_worker_disabled_by_default_when_env_unset(monkeypatch) -> None:
+    """The persistent Jedi worker is opt-in (``CI_JEDI_WORKER_ENABLED=1``).
+
+    Its `request()` path holds one global `threading.Lock` across every
+    stdin/stdout round-trip to a single subprocess, which serializes every
+    caller — under concurrent OCC commits that lock dominated commit_apply
+    time. Default is now "off"; Python queries fall back to subprocess-
+    per-call scripts which are slower per query but fully parallel.
+    """
     monkeypatch.delenv(ENV_FLAG, raising=False)
-
-    class _Worker:
-        def __init__(self, workspace_root, *, sandbox, enabled_default=True, **kwargs):
-            self.enabled_default = enabled_default
-
-        def request(self, op, args=None):
-            return [{"name": "demo", "type": "function", "module_path": "/workspace/demo.py", "line": 1, "column": 4}]
-
-        def shutdown(self):
-            pass
-
-        def worker_status(self):
-            return {"transport": "sandbox_socket", "pid": 4242}
-
-    monkeypatch.setattr("code_intelligence.lsp.client.SandboxJediWorkerClient", _Worker)
     sandbox = SimpleNamespace(process=SimpleNamespace(exec=lambda *args, **kwargs: None))
     lsp = LspClient(workspace_root="/workspace", sandbox=sandbox)
 
@@ -248,12 +290,10 @@ def test_sandbox_worker_enabled_by_default_when_env_unset(monkeypatch) -> None:
         {"path": "/workspace/demo.py", "line": 1, "column": 4},
     )
 
-    assert used is True
-    assert isinstance(result, list)
-    assert lsp.worker_status()["enabled"] is True
-    assert lsp.worker_status()["pid"] == 4242
-    assert lsp.telemetry.successes == 1
-    assert lsp.telemetry.worker_successes == 1
+    assert used is False
+    assert result is None
+    assert lsp.worker_status()["enabled"] is False
+    assert lsp.worker_active is False
 
 
 def test_sandbox_worker_env_kill_switch_overrides_default(monkeypatch) -> None:

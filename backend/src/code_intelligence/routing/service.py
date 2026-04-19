@@ -36,7 +36,7 @@ from code_intelligence.analysis.tree_cache import TreeCache
 from code_intelligence.editing.arbiter import Arbiter
 from code_intelligence.editing.patcher import Patcher
 from code_intelligence.editing.time_machine import TimeMachine
-from code_intelligence.editing.write_coordinator import WriteCoordinator
+from code_intelligence.editing.write_coordinator import CommitOperation, WriteCoordinator
 from code_intelligence.hashing import content_hash
 from code_intelligence.lsp.client import LspClient
 from code_intelligence.routing.backend_protocol import (
@@ -115,6 +115,35 @@ class _InflightRenamePreview:
     """One in-progress dry-run preview snapshot shared by callers."""
 
     event: threading.Event
+
+
+@dataclass(frozen=True)
+class CommitSpecRequest:
+    """One high-level typed commit request inside a micro-batch."""
+
+    op: str
+    specs: Sequence[Any]
+    agent_id: str = ""
+    description: str = ""
+
+
+@dataclass(frozen=True)
+class RenamePlanRequest:
+    """One semantic rename planning request inside a micro-batch."""
+
+    file_path: str
+    line: int
+    character: int
+    new_name: str
+
+
+@dataclass(frozen=True)
+class RenameCommitRequest:
+    """One attributed rename plan commit inside a micro-batch."""
+
+    plan: SemanticRenamePlan
+    agent_id: str = ""
+    description: str = ""
 
 
 class CodeIntelligenceService:
@@ -216,7 +245,7 @@ class CodeIntelligenceService:
         old_sandbox = getattr(self.lsp_client, "_sandbox", None)
         self.lsp_client._sandbox = sandbox
         if old_sandbox is not sandbox:
-            self.lsp_client._worker_enabled_default = True
+            self.lsp_client._worker_enabled_default = False
             self.lsp_client.reset_backend_availability()
             self._clear_rename_preview_cache()
         self._content.bind_sandbox(sandbox)
@@ -638,6 +667,76 @@ print("refreshed")
             changes=tuple(changes),
         )
 
+    def rename_symbol_plans_many(
+        self,
+        requests: Sequence[RenamePlanRequest | dict[str, Any]],
+    ) -> list[SemanticRenamePlan]:
+        """Build many rename plans with one LSP/Jedi backend call where possible."""
+        normalized = [
+            req
+            if isinstance(req, RenamePlanRequest)
+            else RenamePlanRequest(
+                file_path=str(req.get("file_path") or ""),
+                line=int(req.get("line") or 0),
+                character=int(req.get("character") or 0),
+                new_name=str(req.get("new_name") or ""),
+            )
+            for req in requests
+        ]
+        if not normalized:
+            return []
+        if len(normalized) == 1:
+            req = normalized[0]
+            return [
+                self.rename_symbol_plan(
+                    req.file_path,
+                    req.line,
+                    req.character,
+                    req.new_name,
+                )
+            ]
+
+        final_maps = self.lsp_client.rename_symbols(
+            [
+                (req.file_path, req.line, req.character, req.new_name)
+                for req in normalized
+            ]
+        )
+        all_paths: list[str] = []
+        for final_by_path in final_maps:
+            all_paths.extend(final_by_path)
+        try:
+            base_by_path = self._content.read_many(
+                list(dict.fromkeys(all_paths)),
+                allow_missing=True,
+            )
+        except Exception:  # pragma: no cover - defensive I/O
+            base_by_path = {}
+
+        plans: list[SemanticRenamePlan] = []
+        for req, final_by_path in zip(normalized, final_maps, strict=True):
+            changes: list[SemanticFileChange] = []
+            for path, final_content in final_by_path.items():
+                base_content, existed = base_by_path.get(path, ("", False))
+                if not existed and not base_content:
+                    continue
+                changes.append(
+                    SemanticFileChange(
+                        file_path=path,
+                        base_content=base_content,
+                        base_hash=content_hash(base_content),
+                        final_content=final_content,
+                    ),
+                )
+            plans.append(
+                SemanticRenamePlan(
+                    new_name=req.new_name,
+                    origin=(req.file_path, int(req.line), int(req.character)),
+                    changes=tuple(changes),
+                )
+            )
+        return plans
+
     def preview_rename_symbol_plan(
         self, file_path: str, line: int, character: int, new_name: str,
     ) -> SemanticRenamePlan:
@@ -843,6 +942,61 @@ print("refreshed")
             description=description,
         )
 
+    def commit_specs_many(
+        self,
+        requests: Sequence[CommitSpecRequest | dict[str, Any]],
+    ) -> list[OperationResult]:
+        """Plan and commit many typed file mutations with batched sandbox I/O."""
+        normalized = [
+            req
+            if isinstance(req, CommitSpecRequest)
+            else CommitSpecRequest(
+                op=str(req.get("op") or ""),
+                specs=tuple(req.get("specs") or ()),
+                agent_id=str(req.get("agent_id") or ""),
+                description=str(req.get("description") or ""),
+            )
+            for req in requests
+        ]
+        if not normalized:
+            return []
+        if len(normalized) == 1:
+            req = normalized[0]
+            return [self._commit_specs_direct(req)]
+
+        read_paths = self._commit_spec_read_paths(normalized)
+        try:
+            base_by_path = self._content.read_many(read_paths, allow_missing=True)
+        except Exception:
+            logger.debug("batched commit planning read failed", exc_info=True)
+            return [self._commit_specs_direct(req) for req in normalized]
+
+        operations: list[CommitOperation | None] = []
+        results: list[OperationResult | None] = [None] * len(normalized)
+        for idx, req in enumerate(normalized):
+            changes, early = self._commit_spec_changes_from_base(req, base_by_path)
+            if early is not None:
+                results[idx] = early
+                operations.append(None)
+                continue
+            operations.append(
+                CommitOperation(
+                    changes=tuple(changes),
+                    agent_id=req.agent_id,
+                    edit_type=f"{req.op}_file",
+                    description=req.description,
+                )
+            )
+
+        commit_ops = [op for op in operations if op is not None]
+        committed = self._write_coordinator.commit_many_operations_against_base(commit_ops)
+        committed_iter = iter(committed)
+        for idx, op in enumerate(operations):
+            if op is None:
+                continue
+            results[idx] = next(committed_iter)
+        return [r for r in results if r is not None]
+
     # -- Typed mutation APIs (OCC-gated, batch-capable) ----------------------
 
     def write_file(
@@ -928,6 +1082,67 @@ print("refreshed")
             edit_type="rename_symbol",
             description=description or f"rename to {new_name}",
         )
+
+    def commit_rename_plan(
+        self,
+        plan: SemanticRenamePlan,
+        *,
+        agent_id: str = "",
+        description: str = "",
+    ) -> OperationResult:
+        """Commit a previously computed rename plan without recomputing Jedi rename."""
+        if not plan.changes:
+            return OperationResult(
+                success=True,
+                status="committed",
+                files=(),
+                conflict_file=None,
+                conflict_reason="",
+                timings={},
+            )
+        return self._write_coordinator.commit_operation_against_base(
+            list(plan.changes),
+            agent_id=agent_id,
+            edit_type="rename_symbol",
+            description=description or f"rename to {plan.new_name}",
+        )
+
+    def commit_rename_plans_many(
+        self,
+        requests: Sequence[RenameCommitRequest | dict[str, Any]],
+    ) -> list[OperationResult]:
+        """Commit many already-computed rename plans with batched sandbox I/O."""
+        normalized = [
+            req
+            if isinstance(req, RenameCommitRequest)
+            else RenameCommitRequest(
+                plan=req["plan"],
+                agent_id=str(req.get("agent_id") or ""),
+                description=str(req.get("description") or ""),
+            )
+            for req in requests
+        ]
+        if not normalized:
+            return []
+        if len(normalized) == 1:
+            req = normalized[0]
+            return [
+                self.commit_rename_plan(
+                    req.plan,
+                    agent_id=req.agent_id,
+                    description=req.description,
+                )
+            ]
+        operations = [
+            CommitOperation(
+                changes=tuple(req.plan.changes),
+                agent_id=req.agent_id,
+                edit_type="rename_symbol",
+                description=req.description or f"rename to {req.plan.new_name}",
+            )
+            for req in normalized
+        ]
+        return self._write_coordinator.commit_many_operations_against_base(operations)
 
     def delete_file(
         self,
@@ -1033,6 +1248,203 @@ print("refreshed")
         )
 
     # -- Spec -> OperationChange adapters ------------------------------------
+
+    def _commit_specs_direct(self, req: CommitSpecRequest) -> OperationResult:
+        if req.op == "write":
+            return self.write_file(
+                req.specs,  # type: ignore[arg-type]
+                agent_id=req.agent_id,
+                description=req.description,
+            )
+        if req.op == "edit":
+            return self.edit_file(
+                req.specs,  # type: ignore[arg-type]
+                agent_id=req.agent_id,
+                description=req.description,
+            )
+        if req.op == "delete":
+            return self.delete_file(
+                [str(path) for path in req.specs],
+                agent_id=req.agent_id,
+                description=req.description,
+            )
+        if req.op == "move":
+            return self.move_file(
+                req.specs,  # type: ignore[arg-type]
+                agent_id=req.agent_id,
+                description=req.description,
+            )
+        return OperationResult(
+            success=False,
+            status="failed",
+            files=(),
+            conflict_file=None,
+            conflict_reason=f"unsupported commit op: {req.op}",
+            timings={},
+        )
+
+    def _commit_spec_read_paths(self, requests: Sequence[CommitSpecRequest]) -> list[str]:
+        paths: list[str] = []
+        for req in requests:
+            if req.op == "write":
+                paths.extend(str(spec.file_path) for spec in req.specs)
+            elif req.op == "edit":
+                paths.extend(str(spec.file_path) for spec in req.specs)
+            elif req.op == "delete":
+                paths.extend(str(path) for path in req.specs)
+            elif req.op == "move":
+                for spec in req.specs:
+                    paths.append(str(spec.src_path))
+                    paths.append(str(spec.dst_path))
+        return list(dict.fromkeys(paths))
+
+    def _commit_spec_changes_from_base(
+        self,
+        req: CommitSpecRequest,
+        base_by_path: dict[str, tuple[str, bool]],
+    ) -> tuple[list[OperationChange], OperationResult | None]:
+        if req.op == "write":
+            return self._write_specs_to_changes_from_base(req.specs, base_by_path), None
+        if req.op == "edit":
+            return self._edit_specs_to_changes_from_base(req.specs, base_by_path)
+        if req.op == "delete":
+            return self._delete_paths_to_changes_from_base(
+                [str(path) for path in req.specs],
+                base_by_path,
+            )
+        if req.op == "move":
+            return self._move_specs_to_changes_from_base(req.specs, base_by_path)
+        return [], OperationResult(
+            success=False,
+            status="failed",
+            files=(),
+            conflict_file=None,
+            conflict_reason=f"unsupported commit op: {req.op}",
+            timings={},
+        )
+
+    def _write_specs_to_changes_from_base(
+        self,
+        specs: Sequence[Any],
+        base_by_path: dict[str, tuple[str, bool]],
+    ) -> list[OperationChange]:
+        changes: list[OperationChange] = []
+        for spec in specs:
+            current, existed = base_by_path.get(str(spec.file_path), ("", False))
+            if spec.overwrite:
+                changes.append(
+                    OperationChange(
+                        file_path=spec.file_path,
+                        base_content=current,
+                        base_hash=content_hash(current) if existed else "",
+                        final_content=spec.content,
+                        base_existed=existed,
+                        strict_base=True,
+                    )
+                )
+            else:
+                changes.append(
+                    OperationChange(
+                        file_path=spec.file_path,
+                        base_content="",
+                        base_hash="",
+                        final_content=spec.content,
+                        base_existed=False,
+                    )
+                )
+        return changes
+
+    def _edit_specs_to_changes_from_base(
+        self,
+        specs: Sequence[Any],
+        base_by_path: dict[str, tuple[str, bool]],
+    ) -> tuple[list[OperationChange], OperationResult | None]:
+        changes: list[OperationChange] = []
+        for spec in specs:
+            current, existed = base_by_path.get(str(spec.file_path), ("", False))
+            if not existed:
+                return [], _not_found_result(spec.file_path)
+            patch = self.patcher.apply_edits(current, list(spec.edits))
+            if not patch.success:
+                return [], _patch_failed_result(spec.file_path, patch.errors)
+            changes.append(
+                OperationChange(
+                    file_path=spec.file_path,
+                    base_content=current,
+                    base_hash=content_hash(current),
+                    final_content=patch.content,
+                    base_existed=True,
+                )
+            )
+        return changes, None
+
+    def _delete_paths_to_changes_from_base(
+        self,
+        paths: Sequence[str],
+        base_by_path: dict[str, tuple[str, bool]],
+    ) -> tuple[list[OperationChange], OperationResult | None]:
+        changes: list[OperationChange] = []
+        for path in paths:
+            current, existed = base_by_path.get(path, ("", False))
+            if not existed:
+                return [], _not_found_result(path)
+            changes.append(
+                OperationChange(
+                    file_path=path,
+                    base_content=current,
+                    base_hash=content_hash(current),
+                    final_content=None,
+                    base_existed=True,
+                )
+            )
+        return changes, None
+
+    def _move_specs_to_changes_from_base(
+        self,
+        specs: Sequence[Any],
+        base_by_path: dict[str, tuple[str, bool]],
+    ) -> tuple[list[OperationChange], OperationResult | None]:
+        changes: list[OperationChange] = []
+        for spec in specs:
+            if spec.src_path == spec.dst_path:
+                return [], _identical_paths_result(spec.src_path)
+            src_content, src_existed = base_by_path.get(str(spec.src_path), ("", False))
+            if not src_existed:
+                return [], _not_found_result(spec.src_path)
+            dst_content, dst_existed = base_by_path.get(str(spec.dst_path), ("", False))
+            if dst_existed and not spec.overwrite:
+                return [], _dst_exists_result(spec.dst_path)
+            changes.append(
+                OperationChange(
+                    file_path=spec.src_path,
+                    base_content=src_content,
+                    base_hash=content_hash(src_content),
+                    final_content=None,
+                    base_existed=True,
+                )
+            )
+            if dst_existed:
+                changes.append(
+                    OperationChange(
+                        file_path=spec.dst_path,
+                        base_content=dst_content,
+                        base_hash=content_hash(dst_content),
+                        final_content=src_content,
+                        base_existed=True,
+                        strict_base=True,
+                    )
+                )
+            else:
+                changes.append(
+                    OperationChange(
+                        file_path=spec.dst_path,
+                        base_content="",
+                        base_hash="",
+                        final_content=src_content,
+                        base_existed=False,
+                    )
+                )
+        return changes, None
 
     def _write_spec_to_change(self, spec: WriteSpec) -> OperationChange:
         current, existed = self._content.read(spec.file_path, allow_missing=True)

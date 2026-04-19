@@ -10,10 +10,13 @@ dry-run, no audit-only side path.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import keyword
 import logging
+import os
 import re
+from dataclasses import dataclass
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -36,6 +39,215 @@ logger = logging.getLogger(__name__)
 
 _IDENTIFIER_RE = r"^[A-Za-z_][A-Za-z0-9_]*$"
 _CANDIDATE_LIMIT = 10
+_RENAME_BATCH_WINDOW_SECONDS = (
+    float(os.environ.get("CI_RENAME_BATCH_WINDOW_MS", "5")) / 1000.0
+)
+
+
+@dataclass
+class _RenamePlanEntry:
+    svc: Any
+    file_path: str
+    line: int
+    character: int
+    new_name: str
+    future: asyncio.Future[Any]
+
+
+@dataclass
+class _RenameCommitEntry:
+    svc: Any
+    context: ToolExecutionContext
+    plan: Any
+    description: str
+    future: asyncio.Future[Any]
+
+
+class _RenamePlanBatcher:
+    def __init__(self, svc: Any) -> None:
+        self._svc = svc
+        self._lock = asyncio.Lock()
+        self._entries: list[_RenamePlanEntry] = []
+        self._scheduled = False
+
+    async def submit(
+        self,
+        *,
+        file_path: str,
+        line: int,
+        character: int,
+        new_name: str,
+    ) -> Any:
+        loop = asyncio.get_running_loop()
+        future: asyncio.Future[Any] = loop.create_future()
+        entry = _RenamePlanEntry(
+            svc=self._svc,
+            file_path=file_path,
+            line=line,
+            character=character,
+            new_name=new_name,
+            future=future,
+        )
+        async with self._lock:
+            self._entries.append(entry)
+            if not self._scheduled:
+                self._scheduled = True
+                loop.create_task(self._flush_soon())
+        return await future
+
+    async def _flush_soon(self) -> None:
+        await asyncio.sleep(_RENAME_BATCH_WINDOW_SECONDS)
+        async with self._lock:
+            entries = self._entries
+            self._entries = []
+            self._scheduled = False
+        if not entries:
+            return
+        method = getattr(self._svc, "rename_symbol_plans_many", None)
+        if len(entries) == 1 or not callable(method):
+            await self._flush_direct(entries)
+            return
+        requests = [
+            {
+                "file_path": entry.file_path,
+                "line": entry.line,
+                "character": entry.character,
+                "new_name": entry.new_name,
+            }
+            for entry in entries
+        ]
+        try:
+            with use_sandbox_io_loop():
+                results = await run_sync_in_executor(method, requests)
+        except Exception:
+            await self._flush_direct(entries)
+            return
+        if len(results) != len(entries):
+            await self._flush_direct(entries)
+            return
+        for entry, result in zip(entries, results, strict=True):
+            entry.future.set_result(result)
+
+    async def _flush_direct(self, entries: list[_RenamePlanEntry]) -> None:
+        for entry in entries:
+            try:
+                with use_sandbox_io_loop():
+                    result = await run_sync_in_executor(
+                        self._svc.rename_symbol_plan,
+                        entry.file_path,
+                        entry.line,
+                        entry.character,
+                        entry.new_name,
+                    )
+            except Exception as exc:
+                entry.future.set_exception(exc)
+            else:
+                entry.future.set_result(result)
+
+
+class _RenameCommitBatcher:
+    def __init__(self, svc: Any) -> None:
+        self._svc = svc
+        self._lock = asyncio.Lock()
+        self._entries: list[_RenameCommitEntry] = []
+        self._scheduled = False
+
+    async def submit(
+        self,
+        context: ToolExecutionContext,
+        *,
+        plan: Any,
+        description: str,
+    ) -> Any:
+        loop = asyncio.get_running_loop()
+        future: asyncio.Future[Any] = loop.create_future()
+        entry = _RenameCommitEntry(
+            svc=self._svc,
+            context=context,
+            plan=plan,
+            description=description,
+            future=future,
+        )
+        async with self._lock:
+            self._entries.append(entry)
+            if not self._scheduled:
+                self._scheduled = True
+                loop.create_task(self._flush_soon())
+        return await future
+
+    async def _flush_soon(self) -> None:
+        await asyncio.sleep(_RENAME_BATCH_WINDOW_SECONDS)
+        async with self._lock:
+            entries = self._entries
+            self._entries = []
+            self._scheduled = False
+        if not entries:
+            return
+        method = getattr(self._svc, "commit_rename_plans_many", None)
+        if len(entries) == 1 or not callable(method):
+            await self._flush_direct(entries)
+            return
+        for entry in entries:
+            rebind_ci_service(entry.context, self._svc)
+        requests = [
+            {
+                "plan": entry.plan,
+                "agent_id": resolved_agent_id(entry.context),
+                "description": entry.description,
+            }
+            for entry in entries
+        ]
+        try:
+            with use_sandbox_io_loop():
+                results = await run_sync_in_executor(method, requests)
+        except Exception:
+            await self._flush_direct(entries)
+            return
+        if len(results) != len(entries):
+            await self._flush_direct(entries)
+            return
+        for entry, result in zip(entries, results, strict=True):
+            entry.future.set_result(result)
+
+    async def _flush_direct(self, entries: list[_RenameCommitEntry]) -> None:
+        for entry in entries:
+            try:
+                rebind_ci_service(entry.context, self._svc)
+                with use_sandbox_io_loop():
+                    result = await run_sync_in_executor(
+                        self._svc.commit_rename_plan,
+                        entry.plan,
+                        agent_id=resolved_agent_id(entry.context),
+                        description=entry.description,
+                    )
+            except Exception as exc:
+                entry.future.set_exception(exc)
+            else:
+                entry.future.set_result(result)
+
+
+_PLAN_BATCHERS: dict[tuple[int, int], _RenamePlanBatcher] = {}
+_COMMIT_BATCHERS: dict[tuple[int, int], _RenameCommitBatcher] = {}
+
+
+def _rename_plan_batcher_for(svc: Any) -> _RenamePlanBatcher:
+    loop = asyncio.get_running_loop()
+    key = (id(svc), id(loop))
+    batcher = _PLAN_BATCHERS.get(key)
+    if batcher is None:
+        batcher = _RenamePlanBatcher(svc)
+        _PLAN_BATCHERS[key] = batcher
+    return batcher
+
+
+def _rename_commit_batcher_for(svc: Any) -> _RenameCommitBatcher:
+    loop = asyncio.get_running_loop()
+    key = (id(svc), id(loop))
+    batcher = _COMMIT_BATCHERS.get(key)
+    if batcher is None:
+        batcher = _RenameCommitBatcher(svc)
+        _COMMIT_BATCHERS[key] = batcher
+    return batcher
 
 
 class FileRenameSummary(BaseModel):
@@ -193,14 +405,12 @@ async def _perform_rename(
     submits the whole rename as one OCC batch.
     """
     try:
-        with use_sandbox_io_loop():
-            plan = await run_sync_in_executor(
-                svc.rename_symbol_plan,
-                resolved_path,
-                int(line),
-                int(character),
-                new_name,
-            )
+        plan = await _rename_plan_batcher_for(svc).submit(
+            file_path=resolved_path,
+            line=int(line),
+            character=int(character),
+            new_name=new_name,
+        )
     except Exception as exc:  # pragma: no cover - defensive
         logger.debug("rename_symbol_plan raised for %s", resolved_path, exc_info=True)
         return ToolResult(output=f"LSP rename failed: {exc}", is_error=True)
@@ -258,16 +468,11 @@ async def _perform_rename(
         )
 
     rebind_ci_service(context, svc)
-    with use_sandbox_io_loop():
-        result = await run_sync_in_executor(
-            svc.rename_symbol,
-            resolved_path,
-            int(line),
-            int(character),
-            new_name,
-            agent_id=resolved_agent_id(context),
-            description=f"rename to {new_name}",
-        )
+    result = await _rename_commit_batcher_for(svc).submit(
+        context,
+        plan=plan,
+        description=f"rename to {new_name}",
+    )
 
     primary_paths = [change.file_path for change in changes]
     return operation_result_to_tool_result(

@@ -738,6 +738,8 @@ async def _exec_shell_command(
         "exit_code": exit_code,
         "changed_paths": list(change.changed_paths),
         "ambient_changed_paths": list(change.ambient_changed_paths),
+        "overlay_success": bool(change.success),
+        "overlay_conflict_reason": change.conflict_reason,
     }
 
 
@@ -1054,16 +1056,27 @@ async def daytona_codeact(
             return tool_error
         assert shell_result is not None
         exit_code = int(shell_result.get("exit_code", 1))
+        overlay_success = bool(shell_result.get("overlay_success", True))
+        overlay_conflict = shell_result.get("overlay_conflict_reason") or ""
         changed_paths = _changed_paths_from_shell(shell_result)
         ambient_changed_paths = _ambient_changed_paths_from_shell(shell_result)
+        is_error = exit_code != 0 or not overlay_success
+        if not overlay_success and exit_code == 0:
+            error_detail = (
+                f"overlay commit aborted: {overlay_conflict or 'unknown reason'}"
+            )
+        elif exit_code != 0:
+            error_detail = _shell_result_error_detail(shell_result)
+        else:
+            error_detail = ""
         return _build_tool_output(
             context=context,
-            status="ok" if exit_code == 0 else "error",
+            status="ok" if not is_error else "error",
             files_written=len(changed_paths),
             shells=[shell_result],
             script_stdout="",
             warnings=[],
-            error=_shell_result_error_detail(shell_result) if exit_code != 0 else "",
+            error=error_detail,
             changed_paths=changed_paths,
             ambient_changed_paths=ambient_changed_paths,
         )
