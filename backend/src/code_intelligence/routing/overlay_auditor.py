@@ -52,10 +52,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-from tools.daytona_toolkit._daytona_utils import (
-    _extract_exit_code,
-    _wrap_bash_command_fast as _wrap_bash_command,
-)
+from tools.daytona_toolkit._daytona_utils import _extract_exit_code, _wrap_bash_command
 
 from code_intelligence.routing.overlay_command_committer import OverlayCommandCommitter
 from code_intelligence.routing.overlay_config import (

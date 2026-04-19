@@ -147,26 +147,6 @@ def _wrap_bash_command(command: str) -> str:
     return f"env -u LC_ALL bash -o pipefail -lc {shlex.quote(script)}"
 
 
-def _wrap_bash_command_fast(command: str) -> str:
-    """Like ``_wrap_bash_command`` but skips the login shell.
-
-    Dropping ``-l`` avoids sourcing ``/etc/profile`` / ``.bashrc`` on every
-    exec — a large per-call cost in Daytona images with nvm/pyenv/etc. in
-    their profile. Safe only when the caller does not rely on profile state;
-    the PATH exports and python3 shim are still applied by the script body.
-    """
-    script = (
-        f"{_USER_LOCAL_BIN_EXPORT}\n"
-        f"{_PROJECT_VENV_BIN_EXPORT}\n"
-        f"{_PYTHON3_SHIM}\n"
-        f"{command}\n"
-        "__codex_exit_code=$?\n"
-        f'printf "\\n{_EXIT_MARKER}%s\\n" "$__codex_exit_code"\n'
-        'exit "$__codex_exit_code"'
-    )
-    return f"env -u LC_ALL bash -o pipefail -c {shlex.quote(script)}"
-
-
 def _extract_exit_code(
     output: str,
     *,
